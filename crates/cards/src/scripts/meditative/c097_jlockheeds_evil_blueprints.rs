@@ -1,7 +1,8 @@
 //! M #97 Jlockheed's Evil Blueprints (SPEC §8.8 row 97, R1280). (0) Spell, Mythic, Jlockeed.
 //!   Base:    "Discover a building: Empty Plot, Wishing Well, School, Mega Church, Bunker, University, The
-//!            Great Wall, Prison or Jlockheed's Headquarters."
-//!   Radiant: "Discover a Radiant building: …"
+//!            Great Wall, Prison or Jlockheed's Headquarters. Piece together the blueprint."
+//!   Radiant: "Discover a Radiant building: … Piece together the Radiant blueprint." (The last line is
+//!            the designer's flavour, which the face hides behind "…", #1017.)
 //!   Engine:  "A Discover (§6.3) of three different buildings drawn uniformly from the nine (M #97.1 to
 //!            #97.9, a named pool with tokens, R60), shown to the chooser only (§10.8), the pick added to
 //!            your hand, Radiant on the Radiant face, the hand cap burning it (§2.4)."

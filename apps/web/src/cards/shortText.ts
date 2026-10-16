@@ -5,11 +5,13 @@
 //
 // Issue #1017 measured the limit (constants.ts FACE_TEXT_LIMIT) and cut every catalog face under it,
 // but for these. Each card's text is a list no box holds, or a face still a line over after the cut:
-// - `n` (a number): its first n lines, which its text puts first, then "…": #98 Heroic Power's
-//   thirteen powers, Meditative #8 Reach the Summit's eleven levels, Combo-Index's grades, Mind
-//   Games' and Fortify Mind's three choices, and YileGPT Unleashed's list of Cries;
-// - "colon": up to its first colon, then "…": the three Call to Chaos editions, whose list must stay
-//   whole in the catalog (each roll's label is a clause of it, R436);
+// - `n` (a number): its first n lines, which its text puts first, "…" in place of the last full
+//   stop: #98 Heroic Power's thirteen powers, Meditative #8 Reach the Summit's eleven levels,
+//   Combo-Index's grades, Mind Games' and Fortify Mind's three choices, and YileGPT Unleashed's list
+//   of Cries; and a few faces that fit, whose last line is a reminder or the designer's flavour
+//   that the click-in carries (Tesla, Jade Beauty, Jlockheed's Evil Blueprints);
+// - "colon": up to its first colon, "…" in its place: the three Call to Chaos editions, whose list
+//   must stay whole in the catalog (each roll's label is a clause of it, R436);
 // - "clamp": its whole text, cut by the rules box at its last line with "…": eight faces still about
 //   a line over after the cut (Yile's Virus and Knowledge Breaker, and the Radiant faces of KY's Gift,
 //   Feng Shui, Money Machine and Windfast), which a 200 px tile prints whole.
@@ -41,25 +43,36 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "core-093": { base: 2, radiant: 2 },
   "core-095": { base: "colon", radiant: "colon" },
   "core-098": { base: 2, radiant: 2 },
+  "classic-005": { base: 2, radiant: 2 },
   "classicplus-042-1": { radiant: "clamp" },
   "classicplus-073": { base: "colon", radiant: "colon" },
   "meditative-008": { base: 2, radiant: 2 },
   "meditative-022": { base: 1, radiant: 1 },
   "meditative-022-1": { base: 3, radiant: 2 },
+  "meditative-039-5": { base: 3, radiant: 3 },
   "meditative-040": { radiant: "clamp" },
   "meditative-045": { base: "clamp", radiant: "clamp" },
-  "meditative-054": { radiant: "clamp" },
   "meditative-049-1": { base: 3, radiant: 3 },
   "meditative-049-2": { base: "clamp", radiant: "clamp" },
+  "meditative-054": { radiant: "clamp" },
   "meditative-091": { radiant: "clamp" },
   "meditative-095": { base: "colon", radiant: "colon" },
+  "meditative-097": { base: 1, radiant: 1 },
 };
 
-/** What ends a short form: the text goes on in the extended description. */
+/** What ends a short form, in place of its last full stop or colon: the text goes on in the extended description. */
 export const MORE = "…";
 
 /** A colon, English or Chinese (R1302), for the "colon" form. */
 const COLON = /[:：]/;
+
+/** The stop a short form's "…" takes the place of: a full stop or a colon, English or Chinese. */
+const LAST_STOP = /[.:。：]$/;
+
+/** `cut` ending in "…", which replaces its last full stop or colon: "…take all three penalties…". */
+function trailOff(cut: string): string {
+  return `${cut.trimEnd().replace(LAST_STOP, "")}${MORE}`;
+}
 
 /** The short form of a card's face, or null when the face prints its whole text. */
 export function shortFormOf(defId: string, radiant: boolean): ShortForm | null {
@@ -68,18 +81,19 @@ export function shortFormOf(defId: string, radiant: boolean): ShortForm | null {
 }
 
 /**
- * The words a `n` or "colon" short form prints: the text's first n lines, or the text up to and
- * including its first colon, then " …". Null when there is nothing to cut (a text no longer than
- * its form, or one without a colon) and for "clamp", which prints the whole text.
+ * The words a `n` or "colon" short form prints: the text's first n lines, or the text up to its
+ * first colon, ending in "…" in place of the full stop or colon (`trailOff`). Null when there is
+ * nothing to cut (a text no longer than its form, or one without a colon) and for "clamp", which
+ * prints the whole text.
  */
 export function cutText(full: string, form: ShortForm): string | null {
   if (form === "clamp") return null;
   if (form === "colon") {
     const at = full.search(COLON);
-    return at < 0 || at === full.length - 1 ? null : `${full.slice(0, at + 1)} ${MORE}`;
+    return at < 0 || at === full.length - 1 ? null : trailOff(full.slice(0, at + 1));
   }
   const lines = full.split("\n");
-  return lines.length <= form ? null : `${lines.slice(0, form).join("\n")} ${MORE}`;
+  return lines.length <= form ? null : trailOff(lines.slice(0, form).join("\n"));
 }
 
 /**

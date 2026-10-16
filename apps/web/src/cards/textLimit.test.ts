@@ -45,10 +45,13 @@ describe("R1017000 the face text limit", () => {
     expect(overLimit("a\nb\nc\nd\ne\nf\ng", FACE_TEXT_LIMIT)).toBe(true);
   });
 
-  it("R1017000 cutText keeps a short form's first lines, or the text up to its first colon, then …", () => {
-    expect(cutText("One.\nTwo.\nThree.", 2)).toBe(`One.\nTwo. ${MORE}`);
-    expect(cutText("One random effect: A; B.", "colon")).toBe(`One random effect: ${MORE}`);
-    expect(cutText("随机一个效果：甲；乙。", "colon")).toBe(`随机一个效果： ${MORE}`);
+  it("R1017000 cutText keeps a short form's first lines, or the text up to its first colon, \"…\" in place of its stop", () => {
+    expect(cutText("One.\nTwo.\nThree.", 2)).toBe(`One.\nTwo${MORE}`);
+    expect(cutText("One random effect: A; B.", "colon")).toBe(`One random effect${MORE}`);
+    expect(cutText("随机一个效果：甲；乙。", "colon")).toBe(`随机一个效果${MORE}`);
+    expect(cutText("每张牌。\n攻击。\n防御。", 1)).toBe(`每张牌${MORE}`);
+    // A line that ends in no full stop keeps its last character.
+    expect(cutText("Reach for the stars!\nThen more.", 1)).toBe(`Reach for the stars!${MORE}`);
     // Nothing to cut: a text no longer than its form, one with no colon, and a clamp.
     expect(cutText("One.\nTwo.", 2)).toBeNull();
     expect(cutText("???", "colon")).toBeNull();
@@ -70,18 +73,20 @@ describe("R1017000 the face text limit", () => {
     expect(over).toEqual([]);
   });
 
-  it("R1017000 a short form is only for a face over the limit, and each one shortens its face", () => {
+  it("R1017000 a clamp is only for a face over the limit, and each cut short form shortens its face", () => {
     for (const [defId, forms] of Object.entries(SHORT_FORMS)) {
       for (const radiant of FACES) {
         const form = radiant ? forms.radiant : forms.base;
         if (form === undefined) continue;
         const { full, shown } = printed(defId, radiant);
         const where = `${defId} ${radiant ? "radiant" : "base"}`;
-        expect(overLimit(full, FACE_TEXT_LIMIT), `${where} fits the limit whole`).toBe(true);
-        if (form !== "clamp") {
+        // A clamp is for a face over the limit; a cut short form may also hide a reminder or the
+        // designer's flavour at the end of a face that fits, which the click-in carries.
+        if (form === "clamp") expect(overLimit(full, FACE_TEXT_LIMIT), `${where} fits the limit whole`).toBe(true);
+        else {
           expect(shown, `${where} has nothing to cut`).not.toBe(full);
-          expect(shown.endsWith(` ${MORE}`), where).toBe(true);
-          expect(full.startsWith(shown.slice(0, -MORE.length - 1)), `${where} is not its text's start`).toBe(true);
+          expect(shown.endsWith(MORE), where).toBe(true);
+          expect(full.startsWith(shown.slice(0, -MORE.length)), `${where} is not its text's start`).toBe(true);
         }
       }
     }

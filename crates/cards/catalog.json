@@ -3932,7 +3932,7 @@
           "kind": "Lifesteal"
         }
       ],
-      "text": "Animated, Lifesteal\nReveals when your opponent summons a Unit: Deal {damage} damage to it. Then summon this in Defense Position."
+      "text": "Animated, Lifesteal\nReveals when your opponent summons a Unit: Deal {damage} damage to it. Then summon this in Defense Position.\nLater Units are not hit."
     },
     "radiant": {
       "attack": 2,
@@ -3945,7 +3945,7 @@
           "kind": "Lifesteal"
         }
       ],
-      "text": "Animated, Lifesteal\nReveals when your opponent summons a Unit: Deal {damage} damage to it. Then summon this in Defense Position."
+      "text": "Animated, Lifesteal\nReveals when your opponent summons a Unit: Deal {damage} damage to it. Then summon this in Defense Position.\nLater Units are not hit."
     }
   },
   "classic-006": {
@@ -12742,7 +12742,7 @@
           "kind": "Immutable"
         }
       ],
-      "text": "Can't attack, Indestructible, Immutable\nEnd of turn: Allure every enemy Unit.\nYou summon this when your Jade Counter reaches 5."
+      "text": "Can't attack, Indestructible, Immutable\nEnd of turn: Allure every enemy Unit.\nYou summon this when your Jade Counter reaches 5.\nAt the start of your next turn, steal the Units this charmed, or they die of heartbreak if you have no room."
     },
     "radiant": {
       "attack": 40,
@@ -12755,7 +12755,7 @@
           "kind": "Immutable"
         }
       ],
-      "text": "Indestructible, Immutable\nEnd of turn: Allure every enemy Unit.\nYour Jade Beauties become Radiant when your Jade Counter reaches 10."
+      "text": "Indestructible, Immutable\nEnd of turn: Allure every enemy Unit.\nYour Jade Beauties become Radiant when your Jade Counter reaches 10.\nAt the start of your next turn, steal the Units this charmed, or they die of heartbreak if you have no room."
     }
   },
   "meditative-040": {
@@ -15301,11 +15301,11 @@
     "loc": 42,
     "base": {
       "keywords": [],
-      "text": "Discover a building: Empty Plot, Wishing Well, School, Mega Church, Bunker, University, The Great Wall, Prison or Jlockheed's Headquarters."
+      "text": "Discover a building: Empty Plot, Wishing Well, School, Mega Church, Bunker, University, The Great Wall, Prison or Jlockheed's Headquarters.\nPiece together the blueprint."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover a Radiant building: Empty Plot, Wishing Well, School, Mega Church, Bunker, University, The Great Wall, Prison or Jlockheed's Headquarters."
+      "text": "Discover a Radiant building: Empty Plot, Wishing Well, School, Mega Church, Bunker, University, The Great Wall, Prison or Jlockheed's Headquarters.\nPiece together the Radiant blueprint."
     }
   },
   "meditative-097-1": {

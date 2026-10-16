@@ -793,6 +793,77 @@
     #f3dfa0;
 }
 
+/* ------------------------------------------------------------------------------ full art --- */
+
+/* R1017001: a hero portrait's card (fullArt.ts) prints its art across the whole face, over the
+   frame's panel, which shows only as the rarity rim around it. A scrim darkens the top, behind the
+   cost gem and the crest, and the foot, behind the rules box; the rules box is smoked glass with
+   light ink, so the words read over any picture. The name ribbon, the gems, the tags, the type line
+   and the stats sit over the art as on every face. Selectors carry the face's type where the
+   ordinary rule does (a Unit's portrait window), so they outrank it whatever the order. */
+.cf[data-full-art="true"] .cf-art-frame,
+.cf[data-full-art="true"][data-card-type] .cf-art-frame {
+  inset: 0;
+  z-index: 0;
+  height: auto;
+  filter: none;
+}
+
+/* A Trap's notched plate behind its window has no window to frame. */
+.cf[data-full-art="true"][data-card-type] .cf-art-frame::before {
+  content: none;
+}
+
+.cf[data-full-art="true"] .cf-art-frame > .cf-art {
+  box-shadow: none;
+}
+
+.cf[data-full-art="true"] .cf-art-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgb(0 0 0 / 0.45),
+    transparent 18%,
+    transparent 44%,
+    rgb(0 0 0 / 0.5) 60%,
+    rgb(0 0 0 / 0.78)
+  );
+  pointer-events: none;
+}
+
+.cf[data-full-art="true"] .card-text {
+  background: rgb(12 14 22 / 0.6);
+  box-shadow:
+    inset 0 0 0 0.35cqw rgb(255 255 255 / 0.22),
+    0 0.4cqh 1.2cqh rgb(0 0 0 / 0.35);
+  color: #f6eedb;
+  text-shadow: 0 0.15cqh 0.3cqh rgb(0 0 0 / 0.85);
+}
+
+/* A Radiant full-art face's glass is gilded, as its parchment is. */
+.cf[data-full-art="true"][data-radiant-face="true"] .card-text {
+  background: rgb(46 32 6 / 0.62);
+  box-shadow:
+    inset 0 0 0 0.35cqw rgb(255 210 74 / 0.45),
+    0 0.4cqh 1.2cqh rgb(0 0 0 / 0.35);
+}
+
+/* The marks the parchment inks dark, in their colours for a dark panel (R277, R280). */
+.cf[data-full-art="true"] .card-text .cf-mark {
+  color: var(--mark-ink-on-dark);
+}
+
+.cf[data-full-art="true"] .card-text .cf-value {
+  color: #9cc8ff;
+}
+
+.cf[data-full-art="true"] .card-text .cf-text-gained {
+  border-top-color: #6fbf6a;
+  color: #9be596;
+}
+
 /* --------------------------------------------------------------------- tags and type line --- */
 
 .cf .cf-tags {
@@ -975,6 +1046,12 @@
 
   .cf:not([data-layout="minion"]):not([data-card-type="Unit"]) .cf-art-frame {
     height: 50cqh;
+  }
+
+  /* R1017001: a full-art face keeps its art across the whole face at hand size too. */
+  .cf[data-full-art="true"]:not([data-layout="minion"])[data-card-type] .cf-art-frame {
+    inset: 0;
+    height: auto;
   }
 
   .cf:not([data-layout="minion"]) .card-name,

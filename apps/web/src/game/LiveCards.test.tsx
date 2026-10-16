@@ -259,8 +259,8 @@ describe("Call to Chaos reads ??? in play and its real text in the collection", 
 
   it("the collection's detail view prints both faces' real text", () => {
     render(<CardDetail def={def("core-095")} onClose={() => {}} />);
-    // R1017000: each face prints its text up to its colon and "…", and the detail's rules print it whole.
-    expect(text(screen.getByTestId(INSPECT_FACE_BASE), ".card-text")).toBe("One random effect: …");
+    // R1017000: each face prints its text up to its colon, "…" in its place, and the detail's rules print it whole.
+    expect(text(screen.getByTestId(INSPECT_FACE_BASE), ".card-text")).toBe("One random effect…");
     expect(text(screen.getByTestId(INSPECT_FACE_RADIANT), ".card-text")).toContain("Three different random effects");
     const rules = screen.getByTestId(INSPECT_DETAIL).querySelector(".inspect-rules");
     expect(rules?.textContent).toContain("Summon 3 random (3) Cost Units");

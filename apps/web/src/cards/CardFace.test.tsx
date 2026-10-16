@@ -682,7 +682,7 @@ describe("B15: length tiers, and useFitText without layout", () => {
       // #1017 cut KY's Private Tutor's Radiant text under the limit.
       ["core-051", true, "l"],
       // A short form is what the face prints: Combo-Index's two header lines, Call to Chaos's "Three
-      // different random effects, resolved in the order listed: …" (#1017).
+      // different random effects, resolved in the order listed…" (#1017).
       ["core-093", false, "l"],
       ["core-095", true, "m"],
       ["meditative-022-1", false, "l"],
@@ -1007,11 +1007,11 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     expect(box.getAttribute("title")).toContain("Ascent 0:");
   });
 
-  it("#1017: a Summit without a level prints its short form, its header and \"…\", as does one past its lines", () => {
+  it("#1017: a Summit without a level prints its short form, its header ending in \"…\", as does one past its lines", () => {
     for (const level of [null, 99]) {
       const box = summitBox(level);
       expect(box.getAttribute("data-short"), String(level)).toBe("true");
-      expect(box.textContent, String(level)).toContain("End of turn: Return this to hand. …");
+      expect(box.textContent, String(level)).toContain("End of turn: Return this to hand…");
       expect(box.textContent, String(level)).not.toContain("Ascent 0:");
       cleanup();
     }

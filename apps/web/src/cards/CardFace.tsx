@@ -43,6 +43,9 @@
 // form, or clamps with "…", and never shrinks its art for it (`faceText`); its whole text stands on
 // the left of its hover preview (inspect/Extended.tsx). With hover previews off, the rules box's
 // tooltip carries it instead (#912).
+//
+// R1017001: a hero portrait's card (fullArt.ts) prints its art across the whole full face
+// (`data-full-art`, the art's "full" shape), its words on a smoked-glass rules box (cards.css).
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -57,6 +60,7 @@ import { nameTier, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
+import { isFullArt } from "./fullArt.ts";
 import { ALL_TRIBES, foilFor, frameRarity, frameTags, type FaceModel } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { setMarkOf } from "./setMark.ts";
@@ -255,6 +259,8 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // Glitch is a blank card (glitch.ts): no picture, set mark or tags, its words corrupted, and its
   // blob spilling out over the frame, outside the clipped `.cf-scale`.
   const glitch = isGlitch(face.defId);
+  // R1017001: a hero portrait's card fills its full face with its art.
+  const fullArt = full && !glitch && isFullArt(face.englishName ?? face.name);
 
   return (
     <span
@@ -271,6 +277,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
       data-vanilla={face.vanilla ? "true" : undefined}
       data-tuned={face.tuning?.verdict}
       data-glitch={glitch ? "true" : undefined}
+      data-full-art={fullArt ? "true" : undefined}
       style={scales}
     >
       <span className="cf-scale">
@@ -301,7 +308,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
               tags={face.tags}
               type={face.type}
               name={face.englishName ?? face.name}
-              shape={ART_SHAPE[face.type]}
+              shape={fullArt ? "full" : ART_SHAPE[face.type]}
               lazy={lazyArt}
             />
           )}
