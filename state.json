@@ -7484,8 +7484,10 @@
     "what": "revise #1056 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-16T13:18:42Z",
-    "notes": [],
+    "at": "2026-10-16T13:24:46Z",
+    "notes": [
+      "started a night run, as a lane was free: a suggestion survey is due, for `claude-1`"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
