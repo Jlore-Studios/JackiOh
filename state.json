@@ -15482,6 +15482,12 @@
         "number": 899,
         "title": "Architecture: spec check reads the card scripts' .luau citations and refuses proofs that cannot run",
         "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-16T04:41:01Z",
+        "number": 1040,
+        "title": "Patch v0.3.Y: the game log stays where its reader scrolled, and every line that names a card opens it",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": "2026-10-16T02:32:48Z",
