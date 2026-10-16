@@ -870,6 +870,13 @@
     "1038": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T04:59:01Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Least sure whether static AI reads are 'the AI's search' or medium; they hold as hard because the rule maps all of crates/ai/src/ there and move order drives the lethal walk."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
