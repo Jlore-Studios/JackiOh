@@ -15325,9 +15325,9 @@
     ],
     "idle_since": "2026-10-16T02:32:48Z",
     "last_run": "2026-10-16T02:32:48Z",
-    "provider": "claude-3",
+    "provider": null,
     "requested": false,
-    "run_id": "38840931305",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
