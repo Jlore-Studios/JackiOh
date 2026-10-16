@@ -2010,7 +2010,25 @@
       "feedback_since": "2026-10-16T20:47:47Z",
       "issue": 1076,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "claude"
+        ],
+        "builder": "claude",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "38964731449",
+            "tier": "strong"
+          }
+        ],
+        "sha": "2079f66baedcde38d6ba7a8b5b5ca8a7e2c8be58",
+        "tiers": {
+          "claude": "strong"
+        }
+      }
     },
     "148": {
       "asks": [
