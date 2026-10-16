@@ -37,15 +37,13 @@ pub struct BuffAmount {
     pub health: Option<i32>,
 }
 
-/// R21's pool is written as text in config; "Armor 1" and "Spell Damage 1" are its numbered entries
-/// (§6.1, R781005).
+/// R21's pool is written as text in config; every entry is an unnumbered keyword since patch v0.3.Y
+/// took Armor 1 and Spell Damage +1 out (R1025000).
 const POOL_KEYWORDS: &[(&str, Keyword)] = &[
     ("Taunt", Keyword::Taunt),
-    ("Armor 1", Keyword::Armor { n: 1 }),
     ("Flying", Keyword::Flying),
     ("Ranged", Keyword::Ranged),
     ("Indestructible", Keyword::Indestructible),
-    ("Spell Damage 1", Keyword::SpellDamage { n: 1 }),
     ("Rush", Keyword::Rush),
     ("Charge", Keyword::Charge),
     ("First Strike", Keyword::FirstStrike),
@@ -287,8 +285,8 @@ pub fn grant_ability(args: GrantAbilityArgs) -> Effect {
     })
 }
 
-/// Every pool keyword this unit does not have yet, read through the layers (§10.4, R21). A unit
-/// that already has Armor from any source is not offered "Armor 1", as R21 counts by keyword.
+/// Every pool keyword this unit does not have yet, read through the layers (§10.4, R21). A unit is
+/// never offered a keyword kind it already holds from any source, as R21 counts by keyword.
 fn pool_candidates(ctx: &EffectContext<'_>, unit: &CardInstance) -> Vec<Keyword> {
     let held = unit_view(ctx.sink.state, unit).keywords;
     candidates_beside(&held)
