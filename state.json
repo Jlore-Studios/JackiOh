@@ -705,6 +705,7 @@
     "1034": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-16T02:39:33Z",
         "difficulty": "medium",
