@@ -25,7 +25,7 @@ use jackioh_engine::{
     seat_to_act, view_for,
 };
 use jackioh_server::actor::clock::initial_clocks;
-use jackioh_server::actor::engine::{fold, fold_args, hash_state, seat_played_by};
+use jackioh_server::actor::engine::{Pinned, fold, fold_args, hash_state, seat_played_by};
 use jackioh_server::api::replays::ReplayCache;
 use jackioh_server::api::retention::purge_expired;
 use jackioh_server::app::{App, now_ms};
@@ -124,14 +124,10 @@ struct Played {
 impl Played {
     /// The state after the first `k` log actions, folded afresh as the actor's rebuild folds it.
     fn state_at(&self, k: usize) -> GameState {
-        let folded = fold(&fold_args(
-            &self.seed,
-            &self.decks,
-            self.log[..k].to_vec(),
-            None,
-            None,
-            None,
-        ));
+        let folded = fold(
+            Pinned::default(),
+            &fold_args(&self.seed, &self.decks, self.log[..k].to_vec(), None, None, None),
+        );
         assert!(folded.errors.is_empty(), "step {k}: {:?}", folded.errors);
         folded.state
     }
@@ -995,14 +991,10 @@ mod r767000_the_versions {
             });
             register_shipped(vec![ShippedCatalog::new(PLAYED_ON, original, IndexMap::new())]);
             register_catalog_as(patched, "test");
-            let refolded = fold(&fold_args(
-                &played.seed,
-                &played.decks,
-                played.log.clone(),
-                None,
-                None,
-                None,
-            ));
+            let refolded = fold(
+                Pinned::default(),
+                &fold_args(&played.seed, &played.decks, played.log.clone(), None, None, None),
+            );
             if hash_state(&refolded.state) != hash_state(&played.last) {
                 return (played, shown);
             }

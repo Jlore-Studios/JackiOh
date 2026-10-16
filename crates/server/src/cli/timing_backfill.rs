@@ -20,7 +20,7 @@
 use anyhow::bail;
 
 use crate::actor::engine::{off_runtime, registered_thread};
-use crate::actor::registry::dealt_for;
+use crate::actor::registry::{dealt_for, pinned_for};
 use crate::actor::telemetry::{LIVE_PILOTS, replay};
 use crate::cli::{connect_one, database_url};
 use crate::db::store::{Db, PlayTelemetry, StoreError};
@@ -59,7 +59,7 @@ pub async fn backfill(db: &Db) -> Result<BackfillOutcome, StoreError> {
         // R258: the deal the registry folds the match with, or the fold is another game. #1035: off the
         // runtime, as a rebuild folds.
         let replayed = off_runtime(registered_thread, move || {
-            replay(&match_row, &log, dealt_for(mode))
+            replay(pinned_for(&match_row), &match_row, &log, dealt_for(mode))
         })
         .await;
         let recorder = match replayed {

@@ -20,7 +20,7 @@ use jackioh_engine::{
     Action, ActionBody, ActionType, CardType, GameState, PlayerId, Rng, Row, Zone, seat_to_act,
 };
 use jackioh_server::actor::engine::{
-    begin_game, create_game, create_game_args, deal_random_deck, legal_actions, reduce,
+    Pinned, begin_game, create_game, create_game_args, deal_random_deck, legal_actions, reduce,
 };
 use jackioh_server::bots::seat::{
     BotJob, THINK_MODEL, ThinkFor, ThinkModel, decision_deadline_ms, fallback_action, never_played, play,
@@ -160,26 +160,33 @@ fn r1452_r188_forbids_a_concession_a_draw_offer_an_accepted_draw_and_an_emote() 
 #[test]
 fn r1452_the_fallback_move_answers_the_mulligan_ends_the_turn_and_never_concedes() {
     let decks = decks();
-    let mut state = begin_game(&create_game(&create_game_args(
-        "seed-fallback",
-        &decks,
-        None,
-        None,
-        None,
-    )))
+    let mut state = begin_game(
+        Pinned::default(),
+        &create_game(
+            Pinned::default(),
+            &create_game_args("seed-fallback", &decks, None, None, None),
+        ),
+    )
     .state;
     // Both mulligans open: each seat's fallback is its keep.
     for seat in PLAYER_IDS {
-        let body = fallback_action(&state, seat).expect("a mulligan is owed");
+        let body = fallback_action(Pinned::default(), &state, seat).expect("a mulligan is owed");
         assert!(matches!(body, ActionBody::Mulligan { .. }), "{body:?}");
-        let result = reduce(&state, &Action::new(body, seat, format!("fallback-{seat}")));
+        let result = reduce(
+            Pinned::default(),
+            &state,
+            &Action::new(body, seat, format!("fallback-{seat}")),
+        );
         assert!(result.error.is_none(), "{:?}", result.error);
         state = result.state;
     }
     // The first turn: the active seat ends it; neither seat's fallback is ever one R188 forbids.
-    assert_eq!(fallback_action(&state, state.active), Some(ActionBody::EndTurn));
+    assert_eq!(
+        fallback_action(Pinned::default(), &state, state.active),
+        Some(ActionBody::EndTurn)
+    );
     for seat in PLAYER_IDS {
-        if let Some(body) = fallback_action(&state, seat) {
+        if let Some(body) = fallback_action(Pinned::default(), &state, seat) {
             assert!(!r188_forbidden(&body), "{seat}: {body:?}");
         }
     }
@@ -331,10 +338,21 @@ fn r639000_never_played_is_only_offers_and_emotes() {
 /// at least `turn` and the first seat's: the active seat's main phase.
 fn opened_at(seed: &str, turn: i32) -> GameState {
     let decks = decks();
-    let mut state = begin_game(&create_game(&create_game_args(seed, &decks, None, None, None))).state;
+    let mut state = begin_game(
+        Pinned::default(),
+        &create_game(
+            Pinned::default(),
+            &create_game_args(seed, &decks, None, None, None),
+        ),
+    )
+    .state;
     for seat in PLAYER_IDS {
-        let body = fallback_action(&state, seat).expect("a mulligan is owed");
-        let result = reduce(&state, &Action::new(body, seat, format!("keep-{seat}")));
+        let body = fallback_action(Pinned::default(), &state, seat).expect("a mulligan is owed");
+        let result = reduce(
+            Pinned::default(),
+            &state,
+            &Action::new(body, seat, format!("keep-{seat}")),
+        );
         assert!(result.error.is_none(), "{:?}", result.error);
         state = result.state;
     }
@@ -342,6 +360,7 @@ fn opened_at(seed: &str, turn: i32) -> GameState {
     let mut at = 0;
     while state.turn < turn || state.active != first {
         let result = reduce(
+            Pinned::default(),
             &state,
             &Action::new(ActionBody::EndTurn, state.active, format!("end-{at}")),
         );
@@ -361,6 +380,7 @@ fn job(state: &GameState, seat: PlayerId, seed: &str, own_turn_start: bool) -> B
 /// `job` at `skill` (R747000), the weakest strength's search and style otherwise.
 fn job_at(state: &GameState, seat: PlayerId, seed: &str, own_turn_start: bool, skill: f64) -> BotJob {
     BotJob {
+        pinned: Pinned::default(),
         state: state.clone(),
         seat,
         home: seat,
@@ -430,6 +450,7 @@ async fn r639000_a_bot_answers_a_draw_offer_by_its_own_roll_not_the_searchs_decl
     let bot = person.opponent();
     state.players[bot].hero.health = 1;
     let offered = reduce(
+        Pinned::default(),
         &state,
         &Action::new(ActionBody::OfferDraw, person, "offer".to_string()),
     );
@@ -477,7 +498,14 @@ fn random_turn_starts(seed: &str) -> Vec<GameState> {
         deal_random_deck(&format!("{seed}-a"), None),
         deal_random_deck(&format!("{seed}-b"), None),
     );
-    let mut state = begin_game(&create_game(&create_game_args(seed, &decks, None, None, None))).state;
+    let mut state = begin_game(
+        Pinned::default(),
+        &create_game(
+            Pinned::default(),
+            &create_game_args(seed, &decks, None, None, None),
+        ),
+    )
+    .state;
     let mut rng = Rng::new(seed, 0);
     let mut starts: Vec<GameState> = Vec::new();
     for step in 0..2_000 {
@@ -490,13 +518,17 @@ fn random_turn_starts(seed: &str) -> Vec<GameState> {
         {
             starts.push(state.clone());
         }
-        let legal: Vec<ActionBody> = legal_actions(&state, seat)
+        let legal: Vec<ActionBody> = legal_actions(Pinned::default(), &state, seat)
             .into_iter()
             .filter(|body| !matches!(body, ActionBody::Concede | ActionBody::OfferDraw))
             .collect();
         let at = (rng.next() * legal.len() as f64) as usize;
         let Some(body) = legal.get(at) else { break };
-        let result = reduce(&state, &Action::new(body.clone(), seat, format!("random-{step}")));
+        let result = reduce(
+            Pinned::default(),
+            &state,
+            &Action::new(body.clone(), seat, format!("random-{step}")),
+        );
         if result.error.is_none() {
             state = result.state;
         }
@@ -542,9 +574,15 @@ async fn r639000_a_face_down_enemy_card_stops_neither_the_standing_read_nor_the_
     let person = bot.opponent();
     let mut state = with_face_down_trap(opened_at("seed-play-hidden-draw", 1), bot);
     if state.active != person {
-        state = reduce(&state, &Action::new(ActionBody::EndTurn, bot, "pass".to_string())).state;
+        state = reduce(
+            Pinned::default(),
+            &state,
+            &Action::new(ActionBody::EndTurn, bot, "pass".to_string()),
+        )
+        .state;
     }
     let offered = reduce(
+        Pinned::default(),
         &state,
         &Action::new(ActionBody::OfferDraw, person, "offer".to_string()),
     );
@@ -672,6 +710,7 @@ async fn r747000_a_random_bot_still_answers_a_draw_offer_by_its_own_roll() {
     let bot = person.opponent();
     state.players[bot].hero.health = 1;
     let offered = reduce(
+        Pinned::default(),
         &state,
         &Action::new(ActionBody::OfferDraw, person, "offer".to_string()),
     );

@@ -21,7 +21,7 @@ use serde_json::{Value, json};
 
 use jackioh_engine::wire::{EmoteId, Phase, PlayerId};
 use jackioh_engine::{ActionBody, ActionType, Rng, deal_emote_hand};
-use jackioh_server::actor::engine::{fold, fold_args, hash_state, legal_actions};
+use jackioh_server::actor::engine::{Pinned, fold, fold_args, hash_state, legal_actions};
 use jackioh_server::actor::match_actor::{MatchActor, bot_moved_turns};
 use jackioh_server::actor::protocol::SERVER_NONCE_PREFIX;
 use jackioh_server::app::{App, now_ms};
@@ -503,7 +503,10 @@ async fn r1452_bot_match_replays_from_seed_and_log() {
         log.iter().any(|action| bot_nonce(&action.nonce)),
         "PREMISE: the bot moved"
     );
-    let folded = fold(&fold_args(&m.seed, &row.decks, log, None, None, None));
+    let folded = fold(
+        Pinned::default(),
+        &fold_args(&m.seed, &row.decks, log, None, None, None),
+    );
     assert!(folded.errors.is_empty(), "{:?}", folded.errors);
     assert_eq!(hash_state(&folded.state), hash_state(&m.actor.engine_state()));
 }
@@ -588,7 +591,10 @@ async fn r1452_a_restart_mid_game_resumes_the_bot_on_its_next_turn() {
         .into_iter()
         .map(|entry| entry.action)
         .collect();
-    let folded = fold(&fold_args(&m.seed, &row.decks, actions, None, None, None));
+    let folded = fold(
+        Pinned::default(),
+        &fold_args(&m.seed, &row.decks, actions, None, None, None),
+    );
     assert!(folded.errors.is_empty(), "{:?}", folded.errors);
     assert_eq!(hash_state(&folded.state), hash_state(&revived.engine_state()));
 }
@@ -670,7 +676,7 @@ async fn r639000_a_bot_answers_a_draw_offer_at_its_fitted_pace() {
         2,
         ActionType::AnswerDraw,
         false,
-        legal_actions(&state, bot).len(),
+        legal_actions(Pinned::default(), &state, bot).len(),
         None,
     );
     assert_eq!(answered_at - offer.2, expected, "{rows:?}");
@@ -714,7 +720,7 @@ async fn r639000_a_seeded_bot_game_draws_its_mulligan_and_idle_turn_from_the_fit
         0,
         ActionType::Mulligan,
         true,
-        legal_actions(&opening, bot).len(),
+        legal_actions(Pinned::default(), &opening, bot).len(),
         Some(MULLIGAN_CLOCK_MS),
     );
     assert_eq!(mulligan.2 - row.created_at, expected, "{rows:?}");
@@ -999,7 +1005,7 @@ async fn r639000_a_restart_mid_turn_does_not_begin_the_bots_turn_again() {
     let row = q!(m.app, matches_get(MATCH_ID)).expect("the match row");
     let log = q!(m.app, matches_actions(MATCH_ID));
     assert_eq!(
-        bot_moved_turns(&row, &log, None)[bot],
+        bot_moved_turns(Pinned::default(), &row, &log, None)[bot],
         Some(turn),
         "the log says the bot has moved this turn"
     );
@@ -1029,7 +1035,7 @@ async fn r639000_a_restart_mid_turn_does_not_begin_the_bots_turn_again() {
     }
     let (_, action, at) = next.expect("the rebuilt bot's next move");
     let kind: ActionType = from(action["type"].clone());
-    let legal = legal_actions(&state, bot).len();
+    let legal = legal_actions(Pinned::default(), &state, bot).len();
     // The rebuilt actor's timing stream starts over (R1452); the move is a later one of its turn.
     let later = drawn_think_ms(&m.seed, bot, 0, kind, false, legal, None);
     let first = drawn_think_ms(&m.seed, bot, 0, kind, true, legal, None);

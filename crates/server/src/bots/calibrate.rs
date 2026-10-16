@@ -21,7 +21,7 @@ use jackioh_ai::{AiOptions, AiStyle, decide_styled, plays_best, random_action};
 use jackioh_engine::wire::PerPlayer;
 use jackioh_engine::{Action, PlayerId, Rng, Winner, seat_played_by, seat_to_act};
 
-use crate::actor::engine;
+use crate::actor::engine::{self, Pinned};
 use crate::bots::seat::{fallback_action, r188_forbidden};
 use crate::config::{
     BOT_CALIBRATION_BISECTIONS, BOT_CALIBRATION_FIT_ITERATIONS, BOT_CALIBRATION_MAX_ACTIONS,
@@ -88,12 +88,14 @@ pub fn game_seed(base: &str, a: usize, b: usize, n: usize) -> String {
 /// Glitch left it in (R677): each strength keeps its own stream and its own deck through a swap, as
 /// an account does.
 pub fn play_game(seed: &str, p1: &BotStrength, p2: &BotStrength) -> Option<Winner> {
+    // Calibration plays on this build's own catalog.
+    let pinned = Pinned::default();
     let decks = (
         engine::deal_random_deck(&format!("{seed}:p1-deck"), None),
         engine::deal_random_deck(&format!("{seed}:p2-deck"), None),
     );
-    let created = engine::create_game(&engine::create_game_args(seed, &decks, None, None, None));
-    let mut state = engine::begin_game(&created).state;
+    let created = engine::create_game(pinned, &engine::create_game_args(seed, &decks, None, None, None));
+    let mut state = engine::begin_game(pinned, &created).state;
     let strengths = PerPlayer::new(p1, p2);
     let mut streams = PerPlayer::new(
         Rng::new(&format!("{seed}:bot-ai:{}", PlayerId::P1.as_str()), 0),
@@ -135,12 +137,16 @@ pub fn play_game(seed: &str, p1: &BotStrength, p2: &BotStrength) -> Option<Winne
         streams[home] = rng;
         let body = chosen
             .filter(|body| !r188_forbidden(body))
-            .or_else(|| fallback_action(&state, seat))?;
+            .or_else(|| fallback_action(pinned, &state, seat))?;
         let action = Action::new(body, seat, format!("calibrate-{moves}"));
-        let mut result = engine::reduce(&state, &action);
+        let mut result = engine::reduce(pinned, &state, &action);
         if result.error.is_some() {
-            let body = fallback_action(&state, seat)?;
-            result = engine::reduce(&state, &Action::new(body, seat, format!("calibrate-{moves}")));
+            let body = fallback_action(pinned, &state, seat)?;
+            result = engine::reduce(
+                pinned,
+                &state,
+                &Action::new(body, seat, format!("calibrate-{moves}")),
+            );
             if result.error.is_some() {
                 return None;
             }
