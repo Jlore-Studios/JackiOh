@@ -8,6 +8,9 @@
 // Brittle R385, enchantments E39, standing as a Unit R383) and its lines of code (E36) stand with the
 // printed text and the glossary, in the column beside the face (inspect.css), with the card's flavour
 // line and artist credit (R660, Flavour.tsx) after the glossary.
+//
+// Issue #1017: a face that prints less than its whole text has the whole text under it (Extended.tsx),
+// and a Summit in a game prints its next Ascent line (R280).
 
 import { useRef } from "react";
 import type { ReactElement } from "react";
@@ -16,6 +19,8 @@ import { t, useLocale } from "../../i18n/i18n.ts";
 import { CardFace } from "../CardFace.tsx";
 import type { FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
+import { ascentLevelOf } from "../shortText.ts";
+import { Extended } from "./Extended.tsx";
 import { Flavour } from "./Flavour.tsx";
 import { Glossary } from "./Glossary.tsx";
 import { InspectNote } from "./InspectNote.tsx";
@@ -32,6 +37,7 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
   useLocale();
   const closeButton = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
+  const ascentLevel = ascentLevelOf(face.values);
 
   return createPortal(
     <div className="inspect-layer inspect-layer--sheet" {...OVERLAY_ROOT_PROPS}>
@@ -47,9 +53,10 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
         <div className="inspect-sheet-body">
           <RefsInteractive>
             <div className="inspect-face inspect-face--sheet" data-testid={INSPECT_FACE}>
-              <CardFace face={face} layout="full" />
+              <CardFace face={face} layout="full" ascentLevel={ascentLevel} />
               <InspectNote note={note} />
             </div>
+            <Extended face={face} ascentLevel={ascentLevel} />
             <StateNotes face={face} />
             <Printed face={face} />
           </RefsInteractive>

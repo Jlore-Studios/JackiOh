@@ -1,8 +1,7 @@
 //! C #19 Lizard's Breath (SPEC §8.6 row 19). (1) Spell, Rare.
-//!   Base:    "Deal {damage} damage. Your largest pile adds its effect: Deck, draw {draw}; Graveyard,
-//!            gain {mana} mana; Exile, deal {extraDamage} more damage. Ties go to the pile listed
-//!            first." — 2, 1, 2, 4
-//!   Radiant: "Deal {damage} damage. Your two largest piles add their effects: …" — 4, 1, 2, 4
+//!   Base:    "Deal {damage} damage. Your largest pile adds: Deck, draw {draw}; Graveyard, gain {mana}
+//!            mana; Exile, deal {extraDamage} more damage. Ties go to the first listed." — 2, 1, 2, 4
+//!   Radiant: "Deal {damage} damage. Your two largest piles add: …" — 4, 1, 2, 4
 //!
 //! Targeted (§8's Conventions): any unit or hero, either side, chosen with the play (R81). The piles
 //! are your own, counted as the Spell resolves (it is in none of them, §10.5) and ranked by size, a

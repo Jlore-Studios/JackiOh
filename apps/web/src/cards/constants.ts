@@ -28,6 +28,21 @@ export const FIT_STEPS = 6;
  */
 export const FIT_FLOOR_PX = 9;
 
+/**
+ * Issue #1017: the most text a face may print, measured in Chromium on every catalog face at the
+ * reading floor. The Almanac's and the deck builder's tiles are 164 to 220 px wide, and a 170 px
+ * face's rules box holds 6 lines of about 28 characters before the art would give way; every
+ * catalog face fits this but the short forms (shortText.ts). `faceLines` wraps by words to count.
+ */
+export const FACE_TEXT_LIMIT = { charsPerLine: 28, lines: 6 } as const;
+
+/**
+ * The same for the hover preview's face (271 px wide, PREVIEW_HEIGHT_PX tall): 10 lines of about 45
+ * characters. A face in play prints only there, so a Summit's next Ascent line and a fused or
+ * Buffed card are held to it.
+ */
+export const PREVIEW_TEXT_LIMIT = { charsPerLine: 45, lines: 10 } as const;
+
 /** Below this face height the rules box, tags and type line hide. Mirrored in cards.css's @container rule. */
 export const FACE_TEXT_MIN_HEIGHT_PX = 150;
 

@@ -2,7 +2,7 @@
 //!
 //! Base:    "End of turn: Shuffle The Coin into each player's deck.\nActivate: Spend ({price}).
 //!          Tribute this. Either player may activate this."
-//! Radiant: "End of turn: Shuffle The Coin into your opponent's deck and a Radiant The Coin into
+//! Radiant: "End of turn: Shuffle The Coin into your opponent's deck and a Radiant one into
 //!          yours.\nActivate: Spend ({price}). Tribute this. Either player may activate this."
 //! Engine:
 //! - **End of turn** (its controller's): two fresh shuffles, The Coin (§7) into the opponent's deck,

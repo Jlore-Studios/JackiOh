@@ -1,8 +1,8 @@
 //! C+ #42.1 KY's Gift (SPEC §8.7 row 42.1, §7, R16, R62, R380). (4) Field Spell, KY, Token (printed
 //! Legendary); C+ #42 KY's Test's Hard reward.
 //!   Activate: Gain {mana} mana. Your opponent discards {discards|random card|random cards}. Heal your hero {heal}. Add a
-//!   random Book, a random KY card, a random Legendary card and a random (4) Cost card to your hand.
-//!   They cost (0). Radiant: 2 mana, 2 discards, heal 10, and the four cards are Radiant.
+//!   random Book, KY card, Legendary and (4) Cost card to your hand. They cost (0). Radiant: 2 mana,
+//!   2 discards, heal 10, and the four cards are Radiant.
 //!
 //! An Activate, once a turn (R384; its controller's start of turn, R62, before patch v0.3.10), in the
 //! order written. The mana is temporary (§2.3). The discard

@@ -1,8 +1,7 @@
 //! C+ #37 Wardrum (SPEC §8.7 row 37): (5) Unit, Quickdraw, Legendary, 5/5 → 10/10.
-//!   Base:    "While this is in your hand or deck: After the Spells, Field Spells and Traps you play in a
-//!            turn reach {threshold}, summon this. End of turn: Cast a copy of a random Spell, Field Spell
-//!            or Trap you played this turn."
-//!   Radiant: "… End of turn: Cast a copy of each Spell, Field Spell and Trap you played this turn."
+//!   Base:    "While in your hand or deck: After you play {threshold} non-Units in a turn, summon this.
+//!            End of turn: Cast a copy of a random non-Unit you played this turn."
+//!   Radiant: "… End of turn: Cast a copy of each non-Unit you played this turn."
 //! A hand and deck trigger (B5 E26) on the resolution of the play that is the threshold-th non-Unit play
 //! of the turn (casts count, R70); `summonThis` puts it in the leftmost open unit zone with no Cry, or
 //! leaves it where it is. The end of turn casts fresh copies by definition and face (E12, R87), skipping

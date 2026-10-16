@@ -17,9 +17,10 @@ import { CATALOG } from "@jackioh/cards";
 import { fillParams, type BackrowView, type CardDef, type PlayerView, type Tuning } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetFxSettingsForTests } from "../fx/settings.ts";
+import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import Board from "../game/Board.tsx";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { testid } from "../game/contract.ts";
@@ -54,7 +55,14 @@ import {
   tuningSummary,
 } from "./tuning.ts";
 
+// R1017001: the hero portraits' cards print full art and none of their words; these tests read the
+// rules box, so full art is off here (fullArt.test.tsx covers it).
+beforeEach(() => {
+  writeCardSettings({ fullArt: false });
+});
+
 afterEach(() => {
+  writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
   act(() => {
     closeInspect();
   });

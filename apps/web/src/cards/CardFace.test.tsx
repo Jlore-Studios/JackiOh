@@ -11,13 +11,13 @@ import { fileURLToPath } from "node:url";
 
 import { act, cleanup, render } from "@testing-library/react";
 import { useRef, type ReactElement } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import { GLITCH_DEF_ID, TRIBAL_TAGS } from "@jackioh/engine/config";
 import { fillParams, type CardDef, type CardType, type PreviewValue, type Rarity, type Tag } from "@jackioh/shared";
 
-import { CardFace } from "./CardFace.tsx";
+import { CardFace, faceText } from "./CardFace.tsx";
 import { CHINESE_TERMS } from "./chinese.ts";
 import { RulesText } from "./RulesText.tsx";
 import {
@@ -35,6 +35,12 @@ import { termsIn } from "./rules.ts";
 import { SET_MARK_MIN_FACE_PX, setMarkOf } from "./setMark.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import { SUMMIT_DEF_ID, ascentLevelOf, summitShortText } from "./shortText.ts";
+
+// R1017001: the hero portraits' cards print full art and none of their words. These tests read every
+// face's words, so full art is off here; fullArt.test.tsx covers the full-art faces.
+beforeEach(() => {
+  writeCardSettings({ fullArt: false });
+});
 
 afterEach(() => {
   cleanup();
@@ -361,7 +367,8 @@ describe("B10: RulesText marks terms in bold", () => {
         const source: FaceSource = { defId: card.id, def: card, radiant };
         const label = `${card.id} ${radiant ? "radiant" : "base"}`;
         const drawn = new Set([...renderFace(source).querySelectorAll(".card-text strong.cf-term")].map((term) => term.getAttribute("data-term")));
-        expect([...drawn], label).toEqual(termsIn(faceModel(source).text.full));
+        // The words the face prints: its short form where it has one (#1017).
+        expect([...drawn], label).toEqual(termsIn(faceText(faceModel(source)).shown));
         for (const keyword of (radiant ? card.radiant : card.base).keywords) expect(drawn.has(keyword.kind), `${label} ${keyword.kind}`).toBe(true);
         cleanup();
       }
@@ -445,9 +452,11 @@ describe("B10: RulesText marks terms in bold", () => {
     () => {
       for (const card of DEFS) {
         for (const radiant of [false, true]) {
-          const text = faceModel({ defId: card.id, def: card, radiant }).text;
+          const model = faceModel({ defId: card.id, def: card, radiant });
+          const text = model.text;
           const cf = catalogFace(card.id, radiant);
-          expect(one(cf, ".cf-text-base").textContent, card.id).toBe(text.full);
+          // Its whole text, or the short form that starts it (#1017).
+          expect(one(cf, ".cf-text-base").textContent, card.id).toBe(faceText(model).shown);
           // The face's catalog text, its `{key}` numbers filled in with its printed values (B3.4 rule 5).
           expect(text.full, card.id).toBe(fillParams(card, radiant ? "radiant" : "base"));
           cleanup();
@@ -676,9 +685,15 @@ describe("B15: length tiers, and useFitText without layout", () => {
       // Patch v0.3.10 shortened Silly Silas's Radiant text by a tier.
       ["core-052", true, "l"],
       ["core-051", false, "l"],
-      ["core-051", true, "xl"],
-      ["core-093", false, "xxl"],
-      ["core-095", true, "xxl"],
+      // #1017 cut KY's Private Tutor's Radiant text under the limit.
+      ["core-051", true, "l"],
+      // A short form is what the face prints: Combo-Index's two header lines, Call to Chaos's "Three
+      // different random effects, resolved in the order listed…" (#1017).
+      ["core-093", false, "l"],
+      ["core-095", true, "m"],
+      ["meditative-022-1", false, "l"],
+      // A clamp prints its whole text.
+      ["meditative-045", true, "xl"],
     ];
     for (const [id, radiant, tier] of cases) {
       expect(catalogFace(id, radiant).getAttribute("data-text-tier"), `${id} radiant=${String(radiant)}`).toBe(tier);
@@ -972,7 +987,9 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
   it("a Summit face with a level prints its header and only the next Ascent line", () => {
     const box = summitBox(1);
     expect(box.getAttribute("data-short")).toBe("true");
-    expect(box.textContent).toContain("Ascent level: starts at 0");
+    expect(box.getAttribute("data-less")).toBe("true");
+    expect(box.textContent).toContain("Costs (Ascent level)");
+    expect(box.textContent).toContain("End of turn: Return this to hand.");
     expect(box.textContent).toContain("Ascent 1:");
     for (const hidden of ["Ascent 0:", "Ascent 2:", "Ascent 9:", "Ascent 10:"]) {
       expect(box.textContent, hidden).not.toContain(hidden);
@@ -996,25 +1013,42 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     expect(box.getAttribute("title")).toContain("Ascent 0:");
   });
 
-  it("a Summit without a level prints the whole text, as does any other card given one", () => {
-    const whole = summitBox(null);
-    expect(whole.hasAttribute("data-short")).toBe(false);
-    expect(whole.textContent).toContain("Ascent 0:");
-    expect(whole.textContent).toContain("Ascent 10:");
-    cleanup();
+  it("#1017: a Summit without a level prints its short form, its header ending in \"…\", as does one past its lines", () => {
+    for (const level of [null, 99]) {
+      const box = summitBox(level);
+      expect(box.getAttribute("data-short"), String(level)).toBe("true");
+      expect(box.textContent, String(level)).toContain("End of turn: Return this to hand…");
+      expect(box.textContent, String(level)).not.toContain("Ascent 0:");
+      cleanup();
+    }
 
-    // A level past the printed lines falls back to the whole text rather than hiding any.
-    expect(summitBox(99).hasAttribute("data-short")).toBe(false);
-    cleanup();
-
-    // A level means nothing off the Summit: Heroic Power's list of thirteen stays whole.
+    // A level means nothing off the Summit: Heroic Power prints its own short form, the header over
+    // its thirteen powers.
     const { container } = render(
       <CardFace face={faceModel({ defId: "core-098", def: def("core-098"), radiant: false })} ascentLevel={3} />,
     );
     flushFits();
     const heroic = one(container, ".card-text");
-    expect(heroic.hasAttribute("data-short")).toBe(false);
+    expect(heroic.getAttribute("data-short")).toBe("true");
     expect(heroic.textContent).toContain("Gain one of 13 random powers");
+    expect(heroic.textContent).not.toContain("Expedition Map");
+  });
+
+  it("#1017: a face that fits prints its whole text, and a clamp prints its whole text as printing less", () => {
+    const { container } = render(<CardFace face={faceModel({ defId: "core-052", def: def("core-052"), radiant: true })} />);
+    flushFits();
+    const fits = one(container, ".card-text");
+    expect(fits.hasAttribute("data-short")).toBe(false);
+    expect(fits.hasAttribute("data-less")).toBe(false);
+    cleanup();
+
+    const clamp = faceModel({ defId: "meditative-049-2", def: def("meditative-049-2"), radiant: false });
+    const view = render(<CardFace face={clamp} />);
+    flushFits();
+    const box = one(view.container, ".card-text");
+    expect(box.hasAttribute("data-short")).toBe(false);
+    expect(box.getAttribute("data-less")).toBe("true");
+    expect(one(view.container, ".cf-text-base").textContent).toBe(clamp.text.full);
   });
 });
 

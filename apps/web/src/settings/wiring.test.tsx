@@ -96,11 +96,12 @@ function toggle(testId: string): HTMLInputElement {
 const MYTHIC = Object.values(CATALOG).find((def) => def.rarity === "Mythic");
 
 describe("SETTINGS_SLOTS mounts every task's controls in its own section", () => {
-  it("lists the vibration under gameplay (R669), task 1's effects and task 6's foil under visuals, and task 2's audio under audio, each with a reset", () => {
+  it("lists the vibration under gameplay (R669), task 1's effects, task 6's foil and the full-art switch (R1017001) under visuals, and task 2's audio under audio, each with a reset", () => {
     expect(SETTINGS_SLOTS.map((slot) => [slot.section, slot.id])).toEqual([
       ["gameplay", "haptics"],
       ["visuals", "fx"],
       ["visuals", "card-foil"],
+      ["visuals", "card-full-art"],
       ["audio", "audio"],
       ["gameplay", "language"],
     ]);
@@ -213,6 +214,31 @@ describe("every setting persists and applies live, on a board already on screen"
 
     fireEvent.click(toggle("setting-animatedFoil"));
     expect(face()).toHaveAttribute("data-foil", "animated");
+  });
+
+  it("R1017001 the Full-art cards switch writes task 6's store, and a hero's card shows its text or its art at once", () => {
+    const hero = Object.values(CATALOG).find((def) => def.name === "Gary the Gambler");
+    if (hero === undefined) throw new Error("the catalog has no Gary the Gambler");
+    render(
+      <>
+        <CardFace face={faceModel({ defId: hero.id, def: hero, radiant: false })} layout="full" />
+        <SettingsPanel onClose={noop} />
+      </>,
+    );
+    fireEvent.click(screen.getByTestId("settings-tab-visuals"));
+    expect(screen.getByRole("switch", { name: "Full-art cards" })).toBe(toggle("setting-fullArt"));
+    const face = (): Element | null => document.querySelector(".cf");
+    expect(face()).toHaveAttribute("data-full-art", "true");
+    expect(document.querySelector(".cf .card-text")).toBeNull();
+
+    fireEvent.click(toggle("setting-fullArt"));
+    expect(face()).not.toHaveAttribute("data-full-art");
+    expect(document.querySelector(".cf .card-text")).not.toBeNull();
+    expect(readCardSettings().fullArt).toBe(false);
+    expect(stored(CARD_SETTINGS_KEY)).toMatchObject({ fullArt: false });
+
+    fireEvent.click(toggle("setting-fullArt"));
+    expect(face()).toHaveAttribute("data-full-art", "true");
   });
 
   it("audio: a volume, mute and voice lines write task 2's store, which the engine hears", () => {

@@ -1,5 +1,6 @@
 // Fits card text in its box (docs/polish/6-cards.md, Surface B): tiers start smaller and `useFitText` sets `--cf-fit`, which cards.css applies.
-// Rules text retries full size, then `data-long`, then `data-longest`, before clamping at FIT_FLOOR_PX.
+// Rules text retries full size, then `data-long`, then `data-longest`, before clamping at FIT_FLOOR_PX;
+// a face that prints less than its text (`long: false`, shortText.ts) clamps without the art giving way.
 // Fits batch layout reads and park while `content-visibility: auto` skips a holder.
 
 import { useLayoutEffect, type RefObject } from "react";
@@ -49,6 +50,11 @@ const FLOOR_SLACK_PX = 0.05;
 export type FitOptions = {
   /** Rules-text floor in px; without it, text shrinks to FIT_MIN then clamps. */
   floorPx?: number;
+  /**
+   * Issue #1017: false keeps the art whole: past the floor the text clamps without the long
+   * layouts, its whole text standing beside the face instead (shortText.ts). True when absent.
+   */
+  long?: boolean;
 };
 
 function overflows(element: HTMLElement): boolean {
@@ -166,7 +172,7 @@ function* fit(element: HTMLElement, options: FitOptions): Steps<void> {
   if (yield* readable(element, yield* search(element), floorPx)) return;
 
   // 2. The long layout gives the text more room, and the longest layout more again.
-  if (face !== null) {
+  if (face !== null && options.long !== false) {
     face.setAttribute(LONG_ATTRIBUTE, "true");
     if (yield* readable(element, yield* search(element), floorPx)) return;
     face.setAttribute(LONGEST_ATTRIBUTE, "true");
@@ -313,12 +319,12 @@ function watchFonts(): void {
 
 /** Fits text on resize or content changes; overflowing text clamps and rules text preserves its floor. */
 export function useFitText(ref: RefObject<HTMLElement | null>, content: string, options: FitOptions = {}): void {
-  const { floorPx } = options;
+  const { floorPx, long } = options;
   useLayoutEffect(() => {
     const element = ref.current;
     if (element === null) return undefined;
 
-    const fitOptions: FitOptions = floorPx === undefined ? {} : { floorPx };
+    const fitOptions: FitOptions = { ...(floorPx === undefined ? {} : { floorPx }), ...(long === undefined ? {} : { long }) };
     // The container sizes this box; its first pass establishes the comparison baseline.
     let last: string | undefined;
     const queueFit = (): (() => void) =>
@@ -350,5 +356,5 @@ export function useFitText(ref: RefObject<HTMLElement | null>, content: string, 
       observer.disconnect();
       cancel();
     };
-  }, [ref, content, floorPx]);
+  }, [ref, content, floorPx, long]);
 }

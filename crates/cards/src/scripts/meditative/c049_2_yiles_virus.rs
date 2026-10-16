@@ -1,9 +1,9 @@
 //! M #49.2 Yile's Virus (SPEC §8.8 row 49.2): (2) Unit, CN, Token (printed Mythic),
 //! 0/8 → 0/16, Can't attack.
 //!
-//! "Can't attack. Can't be in Defense Position. Activate: Destroy this. Death: Discard
-//! {discards|random card|random cards}. Start of turn: Deal {damage} damage to each adjacent Unit
-//! that isn't a Yile's Virus, and to your hero."
+//! "Can't attack. Start of turn: Deal {damage} damage to your hero and each adjacent Unit that isn't
+//! a Yile's Virus. Always in Attack Position. Activate: Destroy this. Death: Discard
+//! {discards|random card|random cards}."
 //! Engine: Can't attack is a keyword; "can't be in Defense Position" is #65.1 Spikey Pillow's
 //! `neverDefense` flag, so the token never has Defense's Taunt. Activate (R384) destroys itself
 //! once a turn in its controller's main phase. Death discards at random from its controller's hand

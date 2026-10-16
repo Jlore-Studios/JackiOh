@@ -1,9 +1,9 @@
 //! M #30 Fickle E-Kitten (SPEC §8.8 row 30): (1) Unit, Felinor, Epic, 3/4 → 6/8.
 //!
-//! Base:    "Start of turn: If your opponent has a more expensive permanent than you, they gain
-//! control of this. Otherwise, shuffle a Love Bomb into your deck."
-//! Radiant: "Start of turn: If your opponent has a more expensive permanent than you and a larger
-//! deck, they gain control of this. Otherwise, shuffle a Radiant Love Bomb into your deck."
+//! Base:    "Start of turn: If your opponent has a pricier permanent, they gain control of this.
+//! Otherwise, shuffle a Love Bomb into your deck."
+//! Radiant: "Start of turn: If your opponent has a pricier permanent and a bigger deck, they gain
+//! control of this. Otherwise, shuffle a Radiant Love Bomb into your deck."
 //! Engine: at the start of its controller's turn (§2.2, R62's queue).
 //! - **The condition** compares each side's most expensive permanent with NEW read helper
 //!   `highest_permanent_cost(state, player)` (R901, MD-B5), this card counting for its controller.

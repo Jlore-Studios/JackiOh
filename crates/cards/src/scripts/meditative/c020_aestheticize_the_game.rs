@@ -1,8 +1,7 @@
 //! Meditative #20 Aestheticize the Game (SPEC §8.8 row 20). (1) Spell, Quickdraw, Wincon, Mythic.
-//!   Base:    "Choose one. For the rest of the game, you also win while it is true: your hero has
-//!             {health} or more Health; your graveyard holds {graveyard} or more cards; or your Units
-//!             have {board} or more Attack and {board} or more Health in total."
-//!   Radiant: the same with 90s, then: "Draw {draw} cards."
+//!   Base:    "Choose one. You also win while it's true: your hero has {health}+ Health; your graveyard
+//!             has {graveyard}+ cards; or your Units total {board}+ Attack and {board}+ Health."
+//!   Radiant: the same with 90s, then: "Draw {draw}."
 //!
 //! ME-WIN's chosen condition (R848–R850): the three modes are declared (R81), and the chosen one
 //! installs a rest-of-game player effect on the caster, `altWin { condition, threshold }` (never

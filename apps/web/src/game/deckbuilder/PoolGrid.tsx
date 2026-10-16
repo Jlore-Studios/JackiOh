@@ -12,8 +12,10 @@
 // A click on the card opens its detail view, as the brief asks ("in the deck builder, a click opens
 // a detail view with both faces side by side and a glossary"), and the detail's "Add to <deck>"
 // adds it. So does a right-click, or a touch long-press, which is why the inspect trigger here
-// runs with `hover: false` and hands both gestures to `onInspect`. Adding takes one gesture still:
-// the "+", or a drag onto the deck.
+// hands both gestures to `onInspect`. Adding takes one gesture still: the "+", or a drag onto the
+// deck. A resting mouse opens no preview, but on a card whose face prints less than its whole text
+// (issue #1017: a short form or a clamp, cards/CardFace.tsx `faceText`): its preview has the whole
+// text on the face's left.
 //
 // A card of the newest shipped set wears a small "New" ribbon (`.db-new`) for the patch that ships
 // the set and the one after (R1383, patches/ribbon.ts); its accessible name says "new".
@@ -32,7 +34,7 @@ import { useMemo, type DragEvent, type ReactElement } from "react";
 import type { CardDef, SetName } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
-import { CardFace, faceModel, useInspectTrigger } from "../../cards/index.ts";
+import { CardFace, faceModel, faceText, useInspectTrigger } from "../../cards/index.ts";
 import { CARD_TABLES, readerName } from "../../cards/chinese.ts";
 import { costText } from "../../patches/diff.ts";
 import { NEW_RIBBON_SET } from "../../patches/ribbon.ts";
@@ -130,7 +132,7 @@ function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): React
   const inspect = useInspectTrigger(
     { key: poolCardId(cardId), face },
     {
-      hover: false,
+      hover: faceText(face).less,
       onLongPress: () => {
         onInspect(cardId);
       },

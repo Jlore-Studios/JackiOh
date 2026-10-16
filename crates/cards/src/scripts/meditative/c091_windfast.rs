@@ -1,11 +1,10 @@
 //! M #91 Windfast (SPEC §8.8 row 91): (1) Unit, Epic, Catalyst, 1/1 → 2/2, Rush and Windfury on both
 //! faces.
 //!
-//! Base:    "Tribute 1, Rush, Windfury\nWhen this would attack, summon a random Unit from your hand to
-//!            make that attack instead. Bounce it afterwards if it survives.\nDeath: Shuffle a
-//!            Windfurious Prime into your deck."
-//! Radiant: "Tribute 1, Rush, Windfury\nWhen this would attack, summon a random Unit from your hand to
-//!            make that attack instead.\nDeath: Shuffle a Radiant Windfurious Prime into your deck."
+//! Base:    "Tribute 1, Rush, Windfury\nA random hand Unit is summoned to make each of its attacks, then
+//!            Bounced.\nDeath: Shuffle a Windfurious Prime into your deck."
+//! Radiant: "Tribute 1, Rush, Windfury\nA random hand Unit is summoned to make each of its attacks.\nDeath:
+//!            Shuffle a Radiant Windfurious Prime into your deck."
 //! Engine: `tribute` 1, `attack_from_hand` on both faces, `bounce_attacker` on the base face only
 //! (ME-ATTACKSUMMON, R1202, R831006: the Unit the match rng's since patch v0.3.10, the controller's
 //! pick before); a `death` hook shuffling in `meditative-091-1` — Radiant on the Radiant face. Tribute,
@@ -92,7 +91,7 @@ mod tests {
                 assert!(def.radiant.keywords.contains(&Keyword::Windfury));
                 assert_eq!(
                     def.base.text,
-                    "Tribute 1, Rush, Windfury\nWhen this would attack, summon a random Unit from your hand to make that attack instead. Bounce it afterwards if it survives.\nDeath: Shuffle a Windfurious Prime into your deck."
+                    "Tribute 1, Rush, Windfury\nA random hand Unit is summoned to make each of its attacks, then Bounced.\nDeath: Shuffle a Windfurious Prime into your deck."
                 );
                 assert_eq!(def.refs, Some(vec![PRIME.to_string()]));
                 let all = registered_scripts();
@@ -216,7 +215,7 @@ mod tests {
                 let def = crate::card_def(ID);
                 assert_eq!(
                     def.radiant.text,
-                    "Tribute 1, Rush, Windfury\nWhen this would attack, summon a random Unit from your hand to make that attack instead.\nDeath: Shuffle a Radiant Windfurious Prime into your deck."
+                    "Tribute 1, Rush, Windfury\nA random hand Unit is summoned to make each of its attacks.\nDeath: Shuffle a Radiant Windfurious Prime into your deck."
                 );
                 let all = registered_scripts();
                 let flags = all[ID].radiant.static_flags.as_ref().expect("flags");

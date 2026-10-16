@@ -9,7 +9,7 @@ import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../cards/settings.ts"
 import { DEFAULT_FX_SETTINGS, setFxSettings } from "../fx/settings.ts";
 import { DEFAULT_HAPTICS_SETTINGS, writeHapticsSettings } from "../haptics/settings.ts";
 import { resetLocale } from "../i18n/i18n.ts";
-import { AnimatedFoilSwitch, FxControls, LanguageSelect, VibrationSwitch } from "./controls.tsx";
+import { AnimatedFoilSwitch, FullArtSwitch, FxControls, LanguageSelect, VibrationSwitch } from "./controls.tsx";
 
 export type SettingsSectionId = "gameplay" | "visuals" | "audio";
 
@@ -45,6 +45,14 @@ export const SETTINGS_SLOTS: readonly SettingsSlot[] = [
     render: () => createElement(AnimatedFoilSwitch),
     reset: () => {
       writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
+    },
+  },
+  {
+    section: "visuals",
+    id: "card-full-art",
+    render: () => createElement(FullArtSwitch),
+    reset: () => {
+      writeCardSettings({ fullArt: CARD_SETTINGS_DEFAULTS.fullArt });
     },
   },
   {
