@@ -50,7 +50,7 @@ use crate::api::http::{
 };
 use crate::api::queue::{new_seed, new_uuid, seed_override_of};
 use crate::app::{App, now_ms};
-use crate::config::{DUOS_ROOM_TTL_MS, ROOM_CODE_LENGTH};
+use crate::config::{DUOS_ROOM_TTL_MS, MAX_OPEN_ROOMS_PER_HOST, ROOM_CODE_LENGTH};
 use crate::db::store::Profile;
 use crate::duos::engine::{self, Pinned};
 use crate::duos::live_match_of;
@@ -248,6 +248,20 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
 
     let now = now_ms();
     let expires_at = now + DUOS_ROOM_TTL_MS;
+
+    // R890000, R1047002: one host holds at most `MAX_OPEN_ROOMS_PER_HOST` co-op rooms nobody has
+    // joined, counted apart from their 1v1 rooms, so its rooms cannot amplify a seat race without
+    // bound. Advisory: the claim in `join` is what stops a second match, not this count.
+    let open = one_tx!(app.db, |t| t
+        .duos_rooms_count_open_by_host(&profile.id, now)
+        .await?)?;
+    if open >= MAX_OPEN_ROOMS_PER_HOST {
+        return Err(ApiError::new(
+            ApiErrorCode::Conflict,
+            "you have too many co-op rooms open; wait for someone to join or let one expire",
+        ));
+    }
+
     for _attempt in 0..CODE_ATTEMPTS {
         let code = random_code(ROOM_CODE_LENGTH);
         let room = DuosRoom {

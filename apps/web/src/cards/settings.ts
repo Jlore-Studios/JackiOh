@@ -5,13 +5,14 @@
 
 import { useSyncExternalStore } from "react";
 
-export type CardSettings = { hoverPreviews: boolean; animatedFoil: boolean };
+export type CardSettings = { hoverPreviews: boolean; animatedFoil: boolean; fullArt: boolean };
 
 export const CARD_SETTINGS_KEY = "jackioh.cards.settings.v1";
 
 export const CARD_SETTINGS_DEFAULTS: Readonly<CardSettings> = Object.freeze({
   hoverPreviews: true,
   animatedFoil: true,
+  fullArt: true,
 });
 
 type CardSettingsField = {
@@ -34,9 +35,15 @@ export const CARD_SETTINGS_FIELDS: readonly CardSettingsField[] = [
     label: "Animated foil",
     description: "Mythic and Radiant cards shimmer. Off shows the foil standing still.",
   },
+  {
+    key: "fullArt",
+    section: "visuals",
+    label: "Full-art cards",
+    description: "The heroes' cards show only their art and name; hover or click one to read it. Off shows their text like any card.",
+  },
 ];
 
-const SETTING_KEYS: readonly (keyof CardSettings)[] = ["hoverPreviews", "animatedFoil"];
+const SETTING_KEYS: readonly (keyof CardSettings)[] = ["hoverPreviews", "animatedFoil", "fullArt"];
 
 /**
  * The value of a write that storage refused, and what storage held at that moment (`undefined`
@@ -115,7 +122,7 @@ let snapshot: CardSettings = CARD_SETTINGS_DEFAULTS;
 
 function getSnapshot(): CardSettings {
   const next = readCardSettings();
-  if (next.hoverPreviews !== snapshot.hoverPreviews || next.animatedFoil !== snapshot.animatedFoil) {
+  if (SETTING_KEYS.some((key) => next[key] !== snapshot[key])) {
     snapshot = next;
   }
   return snapshot;

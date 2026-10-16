@@ -72,6 +72,9 @@ pub struct App {
     /// SPEC S7: the friend requests' and chat's own allowances (B43, B53), held here for the
     /// limiter's reason.
     pub social: crate::social::Social,
+    /// #1035: the setup of the blocking job a whole-log fold runs in (`actor::engine::off_runtime`):
+    /// `actor::engine::registered_thread` here; a test's carries its thread's cards over.
+    pub engine_thread: actor::engine::EngineThread,
 }
 
 // ---------------------------------------------------------------------------
@@ -759,6 +762,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         queue_presence: api::queue::QueuePresence::new(),
         // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
         social: crate::social::Social::default(),
+        engine_thread: actor::engine::registered_thread,
     });
 
     if app.env.e2e {

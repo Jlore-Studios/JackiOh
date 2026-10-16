@@ -89,6 +89,46 @@ if [ "${JACKIOH_WASM_NORMAL:-1}" = 0 ] && [ "${JACKIOH_WASM_LUAU:-1}" = 0 ]; the
   exit 1
 fi
 
+# #997: on Vercel (VERCEL=1) the built modules are kept for the next deploy. Vercel's build cache
+# keeps only node_modules directories, so target/ and .cache/emsdk start empty and every deploy
+# built both modules from nothing (about 10 of a 12-minute build). The modules go in
+# node_modules/.cache/jackioh-wasm/<key>, the key a hash of everything they are built from: the
+# crates they compile (MODULE_CRATES, held to the workspace's path dependencies by
+# apps/web/src/net/build-wasm-cache.test.ts), every manifest, the lockfile, .cargo/, the toolchain
+# pin, this script (the wasm-bindgen and emsdk pins) and the JACKIOH_WASM_* flags. A deploy with the
+# same key copies them back and builds nothing; any other builds and keeps its own modules in place
+# of the last. Anywhere else nothing is kept: cargo's own cache already makes a rebuild quick.
+MODULE_CRATES="crates/engine crates/cards crates/ai crates/luau crates/wasm"
+CACHE_DIR="$ROOT/node_modules/.cache/jackioh-wasm"
+key=""
+if [ "${VERCEL:-}" = 1 ]; then
+  if command -v sha256sum >/dev/null 2>&1; then sum="sha256sum"; else sum="shasum -a 256"; fi
+  # shellcheck disable=SC2086 # MODULE_CRATES and sum are word lists.
+  key=$(
+    {
+      echo "preview=${JACKIOH_WASM_PREVIEW:-1} duos=${JACKIOH_WASM_DUOS:-0} normal=${JACKIOH_WASM_NORMAL:-1} luau=${JACKIOH_WASM_LUAU:-1}"
+      find $MODULE_CRATES crates/*/Cargo.toml Cargo.toml Cargo.lock .cargo rust-toolchain.toml scripts/build-wasm.sh \
+        -type f -print0 | LC_ALL=C sort -zu | xargs -0 $sum
+    } | $sum | cut -c1-32
+  )
+  # An empty key (no hasher) keeps and restores nothing.
+  if [ -n "$key" ] && [ -d "$CACHE_DIR/$key" ]; then
+    mkdir -p "$OUT_DIR"
+    cp -R "$CACHE_DIR/$key/." "$OUT_DIR/"
+    echo "build-wasm: restored the modules from Vercel's build cache ($key); nothing to build"
+    exit 0
+  fi
+fi
+# What this run built, kept under its key (above) in place of whatever was kept before.
+keep() {
+  [ -n "$key" ] || return 0
+  rm -rf "$CACHE_DIR"
+  mkdir -p "$CACHE_DIR"
+  cp -R "$OUT_DIR" "$CACHE_DIR/$key.partial"
+  mv "$CACHE_DIR/$key.partial" "$CACHE_DIR/$key"
+  echo "build-wasm: kept the modules in Vercel's build cache ($key)"
+}
+
 if [ "${JACKIOH_WASM_NORMAL:-1}" = 1 ]; then
   # The target. rust-toolchain.toml lists it, but a toolchain installed before that line existed has
   # none, and rustup adds a toolchain file's targets only when it installs the toolchain itself.
@@ -167,7 +207,10 @@ fi
 # `jackioh_wasm_luau.d.ts` for the factory's types (written here, since `emcc` emits none).
 case "${JACKIOH_WASM_LUAU:-1}" in
   1) ;;
-  0) exit 0 ;;
+  0)
+    keep
+    exit 0
+    ;;
   *)
     echo "build-wasm: JACKIOH_WASM_LUAU is 1 (the default) or 0, not \"$JACKIOH_WASM_LUAU\"" >&2
     exit 1
@@ -269,3 +312,4 @@ declare const createModule: (options?: { wasmBinary?: BufferSource }) => Promise
 export default createModule;
 TYPES
 echo "build-wasm: wrote $LUAU_OUT_DIR"
+keep

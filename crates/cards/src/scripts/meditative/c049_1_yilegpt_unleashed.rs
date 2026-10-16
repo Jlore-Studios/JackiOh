@@ -1,9 +1,9 @@
 //! M #49.1 YileGPT Unleashed (SPEC §8.8 row 49.1): (10) Unit, CN, Acclaimed, Prime, Token (printed
 //! Mythic), 8/20 → 16/40, Can't attack (Radiant: Can't attack, Armor 5).
 //!
-//! "Cry: Do {picks} of these at random …" / Radiant "Cry: [all five] …" plus "Start of turn: Make
-//! [a random permanent / {radiants} random permanents] of yours Radiant" and "Whenever your turn
-//! ends with unspent mana, this costs that much less."
+//! "Start of turn: Make [a random permanent / {radiants} random permanents] of yours Radiant" and
+//! "Whenever your turn ends with unspent mana, this costs that much less." plus "Cry: Do {picks} of
+//! these at random …" / Radiant "Cry: [all five] …"
 //! Engine:
 //! - The discount is a hand trigger and a deck trigger (R464) on its owner's `turnEnded`: they read
 //!   the event's `unspentMana` (the number Bread and Butter reads) into a `costMod` of minus that

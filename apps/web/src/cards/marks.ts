@@ -42,13 +42,13 @@ export const MARK_PALETTES = {
   cyan: { rim: "#4fe3ff", core: "#e0fbff", glow: "#0fa3c4", preset: "frost" },
   blue: { rim: "#6b94ff", core: "#e3eaff", glow: "#2349c9", preset: "frost" },
   orange: { rim: "#ff9a3d", core: "#fff1de", glow: "#d1570a", preset: "ember" },
-  // Meditative #39.5 Jade Beauty's Allure (`ALLURE_MARK_COLOR`), pink (R963).
+  // Allure's (`ALLURE_MARK_COLOR`), pink: Jade Beauty's and K-Pop Fanatic's (R963, R1045000).
   pink: { rim: "#ff7ac8", core: "#ffe3f3", glow: "#c2187a", preset: "arcane" },
 } as const satisfies Readonly<Record<string, MarkPalette>>;
 
 export type MarkColor = keyof typeof MARK_PALETTES;
 
-/** What an unknown colour key is drawn in: the corruption purple #50 uses. */
+/** What an unknown colour key is drawn in: the corruption purple of the `steal` mark. */
 export const DEFAULT_MARK_COLOR: MarkColor = "purple";
 
 function isMarkColor(color: string): color is MarkColor {
@@ -68,16 +68,16 @@ export function paletteFor(color: string): MarkPalette {
 export type MarkWords = { name: string; text: string };
 
 export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
-  // #50 K-Pop Fanatic: "At the start of your next turn, steal it" (your: the Fanatic's controller).
+  // Meditative #76 Do or Die: "At the start of your next turn, steal each marked card" (your: the caster's).
   steal: { name: "Steal", text: "Marked: stolen at the start of its marker's next turn" },
   // B5 E35: the mark a unit going Berserk is announced with (C+ #19.2, C+ #19.5).
   berserk: { name: "Berserk", text: BERSERK_WORDS },
   // Classic #20 The Power to Punish: the unit marked for death wears #50's aura, in red (R437).
   destroy: { name: "Destroy", text: "Marked: destroyed at the start of its marker's next turn" },
-  // Meditative #39.5 Jade Beauty: "at the start of your next turn, steal them" (R963).
+  // Allure (R963, R1045000): Meditative #39.5 Jade Beauty's every enemy Unit, #50 K-Pop Fanatic's one enemy permanent.
   allure: {
     name: "Allure",
-    text: "Marked: joins its marker's side at the start of their next turn, or dies with no room",
+    text: "Marked: joins its marker's side at the start of their next turn, or is destroyed with no room",
   },
 };
 

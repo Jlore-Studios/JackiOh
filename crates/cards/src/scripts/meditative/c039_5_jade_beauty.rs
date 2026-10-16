@@ -3,10 +3,15 @@
 //!
 //!   Base:    "Can't attack, Indestructible, Immutable
 //!            End of turn: Allure every enemy Unit.
-//!            You summon this when your Jade Counter reaches 5."
+//!            You summon this when your Jade Counter reaches 5.
+//!            At the start of your next turn, steal the Units this charmed, or they die of heartbreak
+//!            if you have no room."
 //!   Radiant: "Indestructible, Immutable
 //!            End of turn: Allure every enemy Unit.
-//!            Your Jade Beauties become Radiant when your Jade Counter reaches 10."
+//!            Your Jade Beauties become Radiant when your Jade Counter reaches 10.
+//!            At the start of your next turn, steal the Units this charmed, or they die of heartbreak
+//!            if you have no room." (The last line is Allure's reminder, which the face hides behind
+//!            "…", #1017.)
 //!
 //! Engine: a Unit token that ME-JADE summons (no Cry). Indestructible (R46). Immutable (R23): no
 //! Nerf, Buff, Transform or Fuse-onto, though Radiant still applies. Each end of its controller's

@@ -43,3 +43,6 @@ export const STATS_TOP_CARDS = 3;
  */
 export const CARD_STATS_MIN_SAMPLE = 20;
 
+
+/** R654: how long the players tab waits after the last change to its search before it asks the server, in ms. */
+export const PLAYER_SEARCH_DEBOUNCE_MS = 300;

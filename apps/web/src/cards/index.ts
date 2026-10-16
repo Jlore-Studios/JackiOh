@@ -32,7 +32,19 @@ export {
 } from "./inPlay.ts";
 export type { RolledPower } from "./inPlay.ts";
 
-export { ASCENT_LABEL, SUMMIT_DEF_ID, ascentLevelOf, summitShortText } from "./shortText.ts";
+export {
+  ASCENT_LABEL,
+  MORE,
+  SHORT_FORMS,
+  SUMMIT_DEF_ID,
+  ascentLevelOf,
+  cutText,
+  faceLines,
+  overLimit,
+  shortFormOf,
+  summitShortText,
+} from "./shortText.ts";
+export type { ShortForm, TextLimit } from "./shortText.ts";
 
 export { GLOSSARY, KEYWORD_MARK } from "./glossary.ts";
 export type { GlossaryEntry, GlossaryTermId, StatusTermId, TriggerTermId, VerbTermId } from "./glossary.ts";
@@ -45,6 +57,7 @@ export type { LengthTier } from "./fit.ts";
 
 export {
   FACE_ASPECT,
+  FACE_TEXT_LIMIT,
   FACE_TEXT_MIN_HEIGHT_PX,
   FIT_MIN,
   REF_HOVER_DELAY_MS,
@@ -52,6 +65,7 @@ export {
   REF_TOOLTIP_HEIGHT_PX,
   FIT_STEPS,
   NAME_TIER_MAX,
+  PREVIEW_TEXT_LIMIT,
   TEXT_TIER_MAX,
   TIER_SCALE,
 } from "./constants.ts";
@@ -73,8 +87,8 @@ export {
 } from "./wheel/StackSheet.tsx";
 export type { StackSheetProps } from "./wheel/StackSheet.tsx";
 
-export { CardFace } from "./CardFace.tsx";
-export type { CardFaceProps } from "./CardFace.tsx";
+export { CardFace, faceText } from "./CardFace.tsx";
+export type { CardFaceProps, RulesBox } from "./CardFace.tsx";
 export { MinionFace } from "./MinionFace.tsx";
 export type { MinionFaceProps } from "./MinionFace.tsx";
 export { CardBack } from "./CardBack.tsx";

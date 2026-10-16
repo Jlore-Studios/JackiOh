@@ -100,9 +100,9 @@ function modelLayout(model: Model): void {
   });
 }
 
-function Probe({ content }: { content: string }): ReactElement {
+function Probe({ content, long }: { content: string; long?: boolean }): ReactElement {
   const ref = useRef<HTMLSpanElement>(null);
-  useFitText(ref, content, { floorPx: FIT_FLOOR_PX });
+  useFitText(ref, content, { floorPx: FIT_FLOOR_PX, ...(long === undefined ? {} : { long }) });
   return (
     <span className="cf">
       <span data-probe="text" ref={ref}>
@@ -112,9 +112,9 @@ function Probe({ content }: { content: string }): ReactElement {
   );
 }
 
-function fitted(model: Model): { text: HTMLElement; face: HTMLElement; font: number } {
+function fitted(model: Model, long?: boolean): { text: HTMLElement; face: HTMLElement; font: number } {
   modelLayout(model);
-  const { container } = render(<Probe content="rules" />);
+  const { container } = render(<Probe content="rules" {...(long === undefined ? {} : { long })} />);
   flushFits();
   const text = container.querySelector<HTMLElement>('[data-probe="text"]');
   const face = container.querySelector<HTMLElement>(".cf");
@@ -171,6 +171,16 @@ describe("the rules box's reading floor", () => {
     expect(font).toBeLessThan(FIT_FLOOR_PX + 0.05);
     const lines = Number(text.style.getPropertyValue("--cf-clamp-lines"));
     expect(lines).toBe(Math.floor((120 - 2 * PADDING) / (font * LINE_HEIGHT)));
+  });
+
+  it("R1017000 a face that prints less than its text clamps at the floor in its own box, the art whole", () => {
+    // The same text that took the long layout above: with `long: false` the face never takes it.
+    const { text, face, font } = fitted({ basePx: 11, tierScale: 0.62, box: 80, longBox: 120, need: 1.2 }, false);
+    expect(face.hasAttribute(LONG_ATTRIBUTE)).toBe(false);
+    expect(face.hasAttribute(LONGEST_ATTRIBUTE)).toBe(false);
+    expect(text.getAttribute("data-clamped")).toBe("true");
+    expect(font).toBeGreaterThanOrEqual(FIT_FLOOR_PX);
+    expect(Number(text.style.getPropertyValue("--cf-clamp-lines"))).toBe(Math.floor((80 - 2 * PADDING) / (font * LINE_HEIGHT)));
   });
 
   it("fits a face too small for the floor as before: shrink, and clamp only past FIT_MIN", () => {

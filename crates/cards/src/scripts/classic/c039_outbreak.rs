@@ -1,7 +1,7 @@
 //! C #39 Outbreak (SPEC §8.6 row 39). (1) Spell, Epic.
-//!   Base:    "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy permanent with
-//!            at least as many Plague Counters as its cost, steal it. Otherwise, draw a card for each
-//!            Plague Counter on it." — 1 token
+//!   Base:    "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy's with at
+//!            least its cost in Plague Counters, steal it. Otherwise, draw 1 per Plague Counter on it."
+//!            — 1 token
 //!   Radiant: the same text — 2 tokens
 //!
 //! The target is any permanent on either side, face-down ones included, declared with the play (R81); a face-down

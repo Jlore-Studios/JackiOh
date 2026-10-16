@@ -53,6 +53,25 @@ function connectionWords(state: DuosConnection): string {
   }
 }
 
+/** The connection line: the words for a player, the raw state for tests, and a retry while reconnecting. */
+function ConnectionLine({ state, onReconnect }: { state: DuosConnection; onReconnect: () => void }): ReactElement {
+  return (
+    <>
+      <span data-testid={duosTestid.connection} data-connection={state}>
+        {connectionWords(state)}
+      </span>
+      {state === "reconnecting" ? (
+        <>
+          {" "}
+          <button type="button" className="link-button" data-testid={duosTestid.reconnect} onClick={onReconnect}>
+            {t("Reconnect now")}
+          </button>
+        </>
+      ) : null}
+    </>
+  );
+}
+
 function monotonic(): number {
   return typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
 }
@@ -152,9 +171,7 @@ export function DuosRoute({ matchId }: { matchId: string }): ReactElement {
       status: (
         <>
           {t("Co-op match")} ·{" "}
-          <span data-testid={duosTestid.connection} data-connection={match.connection}>
-            {connectionWords(match.connection)}
-          </span>
+          <ConnectionLine state={match.connection} onReconnect={match.connect} />
           {DEV_ONLY ? (
             <>
               {" "}· {t("match")} <code>{matchId}</code>
@@ -172,7 +189,7 @@ export function DuosRoute({ matchId }: { matchId: string }): ReactElement {
       },
     }),
     // `locale`: the words are drawn in the reader's language, and follow a switch (#711).
-    [match.connection, match.clock, match.teammate, matchId, locale],
+    [match.connection, match.connect, match.clock, match.teammate, matchId, locale],
   );
 
   if (view === null) {
@@ -193,9 +210,7 @@ export function DuosRoute({ matchId }: { matchId: string }): ReactElement {
     return (
       <Loading what="Joining the co-op match…" slow testId={duosTestid.connecting}>
         <p className="auth-hint">
-          <span data-testid={duosTestid.connection} data-connection={match.connection}>
-            {connectionWords(match.connection)}
-          </span>
+          <ConnectionLine state={match.connection} onReconnect={match.connect} />
         </p>
       </Loading>
     );

@@ -234,10 +234,11 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
     "An attack on it is legal only from the enemy unit zone of its own lane",
   ),
   Berserk: status("Berserk", "While Berserk, at the start and end of its controller's turn this attacks its own hero"),
-  // Patch v0.3.7 (R781005): the pool's name, printed lower-case ("random combat keywords").
+  // Patch v0.3.7 (R781005): the pool's name, printed lower-case ("random combat keywords"); patch
+  // v0.3.Y (R1025000) took Armor 1 and Spell Damage +1 out of it.
   "Combat keyword": status(
     "Combat keyword",
-    "One of the keywords Units fight with: Taunt, Armor 1, Rush, Charge, First Strike, Flying, Ranged, Poisonous, Reborn, Divine Shield, Windfury, Cleave, Indestructible, Deft, Spell Damage +1, Lifesteal, Pierce, Trample",
+    "One of the keywords Units fight with: Taunt, Rush, Charge, First Strike, Flying, Ranged, Poisonous, Reborn, Divine Shield, Windfury, Cleave, Indestructible, Deft, Lifesteal, Pierce, Trample",
     { aliases: ["combat keywords", "combat keyword"] },
   ),
 
@@ -302,7 +303,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   }),
   Allure: verb(
     "Allure",
-    "Steal the marked enemy Units at the start of your next turn; one you have no room for dies",
+    "Steal the marked enemy permanents at the start of your next turn; one you have no room for is destroyed",
   ),
   "Jade Counter": verb("Jade Counter", "A public count each player has, that only rises"),
   // R1384: §6.3's words the Meditative cards print; "hand size" matches as #79 prints it.

@@ -5,7 +5,7 @@
 
 import { useId, type CSSProperties, type ReactElement } from "react";
 
-import { CARD_SETTINGS_FIELDS, useCardSettings, writeCardSettings } from "../cards/settings.ts";
+import { CARD_SETTINGS_FIELDS, useCardSettings, writeCardSettings, type CardSettings } from "../cards/settings.ts";
 import { FX_SPEED_DEFAULT, FX_SPEED_MAX, FX_SPEED_MIN, FX_SPEED_STEP } from "../fx/constants.ts";
 import { useFxSettings, type FxIntensity } from "../fx/settings.ts";
 import { useHapticsSettings, writeHapticsSettings } from "../haptics/settings.ts";
@@ -148,34 +148,44 @@ export function FxControls(): ReactElement {
   );
 }
 
-/** Task 6's words for its foil switch (cards/settings.ts), so the panel and the module agree. */
-const FOIL_FIELD = CARD_SETTINGS_FIELDS.find((field) => field.key === "animatedFoil");
-
-/** Task 6's animated foil on Mythic and Radiant faces. */
-export function AnimatedFoilSwitch(): ReactElement {
+/** A card presentation switch in Task 6's words (cards/settings.ts), so the panel and the module agree. */
+function CardSettingSwitch({ setting }: { setting: "animatedFoil" | "fullArt" }): ReactElement {
   const settings = useCardSettings();
   const hintId = useId();
+  const field = CARD_SETTINGS_FIELDS.find((entry) => entry.key === setting);
   return (
     <div className="settings-row">
       <label className="settings-control">
-        <span className="settings-label">{t(FOIL_FIELD?.label ?? "Animated foil")}</span>
+        <span className="settings-label">{t(field?.label ?? setting)}</span>
         <input
           type="checkbox"
           role="switch"
           className="settings-switch"
-          data-testid="setting-animatedFoil"
-          checked={settings.animatedFoil}
+          data-testid={`setting-${setting}`}
+          checked={settings[setting]}
           aria-describedby={hintId}
           onChange={(event) => {
-            writeCardSettings({ animatedFoil: event.currentTarget.checked });
+            const patch: Partial<CardSettings> = {};
+            patch[setting] = event.currentTarget.checked;
+            writeCardSettings(patch);
           }}
         />
       </label>
       <p className="settings-hint" id={hintId}>
-        {FOIL_FIELD === undefined ? null : t(FOIL_FIELD.description)}
+        {field === undefined ? null : t(field.description)}
       </p>
     </div>
   );
+}
+
+/** Task 6's animated foil on Mythic and Radiant faces. */
+export function AnimatedFoilSwitch(): ReactElement {
+  return <CardSettingSwitch setting="animatedFoil" />;
+}
+
+/** R1017001: the hero portraits' cards drawn as full art, or with their text like any card. */
+export function FullArtSwitch(): ReactElement {
+  return <CardSettingSwitch setting="fullArt" />;
 }
 
 /** R669: the vibration on a drop, a hit and the viewer's turn start, on a phone that has one. */

@@ -95,7 +95,7 @@ export function isSelected(highlight: Highlight | undefined, testId: string | un
   return (highlight ?? NO_HIGHLIGHT).selected.has(testId);
 }
 
-/** `data-legal` is the only gate on firing `onClick`; see the drag note below. */
+/** `data-legal` is the only gate on firing `onClick` but R979000's reason; see the drag note below. */
 export function legalAttr(legal: boolean): "true" | "false" {
   return legal ? "true" : "false";
 }
@@ -234,9 +234,9 @@ function formOf(card: CardView | null, unit: UnitView | null | undefined, type: 
   return "full";
 }
 
-/** R849000: a card's native tooltip, its name and why your own unit cannot attack now. */
-function cardTitle(name: string, unit: UnitView | null | undefined): string {
-  const reason = unit?.attackReason;
+/** R849000: a card's native tooltip, its name and why your own unit cannot attack now; R979000: a card in hand that cannot be played says why instead. */
+function cardTitle(name: string, unit: UnitView | null | undefined, card: CardView | null): string {
+  const reason = unit?.attackReason ?? (unit == null ? card?.playReason : undefined);
   return reason === undefined ? name : t("{name}: {reason}", { name, reason: t(reason) });
 }
 
@@ -301,9 +301,12 @@ export default function Card(props: CardProps): ReactElement {
   const selected = isSelected(props.highlight, testId);
   const clickable = target !== null && target !== undefined;
   const animatingEvent = testId === undefined ? undefined : props.animating?.get(testId);
+  // R979000: a card in your hand the view says cannot be played stays greyed out, as `legal` offers
+  // it nothing, but its click still reaches the board, which shows `playReason` and sends nothing.
+  const explains = card?.playReason !== undefined;
 
   function fire(event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>): void {
-    if (!clickable || !legal) return;
+    if (!clickable || !(legal || explains)) return;
     event.stopPropagation();
     props.onClick?.(target);
   }
@@ -441,7 +444,7 @@ export default function Card(props: CardProps): ReactElement {
       style={position === "DEF" ? { transform: "rotate(90deg) scale(0.72)" } : undefined}
       // The hover preview replaces the native tooltip; with previews off, the name comes back, and
       // with it (R849000) the engine's reason a unit of yours cannot attack now.
-      title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit)}
+      title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit, card)}
     >
       {unit !== undefined && unit !== null ? (
         <MinionFace face={face} unit={unit} />

@@ -1,11 +1,10 @@
 //! C #88 Siphon Squad (SPEC §8.6 row 88). (2) Field Trap, Rare.
-//!   Base:    "Start of Turn: Reveal.
-//!            Aura: Enemy Units have −X Attack, where X is {multiplier}× the number of Units your opponent
-//!            controls.
-//!            When your opponent controls no Units, Tribute this." — ×2
-//!   Radiant: "Start of Turn: Reveal.
+//!   Base:    "Start of turn: Reveal.
+//!            Aura: Enemy Units have −X Attack, where X is {multiplier}× their number.
+//!            When your opponent has no Units, Tribute this." — ×2
+//!   Radiant: "Start of turn: Reveal.
 //!            Aura: Enemy Units have 0 Attack.
-//!            When your opponent controls no Units, Tribute this."
+//!            When your opponent has no Units, Tribute this."
 //!   Engine:  "A layer-5 aura (§10.4), attack floored at 0; the Radiant's "0 attack" sets attack last, after
 //!            every other layer. The self-Tribute is a condition checked at every state check, the one right
 //!            after it is set included. … live while face-down … (R403). The base face's `preview` (R280)

@@ -1,8 +1,8 @@
 //! C #42 Transmutable Toxins (SPEC §8.6 row 42, §6.2 Activate, §6.3 Plague Counter, §10.4 layer 5; R60,
 //! R69, R384). Field Spell, cost 2, Rare.
-//!   Base:    "Aura: Your Units have +{stats}/+{stats} for each Plague Counter on them. Enemy Units have
-//!            −{stats}/−{stats} for each Plague Counter on them.\nActivate: Place a Plague Counter on each
-//!            of {tokens|random Unit|random Units}." (stats 1, tokens 2)
+//!   Base:    "Aura: Your Units have +{stats}/+{stats}, enemy Units −{stats}/−{stats}, per Plague Counter
+//!            on them.\nActivate: Place a Plague Counter on each of {tokens|random Unit|random Units}."
+//!            (stats 1, tokens 2)
 //!   Radiant: the same words with stats 2.
 //!
 //! THE AURA is §10.4's layer 5, recomputed on every read: each unit on the field carrying Plague Tokens

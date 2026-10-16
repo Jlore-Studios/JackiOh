@@ -83,7 +83,7 @@ mod tests {
     const DISCARDABLE: [&str; 3] = ["core-001", "core-002", "core-003"];
     const LIBRARY: [&str; 4] = ["core-008", "core-008", "core-008", "core-008"];
 
-    /// R21's pool as keyword KINDS ("Armor 1" and "Spell Damage 1" are numbered, §6.1, R781005).
+    /// R21's pool as keyword KINDS (§6.1, R781005, R1025000).
     fn pool_kinds() -> IndexSet<String> {
         random_pool_keywords()
             .iter()

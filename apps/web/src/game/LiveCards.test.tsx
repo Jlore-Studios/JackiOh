@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   CONCEALED_TEXT,
   CardDetail,
+  INSPECT_DETAIL,
   INSPECT_FACE_BASE,
   INSPECT_FACE_RADIANT,
   INSPECT_HOVER,
@@ -233,8 +234,11 @@ describe("R752 a Heroic Power in play prints the one power it rolled", () => {
 
   it("in the collection: the whole list of thirteen, base and radiant", () => {
     render(<CardDetail def={def("core-098")} onClose={() => {}} />);
+    // R1017000: each face prints its header and "…", and the detail's rules print the whole list.
     expect(text(screen.getByTestId(INSPECT_FACE_BASE), ".card-text")).toContain("Gain one of 13 random powers");
-    expect(text(screen.getByTestId(INSPECT_FACE_RADIANT), ".card-text")).toContain("Recruit a permanent. Make it Radiant.");
+    expect(text(screen.getByTestId(INSPECT_FACE_RADIANT), ".card-text")).toContain("…");
+    const rules = screen.getByTestId(INSPECT_DETAIL).querySelector(".inspect-rules");
+    expect(rules?.textContent).toContain("Recruit a permanent. Make it Radiant.");
   });
 });
 
@@ -255,8 +259,11 @@ describe("Call to Chaos reads ??? in play and its real text in the collection", 
 
   it("the collection's detail view prints both faces' real text", () => {
     render(<CardDetail def={def("core-095")} onClose={() => {}} />);
-    expect(text(screen.getByTestId(INSPECT_FACE_BASE), ".card-text")).toContain("Summon 3 random (3) Cost Units");
+    // R1017000: each face prints its text up to its colon, "…" in its place, and the detail's rules print it whole.
+    expect(text(screen.getByTestId(INSPECT_FACE_BASE), ".card-text")).toBe("One random effect…");
     expect(text(screen.getByTestId(INSPECT_FACE_RADIANT), ".card-text")).toContain("Three different random effects");
+    const rules = screen.getByTestId(INSPECT_DETAIL).querySelector(".inspect-rules");
+    expect(rules?.textContent).toContain("Summon 3 random (3) Cost Units");
   });
 });
 

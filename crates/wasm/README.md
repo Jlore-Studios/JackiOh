@@ -47,6 +47,14 @@ feature (#936's Duos bindings, which only the development-only `/dev/duos` calls
 and on only for `predev` (`JACKIOH_WASM_DUOS=1`), so no other module, the one a player loads
 included, carries them.
 
+On Vercel (`VERCEL=1`) it also keeps what it built for the next deploy (#997). Vercel's build cache
+keeps only `node_modules` directories, so `target/` and the emsdk start empty on every deploy. The
+script therefore copies `pkg/`, both modules, into `node_modules/.cache/jackioh-wasm/<key>`. The key
+is a hash of everything the modules are built from: this crate and the four it compiles (held to the
+workspace's path dependencies by `apps/web/src/net/build-wasm-cache.test.ts`), every manifest, the
+lockfile, `.cargo/`, `rust-toolchain.toml`, the script itself and the `JACKIOH_WASM_*` flags. A deploy
+whose key matches copies the modules back and runs no `cargo` at all. Anywhere else nothing is kept.
+
 `apps/web/src/wasm/index.ts` is the only caller: `loadWasm()` (or `loadWasmSync(bytes)` under jsdom)
 and one typed function per binding, named as the TypeScript engine named it. `apps/web/src/wire/`
 maps the client's `@jackioh/*` imports onto those functions and the generated types

@@ -7,10 +7,12 @@
 //
 //   B15  every catalog card, base and radiant face, as a full CardFace in a 5:7 box 270 px wide
 //        and 170 px wide: `.card-name` and `.card-text` stay inside their own boxes on both axes
-//        (scroll <= client + 1). At 270 px nothing may clamp but #98's thirteen powers (R752); at
-//        170 px only a face whose printed text (base plus radiant clause) runs past 260 characters
-//        may carry `data-clamped`, and a clamped rules box instead stays inside the face at the
-//        reading floor (FIT_FLOOR_PX).
+//        (scroll <= client + 1), and no face takes the long layout, so no face shrinks its art for
+//        its words (R1017000). At 270 px nothing may clamp; at 170 px only a face that prints less
+//        than its whole text (a short form or a clamp, `faceText`) may carry `data-clamped`, and a
+//        clamped rules box instead stays inside the face at the reading floor (FIT_FLOOR_PX).
+//        A hero portrait's full-art face (R1017001) has only its name to fit: it carries
+//        data-full-art and prints no rules box.
 //   §10.10  faces in play (the live card, `faceModel` with `inPlay`): a fused card's text a line
 //        per ingredient, each of #98's thirteen rolled powers on both faces, Call to Chaos's ???, a
 //        Vanilla unit with the keywords it kept — all inside their boxes at 270 and 170 px; and
@@ -31,8 +33,18 @@
 // from outside apps/web/src/cards only through its barrel, cards/index.ts.
 
 import { CATALOG } from "@jackioh/cards";
-import { CardFace, FACE_ASPECT, POWER_WORDS, TEXT_TIER_MAX, faceModel, type FaceModel } from "../../../apps/web/src/cards/index.ts";
+import {
+  CardFace,
+  FACE_ASPECT,
+  POWER_WORDS,
+  TEXT_TIER_MAX,
+  faceModel,
+  faceText,
+  shortFormOf,
+  type FaceModel,
+} from "../../../apps/web/src/cards/index.ts";
 import { FIT_FLOOR_PX } from "../../../apps/web/src/cards/constants.ts";
+import { showsFullArt } from "../../../apps/web/src/cards/fullArt.ts";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
 import { baseView, card, emptySide, fullBoardView, fusedDef, pendingFor } from "../../../apps/web/src/test/fixtures.ts";
@@ -48,23 +60,20 @@ const SETTLE_TIMEOUT_MS = 15_000;
 
 type FitBox = { width: number; clampAllowed: boolean };
 
-/** B15's two widths. At 270 px nothing may clamp; at 170 px only the longest texts may. */
+/** B15's two widths. At 270 px nothing may clamp; at 170 px only a face that prints less may (R1017000). */
 const FIT_BOXES: readonly FitBox[] = [
   { width: 270, clampAllowed: false },
   { width: 170, clampAllowed: true },
 ];
 
 /**
- * R752: #98 Heroic Power prints its thirteen powers, a line each on both faces, which no 270 px box
- * holds at the reading floor (FIT_FLOOR_PX). Its printed faces may clamp at 270 px too, as the
- * longest texts may at 170 px: the detail view prints its rules whole at reading size (a long
- * text's `.inspect-rules`, CardDetail.tsx), and in play its face is only the power it rolled, which
- * fits at both widths (the §10.10 block below). No other card is excused.
+ * R1017000: a face whose text runs past the measured limit prints less than its whole text (a
+ * short form, or its text clamped, shortText.ts), and only such a face may clamp, at 170 px. #98
+ * Heroic Power's thirteen powers clamped at every width before #1017; its face now prints the
+ * header over them, which fits at both widths.
  */
-const CLAMPS_AT_EVERY_WIDTH: ReadonlySet<string> = new Set(["core-098"]);
-
-function clampAllowedFor(def: CardDef, box: FitBox): boolean {
-  return box.clampAllowed || CLAMPS_AT_EVERY_WIDTH.has(def.id);
+function clampAllowedFor(def: CardDef, box: FitBox, radiant: boolean): boolean {
+  return box.clampAllowed && faceText(faceModel({ defId: def.id, def, radiant })).less;
 }
 
 const FACES = [
@@ -109,7 +118,15 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
     problems.push(`${where}: .cf is ${rect.width}x${rect.height}, not ${box.width}x${height}`);
   }
 
-  for (const selector of [".card-name", ".card-text"]) {
+  // R1017001: a hero portrait's card prints its art across the face and no words, so its name is
+  // all it has to fit, and it has no rules box at all.
+  const fullArt = showsFullArt(faceModel({ defId: def.id, def, radiant }));
+  if ((cf.getAttribute("data-full-art") === "true") !== fullArt) {
+    problems.push(`${where}: data-full-art is ${cf.getAttribute("data-full-art") ?? "unset"}, expected ${fullArt ? "true" : "unset"}`);
+  }
+  if (fullArt && cf.querySelector(".card-text") !== null) problems.push(`${where}: a full-art face prints a rules box`);
+
+  for (const selector of fullArt ? [".card-name"] : [".card-name", ".card-text"]) {
     const el = cf.querySelector<HTMLElement>(selector);
     if (el === null) {
       problems.push(`${where}: no ${selector}`);
@@ -118,7 +135,7 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
     // A rules box that may clamp and did is cut at a line with an ellipsis, by design: the rest of
     // its text is scrollable overflow it never paints (fit.ts). It must still stay inside the face
     // and print at the reading floor, which is what is checked for it instead.
-    if (selector === ".card-text" && el.getAttribute("data-clamped") === "true" && clampAllowedFor(def, box)) {
+    if (selector === ".card-text" && el.getAttribute("data-clamped") === "true" && clampAllowedFor(def, box, radiant)) {
       const face = cf.getBoundingClientRect();
       const own = el.getBoundingClientRect();
       if (own.bottom > face.bottom + 1 || own.top < face.top - 1) problems.push(`${where}: a clamped .card-text runs off the face`);
@@ -146,8 +163,11 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
     problems.push(`${where}: .card-text has no box`);
   }
 
+  // R1017000: no face gives its art's room to its words.
+  if (cf.hasAttribute("data-long")) problems.push(`${where}: takes the long layout (printed text is ${printedLength(def, radiant)} characters)`);
+
   const clamped = [...cf.querySelectorAll<HTMLElement>("[data-clamped]")];
-  const mayClamp = clampAllowedFor(def, box) && printedLength(def, radiant) > TEXT_TIER_MAX.xl;
+  const mayClamp = clampAllowedFor(def, box, radiant);
   if (clamped.length > 0 && !mayClamp) {
     const which = clamped.map((el) => `.${(el.getAttribute("class") ?? "").split(/\s+/).join(".")}`).join(", ");
     problems.push(`${where}: data-clamped on ${which} (printed text is ${printedLength(def, radiant)} characters)`);
@@ -159,7 +179,7 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
 }
 
 describe("B15: every catalog face fits its name and rules text at 270 px and 170 px", () => {
-  it("B15 the premise: the clamp allowance covers exactly the longest texts (Core's #93, #95 and #98, Classic+ #62 and #73, and five Meditative cards)", () => {
+  it("B15 R1017000 the premise: the longest texts (Core's #93, #95 and #98, Classic+ #73, and five Meditative cards) each print a short form", () => {
     const long = DEFS.flatMap((def) =>
       FACES.filter((face) => printedLength(def, face.radiant) > TEXT_TIER_MAX.xl).map((face) => `${def.id} ${face.label}`),
     );
@@ -170,8 +190,13 @@ describe("B15: every catalog face fits its name and rules text at 270 px and 170
     // #22 Mind Games and its #22.1 Fortify Mind, #49.1 YileGPT Unleashed and #95 Call to Chaos
     // (meditative-faces.cy.tsx measures the set's faces at the inspect sizes); #65 Keymaster Keenus's
     // and #45 Knowledge Breaker's Radiant faces left it with their patch v0.3.7 text, and C+ #62 KY's
-    // Papaya joined it with v0.3.10's Discover text (#967). Each fits at 270 px, #8 in the longest
-    // layout.
+    // Papaya joined it with v0.3.10's Discover text (#967) and left it with #1017's cut. Each face
+    // left prints a short form, its header and "…", the whole text standing on its left in the
+    // hover preview (R1017000).
+    for (const entry of long) {
+      const [id, label] = entry.split(" ");
+      expect(shortFormOf(id ?? "", label === "radiant"), entry).to.not.equal(null);
+    }
     expect(long).to.have.members([
       "meditative-008 base",
       "meditative-008 radiant",
@@ -189,8 +214,6 @@ describe("B15: every catalog face fits its name and rules text at 270 px and 170
       "core-095 radiant",
       "core-098 base",
       "core-098 radiant",
-      "classicplus-062 base",
-      "classicplus-062 radiant",
       "classicplus-073 base",
       "classicplus-073 radiant",
     ]);
@@ -198,7 +221,7 @@ describe("B15: every catalog face fits its name and rules text at 270 px and 170
 
   for (const box of FIT_BOXES) {
     for (const face of FACES) {
-      const rule = box.clampAllowed ? "only the longest texts may clamp" : "nothing clamps";
+      const rule = box.clampAllowed ? "only a face that prints less may clamp" : "nothing clamps";
       it(`B15 every ${face.label} face at ${box.width}px wide: name and text within their boxes, ${rule}`, () => {
         cy.mount(<FaceGrid width={box.width} radiant={face.radiant} />);
         cy.get("[data-fit-box] > .cf").should("have.length", DEFS.length);
@@ -264,7 +287,8 @@ describe("R503: the set mark, printed rarity and the new families on real faces"
     { id: "classicplus-043", why: "a Classic+ Legendary Spell (crest)" },
     { id: "classicplus-019-1", why: "a Classic+ token printed Legendary" },
     { id: "classic-038", why: "a Classic Field Trap" },
-    { id: "core-093", why: "the long layout (a dense rules box)" },
+    { id: "core-093", why: "a short form (a dense rules box ending in …)" },
+    { id: "core-004", why: "a full-art hero card (R1017001: the gem and mark in the top-right corner)" },
   ] as const;
 
   /** What the mark must never cover. */

@@ -13,6 +13,8 @@ export const INSPECT_FACE_RADIANT = "inspect-face-radiant";
 export const INSPECT_GLOSSARY = "inspect-glossary";
 /** A face in play's printed text, where the two differ (SPEC §10.10). */
 export const INSPECT_PRINTED = "inspect-printed";
+/** Issue #1017: a face's whole text, on its left in the preview, where the face prints less of it. */
+export const INSPECT_EXTENDED = "inspect-extended";
 /** R279: the hover preview's column of the cards a face's text names. */
 export const INSPECT_REFS = "inspect-refs";
 /** R660: a card's flavour line and artist credit, in the preview, the sheet and the detail view. */

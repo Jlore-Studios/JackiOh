@@ -82,6 +82,12 @@
   box-shadow: none;
 }
 
+/* A full-art face (R1017001): the whole face, clipped by the face's own rounded panel. */
+.cf-art--full {
+  border-radius: 0;
+  box-shadow: none;
+}
+
 /* Board minion: a full oval. */
 .cf-art--oval {
   border-radius: 50%;

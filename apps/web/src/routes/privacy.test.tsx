@@ -1,12 +1,14 @@
 // `/privacy`, `/terms`, `/accessibility` and `/copyright`, the footer that links them, the terms box
 // on "Create account" (R757001), and the tab title and canonical link `App` keeps for every path.
 
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -35,6 +37,26 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 
 /** A lazily-imported route chunk can outrun the 1 s default when the whole suite runs at once. */
 const SLOW = { timeout: 5_000 } as const;
+
+/**
+ * R970001: each `TERMS_VERSION` and the SHA-256 of the words it covers, both pages' English text as
+ * `agreedText` reads it. A row is added for each new version and never edited: a change to either
+ * page's words is a new version, so the test below fails until the version moves and its row is here.
+ */
+const AGREED_TEXT: Readonly<Record<string, string>> = {
+  "2026-10-15b/2026-10-15b": "33b0dd18c38c52456ee05a0cfaa51d881cc168411edac71c1672a9254d997e13",
+};
+
+/** Both pages' English text, the Terms then the Privacy Policy, as rendered. */
+function agreedText(): string {
+  const text = (Page: () => ReactElement): string => {
+    const { container, unmount } = render(<Page />);
+    const words = container.textContent ?? "";
+    unmount();
+    return words;
+  };
+  return `${text(TermsRoute)}\n${text(PrivacyRoute)}`;
+}
 
 function at(path: string): void {
   window.history.replaceState(null, "", path);
@@ -88,9 +110,19 @@ describe("the privacy policy", () => {
     expect(section(/deleting your account/i)).toMatch(/record of your age check and of the terms you agreed to/);
   });
 
-  it("R757001 TERMS_VERSION is the terms' date, then the privacy policy's", () => {
+  it("R757001 R970001 TERMS_VERSION is the terms' date, then the privacy policy's, each with a letter for a second change that day", () => {
     // A change to either page's text changes its date, so every account is asked to agree again.
-    expect(TERMS_VERSION).toBe(`${TERMS_LAST_UPDATED}/${PRIVACY_LAST_UPDATED}`);
+    const [terms, privacy] = TERMS_VERSION.split("/");
+    expect(terms).toMatch(new RegExp(`^${TERMS_LAST_UPDATED}[b-z]?$`, "u"));
+    expect(privacy).toMatch(new RegExp(`^${PRIVACY_LAST_UPDATED}[b-z]?$`, "u"));
+  });
+
+  it("R970001 a change to either page's words is a new TERMS_VERSION, even on a day the page already changed", () => {
+    const digest = createHash("sha256").update(agreedText()).digest("hex");
+    expect(
+      AGREED_TEXT[TERMS_VERSION],
+      "the Terms or the Privacy Policy changed: move TERMS_VERSION (docs/compliance.md §4) and add its row to AGREED_TEXT",
+    ).toBe(digest);
   });
 
   it("names what is collected, who handles it, and how to delete an account", () => {
@@ -178,6 +210,30 @@ describe("the privacy policy", () => {
     expect(deleting).toMatch(/challenges, co-op rooms and replay shares/);
   });
 
+  it("#970 names custom cards and the presence heartbeat, and deletes the custom cards with the account", () => {
+    render(<PrivacyRoute />);
+    const page = screen.getByTestId(privacyTestid.screen);
+    const section = (name: RegExp): string =>
+      within(page).getByRole("heading", { name }).closest("section")?.textContent ?? "";
+    const items = (name: RegExp): string[] =>
+      [...(within(page).getByRole("heading", { name }).closest("section")?.querySelectorAll("li") ?? [])].map(
+        (item) => item.textContent ?? "",
+      );
+
+    const custom = items(/what we collect/i).find((item) => item.startsWith("Your custom cards")) ?? "";
+    expect(custom).toMatch(/name, type, cost, rarity, stats, keywords, text and numbers/);
+    expect(custom).toMatch(/its script/);
+    expect(custom).toMatch(/Only you can see them\./);
+    // R970002: every signed-in session beats, once its account has agreed; not only Play together's.
+    const online = items(/what we collect/i).filter((item) => /told us you were online/.test(item));
+    expect(online).toHaveLength(1);
+    expect(online[0]).toMatch(/^While you are signed in, .* once you have agreed\s+to the Terms and this policy\./u);
+    expect(items(/what we collect/i).find((item) => item.startsWith("If you use Play together"))).not.toMatch(/online/);
+    expect(section(/why we collect it/i)).toMatch(/custom cards/);
+    expect(section(/how long we keep it/i)).toMatch(/your custom cards, your age check/);
+    expect(section(/deleting your account/i)).toMatch(/trios and cards, your custom cards, your\s+tutorial progress/);
+  });
+
   it("R632 says the sign-in session lasts only as long as the tab, not as a stored sign-in", () => {
     render(<PrivacyRoute />);
     const page = screen.getByTestId(privacyTestid.screen);
@@ -237,9 +293,37 @@ describe("the legal pages", () => {
     );
     expect(screen.getByRole("region", { name: "Agreeing to these terms" })).toHaveTextContent(/ticking the box/);
     const submitted = screen.getByRole("region", { name: "What you submit" });
-    expect(submitted).toHaveTextContent(/username you choose/);
     expect(submitted).toHaveTextContent(/We remove content that infringes/);
     expect(within(submitted).getByRole("link", { name: "Copyright" })).toHaveAttribute("href", paths.copyright);
+  });
+
+  it("#970 the terms license what a player submits, each with who sees it, and set the rules of chat", () => {
+    render(<TermsRoute />);
+    const submitted = screen.getByRole("region", { name: "What you submit" });
+    expect(submitted).toHaveTextContent(/you let us store it, and show it to the people named below/);
+    const items = within(submitted)
+      .getAllByRole("listitem")
+      .map((item) => item.textContent ?? "");
+    expect(items).toEqual([
+      "Your username, which other players see.",
+      expect.stringMatching(/^Your chat messages, which the friend you send them to sees, and the reason you give when you\s+report one, which only we see\.$/u),
+      "Your custom cards (their names, text and scripts) and the names of your decks, which only you see.",
+      "The replays you share, which the friends you share them with see.",
+    ]);
+    expect(within(submitted).getByRole("link", { name: "Privacy Policy" })).toHaveAttribute("href", paths.privacy);
+    const chat = screen.getByRole("region", { name: "Chat" });
+    for (const rule of [/harass, threaten or bully/, /hate speech/, /spam/, /personal details/, /your own included/]) {
+      expect(chat).toHaveTextContent(rule);
+    }
+    expect(chat).toHaveTextContent(/replace each word on our filter list with asterisks/);
+    expect(chat).toHaveTextContent(/abuse in chat can get an account suspended or banned/);
+  });
+
+  it("#970 the copyright page names a custom card's name and text as something a notice can be about", () => {
+    render(<CopyrightRoute />);
+    expect(screen.getByRole("region", { name: /reporting content that infringes your copyright/i })).toHaveTextContent(
+      /such as a username or a custom card.s name or text/,
+    );
   });
 
   it("the copyright page says how to send a notice, leaves the agent to the owner, and shows its date", () => {

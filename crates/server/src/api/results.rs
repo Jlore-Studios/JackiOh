@@ -31,7 +31,6 @@
 //! game leaves the series in its next game already (both sides had one deck left, so both picks were
 //! made for them, R332), that game is started after the commit.
 
-use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -529,10 +528,11 @@ async fn fold_terminal_input(app: &Arc<App>, match_row: &MatchRow, now: i64) -> 
         glitch_boards,
         registry::dealt_for(mode),
     );
-    let folded = match catch_unwind(AssertUnwindSafe(|| engine::fold(&args))) {
+    // #1035: off the runtime, as a rebuild folds.
+    let folded = match engine::off_runtime(app.engine_thread, move || engine::fold(&args)).await {
         Ok(folded) => folded,
-        Err(payload) => {
-            tracing::error!(event = "reaper.fold.panicked", matchId = %match_row.id, message = %registry::panic_text(payload));
+        Err(message) => {
+            tracing::error!(event = "reaper.fold.panicked", matchId = %match_row.id, message = %message);
             return None;
         }
     };

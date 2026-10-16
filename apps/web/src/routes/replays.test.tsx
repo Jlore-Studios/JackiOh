@@ -1,7 +1,8 @@
 // R768000, issue #768: `/replays`, the recent games. It lists the practice games a worker kept and,
 // signed in, the account's online games a page at a time; opens one in the player and comes back to
 // the list; names a game it cannot show and keeps its Watch button off; and is a route a production
-// build keeps, with the GIF code still loaded on demand.
+// build keeps, with the GIF code still loaded on demand. R970000: an account that owes the consent
+// screen meets it before the online half, which waits on its answer.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -10,10 +11,12 @@ import { fileURLToPath } from "node:url";
 import { AI_GATE_BUDGET } from "@jackioh/ai";
 import { REPLAY_PAGE_STEPS } from "@jackioh/engine/config";
 import type { PlayerId } from "@jackioh/shared";
+import { TERMS_VERSION } from "@jackioh/server-config";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiRequestError, getMe, getReplaySteps, getReplays } from "../net/api.ts";
+import { consentTestid } from "../auth/testids.ts";
+import { ApiRequestError, getMe, getReplaySteps, getReplays, postConsent } from "../net/api.ts";
 import type { OnlineReplayListing } from "../net/api.ts";
 import { documentTitleFor, screenNameFor } from "../net/head.ts";
 import { paths } from "../net/navigate.ts";
@@ -29,7 +32,7 @@ import { ReplaysRoute, replaysTestid } from "./replays.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
-  return { ...actual, getMe: vi.fn(), getReplays: vi.fn(), getReplaySteps: vi.fn() };
+  return { ...actual, getMe: vi.fn(), getReplays: vi.fn(), getReplaySteps: vi.fn(), postConsent: vi.fn() };
 });
 
 const TOKEN = "e2e-token-p1";
@@ -75,7 +78,7 @@ function listing(over: Partial<OnlineReplayListing> = {}): OnlineReplayListing {
   };
 }
 
-function signIn(): void {
+function signIn(owed: { termsOwed?: boolean } = {}): void {
   window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: TOKEN }));
   vi.mocked(getMe).mockResolvedValue({
     profile: { id: "profile-p1", status: "active" },
@@ -83,6 +86,7 @@ function signIn(): void {
     emailVerified: true,
     currentMatchId: null,
     email: "player@example.test",
+    ...owed,
   } as Awaited<ReturnType<typeof getMe>>);
 }
 
@@ -179,6 +183,49 @@ describe("R768000 /replays", () => {
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent("Too many requests");
     });
+  });
+});
+
+describe("R970000 /replays and the consent screen", () => {
+  it("R970000 an account that owes the terms sees the practice half, and its online half only once it agrees", async () => {
+    signIn({ termsOwed: true });
+    vi.mocked(getReplays).mockResolvedValue({ replays: [listing()], nextOffset: null });
+    vi.mocked(postConsent).mockImplementation(() => {
+      signIn();
+      return Promise.resolve({ ageCheckOwed: false, termsOwed: false });
+    });
+    renderRoute(await storeWithGame());
+
+    // The practice half is open; the online half, its "Shared with me" and its shares wait.
+    expect(await screen.findByTestId(replaysTestid.practice(1))).toBeInTheDocument();
+    const owed = await screen.findByTestId(replaysTestid.consent);
+    expect(owed).toHaveTextContent("Agree to the Terms and the Privacy Policy to see your online games.");
+    expect(getReplays).not.toHaveBeenCalled();
+    expect(screen.queryByTestId(replaysTestid.sharedWithMe)).toBeNull();
+    expect(screen.queryByTestId(replaysTestid.online("m-1"))).toBeNull();
+
+    fireEvent.click(within(owed).getByRole("button", { name: "Continue" }));
+    expect(await screen.findByTestId(consentTestid.changed)).toBeInTheDocument();
+    // Unticked, nothing is sent.
+    fireEvent.click(screen.getByTestId(consentTestid.submit));
+    expect(postConsent).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId(consentTestid.agree));
+    fireEvent.click(screen.getByTestId(consentTestid.submit));
+
+    expect(await screen.findByTestId(replaysTestid.online("m-1"))).toBeInTheDocument();
+    expect(postConsent).toHaveBeenCalledWith(TOKEN, { termsVersion: TERMS_VERSION });
+    expect(getReplays).toHaveBeenCalledWith(TOKEN);
+    expect(screen.getByTestId(replaysTestid.sharedWithMe)).toBeInTheDocument();
+    expect(screen.queryByTestId(replaysTestid.consent)).toBeNull();
+    expect(screen.getByTestId(replaysTestid.practice(1))).toBeInTheDocument();
+  });
+
+  it("R970000 an account that owes nothing is not asked", async () => {
+    signIn({ termsOwed: false });
+    vi.mocked(getReplays).mockResolvedValue({ replays: [listing()], nextOffset: null });
+    renderRoute(memorySaveStore());
+    expect(await screen.findByTestId(replaysTestid.online("m-1"))).toBeInTheDocument();
+    expect(screen.queryByTestId(replaysTestid.consent)).toBeNull();
   });
 });
 

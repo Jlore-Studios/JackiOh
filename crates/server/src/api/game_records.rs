@@ -13,13 +13,33 @@
 //! Telemetry never costs a result: it runs after the result's transaction and every failure is logged
 //! and swallowed. It is idempotent (keyed by match id; the store refuses a second), so a result
 //! written twice files the game once. The reaper's ceiling draws (R112) leave none: no game to read.
+//!
+//! R1044000: the store folds each record it writes into the totals every card figure is read from,
+//! in the same transaction. `fold_pending` folds the records written before the totals existed.
 
 use jackioh_engine::{FoldArgs, GameMode, GameRecord, GameSource, PerPlayer, Pilot};
 use serde_json::{Map, Value, json};
 
 use crate::actor::engine;
 use crate::app::App;
-use crate::db::store::{MatchRow, ProfileKind, QueueMode};
+use crate::config::STATS_FOLD_BATCH_RECORDS;
+use crate::db::store::{Db, MatchRow, ProfileKind, QueueMode, StoreError};
+
+/// R1044000: folds every record not yet in the totals, `STATS_FOLD_BATCH_RECORDS` to a transaction,
+/// and answers how many it folded. `jackioh-server stats-fold` runs it once after migration 0041,
+/// and the retention loop before each purge, so a purge never meets a record it may not empty.
+pub async fn fold_pending(db: &Db) -> Result<usize, StoreError> {
+    let mut folded = 0;
+    loop {
+        let mut tx = db.begin(None).await?;
+        let batch = tx.game_records_fold_pending(STATS_FOLD_BATCH_RECORDS).await?;
+        tx.commit().await?;
+        folded += batch;
+        if batch < STATS_FOLD_BATCH_RECORDS {
+            return Ok(folded);
+        }
+    }
+}
 
 /// An error as the sentence a log line carries.
 fn message_of(error: impl std::fmt::Display) -> String {
@@ -110,20 +130,24 @@ async fn record_live_game_inner(app: &App, match_id: &str) -> Result<Option<Game
         entries.push(serde_json::to_value(&entry.action).map_err(message_of)?);
     }
     let args = fold_args_of(&row, entries).map_err(message_of)?;
-    // The engine panics on decks it refuses; the panic is that error (as `actor::registry` reads it).
-    let summarized = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        jackioh_engine::summarize_game(&args)
-    }))
-    .map_err(crate::actor::registry::panic_text)?;
+    // R677, R1451: each seat is filed under the account that plays it as the game ends, as the
+    // result credits it, so after a Glitch's swap a bot's `ai` goes on the seat it ended in. Only a
+    // game with a bot in it can tell, so only it folds the log again to read the swap. #1035: both
+    // folds in one job off the runtime; the engine panics on decks it refuses, and the panic is that
+    // error.
+    let bot_game = began.0 != began.1;
+    let (summarized, swapped) = engine::off_runtime(app.engine_thread, move || {
+        let summarized = jackioh_engine::summarize_game(&args);
+        let swapped =
+            summarized.is_some() && bot_game && engine::snapshot(&engine::fold(&args).state).seats_swapped;
+        (summarized, swapped)
+    })
+    .await?;
     let Some(game) = summarized else {
         // A fold that does not reach the result is a determinism break (§9.3); say so loudly.
         tracing::error!(event = "game.record.unfinished", matchId = %match_id, actions = actions);
         return Ok(None);
     };
-    // R677, R1451: each seat is filed under the account that plays it as the game ends, as the
-    // result credits it, so after a Glitch's swap a bot's `ai` goes on the seat it ended in. Only a
-    // game with a bot in it can tell, so only it folds the log again to read the swap.
-    let swapped = began.0 != began.1 && engine::snapshot(&engine::fold(&args).state).seats_swapped;
     let pilots = if swapped {
         PerPlayer::new(began.1, began.0)
     } else {

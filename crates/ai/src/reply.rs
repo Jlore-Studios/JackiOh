@@ -7,14 +7,19 @@
 //!   1. A card the line itself put in the opponent's hand (a Pocket Chaos it was handed, the units a
 //!      Flood bounced) is no guess: the seat watched it arrive. The opponent plays the one whose
 //!      result its own evaluation likes best, if that beats standing still.
-//!   2. Otherwise it is a static trader: of every attack it may declare, it takes the one with the
+//!   2. An Activate of a card the seat can see face-up on the field (The Power to Punish's damage, a
+//!      Heroic Power's rolled Ping) is no guess either. The opponent tries up to
+//!      AI_REPLY.visible_activations, those aimed at the seat's hero first, and uses the one its own
+//!      evaluation likes best if that beats standing still.
+//!   3. Otherwise it is a static trader: of every attack it may declare, it takes the one with the
 //!      best value read off the layers (lethal, a kill it survives, a trade up, the face).
-//!   3. When neither is worth doing it ends its turn.
+//!   4. When none is worth doing it ends its turn.
 //!
 //! It plays none of the cards it held unseen, because those are samples: a guessed hand would add
-//! noise, not information. Every step is a real `reduce` (one node each), so the engine decides what
-//! actually happens: traps, First Strike, Divine Shield, Taunt, Lifesteal, end-of-turn damage and the
-//! seat's own start of turn. Nothing here recurses.
+//! noise, not information; nor does it use a face-down card's Reveal, whose card is a sample too.
+//! Every step is a real `reduce` (one node each), so the engine decides what actually happens: traps,
+//! First Strike, Divine Shield, Taunt, Lifesteal, end-of-turn damage and the seat's own start of turn.
+//! Nothing here recurses.
 //!
 //! Port of `packages/ai/src/reply.ts`. TS's `try { reduce } catch` is `catch_unwind` around
 //! `reduce`, whose refusals come back as `error` and whose impossible states panic (SURFACE §4.4.9).
@@ -24,8 +29,8 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexSet;
 use jackioh_engine::{
-    Action, ActionBody, CardInstance, GameState, KeywordKind, PlayerId, UnitView, effective_life,
-    find_instance, has_keyword, legal_actions, reduce, subsystems, takes_strike_back, unit_view,
+    Action, ActionBody, CardInstance, GameState, KeywordKind, PlayerId, Selection, UnitView, effective_life,
+    find_instance, has_keyword, legal_actions, pierces, reduce, subsystems, takes_strike_back, unit_view,
 };
 
 use crate::candidates::candidate_actions_in;
@@ -40,14 +45,18 @@ struct Side {
     indestructible: bool,
     first_strike: bool,
     poisonous: bool,
+    /// R346: its hits skip §4.4 step 2, the Armor.
+    pierce: bool,
 }
 
-fn side_of(view: UnitView) -> Side {
+fn side_of(state: &GameState, unit: &CardInstance) -> Side {
+    let view = unit_view(state, unit);
     Side {
         shield: has_keyword(&view.keywords, KeywordKind::DivineShield),
         indestructible: has_keyword(&view.keywords, KeywordKind::Indestructible),
         first_strike: has_keyword(&view.keywords, KeywordKind::FirstStrike),
         poisonous: has_keyword(&view.keywords, KeywordKind::Poisonous),
+        pierce: pierces(state, Some(unit), None),
         view,
     }
 }
@@ -59,7 +68,8 @@ struct Blow {
     pops_shield: bool,
 }
 
-/// §4.4 steps 1, 2, 4 and 7 for one blow: what `from` deals to `to`, and whether it kills.
+/// §4.4 steps 1, 2, 4 and 7 for one blow: what `from` deals to `to`, and whether it kills. Step 2's
+/// Armor is skipped when `from` pierces (R346).
 fn blow(from: &Side, to: &Side) -> Blow {
     let amount = from.view.attack;
     if amount <= 0 {
@@ -83,7 +93,11 @@ fn blow(from: &Side, to: &Side) -> Blow {
             pops_shield: false,
         };
     }
-    let dealt = (amount - to.view.armor).max(0);
+    let dealt = if from.pierce {
+        amount
+    } else {
+        (amount - to.view.armor).max(0)
+    };
     let kills = dealt >= to.view.health || (from.poisonous && dealt > 0);
     Blow {
         dealt,
@@ -100,8 +114,8 @@ fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> f
     let Some(target) = find_instance(state, target_id) else {
         return f64::NEG_INFINITY;
     };
-    let a = side_of(unit_view(state, attacker));
-    let t = side_of(unit_view(state, target));
+    let a = side_of(state, attacker);
+    let t = side_of(state, target);
     let out = blow(&a, &t);
     let mut kills = out.kills;
     let mut dies = takes_strike_back(state, attacker, target) && blow(&t, &a).kills;
@@ -154,8 +168,9 @@ fn ranked_attacks(state: &GameState, seat: PlayerId, legal: &[ActionBody]) -> Ve
             continue;
         };
         let value = if *target_id == hero {
+            let pierce = pierces(state, Some(attacker), None);
             let damage =
-                subsystems::projected_hero_damage(state, seat, unit_view(state, attacker).attack, false);
+                subsystems::projected_hero_damage(state, seat, unit_view(state, attacker).attack, pierce);
             reply_face_value(state, seat, damage)
         } else {
             trade_value(state, attacker, target_id)
@@ -195,7 +210,7 @@ fn reduce_for(
     }
 }
 
-/// `known_play`'s answer: TS's `GameState | null | undefined`.
+/// `known_play`'s and `visible_activation`'s answer: TS's `GameState | null | undefined`.
 enum Known {
     /// The counter refused a node (TS `null`).
     Cut,
@@ -221,13 +236,19 @@ fn known_play(
         )
         .take(AI_REPLY.known_plays.max(0) as usize)
         .collect();
-    if plays.is_empty() {
+    best_try(state, opp, &plays, counter)
+}
+
+/// The best of `tries` for `opp` by its own evaluation: one that wins the game at once, else the one
+/// whose result beats standing still by the most (ties keep the list's order).
+fn best_try(state: &GameState, opp: PlayerId, tries: &[ActionBody], counter: &dyn NodeCounter) -> Known {
+    if tries.is_empty() {
         return Known::Nothing;
     }
     let mut best: Option<GameState> = None;
     let mut best_value = evaluate(state, opp, NextSwing::Enemy, &AI_EVAL);
-    for play in &plays {
-        let next = match simulate(state, opp, play, counter) {
+    for action in tries {
+        let next = match simulate(state, opp, action, counter) {
             None => return Known::Cut,
             Some(Err(_)) => continue,
             Some(Ok(next)) => next,
@@ -249,6 +270,73 @@ fn known_play(
         Some(state) => Known::Played(Box::new(state)),
         None => Known::Nothing,
     }
+}
+
+/// Where a visible activation is aimed, in the order a reply step tries them.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum Aim {
+    /// At the seat's hero, where a lethal one is.
+    SeatHero,
+    /// At a card the seat controls: the opponent's activated removal.
+    SeatCard,
+    /// Anything else, an activation with no target among them.
+    Other,
+}
+
+/// Where `action` aims, read off the targets it carries.
+fn aim_of(state: &GameState, seat: PlayerId, action: &ActionBody) -> Aim {
+    let targets: &[Selection] = match action {
+        ActionBody::Activate { targets, .. } | ActionBody::ActivatePower { targets, .. } => {
+            targets.as_deref().unwrap_or(&[])
+        }
+        _ => &[],
+    };
+    if targets
+        .iter()
+        .any(|target| matches!(target, Selection::Hero { player } if *player == seat))
+    {
+        return Aim::SeatHero;
+    }
+    let at_seat_card = targets.iter().any(|target| {
+        matches!(target, Selection::Instance { instance_id }
+            if find_instance(state, instance_id).is_some_and(|card| card.controller == seat))
+    });
+    if at_seat_card { Aim::SeatCard } else { Aim::Other }
+}
+
+/// Whether the seat can see the source of `action`, an `activate` (or the `activatePower` alias, which
+/// `legal_actions` no longer lists, R752): a card acting face-up on the field (`is_acting_on_field`, so
+/// never a face-down card's Reveal, R783006, nor a card determinization filled in) that is none of the
+/// cards the opponent held unseen.
+fn visible_source(state: &GameState, hidden: &IndexSet<String>, action: &ActionBody) -> bool {
+    let (ActionBody::Activate { instance_id, .. } | ActionBody::ActivatePower { instance_id, .. }) = action
+    else {
+        return false;
+    };
+    !hidden.contains(instance_id)
+        && find_instance(state, instance_id).is_some_and(|card| subsystems::is_acting_on_field(state, card))
+}
+
+/// Step 2: the best of the opponent's activations whose source the seat can see, by the opponent's
+/// own evaluation, when it beats standing still. At most AI_REPLY.visible_activations are tried,
+/// ordered by `aim_of` and in legal_actions order within each aim: `legal_actions` lists the
+/// activating side's own targets first, so the seat's hero would otherwise come last.
+fn visible_activation(
+    state: &GameState,
+    seat: PlayerId,
+    legal: &[ActionBody],
+    hidden: &IndexSet<String>,
+    counter: &dyn NodeCounter,
+) -> Known {
+    let mut tries: Vec<ActionBody> = legal
+        .iter()
+        .filter(|action| visible_source(state, hidden, action))
+        .cloned()
+        .collect();
+    // Stable, so each aim keeps legal_actions order.
+    tries.sort_by_key(|action| aim_of(state, seat, action));
+    tries.truncate(AI_REPLY.visible_activations.max(0) as usize);
+    best_try(state, seat.opponent(), &tries, counter)
 }
 
 /// The ids of the cards the opponent holds unseen: its hand and its library, as sampled.
@@ -298,10 +386,18 @@ pub fn simulate_reply(
             return Some(current);
         }
 
-        // One legal_actions serves both the known-play try (its ordered candidates) and the static
-        // trader's attack list — the two enumerations the walk used to make per step.
+        // One legal_actions serves the known-play try (its ordered candidates), the visible
+        // activations and the static trader's attack list.
         let legal = legal_actions(&current, opp);
         match known_play(&current, seat, &legal, hidden, counter) {
+            Known::Cut => return None,
+            Known::Played(played) => {
+                current = *played;
+                continue;
+            }
+            Known::Nothing => {}
+        }
+        match visible_activation(&current, seat, &legal, hidden, counter) {
             Known::Cut => return None,
             Known::Played(played) => {
                 current = *played;

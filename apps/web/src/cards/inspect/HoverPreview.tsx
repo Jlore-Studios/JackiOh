@@ -8,21 +8,28 @@
 // Unit R383) has them in words at the top (StateNotes.tsx), since badge tooltips cannot be hovered
 // here. It ends with the card's lines of code (E36), above which sit the flavour line and artist
 // credit (R660, Flavour.tsx); a face with nothing beside it stays alone.
+//
+// Issue #1017: a face that prints less than its whole text (a short form or a clamp, CardFace.tsx
+// `faceText`) has the whole text on its left (Extended.tsx), the two held together so the text stays
+// on the face's left whichever side of the anchor the preview opens on. A Summit in a game prints
+// its next Ascent line here too, from the level its view carries (R280).
 
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement } from "react";
 import { createPortal } from "react-dom";
-import { CardFace } from "../CardFace.tsx";
+import { CardFace, faceText } from "../CardFace.tsx";
 import { FACE_ASPECT } from "../constants.ts";
 import type { FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
 import {
+  PREVIEW_EXTENDED_WIDTH_PX,
   PREVIEW_GLOSSARY_GAP_PX,
   PREVIEW_GLOSSARY_WIDTH_PX,
   PREVIEW_HEIGHT_PX,
   PREVIEW_MAX_VIEWPORT_SHARE,
   PREVIEW_REFS_WIDTH_PX,
 } from "./constants.ts";
+import { Extended } from "./Extended.tsx";
 import { Glossary } from "./Glossary.tsx";
 import { placePreview, type PreviewPrefer, type Rect } from "./placement.ts";
 import { Flavour, showsEasterEgg } from "./Flavour.tsx";
@@ -32,6 +39,7 @@ import { Printed } from "./Printed.tsx";
 import { LocLine, StateNotes, hasStateNotes } from "./StateNotes.tsx";
 import { namedCards, References } from "./References.tsx";
 import { useDefResolver } from "../refContext.tsx";
+import { ascentLevelOf } from "../shortText.ts";
 import { OVERLAY_ROOT_PROPS } from "./store.ts";
 import { INSPECT_FACE, INSPECT_HOVER } from "./testids.ts";
 import "./inspect.css";
@@ -43,12 +51,13 @@ function viewportSize(): { width: number; height: number } {
 }
 
 /** The preview's size before it has been laid out, from the same numbers inspect.css uses. */
-function estimatedSize(withGlossary: boolean, withRefs: boolean): { width: number; height: number } {
+function estimatedSize(withGlossary: boolean, withRefs: boolean, withExtended: boolean): { width: number; height: number } {
   const height = Math.min(PREVIEW_HEIGHT_PX, window.innerHeight * PREVIEW_MAX_VIEWPORT_SHARE);
   const cardWidth = height * FACE_ASPECT;
   const glossary = withGlossary ? PREVIEW_GLOSSARY_GAP_PX + PREVIEW_GLOSSARY_WIDTH_PX : 0;
   const refs = withRefs ? PREVIEW_GLOSSARY_GAP_PX + PREVIEW_REFS_WIDTH_PX : 0;
-  return { width: cardWidth + glossary + refs, height };
+  const extended = withExtended ? PREVIEW_GLOSSARY_GAP_PX + PREVIEW_EXTENDED_WIDTH_PX : 0;
+  return { width: cardWidth + glossary + refs + extended, height };
 }
 
 export function HoverPreview({ face, anchor, prefer = "beside", note }: HoverPreviewProps): ReactElement {
@@ -59,7 +68,9 @@ export function HoverPreview({ face, anchor, prefer = "beside", note }: HoverPre
   const notes = hasStateNotes(face);
   const flavoured = face.known && (flavourFor(face.defId) !== null || showsEasterEgg(face));
   const side = notes || face.printed !== null || flavoured;
-  const placed = placePreview(anchor, viewportSize(), estimatedSize(entries.length > 0 || side, named > 0), prefer);
+  const ascentLevel = ascentLevelOf(face.values);
+  const extended = faceText(face, ascentLevel).less;
+  const placed = placePreview(anchor, viewportSize(), estimatedSize(entries.length > 0 || side, named > 0, extended), prefer);
 
   // Once laid out, place it again by its real size. jsdom has no layout and keeps the estimate.
   useLayoutEffect(() => {
@@ -84,9 +95,12 @@ export function HoverPreview({ face, anchor, prefer = "beside", note }: HoverPre
       style={{ position: "fixed", left: placed.left, top: placed.top, pointerEvents: "none" }}
       {...OVERLAY_ROOT_PROPS}
     >
-      <div className="inspect-face" data-testid={INSPECT_FACE} style={{ height: PREVIEW_HEIGHT_PX }}>
-        <CardFace face={face} layout="full" />
-        <InspectNote note={note} />
+      <div className="inspect-facegroup">
+        <Extended face={face} ascentLevel={ascentLevel} />
+        <div className="inspect-face" data-testid={INSPECT_FACE} style={{ height: PREVIEW_HEIGHT_PX }}>
+          <CardFace face={face} layout="full" ascentLevel={ascentLevel} />
+          <InspectNote note={note} />
+        </div>
       </div>
       {entries.length > 0 || side ? (
         <div className="inspect-side">

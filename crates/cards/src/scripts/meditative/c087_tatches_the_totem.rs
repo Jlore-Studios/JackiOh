@@ -1,11 +1,11 @@
 //! M #87 Tatches the Totem (SPEC §8.8 row 87): (1) Unit, All Tribes (Human, Felinor, KY, CN,
 //! Jlockeed), Legendary, 0/3 → 0/6.
 //!
-//! Base:    "While this is in your deck: After you play a card with a tribal tag, summon this.
+//! Base:    "While in your deck: After you play a card with a tribal tag, summon this.
 //!          End of turn: Buff {cards|random card|random cards} in your hand or deck."
-//! Radiant: "While this is in your deck: After you play a card with a tribal tag, summon this.
-//!          End of turn: Buff {cards|random card|random cards} in your hand or deck. Then Buff each
-//!          Unit adjacent to this."
+//! Radiant: "While in your deck: After you play a card with a tribal tag, summon this.
+//!          End of turn: Buff {cards|random card|random cards} in your hand or deck and each adjacent
+//!          Unit."
 //! Engine: a deck trigger (R464, C+ #37 Wardrum's) on `cardResolved` of its owner's play, a cast
 //! included (R70), whose running face carries a tribal tag (TRIBAL_TAGS, R1424): `summon_this` into
 //! the leftmost open unit zone (R64), no Cry (R1), the first either player sees of it (R97); with no

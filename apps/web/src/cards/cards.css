@@ -793,6 +793,74 @@
     #f3dfa0;
 }
 
+/* ------------------------------------------------------------------------------ full art --- */
+
+/* R1017001: a hero portrait's card (fullArt.ts) prints its art across the whole face and no words,
+   as Hearthstone's Signature cards do: the cost gem, the rarity gem in the corner opposite it with
+   the set mark under it, and the name banner at the foot between a Unit's attack and health. The
+   frame's panel shows only as the rarity rim around the art; a scrim darkens the top, behind the
+   gems, the set mark and the crest, and the foot, behind the banner and the stats. CardFace draws no rules box, tags or
+   type line; the whole text is in the hover preview and the detail view. Selectors carry the face's
+   type where the ordinary rule does (a Unit's portrait window), so they outrank it whatever the
+   order. */
+.cf[data-full-art="true"] .cf-art-frame,
+.cf[data-full-art="true"][data-card-type] .cf-art-frame {
+  inset: 0;
+  z-index: 0;
+  height: auto;
+  filter: none;
+}
+
+/* A Trap's notched plate behind its window has no window to frame. */
+.cf[data-full-art="true"][data-card-type] .cf-art-frame::before {
+  content: none;
+}
+
+.cf[data-full-art="true"] .cf-art-frame > .cf-art {
+  box-shadow: none;
+}
+
+.cf[data-full-art="true"] .cf-art-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgb(0 0 0 / 0.4),
+    transparent 16%,
+    transparent 58%,
+    rgb(0 0 0 / 0.5) 78%,
+    rgb(0 0 0 / 0.72)
+  );
+  pointer-events: none;
+}
+
+/* The banner sits between a Unit's attack and health (19cqw gems in the bottom corners, their
+   numbers centred about 92cqh down), level with the numbers: 7.6cqh high, its middle at 92cqh. */
+.cf[data-full-art="true"] .card-name {
+  top: 88.2cqh;
+  left: 19cqw;
+  right: 19cqw;
+  padding: 0 4cqw;
+}
+
+/* The rarity gem takes the top-right corner, opposite the cost gem, as a hand card's does; the set
+   mark hangs under it on the same centre line (the gem is 0.8cqh wider), clear of the turned gem's
+   lowest point at 10.3cqh. None of the heroes' cards has an element, whose chip shares the corner. */
+.cf[data-full-art="true"] .cf-gem {
+  top: 3cqh;
+  left: auto;
+  right: 6cqw;
+  width: 6cqh;
+  height: 6cqh;
+  translate: none;
+}
+
+.cf[data-full-art="true"] .cf-set {
+  top: 12.5cqh;
+  right: calc(6cqw + 0.4cqh);
+}
+
 /* --------------------------------------------------------------------- tags and type line --- */
 
 .cf .cf-tags {
@@ -975,6 +1043,12 @@
 
   .cf:not([data-layout="minion"]):not([data-card-type="Unit"]) .cf-art-frame {
     height: 50cqh;
+  }
+
+  /* R1017001: a full-art face keeps its art across the whole face at hand size too. */
+  .cf[data-full-art="true"]:not([data-layout="minion"])[data-card-type] .cf-art-frame {
+    inset: 0;
+    height: auto;
   }
 
   .cf:not([data-layout="minion"]) .card-name,

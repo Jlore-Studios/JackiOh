@@ -40,6 +40,10 @@ use serde_json::{Value, json};
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
+use jackioh_engine::wire::{
+    CardStatsFilter, GAME_SOURCES, GameMode, PilotFilter, SourceFilter, StatsTotals, card_stats,
+    card_stats_of, sources_of,
+};
 use jackioh_engine::{Action, GameRecord, LastBoardEntry, PlayerId};
 use jackioh_server::api::series_rules::forfeit_series;
 use jackioh_server::config::PersonaName;
@@ -51,8 +55,8 @@ use jackioh_server::db::store::{
     MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow,
     PlayerStatsListOptions, Profile, ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow,
     RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room, SavedCustomCard, SavedDeck, SavedTrio,
-    Season, SeriesRow, StoreError, TermsSource, Ticket, TutorialMergeInput, TutorialProgressRow, Tx,
-    UsernameClaim, UsernameClaimOutcome,
+    Season, SeriesRow, StatsTotalsQuery, StoreError, TermsSource, Ticket, TutorialMergeInput,
+    TutorialProgressRow, Tx, UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{SeasonRank, fresh_rank};
@@ -371,6 +375,57 @@ impl StoreHarness {
         }
     }
 
+    /// R1044000: every game record as one written before the totals were (migration 0041): not
+    /// folded, and the totals empty. In Postgres the rows' `folded` flag and the three totals
+    /// tables; in memory the ledger's flag and the one `StatsTotals`.
+    pub async fn forget_game_record_folds(&self) {
+        match &self.ends {
+            Ends::Memory { data, .. } => {
+                let mut data = data.lock().await;
+                for row in data.tables.game_record_ledger.values_mut() {
+                    row.folded = false;
+                }
+                data.tables.stats_totals = Default::default();
+            }
+            Ends::Postgres { admin } => {
+                sqlx::raw_sql(
+                    "update public.game_records set folded = false;
+                     truncate public.record_totals, public.card_totals, public.decklist_totals;",
+                )
+                .execute(admin)
+                .await
+                .expect("forget the folds");
+            }
+        }
+    }
+
+    /// R1044001: moves a game record's write `by_ms` into the past, as time passing would.
+    pub async fn age_game_record(&self, id: &str, by_ms: i64) {
+        match &self.ends {
+            Ends::Memory { data, .. } => {
+                let mut data = data.lock().await;
+                let row = data
+                    .tables
+                    .game_record_ledger
+                    .get_mut(id)
+                    .expect("a game record written");
+                row.recorded_at -= by_ms;
+            }
+            Ends::Postgres { admin } => {
+                sqlx::query(
+                    "update public.game_records
+                        set recorded_at = recorded_at - ($2::double precision / 1000.0) * interval '1 second'
+                      where id = $1",
+                )
+                .bind(id)
+                .bind(by_ms)
+                .execute(admin)
+                .await
+                .expect("age a game record");
+            }
+        }
+    }
+
     pub async fn close(self) {
         if let Db::Pg(pool) = &self.db {
             pool.close().await;
@@ -389,7 +444,8 @@ impl StoreHarness {
 /// tables are no longer written by anything (R254) but are emptied all the same, so a test that
 /// wrote one by hand leaves nothing behind.
 pub const TRUNCATE: &str = "truncate
-  public.game_records, public.tutorial_progress, public.player_settings,
+  public.game_records, public.record_totals, public.card_totals, public.decklist_totals,
+  public.tutorial_progress, public.player_settings,
   public.rated_games, public.bot_ratings, public.season_ranks, public.seasons,
   public.series, public.results, public.match_actions, public.tickets, public.matches,
   public.trios, public.decks, public.custom_cards,
@@ -4437,11 +4493,256 @@ mod game_records {
         );
     }
 
+    /// Records of both sources, every mode, two patches, human and AI seats, wins, a loss and a
+    /// draw, turns played, and one decklist taken twice in two orders.
+    fn mixed_records() -> Vec<GameRecord> {
+        let seats = |p1: Value, p2: Value| json!({ "p1": p1, "p2": p2 });
+        let seat = |deck: Value, opening: Value, drawn: Value, played: Value, turns: Value| json!({ "deck": deck, "opening": opening, "drawn": drawn, "played": played, "playedTurns": turns });
+        let game = |first: &str, winner: &str, seats: Value| json!({ "first": first, "winner": winner, "reason": "hero-death", "turns": 8, "seats": seats });
+        let list = json!(["core-001", "core-002", "core-003", "core-004"]);
+        let reordered = json!(["core-004", "core-003", "core-002", "core-001"]);
+        let other = json!(["core-002", "core-005", "core-006"]);
+        vec![
+            game_record(
+                "m-b",
+                json!({ "game": game("p1", "p1", seats(
+                    seat(list.clone(), json!(["core-001"]), json!(["core-002"]), json!(["core-001", "core-002"]), json!([1, 3])),
+                    seat(other.clone(), json!(["core-005"]), json!([]), json!(["core-005"]), json!([2])),
+                )) }),
+            ),
+            game_record(
+                "m-a",
+                json!({ "pilots": { "p1": "ai", "p2": "human" }, "game": game("p2", "p2", seats(
+                    seat(other.clone(), json!([]), json!(["core-006"]), json!([]), json!([])),
+                    seat(reordered.clone(), json!(["core-004"]), json!([]), json!(["core-004"]), json!([2])),
+                )) }),
+            ),
+            game_record(
+                "m-c",
+                json!({ "mode": "bo3", "game": game("p1", "draw", seats(
+                    seat(list.clone(), json!([]), json!([]), json!(["core-003"]), json!([4])),
+                    seat(other.clone(), json!([]), json!([]), json!([]), json!([])),
+                )) }),
+            ),
+            game_record(
+                "m-d",
+                json!({ "mode": "random", "patch": "v0.2.0", "game": game("p2", "p1", seats(
+                    seat(other.clone(), json!([]), json!(["core-002"]), json!(["core-002"]), json!([1])),
+                    seat(list.clone(), json!([]), json!([]), json!([]), json!([])),
+                )) }),
+            ),
+            game_record(
+                "dev:v0.1.1:gather:1",
+                json!({ "source": "dev", "mode": "random", "pilots": { "p1": "ai", "p2": "ai" },
+                        "game": game("p1", "p2", seats(
+                            seat(list.clone(), json!(["core-001"]), json!([]), json!(["core-001"]), json!([1])),
+                            seat(other.clone(), json!([]), json!([]), json!([]), json!([])),
+                        )) }),
+            ),
+            game_record(
+                "dev:v0.1.1:gather:2",
+                json!({ "source": "dev", "mode": "random", "pilots": { "p1": "ai", "p2": "ai" },
+                        "game": game("p2", "p1", seats(
+                            seat(other, json!([]), json!([]), json!([]), json!([])),
+                            seat(list, json!([]), json!(["core-003"]), json!(["core-003"]), json!([2])),
+                        )) }),
+            ),
+        ]
+    }
+
+    /// The totals the records make, folded in memory: what the store must hold once it wrote them.
+    fn folded(records: &[GameRecord]) -> StatsTotals {
+        let mut totals = StatsTotals::default();
+        for record in records {
+            totals.fold(record, true);
+        }
+        totals
+    }
+
+    /// What `stats_totals_load(&every_total())` must answer once the records are folded: every
+    /// count, and no decklists, which `stats_decklists` reads.
+    fn loaded(records: &[GameRecord]) -> StatsTotals {
+        folded(records).select(GAME_SOURCES, None, None, true)
+    }
+
+    fn every_total() -> StatsTotalsQuery {
+        StatsTotalsQuery {
+            source: SourceFilter::All,
+            mode: None,
+            patch: None,
+            drills: true,
+        }
+    }
+
+    /// R1044000: a record written is folded into the totals once, in the transaction that writes
+    /// it, and the totals give every report the records gave.
+    async fn r1044000_folds_each_record_written_once_and_reads_every_report_the_records_give(
+        harness: &StoreHarness,
+    ) {
+        let records = mixed_records();
+        // Two one at a time, the rest as a batch with a repeat in it, then all of them again.
+        assert!(q!(harness, t => t.game_records_insert(&records[0])));
+        assert!(q!(harness, t => t.game_records_insert(&records[1])));
+        let mut batch: Vec<GameRecord> = records[2..].to_vec();
+        batch.push(records[2].clone());
+        let written = q!(harness, t => t.game_records_insert_batch(&batch));
+        assert_eq!(written, [true, true, true, true, false]);
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records)),
+            vec![false; records.len()]
+        );
+
+        let expected = folded(&records);
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&records)
+        );
+        for source in [SourceFilter::Live, SourceFilter::Dev, SourceFilter::All] {
+            for mode in [None, Some(GameMode::Bo1), Some(GameMode::Random)] {
+                for patch in [None, Some("v0.1.1".to_string())] {
+                    let query = StatsTotalsQuery {
+                        source,
+                        mode,
+                        patch: patch.clone(),
+                        drills: false,
+                    };
+                    let totals = q!(harness, t => t.stats_totals_load(&query));
+                    assert_eq!(
+                        totals,
+                        expected.select(&sources_of(source), mode, patch.as_deref(), false),
+                        "{query:?}"
+                    );
+                    for pilot in [PilotFilter::Human, PilotFilter::Ai, PilotFilter::Unified] {
+                        let filter = CardStatsFilter {
+                            source,
+                            mode,
+                            patch: patch.clone(),
+                            pilot,
+                        };
+                        assert_eq!(
+                            card_stats_of(&totals, &filter),
+                            card_stats(&records, &filter),
+                            "{filter:?}"
+                        );
+                    }
+                }
+            }
+        }
+        // The people's live Best-of-1 lists: one list in two orders, first held by m-a's p2.
+        let lists = q!(harness, t => t.stats_decklists("v0.1.1"));
+        assert_eq!(lists, expected.decklists("v0.1.1"));
+        assert_eq!(lists.len(), 2);
+        assert_eq!(lists[0].first.record, "m-a");
+        assert_eq!(lists[0].games, 2);
+        assert!(q!(harness, t => t.stats_decklists("v9")).is_empty());
+    }
+
+    /// R1044000: a record written before the totals (migration 0041) is folded by
+    /// `game_records_fold_pending`, a batch at a time, the first in id order, and never twice.
+    async fn r1044000_folds_the_records_written_before_the_totals_once_a_batch_at_a_time(
+        harness: &StoreHarness,
+    ) {
+        let records = mixed_records();
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records)),
+            vec![true; records.len()]
+        );
+        harness.forget_game_record_folds().await;
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            StatsTotals::default()
+        );
+
+        let mut sorted = records.clone();
+        sorted.sort_by(|a, b| a.id.cmp(&b.id));
+        assert_eq!(q!(harness, t => t.game_records_fold_pending(2)), 2);
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&sorted[..2])
+        );
+        assert_eq!(
+            q!(harness, t => t.game_records_fold_pending(100)),
+            records.len() - 2
+        );
+        assert_eq!(q!(harness, t => t.game_records_fold_pending(100)), 0);
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&records)
+        );
+        assert_eq!(
+            q!(harness, t => t.stats_decklists("v0.1.1")),
+            folded(&records).decklists("v0.1.1")
+        );
+    }
+
+    /// R1044001: the purge empties a folded record's detail once it is older than its cutoff and
+    /// keeps its id, so the same game is never written or folded again, and the totals stand. An
+    /// unfolded record keeps its detail until it is folded.
+    async fn r1044001_the_purge_empties_a_folded_records_detail_past_its_cutoff_and_keeps_its_id(
+        harness: &StoreHarness,
+    ) {
+        let records = mixed_records();
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records)),
+            vec![true; records.len()]
+        );
+        const DAY: i64 = 86_400_000;
+        let now = harness.now();
+        harness.age_game_record("m-a", 8 * DAY).await;
+        harness.age_game_record("dev:v0.1.1:gather:1", 8 * DAY).await;
+        let cutoffs: RetentionPurgeInput = from(json!({
+            "codeAttemptsBefore": now - 30 * DAY,
+            "matchActionsEndedBefore": now - 90 * DAY,
+            "playTelemetryEndedBefore": now - 365 * DAY,
+            "gameRecordsRecordedBefore": now - 7 * DAY,
+        }));
+        let purged = q!(harness, t => t.purge_expired(&cutoffs));
+        assert_eq!(j(&purged)["gameRecords"], json!(2));
+        let held = q!(harness, t => t.game_records_list(&query(json!({ "source": "all", "mode": null, "patch": null }))));
+        assert_eq!(ids_of(&held), ["dev:v0.1.1:gather:2", "m-b", "m-c", "m-d"]);
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&records)
+        );
+        // The emptied ones are still held by id: written again, they are refused and fold nothing.
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records)),
+            vec![false; records.len()]
+        );
+        assert_eq!(q!(harness, t => t.game_records_fold_pending(100)), 0);
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&records)
+        );
+
+        // An unfolded record is never emptied, however old; folded, it goes on the next purge.
+        harness.reset().await;
+        assert!(q!(harness, t => t.game_records_insert(&records[0])));
+        harness.forget_game_record_folds().await;
+        harness.age_game_record(&records[0].id, 8 * DAY).await;
+        assert_eq!(
+            j(&q!(harness, t => t.purge_expired(&cutoffs)))["gameRecords"],
+            json!(0)
+        );
+        assert_eq!(q!(harness, t => t.game_records_fold_pending(100)), 1);
+        assert_eq!(
+            j(&q!(harness, t => t.purge_expired(&cutoffs)))["gameRecords"],
+            json!(1)
+        );
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&records[..1])
+        );
+    }
+
     both_stores!(
         r376_reads_a_match_s_mode_off_its_room_its_queue_tickets_or_its_series,
         r376_writes_one_record_per_game_and_refuses_a_second_with_the_same_id,
         r378_reads_development_records_only_when_asked_and_filters_by_mode_and_patch,
         r378_refuses_a_development_record_under_a_match_id_and_a_live_one_under_a_development_id,
+        r1044000_folds_each_record_written_once_and_reads_every_report_the_records_give,
+        r1044000_folds_the_records_written_before_the_totals_once_a_batch_at_a_time,
+        r1044001_the_purge_empties_a_folded_records_detail_past_its_cutoff_and_keeps_its_id,
     );
 }
 
@@ -5257,11 +5558,12 @@ mod purge_expired {
             "codeAttemptsBefore": now - 30 * day,
             "matchActionsEndedBefore": now - 90 * day,
             "playTelemetryEndedBefore": now - 365 * day,
+            "gameRecordsRecordedBefore": now - 7 * day,
         }));
         let purged = q!(harness, t => t.purge_expired(&cutoffs));
         assert_eq!(
             j(&purged),
-            json!({ "codeAttempts": 1, "matchActions": 1, "playTelemetry": 0 })
+            json!({ "codeAttempts": 1, "matchActions": 1, "playTelemetry": 0, "gameRecords": 0 })
         );
         assert_eq!(q!(harness, t => t.codes_count_attempts_by_ip("ip-old", 0)), 0);
         assert_eq!(q!(harness, t => t.codes_count_attempts_by_ip("ip-new", 0)), 1);
@@ -5514,12 +5816,13 @@ mod r1442_play_telemetry {
             "codeAttemptsBefore": now - 30 * DAY,
             "matchActionsEndedBefore": now - 90 * DAY,
             "playTelemetryEndedBefore": now - 365 * DAY,
+            "gameRecordsRecordedBefore": now - 7 * DAY,
         }));
         let purged = q!(harness, t => t.purge_expired(&cutoffs));
         // Two timings, an emote and two signals: the old match's five rows.
         assert_eq!(
             j(&purged),
-            json!({ "codeAttempts": 0, "matchActions": 0, "playTelemetry": 5 })
+            json!({ "codeAttempts": 0, "matchActions": 0, "playTelemetry": 5, "gameRecords": 0 })
         );
         assert_eq!(
             j(&q!(harness, t => t.play_telemetry_of(&old))),
@@ -6379,7 +6682,8 @@ mod social {
     use super::*;
     use jackioh_engine::config::DUOS_HUMAN_TEAM;
     use jackioh_server::db::store::{
-        ChallengeRow, ChallengeState, ChatMessageRow, ChatReportRow, FriendRequestRow, ReplayShare,
+        ChallengeRow, ChallengeState, ChatMessageRow, ChatReportListing, ChatReportRow, FriendRequestRow,
+        ReplayShare,
     };
     use jackioh_server::duos::store::DuosMatch;
 
@@ -6756,7 +7060,42 @@ mod social {
             "no such message"
         );
 
+        // #970: the operator's list, oldest report first, each with the message it reports.
+        let later: ChatReportRow = from(json!({
+            "id": id(),
+            "messageId": m4.id,
+            "reporter": c.id,
+            "reason": "spam",
+            "createdAt": now + 1_000,
+        }));
+        assert!(q!(harness, t => t.chat_report(&later)));
+        let listed = |rows: Vec<ChatReportListing>| -> Vec<(ChatMessageRow, String, String, i64)> {
+            rows.into_iter()
+                .map(|row| {
+                    (
+                        row.message,
+                        row.report.reporter,
+                        row.report.reason,
+                        row.report.created_at,
+                    )
+                })
+                .collect()
+        };
+        let m1_read = must(q!(harness, t => t.chat_get(&m1.id)), "m1");
+        assert_eq!(
+            listed(q!(harness, t => t.chat_reports_all())),
+            vec![
+                (m1_read, b.id.clone(), "rude".to_string(), now),
+                (m4.clone(), c.id.clone(), "spam".to_string(), now + 1_000),
+            ]
+        );
+
         assert_eq!(q!(harness, t => t.chat_purge(m2.created_at + 1)), 2);
+        assert_eq!(
+            listed(q!(harness, t => t.chat_reports_all())),
+            vec![(m4.clone(), c.id.clone(), "spam".to_string(), now + 1_000)],
+            "a report goes with its message"
+        );
         assert!(q!(harness, t => t.chat_get(&m1.id)).is_none());
         assert_eq!(
             ids_of(&q!(harness, t => t.chat_page(&a.id, &b.id, None, 10))),
@@ -7266,8 +7605,52 @@ mod duos {
         assert_eq!(kept.result, Some(result));
     }
 
+    /// R890000, R1047002: a host's open co-op rooms are the unjoined, unexpired ones, counted by
+    /// host; a claimed room and a lapsed one are not, and a malformed id holds none.
+    async fn r1047002_open_co_op_rooms_are_counted_by_host(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let now = harness.now();
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_count_open_by_host(&host.id, now)),
+            0
+        );
+
+        for (code, owner, made, expires) in [
+            ("DUOSLM", &host.id, now, now + 600_000),
+            ("DUOSNP", &host.id, now, now + 600_000),
+            ("DUOSQR", &host.id, now - 700_000, now - 100_000),
+            ("DUOSTV", &guest.id, now, now + 600_000),
+        ] {
+            assert!(q!(harness, t => t.duos_rooms_create(&room(code, owner, made, expires))));
+        }
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_count_open_by_host(&host.id, now)),
+            2
+        );
+
+        let choice = DuosChoice::Random { lean: None };
+        must(
+            q!(harness, t => t.duos_rooms_claim("DUOSNP", &guest.id, &choice, &id(), now)),
+            "the claim",
+        );
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_count_open_by_host(&host.id, now)),
+            1
+        );
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_count_open_by_host(&guest.id, now)),
+            1
+        );
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_count_open_by_host("not-a-uuid", now)),
+            0
+        );
+    }
+
     both_stores!(
         s6_rooms_are_claimed_once_and_reaped,
+        r1047002_open_co_op_rooms_are_counted_by_host,
         s6_matches_finish_once_and_the_log_is_append_only,
         s6_a_deleted_profile_takes_its_rooms_and_matches,
         s6_the_purge_takes_the_logs_of_matches_that_ended_before_the_cutoff,

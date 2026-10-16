@@ -452,6 +452,23 @@ mod r654_public_card_and_player_stats {
     }
 
     #[tokio::test]
+    async fn r654_filters_cards_by_each_shipped_set_alone_so_classic_keeps_classic_plus_out() {
+        let app = test_app().await;
+        for set in jackioh_engine::SHIPPED_SETS {
+            let name = set.as_str();
+            // `+` is a space in a query unless it is encoded.
+            let param = name.to_lowercase().replace('+', "%2B");
+            let prefix = format!("{}-", name.to_lowercase().replace('+', "plus"));
+            let (status, _, data) = get_public(&app, &format!("/api/stats/cards?set={param}")).await;
+            let ids = ids_of(&data);
+            assert_eq!(status, 200, "set={param}");
+            assert!(!ids.is_empty(), "set={param}");
+            assert_eq!(ids, deckable_ids(|def| def["set"] == name), "set={param}");
+            assert!(ids.iter().all(|id| id.starts_with(&prefix)), "set={param}");
+        }
+    }
+
+    #[tokio::test]
     async fn r654_get_api_stats_cards_id_returns_drill_down_with_turn_played_and_co_played_cards() {
         let app = test_app().await;
         let records = (1..=30)
@@ -860,5 +877,96 @@ mod r978000_kept_card_stats {
         .await;
         let (_, _, second) = get_public(&app, &path).await;
         assert_eq!(second["totalGames"], json!(2));
+    }
+}
+
+mod r1044000_condensed_card_stats {
+    use super::*;
+    use std::time::Duration;
+
+    use jackioh_server::api::retention::purge_expired;
+    use jackioh_server::config::GAME_RECORD_RAW_RETENTION_DAYS;
+    use jackioh_server::db::store::{Db, GameRecordQuery};
+
+    const DAY_MS: i64 = 86_400_000;
+
+    /// Every public card figure the records give: the cards for each source and pilot, and two
+    /// cards' drill-downs, which read the turns and the co-played cards.
+    async fn figures(app: &Arc<App>) -> Vec<Value> {
+        let mut bodies = Vec::new();
+        for path in [
+            "/api/stats/cards",
+            "/api/stats/cards?source=live",
+            "/api/stats/cards?source=dev",
+            "/api/stats/cards?pilot=human",
+            "/api/stats/cards?pilot=ai",
+            "/api/stats/cards/core-001",
+            "/api/stats/cards/core-002?pilot=ai",
+        ] {
+            let (status, _, body) = get_public(app, path).await;
+            assert_eq!(status, 200, "{path}");
+            bodies.push(body);
+        }
+        bodies
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1044000_r1044001_the_card_figures_stand_when_each_games_detail_is_purged() {
+        let app = test_app().await;
+        let decks = [
+            vec!["core-001", "core-002", "core-003"],
+            vec!["core-003", "core-002", "core-004"],
+            vec!["core-004", "core-001", "core-005"],
+        ];
+        let mut records: Vec<Value> = Vec::new();
+        for i in 0..24 {
+            let mut record = make_game_record(
+                &format!("cond-{i:02}"),
+                RecordOptions {
+                    source: Some(if i % 4 == 3 { "dev" } else { "live" }),
+                    p1_deck: Some(decks[i % 3].clone()),
+                    p2_deck: Some(decks[(i + 1) % 3].clone()),
+                    winner: Some(["p1", "p2", "draw"][i % 3]),
+                    p1_played_turns: Some(vec![1 + i % 4, 2 + i % 3]),
+                    ..RecordOptions::default()
+                },
+            );
+            // Some live games against a ladder bot, whose side is the AI's.
+            if i % 4 == 1 {
+                record["pilots"]["p2"] = json!("ai");
+            }
+            records.push(record);
+        }
+        insert_records(&app, records).await;
+        let before = figures(&app).await;
+        assert_eq!(before[0]["totalGames"], json!(24));
+
+        // A week and a day on, the purge empties every record's detail.
+        match &app.db {
+            Db::Fake(data) => {
+                for row in data.lock().await.tables.game_record_ledger.values_mut() {
+                    row.recorded_at -= (GAME_RECORD_RAW_RETENTION_DAYS + 1) * DAY_MS;
+                }
+            }
+            Db::Pg(_) => panic!("the API tests run on the fake store"),
+        }
+        let purged = purge_expired(&app).await.expect("purgeExpired");
+        assert_eq!(purged.game_records, 24);
+        let mut tx = app.db.begin(None).await.expect("a store transaction");
+        let held = tx
+            .game_records_list(&from::<GameRecordQuery>(
+                json!({ "source": "all", "mode": null, "patch": null }),
+            ))
+            .await
+            .expect("gameRecords.list");
+        tx.commit().await.expect("commit");
+        assert!(held.is_empty(), "no record's detail is held");
+
+        // Past the kept reports' TTL, every figure is computed again, off the totals alone.
+        tokio::time::advance(Duration::from_secs(
+            u64::try_from(CARD_STATS_CACHE_TTL_SECONDS).expect("a TTL") + 1,
+        ))
+        .await;
+        assert_eq!(figures(&app).await, before);
     }
 }

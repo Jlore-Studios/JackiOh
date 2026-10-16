@@ -13,10 +13,11 @@
 
 use jackioh_engine::config::{DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
 use jackioh_engine::{
-    AttackTarget, CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
+    AttackTarget, CardInstance, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
     active_brittle_count, active_units_of, animated_kind_of, attack_restriction, attacks_per_turn,
-    cannot_attack, card_keywords, credit_lapsing, effective_life, find_def, has_keyword, hero_armor_of,
-    owed_mana_of, own_cost, pierces, query_cost, reset_instance, subsystems, takes_strike_back, unit_view,
+    backrow_is_public, cannot_attack, card_keywords, credit_lapsing, effective_life, find_def, has_keyword,
+    hero_armor_of, owed_mana_of, own_cost, pierces, query_cost, reset_instance, subsystems,
+    takes_strike_back, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -41,20 +42,10 @@ fn hero_value(health: i32, start: i32, w: &EvalWeights) -> f64 {
     w.hero_health * (f64::from(health) * f64::from(start)).sqrt()
 }
 
-/// §10.8, R33: whether `seat` may read this backrow card. A placeholder never is.
+/// §10.8, R33, R686: whether `seat` may read this backrow card, by the rule `view_for` reads
+/// (`backrow_is_public`). A placeholder never is, and is asked first: the rule reads the definition.
 fn readable_by(state: &GameState, card: &CardInstance, seat: PlayerId) -> bool {
-    let Some(_def) = find_def(Some(state), &card.def_id) else {
-        return false;
-    };
-    // ME-ALTPLAY, R1046: a set Unit or Spell reads as a Field Trap or Trap.
-    let face = jackioh_engine::faces::card_type_of(state, card);
-    if face != CardType::Trap && face != CardType::FieldTrap {
-        return true;
-    }
-    if card.face_up == Some(true) {
-        return true;
-    }
-    card.controller == seat
+    find_def(Some(state), &card.def_id).is_some() && backrow_is_public(state, card, seat)
 }
 
 /// B3.3: the share of itself a card keeps under its Brittle count (`active_brittle_count`), 1 with none.
@@ -219,8 +210,8 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
 /// position ATK, no "Can't attack" and no E35 status barring attacks, sorted ascending by attack.
 /// Taunt units on the defending side soak up the smallest attackers they bind first, one §4.4 hit at
 /// a time (`damage_past_taunts`). Each remaining attacker's attack goes through
-/// `subsystems::projected_hero_damage` (armor and the Anti-oneshot cap, per hit), and the results are
-/// summed.
+/// `subsystems::projected_hero_damage` (armor, which a Pierce hit skips (R346), and the Anti-oneshot
+/// cap, per hit), and the results are summed.
 pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
     let mut attacks: Vec<(&CardInstance, i32)> = Vec::new();
     for unit in active_units_of(state, attacker) {
@@ -255,7 +246,8 @@ const REBORN_HEALTH: i32 = 1;
 /// dealt (step 7); and what a Trample hit lands beyond the Taunt's health reaches the hero (step 9,
 /// R63). A Taunt its attackers cannot destroy holds them all, and a destroyed Reborn Taunt comes back
 /// and binds the attackers left (§4.5 step 4, `reborn_body`). Lane strike (R94), combat-only bonuses
-/// (R1120) and Cleave stay out. Every remaining hit goes through `subsystems::projected_hero_damage`.
+/// (R1120) and Cleave stay out. Every remaining hit goes through `subsystems::projected_hero_damage`
+/// with its attacker's Pierce (R346).
 pub fn damage_past_taunts(state: &GameState, defender: PlayerId, attacks: &[(&CardInstance, i32)]) -> i32 {
     let mut free: Vec<(&CardInstance, i32)> = attacks.to_vec();
     free.sort_by_key(|(_, attack)| *attack);
@@ -323,8 +315,9 @@ pub fn damage_past_taunts(state: &GameState, defender: PlayerId, attacks: &[(&Ca
         }
     }
 
-    for (_, hit) in &free {
-        total += subsystems::projected_hero_damage(state, defender, *hit, false);
+    for (attacker, hit) in &free {
+        let pierce = pierces(state, Some(attacker), None);
+        total += subsystems::projected_hero_damage(state, defender, *hit, pierce);
     }
     total
 }

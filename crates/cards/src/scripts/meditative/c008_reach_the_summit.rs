@@ -1,7 +1,7 @@
 //! Meditative #8 Reach the Summit (SPEC §8.8 row 8). (0) Spell, Quickdraw, Wincon, Mythic.
-//!   Base:    "Ascent level: starts at 0. This costs (Ascent level). … Ascent 0: Heal your hero {heal}.
-//!             … Ascent 10: Win the game."
-//!   Radiant: the same with "This costs (Ascent level - 1), never less than (0)." and 3 of each.
+//!   Base:    "Costs (Ascent level). Gain that level's effect, then it goes up by 1. … Ascent 0: Heal
+//!             your hero {heal}. … Ascent 10: Win the game."
+//!   Radiant: the same with "Costs (Ascent level - 1), never less than (0)." and 3 of each.
 //!
 //! The Ascent level is R429's play count on the instance: `counts_plays` counts each play at §10.5
 //! step 4 (casts included, countered plays never), and the count rides the card through every zone.

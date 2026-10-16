@@ -1,9 +1,9 @@
 //! C #28 Second Wind (SPEC §8.6 row 28, §6.2 Replacement, §6.3 Play; R1, R3, R65, R78, R393).
 //! Field Spell, cost 0, Legendary.
-//!   Base:    "Cry: Exile your deck. Discard your hand.\nAura: You may play cards from your graveyard
-//!            that cost ({minCost}) or more. Cards that would go to your graveyard are exiled instead."
-//!   Radiant: "Cry: Exile your deck. Discard your hand.\nAura: You may play cards from your graveyard
-//!            that cost ({minCost}) or more."
+//!   Base:    "Cry: Exile your deck and discard your hand.\nAura: You may play ({minCost})+ Cost cards
+//!            from your graveyard. Cards that would go there are exiled instead."
+//!   Radiant: "Cry: Exile your deck and discard your hand.\nAura: You may play ({minCost})+ Cost cards
+//!            from your graveyard."
 //!   Engine:  "Play from the graveyard (§6.3 Play) for every card type while this is on the field: such
 //!            a play costs, chooses and counts as one from hand, fires its Cry (R1) and takes R65's
 //!            player discounts, at a price of at least (1) as paid (no free loop). The base face adds a

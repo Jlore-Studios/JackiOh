@@ -34,8 +34,8 @@ use jackioh_engine::wire::DuosSeat;
 use jackioh_server::actor::ws_server::{Socket, SocketFrame};
 use jackioh_server::app::{App, now_ms, router};
 use jackioh_server::config::{
-    DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_ROUND_CLOCK_MS, MAX_SAVED_DECKS,
-    PING_RATE_LIMIT, PING_RATE_WINDOW_MS,
+    DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_ROUND_CLOCK_MS,
+    MATCH_CEILING_MS, MAX_SAVED_DECKS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{CollectionEntry, Db};
@@ -1839,5 +1839,63 @@ mod b40_the_rebuild {
         assert_eq!(rebuilt.hash(), hash);
         assert_eq!(rebuilt.next_seq(), next_seq);
         assert_eq!(first_view(&back)["view"]["seat"], "a1");
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1047000 — the hard ceiling (§9.5)
+// ---------------------------------------------------------------------------------------------
+
+mod r1047000_the_ceiling {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r1047000_a_co_op_match_reaching_the_ceiling_ends_as_a_ceiling_draw_and_writes_its_result() {
+        let h = duos("easy").await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        // A held channel, not a WebSocket: a WebSocket the clock jumps over would be dropped as idle
+        // (R1441).
+        let (socket, mut frames) = Socket::channel();
+        actor.attach(DuosSeat::A1, socket);
+        actor.idle().await;
+
+        tokio::time::advance(ms(MATCH_CEILING_MS)).await;
+        settle().await;
+        let deadline = Instant::now() + PROMPTLY;
+        while !actor.is_finished() && Instant::now() < deadline {
+            tokio::time::sleep(WAIT_STEP).await;
+            actor.idle().await;
+        }
+
+        let draw = json!({ "outcome": "draw", "winner": null, "reason": "ceiling" });
+        assert!(actor.is_finished(), "the ceiling ended the match");
+        let mut t = h.app.db.begin(None).await.expect("a transaction");
+        let row = t
+            .duos_matches_get(&h.match_id)
+            .await
+            .expect("the row")
+            .expect("the match's row");
+        t.commit().await.expect("the commit");
+        assert_eq!(row.result, Some(draw.clone()));
+        assert!(row.ended_at.is_some(), "{row:?}");
+        let log = h.logged().await;
+        let last = log.last().expect("the log holds the ceiling");
+        assert_eq!(last.action["seat"], "a1", "{:?}", last.action);
+        assert_eq!(
+            last.action["body"],
+            duel(json!({ "type": "ceilingReached" })),
+            "{:?}",
+            last.action
+        );
+        assert_eq!(last.nonce, format!("srv-ceiling-{}", last.seq));
+        let pushed = drain(&mut frames);
+        let view = pushed
+            .iter()
+            .rev()
+            .find(|frame| frame["type"] == "view")
+            .expect("a view after the ceiling");
+        assert_eq!(view["view"]["result"], draw, "{view}");
+        assert_eq!(h.live(&h.host).await, Value::Null);
+        assert_eq!(h.live(&h.guest).await, Value::Null);
     }
 }

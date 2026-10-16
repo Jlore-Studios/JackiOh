@@ -7,7 +7,7 @@ import { useLayoutEffect, useRef } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { CardDef, CardType } from "@jackioh/shared";
-import { CardFace } from "../CardFace.tsx";
+import { CardFace, faceText } from "../CardFace.tsx";
 import { readerTerms } from "../chinese.ts";
 import { textTier } from "../fit.ts";
 import { faceModel, locWords, type FaceModel } from "../model.ts";
@@ -62,7 +62,10 @@ export function detailMetaLine(def: CardDef): string {
   return parts.join(" · ");
 }
 
-/** Text tiers whose printed face shrinks far enough to want the reading-size copy on any screen. */
+/**
+ * Text tiers whose printed face shrinks far enough to want the reading-size copy on any screen; a
+ * face that prints less than its whole text (issue #1017, `faceText`) wants it too.
+ */
 const LONG_TEXT_TIERS: ReadonlySet<string> = new Set(["xl", "xxl"]);
 
 /**
@@ -72,7 +75,11 @@ const LONG_TEXT_TIERS: ReadonlySet<string> = new Set(["xl", "xxl"]);
 function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel }): ReactElement | null {
   const radiantLine = radiant.text.full === base.text.full ? null : radiant.text;
   if (base.text.full === "" && radiantLine === null) return null;
-  const long = LONG_TEXT_TIERS.has(textTier(base.text.full)) || LONG_TEXT_TIERS.has(textTier(radiant.text.full));
+  const long =
+    LONG_TEXT_TIERS.has(textTier(base.text.full)) ||
+    LONG_TEXT_TIERS.has(textTier(radiant.text.full)) ||
+    faceText(base).less ||
+    faceText(radiant).less;
   return (
     <div className="inspect-rules" data-long={long ? "true" : "false"}>
       {base.text.full === "" ? null : (

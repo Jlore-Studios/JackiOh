@@ -605,9 +605,9 @@ mod r21_random_keywords_m3_t1 {
             .position = Some(Position::Def);
         let mut b = Bench::new(state);
 
-        // Every draw the 18-entry pool has room for but Taunt and Armor, and nothing it has (R781005).
+        // Every draw the 16-entry pool has room for but Taunt, and nothing it has (R781005, R1025000).
         let me = Some(b.card(&unit.id));
-        let count = RANDOM_KEYWORD_POOL.len() - 2;
+        let count = RANDOM_KEYWORD_POOL.len() - 1;
         run(
             &mut b,
             grant_random_keywords(json_as(json!({ "target": { "of": "self" }, "count": count }))),
@@ -619,7 +619,43 @@ mod r21_random_keywords_m3_t1 {
         assert!(!kinds.contains(&"Taunt".to_string()));
         assert!(!kinds.contains(&"Armor".to_string()));
         assert_eq!(kinds.iter().collect::<IndexSet<_>>().len(), kinds.len());
-        assert_eq!(kinds.len(), RANDOM_KEYWORD_POOL.len() - 2);
+        assert_eq!(kinds.len(), RANDOM_KEYWORD_POOL.len() - 1);
+    }
+
+    #[test]
+    fn r21_r1025000_a_grant_of_the_whole_pool_never_gives_armor_or_spell_damage() {
+        let mut state = game("random-kw-no-numbered");
+        let unit = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let mut b = Bench::new(state);
+
+        // Drawing the pool dry on a unit with no keyword hands out every entry, and Armor 1 and
+        // Spell Damage +1 are not among them.
+        run(
+            &mut b,
+            grant_random_keywords(json_as(
+                json!({ "target": { "of": "chosen" }, "count": RANDOM_KEYWORD_POOL.len() }),
+            )),
+            None,
+            on_instance(&unit),
+        );
+
+        let kinds = granted_kinds(&b.events);
+        assert!(!kinds.contains(&"Armor".to_string()));
+        assert!(!kinds.contains(&"Spell Damage".to_string()));
+        assert_eq!(kinds.iter().collect::<IndexSet<_>>().len(), kinds.len());
+        // Only Taunt may be left out, when Indestructible came first (R347, R781004).
+        assert!(kinds.len() >= RANDOM_KEYWORD_POOL.len() - 1);
+        for keyword in &b.card(&unit.id).granted_keywords {
+            assert!(!matches!(
+                keyword.kind(),
+                KeywordKind::Armor | KeywordKind::SpellDamage
+            ));
+        }
     }
 
     #[test]

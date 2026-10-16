@@ -1,9 +1,12 @@
-//! #50 K-Pop Fanatic (SPEC §8.2; R13, R15, R62, R68, R76, R81, R90, R126, R127, R174, R275, R282, R437).
+//! #50 K-Pop Fanatic (SPEC §8.2; R13, R15, R46, R62, R68, R76, R81, R90, R126, R127, R174, R275, R282,
+//! R437, R767000, R1045000).
 //!   (2) Unit, Human, Epic, 1/1 → 2/2.
-//!   Base:    "Cry: choose an enemy permanent; at the start of your next turn, steal it"
-//!   Radiant: "Divine Shield; Cry: choose an enemy permanent; at the start of your next turn, steal
-//!            it; it becomes Radiant" (R275; "Divine Shield" is printed in `catalog.json`).
+//!   Base:    "Cry: Allure an enemy permanent."
+//!   Radiant: "Divine Shield; Cry: Allure an enemy permanent. Make it Radiant when you steal it."
+//!            (R275; "Divine Shield" is printed in `catalog.json`).
 //!
+//! Allure (§6.3, R963, R1045000) is a delayed steal that destroys a target with no open zone in its row
+//! (`otherwise: destroy`, R46), as Jade Beauty's does; the card Allures the one permanent it declares.
 //! The choice is a declared target made at PLAY time (R81) over both enemy rows ("permanent", §6.3);
 //! R90 validates it, a face-down trap may be named unseen (§9.1), a Stack pile offers its top (R13).
 //! The delay (§8.2 Engine cell) is keyed to the TARGET, not this unit, so it fires even if K-Pop
@@ -11,7 +14,8 @@
 //! `resume` table alone, hence `hook: RESUME_HOOK` (R126). Its fizzles (R76, R174) and R15's
 //! placement are the engine's, not re-checked here.
 //! The rider (R282) lands only on a card the steal took: `takeable` before it, `held_now` after.
-//! THE MARK (R437): the pending steal's target carries a purple `steal` mark until it resolves.
+//! THE MARK (R437): the pending steal's target carries Allure's pink `allure` mark until it resolves.
+//! `script_v0_3_7b` is the plain steal the card ran through v0.3.7b, kept for its replays (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -23,24 +27,45 @@ const STEAL_STEP: &str = "steal";
 /// The one thing the continuation captures: which permanent was chosen (§8.2 Engine cell).
 const TARGET_KEY: &str = "targetId";
 
-/// R437: the pending steal, as the mark its target carries while it waits — purple.
-const STEAL_MARK: StealMark = StealMark {
-    mark: "steal",
-    color: "purple",
-};
-
-/// The mark's two strings, written into the `delay` literal.
-struct StealMark {
+/// The delayed steal as one version of the card makes it: the mark its target carries while it waits
+/// (R437), and what the steal does when this side has no free zone in the target's row.
+#[derive(Clone, Copy)]
+struct Pending {
     mark: &'static str,
     color: &'static str,
+    otherwise: Option<StealOtherwise>,
 }
 
-impl StealMark {
+impl Pending {
     /// The `CardMark` literal `delay` takes.
-    fn to_json(&self) -> Value {
+    fn mark_json(&self) -> Value {
         json!({ "mark": self.mark, "color": self.color })
     }
+
+    /// The steal of the captured target.
+    fn steal_of(&self, target_id: &str) -> Effect {
+        steal(StealTarget {
+            instance_id: Some(target_id.to_string()),
+            otherwise: self.otherwise,
+            ..StealTarget::default()
+        })
+    }
 }
+
+/// R1045000: Allure (§6.3, R963): Allure's pink mark, and a target with no room on this side destroyed.
+const ALLURE: Pending = Pending {
+    mark: ALLURE_MARK,
+    color: ALLURE_MARK_COLOR,
+    otherwise: Some(StealOtherwise::Destroy),
+};
+
+/// R767000: the plain steal of v0.3.7b and before: a purple `steal` mark, and a target with no room left
+/// with the opponent (R15).
+const PLAIN_STEAL: Pending = Pending {
+    mark: "steal",
+    color: "purple",
+    otherwise: None,
+};
 
 /// The play-time pick (R81), read straight off the context — reading state is not mutating it.
 fn chosen_instance_id(ctx: &EffectContext<'_>) -> Option<String> {
@@ -85,22 +110,23 @@ fn held_now(ctx: &EffectContext<'_>, id: &str) -> bool {
 
 /// R62's continuation, registered once in the `resume` table (R126). R76's fizzles are steal's own
 /// no-ops: a target gone from the field, or one already yours.
-fn steal_step(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+fn steal_step(ctx: &mut EffectContext<'_>, pending: Pending) -> Vec<Effect> {
     let Some(target_id) = captured_target_id(ctx) else {
         return vec![];
     };
-    vec![steal(json_as(json!({ "instanceId": target_id })))]
+    vec![pending.steal_of(&target_id)]
 }
 
 /// The radiant face's step: the same steal, then R282's rider for the card the steal took and nothing
 /// else. `takeable` is read as the list is built, before the steal; `for_each_card` reads its set when
 /// the list reaches it, after, so the set is the stolen card or nothing. The face the Cry ran is the
-/// one stored with the delay, whatever the Fanatic shows when it fires.
-fn radiant_steal_step(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+/// one stored with the delay, whatever the Fanatic shows when it fires (a target the steal destroyed for
+/// want of room, R1045000, still stands under the other player).
+fn radiant_steal_step(ctx: &mut EffectContext<'_>, pending: Pending) -> Vec<Effect> {
     let Some(target_id) = captured_target_id(ctx) else {
         return vec![];
     };
-    let mut effects: Vec<Effect> = vec![steal(json_as(json!({ "instanceId": target_id })))];
+    let mut effects: Vec<Effect> = vec![pending.steal_of(&target_id)];
     if !takeable(ctx, &target_id) {
         return effects;
     }
@@ -121,7 +147,7 @@ fn radiant_steal_step(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
 }
 
 /// The Cry both faces share: choose the enemy permanent and arm the steal (§8.2 Engine cell).
-fn kpop_fanatic(step: Hook) -> Script {
+fn kpop_fanatic(pending: Pending, step: Hook) -> Script {
     Script {
         // §6.3: a permanent is a Unit, Field Spell, Trap or Field Trap, so both enemy rows are offered.
         targets: vec![TargetDecl::target(
@@ -129,7 +155,7 @@ fn kpop_fanatic(step: Hook) -> Script {
             1,
             json!({ "side": "enemy", "of": ["unit", "backrow"] }),
         )],
-        cry: Some(hook(|ctx| {
+        cry: Some(hook(move |ctx| {
             let Some(target_id) = chosen_instance_id(ctx) else {
                 return vec![];
             };
@@ -142,7 +168,7 @@ fn kpop_fanatic(step: Hook) -> Script {
                 // same card is back by then (bounced and replayed, or a Reborn body) — R76's fizzle.
                 "watch": target_id,
                 // R437: and it carries the steal's mark in both views while it waits.
-                "mark": STEAL_MARK.to_json(),
+                "mark": pending.mark_json(),
             })))]
         })),
         resume: IndexMap::from([(STEAL_STEP, step)]),
@@ -150,22 +176,35 @@ fn kpop_fanatic(step: Hook) -> Script {
     }
 }
 
-pub fn script() -> CardScripts {
+/// Both faces as one version makes them: the same Cry, the radiant face's step adding R282's rider.
+fn scripts_with(pending: Pending) -> CardScripts {
     CardScripts {
-        base: kpop_fanatic(hook(steal_step)),
+        base: kpop_fanatic(pending, hook(move |ctx| steal_step(ctx, pending))),
         // "Divine Shield" is printed in the catalog; the step adds R282's rider.
-        radiant: kpop_fanatic(hook(radiant_steal_step)),
+        radiant: kpop_fanatic(pending, hook(move |ctx| radiant_steal_step(ctx, pending))),
     }
 }
 
-// #50 K-Pop Fanatic — SPEC §8.2, BUILD M4-T4: "Steal fires at your next start of turn even if it
-// died (R76); fizzles if the target left; radiant Divine Shield". R437: the pending steal marks its
-// target purple in both views while it waits. A base #50 made Radiant on the field gains its radiant
+pub fn script() -> CardScripts {
+    scripts_with(ALLURE)
+}
+
+/// R767000: the scripts v0.3.7b and every version before it ran, a plain steal that marked its target
+/// purple and left one it had no room for with the opponent (R15); `KEPT_SCRIPTS` folds those
+/// versions' replays under them.
+pub fn script_v0_3_7b() -> CardScripts {
+    scripts_with(PLAIN_STEAL)
+}
+
+// #50 K-Pop Fanatic — SPEC §8.2, BUILD M4-T4: "Allure (R1045000): the target carries the pink `allure`
+// mark and is stolen at your next start of turn even if K-Pop Fanatic died (R76), or destroyed with no
+// open zone in its row, an Indestructible one staying; fizzles if the target left; radiant Divine
+// Shield". R437: the pending Allure marks its target pink in both views while it waits. A base #50 made Radiant on the field gains its radiant
 // face's Divine Shield at once, even after a granted one was spent (§5.2).
 //
 // Radiant (R275, R282): the rider lands only on a card the delayed steal took, never on a target that
 // left the field (R76, R174), lies dormant under a Stack pile (R13), was already this player's, or
-// stayed with the opponent because the row was full (R15). Each has an `R282` case below.
+// was destroyed because the row was full (R1045000). Each has an `R282` case below.
 //
 // Every case crosses a turn boundary, so both sides keep a card in hand, a unit and library cards:
 // the engine auto-ends a turn with nothing left (R82) and an empty library adds fatigue. Two
@@ -248,15 +287,16 @@ mod tests {
     const SAINTESS: &str = "core-081";
     const SURGERY: &str = "core-063";
 
-    // R437: the pending steal marks its target purple, in both views, while it waits.
+    // R437, R1045000: the pending Allure marks its target with Allure's pink mark, in both views, while it
+    // waits.
 
-    fn steal_mark() -> Value {
-        json!({ "mark": "steal", "color": "purple" })
+    fn allure_mark() -> Value {
+        json!({ "mark": "allure", "color": "pink" })
     }
 
-    /// A `marked` event's JSON with the steal mark spread in.
+    /// A `marked` event's JSON with the Allure mark spread in.
     fn marked(instance_id: &str, added: bool) -> Value {
-        json!({ "type": "marked", "instanceId": instance_id, "mark": "steal", "color": "purple", "added": added })
+        json!({ "type": "marked", "instanceId": instance_id, "mark": "allure", "color": "pink", "added": added })
     }
 
     /// The marks a card's view carries, wherever the viewer sees it on the field: the marks JSON, `Null`
@@ -737,7 +777,7 @@ mod tests {
         }
 
         #[test]
-        fn r282_a_full_row_keeps_the_target_with_the_opponent_and_it_is_not_made_radiant_r15() {
+        fn r282_r1045000_a_full_row_destroys_the_target_and_it_is_not_made_radiant() {
             crate::register_all();
             let mut g = scenario(json!({
                 "p1": {
@@ -756,8 +796,8 @@ mod tests {
             g.end_turn();
 
             assert_eq!(g.state().active, P1);
-            assert_eq!(unit_id(&g, P2, 2), Some(prey.id.clone()));
-            assert_eq!(g.card(&prey).controller, P2);
+            g.expect_in_zone(&prey, "graveyard");
+            assert_eq!(count_events(&g, GameEventType::ControlChanged), 0);
             assert!(!g.card(&prey).radiant);
             assert!(!radiant_set_on(&g, &prey.id));
             assert!(g.state().delayed.is_empty());
@@ -845,7 +885,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r437_the_cry_marks_its_target_purple_in_both_views_and_the_mark_goes_when_the_steal_resolves() {
+        fn r437_r1045000_the_cry_marks_its_target_allure_pink_in_both_views_and_the_mark_goes_when_the_steal_resolves() {
             crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [KPOP, FILLER], "library": LIBRARY },
@@ -855,15 +895,15 @@ mod tests {
             g.play(KPOP, target(&prey.id));
 
             assert_eq!(mark_events(g.last_events()), vec![marked(&prey.id, true)]);
-            assert_eq!(marks_in(&g.view(P1), &prey.id), json!([steal_mark()]));
-            assert_eq!(marks_in(&g.view(P2), &prey.id), json!([steal_mark()]));
+            assert_eq!(marks_in(&g.view(P1), &prey.id), json!([allure_mark()]));
+            assert_eq!(marks_in(&g.view(P2), &prey.id), json!([allure_mark()]));
             // K-Pop Fanatic itself carries none.
             let fanatic_id = unit_id(&g, P1, 1).unwrap_or_default();
             assert_eq!(marks_in(&g.view(P1), &fanatic_id), Value::Null);
 
             g.end_turn();
             // Still waiting through p2's turn.
-            assert_eq!(marks_in(&g.view(P2), &prey.id), json!([steal_mark()]));
+            assert_eq!(marks_in(&g.view(P2), &prey.id), json!([allure_mark()]));
             g.end_turn();
 
             // Stolen at p1's start of turn: the mark is gone, from both views, with a `marked` removal.
@@ -886,7 +926,7 @@ mod tests {
             g.play(KPOP, target(&prey.id));
             g.play(MIND_CONTROL, target(&prey.id));
             // Taking control is not leaving the field (R171): the steal still waits, and so does its mark.
-            assert_eq!(marks_in(&g.view(P1), &prey.id), json!([steal_mark()]));
+            assert_eq!(marks_in(&g.view(P1), &prey.id), json!([allure_mark()]));
 
             until_active(&mut g, P2);
             until_active(&mut g, P1);
@@ -943,11 +983,11 @@ mod tests {
             let p1_view = g.view(P1);
             let back = serde_json::to_value(&p1_view.opponent.backrow[2]).expect("a backrow view serialises");
             assert_eq!(back["faceDown"], json!(true));
-            assert_eq!(back["marks"], json!([steal_mark()]));
+            assert_eq!(back["marks"], json!([allure_mark()]));
             assert!(back.get("defId").is_none());
             let seen = mark_events(&p1_view.events);
             assert_eq!(seen, vec![marked("hidden", true)]);
-            assert_eq!(marks_in(&g.view(P2), &trap.id), json!([steal_mark()]));
+            assert_eq!(marks_in(&g.view(P2), &trap.id), json!([allure_mark()]));
             let p2_marks = mark_events(&g.view(P2).events);
             assert_eq!(p2_marks.first().map(|event| event["instanceId"].clone()), Some(json!(trap.id)));
         }
@@ -1048,8 +1088,8 @@ mod tests {
                 }),
             );
 
-            assert_eq!(marks_in(&view_for(&state, P1), &token.id), json!([steal_mark()]));
-            assert_eq!(marks_in(&view_for(&state, P2), &token.id), json!([steal_mark()]));
+            assert_eq!(marks_in(&view_for(&state, P1), &token.id), json!([allure_mark()]));
+            assert_eq!(marks_in(&view_for(&state, P2), &token.id), json!([allure_mark()]));
 
             let replayed = fold(&json_as::<FoldArgs>(json!({
                 "seed": seed,
@@ -1061,6 +1101,140 @@ mod tests {
             for viewer in [P1, P2] {
                 assert_eq!(view_for(&replayed.state, viewer), view_for(&state, viewer));
             }
+        }
+    }
+
+    mod n50_k_pop_fanatic_r1045000_allure_reaches_every_permanent {
+        use super::*;
+
+        /// Core #66 Rock Wall: Indestructible, so a destroy leaves it standing (R46).
+        const WALL: &str = "core-066";
+        /// Core #75 Infinite Reserves: a Field Spell with nothing to do in these cases.
+        const RESERVES: &str = "core-075";
+
+        /// p1's unit row is full but for the zone K-Pop Fanatic takes, and `prey` is p2's only card.
+        fn full_row(prey: Value) -> Scenario {
+            scenario(json!({
+                "p1": {
+                    "hand": [KPOP, FILLER],
+                    "field": [VANILLA, VANILLA, VANILLA, VANILLA],
+                    "library": LIBRARY,
+                },
+                "p2": { "hand": [FILLER], "field": [prey], "library": LIBRARY },
+            }))
+        }
+
+        #[test]
+        fn r1045000_both_faces_print_allure_in_fewer_words_than_the_steal_they_replace() {
+            crate::register_all();
+            let def = crate::card_def(KPOP);
+            let old_base = "Cry: Choose an enemy permanent. At the start of your next turn, steal it.";
+            let old_radiant = "Divine Shield\nCry: Choose an enemy permanent. At the start of your next turn, steal it and make it Radiant.";
+
+            assert_eq!(def.base.text, "Cry: Allure an enemy permanent.");
+            assert_eq!(
+                def.radiant.text,
+                "Divine Shield\nCry: Allure an enemy permanent. Make it Radiant when you steal it."
+            );
+            assert!(def.base.text.len() < old_base.len());
+            assert!(def.radiant.text.len() < old_radiant.len());
+        }
+
+        #[test]
+        fn r1045000_base_with_no_open_unit_zone_the_allured_unit_is_destroyed_not_left_with_the_opponent() {
+            crate::register_all();
+            let mut g = full_row(json!({ "def": VANILLA, "lane": 2 }));
+            let prey = unit_at(&g, P2, 2, "setup: p2 should hold Mr. Vanilla in lane 2");
+            // K-Pop Fanatic takes p1's last free zone, lane 5.
+            g.play(KPOP, target(&prey.id));
+            assert_eq!(g.unit(P1, 5).map(|unit| unit.def_id.clone()), Some(KPOP.to_string()));
+
+            g.end_turn();
+            g.end_turn();
+
+            assert_eq!(g.state().active, P1);
+            g.expect_in_zone(&prey, "graveyard");
+            assert!(g.events().iter().any(
+                |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == prey.id)
+            ));
+            assert_eq!(count_events(&g, GameEventType::ControlChanged), 0);
+            assert!(g.state().delayed.is_empty());
+            assert!(g.state().marks.is_none());
+        }
+
+        #[test]
+        fn r1045000_an_indestructible_allured_unit_with_no_room_stays_where_it_is() {
+            crate::register_all();
+            let mut g = full_row(json!({ "def": WALL, "lane": 2 }));
+            let prey = unit_at(&g, P2, 2, "setup: p2 should hold the wall in lane 2");
+            g.play(KPOP, target(&prey.id));
+
+            g.end_turn();
+            g.end_turn();
+
+            assert_eq!(g.state().active, P1);
+            assert_eq!(unit_id(&g, P2, 2), Some(prey.id.clone()));
+            assert_eq!(g.card(&prey).controller, P2);
+            assert_eq!(count_events(&g, GameEventType::ControlChanged), 0);
+        }
+
+        #[test]
+        fn r1045000_a_field_spell_with_no_open_backrow_zone_is_destroyed() {
+            crate::register_all();
+            let mut g = scenario(json!({
+                "p1": {
+                    "hand": [KPOP, FILLER],
+                    "backrow": [RESERVES, RESERVES, RESERVES, RESERVES, RESERVES],
+                    "library": LIBRARY,
+                },
+                "p2": {
+                    "hand": [FILLER],
+                    "field": [VANILLA],
+                    "backrow": [{ "def": RESERVES, "lane": 3 }],
+                    "library": LIBRARY,
+                },
+            }));
+            let prey = g
+                .backrow(P2, 3)
+                .expect("setup: p2 should hold Infinite Reserves in backrow lane 3")
+                .clone();
+            g.play(KPOP, target(&prey.id));
+
+            assert_eq!(marks_in(&g.view(P2), &prey.id), json!([allure_mark()]));
+
+            g.end_turn();
+            g.end_turn();
+
+            assert_eq!(g.state().active, P1);
+            g.expect_in_zone(&prey, "graveyard");
+            assert_eq!(backrow_id(&g, P2, 3), None);
+            assert_eq!(count_events(&g, GameEventType::ControlChanged), 0);
+        }
+
+        #[test]
+        fn r1045000_r767000_a_game_on_v0_3_7_folds_under_the_kept_plain_steal_its_mark_purple_and_a_full_row_leaving_the_target() {
+            crate::register_all();
+            let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+            jackioh_engine::with_shipped(Some(shipped), || {
+                let mut g = full_row(json!({ "def": VANILLA, "lane": 2 }));
+                let prey = unit_at(&g, P2, 2, "setup: p2 should hold Mr. Vanilla in lane 2");
+                g.play(KPOP, target(&prey.id));
+                assert_eq!(
+                    marks_in(&g.view(P2), &prey.id),
+                    json!([{ "mark": "steal", "color": "purple" }])
+                );
+
+                g.end_turn();
+                g.end_turn();
+
+                assert_eq!(g.state().active, P1);
+                assert_eq!(unit_id(&g, P2, 2), Some(prey.id.clone()));
+                assert_eq!(g.card(&prey).controller, P2);
+                assert!(!g
+                    .events()
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == prey.id)));
+            });
         }
     }
 }

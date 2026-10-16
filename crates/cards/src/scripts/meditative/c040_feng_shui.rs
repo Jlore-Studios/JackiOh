@@ -1,10 +1,9 @@
 //! Meditative #40 Feng Shui (SPEC §8.8 row 40, R980–R987, BUILD M10 row M 40). (2) Field
 //! Spell, CN, Legendary.
-//!   Base:    "Aura: Every card has an element: 水, 木, 火, 金 or 土. / Auspicious behavior will be
-//!            rewarded and inauspicious behavior will be punished. / Your last element and your
-//!            opponent's last element are shown here. / Aura: You have Luck {luck}."
-//!   Radiant: line 2 becomes "Auspicious behavior will be rewarded for you, and inauspicious behavior
-//!            will be punished heavily for your opponent."
+//!   Base:    "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui is rewarded, bad punished. You
+//!            have Luck {luck}. / Your last element, your opponent's last element."
+//!   Radiant: line 1's "good feng shui is rewarded, bad punished" becomes "good feng shui rewards you,
+//!            bad hurts your opponent heavily"
 //!   Engine:  ME-ELEMENT (`engine/src/subsystems/feng_shui.rs`): the card judges every face-up play at
 //!            §10.5 step 3 by its element against its player's last (R981–R984), shows elements on
 //!            readable cards while it acts (R980), and shows both records through `preview` (R982);

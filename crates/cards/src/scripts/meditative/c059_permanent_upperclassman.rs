@@ -1,10 +1,10 @@
 //! M #59 Permanent Upperclassman (SPEC §8.8 row 59): (3) Unit, Human, Rare, 3/3 → 6/6.
 //!
 //! Base:    "Cry: Summon a random (4) Cost Unit. It gains "Death: Fuse a random Book and a random AI
-//!          generated card and add the result to your hand.""
+//!          generated card into your hand.""
 //! Radiant: "Cry: Summon a random Radiant (4) Cost Unit. It gains "Death: Fuse a random Radiant Book
-//!          and a random Radiant AI generated card and add the result to your hand."" (the granted
-//!          Death quoted in its sentence, R1445)
+//!          and a random Radiant AI generated card into your hand."" (the granted Death quoted in its
+//!          sentence, R1445)
 //! Engine: ME-GRANT (docs/meditative-set.md M5, MD-D13) plus multi-pool fusion (MD-D14) — the
 //! summoned Unit is granted `meditative-059#fusedBookDeath` as plain data; the hook fuses one pick
 //! from each pool, the Book first so the fused type falls back to it, into the controller's hand at

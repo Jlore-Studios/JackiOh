@@ -59,6 +59,8 @@ contributors' pull requests wait for approval before any workflow runs (Settings
 | `register-runners.sh` | on your computer | registers each `night-vm-*` subscription's runner with GitHub and starts it as a service |
 | `starter.py` | AWS Lambda | starts the machine when a bot-night job is queued for a `night-vm-*` runner (tested in `bot/tests/test_machine.py`) |
 | `deploy-starter.sh` | on your computer | creates or updates the starter, its role and its five-minute schedule |
+| `credits.py` | AWS Lambda | opens one issue when the project's credits fall under $20 (tested in `bot/tests/test_machine.py`) |
+| `deploy-credits.sh` | on your computer | creates or updates the credits watch, its role and its six-hour schedule |
 
 The scripts on your computer need the AWS CLI signed in to the project (`aws login`) and, for the
 runners, `gh` signed in as a repository admin. They find the machine by its `Name` tag, or take
@@ -95,6 +97,20 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
    ```sh
    REPO_ID=$(gh api repos/OWNER/REPO --jq .id) bot/machine/deploy-starter.sh
    ```
+6. **Deploy the credits watch**, with a fine-grained token for the repository that can read and
+   write its issues and nothing else:
+
+   ```sh
+   REPO=OWNER/REPO CREDITS_GITHUB_TOKEN=<token> bot/machine/deploy-credits.sh
+   ```
+
+   On the Free plan, AWS closes the project when its credits run out, and both boxes stop with
+   it. Every six hours the watch reads the credits left (`aws freetier get-account-plan-state`),
+   and once they are under `FLOOR` ($20) it opens the issue "AWS credits are under $20", labelled
+   `human`, once: an issue with that title ever opened, open or closed, stops another. Its log
+   is the CloudWatch group `/aws/lambda/jackioh-credits-watch`, kept for seven days. Deployed
+   without a token, it only logs; set `GITHUB_TOKEN` on the function in the Lambda console, or
+   deploy again with one.
 
 ## The training box
 
