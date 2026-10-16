@@ -21,7 +21,7 @@ use jackioh_engine::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::config::EvalWeights;
+use crate::config::{AI_EVAL, EvalWeights};
 
 /// The life `player` started the game with, where the hero value and `closing` are anchored (R964000):
 /// HERO_HEALTH in a 1v1 game; in a Duos duel the seat's own HP and its team's pool at its cap (§13.4;
@@ -61,6 +61,12 @@ fn can_swing(state: &GameState, unit: &CardInstance, view: &UnitView) -> bool {
     !has_keyword(&view.keywords, KeywordKind::CantAttack) && !cannot_attack(state, unit)
 }
 
+/// R49: a unit with Deft, read through the layers, in Defense Position. Its switch to Attack spends
+/// only the switch's exertion, so it can switch and still attack in the same turn.
+pub(crate) fn deft_in_defense(view: &UnitView) -> bool {
+    view.position == Position::Def && has_keyword(&view.keywords, KeywordKind::Deft)
+}
+
 /// One unit's worth on the board: its stats through the layers and its keywords (AI_EVAL), Spell
 /// Damage per point, all discounted by its Brittle count.
 pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f64 {
@@ -69,8 +75,10 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f6
     let mut value = w.health * f64::from(view.health) + w.armor_point * f64::from(view.armor);
     if can_swing(state, unit, &view) {
         // §4.1: a Defense-Position unit cannot attack until it spends a turn's exertion switching back,
-        // though it still strikes back in full, so only part of its attack counts.
-        let share = if view.position == Position::Def {
+        // though it still strikes back in full, so only part of its attack counts. With
+        // `deftDefenseAttacks` a Deft unit keeps it all: it can switch back and attack in one turn (R49).
+        let deft = w.deft_defense_attacks && deft_in_defense(&view);
+        let share = if view.position == Position::Def && !deft {
             w.defense_attack_share
         } else {
             1.0
@@ -206,17 +214,25 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     value
 }
 
+/// The face damage `attacker`'s board could deal the other hero next turn, as AI_EVAL reads it
+/// (`face_threat_with`).
+pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
+    face_threat_with(state, attacker, &AI_EVAL)
+}
+
 /// The face damage `attacker`'s board could deal the other hero next turn: units with attack > 0,
-/// position ATK, no "Can't attack" and no E35 status barring attacks, sorted ascending by attack.
-/// Taunt units on the defending side soak up the smallest attackers they bind first, one §4.4 hit at
-/// a time (`damage_past_taunts`). Each remaining attacker's attack goes through
+/// position ATK (with `w.deft_defense_attacks`, a Deft unit in Defense Position too, which can switch
+/// to Attack and still swing, R49), no "Can't attack" and no E35 status barring attacks, sorted
+/// ascending by attack. Taunt units on the defending side soak up the smallest attackers they bind
+/// first, one §4.4 hit at a time (`damage_past_taunts`). Each remaining attacker's attack goes through
 /// `subsystems::projected_hero_damage` (armor, which a Pierce hit skips (R346), and the Anti-oneshot
 /// cap, per hit), and the results are summed.
-pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
+pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
     let mut attacks: Vec<(&CardInstance, i32)> = Vec::new();
     for unit in active_units_of(state, attacker) {
         let view = unit_view(state, unit);
-        if view.attack <= 0 || view.position != Position::Atk {
+        let ready = view.position == Position::Atk || (w.deft_defense_attacks && deft_in_defense(&view));
+        if view.attack <= 0 || !ready {
             continue;
         }
         if !can_swing(state, unit, &view) {
@@ -393,8 +409,8 @@ pub fn evaluate(state: &GameState, seat: PlayerId, next: NextSwing, w: &EvalWeig
         };
     }
 
-    let enemy_damage = face_threat(state, opp);
-    let our_damage = face_threat(state, seat);
+    let enemy_damage = face_threat_with(state, opp, w);
+    let our_damage = face_threat_with(state, seat, w);
     // §13.4, R964000: a hero's life is `effective_life`, own HP and the team's pool in a Duos duel,
     // the hero's health in a 1v1 game.
     let seat_life = effective_life(state, seat);

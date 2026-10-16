@@ -9,7 +9,7 @@
 //! Port of `packages/ai/test/evaluate.test.ts`. TS's `evaluate(state, seat)` defaults are written
 //! out (`NextSwing::Enemy`, `AI_EVAL`) by `eval`.
 
-use jackioh_ai::{AI_EVAL, GREEDY_EVAL, NextSwing, evaluate, face_threat, unit_worth};
+use jackioh_ai::{AI_EVAL, GREEDY_EVAL, NextSwing, evaluate, face_threat, face_threat_with, unit_worth};
 use jackioh_engine::testkit::{
     AI_DIFFICULTY, CardInstance, GameOverReason, GameResult, GameState, HERO_HEALTH, Keyword, Phase,
     PlayerId, Value, Winner, json,
@@ -334,6 +334,62 @@ mod evaluate_the_strength_passs_terms {
         assert_close(diff, (1.0 - AI_EVAL.position_grants) * AI_EVAL.keyword.taunt, 10);
         assert!(diff > 0.0);
     }
+
+    /// #45 Deft Duelist (4/3, Charge, Deft) on p1's field in Attack and in Defense Position, each
+    /// board with its unit.
+    fn duelist() -> ((GameState, CardInstance), (GameState, CardInstance)) {
+        let attack = board(json!({ "p1": { "field": ["core-045"] } }));
+        let defense = board(json!({ "p1": { "field": [{ "def": "core-045", "position": "DEF" }] } }));
+        let (atk, def) = (first_unit(&attack), first_unit(&defense));
+        ((attack, atk), (defense, def))
+    }
+
+    /// p2's Deft Duelist in Defense Position, p1's board empty.
+    fn enemy_duelist_in_defense() -> GameState {
+        board(json!({ "p1": {}, "p2": { "field": [{ "def": "core-045", "position": "DEF" }] } }))
+    }
+
+    #[test]
+    fn a_deft_unit_in_defense_position_keeps_its_whole_attack_and_differs_only_by_the_position_grants() {
+        // R49: its switch back to Attack spends no attack, so Defense Position costs it no attack share.
+        let ((attack, atk), (defense, def)) = duelist();
+        assert_close(
+            unit_worth(&defense, &def, &AI_EVAL) - unit_worth(&attack, &atk, &AI_EVAL),
+            AI_EVAL.position_grants * (AI_EVAL.keyword.taunt + AI_EVAL.armor_point),
+            10,
+        );
+    }
+
+    #[test]
+    fn greedy_eval_still_reads_a_deft_unit_in_defense_position_as_one_that_cannot_attack() {
+        // The frozen baseline: Deft Duelist in Defense Position loses its attack share, as Mr. Vanilla
+        // does, and threatens nothing.
+        let ((attack, atk), (defense, def)) = duelist();
+        let w = GREEDY_EVAL;
+        assert_close(
+            unit_worth(&attack, &atk, &w) - unit_worth(&defense, &def, &w),
+            (1.0 - w.defense_attack_share) * w.attack * 4.0
+                - w.position_grants * (w.keyword.taunt + w.armor_point),
+            10,
+        );
+        let state = enemy_duelist_in_defense();
+        assert_eq!(face_threat_with(&state, PlayerId::P2, &w), 0);
+        assert_eq!(face_threat_with(&state, PlayerId::P2, &AI_EVAL), 4);
+    }
+
+    #[test]
+    fn deft_defense_attacks_moves_the_score_by_the_threat_and_the_attack_share_it_counts() {
+        // Off, the enemy Duelist threatens nothing and counts half its attack; on, it threatens 4 and
+        // counts all of it. Nothing else on the board reads the flag.
+        let state = enemy_duelist_in_defense();
+        let mut off = AI_EVAL;
+        off.deft_defense_attacks = false;
+        assert_close(
+            evaluate(&state, AI, NextSwing::Enemy, &off) - evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL),
+            AI_EVAL.threat_per_damage * 4.0 + (1.0 - AI_EVAL.defense_attack_share) * AI_EVAL.attack * 4.0,
+            10,
+        );
+    }
 }
 
 mod face_threat_b13 {
@@ -376,6 +432,16 @@ mod face_threat_b13 {
             json!({ "p1": {}, "p2": { "field": ["core-011", { "def": "core-020", "position": "DEF" }] } }),
         );
         assert_eq!(face_threat(&state, PlayerId::P2), 3);
+    }
+
+    #[test]
+    fn a_deft_unit_in_defense_position_is_an_attacker_and_one_without_deft_is_not() {
+        // R49: Deft Duelist (4 attack) switches to Attack and still swings; Mr. Vanilla (4) cannot.
+        let deft = board(json!({ "p1": {}, "p2": { "field": [{ "def": "core-045", "position": "DEF" }] } }));
+        assert_eq!(face_threat(&deft, PlayerId::P2), 4);
+        let vanilla =
+            board(json!({ "p1": {}, "p2": { "field": [{ "def": "core-008", "position": "DEF" }] } }));
+        assert_eq!(face_threat(&vanilla, PlayerId::P2), 0);
     }
 
     #[test]
