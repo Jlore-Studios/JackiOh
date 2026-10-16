@@ -8016,8 +8016,13 @@
     "what": "build #1062 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-16T17:08:50Z",
-    "notes": [],
+    "at": "2026-10-16T17:14:45Z",
+    "notes": [
+      "#1077: typed it Task",
+      "#1076: typed it Task",
+      "#1075: typed it Task",
+      "#1074: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
