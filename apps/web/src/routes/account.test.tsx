@@ -102,7 +102,7 @@ describe("the account screen", () => {
     expect(status).toHaveAttribute("data-status", "pending");
     expect(screen.getByTestId("account-redeem")).toHaveClass("button-primary");
     // Sign-out revokes the session too, and the screen says so.
-    expect(screenRoot.textContent).toMatch(/revoked/);
+    expect(screenRoot.textContent).toMatch(/revoke/);
     expect(screenRoot.textContent).not.toMatch(/clears this device.s token/);
   });
 
@@ -160,6 +160,68 @@ describe("the account screen", () => {
     render(<AccountRoute token={TOKEN} />);
 
     expect(await screen.findByTestId("account-error")).toHaveTextContent("the server refused");
+  });
+
+  it("shows the summary without opening management", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    render(<AccountRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId("account-email")).toBeInTheDocument();
+    expect(screen.getByTestId("account-rank")).toBeInTheDocument();
+    expect(screen.getByTestId("account-leaderboard")).toBeInTheDocument();
+    expect(screen.getByTestId("account-record")).toBeInTheDocument();
+    expect(screen.getByTestId("account-sign-out")).toBeInTheDocument();
+    expect(screen.getByTestId("account-manage-toggle")).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId("settings-email-input")).toBeNull();
+    expect(screen.queryByTestId("account-two-step")).toBeNull();
+    expect(screen.queryByTestId(usernameTestid.input)).toBeNull();
+    expect(screen.queryByTestId("account-delete")).toBeNull();
+  });
+
+  it("opening management reveals the rare options", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.stubEnv("VITE_SUPABASE_URL", "https://project.supabase.co");
+    vi.stubEnv("VITE_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_test");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new Error("no provider"))),
+    );
+    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: TOKEN }));
+    try {
+      render(
+        <AccountRoute
+          token={TOKEN}
+          me={{
+            profile: { id: "p1", status: "active" },
+            needsInviteCode: false,
+            emailVerified: true,
+            currentMatchId: null,
+            email: "player1@example.com",
+            username: { name: "Player#7", nextChangeAt: null, promptOwed: false },
+          }}
+        />,
+      );
+      await screen.findByTestId("account-email");
+
+      const toggle = screen.getByTestId("account-manage-toggle");
+      await userEvent.click(toggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByTestId(usernameTestid.input)).toBeInTheDocument();
+      expect(screen.getByTestId("settings-email")).toBeInTheDocument();
+      expect(screen.getByTestId("account-two-step")).toBeInTheDocument();
+      expect(screen.getByTestId("account-delete")).toBeInTheDocument();
+
+      await userEvent.click(toggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByTestId(usernameTestid.input)).toBeNull();
+      expect(screen.queryByTestId("settings-email")).toBeNull();
+      expect(screen.queryByTestId("account-two-step")).toBeNull();
+      expect(screen.queryByTestId("account-delete")).toBeNull();
+    } finally {
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+      window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    }
   });
 
   it("signing out clears the stored token", async () => {
@@ -233,6 +295,7 @@ describe("R1435 the username on the account page", () => {
     );
     vi.mocked(saveUsername).mockResolvedValue({ name: "Max", nextChangeAt: Date.now() + 86_400_000, promptOwed: false });
     render(<AccountRoute token={TOKEN} me={activeMe({ name: "Player#7", nextChangeAt: null, promptOwed: false })} />);
+    await userEvent.click(screen.getByTestId("account-manage-toggle"));
 
     expect(screen.getByTestId("account-username").textContent).toBe("Player#7");
     expect(screen.queryByTestId("account-username-cooldown")).toBeNull();
@@ -258,10 +321,11 @@ describe("R1435 the username on the account page", () => {
     expect(saveUsername).toHaveBeenCalledWith(TOKEN, "Max");
   });
 
-  it("R1435 during the cooldown says when the next change is allowed, and offers no field", () => {
+  it("R1435 during the cooldown says when the next change is allowed, and offers no field", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     const next = Date.now() + 3_600_000;
     render(<AccountRoute token={TOKEN} me={activeMe({ name: "Max#3", nextChangeAt: next, promptOwed: false })} />);
+    await userEvent.click(screen.getByTestId("account-manage-toggle"));
 
     expect(screen.getByTestId("account-username").textContent).toBe("Max#3");
     expect(screen.getByTestId("account-username-cooldown")).toHaveTextContent(
@@ -270,19 +334,21 @@ describe("R1435 the username on the account page", () => {
     expect(screen.queryByTestId(usernameTestid.input)).toBeNull();
   });
 
-  it("R1435 a cooldown that has run out offers the field again", () => {
+  it("R1435 a cooldown that has run out offers the field again", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     render(<AccountRoute token={TOKEN} me={activeMe({ name: "Max#3", nextChangeAt: Date.now() - 1_000, promptOwed: false })} />);
+    await userEvent.click(screen.getByTestId("account-manage-toggle"));
 
     expect(screen.queryByTestId("account-username-cooldown")).toBeNull();
     expect(screen.getByTestId(usernameTestid.input)).toBeInTheDocument();
   });
 
-  it("R1435 a cooldown that runs out while the page is open offers the field again", () => {
+  it("R1435 a cooldown that runs out while the page is open offers the field again", async () => {
     vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
     try {
       vi.mocked(getProfile).mockResolvedValue(profileBody());
       render(<AccountRoute token={TOKEN} me={activeMe({ name: "Max#3", nextChangeAt: Date.now() + 2_000, promptOwed: false })} />);
+      await userEvent.click(screen.getByTestId("account-manage-toggle"));
       expect(screen.getByTestId("account-username-cooldown")).toBeInTheDocument();
 
       act(() => {
@@ -295,7 +361,7 @@ describe("R1435 the username on the account page", () => {
     }
   });
 
-  it("R1435 a pending account sees its username, and no field: the preview and the save are for active accounts", () => {
+  it("R1435 a pending account sees its username, and no field: the preview and the save are for active accounts", async () => {
     render(
       <AccountRoute
         token={TOKEN}
@@ -309,6 +375,7 @@ describe("R1435 the username on the account page", () => {
         }}
       />,
     );
+    await userEvent.click(screen.getByTestId("account-manage-toggle"));
 
     expect(screen.getByTestId("account-username").textContent).toBe("Player#7");
     expect(screen.queryByTestId(usernameTestid.input)).toBeNull();
@@ -338,6 +405,7 @@ describe("deleting the account", () => {
     try {
       render(<AccountRoute token={TOKEN} />);
       await screen.findByTestId("account-email");
+      await userEvent.click(screen.getByTestId("account-manage-toggle"));
       await userEvent.click(screen.getByTestId("account-delete"));
 
       const confirm = screen.getByTestId("account-delete-confirm");
@@ -372,6 +440,7 @@ describe("deleting the account", () => {
     try {
       render(<AccountRoute token={TOKEN} />);
       await screen.findByTestId("account-email");
+      await userEvent.click(screen.getByTestId("account-manage-toggle"));
       await userEvent.click(screen.getByTestId("account-delete"));
       await userEvent.type(screen.getByTestId("account-delete-input"), "DELETE");
       await userEvent.click(screen.getByTestId("account-delete-confirm"));
@@ -397,6 +466,7 @@ describe("deleting the account", () => {
         }}
       />,
     );
+    await userEvent.click(screen.getByTestId("account-manage-toggle"));
     await userEvent.click(screen.getByTestId("account-delete"));
     await userEvent.click(screen.getByTestId("account-delete-cancel"));
     expect(screen.queryByTestId("account-delete-input")).toBeNull();
