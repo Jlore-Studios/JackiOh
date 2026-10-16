@@ -29,13 +29,12 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexSet;
 use jackioh_engine::{
-    Action, ActionBody, CardInstance, GameState, KeywordKind, PLAYER_IDS, PlayerId, Selection, UnitView,
-    effective_life, find_instance, has_keyword, legal_actions, pierces, reduce, subsystems,
-    takes_strike_back, unit_view,
+    Action, ActionBody, CardInstance, GameState, KeywordKind, PlayerId, Selection, UnitView, effective_life,
+    find_instance, has_keyword, legal_actions, pierces, reduce, subsystems, takes_strike_back, unit_view,
 };
 
 use crate::candidates::candidate_actions_in;
-use crate::config::{AI_EVAL, AI_REPLY, AI_SEARCH, AI_SECOND_REPLY, AiSecondReply};
+use crate::config::{AI_EVAL, AI_REPLY, AI_SEARCH};
 use crate::evaluate::{NextSwing, evaluate, unit_worth};
 use crate::simulate::{LineStatus, best_auto_answer, line_status, simulate, static_score, surcharge_nodes};
 use crate::types::NodeCounter;
@@ -428,49 +427,6 @@ pub fn simulate_reply(
     Some(current)
 }
 
-/// Whether a card on either side's field or backrow makes a second reply slow: a fused one (R77,
-/// `subsystems::fused_ingredients`), whose composed scripts every turn's start and end runs, or one of
-/// `second.slow_def_ids`. Over such a board #1058's pilot spent up to 35 s on one decision.
-fn slow_board(state: &GameState, second: &AiSecondReply) -> bool {
-    PLAYER_IDS.iter().any(|player| {
-        let side = &state.players[*player];
-        side.units
-            .iter()
-            .flatten()
-            .flatten()
-            .chain(side.backrow.iter().flatten())
-            .any(|card| {
-                second.slow_def_ids.contains(&card.def_id.as_str())
-                    || subsystems::fused_ingredients(state, &card.def_id).is_some()
-            })
-    })
-}
-
-/// #1058 (`AI_SECOND_REPLY`): one more opponent turn after `simulate_reply`. From `after`, the seat's
-/// next decision as `simulate_reply` left it, the seat ends its turn without acting (one node) and the
-/// opponent replies again by this file's rule. `after` comes back unchanged when the game is over, the
-/// seat is not to act with nothing pending, or the board is slow (`slow_board`); `None` when the
-/// counter refused a node.
-pub fn simulate_second_reply(
-    after: &GameState,
-    seat: PlayerId,
-    counter: &dyn NodeCounter,
-    hidden: &IndexSet<String>,
-    second: &AiSecondReply,
-) -> Option<GameState> {
-    if after.result.is_some() || after.active != seat || after.pending.is_some() || slow_board(after, second)
-    {
-        return Some(after.clone());
-    }
-    if !counter.take() {
-        return None;
-    }
-    match reduce_for(after, seat, &ActionBody::EndTurn, counter) {
-        Some(passed) => simulate_reply(&passed, seat, counter, hidden),
-        None => Some(after.clone()),
-    }
-}
-
 /// A closed line's value after the opponent's reply: `end` is where the line stopped. A line that
 /// handed the opponent the turn is scored at the seat's next decision, where the seat swings first,
 /// less the crystals it left unspent; a line that ended the game, or stopped on the seat's own
@@ -483,19 +439,6 @@ pub fn reply_score(
     counter: &dyn NodeCounter,
     hidden: &IndexSet<String>,
 ) -> Option<f64> {
-    reply_score_with(end, seat, root_turn, counter, hidden, &AI_SECOND_REPLY)
-}
-
-/// `reply_score` with the second reply's switch handed in (`reply_score` hands in `AI_SECOND_REPLY`), so
-/// a test holds either setting whatever the constant says.
-pub fn reply_score_with(
-    end: &GameState,
-    seat: PlayerId,
-    root_turn: i32,
-    counter: &dyn NodeCounter,
-    hidden: &IndexSet<String>,
-    second: &AiSecondReply,
-) -> Option<f64> {
     let status = line_status(end, seat, root_turn);
     if status == LineStatus::Over || status == LineStatus::Open {
         return Some(static_score(end, seat, root_turn));
@@ -505,10 +448,7 @@ pub fn reply_score_with(
     } else {
         0
     };
-    let mut after = simulate_reply(end, seat, counter, hidden)?;
-    if second.on {
-        after = simulate_second_reply(&after, seat, counter, hidden, second)?;
-    }
+    let after = simulate_reply(end, seat, counter, hidden)?;
     let next = if after.active == seat {
         NextSwing::Seat
     } else {

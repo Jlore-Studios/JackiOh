@@ -22,16 +22,6 @@ const PUNISH: &str = "classic-020";
 const HEROIC: &str = "core-098";
 /// C #6 Cloaked Toe Cracker, the card that prints Cloaked.
 const CRACKER: &str = "classic-006";
-/// The one reply these tests pin, whatever `AI_SECOND_REPLY` says (#1058).
-const ONE_REPLY: AiSecondReply = AiSecondReply {
-    on: false,
-    ..AI_SECOND_REPLY
-};
-/// The second reply switched on (#1058).
-const TWO_REPLIES: AiSecondReply = AiSecondReply {
-    on: true,
-    ..AI_SECOND_REPLY
-};
 
 /// TS's `{ ...base, ...over }` on two JSON objects (an absent `over` changes nothing).
 fn spread(base: Value, over: Option<&Value>) -> Value {
@@ -241,14 +231,7 @@ mod reply_score {
         )
         .expect("a reply");
         let counter = create_node_counter(20, None);
-        let score = reply_score_with(
-            &ended,
-            AI,
-            TURN,
-            &counter,
-            &hidden_card_ids(&ended, AI),
-            &ONE_REPLY,
-        );
+        let score = reply_score(&ended, AI, TURN, &counter, &hidden_card_ids(&ended, AI));
         assert_eq!(
             score,
             Some(evaluate(&after, AI, NextSwing::Seat, &AI_EVAL) - AI_EVAL.unspent_mana * 2.0)
@@ -284,7 +267,7 @@ mod reply_score {
         );
         let counter = create_node_counter(20, None);
         assert_eq!(
-            reply_score_with(&won, AI, TURN, &counter, &hidden_card_ids(&won, AI), &ONE_REPLY),
+            reply_score(&won, AI, TURN, &counter, &hidden_card_ids(&won, AI)),
             Some(static_score(&won, AI, TURN))
         );
         assert_eq!(counter.used(), 0);
@@ -295,13 +278,12 @@ mod reply_score {
     fn is_null_when_the_counter_runs_out_during_the_reply() {
         let state = handed_over(json!({ "p2": { "field": ["core-008"] } }));
         assert!(
-            reply_score_with(
+            reply_score(
                 &state,
                 AI,
                 TURN,
                 &create_node_counter(1, None),
-                &hidden_card_ids(&state, AI),
-                &ONE_REPLY,
+                &hidden_card_ids(&state, AI)
             )
             .is_none()
         );
@@ -419,13 +401,12 @@ mod visible_activations {
         assert_eq!(winner(&reply), Some(Winner::from(HUMAN)));
 
         assert_eq!(line_status(&state, AI, TURN), LineStatus::Passed);
-        let score = reply_score_with(
+        let score = reply_score(
             &state,
             AI,
             TURN,
             &create_node_counter(20, None),
             &hidden_card_ids(&state, AI),
-            &ONE_REPLY,
         );
         assert_eq!(score, loss_score(&state));
     }
@@ -466,13 +447,12 @@ mod visible_activations {
         )
         .expect("a reply");
         assert_eq!(winner(&reply), Some(Winner::from(HUMAN)));
-        let score = reply_score_with(
+        let score = reply_score(
             &state,
             AI,
             TURN,
             &create_node_counter(20, None),
             &hidden_card_ids(&state, AI),
-            &ONE_REPLY,
         );
         assert_eq!(score, loss_score(&state));
     }
@@ -629,89 +609,5 @@ mod visible_activations {
             "{:?}",
             decision.action
         );
-    }
-}
-
-mod second_reply {
-    use super::*;
-
-    /// #1058: the seat ends its next turn without acting and the opponent replies again, so the line is
-    /// scored at the seat's decision two of the opponent's turns on
-    #[test]
-    fn the_opponent_replies_twice_and_the_line_is_scored_two_of_its_turns_on() {
-        jackioh_cards::register_all();
-        let s = scenario(json!({
-            "seed": "second-reply",
-            "active": "p1",
-            "turn": TURN,
-            "p1": { "mana": 2, "library": LIBRARY },
-            "p2": { "field": ["core-008"], "library": LIBRARY },
-        }));
-        let ended = act(s.state(), AI, &ActionBody::EndTurn);
-        let hidden = hidden_card_ids(&ended, AI);
-        let counter = create_node_counter(20, None);
-        let after = simulate_reply(&ended, AI, &counter, &hidden).expect("a reply");
-        let twice =
-            simulate_second_reply(&after, AI, &counter, &hidden, &TWO_REPLIES).expect("a second reply");
-        assert!(twice.result.is_none());
-        assert_eq!(twice.active, AI);
-        assert_eq!(twice.turn, TURN + 4);
-        assert_eq!(twice.phase, Phase::Main);
-        assert!(twice.pending.is_none());
-        // Mr. Vanilla's 4 to the face on each of p2's turns.
-        assert_eq!(twice.players[AI].hero.health, 22);
-        // Each reply's attack and endTurn, and the seat's endTurn between them.
-        assert_eq!(counter.used(), 5);
-
-        let scored = create_node_counter(20, None);
-        assert_eq!(
-            reply_score_with(&ended, AI, TURN, &scored, &hidden, &TWO_REPLIES),
-            Some(evaluate(&twice, AI, NextSwing::Seat, &AI_EVAL) - AI_EVAL.unspent_mana * 2.0)
-        );
-        assert_eq!(scored.used(), 5);
-    }
-
-    /// #1058: over a fused card (R77) the second reply is not played, and no node is spent
-    #[test]
-    fn a_fused_card_in_play_keeps_the_one_reply() {
-        jackioh_cards::register_all();
-        let mut state = scenario(json!({
-            "seed": "second-reply-fused",
-            "active": "p1",
-            "turn": TURN,
-            "p1": { "library": LIBRARY },
-            "p2": { "field": ["core-008"], "library": LIBRARY },
-        }))
-        .state()
-        .clone();
-        let hidden = hidden_card_ids(&state, AI);
-        let counter = create_node_counter(20, None);
-        let unfused =
-            simulate_second_reply(&state, AI, &counter, &hidden, &TWO_REPLIES).expect("a second reply");
-        assert_eq!(unfused.turn, TURN + 2);
-        assert_eq!(counter.used(), 3);
-
-        // A transient def as `subsystems::fuse` builds one: a real card's faces under a fused id (R179).
-        let fused = "t-1:core-008+core-011";
-        let mut def = registered_catalog()["core-008"].clone();
-        def.id = fused.to_string();
-        def.index = fused.to_string();
-        state.transient_defs.insert(fused.to_string(), def);
-        let unit = state.players[HUMAN]
-            .units
-            .iter()
-            .flatten()
-            .flatten()
-            .next()
-            .map(|card| card.id.clone())
-            .expect("p2's unit");
-        find_instance_mut(&mut state, &unit).expect("p2's unit").def_id = fused.to_string();
-
-        let counter = create_node_counter(20, None);
-        assert_eq!(
-            simulate_second_reply(&state, AI, &counter, &hidden, &TWO_REPLIES),
-            Some(state.clone())
-        );
-        assert_eq!(counter.used(), 0);
     }
 }
