@@ -370,6 +370,13 @@
     "1014": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T00:19:41Z",
+        "difficulty": "hard",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "the change is in crates/ai/src/candidates.rs, the move generation the AI's search and lethal solver walk, which the rule rates hard outright"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
