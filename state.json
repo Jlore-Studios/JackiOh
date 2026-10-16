@@ -1896,6 +1896,13 @@
     "1081": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T20:38:39Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "least sure whether zone-eligibility predicates count as hard-rule 'engine rules'; they don't: no change to the resolution loop, AI search, or cross-crate design"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
