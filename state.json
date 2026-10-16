@@ -1937,6 +1937,13 @@
     "1080": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T20:58:24Z",
+        "difficulty": "hard",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "all of it is crates/ai/src (the lethal solver, the reply and the evaluation): the rule rates the AI's search hard, whatever its size"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
