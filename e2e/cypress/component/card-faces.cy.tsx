@@ -11,6 +11,8 @@
 //        its words (R1017000). At 270 px nothing may clamp; at 170 px only a face that prints less
 //        than its whole text (a short form or a clamp, `faceText`) may carry `data-clamped`, and a
 //        clamped rules box instead stays inside the face at the reading floor (FIT_FLOOR_PX).
+//        A hero portrait's full-art face (R1017001) has only its name to fit: it carries
+//        data-full-art and prints no rules box.
 //   §10.10  faces in play (the live card, `faceModel` with `inPlay`): a fused card's text a line
 //        per ingredient, each of #98's thirteen rolled powers on both faces, Call to Chaos's ???, a
 //        Vanilla unit with the keywords it kept — all inside their boxes at 270 and 170 px; and
@@ -42,6 +44,7 @@ import {
   type FaceModel,
 } from "../../../apps/web/src/cards/index.ts";
 import { FIT_FLOOR_PX } from "../../../apps/web/src/cards/constants.ts";
+import { showsFullArt } from "../../../apps/web/src/cards/fullArt.ts";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
 import { baseView, card, emptySide, fullBoardView, fusedDef, pendingFor } from "../../../apps/web/src/test/fixtures.ts";
@@ -115,7 +118,15 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
     problems.push(`${where}: .cf is ${rect.width}x${rect.height}, not ${box.width}x${height}`);
   }
 
-  for (const selector of [".card-name", ".card-text"]) {
+  // R1017001: a hero portrait's card prints its art across the face and no words, so its name is
+  // all it has to fit, and it has no rules box at all.
+  const fullArt = showsFullArt(faceModel({ defId: def.id, def, radiant }));
+  if ((cf.getAttribute("data-full-art") === "true") !== fullArt) {
+    problems.push(`${where}: data-full-art is ${cf.getAttribute("data-full-art") ?? "unset"}, expected ${fullArt ? "true" : "unset"}`);
+  }
+  if (fullArt && cf.querySelector(".card-text") !== null) problems.push(`${where}: a full-art face prints a rules box`);
+
+  for (const selector of fullArt ? [".card-name"] : [".card-name", ".card-text"]) {
     const el = cf.querySelector<HTMLElement>(selector);
     if (el === null) {
       problems.push(`${where}: no ${selector}`);

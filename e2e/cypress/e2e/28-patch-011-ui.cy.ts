@@ -7,6 +7,7 @@ import { landingFanCardTestid, landingTestid } from "../../../apps/web/src/auth/
 import { createRng } from "../../../apps/web/src/fx/rng.ts";
 import { FX_SETTINGS_KEY, seedFor } from "../../support/config.ts";
 import {
+  INSPECT_EXTENDED,
   INSPECT_FACE,
   INSPECT_FACE_DOWN,
   INSPECT_FACE_DOWN_COST,
@@ -123,8 +124,10 @@ function comboIndex(viewport: Viewport | null): void {
 
     hover(card);
     cy.get(ts(INSPECT_HOVER)).find(ts(INSPECT_FACE)).should("contain.text", "Grade {E} (starts at E).");
-    cy.get(ts(INSPECT_HOVER)).find('.cf-value[data-label="Grade"]').should("have.text", "{E}");
-    cy.get(ts(INSPECT_HOVER)).find(`.cf-value[data-label="${THRESHOLD_LABEL}"]`).should("have.text", "{1}");
+    cy.get(ts(INSPECT_HOVER)).find(ts(INSPECT_FACE)).find('.cf-value[data-label="Grade"]').should("have.text", "{E}");
+    cy.get(ts(INSPECT_HOVER)).find(ts(INSPECT_FACE)).find(`.cf-value[data-label="${THRESHOLD_LABEL}"]`).should("have.text", "{1}");
+    // Issue #1017: the face prints a short form, so the whole text stands on its left, values and all.
+    cy.get(ts(INSPECT_HOVER)).find(ts(INSPECT_EXTENDED)).find('.cf-value[data-label="Grade"]').should("have.text", "{E}");
     shoot(viewport, "combo-index-grade-e-hover");
     unhover(card);
     shoot(viewport, "combo-index-grade-e");
@@ -137,7 +140,7 @@ function comboIndex(viewport: Viewport | null): void {
       .should("have.text", "D")
       .and("have.attr", "data-grade-letter", "D");
     hover(card);
-    cy.get(ts(INSPECT_HOVER)).find('.cf-value[data-label="Grade"]').should("have.text", "{D}");
+    cy.get(ts(INSPECT_HOVER)).find(ts(INSPECT_FACE)).find('.cf-value[data-label="Grade"]').should("have.text", "{D}");
     shoot(viewport, "combo-index-grade-d-hover");
     unhover(card);
   });

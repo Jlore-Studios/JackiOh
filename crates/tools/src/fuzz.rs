@@ -189,13 +189,15 @@ fn max_actions_per_game() -> usize {
     usize::try_from(TURN_CAP_PLAYER_TURNS).unwrap_or(0) * AI_PLAYOUT_STEP_CAP
 }
 
-/// §2.5 plus R84: the policy never concedes or offers a draw, so only these three can occur.
+/// §2.5 plus R84: the policy never concedes or offers a draw, so only these can occur, a Glitch that
+/// voids the match (R679) among them.
 const TERMINAL_REASONS: &[&str] = &[
     "hero-death",
     "both-heroes-dead",
     "turn-cap",
     "alt-win",
     "won-by-effect",
+    "voided",
 ];
 
 // ---------------------------------------------------------------------------------------------
@@ -1356,6 +1358,7 @@ impl HandicapWave {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jackioh_engine::{GameOverReason, GameResult, Winner};
 
     mod fuzz_m4_gate {
         use super::*;
@@ -1444,6 +1447,28 @@ mod tests {
             assert_eq!(origin_of(Some("crates/tools/src/fuzz.rs:10:5")), "");
             assert_eq!(origin_of(None), "");
         }
+
+        #[test]
+        fn r679_a_glitch_that_voids_the_match_is_a_real_ending() {
+            register_all();
+            let decks = decks_for_seed(1);
+            let mut state = create_game(&CreateGameOptions {
+                seed: "jackioh-fuzz-1".to_string(),
+                decks: decks.clone(),
+                ..CreateGameOptions::default()
+            });
+            state.result = Some(GameResult {
+                winner: Winner::Draw,
+                reason: GameOverReason::Voided,
+            });
+            state.phase = Phase::Over;
+            let run = GameRun {
+                state,
+                log: Vec::new(),
+                decks,
+            };
+            assert_eq!(check_termination(&run).err().map(|failure| failure.message), None);
+        }
     }
 
     mod fuzz_handicapped_games_r180_r184_r187 {
@@ -1470,6 +1495,13 @@ mod tests {
             let wave = play_handicap_wave(from, size);
             println!("{}", wave.summary());
             assert_eq!(wave.failure_lines(), Vec::<String>::new());
+        }
+
+        #[test]
+        fn r679_seed_4679_whose_glitch_voids_the_match_passes() {
+            // The daily run's handicapped seed that a Glitch voided at 96b68c9 (#1055).
+            let outcome = play_seed(4679);
+            assert_eq!(outcome.error, None);
         }
     }
 }
