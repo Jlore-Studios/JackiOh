@@ -17,8 +17,8 @@ use std::cmp::Ordering;
 
 use indexmap::IndexSet;
 use jackioh_engine::{
-    ANSWER_KEY, AttackHealth, CardInstance, CardType, Counters, GameEvent, GameState, PLAYER_IDS,
-    PendingChoice, PlayerId, Resume, SETUP_WORK, Selection, active_units_of, announced_face_down_to,
+    ANSWER_KEY, AttackHealth, CardInstance, Counters, GameEvent, GameState, PLAYER_IDS, PendingChoice,
+    PlayerId, Resume, SETUP_WORK, Selection, active_units_of, announced_face_down_to, backrow_is_public,
     effective_cost, find_def, find_instance, find_instance_mut, handicap_of, mulligan_prompt_for,
     unclamped_attack, unit_view,
 };
@@ -162,18 +162,12 @@ fn by_instance_id(a: &CardInstance, b: &CardInstance) -> Ordering {
     }
 }
 
-/// §10.8 and R33, as `view_for` reads them: a backrow Trap or Field Trap is readable by its current
-/// controller only until it flips face-up; a Field Spell is public. A placeholder is never readable.
+/// §10.8, R33 and R686, by the rule `view_for` reads (`backrow_is_public`): a backrow Trap or Field
+/// Trap is readable by its current controller only until it flips face-up or is revealed; a Field
+/// Spell is public. A placeholder is never readable, and is asked first: the rule reads the card's
+/// definition, which a placeholder has none of.
 fn backrow_hidden_from(state: &GameState, card: &CardInstance, seat: PlayerId) -> bool {
-    if card.controller == seat || card.face_up == Some(true) {
-        return false;
-    }
-    let Some(_def) = find_def(Some(state), &card.def_id) else {
-        return true;
-    };
-    // ME-ALTPLAY, R1046: a set Unit or Spell reads as a Field Trap or Trap.
-    let face = jackioh_engine::faces::card_type_of(state, card);
-    face == CardType::Trap || face == CardType::FieldTrap
+    find_def(Some(state), &card.def_id).is_none() || !backrow_is_public(state, card, seat)
 }
 
 /// The instance ids `redact` hides from `seat` (step 2): the opponent's hand and library, every
