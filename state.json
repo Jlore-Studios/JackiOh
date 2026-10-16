@@ -724,6 +724,13 @@
     "1035": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T02:27:19Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "fails easy lines 2 and 5: a testkit-only helper in crates/engine/src/testkit beside the server change, about 16 files; not hard, since no rule, AI search or migration moves"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
