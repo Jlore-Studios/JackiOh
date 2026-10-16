@@ -36,7 +36,7 @@ use crate::api::http::{
 use crate::app::App;
 use crate::config::{DECK_NAME_MAX_LENGTH, DRAFT_ISSUES_REPORTED_MAX, MAX_SAVED_DECKS, MAX_SAVED_TRIOS};
 use crate::db::store::{
-    FrozenDeck, FrozenTrio, SavedDeck, SavedTrio, TrioSlots, TrioUpsertOutcome, Tx, UpsertOutcome,
+    FrozenDeck, FrozenTrio, SavedDeck, SavedTrio, StoreError, TrioSlots, TrioUpsertOutcome, Tx, UpsertOutcome,
 };
 
 // Ids
@@ -1021,18 +1021,71 @@ pub async fn freeze_choice(
     })
 }
 
-/// R264: a profile in a series that is not over can neither queue nor create or join a room — its
-/// next game is already decided by the series, and a second one would make it two places at once.
-/// `already_in_match`, like being in a match, with the series to go back to in `details`.
-pub async fn assert_not_in_series(app: &App, profile_id: &str) -> Result<(), ApiError> {
+/// What holds a profile in a game, so that it may start no other (§9.5, R264, R1065000).
+#[derive(Clone, Debug, PartialEq)]
+pub enum Seated {
+    /// Its in-match flag: a live 1v1 match.
+    Match,
+    /// A Conquest series that is not over, by id: between its games the profile is in no match.
+    Series(String),
+    /// A live co-op match, by id, which sets no in-match flag.
+    Duos(String),
+}
+
+/// R1065000: the one question every door into a 1v1 or a co-op game asks, inside the caller's
+/// transaction: the in-match flag, then a series that is not over (R264), then a live co-op match.
+/// A profile the store does not hold is in none of them.
+pub async fn seated_in(t: &mut Tx<'_>, profile_id: &str) -> Result<Option<Seated>, StoreError> {
+    let in_match = t
+        .profiles_get_by_id(profile_id)
+        .await?
+        .is_some_and(|profile| profile.in_match_id.is_some());
+    if in_match {
+        return Ok(Some(Seated::Match));
+    }
+    if let Some(series) = t.series_active_for(profile_id).await? {
+        return Ok(Some(Seated::Series(series.id)));
+    }
+    Ok(t.duos_matches_live_for(profile_id).await?.map(Seated::Duos))
+}
+
+/// R264, R1065000: a profile in a match, in a series that is not over or in a live co-op match can
+/// neither queue nor create or join a room, 1v1 or co-op: its game is already decided, and a second
+/// one would make it two places at once. `already_in_match`, with the series or the co-op match to
+/// go back to in `details`.
+pub async fn assert_free_to_play(app: &App, profile_id: &str) -> Result<(), ApiError> {
     let mut tx = app.db.begin(Some(profile_id)).await?;
-    let series = tx.series_active_for(profile_id).await?;
+    let seated = seated_in(&mut tx, profile_id).await?;
     tx.commit().await?;
-    if let Some(series) = series {
-        return Err(ApiError::with_details(
+    match seated {
+        None => Ok(()),
+        Some(Seated::Match) => Err(ApiError::new(
+            ApiErrorCode::AlreadyInMatch,
+            "finish your current match first",
+        )),
+        Some(Seated::Series(id)) => Err(ApiError::with_details(
             ApiErrorCode::AlreadyInMatch,
             "Finish your Conquest series first.",
-            json!({ "seriesId": series.id }),
+            json!({ "seriesId": id }),
+        )),
+        Some(Seated::Duos(id)) => Err(ApiError::with_details(
+            ApiErrorCode::AlreadyInMatch,
+            "Finish your co-op match first.",
+            json!({ "duosMatchId": id }),
+        )),
+    }
+}
+
+/// The host is still free when a join would start the game (they may have been matched since): in
+/// no match, no series that is not over and no live co-op match (R1065000); both kinds of room ask.
+pub async fn assert_host_free(app: &App, host_profile_id: &str) -> Result<(), ApiError> {
+    let mut tx = app.db.begin(None).await?;
+    let seated = seated_in(&mut tx, host_profile_id).await?;
+    tx.commit().await?;
+    if seated.is_some() {
+        return Err(ApiError::new(
+            ApiErrorCode::Conflict,
+            "The host of that room is playing another game right now.",
         ));
     }
     Ok(())

@@ -6,9 +6,9 @@
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::{
-    ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, Row, ZoneChoice,
-    ZoneSlot, beneath_at, canonical, card_at, carried_at, effective_cost, find_instance, has_keyword,
-    is_locked, legal_actions, pierces, row_size, subsystems, takes_strike_back, unit_view,
+    ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, Row, Selection,
+    ZoneChoice, ZoneSlot, beneath_at, canonical, card_at, carried_at, effective_cost, find_instance,
+    has_keyword, is_locked, legal_actions, pierces, row_size, subsystems, takes_strike_back, unit_view,
 };
 use serde_json::Value;
 
@@ -214,17 +214,80 @@ fn source_cost(state: &GameState, action: &ActionBody) -> i32 {
     }
 }
 
-/// One source instance's variants, in legal_actions order, and its cost.
+/// One source instance's variants (legal_actions order, then dealt by `enemy_first`) and its cost.
 struct Source {
     cost: i32,
     variants: Vec<ActionBody>,
+}
+
+/// Where a source variant's first target aims (#1062).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum FirstAim {
+    /// At the enemy hero.
+    EnemyHero,
+    /// At a card the enemy controls.
+    EnemyCard,
+    /// Anything else: no target, one of the seat's own, a zone, a mode.
+    Other,
+}
+
+/// Where `action`'s first target aims, read off the targets it carries.
+fn first_aim(state: &GameState, seat: PlayerId, action: &ActionBody) -> FirstAim {
+    let targets = match action {
+        ActionBody::Play { targets, .. }
+        | ActionBody::ActivatePower { targets, .. }
+        | ActionBody::Activate { targets, .. } => targets.as_deref(),
+        _ => None,
+    };
+    let enemy = seat.opponent();
+    match targets.and_then(|targets| targets.first()) {
+        Some(Selection::Hero { player }) if *player == enemy => FirstAim::EnemyHero,
+        Some(Selection::Instance { instance_id })
+            if find_instance(state, instance_id).is_some_and(|card| card.controller == enemy) =>
+        {
+            FirstAim::EnemyCard
+        }
+        _ => FirstAim::Other,
+    }
+}
+
+/// One source's variants with those aimed at the enemy (the enemy hero's first, then the enemy's
+/// cards') dealt alternately with the rest, enemy first: e0, o0, e1, o1, … (#1062). Each group keeps
+/// legal_actions order, so a source with no variant aimed at the enemy keeps its order exactly.
+fn enemy_first(state: &GameState, seat: PlayerId, variants: Vec<ActionBody>) -> Vec<ActionBody> {
+    let mut at_hero: Vec<ActionBody> = Vec::new();
+    let mut at_cards: Vec<ActionBody> = Vec::new();
+    let mut rest: Vec<ActionBody> = Vec::new();
+    for variant in variants {
+        match first_aim(state, seat, &variant) {
+            FirstAim::EnemyHero => at_hero.push(variant),
+            FirstAim::EnemyCard => at_cards.push(variant),
+            FirstAim::Other => rest.push(variant),
+        }
+    }
+    at_hero.extend(at_cards);
+    let mut enemy = at_hero.into_iter();
+    let mut other = rest.into_iter();
+    let mut out: Vec<ActionBody> = Vec::new();
+    loop {
+        match (enemy.next(), other.next()) {
+            (None, None) => break,
+            (aimed, unaimed) => {
+                out.extend(aimed);
+                out.extend(unaimed);
+            }
+        }
+    }
+    out
 }
 
 /// Tier 2: round-robin across source instances — every source's first variant, then every source's
 /// second, … — each round by current cost, highest first (ties keep legal_actions order). A card on
 /// the field with an Activate ability is a source like a hand card (B3.2): a ♾️ or Activate N card's
 /// repeated uses need nothing here, since the AI re-plans after every action.
-fn round_robin(state: &GameState, actions: &[ActionBody]) -> Vec<ActionBody> {
+/// Inside one source, the variants aimed at the enemy alternate with the rest, enemy first
+/// (`enemy_first`, #1062), so a board of the seat's own targets cannot crowd the enemy's out of the beam.
+fn round_robin(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> Vec<ActionBody> {
     let mut sources: Vec<Source> = Vec::new();
     let mut by_id: IndexMap<String, usize> = IndexMap::new();
     for action in actions {
@@ -245,6 +308,9 @@ fn round_robin(state: &GameState, actions: &[ActionBody]) -> Vec<ActionBody> {
         if let Some(source) = sources.get_mut(at) {
             source.variants.push(action.clone());
         }
+    }
+    for source in &mut sources {
+        source.variants = enemy_first(state, seat, std::mem::take(&mut source.variants));
     }
     let mut ordered: Vec<(usize, Source)> = sources.into_iter().enumerate().collect();
     ordered.sort_by(|(ia, a), (ib, b)| b.cost.cmp(&a.cost).then(ia.cmp(ib)));
@@ -405,7 +471,7 @@ pub fn candidate_actions_in(state: &GameState, seat: PlayerId, legal: Vec<Action
     let mut out: Vec<ActionBody> = Vec::new();
     out.extend(hero_attacks);
     out.extend(good_trades);
-    out.extend(round_robin(state, &plays));
+    out.extend(round_robin(state, seat, &plays));
     out.extend(answers);
     out.extend(other_attacks);
     out.extend(switches);

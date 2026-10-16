@@ -35,6 +35,9 @@ export const REVEAL_AT_NOTE = "Reveals — your opponent can't see when";
 /** R370: the line under it in its inspect overlay. */
 export const FACE_DOWN_HINT = "Only the player who set it can see what it is. It springs by itself when its condition is met.";
 
+/** R471: the Plague Counters a face-down card's inspect overlay states; tokens are public (B5 E19). */
+export const PLAGUE_COUNT_WORDS = "Plague Counters: {count}";
+
 /** "(2) Cost": a specific cost, written as card text writes one, the cost as a noun (R432). */
 export function costPhrase(cost: number): string {
   return `(${String(cost)}) Cost`;

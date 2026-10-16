@@ -28,7 +28,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::api::collection::caller_profile;
-use crate::api::decks::{assert_no_custom_cards, lean_of};
+use crate::api::decks::{assert_no_custom_cards, lean_of, seated_in};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::api::queue::{discard_open, new_seed, new_uuid};
 use crate::app::{App, now_ms};
@@ -232,13 +232,19 @@ async fn create_rematch(
             .await
             .map_err(|error| ApiError::internal(error.to_string()))?;
         for seat in [&seats.0, &seats.1] {
+            // R1065000: a match, a series not over or a live co-op match; no details, since the seat
+            // may be the other player's.
+            if seated_in(&mut tx, &seat.profile_id)
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?
+                .is_some()
+            {
+                return Err(already_in_match());
+            }
             let found = tx
                 .profiles_get_many(std::slice::from_ref(&seat.profile_id))
                 .await
                 .map_err(|error| ApiError::internal(error.to_string()))?;
-            if found.first().is_some_and(|profile| profile.in_match_id.is_some()) {
-                return Err(already_in_match());
-            }
             if found
                 .first()
                 .is_some_and(|profile| profile.kind == ProfileKind::Bot)

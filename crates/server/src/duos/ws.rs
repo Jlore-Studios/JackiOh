@@ -4,7 +4,9 @@
 //! The upgrade itself (origin check, per-address count, frame cap, subprotocol) is
 //! `actor::ws_server::handle_duos`, the same doors `/ws/match` goes through. It installs a
 //! `HelloGate` on the socket before the socket's pump starts, so a `hello` the client sends the
-//! moment the socket opens is held while the token is checked rather than dropped. Then
+//! moment the socket opens is held while the token is checked rather than dropped. The gate is the
+//! one `/ws/watch` waits behind too (`actor::guard`, R835002): it answers a frame that is not the
+//! hello `malformed` and closes the socket past `MALFORMED_FRAMES_PER_WINDOW` of them. Then
 //! `handle_duos_socket` verifies the token (`?token=`), applies §9.4's gate (`assert_active`), waits
 //! for the hello (at most `WS_IDLE_TIMEOUT_SECONDS`), and attaches the socket to the seat the profile
 //! holds in that match, folding the actor back first when it is not in memory. Every refusal answers
@@ -14,125 +16,37 @@
 //! The match is the hello's `matchId`, else the upgrade's `?matchId=`, else the profile's live co-op
 //! match (B42).
 
-use std::sync::{Arc, Mutex, Weak};
-use std::time::Duration;
-
-use tokio::sync::Notify;
+use std::sync::Arc;
 
 use jackioh_engine::wire::DuosSeat;
 
-use crate::actor::contracts::SocketHandlers;
+use crate::actor::guard;
 use crate::actor::protocol::SocketErrorCode;
 use crate::actor::ws_server::{Socket, WS_CLOSE};
-use crate::api::http::{ApiErrorCode, assert_active, lock};
+use crate::api::http::{ApiErrorCode, assert_active};
 use crate::app::App;
-use crate::config::WS_IDLE_TIMEOUT_SECONDS;
 use crate::db::store::{Profile, StoreError};
 use crate::duos::live_match_of;
 use crate::duos::protocol::{DuosClientMessage, encode, error_message, parse_duos_message};
 use crate::duos::registry::{DuosAttachError, registry};
 
-/// What the gate has heard.
-#[derive(Default)]
-struct GateState {
-    /// The first hello's `matchId` (itself optional), once one came.
-    hello: Option<Option<String>>,
-    closed: bool,
-}
-
-struct Gate {
-    state: Mutex<GateState>,
-    heard: Notify,
-    socket: Socket,
-}
-
-impl Gate {
-    fn receive(&self, text: &str) {
-        match parse_duos_message(text) {
-            Ok(DuosClientMessage::Hello { match_id }) => {
-                let first = {
-                    let mut state = lock(&self.state);
-                    let first = state.hello.is_none();
-                    if first {
-                        state.hello = Some(match_id);
-                    }
-                    first
-                };
-                if first {
-                    self.heard.notify_one();
-                }
-            }
-            Ok(_) => self.socket.send(encode(&error_message(
-                SocketErrorCode::Malformed,
-                "send hello with your matchId first",
-                None,
-            ))),
-            Err(malformed) => self.socket.send(encode(&error_message(
-                SocketErrorCode::Malformed,
-                &malformed.reason,
-                None,
-            ))),
-        }
-    }
-
-    fn closed(&self) {
-        lock(&self.state).closed = true;
-        self.heard.notify_one();
-    }
-}
-
-/// The socket's handlers until the actor attaches it: they keep the first hello. Its handlers hold
-/// the gate weakly, so a socket that closes before its hello leaves nothing behind.
-pub struct HelloGate {
-    gate: Arc<Gate>,
-}
+/// The socket's handlers until the actor attaches it (`actor::guard::HelloGate`, which `/ws/watch`
+/// shares): they keep the first hello, the match it names being optional.
+pub struct HelloGate(guard::HelloGate<Option<String>>);
 
 impl HelloGate {
     /// Installs the gate's handlers on `socket`. Call it before the transport delivers any frame.
     pub fn install(socket: &Socket) -> HelloGate {
-        let gate = Arc::new(Gate {
-            state: Mutex::new(GateState::default()),
-            heard: Notify::new(),
-            socket: socket.clone(),
-        });
-        let on_message: Weak<Gate> = Arc::downgrade(&gate);
-        let on_close = on_message.clone();
-        socket.attach(SocketHandlers {
-            message: Box::new(move |text: String| {
-                if let Some(gate) = on_message.upgrade() {
-                    gate.receive(&text);
-                }
-            }),
-            close: Box::new(move || {
-                if let Some(gate) = on_close.upgrade() {
-                    gate.closed();
-                }
-            }),
-        });
-        HelloGate { gate }
+        HelloGate(guard::HelloGate::install(socket, duos_hello))
     }
+}
 
-    /// The hello's `matchId` once one came; `None` when the socket closed first or said nothing for
-    /// `WS_IDLE_TIMEOUT_SECONDS`.
-    pub async fn wait(&self) -> Option<Option<String>> {
-        let limit = Duration::from_secs(u64::try_from(WS_IDLE_TIMEOUT_SECONDS).unwrap_or(0));
-        let heard = tokio::time::timeout(limit, async {
-            loop {
-                let notified = self.gate.heard.notified();
-                {
-                    let state = lock(&self.gate.state);
-                    if let Some(hello) = &state.hello {
-                        return Some(hello.clone());
-                    }
-                    if state.closed {
-                        return None;
-                    }
-                }
-                notified.await;
-            }
-        })
-        .await;
-        heard.unwrap_or(None)
+/// The hello's `matchId`, or the reason a frame that is not the hello gives.
+fn duos_hello(text: &str) -> Result<Option<String>, String> {
+    match parse_duos_message(text) {
+        Ok(DuosClientMessage::Hello { match_id }) => Ok(match_id),
+        Ok(_) => Err("send hello with your matchId first".to_string()),
+        Err(malformed) => Err(malformed.reason),
     }
 }
 
@@ -193,7 +107,7 @@ async fn attach_socket(
     query_match_id: Option<String>,
 ) -> Result<DuosSeat, Refusal> {
     let profile = authenticate(app, token).await?;
-    let Some(asked) = gate.wait().await else {
+    let Some(asked) = gate.0.wait().await else {
         return Err(Refusal::refused(
             WS_CLOSE.forbidden,
             "send hello with your matchId first",

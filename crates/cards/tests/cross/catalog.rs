@@ -25,6 +25,8 @@
 //!                    by their sections' own sentences, the Grapes tagged Fruit, every token tagged
 //!                    Token and rated "Token", B2.5) and B8's table of the ten AI generated cards
 //!                    (tagged AI). Buff Billy's "3X/3X → 6X/6X" prints 0/0 (its `xStats` carry X).
+//!   patch v0.3.Y    — issue #1067 renamed Jlockheed to Jlockeed in every name (the briefs keep
+//!                    the old spelling as the record).
 //!   patch v0.3.10   — issue #831's costs, stats, types and tags, in every set's rows: the briefs'
 //!                    lines are what the designer first wrote, the patch what the cards are now.
 //!   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
@@ -48,12 +50,12 @@
 use std::collections::BTreeMap;
 
 use indexmap::IndexMap;
-use jackioh_cards::CATALOG;
+use jackioh_cards::{CATALOG, chinese_json};
 use jackioh_engine::{
     CardCost, CardDef, CardFace, CardType, FaceKind, GLITCH_DEF_ID, KeywordKind, Rarity, SetName, Tag,
     fill_params, set_ships,
 };
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 use CardType as T;
 use Rarity as R;
@@ -2655,7 +2657,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     ),
     row(
         "48",
-        "Jlockheed's Lobbyist",
+        "Jlockeed's Lobbyist",
         c(1),
         T::Unit,
         &[G::Jlockeed],
@@ -2685,7 +2687,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     ),
     row(
         "51",
-        "Jlockheed's J15 Fighter",
+        "Jlockeed's J15 Fighter",
         c(3),
         T::Unit,
         &[G::Jlockeed],
@@ -2695,7 +2697,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     ),
     row(
         "52",
-        "Jlockheed's Permanent Defense Contract",
+        "Jlockeed's Permanent Defense Contract",
         c(2),
         T::Spell,
         &[G::Jlockeed],
@@ -4313,7 +4315,7 @@ const MEDITATIVE: &[SpecRow] = &[
     ),
     row(
         "97",
-        "Jlockheed's Evil Blueprints",
+        "Jlockeed's Evil Blueprints",
         c(0),
         T::Spell,
         &[G::Jlockeed],
@@ -4403,7 +4405,7 @@ const MEDITATIVE: &[SpecRow] = &[
     ),
     row(
         "97.9",
-        "Jlockheed's Headquarters",
+        "Jlockeed's Headquarters",
         c(4),
         T::Unit,
         &[G::Jlockeed, G::Token],
@@ -5024,8 +5026,9 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             }
         };
         // [family, expected rarity, member ids]. The Jlockeed family is Core's two: the Classic+
-        // Jlockheed cards spell it differently and differ in type and effect shape, so the
-        // template does not reach them (R739). The House is no Right-house/Wrong-House card.
+        // cards spelled it differently before patch v0.3.Y (#1067) and differ in type and
+        // effect shape, so the template does not reach them (R739). The House is no
+        // Right-house/Wrong-House card.
         let families: &[(&str, Rarity, &[&str])] = &[
             (
                 "Book of ___",
@@ -5352,7 +5355,7 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
     use super::*;
 
     #[test]
-    fn r278_tags_core_13_and_14_the_three_classic_plus_jlockheed_cards_48_51_and_52_classic_4_palantir_and_meditative_87_97_and_97_9_and_no_other_entry()
+    fn r278_tags_core_13_and_14_the_three_classic_plus_jlockeed_cards_48_51_and_52_classic_4_palantir_and_meditative_87_97_and_97_9_and_no_other_entry()
      {
         let mut tagged: Vec<String> = entries()
             .into_iter()
@@ -5375,15 +5378,15 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
             ]),
             "entries tagged Jlockeed"
         );
-        // The tag follows the name: every entry whose name says Jlockeed, or the Classic+ spelling
-        // Jlockheed, carries it — one faction under two spellings (B2.4) — plus Classic #4 Palantir,
-        // which the balance patch inducted without renaming it, and M #87 Tatches the Totem, which
-        // carries every tribal tag ("All Tribes", §8.8 row 87, R1424). M #97.9 Jlockheed's
-        // Headquarters is the Meditative set's, a token that fills the board with the faction's
-        // Units (§8.8).
+        // The tag follows the name: every entry whose name says Jlockeed carries it — one
+        // faction under one spelling since patch v0.3.Y (#1067) respelled the five names the
+        // designer spelled with an h (B2.4) — plus Classic #4 Palantir, which the balance patch
+        // inducted without renaming it, and M #87 Tatches the Totem, which carries every tribal
+        // tag ("All Tribes", §8.8 row 87, R1424). M #97.9 Jlockeed's Headquarters is the
+        // Meditative set's, a token that fills the board with the faction's Units (§8.8).
         let mut named: Vec<String> = entries()
             .into_iter()
-            .filter(|entry| entry.name.contains("Jlockeed") || entry.name.contains("Jlockheed"))
+            .filter(|entry| entry.name.contains("Jlockeed"))
             .map(|entry| entry.id.clone())
             .collect();
         named.sort();
@@ -5391,7 +5394,33 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
             .into_iter()
             .filter(|id| id != "classic-004" && id != "meditative-087")
             .collect();
-        assert_eq!(named, expected, "entries whose name names Jlockeed or Jlockheed");
+        assert_eq!(named, expected, "entries whose name names Jlockeed");
+    }
+
+    #[test]
+    fn r278_no_name_or_face_spells_the_faction_with_an_h() {
+        let old = |text: &str| text.to_lowercase().contains("jlockh");
+        for entry in entries() {
+            assert!(!old(&entry.name), "{} names the faction with an h", entry.id);
+            assert!(
+                !old(&entry.face(FaceKind::Base).text),
+                "{} base face spells the faction with an h",
+                entry.id
+            );
+            assert!(
+                !old(&entry.face(FaceKind::Radiant).text),
+                "{} radiant face spells the faction with an h",
+                entry.id
+            );
+        }
+        let table: IndexMap<String, Map<String, Value>> =
+            serde_json::from_str(chinese_json()).expect("crates/cards/chinese.json is an object of objects");
+        for (id, entry) in &table {
+            for field in ["name", "base", "radiant"] {
+                let text = entry.get(field).and_then(Value::as_str).unwrap_or("");
+                assert!(!old(text), "{id} chinese {field} spells the faction with an h");
+            }
+        }
     }
 }
 

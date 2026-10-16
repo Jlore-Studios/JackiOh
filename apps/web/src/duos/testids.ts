@@ -42,10 +42,11 @@ export const duosTestid = {
   resultBack: "duos-result-back",
   resultBoard: "duos-result-board",
   resultReplay: "duos-result-replay",
-  // The route's own: before the first view, and its clock and connection line.
+  // The route's own: before the first view, its clock, and its connection line and Reconnect now.
   connecting: "duos-connecting",
   refused: "duos-refused",
   connection: "duos-connection",
+  reconnect: "duos-reconnect",
   clock: "duos-clock",
   // The co-op replay's own (#965): its root; its controls carry the replay player's ids (replayTestid).
   replay: "duos-replay",
