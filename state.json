@@ -1339,11 +1339,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-16T15:18:54Z",
+        "at": "2026-10-16T16:49:10Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "hard when the work is the AI's search (crates/ai/src/): the fix reorders round_robin in crates/ai/src/candidates.rs, so it holds directly"
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "the change is in crates/ai/src/ (the AI's move order, which feeds the beam, the lethal solver and the reply model): the rule's hard line, so never easy or medium"
       },
       "failures": 0,
       "forced": false,
