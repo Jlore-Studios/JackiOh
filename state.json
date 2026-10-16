@@ -1759,6 +1759,14 @@
         }
       }
     },
+    "1079": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-16T16:50:09Z",
+      "issue": 1062,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "148": {
       "asks": [
         "c:5974504575"
