@@ -6,15 +6,22 @@
 //! reducer, which hands p2 its turn 10; `simulateReply` then plays p2's reply.
 //!
 //! Port of `packages/ai/test/reply.test.ts`. TS's defaulted `hidden` argument (`hiddenCardIds` of the
-//! state handed in) is passed explicitly wherever TS left it out.
+//! state handed in) is passed explicitly wherever TS left it out. #1036's tests also show the opponent
+//! using the Activates it can see and never a face-down one.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, act, in_graveyard, on_field};
+use super::support::{AI, HUMAN, act, in_graveyard, is_legal, on_field};
 
 const TURN: i32 = 9;
 const LIBRARY: &[&str] = &["core-008", "core-011", "core-008", "core-011"];
+/// C #20 The Power to Punish: "Activate: Choose one: Deal {damage} damage; …", once per turn.
+const PUNISH: &str = "classic-020";
+/// #98 Heroic Power, whose power is an `activate` (R752).
+const HEROIC: &str = "core-098";
+/// C #6 Cloaked Toe Cracker, the card that prints Cloaked.
+const CRACKER: &str = "classic-006";
 
 /// TS's `{ ...base, ...over }` on two JSON objects (an absent `over` changes nothing).
 fn spread(base: Value, over: Option<&Value>) -> Value {
@@ -310,5 +317,297 @@ mod duos_life_r964000 {
 
         // Spent: the hero's health is the pool, and 20 empties it.
         assert_eq!(reply_face_value(&with_pool(&state, true), AI, 20), AI_EVAL.win);
+    }
+}
+
+mod visible_activations {
+    use super::*;
+
+    /// What `reply_score` gives a passed line that the opponent's reply wins: its loss, less the
+    /// crystals it left unspent, exactly as `reply_score` sums it.
+    fn loss_score(state: &GameState) -> Option<f64> {
+        let unspent = state.players[AI].turn_log.unspent_at_end.unwrap_or(0);
+        Some(-AI_EVAL.win + f64::from(TURN + 1) - AI_EVAL.unspent_mana * f64::from(unspent))
+    }
+
+    fn winner(state: &GameState) -> Option<Winner> {
+        state.result.map(|result| result.winner)
+    }
+
+    /// p2 sets a Cloaked Toe Cracker face-down by its Cloaked on its turn 8, and both seats end their
+    /// turns: p2's turn 10, its set card's Reveal on offer (R783006).
+    fn cracker_set() -> GameState {
+        jackioh_cards::register_all();
+        let s = scenario(json!({
+            "seed": "reply-unseen",
+            "active": "p2",
+            "turn": TURN - 1,
+            "p1": { "hand": ["core-008"], "library": LIBRARY },
+            "p2": { "hand": [CRACKER, "core-008"], "library": LIBRARY },
+        }));
+        let cracker = s
+            .hand(HUMAN)
+            .into_iter()
+            .find(|card| card.def_id == CRACKER)
+            .map(|card| card.id)
+            .expect("the Toe Cracker");
+        let set = act(
+            s.state(),
+            HUMAN,
+            ActionBody::Play {
+                instance_id: cracker,
+                zone: Some(ZoneChoice {
+                    row: Row::Backrow,
+                    lane: 1,
+                }),
+                x: None,
+                embiggen: None,
+                equip: None,
+                tributes: None,
+                targets: None,
+                modes: None,
+                plague: None,
+                face_down: Some(RevealAt::Cloaked),
+            },
+        );
+        let handed = act(&set, HUMAN, &ActionBody::EndTurn);
+        assert_eq!(handed.active, AI);
+        let back = act(&handed, AI, &ActionBody::EndTurn);
+        assert_eq!(back.active, HUMAN);
+        assert_eq!(back.turn, TURN + 1);
+        back
+    }
+
+    /// Whether p2 may Reveal its set card `id` (R783006).
+    fn reveal_offered(state: &GameState, id: &str) -> bool {
+        legal_actions(state, HUMAN).iter().any(|action| {
+            matches!(action, ActionBody::Activate { instance_id, ability, .. }
+                if instance_id.as_str() == id && ability.as_deref() == Some(alt_play::CLOAKED_REVEAL))
+        })
+    }
+
+    /// The seat passes at 2 health into a face-up The Power to Punish it can see: its 2 damage ends the game
+    #[test]
+    fn a_face_up_power_to_punish_is_lethal_on_the_seat_at_2_health_and_the_line_scores_as_that_loss() {
+        let state = handed_over(json!({ "p1": { "health": 2 }, "p2": { "backrow": [PUNISH] } }));
+        let reply = simulate_reply(
+            &state,
+            AI,
+            &create_node_counter(20, None),
+            &hidden_card_ids(&state, AI),
+        )
+        .expect("a reply");
+        assert_eq!(reply.turn, TURN + 1);
+        assert_eq!(winner(&reply), Some(Winner::from(HUMAN)));
+
+        assert_eq!(line_status(&state, AI, TURN), LineStatus::Passed);
+        let score = reply_score(
+            &state,
+            AI,
+            TURN,
+            &create_node_counter(20, None),
+            &hidden_card_ids(&state, AI),
+        );
+        assert_eq!(score, loss_score(&state));
+    }
+
+    /// A Heroic Power that rolled Ping finishes the seat at 1 health through the activate legal_actions lists
+    #[test]
+    fn a_heroic_power_that_rolled_ping_is_lethal_on_the_seat_at_1_health_through_its_listed_activate() {
+        let mut state = handed_over(json!({ "p1": { "health": 1 }, "p2": { "backrow": [HEROIC] } }));
+        let id = state.players[HUMAN]
+            .backrow
+            .iter()
+            .flatten()
+            .find(|card| card.def_id == HEROIC)
+            .map(|card| card.id.clone())
+            .expect("the Heroic Power");
+        find_instance_mut(&mut state, &id)
+            .expect("the Heroic Power")
+            .memory
+            .insert(subsystems::POWER_KEY.to_string(), json!("ping"));
+        // Ping is an `activate` (R752), the action the engine offers for it.
+        assert!(is_legal(
+            &state,
+            HUMAN,
+            ActionBody::Activate {
+                instance_id: id,
+                ability: Some("ping".into()),
+                targets: Some(vec![Selection::Hero { player: AI }]),
+                modes: None,
+                tributes: None,
+            }
+        ));
+
+        let reply = simulate_reply(
+            &state,
+            AI,
+            &create_node_counter(20, None),
+            &hidden_card_ids(&state, AI),
+        )
+        .expect("a reply");
+        assert_eq!(winner(&reply), Some(Winner::from(HUMAN)));
+        let score = reply_score(
+            &state,
+            AI,
+            TURN,
+            &create_node_counter(20, None),
+            &hidden_card_ids(&state, AI),
+        );
+        assert_eq!(score, loss_score(&state));
+    }
+
+    /// The activation aimed at the seat's hero is tried first, though legal_actions lists the units first
+    #[test]
+    fn tries_the_activation_aimed_at_the_seats_hero_first_so_a_busy_board_never_hides_the_lethal() {
+        let state = handed_over(json!({
+            "p1": { "health": 2, "field": ["core-008", "core-008", "core-008", "core-008"] },
+            "p2": { "backrow": [PUNISH] },
+        }));
+        // The premise: in legal_actions order, the hit on p1's hero is past the cap.
+        let at_hero = legal_actions(&state, HUMAN)
+            .iter()
+            .filter(|action| matches!(action, ActionBody::Activate { .. }))
+            .position(|action| {
+                matches!(action, ActionBody::Activate { targets: Some(targets), .. }
+                    if targets.contains(&Selection::Hero { player: AI }))
+            })
+            .expect("Punish's hit on p1's hero");
+        assert!(at_hero >= AI_REPLY.visible_activations as usize);
+
+        let reply = simulate_reply(
+            &state,
+            AI,
+            &create_node_counter(20, None),
+            &hidden_card_ids(&state, AI),
+        )
+        .expect("a reply");
+        assert_eq!(winner(&reply), Some(Winner::from(HUMAN)));
+    }
+
+    /// A card set face-down is one the seat cannot see, so the reply never uses its Reveal
+    #[test]
+    fn never_reveals_a_card_set_face_down_that_the_seat_cannot_see() {
+        let state = cracker_set();
+        let set = state.players[HUMAN].backrow[0]
+            .as_ref()
+            .expect("the set Toe Cracker");
+        assert!(set.set_as.is_some());
+        assert!(reveal_offered(&state, &set.id));
+
+        let reply = simulate_reply(
+            &state,
+            AI,
+            &create_node_counter(40, None),
+            &hidden_card_ids(&state, AI),
+        )
+        .expect("a reply");
+        let still = reply.players[HUMAN].backrow[0].as_ref().expect("still set");
+        assert_eq!(still.id, set.id);
+        assert!(still.set_as.is_some());
+        assert!(!on_field(&reply, HUMAN, CRACKER));
+        assert_eq!(reply.players[AI].hero.health, state.players[AI].hero.health);
+    }
+
+    /// Nor a card a determinization filled in face-down: it is a sample, whatever it was drawn as
+    #[test]
+    fn never_reveals_a_card_a_determinization_filled_in_face_down() {
+        let state = cracker_set();
+        let public = redact(&state, AI);
+        let mut checked = 0;
+        for n in 0..300 {
+            let world = determinize(
+                &public,
+                AI,
+                &mut create_rng(&format!("reply-unseen-{n}"), 0),
+                DeterminizeOptions::default(),
+            );
+            let Some(set) = world.players[HUMAN].backrow[0].as_ref() else {
+                continue;
+            };
+            if set.set_as.map(|set_as| set_as.reveal) != Some(RevealAt::Cloaked) {
+                continue;
+            }
+            assert!(reveal_offered(&world, &set.id));
+            let reply = simulate_reply(
+                &world,
+                AI,
+                &create_node_counter(40, None),
+                &hidden_card_ids(&world, AI),
+            )
+            .expect("a reply");
+            let still = reply.players[HUMAN].backrow[0].as_ref().expect("still set");
+            assert_eq!(still.id, set.id);
+            assert!(still.set_as.is_some());
+            assert_eq!(reply.players[AI].hero.health, world.players[AI].hero.health);
+            checked += 1;
+            if checked == 3 {
+                break;
+            }
+        }
+        assert!(checked > 0, "no world filled the set card in as a Cloaked set");
+    }
+
+    /// decide heals rather than pass at 2 health into a face-up The Power to Punish
+    #[test]
+    fn decide_heals_rather_than_pass_at_2_health_into_a_face_up_power_to_punish() {
+        jackioh_cards::register_all();
+        let s = scenario(json!({
+            "seed": "reply-decide-heal",
+            "active": "p1",
+            "turn": TURN,
+            "p1": { "health": 2, "mana": 1, "hand": ["core-005", "core-008"], "library": LIBRARY },
+            "p2": { "backrow": [PUNISH], "hand": ["core-005"], "library": LIBRARY },
+        }));
+        let stockpile = s
+            .hand(AI)
+            .into_iter()
+            .find(|card| card.def_id == "core-005")
+            .map(|card| card.id)
+            .expect("the Stockpile");
+        let decision = decide(
+            s.state(),
+            AI,
+            &mut AiOptions::new(create_rng("reply-decide-heal", 0)),
+        )
+        .expect("a decision");
+        assert!(
+            matches!(&decision.action, ActionBody::Play { instance_id, .. } if *instance_id == stockpile),
+            "{:?}",
+            decision.action
+        );
+    }
+
+    /// decide exiles a face-up The Power to Punish rather than play a bigger body and pass into it
+    #[test]
+    fn decide_exiles_a_face_up_power_to_punish_rather_than_play_a_bigger_body_and_pass_into_it() {
+        jackioh_cards::register_all();
+        let s = scenario(json!({
+            "seed": "reply-decide-exile",
+            "active": "p1",
+            "turn": TURN,
+            "p1": { "health": 2, "hand": ["core-034", "core-025"], "library": LIBRARY },
+            "p2": { "backrow": [PUNISH], "hand": ["core-005"], "library": LIBRARY },
+        }));
+        let collateral = s
+            .hand(AI)
+            .into_iter()
+            .find(|card| card.def_id == "core-034")
+            .map(|card| card.id)
+            .expect("the Collateral Damage");
+        let punish = s.backrow(HUMAN, 1).map(|card| card.id).expect("the Punish");
+        let decision = decide(
+            s.state(),
+            AI,
+            &mut AiOptions::new(create_rng("reply-decide-exile", 0)),
+        )
+        .expect("a decision");
+        assert!(
+            matches!(&decision.action, ActionBody::Play { instance_id, targets: Some(targets), .. }
+                if *instance_id == collateral
+                    && targets.contains(&Selection::Instance { instance_id: punish.clone() })),
+            "{:?}",
+            decision.action
+        );
     }
 }

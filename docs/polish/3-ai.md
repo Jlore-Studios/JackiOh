@@ -353,6 +353,7 @@ export const AI_REPLY = {
   maxSteps: 12,          // engine steps one reply may take: plays, attacks, prompt answers, endTurn
   reserveSteps: 5,       // nodes decide reserves per reply when it splits the budget
   knownPlays: 8,         // plays of cards the line put in the opponent's hand tried per step
+  visibleActivations: 4, // activations of cards the seat can see on the field tried per step (#1036)
   facePerDamage: 1,      // the opponent's value per point its attack would deal the seat's hero
   chipPerDamage: 0.3,    // per point an attack deals a unit it does not kill
 } as const;
@@ -678,13 +679,18 @@ The rule, one step at a time, each step one `reduce` (one node):
    over, the units a Flood bounced. The seat watched it arrive, so it is information, not a guess.
    The opponent tries up to `AI_REPLY.knownPlays` plays of such cards and takes the one its own
    `evaluate` likes best, if that beats standing still.
-2. **Trades.** Otherwise it takes the legal attack of highest static value, when that value is
+2. **Visible activations.** An Activate of a card face-up on the field that is not in `hidden` (The
+   Power to Punish, a Heroic Power's rolled Ping) is information too. The opponent tries up to
+   `AI_REPLY.visibleActivations` of them, those aimed at the seat's hero first, then at a card the
+   seat controls, and takes the one its own `evaluate` likes best, if that beats standing still
+   (#1036). A face-down card's Reveal is never tried: its card is a sample.
+3. **Trades.** Otherwise it takes the legal attack of highest static value, when that value is
    positive: an attack that kills the seat's hero is worth `AI_EVAL.win`; one on the hero is worth
    `facePerDamage` per point of `projectedHeroDamage`; one on a unit is worth the target's
    `unitWorth` if it dies (First Strike deciding who strikes first, Divine Shield popped for its
    keyword weight, Poisonous killing), `chipPerDamage` per point otherwise, less the attacker's own
    `unitWorth` if it dies.
-3. **End.** Otherwise it ends its turn, and the engine runs the seat's start of turn.
+4. **End.** Otherwise it ends its turn, and the engine runs the seat's start of turn.
 
 It never plays a card it held unseen: those are samples, and a guessed hand adds noise rather than
 information. At most `AI_REPLY.maxSteps` steps; the seat's own prompt at its next turn start ends
@@ -1213,7 +1219,7 @@ Web and e2e (slice C):
 
 The strength pass (after the build; see "Strength pass" below):
 
-- **B41**: the opponent's reply. From a state where the seat has just passed the turn, `simulateReply` has the opponent swing an unblocked unit at the face and end its turn (one node each), take lethal when it has it, leave a Defense-Position wall it cannot hurt alone, trade into a unit worth more than the face damage it gives up, stop at the seat's own start-of-turn prompt, and return null without a node. It replays the units the seat's own Flood bounced into its hand and none of the cards it held unseen. `replyScore` scores a passed line with `evaluate(after, seat, "seat")` less its unspent crystals, keeps the static score of a line that ended the game, and is null when the counter runs out. Observed on `scenario()` boards.
+- **B41**: the opponent's reply. From a state where the seat has just passed the turn, `simulateReply` has the opponent swing an unblocked unit at the face and end its turn (one node each), take lethal when it has it, leave a Defense-Position wall it cannot hurt alone, trade into a unit worth more than the face damage it gives up, stop at the seat's own start-of-turn prompt, and return null without a node. It replays the units the seat's own Flood bounced into its hand and none of the cards it held unseen. It also uses a face-up The Power to Punish or a Heroic Power that rolled Ping for lethal, tries the one aimed at the seat's hero first even where move order lists it past the cap, never reveals a card set face-down (on the board or filled in by a determinization), and `decide` heals or exiles the Punish rather than pass into it (#1036). `replyScore` scores a passed line with `evaluate(after, seat, "seat")` less its unspent crystals, keeps the static score of a line that ended the game, and is null when the counter runs out. Observed on `scenario()` boards.
 - **B42**: timing. Every decision the Easy AI faced in the first ai-vs-greedy gate game (the first six under `pnpm ai:gate`), decided again at `AI_BUDGET`, spends at most `AI_BUDGET.nodes` nodes, and the fastest of three runs of each takes under `AI_GATE.maxDecisionMs` as the development machine would time it: each run is timed right after a fixed yardstick of engine work (`AI_GATE.calibrationGames` random-policy games), and the smallest ratio times `AI_GATE.calibrationRefMs` is what counts, so load or a slower runner fails nothing (integration fix stage; the raw clock failed at 1,520 and 5,523 ms under load and passed alone). Observed with `performance.now()`.
 
 ## Tests
