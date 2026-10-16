@@ -8384,8 +8384,13 @@
     "what": "build #1075 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-16T22:24:15Z",
-    "notes": [],
+    "at": "2026-10-16T22:30:54Z",
+    "notes": [
+      "#1088: typed it Task",
+      "#1087: typed it Task",
+      "#1086: typed it Task",
+      "#1085: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
