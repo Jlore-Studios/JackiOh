@@ -7963,8 +7963,10 @@
     "what": "build #1058 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-16T15:57:45Z",
-    "notes": [],
+    "at": "2026-10-16T16:03:42Z",
+    "notes": [
+      "#1071: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
