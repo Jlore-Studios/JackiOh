@@ -724,11 +724,10 @@ pub fn validate_play(
     if from == PlayFrom::Graveyard {
         why_graveyard_play_refused(state, player, &card, cost, action.plague.as_ref())?;
     // R1223: the refusal reads the one affordability function, as `legal_actions` does.
-    } else if cost > crate::credit::spendable_mana(state, player) {
-        return Err(EngineError::new(format!(
-            "{} costs {cost}, more than your mana",
-            def_of(Some(state), &card.def_id).name
-        )));
+    } else {
+        // R979000: the sentence is `credit::why_unaffordable`'s, so the reducer and the view refuse
+        // in one voice; the check is unchanged.
+        crate::credit::why_unaffordable(state, &card, cost)?;
     }
 
     // Step 1 accepted the zone; a play that named none takes the leftmost free one — or, on a full

@@ -1,8 +1,9 @@
 // A face in play's states in words, beside the face an inspect overlay shows (SPEC §10.8). A hover
 // preview takes no pointer events and a touch sheet has no hover, so the badges' tooltips cannot be
 // read there. Covers the tuned ribbon (R386, R1320), the other badges' words (R385, E39, R383), a
-// quest line (B5 E33, R404), what a copier copies (B5 E14, R511) and why the viewer's own unit cannot
-// attack now (R849000). `LocLine` is E36's meta line.
+// quest line (B5 E33, R404), what a copier copies (B5 E14, R511), why the viewer's own unit cannot
+// attack now (R849000) and why a card in hand cannot be played now (R979000). `LocLine` is E36's
+// meta line.
 
 import type { ReactElement } from "react";
 
@@ -21,6 +22,8 @@ const AURA_GLYPH = "✦";
 const COPY_GLYPH = "“";
 /** R849000: the glyph of a unit's reason for not attacking. */
 const ATTACK_REASON_GLYPH = "⊘";
+/** R979000: the glyph of a hand card's reason for not playing, the attack reason's sibling. */
+const PLAY_REASON_GLYPH = "⊘";
 
 /** R511: "Copying: Book of Knowledge", "Copying: Book of Knowledge (Radiant)". */
 export function copyingWords(copying: { name: string; radiant: boolean }): string {
@@ -33,7 +36,8 @@ export function hasStateNotes(face: FaceModel): boolean {
     (face.marks ?? []).length > 0 ||
     (face.quest?.auras ?? []).length > 0 ||
     (face.copying ?? null) !== null ||
-    face.attackReason !== undefined
+    face.attackReason !== undefined ||
+    face.playReason !== undefined
   );
 }
 
@@ -77,7 +81,13 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
   const auras = face.quest?.auras ?? [];
   const copying = face.copying ?? null;
   const lines =
-    others.length + marks.length + quests.length + auras.length + (copying === null ? 0 : 1) + (face.attackReason === undefined ? 0 : 1);
+    others.length +
+    marks.length +
+    quests.length +
+    auras.length +
+    (copying === null ? 0 : 1) +
+    (face.attackReason === undefined ? 0 : 1) +
+    (face.playReason === undefined ? 0 : 1);
   if (lines === 0 && !tuned) return null;
   return (
     <>
@@ -90,6 +100,14 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
                 {ATTACK_REASON_GLYPH}
               </span>
               <span className="inspect-state-words">{t(face.attackReason)}</span>
+            </li>
+          )}
+          {face.playReason === undefined ? null : (
+            <li className="inspect-state" data-state="playReason">
+              <span className="inspect-state-glyph" aria-hidden="true">
+                {PLAY_REASON_GLYPH}
+              </span>
+              <span className="inspect-state-words">{t(face.playReason)}</span>
             </li>
           )}
           {copying === null ? null : (

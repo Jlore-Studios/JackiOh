@@ -390,7 +390,7 @@ export function aiToAct(state: GameState, seat: PlayerId): boolean;
 2. **Hidden set** H is the union of:
    - every card in `players[opp].hand` and `players[opp].library`;
    - every backrow card that `viewFor(state, seat)` would show as `{ faceDown: true }`, meaning
-     `controller !== seat && faceUp !== true && def.type !== "Field Spell"`;
+     `controller !== seat && faceUp !== true && revealed !== true && def.type !== "Field Spell"` (R686);
    - every card in `players[seat].library` whose instance id was minted for the opponent's opening
      deck (`#87` Pocket Chaos's library swap, R73). `createGame` mints `c1..c{n1}` for p1's deck
      and `c{n1+1}..c{n1+n2}` for p2's, where `n` is each seat's `handicapOf(...).deckSize`.
