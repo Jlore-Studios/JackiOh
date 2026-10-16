@@ -46,6 +46,10 @@
 //! match rng: each is a test-made `Effect` that writes exactly what that outcome writes (TS's fake
 //! wrote the same two fields and events).
 
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, mpsc};
+use std::time::Duration;
+
 use indexmap::IndexMap;
 use jackioh_engine::config::{DECK_SIZE, HERO_HEALTH};
 use jackioh_engine::effects::{choose_mode, lose_health};
@@ -307,6 +311,113 @@ pub fn install_test_cards() {
     jackioh_cards::register_all();
     register_catalog(test_catalog());
     register_scripts(test_scripts());
+}
+
+/// #1035: a 0-cost Quickdraw Spell whose play, while its `FoldGate` is armed, parks the fold that
+/// replays it. It is not in `install_test_cards`'s catalog: `install_gated_test_cards` adds it.
+pub const TEST_FOLD_GATE: &str = "test-fold-gate";
+
+/// #1035: how long a parked fold waits to be released. Bounded, so a fold that holds the runtime
+/// (the probe cannot run to release it) ends its test on order and does not hang it.
+pub const FOLD_GATE_WAIT: Duration = Duration::from_secs(5);
+
+/// #1035: what `TEST_FOLD_GATE`'s script shares with its test. Armed, the next play of the card parks
+/// its fold: it tells the test it has parked (`parked`), then waits for the test's release, for at most
+/// `FOLD_GATE_WAIT`. `note` and `order` record the steps in the order they happened.
+pub struct FoldGate {
+    armed: AtomicBool,
+    parked: Mutex<Option<tokio::sync::oneshot::Sender<()>>>,
+    release: Mutex<mpsc::Receiver<()>>,
+    order: Mutex<Vec<&'static str>>,
+}
+
+impl FoldGate {
+    /// A disarmed gate, the sender that releases it and the receiver that says it has parked.
+    pub fn new() -> (
+        Arc<FoldGate>,
+        mpsc::Sender<()>,
+        tokio::sync::oneshot::Receiver<()>,
+    ) {
+        let (release, released) = mpsc::channel();
+        let (parked, parks) = tokio::sync::oneshot::channel();
+        let gate = Arc::new(FoldGate {
+            armed: AtomicBool::new(false),
+            parked: Mutex::new(Some(parked)),
+            release: Mutex::new(released),
+            order: Mutex::new(Vec::new()),
+        });
+        (gate, release, parks)
+    }
+
+    /// The next play of `TEST_FOLD_GATE` parks, once.
+    pub fn arm(&self) {
+        self.armed.store(true, Ordering::SeqCst);
+    }
+
+    pub fn note(&self, step: &'static str) {
+        self.order
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .push(step);
+    }
+
+    pub fn order(&self) -> Vec<&'static str> {
+        self.order
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone()
+    }
+
+    fn pass(&self) {
+        if !self.armed.swap(false, Ordering::SeqCst) {
+            return;
+        }
+        let parked = self
+            .parked
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .take();
+        if let Some(parked) = parked {
+            let _ = parked.send(());
+        }
+        let release = self
+            .release
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let _ = release.recv_timeout(FOLD_GATE_WAIT);
+        drop(release);
+        self.note("fold");
+    }
+}
+
+/// #1035: `install_test_cards`' cards plus `TEST_FOLD_GATE`, whose play parks its fold while `gate` is
+/// armed.
+pub fn install_gated_test_cards(gate: Arc<FoldGate>) {
+    jackioh_cards::register_all();
+    let mut defs = test_catalog();
+    let index = FIRST_TEST_INDEX + test_card_defs().len() as i32;
+    defs.insert(
+        TEST_FOLD_GATE.to_string(),
+        test_def(TEST_FOLD_GATE, index, "Quickdraw. Parks a fold."),
+    );
+    register_catalog(defs);
+    let script = Script {
+        static_flags: quickdraw(),
+        cry: Some(hook(move |_ctx| {
+            gate.pass();
+            Vec::new()
+        })),
+        ..Script::default()
+    };
+    let mut scripts = test_scripts();
+    scripts.insert(
+        TEST_FOLD_GATE.to_string(),
+        CardScripts {
+            base: script.clone(),
+            radiant: script,
+        },
+    );
+    register_scripts(scripts);
 }
 
 /// A `DECK_SIZE`-card deck of test ids, with `extra` scripted cards first; each of them has

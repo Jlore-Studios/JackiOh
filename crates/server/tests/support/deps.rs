@@ -189,6 +189,7 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
         card_stats: jackioh_server::api::stats::KeptReports::default(),
         queue_presence: jackioh_server::api::queue::QueuePresence::new(),
         social: jackioh_server::social::Social::default(),
+        engine_thread: test_engine_thread,
     });
     if options.e2e && !options.skip_fixtures && !restarted {
         jackioh_server::api::e2e::seed_e2e_fixtures(&app)
@@ -196,6 +197,18 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
             .unwrap_or_else(|error| panic!("R144's reseed: {error:?}"));
     }
     app
+}
+
+/// #1035: the test app's `EngineThread`. It reads the calling test thread's cards
+/// (`install_test_cards`, or whatever catalog, scripts and shipped catalogs the test registered,
+/// R767000) and sets them on the blocking pool's thread, so a fold off the runtime reads what the
+/// test's own thread reads.
+fn test_engine_thread() -> Box<dyn FnOnce() + Send> {
+    let overrides = jackioh_engine::testkit::thread_overrides();
+    Box::new(move || {
+        jackioh_cards::register_all();
+        overrides.install();
+    })
 }
 
 // ---------------------------------------------------------------------------

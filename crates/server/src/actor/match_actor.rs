@@ -103,8 +103,9 @@ impl Drop for Replying {
 pub struct MatchActorInput {
     /// TS `match` (a Rust keyword): the row as it stands.
     pub match_row: MatchRow,
-    /// The live state, when the caller already has one. `None`, the actor folds `(seed, decks, log)`.
-    pub state: Option<EngineState>,
+    /// The live state: the opening `Registry::start` began, or the fold `Registry::rebuild` ran off the
+    /// runtime (#1035).
+    pub state: EngineState,
     /// The rows already in `match_actions`: the seq counter and the nonce map are rebuilt from them.
     pub log: Vec<MatchActionRow>,
     /// R679: called once, synchronously, when a Glitch voids the match, before the store forgets it —
@@ -467,23 +468,6 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
             portrait: None,
         },
     );
-
-    let state = match state {
-        Some(state) => state,
-        None => {
-            let (last_boards, glitch_boards) = last_boards_of(&match_row);
-            let actions = log.iter().map(|row| row.action.clone()).collect();
-            engine::fold(&engine::fold_args(
-                &match_row.seed,
-                &match_row.decks,
-                actions,
-                last_boards,
-                glitch_boards,
-                None,
-            ))
-            .state
-        }
-    };
 
     let next_seq = log.iter().fold(0, |highest, row| highest.max(row.seq)) + 1;
     let acks: IndexMap<String, ServerMessage> = log
