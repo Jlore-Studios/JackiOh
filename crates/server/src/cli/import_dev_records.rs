@@ -25,6 +25,7 @@ use jackioh_engine::wire::{DEV_RECORD_ID_PREFIX, GameSource, parse_game_record_l
 
 use crate::cli::card_stats::literal;
 use crate::cli::{connect_one, database_url};
+use crate::config::STATS_FOLD_BATCH_RECORDS;
 use crate::db::store::Db;
 
 const USAGE: &str = "Usage: jackioh-server stats-import <records.jsonl>";
@@ -86,16 +87,15 @@ pub async fn import_dev_records(db: &Db, contents: &str) -> anyhow::Result<Impor
         );
     }
 
-    // One transaction per record, as TS's one store call per record was: a record already in the
-    // table answers false and is counted as skipped.
+    // R1044000: `STATS_FOLD_BATCH_RECORDS` records to a transaction, the ones written folded into the
+    // totals together, so a day's file rewrites each card's totals a few times rather than once per
+    // game. A record already in the table answers false and is counted as skipped.
     let mut written = 0;
-    for record in &records {
+    for batch in records.chunks(STATS_FOLD_BATCH_RECORDS) {
         let mut tx = db.begin(None).await?;
-        let inserted = tx.game_records_insert(record).await?;
+        let inserted = tx.game_records_insert_batch(batch).await?;
         tx.commit().await?;
-        if inserted {
-            written += 1;
-        }
+        written += inserted.into_iter().filter(|&wrote| wrote).count();
     }
     Ok(ImportOutcome {
         read: records.len(),

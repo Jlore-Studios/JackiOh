@@ -17,10 +17,9 @@
 //! run folds it again and skips it again. So is a match in which no person made a move (every action
 //! the clock's): it leaves no row, and the next run folds it again.
 
-use std::panic::AssertUnwindSafe;
-
 use anyhow::bail;
 
+use crate::actor::engine::{off_runtime, registered_thread};
 use crate::actor::registry::dealt_for;
 use crate::actor::telemetry::{LIVE_PILOTS, replay};
 use crate::cli::{connect_one, database_url};
@@ -57,9 +56,12 @@ pub async fn backfill(db: &Db) -> Result<BackfillOutcome, StoreError> {
         };
         let log = tx.matches_actions(&match_id).await?;
         let mode = tx.matches_mode_of(&match_id).await?;
-        // R258: the deal the registry folds the match with, or the fold is another game.
-        let replayed =
-            std::panic::catch_unwind(AssertUnwindSafe(|| replay(&match_row, &log, dealt_for(mode))));
+        // R258: the deal the registry folds the match with, or the fold is another game. #1035: off the
+        // runtime, as a rebuild folds.
+        let replayed = off_runtime(registered_thread, move || {
+            replay(&match_row, &log, dealt_for(mode))
+        })
+        .await;
         let recorder = match replayed {
             Ok((recorder, 0)) => recorder,
             Ok((_, refused)) => {

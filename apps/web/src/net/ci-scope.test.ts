@@ -71,7 +71,10 @@ let repo = "";
 /** The first commit's sha. */
 let baseSha = "";
 
-const GIT_CONFIG = ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"];
+/** Git's background upkeep is off (#1016): from git 2.54 a commit can start a detached repack (`git
+ * maintenance run --auto`), whose prune-packed removes the empty objects/xx directory a `git add` here
+ * has just made for an object, and the add fails with "unable to create temporary file". */
+const GIT_CONFIG = ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false", "-c", "gc.auto=0"];
 
 function git(...args: string[]): string {
   return execFileSync("git", [...GIT_CONFIG, ...args], { cwd: repo, encoding: "utf8" }).trim();
@@ -577,10 +580,13 @@ function namedPaths(roots: string[], keep: (file: string) => boolean): Map<strin
   return found;
 }
 
-/** What the web's typecheck, lint and unit tests read. ci-scope.test.ts and vercel-ignore.test.ts name paths only as data for their throwaway repos. */
+/** What the web's typecheck, lint and unit tests read. ci-scope.test.ts, vercel-ignore.test.ts and
+ * build-wasm-cache.test.ts name paths only as data for their throwaway repos (the last reads only
+ * scripts/build-wasm.sh and Cargo.toml for real, which run web anyway). */
+const DATA_ONLY = ["apps/web/src/net/ci-scope.test.ts", "apps/web/src/net/vercel-ignore.test.ts", "apps/web/src/net/build-wasm-cache.test.ts"];
 const WEB = namedPaths(
   ["apps/web/src", "apps/web/scripts", "apps/web/vite.config.ts", "apps/web/vitest.config.ts", "apps/web/static-pages.ts"],
-  (file) => file !== "apps/web/src/net/ci-scope.test.ts" && file !== "apps/web/src/net/vercel-ignore.test.ts",
+  (file) => !DATA_ONLY.includes(file),
 );
 /** What e2e smoke's client build and specs read: e2e/, and the client without its unit tests. */
 const E2E = namedPaths(

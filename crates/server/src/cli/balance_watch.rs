@@ -28,7 +28,7 @@ use anyhow::{anyhow, bail};
 use indexmap::IndexMap;
 
 use jackioh_engine::wire::{
-    CardStats, CardStatsFilter, GameRecord, GameSource, PilotFilter, SourceFilter, Tally, card_stats,
+    CardStats, CardStatsFilter, GameRecord, PilotFilter, SourceFilter, StatsTotals, add_stats, card_stats_of,
     parse_game_record_lines, played_delta, record_matches,
 };
 
@@ -39,7 +39,7 @@ use crate::config::{
     BALANCE_WATCH_MIN_GAMES, BALANCE_WATCH_PLAYED_DELTA_THRESHOLD, BALANCE_WATCH_Z_THRESHOLD,
     CARD_STATS_MIN_SAMPLE, PUBLIC_STATS_MIN_LIVE_GAMES,
 };
-use crate::db::store::{Db, GameRecordQuery, StoreError};
+use crate::db::store::{Db, StatsTotalsQuery, StoreError};
 use crate::env::quoted;
 
 const USAGE: &str =
@@ -146,30 +146,17 @@ pub fn is_provisional(live_games: i64) -> bool {
     live_games < PUBLIC_STATS_MIN_LIVE_GAMES
 }
 
-fn add_tally(into: &mut Tally, other: &Tally) {
-    into.games += other.games;
-    into.wins += other.wins;
-    into.draws += other.draws;
-}
-
 fn merge_into(by_card: &mut IndexMap<String, CardStats>, stat: CardStats) {
     match by_card.get_mut(&stat.card) {
         None => {
             by_card.insert(stat.card.clone(), stat);
         }
-        Some(held) => {
-            add_tally(&mut held.in_deck, &stat.in_deck);
-            add_tally(&mut held.opening_hand, &stat.opening_hand);
-            add_tally(&mut held.going_first, &stat.going_first);
-            add_tally(&mut held.going_second, &stat.going_second);
-            add_tally(&mut held.played, &stat.played);
-            add_tally(&mut held.drawn_not_played, &stat.drawn_not_played);
-        }
+        Some(held) => add_stats(held, &stat),
     }
 }
 
-/// R377: the report the options ask for, off the records the store holds. One
-/// `GameRecordQuery` through `game_records_list`, then the counting replicates
+/// R377: the report the options ask for, off the totals the store holds (R1044000). One
+/// `StatsTotalsQuery` through `stats_totals_load`, then the counting replicates
 /// `api::stats::public_report` locally (R1451): live records count their human seats only, and
 /// development records count every seat, but only with `--source=all` while the gate stands —
 /// `--source=live` always counts live-only, and once the gate clears development runs are ignored
@@ -178,22 +165,23 @@ pub async fn balance_watch_report(
     db: &Db,
     options: &BalanceWatchOptions,
 ) -> Result<BalanceWatchReport, StoreError> {
-    let query = GameRecordQuery {
+    let query = StatsTotalsQuery {
         source: options.source,
         mode: None,
         patch: Some(options.patch.clone()),
+        drills: false,
     };
     let mut tx = db.begin(None).await?;
-    let records = tx.game_records_list(&query).await?;
+    let totals = tx.stats_totals_load(&query).await?;
     tx.commit().await?;
 
-    Ok(balance_watch_report_for_records(&records, options))
+    Ok(balance_watch_report_for_totals(&totals, options))
 }
 
-/// R377: the same report off record files, with no store. It reads what the store's
-/// `GameRecordQuery` would return (`game_records_list`'s filter, in id order, one record per id,
-/// since the table holds one row per id), so it builds the store path's report. A file that cannot
-/// be read, or a line that is not a record, is an error naming the file (and the line).
+/// R377: the same report off record files, with no store. It folds what the store would hold (the
+/// patch's records of the source, one record per id, since the table holds one row per id), so it
+/// builds the store path's report. A file that cannot be read, or a line that is not a record, is an
+/// error naming the file (and the line).
 pub async fn balance_watch_report_from_files(
     paths: &[PathBuf],
     options: &BalanceWatchOptions,
@@ -215,17 +203,18 @@ pub async fn balance_watch_report_from_files(
     }
     records.sort_by(|a, b| a.id.cmp(&b.id));
     records.dedup_by(|later, earlier| later.id == earlier.id);
-    Ok(balance_watch_report_for_records(&records, options))
+    let mut totals = StatsTotals::default();
+    for record in &records {
+        totals.fold(record, false);
+    }
+    Ok(balance_watch_report_for_totals(&totals, options))
 }
 
-fn balance_watch_report_for_records(
-    records: &[GameRecord],
+fn balance_watch_report_for_totals(
+    totals: &StatsTotals,
     options: &BalanceWatchOptions,
 ) -> BalanceWatchReport {
-    let live_games = records
-        .iter()
-        .filter(|record| record.source == GameSource::Live)
-        .count() as i64;
+    let live_games = totals.live_games(&options.patch);
     let provisional = is_provisional(live_games);
 
     let filter = |source: SourceFilter, pilot: PilotFilter| CardStatsFilter {
@@ -236,14 +225,14 @@ fn balance_watch_report_for_records(
     };
     let mut by_card: IndexMap<String, CardStats> = IndexMap::new();
     let (mut games, mut decks) = (0i64, 0i64);
-    let live = card_stats(records, &filter(SourceFilter::Live, PilotFilter::Human));
+    let live = card_stats_of(totals, &filter(SourceFilter::Live, PilotFilter::Human));
     games += live.games as i64;
     decks += live.decks as i64;
     for stat in live.cards {
         merge_into(&mut by_card, stat);
     }
     if options.source == SourceFilter::All && provisional {
-        let dev = card_stats(records, &filter(SourceFilter::Dev, PilotFilter::Unified));
+        let dev = card_stats_of(totals, &filter(SourceFilter::Dev, PilotFilter::Unified));
         games += dev.games as i64;
         decks += dev.decks as i64;
         for stat in dev.cards {

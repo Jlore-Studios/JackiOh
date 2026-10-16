@@ -1446,12 +1446,12 @@ mod spec_11_rulings_r1_r42_m3_gate {
     }
 
     #[test]
-    fn r21_r781005_draws_random_keywords_from_the_eighteen_entry_pool_and_never_repeats_one_on_a_unit() {
+    fn r21_r781005_r1025000_draws_random_keywords_from_the_sixteen_entry_pool_and_never_repeats_one_on_a_unit()
+     {
         assert_eq!(
             RANDOM_KEYWORD_POOL.to_vec(),
             vec![
                 "Taunt",
-                "Armor 1",
                 "Rush",
                 "Charge",
                 "First Strike",
@@ -1464,7 +1464,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
                 "Cleave",
                 "Indestructible",
                 "Deft",
-                "Spell Damage 1",
                 "Lifesteal",
                 "Pierce",
                 "Trample",

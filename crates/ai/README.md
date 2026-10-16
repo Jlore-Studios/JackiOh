@@ -18,10 +18,10 @@ caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
 module, the `jackioh` tools, and this crate's tests (dev-dependency).
 
-Every AI number is a named constant (CLAUDE.md rule 9): `AI_BUDGET`, `AI_GATE_BUDGET`, `AI_SEARCH`
-and `AI_DETERMINIZE` in `src/config.rs`, and the deck, gate, sweep and development-run numbers in
-their modules (`AI_DECK` in `deck.rs`, `AI_GATE` in `gate.rs`, `AI_SWEEP` in `sweep.rs`,
-`AI_DEV_RUN` in `dev_run.rs`), with the Duos gate's `DUOS_GATE_GAMES_SMOKE` and
+Every AI number is a named constant (CLAUDE.md rule 9): `AI_BUDGET`, `AI_GATE_BUDGET`, `AI_SEARCH`,
+`AI_DETERMINIZE`, `AI_MULLIGAN` and `AI_MULLIGAN_CURVE` in `src/config.rs`, and the deck, gate, sweep
+and development-run numbers in their modules (`AI_DECK` in `deck.rs`, `AI_GATE` in `gate.rs`,
+`AI_SWEEP` in `sweep.rs`, `AI_DEV_RUN` in `dev_run.rs`), with the Duos gate's `DUOS_GATE_GAMES_SMOKE` and
 `DUOS_GATE_WIN_FLOOR` in `src/config.rs`. The tiers are the engine's (`AI_DIFFICULTY`, `AI_TUTORIAL`
 and Duos's `duos_ai_team` in `crates/engine/src/config.rs`).
 
@@ -45,13 +45,18 @@ only in hidden cards give the same decision under the same rng. The caller reads
 back afterwards.
 
 The AI never concedes and never offers a draw, and it declines every draw offer at once (R188). It
-answers its mulligan as soon as the mulligans open (R265, R266). Nothing here reads a difficulty or a
-handicap: the tiers change the AI seat's resources only (R180), and the tutorial's opponent is the
-same AI on `AI_TUTORIAL` with the lesson's fixed deck (R290, R291).
+answers its mulligan as soon as the mulligans open (R265, R266): `mulligan_keep_curved` sends back
+every card costing more than `AI_MULLIGAN.keep_max_cost` except the one proven four-drop the shaped
+keep holds, and keeps the cheap ones to `AI_MULLIGAN_CURVE` (#993): at most two one-drops, and only
+the cheapest card when none is an early play, counted in the seat's crystals (its mana bonus and,
+going second, The Coin). Nothing here reads a difficulty, and a handicap only as the seat's mana (the
+mulligan's bonus and cap): the tiers change the AI seat's resources only (R180), and the tutorial's
+opponent is the same AI on `AI_TUTORIAL` with the lesson's fixed deck (R290, R291).
 
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
-lines one turn deeper after the opponent's reply (`reply.rs`) on every determinization, and plays the
-first action of the best mean. It re-plans after every action.
+lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
+it can see on the field, then its attacks) on every determinization, and plays the first action of the
+best mean. It re-plans after every action.
 
 `decide_styled` is `decide` under an `AiStyle` (R1452), the server's ladder bots' strength knob beside
 their budget: a `missed_lethal_chance` to pass over the lethal line the solver found (the search then

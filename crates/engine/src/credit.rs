@@ -7,7 +7,8 @@
 //! and two or more lenders share one line. `spendable_mana` is the one affordability function every
 //! refusal and listing reads (R1223).
 
-use crate::state::{GameState, PlayerState};
+use crate::catalog::def_of;
+use crate::state::{CardInstance, EngineError, GameState, PlayerState};
 use crate::wire::{PlayerId, Row};
 
 /// What a credit line offers: the most its controller may owe at once, and how many instalments
@@ -72,6 +73,24 @@ pub fn credit_available(state: &GameState, player: PlayerId) -> i32 {
 /// refusal and listing reads this, so `legal_actions` and the reducer agree.
 pub fn spendable_mana(state: &GameState, player: PlayerId) -> i32 {
     state.players[player].mana.current + credit_available(state, player)
+}
+
+/// R979000: why this price is one the player cannot pay — §10.5 step 1's words (`play_steps.rs` owns
+/// the call; this owns the sentence), so the view's `playReason` and the reducer refuse in one voice.
+/// The seat is the one holding the card (a hand card's holder, as the pay step charges), never a
+/// recorded controller a control change may have moved.
+pub fn why_unaffordable(state: &GameState, card: &CardInstance, cost: i32) -> Result<(), EngineError> {
+    let holder = match card.zone {
+        crate::wire::Zone::Hand { player } => player,
+        _ => card.controller,
+    };
+    if cost <= spendable_mana(state, holder) {
+        return Ok(());
+    }
+    Err(EngineError::new(format!(
+        "{} costs {cost}, more than your mana",
+        def_of(Some(state), &card.def_id).name
+    )))
 }
 
 /// R1223: one turn's debt split into `parts` instalments as evenly as possible, larger first: 4 over

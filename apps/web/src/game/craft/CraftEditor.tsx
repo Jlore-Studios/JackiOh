@@ -27,7 +27,6 @@ import { t, useLocale } from "../../i18n/i18n.ts";
 
 import {
   HAT_LABELS,
-  HATS_FOR_TYPE,
   VERB_LABELS,
   addEffect,
   addHat,
@@ -39,6 +38,8 @@ import {
   stepKeywordN,
   stepN,
   stepStat,
+  takesHat,
+  takesKeyword,
   toggleKeyword,
 } from "./recipe.ts";
 import "./craft.css";
@@ -348,25 +349,40 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                 </div>
               )}
               <div className="craft-row">
-                {CRAFT_KEYWORD_PRICES.map((row) => (
-                  <button
-                    key={row.kind}
-                    type="button"
-                    className="craft-block"
-                    aria-pressed={recipe.keywords.some((block) => block.kind === row.kind)}
-                    title={keywordPriceText(row.kind)}
-                    onClick={() => clickGuard(() => setRecipe((prev) => toggleKeyword(prev, row.kind)))}
-                    onPointerDown={(event) => beginDrag(event, { from: "palette-effect", verb: "grantKeyword" }, t("Give a unit {keyword}", { keyword: keywordName(row.kind) }))}
-                  >
-                    {keywordName(row.kind)} · {keywordPriceText(row.kind)}
-                  </button>
-                ))}
+                {CRAFT_KEYWORD_PRICES.map((row) => {
+                  // R883: a type that cannot take this keyword leaves its click inert. The button still
+                  // starts the drag of a "Give a unit X" effect, which any type may hold, so it is
+                  // `aria-disabled`, not `disabled`, which would swallow the pointerdown.
+                  const takes = takesKeyword(recipe.type, row.kind);
+                  return (
+                    <button
+                      key={row.kind}
+                      type="button"
+                      className="craft-block"
+                      aria-pressed={recipe.keywords.some((block) => block.kind === row.kind)}
+                      aria-disabled={!takes}
+                      title={
+                        takes
+                          ? keywordPriceText(row.kind)
+                          : t("A {type} cannot take {keyword}", { type: typeName(recipe.type), keyword: keywordName(row.kind) })
+                      }
+                      onClick={() =>
+                        clickGuard(() =>
+                          setRecipe((prev) => (takesKeyword(prev.type, row.kind) ? toggleKeyword(prev, row.kind) : prev)),
+                        )
+                      }
+                      onPointerDown={(event) => beginDrag(event, { from: "palette-effect", verb: "grantKeyword" }, t("Give a unit {keyword}", { keyword: keywordName(row.kind) }))}
+                    >
+                      {keywordName(row.kind)} · {keywordPriceText(row.kind)}
+                    </button>
+                  );
+                })}
               </div>
             </section>
             <section aria-label={t("Hats")}>
               <h3>{t("Hats")}</h3>
               <div className="craft-row">
-                {CRAFT_HAT_PRICES.filter((row) => (HATS_FOR_TYPE[recipe.type] ?? []).includes(row.hat)).map((row) => (
+                {CRAFT_HAT_PRICES.filter((row) => takesHat(recipe.type, row.hat)).map((row) => (
                   <button
                     key={row.hat}
                     type="button"

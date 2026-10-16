@@ -2,7 +2,8 @@
 //!
 //! B14: `candidateActions` is `legalActions` minus the four action types the AI never searches
 //! (R84's concede, offerDraw and answerDraw, and the mulligan), with plays that differ only in their
-//! lane collapsed to the lowest and the highest, and endTurn last whenever it is legal.
+//! lane collapsed to the lowest lane of each placement, at most `AI_SEARCH.zone_variants` of them
+//! (#1014), and endTurn last whenever it is legal.
 //!
 //! B15: `decide` is a pure function of (state, seat, rng seed, budget): the same inputs give a
 //! deep-equal Decision, it never spends more nodes than the budget, its action is always legal, and
@@ -82,6 +83,73 @@ fn lane_of(action: &ActionBody) -> Option<i32> {
     }
 }
 
+/// One zone as B14's placement reads it: `|` past the board's edge, else the id of the card acting
+/// there (`-` for none), the Unit a carrier holds there, how many cards lie beneath and `L` when it is
+/// Locked.
+fn zone_reading(state: &GameState, slot: ZoneSlot) -> String {
+    if slot.lane < 1 || slot.lane > row_size(slot.row) {
+        return "|".to_string();
+    }
+    format!(
+        "{}{}:{}{}",
+        card_at(state, slot).map_or("-", |card| card.id.as_str()),
+        carried_at(state, slot).map_or(String::new(), |unit| format!("+{}", unit.id)),
+        beneath_at(state, slot).len(),
+        if is_locked(state, slot) { "L" } else { "" },
+    )
+}
+
+/// B14's placement of a play into `zone` (#1014): the seat's zones beside it in its row, left then
+/// right, or the board's edge, then the lane's four zones.
+fn placement(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String {
+    let other_row = if zone.row == Row::Units {
+        Row::Backrow
+    } else {
+        Row::Units
+    };
+    let enemy = seat.opponent();
+    [
+        (seat, zone.row, zone.lane - 1),
+        (seat, zone.row, zone.lane + 1),
+        (seat, zone.row, zone.lane),
+        (seat, other_row, zone.lane),
+        (enemy, Row::Units, zone.lane),
+        (enemy, Row::Backrow, zone.lane),
+    ]
+    .into_iter()
+    .map(|(player, row, lane)| zone_reading(state, ZoneSlot { player, row, lane }))
+    .collect::<Vec<_>>()
+    .join("/")
+}
+
+/// The lanes `candidate_actions` offers the AI's hand card of `def_id`, lowest first.
+fn offered_lanes(state: &GameState, def_id: &str) -> Vec<i32> {
+    let id = hand_id(state, def_id);
+    let mut lanes: Vec<i32> = candidate_actions(state, AI)
+        .iter()
+        .filter_map(|action| match action {
+            ActionBody::Play {
+                instance_id,
+                zone: Some(zone),
+                ..
+            } if *instance_id == id => Some(zone.lane),
+            _ => None,
+        })
+        .collect();
+    lanes.sort();
+    lanes
+}
+
+/// The id of the AI's hand card of `def_id`.
+fn hand_id(state: &GameState, def_id: &str) -> String {
+    state.players[AI]
+        .hand
+        .iter()
+        .find(|card| card.def_id == def_id)
+        .map(|card| card.id.clone())
+        .expect("the card is in the AI's hand")
+}
+
 fn is_play(action: &ActionBody) -> bool {
     matches!(action, ActionBody::Play { .. })
 }
@@ -152,7 +220,9 @@ mod candidate_actions_b14 {
             );
         }
 
-        // Plays: per otherwise-identical play, exactly the lowest and the highest lane legal offers.
+        // Plays: per otherwise-identical play, the lowest lane of each placement, in legal order, up to
+        // AI_SEARCH.zone_variants of them, and no other lane (#1014).
+        let cap = AI_SEARCH.zone_variants as usize;
         let mut groups: IndexMap<String, Vec<ActionBody>> = IndexMap::new();
         for action in &legal {
             if !is_play(action) {
@@ -172,21 +242,22 @@ mod candidate_actions_b14 {
                 .iter()
                 .filter(|action| is_play(action) && without_zone(action) == *key)
                 .collect();
-            let lanes: Vec<i32> = group.iter().filter_map(lane_of).collect();
-            if lanes.is_empty() {
+            if group.iter().all(|action| lane_of(action).is_none()) {
                 let offered_keys: Vec<String> = offered.iter().map(|action| action_key(action)).collect();
                 let group_keys: Vec<String> = group.iter().map(action_key).collect();
                 assert_eq!(offered_keys, group_keys, "{key}");
                 continue;
             }
-            let low = lanes.iter().copied().min().unwrap_or(0);
-            let high = lanes.iter().copied().max().unwrap_or(0);
-            let mut expected: Vec<Option<i32>> = [low, high]
-                .into_iter()
-                .collect::<IndexSet<i32>>()
-                .into_iter()
-                .map(Some)
-                .collect();
+            let mut placements: IndexSet<String> = IndexSet::new();
+            let mut expected: Vec<Option<i32>> = Vec::new();
+            for action in group {
+                let ActionBody::Play { zone: Some(zone), .. } = action else {
+                    continue;
+                };
+                if placements.len() < cap && placements.insert(placement(&state, AI, zone)) {
+                    expected.push(Some(zone.lane));
+                }
+            }
             expected.sort_by_key(|lane| lane.unwrap_or(0));
             let mut offered_lanes: Vec<Option<i32>> = offered.iter().map(|action| lane_of(action)).collect();
             offered_lanes.sort_by_key(|lane| lane.unwrap_or(0));
@@ -236,6 +307,38 @@ mod candidate_actions_b14 {
             .collect();
         two_lanes.sort_by_key(|lane| lane.unwrap_or(0));
         assert_eq!(two_lanes, vec![Some(4), Some(5)]);
+    }
+
+    /// B14: a play keeps the lowest lane of each placement and none past AI_SEARCH.zone_variants (#1014)
+    #[test]
+    fn b14_a_play_keeps_the_lowest_lane_of_each_placement_and_none_past_the_cap() {
+        jackioh_cards::register_all();
+        let cap = AI_SEARCH.zone_variants as usize;
+        // An empty row: lane 1 has the edge on its left, lane 5 on its right, and lanes 2 to 4 are one
+        // placement.
+        let empty = scenario(json!({
+            "seed": "search-empty-row",
+            "p1": { "hand": ["core-008"] },
+            "p2": { "hand": ["core-005"] },
+        }))
+        .state()
+        .clone();
+        let mut expected: Vec<i32> = [1, 2, 5].into_iter().take(cap).collect();
+        expected.sort();
+        assert_eq!(offered_lanes(&empty, "core-008"), expected);
+
+        // A unit opposite every lane: each lane is its own placement, so the lowest ones up to the cap.
+        let crowded = scenario(json!({
+            "seed": "search-crowded-row",
+            "p1": { "hand": ["core-008"] },
+            "p2": { "field": ["core-011", "core-011", "core-011", "core-011", "core-011"] },
+        }))
+        .state()
+        .clone();
+        assert_eq!(
+            offered_lanes(&crowded, "core-008"),
+            (1..=5).take(cap).collect::<Vec<i32>>()
+        );
     }
 
     /// B14: an attack on the enemy hero leads, plays come before position switches, and endTurn trails
@@ -480,6 +583,96 @@ mod candidate_actions_b14 {
 
         assert_eq!(candidate_tribute_sets, legal_tribute_sets);
         assert!(!candidate_tribute_sets.is_empty());
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// #1014: the lanes that play differently
+// ---------------------------------------------------------------------------------------------
+
+mod lanes_that_play_differently {
+    use super::*;
+
+    /// Both sides' libraries, so that no simulated end of turn decks anyone out.
+    const LIBRARY: &[&str] = &["core-008", "core-011", "core-008", "core-011"];
+
+    /// C #71 Lane Eater destroys every other card in its lane: with lanes 1, 3 and 5 free and the
+    /// enemy's 9/9 Taunt opposite lane 3, lane 3 is a candidate and `decide` plays it there.
+    #[test]
+    fn lane_eater_is_tried_opposite_the_enemy_taunt_and_decide_plays_it_there() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-lane-eater",
+            "p1": {
+                "hand": ["classic-071"],
+                "field": [{ "def": "core-011", "lane": 2 }, { "def": "core-011", "lane": 4 }],
+                "library": LIBRARY,
+            },
+            "p2": { "field": [{ "def": "core-019", "lane": 3 }], "library": LIBRARY },
+        }))
+        .state()
+        .clone();
+        assert!(offered_lanes(&state, "classic-071").contains(&3));
+
+        let eater = hand_id(&state, "classic-071");
+        let decision =
+            decide(&state, AI, &mut ai_options("search-lane-eater", AI_BUDGET)).expect("a decision");
+        assert!(
+            matches!(
+                &decision.action,
+                ActionBody::Play { instance_id, zone: Some(zone), .. }
+                    if *instance_id == eater && zone.lane == 3
+            ),
+            "{}",
+            action_key(&decision.action)
+        );
+    }
+
+    /// M #23 Golly Bob Howdy turns the Units beside it into Sheep: with its own units in lanes 1 and 5,
+    /// the harmless lane 3 is a candidate, and the AI's turn sheeps neither unit.
+    #[test]
+    fn golly_bob_howdy_is_tried_between_its_own_units_and_the_turn_sheeps_neither() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-golly",
+            "p1": {
+                "hand": ["meditative-023"],
+                "field": [{ "def": "core-008", "lane": 1 }, { "def": "core-008", "lane": 5 }],
+                "library": LIBRARY,
+            },
+            "p2": { "library": LIBRARY },
+        }))
+        .state()
+        .clone();
+        assert!(offered_lanes(&state, "meditative-023").contains(&3));
+
+        let turn = play_ai_turn(&state, AI, &mut ai_options("search-golly", AI_BUDGET));
+        assert_eq!(
+            active_units_of(&turn.state, AI)
+                .iter()
+                .filter(|unit| unit.def_id == "core-008")
+                .count(),
+            2
+        );
+    }
+
+    /// C+ #20 Mushroom Power buffs the Units beside it: with its own units in lanes 2 and 4, lane 3,
+    /// which buffs both, is a candidate.
+    #[test]
+    fn mushroom_power_is_tried_in_the_lane_between_the_two_units_it_buffs() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-mushroom",
+            "p1": {
+                "hand": ["classicplus-020"],
+                "field": [{ "def": "core-008", "lane": 2 }, { "def": "core-008", "lane": 4 }],
+                "library": LIBRARY,
+            },
+            "p2": { "library": LIBRARY },
+        }))
+        .state()
+        .clone();
+        assert!(offered_lanes(&state, "classicplus-020").contains(&3));
     }
 }
 

@@ -648,7 +648,7 @@ fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>)
 /// A cheap identity for a position inside one turn, for the lethal solver's visited set and the
 /// beam's duplicate check: both heroes, the open prompt whole, both library sizes, every active unit's
 /// id, damage, buffs, exertion and position and what else changes how it plays (`unit_play_signature`),
-/// every backrow card (`card_signature`, and whether it is face up), the seat's hand (`card_signature`)
+/// every backrow card (`card_signature`, whether face up or revealed), the seat's hand (`card_signature`)
 /// and mana, and the enemy hand size; then, each only when it is not the default, both sides' other
 /// state (`push_side_parts`), the seat's debt (R1224), and the game's delayed effects and marks (#898).
 /// A unit's lane is left out, so the two lanes `candidate_actions` keeps for one play stay one
@@ -702,7 +702,14 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
             .iter()
             .map(|card| {
                 card.as_ref().map_or("-".to_string(), |card| {
-                    let face = if card.face_up == Some(true) { "^" } else { "" };
+                    // R686: a revealed card shows its face but is not face-up (a Trap of it still fires).
+                    let face = if card.face_up == Some(true) {
+                        "^"
+                    } else if card.revealed == Some(true) {
+                        "~"
+                    } else {
+                        ""
+                    };
                     format!("{}{face}:{:?}", card_signature(card), card.counters)
                 })
             })

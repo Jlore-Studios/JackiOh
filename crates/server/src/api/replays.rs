@@ -31,7 +31,6 @@
 //! first; a list opens at most `REPLAY_LIST_PAGE` of them; and both routes together are held to
 //! `REPLAY_REQUESTS_PER_MINUTE` an account, a second limiter of the kind R109's is.
 
-use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Arc, Mutex};
 
 use indexmap::IndexMap;
@@ -45,7 +44,7 @@ use serde_json::json;
 
 use crate::actor::engine::{self, EngineState};
 use crate::actor::match_actor::last_boards_of;
-use crate::actor::registry::{dealt_for, panic_text};
+use crate::actor::registry::dealt_for;
 use crate::api::collection::caller_profile;
 use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, RateLimiter, Req, account_key, bad_request, create_rate_limiter, lock,
@@ -278,8 +277,9 @@ fn rules_changed() -> ReplayOpen {
 }
 
 /// R768: the match's log folded once and checked, as the actor's rebuild folds it, under the catalog
-/// version it was played on (R767000).
-fn open_uncached(replay: &ReplayRow, log: Vec<Action>, mode: Option<QueueMode>) -> ReplayOpen {
+/// version it was played on (R767000). Run off the runtime (`open_uncached`); panics on a setup
+/// `create_game` refuses.
+fn open_folded(replay: &ReplayRow, log: Vec<Action>, mode: Option<QueueMode>) -> ReplayOpen {
     let row = &replay.row;
     // Refused before anything is folded, the legacy check's fold included.
     let shipped = match engine::catalog_for(&row.catalog_version) {
@@ -295,36 +295,46 @@ fn open_uncached(replay: &ReplayRow, log: Vec<Action>, mode: Option<QueueMode>) 
         glitch_boards,
         dealt_for(mode),
     );
-    let opened = catch_unwind(AssertUnwindSafe(|| {
-        engine::with_shipped(shipped, || {
-            let final_hash = match &row.final_hash {
-                Some(final_hash) => final_hash.clone(),
-                None => {
-                    let folded = engine::fold(&args);
-                    if !ends_as_recorded(&folded.state, &replay.result) {
-                        return rules_changed();
-                    }
-                    engine::hash_state(&folded.state)
+    engine::with_shipped(shipped, || {
+        let final_hash = match &row.final_hash {
+            Some(final_hash) => final_hash.clone(),
+            None => {
+                let folded = engine::fold(&args);
+                if !ends_as_recorded(&folded.state, &replay.result) {
+                    return rules_changed();
                 }
-            };
-            engine::replay_open(
-                &args,
-                &ReplayRecord {
-                    catalog_version: row.catalog_version.clone(),
-                    final_hash,
-                },
-            )
-        })
-    }));
-    opened.unwrap_or_else(|payload| {
+                engine::hash_state(&folded.state)
+            }
+        };
+        engine::replay_open(
+            &args,
+            &ReplayRecord {
+                catalog_version: row.catalog_version.clone(),
+                final_hash,
+            },
+        )
+    })
+}
+
+/// R768: `open_folded` in one job off the runtime (#1035), as Duos's replay opens: a long log is a
+/// long fold.
+async fn open_uncached(
+    app: &App,
+    replay: &ReplayRow,
+    log: Vec<Action>,
+    mode: Option<QueueMode>,
+) -> ReplayOpen {
+    let folding = replay.clone();
+    let opened = engine::off_runtime(app.engine_thread, move || open_folded(&folding, log, mode)).await;
+    opened.unwrap_or_else(|message| {
         // A setup `create_game` refuses: the frozen decks no longer pass this build's checks.
-        tracing::error!(event = "replay.open.panicked", matchId = %row.id, message = %panic_text(payload));
+        tracing::error!(event = "replay.open.panicked", matchId = %replay.row.id, message = %message);
         rules_changed()
     })
 }
 
 /// The replay of a match the caller may read: the one kept in memory, else `log` folded and kept.
-fn open_replay(
+async fn open_replay(
     app: &App,
     replay: &ReplayRow,
     kept: Option<Arc<ReplayOpen>>,
@@ -334,7 +344,7 @@ fn open_replay(
     if let Some(open) = kept {
         return open;
     }
-    let open = Arc::new(open_uncached(replay, log, mode));
+    let open = Arc::new(open_uncached(app, replay, log, mode).await);
     app.replays.cache.put(&replay.row.id, Arc::clone(&open), now_ms());
     open
 }
@@ -424,7 +434,7 @@ pub async fn list_replays(app: &Arc<App>, req: Req) -> ApiResult {
 
     let mut replays = Vec::with_capacity(rows.len());
     for (replay, (mode, kept, log)) in rows.iter().zip(reads) {
-        let open = open_replay(app, replay, kept, log, mode);
+        let open = open_replay(app, replay, kept, log, mode).await;
         let opponent = opponent_of(replay, &profile.id);
         let portraits = replay
             .row
@@ -506,7 +516,7 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
     };
     tx.commit().await?;
 
-    let open = open_replay(app, &replay, kept, log, mode);
+    let open = open_replay(app, &replay, kept, log, mode).await;
     let (total, checkpoints) = match open.as_ref() {
         ReplayOpen::Refused { reason } => {
             return Err(ApiError::with_details(

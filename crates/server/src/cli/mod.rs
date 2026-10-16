@@ -18,6 +18,7 @@ pub mod moderate;
 pub mod season_start;
 pub mod seed_accounts;
 pub mod seed_catalog;
+pub mod stats_fold;
 pub mod timing_backfill;
 pub mod timing_fit;
 

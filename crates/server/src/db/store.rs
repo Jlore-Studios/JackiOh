@@ -31,7 +31,7 @@ use serde_json::Value;
 
 use jackioh_engine::wire::{
     Action, ActionType, CustomCard, CustomFrame, EmoteId, GameEventType, GameMode, GameOverReason,
-    GameRecord, LeanPick, PerPlayer, PlayerId, PortraitId, SourceFilter, Winner,
+    GameRecord, LeanPick, ListTotal, PerPlayer, PlayerId, PortraitId, SourceFilter, StatsTotals, Winner,
 };
 
 use super::{fake, pg};
@@ -797,6 +797,20 @@ pub struct GameRecordQuery {
     pub patch: Option<String>,
 }
 
+/// R1044000: which totals a read returns: the sources, mode and patch a `GameRecordQuery` names,
+/// and, with `drills`, each card's turn and co-played counts too, which only the current patch's
+/// drill-down reads.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct StatsTotalsQuery {
+    pub source: SourceFilter,
+    /// One match type, or null for every mode.
+    pub mode: Option<GameMode>,
+    /// One patch, or null for every patch.
+    pub patch: Option<String>,
+    pub drills: bool,
+}
+
 // The Conquest series (SPEC §9.5, R330–R338, R262–R264). One row per series, persisted so a series
 // survives a server restart; every transition is a pure function in `api/series_rules.rs` written
 // back with `series_update`, which is compare-and-set on `version`.
@@ -1257,6 +1271,8 @@ pub struct RetentionPurgeInput {
     pub match_actions_ended_before: i64,
     /// R1442: the play telemetry of every match that ended before this goes.
     pub play_telemetry_ended_before: i64,
+    /// R1044001: the detail of every folded game record written before this goes; its id stays.
+    pub game_records_recorded_before: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -1266,6 +1282,8 @@ pub struct RetentionPurgeResult {
     pub match_actions: i64,
     /// R1442: the rows of the three telemetry tables, together.
     pub play_telemetry: i64,
+    /// R1044001: the game records whose detail went.
+    pub game_records: i64,
 }
 
 // Play telemetry (R1442, migration 0029). Server-only, keyed by match and seat, naming no profile.
@@ -1522,10 +1540,11 @@ impl Tx<'_> {
     /// The retention purge (`api/retention.rs`): deletes `code_attempts` rows made before
     /// `code_attempts_before` and the action log of every match that ended before
     /// `match_actions_ended_before` (epoch ms), and the play telemetry of every match that ended
-    /// before `play_telemetry_ended_before` (R1442). Results, and so ratings, are kept. Answers how
-    /// many rows of each went. In Postgres this is `app.purge_expired_rows` (migration 0013, given
-    /// its third cutoff by 0029), the one path the append-only guard on `match_actions` lets a
-    /// delete through.
+    /// before `play_telemetry_ended_before` (R1442), and empties the detail of every game record
+    /// folded into the totals and written before `game_records_recorded_before`, keeping its id
+    /// (R1044001). Results, and so ratings, are kept. Answers how many rows of each went. In Postgres
+    /// this is `app.purge_expired_rows` (migration 0013, given its third cutoff by 0029 and its fourth
+    /// by 0041), the one path the append-only guard on `match_actions` lets a delete through.
     pub async fn purge_expired(&mut self, input: &RetentionPurgeInput) -> StoreResult<RetentionPurgeResult> {
         dispatch!(self, purge_expired(input))
     }
@@ -2332,14 +2351,46 @@ impl Tx<'_> {
 
     // gameRecords (R376: the card statistics' game records)
 
-    /// R376: one record per id. False, and nothing written, when a record with this id exists.
+    /// R376: one record per id. False, and nothing written, when a record with this id exists, even
+    /// one whose detail the purge has gone through (R1044001). R1044000: a record written is folded
+    /// into the totals in the same transaction, and only then.
     pub async fn game_records_insert(&mut self, record: &GameRecord) -> StoreResult<bool> {
-        dispatch!(self, game_records_insert(record))
+        Ok(self
+            .game_records_insert_batch(std::slice::from_ref(record))
+            .await?
+            .first()
+            .copied()
+            .unwrap_or(false))
     }
 
-    /// The records of the query's sources, mode and patch, in id order (code points).
+    /// `game_records_insert` for each record in turn, answering for each whether it was written; the
+    /// ones written are folded into the totals together, in this transaction.
+    pub async fn game_records_insert_batch(&mut self, records: &[GameRecord]) -> StoreResult<Vec<bool>> {
+        dispatch!(self, game_records_insert_batch(records))
+    }
+
+    /// The records of the query's sources, mode and patch whose detail is still held (R1044001), in
+    /// id order (code points).
     pub async fn game_records_list(&mut self, query: &GameRecordQuery) -> StoreResult<Vec<GameRecord>> {
         dispatch!(self, game_records_list(query))
+    }
+
+    /// R1044000: folds into the totals up to `limit` records written before the totals were (the
+    /// first in id order), marking each folded, and answers how many it folded. A record is folded
+    /// once: one written since is folded as it is written.
+    pub async fn game_records_fold_pending(&mut self, limit: usize) -> StoreResult<usize> {
+        dispatch!(self, game_records_fold_pending(limit))
+    }
+
+    /// R1044000: the totals the query reads. No decklists: `stats_decklists` reads those.
+    pub async fn stats_totals_load(&mut self, query: &StatsTotalsQuery) -> StoreResult<StatsTotals> {
+        dispatch!(self, stats_totals_load(query))
+    }
+
+    /// R1044000 (R1454, R750000): the patch's live Best-of-1 human decklists, in the order the
+    /// records first held them.
+    pub async fn stats_decklists(&mut self, patch: &str) -> StoreResult<Vec<ListTotal>> {
+        dispatch!(self, stats_decklists(patch))
     }
 
     // playerStats (R654: each profile's player statistics and privacy setting)
@@ -2528,6 +2579,14 @@ pub struct ChatReportRow {
     pub reporter: String,
     pub reason: String,
     pub created_at: i64,
+}
+
+/// B53, #970: a stored report and the message it reports, as `moderate chat-reports` lists it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatReportListing {
+    pub report: ChatReportRow,
+    pub message: ChatMessageRow,
 }
 
 impl Tx<'_> {
@@ -2795,6 +2854,12 @@ impl Tx<'_> {
     /// many messages went.
     pub async fn chat_purge(&mut self, before: i64) -> StoreResult<i64> {
         dispatch!(self, chat_purge(before))
+    }
+
+    /// B53, #970: every report the store holds, each with its message, oldest report first, the
+    /// report's id breaking a tie. A report lasts as long as its message (`chat_purge`).
+    pub async fn chat_reports_all(&mut self) -> StoreResult<Vec<ChatReportListing>> {
+        dispatch!(self, chat_reports_all())
     }
 }
 // ---- end Social ----

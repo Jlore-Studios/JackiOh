@@ -10,10 +10,12 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
+use jackioh_engine::wire::GameRecord;
 use jackioh_server::api::retention::purge_expired;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
-    CODE_ATTEMPT_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS, PLAY_TELEMETRY_RETENTION_DAYS,
+    CODE_ATTEMPT_RETENTION_DAYS, GAME_RECORD_RAW_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS,
+    PLAY_TELEMETRY_RETENTION_DAYS,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{CodeAttempt, Db, MatchActionRow, MatchRow, MatchSignalRow};
@@ -76,6 +78,27 @@ fn signals_row(match_id: &str) -> MatchSignalRow {
     }))
 }
 
+/// A live game record with nothing in it but its id.
+fn game_record(id: &str) -> GameRecord {
+    from(json!({
+        "id": id,
+        "source": "live",
+        "mode": "bo1",
+        "patch": "v0.1.1",
+        "pilots": { "p1": "human", "p2": "human" },
+        "game": {
+            "first": "p1",
+            "winner": "p1",
+            "reason": "hero-death",
+            "turns": 5,
+            "seats": {
+                "p1": { "deck": ["a"], "opening": [], "drawn": [], "played": [] },
+                "p2": { "deck": ["b"], "opening": [], "drawn": [], "played": [] }
+            }
+        }
+    }))
+}
+
 /// Logs one code attempt in a transaction of its own.
 async fn log_attempt(app: &App, ip_hash: &str, at: i64) {
     let attempt: CodeAttempt = from(
@@ -127,11 +150,26 @@ mod the_retention_purge {
                 data.tables.match_signals.push(signals_row(match_id));
             }
         }
+        // R1044001: a game record's detail, on its own cutoff, written then dated by hand.
+        let game_records_recorded_before = now - GAME_RECORD_RAW_RETENTION_DAYS * DAY_MS;
+        for (id, recorded_at) in [
+            ("g-at-cutoff", game_records_recorded_before),
+            ("g-past-cutoff", game_records_recorded_before - 1),
+        ] {
+            let mut t = app.db.begin(None).await.expect("begin");
+            assert!(
+                t.game_records_insert(&game_record(id))
+                    .await
+                    .expect("gameRecords.insert")
+            );
+            t.commit().await.expect("commit");
+            fake(&app).await.tables.game_record_ledger[id].recorded_at = recorded_at;
+        }
 
         let purged = purge_expired(&app).await.expect("purgeExpired");
         assert_eq!(
             json_of(&purged),
-            json!({ "codeAttempts": 1, "matchActions": 1, "playTelemetry": 1 })
+            json!({ "codeAttempts": 1, "matchActions": 1, "playTelemetry": 1, "gameRecords": 1 })
         );
         let data = fake(&app).await;
         let attempts: Vec<String> = data
@@ -155,6 +193,15 @@ mod the_retention_purge {
             .map(|row| row.match_id.clone())
             .collect();
         assert_eq!(signals, vec!["t-at-cutoff".to_string()]);
+        let records: Vec<String> = data
+            .tables
+            .game_records
+            .iter()
+            .map(|row| row.id.clone())
+            .collect();
+        assert_eq!(records, vec!["g-at-cutoff".to_string()]);
+        // The emptied record's row stays, so the same game is never written again.
+        assert!(data.tables.game_record_ledger.contains_key("g-past-cutoff"));
     }
 
     #[tokio::test(start_paused = true)]
@@ -184,7 +231,7 @@ mod the_retention_purge {
         let purged = purge_expired(&app).await.expect("purgeExpired");
         assert_eq!(
             json_of(&purged),
-            json!({ "codeAttempts": 1, "matchActions": 1, "playTelemetry": 0 })
+            json!({ "codeAttempts": 1, "matchActions": 1, "playTelemetry": 0, "gameRecords": 0 })
         );
         let data = fake(&app).await;
         let attempts: Vec<String> = data

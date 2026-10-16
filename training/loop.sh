@@ -44,9 +44,9 @@
 # The gather lane (`loop.sh gather`, training/gather.md) improves nothing and opens no pull request,
 # so it needs neither Devin nor gh: each cycle checks out main, builds jackioh from it, loads the
 # finished days as above, and plays the next TRAIN_GATHER_GAMES games of its own seed series with
-# `jackioh stats` (R378: the AI on main against itself on All Random decks), up to
-# TRAIN_GATHER_PATCH_GAMES a patch. It appends them to ~/training-out/gather/<date>.jsonl and
-# rewrites the patch's card figures, cards-<patch>.txt and .json, from every game it holds.
+# `jackioh stats` (R378: the AI on main against itself on All Random decks), without end. It
+# appends them to ~/training-out/gather/<date>.jsonl and rewrites the patch's card figures,
+# cards-<patch>.txt and .json, from every game it holds.
 #
 # Stop a lane with `sudo systemctl stop jackioh-train@<lane>` (and `disable` to keep it stopped).
 #
@@ -55,8 +55,7 @@
 # 18000: the standing prompt's four hours, plus an hour for the last gate run to finish, since the
 # improve lane's 400 games take half an hour or more on the box's two cores),
 # TRAIN_PROGRESS_SECONDS (default 900), TRAIN_IDLE_SECONDS (default 900: how long an idle unban lane
-# waits between looks), TRAIN_GATHER_GAMES (default 100: the gather lane's games a cycle),
-# TRAIN_GATHER_PATCH_GAMES (default 5000: its games a patch).
+# waits between looks), TRAIN_GATHER_GAMES (default 100: the gather lane's games a cycle).
 
 # shellcheck disable=SC2016 # the backticks in printf's formats are Markdown's, for GitHub
 set -u
@@ -105,7 +104,6 @@ session_limit="${TRAIN_SESSION_SECONDS:-18000}"
 progress_every="${TRAIN_PROGRESS_SECONDS:-900}"
 idle_pause="${TRAIN_IDLE_SECONDS:-900}"
 gather_games="${TRAIN_GATHER_GAMES:-100}"
-gather_cap="${TRAIN_GATHER_PATCH_GAMES:-5000}"
 
 mkdir -p "$logs" "$out" "$work" || exit 1
 exec >>"$logs/$lane.log" 2>&1
@@ -131,8 +129,6 @@ report=""
 # The pause after this cycle (idle sets it longer), and the generation the lane last went idle on.
 sleep_for="$pause"
 idle_generation=""
-# The patch the gather lane has all its games of, once it has said so.
-gathered=""
 
 # Notes $1, a clause, in attempts.md (which the standing prompt has Devin read first) and the log.
 note() {
@@ -290,8 +286,7 @@ import_records() {
 # The gather lane's cycle (training/gather.md): the AI on main against itself on All Random decks,
 # the next TRAIN_GATHER_GAMES games of the lane's own seed series, filed as development records
 # under the patch main compiles in (R378). Game n's seed is gather:<n>, and cursor-<patch> holds the
-# next n, so no game is played twice for a patch and a new patch starts again at 1. A patch's games
-# stop at TRAIN_GATHER_PATCH_GAMES, and the lane idles until main ships another. The cursor moves
+# next n, so no game is played twice for a patch and a new patch starts again at 1. The cursor moves
 # before the batch's games join the day's file: a batch the loop never finished is played again,
 # and none is appended twice. Then the patch's card figures are rewritten from every game it holds.
 gather() {
@@ -322,15 +317,7 @@ gather() {
   cursor="$out/cursor-$patch"
   from=1
   [ ! -f "$cursor" ] || from=$(cat "$cursor")
-  games=$((gather_cap - from + 1))
-  if [ "$games" -le 0 ]; then
-    sleep_for="$idle_pause"
-    [ "$patch" != "$gathered" ] || return 0
-    gathered="$patch"
-    log "$patch has its $gather_cap games; the lane waits for main to ship another patch"
-    return 0
-  fi
-  [ "$games" -le "$gather_games" ] || games="$gather_games"
+  games="$gather_games"
   batch="$work/batch.jsonl"
   rm -f "$batch"
   log "games $from to $((from + games - 1)) of $patch: the AI on main at $at against itself"

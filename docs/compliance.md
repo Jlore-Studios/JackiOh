@@ -1,7 +1,7 @@
 # Launch compliance: the owner's runbook (issue #757)
 
 What the code does for the five items of the pre-launch checklist in #757, and what is left to a
-person. None of this is legal advice: have a lawyer read `/terms`, `/privacy`, `/copyright` and the
+person; and, since #970, how to read the chat reports players file (section 6). None of this is legal advice: have a lawyer read `/terms`, `/privacy`, `/copyright` and the
 age screen's wording before launch, and remove each page's `DRAFT — needs owner and legal review`
 line only after that review.
 
@@ -63,8 +63,14 @@ line only after that review.
 1. Edit the page. Set its `TERMS_LAST_UPDATED` (`apps/web/src/routes/terms.tsx`) or
    `PRIVACY_LAST_UPDATED` (`privacy.tsx`) to the day.
 2. Set `TERMS_VERSION` in `crates/server/src/config.rs` to the terms' date, then the privacy
-   policy's (`YYYY-MM-DD/YYYY-MM-DD`); `src/routes/privacy.test.tsx` fails until it matches. Run
-   the export test above and commit `serverConfig.ts`.
+   policy's (`YYYY-MM-DD/YYYY-MM-DD`); `src/routes/privacy.test.tsx` fails until it matches. A page
+   that already changed today keeps its date, and its half of the version takes a letter instead:
+   `b` for the second change that day, then `c` (`2026-10-15b/2026-10-15`, R970001). Run the
+   export test above and commit `serverConfig.ts`.
+   The same test file's `AGREED_TEXT` holds a row per version, the SHA-256 of both pages' English
+   text, and fails on any change to the words (a number the pages read from the configuration, such
+   as `MIN_ACCOUNT_AGE_YEARS` or a retention period, included) until the version moves. Add the new
+   version's row with the digest the failure prints; never edit an old row.
 3. Re-quote the changed text in `apps/web/static-pages.ts`.
 4. Every account is asked to agree again, on its next gated screen (never on `/account` and never in
    a match). The server deploys on merge and the production web up to a day later: until the web
@@ -79,3 +85,31 @@ line only after that review.
 JackiOh has no payments or subscriptions, so there is nothing to cancel; "Delete my account" on
 `/account` removes an account. A paid feature must bring a cancel button in settings, renewal
 reminders and a notice before charging.
+
+## 6. Reviewing chat reports (B53, #970)
+
+A player can report a message a friend sent them, with a reason (harassment, spam or other). Nothing
+alerts anyone (each report writes one `chat.reported` line to the server's log): the reports wait in
+`chat_reports` and are deleted with their message `CHAT_RETENTION_DAYS` (30) after it was sent, so
+read them at least weekly.
+
+1. From a checkout with the production environment (`DATABASE_URL` and the rest that `moderate`
+   reads, `crates/server/README.md`), run
+   `cargo run --release -p jackioh-server -- moderate chat-reports`. It changes nothing, and prints
+   every report held, oldest first: when it was made and its reason, the reporter's and the
+   sender's profile ids, and the message as stored (the word filter has already masked what it
+   catches).
+2. Judge each against the Terms' "Chat" section. Abuse is grounds for a ban:
+   `moderate ban <sender-profile-id>` (each report prints the line). A ban lands at once: the
+   account's next request, chat included, answers `account_banned`.
+3. Nothing marks a report done: the next run lists it again until its message is purged.
+
+## 7. What the card statistics keep (R1044000, R1044001)
+
+Each finished match leaves a game record (`game_records`, R376), which names no account: both
+decklists, opening hands, draws and plays, and the result. As it is written it is added into the
+card statistics' totals (`record_totals`, `card_totals`, `decklist_totals`), counts with no single
+game in them. The retention loop empties a record's detail `GAME_RECORD_RAW_RETENTION_DAYS` (7) after
+it was written and keeps only its id, source, mode, patch and time, so the same game is not counted
+twice; the totals are kept as long as the statistics are. The Privacy Policy's "for as long as the
+statistics are kept" covers both, so this changed none of its words.

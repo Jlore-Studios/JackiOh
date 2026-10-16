@@ -50,7 +50,9 @@ tx.commit().await?`.
 decks with `jackioh_ai::build_ai_deck` (R258), leaning a seat's deck on the set its player picked,
 "newest" being the newest set that ships (`deal_random_deck(seed, lean_of(lean))`, R1372, R924000); it calls
 `jackioh_cards::register_all()` first. A ladder bot's moves come from `jackioh_ai::decide_styled`
-(`bots/seat.rs`), run on the blocking pool so no search holds up the runtime (R1452). The
+(`bots/seat.rs`), run on the blocking pool so no search holds up the runtime (R1452). Every whole-log
+fold on an async path (a rebuild's three, a replay's opening, the reaper's, a game record's and `timing-backfill`'s) runs there too,
+one job per call, through `actor::engine::off_runtime`, its thread set up by `App::engine_thread` (#1035). The
 deck and trio rules are `jackioh_engine::validator`, the same module the client runs through WASM;
 no rule is restated here. A co-op match calls the engine's Duos functions (`duos_create`,
 `duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`,
@@ -108,6 +110,10 @@ target/release/jackioh-server                   # 4. serve (the default subcomma
   `mint-code` it reads the whole environment, because a `CODE_PEPPER` that differs from the
   running server's revokes a hash redemption will never look up. Stdout is the audit trail:
   the CLI has no log pipeline, so the line it prints is the record of the lever.
+  `moderate chat-reports` is the one read among them, and writes nothing: every chat report the
+  store holds (B53), oldest first, each with when and why it was made, the reporter's and the
+  sender's profile ids and the message as stored. A report goes with its message after
+  `CHAT_RETENTION_DAYS`, so `docs/compliance.md` §6 reads them weekly.
 - **Seasons.** `season-start --dry-run` walks R609's season open and soft reset and rolls it back,
   printing the report; without the flag it commits. Re-running is safe.
 
@@ -135,8 +141,8 @@ placeholders (`app::load_server_env`).
 | `LADDER_BOTS` | no | `on` seats a ladder bot against a ranked ticket of any mode left alone past its fallback time (a Conquest ticket's in a series, R641000), and keeps the bot pool (R1453, R1454, R1452); off unless `on` (unset or `off`), and any other value refuses the boot. The bots decide in this process, so turning it on wants a host with room for the AI's search, such as a paid Render instance |
 
 `mint-code`, `moderate` and `seed-accounts` read the same environment (`seed-accounts` also
-`SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import`, `stats-export`,
-`balance-watch` (without `--file`), `timing-backfill` and `timing-fit` read `DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
+`SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import`, `stats-fold`,
+`stats-export`, `balance-watch` (without `--file`), `timing-backfill` and `timing-fit` read `DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
 `PUBLIC_ENV_VARS` and `SERVER_ONLY_ENV_VARS` are disjoint by design.
 
 ## HTTP surface
@@ -182,7 +188,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET` | `/api/friends` | active | the caller's friends with their status (`offline`, `online`, `inMatch`) and whether they may be watched, the requests in and out, and the players the caller blocks (§9.4), read in one transaction by a fixed number of set-based queries whatever the number of friends |
 | `POST`, `DELETE` | `/api/friends/requests`, `/:id/accept`, `/:id/decline`, `/api/friends/requests/:id`, `/api/friends/:profileId` | active | a request by exact `name#tag` (an unknown name and a blocked pair answer the same 404; `self`, `already_friends`, `already_requested`, `friend_cap` are 409; past `FRIEND_REQUESTS_PER_HOUR` is 429; a mutual request is accepted at once), its answer or its cancel, and removing a friend (which deletes the replay shares between the two, either way, and lets go a watch of either by the other) |
 | `POST`, `DELETE` | `/api/blocks`, `/api/blocks/:profileId` | active | block (removing the friendship, every request and every replay share either way, and letting go a watch of either by the other) and unblock |
-| `POST` | `/api/presence` | active | the heartbeat, every `PRESENCE_HEARTBEAT_MS`; a friend reads as online for `PRESENCE_TTL_MS` after it |
+| `POST` | `/api/presence` | active | the heartbeat, every `PRESENCE_HEARTBEAT_MS`; a friend reads as online for `PRESENCE_TTL_MS` after it; records nothing while the account owes the terms (R970002) |
 | `GET`, `POST`, `DELETE` | `/api/challenges`, `/:id/decline`, `/api/challenges/:id` | active | challenge an online, idle friend with `POST /api/rooms`'s body plus `friendId`, making the room and the challenge (409 `busy`, `offline`, `already_challenged`); the open challenges in and out; decline, cancel; `CHALLENGE_TTL_MS` frees an unanswered one's room, and the sweeper then deletes every challenge row that old; past `CHALLENGES_PER_HOUR` an hour a challenger gets 429 |
 | `GET`, `POST` | `/api/chat/:friendId`, `/api/chat/unread`, `/api/chat/messages/:id/report` | active | a page of a conversation (`CHAT_PAGE`, newest last, marked read), a message to a friend (1 to `CHAT_MAX_CHARS` once trimmed, 422 `empty` or `too_long`, masked, `CHAT_MESSAGES_PER_MINUTE` a sender), unread counts, a report |
 | `GET`, `POST`, `DELETE` | `/api/replays/shared`, `/api/replays/:matchId/shares`, `/api/replays/:matchId/shares/:friendId` | active | the replays shared with the caller; share a finished match the caller held a seat in with a friend, and unshare it |
@@ -255,7 +261,8 @@ What the actor holds, each with a test named after it:
 
 After a result commits, `api::results` files the game in `game_records` (`api::game_records`, the
 engine's `summarize_game`) under the match's mode and the compiled-in newest patch, as `source:
-"live"`; a failure is logged as `game.record.failed` and the result stands.
+"live"`, and the store folds it into the card statistics' totals in the same transaction (R1044000);
+a failure is logged as `game.record.failed` and the result stands.
 
 ### The co-op socket (§13)
 
@@ -299,7 +306,7 @@ Both players' own match sockets get `watchers {count}` when the count changes. A
 gets the same `error forbidden` and close the moment the friend turns watching off (`PUT
 /api/settings`), or the two unfriend or either blocks the other (`MatchActor::revoke_watchers`).
 
-## Card statistics (§9.11, R376–R378)
+## Card statistics (§9.11, R376–R378, R1044000, R1044001)
 
 ```
 target/release/jackioh-server stats-cards                                   # live games of every mode and patch, their human seats
@@ -308,9 +315,19 @@ target/release/jackioh-server stats-cards --card=core-002 --json
 cargo jackioh stats --patch v0.2.5 --out v0.2.5-dev.jsonl                   # a pre-release AI run
 target/release/jackioh-server stats-import v0.2.5-dev.jsonl                 # loaded; refused whole unless every line is a dev record
 target/release/jackioh-server stats-cards --source=dev --patch=v0.2.5       # read beside the same patch's live games
-target/release/jackioh-server stats-export --out=live.jsonl                 # the records stats-cards reads, a line each, in id order
+target/release/jackioh-server stats-export --out=live.jsonl                 # the records still held in full, a line each, in id order
 cargo jackioh stats report live.jsonl --json                                # the same figures with no database
+target/release/jackioh-server stats-fold                                    # fold the records written before migration 0041; the retention loop does it too
 ```
+
+Every figure, `stats-cards`, `balance-watch`, the public routes and the ladder bots' decks, reads the
+totals each record is folded into as it is written (migration 0041: `record_totals`, `card_totals`,
+`decklist_totals`; `Tx::stats_totals_load`, `Tx::stats_decklists`), by the engine's `StatsTotals`, the
+counting a record file is read with, so a report is what the records gave. `stats-import` writes and
+folds `STATS_FOLD_BATCH_RECORDS` (500) records to a transaction. A record written before migration
+0041 is not folded until the retention loop folds it at boot or `stats-fold` does (R1044000). Once
+folded, a record's detail is emptied `GAME_RECORD_RAW_RETENTION_DAYS` (7) after it was written by the
+retention purge; its row and id stay, so the same game is never written or counted again (R1044001).
 
 `stats-cards` takes `--source=live|dev|all` (live unless told otherwise), `--mode=bo1|bo3|random`,
 `--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`. With no `--pilot` it
@@ -321,8 +338,9 @@ The training box's gather lane (`training/README.md`, The gather lane) runs `car
 end under its own series and loads each finished day with `stats-import`, so `stats-cards --source=dev
 --patch=<version>` reads its games.
 
-`stats-export` writes the records a `stats-cards` call with the same `--source`, `--mode` and `--patch` reads,
-one `GameRecord` (R376) per line in id order, to the file `--out=<file>` names (required, resolved against
+`stats-export` writes the records a `stats-cards` call with the same `--source`, `--mode` and `--patch` reads
+whose detail is still held (the last `GAME_RECORD_RAW_RETENTION_DAYS`, R1044001), one `GameRecord` (R376)
+per line in id order, to the file `--out=<file>` names (required, resolved against
 the directory the command was started in, an existing file replaced). Every seat of every game is in the file,
 so `--pilot` and `--card` are not its flags: they are the reader's. The file is what `cargo jackioh stats --out`
 writes, so `cargo jackioh stats report` reads it, `analysis/` loads it and `stats-import` takes it when it holds
@@ -567,6 +585,14 @@ the server's alone, as a 1v1 match's are: a room's host and guest may read it (b
 choices), and no client role reads a co-op match or its log (no grant, no policy). The retention
 loop deletes a co-op match's log `MATCH_ACTION_RETENTION_DAYS` after the match ended, as a 1v1
 match's (`duos::purge_expired_logs`); the match row and its result stay.
+
+Migration 0041 adds the card statistics' totals (R1044000): `record_totals`, `card_totals` and
+`decklist_totals`, server-only like `game_records` (RLS on, no policy, no grant), and
+`game_records.folded`. A record's `record` may now be null, and only once it is folded. The retention
+loop first folds any record not yet folded (`api::game_records::fold_pending`), then
+`app.purge_expired_rows`' fourth cutoff empties the detail of each folded record written more than
+`GAME_RECORD_RAW_RETENTION_DAYS` ago (R1044001). The store folds under a transaction-level advisory
+lock per patch and source, so two folds into the same rows never interleave.
 
 ## Tests
 
