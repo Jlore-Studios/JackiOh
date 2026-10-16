@@ -870,6 +870,7 @@
     "1038": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-16T05:37:20Z",
         "difficulty": "hard",
