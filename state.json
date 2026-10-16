@@ -2005,11 +2005,13 @@
         "by": "`claude` (strong)",
         "sha": "2079f66baedcde38d6ba7a8b5b5ca8a7e2c8be58"
       },
+      "closed_at": "2026-10-16T21:37:24Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-16T20:47:47Z",
       "issue": 1076,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
