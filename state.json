@@ -742,7 +742,9 @@
     },
     "1036": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6206150877"
+      ],
       "difficulty_by": {
         "at": "2026-10-16T02:19:50Z",
         "difficulty": "hard",
@@ -775,9 +777,7 @@
       "started_at": "2026-10-16T02:01:28Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6206150877"
-      ]
+      "taken_asks": []
     },
     "1037": {
       "cleared": {
