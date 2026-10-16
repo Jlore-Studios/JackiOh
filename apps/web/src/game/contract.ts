@@ -61,6 +61,8 @@ export const testid = {
   revealAt: (instanceId: string): string => `reveal-at-${instanceId}`,
   /** R667: the Plague Chalice warning on the viewer's own hand card. */
   countered: (instanceId: string): string => `countered-${instanceId}`,
+  /** R90 (#992): the note badge on the viewer's own hand card whose listed plays R90's bound cut. */
+  choicesTruncated: (instanceId: string): string => `choices-truncated-${instanceId}`,
   endTurn: "end-turn",
   offerDraw: "offer-draw",
   power: "power",
