@@ -30,7 +30,7 @@ use std::time::Duration;
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::validator::{self, CatalogSnapshot, DeckInput, LoadoutDeck, LoadoutInput};
-use jackioh_engine::wire::{GameMode, GameRecord, GameSource, PLAYER_IDS, Pilot, SourceFilter};
+use jackioh_engine::wire::ListTotal;
 use jackioh_engine::{Rng, pick_portrait_from_seed};
 
 use crate::actor::engine::{deal_random_deck_excluding_with_strength, deal_random_deck_with_strength};
@@ -46,8 +46,7 @@ use crate::config::{
     BOT_STALE_START_SECONDS, BOT_STRENGTHS, CARD_STATS_MIN_SAMPLE, USERNAME_CHANGE_COOLDOWN_MS,
 };
 use crate::db::store::{
-    BotDeck, BotRow, FrozenDeck, FrozenTrio, GameRecordQuery, NewBot, StoreError, UsernameClaim,
-    UsernameClaimOutcome,
+    BotDeck, BotRow, FrozenDeck, FrozenTrio, NewBot, StoreError, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::username::{normalize_username, username_key};
 
@@ -217,51 +216,17 @@ pub fn bot_target_strength(strength: usize) -> f64 {
     ((own.seed_rating - low) / (high - low)).clamp(0.0, 1.0)
 }
 
-/// One distinct decklist's live human Best-of-1 games, and how many of them it won.
-struct ListRecord {
-    /// The list as its first record held it.
-    deck: Vec<String>,
-    /// Its sorted ids, which make two orderings one list.
-    key: Vec<String>,
-    wins: i64,
-    games: i64,
-}
-
 /// R1454, R750000: the patch's distinct decklists people took into live Best-of-1 games (sorted
-/// copies compared, so a reordering is the same list), split in two. `ranked` holds those with at
-/// least `CARD_STATS_MIN_SAMPLE` games, the best exact win rate first (`wins_a × games_b` against
+/// copies compared, so a reordering is the same list), as the totals hold them (R1044000), in the
+/// order the records first held them, split in two. `ranked` holds those with at least
+/// `CARD_STATS_MIN_SAMPLE` games, the best exact win rate first (`wins_a × games_b` against
 /// `wins_b × games_a`, so no float decides it, as `win_rate_leader` does), then more games, then the
 /// ids joined, ascending; `unranked` holds the rest in the records' order. A draw is a game not won, as
 /// `card_stats` counts it, and a list needs its 20 games before it is ranked at all, so a list that
 /// won its one game never goes ahead of one that won 90 of 200.
-fn ranked_human_bo1_decklists(records: &[GameRecord]) -> (Vec<Vec<String>>, Vec<Vec<String>>) {
-    let mut lists: IndexMap<Vec<String>, ListRecord> = IndexMap::new();
-    for record in records {
-        if record.source != GameSource::Live || record.mode != GameMode::Bo1 {
-            continue;
-        }
-        for seat in PLAYER_IDS {
-            if record.pilots[seat] != Pilot::Human {
-                continue;
-            }
-            let deck = &record.game.seats[seat].deck;
-            let mut key = deck.clone();
-            key.sort();
-            let list = lists.entry(key.clone()).or_insert_with(|| ListRecord {
-                deck: deck.clone(),
-                key,
-                wins: 0,
-                games: 0,
-            });
-            list.games += 1;
-            if record.game.winner.player() == Some(seat) {
-                list.wins += 1;
-            }
-        }
-    }
-    let (mut ranked, unranked): (Vec<ListRecord>, Vec<ListRecord>) = lists
-        .into_values()
-        .partition(|list| list.games >= CARD_STATS_MIN_SAMPLE);
+fn ranked_human_bo1_decklists(lists: &[ListTotal]) -> (Vec<Vec<String>>, Vec<Vec<String>>) {
+    let (mut ranked, unranked): (Vec<&ListTotal>, Vec<&ListTotal>) =
+        lists.iter().partition(|list| list.games >= CARD_STATS_MIN_SAMPLE);
     ranked.sort_by(|a, b| {
         (b.wins * a.games)
             .cmp(&(a.wins * b.games))
@@ -269,8 +234,8 @@ fn ranked_human_bo1_decklists(records: &[GameRecord]) -> (Vec<Vec<String>>, Vec<
             .then_with(|| a.key.join(",").cmp(&b.key.join(",")))
     });
     (
-        ranked.into_iter().map(|list| list.deck).collect(),
-        unranked.into_iter().map(|list| list.deck).collect(),
+        ranked.into_iter().map(|list| list.deck.clone()).collect(),
+        unranked.into_iter().map(|list| list.deck.clone()).collect(),
     )
 }
 
@@ -295,8 +260,10 @@ fn by_strength(ranked: Vec<Vec<String>>, strength: f64) -> Vec<Vec<String>> {
 /// shuffled from the seed (R750000), then
 /// random decks dealt as a player's are (All Random's deal, with no shadow ban and no soft gate,
 /// R1453) leaning on the cards that win as far as `strength` says (`bot_target_strength`, R750000),
-/// trying at most `BOT_DECK_DRAW_ATTEMPTS` in all, each with a portrait dealt from the seed.
-pub fn draw_decks(seed: &str, records: &[GameRecord], catalog: &Catalog, strength: f64) -> Vec<BotDeck> {
+/// trying at most `BOT_DECK_DRAW_ATTEMPTS` in all, each with a portrait dealt from the seed. `lists`
+/// are the patch's live Best-of-1 human decklists in the order the records first held them
+/// (`Tx::stats_decklists`, R1044000).
+pub fn draw_decks(seed: &str, lists: &[ListTotal], catalog: &Catalog, strength: f64) -> Vec<BotDeck> {
     jackioh_cards::register_all();
     let mut rng = Rng::new(&format!("{seed}:decks"), 0);
     let wanted = usize::try_from(int_in(
@@ -305,7 +272,7 @@ pub fn draw_decks(seed: &str, records: &[GameRecord], catalog: &Catalog, strengt
         i64::try_from(BOT_DECKS_MAX).unwrap_or(0),
     ))
     .unwrap_or(BOT_DECKS_MIN);
-    let (ranked, unranked) = ranked_human_bo1_decklists(records);
+    let (ranked, unranked) = ranked_human_bo1_decklists(lists);
     let mut candidates = by_strength(ranked, strength);
     candidates.extend(rng.shuffle(&unranked));
     candidates.truncate(BOT_DECK_DRAW_ATTEMPTS);
@@ -504,21 +471,16 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
             bot.decks.is_empty() || bot.decks_catalog_version.as_deref() != Some(app.catalog.version.as_str())
         })
         .collect();
-    let records = if stale.is_empty() {
+    let lists = if stale.is_empty() {
         Vec::new()
     } else {
-        tx.game_records_list(&GameRecordQuery {
-            source: SourceFilter::Live,
-            mode: Some(GameMode::Bo1),
-            patch: Some(app.catalog.version.clone()),
-        })
-        .await?
+        tx.stats_decklists(&app.catalog.version).await?
     };
     tx.commit().await?;
     for bot in &stale {
         let decks = draw_decks(
             &format!("{seed}:{}", bot.profile_id),
-            &records,
+            &lists,
             &app.catalog,
             bot_target_strength(bot.strength),
         );

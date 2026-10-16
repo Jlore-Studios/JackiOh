@@ -62,18 +62,19 @@ declare
   -- the age_checks/terms_acceptances of consent (0034, R757000, R757001), custom_cards (0037,
   -- R915008), and the friend_requests, friendships, blocks, presence, challenges, chat_messages,
   -- chat_reports and replay_shares of Play together (0038, #936) and its Duos co-op's duos_rooms,
-  -- duos_matches and duos_match_actions (0039, #946).
+  -- duos_matches and duos_match_actions (0039, #946), and the card statistics' record_totals,
+  -- card_totals and decklist_totals (0041, R1044000).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033, 0035 and 0036 add no table. The three loadout tables stay after 0007, unread and
   -- unwritten (R254), so they are still expected here.
   expected constant text[] := array[
-    'action_timings', 'age_checks', 'blocks', 'bot_ratings', 'bots', 'cards', 'challenges', 'chat_messages',
-    'chat_reports', 'code_attempts', 'collection', 'collection_grants', 'custom_cards', 'decks',
-    'duos_match_actions', 'duos_matches', 'duos_rooms', 'emote_events', 'friend_requests', 'friendships',
-    'game_records', 'invite_codes', 'last_boards', 'loadout_deck_cards', 'loadout_decks', 'loadouts',
-    'match_actions', 'match_signals', 'matches', 'player_settings', 'player_stats', 'presence', 'profiles',
-    'rated_games', 'replay_shares', 'results', 'season_ranks', 'seasons', 'series', 'terms_acceptances',
-    'tickets', 'trios',
+    'action_timings', 'age_checks', 'blocks', 'bot_ratings', 'bots', 'card_totals', 'cards', 'challenges',
+    'chat_messages', 'chat_reports', 'code_attempts', 'collection', 'collection_grants', 'custom_cards',
+    'decklist_totals', 'decks', 'duos_match_actions', 'duos_matches', 'duos_rooms', 'emote_events',
+    'friend_requests', 'friendships', 'game_records', 'invite_codes', 'last_boards', 'loadout_deck_cards',
+    'loadout_decks', 'loadouts', 'match_actions', 'match_signals', 'matches', 'player_settings',
+    'player_stats', 'presence', 'profiles', 'rated_games', 'record_totals', 'replay_shares', 'results',
+    'season_ranks', 'seasons', 'series', 'terms_acceptances', 'tickets', 'trios',
     'tutorial_progress'];
   actual  text[];
   missing text[];

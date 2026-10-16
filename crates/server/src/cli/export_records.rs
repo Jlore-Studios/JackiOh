@@ -1,13 +1,15 @@
-//! Admin script: writes the game records `stats-cards` reads to a file, so they can be worked on
-//! outside Postgres (SPEC §9.11, R376, R378).
+//! Admin script: writes the game records whose detail is still held to a file, so they can be
+//! worked on outside Postgres (SPEC §9.11, R376, R378).
 //!
 //! ```text
 //! jackioh-server stats-export --out=<records.jsonl> [--source=live|dev|all] [--mode=bo1|bo3|random]
 //!   [--patch=<version>]
 //! ```
 //!
-//! Reads `public.game_records` through the store (DATABASE_URL) with the query `stats-cards` makes
-//! for the same flags, and writes one GameRecord per line in id order: the format `cargo jackioh
+//! Reads `public.game_records` through the store (DATABASE_URL) for the sources, mode and patch the
+//! flags name, as `stats-cards` reads the totals for them. R1044001: only the records written in the
+//! last `GAME_RECORD_RAW_RETENTION_DAYS` hold their detail, so only those are written; the figures
+//! of the older ones are in the totals alone. It writes one GameRecord per line in id order: the format `cargo jackioh
 //! stats --out` and the training lanes write, which `stats-import` and `cargo jackioh stats report`
 //! read and `analysis/` loads. Live games only unless `--source=dev` or `--source=all` says
 //! otherwise (R378). Pilots are per seat, so the file holds every seat of every game it names; the

@@ -358,26 +358,216 @@ fn count(tally: &mut Tally, outcome: Outcome) {
 /// id for the decks that held it, so a copy of it made in play counts as the card for those decks and
 /// a card no counted deck held has no entry. `cards` lists the ids in catalog-id order.
 ///
+/// R1044000: the records are folded into totals and the report read off them, as the server reads
+/// the totals it keeps, so the two cannot count differently.
+///
 /// TS's `filter` defaulted to `DEFAULT_CARD_STATS_FILTER`; a caller passes `&DEFAULT_CARD_STATS_FILTER`.
 pub fn card_stats(records: &[GameRecord], filter: &CardStatsFilter) -> CardStatsReport {
-    let mut by_card: IndexMap<String, CardStats> = IndexMap::new();
-    let mut games = 0;
-    let mut decks = 0;
+    let mut totals = StatsTotals::default();
+    for record in records.iter().filter(|record| record_matches(record, filter)) {
+        totals.fold(record, false);
+    }
+    card_stats_of(&totals, filter)
+}
 
-    for record in records {
-        if !record_matches(record, filter) {
-            continue;
-        }
-        let seats = seats_counted(record, filter.pilot);
-        if seats.is_empty() {
-            continue;
-        }
-        games += 1;
+// ---------------------------------------------------------------------------
+// The totals: the records folded (R1044000)
+// ---------------------------------------------------------------------------
 
-        for seat in seats {
-            decks += 1;
+/// R1044000: a turn's or a co-played card's games and wins, as the card drill-down counts them: one
+/// deck in one game, a draw a game not won.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub struct DrillCount {
+    pub games: i64,
+    pub wins: i64,
+}
+
+impl DrillCount {
+    fn add(&mut self, other: &DrillCount) {
+        self.games += other.games;
+        self.wins += other.wins;
+    }
+}
+
+/// R1044000: where two cards were first met in one deck, the records taken in id order: the record,
+/// its seat (0 for p1, 1 for p2) and the other card's place among that seat's distinct cards. The
+/// drill-down lists the co-played cards with the most games first and a tie in the order first met,
+/// so the totals keep the earliest meeting. Ordered field by field, the id by its bytes, as the store
+/// reads records (`order by id collate "C"`).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct FirstMet {
+    pub record: String,
+    pub seat: u8,
+    pub index: u32,
+}
+
+impl FirstMet {
+    /// Keeps the earlier of this meeting and `(record, seat, index)`.
+    pub fn keep_earlier(&mut self, record: &str, seat: u8, index: u32) {
+        if (record, seat, index) < (self.record.as_str(), self.seat, self.index) {
+            *self = FirstMet {
+                record: record.to_string(),
+                seat,
+                index,
+            };
+        }
+    }
+}
+
+/// R1044000: a card's games and wins with one other card in its deck, and where the two first met.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CoCount {
+    pub games: i64,
+    pub wins: i64,
+    pub first: FirstMet,
+}
+
+/// R1044000: one card's totals under one key: R377's breakdowns, and the drill-down's games by the
+/// turn the card was played on and with each card that shared its deck.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CardTotal {
+    pub stats: CardStats,
+    pub turns: IndexMap<i32, DrillCount>,
+    pub co: IndexMap<String, CoCount>,
+}
+
+impl CardTotal {
+    pub fn new(card: &str) -> CardTotal {
+        CardTotal {
+            stats: empty_stats(card),
+            turns: IndexMap::new(),
+            co: IndexMap::new(),
+        }
+    }
+
+    /// Adds `other`'s counts, each pair keeping its earlier first meeting.
+    pub fn add(&mut self, other: &CardTotal) {
+        add_stats(&mut self.stats, &other.stats);
+        for (turn, count) in &other.turns {
+            self.turns.entry(*turn).or_default().add(count);
+        }
+        for (card, count) in &other.co {
+            match self.co.get_mut(card) {
+                None => {
+                    self.co.insert(card.clone(), count.clone());
+                }
+                Some(held) => {
+                    held.games += count.games;
+                    held.wins += count.wins;
+                    held.first
+                        .keep_earlier(&count.first.record, count.first.seat, count.first.index);
+                }
+            }
+        }
+    }
+}
+
+/// R1044000: the seats a card total gathers: one patch, source and mode, and the seat's pilot.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TotalsKey {
+    pub patch: String,
+    pub source: GameSource,
+    pub mode: GameMode,
+    pub pilot: Pilot,
+}
+
+/// R1044000: the records a record count gathers: one patch, source and mode, and both seats' pilots
+/// (p1's, then p2's), from which a query's games and decks are read for any pilot filter.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct RecordsKey {
+    pub patch: String,
+    pub source: GameSource,
+    pub mode: GameMode,
+    pub pilots: (Pilot, Pilot),
+}
+
+/// R1044000: where a decklist was first seen, the records taken in id order: the record and its seat.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct FirstSeen {
+    pub record: String,
+    pub seat: u8,
+}
+
+/// R1044000 (R1454, R750000): one distinct decklist people took into a patch's live Best-of-1
+/// games: the list as the first record held it, its sorted ids (which make two orderings one list),
+/// its games and the games it won (a draw a game not won).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct ListTotal {
+    pub deck: Vec<String>,
+    pub key: Vec<String>,
+    pub games: i64,
+    pub wins: i64,
+    pub first: FirstSeen,
+}
+
+impl ListTotal {
+    /// Adds `other`'s games and wins; the list keeps the order of whichever was seen first.
+    pub fn add(&mut self, other: &ListTotal) {
+        self.games += other.games;
+        self.wins += other.wins;
+        if other.first < self.first {
+            self.deck = other.deck.clone();
+            self.first = other.first.clone();
+        }
+    }
+}
+
+/// R1044000: records folded into the counts every card figure is read from. Adding is commutative
+/// and associative, so records folded in any order, or in pieces and added, make the same totals.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct StatsTotals {
+    /// Records by patch, source, mode and both seats' pilots.
+    pub records: IndexMap<RecordsKey, i64>,
+    /// Each key's cards, by catalog id.
+    pub cards: IndexMap<TotalsKey, IndexMap<String, CardTotal>>,
+    /// Each patch's live Best-of-1 human decklists, by their sorted ids joined with commas.
+    pub lists: IndexMap<String, IndexMap<String, ListTotal>>,
+}
+
+/// One breakdown added into another.
+fn add_tally(into: &mut Tally, other: &Tally) {
+    into.games += other.games;
+    into.wins += other.wins;
+    into.draws += other.draws;
+}
+
+/// Every breakdown of one card's figures added into another's.
+pub fn add_stats(into: &mut CardStats, other: &CardStats) {
+    add_tally(&mut into.in_deck, &other.in_deck);
+    add_tally(&mut into.opening_hand, &other.opening_hand);
+    add_tally(&mut into.going_first, &other.going_first);
+    add_tally(&mut into.going_second, &other.going_second);
+    add_tally(&mut into.played, &other.played);
+    add_tally(&mut into.drawn_not_played, &other.drawn_not_played);
+}
+
+/// A seat's place in `PLAYER_IDS`, as `FirstMet` and `FirstSeen` keep it.
+fn seat_index(seat: PlayerId) -> u8 {
+    match seat {
+        PlayerId::P1 => 0,
+        PlayerId::P2 => 1,
+    }
+}
+
+impl StatsTotals {
+    /// R1044000: adds one record. Each seat's cards go under its own pilot's key, counted as R377
+    /// counts them. With `drills`, also each card's games by the turn it was played on and with each
+    /// card that shared its deck, which the card drill-down reads; without, R377's breakdowns and the
+    /// decklists alone, which are all `card_stats` reads.
+    pub fn fold(&mut self, record: &GameRecord, drills: bool) {
+        let records_key = RecordsKey {
+            patch: record.patch.clone(),
+            source: record.source,
+            mode: record.mode,
+            pilots: (record.pilots.p1, record.pilots.p2),
+        };
+        *self.records.entry(records_key).or_default() += 1;
+
+        for seat in PLAYER_IDS {
+            let pilot = record.pilots[seat];
             let summary = &record.game.seats[seat];
             let outcome = outcome_for(&record.game, seat);
+            let won = outcome == Outcome::Win;
             let opening: IndexSet<&str> = summary.opening.iter().map(String::as_str).collect();
             let in_hand: IndexSet<&str> = summary
                 .opening
@@ -387,12 +577,31 @@ pub fn card_stats(records: &[GameRecord], filter: &CardStatsFilter) -> CardStats
                 .collect();
             let played: IndexSet<&str> = summary.played.iter().map(String::as_str).collect();
             let first = record.game.first == seat;
+            // The turn of each play, read only when every play has one.
+            let played_turns = summary
+                .played_turns
+                .as_ref()
+                .filter(|turns| turns.len() == summary.played.len());
 
+            let key = TotalsKey {
+                patch: record.patch.clone(),
+                source: record.source,
+                mode: record.mode,
+                pilot,
+            };
             let deck: IndexSet<&str> = summary.deck.iter().map(String::as_str).collect();
-            for card in deck {
-                let stats = by_card
+            // A seat with no cards adds no key, as the store keeps no row for it.
+            let mut none = IndexMap::new();
+            let cards = if deck.is_empty() {
+                &mut none
+            } else {
+                self.cards.entry(key).or_default()
+            };
+            for &card in &deck {
+                let total = cards
                     .entry(card.to_string())
-                    .or_insert_with(|| empty_stats(card));
+                    .or_insert_with(|| CardTotal::new(card));
+                let stats = &mut total.stats;
                 count(&mut stats.in_deck, outcome);
                 if opening.contains(card) {
                     count(&mut stats.opening_hand, outcome);
@@ -410,19 +619,306 @@ pub fn card_stats(records: &[GameRecord], filter: &CardStatsFilter) -> CardStats
                 } else if in_hand.contains(card) {
                     count(&mut stats.drawn_not_played, outcome);
                 }
+                if !drills {
+                    continue;
+                }
+
+                // Each turn the card was played on counts the game once.
+                let mut turns_played_in_game: IndexSet<i32> = IndexSet::new();
+                if let Some(played_turns) = played_turns {
+                    for (index, played) in summary.played.iter().enumerate() {
+                        if played == card
+                            && let Some(turn) = played_turns.get(index).copied()
+                            && turn > 0
+                        {
+                            turns_played_in_game.insert(turn);
+                        }
+                    }
+                }
+                for turn in turns_played_in_game {
+                    let tally = total.turns.entry(turn).or_default();
+                    tally.games += 1;
+                    tally.wins += i64::from(won);
+                }
+
+                for (index, &other) in deck.iter().enumerate() {
+                    if other == card {
+                        continue;
+                    }
+                    let index = u32::try_from(index).unwrap_or(u32::MAX);
+                    match total.co.get_mut(other) {
+                        None => {
+                            let first = FirstMet {
+                                record: record.id.clone(),
+                                seat: seat_index(seat),
+                                index,
+                            };
+                            total.co.insert(
+                                other.to_string(),
+                                CoCount {
+                                    games: 1,
+                                    wins: i64::from(won),
+                                    first,
+                                },
+                            );
+                        }
+                        Some(held) => {
+                            held.games += 1;
+                            held.wins += i64::from(won);
+                            held.first.keep_earlier(&record.id, seat_index(seat), index);
+                        }
+                    }
+                }
+            }
+
+            // R1454, R750000: the lists people took into live Best-of-1 games.
+            if record.source == GameSource::Live && record.mode == GameMode::Bo1 && pilot == Pilot::Human {
+                let mut sorted = summary.deck.clone();
+                sorted.sort();
+                let joined = sorted.join(",");
+                let list = ListTotal {
+                    deck: summary.deck.clone(),
+                    key: sorted,
+                    games: 1,
+                    wins: i64::from(won),
+                    first: FirstSeen {
+                        record: record.id.clone(),
+                        seat: seat_index(seat),
+                    },
+                };
+                let lists = self.lists.entry(record.patch.clone()).or_default();
+                match lists.get_mut(&joined) {
+                    None => {
+                        lists.insert(joined, list);
+                    }
+                    Some(held) => held.add(&list),
+                }
             }
         }
     }
 
+    /// R1044000: adds `other`'s totals into these.
+    pub fn add(&mut self, other: &StatsTotals) {
+        for (key, records) in &other.records {
+            *self.records.entry(key.clone()).or_default() += records;
+        }
+        for (key, cards) in &other.cards {
+            let held = self.cards.entry(key.clone()).or_default();
+            for (card, total) in cards {
+                match held.get_mut(card) {
+                    None => {
+                        held.insert(card.clone(), total.clone());
+                    }
+                    Some(mine) => mine.add(total),
+                }
+            }
+        }
+        for (patch, lists) in &other.lists {
+            let held = self.lists.entry(patch.clone()).or_default();
+            for (key, list) in lists {
+                match held.get_mut(key) {
+                    None => {
+                        held.insert(key.clone(), list.clone());
+                    }
+                    Some(mine) => mine.add(list),
+                }
+            }
+        }
+    }
+
+    /// R1044000: the totals of the sources, mode (or every mode) and patch (or every patch) given,
+    /// each card's turn and co-played counts only with `drills`, and no decklists (`decklists` reads
+    /// those).
+    pub fn select(
+        &self,
+        sources: &[GameSource],
+        mode: Option<GameMode>,
+        patch: Option<&str>,
+        drills: bool,
+    ) -> StatsTotals {
+        let wanted = |key_patch: &str, source: GameSource, key_mode: GameMode| {
+            sources.contains(&source)
+                && mode.is_none_or(|mode| key_mode == mode)
+                && patch.is_none_or(|patch| key_patch == patch)
+        };
+        let records = self
+            .records
+            .iter()
+            .filter(|(key, _)| wanted(&key.patch, key.source, key.mode))
+            .map(|(key, records)| (key.clone(), *records))
+            .collect();
+        let cards = self
+            .cards
+            .iter()
+            .filter(|(key, _)| wanted(&key.patch, key.source, key.mode))
+            .map(|(key, cards)| {
+                let cards = cards
+                    .iter()
+                    .map(|(card, total)| {
+                        let total = if drills {
+                            total.clone()
+                        } else {
+                            CardTotal {
+                                stats: total.stats.clone(),
+                                turns: IndexMap::new(),
+                                co: IndexMap::new(),
+                            }
+                        };
+                        (card.clone(), total)
+                    })
+                    .collect();
+                (key.clone(), cards)
+            })
+            .collect();
+        StatsTotals {
+            records,
+            cards,
+            lists: IndexMap::new(),
+        }
+    }
+
+    /// R1044000 (R1454, R750000): a patch's live Best-of-1 human decklists, in the order the records
+    /// first held them.
+    pub fn decklists(&self, patch: &str) -> Vec<ListTotal> {
+        let mut lists: Vec<ListTotal> = self
+            .lists
+            .get(patch)
+            .map(|lists| lists.values().cloned().collect())
+            .unwrap_or_default();
+        lists.sort_by(|a, b| a.first.cmp(&b.first));
+        lists
+    }
+
+    /// R654: a patch's live games, which the publication gate counts.
+    pub fn live_games(&self, patch: &str) -> i64 {
+        self.records
+            .iter()
+            .filter(|(key, _)| key.source == GameSource::Live && key.patch == patch)
+            .map(|(_, records)| records)
+            .sum()
+    }
+}
+
+/// Whether a pilot filter counts a seat with this pilot.
+fn pilot_counts(filter: PilotFilter, pilot: Pilot) -> bool {
+    filter == PilotFilter::Unified || pilot.as_str() == filter.as_str()
+}
+
+/// R377, R1044000: every card's breakdowns over the totals the filter reads, as `card_stats` counts
+/// the records folded into them: the games are the records with a seat the filter counts, the decks
+/// those seats, and `cards` the cards some counted deck held, in catalog-id order.
+pub fn card_stats_of(totals: &StatsTotals, filter: &CardStatsFilter) -> CardStatsReport {
+    let sources = sources_of(filter.source);
+    let wanted = |patch: &str, source: GameSource, mode: GameMode| {
+        sources.contains(&source)
+            && filter.mode.is_none_or(|wanted| mode == wanted)
+            && filter.patch.as_ref().is_none_or(|wanted| patch == wanted)
+    };
+    let (mut games, mut decks) = (0i64, 0i64);
+    for (key, records) in &totals.records {
+        if !wanted(&key.patch, key.source, key.mode) {
+            continue;
+        }
+        let seats = i64::from(pilot_counts(filter.pilot, key.pilots.0))
+            + i64::from(pilot_counts(filter.pilot, key.pilots.1));
+        if seats > 0 {
+            games += records;
+            decks += records * seats;
+        }
+    }
+
+    let mut by_card: IndexMap<&str, CardStats> = IndexMap::new();
+    for (key, cards) in &totals.cards {
+        if !wanted(&key.patch, key.source, key.mode) || !pilot_counts(filter.pilot, key.pilot) {
+            continue;
+        }
+        for (card, total) in cards {
+            match by_card.get_mut(card.as_str()) {
+                None => {
+                    by_card.insert(card, total.stats.clone());
+                }
+                Some(held) => add_stats(held, &total.stats),
+            }
+        }
+    }
     let mut cards: Vec<CardStats> = by_card.into_values().collect();
     // A stable sort by id (SURFACE §4.4.1; ids are ASCII, so `str::cmp` is JS's `<`).
     cards.sort_by(|a, b| a.card.cmp(&b.card));
     CardStatsReport {
         filter: filter.clone(),
-        games,
-        decks,
+        games: i32::try_from(games).unwrap_or(i32::MAX),
+        decks: i32::try_from(decks).unwrap_or(i32::MAX),
         cards,
     }
+}
+
+/// R1044000: one card's drill-down over the totals a query counts.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CardDrill {
+    /// Games by the turn the card was played on, in turn order.
+    pub by_turn: Vec<(i32, DrillCount)>,
+    /// The cards that shared its deck, most games first (ties in the order first met), at most the
+    /// `top` asked for.
+    pub co_played: Vec<(String, DrillCount)>,
+}
+
+/// R978000, R1044000: every card's drill-down over the totals whose key `counts`, each turn's and
+/// each other card's counts summed across those keys and each pair keeping its earliest meeting, so
+/// a tie lists in the order the records first met it, as counting the records themselves did.
+pub fn card_drills_of(
+    totals: &StatsTotals,
+    counts: impl Fn(&TotalsKey) -> bool,
+    top: usize,
+) -> IndexMap<String, CardDrill> {
+    type Merged<'a> = (
+        IndexMap<i32, DrillCount>,
+        IndexMap<&'a str, (DrillCount, FirstMet)>,
+    );
+    let mut merged: IndexMap<&str, Merged> = IndexMap::new();
+    for (key, cards) in &totals.cards {
+        if !counts(key) {
+            continue;
+        }
+        for (card, total) in cards {
+            let (turns, co) = merged.entry(card.as_str()).or_default();
+            for (turn, count) in &total.turns {
+                turns.entry(*turn).or_default().add(count);
+            }
+            for (other, count) in &total.co {
+                let pair = DrillCount {
+                    games: count.games,
+                    wins: count.wins,
+                };
+                match co.get_mut(other.as_str()) {
+                    None => {
+                        co.insert(other, (pair, count.first.clone()));
+                    }
+                    Some((held, first)) => {
+                        held.add(&pair);
+                        first.keep_earlier(&count.first.record, count.first.seat, count.first.index);
+                    }
+                }
+            }
+        }
+    }
+    merged
+        .into_iter()
+        .map(|(card, (turns, co))| {
+            let mut by_turn: Vec<(i32, DrillCount)> = turns.into_iter().collect();
+            by_turn.sort_by_key(|(turn, _)| *turn);
+            let mut co_played: Vec<(&str, DrillCount, FirstMet)> = co
+                .into_iter()
+                .map(|(other, (count, first))| (other, count, first))
+                .collect();
+            co_played.sort_by(|a, b| b.1.games.cmp(&a.1.games).then_with(|| a.2.cmp(&b.2)));
+            co_played.truncate(top);
+            let co_played = co_played
+                .into_iter()
+                .map(|(other, count, _)| (other.to_string(), count))
+                .collect();
+            (card.to_string(), CardDrill { by_turn, co_played })
+        })
+        .collect()
 }
 
 /// Wins over games; `None` when there are no games, so an empty breakdown never reads as 0%.
@@ -1257,6 +1753,441 @@ mod tests {
                     pilot: PilotFilter::Ai
                 }),
                 "AI development runs, All Random, patch v0.2.5, AI pilots"
+            );
+        }
+    }
+
+    /// R1044000: the totals read every figure the records gave. Each reference below is the counting
+    /// that read the records themselves before the totals (`card_stats` here, `card_drills` in the
+    /// server's `api/stats.rs` and `ranked_human_bo1_decklists`' loop in `bots/pool.rs`), kept as it
+    /// was so the totals are measured against it.
+    mod totals {
+        use super::*;
+
+        /// `card_stats` as it counted the records themselves.
+        fn reference_card_stats(records: &[GameRecord], filter: &CardStatsFilter) -> CardStatsReport {
+            let mut by_card: IndexMap<String, CardStats> = IndexMap::new();
+            let mut games = 0;
+            let mut decks = 0;
+            for record in records {
+                if !record_matches(record, filter) {
+                    continue;
+                }
+                let seats = seats_counted(record, filter.pilot);
+                if seats.is_empty() {
+                    continue;
+                }
+                games += 1;
+                for seat in seats {
+                    decks += 1;
+                    let summary = &record.game.seats[seat];
+                    let outcome = outcome_for(&record.game, seat);
+                    let opening: IndexSet<&str> = summary.opening.iter().map(String::as_str).collect();
+                    let in_hand: IndexSet<&str> = summary
+                        .opening
+                        .iter()
+                        .chain(summary.drawn.iter())
+                        .map(String::as_str)
+                        .collect();
+                    let played: IndexSet<&str> = summary.played.iter().map(String::as_str).collect();
+                    let first = record.game.first == seat;
+                    let deck: IndexSet<&str> = summary.deck.iter().map(String::as_str).collect();
+                    for card in deck {
+                        let stats = by_card
+                            .entry(card.to_string())
+                            .or_insert_with(|| empty_stats(card));
+                        count(&mut stats.in_deck, outcome);
+                        if opening.contains(card) {
+                            count(&mut stats.opening_hand, outcome);
+                        }
+                        count(
+                            if first {
+                                &mut stats.going_first
+                            } else {
+                                &mut stats.going_second
+                            },
+                            outcome,
+                        );
+                        if played.contains(card) {
+                            count(&mut stats.played, outcome);
+                        } else if in_hand.contains(card) {
+                            count(&mut stats.drawn_not_played, outcome);
+                        }
+                    }
+                }
+            }
+            let mut cards: Vec<CardStats> = by_card.into_values().collect();
+            cards.sort_by(|a, b| a.card.cmp(&b.card));
+            CardStatsReport {
+                filter: filter.clone(),
+                games,
+                decks,
+                cards,
+            }
+        }
+
+        /// The server's `seat_counted`: a development seat always counts, a live one when the pilot
+        /// is merged or names it.
+        fn seat_counted(source: GameSource, pilot: Pilot, live_pilot: PilotFilter) -> bool {
+            source == GameSource::Dev || pilot_counts(live_pilot, pilot)
+        }
+
+        type ReferenceDrill = (Vec<(i32, DrillCount)>, Vec<(String, DrillCount)>);
+
+        /// The server's `card_drills`, over the records in id order.
+        fn reference_card_drills(
+            records: &[GameRecord],
+            live_pilot: PilotFilter,
+            top: usize,
+        ) -> IndexMap<String, ReferenceDrill> {
+            type Tallies<'a> = (IndexMap<i32, DrillCount>, IndexMap<&'a str, DrillCount>);
+            let mut tallies: IndexMap<&str, Tallies> = IndexMap::new();
+            for record in records {
+                for seat in PLAYER_IDS {
+                    if !seat_counted(record.source, record.pilots[seat], live_pilot) {
+                        continue;
+                    }
+                    let summary = &record.game.seats[seat];
+                    let won = record.game.winner == Winner::from(seat);
+                    let distinct: IndexSet<&str> = summary.deck.iter().map(String::as_str).collect();
+                    for &card_id in &distinct {
+                        let (turn_tallies, co_played_tallies) = tallies.entry(card_id).or_default();
+                        let mut turns_played_in_game: IndexSet<i32> = IndexSet::new();
+                        if let Some(played_turns) = summary
+                            .played_turns
+                            .as_ref()
+                            .filter(|turns| turns.len() == summary.played.len())
+                        {
+                            for (index, played) in summary.played.iter().enumerate() {
+                                if played == card_id
+                                    && let Some(turn) = played_turns.get(index).copied()
+                                    && turn > 0
+                                {
+                                    turns_played_in_game.insert(turn);
+                                }
+                            }
+                        }
+                        for turn in turns_played_in_game {
+                            let tally = turn_tallies.entry(turn).or_default();
+                            tally.games += 1;
+                            if won {
+                                tally.wins += 1;
+                            }
+                        }
+                        for &other_id in &distinct {
+                            if other_id == card_id {
+                                continue;
+                            }
+                            let tally = co_played_tallies.entry(other_id).or_default();
+                            tally.games += 1;
+                            if won {
+                                tally.wins += 1;
+                            }
+                        }
+                    }
+                }
+            }
+            tallies
+                .into_iter()
+                .map(|(card_id, (turn_tallies, co_played_tallies))| {
+                    let mut by_turn: Vec<(i32, DrillCount)> = turn_tallies.into_iter().collect();
+                    by_turn.sort_by_key(|(turn, _)| *turn);
+                    let mut co_played: Vec<(&str, DrillCount)> = co_played_tallies.into_iter().collect();
+                    co_played.sort_by_key(|(_, tally)| std::cmp::Reverse(tally.games));
+                    co_played.truncate(top);
+                    let co_played = co_played
+                        .into_iter()
+                        .map(|(id, tally)| (id.to_string(), tally))
+                        .collect();
+                    (card_id.to_string(), (by_turn, co_played))
+                })
+                .collect()
+        }
+
+        /// The ladder bots' loop over a patch's live Best-of-1 records in id order: each distinct
+        /// list's first deck, sorted ids, games and wins, in the order first met.
+        fn reference_lists(records: &[GameRecord]) -> Vec<(Vec<String>, Vec<String>, i64, i64)> {
+            let mut lists: IndexMap<Vec<String>, (Vec<String>, i64, i64)> = IndexMap::new();
+            for record in records {
+                if record.source != GameSource::Live || record.mode != GameMode::Bo1 {
+                    continue;
+                }
+                for seat in PLAYER_IDS {
+                    if record.pilots[seat] != Pilot::Human {
+                        continue;
+                    }
+                    let deck = &record.game.seats[seat].deck;
+                    let mut key = deck.clone();
+                    key.sort();
+                    let list = lists.entry(key).or_insert_with(|| (deck.clone(), 0, 0));
+                    list.1 += 1;
+                    if record.game.winner.player() == Some(seat) {
+                        list.2 += 1;
+                    }
+                }
+            }
+            lists
+                .into_iter()
+                .map(|(key, (deck, games, wins))| (deck, key, games, wins))
+                .collect()
+        }
+
+        /// A small deterministic generator (xorshift64), so the records are many and varied and the
+        /// same on every run.
+        struct Draws(u64);
+
+        impl Draws {
+            fn next(&mut self) -> u64 {
+                self.0 ^= self.0 << 13;
+                self.0 ^= self.0 >> 7;
+                self.0 ^= self.0 << 17;
+                self.0
+            }
+
+            fn below(&mut self, n: usize) -> usize {
+                usize::try_from(self.next() % n as u64).unwrap_or(0)
+            }
+
+            fn pick<'a>(&mut self, from: &[&'a str]) -> &'a str {
+                from[self.below(from.len())]
+            }
+        }
+
+        /// Few cards, so pairs tie often and every tie-break is exercised.
+        const CARDS: &[&str] = &["a", "b", "c", "d", "e", "f", "g"];
+
+        fn random_seat(draws: &mut Draws) -> SeatSummary {
+            let size = 3 + draws.below(4);
+            let deck: Vec<String> = (0..size).map(|_| draws.pick(CARDS).to_string()).collect();
+            let some = |draws: &mut Draws, most: usize| -> Vec<String> {
+                (0..draws.below(most + 1))
+                    .map(|_| draws.pick(CARDS).to_string())
+                    .collect()
+            };
+            let opening = some(draws, 3);
+            let drawn = some(draws, 3);
+            let played = some(draws, 4);
+            // Every kind of turn list: none, one per play (some of them 0, which counts no turn),
+            // and one of the wrong length, which the drill-down reads as none.
+            let played_turns = match draws.below(4) {
+                0 => None,
+                1 => Some(vec![1; played.len() + 1]),
+                _ => Some(
+                    played
+                        .iter()
+                        .map(|_| i32::try_from(draws.below(5)).unwrap_or(0))
+                        .collect(),
+                ),
+            };
+            SeatSummary {
+                deck,
+                opening,
+                drawn,
+                played,
+                played_turns,
+            }
+        }
+
+        fn random_record(draws: &mut Draws, n: usize) -> GameRecord {
+            let source = if draws.below(3) == 0 {
+                GameSource::Dev
+            } else {
+                GameSource::Live
+            };
+            let pilot = |draws: &mut Draws| {
+                if draws.below(3) == 0 {
+                    Pilot::Ai
+                } else {
+                    Pilot::Human
+                }
+            };
+            let pilots = PerPlayer::new(pilot(draws), pilot(draws));
+            let winner = match draws.below(5) {
+                0 => Winner::Draw,
+                1 | 2 => Winner::P1,
+                _ => Winner::P2,
+            };
+            GameRecord {
+                // Ids sort apart from the order they are made in, and live ones as match ids do.
+                id: match source {
+                    GameSource::Dev => format!("dev:x:{:03}", (n * 37) % 1000),
+                    GameSource::Live => format!("m{:03}", (n * 53) % 1000),
+                },
+                source,
+                mode: [GameMode::Bo1, GameMode::Bo3, GameMode::Random][draws.below(3)],
+                patch: ["v1", "v2"][draws.below(2)].to_string(),
+                pilots,
+                game: GameSummary {
+                    first: if draws.below(2) == 0 {
+                        PlayerId::P1
+                    } else {
+                        PlayerId::P2
+                    },
+                    winner,
+                    reason: GameOverReason::HeroDeath,
+                    turns: 10,
+                    seats: PerPlayer::new(random_seat(draws), random_seat(draws)),
+                },
+            }
+        }
+
+        /// Records as the store reads them: one per id, in id order.
+        fn records() -> Vec<GameRecord> {
+            let mut draws = Draws(0x9e37_79b9_7f4a_7c15);
+            let mut records: Vec<GameRecord> = (0..400).map(|n| random_record(&mut draws, n)).collect();
+            records.sort_by(|a, b| a.id.cmp(&b.id));
+            records.dedup_by(|later, earlier| later.id == earlier.id);
+            records
+        }
+
+        /// The records folded out of order, in two pieces added together.
+        fn folded(records: &[GameRecord]) -> StatsTotals {
+            let mut shuffled: Vec<&GameRecord> = records.iter().collect();
+            let mut draws = Draws(7);
+            for index in (1..shuffled.len()).rev() {
+                shuffled.swap(index, draws.below(index + 1));
+            }
+            let (first, second) = shuffled.split_at(shuffled.len() / 3);
+            let mut totals = StatsTotals::default();
+            for record in first {
+                totals.fold(record, true);
+            }
+            let mut rest = StatsTotals::default();
+            for record in second {
+                rest.fold(record, true);
+            }
+            totals.add(&rest);
+            totals
+        }
+
+        #[test]
+        fn r1044000_totals_give_every_card_report_the_records_gave() {
+            let records = records();
+            let totals = folded(&records);
+            let mut checked = 0;
+            for source in SOURCE_FILTERS {
+                for mode in [
+                    None,
+                    Some(GameMode::Bo1),
+                    Some(GameMode::Bo3),
+                    Some(GameMode::Random),
+                ] {
+                    for patch in [None, Some("v1"), Some("v2"), Some("v3")] {
+                        for pilot in PILOT_FILTERS {
+                            let filter = CardStatsFilter {
+                                source: *source,
+                                mode,
+                                patch: patch.map(str::to_string),
+                                pilot: *pilot,
+                            };
+                            let expected = reference_card_stats(&records, &filter);
+                            assert_eq!(card_stats_of(&totals, &filter), expected, "{filter:?}");
+                            assert_eq!(card_stats(&records, &filter), expected, "{filter:?}");
+                            checked += expected.games;
+                        }
+                    }
+                }
+            }
+            assert!(checked > 0, "the filters read some games");
+        }
+
+        #[test]
+        fn r1044000_totals_give_every_drill_down_the_records_gave_ties_in_the_order_first_met() {
+            let records = records();
+            let totals = folded(&records);
+            for patch in ["v1", "v2"] {
+                for source in SOURCE_FILTERS {
+                    let sources = sources_of(*source);
+                    let counted: Vec<GameRecord> = records
+                        .iter()
+                        .filter(|record| record.patch == patch && sources.contains(&record.source))
+                        .cloned()
+                        .collect();
+                    for live_pilot in PILOT_FILTERS {
+                        for top in [1, 2, 3, 10] {
+                            let expected = reference_card_drills(&counted, *live_pilot, top);
+                            let drills = card_drills_of(
+                                &totals,
+                                |key| {
+                                    key.patch == patch
+                                        && sources.contains(&key.source)
+                                        && seat_counted(key.source, key.pilot, *live_pilot)
+                                },
+                                top,
+                            );
+                            assert_eq!(drills.len(), expected.len(), "{patch} {source} {live_pilot}");
+                            for (card, (by_turn, co_played)) in &expected {
+                                let drill = &drills[card.as_str()];
+                                assert_eq!(&drill.by_turn, by_turn, "{patch} {source} {live_pilot} {card}");
+                                assert_eq!(
+                                    &drill.co_played, co_played,
+                                    "{patch} {source} {live_pilot} {card} top {top}"
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        #[test]
+        fn r1044000_totals_hold_each_patchs_live_best_of_one_lists_in_the_order_first_held() {
+            let records = records();
+            let totals = folded(&records);
+            for patch in ["v1", "v2"] {
+                let of_patch: Vec<GameRecord> = records
+                    .iter()
+                    .filter(|record| record.patch == patch)
+                    .cloned()
+                    .collect();
+                let lists: Vec<(Vec<String>, Vec<String>, i64, i64)> = totals
+                    .decklists(patch)
+                    .into_iter()
+                    .map(|list| (list.deck, list.key, list.games, list.wins))
+                    .collect();
+                assert_eq!(lists, reference_lists(&of_patch), "{patch}");
+                assert!(!lists.is_empty());
+            }
+        }
+
+        #[test]
+        fn r1044000_folding_in_any_order_or_in_pieces_makes_the_same_totals() {
+            let records = records();
+            let mut in_order = StatsTotals::default();
+            for record in &records {
+                in_order.fold(record, true);
+            }
+            assert_eq!(folded(&records), in_order);
+            // Selecting without drills keeps the breakdowns and drops the turn and pair counts.
+            let selected = in_order.select(&[GameSource::Live], Some(GameMode::Bo1), Some("v1"), false);
+            assert!(
+                selected.cards.keys().all(|key| key.source == GameSource::Live
+                    && key.mode == GameMode::Bo1
+                    && key.patch == "v1")
+            );
+            assert!(
+                selected
+                    .cards
+                    .values()
+                    .flat_map(|cards| cards.values())
+                    .all(|total| total.turns.is_empty() && total.co.is_empty())
+            );
+            let filter = CardStatsFilter {
+                source: SourceFilter::Live,
+                mode: Some(GameMode::Bo1),
+                patch: Some("v1".to_string()),
+                pilot: PilotFilter::Unified,
+            };
+            assert_eq!(
+                card_stats_of(&selected, &filter),
+                card_stats_of(&in_order, &filter)
+            );
+            assert_eq!(
+                in_order.live_games("v1"),
+                records
+                    .iter()
+                    .filter(|record| record.patch == "v1" && record.source == GameSource::Live)
+                    .count() as i64
             );
         }
     }

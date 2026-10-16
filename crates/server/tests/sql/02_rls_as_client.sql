@@ -391,7 +391,8 @@ begin
   foreach t in array array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records', 'player_stats',
                            'seasons', 'season_ranks', 'bot_ratings', 'rated_games',
                            'action_timings', 'emote_events', 'match_signals', 'bots',
-                           'age_checks', 'terms_acceptances'] loop
+                           'age_checks', 'terms_acceptances',
+                           'record_totals', 'card_totals', 'decklist_totals'] loop
     if to_regclass('public.' || t) is null then
       missing := missing || t || ' ';
     end if;
@@ -412,11 +413,13 @@ declare
   -- R1442): how each person paced, emoted and gave up, which the server alone reads and writes.
   -- `bots` (0032, R1454): which profiles are ladder bots, which R1452 says no client read tells.
   -- `age_checks` and `terms_acceptances` (0034, R757000, R757001): what each account agreed to,
-  -- which the server alone records.
+  -- which the server alone records. The three totals tables (0041, R1044000): the game records
+  -- folded, which the server alone reads and serves as the public figures.
   forbidden constant text[] := array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records', 'player_stats',
                                      'seasons', 'season_ranks', 'bot_ratings', 'rated_games',
                                      'action_timings', 'emote_events', 'match_signals', 'bots',
-                                     'age_checks', 'terms_acceptances'];
+                                     'age_checks', 'terms_acceptances',
+                                     'record_totals', 'card_totals', 'decklist_totals'];
   missing   text := coalesce(current_setting('rls3.missing', true), 'unknown');
   t         text;
   n         bigint;

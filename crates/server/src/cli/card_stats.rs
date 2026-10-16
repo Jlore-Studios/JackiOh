@@ -6,28 +6,30 @@
 //!   [--patch=<version>] [--pilot=human|ai|unified] [--card=<id>] [--json]
 //! ```
 //!
-//! Reads `public.game_records` through the store (DATABASE_URL), keeps the records the filter names,
-//! and prints every card's four breakdowns — in deck, in the opening hand, going first and going
-//! second, played against drawn but not played — each with the games behind it. With nothing named
+//! Reads the totals every record is folded into as it is written (R1044000, migration 0041) through
+//! the store (DATABASE_URL), keeps the ones the filter names, and prints every card's four
+//! breakdowns — in deck, in the opening hand, going first and going second, played against drawn but
+//! not played — each with the games behind it. With nothing named
 //! it reads every counted seat of live games of every mode and patch (R807000's merged display):
 //! a development run's records are read only with `--source=dev` or `--source=all` (R378), and
 //! `--pilot=human` reads the people's sides only, `--pilot=ai` the bots'. `--json` prints the
 //! report as data instead.
 //!
-//! The arithmetic is `card_stats` in `jackioh_engine::wire::stats` (TS `packages/shared/src/stats.ts`),
-//! the same the AI's development run prints its own games with, so a pre-release run and the live
-//! games after it compare figure for figure: run both with the same `--patch`.
+//! The arithmetic is `card_stats_of` in `jackioh_engine::wire::stats` (TS
+//! `packages/shared/src/stats.ts`), which `card_stats` reads record files with too, the same the AI's
+//! development run prints its own games with, so a pre-release run and the live games after it
+//! compare figure for figure: run both with the same `--patch`.
 
 use anyhow::bail;
 use serde::Serialize;
 
 use jackioh_engine::wire::{
     CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, GAME_MODES, GameMode, PILOT_FILTERS,
-    PilotFilter, SOURCE_FILTERS, SourceFilter, card_stats, format_card_stats,
+    PilotFilter, SOURCE_FILTERS, SourceFilter, card_stats_of, format_card_stats,
 };
 
 use crate::cli::{connect_one, database_url};
-use crate::db::store::{Db, GameRecordQuery, StoreError};
+use crate::db::store::{Db, StatsTotalsQuery, StoreError};
 use crate::env::quoted;
 
 const USAGE: &str = "Usage: jackioh-server stats-cards [options]
@@ -125,17 +127,19 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
     Ok(CardStatsOptions { filter, card, json })
 }
 
-/// R377: the report the options ask for, off the records the store holds.
+/// R377: the report the options ask for, off the totals the store holds (R1044000), the records
+/// folded as they were written.
 pub async fn card_stats_report(db: &Db, options: &CardStatsOptions) -> Result<CardStatsReport, StoreError> {
-    let query = GameRecordQuery {
+    let query = StatsTotalsQuery {
         source: options.filter.source,
         mode: options.filter.mode,
         patch: options.filter.patch.clone(),
+        drills: false,
     };
     let mut tx = db.begin(None).await?;
-    let records = tx.game_records_list(&query).await?;
+    let totals = tx.stats_totals_load(&query).await?;
     tx.commit().await?;
-    let mut report = card_stats(&records, &options.filter);
+    let mut report = card_stats_of(&totals, &options.filter);
     if let Some(only) = &options.card {
         report.cards.retain(|stats| &stats.card == only);
     }

@@ -13,21 +13,25 @@
 //!  - a finished co-op match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended, as a
 //!    1v1 match's (§13.9; `duos::purge_expired_logs`, its own transaction). Its row, the seed, the
 //!    decks and the result, is kept, as a 1v1 match's is.
+//!  - a game record's detail `GAME_RECORD_RAW_RETENTION_DAYS` after it was written, once it is folded
+//!    into the card statistics' totals (R1044001). Its id, source, mode, patch and time are kept. The
+//!    loop folds any record written before the totals first (`game_records::fold_pending`).
 //!
 //! `app.rs` spawns `run_purge`, which runs it at boot and then every
 //! `RETENTION_PURGE_INTERVAL_SECONDS`, next to the match reaper. In Postgres it is one call to
-//! `app.purge_expired_rows` (migration 0013, with 0029's third cutoff).
+//! `app.purge_expired_rows` (migration 0013, with 0029's third cutoff and 0041's fourth).
 
 use std::sync::Arc;
 use std::time::Duration;
 
 use serde_json::json;
 
+use crate::api::game_records::fold_pending;
 use crate::api::http::{log_info, log_warn, now_ms};
 use crate::app::App;
 use crate::config::{
-    CODE_ATTEMPT_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS, PLAY_TELEMETRY_RETENTION_DAYS,
-    RETENTION_PURGE_INTERVAL_SECONDS,
+    CODE_ATTEMPT_RETENTION_DAYS, GAME_RECORD_RAW_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS,
+    PLAY_TELEMETRY_RETENTION_DAYS, RETENTION_PURGE_INTERVAL_SECONDS,
 };
 use crate::db::store::{RetentionPurgeInput, RetentionPurgeResult, StoreError};
 
@@ -42,6 +46,7 @@ pub async fn purge_expired(app: &App) -> Result<RetentionPurgeResult, StoreError
             code_attempts_before: now - CODE_ATTEMPT_RETENTION_DAYS * MS_PER_DAY,
             match_actions_ended_before: now - MATCH_ACTION_RETENTION_DAYS * MS_PER_DAY,
             play_telemetry_ended_before: now - PLAY_TELEMETRY_RETENTION_DAYS * MS_PER_DAY,
+            game_records_recorded_before: now - GAME_RECORD_RAW_RETENTION_DAYS * MS_PER_DAY,
         })
         .await?;
     tx.commit().await?;
@@ -53,15 +58,28 @@ pub async fn purge_expired(app: &App) -> Result<RetentionPurgeResult, StoreError
 /// spawns it.
 pub async fn run_purge(app: Arc<App>) {
     loop {
+        // R1044000: the records written before the totals are folded first, in transactions of their
+        // own, so their detail can go on the purge's cutoff like any other's.
+        match fold_pending(&app.db).await {
+            Ok(0) => {}
+            Ok(folded) => log_info("game_records.folded", json!({ "records": folded })),
+            Err(error) => log_warn(
+                "game_records.fold_failed",
+                json!({ "message": error.to_string() }),
+            ),
+        }
         match purge_expired(&app).await {
             Ok(purged) => {
-                if purged.code_attempts + purged.match_actions + purged.play_telemetry > 0 {
+                if purged.code_attempts + purged.match_actions + purged.play_telemetry + purged.game_records
+                    > 0
+                {
                     log_info(
                         "retention.purged",
                         json!({
                             "codeAttempts": purged.code_attempts,
                             "matchActions": purged.match_actions,
                             "playTelemetry": purged.play_telemetry,
+                            "gameRecords": purged.game_records,
                         }),
                     );
                 }
