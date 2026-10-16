@@ -1406,9 +1406,7 @@
       "started_at": "2026-10-16T14:53:11Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6217915143"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1064": {
