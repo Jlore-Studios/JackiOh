@@ -16,24 +16,34 @@ use std::time::Duration;
 
 use serde_json::{Value, json};
 
+use jackioh_engine::pick_portrait_from_seed;
 use jackioh_engine::wire::{DuosActionBody, DuosSeat};
+use jackioh_server::api::queue::try_pair;
+use jackioh_server::api::rematch::STAKE_NORMAL;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
-    CODE_ALPHABET, DUOS_ROOM_TTL_MS, MATCH_ACTION_RETENTION_DAYS, MATCH_CEILING_MS, MAX_OPEN_ROOMS_PER_HOST,
-    MAX_SAVED_DECKS, REPLAY_REQUESTS_PER_MINUTE, ROOM_CODE_LENGTH,
+    BOT_FALLBACK_MAX_SECONDS, CODE_ALPHABET, DUOS_ROOM_TTL_MS, MATCH_ACTION_RETENTION_DAYS, MATCH_CEILING_MS,
+    MAX_OPEN_ROOMS_PER_HOST, MAX_SAVED_DECKS, REPLAY_REQUESTS_PER_MINUTE, ROOM_CODE_LENGTH,
 };
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{CollectionEntry, Db};
+use jackioh_server::db::store::{BotDeck, CollectionEntry, Db, NewBot};
 use jackioh_server::duos::registry;
 use jackioh_server::duos::store::{DuosActionRow, DuosMatch, DuosRoom};
 
-use crate::support::deps::{add_user, call, empty_test_app};
+use crate::support::deps::{TestAppOptions, add_user, call, empty_test_app, test_app_with};
 
 /// The epoch-ms stamp a saved deck carries; nothing reads it back.
 const AT: i64 = 1_700_000_000_000;
 
 /// S6's room code length, stated by the spec ("6 chars").
 const DUOS_CODE_CHARS: usize = 6;
+
+/// Unit conversions, not configuration.
+const MS_PER_SECOND: i64 = 1000;
+const MS_PER_DAY: i64 = 86_400_000;
+
+/// The one ladder bot `with_ladder_bot` makes.
+const BOT: &str = "bot-ladder";
 
 // ---------------------------------------------------------------------------------------------
 // Plumbing (private copies: each test file of this binary keeps its own)
@@ -239,7 +249,11 @@ struct Three {
 
 async fn three() -> Three {
     jackioh_cards::register_all();
-    let app = empty_test_app().await;
+    three_on(empty_test_app().await).await
+}
+
+/// The three accounts, seeded on `app`.
+async fn three_on(app: Arc<App>) -> Three {
     let host = account(&app, 1, "Hana").await;
     let guest = account(&app, 2, "Gus").await;
     let third = account(&app, 3, "Tess").await;
@@ -249,6 +263,112 @@ async fn three() -> Three {
         guest,
         third,
     }
+}
+
+/// R1065000: the three accounts on a server with `LADDER_BOTS` on and one ladder bot, rated with
+/// the people, on all day and dealt for this catalog.
+async fn with_ladder_bot() -> Three {
+    jackioh_cards::register_all();
+    let app = test_app_with(TestAppOptions {
+        env: vec![("LADDER_BOTS".to_string(), "on".to_string())],
+        skip_fixtures: true,
+        ..TestAppOptions::default()
+    })
+    .await;
+    let bot: NewBot = from(json!({
+        "profileId": BOT,
+        "strength": 2,
+        "speed": 1.0,
+        "persona": "balanced",
+        "activeFromHour": 0,
+        "activeHours": 24,
+        "decks": [],
+        "decksCatalogVersion": null,
+        "createdAt": now_ms() - 30 * MS_PER_DAY,
+        "seedRating": 1000.0,
+    }));
+    store!(app, t => t.bots_create(&bot).await.expect("bots.create"));
+    let decks = [BotDeck {
+        cards: deck(),
+        portrait: pick_portrait_from_seed("bot-deck").to_string(),
+    }];
+    store!(app, t => t
+        .bots_set_decks(BOT, &decks, &app.catalog.version)
+        .await
+        .expect("bots.setDecks"));
+    three_on(app).await
+}
+
+/// `POST /api/queue`.
+async fn enqueue(app: &Arc<App>, who: &Account, body: Value) -> (u16, Value) {
+    api(app, "POST", "/api/queue", &who.token, body).await
+}
+
+/// A 1v1 All Random room `who` opens; answers its code.
+async fn room_1v1(app: &Arc<App>, who: &Account) -> String {
+    let (status, body) = api(app, "POST", "/api/rooms", &who.token, json!({ "mode": "random" })).await;
+    assert_eq!(status, 200, "{body}");
+    body["code"].as_str().expect("a room code").to_string()
+}
+
+/// `POST /api/rooms/:code/join`, All Random.
+async fn join_1v1(app: &Arc<App>, who: &Account, code: &str) -> (u16, Value) {
+    api(
+        app,
+        "POST",
+        &format!("/api/rooms/{code}/join"),
+        &who.token,
+        json!({ "mode": "random" }),
+    )
+    .await
+}
+
+/// An open ticket written through the store, as a race would leave it: rating 1000, enqueued
+/// `waited_ms` ago.
+async fn write_ticket(app: &Arc<App>, id: &str, profile_id: &str, mode: &str, waited_ms: i64) {
+    let cards = if mode == "bo1" { json!(deck()) } else { json!([]) };
+    let ticket = json!({
+        "id": id,
+        "profileId": profile_id,
+        "rating": 1000,
+        "mode": mode,
+        "deck": cards,
+        "trio": null,
+        "catalogVersion": app.catalog.version,
+        "enqueuedAt": now_ms() - waited_ms,
+        "status": "open",
+        "matchId": null,
+    });
+    store!(app, t => t.tickets_insert(&from(ticket)).await.expect("tickets.insert"));
+}
+
+async fn ticket_status(app: &Arc<App>, id: &str) -> Value {
+    let ticket = store!(app, t => t.tickets_get(id).await.expect("tickets.get").expect("the ticket"));
+    serde_json::to_value(&ticket).expect("a ticket")["status"].clone()
+}
+
+async fn open_ticket(app: &Arc<App>, profile_id: &str) -> bool {
+    store!(app, t => t
+        .tickets_open_for_profile(profile_id)
+        .await
+        .expect("tickets.openForProfile")
+        .is_some())
+}
+
+async fn in_match(app: &Arc<App>, profile_id: &str) -> Option<String> {
+    store!(app, t => t
+        .profiles_get_by_id(profile_id)
+        .await
+        .expect("profiles.getById")
+        .expect("the profile")
+        .in_match_id)
+}
+
+/// R1065000's refusal: `409 already_in_match` naming the co-op match in `details`.
+fn held_by_co_op(status: u16, body: &Value, match_id: &str) {
+    assert_eq!(status, 409, "{body}");
+    assert!(code_is(body, "already_in_match"), "{body}");
+    assert_eq!(body["error"]["details"]["duosMatchId"], json!(match_id), "{body}");
 }
 
 impl Three {
@@ -1104,5 +1224,273 @@ mod r1047002_the_room_cap {
         assert_eq!(status, 204, "{body}");
         let (status, body) = create(&t.app, &t.host, json!({ "difficulty": "easy", "random": true })).await;
         assert_eq!(status, 201, "{body}");
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1065000 — a live co-op match holds its players out of 1v1
+// ---------------------------------------------------------------------------------------------
+
+mod r1065000_a_live_co_op_match_holds_its_players_out_of_1v1 {
+    use super::*;
+
+    #[tokio::test]
+    async fn r1065000_the_queue_refuses_a_player_in_a_live_co_op_match_in_best_of_1_and_all_random_and_takes_them_once_it_ends()
+     {
+        let t = three().await;
+        with_saved_deck(&t.app, &t.guest.id, &uuid(101)).await;
+        with_saved_deck(&t.app, &t.host.id, &uuid(102)).await;
+        let (_, match_id) = t.started().await;
+
+        let (status, body) = enqueue(&t.app, &t.guest, json!({ "mode": "bo1", "deckId": uuid(101) })).await;
+        held_by_co_op(status, &body, &match_id);
+        let (status, body) = enqueue(&t.app, &t.guest, json!({ "mode": "random" })).await;
+        held_by_co_op(status, &body, &match_id);
+        assert!(!open_ticket(&t.app, &t.guest.id).await, "no ticket was written");
+
+        finish(&t.app, &match_id).await;
+
+        let (status, body) = enqueue(&t.app, &t.guest, json!({ "mode": "random" })).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(body["status"], "open", "{body}");
+        let (status, body) = enqueue(&t.app, &t.host, json!({ "mode": "bo1", "deckId": uuid(102) })).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(body["status"], "open", "{body}");
+    }
+
+    #[tokio::test]
+    async fn r1065000_a_player_in_a_live_co_op_match_can_neither_open_nor_join_a_1v1_room() {
+        let t = three().await;
+        let code = room_1v1(&t.app, &t.third).await;
+        let (_, match_id) = t.started().await;
+
+        let (status, body) = api(
+            &t.app,
+            "POST",
+            "/api/rooms",
+            &t.guest.token,
+            json!({ "mode": "random" }),
+        )
+        .await;
+        held_by_co_op(status, &body, &match_id);
+        let (status, body) = join_1v1(&t.app, &t.guest, &code).await;
+        held_by_co_op(status, &body, &match_id);
+        let room = store!(t.app, tx => tx.rooms_get(&code).await.expect("rooms.get").expect("the room"));
+        assert_eq!(room.guest_profile_id, None, "the room is unclaimed");
+
+        finish(&t.app, &match_id).await;
+
+        let (status, body) = join_1v1(&t.app, &t.guest, &code).await;
+        assert_eq!(status, 200, "{body}");
+    }
+
+    #[tokio::test]
+    async fn r1065000_a_join_of_a_1v1_room_whose_host_is_in_a_live_co_op_match_is_409_conflict() {
+        let t = three().await;
+        let code = room_1v1(&t.app, &t.host).await;
+        let (_, match_id) = t.started().await;
+
+        let (status, body) = join_1v1(&t.app, &t.third, &code).await;
+        assert_eq!(status, 409, "{body}");
+        assert!(code_is(&body, "conflict"), "{body}");
+        let room = store!(t.app, tx => tx.rooms_get(&code).await.expect("rooms.get").expect("the room"));
+        assert_eq!(room.guest_profile_id, None, "the room is unclaimed");
+
+        finish(&t.app, &match_id).await;
+
+        let (status, body) = join_1v1(&t.app, &t.third, &code).await;
+        assert_eq!(status, 200, "{body}");
+    }
+
+    #[tokio::test]
+    async fn r1065000_the_co_op_start_cancels_both_players_open_tickets() {
+        let t = three().await;
+        with_saved_deck(&t.app, &t.host.id, &uuid(102)).await;
+        let (status, body) = enqueue(&t.app, &t.host, json!({ "mode": "bo1", "deckId": uuid(102) })).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(body["status"], "open", "{body}");
+        let (status, body) = enqueue(&t.app, &t.guest, json!({ "mode": "random" })).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(body["status"], "open", "{body}");
+
+        t.started().await;
+
+        assert!(
+            !open_ticket(&t.app, &t.host.id).await,
+            "the host's ticket is cancelled"
+        );
+        assert!(
+            !open_ticket(&t.app, &t.guest.id).await,
+            "the guest's ticket is cancelled"
+        );
+    }
+
+    #[tokio::test]
+    async fn r1065000_the_sweep_pairs_no_ticket_whose_owner_is_in_a_live_co_op_match() {
+        let t = three().await;
+        let (_, match_id) = t.started().await;
+        write_ticket(&t.app, "t-host", &t.host.id, "random", 0).await;
+        write_ticket(&t.app, "t-guest", &t.guest.id, "random", 0).await;
+
+        let report = try_pair(&t.app).await.expect("a sweep");
+
+        assert_eq!(report.made, 0);
+        assert!(report.failed.is_empty());
+        assert_eq!(ticket_status(&t.app, "t-host").await, "open");
+        assert_eq!(ticket_status(&t.app, "t-guest").await, "open");
+        assert_eq!(in_match(&t.app, &t.host.id).await, None);
+        assert_eq!(in_match(&t.app, &t.guest.id).await, None);
+
+        finish(&t.app, &match_id).await;
+
+        let report = try_pair(&t.app).await.expect("a sweep");
+        assert_eq!(report.made, 1);
+        assert_eq!(ticket_status(&t.app, "t-host").await, "matched");
+        assert_eq!(ticket_status(&t.app, "t-guest").await, "matched");
+    }
+
+    #[tokio::test]
+    async fn r1065000_nor_does_the_ladder_bot_fallback() {
+        let t = with_ladder_bot().await;
+        let (_, match_id) = t.started().await;
+        let past_fallback = (BOT_FALLBACK_MAX_SECONDS + 1) * MS_PER_SECOND;
+        write_ticket(&t.app, "t-guest", &t.guest.id, "bo1", past_fallback).await;
+
+        let report = try_pair(&t.app).await.expect("a sweep");
+
+        assert_eq!(report.made, 0);
+        assert_eq!(ticket_status(&t.app, "t-guest").await, "open");
+        assert_eq!(in_match(&t.app, BOT).await, None, "the bot is not seated");
+
+        finish(&t.app, &match_id).await;
+
+        let report = try_pair(&t.app).await.expect("a sweep");
+        assert_eq!(report.made, 1);
+        assert_eq!(ticket_status(&t.app, "t-guest").await, "matched");
+    }
+
+    #[tokio::test]
+    async fn r1065000_a_rematch_with_a_seat_in_a_live_co_op_match_is_409_and_creates_nothing() {
+        let t = three().await;
+        let size = usize::try_from(jackioh_engine::config::DECK_SIZE).expect("a deck size");
+        let pool = playable();
+        let now = now_ms();
+        let finished = json!({
+            "id": "r1065000-finished",
+            "seed": "seed-r1065000",
+            "players": [t.third.id, t.guest.id],
+            "decks": [pool[..size], pool[size..2 * size]],
+            "catalogVersion": t.app.catalog.version,
+            "ranked": true,
+            "status": "finished",
+            "createdAt": now,
+            "finishedAt": now,
+            "clocks": {
+                "turnDeadline": null,
+                "promptDeadline": null,
+                "graceDeadline": { "p1": null, "p2": null },
+                "ceilingAt": now + MATCH_CEILING_MS,
+            },
+            "portraits": ["vanilla", "vanilla"],
+        });
+        store!(t.app, tx => tx.matches_create(&from(finished)).await.expect("matches.create"));
+        t.started().await;
+        let path = "/api/matches/r1065000-finished/rematch";
+
+        let (status, body) = api(
+            &t.app,
+            "POST",
+            path,
+            &t.third.token,
+            json!({ "stakes": STAKE_NORMAL }),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(body["matchId"], Value::Null, "{body}");
+        let (status, body) = api(
+            &t.app,
+            "POST",
+            path,
+            &t.guest.token,
+            json!({ "stakes": STAKE_NORMAL }),
+        )
+        .await;
+        assert_eq!(status, 409, "{body}");
+        assert!(code_is(&body, "already_in_match"), "{body}");
+        assert_eq!(
+            fake(&t.app).lock().await.tables.matches.len(),
+            1,
+            "no rematch was made"
+        );
+    }
+
+    #[tokio::test]
+    async fn r1065000_co_op_still_refuses_a_player_in_a_1v1_match_or_a_series_and_a_host_in_one() {
+        let t = three().await;
+        let code = room(&t.app, &t.host).await;
+        let body = json!({ "difficulty": "easy", "random": true });
+
+        // A guest in a 1v1 match.
+        store!(t.app, tx => tx
+            .profiles_set_in_match(&t.guest.id, Some("elsewhere"))
+            .await
+            .expect("profiles.setInMatch"));
+        let (status, refused) = create(&t.app, &t.guest, body.clone()).await;
+        assert_eq!(status, 409, "{refused}");
+        assert!(code_is(&refused, "already_in_match"), "{refused}");
+        let (status, refused) = join(&t.app, &t.guest, &code).await;
+        assert_eq!(status, 409, "{refused}");
+        assert!(code_is(&refused, "already_in_match"), "{refused}");
+        store!(t.app, tx => tx
+            .profiles_set_in_match(&t.guest.id, None)
+            .await
+            .expect("profiles.setInMatch"));
+
+        // A host in a 1v1 match.
+        store!(t.app, tx => tx
+            .profiles_set_in_match(&t.host.id, Some("elsewhere"))
+            .await
+            .expect("profiles.setInMatch"));
+        let (status, refused) = join(&t.app, &t.guest, &code).await;
+        assert_eq!(status, 409, "{refused}");
+        assert!(code_is(&refused, "conflict"), "{refused}");
+        store!(t.app, tx => tx
+            .profiles_set_in_match(&t.host.id, None)
+            .await
+            .expect("profiles.setInMatch"));
+
+        // A guest in a series that is not over.
+        let trio = json!({ "name": "t", "decks": [{ "name": "a", "cards": [] }, { "name": "b", "cards": [] }, { "name": "c", "cards": [] }] });
+        let series = from(json!({
+            "id": "series-1",
+            "sides": [
+                { "profileId": t.guest.id, "trio": trio, "wins": 0, "pick": null },
+                { "profileId": "someone", "trio": trio, "wins": 0, "pick": null },
+            ],
+            "catalogVersion": jackioh_cards::catalog_version(),
+            "ranked": false,
+            "seedBase": "s",
+            "status": "picking",
+            "games": [],
+            "nextMatchId": "reserved",
+            "pickDeadline": null,
+            "winner": null,
+            "endReason": null,
+            "ratingBefore": null,
+            "ratingAfter": null,
+            "createdAt": 0,
+            "updatedAt": 0,
+            "endedAt": null,
+            "version": 1,
+        }));
+        store!(t.app, tx => tx.series_create(&series).await.expect("series.create"));
+        let (status, refused) = create(&t.app, &t.guest, body).await;
+        assert_eq!(status, 409, "{refused}");
+        assert!(code_is(&refused, "already_in_match"), "{refused}");
+        assert_eq!(
+            refused["error"]["details"],
+            json!({ "seriesId": "series-1" }),
+            "{refused}"
+        );
     }
 }
