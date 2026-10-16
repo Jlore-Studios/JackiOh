@@ -2188,6 +2188,9 @@
       ]
     },
     "1089": {
+      "ci_reruns": {
+        "66f10c35f5d5be41425656e8ab8ccfa3eeda3c6d": 1
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-16T20:39:49Z",
