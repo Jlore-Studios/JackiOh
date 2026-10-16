@@ -21,7 +21,7 @@ A record file is one `GameRecord` (R376) per line, `source` `live` or `dev`, who
 
 | Records | Written by |
 |---|---|
-| Live games, off `public.game_records` | `jackioh-server stats-export --out=analysis/data/live.jsonl` (`DATABASE_URL` set; `--source`, `--mode` and `--patch` narrow it, `crates/server/README.md`) |
+| Live games, off `public.game_records` | `jackioh-server stats-export --out=analysis/data/live.jsonl` (`DATABASE_URL` set; `--source`, `--mode` and `--patch` narrow it, `crates/server/README.md`). The database keeps each game's detail a week (`GAME_RECORD_RAW_RETENTION_DAYS`, R1044001), so export what a notebook will want before then |
 | An AI development run on this checkout | `cargo jackioh stats --games 200 --out analysis/data/dev.jsonl` (R378) |
 | The training lanes' games | `~/training-out/<lane>/*.jsonl` on the training box (`training/README.md`) |
 

@@ -92,7 +92,8 @@ use serde_json::Value;
 use tokio::sync::{Mutex, MutexGuard};
 
 use jackioh_engine::wire::stats::{
-    CardStatsFilter, DEV_RECORD_ID_PREFIX, GameRecord, GameSource, PilotFilter, record_matches,
+    CardStatsFilter, DEV_RECORD_ID_PREFIX, GameRecord, GameSource, ListTotal, PilotFilter, StatsTotals,
+    record_matches, sources_of,
 };
 use jackioh_engine::wire::{CustomCard, PLAYER_IDS, PlayerId};
 
@@ -113,9 +114,9 @@ use crate::db::store::{
     PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
     PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow,
     RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio, Season,
-    SeasonStanding, SeriesRow, SeriesStatus, SignalOutcomeRow, StoreError, TermsAcceptanceRow, TermsSource,
-    Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome,
-    TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    SeasonStanding, SeriesRow, SeriesStatus, SignalOutcomeRow, StatsTotalsQuery, StoreError,
+    TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialMergeInput,
+    TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -133,6 +134,14 @@ pub struct CollectionRow {
     pub profile_id: String,
     pub card_id: String,
     pub quantity: i64,
+}
+
+/// What `public.game_records` keeps of a record besides its detail (migrations 0014, 0041): when it
+/// was written, and whether it is folded into the totals (R1044000, R1044001).
+#[derive(Clone, Debug, PartialEq)]
+pub struct GameRecordLedgerRow {
+    pub recorded_at: i64,
+    pub folded: bool,
 }
 
 /// One row of `public.last_boards` (migration 0017): one per profile and kind (R565).
@@ -231,7 +240,12 @@ pub struct FakeTables {
     // PlayerStatsTables
     pub player_stats: Vec<PlayerStatsTableRow>,
     // GameRecordTables: the table R376 adds (`public.game_records`, migration 0014): one row per recorded game.
+    // R1044001: a record whose detail the purge has emptied leaves `game_records`; its ledger row stays.
     pub game_records: Vec<GameRecord>,
+    // R1044000, R1044001 (migration 0041): each record id ever written, when, and whether it is folded.
+    pub game_record_ledger: IndexMap<String, GameRecordLedgerRow>,
+    // R1044000 (migration 0041's three totals tables, in one): the records folded.
+    pub stats_totals: StatsTotals,
     // RankedTables
     pub seasons: Vec<Season>,
     pub season_ranks: Vec<SeasonRank>,
@@ -2503,27 +2517,50 @@ pub fn match_mode_in(tables: &FakeTables, match_id: &str) -> Option<QueueMode> {
         .map(|row| row.mode)
 }
 
-/// R376: one record per id, as the primary key makes it. False, and nothing written, when a record
-/// with this id exists.
-pub fn game_records_insert(f: &mut FakeTx<'_>, record: &GameRecord) -> Result<bool, StoreError> {
+/// R376: one record per id, as the primary key makes it, each answered in turn: false, and nothing
+/// written, when a record with this id exists, its detail purged or not (R1044001). R1044000: the
+/// records written are folded into the totals, in the same transaction, and marked folded.
+pub fn game_records_insert_batch(
+    f: &mut FakeTx<'_>,
+    records: &[GameRecord],
+) -> Result<Vec<bool>, StoreError> {
     call(f, "gameRecords.insert")?;
-    // R378: `game_records_dev_id_check` (0014). A development id begins "dev:", a live one never.
-    if (record.source == GameSource::Dev) != record.id.starts_with(DEV_RECORD_ID_PREFIX) {
-        return Err(StoreError::from(format!(
-            "game_records_dev_id_check: a {} record cannot have the id {}",
-            record.source, record.id
-        )));
+    let now = (f.guard.now)();
+    let tables = f.tables();
+    let mut written = Vec::with_capacity(records.len());
+    for record in records {
+        // R378: `game_records_dev_id_check` (0014). A development id begins "dev:", a live one never.
+        if (record.source == GameSource::Dev) != record.id.starts_with(DEV_RECORD_ID_PREFIX) {
+            return Err(StoreError::from(format!(
+                "game_records_dev_id_check: a {} record cannot have the id {}",
+                record.source, record.id
+            )));
+        }
+        if tables.game_record_ledger.contains_key(&record.id)
+            || tables
+                .game_records
+                .iter()
+                .any(|existing| existing.id == record.id)
+        {
+            written.push(false);
+            continue;
+        }
+        tables.game_records.push(record.clone());
+        tables.game_record_ledger.insert(
+            record.id.clone(),
+            GameRecordLedgerRow {
+                recorded_at: now,
+                folded: true,
+            },
+        );
+        tables.stats_totals.fold(record, true);
+        written.push(true);
     }
-    let rows = &mut f.tables().game_records;
-    if rows.iter().any(|existing| existing.id == record.id) {
-        return Ok(false);
-    }
-    rows.push(record.clone());
-    Ok(true)
+    Ok(written)
 }
 
-/// The records of the query's sources, mode and patch, in id order (code points), filtered exactly
-/// as `card_stats` does.
+/// The records of the query's sources, mode and patch whose detail is still held (R1044001), in id
+/// order (code points), filtered exactly as `card_stats` does.
 pub fn game_records_list(f: &mut FakeTx<'_>, query: &GameRecordQuery) -> Result<Vec<GameRecord>, StoreError> {
     call(f, "gameRecords.list")?;
     let filter = CardStatsFilter {
@@ -2541,6 +2578,56 @@ pub fn game_records_list(f: &mut FakeTx<'_>, query: &GameRecordQuery) -> Result<
         .collect();
     rows.sort_by(|a, b| a.id.cmp(&b.id));
     Ok(rows)
+}
+
+/// R1044000: folds up to `limit` records the totals do not hold yet, the first in id order, and marks
+/// them folded. A record with no ledger row (put in the table by hand) is one of them.
+pub fn game_records_fold_pending(f: &mut FakeTx<'_>, limit: usize) -> Result<usize, StoreError> {
+    call(f, "gameRecords.foldPending")?;
+    let now = (f.guard.now)();
+    let tables = f.tables();
+    let mut pending: Vec<GameRecord> = tables
+        .game_records
+        .iter()
+        .filter(|record| {
+            tables
+                .game_record_ledger
+                .get(&record.id)
+                .is_none_or(|row| !row.folded)
+        })
+        .cloned()
+        .collect();
+    pending.sort_by(|a, b| a.id.cmp(&b.id));
+    pending.truncate(limit);
+    for record in &pending {
+        tables.stats_totals.fold(record, true);
+        tables
+            .game_record_ledger
+            .entry(record.id.clone())
+            .or_insert(GameRecordLedgerRow {
+                recorded_at: now,
+                folded: false,
+            })
+            .folded = true;
+    }
+    Ok(pending.len())
+}
+
+/// R1044000: the totals the query reads.
+pub fn stats_totals_load(f: &mut FakeTx<'_>, query: &StatsTotalsQuery) -> Result<StatsTotals, StoreError> {
+    call(f, "statsTotals.load")?;
+    Ok(f.tables().stats_totals.select(
+        &sources_of(query.source),
+        query.mode,
+        query.patch.as_deref(),
+        query.drills,
+    ))
+}
+
+/// R1044000 (R1454, R750000): the patch's live Best-of-1 human decklists, first held first.
+pub fn stats_decklists(f: &mut FakeTx<'_>, patch: &str) -> Result<Vec<ListTotal>, StoreError> {
+    call(f, "statsTotals.decklists")?;
+    Ok(f.tables().stats_totals.decklists(patch))
 }
 
 // ---------------------------------------------------------------------------
@@ -3159,10 +3246,18 @@ pub fn purge_expired_rows(tables: &mut FakeTables, input: &RetentionPurgeInput) 
     }) + keep_only(&mut tables.match_signals, |row| {
         !telemetry_expired.contains(&row.match_id)
     });
+    // 0041, R1044001: a folded record's detail, on its own cutoff; its ledger row stays.
+    let ledger = &tables.game_record_ledger;
+    let game_records = keep_only(&mut tables.game_records, |record| {
+        !ledger
+            .get(&record.id)
+            .is_some_and(|row| row.folded && row.recorded_at < input.game_records_recorded_before)
+    });
     RetentionPurgeResult {
         code_attempts: code_attempts as i64,
         match_actions: match_actions as i64,
         play_telemetry: play_telemetry as i64,
+        game_records: game_records as i64,
     }
 }
 

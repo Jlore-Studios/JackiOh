@@ -63,7 +63,10 @@ use sqlx::{Postgres, Row, Transaction};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use jackioh_engine::wire::{GameEventType, GameRecord, parse_game_record, portrait_or_default, sources_of};
+use jackioh_engine::wire::{
+    CardTotal, CoCount, DrillCount, FirstMet, FirstSeen, GameEventType, GameRecord, ListTotal, RecordsKey,
+    StatsTotals, TotalsKey, parse_game_record, portrait_or_default, sources_of,
+};
 use jackioh_engine::{Action, CustomCard, LastBoardEntry, LeanPick, PlayerId};
 
 use crate::auth::is_uuid;
@@ -78,10 +81,10 @@ use crate::db::store::{
     PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
     PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayRow,
     ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio,
-    Season, SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StoreError, TermsAcceptanceRow,
-    TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice,
-    TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim,
-    UsernameClaimOutcome,
+    Season, SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError,
+    TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome,
+    TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
+    UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -1797,25 +1800,28 @@ pub async fn redeem_invite_code(
 }
 
 /// The retention purge, as one call to `app.purge_expired_rows` (migration 0013, with 0029's third
-/// cutoff for the play telemetry, R1442): the only path `match_actions`' append-only guard lets a
-/// delete through.
+/// cutoff for the play telemetry, R1442, and 0041's fourth for the game records' detail, R1044001):
+/// the only path `match_actions`' append-only guard lets a delete through.
 pub async fn purge_expired(
     t: &mut PgTx<'_>,
     input: &RetentionPurgeInput,
 ) -> Result<RetentionPurgeResult, StoreError> {
     run_as(t, None).await?;
     let row = sqlx::query(concat!(
-        "select code_attempts, match_actions, play_telemetry from app.purge_expired_rows(",
+        "select code_attempts, match_actions, play_telemetry, game_records from app.purge_expired_rows(",
         ts!("$1"),
         ", ",
         ts!("$2"),
         ", ",
         ts!("$3"),
+        ", ",
+        ts!("$4"),
         ")"
     ))
     .bind(input.code_attempts_before)
     .bind(input.match_actions_ended_before)
     .bind(input.play_telemetry_ended_before)
+    .bind(input.game_records_recorded_before)
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
@@ -1826,6 +1832,7 @@ pub async fn purge_expired(
         code_attempts: get::<i64>(&row, "code_attempts")?,
         match_actions: get::<i64>(&row, "match_actions")?,
         play_telemetry: get::<i64>(&row, "play_telemetry")?,
+        game_records: get::<i64>(&row, "game_records")?,
     })
 }
 
@@ -4391,26 +4398,44 @@ pub async fn last_boards_sample_others(
 // Game records for the card statistics (SPEC §9.11, R376)
 // ---------------------------------------------------------------------------
 
-/// R376: one record per id; `on conflict do nothing` answers a second write of a game with false.
-pub async fn game_records_insert(t: &mut PgTx<'_>, record: &GameRecord) -> Result<bool, StoreError> {
+/// R376: one record per id; `on conflict do nothing` answers a second write of a game with false,
+/// a row whose detail the purge emptied included (R1044001). R1044000: the records written are
+/// written folded, and their counts added to the totals (`stats_totals_add`) before the transaction
+/// commits, so a record is in the totals exactly when it is in the table. No `app.*` function: the
+/// fold is the engine's, in Rust.
+pub async fn game_records_insert_batch(
+    t: &mut PgTx<'_>,
+    records: &[GameRecord],
+) -> Result<Vec<bool>, StoreError> {
     run_as(t, None).await?;
-    let done = sqlx::query(
-        "insert into public.game_records (id, source, mode, patch, record)
-         values ($1::text, $2::text, $3::text, $4::text, $5::jsonb)
-         on conflict (id) do nothing",
-    )
-    .bind(record.id.as_str())
-    .bind(literal(&record.source)?)
-    .bind(literal(&record.mode)?)
-    .bind(record.patch.as_str())
-    .bind(json(record)?)
-    .execute(&mut **t)
-    .await
-    .map_err(db_error)?;
-    Ok(done.rows_affected() == 1)
+    let mut written = Vec::with_capacity(records.len());
+    let mut delta = StatsTotals::default();
+    for record in records {
+        let done = sqlx::query(
+            "insert into public.game_records (id, source, mode, patch, record, folded)
+             values ($1::text, $2::text, $3::text, $4::text, $5::jsonb, true)
+             on conflict (id) do nothing",
+        )
+        .bind(record.id.as_str())
+        .bind(literal(&record.source)?)
+        .bind(literal(&record.mode)?)
+        .bind(record.patch.as_str())
+        .bind(json(record)?)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+        let wrote = done.rows_affected() == 1;
+        if wrote {
+            delta.fold(record, true);
+        }
+        written.push(wrote);
+    }
+    stats_totals_add(t, &delta).await?;
+    Ok(written)
 }
 
-/// The filter on the indexed columns; each row read back through `parse_game_record`.
+/// The filter on the indexed columns; each row whose detail is still held (R1044001) read back
+/// through `parse_game_record`.
 pub async fn game_records_list(
     t: &mut PgTx<'_>,
     query: &GameRecordQuery,
@@ -4426,6 +4451,7 @@ pub async fn game_records_list(
           where source = any($1::text[])
             and ($2::text is null or mode = $2::text)
             and ($3::text is null or patch = $3::text)
+            and record is not null
           order by id collate \"C\"",
     )
     .bind(sources)
@@ -4440,6 +4466,432 @@ pub async fn game_records_list(
             parse_game_record(&record).map_err(|error| StoreError::from(error.to_string()))
         })
         .collect()
+}
+
+/// R1044000: folds up to `limit` records written unfolded (before migration 0041), the first in id
+/// order, and marks them folded. `skip locked`, so two folds running at once take different records
+/// and none is folded twice.
+pub async fn game_records_fold_pending(t: &mut PgTx<'_>, limit: usize) -> Result<usize, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select record from public.game_records
+          where not folded
+          order by id collate \"C\"
+          limit $1
+          for update skip locked",
+    )
+    .bind(i64::try_from(limit).unwrap_or(i64::MAX))
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let mut delta = StatsTotals::default();
+    let mut ids: Vec<String> = Vec::with_capacity(rows.len());
+    for row in &rows {
+        let record: Value = get(row, "record")?;
+        let record = parse_game_record(&record).map_err(|error| StoreError::from(error.to_string()))?;
+        delta.fold(&record, true);
+        ids.push(record.id);
+    }
+    if ids.is_empty() {
+        return Ok(0);
+    }
+    sqlx::query("update public.game_records set folded = true where id = any($1::text[])")
+        .bind(&ids)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    stats_totals_add(t, &delta).await?;
+    Ok(ids.len())
+}
+
+/// `card_totals.co` as stored: each other card's `[games, wins, record, seat, index]`.
+fn co_json(co: &IndexMap<String, CoCount>) -> Value {
+    Value::Object(
+        co.iter()
+            .map(|(card, count)| {
+                (
+                    card.clone(),
+                    json!([
+                        count.games,
+                        count.wins,
+                        count.first.record,
+                        count.first.seat,
+                        count.first.index
+                    ]),
+                )
+            })
+            .collect(),
+    )
+}
+
+/// `card_totals.co` read back.
+fn co_of(value: Value) -> Result<IndexMap<String, CoCount>, StoreError> {
+    let bad = || {
+        StoreError::from("card_totals.co: expected { card: [games, wins, record, seat, index] }".to_string())
+    };
+    let Value::Object(entries) = value else {
+        return Err(bad());
+    };
+    entries
+        .into_iter()
+        .map(|(card, entry)| {
+            let (games, wins, record, seat, index): (i64, i64, String, u8, u32) =
+                serde_json::from_value(entry).map_err(|_| bad())?;
+            Ok((
+                card,
+                CoCount {
+                    games,
+                    wins,
+                    first: FirstMet { record, seat, index },
+                },
+            ))
+        })
+        .collect()
+}
+
+/// `card_totals.turns` as stored: each turn's `[games, wins]`.
+fn turns_json(turns: &IndexMap<i32, DrillCount>) -> Value {
+    Value::Object(
+        turns
+            .iter()
+            .map(|(turn, count)| (turn.to_string(), json!([count.games, count.wins])))
+            .collect(),
+    )
+}
+
+/// `card_totals.turns` read back.
+fn turns_of(value: Value) -> Result<IndexMap<i32, DrillCount>, StoreError> {
+    let bad = || StoreError::from("card_totals.turns: expected { turn: [games, wins] }".to_string());
+    let Value::Object(entries) = value else {
+        return Err(bad());
+    };
+    entries
+        .into_iter()
+        .map(|(turn, entry)| {
+            let turn: i32 = turn.parse().map_err(|_| bad())?;
+            let (games, wins): (i64, i64) = serde_json::from_value(entry).map_err(|_| bad())?;
+            Ok((turn, DrillCount { games, wins }))
+        })
+        .collect()
+}
+
+/// R1044000: adds `delta` into the stored totals. The record counts are added in SQL; each card row
+/// and decklist the delta touches is read, added to in Rust (`StatsTotals::add`, the engine's
+/// counting) and written back. A transaction-level advisory lock on each patch and source the delta
+/// touches, taken in order, keeps two folds into the same rows from interleaving; the lock ends with
+/// the transaction.
+async fn stats_totals_add(t: &mut PgTx<'_>, delta: &StatsTotals) -> Result<(), StoreError> {
+    if delta.records.is_empty() {
+        return Ok(());
+    }
+    let mut locks: Vec<String> = Vec::new();
+    for key in delta.records.keys() {
+        locks.push(format!(
+            "jackioh.stats_totals:{}:{}",
+            key.patch,
+            literal(&key.source)?
+        ));
+    }
+    locks.sort();
+    locks.dedup();
+    for lock in &locks {
+        sqlx::query("select pg_advisory_xact_lock(hashtextextended($1::text, 0))")
+            .bind(lock)
+            .execute(&mut **t)
+            .await
+            .map_err(db_error)?;
+    }
+
+    // The records: one statement, each count added in place.
+    let mut columns: [Vec<String>; 5] = Default::default();
+    let mut counts: Vec<i64> = Vec::new();
+    for (key, records) in &delta.records {
+        columns[0].push(key.patch.clone());
+        columns[1].push(literal(&key.source)?);
+        columns[2].push(literal(&key.mode)?);
+        columns[3].push(literal(&key.pilots.0)?);
+        columns[4].push(literal(&key.pilots.1)?);
+        counts.push(*records);
+    }
+    let [patches, sources, modes, p1_pilots, p2_pilots] = columns;
+    sqlx::query(
+        "insert into public.record_totals (patch, source, mode, p1_pilot, p2_pilot, records)
+         select * from unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::int8[])
+         on conflict (patch, source, mode, p1_pilot, p2_pilot)
+         do update set records = public.record_totals.records + excluded.records",
+    )
+    .bind(patches)
+    .bind(sources)
+    .bind(modes)
+    .bind(p1_pilots)
+    .bind(p2_pilots)
+    .bind(counts)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+
+    // The cards the delta touches, as stored, then with the delta added.
+    let mut keys: [Vec<String>; 5] = Default::default();
+    for (key, cards) in &delta.cards {
+        for card in cards.keys() {
+            keys[0].push(key.patch.clone());
+            keys[1].push(literal(&key.source)?);
+            keys[2].push(literal(&key.mode)?);
+            keys[3].push(literal(&key.pilot)?);
+            keys[4].push(card.clone());
+        }
+    }
+    let [patches, sources, modes, pilots, cards] = keys;
+    let rows = sqlx::query(
+        "select c.patch, c.source, c.mode, c.pilot, c.card, c.stats, c.turns, c.co
+           from public.card_totals c
+           join unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[])
+             as k(patch, source, mode, pilot, card)
+             on c.patch = k.patch and c.source = k.source and c.mode = k.mode
+            and c.pilot = k.pilot and c.card = k.card",
+    )
+    .bind(&patches)
+    .bind(&sources)
+    .bind(&modes)
+    .bind(&pilots)
+    .bind(&cards)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let mut stored = StatsTotals::default();
+    for row in &rows {
+        let key = TotalsKey {
+            patch: get(row, "patch")?,
+            source: from_literal(&get::<String>(row, "source")?)?,
+            mode: from_literal(&get::<String>(row, "mode")?)?,
+            pilot: from_literal(&get::<String>(row, "pilot")?)?,
+        };
+        let card: String = get(row, "card")?;
+        let total = CardTotal {
+            stats: from_json(get::<Value>(row, "stats")?)?,
+            turns: turns_of(get::<Value>(row, "turns")?)?,
+            co: co_of(get::<Value>(row, "co")?)?,
+        };
+        stored.cards.entry(key).or_default().insert(card, total);
+    }
+
+    // The decklists the delta touches, as stored.
+    let mut list_patches: Vec<String> = Vec::new();
+    let mut list_keys: Vec<String> = Vec::new();
+    for (patch, lists) in &delta.lists {
+        for list in lists.keys() {
+            list_patches.push(patch.clone());
+            list_keys.push(list.clone());
+        }
+    }
+    if !list_keys.is_empty() {
+        let rows = sqlx::query(
+            "select d.patch, d.list, d.deck, d.games, d.wins, d.first_record, d.first_seat
+               from public.decklist_totals d
+               join unnest($1::text[], $2::text[]) as k(patch, list)
+                 on d.patch = k.patch and d.list = k.list",
+        )
+        .bind(&list_patches)
+        .bind(&list_keys)
+        .fetch_all(&mut **t)
+        .await
+        .map_err(db_error)?;
+        for row in &rows {
+            let patch: String = get(row, "patch")?;
+            let list: String = get(row, "list")?;
+            let total = list_total_of(row)?;
+            stored.lists.entry(patch).or_default().insert(list, total);
+        }
+    }
+
+    stored.add(delta);
+
+    // Every card row touched, written back whole.
+    let mut columns: [Vec<String>; 8] = Default::default();
+    for (key, cards) in &stored.cards {
+        for (card, total) in cards {
+            columns[0].push(key.patch.clone());
+            columns[1].push(literal(&key.source)?);
+            columns[2].push(literal(&key.mode)?);
+            columns[3].push(literal(&key.pilot)?);
+            columns[4].push(card.clone());
+            columns[5].push(json(&total.stats)?);
+            columns[6].push(turns_json(&total.turns).to_string());
+            columns[7].push(co_json(&total.co).to_string());
+        }
+    }
+    let [patches, sources, modes, pilots, cards, stats, turns, co] = columns;
+    sqlx::query(
+        "insert into public.card_totals (patch, source, mode, pilot, card, stats, turns, co)
+         select k.patch, k.source, k.mode, k.pilot, k.card, k.stats::jsonb, k.turns::jsonb, k.co::jsonb
+           from unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[],
+                       $8::text[])
+             as k(patch, source, mode, pilot, card, stats, turns, co)
+         on conflict (patch, source, mode, pilot, card)
+         do update set stats = excluded.stats, turns = excluded.turns, co = excluded.co",
+    )
+    .bind(patches)
+    .bind(sources)
+    .bind(modes)
+    .bind(pilots)
+    .bind(cards)
+    .bind(stats)
+    .bind(turns)
+    .bind(co)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+
+    // Every decklist touched, written back whole.
+    if !list_keys.is_empty() {
+        let mut texts: [Vec<String>; 4] = Default::default();
+        let mut games: Vec<i64> = Vec::new();
+        let mut wins: Vec<i64> = Vec::new();
+        let mut seats: Vec<i16> = Vec::new();
+        for (patch, lists) in &stored.lists {
+            for (list, total) in lists {
+                texts[0].push(patch.clone());
+                texts[1].push(list.clone());
+                texts[2].push(json(&total.deck)?);
+                texts[3].push(total.first.record.clone());
+                games.push(total.games);
+                wins.push(total.wins);
+                seats.push(i16::from(total.first.seat));
+            }
+        }
+        let [patches, lists, decks, first_records] = texts;
+        sqlx::query(
+            "insert into public.decklist_totals (patch, list, deck, games, wins, first_record, first_seat)
+             select k.patch, k.list, k.deck::jsonb, k.games, k.wins, k.first_record, k.first_seat
+               from unnest($1::text[], $2::text[], $3::text[], $4::int8[], $5::int8[], $6::text[],
+                           $7::int2[])
+                 as k(patch, list, deck, games, wins, first_record, first_seat)
+             on conflict (patch, list)
+             do update set deck = excluded.deck, games = excluded.games, wins = excluded.wins,
+                           first_record = excluded.first_record, first_seat = excluded.first_seat",
+        )
+        .bind(patches)
+        .bind(lists)
+        .bind(decks)
+        .bind(games)
+        .bind(wins)
+        .bind(first_records)
+        .bind(seats)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    }
+    Ok(())
+}
+
+/// A `decklist_totals` row read back: its key is its deck, sorted.
+fn list_total_of(row: &PgRow) -> Result<ListTotal, StoreError> {
+    let deck: Vec<String> = from_json(get::<Value>(row, "deck")?)?;
+    let mut key = deck.clone();
+    key.sort();
+    let seat: i16 = get(row, "first_seat")?;
+    Ok(ListTotal {
+        deck,
+        key,
+        games: get(row, "games")?,
+        wins: get(row, "wins")?,
+        first: FirstSeen {
+            record: get(row, "first_record")?,
+            seat: u8::try_from(seat)
+                .map_err(|_| StoreError::from(format!("decklist_totals.first_seat {seat}")))?,
+        },
+    })
+}
+
+/// R1044000: the totals the query reads, each card's turn and co-played counts only with `drills`.
+pub async fn stats_totals_load(
+    t: &mut PgTx<'_>,
+    query: &StatsTotalsQuery,
+) -> Result<StatsTotals, StoreError> {
+    let sources = sources_of(query.source)
+        .iter()
+        .map(literal)
+        .collect::<Result<Vec<String>, StoreError>>()?;
+    let mode = query.mode.as_ref().map(literal).transpose()?;
+    run_as(t, None).await?;
+    let mut totals = StatsTotals::default();
+    let rows = sqlx::query(
+        "select patch, source, mode, p1_pilot, p2_pilot, records from public.record_totals
+          where source = any($1::text[])
+            and ($2::text is null or mode = $2::text)
+            and ($3::text is null or patch = $3::text)",
+    )
+    .bind(&sources)
+    .bind(mode.as_deref())
+    .bind(query.patch.as_deref())
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    for row in &rows {
+        let key = RecordsKey {
+            patch: get(row, "patch")?,
+            source: from_literal(&get::<String>(row, "source")?)?,
+            mode: from_literal(&get::<String>(row, "mode")?)?,
+            pilots: (
+                from_literal(&get::<String>(row, "p1_pilot")?)?,
+                from_literal(&get::<String>(row, "p2_pilot")?)?,
+            ),
+        };
+        totals.records.insert(key, get(row, "records")?);
+    }
+    let rows = sqlx::query(
+        "select patch, source, mode, pilot, card, stats,
+                case when $4::boolean then turns end as turns,
+                case when $4::boolean then co end as co
+           from public.card_totals
+          where source = any($1::text[])
+            and ($2::text is null or mode = $2::text)
+            and ($3::text is null or patch = $3::text)",
+    )
+    .bind(&sources)
+    .bind(mode.as_deref())
+    .bind(query.patch.as_deref())
+    .bind(query.drills)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    for row in &rows {
+        let key = TotalsKey {
+            patch: get(row, "patch")?,
+            source: from_literal(&get::<String>(row, "source")?)?,
+            mode: from_literal(&get::<String>(row, "mode")?)?,
+            pilot: from_literal(&get::<String>(row, "pilot")?)?,
+        };
+        let card: String = get(row, "card")?;
+        let total = CardTotal {
+            stats: from_json(get::<Value>(row, "stats")?)?,
+            turns: get::<Option<Value>>(row, "turns")?
+                .map(turns_of)
+                .transpose()?
+                .unwrap_or_default(),
+            co: get::<Option<Value>>(row, "co")?
+                .map(co_of)
+                .transpose()?
+                .unwrap_or_default(),
+        };
+        totals.cards.entry(key).or_default().insert(card, total);
+    }
+    Ok(totals)
+}
+
+/// R1044000 (R1454, R750000): the patch's live Best-of-1 human decklists, first held first.
+pub async fn stats_decklists(t: &mut PgTx<'_>, patch: &str) -> Result<Vec<ListTotal>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select deck, games, wins, first_record, first_seat from public.decklist_totals
+          where patch = $1::text
+          order by first_record collate \"C\", first_seat",
+    )
+    .bind(patch)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(list_total_of).collect()
 }
 
 // ---------------------------------------------------------------------------

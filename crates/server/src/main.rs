@@ -41,6 +41,8 @@ enum Command {
     BalanceWatch(Rest),
     /// Load an `ai:stats` development run's game records (TS `stats:import`).
     StatsImport(Rest),
+    /// Fold the game records written before the card statistics' totals into them (R1044000).
+    StatsFold(Rest),
     /// Write the game records `stats-cards` reads to a JSONL file.
     StatsExport(Rest),
     /// Watch for clusters of accounts sharing an IP hash (SPEC §9.8): an advisory report, nothing changed.
@@ -78,6 +80,7 @@ async fn main() -> ExitCode {
         Command::StatsCards(rest) => cli::card_stats::run(rest.args).await,
         Command::BalanceWatch(rest) => cli::balance_watch::run(rest.args).await,
         Command::StatsImport(rest) => cli::import_dev_records::run(rest.args).await,
+        Command::StatsFold(rest) => cli::stats_fold::run(rest.args).await,
         Command::StatsExport(rest) => cli::export_records::run(rest.args).await,
         Command::InviteClusters(rest) => cli::invite_clusters::run(rest.args).await,
         Command::Moderate(rest) => cli::moderate::run(rest.args).await,

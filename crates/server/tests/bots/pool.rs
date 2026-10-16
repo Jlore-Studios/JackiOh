@@ -21,7 +21,7 @@ use serde_json::{Value, json};
 use jackioh_engine::validator::{
     CatalogSnapshot, DeckInput, LoadoutDeck, LoadoutInput, validate_deck, validate_trio,
 };
-use jackioh_engine::wire::GameRecord;
+use jackioh_engine::wire::{GameRecord, ListTotal, StatsTotals};
 use jackioh_server::actor::engine::{deal_random_deck, deal_random_deck_excluding};
 use jackioh_server::api::catalog::Catalog;
 use jackioh_server::api::queue::run_matchmaker;
@@ -121,6 +121,16 @@ fn games_of(name: &str, deck: &[String], patch: &str, wins: usize, games: usize)
     (0..games)
         .map(|n| scored(&format!("{name}-{n}"), deck, patch, n < wins))
         .collect()
+}
+
+/// R1044000: the patch's live Best-of-1 human decklists in `records`, as the store's totals hold
+/// them once the records are written (`Tx::stats_decklists`).
+fn lists_of(records: &[GameRecord], patch: &str) -> Vec<ListTotal> {
+    let mut totals = StatsTotals::default();
+    for record in records {
+        totals.fold(record, false);
+    }
+    totals.decklists(patch)
 }
 
 #[test]
@@ -254,9 +264,9 @@ async fn r1454_decks_prefer_human_bo1_lists_legal() {
 
     for k in 0..10 {
         let seed = format!("decks-{k}");
-        let decks = draw_decks(&seed, &records, &app.catalog, 0.0);
+        let decks = draw_decks(&seed, &lists_of(&records, &patch), &app.catalog, 0.0);
         assert_eq!(
-            draw_decks(&seed, &records, &app.catalog, 0.0),
+            draw_decks(&seed, &lists_of(&records, &patch), &app.catalog, 0.0),
             decks,
             "the same seed deals the same decks"
         );
@@ -339,7 +349,12 @@ async fn r1454_decks_skip_a_list_no_player_could_queue() {
     records.push(record("live-good", "live", "bo1", "human", &legal, &patch));
 
     for k in 0..10 {
-        let decks = draw_decks(&format!("decks-legal-{k}"), &records, &app.catalog, 0.0);
+        let decks = draw_decks(
+            &format!("decks-legal-{k}"),
+            &lists_of(&records, &patch),
+            &app.catalog,
+            0.0,
+        );
         assert!(
             (BOT_DECKS_MIN..=BOT_DECKS_MAX).contains(&decks.len()),
             "{} decks",
@@ -708,7 +723,12 @@ async fn r750000_ranked_lists_deal_in_the_order_of_the_bots_strength() {
     // The strongest bot takes the best list first and the weakest the worst; the thin list follows.
     for (strength, first, second) in [(1.0, &best, &worse), (0.0, &worse, &best)] {
         for k in 0..10 {
-            let decks = draw_decks(&format!("ranked-{k}"), &records, &app.catalog, strength);
+            let decks = draw_decks(
+                &format!("ranked-{k}"),
+                &lists_of(&records, &patch),
+                &app.catalog,
+                strength,
+            );
             assert_eq!(&decks[0].cards, first, "strength {strength}, seed {k}");
             assert_eq!(&decks[1].cards, second, "strength {strength}, seed {k}");
             if let Some(third) = decks.get(2) {
@@ -732,7 +752,12 @@ async fn r750000_below_threshold_lists_fall_back_to_the_shuffle() {
     records.extend(games_of("second", &second, &patch, 0, 19));
     let mut led: IndexSet<Vec<String>> = IndexSet::new();
     for k in 0..10 {
-        let decks = draw_decks(&format!("unranked-{k}"), &records, &app.catalog, 1.0);
+        let decks = draw_decks(
+            &format!("unranked-{k}"),
+            &lists_of(&records, &patch),
+            &app.catalog,
+            1.0,
+        );
         assert!(decks[..2].iter().any(|deck| deck.cards == first), "seed {k}");
         assert!(decks[..2].iter().any(|deck| deck.cards == second), "seed {k}");
         led.insert(decks[0].cards.clone());
