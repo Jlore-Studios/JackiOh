@@ -94,6 +94,9 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit?.grants !== undefined && unit.grants.length > 0) inPlay.grants = unit.grants;
   // R849000: the inspect notes spell it out.
   if (unit?.attackReason !== undefined) inPlay.attackReason = unit.attackReason;
+  // R979000: a card in hand that cannot be played says why. Only a hand card carries it (the
+  // engine sets it nowhere else), so every other card reads as before.
+  if (unit === undefined && card.playReason !== undefined) inPlay.playReason = card.playReason;
   // B5 E33, R404: a quest line; B5 E14, R399: the Spell text a copier has, with the numbers it reads.
   if (card.quest !== undefined) inPlay.quest = card.quest;
   const copies = card.copies;

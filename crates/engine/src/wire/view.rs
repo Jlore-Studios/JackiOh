@@ -89,6 +89,14 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub countered_on_play: Option<bool>,
+    /// R979000, §10.8: why the viewer's own hand card cannot be played now
+    /// (`play_choices::why_hand_card_unplayable`), as `UnitView.attack_reason` (R849000) is for an
+    /// attack. Set only on the viewer's own hand card while they may act (their turn, the main
+    /// phase, no prompt open) and `play_actions_for` lists no play of it. Absent otherwise, never
+    /// `false` or empty, so a view with no unplayable card is byte for byte what it was.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub play_reason: Option<String>,
     /// #992, R90, §10.8: `legalActions` lists plays of this card in the viewer's own hand and R90's bound
     /// dropped some of the choice combinations they are built from, so the list is a slice whose first
     /// plays offer every pick. Present, and `true`, only then; absent otherwise, never `false`, never on
