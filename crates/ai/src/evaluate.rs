@@ -13,10 +13,11 @@
 
 use jackioh_engine::config::{DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
 use jackioh_engine::{
-    AttackTarget, CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
+    AttackTarget, CardInstance, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
     active_brittle_count, active_units_of, animated_kind_of, attack_restriction, attacks_per_turn,
-    cannot_attack, card_keywords, credit_lapsing, effective_life, find_def, has_keyword, hero_armor_of,
-    owed_mana_of, own_cost, pierces, query_cost, reset_instance, subsystems, takes_strike_back, unit_view,
+    backrow_is_public, cannot_attack, card_keywords, credit_lapsing, effective_life, find_def, has_keyword,
+    hero_armor_of, owed_mana_of, own_cost, pierces, query_cost, reset_instance, subsystems,
+    takes_strike_back, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -41,20 +42,10 @@ fn hero_value(health: i32, start: i32, w: &EvalWeights) -> f64 {
     w.hero_health * (f64::from(health) * f64::from(start)).sqrt()
 }
 
-/// §10.8, R33: whether `seat` may read this backrow card. A placeholder never is.
+/// §10.8, R33, R686: whether `seat` may read this backrow card, by the rule `view_for` reads
+/// (`backrow_is_public`). A placeholder never is, and is asked first: the rule reads the definition.
 fn readable_by(state: &GameState, card: &CardInstance, seat: PlayerId) -> bool {
-    let Some(_def) = find_def(Some(state), &card.def_id) else {
-        return false;
-    };
-    // ME-ALTPLAY, R1046: a set Unit or Spell reads as a Field Trap or Trap.
-    let face = jackioh_engine::faces::card_type_of(state, card);
-    if face != CardType::Trap && face != CardType::FieldTrap {
-        return true;
-    }
-    if card.face_up == Some(true) {
-        return true;
-    }
-    card.controller == seat
+    find_def(Some(state), &card.def_id).is_some() && backrow_is_public(state, card, seat)
 }
 
 /// B3.3: the share of itself a card keeps under its Brittle count (`active_brittle_count`), 1 with none.
