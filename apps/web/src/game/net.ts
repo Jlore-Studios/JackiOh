@@ -110,20 +110,20 @@ export const RECONNECT_JITTER = 0.25;
  * the browser answers without telling the page. A socket that is still there but quiet (a long
  * turn) is no reason to drop it; this is only the point past which it is worth asking.
  */
-const SILENT_SOCKET_MS = WS_PING_INTERVAL_SECONDS * 1000;
+export const SILENT_SOCKET_MS = WS_PING_INTERVAL_SECONDS * 1000;
 
 /**
  * R1441: how long a woken page waits for the answer to its probe (a `hello`, which the actor
  * answers with a full view) before it replaces the socket.
  */
-const WAKE_PROBE_MS = 5000;
+export const WAKE_PROBE_MS = 5000;
 
 export type Timers = {
   setTimeout: (handler: () => void, ms: number) => unknown;
   clearTimeout: (handle: unknown) => void;
 };
 
-const defaultTimers: Timers = {
+export const defaultTimers: Timers = {
   setTimeout: (handler, ms) => setTimeout(handler, ms),
   clearTimeout: (handle) => {
     clearTimeout(handle as ReturnType<typeof setTimeout>);
@@ -135,7 +135,7 @@ const defaultTimers: Timers = {
  * network comes back (as `settings/accountSync.ts` listens for). Returns the function that stops
  * listening.
  */
-function pageWake(handler: () => void): () => void {
+export function pageWake(handler: () => void): () => void {
   if (typeof window === "undefined" || typeof document === "undefined") return () => undefined;
   const onVisibility = (): void => {
     if (document.visibilityState === "visible") handler();
