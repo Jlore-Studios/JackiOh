@@ -11,10 +11,11 @@
 //  - Per-row sample floor (20 games): displays "not enough games" below threshold.
 //  - URL search params for shareable views.
 //  - Card drill-down modal showing CardFace, patch history, turn curve, and co-played synergy.
+//  - Players tab: the search asks the server a pause after the typing, one page of the server's limit at a time.
 
 import { Fragment, useCallback, useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
-import type { CardDefs } from "@jackioh/shared";
+import { SHIPPED_SETS, type CardDefs } from "@jackioh/shared";
 import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
 import { chineseName, drawnInChinese, readerName } from "../cards/chinese.ts";
@@ -31,7 +32,7 @@ import {
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
-import { CARD_STATS_MIN_SAMPLE } from "../stats/config.ts";
+import { CARD_STATS_MIN_SAMPLE, PLAYER_SEARCH_DEBOUNCE_MS } from "../stats/config.ts";
 import { winPercent } from "../stats/model.ts";
 import { usePlayerStats } from "../stats/store.ts";
 import { statsTestid } from "../stats/testids.ts";
@@ -104,6 +105,10 @@ export default function StatsRoute(): ReactElement {
   const [playersError, setPlayersError] = useState(false);
   const [playersList, setPlayersList] = useState<PublicPlayerSummary[]>([]);
   const [playerSearch, setPlayerSearch] = useState("");
+  // The search the players tab last asked for (the box's text, a pause after its last change) and its page.
+  const [playerQuery, setPlayerQuery] = useState("");
+  const [playerPage, setPlayerPage] = useState(1);
+  const [playersHasMore, setPlayersHasMore] = useState(false);
 
   // Drill-down data
   const [drillDownLoading, setDrillDownLoading] = useState(false);
@@ -166,18 +171,21 @@ export default function StatsRoute(): ReactElement {
     return fetchCardStats();
   }, [fetchCardStats]);
 
-  // Fetch players
-  const fetchPlayers = useCallback((query?: string) => {
+  // Fetch players: one page of the server's `limit` rows. The response carries no total, so a full page may have another after it.
+  const fetchPlayers = useCallback((query: string, page: number) => {
     setPlayersLoading(true);
     setPlayersError(false);
     const controller = new AbortController();
 
-    getPublicPlayers({ search: query, signal: controller.signal })
+    getPublicPlayers({ search: query, page: page > 1 ? page : undefined, signal: controller.signal })
       .then((res) => {
+        if (controller.signal.aborted) return;
         setPlayersList(res.players);
+        setPlayersHasMore(res.players.length >= res.limit);
         setPlayersLoading(false);
       })
       .catch(() => {
+        if (controller.signal.aborted) return;
         setPlayersError(true);
         setPlayersLoading(false);
       });
@@ -185,11 +193,22 @@ export default function StatsRoute(): ReactElement {
     return () => controller.abort();
   }, []);
 
+  // One request per pause in the typing, not one per keystroke: the box's text becomes the query
+  // `PLAYER_SEARCH_DEBOUNCE_MS` after its last change, from page 1.
+  useEffect(() => {
+    if (playerSearch === playerQuery) return;
+    const timer = window.setTimeout(() => {
+      setPlayerQuery(playerSearch);
+      setPlayerPage(1);
+    }, PLAYER_SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [playerSearch, playerQuery]);
+
   useEffect(() => {
     if (tab === "players") {
-      return fetchPlayers(playerSearch);
+      return fetchPlayers(playerQuery, playerPage);
     }
-  }, [tab, playerSearch, fetchPlayers]);
+  }, [tab, playerQuery, playerPage, fetchPlayers]);
 
   // Fetch card drill-down
   useEffect(() => {
@@ -412,8 +431,12 @@ export default function StatsRoute(): ReactElement {
                   aria-label={t("Filter by set")}
                 >
                   <option value="">{t("All sets")}</option>
-                  <option value="core">{t("Core")}</option>
-                  <option value="classic">{t("Classic+")}</option>
+                  {/* R1420: every set that ships, and only those. The server compares the value with each card's set, case folded. */}
+                  {SHIPPED_SETS.map((set) => (
+                    <option key={set} value={set.toLowerCase()}>
+                      {t(set)}
+                    </option>
+                  ))}
                 </select>
 
                 <select
@@ -749,7 +772,7 @@ export default function StatsRoute(): ReactElement {
             ) : playersError ? (
               <div className="stats-error">
                 <p>{t("Failed to load player stats.")}</p>
-                <button type="button" className="stats-retry-btn" onClick={() => fetchPlayers(playerSearch)}>
+                <button type="button" className="stats-retry-btn" onClick={() => fetchPlayers(playerQuery, playerPage)}>
                   {t("Retry")}
                 </button>
               </div>
@@ -790,6 +813,30 @@ export default function StatsRoute(): ReactElement {
                     })}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {!playersLoading && !playersError && (playerPage > 1 || playersHasMore) && (
+              <div className="stats-pager" data-testid={statsTestid.playersPager}>
+                <button
+                  type="button"
+                  className="stats-pager-btn"
+                  data-testid={statsTestid.playersPrev}
+                  disabled={playerPage <= 1}
+                  onClick={() => setPlayerPage((page) => page - 1)}
+                >
+                  {t("Previous page")}
+                </button>
+                <span className="stats-pager-page">{t("Page {page}", { page: playerPage })}</span>
+                <button
+                  type="button"
+                  className="stats-pager-btn"
+                  data-testid={statsTestid.playersNext}
+                  disabled={!playersHasMore}
+                  onClick={() => setPlayerPage((page) => page + 1)}
+                >
+                  {t("Next page")}
+                </button>
               </div>
             )}
           </section>

@@ -411,6 +411,34 @@
   cursor: pointer;
 }
 
+.stats-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.stats-pager-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--line-bright, #454d66);
+  background: rgba(18, 22, 34, 0.8);
+  color: var(--text, #fff);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.stats-pager-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.stats-pager-page {
+  font-size: 13px;
+  color: var(--text-dim, #9aa1b8);
+}
+
 /* Modal drill-down */
 .stats-modal-scrim {
   position: fixed;

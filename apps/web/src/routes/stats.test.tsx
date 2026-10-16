@@ -1,11 +1,13 @@
 // Tests for the public statistics page (SPEC §9.11, R654).
 
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { SHIPPED_SETS } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { paths } from "../net/navigate.ts";
 import { SESSION_STORAGE_KEY } from "../net/session.ts";
+import { PLAYER_SEARCH_DEBOUNCE_MS } from "../stats/config.ts";
 import { recordGame, resetPlayerStats } from "../stats/store.ts";
 import { statsTestid } from "../stats/testids.ts";
 import { SiteFooter, siteFooterTestid } from "./SiteFooter.tsx";
@@ -303,6 +305,102 @@ describe("R654 public statistics route", () => {
     await waitFor(() => {
       expect(fetchMock.mock.calls.some(([input]) => String(input).includes("/api/stats/players?search=max"))).toBe(true);
     });
+  });
+
+  it("R654 the set filter lists every shipped set and asks the server for each one's own value", async () => {
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+
+    const select = screen.getByLabelText("Filter by set") as HTMLSelectElement;
+    expect([...select.options].map((option) => [option.value, option.textContent])).toEqual([
+      ["", "All sets"],
+      ...SHIPPED_SETS.map((set) => [set.toLowerCase(), set]),
+    ]);
+
+    const asked = (): (string | null)[] =>
+      vi
+        .mocked(fetch)
+        .mock.calls.map(([input]) => new URL(String(input), window.location.origin))
+        .filter((url) => url.pathname === "/api/stats/cards")
+        .map((url) => url.searchParams.get("set"));
+    for (const set of SHIPPED_SETS) {
+      fireEvent.change(select, { target: { value: set.toLowerCase() } });
+      await waitFor(() => expect(asked()).toContain(set.toLowerCase()));
+    }
+  });
+
+  it("R654 the player search asks the server once per pause in the typing, not once per keystroke", async () => {
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    await user.click(await screen.findByTestId(statsTestid.tabPlayers, undefined, SLOW));
+    await screen.findByTestId(statsTestid.playersTable, undefined, SLOW);
+
+    const searched = (): (string | null)[] =>
+      vi
+        .mocked(fetch)
+        .mock.calls.map(([input]) => new URL(String(input), window.location.origin))
+        .filter((url) => url.pathname === "/api/stats/players" && url.searchParams.has("search"))
+        .map((url) => url.searchParams.get("search"));
+    const box = screen.getByPlaceholderText("Search player by username…");
+    for (const text of ["a", "al", "ali", "alic", "alice"]) {
+      fireEvent.change(box, { target: { value: text } });
+    }
+    expect(searched()).toEqual([]);
+
+    await waitFor(() => expect(searched()).toEqual(["alice"]));
+    await act(() => new Promise((resolve) => setTimeout(resolve, PLAYER_SEARCH_DEBOUNCE_MS)));
+    expect(searched()).toEqual(["alice"]);
+  });
+
+  it("R654 the players tab pages: a full page offers the next, which asks the server for page 2, and Previous goes back", async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = new URL(String(input), window.location.origin);
+      if (url.pathname === "/api/stats/players") {
+        const page = Number(url.searchParams.get("page") ?? "1");
+        const players =
+          page === 1
+            ? [
+                { ...MOCK_PLAYERS.players[0], profileId: "profile-alpha", username: "AlphaPlayer" },
+                { ...MOCK_PLAYERS.players[0], profileId: "profile-beta", username: "BetaPlayer" },
+              ]
+            : [{ ...MOCK_PLAYERS.players[0], profileId: "profile-gamma", username: "GammaPlayer" }];
+        return Promise.resolve(new Response(JSON.stringify({ players, page, limit: 2 }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify(MOCK_CARD_STATS_PROVISIONAL), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+
+    const asked = (): { search: string | null; page: string | null }[] =>
+      fetchMock.mock.calls
+        .map(([input]) => new URL(String(input), window.location.origin))
+        .filter((url) => url.pathname === "/api/stats/players")
+        .map((url) => ({ search: url.searchParams.get("search"), page: url.searchParams.get("page") }));
+
+    await user.click(await screen.findByTestId(statsTestid.tabPlayers, undefined, SLOW));
+    await screen.findByText("BetaPlayer", undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.playersPager)).toHaveTextContent("Page 1");
+    expect(screen.getByTestId(statsTestid.playersPrev)).toBeDisabled();
+    expect(screen.getByTestId(statsTestid.playersNext)).toBeEnabled();
+
+    await user.click(screen.getByTestId(statsTestid.playersNext));
+    await screen.findByText("GammaPlayer", undefined, SLOW);
+    expect(screen.queryByText("AlphaPlayer")).not.toBeInTheDocument();
+    expect(asked().some((call) => call.page === "2")).toBe(true);
+    expect(screen.getByTestId(statsTestid.playersPager)).toHaveTextContent("Page 2");
+    expect(screen.getByTestId(statsTestid.playersNext)).toBeDisabled();
+
+    await user.click(screen.getByTestId(statsTestid.playersPrev));
+    await screen.findByText("AlphaPlayer", undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.playersPager)).toHaveTextContent("Page 1");
+
+    // A new search starts again at page 1.
+    await user.click(screen.getByTestId(statsTestid.playersNext));
+    await screen.findByText("GammaPlayer", undefined, SLOW);
+    fireEvent.change(screen.getByPlaceholderText("Search player by username…"), { target: { value: "alp" } });
+    await waitFor(() => expect(asked()).toContainEqual({ search: "alp", page: null }));
+    expect(asked()).not.toContainEqual({ search: "alp", page: "2" });
   });
 
   it("R654 fallback button switches to previous patch live data when available", async () => {
