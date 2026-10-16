@@ -13,13 +13,33 @@
 //! Telemetry never costs a result: it runs after the result's transaction and every failure is logged
 //! and swallowed. It is idempotent (keyed by match id; the store refuses a second), so a result
 //! written twice files the game once. The reaper's ceiling draws (R112) leave none: no game to read.
+//!
+//! R1044000: the store folds each record it writes into the totals every card figure is read from,
+//! in the same transaction. `fold_pending` folds the records written before the totals existed.
 
 use jackioh_engine::{FoldArgs, GameMode, GameRecord, GameSource, PerPlayer, Pilot};
 use serde_json::{Map, Value, json};
 
 use crate::actor::engine;
 use crate::app::App;
-use crate::db::store::{MatchRow, ProfileKind, QueueMode};
+use crate::config::STATS_FOLD_BATCH_RECORDS;
+use crate::db::store::{Db, MatchRow, ProfileKind, QueueMode, StoreError};
+
+/// R1044000: folds every record not yet in the totals, `STATS_FOLD_BATCH_RECORDS` to a transaction,
+/// and answers how many it folded. `jackioh-server stats-fold` runs it once after migration 0041,
+/// and the retention loop before each purge, so a purge never meets a record it may not empty.
+pub async fn fold_pending(db: &Db) -> Result<usize, StoreError> {
+    let mut folded = 0;
+    loop {
+        let mut tx = db.begin(None).await?;
+        let batch = tx.game_records_fold_pending(STATS_FOLD_BATCH_RECORDS).await?;
+        tx.commit().await?;
+        folded += batch;
+        if batch < STATS_FOLD_BATCH_RECORDS {
+            return Ok(folded);
+        }
+    }
+}
 
 /// An error as the sentence a log line carries.
 fn message_of(error: impl std::fmt::Display) -> String {

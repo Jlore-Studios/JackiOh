@@ -141,8 +141,8 @@ placeholders (`app::load_server_env`).
 | `LADDER_BOTS` | no | `on` seats a ladder bot against a ranked ticket of any mode left alone past its fallback time (a Conquest ticket's in a series, R641000), and keeps the bot pool (R1453, R1454, R1452); off unless `on` (unset or `off`), and any other value refuses the boot. The bots decide in this process, so turning it on wants a host with room for the AI's search, such as a paid Render instance |
 
 `mint-code`, `moderate` and `seed-accounts` read the same environment (`seed-accounts` also
-`SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import`, `stats-export`,
-`balance-watch` (without `--file`), `timing-backfill` and `timing-fit` read `DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
+`SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import`, `stats-fold`,
+`stats-export`, `balance-watch` (without `--file`), `timing-backfill` and `timing-fit` read `DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
 `PUBLIC_ENV_VARS` and `SERVER_ONLY_ENV_VARS` are disjoint by design.
 
 ## HTTP surface
@@ -261,7 +261,8 @@ What the actor holds, each with a test named after it:
 
 After a result commits, `api::results` files the game in `game_records` (`api::game_records`, the
 engine's `summarize_game`) under the match's mode and the compiled-in newest patch, as `source:
-"live"`; a failure is logged as `game.record.failed` and the result stands.
+"live"`, and the store folds it into the card statistics' totals in the same transaction (R1044000);
+a failure is logged as `game.record.failed` and the result stands.
 
 ### The co-op socket (§13)
 
@@ -305,7 +306,7 @@ Both players' own match sockets get `watchers {count}` when the count changes. A
 gets the same `error forbidden` and close the moment the friend turns watching off (`PUT
 /api/settings`), or the two unfriend or either blocks the other (`MatchActor::revoke_watchers`).
 
-## Card statistics (§9.11, R376–R378)
+## Card statistics (§9.11, R376–R378, R1044000, R1044001)
 
 ```
 target/release/jackioh-server stats-cards                                   # live games of every mode and patch, their human seats
@@ -314,9 +315,19 @@ target/release/jackioh-server stats-cards --card=core-002 --json
 cargo jackioh stats --patch v0.2.5 --out v0.2.5-dev.jsonl                   # a pre-release AI run
 target/release/jackioh-server stats-import v0.2.5-dev.jsonl                 # loaded; refused whole unless every line is a dev record
 target/release/jackioh-server stats-cards --source=dev --patch=v0.2.5       # read beside the same patch's live games
-target/release/jackioh-server stats-export --out=live.jsonl                 # the records stats-cards reads, a line each, in id order
+target/release/jackioh-server stats-export --out=live.jsonl                 # the records still held in full, a line each, in id order
 cargo jackioh stats report live.jsonl --json                                # the same figures with no database
+target/release/jackioh-server stats-fold                                    # fold the records written before migration 0041; the retention loop does it too
 ```
+
+Every figure, `stats-cards`, `balance-watch`, the public routes and the ladder bots' decks, reads the
+totals each record is folded into as it is written (migration 0041: `record_totals`, `card_totals`,
+`decklist_totals`; `Tx::stats_totals_load`, `Tx::stats_decklists`), by the engine's `StatsTotals`, the
+counting a record file is read with, so a report is what the records gave. `stats-import` writes and
+folds `STATS_FOLD_BATCH_RECORDS` (500) records to a transaction. A record written before migration
+0041 is not folded until the retention loop folds it at boot or `stats-fold` does (R1044000). Once
+folded, a record's detail is emptied `GAME_RECORD_RAW_RETENTION_DAYS` (7) after it was written by the
+retention purge; its row and id stay, so the same game is never written or counted again (R1044001).
 
 `stats-cards` takes `--source=live|dev|all` (live unless told otherwise), `--mode=bo1|bo3|random`,
 `--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`. With no `--pilot` it
@@ -327,8 +338,9 @@ The training box's gather lane (`training/README.md`, The gather lane) runs `car
 end under its own series and loads each finished day with `stats-import`, so `stats-cards --source=dev
 --patch=<version>` reads its games.
 
-`stats-export` writes the records a `stats-cards` call with the same `--source`, `--mode` and `--patch` reads,
-one `GameRecord` (R376) per line in id order, to the file `--out=<file>` names (required, resolved against
+`stats-export` writes the records a `stats-cards` call with the same `--source`, `--mode` and `--patch` reads
+whose detail is still held (the last `GAME_RECORD_RAW_RETENTION_DAYS`, R1044001), one `GameRecord` (R376)
+per line in id order, to the file `--out=<file>` names (required, resolved against
 the directory the command was started in, an existing file replaced). Every seat of every game is in the file,
 so `--pilot` and `--card` are not its flags: they are the reader's. The file is what `cargo jackioh stats --out`
 writes, so `cargo jackioh stats report` reads it, `analysis/` loads it and `stats-import` takes it when it holds
@@ -573,6 +585,14 @@ the server's alone, as a 1v1 match's are: a room's host and guest may read it (b
 choices), and no client role reads a co-op match or its log (no grant, no policy). The retention
 loop deletes a co-op match's log `MATCH_ACTION_RETENTION_DAYS` after the match ended, as a 1v1
 match's (`duos::purge_expired_logs`); the match row and its result stay.
+
+Migration 0041 adds the card statistics' totals (R1044000): `record_totals`, `card_totals` and
+`decklist_totals`, server-only like `game_records` (RLS on, no policy, no grant), and
+`game_records.folded`. A record's `record` may now be null, and only once it is folded. The retention
+loop first folds any record not yet folded (`api::game_records::fold_pending`), then
+`app.purge_expired_rows`' fourth cutoff empties the detail of each folded record written more than
+`GAME_RECORD_RAW_RETENTION_DAYS` ago (R1044001). The store folds under a transaction-level advisory
+lock per patch and source, so two folds into the same rows never interleave.
 
 ## Tests
 
