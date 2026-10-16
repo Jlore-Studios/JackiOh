@@ -210,8 +210,8 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
 /// position ATK, no "Can't attack" and no E35 status barring attacks, sorted ascending by attack.
 /// Taunt units on the defending side soak up the smallest attackers they bind first, one §4.4 hit at
 /// a time (`damage_past_taunts`). Each remaining attacker's attack goes through
-/// `subsystems::projected_hero_damage` (armor and the Anti-oneshot cap, per hit), and the results are
-/// summed.
+/// `subsystems::projected_hero_damage` (armor, which a Pierce hit skips (R346), and the Anti-oneshot
+/// cap, per hit), and the results are summed.
 pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
     let mut attacks: Vec<(&CardInstance, i32)> = Vec::new();
     for unit in active_units_of(state, attacker) {
@@ -246,7 +246,8 @@ const REBORN_HEALTH: i32 = 1;
 /// dealt (step 7); and what a Trample hit lands beyond the Taunt's health reaches the hero (step 9,
 /// R63). A Taunt its attackers cannot destroy holds them all, and a destroyed Reborn Taunt comes back
 /// and binds the attackers left (§4.5 step 4, `reborn_body`). Lane strike (R94), combat-only bonuses
-/// (R1120) and Cleave stay out. Every remaining hit goes through `subsystems::projected_hero_damage`.
+/// (R1120) and Cleave stay out. Every remaining hit goes through `subsystems::projected_hero_damage`
+/// with its attacker's Pierce (R346).
 pub fn damage_past_taunts(state: &GameState, defender: PlayerId, attacks: &[(&CardInstance, i32)]) -> i32 {
     let mut free: Vec<(&CardInstance, i32)> = attacks.to_vec();
     free.sort_by_key(|(_, attack)| *attack);
@@ -314,8 +315,9 @@ pub fn damage_past_taunts(state: &GameState, defender: PlayerId, attacks: &[(&Ca
         }
     }
 
-    for (_, hit) in &free {
-        total += subsystems::projected_hero_damage(state, defender, *hit, false);
+    for (attacker, hit) in &free {
+        let pierce = pierces(state, Some(attacker), None);
+        total += subsystems::projected_hero_damage(state, defender, *hit, pierce);
     }
     total
 }
