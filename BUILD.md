@@ -423,7 +423,7 @@ Acceptance: `pnpm test --filter cards` runs a test file per catalog entry (111 f
 | 47 | Fig of Life | 1 | Heals a unit up to max or the hero without cap (R19); radiant 50 |
 | 48 | 5pek Controller | 1 | Every unit switches, exertion untouched (R20), Spikey Pillow stays ATK; radiant enemy-only mode |
 | 49 | Snom Bunny Mind Control | 1 | Steal placement per R15; radiant sets the flag on the stolen card |
-| 50 | K-Pop Fanatic | 2 | Steal fires at your next start of turn even if it died (R76); fizzles if the target left; radiant Divine Shield, and the stolen card becomes Radiant only when the steal lands (R282) |
+| 50 | K-Pop Fanatic | 2 | Allure (R1045000): the target carries the pink `allure` mark and is stolen at your next start of turn even if K-Pop Fanatic died (R76), or destroyed with no open zone in its row, an Indestructible one staying; fizzles if the target left; radiant Divine Shield, and the stolen card becomes Radiant only when the steal lands (R282) |
 | 51 | KY's Private Tutor | 2 | Only types and brackets with a match offered; 3 random matches revealed; no match → Notebook; Field Trap counts as Trap; radiant runs twice |
 | 51.1 | KY's Empty Notebook | 1 | Draw 1; radiant 2; absent from every random pool |
 | 52 | Silly Silas | 3 | Rotate both rings either direction, control changes on crossing, damage travels, Silas moves too; a Locked destination takes the card (R831000); radiant bounces the cards that would cross to the opponent to their controller's hand at cost 0, while the opponent's crossing cards still change control (R14, R747) |

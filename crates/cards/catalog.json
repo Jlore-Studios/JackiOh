@@ -1571,7 +1571,7 @@
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "Cry: Choose an enemy permanent. At the start of your next turn, steal it."
+      "text": "Cry: Allure an enemy permanent."
     },
     "radiant": {
       "attack": 2,
@@ -1581,7 +1581,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Divine Shield\nCry: Choose an enemy permanent. At the start of your next turn, steal it and make it Radiant."
+      "text": "Divine Shield\nCry: Allure an enemy permanent. Make it Radiant when you steal it."
     }
   },
   "core-051": {

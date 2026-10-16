@@ -15,6 +15,7 @@ use jackioh_engine::{CardDef, CardDefs, CardScripts, ShippedCatalog};
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
+use crate::scripts::core::c050_k_pop_fanatic;
 use crate::scripts::meditative::{c097_2_wishing_well, c097_8_prison};
 use crate::{CATALOG, REGISTRY, catalog_json};
 
@@ -25,7 +26,8 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// previous kept script, folds under the kept one; every other card runs the build's own. The first
 /// kept are #1034's: Wishing Well and Prison rolled without their controller's Luck (R987) through
 /// v0.3.7b. A card patch before them that changed a script's behaviour kept none, and a game it alters
-/// is refused by its final hash.
+/// is refused by its final hash. K-Pop Fanatic's plain steal is kept beside them: it marked its target
+/// purple and left one it had no room for with the opponent through v0.3.7b, before it Allured (R1045000).
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
         c097_2_wishing_well::ID,
@@ -33,6 +35,11 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c097_2_wishing_well::script_v0_3_7b,
     ),
     (c097_8_prison::ID, "v0.3.7b", c097_8_prison::script_v0_3_7b),
+    (
+        c050_k_pop_fanatic::ID,
+        "v0.3.7b",
+        c050_k_pop_fanatic::script_v0_3_7b,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
