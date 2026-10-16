@@ -14872,9 +14872,9 @@
     ],
     "idle_since": "2026-10-16T14:04:23Z",
     "last_run": "2026-10-16T14:04:23Z",
-    "provider": "claude-3",
+    "provider": null,
     "requested": false,
-    "run_id": "38912727310",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
