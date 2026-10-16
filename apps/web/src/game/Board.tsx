@@ -4,7 +4,8 @@
 // `viewFor` has already oriented the view, so the DOM speaks in "you" and "opponent" and the
 // board never has to know which seat is which. Nothing here decides anything: every clickable
 // element takes `data-legal` from `props.highlight.legal` (built by `actions.ts` from the
-// engine's `legalActions`) and fires `props.onClick` only when that says true. With the default
+// engine's `legalActions`) and fires `props.onClick` only when that says true (or, R979000, to
+// show the reason a hand card of yours cannot be played, which sends nothing). With the default
 // `NO_HIGHLIGHT` the whole board is greyed out, which is the honest default for "the client has
 // not been told what is legal".
 //

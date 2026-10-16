@@ -145,8 +145,9 @@ export type PlayNeed =
   | { kind: "mode"; min: number; max: number; options: string[] };
 
 /**
- * What a click comes to: the next interaction, the action to send, if one is ready, and (R849000) a
- * `notice`, the engine's own words for why a click on your unit did nothing. A notice sends nothing.
+ * What a click comes to: the next interaction, the action to send, if one is ready, and (R849000,
+ * R979000) a `notice`, the engine's own words for why a click on your unit or your hand card did
+ * nothing. A notice sends nothing.
  */
 export type ClickResult = { interaction: Interaction; action?: ActionBody; notice?: string };
 
@@ -854,10 +855,24 @@ export function highlightFor(
 // The click reducer.
 // ---------------------------------------------------------------------------------------------
 
-/** Picks a card up to play it (from the hand, or from the graveyard pile's "Play", B5 E11). */
-function startPlay(legal: readonly ActionBody[], interaction: Interaction, instanceId: string): ClickResult {
+/**
+ * Picks a card up to play it (from the hand, or from the graveyard pile's "Play", B5 E11).
+ * R979000: `legal` offers a card in hand no play; say why in the engine's words where the view
+ * gives them (`CardView.playReason`, on the viewer's own hand cards only). Nothing is sent.
+ */
+function startPlay(
+  legal: readonly ActionBody[],
+  interaction: Interaction,
+  instanceId: string,
+  view: PlayerView,
+): ClickResult {
   const candidates = playsFor(legal, instanceId);
-  if (candidates.length === 0) return { interaction };
+  if (candidates.length === 0) {
+    const reason = Array.isArray(view.you.hand)
+      ? view.you.hand.find((card) => card.instanceId === instanceId)?.playReason
+      : undefined;
+    return reason === undefined ? { interaction } : { interaction, notice: reason };
+  }
   return settle({ stage: "playing", instanceId, candidates, picked: {} });
 }
 
@@ -908,12 +923,12 @@ export function onClickTarget(
         const asTarget = narrowByTarget(interaction, { pick: "instance", instanceId: target.instanceId });
         if (asTarget !== null) return settle(asTarget);
       }
-      return startPlay(legal, interaction, target.instanceId);
+      return startPlay(legal, interaction, target.instanceId, view);
     }
 
     case "graveyard": {
       if (interaction.stage === "playing" && interaction.instanceId === target.instanceId) return { interaction: IDLE };
-      return startPlay(legal, interaction, target.instanceId);
+      return startPlay(legal, interaction, target.instanceId, view);
     }
 
     case "activate":
