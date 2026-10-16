@@ -590,6 +590,7 @@
      by that much, the hand sits level with the wordmark and the buttons instead of sagging below
      them, and it is dealt a little larger to fill its half of the table. */
   .landing .landing-fan {
+    /* The widest fan card, FAN_CARD_MAX_PX (landingFan.ts): R1017002's text limit is measured at it. */
     --fan-card-w: clamp(104px, 11.5vw, 158px);
     align-self: center;
     translate: 0 -10%;
