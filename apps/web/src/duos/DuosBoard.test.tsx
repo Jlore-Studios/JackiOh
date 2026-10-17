@@ -14,7 +14,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import type { PlayerView } from "@jackioh/shared";
+import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { PING_SHOW_MS } from "@jackioh/server-config";
 
 import { closeInspect } from "../cards/index.ts";
@@ -22,7 +22,7 @@ import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { testid } from "../game/contract.ts";
 import type { PingKind, PingTarget } from "../net/duos.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
-import { baseView, card, emptySide, unit } from "../test/fixtures.ts";
+import { baseView, card, emptySide, unit, withEvents } from "../test/fixtures.ts";
 import { must, showsNumber } from "../test/stubServer.ts";
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
@@ -669,5 +669,42 @@ describe("#965 the replay door and the board's replay mode", () => {
     flipPortal();
     expect(screen.getByTestId(testid.handCard("t1"))).toBeInTheDocument();
     expect(screen.queryByTestId(testid.handCard("h1"))).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// #1146: the team's result waits for the own duel's last burst
+// ---------------------------------------------------------------------------------------------
+
+describe("#1146 the team result waits for the own duel's lethal burst", () => {
+  const START: GameEvent[] = [{ type: "turnStarted", player: "p1", turn: 5 }];
+  const HIT: GameEvent = { type: "damage", sourceId: null, targetId: "hero-p1", amount: 3, combat: false };
+  const LETHAL: DuosView["result"] = { outcome: "win", winner: "a", reason: "duelResult" };
+
+  it("#1146 holds the panel while the burst plays, and opens it once the board settles", async () => {
+    const board = renderBoard({ view: { ...duosView(), own: withEvents(ownDuel(), START) } });
+    expect(screen.queryByTestId("duos-result")).toBeNull();
+
+    board.rerender({
+      view: {
+        ...duosView(),
+        own: withEvents(ownDuel({ result: { winner: "p1", reason: "hero-death" } }), [
+          ...START,
+          HIT,
+          { type: "gameOver", winner: "p1", reason: "hero-death" },
+        ]),
+        result: LETHAL,
+      },
+    });
+    // The board's own marks reach the panel through a MutationObserver: let its callback run.
+    await act(async () => {});
+    expect(screen.getByTestId("animation-queue")).toBeInTheDocument();
+    expect(screen.queryByTestId("duos-result")).toBeNull();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    expect(screen.queryByTestId("animation-queue")).toBeNull();
+    expect(screen.getByTestId("duos-result")).toBeInTheDocument();
   });
 });

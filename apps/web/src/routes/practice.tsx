@@ -416,6 +416,28 @@ function useBoardBusy(root: HTMLElement | null, controller: PracticeController |
 }
 
 /**
+ * Whether the board under `root` is still animating: any element carrying `data-animating`, the
+ * one mark `useBoardBusy` above reads. A voice line (`data-speaking`) is left out on purpose, so the
+ * victory line never holds the result dialog back.
+ */
+export function useBoardAnimating(root: HTMLElement | null): boolean {
+  const [animating, setAnimating] = useState(false);
+  useEffect(() => {
+    if (root === null || typeof MutationObserver !== "function") return;
+    const report = (): void => {
+      setAnimating(root.querySelector("[data-animating]") !== null);
+    };
+    const observer = new MutationObserver(report);
+    observer.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ["data-animating"] });
+    report();
+    return () => {
+      observer.disconnect();
+    };
+  }, [root]);
+  return animating;
+}
+
+/**
  * Hold the AI's next step while an element anywhere in the page carries `attribute`, for at most
  * `maxMs` per mark (SPEC §9.9: AI turns are paced so the player can follow them). The contract with
  * the layer that marks is one attribute, as the board's is with `data-animating`: it is set while
@@ -861,8 +883,12 @@ function PracticeScreen({
   const [resultReadyFor, setResultReadyFor] = useState<PracticeStartConfig | null>(null);
   // This game's own end: a Play again renders once with the old controller's finished state.
   const finished = state.config === game && state.snapshot?.view.result != null;
+  const boardAnimating = useBoardAnimating(boardRoot);
   useEffect(() => {
-    if (!finished || game === null) return;
+    // The burst that ended the game plays out first (Game.tsx no longer drains it): the dialog
+    // opens once the board has settled, and `delay` is the wait after that for the board's own
+    // Victory or Defeat sequence.
+    if (!finished || game === null || boardAnimating) return;
     const effectsOff = reducedMotionNow() || getFxSettings().intensity === "off";
     const delay = effectsOff ? 0 : (pace.current.resultDelayMs ?? 0);
     if (delay <= 0) {
@@ -875,7 +901,7 @@ function PracticeScreen({
     return () => {
       clearTimeout(timer);
     };
-  }, [finished, game]);
+  }, [finished, game, boardAnimating]);
   const onViewBoard = useCallback(() => {
     setResultClosedFor(game);
   }, [game]);

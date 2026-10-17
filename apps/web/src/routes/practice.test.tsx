@@ -1,6 +1,6 @@
 // `/practice`: B32 and B33 (docs/polish/3-ai.md).
 
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 
@@ -55,7 +55,7 @@ import { tutorialTestid } from "../tutorial/testids.ts";
 import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { gifTestid } from "../replay/ShareGif.tsx";
 import { practiceDeckIssues } from "../wire/validator.ts";
-import PracticeRoute, { readPracticeParams } from "./practice.tsx";
+import PracticeRoute, { readPracticeParams, useBoardAnimating } from "./practice.tsx";
 import type { PracticeRouteProps } from "./practice.tsx";
 
 // R768000: "Share the last turn" makes a GIF at once; the export itself is `gif/export.test.ts`'s.
@@ -1870,6 +1870,39 @@ describe("the result dialog", () => {
     expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
     expect(screen.queryByTestId(T.result)).toBeNull();
     expect(screen.queryByTestId(T.hud)).toBeNull();
+  });
+});
+
+describe("the result dialog waits for the board", () => {
+  it("useBoardAnimating follows the board's data-animating mark, and only that one", async () => {
+    const board = document.createElement("div");
+    document.body.append(board);
+    const { result, unmount } = renderHook(() => useBoardAnimating(board));
+    await act(async () => {});
+    expect(result.current).toBe(false);
+
+    const mark = document.createElement("div");
+    mark.setAttribute("data-animating", "damage");
+    await act(async () => {
+      board.append(mark);
+    });
+    expect(result.current).toBe(true);
+
+    await act(async () => {
+      mark.remove();
+    });
+    expect(result.current).toBe(false);
+
+    // A voice line is not an animation: it never holds the result back.
+    const voice = document.createElement("div");
+    voice.setAttribute("data-speaking", "true");
+    await act(async () => {
+      board.append(voice);
+    });
+    expect(result.current).toBe(false);
+
+    unmount();
+    board.remove();
   });
 });
 
