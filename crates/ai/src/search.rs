@@ -53,7 +53,10 @@ fn best_first_lines(mut lines: Vec<Line>) -> Vec<Line> {
     lines
 }
 
-/// The first `width` candidates that are not endTurn, plus endTurn when it is legal.
+/// The first `width` candidates that are not endTurn, plus endTurn when it is legal. A level that
+/// filled its width with attacks alone also carries the first play or activate and the first
+/// position switch past the cutoff, so a wide board does not read as a level with nothing but
+/// swings.
 fn expansion(state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody> {
     let candidates = candidate_actions(state, seat);
     let end = candidates
@@ -61,10 +64,34 @@ fn expansion(state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody>
         .find(|action| matches!(action, ActionBody::EndTurn))
         .cloned();
     let mut moves: Vec<ActionBody> = candidates
-        .into_iter()
+        .iter()
         .filter(|action| !matches!(action, ActionBody::EndTurn))
         .take(width)
+        .cloned()
         .collect();
+    if !moves.is_empty()
+        && moves
+            .iter()
+            .all(|action| matches!(action, ActionBody::Attack { .. }))
+    {
+        let is_play = |action: &&ActionBody| {
+            matches!(
+                action,
+                ActionBody::Play { .. } | ActionBody::Activate { .. } | ActionBody::ActivatePower { .. }
+            )
+        };
+        for extra in [
+            candidates.iter().find(|action| is_play(action)),
+            candidates
+                .iter()
+                .find(|action| matches!(action, ActionBody::SwitchPosition { .. })),
+        ]
+        .into_iter()
+        .flatten()
+        {
+            moves.push(extra.clone());
+        }
+    }
     if let Some(end) = end {
         moves.push(end);
     }

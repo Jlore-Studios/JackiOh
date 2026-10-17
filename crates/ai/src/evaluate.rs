@@ -14,20 +14,27 @@
 //! are passed explicitly.
 
 use jackioh_engine::config::{
-    DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT, TURN_CAP_PLAYER_TURNS,
+    DUOS_OWN_HEALTH, FATIGUE_DAMAGE, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT,
+    TURN_CAP_PLAYER_TURNS,
 };
 use jackioh_engine::effects::DELAYED_DESTROY_HOOK;
 use jackioh_engine::{
-    AttackTarget, CardInstance, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
+    AttackTarget, CardInstance, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView, ZoneName,
     active_brittle_count, active_units_of, animated_kind_of, attack_restriction, attacks_per_turn,
-    backrow_is_public, cannot_attack, card_keywords, credit_lapsing, effective_life, find_def, has_keyword,
-    hero_armor_of, is_temporary_card, owed_mana_of, own_cost, pierces, query_cost, reset_instance,
-    subsystems, takes_strike_back, unit_has, unit_view,
+    backrow_is_public, cannot_attack, card_keywords, credit_lapsing, effective_life, find_def, find_instance,
+    has_keyword, hero_armor_of, is_temporary_card, lost_refreshes_left, max_mana_for, owed_mana_of, own_cost,
+    pierces, query_cost, reset_instance, subsystems, takes_strike_back, unit_has, unit_view,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::candidates::{Side, blow, cleaved_neighbours, side_of};
 use crate::config::{AI_EVAL, EvalWeights};
+
+/// The token M #96 Meditative Journey shuffles into its controller's deck (its `defId`), and the
+/// `memory` key its journey's picked ids ride under (R1246, c096_meditative_journey.rs).
+const JOURNEY_COMPLETE_ID: &str = "meditative-096-1";
+const JOURNEY_KEY: &str = "journey";
 
 /// The life `player` started the game with, where the hero value and `closing` are anchored (R964000):
 /// HERO_HEALTH in a 1v1 game; in a Duos duel the seat's own HP and its team's pool at its cap (§13.4;
@@ -227,6 +234,8 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
 
     // R1224: a debt is coming turns' mana spent early, so it counts against the side that owes it.
     value -= w.owed_mana * f64::from(owed_mana_of(state, player));
+    // R844: a lost refresh forfeits a whole refresh's crystals — a debt of `max_mana_for`.
+    value -= w.owed_mana * f64::from(lost_refreshes_left(side) * max_mana_for(side));
     // #1086: what the side has banked in state both seats see (R185): Jade steps (R962), extra
     // turns (R846) and the enemy units it has marked (R437; no `unit_worth` call at a zero share).
     value += w.jade_step * f64::from(jade_steps(side.jade.unwrap_or(0)));
@@ -281,6 +290,26 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     }
 
     value += w.library_card * (side.library.len() as f64).min(w.library_comfort);
+    // R1246/R1248: a Journey Complete the side was shown going into its library (R311; a placeholder
+    // names no def) still names every card its journey exiled, and its cast-on-draw returns each one
+    // still in an exile pile to hand Radiant — a deferred gain, not the loss the exiles alone read as.
+    for card in &side.library {
+        if card.def_id != JOURNEY_COMPLETE_ID {
+            continue;
+        }
+        let Some(ids) = card.memory.get(JOURNEY_KEY).and_then(Value::as_array) else {
+            continue;
+        };
+        value += w.journey_card
+            * ids
+                .iter()
+                .filter(|id| {
+                    id.as_str().is_some_and(|id| {
+                        find_instance(state, id).is_some_and(|card| card.zone.z() == ZoneName::Exile)
+                    })
+                })
+                .count() as f64;
+    }
     value
 }
 
@@ -540,6 +569,19 @@ fn reborn_body(state: &GameState, taunt: &CardInstance) -> Option<(CardInstance,
     has_keyword(&view.keywords, KeywordKind::Taunt).then_some((body, view))
 }
 
+/// The next hit an empty library deals `player` (§2.4's fatigue, R3/R315): the recurring hit
+/// `face_threat` cannot see, since a draw on an empty library deals it and no attacker does. It goes
+/// through §4.4 on the hero like an attacker's — Armor and the Anti-oneshot cap (R125) — and nothing
+/// pierces it, so the projection reads `pierce: false`.
+fn fatigue_hit(state: &GameState, player: PlayerId) -> i32 {
+    let side = &state.players[player];
+    if side.library.is_empty() {
+        subsystems::projected_hero_damage(state, player, FATIGUE_DAMAGE(side.fatigue_count + 1), false)
+    } else {
+        0
+    }
+}
+
 /// Who swings next, for the threat and pressure terms: "enemy" (the default) reads a state as the end
 /// of `seat`'s turn, where the enemy's board attacks before `seat` can answer; "seat" reads it as the
 /// start of `seat`'s turn (the opponent's reply has been played out), where `seat` attacks first and
@@ -566,8 +608,11 @@ pub fn evaluate(state: &GameState, seat: PlayerId, next: NextSwing, w: &EvalWeig
         };
     }
 
-    let enemy_damage = face_threat_with(state, opp, w);
-    let our_damage = face_threat_with(state, seat, w);
+    // Each side's coming fatigue hit counts toward the damage it is about to take (w.fatigue; R3).
+    let enemy_damage =
+        f64::from(face_threat_with(state, opp, w)) + w.fatigue * f64::from(fatigue_hit(state, seat));
+    let our_damage =
+        f64::from(face_threat_with(state, seat, w)) + w.fatigue * f64::from(fatigue_hit(state, opp));
     // §13.4, R964000: a hero's life is `effective_life`, own HP and the team's pool in a Duos duel,
     // the hero's health in a 1v1 game.
     let seat_life = effective_life(state, seat);
@@ -575,19 +620,19 @@ pub fn evaluate(state: &GameState, seat: PlayerId, next: NextSwing, w: &EvalWeig
     let seat_first = next == NextSwing::Seat;
     let threat_share = if seat_first { w.answerable_threat } else { 1.0 };
     let threat = threat_share
-        * (if enemy_damage >= seat_life {
+        * (if enemy_damage >= f64::from(seat_life) {
             w.lethal_threat
         } else {
-            w.threat_per_damage * f64::from(enemy_damage)
+            w.threat_per_damage * enemy_damage
         });
-    let pressure = if our_damage >= opp_life {
+    let pressure = if our_damage >= f64::from(opp_life) {
         if seat_first {
             w.lethal_on_board
         } else {
             w.lethal_pressure
         }
     } else {
-        w.pressure_per_damage * f64::from(our_damage)
+        w.pressure_per_damage * our_damage
     };
 
     // §2.5: the game is a draw at the turn cap, which scores nothing, so late on every point of damage

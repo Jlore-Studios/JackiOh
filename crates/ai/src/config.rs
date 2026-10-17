@@ -279,6 +279,10 @@ pub struct EvalWeights {
     /// Per grade step a readable backrow card's counter has climbed past E (§10.1, R27/R62:
     /// Combo-Index's cascade), plus one for a rise this turn's plays already arm.
     pub grade_counter: f64,
+    /// R1246: per id a Journey Complete in the library still names in an exile pile — a card its
+    /// cast-on-draw returns to hand Radiant, so the journey's exiles are a deferred gain rather than
+    /// the loss the exiles alone read as.
+    pub journey_card: f64,
     /// B3.4, R65: taken off an own hand card per crystal its `costMod` (a Degrade's +1, an Upgrade's −1)
     /// moves its cost; a cheaper card gains it.
     pub hand_cost_delta: f64,
@@ -306,12 +310,18 @@ pub struct EvalWeights {
     /// Per crystal left at the end of the seat's own turn (terminal only).
     pub unspent_mana: f64,
     /// R1224: per mana owed on the coming refreshes (Jlarna's credit line) — a debt is coming
-    /// turns' mana spent early.
+    /// turns' mana spent early. A lost refresh (R844) counts the refresh's whole `max_mana_for`
+    /// as such a debt.
     pub owed_mana: f64,
     /// Per point of faceThreat(enemy) against the seat.
     pub threat_per_damage: f64,
     /// When faceThreat(enemy) >= the seat's life (`effective_life`, R964000).
     pub lethal_threat: f64,
+    /// The share of a side's next fatigue hit that counts toward the damage it is about to take
+    /// (evaluate's `fatigue_hit`, R3/R125): a draw on an empty library deals it, so the threat and
+    /// pressure terms — which only ever saw attackers — read the long game's usual end. 1.0 counts
+    /// the whole projected hit like a face hit's.
+    pub fatigue: f64,
     pub pressure_per_damage: f64,
     pub lethal_pressure: f64,
     /// The share of the threat terms that counts when `seat` swings first (evaluate's "seat" frame).
@@ -378,6 +388,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     radiant_in_hand: 0.5,
     plague_counter: 0.5,
     grade_counter: 1.5,
+    journey_card: 2.6,
     hand_cost_delta: 0.5,
     // #1086: untuned starts for the training lanes. A Jade step as a grade step, a mark as
     // `animated_share`, a Temporary card at Brittle 1's half, an extra turn about a turn's mana at
@@ -397,6 +408,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     owed_mana: 0.8,
     threat_per_damage: 0.4,
     lethal_threat: 150.0,
+    fatigue: 1.0,
     pressure_per_damage: 0.5,
     lethal_pressure: 20.0,
     answerable_threat: 0.3,
@@ -461,6 +473,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     // as it did.
     plague_counter: 0.0,
     grade_counter: 0.0,
+    journey_card: 0.0,
     hand_cost_delta: 0.0,
     // #1086's banked terms came after the gates were fixed too: nothing, as it gave them.
     temporary_discount: 0.0,
@@ -479,6 +492,9 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     owed_mana: 0.0,
     threat_per_damage: 0.4,
     lethal_threat: 150.0,
+    // The baseline is frozen: fatigue counted nothing when the gates were fixed, as everything after
+    // them did.
+    fatigue: 0.0,
     pressure_per_damage: 0.5,
     lethal_pressure: 20.0,
     answerable_threat: 0.3,
@@ -513,7 +529,10 @@ pub struct AiReply {
 
 /// The opponent's reply that the best lines are scored after (reply.rs, SPEC §9.9).
 pub const AI_REPLY: AiReply = AiReply {
-    max_steps: 12,
+    // A reply that needs the whole dozen steps is a whole extra turn or a prompt chain — the fat
+    // states the Meditative cards deal — and its tail nodes starve the lines and worlds behind
+    // it. Nine still covers a normal turn twice over.
+    max_steps: 9,
     reserve_steps: 5,
     known_plays: 8,
     visible_activations: 4,

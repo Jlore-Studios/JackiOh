@@ -214,8 +214,12 @@ mod evaluate_the_strength_passs_terms {
     #[test]
     fn scored_where_the_seat_moves_first_the_enemys_threat_counts_only_its_answerable_share() {
         // Mr. Vanilla threatens 4 into an empty board at 30 health: no lethal either way, and p1 has no
-        // attacker, so the frames differ only in the threat term.
-        let state = board(json!({ "p1": {}, "p2": { "field": ["core-008"] } }));
+        // attacker, so the frames differ only in the threat term. Both libraries hold a card — the
+        // fixture's empty libraries otherwise count fatigue hits that are not its subject.
+        let state = board(json!({
+            "p1": { "library": ["core-011"] },
+            "p2": { "field": ["core-008"], "library": ["core-011"] },
+        }));
         assert_eq!(face_threat(&state, PlayerId::P2), 4);
         assert_eq!(face_threat(&state, AI), 0);
         let threat = AI_EVAL.threat_per_damage * 4.0;
@@ -223,6 +227,41 @@ mod evaluate_the_strength_passs_terms {
             evaluate(&state, AI, NextSwing::Seat, &AI_EVAL)
                 - evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL),
             (1.0 - AI_EVAL.answerable_threat) * threat,
+            10,
+        );
+    }
+
+    #[test]
+    fn an_empty_librarys_next_fatigue_hit_counts_toward_the_damage_that_side_is_about_to_take() {
+        // Same fixture as the answerable-share test: Mr. Vanilla alone threatens p1 for 4, both
+        // heroes at 30, no lethals. Emptying p2's library removes its library_card worth (their
+        // material, a term subtracted from our score: +0.1) and prices its next fatigue hit, 1,
+        // into our pressure — the seat's score rises by w.pressure_per_damage * 1 + 0.1 = 0.6.
+        // Emptying p1's (the seat's) raises the enemy threat by w.threat_per_damage * 1 and costs
+        // p1's own library_card: a drop of 0.4 + 0.1 = 0.5.
+        let full = board(json!({
+            "p1": { "library": ["core-011"] },
+            "p2": { "field": ["core-008"], "library": ["core-011"] },
+        }));
+        let base = eval(&full, AI);
+        let opp_empty = {
+            let mut state = clone(&full);
+            state.players[PlayerId::P2].library.clear();
+            state
+        };
+        assert_close(
+            eval(&opp_empty, AI) - base,
+            AI_EVAL.fatigue * AI_EVAL.pressure_per_damage + AI_EVAL.library_card,
+            10,
+        );
+        let own_empty = {
+            let mut state = clone(&full);
+            state.players[AI].library.clear();
+            state
+        };
+        assert_close(
+            base - eval(&own_empty, AI),
+            AI_EVAL.fatigue * AI_EVAL.threat_per_damage + AI_EVAL.library_card,
             10,
         );
     }

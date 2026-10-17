@@ -40,7 +40,9 @@ use crate::candidates::{blow, candidate_actions_in, cleaved_neighbours, exchange
 use crate::config::{AI_EVAL, AI_REPLY, AI_SEARCH};
 use crate::evaluate::{NextSwing, evaluate, unit_worth};
 use crate::lethal::deft_ready_switch;
-use crate::simulate::{LineStatus, best_auto_answer, line_status, simulate, static_score, surcharge_nodes};
+use crate::simulate::{
+    LineStatus, best_auto_answer, line_status, simulate_own, static_score, surcharge_nodes,
+};
 use crate::types::NodeCounter;
 
 /// The opponent's static value of `attacker` hitting `target` (§4.3): the unit it kills, less its own
@@ -206,7 +208,7 @@ fn best_try(state: &GameState, opp: PlayerId, tries: &[ActionBody], counter: &dy
     let mut best: Option<GameState> = None;
     let mut best_value = evaluate(state, opp, NextSwing::Enemy, &AI_EVAL);
     for action in tries {
-        let next = match simulate(state, opp, action, counter) {
+        let next = match simulate_own(state, opp, action, counter) {
             None => return Known::Cut,
             Some(Err(_)) => continue,
             Some(Ok(next)) => next,
