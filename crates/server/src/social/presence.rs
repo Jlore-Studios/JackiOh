@@ -10,7 +10,7 @@
 //! last heartbeat is at most `PRESENCE_TTL_MS` old; else `offline`. A ladder bot never beats, so it
 //! reads as a person who is away, and in a match as a person in one (R1452).
 //!
-//! `watchable` (B50): the viewer may watch the friend's live 1v1 match, which is not ranked, whose
+//! `watchable` (B50): the viewer may watch the friend's live 1v1 match, ranked or unranked, whose
 //! friend allows spectators (`profiles.allow_spectators`) and has fewer than `SPECTATORS_PER_MATCH`
 //! watchers. The watch socket judges it again at its hello (`social::watch`).
 //!
