@@ -61,7 +61,9 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, bail};
 use clap::ValueEnum;
-use jackioh_engine::{GameResult, PlayerId, TRAINING_IMPROVE, TRAINING_LEARN, TRAINING_UNBAN, TrainingGate, Winner};
+use jackioh_engine::{
+    GameResult, PlayerId, TRAINING_IMPROVE, TRAINING_LEARN, TRAINING_UNBAN, TrainingGate, Winner,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
