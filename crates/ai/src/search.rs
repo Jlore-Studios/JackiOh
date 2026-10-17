@@ -14,6 +14,7 @@ use jackioh_engine::{ActionBody, GameState, Phase, PlayerId};
 use crate::candidates::{candidate_actions, candidate_set};
 use crate::config::AI_EVAL;
 use crate::evaluate::{NextSwing, evaluate};
+use crate::learned::finalist_score;
 use crate::reply::{hidden_card_ids, reply_score};
 use crate::simulate::{LineStatus, close_line, line_status, search_signature, simulate, static_score};
 use crate::types::{NodeCounter, SearchBudget};
@@ -226,6 +227,9 @@ pub fn score_line(
     {
         match simulate(&state, seat, &ActionBody::EndTurn, counter) {
             None => return None,
+            // A finalist whose endTurn is refused keeps its static score, from the evaluation that
+            // scores the finalists when they are replied to (#1010).
+            Some(Err(_)) if reply => return Some(finalist_score(&state, seat, NextSwing::Enemy)),
             Some(Err(_)) => return Some(evaluate(&state, seat, NextSwing::Enemy, &AI_EVAL)),
             Some(Ok(next)) => state = next,
         }

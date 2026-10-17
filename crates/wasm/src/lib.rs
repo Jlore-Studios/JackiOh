@@ -663,6 +663,18 @@ pub fn constants() -> Result<String, JsError> {
     }))
 }
 
+/// R1011000: the learned evaluation's parity fixture (`crates/ai/tests/fixtures/learned-parity.json`)
+/// as this build computes it: its integer network's correction for each case, in order. The web's
+/// tests hold the WASM build to the fixture's numbers bit for bit, as `cargo test -p jackioh-ai` holds
+/// the native one.
+#[wasm_bindgen]
+pub fn learned_parity(fixture_json: &str) -> Result<String, JsError> {
+    let fixture: serde_json::Value = serde_json::from_str(fixture_json)
+        .map_err(|error| JsError::new(&format!("the parity fixture is not JSON: {error}")))?;
+    let answers = jackioh_ai::parity_answers(&fixture).map_err(|error| JsError::new(&error))?;
+    to_json(&answers)
+}
+
 // ---------------------------------------------------------------------------------------------
 // The engine's tables the web's tests read (`subsystems.*`)
 // ---------------------------------------------------------------------------------------------
