@@ -1908,25 +1908,12 @@
       "taken_asks": [],
       "verdict_rounds": 3,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
-        "rejections": [
-          "claude"
-        ],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "38997086323",
-            "tier": "medium"
-          }
-        ],
-        "sha": "02a1e5a64e8f452d6798259d1abfc6b2a8442d9c",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
+        "approvals": [],
+        "builder": "claude",
+        "rejections": [],
+        "reviews": [],
+        "sha": "97bcceff5722b618214b2b2eb41050ad31d70443",
+        "tiers": {}
       }
     },
     "1090": {
