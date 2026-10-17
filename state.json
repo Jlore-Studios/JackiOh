@@ -3242,6 +3242,13 @@
     "1142": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T20:33:40Z",
+        "difficulty": "medium",
+        "provider": "agy",
+        "tier": "medium",
+        "why": "the planner gave no rating line"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
