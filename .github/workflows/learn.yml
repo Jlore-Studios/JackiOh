@@ -1,0 +1,208 @@
+# The learn lane (#466, #1012; training/learn.md): the learned evaluation, retrained on fresh
+# self-play and promoted to main by the same gate as every AI, with no LLM anywhere in it
+# (docs/learned-eval.md D2). Weekly, and by dispatch (`gh workflow run learn.yml`).
+#
+#   plan      skips the run while the lane's pull request is open, and names the export's seed base
+#             (`learned-<catalog>-<date>-<run>`, never a gate's or the dev set's, R1006002)
+#   export    selfplay.yml, called: `games` games in `shards` jobs on `runner` (GitHub's, or the
+#             local runner, jackioh-selfplay-local)
+#   retrain   on main: training/ml/retrain.sh over the export (positions, the fit, the weights, the
+#             switch on, and an 800-game paired screen against main's AI on improve-dev, decided in
+#             advance). Only a screen with edgeLow above zero goes on: the weights and the switch are
+#             committed on ai/learn, `promote --lane learn` plays the lane's 400 hold-out games once
+#             (R1012000, R850001), and a pass is pushed as `AI gen <N> (learn): …` with auto-merge on.
+#             CI's training gate plays the gate again (`promote --verify`) before it merges, as for
+#             every lane. Each stage's report is kept as the run's `learn-<run>` artifact and in its
+#             summary, whether or not it passed.
+#
+# Pushing ai/learn and opening its pull request take LEARN_LANE_TOKEN, a fine-grained token that can
+# write contents and pull requests on this repository alone (a pull request opened with the run's
+# own token would start no CI). Without it, a passing promotion stops at its artifact
+# (`learn-<run>/promotion.patch`) and the run says so.
+name: learn
+
+on:
+  schedule:
+    - cron: "23 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      games:
+        description: "Games to export"
+        required: true
+        default: "100000"
+      shards:
+        description: "Export jobs"
+        required: true
+        default: "20"
+      runner:
+        description: "Where the export runs"
+        type: choice
+        options:
+          - ubuntu-latest
+          - jackioh-selfplay-local
+        default: ubuntu-latest
+      screen:
+        description: "Paired screen games against main (decided before it is played)"
+        required: true
+        default: "800"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: learn
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      run: ${{ steps.plan.outputs.run }}
+      seed: ${{ steps.plan.outputs.seed }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          open=$(gh pr list -R "$REPO" --head ai/learn --state open --json number --jq 'length')
+          if [ "$open" != "0" ]; then
+            echo "the learn lane's pull request is open: nothing to do until it merges or closes" >> "$GITHUB_STEP_SUMMARY"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          catalog=$(jq -r '.[-1].version' crates/cards/patches/patches.json | tr -c 'A-Za-z0-9._-\n' '_')
+          echo "seed=learned-$catalog-$(date -u +%Y%m%d)-$RUN" >> "$GITHUB_OUTPUT"
+          echo "run=true" >> "$GITHUB_OUTPUT"
+
+  export:
+    needs: plan
+    if: ${{ needs.plan.outputs.run == 'true' }}
+    uses: ./.github/workflows/selfplay.yml
+    with:
+      games: ${{ inputs.games || '100000' }}
+      seed: ${{ needs.plan.outputs.seed }}
+      shards: ${{ inputs.shards || '20' }}
+      runner: ${{ inputs.runner || 'ubuntu-latest' }}
+      retention: "30"
+      count: false
+
+  retrain:
+    name: retrain, screen, gate
+    needs: [plan, export]
+    if: ${{ needs.plan.outputs.run == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+      - name: uv
+        run: |
+          python3 -m pip install --user --quiet uv
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: selfplay-${{ needs.plan.outputs.seed }}-*
+          path: ${{ runner.temp }}/export
+      - name: retrain and screen (training/ml/retrain.sh)
+        id: retrain
+        env:
+          SCREEN: ${{ inputs.screen || '800' }}
+        run: |
+          set -uo pipefail
+          git switch -c ai/learn
+          status=0
+          # The tree is main's, so the exporter retrain.sh builds first is main's AI: the parent.
+          training/ml/retrain.sh --logs "$RUNNER_TEMP/export" --out "$RUNNER_TEMP/learn" \
+            --parent-bin tree --screen-games "$SCREEN" || status=$?
+          echo "passed=$([ "$status" = 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          {
+            echo "## The learn lane, run ${{ github.run_number }}"
+            echo
+            [ -f "$RUNNER_TEMP/learn/fit/report.md" ] && sed -n '1,40p' "$RUNNER_TEMP/learn/fit/report.md"
+            echo
+            echo '```json'
+            cat "$RUNNER_TEMP/learn/summary.json" 2>/dev/null || echo '{"stage":"failed before the screen"}'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: the gate, once (promote --lane learn)
+        id: gate
+        if: ${{ steps.retrain.outputs.passed == 'true' }}
+        run: |
+          set -uo pipefail
+          git config user.name "JackiOh learn lane"
+          git config user.email "learn-lane@users.noreply.github.com"
+          games=$(jq -r '.counts.replayed' "$RUNNER_TEMP/learn/positions.json")
+          git add crates/ai/src/learned/weights.json crates/ai/src/config.rs
+          git commit -q -m "Stack (learn): the learned evaluation retrained on $games games" \
+            -m "$(cat "$RUNNER_TEMP/learn/summary.json")"
+          status=0
+          cargo build --release -p jackioh-tools --quiet
+          target/release/jackioh promote --lane learn --parent-bin "$RUNNER_TEMP/learn/parent-jackioh" \
+            > "$RUNNER_TEMP/learn/promote.md" || status=$?
+          cat "$RUNNER_TEMP/learn/promote.md" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" != 0 ]; then
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          generation=$(jq -r .generation crates/ai/generation.json)
+          git add crates/ai/generation.json training/history/learn.jsonl
+          git commit -q -m "AI gen $generation (learn): the learned evaluation, retrained on $games games" \
+            -m "$(cat "$RUNNER_TEMP/learn/promote.md")"
+          git format-patch -2 --stdout > "$RUNNER_TEMP/learn/promotion.patch"
+          {
+            echo "passed=true"
+            echo "generation=$generation"
+            echo "games=$games"
+          } >> "$GITHUB_OUTPUT"
+      - name: deliver (push ai/learn, open its pull request, auto-merge)
+        if: ${{ steps.gate.outputs.passed == 'true' }}
+        env:
+          LEARN_LANE_TOKEN: ${{ secrets.LEARN_LANE_TOKEN }}
+          REPO: ${{ github.repository }}
+          GENERATION: ${{ steps.gate.outputs.generation }}
+          GAMES: ${{ steps.gate.outputs.games }}
+        run: |
+          set -euo pipefail
+          if [ -z "$LEARN_LANE_TOKEN" ]; then
+            echo "::warning::the gate passed, but LEARN_LANE_TOKEN is not set: the promotion is the run's artifact (promotion.patch)"
+            exit 0
+          fi
+          # main must not have moved under the parent, or CI's --verify would measure another one.
+          git fetch --quiet origin main
+          if [ "$(git rev-parse origin/main:crates/ai)" != "$(git rev-parse HEAD~2:crates/ai)" ]; then
+            echo "::warning::main's AI moved during the run: the next run retrains on it"
+            exit 0
+          fi
+          git push --force "https://x-access-token:${LEARN_LANE_TOKEN}@github.com/${REPO}.git" HEAD:refs/heads/ai/learn
+          export GH_TOKEN="$LEARN_LANE_TOKEN"
+          title="AI gen $GENERATION (learn): the learned evaluation, retrained on $GAMES games"
+          gh pr create -R "$REPO" --base main --head ai/learn --title "$title" \
+            --body-file "$RUNNER_TEMP/learn/promote.md"
+          gh pr merge -R "$REPO" ai/learn --auto --squash
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: learn-${{ github.run_number }}
+          path: |
+            ${{ runner.temp }}/learn/summary.json
+            ${{ runner.temp }}/learn/positions.json
+            ${{ runner.temp }}/learn/fit/report.md
+            ${{ runner.temp }}/learn/fit/report.json
+            ${{ runner.temp }}/learn/screen.txt
+            ${{ runner.temp }}/learn/promote.md
+            ${{ runner.temp }}/learn/promotion.patch
+            crates/ai/src/learned/weights.json
+          if-no-files-found: ignore
+          retention-days: 90
