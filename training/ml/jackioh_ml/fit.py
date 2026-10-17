@@ -40,6 +40,8 @@ HELD_OUT = 0.1
 VALIDATION = 0.1
 MIN_KEY_COUNT = 20
 BATCH = 2048
+#: Threads the fit runs on: one, so its sums add in one order and a refit gives the same weights.
+FIT_THREADS = 1
 #: The decoupled weight decay of the per-card rows (AdamW), and of every other weight of (c).
 SPARSE_DECAY = 1e-2
 MAX_EPOCHS = 40
@@ -317,7 +319,12 @@ def decide(report: dict) -> dict:
 def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS, curve: tuple[int, ...] = CURVE_GAMES,
         width: int = 16, head: tuple[int, ...] = (16,), log: Callable[[str], None] = print) -> dict:
     started = time.time()
-    torch.set_num_threads(max(1, torch.get_num_threads()))
+    # #1012: the same positions and seeds give the same weights. Only deterministic kernels, and one
+    # thread for the order of every floating-point sum (a reduction split across threads adds in an
+    # order that changes from run to run).
+    torch.use_deterministic_algorithms(True)
+    torch.set_num_threads(FIT_THREADS)
+    torch.manual_seed(0)
     random.seed(0)
     positions = D.load(paths)
     log(f"{len(positions):,} positions from {len(positions.games):,} games, FEATURES_VERSION {positions.features_version}")
@@ -359,6 +366,7 @@ def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS,
     best_model, best_loss = None, math.inf
     report["seeds"] = []
     for seed in seeds:
+        torch.manual_seed(seed)  # the network's first weights come from the seed, not the process
         net = NetModel(len(positions.dense_names), len(vocab.keys), width=width, head=head)
         start_from(net, hand, linear)
         fitted = train(net, data, fit_rows, valid_rows, seed=seed, log=log)
@@ -384,6 +392,7 @@ def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS,
         linear_sub = LinearModel(len(positions.dense_names))
         start_from(linear_sub, hand)
         fit_convex(linear_sub, data, rows, l2=linear_l2, log=log)
+        torch.manual_seed(seeds[0])
         net = NetModel(len(positions.dense_names), len(vocab.keys), width=width, head=head)
         start_from(net, hand, linear_sub)
         train(net, data, rows, valid_rows, seed=seeds[0], log=log)
@@ -405,6 +414,7 @@ def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS,
 
     save(best_model, "model.pt")
     # (b) as a network whose head is zero: the linear correction alone, which `export.py` reads alike.
+    torch.manual_seed(0)
     linear_net = NetModel(len(positions.dense_names), len(vocab.keys), width=width, head=head)
     start_from(linear_net, hand, linear)
     save(linear_net, "model-b.pt")
