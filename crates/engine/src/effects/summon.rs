@@ -883,9 +883,10 @@ pub struct FillBoardArgs {
     pub radiant_for: Option<PlayerSpec>,
 }
 
-/// §7 and R64: "fill your board" summons the named token into every empty, unlocked unit zone,
-/// left to right. With `row: backrow` and `side: any` it fills each side's empty, unlocked backrow
-/// zones for that side's player (MD-B3, R942).
+/// §7 and R64: "fill your board" summons the named token into every empty, unreserved unit zone,
+/// left to right, a Locked one included (`fill_board_zones`, R1136000). With `row: backrow` and
+/// `side: any` it fills each side's empty, unlocked backrow zones for that side's player, a Locked
+/// one still skipped (MD-B3, R942).
 pub fn fill_board(args: FillBoardArgs) -> Effect {
     Effect::new("fillBoard", move |ctx| {
         let row = args.row.unwrap_or(Row::Units);
@@ -901,7 +902,12 @@ pub fn fill_board(args: FillBoardArgs) -> Effect {
             }
             let radiant = args.radiant == Some(true)
                 || args.radiant_for.map(|spec| player_of(ctx, spec)) == Some(player);
-            for slot in open_zones(ctx.state, player, row) {
+            // R1136000: a unit fill enters a Locked zone; R942's backrow fill still skips one.
+            let slots = match row {
+                Row::Units => fill_board_zones(ctx.state, player),
+                Row::Backrow => open_zones(ctx.state, player, row),
+            };
+            for slot in slots {
                 let at = SummonPlacement {
                     lane: Some(slot.lane),
                     radiant: if radiant { Some(true) } else { None },
@@ -928,10 +934,10 @@ pub struct FillBoardRandomArgs {
     pub radiant: Option<bool>,
 }
 
-/// R1080 (M #51): "fill your board" where every empty, unlocked unit zone, left to right (R64), gets
-/// its own pick from the match rng (R60), repeats allowed. The pool is `summon_random`'s — every set
-/// (R380) but the card that generated it (R387) — kept to the cards that go in the unit row. With no
-/// open zone nothing is drawn (R129). Summons fire no Cry (R1).
+/// R1080 (M #51): "fill your board" where every empty, unreserved unit zone, a Locked one included,
+/// left to right (R64, R1136000), gets its own pick from the match rng (R60), repeats allowed. The pool
+/// is `summon_random`'s — every set (R380) but the card that generated it (R387) — kept to the cards
+/// that go in the unit row. With no zone to fill nothing is drawn (R129). Summons fire no Cry (R1).
 pub fn fill_board_random(args: FillBoardRandomArgs) -> Effect {
     Effect::new("fillBoardRandom", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));

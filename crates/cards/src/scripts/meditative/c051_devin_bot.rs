@@ -3,7 +3,7 @@
 //! Base:    "Cry: Fill your board with random 1/1 Units."
 //! Radiant: "Cry: Fill your board with random Radiant 1/1 Units."
 //! Engine: `fill_board_random` with `{ type: Unit, stats: {1, 1}, withTokens: true }` (R1080): every
-//! empty, unlocked unit zone, left to right, gets its own pick from the match rng, repeats allowed,
+//! empty unit zone (R1136000), left to right, gets its own pick from the match rng, repeats allowed,
 //! from the Units whose printed base face is 1/1, tokens included, never Devin Bot itself (R387).
 //! Summons fire no Cry (R1). It has had no Reborn since patch v0.3.10.
 
@@ -35,9 +35,9 @@ pub fn script() -> CardScripts {
 }
 
 // M #51 Devin Bot — SPEC §8.8 row 51, BUILD M10 row M 51: "No Reborn (patch v0.3.10); Cry (played or
-// cast, R1): each empty, unlocked unit zone of yours, left to right, gets its own random Unit whose
-// printed base face is 1/1, tokens included, never Devin Bot (R1080); a full board draws no random
-// number (R129); it dies for good; radiant 2/2 and the 1/1s are Radiant".
+// cast, R1): each empty unit zone of yours, a Locked one included (R1136000), left to right, gets its
+// own random Unit whose printed base face is 1/1, tokens included, never Devin Bot (R1080); a full
+// board draws no random number (R129); it dies for good; radiant 2/2 and the 1/1s are Radiant".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -173,7 +173,7 @@ mod tests {
             }
 
             #[test]
-            fn r1080_a_locked_zone_is_skipped() {
+            fn r1136000_r1080_a_locked_zone_gets_its_own_pick_too() {
                 let _guard = preview_sets(&[SetName::Meditative]);
                 let mut s = board("devin-locked", json!([]));
                 lock_zone(
@@ -189,7 +189,7 @@ mod tests {
                     .iter()
                     .map(|unit| slot_of(s.state(), unit).map(|slot| slot.lane).unwrap_or(0))
                     .collect();
-                assert_eq!(lanes, vec![1, 2, 4, 5]);
+                assert_eq!(lanes, vec![1, 2, 3, 4, 5]);
             }
 
             #[test]

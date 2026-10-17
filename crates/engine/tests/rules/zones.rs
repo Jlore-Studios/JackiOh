@@ -402,11 +402,12 @@ mod r64_fill_your_board_m1_t4 {
     use super::*;
 
     #[test]
-    fn lists_every_empty_unlocked_unit_zone_left_to_right() {
+    fn r1136000_lists_every_empty_unreserved_unit_zone_left_to_right_a_locked_one_included() {
         let mut state = game();
         put(&mut state, "fx-1", unit_slot(PlayerId::P1, 2), false);
         lock_zone(&mut state, unit_slot(PlayerId::P1, 4));
-        assert_eq!(lanes(&fill_board_zones(&state, PlayerId::P1)), vec![1, 3, 5]);
+        reserve_zone(&mut state, unit_slot(PlayerId::P1, 5));
+        assert_eq!(lanes(&fill_board_zones(&state, PlayerId::P1)), vec![1, 3, 4]);
     }
 
     #[test]

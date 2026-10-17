@@ -3,9 +3,9 @@
 //!   Radiant: "Tribute 3, Immutable, Armor 2, Can't attack\nCry: Lock every unit zone on your side."
 //!   Engine:  "The Cry, when it is played (R1), Locks each of your five unit zones (§6.3 Lock, a `locked`
 //!            each, one Locked already skipped), occupied ones included, since a Lock evicts nothing
-//!            (§3.2); until one is Unlocked no Unit, a Stack play included, may be played there (R688), and
-//!            'fill your board' effects (R64) fill nothing on that side, whoever's effect it is, while
-//!            ordinary summons and moves still enter (R688). The Locks outlast the Wall (R1260)."
+//!            (§3.2); until one is Unlocked no Unit, a Stack play included, may be played there (R688),
+//!            while summons, moves and, since patch v0.3.Y, 'fill your board' effects still enter, whoever's
+//!            effect it is (R688, R1136000). The Locks outlast the Wall (R1260)."
 //!
 //! One script serves both faces: Tribute 3 is its static flag, and Immutable (R23) and the Radiant face's
 //! Armor 2 and 0/100 are catalog data.
@@ -46,9 +46,9 @@ pub fn script() -> CardScripts {
 
 // M 97.7 The Great Wall — SPEC §8.8 row 97.7, BUILD M10 row M 97.7: "Tribute 3, Immutable, Can't attack; Cry
 // (played): all five of your unit zones are Locked, its own and the occupied ones included, nothing evicted
-// (MD-F15, R1260); afterwards no Unit may be played into them and a fill fills nothing on your side, while a
-// summon still lands; the Locks stay after the Wall leaves; an Unlock (M 27, C+ 77) frees them; radiant
-// 0/100 and Armor 2".
+// (MD-F15, R1260); afterwards no Unit may be played into them, while a summon and, since patch v0.3.Y, a
+// fill still land (R1136000); the Locks stay after the Wall leaves; an Unlock (M 27, C+ 77) frees them;
+// radiant 0/100 and Armor 2".
 //
 // Every scenario keeps spare cards in each hand and library, so R82 does not end the turn after a play.
 #[cfg(test)]
@@ -209,7 +209,7 @@ mod tests {
         }
 
         #[test]
-        fn r1260_r688_a_fill_fills_nothing_while_a_summon_still_lands() {
+        fn r1136000_r1260_a_summon_and_a_fill_both_land_in_its_locked_zones() {
             let mut s = setup(
                 false,
                 &[],
@@ -222,15 +222,19 @@ mod tests {
                 ]),
             );
             play_wall(&mut s);
-            let cursor = s.state().rng_cursor;
-            s.activate(HEADQUARTERS, json!({}));
-            assert!(summoned(&s).is_empty());
-            assert_eq!(s.state().rng_cursor, cursor);
-            // The School's summon is no fill: every open zone is Locked, so it lands in the leftmost one (R688).
+            // The School's summon: every empty zone is Locked, so it lands in the leftmost one (R688) …
             s.activate(SCHOOL, json!({}));
             let units = summoned(&s);
             assert_eq!(units.len(), 1);
             assert_eq!(s.unit(P1, 2).map(|unit| unit.id), Some(units[0].id.clone()));
+            // … and the Headquarters' fill takes the other one, Locked too (R1136000).
+            s.activate(HEADQUARTERS, json!({}));
+            let filled = summoned(&s);
+            assert_eq!(filled.len(), 1);
+            assert_eq!(s.unit(P1, 3).map(|unit| unit.id), Some(filled[0].id.clone()));
+            for lane in [2, 3] {
+                assert!(is_locked(s.state(), slot(P1, lane)), "p1 lane {lane} stays Locked");
+            }
         }
 
         #[test]
