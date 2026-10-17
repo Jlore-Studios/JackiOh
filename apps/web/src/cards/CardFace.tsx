@@ -46,7 +46,7 @@
 //
 // R1017001: a hero portrait's card (fullArt.ts) prints its art across the whole full face and no
 // words (`data-full-art`, the art's "full" shape): no rules box, tags or type line, its whole text in
-// the hover preview and the detail view. The Full-art cards setting turns it off.
+// the hover preview and the detail view. The Full-art cards setting turns it off, and so does a tutorial lesson's board (R1108000).
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -61,7 +61,7 @@ import { nameTier, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
-import { showsFullArt } from "./fullArt.ts";
+import { showsFullArt, useFullArt } from "./fullArt.ts";
 import { ALL_TRIBES, foilFor, frameRarity, frameTags, type FaceModel } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { setMarkOf } from "./setMark.ts";
@@ -155,11 +155,12 @@ export type RulesBox = {
  * line; a face printing its catalog text takes its short form (shortText.ts SHORT_FORMS); a face in
  * play past the hover preview's limit (a fused card, a heavily Buffed one) clamps. Each of these
  * prints less than its whole text, which the hover preview prints on the face's left.
+ * `fullArtOn` is the caller's `useFullArt()` (R1108000); without it, the setting decides.
  */
-export function faceText(face: FaceModel, ascentLevel?: number | null): RulesBox {
+export function faceText(face: FaceModel, ascentLevel?: number | null, fullArtOn?: boolean): RulesBox {
   const full = face.text.full;
   // R1017001: a full-art face prints none of its words.
-  if (showsFullArt(face)) return { shown: "", short: null, less: printedText(face, full) !== "" };
+  if (showsFullArt(face, fullArtOn)) return { shown: "", short: null, less: printedText(face, full) !== "" };
   const summit = summitShortText(face.defId, full, ascentLevel);
   // A face in play that prints something other than its catalog text (a #98 Heroic Power's rolled
   // power, a Vanilla unit's lost text, inPlay.ts) takes no short form; a Call to Chaos's "???" has
@@ -235,6 +236,7 @@ export function hasCrest(face: FaceModel): boolean {
 export function CardFace({ face, layout = "full", className, lazyArt = false, ascentLevel }: CardFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
+  const fullArtOn = useFullArt();
   const nameRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
 
@@ -243,7 +245,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // is the full text's prefix, so a value after its label ("Ascent level", R280) and a mark or tuned
   // number inside it keep their offsets; RulesText drops marks outside the printed words on its
   // own, and a tuned number on a hidden line goes unmarked.
-  const { shown, short, less } = faceText(face, ascentLevel);
+  const { shown, short, less } = faceText(face, ascentLevel, fullArtOn);
   // #912: the hover preview shows the whole card, so the native tooltip only stands in for it
   // while hover previews are off, as Card.tsx's root title does (B19).
   const tooltip = settings.hoverPreviews || face.text.full === "" ? undefined : face.text.full;
@@ -263,7 +265,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // blob spilling out over the frame, outside the clipped `.cf-scale`.
   const glitch = isGlitch(face.defId);
   // R1017001: a hero portrait's card fills its full face with its art, and prints no words.
-  const fullArt = full && showsFullArt(face, settings.fullArt);
+  const fullArt = full && showsFullArt(face, fullArtOn);
 
   return (
     <span
