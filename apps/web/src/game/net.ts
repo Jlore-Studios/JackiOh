@@ -94,6 +94,12 @@ export const REFUSAL_CLOSE_CODES: readonly number[] = [4401, 4403, 4404];
  */
 export const VOIDED_CLOSE_CODE = 4410;
 
+/**
+ * R1115000: the refusal the server sends when the handshake's token does not verify (R148). It
+ * settles only for that token: a different one opens one more socket.
+ */
+export const UNAUTHORIZED_CLOSE_CODE = 4401;
+
 /** A short backoff; the last entry repeats. Spec 05 reloads the page, so a resume is a fresh boot. */
 export const RECONNECT_DELAYS_MS: readonly number[] = [250, 500, 1000, 2000, 5000];
 
@@ -407,7 +413,7 @@ export type ConnectionState =
   | "open"
   /** The socket dropped and a reconnect is pending. */
   | "reconnecting"
-  /** The server refused this socket (4401/4403/4404); no reconnect will be attempted. */
+  /** The server refused this socket (4401/4403/4404); no reconnect will be attempted, but a 4401 is final only for the token it refused (R1115000). */
   | "refused"
   /** `close()` was called. */
   | "closed";
@@ -461,7 +467,7 @@ export type MatchClient = {
   close: () => void;
   /** The URL the next socket will open, for a diagnostic panel. */
   url: () => string;
-  /** R194: changes the token for the next handshake without reopening a healthy socket. */
+  /** R194: changes the token for the next handshake without reopening a healthy socket; after a 4401, a token other than the refused one opens one more socket (R1115000). */
   setToken: (token: string) => void;
 };
 
@@ -541,6 +547,8 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   let emoteSeq = 0;
   /** Set when a socket is created; its first `view` proves the server answered (§9.5), so an error from before it is stale. */
   let awaitingFirstView = false;
+  /** R1115000: the token a 4401 refused while the client stays refused for it; null otherwise. */
+  let refusedToken: string | null = null;
 
   const wakeProbe = createWakeProbe({
     socket: () => socket,
@@ -625,9 +633,10 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   function open(): void {
     if (stopped || socket !== null) return;
 
+    const handshake = token;
     let created: SocketLike;
     try {
-      created = factory(socketUrlFor(base, token, options.matchId));
+      created = factory(socketUrlFor(base, handshake, options.matchId));
     } catch (cause) {
       patch({
         connection: "reconnecting",
@@ -682,6 +691,13 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
         return;
       }
       if (REFUSAL_CLOSE_CODES.includes(event.code)) {
+        // R1115000: a 4401 refuses this handshake's token, not the match. A token renewed before
+        // the close arrived opens one more socket now; one `setToken` brings later opens it then.
+        if (event.code === UNAUTHORIZED_CLOSE_CODE && token !== handshake) {
+          open();
+          return;
+        }
+        refusedToken = event.code === UNAUTHORIZED_CLOSE_CODE ? handshake : null;
         // Retrying a settled refusal would loop.
         patch({
           connection: "refused",
@@ -789,6 +805,10 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     url: () => socketUrlFor(base, token, options.matchId),
     setToken: (next) => {
       token = next;
+      // R1115000: after a 4401, a token other than the one it refused opens one more socket.
+      if (refusedToken === null || next === refusedToken) return;
+      refusedToken = null;
+      open();
     },
   };
 }
