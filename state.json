@@ -3213,15 +3213,22 @@
       }
     },
     "1117": {
+      "action": "revise",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-17T06:01:45Z",
       "issue": 1103,
       "kind": "revise",
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-10-17T06:53:42Z",
+      "run_id": "39011563411",
       "self_check_findings": [],
       "source": "conflict",
+      "started_at": "2026-10-17T06:53:57Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "gemini"
@@ -9553,9 +9560,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-17T06:41:06Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39010769688",
-    "what": "revise #1111 on muse"
+    "at": "2026-10-17T06:53:57Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39011563411",
+    "what": "revise #1117 on agy"
   },
   "last_sweep": {
     "at": "2026-10-17T06:48:06Z",
