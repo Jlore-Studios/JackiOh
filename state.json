@@ -3222,6 +3222,9 @@
         }
       }
     },
+    "1143": {
+      "suggestion": true
+    },
     "1146": {
       "action": "plan",
       "asks": [],
