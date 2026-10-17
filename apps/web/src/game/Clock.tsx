@@ -12,6 +12,9 @@
 // The last 30 seconds of a turn (R439): the running side's line turns urgent (`data-clock-urgency`,
 // `data-clock-side`) and the viewer's own turn adds an ember fuse (`TurnFuse`). Only a running turn clock
 // has a final stretch (`clockUrgency.ts`); reduced motion keeps the static readout, no fuse.
+//
+// A seat whose socket is away shows its disconnect grace (§9.5, R79) as a named timer: whose window
+// it is, in words, beside the seconds left (`GraceLine`).
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -269,6 +272,25 @@ function attributes(line: ClockLine): Record<string, string> {
 
 const SIDE_LABEL: Readonly<Record<ClockSide, string>> = { you: "You", opponent: "Opponent" };
 
+/** §9.5: whose disconnect grace a grace line counts down. English; `t()` is called at render. */
+const GRACE_LABEL: Readonly<Record<ClockSide, string>> = {
+  you: "You are reconnecting",
+  opponent: "Opponent reconnecting",
+};
+
+/** The grace line's accessible name: "Opponent reconnecting, 45 seconds left". */
+function graceAccessibleName(side: ClockSide, seconds: number): string {
+  const count = String(seconds);
+  if (side === "you") {
+    return seconds === 1
+      ? t("You are reconnecting, {count} second left", { count })
+      : t("You are reconnecting, {count} seconds left", { count });
+  }
+  return seconds === 1
+    ? t("Opponent reconnecting, {count} second left", { count })
+    : t("Opponent reconnecting, {count} seconds left", { count });
+}
+
 /** The gauge round the hourglass (R439): a ring that empties with the final stretch. Decoration. */
 function UrgencyGauge({ fraction }: { fraction: number }): ReactElement {
   return (
@@ -326,6 +348,26 @@ function SideLine({
       <span key={seconds} className="clock-digits">
         {text}
       </span>
+    </span>
+  );
+}
+
+/**
+ * §9.5: one seat's disconnect grace while its socket is away: whose reconnect window it is, in
+ * words, and the seconds left on it, as a timer with a name (as R439's urgent readout is).
+ */
+function GraceLine({ side, remainingMs }: { side: ClockSide; remainingMs: number }): ReactElement {
+  return (
+    <span
+      className="clock-line clock-grace"
+      data-testid={`grace-${side}`}
+      data-remaining-ms={String(Math.max(0, Math.round(remainingMs)))}
+      data-total-ms={String(DISCONNECT_GRACE_MS)}
+      role="timer"
+      aria-label={graceAccessibleName(side, secondsLeft(remainingMs))}
+    >
+      <span className="clock-grace-label">{t(GRACE_LABEL[side])}</span>
+      <span className="clock-digits">{formatClock(remainingMs)}</span>
     </span>
   );
 }
@@ -443,27 +485,9 @@ export default function Clock(props: ClockProps) {
         </span>
       )}
 
-      {readout.grace.you === null ? null : (
-        <span
-          className="clock-line"
-          data-testid="grace-you"
-          data-remaining-ms={String(Math.max(0, Math.round(readout.grace.you)))}
-          data-total-ms={String(DISCONNECT_GRACE_MS)}
-        >
-          {formatClock(readout.grace.you)}
-        </span>
-      )}
+      {readout.grace.you === null ? null : <GraceLine side="you" remainingMs={readout.grace.you} />}
 
-      {readout.grace.opponent === null ? null : (
-        <span
-          className="clock-line"
-          data-testid="grace-opponent"
-          data-remaining-ms={String(Math.max(0, Math.round(readout.grace.opponent)))}
-          data-total-ms={String(DISCONNECT_GRACE_MS)}
-        >
-          {formatClock(readout.grace.opponent)}
-        </span>
-      )}
+      {readout.grace.opponent === null ? null : <GraceLine side="opponent" remainingMs={readout.grace.opponent} />}
 
       {readout.ceilingMs === null ? null : (
         <span

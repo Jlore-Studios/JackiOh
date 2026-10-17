@@ -13,7 +13,8 @@
 //! R264: a room is created in a mode, and a joiner plays that mode or is refused with it named. A
 //! Best-of-1 join starts the match on the two frozen decks; an All Random join deals both decks
 //! (R258); a Conquest join makes the series (R259), whose first game starts once both players have
-//! picked a deck. Handlers: `create` (`POST /api/rooms`), `join` (`POST /api/rooms/:code/join`).
+//! picked a deck. Handlers: `create` (`POST /api/rooms`), `join` (`POST /api/rooms/:code/join`),
+//! and, R1075000, `mine` (`GET /api/rooms`) and `cancel` (`DELETE /api/rooms/:code`).
 //! Surface contract: docs/v0.3.0/SURFACE.md §4.1.
 
 use std::cell::RefCell;
@@ -627,6 +628,63 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             "mode": claimed.mode,
         }),
     ))
+}
+
+/// DELETE /api/rooms/:code — the host frees a room nobody has joined (§9.5, R1075000) through
+/// `release_room`, as a challenge's close frees its room: the code is free at once (R110), a join
+/// meets the miss an unknown code is, the end-to-end seed goes with it (R143). Idempotent like
+/// `DELETE /api/queue`: `cancelled: false` when the code holds no unjoined room, and a joined room
+/// is never touched. Another host's room is the join's 404; a room an open challenge holds is 409,
+/// since its challenge's cancel frees it (SPEC S7, B49).
+pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
+    let profile_id = profile_of(&req)?;
+    let code = normalize_code(&req.params.get("code").cloned().unwrap_or_default());
+    let mut tx = app.db.begin(None).await?;
+    let Some(room) = tx.rooms_get(&code).await? else {
+        tx.commit().await?;
+        return Ok(json_response(200, json!({ "cancelled": false })));
+    };
+    if room.host_profile_id != profile_id {
+        return Err(ApiError::new(
+            ApiErrorCode::NotFound,
+            "that room code is not open",
+        ));
+    }
+    if tx.challenges_open_for_room(&code, now_ms()).await?.is_some() {
+        return Err(ApiError::new(
+            ApiErrorCode::Conflict,
+            "that room is a challenge to a friend; cancel the challenge instead",
+        ));
+    }
+    // `rooms_release` deletes only an unjoined row: a claim that landed after the read keeps its room.
+    let cancelled = release_room(&mut tx, &code).await?;
+    tx.commit().await?;
+    if cancelled {
+        tracing::info!(event = "room.cancelled", code = %code, hostProfileId = %profile_id);
+    }
+    Ok(json_response(200, json!({ "cancelled": cancelled })))
+}
+
+/// GET /api/rooms — the caller's own rooms nobody has joined and not expired, newest first, as
+/// `POST /api/rooms` answered them (§9.5, R1075000); a room an open challenge holds is the
+/// challenge's and is not listed.
+pub async fn mine(app: &Arc<App>, req: Req) -> ApiResult {
+    let profile_id = profile_of(&req)?;
+    let now = now_ms();
+    let mut tx = app.db.begin(None).await?;
+    let open = tx.rooms_open_by_host(&profile_id, now).await?;
+    let challenged = tx.challenges_open_of(&profile_id, now).await?;
+    tx.commit().await?;
+    let rooms: Vec<Value> = open
+        .iter()
+        .filter(|room| {
+            !challenged
+                .iter()
+                .any(|challenge| challenge.room_code == room.code)
+        })
+        .map(|room| json!({ "code": room.code, "expiresAt": room.expires_at, "mode": room.mode }))
+        .collect();
+    Ok(json_response(200, json!({ "rooms": rooms })))
 }
 
 // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----

@@ -4,7 +4,8 @@
 //! player, an alarm for the turn clock, and it appends every resolved action to the log" (§9.2).
 //! This file is that, and nothing else: it owns no rules, no timer and no socket library.
 //!
-//!  - The rules live in `jackioh_engine`, reached through `actor::engine` (SURFACE §11.3: no port).
+//!  - The rules live in `jackioh_engine`, reached through `actor::engine` (SURFACE §11.3: no port),
+//!    under the match's pinned catalog (R388, R767000).
 //!    §9.3: "`reduce` refuses illegal actions itself and returns the reason", so a refusal is relayed
 //!    verbatim and never re-derived here.
 //!  - The clock lives in `actor::clock` (R79). Every expiry comes back as a `ClockExpiry` and is
@@ -49,7 +50,7 @@ use crate::actor::contracts::{
     ActorDeps, ClockExpiry, ClockView, CreateMatchClockInput, ExpiryHandler, MatchClock, RecordResultInput,
     SocketHandlers, VoidMatchInput, one_tx,
 };
-use crate::actor::engine::{self, EngineState, LastBoards, MatchSnapshot};
+use crate::actor::engine::{self, EngineState, LastBoards, MatchSnapshot, Pinned};
 use crate::actor::guard::{CLOSE_POLICY_VIOLATED, SeatGuard, alert_unusual_rejections};
 use crate::actor::protocol::{
     ClientMessage, MATCH_VOIDED_CLOSE_REASON, SERVER_NONCE_PREFIX, ServerMessage, SocketErrorCode,
@@ -111,6 +112,8 @@ pub struct MatchActorInput {
     /// R641000: the match is a game of a Conquest series, which offers no rematch (R672), so a bot
     /// draws no rematch plan when it ends: the series' next pick phase is what comes next.
     pub series_game: bool,
+    /// R388, R767000: the catalog the match is played under (`registry`'s `pinned_for`).
+    pub pinned: Pinned,
 }
 
 /// R417, R678: the boards a match was created with — its seats' last boards and the two other
@@ -123,26 +126,31 @@ pub fn last_boards_of(match_row: &MatchRow) -> (Option<LastBoards>, Option<LastB
 /// R1452, R639000: by home seat, the turn of each bot's last move in `log` (its nonce `srv-bot-…`),
 /// as `on_bot_move` keeps it in memory, so an actor rebuilt in the middle of a bot's turn knows that
 /// turn had already begun: its first move's think time, its concession and its idle roll come only
-/// at a turn's start, not again after a restart. Folded step by step as `telemetry::replay` folds.
+/// at a turn's start, not again after a restart. Folded step by step as `telemetry::replay` folds,
+/// under the match's pinned catalog (R388, R767000).
 pub fn bot_moved_turns(
+    pinned: Pinned,
     match_row: &MatchRow,
     log: &[MatchActionRow],
     dealt: Option<Vec<PlayerId>>,
 ) -> PerPlayer<Option<i32>> {
     let (last_boards, glitch_boards) = last_boards_of(match_row);
-    let mut state = engine::fold(&engine::fold_args(
-        &match_row.seed,
-        &match_row.decks,
-        Vec::new(),
-        last_boards,
-        glitch_boards,
-        dealt,
-    ))
+    let mut state = engine::fold(
+        pinned,
+        &engine::fold_args(
+            &match_row.seed,
+            &match_row.decks,
+            Vec::new(),
+            last_boards,
+            glitch_boards,
+            dealt,
+        ),
+    )
     .state;
     let bot_nonce = format!("{SERVER_NONCE_PREFIX}bot-");
     let mut moved = PerPlayer::new(None, None);
     for row in log {
-        let result = engine::reduce(&state, &row.action);
+        let result = engine::reduce(pinned, &state, &row.action);
         if result.error.is_some() {
             continue;
         }
@@ -348,6 +356,8 @@ struct Shared {
     bots: PerPlayer<Option<BotRow>>,
     /// R641000: a game of a Conquest series (`MatchActorInput::series_game`).
     series_game: bool,
+    /// R388, R767000: the catalog the match is played under.
+    pinned: Pinned,
     core: Mutex<Core>,
 }
 
@@ -434,6 +444,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         bots,
         bot_moved_turn,
         series_game,
+        pinned,
     } = input;
     let seats = (
         MatchSeat {
@@ -464,7 +475,8 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         deal_emote_hand(&match_row.seed, PlayerId::P2),
     );
     let opening = engine::snapshot(&state);
-    let telemetry = telemetry.unwrap_or_else(|| Recorder::new(&match_row.id, match_row.created_at, &opening));
+    let telemetry =
+        telemetry.unwrap_or_else(|| Recorder::new(pinned, &match_row.id, match_row.created_at, &opening));
     // R677: a rebuilt actor's bot may already play the other seat.
     let seat_of_home = |home: PlayerId| {
         if opening.seats_swapped {
@@ -490,7 +502,8 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         ),
     );
     let bot_view = |home: PlayerId, bot: &Option<BotRow>| {
-        bot.as_ref().map(|_| engine::view_for(&state, seat_of_home(home)))
+        bot.as_ref()
+            .map(|_| engine::view_for(pinned, &state, seat_of_home(home)))
     };
     let bot_views = PerPlayer::new(bot_view(PlayerId::P1, &bots.p1), bot_view(PlayerId::P2, &bots.p2));
 
@@ -552,6 +565,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         on_voided,
         bots,
         series_game,
+        pinned,
         core: Mutex::new(core),
     });
     let actor = MatchActor { shared };
@@ -663,7 +677,7 @@ impl MatchActor {
                 let wanted = ActionBody::Emote { emote };
                 let nonce = {
                     let core = self.lock();
-                    if engine::legal_actions(&core.state, player).contains(&wanted) {
+                    if engine::legal_actions(self.shared.pinned, &core.state, player).contains(&wanted) {
                         Some(format!("{SERVER_NONCE_PREFIX}emote-{}", core.next_seq))
                     } else {
                         None
@@ -745,7 +759,7 @@ impl MatchActor {
     fn view_of(&self, core: &Core, player: PlayerId) -> PlayerView {
         // R79: the engine never reads a clock, so the view's `clockMs` is filled in here from the one
         // component that knows. Nothing else about the view is touched.
-        let view = engine::view_for(&core.state, player);
+        let view = engine::view_for(self.shared.pinned, &core.state, player);
         PlayerView {
             clock_ms: self
                 .shared
@@ -768,7 +782,7 @@ impl MatchActor {
     fn push_view(&self, core: &Core, player: PlayerId) {
         let message = view_message(
             self.view_of(core, player),
-            &engine::legal_actions(&core.state, player),
+            &engine::legal_actions(self.shared.pinned, &core.state, player),
         );
         self.send(core, player, &message);
     }
@@ -952,7 +966,7 @@ impl MatchActor {
                     self.send(core, player, &prompt_for_opponent(player.opponent(), deadline));
                     continue;
                 }
-                let view = engine::view_for(&core.state, player);
+                let view = engine::view_for(self.shared.pinned, &core.state, player);
                 if let Some(PendingView::ForYou(pending)) = &view.pending {
                     self.send(
                         core,
@@ -969,7 +983,7 @@ impl MatchActor {
         if let Some(holder) = pending_for
             && Some(holder) != core.last_pending_for
         {
-            let view = engine::view_for(&core.state, holder);
+            let view = engine::view_for(self.shared.pinned, &core.state, holder);
             if let Some(PendingView::ForYou(pending)) = &view.pending {
                 self.send(
                     core,
@@ -1289,7 +1303,7 @@ impl MatchActor {
             }
             // §9.1: the seat is the server's, never the client's.
             let action = Action::new(body, player, nonce.clone());
-            let result = engine::reduce(&core.state, &action);
+            let result = engine::reduce(self.shared.pinned, &core.state, &action);
             (action, result, core.next_seq)
         };
 
@@ -1390,7 +1404,11 @@ impl MatchActor {
                 continue;
             }
             let player = playing(&core, home);
-            if !jackioh_ai::ai_to_act(&core.state, player) {
+            if !self
+                .shared
+                .pinned
+                .run(|| jackioh_ai::ai_to_act(&core.state, player))
+            {
                 continue;
             }
             let Some(strength) = BOT_STRENGTHS.get(bot.strength).or(BOT_STRENGTHS.last()).copied() else {
@@ -1423,6 +1441,7 @@ impl MatchActor {
                 own_turn_start,
                 aim_lead_ms: aim_lead_ms(seed, home, version),
                 clock_left_ms,
+                pinned: self.shared.pinned,
             };
             core.bot_thinking[home] = true;
             let actor = Arc::downgrade(&self.shared);
@@ -1491,7 +1510,7 @@ impl MatchActor {
             let stale = core.next_seq != version;
             let body = played.body.filter(|body| !never_played(body));
             let body = if !stale {
-                body.or_else(|| fallback_action(&core.state, player))
+                body.or_else(|| fallback_action(self.shared.pinned, &core.state, player))
             } else if core.state.turn == turn {
                 body
             } else {
@@ -1524,7 +1543,7 @@ impl MatchActor {
             }
         );
         let retry = if refused && !stale {
-            fallback_action(&self.lock().state, player)
+            fallback_action(self.shared.pinned, &self.lock().state, player)
         } else {
             None
         };
@@ -1564,7 +1583,7 @@ impl MatchActor {
             if core.personas[home].is_none() {
                 continue;
             }
-            let view = engine::view_for(&core.state, playing(core, home));
+            let view = engine::view_for(self.shared.pinned, &core.state, playing(core, home));
             let from = view.events.len().saturating_sub(fresh);
             let prev = core.bot_views[home].take();
             let intents = match core.personas[home].as_mut() {
@@ -1803,7 +1822,11 @@ impl MatchActor {
         let shown = match aim {
             None => None,
             Some(aim) => {
-                if aim_is_public(&aim, player, &engine::view_for(&core.state, receiver)) {
+                if aim_is_public(
+                    &aim,
+                    player,
+                    &engine::view_for(self.shared.pinned, &core.state, receiver),
+                ) {
                     Some(aim)
                 } else {
                     None

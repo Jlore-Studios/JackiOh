@@ -528,8 +528,10 @@ async fn fold_terminal_input(app: &Arc<App>, match_row: &MatchRow, now: i64) -> 
         glitch_boards,
         registry::dealt_for(mode),
     );
-    // #1035: off the runtime, as a rebuild folds.
-    let folded = match engine::off_runtime(app.engine_thread, move || engine::fold(&args)).await {
+    // #1035: off the runtime, as a rebuild folds, under the catalog the match started on
+    // (R388, R767000).
+    let pinned = registry::pinned_for(match_row);
+    let folded = match engine::off_runtime(app.engine_thread, move || engine::fold(pinned, &args)).await {
         Ok(folded) => folded,
         Err(message) => {
             tracing::error!(event = "reaper.fold.panicked", matchId = %match_row.id, message = %message);

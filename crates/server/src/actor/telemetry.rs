@@ -25,7 +25,7 @@ use jackioh_engine::{
 };
 
 use crate::actor::contracts::one_tx;
-use crate::actor::engine::{self, EngineState, MatchSnapshot};
+use crate::actor::engine::{self, EngineState, MatchSnapshot, Pinned};
 use crate::actor::match_actor::last_boards_of;
 use crate::actor::protocol::SERVER_NONCE_PREFIX;
 use crate::app::App;
@@ -83,6 +83,8 @@ fn empty_signals(match_id: &str, seat: PlayerId) -> MatchSignalRow {
 /// One match's telemetry as it is gathered (see the module header).
 #[derive(Clone, Debug)]
 pub struct Recorder {
+    /// R388, R767000: the catalog the legal count and the concession's evaluation read.
+    pinned: Pinned,
     match_id: String,
     /// By engine seat: when the seat began to owe the move it owes now (the push that made it so),
     /// or `None` while it owes nothing.
@@ -109,8 +111,9 @@ pub struct Recorder {
 
 impl Recorder {
     /// A match that opened at `opened_at` (epoch ms, its creation) in the state `opening` shows.
-    pub fn new(match_id: &str, opened_at: i64, opening: &MatchSnapshot) -> Recorder {
+    pub fn new(pinned: Pinned, match_id: &str, opened_at: i64, opening: &MatchSnapshot) -> Recorder {
         Recorder {
+            pinned,
             match_id: match_id.to_string(),
             owed_since: PerPlayer::new(
                 owes(opening, PlayerId::P1).then_some(opened_at),
@@ -143,6 +146,7 @@ impl Recorder {
         clock_left_ms: Option<i64>,
         last_event: Option<GameEventType>,
     ) {
+        let pinned = self.pinned;
         let snapshot = engine::snapshot(before);
         let player = action.player_id;
         let home = home_of(&snapshot, player);
@@ -161,13 +165,13 @@ impl Recorder {
                     NextSwing::Enemy
                 };
                 signals.conceded_turn = Some(snapshot.turn);
-                signals.concede_eval_deficit = Some(-evaluate(before, player, next, &AI_EVAL));
+                signals.concede_eval_deficit = Some(-pinned.run(|| evaluate(before, player, next, &AI_EVAL)));
             }
             _ => {}
         }
 
         if decision {
-            let legal = engine::legal_actions(before, player).len();
+            let legal = engine::legal_actions(pinned, before, player).len();
             self.timings.push(ActionTimingRow {
                 match_id: self.match_id.clone(),
                 seat: home,
@@ -266,24 +270,33 @@ impl Recorder {
 /// then each logged action as `on_action` and its push at the action's own `at`. A row the engine
 /// refuses is skipped, as `fold` skips it. Answers the recorder and how many rows were refused.
 pub fn replay(
+    pinned: Pinned,
     match_row: &MatchRow,
     log: &[MatchActionRow],
     dealt: Option<Vec<PlayerId>>,
 ) -> (Recorder, usize) {
     let (last_boards, glitch_boards) = last_boards_of(match_row);
-    let mut state = engine::fold(&engine::fold_args(
-        &match_row.seed,
-        &match_row.decks,
-        Vec::new(),
-        last_boards,
-        glitch_boards,
-        dealt,
-    ))
+    let mut state = engine::fold(
+        pinned,
+        &engine::fold_args(
+            &match_row.seed,
+            &match_row.decks,
+            Vec::new(),
+            last_boards,
+            glitch_boards,
+            dealt,
+        ),
+    )
     .state;
-    let mut recorder = Recorder::new(&match_row.id, match_row.created_at, &engine::snapshot(&state));
+    let mut recorder = Recorder::new(
+        pinned,
+        &match_row.id,
+        match_row.created_at,
+        &engine::snapshot(&state),
+    );
     let mut refused = 0;
     for row in log {
-        let result = engine::reduce(&state, &row.action);
+        let result = engine::reduce(pinned, &state, &row.action);
         if result.error.is_some() {
             refused += 1;
             continue;

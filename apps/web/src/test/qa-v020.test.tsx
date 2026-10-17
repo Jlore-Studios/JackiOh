@@ -47,6 +47,7 @@ import {
   getCollection,
   getDecks,
   getMe,
+  getOpenRooms,
   getOwnRank,
   getPopulation,
   type DecksResponse,
@@ -71,6 +72,7 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     getCollection: vi.fn(),
     getPopulation: vi.fn(),
     getOwnRank: vi.fn(),
+    getOpenRooms: vi.fn(),
   };
 });
 vi.mock("../net/navigate.ts", async (importOriginal) => {
@@ -359,6 +361,7 @@ describe("QA v0.2.0, Global Cosmetic", () => {
     vi.mocked(getOwnRank).mockRejectedValue(new Error("the rank is not this spec's subject"));
     vi.mocked(enqueue).mockResolvedValue({ ticketId: "tk", status: "open", matchId: null, seriesId: null, mode: "bo1" });
     vi.mocked(dequeue).mockResolvedValue({ cancelled: true });
+    vi.mocked(getOpenRooms).mockResolvedValue({ rooms: [] });
 
     render(<PlayRoute token="token" />);
     await screen.findByTestId(playTestid.deckSelect);

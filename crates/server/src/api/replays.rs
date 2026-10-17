@@ -42,7 +42,7 @@ use jackioh_engine::{
 use serde::Serialize;
 use serde_json::json;
 
-use crate::actor::engine::{self, EngineState};
+use crate::actor::engine::{self, EngineState, Pinned};
 use crate::actor::match_actor::last_boards_of;
 use crate::actor::registry::dealt_for;
 use crate::api::collection::caller_profile;
@@ -282,8 +282,8 @@ fn rules_changed() -> ReplayOpen {
 fn open_folded(replay: &ReplayRow, log: Vec<Action>, mode: Option<QueueMode>) -> ReplayOpen {
     let row = &replay.row;
     // Refused before anything is folded, the legacy check's fold included.
-    let shipped = match engine::catalog_for(&row.catalog_version) {
-        Ok(shipped) => shipped,
+    let pinned = match Pinned::of(&row.catalog_version) {
+        Ok(pinned) => pinned,
         Err(reason) => return ReplayOpen::Refused { reason },
     };
     let (last_boards, glitch_boards) = last_boards_of(row);
@@ -295,11 +295,11 @@ fn open_folded(replay: &ReplayRow, log: Vec<Action>, mode: Option<QueueMode>) ->
         glitch_boards,
         dealt_for(mode),
     );
-    engine::with_shipped(shipped, || {
+    pinned.run(|| {
         let final_hash = match &row.final_hash {
             Some(final_hash) => final_hash.clone(),
             None => {
-                let folded = engine::fold(&args);
+                let folded = engine::fold(pinned, &args);
                 if !ends_as_recorded(&folded.state, &replay.result) {
                     return rules_changed();
                 }
@@ -353,20 +353,26 @@ async fn open_replay(
 /// from there, up to `count`, it goes on playing it, so a page never spans a Glitch's swap and every
 /// step of it is one seat's view. Read off the states as `replay_page` reads them, from the kept state
 /// at or before `from`. `from` is a step of the replay and `count` at least 1.
-fn seat_run(checkpoints: &ReplayCheckpoints, home: PlayerId, from: usize, count: usize) -> (PlayerId, usize) {
+fn seat_run(
+    pinned: Pinned,
+    checkpoints: &ReplayCheckpoints,
+    home: PlayerId,
+    from: usize,
+    count: usize,
+) -> (PlayerId, usize) {
     let end = (from + count).min(checkpoints.accepted.len() + 1);
     let mut at = from - from % REPLAY_CHECKPOINT_EVERY;
     let Some(mut state) = checkpoints.states.get(at / REPLAY_CHECKPOINT_EVERY).cloned() else {
         return (home, 1);
     };
     while at < from {
-        state = engine::reduce(&state, &checkpoints.accepted[at]).state;
+        state = engine::reduce(pinned, &state, &checkpoints.accepted[at]).state;
         at += 1;
     }
     let seat = engine::seat_played_by(&state, home);
     let mut run = 1;
     while at + 1 < end {
-        state = engine::reduce(&state, &checkpoints.accepted[at]).state;
+        state = engine::reduce(pinned, &state, &checkpoints.accepted[at]).state;
         at += 1;
         if engine::seat_played_by(&state, home) != seat {
             break;
@@ -531,14 +537,13 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
         return Err(bad_request(format!("no step {from}: this replay has {total}")));
     }
     // R767000: the walk to `from` reduces past a kept state, so under the catalog the fold read.
-    let (seat, run) = engine::under_checkpoints(checkpoints, || {
-        seat_run(
-            checkpoints,
-            home_seat(&replay, &reader),
-            from,
-            count.min(REPLAY_PAGE_STEPS),
-        )
-    });
+    let (seat, run) = seat_run(
+        Pinned::of_checkpoints(checkpoints),
+        checkpoints,
+        home_seat(&replay, &reader),
+        from,
+        count.min(REPLAY_PAGE_STEPS),
+    );
     let page = engine::replay_page(checkpoints, seat, from, run);
     ok_of(&ReplaySteps {
         match_id: replay.row.id.clone(),

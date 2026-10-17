@@ -89,6 +89,9 @@
   "Link shared": "链接已分享",
   "Link copied": "链接已复制",
   "Left the queue.": "已离开队列。",
+  "Cancel room": "取消房间",
+  "Room cancelled. Its code no longer works.": "房间已取消，房间号不再有效。",
+  "That room is no longer open: someone joined it or it expired.": "该房间已不再开放：有人已加入，或已过期。",
   "Give your opponent this code. You will be taken to the game when they join.": "把房间号告诉对手，对手加入后将进入对局。",
   "Your rank": "你的段位",
   "Ready to queue": "可以开始匹配",
@@ -283,6 +286,12 @@
   "Your turn ends in {count} seconds": "你的回合还剩{count}秒",
   "Their turn ends in {count} second": "对手的回合还剩{count}秒",
   "Their turn ends in {count} seconds": "对手的回合还剩{count}秒",
+  "You are reconnecting": "你正在重新连接",
+  "Opponent reconnecting": "对手重新连接中",
+  "You are reconnecting, {count} second left": "你正在重新连接，还剩{count}秒",
+  "You are reconnecting, {count} seconds left": "你正在重新连接，还剩{count}秒",
+  "Opponent reconnecting, {count} second left": "对手重新连接中，还剩{count}秒",
+  "Opponent reconnecting, {count} seconds left": "对手重新连接中，还剩{count}秒",
   "you hand": "你的手牌",
   "opponent hand": "对手的手牌",
   "Hand": "手牌",
@@ -2862,5 +2871,8 @@
   "Your replays →": "你的回放 →",
   "This game was played on an earlier patch.": "这局对局是在较早的版本中进行的。",
   "This game was played under older rules.": "这局对局是在旧规则下进行的。",
-  "This replay has expired.": "这个回放已过期。"
+  "This replay has expired.": "这个回放已过期。",
+  "{name} (needs a fix)": "{name}（需要修正）",
+  "Fix it in {decks} to play it here.": "在{decks}中修正它，即可在这里使用。",
+  "Fix them in {decks} to play them here.": "在{decks}中修正它们，即可在这里使用。"
 }
