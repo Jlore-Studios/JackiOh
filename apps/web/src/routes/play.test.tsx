@@ -24,6 +24,7 @@ import {
 import { readQueued, rememberQueued } from "../net/liveGame.ts";
 import {
   ApiRequestError,
+  cancelRoom,
   createRoom,
   dequeue,
   enqueue,
@@ -31,6 +32,7 @@ import {
   getCollection,
   getDecks,
   getMe,
+  getOpenRooms,
   getOwnRank,
   getPopulation,
   joinRoom,
@@ -66,6 +68,8 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     enqueue: vi.fn(),
     dequeue: vi.fn(),
     createRoom: vi.fn(),
+    cancelRoom: vi.fn(),
+    getOpenRooms: vi.fn(),
     joinRoom: vi.fn(),
     getDecks: vi.fn(),
     getCatalog: vi.fn(),
@@ -181,6 +185,7 @@ beforeEach(() => {
   });
   vi.mocked(getPopulation).mockResolvedValue({ gamesLastHour: 12, expectedWaitSeconds: { bo1: 30, bo3: null, random: 90 } });
   vi.mocked(getOwnRank).mockResolvedValue(rankBody());
+  vi.mocked(getOpenRooms).mockResolvedValue({ rooms: [] });
 });
 
 afterEach(() => {
@@ -638,6 +643,106 @@ describe("the lobby's answers", () => {
     const roomMode = screen.getByTestId(playTestid.roomMode);
     expect(roomMode).toHaveAttribute("data-mode", "random");
     expect(roomMode).toHaveTextContent("All Random");
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R1075000: a room's host cancels it, and a reload finds it again
+// ---------------------------------------------------------------------------------------------
+
+describe("R1075000 a room's host cancels it, and a reload finds it again", () => {
+  afterEach(() => {
+    window.sessionStorage.clear();
+  });
+
+  async function createRandomRoom(): Promise<void> {
+    vi.mocked(createRoom).mockResolvedValue({ code: "QRST", expiresAt: 0, mode: "random" });
+    await renderLobby();
+    pickMode("random");
+    fireEvent.click(screen.getByTestId(playTestid.createRoom));
+    await screen.findByTestId(playTestid.roomCode);
+  }
+
+  it("R1075000 Cancel room frees the room: the ticket goes, the setup unlocks and the status says so", async () => {
+    vi.mocked(cancelRoom).mockResolvedValue({ cancelled: true });
+    await createRandomRoom();
+    expect(screen.getByTestId(playTestid.createRoom)).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId(playTestid.cancelRoom));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId(playTestid.roomCode)).toBeNull();
+    });
+    expect(vi.mocked(cancelRoom)).toHaveBeenCalledWith(TOKEN, "QRST");
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent("Room cancelled. Its code no longer works.");
+    expect(screen.getByTestId(playTestid.createRoom)).not.toBeDisabled();
+    expect(screen.queryByTestId(playTestid.error)).toBeNull();
+  });
+
+  it("R1075000 a room joined or lapsed answers cancelled false: the ticket goes and the status says so", async () => {
+    vi.mocked(cancelRoom).mockResolvedValue({ cancelled: false });
+    await createRandomRoom();
+
+    fireEvent.click(screen.getByTestId(playTestid.cancelRoom));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId(playTestid.roomCode)).toBeNull();
+    });
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(
+      "That room is no longer open: someone joined it or it expired.",
+    );
+    expect(screen.getByTestId(playTestid.createRoom)).not.toBeDisabled();
+  });
+
+  it("R1075000 after a reload the lobby shows the host's open room again, with its copy link, and Cancel room frees it", async () => {
+    vi.mocked(getOpenRooms).mockResolvedValue({ rooms: [{ code: "WXYZ23", expiresAt: 0, mode: "bo3" }] });
+    vi.mocked(cancelRoom).mockResolvedValue({ cancelled: true });
+    await renderLobby();
+
+    expect(await screen.findByTestId(playTestid.roomCode)).toHaveTextContent("WXYZ23");
+    expect(vi.mocked(getOpenRooms)).toHaveBeenCalledWith(TOKEN);
+    expect(screen.getByTestId(playTestid.roomMode)).toHaveAttribute("data-mode", "bo3");
+    expect(screen.getByTestId(playTestid.copyRoomLink)).toBeInTheDocument();
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent(
+      "Give your opponent this code. You will be taken to the game when they join.",
+    );
+    expect(screen.getByTestId(playTestid.createRoom)).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId(playTestid.cancelRoom));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId(playTestid.roomCode)).toBeNull();
+    });
+    expect(vi.mocked(cancelRoom)).toHaveBeenCalledWith(TOKEN, "WXYZ23");
+    expect(screen.getByTestId(playTestid.status)).toHaveTextContent("Room cancelled. Its code no longer works.");
+  });
+
+  it("R1075000 a failed read leaves the idle lobby", async () => {
+    vi.mocked(getOpenRooms).mockRejectedValue(new Error("the server is down"));
+    await renderLobby();
+    pickMode("random");
+    await waitFor(() => {
+      expect(vi.mocked(getOpenRooms)).toHaveBeenCalled();
+    });
+    await act(async () => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(screen.queryByTestId(playTestid.roomCode)).toBeNull();
+    expect(screen.queryByTestId(playTestid.error)).toBeNull();
+    expect(screen.getByTestId(playTestid.createRoom)).not.toBeDisabled();
+  });
+
+  it("R1075000 a lobby resuming a queue wait does not ask for rooms", async () => {
+    rememberQueued("bo1");
+    render(<PlayRoute token={TOKEN} />);
+    await screen.findByTestId(playTestid.deckSelect);
+    await act(async () => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(vi.mocked(getOpenRooms)).not.toHaveBeenCalled();
+    expect(screen.queryByTestId(playTestid.roomCode)).toBeNull();
   });
 });
 

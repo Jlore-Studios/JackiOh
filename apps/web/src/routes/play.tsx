@@ -3,6 +3,7 @@
 // Room links only prefill, the queue's readout stays on the mode tiles and the games line under them,
 // and rank never exposes its hidden rating. R915005: a deck naming a custom card (or a trio holding
 // one) plays only in practice, so the pickers show it off, saying why, and never pick it themselves.
+// R1075000: the host cancels a room nobody has joined, and the lobby finds the host's open room again on mount.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -20,6 +21,7 @@ import { MATCH_FOUND_NAV_DELAY_MS, QUEUE_ENDED_AFTER_READS, SERIES_POLL_SECONDS 
 import type { LeanPick } from "@jackioh/shared";
 import {
   ApiRequestError,
+  cancelRoom,
   createRoom,
   dequeue,
   enqueue,
@@ -27,6 +29,7 @@ import {
   getCollection,
   getDecks,
   getMe,
+  getOpenRooms,
   getOwnRank,
   getPopulation,
   joinRoom,
@@ -79,6 +82,8 @@ export const playTestid = {
   seriesLink: "play-series-link",
   copyRoomCode: "play-copy-room-code",
   copyRoomLink: "play-copy-room-link",
+  /** R1075000: the room ticket's Cancel. */
+  cancelRoom: "play-cancel-room",
   searching: "play-searching",
   rank: "play-rank",
   leaderboard: "play-leaderboard",
@@ -383,7 +388,9 @@ type Status =
   | { kind: "roomLink"; mode: QueueMode }
   | { kind: "found" }
   | { kind: "left" }
-  | { kind: "ticket" };
+  | { kind: "ticket" }
+  | { kind: "roomCancelled" }
+  | { kind: "roomGone" };
 
 // Pairing watch
 
@@ -582,7 +589,15 @@ function Searching({ mode }: { mode: QueueMode }): ReactElement {
   );
 }
 
-function RoomTicket({ room }: { room: Room }): ReactElement {
+function RoomTicket({
+  room,
+  disabled,
+  onCancel,
+}: {
+  room: Room;
+  disabled: boolean;
+  onCancel: () => void;
+}): ReactElement {
   const [copied, setCopied] = useState(false);
   const [linkSent, setLinkSent] = useState<"shared" | "copied" | null>(null);
   function copy(): void {
@@ -617,6 +632,15 @@ function RoomTicket({ room }: { room: Room }): ReactElement {
         onClick={sendLink}
       >
         {linkSent === "shared" ? t("Link shared") : linkSent === "copied" ? t("Link copied") : t("Copy invite link")}
+      </button>
+      <button
+        type="button"
+        className="link-button"
+        data-testid={playTestid.cancelRoom}
+        disabled={disabled}
+        onClick={onCancel}
+      >
+        {t("Cancel room")}
       </button>
     </div>
   );
@@ -672,6 +696,10 @@ function statusWords(status: Status): string {
       return t("Left the queue.");
     case "ticket":
       return t("Give your opponent this code. You will be taken to the game when they join.");
+    case "roomCancelled":
+      return t("Room cancelled. Its code no longer works.");
+    case "roomGone":
+      return t("That room is no longer open: someone joined it or it expired.");
   }
 }
 
@@ -759,6 +787,26 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
       cancelled = true;
     };
   }, [token]);
+
+  // R1075000: a reload loses the ticket with the page, so a lobby that opened idle (no queue wait,
+  // no room link) asks for the host's open rooms and shows the newest again. A failed read changes nothing.
+  const opensIdle = rejoined === null && link === null;
+  useEffect(() => {
+    if (!opensIdle) return;
+    let cancelled = false;
+    attempt(() => getOpenRooms(token))
+      .then((answer) => {
+        const open = answer.rooms[0];
+        if (cancelled || open === undefined) return;
+        setRoom((current) => current ?? { code: open.code, mode: open.mode });
+        setWaiting(true);
+        setStatus((current) => current ?? { kind: "ticket" });
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [token, opensIdle]);
 
   // Persist the displayed IDs so stale saved choices are replaced.
   const deckShown = deck?.id;
@@ -848,6 +896,17 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
       setRoom({ code: created.code, mode: created.mode });
       setWaiting(true);
       setStatus({ kind: "ticket" });
+    });
+  }
+
+  function onCancelRoom(): void {
+    if (room === null) return;
+    const code = room.code;
+    run(async () => {
+      const answer = await cancelRoom(token, code);
+      setRoom(null);
+      setWaiting(false);
+      setStatus({ kind: answer.cancelled ? "roomCancelled" : "roomGone" });
     });
   }
 
@@ -1150,7 +1209,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
             >
               {t("Create a room")}
             </button>
-            {room === null ? null : <RoomTicket room={room} />}
+            {room === null ? null : <RoomTicket room={room} disabled={busy || found} onCancel={onCancelRoom} />}
 
             <form className="play-join" data-testid={playTestid.joinForm} onSubmit={onJoin}>
               <label htmlFor="play-join-code">{t("Join a room")}</label>

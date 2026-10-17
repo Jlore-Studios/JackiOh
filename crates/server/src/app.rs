@@ -355,13 +355,20 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::User,
         h!(api::queue::population),
     ),
-    // actor/rooms.rs (TS `match/rooms.ts`'s `create` and `join`)
+    // actor/rooms.rs (TS `match/rooms.ts`'s `create` and `join`; R1075000's `mine` and `cancel`)
+    ("GET", "/api/rooms", AuthLevel::Active, h!(actor::rooms::mine)),
     ("POST", "/api/rooms", AuthLevel::Active, h!(actor::rooms::create)),
     (
         "POST",
         "/api/rooms/:code/join",
         AuthLevel::Active,
         h!(actor::rooms::join),
+    ),
+    (
+        "DELETE",
+        "/api/rooms/:code",
+        AuthLevel::Active,
+        h!(actor::rooms::cancel),
     ),
     // api/series.rs
     (
