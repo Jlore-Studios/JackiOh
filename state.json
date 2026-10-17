@@ -2609,6 +2609,13 @@
     "1115": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T14:16:22Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "fails the easy rule outright: it adds ruling R1115000 and edits spec/ (rule line 3); web and spec only, 11 files and about 280 lines"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
