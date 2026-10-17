@@ -2797,6 +2797,13 @@
     "1102": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T05:28:34Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Easy line 5 fails (touches crates/ai/src/), so not easy; the hard bullet naming crates/ai/src/ is the AI's search algorithm, while this is localized evaluation/reply arithmetic plus one weight in one crate, so medium."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
