@@ -16,12 +16,13 @@
 use jackioh_engine::config::{
     DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT, TURN_CAP_PLAYER_TURNS,
 };
+use jackioh_engine::effects::DELAYED_DESTROY_HOOK;
 use jackioh_engine::{
     AttackTarget, CardInstance, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
     active_brittle_count, active_units_of, animated_kind_of, attack_restriction, attacks_per_turn,
     backrow_is_public, cannot_attack, card_keywords, credit_lapsing, effective_life, find_def, has_keyword,
     hero_armor_of, is_temporary_card, owed_mana_of, own_cost, pierces, query_cost, reset_instance,
-    subsystems, takes_strike_back, unit_view,
+    subsystems, takes_strike_back, unit_has, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -176,7 +177,8 @@ fn jade_steps(jade: i32) -> i32 {
 /// R437: the `unit_worth` of the enemy units a delayed effect `player` owns has marked, each once (a
 /// mark names its entry by `delayed_id`; an entry `redact` dropped, R185, counts nothing). A mark on a
 /// hand card (R1141), a backrow card or an own unit counts nothing, nor does an unmarked delayed
-/// effect: the shipped ones are as often a cost (/fullsend's exile) as a payoff.
+/// effect: the shipped ones are as often a cost (/fullsend's exile) as a payoff. Nor does a delayed
+/// destroy's mark on a unit that is Indestructible now, which the destroy spares (Classic #20, R46).
 fn marked_enemy_worth(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
     let Some(marks) = &state.marks else {
         return 0.0;
@@ -185,14 +187,21 @@ fn marked_enemy_worth(state: &GameState, player: PlayerId, w: &EvalWeights) -> f
     let mut counted: Vec<&str> = Vec::new();
     let mut worth = 0.0;
     for mark in marks {
-        let owned = state
+        let Some(entry) = state
             .delayed
             .iter()
-            .any(|entry| entry.id == mark.delayed_id && entry.owner == player);
-        if !owned || counted.contains(&mark.instance_id.as_str()) {
+            .find(|entry| entry.id == mark.delayed_id && entry.owner == player)
+        else {
+            continue;
+        };
+        if counted.contains(&mark.instance_id.as_str()) {
             continue;
         }
         if let Some(unit) = enemy.iter().find(|unit| unit.id == mark.instance_id) {
+            if entry.resume.hook == DELAYED_DESTROY_HOOK && unit_has(state, unit, KeywordKind::Indestructible)
+            {
+                continue;
+            }
             counted.push(mark.instance_id.as_str());
             worth += unit_worth(state, unit, w);
         }

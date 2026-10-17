@@ -669,6 +669,9 @@ mod banked_state_1086 {
     const FULLSEND: &str = "core-078"; // (4) Spell: end of turn, exile your hand (an unmarked delayed effect)
     const RIFT: &str = "meditative-019-1"; // (2) Spell token: take an extra turn after this one (R846)
     const VANILLA: &str = "core-008"; // (1) Unit 4/4, no keywords
+    const PUNISH: &str = "classic-020"; // Field Spell: Activate, a Unit is destroyed at your next turn's start
+    const DOOM: &str = "destroy a Unit at the start of your next turn";
+    const ROCK: &str = "core-066"; // Unit 10/10 Indestructible
 
     fn at_jade(state: &GameState, jade: i32) -> GameState {
         let mut out = clone(state);
@@ -785,6 +788,57 @@ mod banked_state_1086 {
         );
         // The marked unit's controller reads the same mark as a loss.
         assert!(eval(&armed, HUMAN) < eval(&bare, HUMAN));
+    }
+
+    /// The Power to Punish's base delayed destroy aimed at p2's `def` in lane 2: the armed state, the
+    /// same state with no delayed effect or mark, and the marked unit.
+    fn punished(def: &str) -> (GameState, GameState, CardInstance) {
+        register_cards();
+        let mut s = scenario(json!({
+            "seed": "evaluate-banked",
+            "p1": { "hand": [VANILLA], "backrow": [PUNISH] },
+            "p2": { "hand": [VANILLA], "field": [{ "def": def, "lane": 2 }] },
+        }));
+        let prey = s
+            .unit(HUMAN, 2)
+            .expect("setup: p2 should hold the unit in lane 2");
+        s.activate(
+            PUNISH,
+            json!({ "modes": [DOOM], "targets": [{ "pick": "instance", "instanceId": prey.id }] }),
+        );
+        let armed = s.state().clone();
+        assert!(
+            armed
+                .marks
+                .as_ref()
+                .is_some_and(|marks| marks.iter().any(|mark| mark.instance_id == prey.id)),
+            "setup: the doomed unit should wear the red mark"
+        );
+        let mut bare = clone(&armed);
+        bare.delayed.clear();
+        bare.marks = None;
+        let live = s
+            .unit(HUMAN, 2)
+            .expect("the unit is still on the field until the destroy");
+        (armed, bare, live)
+    }
+
+    #[test]
+    fn r437_the_power_to_punishs_pending_destroy_banks_a_share_of_the_marked_unit() {
+        let (armed, bare, live) = punished(VANILLA);
+        assert_close(
+            eval(&armed, AI) - eval(&bare, AI),
+            AI_EVAL.marked_share * unit_worth(&armed, &live, &AI_EVAL),
+            9,
+        );
+        assert!(eval(&armed, HUMAN) < eval(&bare, HUMAN));
+    }
+
+    #[test]
+    fn r46_a_pending_destroy_marked_on_an_indestructible_unit_banks_nothing() {
+        let (armed, bare, _) = punished(ROCK);
+        assert_eq!(eval(&armed, AI), eval(&bare, AI));
+        assert_eq!(eval(&armed, HUMAN), eval(&bare, HUMAN));
     }
 
     #[test]

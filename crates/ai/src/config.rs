@@ -278,7 +278,8 @@ pub struct EvalWeights {
     /// crossing's worth is the Jade Beauty it summons or ascends, which `unit_worth` prices.
     pub jade_step: f64,
     /// R437: the share of an enemy unit's `unit_worth` a side banks while its own delayed effect marks
-    /// it. Every shipped mark is a pending removal its controller still has a turn to answer.
+    /// it. Every shipped mark is a pending steal or destroy its controller still has a turn to answer;
+    /// a destroy's mark on an Indestructible unit, which it spares (R46), banks nothing.
     pub marked_share: f64,
     /// R846: per extra turn owed.
     pub extra_turn: f64,
