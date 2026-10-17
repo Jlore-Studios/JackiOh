@@ -2513,11 +2513,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-17T13:57:57Z",
+        "at": "2026-10-17T14:59:37Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "The AI's search is always hard, and this changes how beam_search scores its frontier rather than adding an isolated branch."
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "it changes the AI's search in crates/ai/src (rule line 5, and 'hard: the AI's search'); the muse rating stands"
       },
       "failures": 0,
       "forced": false,
