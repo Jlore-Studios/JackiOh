@@ -3775,6 +3775,13 @@
     "1159": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T23:41:20Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 1 fails: 5 waiters plus 5 test files is 10 files, at the easy limit with no room to spare"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
