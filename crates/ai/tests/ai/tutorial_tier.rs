@@ -6,8 +6,9 @@
 //! at AI_TUTORIAL in about half its games, and on the same seeds more often than the AI at Easy.
 //!
 //! Game n plays seed `${TUTORIAL_TIER.series}:greedy:${n}` at both tiers, so only the AI seat's
-//! handicap and deck differ. Both seats are dealt by the gates' one rule, with the shadow ban (R186)
-//! on both sides, and every game has to be clean and fold back to its hash (B31).
+//! handicap and deck differ. Both seats are dealt by the gates' one rule, with the frozen fixture ban
+//! (`FIXTURE_BANNED_IDS`, issue #1113) on both sides, so a shadow-ban change re-deals none of these
+//! games, and every game has to be clean and fold back to its hash (B31).
 //! §10.7's random policy is not asserted: a run small enough for `pnpm test` holds too few wins.
 
 use std::io::Write as _;
@@ -109,12 +110,16 @@ fn tier_game(tier: Tier, n: i32) -> MatchConfig {
     let ai_seat = human_seat.opponent();
     let ai_handicap = tier_handicap(tier);
 
+    // Issue #1113: both seats deal from the frozen fixture pool, so a shadow-ban change
+    // re-deals none of these games. The greedy seat is a fixture stand-in, not a shipped deal.
+    let fixture_banned: Vec<String> = FIXTURE_BANNED_IDS.iter().map(|id| id.to_string()).collect();
     let deck_for = |seat: PlayerId, handicap: &Handicap| -> Vec<String> {
         build_ai_deck(
             &mut create_rng(&format!("{seed}:deck:{seat}"), 0),
             handicap.deck_size,
             &AiDeckOptions {
                 mana_cap: Some(handicap.mana_cap),
+                banned: Some(fixture_banned.clone()),
                 ..Default::default()
             },
         )
@@ -279,6 +284,7 @@ mod r290_the_tutorial_tier_by_play {
                     AI_TUTORIAL.deck_size,
                     &AiDeckOptions {
                         mana_cap: Some(AI_TUTORIAL.mana_cap),
+                        banned: Some(FIXTURE_BANNED_IDS.iter().map(|id| id.to_string()).collect()),
                         ..Default::default()
                     },
                 )

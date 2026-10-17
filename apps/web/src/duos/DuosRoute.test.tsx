@@ -56,7 +56,7 @@ afterEach(() => {
 
 describe("the co-op route's connection line", () => {
   it("offers Reconnect now only while reconnecting, and a click opens a socket at once", () => {
-    render(<DuosRoute matchId="dm-1" />);
+    render(<DuosRoute matchId="dm-1" token="tok-duos" />);
     expect(sockets).toHaveLength(1);
     expect(screen.queryByTestId(duosTestid.reconnect)).toBeNull();
 
@@ -79,5 +79,20 @@ describe("the co-op route's connection line", () => {
     });
     expect(screen.getByTestId(duosTestid.connection)).toHaveAttribute("data-connection", "open");
     expect(screen.queryByTestId(duosTestid.reconnect)).toBeNull();
+  });
+});
+
+describe("the co-op route's token", () => {
+  it("R1115000 the socket carries the gate's token, and a renewed one reopens a socket refused with 4401", () => {
+    const { rerender } = render(<DuosRoute matchId="dm-1" token="tok-old" />);
+    expect(sockets).toHaveLength(1);
+    expect(latest().url).toContain("token=tok-old");
+    act(() => {
+      latest().onclose?.({ code: 4401, reason: "sign in first", wasClean: false });
+    });
+    expect(screen.getByTestId(duosTestid.refused)).toBeInTheDocument();
+    rerender(<DuosRoute matchId="dm-1" token="tok-new" />);
+    expect(sockets).toHaveLength(2);
+    expect(latest().url).toContain("token=tok-new");
   });
 });

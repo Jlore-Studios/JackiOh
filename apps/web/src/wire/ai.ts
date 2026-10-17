@@ -147,6 +147,9 @@ export let AI_GATE_BUDGET: SearchBudget;
 /** R186: the ids the AI never deals itself, sorted. */
 export let SHADOW_BAN_IDS: readonly string[];
 
+/** Issue #1113: the frozen fixture pool the seeded fixtures deal from, sorted. Never updated. */
+export let FIXTURE_BANNED_IDS: readonly string[];
+
 /** SPEC §9.9, R1370: the deck builder's numbers, `leanMinShare` among them (CLAUDE.md rule 9). */
 export let AI_DECK: AiDeckConstants;
 
@@ -155,6 +158,7 @@ whenWasmLoaded(() => {
   AI_BUDGET = constants.AI_BUDGET;
   AI_GATE_BUDGET = constants.AI_GATE_BUDGET;
   SHADOW_BAN_IDS = constants.SHADOW_BAN_IDS;
+  FIXTURE_BANNED_IDS = constants.FIXTURE_BANNED_IDS;
   AI_DECK = constants.AI_DECK;
 });
 

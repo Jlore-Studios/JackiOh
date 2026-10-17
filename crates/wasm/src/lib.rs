@@ -650,15 +650,18 @@ pub fn choose_action(
     to_json(&json!({ "action": action, "rngCursor": rng.cursor() }))
 }
 
-/// `{ AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, AI_DECK }` for practice, the tutorial harness, the
-/// "More cards from the newest set" toggle (`AI_DECK.leanMinShare`, R1370) and their tests.
-/// `SHADOW_BAN_IDS` is TypeScript's `Object.keys(SHADOW_BAN).sort()` (`jackioh_ai::SHADOW_BAN_IDS`).
+/// `{ AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, FIXTURE_BANNED_IDS, AI_DECK }` for practice,
+/// the tutorial harness, the "More cards from the newest set" toggle (`AI_DECK.leanMinShare`,
+/// R1370) and their tests. `SHADOW_BAN_IDS` is TypeScript's `Object.keys(SHADOW_BAN).sort()`
+/// (`jackioh_ai::SHADOW_BAN_IDS`); `FIXTURE_BANNED_IDS` is the frozen fixture pool (issue #1113),
+/// the same ids in the same order.
 #[wasm_bindgen]
 pub fn constants() -> Result<String, JsError> {
     to_json(&json!({
         "AI_BUDGET": jackioh_ai::AI_BUDGET,
         "AI_GATE_BUDGET": jackioh_ai::AI_GATE_BUDGET,
         "SHADOW_BAN_IDS": jackioh_ai::SHADOW_BAN_IDS,
+        "FIXTURE_BANNED_IDS": jackioh_ai::FIXTURE_BANNED_IDS,
         "AI_DECK": jackioh_ai::AI_DECK,
     }))
 }

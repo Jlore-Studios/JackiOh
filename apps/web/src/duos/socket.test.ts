@@ -357,4 +357,117 @@ describe("the co-op socket's reconnect", () => {
     h.client.connect();
     expect(h.sockets).toHaveLength(2);
   });
+
+  it("a reconnect's first view clears the not-connected alert a send set while the socket was down", () => {
+    const h = connected();
+    h.socket().deliver(view(2));
+    h.socket().drop(1006);
+    h.client.send({ kind: "concede" });
+    expect(h.client.snapshot().errorCode).toBe("offline");
+
+    h.runTimers();
+    h.socket().open();
+    // An open alone proves nothing: `hello` is still unanswered.
+    expect(h.client.snapshot().error).toBe("not connected to the match");
+
+    h.socket().deliver(view(3));
+    expect(h.client.snapshot().error).toBeNull();
+    expect(h.client.snapshot().errorCode).toBeNull();
+    expect(roundOf(h)).toBe(3);
+  });
+
+  it("only a socket's first view clears an error: a refusal after it stays until the next ack", () => {
+    const h = connected();
+    h.socket().deliver(view(1));
+    h.socket().deliver({ type: "error", code: "illegal_action", message: "not your turn" });
+    h.socket().deliver(view(2));
+    expect(h.client.snapshot().error).toBe("not your turn");
+
+    h.socket().deliver({ type: "ack", nonce: "n-1", seq: 1 });
+    expect(h.client.snapshot().error).toBeNull();
+    expect(h.client.snapshot().errorCode).toBeNull();
+  });
+});
+
+// a refusal for the sign-in (R1115000)
+
+/** The token a socket's handshake carried. */
+function handshakeToken(socket: FakeSocket): string | null {
+  return new URL(socket.url).searchParams.get("token");
+}
+
+describe("a co-op socket refused for its sign-in", () => {
+  it("R1115000 a co-op 4401, then a renewed token, opens one more socket that carries it", () => {
+    const h = connected();
+    h.socket().drop(4401, "sign in first");
+    expect(h.client.snapshot().connection).toBe("refused");
+    expect(h.client.snapshot().error).toBe("sign in first");
+
+    h.client.setToken("new");
+    expect(h.sockets).toHaveLength(2);
+    expect(handshakeToken(h.socket())).toBe("new");
+    expect(h.client.snapshot().error).toBeNull();
+
+    h.socket().open();
+    expect(h.client.snapshot().connection).toBe("open");
+    expect(h.socket().frames()).toEqual([HELLO]);
+  });
+
+  it("R1115000 a co-op token the 4401 refused opens no socket", () => {
+    const h = connected();
+    h.socket().drop(4401, "sign in first");
+    h.client.setToken("tok");
+    expect(h.sockets).toHaveLength(1);
+    expect(h.client.snapshot().connection).toBe("refused");
+    expect(h.pending()).toBe(0);
+  });
+
+  it("R1115000 a co-op 4401 on the socket a renewed token opened is final for that token", () => {
+    const h = connected();
+    h.socket().drop(4401, "sign in first");
+    h.client.setToken("new");
+    h.socket().drop(4401, "sign in first");
+    expect(h.client.snapshot().connection).toBe("refused");
+    expect(h.pending()).toBe(0);
+
+    h.client.setToken("new");
+    expect(h.sockets).toHaveLength(2);
+    // One refusal per token: the next renewal gets its one socket.
+    h.client.setToken("newer");
+    expect(h.sockets).toHaveLength(3);
+    expect(handshakeToken(h.socket())).toBe("newer");
+  });
+
+  it("R1115000 a co-op token renewed before the 4401 arrives opens one more socket at once", () => {
+    const h = connected();
+    // R194: a healthy socket is not reopened by a renewal.
+    h.client.setToken("new");
+    expect(h.sockets).toHaveLength(1);
+
+    h.socket().drop(4401, "sign in first");
+    expect(h.sockets).toHaveLength(2);
+    expect(handshakeToken(h.socket())).toBe("new");
+    expect(h.pending()).toBe(0);
+
+    h.socket().drop(4401, "sign in first");
+    expect(h.client.snapshot().connection).toBe("refused");
+    expect(h.sockets).toHaveLength(2);
+  });
+
+  it("R1115000 a co-op 4403 or 4404 is not reopened by a renewed token, even after a 4401's retry", () => {
+    for (const code of [4403, 4404]) {
+      const direct = connected();
+      direct.socket().drop(code, "not your match");
+      direct.client.setToken("new");
+      expect(direct.sockets).toHaveLength(1);
+
+      const afterRetry = connected();
+      afterRetry.socket().drop(4401, "sign in first");
+      afterRetry.client.setToken("new");
+      afterRetry.socket().drop(code, "not your match");
+      afterRetry.client.setToken("newer");
+      expect(afterRetry.sockets).toHaveLength(2);
+      expect(afterRetry.client.snapshot().connection).toBe("refused");
+    }
+  });
 });

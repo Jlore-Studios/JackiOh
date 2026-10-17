@@ -4,7 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 
-import { AI_GATE_BUDGET } from "@jackioh/ai";
+import { AI_GATE_BUDGET, FIXTURE_BANNED_IDS } from "@jackioh/ai";
 import { dealEmoteHand } from "@jackioh/engine";
 import { newestShippedSet, opponentOf } from "@jackioh/shared";
 import type { ActionBody, CardDefs, PlayerId } from "@jackioh/shared";
@@ -898,6 +898,22 @@ describe("B32 URL parameters", () => {
     expect(readPracticeParams("?difficulty=nightmare&seat=p3&pace=slow")).toEqual({});
     expect(readPracticeParams("?seed=s2&difficulty=Easy&seat=P1")).toEqual({ seed: "s2" });
   });
+
+  it("issue #1113 readPracticeParams keeps aipool=fixture outside production, and drops any other pool", () => {
+    expect(readPracticeParams("?aipool=fixture")).toEqual({ aipool: "fixture" });
+    expect(readPracticeParams("?seed=s1&aipool=fixture")).toEqual({ seed: "s1", aipool: "fixture" });
+    expect(readPracticeParams("?aipool=other")).toEqual({});
+    expect(readPracticeParams("?aipool=")).toEqual({});
+  });
+
+  it("issue #1113 a production build ignores aipool", () => {
+    vi.stubEnv("MODE", "production");
+    try {
+      expect(readPracticeParams("?aipool=fixture")).toEqual({});
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });
 
 // B33: starting a game.
@@ -1052,6 +1068,33 @@ describe("B33 starting renders the game under the practice HUD", () => {
     expect(hud).toHaveAttribute("data-human-seat", "p2");
     expect(hud).toHaveAttribute("data-ai-seat", "p1");
     expect(screen.queryByTestId(T.setup)).toBeNull();
+  });
+
+  it("issue #1113 ?aipool=fixture autostarts dealing the AI from the frozen pool, and without it the config names no pool", async () => {
+    visit("?seed=pool1&difficulty=easy&deck=random&seat=p1&aipool=fixture");
+    const host = routeHost();
+    renderRoute(host);
+
+    await screen.findByTestId(T.hud);
+    expect(host.starts()).toEqual([
+      {
+        seed: "pool1",
+        difficulty: "easy",
+        humanSeat: "p1",
+        deck: { kind: "random" },
+        aiBanned: [...FIXTURE_BANNED_IDS],
+      },
+    ]);
+    cleanup();
+
+    visit("?seed=pool2&difficulty=easy&deck=random&seat=p1");
+    const live = routeHost();
+    renderRoute(live);
+
+    await screen.findByTestId(T.hud);
+    expect(live.starts()).toEqual([
+      { seed: "pool2", difficulty: "easy", humanSeat: "p1", deck: { kind: "random" } },
+    ]);
   });
 
   it("B33 no autostart without a valid difficulty and a random or preset deck", async () => {
