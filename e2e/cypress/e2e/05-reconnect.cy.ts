@@ -14,6 +14,7 @@ import { CARD_NAMES } from "../../support/cards.ts";
 import { accounts, routes, seedFor, server, timeouts } from "../../support/config.ts";
 import {
   END_TURN,
+  GRACE_OPPONENT,
   MANA_CRYSTAL,
   MODIFIER_BADGE,
   PROMPT,
@@ -433,5 +434,30 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
       cy.noPrompt();
       waitForMyTurn();
     });
+
+    // §9.5: the grace countdown is stored on the match so both clients show it. Seat 2's socket
+    // drops, and seat 1's board names whose reconnect window it counts down.
+    cy.then(() => {
+      cy.wsPlayer({ action: "disconnect", name: SEAT_TWO });
+    });
+    cy.get(ts(GRACE_OPPONENT), { timeout: timeouts.view }).should(($line) => {
+      expect($line.text(), "the countdown says whose reconnect window it is").to.contain(
+        "Opponent reconnecting",
+      );
+      expect($line.attr("role"), "a timer").to.eq("timer");
+      expect($line.attr("aria-label") ?? "", "with a name a screen reader announces").to.match(
+        /^Opponent reconnecting, \d+ seconds? left$/,
+      );
+      expect(
+        Number($line.attr("data-remaining-ms")),
+        `no more than DISCONNECT_GRACE_SECONDS (${String(DISCONNECT_GRACE_SECONDS)} s, R79)`,
+      ).to.be.at.most(DISCONNECT_GRACE_SECONDS * 1000);
+    });
+
+    // Seat 2 comes back inside the window, and the line goes with its grace.
+    cy.then(() => {
+      cy.wsPlayer({ action: "connect", name: SEAT_TWO, url: server.ws(), token: seatTwo.token, matchId });
+    });
+    cy.get(ts(GRACE_OPPONENT), { timeout: timeouts.view }).should("not.exist");
   });
 });
