@@ -8221,12 +8221,12 @@
   "machine_disk": {
     "issue": null,
     "reading": {
-      "at": "2026-10-17T14:16:18Z",
-      "free": 81777123328,
-      "percent": 34,
+      "at": "2026-10-17T15:23:22Z",
+      "free": 77639016448,
+      "percent": 37,
       "total": 123690532864
     },
-    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39038142188",
+    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39040063821",
     "runner": "night-vm-agy",
     "shown": null
   },
