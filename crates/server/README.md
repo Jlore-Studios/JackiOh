@@ -246,7 +246,10 @@ What the actor holds, each with a test named after it:
   malformed-frame budget, past which its socket is closed with 1008 (R835002).
 - Every resolved action is appended to `match_actions`. A rebuilt actor folds `(seed, decks, log)`
   with the last boards, Glitch boards and dealt seats frozen into the match at its start (R417, R678,
-  R433), and a reconnect gets a fresh view, never a log replay (§9.5).
+  R433), and a reconnect gets a fresh view, never a log replay (§9.5). A match is played, rebuilt,
+  reaped and recorded under the catalog version it started on (R388, R767000): a start on a version
+  this build neither is nor carries is refused, and a rebuild of such a match logs
+  `match.catalog.unpinned` and plays on this build's catalog, as Duos's does.
 - Clocks (R79, R268) are `config.rs` constants and live here, never in the engine: an expiry is a
   server-only action (`timeout`, `disconnectExpired`, `ceilingReached`) that goes through `reduce` and
   the log like any other. Every terminal reason writes exactly one `results` row and moves the rating
@@ -263,9 +266,9 @@ What the actor holds, each with a test named after it:
   restart's actor is rebuilt when the person's socket comes back.
 
 After a result commits, `api::results` files the game in `game_records` (`api::game_records`, the
-engine's `summarize_game`) under the match's mode and the compiled-in newest patch, as `source:
-"live"`, and the store folds it into the card statistics' totals in the same transaction (R1044000);
-a failure is logged as `game.record.failed` and the result stands.
+engine's `summarize_game`) under the match's mode and the patch the match started on (its row's
+`catalog_version`), as `source: "live"`, and the store folds it into the card statistics' totals in
+the same transaction (R1044000); a failure is logged as `game.record.failed` and the result stands.
 
 ### The co-op socket (§13)
 

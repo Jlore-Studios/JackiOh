@@ -19,13 +19,11 @@ use jackioh_server::config::AIM_RELAY_INTERVAL_MS;
 use jackioh_server::db::store::StartMatchInput;
 use serde_json::{Value, json};
 
-use crate::support::deps::test_app;
+use crate::support::deps::{TEST_CATALOG_VERSION, test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
 
 const MATCH_ID: &str = "match-aim";
-
-const TEST_CATALOG_VERSION: &str = "test-1";
 
 /// How many times `settle` yields: enough for every task woken at this instant to run.
 const SETTLE_YIELDS: usize = 8;

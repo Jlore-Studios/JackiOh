@@ -14,6 +14,7 @@ pub mod heartbeat;
 pub mod last_boards;
 pub mod long_fold;
 pub mod match_actor;
+pub mod pinned;
 pub mod recovery;
 pub mod rooms;
 pub mod series_recovery;

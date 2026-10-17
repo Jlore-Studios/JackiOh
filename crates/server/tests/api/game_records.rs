@@ -1,11 +1,11 @@
 //! SPEC §9.11, R376–R378: the live half of the card statistics. A finished match is filed once,
-//! after its result, under its mode, the build's patch and two human pilots, and nothing about it
-//! can cost the result. The real engine plays the games, through the real registry, actor and
-//! results writer, driven over the match protocol by two in-memory sockets.
+//! after its result, under its mode, the patch the match started on and two human pilots, and
+//! nothing about it can cost the result. The real engine plays the games, through the real
+//! registry, actor and results writer, driven over the match protocol by two in-memory sockets.
 //!
 //! The losing seat concedes once both mulligans are in, which ends a real game in one action:
-//! the record's `reason` is `concede`. Every live record is filed under the compiled-in patch
-//! (`jackioh_cards::catalog_version()`, R388's newest). Surface contract: docs/v0.3.0/SURFACE.md §11.3.
+//! the record's `reason` is `concede`. Every live record is filed under the patch the match started
+//! on (its row's catalog version, R388). Surface contract: docs/v0.3.0/SURFACE.md §11.3.
 
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
@@ -15,7 +15,10 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use tokio::sync::{MutexGuard, mpsc};
 
-use jackioh_engine::PlayerId;
+use indexmap::IndexMap;
+
+use jackioh_engine::testkit::{clear_overrides, register_shipped};
+use jackioh_engine::{PlayerId, ShippedCatalog};
 use jackioh_server::actor::ws_server::{Socket, SocketFrame};
 use jackioh_server::api::game_records::record_live_game;
 use jackioh_server::api::results::record_result;
@@ -28,6 +31,8 @@ use crate::support::deps::test_app;
 const MATCH_ID: &str = "match-records";
 const P1: &str = "profile-1";
 const P2: &str = "profile-2";
+/// The catalog version a game below started on: carried by this thread's build, not its own.
+const STARTED_ON: &str = "v-started";
 
 // Plumbing (private copies: each test file of this binary keeps its own)
 
@@ -226,6 +231,11 @@ async fn paired_tickets(app: &App, mode: &str) {
 /// A live match on the real registry and the real results writer, paired from two `mode` tickets —
 /// or, with `None`, from nothing a mode can be read off — with both seats' sockets attached.
 async fn live_match(mode: Option<&str>) -> Harness {
+    live_match_on(mode, None).await
+}
+
+/// The match `live_match` starts, on `catalog_version` (`None`: the build's own).
+async fn live_match_on(mode: Option<&str>, catalog_version: Option<&str>) -> Harness {
     let app = test_app().await;
     {
         let mut data = fake(&app).await;
@@ -242,7 +252,7 @@ async fn live_match(mode: Option<&str>) -> Harness {
             StartMatchInput {
                 match_id: MATCH_ID.to_string(),
                 seed: "seed-records".to_string(),
-                catalog_version: app.catalog.version.clone(),
+                catalog_version: catalog_version.map_or_else(|| app.catalog.version.clone(), str::to_string),
                 ranked: false,
                 seats: (
                     MatchSeat {
@@ -422,6 +432,24 @@ mod live_game_records {
 
         assert!(record_live_game(&h.app, MATCH_ID).await.is_none());
         assert_eq!(logs.count("game.record.unfinished"), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r376_r388_files_a_game_under_the_patch_it_started_on_not_the_build_that_finished_it() {
+        jackioh_cards::register_all();
+        register_shipped(vec![ShippedCatalog::new(
+            STARTED_ON,
+            jackioh_cards::CATALOG.clone(),
+            IndexMap::new(),
+        )]);
+        let mut h = live_match_on(Some("bo1"), Some(STARTED_ON)).await;
+        play_to_concession(&mut h).await;
+
+        let records = game_records(&h.app).await;
+        let records = records.as_array().expect("a list");
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0]["patch"], json!(STARTED_ON));
+        clear_overrides();
     }
 
     #[tokio::test]

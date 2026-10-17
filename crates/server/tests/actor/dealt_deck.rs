@@ -18,13 +18,10 @@ use jackioh_server::app::App;
 use jackioh_server::db::store::{Db, StartMatchInput, Ticket};
 use serde_json::{Value, json};
 
-use crate::support::deps::test_app;
+use crate::support::deps::{TEST_CATALOG_VERSION, test_app};
 
 const P1: &str = "profile-1";
 const P2: &str = "profile-2";
-
-/// TS `TEST_CATALOG_VERSION` (`test/fakes/deps.ts`): the catalog version the test matches carry.
-const TEST_CATALOG_VERSION: &str = "test-1";
 
 /// The test app over the fake store, both profiles seeded, the real catalog registered.
 async fn world() -> Arc<App> {
