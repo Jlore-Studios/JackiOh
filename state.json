@@ -3021,6 +3021,13 @@
     "1136": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T19:29:53Z",
+        "difficulty": "hard",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "the 'hard: engine rules (crates/engine/src/)' line: the src fix is two small edits in zones.rs and effects/summon.rs, but it changes an engine placement rule, adds a ruling and re-blesses 4 golden games; torn between medium and hard, the rule says take the higher"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-7",
