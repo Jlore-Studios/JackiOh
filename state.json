@@ -3250,6 +3250,13 @@
     "1143": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T20:07:16Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "the never-easy list names AI work outright, and this changes the AI's eval in crates/ai/src, so hard holds with no close call"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
