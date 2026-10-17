@@ -529,9 +529,28 @@ describe("R654 public statistics route", () => {
     expect(screen.getByText("-10%")).toBeInTheDocument();
     expect(screen.getByText("(20 / 5)")).toBeInTheDocument();
 
-    // Lava Hound (below sample floor: 10 games < 20): renders "—"
+    // Lava Hound (below sample floor: 10 games < 20): its When drawn renders "—"
     const houndRow = screen.getByText("Lava Hound").closest("tr")!;
-    expect(within(houndRow).getAllByText("—")).toHaveLength(2);
+    expect(within(houndRow).getAllByText("—")).toHaveLength(1);
+  });
+
+  it("R654 renders not enough data for a Played Δ the server withholds or a card below the floor", async () => {
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+
+    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+    await user.click(screen.getByLabelText(/Played Δ/i));
+
+    // Lava Hound is below the floor (10 games < 20): no delta and no cohort sizes.
+    const houndRow = screen.getByText("Lava Hound").closest("tr")!;
+    expect(within(houndRow).getByText("not enough data")).toBeInTheDocument();
+    expect(within(houndRow).queryByText("+27%")).not.toBeInTheDocument();
+    expect(within(houndRow).queryByText("(5 / 3)")).not.toBeInTheDocument();
+
+    // The explainer says what the delta's floor is.
+    expect(
+      screen.getByText(/Played Δ needs 20 games on each side, played and drawn but not played/),
+    ).toBeInTheDocument();
   });
 
   it("R377 sorts cards by Played Δ descending and ascending", async () => {

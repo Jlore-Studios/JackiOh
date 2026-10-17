@@ -521,11 +521,11 @@ mod r654_public_card_and_player_stats {
     #[tokio::test]
     async fn r377_get_api_stats_cards_publishes_drawn_not_played_counts_and_server_calculated_played_delta() {
         let app = test_app().await;
-        // 40 games where p1 holds core-001 and core-002:
+        // 50 games where p1 holds core-001 and core-002:
         // core-001 is played in 30 games (21 wins, 9 losses -> 70% played win rate).
-        // core-001 is drawn but not played in 10 games (5 wins, 5 losses -> 50% baseline).
+        // core-001 is drawn but not played in 20 games (10 wins, 10 losses -> 50% baseline).
         // Played delta for core-001 = 0.70 - 0.50 = +0.20 (+20 points).
-        // core-002 is never played in any of the 40 games (played cohort is empty -> delta is null).
+        // core-002 is never played in any of the 50 games (played cohort is empty -> delta is null).
         let mut records = Vec::new();
         // 21 played games won by p1
         for i in 1..=21 {
@@ -553,8 +553,8 @@ mod r654_public_card_and_player_stats {
                 },
             ));
         }
-        // 5 unplayed games won by p1
-        for i in 1..=5 {
+        // 10 unplayed games won by p1
+        for i in 1..=10 {
             records.push(make_game_record(
                 &format!("rec-u-win-{i}"),
                 RecordOptions {
@@ -566,8 +566,8 @@ mod r654_public_card_and_player_stats {
                 },
             ));
         }
-        // 5 unplayed games lost by p1
-        for i in 1..=5 {
+        // 10 unplayed games lost by p1
+        for i in 1..=10 {
             records.push(make_game_record(
                 &format!("rec-u-loss-{i}"),
                 RecordOptions {
@@ -585,22 +585,78 @@ mod r654_public_card_and_player_stats {
         assert_eq!(status, 200);
 
         let card001 = find(&data["cards"], "id", &json!("core-001")).expect("core-001 is listed");
-        assert_eq!(card001["games"], json!(40));
-        assert_eq!(card001["drawnGames"], json!(40));
+        assert_eq!(card001["games"], json!(50));
+        assert_eq!(card001["drawnGames"], json!(50));
         assert_eq!(card001["playedGames"], json!(30));
         assert_eq!(card001["playedWinRate"].as_f64(), Some(0.7));
-        assert_eq!(card001["drawnNotPlayedGames"], json!(10));
+        assert_eq!(card001["drawnNotPlayedGames"], json!(20));
         assert_eq!(card001["drawnNotPlayedWinRate"].as_f64(), Some(0.5));
         let delta001 = card001["playedDelta"].as_f64().expect("core-001 has playedDelta");
         assert!((delta001 - 0.2).abs() < 1e-9);
 
         let card002 = find(&data["cards"], "id", &json!("core-002")).expect("core-002 is listed");
-        assert_eq!(card002["games"], json!(40));
+        assert_eq!(card002["games"], json!(50));
         assert_eq!(card002["playedGames"], json!(0));
         assert!(card002["playedWinRate"].is_null());
-        assert_eq!(card002["drawnNotPlayedGames"], json!(40));
-        assert_eq!(card002["drawnNotPlayedWinRate"].as_f64(), Some(26.0 / 40.0));
+        assert_eq!(card002["drawnNotPlayedGames"], json!(50));
+        assert_eq!(card002["drawnNotPlayedWinRate"].as_f64(), Some(31.0 / 50.0));
         assert!(card002["playedDelta"].is_null());
+    }
+
+    #[tokio::test]
+    async fn r654_get_api_stats_cards_withholds_the_played_delta_below_the_floor_on_either_side() {
+        let app = test_app().await;
+        // 40 games where p1 holds core-001, core-002 and core-005:
+        //  - 20 won, core-001 and core-002 played;
+        //  - 19 lost, only core-005 played;
+        //  - 1 lost, only core-002 played.
+        // core-001: 20 played, 20 drawn but not played: both at the floor, so its delta shows (+100).
+        // core-002: 21 played, 19 not: its baseline is one game short, so no delta.
+        // core-005: 19 played, 21 not: its played side is one game short, so no delta.
+        let deck = vec!["core-001", "core-002", "core-005"];
+        let mut records = Vec::new();
+        let groups: [(&str, usize, Vec<&str>, &str); 3] = [
+            ("both", 20, vec!["core-001", "core-002"], "p1"),
+            ("third", 19, vec!["core-005"], "p2"),
+            ("second", 1, vec!["core-002"], "p2"),
+        ];
+        for (name, count, played, winner) in groups {
+            for i in 1..=count {
+                records.push(make_game_record(
+                    &format!("rec-{name}-{i}"),
+                    RecordOptions {
+                        source: Some("live"),
+                        p1_deck: Some(deck.clone()),
+                        p1_played: Some(played.clone()),
+                        winner: Some(winner),
+                        ..RecordOptions::default()
+                    },
+                ));
+            }
+        }
+        insert_records(&app, records).await;
+
+        let (status, _, data) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(status, 200);
+
+        let card = |id: &str| find(&data["cards"], "id", &json!(id)).expect("the card is listed");
+        let card001 = card("core-001");
+        assert_eq!(card001["playedGames"], json!(20));
+        assert_eq!(card001["drawnNotPlayedGames"], json!(20));
+        let delta001 = card001["playedDelta"].as_f64().expect("core-001 has playedDelta");
+        assert!((delta001 - 1.0).abs() < 1e-9);
+
+        let card002 = card("core-002");
+        assert_eq!(card002["playedGames"], json!(21));
+        assert_eq!(card002["drawnNotPlayedGames"], json!(19));
+        assert!(card002["drawnNotPlayedWinRate"].as_f64().is_some());
+        assert!(card002["playedDelta"].is_null());
+
+        let card005 = card("core-005");
+        assert_eq!(card005["playedGames"], json!(19));
+        assert_eq!(card005["drawnNotPlayedGames"], json!(21));
+        assert!(card005["playedWinRate"].as_f64().is_some());
+        assert!(card005["playedDelta"].is_null());
     }
 
     #[tokio::test]
