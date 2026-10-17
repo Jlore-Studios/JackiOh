@@ -47,7 +47,7 @@ if [ -z "$logs" ] && { [ -z "$games" ] || [ -z "$seed" ]; }; then
   echo "retrain.sh: name --logs, or --games and --seed" >&2; exit 2
 fi
 
-root=$(git rev-parse --show-toplevel)
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$root"
 mkdir -p "$out"
 out=$(cd "$out" && pwd)
