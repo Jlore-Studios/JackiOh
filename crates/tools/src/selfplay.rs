@@ -7,20 +7,25 @@
 //! positions` turns the same games into any version of the features in seconds. Each game is one
 //! JSON line, in game order (`SelfplayGame`): its seed, decks, log, final hash, result and turns, the
 //! catalog version and the commit it was played on. A game is a function of its seed, so the file is
-//! byte-identical for the same base and games whatever `RAYON_NUM_THREADS` says (R1006001).
+//! byte-identical for the same base and games whatever `RAYON_NUM_THREADS` says (R1006001). Games are
+//! played and written in chunks, so a long export keeps what it has played; each chunk, and any game
+//! slower than a minute, is named on stderr.
 //!
 //! A base that names a training gate's hold-out deals (`promote::is_gate_seed_base`, R850001) or
 //! the improve lane's dev set (`improve-dev`, the screens' deals) is refused, so no screen ever plays
 //! a deal the network was fitted on (R1006002).
 
-use std::path::{Path, PathBuf};
+use std::io::{BufWriter, Write};
+use std::path::PathBuf;
+use std::time::Instant;
 
 use anyhow::{Context, bail};
 use jackioh_ai::{AI_GATE_BUDGET, dev_game_config};
 use jackioh_engine::{Action, GameResult, PerPlayer, PlayerId};
 use serde::{Deserialize, Serialize};
 
-use crate::arena::{AgentSpec, ArenaGame, ArenaOutcome, SeedSet, play_games};
+use crate::arena::{AgentSpec, ArenaGame, ArenaOutcome, SeedSet, play_game};
+use rayon::prelude::*;
 
 #[derive(clap::Args, Debug)]
 pub struct Args {
@@ -138,27 +143,66 @@ pub(crate) fn file_name(base: &str, from: i32, games: i32) -> String {
     format!("selfplay-{safe}-{from}-{}.jsonl", from + games - 1)
 }
 
-/// Plays the games and returns their lines, in game order.
-pub(crate) fn play(base: &str, from: i32, games: i32, commit: &str) -> anyhow::Result<Vec<SelfplayGame>> {
+/// Games played and written at a time: a chunk's lines are on disk before the next chunk starts, in
+/// game order, so a long export keeps what it has played and its file is the same whatever the chunk.
+const CHUNK_GAMES: i32 = 64;
+
+/// A game slower than this, in seconds of wall time, is named on stderr as it finishes.
+const SLOW_GAME_SECONDS: f64 = 60.0;
+
+/// Plays games `from..from + games` in chunks of `CHUNK_GAMES`, handing each chunk's lines, in game
+/// order, to `sink` before the next chunk starts. Progress and slow games go to stderr.
+pub(crate) fn play_chunks(
+    base: &str,
+    from: i32,
+    games: i32,
+    commit: &str,
+    mut sink: impl FnMut(&[SelfplayGame]) -> anyhow::Result<()>,
+) -> anyhow::Result<()> {
     jackioh_cards::register_all();
     let catalog = jackioh_cards::catalog_version();
-    let outcomes = play_games(&setups(base, from, games))?;
-    Ok(outcomes
-        .into_iter()
-        .map(|outcome| game_of(outcome, catalog, commit))
-        .collect())
+    let end = from + games;
+    let mut start = from;
+    while start < end {
+        let count = CHUNK_GAMES.min(end - start);
+        eprintln!(
+            "{}",
+            serde_json::json!({ "selfplay": "chunk", "from": start, "to": start + count - 1, "of": end - 1 })
+        );
+        let played: Vec<(ArenaOutcome, f64)> = setups(base, start, count)
+            .par_iter()
+            .map(|game| {
+                let clock = Instant::now();
+                play_game(game).map(|outcome| (outcome, clock.elapsed().as_secs_f64()))
+            })
+            .collect::<anyhow::Result<_>>()?;
+        let mut lines = Vec::with_capacity(played.len());
+        for (outcome, seconds) in played {
+            if seconds > SLOW_GAME_SECONDS {
+                eprintln!(
+                    "{}",
+                    serde_json::json!({
+                        "selfplay": "slow game", "seed": outcome.game.seed, "seconds": seconds.round(),
+                        "turns": outcome.turns, "actions": outcome.log.len(), "result": outcome.result.is_some(),
+                    })
+                );
+            }
+            lines.push(game_of(outcome, catalog, commit));
+        }
+        sink(&lines)?;
+        start += count;
+    }
+    Ok(())
 }
 
-pub(crate) fn write(path: &Path, games: &[SelfplayGame]) -> anyhow::Result<()> {
-    if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir).with_context(|| format!("selfplay: cannot create {}", dir.display()))?;
-    }
-    let mut text = String::new();
-    for game in games {
-        text.push_str(&serde_json::to_string(game)?);
-        text.push('\n');
-    }
-    std::fs::write(path, text).with_context(|| format!("selfplay: cannot write {}", path.display()))
+/// Plays the games and returns their lines, in game order.
+pub(crate) fn play(base: &str, from: i32, games: i32, commit: &str) -> anyhow::Result<Vec<SelfplayGame>> {
+    let mut all = Vec::new();
+    play_chunks(base, from, games, commit, |chunk| {
+        all.extend_from_slice(chunk);
+        Ok(())
+    })?;
+    Ok(all)
 }
 
 pub fn run(args: Args) -> anyhow::Result<()> {
@@ -171,19 +215,37 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     if args.from < 1 {
         bail!("selfplay: --from must be at least 1, not {}", args.from);
     }
-    let games = play(&args.seed, args.from, args.games, &commit())?;
     let path = args.out.join(file_name(&args.seed, args.from, args.games));
-    write(&path, &games)?;
-    let finished = games.iter().filter(|game| game.result.is_some()).count();
-    let turns: i64 = games.iter().map(|game| i64::from(game.turns)).sum();
+    std::fs::create_dir_all(&args.out)
+        .with_context(|| format!("selfplay: cannot create {}", args.out.display()))?;
+    let file = std::fs::File::create(&path)
+        .with_context(|| format!("selfplay: cannot create {}", path.display()))?;
+    let mut writer = BufWriter::new(file);
+    let (mut played, mut finished, mut turns, mut catalog) = (0usize, 0usize, 0i64, None::<String>);
+    play_chunks(&args.seed, args.from, args.games, &commit(), |chunk| {
+        for game in chunk {
+            serde_json::to_writer(&mut writer, game)?;
+            writer.write_all(
+                b"
+",
+            )?;
+            played += 1;
+            finished += usize::from(game.result.is_some());
+            turns += i64::from(game.turns);
+            catalog.get_or_insert_with(|| game.catalog.clone());
+        }
+        writer
+            .flush()
+            .with_context(|| format!("selfplay: cannot write {}", path.display()))
+    })?;
     println!(
         "{}",
         serde_json::json!({
             "out": path.display().to_string(),
-            "games": games.len(),
+            "games": played,
             "finished": finished,
             "turns": turns,
-            "catalog": games.first().map(|game| game.catalog.clone()),
+            "catalog": catalog,
         })
     );
     Ok(())
