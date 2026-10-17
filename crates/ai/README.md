@@ -100,6 +100,13 @@ building and nothing else: a banned card stays legal for every player. Since #73
 Meditative cards only, at most half of the set (R732000): no sweep, lane or person adds a card of an
 earlier set, and the unban lane (`training/unban.md`) only removes entries.
 
+`FIXTURE_BANNED_IDS` (issue #1113) is the frozen fixture pool: a copy of the table as it stood
+when the seeded fixtures were dealt from it. It is never updated with the table; a fixture that
+needs a new deal changes its seed instead. R290's tier games, the `cargo test` gate smokes behind
+`fixture_game_config`/`run_fixture_gate_games`, and the named practice seeds (R265's mulligan
+seeds, B34's walk, R677's glitch-swap) and spec 13's URL games deal the AI from it. `gate --full`,
+promotion, sweep and live practice keep the live table.
+
 ## Matches and the quality gates
 
 `play_match(&MatchConfig, &mut MatchHooks) -> MatchRecord` plays one whole game between two

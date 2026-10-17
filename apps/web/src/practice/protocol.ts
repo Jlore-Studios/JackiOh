@@ -77,6 +77,13 @@ export type PracticeStartConfig = {
    * no card statistics (§12.10). Never a lesson's or the AI's.
    */
   customCards?: CustomCard[];
+  /**
+   * Issue #1113, tests only: the ids the AI deck is dealt without, as `banned`. When set, the AI
+   * deck is dealt with it; absent, the AI deals the live shadow ban as today. The seeded fixtures
+   * (the R265/B34/R677 seeds, spec 13's URL games) set it to the frozen fixture pool; the
+   * production route never sets it.
+   */
+  aiBanned?: readonly string[];
 };
 
 /** R417: one card of a last board, its card and face only (the engine's `LastBoardEntry`). */

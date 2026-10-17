@@ -24,6 +24,9 @@
 //                         read, a game on a random deck around that card (R915005), on the remembered
 //                         difficulty; a card the account does not have shows the setup, saying so
 //   ?pace=fast            e2e pacing, honoured only outside a production build
+//   ?aipool=fixture      issue #1113, e2e only: the seeded fixtures deal the AI from the frozen
+//                         fixture pool instead of the live shadow ban, honoured only outside a
+//                         production build
 //
 // With none of the params that start a game, a free game left in progress on this device (a reload,
 // a closed tab) picks up where it was (R668, `practice/resume.ts`); one that starts a game discards it.
@@ -47,6 +50,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { FIXTURE_BANNED_IDS } from "@jackioh/ai";
 import { CUSTOM_ID_PREFIX, DIFFICULTIES, type Difficulty } from "@jackioh/engine/config";
 import { LEAN_NEWEST, isLeanPick } from "@jackioh/shared";
 import type { ActionBody, CardDefs, LeanPick, PlayerId, PlayerView, SandboxOp } from "@jackioh/shared";
@@ -149,6 +153,8 @@ type PracticeParams = {
   /** #921: a custom card's id, to try on a random deck around it. */
   try?: string;
   pace?: "fast";
+  /** Issue #1113, e2e only: the seeded fixtures' pool. Dropped in a production build. */
+  aipool?: "fixture";
 };
 
 function isDifficulty(value: unknown): value is Difficulty {
@@ -179,6 +185,10 @@ export function readPracticeParams(search: string): PracticeParams {
   if (tried !== null && tried.startsWith(CUSTOM_ID_PREFIX)) out.try = tried;
 
   if (params.get("pace") === "fast") out.pace = "fast";
+
+  // Issue #1113, e2e only: the seeded fixtures deal the AI from the frozen pool. Read at call
+  // time, not the module-level DEV_ONLY, so a test can stub MODE to production and watch it drop.
+  if (import.meta.env.MODE !== "production" && params.get("aipool") === "fixture") out.aipool = "fixture";
 
   return out;
 }
@@ -255,6 +265,9 @@ function configFor(choice: PracticeSetupChoice, params: PracticeParams): Practic
     difficulty: choice.difficulty,
     humanSeat: params.seat ?? randomSeat(),
     deck: choice.deck,
+    // Issue #1113, e2e only: the seeded fixtures deal the AI from the frozen pool. `EngineGate`
+    // in main.tsx holds this screen until the module is loaded, so the binding below is set.
+    ...(params.aipool === "fixture" ? { aiBanned: [...FIXTURE_BANNED_IDS] } : {}),
     // R923000: a sandbox game, with its dev tools.
     ...(choice.sandbox === true ? { sandbox: true } : {}),
     // R915006: the custom cards the deck names, which the game carries.
