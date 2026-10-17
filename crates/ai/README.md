@@ -188,7 +188,13 @@ pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64
   keys it has rows for (an unknown key is no input), the layers and the skip connection. `build.rs`
   turns it into constant slices: data at compile time, no static at run time (rule 4). The checked-in
   file may be the null network, whose correction is zero everywhere.
-- Inference is `f64`, one fixed order, clipped ReLUs as comparisons, no libm.
+- Inference is `f64`, one fixed order, clipped ReLUs as comparisons, no libm, for a float network
+  (`"format": 1`, `Learned::Float`), which part 5's native screen measures. The network that ships is
+  an integer one (`"format": 2`, `Learned::Int`, `src/learned/int.rs`, #1011): `training/ml`'s
+  `quantize.py` folds the standardizer into an i16 first layer over the raw features, i8 head layers,
+  i64 sums, floor shifts and clips, and one IEEE division at the end, so the native gates and the
+  browser's WASM build give the same answer bit for bit (R1011000; `tests/fixtures/learned-parity.json`,
+  held natively and through the WASM module's `learned_parity`).
 
 ## Duos (§13.7)
 

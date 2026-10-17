@@ -183,14 +183,26 @@ fn r1010002_a_duos_duel_keeps_the_hand_eval() {
     }
     with_tiny(|network, _| {
         let hand = evaluate(&solo, PlayerId::P1, NextSwing::Seat, &AI_EVAL);
-        let learned = finalist_score_with(&solo, PlayerId::P1, NextSwing::Seat, EvalKind::Learned, network);
+        let learned = finalist_score_with(
+            &solo,
+            PlayerId::P1,
+            NextSwing::Seat,
+            EvalKind::Learned,
+            &Learned::Float(*network),
+        );
         let features = features_of(&solo, PlayerId::P1);
         assert_eq!(learned, network.points(hand, &features));
         assert_ne!(learned, hand, "the network moves this position");
 
         let duos_hand = evaluate(&duos, PlayerId::P1, NextSwing::Seat, &AI_EVAL);
         assert_eq!(
-            finalist_score_with(&duos, PlayerId::P1, NextSwing::Seat, EvalKind::Learned, network),
+            finalist_score_with(
+                &duos,
+                PlayerId::P1,
+                NextSwing::Seat,
+                EvalKind::Learned,
+                &Learned::Float(*network)
+            ),
             duos_hand
         );
     });
@@ -218,11 +230,21 @@ fn r1010000_the_hand_switch_and_the_null_network_score_as_the_hand_eval() {
             finalist_score_with(&state, PlayerId::P1, next, EvalKind::Hand, &LEARNED),
             hand
         );
-        if LEARNED.keys.is_empty()
-            && LEARNED.hand_b == 0.0
-            && LEARNED.out_w.iter().all(|w| *w == 0.0)
-            && LEARNED.out_b == 0.0
-        {
+        let null = match LEARNED {
+            Learned::Float(net) => {
+                net.keys.is_empty()
+                    && net.hand_b == 0.0
+                    && net.out_w.iter().all(|w| *w == 0.0)
+                    && net.out_b == 0.0
+            }
+            Learned::Int(net) => {
+                net.keys.is_empty()
+                    && net.hand_b == 0.0
+                    && net.out_w.iter().all(|w| *w == 0)
+                    && net.out_b == 0
+            }
+        };
+        if null {
             assert_eq!(
                 finalist_score_with(&state, PlayerId::P1, next, EvalKind::Learned, &LEARNED),
                 hand
@@ -241,4 +263,35 @@ fn r1010000_the_hand_switch_and_the_null_network_score_as_the_hand_eval() {
             ),
         }
     });
+}
+
+/// The integer network's parity fixture (`training/ml/jackioh_ml/quantize.py --parity`): a seeded
+/// random network, quantized, and 40 positions with the corrections the Python integer reference
+/// computes, as the shortest text that reads back as each double.
+const PARITY: &str = include_str!("../fixtures/learned-parity.json");
+
+/// R1011000: the integer network gives, natively, exactly the Python reference's corrections, bit
+/// for bit; the web's tests hold the WASM build to the same fixture.
+#[test]
+fn r1011000_the_integer_network_gives_the_reference_bit_for_bit() {
+    let fixture: Value = serde_json::from_str(PARITY).expect("the fixture parses");
+    let answers = parity_answers(&fixture).expect("the fixture's network reads");
+    let cases = fixture["cases"].as_array().expect("cases");
+    assert_eq!(answers.len(), 40);
+    assert_eq!(answers.len(), cases.len());
+    let mut moved = 0;
+    for (at, (answer, case)) in answers.iter().zip(cases).enumerate() {
+        let expected: f64 = case["expected"]
+            .as_str()
+            .expect("text")
+            .parse()
+            .expect("a number");
+        assert_eq!(
+            answer.to_bits(),
+            expected.to_bits(),
+            "case {at}: {answer} against {expected}"
+        );
+        moved += usize::from(*answer != 0.0);
+    }
+    assert!(moved > 30, "the network moves most positions");
 }
