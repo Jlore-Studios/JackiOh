@@ -16,7 +16,7 @@ use crate::brittle_count::active_brittle_count;
 use crate::layers::{card_keywords, printed_keywords_of, stats_with_buffs, unit_view};
 use crate::script::{ActivationUses, Script};
 use crate::state::{CardInstance, GameState};
-use crate::wire::{AttackHealth, CardType, Keyword, KeywordKind, ParamBetter, Row, Zone, has_keyword};
+use crate::wire::{AttackHealth, CardType, Keyword, KeywordKind, ParamBetter, has_keyword};
 
 /// B3.4 rule 3: the numbered keywords, by the tuning key each is read under (`tuning::tuned_count`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -92,9 +92,10 @@ const PRINTED_NUMBERED: &[(NumberedKey, KeywordKind)] = &[
     (NumberedKey::SpellDamage, KeywordKind::SpellDamage),
 ];
 
-/// The field's unit row: where a card's stats are read through all five layers (§10.4).
-fn in_unit_row(card: &CardInstance) -> bool {
-    matches!(card.zone, Zone::Field { row: Row::Units, .. })
+/// The field's unit row, or a backrow zone a Unit stands in (R1081000): where a card's stats are read
+/// through all five layers (§10.4).
+fn in_unit_row(state: &GameState, card: &CardInstance) -> bool {
+    crate::zones::in_units_row_or_standing(state, card)
 }
 
 /// R65, B3.4 rule 3: the card's own cost — `costOverride` or its printed cost (a computed or embiggen
@@ -129,7 +130,7 @@ pub fn current_stats(state: &GameState, card: &CardInstance) -> Option<AttackHea
     if !has_stats(state, card) {
         return None;
     }
-    if in_unit_row(card) {
+    if in_unit_row(state, card) {
         let view = unit_view(state, card);
         return Some(AttackHealth {
             attack: view.attack,
@@ -291,7 +292,7 @@ pub fn number_key(ref_: &NumberRef) -> String {
 /// face prints, R749, R1431, and its power's now, R1430). An Immutable card has none a change may reach
 /// (B3.4 rule 2), so it lists none.
 pub fn numbers_on(state: &GameState, card: &CardInstance) -> Vec<NumberOnCard> {
-    let keywords = if in_unit_row(card) {
+    let keywords = if in_unit_row(state, card) {
         unit_view(state, card).keywords
     } else {
         card_keywords(state, card)

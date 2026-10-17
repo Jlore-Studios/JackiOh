@@ -6,9 +6,10 @@
 //! M3-T2) and vanishes the instant the card stops being an aura source. `applies` reads instance data
 //! only and never calls back into `unit_view`, or the layers would recurse.
 //!
-//! "Your units": the controller's units in the `units` row, so the aura skips its own backrow card and
-//! a stolen unit stops matching because `controller` is compared (R78 resets it on the way out). Rush
-//! from this aura is what R83's "a Reborn body the board has granted Rush may attack again" refers to.
+//! "Your units": the controller's units in the `units` row or standing in the backrow (R1081000), so the
+//! aura skips its own backrow card and a stolen unit stops matching because `controller` is compared
+//! (R78 resets it on the way out). Rush from this aura is what R83's "a Reborn body the board has
+//! granted Rush may attack again" refers to.
 
 use jackioh_engine::prelude::*;
 
@@ -20,9 +21,11 @@ fn weapons_aura() -> AuraHook {
     aura_hook(|args: HookArgs<'_>| {
         let attack = param(&args, "attack");
         let controller = args.self_.controller;
+        let state = args.state;
         vec![AuraEntry {
+            // R1081000: a Unit standing in the backrow is one of "your units".
             applies: Box::new(move |unit: &CardInstance| {
-                unit.controller == controller && matches!(unit.zone, Zone::Field { row: Row::Units, .. })
+                unit.controller == controller && in_units_row_or_standing(state, unit)
             }),
             mod_: StatMod {
                 attack: Some(attack),
@@ -213,5 +216,19 @@ mod tests {
                 s.expect_stats("core-008", json!({ "attack": 4 + attack, "health": 4 }));
             }
         }
+    }
+
+    /// R1081000: a Unit standing in the backrow is one of "your units": it gets the +4 attack.
+    #[test]
+    fn r1081000_a_unit_standing_in_the_backrow_is_one_of_your_units() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "backrow": [{ "def": "core-014", "lane": 1 }], "field": ["core-008"], "hand": ["core-005"] },
+            "p2": { "hand": ["core-005"] }
+        }));
+        let vanilla = s.card("core-008").id.clone();
+        crate::stand_in_backrow(&mut s, &vanilla, 2);
+        s.expect_stats(vanilla.as_str(), json!({ "attack": 8, "health": 4 }));
+        assert!(s.stats(vanilla.as_str()).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Rush));
     }
 }

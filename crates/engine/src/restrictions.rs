@@ -236,7 +236,8 @@ pub fn is_berserk(card: &CardInstance) -> bool {
 
 /// B5 E35: whether the unit may go Berserk now: on the field, not Berserk yet, and not immune to it.
 pub fn can_go_berserk(state: &GameState, card: &CardInstance) -> bool {
-    if !matches!(card.zone, Zone::Field { row: Row::Units, .. }) {
+    // R1081000: a Unit standing in the backrow goes Berserk as one in a unit zone does.
+    if !crate::zones::in_units_row_or_standing(state, card) {
         return false;
     }
     if !active_on_field(state, card) {

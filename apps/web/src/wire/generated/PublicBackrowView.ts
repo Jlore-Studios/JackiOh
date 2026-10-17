@@ -13,6 +13,7 @@ import type { QuestView } from "./QuestView";
 import type { RevealAt } from "./RevealAt";
 import type { Tag } from "./Tag";
 import type { Tuning } from "./Tuning";
+import type { UnitView } from "./UnitView";
 
 /**
  * The public member of `BackrowView`: `CardView & { faceDown: false; type: CardType; … }`. Every
@@ -59,4 +60,10 @@ vanilla?: true,
 /**
  * B5 E21: face-down, dormant cards beneath this one in a backrow pile (§3.2). Absent for none.
  */
-buried?: number, };
+buried?: number, 
+/**
+ * R1081000: the Unit standing in this backrow zone, when the public top card is one — a Flying
+ * Unit there is a Unit for every rule, so the client draws it as the minion it is. Units are
+ * public in any zone, so this carries no hidden information; absent for every other backrow card.
+ */
+unit?: UnitView, };

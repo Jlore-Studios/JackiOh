@@ -20,10 +20,12 @@ fn defense_armor_aura() -> AuraHook {
     aura_hook(|args: HookArgs<'_>| {
         let n = param(&args, "armor");
         let controller = args.self_.controller;
+        let state = args.state;
         vec![AuraEntry {
             applies: Box::new(move |unit: &CardInstance| {
                 unit.controller == controller
-                    && matches!(unit.zone, Zone::Field { row: Row::Units, .. })
+                    // R1081000: a Unit standing in the backrow is one of "your units".
+                    && in_units_row_or_standing(state, unit)
                     && unit.position.unwrap_or(Position::Atk) == Position::Def
             }),
             mod_: StatMod {
@@ -138,5 +140,21 @@ mod tests {
                 s.attack("core-025", "core-019").expect_stats("core-019", json!({ "health": health }));
             }
         }
+    }
+
+    /// R1081000: a Unit standing in the backrow in Defense Position takes the aura's Armor too.
+    #[test]
+    fn r1081000_a_defense_position_unit_standing_in_the_backrow_takes_the_armor() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "active": "p2",
+            "p1": { "field": ["core-001", "core-019"] },
+            "p2": { "field": ["core-025"] }
+        }));
+        let menace = s.card("core-019").id.clone();
+        crate::stand_in_backrow(&mut s, &menace, 1);
+        s.card_mut(menace.as_str()).position = Some(Position::Def);
+        s.attack("core-025", menace.as_str())
+            .expect_stats(menace.as_str(), json!({ "health": 5, "maxHealth": 9 }));
     }
 }

@@ -399,6 +399,24 @@
   animation: kw-flying-hover var(--kw-period-hover) ease-in-out infinite alternate;
 }
 
+/* R1081000: a Flying minion out of Defense hovers above the board, in either row. */
+.cf--minion[data-flying="true"] {
+  transform: translateY(-6%);
+  filter: drop-shadow(0 12px 12px rgb(0 0 0 / 0.35));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cf--minion[data-flying="true"] {
+    transform: none;
+    filter: none;
+  }
+}
+
+:root[data-reduce-motion="true"] .cf--minion[data-flying="true"] {
+  transform: none;
+  filter: none;
+}
+
 .cf .kw-fx[data-keyword-fx="Cloaked"][data-kw-motion="on"] .kw-anim {
   animation: kw-cloaked-fade var(--kw-period-cloak) ease-in-out infinite alternate;
 }

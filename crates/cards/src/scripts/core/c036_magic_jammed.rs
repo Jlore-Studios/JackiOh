@@ -62,6 +62,8 @@ mod tests {
     const SHEEPISH: &str = "core-041";
     /// A spare hand card, so no side runs out of meaningful actions and auto-ends its turn.
     const SPARE: &str = "core-005";
+    /// (1) 4/4 Unit with no text.
+    const VANILLA: &str = "core-008";
 
     /// Registers the catalog first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
@@ -127,6 +129,21 @@ mod tests {
             assert!(s.state().players.p2.locks.backrow[2]);
             // R81: the target travelled with the play, so resolution never paused.
             assert!(s.state().pending.is_none());
+        }
+
+        /// R1081000: a Unit standing in a backrow zone is no backrow card (§6.1 Animated): no target.
+        #[test]
+        fn r1081000_a_unit_standing_in_the_backrow_is_no_backrow_card_to_target() {
+            let mut s = scn(json!({
+                "p1": { "hand": [MAGIC_JAMMED, SPARE], "library": [SPARE] },
+                "p2": { "field": [{ "def": VANILLA, "lane": 1 }], "hand": [SPARE], "library": [SPARE] },
+            }));
+            let unit = s.unit("p2", 1).expect("a Unit in lane 1").id;
+            crate::stand_in_backrow(&mut s, &unit, 3);
+
+            s.expect_refused(|s| s.play(MAGIC_JAMMED, json!({ "targets": pick(&unit) })));
+
+            s.expect_in_zone(unit.as_str(), "field");
         }
 
         #[test]

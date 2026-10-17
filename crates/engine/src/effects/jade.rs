@@ -16,7 +16,7 @@ use crate::effects::summon::{SummonArgs, summon};
 use crate::effects::targets::{PlayerSpec, player_of};
 use crate::script::Effect;
 use crate::wire::{GameEvent, Row};
-use crate::zones::{card_at, slots_of};
+use crate::zones::{card_at, slots_of, standing_units_of};
 
 /// `addJade`'s argument: how much the counter rises by, and whose (default the controller's own,
 /// which is what a resolving Jade or Red Jade adds to, MD-C2).
@@ -53,9 +53,11 @@ pub fn add_jade(args: AddJadeArgs) -> Effect {
             (beauty.apply)(ctx);
         }
         if before < JADE_ASCEND_AT && JADE_ASCEND_AT <= after {
+            // R1081000: a Jade Beauty standing in the backrow is one of them, after the unit row's.
             let beauties: Vec<String> = slots_of(player, Row::Units)
                 .into_iter()
                 .filter_map(|slot| card_at(ctx.sink.state, slot).cloned())
+                .chain(standing_units_of(ctx.sink.state, player).into_iter().cloned())
                 .filter(|card| card.def_id == JADE_BEAUTY_DEF_ID)
                 .map(|card| card.id)
                 .collect();

@@ -24,7 +24,14 @@ pub const ID: &str = "classic-005";
 fn arrival(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
     match event {
         GameEvent::Summoned { player, row, exits_from, instance_id, .. } => {
-            if *player == ctx.controller || *row != Row::Units {
+            if *player == ctx.controller {
+                return None;
+            }
+            // R1081000: a Unit summoned standing in a backrow zone (a Reborn return, a Flicker) is a
+            // summoned Unit too; any other card a summon sets in the backrow is none.
+            if *row != Row::Units
+                && !find_instance(&*ctx.state, instance_id).is_some_and(|unit| stands_in_backrow(&*ctx.state, unit))
+            {
                 return None;
             }
             // A play's own placement (§10.5 step 4) is answered when the play resolves, below.
@@ -283,6 +290,24 @@ mod tests {
                 s.expect_in_zone(&defender, "field");
                 assert_eq!(count(s.events(), "trapFired"), 1);
                 assert_eq!(count(s.events(), "animated"), 1);
+                s.expect_events(json!(["destroyed", "summoned", "trapFired", "divineShieldLost"]));
+            }
+
+            /// R1081000: a Reborn body that stood in the backrow returns standing there, a Unit summoned.
+            #[test]
+            fn r1081000_a_reborn_body_returning_to_stand_in_the_backrow_is_summoned_and_answered() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [HIT_JOB, FILLER], "backrow": [set_tesla(false, 3)], "health": 20, "library": [VANILLA] },
+                    "p2": { "hand": [FILLER], "field": [{ "def": DEFENDER, "lane": 2 }] },
+                }));
+                let defender = s.card(DEFENDER).id.clone();
+                crate::stand_in_backrow(&mut s, &defender, 2);
+
+                s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": defender }] }));
+
+                assert!(stands_in_backrow(s.state(), s.card(defender.as_str())));
+                assert_eq!(count(s.events(), "trapFired"), 1);
                 s.expect_events(json!(["destroyed", "summoned", "trapFired", "divineShieldLost"]));
             }
 

@@ -179,7 +179,13 @@ fn backrow_cards_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
 
 /// Quest 3: the permanents `player` controls now — the tops of their unit piles and their backrow cards.
 fn permanents_controlled(state: &GameState, player: PlayerId) -> i32 {
-    (active_units_of(state, player).len() + backrow_cards_of(state, player).len()) as i32
+    // R1081000: a Unit standing in the backrow is among the active units already; count it once.
+    let units = active_units_of(state, player);
+    let backrow = backrow_cards_of(state, player)
+        .into_iter()
+        .filter(|card| !units.iter().any(|unit| unit.id == card.id))
+        .count();
+    (units.len() + backrow) as i32
 }
 
 /// Quest 6: the lower of `player`'s Units' total attack and total health, through the layers (§10.4).
@@ -341,7 +347,12 @@ fn quest_cards_in_order(state: &GameState) -> Vec<CardInstance> {
     let mut out: Vec<CardInstance> = Vec::new();
     for player in sides {
         let units: Vec<CardInstance> = active_units_of(state, player).into_iter().cloned().collect();
-        let backrow: Vec<CardInstance> = backrow_cards_of(state, player).into_iter().cloned().collect();
+        // R1081000: a Unit standing in the backrow is among the active units already; visit it once.
+        let backrow: Vec<CardInstance> = backrow_cards_of(state, player)
+            .into_iter()
+            .filter(|card| !units.iter().any(|unit| unit.id == card.id))
+            .cloned()
+            .collect();
         for card in units.into_iter().chain(backrow) {
             if quest_book_of(state, &card).is_some() {
                 out.push(card);

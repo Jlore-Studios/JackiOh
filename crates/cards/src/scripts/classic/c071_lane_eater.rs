@@ -13,13 +13,15 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "classic-071";
 
 /// The zones of this lane the face destroys in: the base face's three others, the Radiant's two enemy ones.
-fn lane_zones(me: PlayerId, enemy_only: bool) -> Vec<(PlayerId, Row)> {
+/// `own` is the row Lane Eater stands in: the unit row, or the backrow when it stands there (R1081000).
+fn lane_zones(me: PlayerId, own: Row, enemy_only: bool) -> Vec<(PlayerId, Row)> {
     let enemy = opponent_of(me);
     let theirs = vec![(enemy, Row::Units), (enemy, Row::Backrow)];
     if enemy_only {
         theirs
     } else {
-        let mut zones = vec![(me, Row::Backrow)];
+        let other = if own == Row::Units { Row::Backrow } else { Row::Units };
+        let mut zones = vec![(me, other)];
         zones.extend(theirs);
         zones
     }
@@ -27,14 +29,17 @@ fn lane_zones(me: PlayerId, enemy_only: bool) -> Vec<(PlayerId, Row)> {
 
 /// Destroy the card acting in each of those zones of Lane Eater's lane, as the Cry resolves.
 fn destroy_in_lane(ctx: &EffectContext, enemy_only: bool) -> Vec<Effect> {
-    let at = ctx.live_self().and_then(|me| slot_of(&*ctx.state, me));
-    let Some(at) = at else {
+    let Some(me) = ctx.live_self() else {
         return Vec::new();
     };
-    if at.row != Row::Units {
+    let Some(at) = slot_of(&*ctx.state, me) else {
+        return Vec::new();
+    };
+    // R1081000: a Lane Eater standing in the backrow eats this lane from there.
+    if !in_units_row_or_standing(&*ctx.state, me) {
         return Vec::new();
     }
-    lane_zones(ctx.controller, enemy_only)
+    lane_zones(ctx.controller, at.row, enemy_only)
         .into_iter()
         .filter_map(|(player, row)| {
             card_at(&*ctx.state, ZoneSlot { player, row, lane: at.lane }).map(|card| {
@@ -322,5 +327,35 @@ mod tests {
                 2
             );
         }
+    }
+
+    /// R1081000: a Flying Lane Eater played into a backrow zone eats every other card in its lane from
+    /// there — its own side's unit zone included.
+    #[test]
+    fn r1081000_played_flying_into_the_backrow_it_eats_every_other_card_in_its_lane() {
+        let mut s = scenario(json!({
+            "p1": merged(spare(), json!({
+                "hand": [LANE_EATER, STOCKPILE],
+                "field": [{ "def": VANILLA, "lane": 2 }],
+                "mana": 10,
+            })),
+            "p2": merged(spare(), json!({
+                "field": [{ "def": TIMMY, "lane": 2 }],
+                "backrow": [{ "def": MANA_WELL, "lane": 2 }],
+            })),
+        }));
+        let eater = s.card(LANE_EATER).id.clone();
+        crate::give_flying(&mut s, &eater);
+        let vanilla = s.card(VANILLA).clone();
+        let timmy = s.card(TIMMY).clone();
+        let well = s.card(MANA_WELL).clone();
+
+        s.play(LANE_EATER, json!({ "row": "backrow", "zone": 2 }));
+
+        s.expect_in_zone(&vanilla, "graveyard");
+        s.expect_in_zone(&timmy, "graveyard");
+        s.expect_in_zone(&well, "graveyard");
+        s.expect_in_zone(eater.as_str(), "field");
+        assert_eq!(lane_two_locks(&s), vec![true, true, true, true]);
     }
 }

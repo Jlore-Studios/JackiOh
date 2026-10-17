@@ -34,7 +34,8 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     // R685: midlane is computed from the lane count, never hardcoded, through the engine helper (M3-T1).
     let lane = slot_of(&*ctx.state, &self_).map_or(-1, |slot| slot.lane);
     let in_midlane = midlane_lanes_of(&*ctx.state, ctx.controller).contains(&lane)
-        && matches!(self_.zone, Zone::Field { row: Row::Units, .. });
+        // R1081000: standing in the midlane's backrow zone is being in midlane too.
+        && in_units_row_or_standing(&*ctx.state, &self_);
     let bounces = param(&*ctx, "bounces");
     let mana = mana_when_played(ctx);
     let mut effects = Vec::new();
@@ -403,5 +404,23 @@ mod tests {
                 assert_eq!(bounced_ids(&s), Vec::<String>::new());
             }
         }
+    }
+
+    /// R1081000: a Flying Mid Runner played into the midlane's backrow zone is in midlane: it Tributes
+    /// itself there as in the unit zone.
+    #[test]
+    fn r1081000_played_flying_into_the_midlane_backrow_zone_it_tributes_itself() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "hand": [RUNNER, ANCHOR], "mana": 3 },
+            "p2": { "hand": [ANCHOR], "field": [VANILLA] },
+        }));
+        let runner = s.card(RUNNER).id.clone();
+        crate::give_flying(&mut s, &runner);
+
+        s.play(RUNNER, json!({ "row": "backrow", "zone": 3 }));
+
+        s.expect_in_zone(RUNNER, "graveyard");
+        assert_eq!(bounced_ids(&s), Vec::<String>::new());
     }
 }

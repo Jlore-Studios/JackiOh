@@ -17,11 +17,20 @@ fn joon() -> Script {
             let Some(at) = slot_of(&*ctx.state, me) else {
                 return vec![];
             };
-            if at.row != Row::Units || at.lane >= UNIT_ZONES {
+            // R1081000: standing in the backrow, the Unit to its right is the one standing in the next
+            // backrow zone (`is_adjacent_card`), never a backrow card.
+            if !in_units_row_or_standing(&*ctx.state, me) {
                 return vec![];
             }
-            let next = ZoneSlot { player: at.player, row: Row::Units, lane: at.lane + 1 };
-            let Some(id) = card_at(&*ctx.state, next).map(|card| card.id.clone()) else {
+            let zones = if at.row == Row::Units { UNIT_ZONES } else { BACKROW_ZONES };
+            if at.lane >= zones {
+                return vec![];
+            }
+            let next = ZoneSlot { player: at.player, row: at.row, lane: at.lane + 1 };
+            let Some(id) = card_at(&*ctx.state, next)
+                .filter(|card| is_adjacent_card(&*ctx.state, me, card))
+                .map(|card| card.id.clone())
+            else {
                 return vec![];
             };
             vec![upgrade(json_as(json!({ "instanceId": id, "times": param(&*ctx, "times") })))]
@@ -152,5 +161,39 @@ mod tests {
         let right = s.unit(PlayerId::P1, 3).expect("the neighbour").id.clone();
         s.end_turn();
         assert_eq!(upgraded_for(s.events(), &right), 10);
+    }
+
+    /// R1081000: standing in the backrow, the Unit to its right is the one standing in the next backrow
+    /// zone; a backrow card there is no Unit and takes nothing.
+    #[test]
+    fn r1081000_standing_in_the_backrow_it_buffs_the_unit_standing_to_its_right() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": {
+                "field": [{ "def": JOON, "lane": 2 }, { "def": VANILLA, "lane": 3 }],
+                "hand": [FILLER],
+            },
+            "p2": { "hand": [FILLER] },
+        }));
+        let joon = s.unit(PlayerId::P1, 2).expect("Joon").id.clone();
+        let right = s.unit(PlayerId::P1, 3).expect("the right neighbour").id.clone();
+        crate::stand_in_backrow(&mut s, &joon, 2);
+        crate::stand_in_backrow(&mut s, &right, 3);
+        s.end_turn();
+        assert_eq!(upgraded_for(s.events(), &right), 5);
+
+        let mut beside_a_spell = scenario(json!({
+            "p1": {
+                "field": [{ "def": JOON, "lane": 4 }],
+                "backrow": [{ "def": "core-006", "lane": 5 }],
+                "hand": [FILLER],
+            },
+            "p2": { "hand": [FILLER] },
+        }));
+        let joon = beside_a_spell.unit(PlayerId::P1, 4).expect("Joon").id.clone();
+        let well = beside_a_spell.backrow(PlayerId::P1, 5).expect("the Field Spell").id.clone();
+        crate::stand_in_backrow(&mut beside_a_spell, &joon, 4);
+        beside_a_spell.end_turn();
+        assert_eq!(upgraded_for(beside_a_spell.events(), &well), 0);
     }
 }

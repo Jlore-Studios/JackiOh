@@ -479,4 +479,17 @@ mod tests {
             assert_eq!(copy.and_then(|card| card.cost_override), Some(1));
         }
     }
+
+    /// R1081000: a Unit of yours standing in the backrow that would die is one of your Units in the
+    /// would-die window: the Radiant face flickers it where it stands.
+    #[test]
+    fn r1081000_radiant_flickers_your_unit_standing_in_the_backrow_where_it_stands() {
+        let mut s = wipe(true, json!([VANILLA]), json!({}));
+        let vanilla = s.card(VANILLA).id.clone();
+        crate::stand_in_backrow(&mut s, &vanilla, 2);
+        s.play(BIG_FELINOR, json!({}));
+        assert_eq!(fired(&s), 1);
+        assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(vanilla.clone()));
+        assert!(stands_in_backrow(s.state(), s.card(vanilla.as_str())));
+    }
 }

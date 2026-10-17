@@ -213,6 +213,18 @@ mod tests {
             assert_eq!(s.card(FIENDER).buffs.attack, 2);
         }
 
+        /// R1081000: a Unit standing in the backrow is one of "your Units on the field", buffed once.
+        #[test]
+        fn r1081000_a_unit_standing_in_the_backrow_is_one_of_your_units_on_the_field() {
+            let mut s = appropriations(false, json!({}), json!({}));
+            let timmy = unit(&s, P1, 1).id;
+            crate::stand_in_backrow(&mut s, &timmy, 2);
+            s.play(APPROPRIATIONS, json!({ "x": 2, "modes": ["Military"] }));
+            assert_eq!(s.card(timmy.as_str()).buffs.attack, 4);
+            s.expect_stats(timmy.as_str(), json!({ "attack": 7, "health": 3 }));
+            assert!(keywords_of(&s, s.card(timmy.as_str())).contains(&"Rush".to_string()));
+        }
+
         #[test]
         fn e38_a_hand_unit_carries_the_buff_and_rush_onto_the_field_as_it_enters() {
             let mut s = appropriations(false, json!({}), json!({}));

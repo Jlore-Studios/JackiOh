@@ -142,6 +142,21 @@ mod tests {
                 }
             }
 
+            /// R1081000: a Unit standing in a backrow zone is no backrow card (§6.1 Animated): it stays.
+            #[test]
+            fn r1081000_a_unit_standing_in_the_backrow_is_no_backrow_card_and_stays() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "field": [BACK_BREAKER], "hand": [HIT_JOB, STOCKPILE], "library": spare_library() },
+                    "p2": with_spare(json!({ "field": [{ "def": VANILLA, "lane": 1 }], "backrow": [GOING_LONG] })),
+                }));
+                let standing = s.unit(P2, 1).expect("a Unit in lane 1").id;
+                crate::stand_in_backrow(&mut s, &standing, 2);
+                hit(&mut s, BACK_BREAKER);
+                assert!(backrow_ids(&s, P2)[0].is_none());
+                assert_eq!(s.backrow(P2, 2).map(|card| card.id), Some(standing));
+            }
+
             #[test]
             fn s4_5_a_combat_death_fires_it_too() {
                 crate::register_all();

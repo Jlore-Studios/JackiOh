@@ -1307,6 +1307,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           <span
             class="cf cf--minion"
             data-card-type="Unit"
+            data-flying="true"
             data-foil="animated"
             data-layout="minion"
             data-radiant-face="true"
