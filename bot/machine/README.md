@@ -61,6 +61,7 @@ contributors' pull requests wait for approval before any workflow runs (Settings
 | `deploy-starter.sh` | on your computer | creates or updates the starter, its role and its five-minute schedule |
 | `credits.py` | AWS Lambda | opens one issue when the project's credits fall under $20 (tested in `bot/tests/test_machine.py`) |
 | `deploy-credits.sh` | on your computer | creates or updates the credits watch, its role and its six-hour schedule |
+| `local/` | on a person's Windows PC | the local runner (below): the runner image, the supervisor that lends the PC only while it is idle, its logon task and the logins |
 
 The scripts on your computer need the AWS CLI signed in to the project (`aws login`) and, for the
 runners, `gh` signed in as a repository admin. They find the machine by its `Name` tag, or take
@@ -182,6 +183,59 @@ Running the lanes:
   database back, stop the lane, delete `sessions.db*` there as that user, and start it again.
 - **Cost**: the box is always on: about $70 a month for the instance (on-demand `m7i-flex.large` in
   `us-east-2`; an `m7i.xlarge` would be about $150) plus about $8 for its disk.
+
+## The local runner
+
+A person's own machine adds its cores to GitHub's free runners for the learned evaluation's
+self-play exports (#1008, `docs/learned-eval.md` D1; `.github/workflows/selfplay.yml`,
+`training/README.md`, Where the exports come from), without touching the training box, which the
+lanes keep. It can also take some of the night box's own jobs while the box is busy or off.
+
+| | |
+|---|---|
+| Machine | the owner's laptop (jgoetzmann): Windows 11, Intel i7-11800H (8 cores, 16 threads), 32 GB, Docker Desktop on WSL2 (which `%USERPROFILE%\.wslconfig` caps at 8 GB and 8 processors for every container). The owner looks after it |
+| Label | `jackioh-selfplay-local`, and no other: only `selfplay.yml` names it (its `runner` input). Registered to this repository alone |
+| How it runs | `bot/machine/local/supervisor.ps1`, started at logon by a scheduled task (`install-task.ps1`). Each runner is one ephemeral container of the image `local/Dockerfile` builds (`jackioh-pc-runner`): it registers with a single-use JIT config, takes one job and is gone |
+| When | only while the PC is otherwise idle: CPU under 50% and memory under 24 GB in every sample of the last minute, leaving out the runners' own use (`config.json`). It keeps one runner Idle for the label while it is calm; when the PC gets busy the idle runner is unregistered at once, and a runner in a job is throttled to half a CPU until it is calm again, so no export loses a shard |
+| Limits | one job at a time, 6 CPUs and 6 GB a container, swap off; never a GPU (no `--gpus`, `NVIDIA_VISIBLE_DEVICES=void`); a non-root user with `no-new-privileges`, no host folder and no Docker socket |
+| Tools | Rust 1.97.0 (`rust-toolchain.toml`), a C++ compiler (`mlua` builds Luau from source), `git` and `jq`, Node 24, Python 3.12, and the night box's CLIs |
+| Disk | a container's work directory goes with it, so `target/` never grows between exports; a shard runs the release `jackioh` the workflow builds on GitHub's runners, so it builds nothing. The image is about 6 GB |
+
+Any workflow could ask for the label, so it is safe only while **"Require approval for all external
+contributors"** stays on (Settings → Actions → General), as the night box's runners are (Why each
+subscription is its own user).
+
+**The night box's labels.** `config.json` also lists the `night-vm-<id>` subscriptions. A
+subscription is served here only once it is logged in on the PC (`.\login.ps1 <id>`, a second login
+of the same account, into the volume `jackioh-pc-home-<id>`), and then only when one of its jobs is
+queued: a runner here with that label takes it, or the night box does. While the box is stopped the
+PC usually takes it first, since the starter looks every five minutes and the supervisor every 20
+seconds, and the box stays off. The jobs still count against `machine_parallel`.
+
+**Setting it up**, once, on the PC (PowerShell, Docker Desktop running):
+
+```powershell
+docker build -t jackioh-pc-runner:latest bot/machine/local
+docker run --rm jackioh-pc-runner bash -c "ls /dev/dxg /dev/nvidia0; nproc; rustc -V"   # no GPU device
+copy bot\machine\local\* D:\somewhere\jackioh-pc-runner\    # a folder no checkout moves
+cd D:\somewhere\jackioh-pc-runner
+.\install-task.ps1          # the supervisor at every logon, started now
+```
+
+`gh` must be signed in as a repository admin: the supervisor asks GitHub for each runner's JIT
+config. The runner shows Idle under Settings → Actions → Runners as `pc-selfplay-<time>` within a
+minute of a calm PC. The log is `logs\supervisor.log` beside the scripts.
+
+**Stopping and removing it:**
+
+```powershell
+.\install-task.ps1 -Remove   # no new runners from now on
+.\stop-all.ps1               # unregister and remove every idle runner here (-Force kills one in a job)
+docker image rm jackioh-pc-runner:latest
+```
+
+GitHub drops an ephemeral runner when it ends, and the supervisor drops any it left offline every
+ten minutes, so nothing stays registered once the supervisor is gone and `stop-all.ps1` has run.
 
 ## Running it
 
