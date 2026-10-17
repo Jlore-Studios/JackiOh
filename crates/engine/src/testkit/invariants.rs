@@ -65,8 +65,8 @@
 //!      Rollback can turn a token into a fused card and back, fuzz seed 119), or a card a full library refused before it existed that copies nothing
 //!      (R316, fuzz seed 5967 of the handicapped wave, #562); a Glitch's reset or boards (R676, R678)
 //!      takes the rest unseen, and the first oracle excused it, which was the engine's own R97 rule
-//!      restated: R764 fixed it. In a duel, a card in no pile that is not a token and that the log
-//!      last shows in a hand was passed out of it (B20) and reads to that hand's player alone: the Duos
+//!      restated: R764 fixed it. In a duel, a card in no pile, a token included, that the log last
+//!      shows in a hand was passed out of it (B20) and reads to that hand's player alone: the Duos
 //!      fuzz's first run found `view_for` naming a passed card's draw to the passer's opponent (R1074000).
 //!      Judging former ids by the log found a sixth, fuzz seed 992: R419's Rollback recreated a
 //!      face-down trap #83 had transformed away, and the `formerId` it carries goes with the card
@@ -226,7 +226,8 @@ struct Lineage {
     /// it was, fuzz seed 119), so its leaving names it better than every definition it ever wore.
     gone_as: IndexMap<String, String>,
     /// R1074000: in a duel, each id whose last place the log shows is a hand, and that hand's player. A
-    /// pass (B20) takes a hand card out of its duel with no event, so one in no pile was passed.
+    /// pass (B20) takes a hand card out of its duel with no event, so one in no pile was passed. A unit
+    /// token bounced or stolen off the field or out of the resolving zone reached no hand (R11).
     in_hand: IndexMap<String, PlayerId>,
 }
 
@@ -237,6 +238,7 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
     let mut ties: IndexMap<String, IndexSet<String>> = IndexMap::new();
     let mut gone_as: IndexMap<String, String> = IndexMap::new();
     let mut in_hand: IndexMap<String, PlayerId> = IndexMap::new();
+    let mut ceased: IndexSet<String> = IndexSet::new();
     let tie =
         |ties: &mut IndexMap<String, IndexSet<String>>, id: Option<&Value>, values: &[Option<&Value>]| {
             let Some(id) = id.and_then(Value::as_str) else {
@@ -309,21 +311,39 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
             }
         });
         match event {
+            // R11: a unit token bounced or stolen off the field or out of the resolving zone ceased to exist
+            // on its way to the hand, so a counter's steal's `addedToHand` after it puts it in none.
+            GameEvent::Bounced {
+                instance_id, def_id, ..
+            }
+            | GameEvent::Stolen {
+                instance_id,
+                def_id,
+                zone: ZoneName::Field | ZoneName::Resolving,
+                ..
+            } if is_unit_token_def(state, def_id) => {
+                in_hand.shift_remove(instance_id);
+                ceased.insert(instance_id.clone());
+            }
             GameEvent::Drawn {
                 player, instance_id, ..
             }
             | GameEvent::AddedToHand {
                 player, instance_id, ..
-            } => {
-                in_hand.insert(instance_id.clone(), *player);
             }
-            GameEvent::Bounced {
-                owner, instance_id, ..
-            } => {
-                in_hand.insert(instance_id.clone(), *owner);
+            | GameEvent::Bounced {
+                owner: player,
+                instance_id,
+                ..
             }
-            GameEvent::Stolen { to, instance_id, .. } => {
-                in_hand.insert(instance_id.clone(), *to);
+            | GameEvent::Stolen {
+                to: player,
+                instance_id,
+                ..
+            } => {
+                if !ceased.contains(instance_id) {
+                    in_hand.insert(instance_id.clone(), *player);
+                }
             }
             // R227: a card set face-down from a hand left it under its old id, the `formerId`.
             GameEvent::CardPlayed {
@@ -405,6 +425,11 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
     }
 }
 
+/// R11: whether a definition is a unit token's, which ceases to exist when it leaves the field.
+fn is_unit_token_def(state: &GameState, def_id: &str) -> bool {
+    crate::catalog::find_def(Some(state), def_id).is_some_and(|def| def.token && def.type_ == CardType::Unit)
+}
+
 /// The events that take a card out of a zone and name the definition it left as (`Lineage::gone_as`).
 const LEAVING_EVENTS: [&str; 5] = ["destroyed", "exiled", "burned", "discarded", "bounced"];
 
@@ -420,8 +445,8 @@ struct Standing {
 /// otherwise only when every definition the log pairs with it is a token's: R11's tokens go public
 /// (leaving the field, discarded, burned), where any other card in no pile went unseen, out of a
 /// Glitch's reset or boards (R676, R678), and stays as hidden as it was. In a duel, one the log last
-/// shows in a hand that is no token was passed out of it (B20) and reads to that hand's player alone
-/// (R1074000). An id neither the state nor the log knows vouches for nothing.
+/// shows in a hand, a token's included, was passed out of it (B20) and reads to that hand's player
+/// alone (R1074000). An id neither the state nor the log knows vouches for nothing.
 fn standing_of(
     state: &GameState,
     held: &IndexSet<String>,
@@ -459,6 +484,13 @@ fn standing_of(
                 });
             }
             let defs = lineage.ties.get(id)?;
+            // R1074000: in a duel, a card the log last shows in a hand, token or not, was passed out of it.
+            if let Some(&holder) = lineage.in_hand.get(id) {
+                return Some(Standing {
+                    reads: holder == viewer,
+                    where_: format!("{holder}'s hand, which it was passed out of"),
+                });
+            }
             // R11: a token that ceased to exist (it left the field, was discarded or burned) was public when
             // it went, judged by what it left as. Any other card in no pile went unseen (a Glitch's reset
             // or boards, R676, R678), named by no leaving, and stays as hidden as every definition it wore.
@@ -468,13 +500,6 @@ fn standing_of(
                     .iter()
                     .all(|def| crate::catalog::def_of(Some(&*state), def).token),
             };
-            // R1074000: in a duel, a card the log last shows in a hand was passed out of it, unseen.
-            if !token && let Some(&holder) = lineage.in_hand.get(id) {
-                return Some(Standing {
-                    reads: holder == viewer,
-                    where_: format!("{holder}'s hand, which it was passed out of"),
-                });
-            }
             return Some(Standing {
                 reads: token,
                 where_: "no pile (it ceased to exist)".to_string(),

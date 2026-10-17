@@ -23,8 +23,8 @@
 //!   - R227: a card set face-down took a fresh id, so the events that named its old id follow it to
 //!     its zone through the `formerId` that set it, and `formerId` itself travels only with the card.
 //!   - R1074000: a Duos pass (B20) takes a hand card out of its duel unseen, so in a duel a card in no
-//!     pile that is no token reads to the player whose hand the events last show it in, and to nobody
-//!     when they show it in none.
+//!     pile reads to the player whose hand the events last show it in, and when they show it in none
+//!     to everyone if it is a token (R11) and to nobody if not.
 //!   - R177: more fields follow R97 — a prompt option offering a face-down card names it by id only
 //!     (and the zone it lies in, R821000),
 //!     a `costChanged` on an unreadable card hides its cost and a `buffed` one its amounts, and a
@@ -168,10 +168,10 @@ struct Replacements {
 /// R1074000: what a duel's events say of the cards in no pile that took no successor.
 #[derive(Clone, Debug, Default)]
 struct DuelGone {
-    /// The ones that read openly as they would in a 1v1 game: a token (R11), judged by the definition
-    /// the events last name it as, and a card a full library refused before it existed (R316).
+    /// The ones that read openly as they would in a 1v1 game: a token no pass took (R11), judged by the
+    /// definition the events last name it as, and a card a full library refused before it existed (R316).
     public: IndexSet<String>,
-    /// The ones a pass took out of a hand, each with the player whose hand it left.
+    /// The ones a pass took out of a hand, tokens among them, each with the player whose hand it left.
     passed: IndexMap<String, PlayerId>,
 }
 
@@ -246,19 +246,41 @@ fn replacements_of(events: &[&GameEvent], state: Option<&GameState>) -> Replacem
 /// or a passed one. A passed card's last place the events show is a hand: put there by a draw, an add
 /// to hand, a bounce or a steal (a counter that sends a card to a hand steals it), carried to the card
 /// a Transform or a Fuse in the hand made of it, and not taken out since by a play, a set (R227's old
-/// id), a discard, a burn, a shuffle, an exile, a graveyard or a control change. One that came in by a
-/// pass, or whose arrival the log no longer holds, names no hand. Only a Duos seat passes, so a 1v1
-/// state is no duel and reads every event as before.
+/// id), a discard, a burn, a shuffle, an exile, a graveyard or a control change. A unit token bounced
+/// or stolen off the field or out of the resolving zone ceased to exist on its way to the hand (R11),
+/// so it reached none. One that came in by a pass, or whose arrival the log no longer holds, names no
+/// hand. Only a Duos seat passes, so a 1v1 state is no duel and reads every event as before.
 fn duel_gone(events: &[&GameEvent], state: &GameState) -> Option<DuelGone> {
-    if PLAYER_IDS.into_iter().all(|player| state.players[player].duos.is_none()) {
+    if PLAYER_IDS
+        .into_iter()
+        .all(|player| state.players[player].duos.is_none())
+    {
         return None;
     }
-    // Each card in a hand, and whose hand; each card's last definition the events name it as.
+    // Each card in a hand, and whose hand; each card's last definition the events name it as; each unit
+    // token that ceased to exist on its way to a hand, whose `addedToHand` may follow (a counter's steal).
     let mut in_hand: IndexMap<String, PlayerId> = IndexMap::new();
     let mut last_def: IndexMap<String, String> = IndexMap::new();
     let mut never_made: IndexSet<String> = IndexSet::new();
+    let mut ceased: IndexSet<String> = IndexSet::new();
+    let unit_token = |def_id: &str| {
+        find_def(Some(state), def_id).is_some_and(|def| def.token && def.type_ == CardType::Unit)
+    };
     for event in events {
         match event {
+            GameEvent::Bounced {
+                instance_id, def_id, ..
+            }
+            | GameEvent::Stolen {
+                instance_id,
+                def_id,
+                zone: ZoneName::Field | ZoneName::Resolving,
+                ..
+            } if unit_token(def_id) => {
+                last_def.insert(instance_id.clone(), def_id.clone());
+                in_hand.shift_remove(instance_id);
+                ceased.insert(instance_id.clone());
+            }
             GameEvent::Drawn {
                 player,
                 instance_id,
@@ -281,8 +303,10 @@ fn duel_gone(events: &[&GameEvent], state: &GameState) -> Option<DuelGone> {
                 def_id,
                 ..
             } => {
-                in_hand.insert(instance_id.clone(), *player);
                 last_def.insert(instance_id.clone(), def_id.clone());
+                if !ceased.contains(instance_id) {
+                    in_hand.insert(instance_id.clone(), *player);
+                }
             }
             GameEvent::Transformed {
                 instance_id,
@@ -389,15 +413,12 @@ fn duel_gone(events: &[&GameEvent], state: &GameState) -> Option<DuelGone> {
             .is_some_and(|def| def.token)
     };
     let gone = |id: &str| find_instance(state, id).is_none();
+    let passed: IndexMap<String, PlayerId> = in_hand.into_iter().filter(|(id, _)| gone(id)).collect();
     let public: IndexSet<String> = last_def
         .keys()
-        .filter(|id| gone(id) && token(id))
+        .filter(|id| gone(id) && token(id) && !passed.contains_key(*id))
         .chain(never_made.iter())
         .cloned()
-        .collect();
-    let passed: IndexMap<String, PlayerId> = in_hand
-        .into_iter()
-        .filter(|(id, _)| gone(id) && !public.contains(id))
         .collect();
     Some(DuelGone { public, passed })
 }
@@ -413,8 +434,9 @@ fn duel_gone(events: &[&GameEvent], state: &GameState) -> Option<DuelGone> {
 /// replacement keeps, and a library #83 replaced still never reads, so its earlier `cardPlayed` or
 /// `costChanged` cannot spell out what it was or in what order. With no replacement — a unit token
 /// that left the field (R11), a card exiled out of existence (R86) — it was public when it went. In a
-/// duel only a token or a card a full library refused (R316) went so: any other was passed out of a
-/// hand (B20), and reads to that hand's player alone (R1074000).
+/// duel one the events last show in a hand, a token's included, was passed out of it (B20) and reads to
+/// that hand's player alone, and of the rest only a token or a card a full library refused (R316) went
+/// publicly (R1074000).
 fn may_read(state: &GameState, viewer: PlayerId, instance_id: &str, replaced: &Replacements) -> bool {
     let mut id = instance_id.to_string();
     let mut card = find_instance(state, &id);
