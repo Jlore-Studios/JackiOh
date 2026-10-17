@@ -13,8 +13,8 @@ use jackioh_engine::{ActionBody, GameState, Phase, PlayerId};
 
 use crate::candidates::{candidate_actions, candidate_set};
 use crate::config::AI_EVAL;
-use crate::learned::finalist_score;
 use crate::evaluate::{NextSwing, evaluate};
+use crate::learned::finalist_score;
 use crate::reply::{hidden_card_ids, reply_score};
 use crate::simulate::{LineStatus, close_line, line_status, search_signature, simulate, static_score};
 use crate::types::{NodeCounter, SearchBudget};
