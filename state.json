@@ -1920,12 +1920,22 @@
       "taken_asks": [],
       "verdict_rounds": 3,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "39033401656",
+            "tier": "strong"
+          }
+        ],
         "sha": "97bcceff5722b618214b2b2eb41050ad31d70443",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "1090": {
