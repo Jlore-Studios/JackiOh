@@ -2483,6 +2483,9 @@
       "stop_requested": false,
       "verdict_rounds": 1
     },
+    "1112": {
+      "suggestion": true
+    },
     "1116": {
       "cleared": {
         "at": "2026-10-17T06:50:44Z",
