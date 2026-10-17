@@ -2979,6 +2979,13 @@
     "1107": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T05:34:48Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule line 3 fails: the spec does not say when a watch ends, so a new ruling R1107000 and a \u00a79.5 edit are needed, beside the server change"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
