@@ -70,6 +70,9 @@ mapfile -t files < <(find "$logs" -name 'selfplay-*.jsonl' | sort -V)
 say "positions (--every $every) over ${#files[@]} log files"
 "$bin" positions "${files[@]}" --out "$out/positions.jsonl" --every "$every" | tee "$out/positions.json"
 
+# The trainer's package lives in training/ml, which `python -m` reads only from the path.
+export PYTHONPATH="$root/training/ml${PYTHONPATH:+:$PYTHONPATH}"
+
 say "the fit"
 # shellcheck disable=SC2086  # the seeds are words
 uv run --frozen --project training/ml python -m jackioh_ml.fit "$out/positions.jsonl" --out "$out/fit" \
