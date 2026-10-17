@@ -9282,13 +9282,10 @@
     "what": "plan #1107 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-17T05:17:42Z",
+    "at": "2026-10-17T05:24:34Z",
     "notes": [
-      "#1102 needs a plan",
-      "#1103 needs a plan",
-      "#1104 needs a plan",
-      "#1107 needs a plan",
-      "started a night run, as a lane was free: #1102 (medium) is queued to build, for `muse`: plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
+      "#1108 needs a plan",
+      "started a night run, as a lane was free: #1108 (medium) is queued to build, for `claude-1`: plan on `claude-1` (claude, `opus`, strong)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
