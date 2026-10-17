@@ -111,8 +111,10 @@ function Get-Runners {
 # This PC's load without its runner containers: CPU % of all logical CPUs, memory used in GB.
 function Get-Sample($runners) {
   $cpu = $null
-  foreach ($path in '\Processor Information(_Total)\% Processor Utility',
-                    '\Processor(_Total)\% Processor Time') {
+  # CPU time, as `docker stats` measures the runners' share, so the two subtract like for like.
+  # (Processor Utility scales by clock speed: at turbo it reads the runners' cores as far more than
+  # their share of the CPUs, and the rest of the PC as busier than it is.)
+  foreach ($path in '\Processor(_Total)\% Processor Time', '\Processor Information(_Total)\% Processor Time') {
     try {
       $cpu = (Get-Counter $path -SampleInterval $cfg.sampleSeconds -MaxSamples 1 -ErrorAction Stop).CounterSamples[0].CookedValue
       break
