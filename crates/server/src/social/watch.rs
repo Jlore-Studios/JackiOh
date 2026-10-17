@@ -10,8 +10,10 @@
 //!
 //! Every refusal is the one `error` frame, `forbidden`, and a close with R148's 4403 (4401 before
 //! sign-in, 1011 for a fault), all with the same message, so a socket learns that it may not watch,
-//! never which check said so. Every frame after the hello is dropped unread: none reaches the
-//! reducer, and a watcher leaving changes nothing in the match but the count its players see (B51).
+//! never which check said so. No frame after the hello reaches the reducer: once the actor has the
+//! socket a later hello is answered with the view it was last sent (R1103000, so R1441's wake probe
+//! hears a live socket), and every other frame is dropped unread. A watcher leaving changes nothing
+//! in the match but the count its players see (B51).
 //! Before the hello the socket waits behind the gate `/ws/duos` waits behind (`actor::guard::HelloGate`,
 //! R835002): a frame that is not the hello is answered `malformed` and past
 //! `MALFORMED_FRAMES_PER_WINDOW` of them the socket is closed, and a hello that does not come within

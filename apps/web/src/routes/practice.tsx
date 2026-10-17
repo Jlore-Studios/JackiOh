@@ -51,6 +51,7 @@ import { CUSTOM_ID_PREFIX, DIFFICULTIES, type Difficulty } from "@jackioh/engine
 import { LEAN_NEWEST, isLeanPick } from "@jackioh/shared";
 import type { ActionBody, CardDefs, LeanPick, PlayerId, PlayerView, SandboxOp } from "@jackioh/shared";
 
+import { FullArtAllowed } from "../cards/fullArt.ts";
 import { customDefsOf, gameCustomCards, useCustomCards } from "../creator/useCustomCards.ts";
 import Game from "../game/Game.tsx";
 import { reducedMotionNow } from "../game/animations.ts";
@@ -1078,19 +1079,22 @@ function PracticeScreen({
   const board = (
     // The result panel is practice's own dialog (PracticeResult), so the board keeps to its chip.
     // R345: a lesson keeps R82's automatic turn end on, since its coach is written around it.
-    <Game
-      view={snapshot.view}
-      legal={snapshot.legal}
-      onAction={onAction}
-      error={snapshot.error}
-      resultForm="chip"
-      emotes={emotes}
-      // R639: a practice game is the player's own game and is logged; a tutorial lesson is not,
-      // R923000: nor is a sandbox game, which counts for nothing, and R915009: nor is a game with
-      // custom cards (§12.10).
-      trackStats={config.lesson === undefined && config.sandbox !== true && (config.customCards?.length ?? 0) === 0}
-      {...(config.lesson === undefined ? {} : { autoEndTurn: true })}
-    />
+    // R1108000: and no card on a lesson's board prints full art, whatever the Full-art cards setting.
+    <FullArtAllowed allowed={config.lesson === undefined}>
+      <Game
+        view={snapshot.view}
+        legal={snapshot.legal}
+        onAction={onAction}
+        error={snapshot.error}
+        resultForm="chip"
+        emotes={emotes}
+        // R639: a practice game is the player's own game and is logged; a tutorial lesson is not,
+        // R923000: nor is a sandbox game, which counts for nothing, and R915009: nor is a game with
+        // custom cards (§12.10).
+        trackStats={config.lesson === undefined && config.sandbox !== true && (config.customCards?.length ?? 0) === 0}
+        {...(config.lesson === undefined ? {} : { autoEndTurn: true })}
+      />
+    </FullArtAllowed>
   );
   const result = snapshot.view.result;
   const outcome = result === null ? null : outcomeOf(result, snapshot.view.viewer);

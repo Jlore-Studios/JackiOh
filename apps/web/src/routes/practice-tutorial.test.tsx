@@ -8,9 +8,11 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { CATALOG } from "@jackioh/cards";
 import { opponentOf } from "@jackioh/shared";
-import type { PlayerId } from "@jackioh/shared";
+import type { CardDefs, PlayerId } from "@jackioh/shared";
 
+import { readCardSettings } from "../cards/settings.ts";
 import type { Account } from "../net/gate.ts";
 import { PRACTICE_PACING_FAST } from "../practice/config.ts";
 import type { PracticeHost } from "../practice/host.ts";
@@ -53,7 +55,7 @@ const FAKE_SCRIPT: LessonScript = {
 // the scripted host: `endTurn` wins the game for the human, `concede` loses it
 // ---------------------------------------------------------------------------------------------
 
-type HostOptions = { aiToAct?: boolean };
+type HostOptions = { aiToAct?: boolean; defs?: CardDefs };
 
 type RouteHost = {
   factory: () => PracticeHost;
@@ -97,7 +99,7 @@ function routeHost(options: HostOptions = {}): RouteHost {
             id: mine,
             type: "started",
             snapshot: snapshotFor(human, options.aiToAct ?? false),
-            defs: {},
+            defs: options.defs ?? {},
             aiSeat: opponentOf(human),
           };
           break;
@@ -414,5 +416,43 @@ describe("a lesson plays under the tutorial HUD with the coach", () => {
 
     cleanup();
     expect(window.__jackiohTutorial).toBeUndefined();
+  });
+});
+
+// R1108000: a lesson's board (practice.tsx) prints no full art; a practice game's still does.
+describe("R1108000 a lesson's board prints no full art", () => {
+  /** Mr. Vanilla, the card `snapshotFor` holds in hand, and a hero's card, so full art when allowed. */
+  function heroDefs(): CardDefs {
+    const vanilla = CATALOG["core-008"];
+    if (vanilla === undefined) throw new Error("no core-008");
+    return { "core-008": vanilla };
+  }
+
+  function vanillaFaces(): HTMLElement[] {
+    return [...screen.getByTestId("game").querySelectorAll<HTMLElement>(".cf")].filter(
+      (face) => face.querySelector(".card-name")?.textContent === "Mr. Vanilla",
+    );
+  }
+
+  it("R1108000 a lesson's hand prints Mr. Vanilla with its type line and no full art, the Full-art cards setting on", async () => {
+    visit(`?lesson=${lesson(1).id}`);
+    renderRoute(routeHost({ defs: heroDefs() }));
+    await screen.findByTestId(tutorialTestid.hud);
+    expect(readCardSettings().fullArt).toBe(true);
+    const faces = vanillaFaces();
+    expect(faces.length).toBeGreaterThan(0);
+    for (const face of faces) {
+      expect(face.hasAttribute("data-full-art")).toBe(false);
+      expect(face.querySelector(".card-type")).not.toBeNull();
+    }
+  });
+
+  it("R1108000 a practice game's hand prints the same card in full art", async () => {
+    visit("?seed=art1&difficulty=easy&deck=random&seat=p1");
+    renderRoute(routeHost({ defs: heroDefs() }));
+    await screen.findByTestId(practiceTestid.hud);
+    const faces = vanillaFaces();
+    expect(faces.length).toBeGreaterThan(0);
+    for (const face of faces) expect(face.getAttribute("data-full-art")).toBe("true");
   });
 });

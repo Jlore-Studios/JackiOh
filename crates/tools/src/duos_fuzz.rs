@@ -21,7 +21,9 @@ use anyhow::bail;
 use indexmap::IndexMap;
 use jackioh_cards::register_all;
 use jackioh_engine::subsystems::AI_SKIPPED_ACTIONS;
-use jackioh_engine::testkit::preview_every_set;
+use jackioh_engine::testkit::{
+    DuosInvariantMonitor, I6_GATE_STRIDE, create_duos_invariant_monitor, preview_every_set,
+};
 use jackioh_engine::{
     AI_END_TURN_PROBABILITY, AI_PLAYOUT_STEP_CAP, ActionBody, DECK_SIZE, DUOS_DUELS, DUOS_REASON_DUEL_RESULT,
     DUOS_REASON_POOL_EMPTIED, DUOS_REASON_TURN_CAP, DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks,
@@ -133,13 +135,29 @@ fn choose(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> Option<DuosAction
 
 /// Assertion 1: one game played out, every offered action accepted.
 fn play_duos_game(seed: u32) -> Result<DuosRun, String> {
+    play_duos_game_inner(seed, |_, _, _, _| {})
+}
+
+fn play_duos_game_inner<F>(seed: u32, mut tamper: F) -> Result<DuosRun, String>
+where
+    F: FnMut(usize, &mut DuosState, &mut DuosAction, &mut DuosInvariantMonitor),
+{
     register_all();
     let options = DuosCreateOptions {
         seed: format!("jackioh-duos-fuzz-{seed}"),
         decks: duos_decks_for_seed(seed),
         ..DuosCreateOptions::default()
     };
-    let mut state = duos_begin(&duos_create(&options)).state;
+    let begun = duos_begin(&duos_create(&options));
+    let mut state = begun.state;
+    let mut monitor = create_duos_invariant_monitor(&state);
+    let stride = if cfg!(test) { 1 } else { I6_GATE_STRIDE };
+    let mut setup = monitor.after(&begun.events, &state);
+    setup.extend(monitor.hidden(&state));
+    if let Some(first) = setup.first() {
+        return Err(format!("at step 0: {first}"));
+    }
+
     let mut policy = Rng::new(&format!("jackioh-duos-fuzz-policy-{seed}"), 0);
     let mut order = Rng::new(&format!("jackioh-duos-fuzz-order-{seed}"), 0);
     let mut log: Vec<DuosAction> = Vec::new();
@@ -165,11 +183,19 @@ fn play_duos_game(seed: u32) -> Result<DuosRun, String> {
                 state.round
             ));
         };
-        let action = DuosAction {
+        let mut action = DuosAction {
             seat,
             nonce: format!("duos-fuzz-{}", log.len()),
             body,
         };
+
+        tamper(log.len(), &mut state, &mut action, &mut monitor);
+
+        let unsound = monitor.before(&state, action.seat, &action.body);
+        if let Some(first) = unsound.first() {
+            return Err(format!("at step {}: {first}", log.len()));
+        }
+
         let result = duos_reduce(&state, &action);
         if let Some(error) = result.error {
             return Err(format!(
@@ -179,6 +205,14 @@ fn play_duos_game(seed: u32) -> Result<DuosRun, String> {
         }
         log.push(action);
         state = result.state;
+
+        let mut broken = monitor.after(&result.events, &state);
+        if log.len().is_multiple_of(stride) || state.result.is_some() {
+            broken.extend(monitor.hidden(&state));
+        }
+        if let Some(first) = broken.first() {
+            return Err(format!("at step {}: {first}", log.len()));
+        }
     }
     Ok(DuosRun { options, log, state })
 }
@@ -265,6 +299,35 @@ fn fuzz_duos_seed(seed: u32) -> DuosSeedOutcome {
     }
 }
 
+#[cfg(test)]
+fn fuzz_duos_seed_with<F>(seed: u32, tamper: F) -> DuosSeedOutcome
+where
+    F: FnMut(usize, &mut DuosState, &mut DuosAction, &mut DuosInvariantMonitor),
+{
+    let _preview = preview_every_set();
+    let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<String, String> {
+        let run = play_duos_game_inner(seed, tamper)?;
+        check_duos_run(&run)
+    }));
+    match caught {
+        Ok(Ok(reason)) => DuosSeedOutcome {
+            seed,
+            reason: Some(reason),
+            error: None,
+        },
+        Ok(Err(error)) => DuosSeedOutcome {
+            seed,
+            reason: None,
+            error: Some(error),
+        },
+        Err(payload) => DuosSeedOutcome {
+            seed,
+            reason: None,
+            error: Some(format!("panic: {}", panic_message(&*payload))),
+        },
+    }
+}
+
 /// Seeds `from..from + ran`, in parallel, read back in seed order.
 fn play_duos_wave(from: u32, ran: u32) -> Vec<DuosSeedOutcome> {
     register_all();
@@ -322,5 +385,61 @@ mod tests {
     fn a_duos_smoke_wave_ends_every_game_and_folds_it_back() {
         let outcomes = play_duos_wave(1, duos_wave_size(None));
         assert_eq!(failure_lines(&outcomes), Vec::<String>::new());
+    }
+
+    #[test]
+    fn a_planted_sick_attack_fails_duos_fuzz_naming_seed_duel_and_step() {
+        use jackioh_engine::{Phase, PlayerId, Row, Zone};
+        let outcome = fuzz_duos_seed_with(7, |step, state, action, monitor| {
+            if state.round >= 1 && state.duels[0].phase == Phase::Main && step == 4 {
+                let mut card = state.duels[0].players[PlayerId::P1].hand[0].clone();
+                card.def_id = "core-001".to_string();
+                card.granted_keywords.clear();
+                card.zone = Zone::Field {
+                    player: PlayerId::P1,
+                    row: Row::Units,
+                    lane: 1,
+                };
+                card.summoned_turn = Some(state.duels[0].turn);
+                let attacker_id = card.id.clone();
+                state.duels[0].players[PlayerId::P1].units[0] = Some(vec![card]);
+                monitor.duel_monitor_mut(0).enter(&attacker_id);
+                action.seat = DuosSeat::A1;
+                action.body = DuosActionBody::Duel {
+                    body: ActionBody::Attack {
+                        attacker_id,
+                        target_id: "hero-p2".to_string(),
+                    },
+                };
+            }
+        });
+        assert!(outcome.error.is_some(), "outcome should have failed");
+        let line = format!("seed {}: {}", outcome.seed, outcome.error.unwrap());
+        assert!(line.contains("seed 7"), "should name seed 7: {line}");
+        assert!(line.contains("duel 0"), "should name duel 0: {line}");
+        assert!(line.contains("step 4"), "should name step 4: {line}");
+        assert!(
+            line.contains("I1 sick attack"),
+            "should cite I1 sick attack: {line}"
+        );
+    }
+
+    #[test]
+    fn a_planted_view_leak_fails_duos_fuzz_naming_seed_duel_and_step() {
+        let outcome = fuzz_duos_seed_with(7, |step, _state, _action, monitor| {
+            if step == 1 {
+                monitor.view_tamper = Some(std::sync::Arc::new(|view| {
+                    if view.seat == DuosSeat::A1 {
+                        view.enemy.ended = vec![true, false];
+                    }
+                }));
+            }
+        });
+        assert!(outcome.error.is_some(), "outcome should have failed");
+        let line = format!("seed {}: {}", outcome.seed, outcome.error.unwrap());
+        assert!(line.contains("seed 7"), "should name seed 7: {line}");
+        assert!(line.contains("duel 0"), "should name duel 0: {line}");
+        assert!(line.contains("step 2"), "should name step 2: {line}");
+        assert!(line.contains("I6 duos leak"), "should cite I6 duos leak: {line}");
     }
 }

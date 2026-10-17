@@ -145,7 +145,7 @@ and any human seat the server hands it after a disconnect (§13.8).
 ```rust
 pub fn duos_decide(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosActionBody>;
 pub fn duos_passes(state: &DuosState, seat: DuosSeat) -> Vec<String>;
-pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins, draws }
+pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins, draws, rejected }
 ```
 
 - `duos_decide` is `decide` on the seat's own duel: its mulligan and its prompts as a 1v1 seat answers
@@ -168,7 +168,8 @@ pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins
   handicap, which the caller sets in `DuosCreateOptions`; nothing here reads a difficulty. The AI
   never concedes (R188), so it neither offers nor confirms a team's concede.
 - `duos_gate` plays the Easy AI team against a team on §10.7's random policy; it passes at
-  `DUOS_GATE_WIN_FLOOR` (0.8) of `DUOS_GATE_GAMES_SMOKE` (20) games (`cargo jackioh gate --duos`).
+  `DUOS_GATE_WIN_FLOOR` (0.8) of `DUOS_GATE_GAMES_SMOKE` (20) games with no action of either team
+  refused (`cargo jackioh gate --duos`).
 
 ## Commands
 

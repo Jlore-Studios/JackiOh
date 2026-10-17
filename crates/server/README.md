@@ -321,10 +321,15 @@ than `SPECTATORS_PER_MATCH` watchers. The watcher gets `view {view, legal: []}`,
 close. Before its hello the socket waits behind the same `actor::guard::HelloGate` as `/ws/duos`: a
 frame that is not the hello is answered `malformed`, past `MALFORMED_FRAMES_PER_WINDOW` of them it is
 closed with 1008, and with no hello within `WS_IDLE_TIMEOUT_SECONDS` it is refused (`forbidden`, 4403)
-(R835002). Every frame a watcher sends after `hello` is ignored, and leaving changes nothing in the match.
+(R835002). Once it is in, a later `hello` is answered with the view it was last sent, again (nothing
+before its first; R1103000), so the watch screen's wake probe (R1441) hears a live socket; every other
+frame a watcher sends is ignored, and leaving changes nothing in the match.
 Both players' own match sockets get `watchers {count}` when the count changes. A watcher already in
 gets the same `error forbidden` and close the moment the friend turns watching off (`PUT
 /api/settings`), or the two unfriend or either blocks the other (`MatchActor::revoke_watchers`).
+Once the match is over, a watcher that has been sent the view with the result is closed with 1000, `the
+match is over`, and both players get the new count (R1107000); a void still closes every watcher at once
+with `MATCH_VOIDED_CLOSE_CODE`.
 
 ## Card statistics (§9.11, R376–R378, R1044000, R1044001)
 

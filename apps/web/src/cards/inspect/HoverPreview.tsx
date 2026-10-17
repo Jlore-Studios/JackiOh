@@ -19,6 +19,7 @@ import type { ReactElement } from "react";
 import { createPortal } from "react-dom";
 import { CardFace, faceText } from "../CardFace.tsx";
 import { FACE_ASPECT } from "../constants.ts";
+import { useFullArt } from "../fullArt.ts";
 import type { FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
 import {
@@ -64,12 +65,13 @@ export function HoverPreview({ face, anchor, prefer = "beside", note }: HoverPre
   const ref = useRef<HTMLDivElement>(null);
   const entries = glossaryFor(face);
   const resolve = useDefResolver();
+  const fullArtOn = useFullArt();
   const named = resolve === null ? 0 : namedCards(face, resolve).length;
   const notes = hasStateNotes(face);
   const flavoured = face.known && (flavourFor(face.defId) !== null || showsEasterEgg(face));
   const side = notes || face.printed !== null || flavoured;
   const ascentLevel = ascentLevelOf(face.values);
-  const extended = faceText(face, ascentLevel).less;
+  const extended = faceText(face, ascentLevel, fullArtOn).less;
   const placed = placePreview(anchor, viewportSize(), estimatedSize(entries.length > 0 || side, named > 0, extended), prefer);
 
   // Once laid out, place it again by its real size. jsdom has no layout and keeps the estimate.

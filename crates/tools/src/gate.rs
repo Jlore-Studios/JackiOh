@@ -67,7 +67,7 @@ pub struct Args {
     #[arg(long, value_name = "DIR")]
     pub out: Option<PathBuf>,
     /// Play the Duos gate instead (#936 B32, `duos_gate.rs`): the Easy AI team against a
-    /// random-policy team; prints the report and fails under DUOS_GATE_WIN_FLOOR.
+    /// random-policy team; prints the report and fails under DUOS_GATE_WIN_FLOOR or on any refused action.
     #[arg(long, conflicts_with_all = ["full", "shard", "out"])]
     pub duos: bool,
     /// With `--duos`: the games to play (default DUOS_GATE_GAMES_SMOKE).

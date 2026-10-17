@@ -111,8 +111,9 @@ pub fn targets_in_scope(ctx: &EffectContext<'_>, scope: Option<&TargetScope>) ->
                 if excludes_self && Some(card.id.as_str()) == self_id {
                     continue;
                 }
-                // R1081000: a Unit standing in the backrow was offered above, among the units.
-                if kinds.contains(&FilterOf::Unit) && crate::zones::is_standing_unit(ctx.state, card) {
+                // R1081000: a Unit standing in the backrow is no backrow card (§6.1 Animated): it is
+                // one of the units.
+                if crate::zones::is_standing_unit(ctx.state, card) {
                     continue;
                 }
                 out.push(Selection::Instance {
@@ -905,7 +906,10 @@ fn pile_cards(state: &GameState, player: PlayerId, zone: PileZone) -> Vec<&CardI
         PileZone::Field => {
             let mut out: Vec<&CardInstance> = active_units_of(state, player);
             for slot in slots_of(player, Row::Backrow) {
-                if let Some(card) = card_at(state, slot) {
+                // R1081000: a Unit standing there is among the units already.
+                if let Some(card) = card_at(state, slot)
+                    && !crate::zones::is_standing_unit(state, card)
+                {
                     out.push(card);
                 }
             }

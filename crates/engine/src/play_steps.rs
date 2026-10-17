@@ -871,15 +871,13 @@ fn tributes_an_enemy(state: &GameState, run: &PlayRun) -> bool {
 /// opponent". The opponent's zone in the lane the player named when it is open, else the leftmost
 /// open zone of their unit row, which is R15's placement for a card changing sides. With no open zone
 /// there it is placed where the player named, on their own side, as a steal that finds no zone leaves
-/// the card where it is (R15).
+/// the card where it is (R15). A Flying Golem named into a backrow zone is summoned all the same, into
+/// the unit row, as every summon is (R1081000), the lane its zone's.
 fn handed_over_zone(state: &GameState, run: &PlayRun, card: &CardInstance) -> Option<ZoneSlot> {
     if run.enemy_tributed != Some(true) {
         return None;
     }
     let zone = run.zone?;
-    if zone.row != Row::Units {
-        return None;
-    }
     if crate::scripts::flags_of(state, card).enemy_tribute_hands_over != Some(true) {
         return None;
     }

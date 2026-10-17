@@ -5,7 +5,8 @@
 //! reach the reducer; a watcher leaving changes nothing in the match; the players' own match sockets
 //! hear `watchers {count}` when the count changes. A watcher already in is let go the same way
 //! (`forbidden`, then closed) once the friend turns watching off, or the two unfriend or either
-//! blocks the other.
+//! blocks the other. Once the match is over, a watcher that has had the view with the result is
+//! closed with 1000 (R1107000).
 //!
 //! The match is a real one on the registry, played with the server tests' cards
 //! (`support::engine`); its players are attached with in-memory sockets (`support::socket`), as the
@@ -180,6 +181,15 @@ impl World {
             }));
             settle().await;
         }
+    }
+
+    /// The friend concedes: the game is over.
+    async fn friend_concedes(&self) {
+        self.p1.receive_json(json!({
+            "type": "action",
+            "action": { "type": "concede", "nonce": "f-concede" },
+        }));
+        settle().await;
     }
 }
 
@@ -623,5 +633,186 @@ mod r835002_the_hello_gate {
         );
         assert!(client.of_type("view").is_empty(), "{:?}", client.frames());
         assert_eq!(w.app.matches.watcher_count(&w.match_id), 0);
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1107000 — a watch ends with the match
+// ---------------------------------------------------------------------------------------------
+
+mod r1107000_a_watch_ends_with_the_match {
+    use super::*;
+
+    /// RFC 6455's normal closure.
+    const CLOSE_NORMAL: u16 = 1000;
+    /// What the close of a finished match's watcher says.
+    const MATCH_OVER: &str = "the match is over";
+
+    fn result_of(socket: &FakeSocket) -> Value {
+        last_view_of(socket)["result"].clone()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1107000_a_caught_up_watcher_is_sent_the_last_view_then_closed_and_the_players_hear_the_count() {
+        let w = world(false).await;
+        let watcher = w.watch(&w.watcher).await;
+        w.keep_both().await;
+        let delay = ms(SPECTATE_DELAY_MS);
+        assert!(
+            watcher
+                .wait_for(0, delay + DELAY_SLACK, |frame| {
+                    frame["type"] == "view" && frame["view"]["phase"] == "main"
+                })
+                .await
+                .is_some(),
+            "the watcher never saw the turn begin: {:?}",
+            watcher.frames()
+        );
+        assert_eq!(watcher_counts(&w.p1).last(), Some(&json!(1)));
+        w.p1.clear();
+        w.p2.clear();
+
+        w.friend_concedes().await;
+        let result = result_of(&w.p1);
+        assert!(!result.is_null(), "the game is not over: {}", last_view_of(&w.p1));
+
+        // Nothing closes it before the view with the result is due.
+        assert_eq!(watcher.wait_closed(delay - DELAY_SLACK).await, None);
+        assert_eq!(watcher.wait_closed(DELAY_SLACK * 2).await, Some(CLOSE_NORMAL));
+        let views = watcher.of_type("view");
+        assert_eq!(
+            views.last().map(|frame| &frame["view"]["result"]),
+            Some(&result),
+            "{views:?}"
+        );
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 0);
+        for socket in [&w.p1, &w.p2] {
+            assert_eq!(watcher_counts(socket), vec![json!(0)]);
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1107000_a_watcher_who_joined_mid_match_gets_every_view_it_is_owed_through_the_last_before_the_close()
+     {
+        let w = world(false).await;
+        w.keep_both().await;
+        let watcher = w.watch(&w.watcher).await;
+        w.friend_concedes().await;
+        let result = result_of(&w.p1);
+        assert!(!result.is_null(), "the game is not over: {}", last_view_of(&w.p1));
+        assert!(watcher.of_type("view").is_empty(), "{:?}", watcher.frames());
+        let delay = ms(SPECTATE_DELAY_MS);
+
+        assert_eq!(watcher.wait_closed(delay + DELAY_SLACK).await, Some(CLOSE_NORMAL));
+
+        let views = watcher.of_type("view");
+        let (last, before) = views.split_last().expect("the watcher was sent its views");
+        assert_eq!(last["view"]["result"], result, "{views:?}");
+        assert!(
+            before.iter().all(|frame| frame["view"]["result"].is_null()),
+            "{before:?}"
+        );
+        assert!(
+            before.iter().any(|frame| frame["view"]["phase"] == "main"),
+            "the views leading up to the last were skipped: {before:?}"
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1107000_a_watcher_let_in_once_the_last_view_is_due_gets_it_and_goes_at_once() {
+        let w = world(false).await;
+        w.keep_both().await;
+        w.friend_concedes().await;
+        let result = result_of(&w.p1);
+        assert!(!result.is_null(), "the game is not over: {}", last_view_of(&w.p1));
+        tokio::time::sleep(ms(SPECTATE_DELAY_MS) + DELAY_SLACK).await;
+        w.p1.clear();
+        w.p2.clear();
+
+        // Straight to the actor: the hello refuses a match whose result has landed.
+        let late = create_fake_socket();
+        w.app
+            .matches
+            .attach_watcher(&w.app, &w.match_id, &w.friend.id, &w.watcher.id, late.socket())
+            .await
+            .expect("the actor takes the watcher");
+        settle().await;
+
+        let views = late.of_type("view");
+        assert_eq!(views.len(), 1, "{views:?}");
+        assert_eq!(views[0]["view"]["result"], result);
+        assert_eq!(late.close_code(), Some(CLOSE_NORMAL));
+        assert_eq!(late.close_reason().as_deref(), Some(MATCH_OVER));
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 0);
+        for socket in [&w.p1, &w.p2] {
+            assert_eq!(watcher_counts(socket), vec![json!(1), json!(0)]);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1103000 — a watcher's later hello is answered, so a wake probe hears a live socket
+// ---------------------------------------------------------------------------------------------
+
+mod r1103000_a_watchers_later_hello {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r1103000_a_watchers_later_hello_is_answered_with_the_view_it_was_last_sent_and_nothing_newer() {
+        let w = world(false).await;
+        let watcher = w.watch(&w.watcher).await;
+        let hello = json!({ "type": "hello", "matchId": w.match_id, "friendId": w.friend.id });
+
+        // No view is due yet, so there is nothing to answer with.
+        watcher.send_json(hello.clone()).await;
+        settle().await;
+        assert!(watcher.of_type("view").is_empty(), "{:?}", watcher.frames());
+
+        w.keep_both().await;
+        let delay = ms(SPECTATE_DELAY_MS);
+        assert!(
+            watcher
+                .wait_for(0, delay + DELAY_SLACK, |frame| {
+                    frame["type"] == "view" && frame["view"]["phase"] == "main"
+                })
+                .await
+                .is_some(),
+            "the watcher never saw the turn begin: {:?}",
+            watcher.frames()
+        );
+        settle().await;
+        let sent = watcher.of_type("view");
+        let last = sent.last().cloned().expect("the watcher was sent its views");
+        assert_eq!(last["view"]["active"], "p1", "{last}");
+        // The friend ends the turn: a state the watcher is not owed for SPECTATE_DELAY_MS.
+        w.p1.receive_json(json!({ "type": "action", "action": { "type": "endTurn", "nonce": "f-end" } }));
+        settle().await;
+        assert_eq!(last_view_of(&w.p2)["active"], "p2");
+        w.p1.clear();
+        w.p2.clear();
+        let received = watcher.received();
+
+        watcher.send_json(hello).await;
+        settle().await;
+
+        let answered = watcher.frames().split_off(received);
+        assert_eq!(
+            answered,
+            vec![last],
+            "the view it was last sent, again, and nothing else"
+        );
+        for socket in [&w.p1, &w.p2] {
+            assert!(socket.of_type("view").is_empty(), "{:?}", socket.messages());
+            assert!(socket.of_type("ack").is_empty(), "{:?}", socket.messages());
+        }
+
+        // Any other frame is still dropped unread.
+        let received = watcher.received();
+        watcher.send_text("not json").await;
+        watcher
+            .send_json(json!({ "type": "action", "action": { "type": "endTurn", "nonce": "w-end" } }))
+            .await;
+        settle().await;
+        assert_eq!(watcher.received(), received, "{:?}", watcher.frames());
     }
 }

@@ -15,9 +15,10 @@
 //!
 //! The gate (B32): `duos_gate` plays the Easy AI team (`duos_decide` at AI_GATE_BUDGET) against a team
 //! on §10.7's random policy over `duos_legal_actions` (`duos_random_action`), the AI on team A in odd
-//! games and on team B in even ones, every seat dealt by `build_ai_deck` on its Easy handicap. Pure
-//! and seeded like the rest of the crate (CLAUDE.md rule 4): a budget counts `reduce` calls, every
-//! stream is seeded from the game's seed and its seat, and nothing reads a clock.
+//! games and on team B in even ones, every seat dealt by `build_ai_deck` on its Easy handicap. An action
+//! `duos_reduce` refuses, on either team, fails the gate (`DuosGateReport::passes`). Pure and seeded
+//! like the rest of the crate (CLAUDE.md rule 4): a budget counts `reduce` calls, every stream is
+//! seeded from the game's seed and its seat, and nothing reads a clock.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -325,13 +326,15 @@ fn policy_kind(body: &DuosActionBody) -> PolicyKind {
 }
 
 /// Gate: the Easy AI team against a random-policy team (B32). `wins` counts the games the AI team won;
-/// `draws` is reported beside them and counts for nothing.
+/// `draws` is reported beside them and counts for nothing; any `rejected` action fails the gate.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct DuosGateReport {
     pub games: usize,
     pub wins: usize,
     pub draws: usize,
+    /// Actions `duos_reduce` refused, summed over the games, on either team (`DuosGateGame::rejected`).
+    pub rejected: usize,
 }
 
 impl DuosGateReport {
@@ -344,9 +347,11 @@ impl DuosGateReport {
         }
     }
 
-    /// B32: the AI team won at least DUOS_GATE_WIN_FLOOR of a run of at least one game.
+    /// B32: the AI team won at least DUOS_GATE_WIN_FLOOR of a run of at least one game, and no game had
+    /// an action refused. A refusal is an AI bug or a gap between `duos_legal_actions` and
+    /// `duos_reduce`, on either team, and fails the gate as a rejected action fails the 1v1 gates (B31).
     pub fn passes(&self) -> bool {
-        self.games > 0 && self.wins as f64 >= DUOS_GATE_WIN_FLOOR * self.games as f64
+        self.games > 0 && self.rejected == 0 && self.wins as f64 >= DUOS_GATE_WIN_FLOOR * self.games as f64
     }
 }
 
@@ -366,6 +371,8 @@ pub struct DuosGateGame {
     pub actions: usize,
     /// Actions `duos_reduce` refused, each replaced by the random policy's.
     pub rejected: usize,
+    /// Of `rejected`, the actions the AI team sent; the rest were the random-policy team's.
+    pub ai_rejected: usize,
 }
 
 /// Game n (1-based): the AI is team A when n is odd and team B when n is even, so a run measures it
@@ -386,6 +393,7 @@ pub fn duos_gate_report(played: &[DuosGateGame]) -> DuosGateReport {
         games: played.len(),
         wins: played.iter().filter(|game| game.won).count(),
         draws: played.iter().filter(|game| game.drawn).count(),
+        rejected: played.iter().map(|game| game.rejected).sum(),
     }
 }
 
@@ -394,7 +402,8 @@ pub fn duos_gate_report(played: &[DuosGateGame]) -> DuosGateReport {
 /// DUOS_HUMAN_TEAM. While a game is live, the first seat of `duos_seats_to_act` that sends something
 /// acts: an AI seat through `duos_decide` at AI_GATE_BUDGET, a random-policy seat through
 /// `duos_random_action`, each on its own stream. An action `duos_reduce` refuses is replaced by the
-/// random policy's for that seat. A game in which no listed seat sends anything stops there,
+/// random policy's for that seat and counted in `rejected` (in `ai_rejected` too when the AI team sent
+/// it). A game in which no listed seat sends anything stops there,
 /// unfinished. A pure function of `n` and `series`.
 pub fn duos_gate_game(n: usize, series: &str) -> DuosGateGame {
     let seed = format!("{series}:{n}");
@@ -404,6 +413,7 @@ pub fn duos_gate_game(n: usize, series: &str) -> DuosGateGame {
 
     let mut actions = 0usize;
     let mut rejected = 0usize;
+    let mut ai_rejected = 0usize;
     while state.result.is_none() && actions < DUOS_GATE_MAX_ACTIONS {
         // The first listed seat that sends something acts; an AI seat that owes nothing (it waits on
         // another seat's prompt in its duel) lets the next one go.
@@ -440,6 +450,9 @@ pub fn duos_gate_game(n: usize, series: &str) -> DuosGateGame {
             reduced.state
         } else {
             rejected += 1;
+            if seat.team() == subject {
+                ai_rejected += 1;
+            }
             let Some(replacement) = duos_random_action(&state, seat, &mut rngs[slot]) else {
                 break;
             };
@@ -470,6 +483,7 @@ pub fn duos_gate_game(n: usize, series: &str) -> DuosGateGame {
         reason: result.map(|result| result.reason.clone()),
         actions,
         rejected,
+        ai_rejected,
     }
 }
 

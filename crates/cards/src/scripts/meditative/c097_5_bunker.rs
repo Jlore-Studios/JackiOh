@@ -136,6 +136,25 @@ mod tests {
             assert_eq!(s.unit(P1, 1).unwrap().damage, 0);
         }
 
+        /// R1081000: a Unit standing in the backrow zone of Bunker's lane is in its lane.
+        #[test]
+        fn r1081000_struck_back_by_a_unit_standing_in_the_backrow_of_its_lane_it_hits_first_for_15() {
+            crate::register_all();
+            let mut s = crate::scenario(json!({
+                "p1": { "field": [{ "def": ID, "lane": 1 }], "hand": [FILLER], "library": [SPARE, SPARE] },
+                "p2": { "field": [{ "def": BIG_ATTACKER, "lane": 1 }], "hand": [FILLER], "library": [SPARE, SPARE] },
+            }));
+            let big = s.unit(P2, 1).unwrap().id.clone();
+            crate::stand_in_backrow(&mut s, &big, 1);
+            s.end_turn();
+            let bunker = s.unit(P1, 1).unwrap().id.clone();
+
+            s.attack(&big, &bunker);
+
+            s.expect_in_zone(big.as_str(), "graveyard");
+            assert_eq!(s.unit(P1, 1).unwrap().damage, 0);
+        }
+
         #[test]
         fn r1283_struck_from_another_lane_it_hits_for_its_base_attack_5() {
             crate::register_all();

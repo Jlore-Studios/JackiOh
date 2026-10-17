@@ -16,7 +16,8 @@ use crate::state::{CardInstance, find_instance};
 use crate::stays::{exit_mark, left_field_after};
 use crate::wire::{CardType, PlayerId, Row, Selection, Tag, TargetAim, ZoneName, opponent_of};
 use crate::zones::{
-    ZoneSlot, adjacent, card_at, carried_units_of, is_buried, row_size, slot_of, slots_of, standing_units_of,
+    ZoneSlot, adjacent, card_at, carried_units_of, is_buried, is_standing_unit, row_size, slot_of, slots_of,
+    standing_units_of,
 };
 
 /// Which card or hero an effect names (TS `TargetSpec`, discriminated on `of`).
@@ -371,7 +372,10 @@ pub fn cards_in_scope_aimed(
 fn cards_in_scope_with(ctx: &EffectContext<'_>, scope: &BoardScope, aim: TargetAim) -> Vec<CardInstance> {
     let mut out: Vec<CardInstance> = Vec::new();
     for slot in slots_in_scope(ctx, scope) {
+        // R1081000: a Unit standing in a backrow zone is no backrow card, as an animated one is none
+        // (§6.1 Animated): a backrow scope passes it by, and a unit scope meets it below.
         if let Some(card) = card_at(ctx.state, slot)
+            && !(slot.row == Row::Backrow && is_standing_unit(ctx.state, card))
             && matches_scope_aimed(ctx, card, scope, aim)
         {
             out.push(card.clone());
@@ -384,17 +388,10 @@ fn cards_in_scope_with(ctx: &EffectContext<'_>, scope: &BoardScope, aim: TargetA
                     out.push(unit.clone());
                 }
             }
-            // R1081000: and so is a Unit standing in a backrow zone, after those — unless the scope
-            // names the backrow, where the walk of its zones meets it already.
-            let names_backrow = scope
-                .rows
-                .as_ref()
-                .is_some_and(|rows| rows.contains(&Row::Backrow));
-            if !names_backrow {
-                for unit in standing_units_of(ctx.state, slot.player) {
-                    if matches_scope_aimed(ctx, unit, scope, aim) {
-                        out.push(unit.clone());
-                    }
+            // R1081000: and so is a Unit standing in a backrow zone, after those.
+            for unit in standing_units_of(ctx.state, slot.player) {
+                if matches_scope_aimed(ctx, unit, scope, aim) {
+                    out.push(unit.clone());
                 }
             }
         }

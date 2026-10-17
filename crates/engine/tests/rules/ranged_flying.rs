@@ -15,8 +15,8 @@ use super::fixtures::field::{banner, fuser};
 use super::fixtures::harness::{events_of_type, new_game, put, sink_for, slot};
 use super::fixtures::keywords_783::{
     cloaked_bolt, cloaked_field, crater_trap, crater_unit, first_striker, flyer, flying_reborner,
-    flying_stacker, flying_taunter, grunt, quake, ranged, ranged_cleaver, ranged_striker, ranged_trampler,
-    register_keywords_783, sniper,
+    flying_stacker, flying_taunter, grunt, plague_field, quake, ranged, ranged_cleaver, ranged_striker,
+    ranged_trampler, register_keywords_783, sniper,
 };
 use super::fixtures::prompt_harness::{act, cast_now};
 
@@ -1235,5 +1235,57 @@ mod r1081000_flying_backrow {
             is_locked(&next, slot(P1, Row::Backrow, 3)),
             "Crater Locks the zone it arrives in"
         );
+    }
+
+    #[test]
+    fn r1081000_a_standing_unit_is_no_backrow_card_but_one_of_the_units_to_every_walk() {
+        use jackioh_engine::effects::{StealAllArgs, cards_in_card_scope, cards_in_scope, steal_all};
+        let mut state = board("r1081000-walks");
+        let walker = put(&mut state, &grunt().id, slot(P2, Row::Units, 1), json!({}));
+        let wing = put(&mut state, &flyer().id, slot(P2, Row::Backrow, 2), json!({}));
+        let field = put(
+            &mut state,
+            &plague_field().id,
+            slot(P2, Row::Backrow, 3),
+            json!({}),
+        );
+        let (walker, wing, field) = (walker.id, wing.id, field.id);
+        {
+            let mut sink = sink_for(&mut state);
+            let ctx = make_context(
+                &mut sink,
+                None,
+                HookOptions {
+                    controller: Some(P1),
+                    ..Default::default()
+                },
+            );
+            let board = |rows: Value| -> Vec<String> {
+                cards_in_scope(&ctx, &json_as(json!({ "side": "enemy", "rows": rows })))
+                    .iter()
+                    .map(|card| card.id.clone())
+                    .collect()
+            };
+            let cards = |rows: Value| -> Vec<String> {
+                let scope = json_as(json!({ "side": "enemy", "zones": ["field"], "rows": rows }));
+                cards_in_card_scope(&ctx, &scope, None)
+                    .iter()
+                    .map(|entry| entry.card.id.clone())
+                    .collect()
+            };
+            for walk in [&board as &dyn Fn(Value) -> Vec<String>, &cards] {
+                assert_eq!(walk(json!(["units"])), [walker.clone(), wing.clone()]);
+                assert_eq!(walk(json!(["backrow"])), vec![field.clone()], "no backrow card");
+                assert_eq!(
+                    walk(json!(["units", "backrow"])),
+                    [walker.clone(), wing.clone(), field.clone()],
+                    "once"
+                );
+            }
+        }
+        run_effect(&mut state, steal_all(StealAllArgs::default()), P1);
+        assert_eq!(live(&state, &walker).controller, P1);
+        assert!(stands(&state, P1, &wing), "taken with the unit row's, standing");
+        assert_eq!(live(&state, &field).controller, P2);
     }
 }

@@ -23,7 +23,7 @@ use crate::preview::is_face_down;
 use crate::script::EffectContext;
 use crate::state::{CardInstance, GameState};
 use crate::wire::{CardType, PlayerId, Row, Tag, Zone, opponent_of};
-use crate::zones::{card_at, slots_of};
+use crate::zones::{card_at, is_standing_unit, slots_of, standing_units_of};
 
 /// The piles a card scope reaches: the field (both rows unless `rows` narrows it), a hand, a deck.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -157,10 +157,18 @@ pub fn matches_card_scope(ctx: &EffectContext<'_>, card: &CardInstance, scope: &
 fn field_cards(state: &GameState, player: PlayerId, rows: &[Row]) -> Vec<CardInstance> {
     rows.iter()
         .flat_map(|row| {
-            slots_of(player, *row)
+            let mut cards: Vec<CardInstance> = slots_of(player, *row)
                 .into_iter()
-                .filter_map(|slot| card_at(state, slot).cloned())
-                .collect::<Vec<CardInstance>>()
+                .filter_map(|slot| card_at(state, slot))
+                // R1081000: a Unit standing in a backrow zone is no backrow card (§6.1 Animated)…
+                .filter(|card| !(*row == Row::Backrow && is_standing_unit(state, card)))
+                .cloned()
+                .collect();
+            // …but one of the side's Units, after its unit zones', as `targets::cards_in_scope` has it.
+            if *row == Row::Units {
+                cards.extend(standing_units_of(state, player).into_iter().cloned());
+            }
+            cards
         })
         .collect()
 }

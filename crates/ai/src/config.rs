@@ -494,6 +494,11 @@ pub struct AiReply {
     pub face_per_damage: f64,
     /// Per point an attack deals a unit it does not kill.
     pub chip_per_damage: f64,
+    /// The share of a cleaved neighbour's payoff the reply counts (R63): a killed neighbour at
+    /// this share of its `unit_worth`, a popped neighbour shield at this share of the Divine
+    /// Shield weight. Board-dependent kills only — the Cleave body itself stays priced by
+    /// `AI_EVAL.keyword.cleave`.
+    pub cleave_share: f64,
 }
 
 /// The opponent's reply that the best lines are scored after (reply.rs, SPEC §9.9).
@@ -504,6 +509,7 @@ pub const AI_REPLY: AiReply = AiReply {
     visible_activations: 4,
     face_per_damage: 1.0,
     chip_per_damage: 0.3,
+    cleave_share: 1.0,
 };
 
 /// `AI_MULLIGAN`'s shape, and `GREEDY_MULLIGAN`'s (the same one field).

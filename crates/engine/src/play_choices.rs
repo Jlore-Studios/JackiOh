@@ -485,6 +485,11 @@ pub fn equip_host_at(
         return None;
     }
     let top = crate::zones::card_at(state, slot)?;
+    // R1081000: a Unit standing in a backrow zone hosts as one in a unit zone does; no other backrow
+    // card is a Unit (a carrier's Unit stands on the carrier, never as the zone's card).
+    if slot.row == Row::Backrow && !crate::zones::is_standing_unit(state, top) {
+        return None;
+    }
     if crate::faces::card_type_of(state, top) != CardType::Unit {
         return None;
     }
@@ -500,8 +505,8 @@ pub fn equip_host_at(
     Some(top.id.clone())
 }
 
-/// R1086: the unit-row zones that hold a host for an Equip play, in lane order. Empty unless the
-/// card plays Equip at all.
+/// R1086: the zones that hold a host for an Equip play, in lane order: the unit row's, then the backrow
+/// zones a Unit stands in (R1081000). Empty unless the card plays Equip at all.
 pub fn legal_equip_zones_for(
     state: &GameState,
     player: PlayerId,
@@ -511,8 +516,8 @@ pub fn legal_equip_zones_for(
     if !plays_equip(state, card) {
         return Vec::new();
     }
-    crate::zones::slots_of(player, Row::Units)
-        .iter()
+    ROWS.iter()
+        .flat_map(|row| crate::zones::slots_of(player, *row))
         .filter(|slot| equip_host_at(state, player, slot, tributes).is_some())
         .map(|slot| ZoneChoice {
             row: slot.row,
@@ -1156,7 +1161,8 @@ pub fn legal_selections_for(
                         let Some(held) = crate::zones::card_at(state, slot) else {
                             continue;
                         };
-                        if on_field(held) {
+                        // R1081000: a Unit standing there is no backrow card (§6.1 Animated).
+                        if on_field(held) && !crate::zones::is_standing_unit(state, held) {
                             offer(Selection::Instance {
                                 instance_id: held.id.clone(),
                             });
@@ -2414,9 +2420,6 @@ fn refuse_equip(
     let Some(zone) = zone else {
         return refuse(format!("{name} played as Equip takes a zone"));
     };
-    if zone.row != Row::Units {
-        return refuse(format!("{name} played as Equip goes in the units row"));
-    }
     if zone.lane < 1 || zone.lane > crate::zones::row_size(zone.row) {
         return refuse(format!("there is no {} zone {}", zone.row, zone.lane));
     }
@@ -2426,7 +2429,7 @@ fn refuse_equip(
         lane: zone.lane,
     };
     if equip_host_at(state, player, &slot, tributes).is_none() {
-        return refuse(format!("that units zone holds no Unit for {name}"));
+        return refuse(format!("that {} zone holds no Unit for {name}", zone.row));
     }
     Ok(())
 }

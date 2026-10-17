@@ -18,7 +18,8 @@ use crate::state::{CardInstance, find_instance};
 use crate::wire::{ControlHow, GameEvent, PlayerId, Row, opponent_of};
 use crate::zones::{
     PlaceOnFieldOptions, ZoneSlot, card_at, first_entry_zone, in_units_row_or_standing, is_open,
-    place_beneath_top, place_on_field, place_standing_on_field, remove_from_field, slot_of, slots_of,
+    is_standing_unit, place_beneath_top, place_on_field, place_standing_on_field, remove_from_field, slot_of,
+    slots_of, standing_units_of,
 };
 
 /// Which card to steal: the pick the play or a prompt carried (R81), or an instance id a script
@@ -192,10 +193,19 @@ pub struct StealAllArgs {
 pub fn steal_all(args: StealAllArgs) -> Effect {
     Effect::new("stealAll", move |ctx| {
         let row = args.row.unwrap_or(Row::Units);
-        for slot in slots_of(opponent_of(ctx.controller), row) {
-            let Some(card) = card_at(ctx.state, slot).cloned() else {
-                continue;
-            };
+        let enemy = opponent_of(ctx.controller);
+        // R1081000: a Unit standing in a backrow zone is one of the units row's, after its zones, and
+        // no backrow card (§6.1 Animated).
+        let mut cards: Vec<CardInstance> = slots_of(enemy, row)
+            .into_iter()
+            .filter_map(|slot| card_at(ctx.state, slot))
+            .filter(|card| !(row == Row::Backrow && is_standing_unit(ctx.state, card)))
+            .cloned()
+            .collect();
+        if row == Row::Units {
+            cards.extend(standing_units_of(ctx.state, enemy).into_iter().cloned());
+        }
+        for card in cards {
             take_control(ctx, &card);
         }
     })
@@ -217,7 +227,8 @@ pub fn capture(args: CaptureArgs) -> Effect {
         let Some(holder_slot) = slot_of(ctx.state, holder_live) else {
             return;
         };
-        if holder_slot.row != Row::Units || !is_active_on_field(ctx.state, holder_live) {
+        // R1081000: a captor standing in a backrow zone captures as one in a unit zone does.
+        if !in_units_row_or_standing(ctx.state, holder_live) || !is_active_on_field(ctx.state, holder_live) {
             return;
         }
         let Some(target_card) = instance_on_its_stay(ctx, &args.instance_id) else {
@@ -245,7 +256,7 @@ pub fn capture(args: CaptureArgs) -> Effect {
         ctx.events.push(GameEvent::ControlChanged {
             instance_id: placed.id.clone(),
             controller: holder_slot.player,
-            row: Row::Units,
+            row: holder_slot.row,
             lane: holder_slot.lane,
             former_id: None,
             how: Some(ControlHow::Steal),

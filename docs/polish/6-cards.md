@@ -934,7 +934,8 @@ The deck builder does the same for its own buttons by scoping every button rule 
   "static" for them while it is off, and "none" otherwise (jsdom). A full face of a hero
   portrait's card (R641's roster, `fullArt.ts`) carries `data-full-art="true"`, draws its art in the
   `full` shape across the whole face and prints no rules box, tags or type line, while the Full-art
-  cards setting (`fullArt`, Visuals) is on (R1017001, jsdom).
+  cards setting (`fullArt`, Visuals) is on and no tutorial lesson's board holds it (R1017001, R1108000,
+  jsdom).
 - **B14.** A radiant face sets `data-radiant-face="true"` on `.cf` and renders its art with
   `data-art-variant="radiant"`. Whenever `text.radiant` is not null, it prints `.cf-text-base`
   followed by `.cf-text-radiant` under a gold rule; an empty `.cf-text-base` (the cell replaced

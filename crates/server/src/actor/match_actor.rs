@@ -2201,22 +2201,29 @@ fn mulligan_window(snapshot: &MatchSnapshot) -> Vec<PlayerId> {
 // Glitch's swap moves the record with the account), and each watcher is sent each recorded view of
 // its friend's seat SPECTATE_DELAY_MS after the state it shows, by the one wait the actor arms for
 // the next view due. A watcher who joins starts from the newest view already that old. Nothing a
-// watcher's socket sends is read: it reaches no reducer, log, relay or clock, and a watcher's
-// leaving changes nothing in the match but the count the players are told (B51).
+// watcher's socket sends reaches a reducer, log, relay or clock: a later hello is answered with the
+// view it was last sent, so its page can tell a live socket from a dead one (R1103000), and every
+// other frame is dropped unread. A watcher's leaving changes nothing in the match but the count the
+// players are told (B51). Once the match is over, a watcher sent its seat's last view, the one with
+// the result, is let go (R1107000).
 
 use crate::actor::protocol::watchers_frame;
 use crate::actor::ws_server::WS_CLOSE;
 use crate::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH};
+use crate::social::watch::parse_watch_hello;
 
 /// What a revoked watcher's `forbidden` frame and close say: the words every refused hello carries
 /// (`social::watch`), so a socket learns that it may no longer watch, never which change said so.
 pub const WATCH_NOT_ALLOWED: &str = "you may not watch this match";
 
 /// RFC 6455's normal closure and "going away": a watcher's socket is closed with the first when a
-/// newer socket of the same account replaces it, and with the second when the actor goes (wire
-/// vocabulary, like `CLOSE_POLICY_VIOLATED`).
+/// newer socket of the same account replaces it or once it has had a finished match's last view
+/// (R1107000), and with the second when the actor goes (wire vocabulary, like
+/// `CLOSE_POLICY_VIOLATED`).
 const CLOSE_NORMAL: u16 = 1000;
 const CLOSE_GOING_AWAY: u16 = 1001;
+/// R1107000: what a finished match's watcher's close says, once it has been sent its seat's last view.
+const MATCH_OVER_CLOSE_REASON: &str = "the match is over";
 
 /// One recorded view of a seat: its encoded `view` frame (`legal: []`, B50), when the state it shows
 /// was reached, and its place in the record.
@@ -2263,6 +2270,19 @@ impl Spectate {
     }
 }
 
+/// R1107000: closes the sockets of the watchers `MatchActor::spectate_let_go_finished` let go, each
+/// with CLOSE_NORMAL. Called without the actor's lock, which each socket's close handler takes; the
+/// handler finds its watcher already out of the list.
+fn close_finished_watchers(watchers: Vec<Watcher>) {
+    for watcher in watchers {
+        if watcher.socket.is_open() {
+            watcher
+                .socket
+                .close(Some(CLOSE_NORMAL), Some(MATCH_OVER_CLOSE_REASON));
+        }
+    }
+}
+
 /// Why `MatchActor::attach_watcher` turned a watcher away.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WatchRefused {
@@ -2284,15 +2304,16 @@ impl WatchRefused {
 impl MatchActor {
     /// B50: a watcher's socket, for `profile_id`'s account, on the seat the account that began in
     /// `home` plays. A newer socket of the same account replaces its older one, so an account is one
-    /// watcher; otherwise a match already watched by SPECTATORS_PER_MATCH sockets is `Full`. The
-    /// socket's frames go unread from here on, and the players are told the new count (B51).
+    /// watcher; otherwise a match already watched by SPECTATORS_PER_MATCH sockets is `Full`. From
+    /// here on the socket's hellos are answered (R1103000) and its other frames go unread, and the
+    /// players are told the new count (B51).
     pub fn attach_watcher(
         &self,
         home: PlayerId,
         profile_id: &str,
         socket: Socket,
     ) -> Result<(), WatchRefused> {
-        let (id, replaced) = {
+        let (id, replaced, done) = {
             let mut core = self.lock();
             if core.stopped
                 || core.voided
@@ -2313,6 +2334,7 @@ impl MatchActor {
             // Those already watching are sent what has come due first, so each record is down to
             // the view the newcomer starts from.
             self.spectate_flush(&mut core, now_ms());
+            let done = self.spectate_let_go_finished(&mut core);
             let id = core.spectate.next_id;
             core.spectate.next_id += 1;
             core.spectate.watchers.push(Watcher {
@@ -2322,13 +2344,22 @@ impl MatchActor {
                 socket: socket.clone(),
                 sent: None,
             });
-            (id, replaced)
+            (id, replaced, done)
         };
 
         let actor = Arc::downgrade(&self.shared);
+        let heard = actor.clone();
         socket.attach(SocketHandlers {
-            // B50: whatever a watcher sends, nothing reads it.
-            message: Box::new(|_text: String| {}),
+            // B50: nothing a watcher sends reaches the reducer. R1103000: a hello is answered, and
+            // whatever else it sends, nothing reads.
+            message: Box::new(move |text: String| {
+                if parse_watch_hello(&text).is_err() {
+                    return;
+                }
+                if let Some(shared) = heard.upgrade() {
+                    MatchActor { shared }.answer_watcher_hello(id);
+                }
+            }),
             close: Box::new(move || {
                 if let Some(shared) = actor.upgrade() {
                     MatchActor { shared }.detach_watcher(id);
@@ -2342,6 +2373,8 @@ impl MatchActor {
                 .socket
                 .close(Some(CLOSE_NORMAL), Some("replaced by a new socket"));
         }
+        // R1107000: a watcher already in may just have had the finished match's last view.
+        close_finished_watchers(done);
         // A socket that went before its handler was in has no close left to run.
         if !socket.is_open() {
             self.detach_watcher(id);
@@ -2355,6 +2388,10 @@ impl MatchActor {
             self.push_watchers(&core);
         }
         tracing::info!(event = "match.watcher.attached", matchId = %self.match_id_str(), home = %home, watchers = core.spectate.watchers.len());
+        // R1107000: the newcomer's first view may be the finished match's last, and then it goes at once.
+        let done = self.spectate_let_go_finished(&mut core);
+        drop(core);
+        close_finished_watchers(done);
         Ok(())
     }
 
@@ -2405,6 +2442,25 @@ impl MatchActor {
             }
         }
         gone.len()
+    }
+
+    /// R1103000: a watcher's later hello is answered with the view it was last sent, again, so its
+    /// page hears that the socket is alive (R1441's probe). It is never a view sooner than
+    /// SPECTATE_DELAY_MS after the state it shows, and a watcher sent no view yet is sent nothing.
+    fn answer_watcher_hello(&self, id: u64) {
+        let core = self.lock();
+        if core.stopped || core.spectate.closed {
+            return;
+        }
+        let Some(watcher) = core.spectate.watchers.iter().find(|watcher| watcher.id == id) else {
+            return;
+        };
+        let last = core.spectate.records[watcher.home]
+            .iter()
+            .find(|record| watcher.sent == Some(record.seq));
+        if let Some(record) = last {
+            watcher.socket.send(record.frame.as_str());
+        }
     }
 
     /// A watcher's socket went: it leaves, and the players hear the new count (B51).
@@ -2534,8 +2590,38 @@ impl MatchActor {
                 armed.fired();
             }
             actor.spectate_flush(&mut core, now_ms());
+            let done = actor.spectate_let_go_finished(&mut core);
+            drop(core);
+            close_finished_watchers(done);
         });
         *timer = Some((armed, due));
+    }
+
+    /// R1107000: once the match is over, each watcher that has been sent its seat's last view (the
+    /// newest in its record: nothing is recorded after the game's end, so it is the one with the
+    /// result) is let go: out of the list, and the players told the new count (B51). Answers those
+    /// watchers, for the caller to close with `close_finished_watchers` once it has let go of the
+    /// lock. Called after each `spectate_flush` that can send that view: the wait's and an attach's.
+    /// `spectate_record_in`'s cannot, since the view it records is SPECTATE_DELAY_MS from due.
+    #[must_use]
+    fn spectate_let_go_finished(&self, core: &mut Core) -> Vec<Watcher> {
+        if !core.finished || core.spectate.closed {
+            return Vec::new();
+        }
+        let records = &core.spectate.records;
+        let (done, kept): (Vec<Watcher>, Vec<Watcher>) = std::mem::take(&mut core.spectate.watchers)
+            .into_iter()
+            .partition(|watcher| {
+                records[watcher.home]
+                    .back()
+                    .is_some_and(|last| watcher.sent == Some(last.seq))
+            });
+        core.spectate.watchers = kept;
+        if !done.is_empty() && !core.stopped {
+            tracing::info!(event = "match.watcher.finished", matchId = %self.match_id_str(), finished = done.len(), watchers = core.spectate.watchers.len());
+            self.push_watchers(core);
+        }
+        done
     }
 
     /// The actor stops or the match is voided: every watcher's socket closes with `code` and

@@ -490,4 +490,37 @@ mod tests {
         assert_eq!(pile[1].controller, P1);
         assert!(s.backrow(P2, 2).is_none());
     }
+
+    /// R1081000: a Prison standing in the backrow captures beneath itself there, and the capture resumes
+    /// standing there when Prison leaves.
+    #[test]
+    fn r1081000_a_prison_standing_in_the_backrow_captures_beneath_itself() {
+        crate::register_all();
+        let mut s = crate::scenario(json!({
+            "p1": { "field": [{ "def": ID, "lane": 1 }], "hand": [FILLER], "library": [SPARE, SPARE] },
+            "p2": { "hand": [VANILLA, FILLER], "library": [SPARE, SPARE], "mana": 10 },
+        }));
+        set_param(s.card_mut(ID), "chance", 100);
+        let prison = s.card(ID).id.clone();
+        crate::stand_in_backrow(&mut s, &prison, 3);
+        s.end_turn();
+        let vanilla = s.card(VANILLA).id.clone();
+
+        s.play(VANILLA, json!({ "zone": 2 }));
+
+        let at = ZoneSlot { player: P1, row: Row::Backrow, lane: 3 };
+        let beneath = jackioh_engine::zones::beneath_at(s.state(), at);
+        assert_eq!(beneath.iter().map(|card| card.id.as_str()).collect::<Vec<_>>(), [vanilla.as_str()]);
+        assert_eq!(beneath[0].controller, P1);
+        assert!(s.unit(P2, 2).is_none());
+        assert!(s.events().iter().any(|event| matches!(
+            event,
+            GameEvent::ControlChanged { instance_id, row: Row::Backrow, lane: 3, .. } if *instance_id == vanilla
+        )));
+
+        let mut gone = s.card(prison.as_str()).clone();
+        remove_from_any_zone(s.state_mut(), &mut gone);
+        assert_eq!(s.backrow(P1, 3).map(|card| card.id), Some(vanilla.clone()));
+        assert!(stands_in_backrow(s.state(), s.card(vanilla.as_str())));
+    }
 }

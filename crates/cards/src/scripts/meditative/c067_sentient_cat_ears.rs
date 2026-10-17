@@ -124,6 +124,27 @@ mod tests {
                 assert!(library_def_ids(&s, P1).contains(&BOMB.to_string()));
             }
 
+            /// R1081000: a Unit standing in the backrow is one of your acting Units: a host where it stands.
+            #[test]
+            fn r1081000_onto_your_unit_standing_in_the_backrow_it_fuses_there() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "ears-standing",
+                    "p1": { "hand": [EARS, FILLER], "field": [VANILLA], "library": filler(3) },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                let host = s.card(VANILLA).id.clone();
+                crate::stand_in_backrow(&mut s, &host, 2);
+
+                s.play(EARS, json!({ "row": "backrow", "zone": 2, "equip": true }));
+
+                assert!(fused(&s));
+                assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(host.clone()));
+                assert!(stands_in_backrow(s.state(), s.card(host.as_str())));
+                let stats = s.stats(host.as_str());
+                assert_eq!((stats.attack, stats.health), (5, 5));
+            }
+
             #[test]
             fn an_immutable_unit_is_no_host() {
                 crate::register_all();

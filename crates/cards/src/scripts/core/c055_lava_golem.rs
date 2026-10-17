@@ -313,6 +313,26 @@ mod tests {
             assert_eq!(golem.summoned_turn, Some(turn));
         }
 
+        /// R1081000: a Flying Golem named into a backrow zone is still summoned for the opponent, into
+        /// their unit zone of that lane.
+        #[test]
+        fn r1081000_played_flying_into_the_backrow_it_is_still_summoned_for_the_opponent() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": ["core-055"], "field": [{ "def": "core-053", "lane": 1 }, { "def": "core-053", "lane": 2 }] },
+                "p2": { "field": [{ "def": "core-053", "lane": 1 }] },
+            }));
+            let golem = s.card("core-055").id.clone();
+            crate::give_flying(&mut s, &golem);
+            let mut tributes = ids_at(&s, P1, &[1, 2]);
+            tributes.push(unit_at(&s, P2, 1).id);
+
+            s.play("core-055", json!({ "row": "backrow", "zone": 3, "tributes": tributes }));
+
+            assert_eq!(s.unit(P2, 3).map(|unit| unit.id), Some(golem));
+            assert!(s.backrow(P1, 3).is_none());
+        }
+
         #[test]
         fn r360_base_the_opponent_s_leftmost_open_zone_when_the_lane_the_play_named_is_taken_there_r15() {
             crate::register_all();

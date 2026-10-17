@@ -360,6 +360,27 @@ mod tests {
             s.expect_stats(FIENDER, json!({ "attack": 8, "maxHealth": 17 }));
         }
 
+        /// R1081000: a Felinor that stood in a backrow zone lies dormant there under a Flying Stack card,
+        /// and counts as one dormant in a unit zone does.
+        #[test]
+        fn r1081000_a_felinor_dormant_beneath_a_backrow_pile_still_counts() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "core-092-backrow-pile",
+                "p1": { "field": [BIG_FELINOR], "hand": [FIENDER, "core-005"] },
+                "p2": { "hand": ["core-005"] },
+            }));
+            let felinor = s.card(BIG_FELINOR).id.clone();
+            crate::stand_in_backrow(&mut s, &felinor, 2);
+            let fiender = s.card(FIENDER).id.clone();
+            crate::give_flying(&mut s, &fiender);
+
+            s.play(FIENDER, json!({ "row": "backrow", "zone": 2 }));
+
+            assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(fiender));
+            s.expect_stats(FIENDER, json!({ "attack": 8, "maxHealth": 17 }));
+        }
+
         #[test]
         fn r92_the_dormant_card_under_the_stack_has_no_position_and_cannot_be_switched() {
             crate::register_all();

@@ -762,11 +762,20 @@ fn place_with(
     true
 }
 
-/// R638, R13: places a card beneath the top card of a unit zone pile.
-/// This is no arrival (R638), and the card lies dormant (R13).
+/// R638, R13: places a card beneath the top card of a unit zone pile, or beneath a Unit standing in a
+/// backrow zone (R1081000), the top of that zone's pile. This is no arrival (R638), and the card lies
+/// dormant (R13).
 pub fn place_beneath_top(state: &mut GameState, instance: &mut CardInstance, slot: ZoneSlot) -> bool {
-    if slot.row != Row::Units {
-        return false;
+    if slot.row == Row::Backrow {
+        if !card_at(state, slot).is_some_and(|top| is_standing_unit(state, top)) {
+            return false;
+        }
+        instance.controller = slot.player;
+        instance.zone = zone_of(slot);
+        let mut beneath = beneath_at(state, slot).to_vec();
+        beneath.insert(0, instance.clone());
+        set_beneath(&mut state.players[slot.player], slot.lane, beneath);
+        return true;
     }
     let Some(pile) = pile_at_mut(state, slot) else {
         return false;
@@ -1576,12 +1585,21 @@ pub fn standing_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstan
         .collect()
 }
 
+/// §3.2, R13: the Units dormant beneath the tops of `player`'s piles: a unit zone's, lane by lane, then
+/// a backrow zone's, where a Unit that stood there lies once a Stack card is played onto it (R1081000).
 pub fn dormant_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
-    state.players[player]
-        .units
+    let side = &state.players[player];
+    side.units
         .iter()
         .flatten()
         .flat_map(|pile| pile.iter().skip(1))
+        .chain(
+            side.backrow_piles
+                .iter()
+                .flatten()
+                .flatten()
+                .filter(|beneath| is_standing_unit(state, beneath)),
+        )
         .collect()
 }
 

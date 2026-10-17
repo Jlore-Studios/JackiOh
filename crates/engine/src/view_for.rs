@@ -22,6 +22,9 @@
 //!     up to the end of its action read as the sentinel for each card the state no longer holds.
 //!   - R227: a card set face-down took a fresh id, so the events that named its old id follow it to
 //!     its zone through the `formerId` that set it, and `formerId` itself travels only with the card.
+//!   - R1074000: a Duos pass (B20) takes a hand card out of its duel unseen, so in a duel a card in no
+//!     pile reads to the player whose hand the events last show it in, and when they show it in none
+//!     to everyone if it is a token (R11) and to nobody if not.
 //!   - R177: more fields follow R97 — a prompt option offering a face-down card names it by id only
 //!     (and the zone it lies in, R821000),
 //!     a `costChanged` on an unreadable card hides its cost and a `buffed` one its amounts, and a
@@ -68,7 +71,7 @@ use serde_json::{Map, Value};
 
 use crate::animated::is_animated;
 use crate::announce::announced_face_down_to;
-use crate::catalog::registered_catalog;
+use crate::catalog::{find_def, registered_catalog};
 use crate::combat::{ExertionKind, has_exertion_in, is_asleep, why_cannot_declare_in};
 use crate::condition::condition_active;
 use crate::config::{DRAW_OFFER_BLOCK_TURNS, VIEW_EVENT_LIMIT};
@@ -100,10 +103,10 @@ use crate::turn::standing_draw_offer;
 use crate::wire::{
     AnimatedView, BackrowCounters, BackrowView, CardDef, CardMark, CardType, CardView, CopiedTextView,
     CreditView, DrawOfferView, FaceDownBackrowView, GameEvent, GameEventType, GameResult, GlitchOutcome,
-    HandView, HeroPowerView, HeroView, ManaView, ModifierView, MulliganView, PLAYER_IDS,
-    PendingElsewhereView, PendingOption, PendingPromptView, PendingView, PlayerId, PlayerView, PreviewValue,
-    PublicBackrowView, Row, RowFlags, Selection, SideView, TuningChange, UnitView, Zone, ZoneName,
-    opponent_of,
+    HandView, HeroPowerView, HeroView, LibraryOverflowOutcome, ManaView, ModifierView, MulliganView,
+    PLAYER_IDS, PendingElsewhereView, PendingOption, PendingPromptView, PendingView, PlayerId, PlayerView,
+    PreviewValue, PublicBackrowView, Row, RowFlags, Selection, SideView, TuningChange, UnitView, Zone,
+    ZoneName, opponent_of,
 };
 use crate::zones::{
     beneath_at, carried_at, carried_units_of, home_of, is_reserved, is_standing_unit, slot_of, slots_of,
@@ -160,6 +163,18 @@ struct Replacements {
     /// card they name that the state no longer holds ceased to exist out of that Glitch, unseen, and
     /// reads to nobody.
     voided: bool,
+    /// R1074000: `Some` in a duel, where a pass (B20) takes a hand card out of the state unseen.
+    duel: Option<DuelGone>,
+}
+
+/// R1074000: what a duel's events say of the cards in no pile that took no successor.
+#[derive(Clone, Debug, Default)]
+struct DuelGone {
+    /// The ones that read openly as they would in a 1v1 game: a token no pass took (R11), judged by the
+    /// definition the events last name it as, and a card a full library refused before it existed (R316).
+    public: IndexSet<String>,
+    /// The ones a pass took out of a hand, tokens among them, each with the player whose hand it left.
+    passed: IndexMap<String, PlayerId>,
 }
 
 fn replacements_of(events: &[&GameEvent], state: Option<&GameState>) -> Replacements {
@@ -224,7 +239,190 @@ fn replacements_of(events: &[&GameEvent], state: Option<&GameState>) -> Replacem
         hidden_from,
         to_library: to_library.filter(|set| !set.is_empty()),
         voided: false,
+        duel: state.and_then(|state| duel_gone(events, state)),
     }
+}
+
+/// R1074000: a pass (B20) takes a card out of its duel's hand with no event, so in a duel a card in no
+/// pile with no successor is a token that ceased to exist (R11), a card a full library refused (R316),
+/// or a passed one. A passed card's last place the events show is a hand: put there by a draw, an add
+/// to hand, a bounce or a steal (a counter that sends a card to a hand steals it), carried to the card
+/// a Transform or a Fuse in the hand made of it, and not taken out since by a play, a set (R227's old
+/// id), a discard, a burn, a shuffle, an exile, a graveyard or a control change. A unit token bounced
+/// or stolen off the field or out of the resolving zone ceased to exist on its way to the hand (R11),
+/// so it reached none. One that came in by a pass, or whose arrival the log no longer holds, names no
+/// hand. Only a Duos seat passes, so a 1v1 state is no duel and reads every event as before.
+fn duel_gone(events: &[&GameEvent], state: &GameState) -> Option<DuelGone> {
+    if PLAYER_IDS
+        .into_iter()
+        .all(|player| state.players[player].duos.is_none())
+    {
+        return None;
+    }
+    // Each card in a hand, and whose hand; each card's last definition the events name it as; each unit
+    // token that ceased to exist on its way to a hand, whose `addedToHand` may follow (a counter's steal).
+    let mut in_hand: IndexMap<String, PlayerId> = IndexMap::new();
+    let mut last_def: IndexMap<String, String> = IndexMap::new();
+    let mut never_made: IndexSet<String> = IndexSet::new();
+    let mut ceased: IndexSet<String> = IndexSet::new();
+    let unit_token = |def_id: &str| {
+        find_def(Some(state), def_id).is_some_and(|def| def.token && def.type_ == CardType::Unit)
+    };
+    for event in events {
+        match event {
+            GameEvent::Bounced {
+                instance_id, def_id, ..
+            }
+            | GameEvent::Stolen {
+                instance_id,
+                def_id,
+                zone: ZoneName::Field | ZoneName::Resolving,
+                ..
+            } if unit_token(def_id) => {
+                last_def.insert(instance_id.clone(), def_id.clone());
+                in_hand.shift_remove(instance_id);
+                ceased.insert(instance_id.clone());
+            }
+            GameEvent::Drawn {
+                player,
+                instance_id,
+                def_id,
+                ..
+            }
+            | GameEvent::AddedToHand {
+                player,
+                instance_id,
+                def_id,
+            }
+            | GameEvent::Bounced {
+                owner: player,
+                instance_id,
+                def_id,
+            }
+            | GameEvent::Stolen {
+                to: player,
+                instance_id,
+                def_id,
+                ..
+            } => {
+                last_def.insert(instance_id.clone(), def_id.clone());
+                if !ceased.contains(instance_id) {
+                    in_hand.insert(instance_id.clone(), *player);
+                }
+            }
+            GameEvent::Transformed {
+                instance_id,
+                new_instance_id,
+                from_def_id,
+                to_def_id,
+                ..
+            } => {
+                last_def.insert(instance_id.clone(), from_def_id.clone());
+                last_def.insert(new_instance_id.clone(), to_def_id.clone());
+                if let Some(holder) = in_hand.shift_remove(instance_id) {
+                    in_hand.insert(new_instance_id.clone(), holder);
+                }
+            }
+            GameEvent::Fused {
+                instance_ids,
+                result_instance_id,
+                def_id,
+            } => {
+                last_def.insert(result_instance_id.clone(), def_id.clone());
+                let held: Vec<PlayerId> = instance_ids
+                    .iter()
+                    .filter_map(|id| in_hand.shift_remove(id))
+                    .collect();
+                if let Some(holder) = held.first() {
+                    in_hand.insert(result_instance_id.clone(), *holder);
+                }
+            }
+            GameEvent::CardPlayed {
+                instance_id,
+                def_id,
+                former_id,
+                ..
+            }
+            | GameEvent::Summoned {
+                instance_id,
+                def_id,
+                former_id,
+                ..
+            } => {
+                last_def.insert(instance_id.clone(), def_id.clone());
+                in_hand.shift_remove(instance_id);
+                if let Some(former) = former_id {
+                    in_hand.shift_remove(former);
+                }
+            }
+            GameEvent::ControlChanged {
+                instance_id,
+                former_id,
+                ..
+            } => {
+                in_hand.shift_remove(instance_id);
+                if let Some(former) = former_id {
+                    in_hand.shift_remove(former);
+                }
+            }
+            GameEvent::CardAnnounced {
+                instance_id, def_id, ..
+            }
+            | GameEvent::Discarded {
+                instance_id, def_id, ..
+            }
+            | GameEvent::Burned {
+                instance_id, def_id, ..
+            }
+            | GameEvent::ShuffledIn {
+                instance_id, def_id, ..
+            }
+            | GameEvent::Exiled {
+                instance_id, def_id, ..
+            }
+            | GameEvent::EnteredGraveyard {
+                instance_id, def_id, ..
+            } => {
+                last_def.insert(instance_id.clone(), def_id.clone());
+                in_hand.shift_remove(instance_id);
+            }
+            GameEvent::Destroyed {
+                instance_id, def_id, ..
+            }
+            | GameEvent::CardResolved {
+                instance_id, def_id, ..
+            } => {
+                last_def.insert(instance_id.clone(), def_id.clone());
+            }
+            GameEvent::LibraryOverflow {
+                instance_id,
+                def_id,
+                outcome,
+                ..
+            } => {
+                last_def.insert(instance_id.clone(), def_id.clone());
+                if *outcome == LibraryOverflowOutcome::NotCreated {
+                    never_made.insert(instance_id.clone());
+                }
+            }
+            _ => {}
+        }
+    }
+    let token = |id: &str| {
+        last_def
+            .get(id)
+            .and_then(|def_id| find_def(Some(state), def_id))
+            .is_some_and(|def| def.token)
+    };
+    let gone = |id: &str| find_instance(state, id).is_none();
+    let passed: IndexMap<String, PlayerId> = in_hand.into_iter().filter(|(id, _)| gone(id)).collect();
+    let public: IndexSet<String> = last_def
+        .keys()
+        .filter(|id| gone(id) && token(id) && !passed.contains_key(*id))
+        .chain(never_made.iter())
+        .cloned()
+        .collect();
+    Some(DuelGone { public, passed })
 }
 
 /// R97: whether this viewer may read the identity of the card an event names, judged by where the
@@ -237,7 +435,10 @@ fn replacements_of(events: &[&GameEvent], state: Option<&GameState>) -> Replacem
 /// the card that replaced it: a face-down trap #83 Transmogulate replaced keeps the secret its
 /// replacement keeps, and a library #83 replaced still never reads, so its earlier `cardPlayed` or
 /// `costChanged` cannot spell out what it was or in what order. With no replacement — a unit token
-/// that left the field (R11), a card exiled out of existence (R86) — it was public when it went.
+/// that left the field (R11), a card exiled out of existence (R86) — it was public when it went. In a
+/// duel one the events last show in a hand, a token's included, was passed out of it (B20) and reads to
+/// that hand's player alone, and of the rest only a token or a card a full library refused (R316) went
+/// publicly (R1074000).
 fn may_read(state: &GameState, viewer: PlayerId, instance_id: &str, replaced: &Replacements) -> bool {
     let mut id = instance_id.to_string();
     let mut card = find_instance(state, &id);
@@ -264,7 +465,15 @@ fn may_read(state: &GameState, viewer: PlayerId, instance_id: &str, replaced: &R
     // R764: so is one a Glitch took off the board or out of the match before it was ever revealed.
     let Some(card) = card else {
         let to_library = replaced.to_library.as_ref().is_some_and(|ids| ids.contains(&id));
-        return !to_library && !replaced.voided;
+        if to_library || replaced.voided {
+            return false;
+        }
+        // R1074000: in a duel, a card a pass took out of a hand is as hidden as it was there, and one
+        // that names no hand, in by a pass and out by another, reads to nobody.
+        let Some(duel) = &replaced.duel else {
+            return true;
+        };
+        return duel.public.contains(&id) || duel.passed.get(&id) == Some(&viewer);
     };
     match &card.zone {
         Zone::Library { .. } => false,
