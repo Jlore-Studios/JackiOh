@@ -296,13 +296,18 @@ mod tests {
             serde_json::to_value(&snapshot_v0_1_0).expect("serialises")
         );
 
-        // The newest snapshot is carried and rebuilt exact.
-        let newest = catalog_defs_at(crate::CATALOG_VERSION).expect("newest version is carried");
-        let snapshot_newest: CardDefs =
-            serde_json::from_str(include_str!("../patches/v0.3.7b.json")).expect("newest reads as cards");
+        // The newest is carried too, and v0.3.7b, the newest when this was written, is rebuilt as its
+        // snapshot holds it, without the pending patches' changes `catalog.json` already has.
+        assert!(
+            catalog_defs_at(crate::CATALOG_VERSION).is_some(),
+            "the newest is carried"
+        );
+        let v0_3_7b = catalog_defs_at("v0.3.7b").expect("v0.3.7b is carried");
+        let snapshot_v0_3_7b: CardDefs =
+            serde_json::from_str(include_str!("../patches/v0.3.7b.json")).expect("v0.3.7b reads as cards");
         assert_eq!(
-            serde_json::to_value(newest).expect("serialises"),
-            serde_json::to_value(&snapshot_newest).expect("serialises")
+            serde_json::to_value(v0_3_7b).expect("serialises"),
+            serde_json::to_value(&snapshot_v0_3_7b).expect("serialises")
         );
 
         assert!(catalog_defs_at("v0.0.0-unknown").is_none());
