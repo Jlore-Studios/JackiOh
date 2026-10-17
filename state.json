@@ -3240,10 +3240,8 @@
       }
     },
     "1142": {
-      "action": "plan",
-      "asks": [
-        "c:6240062917"
-      ],
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-10-17T20:33:40Z",
         "difficulty": "medium",
@@ -3272,11 +3270,13 @@
       "provider": "agy",
       "queued_at": "2026-10-17T20:00:49Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "39065016219",
-      "started_at": "2026-10-17T20:03:03Z",
+      "run_id": "39067317254",
+      "started_at": "2026-10-17T20:35:28Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6240062917"
+      ]
     },
     "1143": {
       "action": "build",
@@ -8829,9 +8829,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-17T20:34:46Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39067259655",
-    "what": "plan #1150 on muse"
+    "at": "2026-10-17T20:35:28Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39067317254",
+    "what": "build #1142 on agy"
   },
   "last_sweep": {
     "at": "2026-10-17T20:30:48Z",
