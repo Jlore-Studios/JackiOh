@@ -3262,11 +3262,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-17T20:07:16Z",
+        "at": "2026-10-17T20:23:01Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "the never-easy list names AI work outright, and this changes the AI's eval in crates/ai/src, so hard holds with no close call"
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Rule 5 is broken outright: the change is in crates/ai/src/ (evaluate.rs, config.rs), and AI work is named hard."
       },
       "failures": 0,
       "forced": false,
