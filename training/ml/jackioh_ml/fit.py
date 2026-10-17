@@ -13,7 +13,8 @@ the rest, and writes `<out>/report.md` and `<out>/report.json`:
   scores as won that the seat lost, and the reverse.
 
 `<out>/model.pt` keeps the best seed's network (c) with its vocabulary and standardizer, which
-`export.py` turns into the Rust weights.
+`export.py` turns into the Rust weights; `<out>/model-b.pt` is (b), the linear correction alone, in the
+same form.
 """
 
 from __future__ import annotations
@@ -39,6 +40,8 @@ HELD_OUT = 0.1
 VALIDATION = 0.1
 MIN_KEY_COUNT = 20
 BATCH = 2048
+#: The decoupled weight decay of the per-card rows (AdamW), and of every other weight of (c).
+SPARSE_DECAY = 1e-2
 MAX_EPOCHS = 40
 PATIENCE = 3
 CURVE_GAMES = (10_000, 30_000, 100_000)
@@ -168,16 +171,24 @@ def train(
     valid_rows: np.ndarray,
     seed: int,
     lr: float = 3e-3,
-    weight_decay: float = 1e-6,
+    weight_decay: float = 1e-4,
     log: Callable[[str], None] = print,
 ) -> dict:
     """Adam on the log loss, keeping the epoch with the best validation loss (early stopping)."""
     torch.manual_seed(seed)
     rng = np.random.default_rng(seed)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    # The per-card rows see the fewest games each: they take the strongest penalty.
+    sparse = [p for name, p in model.named_parameters() if name.startswith("sparse_in")]
+    rest = [p for name, p in model.named_parameters() if not name.startswith("sparse_in")]
+    groups = [{"params": rest, "weight_decay": weight_decay}]
+    if sparse:
+        groups.append({"params": sparse, "weight_decay": SPARSE_DECAY})
+    optimizer = torch.optim.AdamW(groups, lr=lr)
     loss_fn = nn.BCEWithLogitsLoss()
-    best, best_state, stale, epochs = math.inf, None, 0, 0
     yv = data.outcome[torch.as_tensor(valid_rows)].numpy()
+    # Where it starts counts as an epoch: a fit that never beats its start keeps it.
+    best, stale, epochs = log_loss(predict(model, data, valid_rows), yv), 0, 0
+    best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
     for epoch in range(MAX_EPOCHS):
         model.train()
         order = rng.permutation(train_rows)
@@ -229,11 +240,14 @@ def fit_convex(model: nn.Module, data: Prepared, rows: np.ndarray, l2: float = 0
 LINEAR_L2 = (1e-5, 1e-4, 1e-3, 1e-2)
 
 
-def start_from(model: nn.Module, hand: HandModel) -> None:
-    """(b) and (c) start where (a) ended: the calibrated hand eval."""
+def start_from(model: nn.Module, hand: HandModel, linear: "LinearModel | None" = None) -> None:
+    """(b) starts where (a) ended, the calibrated hand eval; (c) where (b) ended, when it is given."""
     with torch.no_grad():
-        model.hand.a.copy_(hand.a)
-        model.hand.b.copy_(hand.b)
+        source = linear.hand if linear is not None else hand
+        model.hand.a.copy_(source.a)
+        model.hand.b.copy_(source.b)
+        if linear is not None and hasattr(model, "linear"):
+            model.linear.weight.copy_(linear.w.weight)
 
 
 def misjudged(positions: D.Positions, p_hand: np.ndarray, catalog: dict[str, str]) -> dict:
@@ -346,7 +360,7 @@ def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS,
     report["seeds"] = []
     for seed in seeds:
         net = NetModel(len(positions.dense_names), len(vocab.keys), width=width, head=head)
-        start_from(net, hand)
+        start_from(net, hand, linear)
         fitted = train(net, data, fit_rows, valid_rows, seed=seed, log=log)
         p_net = predict(net, data, held)
         entry = {"seed": seed, "epochs": fitted["epochs"], "heldOut": metrics(p_net, y_held, positions.turn[held])}
@@ -366,8 +380,12 @@ def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS,
             else:
                 continue
         rows = D.first_games(positions, fit_rows, games)
+        # Each size's (b) is fitted on that size's games, so a small fit never starts from the big one's.
+        linear_sub = LinearModel(len(positions.dense_names))
+        start_from(linear_sub, hand)
+        fit_convex(linear_sub, data, rows, l2=linear_l2, log=log)
         net = NetModel(len(positions.dense_names), len(vocab.keys), width=width, head=head)
-        start_from(net, hand)
+        start_from(net, hand, linear_sub)
         train(net, data, rows, valid_rows, seed=seeds[0], log=log)
         report["curve"].append({"games": games, "heldOut": metrics(predict(net, data, held), y_held, positions.turn[held])})
         if games == fit_games:
@@ -380,9 +398,16 @@ def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS,
     out.mkdir(parents=True, exist_ok=True)
     (out / "report.json").write_text(json.dumps(report, indent=1), encoding="utf-8")
     (out / "report.md").write_text(render(report), encoding="utf-8")
-    torch.save({"state": best_model.state_dict(), "width": width, "head": list(head), "vocab": vocab.keys,
-                "mean": scaler.mean.tolist(), "scale": scaler.scale.tolist(), "denseNames": positions.dense_names,
-                "featuresVersion": positions.features_version, "catalogs": sorted(positions.catalogs)}, out / "model.pt")
+    def save(model: NetModel, name: str) -> None:
+        torch.save({"state": model.state_dict(), "width": width, "head": list(head), "vocab": vocab.keys,
+                    "mean": scaler.mean.tolist(), "scale": scaler.scale.tolist(), "denseNames": positions.dense_names,
+                    "featuresVersion": positions.features_version, "catalogs": sorted(positions.catalogs)}, out / name)
+
+    save(best_model, "model.pt")
+    # (b) as a network whose head is zero: the linear correction alone, which `export.py` reads alike.
+    linear_net = NetModel(len(positions.dense_names), len(vocab.keys), width=width, head=head)
+    start_from(linear_net, hand, linear)
+    save(linear_net, "model-b.pt")
     log(f"wrote {out / 'report.md'} in {report['seconds']} s: {report['decision']['verdict']}")
     return report
 
