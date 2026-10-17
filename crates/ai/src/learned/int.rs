@@ -43,6 +43,8 @@ pub struct IntNetwork<'a> {
     pub out_shift: u32,
     pub out_w: &'a [i8],
     pub out_b: i64,
+    /// (b)'s linear term over the raw dense features, at the output's scale `A·2^out_shift`.
+    pub linear: &'a [i64],
     pub hand_a: f64,
     pub hand_b: f64,
     pub hand_unit: f64,
@@ -67,6 +69,7 @@ impl IntNetwork<'_> {
             return 0.0;
         }
         let mut acc: Vec<i64> = self.bias.to_vec();
+        let mut linear = 0i64;
         for (j, value) in features.dense.iter().enumerate() {
             if *value == 0 {
                 continue;
@@ -75,6 +78,7 @@ impl IntNetwork<'_> {
             for (a, w) in acc.iter_mut().zip(&self.dense_in[j * width..(j + 1) * width]) {
                 *a += x * i64::from(*w);
             }
+            linear += x * self.linear.get(j).copied().unwrap_or(0);
         }
         for (key, count) in &features.sparse {
             if let Ok(r) = self.keys.binary_search(&key.as_str()) {
@@ -106,6 +110,7 @@ impl IntNetwork<'_> {
         for (w, h) in self.out_w.iter().zip(&hidden) {
             total += i64::from(*w) * h;
         }
+        total += linear;
         // Both are exact in an f64 (far under 2^53), and the one division is IEEE's.
         total as f64 / (self.activation << self.out_shift) as f64
     }
@@ -188,6 +193,7 @@ pub struct OwnedIntNetwork {
     out_shift: u32,
     out_w: Vec<i8>,
     out_b: i64,
+    linear: Vec<i64>,
     hand_a: f64,
     hand_b: f64,
     hand_unit: f64,
@@ -269,6 +275,11 @@ impl OwnedIntNetwork {
             out_shift: shift_of(get("shift")?, "out shift")?,
             out_w: words::<1, i8>(&base64_field(get("w")?, "out w")?, i8::from_le_bytes).ok_or("out w")?,
             out_b: whole(get("b")?, "out b")?,
+            linear: match json.get("linear") {
+                Some(text) => words::<8, i64>(&base64_field(text, "linear")?, i64::from_le_bytes)
+                    .ok_or("linear: a length that is not whole i64s")?,
+                None => Vec::new(),
+            },
             hand_a: float("handA")?,
             hand_b: float("handB")?,
             hand_unit: float("handUnit")?,
@@ -317,6 +328,7 @@ impl OwnedIntNetwork {
             out_shift: self.out_shift,
             out_w: &self.out_w,
             out_b: self.out_b,
+            linear: &self.linear,
             hand_a: self.hand_a,
             hand_b: self.hand_b,
             hand_unit: self.hand_unit,

@@ -138,6 +138,17 @@ fn float_code(
             .unwrap_or_else(|| fail(&format!("{name} is not a number")))
     };
     let (hand_a, hand_b, hand_unit) = (number("handA"), number("handB"), number("handUnit"));
+    // (b)'s linear term, one per dense input; a network without one has none.
+    let linear = json
+        .get("linear")
+        .map(|v| numbers(v, "linear"))
+        .unwrap_or_else(|| vec![0.0; dense]);
+    if linear.len() != dense {
+        fail(&format!(
+            "linear has {} values, not one per dense name ({dense})",
+            linear.len()
+        ));
+    }
 
     for (at, (inputs, w, b)) in layers.iter().enumerate() {
         writeln!(
@@ -167,7 +178,7 @@ fn float_code(
         code,
         "pub const LEARNED: Learned<'static> = Learned::Float(Network {{ features_version: {features_version}, catalog: {catalog:?}, \
          width: {width}, mean: {}, scale: {}, keys: LEARNED_KEYS, dense_in: {}, sparse_in: {}, bias: {}, \
-         head: LEARNED_HEAD, out_w: {}, out_b: {}, hand_a: {}, hand_b: {}, hand_unit: {} }});",
+         head: LEARNED_HEAD, out_w: {}, out_b: {}, linear: {}, hand_a: {}, hand_b: {}, hand_unit: {} }});",
         slice(&mean),
         slice(&scale),
         slice(&dense_in),
@@ -175,6 +186,7 @@ fn float_code(
         slice(&bias),
         slice(&out_w),
         literal(out_b),
+        slice(&linear),
         literal(hand_a),
         literal(hand_b),
         literal(hand_unit),
@@ -305,6 +317,13 @@ fn int_code(
         fail("out's shapes do not add up");
     }
     let out_b = whole(get("b"), "out b");
+    let linear = match json.get("linear") {
+        Some(text) => words(text, "linear", 8),
+        None => vec![0; dense],
+    };
+    if linear.len() != dense {
+        fail("linear is not one per dense name");
+    }
     let number = |name: &str| {
         field(name)
             .as_f64()
@@ -325,11 +344,12 @@ fn int_code(
         code,
         "pub const LEARNED: Learned<'static> = Learned::Int(IntNetwork {{ features_version: {features_version}, catalog: {catalog:?}, \
          width: {width}, dense: {dense}, activation: {activation}, shift: {shift}, keys: LEARNED_KEYS, dense_in: {}, sparse_in: {}, \
-         bias: {}, head: LEARNED_INT_HEAD, out_shift: {out_shift}, out_w: {}, out_b: {out_b}, hand_a: {}, hand_b: {}, hand_unit: {} }});",
+         bias: {}, head: LEARNED_INT_HEAD, out_shift: {out_shift}, out_w: {}, out_b: {out_b}, linear: {}, hand_a: {}, hand_b: {}, hand_unit: {} }});",
         ints(&dense_in),
         ints(&sparse_in),
         ints(&bias),
         ints(&out_w),
+        ints(&linear),
         literal(number("handA")),
         literal(number("handB")),
         literal(number("handUnit")),

@@ -55,6 +55,8 @@ pub struct Network<'a> {
     pub head: &'a [Layer<'a>],
     pub out_w: &'a [f64],
     pub out_b: f64,
+    /// (b)'s linear term over the standardized dense features, one per input, added to the output.
+    pub linear: &'a [f64],
     /// The skip connection: `a·hand/hand_unit + hand_b`.
     pub hand_a: f64,
     pub hand_b: f64,
@@ -135,12 +137,14 @@ impl Network<'_> {
             return 0.0;
         }
         let mut hidden: Vec<f64> = self.bias.to_vec();
+        let mut linear = 0.0;
         for (j, value) in features.dense.iter().enumerate() {
             let x = (f64::from(*value) - self.mean[j]) / self.scale[j];
             let row = &self.dense_in[j * width..(j + 1) * width];
             for (h, w) in hidden.iter_mut().zip(row) {
                 *h += x * w;
             }
+            linear += x * self.linear.get(j).copied().unwrap_or(0.0);
         }
         for (key, count) in &features.sparse {
             if let Ok(r) = self.keys.binary_search(&key.as_str()) {
@@ -170,7 +174,7 @@ impl Network<'_> {
         for (w, h) in self.out_w.iter().zip(&hidden) {
             out += w * h;
         }
-        out
+        out + linear
     }
 
     /// The position's value in the hand eval's points: `hand + (b + net(x))·U/a`.

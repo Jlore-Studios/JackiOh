@@ -38,6 +38,8 @@ struct NetworkJson {
     bias: Vec<f64>,
     head: Vec<LayerJson>,
     out: OutJson,
+    #[serde(default)]
+    linear: Vec<f64>,
     hand_a: f64,
     hand_b: f64,
     hand_unit: f64,
@@ -122,6 +124,7 @@ fn with_tiny<R>(run: impl FnOnce(&Network<'_>, &[Case]) -> R) -> R {
         head: &layers,
         out_w: &owned.json.out.w,
         out_b: owned.json.out.b,
+        linear: &owned.json.linear,
         hand_a: owned.json.hand_a,
         hand_b: owned.json.hand_b,
         hand_unit: owned.json.hand_unit,
