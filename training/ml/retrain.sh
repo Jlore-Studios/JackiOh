@@ -56,7 +56,7 @@ say() { echo "retrain: $*"; }
 
 say "building jackioh from this tree (the exporter)"
 cargo build --release -p jackioh-tools --quiet
-bin="$root/target/release/jackioh"
+bin="${CARGO_TARGET_DIR:-$root/target}/release/jackioh"
 cp "$bin" "$out/tree-jackioh"
 
 if [ -z "$logs" ]; then
