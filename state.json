@@ -2658,6 +2658,11 @@
       "action": "revise",
       "asks": [],
       "audit_tier": "strong",
+      "cleared": {
+        "at": "2026-10-17T04:46:32Z",
+        "by": "`claude` (strong)",
+        "sha": "3b6cafb9fc5efae44e4d6dddf78a574b9f14cbd0"
+      },
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
