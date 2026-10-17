@@ -2382,6 +2382,13 @@
     "1092": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T02:15:06Z",
+        "difficulty": "medium",
+        "provider": "agy",
+        "tier": "medium",
+        "why": "Spans multiple crates (crates/cards and crates/server) to wire compiled card history to the server endpoint, so rule 2 fails."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
