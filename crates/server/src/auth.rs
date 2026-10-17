@@ -33,7 +33,10 @@ use jsonwebtoken::{Algorithm, AlgorithmFamily, DecodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::config::{AUTH_PROVIDER_TIMEOUT_SECONDS, AUTH_SESSION_LIVE_CACHE_SECONDS};
+use crate::config::{
+    AUTH_PROVIDER_TIMEOUT_SECONDS, AUTH_SESSION_LIVE_CACHE_SECONDS, JWKS_CACHE_MAX_AGE_MS, JWKS_COOLDOWN_MS,
+    JWKS_FETCH_TIMEOUT_MS, JWKS_STALE_MAX_MS,
+};
 
 // The identity a verified token names
 
@@ -131,14 +134,6 @@ const MS_PER_SECOND: i64 = 1000;
 
 /// The level a token claims to be (`aal`): `aal2` once a second factor was proved (R665).
 const SECOND_FACTOR_LEVEL: &str = "aal2";
-
-/// Not in SPEC, no R-row: jose's `createRemoteJWKSet` defaults. A fetched key set is kept this long
-/// before it is fetched again.
-const JWKS_CACHE_MAX_AGE_MS: i64 = 10 * 60 * 1000;
-/// jose's `cooldownDuration`: a token whose key is not in the set refetches it at most this often.
-const JWKS_COOLDOWN_MS: i64 = 30_000;
-/// jose's `timeoutDuration` for the key-set request.
-const JWKS_FETCH_TIMEOUT_MS: u64 = 5_000;
 
 // The slice of the provider's shapes this file reads
 
@@ -481,6 +476,37 @@ struct KeyCache {
     keys: Option<JwkSet>,
     fetched_at: i64,
     fixed: bool,
+    /// When the last refetch failed, so failures are retried at most once per `JWKS_COOLDOWN_MS`
+    /// (R1144000). Cleared by a success.
+    last_failed_at: Option<i64>,
+    /// The fetch in flight, if one request is fetching while others wait (R1144000). Set under
+    /// the lock before the fetch starts and taken back under the lock when it lands, so at most
+    /// one fetch runs at a time and no request waits past one fetch timeout.
+    inflight: Option<Arc<tokio::sync::Notify>>,
+}
+
+/// Why a key-set refetch did not produce a set. Fixed wording only: the cause is logged, never
+/// error internals, tokens or keys.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum JwksFetchError {
+    /// The request never answered (the fetch timeout included).
+    Transport,
+    /// The endpoint answered with this status.
+    Status(u16),
+    /// The body was not a key set.
+    Body,
+}
+
+impl std::fmt::Display for JwksFetchError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            JwksFetchError::Transport => write!(f, "the key-set request failed"),
+            JwksFetchError::Status(status) => {
+                write!(f, "the key-set endpoint answered status {status}")
+            }
+            JwksFetchError::Body => write!(f, "the key-set body was not a key set"),
+        }
+    }
 }
 
 /// The caches are behaviour (R194, R665, the proposed ruling above), not optimisations.
@@ -540,6 +566,8 @@ impl SupabaseAuth {
                 keys: Some(keys),
                 fetched_at: 0,
                 fixed: true,
+                last_failed_at: None,
+                inflight: None,
             },
             None => KeyCache::default(),
         };
@@ -619,19 +647,19 @@ impl SupabaseAuth {
         })
     }
 
-    async fn fetch_key_set(&self) -> Option<JwkSet> {
+    async fn fetch_key_set(&self) -> Result<JwkSet, JwksFetchError> {
         let response = self
             .http
             .get(&self.jwks_url)
             .header("accept", "application/json")
-            .timeout(Duration::from_millis(JWKS_FETCH_TIMEOUT_MS))
+            .timeout(Duration::from_millis(JWKS_FETCH_TIMEOUT_MS as u64))
             .send()
             .await
-            .ok()?;
+            .map_err(|_| JwksFetchError::Transport)?;
         if !response.status().is_success() {
-            return None;
+            return Err(JwksFetchError::Status(response.status().as_u16()));
         }
-        response.json::<JwkSet>().await.ok()
+        response.json::<JwkSet>().await.map_err(|_| JwksFetchError::Body)
     }
 
     /// The keys of the set that could have signed a token with this header: its `kid` when it names
@@ -665,49 +693,106 @@ impl SupabaseAuth {
             .collect()
     }
 
-    /// The key set: fetched on first use, refetched once it is old, and refetched (at most once per
-    /// cooldown) when no key in it matches the token.
+    /// The key set: fetched on first use, refetched once it is old, and refetched (at most once
+    /// per cooldown) when no key in it matches the token. The mutex is never held across a fetch:
+    /// one request fetches while the others wait on its `Notify`. A failed refetch keeps serving
+    /// the last good set for at most `JWKS_STALE_MAX_MS` past its age (R1144000), so a key
+    /// endpoint that is down signs nobody out. A successful fetch replaces the set whole, so a key
+    /// the endpoint dropped is refused at once.
     async fn keys_for(&self, header: &Header) -> Vec<DecodingKey> {
-        let mut cache = self.key_set.lock().await;
-        if cache.fixed {
-            return cache
+        let now = (self.now)();
+        enum Next {
+            Serve(Vec<DecodingKey>),
+            Wait(std::pin::Pin<Box<tokio::sync::futures::OwnedNotified>>),
+            Fetch,
+        }
+        let next = {
+            let mut cache = self.key_set.lock().await;
+            if cache.fixed {
+                return cache
+                    .keys
+                    .as_ref()
+                    .map(|keys| Self::candidates(keys, header))
+                    .unwrap_or_default();
+            }
+            let found = cache
                 .keys
                 .as_ref()
                 .map(|keys| Self::candidates(keys, header))
                 .unwrap_or_default();
-        }
-        let now = (self.now)();
-        if cache.keys.is_none() || now - cache.fetched_at >= JWKS_CACHE_MAX_AGE_MS {
-            match self.fetch_key_set().await {
-                Some(keys) => {
-                    cache.keys = Some(keys);
-                    cache.fetched_at = now;
+            let age = now - cache.fetched_at;
+            let stale = age >= JWKS_CACHE_MAX_AGE_MS;
+            let within_cap = cache.keys.is_some() && age < JWKS_CACHE_MAX_AGE_MS + JWKS_STALE_MAX_MS;
+            let cooling = matches!(cache.last_failed_at, Some(at) if now - at < JWKS_COOLDOWN_MS);
+            // Refetch when the set is stale, or on a key miss past the cooldown (a rotation may
+            // have dropped the key). A miss on a just-fetched set is answered from the cache, or
+            // every unknown key would fetch.
+            if !stale && !(found.is_empty() && age >= JWKS_COOLDOWN_MS) {
+                Next::Serve(found)
+            } else if cooling {
+                // A refetch failed a moment ago: serve the stale set while it is inside the cap
+                // rather than fetching on every request.
+                Next::Serve(if within_cap { found } else { Vec::new() })
+            } else if let Some(inflight) = cache.inflight.clone() {
+                // One request is already fetching. The wait is registered before the lock is
+                // dropped (`enable`), so the fetch's wake-up cannot be missed.
+                let mut wait = Box::pin(inflight.notified_owned());
+                wait.as_mut().enable();
+                Next::Wait(wait)
+            } else {
+                cache.inflight = Some(Arc::new(tokio::sync::Notify::new()));
+                Next::Fetch
+            }
+        };
+        match next {
+            Next::Serve(found) => found,
+            Next::Wait(wait) => {
+                wait.await;
+                let cache = self.key_set.lock().await;
+                Self::served(&cache, header, now)
+            }
+            Next::Fetch => {
+                let outcome = self.fetch_key_set().await;
+                let mut cache = self.key_set.lock().await;
+                match outcome {
+                    Ok(keys) => {
+                        cache.keys = Some(keys);
+                        cache.fetched_at = now;
+                        cache.last_failed_at = None;
+                    }
+                    Err(cause) => {
+                        cache.last_failed_at = Some(now);
+                        tracing::warn!(event = "auth.jwks.fetch_failed", reason = %cause);
+                    }
                 }
-                None => return Vec::new(),
+                if let Some(inflight) = cache.inflight.take() {
+                    inflight.notify_waiters();
+                }
+                Self::served(&cache, header, now)
             }
         }
-        let found = cache
-            .keys
-            .as_ref()
-            .map(|keys| Self::candidates(keys, header))
-            .unwrap_or_default();
-        if !found.is_empty() || now - cache.fetched_at < JWKS_COOLDOWN_MS {
-            return found;
-        }
-        match self.fetch_key_set().await {
-            Some(keys) => {
-                let refetched = Self::candidates(&keys, header);
-                cache.keys = Some(keys);
-                cache.fetched_at = now;
-                refetched
-            }
-            None => Vec::new(),
+    }
+
+    /// What the cache answers once no fetch is running: the set while it is inside the stale cap,
+    /// nothing past it. A success lands here with a fresh age, so a key a successful refetch
+    /// dropped is refused at once.
+    fn served(cache: &KeyCache, header: &Header, now: i64) -> Vec<DecodingKey> {
+        let age = now - cache.fetched_at;
+        if cache.keys.is_some() && age < JWKS_CACHE_MAX_AGE_MS + JWKS_STALE_MAX_MS {
+            cache
+                .keys
+                .as_ref()
+                .map(|keys| Self::candidates(keys, header))
+                .unwrap_or_default()
+        } else {
+            Vec::new()
         }
     }
 
     // Both verifiers swallow their error: it covers a forged or expired token, a project that
-    // signs symmetrically (the JWKS then publishes no matching key) and a JWKS that could not be
-    // fetched. The caller falls through to the next tier.
+    // signs symmetrically (the JWKS then publishes no matching key) and a key set past
+    // R1144000's stale cap while the endpoint is down (`keys_for` still serves the last good set
+    // inside it). The caller falls through to the next tier.
     async fn verify_against_jwks(&self, token: &str) -> Option<LocalClaims> {
         let header = jsonwebtoken::decode_header(token).ok()?;
         if header.alg.family() == AlgorithmFamily::Hmac {
