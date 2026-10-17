@@ -3060,9 +3060,11 @@
       "asks": [],
       "audit_tier": "strong",
       "cleared": {
-        "at": "2026-10-17T19:48:41Z",
+        "at": "2026-10-17T20:16:24Z",
         "by": "`claude` (strong)",
-        "sha": "999e3dd68cdd31a56500eb99dbd21736eb8bde38"
+        "carried_from": "999e3dd68cdd31a56500eb99dbd21736eb8bde38",
+        "resolved_by": "`claude` (strong)",
+        "sha": "afb0085183fc3301fbc632f6b79f4d4e06fac43b"
       },
       "cross_rounds": 1,
       "died": 0,
