@@ -3218,8 +3218,10 @@
       "feedback_since": "2026-10-17T06:01:45Z",
       "issue": 1103,
       "kind": "revise",
-      "queued_at": "2026-10-17T06:52:53Z",
+      "queued_at": "2026-10-17T06:53:42Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "gemini"
