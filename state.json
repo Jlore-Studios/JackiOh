@@ -2453,10 +2453,8 @@
       "verdict_rounds": 1
     },
     "1094": {
-      "action": "plan",
-      "asks": [
-        "c:6228152297"
-      ],
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-10-17T02:32:46Z",
         "difficulty": "hard",
@@ -2485,11 +2483,13 @@
       "provider": "claude-1",
       "queued_at": "2026-10-17T01:50:28Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "38992982470",
-      "started_at": "2026-10-17T01:57:46Z",
+      "run_id": "38995360584",
+      "started_at": "2026-10-17T02:33:49Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6228152297"
+      ]
     },
     "1095": {
       "action": "build",
@@ -9032,9 +9032,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-17T02:16:08Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38994209586",
-    "what": "build #1092 on agy"
+    "at": "2026-10-17T02:33:49Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38995360584",
+    "what": "build #1094 on claude-1"
   },
   "last_sweep": {
     "at": "2026-10-17T02:29:31Z",
