@@ -2978,6 +2978,13 @@
     "1108": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T05:33:46Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Rule line 3 fails: the tutorial override is a presentation decision the spec doesn't make (R1017001 only names the setting), so it needs a new ruling R1108000, edits to spec/ and an INDEX rewrite. It also touches two areas of apps/web (cards and routes)."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
