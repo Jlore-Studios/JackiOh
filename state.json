@@ -2642,31 +2642,20 @@
       "interruptions": 0,
       "issue": 1074,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The new in-hand tracking drops the card's new id, not its old one, when a card goes face-down from hand (R227). The old id then counts as a card that left its holder's hand and vanished, gets the opponent added to its hidden_from, and stays hidden from the opponent for good, even after the trap fires and is public. This breaks R227/R97 in ordinary 1v1 play.",
-          "evidence": "The `CardPlayed`/`Summoned` arm calls `in_hand.shift_remove(instance_id)`, and for a face-down play `instance_id` is the fresh id while the hand card's id is `former_id` (play_steps.rs:1627-1631, 1725). Afterwards the old id is not in state, so the loop at the end of `replacements_of` adds it to `held_by` and pushes `opponent_of(holder)` onto `hidden_from[old]`. In `may_read`, the while-loop checks `hidden_from` before following `replaced_by`, so it returns false for the opponent. The base code followed the old id to the trap's current zone instead. The existing test crates/cards/tests/cross/hidden_information.rs:2252 `r227_r97_once_the_trap_fires_and_is_public_the_events_that_named_its_old_id_read_openly_again` covers exactly this. Reminisce emits `AddedToHand{player: p2, instance_id: old}` (draw.rs:113), the trap is set and then fires, and the test asserts that p1's view has an event naming old_id with SHEEPISH. With this change that event is redacted to HIDDEN_ID, so the test should fail. The builder's verification ran only `jackioh-tools duos` and the engine's `invariants` filter, never `cargo test -p jackioh-cards`, so nothing they report would catch it.",
-          "severity": "blocking",
-          "where": "crates/engine/src/view_for.rs:229"
-        },
-        {
-          "claim": "The change rewrites production `view_for` hidden-information rules for every 1v1 game, which the issue scoped as testkit/tools only with 'no rule changes'. It does so with no ruling note, no ruling-named test of the new view behaviour, and a doc comment and R227 comment that now contradict the code.",
-          "evidence": "Before, a card with no replacement that is missing from state read openly unless it was going back to the library or had been voided by a Glitch (base `may_read`: `!to_library && !replaced.voided`). Now it reads only for tokens, R316 never-made cards, or the former holder. `may_read`'s doc comment still says a card exiled out of existence 'was public when it went'. The diff also deletes the R227 comment on the CardPlayed/Summoned arm. Which events of a passed card (B20) the passer's opponent may read is a decision the spec does not make, so CLAUDE.md rule 3 calls for an R1074xxx note and a proving test. The only coverage is the fuzz monitor, which checks for leaks and never for over-hiding, so the regression in finding 1 slips past it.",
-          "severity": "blocking",
-          "where": "crates/engine/src/view_for.rs:362"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-17T01:50:34Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "38992729034",
       "self_check_findings": [],
       "source": "cross-review",
       "started_at": "2026-10-17T01:54:05Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "gemini"
