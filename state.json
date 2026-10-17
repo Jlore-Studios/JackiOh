@@ -1927,12 +1927,6 @@
           "claude": "strong",
           "muse": "medium"
         }
-      },
-      "wip": {
-        "at": "2026-10-17T09:45:01Z",
-        "provider": "claude-3",
-        "sha": "7d26f9862708dbadde45fb57b95abf21c4f191a1",
-        "start": "02a1e5a64e8f452d6798259d1abfc6b2a8442d9c"
       }
     },
     "1090": {
