@@ -283,7 +283,11 @@ describe("R1141000 Download JSON", () => {
 
   it("R1141000 a practice row saves every step of its game, in order, and nothing of its setup", async () => {
     renderRoute(await storeWithGame());
-    await screen.findByTestId(replaysTestid.practice(1));
+    const row = await screen.findByTestId(replaysTestid.practice(1));
+    // Its button sits just left of Watch.
+    expect(within(row).getByRole("button", { name: "Watch" }).previousElementSibling).toBe(
+      screen.getByTestId(replaysTestid.download("practice-1")),
+    );
     fireEvent.click(screen.getByTestId(replaysTestid.download("practice-1")));
 
     const { file, text, json } = await savedJson();
@@ -306,7 +310,10 @@ describe("R1141000 Download JSON", () => {
     serveSteps();
     vi.mocked(getReplays).mockResolvedValue({ replays: [listing()], nextOffset: null });
     renderRoute(memorySaveStore());
-    await screen.findByTestId(replaysTestid.online("m-1"));
+    const row = await screen.findByTestId(replaysTestid.online("m-1"));
+    expect(within(row).getByRole("button", { name: "Watch" }).previousElementSibling).toBe(
+      screen.getByTestId(replaysTestid.download("online-m-1")),
+    );
     fireEvent.click(screen.getByTestId(replaysTestid.download("online-m-1")));
 
     const { file, text, json } = await savedJson();

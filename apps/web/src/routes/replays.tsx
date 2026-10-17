@@ -13,6 +13,7 @@
 //
 // DOWNLOAD JSON (R1141000). A row that can be watched can be saved as one JSON file for a bug
 // report: its steps' views and the row's facts, through the same `ReplaySource`, no account named.
+// Its button sits just left of Watch.
 
 import { useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
@@ -122,14 +123,14 @@ function DownloadJson({ testKey, game, open }: { testKey: string; game: ReplayJs
   };
   return (
     <>
-      <button type="button" data-testid={replaysTestid.download(testKey)} onClick={save} disabled={saving}>
-        {saving ? t("Saving…") : t("Download JSON")}
-      </button>
       {failed === null ? null : (
         <span role="alert" className="replays__why" data-testid={replaysTestid.downloadFailed(testKey)}>
           {failed}
         </span>
       )}
+      <button type="button" data-testid={replaysTestid.download(testKey)} onClick={save} disabled={saving}>
+        {saving ? t("Saving…") : t("Download JSON")}
+      </button>
     </>
   );
 }
@@ -260,9 +261,6 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
                     {turnsText(row.turns)} · {formatDateTime(row.endedAt, { dateStyle: "medium", timeStyle: "short" })}
                     {why === null ? null : <span className="replays__why"> · {why}</span>}
                   </span>
-                  <button type="button" onClick={() => openPractice(row)} disabled={why !== null}>
-                    {t("Watch")}
-                  </button>
                   {why === null ? (
                     <DownloadJson
                       testKey={`practice-${String(row.game)}`}
@@ -270,6 +268,9 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
                       open={() => (host.current === null ? null : practiceReplaySource(host.current, row))}
                     />
                   ) : null}
+                  <button type="button" onClick={() => openPractice(row)} disabled={why !== null}>
+                    {t("Watch")}
+                  </button>
                 </li>
               );
             })}
@@ -324,11 +325,6 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
                       {formatDateTime(row.endedAt, { dateStyle: "medium", timeStyle: "short" })}
                       {why === null ? null : <span className="replays__why"> · {why}</span>}
                     </span>
-                    <button type="button" onClick={() => openOnline(row)} disabled={why !== null}>
-                      {t("Watch")}
-                    </button>
-                    {/* #936 B59: a game that can be watched can be shared with a friend. */}
-                    {why === null ? <ShareWithFriend matchId={row.matchId} /> : null}
                     {why === null ? (
                       <DownloadJson
                         testKey={`online-${row.matchId}`}
@@ -336,6 +332,11 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
                         open={() => (token === null ? null : onlineReplaySource(token, row))}
                       />
                     ) : null}
+                    <button type="button" onClick={() => openOnline(row)} disabled={why !== null}>
+                      {t("Watch")}
+                    </button>
+                    {/* #936 B59: a game that can be watched can be shared with a friend. */}
+                    {why === null ? <ShareWithFriend matchId={row.matchId} /> : null}
                   </li>
                 );
               })}
