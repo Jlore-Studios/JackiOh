@@ -800,14 +800,14 @@ export function App(): ReactElement {
       );
     }
 
-    // #936: a Duos co-op match, behind the same gate as a match; the board reads its own socket's token.
+    // #936: a Duos co-op match, behind the same gate as a match; its socket carries the gate's token (R1115000).
     const duosId = duosIdOf(path);
     if (duosId !== null) {
       return (
         <Gated key={path}>
           {(account) => (
             <EngineGate>
-              <DuosRoute key={sessionKeyOf(account.token)} matchId={duosId} />
+              <DuosRoute key={sessionKeyOf(account.token)} matchId={duosId} token={account.token} />
             </EngineGate>
           )}
         </Gated>

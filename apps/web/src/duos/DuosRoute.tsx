@@ -11,9 +11,9 @@
 // A finished game's result panel offers "Watch the replay" (#965, §13.9): the route then swaps the
 // board for `DuosReplay.tsx`, which reads the server's replay once, and "back" returns to the result.
 //
-// The route reads the bearer from the tab's session itself (S8 gives it only the match id); the
-// gate in main.tsx has already let a signed-in, active account through, and keys the route by the
-// provider session, so a new session opens a new socket.
+// The route takes the bearer the gate resolved, as `/match/<id>` does, and hands each renewal to the
+// socket (R194, R1115000); the gate in main.tsx has already let a signed-in, active account through,
+// and keys the route by the provider session, so a new session opens a new socket.
 
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
@@ -110,9 +110,9 @@ function RoundClock({ clock }: { clock: DuosClockReading | null }): ReactElement
   );
 }
 
-export function DuosRoute({ matchId }: { matchId: string }): ReactElement {
+export function DuosRoute({ matchId, token }: { matchId: string; token: string }): ReactElement {
   const locale = useLocale();
-  const match = useDuosMatch({ matchId });
+  const match = useDuosMatch({ matchId, token });
   // `GET /api/catalog`, once; with none the board shows def ids, never a guessed name.
   const lookup = useCatalogLookup();
   // #965: the result panel's replay is open. Held above the early returns, which a hook may not follow.
