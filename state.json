@@ -8412,13 +8412,8 @@
     "what": "plan #1129 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-17T17:28:52Z",
-    "notes": [
-      "#1126 needs a plan",
-      "#1127 needs a plan",
-      "#1129 needs a plan",
-      "started a night run, as a lane was free: #1127 (medium) is queued to build, for `muse`: plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
-    ],
+    "at": "2026-10-17T17:35:38Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
