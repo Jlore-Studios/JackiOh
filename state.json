@@ -2710,12 +2710,6 @@
           "claude": "strong",
           "gemini": "medium"
         }
-      },
-      "wip": {
-        "at": "2026-10-17T02:38:43Z",
-        "provider": "claude-3",
-        "sha": "4dd40b25600ae7883e58f63f12abeb76ba7879d0",
-        "start": "e746d6f5913e12aa30d4c9145da52d375d892547"
       }
     },
     "1100": {
