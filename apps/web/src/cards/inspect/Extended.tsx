@@ -7,12 +7,14 @@
 import type { ReactElement } from "react";
 import { t } from "../../i18n/i18n.ts";
 import { faceText, gainedLine } from "../CardFace.tsx";
+import { useFullArt } from "../fullArt.ts";
 import type { FaceModel } from "../model.ts";
 import { RulesText } from "../RulesText.tsx";
 import { INSPECT_EXTENDED } from "./testids.ts";
 
 export function Extended({ face, ascentLevel }: { face: FaceModel; ascentLevel?: number | null }): ReactElement | null {
-  if (!faceText(face, ascentLevel).less) return null;
+  const fullArtOn = useFullArt();
+  if (!faceText(face, ascentLevel, fullArtOn).less) return null;
   const gained = gainedLine(face);
   return (
     <div className="inspect-printed inspect-extended" data-testid={INSPECT_EXTENDED}>

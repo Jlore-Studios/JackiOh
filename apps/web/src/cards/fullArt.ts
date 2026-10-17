@@ -6,13 +6,17 @@
 // hero's face becomes a full-art card, by name, as the roster names them, so a portrait the roster
 // adds needs no line here. The Full-art cards setting (settings.ts `fullArt`) turns them off, and they
 // print their text like any card.
+// R1108000: a tutorial lesson's board prints no full art, whatever the setting: practice.tsx wraps it in
+// `FullArtAllowed` of false, and the faces and inspect overlays below it read `useFullArt`.
 //
 // Presentation only (CLAUDE.md rule 7): the face is drawn differently and plays the same.
+
+import { createContext, createElement, useContext, type ReactElement, type ReactNode } from "react";
 
 import { PORTRAITS } from "@jackioh/shared";
 
 import type { FaceModel } from "./model.ts";
-import { readCardSettings } from "./settings.ts";
+import { readCardSettings, useCardSettings } from "./settings.ts";
 import { isGlitch } from "./glitch.ts";
 
 /** The English names of the cards whose faces print full art: every hero portrait's card. */
@@ -29,4 +33,19 @@ export function isFullArt(englishName: string): boolean {
  */
 export function showsFullArt(face: FaceModel, fullArtOn: boolean = readCardSettings().fullArt): boolean {
   return fullArtOn && !isGlitch(face.defId) && isFullArt(face.englishName ?? face.name);
+}
+
+/** R1108000: whether the faces below it may print full art; false on a tutorial lesson's board. */
+const FullArtAllowedContext = createContext(true);
+
+/** R1108000: the faces below it print full art only when `allowed` (practice.tsx: not in a lesson). */
+export function FullArtAllowed({ allowed, children }: { allowed: boolean; children?: ReactNode }): ReactElement {
+  return createElement(FullArtAllowedContext.Provider, { value: allowed }, children);
+}
+
+/** R1108000: the Full-art cards setting, off below a `FullArtAllowed` of false. */
+export function useFullArt(): boolean {
+  const { fullArt } = useCardSettings();
+  const allowed = useContext(FullArtAllowedContext);
+  return fullArt && allowed;
 }
