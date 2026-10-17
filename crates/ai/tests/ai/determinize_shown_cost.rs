@@ -122,6 +122,7 @@ mod determinize_at_the_shown_cost_r762 {
                 &mut create_rng(&format!("shown-cost-greedy:{k}"), 0),
                 DeterminizeOptions {
                     match_shown_cost: Some(false),
+                    consistent_pools: Some(false),
                 },
             );
             let def_id = card_by_id(&world, &lanes[2].id)

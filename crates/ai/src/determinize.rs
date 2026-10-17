@@ -21,6 +21,7 @@ use serde_json::json;
 
 use crate::config::AI_DETERMINIZE;
 use crate::observe::HIDDEN_DEF_ID;
+use crate::shadow_ban::SHADOW_BAN_IDS;
 
 fn all_cards(state: &GameState) -> Vec<&CardInstance> {
     let mut out: Vec<&CardInstance> = Vec::new();
@@ -110,6 +111,12 @@ pub struct DeterminizeOptions {
     /// R762: a face-down card showing a cost takes a trap of that cost while an unseen one is left. Default true.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub match_shown_cost: Option<bool>,
+    /// A dealt AI deck holds none of R186's shadow-banned cards, so a world consistent with the game
+    /// being played holds none either: the hidden-card pools drop SHADOW_BAN_IDS, and the seat's own
+    /// library, dealt singletons (`build_ai_deck`), samples no second copy of a def the seat already
+    /// shows. Default true; the greedy baseline passes false so its sampler stays put.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub consistent_pools: Option<bool>,
 }
 
 /// Where a face-down placeholder of one side sits: a backrow top, a card dormant under a backrow pile
@@ -271,12 +278,20 @@ fn query_ids(args: serde_json::Value) -> Vec<String> {
 /// so the walk's sampling of the other side's slots first does not change it.
 pub struct DetGround {
     seen: IndexSet<String>,
+    /// The seat's own shown def ids (DeterminizeOptions.consistent_pools' `seen_own`): a dealt deck
+    /// holds one of a def, so the seat's own library holds no second copy of one it already shows.
+    seen_own: IndexSet<String>,
     trap_pool: Vec<String>,
     aura_traps: Vec<String>,
     shown: String,
     cloakable: PerPlayer<Vec<String>>,
     slot_pool: PerPlayer<Vec<String>>,
     card_pool: Vec<String>,
+    /// `trap_pool`, `slot_pool` and `card_pool` minus SHADOW_BAN_IDS (consistent_pools): a dealt AI
+    /// deck can hold none of them, so a consistent world samples none.
+    open_trap_pool: Vec<String>,
+    open_slot_pool: PerPlayer<Vec<String>>,
+    open_card_pool: Vec<String>,
 }
 
 /// The `DetGround` of a public state: step 2's `seen`, step 3's pools and aura baseline, steps 4/5's
@@ -284,9 +299,16 @@ pub struct DetGround {
 pub fn det_ground(public_state: &GameState, seat: PlayerId) -> DetGround {
     let opp = seat.opponent();
     let mut seen: IndexSet<String> = IndexSet::new();
+    let mut seen_own: IndexSet<String> = IndexSet::new();
     for card in all_cards(public_state) {
-        if card.owner == opp && !is_placeholder(card) {
+        if is_placeholder(card) {
+            continue;
+        }
+        if card.owner == opp {
             seen.insert(card.def_id.clone());
+        }
+        if card.owner == seat {
+            seen_own.insert(card.def_id.clone());
         }
     }
     let trap_pool = query_ids(json!({ "type": ["Trap", "Field Trap"] }));
@@ -324,14 +346,33 @@ pub fn det_ground(public_state: &GameState, seat: PlayerId) -> DetGround {
         slot_pool[side] = pool;
     }
     let card_pool = query_ids(json!({ "excludeDefId": AI_DETERMINIZE.exclude_def_ids }));
+    let unbanned = |ids: &[String]| -> Vec<String> {
+        let open: Vec<String> = ids
+            .iter()
+            .filter(|id| !SHADOW_BAN_IDS.contains(&id.as_str()))
+            .cloned()
+            .collect();
+        // A pool banned whole samples as before rather than going dry.
+        if open.is_empty() { ids.to_vec() } else { open }
+    };
+    let open_trap_pool = unbanned(&trap_pool);
+    let mut open_slot_pool: PerPlayer<Vec<String>> = PerPlayer::default();
+    for side in PLAYER_IDS {
+        open_slot_pool[side] = unbanned(&slot_pool[side]);
+    }
+    let open_card_pool = unbanned(&card_pool);
     DetGround {
         seen,
+        seen_own,
         trap_pool,
         aura_traps,
         shown,
         cloakable,
         slot_pool,
         card_pool,
+        open_trap_pool,
+        open_slot_pool,
+        open_card_pool,
     }
 }
 
@@ -364,18 +405,28 @@ pub fn determinize_on(
     let seen = &ground.seen;
     let mut sampled: IndexSet<String> = IndexSet::new();
 
+    let consistent = options.consistent_pools.unwrap_or(true);
+
     // Step 3: face-down backrow placeholders, in lane order, from the Trap and Field Trap pool. R602: a
     // face-down Trap's aura is live (R403) and the units it changes are on the board for the seat to read,
     // so a candidate whose aura would change any unit's shown stats is not in the pool for that card.
     let base_sampler = TrapSampler {
-        trap_pool: &ground.trap_pool,
+        trap_pool: if consistent {
+            &ground.open_trap_pool
+        } else {
+            &ground.trap_pool
+        },
         aura_traps: &ground.aura_traps,
         shown: &ground.shown,
         match_shown_cost: options.match_shown_cost.unwrap_or(true),
     };
     for side in [opp, seat] {
         let cloakable = &ground.cloakable[side];
-        let pool = &ground.slot_pool[side];
+        let pool = if consistent {
+            &ground.open_slot_pool[side]
+        } else {
+            &ground.slot_pool[side]
+        };
         let sampler = if !cloakable.is_empty() {
             TrapSampler {
                 trap_pool: pool,
@@ -433,8 +484,12 @@ pub fn determinize_on(
     }
 
     // Step 4: the opponent's hand, then its library, in (sorted) order, from the non-token pool of
-    // every set (det_ground's card_pool).
-    let pool = &ground.card_pool;
+    // every set (det_ground's card_pool; consistent_pools' open_card_pool).
+    let pool = if consistent {
+        &ground.open_card_pool
+    } else {
+        &ground.card_pool
+    };
     for at in 0..next.players[opp].hand.len() {
         if is_placeholder(&next.players[opp].hand[at]) {
             next.players[opp].hand[at].def_id = sample_def(pool, seen, &mut sampled, rng);
@@ -446,10 +501,19 @@ pub fn determinize_on(
         }
     }
 
-    // Step 5: the seat's own library — the opponent's cards in it sampled as in step 4, then shuffled.
+    // Step 5: the seat's own library — the opponent's cards in it sampled as in step 4, then
+    // shuffled. A card the seat owns is dealt one copy (consistent_pools): the seat's own library
+    // holds no second copy of a def it already shows (`seen_own`), while one of the opponent's in
+    // it samples as in step 4 (`seen`).
     for at in 0..next.players[seat].library.len() {
-        if is_placeholder(&next.players[seat].library[at]) {
-            next.players[seat].library[at].def_id = sample_def(pool, seen, &mut sampled, rng);
+        let card = &next.players[seat].library[at];
+        if is_placeholder(card) {
+            let seen_for = if consistent && card.owner == seat {
+                &ground.seen_own
+            } else {
+                seen
+            };
+            next.players[seat].library[at].def_id = sample_def(pool, seen_for, &mut sampled, rng);
         }
     }
     next.players[seat].library = rng.shuffle(&next.players[seat].library);

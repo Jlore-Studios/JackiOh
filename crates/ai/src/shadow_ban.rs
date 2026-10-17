@@ -229,6 +229,50 @@
 /// Dealt at stock weight and not in `UNBANNED_PREFER`, on the generations
 /// 4–7 precedent: none of the four shows the kind of sweep numbers a tripled
 /// deal is justified by.
+///
+/// Generation 13 removed eight entries — 025, 029, 031, 049, 085, 087, 091
+/// and 099 — the cards that are sweep-clean on this build AND deal at or
+/// above par on the lane's game records. Playtester (+7.4 and +11.5 a play
+/// at easy and hard), YileGPT Tamed (+4.5, +10.5) and Paranoia (+3.4, +3.1)
+/// price their plays above the deal — the three went 13/17, 15/22 and 13/17
+/// pooled across this lane's dealt games; the rest of the eight sit at or
+/// above neutral. The rest are generation 9's `timeout` rows the cheaper
+/// reply walk put under the decision budget: Windfast (28 plays +28.6 at
+/// easy), Tatches the Totem (30 +1.8), The Conductor (031) and Blue-Eyes
+/// White Felinor (025) cleared outright; Forbiddenous Factory (029) holds no
+/// ban row — the sweep lists it on SHADOW_WATCH, which stays the sweep's own
+/// bookkeeping. Three more cleared their sweeps too — 030, 069 and
+/// Occidentless Mandate (078, +78.7 a play at hard) — but clean sweeps make
+/// a card eligible, and the dealt record decides it: their dealt games read
+/// 6/25 against a ~47% neutral rate on the lane's records, so they wait for
+/// teaching, not the sweep; Fear Mongerer (012, 43% pooled dealt) and
+/// Permanent Underclassman (058, 45%) join them on the same evidence — a
+/// 10-release table measured 47/100 on this family's dry run while an
+/// equal-pool arena of the same code read 22/40, so the two below-par
+/// cards' deal slots go back to the pool. What changed since the bans: the reply's tries
+/// answer the acting seat's own prompts inside the step (`simulate_own`:
+/// first answer, one node), so a play whose payoff sits behind its own
+/// prompt — a Discover, a market, a prediction — stops surfacing an
+/// open-prompt state the eval reads as the spent card alone (the beam's own
+/// prompt reads are #1112's: a child at its own prompt ranks where its
+/// answers lead, and the real answer stays the beam's to search);
+/// determinization's hidden-card pools drop SHADOW_BAN_IDS
+/// and the seat's own
+/// library samples no second copy of a shown def, so the worlds the beam
+/// scores are consistent with the dealt game; a beam level of
+/// nothing-but-attacks also carries the first play/activate and first
+/// SwitchPosition past the cutoff; a chosen action refused on the true state
+/// now submits the search's runner-up finalist before the generic
+/// replacements; `evaluate` prices the extra turns a side is owed (R846), the
+/// refreshes it will lose (R844) and the cards a Journey Complete in the
+/// library still names in exile (`journey_card`, R1246 — inert while 096 is
+/// banned, left for the pool that takes it); and the reply walk ends at nine
+/// steps instead of twelve, so one long reply can no longer starve the lines
+/// and worlds behind it. The nine kept
+/// entries: 011 still `timeout` on this build, 075 `neverPlayed`, and 012,
+/// 017, 030, 058, 069, 078 and 096 clean-swept but dealing below par on the
+/// lane's records. Dealt at stock weight and not in `UNBANNED_PREFER`, same
+/// precedent.
 pub const SHADOW_BAN: &[(&str, &str)] = &[
     (
         "meditative-011",
@@ -243,24 +287,8 @@ pub const SHADOW_BAN: &[(&str, &str)] = &[
         "timeout: hard: 13 decision(s) over 2000 ms or game(s) past 600 actions",
     ),
     (
-        "meditative-025",
-        "timeout: hard: 7 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-029",
-        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions; hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
         "meditative-030",
         "timeout: easy: 3 decision(s) over 2000 ms or game(s) past 600 actions; hard: 2 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-031",
-        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-049",
-        "timeout: hard: 8 decision(s) over 2000 ms or game(s) past 600 actions",
     ),
     (
         "meditative-058",
@@ -279,24 +307,8 @@ pub const SHADOW_BAN: &[(&str, &str)] = &[
         "timeout: easy: 4 decision(s) over 2000 ms or game(s) past 600 actions",
     ),
     (
-        "meditative-085",
-        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions; hard: 2 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-087",
-        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions; hard: 3 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-091",
-        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
         "meditative-096",
         "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-099",
-        "timeout: easy: 2 decision(s) over 2000 ms or game(s) past 600 actions",
     ),
 ];
 

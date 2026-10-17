@@ -368,10 +368,12 @@ pub fn own_prompt_score(state: &GameState, seat: PlayerId, counter: &dyn NodeCou
 }
 
 /// One AI action on a determinized state: reduce (nonce `sim:${counter.used}`), then, while a prompt
-/// of the other seat is open, answer it with the answerer's best of its first
+/// is open, answer it with the answerer's best of its first
 /// AI_SEARCH.max_auto_answer_options answers (`best_auto_answer`: each answer tried one more node, at
 /// most AI_SEARCH.maxAutoAnswers prompts). A throw or a refusal is `{ ok: false }`. Returns null
-/// without touching anything when the counter refuses a node.
+/// without touching anything when the counter refuses a node. A prompt of the seat's own is left
+/// open: the beam scores where its answers lead (`own_prompt_score`, #1112) and searches the real
+/// answer itself.
 pub fn simulate(
     state: &GameState,
     seat: PlayerId,
@@ -384,20 +386,44 @@ pub fn simulate(
         action,
         counter,
         AI_SEARCH.max_auto_answer_options.max(1) as usize,
+        false,
+    )
+}
+
+/// `simulate` with the acting seat's own prompts answered inside the step too, at their first answer
+/// (one node each): reply.rs's `best_try` plays the opponent's turn, where the beam's own-prompt
+/// search never reaches — a play of the opponent's whose payoff sits behind its own prompt (a
+/// Discover, a market, a prediction) would otherwise surface an open-prompt state the eval reads as
+/// the spent card alone, the `neverPlayed` blind spot R186's sweep keeps flagging, so no known
+/// play with a prompt chain would ever outbid standing still. The fix only needs the state after
+/// the prompt resolved; the other seat's prompts still get the answerer's best of `options`.
+pub(crate) fn simulate_own(
+    state: &GameState,
+    seat: PlayerId,
+    action: &ActionBody,
+    counter: &dyn NodeCounter,
+) -> Option<SimStep> {
+    simulate_answering(
+        state,
+        seat,
+        action,
+        counter,
+        AI_SEARCH.max_auto_answer_options.max(1) as usize,
+        true,
     )
 }
 
 /// `simulate` as it stood before #891, for the greedy baseline: every prompt of the other seat gets
-/// the first entry of legalActions, one node each, and nothing is scored with AI_EVAL, so the
-/// yardstick the gates measure the AI against stays put (docs/polish/3-ai.md, "A baseline that
-/// stays put").
+/// the first entry of legalActions, one node each, its own prompts left open, and nothing is scored
+/// with AI_EVAL, so the yardstick the gates measure the AI against stays put (docs/polish/3-ai.md,
+/// "A baseline that stays put").
 pub fn simulate_first_answers(
     state: &GameState,
     seat: PlayerId,
     action: &ActionBody,
     counter: &dyn NodeCounter,
 ) -> Option<SimStep> {
-    simulate_answering(state, seat, action, counter, 1)
+    simulate_answering(state, seat, action, counter, 1, false)
 }
 
 fn simulate_answering(
@@ -406,6 +432,7 @@ fn simulate_answering(
     action: &ActionBody,
     counter: &dyn NodeCounter,
     options: usize,
+    own_prompts: bool,
 ) -> Option<SimStep> {
     if !counter.take() {
         return None;
@@ -438,15 +465,18 @@ fn simulate_answering(
         let mut current = first.state;
         let mut answered: usize = 0;
         loop {
-            let other = match (&current.result, &current.pending) {
-                (None, Some(pending)) if pending.player_id != seat => pending.player_id,
+            let answerer = match (&current.result, &current.pending) {
+                (None, Some(pending)) if own_prompts || pending.player_id != seat => pending.player_id,
                 _ => break,
             };
             if answered >= AI_SEARCH.max_auto_answers as usize {
                 note_sim_error(counter);
-                return Some(Err("too many opponent prompts in one step".to_string()));
+                return Some(Err("too many prompts in one step".to_string()));
             }
-            current = match best_auto_answer(&current, other, options, counter, "sim")? {
+            // The seat's own prompt takes its first answer (one node); the other seat's gets the
+            // answerer's best of `options`.
+            let tries = if answerer == seat { 1 } else { options };
+            current = match best_auto_answer(&current, answerer, tries, counter, "sim")? {
                 Ok(next) => next,
                 Err(error) => return Some(Err(error)),
             };

@@ -930,6 +930,11 @@ mod determinize_b12 {
                 let def_id = card.map(|card| card.def_id.clone()).unwrap_or_default();
                 assert_ne!(def_id, HIDDEN_DEF_ID);
                 assert!(pool.contains(&def_id), "{id} sampled {def_id}");
+                // consistent_pools: a dealt AI deck holds no shadow-banned card, so no sample does.
+                assert!(
+                    !SHADOW_BAN_IDS.contains(&def_id.as_str()),
+                    "{id} sampled banned {def_id}"
+                );
                 if face_down_ids.contains(id) {
                     assert!(traps.contains(&def_id), "{id} sampled {def_id}");
                 }
@@ -1026,11 +1031,13 @@ mod determinize_b12 {
         let mut library = pool.clone();
         library.extend(["core-008", "core-011", "core-019"].map(String::from));
         let state = build("observe-pool-exhaust", json!({ "library": library }), json!({}));
-        let excluded: IndexSet<String> = query(&Default::default())
+        let mut excluded: IndexSet<String> = query(&Default::default())
             .iter()
             .filter(|def| AI_DETERMINIZE.exclude_def_ids.contains(&def.id.as_str()))
             .map(|def| def.id.clone())
             .collect();
+        // consistent_pools: a dealt AI deck holds no shadow-banned card, so no sample does.
+        excluded.extend(SHADOW_BAN_IDS.iter().map(|id| id.to_string()));
         let world = det(
             &redact(&state, AI),
             AI,

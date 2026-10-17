@@ -47,6 +47,7 @@ pub fn greedy_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option
         rng,
         DeterminizeOptions {
             match_shown_cost: Some(false),
+            consistent_pools: Some(false),
         },
     );
     let candidates = candidate_actions(&det, seat);

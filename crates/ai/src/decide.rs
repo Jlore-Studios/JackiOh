@@ -232,12 +232,15 @@ enum Plan {
     /// Answered at once, with quiet stats.
     Immediate(ActionBody, DecisionReason),
     /// Searched: the stats are the counter's, with this score and, when given, this stop reason.
+    /// `alternates` are the non-chosen finalists' lines, best mean first, for `submitted` to try
+    /// on the true state when the chosen action refuses there.
     Searched {
         action: ActionBody,
         reason: DecisionReason,
         line: Vec<ActionBody>,
         score: f64,
         stopped_by: Option<StoppedBy>,
+        alternates: Vec<Vec<ActionBody>>,
     },
 }
 
@@ -331,6 +334,7 @@ fn plan(
                 line: lethal,
                 score: AI_EVAL.win - f64::from(public.turn),
                 stopped_by: None,
+                alternates: Vec::new(),
             };
         }
         passed_over = Some(first_lethal);
@@ -346,6 +350,7 @@ fn plan(
             reason: DecisionReason::Fallback,
             score: 0.0,
             stopped_by: None,
+            alternates: Vec::new(),
         };
     };
     let root_turn = det0.turn;
@@ -376,6 +381,7 @@ fn plan(
             reason: DecisionReason::Fallback,
             score: 0.0,
             stopped_by: Some(stopped_by),
+            alternates: Vec::new(),
         };
     }
 
@@ -445,6 +451,23 @@ fn plan(
     let chosen_index = pick_finalist(&means, style.temperature, rng);
     let chosen_mean = means.get(chosen_index).copied().unwrap_or(0.0);
 
+    // The other finalists' lines, best mean first, for `submitted` to try on the true state
+    // before the match's replacements when the chosen action refuses there.
+    let mut ranked: Vec<usize> = (0..finalists.len()).collect();
+    ranked.sort_by(|a, b| {
+        means
+            .get(*b)
+            .copied()
+            .unwrap_or(0.0)
+            .partial_cmp(&means.get(*a).copied().unwrap_or(0.0))
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    let alternates: Vec<Vec<ActionBody>> = ranked
+        .into_iter()
+        .filter(|index| *index != chosen_index)
+        .filter_map(|index| finalists.get(index).map(|entry| entry.line.actions.clone()))
+        .collect();
+
     let chosen = finalists.get(chosen_index).map(|entry| entry.line);
     let Some((chosen, action)) =
         chosen.and_then(|line| line.actions.first().map(|action| (line, action.clone())))
@@ -456,6 +479,7 @@ fn plan(
             reason: DecisionReason::Fallback,
             score: 0.0,
             stopped_by: None,
+            alternates: Vec::new(),
         };
     };
     let stopped_by = if counter.stopped_by() != StoppedBy::Exhausted {
@@ -478,17 +502,24 @@ fn plan(
         line: chosen.actions.clone(),
         score: chosen_mean,
         stopped_by: Some(stopped_by),
+        alternates,
     }
 }
 
-/// The body a decision submits: the chosen one when the reducer accepts it on the true state, and
-/// the first of the match's replacements (`replacements_for`: endTurn, then an answer, then any
-/// other legal action) when it does not. A chosen action can be legal on every determinization and
-/// still refuse on the true state — a face-down aura trap taxes the hand the determinization could
-/// not see (R403) — and a submitted refusal is recorded against the AI and replaced anyway, so the
-/// same replacement is better submitted directly: the trajectory is the same one the match would
-/// have made of it, minus the rejection.
-fn submitted(state: &GameState, seat: PlayerId, decision: Decision) -> Decision {
+/// The body a decision submits: the chosen one when the reducer accepts it on the true state, the
+/// first `alternates` line whose own first action the reducer accepts, and the first of the match's
+/// replacements (`replacements_for`: endTurn, then an answer, then any other legal action) when no
+/// finalist holds. A chosen action can be legal on every determinization and still refuse on the
+/// true state — a face-down aura trap taxes the hand the determinization could not see (R403) — and
+/// a submitted refusal is recorded against the AI and replaced anyway, so the next-best line the
+/// search actually scored is better submitted directly, and the same replacement better than a
+/// refusal: the trajectory is the same one the match would have made of it, minus the rejection.
+fn submitted(
+    state: &GameState,
+    seat: PlayerId,
+    decision: Decision,
+    alternates: &[Vec<ActionBody>],
+) -> Decision {
     if holds_placeholder(state) {
         // `decide` is handed the observed view outside the gate's drivers (the worker and arena
         // send the redacted state), and its `ai:hidden` placeholders have no definition the
@@ -507,6 +538,18 @@ fn submitted(state: &GameState, seat: PlayerId, decision: Decision) -> Decision 
     };
     if trial(&decision.action) {
         return decision;
+    }
+    for alternate in alternates {
+        let Some(first) = alternate.first() else {
+            continue;
+        };
+        if trial(first) {
+            return Decision {
+                line: alternate.clone(),
+                action: first.clone(),
+                ..decision
+            };
+        }
     }
     for replacement in replacements_for(state, seat) {
         if trial(&replacement) {
@@ -598,13 +641,14 @@ pub fn decide_styled(
     };
 
     match outcome {
-        Ok(Plan::Immediate(action, reason)) => Some(submitted(state, seat, immediate(action, reason))),
+        Ok(Plan::Immediate(action, reason)) => Some(submitted(state, seat, immediate(action, reason), &[])),
         Ok(Plan::Searched {
             action,
             reason,
             line,
             score,
             stopped_by,
+            alternates,
         }) => Some(submitted(
             state,
             seat,
@@ -614,6 +658,7 @@ pub fn decide_styled(
                 line,
                 stats: stats(&counter, 0, score, stopped_by),
             },
+            &alternates,
         )),
         Err(_) => {
             let action = fallback_action(&scratch.candidates);
@@ -626,6 +671,7 @@ pub fn decide_styled(
                     reason: DecisionReason::Fallback,
                     stats: stats(&counter, 1, 0.0, None),
                 },
+                &[],
             ))
         }
     }

@@ -84,6 +84,7 @@ fn r1046_redact_drops_set_as_and_determinize_samples_units_only_under_the_breake
     // Determinized worlds may hold a Unit while the Breaker acts, stamped `cloaked`...
     let options = DeterminizeOptions {
         match_shown_cost: Some(false),
+        consistent_pools: Some(false),
     };
     let mut units = 0;
     for n in 0..50 {
@@ -225,6 +226,7 @@ fn r783009_determinize_samples_a_printed_cloaked_card_stamped_cloaked() {
     let public = redact(&state, HUMAN);
     let options = DeterminizeOptions {
         match_shown_cost: Some(false),
+        consistent_pools: Some(false),
     };
     let mut cloaked = 0;
     for n in 0..300 {
