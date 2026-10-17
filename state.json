@@ -2301,12 +2301,6 @@
         "tiers": {
           "muse": "medium"
         }
-      },
-      "wip": {
-        "at": "2026-10-17T02:59:57Z",
-        "provider": "claude-4",
-        "sha": "eeb16fd7d0a0527fa48f656758a16b0243832080",
-        "start": "66f10c35f5d5be41425656e8ab8ccfa3eeda3c6d"
       }
     },
     "1090": {
