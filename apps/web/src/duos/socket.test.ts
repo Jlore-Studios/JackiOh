@@ -357,4 +357,34 @@ describe("the co-op socket's reconnect", () => {
     h.client.connect();
     expect(h.sockets).toHaveLength(2);
   });
+
+  it("a reconnect's first view clears the not-connected alert a send set while the socket was down", () => {
+    const h = connected();
+    h.socket().deliver(view(2));
+    h.socket().drop(1006);
+    h.client.send({ kind: "concede" });
+    expect(h.client.snapshot().errorCode).toBe("offline");
+
+    h.runTimers();
+    h.socket().open();
+    // An open alone proves nothing: `hello` is still unanswered.
+    expect(h.client.snapshot().error).toBe("not connected to the match");
+
+    h.socket().deliver(view(3));
+    expect(h.client.snapshot().error).toBeNull();
+    expect(h.client.snapshot().errorCode).toBeNull();
+    expect(roundOf(h)).toBe(3);
+  });
+
+  it("only a socket's first view clears an error: a refusal after it stays until the next ack", () => {
+    const h = connected();
+    h.socket().deliver(view(1));
+    h.socket().deliver({ type: "error", code: "illegal_action", message: "not your turn" });
+    h.socket().deliver(view(2));
+    expect(h.client.snapshot().error).toBe("not your turn");
+
+    h.socket().deliver({ type: "ack", nonce: "n-1", seq: 1 });
+    expect(h.client.snapshot().error).toBeNull();
+    expect(h.client.snapshot().errorCode).toBeNull();
+  });
 });
