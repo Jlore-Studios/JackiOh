@@ -3120,6 +3120,7 @@
         "by": "`gemini` (medium), `claude` (strong)",
         "sha": "3da40273080e97250a351bf1587784441c0a22d4"
       },
+      "closed_at": "2026-10-17T19:01:09Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
@@ -3129,6 +3130,7 @@
       "interruptions": 0,
       "issue": 1126,
       "kind": "review",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-10-17T18:50:45Z",
