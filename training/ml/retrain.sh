@@ -6,12 +6,15 @@
 #
 #   training/ml/retrain.sh --out <dir> (--logs <dir> | --games <n> --seed <base>) [--parent-bin <path>]
 #                          [--screen-games 800] [--every reply|turn|decision] [--seeds "1 2 3"]
+#                          [--width 32] [--head "32"]
 #
 #   1. the logs: `--logs` reuses an export (selfplay.yml's artifacts, or a local run), else `jackioh
 #      selfplay --games <n> --seed <base>` plays one here (R1006001, R1006002);
 #   2. `jackioh positions --every reply` over them, the positions the search scores (R1006006; games
 #      that no longer replay are dropped and counted, R1006003);
-#   3. the fit (`python -m jackioh_ml.fit`), and its report; it stops here unless the network beats the
+#   3. the fit (`python -m jackioh_ml.fit`, 32 wide with a head of 32 by default: about 38,000 weights,
+#      the size 20,000 games and more support, D5's "wider only as the data grows"), and its report;
+#      it stops here unless the network beats the
 #      calibrated hand eval on held-out turns 4-10 (`decision.gain` > 0);
 #   4. the weights (`python -m jackioh_ml.export`) into crates/ai/src/learned/weights.json, and the
 #      switch, AI_EVAL_KIND, set to Learned in crates/ai/src/config.rs;
@@ -29,7 +32,7 @@
 # (R850001), by a candidate a screen has already passed.
 set -euo pipefail
 
-out="" logs="" games="" seed="" parent="" screen_games=800 every=reply seeds="1 2 3"
+out="" logs="" games="" seed="" parent="" screen_games=800 every=reply seeds="1 2 3" width=32 head=32
 while [ $# -gt 0 ]; do
   case "$1" in
     --out) out="$2"; shift 2 ;;
@@ -40,6 +43,8 @@ while [ $# -gt 0 ]; do
     --screen-games) screen_games="$2"; shift 2 ;;
     --every) every="$2"; shift 2 ;;
     --seeds) seeds="$2"; shift 2 ;;
+    --width) width="$2"; shift 2 ;;
+    --head) head="$2"; shift 2 ;;
     *) echo "retrain.sh: unknown argument $1" >&2; exit 2 ;;
   esac
 done
@@ -76,7 +81,7 @@ export PYTHONPATH="$root/training/ml${PYTHONPATH:+:$PYTHONPATH}"
 say "the fit"
 # shellcheck disable=SC2086  # the seeds are words
 uv run --frozen --project training/ml python -m jackioh_ml.fit "$out/positions.jsonl" --out "$out/fit" \
-  --root "$root" --seeds $seeds
+  --root "$root" --seeds $seeds --width "$width" --head $head
 gain=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['decision']['gain'])" "$out/fit/report.json")
 if ! python3 -c "import sys; sys.exit(0 if float(sys.argv[1]) > 0 else 1)" "$gain"; then
   say "the network does not beat the calibrated hand eval on held-out turns 4-10 (gain $gain): no screen"
