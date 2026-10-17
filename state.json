@@ -2776,6 +2776,9 @@
         }
       }
     },
+    "1102": {
+      "suggestion": true
+    },
     "1105": {
       "action": "revise",
       "asks": [],
