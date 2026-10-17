@@ -32,88 +32,24 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexSet;
 use jackioh_engine::{
-    Action, ActionBody, CardInstance, GameState, KeywordKind, PlayerId, Selection, UnitView, effective_life,
+    Action, ActionBody, CardInstance, GameState, KeywordKind, PlayerId, Selection, effective_life,
     find_instance, has_keyword, legal_actions, pierces, reduce, subsystems, takes_strike_back, unit_view,
 };
 
-use crate::candidates::{candidate_actions_in, exchange};
+use crate::candidates::{blow, candidate_actions_in, cleaved_neighbours, exchange, side_of};
 use crate::config::{AI_EVAL, AI_REPLY, AI_SEARCH};
 use crate::evaluate::{NextSwing, evaluate, unit_worth};
 use crate::lethal::deft_ready_switch;
 use crate::simulate::{LineStatus, best_auto_answer, line_status, simulate, static_score, surcharge_nodes};
 use crate::types::NodeCounter;
 
-struct Side {
-    view: UnitView,
-    shield: bool,
-    indestructible: bool,
-    first_strike: bool,
-    poisonous: bool,
-    /// R346: its hits skip §4.4 step 2, the Armor.
-    pierce: bool,
-}
-
-fn side_of(state: &GameState, unit: &CardInstance) -> Side {
-    let view = unit_view(state, unit);
-    Side {
-        shield: has_keyword(&view.keywords, KeywordKind::DivineShield),
-        indestructible: has_keyword(&view.keywords, KeywordKind::Indestructible),
-        first_strike: has_keyword(&view.keywords, KeywordKind::FirstStrike),
-        poisonous: has_keyword(&view.keywords, KeywordKind::Poisonous),
-        pierce: pierces(state, Some(unit), None),
-        view,
-    }
-}
-
-/// What one blow does (`blow`'s answer).
-struct Blow {
-    dealt: i32,
-    kills: bool,
-    pops_shield: bool,
-}
-
-/// §4.4 steps 1, 2, 4 and 7 for one blow: what `from` deals to `to` with a strike of `amount`
-/// (`exchange`'s), Poisonous when `poisonous`, and whether it kills. Step 2's Armor is skipped when
-/// `from` pierces (R346).
-fn blow(from: &Side, amount: i32, poisonous: bool, to: &Side) -> Blow {
-    if amount <= 0 {
-        return Blow {
-            dealt: 0,
-            kills: false,
-            pops_shield: false,
-        };
-    }
-    if to.shield {
-        return Blow {
-            dealt: 0,
-            kills: false,
-            pops_shield: true,
-        };
-    }
-    if to.indestructible {
-        return Blow {
-            dealt: 0,
-            kills: false,
-            pops_shield: false,
-        };
-    }
-    let dealt = if from.pierce {
-        amount
-    } else {
-        (amount - to.view.armor).max(0)
-    };
-    let kills = dealt >= to.view.health || (poisonous && dealt > 0);
-    Blow {
-        dealt,
-        kills,
-        pops_shield: false,
-    }
-}
-
 /// The opponent's static value of `attacker` hitting `target` (§4.3): the unit it kills, less its own
 /// body when that dies too, with First Strike deciding who strikes first and no strike back at all on
 /// a Ranged attacker unless the target is Ranged too (R783000). A hit that kills nothing is worth a
-/// little per point dealt, so a second attacker can finish what the first one started.
+/// little per point dealt, so a second attacker can finish what the first one started. A Cleave
+/// attack also prices what its splash kills or unshields on the target's neighbours (R63): a killed
+/// neighbour at `AI_REPLY.cleave_share` of its worth, a popped neighbour shield at the same share
+/// of the Divine Shield weight.
 fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> f64 {
     let Some(target) = find_instance(state, target_id) else {
         return f64::NEG_INFINITY;
@@ -133,6 +69,21 @@ fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> f
         kills = false;
     }
 
+    // R63: the splash belongs to the attack, so it lands whenever the strike does — every case but
+    // the defender-first one above, where the attacker is destroyed before it strikes at all.
+    let mut cleave_value = 0.0;
+    if has_keyword(&a.view.keywords, KeywordKind::Cleave) && !(t.first_strike && !a.first_strike && dies) {
+        for neighbour in cleaved_neighbours(state, attacker, target) {
+            let n = side_of(state, &neighbour);
+            let splash = blow(&a, combat.splash, combat.poisonous, &n);
+            if splash.kills {
+                cleave_value += AI_REPLY.cleave_share * unit_worth(state, &neighbour, &AI_EVAL);
+            } else if splash.pops_shield {
+                cleave_value += AI_REPLY.cleave_share * AI_EVAL.keyword.divine_shield;
+            }
+        }
+    }
+
     let mut value = if kills {
         unit_worth(state, target, &AI_EVAL)
     } else {
@@ -144,7 +95,7 @@ fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> f
     if dies {
         value -= unit_worth(state, attacker, &AI_EVAL);
     }
-    value
+    value + cleave_value
 }
 
 /// The static trader's value of a face hit of `damage` on `seat`'s hero: AI_EVAL.win when it would end
