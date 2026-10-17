@@ -240,6 +240,27 @@ mod simulate_reply {
         assert!(!on_field(&blind, HUMAN, "core-008"));
     }
 
+    /// R82: the seat's next turn with nothing but ending it left to do ends itself inside the
+    /// opponent's EndTurn reduce. The reply stops where the opponent's second turn begins —
+    /// the seat's next decision never came — instead of playing the opponent's turns out to a
+    /// phantom death.
+    #[test]
+    fn r82_stops_where_the_opponents_second_turn_begins_when_the_seats_next_turn_is_empty() {
+        // p1's hand and library are empty: its turn 11 has only End turn to offer.
+        let state = handed_over(json!({
+            "p1": { "hand": [], "library": [] },
+            "p2": { "field": ["core-008"] },
+        }));
+        let counter = create_node_counter(20, None);
+        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI)).expect("a reply");
+        // One hit for 4 and one fatigue draw ride inside p2's EndTurn; a second p2 turn does not run.
+        assert!(reply.result.is_none());
+        assert_eq!(reply.active, HUMAN);
+        assert_eq!(reply.turn, TURN + 3);
+        assert_eq!(reply.players[AI].hero.health, 25);
+        assert_eq!(counter.used(), 2);
+    }
+
     /// returns null without a node to spend
     #[test]
     fn returns_null_without_a_node_to_spend() {
