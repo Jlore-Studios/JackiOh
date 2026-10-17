@@ -343,11 +343,12 @@ export function registeredCatalog(): CardDefs {
 
 /** The catalog version compiled into the module (the newest entry of patches.json). */
 /**
- * R1011000: the learned evaluation's parity fixture, computed by this WASM build: its integer
- * network's correction for each case. Only the tests call it.
+ * R1011000: the learned evaluation's parity fixture, computed by the normal WASM module: its integer
+ * network's correction for each case. Only the tests call it, so it is the normal module's own export
+ * and the Luau module (R915009) carries no copy of it.
  */
 export function learnedParity(fixtureJson: string): number[] {
-  return call("learnedParity", () => parsed<number[]>(engine.learned_parity(fixtureJson)));
+  return call("learnedParity", () => parsed<number[]>(normal.learned_parity(fixtureJson)));
 }
 
 export function catalogVersion(): string {
