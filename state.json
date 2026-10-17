@@ -3362,6 +3362,7 @@
     "1146": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-17T20:02:08Z",
         "difficulty": "medium",
@@ -3370,6 +3371,7 @@
         "why": "easy-rule line 3 fails: spec/10-engine-guide.md \u00a710.10 says the game-over sequence 'opens by replaying the killing blow', which this change makes false, so a spec note must be edited"
       },
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-10-17T21:08:54Z",
         "family": "claude",
