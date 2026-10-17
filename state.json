@@ -2551,6 +2551,13 @@
     "1113": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T14:06:26Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "least sure whether crates/ai/src work makes it hard; it stays medium because shadow_ban.rs holds tables, not the search, and the change is additive plumbing with live paths untouched"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
