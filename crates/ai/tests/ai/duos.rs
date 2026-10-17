@@ -990,6 +990,8 @@ fn r1127000_pass_limits_still_cap_a_scored_list() {
     let mut hand = vec![ONE_DROP, BIG];
     hand.extend(OTHER_BIGS);
     let seed = "duos-ai-best-pass-cap";
+    // `cost` reads the catalog before `passing` registers it.
+    register_cards();
     let (state, ids) = passing(seed, team_a(rules), &hand, cost(BIG) - 1, cost(BIG));
     assert!(
         can_play(&state.duels[0], PlayerId::P1, &ids[0]),
@@ -1015,4 +1017,48 @@ fn r1127000_free_pass_next_turn_cards_keep_cost_order() {
     set_mana(&mut state, A2, 0);
     full_refresh_next_turn(&mut state, A2);
     assert_eq!(duos_passes(&state, A1), vec![ids[1].clone(), ids[0].clone()]);
+}
+
+#[test]
+fn r1127000_the_passed_card_is_scored_under_the_teammates_next_id_not_the_one_it_held() {
+    let seed = "duos-ai-best-pass-ids";
+    let (mut state, first, second) = winning_pass_state(seed);
+    // Both duels number their cards from the same start, so a card minted now in A2's duel takes the
+    // id the first card of A1's hand holds. The Stab takes that id, and in A2's duel it names a
+    // one-drop of A2's own.
+    let (big, stab) = (second, first);
+    let hand = &mut state.duels[0].players[PlayerId::P1].hand;
+    hand[0].id = big.clone();
+    hand[1].id = stab.clone();
+    let one_drop = give(&mut state, A2, ONE_DROP);
+    assert_eq!(one_drop, stab, "the Stab's id names A2's one-drop");
+    // Scored under that id, the Stab's plays would play the one-drop and leave the Stab in hand, and
+    // BIG, whose id names nothing of A2's, would outscore it.
+    assert_eq!(duos_passes(&state, A1), vec![stab.clone()], "not {big}");
+}
+
+#[test]
+fn r1127000_a_passed_fused_card_is_scored_with_its_match_made_definitions_along() {
+    let seed = "duos-ai-best-pass-fused";
+    let (mut state, big, stab) = winning_pass_state(seed);
+    // A Fuse of a crafted card and BIG, minted in A1's duel alone (R77, R102): its definitions live
+    // only in duel 0's `transient_defs`, and it costs what BIG costs.
+    let crafted = "craft:#duos-ai";
+    let fused = format!("t-1:{crafted}+{BIG}");
+    let mut crafted_def = def_of(None, BIG).clone();
+    crafted_def.id = crafted.to_string();
+    let mut fused_def = def_of(None, BIG).clone();
+    fused_def.id = fused.clone();
+    state.duels[0]
+        .transient_defs
+        .insert(crafted.to_string(), crafted_def);
+    state.duels[0].transient_defs.insert(fused.clone(), fused_def);
+    let fusion = give(&mut state, A1, &fused);
+    assert!(
+        !can_play(&state.duels[0], PlayerId::P1, &fusion),
+        "A1 cannot play the fusion"
+    );
+    // Scored without its definition, the fusion would break the scoring and every candidate would
+    // fall back to cost order, BIG first.
+    assert_eq!(duos_passes(&state, A1), vec![stab.clone()], "not {big}");
 }

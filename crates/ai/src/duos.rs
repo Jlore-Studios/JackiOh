@@ -10,8 +10,9 @@
 //! Knowledge (B29): `decide` reads its duel only through `redact` and its determinizations (R185).
 //! `duos_passes` reads the seat's own hand and its own legal plays off the same redacted probe
 //! `decide` lists its own actions on, and of the teammate only its own side: hand size, mana, open
-//! zones. An opponent's hidden card never reaches a decision, so two states that differ only there
-//! decide alike under the same options.
+//! zones, and the determinization of its redacted duel that R1127000 scores each pass on. An
+//! opponent's hidden card never reaches a decision, so two states that differ only there decide
+//! alike under the same options.
 //!
 //! The gate (B32): `duos_gate` plays the Easy AI team (`duos_decide` at AI_GATE_BUDGET) against a team
 //! on §10.7's random policy over `duos_legal_actions` (`duos_random_action`), the AI on team A in odd
@@ -30,7 +31,7 @@ use jackioh_engine::config::{
 use jackioh_engine::duos::{
     DuosState, duos_begin, duos_create, duos_legal_actions, duos_reduce, duos_seats_to_act,
 };
-use jackioh_engine::subsystems::AI_SKIPPED_ACTIONS;
+use jackioh_engine::subsystems::{self, AI_SKIPPED_ACTIONS};
 use jackioh_engine::wire::{
     DUOS_SEATS, DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosOutcome,
     DuosSeat, PerTeam, Team,
@@ -324,9 +325,10 @@ fn rank_now(
 /// R1127000: the teammate's best bounded follow-up with the passed card in hand: the maximum of
 /// `evaluate` over at most `DUOS_PASS_MAX_FOLLOWUPS` legal `Play` actions (the passed card's own
 /// plays first, then the rest in `legal_actions` order), each applied by one engine step to the
-/// teammate's determinized probe with a copy of the card added to its hand, scored from the
-/// teammate's seat; `evaluate` of the receiving probe when no follow-up applies. The probe is
-/// built exactly like `own_probe`, on the fixed `DUOS_PASS_PROBE_SEED`, so no hidden opponent card
+/// teammate's determinized probe with a copy of the card added to its hand as B20's pass adds it
+/// (the duel's next instance id, its match-made definitions along), scored from the teammate's
+/// seat; `evaluate` of the receiving probe when no follow-up applies. The probe is built exactly
+/// like `own_probe`, on the fixed `DUOS_PASS_PROBE_SEED`, so no hidden opponent card
 /// and no caller stream is ever read; a refused or panicking follow-up is skipped.
 fn pass_score(
     own_probe: &GameState,
@@ -350,7 +352,13 @@ fn pass_score(
         DeterminizeOptions::default(),
     );
     let mut receiving = mate_probe;
+    // As the pass itself moves it (B20): its match-made definitions go along, and it takes the next
+    // instance id of the teammate's duel. Both duels number their cards from the same start, so the
+    // id it holds in the seat's duel may name another card in the teammate's.
+    carry_match_defs(own_probe, &mut receiving, &passed.def_id);
     let mut given = passed;
+    given.id = format!("c{}", receiving.next_id);
+    receiving.next_id += 1;
     given.owner = mate;
     given.controller = mate;
     given.zone = Zone::Hand { player: mate };
@@ -389,6 +397,20 @@ fn pass_score(
         best = Some(best.map_or(value, |held: f64| held.max(value)));
     }
     best.unwrap_or_else(|| evaluate(&receiving, mate, NextSwing::Enemy, &AI_EVAL))
+}
+
+/// B20's carry onto a probe: a card whose definition lives in the seat's duel alone (a fused or
+/// crafted card's, R77, R102) takes it to the teammate's, and with it every match-made definition
+/// it is made of.
+fn carry_match_defs(from: &GameState, to: &mut GameState, def_id: &str) {
+    let mut queue: Vec<String> = vec![def_id.to_string()];
+    while let Some(id) = queue.pop() {
+        let Some(def) = from.transient_defs.get(&id) else {
+            continue;
+        };
+        queue.extend(subsystems::fused_ingredients(from, &id).unwrap_or_default());
+        to.transient_defs.entry(id).or_insert_with(|| def.clone());
+    }
 }
 
 // ---------------------------------------------------------------------------

@@ -56,9 +56,10 @@ pub const DUOS_GATE_WIN_FLOOR: f64 = 0.8;
 /// follow-ups on. Fixed (never the caller's stream), so the same state reproduces the pass order.
 pub const DUOS_PASS_PROBE_SEED: &str = "ai:duos-pass";
 
-/// R1127000: the most of the teammate's legal `Play` follow-ups one passed card is scored on, in
-/// `legal_actions` order. Bounds scoring at one hand of cards times this many single `reduce` calls
-/// per `duos_passes` call, with no search and no reply simulation.
+/// R1127000: the most of the teammate's legal `Play` follow-ups one passed card is scored on, the
+/// card's own plays first, then the rest in `legal_actions` order. Bounds scoring at one hand of
+/// cards times this many single `reduce` calls per `duos_passes` call, with no search and no reply
+/// simulation.
 pub const DUOS_PASS_MAX_FOLLOWUPS: usize = 8;
 
 /// `AI_SEARCH`'s shape.
