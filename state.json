@@ -3223,6 +3223,7 @@
       "feedback_since": "2026-10-17T06:01:45Z",
       "issue": 1103,
       "kind": "revise",
+      "queued_at": "2026-10-17T06:52:53Z",
       "self_check_findings": [],
       "votes": {
         "approvals": [
