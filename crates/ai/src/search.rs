@@ -15,7 +15,9 @@ use crate::candidates::{candidate_actions, candidate_set};
 use crate::config::AI_EVAL;
 use crate::evaluate::{NextSwing, evaluate};
 use crate::reply::{hidden_card_ids, reply_score};
-use crate::simulate::{LineStatus, close_line, line_status, search_signature, simulate, static_score};
+use crate::simulate::{
+    LineStatus, close_line, line_status, own_prompt_score, search_signature, simulate, static_score,
+};
 use crate::types::{NodeCounter, SearchBudget};
 
 /// A complete line. `end` is the state it was scored at (after its closing endTurn), which `decide`
@@ -71,7 +73,8 @@ fn expansion(state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody>
 
 /// Beam search on one determinization. The frontier starts at `det`. Each open line expands its first
 /// rootBranching (depth 0) or branching (deeper) candidates, plus endTurn. Every child is simulated
-/// and scored with `evaluate`; children whose status is not "open" become complete lines scored by
+/// and scored with `evaluate`, a child waiting on the seat's own prompt where its answers lead
+/// (`own_prompt_score`, #1112); children whose status is not "open" become complete lines scored by
 /// terminalScore; the best beamWidth open children (stable) form the next frontier. The loop stops at
 /// maxDepth (open lines are closed by terminalScore) or when the counter refuses. Returns complete
 /// lines, best first.
@@ -134,7 +137,9 @@ pub fn beam_search(
                     continue;
                 }
                 seen.insert(signature);
-                let score = evaluate(&next, seat, NextSwing::Enemy, &AI_EVAL);
+                // #1112: a child waiting on the seat's own prompt is ranked where its answers lead.
+                let score = own_prompt_score(&next, seat, counter)
+                    .unwrap_or_else(|| evaluate(&next, seat, NextSwing::Enemy, &AI_EVAL));
                 children.push(OpenLine {
                     state: next,
                     actions,

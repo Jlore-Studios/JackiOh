@@ -1004,3 +1004,142 @@ mod enemy_targets_first {
         }
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// #1112: a child waiting on the seat's own prompt is ranked where its answers lead
+// ---------------------------------------------------------------------------------------------
+
+mod own_prompt_lookahead {
+    use super::*;
+
+    /// Craft a Card (#99): 4 mana, Discover a Unit, then another, the fused result to hand at 0.
+    const CRAFT: &str = "core-099";
+
+    /// `evaluate` as the beam scores a child.
+    fn eval(state: &GameState) -> f64 {
+        evaluate(state, AI, NextSwing::Enemy, &AI_EVAL)
+    }
+
+    /// Craft a Card beside four 1-cost Spells that do nothing on this board (Book of Plague, Ancient
+    /// Acquisition, Divine Favor, Rewind: no permanent, an empty graveyard, a hand bigger than the
+    /// opponent's), at the default 4 crystals. The cast and its 0-cost fused Unit is the turn's best
+    /// use, but at its first Discover the cast reads as a spent 4-cost card, worse than any Spell.
+    fn craft_turn() -> GameState {
+        jackioh_cards::register_all();
+        scenario(json!({
+            "seed": "search-own-prompt",
+            "p1": {
+                "hand": [CRAFT, "classic-070", "classic-034", "classic-046", "classic-054"],
+                "library": ["core-053", "core-011", "core-008"],
+            },
+            "p2": { "hand": ["core-005"], "library": ["core-053", "core-011"] },
+        }))
+        .state()
+        .clone()
+    }
+
+    fn craft_play(state: &GameState) -> ActionBody {
+        let craft = hand_id(state, CRAFT);
+        candidate_actions(state, AI)
+            .into_iter()
+            .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == craft))
+            .unwrap_or_else(|| panic!("Craft a Card is not a candidate"))
+    }
+
+    /// Right after the cast: the first Discover is open, and it is the AI's.
+    fn at_first_discover() -> GameState {
+        let start = craft_turn();
+        let state = act(&start, AI, craft_play(&start));
+        assert_eq!(state.pending.as_ref().map(|pending| pending.player_id), Some(AI));
+        state
+    }
+
+    /// #1112: beside AI_BUDGET.beam_width other plays, the best line casts Craft a Card, answers both
+    /// Discovers and plays the fused Unit: a line the beam cut at its first Discover before.
+    #[test]
+    fn craft_a_cards_best_line_casts_it_answers_both_discovers_and_plays_the_fused_unit() {
+        let state = craft_turn();
+        let craft = hand_id(&state, CRAFT);
+        let others: IndexSet<String> = candidate_actions(&state, AI)
+            .iter()
+            .filter_map(|action| match action {
+                ActionBody::Play { instance_id, .. } if *instance_id != craft => Some(instance_id.clone()),
+                _ => None,
+            })
+            .collect();
+        assert!(others.len() >= AI_BUDGET.beam_width, "{others:?}");
+
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        let lines = beam_search(&state, AI, &counter, AI_BUDGET);
+        let best = lines.first().unwrap_or_else(|| panic!("the beam found no line"));
+        let keys: Vec<String> = best.actions.iter().map(action_key).collect();
+        assert!(best.actions.len() >= 4, "{keys:?}");
+        assert!(
+            matches!(&best.actions[0], ActionBody::Play { instance_id, .. } if *instance_id == craft),
+            "{keys:?}"
+        );
+        assert!(matches!(best.actions[1], ActionBody::Answer { .. }), "{keys:?}");
+        assert!(matches!(best.actions[2], ActionBody::Answer { .. }), "{keys:?}");
+        let ActionBody::Play {
+            instance_id: fused, ..
+        } = &best.actions[3]
+        else {
+            panic!("the fused Unit is not played: {keys:?}");
+        };
+        assert!(
+            state.players[AI].hand.iter().all(|card| card.id != *fused),
+            "{keys:?}"
+        );
+        assert!(
+            active_units_of(&best.end, AI)
+                .iter()
+                .any(|unit| unit.id == *fused && best.end.transient_defs.contains_key(&unit.def_id)),
+            "{keys:?}"
+        );
+    }
+
+    /// #1112: at its first Discover, the lookahead scores the cast at least as well as the best state
+    /// its first answers reach, above the prompt state itself, one node per answer tried.
+    #[test]
+    fn a_child_at_its_own_prompt_scores_at_least_the_best_state_its_first_answers_reach() {
+        let state = at_first_discover();
+        let answers: Vec<ActionBody> = legal_actions(&state, AI)
+            .into_iter()
+            .filter(|answer| *answer != ActionBody::Concede)
+            .take(AI_SEARCH.max_auto_answer_options as usize)
+            .collect();
+        assert!(answers.len() > 1, "{answers:?}");
+        let best_first = answers
+            .iter()
+            .map(|answer| eval(&act(&state, AI, answer)))
+            .fold(f64::NEG_INFINITY, f64::max);
+
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        let score = own_prompt_score(&state, AI, &counter).unwrap_or_else(|| panic!("no lookahead score"));
+        assert!(score >= best_first, "{score} < {best_first}");
+        assert!(score > eval(&state), "{score} <= {}", eval(&state));
+        // Two Discovers of three Units each, every answer one node.
+        assert_eq!(counter.used(), 2 * answers.len());
+    }
+
+    /// #1112: with no prompt of the seat's own open there is no lookahead, so the child keeps exactly
+    /// its `evaluate`, and no node is spent.
+    #[test]
+    fn a_child_with_no_prompt_of_the_seats_own_gets_no_lookahead_and_spends_no_node() {
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        assert_eq!(own_prompt_score(&craft_turn(), AI, &counter), None);
+        assert_eq!(
+            own_prompt_score(&at_first_discover(), AI.opponent(), &counter),
+            None
+        );
+        assert_eq!(counter.used(), 0);
+    }
+
+    /// #1112: a lookahead the counter refuses gives no score, so the child keeps its plain one.
+    #[test]
+    fn a_lookahead_the_counter_refuses_gives_no_score() {
+        let counter = create_node_counter(1, None);
+        assert_eq!(own_prompt_score(&at_first_discover(), AI, &counter), None);
+        assert_eq!(counter.used(), 1);
+    }
+}
