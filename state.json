@@ -3383,6 +3383,13 @@
     "1150": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T20:38:17Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Easy line 3 (no spec change) fails: spec/09-architecture.md explicitly forbids ranked watching, so the spec itself must be amended."
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
