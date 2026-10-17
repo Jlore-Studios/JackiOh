@@ -3393,7 +3393,7 @@
       "verdict_rounds": 0
     },
     "1147": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "difficulty_by": {
         "at": "2026-10-17T21:42:32Z",
@@ -3420,12 +3420,12 @@
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_tier": "medium",
-      "provider": "muse",
+      "provider": "agy",
       "queued_at": "2026-10-17T20:03:19Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
-      "run_id": "39071817242",
-      "started_at": "2026-10-17T21:39:37Z",
+      "run_id": "39072893335",
+      "started_at": "2026-10-17T21:56:27Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -9118,9 +9118,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-17T21:55:15Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39072854096",
-    "what": "build #1146 on muse"
+    "at": "2026-10-17T21:56:27Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39072893335",
+    "what": "build #1147 on agy"
   },
   "last_sweep": {
     "at": "2026-10-17T21:51:55Z",
