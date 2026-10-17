@@ -103,6 +103,11 @@ impl FakeSocket {
         self.drain().close_code
     }
 
+    /// The server's close reason, or `None` while open and after `drop()`.
+    pub fn close_reason(&self) -> Option<String> {
+        self.drain().close_reason.clone()
+    }
+
     /// Every frame the server sent, in order.
     pub fn sent(&self) -> Vec<String> {
         self.drain().sent.clone()

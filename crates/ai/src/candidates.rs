@@ -7,9 +7,9 @@
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::{
     ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, Row, Selection,
-    UnitView, ZoneChoice, ZoneSlot, attack_mod_for, beneath_at, canonical, card_at, carried_at,
+    UnitView, ZoneChoice, ZoneSlot, adjacent, attack_mod_for, beneath_at, canonical, card_at, carried_at,
     effective_cost, find_instance, has_keyword, is_locked, lane_multiplier_for, legal_actions, pierces,
-    row_size, subsystems, takes_strike_back, unit_view,
+    row_size, slot_of, subsystems, takes_strike_back, unit_view,
 };
 use serde_json::Value;
 
@@ -125,6 +125,9 @@ pub(crate) struct Exchange {
     pub poisonous: bool,
     /// What the defender's strike back deals before §4.4.
     pub strike_back: i32,
+    /// The Cleave splash: the attacker's attack with the combat-only bonus, unmultiplied — the
+    /// engine's `strike` passes unmultiplied `attack` as the Cleave amount.
+    pub splash: i32,
 }
 
 pub(crate) fn exchange(
@@ -139,7 +142,96 @@ pub(crate) fn exchange(
         hit: (a.attack + bonus.attack) * lane_multiplier_for(state, attacker, defender),
         poisonous: bonus.poisonous || has_keyword(&a.keywords, KeywordKind::Poisonous),
         strike_back: t.attack * lane_multiplier_for(state, defender, attacker),
+        splash: a.attack + bonus.attack,
     }
+}
+
+/// One side of a §4.4 blow, read through the layers.
+pub(crate) struct Side {
+    pub(crate) view: UnitView,
+    pub(crate) shield: bool,
+    pub(crate) indestructible: bool,
+    pub(crate) first_strike: bool,
+    pub(crate) poisonous: bool,
+    /// R346: its hits skip §4.4 step 2, the Armor.
+    pub(crate) pierce: bool,
+}
+
+pub(crate) fn side_of(state: &GameState, unit: &CardInstance) -> Side {
+    let view = unit_view(state, unit);
+    Side {
+        shield: has_keyword(&view.keywords, KeywordKind::DivineShield),
+        indestructible: has_keyword(&view.keywords, KeywordKind::Indestructible),
+        first_strike: has_keyword(&view.keywords, KeywordKind::FirstStrike),
+        poisonous: has_keyword(&view.keywords, KeywordKind::Poisonous),
+        pierce: pierces(state, Some(unit), None),
+        view,
+    }
+}
+
+/// What one blow does (`blow`'s answer).
+pub(crate) struct Blow {
+    pub(crate) dealt: i32,
+    pub(crate) kills: bool,
+    pub(crate) pops_shield: bool,
+}
+
+/// §4.4 steps 1, 2, 4 and 7 for one blow: what `from` deals to `to` with a strike of `amount`
+/// (`exchange`'s), Poisonous when `poisonous`, and whether it kills. Step 2's Armor is skipped when
+/// `from` pierces (R346).
+pub(crate) fn blow(from: &Side, amount: i32, poisonous: bool, to: &Side) -> Blow {
+    if amount <= 0 {
+        return Blow {
+            dealt: 0,
+            kills: false,
+            pops_shield: false,
+        };
+    }
+    if to.shield {
+        return Blow {
+            dealt: 0,
+            kills: false,
+            pops_shield: true,
+        };
+    }
+    if to.indestructible {
+        return Blow {
+            dealt: 0,
+            kills: false,
+            pops_shield: false,
+        };
+    }
+    let dealt = if from.pierce {
+        amount
+    } else {
+        (amount - to.view.armor).max(0)
+    };
+    let kills = dealt >= to.view.health || (poisonous && dealt > 0);
+    Blow {
+        dealt,
+        kills,
+        pops_shield: false,
+    }
+}
+
+/// The units one attack on `target` also strikes (§4.4 step 10, R63): each unit adjacent to the
+/// target on its own side, when the attacker has Cleave — the engine's `struck_by` minus the
+/// defender. One §4.4 implementation serves the reply and the threat model alike.
+pub(crate) fn cleaved_neighbours(
+    state: &GameState,
+    attacker: &CardInstance,
+    target: &CardInstance,
+) -> Vec<CardInstance> {
+    if !has_keyword(&unit_view(state, attacker).keywords, KeywordKind::Cleave) {
+        return Vec::new();
+    }
+    let Some(at) = slot_of(state, target) else {
+        return Vec::new();
+    };
+    adjacent(at)
+        .into_iter()
+        .filter_map(|slot| card_at(state, slot).cloned())
+        .collect()
 }
 
 /// Tier 1: an attack on a unit it kills and survives, read from the layers and the combat's own
