@@ -3330,17 +3330,20 @@
       "forced": false,
       "interruptions": 1,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-17T21:00:35Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "",
       "run_id": "39069147923",
       "started_at": "2026-10-17T21:01:47Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": [
         "c:6240967857"
-      ]
+      ],
+      "verdict_rounds": 0
     },
     "1146": {
       "action": "build",
