@@ -10,8 +10,9 @@
 //! Knowledge (B29): `decide` reads its duel only through `redact` and its determinizations (R185).
 //! `duos_passes` reads the seat's own hand and its own legal plays off the same redacted probe
 //! `decide` lists its own actions on, and of the teammate only its own side: hand size, mana, open
-//! zones. An opponent's hidden card never reaches a decision, so two states that differ only there
-//! decide alike under the same options.
+//! zones, and the determinization of its redacted duel that R1127000 scores each pass on. An
+//! opponent's hidden card never reaches a decision, so two states that differ only there decide
+//! alike under the same options.
 //!
 //! The gate (B32): `duos_gate` plays the Easy AI team (`duos_decide` at AI_GATE_BUDGET) against a team
 //! on §10.7's random policy over `duos_legal_actions` (`duos_random_action`), the AI on team A in odd
@@ -20,6 +21,7 @@
 //! like the rest of the crate (CLAUDE.md rule 4): a budget counts `reduce` calls, every stream is
 //! seeded from the game's seed and its seat, and nothing reads a clock.
 
+use std::cmp::Ordering;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexSet;
@@ -29,22 +31,25 @@ use jackioh_engine::config::{
 use jackioh_engine::duos::{
     DuosState, duos_begin, duos_create, duos_legal_actions, duos_reduce, duos_seats_to_act,
 };
-use jackioh_engine::subsystems::AI_SKIPPED_ACTIONS;
+use jackioh_engine::subsystems::{self, AI_SKIPPED_ACTIONS};
 use jackioh_engine::wire::{
     DUOS_SEATS, DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosOutcome,
     DuosSeat, PerTeam, Team,
 };
 use jackioh_engine::{
-    ActionBody, ActionType, CardInstance, CostOptions, GameState, PlayerId, PlayerState, Rng, Zone,
+    Action, ActionBody, ActionType, CardInstance, CostOptions, GameState, PlayerId, PlayerState, Rng, Zone,
     effective_cost, hand_cap_of, legal_actions, max_mana_for, natural_mana_on, needs_zone, open_zones,
-    refreshed_mana, row_for_card, spendable_mana,
+    reduce, refreshed_mana, row_for_card, spendable_mana,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::config::{AI_GATE_BUDGET, AI_SEARCH, DUOS_GATE_WIN_FLOOR};
+use crate::config::{
+    AI_EVAL, AI_GATE_BUDGET, AI_SEARCH, DUOS_GATE_WIN_FLOOR, DUOS_PASS_MAX_FOLLOWUPS, DUOS_PASS_PROBE_SEED,
+};
 use crate::decide::decide;
 use crate::deck::{AiDeckOptions, build_ai_deck};
 use crate::determinize::{DeterminizeOptions, determinize};
+use crate::evaluate::{NextSwing, evaluate};
 use crate::observe::redact;
 use crate::types::AiOptions;
 
@@ -146,12 +151,15 @@ fn fallback(state: &DuosState, seat: DuosSeat, legal: &[DuosActionBody]) -> Opti
 /// (B28). A card qualifies when the seat cannot play it this turn and its teammate can: the teammate
 /// is a round seat that has not ended, can afford the card and has a zone for it. With the team's
 /// `pass_cost` 0 a card also qualifies when the teammate can afford it next turn and the seat cannot.
-/// The cards the teammate can play now come first, each group costliest first and then in hand order;
-/// the list never holds more than the passes left this round, the teammate's free hand slots, or the
-/// passes the seat's mana pays for. Empty unless `seat` is a round seat that has not ended.
+/// The cards the teammate can play now come first, ranked by the teammate's best bounded follow-up
+/// with each (R1127000), ties by costliest first and then in hand order; the cards it can only pay
+/// for next turn keep costliest-first and hand order. The list never holds more than the passes left
+/// this round, the teammate's free hand slots, or the passes the seat's mana pays for. Empty unless
+/// `seat` is a round seat that has not ended.
 ///
 /// B29: the seat's own hand, its plays and its next refresh are read off the redacted probe `decide`
-/// lists its own actions on; of the teammate only its own side (hand size, mana, open zones). A
+/// lists its own actions on; of the teammate only its own side (hand size, mana, open zones), plus
+/// the determinized probe R1127000's follow-up scoring replays each candidate card into. A
 /// card's price is its own (`own_cost`), the part of it a pass keeps (B20).
 pub fn duos_passes(state: &DuosState, seat: DuosSeat) -> Vec<String> {
     // `redact` and `determinize` run on the true duel, as in `decide`; a failure there is no pass.
@@ -216,7 +224,7 @@ fn passes_of(state: &DuosState, seat: DuosSeat) -> Vec<String> {
             later.push((cost, index, card.id.clone()));
         }
     }
-    best_first(&mut now);
+    rank_now(&mut now, &probe, player, mate_duel, mate.player());
     best_first(&mut later);
     now.into_iter()
         .chain(later)
@@ -275,6 +283,134 @@ fn next_turn_mana(duel: &GameState, side: &PlayerState) -> i32 {
 /// Costliest first, then in hand order.
 fn best_first(cards: &mut [(i32, usize, String)]) {
     cards.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+}
+
+/// R1127000: order the cards the teammate can play now by the teammate's best bounded follow-up
+/// with each, highest first; ties by costliest first, then hand order. Scoring can never empty or
+/// crash the pass list: a scoring panic falls back to the cost order.
+fn rank_now(
+    now: &mut [(i32, usize, String)],
+    own_probe: &GameState,
+    seat_player: PlayerId,
+    mate_duel: &GameState,
+    mate: PlayerId,
+) {
+    let scored = catch_unwind(AssertUnwindSafe(|| {
+        now.iter()
+            .map(|(cost, index, id)| {
+                (
+                    pass_score(own_probe, seat_player, id, mate_duel, mate),
+                    *cost,
+                    *index,
+                    id.clone(),
+                )
+            })
+            .collect::<Vec<_>>()
+    }));
+    let Ok(mut scored) = scored else {
+        best_first(now);
+        return;
+    };
+    scored.sort_by(|a, b| {
+        b.0.partial_cmp(&a.0)
+            .unwrap_or(Ordering::Equal)
+            .then(b.1.cmp(&a.1))
+            .then(a.2.cmp(&b.2))
+    });
+    for (at, (_, cost, index, id)) in scored.into_iter().enumerate() {
+        now[at] = (cost, index, id);
+    }
+}
+
+/// R1127000: the teammate's best bounded follow-up with the passed card in hand: the maximum of
+/// `evaluate` over at most `DUOS_PASS_MAX_FOLLOWUPS` legal `Play` actions (the passed card's own
+/// plays first, then the rest in `legal_actions` order), each applied by one engine step to the
+/// teammate's determinized probe with a copy of the card added to its hand as B20's pass adds it
+/// (the duel's next instance id, its match-made definitions along), scored from the teammate's
+/// seat; `evaluate` of the receiving probe when no follow-up applies. The probe is built exactly
+/// like `own_probe`, on the fixed `DUOS_PASS_PROBE_SEED`, so no hidden opponent card
+/// and no caller stream is ever read; a refused or panicking follow-up is skipped.
+fn pass_score(
+    own_probe: &GameState,
+    seat_player: PlayerId,
+    card_id: &str,
+    mate_duel: &GameState,
+    mate: PlayerId,
+) -> f64 {
+    let Some(passed) = own_probe.players[seat_player]
+        .hand
+        .iter()
+        .find(|card| card.id == card_id)
+        .cloned()
+    else {
+        return f64::NEG_INFINITY;
+    };
+    let mate_probe = determinize(
+        &redact(mate_duel, mate),
+        mate,
+        &mut Rng::new(DUOS_PASS_PROBE_SEED, 0),
+        DeterminizeOptions::default(),
+    );
+    let mut receiving = mate_probe;
+    // As the pass itself moves it (B20): its match-made definitions go along, and it takes the next
+    // instance id of the teammate's duel. Both duels number their cards from the same start, so the
+    // id it holds in the seat's duel may name another card in the teammate's.
+    carry_match_defs(own_probe, &mut receiving, &passed.def_id);
+    let mut given = passed;
+    given.id = format!("c{}", receiving.next_id);
+    receiving.next_id += 1;
+    given.owner = mate;
+    given.controller = mate;
+    given.zone = Zone::Hand { player: mate };
+    receiving.players[mate].hand.push(given.clone());
+    let mut best: Option<f64> = None;
+    // The passed card's own plays first, then the teammate's other plays in `legal_actions`
+    // order: the card sits at the hand's end, so a plain prefix would cut its plays off behind a
+    // full hand's and score every candidate alike. Still at most `DUOS_PASS_MAX_FOLLOWUPS` steps.
+    let mut own_plays = Vec::new();
+    let mut other_plays = Vec::new();
+    for action in legal_actions(&receiving, mate) {
+        match &action {
+            ActionBody::Play { instance_id, .. } if *instance_id == given.id => {
+                own_plays.push(action);
+            }
+            ActionBody::Play { .. } => other_plays.push(action),
+            _ => {}
+        }
+    }
+    let plays = own_plays
+        .into_iter()
+        .chain(other_plays)
+        .take(DUOS_PASS_MAX_FOLLOWUPS);
+    for (at, body) in plays.enumerate() {
+        let applied = catch_unwind(AssertUnwindSafe(|| {
+            reduce(
+                &receiving,
+                &Action::new(body, mate, format!("duos-pass-score:{at}")),
+            )
+        }));
+        let Ok(applied) = applied else { continue };
+        if applied.error.is_some() {
+            continue;
+        }
+        let value = evaluate(&applied.state, mate, NextSwing::Enemy, &AI_EVAL);
+        best = Some(best.map_or(value, |held: f64| held.max(value)));
+    }
+    best.unwrap_or_else(|| evaluate(&receiving, mate, NextSwing::Enemy, &AI_EVAL))
+}
+
+/// B20's carry onto a probe: a card whose definition lives in the seat's duel alone (a fused or
+/// crafted card's, R77, R102) takes it to the teammate's, and with it every match-made definition
+/// it is made of.
+fn carry_match_defs(from: &GameState, to: &mut GameState, def_id: &str) {
+    let mut queue: Vec<String> = vec![def_id.to_string()];
+    while let Some(id) = queue.pop() {
+        let Some(def) = from.transient_defs.get(&id) else {
+            continue;
+        };
+        queue.extend(subsystems::fused_ingredients(from, &id).unwrap_or_default());
+        to.transient_defs.entry(id).or_insert_with(|| def.clone());
+    }
 }
 
 // ---------------------------------------------------------------------------
