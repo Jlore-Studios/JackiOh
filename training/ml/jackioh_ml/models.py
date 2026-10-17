@@ -5,7 +5,8 @@ Each predicts the logit of the seat's outcome (1 a win, 0 a loss, a draw half of
 - (a) `HandModel`: the hand eval calibrated to a probability, `a·hand + b`.
 - (b) `LinearModel`: a logistic over the dense features with the hand eval among them, the shape of
   session s15's linear fit (`training/improve.md`), which matched the hand eval and added nothing.
-- (c) `NetModel`: D5's network with D4's skip connection, `a·hand + b + net(x)`. Its first layer is
+- (c) `NetModel`: D5's network with D4's skip connection, `a·hand + b + v·x + net(x)`, (b)'s linear
+  term among it. Its first layer is
   `width` wide over the standardized dense features and one learned row per sparse key (an
   `EmbeddingBag` summed with each key's count: NNUE's accumulator), through a clipped ReLU (0 to 1, as
   NNUE clips it, so part 6's integers can carry it), then a small dense head. Its output layer starts
@@ -66,7 +67,11 @@ def clipped_relu(x: torch.Tensor) -> torch.Tensor:
 
 
 class NetModel(nn.Module):
-    """(c): a·hand + b + head(clip(W·dense + Σ E[key]·count + c))."""
+    """(c): a·hand + b + v·dense + head(clip(W·dense + Σ E[key]·count + c)).
+
+    `v·dense` is (b)'s linear term, so (c) holds (b) exactly when its head is zero, which is where it
+    starts (`fit.start_from`): the head learns only what neither the hand eval nor a line over the dense
+    features already says."""
 
     def __init__(self, dense: int, vocab: int, width: int = 16, head: tuple[int, ...] = (16,)) -> None:
         super().__init__()
@@ -86,6 +91,8 @@ class NetModel(nn.Module):
         self.out = nn.Linear(size, 1)
         nn.init.zeros_(self.out.weight)
         nn.init.zeros_(self.out.bias)
+        self.linear = nn.Linear(dense, 1, bias=False)
+        nn.init.zeros_(self.linear.weight)
 
     def correction(self, batch: Batch) -> torch.Tensor:
         """net(x): the logit the network adds to the calibrated hand eval."""
@@ -93,7 +100,7 @@ class NetModel(nn.Module):
         h = clipped_relu(first)
         for layer in self.head:
             h = clipped_relu(layer(h))
-        return self.out(h).squeeze(-1)
+        return self.out(h).squeeze(-1) + self.linear(batch.dense).squeeze(-1)
 
     def forward(self, batch: Batch) -> torch.Tensor:
         return self.hand(batch) + self.correction(batch)
