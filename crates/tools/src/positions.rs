@@ -17,7 +17,9 @@
 //! `--every turn` (the default) writes one position per seat per turn: the seat's first decision of its
 //! own turn in the main phase, with no prompt open, about 16 a game. That is the state the search's
 //! finalists are scored at after the opponent's reply. `--every decision` writes every decision a seat
-//! makes in a main phase, about 70 a game. The file's first line is a header naming the features
+//! makes in a main phase, about 70 a game. `--every reply` writes, at each end of a seat's turn, the
+//! position the search would score that line at: the opponent's reply as the search simulates it,
+//! played out from the true state (R1006006). The file's first line is a header naming the features
 //! (`PositionsHeader`), so a reader takes the feature length from the data.
 
 use std::io::{BufRead, BufReader, BufWriter, Write};
@@ -25,10 +27,13 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, bail};
-use jackioh_ai::{AI_EVAL, FEATURES_VERSION, NextSwing, dense_names, evaluate, features_of};
+use jackioh_ai::{
+    AI_EVAL, FEATURES_VERSION, NextSwing, create_node_counter, dense_names, evaluate, features_of,
+    hidden_card_ids, simulate_reply,
+};
 use jackioh_engine::{
-    CreateGameOptions, GameResult, GameState, Phase, PlayerId, begin_game, catalog_for, create_game,
-    hash_state, reduce, seat_to_act, with_shipped,
+    ActionBody, CreateGameOptions, GameResult, GameState, Phase, PlayerId, begin_game, catalog_for,
+    create_game, hash_state, reduce, seat_to_act, with_shipped,
 };
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -45,6 +50,9 @@ pub enum Every {
     Turn,
     /// Every decision a seat makes in a main phase.
     Decision,
+    /// R1006006: at each end of a seat's turn, the position the search would score its line at: the
+    /// opponent's reply as the search simulates it (`simulate_reply`), played out from the true state.
+    Reply,
 }
 
 #[derive(clap::Args, Debug)]
@@ -144,6 +152,7 @@ fn position_seat(state: &GameState, every: Every, turned: &mut Vec<(i32, PlayerI
         return None;
     }
     match every {
+        Every::Reply => None,
         Every::Decision => Some(seat),
         Every::Turn => {
             if seat != state.active || state.pending.is_some() || turned.contains(&(state.turn, seat)) {
@@ -184,6 +193,33 @@ pub(crate) fn row_at(
     }
 }
 
+/// The node budget the reply a `--every reply` row plays out may spend: more than any reply takes, so
+/// every reply is played to its end as the search plays it when its budget allows.
+const REPLY_NODES: usize = 2000;
+
+/// R1006006: the row for the seat whose turn just ended at `end`: the opponent's reply as the search
+/// simulates it (`simulate_reply`, the hidden cards those of the true state's opponent), then the seat's
+/// features and the hand eval there with the reply's swing rule, as `reply_score` scores a line. `None`
+/// when the reply ends the game or runs out of nodes.
+fn reply_row(
+    end: &GameState,
+    seat: PlayerId,
+    step: usize,
+    game: &SelfplayGame,
+) -> Result<Option<PositionRow>, Dropped> {
+    let Some(outcome) = outcome_for(game.result, seat) else {
+        return Err(Dropped::NoResult);
+    };
+    let counter = create_node_counter(REPLY_NODES, None);
+    let Some(after) = simulate_reply(end, seat, &counter, &hidden_card_ids(end, seat)) else {
+        return Ok(None);
+    };
+    if after.result.is_some() {
+        return Ok(None);
+    }
+    Ok(Some(row_at(&after, seat, step, game, outcome)))
+}
+
 /// R1006003: `game` folded under its catalog, its rows if it reaches its hash.
 pub(crate) fn fold_game(
     game: &SelfplayGame,
@@ -211,11 +247,22 @@ pub(crate) fn fold_game(
                     };
                     rows.push(row_at(&state, seat, step, game, outcome));
                 }
+                let ended_by = (every == Every::Reply
+                    && action.body == ActionBody::EndTurn
+                    && action.player_id == state.active
+                    && state.phase == Phase::Main
+                    && state.result.is_none())
+                .then_some(state.active);
                 let result = reduce(&state, action);
                 if result.error.is_some() {
                     return Err(Dropped::NotReplayed);
                 }
                 state = result.state;
+                if let Some(seat) = ended_by
+                    && let Some(row) = reply_row(&state, seat, step + 1, game)?
+                {
+                    rows.push(row);
+                }
             }
             if hash_state(&state) != game.hash || state.result != game.result {
                 return Err(Dropped::NotReplayed);
@@ -380,6 +427,32 @@ mod tests {
         let mut old = game;
         old.catalog = "0.0.0-never".to_string();
         assert_eq!(fold_game(&old, Every::Turn, build), Err(Dropped::EarlierPatch));
+    }
+
+    /// R1006006: `--every reply` writes one row per end of a seat's turn whose reply leaves the game
+    /// going: the features and hand eval after the reply as the search simulates it, which is the
+    /// seat's next turn, the same rows on every fold.
+    #[test]
+    fn r1006006_reply_rows_are_the_search_s_simulated_replies_one_per_turn_end() {
+        let (game, _) = played(3);
+        let build = jackioh_cards::catalog_version();
+        let rows = fold_game(&game, Every::Reply, build).expect("it replays");
+        let ends = game
+            .log
+            .iter()
+            .filter(|action| action.body == ActionBody::EndTurn)
+            .count();
+        assert!(
+            !rows.is_empty() && rows.len() <= ends,
+            "{} rows for {ends} turn ends",
+            rows.len()
+        );
+        assert_eq!(rows, fold_game(&game, Every::Reply, build).expect("again"));
+        let turns = fold_game(&game, Every::Turn, build).expect("it replays");
+        // A reply row is the seat's position after the reply, a turn after the one it ended.
+        for row in &rows {
+            assert!(turns.iter().any(|turn| turn.turn > 0) && row.turn > 0);
+        }
     }
 
     #[test]
