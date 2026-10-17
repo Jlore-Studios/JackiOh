@@ -3254,6 +3254,8 @@
       "provider": "claude-3",
       "question": "",
       "queued_at": "2026-10-17T07:38:09Z",
+      "review_floor": "",
+      "review_notes": "",
       "round_tier": "medium",
       "run_id": "39014376820",
       "self_check_findings": [],
