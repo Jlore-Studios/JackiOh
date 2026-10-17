@@ -3499,7 +3499,10 @@
       "feedback_since": "2026-10-17T19:30:55Z",
       "issue": 1136,
       "kind": "revise",
+      "queued_at": "2026-10-17T21:27:27Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
