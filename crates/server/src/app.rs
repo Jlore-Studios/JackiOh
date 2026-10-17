@@ -218,7 +218,7 @@ macro_rules! h {
 /// Every route the server serves, in one table, in TS `allRoutes()`'s order: the order the router
 /// tries them in (`api::http::dispatch`), which tests assert. `GET /api/catalog` reports the
 /// deployed commit in a header (`api::catalog`). Not ported (SURFACE §11.3): `POST
-/// /api/auth/signup` and `GET /api/catalog/:version`.
+/// /api/auth/signup`.
 ///
 /// Auth levels (§9.4): `None` is open; `User` is a verified token and a profile of any status (the
 /// code screen); `Active` also needs `status = 'active'`.
@@ -262,6 +262,12 @@ pub static ROUTES: &[Route] = &[
         "/api/catalog",
         AuthLevel::None,
         h!(api::catalog::get_catalog),
+    ),
+    (
+        "GET",
+        "/api/catalog/:version",
+        AuthLevel::None,
+        h!(api::catalog::get_catalog_version),
     ),
     // api/codes.rs
     (
