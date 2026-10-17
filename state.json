@@ -9295,8 +9295,10 @@
     "what": "plan #1160 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-17T23:24:49Z",
-    "notes": [],
+    "at": "2026-10-17T23:31:22Z",
+    "notes": [
+      "#1160 left the Needs plan stage"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
