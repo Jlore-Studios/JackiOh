@@ -3321,6 +3321,13 @@
     "1144": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T21:49:01Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 3 fails: trusting a stale key set is a spec-undecided behavior that needs new ruling R1144000, so easy is out"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
