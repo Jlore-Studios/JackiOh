@@ -2420,6 +2420,13 @@
     "1094": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T01:56:48Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "AI-search line: it changes trade ordering in crates/ai/src/candidates.rs and reply.rs, which the hard rule names explicitly"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
