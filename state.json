@@ -2805,6 +2805,10 @@
       "run_id": "39054740163",
       "started_at": "2026-10-17T17:40:22Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-4` (claude, opus) rejected it: `crates/ai/src/duos.rs:356`: pass_score puts the passed card into the teammate's probe under the instance id it had in the passer's duel, but both duels number t"
+      ],
+      "strikes": 1,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
