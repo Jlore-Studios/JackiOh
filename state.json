@@ -2688,11 +2688,11 @@
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
-      "provider": "claude-2",
+      "provider": "claude-3",
       "queued_at": "2026-10-17T13:54:12Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "39039281998",
-      "started_at": "2026-10-17T14:06:18Z",
+      "run_id": "39039908793",
+      "started_at": "2026-10-17T14:15:20Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -8134,9 +8134,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-17T14:07:25Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39039355021",
-    "what": "build #1113 on muse"
+    "at": "2026-10-17T14:15:20Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39039908793",
+    "what": "plan #1125 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-17T14:07:38Z",
