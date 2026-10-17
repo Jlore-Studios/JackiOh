@@ -5,18 +5,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:6126405024": {
-      "at": "2026-10-12T14:34:59Z",
-      "lines": [
-        "@jgoetzmann-bot approved but make the tests work in the daily check only"
-      ]
-    },
-    "c:6126907150": {
-      "at": "2026-10-12T15:03:41Z",
-      "lines": [
-        "/harness build you may edit the issue templates for this PR. Issue templates are low risk modifications"
-      ]
-    },
     "c:6129539788": {
       "at": "2026-10-12T17:46:32Z",
       "lines": [
@@ -435,6 +423,12 @@
       "at": "2026-10-17T13:55:51Z",
       "lines": [
         "approve"
+      ]
+    },
+    "c:6237520338": {
+      "at": "2026-10-17T17:23:03Z",
+      "lines": [
+        "Approve"
       ]
     }
   },
