@@ -679,6 +679,18 @@ export function joinRoom(token: string, code: string, choice: ModeChoice): Promi
   });
 }
 
+/** `GET /api/rooms` (R1075000): the caller's rooms nobody has joined yet, newest first. */
+export type OpenRoomsResponse = { rooms: CreateRoomResponse[] };
+
+export function getOpenRooms(token: string): Promise<OpenRoomsResponse> {
+  return apiRequest<OpenRoomsResponse>("/api/rooms", { token });
+}
+
+/** `DELETE /api/rooms/:code` (R1075000): `cancelled: false` when no unjoined room of the caller's held it. */
+export function cancelRoom(token: string, code: string): Promise<{ cancelled: boolean }> {
+  return apiRequest<{ cancelled: boolean }>(`/api/rooms/${encodeURIComponent(code)}`, { method: "DELETE", token });
+}
+
 /** The room's mode from a mode-mismatch refusal (R264), or null for any other error. */
 export function roomModeOf(error: unknown): QueueMode | null {
   if (!(error instanceof ApiRequestError) || error.code !== "conflict") return null;

@@ -1,6 +1,6 @@
 //! The room-code challenge (`actor/rooms.rs`, SPEC §9.5, R79, BUILD M6-T4).
 //!
-//! Three rulings own this file:
+//! Four rulings own this file:
 //!
 //!  - **R143**, the optional seed. A room's match is not created until someone joins, so the seed
 //!    the host posts to `POST /api/rooms` has to survive until the join, and outside end-to-end mode
@@ -10,6 +10,9 @@
 //!  - **R264**, the room's mode: a room is made in the host's mode with their deck or trio frozen
 //!    into it, a join in another mode is refused with the room's mode named, a Best-of-3 join makes
 //!    the series and an All Random join deals both decks.
+//!  - **R1075000**, the host's cancel and the lobby's list: `DELETE /api/rooms/:code` frees a room
+//!    nobody has joined (never a joined one, never another host's, never a challenge's) and
+//!    `GET /api/rooms` lists the caller's own open rooms back to them.
 //!
 //! The rooms run the real `freeze_choice` (`api/decks.rs`), validator and registry over decks saved
 //! into the store; "the match the join started" is the match row it wrote. R149's two tests script
@@ -25,10 +28,10 @@ use jackioh_engine::newest_shipped_set;
 use jackioh_engine::wire::{DEFAULT_PORTRAIT, pick_portrait_from_seed};
 use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::actor::rooms::{e2e_room_seed_count, script_room_codes};
-use jackioh_server::app::App;
+use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{MAX_SAVED_DECKS, MAX_SAVED_TRIOS, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
-use jackioh_server::db::store::{CollectionEntry, Db};
+use jackioh_server::db::store::{ChallengeRow, CollectionEntry, Db};
 
 use crate::support::deps::{TestAppOptions, add_user, call, record_logs, test_app, test_app_with};
 
@@ -215,6 +218,23 @@ async fn create(app: &Arc<App>, token: &str, body: Value) -> (u16, Value) {
 
 async fn join(app: &Arc<App>, token: &str, code: &str, body: Value) -> (u16, Value) {
     post(app, token, &format!("/api/rooms/{code}/join"), Some(body)).await
+}
+
+async fn cancel(app: &Arc<App>, token: &str, code: &str) -> (u16, Value) {
+    let (status, _headers, answer) = call(
+        app,
+        "DELETE",
+        &format!("/api/rooms/{code}"),
+        Some(token),
+        Value::Null,
+    )
+    .await;
+    (status, answer)
+}
+
+async fn open_rooms(app: &Arc<App>, token: &str) -> (u16, Value) {
+    let (status, _headers, answer) = call(app, "GET", "/api/rooms", Some(token), Value::Null).await;
+    (status, answer)
 }
 
 impl Harness {
@@ -1187,6 +1207,182 @@ mod r890000_a_match_seat_is_claimed_atomically {
         assert_eq!(status, 409, "{refused}");
         assert_eq!(refused["error"]["code"], "conflict");
         assert_eq!(h.rooms().await.len(), 3);
+    }
+}
+
+mod r1075000_a_host_cancels_and_finds_their_room {
+    //! R1075000 — `DELETE /api/rooms/:code` and `GET /api/rooms` (§9.5).
+    use super::*;
+
+    /// A room the host made, as its code.
+    async fn host_room(h: &Harness) -> String {
+        let (status, created) = h.create(json!({})).await;
+        assert_eq!(status, 200, "{created}");
+        created["code"].as_str().expect("a code").to_string()
+    }
+
+    fn codes(answer: &Value) -> Vec<String> {
+        answer["rooms"]
+            .as_array()
+            .expect("a rooms list")
+            .iter()
+            .map(|room| room["code"].as_str().expect("a code").to_string())
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn r1075000_the_host_cancels_an_unjoined_room_and_its_code_joins_as_unknown() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        let code = host_room(&h).await;
+
+        let (status, answer) = cancel(&h.app, &h.host, &code).await;
+
+        assert_eq!(status, 200, "{answer}");
+        assert_eq!(answer, json!({ "cancelled": true }));
+        assert!(h.rooms().await.is_empty());
+        let (status, refused) = h.join(&code, json!({})).await;
+        assert_eq!(status, 404, "{refused}");
+        assert_eq!(refused["error"]["code"], "not_found");
+    }
+
+    #[tokio::test]
+    async fn r1075000_a_second_cancel_and_an_unknown_code_report_cancelled_false() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        let code = host_room(&h).await;
+        assert_eq!(
+            cancel(&h.app, &h.host, &code).await.1,
+            json!({ "cancelled": true })
+        );
+
+        let (status, again) = cancel(&h.app, &h.host, &code).await;
+        assert_eq!((status, again), (200, json!({ "cancelled": false })));
+        let (status, unknown) = cancel(&h.app, &h.host, "ZZZ999").await;
+        assert_eq!((status, unknown), (200, json!({ "cancelled": false })));
+    }
+
+    #[tokio::test]
+    async fn r1075000_a_non_host_cancel_is_refused_and_the_room_stays() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        let code = host_room(&h).await;
+
+        let (status, refused) = cancel(&h.app, &h.guest, &code).await;
+
+        assert_eq!(status, 404, "{refused}");
+        assert_eq!(refused["error"]["code"], "not_found");
+        assert_eq!(h.rooms().await.len(), 1);
+        assert_eq!(h.join(&code, json!({})).await.0, 200);
+    }
+
+    #[tokio::test]
+    async fn r1075000_a_joined_room_is_never_touched() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        let (code, _) = play_through(&h, json!({}), json!({})).await;
+        let match_id = started(&h.app).await.pop().expect("the join started a match")["id"].clone();
+
+        let (status, answer) = cancel(&h.app, &h.host, &code).await;
+
+        assert_eq!((status, answer), (200, json!({ "cancelled": false })));
+        assert_eq!(started(&h.app).await.len(), 1);
+        assert_eq!(in_match_of(&h.app, HOST).await, match_id);
+        let rooms = h.rooms().await;
+        assert_eq!(rooms.len(), 1);
+        assert_eq!(rooms[0]["guestProfileId"], json!(GUEST));
+    }
+
+    #[tokio::test]
+    async fn r1075000_a_cancel_frees_a_slot_of_the_open_room_cap() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        let first = host_room(&h).await;
+        host_room(&h).await;
+        host_room(&h).await;
+        assert_eq!(h.create(json!({})).await.0, 409);
+
+        assert_eq!(
+            cancel(&h.app, &h.host, &first).await.1,
+            json!({ "cancelled": true })
+        );
+
+        let (status, created) = h.create(json!({})).await;
+        assert_eq!(status, 200, "{created}");
+    }
+
+    #[tokio::test]
+    async fn r1075000_drops_the_end_to_end_seed_with_the_room() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(true).await;
+        let (status, created) = h.create(json!({ "seed": "cancelled-room" })).await;
+        assert_eq!(status, 200, "{created}");
+        let code = created["code"].as_str().expect("a code").to_string();
+        assert_eq!(e2e_room_seed_count() as i64, 1);
+
+        assert_eq!(
+            cancel(&h.app, &h.host, &code).await.1,
+            json!({ "cancelled": true })
+        );
+
+        assert_eq!(e2e_room_seed_count() as i64, 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1075000_lists_the_callers_open_rooms_newest_first_and_nobody_elses() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        let (_, first) = h.create(json!({})).await;
+        let older = first["code"].as_str().expect("a code").to_string();
+        tokio::time::advance(Duration::from_secs(1)).await;
+        let (_, second) = h.create(json!({})).await;
+        let newer = second["code"].as_str().expect("a code").to_string();
+        let (_, third) = h.create_as_guest(json!({})).await;
+        let guests = third["code"].as_str().expect("a code").to_string();
+
+        let (status, listed) = open_rooms(&h.app, &h.host).await;
+
+        assert_eq!(status, 200, "{listed}");
+        assert_eq!(
+            listed["rooms"][0],
+            json!({ "code": newer, "expiresAt": second["expiresAt"], "mode": "bo1" })
+        );
+        assert_eq!(codes(&listed), vec![newer.clone(), older.clone()]);
+        assert_eq!(codes(&open_rooms(&h.app, &h.guest).await.1), vec![guests]);
+
+        // A joined room is the match's, not a lobby's.
+        assert_eq!(h.join(&older, json!({})).await.0, 200);
+        assert_eq!(codes(&open_rooms(&h.app, &h.host).await.1), vec![newer]);
+
+        tokio::time::advance(Duration::from_secs(ROOM_CODE_TTL_SECONDS as u64 + 1)).await;
+        assert!(codes(&open_rooms(&h.app, &h.host).await.1).is_empty());
+        assert!(codes(&open_rooms(&h.app, &h.guest).await.1).is_empty());
+    }
+
+    #[tokio::test]
+    async fn r1075000_a_challenges_room_is_neither_listed_nor_cancelled_here() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        let code = host_room(&h).await;
+        let challenge: ChallengeRow = from(json!({
+            "id": uuid(9),
+            "fromProfile": HOST,
+            "toProfile": GUEST,
+            "roomCode": code,
+            "mode": "bo1",
+            "createdAt": now_ms(),
+            "expiresAt": now_ms() + 60_000,
+            "state": "open",
+        }));
+        store!(h.app, t => t.challenges_create(&challenge, now_ms()).await.expect("challenges.create"));
+
+        assert!(codes(&open_rooms(&h.app, &h.host).await.1).is_empty());
+        let (status, refused) = cancel(&h.app, &h.host, &code).await;
+        assert_eq!(status, 409, "{refused}");
+        assert_eq!(refused["error"]["code"], "conflict");
+        let (status, refused) = cancel(&h.app, &h.guest, &code).await;
+        assert_eq!(status, 404, "{refused}");
+        assert_eq!(h.rooms().await.len(), 1);
     }
 }
 

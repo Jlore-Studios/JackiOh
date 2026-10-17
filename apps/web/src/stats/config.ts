@@ -34,6 +34,12 @@ export const FEATURE_WEIGHT_DENSE = 1;
 /** R639: the longest length tier (`fit.ts`) a name or a rules text may be in and still count as fitting without a shrink. */
 export const FEATURE_PLAIN_MAX_TIER = "m";
 
+/**
+ * R1017002: a hero portrait's full-art card (cards/fullArt.ts) is drawn this many times as readily
+ * as it would be otherwise, in the fan's deal and in its swaps, while the Full-art cards setting is on.
+ */
+export const FULL_ART_WEIGHT_FACTOR = 2;
+
 /** R639: how many cards each "favourite" list on the statistics card shows. */
 export const STATS_TOP_CARDS = 3;
 
