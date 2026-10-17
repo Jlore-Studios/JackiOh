@@ -5,11 +5,12 @@
 # it; whoever proposes a change to the features or the model measures it with this same script.
 #
 #   training/ml/retrain.sh --out <dir> (--logs <dir> | --games <n> --seed <base>) [--parent-bin <path>]
-#                          [--screen-games 800] [--every turn|decision] [--seeds "1 2 3"]
+#                          [--screen-games 800] [--every reply|turn|decision] [--seeds "1 2 3"]
 #
 #   1. the logs: `--logs` reuses an export (selfplay.yml's artifacts, or a local run), else `jackioh
 #      selfplay --games <n> --seed <base>` plays one here (R1006001, R1006002);
-#   2. `jackioh positions` over them (games that no longer replay are dropped and counted, R1006003);
+#   2. `jackioh positions --every reply` over them, the positions the search scores (R1006006; games
+#      that no longer replay are dropped and counted, R1006003);
 #   3. the fit (`python -m jackioh_ml.fit`), and its report; it stops here unless the network beats the
 #      calibrated hand eval on held-out turns 4-10 (`decision.gain` > 0);
 #   4. the weights (`python -m jackioh_ml.export`) into crates/ai/src/learned/weights.json, and the
@@ -28,7 +29,7 @@
 # (R850001), by a candidate a screen has already passed.
 set -euo pipefail
 
-out="" logs="" games="" seed="" parent="" screen_games=800 every=turn seeds="1 2 3"
+out="" logs="" games="" seed="" parent="" screen_games=800 every=reply seeds="1 2 3"
 while [ $# -gt 0 ]; do
   case "$1" in
     --out) out="$2"; shift 2 ;;
