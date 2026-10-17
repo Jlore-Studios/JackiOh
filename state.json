@@ -9388,8 +9388,10 @@
     "what": "build #1103 on agy"
   },
   "last_sweep": {
-    "at": "2026-10-17T05:55:54Z",
-    "notes": [],
+    "at": "2026-10-17T06:02:47Z",
+    "notes": [
+      "started a night run, as a lane was free: a suggestion survey is due, for `claude-4`"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
