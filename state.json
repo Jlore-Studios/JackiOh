@@ -2833,6 +2833,7 @@
     "1103": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-17T06:00:42Z",
         "difficulty": "medium",
