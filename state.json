@@ -2662,7 +2662,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-16T20:41:04Z",
+      "feedback_since": "2026-10-17T02:42:37Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-17T02:38:21Z",
@@ -2679,17 +2679,18 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "claude-7",
+      "question": "",
       "queued_at": "2026-10-17T01:50:34Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
       "run_id": "38995823580",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-17T02:42:37Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "gemini"
