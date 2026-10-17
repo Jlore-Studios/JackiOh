@@ -2,7 +2,7 @@
 //! docs/v0.3.0/README.md §8; training/README.md).
 //!
 //! ```text
-//! cargo jackioh promote --lane improve|unban --parent-bin <path to main's jackioh> [--dry-run] [--verify]
+//! cargo jackioh promote --lane improve|unban|learn --parent-bin <path to main's jackioh> [--dry-run] [--verify]
 //! ```
 //!
 //! The candidate is this build's AI (`self`). It plays the lane's `games` against the parent, the AI
@@ -23,6 +23,10 @@
 //! |-----------|--------------------------------|--------------------------------------|----------------------------------|
 //! | `improve` | 400: 200 deals, paired         | ≥ `TRAINING_IMPROVE.vs_parent` (220) | —                                |
 //! | `unban`   | 100, unpaired                  | ≥ `TRAINING_UNBAN.vs_parent` (60)    | strictly fewer than the parent's |
+//! | `learn`   | 400: 200 deals, paired         | ≥ `TRAINING_LEARN.vs_parent` (220)   | —                                |
+//!
+//! The `learn` lane is the learned evaluation's (#1012, R1012000): a network a script retrained, no
+//! LLM in the loop (`training/learn.md`), gated like `improve` on hold-out deals of its own.
 //!
 //! It plays no games against SPEC §10.7's random policy (R732001): the lanes dropped them once
 //! generation 9, the first AI dealt the Meditative set (issue #732), had beaten random in at least 90
@@ -57,7 +61,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, bail};
 use clap::ValueEnum;
-use jackioh_engine::{GameResult, PlayerId, TRAINING_IMPROVE, TRAINING_UNBAN, TrainingGate, Winner};
+use jackioh_engine::{GameResult, PlayerId, TRAINING_IMPROVE, TRAINING_LEARN, TRAINING_UNBAN, TrainingGate, Winner};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -98,7 +102,7 @@ const VERIFIED_FIELDS: &[&str] = &[
     "parentShadowBan",
 ];
 
-/// The two training lanes (docs/v0.3.0/README.md §8).
+/// The training lanes (docs/v0.3.0/README.md §8; `learn`, #1012).
 #[derive(clap::ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Lane {
     /// Beat the parent: ≥ 220 of 400 games against it, 200 deals each played twice (R850000).
@@ -106,6 +110,8 @@ pub enum Lane {
     /// Play well with fewer shadow bans: strictly fewer than the parent's and ≥ 60 of 100 against it.
     /// Idle while the parent has none (`lane_done`).
     Unban,
+    /// The learned evaluation, retrained by a script (R1012000): improve's bar on its own deals.
+    Learn,
 }
 
 impl Lane {
@@ -113,6 +119,7 @@ impl Lane {
         match self {
             Lane::Improve => "improve",
             Lane::Unban => "unban",
+            Lane::Learn => "learn",
         }
     }
 
@@ -121,6 +128,7 @@ impl Lane {
         match self {
             Lane::Improve => TRAINING_IMPROVE,
             Lane::Unban => TRAINING_UNBAN,
+            Lane::Learn => TRAINING_LEARN,
         }
     }
 }
@@ -531,7 +539,7 @@ fn last_pass(
     ));
     let ban_rule = match lane {
         Lane::Unban => ", and the unban lane needs strictly fewer than the parent's",
-        Lane::Improve => "",
+        Lane::Improve | Lane::Learn => "",
     };
     out.push_str(&format!(
         "{} wins put its true win rate at {} (95% interval); the gate needs {}. Shadow bans: {} \
@@ -631,7 +639,7 @@ fn report(
     }
     let ban_rule = match lane {
         Lane::Unban => "; the unban lane needs strictly fewer than the parent's",
-        Lane::Improve => "",
+        Lane::Improve | Lane::Learn => "",
     };
     out.push_str(&format!(
         "Shadow bans: {} (parent {}){ban_rule}.\n\n",
@@ -840,6 +848,23 @@ mod tests {
                 vs_parent: 60
             }
         );
+    }
+
+    #[test]
+    fn r1012000_the_learn_lane_gates_like_improve_on_hold_out_deals_of_its_own() {
+        let learn = |vs_parent| counts(Lane::Learn, vs_parent, 0, 0);
+        assert_eq!(TRAINING_LEARN, TRAINING_IMPROVE);
+        assert!(gate_failures(Lane::Learn, &learn(220)).is_empty());
+        assert_eq!(
+            gate_failures(Lane::Learn, &learn(219)),
+            vec!["vs parent: 219/400 wins, 220 needed".to_string()]
+        );
+        // Its deals are its own: `learn:<tree>:<d>`, never a screen's (R850001), never an export's.
+        assert_eq!(game_seed(Lane::Learn, "abc", 7), "learn:abc:7");
+        assert!(is_gate_seed_base("learn") && is_gate_seed_base("learn:abc"));
+        assert!(!is_gate_seed_base("learned-dev"));
+        // A paired gate's dry run reads only the committed AI.
+        assert!(dirty_refusal(Lane::Learn, "dry run").is_some());
     }
 
     #[test]
