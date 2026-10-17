@@ -2470,6 +2470,7 @@
     "1094": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-17T02:32:46Z",
         "difficulty": "hard",
