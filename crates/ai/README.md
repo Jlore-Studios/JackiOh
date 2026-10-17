@@ -174,6 +174,29 @@ pub struct Features { pub dense: Vec<i32>, pub sparse: Vec<(String, i32)> }
 - `FEATURES_VERSION` names the layout; any change bumps it, and a network's weights record the
   version they were fitted on.
 
+## The learned evaluation (#466, #1010)
+
+`src/learned.rs` is a small network over `features` that corrects the hand eval where the search
+finally scores a line (`docs/learned-eval.md` D4, D6, D7, D9):
+
+```rust
+pub enum EvalKind { Hand, Learned }
+pub const AI_EVAL_KIND: EvalKind;                 // config.rs: Hand, unless a promotion turns it on
+pub const LEARNED: Network<'static>;              // compiled in from src/learned/weights.json by build.rs
+pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64;
+```
+
+- With `Hand` nothing changes. With `Learned`, `reply_score` scores a finalist after the opponent's
+  reply as `hand + (b + net(x))·U/a`, the network's logit mapped back onto the hand eval's points
+  (R1010000, R1010001). The beam's pruning keeps the hand eval. 1v1 only: a Duos duel keeps the hand
+  eval (R1010002).
+- `src/learned/weights.json` is what `training/ml/jackioh_ml/export.py` writes from a fit: the feature
+  version and dense names it was fitted on (a test fails on a mismatch), the standardizer, the sparse
+  keys it has rows for (an unknown key is no input), the layers and the skip connection. `build.rs`
+  turns it into constant slices: data at compile time, no static at run time (rule 4). The checked-in
+  file may be the null network, whose correction is zero everywhere.
+- Inference is `f64`, one fixed order, clipped ReLUs as comparisons, no libm.
+
 ## Duos (§13.7)
 
 `src/duos.rs` plays a seat of a Duos game (`jackioh_engine::duos`): one AI plays both seats of team B,
