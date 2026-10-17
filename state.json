@@ -8931,8 +8931,11 @@
     "what": "build #1144 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-17T21:07:11Z",
-    "notes": [],
+    "at": "2026-10-17T21:13:50Z",
+    "notes": [
+      "#1144 needs a plan",
+      "#1151 needs a plan"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
