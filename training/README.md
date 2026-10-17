@@ -11,8 +11,11 @@ docs/v0.3.0/SURFACE.md §14.
 | `improve` | a stronger AI: beat its predecessor in 220 of 400 games, 200 deals each played twice with the seats swapped (R850000) | [`improve.md`](improve.md) |
 | `unban` | an AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, while beating it in 60 of 100 | [`unban.md`](unban.md) |
 | `gather` | no change to the AI: development records for the card win rates (R378), without end | [`gather.md`](gather.md) |
+| `learn` | a stronger learned evaluation, retrained on fresh self-play by a script with no LLM in it: improve's bar, 220 of 400 paired games, on deals of its own (R1012000) | [`learn.md`](learn.md) |
 
-The `gather` lane runs no Devin session and opens no pull request (The gather lane, below).
+The `gather` lane runs no Devin session and opens no pull request (The gather lane, below). The
+`learn` lane runs no Devin session either and needs no box: it is a GitHub workflow,
+`.github/workflows/learn.yml`, and its contract is [`learn.md`](learn.md).
 
 Generation 8 (`training/history/unban.jsonl`, 2026-10-10) removed the last ban on the earlier sets,
 Core, Classic and Classic+. Generation 9 (#732, `training/history/meditative.jsonl`) brought the
