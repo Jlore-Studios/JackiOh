@@ -38,8 +38,8 @@ use jackioh_engine::{
 
 use crate::candidates::{blow, candidate_actions_in, cleaved_neighbours, exchange, side_of};
 use crate::config::{AI_EVAL, AI_REPLY, AI_SEARCH};
-use crate::learned::finalist_score;
 use crate::evaluate::{NextSwing, evaluate, unit_worth};
+use crate::learned::finalist_score;
 use crate::lethal::deft_ready_switch;
 use crate::simulate::{LineStatus, best_auto_answer, line_status, simulate, static_score, surcharge_nodes};
 use crate::types::NodeCounter;

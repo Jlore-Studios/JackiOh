@@ -73,7 +73,11 @@ impl Owned {
             keys: json.keys.clone(),
             dense_in: json.dense_in.iter().flatten().copied().collect(),
             sparse_in: json.sparse_in.iter().flatten().copied().collect(),
-            head_w: json.head.iter().map(|layer| layer.w.iter().flatten().copied().collect()).collect(),
+            head_w: json
+                .head
+                .iter()
+                .map(|layer| layer.w.iter().flatten().copied().collect())
+                .collect(),
             json,
         }
     }
@@ -138,9 +142,17 @@ fn r1010001_a_tiny_network_gives_the_outputs_the_python_reference_computes() {
                 sparse: case.sparse.clone(),
             };
             let correction = network.correction(&features);
-            assert!(close(correction, case.correction), "case {at}: {correction} against {}", case.correction);
+            assert!(
+                close(correction, case.correction),
+                "case {at}: {correction} against {}",
+                case.correction
+            );
             let points = network.points(case.hand, &features);
-            assert!(close(points, case.points), "case {at}: {points} against {}", case.points);
+            assert!(
+                close(points, case.points),
+                "case {at}: {points} against {}",
+                case.points
+            );
             if correction != 0.0 {
                 moved += 1;
             }
@@ -202,15 +214,31 @@ fn r1010000_the_hand_switch_and_the_null_network_score_as_the_hand_eval() {
     let state = state();
     for next in [NextSwing::Enemy, NextSwing::Seat] {
         let hand = evaluate(&state, PlayerId::P1, next, &AI_EVAL);
-        assert_eq!(finalist_score_with(&state, PlayerId::P1, next, EvalKind::Hand, &LEARNED), hand);
-        if LEARNED.keys.is_empty() && LEARNED.hand_b == 0.0 && LEARNED.out_w.iter().all(|w| *w == 0.0) && LEARNED.out_b == 0.0 {
-            assert_eq!(finalist_score_with(&state, PlayerId::P1, next, EvalKind::Learned, &LEARNED), hand);
+        assert_eq!(
+            finalist_score_with(&state, PlayerId::P1, next, EvalKind::Hand, &LEARNED),
+            hand
+        );
+        if LEARNED.keys.is_empty()
+            && LEARNED.hand_b == 0.0
+            && LEARNED.out_w.iter().all(|w| *w == 0.0)
+            && LEARNED.out_b == 0.0
+        {
+            assert_eq!(
+                finalist_score_with(&state, PlayerId::P1, next, EvalKind::Learned, &LEARNED),
+                hand
+            );
         }
     }
     assert_eq!(finalist_score(&state, PlayerId::P1, NextSwing::Enemy), {
         match AI_EVAL_KIND {
             EvalKind::Hand => evaluate(&state, PlayerId::P1, NextSwing::Enemy, &AI_EVAL),
-            EvalKind::Learned => finalist_score_with(&state, PlayerId::P1, NextSwing::Enemy, EvalKind::Learned, &LEARNED),
+            EvalKind::Learned => finalist_score_with(
+                &state,
+                PlayerId::P1,
+                NextSwing::Enemy,
+                EvalKind::Learned,
+                &LEARNED,
+            ),
         }
     });
 }
