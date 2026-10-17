@@ -2860,6 +2860,10 @@
       "run_id": "39008346775",
       "started_at": "2026-10-17T06:01:45Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-3` (claude, opus) rejected it: `apps/web/src/together/WatchRoute.tsx:89`: The wake probe sends a second `hello` on the watch socket, but the `/ws/watch` server never answers a frame after the "
+      ],
+      "strikes": 1,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 2
