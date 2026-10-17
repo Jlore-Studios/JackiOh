@@ -2855,6 +2855,13 @@
     "1104": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T05:33:52Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 5 fails (it changes crates/ai/src/duos.rs) and rule 2 fails (crates/ai and crates/tools); it is not hard because it touches no search, eval or engine rule, only the gate's report and verdict"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
