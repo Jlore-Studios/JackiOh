@@ -2648,15 +2648,15 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-7",
       "queued_at": "2026-10-17T01:50:34Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "38992729034",
+      "run_id": "38995823580",
       "self_check_findings": [],
       "source": "cross-review",
-      "started_at": "2026-10-17T01:54:05Z",
+      "started_at": "2026-10-17T02:42:37Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -9062,9 +9062,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-17T02:36:22Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38995408695",
-    "what": "suggestions on claude-3"
+    "at": "2026-10-17T02:42:37Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38995823580",
+    "what": "revise #1099 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-17T02:39:54Z",
