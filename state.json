@@ -3369,6 +3369,7 @@
         "tier": "medium",
         "why": "easy-rule line 3 fails: spec/10-engine-guide.md \u00a710.10 says the game-over sequence 'opens by replaying the killing blow', which this change makes false, so a spec note must be edited"
       },
+      "failures": 0,
       "handoff": {
         "at": "2026-10-17T21:08:54Z",
         "family": "claude",
@@ -3386,13 +3387,15 @@
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_tier": "medium",
+      "pr": 1157,
       "provider": "muse",
+      "question": "",
       "round_tier": "medium",
       "run_id": "39072854096",
       "started_at": "2026-10-17T21:55:15Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "1147": {
       "action": "build",
