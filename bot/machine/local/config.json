@@ -1,0 +1,19 @@
+{
+  "repo": "Jlore-Studios/JackiOh",
+  "image": "jackioh-pc-runner:latest",
+  "serve": [
+    { "label": "jackioh-selfplay-local", "workflows": ["selfplay.yml"], "standby": true },
+    { "label": "night-vm-devin", "workflows": ["bot-night.yml", "triage.yml"], "home": "jackioh-pc-home-devin" },
+    { "label": "night-vm-muse", "workflows": ["bot-night.yml", "triage.yml"], "home": "jackioh-pc-home-muse" },
+    { "label": "night-vm-gpt", "workflows": ["bot-night.yml", "triage.yml"], "home": "jackioh-pc-home-gpt", "seccompUnconfined": true },
+    { "label": "night-vm-agy", "workflows": ["bot-night.yml", "triage.yml"], "home": "jackioh-pc-home-agy" }
+  ],
+  "maxJobs": 1,
+  "cpuPercentBelow": 50,
+  "memoryGBBelow": 24,
+  "calmSeconds": 60,
+  "sampleSeconds": 5,
+  "containerCpus": 6,
+  "containerMemory": "6g",
+  "throttledCpus": 0.5
+}
