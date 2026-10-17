@@ -8179,12 +8179,8 @@
     "what": "build #1115 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-17T14:17:48Z",
-    "notes": [
-      "#1128: typed it Task",
-      "#1127: typed it Task",
-      "#1126: typed it Task"
-    ],
+    "at": "2026-10-17T14:24:39Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
