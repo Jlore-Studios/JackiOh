@@ -2367,6 +2367,9 @@
         }
       }
     },
+    "1092": {
+      "suggestion": true
+    },
     "1094": {
       "action": "plan",
       "asks": [],
