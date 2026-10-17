@@ -2758,6 +2758,13 @@
     "1127": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T17:39:29Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "hard's `the AI's search (crates/ai/src/)` line could cover any AI file, but this only re-ranks duos.rs's already-eligible pass list with a bounded 1-ply evaluate probe and touches no beam, lethal, or decide code, so medium holds"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
