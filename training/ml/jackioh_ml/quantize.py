@@ -48,14 +48,21 @@ def _unpack(fmt: str, text: str) -> list[int]:
     return list(struct.unpack("<" + fmt * (len(raw) // size), raw))
 
 
+#: The largest shift a layer takes: a layer of zeros takes it, so a linear term added at its scale
+#: keeps its precision.
+MAX_SHIFT = 24
+
+
 def _shift_for(largest: float, limit: int, unit: float) -> int:
-    """The largest s with `largest·unit·2^s` within `limit` (at most 24)."""
+    """The largest s in [0, MAX_SHIFT] with `largest·unit·2^s` within `limit`."""
     if largest == 0:
-        return 0
+        return MAX_SHIFT
     s = math.floor(math.log2(limit / (largest * unit)))
     while largest * unit * 2.0**s > limit:
         s -= 1
-    return max(min(s, 24), -24)
+    if s < 0:
+        raise ValueError(f"a weight of {largest} does not fit {limit} at any shift")
+    return min(s, MAX_SHIFT)
 
 
 def quantize(weights: dict) -> dict:
@@ -83,6 +90,11 @@ def quantize(weights: dict) -> dict:
         inputs = len(layer["b"])
     out_w = weights["out"]["w"]
     so = _shift_for(max([abs(w) for w in out_w] + [0.0]), I8, 1.0)
+    # (b)'s linear term, folded like the first layer and added at the output's scale, A·2^so.
+    linear = weights.get("linear") or [0.0] * len(mean)
+    linear_folded = [linear[j] / scale[j] for j in range(len(mean))]
+    linear_bias = -sum(mean[j] * linear_folded[j] for j in range(len(mean)))
+    unit_out = ACTIVATION * 2.0**so
     return {
         "format": FORMAT,
         "featuresVersion": weights["featuresVersion"],
@@ -97,7 +109,8 @@ def quantize(weights: dict) -> dict:
         "bias": _pack("q", bias_q),
         "head": head,
         "out": {"shift": so, "w": _pack("b", [round(w * 2.0**so) for w in out_w]),
-                "b": round(weights["out"]["b"] * ACTIVATION * 2.0**so)},
+                "b": round((weights["out"]["b"] + linear_bias) * unit_out)},
+        "linear": _pack("q", [round(w * unit_out) for w in linear_folded]),
         "handA": weights["handA"],
         "handB": weights["handB"],
         "handUnit": weights["handUnit"],
@@ -116,6 +129,7 @@ def unpacked(weights: dict) -> dict:
         "bias": _unpack("q", weights["bias"]),
         "head": [(layer["inputs"], layer["shift"], _unpack("b", layer["w"]), _unpack("q", layer["b"])) for layer in weights["head"]],
         "out": (weights["out"]["shift"], _unpack("b", weights["out"]["w"]), weights["out"]["b"]),
+        "linear": _unpack("q", weights["linear"]) if "linear" in weights else [0] * len(weights["denseNames"]),
         "dense": len(weights["denseNames"]),
     }
 
@@ -130,11 +144,13 @@ def correction(net: dict, dense: list[int], sparse: list[list]) -> float:
     if len(dense) != net["dense"]:
         return 0.0
     acc = list(net["bias"])
+    lin = 0
     for j, x in enumerate(dense):
         if x:
             base = j * width
             for i in range(width):
                 acc[i] += x * net["denseIn"][base + i]
+            lin += x * net["linear"][j]
     for key, count in sparse:
         r = net["index"].get(key)
         if r is not None:
@@ -154,6 +170,7 @@ def correction(net: dict, dense: list[int], sparse: list[list]) -> float:
     total = b
     for i, h in enumerate(hidden):
         total += w[i] * h
+    total += lin
     return total / (top * 2.0**shift)
 
 

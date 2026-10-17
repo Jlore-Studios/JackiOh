@@ -60,6 +60,8 @@ def from_model(path: Path) -> dict:
         "bias": [float(x) for x in state["dense_in.bias"].double()],
         "head": head,
         "out": {"w": [float(x) for x in state["out.weight"].double()[0]], "b": float(state["out.bias"].double()[0])},
+        # (b)'s linear term over the standardized dense features, added to the output.
+        "linear": [float(x) for x in state["linear.weight"].double()[0]] if "linear.weight" in state else [0.0] * len(saved["denseNames"]),
         "handA": float(state["hand.a"]),
         "handB": float(state["hand.b"]),
         "handUnit": 100.0,
@@ -82,6 +84,7 @@ def null(dense_names: list[str], features_version: int, catalog: str) -> dict:
         "bias": [0.0],
         "head": [],
         "out": {"w": [0.0], "b": 0.0},
+        "linear": [0.0] * len(dense_names),
         "handA": 1.0,
         "handB": 0.0,
         "handUnit": 100.0,
@@ -123,6 +126,7 @@ def random_network(positions: Path, seed: int, width: int = 4, head: tuple[int, 
         "bias": draws(width, 0.4),
         "head": layers,
         "out": {"w": draws(inputs, 1.0), "b": rng.gauss(0.0, 0.2)},
+        "linear": draws(len(loaded.dense_names), 0.05),
         "handA": 0.8 + rng.random(),
         "handB": rng.gauss(0.0, 0.1),
         "handUnit": 100.0,
@@ -143,11 +147,14 @@ def correction(weights: dict, dense: list[int], sparse: list[list]) -> float:
     if len(dense) != len(weights["mean"]):
         return 0.0
     hidden = [float(b) for b in weights["bias"]]
+    linear = weights.get("linear") or [0.0] * len(dense)
+    lin = 0.0
     for j, value in enumerate(dense):
         x = (float(value) - weights["mean"][j]) / weights["scale"][j]
         row = weights["denseIn"][j]
         for i in range(width):
             hidden[i] += x * row[i]
+        lin += x * linear[j]
     index = {key: r for r, key in enumerate(weights["keys"])}
     for key, count in sparse:
         r = index.get(key)
@@ -167,7 +174,7 @@ def correction(weights: dict, dense: list[int], sparse: list[list]) -> float:
     out = float(weights["out"]["b"])
     for w, h in zip(weights["out"]["w"], hidden):
         out += w * h
-    return out
+    return out + lin
 
 
 def points(weights: dict, hand: float, dense: list[int], sparse: list[list]) -> float:
