@@ -42,6 +42,9 @@ const MOCK_CARD_STATS_PROVISIONAL = {
       drawnWinRate: 0.65,
       playedGames: 30,
       playedWinRate: 0.7,
+      drawnNotPlayedGames: 10,
+      drawnNotPlayedWinRate: 0.5,
+      playedDelta: 0.2,
       playRate: 0.5,
       hasEnoughGames: true,
     },
@@ -57,8 +60,29 @@ const MOCK_CARD_STATS_PROVISIONAL = {
       drawnWinRate: 0.9,
       playedGames: 5,
       playedWinRate: 1.0,
+      drawnNotPlayedGames: 3,
+      drawnNotPlayedWinRate: 0.733,
+      playedDelta: 0.267,
       playRate: 0.1,
       hasEnoughGames: false, // Below sample threshold (20)
+    },
+    {
+      id: "core-003",
+      name: "Aqua Warden",
+      cost: 2,
+      rarity: "Common",
+      set: "core",
+      games: 30,
+      winRate: 0.5,
+      drawnGames: 25,
+      drawnWinRate: 0.45,
+      playedGames: 20,
+      playedWinRate: 0.4,
+      drawnNotPlayedGames: 5,
+      drawnNotPlayedWinRate: 0.5,
+      playedDelta: -0.1,
+      playRate: 0.3,
+      hasEnoughGames: true,
     },
   ],
   summary: {
@@ -479,5 +503,66 @@ describe("R654 public statistics route", () => {
     const modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
     expect(modal.textContent).not.toMatch(/gate/i);
     expect(within(modal).getByText("Win rate by patch")).toBeInTheDocument();
+  });
+
+  it("R377 reveals Played Δ column and renders signed points and cohort sample sizes", async () => {
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+
+    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+
+    // Played Δ column header is initially hidden
+    expect(screen.queryByRole("columnheader", { name: /Played Δ/i })).not.toBeInTheDocument();
+
+    // Toggle column visibility
+    const toggle = screen.getByLabelText(/Played Δ/i);
+    await user.click(toggle);
+
+    // Column header is now visible
+    expect(screen.getByRole("columnheader", { name: /Played Δ/i })).toBeInTheDocument();
+
+    // Spark Pup (eligible, delta = +0.20): renders +20% and (30 / 10)
+    expect(screen.getByText("+20%")).toBeInTheDocument();
+    expect(screen.getByText("(30 / 10)")).toBeInTheDocument();
+
+    // Aqua Warden (eligible, delta = -0.10): renders -10% and (20 / 5)
+    expect(screen.getByText("-10%")).toBeInTheDocument();
+    expect(screen.getByText("(20 / 5)")).toBeInTheDocument();
+
+    // Lava Hound (below sample floor: 10 games < 20): renders "—"
+    const houndRow = screen.getByText("Lava Hound").closest("tr")!;
+    expect(within(houndRow).getAllByText("—")).toHaveLength(2);
+  });
+
+  it("R377 sorts cards by Played Δ descending and ascending", async () => {
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+
+    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+
+    // Reveal Played Δ column
+    const toggle = screen.getByLabelText(/Played Δ/i);
+    await user.click(toggle);
+
+    const deltaHeader = screen.getByRole("columnheader", { name: /Played Δ/i });
+    expect(deltaHeader).toHaveAttribute("aria-sort", "none");
+
+    // Click to sort descending: Spark Pup (+20%) first, then Aqua Warden (-10%), then Lava Hound (< minSample)
+    await user.click(deltaHeader);
+    expect(deltaHeader).toHaveAttribute("aria-sort", "descending");
+
+    let rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
+    expect(rows[0]).toHaveTextContent("Spark Pup");
+    expect(rows[1]).toHaveTextContent("Aqua Warden");
+    expect(rows[2]).toHaveTextContent("Lava Hound");
+
+    // Click again to toggle to ascending: Aqua Warden (-10%) first, then Spark Pup (+20%), then Lava Hound
+    await user.click(deltaHeader);
+    expect(deltaHeader).toHaveAttribute("aria-sort", "ascending");
+
+    rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
+    expect(rows[0]).toHaveTextContent("Aqua Warden");
+    expect(rows[1]).toHaveTextContent("Spark Pup");
+    expect(rows[2]).toHaveTextContent("Lava Hound");
   });
 });

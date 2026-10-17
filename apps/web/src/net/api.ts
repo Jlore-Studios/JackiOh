@@ -961,6 +961,9 @@ export type PublicCardStat = {
   drawnWinRate: number | null;
   playedGames: number;
   playedWinRate: number | null;
+  drawnNotPlayedGames: number;
+  drawnNotPlayedWinRate: number | null;
+  playedDelta: number | null;
   playRate: number;
   hasEnoughGames: boolean;
 };

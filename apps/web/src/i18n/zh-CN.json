@@ -886,6 +886,7 @@
   "{whenDrawn} shows win rate when the card was in hand or played; {playRate} shows the percentage of all recorded decks containing the card.": "{whenDrawn}表示这张卡牌在手牌中或被打出时的胜率；{playRate}表示所有已记录的卡组中包含这张卡牌的比例。",
   "When drawn": "抽到时",
   "Play rate": "出场率",
+  "Played Δ": "打出 Δ",
   "Statistics views": "统计视图",
   "Cards": "卡牌",
   "Players": "玩家",
