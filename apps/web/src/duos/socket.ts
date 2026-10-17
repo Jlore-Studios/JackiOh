@@ -246,6 +246,8 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
   /** R1441: stops listening for the page waking; null while it is not. */
   let unwake: (() => void) | null = null;
   let stopped = false;
+  /** Set when a socket is created; its first `view` proves the server answered (§9.5, §13), so an error from before it is stale. */
+  let awaitingFirstView = false;
   /** When this seat's last pings went out, for the server's own limit (B39). */
   let pingTimes: number[] = [];
   /** R1115000: the token `setToken` last gave, which every open carries in place of `tokenOf()`'s. */
@@ -303,9 +305,18 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
 
   function handle(frame: DuosServerFrame): void {
     switch (frame.type) {
-      case "view":
-        patch({ view: frame.view, legal: frame.legal });
+      case "view": {
+        // A new socket's first view proves the server answered its `hello` (§9.5, §13): an error from
+        // before it (a send while the socket was down) no longer describes the match.
+        const fresh = awaitingFirstView;
+        awaitingFirstView = false;
+        patch({
+          view: frame.view,
+          legal: frame.legal,
+          ...(fresh ? { error: null, errorCode: null } : {}),
+        });
         return;
+      }
       case "ack":
         patch({ error: null, errorCode: null });
         return;
@@ -351,6 +362,7 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
       return;
     }
     socket = created;
+    awaitingFirstView = true;
     hear();
     if (snapshot.connection !== "reconnecting") patch({ connection: "connecting" });
 
