@@ -2797,6 +2797,13 @@
     "1129": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T17:41:38Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "rule line 3 fails: the new tests' titles cite R711000, a ruling spec/INDEX.md lists, and 72 translations are a judgement call"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
