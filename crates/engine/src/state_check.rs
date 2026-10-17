@@ -276,6 +276,9 @@ pub struct RebornEntry {
     pub token: Option<CardInstance>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub face: Option<RebornFace>,
+    /// R1081000: the unit stood in a backrow zone itself, so it returns standing there. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub standing: Option<bool>,
 }
 
 /// One of step 5's reports (`DeathPass.collected`).
@@ -479,12 +482,13 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             row: entry.at.row,
             lane: entry.at.lane,
         };
-        if !crate::zones::place_on_field(
-            sink.state,
-            &mut copy,
-            slot,
-            PlaceOnFieldOptions { stack: Some(true) },
-        ) {
+        let options = PlaceOnFieldOptions { stack: Some(true) };
+        let landed = if entry.standing == Some(true) {
+            crate::zones::place_standing_on_field(sink.state, &mut copy, slot, options)
+        } else {
+            crate::zones::place_on_field(sink.state, &mut copy, slot, options)
+        };
+        if !landed {
             continue;
         }
         let owner = copy.owner;
@@ -699,6 +703,7 @@ struct ReadCard {
     max_health: i32,
     at: Option<ZoneRef>,
     token: bool,
+    standing: bool,
     snapshot: CardInstance,
 }
 
@@ -729,6 +734,7 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 max_health: view.max_health,
                 at: crate::zones::slot_of(sink.state, &unit),
                 token: crate::zones::is_unit_token(sink.state, &unit),
+                standing: crate::zones::stands_in_backrow(sink.state, &unit),
                 // R78 resets an instance as it leaves, so the Death hook of step 3 reads this snapshot (R89).
                 snapshot: unit.clone(),
                 unit,
@@ -798,6 +804,7 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                     None
                 },
                 face,
+                standing: if card.standing { Some(true) } else { None },
             });
         }
         sink.state.counters.destroyed += 1;

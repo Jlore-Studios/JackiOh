@@ -54,6 +54,8 @@ struct RingEntry {
     from: ZoneSlot,
     to: ZoneSlot,
     cards: Vec<CardInstance>,
+    /// R1081000: the Unit standing in this backrow zone itself, if one does — it lands standing.
+    standing: Option<String>,
 }
 
 /// Everything in a zone, top card first. A unit zone may hold a Stack pile, and the dormant cards
@@ -76,14 +78,19 @@ fn can_accept(state: &GameState, slot: &ZoneSlot) -> bool {
 
 /// Put a zone's cards down in their new zone. A pile is rebuilt from the bottom up so the card that
 /// was on top is on top again, which keeps the same card acting for the zone (§3.2).
-fn place_contents(state: &mut GameState, cards: &[CardInstance], to: &ZoneSlot) {
+fn place_contents(state: &mut GameState, cards: &[CardInstance], standing: Option<&str>, to: &ZoneSlot) {
     for (placed, card) in cards.iter().rev().enumerate() {
         // Every ring zone was emptied before anything was placed and the destination accepts cards,
         // so a refusal here is a broken invariant, not a game rule; `zones.rs` says so the same way.
         let options = crate::zones::PlaceOnFieldOptions {
             stack: Some(placed > 0),
         };
-        if !crate::zones::place_on_field(state, &mut card.clone(), to, options) {
+        let landed = if standing == Some(card.id.as_str()) {
+            crate::zones::place_standing_on_field(state, &mut card.clone(), to, options)
+        } else {
+            crate::zones::place_on_field(state, &mut card.clone(), to, options)
+        };
+        if !landed {
             panic!(
                 "rotation could not place {} in {} {} {}",
                 card.id, to.player, to.row, to.lane
@@ -139,6 +146,9 @@ pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationR
                     .map(|from| RingEntry {
                         to: crate::zones::ring_neighbor(from, args.direction, args.perspective),
                         cards: contents_of(state, &from),
+                        standing: crate::zones::card_at(state, from)
+                            .filter(|top| crate::zones::stands_in_backrow(state, top))
+                            .map(|top| top.id.clone()),
                         from,
                     })
                     .collect::<Vec<_>>()
@@ -189,7 +199,7 @@ pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationR
         }
 
         let before: Vec<PlayerId> = entry.cards.iter().map(|card| card.controller).collect();
-        place_contents(sink.state, &entry.cards, &entry.to);
+        place_contents(sink.state, &entry.cards, entry.standing.as_deref(), &entry.to);
 
         for (at, card) in entry.cards.iter().enumerate() {
             result.moved.push(card.id.clone());

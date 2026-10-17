@@ -433,6 +433,10 @@ fn flying_takes_backrow(
     slot: &ZoneSlot,
     tributes: &[String],
 ) -> bool {
+    // R653, R23: an Immutable fuser takes no Unit in, standing on it or beneath it either.
+    if immutable_fuser(state, slot) {
+        return false;
+    }
     if plays_on_stack(state, card) {
         accepts_stack(state, slot)
     } else {
@@ -599,6 +603,14 @@ pub fn freed_by_tribute(state: &GameState, slot: &ZoneSlot, tributes: &[String])
         return false;
     }
     if slot.row == Row::Units && crate::zones::pile_at(state, slot).map_or(0, |pile| pile.len()) != 1 {
+        return false;
+    }
+    // R1081000: the same reading in the backrow, where a Unit stands on its own — a card beneath it
+    // would resume (R13), and a Unit a carrier holds goes with the carrier's zone, not the Tribute's.
+    if slot.row == Row::Backrow
+        && (!crate::zones::beneath_at(state, *slot).is_empty()
+            || crate::zones::carried_at(state, *slot).is_some())
+    {
         return false;
     }
     !crate::layers::unit_has(state, held, KeywordKind::Reborn)

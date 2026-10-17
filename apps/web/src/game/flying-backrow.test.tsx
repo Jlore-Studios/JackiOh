@@ -11,6 +11,7 @@ import { baseView, emptySide, faceUpBackrow, unit } from "../test/fixtures.ts";
 import Board from "./Board.tsx";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { testid, type ClickTarget } from "./contract.ts";
+import { targetFromElement } from "./drag/targets.ts";
 
 afterEach(() => {
   cleanup();
@@ -85,5 +86,11 @@ describe("R1081000 a Flying Unit in the backrow", () => {
     expect(button.parentElement?.getAttribute("data-testid")).toBe(testid.zone("you", "backrow", 1));
     fireEvent.click(button);
     expect(onClick).toHaveBeenCalledWith({ on: "switch", instanceId: "bird-1" });
+  });
+
+  it("R1081000 a backrow minion is a unit to a drag, so it attacks and takes a Tribute pick", () => {
+    renderBoard(backrowFlyerView("ATK"));
+    const card = screen.getByTestId(testid.card("bird-1"));
+    expect(targetFromElement(card)?.target).toEqual({ on: "unit", instanceId: "bird-1", side: "you", lane: 1 });
   });
 });

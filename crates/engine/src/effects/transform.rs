@@ -69,8 +69,9 @@ fn replace_on_field(
     radiant: bool,
 ) -> Option<CardInstance> {
     let at = slot_of(ctx.state, old)?;
-    // R446: a Unit a carrier holds stands in a backrow zone as a Unit, and a Unit may take its place there.
-    let row_here = if is_carried(ctx.state, old) {
+    // R446: a Unit a carrier holds stands in a backrow zone as a Unit, and a Unit may take its place there;
+    // so does one standing in a backrow zone itself (R1081000).
+    let row_here = if is_carried(ctx.state, old) || crate::zones::stands_in_backrow(ctx.state, old) {
         Row::Units
     } else {
         at.row
@@ -376,8 +377,13 @@ pub fn vanilla(args: TransformTarget) -> Effect {
 
 /// Whether `def` could take `old`'s place: on the field only a definition of the same row, as R35
 /// keeps a board card's type (a Unit for a Unit); in a graveyard or exile never a unit token (R11).
-fn can_replace(old: &CardInstance, def: &CardDef) -> bool {
+///
+/// R1081000: a Unit standing in a backrow zone is replaced as a Unit, by a Unit.
+fn can_replace(state: &GameState, old: &CardInstance, def: &CardDef) -> bool {
     match old.zone {
+        Zone::Field { .. } if crate::zones::stands_in_backrow(state, old) => {
+            row_for(def.type_) == Some(Row::Units)
+        }
         Zone::Field { row, .. } => row_for(def.type_) == Some(row),
         Zone::Graveyard { .. } | Zone::Exile { .. } => !(def.token && def.type_ == CardType::Unit),
         Zone::Hand { .. } | Zone::Library { .. } => true,
@@ -492,7 +498,7 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
         let shared: Option<CardDef> = if args.same == Some(true) {
             let pool: Vec<&CardDef> = query(&asked)
                 .into_iter()
-                .filter(|def| olds.iter().all(|old| can_replace(old, def)))
+                .filter(|def| olds.iter().all(|old| can_replace(&*ctx.state, old, def)))
                 .collect();
             pick_generated(ctx.sink.rng, &pool, None).cloned()
         } else {
@@ -512,7 +518,7 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
                 None => {
                     let pool: Vec<&CardDef> = query(&asked)
                         .into_iter()
-                        .filter(|def| can_replace(old, def))
+                        .filter(|def| can_replace(&*ctx.state, old, def))
                         .collect();
                     let glitch: Option<&GameState> = if held { Some(&*ctx.sink.state) } else { None };
                     pick_generated(ctx.sink.rng, &pool, glitch).cloned()

@@ -100,7 +100,8 @@ use crate::wire::{
 use crate::work::{begin_work_cascade, drain_work, drop_work, paused, paused_of, push_work};
 use crate::zones::{
     PlaceOnFieldOptions, ZoneSlot, card_at, cease_to_exist, first_free_zone, fresh_face_down_id, is_open,
-    lands_face_down, place_on_field, release_zone, remove_from_any_zone, reserve_zone, slots_of,
+    lands_face_down, place_on_field, place_standing_on_field, release_zone, remove_from_any_zone,
+    reserve_zone, slots_of,
 };
 
 /// TS `Extract<ActionBody, { type: "play" }>`. `play_choices.rs` names the same type (TS declared it in
@@ -1668,12 +1669,15 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
         Some(zone) => {
             // R1086: an Equip play lands on top of its host, as a Stack card lands on its pile.
             let stack = plays_on_stack(sink.state, &card) || base.is_some() || run.equip_host.is_some();
-            place_on_field(
-                sink.state,
-                &mut card,
-                zone,
-                PlaceOnFieldOptions { stack: Some(stack) },
-            )
+            let options = PlaceOnFieldOptions { stack: Some(stack) };
+            if zone.row == Row::Backrow {
+                // R1081000: a Unit played into a backrow zone was vetted as a Flying Unit as it was in
+                // hand (`play_choices::flies`), or as one a carrier takes, which `place_on_field` tries
+                // first; here it stands, whatever its keywords read as in the resolving zone.
+                place_standing_on_field(sink.state, &mut card, zone, options)
+            } else {
+                place_on_field(sink.state, &mut card, zone, options)
+            }
         }
         None => false,
     };

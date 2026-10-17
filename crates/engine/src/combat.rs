@@ -584,6 +584,10 @@ fn cleave(
         let Some(neighbour) = crate::zones::card_at(sink.state, slot).cloned() else {
             continue;
         };
+        // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent.
+        if !crate::zones::is_adjacent_card(sink.state, &defender, &neighbour) {
+            continue;
+        }
         deal_damage(
             sink,
             DamageArgs {

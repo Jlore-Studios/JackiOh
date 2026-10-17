@@ -131,7 +131,9 @@ fn struck_by(state: &GameState, attacker: &CardInstance, defender: &CardInstance
     };
     let mut struck = vec![defender.clone()];
     for slot in crate::zones::adjacent(at) {
-        if let Some(card) = crate::zones::card_at(state, slot) {
+        if let Some(card) = crate::zones::card_at(state, slot)
+            && crate::zones::is_adjacent_card(state, defender, card)
+        {
             struck.push(card.clone());
         }
     }

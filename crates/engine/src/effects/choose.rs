@@ -111,6 +111,10 @@ pub fn targets_in_scope(ctx: &EffectContext<'_>, scope: Option<&TargetScope>) ->
                 if excludes_self && Some(card.id.as_str()) == self_id {
                     continue;
                 }
+                // R1081000: a Unit standing in the backrow was offered above, among the units.
+                if kinds.contains(&FilterOf::Unit) && crate::zones::is_standing_unit(ctx.state, card) {
+                    continue;
+                }
                 out.push(Selection::Instance {
                     instance_id: card.id.clone(),
                 });

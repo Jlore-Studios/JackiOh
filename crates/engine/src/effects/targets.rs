@@ -443,6 +443,10 @@ fn adjacent_to_with(
         if found.id == card.id {
             continue;
         }
+        // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent.
+        if !crate::zones::is_adjacent_card(ctx.state, &card, found) {
+            continue;
+        }
         if !matches_scope_aimed(ctx, found, scope, aim) {
             continue;
         }

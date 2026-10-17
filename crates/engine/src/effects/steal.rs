@@ -18,7 +18,7 @@ use crate::state::{CardInstance, find_instance};
 use crate::wire::{ControlHow, GameEvent, PlayerId, Row, opponent_of};
 use crate::zones::{
     PlaceOnFieldOptions, ZoneSlot, card_at, first_entry_zone, is_open, place_beneath_top, place_on_field,
-    remove_from_field, slot_of, slots_of,
+    place_standing_on_field, remove_from_field, slot_of, slots_of,
 };
 
 /// Which card to steal: the pick the play or a prompt carried (R81), or an instance id a script
@@ -94,16 +94,23 @@ fn move_control(
     };
 
     let mut moving = card.clone();
+    // R1081000: a Unit standing in a backrow zone is stolen standing, into the open backrow zone `to`.
+    let stands = crate::zones::stands_in_backrow(ctx.state, card);
     remove_from_field(ctx.state, &moving, Default::default());
-    if !place_on_field(ctx.state, &mut moving, to, Default::default()) {
+    let landed = if stands {
+        place_standing_on_field(ctx.state, &mut moving, to, Default::default())
+    } else {
+        place_on_field(ctx.state, &mut moving, to, Default::default())
+    };
+    if !landed {
         // `to` was open a line ago and the card came off the other side of the field, so this cannot
         // happen; putting the card back keeps the board legal rather than losing it to a refusal.
-        place_on_field(
-            ctx.state,
-            &mut moving,
-            from,
-            PlaceOnFieldOptions { stack: Some(true) },
-        );
+        let options = PlaceOnFieldOptions { stack: Some(true) };
+        if stands {
+            place_standing_on_field(ctx.state, &mut moving, from, options);
+        } else {
+            place_on_field(ctx.state, &mut moving, from, options);
+        }
         return false;
     }
 

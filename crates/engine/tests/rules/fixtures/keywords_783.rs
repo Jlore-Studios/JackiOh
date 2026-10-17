@@ -286,6 +286,18 @@ pub fn flying_stacker() -> CardDef {
     )
 }
 
+/// A Flying 2/2 with Reborn (R1081000: it returns standing where it stood).
+pub fn flying_reborner() -> CardDef {
+    unit(
+        7869,
+        "flying-reborner",
+        1,
+        2,
+        2,
+        json!([{ "kind": "Flying" }, { "kind": "Reborn" }]),
+    )
+}
+
 /// A Crater Spell, on which Crater does nothing: 1 to the enemy hero.
 pub fn crater_spell() -> CardDef {
     def(7858, "crater-spell", "Spell", 1, json!([{ "kind": "Crater" }]))
@@ -387,6 +399,7 @@ pub static KW_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         flicker_all(),
         stacker(),
         flying_stacker(),
+        flying_reborner(),
         crater_spell(),
         crater_field(),
         flashback_spell(),
@@ -442,6 +455,7 @@ pub static KW_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         crater_cloaked(),
         stacker(),
         flying_stacker(),
+        flying_reborner(),
         crater_field(),
     ] {
         table.insert(card.id, both(Script::default()));

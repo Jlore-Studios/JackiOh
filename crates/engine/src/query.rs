@@ -514,7 +514,9 @@ pub fn redirect_neighbours(state: &GameState, attacker: &CardInstance) -> Vec<Ca
         .into_iter()
         .filter_map(|slot| card_at(state, slot).cloned())
         .filter(|unit| {
-            crate::zones::acts_on_field(state, unit)
+            // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent.
+            crate::zones::is_adjacent_card(state, attacker, unit)
+                && crate::zones::acts_on_field(state, unit)
                 && !crate::zones::is_carried(state, unit)
                 && crate::restrictions::attack_restriction(
                     state,

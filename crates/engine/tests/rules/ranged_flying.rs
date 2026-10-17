@@ -7,11 +7,16 @@ use jackioh_engine::subsystems::lethal::projected_damage;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
+use jackioh_engine::effects::{steal, swap_board, transform};
+use jackioh_engine::subsystems::rotation::{RotationArgs, rotate_rings};
+
 use super::fixtures::combat::cleaver;
+use super::fixtures::field::fuser;
 use super::fixtures::harness::{events_of_type, new_game, put, sink_for, slot};
 use super::fixtures::keywords_783::{
-    cloaked_bolt, cloaked_field, first_striker, flyer, flying_stacker, flying_taunter, grunt, quake, ranged,
-    ranged_cleaver, ranged_striker, ranged_trampler, register_keywords_783, sniper,
+    cloaked_bolt, cloaked_field, crater_trap, first_striker, flyer, flying_reborner, flying_stacker,
+    flying_taunter, grunt, quake, ranged, ranged_cleaver, ranged_striker, ranged_trampler,
+    register_keywords_783, sniper,
 };
 use super::fixtures::prompt_harness::{act, cast_now};
 
@@ -734,5 +739,255 @@ mod r1081000_flying_backrow {
         }
         assert!(in_graveyard(&doomed, P1, &wing.id), "a flyer at 0 health dies");
         assert!(card_at(&doomed, slot(P1, Row::Backrow, 1)).is_none());
+    }
+
+    /// `effect` as `actor` casts it, straight through its `apply`.
+    fn run_effect(state: &mut GameState, effect: Effect, actor: PlayerId) {
+        let mut sink = sink_for(state);
+        let mut ctx = make_context(
+            &mut sink,
+            None,
+            HookOptions {
+                controller: Some(actor),
+                ..Default::default()
+            },
+        );
+        (effect.apply)(&mut ctx);
+    }
+
+    /// Strip the text off `id`, Flying with it.
+    fn vanilla(state: &mut GameState, id: &str) {
+        if let Some(card) = find_instance_mut(state, id) {
+            card.vanilla = true;
+        }
+    }
+
+    fn stands(state: &GameState, player: PlayerId, id: &str) -> bool {
+        standing_units_of(state, player).iter().any(|unit| unit.id == id)
+    }
+
+    #[test]
+    fn r1081000_a_backrow_flyer_is_one_trigger_holder() {
+        let mut state = board("r1081000-holder");
+        let wing = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 1), json!({}));
+        let held = cards_in_trigger_order(&state)
+            .into_iter()
+            .filter(|holder| holder.card.id == wing.id)
+            .count();
+        assert_eq!(held, 1, "a Unit standing in the backrow holds its triggers once");
+        assert_eq!(field_holders_where(&state, |card| card.id == wing.id).len(), 1);
+    }
+
+    #[test]
+    fn r1081000_a_standing_unit_that_lost_flying_still_swaps_rotates_and_is_stolen_standing() {
+        // A board swap sets it down standing on the other side, Flying or not.
+        let mut state = board("r1081000-swap");
+        let wing = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 2), json!({}));
+        vanilla(&mut state, &wing.id);
+        run_effect(&mut state, swap_board(), P1);
+        let swapped = live(&state, &wing.id);
+        assert_eq!(swapped.controller, P2);
+        assert!(stands(&state, P2, &wing.id), "it stands on the other side");
+        assert!(active_units_of(&state, P2).iter().any(|unit| unit.id == wing.id));
+
+        // A rotation across the centre line likewise.
+        let mut ring = board("r1081000-rotate");
+        let wing = put(&mut ring, &flyer().id, slot(P1, Row::Backrow, 5), json!({}));
+        vanilla(&mut ring, &wing.id);
+        {
+            let mut sink = sink_for(&mut ring);
+            rotate_rings(
+                &mut sink,
+                &RotationArgs {
+                    direction: RotationDirection::Right,
+                    perspective: P1,
+                    radiant: None,
+                },
+            );
+        }
+        let moved = live(&ring, &wing.id);
+        assert!(
+            matches!(
+                moved.zone,
+                Zone::Field {
+                    row: Row::Backrow,
+                    ..
+                }
+            ) && moved.zone
+                != Zone::Field {
+                    player: P1,
+                    row: Row::Backrow,
+                    lane: 5
+                },
+            "it moved along the backrow ring"
+        );
+        let Zone::Field { player, .. } = moved.zone else {
+            panic!("on the field");
+        };
+        assert!(stands(&ring, player, &wing.id), "and stands where it landed");
+
+        // A steal takes it into the thief's open backrow zone, standing.
+        let mut taken = board("r1081000-steal");
+        let wing = put(&mut taken, &flyer().id, slot(P2, Row::Backrow, 3), json!({}));
+        vanilla(&mut taken, &wing.id);
+        run_effect(&mut taken, steal(json_as(json!({ "instanceId": wing.id }))), P1);
+        assert_eq!(live(&taken, &wing.id).controller, P1);
+        assert!(
+            stands(&taken, P1, &wing.id),
+            "stolen, it stands in the thief's backrow"
+        );
+        assert!(!stands(&taken, P2, &wing.id));
+    }
+
+    #[test]
+    fn r1081000_cleave_beside_a_backrow_flyer_reaches_only_units_standing_there() {
+        let mut state = board("r1081000-cleave");
+        let wing = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 2), json!({}));
+        let neighbour = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 3), json!({}));
+        let trap = put(
+            &mut state,
+            &crater_trap().id,
+            slot(P1, Row::Backrow, 1),
+            json!({}),
+        );
+        let splasher = put(
+            &mut state,
+            &ranged_cleaver().id,
+            slot(P2, Row::Units, 1),
+            json!({}),
+        );
+        let (refused, events) = declare(&mut state, &splasher.id, &wing.id);
+        assert_eq!(refused, None);
+        assert_eq!(damage_on(&state, &wing.id), 2);
+        assert_eq!(
+            damage_on(&state, &neighbour.id),
+            2,
+            "the Unit beside it takes the splash"
+        );
+        assert_eq!(damage_on(&state, &trap.id), 0, "a Trap beside it is no Unit");
+        assert!(
+            events_of_type(&events, GameEventType::Damage)
+                .iter()
+                .all(|event| !matches!(event, GameEvent::Damage { target_id, .. } if *target_id == trap.id)),
+            "no damage event names the Trap"
+        );
+    }
+
+    #[test]
+    fn r1081000_a_transform_replaces_a_standing_unit_with_a_unit_where_it_stands() {
+        let mut state = board("r1081000-transform");
+        let wing = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 2), json!({}));
+        run_effect(
+            &mut state,
+            transform(json_as(json!({ "instanceId": wing.id, "defId": grunt().id }))),
+            P2,
+        );
+        let now = card_at(&state, slot(P1, Row::Backrow, 2))
+            .cloned()
+            .expect("a card stands there");
+        assert_eq!(now.def_id, grunt().id);
+        assert_ne!(now.id, wing.id);
+        assert!(
+            stands(&state, P1, &now.id),
+            "the replacement stands there as a Unit"
+        );
+        assert!(
+            find_instance(&state, &wing.id).is_none(),
+            "the old card ceased to exist"
+        );
+    }
+
+    #[test]
+    fn r1081000_a_tribute_frees_a_backrow_zone_only_when_nothing_would_resume() {
+        // A lone standing Flying Unit, tributed, leaves its zone empty: a Flying play may take it.
+        let mut state = board("r1081000-tribute-lone");
+        let lone = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 1), json!({}));
+        for lane in 2..=5 {
+            put(&mut state, &flyer().id, slot(P1, Row::Backrow, lane), json!({}));
+        }
+        let bird = in_hand_with_mana(&mut state, &flyer().id, P1);
+        let zones = legal_zones_for(&state, P1, &bird, std::slice::from_ref(&lone.id));
+        assert!(
+            zones.contains(&backrow_zone(1)),
+            "the zone its Tribute empties is offered"
+        );
+
+        // One stacked on a Field Spell leaves the Field Spell to resume (R13), so it frees nothing.
+        let mut stacked = board("r1081000-tribute-pile");
+        let field = put(
+            &mut stacked,
+            &cloaked_field().id,
+            slot(P1, Row::Backrow, 1),
+            json!({}),
+        );
+        let mut rider = new_instance(&mut stacked, &flying_stacker().id, P1, Zone::Hand { player: P1 });
+        assert!(place_standing_on_field(
+            &mut stacked,
+            &mut rider,
+            slot(P1, Row::Backrow, 1),
+            PlaceOnFieldOptions { stack: Some(true) },
+        ));
+        assert!(stands(&stacked, P1, &rider.id));
+        assert_eq!(
+            card_at(&stacked, slot(P1, Row::Backrow, 1)).map(|card| card.id.clone()),
+            Some(rider.id.clone())
+        );
+        for lane in 2..=5 {
+            put(&mut stacked, &flyer().id, slot(P1, Row::Backrow, lane), json!({}));
+        }
+        let bird = in_hand_with_mana(&mut stacked, &flyer().id, P1);
+        let zones = legal_zones_for(&stacked, P1, &bird, std::slice::from_ref(&rider.id));
+        assert!(
+            !zones.contains(&backrow_zone(1)),
+            "the card beneath {} would take its zone back",
+            field.id
+        );
+    }
+
+    #[test]
+    fn r1081000_a_standing_reborn_unit_returns_standing() {
+        let mut state = board("r1081000-reborn");
+        let wing = put(
+            &mut state,
+            &flying_reborner().id,
+            slot(P1, Row::Backrow, 1),
+            json!({}),
+        );
+        if let Some(card) = find_instance_mut(&mut state, &wing.id) {
+            card.damage = 2;
+        }
+        {
+            let mut sink = sink_for(&mut state);
+            state_check(&mut sink);
+        }
+        let back = card_at(&state, slot(P1, Row::Backrow, 1))
+            .cloned()
+            .expect("it came back");
+        assert_eq!(back.id, wing.id);
+        assert!(stands(&state, P1, &wing.id), "it returns standing where it stood");
+        assert!(!in_graveyard(&state, P1, &wing.id));
+    }
+
+    #[test]
+    fn r1081000_an_immutable_fuser_takes_no_flying_stack_unit_either() {
+        // `field_game` registers the fuser (Classic+ #33's shape); #783's cards go on top of it.
+        let mut state = super::super::fixtures::field::field_game("r1081000-fuser");
+        register_keywords_783();
+        state.turn = 4;
+        state.active = P1;
+        state.phase = Phase::Main;
+        let holder = put(&mut state, &fuser.id, slot(P1, Row::Backrow, 2), json!({}));
+        if let Some(card) = find_instance_mut(&mut state, &holder.id) {
+            card.granted_keywords.push(Keyword::Immutable);
+        }
+        let stacker = in_hand_with_mana(&mut state, &flying_stacker().id, P1);
+        assert!(!legal_zones_for(&state, P1, &stacker, &[]).contains(&backrow_zone(2)));
+        assert!(
+            play_refusal(&state, &stacker.id, json!({ "row": "backrow", "lane": 2 })).contains("Immutable")
+        );
+        if let Some(card) = find_instance_mut(&mut state, &holder.id) {
+            card.granted_keywords.clear();
+        }
+        assert!(legal_zones_for(&state, P1, &stacker, &[]).contains(&backrow_zone(2)));
     }
 }
