@@ -3480,6 +3480,10 @@
       "run_id": "39067580489",
       "started_at": "2026-10-17T20:39:13Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-4` (claude, opus) rejected it: `e2e/cypress/e2e/44-watch.cy.ts:254`: The daily watch spec asserts the waiting panel is visible after a full page visit, a friends-list load, a click and a socke"
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 1
     },
