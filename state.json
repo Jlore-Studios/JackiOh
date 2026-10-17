@@ -2479,6 +2479,13 @@
     "1095": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T02:04:34Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "Rule 3 fails: it adds a sentence to spec/09-architecture.md (\u00a79.9). It also touches the web app and the spec together and makes UX decisions, so it cannot be easy."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
