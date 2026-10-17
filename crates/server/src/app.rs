@@ -917,8 +917,8 @@ fn spawn_loops(app: &Arc<App>) -> Vec<(&'static str, JoinHandle<()>)> {
     // instance may sleep before an hour is up, and then on its interval. Each loop logs its own
     // failures and tries again on its next tick. R1454: with `LADDER_BOTS=on`, the bot pool is sized
     // once now and then hourly. Each starts through `loops::spawn_supervised`, so a panic that
-    // unwinds out of a loop is logged (`loop.crashed`) and the loop starts again (`loop.restarted`)
-    // instead of dying silently (#842).
+    // unwinds out of a loop (`loop.crashed`, #842) or a loop that returns (`loop.returned`, #1093)
+    // is logged as an alert and the loop starts again (`loop.restarted`) instead of dying silently.
     let mut running = vec![
         (
             "matchmaker",
@@ -966,7 +966,8 @@ fn spawn_loops(app: &Arc<App>) -> Vec<(&'static str, JoinHandle<()>)> {
     running
 }
 
-/// Aborts every loop `spawn_loops` started and waits for the tasks to end (#861's drain).
+/// Aborts every loop `spawn_loops` started and waits for the tasks to end (#861's drain). An abort
+/// also cancels a supervisor's restart wait, so no loop starts again (#1093).
 async fn stop_loops(running: Vec<(&'static str, JoinHandle<()>)>) {
     for (_, handle) in &running {
         handle.abort();

@@ -1,7 +1,9 @@
 // Practice presets are token-free Core decks, checked under §2.6 and outside AI's shadow ban (R186).
+// A saved deck is offered only when complete and the validator finds no §2.6 fault in it (§9.9, `savedDeckRefusal`).
 
 import { DECK_SIZE } from "@jackioh/engine/config";
 
+import { practiceDeckIssues } from "../wire/validator.ts";
 import type { PracticeDeckChoice } from "./protocol.ts";
 
 export type PracticePreset = {
@@ -106,9 +108,27 @@ export const RANDOM_DECK_IDENTITY =
 /** Oldest-first, named `GET /api/decks` result; it may be an incomplete draft (R250). */
 export type PracticeSavedDeck = { name: string; cards: readonly string[]; portrait?: string | null };
 
-/** R250 drafts need `DECK_SIZE` cards to be offered; `createGame` validates every deck (§2.6). */
+/** Each saved deck's `savedDeckRefusal`, worked out once: a deck from `GET /api/decks` is never changed in place. */
+const refusals = new WeakMap<PracticeSavedDeck, string | null>();
+
+/**
+ * §9.9: why the worker's `createGame` would refuse a complete saved deck, as the validator's first issue
+ * (`practiceDeckIssues`: a repeated, unknown, Token or unshipped card), or null when it would start it.
+ * Also null for an R250 draft short of `DECK_SIZE`, whose label already says so. The worker still judges every deck.
+ */
+export function savedDeckRefusal(deck: PracticeSavedDeck): string | null {
+  if (deck.cards.length !== DECK_SIZE) return null;
+  let refusal = refusals.get(deck);
+  if (refusal === undefined) {
+    refusal = practiceDeckIssues({ name: deck.name, cards: deck.cards })[0]?.message ?? null;
+    refusals.set(deck, refusal);
+  }
+  return refusal;
+}
+
+/** A saved deck is offered when it holds `DECK_SIZE` cards (R250) and `savedDeckRefusal` finds nothing (§9.9). */
 export function isPlayableSavedDeck(deck: PracticeSavedDeck): boolean {
-  return deck.cards.length === DECK_SIZE;
+  return deck.cards.length === DECK_SIZE && savedDeckRefusal(deck) === null;
 }
 
 const RANDOM_VALUE = "random";
@@ -172,6 +192,7 @@ export function savedDeckOf(value: string, saved: readonly PracticeSavedDeck[] |
 }
 
 export function savedDeckLabel(deck: PracticeSavedDeck): string {
+  if (savedDeckRefusal(deck) !== null) return `${deck.name} (needs a fix)`;
   if (isPlayableSavedDeck(deck)) return deck.name;
   return `${deck.name} (${String(deck.cards.length)} of ${String(DECK_SIZE)} cards, not complete)`;
 }
