@@ -16937,9 +16937,9 @@
     ],
     "idle_since": null,
     "last_run": "2026-10-17T03:23:25Z",
-    "provider": "agy",
+    "provider": null,
     "requested": false,
-    "run_id": "38998484118",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
