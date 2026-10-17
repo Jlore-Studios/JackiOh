@@ -162,7 +162,9 @@ pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins
 - `duos_passes` names the hand cards to pass now, best first: a card the seat cannot play this turn
   and its teammate can (a round seat that has not ended, can afford it and has a zone for it), when
   the seat can pay the pass; with `pass_cost` 0 also a card the teammate can afford next turn and the
-  seat cannot; never more than the passes left or the teammate's free hand slots.
+  seat cannot; never more than the passes left or the teammate's free hand slots. Immediate passes
+  rank by the teammate's best bounded follow-up (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays
+  on a fixed-seed probe), ties by cost then hand order; free-pass next-turn cards keep cost order.
 - It knows what its team knows and nothing more: its own duel through `decide`'s `redact` and
   `determinize` (R185), and its teammate's own state, which a team shares (§13.6). An opponent's
   hidden card never changes a decision.
