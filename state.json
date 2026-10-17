@@ -2427,6 +2427,10 @@
       "run_id": "38994209586",
       "started_at": "2026-10-17T02:16:08Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-1` (claude, opus) rejected it: `crates/cards/src/history.rs:299`: The new unit test compares `catalog_defs_at(crate::CATALOG_VERSION)` with the hardcoded `patches/v0.3.7b.json`, so it fails as"
+      ],
+      "strikes": 1,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
