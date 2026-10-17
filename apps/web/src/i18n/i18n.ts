@@ -9,6 +9,9 @@
 // refusals, validator issues) is looked up where it is displayed, by the same call; a dictionary key
 // that holds `{name}` tokens also matches a sentence whose values are already filled in, since those
 // arrive complete from Rust ("Choose 2 cards" finds "Choose {n} cards").
+// That fallback is for the engine's and the server's sentences: every literal the client itself
+// wraps in `t()` has an entry in `zh-CN.json` (an identity entry when it reads as written, as
+// "English" has), which `i18n.test.ts` checks (R711000).
 //
 // A language is one dictionary file (`<tag>.json`, English to its words; a value is a string, or
 // `{ one, other }` and the other CLDR plural categories, chosen by `Intl.PluralRules` over the
