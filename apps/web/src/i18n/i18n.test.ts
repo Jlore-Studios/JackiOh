@@ -3,11 +3,17 @@
 // 1. t() with fallback, params, and plurals;
 // 2. the card rule and the easter egg;
 // 3. the language button switching live, persisting, and updating <html lang>;
-// 4. every zh-CN.json dictionary entry's {params} matching its English key.
+// 4. every zh-CN.json dictionary entry's {params} matching its English key;
+// 5. every literal sentence a non-test source wraps in t() having a zh-CN.json entry.
+
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { createElement } from "react";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import ts from "typescript";
 
 import { CATALOG } from "@jackioh/cards";
 import { SERIES_WINS_NEEDED } from "@jackioh/server-config";
@@ -30,6 +36,49 @@ import {
 } from "./i18n.ts";
 import LanguageButton from "./LanguageButton.tsx";
 import zhCN from "./zh-CN.json";
+
+/** The client's sources: `apps/web/src`, this folder's parent. */
+const SRC = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+/** Every non-test source under `dir`: no `*.test.ts(x)`, no `test/` folder, no `wire/generated/`. */
+function sources(dir: string): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) return name === "test" || relative(SRC, path) === join("wire", "generated") ? [] : sources(path);
+    return /\.(ts|tsx)$/u.test(name) && !/\.test\.tsx?$/u.test(name) ? [path] : [];
+  });
+}
+
+/** The literal sentences an argument is: a string, a template with no substitutions, or each branch of a conditional of them. */
+function literals(node: ts.Expression): (ts.StringLiteral | ts.NoSubstitutionTemplateLiteral)[] {
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return [node];
+  if (ts.isParenthesizedExpression(node)) return literals(node.expression);
+  if (ts.isConditionalExpression(node)) return [...literals(node.whenTrue), ...literals(node.whenFalse)];
+  return [];
+}
+
+/** Each literal sentence a source wraps in `t()`, with the `file:line` it stands at. */
+function sentencesIn(path: string, text: string): { at: string; key: string }[] {
+  const file = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  const out: { at: string; key: string }[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "t") {
+      const first = node.arguments[0];
+      for (const literal of first === undefined ? [] : literals(first)) {
+        const line = file.getLineAndCharacterOfPosition(literal.getStart(file)).line + 1;
+        out.push({ at: `${relative(SRC, path)}:${String(line)}`, key: literal.text });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return out;
+}
+
+/** The sentences `zh-CN.json` has no entry for, as `file:line: "sentence"`. */
+function untranslated(sentences: readonly { at: string; key: string }[]): string[] {
+  return sentences.filter(({ key }) => !Object.hasOwn(zhCN, key)).map(({ at, key }) => `${at}: ${JSON.stringify(key)}`);
+}
 
 describe("R711000 internationalisation and reader language", () => {
   beforeEach(() => {
@@ -203,5 +252,30 @@ describe("R711000 internationalisation and reader language", () => {
         expect(valTokens, `Token mismatch for key "${key}" and translation "${str}"`).toEqual(keyTokens);
       }
     }
+  });
+
+  it("R711000 every sentence the client wraps in t() has a zh-CN entry", () => {
+    const files = sources(SRC);
+    expect(files.length).toBeGreaterThan(100);
+    const sentences = files.flatMap((path) => sentencesIn(path, readFileSync(path, "utf8")));
+    expect(sentences.length).toBeGreaterThan(1000);
+    expect(untranslated(sentences)).toEqual([]);
+  });
+
+  it("R711000 the t() guard names the file and line of a literal with no entry, in either branch of a conditional", () => {
+    const probe = join(SRC, "probe.tsx");
+    const text = [
+      'const a = t("Your turn");',
+      'const b = t("Some new sentence");',
+      'const c = t(won ? "Victory" : `Another new sentence`, { n: 1 });',
+      "const d = t(label);",
+      'const e = other("Not wrapped in t");',
+    ].join("\n");
+    expect(sentencesIn(probe, text).map(({ key }) => key)).toEqual(["Your turn", "Some new sentence", "Victory", "Another new sentence"]);
+    expect(untranslated(sentencesIn(probe, text))).toEqual(['probe.tsx:2: "Some new sentence"', 'probe.tsx:3: "Another new sentence"']);
+    // Test files and ts-rs's generated wire types are not walked.
+    const walked = sources(SRC).map((path) => relative(SRC, path));
+    expect(walked).toContain(join("i18n", "i18n.ts"));
+    expect(walked.filter((path) => /\.test\.tsx?$/u.test(path) || path.startsWith(join("wire", "generated")))).toEqual([]);
   });
 });
