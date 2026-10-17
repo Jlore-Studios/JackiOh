@@ -669,6 +669,60 @@ mod r654_public_card_and_player_stats {
         assert_eq!(huge_status, 400);
     }
 
+    /// R1142000: PUT /api/stats/player accepts a body under PLAYER_STATS_BYTES_MAX (65536)
+    /// and summarises it on GET /api/stats/players; a body exceeding it returns 400.
+    #[tokio::test]
+    async fn r1142000_put_player_stats_accepts_body_under_new_cap_and_refuses_past_it() {
+        let app = test_app().await;
+
+        let base_prefix = r#"{"stats":{"games":20,"wins":15,"losses":5,"draws":0,"cards":{"core-001":{"played":10}},"pad":""#;
+        let base_suffix = r#""},"isPrivate":false}"#;
+        let overhead = base_prefix.len() + base_suffix.len();
+        assert!(overhead < PLAYER_STATS_BYTES_MAX);
+
+        // 1. Body just under cap (exactly PLAYER_STATS_BYTES_MAX bytes)
+        let pad_len = PLAYER_STATS_BYTES_MAX - overhead;
+        let body_str = format!("{base_prefix}{}{base_suffix}", "a".repeat(pad_len));
+        let body: Value = serde_json::from_str(&body_str).expect("valid JSON");
+        assert_eq!(body.to_string().encode_utf16().count(), PLAYER_STATS_BYTES_MAX);
+
+        let (status, _, put_res) =
+            request(&app, "PUT", "/api/stats/player", Some(USER_TOKEN), Some(body)).await;
+        assert_eq!(status, 200);
+        assert_eq!(put_res["stats"]["games"], 20);
+
+        // Verified summarized in public players list
+        let (list_status, _, list_body) = get_public(&app, "/api/stats/players").await;
+        assert_eq!(list_status, 200);
+        let players = list_body["players"].as_array().expect("players list");
+        let found = players.iter().find(|p| p["games"] == 20);
+        assert!(found.is_some(), "player summary found in public players list");
+        let player = found.unwrap();
+        assert_eq!(player["games"], 20);
+        assert_eq!(player["wins"], 15);
+        assert_eq!(player["losses"], 5);
+        assert_eq!(player["favouriteCards"][0]["id"], "core-001");
+        assert_eq!(player["favouriteCards"][0]["count"], 10);
+
+        // 2. Body exceeding cap by 1 byte returns 400
+        let over_body_str = format!("{base_prefix}{}{base_suffix}", "a".repeat(pad_len + 1));
+        let over_body: Value = serde_json::from_str(&over_body_str).expect("valid JSON");
+        assert_eq!(
+            over_body.to_string().encode_utf16().count(),
+            PLAYER_STATS_BYTES_MAX + 1
+        );
+
+        let (over_status, _, _) = request(
+            &app,
+            "PUT",
+            "/api/stats/player",
+            Some(USER_TOKEN),
+            Some(over_body),
+        )
+        .await;
+        assert_eq!(over_status, 400);
+    }
+
     #[tokio::test]
     async fn r654_get_api_stats_players_lists_public_player_summaries_respects_privacy_and_search_omits_elo()
     {

@@ -829,8 +829,8 @@ pub const PLAYER_STATS_CACHE_TTL_SECONDS: i64 = 60;
 pub const PLAYER_STATS_PAGE_LIMIT: usize = 50;
 
 /// The most text the stored player statistics JSON of one account may come to, in bytes.
-/// Bounds request body and stored payload.
-pub const PLAYER_STATS_BYTES_MAX: usize = 16384;
+/// Bounds request body and stored payload (R1142000: raised from 16384 to 65536 so pruned catalog fits).
+pub const PLAYER_STATS_BYTES_MAX: usize = 65536;
 
 // ---------------------------------------------------------------------------------------------
 // Play telemetry (SPEC §9.11, R1442): how humans pace their moves, for the ladder bots (#636).
