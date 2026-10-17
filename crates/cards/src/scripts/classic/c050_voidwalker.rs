@@ -105,6 +105,12 @@ mod tests {
         use super::*;
 
         #[test]
+        fn declares_no_tuned_numbers() {
+            crate::register_all();
+            assert!(crate::card_def(VOID).params.is_none());
+        }
+
+        #[test]
         fn events_every_exile_it_causes_is_an_exiled_event_naming_the_card() {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, FILLER], "field": [VOID] }, "p2": { "hand": [FILLER], "field": [VANILLA] } }));

@@ -98,6 +98,12 @@ mod tests {
     mod c_37_last_hurrah {
         use super::*;
 
+        #[test]
+        fn declares_no_tuned_numbers() {
+            crate::register_all();
+            assert!(crate::card_def(HURRAH).params.is_none());
+        }
+
         mod base {
             use super::*;
 

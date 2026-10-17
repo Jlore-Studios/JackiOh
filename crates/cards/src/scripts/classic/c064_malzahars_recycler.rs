@@ -154,6 +154,12 @@ mod tests {
     mod c_64_malzahars_recycler {
         use super::*;
 
+        #[test]
+        fn declares_no_tuned_numbers() {
+            crate::register_all();
+            assert!(crate::card_def(RECYCLER).params.is_none());
+        }
+
         mod base {
             use super::*;
 

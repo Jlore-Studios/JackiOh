@@ -140,6 +140,12 @@ mod tests {
         }))
     }
 
+    #[test]
+    fn declares_no_tuned_numbers() {
+        crate::register_all();
+        assert!(crate::card_def(CHALICE).params.is_none());
+    }
+
     /// base
     mod base {
         use super::*;

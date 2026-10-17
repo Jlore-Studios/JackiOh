@@ -172,6 +172,12 @@ mod tests {
     mod c_n32_felinor_feelings {
         use super::*;
 
+        #[test]
+        fn declares_no_tuned_numbers() {
+            crate::register_all();
+            assert!(crate::card_def(FEELINGS).params.is_none());
+        }
+
         mod base {
             use super::*;
 

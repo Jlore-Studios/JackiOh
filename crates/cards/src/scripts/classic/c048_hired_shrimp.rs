@@ -168,6 +168,12 @@ mod tests {
     mod c48_hired_shrimp {
         use super::*;
 
+        #[test]
+        fn declares_no_tuned_numbers() {
+            crate::register_all();
+            assert!(crate::card_def(SHRIMP).params.is_none());
+        }
+
         mod base {
             use super::*;
 

@@ -214,6 +214,12 @@ mod tests {
     mod c_n18_glitch_in_the_system {
         use super::*;
 
+        #[test]
+        fn declares_no_tuned_numbers() {
+            crate::register_all();
+            assert!(crate::card_def(GLITCH).params.is_none());
+        }
+
         mod base {
             use super::*;
 

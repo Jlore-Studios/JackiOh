@@ -123,6 +123,12 @@ mod tests {
     mod c_66_eu_striker {
         use super::*;
 
+        #[test]
+        fn declares_no_tuned_numbers() {
+            crate::register_all();
+            assert!(crate::card_def(STRIKER).params.is_none());
+        }
+
         mod base {
             use super::*;
 

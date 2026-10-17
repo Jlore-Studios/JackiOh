@@ -117,6 +117,12 @@ mod tests {
     mod c_33_joro {
         use super::*;
 
+        #[test]
+        fn declares_no_tuned_numbers() {
+            crate::register_all();
+            assert!(crate::card_def(JORO).params.is_none());
+        }
+
         mod base {
             use super::*;
 

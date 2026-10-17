@@ -128,6 +128,12 @@ mod tests {
     mod c_62_living_bomb {
         use super::*;
 
+        #[test]
+        fn declares_no_tuned_numbers() {
+            crate::register_all();
+            assert!(crate::card_def(BOMB).params.is_none());
+        }
+
         mod base {
             use super::*;
 

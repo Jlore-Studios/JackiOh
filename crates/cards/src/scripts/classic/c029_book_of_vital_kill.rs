@@ -74,6 +74,12 @@ mod tests {
     mod c_n29_book_of_vital_kill {
         use super::*;
 
+        #[test]
+        fn declares_no_tuned_numbers() {
+            crate::register_all();
+            assert!(crate::card_def(VITAL).params.is_none());
+        }
+
         mod base {
             use super::*;
 

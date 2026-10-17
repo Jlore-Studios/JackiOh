@@ -95,6 +95,12 @@ mod tests {
         use super::*;
 
         #[test]
+        fn declares_no_tuned_numbers() {
+            crate::register_all();
+            assert!(crate::card_def(DATACENTER).params.is_none());
+        }
+
+        #[test]
         fn s7_the_pool_its_text_names_is_the_ten_ai_generated_cards_tokens_all() {
             crate::register_all();
             let mut pool: Vec<String> = crate::query::query(&json_as(json!({ "tags": ["AI"], "token": true })))
