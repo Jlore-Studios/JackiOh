@@ -2161,6 +2161,13 @@
     "1087": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T00:15:59Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 7 fails outright: the whole change is a Cypress e2e spec (plus its wsPlayer helper), which the easy rule excludes; it is test-only and in e2e/ alone, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
