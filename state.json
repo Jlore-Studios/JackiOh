@@ -2727,6 +2727,8 @@
       "run_id": "39049145024",
       "started_at": "2026-10-17T16:23:25Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 2
     },
