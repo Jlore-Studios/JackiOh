@@ -3384,10 +3384,10 @@
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_tier": "medium",
-      "provider": "claude-3",
+      "provider": "muse",
       "round_tier": "medium",
-      "run_id": "39065070850",
-      "started_at": "2026-10-17T20:04:04Z",
+      "run_id": "39072854096",
+      "started_at": "2026-10-17T21:55:15Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -9118,9 +9118,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-17T21:54:35Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39072769088",
-    "what": "review #1155 on claude-1"
+    "at": "2026-10-17T21:55:15Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39072854096",
+    "what": "build #1146 on muse"
   },
   "last_sweep": {
     "at": "2026-10-17T21:51:55Z",
