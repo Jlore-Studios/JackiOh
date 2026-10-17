@@ -2724,6 +2724,14 @@
         }
       }
     },
+    "1101": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-17T02:05:30Z",
+      "issue": 1095,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "148": {
       "asks": [
         "c:5974504575"
