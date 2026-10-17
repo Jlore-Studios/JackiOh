@@ -3246,6 +3246,11 @@
       "action": "revise",
       "asks": [],
       "audit_tier": "strong",
+      "cleared": {
+        "at": "2026-10-17T08:30:25Z",
+        "by": "`claude` (strong)",
+        "sha": "ece20b24c39bfadbcdfed4f7b5707565f0d86a84"
+      },
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
