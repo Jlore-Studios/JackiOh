@@ -2737,6 +2737,11 @@
       "taken_asks": []
     },
     "1130": {
+      "cleared": {
+        "at": "2026-10-17T15:01:50Z",
+        "by": "`claude` (strong)",
+        "sha": "e03b306d1e0d319288b3419b69784d94afd97064"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-17T14:17:56Z",
