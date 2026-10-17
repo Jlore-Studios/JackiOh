@@ -372,6 +372,8 @@ describe("B50 the watch screen", () => {
     wakeTab();
     expect(connection("watch-screen")).toBe("closed");
     expect(sockets).toHaveLength(WATCH_RECONNECT_ATTEMPTS + 1);
+    expect(latest().closed).toBe(true);
+    expect(sockets.every((s) => s.closed)).toBe(true);
 
     await advance(SILENT_SOCKET_MS + 1);
     wakeTab();

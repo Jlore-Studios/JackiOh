@@ -68,18 +68,22 @@ function useWatch(matchId: string, friendId: string): { view: PlayerView | null;
       window.clearTimeout(timer);
       socket = null;
       wakeProbe.cancel();
+      const closeStale = (): void => {
+        try {
+          stale.close(1000, "replaced");
+        } catch {
+          // Already gone.
+        }
+      };
       if (tries >= WATCH_RECONNECT_ATTEMPTS) {
+        closeStale();
         setConnection("closed");
         return;
       }
       tries += 1;
       setConnection("connecting");
       open();
-      try {
-        stale.close(1000, "replaced");
-      } catch {
-        // Already gone.
-      }
+      closeStale();
     };
 
     const wakeProbe = createWakeProbe<WebSocket>({
