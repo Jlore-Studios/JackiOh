@@ -1,7 +1,8 @@
 //! Fuzz-level invariants for summoning sickness, exertion, game over, hidden information and owed
 //! work (SPEC §4.1, §4.2, §9.3, §10.3, §10.8, R53, R83, R113, R171; docs/polish/4-edge-cases.md
-//! "Fuzz invariants"). `cargo jackioh fuzz` runs one monitor per game (SURFACE §8, §12), and the
-//! edge-case hunters reuse it.
+//! "Fuzz invariants"). `cargo jackioh fuzz` runs one monitor per game (SURFACE §8, §12), `fuzz --duos`
+//! one per duel through `DuosInvariantMonitor` (#1074, with the Duos view's own redaction and the pool
+//! bounds, §13.4, §13.6), and the edge-case hunters reuse it.
 //!
 //! THE MONITOR IS AN ORACLE, NOT THE FIX RESTATED. It never reads `summonedTurn` to decide who is
 //! sick. It keeps a shadow built only from the event stream:
@@ -64,7 +65,9 @@
 //!      Rollback can turn a token into a fused card and back, fuzz seed 119), or a card a full library refused before it existed that copies nothing
 //!      (R316, fuzz seed 5967 of the handicapped wave, #562); a Glitch's reset or boards (R676, R678)
 //!      takes the rest unseen, and the first oracle excused it, which was the engine's own R97 rule
-//!      restated: R764 fixed it.
+//!      restated: R764 fixed it. In a duel, a card in no pile, a token included, that the log last
+//!      shows in a hand was passed out of it (B20) and reads to that hand's player alone: the Duos
+//!      fuzz's first run found `view_for` naming a passed card's draw to the passer's opponent (R1074000).
 //!      Judging former ids by the log found a sixth, fuzz seed 992: R419's Rollback recreated a
 //!      face-down trap #83 had transformed away, and the `formerId` it carries goes with the card
 //!      (R227) once that card is public, R177's mark on the old id notwithstanding.
@@ -91,10 +94,12 @@ use serde_json::{Map, Value};
 
 use crate::config::WINDFURY_ATTACKS;
 use crate::damage::DamageTarget;
+use crate::duos::{DuosState, duos_view_for};
 use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::wire::{
-    ActionBody, CardType, Enchantment, GameEvent, KeywordKind, PLAYER_IDS, Phase, PlayerId, PlayerView,
-    Selection, TuningChange, ZoneName, has_keyword, opponent_of,
+    ActionBody, CardType, DUOS_DUELS, DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat, DuosView, Enchantment,
+    GameEvent, KeywordKind, PLAYER_IDS, Phase, PlayerId, PlayerView, Selection, Team, TuningChange, ZoneName,
+    has_keyword, opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -220,6 +225,10 @@ struct Lineage {
     /// definition can change and change back (R77's Fuse, then R419's Rollback restoring the token
     /// it was, fuzz seed 119), so its leaving names it better than every definition it ever wore.
     gone_as: IndexMap<String, String>,
+    /// R1074000: in a duel, each id whose last place the log shows is a hand, and that hand's player. A
+    /// pass (B20) takes a hand card out of its duel with no event, so one in no pile was passed. A unit
+    /// token bounced or stolen off the field or out of the resolving zone reached no hand (R11).
+    in_hand: IndexMap<String, PlayerId>,
 }
 
 fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
@@ -228,6 +237,8 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
     let mut never_made: IndexSet<String> = IndexSet::new();
     let mut ties: IndexMap<String, IndexSet<String>> = IndexMap::new();
     let mut gone_as: IndexMap<String, String> = IndexMap::new();
+    let mut in_hand: IndexMap<String, PlayerId> = IndexMap::new();
+    let mut ceased: IndexSet<String> = IndexSet::new();
     let tie =
         |ties: &mut IndexMap<String, IndexSet<String>>, id: Option<&Value>, values: &[Option<&Value>]| {
             let Some(id) = id.and_then(Value::as_str) else {
@@ -299,6 +310,96 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
                 }
             }
         });
+        match event {
+            // R11: a unit token bounced or stolen off the field or out of the resolving zone ceased to exist
+            // on its way to the hand, so a counter's steal's `addedToHand` after it puts it in none.
+            GameEvent::Bounced {
+                instance_id, def_id, ..
+            }
+            | GameEvent::Stolen {
+                instance_id,
+                def_id,
+                zone: ZoneName::Field | ZoneName::Resolving,
+                ..
+            } if is_unit_token_def(state, def_id) => {
+                in_hand.shift_remove(instance_id);
+                ceased.insert(instance_id.clone());
+            }
+            GameEvent::Drawn {
+                player, instance_id, ..
+            }
+            | GameEvent::AddedToHand {
+                player, instance_id, ..
+            }
+            | GameEvent::Bounced {
+                owner: player,
+                instance_id,
+                ..
+            }
+            | GameEvent::Stolen {
+                to: player,
+                instance_id,
+                ..
+            } => {
+                if !ceased.contains(instance_id) {
+                    in_hand.insert(instance_id.clone(), *player);
+                }
+            }
+            // R227: a card set face-down from a hand left it under its old id, the `formerId`.
+            GameEvent::CardPlayed {
+                instance_id,
+                former_id,
+                ..
+            }
+            | GameEvent::Summoned {
+                instance_id,
+                former_id,
+                ..
+            }
+            | GameEvent::ControlChanged {
+                instance_id,
+                former_id,
+                ..
+            } => {
+                in_hand.shift_remove(instance_id);
+                if let Some(former) = former_id {
+                    in_hand.shift_remove(former);
+                }
+            }
+            GameEvent::CardAnnounced { instance_id, .. }
+            | GameEvent::Discarded { instance_id, .. }
+            | GameEvent::Burned { instance_id, .. }
+            | GameEvent::ShuffledIn { instance_id, .. }
+            | GameEvent::Exiled { instance_id, .. }
+            | GameEvent::EnteredGraveyard { instance_id, .. } => {
+                in_hand.shift_remove(instance_id);
+            }
+            GameEvent::Transformed {
+                instance_id,
+                new_instance_id,
+                ..
+            } => {
+                if let Some(holder) = in_hand.shift_remove(instance_id) {
+                    in_hand.insert(new_instance_id.clone(), holder);
+                }
+            }
+            GameEvent::Fused {
+                instance_ids,
+                result_instance_id,
+                ..
+            } => {
+                let mut holder = None;
+                for id in instance_ids {
+                    if let Some(h) = in_hand.shift_remove(id) {
+                        holder = Some(h);
+                    }
+                }
+                if let Some(holder) = holder {
+                    in_hand.insert(result_instance_id.clone(), holder);
+                }
+            }
+            _ => {}
+        }
         if let GameEvent::Fused {
             instance_ids,
             result_instance_id,
@@ -312,13 +413,21 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
             }
         }
     }
+    // Only a Duos seat passes (B20): a 1v1 hand card never leaves by a pass.
+    in_hand.retain(|id, holder| state.players[*holder].duos.is_some() && find_instance(state, id).is_none());
     Lineage {
         next,
         unread,
         never_made,
         ties,
         gone_as,
+        in_hand,
     }
+}
+
+/// R11: whether a definition is a unit token's, which ceases to exist when it leaves the field.
+fn is_unit_token_def(state: &GameState, def_id: &str) -> bool {
+    crate::catalog::find_def(Some(state), def_id).is_some_and(|def| def.token && def.type_ == CardType::Unit)
 }
 
 /// The events that take a card out of a zone and name the definition it left as (`Lineage::gone_as`).
@@ -335,8 +444,9 @@ struct Standing {
 /// none reads when a full library refused it before it existed and it copies nothing (R316), and
 /// otherwise only when every definition the log pairs with it is a token's: R11's tokens go public
 /// (leaving the field, discarded, burned), where any other card in no pile went unseen, out of a
-/// Glitch's reset or boards (R676, R678), and stays as hidden as it was. An id neither the state nor
-/// the log knows vouches for nothing.
+/// Glitch's reset or boards (R676, R678), and stays as hidden as it was. In a duel, one the log last
+/// shows in a hand, a token's included, was passed out of it (B20) and reads to that hand's player
+/// alone (R1074000). An id neither the state nor the log knows vouches for nothing.
 fn standing_of(
     state: &GameState,
     held: &IndexSet<String>,
@@ -374,6 +484,13 @@ fn standing_of(
                 });
             }
             let defs = lineage.ties.get(id)?;
+            // R1074000: in a duel, a card the log last shows in a hand, token or not, was passed out of it.
+            if let Some(&holder) = lineage.in_hand.get(id) {
+                return Some(Standing {
+                    reads: holder == viewer,
+                    where_: format!("{holder}'s hand, which it was passed out of"),
+                });
+            }
             // R11: a token that ceased to exist (it left the field, was discarded or burned) was public when
             // it went, judged by what it left as. Any other card in no pile went unseen (a Glitch's reset
             // or boards, R676, R678), named by no leaving, and stays as hidden as every definition it wore.
@@ -878,7 +995,7 @@ impl InvariantMonitor {
         self.readied.contains(&card.id) && card.summoned_turn.is_none()
     }
 
-    fn enter(&mut self, id: &str) {
+    pub fn enter(&mut self, id: &str) {
         self.entered.insert(id.to_string(), self.turn);
         let stint = self.stint_of(id) + 1;
         self.stint.insert(id.to_string(), stint);
@@ -1259,5 +1376,278 @@ impl InvariantMonitor {
             }
         }
         found
+    }
+}
+
+/// Redaction checks on a `DuosView` (§13.6, B22, B23):
+/// - enemy `ended` must remain hidden (all `false`)
+/// - enemy `passes_left` must remain hidden (all `0`)
+/// - `concede_offered_by` must belong to the viewer's own team
+pub fn check_duos_view_redaction(view: &DuosView) -> Vec<String> {
+    let mut violations = Vec::new();
+    if view.enemy.ended.iter().any(|&e| e) {
+        violations.push(format!(
+            "I6 duos leak: enemy ended leaked {:?} to {} (§13.6, B22)",
+            view.enemy.ended, view.seat
+        ));
+    }
+    if view.enemy.passes_left.iter().any(|&p| p != 0) {
+        violations.push(format!(
+            "I6 duos leak: enemy passes_left leaked {:?} to {} (§13.6, B22)",
+            view.enemy.passes_left, view.seat
+        ));
+    }
+    if let Some(offer) = view.concede_offered_by
+        && offer.team() != view.seat.team()
+    {
+        violations.push(format!(
+            "I6 duos leak: enemy concede offer from {offer} leaked to {} (§13.6)",
+            view.seat
+        ));
+    }
+    violations
+}
+
+/// A tamper callback for testing seat redaction on a generated `DuosView`.
+pub type DuosViewTamper = std::sync::Arc<dyn Fn(&mut DuosView) + Send + Sync>;
+
+/// The Duos invariant monitor (#1074): one `InvariantMonitor` per duel fed from `DuosEvent::Duel`
+/// event streams, hidden information checks across both duels, `duos_view_for` seat redaction
+/// checks, and life pool bounds (§13.4).
+pub struct DuosInvariantMonitor {
+    monitors: [InvariantMonitor; DUOS_DUELS],
+    pub view_tamper: Option<DuosViewTamper>,
+}
+
+impl Clone for DuosInvariantMonitor {
+    fn clone(&self) -> Self {
+        DuosInvariantMonitor {
+            monitors: self.monitors.clone(),
+            view_tamper: self.view_tamper.clone(),
+        }
+    }
+}
+
+impl std::fmt::Debug for DuosInvariantMonitor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DuosInvariantMonitor")
+            .field("monitors", &self.monitors)
+            .field("view_tamper", &self.view_tamper.as_ref().map(|_| "<tamper fn>"))
+            .finish()
+    }
+}
+
+pub fn create_duos_invariant_monitor(start: &DuosState) -> DuosInvariantMonitor {
+    DuosInvariantMonitor::new(start)
+}
+
+impl DuosInvariantMonitor {
+    pub fn new(start: &DuosState) -> DuosInvariantMonitor {
+        DuosInvariantMonitor {
+            monitors: [
+                InvariantMonitor::new(&start.duels[0]),
+                InvariantMonitor::new(&start.duels[1]),
+            ],
+            view_tamper: None,
+        }
+    }
+
+    pub fn duel_monitor(&self, duel: usize) -> &InvariantMonitor {
+        &self.monitors[duel]
+    }
+
+    pub fn duel_monitor_mut(&mut self, duel: usize) -> &mut InvariantMonitor {
+        &mut self.monitors[duel]
+    }
+
+    /// I1 and I3 on the state the next Duos action is chosen in.
+    pub fn before(&mut self, state: &DuosState, seat: DuosSeat, action: &DuosActionBody) -> Vec<String> {
+        let duel = seat.duel();
+        let violations = match action {
+            DuosActionBody::Duel { body } => {
+                self.monitors[duel].before(&state.duels[duel], seat.player(), body)
+            }
+            DuosActionBody::Pass { .. } | DuosActionBody::Concede => {
+                self.monitors[duel].before(&state.duels[duel], seat.player(), &ActionBody::EndTurn)
+            }
+        };
+        violations
+            .into_iter()
+            .map(|v| format!("duel {duel}: {v}"))
+            .collect()
+    }
+
+    /// Feeds one action's events into the monitors, asserts I2, I4, I5, and I7 against both duels,
+    /// and checks pool bounds (§13.4) for both teams.
+    pub fn after(&mut self, events: &[DuosEvent], state: &DuosState) -> Vec<String> {
+        let mut found = Vec::new();
+        let mut duel_events: [Vec<GameEvent>; DUOS_DUELS] = [Vec::new(), Vec::new()];
+        for event in events {
+            if let DuosEvent::Duel { duel, event } = event {
+                let idx = *duel as usize;
+                if idx < DUOS_DUELS {
+                    duel_events[idx].push(event.clone());
+                }
+            }
+        }
+        for (duel, duel_events_list) in duel_events.iter().enumerate().take(DUOS_DUELS) {
+            if duel < state.duels.len() {
+                let violations = self.monitors[duel].after(duel_events_list, &state.duels[duel]);
+                found.extend(violations.into_iter().map(|v| format!("duel {duel}: {v}")));
+            }
+        }
+        for &team in Team::ALL {
+            let pool = state.teams[team].pool;
+            let cap = state.teams[team].rules.pool_health;
+            if pool > cap {
+                found.push(format!("pool bound: team {team} pool {pool} > cap {cap} (§13.4)"));
+            }
+            if state.result.is_none() && pool <= 0 {
+                found.push(format!(
+                    "pool bound: live game has team {team} pool {pool} <= 0 (§13.4)"
+                ));
+            }
+        }
+        found
+    }
+
+    /// I6 for all seats: both duels' 1v1 hidden checks, plus `duos_view_for` redaction for each seat.
+    pub fn hidden(&self, state: &DuosState) -> Vec<String> {
+        let mut found = Vec::new();
+        for (duel, monitor) in self.monitors.iter().enumerate() {
+            if duel < state.duels.len() {
+                let violations = monitor.hidden(&state.duels[duel]);
+                found.extend(violations.into_iter().map(|v| format!("duel {duel}: {v}")));
+            }
+        }
+        for seat in DUOS_SEATS {
+            let checked = catch_unwind(AssertUnwindSafe(|| {
+                let mut view = duos_view_for(state, seat);
+                if let Some(tamper) = &self.view_tamper {
+                    tamper(&mut view);
+                }
+                check_duos_view_redaction(&view)
+            }));
+            match checked {
+                Ok(violations) => {
+                    found.extend(
+                        violations
+                            .into_iter()
+                            .map(|v| format!("duel {} (seat {seat}): {v}", seat.duel())),
+                    );
+                }
+                Err(payload) => {
+                    let message = if let Some(text) = payload.downcast_ref::<&str>() {
+                        (*text).to_string()
+                    } else if let Some(text) = payload.downcast_ref::<String>() {
+                        text.clone()
+                    } else {
+                        "a panic with no message".to_string()
+                    };
+                    found.push(format!(
+                        "duel {} (seat {seat}): I6 duos view threw: duos_view_for: {message} (§13.6)",
+                        seat.duel()
+                    ));
+                }
+            }
+        }
+        found
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::DECK_SIZE;
+    use crate::testkit::scenario::{catalog_override, register_catalog};
+    use crate::wire::{CardDefs, DuosDecks};
+
+    fn test_decks() -> DuosDecks {
+        if catalog_override().is_none() {
+            let defs: CardDefs = serde_json::from_str(include_str!("../../../cards/catalog.json"))
+                .expect("crates/cards/catalog.json parses as CardDefs");
+            register_catalog(defs);
+        }
+        let defs = catalog_override().unwrap();
+        let size = usize::try_from(DECK_SIZE).unwrap();
+        let ids: Vec<String> = defs
+            .iter()
+            .filter(|(_, def)| !def.is_token())
+            .map(|(id, _)| id.clone())
+            .take(size * 4)
+            .collect();
+        DuosDecks {
+            a1: ids[0..size].to_vec(),
+            a2: ids[size..size * 2].to_vec(),
+            b1: ids[size * 2..size * 3].to_vec(),
+            b2: ids[size * 3..size * 4].to_vec(),
+        }
+    }
+
+    #[test]
+    fn duos_monitor_clean_on_fresh_game() {
+        let decks = test_decks();
+        let state = crate::testkit::duos_scenario::duos_scenario("clean-duos-monitor", decks, None);
+        let mut monitor = create_duos_invariant_monitor(&state);
+        assert_eq!(monitor.after(&[], &state), Vec::<String>::new());
+        assert_eq!(monitor.hidden(&state), Vec::<String>::new());
+    }
+
+    #[test]
+    fn check_duos_view_redaction_flags_enemy_ended_and_passes_leak() {
+        let decks = test_decks();
+        let state = crate::testkit::duos_scenario::duos_scenario("redaction-test", decks, None);
+        let mut view = duos_view_for(&state, DuosSeat::A1);
+
+        // Initially clean
+        assert_eq!(check_duos_view_redaction(&view), Vec::<String>::new());
+
+        // Enemy ended leak
+        view.enemy.ended = vec![true, false];
+        let violations = check_duos_view_redaction(&view);
+        assert_eq!(violations.len(), 1);
+        assert!(violations[0].contains("enemy ended leaked"));
+
+        // Enemy passes_left leak
+        view.enemy.ended = vec![false, false];
+        view.enemy.passes_left = vec![1, 0];
+        let violations = check_duos_view_redaction(&view);
+        assert_eq!(violations.len(), 1);
+        assert!(violations[0].contains("enemy passes_left leaked"));
+
+        // Enemy concede offer leak (offer from B1 leaked to A1)
+        view.enemy.passes_left = vec![0, 0];
+        view.concede_offered_by = Some(DuosSeat::B1);
+        let violations = check_duos_view_redaction(&view);
+        assert_eq!(violations.len(), 1);
+        assert!(violations[0].contains("enemy concede offer from b1 leaked to a1"));
+    }
+
+    #[test]
+    fn duos_monitor_flags_pool_bound_overflow() {
+        let decks = test_decks();
+        let mut state = crate::testkit::duos_scenario::duos_scenario("pool-overflow-test", decks, None);
+        let mut monitor = create_duos_invariant_monitor(&state);
+
+        // Clean initially
+        assert_eq!(monitor.after(&[], &state), Vec::<String>::new());
+
+        // Overflow team A pool
+        state.teams.a.pool = 25;
+        let findings = monitor.after(&[], &state);
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.contains("pool bound: team a pool 25 > cap 20"))
+        );
+
+        // Reset pool and test live game with pool <= 0
+        state.teams.a.pool = 0;
+        let findings = monitor.after(&[], &state);
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.contains("pool bound: live game has team a pool 0 <= 0"))
+        );
     }
 }
