@@ -5,23 +5,29 @@
 //! Patch v0.2.0's mechanics through the engine's own readers: a unit the engine bars from attacking
 //! (E35) counts no attack, Spell Damage (E6) and Immune to Spells are worth something, a Brittle count
 //! (B3.3) discounts its card, an Animated backrow card (B3.1) is partly a unit already, and an own hand
-//! card's `costMod` (B3.4, R65) moves its worth. It reads only what the seat may know or what a
+//! card's `costMod` (B3.4, R65) moves its worth. #1086 prices what a side has banked in public state:
+//! Jade steps (R962), the enemy units its delayed effects have marked (R437), extra turns (R846), and
+//! an own Temporary hand card at a discount (R637). It reads only what the seat may know or what a
 //! determinization sampled, and nothing here reads a handicap or a difficulty (R180).
 //!
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
 //! are passed explicitly.
 
-use jackioh_engine::config::{DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
+use jackioh_engine::config::{
+    DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT, TURN_CAP_PLAYER_TURNS,
+};
+use jackioh_engine::effects::DELAYED_DESTROY_HOOK;
 use jackioh_engine::{
     AttackTarget, CardInstance, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
     active_brittle_count, active_units_of, animated_kind_of, attack_restriction, attacks_per_turn,
     backrow_is_public, cannot_attack, card_keywords, credit_lapsing, effective_life, find_def, has_keyword,
-    hero_armor_of, owed_mana_of, own_cost, pierces, query_cost, reset_instance, subsystems,
-    takes_strike_back, unit_view,
+    hero_armor_of, is_temporary_card, owed_mana_of, own_cost, pierces, query_cost, reset_instance,
+    subsystems, takes_strike_back, unit_has, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::config::EvalWeights;
+use crate::candidates::{Side, blow, cleaved_neighbours, side_of};
+use crate::config::{AI_EVAL, EvalWeights};
 
 /// The life `player` started the game with, where the hero value and `closing` are anchored (R964000):
 /// HERO_HEALTH in a 1v1 game; in a Duos duel the seat's own HP and its team's pool at its cap (§13.4;
@@ -61,6 +67,12 @@ fn can_swing(state: &GameState, unit: &CardInstance, view: &UnitView) -> bool {
     !has_keyword(&view.keywords, KeywordKind::CantAttack) && !cannot_attack(state, unit)
 }
 
+/// R49: a unit with Deft, read through the layers, in Defense Position. Its switch to Attack spends
+/// only the switch's exertion, so it can switch and still attack in the same turn.
+pub(crate) fn deft_in_defense(view: &UnitView) -> bool {
+    view.position == Position::Def && has_keyword(&view.keywords, KeywordKind::Deft)
+}
+
 /// One unit's worth on the board: its stats through the layers and its keywords (AI_EVAL), Spell
 /// Damage per point, all discounted by its Brittle count.
 pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f64 {
@@ -69,8 +81,10 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f6
     let mut value = w.health * f64::from(view.health) + w.armor_point * f64::from(view.armor);
     if can_swing(state, unit, &view) {
         // §4.1: a Defense-Position unit cannot attack until it spends a turn's exertion switching back,
-        // though it still strikes back in full, so only part of its attack counts.
-        let share = if view.position == Position::Def {
+        // though it still strikes back in full, so only part of its attack counts. With
+        // `deftDefenseAttacks` a Deft unit keeps it all: it can switch back and attack in one turn (R49).
+        let deft = w.deft_defense_attacks && deft_in_defense(&view);
+        let share = if view.position == Position::Def && !deft {
             w.defense_attack_share
         } else {
             1.0
@@ -124,7 +138,8 @@ fn cost_shift(state: &GameState, card: &CardInstance) -> i32 {
     }
 }
 
-/// An own hand card. maxi-tail: a Degrade or Upgrade of a hand card's stats is not read here.
+/// An own hand card, a Temporary one (R637) at `temporary_discount` off. maxi-tail: a Degrade or
+/// Upgrade of a hand card's stats is not read here.
 fn hand_card_value(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f64 {
     let def = find_def(Some(state), &card.def_id);
     let cost = match def {
@@ -137,7 +152,62 @@ fn hand_card_value(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f
     } else {
         w.hand_cost_delta * f64::from(cost_shift(state, card))
     };
-    (w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + radiant - shift) * brittle_share(card, w)
+    // R637: `is_temporary_card` reads the definition, so a card without one is never asked.
+    let temporary = if def.is_some() && is_temporary_card(state, card) {
+        1.0 - w.temporary_discount
+    } else {
+        1.0
+    };
+    (w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + radiant - shift)
+        * brittle_share(card, w)
+        * temporary
+}
+
+/// R962: the steps a Jade Counter at `jade` has climbed toward the next threshold it has not crossed.
+/// It only rises (R961): toward JADE_BEAUTY_AT, then toward JADE_ASCEND_AT, then none.
+fn jade_steps(jade: i32) -> i32 {
+    if jade < JADE_BEAUTY_AT {
+        jade
+    } else if jade < JADE_ASCEND_AT {
+        jade - JADE_BEAUTY_AT
+    } else {
+        0
+    }
+}
+
+/// R437: the `unit_worth` of the enemy units a delayed effect `player` owns has marked, each once (a
+/// mark names its entry by `delayed_id`; an entry `redact` dropped, R185, counts nothing). A mark on a
+/// hand card (R1141), a backrow card or an own unit counts nothing, nor does an unmarked delayed
+/// effect: the shipped ones are as often a cost (/fullsend's exile) as a payoff. Nor does a delayed
+/// destroy's mark on a unit that is Indestructible now, which the destroy spares (Classic #20, R46).
+fn marked_enemy_worth(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
+    let Some(marks) = &state.marks else {
+        return 0.0;
+    };
+    let enemy = active_units_of(state, player.opponent());
+    let mut counted: Vec<&str> = Vec::new();
+    let mut worth = 0.0;
+    for mark in marks {
+        let Some(entry) = state
+            .delayed
+            .iter()
+            .find(|entry| entry.id == mark.delayed_id && entry.owner == player)
+        else {
+            continue;
+        };
+        if counted.contains(&mark.instance_id.as_str()) {
+            continue;
+        }
+        if let Some(unit) = enemy.iter().find(|unit| unit.id == mark.instance_id) {
+            if entry.resume.hook == DELAYED_DESTROY_HOOK && unit_has(state, unit, KeywordKind::Indestructible)
+            {
+                continue;
+            }
+            counted.push(mark.instance_id.as_str());
+            worth += unit_worth(state, unit, w);
+        }
+    }
+    worth
 }
 
 /// A hero's side of the ledger: its concave life (`effective_life`, R964000) and its armor.
@@ -146,7 +216,8 @@ fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
         + w.hero_armor * f64::from(hero_armor_of(state, player))
 }
 
-/// Everything on one side but the hero: the board, the backrow, the hand and the library.
+/// Everything on one side but the hero: the board, what it has banked (a debt, Jade steps, extra
+/// turns, the enemy units it has marked), the backrow, the hand and the library.
 fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights) -> f64 {
     let side = &state.players[player];
     let mut value = 0.0;
@@ -156,6 +227,13 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
 
     // R1224: a debt is coming turns' mana spent early, so it counts against the side that owes it.
     value -= w.owed_mana * f64::from(owed_mana_of(state, player));
+    // #1086: what the side has banked in state both seats see (R185): Jade steps (R962), extra
+    // turns (R846) and the enemy units it has marked (R437; no `unit_worth` call at a zero share).
+    value += w.jade_step * f64::from(jade_steps(side.jade.unwrap_or(0)));
+    value += w.extra_turn * f64::from(side.extra_turns.unwrap_or(0));
+    if w.marked_share != 0.0 {
+        value += w.marked_share * marked_enemy_worth(state, player, w);
+    }
     // R1225: on its controller's turn, an unused base-face Jlarna is tributed at end of turn, so it
     // is worth nothing.
     let lapsing: Vec<String> = if state.active == player {
@@ -206,17 +284,25 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     value
 }
 
+/// The face damage `attacker`'s board could deal the other hero next turn, as AI_EVAL reads it
+/// (`face_threat_with`).
+pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
+    face_threat_with(state, attacker, &AI_EVAL)
+}
+
 /// The face damage `attacker`'s board could deal the other hero next turn: units with attack > 0,
-/// position ATK, no "Can't attack" and no E35 status barring attacks, sorted ascending by attack.
-/// Taunt units on the defending side soak up the smallest attackers they bind first, one §4.4 hit at
-/// a time (`damage_past_taunts`). Each remaining attacker's attack goes through
+/// position ATK (with `w.deft_defense_attacks`, a Deft unit in Defense Position too, which can switch
+/// to Attack and still swing, R49), no "Can't attack" and no E35 status barring attacks, sorted
+/// ascending by attack. Taunt units on the defending side soak up the smallest attackers they bind
+/// first, one §4.4 hit at a time (`damage_past_taunts`). Each remaining attacker's attack goes through
 /// `subsystems::projected_hero_damage` (armor, which a Pierce hit skips (R346), and the Anti-oneshot
 /// cap, per hit), and the results are summed.
-pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
+pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
     let mut attacks: Vec<(&CardInstance, i32)> = Vec::new();
     for unit in active_units_of(state, attacker) {
         let view = unit_view(state, unit);
-        if view.attack <= 0 || view.position != Position::Atk {
+        let ready = view.position == Position::Atk || (w.deft_defense_attacks && deft_in_defense(&view));
+        if view.attack <= 0 || !ready {
             continue;
         }
         if !can_swing(state, unit, &view) {
@@ -233,6 +319,28 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 /// §4.5 step 4: a Reborn unit comes back at 1 health.
 const REBORN_HEALTH: i32 = 1;
 
+/// One Taunt's standing while `damage_past_taunts` walks it: the unit, its view, and the shield
+/// and health its attackers (and their splashes) have left it with.
+struct TauntStand {
+    unit: CardInstance,
+    view: UnitView,
+    shield: bool,
+    health: i32,
+}
+
+impl TauntStand {
+    fn of(unit: CardInstance, view: UnitView) -> Self {
+        let shield = has_keyword(&view.keywords, KeywordKind::DivineShield);
+        let health = view.health;
+        Self {
+            unit,
+            view,
+            shield,
+            health,
+        }
+    }
+}
+
 /// What `attacks` (one entry per attack: the attacker and its attack) deal `defender`'s hero once its
 /// Taunt units have soaked up the smallest attackers they bind, as `face_threat` counts it. §4.2 step
 /// 3: a Taunt binds only the attackers that may attack it, asked of the engine's own
@@ -244,75 +352,140 @@ const REBORN_HEALTH: i32 = 1;
 /// the first hit whole (step 1); the Taunt's Armor comes off each hit, unless it pierces (step 2,
 /// R346), and a hit the Armor takes whole does nothing (R1361); Poisonous destroys with any damage
 /// dealt (step 7); and what a Trample hit lands beyond the Taunt's health reaches the hero (step 9,
-/// R63). A Taunt its attackers cannot destroy holds them all, and a destroyed Reborn Taunt comes back
-/// and binds the attackers left (§4.5 step 4, `reborn_body`). Lane strike (R94), combat-only bonuses
-/// (R1120) and Cleave stay out. Every remaining hit goes through `subsystems::projected_hero_damage`
-/// with its attacker's Pierce (R346).
+/// R63). A bound Cleave attacker also splashes its attack onto the defender's live neighbouring
+/// Taunts (§4.4 step 10, R63): a killed neighbour stops binding, a popped neighbour shield is gone,
+/// and Trample excess past a neighbour reaches the hero as for the main hit. A Taunt its attackers
+/// cannot destroy holds them all, and a destroyed Reborn Taunt comes back and binds the attackers
+/// left (§4.5 step 4, `reborn_body`). Lane strike (R94) and combat-only bonuses (R1120) stay out.
+/// Every remaining hit goes through `subsystems::projected_hero_damage` with its attacker's Pierce
+/// (R346).
 pub fn damage_past_taunts(state: &GameState, defender: PlayerId, attacks: &[(&CardInstance, i32)]) -> i32 {
     let mut free: Vec<(&CardInstance, i32)> = attacks.to_vec();
     free.sort_by_key(|(_, attack)| *attack);
-    let mut taunts: Vec<(&CardInstance, UnitView)> = active_units_of(state, defender)
+    let mut stands: Vec<TauntStand> = active_units_of(state, defender)
         .into_iter()
-        .map(|unit| (unit, unit_view(state, unit)))
-        .filter(|(_, view)| has_keyword(&view.keywords, KeywordKind::Taunt))
+        .map(|unit| TauntStand::of(unit.clone(), unit_view(state, unit)))
+        .filter(|stand| has_keyword(&stand.view.keywords, KeywordKind::Taunt))
         .collect();
-    taunts.sort_by_key(|(_, view)| view.health + view.armor);
+    stands.sort_by_key(|stand| stand.view.health + stand.view.armor);
 
     let mut total = 0;
-    for (unit, view) in taunts {
-        let mut standing = Some((unit.clone(), view));
-        while let Some((taunt, view)) = standing.take() {
-            let target = AttackTarget::Unit {
-                instance: taunt.clone(),
+    let mut i = 0;
+    while i < stands.len() {
+        let target = AttackTarget::Unit {
+            instance: stands[i].unit.clone(),
+        };
+        let (bound, mut unbound): (Vec<_>, Vec<_>) = free
+            .into_iter()
+            .partition(|(attacker, _)| attack_restriction(state, attacker, &target).is_ok());
+        let mut bound = bound.into_iter();
+        let mut poisoned = false;
+        while stands[i].health > 0 && !poisoned {
+            let Some((attacker, attack)) = bound.next() else {
+                break;
             };
-            let (bound, mut unbound): (Vec<_>, Vec<_>) = free
-                .into_iter()
-                .partition(|(attacker, _)| attack_restriction(state, attacker, &target).is_ok());
-            let mut bound = bound.into_iter();
-            let mut shield = has_keyword(&view.keywords, KeywordKind::DivineShield);
-            let mut health = view.health;
-            let mut poisoned = false;
-            while health > 0 && !poisoned {
-                let Some((attacker, attack)) = bound.next() else {
-                    break;
-                };
-                // §4.3 step 1: an attacker the Taunt's First Strike destroys lands nothing.
-                if falls_to_first_strike(state, attacker, &taunt, &view) {
-                    continue;
-                }
-                // §4.4 step 1: the shield takes the whole hit.
-                if shield {
-                    shield = false;
-                    continue;
-                }
-                // Step 2: the Taunt's Armor comes off each hit, unless it pierces (R346); a hit it takes
-                // whole is no damage instance at all (R1361).
-                let pierce = pierces(state, Some(attacker), None);
-                let dealt = if pierce {
-                    attack
-                } else {
-                    (attack - view.armor).max(0)
-                };
-                if dealt <= 0 {
-                    continue;
-                }
-                let keywords = unit_view(state, attacker).keywords;
-                // Step 9: what Trample lands beyond the Taunt's health is a hit on the hero (R63).
-                if has_keyword(&keywords, KeywordKind::Trample) && dealt > health {
-                    total += subsystems::projected_hero_damage(state, defender, dealt - health, pierce);
-                }
-                // Step 7: Poisonous destroys with any damage dealt.
-                poisoned = has_keyword(&keywords, KeywordKind::Poisonous);
-                health -= dealt;
+            // §4.3 step 1: an attacker the Taunt's First Strike destroys lands nothing.
+            if falls_to_first_strike(state, attacker, &stands[i].unit, &stands[i].view) {
+                continue;
             }
-            unbound.extend(bound);
-            unbound.sort_by_key(|(_, attack)| *attack);
-            free = unbound;
-            // §4.5 step 4: a destroyed Reborn Taunt comes back and binds what is left.
-            if (health <= 0 || poisoned) && has_keyword(&view.keywords, KeywordKind::Reborn) {
-                standing = reborn_body(state, &taunt);
+            let keywords = unit_view(state, attacker).keywords;
+            let pierce = pierces(state, Some(attacker), None);
+            // The splash belongs to the attack rather than to the hit (R63), so it lands even when
+            // the hit on the Taunt itself is stopped below. Only live neighbouring Taunts matter:
+            // the target itself and the stands already walked bind nothing more.
+            if has_keyword(&keywords, KeywordKind::Cleave) {
+                // Combat-only bonuses stay out of the threat model, so the splash is Poisonous
+                // from the attacker's own keyword alone.
+                let poisonous = has_keyword(&keywords, KeywordKind::Poisonous);
+                let from = side_of(state, attacker);
+                for neighbour in cleaved_neighbours(state, attacker, &stands[i].unit) {
+                    let Some(j) = stands.iter().position(|stand| stand.unit.id == neighbour.id) else {
+                        continue;
+                    };
+                    if j <= i || !has_keyword(&stands[j].view.keywords, KeywordKind::Taunt) {
+                        continue;
+                    }
+                    // The stand's tracked shield and health, not the state's: an earlier splash
+                    // may already have popped or hurt it.
+                    let mut damaged = stands[j].view.clone();
+                    damaged.health = stands[j].health;
+                    let to = Side {
+                        view: damaged,
+                        shield: stands[j].shield,
+                        indestructible: has_keyword(&stands[j].view.keywords, KeywordKind::Indestructible),
+                        first_strike: false,
+                        poisonous: false,
+                        pierce: false,
+                    };
+                    let splash = blow(&from, attack, poisonous, &to);
+                    if splash.pops_shield {
+                        stands[j].shield = false;
+                    } else {
+                        // Step 9: what Trample lands beyond the neighbour's health is a hit on
+                        // the hero (R63), as for the main hit below.
+                        if has_keyword(&keywords, KeywordKind::Trample) && splash.dealt > stands[j].health {
+                            total += subsystems::projected_hero_damage(
+                                state,
+                                defender,
+                                splash.dealt - stands[j].health,
+                                pierce,
+                            );
+                        }
+                        if splash.kills {
+                            // §4.5 step 4: a destroyed Reborn neighbour comes back and binds what
+                            // is left, unless its body has no Taunt. Only a later stand is ever
+                            // removed, so `i` stays valid.
+                            if has_keyword(&stands[j].view.keywords, KeywordKind::Reborn) {
+                                match reborn_body(state, &stands[j].unit) {
+                                    Some((body, view)) => stands[j] = TauntStand::of(body, view),
+                                    None => {
+                                        stands.remove(j);
+                                    }
+                                }
+                            } else {
+                                stands.remove(j);
+                            }
+                        } else {
+                            stands[j].health -= splash.dealt;
+                        }
+                    }
+                }
             }
+            // §4.4 step 1: the shield takes the whole hit.
+            if stands[i].shield {
+                stands[i].shield = false;
+                continue;
+            }
+            // Step 2: the Taunt's Armor comes off each hit, unless it pierces (R346); a hit it takes
+            // whole is no damage instance at all (R1361).
+            let dealt = if pierce {
+                attack
+            } else {
+                (attack - stands[i].view.armor).max(0)
+            };
+            if dealt <= 0 {
+                continue;
+            }
+            // Step 9: what Trample lands beyond the Taunt's health is a hit on the hero (R63).
+            if has_keyword(&keywords, KeywordKind::Trample) && dealt > stands[i].health {
+                total += subsystems::projected_hero_damage(state, defender, dealt - stands[i].health, pierce);
+            }
+            // Step 7: Poisonous destroys with any damage dealt.
+            poisoned = has_keyword(&keywords, KeywordKind::Poisonous);
+            stands[i].health -= dealt;
         }
+        unbound.extend(bound);
+        unbound.sort_by_key(|(_, attack)| *attack);
+        free = unbound;
+        // §4.5 step 4: a destroyed Reborn Taunt comes back and binds what is left.
+        if (stands[i].health <= 0 || poisoned)
+            && has_keyword(&stands[i].view.keywords, KeywordKind::Reborn)
+            && let Some((body, view)) = reborn_body(state, &stands[i].unit)
+        {
+            stands[i] = TauntStand::of(body, view);
+            continue;
+        }
+        i += 1;
     }
 
     for (attacker, hit) in &free {
@@ -393,8 +566,8 @@ pub fn evaluate(state: &GameState, seat: PlayerId, next: NextSwing, w: &EvalWeig
         };
     }
 
-    let enemy_damage = face_threat(state, opp);
-    let our_damage = face_threat(state, seat);
+    let enemy_damage = face_threat_with(state, opp, w);
+    let our_damage = face_threat_with(state, seat, w);
     // §13.4, R964000: a hero's life is `effective_life`, own HP and the team's pool in a Duos duel,
     // the hero's health in a 1v1 game.
     let seat_life = effective_life(state, seat);

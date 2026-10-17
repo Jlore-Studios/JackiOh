@@ -91,6 +91,18 @@ fn must<T>(value: Option<T>, what: &str) -> T {
     value.unwrap_or_else(|| panic!("missing {what}"))
 }
 
+/// R1074000: the game as one duel of a Duos match sees it, both sides on Duos life (§13.4), where a
+/// hand card can leave by a pass (B20).
+fn as_a_duel(s: &mut Scenario) {
+    for player in PLAYER_IDS {
+        s.state_mut().players[player].duos = Some(DuosLife {
+            pool: DUOS_POOL_HEALTH,
+            pool_cap: DUOS_POOL_HEALTH,
+            spent: false,
+        });
+    }
+}
+
 /// The viewer's two views are identical, event list first so a failure names the extra event.
 fn indistinguishable(viewer: PlayerId, a: &Scenario, b: &Scenario) {
     let types = |s: &Scenario| -> Vec<GameEventType> {
@@ -2271,5 +2283,64 @@ mod r227_r177_a_card_set_face_down_takes_a_fresh_id {
             .filter(|event| json_text(event).contains(&format!("\"{old_id}\"")))
             .collect();
         assert!(naming.iter().any(|event| json_text(event).contains(SHEEPISH)));
+    }
+
+    /// R1074000: in a duel a card in no pile last seen in a hand was passed out of it, but a card set
+    /// face-down left its hand under its old id (R227), so that id is no passed card's: once the trap
+    /// fires, its return to hand reads openly as in a 1v1 game.
+    #[test]
+    fn r1074000_r227_in_a_duel_a_card_set_from_a_hand_is_judged_where_it_went_not_as_passed() {
+        jackioh_cards::register_all();
+        let (mut s, old_id, _new_id) = reset_sheepish();
+        as_a_duel(&mut s);
+        s.end_turn();
+        s.play(MR_VANILLA, json!({}));
+        let returned = s.view("p1").events.into_iter().any(|event| {
+            matches!(&event, GameEvent::AddedToHand { instance_id, def_id, .. }
+                if *instance_id == old_id && def_id == SHEEPISH)
+        });
+        assert!(returned, "p1 reads the fired trap's return to hand by its old id");
+    }
+}
+
+/// R1074000: in a duel a card in no pile that the events last show in a hand was passed out of it, but a
+/// unit token bounced off the field ceases to exist on its way to the hand (R11), so it reached none:
+/// its bounce reads openly to both seats, as in a 1v1 game.
+mod r1074000_r11_a_unit_token_bounced_in_a_duel_reached_no_hand {
+    use super::*;
+
+    const FLOOD: &str = "core-017";
+    const RUSH_TOKEN: &str = "core-t-rush";
+
+    #[test]
+    fn r1074000_r11_both_seats_read_a_unit_token_flood_bounced_off_the_field() {
+        jackioh_cards::register_all();
+        let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test.
+            "seed": "r1074000-flood",
+            "p1": { "hand": [FLOOD], "mana": 4, "library": [MR_VANILLA, MR_VANILLA] },
+            "p2": { "field": [{ "def": RUSH_TOKEN, "lane": 1 }], "library": [MR_VANILLA, MR_VANILLA] },
+        }));
+        as_a_duel(&mut s);
+        let token = must(s.unit("p2", 1), "p2's Rush Token").id;
+        s.play(FLOOD, json!({}));
+        assert!(
+            find_instance(s.state(), &token).is_none(),
+            "the token ceased to exist (R11)"
+        );
+
+        for seat in PLAYER_IDS {
+            let bounced = events_of(&s.view(seat), GameEventType::Bounced)
+                .into_iter()
+                .any(|event| {
+                    matches!(&event, GameEvent::Bounced { instance_id, def_id, .. }
+                        if *instance_id == token && def_id == RUSH_TOKEN)
+                });
+            assert!(bounced, "{seat} reads the bounced token");
+        }
+        assert_eq!(
+            create_invariant_monitor(s.state()).hidden(s.state()),
+            Vec::<String>::new()
+        );
     }
 }

@@ -26,7 +26,8 @@ fn felinor_aura(include_self: bool) -> AuraHook {
         vec![AuraEntry {
             applies: Box::new(move |unit: &CardInstance| {
                 unit.controller == ctx.self_.controller
-                    && matches!(unit.zone, Zone::Field { row: Row::Units, .. })
+                    // R1081000: a Felinor standing in the backrow is one on the field.
+                    && in_units_row_or_standing(ctx.state, unit)
                     && (include_self || unit.id != ctx.self_.id)
                     // MD-B15, R923: a granted Felinor tag counts.
                     && tags_of(ctx.state, unit).contains(&Tag::Felinor)
@@ -355,5 +356,22 @@ mod tests {
             assert_eq!(s.view(P1).you.hero.armor, 0);
             s.expect_stats(FLAG, json!({ "attack": 11, "health": 11 }));
         }
+    }
+
+    /// R1081000: a Felinor standing in the backrow is one on the field: the aura reaches it there too.
+    #[test]
+    fn r1081000_a_felinor_standing_in_the_backrow_keeps_the_aura() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "field": [FLAG, DUPE], "hand": [FILLER] },
+            "p2": { "hand": [FILLER] },
+        }));
+        let dupe = s.card(DUPE).id.clone();
+        let in_the_row = s.stats(dupe.as_str());
+        // Duplicating Felinors prints 3/4: the aura is on it.
+        assert!(in_the_row.attack > 3);
+        crate::stand_in_backrow(&mut s, &dupe, 3);
+        let standing = s.stats(dupe.as_str());
+        assert_eq!((standing.attack, standing.max_health), (in_the_row.attack, in_the_row.max_health));
     }
 }

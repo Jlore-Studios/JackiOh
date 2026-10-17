@@ -899,3 +899,108 @@ mod decides_determinism_and_budget_b15 {
         assert_eq!(js(counter.stopped_by()), json!("clock"));
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// #1062: the enemy's targets beside the seat's own
+// ---------------------------------------------------------------------------------------------
+
+mod enemy_targets_first {
+    use super::*;
+
+    /// Burn (C #36: any unit or hero) in the AI's hand beside two Tempo Timmys and a Mr. Vanilla in
+    /// Defense Position, against the 4-mana 7/7: two face attacks lead, and `legal_actions` offers
+    /// Burn's own-side targets before the enemy's (`play_choices::sides_for`).
+    fn burn_board() -> GameState {
+        jackioh_cards::register_all();
+        scenario(json!({
+            "seed": "candidates-enemy-first",
+            "p1": { "hand": ["classic-036"], "field": ["core-011", "core-011", { "def": "core-008", "position": "DEF" }] },
+            "p2": { "field": ["core-025"] },
+        }))
+        .state()
+        .clone()
+    }
+
+    /// Whether a play's first target is the enemy hero or a card the enemy controls.
+    fn aimed_at_the_enemy(state: &GameState, action: &ActionBody) -> bool {
+        let first = match action {
+            ActionBody::Play { targets, .. } => targets.as_deref().and_then(|targets| targets.first()),
+            _ => None,
+        };
+        match first {
+            Some(Selection::Hero { player }) => *player != AI,
+            Some(Selection::Instance { instance_id }) => {
+                find_instance(state, instance_id).is_some_and(|card| card.controller != AI)
+            }
+            _ => false,
+        }
+    }
+
+    /// The action keys of `actions`' plays of `instance_id`, in order.
+    fn plays_of(actions: &[ActionBody], instance_id: &str) -> Vec<String> {
+        actions
+            .iter()
+            .filter(|action| matches!(action, ActionBody::Play { instance_id: id, .. } if id == instance_id))
+            .map(action_key)
+            .collect()
+    }
+
+    /// #1062: with three units of its own and two face attacks, a Burn at the enemy is among the
+    /// first AI_BUDGET.branching candidates, so every step of the beam tries one.
+    #[test]
+    fn a_burn_at_the_enemy_is_within_branching_beside_three_own_units_and_two_face_attacks() {
+        let state = burn_board();
+        let candidates = candidate_actions(&state, AI);
+        let first_at_enemy = candidates
+            .iter()
+            .position(|action| aimed_at_the_enemy(&state, action));
+        assert!(
+            first_at_enemy.is_some_and(|at| at < AI_BUDGET.branching),
+            "{first_at_enemy:?} in {:?}",
+            candidates.iter().map(action_key).collect::<Vec<_>>()
+        );
+    }
+
+    /// #1062: one source's variants at the enemy (the enemy hero's first) alternate with the rest,
+    /// enemy first, each group in legal_actions order.
+    #[test]
+    fn a_sources_variants_alternate_enemy_first_with_the_enemy_hero_first() {
+        let state = burn_board();
+        let burn = hand_id(&state, "classic-036");
+        let legal = plays_of(&legal_actions(&state, AI), &burn);
+        // legal_actions: Tempo Timmy, Tempo Timmy, Mr. Vanilla, the AI's hero, the 7/7, the enemy hero.
+        assert_eq!(legal.len(), 6, "{legal:?}");
+        let expected: Vec<String> = [5, 0, 4, 1, 2, 3].iter().map(|&at| legal[at].clone()).collect();
+        assert_eq!(plays_of(&candidate_actions(&state, AI), &burn), expected);
+    }
+
+    /// #1062: Golden Grape, which only aims at the AI's own field and hand, and Mr. Vanilla from hand,
+    /// which aims at nothing, keep legal_actions order.
+    #[test]
+    fn a_source_aimed_only_at_its_own_side_and_one_aimed_at_nothing_keep_legal_actions_order() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "candidates-enemy-first",
+            "p1": {
+                "hand": ["classic-036", "classicplus-065-4", "core-008"],
+                "mana": 2,
+                "field": ["core-011", "core-011", { "def": "core-008", "position": "DEF" }],
+            },
+            "p2": { "field": ["core-025"] },
+        }))
+        .state()
+        .clone();
+        let legal = legal_actions(&state, AI);
+        let candidates = candidate_actions(&state, AI);
+        for def_id in ["classicplus-065-4", "core-008"] {
+            let id = hand_id(&state, def_id);
+            let kept = plays_of(&candidates, &id);
+            let offered: Vec<String> = plays_of(&legal, &id)
+                .into_iter()
+                .filter(|key| kept.contains(key))
+                .collect();
+            assert!(offered.len() > 1, "{def_id}: {offered:?}");
+            assert_eq!(kept, offered, "{def_id}");
+        }
+    }
+}

@@ -954,7 +954,15 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
             None
         },
     };
-    if !crate::zones::place_on_field(&mut *sink.state, &mut card, slot, options) {
+    // R1081000: a Flying Unit set in a backrow zone stands there, as one played into it does.
+    let stands =
+        row == Row::Backrow && crate::layers::unit_has(&*sink.state, &card, crate::wire::KeywordKind::Flying);
+    let placed = if stands {
+        crate::zones::place_standing_on_field(&mut *sink.state, &mut card, slot, options)
+    } else {
+        crate::zones::place_on_field(&mut *sink.state, &mut card, slot, options)
+    };
+    if !placed {
         return Err(format!(
             "{}: {} {} lane {lane} would not take \"{}\"",
             entry.label,

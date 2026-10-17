@@ -237,6 +237,38 @@ describe("the rendered clock", () => {
     expect(screen.queryByTestId("grace-opponent")).toBeNull();
   });
 
+  it("labels each grace line with whose reconnect window it is, a named timer beside the countdown", () => {
+    const at = { ms: 0 };
+    const half = DISCONNECT_GRACE_MS / 2;
+    const pinned = props({
+      frame: frame({ graceDeadline: { p1: NOW + DISCONNECT_GRACE_MS, p2: NOW + half } }),
+      monotonic: monotonicAt(at),
+    });
+    const view = render(<Clock {...pinned} />);
+
+    const you = screen.getByTestId("grace-you");
+    expect(you).toHaveAttribute("role", "timer");
+    expect(you).toHaveTextContent("You are reconnecting");
+    expect(you).toHaveTextContent(formatClock(DISCONNECT_GRACE_MS));
+    expect(you).toHaveAttribute("aria-label", `You are reconnecting, ${String(DISCONNECT_GRACE_MS / 1000)} seconds left`);
+
+    const opponent = screen.getByTestId("grace-opponent");
+    expect(opponent).toHaveTextContent("Opponent reconnecting");
+    expect(opponent).toHaveTextContent(formatClock(half));
+    expect(screen.getByRole("timer", { name: `Opponent reconnecting, ${String(half / 1000)} seconds left` })).toBe(opponent);
+
+    // Words, name and digits tick together with the monotonic clock, down to the last second.
+    at.ms = half - 1_000;
+    view.rerender(<Clock {...pinned} />);
+    expect(screen.getByTestId("grace-opponent")).toHaveAttribute("aria-label", "Opponent reconnecting, 1 second left");
+    expect(screen.getByTestId("grace-opponent")).toHaveTextContent(formatClock(1_000));
+
+    // clock.css keeps the words on one line, cut short rather than spilling out of End turn's housing.
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "clock.css"), "utf8").replace(/\s+/g, " ");
+    expect(css).toContain(".clock-grace-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }");
+    expect(css).toContain(".clock-grace .clock-digits { flex-shrink: 0; }");
+  });
+
   it("still renders both sides from PlayerView.clockMs when no frame has arrived", () => {
     render(<Clock {...props({ youMs: 42_000, opponentMs: null, frame: null })} />);
     expect(screen.getByTestId("clock-you")).toHaveTextContent("42s");

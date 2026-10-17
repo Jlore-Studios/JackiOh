@@ -27,11 +27,11 @@
 //! indentation, which cost the browser's module about 2.7 KB gzipped against #442 L12's cap
 //! (`apps/web/src/wasm/size.test.ts`).
 //!
-//! R767000: and every other shipped version, for the replays of games played on it.
-//! `$OUT_DIR/history.json` holds `{ order, patches, versions }`: `order` is every shipped version,
-//! oldest first; each of `versions` is one shipped version but the newest, with the catalog ids its
-//! snapshot (`patches/<version>.json`) lacks (`absent`) and, for each id whose entry differs from
-//! `catalog.json`'s, an index into `patches` (`changed`). Each patch is `{ set, unset }`: the
+//! R767000, R388: and every shipped version, for the replays of games played on it and for `GET
+//! /api/catalog/:version`. `$OUT_DIR/history.json` holds `{ order, patches, versions }`: `order` is
+//! every shipped version, oldest first; each of `versions` is one shipped version, with the catalog
+//! ids its snapshot (`patches/<version>.json`) lacks (`absent`) and, for each id whose entry differs
+//! from `catalog.json`'s, an index into `patches` (`changed`). Each patch is `{ set, unset }`: the
 //! snapshot's top-level keys whose value differs, with that value, and the keys only `catalog.json`'s
 //! entry has. An id the catalog no longer has is not carried. `src/history.rs` reads it.
 //!
@@ -178,7 +178,7 @@ fn read_json(path: &Path) -> serde_json::Value {
     serde_json::from_str(&text).unwrap_or_else(|e| panic!("{}: {e}", path.display()))
 }
 
-/// R767000: `$OUT_DIR/history.json` (the header): every shipped version but the newest, or with
+/// R767000, R388: `$OUT_DIR/history.json` (the header): every shipped version, or with
 /// `from` those from `from` on, as its snapshot differs from `catalog`.
 fn history_json(
     patches_dir: &Path,
@@ -207,7 +207,7 @@ fn history_json(
             .position(|version| version == from)
             .unwrap_or_else(|| panic!("BROWSER_CARRIED_FROM {from} is not in {}", list.display()))
     });
-    for version in versions.iter().take(versions.len().saturating_sub(1)).skip(first) {
+    for version in versions.iter().skip(first) {
         let path = patches_dir.join(format!("{version}.json"));
         let snapshot = read_json(&path);
         let snapshot = snapshot

@@ -162,7 +162,9 @@ pub(crate) fn acting_texts_of(state: &GameState, player: PlayerId) -> Vec<CardIn
         let card_type = crate::faces::card_type_of(state, card);
         let face_down =
             (card_type == CardType::Trap || card_type == CardType::FieldTrap) && card.face_up != Some(true);
-        if !face_down {
+        // R1081000: a Unit standing in the backrow is already above, among the active units — its
+        // text must not answer twice.
+        if !face_down && !out.iter().any(|held| held.id == card.id) {
             out.push(card.clone());
         }
     }

@@ -615,6 +615,31 @@ pub fn place_on_field(
     slot: impl Into<ZoneSlot>,
     options: PlaceOnFieldOptions,
 ) -> bool {
+    place_with(state, instance, slot, options, false)
+}
+
+/// R1081000: `place_on_field` for a Unit that stands in a backrow zone itself — a Flying Unit played
+/// into one (the play was vetted by `play_choices`, which read its Flying where it was in hand), or a
+/// Unit already standing in one, or dormant beneath its top, that is moved whole (a steal, a swap, a
+/// rotation, a restore, Reborn's return; a whole zone sets every card down so but the Unit a carrier
+/// holds). Only these set a Unit down in a backrow zone that no carrier holds; every other placement
+/// (a summon, a move out of a carrier's zone) refuses it there, as before.
+pub fn place_standing_on_field(
+    state: &mut GameState,
+    instance: &mut CardInstance,
+    slot: impl Into<ZoneSlot>,
+    options: PlaceOnFieldOptions,
+) -> bool {
+    place_with(state, instance, slot, options, true)
+}
+
+fn place_with(
+    state: &mut GameState,
+    instance: &mut CardInstance,
+    slot: impl Into<ZoneSlot>,
+    options: PlaceOnFieldOptions,
+    stands: bool,
+) -> bool {
     let slot = slot.into();
     let stack = options.stack == Some(true);
     // R688: a Lock refuses plays, never placements — summons, moves, rotations and restores all land.
@@ -639,22 +664,41 @@ pub fn place_on_field(
         // R446: a Unit enters a backrow zone only on top of a carrier, which stays beneath it and keeps
         // acting there. A move that sets a whole zone down (`zone_contents`: a rotation, a board swap)
         // puts the carrier down first and its Unit back on it, whatever the carrier's text says by then.
-        let Some(top) = state.players[slot.player]
+        //
+        // R1081000: a Unit that stands (`place_standing_on_field`) may also stand in the zone itself —
+        // an empty slot lands as `Backrow`; an occupied one only with `stack` and no carried Unit
+        // standing there, as a Stack pile. A carrier still takes it as a carrier first, so a play onto
+        // one lands carried, never standing.
+        match state.players[slot.player]
             .backrow
             .get(index)
             .and_then(Option::as_ref)
-        else {
-            return false;
-        };
-        if carried_at(state, slot).is_some() {
-            return false;
+        {
+            None => {
+                if !stands {
+                    return false;
+                }
+                Landing::Backrow
+            }
+            Some(top) => {
+                if carried_at(state, slot).is_some() {
+                    return false;
+                }
+                if is_carrier(state, top) {
+                    // R653: the first Unit to stand on a carrier that fuses its Unit is the one it
+                    // takes this stay.
+                    let stamp =
+                        flags_of(state, top).fuses_carried == Some(true) && stacked_onto(top).is_none();
+                    Landing::Carried { stamp }
+                } else if stands && stack {
+                    Landing::Backrow
+                } else if !stands && stack {
+                    Landing::Carried { stamp: false }
+                } else {
+                    return false;
+                }
+            }
         }
-        if !is_carrier(state, top) && !stack {
-            return false;
-        }
-        // R653: the first Unit to stand on a carrier that fuses its Unit is the one it takes this stay.
-        let stamp = flags_of(state, top).fuses_carried == Some(true) && stacked_onto(top).is_none();
-        Landing::Carried { stamp }
     } else {
         // B5 E21: a Stack card may top an occupied backrow zone as it may a unit zone; the card beneath
         // goes dormant (§3.2). A zone carrying a Unit takes nothing more (R446).
@@ -718,11 +762,20 @@ pub fn place_on_field(
     true
 }
 
-/// R638, R13: places a card beneath the top card of a unit zone pile.
-/// This is no arrival (R638), and the card lies dormant (R13).
+/// R638, R13: places a card beneath the top card of a unit zone pile, or beneath a Unit standing in a
+/// backrow zone (R1081000), the top of that zone's pile. This is no arrival (R638), and the card lies
+/// dormant (R13).
 pub fn place_beneath_top(state: &mut GameState, instance: &mut CardInstance, slot: ZoneSlot) -> bool {
-    if slot.row != Row::Units {
-        return false;
+    if slot.row == Row::Backrow {
+        if !card_at(state, slot).is_some_and(|top| is_standing_unit(state, top)) {
+            return false;
+        }
+        instance.controller = slot.player;
+        instance.zone = zone_of(slot);
+        let mut beneath = beneath_at(state, slot).to_vec();
+        beneath.insert(0, instance.clone());
+        set_beneath(&mut state.players[slot.player], slot.lane, beneath);
+        return true;
     }
     let Some(pile) = pile_at_mut(state, slot) else {
         return false;
@@ -737,7 +790,7 @@ pub fn place_beneath_top(state: &mut GameState, instance: &mut CardInstance, slo
 }
 
 /// R227: whether a card placed in this row lands face-down — a Trap or a Field Trap in a backrow
-/// (§3.2, R33). A Field Spell lands face-up, and a Unit never reaches the backrow.
+/// (§3.2, R33). A Field Spell lands face-up, and a Unit standing in the backrow (R1081000) face-up too.
 pub fn lands_face_down(state: &GameState, instance: &CardInstance, row: Row) -> bool {
     if row != Row::Backrow {
         return false;
@@ -1453,7 +1506,9 @@ pub fn move_to_zone(
 }
 
 /// Every unit that acts for this player: each unit zone's top card in lane order (§3.2), then the
-/// Units its carriers hold, in backrow lane order — a carried Unit is a Unit for every rule (R446).
+/// Units its carriers hold, in backrow lane order — a carried Unit is a Unit for every rule (R446) —
+/// then the Units standing in its backrow zones, in backrow lane order: a Flying Unit there is a Unit
+/// for every rule too (R1081000).
 pub fn active_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     // Read straight off the rows, not through `slots_of` and `card_at`: the auras ask for this on every
     // unit read (`layers::aura_sources`), so it builds nothing it does not return (#188).
@@ -1469,15 +1524,82 @@ pub fn active_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance
         }
     }
     units.extend(side.carried.iter().flatten().filter_map(Option::as_ref));
+    units.extend(standing_units_of(state, player));
     units
 }
 
+/// R1081000: whether the top card of a backrow zone is a Unit standing there — a Flying Unit played
+/// into it. A Unit that enters the field is given a position (`place_on_field`) and a face-down card
+/// holds none, so the position is read first: it keeps this read, which every unit walk makes, off the
+/// definition of the Traps a backrow holds, and off the `ai:hidden` placeholder a redacted state shows
+/// in a face-down card's place, which has none to read. A set Cloaked Unit reads as the Trap it is set
+/// as (`card_type_of`), so it is never one.
+pub fn is_standing_unit(state: &GameState, card: &CardInstance) -> bool {
+    card.position.is_some() && card_type_of(state, card) == CardType::Unit
+}
+
+/// R1081000: whether `card` is itself a Unit standing in a backrow zone — one of `standing_units_of` for
+/// the side it is on, never a Unit a carrier holds (which `is_standing_unit` alone cannot tell apart).
+/// What a mover reads before it lifts the card, to set it down standing again (`place_standing_on_field`).
+pub fn stands_in_backrow(state: &GameState, card: &CardInstance) -> bool {
+    match card.zone {
+        Zone::Field {
+            player,
+            row: Row::Backrow,
+            ..
+        } => standing_units_of(state, player)
+            .iter()
+            .any(|standing| standing.id == card.id),
+        _ => false,
+    }
+}
+
+/// R1081000: whether `card` is a Unit in a zone of its own on the field — in a unit zone, or standing in
+/// a backrow zone. What a "your Units" or "a Unit on the field" read asks where it used to ask for the
+/// unit row alone, so a Flying Unit in the backrow answers as it would there. A Unit a carrier holds is
+/// neither, as before (R446).
+pub fn in_units_row_or_standing(state: &GameState, card: &CardInstance) -> bool {
+    matches!(card.zone, Zone::Field { row: Row::Units, .. }) || stands_in_backrow(state, card)
+}
+
+/// R1081000: whether `neighbour` is adjacent to `origin` in the sense an effect or a Cleave reads: beside a
+/// Unit standing in the backrow, a neighbour is another Unit standing there, never a Trap or a Field
+/// Spell, which is no Unit (§3.1 Adjacent, §4.4 step 10 hit "units adjacent"). Beside any other card it
+/// is whatever stands in the neighbouring zone, as before. `adjacent` itself only names the zones.
+pub fn is_adjacent_card(state: &GameState, origin: &CardInstance, neighbour: &CardInstance) -> bool {
+    !stands_in_backrow(state, origin) || is_standing_unit(state, neighbour)
+}
+
+/// R1081000: the Units standing in `player`'s backrow zones, in backrow lane order — each a Unit for
+/// every rule, so every walk that reads the player's Units reads these after their unit zones' and
+/// their carriers'.
+pub fn standing_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
+    let side = &state.players[player];
+    (1..=BACKROW_ZONES)
+        .filter_map(|lane| {
+            lane_index(lane)
+                .and_then(|index| side.backrow.get(index))
+                .and_then(Option::as_ref)
+        })
+        .filter(|top| is_standing_unit(state, top))
+        .collect()
+}
+
+/// §3.2, R13: the Units dormant beneath the tops of `player`'s piles: a unit zone's, lane by lane, then
+/// a backrow zone's, where a Unit that stood there lies once a Stack card is played onto it (R1081000).
 pub fn dormant_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
-    state.players[player]
-        .units
+    let side = &state.players[player];
+    side.units
         .iter()
         .flatten()
         .flat_map(|pile| pile.iter().skip(1))
+        .chain(
+            side.backrow_piles
+                .iter()
+                .flatten()
+                .flatten()
+                .filter(|beneath| is_standing_unit(state, beneath)),
+        )
         .collect()
 }
 

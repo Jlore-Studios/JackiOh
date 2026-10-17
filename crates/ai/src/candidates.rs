@@ -6,9 +6,10 @@
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::{
-    ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, Row, ZoneChoice,
-    ZoneSlot, beneath_at, canonical, card_at, carried_at, effective_cost, find_instance, has_keyword,
-    is_locked, legal_actions, pierces, row_size, subsystems, takes_strike_back, unit_view,
+    ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, Row, Selection,
+    UnitView, ZoneChoice, ZoneSlot, adjacent, attack_mod_for, beneath_at, canonical, card_at, carried_at,
+    effective_cost, find_instance, has_keyword, is_locked, lane_multiplier_for, legal_actions, pierces,
+    row_size, slot_of, subsystems, takes_strike_back, unit_view,
 };
 use serde_json::Value;
 
@@ -113,9 +114,130 @@ fn collapse_zones(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> 
         .collect()
 }
 
-/// Tier 1: an attack on a unit it kills and survives, read from the layers. Divine Shield or
-/// Indestructible on the target means no kill; a Ranged attacker survives any target that is not
-/// Ranged (R783000). Either side's hit skips the other's Armor when it pierces (§4.4 step 2, R346).
+/// The two strikes of a combat between `attacker` and the Unit `defender` (`a` and `t` their views),
+/// as `resolve_combat` reads them before either lands (R94): the attacker's attack plus the board's
+/// combat-only bonus (`attack_mod_for`, R1120) times its lane multiplier (`lane_multiplier_for`,
+/// R1283), and the defender's attack times its own, which no bonus ever rides.
+pub(crate) struct Exchange {
+    /// What the attacker's strike deals before §4.4.
+    pub hit: i32,
+    /// Whether that strike is Poisonous: the attacker's own keyword or the bonus's (R1120).
+    pub poisonous: bool,
+    /// What the defender's strike back deals before §4.4.
+    pub strike_back: i32,
+    /// The Cleave splash: the attacker's attack with the combat-only bonus, unmultiplied — the
+    /// engine's `strike` passes unmultiplied `attack` as the Cleave amount.
+    pub splash: i32,
+}
+
+pub(crate) fn exchange(
+    state: &GameState,
+    attacker: &CardInstance,
+    a: &UnitView,
+    defender: &CardInstance,
+    t: &UnitView,
+) -> Exchange {
+    let bonus = attack_mod_for(state, attacker, defender);
+    Exchange {
+        hit: (a.attack + bonus.attack) * lane_multiplier_for(state, attacker, defender),
+        poisonous: bonus.poisonous || has_keyword(&a.keywords, KeywordKind::Poisonous),
+        strike_back: t.attack * lane_multiplier_for(state, defender, attacker),
+        splash: a.attack + bonus.attack,
+    }
+}
+
+/// One side of a §4.4 blow, read through the layers.
+pub(crate) struct Side {
+    pub(crate) view: UnitView,
+    pub(crate) shield: bool,
+    pub(crate) indestructible: bool,
+    pub(crate) first_strike: bool,
+    pub(crate) poisonous: bool,
+    /// R346: its hits skip §4.4 step 2, the Armor.
+    pub(crate) pierce: bool,
+}
+
+pub(crate) fn side_of(state: &GameState, unit: &CardInstance) -> Side {
+    let view = unit_view(state, unit);
+    Side {
+        shield: has_keyword(&view.keywords, KeywordKind::DivineShield),
+        indestructible: has_keyword(&view.keywords, KeywordKind::Indestructible),
+        first_strike: has_keyword(&view.keywords, KeywordKind::FirstStrike),
+        poisonous: has_keyword(&view.keywords, KeywordKind::Poisonous),
+        pierce: pierces(state, Some(unit), None),
+        view,
+    }
+}
+
+/// What one blow does (`blow`'s answer).
+pub(crate) struct Blow {
+    pub(crate) dealt: i32,
+    pub(crate) kills: bool,
+    pub(crate) pops_shield: bool,
+}
+
+/// §4.4 steps 1, 2, 4 and 7 for one blow: what `from` deals to `to` with a strike of `amount`
+/// (`exchange`'s), Poisonous when `poisonous`, and whether it kills. Step 2's Armor is skipped when
+/// `from` pierces (R346).
+pub(crate) fn blow(from: &Side, amount: i32, poisonous: bool, to: &Side) -> Blow {
+    if amount <= 0 {
+        return Blow {
+            dealt: 0,
+            kills: false,
+            pops_shield: false,
+        };
+    }
+    if to.shield {
+        return Blow {
+            dealt: 0,
+            kills: false,
+            pops_shield: true,
+        };
+    }
+    if to.indestructible {
+        return Blow {
+            dealt: 0,
+            kills: false,
+            pops_shield: false,
+        };
+    }
+    let dealt = if from.pierce {
+        amount
+    } else {
+        (amount - to.view.armor).max(0)
+    };
+    let kills = dealt >= to.view.health || (poisonous && dealt > 0);
+    Blow {
+        dealt,
+        kills,
+        pops_shield: false,
+    }
+}
+
+/// The units one attack on `target` also strikes (§4.4 step 10, R63): each unit adjacent to the
+/// target on its own side, when the attacker has Cleave — the engine's `struck_by` minus the
+/// defender. One §4.4 implementation serves the reply and the threat model alike.
+pub(crate) fn cleaved_neighbours(
+    state: &GameState,
+    attacker: &CardInstance,
+    target: &CardInstance,
+) -> Vec<CardInstance> {
+    if !has_keyword(&unit_view(state, attacker).keywords, KeywordKind::Cleave) {
+        return Vec::new();
+    }
+    let Some(at) = slot_of(state, target) else {
+        return Vec::new();
+    };
+    adjacent(at)
+        .into_iter()
+        .filter_map(|slot| card_at(state, slot).cloned())
+        .collect()
+}
+
+/// Tier 1: an attack on a unit it kills and survives, read from the layers and the combat's own
+/// reads (`exchange`). Divine Shield or Indestructible on the target means no kill; a Ranged attacker
+/// survives any target that is not Ranged (R783000). Either side's hit skips the other's Armor when
+/// it pierces (§4.4 step 2, R346).
 fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardInstance) -> bool {
     let a = unit_view(state, attacker);
     let t = unit_view(state, target);
@@ -124,15 +246,16 @@ fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardI
     {
         return false;
     }
+    let combat = exchange(state, attacker, &a, target, &t);
     let dealt = if pierces(state, Some(attacker), None) {
-        a.attack
+        combat.hit
     } else {
-        (a.attack - t.armor).max(0)
+        (combat.hit - t.armor).max(0)
     };
     if dealt <= 0 {
         return false;
     }
-    let kills = dealt >= t.health || has_keyword(&a.keywords, KeywordKind::Poisonous);
+    let kills = dealt >= t.health || combat.poisonous;
     if !kills {
         return false;
     }
@@ -151,9 +274,9 @@ fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardI
         return true;
     }
     let taken = if pierces(state, Some(target), None) {
-        t.attack
+        combat.strike_back
     } else {
-        (t.attack - a.armor).max(0)
+        (combat.strike_back - a.armor).max(0)
     };
     if taken <= 0 {
         return true;
@@ -214,17 +337,80 @@ fn source_cost(state: &GameState, action: &ActionBody) -> i32 {
     }
 }
 
-/// One source instance's variants, in legal_actions order, and its cost.
+/// One source instance's variants (legal_actions order, then dealt by `enemy_first`) and its cost.
 struct Source {
     cost: i32,
     variants: Vec<ActionBody>,
+}
+
+/// Where a source variant's first target aims (#1062).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum FirstAim {
+    /// At the enemy hero.
+    EnemyHero,
+    /// At a card the enemy controls.
+    EnemyCard,
+    /// Anything else: no target, one of the seat's own, a zone, a mode.
+    Other,
+}
+
+/// Where `action`'s first target aims, read off the targets it carries.
+fn first_aim(state: &GameState, seat: PlayerId, action: &ActionBody) -> FirstAim {
+    let targets = match action {
+        ActionBody::Play { targets, .. }
+        | ActionBody::ActivatePower { targets, .. }
+        | ActionBody::Activate { targets, .. } => targets.as_deref(),
+        _ => None,
+    };
+    let enemy = seat.opponent();
+    match targets.and_then(|targets| targets.first()) {
+        Some(Selection::Hero { player }) if *player == enemy => FirstAim::EnemyHero,
+        Some(Selection::Instance { instance_id })
+            if find_instance(state, instance_id).is_some_and(|card| card.controller == enemy) =>
+        {
+            FirstAim::EnemyCard
+        }
+        _ => FirstAim::Other,
+    }
+}
+
+/// One source's variants with those aimed at the enemy (the enemy hero's first, then the enemy's
+/// cards') dealt alternately with the rest, enemy first: e0, o0, e1, o1, … (#1062). Each group keeps
+/// legal_actions order, so a source with no variant aimed at the enemy keeps its order exactly.
+fn enemy_first(state: &GameState, seat: PlayerId, variants: Vec<ActionBody>) -> Vec<ActionBody> {
+    let mut at_hero: Vec<ActionBody> = Vec::new();
+    let mut at_cards: Vec<ActionBody> = Vec::new();
+    let mut rest: Vec<ActionBody> = Vec::new();
+    for variant in variants {
+        match first_aim(state, seat, &variant) {
+            FirstAim::EnemyHero => at_hero.push(variant),
+            FirstAim::EnemyCard => at_cards.push(variant),
+            FirstAim::Other => rest.push(variant),
+        }
+    }
+    at_hero.extend(at_cards);
+    let mut enemy = at_hero.into_iter();
+    let mut other = rest.into_iter();
+    let mut out: Vec<ActionBody> = Vec::new();
+    loop {
+        match (enemy.next(), other.next()) {
+            (None, None) => break,
+            (aimed, unaimed) => {
+                out.extend(aimed);
+                out.extend(unaimed);
+            }
+        }
+    }
+    out
 }
 
 /// Tier 2: round-robin across source instances — every source's first variant, then every source's
 /// second, … — each round by current cost, highest first (ties keep legal_actions order). A card on
 /// the field with an Activate ability is a source like a hand card (B3.2): a ♾️ or Activate N card's
 /// repeated uses need nothing here, since the AI re-plans after every action.
-fn round_robin(state: &GameState, actions: &[ActionBody]) -> Vec<ActionBody> {
+/// Inside one source, the variants aimed at the enemy alternate with the rest, enemy first
+/// (`enemy_first`, #1062), so a board of the seat's own targets cannot crowd the enemy's out of the beam.
+fn round_robin(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> Vec<ActionBody> {
     let mut sources: Vec<Source> = Vec::new();
     let mut by_id: IndexMap<String, usize> = IndexMap::new();
     for action in actions {
@@ -245,6 +431,9 @@ fn round_robin(state: &GameState, actions: &[ActionBody]) -> Vec<ActionBody> {
         if let Some(source) = sources.get_mut(at) {
             source.variants.push(action.clone());
         }
+    }
+    for source in &mut sources {
+        source.variants = enemy_first(state, seat, std::mem::take(&mut source.variants));
     }
     let mut ordered: Vec<(usize, Source)> = sources.into_iter().enumerate().collect();
     ordered.sort_by(|(ia, a), (ib, b)| b.cost.cmp(&a.cost).then(ia.cmp(ib)));
@@ -405,7 +594,7 @@ pub fn candidate_actions_in(state: &GameState, seat: PlayerId, legal: Vec<Action
     let mut out: Vec<ActionBody> = Vec::new();
     out.extend(hero_attacks);
     out.extend(good_trades);
-    out.extend(round_robin(state, &plays));
+    out.extend(round_robin(state, seat, &plays));
     out.extend(answers);
     out.extend(other_attacks);
     out.extend(switches);

@@ -469,4 +469,20 @@ mod tests {
             }
         }
     }
+
+    /// R1081000: a Unit of yours standing in the backrow is a unit acting on the field: a Spell's pick
+    /// of it summons Joro and moves to it, as one of a unit in a unit zone does.
+    #[test]
+    fn r1081000_a_spells_pick_of_your_unit_standing_in_the_backrow_summons_joro() {
+        crate::register_all();
+        let mut s = under_attack(json!({}));
+        let joro = s.card(JORO).id.clone();
+        let vanilla = s.card(VANILLA).id.clone();
+        crate::stand_in_backrow(&mut s, &vanilla, 1);
+        s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": vanilla }] }));
+        let seen: Vec<Value> =
+            redirects(&s).iter().map(|event| json!([event["what"], event["fromId"], event["toId"]])).collect();
+        assert_eq!(seen, vec![json!(["target", vanilla, joro])]);
+        s.expect_in_zone(vanilla.as_str(), "field");
+    }
 }

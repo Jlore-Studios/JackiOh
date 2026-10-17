@@ -1,6 +1,6 @@
-//! M #97 Jlockheed's Evil Blueprints (SPEC §8.8 row 97, R1280). (0) Spell, Mythic, Jlockeed.
+//! M #97 Jlockeed's Evil Blueprints (SPEC §8.8 row 97, R1280). (0) Spell, Mythic, Jlockeed.
 //!   Base:    "Discover a building: Empty Plot, Wishing Well, School, Mega Church, Bunker, University, The
-//!            Great Wall, Prison or Jlockheed's Headquarters. Piece together the blueprint."
+//!            Great Wall, Prison or Jlockeed's Headquarters. Piece together the blueprint."
 //!   Radiant: "Discover a Radiant building: … Piece together the Radiant blueprint." (The last line is
 //!            the designer's flavour, which the face hides behind "…", #1017.)
 //!   Engine:  "A Discover (§6.3) of three different buildings drawn uniformly from the nine (M #97.1 to
@@ -8,7 +8,8 @@
 //!            your hand, Radiant on the Radiant face, the hand cap burning it (§2.4)."
 //!
 //! The nine are token cards, in no other pool but C+ #23's (R382), offered uniformly without replacement
-//! (R60).
+//! (R60). The prompt names the card as the catalog the game runs under does (`def_of`), so a replay of
+//! an older version asks in that version's words (R767000).
 
 use jackioh_engine::effects::{add_to_hand, chosen_options, discover_from_catalog};
 use jackioh_engine::prelude::*;
@@ -36,12 +37,13 @@ const PICKED: &str = "picked";
 
 fn blueprints(radiant: bool) -> Script {
     Script {
-        cry: Some(hook(|_ctx| {
+        cry: Some(hook(|ctx| {
+            let name = &def_of(Some(&*ctx.state), ID).name;
             vec![discover_from_catalog(json_as(json!({
                 "step": PICKED,
                 "count": OPTIONS,
                 "query": { "defId": BUILDINGS, "withTokens": true },
-                "prompt": "Jlockheed's Evil Blueprints: Discover a building",
+                "prompt": format!("{name}: Discover a building"),
             })))]
         })),
         resume: IndexMap::from([(
@@ -64,7 +66,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M 97 Jlockheed's Evil Blueprints — SPEC §8.8 row 97, BUILD M10 row M 97: "Discovers one of three
+// M 97 Jlockeed's Evil Blueprints — SPEC §8.8 row 97, BUILD M10 row M 97: "Discovers one of three
 // different buildings out of the nine (M 97.1 to M 97.9), shown to you only (MD-F11), the pick to
 // your hand, the hand cap burning it; every building can be offered, and never a card outside the
 // nine; the opponent sees a prompt and a hidden card; radiant the building is Radiant".
@@ -232,6 +234,24 @@ mod tests {
                 .iter()
                 .any(|e| matches!(e, GameEvent::Burned { def_id, .. } if def_id == &picked));
             assert!(burned, "card was burned per §2.4 and R11");
+        }
+
+        #[test]
+        fn r767000_the_prompt_names_the_card_as_the_version_the_game_runs_under_does() {
+            crate::register_all();
+            let prompt = || {
+                let mut s = setup("bp-prompt", false);
+                s.play(ID, json!({}));
+                open_pending(s.state()).prompt.clone()
+            };
+            assert_eq!(prompt(), "Jlockeed's Evil Blueprints: Discover a building");
+            // v0.3.7 printed the name with the faction spelled the designer's way (patch v0.3.Y, #1067).
+            let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+            let named = &shipped.defs()[ID].name;
+            assert_ne!(*named, crate::card_def(ID).name);
+            jackioh_engine::with_shipped(Some(shipped), || {
+                assert_eq!(prompt(), format!("{named}: Discover a building"));
+            });
         }
     }
 

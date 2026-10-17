@@ -67,7 +67,7 @@ use serde_json::{Value, json};
 use tracing::subscriber::DefaultGuard;
 
 use self::log_capture::Recorder;
-use crate::support::deps::{empty_test_app, test_app};
+use crate::support::deps::{TEST_CATALOG_VERSION, empty_test_app, test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
 
@@ -93,9 +93,6 @@ fn rating_move(rating_a: f64, rating_b: f64, score_a: f64) -> (f64, f64) {
 // ---------------------------------------------------------------------------
 
 const MATCH_ID: &str = "match-1";
-
-/// TS `TEST_CATALOG_VERSION` (`test/fakes/deps.ts`): the catalog version the test matches carry.
-const TEST_CATALOG_VERSION: &str = "test-1";
 
 /// The seed every match here is dealt under (TS `"seed-actor"`); a scripted deal searches from it.
 const SEED: &str = "seed-actor";
@@ -1015,7 +1012,7 @@ mod m6_t4_the_match_actor {
     /// a replay's fold of the row's seed, decks, boards and log ends on exactly that state.
     #[tokio::test(start_paused = true)]
     async fn r768_records_the_final_states_hash_with_the_result() {
-        use jackioh_server::actor::engine::{fold, fold_args, hash_state};
+        use jackioh_server::actor::engine::{Pinned, fold, fold_args, hash_state};
         use jackioh_server::actor::match_actor::last_boards_of;
 
         let h = harness(Options::default()).await;
@@ -1037,14 +1034,10 @@ mod m6_t4_the_match_actor {
             .map(|entry| serde_json::from_value(entry["action"].clone()).expect("an Action"))
             .collect();
         let (last_boards, glitch_boards) = last_boards_of(&row);
-        let folded = fold(&fold_args(
-            &row.seed,
-            &row.decks,
-            log,
-            last_boards,
-            glitch_boards,
-            None,
-        ));
+        let folded = fold(
+            Pinned::default(),
+            &fold_args(&row.seed, &row.decks, log, last_boards, glitch_boards, None),
+        );
         assert!(folded.errors.is_empty(), "{:?}", folded.errors);
         assert!(folded.state.result.is_some());
         assert_eq!(row.final_hash, Some(hash_state(&folded.state)));

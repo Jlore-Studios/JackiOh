@@ -49,7 +49,11 @@ pub fn audit_targets(state: &GameState, args: AuditArgs) -> Vec<CardInstance> {
                 .cloned()
                 .collect::<Vec<_>>();
             for slot in crate::zones::slots_of(player, Row::Backrow) {
-                cards.extend(crate::zones::card_at(state, slot).cloned());
+                // R1081000: a Unit standing in the backrow is among the active units already; scan it once.
+                let extra: Option<CardInstance> = crate::zones::card_at(state, slot)
+                    .filter(|card| !cards.iter().any(|held| held.id == card.id))
+                    .cloned();
+                cards.extend(extra);
             }
             cards
         })

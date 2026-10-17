@@ -220,7 +220,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Equip: keyword("Equip", "May be played onto one of your Units, fusing into it"),
   // #783: five keywords no card prints yet (R783000, R783002, R783004, R783010, R783012).
   Ranged: keyword("Ranged", "Takes no damage back when it attacks, unless the defender is Ranged"),
-  Flying: keyword("Flying", "Only Units with Flying or Ranged can attack it, unless it is in Defense Position"),
+  Flying: keyword("Flying", "Only Units with Flying or Ranged can attack it, unless it is in Defense Position. It may be played into your backrow as well as into a unit zone"),
   Cloaked: keyword("Cloaked", "Can be played face-down as a Trap. Activate: Reveal"),
   Crater: keyword("Crater", "Locks its zone when it arrives as a Unit, or when it is revealed as a Trap"),
   Flashback: keyword("Flashback", "Can be played from your graveyard once, at its cost"),

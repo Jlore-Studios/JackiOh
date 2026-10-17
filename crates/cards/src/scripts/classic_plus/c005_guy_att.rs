@@ -113,6 +113,20 @@ mod tests {
             assert_eq!(count(&s, "destroyed"), 2);
         }
 
+        /// R1081000: a Unit standing in a backrow zone is no backrow card (§6.1 Animated): it stays.
+        #[test]
+        fn r1081000_a_unit_of_yours_standing_in_the_backrow_is_no_backrow_card_and_stays() {
+            crate::register_all();
+            let mut s = setup(json!({ "field": [{ "def": VANILLA, "lane": 2 }], "backrow": [{ "def": MANA_WELL, "lane": 4 }] }), json!({}), false);
+            let standing = s.card(VANILLA).id.clone();
+            crate::stand_in_backrow(&mut s, &standing, 3);
+
+            s.play(GUY, json!({ "zone": 1 }));
+
+            s.expect_in_zone(MANA_WELL, "graveyard");
+            assert_eq!(s.backrow(P1, 3).map(|card| card.id), Some(standing));
+        }
+
         #[test]
         fn r46_an_indestructible_backrow_card_stays() {
             crate::register_all();

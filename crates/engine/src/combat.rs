@@ -34,7 +34,7 @@ use crate::state::{
     CardInstance, DeclaredAttack, EngineError, Exertion, GameState, Position, Resume, WorkItem,
     find_instance, find_instance_mut,
 };
-use crate::wire::{GameEvent, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, has_keyword, opponent_of};
+use crate::wire::{GameEvent, Keyword, KeywordKind, PLAYER_IDS, PlayerId, has_keyword, opponent_of};
 use crate::work::{PausedStep, WorkPlan, owe, paused as is_paused, paused_of};
 
 /// What an attack can be declared on (§4.2 step 2): an enemy unit or the enemy hero. It is the
@@ -542,8 +542,9 @@ pub fn lane_multiplier_for(state: &GameState, striker: &CardInstance, struck: &C
     let Some(struck_slot) = crate::zones::slot_of(state, struck) else {
         return 1;
     };
-    if striker_slot.row == Row::Units
-        && struck_slot.row == Row::Units
+    // R1081000: a Unit standing in a backrow zone is in that zone's lane, as one in its unit zone is.
+    if crate::zones::in_units_row_or_standing(state, striker)
+        && crate::zones::in_units_row_or_standing(state, struck)
         && striker_slot.player != struck_slot.player
         && striker_slot.lane == struck_slot.lane
     {
@@ -584,6 +585,10 @@ fn cleave(
         let Some(neighbour) = crate::zones::card_at(sink.state, slot).cloned() else {
             continue;
         };
+        // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent.
+        if !crate::zones::is_adjacent_card(sink.state, &defender, &neighbour) {
+            continue;
+        }
         deal_damage(
             sink,
             DamageArgs {

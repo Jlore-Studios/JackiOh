@@ -252,7 +252,8 @@ pub fn recalled(ctx: &EffectContext<'_>, key: &str) -> Option<Value> {
 pub fn killer_of<'a>(state: &'a GameState, card: Option<&CardInstance>) -> Option<&'a CardInstance> {
     let id = card?.last_damaged_by.as_ref()?;
     let killer = find_instance(state, id)?;
-    if !matches!(killer.zone, Zone::Field { row: Row::Units, .. }) {
+    // R1081000: a killer standing in the backrow is a Unit acting on the field.
+    if !crate::zones::in_units_row_or_standing(state, killer) {
         return None;
     }
     if crate::faces::card_type_of(state, killer) != CardType::Unit {
@@ -514,7 +515,9 @@ pub fn redirect_neighbours(state: &GameState, attacker: &CardInstance) -> Vec<Ca
         .into_iter()
         .filter_map(|slot| card_at(state, slot).cloned())
         .filter(|unit| {
-            crate::zones::acts_on_field(state, unit)
+            // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent.
+            crate::zones::is_adjacent_card(state, attacker, unit)
+                && crate::zones::acts_on_field(state, unit)
                 && !crate::zones::is_carried(state, unit)
                 && crate::restrictions::attack_restriction(
                     state,

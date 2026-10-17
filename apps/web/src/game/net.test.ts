@@ -702,6 +702,85 @@ describe("a silent socket", () => {
   });
 });
 
+/** The token a socket's handshake carried. */
+function handshakeToken(socket: FakeSocket): string | null {
+  return new URL(socket.url).searchParams.get("token");
+}
+
+describe("a socket refused for its sign-in", () => {
+  it("R1115000 a 4401, then a renewed token, opens one more socket that carries it", () => {
+    const h = connected();
+    h.socket().drop(4401, "sign in first");
+    expect(h.client.snapshot().connection).toBe("refused");
+
+    h.client.setToken("new");
+    expect(h.sockets).toHaveLength(2);
+    expect(handshakeToken(h.socket())).toBe("new");
+
+    h.socket().open();
+    expect(h.client.snapshot().connection).toBe("open");
+    expect(h.socket().frames()).toEqual([{ type: "hello", token: "new", matchId: "m-1" }]);
+  });
+
+  it("R1115000 the token the 4401 refused opens no socket", () => {
+    const h = connected();
+    h.socket().drop(4401, "sign in first");
+    h.client.setToken("tok");
+    expect(h.sockets).toHaveLength(1);
+    expect(h.client.snapshot().connection).toBe("refused");
+    expect(h.pending()).toBe(0);
+  });
+
+  it("R1115000 a 4401 on the socket a renewed token opened is final for that token", () => {
+    const h = connected();
+    h.socket().drop(4401, "sign in first");
+    h.client.setToken("new");
+    h.socket().drop(4401, "sign in first");
+    expect(h.client.snapshot().connection).toBe("refused");
+    expect(h.pending()).toBe(0);
+
+    h.client.setToken("new");
+    expect(h.sockets).toHaveLength(2);
+    // One refusal per token: the next renewal gets its one socket.
+    h.client.setToken("newer");
+    expect(h.sockets).toHaveLength(3);
+    expect(handshakeToken(h.socket())).toBe("newer");
+  });
+
+  it("R1115000 a token renewed before the 4401 arrives opens one more socket at once", () => {
+    const h = connected();
+    // R194: a healthy socket is not reopened by a renewal.
+    h.client.setToken("new");
+    expect(h.sockets).toHaveLength(1);
+
+    h.socket().drop(4401, "sign in first");
+    expect(h.sockets).toHaveLength(2);
+    expect(handshakeToken(h.socket())).toBe("new");
+    expect(h.pending()).toBe(0);
+
+    h.socket().drop(4401, "sign in first");
+    expect(h.client.snapshot().connection).toBe("refused");
+    expect(h.sockets).toHaveLength(2);
+  });
+
+  it("R1115000 a 4403 or 4404 is not reopened by a renewed token, even after a 4401's retry", () => {
+    for (const code of [4403, 4404]) {
+      const direct = connected();
+      direct.socket().drop(code, "not your match");
+      direct.client.setToken("new");
+      expect(direct.sockets).toHaveLength(1);
+
+      const afterRetry = connected();
+      afterRetry.socket().drop(4401, "sign in first");
+      afterRetry.client.setToken("new");
+      afterRetry.socket().drop(code, "not your match");
+      afterRetry.client.setToken("newer");
+      expect(afterRetry.sockets).toHaveLength(2);
+      expect(afterRetry.client.snapshot().connection).toBe("refused");
+    }
+  });
+});
+
 // The dev-handle shim
 
 describe("viewDerivedState", () => {

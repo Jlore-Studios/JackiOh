@@ -50,7 +50,15 @@ pub fn put(state: &mut GameState, def_id: &str, at: ZoneSlot, options: Value) ->
     if options.get("radiant").and_then(Value::as_bool) == Some(true) {
         card.radiant = true;
     }
-    if !place_on_field(state, &mut card, at, Default::default()) {
+    // R1081000: a Flying Unit put in a backrow zone stands there, as one played into it does.
+    let stands = at.row == Row::Backrow && unit_has(state, &card, KeywordKind::Flying);
+    let options = PlaceOnFieldOptions::default();
+    let placed = if stands {
+        place_standing_on_field(state, &mut card, at, options)
+    } else {
+        place_on_field(state, &mut card, at, options)
+    };
+    if !placed {
         panic!("could not place {def_id} in {} {}", at.row, at.lane);
     }
     find_instance(state, &card.id).cloned().unwrap_or(card)

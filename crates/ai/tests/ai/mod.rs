@@ -6,6 +6,8 @@
 pub mod activate;
 pub mod alt_play;
 pub mod answer_key;
+pub mod cleave;
+pub mod combat_mods;
 pub mod decide;
 pub mod deck;
 pub mod determinize_shown_cost;

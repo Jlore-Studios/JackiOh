@@ -3,8 +3,8 @@
 //! §9.5: direct challenge by a 6-character room code from the invite-code alphabet. The queue's
 //! rules apply too, being the same assertions §9.5 makes about entering a match:
 //!
-//!  - the account is active (`AuthLevel::Active`, §9.4), not in a match and not in a series that is
-//!    not over (R264);
+//!  - the account is active (`AuthLevel::Active`, §9.4), not in a match, a series that is not over
+//!    (R264) or a live co-op match (R1065000);
 //!  - the deck or trio is validated at match time by the shared validator (§9.4, R253), through the
 //!    queue's `freeze_choice`, and frozen into the room at creation (§9.4, §9.5, §9.8);
 //!  - `rooms_claim` is the atomic single-claim: the loser of a join race gets a 409, never a second
@@ -13,7 +13,8 @@
 //! R264: a room is created in a mode, and a joiner plays that mode or is refused with it named. A
 //! Best-of-1 join starts the match on the two frozen decks; an All Random join deals both decks
 //! (R258); a Conquest join makes the series (R259), whose first game starts once both players have
-//! picked a deck. Handlers: `create` (`POST /api/rooms`), `join` (`POST /api/rooms/:code/join`).
+//! picked a deck. Handlers: `create` (`POST /api/rooms`), `join` (`POST /api/rooms/:code/join`),
+//! and, R1075000, `mine` (`GET /api/rooms`) and `cancel` (`DELETE /api/rooms/:code`).
 //! Surface contract: docs/v0.3.0/SURFACE.md §4.1.
 
 use std::cell::RefCell;
@@ -27,7 +28,7 @@ use jackioh_engine::{PlayerId, pick_portrait_from_seed};
 use crate::actor::engine::{deal_random_deck, lean_of};
 use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
 use crate::api::decks::{
-    FrozenChoice, ModeChoiceInput, assert_not_in_series, freeze_choice, read_mode_choice,
+    FrozenChoice, ModeChoiceInput, assert_free_to_play, assert_host_free, freeze_choice, read_mode_choice,
 };
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json as json_response};
 use crate::api::queue::{new_seed, new_uuid, seed_override_of};
@@ -180,21 +181,6 @@ fn wiring_fault(message: String) -> ApiError {
     ApiError::new(ApiErrorCode::Internal, "something went wrong")
 }
 
-/// §9.5: "Enqueue asserts the account is active and not in a match."
-fn assert_not_in_match(req: &Req) -> Result<(), ApiError> {
-    let in_match = req
-        .caller
-        .as_ref()
-        .and_then(|caller| caller.profile.in_match_id.as_ref());
-    if in_match.is_some() {
-        return Err(ApiError::new(
-            ApiErrorCode::AlreadyInMatch,
-            "finish your current match first",
-        ));
-    }
-    Ok(())
-}
-
 fn profile_of(req: &Req) -> Result<String, ApiError> {
     match req.caller.as_ref() {
         Some(caller) => Ok(caller.profile.id.clone()),
@@ -232,27 +218,6 @@ async fn joinable_room(app: &App, typed: &str) -> Result<Room, ApiError> {
         return Err(ApiError::new(ApiErrorCode::UpdateRequired, "update required"));
     }
     Ok(room)
-}
-
-/// §9.5's "not in a match" holds for the host when the match is made, not only when the room was
-/// opened (as `try_pair` re-reads it): the host may have been matched meanwhile (or paired into a
-/// series, R264). The room is left unclaimed so the join can be retried.
-async fn assert_host_free(app: &App, host_profile_id: &str) -> Result<(), ApiError> {
-    let mut tx = app.db.begin(None).await?;
-    let host = tx.profiles_get_by_id(host_profile_id).await?;
-    let series = tx.series_active_for(host_profile_id).await?;
-    tx.commit().await?;
-    let host_in_match = host
-        .as_ref()
-        .and_then(|profile| profile.in_match_id.as_ref())
-        .is_some();
-    if host_in_match || series.is_some() {
-        return Err(ApiError::new(
-            ApiErrorCode::Conflict,
-            "The host of that room is playing another game right now.",
-        ));
-    }
-    Ok(())
 }
 
 /// The two seats of a room's match: the host is p1 (§9.5), the joiner p2.
@@ -340,13 +305,12 @@ pub struct OpenedRoom {
 pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, ApiError> {
     // ---- end Social ----
     let profile_id = profile_of(req)?;
-    assert_not_in_match(req)?;
     // R257, R264: the same choice the queue takes.
     let choice = read_mode_choice(&req.body)?;
     // R143: an optional `seed`, accepted only by an end-to-end server and rejected elsewhere,
     // read before any work so a production caller gets the 400 without a room being made.
     let seed = seed_override_of(app, &req.body)?;
-    assert_not_in_series(app, &profile_id).await?;
+    assert_free_to_play(app, &profile_id).await?;
 
     // R253: checked now and frozen into the room — a deck, a trio, or nothing for All Random.
     let frozen = freeze_choice(app, &profile_id, &choice).await?;
@@ -433,11 +397,10 @@ pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, 
 /// `&App` does not fit.
 pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let profile_id = profile_of(&req)?;
-    assert_not_in_match(&req)?;
     let choice = read_mode_choice(&req.body)?;
     // R143 again: both endpoints accept the field in end-to-end mode and refuse it outside one.
     let joiner_seed = seed_override_of(app, &req.body)?;
-    assert_not_in_series(app, &profile_id).await?;
+    assert_free_to_play(app, &profile_id).await?;
 
     let typed = req.params.get("code").cloned().unwrap_or_default();
     let room = joinable_room(app, &typed).await?;
@@ -665,6 +628,63 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             "mode": claimed.mode,
         }),
     ))
+}
+
+/// DELETE /api/rooms/:code — the host frees a room nobody has joined (§9.5, R1075000) through
+/// `release_room`, as a challenge's close frees its room: the code is free at once (R110), a join
+/// meets the miss an unknown code is, the end-to-end seed goes with it (R143). Idempotent like
+/// `DELETE /api/queue`: `cancelled: false` when the code holds no unjoined room, and a joined room
+/// is never touched. Another host's room is the join's 404; a room an open challenge holds is 409,
+/// since its challenge's cancel frees it (SPEC S7, B49).
+pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
+    let profile_id = profile_of(&req)?;
+    let code = normalize_code(&req.params.get("code").cloned().unwrap_or_default());
+    let mut tx = app.db.begin(None).await?;
+    let Some(room) = tx.rooms_get(&code).await? else {
+        tx.commit().await?;
+        return Ok(json_response(200, json!({ "cancelled": false })));
+    };
+    if room.host_profile_id != profile_id {
+        return Err(ApiError::new(
+            ApiErrorCode::NotFound,
+            "that room code is not open",
+        ));
+    }
+    if tx.challenges_open_for_room(&code, now_ms()).await?.is_some() {
+        return Err(ApiError::new(
+            ApiErrorCode::Conflict,
+            "that room is a challenge to a friend; cancel the challenge instead",
+        ));
+    }
+    // `rooms_release` deletes only an unjoined row: a claim that landed after the read keeps its room.
+    let cancelled = release_room(&mut tx, &code).await?;
+    tx.commit().await?;
+    if cancelled {
+        tracing::info!(event = "room.cancelled", code = %code, hostProfileId = %profile_id);
+    }
+    Ok(json_response(200, json!({ "cancelled": cancelled })))
+}
+
+/// GET /api/rooms — the caller's own rooms nobody has joined and not expired, newest first, as
+/// `POST /api/rooms` answered them (§9.5, R1075000); a room an open challenge holds is the
+/// challenge's and is not listed.
+pub async fn mine(app: &Arc<App>, req: Req) -> ApiResult {
+    let profile_id = profile_of(&req)?;
+    let now = now_ms();
+    let mut tx = app.db.begin(None).await?;
+    let open = tx.rooms_open_by_host(&profile_id, now).await?;
+    let challenged = tx.challenges_open_of(&profile_id, now).await?;
+    tx.commit().await?;
+    let rooms: Vec<Value> = open
+        .iter()
+        .filter(|room| {
+            !challenged
+                .iter()
+                .any(|challenge| challenge.room_code == room.code)
+        })
+        .map(|room| json!({ "code": room.code, "expiresAt": room.expires_at, "mode": room.mode }))
+        .collect();
+    Ok(json_response(200, json!({ "rooms": rooms })))
 }
 
 // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----

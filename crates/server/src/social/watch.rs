@@ -10,8 +10,14 @@
 //!
 //! Every refusal is the one `error` frame, `forbidden`, and a close with R148's 4403 (4401 before
 //! sign-in, 1011 for a fault), all with the same message, so a socket learns that it may not watch,
-//! never which check said so. Every frame after the hello is dropped unread: none reaches the
-//! reducer, and a watcher leaving changes nothing in the match but the count its players see (B51).
+//! never which check said so. No frame after the hello reaches the reducer: once the actor has the
+//! socket a later hello is answered with the view it was last sent (R1103000, so R1441's wake probe
+//! hears a live socket), and every other frame is dropped unread. A watcher leaving changes nothing
+//! in the match but the count its players see (B51).
+//! Before the hello the socket waits behind the gate `/ws/duos` waits behind (`actor::guard::HelloGate`,
+//! R835002): a frame that is not the hello is answered `malformed` and past
+//! `MALFORMED_FRAMES_PER_WINDOW` of them the socket is closed, and a hello that does not come within
+//! `WS_IDLE_TIMEOUT_SECONDS` is refused like any other.
 //!
 //! Being let in is no standing leave (§9.8, "the friend can turn it off"; B46): when the friend turns
 //! `allowSpectators` off (`revoke_all_of`), or the two unfriend or either blocks the other
@@ -24,26 +30,19 @@
 
 use std::future::Future;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 
 use axum::http::Uri;
 use serde_json::Value;
-use tokio::sync::mpsc;
 
-use crate::actor::contracts::SocketHandlers;
+use crate::actor::guard::HelloGate;
 use crate::actor::match_actor::WATCH_NOT_ALLOWED as NOT_ALLOWED;
 use crate::actor::protocol::{SocketErrorCode, encode, error_message};
 use crate::actor::registry::AttachError;
 use crate::actor::ws_server::{Socket, WS_CLOSE, upgrade_token};
 use crate::api::http::assert_active;
 use crate::app::App;
-use crate::config::MALFORMED_FRAMES_PER_WINDOW;
 use crate::db::store::{MatchPhase, MatchStatus, Profile, StoreError, Tx};
 use crate::social::friends::are_friends;
-
-/// RFC 6455's policy violation, as the match socket closes a flood of malformed frames with (wire
-/// vocabulary, not a tuned number).
-const CLOSE_POLICY_VIOLATED: u16 = 1008;
 
 /// The watcher's one frame (S7).
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -77,46 +76,16 @@ pub fn parse_watch_hello(text: &str) -> Result<WatchHello, String> {
     }
 }
 
-/// What a watch socket has said before its hello was answered.
-enum Heard {
-    Hello(WatchHello),
-    Malformed(String),
-    Gone,
-}
-
-/// The frames a watch socket sends until its hello is answered, as `listen` hands them on.
-pub struct WatchListener {
-    heard: mpsc::UnboundedReceiver<Heard>,
-}
+/// The watch socket's handlers until its hello is answered: `actor::guard::HelloGate`, the gate
+/// `/ws/duos` waits behind too, with `parse_watch_hello` for the hello.
+pub type WatchListener = HelloGate<WatchHello>;
 
 /// Puts the watch's frame handlers on `socket`, before anything can arrive on it (the upgrade calls
-/// this before its pump starts): the first hello is kept and every frame after it dropped unread.
-/// The handlers hold a channel, never the socket, so a socket refused or gone frees itself; the
-/// actor's handlers replace them once it takes the socket.
+/// this before its pump starts): the first hello is kept and every frame after it dropped unread
+/// (B50). The handlers hold the gate weakly and the gate belongs to `serve`, so a socket refused or
+/// gone frees itself; the actor's handlers replace them once it takes the socket.
 pub fn listen(socket: &Socket) -> WatchListener {
-    let (heard, inbox) = mpsc::unbounded_channel();
-    let gone = heard.clone();
-    let helloed = AtomicBool::new(false);
-    socket.attach(SocketHandlers {
-        message: Box::new(move |text: String| {
-            // B50: after the hello, nothing a watcher sends is read.
-            if helloed.load(Ordering::SeqCst) {
-                return;
-            }
-            let frame = match parse_watch_hello(&text) {
-                Ok(hello) => {
-                    helloed.store(true, Ordering::SeqCst);
-                    Heard::Hello(hello)
-                }
-                Err(reason) => Heard::Malformed(reason),
-            };
-            let _ = heard.send(frame);
-        }),
-        close: Box::new(move || {
-            let _ = gone.send(Heard::Gone);
-        }),
-    });
-    WatchListener { heard: inbox }
+    HelloGate::install(socket, parse_watch_hello)
 }
 
 /// `listen`, then `serve`. The handlers go on when this is called, before the future it answers
@@ -179,11 +148,17 @@ async fn admit(
     app: &Arc<App>,
     socket: &Socket,
     uri: &Uri,
-    mut listener: WatchListener,
+    listener: WatchListener,
 ) -> Result<(), WatchFailure> {
     let watcher = authenticate(app, uri).await?;
-    let Some(hello) = hear_hello(socket, &mut listener).await else {
-        return Err(WatchFailure::Gone);
+    let Some(hello) = listener.wait().await else {
+        // R835002: still open means no hello came in `WS_IDLE_TIMEOUT_SECONDS`; gone, or closed for
+        // its malformed frames, has no one to answer.
+        return Err(if socket.is_open() {
+            refused(WS_CLOSE.forbidden, NOT_ALLOWED)
+        } else {
+            WatchFailure::Gone
+        });
     };
     if !may_watch(app, &watcher.id, &hello).await? {
         tracing::info!(event = "watch.refused", matchId = %hello.match_id);
@@ -237,28 +212,6 @@ async fn authenticate(app: &Arc<App>, uri: &Uri) -> Result<Profile, WatchFailure
     };
     assert_active(&profile).map_err(|error| refused(WS_CLOSE.forbidden, &error.message))?;
     Ok(profile)
-}
-
-/// The hello, once it comes. A malformed frame before it is answered `malformed`, as the match
-/// socket answers one, and past MALFORMED_FRAMES_PER_WINDOW of them the socket is closed. `None` once
-/// the socket has gone.
-async fn hear_hello(socket: &Socket, listener: &mut WatchListener) -> Option<WatchHello> {
-    let mut malformed = 0;
-    while let Some(heard) = listener.heard.recv().await {
-        match heard {
-            Heard::Hello(hello) => return Some(hello),
-            Heard::Gone => return None,
-            Heard::Malformed(reason) => {
-                malformed += 1;
-                socket.send(encode(&error_message(SocketErrorCode::Malformed, &reason, None)));
-                if malformed > MALFORMED_FRAMES_PER_WINDOW {
-                    socket.close(Some(CLOSE_POLICY_VIOLATED), Some("too many malformed frames"));
-                    return None;
-                }
-            }
-        }
-    }
-    None
 }
 
 /// B50, as the store answers it: `watcher_id` may watch `hello`'s friend in `hello`'s match. Room is

@@ -34,7 +34,10 @@ pub mod ky_test_bank;
 /// R767000: the shipped catalog versions a replay folds under.
 mod history;
 
-pub use history::{KEPT_SCRIPTS, KeptScript, carried_versions, has_script_at, shipped_catalog};
+pub use history::{
+    KEPT_SCRIPTS, KeptScript, carried_versions, catalog_at, catalog_defs_at, has_script_at, shipped_catalog,
+    shipped_versions,
+};
 
 pub use query::*;
 
@@ -145,6 +148,48 @@ pub fn register_all() {
 pub(crate) fn scenario(opts: serde_json::Value) -> jackioh_engine::testkit::Scenario {
     register_all();
     jackioh_engine::testkit::scenario(opts)
+}
+
+/// R1081000: move the Unit `id`, set up in a unit zone, to stand in its controller's backrow zone `lane`,
+/// as a Flying Unit played there stands. No catalog card prints Flying (a random keyword's), and a Unit
+/// standing there stays standing whatever its text says, so a card test sets one up so.
+#[cfg(test)]
+pub(crate) fn stand_in_backrow(s: &mut jackioh_engine::testkit::Scenario, id: &str, lane: i32) {
+    use jackioh_engine::prelude::*;
+    let state = s.state_mut();
+    let mut moving = find_instance(state, id)
+        .cloned()
+        .expect("the Unit is on the field");
+    let player = moving.controller;
+    assert!(remove_from_field(
+        state,
+        &moving,
+        RemoveFromFieldOptions::default()
+    ));
+    let at = ZoneSlot {
+        player,
+        row: Row::Backrow,
+        lane,
+    };
+    assert!(place_standing_on_field(
+        state,
+        &mut moving,
+        at,
+        PlaceOnFieldOptions::default()
+    ));
+    assert!(stands_in_backrow(
+        state,
+        find_instance(state, id).expect("placed")
+    ));
+}
+
+/// R1081000: give the card `id` Flying (`grantedKeywords`), so that in hand it may be played into an
+/// open backrow zone.
+#[cfg(test)]
+pub(crate) fn give_flying(s: &mut jackioh_engine::testkit::Scenario, id: &str) {
+    use jackioh_engine::prelude::*;
+    let card = find_instance_mut(s.state_mut(), id).expect("the card exists");
+    card.granted_keywords.push(Keyword::Flying);
 }
 
 /// An engine value as its JSON, for the card tests' comparisons with TS's object literals.

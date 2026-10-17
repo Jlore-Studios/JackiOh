@@ -314,6 +314,69 @@ mod the_lethal_solvers_walks {
         assert!(counter.used() < AI_SEARCH.lethal_quick_nodes as usize);
     }
 
+    /// p1 (the AI) on turn 9 with `def_id` in Defense Position, on the field since before this turn;
+    /// p2 at 4 health with no unit, so no Taunt. Both sides hold a library.
+    fn in_defense_at_4(def_id: &str) -> GameState {
+        register_cards();
+        scenario(json!({
+            "seed": "lethal-deft",
+            "active": AI,
+            "turn": 9,
+            "p1": { "field": [{ "def": def_id, "position": "DEF" }], "library": ["core-008", "core-011"] },
+            "p2": { "health": 4, "library": ["core-008", "core-011"] },
+        }))
+        .state()
+        .clone()
+    }
+
+    #[test]
+    fn switches_a_deft_unit_out_of_defense_position_and_attacks_the_hero_for_lethal() {
+        // R49: Deft Duelist's switch to Attack spends only its switch, so its 4 still reaches the hero.
+        let state = in_defense_at_4("core-045");
+        let duelist = mine(&state, AI, "core-045");
+        let dets = worlds(&state, "lethal-deft", 2);
+        let line = find_lethal(
+            &dets,
+            AI,
+            &create_node_counter(AI_BUDGET.nodes, None),
+            AI_BUDGET.lethal_nodes,
+        );
+        let expected = vec![
+            ActionBody::SwitchPosition {
+                instance_id: duelist.id.clone(),
+            },
+            ActionBody::Attack {
+                attacker_id: duelist.id.clone(),
+                target_id: format!("hero-{HUMAN}"),
+            },
+        ];
+        assert_eq!(line, Some(expected.clone()));
+        for det in &dets {
+            assert_eq!(
+                play_out(det, &expected)
+                    .result
+                    .and_then(|result| result.winner.player()),
+                Some(AI)
+            );
+        }
+    }
+
+    #[test]
+    fn finds_no_lethal_for_a_unit_in_defense_position_without_deft() {
+        // Mr. Vanilla's switch spends its one exertion, so it cannot attack after it.
+        let state = in_defense_at_4("core-008");
+        let dets = worlds(&state, "lethal-deft", 2);
+        assert!(
+            find_lethal(
+                &dets,
+                AI,
+                &create_node_counter(AI_BUDGET.nodes, None),
+                AI_BUDGET.lethal_nodes
+            )
+            .is_none()
+        );
+    }
+
     #[test]
     fn a_whole_ai_turn_on_the_wide_board_kills_the_hero_lethal_from_the_first_decision() {
         let run = run_puzzle("lethal-wide", wide());

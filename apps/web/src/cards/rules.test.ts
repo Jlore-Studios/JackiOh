@@ -895,6 +895,13 @@ describe("R910000: a trigger or verb bolds wherever a card uses it, in every cas
   });
 });
 
+describe("R1081000: a Flying Unit may stand in the backrow", () => {
+  it("R1081000 Flying's rule names the backrow placement", () => {
+    expect(GLOSSARY.Flying.section).toBe("§6.1");
+    expect(GLOSSARY.Flying.rule).toContain("your backrow");
+  });
+});
+
 describe("R1045000: K-Pop Fanatic Allures the enemy permanent it chooses", () => {
   it("R1045000 both faces of K-Pop Fanatic print Allure, which bolds as the §6.3 verb, and Allure's row names every permanent", () => {
     for (const face of ["base", "radiant"] as const) {

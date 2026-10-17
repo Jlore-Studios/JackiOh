@@ -645,6 +645,12 @@ pub struct PublicBackrowView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub buried: Option<i32>,
+    /// R1081000: the Unit standing in this backrow zone, when the public top card is one — a Flying
+    /// Unit there is a Unit for every rule, so the client draws it as the minion it is. Units are
+    /// public in any zone, so this carries no hidden information; absent for every other backrow card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub unit: Option<UnitView>,
 }
 
 /// The face-down member of `BackrowView`: a marker. §10.8 grants the non-controller the fact that

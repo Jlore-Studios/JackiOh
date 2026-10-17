@@ -12,7 +12,10 @@
 //!      AI_REPLY.visible_activations, those aimed at the seat's hero first, and uses the one its own
 //!      evaluation likes best if that beats standing still.
 //!   3. Otherwise it is a static trader: of every attack it may declare, it takes the one with the
-//!      best value read off the layers (lethal, a kill it survives, a trade up, the face).
+//!      best value read off the layers (lethal, a kill it survives, a trade up, the face). First, a
+//!      unit of its with Deft in Defense Position, its switch and its attack unspent, is switched to
+//!      Attack on trial (R49: it can still attack): the switch is kept when the best attack after it
+//!      is one of the unit's own, and otherwise the unit stays in Defense.
 //!   4. When none is worth doing it ends its turn.
 //!
 //! It plays none of the cards it held unseen, because those are samples: a guessed hand would add
@@ -29,101 +32,56 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexSet;
 use jackioh_engine::{
-    Action, ActionBody, CardInstance, GameState, KeywordKind, PlayerId, Selection, UnitView, effective_life,
+    Action, ActionBody, CardInstance, GameState, KeywordKind, PlayerId, Selection, effective_life,
     find_instance, has_keyword, legal_actions, pierces, reduce, subsystems, takes_strike_back, unit_view,
 };
 
-use crate::candidates::candidate_actions_in;
+use crate::candidates::{blow, candidate_actions_in, cleaved_neighbours, exchange, side_of};
 use crate::config::{AI_EVAL, AI_REPLY, AI_SEARCH};
 use crate::evaluate::{NextSwing, evaluate, unit_worth};
+use crate::lethal::deft_ready_switch;
 use crate::simulate::{LineStatus, best_auto_answer, line_status, simulate, static_score, surcharge_nodes};
 use crate::types::NodeCounter;
-
-struct Side {
-    view: UnitView,
-    shield: bool,
-    indestructible: bool,
-    first_strike: bool,
-    poisonous: bool,
-    /// R346: its hits skip §4.4 step 2, the Armor.
-    pierce: bool,
-}
-
-fn side_of(state: &GameState, unit: &CardInstance) -> Side {
-    let view = unit_view(state, unit);
-    Side {
-        shield: has_keyword(&view.keywords, KeywordKind::DivineShield),
-        indestructible: has_keyword(&view.keywords, KeywordKind::Indestructible),
-        first_strike: has_keyword(&view.keywords, KeywordKind::FirstStrike),
-        poisonous: has_keyword(&view.keywords, KeywordKind::Poisonous),
-        pierce: pierces(state, Some(unit), None),
-        view,
-    }
-}
-
-/// What one blow does (`blow`'s answer).
-struct Blow {
-    dealt: i32,
-    kills: bool,
-    pops_shield: bool,
-}
-
-/// §4.4 steps 1, 2, 4 and 7 for one blow: what `from` deals to `to`, and whether it kills. Step 2's
-/// Armor is skipped when `from` pierces (R346).
-fn blow(from: &Side, to: &Side) -> Blow {
-    let amount = from.view.attack;
-    if amount <= 0 {
-        return Blow {
-            dealt: 0,
-            kills: false,
-            pops_shield: false,
-        };
-    }
-    if to.shield {
-        return Blow {
-            dealt: 0,
-            kills: false,
-            pops_shield: true,
-        };
-    }
-    if to.indestructible {
-        return Blow {
-            dealt: 0,
-            kills: false,
-            pops_shield: false,
-        };
-    }
-    let dealt = if from.pierce {
-        amount
-    } else {
-        (amount - to.view.armor).max(0)
-    };
-    let kills = dealt >= to.view.health || (from.poisonous && dealt > 0);
-    Blow {
-        dealt,
-        kills,
-        pops_shield: false,
-    }
-}
 
 /// The opponent's static value of `attacker` hitting `target` (§4.3): the unit it kills, less its own
 /// body when that dies too, with First Strike deciding who strikes first and no strike back at all on
 /// a Ranged attacker unless the target is Ranged too (R783000). A hit that kills nothing is worth a
-/// little per point dealt, so a second attacker can finish what the first one started.
+/// little per point dealt, so a second attacker can finish what the first one started. A Cleave
+/// attack also prices what its splash kills or unshields on the target's neighbours (R63): a killed
+/// neighbour at `AI_REPLY.cleave_share` of its worth, a popped neighbour shield at the same share
+/// of the Divine Shield weight.
 fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> f64 {
     let Some(target) = find_instance(state, target_id) else {
         return f64::NEG_INFINITY;
     };
     let a = side_of(state, attacker);
     let t = side_of(state, target);
-    let out = blow(&a, &t);
+    // R1120, R1283: each strike as the combat reads it, the bonus and the lane multiplier included.
+    let combat = exchange(state, attacker, &a.view, target, &t.view);
+    let out = blow(&a, combat.hit, combat.poisonous, &t);
     let mut kills = out.kills;
-    let mut dies = takes_strike_back(state, attacker, target) && blow(&t, &a).kills;
+    let mut dies =
+        takes_strike_back(state, attacker, target) && blow(&t, combat.strike_back, t.poisonous, &a).kills;
     if a.first_strike && !t.first_strike && kills {
         dies = false;
     }
     if t.first_strike && !a.first_strike && dies {
         kills = false;
+    }
+
+    // R63: the splash belongs to the attack, so it lands whenever the strike does — every case but
+    // the defender-first one above, where the attacker is destroyed before it strikes at all.
+    let mut cleave_value = 0.0;
+    if has_keyword(&a.view.keywords, KeywordKind::Cleave) && !(t.first_strike && !a.first_strike && dies) {
+        for neighbour in cleaved_neighbours(state, attacker, target) {
+            let n = side_of(state, &neighbour);
+            let splash = blow(&a, combat.splash, combat.poisonous, &n);
+            if splash.kills {
+                cleave_value += AI_REPLY.cleave_share * unit_worth(state, &neighbour, &AI_EVAL);
+            } else if splash.pops_shield {
+                cleave_value += AI_REPLY.cleave_share * AI_EVAL.keyword.divine_shield;
+            }
+        }
     }
 
     let mut value = if kills {
@@ -137,7 +95,7 @@ fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> f
     if dies {
         value -= unit_worth(state, attacker, &AI_EVAL);
     }
-    value
+    value + cleave_value
 }
 
 /// The static trader's value of a face hit of `damage` on `seat`'s hero: AI_EVAL.win when it would end
@@ -210,7 +168,7 @@ fn reduce_for(
     }
 }
 
-/// `known_play`'s and `visible_activation`'s answer: TS's `GameState | null | undefined`.
+/// `known_play`'s, `visible_activation`'s and `deft_switch`'s answer: TS's `GameState | null | undefined`.
 enum Known {
     /// The counter refused a node (TS `null`).
     Cut,
@@ -339,6 +297,34 @@ fn visible_activation(
     best_try(state, seat.opponent(), &tries, counter)
 }
 
+/// Step 3, R49: the opponent's Deft units in Defense Position may switch to Attack and still attack.
+/// Each one whose switch `legal` lists and whose attack is unspent (`deft_ready_switch`), in
+/// legal_actions order, is switched on trial, one node; the first whose best-ranked attack after the
+/// switch is one of its own keeps the switch. Otherwise every such unit stays in Defense.
+fn deft_switch(state: &GameState, seat: PlayerId, legal: &[ActionBody], counter: &dyn NodeCounter) -> Known {
+    let opp = seat.opponent();
+    for action in legal {
+        let ActionBody::SwitchPosition { instance_id } = action else {
+            continue;
+        };
+        if !deft_ready_switch(state, instance_id) {
+            continue;
+        }
+        if !counter.take() {
+            return Known::Cut;
+        }
+        let Some(switched) = reduce_for(state, opp, action, counter) else {
+            continue;
+        };
+        let after = legal_actions(&switched, opp);
+        let best = ranked_attacks(&switched, seat, &after).into_iter().next();
+        if matches!(&best, Some(ActionBody::Attack { attacker_id, .. }) if attacker_id == instance_id) {
+            return Known::Played(Box::new(switched));
+        }
+    }
+    Known::Nothing
+}
+
 /// The ids of the cards the opponent holds unseen: its hand and its library, as sampled.
 pub fn hidden_card_ids(state: &GameState, seat: PlayerId) -> IndexSet<String> {
     let side = &state.players[seat.opponent()];
@@ -387,7 +373,7 @@ pub fn simulate_reply(
         }
 
         // One legal_actions serves the known-play try (its ordered candidates), the visible
-        // activations and the static trader's attack list.
+        // activations, the Deft switches and the static trader's attack list.
         let legal = legal_actions(&current, opp);
         match known_play(&current, seat, &legal, hidden, counter) {
             Known::Cut => return None,
@@ -401,6 +387,14 @@ pub fn simulate_reply(
             Known::Cut => return None,
             Known::Played(played) => {
                 current = *played;
+                continue;
+            }
+            Known::Nothing => {}
+        }
+        match deft_switch(&current, seat, &legal, counter) {
+            Known::Cut => return None,
+            Known::Played(switched) => {
+                current = *switched;
                 continue;
             }
             Known::Nothing => {}

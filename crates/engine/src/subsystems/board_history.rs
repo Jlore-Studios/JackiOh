@@ -27,8 +27,8 @@ use crate::state::{
 };
 use crate::wire::{GameEvent, PLAYER_IDS, PerPlayer, PlayerId, Row, RowFlags, Zone, ZoneName};
 use crate::zones::{
-    PlaceOnFieldOptions, RemoveFromFieldOptions, ZoneSlot, fresh_face_down_id, place_on_field, release_home,
-    remove_from_any_zone, remove_from_field, slots_of, zone_contents,
+    PlaceOnFieldOptions, RemoveFromFieldOptions, ZoneSlot, fresh_face_down_id, place_on_field,
+    place_standing_on_field, release_home, remove_from_any_zone, remove_from_field, slots_of, zone_contents,
 };
 
 const ROWS: [Row; 2] = [Row::Units, Row::Backrow];
@@ -106,6 +106,14 @@ fn snapshot_zone(side: &SideSnapshot, slot: &ZoneSlot) -> Vec<CardInstance> {
     out
 }
 
+/// The Unit a snapshot holds on a carrier in a backrow zone (R446). It goes back on its carrier; every
+/// other card of the zone lands where it lay, a Unit standing there or dormant beneath its top included
+/// (R1081000).
+fn snapshot_carried<'a>(side: &'a SideSnapshot, slot: &ZoneSlot) -> Option<&'a CardInstance> {
+    let i = usize::try_from(slot.lane - 1).ok()?;
+    side.carried.as_ref()?.get(i)?.as_ref()
+}
+
 fn zones_of(player: PlayerId) -> Vec<ZoneSlot> {
     ROWS.iter().flat_map(|row| slots_of(player, *row)).collect()
 }
@@ -137,6 +145,9 @@ struct Placement {
     live: Option<CardInstance>,
     from: Option<PlayerId>,
     was_face_down: bool,
+    /// R1081000: the card lay in its backrow zone itself (not on a carrier), so it is set down so — a Unit
+    /// standing there or dormant beneath its top as well as any other card.
+    stands: bool,
 }
 
 /// R566: a card that stood on the same side of the field just before, under the same id, entered nothing
@@ -242,12 +253,16 @@ pub fn restore_board(
                     ),
                     _ => (None, false),
                 };
+                let stands = slot.row == Row::Backrow
+                    && snapshot_carried(&snapshot.sides[*player], &slot)
+                        .is_none_or(|carried| carried.id != card.id);
                 placements.push(Placement {
                     card,
                     slot,
                     live,
                     from,
                     was_face_down,
+                    stands,
                 });
             }
         }
@@ -313,12 +328,13 @@ pub fn restore_board(
                 };
                 // Every restored zone is empty and open now; only a carried Unit whose carrier is mid-play
                 // (left out above) can find no place, and it goes to its controller's hand as step 1's cards do.
-                if !place_on_field(
-                    sink.state,
-                    &mut card,
-                    slot,
-                    PlaceOnFieldOptions { stack: Some(at > 0) },
-                ) {
+                let options = PlaceOnFieldOptions { stack: Some(at > 0) };
+                let landed = if placement.stands {
+                    place_standing_on_field(sink.state, &mut card, slot, options)
+                } else {
+                    place_on_field(sink.state, &mut card, slot, options)
+                };
+                if !landed {
                     bounce_card(sink, &card);
                     continue;
                 }

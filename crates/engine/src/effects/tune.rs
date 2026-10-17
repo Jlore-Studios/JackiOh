@@ -59,8 +59,7 @@ use crate::script::{Effect, EffectContext};
 use crate::state::{BrittleCounter, CardInstance, GameState, PromptOption, find_instance, find_instance_mut};
 use crate::tuning::{TUNED_FLOOR, X_KEY, add_step, tidy_tuning, tuned_count, tuning_of, x_of};
 use crate::wire::{
-    CardType, GameEvent, Keyword, KeywordKind, PromptKind, Row, Selection, TuningChange, Zone, ZoneName,
-    has_keyword,
+    CardType, GameEvent, Keyword, KeywordKind, PromptKind, Selection, TuningChange, ZoneName, has_keyword,
 };
 
 use super::buff::candidates_beside;
@@ -182,11 +181,13 @@ impl TuneRow {
     }
 }
 
-/// The keywords the card has now — all five layers in the unit row (§10.4), layers 1 to 4 elsewhere.
+/// The keywords the card has now — all five layers in the unit row or standing in a backrow zone
+/// (§10.4, R1081000), layers 1 to 4 elsewhere.
 fn keywords_now(state: &GameState, card: &CardInstance) -> Vec<Keyword> {
-    match card.zone {
-        Zone::Field { row: Row::Units, .. } => unit_view(state, card).keywords,
-        _ => card_keywords(state, card),
+    if crate::zones::in_units_row_or_standing(state, card) {
+        unit_view(state, card).keywords
+    } else {
+        card_keywords(state, card)
     }
 }
 
@@ -831,7 +832,7 @@ fn write_number(ctx: &mut EffectContext<'_>, card_id: &str, number: &NumberRef, 
             }
         }
         NumberRef::Attack | NumberRef::Health => {
-            let on_field = matches!(card.zone, Zone::Field { row: Row::Units, .. });
+            let on_field = crate::zones::in_units_row_or_standing(state, &card);
             let attack = matches!(number, NumberRef::Attack);
             let now = if attack {
                 if on_field {

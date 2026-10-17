@@ -14,7 +14,7 @@ use crate::script::Effect;
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
 use crate::state_check::sacrifice_now;
 use crate::wire::TargetAim;
-use crate::wire::{Row, Zone, ZoneName};
+use crate::wire::ZoneName;
 
 /// The mark every destroy leaves (§6.3, §4.5 step 1). A destroy is not a damage instance, so no
 /// unit's hit can be the lethal one any more: R42's "a death whose lethal damage instance came from
@@ -30,8 +30,8 @@ fn mark_destroyed(state: &mut GameState, card: &CardInstance) {
     let Some(current) = find_instance(state, &card.id) else {
         return;
     };
-    let killed =
-        matches!(current.zone, Zone::Field { row: Row::Units, .. }) && already_killed(state, current);
+    // R1081000: a Unit standing in the backrow keeps its killer's credit as one in a unit zone does.
+    let killed = crate::zones::in_units_row_or_standing(state, current) && already_killed(state, current);
     let Some(live) = find_instance_mut(state, &card.id) else {
         return;
     };

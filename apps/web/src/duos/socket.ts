@@ -4,8 +4,9 @@
 //
 // The handshake is `/ws/match`'s (auth as `/ws/match`, S6): the token and the match id ride in the
 // query string, since a browser cannot set a socket's headers, and `hello` asks for a fresh view. The
-// token is read from the tab's session at every open (`net/session.ts`), so a reconnect after the gate
-// renewed it carries the new one.
+// token is the gate's, given through `setToken` as `game/net.ts` takes it (the tab's session until one
+// is given, `net/session.ts`), so a reconnect after a renewal carries the new one, and a 4401 is final
+// only for the token it refused (R1115000).
 //
 // A drop reconnects with `game/net.ts`'s backoff and jitter (R1441); a refusal (4401/4403/4404) and
 // a voided match (4410) do not. A woken page (the tab turned visible, the network came back) asks a
@@ -27,6 +28,7 @@ import {
   RECONNECT_JITTER,
   REFUSAL_CLOSE_CODES,
   SILENT_SOCKET_MS,
+  UNAUTHORIZED_CLOSE_CODE,
   VOIDED_CLOSE_CODE,
   WAKE_PROBE_MS,
   defaultTimers,
@@ -166,11 +168,13 @@ export type DuosClient = {
   sendPing: (ping: PingKind, target: PingTarget) => void;
   close: () => void;
   url: () => string;
+  /** R1115000: the gate's token for the next handshake; after a 4401, a token other than the refused one opens one more socket. */
+  setToken: (token: string) => void;
 };
 
 export type DuosClientOptions = {
   matchId: string;
-  /** The bearer for the next open; defaults to the tab's session. */
+  /** The bearer for the next open until `setToken` gives one; defaults to the tab's session. */
   token?: () => string | null;
   /** Defaults to `duosSocketUrl()`. */
   baseUrl?: string;
@@ -244,6 +248,10 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
   let stopped = false;
   /** When this seat's last pings went out, for the server's own limit (B39). */
   let pingTimes: number[] = [];
+  /** R1115000: the token `setToken` last gave, which every open carries in place of `tokenOf()`'s. */
+  let given: string | null = null;
+  /** R1115000: the token a 4401 refused while the client stays refused for it; null otherwise. */
+  let refusedToken: string | null = null;
 
   function patch(next: Partial<DuosSnapshot>): void {
     snapshot = { ...snapshot, ...next };
@@ -325,7 +333,7 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
 
   function open(): void {
     if (stopped || socket !== null) return;
-    const token = tokenOf();
+    const token = given ?? tokenOf();
     if (token === null) {
       patch({ connection: "refused", error: "Sign in again to play together.", errorCode: "forbidden" });
       return;
@@ -375,6 +383,13 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
         return;
       }
       if (REFUSAL_CLOSE_CODES.includes(event.code)) {
+        // R1115000: a 4401 refuses this handshake's token, not the match. A token renewed before
+        // the close arrived opens one more socket now; one `setToken` brings later opens it then.
+        if (event.code === UNAUTHORIZED_CLOSE_CODE && given !== null && given !== token) {
+          open();
+          return;
+        }
+        refusedToken = event.code === UNAUTHORIZED_CLOSE_CODE ? token : null;
         patch({
           connection: "refused",
           error: event.reason.length > 0 ? event.reason : "the server refused this co-op socket",
@@ -509,12 +524,24 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
       patch({ connection: "closed" });
     },
     url: () => base,
+    setToken: (next) => {
+      given = next;
+      // R1115000: after a 4401, a token other than the one it refused opens one more socket.
+      if (refusedToken === null || next === refusedToken) return;
+      refusedToken = null;
+      // A view does not clear an error here, so the refusal's reason goes now.
+      patch({ error: null, errorCode: null });
+      open();
+    },
   };
 }
 
 // The hook
 
-export type UseDuosMatchOptions = Omit<DuosClientOptions, "token" | "monotonic" | "now" | "timers" | "wake" | "random">;
+export type UseDuosMatchOptions = Omit<DuosClientOptions, "token" | "monotonic" | "now" | "timers" | "wake" | "random"> & {
+  /** The bearer the gate resolved (R194), handed to the client as `useMatch` hands its own. */
+  token: string;
+};
 
 export type UseDuosMatchResult = DuosSnapshot & {
   /** Open a socket now rather than at the end of the backoff (the route's Reconnect now). */
@@ -526,7 +553,7 @@ export type UseDuosMatchResult = DuosSnapshot & {
 
 /** One `/ws/duos` socket for the life of the route; snapshots through `useSyncExternalStore`. */
 export function useDuosMatch(options: UseDuosMatchOptions): UseDuosMatchResult {
-  const { matchId, baseUrl, socketFactory } = options;
+  const { matchId, token, baseUrl, socketFactory } = options;
   const client = useMemo(
     () =>
       createDuosClient({
@@ -536,6 +563,10 @@ export function useDuosMatch(options: UseDuosMatchOptions): UseDuosMatchResult {
       }),
     [matchId, baseUrl, socketFactory],
   );
+  // Before connect, so the first socket carries the gate's token; later ones reach it here (R1115000).
+  useEffect(() => {
+    client.setToken(token);
+  }, [client, token]);
   useEffect(() => {
     client.connect();
     return () => {

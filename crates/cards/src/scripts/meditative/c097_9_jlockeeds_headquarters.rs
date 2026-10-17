@@ -1,7 +1,7 @@
-//! M #97.9 Jlockheed's Headquarters (SPEC §8.8 row 97.9, R1261). (4) Unit, Jlockeed, Token (printed
+//! M #97.9 Jlockeed's Headquarters (SPEC §8.8 row 97.9, R1261). (4) Unit, Jlockeed, Token (printed
 //! Mythic), 0/20 → 0/40.
-//!   Base:    "Tribute 5, Indestructible, Can't attack\nActivate: Fill your board with random Jlockheed Units."
-//!   Radiant: "Tribute 5, Indestructible, Can't attack\nActivate 2: Fill your board with random Radiant Jlockheed Units."
+//!   Base:    "Tribute 5, Indestructible, Can't attack\nActivate: Fill your board with random Jlockeed Units."
+//!   Radiant: "Tribute 5, Indestructible, Can't attack\nActivate 2: Fill your board with random Radiant Jlockeed Units."
 //!   Engine:  "Activate (R384; Activate 2 on the Radiant face). C+ #2 Groom Shroom's fill: each empty,
 //!            unlocked, unreserved unit zone, left to right (R64), gets a random non-token Jlockeed Unit of
 //!            every set (R380; this token is out, §5.1, R387), repeats allowed (R60), summoned, so with no
@@ -19,7 +19,7 @@ const RADIANT_USES: i32 = 2;
 /// §6.3 "Tribute 5": five of your Units, or Sheep Tokens worth as many (§3.2).
 const TRIBUTE_COST: i32 = 5;
 
-/// "Jlockheed Units": the Jlockeed-tagged Units of every set (R278, R380).
+/// "Jlockeed Units": the Jlockeed-tagged Units of every set (R278, R380).
 fn jlockeed_units() -> Value {
     json!({ "type": "Unit", "tags": ["Jlockeed"] })
 }
@@ -67,14 +67,14 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M 97.9 Jlockheed's Headquarters — SPEC §8.8 row 97.9, BUILD M10 row M 97.9: "Tribute 5, Indestructible,
+// M 97.9 Jlockeed's Headquarters — SPEC §8.8 row 97.9, BUILD M10 row M 97.9: "Tribute 5, Indestructible,
 // Can't attack; Activate, once a turn: each empty, unlocked unit zone of yours, left to right, gets a
 // random non-token Jlockeed Unit (MD-F17, R1261), with no Cry; a full or Locked board summons nothing and
 // draws nothing; radiant 0/40 (0/50 before patch v0.3.10), Activate 2 (a second use fills what the
 // first left empty), and the Units are Radiant".
 //
-// The Jlockeed Units of the sets that ship are Jlockeed Shredder-10 (Core #13), Jlockheed's Lobbyist
-// (C+ #48), Jlockheed's J15 Fighter (C+ #51) and Tatches the Totem (M #87, every tribe), the Meditative
+// The Jlockeed Units of the sets that ship are Jlockeed Shredder-10 (Core #13), Jlockeed's Lobbyist
+// (C+ #48), Jlockeed's J15 Fighter (C+ #51) and Tatches the Totem (M #87, every tribe), the Meditative
 // set shipping (R1420); the Headquarters is a token and never its own pick (§5.1, R387).
 // Every scenario keeps spare cards in each hand and library, so R82 does not end the turn after a use.
 #[cfg(test)]

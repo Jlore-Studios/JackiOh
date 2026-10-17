@@ -55,7 +55,7 @@ use crate::state::{
     CardInstance, GameState, ModifierExpiry, ModifierKind, Resume, active_first, find_instance,
     find_instance_mut,
 };
-use crate::wire::{CardType, GameEvent, PlayerId, RedirectWhat, Row, Zone, ZoneName, opponent_of};
+use crate::wire::{CardType, GameEvent, PlayerId, RedirectWhat, Row, ZoneName, opponent_of};
 use crate::zones::GraveyardRedirect;
 
 // ---------------------------------------------------------------------------
@@ -584,8 +584,9 @@ pub fn healing_replaced(sink: &mut EngineSink<'_>, target: &DamageTarget, amount
 // §4.5 step 1: would die (E5), and the flicker it sends a unit through (E22)
 // ---------------------------------------------------------------------------
 
-fn in_unit_zone(card: &CardInstance) -> bool {
-    matches!(card.zone, Zone::Field { row: Row::Units, .. })
+/// R1081000: a Unit standing in the backrow dies from a zone of its own, as one in a unit zone does.
+fn in_unit_zone(state: &GameState, card: &CardInstance) -> bool {
+    crate::zones::in_units_row_or_standing(state, card)
 }
 
 /// §4.5 step 1, before any card moves: the units the check collected would die, and a `wouldDie`
@@ -594,13 +595,13 @@ fn in_unit_zone(card: &CardInstance) -> bool {
 /// collection only; a Sacrifice is an effect's (§6.3) and is not offered.
 pub fn would_die_window(sink: &mut EngineSink<'_>, dying: &[CardInstance]) -> Vec<CardInstance> {
     let mut left: Vec<CardInstance> = dying.to_vec();
-    if !left.iter().any(in_unit_zone) {
+    if !left.iter().any(|card| in_unit_zone(sink.state, card)) {
         return left;
     }
     for mut cand in candidates(sink.state, None) {
         let theirs: Vec<CardInstance> = left
             .iter()
-            .filter(|card| in_unit_zone(card) && card.controller == cand.controller)
+            .filter(|card| in_unit_zone(sink.state, card) && card.controller == cand.controller)
             .cloned()
             .collect();
         if theirs.is_empty() {
@@ -609,7 +610,7 @@ pub fn would_die_window(sink: &mut EngineSink<'_>, dying: &[CardInstance]) -> Ve
         let event = ReplacedEvent::WouldDie {
             units: left
                 .iter()
-                .filter(|card| in_unit_zone(card))
+                .filter(|card| in_unit_zone(sink.state, card))
                 .map(|card| DyingUnit {
                     instance_id: card.id.clone(),
                     controller: card.controller,

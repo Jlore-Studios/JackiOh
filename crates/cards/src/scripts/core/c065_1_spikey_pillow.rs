@@ -24,10 +24,12 @@ fn attack_drain_aura(spares_own_kind: bool) -> AuraHook {
         // "−2 attack": the declared number `drain` (R386), less being better for the Pillow's controller.
         let drain = param(&args, "drain");
         let controller = args.self_.controller;
+        let state = args.state;
         vec![AuraEntry {
             applies: Box::new(move |unit: &CardInstance| {
                 unit.controller == controller
-                    && matches!(unit.zone, Zone::Field { row: Row::Units, .. })
+                    // R1081000: a Unit standing in the backrow is one of "your units".
+                    && in_units_row_or_standing(state, unit)
                     && !(spares_own_kind && unit.def_id == ID)
             }),
             mod_: StatMod {
@@ -244,5 +246,15 @@ mod tests {
             s.expect_refused_with(|s| s.switch_position(&pillow), "Defense Position");
             s.expect_stats(&pillow, json!({ "attack": 0, "maxHealth": 4 }));
         }
+    }
+
+    /// R1081000: a Unit standing in the backrow is one of "your units": the drain reaches it.
+    #[test]
+    fn r1081000_the_drain_reaches_a_unit_standing_in_the_backrow() {
+        crate::register_all();
+        let mut s = scenario(json!({ "p1": { "field": [PILLOW, TIMMY] } }));
+        let timmy = unit_at(&s, P1, 2);
+        crate::stand_in_backrow(&mut s, &timmy.id, 2);
+        s.expect_stats(&timmy, json!({ "attack": 1, "maxHealth": 3 }));
     }
 }

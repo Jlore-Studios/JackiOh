@@ -408,6 +408,50 @@ fn accepts_stack(state: &GameState, slot: &ZoneSlot) -> bool {
     crate::zones::accepts_stack_card(state, slot, Default::default())
 }
 
+/// R1081000: whether this card may be played into a backrow zone as well as its unit-row zones — a
+/// Unit with Flying, played face-up. Read off the card's keywords as they stand where it is (§10.4),
+/// as `plays_on_stack` is.
+fn flies(state: &GameState, card: &CardInstance) -> bool {
+    if card.set_as.is_some() {
+        return false;
+    }
+    if !needs_zone(state, card) {
+        return false;
+    }
+    if row_for_card(state, card) != Row::Units {
+        return false;
+    }
+    crate::layers::unit_has(state, card, KeywordKind::Flying)
+}
+
+/// R1081000: whether a Flying play stands in this backrow zone — the same predicate `legal_zones_for`
+/// lists by. Without Stack the zone must be open or freed by the play's own Tribute; with Stack
+/// occupancy is waived as for any Stack card (`accepts_stack` still refuses Locked and reserved zones),
+/// but a carrier's zone is never stood in: a carrier takes a Unit only as its Unit (R446), which
+/// `zones::why_cannot_carry` judges for a Flying Unit as for any, so a carrier that has taken its one
+/// Unit takes no Flying Stack Unit either (R653).
+fn flying_takes_backrow(
+    state: &GameState,
+    card: &CardInstance,
+    slot: &ZoneSlot,
+    tributes: &[String],
+) -> bool {
+    // R653, R23: an Immutable fuser takes no Unit in, standing on it or beneath it either.
+    if immutable_fuser(state, slot) {
+        return false;
+    }
+    if plays_on_stack(state, card) {
+        accepts_stack(state, slot) && !holds_carrier(state, slot)
+    } else {
+        crate::zones::is_open(state, slot) || freed_by_tribute(state, slot, tributes)
+    }
+}
+
+/// R446: whether the card acting in this zone is a carrier, which a Unit enters only as its Unit.
+fn holds_carrier(state: &GameState, slot: &ZoneSlot) -> bool {
+    crate::zones::card_at(state, slot).is_some_and(|top| crate::zones::is_carrier(state, top))
+}
+
 /// MD-F12, R1281: whether this Unit may be played onto a stack base.
 fn onto_stack_base(state: &GameState, player: PlayerId, card: &CardInstance, slot: &ZoneSlot) -> bool {
     card.set_as.is_none()
@@ -441,6 +485,11 @@ pub fn equip_host_at(
         return None;
     }
     let top = crate::zones::card_at(state, slot)?;
+    // R1081000: a Unit standing in a backrow zone hosts as one in a unit zone does; no other backrow
+    // card is a Unit (a carrier's Unit stands on the carrier, never as the zone's card).
+    if slot.row == Row::Backrow && !crate::zones::is_standing_unit(state, top) {
+        return None;
+    }
     if crate::faces::card_type_of(state, top) != CardType::Unit {
         return None;
     }
@@ -456,8 +505,8 @@ pub fn equip_host_at(
     Some(top.id.clone())
 }
 
-/// R1086: the unit-row zones that hold a host for an Equip play, in lane order. Empty unless the
-/// card plays Equip at all.
+/// R1086: the zones that hold a host for an Equip play, in lane order: the unit row's, then the backrow
+/// zones a Unit stands in (R1081000). Empty unless the card plays Equip at all.
 pub fn legal_equip_zones_for(
     state: &GameState,
     player: PlayerId,
@@ -467,8 +516,8 @@ pub fn legal_equip_zones_for(
     if !plays_equip(state, card) {
         return Vec::new();
     }
-    crate::zones::slots_of(player, Row::Units)
-        .iter()
+    ROWS.iter()
+        .flat_map(|row| crate::zones::slots_of(player, *row))
         .filter(|slot| equip_host_at(state, player, slot, tributes).is_some())
         .map(|slot| ZoneChoice {
             row: slot.row,
@@ -515,6 +564,15 @@ pub fn legal_zones_for(
                 .filter(|slot| !immutable_fuser(state, slot)),
         );
     }
+    // R1081000: a Flying Unit is also offered the backrow zones it stands in — after its unit-row zones,
+    // in lane order. A carrier's zone it takes only as the carrier's Unit, as listed above.
+    if flies(state, card) {
+        for slot in crate::zones::slots_of(player, Row::Backrow) {
+            if flying_takes_backrow(state, card, &slot, tributes) && !slots.contains(&slot) {
+                slots.push(slot);
+            }
+        }
+    }
     slots
         .into_iter()
         .map(|slot| ZoneChoice {
@@ -560,11 +618,24 @@ pub fn freed_by_tribute(state: &GameState, slot: &ZoneSlot, tributes: &[String])
     if slot.row == Row::Units && crate::zones::pile_at(state, slot).map_or(0, |pile| pile.len()) != 1 {
         return false;
     }
+    // R1081000: the same reading in the backrow, where a Unit stands on its own — a card beneath it
+    // would resume (R13), and a Unit a carrier holds goes with the carrier's zone, not the Tribute's.
+    if slot.row == Row::Backrow
+        && (!crate::zones::beneath_at(state, *slot).is_empty()
+            || crate::zones::carried_at(state, *slot).is_some())
+    {
+        return false;
+    }
     !crate::layers::unit_has(state, held, KeywordKind::Reborn)
 }
 
 /// R64, R391: the zone a play that names none takes — the leftmost open zone of its row, else, on a
 /// full row, the leftmost zone its own Tribute empties. `None` when there is neither.
+///
+/// R1081000: a Flying Unit with no zone in its unit row takes the leftmost open backrow zone, else
+/// the leftmost one its own Tribute empties — the unit row stays its home, so it is read first.
+/// `refuse_zone`'s no-zone arm and §10.5 step 4's assignment read this one function, so the refusal
+/// and the placement cannot disagree.
 pub fn default_zone_for(
     state: &GameState,
     player: PlayerId,
@@ -572,8 +643,16 @@ pub fn default_zone_for(
     tributes: &[String],
 ) -> Option<ZoneSlot> {
     let row = row_for_card(state, card);
-    crate::zones::first_free_zone(state, player, row).or_else(|| {
+    let own = crate::zones::first_free_zone(state, player, row).or_else(|| {
         crate::zones::slots_of(player, row)
+            .into_iter()
+            .find(|slot| freed_by_tribute(state, slot, tributes))
+    });
+    if own.is_some() || !flies(state, card) {
+        return own;
+    }
+    crate::zones::first_free_zone(state, player, Row::Backrow).or_else(|| {
+        crate::zones::slots_of(player, Row::Backrow)
             .into_iter()
             .find(|slot| freed_by_tribute(state, slot, tributes))
     })
@@ -1082,7 +1161,8 @@ pub fn legal_selections_for(
                         let Some(held) = crate::zones::card_at(state, slot) else {
                             continue;
                         };
-                        if on_field(held) {
+                        // R1081000: a Unit standing there is no backrow card (§6.1 Animated).
+                        if on_field(held) && !crate::zones::is_standing_unit(state, held) {
                             offer(Selection::Instance {
                                 instance_id: held.id.clone(),
                             });
@@ -2340,9 +2420,6 @@ fn refuse_equip(
     let Some(zone) = zone else {
         return refuse(format!("{name} played as Equip takes a zone"));
     };
-    if zone.row != Row::Units {
-        return refuse(format!("{name} played as Equip goes in the units row"));
-    }
     if zone.lane < 1 || zone.lane > crate::zones::row_size(zone.row) {
         return refuse(format!("there is no {} zone {}", zone.row, zone.lane));
     }
@@ -2352,7 +2429,7 @@ fn refuse_equip(
         lane: zone.lane,
     };
     if equip_host_at(state, player, &slot, tributes).is_none() {
-        return refuse(format!("that units zone holds no Unit for {name}"));
+        return refuse(format!("that {} zone holds no Unit for {name}", zone.row));
     }
     Ok(())
 }
@@ -2395,6 +2472,18 @@ fn refuse_zone(
             row: zone.row,
             lane: zone.lane,
         };
+        // R1081000: a Flying Unit may stand in a backrow zone it takes, as `legal_zones_for` lists
+        // them. A carrier takes it only as its Unit, on the R446 path below as any Unit (R653: not
+        // once it has taken its one); any other zone it cannot take is simply not open, as in its
+        // unit row.
+        if flies(state, card) {
+            if flying_takes_backrow(state, card, &slot, tributes) {
+                return Ok(());
+            }
+            if !holds_carrier(state, &slot) {
+                return refuse(format!("that {} zone is not open", zone.row));
+            }
+        }
         crate::zones::why_cannot_carry(state, slot)?;
         if immutable_fuser(state, &slot) {
             return refuse("an Immutable card takes no Unit in".to_string());

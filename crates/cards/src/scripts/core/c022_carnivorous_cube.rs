@@ -72,8 +72,9 @@ fn meal_of(ctx: &EffectContext<'_>) -> Option<Eaten> {
     }
 
     let card = instance_of(ctx, &TargetSpec::Chosen { index: None })?;
-    // R428: a Unit, acting in a unit zone — never a backrow card.
-    if !matches!(card.zone, Zone::Field { row: Row::Units, .. }) {
+    // R428: a Unit, acting in a unit zone — never a backrow card, but a Unit standing in the backrow
+    // is a Unit (R1081000).
+    if !in_units_row_or_standing(&*ctx.state, &card) {
         return None;
     }
     // "One of your other Units": ally only, and R41's "cannot eat itself".
@@ -510,5 +511,25 @@ mod tests {
                 ));
             }
         }
+    }
+
+    /// R1081000: a Unit standing in the backrow is one of your other Units, so the Cube eats it.
+    #[test]
+    fn r1081000_it_eats_a_unit_standing_in_the_backrow() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "seed": "cube-eat-standing",
+            "p1": { "hand": [CUBE, FILLER], "field": [TIMMY] },
+            "p2": { "hand": [FILLER] },
+        }));
+        let meal = s.card(TIMMY).clone();
+        crate::stand_in_backrow(&mut s, &meal.id, 2);
+
+        s.play(CUBE, json!({ "targets": [{ "pick": "instance", "instanceId": meal.id }] }));
+
+        s.expect_in_zone(&meal, "graveyard");
+        assert_eq!(backrow(&s, P1), lanes([None, None, None, None, None]));
+        let cube = s.card(CUBE).clone();
+        assert!(cube.memory.contains_key("eaten"));
     }
 }

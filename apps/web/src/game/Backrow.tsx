@@ -13,6 +13,9 @@
 // B5 E21: a backrow zone may hold a pile, and the view counts the dormant cards under its top
 // (`buried`, a count and never an identity, on a face-up card and on a face-down one alike, read
 // defensively as the cost is). The zone shows the depth beside the card, as a unit pile does.
+//
+// R471: a face-down card's Plague Counters (`plague`) ride its back; its controller reads them off
+// `counters`, as on any face-up card.
 
 import type { ReactElement } from "react";
 
@@ -60,6 +63,8 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
     const cost = "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
     // R437, R33: a marked face-down card's back carries its mark (read through marks.ts, as defensively).
     const marks = marksOf(entry);
+    // R471: Plague Counters are public; read defensively, as the cost is.
+    const plague = "plague" in entry && typeof entry.plague === "number" ? entry.plague : undefined;
     return (
       <>
         <Card
@@ -70,6 +75,7 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
             at: `${props.side}-${String(props.lane)}`,
             ...(cost === undefined ? {} : { cost }),
             ...(marks.length === 0 ? {} : { marks }),
+            ...(plague === undefined ? {} : { plague }),
           }}
         />
         <PileDepth buried={buried} top={null} />
@@ -78,6 +84,36 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
   }
 
   const testId = testid.card(entry.instanceId);
+  // R1081000: a Unit standing in the backrow is drawn as the minion it is — the unit block the view
+  // carries — with the same switch, target, highlight and click wiring a unit-zone minion has
+  // (Zone.tsx). Anything else keeps the backrow face below.
+  if (entry.type === "Unit" && entry.unit !== undefined && entry.unit !== null) {
+    const unit = entry.unit;
+    return (
+      <>
+        <Card
+          testId={testId}
+          card={entry}
+          unit={unit}
+          switchTarget
+          type={entry.type}
+          owner={entry.owner}
+          controller={entry.controller}
+          counters={entry.counters}
+          unrevealed={entry.unrevealed === true}
+          revealAt={entry.revealAt}
+          className="card-backrow"
+          touchHold={props.touchHold}
+          target={{ on: "unit", instanceId: unit.instanceId, side: props.side, lane: props.lane }}
+          highlight={props.highlight}
+          animating={props.animating}
+          onClick={props.onClick}
+          pops={props.pops?.get(testId)}
+        />
+        <PileDepth buried={buried} top={top} />
+      </>
+    );
+  }
   return (
     <>
       <Card

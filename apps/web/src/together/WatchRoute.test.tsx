@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
 
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
+import { SILENT_SOCKET_MS, WAKE_PROBE_MS } from "../game/net.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import type { Friend } from "../net/social.ts";
 import { baseView } from "../test/fixtures.ts";
@@ -59,6 +60,7 @@ type Listener = (event: { data?: unknown }) => void;
 class FakeWatchSocket {
   readonly sent: string[] = [];
   closed = false;
+  readyState = 0;
   private readonly listeners = new Map<string, Listener[]>();
 
   constructor(readonly url: string) {
@@ -74,10 +76,13 @@ class FakeWatchSocket {
   }
 
   close(): void {
+    this.readyState = 3;
     this.closed = true;
   }
 
   emit(type: "open" | "message" | "close", event: { data?: unknown } = {}): void {
+    if (type === "open") this.readyState = 1;
+    if (type === "close") this.readyState = 3;
     act(() => {
       for (const listener of this.listeners.get(type) ?? []) listener(event);
     });
@@ -97,6 +102,13 @@ function latest(): FakeWatchSocket {
 async function advance(ms: number): Promise<void> {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(ms);
+  });
+}
+
+function wakeTab(): void {
+  act(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+    document.dispatchEvent(new Event("visibilitychange"));
   });
 }
 
@@ -229,5 +241,143 @@ describe("B50 the watch screen", () => {
     expect(screen.getByTestId("watch-status").getAttribute("data-connection")).toBe("closed");
     await advance(WATCH_RECONNECT_MS);
     expect(sockets).toHaveLength(1);
+  });
+
+  it("R1441 probes a silent watch socket on tab visibility and replaces it if unresponsive", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date", "performance"] });
+    watch();
+    const first = latest();
+    first.emit("open");
+    first.frame({ type: "view", view: baseView({ viewer: "p1" }), legal: [] });
+    expect(first.sent).toHaveLength(1);
+
+    await advance(SILENT_SOCKET_MS + 1);
+    wakeTab();
+    expect(first.sent.map((text) => JSON.parse(text) as unknown)).toEqual([
+      { type: "hello", matchId: "m-watch", friendId: "f-ann" },
+      { type: "hello", matchId: "m-watch", friendId: "f-ann" },
+    ]);
+    expect(sockets).toHaveLength(1);
+
+    await advance(WAKE_PROBE_MS);
+    expect(first.closed).toBe(true);
+    expect(sockets).toHaveLength(2);
+    expect(connection("watch-screen")).toBe("connecting");
+
+    const second = latest();
+    second.emit("open");
+    expect(connection("watch-screen")).toBe("open");
+    expect(second.sent.map((text) => JSON.parse(text) as unknown)).toEqual([
+      { type: "hello", matchId: "m-watch", friendId: "f-ann" },
+    ]);
+
+    first.frame({ type: "view", view: baseView({ viewer: "p1", turn: 9 }), legal: [] });
+    expect(screen.getByTestId("game")).toBeInTheDocument();
+  });
+
+  it("R1441 R1103000 keeps a quiet watch socket that answers the wake probe", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date", "performance"] });
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "view", view: baseView({ viewer: "p1" }), legal: [] });
+    expect(socket.sent).toHaveLength(1);
+
+    await advance(SILENT_SOCKET_MS + 1);
+    wakeTab();
+    expect(socket.sent).toHaveLength(2);
+
+    // The server answers a watcher's hello with the view it last sent.
+    socket.frame({ type: "view", view: baseView({ viewer: "p1" }), legal: [] });
+    await advance(WAKE_PROBE_MS * 2);
+
+    expect(sockets).toHaveLength(1);
+    expect(socket.closed).toBe(false);
+    expect(connection("watch-screen")).toBe("open");
+
+    wakeTab();
+    expect(socket.sent).toHaveLength(2);
+  });
+
+  it("R1441 does not probe a watch socket heard within the ping interval", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date", "performance"] });
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "view", view: baseView({ viewer: "p1" }), legal: [] });
+    expect(socket.sent).toHaveLength(1);
+
+    await advance(SILENT_SOCKET_MS - 1000);
+    wakeTab();
+    expect(socket.sent).toHaveLength(1);
+    await advance(WAKE_PROBE_MS);
+    expect(sockets).toHaveLength(1);
+    expect(socket.closed).toBe(false);
+  });
+
+  it("R1441 does not probe or reopen a finished or refused game on wake", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date", "performance"] });
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({
+      type: "view",
+      view: baseView({ viewer: "p1", result: { winner: "p1", reason: "concede" } }),
+      legal: [],
+    });
+    expect(socket.sent).toHaveLength(1);
+
+    await advance(SILENT_SOCKET_MS + 1);
+    wakeTab();
+    expect(socket.sent).toHaveLength(1);
+    await advance(WAKE_PROBE_MS);
+    expect(sockets).toHaveLength(1);
+
+    socket.emit("close");
+    expect(connection("watch-screen")).toBe("closed");
+    await advance(SILENT_SOCKET_MS + 1);
+    wakeTab();
+    expect(sockets).toHaveLength(1);
+
+    cleanup();
+    sockets = [];
+    watch();
+    const refusedSocket = latest();
+    refusedSocket.emit("open");
+    refusedSocket.frame({ type: "error", code: "forbidden", message: "refused" });
+    refusedSocket.emit("close");
+    expect(connection("watch-screen")).toBe("refused");
+
+    await advance(SILENT_SOCKET_MS + 1);
+    wakeTab();
+    expect(sockets).toHaveLength(1);
+  });
+
+  it("R1441 wake replacements respect WATCH_RECONNECT_ATTEMPTS", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date", "performance"] });
+    watch();
+    const first = latest();
+    first.emit("open");
+    first.frame({ type: "view", view: baseView({ viewer: "p1" }), legal: [] });
+
+    for (let attempt = 1; attempt <= WATCH_RECONNECT_ATTEMPTS; attempt += 1) {
+      await advance(SILENT_SOCKET_MS + 1);
+      wakeTab();
+      if (attempt === 1) {
+        await advance(WAKE_PROBE_MS);
+      }
+      expect(sockets).toHaveLength(attempt + 1);
+    }
+
+    await advance(SILENT_SOCKET_MS + 1);
+    wakeTab();
+    expect(connection("watch-screen")).toBe("closed");
+    expect(sockets).toHaveLength(WATCH_RECONNECT_ATTEMPTS + 1);
+    expect(latest().closed).toBe(true);
+    expect(sockets.every((s) => s.closed)).toBe(true);
+
+    await advance(SILENT_SOCKET_MS + 1);
+    wakeTab();
+    expect(sockets).toHaveLength(WATCH_RECONNECT_ATTEMPTS + 1);
   });
 });

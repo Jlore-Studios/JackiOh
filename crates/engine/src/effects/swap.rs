@@ -23,8 +23,8 @@ use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, GameState, find_instance};
 use crate::wire::{GameEvent, PlayerId, Row, Zone, opponent_of};
 use crate::zones::{
-    PlaceOnFieldOptions, RemoveFromFieldOptions, ZoneSlot, is_locked, is_reserved, place_on_field,
-    remove_from_field, slots_of, zone_contents,
+    PlaceOnFieldOptions, RemoveFromFieldOptions, ZoneSlot, carried_at, is_locked, is_reserved,
+    place_on_field, place_standing_on_field, remove_from_field, slots_of, zone_contents,
 };
 
 use super::choose::chosen_options;
@@ -42,6 +42,10 @@ pub const SWAP_ROWS: &[Row] = &[Row::Units, Row::Backrow];
 struct SwapEntry {
     to: ZoneSlot,
     cards: Vec<CardInstance>,
+    /// R446: the Unit a carrier holds in this backrow zone, if one does — it goes back on its carrier.
+    /// Every other card lands where it lay, a Unit standing in the zone or dormant beneath its top
+    /// included (R1081000).
+    carried: Option<String>,
 }
 
 /// Everything in a zone, top card first. A unit zone may hold a Stack pile, and the dormant cards
@@ -69,18 +73,19 @@ fn can_accept(state: &GameState, slot: &ZoneSlot) -> bool {
 
 /// Put a zone's cards down in their new zone. A pile is rebuilt from the bottom up so the card that
 /// was on top is on top again, which keeps the same card acting for the zone (§3.2).
-fn place_contents(state: &mut GameState, cards: &[CardInstance], to: &ZoneSlot) {
+fn place_contents(state: &mut GameState, cards: &[CardInstance], carried: Option<&str>, to: &ZoneSlot) {
     for (placed, card) in cards.iter().rev().enumerate() {
         // Every swapped zone was emptied and the destination accepts cards, so a refusal here is a
         // broken invariant, not a game rule.
-        if !place_on_field(
-            state,
-            &mut card.clone(),
-            to,
-            PlaceOnFieldOptions {
-                stack: Some(placed > 0),
-            },
-        ) {
+        let options = PlaceOnFieldOptions {
+            stack: Some(placed > 0),
+        };
+        let landed = if carried == Some(card.id.as_str()) {
+            place_on_field(state, &mut card.clone(), to, options)
+        } else {
+            place_standing_on_field(state, &mut card.clone(), to, options)
+        };
+        if !landed {
             panic!(
                 "swap could not place {} in {} {} {}",
                 card.id, to.player, to.row, to.lane
@@ -124,9 +129,11 @@ fn swap_board_now(ctx: &mut EffectContext<'_>) {
                 if cards.is_empty() {
                     continue;
                 }
+                let carried = carried_at(ctx.state, from).map(|unit| unit.id.clone());
                 entries.push(SwapEntry {
                     to: mirror_of(&from),
                     cards,
+                    carried,
                 });
             }
         }
@@ -157,7 +164,7 @@ fn swap_board_now(ctx: &mut EffectContext<'_>) {
         }
 
         let before: Vec<PlayerId> = entry.cards.iter().map(|card| card.controller).collect();
-        place_contents(&mut *ctx.state, &entry.cards, &entry.to);
+        place_contents(&mut *ctx.state, &entry.cards, entry.carried.as_deref(), &entry.to);
 
         // Every destination is on the other side, so every card that landed changed controller (R73),
         // dormant Stack cards included (§3.2), and has entered its new side (R171).

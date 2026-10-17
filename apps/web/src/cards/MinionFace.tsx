@@ -142,6 +142,7 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
       data-foil={foilFor(face, settings.animatedFoil)}
       data-radiant-face={face.radiant ? "true" : undefined}
       data-taunt={hasKeyword(unit.keywords, "Taunt") ? "true" : undefined}
+      data-flying={hasKeyword(unit.keywords, "Flying") && unit.position !== "DEF" ? "true" : undefined}
       data-vanilla={unit.vanilla === true ? "true" : undefined}
       data-tuned={face.tuning?.verdict}
     >

@@ -127,6 +127,22 @@ pub(crate) fn dealt_for(mode: Option<QueueMode>) -> Option<Vec<PlayerId>> {
     }
 }
 
+/// R388, R767000: the catalog a live match is played under, as Duos's `pinned_for`: the version
+/// its row froze. One this build neither is nor carries cannot be folded as it was played; a live
+/// match is still better rebuilt than left without an actor (its players would be held in it until
+/// the ceiling), so it runs on this build's catalog, and the error says so.
+pub(crate) fn pinned_for(match_row: &MatchRow) -> engine::Pinned {
+    engine::Pinned::of(&match_row.catalog_version).unwrap_or_else(|reason| {
+        tracing::error!(
+            event = "match.catalog.unpinned",
+            matchId = %match_row.id,
+            catalogVersion = %match_row.catalog_version,
+            reason = %reason,
+        );
+        engine::Pinned::default()
+    })
+}
+
 /// R1452: the ladder bot at each home seat of a match between `players` (seat order), or none for a
 /// person. The bots' rows are read only when a seat's profile is a bot's, inside the caller's
 /// transaction, so a match `start` makes and the same match `rebuild` folds read the same seats.
@@ -252,6 +268,15 @@ impl Registry {
             final_hash: None,
         };
         let dealt = dealt_for(derived_mode);
+        // R388, R767000: the match is pinned to the catalog its row froze. A version this build
+        // neither is nor carries is refused before anything is written, as a co-op join refuses
+        // (`duos::rooms`).
+        let pinned = engine::Pinned::of(&match_row.catalog_version).map_err(|reason| {
+            ApiError::internal(format!(
+                "catalog {} cannot be played: {reason}",
+                match_row.catalog_version
+            ))
+        })?;
 
         // The opening draw is part of the engine, not of the log: `fold` replays `create_game` and
         // `begin_game` from `(seed, decks)` before it applies a single action (§9.3). It runs before
@@ -263,7 +288,7 @@ impl Registry {
         let (last_boards, glitch) = last_boards_of(&match_row);
         let args = engine::create_game_args(&match_row.seed, &match_row.decks, last_boards, glitch, dealt);
         let state = std::panic::catch_unwind(AssertUnwindSafe(|| {
-            engine::begin_game(&engine::create_game(&args)).state
+            engine::begin_game(pinned, &engine::create_game(pinned, &args)).state
         }))
         .map_err(|payload| ApiError::internal(panic_text(payload)))?;
 
@@ -283,6 +308,7 @@ impl Registry {
                 bot_moved_turn: PerPlayer::new(None, None),
                 // R641000: a series game draws its bot no rematch plan.
                 series_game: derived_mode == Some(QueueMode::Bo3),
+                pinned,
             },
         );
         lock(&self.actors).insert(match_id.clone(), actor);
@@ -307,6 +333,7 @@ impl Registry {
         let Some(match_row) = match_row else {
             return Err(RebuildError::NotFound);
         };
+        let pinned = pinned_for(&match_row);
 
         let dealt = dealt_for(mode);
         let (last_boards, glitch_boards) = last_boards_of(&match_row);
@@ -324,18 +351,18 @@ impl Registry {
         // #1035: the three folds in one job off the runtime, as Duos's rebuild folds: a long log is a
         // long fold. A panic in the first is the rebuild's internal error.
         let (folded, replayed, bot_turns) = engine::off_runtime(app.engine_thread, move || {
-            let folded = engine::fold(&args);
+            let folded = engine::fold(pinned, &args);
             // R1442: the play telemetry the log holds, so a rebuilt actor's think times carry on. A
             // match already finished has none left to write, and is not replayed twice.
             let replayed = live.then(|| {
                 std::panic::catch_unwind(AssertUnwindSafe(|| {
-                    telemetry::replay(&row, &rows, dealt.clone()).0
+                    telemetry::replay(pinned, &row, &rows, dealt.clone()).0
                 }))
                 .map_err(panic_text)
             });
             // R639000: where each bot's turn stands, so a restart mid-turn does not begin it again.
             let bot_turns = (has_bot && live).then(|| {
-                std::panic::catch_unwind(AssertUnwindSafe(|| bot_moved_turns(&row, &rows, dealt)))
+                std::panic::catch_unwind(AssertUnwindSafe(|| bot_moved_turns(pinned, &row, &rows, dealt)))
                     .map_err(panic_text)
             });
             (folded, replayed, bot_turns)
@@ -380,6 +407,7 @@ impl Registry {
                 bots,
                 bot_moved_turn,
                 series_game: mode == Some(QueueMode::Bo3),
+                pinned,
             },
         );
         lock(&self.actors).insert(match_id.to_string(), actor.clone());

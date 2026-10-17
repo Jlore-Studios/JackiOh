@@ -13,7 +13,7 @@ use crate::config::BERSERK_MARK;
 use crate::restrictions::can_go_berserk;
 use crate::script::Effect;
 use crate::state::{Exertion, find_instance_mut};
-use crate::wire::{GameEvent, Row, Zone};
+use crate::wire::GameEvent;
 
 use super::targets::{TargetSpec, instance_of};
 
@@ -66,7 +66,8 @@ pub fn may_attack_again(args: MayAttackAgainArgs) -> Effect {
         let Some(unit) = instance_of(ctx, &args.target) else {
             return;
         };
-        if !matches!(unit.zone, Zone::Field { row: Row::Units, .. }) {
+        // R1081000: a Unit standing in the backrow attacks, so it may attack again.
+        if !crate::zones::in_units_row_or_standing(ctx.state, &unit) {
             return;
         }
         let turn = ctx.state.turn;

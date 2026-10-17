@@ -9,7 +9,7 @@
 //! Port of `packages/ai/test/evaluate.test.ts`. TS's `evaluate(state, seat)` defaults are written
 //! out (`NextSwing::Enemy`, `AI_EVAL`) by `eval`.
 
-use jackioh_ai::{AI_EVAL, GREEDY_EVAL, NextSwing, evaluate, face_threat, unit_worth};
+use jackioh_ai::{AI_EVAL, GREEDY_EVAL, NextSwing, evaluate, face_threat, face_threat_with, unit_worth};
 use jackioh_engine::testkit::{
     AI_DIFFICULTY, CardInstance, GameOverReason, GameResult, GameState, HERO_HEALTH, Keyword, Phase,
     PlayerId, Value, Winner, json,
@@ -334,6 +334,62 @@ mod evaluate_the_strength_passs_terms {
         assert_close(diff, (1.0 - AI_EVAL.position_grants) * AI_EVAL.keyword.taunt, 10);
         assert!(diff > 0.0);
     }
+
+    /// #45 Deft Duelist (4/3, Charge, Deft) on p1's field in Attack and in Defense Position, each
+    /// board with its unit.
+    fn duelist() -> ((GameState, CardInstance), (GameState, CardInstance)) {
+        let attack = board(json!({ "p1": { "field": ["core-045"] } }));
+        let defense = board(json!({ "p1": { "field": [{ "def": "core-045", "position": "DEF" }] } }));
+        let (atk, def) = (first_unit(&attack), first_unit(&defense));
+        ((attack, atk), (defense, def))
+    }
+
+    /// p2's Deft Duelist in Defense Position, p1's board empty.
+    fn enemy_duelist_in_defense() -> GameState {
+        board(json!({ "p1": {}, "p2": { "field": [{ "def": "core-045", "position": "DEF" }] } }))
+    }
+
+    #[test]
+    fn a_deft_unit_in_defense_position_keeps_its_whole_attack_and_differs_only_by_the_position_grants() {
+        // R49: its switch back to Attack spends no attack, so Defense Position costs it no attack share.
+        let ((attack, atk), (defense, def)) = duelist();
+        assert_close(
+            unit_worth(&defense, &def, &AI_EVAL) - unit_worth(&attack, &atk, &AI_EVAL),
+            AI_EVAL.position_grants * (AI_EVAL.keyword.taunt + AI_EVAL.armor_point),
+            10,
+        );
+    }
+
+    #[test]
+    fn greedy_eval_still_reads_a_deft_unit_in_defense_position_as_one_that_cannot_attack() {
+        // The frozen baseline: Deft Duelist in Defense Position loses its attack share, as Mr. Vanilla
+        // does, and threatens nothing.
+        let ((attack, atk), (defense, def)) = duelist();
+        let w = GREEDY_EVAL;
+        assert_close(
+            unit_worth(&attack, &atk, &w) - unit_worth(&defense, &def, &w),
+            (1.0 - w.defense_attack_share) * w.attack * 4.0
+                - w.position_grants * (w.keyword.taunt + w.armor_point),
+            10,
+        );
+        let state = enemy_duelist_in_defense();
+        assert_eq!(face_threat_with(&state, PlayerId::P2, &w), 0);
+        assert_eq!(face_threat_with(&state, PlayerId::P2, &AI_EVAL), 4);
+    }
+
+    #[test]
+    fn deft_defense_attacks_moves_the_score_by_the_threat_and_the_attack_share_it_counts() {
+        // Off, the enemy Duelist threatens nothing and counts half its attack; on, it threatens 4 and
+        // counts all of it. Nothing else on the board reads the flag.
+        let state = enemy_duelist_in_defense();
+        let mut off = AI_EVAL;
+        off.deft_defense_attacks = false;
+        assert_close(
+            evaluate(&state, AI, NextSwing::Enemy, &off) - evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL),
+            AI_EVAL.threat_per_damage * 4.0 + (1.0 - AI_EVAL.defense_attack_share) * AI_EVAL.attack * 4.0,
+            10,
+        );
+    }
 }
 
 mod face_threat_b13 {
@@ -376,6 +432,16 @@ mod face_threat_b13 {
             json!({ "p1": {}, "p2": { "field": ["core-011", { "def": "core-020", "position": "DEF" }] } }),
         );
         assert_eq!(face_threat(&state, PlayerId::P2), 3);
+    }
+
+    #[test]
+    fn a_deft_unit_in_defense_position_is_an_attacker_and_one_without_deft_is_not() {
+        // R49: Deft Duelist (4 attack) switches to Attack and still swings; Mr. Vanilla (4) cannot.
+        let deft = board(json!({ "p1": {}, "p2": { "field": [{ "def": "core-045", "position": "DEF" }] } }));
+        assert_eq!(face_threat(&deft, PlayerId::P2), 4);
+        let vanilla =
+            board(json!({ "p1": {}, "p2": { "field": [{ "def": "core-008", "position": "DEF" }] } }));
+        assert_eq!(face_threat(&vanilla, PlayerId::P2), 0);
     }
 
     #[test]
@@ -589,5 +655,266 @@ mod duos_life_r964000 {
         // The pool's cap, not what is left of it.
         assert_eq!(starting_life(&duos, AI), DUOS_OWN_HEALTH + 30);
         assert_eq!(starting_life(&duos, HUMAN), HERO_HEALTH);
+    }
+}
+
+mod banked_state_1086 {
+    use super::*;
+
+    use jackioh_engine::testkit::{JADE_ASCEND_AT, JADE_BEAUTY_AT, Scenario, active_units_of};
+
+    const JADE: &str = "meditative-039-2"; // (0) Spell token: add 1 to your Jade Counter, gain 1 mana
+    const BEAUTY: &str = "meditative-039-5"; // the 20/20 the counter's fifth step summons (R962)
+    const KPOP: &str = "core-050"; // (2) Unit 1/1, Cry: Allure an enemy permanent (R437's mark)
+    const FULLSEND: &str = "core-078"; // (4) Spell: end of turn, exile your hand (an unmarked delayed effect)
+    const RIFT: &str = "meditative-019-1"; // (2) Spell token: take an extra turn after this one (R846)
+    const VANILLA: &str = "core-008"; // (1) Unit 4/4, no keywords
+    const PUNISH: &str = "classic-020"; // Field Spell: Activate, a Unit is destroyed at your next turn's start
+    const DOOM: &str = "destroy a Unit at the start of your next turn";
+    const ROCK: &str = "core-066"; // Unit 10/10 Indestructible
+
+    fn at_jade(state: &GameState, jade: i32) -> GameState {
+        let mut out = clone(state);
+        out.players[AI].jade = if jade == 0 { None } else { Some(jade) };
+        out
+    }
+
+    fn jade_board() -> Scenario {
+        register_cards();
+        scenario(json!({
+            "seed": "evaluate-banked",
+            "p1": { "hand": [JADE, VANILLA] },
+            "p2": { "hand": [VANILLA], "field": [VANILLA] },
+        }))
+    }
+
+    fn jade_play_gain(from: i32) -> (f64, GameState) {
+        let mut s = jade_board();
+        s.state_mut().players[AI].jade = if from == 0 { None } else { Some(from) };
+        let before = s.state().clone();
+        s.play(JADE, json!({}));
+        let after = s.state().clone();
+        (eval(&after, AI) - eval(&before, AI), after)
+    }
+
+    #[test]
+    fn r962_each_jade_step_toward_the_summon_raises_the_score_and_four_are_worth_more_than_a_card() {
+        let plain = jade_board().state().clone();
+        let mut last = eval(&plain, AI);
+        for jade in 1..JADE_BEAUTY_AT {
+            let now = eval(&at_jade(&plain, jade), AI);
+            assert!(now > last, "jade {jade}: {now} is not above {last}");
+            last = now;
+        }
+        let banked = eval(&at_jade(&plain, JADE_BEAUTY_AT - 1), AI) - eval(&plain, AI);
+        assert_close(banked, f64::from(JADE_BEAUTY_AT - 1) * AI_EVAL.jade_step, 9);
+        assert!(
+            banked > AI_EVAL.hand_card,
+            "four steps {banked} are not worth more than a card"
+        );
+        // The enemy's counter counts against the seat.
+        let mut theirs = clone(&plain);
+        theirs.players[HUMAN].jade = Some(JADE_BEAUTY_AT - 1);
+        assert!(eval(&theirs, AI) < eval(&plain, AI));
+    }
+
+    #[test]
+    fn r962_the_jade_that_crosses_the_threshold_is_the_sharpest_step_the_counter_takes() {
+        let (crossing, after) = jade_play_gain(JADE_BEAUTY_AT - 1);
+        assert!(
+            active_units_of(&after, AI)
+                .iter()
+                .any(|unit| unit.def_id == BEAUTY),
+            "setup: the fifth step should summon a Jade Beauty"
+        );
+        for from in 0..JADE_BEAUTY_AT - 1 {
+            let (step, _) = jade_play_gain(from);
+            assert!(
+                crossing > step,
+                "{from} -> {}: {step} is not below the crossing's {crossing}",
+                from + 1
+            );
+        }
+    }
+
+    #[test]
+    fn r962_past_the_summon_the_steps_count_toward_the_ascension_and_none_past_it() {
+        let plain = jade_board().state().clone();
+        let five = eval(&at_jade(&plain, JADE_BEAUTY_AT), AI);
+        assert_close(eval(&plain, AI), five, 9);
+        assert_close(
+            eval(&at_jade(&plain, JADE_ASCEND_AT - 1), AI) - five,
+            f64::from(JADE_ASCEND_AT - 1 - JADE_BEAUTY_AT) * AI_EVAL.jade_step,
+            9,
+        );
+        assert_close(
+            eval(&at_jade(&plain, JADE_ASCEND_AT + 2), AI),
+            eval(&plain, AI),
+            9,
+        );
+    }
+
+    #[test]
+    fn r437_a_k_pop_fanatics_pending_allure_banks_a_share_of_the_marked_unit() {
+        register_cards();
+        let mut s = scenario(json!({
+            "seed": "evaluate-banked",
+            "p1": { "hand": [KPOP, VANILLA] },
+            "p2": { "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 2 }] },
+        }));
+        let prey = s.unit(HUMAN, 2).expect("setup: p2 should hold the 4/4 in lane 2");
+        s.play(
+            KPOP,
+            json!({ "targets": [{ "pick": "instance", "instanceId": prey.id }] }),
+        );
+        let armed = s.state().clone();
+        assert_eq!(armed.delayed.len(), 1, "setup: the Allure should wait");
+        assert!(
+            armed
+                .marks
+                .as_ref()
+                .is_some_and(|marks| marks.iter().any(|mark| mark.instance_id == prey.id))
+        );
+        let mut bare = clone(&armed);
+        bare.delayed.clear();
+        bare.marks = None;
+
+        assert!(eval(&armed, AI) > eval(&bare, AI));
+        let live = s.unit(HUMAN, 2).expect("the 4/4 is still p2's until the steal");
+        assert_close(
+            eval(&armed, AI) - eval(&bare, AI),
+            AI_EVAL.marked_share * unit_worth(&armed, &live, &AI_EVAL),
+            9,
+        );
+        // The marked unit's controller reads the same mark as a loss.
+        assert!(eval(&armed, HUMAN) < eval(&bare, HUMAN));
+    }
+
+    /// The Power to Punish's base delayed destroy aimed at p2's `def` in lane 2: the armed state, the
+    /// same state with no delayed effect or mark, and the marked unit.
+    fn punished(def: &str) -> (GameState, GameState, CardInstance) {
+        register_cards();
+        let mut s = scenario(json!({
+            "seed": "evaluate-banked",
+            "p1": { "hand": [VANILLA], "backrow": [PUNISH] },
+            "p2": { "hand": [VANILLA], "field": [{ "def": def, "lane": 2 }] },
+        }));
+        let prey = s
+            .unit(HUMAN, 2)
+            .expect("setup: p2 should hold the unit in lane 2");
+        s.activate(
+            PUNISH,
+            json!({ "modes": [DOOM], "targets": [{ "pick": "instance", "instanceId": prey.id }] }),
+        );
+        let armed = s.state().clone();
+        assert!(
+            armed
+                .marks
+                .as_ref()
+                .is_some_and(|marks| marks.iter().any(|mark| mark.instance_id == prey.id)),
+            "setup: the doomed unit should wear the red mark"
+        );
+        let mut bare = clone(&armed);
+        bare.delayed.clear();
+        bare.marks = None;
+        let live = s
+            .unit(HUMAN, 2)
+            .expect("the unit is still on the field until the destroy");
+        (armed, bare, live)
+    }
+
+    #[test]
+    fn r437_the_power_to_punishs_pending_destroy_banks_a_share_of_the_marked_unit() {
+        let (armed, bare, live) = punished(VANILLA);
+        assert_close(
+            eval(&armed, AI) - eval(&bare, AI),
+            AI_EVAL.marked_share * unit_worth(&armed, &live, &AI_EVAL),
+            9,
+        );
+        assert!(eval(&armed, HUMAN) < eval(&bare, HUMAN));
+    }
+
+    #[test]
+    fn r46_a_pending_destroy_marked_on_an_indestructible_unit_banks_nothing() {
+        let (armed, bare, _) = punished(ROCK);
+        assert_eq!(eval(&armed, AI), eval(&bare, AI));
+        assert_eq!(eval(&armed, HUMAN), eval(&bare, HUMAN));
+    }
+
+    #[test]
+    fn r437_a_delayed_effect_that_marks_nothing_adds_nothing() {
+        register_cards();
+        let mut s = scenario(json!({
+            "seed": "evaluate-banked",
+            "p1": { "hand": [FULLSEND, VANILLA] },
+            "p2": { "hand": [VANILLA] },
+        }));
+        s.play(FULLSEND, json!({}));
+        let armed = s.state().clone();
+        assert!(
+            !armed.delayed.is_empty(),
+            "setup: /fullsend's exile should wait for the end of turn"
+        );
+        let mut bare = clone(&armed);
+        bare.delayed.clear();
+        assert_eq!(eval(&armed, AI), eval(&bare, AI));
+    }
+
+    #[test]
+    fn r846_an_extra_turn_in_the_bank_is_worth_ai_eval_extra_turn() {
+        register_cards();
+        let mut s = scenario(json!({
+            "seed": "evaluate-banked",
+            "p1": { "hand": [RIFT, VANILLA] },
+            "p2": { "hand": [VANILLA] },
+        }));
+        s.play(RIFT, json!({}));
+        let owed = s.state().clone();
+        assert_eq!(
+            owed.players[AI].extra_turns,
+            Some(1),
+            "setup: the Rift should owe a turn"
+        );
+        let mut none = clone(&owed);
+        none.players[AI].extra_turns = None;
+        assert_close(eval(&owed, AI) - eval(&none, AI), AI_EVAL.extra_turn, 9);
+        assert!(eval(&owed, HUMAN) < eval(&none, HUMAN));
+    }
+
+    #[test]
+    fn r637_a_temporary_hand_card_is_worth_less_than_the_same_card_kept() {
+        let kept = board(json!({ "p1": { "hand": [VANILLA] }, "p2": { "hand": [VANILLA] } }));
+        let empty = board(json!({ "p1": {}, "p2": { "hand": [VANILLA] } }));
+        let mut temporary = clone(&kept);
+        temporary.players[AI].hand[0]
+            .granted_keywords
+            .push(Keyword::Temporary);
+        assert!(eval(&temporary, AI) < eval(&kept, AI));
+        assert_close(
+            eval(&kept, AI) - eval(&temporary, AI),
+            AI_EVAL.temporary_discount * (eval(&kept, AI) - eval(&empty, AI)),
+            9,
+        );
+        // R185: the enemy's hand is unseen, so its Temporary cards move nothing.
+        let mut theirs = clone(&kept);
+        theirs.players[HUMAN].hand[0]
+            .granted_keywords
+            .push(Keyword::Temporary);
+        assert_eq!(eval(&theirs, AI), eval(&kept, AI));
+    }
+
+    #[test]
+    fn greedy_eval_gives_every_banked_term_nothing() {
+        let greedy = |state: &GameState| evaluate(state, AI, NextSwing::Enemy, &GREEDY_EVAL);
+        let plain = jade_board().state().clone();
+        assert_eq!(greedy(&at_jade(&plain, JADE_BEAUTY_AT - 1)), greedy(&plain));
+        let mut owed = clone(&plain);
+        owed.players[AI].extra_turns = Some(1);
+        assert_eq!(greedy(&owed), greedy(&plain));
+        let mut temporary = clone(&plain);
+        temporary.players[AI].hand[1]
+            .granted_keywords
+            .push(Keyword::Temporary);
+        assert_eq!(greedy(&temporary), greedy(&plain));
     }
 }

@@ -54,6 +54,7 @@ import { __resetTutorialProgressForTests, markLessonComplete, readTutorialProgre
 import { tutorialTestid } from "../tutorial/testids.ts";
 import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { gifTestid } from "../replay/ShareGif.tsx";
+import { practiceDeckIssues } from "../wire/validator.ts";
 import PracticeRoute, { readPracticeParams } from "./practice.tsx";
 import type { PracticeRouteProps } from "./practice.tsx";
 
@@ -519,6 +520,54 @@ describe("B32 /practice shows setup to anyone", () => {
     expect(Array.from(select.options).find((option) => option.value === "saved:2")).not.toBeDisabled();
     expect(select.value).toBe("random");
     expect(deckChoiceFromValue("saved:1", [short])).toBeNull();
+  });
+
+  it("lists 20-card saved decks the engine refuses, disabled, says why under the picker with a link to Decks, and starts none of them", async () => {
+    const cards = SAVED_DECKS[0] ?? [];
+    const repeated = { name: "Twice Over", cards: [...cards.slice(0, -1), cards[0] ?? ""] };
+    const unknown = { name: "Lost Card", cards: [...cards.slice(0, -1), "core-999"] };
+    const loadDecks = vi.fn(() => Promise.resolve(decksResponse([repeated, unknown, ...SAVED.slice(2)])));
+    window.localStorage.setItem(PRACTICE_SETUP_KEY, JSON.stringify({ difficulty: "easy", deck: "saved:1" }));
+    const host = routeHost();
+    renderRoute(host, { account: signedIn("active"), loadDecks });
+
+    await waitFor(() => {
+      expect(savedOptions()).toEqual(["saved:1", "saved:2", "saved:3"]);
+    });
+    const select = screen.getByTestId(T.deck) as HTMLSelectElement;
+    const option = (value: string) => Array.from(select.options).find((o) => o.value === value);
+    expect(option("saved:1")).toBeDisabled();
+    expect(option("saved:1")?.textContent).toBe("Twice Over (needs a fix)");
+    expect(option("saved:2")).toBeDisabled();
+    expect(option("saved:2")?.textContent).toBe("Lost Card (needs a fix)");
+    expect(option("saved:3")).not.toBeDisabled();
+    expect(select.value).toBe("random");
+
+    const hint = screen.getByTestId(T.deckHint);
+    expect(hint).toHaveTextContent(practiceDeckIssues(repeated)[0]?.message ?? "no issue");
+    expect(hint).toHaveTextContent(practiceDeckIssues(unknown)[0]?.message ?? "no issue");
+    expect(hint).toHaveTextContent("Fix them in Decks to play them here.");
+    expect(within(hint).getByRole("link", { name: "Decks" })).toHaveAttribute("href", "/decks");
+
+    fireEvent.click(screen.getByTestId(T.start));
+    await screen.findByTestId(T.hud);
+    expect(host.starts()[0]?.deck).toEqual({ kind: "random" });
+  });
+
+  it("one refused saved deck is sent to Decks in the singular, and the legal one stays selectable", async () => {
+    const cards = SAVED_DECKS[0] ?? [];
+    const repeated = { name: "Twice Over", cards: [...cards.slice(0, -1), cards[0] ?? ""] };
+    const loadDecks = vi.fn(() => Promise.resolve(decksResponse([...SAVED.slice(0, 1), repeated])));
+    renderRoute(routeHost(), { account: signedIn("active"), loadDecks });
+
+    await waitFor(() => {
+      expect(savedOptions()).toEqual(["saved:1", "saved:2"]);
+    });
+    const select = screen.getByTestId(T.deck) as HTMLSelectElement;
+    const option = (value: string) => Array.from(select.options).find((o) => o.value === value);
+    expect(option("saved:1")).not.toBeDisabled();
+    expect(option("saved:2")).toBeDisabled();
+    expect(screen.getByTestId(T.deckHint)).toHaveTextContent("Fix it in Decks to play it here.");
   });
 
   it("B32 a pending account gets no saved decks", async () => {

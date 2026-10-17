@@ -78,9 +78,11 @@ export function targetFromElement(element: Element): { target: ClickTarget; test
         const place = zone === null ? null : placeOf(zone);
         if (place === null) return null;
         const instanceId = card[1] as string;
+        // R1081000: a Unit standing in a backrow zone is a unit for every press and drag (Backrow.tsx).
+        const standing = place.row === "backrow" && at.classList.contains("card-unit");
         return {
           target:
-            place.row === "units"
+            place.row === "units" || standing
               ? { on: "unit", instanceId, side: place.side, lane: place.lane }
               : { on: "backrow", instanceId, side: place.side, lane: place.lane },
           testid: id,

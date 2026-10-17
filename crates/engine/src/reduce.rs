@@ -77,7 +77,7 @@ use crate::wire::{
     Action, ActionBody, ActionType, GameEvent, GameOverReason, NON_ACTIVE_ACTION_TYPES,
     PROMPT_OPEN_ACTION_TYPES, Phase, PlayerId, Position, Row, Winner, opponent_of,
 };
-use crate::zones::{active_units_of, card_at, carried_units_of, slots_of};
+use crate::zones::{active_units_of, card_at, carried_units_of, slots_of, standing_units_of};
 
 /// TS `ReduceResult = { state; events; error? }` (SURFACE §6.1). `error` is `Some` exactly when the
 /// action was refused; then `state` is the input, unchanged, and `events` is empty.
@@ -135,7 +135,7 @@ pub fn attack_target_id(target: &AttackTarget) -> String {
 
 /// The attacker an `attack` action names: any card in this player's unit piles, a dormant one
 /// included, so that §3.2's "not on the field" is `combat`'s refusal to give rather than a lookup
-/// failure here (R13).
+/// failure here (R13), then a Unit a carrier holds and a Unit standing in a backrow zone.
 fn attacker_of(state: &GameState, player: PlayerId, instance_id: &str) -> Option<CardInstance> {
     // R446: a Unit a carrier holds is one of the player's units too, which `combat` refuses to attack.
     let in_piles = state.players[player]
@@ -148,7 +148,15 @@ fn attacker_of(state: &GameState, player: PlayerId, instance_id: &str) -> Option
     if in_piles.is_some() {
         return in_piles;
     }
-    carried_units_of(state, player)
+    let carried = carried_units_of(state, player)
+        .into_iter()
+        .find(|card| card.id == instance_id)
+        .cloned();
+    if carried.is_some() {
+        return carried;
+    }
+    // R1081000: and a Unit standing in a backrow zone, which attacks and switches as any unit does.
+    standing_units_of(state, player)
         .into_iter()
         .find(|card| card.id == instance_id)
         .cloned()

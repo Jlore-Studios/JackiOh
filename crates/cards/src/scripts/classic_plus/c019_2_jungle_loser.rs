@@ -10,20 +10,22 @@ const BOT_LOSER: &str = "classicplus-019-5";
 /// The declared `chance` is a percentage.
 const PERCENT: i32 = 100;
 
-/// §3.1: lane N faces lane N. Each Bot Loser of yours with the enemy Unit across from it.
+/// §3.1: lane N faces lane N. Each Bot Loser of yours with each enemy Unit across from it. A Unit standing
+/// in a backrow zone is in that zone's lane (R1081000), a Bot Loser or an enemy Unit alike.
 fn across_from_bot_losers(state: &GameState, controller: PlayerId) -> Vec<KillCredit> {
-    let enemy = opponent_of(controller);
-    slots_of(controller, Row::Units)
+    let lane_of = |unit: &CardInstance| {
+        slot_of(state, unit).filter(|_| in_units_row_or_standing(state, unit)).map(|slot| slot.lane)
+    };
+    let enemies = active_units_of(state, opponent_of(controller));
+    active_units_of(state, controller)
         .into_iter()
-        .flat_map(|slot| {
-            let bot = match card_at(state, slot) {
-                Some(bot) if bot.def_id == BOT_LOSER => bot,
-                _ => return Vec::new(),
-            };
-            match card_at(state, ZoneRef { player: enemy, row: Row::Units, lane: slot.lane }) {
-                None => Vec::new(),
-                Some(victim) => vec![KillCredit { victim_id: victim.id.clone(), to_id: bot.id.clone() }],
-            }
+        .filter(|bot| bot.def_id == BOT_LOSER)
+        .flat_map(|bot| {
+            let lane = lane_of(bot);
+            enemies
+                .iter()
+                .filter(move |victim| lane.is_some() && lane_of(victim) == lane)
+                .map(move |victim| KillCredit { victim_id: victim.id.clone(), to_id: bot.id.clone() })
         })
         .collect()
 }
@@ -109,7 +111,7 @@ mod tests {
     const BOT: &str = "classicplus-019-5";
     const TOP: &str = "classicplus-019-1";
     const VANILLA: &str = "core-008"; // 4/4
-    const FIGHTER: &str = "classicplus-051"; // Jlockheed's J15 Fighter: Can't be attacked
+    const FIGHTER: &str = "classicplus-051"; // Jlockeed's J15 Fighter: Can't be attacked
     const MROW: &str = "core-086"; // 1/1, Can't attack; Death: take control of the Unit that destroyed this
     const FILLER: &str = "core-005";
     const DECK: [&str; 6] = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
@@ -273,7 +275,7 @@ mod tests {
             }
 
             #[test]
-            fn s4_2_step_2_a_unit_that_can_t_be_attacked_is_never_drawn_c_n51_jlockheed_s_j15_fighter() {
+            fn s4_2_step_2_a_unit_that_can_t_be_attacked_is_never_drawn_c_n51_jlockeed_s_j15_fighter() {
                 for seed in 1..=6 {
                     let mut s = always(jungle(
                         json!([]),
@@ -316,6 +318,23 @@ mod tests {
                 let death = s.events().iter().find(|event| event.event_type() == GameEventType::Destroyed);
                 assert_eq!(killer_of(death), Some(loser(&s).id));
                 s.expect_stats(&bot, json!({ "attack": 5 }));
+            }
+
+            /// R1081000: an enemy Unit standing in the backrow zone of your Bot Loser's lane is across from it.
+            #[test]
+            fn r1081000_a_kill_standing_in_the_backrow_across_from_your_bot_loser_sends_it_berserk() {
+                let mut s = always(jungle(
+                    json!([{ "def": BOT, "lane": 4 }]),
+                    false,
+                    json!({ "field": [{ "def": VANILLA, "lane": 4 }] }),
+                    None,
+                ));
+                let vanilla = s.card(VANILLA).id.clone();
+                crate::stand_in_backrow(&mut s, &vanilla, 4);
+                let bot = unit_or_blank(&s, P1, 4);
+                s.end_turn();
+                s.expect_in_zone(vanilla.as_str(), "graveyard");
+                assert_eq!(s.card(&bot).berserk, Some(true));
             }
 
             #[test]

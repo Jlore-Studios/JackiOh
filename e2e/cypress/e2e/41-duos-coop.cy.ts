@@ -266,7 +266,7 @@ function untilHostMayAct(guest: DuosSocket, rounds: number): void {
   });
 }
 
-describe("40 duos co-op — two players against the Easy AI", () => {
+describe("41 duos co-op — two players against the Easy AI", () => {
   it("B60–B64: make and join a room, pass, ping both ways, look through the portal, end the round together and concede as a team", () => {
     const host = accounts.p1();
     const guestAccount = accounts.p2();
