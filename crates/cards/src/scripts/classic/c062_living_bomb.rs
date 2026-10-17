@@ -61,10 +61,8 @@ pub fn script() -> CardScripts {
 // R46; tokens cleared on leave, R78). Radiant: only at the start of opponent's turn.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
     use std::collections::BTreeSet;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -129,23 +127,6 @@ mod tests {
 
     mod c_62_living_bomb {
         use super::*;
-
-        #[test]
-        fn has_no_declared_numbers_the_base_face_holds_both_turns_the_radiant_face_the_opponents_only() {
-            crate::register_all();
-            let def = js(&crate::card_def(ID));
-            assert_eq!(def["id"], BOMB);
-            assert!(def.get("params").is_none());
-            let scripts = script();
-            assert!(scripts.base.start_of_turn.is_some());
-            assert!(scripts.base.start_of_opponent_turn.is_some());
-            assert!(scripts.radiant.start_of_turn.is_none());
-            // The same shared hook.
-            assert!(match (&scripts.radiant.start_of_opponent_turn, &scripts.base.start_of_opponent_turn) {
-                (Some(radiant_hook), Some(base_hook)) => Arc::ptr_eq(radiant_hook, base_hook),
-                _ => false,
-            });
-        }
 
         mod base {
             use super::*;

@@ -209,14 +209,6 @@ mod tests {
             use super::*;
 
             #[test]
-            fn stats_are_8_2() {
-                crate::register_all();
-                let def = crate::card_def(CRITIKAL);
-                assert_eq!((def.base.attack, def.base.health), (Some(4), Some(1)));
-                assert_eq!((def.radiant.attack, def.radiant.health), (Some(8), Some(2)));
-            }
-
-            #[test]
             fn the_returned_graveyard_card_is_made_radiant() {
                 crate::register_all();
                 let mut s = scenario(json!({

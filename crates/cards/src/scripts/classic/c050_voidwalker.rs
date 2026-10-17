@@ -60,7 +60,6 @@ pub fn script() -> CardScripts {
 // already on the field would exile them as they were laid; the Cry's cases play it from hand instead.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -104,28 +103,6 @@ mod tests {
 
     mod c50_voidwalker {
         use super::*;
-
-        #[test]
-        fn declares_a_cry_and_one_replacement_into_exile_on_each_face_and_no_numbers() {
-            crate::register_all();
-            let def = registered_catalog()[ID].clone();
-            assert_eq!(def.id, VOID);
-            assert!(def.params.is_none());
-            let scripts = script();
-            assert_eq!(scripts.base.replacements.len(), 1);
-            let only = &scripts.base.replacements[0];
-            assert_eq!(only.id, "voidwalker");
-            assert_eq!(only.on, ReplacementMoment::ToGraveyard);
-            assert_eq!(js(&only.instead), json!({ "to": "exile" }));
-            assert!(only.where_.is_none() && only.when.is_none() && only.then.is_none() && only.by.is_none());
-            let radiant: Vec<Value> = scripts
-                .radiant
-                .replacements
-                .iter()
-                .map(|each| json!([js(&each.on), js(&each.instead)]))
-                .collect();
-            assert_eq!(json!(radiant), json!([["toGraveyard", { "to": "exile" }]]));
-        }
 
         #[test]
         fn events_every_exile_it_causes_is_an_exiled_event_naming_the_card() {

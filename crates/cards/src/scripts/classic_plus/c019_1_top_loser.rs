@@ -118,24 +118,6 @@ mod tests {
     mod c_n19_1_top_loser {
         use super::*;
 
-        #[test]
-        fn is_a_2_5_5_unit_token_with_a_printed_rarity_one_script_serves_both_faces() {
-            let def = crate::card_def(ID);
-            assert!(def.token);
-            assert_eq!(def.rarity, Rarity::Token);
-            assert_eq!(def.printed_rarity, Some(PrintedRarity::Legendary));
-            let scripts = script();
-            assert_eq!(
-                scripts.base.static_flags,
-                Some(StaticFlags {
-                    attacked_only_from_lane: Some(true),
-                    never_defense: Some(true),
-                    ..StaticFlags::default()
-                })
-            );
-            assert_eq!(scripts.radiant.static_flags, scripts.base.static_flags);
-        }
-
         mod base {
             use super::*;
 
@@ -285,20 +267,6 @@ mod tests {
 
         mod radiant {
             use super::*;
-
-            #[test]
-            fn is_10_10_with_armor_6_and_immune_to_spells() {
-                let mut s = top_loser(json!({}), true, json!({}));
-                let loser = top(&s);
-                s.expect_stats(&loser, json!({ "attack": 10, "health": 10 }));
-                assert_eq!(s.stats(top(&s)).armor, 6);
-                assert!(
-                    s.stats(top(&s))
-                        .keywords
-                        .iter()
-                        .any(|keyword| keyword.kind() == KeywordKind::ImmuneToSpells)
-                );
-            }
 
             #[test]
             fn s6_1_no_spell_targets_it() {

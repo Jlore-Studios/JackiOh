@@ -31,7 +31,6 @@ pub fn script() -> CardScripts {
 // caster (R97, R177)".
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -73,23 +72,6 @@ mod tests {
 
     fn count(s: &Scenario, type_: &str) -> usize {
         s.events().iter().filter(|event| event.event_type().as_str() == type_).count()
-    }
-
-    #[test]
-    fn is_a_0_spell_targeting_a_unit_radiant_a_unit_or_a_backrow_card_on_either_side() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.type_, CardType::Spell);
-        assert_eq!(def.cost, CardCost::Fixed(0));
-        let scripts = script();
-        assert_eq!(
-            serde_json::to_value(&scripts.base.targets).unwrap(),
-            json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }])
-        );
-        assert_eq!(
-            serde_json::to_value(&scripts.radiant.targets).unwrap(),
-            json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "backrow"] } }])
-        );
     }
 
     mod base {

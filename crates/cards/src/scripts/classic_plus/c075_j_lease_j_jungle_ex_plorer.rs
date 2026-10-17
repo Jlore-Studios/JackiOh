@@ -83,27 +83,6 @@ mod tests {
     mod c_n75_j_lease_j_jungle_ex_plorer {
         use super::*;
 
-        #[test]
-        fn is_a_2_5_5_legendary_unit_10_10_radiant_that_names_its_pack() {
-            crate::register_all();
-            let def = crate::card_def(super::super::ID);
-            assert_eq!(def.id, EXPLORER);
-            assert_eq!(
-                [
-                    js(&def.cost),
-                    js(&def.base.attack),
-                    js(&def.base.health),
-                    js(&def.radiant.attack),
-                    js(&def.radiant.health)
-                ],
-                [json!(2), json!(5), json!(5), json!(10), json!(10)]
-            );
-            assert!(def.refs.as_ref().is_some_and(|refs| refs.iter().any(|id| id == PACK)));
-            let scripts = super::super::script();
-            assert!(scripts.base.cry.is_some());
-            assert!(scripts.radiant.cry.is_some());
-        }
-
         mod base {
             use super::*;
 

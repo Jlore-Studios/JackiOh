@@ -30,32 +30,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
-    const P1: PlayerId = PlayerId::P1;
-
-    fn keywords_of(s: &Scenario, player: PlayerId, lane: usize) -> Vec<String> {
-        let view = s.view(player);
-        let side = if view.you.player == player { &view.you } else { &view.opponent };
-        let unit = match side.units.get(lane - 1) {
-            Some(Some(unit)) => unit,
-            _ => panic!("no unit in {player} unit lane {lane}"),
-        };
-        unit.keywords
-            .iter()
-            .map(|keyword| keyword.kind().as_str().to_string())
-            .collect()
-    }
-
     mod n20_pointmaster_base {
         use super::*;
-
-        #[test]
-        fn is_a_printed_7_1_human_with_first_strike_and_no_divine_shield() {
-            crate::register_all();
-            let mut s = scenario(json!({ "p1": { "field": ["core-020"] }, "p2": { "field": ["core-012"] } }));
-
-            s.expect_stats("core-020", json!({ "attack": 7, "health": 1, "maxHealth": 1 }));
-            assert_eq!(keywords_of(&s, P1, 1), vec!["First Strike".to_string()]);
-        }
 
         #[test]
         fn s4_3_step_1_first_strike_kills_the_defender_before_it_can_strike_back() {
@@ -97,21 +73,6 @@ mod tests {
 
     mod n20_pointmaster_radiant {
         use super::*;
-
-        #[test]
-        fn is_a_printed_14_2_with_first_strike_and_divine_shield() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "p1": { "field": [{ "def": "core-020", "radiant": true }] },
-                "p2": { "field": ["core-012"] },
-            }));
-
-            s.expect_stats("core-020", json!({ "attack": 14, "health": 2, "maxHealth": 2 }));
-            let keywords = keywords_of(&s, P1, 1);
-            for wanted in ["First Strike", "Divine Shield"] {
-                assert!(keywords.contains(&wanted.to_string()), "{wanted} missing from {keywords:?}");
-            }
-        }
 
         #[test]
         fn s4_4_step_1_divine_shield_negates_the_whole_counter_attack_and_is_then_gone() {

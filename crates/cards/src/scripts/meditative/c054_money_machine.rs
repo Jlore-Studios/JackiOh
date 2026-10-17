@@ -138,21 +138,6 @@ mod tests {
     }
 
     #[test]
-    fn is_a_1_field_spell_with_a_declared_price_of_2_naming_the_coin() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.cost, CardCost::Fixed(1));
-        assert_eq!(def.type_, CardType::FieldSpell);
-        assert_eq!(def.refs, Some(vec![THE_COIN.to_string()]));
-        let price = def
-            .params
-            .as_ref()
-            .and_then(|params| params.iter().find(|param| param.key == "price"))
-            .map(|param| (param.base, param.radiant));
-        assert_eq!(price, Some((2, 2)));
-    }
-
-    #[test]
     fn r1106_the_odds_are_89_10_1_worst_to_best_and_add_to_100() {
         let table: Vec<(&str, i32)> = MONEY_MACHINE_ODDS
             .iter()

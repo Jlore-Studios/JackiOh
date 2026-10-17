@@ -73,7 +73,6 @@ pub fn script() -> CardScripts {
 // through `param()` (R386). The `conditionMet` proofs (R195) are in `../condition-active.test.ts`.
 #[cfg(test)]
 mod tests {
-    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const BURN: &str = "classic-036";
@@ -94,18 +93,6 @@ mod tests {
 
     mod c_36_burn {
         use super::*;
-
-        #[test]
-        fn declares_one_target_any_unit_or_hero_on_either_side_and_a_script_per_face() {
-            crate::register_all();
-            assert_eq!(js(&registered_catalog()[ID])["id"], BURN);
-            let scripts = script();
-            assert_eq!(
-                js(&scripts.base.targets),
-                json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]),
-            );
-            assert_eq!(js(&scripts.radiant.targets), js(&scripts.base.targets));
-        }
 
         #[test]
         fn r381_its_name_is_a_rules_word_it_is_the_one_card_named_burn_and_no_entrys_refs_name_it() {

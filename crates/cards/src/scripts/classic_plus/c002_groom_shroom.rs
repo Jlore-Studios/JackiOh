@@ -92,7 +92,6 @@ pub fn script() -> CardScripts {
 // zone, which no Core card can do to a unit zone.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -158,18 +157,6 @@ mod tests {
 
     fn kinds(keywords: &[Keyword]) -> Vec<KeywordKind> {
         keywords.iter().map(|k| k.kind()).collect()
-    }
-
-    #[test]
-    fn is_a_3_trap_tagged_felinor_each_face_declares_one_trap_trigger_on_attackdeclared() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.type_, CardType::Trap);
-        assert_eq!(def.tags, vec![Tag::Felinor]);
-        let scripts = script();
-        let ons = |s: &Script| s.triggers.iter().map(|t| t.on.clone()).collect::<Vec<_>>();
-        assert_eq!(ons(&scripts.base), vec![vec![GameEventType::AttackDeclared]]);
-        assert_eq!(ons(&scripts.radiant), vec![vec![GameEventType::AttackDeclared]]);
     }
 
     mod base {

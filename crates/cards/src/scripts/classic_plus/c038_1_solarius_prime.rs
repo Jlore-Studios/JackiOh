@@ -186,22 +186,8 @@ mod tests {
         (s, prime)
     }
 
-    #[test]
-    fn is_a_prime_token_named_solarius_prime_spaced_as_c_46_1_felinor_flagbearer_prime_is_patch_v0_2_y() {
-        let def = crate::card_def(PRIME);
-        assert_eq!(def.name, "Solarius Prime");
-        assert!(def.token);
-        assert_eq!(def.tags, vec![Tag::Prime, Tag::Token]);
-    }
-
     mod base {
         use super::*;
-
-        #[test]
-        fn prints_spell_damage_3() {
-            let s = scenario(json!({ "p1": { "field": [PRIME] } }));
-            assert!(s.stats(PRIME).keywords.contains(&Keyword::SpellDamage { n: 3 }));
-        }
 
         #[test]
         fn r70_r452_its_cry_casts_exactly_5_spells_one_after_another_free_with_no_prompt_of_its_casters() {
@@ -370,12 +356,6 @@ mod tests {
 
     mod radiant {
         use super::*;
-
-        #[test]
-        fn prints_spell_damage_7() {
-            let s = scenario(json!({ "p1": { "field": [{ "def": PRIME, "radiant": true }] } }));
-            assert!(s.stats(PRIME).keywords.contains(&Keyword::SpellDamage { n: 7 }));
-        }
 
         #[test]
         fn casts_5_radiant_spells() {

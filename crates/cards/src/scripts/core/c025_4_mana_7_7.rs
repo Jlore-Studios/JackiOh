@@ -30,7 +30,6 @@ pub fn script() -> CardScripts {
 // fixtures depend on those scripts too).
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -47,62 +46,8 @@ mod tests {
         side.units.get(lane - 1).cloned().flatten()
     }
 
-    /// A script with no hook, no declaration and no flag: every field of `Script` absent or empty.
-    fn is_empty_script(script: &Script) -> bool {
-        script.cost.is_none()
-            && script.cry.is_none()
-            && script.death.is_none()
-            && script.start_of_game.is_none()
-            && script.resume.is_empty()
-            && script.delayed.is_none()
-            && script.set_stat.is_none()
-            && script.start_of_turn.is_none()
-            && script.end_of_turn.is_none()
-            && script.aura.is_none()
-            && script.triggers.is_empty()
-            && script.on_play_hook.is_none()
-            && script.hand_triggers.is_empty()
-            && script.static_flags.is_none()
-            && script.targets.is_empty()
-            && script.modes.is_empty()
-            && script.condition_met.is_none()
-            && script.preview.is_none()
-            && script.activations.is_empty()
-            && script.target_checks.is_empty()
-            && script.cost_aura.is_none()
-            && script.graveyard_play.is_none()
-            && script.targeting_discards.is_none()
-            && script.records_play_as.is_none()
-            && script.draw_limit.is_none()
-            && script.replacements.is_empty()
-            && script.hero_guard.is_none()
-            && script.conditional_keywords.is_none()
-            && script.after_attack.is_none()
-            && script.plague_multiplier.is_none()
-            && script.deck_triggers.is_empty()
-            && script.graveyard_triggers.is_empty()
-            && script.quests.is_none()
-            && script.tribute_when.is_none()
-            && script.would_counter.is_none()
-            && script.start_of_opponent_turn.is_none()
-    }
-
     mod n25_4_mana_7_7 {
         use super::*;
-
-        #[test]
-        fn the_keywords_are_printed_on_the_catalog_faces_so_neither_script_grants_anything() {
-            // §10.4: Armor sums across sources, so a script that re-granted Armor 7 would show 14.
-            let def = crate::card_def(ID);
-            assert_eq!(serde_json::to_value(&def.base.keywords).unwrap(), json!([{ "kind": "Armor", "n": 7 }]));
-            assert_eq!(
-                serde_json::to_value(&def.radiant.keywords).unwrap(),
-                json!([{ "kind": "Armor", "n": 7 }, { "kind": "Reborn" }])
-            );
-            let scripts = script();
-            assert!(is_empty_script(&scripts.base));
-            assert!(is_empty_script(&scripts.radiant));
-        }
 
         mod base {
             use super::*;

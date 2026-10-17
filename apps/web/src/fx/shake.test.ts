@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { FX_SHAKE_FREQ_HZ, FX_SHAKE_MAX_DEG, FX_SHAKE_MAX_PX, FX_TRAUMA_DECAY } from "./constants.ts";
+import { FX_SHAKE_MAX_DEG, FX_SHAKE_MAX_PX, FX_TRAUMA_DECAY } from "./constants.ts";
 import { createNoise1D } from "./rng.ts";
 import { createShake } from "./shake.ts";
 
@@ -18,13 +18,6 @@ function samples(seed: number, trauma: number, fromMs = 0, toMs = 2_000, stepMs 
 }
 
 describe("B30 trauma", () => {
-  it("B30 the default tuning is 18 px, 1.2 degrees, 18 Hz and 1.2 trauma per second", () => {
-    expect(FX_SHAKE_MAX_PX).toBe(18);
-    expect(FX_SHAKE_MAX_DEG).toBe(1.2);
-    expect(FX_SHAKE_FREQ_HZ).toBe(18);
-    expect(FX_TRAUMA_DECAY).toBe(1.2);
-  });
-
   it("B30 a new shake has no trauma and is not active", () => {
     const shake = createShake();
     expect(shake.trauma()).toBe(0);

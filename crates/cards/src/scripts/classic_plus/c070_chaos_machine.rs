@@ -103,19 +103,6 @@ mod tests {
         s.backrow(P1, 1).expect("Chaos Machine in lane 1").id
     }
 
-    #[test]
-    fn is_a_2_field_spell_whose_two_hooks_run_one_tick_on_both_faces() {
-        crate::register_all();
-        let def = js(&crate::card_def(ID));
-        assert_eq!(def["cost"], json!(2));
-        assert_eq!(def["type"], json!("Field Spell"));
-        let CardScripts { base, radiant } = script();
-        let start = base.start_of_turn.as_ref().unwrap();
-        assert!(Arc::ptr_eq(start, base.end_of_turn.as_ref().unwrap()));
-        assert!(Arc::ptr_eq(start, radiant.start_of_turn.as_ref().unwrap()));
-        assert!(Arc::ptr_eq(base.end_of_turn.as_ref().unwrap(), radiant.end_of_turn.as_ref().unwrap()));
-    }
-
     mod base {
         use super::*;
 

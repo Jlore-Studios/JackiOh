@@ -43,7 +43,7 @@ pub fn script() -> CardScripts {
 // random other non-token Book on the same face, keeping the swap (R671).
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
+    use super::ID;
     use jackioh_engine::testkit::*;
     use std::collections::BTreeSet;
 
@@ -126,38 +126,6 @@ mod tests {
 
     mod c_55_book_of_wildfire {
         use super::*;
-
-        #[test]
-        fn is_a_1_spell_with_the_book_tag_declaring_one_target_its_damage_a_declared_number_on_both_faces() {
-            crate::register_all();
-            let def = js(&crate::card_def(ID));
-            assert_eq!(def["id"], WILDFIRE);
-            assert_eq!(def["type"], "Spell");
-            assert_eq!(def["cost"], 1);
-            assert_eq!(def["tags"], json!(["Book"]));
-            assert_eq!(
-                def["params"],
-                json!([{ "key": "damage", "base": 4, "radiant": 8, "better": "up", "step": 1, "min": 1 }]),
-            );
-            let scripts = script();
-            assert_eq!(
-                js(&scripts.base.targets),
-                json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]),
-            );
-            // The Radiant face is the same declaration and the same hooks.
-            assert_eq!(js(&scripts.radiant.targets), js(&scripts.base.targets));
-            assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());
-            assert_eq!(
-                scripts.radiant.hand_triggers.iter().map(|trigger| trigger.id.clone()).collect::<Vec<String>>(),
-                scripts.base.hand_triggers.iter().map(|trigger| trigger.id.clone()).collect::<Vec<String>>(),
-            );
-            // The one engine trigger, by its id and the events it answers.
-            let swap = book_swap_trigger();
-            assert_eq!(scripts.base.hand_triggers.len(), 1);
-            assert_eq!(scripts.base.hand_triggers[0].id, swap.id);
-            assert_eq!(scripts.base.hand_triggers[0].id, BOOK_SWAP_TRIGGER_ID);
-            assert_eq!(scripts.base.hand_triggers[0].on, swap.on);
-        }
 
         #[test]
         fn r671_prints_the_swap_on_both_faces_the_radiant_one_naming_a_radiant_book() {

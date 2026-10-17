@@ -97,16 +97,6 @@ mod tests {
         (0..count).map(|_| json!(FILLER)).collect()
     }
 
-    #[test]
-    fn is_a_1_field_spell_with_no_tag_naming_stockpile() {
-        crate::register_all();
-        let def = crate::card_def(super::ID);
-        assert_eq!(def.type_, CardType::FieldSpell);
-        // Patch v0.3.10 (#831) took its Fruit tag away.
-        assert!(def.tags.is_empty());
-        assert_eq!(def.refs, Some(vec![STOCKPILE.to_string()]));
-    }
-
     mod base {
         use super::*;
 

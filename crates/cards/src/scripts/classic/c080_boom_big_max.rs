@@ -43,7 +43,6 @@ pub fn script() -> CardScripts {
 // patch 1 set the base attack to 13, so the Radiant 26 doubles it exactly (R275) with no exception left.
 #[cfg(test)]
 mod tests {
-    use super::ID;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -57,11 +56,6 @@ mod tests {
     const STOCKPILE: &str = "core-005";
 
     use crate::scenario;
-
-    fn def() -> CardDef {
-        crate::register_all();
-        crate::card_def(ID)
-    }
 
     use crate::js;
 
@@ -98,12 +92,6 @@ mod tests {
             .map(js)
             .filter(|action| action["type"] == json!("play") && action["instanceId"] == json!(boom))
             .collect()
-    }
-
-    /// is tagged Acclaimed (SPEC §8.6 row 80)
-    #[test]
-    fn is_tagged_acclaimed_spec_s8_6_row_80_patch_v0_2_y() {
-        assert_eq!(js(&def().tags), json!(["Acclaimed"]));
     }
 
     mod base {

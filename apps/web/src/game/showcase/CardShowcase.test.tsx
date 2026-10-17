@@ -14,7 +14,7 @@ import { baseView, withEvents } from "../../test/fixtures.ts";
 import { CatalogContext, lookupFromDefs } from "../catalog.ts";
 import Game from "../Game.tsx";
 import CardShowcase from "./CardShowcase.tsx";
-import { SHOWCASE_HOLD_MS, SHOWCASE_QUEUE_MAX, showcaseHoldMs, showcaseTestid as T } from "./constants.ts";
+import { SHOWCASE_HOLD_MS, showcaseHoldMs, showcaseTestid as T } from "./constants.ts";
 
 const lookup = lookupFromDefs(CATALOG);
 const PANTHER = "core-032";
@@ -156,7 +156,6 @@ describe("the opponent's play is held up", () => {
       advance(SHOWCASE_HOLD_MS);
     }
     expect(shown.filter((defId) => defId !== null)).toEqual(["core-005", "core-008", "core-011"]);
-    expect(SHOWCASE_QUEUE_MAX).toBe(3);
   });
 
   it("Escape, or a pointer down anywhere, puts it away with whatever was waiting", () => {

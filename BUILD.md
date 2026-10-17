@@ -370,7 +370,7 @@ Acceptance: a registry test asserts every catalog id has a script and every scri
 `_harness.ts` gives `scenario({ seed, p1: { hand, field, library, health, mana }, p2: {…} })` builders that place real instances, `playFrom(hand)`, `attack`, `answer`, `endTurn`, `view` and assertion helpers (`expectInZone`, `expectStats`, `expectEvents`). Every card test file covers, for base and radiant separately, each behaviour named in its §8 row plus the "must-pass" cases in the table below.
 Acceptance: `pnpm test --filter cards` runs a test file per catalog entry (111 for Core; 317 once M9 lands, 318 with Glitch); a script that lists catalog ids without a test file (`cards/scripts/missing-tests.ts`) prints nothing.
 
-**M4-T4 Implement cards in waves.** Wave 1 first (keywords and single primitives), then Wave 2 (stored state, prompts, delayed and cross-turn effects, traps), then Wave 3 (subsystems). Within a wave, go in index order. A wave is done when every card in it passes its tests and the fuzz gate (M4 gate) still passes with those cards added to the fuzz deck pool.
+**M4-T4 Implement cards in waves.** Wave 1 first (keywords and single primitives), then Wave 2 (stored state, prompts, delayed and cross-turn effects, traps), then Wave 3 (subsystems). Within a wave, go in index order. A wave is done when every card in it passes its tests and the fuzz gate (M4 gate) still passes with those cards added to the fuzz deck pool. A clause that names only a face's printed cost, stats, type or tags ("radiant 5/5") is proved for every entry by `crates/cards/tests/cross/catalog.rs` (M4-T1, M9-T1), here and in M9's and the Meditative tables, and needs no test in the card's file (#1125).
 
 | # | Card | Wave | Must-pass cases (base; radiant) |
 | --- | --- | --- | --- |

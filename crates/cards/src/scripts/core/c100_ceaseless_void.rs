@@ -235,21 +235,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn s8_5_is_a_mythic_10_10_20_20_unit_printed_at_100_with_charge_only_on_the_radiant_face() {
-            crate::register_all();
-            let def = crate::card_def(VOID);
-            assert_eq!(def.type_, CardType::Unit);
-            assert_eq!(serde_json::to_value(def.cost).unwrap(), json!(PRINTED));
-            assert_eq!(serde_json::to_value(def.rarity).unwrap(), json!("Mythic"));
-            assert_eq!((def.base.attack, def.base.health), (Some(10), Some(10)));
-            // R275: a Radiant Unit's attack and health are each at least double its base face's.
-            assert_eq!((def.radiant.attack, def.radiant.health), (Some(20), Some(20)));
-            // §8 Conventions: "Plus X" adds keyword X and restates no clause.
-            assert!(!kinds(&def.base.keywords).contains(&KeywordKind::Charge));
-            assert_eq!(kinds(&def.radiant.keywords), vec![KeywordKind::Charge]);
-        }
-
-        #[test]
         fn s10_9_one_script_serves_both_faces_the_cost_hook_the_cry_and_r662_s_glow_and_nothing_else() {
             crate::register_all();
             // "Plus Charge" and the 20/20 are printed on the radiant face and so §10.4 layer 1, not a line

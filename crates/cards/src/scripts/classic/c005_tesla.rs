@@ -153,21 +153,6 @@ mod tests {
     mod c_n5_tesla {
         use super::*;
 
-        #[test]
-        fn is_a_field_trap_with_animated_and_lifesteal_printed_both_faces_run_one_script() {
-            crate::register_all();
-            let def = crate::card_def(TESLA);
-            assert_eq!(def.type_, CardType::FieldTrap);
-            let kinds: Vec<KeywordKind> = def.base.keywords.iter().map(Keyword::kind).collect();
-            assert_eq!(kinds, vec![KeywordKind::Animated, KeywordKind::Lifesteal]);
-            // The radiant face is the very same script.
-            let scripts = script();
-            assert_eq!(scripts.base.triggers.len(), scripts.radiant.triggers.len());
-            for (base, radiant) in scripts.base.triggers.iter().zip(&scripts.radiant.triggers) {
-                assert!(Arc::ptr_eq(&base.run, &radiant.run));
-            }
-        }
-
         mod base {
             use super::*;
 

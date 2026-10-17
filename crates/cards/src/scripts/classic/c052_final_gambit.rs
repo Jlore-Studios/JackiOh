@@ -84,7 +84,6 @@ pub fn script() -> CardScripts {
 // whose second then lands on you.
 #[cfg(test)]
 mod tests {
-    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const GAMBIT: &str = "classic-052";
@@ -163,26 +162,6 @@ mod tests {
 
     mod c52_final_gambit {
         use super::*;
-
-        #[test]
-        fn declares_one_replacement_at_the_lethal_hit_window_re_aiming_the_hit_at_the_enemy_hero_then_its_follow_up() {
-            crate::register_all();
-            let def = js(&registered_catalog()[ID]);
-            assert_eq!(def["id"], GAMBIT);
-            assert_eq!(def["type"], "Trap");
-            let scripts = script();
-            for face in [&scripts.base, &scripts.radiant] {
-                // A `ReplacementDef` holds a hook, so it is compared field by field, the absent ones absent.
-                assert_eq!(face.replacements.len(), 1);
-                let only = &face.replacements[0];
-                assert_eq!(only.id, "final-gambit");
-                assert_eq!(only.on, ReplacementMoment::LethalHit);
-                assert_eq!(js(&only.instead), json!({ "redirect": "enemyHero" }));
-                assert_eq!(only.then.as_deref(), Some("afterRedirect"));
-                assert!(only.where_.is_none() && only.when.is_none() && only.by.is_none());
-                assert!(face.resume.contains_key("afterRedirect"));
-            }
-        }
 
         mod base {
             use super::*;

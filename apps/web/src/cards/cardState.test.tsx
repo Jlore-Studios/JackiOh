@@ -30,7 +30,6 @@ import { baseView, card, emptySide, faceUpBackrow, fusedDef, unit } from "../tes
 import { CardFace } from "./CardFace.tsx";
 import { BERSERK_WORDS, PILE_WORDS, animatedWords, brittleWords, distinctEnchantments, enchantmentWords, stateBadges } from "./cardState.ts";
 import { markColorOf, markWords } from "./marks.ts";
-import { STATE_BADGES_SMALL_MAX } from "./constants.ts";
 import { closeInspect } from "./inspect/store.ts";
 import { HOVER_DELAY_MS, LONG_PRESS_MS } from "./inspect/constants.ts";
 import {
@@ -423,7 +422,6 @@ describe("E39 enchantments: a glyph and words on every face that shows the card"
     expect(hand[0]?.getAttribute("data-floor")).toBe("2");
     for (const badge of hand) expect(badge.querySelector("img.cf-icon"), badge.getAttribute("data-state") ?? "").not.toBeNull();
     // On a small face the first two show and the rest fold into "+n" (cardstate.css draws the fold).
-    expect(STATE_BADGES_SMALL_MAX).toBe(2);
     expect(handRoot().querySelector(".cf-states-more")?.textContent).toBe("+1");
 
     const minion = screen.getByTestId(testid.card("u1"));

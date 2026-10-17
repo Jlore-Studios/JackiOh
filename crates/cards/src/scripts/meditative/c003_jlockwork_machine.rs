@@ -110,24 +110,6 @@ mod tests {
             .count()
     }
 
-    #[test]
-    fn is_a_3_cost_10_10_declaring_exiles() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.cost, CardCost::Fixed(3));
-        assert_eq!(def.type_, CardType::Unit);
-        assert_eq!(def.rarity, Rarity::Rare);
-        assert!(def.tags.is_empty());
-        assert_eq!(
-            [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-            [Some(10), Some(10), Some(20), Some(20)]
-        );
-        assert_eq!(
-            crate::js(&def.params),
-            json!([{ "key": "exiles", "base": 3, "radiant": 3, "better": "down", "step": 1, "min": 1 }])
-        );
-    }
-
     mod base {
         use super::*;
 

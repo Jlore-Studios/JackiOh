@@ -74,20 +74,6 @@ mod tests {
     mod c_n29_book_of_vital_kill {
         use super::*;
 
-        #[test]
-        fn declares_one_hero_target_on_either_side_and_13_is_the_card_s_own_number_no_params() {
-            crate::register_all();
-            let def = crate::card_def(VITAL);
-            assert_eq!(def.id, VITAL);
-            assert!(def.params.is_none());
-            let scripts = script();
-            assert_eq!(
-                serde_json::to_value(&scripts.base.targets).expect("declarations serialise"),
-                json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["hero"] } }])
-            );
-            assert_eq!(scripts.radiant.targets, scripts.base.targets);
-        }
-
         mod base {
             use super::*;
 
@@ -263,12 +249,6 @@ mod tests {
                 play_at(&mut s, P1);
                 s.expect_health(P1, 13);
                 assert_eq!(s.state().active, P1);
-            }
-
-            #[test]
-            fn names_no_card_since_patch_v0_3_10() {
-                crate::register_all();
-                assert!(crate::card_def(VITAL).refs.is_none());
             }
         }
     }

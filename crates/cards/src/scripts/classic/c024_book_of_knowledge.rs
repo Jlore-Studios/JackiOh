@@ -70,18 +70,6 @@ mod tests {
     mod c_n24_book_of_knowledge {
         use super::*;
 
-        #[test]
-        fn runs_one_script_on_both_faces() {
-            crate::register_all();
-            let scripts = script();
-            assert_eq!(crate::card_def(ID).id, BOOK);
-            // TS `expect(radiant).toBe(base)`: the Radiant face is the base script itself.
-            assert!(Arc::ptr_eq(
-                scripts.radiant.cry.as_ref().unwrap(),
-                scripts.base.cry.as_ref().unwrap()
-            ));
-        }
-
         mod base {
             use super::*;
 

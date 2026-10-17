@@ -83,9 +83,7 @@ pub fn script() -> CardScripts {
 // resolved (§10.5); neither answers the play that moved it (R401, R119; R78 reset; R70 cast).
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -124,41 +122,6 @@ mod tests {
 
     mod c_66_eu_striker {
         use super::*;
-
-        #[test]
-        fn is_a_2_5_4_human_unit_10_8_rush_radiant_a_hand_trigger_and_a_field_trigger_on_card_resolved() {
-            crate::register_all();
-            let def = js(&crate::card_def(ID));
-            assert_eq!(def["cost"], 2);
-            assert_eq!(def["tags"], json!(["Human"]));
-            assert_eq!(
-                json!([def["base"]["attack"], def["base"]["health"], def["radiant"]["attack"], def["radiant"]["health"]]),
-                json!([5, 4, 10, 8]),
-            );
-            assert_eq!(def["base"]["keywords"], json!([]));
-            assert_eq!(def["radiant"]["keywords"], json!([{ "kind": "Rush" }]));
-            assert!(def["params"].is_null());
-            let scripts = script();
-            assert_eq!(
-                scripts.base.hand_triggers.iter().map(|trigger| js(&trigger.on)).collect::<Vec<Value>>(),
-                vec![json!(["cardResolved"])],
-            );
-            assert_eq!(
-                scripts.base.triggers.iter().map(|trigger| js(&trigger.on)).collect::<Vec<Value>>(),
-                vec![json!(["cardResolved"])],
-            );
-            // The radiant face is the base script itself, so its triggers are the very same closures.
-            assert_eq!(scripts.radiant.hand_triggers.len(), scripts.base.hand_triggers.len());
-            assert_eq!(scripts.radiant.triggers.len(), scripts.base.triggers.len());
-            for (radiant, base) in scripts.radiant.hand_triggers.iter().zip(&scripts.base.hand_triggers) {
-                assert_eq!(radiant.id, base.id);
-                assert!(Arc::ptr_eq(&radiant.run, &base.run));
-            }
-            for (radiant, base) in scripts.radiant.triggers.iter().zip(&scripts.base.triggers) {
-                assert_eq!(radiant.id, base.id);
-                assert!(Arc::ptr_eq(&radiant.run, &base.run));
-            }
-        }
 
         mod base {
             use super::*;

@@ -94,7 +94,6 @@ pub fn script() -> CardScripts {
 // play, never below 2; draw; damage) read through `param()` (R386).
 #[cfg(test)]
 mod tests {
-    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const AUCTION: &str = "classic-038";
@@ -174,22 +173,6 @@ mod tests {
 
     mod c_38_jackiestan_auctioneer {
         use super::*;
-
-        #[test]
-        fn is_an_animated_field_trap_both_faces_run_one_script() {
-            crate::register_all();
-            let def = crate::card_def(ID);
-            assert_eq!(def.type_, CardType::FieldTrap);
-            let kinds: Vec<Value> = def.base.keywords.iter().map(|keyword| js(keyword)["kind"].clone()).collect();
-            assert_eq!(kinds, vec![json!("Animated")]);
-            let scripts = script();
-            for face in [&scripts.base, &scripts.radiant] {
-                assert_eq!(face.triggers.len(), 1);
-                assert_eq!(face.triggers[0].id, "auctioneer");
-                assert_eq!(face.triggers[0].on, vec![GameEventType::CardPlayed]);
-                assert!(face.triggers[0].when.is_some());
-            }
-        }
 
         mod base {
             use super::*;

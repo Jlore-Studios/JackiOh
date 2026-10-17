@@ -91,14 +91,6 @@ mod tests {
         matches!(event, GameEvent::AddedToHand { instance_id, def_id, .. } if instance_id == "hidden" && def_id == "hidden")
     }
 
-    #[test]
-    fn is_a_1_spell_book() {
-        crate::register_all();
-        let def = crate::card_def(super::ID);
-        assert_eq!(def.id, BOOK);
-        assert_eq!(def.tags, vec![Tag::Book]);
-    }
-
     mod base {
         use super::*;
 

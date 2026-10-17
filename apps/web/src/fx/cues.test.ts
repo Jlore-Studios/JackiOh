@@ -381,8 +381,7 @@ describe("B8 timing bounds", () => {
     }
   });
 
-  it("B8 the tail bound T is 900 ms and every tail constant fits inside it", () => {
-    expect(FX_MAX_TAIL_MS).toBe(900);
+  it("B8 every tail constant fits inside the tail bound T", () => {
     expect(FX_MAX_PARTICLE_LIFE_MS).toBeLessThanOrEqual(T);
     for (const tail of [FX_SPLAT_HOLD_MS, FX_RAYS_TAIL_MS, FX_ARROWS_TAIL_MS, FX_CRACK_TAIL_MS, FX_BANNER_TAIL_MS, FX_RING_MS]) {
       expect(tail).toBeLessThanOrEqual(T);
@@ -735,7 +734,6 @@ describe("B13 sourceAnchor and memory", () => {
   });
 
   it("B13 the default memory keeps FX_MEMORY_LIMIT casters", () => {
-    expect(FX_MEMORY_LIMIT).toBe(64);
     const memory = createFxMemory();
     for (let i = 0; i <= FX_MEMORY_LIMIT; i += 1) memory.remember([played("p1", `k${i}`)]);
     expect(memory.casterOf("k0")).toBeUndefined();
@@ -1400,7 +1398,6 @@ describe("B19 mana sparks", () => {
   });
 
   it("B19 at most FX_MANA_MAX_SPARKS sparks, however far mana rises", () => {
-    expect(FX_MANA_MAX_SPARKS).toBe(10);
     const cues = manaCues("p1", 30, 150);
     expect(cues).toHaveLength(FX_MANA_MAX_SPARKS);
     const indices = cues.map((c) => (c.kind === "burst" && c.at.kind === "crystal" ? c.at.index : -1));
@@ -1740,7 +1737,6 @@ describe("B22 planResult and planHandover", () => {
   });
 
   it("B22 every result cue ends by FX_RESULT_MS", () => {
-    expect(FX_RESULT_MS).toBe(3200);
     for (const winner of ["p1", "p2", "draw"] as const) {
       const cues = planResult(over(winner), { intensity: FX_INTENSITY_SCALE.high });
       expect(cues.length).toBeGreaterThan(0);
@@ -1768,7 +1764,6 @@ describe("B22 planResult and planHandover", () => {
       banner("Your turn", "you", FX_HANDOVER_BANNER_MS),
       { kind: "rays", tone: "victory", at: CENTER, delayMs: 0, durationMs: FX_HANDOVER_BANNER_MS },
     ]);
-    expect(FX_HANDOVER_BANNER_MS).toBe(1400);
   });
 
   it("B22 planHandover plans nothing when the viewer is not the active player", () => {

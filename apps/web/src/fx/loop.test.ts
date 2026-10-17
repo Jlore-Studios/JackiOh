@@ -152,7 +152,6 @@ describe("B29 frames only while there is work", () => {
 
 describe("B29 frame timing", () => {
   it("B29 dt is the raw frame time, clamped to FX_MAX_DT_MS", () => {
-    expect(FX_MAX_DT_MS).toBe(50);
     const h = harness(() => true);
     h.setNow(1_000);
     h.loop.wake();

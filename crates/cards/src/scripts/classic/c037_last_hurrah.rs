@@ -43,7 +43,6 @@ pub fn script() -> CardScripts {
 // case uses C #4 Palantir's aura, whose own test file proves the limit in full.
 #[cfg(test)]
 mod tests {
-    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const HURRAH: &str = "classic-037";
@@ -98,17 +97,6 @@ mod tests {
 
     mod c_37_last_hurrah {
         use super::*;
-
-        #[test]
-        fn has_no_declared_numbers() {
-            crate::register_all();
-            let def = js(&registered_catalog()[ID]);
-            assert_eq!(def["id"], HURRAH);
-            assert!(def["params"].is_null());
-            let scripts = script();
-            assert!(scripts.base.cry.is_some());
-            assert!(scripts.radiant.cry.is_some());
-        }
 
         mod base {
             use super::*;

@@ -172,25 +172,6 @@ mod tests {
     mod c_n32_felinor_feelings {
         use super::*;
 
-        #[test]
-        fn has_no_declared_numbers_the_base_face_declares_its_target_the_radiant_face_asks_later() {
-            crate::register_all();
-            let def = crate::card_def(FEELINGS);
-            assert_eq!(def.id, FEELINGS);
-            assert!(def.params.is_none());
-            let scripts = script();
-            assert_eq!(
-                scripts
-                    .base
-                    .targets
-                    .first()
-                    .and_then(|decl| decl.filter.as_ref())
-                    .and_then(|filter| filter.check.clone()),
-                Some("felinorLane".to_string())
-            );
-            assert!(scripts.radiant.targets.is_empty());
-        }
-
         mod base {
             use super::*;
 

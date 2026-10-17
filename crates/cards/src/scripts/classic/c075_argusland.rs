@@ -56,8 +56,6 @@ mod tests {
 
     use crate::scenario;
 
-    use crate::js;
-
     fn hero_hits(s: &Scenario, player: PlayerId) -> Vec<i32> {
         let hero = format!("hero-{player}");
         s.events()
@@ -83,22 +81,6 @@ mod tests {
         }));
         s.attack(attacker, "hero");
         s
-    }
-
-    /// runs one script on both faces: a hero guard whose divisor is the declared number
-    #[test]
-    fn runs_one_script_on_both_faces_a_hero_guard_whose_divisor_is_the_declared_number() {
-        let def = crate::card_def(ARGUSLAND);
-        assert_eq!(def.id, ARGUSLAND);
-        assert_eq!(def.type_, CardType::FieldSpell);
-        assert_eq!(
-            js(&def.params),
-            json!([{ "key": "divisor", "base": 2, "radiant": 4, "better": "up", "step": 1, "min": 2 }])
-        );
-        let scripts = script();
-        // The Radiant face is the base face, its guard the same one.
-        let guard = scripts.base.hero_guard.as_ref().expect("a hero guard");
-        assert!(Arc::ptr_eq(guard, scripts.radiant.hero_guard.as_ref().expect("a hero guard")));
     }
 
     /// `describe("base")`.

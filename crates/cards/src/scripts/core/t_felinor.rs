@@ -150,22 +150,6 @@ mod tests {
             use super::*;
 
             #[test]
-            fn s7_prints_a_1_cost_unit_felinor_token_with_1_1_no_keywords_and_no_text() {
-                crate::register_all();
-                let def = crate::card_def(ID);
-                assert_eq!(def.index, "T-felinor");
-                assert_eq!(serde_json::to_value(def.cost).unwrap(), json!(1));
-                assert_eq!(def.type_, CardType::Unit);
-                assert!(def.token);
-                assert!(def.tags.contains(&Tag::Felinor));
-                assert!(def.tags.contains(&Tag::Token));
-                assert_eq!(def.base.attack, Some(1));
-                assert_eq!(def.base.health, Some(1));
-                assert!(def.base.keywords.is_empty());
-                assert_eq!(def.base.text, "");
-            }
-
-            #[test]
             fn s7_r275_gives_the_felinor_token_a_radiant_face_2_2_with_rush_build_m4_t1() {
                 crate::register_all();
                 let def = crate::card_def(ID);

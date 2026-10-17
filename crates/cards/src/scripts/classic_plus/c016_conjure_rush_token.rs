@@ -86,19 +86,6 @@ mod tests {
         tokens(s).into_iter().next().map(|token| token.id).unwrap_or_default()
     }
 
-    /// is a (2) Spell that declares no play-time choice
-    #[test]
-    fn is_a_2_spell_that_declares_no_play_time_choice() {
-        crate::register_all();
-        let def = crate::card_def(CARD);
-        assert_eq!(def.id, CARD);
-        assert_eq!(js(&def.cost), json!(2));
-        assert_eq!(def.type_, CardType::Spell);
-        let scripts = script();
-        assert!(scripts.base.targets.is_empty());
-        assert!(scripts.radiant.targets.is_empty());
-    }
-
     /// `describe("base")`.
     mod base {
         use super::*;
