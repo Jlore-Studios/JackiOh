@@ -29,7 +29,8 @@ fn outcome(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     if card.controller != ctx.controller {
         return vec![exile(json_as(json!({ "target": CHOSEN })))];
     }
-    if row == Row::Backrow {
+    // R1081000: a Unit standing in the backrow is your Unit, not your backrow card.
+    if row == Row::Backrow && !stands_in_backrow(&*ctx.state, &card) {
         return vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))];
     }
     vec![forced_attack_random(json_as(
@@ -612,5 +613,21 @@ mod tests {
             s.activate(MUTATE, json!({ "targets": at(&vanilla) }));
             assert_eq!(attacks_by(s.last_events(), s.card(VANILLA)), ["hero-p2"]);
         }
+    }
+
+    /// R1081000: a Unit of yours standing in the backrow is your Unit, not your backrow card: it attacks.
+    #[test]
+    fn r1081000_your_unit_standing_in_the_backrow_attacks_and_draws_nothing() {
+        let mut s = scenario(json!({
+            "p1": { "hand": [FILLER], "field": [{ "def": VANILLA, "counters": { "plague": 1 } }], "backrow": [MUTATE], "library": lib(4) },
+            "p2": { "hand": [FILLER], "health": 30 }
+        }));
+        let vanilla = s.card(VANILLA).clone();
+        crate::stand_in_backrow(&mut s, &vanilla.id, 2);
+
+        s.activate(MUTATE, json!({ "targets": at(&vanilla) }));
+
+        assert_eq!(attacks_by(s.last_events(), &vanilla), ["hero-p2"]);
+        assert_eq!(draws_by(s.last_events(), P1), 0);
     }
 }

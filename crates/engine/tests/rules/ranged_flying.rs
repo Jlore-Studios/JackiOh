@@ -11,11 +11,11 @@ use jackioh_engine::effects::{steal, swap_board, transform};
 use jackioh_engine::subsystems::rotation::{RotationArgs, rotate_rings};
 
 use super::fixtures::combat::cleaver;
-use super::fixtures::field::fuser;
+use super::fixtures::field::{banner, fuser};
 use super::fixtures::harness::{events_of_type, new_game, put, sink_for, slot};
 use super::fixtures::keywords_783::{
-    cloaked_bolt, cloaked_field, crater_trap, first_striker, flyer, flying_reborner, flying_stacker,
-    flying_taunter, grunt, quake, ranged, ranged_cleaver, ranged_striker, ranged_trampler,
+    cloaked_bolt, cloaked_field, crater_trap, crater_unit, first_striker, flyer, flying_reborner,
+    flying_stacker, flying_taunter, grunt, quake, ranged, ranged_cleaver, ranged_striker, ranged_trampler,
     register_keywords_783, sniper,
 };
 use super::fixtures::prompt_harness::{act, cast_now};
@@ -1105,5 +1105,135 @@ mod r1081000_flying_backrow {
         };
         assert_ne!((player, lane), (P1, 2), "it moved along the ring");
         assert_pile(&ring, ZoneSlot { player, row, lane }, &top.id, &under.id);
+    }
+
+    use jackioh_engine::effects::{
+        MayAttackAgainArgs, TransformTarget, allure_enemy_units, may_attack_again,
+    };
+
+    /// A `def_id` Unit standing in `player`'s backrow zone `lane`, Flying or not: a Unit standing there
+    /// stays standing whatever its text says.
+    fn standing(state: &mut GameState, def_id: &str, player: PlayerId, lane: i32) -> CardInstance {
+        let mut card = new_instance(state, def_id, player, Zone::Hand { player });
+        let at = slot(player, Row::Backrow, lane);
+        assert!(place_standing_on_field(
+            state,
+            &mut card,
+            at,
+            PlaceOnFieldOptions::default()
+        ));
+        live(state, &card.id)
+    }
+
+    #[test]
+    fn r1081000_a_vanilla_keeps_a_standing_unit_alive_at_1_health() {
+        let mut state = board("r1081000-vanilla");
+        let wing = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 1), json!({}));
+        if let Some(card) = find_instance_mut(&mut state, &wing.id) {
+            card.buffs.health = 2;
+            card.damage = 3;
+        }
+        run_effect(
+            &mut state,
+            jackioh_engine::effects::vanilla(TransformTarget {
+                instance_id: Some(wing.id.clone()),
+                ..Default::default()
+            }),
+            P2,
+        );
+        assert_eq!(
+            unit_view(&state, &live(&state, &wing.id)).health,
+            1,
+            "kept alive at 1 health"
+        );
+    }
+
+    #[test]
+    fn r1081000_a_standing_unit_is_a_unit_on_the_field_for_its_cry_its_kills_berserk_and_attacking_again() {
+        let mut state = board("r1081000-on-field");
+        // Its Cry may be triggered where it stands (B5 E13).
+        let quaking = standing(&mut state, &crater_unit().id, P1, 2);
+        assert_eq!(
+            jackioh_engine::cry_trigger::cry_place_of(&state, &quaking),
+            Some(jackioh_engine::cry_trigger::CryPlace::Field)
+        );
+        // It is the Unit that destroyed what its hit doomed (R42).
+        let wing = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 1), json!({}));
+        let mut victim = put(&mut state, &grunt().id, slot(P2, Row::Units, 1), json!({}));
+        victim.last_damaged_by = Some(wing.id.clone());
+        assert_eq!(
+            killer_of(&state, Some(&victim)).map(|card| card.id.clone()),
+            Some(wing.id.clone())
+        );
+        // It may go Berserk.
+        assert!(can_go_berserk(&state, &wing));
+        // It may attack again.
+        if let Some(card) = find_instance_mut(&mut state, &wing.id) {
+            card.exertion.attacked = true;
+        }
+        run_effect(
+            &mut state,
+            may_attack_again(MayAttackAgainArgs {
+                target: json_as(json!({ "of": "instance", "instanceId": wing.id })),
+            }),
+            P1,
+        );
+        assert!(!live(&state, &wing.id).exertion.attacked, "a fresh exertion");
+    }
+
+    #[test]
+    fn r1081000_every_enemy_unit_allured_takes_a_standing_one_too() {
+        let mut state = board("r1081000-allure");
+        let walker = put(&mut state, &grunt().id, slot(P1, Row::Units, 1), json!({}));
+        let wing = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 1), json!({}));
+        run_effect(&mut state, allure_enemy_units(), P2);
+        let watched: Vec<&str> = state
+            .delayed
+            .iter()
+            .filter_map(|entry| entry.watch.as_deref())
+            .collect();
+        assert_eq!(
+            watched,
+            [walker.id.as_str(), wing.id.as_str()],
+            "the unit row's first, then the backrow's"
+        );
+    }
+
+    #[test]
+    fn r1081000_a_standing_units_numbers_read_through_every_layer() {
+        // `field_game` registers the banner, an aura of +2 attack on its controller's field cards.
+        let mut state = super::super::fixtures::field::field_game("r1081000-numbers");
+        register_keywords_783();
+        put(&mut state, &banner.id, slot(P1, Row::Backrow, 5), json!({}));
+        let wing = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 1), json!({}));
+        let grounded = put(&mut state, &flyer().id, slot(P1, Row::Units, 1), json!({}));
+        let stats = |id: &str| current_stats(&state, &live(&state, id)).expect("a Unit has stats");
+        // The aura is layer 5, which the unit row reads; so does the backrow zone it stands in.
+        assert_eq!(stats(&grounded.id).attack, 4);
+        assert_eq!(stats(&wing.id), stats(&grounded.id));
+    }
+
+    #[test]
+    fn r1081000_a_flying_crater_unit_played_into_the_backrow_locks_that_zone() {
+        let mut state = board("r1081000-crater");
+        let quaking = in_hand_with_mana(&mut state, &crater_unit().id, P1);
+        if let Some(card) = find_instance_mut(&mut state, &quaking.id) {
+            card.granted_keywords.push(Keyword::Flying);
+        }
+        let next = act(
+            &state,
+            json!({
+                "type": "play",
+                "instanceId": quaking.id,
+                "zone": { "row": "backrow", "lane": 3 },
+                "playerId": "p1",
+            }),
+            None,
+        );
+        assert!(stands(&next, P1, &quaking.id));
+        assert!(
+            is_locked(&next, slot(P1, Row::Backrow, 3)),
+            "Crater Locks the zone it arrives in"
+        );
     }
 }

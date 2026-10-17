@@ -15,7 +15,7 @@
 
 use crate::script::{HookArgs, ReplacementMoment, ReplacementWhere, Script, TargetedReplacement};
 use crate::state::{CardInstance, EngineError, GameState, find_instance};
-use crate::wire::{CardType, PlayerId, Row, Selection, TargetAim, TargetDecl, Zone, opponent_of};
+use crate::wire::{CardType, PlayerId, Row, Selection, TargetAim, TargetDecl, opponent_of};
 
 /// One face's own targeting cost, read with the card as "this" (a pure read, §10.9).
 fn face_cost(script: &Script, state: &GameState, self_: &CardInstance) -> i32 {
@@ -135,9 +135,8 @@ pub fn interceptor_for<'a>(
     targeted: &CardInstance,
     source: Option<CardType>,
 ) -> Option<&'a CardInstance> {
-    if !matches!(targeted.zone, Zone::Field { row: Row::Units, .. })
-        || crate::zones::is_buried(state, targeted)
-    {
+    // R1081000: a Unit standing in the backrow is a unit acting on the field.
+    if !crate::zones::in_units_row_or_standing(state, targeted) || crate::zones::is_buried(state, targeted) {
         return None;
     }
     let defender = targeted.controller;

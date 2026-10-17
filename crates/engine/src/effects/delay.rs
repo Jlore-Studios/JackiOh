@@ -34,10 +34,10 @@ use crate::modifiers::{add_lane_watch, add_start_of_turn_effect, schedule_delaye
 use crate::prompts::{RESUME_HOOK, SELF_KEY, resume_self};
 use crate::resolve::{HookOptions, make_context};
 use crate::script::{Effect, EffectContext, EngineSink};
-use crate::state::{DelayedAt, DelayedEffect, Resume, find_instance, is_turn_of};
+use crate::state::{CardInstance, DelayedAt, DelayedEffect, Resume, find_instance, is_turn_of};
 use crate::wire::{CardMark, Phase, PlayerId, Row, ZoneName, opponent_of};
 use crate::work::RUN_MARKS_KEY;
-use crate::zones::{card_at, slots_of};
+use crate::zones::{card_at, slots_of, standing_units_of};
 
 /// The `Script` key a delayed continuation lands on unless the card names another. `script.ts`
 /// documents `delayed` as "a delayed effect this card scheduled, resolved at its R62 point", and it
@@ -386,11 +386,18 @@ pub fn allure_enemy_units() -> Effect {
             mark: ALLURE_MARK.to_string(),
             color: ALLURE_MARK_COLOR.to_string(),
         };
-        // `slots_of` walks the row in lane order; `card_at` reads the top of each pile.
-        for slot in slots_of(opponent_of(owner), Row::Units) {
-            let Some(unit) = card_at(ctx.state, slot).cloned() else {
-                continue;
-            };
+        // `slots_of` walks the row in lane order; `card_at` reads the top of each pile. R1081000: then
+        // the Units standing in the backrow, in lane order.
+        let mut units: Vec<CardInstance> = slots_of(opponent_of(owner), Row::Units)
+            .into_iter()
+            .filter_map(|slot| card_at(ctx.state, slot).cloned())
+            .collect();
+        units.extend(
+            standing_units_of(ctx.state, opponent_of(owner))
+                .into_iter()
+                .cloned(),
+        );
+        for unit in units {
             let mut data: IndexMap<String, Value> = IndexMap::new();
             data.insert("instanceId".to_string(), Value::String(unit.id.clone()));
             let resume = Resume {

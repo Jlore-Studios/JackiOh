@@ -13,7 +13,7 @@
 
 use crate::script::EngineSink;
 use crate::state::{CardInstance, find_instance};
-use crate::wire::{CardType, GameEvent, KeywordKind, Row, Zone};
+use crate::wire::{CardType, GameEvent, KeywordKind, Row};
 use crate::zones::{ZoneSlot, is_locked, lock_zone, slot_of};
 
 /// Lock one zone, reported as every Lock is (`locked`); a zone Locked already stays as it is.
@@ -30,12 +30,13 @@ fn lock(sink: &mut EngineSink<'_>, slot: ZoneSlot) {
 }
 
 /// R783010: the card of this id, standing in a unit zone with Crater (read through the layers, §10.4),
-/// Locks that zone. Called as it arrives on the field, before its Cry.
+/// Locks that zone. Called as it arrives on the field, before its Cry. A Flying Unit standing in a
+/// backrow zone Locks that one (R1081000).
 pub fn lock_on_arrival(sink: &mut EngineSink<'_>, id: &str) {
     let Some(card) = find_instance(sink.state, id) else {
         return;
     };
-    if !matches!(card.zone, Zone::Field { row: Row::Units, .. }) {
+    if !crate::zones::in_units_row_or_standing(sink.state, card) {
         return;
     }
     if !crate::layers::unit_has(sink.state, card, KeywordKind::Crater) {

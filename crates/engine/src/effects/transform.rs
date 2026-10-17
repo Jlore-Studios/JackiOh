@@ -345,7 +345,8 @@ pub fn vanilla(args: TransformTarget) -> Effect {
             return;
         }
 
-        let in_units_row = matches!(card.zone, Zone::Field { row: Row::Units, .. });
+        // R1081000: a Unit standing in the backrow is kept alive as one in the unit row is.
+        let in_units_row = crate::zones::in_units_row_or_standing(ctx.state, &card);
         let alive_before = in_units_row && unit_view(ctx.state, &card).health > 0;
         if let Some(live) = find_instance_mut(ctx.state, &card.id) {
             live.vanilla = true;

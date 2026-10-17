@@ -17,8 +17,8 @@ use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance};
 use crate::wire::{ControlHow, GameEvent, PlayerId, Row, opponent_of};
 use crate::zones::{
-    PlaceOnFieldOptions, ZoneSlot, card_at, first_entry_zone, is_open, place_beneath_top, place_on_field,
-    place_standing_on_field, remove_from_field, slot_of, slots_of,
+    PlaceOnFieldOptions, ZoneSlot, card_at, first_entry_zone, in_units_row_or_standing, is_open,
+    place_beneath_top, place_on_field, place_standing_on_field, remove_from_field, slot_of, slots_of,
 };
 
 /// Which card to steal: the pick the play or a prompt carried (R81), or an instance id a script
@@ -223,10 +223,9 @@ pub fn capture(args: CaptureArgs) -> Effect {
         let Some(target_card) = instance_on_its_stay(ctx, &args.instance_id) else {
             return;
         };
-        let Some(target_slot) = slot_of(ctx.state, &target_card) else {
-            return;
-        };
-        if target_slot.row != Row::Units || !is_active_on_field(ctx.state, &target_card) {
+        // R1081000: a Unit standing in the backrow is captured as one in a unit zone is.
+        if !in_units_row_or_standing(ctx.state, &target_card) || !is_active_on_field(ctx.state, &target_card)
+        {
             return;
         }
         if target_card.id == holder_live.id || target_card.controller == holder_live.controller {

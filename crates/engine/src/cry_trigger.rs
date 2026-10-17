@@ -105,9 +105,9 @@ fn name_of(state: &GameState, def_id: &str) -> String {
 }
 
 /// Where a card's Cry could be triggered from, or `None`: a Unit (its running face's type, B2.7) with a
-/// Cry on its running face, on top of its unit pile or in a graveyard. A Vanilla card has no text
-/// (§6.3), so no Cry. A pure read: the reader a card's target check uses (Classic #54's "a Unit that
-/// has a Cry").
+/// Cry on its running face, on top of its unit pile, standing in a backrow zone (R1081000) or in a
+/// graveyard. A Vanilla card has no text (§6.3), so no Cry. A pure read: the reader a card's target
+/// check uses (Classic #54's "a Unit that has a Cry").
 pub fn cry_place_of(state: &GameState, card: &CardInstance) -> Option<CryPlace> {
     // ME-ALTPLAY, R1044: a set Spell whose text is resolving runs from the backrow first.
     if matches!(
@@ -127,7 +127,13 @@ pub fn cry_place_of(state: &GameState, card: &CardInstance) -> Option<CryPlace> 
     crate::scripts::script_of(state, card).cry.as_ref()?;
     match card.zone {
         Zone::Graveyard { .. } => Some(CryPlace::Graveyard),
-        Zone::Field { row: Row::Units, .. } if !crate::zones::is_buried(state, card) => Some(CryPlace::Field),
+        // R1081000: a Unit standing in the backrow is on the field as one in a unit zone is.
+        Zone::Field { .. }
+            if crate::zones::in_units_row_or_standing(state, card)
+                && !crate::zones::is_buried(state, card) =>
+        {
+            Some(CryPlace::Field)
+        }
         _ => None,
     }
 }

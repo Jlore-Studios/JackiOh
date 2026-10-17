@@ -29,6 +29,9 @@ fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
         .collect();
     let mut permanents: Vec<CardInstance> =
         active_units_of(state, enemy).into_iter().cloned().collect();
+    // R1081000: a Unit standing in the backrow is already among the units — one permanent, once.
+    let backrow: Vec<CardInstance> =
+        backrow.into_iter().filter(|card| !permanents.iter().any(|unit| unit.id == card.id)).collect();
     permanents.extend(backrow);
     permanents
 }
@@ -469,5 +472,22 @@ mod tests {
                 assert!(s.state().pending.is_none());
             }
         }
+    }
+
+    /// R1081000: a Unit standing in the enemy backrow is one permanent, counted once: three permanents
+    /// are not the four the Cry needs.
+    #[test]
+    fn r1081000_a_unit_standing_in_the_backrow_counts_once() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "hand": [TECH, ANCHOR] },
+            "p2": { "hand": [ANCHOR], "field": [VANILLA, MENACE, TEMPO] },
+        }));
+        let vanilla = s.card(VANILLA).id.clone();
+        crate::stand_in_backrow(&mut s, &vanilla, 1);
+
+        s.play(TECH, json!({ "zone": 5 }));
+
+        assert!(stolen_ids(&s).is_empty());
     }
 }

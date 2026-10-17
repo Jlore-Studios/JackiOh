@@ -252,7 +252,8 @@ pub fn recalled(ctx: &EffectContext<'_>, key: &str) -> Option<Value> {
 pub fn killer_of<'a>(state: &'a GameState, card: Option<&CardInstance>) -> Option<&'a CardInstance> {
     let id = card?.last_damaged_by.as_ref()?;
     let killer = find_instance(state, id)?;
-    if !matches!(killer.zone, Zone::Field { row: Row::Units, .. }) {
+    // R1081000: a killer standing in the backrow is a Unit acting on the field.
+    if !crate::zones::in_units_row_or_standing(state, killer) {
         return None;
     }
     if crate::faces::card_type_of(state, killer) != CardType::Unit {

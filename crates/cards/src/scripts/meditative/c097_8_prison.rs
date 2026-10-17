@@ -467,4 +467,27 @@ mod tests {
             });
         }
     }
+
+    /// R1081000: a Flying Unit the opponent plays into the backrow is captured as one played into a unit
+    /// zone is.
+    #[test]
+    fn r1081000_a_flying_unit_played_into_the_backrow_is_captured() {
+        crate::register_all();
+        let mut s = crate::scenario(json!({
+            "p1": { "field": [{ "def": ID, "lane": 1 }], "hand": [FILLER], "library": [SPARE, SPARE] },
+            "p2": { "hand": [VANILLA, FILLER], "library": [SPARE, SPARE], "mana": 10 },
+        }));
+        set_param(s.card_mut(ID), "chance", 100);
+        s.end_turn();
+        let vanilla = s.card(VANILLA).id.clone();
+        crate::give_flying(&mut s, &vanilla);
+
+        s.play(VANILLA, json!({ "row": "backrow", "zone": 2 }));
+
+        let pile = jackioh_engine::zones::pile_at(s.state(), slot(P1, 1)).unwrap();
+        assert_eq!(pile.len(), 2);
+        assert_eq!(pile[1].id, vanilla);
+        assert_eq!(pile[1].controller, P1);
+        assert!(s.backrow(P2, 2).is_none());
+    }
 }

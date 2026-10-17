@@ -1545,6 +1545,14 @@ pub fn stands_in_backrow(state: &GameState, card: &CardInstance) -> bool {
     }
 }
 
+/// R1081000: whether `card` is a Unit in a zone of its own on the field — in a unit zone, or standing in
+/// a backrow zone. What a "your Units" or "a Unit on the field" read asks where it used to ask for the
+/// unit row alone, so a Flying Unit in the backrow answers as it would there. A Unit a carrier holds is
+/// neither, as before (R446).
+pub fn in_units_row_or_standing(state: &GameState, card: &CardInstance) -> bool {
+    matches!(card.zone, Zone::Field { row: Row::Units, .. }) || stands_in_backrow(state, card)
+}
+
 /// R1081000: whether `neighbour` is adjacent to `origin` in the sense an effect or a Cleave reads: beside a
 /// Unit standing in the backrow, a neighbour is another Unit standing there, never a Trap or a Field
 /// Spell, which is no Unit (§3.1 Adjacent, §4.4 step 10 hit "units adjacent"). Beside any other card it
