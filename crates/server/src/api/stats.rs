@@ -18,7 +18,8 @@ use tokio::sync::OnceCell;
 
 use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, GameSource, PilotFilter, SourceFilter,
-    StatsTotals, Tally, TotalsKey, add_stats, card_drills_of, card_stats_of, sources_of, win_rate,
+    StatsTotals, Tally, TotalsKey, add_stats, card_drills_of, card_stats_of, played_delta, sources_of,
+    win_rate,
 };
 use jackioh_engine::{CardCost, CardDef, Pilot};
 
@@ -51,6 +52,9 @@ pub struct PublicCardStat {
     pub drawn_win_rate: Option<f64>,
     pub played_games: i64,
     pub played_win_rate: Option<f64>,
+    pub drawn_not_played_games: i64,
+    pub drawn_not_played_win_rate: Option<f64>,
+    pub played_delta: Option<f64>,
     pub play_rate: f64,
     pub has_enough_games: bool,
 }
@@ -587,6 +591,8 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             None
         };
         let played_rate = stat.and_then(|stat| win_rate(&stat.played));
+        let drawn_not_played_rate = stat.and_then(|stat| win_rate(&stat.drawn_not_played));
+        let delta = stat.and_then(played_delta);
         let play_rate = if total_decks > 0 {
             in_deck_games as f64 / total_decks as f64
         } else {
@@ -606,6 +612,9 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             drawn_win_rate: drawn_rate,
             played_games,
             played_win_rate: played_rate,
+            drawn_not_played_games: unplayed_games,
+            drawn_not_played_win_rate: drawn_not_played_rate,
+            played_delta: delta,
             play_rate,
             has_enough_games,
         });

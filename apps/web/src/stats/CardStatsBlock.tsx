@@ -5,7 +5,7 @@ import { INSPECT_STATS } from "../cards/inspect/testids.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { getCardStats, type PublicCardStat } from "../net/api.ts";
 import { readSession } from "../net/session.ts";
-import { winPercent } from "./model.ts";
+import { formatPlayedDelta, winPercent } from "./model.ts";
 import { usePlayerStats } from "./store.ts";
 
 export type CardStatsBlockProps = {
@@ -79,6 +79,18 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
       ? `${Math.round(stat.drawnWinRate * 100)}%`
       : "—";
 
+  const playedDeltaDisplay =
+    stat.hasEnoughGames && stat.playedDelta !== null ? (
+      <>
+        {formatPlayedDelta(stat.playedDelta)}{" "}
+        <span className="inspect-stats-sample-hint">
+          ({stat.playedGames} / {stat.drawnNotPlayedGames})
+        </span>
+      </>
+    ) : (
+      "—"
+    );
+
   const playRateDisplay = `${Math.round(stat.playRate * 100)}%`;
 
   return (
@@ -108,6 +120,10 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
         <div className="inspect-stats-metric">
           <span className="inspect-stats-metric-label">{t("Play rate")}</span>
           <span className="inspect-stats-metric-value">{playRateDisplay}</span>
+        </div>
+        <div className="inspect-stats-metric">
+          <span className="inspect-stats-metric-label">{t("Played Δ")}</span>
+          <span className="inspect-stats-metric-value">{playedDeltaDisplay}</span>
         </div>
       </div>
 
