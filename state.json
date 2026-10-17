@@ -9251,12 +9251,10 @@
     "what": "plan #1156 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-17T23:11:29Z",
+    "at": "2026-10-17T23:18:10Z",
     "notes": [
-      "started a night run, as a lane was free: #1156 (hard) is queued to build, for `claude-7`: plan on `claude-7` (claude, `opus`, strong)",
-      "#1160: typed it Task",
-      "#1159: typed it Task",
-      "#1158: typed it Task"
+      "#1159 needs a plan",
+      "#1160 needs a plan"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
