@@ -34,6 +34,10 @@
 //! banned, leaning on the newest set for a seat whose player asked for that (R1372). It reads the
 //! registered catalog, so it belongs behind the same `register_all()` as the match itself, and the ai
 //! crate is pure and seeded like the engine: one seed, one deck, in any process.
+//!
+//! Every catalog-reading function here runs under the match's `Pinned` catalog (R388, R767000),
+//! as `duos::engine` does, so a patch deployed under a live match never changes what its log
+//! folds to.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -115,8 +119,9 @@ pub async fn off_runtime<T: Send + 'static>(
     .map_err(|error| error.to_string())?
 }
 
-/// The `CreateGameArgs` a match is created with: no catalog (the registered one) and no handicaps
-/// (a server match is Easy both, R180), the rest as the match row froze it.
+/// The `CreateGameArgs` a match is created with: no catalog override (the caller's `Pinned` sets
+/// the catalog, R767000) and no handicaps (a server match is Easy both, R180), the rest as the
+/// match row froze it.
 pub fn create_game_args(
     seed: &str,
     decks: &(Vec<String>, Vec<String>),
@@ -164,34 +169,36 @@ pub fn fold_args(
 }
 
 /// TS `createGame`. Panics, as TS threw, on a deck the catalog refuses.
-pub fn create_game(args: &CreateGameArgs) -> EngineState {
+pub fn create_game(pinned: Pinned, args: &CreateGameArgs) -> EngineState {
     registered();
-    jackioh_engine::create_game(args)
+    pinned.run(|| jackioh_engine::create_game(args))
 }
 
-pub fn begin_game(state: &EngineState) -> ReduceResult {
+pub fn begin_game(pinned: Pinned, state: &EngineState) -> ReduceResult {
     registered();
-    jackioh_engine::begin_game(state)
+    pinned.run(|| jackioh_engine::begin_game(state))
 }
 
-pub fn reduce(state: &EngineState, action: &Action) -> ReduceResult {
+pub fn reduce(pinned: Pinned, state: &EngineState, action: &Action) -> ReduceResult {
     registered();
-    jackioh_engine::reduce(state, action)
+    pinned.run(|| jackioh_engine::reduce(state, action))
 }
 
-pub fn legal_actions(state: &EngineState, player: PlayerId) -> Vec<ActionBody> {
-    jackioh_engine::legal_actions(state, player)
+pub fn legal_actions(pinned: Pinned, state: &EngineState, player: PlayerId) -> Vec<ActionBody> {
+    registered();
+    pinned.run(|| jackioh_engine::legal_actions(state, player))
 }
 
 /// SPEC §10.8: the only window a player gets onto the match.
-pub fn view_for(state: &EngineState, player: PlayerId) -> PlayerView {
-    jackioh_engine::view_for(state, player)
+pub fn view_for(pinned: Pinned, state: &EngineState, player: PlayerId) -> PlayerView {
+    registered();
+    pinned.run(|| jackioh_engine::view_for(state, player))
 }
 
 /// §9.5: a crashed actor rebuilds its state by folding `(seed, log)`.
-pub fn fold(args: &FoldArgs) -> FoldResult {
+pub fn fold(pinned: Pinned, args: &FoldArgs) -> FoldResult {
     registered();
-    jackioh_engine::fold(args)
+    pinned.run(|| jackioh_engine::fold(args))
 }
 
 pub fn hash_state(state: &EngineState) -> String {
@@ -218,10 +225,34 @@ pub fn with_shipped<T>(shipped: Option<&'static ShippedCatalog>, run: impl FnOnc
     jackioh_engine::with_shipped(shipped, run)
 }
 
-/// R767000: `run` under the catalog an opened replay's checkpoints were folded under.
-pub fn under_checkpoints<T>(checkpoints: &ReplayCheckpoints, run: impl FnOnce() -> T) -> T {
-    registered();
-    jackioh_engine::under_checkpoints(checkpoints, run)
+/// R388, R767000: the catalog a match is played, rebuilt and replayed under: this build's own
+/// (`Pinned::default()`), or the shipped catalog of the version it began on. Every function here
+/// that reads a card takes one; a caller with no match (`bots::calibrate`, a test) passes the default.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Pinned(Option<&'static ShippedCatalog>);
+
+impl Pinned {
+    /// The catalog of `version`, or why this build cannot fold a game played on it
+    /// (`earlier_patch`: neither its own version nor one it carries).
+    pub fn of(version: &str) -> Result<Pinned, ReplayRefusal> {
+        catalog_for(version).map(Pinned)
+    }
+
+    /// R767000: the catalog an opened replay's checkpoints were folded under, as `replay_page` reads it.
+    pub fn of_checkpoints(checkpoints: &ReplayCheckpoints) -> Pinned {
+        registered();
+        Pinned(
+            checkpoints
+                .catalog_version
+                .as_deref()
+                .and_then(jackioh_engine::shipped_catalog),
+        )
+    }
+
+    /// `run` under this catalog, on this thread, for that call.
+    pub fn run<T>(self, run: impl FnOnce() -> T) -> T {
+        with_shipped(self.0, run)
+    }
 }
 
 /// R768: steps `[from, from + count)` of an opened replay, each `view_for(state_k, seat)`.
@@ -329,7 +360,7 @@ pub fn last_boards(state: &EngineState) -> LastBoards {
 /// SPEC §11 R376: a finished game's record for the card statistics — each seat's opening hand,
 /// draws and plays, and the ending — read off `(seed, decks, log)`; `None` when the log leaves the
 /// game without a result. Folded like `fold`.
-pub fn summarize_game(args: &FoldArgs) -> Option<GameSummary> {
+pub fn summarize_game(pinned: Pinned, args: &FoldArgs) -> Option<GameSummary> {
     registered();
-    jackioh_engine::summarize_game(args)
+    pinned.run(|| jackioh_engine::summarize_game(args))
 }

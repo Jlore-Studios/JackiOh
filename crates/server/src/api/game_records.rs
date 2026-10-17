@@ -4,7 +4,8 @@
 //! (decklists, opening hands, draws, plays, first player, winner) is read off `(seed, decks, log)` by
 //! the engine's `summarize_game`, called directly (SURFACE §11.3). It is filed under:
 //!  - the match's mode (R257), read off its series, room or queue tickets (`matches_mode_of`);
-//!  - the patch the build's cards are (R388, `jackioh_cards::catalog_version()`);
+//!  - the patch the match started on: its row's catalog version, which its play and this fold read
+//!    (R376, R388, R767000);
 //!  - each seat's pilot: `human` for a person, even when the clock answered a prompt for one (R79's
 //!    `timeout`), and `ai` for a ladder bot (R1451, R1452), each on the seat its account plays as the
 //!    game ends (R677);
@@ -21,6 +22,7 @@ use jackioh_engine::{FoldArgs, GameMode, GameRecord, GameSource, PerPlayer, Pilo
 use serde_json::{Map, Value, json};
 
 use crate::actor::engine;
+use crate::actor::registry::pinned_for;
 use crate::app::App;
 use crate::config::STATS_FOLD_BATCH_RECORDS;
 use crate::db::store::{Db, MatchRow, ProfileKind, QueueMode, StoreError};
@@ -136,10 +138,12 @@ async fn record_live_game_inner(app: &App, match_id: &str) -> Result<Option<Game
     // folds in one job off the runtime; the engine panics on decks it refuses, and the panic is that
     // error.
     let bot_game = began.0 != began.1;
+    let pinned = pinned_for(&row);
     let (summarized, swapped) = engine::off_runtime(app.engine_thread, move || {
-        let summarized = jackioh_engine::summarize_game(&args);
-        let swapped =
-            summarized.is_some() && bot_game && engine::snapshot(&engine::fold(&args).state).seats_swapped;
+        let summarized = engine::summarize_game(pinned, &args);
+        let swapped = summarized.is_some()
+            && bot_game
+            && engine::snapshot(&engine::fold(pinned, &args).state).seats_swapped;
         (summarized, swapped)
     })
     .await?;
@@ -158,7 +162,7 @@ async fn record_live_game_inner(app: &App, match_id: &str) -> Result<Option<Game
         id: match_id.to_string(),
         source: GameSource::Live,
         mode: game_mode_of(mode),
-        patch: jackioh_cards::catalog_version().to_string(),
+        patch: row.catalog_version.clone(),
         pilots,
         game,
     };

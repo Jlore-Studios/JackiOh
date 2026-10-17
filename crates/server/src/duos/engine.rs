@@ -24,28 +24,11 @@ use jackioh_engine::wire::{
     DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosResult, DuosSeat, DuosView,
     PerTeam,
 };
-use jackioh_engine::{Handicap, ReplayRefusal, Rng, ShippedCatalog};
+use jackioh_engine::{Handicap, ReplayRefusal, Rng};
 
-use crate::actor::engine::{catalog_for, deal_random_deck, lean_of, with_shipped};
+pub use crate::actor::engine::Pinned;
+use crate::actor::engine::{deal_random_deck, lean_of};
 use crate::duos::store::{DuosChoice, DuosMatch, DuosMatchOptions, SeatDecks, SeatHandicaps, TeamRules};
-
-/// R767000: the catalog a co-op match is played, rebuilt and replayed under: this build's own
-/// (`None`), or the shipped catalog of the version the match began on.
-#[derive(Clone, Copy, Default)]
-pub struct Pinned(Option<&'static ShippedCatalog>);
-
-impl Pinned {
-    /// The catalog of `version`, or why this build cannot fold a game played on it
-    /// (`earlier_patch`: neither its own version nor one it carries).
-    pub fn of(version: &str) -> Result<Pinned, ReplayRefusal> {
-        catalog_for(version).map(Pinned)
-    }
-
-    /// `run` under this catalog, on this thread, for that call.
-    pub fn run<T>(self, run: impl FnOnce() -> T) -> T {
-        with_shipped(self.0, run)
-    }
-}
 
 fn registered() {
     jackioh_cards::register_all();
