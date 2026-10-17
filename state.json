@@ -2253,6 +2253,7 @@
     "1089": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
       "ci_fixed_head": "02a1e5a64e8f452d6798259d1abfc6b2a8442d9c",
       "ci_fixes": 1,
       "ci_reruns": {
@@ -2260,6 +2261,7 @@
       },
       "ci_run_id": 38979440304,
       "ci_sha": "66f10c35f5d5be41425656e8ab8ccfa3eeda3c6d",
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -2267,19 +2269,32 @@
       "forced": false,
       "interruptions": 0,
       "issue": 1081,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "A board swap or ring rotation panics when a Unit lies dormant beneath a backrow top, a pile this change makes legal: only the top is recorded as `standing`, so the Unit beneath is set down with plain `place_on_field`, which now refuses a Unit in an empty backrow slot.",
+          "evidence": "The Flying+Stack branch of `flying_takes_backrow` (play_choices.rs:430-445) checks only `accepts_stack_card` (zones.rs:375-388), so a Flying Stack Unit, or any backrow Stack card, may be played onto your own standing Flying Unit A. `place_with` (stands && stack) lands `Landing::Backrow` and pushes A beneath (zones.rs:692, 748-758). `zone_contents` returns [top, A]. `place_contents` places A first, by `cards.iter().rev()`; `standing != A`, so it calls `place_on_field`, which reaches the `None => if !stands { return false }` arm (zones.rs:676-680) and then `panic!(\"swap could not place \u2026\")`. rotation.rs `place_contents` and its `standing` capture (~146) have the same shape. board_history.rs:253 marks only the snapshot top as standing, so a Rollback bounces A to hand. Flying reaches hands in real games through RANDOM_KEYWORD_POOL (config.rs:201), which is why 10 golden traces changed. No r1081000 test builds a Unit beneath a standing Unit.",
+          "severity": "blocking",
+          "where": "crates/engine/src/effects/swap.rs:127"
+        },
+        {
+          "claim": "A Flying Unit with Stack is offered, and accepted onto, an Ivory Tower that has already taken its one Unit, and it lands carried and never fuses. This breaks R653, an existing placement rule the issue said not to change.",
+          "evidence": "`refuse_zone`'s Flying branch returns Ok as soon as `flying_takes_backrow` passes. With Stack that is only `accepts_stack` (not reserved, not Locked, nothing carried), so `why_cannot_carry`'s \"that card has taken its one Unit\" check (zones.rs:352-354) is skipped, and `legal_zones_for` (556-562) lists the zone too. `place_with` then sees `is_carrier(top)` and lands `Carried { stamp }`; stamp is false because `stacked_onto(top)` is already set (zones.rs:686-691). A non-Flying Stack Unit is still refused there. The sequence can happen with shipped cards: C+ #77 gives Stack to the hand, plus a random Flying grant.",
+          "severity": "blocking",
+          "where": "crates/engine/src/play_choices.rs:2467"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
-      "queued_at": "2026-10-17T04:16:36Z",
+      "queued_at": "2026-10-17T04:32:29Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
       "run_id": "39001963906",
       "self_check_findings": [],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-10-17T04:17:25Z",
       "stop_requested": false,
       "taken_asks": [],
