@@ -9093,8 +9093,12 @@
     "what": "revise #1089 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-17T02:55:42Z",
-    "notes": [],
+    "at": "2026-10-17T03:02:26Z",
+    "notes": [
+      "#1104: typed it Bug",
+      "#1103: typed it Task",
+      "#1102: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
