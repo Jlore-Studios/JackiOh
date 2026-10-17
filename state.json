@@ -2792,30 +2792,26 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-17T02:16:08Z",
+      "feedback_since": "2026-10-17T03:33:36Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1092,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The new unit test compares `catalog_defs_at(crate::CATALOG_VERSION)` with the hardcoded `patches/v0.3.7b.json`, so it fails as soon as `patches ship` promotes the next version, which turns the automated promotion PR's `rust` check red and leaves the patch unable to go live until a person edits the test.",
-          "evidence": "`CATALOG_VERSION` is the last entry of `patches.json` (build.rs:23,87). `crates/cards/patches/pending/` holds v0.3.8 (72 cards), v0.3.9 (1), v0.3.10 (66) and v0.3.Y (3). `patches-ship.yml` runs `patches ship` after every merge to main that touches pending/ and opens an auto-merging PR. After that run `CATALOG_VERSION` is v0.3.8 or later, and that version's rebuilt defs differ from v0.3.7b.json on the claimed cards. Comparing against `catalog_defs_at(\"v0.3.7b\")` would keep the test stable. The previous reviewer saw this drift and let it through.",
-          "severity": "blocking",
-          "where": "crates/cards/src/history.rs:299"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-1",
+      "question": "",
       "queued_at": "2026-10-17T03:32:49Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "38999207251",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-17T03:33:36Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "gemini"
