@@ -237,10 +237,11 @@ pub const RETENTION_PURGE_INTERVAL_SECONDS: i64 = 3600;
 // The background loops' supervisor (`loops.rs`). Not in SPEC, and no R-row (#842).
 // ---------------------------------------------------------------------------------------------
 
-/// How long `loops::spawn_supervised` waits after a loop panics before it starts that loop again.
-/// The retention purge and the bot pool tick as soon as they start, so without a wait a panic that
-/// recurs on every tick would restart them in a hot loop. Five seconds holds such a loop to one
-/// crash line per five seconds and leaves a pairing or a sweep late by seconds only.
+/// How long `loops::spawn_supervised` waits after a loop panics or returns before it starts that
+/// loop again. The retention purge and the bot pool tick as soon as they start, so without a wait a
+/// panic that recurs on every tick, or a loop that returns at once, would restart them in a hot
+/// loop. Five seconds holds such a loop to one alert line per five seconds and leaves a pairing or
+/// a sweep late by seconds only.
 pub const LOOP_RESTART_DELAY_SECONDS: i64 = 5;
 
 // ---------------------------------------------------------------------------------------------

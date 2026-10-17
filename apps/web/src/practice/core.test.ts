@@ -290,6 +290,7 @@ describe("B34 the core answers with the human's view and nothing else", () => {
       config: config({ humanSeat: "p1", deck: { kind: "saved", index: 1, cards: duplicated } }),
     });
     expect(response.type).toBe("failed");
+    if (response.type === "failed") expect(response.message).toMatch(/appears twice/);
   });
 
   it("B34 a start with a saved deck naming a card the catalog does not have answers `failed`", () => {
@@ -303,6 +304,7 @@ describe("B34 the core answers with the human's view and nothing else", () => {
       config: config({ humanSeat: "p1", deck: { kind: "saved", index: 1, cards: unknown } }),
     });
     expect(response.type).toBe("failed");
+    if (response.type === "failed") expect(response.message).toMatch(/"core-999" is not in the catalog/);
   });
 
   it("B34 a start naming no real difficulty answers `failed` instead of throwing", () => {

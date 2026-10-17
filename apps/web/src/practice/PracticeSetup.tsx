@@ -3,6 +3,7 @@
 // R1373, R924000: only the player's Random deck can lean toward a set; retain its pick.
 // R915005: a saved deck that names custom cards starts with them (`customCards`), drawn in the preview
 // from their frames; one that names a card the account no longer has says so and does not start.
+// §9.9: a complete saved deck the worker would refuse is listed disabled, with its reason in the deck hint and a link to Decks (`savedDeckRefusal`).
 
 import { useId, useMemo, useState, type FormEvent, type ReactElement } from "react";
 
@@ -36,6 +37,7 @@ import {
   isPlayableSavedDeck,
   presetById,
   savedDeckOf,
+  savedDeckRefusal,
   type PracticeSavedDeck,
 } from "./decks.ts";
 import type { PracticeDeckChoice } from "./protocol.ts";
@@ -102,8 +104,22 @@ function customBlock(custom: CustomCardsState, missing: number): string | null {
 
 function savedHint(saved: SavedDecks): ReactElement | null {
   switch (saved.kind) {
-    case "ready":
-      return null;
+    case "ready": {
+      // §9.9: name each complete deck the worker would refuse (listed disabled), and where to fix it.
+      const reasons = saved.decks.map((deck) => savedDeckRefusal(deck)).filter((reason): reason is string => reason !== null);
+      if (reasons.length === 0) return null;
+      const [before = "", after = ""] = (
+        reasons.length === 1 ? t("Fix it in {decks} to play it here.") : t("Fix them in {decks} to play them here.")
+      ).split("{decks}");
+      return (
+        <>
+          {reasons.map((reason) => `${t(reason)} `).join("")}
+          {before}
+          <a href={paths.decks}>{t("Decks")}</a>
+          {after}
+        </>
+      );
+    }
     case "anonymous":
       return <>{t("Sign in and save a deck to play one of your own decks here.")}</>;
     case "checking":
@@ -158,6 +174,7 @@ function cardCount(count: number): string {
 function optionLabel(value: string, label: string, saved: readonly PracticeSavedDeck[] | null): string {
   const deck = savedDeckOf(value, saved);
   if (deck === undefined) return t(label);
+  if (savedDeckRefusal(deck) !== null) return t("{name} (needs a fix)", { name: deck.name });
   if (isPlayableSavedDeck(deck)) return deck.name;
   return t("{name} ({count} of {total} cards, not complete)", {
     name: deck.name,

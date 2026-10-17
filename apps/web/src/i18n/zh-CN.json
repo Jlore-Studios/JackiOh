@@ -2871,5 +2871,8 @@
   "Your replays →": "你的回放 →",
   "This game was played on an earlier patch.": "这局对局是在较早的版本中进行的。",
   "This game was played under older rules.": "这局对局是在旧规则下进行的。",
-  "This replay has expired.": "这个回放已过期。"
+  "This replay has expired.": "这个回放已过期。",
+  "{name} (needs a fix)": "{name}（需要修正）",
+  "Fix it in {decks} to play it here.": "在{decks}中修正它，即可在这里使用。",
+  "Fix them in {decks} to play them here.": "在{decks}中修正它们，即可在这里使用。"
 }

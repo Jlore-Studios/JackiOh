@@ -4,6 +4,10 @@
 //! `AuthLevel::None` and name no profile. `/readyz` is render.yaml's `healthCheckPath`: it answers
 //! 200 only once the store answers `select 1`, so an instance whose database stops answering after
 //! boot fails its check (the pool connects lazily, so nothing else would notice).
+//!
+//! Neither probe reads the background loops: `loops::spawn_supervised` logs an alert for a loop
+//! that panics or returns and starts it again, so a stopped loop shows as an alert, not as a failed
+//! probe (#1093).
 
 use std::sync::Arc;
 use std::time::Duration;
