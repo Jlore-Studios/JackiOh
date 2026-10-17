@@ -2033,6 +2033,10 @@
       "run_id": "38963763633",
       "started_at": "2026-10-16T20:39:49Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-3` (claude, opus) rejected it: `crates/engine/src/effects/swap.rs:127`: A board swap or ring rotation panics when a Unit lies dormant beneath a backrow top, a pile this change makes legal: onl"
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 1
     },
