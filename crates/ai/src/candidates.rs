@@ -7,8 +7,9 @@
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::{
     ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, Row, Selection,
-    ZoneChoice, ZoneSlot, beneath_at, canonical, card_at, carried_at, effective_cost, find_instance,
-    has_keyword, is_locked, legal_actions, pierces, row_size, subsystems, takes_strike_back, unit_view,
+    UnitView, ZoneChoice, ZoneSlot, attack_mod_for, beneath_at, canonical, card_at, carried_at,
+    effective_cost, find_instance, has_keyword, is_locked, lane_multiplier_for, legal_actions, pierces,
+    row_size, subsystems, takes_strike_back, unit_view,
 };
 use serde_json::Value;
 
@@ -113,9 +114,38 @@ fn collapse_zones(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> 
         .collect()
 }
 
-/// Tier 1: an attack on a unit it kills and survives, read from the layers. Divine Shield or
-/// Indestructible on the target means no kill; a Ranged attacker survives any target that is not
-/// Ranged (R783000). Either side's hit skips the other's Armor when it pierces (§4.4 step 2, R346).
+/// The two strikes of a combat between `attacker` and the Unit `defender` (`a` and `t` their views),
+/// as `resolve_combat` reads them before either lands (R94): the attacker's attack plus the board's
+/// combat-only bonus (`attack_mod_for`, R1120) times its lane multiplier (`lane_multiplier_for`,
+/// R1283), and the defender's attack times its own, which no bonus ever rides.
+pub(crate) struct Exchange {
+    /// What the attacker's strike deals before §4.4.
+    pub hit: i32,
+    /// Whether that strike is Poisonous: the attacker's own keyword or the bonus's (R1120).
+    pub poisonous: bool,
+    /// What the defender's strike back deals before §4.4.
+    pub strike_back: i32,
+}
+
+pub(crate) fn exchange(
+    state: &GameState,
+    attacker: &CardInstance,
+    a: &UnitView,
+    defender: &CardInstance,
+    t: &UnitView,
+) -> Exchange {
+    let bonus = attack_mod_for(state, attacker, defender);
+    Exchange {
+        hit: (a.attack + bonus.attack) * lane_multiplier_for(state, attacker, defender),
+        poisonous: bonus.poisonous || has_keyword(&a.keywords, KeywordKind::Poisonous),
+        strike_back: t.attack * lane_multiplier_for(state, defender, attacker),
+    }
+}
+
+/// Tier 1: an attack on a unit it kills and survives, read from the layers and the combat's own
+/// reads (`exchange`). Divine Shield or Indestructible on the target means no kill; a Ranged attacker
+/// survives any target that is not Ranged (R783000). Either side's hit skips the other's Armor when
+/// it pierces (§4.4 step 2, R346).
 fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardInstance) -> bool {
     let a = unit_view(state, attacker);
     let t = unit_view(state, target);
@@ -124,15 +154,16 @@ fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardI
     {
         return false;
     }
+    let combat = exchange(state, attacker, &a, target, &t);
     let dealt = if pierces(state, Some(attacker), None) {
-        a.attack
+        combat.hit
     } else {
-        (a.attack - t.armor).max(0)
+        (combat.hit - t.armor).max(0)
     };
     if dealt <= 0 {
         return false;
     }
-    let kills = dealt >= t.health || has_keyword(&a.keywords, KeywordKind::Poisonous);
+    let kills = dealt >= t.health || combat.poisonous;
     if !kills {
         return false;
     }
@@ -151,9 +182,9 @@ fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardI
         return true;
     }
     let taken = if pierces(state, Some(target), None) {
-        t.attack
+        combat.strike_back
     } else {
-        (t.attack - a.armor).max(0)
+        (combat.strike_back - a.armor).max(0)
     };
     if taken <= 0 {
         return true;

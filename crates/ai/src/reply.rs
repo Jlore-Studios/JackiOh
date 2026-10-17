@@ -36,7 +36,7 @@ use jackioh_engine::{
     find_instance, has_keyword, legal_actions, pierces, reduce, subsystems, takes_strike_back, unit_view,
 };
 
-use crate::candidates::candidate_actions_in;
+use crate::candidates::{candidate_actions_in, exchange};
 use crate::config::{AI_EVAL, AI_REPLY, AI_SEARCH};
 use crate::evaluate::{NextSwing, evaluate, unit_worth};
 use crate::lethal::deft_ready_switch;
@@ -72,10 +72,10 @@ struct Blow {
     pops_shield: bool,
 }
 
-/// §4.4 steps 1, 2, 4 and 7 for one blow: what `from` deals to `to`, and whether it kills. Step 2's
-/// Armor is skipped when `from` pierces (R346).
-fn blow(from: &Side, to: &Side) -> Blow {
-    let amount = from.view.attack;
+/// §4.4 steps 1, 2, 4 and 7 for one blow: what `from` deals to `to` with a strike of `amount`
+/// (`exchange`'s), Poisonous when `poisonous`, and whether it kills. Step 2's Armor is skipped when
+/// `from` pierces (R346).
+fn blow(from: &Side, amount: i32, poisonous: bool, to: &Side) -> Blow {
     if amount <= 0 {
         return Blow {
             dealt: 0,
@@ -102,7 +102,7 @@ fn blow(from: &Side, to: &Side) -> Blow {
     } else {
         (amount - to.view.armor).max(0)
     };
-    let kills = dealt >= to.view.health || (from.poisonous && dealt > 0);
+    let kills = dealt >= to.view.health || (poisonous && dealt > 0);
     Blow {
         dealt,
         kills,
@@ -120,9 +120,12 @@ fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> f
     };
     let a = side_of(state, attacker);
     let t = side_of(state, target);
-    let out = blow(&a, &t);
+    // R1120, R1283: each strike as the combat reads it, the bonus and the lane multiplier included.
+    let combat = exchange(state, attacker, &a.view, target, &t.view);
+    let out = blow(&a, combat.hit, combat.poisonous, &t);
     let mut kills = out.kills;
-    let mut dies = takes_strike_back(state, attacker, target) && blow(&t, &a).kills;
+    let mut dies =
+        takes_strike_back(state, attacker, target) && blow(&t, combat.strike_back, t.poisonous, &a).kills;
     if a.first_strike && !t.first_strike && kills {
         dies = false;
     }

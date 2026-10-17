@@ -2,7 +2,7 @@
 // (SPEC §9.4; R250, R252, R253, R340, R641). Rust shares the same verdict at save and queue; this
 // wrapper only serializes arguments and returns it. Predicates are answered before crossing.
 
-import { validator } from "../wasm/index.ts";
+import { catalogVersion, registeredCatalog, validator } from "../wasm/index.ts";
 
 import type { CardDef, CardDefs, CustomCard, CustomIssue } from "./index.ts";
 
@@ -115,6 +115,20 @@ export const validateTrio = validateLoadout;
 /** R253: L2, L3, L5 and L6 over one Best-of-1 deck. */
 export function validateDeck(input: DeckInput): LoadoutResult {
   return validator<LoadoutResult>("validateDeck", { ...input, catalog: snapshotFor(input.catalog, [input.deck]) });
+}
+
+/** §9.9: the rules of `validateDeck` that a practice game's `createGame` also holds a deck to (§2.6). */
+const PRACTICE_DECK_RULES: readonly LoadoutRule[] = ["L2", "L3", "L6"];
+
+/**
+ * §9.9: what would stop a practice game on `deck`: `validateDeck`'s L2, L3 and L6 against the catalog this
+ * module carries, the one the worker's `createGame` judges by, with nothing banned. Ownership (L5) and
+ * R915005's L7 (a custom card, which plays in practice) are never among them. Empty when it would start.
+ * Setup UX only (CLAUDE.md rule 7): the worker still judges every deck it is sent.
+ */
+export function practiceDeckIssues(deck: LoadoutDeck): LoadoutError[] {
+  const verdict = validateDeck({ deck, catalog: { version: catalogVersion(), cards: registeredCatalog() }, collection: {} });
+  return verdict.ok ? [] : verdict.errors.filter((issue) => PRACTICE_DECK_RULES.includes(issue.rule));
 }
 
 /** Every card more than one of `decks` holds, in first-appearance order (R251, R252). */
