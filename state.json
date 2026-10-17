@@ -2180,6 +2180,13 @@
     "1088": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T00:07:52Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 7 fails: the issue asks for a Cypress assertion in e2e/cypress/e2e/05-reconnect.cy.ts and a 390px layout check, and the change spans apps/web and e2e (rule 2)"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
