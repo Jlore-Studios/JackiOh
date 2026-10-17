@@ -337,6 +337,21 @@ The live games' records are what the gather lane's figures sit beside, and they 
   `r1451_counts_every_seat_of_development_data_unless_a_pilot_is_named` and
   `r1451_reads_a_ladder_bots_side_of_a_live_game_only_when_asked`.
 
+## Where the exports come from
+
+The learned evaluation (#466, `docs/learned-eval.md`) learns from self-play exports: game logs
+`cargo jackioh selfplay` plays, which `cargo jackioh positions` folds into training rows (R1006001,
+R1006003). An export is dispatched, never played on the training box, whose two vCPUs the lanes need:
+`gh workflow run selfplay.yml -f games=100000 -f seed=<base> [-f shards=20] [-f
+runner=jackioh-selfplay-local]` plays it in shards on GitHub's runners (free for this public
+repository, about 1,500 games an hour each) or on the local runner (`bot/machine/README.md`, The local
+runner), and keeps each shard's log file as an artifact for up to 90 days. Its last job runs
+`positions` over the whole export and writes the counts (games, positions, games that no longer
+replay) and the games an hour to the run's summary. The same base and game numbers always play the
+same games, so an export can be played again on any runner, and a base never names a gate's
+hold-out deals or the dev set (R1006002). `gh run download <run> --pattern 'selfplay-<base>-*'`
+fetches it.
+
 ## The ladder bots after a promotion
 
 The ladder bots' strengths are measured against each other on the AI on `main` (R748000,
