@@ -2512,6 +2512,13 @@
     "1112": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T13:57:57Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "The AI's search is always hard, and this changes how beam_search scores its frontier rather than adding an isolated branch."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
