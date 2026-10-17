@@ -168,6 +168,7 @@ waiting helpers (`settled`, `expectAnimating`, `waitForPrompt`, `noPrompt`):
 | `concede()` | The `concede` control only asks ("Concede this game?"); this confirms in the dialog it opens. A spec that clicks `concede` alone has conceded nothing. |
 | `expectNoBlockingViolations(route)` (`support/a11y.ts`) | Spec 38's check (#757): axe-core injected from this package's `node_modules`, WCAG 2.0–2.2 A and AA rules, failing on any serious or critical violation `support/axe-exceptions.ts` does not list for `route` (by rule and a selector each flagged element matches, with its reason), and on a listed one that no longer fires. |
 | `wsPlayer` `awaitView` `where: { mulliganOpponentReady, drawOfferBy }` | R266's "the other seat is ready" and R269's standing offer, read off seat 2's own view (`view.mulligan.opponentReady`, `view.drawOffer.by`). |
+| `wsPlayer` `sendFrame` `{ type: "aim" \| "emote" }` | R738, R643: a cosmetic frame the server never answers, sent as it is (no nonce, no ack awaited); spec 42 aims and emotes from seat two with it. |
 
 | Spec | Needs |
 | --- | --- |
