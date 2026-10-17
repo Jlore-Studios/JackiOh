@@ -918,3 +918,90 @@ mod banked_state_1086 {
         assert_eq!(greedy(&temporary), greedy(&plain));
     }
 }
+
+mod hand_faces_1143 {
+    use super::*;
+
+    use jackioh_engine::testkit::AttackHealth;
+
+    const BIG: &str = "core-025"; // (4) Unit 7/7 Armor 7, Radiant 14/14 Armor 7, Reborn
+    const LAR: &str = "classicplus-076"; // (1) Unit 1/1, Radiant 2/2: Brother Lar
+    const VANILLA: &str = "core-008"; // (1) Unit 4/4, no keywords
+    const STOCKPILE: &str = "core-005"; // (1) Spell on both faces
+
+    /// The same three cards in both hands.
+    fn hands() -> GameState {
+        board(json!({ "p1": { "hand": [BIG, LAR, STOCKPILE] }, "p2": { "hand": [BIG, LAR, STOCKPILE] } }))
+    }
+
+    /// `state` with `player`'s hand card at `index` made Radiant, which swaps its face in hand (R74).
+    fn radiant(state: &GameState, player: PlayerId, index: usize) -> GameState {
+        let mut out = clone(state);
+        out.players[player].hand[index].radiant = true;
+        out
+    }
+
+    /// `state` with `player`'s hand card at `index` carrying `buffs`, which ride onto the field with it.
+    fn buffed(state: &GameState, player: PlayerId, index: usize, buffs: AttackHealth) -> GameState {
+        let mut out = clone(state);
+        out.players[player].hand[index].buffs = buffs;
+        out
+    }
+
+    #[test]
+    fn a_radiant_hand_unit_outscores_itself_un_radiant_by_more_the_more_its_radiant_face_adds() {
+        let plain = hands();
+        let gain = |index: usize| eval(&radiant(&plain, AI, index), AI) - eval(&plain, AI);
+        let (big, lar, spell) = (gain(0), gain(1), gain(2));
+        assert!(
+            lar > AI_EVAL.radiant_in_hand,
+            "Brother Lar's 2/2 {lar} is not above the flat bonus"
+        );
+        assert!(big > lar, "the 14/14's {big} is not above Brother Lar's {lar}");
+        // 7 attack, 7 health and Reborn more than the 7/7 Armor 7 it prints, at the share.
+        assert_close(
+            big,
+            AI_EVAL.radiant_in_hand
+                + AI_EVAL.radiant_face_share
+                    * (7.0 * AI_EVAL.attack + 7.0 * AI_EVAL.health + AI_EVAL.keyword.reborn),
+            9,
+        );
+        // A Spell has no unit face to read: it keeps the flat bonus alone.
+        assert_close(spell, AI_EVAL.radiant_in_hand, 9);
+    }
+
+    #[test]
+    fn a_buffed_hand_unit_outscores_itself_unbuffed_by_its_buffs_worth_at_the_share() {
+        let plain = board(json!({ "p1": { "hand": [VANILLA] }, "p2": { "hand": [VANILLA] } }));
+        let buffs = AttackHealth { attack: 2, health: 1 };
+        let gain = eval(&buffed(&plain, AI, 0, buffs), AI) - eval(&plain, AI);
+        assert!(gain > 0.0, "a +2/+1 hand unit gains {gain}");
+        assert_close(
+            gain,
+            AI_EVAL.radiant_face_share * (2.0 * AI_EVAL.attack + AI_EVAL.health),
+            9,
+        );
+    }
+
+    #[test]
+    fn the_enemys_hidden_hand_scores_the_same_whatever_its_radiant_flags_or_buffs() {
+        let plain = hands();
+        let buffs = AttackHealth { attack: 2, health: 1 };
+        assert_eq!(eval(&radiant(&plain, HUMAN, 0), AI), eval(&plain, AI));
+        assert_eq!(eval(&radiant(&plain, HUMAN, 1), AI), eval(&plain, AI));
+        assert_eq!(eval(&buffed(&plain, HUMAN, 0, buffs), AI), eval(&plain, AI));
+    }
+
+    #[test]
+    fn greedy_eval_reads_no_hand_face_a_radiant_hand_unit_keeps_only_the_flat_bonus() {
+        let greedy = |state: &GameState| evaluate(state, AI, NextSwing::Enemy, &GREEDY_EVAL);
+        let plain = hands();
+        let buffs = AttackHealth { attack: 2, health: 1 };
+        assert_close(
+            greedy(&radiant(&plain, AI, 0)) - greedy(&plain),
+            GREEDY_EVAL.radiant_in_hand,
+            9,
+        );
+        assert_eq!(greedy(&buffed(&plain, AI, 0, buffs)), greedy(&plain));
+    }
+}

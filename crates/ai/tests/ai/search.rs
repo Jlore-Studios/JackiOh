@@ -1143,3 +1143,50 @@ mod own_prompt_lookahead {
         assert_eq!(counter.used(), 1);
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// #1143: a hand Unit is priced by the face it will enter with
+// ---------------------------------------------------------------------------------------------
+
+mod make_radiant_targets_1143 {
+    use super::*;
+
+    /// Glowy Jelly Bean (#26): 3 mana, make a card in your hand Radiant, the card declared at play (R81).
+    const BEAN: &str = "core-026";
+    /// Brother Lar: (1) 1/1, Radiant 2/2.
+    const LAR: &str = "classicplus-076";
+    /// (4) 7/7 Armor 7, Radiant 14/14 Armor 7, Reborn.
+    const BIG: &str = "core-025";
+
+    /// #1143: at 3 crystals the 4-cost 7/7 cannot be played, so the turn is the Bean or Brother Lar.
+    /// Before the face was read every Bean target scored the flat `radiant_in_hand`, below the Bean's
+    /// own hand worth, and Brother Lar was played instead; now the Bean makes the 7/7 a 14/14 Reborn.
+    /// Brother Lar comes first in hand, so a tie between the Bean's targets would pick him.
+    #[test]
+    fn glowy_jelly_bean_is_cast_on_the_hand_unit_whose_radiant_face_adds_most() {
+        jackioh_cards::register_all();
+        let library = ["core-008", "core-011", "core-008", "core-011"];
+        let state = scenario(json!({
+            "seed": "search-bean-uplift",
+            "p1": { "hand": [BEAN, LAR, BIG], "mana": 3, "library": library },
+            "p2": { "library": library },
+        }))
+        .state()
+        .clone();
+        let bean = hand_id(&state, BEAN);
+        let big = hand_id(&state, BIG);
+
+        let decision =
+            decide(&state, AI, &mut ai_options("search-bean-uplift", AI_BUDGET)).expect("a decision");
+        assert!(
+            matches!(
+                &decision.action,
+                ActionBody::Play { instance_id, targets: Some(targets), .. }
+                    if *instance_id == bean
+                        && *targets == vec![Selection::Instance { instance_id: big.clone() }]
+            ),
+            "{}",
+            action_key(&decision.action)
+        );
+    }
+}
