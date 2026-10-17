@@ -8744,13 +8744,8 @@
     "what": "review #1091 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-17T00:12:21Z",
-    "notes": [
-      "#1095: typed it Task",
-      "#1094: typed it Task",
-      "#1093: typed it Task",
-      "#1092: typed it Task"
-    ],
+    "at": "2026-10-17T00:19:08Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
