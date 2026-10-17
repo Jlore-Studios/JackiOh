@@ -2572,6 +2572,61 @@ mod b23_views {
     }
 }
 
+mod r1074000_a_passed_card_reads_to_its_passer_alone {
+    use super::*;
+
+    /// The newest card `seat` drew whose draw its own view still shows: its id and definition.
+    fn newest_draw(state: &DuosState, seat: DuosSeat) -> (String, String) {
+        duos_view_for(state, seat)
+            .own
+            .events
+            .into_iter()
+            .rev()
+            .find_map(|event| match event {
+                GameEvent::Drawn {
+                    player,
+                    instance_id,
+                    def_id,
+                    ..
+                } if player == seat.player() => Some((instance_id, def_id)),
+                _ => None,
+            })
+            .expect("a draw of the seat's in its view")
+    }
+
+    fn names_draw(view: &PlayerView, id: &str, def: &str) -> bool {
+        view.events.iter().any(|event| {
+            matches!(event, GameEvent::Drawn { instance_id, def_id, .. } if instance_id == id && def_id == def)
+        })
+    }
+
+    #[test]
+    fn r1074000_a_passed_cards_draw_stays_hidden_from_the_passers_opponent_and_reads_to_its_team() {
+        let mut state = begun("r1074000");
+        give(&mut state, A1, NOOP); // A1 keeps a move once the pass has spent its mana
+        let (id, def) = newest_draw(&state, A1);
+        let state = ok(&state, A1, pass(&id));
+        assert!(!hand_ids(&state, A1).contains(&id), "the card left duel 0");
+
+        assert!(
+            names_draw(&duos_view_for(&state, A1).own, &id, &def),
+            "A1 still reads its own draw"
+        );
+        assert!(
+            names_draw(&duos_view_for(&state, A2).teammate, &id, &def),
+            "and A2 reads it through A1's seat"
+        );
+        for seat in [B1, B2] {
+            let seen = strings_in(&json_of(duos_view_for(&state, seat)));
+            assert!(!seen.contains(&def), "{seat} never reads A1's passed {def}");
+        }
+        assert!(
+            !strings_in(&json_of(duos_view_for(&state, B1).own)).contains(&id),
+            "B1's duel names the passed card by no id"
+        );
+    }
+}
+
 // ---------------------------------------------------------------------------------------------
 // B24, B25: replay
 // ---------------------------------------------------------------------------------------------

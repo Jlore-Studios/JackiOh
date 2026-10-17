@@ -84,7 +84,7 @@ On its own turn a seat may pass a card from its hand to its teammate's hand. A p
 
 A pass pays the pass cost and moves the card from the passer's hand to the right end of the teammate's, under a new instance id, with the teammate as its owner and its controller, as a steal from a hand makes the thief its owner ([[R12]]). The card keeps its buffs, its cost modifiers and its face. It arrives at once, so a teammate who is a round seat and has not ended may play it the same round. A pass is not a draw, a play or a discard, and nothing triggers on it. Each seat's passes start again each round, and its team sees how many each of its seats has left ([[§13.6]]).
 
-The team sees the card go across; each opposing seat sees only a card back leave one hand or arrive in the other, as the hand count its 1v1 view already shows. The client offers a pass only where the seat's legal actions hold it, on an inspected hand card or by dragging a hand card onto the portal ([[§13.6]]), with the pass cost and the passes left beside it; it checks nothing itself (CLAUDE.md rule 7).
+The team sees the card go across; each opposing seat sees only a card back leave one hand or arrive in the other, as the hand count its 1v1 view already shows, and the events that named the card while it was in the passer's hand stay hidden from the passer's opponent once it has gone ([[R1074000]]). The client offers a pass only where the seat's legal actions hold it, on an inspected hand card or by dragging a hand card onto the portal ([[§13.6]]), with the pass cost and the passes left beside it; it checks nothing itself (CLAUDE.md rule 7).
 
 ### 13.6 Information and the view
 

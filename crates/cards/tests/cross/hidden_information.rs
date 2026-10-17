@@ -2272,4 +2272,31 @@ mod r227_r177_a_card_set_face_down_takes_a_fresh_id {
             .collect();
         assert!(naming.iter().any(|event| json_text(event).contains(SHEEPISH)));
     }
+
+    /// R1074000: in a duel a card in no pile last seen in a hand was passed out of it, but a card set
+    /// face-down left its hand under its old id (R227), so that id is no passed card's: once the trap
+    /// fires, its return to hand reads openly as in a 1v1 game.
+    #[test]
+    fn r1074000_r227_in_a_duel_a_card_set_from_a_hand_is_judged_where_it_went_not_as_passed() {
+        jackioh_cards::register_all();
+        let (mut s, old_id, _new_id) = reset_sheepish();
+        for player in PLAYER_IDS {
+            s.state_mut().players[player].duos = Some(DuosLife {
+                pool: DUOS_POOL_HEALTH,
+                pool_cap: DUOS_POOL_HEALTH,
+                spent: false,
+            });
+        }
+        s.end_turn();
+        s.play(MR_VANILLA, json!({}));
+        eprintln!("DBG old={old_id} new={_new_id} found_old={:?}", jackioh_engine::find_instance(s.state(), &old_id).map(|c| c.zone.clone()));
+        eprintln!("DBG found_new={:?}", jackioh_engine::find_instance(s.state(), &_new_id).map(|c| c.zone.clone()));
+        for e in s.view("p1").events { let t = json_text(&e); if t.contains(&old_id) || t.contains(&_new_id) { eprintln!("DBG ev {t}"); } }
+        for e in s.state().applied.iter().flat_map(|x| x.events.iter()) { let t = json_text(e); if t.contains(&format!("\"{old_id}\"")) { eprintln!("DBG raw {t}"); } }
+        let returned = s.view("p1").events.into_iter().any(|event| {
+            matches!(&event, GameEvent::AddedToHand { instance_id, def_id, .. }
+                if *instance_id == old_id && def_id == SHEEPISH)
+        });
+        assert!(returned, "p1 reads the fired trap's return to hand by its old id");
+    }
 }

@@ -1,7 +1,8 @@
 //! Fuzz-level invariants for summoning sickness, exertion, game over, hidden information and owed
 //! work (SPEC §4.1, §4.2, §9.3, §10.3, §10.8, R53, R83, R113, R171; docs/polish/4-edge-cases.md
-//! "Fuzz invariants"). `cargo jackioh fuzz` runs one monitor per game (SURFACE §8, §12), and the
-//! edge-case hunters reuse it.
+//! "Fuzz invariants"). `cargo jackioh fuzz` runs one monitor per game (SURFACE §8, §12), `fuzz --duos`
+//! one per duel through `DuosInvariantMonitor` (#1074, with the Duos view's own redaction and the pool
+//! bounds, §13.4, §13.6), and the edge-case hunters reuse it.
 //!
 //! THE MONITOR IS AN ORACLE, NOT THE FIX RESTATED. It never reads `summonedTurn` to decide who is
 //! sick. It keeps a shadow built only from the event stream:
@@ -64,7 +65,9 @@
 //!      Rollback can turn a token into a fused card and back, fuzz seed 119), or a card a full library refused before it existed that copies nothing
 //!      (R316, fuzz seed 5967 of the handicapped wave, #562); a Glitch's reset or boards (R676, R678)
 //!      takes the rest unseen, and the first oracle excused it, which was the engine's own R97 rule
-//!      restated: R764 fixed it.
+//!      restated: R764 fixed it. In a duel, a card in no pile that is not a token and that the log
+//!      last shows in a hand was passed out of it (B20) and reads to that hand's player alone: the Duos
+//!      fuzz's first run found `view_for` naming a passed card's draw to the passer's opponent (R1074000).
 //!      Judging former ids by the log found a sixth, fuzz seed 992: R419's Rollback recreated a
 //!      face-down trap #83 had transformed away, and the `formerId` it carries goes with the card
 //!      (R227) once that card is public, R177's mark on the old id notwithstanding.
@@ -222,8 +225,9 @@ struct Lineage {
     /// definition can change and change back (R77's Fuse, then R419's Rollback restoring the token
     /// it was, fuzz seed 119), so its leaving names it better than every definition it ever wore.
     gone_as: IndexMap<String, String>,
-    /// Duos: a card that was held in a player's hand before it left the duel (via duos `pass`).
-    held_in_hand_by: IndexMap<String, PlayerId>,
+    /// R1074000: in a duel, each id whose last place the log shows is a hand, and that hand's player. A
+    /// pass (B20) takes a hand card out of its duel with no event, so one in no pile was passed.
+    in_hand: IndexMap<String, PlayerId>,
 }
 
 fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
@@ -321,12 +325,33 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
             GameEvent::Stolen { to, instance_id, .. } => {
                 in_hand.insert(instance_id.clone(), *to);
             }
-            GameEvent::CardPlayed { instance_id, .. }
-            | GameEvent::CardAnnounced { instance_id, .. }
-            | GameEvent::Summoned { instance_id, .. }
+            // R227: a card set face-down from a hand left it under its old id, the `formerId`.
+            GameEvent::CardPlayed {
+                instance_id,
+                former_id,
+                ..
+            }
+            | GameEvent::Summoned {
+                instance_id,
+                former_id,
+                ..
+            }
+            | GameEvent::ControlChanged {
+                instance_id,
+                former_id,
+                ..
+            } => {
+                in_hand.shift_remove(instance_id);
+                if let Some(former) = former_id {
+                    in_hand.shift_remove(former);
+                }
+            }
+            GameEvent::CardAnnounced { instance_id, .. }
             | GameEvent::Discarded { instance_id, .. }
             | GameEvent::Burned { instance_id, .. }
-            | GameEvent::ShuffledIn { instance_id, .. } => {
+            | GameEvent::ShuffledIn { instance_id, .. }
+            | GameEvent::Exiled { instance_id, .. }
+            | GameEvent::EnteredGraveyard { instance_id, .. } => {
                 in_hand.shift_remove(instance_id);
             }
             GameEvent::Transformed {
@@ -368,19 +393,15 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
             }
         }
     }
-    let mut held_in_hand_by: IndexMap<String, PlayerId> = IndexMap::new();
-    for (id, holder) in in_hand {
-        if find_instance(state, &id).is_none() {
-            held_in_hand_by.insert(id, holder);
-        }
-    }
+    // Only a Duos seat passes (B20): a 1v1 hand card never leaves by a pass.
+    in_hand.retain(|id, holder| state.players[*holder].duos.is_some() && find_instance(state, id).is_none());
     Lineage {
         next,
         unread,
         never_made,
         ties,
         gone_as,
-        held_in_hand_by,
+        in_hand,
     }
 }
 
@@ -398,8 +419,9 @@ struct Standing {
 /// none reads when a full library refused it before it existed and it copies nothing (R316), and
 /// otherwise only when every definition the log pairs with it is a token's: R11's tokens go public
 /// (leaving the field, discarded, burned), where any other card in no pile went unseen, out of a
-/// Glitch's reset or boards (R676, R678), and stays as hidden as it was. An id neither the state nor
-/// the log knows vouches for nothing.
+/// Glitch's reset or boards (R676, R678), and stays as hidden as it was. In a duel, one the log last
+/// shows in a hand that is no token was passed out of it (B20) and reads to that hand's player alone
+/// (R1074000). An id neither the state nor the log knows vouches for nothing.
 fn standing_of(
     state: &GameState,
     held: &IndexSet<String>,
@@ -446,20 +468,15 @@ fn standing_of(
                     .iter()
                     .all(|def| crate::catalog::def_of(Some(&*state), def).token),
             };
-            if token {
-                return Some(Standing {
-                    reads: true,
-                    where_: "no pile (it ceased to exist)".to_string(),
-                });
-            }
-            if let Some(&holder) = lineage.held_in_hand_by.get(id) {
+            // R1074000: in a duel, a card the log last shows in a hand was passed out of it, unseen.
+            if !token && let Some(&holder) = lineage.in_hand.get(id) {
                 return Some(Standing {
                     reads: holder == viewer,
-                    where_: format!("{holder}'s hand before it left the duel"),
+                    where_: format!("{holder}'s hand, which it was passed out of"),
                 });
             }
             return Some(Standing {
-                reads: false,
+                reads: token,
                 where_: "no pile (it ceased to exist)".to_string(),
             });
         };
