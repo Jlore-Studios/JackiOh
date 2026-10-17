@@ -3123,6 +3123,8 @@
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-10-17T18:50:45Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "39059909041",
       "self_check_findings": [],
       "started_at": "2026-10-17T18:53:33Z",
