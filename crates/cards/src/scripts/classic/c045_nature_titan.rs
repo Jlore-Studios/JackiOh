@@ -70,7 +70,6 @@ pub fn script() -> CardScripts {
 // no cap (§6.3); radiant 12/12: draw 2, heal 6; tuned numbers (draw, heal) via `param()` (R386).
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -99,21 +98,6 @@ mod tests {
 
     mod c45_nature_titan {
         use super::*;
-
-        #[test]
-        fn declares_tribute_1_and_runs_one_script_on_both_faces() {
-            crate::register_all();
-            assert_eq!(registered_catalog()[ID].id, TITAN);
-            let scripts = script();
-            assert_eq!(scripts.base.static_flags.as_ref().and_then(|flags| flags.tribute), Some(1));
-            // The Radiant face is the same script.
-            assert_eq!(scripts.radiant.static_flags, scripts.base.static_flags);
-            assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());
-            assert_eq!(
-                scripts.radiant.triggers.iter().map(|trigger| trigger.id.clone()).collect::<Vec<_>>(),
-                scripts.base.triggers.iter().map(|trigger| trigger.id.clone()).collect::<Vec<_>>(),
-            );
-        }
 
         mod base {
             use super::*;

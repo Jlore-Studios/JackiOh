@@ -182,19 +182,6 @@ mod tests {
     }
 
     #[test]
-    fn is_a_4_legendary_spell_of_the_call_to_chaos_tag_and_both_faces_hang_the_card_off_cry() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(js(&def.cost), json!(4));
-        assert_eq!(def.type_, CardType::Spell);
-        assert_eq!(js(&def.tags), json!(["Call to Chaos"]));
-        assert_eq!(def.rarity, Rarity::Legendary);
-        let CardScripts { base, radiant } = script();
-        assert!(base.cry.is_some() && radiant.cry.is_some());
-        assert!(base.triggers.is_empty() && radiant.triggers.is_empty());
-    }
-
-    #[test]
     fn r436_each_entry_s_label_is_a_clause_of_the_card_s_printed_list_in_the_printed_order() {
         crate::register_all();
         let def = crate::card_def(ID);

@@ -184,24 +184,8 @@ mod tests {
         }
     }
 
-    use crate::matches_object;
-
     mod c_n19_2_jungle_loser {
         use super::*;
-
-        #[test]
-        fn is_a_2_5_5_unit_token_printed_legendary_that_acts_at_its_end_of_turn() {
-            let def = crate::card_def(ID);
-            assert!(def.token);
-            let first = def.params.as_ref().and_then(|params| params.first()).expect("a declared number");
-            assert!(matches_object(
-                &serde_json::to_value(first).expect("JSON"),
-                &json!({ "key": "chance", "base": 25, "radiant": 50, "step": 10, "max": 100 }),
-            ));
-            let scripts = script();
-            assert!(scripts.base.end_of_turn.is_some());
-            assert!(scripts.radiant.end_of_turn.is_some());
-        }
 
         mod base {
             use super::*;

@@ -227,21 +227,6 @@ mod tests {
     }
 
     #[test]
-    fn radiant_is_4_2_with_cleave() {
-        crate::register_all();
-        let mut s = scenario(json!({
-            "p1": { "field": [{ "def": ID, "radiant": true }] },
-        }));
-        s.expect_stats(ID, json!({ "attack": 4, "health": 2 }));
-        assert!(
-            s.stats(ID)
-                .keywords
-                .iter()
-                .any(|keyword| keyword.kind() == KeywordKind::Cleave)
-        );
-    }
-
-    #[test]
     fn radiant_cleave_exiles() {
         // The Radiant face's Cleave carries the mark to the neighbours it damages.
         crate::register_all();

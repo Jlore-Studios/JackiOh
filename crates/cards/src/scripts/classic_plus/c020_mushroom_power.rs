@@ -66,19 +66,6 @@ mod tests {
     mod c_n20_mushroom_power {
         use super::*;
 
-        #[test]
-        fn is_a_1_2_2_unit_whose_cry_declares_no_choice_both_faces_run_one_script() {
-            let def = crate::card_def(ID);
-            assert_eq!(def.id, MUSHROOM);
-            assert_eq!(def.cost, CardCost::Fixed(1));
-            let scripts = script();
-            assert!(scripts.base.targets.is_empty());
-            assert!(Arc::ptr_eq(
-                scripts.base.cry.as_ref().expect("base cry"),
-                scripts.radiant.cry.as_ref().expect("radiant cry"),
-            ));
-        }
-
         mod base {
             use super::*;
 

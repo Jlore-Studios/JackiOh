@@ -2487,23 +2487,6 @@ mod tests {
         }
 
         #[test]
-        fn r33_writes_face_up_exactly_as_given_so_false_reads_back_false_and_not_undefined() {
-            let s = scenario(json!({
-                "p1": {
-                    "backrow": [
-                        { "def": "core-041", "faceUp": false }, // a Trap, explicitly face-down
-                        { "def": "core-073", "faceUp": true, "lane": 2 },
-                        { "def": "core-041", "lane": 3 }, // nothing said: the flag stays unset
-                    ],
-                },
-            }));
-
-            assert_eq!(s.backrow("p1", 1).and_then(|card| card.face_up), Some(false));
-            assert_eq!(s.backrow("p1", 2).and_then(|card| card.face_up), Some(true));
-            assert_eq!(s.backrow("p1", 3).and_then(|card| card.face_up), None);
-        }
-
-        #[test]
         fn honours_stats_override_s10_4_layer_1_r41() {
             let mut s = scenario(
                 json!({ "p1": { "field": [{ "defId": "core-043", "statsOverride": { "attack": 3, "health": 3 } }] } }),

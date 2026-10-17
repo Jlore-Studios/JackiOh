@@ -33,7 +33,7 @@ import {
 import { navigate, paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { CARD_STATS_MIN_SAMPLE, PLAYER_SEARCH_DEBOUNCE_MS } from "../stats/config.ts";
-import { winPercent } from "../stats/model.ts";
+import { formatPlayedDelta, winPercent } from "../stats/model.ts";
 import { usePlayerStats } from "../stats/store.ts";
 import { statsTestid } from "../stats/testids.ts";
 import { BackLink } from "./nav.tsx";
@@ -61,7 +61,7 @@ function withNodes(sentence: string, nodes: Readonly<Record<string, ReactNode>>)
 }
 
 type TabKey = "cards" | "players";
-type SortColumn = "name" | "cost" | "rarity" | "games" | "winRate" | "drawnWinRate" | "playRate";
+type SortColumn = "name" | "cost" | "rarity" | "games" | "winRate" | "drawnWinRate" | "playRate" | "playedDelta";
 type SortDirection = "asc" | "desc";
 
 export default function StatsRoute(): ReactElement {
@@ -92,6 +92,7 @@ export default function StatsRoute(): ReactElement {
     winRate: true,
     drawnWinRate: true,
     playRate: true,
+    playedDelta: false,
     personal: true,
   });
 
@@ -278,6 +279,14 @@ export default function StatsRoute(): ReactElement {
         if (a.cost !== b.cost) return (a.cost - b.cost) * flip;
       } else if (sortCol === "playRate") {
         if (a.playRate !== b.playRate) return (a.playRate - b.playRate) * flip;
+      } else if (sortCol === "playedDelta") {
+        if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
+        if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
+        if (a.playedDelta !== null && b.playedDelta === null) return -1;
+        if (a.playedDelta === null && b.playedDelta !== null) return 1;
+        if (a.playedDelta !== null && b.playedDelta !== null && a.playedDelta !== b.playedDelta) {
+          return (a.playedDelta - b.playedDelta) * flip;
+        }
       } else if (sortCol === "rarity") {
         const rarities = ["Common", "Rare", "Epic", "Legendary", "Mythic"];
         const diff = rarities.indexOf(a.rarity) - rarities.indexOf(b.rarity);
@@ -513,6 +522,14 @@ export default function StatsRoute(): ReactElement {
                   />
                   {t("Play rate")}
                 </label>
+                <label className="stats-col-toggle">
+                  <input
+                    type="checkbox"
+                    checked={visibleCols.playedDelta}
+                    onChange={(e) => setVisibleCols((c) => ({ ...c, playedDelta: e.target.checked }))}
+                  />
+                  {t("Played Δ")}
+                </label>
                 {signedIn && (
                   <label className="stats-col-toggle">
                     <input
@@ -659,6 +676,23 @@ export default function StatsRoute(): ReactElement {
                           {t("Play rate")} {sortCol === "playRate" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
+                      {visibleCols.playedDelta && (
+                        <th
+                          scope="col"
+                          className="stats-th stats-th--sortable"
+                          aria-sort={sortCol === "playedDelta" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                          onClick={() => handleSort("playedDelta")}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleSort("playedDelta");
+                            }
+                          }}
+                          tabIndex={0}
+                        >
+                          {t("Played Δ")} {sortCol === "playedDelta" && (sortDir === "asc" ? "↑" : "↓")}
+                        </th>
+                      )}
                       {signedIn && visibleCols.personal && (
                         <th scope="col" className="stats-th">
                           {t("Your stats")}
@@ -729,6 +763,20 @@ export default function StatsRoute(): ReactElement {
                           )}
                           {visibleCols.playRate && (
                             <td className="stats-td">{`${Math.round(card.playRate * 100)}%`}</td>
+                          )}
+                          {visibleCols.playedDelta && (
+                            <td className="stats-td">
+                              {card.hasEnoughGames && card.playedDelta !== null ? (
+                                <span>
+                                  {formatPlayedDelta(card.playedDelta)}{" "}
+                                  <span className="stats-sample-hint">
+                                    ({card.playedGames} / {card.drawnNotPlayedGames})
+                                  </span>
+                                </span>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
                           )}
                           {signedIn && visibleCols.personal && (
                             <td className="stats-td stats-td--personal">

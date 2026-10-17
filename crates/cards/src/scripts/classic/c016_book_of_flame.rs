@@ -77,19 +77,6 @@ mod tests {
     }
 
     #[test]
-    fn declares_one_target_any_unit_or_hero_on_either_side_and_runs_one_script_on_both_faces() {
-        assert_eq!(crate::card_def(ID).id, BOOK);
-        let CardScripts { base, radiant } = script();
-        assert_eq!(
-            serde_json::to_value(&base.targets).unwrap(),
-            json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }])
-        );
-        // One script, so one hook.
-        assert!(Arc::ptr_eq(base.cry.as_ref().unwrap(), radiant.cry.as_ref().unwrap()));
-        assert_eq!(radiant.targets, base.targets);
-    }
-
-    #[test]
     fn r381_it_is_the_one_card_named_book_of_flame_which_c_23_and_c_29_name_c_55_is_book_of_wildfire() {
         let named: Vec<String> = crate::CATALOG
             .values()

@@ -65,7 +65,6 @@ pub fn script() -> CardScripts {
 // played against you, Core #80 Zao Gao, Core #21 Hinder and C #89 Paul Allen's Ghost's targeting cost.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -156,22 +155,9 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_1_field_spell_with_an_end_of_turn_discard_and_a_discard_trigger_no_tuned_numbers() {
+        fn declares_no_tuned_numbers() {
             crate::register_all();
-            let def = js(&crate::card_def(ID));
-            assert_eq!(def["type"], "Field Spell");
-            assert_eq!(def["cost"], 1);
-            assert!(def["params"].is_null());
-            let scripts = script();
-            assert!(scripts.base.end_of_turn.is_some());
-            assert_eq!(
-                scripts.base.triggers.iter().map(|trigger| js(&trigger.on)).collect::<Vec<Value>>(),
-                vec![json!(["discarded"])],
-            );
-            assert_eq!(
-                scripts.radiant.triggers.iter().map(|trigger| js(&trigger.on)).collect::<Vec<Value>>(),
-                vec![json!(["discarded"])],
-            );
+            assert!(crate::card_def(RECYCLER).params.is_none());
         }
 
         mod base {

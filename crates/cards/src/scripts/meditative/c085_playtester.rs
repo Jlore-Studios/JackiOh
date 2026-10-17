@@ -110,26 +110,6 @@ mod tests {
     mod m85_playtester {
         use super::*;
 
-        #[test]
-        fn is_a_2_4_5_rare_unit_radiant_8_10_with_books_1_to_1() {
-            let def = crate::card_def(ID);
-            assert_eq!(def.id, PLAYTESTER);
-            assert_eq!(def.cost, CardCost::Fixed(2));
-            assert_eq!(def.type_, CardType::Unit);
-            assert_eq!(def.rarity, Rarity::Rare);
-            assert!(def.tags.is_empty());
-            assert_eq!(
-                [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-                [Some(4), Some(5), Some(8), Some(10)]
-            );
-            let refs = def.refs.expect("the Books");
-            assert_eq!(refs, vec![BUFF_BOOK.to_string(), NERF_BOOK.to_string()]);
-            let params = def.params.expect("books");
-            assert_eq!(params.len(), 1);
-            assert_eq!(params[0].key, "books");
-            assert_eq!((params[0].base, params[0].radiant), (1, 1));
-        }
-
         mod base {
             use super::*;
 

@@ -77,18 +77,6 @@ mod tests {
         scenario(json!({ "p1": p1, "p2": { "hand": [FILLER], "field": [VANILLA] } }))
     }
 
-    #[test]
-    fn is_a_1_spell_fruit_that_declares_one_target_any_unit_or_hero() {
-        crate::register_all();
-        let def = crate::card_def(super::ID);
-        assert_eq!(def.id, APPLE);
-        assert_eq!(def.tags, vec![Tag::Fruit]);
-        assert_eq!(
-            serde_json::to_value(&super::script().base.targets).unwrap(),
-            json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }])
-        );
-    }
-
     mod base {
         use super::*;
 

@@ -108,26 +108,6 @@ mod tests {
         ids
     }
 
-    /// is a Spell tagged Book and Plague with one number, and one script on both faces
-    #[test]
-    fn is_a_spell_tagged_book_and_plague_with_one_number_and_one_script_on_both_faces() {
-        crate::register_all();
-        let def = crate::card_def(BOOK);
-        assert_eq!(def.id, BOOK);
-        assert_eq!(def.type_, CardType::Spell);
-        assert_eq!(def.tags, vec![Tag::Book, Tag::Plague]);
-        assert_eq!(
-            js(&def.params),
-            json!([{ "key": "tokens", "base": 5, "radiant": 10, "better": "up", "step": 1, "min": 1 }])
-        );
-        // The Radiant face is the base face, its Cry the same one.
-        let scripts = script();
-        assert!(Arc::ptr_eq(
-            scripts.base.cry.as_ref().expect("a Cry"),
-            scripts.radiant.cry.as_ref().expect("a Cry")
-        ));
-    }
-
     mod base {
         use super::*;
 

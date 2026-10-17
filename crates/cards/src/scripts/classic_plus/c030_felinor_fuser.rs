@@ -93,7 +93,6 @@ pub fn script() -> CardScripts {
 // R102, R179); options reach only chooser (R177); radiant Discovers Radiant Felinor Units.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -167,19 +166,6 @@ mod tests {
 
     mod c_n30_felinor_fuser {
         use super::*;
-
-        #[test]
-        fn is_a_3_3_felinor_unit_whose_faces_differ_only_in_the_discovered_cards_face() {
-            crate::register_all();
-            assert_eq!(ID, FUSER);
-            assert_eq!(crate::card_def(ID).id, FUSER);
-            let scripts = script();
-            // Each face is its own script, built by its own call.
-            assert!(!std::sync::Arc::ptr_eq(
-                scripts.base.cry.as_ref().unwrap(),
-                scripts.radiant.cry.as_ref().unwrap()
-            ));
-        }
 
         mod base {
             use super::*;

@@ -210,17 +210,6 @@ mod tests {
         }
 
         #[test]
-        fn costs_2_patch_v0_1_1() {
-            crate::register_all();
-            let s = scenario(json!({ "seed": "core-090-cost", "p1": { "hand": [INJECTION] } }));
-            let cost = match s.view(Some(P1)).you.hand {
-                HandView::Cards(cards) => cards.first().map(|card| card.cost),
-                HandView::Count { .. } => None,
-            };
-            assert_eq!(cost, Some(2));
-        }
-
-        #[test]
         fn s9_2_the_random_position_is_inside_the_whole_pile_and_replays_identically_from_the_seed() {
             crate::register_all();
             let build = || {

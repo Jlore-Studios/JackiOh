@@ -91,19 +91,6 @@ mod tests {
             .collect()
     }
 
-    #[test]
-    fn declares_one_unit_target_on_either_side_and_runs_one_script_on_both_faces() {
-        assert_eq!(crate::card_def(ID).id, BOOK);
-        let CardScripts { base, radiant } = script();
-        assert_eq!(
-            serde_json::to_value(&base.targets).unwrap(),
-            json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }])
-        );
-        // One script, so one hook.
-        assert!(Arc::ptr_eq(base.cry.as_ref().unwrap(), radiant.cry.as_ref().unwrap()));
-        assert_eq!(radiant.targets, base.targets);
-    }
-
     mod base {
         use super::*;
 

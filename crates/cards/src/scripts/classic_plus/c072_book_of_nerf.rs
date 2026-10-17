@@ -85,18 +85,6 @@ mod tests {
         scenario(options)
     }
 
-    #[test]
-    fn is_a_1_spell_book_the_radiant_face_declares_a_wider_target() {
-        crate::register_all();
-        let def = js(&crate::card_def(ID));
-        assert_eq!(def["cost"], json!(1));
-        assert_eq!(def["type"], json!("Spell"));
-        assert_eq!(def["tags"], json!(["Book"]));
-        let CardScripts { base, radiant } = script();
-        assert_eq!(js(&base.targets)[0]["filter"]["of"], json!(["unit", "backrow"]));
-        assert_eq!(js(&radiant.targets)[0]["filter"]["of"], json!(["unit", "backrow", "hand"]));
-    }
-
     mod base {
         use super::*;
 

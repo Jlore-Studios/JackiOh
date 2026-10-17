@@ -111,21 +111,6 @@ mod tests {
         })
     }
 
-    #[test]
-    fn prints_an_x_unit_human_3x_3x_and_radiant_6x_6x() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        let json = js(&def);
-        assert_eq!(json["cost"], json!("X"));
-        assert_eq!(json["type"], json!("Unit"));
-        assert_eq!(json["tags"], json!(["Human"]));
-        assert_eq!(js(&def.base.x_stats), json!({ "attack": 3, "health": 3 }));
-        assert_eq!(js(&def.radiant.x_stats), json!({ "attack": 6, "health": 6 }));
-        let CardScripts { base, radiant } = script();
-        assert!(base.cry.is_some());
-        assert!(radiant.cry.is_some());
-    }
-
     mod base {
         use super::*;
 

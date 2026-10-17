@@ -392,23 +392,6 @@ mod tests {
     }
 
     #[test]
-    fn radiant_is_14_18() {
-        crate::register_all();
-        let mut s = scenario(json!({
-            "seed": "conductor-stats",
-            "p1": {
-                "field": [{ "def": CONDUCTOR, "lane": 1 }, { "def": CONDUCTOR, "radiant": true, "lane": 2 }],
-                "hand": [FILLER],
-            },
-            "p2": { "hand": [FILLER] },
-        }));
-        let base = s.unit(P1, 1).expect("the base Conductor");
-        let radiant = s.unit(P1, 2).expect("the Radiant Conductor");
-        s.expect_stats(&base.id, json!({ "attack": 7, "health": 9 }));
-        s.expect_stats(&radiant.id, json!({ "attack": 14, "health": 18 }));
-    }
-
-    #[test]
     fn r1421_the_radiant_prime_is_a_prime_token() {
         let _preview = preview_sets(&[SetName::Meditative]);
         for n in 0..10 {

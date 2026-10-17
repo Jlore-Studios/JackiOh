@@ -95,16 +95,9 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_3_legendary_field_spell_with_no_tunable_count() {
+        fn declares_no_tuned_numbers() {
             crate::register_all();
-            let def = crate::card_def(super::super::ID);
-            assert_eq!(def.type_, CardType::FieldSpell);
-            assert_eq!(js(&def.cost), json!(3));
-            assert_eq!(def.rarity, Rarity::Legendary);
-            assert!(def.params.is_none());
-            let scripts = super::super::script();
-            assert!(scripts.base.end_of_turn.is_some());
-            assert!(scripts.radiant.end_of_turn.is_some());
+            assert!(crate::card_def(DATACENTER).params.is_none());
         }
 
         #[test]

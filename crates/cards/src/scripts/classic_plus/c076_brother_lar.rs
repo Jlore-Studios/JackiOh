@@ -55,8 +55,6 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    use crate::js;
-
     fn target(s: &Scenario, card: &str) -> Value {
         json!([{ "pick": "instance", "instanceId": s.card(card).id }])
     }
@@ -74,28 +72,6 @@ mod tests {
 
     mod c_n76_brother_lar {
         use super::*;
-
-        #[test]
-        fn is_a_1_1_1_cn_human_unit_2_2_radiant_naming_brother_ping() {
-            crate::register_all();
-            let def = crate::card_def(super::super::ID);
-            assert_eq!(def.id, LAR);
-            assert_eq!(
-                [
-                    js(&def.cost),
-                    js(&def.base.attack),
-                    js(&def.base.health),
-                    js(&def.radiant.attack),
-                    js(&def.radiant.health)
-                ],
-                [json!(1), json!(1), json!(1), json!(2), json!(2)]
-            );
-            assert_eq!(js(&def.tags), json!(["CN", "Human"]));
-            assert_eq!(def.refs, Some(vec![PING.to_string()]));
-            let scripts = super::super::script();
-            assert!(scripts.base.death.is_some());
-            assert!(scripts.radiant.death.is_some());
-        }
 
         mod base {
             use super::*;

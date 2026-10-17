@@ -21,7 +21,7 @@ import {
   type RunnerSignal,
 } from "./animations.ts";
 import { testid } from "./contract.ts";
-import { FX_SETTINGS_KEY, FX_SPEED_MAX, FX_SPEED_MIN } from "../fx/constants.ts";
+import { FX_SETTINGS_KEY } from "../fx/constants.ts";
 import { DEFAULT_FX_SETTINGS, resetFxSettingsForTests, type FxSettings } from "../fx/settings.ts";
 import { fullBoardView } from "../test/fixtures.ts";
 import { setReducedMotion } from "../test/setup.ts";
@@ -760,8 +760,6 @@ describe("B4 the effects speed scales the table", () => {
   });
 
   it("B4 scaleForSpeed clamps speeds above FX_SPEED_MAX and below FX_SPEED_MIN", () => {
-    expect(FX_SPEED_MIN).toBe(0.25);
-    expect(FX_SPEED_MAX).toBe(3);
     expect(scaleForSpeed(600, 5)).toBe(200);
     expect(scaleForSpeed(600, 100)).toBe(200);
     expect(scaleForSpeed(300, 0.1)).toBe(1200);

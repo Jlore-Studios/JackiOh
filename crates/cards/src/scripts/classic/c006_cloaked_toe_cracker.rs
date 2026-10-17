@@ -132,13 +132,6 @@ mod tests {
             use super::*;
 
             #[test]
-            fn is_a_3_4() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [STOCKPILE], "field": [CRACKER] }, "p2": { "hand": [STOCKPILE] } }));
-                s.expect_stats(CRACKER, json!({ "attack": 3, "health": 4, "maxHealth": 4 }));
-            }
-
-            #[test]
             fn r65_aura_your_traps_and_field_traps_in_hand_cost_0_while_it_is_on_the_field() {
                 crate::register_all();
                 let mut s = scenario(json!({

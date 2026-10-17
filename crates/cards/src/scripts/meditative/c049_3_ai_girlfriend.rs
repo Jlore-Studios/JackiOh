@@ -354,14 +354,6 @@ mod tests {
             use super::*;
 
             #[test]
-            fn radiant_is_4_60() {
-                let s = played("girlfriend-radiant-stats", true, 1);
-                let girlfriend = s.unit(P1, 1).expect("animated");
-                let stats = s.stats(&girlfriend);
-                assert_eq!((stats.attack, stats.health), (4, 60));
-            }
-
-            #[test]
             fn r386_times_reads_through_param() {
                 let mut s = scenario(json!({
                     "seed": "girlfriend-radiant-param",

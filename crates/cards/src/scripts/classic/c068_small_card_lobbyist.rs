@@ -63,7 +63,6 @@ pub fn script() -> CardScripts {
 // tuned numbers read through param (R386).
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -111,36 +110,8 @@ mod tests {
     mod c_68_small_card_lobbyist {
         use super::*;
 
-        #[test]
-        fn is_a_4_11_13_unit_22_26_radiant_with_no_keywords_its_two_numbers_declared() {
-            crate::register_all();
-            let def = js(&crate::card_def(ID));
-            assert_eq!(def["cost"], 4);
-            assert_eq!(
-                json!([def["base"]["attack"], def["base"]["health"], def["radiant"]["attack"], def["radiant"]["health"]]),
-                json!([11, 13, 22, 26]),
-            );
-            assert_eq!(
-                def["params"],
-                json!([
-                    { "key": "surcharge", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "tunedOn": "base" },
-                    { "key": "threshold", "base": 3, "radiant": 3, "better": "down", "step": 1, "min": 1 },
-                ]),
-            );
-            let scripts = script();
-            assert!(scripts.base.cost_aura.is_some());
-            assert!(scripts.radiant.cost_aura.is_some());
-        }
-
         mod base {
             use super::*;
-
-            #[test]
-            fn is_an_11_13_on_the_field() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [LOBBYIST, FILLER] } }));
-                s.play(LOBBYIST, json!({})).expect_stats(LOBBYIST, json!({ "attack": 11, "health": 13 }));
-            }
 
             #[test]
             fn every_3_cost_card_in_either_players_hand_costs_1_more_spells_and_units_alike() {
@@ -311,13 +282,6 @@ mod tests {
 
         mod radiant {
             use super::*;
-
-            #[test]
-            fn is_a_22_26_on_the_field() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [{ "def": LOBBYIST, "radiant": true }, FILLER] } }));
-                s.play(LOBBYIST, json!({})).expect_stats(LOBBYIST, json!({ "attack": 22, "health": 26 }));
-            }
 
             #[test]
             fn r65_the_opponent_cant_play_a_3_cost_card_absent_from_their_legal_actions_and_refused() {

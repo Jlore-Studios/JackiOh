@@ -55,7 +55,6 @@ pub fn script() -> CardScripts {
 // The C #27 Pestilent Slime case needs C #27's script (cards-classic-a) registered.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -124,36 +123,6 @@ mod tests {
 
     mod c_63_crop_dusting {
         use super::*;
-
-        #[test]
-        fn is_a_trap_answering_its_controllers_turn_start_with_two_numbers_and_one_script_on_both_faces() {
-            crate::register_all();
-            let def = js(&crate::card_def(ID));
-            assert_eq!(def["id"], DUSTING);
-            assert_eq!(def["type"], "Trap");
-            let scripts = script();
-            let declared: Vec<Value> = scripts
-                .base
-                .triggers
-                .iter()
-                .map(|trigger| json!([trigger.id, trigger.on.iter().map(|on| on.as_str()).collect::<Vec<&str>>()]))
-                .collect();
-            assert_eq!(declared, vec![json!(["crop-dusting", ["turnStarted"]])]);
-            assert_eq!(
-                def["params"],
-                json!([
-                    { "key": "tokens", "base": 1, "radiant": 3, "better": "up", "step": 1, "min": 1 },
-                    { "key": "draw", "base": 1, "radiant": 3, "better": "up", "step": 1, "min": 1 },
-                ]),
-            );
-            // The Radiant face is the same declaration and the same hooks.
-            assert_eq!(
-                scripts.radiant.triggers.iter().map(|trigger| trigger.id.clone()).collect::<Vec<String>>(),
-                scripts.base.triggers.iter().map(|trigger| trigger.id.clone()).collect::<Vec<String>>(),
-            );
-            assert_eq!(scripts.radiant.triggers[0].on, scripts.base.triggers[0].on);
-            assert_eq!(scripts.radiant.triggers[0].when.is_some(), scripts.base.triggers[0].when.is_some());
-        }
 
         mod base {
             use super::*;

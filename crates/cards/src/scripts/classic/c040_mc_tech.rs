@@ -105,7 +105,6 @@ pub fn script() -> CardScripts {
 // type its controller controls (p2 controls no Unit when they hold only traps).
 #[cfg(test)]
 mod tests {
-    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const TECH: &str = "classic-040";
@@ -143,24 +142,8 @@ mod tests {
     mod c_40_mc_tech {
         use super::*;
 
-        #[test]
-        fn has_a_script_per_face_and_the_radiant_pick_answers_into_its_resume_step() {
-            crate::register_all();
-            assert_eq!(crate::card_def(ID).id, TECH);
-            let scripts = script();
-            assert!(scripts.base.cry.is_some());
-            assert!(scripts.radiant.resume.contains_key("steal"));
-        }
-
         mod base {
             use super::*;
-
-            #[test]
-            fn is_a_3_3() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "field": [TECH], "hand": [ANCHOR] } }));
-                s.expect_stats(TECH, json!({ "attack": 3, "health": 3 }));
-            }
 
             #[test]
             fn r60_with_4_enemy_permanents_it_steals_one_at_random_which_is_now_yours() {

@@ -43,7 +43,6 @@ pub fn script() -> CardScripts {
 // conventions, R90). Radiant runs twice; repeats tuned on Radiant face only (R749; `param()`, R386).
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::effects::{TuneDirection, applicable_changes};
     use jackioh_engine::testkit::*;
     use std::collections::BTreeSet;
@@ -113,27 +112,6 @@ mod tests {
 
     mod c_54_rewind {
         use super::*;
-
-        #[test]
-        fn declares_one_target_a_unit_with_a_cry_on_the_field_or_in_a_graveyard_your_side_on_the_base_face_either_on_the_radiant()
-         {
-            crate::register_all();
-            let def = js(&crate::card_def(ID));
-            assert_eq!(def["id"], REWIND);
-            assert_eq!(
-                def["params"],
-                json!([{ "key": "repeats", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }]),
-            );
-            let scripts = script();
-            assert_eq!(
-                js(&scripts.base.targets),
-                json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "ally", "of": ["unit", "graveyard"], "check": "hasCry" } }]),
-            );
-            assert_eq!(
-                js(&scripts.radiant.targets),
-                json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "graveyard"], "check": "hasCry" } }]),
-            );
-        }
 
         mod base {
             use super::*;

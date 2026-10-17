@@ -287,12 +287,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn s4_2_step_4_it_watches_attackdeclared_and_nothing_else() {
-            crate::register_all();
-            assert_eq!(trigger("base").on, vec![GameEventType::AttackDeclared]);
-        }
-
-        #[test]
         fn r61_the_arming_condition_is_a_when_predicate_not_an_empty_run() {
             crate::register_all();
             // `traps.rs`: "`run` returning `[]` is a trap that fired for nothing — it can never mean

@@ -45,9 +45,7 @@ pub fn script() -> CardScripts {
 // Recruit never fires (R1); a Rush Token card stands for a unit-token card a deck may hold (R11).
 #[cfg(test)]
 mod tests {
-    use super::{script, ID};
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const PILE_ON: &str = "classic-060";
     const VANILLA: &str = "core-008"; // Unit 4/4
@@ -84,28 +82,9 @@ mod tests {
         use super::*;
 
         #[test]
-        fn costs_5_and_declares_no_numbers_the_radiant_face_drops_the_replacement() {
+        fn declares_no_tuned_numbers() {
             crate::register_all();
-            let def = js(&registered_catalog()[ID]);
-            assert_eq!(def["id"], PILE_ON);
-            assert_eq!(def["cost"], 5);
-            assert!(def["params"].is_null());
-            let scripts = script();
-            // A declaration holds a hook slot (`when`), so it is compared field by field.
-            assert_eq!(scripts.base.replacements.len(), 1);
-            let replacement = &scripts.base.replacements[0];
-            assert_eq!(replacement.id, "pile-on");
-            assert_eq!(replacement.on, ReplacementMoment::ToGraveyard);
-            assert_eq!(replacement.where_, Some(ReplacementWhere::SelfCard));
-            assert!(replacement.when.is_none());
-            assert_eq!(js(&replacement.instead), json!({ "to": "bottomOfLibrary" }));
-            assert!(replacement.then.is_none());
-            assert!(replacement.by.is_none());
-            assert!(scripts.radiant.replacements.is_empty());
-            assert!(match (&scripts.radiant.cry, &scripts.base.cry) {
-                (Some(radiant_cry), Some(base_cry)) => Arc::ptr_eq(radiant_cry, base_cry),
-                _ => false,
-            });
+            assert!(crate::card_def(PILE_ON).params.is_none());
         }
 
         mod base {

@@ -68,22 +68,6 @@ mod tests {
         }))
     }
 
-    #[test]
-    fn is_a_7_2_first_strike_rush_jlockeed_unit_both_faces_run_one_script_of_two_flags() {
-        crate::register_all();
-        let def = crate::card_def(super::ID);
-        assert_eq!(def.id, J15);
-        assert_eq!(def.tags, vec![Tag::Jlockeed]);
-        let scripts = super::script();
-        assert_eq!(
-            serde_json::to_value(scripts.base.static_flags.as_ref().expect("static flags")).unwrap(),
-            json!({ "neverDefense": true, "cantBeAttacked": true })
-        );
-        // TS `expect(radiant).toBe(base)`: the one script, flags and nothing else.
-        assert_eq!(scripts.radiant.static_flags, scripts.base.static_flags);
-        assert!(scripts.radiant.cry.is_none() && scripts.base.cry.is_none());
-    }
-
     mod base {
         use super::*;
 

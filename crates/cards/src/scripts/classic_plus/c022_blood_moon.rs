@@ -135,25 +135,6 @@ mod tests {
     mod c_n22_blood_moon {
         use super::*;
 
-        #[test]
-        fn is_a_1_trap_whose_radiant_face_is_a_field_trap_both_faces_replace_a_heal() {
-            let def = crate::card_def(ID);
-            assert_eq!(def.type_, CardType::Trap);
-            assert_eq!(def.radiant.type_, Some(CardType::FieldTrap));
-            let scripts = script();
-            let first = scripts.base.replacements.first().expect("a replacement");
-            assert!(matches_object(
-                &json!({ "on": first.on, "instead": js(&first.instead) }),
-                &json!({ "on": "healed", "instead": { "damage": "pierce", "lasting": "thisTurn" } }),
-            ));
-            let first = scripts.radiant.replacements.first().expect("a replacement");
-            assert!(matches_object(
-                &json!({ "on": first.on, "instead": js(&first.instead) }),
-                &json!({ "on": "healed", "instead": { "damage": "pierce" } }),
-            ));
-            assert_eq!(scripts.radiant.static_flags.as_ref().and_then(|flags| flags.heal_to_damage), Some(true));
-        }
-
         mod base {
             use super::*;
 

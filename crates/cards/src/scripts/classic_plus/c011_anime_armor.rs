@@ -27,10 +27,8 @@ pub fn script() -> CardScripts {
 // Anime Armor stands in p1's unit lane 1 unless a test says otherwise.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const ANIME: &str = "classicplus-011";
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
@@ -84,28 +82,6 @@ mod tests {
             ),
             "p2": merged(json!({ "hand": [FILLER], "library": [STOCKPILE, STOCKPILE], "mana": 10 }), p2),
         }))
-    }
-
-    #[test]
-    fn is_a_2_4_4_unit_radiant_8_8_with_reborn_declaring_cap_1_better_down_never_below_1_one_script_runs_both_faces() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.cost, CardCost::Fixed(2));
-        assert_eq!(
-            [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-            [Some(4), Some(4), Some(8), Some(8)]
-        );
-        assert_eq!(serde_json::to_value(&def.radiant.keywords).unwrap(), json!([{ "kind": "Reborn" }]));
-        assert_eq!(
-            serde_json::to_value(&def.params).unwrap(),
-            json!([{ "key": "cap", "base": 1, "radiant": 1, "better": "down", "step": 1, "min": 1 }])
-        );
-        // TS `expect(radiant).toBe(base)`: the Radiant face is the base face's very script.
-        let scripts = script();
-        assert!(matches!(
-            (&scripts.base.hero_guard, &scripts.radiant.hero_guard),
-            (Some(a), Some(b)) if Arc::ptr_eq(a, b)
-        ));
     }
 
     mod base {

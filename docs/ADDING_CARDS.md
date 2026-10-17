@@ -111,7 +111,7 @@ pub fn script() -> CardScripts {
 Read a declared number with `param(ctx, "draw")`, never a literal. Declared targets and modes go in `targets` and `modes`
 ([cards README §1](../crates/cards/README.md#1-the-card-file)). A card with no script of its own for one face reuses `base`.
 
-**Tests**, at the bottom of the same file (two cases in the shape of C+ #6's). Build every game with the testkit's `scenario()`
+**Tests**, at the bottom of the same file (in the shape of C+ #6's; printed cost and stats need no test, `tests/cross/catalog.rs` proves them). Build every game with the testkit's `scenario()`
 after `crate::register_all()`, and name a test after the ruling it pins (`fn r64_the_copy_lands_in_the_leftmost_free_zone`):
 
 ```rust
@@ -119,17 +119,6 @@ after `crate::register_all()`, and name a test after the ruling it pins (`fn r64
 mod tests {
     use super::ID;
     use jackioh_engine::testkit::*;
-
-    #[test]
-    fn is_a_1_1_1_human_unit_radiant_2_2() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.cost, CardCost::Fixed(1));
-        assert_eq!(
-            [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-            [Some(1), Some(1), Some(2), Some(2)]
-        );
-    }
 
     #[test]
     fn radiant_enters_the_field_when_played() {

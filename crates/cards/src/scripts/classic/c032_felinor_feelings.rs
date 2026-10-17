@@ -173,22 +173,9 @@ mod tests {
         use super::*;
 
         #[test]
-        fn has_no_declared_numbers_the_base_face_declares_its_target_the_radiant_face_asks_later() {
+        fn declares_no_tuned_numbers() {
             crate::register_all();
-            let def = crate::card_def(FEELINGS);
-            assert_eq!(def.id, FEELINGS);
-            assert!(def.params.is_none());
-            let scripts = script();
-            assert_eq!(
-                scripts
-                    .base
-                    .targets
-                    .first()
-                    .and_then(|decl| decl.filter.as_ref())
-                    .and_then(|filter| filter.check.clone()),
-                Some("felinorLane".to_string())
-            );
-            assert!(scripts.radiant.targets.is_empty());
+            assert!(crate::card_def(FEELINGS).params.is_none());
         }
 
         mod base {

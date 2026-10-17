@@ -519,6 +519,91 @@ mod r654_public_card_and_player_stats {
     }
 
     #[tokio::test]
+    async fn r377_get_api_stats_cards_publishes_drawn_not_played_counts_and_server_calculated_played_delta() {
+        let app = test_app().await;
+        // 40 games where p1 holds core-001 and core-002:
+        // core-001 is played in 30 games (21 wins, 9 losses -> 70% played win rate).
+        // core-001 is drawn but not played in 10 games (5 wins, 5 losses -> 50% baseline).
+        // Played delta for core-001 = 0.70 - 0.50 = +0.20 (+20 points).
+        // core-002 is never played in any of the 40 games (played cohort is empty -> delta is null).
+        let mut records = Vec::new();
+        // 21 played games won by p1
+        for i in 1..=21 {
+            records.push(make_game_record(
+                &format!("rec-p-win-{i}"),
+                RecordOptions {
+                    source: Some("live"),
+                    p1_deck: Some(vec!["core-001", "core-002"]),
+                    p1_played: Some(vec!["core-001"]),
+                    winner: Some("p1"),
+                    ..RecordOptions::default()
+                },
+            ));
+        }
+        // 9 played games lost by p1
+        for i in 1..=9 {
+            records.push(make_game_record(
+                &format!("rec-p-loss-{i}"),
+                RecordOptions {
+                    source: Some("live"),
+                    p1_deck: Some(vec!["core-001", "core-002"]),
+                    p1_played: Some(vec!["core-001"]),
+                    winner: Some("p2"),
+                    ..RecordOptions::default()
+                },
+            ));
+        }
+        // 5 unplayed games won by p1
+        for i in 1..=5 {
+            records.push(make_game_record(
+                &format!("rec-u-win-{i}"),
+                RecordOptions {
+                    source: Some("live"),
+                    p1_deck: Some(vec!["core-001", "core-002"]),
+                    p1_played: Some(vec![]),
+                    winner: Some("p1"),
+                    ..RecordOptions::default()
+                },
+            ));
+        }
+        // 5 unplayed games lost by p1
+        for i in 1..=5 {
+            records.push(make_game_record(
+                &format!("rec-u-loss-{i}"),
+                RecordOptions {
+                    source: Some("live"),
+                    p1_deck: Some(vec!["core-001", "core-002"]),
+                    p1_played: Some(vec![]),
+                    winner: Some("p2"),
+                    ..RecordOptions::default()
+                },
+            ));
+        }
+        insert_records(&app, records).await;
+
+        let (status, _, data) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(status, 200);
+
+        let card001 = find(&data["cards"], "id", &json!("core-001")).expect("core-001 is listed");
+        assert_eq!(card001["games"], json!(40));
+        assert_eq!(card001["drawnGames"], json!(40));
+        assert_eq!(card001["playedGames"], json!(30));
+        assert_eq!(card001["playedWinRate"].as_f64(), Some(0.7));
+        assert_eq!(card001["drawnNotPlayedGames"], json!(10));
+        assert_eq!(card001["drawnNotPlayedWinRate"].as_f64(), Some(0.5));
+        let delta001 = card001["playedDelta"].as_f64().expect("core-001 has playedDelta");
+        assert!((delta001 - 0.2).abs() < 1e-9);
+
+        let card002 = find(&data["cards"], "id", &json!("core-002")).expect("core-002 is listed");
+        assert_eq!(card002["games"], json!(40));
+        assert_eq!(card002["playedGames"], json!(0));
+        assert!(card002["playedWinRate"].is_null());
+        assert_eq!(card002["drawnNotPlayedGames"], json!(40));
+        assert_eq!(card002["drawnNotPlayedWinRate"].as_f64(), Some(26.0 / 40.0));
+        assert!(card002["playedDelta"].is_null());
+    }
+
+    #[tokio::test]
     async fn r654_get_and_put_api_stats_player_requires_active_auth_stores_stats_and_privacy_opt_out() {
         let app = test_app().await;
         // Unauthenticated requests

@@ -164,7 +164,6 @@ pub fn script() -> CardScripts {
 // radiant no discard clause".
 #[cfg(test)]
 mod tests {
-    use super::ID;
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -198,31 +197,6 @@ mod tests {
 
     mod base {
         use super::*;
-
-        #[test]
-        fn is_a_0_cost_temporary_token_spell() {
-            crate::register_all();
-            let def = crate::card_def(ID);
-            assert_eq!(def.cost, CardCost::Fixed(0));
-            assert_eq!(def.type_, CardType::Spell);
-            assert_eq!(def.rarity, Rarity::Token);
-            assert_eq!(def.printed_rarity, Some(PrintedRarity::Epic));
-            assert!(def.token);
-            assert_eq!(def.tags, vec![Tag::Token]);
-            assert_eq!(def.refs, Some(vec![MIND.to_string()]));
-            for face in [&def.base, &def.radiant] {
-                assert_eq!(face.keywords, vec![Keyword::Temporary]);
-            }
-            let params = def.params.clone().unwrap_or_default();
-            let pair = |key: &str| {
-                params.iter().find(|param| param.key == key).map(|param| (param.base, param.radiant))
-            };
-            assert_eq!(pair("mana"), Some((2, 2)));
-            assert_eq!(pair("discards"), Some((2, 2)));
-            assert_eq!(pair("damage"), Some((8, 8)));
-            assert_eq!(pair("heal"), Some((8, 8)));
-            assert_eq!(pair("armor"), Some((2, 2)));
-        }
 
         #[test]
         fn r864_attack_beats_greed_and_cancels_the_reward() {

@@ -65,18 +65,6 @@ mod tests {
         }))
     }
 
-    #[test]
-    fn is_a_1_spell_book_with_one_script_on_both_faces() {
-        crate::register_all();
-        let def = js(&crate::card_def(ID));
-        assert_eq!(def["cost"], json!(1));
-        assert_eq!(def["type"], json!("Spell"));
-        assert_eq!(def["tags"], json!(["Book"]));
-        let CardScripts { base, radiant } = script();
-        assert!(Arc::ptr_eq(base.cry.as_ref().unwrap(), radiant.cry.as_ref().unwrap()));
-        assert_eq!(js(&base.targets), js(&radiant.targets));
-    }
-
     mod base {
         use super::*;
 

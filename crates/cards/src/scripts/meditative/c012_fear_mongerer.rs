@@ -89,25 +89,6 @@ mod tests {
         )
     }
 
-    #[test]
-    fn is_a_2_cost_epic_human_5_7_unit_crying_end_of_turn_effects() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.cost, CardCost::Fixed(2));
-        assert_eq!(def.type_, CardType::Unit);
-        assert_eq!(def.rarity, Rarity::Epic);
-        assert_eq!(crate::js(&def.tags), json!(["Human"]));
-        assert_eq!((def.base.attack, def.base.health), (Some(5), Some(7)));
-        assert_eq!((def.radiant.attack, def.radiant.health), (Some(10), Some(14)));
-        assert_eq!(
-            crate::js(&def.params),
-            json!([{ "key": "times", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }])
-        );
-        let scripts = super::script();
-        assert!(scripts.base.cry.is_some());
-        assert!(scripts.radiant.cry.is_some());
-    }
-
     mod base {
         use super::*;
 

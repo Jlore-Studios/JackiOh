@@ -69,15 +69,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn s6_1_prints_rush_taunt_lifesteal_and_divine_shield_and_nothing_else() {
-            crate::register_all();
-            let mut g = scenario(json!({ "p1": { "field": [{ "def": "core-056", "lane": 1 }] } }));
-
-            assert_eq!(keyword_kinds(&g, PlayerId::P1, 1), ["Divine Shield", "Lifesteal", "Rush", "Taunt"]);
-            g.expect_stats("core-056", json!({ "attack": 3, "maxHealth": 2, "health": 2 }));
-        }
-
-        #[test]
         fn s4_1_rush_lets_it_attack_a_unit_on_its_summon_turn_but_not_the_hero() {
             crate::register_all();
             let mut g = scenario(json!({
@@ -182,18 +173,6 @@ mod tests {
 
     mod jilliax_radiant {
         use super::*;
-
-        #[test]
-        fn s8_patch_v0_1_1_the_radiant_face_keeps_all_four_keywords_and_adds_reborn() {
-            crate::register_all();
-            let mut g = scenario(json!({ "p1": { "field": [{ "def": "core-056", "radiant": true, "lane": 1 }] } }));
-
-            assert_eq!(
-                keyword_kinds(&g, PlayerId::P1, 1),
-                ["Divine Shield", "Lifesteal", "Reborn", "Rush", "Taunt"]
-            );
-            g.expect_stats("core-056", json!({ "attack": 6, "maxHealth": 4, "health": 4 }));
-        }
 
         #[test]
         fn s4_1_rush_not_charge_a_played_radiant_jilliax_may_attack_a_unit_but_not_the_hero() {

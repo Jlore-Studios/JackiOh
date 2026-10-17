@@ -104,19 +104,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_2_spell_token_printed_legendary_that_casts_itself_on_draw() {
-            crate::register_all();
-            let def = crate::card_def(super::super::ID);
-            assert_eq!(def.id, PACK);
-            assert_eq!(def.type_, CardType::Spell);
-            assert_eq!(js(&def.cost), json!(2));
-            assert_eq!(def.printed_rarity, Some(PrintedRarity::Legendary));
-            let scripts = super::super::script();
-            assert_eq!(scripts.base.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
-            assert_eq!(scripts.radiant.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
-        }
-
-        #[test]
         fn r482_the_text_agrees_with_its_count_at_every_value_and_the_radiant_price_reads_for_one_card_or_five() {
             crate::register_all();
             let def = crate::card_def(super::super::ID);
