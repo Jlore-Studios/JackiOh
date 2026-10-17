@@ -275,7 +275,7 @@ describe("B50 the watch screen", () => {
     expect(screen.getByTestId("game")).toBeInTheDocument();
   });
 
-  it("R1441 keeps a quiet watch socket that answers the wake probe", async () => {
+  it("R1441 R1103000 keeps a quiet watch socket that answers the wake probe", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date", "performance"] });
     watch();
     const socket = latest();
@@ -287,7 +287,8 @@ describe("B50 the watch screen", () => {
     wakeTab();
     expect(socket.sent).toHaveLength(2);
 
-    socket.frame({ type: "view", view: baseView({ viewer: "p1", turn: 2 }), legal: [] });
+    // The server answers a watcher's hello with the view it last sent.
+    socket.frame({ type: "view", view: baseView({ viewer: "p1" }), legal: [] });
     await advance(WAKE_PROBE_MS * 2);
 
     expect(sockets).toHaveLength(1);

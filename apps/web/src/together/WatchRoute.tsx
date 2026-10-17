@@ -4,12 +4,14 @@
 // in its hello, and answers the friend's `PlayerView` frames, each `SPECTATE_DELAY_MS` after the
 // state it shows, with `legal: []`. The board is `Game.tsx` as a replay draws it: nothing legal, a
 // no-op `onAction`, no prompt, drag or glow. Nothing a watcher sends after the hello reaches the
-// game, and this screen sends nothing at all (CLAUDE.md rule 7).
+// game, and this screen sends nothing but the hello (CLAUDE.md rule 7).
 //
 // Whether the friend may be watched (an unranked game, the friend allows it, room for one more) is
 // the server's: a refusal is a `forbidden` frame and a closed socket, and this screen says so with
 // the way back. An unexpected close opens the socket again, `WATCH_RECONNECT_ATTEMPTS` times
-// `WATCH_RECONNECT_MS` apart; a finished game is not reopened.
+// `WATCH_RECONNECT_MS` apart; a finished game is not reopened. A tab that wakes probes a quiet socket
+// with the hello again, which the server answers with the view it last sent, and replaces one that
+// does not answer (R1441, R1103000), within the same attempts.
 
 import { useEffect, useState, type ReactElement } from "react";
 

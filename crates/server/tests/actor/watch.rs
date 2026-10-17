@@ -749,3 +749,70 @@ mod r1107000_a_watch_ends_with_the_match {
         }
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// R1103000 — a watcher's later hello is answered, so a wake probe hears a live socket
+// ---------------------------------------------------------------------------------------------
+
+mod r1103000_a_watchers_later_hello {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r1103000_a_watchers_later_hello_is_answered_with_the_view_it_was_last_sent_and_nothing_newer() {
+        let w = world(false).await;
+        let watcher = w.watch(&w.watcher).await;
+        let hello = json!({ "type": "hello", "matchId": w.match_id, "friendId": w.friend.id });
+
+        // No view is due yet, so there is nothing to answer with.
+        watcher.send_json(hello.clone()).await;
+        settle().await;
+        assert!(watcher.of_type("view").is_empty(), "{:?}", watcher.frames());
+
+        w.keep_both().await;
+        let delay = ms(SPECTATE_DELAY_MS);
+        assert!(
+            watcher
+                .wait_for(0, delay + DELAY_SLACK, |frame| {
+                    frame["type"] == "view" && frame["view"]["phase"] == "main"
+                })
+                .await
+                .is_some(),
+            "the watcher never saw the turn begin: {:?}",
+            watcher.frames()
+        );
+        settle().await;
+        let sent = watcher.of_type("view");
+        let last = sent.last().cloned().expect("the watcher was sent its views");
+        assert_eq!(last["view"]["active"], "p1", "{last}");
+        // The friend ends the turn: a state the watcher is not owed for SPECTATE_DELAY_MS.
+        w.p1.receive_json(json!({ "type": "action", "action": { "type": "endTurn", "nonce": "f-end" } }));
+        settle().await;
+        assert_eq!(last_view_of(&w.p2)["active"], "p2");
+        w.p1.clear();
+        w.p2.clear();
+        let received = watcher.received();
+
+        watcher.send_json(hello).await;
+        settle().await;
+
+        let answered = watcher.frames().split_off(received);
+        assert_eq!(
+            answered,
+            vec![last],
+            "the view it was last sent, again, and nothing else"
+        );
+        for socket in [&w.p1, &w.p2] {
+            assert!(socket.of_type("view").is_empty(), "{:?}", socket.messages());
+            assert!(socket.of_type("ack").is_empty(), "{:?}", socket.messages());
+        }
+
+        // Any other frame is still dropped unread.
+        let received = watcher.received();
+        watcher.send_text("not json").await;
+        watcher
+            .send_json(json!({ "type": "action", "action": { "type": "endTurn", "nonce": "w-end" } }))
+            .await;
+        settle().await;
+        assert_eq!(watcher.received(), received, "{:?}", watcher.frames());
+    }
+}
