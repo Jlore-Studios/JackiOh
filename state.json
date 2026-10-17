@@ -9190,9 +9190,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-17T22:32:47Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39075453707",
-    "what": "build #1144 on muse"
+    "at": "2026-10-17T22:56:30Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39077031869",
+    "what": "suggestions on gpt"
   },
   "last_sweep": {
     "at": "2026-10-17T22:55:17Z",
@@ -17537,13 +17537,19 @@
         "number": 1077,
         "title": "Patch v0.3.Y: the AI's redacted worlds keep a Rollback's history and a Glitch's boards",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-17T20:03:26Z",
+        "number": 1128,
+        "title": "Architecture: record Duos matches in player and card statistics",
+        "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-17T22:19:55Z",
-    "last_run": "2026-10-17T19:08:10Z",
-    "provider": null,
+    "idle_since": "2026-10-17T22:56:30Z",
+    "last_run": "2026-10-17T22:56:30Z",
+    "provider": "gpt",
     "requested": false,
-    "run_id": null,
+    "run_id": "39077031869",
     "taken_asks": []
   },
   "usage": {
