@@ -3789,6 +3789,13 @@
     "1160": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T23:31:41Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 3 (no spec notes): SPEC \u00a79.5 and spec/rulings/R1141000.md must change, so easy is out"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
