@@ -3666,7 +3666,8 @@
       "taken_asks": [],
       "votes": {
         "approvals": [
-          "gemini"
+          "gemini",
+          "claude"
         ],
         "builder": "gemini",
         "rejections": [],
@@ -3675,10 +3676,16 @@
             "family": "gemini",
             "run": "39067317254",
             "tier": "medium"
+          },
+          {
+            "family": "claude",
+            "run": "39072769088",
+            "tier": "strong"
           }
         ],
         "sha": "47a33a748e6f38b20ad584ee111ae5651a7ff711",
         "tiers": {
+          "claude": "strong",
           "gemini": "medium"
         }
       }
