@@ -11,7 +11,7 @@
 
 use indexmap::IndexMap;
 
-use crate::config::{DEFAULT_TRUSTED_PROXY_HOPS, MAX_TRUSTED_PROXY_HOPS};
+use crate::config::{BUG_REPORT_REPO_DEFAULT, DEFAULT_TRUSTED_PROXY_HOPS, MAX_TRUSTED_PROXY_HOPS};
 
 /// The deployment environment (TS `"development" | "test" | "production"`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -85,6 +85,12 @@ pub struct Env {
     /// the bot pool (R1454). Off unless it is set to `on`: the bots decide in this process (SPEC §9.12), which
     /// wants a host with room for the AI's search.
     pub ladder_bots: bool,
+    /// `GITHUB_ISSUES_TOKEN`: a token that may open issues in `github_issues_repo`, with which the
+    /// server files a report of a match its own log does not reproduce (`bug_reports.rs`). Unset,
+    /// a finding is only logged. Secret.
+    pub github_issues_token: Option<String>,
+    /// `GITHUB_ISSUES_REPO`: the `owner/name` a report is filed in; `BUG_REPORT_REPO_DEFAULT` unset.
+    pub github_issues_repo: String,
 }
 
 impl std::fmt::Debug for Env {
@@ -108,6 +114,11 @@ impl std::fmt::Debug for Env {
             .field("trusted_proxy_hops", &self.trusted_proxy_hops)
             .field("deployed_commit", &self.deployed_commit)
             .field("ladder_bots", &self.ladder_bots)
+            .field(
+                "github_issues_token",
+                &self.github_issues_token.as_ref().map(|_| REDACTED),
+            )
+            .field("github_issues_repo", &self.github_issues_repo)
             .finish()
     }
 }
@@ -170,6 +181,8 @@ pub const SERVER_ONLY_ENV_VARS: &[&str] = &[
     "TRUSTED_PROXY_HOPS",
     "RENDER_GIT_COMMIT",
     "LADDER_BOTS",
+    "GITHUB_ISSUES_TOKEN",
+    "GITHUB_ISSUES_REPO",
 ];
 
 const MIN_CODE_PEPPER_LENGTH: usize = 32;
@@ -327,6 +340,35 @@ fn parse_ladder_bots(value: Option<&str>, problems: &mut Vec<String>) -> bool {
     }
 }
 
+/// Optional: unset or blank files no report.
+fn parse_github_issues_token(value: Option<&str>) -> Option<String> {
+    value
+        .filter(|text| is_non_empty(Some(text)))
+        .map(|raw| js_trim(raw).to_string())
+}
+
+fn parse_github_issues_repo(value: Option<&str>, problems: &mut Vec<String>) -> String {
+    let Some(raw) = value.filter(|text| is_non_empty(Some(text))) else {
+        return BUG_REPORT_REPO_DEFAULT.to_string();
+    };
+    let trimmed = js_trim(raw);
+    let parts: Vec<&str> = trimmed.split('/').collect();
+    let named = |part: &str| {
+        !part.is_empty()
+            && part
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
+    };
+    if parts.len() == 2 && parts.iter().all(|part| named(part)) {
+        return trimmed.to_string();
+    }
+    problems.push(format!(
+        "GITHUB_ISSUES_REPO: the owner/name of the GitHub repository the server files a report in when a match's own log does not reproduce it (got {}). Optional; defaults to {BUG_REPORT_REPO_DEFAULT}.",
+        quoted(raw)
+    ));
+    BUG_REPORT_REPO_DEFAULT.to_string()
+}
+
 /// Optional, and never a problem: anything that is not a git SHA is simply not reported.
 fn parse_deployed_commit(value: Option<&str>) -> Option<String> {
     let trimmed = js_trim(value?).to_lowercase();
@@ -450,6 +492,8 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
     let public_origins = parse_public_origins(read("PUBLIC_ORIGINS"), &mut problems);
     let trusted_proxy_hops = parse_trusted_proxy_hops(read("TRUSTED_PROXY_HOPS"), &mut problems);
     let ladder_bots = parse_ladder_bots(read("LADDER_BOTS"), &mut problems);
+    let github_issues_token = parse_github_issues_token(read("GITHUB_ISSUES_TOKEN"));
+    let github_issues_repo = parse_github_issues_repo(read("GITHUB_ISSUES_REPO"), &mut problems);
 
     if e2e && node_env == NodeEnv::Production {
         problems.push(
@@ -488,6 +532,8 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
         trusted_proxy_hops,
         deployed_commit: parse_deployed_commit(read("RENDER_GIT_COMMIT")),
         ladder_bots,
+        github_issues_token,
+        github_issues_repo,
     })
 }
 
