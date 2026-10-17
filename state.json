@@ -9070,9 +9070,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-17T02:43:08Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38995954005",
-    "what": "suggestions on claude-6"
+    "at": "2026-10-17T02:51:19Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38996492181",
+    "what": "suggestions on muse"
   },
   "last_sweep": {
     "at": "2026-10-17T02:46:49Z",
@@ -16783,11 +16783,11 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-10-17T02:03:08Z",
-    "last_run": "2026-10-17T00:03:23Z",
-    "provider": null,
+    "idle_since": "2026-10-17T02:51:19Z",
+    "last_run": "2026-10-17T02:51:19Z",
+    "provider": "muse",
     "requested": false,
-    "run_id": null,
+    "run_id": "38996492181",
     "taken_asks": []
   },
   "usage": {
