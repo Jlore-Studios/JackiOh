@@ -1823,10 +1823,8 @@
       "run_id": "38963916505",
       "started_at": "2026-10-16T20:41:04Z",
       "stop_requested": false,
-      "strike_log": [
-        "`claude-3` (claude, opus) rejected it: `crates/engine/src/view_for.rs:229`: The new in-hand tracking drops the card's new id, not its old one, when a card goes face-down from hand (R227). The old id t"
-      ],
-      "strikes": 1,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 2
