@@ -3392,6 +3392,13 @@
     "1147": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-17T21:42:32Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Not easy: engine, server, web and spec with a new ruling. Least sure of hard-line 'engine rules or the resolution loop': game_summary.rs and wire/stats.rs change, but they only read a finished replay and count records, never reduce or legal_actions, so medium, not hard"
+      },
       "failures": 1,
       "forced": false,
       "handoff": {
