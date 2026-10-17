@@ -48,7 +48,6 @@ pub fn script() -> CardScripts {
 // played (R11); hidden from the opponent (R97); radiant all three Radiant".
 #[cfg(test)]
 mod tests {
-    use super::ID;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -82,13 +81,6 @@ mod tests {
 
     mod c_n32_otherworldly_removal {
         use super::*;
-
-        #[test]
-        fn is_the_card_it_says() {
-            crate::register_all();
-            assert_eq!(ID, REMOVAL);
-            assert_eq!(crate::card_def(ID).id, REMOVAL);
-        }
 
         mod base {
             use super::*;

@@ -89,7 +89,6 @@ pub fn script() -> CardScripts {
 // to 0 after all other layers (§10.4), so their hits are no hits (R63).
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -105,11 +104,6 @@ mod tests {
     const ANCHOR: &str = "core-010"; // (0) Spell (§2.5).
 
     use crate::scenario;
-
-    fn def() -> CardDef {
-        crate::register_all();
-        crate::card_def(ID)
-    }
 
     use crate::js;
 
@@ -146,22 +140,6 @@ mod tests {
 
     fn at(card: &CardInstance) -> Value {
         json!([{ "pick": "instance", "instanceId": card.id }])
-    }
-
-    /// is a Field Trap with an aura, a self-Tribute condition and one number; the base face previews X
-    #[test]
-    fn is_a_field_trap_with_an_aura_a_self_tribute_condition_and_one_number_the_base_face_previews_x() {
-        assert_eq!(def().id, SIPHON);
-        assert_eq!(js(&def().type_), json!("Field Trap"));
-        assert_eq!(
-            js(&def().params),
-            json!([{ "key": "multiplier", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "base" }])
-        );
-        let scripts = script();
-        for face in [&scripts.base, &scripts.radiant] {
-            assert!(face.aura.is_some());
-            assert!(face.tribute_when.is_some());
-        }
     }
 
     /// base

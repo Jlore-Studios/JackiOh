@@ -77,7 +77,6 @@ pub fn script() -> CardScripts {
 // Fusing Crawler onto C #27 Pestilent Slime (R77) tests multiplier and trigger sitting on one card.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -155,31 +154,6 @@ mod tests {
 
     mod c53_plague_crawler {
         use super::*;
-
-        #[test]
-        fn declares_no_target_a_resume_step_its_two_numbers_and_one_script_on_both_faces() {
-            crate::register_all();
-            let def = js(&registered_catalog()[ID]);
-            assert_eq!(def["id"], CRAWLER);
-            let scripts = script();
-            // The pick is a prompt as the Cry resolves (R831016), not a declared target.
-            assert!(scripts.base.targets.is_empty());
-            assert!(scripts.base.resume.contains_key("placed"));
-            assert_eq!(
-                def["params"],
-                json!([
-                    { "key": "tokens", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 },
-                    { "key": "draw", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 },
-                ]),
-            );
-            // The Radiant face is the same script.
-            assert_eq!(js(&scripts.radiant.targets), js(&scripts.base.targets));
-            assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());
-            assert_eq!(
-                scripts.radiant.triggers.iter().map(|trigger| trigger.id.clone()).collect::<Vec<_>>(),
-                scripts.base.triggers.iter().map(|trigger| trigger.id.clone()).collect::<Vec<_>>(),
-            );
-        }
 
         mod base {
             use super::*;

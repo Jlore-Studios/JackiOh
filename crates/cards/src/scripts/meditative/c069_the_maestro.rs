@@ -309,14 +309,6 @@ mod tests {
         }
 
         #[test]
-        fn the_radiant_face_is_8_8() {
-            let s = full_enemy("maestro-stats", true, 0);
-            let maestro = s.unit("p1", 1).expect("the Maestro");
-            let stats = s.stats(maestro.id.as_str());
-            assert_eq!((stats.attack, stats.health), (8, 8));
-        }
-
-        #[test]
         fn two_per_zone_on_the_radiant_face_from_each_of_four_zones() {
             let mut s = full_enemy("maestro-radiant-four", true, 4);
             activate_exile(&mut s);

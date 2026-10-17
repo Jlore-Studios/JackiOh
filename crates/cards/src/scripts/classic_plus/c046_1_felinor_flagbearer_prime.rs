@@ -103,19 +103,6 @@ mod tests {
 
     use crate::js;
 
-    #[test]
-    fn is_a_2_felinor_prime_unit_token_card_printed_legendary_5_5_rush_both_faces_run_one_script() {
-        crate::register_all();
-        let def = crate::card_def(super::ID);
-        assert!(def.token);
-        assert_eq!(js(&def.tags), json!(["Felinor", "Prime", "Token"]));
-        assert_eq!(def.printed_rarity, Some(PrintedRarity::Legendary));
-        // TS `expect(radiant).toBe(base)`: both faces hold the very same hooks.
-        let scripts = script();
-        assert!(Arc::ptr_eq(scripts.radiant.cry.as_ref().unwrap(), scripts.base.cry.as_ref().unwrap()));
-        assert!(Arc::ptr_eq(scripts.radiant.aura.as_ref().unwrap(), scripts.base.aura.as_ref().unwrap()));
-    }
-
     mod base {
         use super::*;
 

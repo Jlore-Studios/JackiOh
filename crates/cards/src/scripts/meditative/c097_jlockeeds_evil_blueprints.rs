@@ -72,8 +72,7 @@ pub fn script() -> CardScripts {
 // nine; the opponent sees a prompt and a hidden card; radiant the building is Radiant".
 #[cfg(test)]
 mod tests {
-    use super::{BUILDINGS, ID, script};
-    use crate::js;
+    use super::{BUILDINGS, ID};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -111,20 +110,6 @@ mod tests {
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "library": [SPARE, SPARE] },
             "p2": { "hand": [FILLER], "library": [SPARE, SPARE] },
         }))
-    }
-
-    #[test]
-    fn is_a_0_cost_spell_tagged_jlockeed_mythic() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.id, "meditative-097");
-        assert_eq!(js(&def.cost), json!(0));
-        assert_eq!(def.rarity, Rarity::Mythic);
-        assert_eq!(def.tags, vec![Tag::Jlockeed]);
-        assert_eq!(def.type_, CardType::Spell);
-        let s = script();
-        assert!(s.base.cry.is_some());
-        assert!(s.radiant.cry.is_some());
     }
 
     mod base {

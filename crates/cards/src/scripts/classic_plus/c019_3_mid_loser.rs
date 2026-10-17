@@ -125,19 +125,6 @@ mod tests {
     mod c_n19_3_mid_loser {
         use super::*;
 
-        #[test]
-        fn is_a_2_5_5_unit_token_printed_legendary_whose_radiant_face_prints_lucky_1_one_script_for_both() {
-            let def = crate::card_def(ID);
-            assert!(def.token);
-            assert_eq!(def.printed_rarity, Some(PrintedRarity::Legendary));
-            assert_eq!(def.radiant.keywords, vec![Keyword::Lucky { n: 1 }]);
-            let scripts = script();
-            assert!(Arc::ptr_eq(
-                scripts.base.cry.as_ref().expect("base cry"),
-                scripts.radiant.cry.as_ref().expect("radiant cry"),
-            ));
-        }
-
         mod base {
             use super::*;
 

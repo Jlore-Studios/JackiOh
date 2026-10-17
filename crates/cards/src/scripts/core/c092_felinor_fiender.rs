@@ -306,19 +306,6 @@ mod tests {
 
             s.expect_stats(FIENDER, json!({ "attack": 6, "maxHealth": 8 }));
         }
-
-        #[test]
-        fn s8_the_base_face_prints_stack_and_no_charge() {
-            crate::register_all();
-            let s = scenario(json!({
-                "seed": "core-092-keywords-base",
-                "p1": { "field": [FIENDER], "hand": ["core-005"] },
-                "p2": { "hand": ["core-005"] },
-            }));
-
-            assert!(keyword_kinds(&s, FIENDER).contains(&"Stack".to_string()));
-            assert!(!keyword_kinds(&s, FIENDER).contains(&"Charge".to_string()));
-        }
     }
 
     // =========================================================================================

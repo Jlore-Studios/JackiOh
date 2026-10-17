@@ -141,22 +141,6 @@ mod tests {
             .clone()
     }
 
-    #[test]
-    fn is_a_4_cost_legendary_field_spell_answering_each_resolution() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.cost, CardCost::Fixed(4));
-        assert_eq!(def.type_, CardType::FieldSpell);
-        assert_eq!(def.rarity, Rarity::Legendary);
-        assert_eq!(
-            crate::js(&def.params),
-            json!([{ "key": "setCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0 }])
-        );
-        let scripts = super::script();
-        assert_eq!(scripts.base.triggers.len(), 1);
-        assert_eq!(scripts.radiant.triggers.len(), 1);
-    }
-
     mod base {
         use super::*;
 

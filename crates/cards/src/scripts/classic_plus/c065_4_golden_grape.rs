@@ -93,8 +93,6 @@ mod tests {
     const FELINORS: &str = "core-012"; // Unit 3/4 → 6/9
     const SHEEPISH: &str = "core-041"; // Trap
 
-    use crate::js;
-
     fn pick(s: &Scenario, card: &str) -> Value {
         json!([{ "pick": "instance", "instanceId": s.card(card).id }])
     }
@@ -116,19 +114,6 @@ mod tests {
 
     fn radiant_golden() -> Value {
         json!({ "def": GOLDEN, "radiant": true })
-    }
-
-    #[test]
-    fn is_a_1_fruit_spell_token_printed_legendary_whose_pick_is_your_hand_or_your_side_of_the_field() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.id, GOLDEN);
-        assert_eq!(js(&def.cost), json!(1));
-        assert_eq!(js(&def.printed_rarity), json!("Legendary"));
-        let decl = json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "ally", "of": ["unit", "backrow", "hand"] } }]);
-        let CardScripts { base, radiant } = script();
-        assert_eq!(js(&base.targets), decl);
-        assert_eq!(js(&radiant.targets), decl);
     }
 
     mod base {

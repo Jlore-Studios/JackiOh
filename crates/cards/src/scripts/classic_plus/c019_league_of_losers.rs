@@ -157,17 +157,6 @@ mod tests {
     mod c_n19_league_of_losers {
         use super::*;
 
-        #[test]
-        fn is_a_4_legendary_spell_with_no_play_time_choice() {
-            let def = crate::card_def(ID);
-            assert_eq!(def.cost, CardCost::Fixed(4));
-            assert_eq!(def.rarity, Rarity::Legendary);
-            let scripts = script();
-            assert!(scripts.base.targets.is_empty());
-            assert!(scripts.radiant.targets.is_empty());
-            assert_eq!(def.refs, Some(FIVE.iter().map(|id| id.to_string()).collect::<Vec<String>>()));
-        }
-
         mod base {
             use super::*;
 

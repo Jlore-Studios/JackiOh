@@ -217,20 +217,6 @@ mod tests {
         }))
     }
 
-    use crate::js;
-
-    #[test]
-    fn is_a_4_legendary_spell_the_radiant_face_adds_echo_1() {
-        crate::register_all();
-        let def = crate::card_def(super::ID);
-        assert_eq!(js(&def.cost), json!(4));
-        assert_eq!(def.rarity, Rarity::Legendary);
-        let scripts = script();
-        assert!(scripts.base.static_flags.is_none());
-        assert_eq!(js(&scripts.radiant.static_flags), json!({ "echo": 1 }));
-        assert!(Arc::ptr_eq(scripts.radiant.cry.as_ref().unwrap(), scripts.base.cry.as_ref().unwrap()));
-    }
-
     mod base {
         use super::*;
 

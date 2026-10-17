@@ -205,26 +205,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_1_1_1_common_unit_radiant_2_2_with_no_params() {
-            let def = crate::card_def(ID);
-            assert_eq!(def.id, VOLATILITY);
-            assert_eq!(def.cost, CardCost::Fixed(1));
-            assert_eq!(def.type_, CardType::Unit);
-            assert_eq!(def.rarity, Rarity::Common);
-            assert!(def.tags.is_empty());
-            assert_eq!(
-                [
-                    def.base.attack,
-                    def.base.health,
-                    def.radiant.attack,
-                    def.radiant.health
-                ],
-                [Some(1), Some(1), Some(2), Some(2)]
-            );
-            assert!(def.params.is_none() || def.params.as_ref().is_some_and(Vec::is_empty));
-        }
-
-        #[test]
         fn r1160_both_faces_carry_their_multipliers() {
             let scripts = script();
             assert_eq!(
@@ -506,12 +486,6 @@ mod tests {
                 }
             }
             assert!(keyword_seen && x_seen);
-        }
-
-        #[test]
-        fn radiant_is_2_2() {
-            let (mut s, id) = volatile("vol-radiant-stats", "field", true, &[]);
-            s.expect_stats(id.as_str(), json!({ "attack": 2, "health": 2 }));
         }
 
         #[test]

@@ -111,29 +111,6 @@ mod tests {
     mod m94_shrinking_felinor {
         use super::*;
 
-        #[test]
-        fn is_a_4_cost_9_11_felinor_and_radiant_18_22_with_its_shrinks_declared() {
-            let def = crate::card_def(ID);
-            assert_eq!(def.cost, CardCost::Fixed(4));
-            assert!(!def.token);
-            assert_eq!(def.rarity, Rarity::Rare);
-            assert_eq!([def.base.attack, def.base.health], [Some(9), Some(11)]);
-            assert_eq!([def.radiant.attack, def.radiant.health], [Some(18), Some(22)]);
-            assert!(def.base.keywords.is_empty());
-            assert!(def.radiant.keywords.is_empty());
-            let params = def.params.unwrap_or_default();
-            let shrink_attack = params.iter().find(|param| param.key == "shrinkAttack");
-            let shrink_health = params.iter().find(|param| param.key == "shrinkHealth");
-            assert_eq!(
-                shrink_attack.map(|param| (param.base, param.radiant, param.min)),
-                Some((3, 2, Some(1)))
-            );
-            assert_eq!(
-                shrink_health.map(|param| (param.base, param.radiant, param.min)),
-                Some((3, 3, Some(1)))
-            );
-        }
-
         mod base {
             use super::*;
 

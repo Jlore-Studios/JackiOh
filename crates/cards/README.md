@@ -228,7 +228,10 @@ A card's tests are the `#[cfg(test)] mod tests` at the bottom of its file, built
 what each does). For **base and radiant separately**: one test per behaviour in the card's spec §8 row
 and every must-pass case in its BUILD table row (M4-T4 for Core, M9 for Classic and Classic+). A
 test that proves a ruling is named after it: `fn r64_the_copy_lands_in_the_leftmost_free_zone`
-(CLAUDE.md rule 3).
+(CLAUDE.md rule 3). A test that only reads printed data back with no action (cost, stats, type, tags
+or rarity, which `tests/cross/catalog.rs` proves for every entry) proves nothing a card test should,
+so write none (#1125). A "no tuned numbers" clause still gets its
+`params.is_none()` test: `catalog.rs` does not assert `params`.
 
 A card that declares `condition_met` proves both answers in `tests/cross/condition_active.rs`, and
 one that declares `preview` proves its values in `tests/cross/preview.rs`; each file also pins the

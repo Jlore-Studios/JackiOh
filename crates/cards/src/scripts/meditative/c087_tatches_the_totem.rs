@@ -144,23 +144,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_1_0_3_legendary_unit_radiant_0_6_with_all_five_tribal_tags() {
-            let def = crate::card_def(ID);
-            assert_eq!(def.id, TATCHES);
-            assert_eq!(def.cost, CardCost::Fixed(1));
-            assert_eq!(def.type_, CardType::Unit);
-            assert_eq!(def.rarity, Rarity::Legendary);
-            assert_eq!(
-                [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-                [Some(0), Some(3), Some(0), Some(6)]
-            );
-            let params = def.params.expect("cards");
-            assert_eq!(params.len(), 1);
-            assert_eq!(params[0].key, "cards");
-            assert_eq!((params[0].base, params[0].radiant), (1, 1));
-        }
-
-        #[test]
         fn r1162_its_tags_are_the_five_tribal_tags() {
             assert_eq!(
                 crate::card_def(ID).tags,

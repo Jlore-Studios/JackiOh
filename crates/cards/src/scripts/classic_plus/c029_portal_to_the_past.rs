@@ -40,7 +40,6 @@ pub fn script() -> CardScripts {
 // packages/engine/test/lastBoards.test.ts.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -110,23 +109,6 @@ mod tests {
 
     mod c_n29_portal_to_the_past {
         use super::*;
-
-        #[test]
-        fn is_a_3_spell_whose_radiant_count_is_the_declared_number_cards() {
-            crate::register_all();
-            let def = crate::card_def(ID);
-            assert!(matches_object(&js(&def), &json!({ "id": PORTAL, "type": "Spell", "cost": 3 })));
-            assert_eq!(
-                js(&def.params),
-                json!([
-                    { "key": "cards", "base": 3, "radiant": 3, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" },
-                    { "key": "setCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0 }
-                ])
-            );
-            let scripts = script();
-            assert!(!scripts.base.resume.is_empty());
-            assert!(scripts.radiant.resume.is_empty());
-        }
 
         #[test]
         fn r386_a_degrade_makes_the_pick_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {

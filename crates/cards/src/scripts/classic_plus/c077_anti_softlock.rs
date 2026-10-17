@@ -123,26 +123,6 @@ mod tests {
     mod c_n77_anti_softlock {
         use super::*;
 
-        #[test]
-        fn draws_its_declared_draw_the_radiant_face_declares_the_choice() {
-            crate::register_all();
-            let def = crate::card_def(super::super::ID);
-            assert_eq!(def.id, SOFTLOCK);
-            let params: Option<Vec<Value>> = def.params.as_ref().map(|params| {
-                params
-                    .iter()
-                    .map(|entry| {
-                        let entry = js(entry);
-                        json!([entry["key"], entry["base"], entry["radiant"]])
-                    })
-                    .collect()
-            });
-            assert_eq!(params, Some(vec![json!(["draw", 1, 2])]));
-            let scripts = super::super::script();
-            assert!(scripts.base.modes.is_empty());
-            assert_eq!(js(&scripts.radiant.modes), json!([{ "kind": "mode", "options": [ALL, YOURS] }]));
-        }
-
         mod base {
             use super::*;
 

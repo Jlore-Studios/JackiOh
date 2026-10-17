@@ -60,7 +60,6 @@ pub fn script() -> CardScripts {
 // draw; empty GY nothing; radiant Discover at −1."
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const GRAVEDIGGER: &str = "core-037";
@@ -96,26 +95,6 @@ mod tests {
 
     mod gravedigger {
         use super::*;
-
-        #[test]
-        fn is_sec8_2s_37_a_2_cost_unit_4_5_to_8_10() {
-            crate::register_all();
-            let def = crate::card_def(ID);
-            assert_eq!(def.index, "37");
-            assert_eq!(def.type_, CardType::Unit);
-            assert_eq!(def.cost, CardCost::Fixed(2));
-            assert_eq!((def.base.attack, def.base.health), (Some(4), Some(5)));
-            assert_eq!((def.radiant.attack, def.radiant.health), (Some(8), Some(10)));
-        }
-
-        #[test]
-        fn base_hangs_its_clause_on_start_of_turn_and_radiant_answers_through_a_resume_step_sec10_6() {
-            let scripts = script();
-            assert!(scripts.base.start_of_turn.is_some());
-            assert!(scripts.base.resume.is_empty());
-            assert!(scripts.radiant.start_of_turn.is_some());
-            assert!(scripts.radiant.resume.contains_key("picked"));
-        }
 
         #[test]
         fn base_adds_a_graveyard_card_to_your_hand_at_the_start_of_your_turn_before_the_draw() {

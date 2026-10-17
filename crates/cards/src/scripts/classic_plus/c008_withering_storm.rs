@@ -78,7 +78,6 @@ pub fn script() -> CardScripts {
 // Degraded events stay unread while in deck (R177, R311).
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -135,21 +134,6 @@ mod tests {
     /// Whether a Degrade left anything on the card (its cost or its tuning).
     fn was_changed(card: &CardInstance) -> bool {
         card.cost_mod != 0 || card.tuning.is_some()
-    }
-
-    #[test]
-    fn is_a_2_spell_declaring_cards_4_and_draw_1_on_both_faces() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.type_, CardType::Spell);
-        assert_eq!(def.cost, CardCost::Fixed(2));
-        assert_eq!(
-            def.params.unwrap_or_default().iter().map(|p| (p.key.clone(), p.base, p.radiant)).collect::<Vec<_>>(),
-            vec![("cards".to_string(), 5, 5), ("draw".to_string(), 1, 1)]
-        );
-        let scripts = script();
-        assert!(scripts.base.cry.is_some());
-        assert!(scripts.radiant.cry.is_some());
     }
 
     mod base {

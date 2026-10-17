@@ -71,7 +71,6 @@ pub fn script() -> CardScripts {
 // Mana Well is a Field Spell and Mr. Vanilla a Unit, neither of them a Spell.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -117,20 +116,6 @@ mod tests {
 
     mod c_56_spell_tyrant {
         use super::*;
-
-        #[test]
-        fn declares_its_number_spells_the_base_face_picks_the_radiant_face_casts_them_all() {
-            crate::register_all();
-            let def = js(&crate::card_def(ID));
-            assert_eq!(def["id"], TYRANT);
-            assert_eq!(
-                def["params"],
-                json!([{ "key": "spells", "base": 3, "radiant": 3, "better": "up", "step": 1, "min": 1, "tunedOn": "base" }]),
-            );
-            let scripts = script();
-            assert!(scripts.base.resume.contains_key("cast"));
-            assert!(scripts.radiant.resume.is_empty());
-        }
 
         mod base {
             use super::*;

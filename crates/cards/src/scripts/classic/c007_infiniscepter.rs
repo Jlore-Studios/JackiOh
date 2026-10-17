@@ -175,22 +175,6 @@ mod tests {
     mod c_n7_infiniscepter {
         use super::*;
 
-        #[test]
-        fn declares_its_hand_pick_one_activate_once_per_turn_and_the_same_script_on_both_faces() {
-            crate::register_all();
-            assert_eq!(ID, SCEPTER);
-            let scripts = script();
-            let (Some(base_cry), Some(radiant_cry)) = (&scripts.base.cry, &scripts.radiant.cry) else {
-                panic!("both faces have a Cry");
-            };
-            assert!(Arc::ptr_eq(base_cry, radiant_cry));
-            assert!(matches_object(
-                &js(&scripts.base.targets[0]),
-                &json!({ "kind": "hand", "filter": { "type": "Spell", "check": "spellWithinLimit" } })
-            ));
-            assert_eq!(scripts.base.activations[0].uses, ActivationUses::Count(1));
-        }
-
         mod base_the_cry {
             use super::*;
 

@@ -80,22 +80,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn s7_a_10_10_whose_four_keywords_are_printed_data_with_no_script_on_either_face() {
-            crate::register_all();
-            let mut s = scenario(json!({ "p1": { "field": [GOLEM], "hand": [ANCHOR] } }));
-            let golem = golem_of(&s);
-
-            s.expect_stats(&golem, json!({ "attack": 10, "health": 10, "maxHealth": 10 }));
-            assert_eq!(
-                keywords_of(&s, &golem),
-                vec!["Divine Shield", "First Strike", "Lifesteal", "Rush"]
-            );
-            let scripts = super::super::script();
-            assert!(scripts.base.cry.is_none() && scripts.radiant.cry.is_none());
-            assert!(scripts.base.targets.is_empty() && scripts.radiant.targets.is_empty());
-        }
-
-        #[test]
         fn s6_1_rush_on_the_turn_it_arrives_it_may_attack_a_unit_and_first_strike_kills_it_untouched() {
             crate::register_all();
             let mut s = scenario(json!({

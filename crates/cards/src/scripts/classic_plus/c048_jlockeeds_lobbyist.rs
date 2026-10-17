@@ -114,23 +114,6 @@ mod tests {
         added.or(burned)
     }
 
-    use crate::js;
-
-    #[test]
-    fn is_a_0_3_jlockeed_unit_0_6_radiant_whose_base_face_alone_carries_the_defense_ban() {
-        crate::register_all();
-        let def = crate::card_def(super::ID);
-        assert_eq!(def.id, LOBBYIST);
-        assert_eq!(js(&def.tags), json!(["Jlockeed"]));
-        assert_eq!(
-            [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-            [Some(0), Some(3), Some(0), Some(6)]
-        );
-        let scripts = script();
-        assert_eq!(scripts.base.static_flags.as_ref().and_then(|flags| flags.never_defense), Some(true));
-        assert!(scripts.radiant.static_flags.as_ref().and_then(|flags| flags.never_defense).is_none());
-    }
-
     mod base {
         use super::*;
 

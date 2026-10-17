@@ -98,15 +98,6 @@ mod tests {
         }))
     }
 
-    #[test]
-    fn is_a_1_spell_that_casts_itself_on_draw_on_both_faces() {
-        crate::register_all();
-        assert_eq!(crate::card_def(super::ID).type_, CardType::Spell);
-        let scripts = super::script();
-        assert_eq!(scripts.base.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
-        assert_eq!(scripts.radiant.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
-    }
-
     mod base {
         use super::*;
 

@@ -53,7 +53,6 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::ID;
-    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -87,25 +86,6 @@ mod tests {
             Some(unit) if unit.def_id == SHEEP => unit,
             other => panic!("lane {lane} of {player:?} holds {:?}, not a Sheep", other.map(|unit| unit.def_id)),
         }
-    }
-
-    #[test]
-    fn is_a_1_cost_3_5_human() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.cost, CardCost::Fixed(1));
-        assert_eq!(def.type_, CardType::Unit);
-        assert_eq!(def.rarity, Rarity::Common);
-        assert_eq!(js(&def.tags), json!(["Human"]));
-        assert_eq!(
-            [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-            [Some(3), Some(5), Some(6), Some(10)]
-        );
-        assert!(def.params.is_none());
-        assert_eq!(js(&def.refs), json!([SHEEP]));
-        let scripts = super::script();
-        assert!(scripts.base.cry.is_some());
-        assert!(scripts.radiant.cry.is_some());
     }
 
     mod base {

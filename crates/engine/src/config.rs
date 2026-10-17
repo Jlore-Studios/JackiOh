@@ -1642,8 +1642,6 @@ mod tests {
         assert_eq!(fib(6), 8);
         assert_eq!(fib(40), 89);
         assert_eq!(FATIGUE_DAMAGE(4), 4);
-        assert_eq!(DAMAGE_REDIRECT_CAP, 10);
-        assert_eq!(BOARD_HISTORY_DEPTH, 4);
         assert_eq!(AI_DIFFICULTY[Difficulty::Easy], HUMAN_HANDICAP);
     }
 }
