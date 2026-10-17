@@ -3654,9 +3654,12 @@
         "sha": "47a33a748e6f38b20ad584ee111ae5651a7ff711"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-17T20:35:28Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1142,
       "kind": "review",
       "pending_request": false,
