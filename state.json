@@ -2511,7 +2511,9 @@
     },
     "1112": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6234634927"
+      ],
       "difficulty_by": {
         "at": "2026-10-17T13:57:57Z",
         "difficulty": "hard",
@@ -2544,9 +2546,7 @@
       "started_at": "2026-10-17T13:49:19Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6234634927"
-      ]
+      "taken_asks": []
     },
     "1113": {
       "asks": [
