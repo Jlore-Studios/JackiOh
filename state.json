@@ -2262,16 +2262,19 @@
       "interruptions": 0,
       "issue": 1081,
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-10-16T23:18:18Z",
       "requested_by": "jgoetzmann-bot",
+      "round_tier": "medium",
       "run_id": "38981349971",
       "self_check_findings": [],
       "source": "ci",
       "started_at": "2026-10-16T23:25:58Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "muse"
