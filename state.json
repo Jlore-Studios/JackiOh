@@ -3241,9 +3241,12 @@
     "1117": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-17T06:53:57Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1103,
       "kind": "revise",
       "last_findings": [],
