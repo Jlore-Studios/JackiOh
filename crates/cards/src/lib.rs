@@ -34,7 +34,10 @@ pub mod ky_test_bank;
 /// R767000: the shipped catalog versions a replay folds under.
 mod history;
 
-pub use history::{KEPT_SCRIPTS, KeptScript, carried_versions, has_script_at, shipped_catalog};
+pub use history::{
+    KEPT_SCRIPTS, KeptScript, carried_versions, catalog_at, catalog_defs_at, has_script_at, shipped_catalog,
+    shipped_versions,
+};
 
 pub use query::*;
 

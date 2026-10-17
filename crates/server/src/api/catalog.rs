@@ -7,7 +7,7 @@
 //! catalog that disagree. Everything downstream depends only on `Catalog`, which `App.catalog` holds:
 //! the defs, the version and the deployed commit `GET /api/catalog` reports.
 //!
-//! Not ported (SURFACE §11.3): `GET /api/catalog/:version`, which the client does not use.
+//! SPEC §9.4 and R388: `GET /api/catalog/:version` serves the exact snapshot for any shipped patch.
 
 use std::sync::Arc;
 
@@ -17,7 +17,7 @@ use jackioh_engine::{CardDef, CardDefs, set_ships};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-use crate::api::http::{ApiResult, Req};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req};
 use crate::app::App;
 
 /// The patch list (R388, B4.2): `patches.json`, the list of patches in the order they were made.
@@ -231,4 +231,48 @@ pub async fn get_catalog(app: &Arc<App>, _req: Req) -> ApiResult {
     Ok(builder
         .body(Body::from(body))
         .unwrap_or_else(|error| panic!("a catalog response: {error}")))
+}
+
+/// `GET /api/catalog/:version` (SPEC §9.4, R388, B4.2).
+///
+/// Public, unauthenticated endpoint serving the exact catalog snapshot as patch `version` left it,
+/// in the same `{ version, defs }` shape as `GET /api/catalog`.
+///
+/// Resolves `version` through compiled card history (`jackioh_cards::catalog_defs_at`). If not in
+/// compiled history but matching `app.catalog.version` (e.g. in tests with an overridden catalog version),
+/// serves `app.catalog`. Returns 404 for unknown, malformed, or traversal-shaped versions without
+/// request-selected file reads.
+pub async fn get_catalog_version(app: &Arc<App>, req: Req) -> ApiResult {
+    let version = req.params.get("version").map(String::as_str).unwrap_or_default();
+    if let Some(defs) = jackioh_cards::catalog_defs_at(version) {
+        let version_json = serde_json::to_string(version).unwrap_or_else(|_| "\"\"".to_string());
+        let defs_json =
+            serde_json::to_string(defs).unwrap_or_else(|error| panic!("CardDefs serialise: {error}"));
+        let body = format!("{{\"version\":{version_json},\"defs\":{defs_json}}}");
+        let response = Response::builder()
+            .status(200)
+            .header("content-type", "application/json; charset=utf-8")
+            .header("cache-control", "no-store")
+            .body(Body::from(body))
+            .unwrap_or_else(|error| panic!("a catalog response: {error}"));
+        return Ok(response);
+    }
+    if !version.is_empty() && version == app.catalog.version {
+        let version_json = serde_json::to_string(&app.catalog.version).unwrap_or_else(|_| "\"\"".to_string());
+        let body = format!(
+            "{{\"version\":{version_json},\"defs\":{}}}",
+            app.catalog.defs_json()
+        );
+        let response = Response::builder()
+            .status(200)
+            .header("content-type", "application/json; charset=utf-8")
+            .header("cache-control", "no-store")
+            .body(Body::from(body))
+            .unwrap_or_else(|error| panic!("a catalog response: {error}"));
+        return Ok(response);
+    }
+    Err(ApiError::new(
+        ApiErrorCode::NotFound,
+        format!("No card patch has the catalog version \"{version}\"."),
+    ))
 }

@@ -99,6 +99,7 @@ pub fn carried_versions() -> Vec<&'static str> {
     HISTORY
         .versions
         .iter()
+        .filter(|delta| delta.version != crate::CATALOG_VERSION)
         .map(|delta| delta.version.as_str())
         .collect()
 }
@@ -106,11 +107,34 @@ pub fn carried_versions() -> Vec<&'static str> {
 /// R767000: the catalog of a carried version, `None` for the build's own version or any it does not
 /// carry. What `register_all` registers with the engine.
 pub fn shipped_catalog(version: &str) -> Option<&'static ShippedCatalog> {
+    if version == crate::CATALOG_VERSION {
+        return None;
+    }
     let at = HISTORY
         .versions
         .iter()
         .position(|delta| delta.version == version)?;
     Some(BUILT[at].get_or_init(|| build(&HISTORY.versions[at])))
+}
+
+/// R388: every shipped catalog version from `patches.json`, in release order.
+pub fn shipped_versions() -> Vec<&'static str> {
+    HISTORY.order.iter().map(String::as_str).collect()
+}
+
+/// R388: the catalog of any shipped version in `patches.json`, exact snapshot.
+pub fn catalog_at(version: &str) -> Option<&'static ShippedCatalog> {
+    let at = HISTORY
+        .versions
+        .iter()
+        .position(|delta| delta.version == version)?;
+    Some(BUILT[at].get_or_init(|| build(&HISTORY.versions[at])))
+}
+
+/// R388: the card definitions of a shipped catalog version: the carried snapshot for any version
+/// in `patches.json`. `None` for any version `patches.json` does not hold.
+pub fn catalog_defs_at(version: &str) -> Option<&'static CardDefs> {
+    catalog_at(version).map(|catalog| catalog.defs())
 }
 
 /// A carried version's catalog: `CATALOG` in order without the ids it lacked, each changed id's raw
@@ -249,5 +273,39 @@ mod tests {
         }));
         assert!(!anti_oneshot());
         assert_eq!(jackioh_engine::catalog::catalog_version(), crate::CATALOG_VERSION);
+    }
+
+    #[test]
+    fn r388_catalog_defs_at_rebuilds_every_shipped_snapshot_exact() {
+        let patches: Value =
+            serde_json::from_str(include_str!("../patches/patches.json")).expect("patches.json is JSON");
+        let shipped: Vec<&str> = patches
+            .as_array()
+            .expect("patches.json is a list")
+            .iter()
+            .filter_map(|patch| patch.get("version").and_then(Value::as_str))
+            .collect();
+        assert_eq!(shipped_versions(), shipped);
+
+        // The oldest snapshot is rebuilt, entry for entry.
+        let oldest = catalog_defs_at("v0.1.0").expect("v0.1.0 is carried");
+        let snapshot_v0_1_0: CardDefs =
+            serde_json::from_str(include_str!("../patches/v0.1.0.json")).expect("v0.1.0 reads as cards");
+        assert_eq!(
+            serde_json::to_value(oldest).expect("serialises"),
+            serde_json::to_value(&snapshot_v0_1_0).expect("serialises")
+        );
+
+        // The newest snapshot is carried and rebuilt exact.
+        let newest = catalog_defs_at(crate::CATALOG_VERSION).expect("newest version is carried");
+        let snapshot_newest: CardDefs =
+            serde_json::from_str(include_str!("../patches/v0.3.7b.json")).expect("newest reads as cards");
+        assert_eq!(
+            serde_json::to_value(newest).expect("serialises"),
+            serde_json::to_value(&snapshot_newest).expect("serialises")
+        );
+
+        assert!(catalog_defs_at("v0.0.0-unknown").is_none());
+        assert!(catalog_at("v0.0.0-unknown").is_none());
     }
 }

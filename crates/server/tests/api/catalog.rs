@@ -12,8 +12,8 @@
 //! The catalog is compiled in (`jackioh_cards::catalog_json()`) and its version is
 //! `jackioh_cards::catalog_version()`, whatever `CATALOG_VERSION` says (a different value only
 //! warns). The binding tests hand `jackioh_engine::validator` the snapshot a handler builds from the
-//! catalog handle (`snapshot` below), JSON in and JSON out (§10.1). `GET /api/catalog/:version` is
-//! not served (SURFACE §11.3), so of R388's four tests only the 404 one remains.
+//! catalog handle (`snapshot` below), JSON in and JSON out (§10.1). R388's `GET /api/catalog/:version`
+//! serves every shipped patch's exact snapshot.
 
 use std::sync::Arc;
 
@@ -532,10 +532,9 @@ mod r163_the_catalog_endpoint_section_9_1_section_9_4_r105 {
             .filter(|(_, path, _, _)| path.starts_with("/api/catalog"))
             .map(|(method, path, auth, _)| (format!("{method} {path}"), matches!(auth, AuthLevel::None)))
             .collect();
-        // `GET /api/catalog/:version` is not served (SURFACE §11.3).
         assert_eq!(
             routes.iter().map(|(route, _)| route.as_str()).collect::<Vec<_>>(),
-            vec!["GET /api/catalog"]
+            vec!["GET /api/catalog", "GET /api/catalog/:version"]
         );
         // "The same bytes for everybody, naming no profile": §9.4's gate is about collection, loadout,
         // queue and match, and card data is none of those.
@@ -560,10 +559,67 @@ mod r163_the_catalog_endpoint_section_9_1_section_9_4_r105 {
 
 // R388 — card patch history: every patch's catalog, served by version
 
-/// SURFACE §11.3 drops `GET /api/catalog/:version`, so the only test that holds is the refusal: no
-/// version, known or not, reads a file.
 mod r388_get_api_catalog_version_serves_the_catalog_as_each_patch_left_it_b4_2 {
     use super::*;
+
+    #[tokio::test]
+    async fn r388_serves_every_patch_in_patches_json_whole_to_a_caller_with_no_account() {
+        let app = test_app().await;
+        let versions = catalog_api::load_patch_versions().await;
+        assert!(!versions.is_empty(), "patches.json has versions");
+        let patches_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../cards/patches");
+        for version in &versions {
+            let response = get(&app, &format!("/api/catalog/{version}"), None).await;
+            assert_eq!(response.status, 200, "{version}: expected 200");
+            let body = response.json();
+            assert_eq!(
+                body["version"],
+                json!(version),
+                "{version}: version field matches"
+            );
+            let path = patches_dir.join(format!("{version}.json"));
+            let raw = std::fs::read_to_string(&path)
+                .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
+            let snapshot: CardDefs = serde_json::from_str(&raw)
+                .unwrap_or_else(|error| panic!("parse {}: {error}", path.display()));
+            let snapshot_value = serde_json::to_value(&snapshot).expect("CardDefs serialises");
+            assert_eq!(
+                body["defs"], snapshot_value,
+                "{version}: defs match snapshot exactly"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn r388_shows_what_a_patch_changed() {
+        let app = test_app().await;
+        let v0_1_0 = get(&app, "/api/catalog/v0.1.0", None).await.json();
+        let v0_2_0 = get(&app, "/api/catalog/v0.2.0", None).await.json();
+
+        let defs_010 = v0_1_0["defs"].as_object().expect("v0.1.0 defs is an object");
+        let defs_020 = v0_2_0["defs"].as_object().expect("v0.2.0 defs is an object");
+
+        assert_eq!(defs_010.len(), 109, "v0.1.0 has 109 card defs");
+        assert_eq!(defs_020.len(), 317, "v0.2.0 has 317 card defs");
+
+        // core-016 (Hit Job) cost 2 in v0.1.0 and 3 in v0.2.0
+        assert_eq!(defs_010["core-016"]["cost"], json!(2));
+        assert_eq!(defs_020["core-016"]["cost"], json!(3));
+    }
+
+    #[tokio::test]
+    async fn r388_serves_the_version_this_server_runs_from_the_catalog_it_loaded_whatever_it_is_called() {
+        let catalog = catalog_api::catalog_from(test_app().await.catalog.defs.clone(), "core-1");
+        let app = app_holding(catalog.clone()).await;
+        let response = get(&app, "/api/catalog/core-1", None).await;
+        assert_eq!(response.status, 200);
+        let body = response.json();
+        assert_eq!(body["version"], "core-1");
+        assert_eq!(
+            body["defs"],
+            serde_json::to_value(&catalog.defs).expect("serialises")
+        );
+    }
 
     #[tokio::test]
     async fn r388_answers_an_unknown_or_malformed_version_with_404_and_reads_no_file_for_it() {
