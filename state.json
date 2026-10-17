@@ -2736,6 +2736,9 @@
       "taken_asks": [],
       "verdict_rounds": 0
     },
+    "1126": {
+      "suggestion": true
+    },
     "1127": {
       "asks": [
         "c:6237520338"
