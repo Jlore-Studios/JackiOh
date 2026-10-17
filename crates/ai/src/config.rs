@@ -52,6 +52,15 @@ pub const DUOS_GATE_GAMES_SMOKE: usize = 20;
 /// wins count; a draw is reported beside them.
 pub const DUOS_GATE_WIN_FLOOR: f64 = 0.8;
 
+/// R1127000: the seed of the throwaway determinization `duos_passes` scores a teammate's
+/// follow-ups on. Fixed (never the caller's stream), so the same state reproduces the pass order.
+pub const DUOS_PASS_PROBE_SEED: &str = "ai:duos-pass";
+
+/// R1127000: the most of the teammate's legal `Play` follow-ups one passed card is scored on, in
+/// `legal_actions` order. Bounds scoring at one hand of cards times this many single `reduce` calls
+/// per `duos_passes` call, with no search and no reply simulation.
+pub const DUOS_PASS_MAX_FOLLOWUPS: usize = 8;
+
 /// `AI_SEARCH`'s shape.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]

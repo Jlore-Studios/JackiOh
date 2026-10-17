@@ -59,6 +59,11 @@ const REMINISCE: &str = "core-072";
 const TURN_STEPS: usize = 40;
 /// The pass cap of `b28_passes_stop_at_the_teams_pass_cap`'s team.
 const SMALL_PASS_CAP: i32 = 2;
+/// Spiteful Stab, a 3-cost Spell: the cheaper card the R1127000 tests pass. It deals 2 plus
+/// A2's missing health below 30 over 5 (R72), so 4 off a full-health Duos hero.
+const STAB: &str = "core-070";
+/// Midrange Menace, a 3-cost Unit (Taunt): the cheaper card of the free-pass pair.
+const MID: &str = "core-019";
 
 // ---------------------------------------------------------------------------------------------
 // Helpers
@@ -904,4 +909,110 @@ fn r964000_every_seat_starts_at_its_own_hp_and_its_teams_pool() {
             );
         }
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1127000: the Duos AI passes the card that gives its teammate the best next play
+// ---------------------------------------------------------------------------------------------
+
+/// Round 1 with A1 holding BIG (4-cost) and the Stab (3-cost) at pass mana, so it can afford
+/// neither, A2 at BIG mana with an empty hand, and B2 at an effective life of 3: the Stab deals 4
+/// and wins outright, while the 7/7 only threatens. A2's hand is cleared so its dealt cards cannot
+/// win on their own and wash the two candidates' scores out.
+fn winning_pass_state(seed: &str) -> (DuosState, String, String) {
+    let mut state = round_one(seed, None);
+    let ids = set_hand(&mut state, A1, &[BIG, STAB]);
+    set_mana(&mut state, A1, DUOS_PASS_COST);
+    set_mana(&mut state, A2, cost(BIG));
+    state.duels[1].players[PlayerId::P1].hand.clear();
+    state.duels[1].players[PlayerId::P2].hero.health = 2;
+    state.duels[1].players[PlayerId::P2]
+        .duos
+        .as_mut()
+        .expect("a duel holds Duos life")
+        .pool = 1;
+    (state, ids[0].clone(), ids[1].clone())
+}
+
+#[test]
+fn r1127000_passes_the_cheaper_card_that_wins_the_teammate_the_game_first() {
+    let seed = "duos-ai-best-pass";
+    let (state, big, stab) = winning_pass_state(seed);
+    assert_eq!(
+        effective_life(&state.duels[1], PlayerId::P2),
+        3,
+        "B2's effective life"
+    );
+    assert!(
+        !can_play(&state.duels[0], PlayerId::P1, &big),
+        "A1 cannot play BIG"
+    );
+    assert!(
+        !can_play(&state.duels[0], PlayerId::P1, &stab),
+        "A1 cannot play the Stab"
+    );
+    // One pass is paid for, and it is the cheaper, better card: this fails on the old cost-first
+    // order, which names BIG.
+    assert_eq!(duos_passes(&state, A1), vec![stab.clone()]);
+    let got = duos_decide(&state, A1, &mut opts(seed));
+    assert_eq!(json_of(&got), json_of(&Some(pass(&stab))));
+}
+
+#[test]
+fn r1127000_hidden_opponent_cards_leave_the_pass_order_unchanged() {
+    let seed = "duos-ai-best-pass-hidden";
+    let base = winning_pass_state(seed).0;
+    let mut across = winning_pass_state(seed).0;
+    swap_hidden_hand_card(&mut across, B1, OTHER_BIGS[2]);
+    let mut diagonal = winning_pass_state(seed).0;
+    swap_hidden_hand_card(&mut diagonal, B2, BIG);
+    for variant in [&across, &diagonal] {
+        for seat in [A1, A2] {
+            let (seen, seen_too) = (duos_view_for(&base, seat), duos_view_for(variant, seat));
+            assert_eq!(json_of(&seen), json_of(&seen_too), "{seat} sees no difference");
+            let (mut first, mut second) = (opts(seed), opts(seed));
+            let from_base = duos_decide(&base, seat, &mut first);
+            let from_variant = duos_decide(variant, seat, &mut second);
+            assert!(from_base.is_some(), "{seat} owes its turn");
+            assert_eq!(json_of(&from_base), json_of(&from_variant), "{seat}");
+            assert_eq!(first.rng.cursor(), second.rng.cursor(), "{seat}");
+            assert_eq!(duos_passes(&base, seat), duos_passes(variant, seat), "{seat}");
+        }
+    }
+}
+
+#[test]
+fn r1127000_pass_limits_still_cap_a_scored_list() {
+    let rules = DuosTeamRules {
+        pass_cap: SMALL_PASS_CAP,
+        ..DUOS_HUMAN_TEAM
+    };
+    let mut hand = vec![ONE_DROP, BIG];
+    hand.extend(OTHER_BIGS);
+    let seed = "duos-ai-best-pass-cap";
+    let (state, ids) = passing(seed, team_a(rules), &hand, cost(BIG) - 1, cost(BIG));
+    assert!(
+        can_play(&state.duels[0], PlayerId::P1, &ids[0]),
+        "A1 keeps its one-drop"
+    );
+    // Scoring picks the order, the cap still truncates: two of the four 4-costs.
+    let passes = duos_passes(&state, A1);
+    assert_eq!(passes.len(), SMALL_PASS_CAP as usize, "{passes:?}");
+    assert!(passes.iter().all(|id| ids[1..].contains(id)), "{passes:?}");
+}
+
+#[test]
+fn r1127000_free_pass_next_turn_cards_keep_cost_order() {
+    let free = DuosTeamRules {
+        pass_cost: 0,
+        ..DUOS_HUMAN_TEAM
+    };
+    let mut state = round_one("duos-ai-best-pass-later", team_a(free));
+    let ids = set_hand(&mut state, A1, &[MID, BIG]);
+    // No mana now on either seat, and a full refresh next turn for A2: both cards are affordable
+    // next turn only.
+    set_mana(&mut state, A1, 0);
+    set_mana(&mut state, A2, 0);
+    full_refresh_next_turn(&mut state, A2);
+    assert_eq!(duos_passes(&state, A1), vec![ids[1].clone(), ids[0].clone()]);
 }
