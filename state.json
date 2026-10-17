@@ -16122,9 +16122,9 @@
     ],
     "idle_since": "2026-10-17T14:04:28Z",
     "last_run": "2026-10-17T14:04:28Z",
-    "provider": "gpt",
+    "provider": null,
     "requested": false,
-    "run_id": "39039153823",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
