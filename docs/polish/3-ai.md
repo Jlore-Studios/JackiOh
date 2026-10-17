@@ -558,6 +558,8 @@ export type SimStep = { ok: true; state: GameState } | { ok: false; error: strin
 export function simulate(state: GameState, seat: PlayerId, action: ActionBody, counter: NodeCounter): SimStep | null;
 /** `simulate` as before #891, the greedy baseline's: every prompt of the other seat gets the first entry of legalActions. */
 export function simulateFirstAnswers(state: GameState, seat: PlayerId, action: ActionBody, counter: NodeCounter): SimStep | null;
+/** #1112: a state at `seat`'s own prompt scored where its answers lead (each prompt on the way gets its holder's best answer, as in `simulate`, each answer one node, at most AI_SEARCH.maxAutoAnswers prompts) by `evaluate`; null when no prompt of the seat's is open, the counter refuses a node or the lookahead fails. */
+export function ownPromptScore(state: GameState, seat: PlayerId, counter: NodeCounter): number | null;
 
 /**
  * A line's value: "over"/"yielded" → evaluate; "passed" → evaluate − AI_EVAL.unspentMana ×
@@ -605,7 +607,8 @@ export type Line = { actions: ActionBody[]; score: number; status: LineStatus; e
 /**
  * Beam search on one determinization. The frontier starts at `det`. Each open line expands its first
  * rootBranching (depth 0) or branching (deeper) candidates, plus endTurn. Every child is simulated
- * and scored with `evaluate`; children whose status is not "open" become complete lines scored by
+ * and scored with `evaluate`, a child waiting on the seat's own prompt where its answers lead
+ * (`ownPromptScore`, #1112); children whose status is not "open" become complete lines scored by
  * terminalScore; the best beamWidth open children (stable) form the next frontier. The loop stops at
  * maxDepth (open lines are closed by terminalScore) or when the counter refuses. Returns complete
  * lines, best first.
