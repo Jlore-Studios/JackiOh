@@ -1491,21 +1491,33 @@ pub fn active_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance
         }
     }
     units.extend(side.carried.iter().flatten().filter_map(Option::as_ref));
-    // R1081000: a Flying Unit standing in a backrow zone. Face-down cards read as Traps
-    // (`card_type_of`), so pairing the Unit read with `is_face_down` keeps a set Cloaked Unit out, as
-    // the `cloaked` tests hold.
-    for lane in 1..=BACKROW_ZONES {
-        let top = lane_index(lane)
-            .and_then(|index| side.backrow.get(index))
-            .and_then(Option::as_ref);
-        if let Some(top) = top
-            && card_type_of(state, top) == CardType::Unit
-            && !crate::preview::is_face_down(state, top)
-        {
-            units.push(top);
-        }
-    }
+    units.extend(standing_units_of(state, player));
     units
+}
+
+/// R1081000: whether the top card of a backrow zone is a Unit standing there — a Flying Unit played
+/// into it. A Unit that enters the field is given a position (`place_on_field`) and a face-down card
+/// holds none, so the position is read first: it keeps this read, which every unit walk makes, off the
+/// definition of the Traps a backrow holds, and off the `ai:hidden` placeholder a redacted state shows
+/// in a face-down card's place, which has none to read. A set Cloaked Unit reads as the Trap it is set
+/// as (`card_type_of`), so it is never one.
+pub fn is_standing_unit(state: &GameState, card: &CardInstance) -> bool {
+    card.position.is_some() && card_type_of(state, card) == CardType::Unit
+}
+
+/// R1081000: the Units standing in `player`'s backrow zones, in backrow lane order — each a Unit for
+/// every rule, so every walk that reads the player's Units reads these after their unit zones' and
+/// their carriers'.
+pub fn standing_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
+    let side = &state.players[player];
+    (1..=BACKROW_ZONES)
+        .filter_map(|lane| {
+            lane_index(lane)
+                .and_then(|index| side.backrow.get(index))
+                .and_then(Option::as_ref)
+        })
+        .filter(|top| is_standing_unit(state, top))
+        .collect()
 }
 
 pub fn dormant_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {

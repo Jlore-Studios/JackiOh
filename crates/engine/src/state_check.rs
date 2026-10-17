@@ -72,7 +72,8 @@ fn live(state: &GameState, card: &CardInstance) -> CardInstance {
 /// died on top of it).
 ///
 /// TS read this through `zones.activeUnitsOf`; this is that walk, kept here: each unit zone's top in
-/// lane order, then the Units the carriers hold, in backrow lane order (R446).
+/// lane order, then the Units the carriers hold, in backrow lane order (R446), then the Units standing
+/// in the backrow zones themselves (R1081000), which the death pass takes from here and not from `backrow_of`.
 fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let side = &state.players[player];
     let mut units: Vec<CardInstance> = Vec::new();
@@ -89,6 +90,11 @@ fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     for card in side.carried.iter().flatten().flatten() {
         units.push(card.clone());
     }
+    units.extend(
+        crate::zones::standing_units_of(state, player)
+            .into_iter()
+            .cloned(),
+    );
     units
 }
 
@@ -1022,10 +1028,12 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
                     .into_iter()
                     .filter(|unit| dying_ids.contains(&unit.id)),
             );
+            // R1081000: a Unit standing in the backrow is among `units_of`'s already, collected once.
             dying.extend(
                 backrow_of(sink.state, player)
                     .into_iter()
-                    .filter(|card| card.marked_destroyed == Some(true)),
+                    .filter(|card| card.marked_destroyed == Some(true))
+                    .filter(|card| !crate::zones::is_standing_unit(sink.state, card)),
             );
         }
 

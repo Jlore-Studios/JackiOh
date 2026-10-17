@@ -654,4 +654,85 @@ mod r1081000_flying_backrow {
             Some(bird.id.as_str())
         );
     }
+
+    #[test]
+    fn r1081000_a_backrow_flyer_attacks_and_switches_by_action() {
+        let mut state = board("r1081000-actions");
+        let wing = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 1), json!({}));
+        let target = put(&mut state, &grunt().id, slot(P2, Row::Units, 1), json!({}));
+        // `legal_actions` offers it its attack and its switch, and `reduce` takes every action offered.
+        assert!(attack_targets(&state, &wing.id).contains(&target.id));
+        let offered = legal_actions(&state, P1);
+        assert!(offered.iter().any(
+            |action| matches!(action, ActionBody::SwitchPosition { instance_id } if *instance_id == wing.id)
+        ));
+        for body in offered {
+            let result = reduce(&state, &Action::new(body.clone(), P1, "r1081000-offered"));
+            assert_eq!(result.error, None, "offered {body:?}, refused");
+        }
+        // Declared as an action, the attack lands on the hero, and the switch spends its exertion.
+        let attacked = act(
+            &state,
+            json!({ "type": "attack", "attackerId": wing.id, "targetId": "hero-p2", "playerId": "p1" }),
+            None,
+        );
+        assert!(live(&attacked, &wing.id).exertion.attacked);
+        assert!(attacked.players.p2.hero.health < state.players.p2.hero.health);
+        let switched = act(
+            &state,
+            json!({ "type": "switchPosition", "instanceId": wing.id, "playerId": "p1" }),
+            None,
+        );
+        assert_eq!(live(&switched, &wing.id).position, Some(Position::Def));
+    }
+
+    #[test]
+    fn r1081000_a_backrow_flyer_is_ready_again_at_its_controllers_turn() {
+        let mut state = board("r1081000-ready");
+        let wing = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 1), json!({}));
+        state = act(
+            &state,
+            json!({ "type": "switchPosition", "instanceId": wing.id, "playerId": "p1" }),
+            None,
+        );
+        assert!(live(&state, &wing.id).exertion.switched);
+        // Turns pass (R82 may pass p1's own) until p1's next one begins.
+        let began = state.turn;
+        while state.active != P1 || state.turn == began {
+            let seat = state.active;
+            state = act(
+                &state,
+                json!({ "type": "endTurn", "playerId": format!("{seat}") }),
+                None,
+            );
+        }
+        assert!(
+            !live(&state, &wing.id).exertion.switched,
+            "its exertion resets as a unit's does"
+        );
+    }
+
+    #[test]
+    fn r1081000_a_backrow_flyer_at_zero_health_dies_and_meets_every_unit_effect() {
+        // An "all Units" effect reaches it, as the 1 damage of a quake shows on either side.
+        let mut state = board("r1081000-all");
+        let mine = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 3), json!({}));
+        let theirs = put(&mut state, &flyer().id, slot(P2, Row::Backrow, 2), json!({}));
+        cast_now(&mut state, &quake().id, P1, false);
+        assert_eq!(damage_on(&state, &mine.id), 1);
+        assert_eq!(damage_on(&state, &theirs.id), 1);
+
+        // Damage past its health is the §4.5 check's to collect, as for any unit.
+        let mut doomed = board("r1081000-dies");
+        let wing = put(&mut doomed, &flyer().id, slot(P1, Row::Backrow, 1), json!({}));
+        if let Some(card) = find_instance_mut(&mut doomed, &wing.id) {
+            card.damage = 3;
+        }
+        {
+            let mut sink = sink_for(&mut doomed);
+            state_check(&mut sink);
+        }
+        assert!(in_graveyard(&doomed, P1, &wing.id), "a flyer at 0 health dies");
+        assert!(card_at(&doomed, slot(P1, Row::Backrow, 1)).is_none());
+    }
 }

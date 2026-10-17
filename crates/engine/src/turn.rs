@@ -274,6 +274,20 @@ fn reset_exertion(sink: &mut EngineSink, player: PlayerId) {
             attacks: None,
         };
     }
+    // R1081000: and the Units standing in its backrow zones, which attack and switch as any unit does.
+    let standing: Vec<String> = crate::zones::standing_units_of(sink.state, player)
+        .into_iter()
+        .map(|card| card.id.clone())
+        .collect();
+    for card in sink.state.players[player].backrow.iter_mut().flatten() {
+        if standing.contains(&card.id) {
+            card.exertion = Exertion {
+                attacked: false,
+                switched: false,
+                attacks: None,
+            };
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

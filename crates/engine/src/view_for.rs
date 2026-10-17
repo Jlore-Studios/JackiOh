@@ -105,7 +105,9 @@ use crate::wire::{
     PublicBackrowView, Row, RowFlags, Selection, SideView, TuningChange, UnitView, Zone, ZoneName,
     opponent_of,
 };
-use crate::zones::{beneath_at, carried_at, carried_units_of, home_of, is_reserved, slot_of, slots_of};
+use crate::zones::{
+    beneath_at, carried_at, carried_units_of, home_of, is_reserved, is_standing_unit, slot_of, slots_of,
+};
 
 /// R97's sentinel: the identity an event carries in place of a card the viewer may not read. Real
 /// ids are `c<n>` for instances and catalog ids like `core-043` for definitions, so this collides
@@ -736,9 +738,9 @@ fn backrow_view(
         // unit prop, so the flag travels here as it does on a unit view.
         vanilla: if card.vanilla { Some(true) } else { None },
         buried,
-        // R1081000: a Unit standing in the backrow rides as the minion it is — the same Unit-face,
-        // not-face-down tops `active_units_of` counts, so the two cannot disagree.
-        unit: if card_type_of(state, card) == CardType::Unit && !is_face_down(state, card) {
+        // R1081000: a Unit standing in the backrow rides as the minion it is — the same tops
+        // `active_units_of` counts, so the two cannot disagree.
+        unit: if is_standing_unit(state, card) {
             unit_view_of(state, auras, std::slice::from_ref(card), viewer)
         } else {
             None
