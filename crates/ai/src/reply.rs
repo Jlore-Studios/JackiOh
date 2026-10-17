@@ -351,6 +351,8 @@ pub fn simulate_reply(
 ) -> Option<GameState> {
     let opp = seat.opponent();
     let mut current = state.clone();
+    // The seat's turns_started as the reply begins: a skipped turn is counted wherever it lands.
+    let seat_turns = current.players[seat].turns_started;
     for _step in 0..AI_REPLY.max_steps {
         if current.result.is_some() {
             return Some(current);
@@ -369,6 +371,14 @@ pub fn simulate_reply(
             continue;
         }
         if current.active != opp {
+            return Some(current);
+        }
+        // The reply is one opponent turn. When the seat's next turn has nothing but ending it
+        // left to do, R82 ends it inside the opponent's EndTurn reduce and the walk lands on
+        // the opponent's *second* turn — no part of a one-turn reply. Playing that out scores
+        // a phantom death on every line that ends with the seat out of gas, so the walk stops
+        // where the seat's next decision could have been.
+        if current.players[seat].turns_started != seat_turns {
             return Some(current);
         }
 
