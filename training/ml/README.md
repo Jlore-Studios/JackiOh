@@ -66,8 +66,9 @@ crates/ai/tests/fixtures/learned-parity.json` writes the parity fixture both bui
 ## The retrain
 
 `training/ml/retrain.sh` is the whole loop, with no LLM inside it (#1012, D2): the logs (`--logs`, or
-`--games` and `--seed` to play them), the positions, the fit, the weights into
-`crates/ai/src/learned/weights.json` with the switch on, the parent (`--parent-bin`, `tree`, or a build
+`--games` and `--seed` to play them), the positions, the fit, the integer network (the float one
+quantized, as above, with its report) into `crates/ai/src/learned/weights.json` with the switch on, so
+the screen and the gate play the network that ships, the parent (`--parent-bin`, `tree`, or a build
 of `origin/main`), the candidate, and an 800-game paired screen on `improve-dev`, decided in advance.
 It prints the gate's command (`cargo jackioh promote --lane learn --parent-bin <parent>`) only when the
 screen's `edgeLow` is above zero, and exits 1 otherwise. The learn lane runs it weekly

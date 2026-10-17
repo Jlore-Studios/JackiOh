@@ -22,8 +22,8 @@ runner). Each run:
 2. **Exports** `games` games (100,000 by default) through `selfplay.yml` on a fresh base,
    `learned-<catalog>-<date>-<run>`, never a gate's deals or the dev set's (R1006002).
 3. **Retrains** with `training/ml/retrain.sh` on `main`: the positions (R1006003, R1006004), the fit
-   and its report (`training/ml/README.md`), the weights into `crates/ai/src/learned/weights.json` and
-   the switch, `AI_EVAL_KIND`, on. It stops when the network does not beat the calibrated hand eval
+   and its report (`training/ml/README.md`), the integer network that ships (D7, R1011000) into
+   `crates/ai/src/learned/weights.json` and the switch, `AI_EVAL_KIND`, on. It stops when the network does not beat the calibrated hand eval
    on held-out turns 4 to 10.
 4. **Screens** the candidate against the AI on `main` on the improve lane's dev set: 800 paired games
    (`arena --set improve-dev --games 800`), a count fixed before it is played, never extended or played

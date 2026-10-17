@@ -200,6 +200,8 @@ jobs:
             ${{ runner.temp }}/learn/positions.json
             ${{ runner.temp }}/learn/fit/report.md
             ${{ runner.temp }}/learn/fit/report.json
+            ${{ runner.temp }}/learn/quantize-report.json
+            ${{ runner.temp }}/learn/weights-float.json
             ${{ runner.temp }}/learn/screen.txt
             ${{ runner.temp }}/learn/promote.md
             ${{ runner.temp }}/learn/promotion.patch

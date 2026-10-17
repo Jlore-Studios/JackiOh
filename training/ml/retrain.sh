@@ -16,8 +16,11 @@
 #      the size 20,000 games and more support, D5's "wider only as the data grows"), and its report;
 #      it stops here unless the network beats the
 #      calibrated hand eval on held-out turns 4-10 (`decision.gain` > 0);
-#   4. the weights (`python -m jackioh_ml.export`) into crates/ai/src/learned/weights.json, and the
-#      switch, AI_EVAL_KIND, set to Learned in crates/ai/src/config.rs;
+#   4. the weights: the float network (`python -m jackioh_ml.export`, <out>/weights-float.json), then
+#      the integer network that ships (`python -m jackioh_ml.quantize`, D7, R1011000) into
+#      crates/ai/src/learned/weights.json, with its held-out loss beside the float one's
+#      (<out>/quantize-report.json); and the switch, AI_EVAL_KIND, set to Learned in
+#      crates/ai/src/config.rs. The screen and the gate play the integer network, as players would;
 #   5. the parent: `--parent-bin <path>`; `--parent-bin tree`, the exporter of step 1, built from this
 #      tree before the weights changed (when the tree is main, as in learn.yml); else `jackioh` built from
 #      origin/main in a worktree of its own (never this tree's target/, #585);
@@ -91,7 +94,10 @@ fi
 
 say "the weights and the switch"
 uv run --frozen --project training/ml python -m jackioh_ml.export --model "$out/fit/model.pt" \
-  --out crates/ai/src/learned/weights.json
+  --out "$out/weights-float.json"
+uv run --frozen --project training/ml python -m jackioh_ml.quantize --weights "$out/weights-float.json" \
+  --out crates/ai/src/learned/weights.json --positions "$out/positions.jsonl" \
+  --report "$out/quantize-report.json"
 sed -i 's/^pub const AI_EVAL_KIND: EvalKind = EvalKind::Hand;/pub const AI_EVAL_KIND: EvalKind = EvalKind::Learned;/' \
   crates/ai/src/config.rs
 grep -q '^pub const AI_EVAL_KIND: EvalKind = EvalKind::Learned;' crates/ai/src/config.rs
