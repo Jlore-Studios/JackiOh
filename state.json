@@ -17617,6 +17617,12 @@
         "number": 1128,
         "title": "Architecture: record Duos matches in player and card statistics",
         "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-17T23:17:42Z",
+        "number": 1158,
+        "title": "Patch v0.3.X: live games and replays render their pinned catalog",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
