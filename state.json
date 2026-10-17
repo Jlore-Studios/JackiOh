@@ -9172,8 +9172,10 @@
     "what": "revise #1089 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-17T04:47:13Z",
-    "notes": [],
+    "at": "2026-10-17T04:53:59Z",
+    "notes": [
+      "#1105: approved and green, so its strikes are cleared"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
