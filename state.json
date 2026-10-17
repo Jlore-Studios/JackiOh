@@ -2853,21 +2853,26 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-17T06:00:44Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
       "planned_by_id": "agy",
       "planned_tier": "medium",
+      "pr": 1117,
       "provider": "agy",
+      "question": "",
       "queued_at": "2026-10-17T05:15:08Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "medium",
       "run_id": "39008346775",
       "started_at": "2026-10-17T06:01:45Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": [
         "c:6230043601"
-      ]
+      ],
+      "verdict_rounds": 2
     },
     "1104": {
       "action": "build",
