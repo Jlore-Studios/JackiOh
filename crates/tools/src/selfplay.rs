@@ -9,7 +9,8 @@
 //! catalog version and the commit it was played on. A game is a function of its seed, so the file is
 //! byte-identical for the same base and games whatever `RAYON_NUM_THREADS` says (R1006001). Games are
 //! played and written in chunks, so a long export keeps what it has played; each chunk, and any game
-//! slower than a minute, is named on stderr.
+//! slower than a minute, is named on stderr. A turn that takes more than `SELFPLAY_TURN_ACTIONS`
+//! actions (an endless combo) ends its game without a result (R1006005).
 //!
 //! A base that names a training gate's hold-out deals (`promote::is_gate_seed_base`, R850001) or
 //! the improve lane's dev set (`improve-dev`, the screens' deals) is refused, so no screen ever plays
@@ -62,6 +63,13 @@ pub struct SelfplayGame {
     pub commit: String,
 }
 
+/// R1006005: the most actions one turn of a self-play game may take. A whole game takes about 60
+/// (131 at the 99th percentile of 448 games, 151 at the most), so only an endless combo reaches it:
+/// The Coin and a fused card that hands back another, played by an AI that finds each loop worth
+/// it (game 474 of `learned-dev`, #1006), which would otherwise run to `ARENA_MAX_ACTIONS` at a
+/// second a decision. Such a game ends without a result, and `positions` drops it.
+pub(crate) const SELFPLAY_TURN_ACTIONS: usize = 100;
+
 /// R1006002: whether a base names deals a screen or a gate plays: a training gate's hold-out deals
 /// (`promote::is_gate_seed_base`) or the improve lane's dev set (`--set improve-dev`).
 pub(crate) fn refused_base(base: &str) -> Option<String> {
@@ -97,6 +105,7 @@ fn setups(base: &str, from: i32, games: i32) -> Vec<ArenaGame> {
                 a_seat: PlayerId::P1,
                 labels: ("self".to_string(), "self".to_string()),
                 paired: false,
+                turn_actions: Some(SELFPLAY_TURN_ACTIONS),
             }
         })
         .collect()
@@ -195,7 +204,8 @@ pub(crate) fn play_chunks(
     Ok(())
 }
 
-/// Plays the games and returns their lines, in game order.
+/// Plays the games and returns their lines, in game order (the tests' way in; `run` streams).
+#[cfg(test)]
 pub(crate) fn play(base: &str, from: i32, games: i32, commit: &str) -> anyhow::Result<Vec<SelfplayGame>> {
     let mut all = Vec::new();
     play_chunks(base, from, games, commit, |chunk| {
@@ -270,6 +280,33 @@ mod tests {
         for base in ["learned", "learned:1", "improvement", "dev", "export-2026-10-16"] {
             assert!(refused_base(base).is_none(), "{base} should be allowed");
         }
+    }
+
+    /// R1006005: a turn that passes the ceiling ends its game without a result, which `positions`
+    /// drops; the export's own ceiling is far above any real turn's.
+    #[test]
+    fn r1006005_a_turn_past_the_ceiling_ends_the_game_without_a_result() {
+        jackioh_cards::register_all();
+        let mut game = setups("selfplay-ceiling", 1, 1).remove(0);
+        assert_eq!(game.turn_actions, Some(SELFPLAY_TURN_ACTIONS));
+        game.turn_actions = Some(1);
+        let outcome = play_game(&game).unwrap();
+        assert_eq!(outcome.result, None);
+        assert!(
+            outcome.thrown.iter().any(|why| why.contains("R1006005")),
+            "{:?}",
+            outcome.thrown
+        );
+        assert!(outcome.turns <= 2, "it ended in its first turn");
+        let line = game_of(outcome, jackioh_cards::catalog_version(), "test");
+        assert_eq!(
+            crate::positions::fold_game(
+                &line,
+                crate::positions::Every::Turn,
+                jackioh_cards::catalog_version()
+            ),
+            Err(crate::positions::Dropped::NoResult)
+        );
     }
 
     #[test]
