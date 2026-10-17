@@ -2,13 +2,15 @@
 // signed in, the account's online games a page at a time; opens one in the player and comes back to
 // the list; names a game it cannot show and keeps its Watch button off; and is a route a production
 // build keeps, with the GIF code still loaded on demand. R970000: an account that owes the consent
-// screen meets it before the online half, which waits on its answer.
+// screen meets it before the online half, which waits on its answer. R1141000: a row that can be
+// watched downloads as one JSON file of its steps' views and its own facts, no account named.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { AI_GATE_BUDGET } from "@jackioh/ai";
+import { CATALOG_VERSION } from "@jackioh/cards";
 import { REPLAY_PAGE_STEPS } from "@jackioh/engine/config";
 import type { PlayerId } from "@jackioh/shared";
 import { TERMS_VERSION } from "@jackioh/server-config";
@@ -27,6 +29,8 @@ import type { PracticeHost } from "../practice/host.ts";
 import { memorySaveStore } from "../practice/saveStore.ts";
 import type { PracticeSaveStore } from "../practice/saveStore.ts";
 import { replayTestid } from "../replay/ReplayPlayer.tsx";
+import { REPLAY_JSON_FORMAT, REPLAY_JSON_VERSION } from "../replay/download.ts";
+import type { ReplayJson } from "../replay/download.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
 import { ReplaysRoute, replaysTestid } from "./replays.tsx";
 
@@ -245,5 +249,104 @@ describe("R768000 a route a production build keeps", () => {
     const share = readFileSync(join(SRC, "replay/ShareGif.tsx"), "utf8");
     expect(share).toMatch(/import type \* as Gif from "\.\/gif\/export\.ts";/u);
     expect(share).toContain('await import("./gif/export.ts")');
+  });
+});
+
+describe("R1141000 Download JSON", () => {
+  /** The files handed to the browser's downloads, by the name each was saved under. */
+  let saved: File[];
+
+  beforeEach(() => {
+    saved = [];
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: vi.fn((file: File) => {
+        saved.push(file);
+        return "blob:jackioh-replay";
+      }),
+    });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  async function savedJson(): Promise<{ file: File; text: string; json: ReplayJson }> {
+    await waitFor(() => expect(saved).toHaveLength(1));
+    const file = saved[0];
+    if (file === undefined) throw new Error("nothing was saved");
+    const text = await file.text();
+    return { file, text, json: JSON.parse(text) as ReplayJson };
+  }
+
+  it("R1141000 a practice row saves every step of its game, in order, and nothing of its setup", async () => {
+    renderRoute(await storeWithGame());
+    await screen.findByTestId(replaysTestid.practice(1));
+    fireEvent.click(screen.getByTestId(replaysTestid.download("practice-1")));
+
+    const { file, text, json } = await savedJson();
+    expect(file.name).toBe("jackioh-replay-practice-1.json");
+    expect(file.type).toBe("application/json");
+    expect(Object.keys(json).sort()).toEqual(["catalogVersion", "format", "game", "savedAt", "steps", "version"]);
+    expect(json).toMatchObject({ format: REPLAY_JSON_FORMAT, version: REPLAY_JSON_VERSION, catalogVersion: CATALOG_VERSION });
+    expect(json.game).toMatchObject({ kind: "practice", game: 1, result: "loss", steps: json.steps.length });
+    expect(Object.keys(json.game).sort()).toEqual(["endedAt", "game", "kind", "portraits", "result", "steps", "turns"]);
+    expect(json.steps.map((step) => step.step)).toEqual(json.steps.map((_, index) => index));
+    expect(json.steps.at(-1)?.view.result).not.toBeNull();
+    // The game's seed and setup stay in the worker (CLAUDE.md rule 7).
+    expect(text).not.toContain("replays-list");
+    expect(text).not.toMatch(/"(seed|log|decks|handicaps|state)":/u);
+    await waitFor(() => expect(screen.getByTestId(replaysTestid.download("practice-1"))).toHaveTextContent("Download JSON"));
+  });
+
+  it("R1141000 an online row saves the server's steps and the match id, never the opponent's account", async () => {
+    signIn();
+    serveSteps();
+    vi.mocked(getReplays).mockResolvedValue({ replays: [listing()], nextOffset: null });
+    renderRoute(memorySaveStore());
+    await screen.findByTestId(replaysTestid.online("m-1"));
+    fireEvent.click(screen.getByTestId(replaysTestid.download("online-m-1")));
+
+    const { file, text, json } = await savedJson();
+    expect(file.name).toBe("jackioh-replay-m-1.json");
+    expect(json.steps).toEqual(steps);
+    expect(json.game).toEqual({
+      kind: "online",
+      matchId: "m-1",
+      mode: "bo1",
+      seat: "p1",
+      endedAt: 0,
+      result: "win",
+      turns: listing().turns,
+      steps: steps.length,
+      portraits: { p1: "vanilla", p2: "vanilla" },
+    });
+    expect(text).not.toContain("rival");
+    expect(text).not.toContain("profile-p2");
+    expect(getReplaySteps).toHaveBeenCalledWith(TOKEN, "m-1", 0, REPLAY_PAGE_STEPS);
+    expect(getReplaySteps).toHaveBeenCalledWith(TOKEN, "m-1", REPLAY_PAGE_STEPS, REPLAY_PAGE_STEPS);
+  });
+
+  it("R1141000 a row this build cannot show offers no download", async () => {
+    signIn();
+    vi.mocked(getReplays).mockResolvedValue({ replays: [listing({ unavailable: "rules_changed" })], nextOffset: null });
+    renderRoute(memorySaveStore());
+    await screen.findByTestId(replaysTestid.online("m-1"));
+    expect(screen.queryByTestId(replaysTestid.download("online-m-1"))).toBeNull();
+  });
+
+  it("R1141000 a page that cannot be had saves nothing and says why on the row", async () => {
+    signIn();
+    vi.mocked(getReplaySteps).mockRejectedValueOnce(new ApiRequestError(410, { code: "gone", message: "purged" }));
+    vi.mocked(getReplays).mockResolvedValue({ replays: [listing()], nextOffset: null });
+    renderRoute(memorySaveStore());
+    const row = await screen.findByTestId(replaysTestid.online("m-1"));
+    fireEvent.click(screen.getByTestId(replaysTestid.download("online-m-1")));
+
+    expect(await within(row).findByTestId(replaysTestid.downloadFailed("online-m-1"))).toHaveTextContent("This replay has expired.");
+    expect(saved).toEqual([]);
+    expect(screen.getByTestId(replaysTestid.download("online-m-1"))).toBeEnabled();
   });
 });
