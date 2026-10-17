@@ -157,6 +157,8 @@ export type WsPlayerCommand =
       seat?: PlayerId;
     }
   | { action: "send"; name: string; body: ActionInput }
+  /** R738, R643: an aim or an emote, sent as it is; the server never answers one, so nothing is awaited. */
+  | { action: "sendFrame"; name: string; frame: CosmeticFrame }
   | { action: "awaitView"; name: string; where?: ViewPredicate }
   | { action: "view"; name: string }
   | { action: "messages"; name: string }
@@ -164,6 +166,9 @@ export type WsPlayerCommand =
   /** Connect as `token`, concede `matchId` and close, in one task (see `cy.concedeAs`). */
   | { action: "concede"; name: string; url?: string; token: string; matchId: string; seat?: PlayerId }
   | { action: "reset" };
+
+/** R738, R643: a top-level cosmetic frame (an aim or an emote). The server never answers one. */
+export type CosmeticFrame = { type: "aim"; aim: Record<string, unknown> | null } | { type: "emote"; emote: string };
 
 /** What `awaitView` waits for. Every field is `AND`ed; an omitted one is not looked at. */
 export type ViewPredicate = {

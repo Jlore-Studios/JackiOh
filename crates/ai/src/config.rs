@@ -272,6 +272,17 @@ pub struct EvalWeights {
     /// B3.4, R65: taken off an own hand card per crystal its `costMod` (a Degrade's +1, an Upgrade's −1)
     /// moves its cost; a cheaper card gains it.
     pub hand_cost_delta: f64,
+    /// R637: the share of its worth an own Temporary hand card loses: cleanup discards it unless played.
+    pub temporary_discount: f64,
+    /// R961, R962: per step a Jade Counter has climbed toward the next threshold it has not crossed. A
+    /// crossing's worth is the Jade Beauty it summons or ascends, which `unit_worth` prices.
+    pub jade_step: f64,
+    /// R437: the share of an enemy unit's `unit_worth` a side banks while its own delayed effect marks
+    /// it. Every shipped mark is a pending steal or destroy its controller still has a turn to answer;
+    /// a destroy's mark on an Indestructible unit, which it spares (R46), banks nothing.
+    pub marked_share: f64,
+    /// R846: per extra turn owed.
+    pub extra_turn: f64,
     /// An unseen hand card is valued as if it cost this.
     pub opponent_hand_cost: f64,
     /// A readable backrow card: backrowBase + backrowPerCost × queryCost(def).
@@ -358,6 +369,13 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     plague_counter: 0.5,
     grade_counter: 1.5,
     hand_cost_delta: 0.5,
+    // #1086: untuned starts for the training lanes. A Jade step as a grade step, a mark as
+    // `animated_share`, a Temporary card at Brittle 1's half, an extra turn about a turn's mana at
+    // MAX_MANA (4 × unspent_mana) plus a draw.
+    temporary_discount: 0.5,
+    jade_step: 1.5,
+    marked_share: 0.5,
+    extra_turn: 5.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
@@ -434,6 +452,11 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     plague_counter: 0.0,
     grade_counter: 0.0,
     hand_cost_delta: 0.0,
+    // #1086's banked terms came after the gates were fixed too: nothing, as it gave them.
+    temporary_discount: 0.0,
+    jade_step: 0.0,
+    marked_share: 0.0,
+    extra_turn: 0.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,

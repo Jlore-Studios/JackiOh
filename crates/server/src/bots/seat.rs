@@ -26,7 +26,7 @@ use jackioh_ai::{
 };
 use jackioh_engine::{ActionBody, ActionType, Aim, GameState, PlayerId, Rng};
 
-use crate::actor::engine;
+use crate::actor::engine::{self, Pinned};
 use crate::bots::aim::bot_aim;
 use crate::bots::signals::{accepts_draw, concedes, standard_normal, standing};
 use crate::config::{
@@ -61,6 +61,8 @@ pub struct BotJob {
     pub aim_lead_ms: i64,
     /// The acting clock the bot has left (R79), or none when none is running for it.
     pub clock_left_ms: Option<i64>,
+    /// R388, R767000: the catalog the decision reads.
+    pub pinned: Pinned,
 }
 
 /// What a bot's move came to: the action it plays (`None` when the AI owed nothing or failed), where
@@ -133,90 +135,94 @@ pub async fn play(job: BotJob) -> BotMove {
         own_turn_start,
         aim_lead_ms,
         clock_left_ms,
+        pinned,
     } = job;
     let fallback_cursor = ai_rng.cursor();
     let deadline_ms = decision_deadline_ms(clock_left_ms);
     let decided = tokio::task::spawn_blocking(move || {
         // The blocking pool's thread has no card override: the registered catalog it reads is the
-        // real one, as the match's own (`actor::engine`).
+        // real one, as the match's own (`actor::engine`). The whole decision runs under the match's
+        // pinned catalog (R388, R767000).
         jackioh_cards::register_all();
-        let legal_count = engine::legal_actions(&state, seat).len();
-        if own_turn_start
-            && concedes(
-                &seed,
-                home,
-                state.turn,
-                &standing(&state, seat, &seed, home),
-                &BOT_CONCEDE_FIT,
-            )
-        {
-            return Decided {
-                body: Some(ActionBody::Concede),
-                ai_cursor: ai_rng.cursor(),
+        pinned.run(|| {
+            let legal_count = engine::legal_actions(pinned, &state, seat).len();
+            if own_turn_start
+                && concedes(
+                    &seed,
+                    home,
+                    state.turn,
+                    &standing(&state, seat, &seed, home),
+                    &BOT_CONCEDE_FIT,
+                )
+            {
+                return Decided {
+                    body: Some(ActionBody::Concede),
+                    ai_cursor: ai_rng.cursor(),
+                    legal_count,
+                    lethal: false,
+                    aim: None,
+                };
+            }
+            // R747000: the skill's roll comes first, on the AI's own stream; a full skill takes no draw,
+            // so a bot at it plays as it did before the knob.
+            let mut ai_rng = ai_rng;
+            let (chosen, lethal, ai_cursor) = if plays_best(strength.skill, &mut ai_rng) {
+                let deadline = std::time::Instant::now()
+                    + Duration::from_millis(u64::try_from(deadline_ms).unwrap_or(0));
+                let should_stop = move || std::time::Instant::now() >= deadline;
+                let mut options = AiOptions {
+                    rng: ai_rng,
+                    budget: strength.budget,
+                    should_stop: Some(&should_stop),
+                };
+                let style = AiStyle {
+                    temperature: strength.temperature,
+                    missed_lethal_chance: strength.missed_lethal_chance,
+                };
+                let decision = decide_styled(&state, seat, &mut options, &style);
+                let lethal = decision
+                    .as_ref()
+                    .is_some_and(|decision| decision.reason == DecisionReason::Lethal);
+                (
+                    decision.map(|decision| decision.action),
+                    lethal,
+                    options.rng.cursor(),
+                )
+            } else if unanswered_draw_offer(&state, seat) {
+                // The random policy never answers an offer (§10.7), so the bot declines as the AI does
+                // and the roll below turns that into its own answer (R639000); no draw is taken.
+                (
+                    Some(ActionBody::AnswerDraw { accept: false }),
+                    false,
+                    ai_rng.cursor(),
+                )
+            } else {
+                let action = random_action(&state, seat, &mut ai_rng);
+                (action, false, ai_rng.cursor())
+            };
+            let body = chosen
+                .filter(|body| !r188_forbidden(body))
+                .map(|body| match body {
+                    ActionBody::AnswerDraw { .. } => ActionBody::AnswerDraw {
+                        accept: accepts_draw(
+                            &seed,
+                            home,
+                            state.turn,
+                            &standing(&state, seat, &seed, home),
+                            &BOT_DRAW_ANSWER_FIT,
+                        ),
+                    },
+                    body => body,
+                });
+            let aim = body.as_ref().and_then(|body| bot_aim(&state, seat, body));
+            Decided {
+                body,
+                ai_cursor,
                 legal_count,
-                lethal: false,
-                aim: None,
-            };
-        }
-        // R747000: the skill's roll comes first, on the AI's own stream; a full skill takes no draw,
-        // so a bot at it plays as it did before the knob.
-        let mut ai_rng = ai_rng;
-        let (chosen, lethal, ai_cursor) = if plays_best(strength.skill, &mut ai_rng) {
-            let deadline =
-                std::time::Instant::now() + Duration::from_millis(u64::try_from(deadline_ms).unwrap_or(0));
-            let should_stop = move || std::time::Instant::now() >= deadline;
-            let mut options = AiOptions {
-                rng: ai_rng,
-                budget: strength.budget,
-                should_stop: Some(&should_stop),
-            };
-            let style = AiStyle {
-                temperature: strength.temperature,
-                missed_lethal_chance: strength.missed_lethal_chance,
-            };
-            let decision = decide_styled(&state, seat, &mut options, &style);
-            let lethal = decision
-                .as_ref()
-                .is_some_and(|decision| decision.reason == DecisionReason::Lethal);
-            (
-                decision.map(|decision| decision.action),
                 lethal,
-                options.rng.cursor(),
-            )
-        } else if unanswered_draw_offer(&state, seat) {
-            // The random policy never answers an offer (§10.7), so the bot declines as the AI does
-            // and the roll below turns that into its own answer (R639000); no draw is taken.
-            (
-                Some(ActionBody::AnswerDraw { accept: false }),
-                false,
-                ai_rng.cursor(),
-            )
-        } else {
-            let action = random_action(&state, seat, &mut ai_rng);
-            (action, false, ai_rng.cursor())
-        };
-        let body = chosen
-            .filter(|body| !r188_forbidden(body))
-            .map(|body| match body {
-                ActionBody::AnswerDraw { .. } => ActionBody::AnswerDraw {
-                    accept: accepts_draw(
-                        &seed,
-                        home,
-                        state.turn,
-                        &standing(&state, seat, &seed, home),
-                        &BOT_DRAW_ANSWER_FIT,
-                    ),
-                },
-                body => body,
-            });
-        let aim = body.as_ref().and_then(|body| bot_aim(&state, seat, body));
-        Decided {
-            body,
-            ai_cursor,
-            legal_count,
-            lethal,
-            aim,
-        }
+                aim,
+            }
+        })
     })
     .await;
     let Decided {
@@ -349,8 +355,8 @@ pub fn never_played(body: &ActionBody) -> bool {
 /// What a bot plays when the AI gave nothing it may play, or the engine refused it: ending the turn
 /// when that is legal, else the first legal action (a prompt's first answer, a mulligan's keep), else
 /// nothing. Never one `r188_forbidden` names.
-pub fn fallback_action(state: &GameState, seat: PlayerId) -> Option<ActionBody> {
-    let legal: Vec<ActionBody> = engine::legal_actions(state, seat)
+pub fn fallback_action(pinned: Pinned, state: &GameState, seat: PlayerId) -> Option<ActionBody> {
+    let legal: Vec<ActionBody> = engine::legal_actions(pinned, state, seat)
         .into_iter()
         .filter(|body| !r188_forbidden(body))
         .collect();

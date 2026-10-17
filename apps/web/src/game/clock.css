@@ -39,7 +39,8 @@
   display: none;
 }
 
-.clock-side-label {
+.clock-side-label,
+.clock-grace-label {
   font-size: 0.78em;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -52,6 +53,24 @@
   color: var(--text);
   font-weight: 700;
   text-align: right;
+}
+
+/* A seat's disconnect grace (§9.5): whose window it is, in words, beside its seconds. One line,
+   never two: where End turn's housing is too narrow for the words (a phone held upright), they
+   are cut short with an ellipsis and the digits stay whole; the line's accessible name
+   (Clock.tsx `GraceLine`) keeps the words in full. */
+.clock-grace {
+  min-width: 0;
+}
+
+.clock-grace-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clock-grace .clock-digits {
+  flex-shrink: 0;
 }
 
 /* ------------------------------------------------------------------ the urgent readout --- */

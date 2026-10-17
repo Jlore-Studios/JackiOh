@@ -13,8 +13,8 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{Action, ActionBody, CardDef, CreateGameArgs, FoldArgs, GameState, Phase, PlayerId};
 use jackioh_server::actor::engine::{
-    begin_game, create_game, deal_random_deck, hash_state, legal_actions, reduce, snapshot, summarize_game,
-    view_for,
+    Pinned, begin_game, create_game, deal_random_deck, hash_state, legal_actions, reduce, snapshot,
+    summarize_game, view_for,
 };
 use serde_json::{Value, json};
 
@@ -71,7 +71,7 @@ fn decks_the_engine_accepts(pool: &[String], seed: &str) -> (GameState, (Vec<Str
     while size * 2 <= pool.len() {
         let decks = (pool[..size].to_vec(), pool[size..size * 2].to_vec());
         let game = args(seed, &decks);
-        match catch_unwind(AssertUnwindSafe(|| create_game(&game))) {
+        match catch_unwind(AssertUnwindSafe(|| create_game(Pinned::default(), &game))) {
             Ok(state) => return (state, decks),
             Err(payload) => {
                 let refusal = panic_text(payload.as_ref());
@@ -90,7 +90,8 @@ fn decks_the_engine_accepts(pool: &[String], seed: &str) -> (GameState, (Vec<Str
 
 /// The instance ids of a seat's hand, read through its own view (§10.8).
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
-    let view = serde_json::to_value(view_for(state, player)).expect("PlayerView serialises");
+    let view =
+        serde_json::to_value(view_for(Pinned::default(), state, player)).expect("PlayerView serialises");
     view["you"]["hand"]
         .as_array()
         .map(|cards| {
@@ -127,7 +128,7 @@ mod the_real_engine_port_src_match_engine_real_ts {
         assert_eq!(snapshot(&state).result, None);
         // Nothing is owed before the deal; `beginGame` opens both mulligans at once (R265).
         assert_eq!(snapshot(&state).mulligan_owed, Vec::<PlayerId>::new());
-        let begun = begin_game(&state).state;
+        let begun = begin_game(Pinned::default(), &state).state;
         let opened = snapshot(&begun);
         assert_eq!(opened.phase, Phase::Mulligan);
         assert_eq!(opened.turn, 0);
@@ -140,7 +141,7 @@ mod the_real_engine_port_src_match_engine_real_ts {
         let pool = deckable_pool();
 
         let (created, _decks) = decks_the_engine_accepts(&pool, "engine-real-firstplay");
-        let mut state = begin_game(&created).state;
+        let mut state = begin_game(Pinned::default(), &created).state;
 
         // Walk the real game through the port's own surface — `snapshot` for whose turn it is,
         // `legalActions` for what may be done, `reduce` to do it — until a card is played.
@@ -154,7 +155,7 @@ mod the_real_engine_port_src_match_engine_real_ts {
                 .pending_for
                 .or_else(|| at.mulligan_owed.first().copied())
                 .unwrap_or(at.active);
-            let options: Vec<ActionBody> = legal_actions(&state, player)
+            let options: Vec<ActionBody> = legal_actions(Pinned::default(), &state, player)
                 .into_iter()
                 .filter(|body| !NEVER_CHOOSE.contains(&body.action_type().as_str()))
                 .collect();
@@ -167,7 +168,7 @@ mod the_real_engine_port_src_match_engine_real_ts {
             let Some(choice) = choice else { break };
 
             let action = Action::new(choice.clone(), player, format!("step-{steps}"));
-            let result = reduce(&state, &action);
+            let result = reduce(Pinned::default(), &state, &action);
 
             // `legalActions` and `reduce` are the same engine: anything offered must be accepted.
             assert_eq!(
@@ -188,7 +189,8 @@ mod the_real_engine_port_src_match_engine_real_ts {
         assert!(snapshot(&state).turn > 0);
         // The port's other two projections work on a state a real card has passed through.
         assert!(!hash_state(&state).is_empty());
-        let view = serde_json::to_value(view_for(&state, PlayerId::P1)).expect("PlayerView serialises");
+        let view = serde_json::to_value(view_for(Pinned::default(), &state, PlayerId::P1))
+            .expect("PlayerView serialises");
         assert!(!view.is_null());
     }
 }
@@ -222,7 +224,7 @@ mod all_randoms_deal_r258_src_match_engine_real_ts {
             }
         }
         // The dealt pair is a game the engine starts, exactly as the match row will hand it over.
-        let state = create_game(&args("r258-match", &(p1.clone(), p2.clone())));
+        let state = create_game(Pinned::default(), &args("r258-match", &(p1.clone(), p2.clone())));
         assert_eq!(snapshot(&state).phase, Phase::Setup);
 
         // Seeded: the same seed deals the same deck, in the same order, every time and in any process…
@@ -246,7 +248,7 @@ mod a_finished_matchs_record_r376_src_match_engine_real_ts {
     /// Applies one action as `player`, which must be accepted, and logs it.
     fn act(state: &mut GameState, log: &mut Vec<Action>, player: PlayerId, body: ActionBody) {
         let action = Action::new(body, player, format!("r376-{}", log.len()));
-        let result = reduce(state, &action);
+        let result = reduce(Pinned::default(), state, &action);
         assert_eq!(
             result.error,
             None,
@@ -261,7 +263,7 @@ mod a_finished_matchs_record_r376_src_match_engine_real_ts {
     fn r376_summarizes_a_real_match_off_its_log_and_makes_nothing_of_an_unfinished_one() {
         let pool = deckable_pool();
         let (created, decks) = decks_the_engine_accepts(&pool, "r376-real");
-        let mut state = begin_game(&created).state;
+        let mut state = begin_game(Pinned::default(), &created).state;
 
         let mut log: Vec<Action> = Vec::new();
         // Both keep their hands (R265), p1 ends its first turn, p2 concedes on its own.
@@ -269,12 +271,12 @@ mod a_finished_matchs_record_r376_src_match_engine_real_ts {
         act(&mut state, &mut log, PlayerId::P1, ActionBody::Mulligan { keep });
         let keep = hand_ids(&state, PlayerId::P2);
         act(&mut state, &mut log, PlayerId::P2, ActionBody::Mulligan { keep });
-        assert!(summarize_game(&fold_args("r376-real", &decks, &log)).is_none());
+        assert!(summarize_game(Pinned::default(), &fold_args("r376-real", &decks, &log)).is_none());
         act(&mut state, &mut log, PlayerId::P1, ActionBody::EndTurn);
         act(&mut state, &mut log, PlayerId::P2, ActionBody::Concede);
 
-        let summary =
-            summarize_game(&fold_args("r376-real", &decks, &log)).expect("a finished game's summary");
+        let summary = summarize_game(Pinned::default(), &fold_args("r376-real", &decks, &log))
+            .expect("a finished game's summary");
         let summary: Value = serde_json::to_value(&summary).expect("GameSummary serialises");
         assert_eq!(summary["first"], json!("p1"));
         assert_eq!(summary["winner"], json!("p1"));
