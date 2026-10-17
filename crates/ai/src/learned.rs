@@ -61,6 +61,56 @@ pub struct Network<'a> {
     pub hand_unit: f64,
 }
 
+mod int;
+pub use int::*;
+
+/// The network the search runs: a float one, which part 5 screens, or the integer one that ships
+/// (#1011). `LEARNED` is whichever `src/learned/weights.json` holds (`"format"` 1 or 2).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Learned<'a> {
+    Float(Network<'a>),
+    Int(IntNetwork<'a>),
+}
+
+impl Learned<'_> {
+    pub fn features_version(&self) -> u32 {
+        match self {
+            Learned::Float(net) => net.features_version,
+            Learned::Int(net) => net.features_version,
+        }
+    }
+
+    /// How many dense features it reads.
+    pub fn dense_len(&self) -> usize {
+        match self {
+            Learned::Float(net) => net.mean.len(),
+            Learned::Int(net) => net.dense,
+        }
+    }
+
+    /// The sparse keys it has a row for, sorted.
+    pub fn keys(&self) -> &[&str] {
+        match self {
+            Learned::Float(net) => net.keys,
+            Learned::Int(net) => net.keys,
+        }
+    }
+
+    pub fn correction(&self, features: &Features) -> f64 {
+        match self {
+            Learned::Float(net) => net.correction(features),
+            Learned::Int(net) => net.correction(features),
+        }
+    }
+
+    pub fn points(&self, hand: f64, features: &Features) -> f64 {
+        match self {
+            Learned::Float(net) => net.points(hand, features),
+            Learned::Int(net) => net.points(hand, features),
+        }
+    }
+}
+
 include!(concat!(env!("OUT_DIR"), "/learned_weights.rs"));
 
 /// The ReLU clipped at one, as comparisons: below zero is zero, above one is one, NaN stays NaN.
@@ -144,7 +194,7 @@ pub fn finalist_score_with(
     seat: PlayerId,
     next: NextSwing,
     kind: EvalKind,
-    network: &Network<'_>,
+    network: &Learned<'_>,
 ) -> f64 {
     let hand = evaluate(state, seat, next, &AI_EVAL);
     match kind {
@@ -166,13 +216,21 @@ mod tests {
     /// R1010000: the network compiled in was fitted on this build's feature layout.
     #[test]
     fn r1010000_the_compiled_network_was_fitted_on_this_feature_version_and_layout() {
-        assert_eq!(LEARNED.features_version, FEATURES_VERSION);
-        assert_eq!(LEARNED.mean.len(), dense_len());
-        assert_eq!(LEARNED.scale.len(), dense_len());
-        assert_eq!(LEARNED.dense_in.len(), dense_len() * LEARNED.width);
-        assert_eq!(LEARNED.sparse_in.len(), LEARNED.keys.len() * LEARNED.width);
+        assert_eq!(LEARNED.features_version(), FEATURES_VERSION);
+        assert_eq!(LEARNED.dense_len(), dense_len());
+        match LEARNED {
+            Learned::Float(net) => {
+                assert_eq!(net.scale.len(), dense_len());
+                assert_eq!(net.dense_in.len(), dense_len() * net.width);
+                assert_eq!(net.sparse_in.len(), net.keys.len() * net.width);
+            }
+            Learned::Int(net) => {
+                assert_eq!(net.dense_in.len(), dense_len() * net.width);
+                assert_eq!(net.sparse_in.len(), net.keys.len() * net.width);
+            }
+        }
         assert!(
-            LEARNED.keys.windows(2).all(|pair| pair[0] < pair[1]),
+            LEARNED.keys().windows(2).all(|pair| pair[0] < pair[1]),
             "keys sorted"
         );
         assert_eq!(LEARNED_DENSE_NAMES.len(), dense_len());

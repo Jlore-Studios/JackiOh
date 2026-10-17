@@ -342,6 +342,14 @@ export function registeredCatalog(): CardDefs {
 }
 
 /** The catalog version compiled into the module (the newest entry of patches.json). */
+/**
+ * R1011000: the learned evaluation's parity fixture, computed by this WASM build: its integer
+ * network's correction for each case. Only the tests call it.
+ */
+export function learnedParity(fixtureJson: string): number[] {
+  return call("learnedParity", () => parsed<number[]>(engine.learned_parity(fixtureJson)));
+}
+
 export function catalogVersion(): string {
   return call("catalogVersion", () => engine.catalog_version());
 }

@@ -71,41 +71,17 @@ fn slice(values: &[f64]) -> String {
     out
 }
 
-fn main() {
-    let dir = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").expect("cargo sets CARGO_MANIFEST_DIR"));
-    let path = dir.join("src/learned/weights.json");
-    println!("cargo:rerun-if-changed={}", path.display());
-    let text = std::fs::read_to_string(&path).unwrap_or_else(|error| fail(&error.to_string()));
-    let json: Value = serde_json::from_str(&text).unwrap_or_else(|error| fail(&error.to_string()));
-
+/// Format 1: a float network (`export.py`), as `Learned::Float`.
+fn float_code(
+    json: &Value,
+    names: &[String],
+    keys: &[String],
+    width: usize,
+    features_version: u32,
+    catalog: &str,
+    code: &mut String,
+) {
     let field = |name: &str| -> &Value { json.get(name).unwrap_or_else(|| fail(&format!("no {name}"))) };
-    let features_version = field("featuresVersion")
-        .as_u64()
-        .and_then(|v| u32::try_from(v).ok())
-        .unwrap_or_else(|| fail("featuresVersion is not a whole number"));
-    let catalog = field("catalog")
-        .as_str()
-        .unwrap_or_else(|| fail("catalog is not text"))
-        .to_string();
-    let width = usize::try_from(
-        field("width")
-            .as_u64()
-            .unwrap_or_else(|| fail("width is not a whole number")),
-    )
-    .unwrap_or_else(|_| fail("width is too large"));
-    if width == 0 {
-        fail("width is 0");
-    }
-    let names: Vec<String> = field("denseNames")
-        .as_array()
-        .unwrap_or_else(|| fail("denseNames is not an array"))
-        .iter()
-        .map(|name| {
-            name.as_str()
-                .unwrap_or_else(|| fail("a dense name is not text"))
-                .to_string()
-        })
-        .collect();
     let dense = names.len();
     let mean = numbers(field("mean"), "mean");
     let scale = numbers(field("scale"), "scale");
@@ -118,19 +94,6 @@ fn main() {
     }
     if scale.contains(&0.0) {
         fail("a scale is 0");
-    }
-    let keys: Vec<String> = field("keys")
-        .as_array()
-        .unwrap_or_else(|| fail("keys is not an array"))
-        .iter()
-        .map(|key| {
-            key.as_str()
-                .unwrap_or_else(|| fail("a key is not text"))
-                .to_string()
-        })
-        .collect();
-    if keys.windows(2).any(|pair| pair[0] >= pair[1]) {
-        fail("keys are not sorted and unique");
     }
     let dense_in = matrix(field("denseIn"), "denseIn", dense, width);
     let sparse_in = matrix(field("sparseIn"), "sparseIn", keys.len(), width);
@@ -176,17 +139,6 @@ fn main() {
     };
     let (hand_a, hand_b, hand_unit) = (number("handA"), number("handB"), number("handUnit"));
 
-    let mut code = String::new();
-    writeln!(
-        code,
-        "/// The dense features the compiled-in network was fitted on, in order."
-    )
-    .unwrap();
-    write!(code, "pub const LEARNED_DENSE_NAMES: &[&str] = &[").unwrap();
-    for name in &names {
-        write!(code, "{name:?},").unwrap();
-    }
-    writeln!(code, "];").unwrap();
     for (at, (inputs, w, b)) in layers.iter().enumerate() {
         writeln!(
             code,
@@ -202,7 +154,7 @@ fn main() {
     }
     writeln!(code, "];").unwrap();
     write!(code, "const LEARNED_KEYS: &[&str] = &[").unwrap();
-    for key in &keys {
+    for key in keys {
         write!(code, "{key:?},").unwrap();
     }
     writeln!(code, "];").unwrap();
@@ -213,9 +165,9 @@ fn main() {
     .unwrap();
     writeln!(
         code,
-        "pub const LEARNED: Network<'static> = Network {{ features_version: {features_version}, catalog: {catalog:?}, \
+        "pub const LEARNED: Learned<'static> = Learned::Float(Network {{ features_version: {features_version}, catalog: {catalog:?}, \
          width: {width}, mean: {}, scale: {}, keys: LEARNED_KEYS, dense_in: {}, sparse_in: {}, bias: {}, \
-         head: LEARNED_HEAD, out_w: {}, out_b: {}, hand_a: {}, hand_b: {}, hand_unit: {} }};",
+         head: LEARNED_HEAD, out_w: {}, out_b: {}, hand_a: {}, hand_b: {}, hand_unit: {} }});",
         slice(&mean),
         slice(&scale),
         slice(&dense_in),
@@ -228,6 +180,230 @@ fn main() {
         literal(hand_unit),
     )
     .unwrap();
+}
+
+/// Standard base64 (RFC 4648), as `src/learned/int.rs` reads it.
+fn base64(text: &str, field: &str) -> Vec<u8> {
+    let value = |c: u8| -> u32 {
+        match c {
+            b'A'..=b'Z' => u32::from(c - b'A'),
+            b'a'..=b'z' => u32::from(c - b'a') + 26,
+            b'0'..=b'9' => u32::from(c - b'0') + 52,
+            b'+' => 62,
+            b'/' => 63,
+            _ => fail(&format!("{field} is not base64")),
+        }
+    };
+    let bytes: Vec<u8> = text.bytes().filter(|c| !c.is_ascii_whitespace()).collect();
+    if !bytes.len().is_multiple_of(4) {
+        fail(&format!("{field} is not base64"));
+    }
+    let mut out = Vec::new();
+    for quad in bytes.chunks(4) {
+        let pad = quad.iter().rev().take_while(|c| **c == b'=').count();
+        let mut n = 0u32;
+        for (at, c) in quad.iter().enumerate() {
+            n = (n << 6) | if at >= 4 - pad { 0 } else { value(*c) };
+        }
+        out.extend_from_slice(&n.to_be_bytes()[1..4 - pad]);
+    }
+    out
+}
+
+fn words(json: &Value, field: &str, size: usize) -> Vec<i64> {
+    let text = json
+        .as_str()
+        .unwrap_or_else(|| fail(&format!("{field} is not base64 text")));
+    let bytes = base64(text, field);
+    if !bytes.len().is_multiple_of(size) {
+        fail(&format!(
+            "{field}: a length that is not whole words of {size} bytes"
+        ));
+    }
+    bytes
+        .chunks(size)
+        .map(|chunk| match size {
+            1 => i64::from(chunk[0] as i8),
+            2 => i64::from(i16::from_le_bytes([chunk[0], chunk[1]])),
+            _ => i64::from_le_bytes(chunk.try_into().expect("eight bytes")),
+        })
+        .collect()
+}
+
+fn ints(values: &[i64]) -> String {
+    let items: Vec<String> = values.iter().map(i64::to_string).collect();
+    format!("&[{}]", items.join(","))
+}
+
+fn whole(json: &Value, field: &str) -> i64 {
+    json.as_i64()
+        .unwrap_or_else(|| fail(&format!("{field} is not a whole number")))
+}
+
+/// Format 2: an integer network (`quantize.py`), as `Learned::Int`.
+fn int_code(
+    json: &Value,
+    names: &[String],
+    keys: &[String],
+    width: usize,
+    features_version: u32,
+    catalog: &str,
+    code: &mut String,
+) {
+    let field = |name: &str| -> &Value { json.get(name).unwrap_or_else(|| fail(&format!("no {name}"))) };
+    let dense = names.len();
+    let dense_in = words(field("denseIn"), "denseIn", 2);
+    let sparse_in = words(field("sparseIn"), "sparseIn", 2);
+    let bias = words(field("bias"), "bias", 8);
+    if dense_in.len() != dense * width || sparse_in.len() != keys.len() * width || bias.len() != width {
+        fail("the first layer's shapes do not add up");
+    }
+    let shift = whole(field("shift"), "shift");
+    let activation = whole(field("activation"), "activation");
+    if !(0..=24).contains(&shift) || activation <= 0 {
+        fail("shift or activation out of range");
+    }
+    let mut inputs = width;
+    let mut heads = Vec::new();
+    for (at, layer) in field("head")
+        .as_array()
+        .unwrap_or_else(|| fail("head is not an array"))
+        .iter()
+        .enumerate()
+    {
+        let get = |name: &str| {
+            layer
+                .get(name)
+                .unwrap_or_else(|| fail(&format!("head[{at}] has no {name}")))
+        };
+        let w = words(get("w"), "head w", 1);
+        let b = words(get("b"), "head b", 8);
+        let layer_shift = whole(get("shift"), "head shift");
+        if whole(get("inputs"), "inputs") != inputs as i64
+            || w.len() != b.len() * inputs
+            || !(0..=24).contains(&layer_shift)
+        {
+            fail(&format!("head[{at}]'s shapes do not add up"));
+        }
+        writeln!(code, "const LEARNED_INT_HEAD_{at}: IntLayer<'static> = IntLayer {{ inputs: {inputs}, shift: {layer_shift}, w: {}, b: {} }};", ints(&w), ints(&b)).unwrap();
+        heads.push(at);
+        inputs = b.len();
+    }
+    write!(code, "const LEARNED_INT_HEAD: &[IntLayer<'static>] = &[").unwrap();
+    for at in heads {
+        write!(code, "LEARNED_INT_HEAD_{at},").unwrap();
+    }
+    writeln!(code, "];").unwrap();
+    let out = field("out");
+    let get = |name: &str| {
+        out.get(name)
+            .unwrap_or_else(|| fail(&format!("out has no {name}")))
+    };
+    let out_w = words(get("w"), "out w", 1);
+    let out_shift = whole(get("shift"), "out shift");
+    if out_w.len() != inputs || !(0..=24).contains(&out_shift) {
+        fail("out's shapes do not add up");
+    }
+    let out_b = whole(get("b"), "out b");
+    let number = |name: &str| {
+        field(name)
+            .as_f64()
+            .filter(|x| x.is_finite())
+            .unwrap_or_else(|| fail(&format!("{name} is not a number")))
+    };
+    write!(code, "const LEARNED_KEYS: &[&str] = &[").unwrap();
+    for key in keys {
+        write!(code, "{key:?},").unwrap();
+    }
+    writeln!(code, "];").unwrap();
+    writeln!(
+        code,
+        "/// The network compiled in from `src/learned/weights.json`."
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "pub const LEARNED: Learned<'static> = Learned::Int(IntNetwork {{ features_version: {features_version}, catalog: {catalog:?}, \
+         width: {width}, dense: {dense}, activation: {activation}, shift: {shift}, keys: LEARNED_KEYS, dense_in: {}, sparse_in: {}, \
+         bias: {}, head: LEARNED_INT_HEAD, out_shift: {out_shift}, out_w: {}, out_b: {out_b}, hand_a: {}, hand_b: {}, hand_unit: {} }});",
+        ints(&dense_in),
+        ints(&sparse_in),
+        ints(&bias),
+        ints(&out_w),
+        literal(number("handA")),
+        literal(number("handB")),
+        literal(number("handUnit")),
+    )
+    .unwrap();
+}
+
+fn main() {
+    let dir = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").expect("cargo sets CARGO_MANIFEST_DIR"));
+    let path = dir.join("src/learned/weights.json");
+    println!("cargo:rerun-if-changed={}", path.display());
+    let text = std::fs::read_to_string(&path).unwrap_or_else(|error| fail(&error.to_string()));
+    let json: Value = serde_json::from_str(&text).unwrap_or_else(|error| fail(&error.to_string()));
+
+    let field = |name: &str| -> &Value { json.get(name).unwrap_or_else(|| fail(&format!("no {name}"))) };
+    let features_version = field("featuresVersion")
+        .as_u64()
+        .and_then(|v| u32::try_from(v).ok())
+        .unwrap_or_else(|| fail("featuresVersion is not a whole number"));
+    let catalog = field("catalog")
+        .as_str()
+        .unwrap_or_else(|| fail("catalog is not text"))
+        .to_string();
+    let width = usize::try_from(
+        field("width")
+            .as_u64()
+            .unwrap_or_else(|| fail("width is not a whole number")),
+    )
+    .unwrap_or_else(|_| fail("width is too large"));
+    if width == 0 {
+        fail("width is 0");
+    }
+    let names: Vec<String> = field("denseNames")
+        .as_array()
+        .unwrap_or_else(|| fail("denseNames is not an array"))
+        .iter()
+        .map(|name| {
+            name.as_str()
+                .unwrap_or_else(|| fail("a dense name is not text"))
+                .to_string()
+        })
+        .collect();
+    let keys: Vec<String> = field("keys")
+        .as_array()
+        .unwrap_or_else(|| fail("keys is not an array"))
+        .iter()
+        .map(|key| {
+            key.as_str()
+                .unwrap_or_else(|| fail("a key is not text"))
+                .to_string()
+        })
+        .collect();
+    if keys.windows(2).any(|pair| pair[0] >= pair[1]) {
+        fail("keys are not sorted and unique");
+    }
+    let mut code = String::new();
+    writeln!(
+        code,
+        "/// The dense features the compiled-in network was fitted on, in order."
+    )
+    .unwrap();
+    write!(code, "pub const LEARNED_DENSE_NAMES: &[&str] = &[").unwrap();
+    for name in &names {
+        write!(code, "{name:?},").unwrap();
+    }
+    writeln!(code, "];").unwrap();
+    let format = field("format").as_u64().unwrap_or(1);
+    match format {
+        1 => float_code(&json, &names, &keys, width, features_version, &catalog, &mut code),
+        2 => int_code(&json, &names, &keys, width, features_version, &catalog, &mut code),
+        _ => fail(&format!(
+            "format {format} is neither a float (1) nor an integer (2) network"
+        )),
+    }
 
     let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").expect("cargo sets OUT_DIR"));
     std::fs::write(out_dir.join("learned_weights.rs"), code).expect("write learned_weights.rs");
