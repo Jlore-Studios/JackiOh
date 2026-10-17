@@ -100,10 +100,10 @@ use crate::turn::standing_draw_offer;
 use crate::wire::{
     AnimatedView, BackrowCounters, BackrowView, CardDef, CardMark, CardType, CardView, CopiedTextView,
     CreditView, DrawOfferView, FaceDownBackrowView, GameEvent, GameEventType, GameResult, GlitchOutcome,
-    HandView, HeroPowerView, HeroView, ManaView, ModifierView, MulliganView, PLAYER_IDS,
-    PendingElsewhereView, PendingOption, PendingPromptView, PendingView, PlayerId, PlayerView, PreviewValue,
-    PublicBackrowView, Row, RowFlags, Selection, SideView, TuningChange, UnitView, Zone, ZoneName,
-    opponent_of,
+    HandView, HeroPowerView, HeroView, LibraryOverflowOutcome, ManaView, ModifierView, MulliganView,
+    PLAYER_IDS, PendingElsewhereView, PendingOption, PendingPromptView, PendingView, PlayerId, PlayerView,
+    PreviewValue, PublicBackrowView, Row, RowFlags, Selection, SideView, TuningChange, UnitView, Zone,
+    ZoneName, opponent_of,
 };
 use crate::zones::{beneath_at, carried_at, carried_units_of, home_of, is_reserved, slot_of, slots_of};
 
@@ -158,6 +158,12 @@ struct Replacements {
     /// card they name that the state no longer holds ceased to exist out of that Glitch, unseen, and
     /// reads to nobody.
     voided: bool,
+    /// R316: a card a full library refused before it existed that copies nothing.
+    never_made: IndexSet<String>,
+    /// R11: tokens that ceased to exist. Tokens are public when they go.
+    tokens: IndexSet<String>,
+    /// Duos: cards that were held in hand before they left the duel (via duos `pass`).
+    held_by: IndexMap<String, PlayerId>,
 }
 
 fn replacements_of(events: &[&GameEvent], state: Option<&GameState>) -> Replacements {
@@ -169,52 +175,166 @@ fn replacements_of(events: &[&GameEvent], state: Option<&GameState>) -> Replacem
     });
     let mut replaced_by: IndexMap<String, String> = IndexMap::new();
     let mut hidden_from: IndexMap<String, Vec<PlayerId>> = IndexMap::new();
+    let mut never_made: IndexSet<String> = IndexSet::new();
+    let mut tokens: IndexSet<String> = IndexSet::new();
+    let mut in_hand: IndexMap<String, PlayerId> = IndexMap::new();
+    let mut check_token = |id: &str, def_id: &str| {
+        if !def_id.is_empty() && crate::catalog::def_of(state, def_id).token {
+            tokens.insert(id.to_string());
+        }
+    };
     for event in events {
         match event {
             GameEvent::Transformed {
                 instance_id,
                 new_instance_id,
                 hidden_from: hidden,
+                from_def_id,
+                to_def_id,
                 ..
-            } if new_instance_id != instance_id => {
-                replaced_by.insert(instance_id.clone(), new_instance_id.clone());
-                if let Some(hidden) = hidden {
-                    hidden_from.insert(instance_id.clone(), hidden.clone());
+            } => {
+                check_token(instance_id, from_def_id);
+                check_token(new_instance_id, to_def_id);
+                if new_instance_id != instance_id {
+                    replaced_by.insert(instance_id.clone(), new_instance_id.clone());
+                    if let Some(hidden) = hidden {
+                        hidden_from.insert(instance_id.clone(), hidden.clone());
+                    }
+                }
+                if let Some(holder) = in_hand.shift_remove(instance_id) {
+                    in_hand.insert(new_instance_id.clone(), holder);
                 }
             }
             GameEvent::Fused {
                 instance_ids,
                 result_instance_id,
+                def_id,
                 ..
             } => {
+                check_token(result_instance_id, def_id);
                 for id in instance_ids {
                     if id != result_instance_id {
                         replaced_by.insert(id.clone(), result_instance_id.clone());
                     }
                 }
+                let mut holder = None;
+                for id in instance_ids {
+                    if let Some(h) = in_hand.shift_remove(id) {
+                        holder = Some(h);
+                    }
+                }
+                if let Some(holder) = holder {
+                    in_hand.insert(result_instance_id.clone(), holder);
+                }
             }
-            // R227: a card set face-down took a fresh id. It is the same card, so the events that named it
-            // by its old id are judged by where it is now, exactly as they were before it moved: its draw
-            // stays hidden while the trap is face-down and reads once the trap is public (R97). No
-            // `hiddenFrom` is kept, since nothing ceased to exist.
             GameEvent::CardPlayed {
                 instance_id,
-                former_id: Some(former),
+                def_id,
+                former_id,
                 ..
             }
             | GameEvent::Summoned {
                 instance_id,
-                former_id: Some(former),
+                def_id,
+                former_id,
                 ..
+            } => {
+                check_token(instance_id, def_id);
+                if let Some(former) = former_id {
+                    replaced_by.insert(former.clone(), instance_id.clone());
+                }
+                in_hand.shift_remove(instance_id);
             }
-            | GameEvent::ControlChanged {
+            GameEvent::ControlChanged {
                 instance_id,
                 former_id: Some(former),
                 ..
             } => {
                 replaced_by.insert(former.clone(), instance_id.clone());
             }
+            GameEvent::Drawn {
+                player,
+                instance_id,
+                def_id,
+                ..
+            }
+            | GameEvent::AddedToHand {
+                player,
+                instance_id,
+                def_id,
+                ..
+            } => {
+                check_token(instance_id, def_id);
+                in_hand.insert(instance_id.clone(), *player);
+            }
+            GameEvent::Bounced {
+                owner,
+                instance_id,
+                def_id,
+                ..
+            } => {
+                check_token(instance_id, def_id);
+                in_hand.insert(instance_id.clone(), *owner);
+            }
+            GameEvent::Stolen {
+                to,
+                instance_id,
+                def_id,
+                ..
+            } => {
+                check_token(instance_id, def_id);
+                in_hand.insert(instance_id.clone(), *to);
+            }
+            GameEvent::CardAnnounced { instance_id, .. } | GameEvent::ShuffledIn { instance_id, .. } => {
+                in_hand.shift_remove(instance_id);
+            }
+            GameEvent::Discarded {
+                instance_id, def_id, ..
+            }
+            | GameEvent::Burned {
+                instance_id, def_id, ..
+            } => {
+                check_token(instance_id, def_id);
+                in_hand.shift_remove(instance_id);
+            }
+            GameEvent::Destroyed {
+                instance_id, def_id, ..
+            }
+            | GameEvent::EnteredGraveyard {
+                instance_id, def_id, ..
+            }
+            | GameEvent::Exiled {
+                instance_id, def_id, ..
+            }
+            | GameEvent::CardResolved {
+                instance_id, def_id, ..
+            } => {
+                check_token(instance_id, def_id);
+            }
+            GameEvent::LibraryOverflow {
+                instance_id,
+                def_id,
+                outcome,
+                copy_of,
+                ..
+            } => {
+                check_token(instance_id, def_id);
+                if let Some(copied) = copy_of {
+                    replaced_by.insert(instance_id.clone(), copied.clone());
+                } else if *outcome == LibraryOverflowOutcome::NotCreated {
+                    never_made.insert(instance_id.clone());
+                }
+            }
             _ => {}
+        }
+    }
+    let mut held_by: IndexMap<String, PlayerId> = IndexMap::new();
+    if let Some(state) = state {
+        for (id, holder) in in_hand {
+            if find_instance(state, &id).is_none() {
+                held_by.insert(id.clone(), holder);
+                hidden_from.entry(id).or_default().push(opponent_of(holder));
+            }
         }
     }
     Replacements {
@@ -222,6 +342,9 @@ fn replacements_of(events: &[&GameEvent], state: Option<&GameState>) -> Replacem
         hidden_from,
         to_library: to_library.filter(|set| !set.is_empty()),
         voided: false,
+        never_made,
+        tokens,
+        held_by,
     }
 }
 
@@ -261,8 +384,24 @@ fn may_read(state: &GameState, viewer: PlayerId, instance_id: &str, replaced: &R
     // R224: a card the mulligan returned waits for its shuffle-back in no pile, and is a library card.
     // R764: so is one a Glitch took off the board or out of the match before it was ever revealed.
     let Some(card) = card else {
+        if replaced
+            .hidden_from
+            .get(&id)
+            .is_some_and(|players| players.contains(&viewer))
+        {
+            return false;
+        }
         let to_library = replaced.to_library.as_ref().is_some_and(|ids| ids.contains(&id));
-        return !to_library && !replaced.voided;
+        if to_library || replaced.voided {
+            return false;
+        }
+        if replaced.never_made.contains(&id) || replaced.tokens.contains(&id) {
+            return true;
+        }
+        if let Some(&holder) = replaced.held_by.get(&id) {
+            return holder == viewer;
+        }
+        return false;
     };
     match &card.zone {
         Zone::Library { .. } => false,

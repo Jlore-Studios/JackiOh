@@ -222,6 +222,8 @@ struct Lineage {
     /// definition can change and change back (R77's Fuse, then R419's Rollback restoring the token
     /// it was, fuzz seed 119), so its leaving names it better than every definition it ever wore.
     gone_as: IndexMap<String, String>,
+    /// Duos: a card that was held in a player's hand before it left the duel (via duos `pass`).
+    held_in_hand_by: IndexMap<String, PlayerId>,
 }
 
 fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
@@ -230,6 +232,7 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
     let mut never_made: IndexSet<String> = IndexSet::new();
     let mut ties: IndexMap<String, IndexSet<String>> = IndexMap::new();
     let mut gone_as: IndexMap<String, String> = IndexMap::new();
+    let mut in_hand: IndexMap<String, PlayerId> = IndexMap::new();
     let tie =
         |ties: &mut IndexMap<String, IndexSet<String>>, id: Option<&Value>, values: &[Option<&Value>]| {
             let Some(id) = id.and_then(Value::as_str) else {
@@ -301,6 +304,57 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
                 }
             }
         });
+        match event {
+            GameEvent::Drawn {
+                player, instance_id, ..
+            }
+            | GameEvent::AddedToHand {
+                player, instance_id, ..
+            } => {
+                in_hand.insert(instance_id.clone(), *player);
+            }
+            GameEvent::Bounced {
+                owner, instance_id, ..
+            } => {
+                in_hand.insert(instance_id.clone(), *owner);
+            }
+            GameEvent::Stolen { to, instance_id, .. } => {
+                in_hand.insert(instance_id.clone(), *to);
+            }
+            GameEvent::CardPlayed { instance_id, .. }
+            | GameEvent::CardAnnounced { instance_id, .. }
+            | GameEvent::Summoned { instance_id, .. }
+            | GameEvent::Discarded { instance_id, .. }
+            | GameEvent::Burned { instance_id, .. }
+            | GameEvent::ShuffledIn { instance_id, .. } => {
+                in_hand.shift_remove(instance_id);
+            }
+            GameEvent::Transformed {
+                instance_id,
+                new_instance_id,
+                ..
+            } => {
+                if let Some(holder) = in_hand.shift_remove(instance_id) {
+                    in_hand.insert(new_instance_id.clone(), holder);
+                }
+            }
+            GameEvent::Fused {
+                instance_ids,
+                result_instance_id,
+                ..
+            } => {
+                let mut holder = None;
+                for id in instance_ids {
+                    if let Some(h) = in_hand.shift_remove(id) {
+                        holder = Some(h);
+                    }
+                }
+                if let Some(holder) = holder {
+                    in_hand.insert(result_instance_id.clone(), holder);
+                }
+            }
+            _ => {}
+        }
         if let GameEvent::Fused {
             instance_ids,
             result_instance_id,
@@ -314,12 +368,19 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
             }
         }
     }
+    let mut held_in_hand_by: IndexMap<String, PlayerId> = IndexMap::new();
+    for (id, holder) in in_hand {
+        if find_instance(state, &id).is_none() {
+            held_in_hand_by.insert(id, holder);
+        }
+    }
     Lineage {
         next,
         unread,
         never_made,
         ties,
         gone_as,
+        held_in_hand_by,
     }
 }
 
@@ -385,8 +446,20 @@ fn standing_of(
                     .iter()
                     .all(|def| crate::catalog::def_of(Some(&*state), def).token),
             };
+            if token {
+                return Some(Standing {
+                    reads: true,
+                    where_: "no pile (it ceased to exist)".to_string(),
+                });
+            }
+            if let Some(&holder) = lineage.held_in_hand_by.get(id) {
+                return Some(Standing {
+                    reads: holder == viewer,
+                    where_: format!("{holder}'s hand before it left the duel"),
+                });
+            }
             return Some(Standing {
-                reads: token,
+                reads: false,
                 where_: "no pile (it ceased to exist)".to_string(),
             });
         };
@@ -1293,54 +1366,6 @@ pub fn check_duos_view_redaction(view: &DuosView) -> Vec<String> {
     violations
 }
 
-/// Identifies false-positive hidden violations in 1v1 view checks resulting from cards passed
-/// between Duos duels: in 1v1, a card that ceased to exist without being voided reads as public (R97),
-/// while the 1v1 invariant monitor expects non-token vanished cards to be hidden.
-fn is_passed_event_fp(v: &str, duel_state: &GameState, passed: &IndexSet<String>) -> bool {
-    if !v.contains("in the view:") {
-        return false;
-    }
-    if let Some(after_events) = v.split("at view.events[").nth(1)
-        && let Some((idx_str, _)) = after_events.split_once(']')
-        && let Ok(idx) = idx_str.parse::<usize>()
-    {
-        let viewer = if v.contains("p1 is sent") {
-            PlayerId::P1
-        } else if v.contains("p2 is sent") {
-            PlayerId::P2
-        } else {
-            return false;
-        };
-        let view = crate::view_for::view_for(duel_state, viewer);
-        if let Some(event) = view.events.get(idx)
-            && let Ok(s) = serde_json::to_string(event)
-            && passed.iter().any(|p| s.contains(&format!("\"{p}\"")))
-        {
-            return true;
-        }
-    }
-    if v.contains("no pile (it ceased to exist)") {
-        let lineage = lineage_of(duel_state, PlayerId::P1);
-        for passed_id in passed {
-            if v.contains(&format!("\"{passed_id}\"")) {
-                return true;
-            }
-        }
-        for (former, next) in &lineage.next {
-            if v.contains(&format!("\"{former}\"")) {
-                let mut current = next.clone();
-                while let Some(further) = lineage.next.get(&current) {
-                    current = further.clone();
-                }
-                if passed.contains(&current) {
-                    return true;
-                }
-            }
-        }
-    }
-    false
-}
-
 /// A tamper callback for testing seat redaction on a generated `DuosView`.
 pub type DuosViewTamper = std::sync::Arc<dyn Fn(&mut DuosView) + Send + Sync>;
 
@@ -1349,7 +1374,6 @@ pub type DuosViewTamper = std::sync::Arc<dyn Fn(&mut DuosView) + Send + Sync>;
 /// checks, and life pool bounds (§13.4).
 pub struct DuosInvariantMonitor {
     monitors: [InvariantMonitor; DUOS_DUELS],
-    passed: [IndexSet<String>; DUOS_DUELS],
     pub view_tamper: Option<DuosViewTamper>,
 }
 
@@ -1357,7 +1381,6 @@ impl Clone for DuosInvariantMonitor {
     fn clone(&self) -> Self {
         DuosInvariantMonitor {
             monitors: self.monitors.clone(),
-            passed: self.passed.clone(),
             view_tamper: self.view_tamper.clone(),
         }
     }
@@ -1367,7 +1390,6 @@ impl std::fmt::Debug for DuosInvariantMonitor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DuosInvariantMonitor")
             .field("monitors", &self.monitors)
-            .field("passed", &self.passed)
             .field("view_tamper", &self.view_tamper.as_ref().map(|_| "<tamper fn>"))
             .finish()
     }
@@ -1384,7 +1406,6 @@ impl DuosInvariantMonitor {
                 InvariantMonitor::new(&start.duels[0]),
                 InvariantMonitor::new(&start.duels[1]),
             ],
-            passed: [IndexSet::new(), IndexSet::new()],
             view_tamper: None,
         }
     }
@@ -1420,22 +1441,11 @@ impl DuosInvariantMonitor {
         let mut found = Vec::new();
         let mut duel_events: [Vec<GameEvent>; DUOS_DUELS] = [Vec::new(), Vec::new()];
         for event in events {
-            match event {
-                DuosEvent::Duel { duel, event } => {
-                    let idx = *duel as usize;
-                    if idx < DUOS_DUELS {
-                        duel_events[idx].push(event.clone());
-                    }
+            if let DuosEvent::Duel { duel, event } = event {
+                let idx = *duel as usize;
+                if idx < DUOS_DUELS {
+                    duel_events[idx].push(event.clone());
                 }
-                DuosEvent::Passed {
-                    from, instance_id, ..
-                } => {
-                    let duel = from.duel();
-                    if duel < DUOS_DUELS {
-                        self.passed[duel].insert(instance_id.clone());
-                    }
-                }
-                _ => {}
             }
         }
         for (duel, duel_events_list) in duel_events.iter().enumerate().take(DUOS_DUELS) {
@@ -1465,12 +1475,7 @@ impl DuosInvariantMonitor {
         for (duel, monitor) in self.monitors.iter().enumerate() {
             if duel < state.duels.len() {
                 let violations = monitor.hidden(&state.duels[duel]);
-                for v in violations {
-                    let is_pass_fp = is_passed_event_fp(&v, &state.duels[duel], &self.passed[duel]);
-                    if !is_pass_fp {
-                        found.push(format!("duel {duel}: {v}"));
-                    }
-                }
+                found.extend(violations.into_iter().map(|v| format!("duel {duel}: {v}")));
             }
         }
         for seat in DUOS_SEATS {
