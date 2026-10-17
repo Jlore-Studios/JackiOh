@@ -64,6 +64,8 @@ pub struct Network<'a> {
 include!(concat!(env!("OUT_DIR"), "/learned_weights.rs"));
 
 /// The ReLU clipped at one, as comparisons: below zero is zero, above one is one, NaN stays NaN.
+/// Written out rather than `f64::clamp` so the comparisons R1010001 names are the code itself.
+#[allow(clippy::manual_clamp)]
 fn clip(x: f64) -> f64 {
     if x < 0.0 {
         0.0
@@ -169,10 +171,16 @@ mod tests {
         assert_eq!(LEARNED.scale.len(), dense_len());
         assert_eq!(LEARNED.dense_in.len(), dense_len() * LEARNED.width);
         assert_eq!(LEARNED.sparse_in.len(), LEARNED.keys.len() * LEARNED.width);
-        assert!(LEARNED.keys.windows(2).all(|pair| pair[0] < pair[1]), "keys sorted");
+        assert!(
+            LEARNED.keys.windows(2).all(|pair| pair[0] < pair[1]),
+            "keys sorted"
+        );
         assert_eq!(LEARNED_DENSE_NAMES.len(), dense_len());
         assert_eq!(
-            LEARNED_DENSE_NAMES.iter().map(|name| name.to_string()).collect::<Vec<_>>(),
+            LEARNED_DENSE_NAMES
+                .iter()
+                .map(|name| name.to_string())
+                .collect::<Vec<_>>(),
             crate::features::dense_names()
         );
     }

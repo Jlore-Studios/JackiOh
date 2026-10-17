@@ -29,7 +29,9 @@ fn numbers(value: &Value, field: &str) -> Vec<f64> {
         .iter()
         .map(|item| match item.as_f64() {
             Some(x) if x.is_finite() => x,
-            _ => fail(&format!("{field} holds a value that is not a finite number: {item}")),
+            _ => fail(&format!(
+                "{field} holds a value that is not a finite number: {item}"
+            )),
         })
         .collect()
 }
@@ -81,9 +83,16 @@ fn main() {
         .as_u64()
         .and_then(|v| u32::try_from(v).ok())
         .unwrap_or_else(|| fail("featuresVersion is not a whole number"));
-    let catalog = field("catalog").as_str().unwrap_or_else(|| fail("catalog is not text")).to_string();
-    let width = usize::try_from(field("width").as_u64().unwrap_or_else(|| fail("width is not a whole number")))
-        .unwrap_or_else(|_| fail("width is too large"));
+    let catalog = field("catalog")
+        .as_str()
+        .unwrap_or_else(|| fail("catalog is not text"))
+        .to_string();
+    let width = usize::try_from(
+        field("width")
+            .as_u64()
+            .unwrap_or_else(|| fail("width is not a whole number")),
+    )
+    .unwrap_or_else(|_| fail("width is too large"));
     if width == 0 {
         fail("width is 0");
     }
@@ -91,22 +100,34 @@ fn main() {
         .as_array()
         .unwrap_or_else(|| fail("denseNames is not an array"))
         .iter()
-        .map(|name| name.as_str().unwrap_or_else(|| fail("a dense name is not text")).to_string())
+        .map(|name| {
+            name.as_str()
+                .unwrap_or_else(|| fail("a dense name is not text"))
+                .to_string()
+        })
         .collect();
     let dense = names.len();
     let mean = numbers(field("mean"), "mean");
     let scale = numbers(field("scale"), "scale");
     if mean.len() != dense || scale.len() != dense {
-        fail(&format!("mean ({}) and scale ({}) are not one per dense name ({dense})", mean.len(), scale.len()));
+        fail(&format!(
+            "mean ({}) and scale ({}) are not one per dense name ({dense})",
+            mean.len(),
+            scale.len()
+        ));
     }
-    if scale.iter().any(|s| *s == 0.0) {
+    if scale.contains(&0.0) {
         fail("a scale is 0");
     }
     let keys: Vec<String> = field("keys")
         .as_array()
         .unwrap_or_else(|| fail("keys is not an array"))
         .iter()
-        .map(|key| key.as_str().unwrap_or_else(|| fail("a key is not text")).to_string())
+        .map(|key| {
+            key.as_str()
+                .unwrap_or_else(|| fail("a key is not text"))
+                .to_string()
+        })
         .collect();
     if keys.windows(2).any(|pair| pair[0] >= pair[1]) {
         fail("keys are not sorted and unique");
@@ -119,9 +140,22 @@ fn main() {
     }
     let mut layers: Vec<(usize, Vec<f64>, Vec<f64>)> = Vec::new();
     let mut inputs = width;
-    for (at, layer) in field("head").as_array().unwrap_or_else(|| fail("head is not an array")).iter().enumerate() {
-        let b = numbers(layer.get("b").unwrap_or_else(|| fail("a head layer has no b")), &format!("head[{at}].b"));
-        let w = matrix(layer.get("w").unwrap_or_else(|| fail("a head layer has no w")), &format!("head[{at}].w"), b.len(), inputs);
+    for (at, layer) in field("head")
+        .as_array()
+        .unwrap_or_else(|| fail("head is not an array"))
+        .iter()
+        .enumerate()
+    {
+        let b = numbers(
+            layer.get("b").unwrap_or_else(|| fail("a head layer has no b")),
+            &format!("head[{at}].b"),
+        );
+        let w = matrix(
+            layer.get("w").unwrap_or_else(|| fail("a head layer has no w")),
+            &format!("head[{at}].w"),
+            b.len(),
+            inputs,
+        );
         layers.push((inputs, w, b.clone()));
         inputs = b.len();
     }
@@ -130,19 +164,37 @@ fn main() {
     if out_w.len() != inputs {
         fail(&format!("out.w has {} values, not {inputs}", out_w.len()));
     }
-    let out_b = out.get("b").and_then(Value::as_f64).unwrap_or_else(|| fail("out.b is not a number"));
-    let number = |name: &str| field(name).as_f64().filter(|x| x.is_finite()).unwrap_or_else(|| fail(&format!("{name} is not a number")));
+    let out_b = out
+        .get("b")
+        .and_then(Value::as_f64)
+        .unwrap_or_else(|| fail("out.b is not a number"));
+    let number = |name: &str| {
+        field(name)
+            .as_f64()
+            .filter(|x| x.is_finite())
+            .unwrap_or_else(|| fail(&format!("{name} is not a number")))
+    };
     let (hand_a, hand_b, hand_unit) = (number("handA"), number("handB"), number("handUnit"));
 
     let mut code = String::new();
-    writeln!(code, "/// The dense features the compiled-in network was fitted on, in order.").unwrap();
+    writeln!(
+        code,
+        "/// The dense features the compiled-in network was fitted on, in order."
+    )
+    .unwrap();
     write!(code, "pub const LEARNED_DENSE_NAMES: &[&str] = &[").unwrap();
     for name in &names {
         write!(code, "{name:?},").unwrap();
     }
     writeln!(code, "];").unwrap();
     for (at, (inputs, w, b)) in layers.iter().enumerate() {
-        writeln!(code, "const LEARNED_HEAD_{at}: Layer<'static> = Layer {{ inputs: {inputs}, w: {}, b: {} }};", slice(w), slice(b)).unwrap();
+        writeln!(
+            code,
+            "const LEARNED_HEAD_{at}: Layer<'static> = Layer {{ inputs: {inputs}, w: {}, b: {} }};",
+            slice(w),
+            slice(b)
+        )
+        .unwrap();
     }
     write!(code, "const LEARNED_HEAD: &[Layer<'static>] = &[").unwrap();
     for at in 0..layers.len() {
@@ -154,7 +206,11 @@ fn main() {
         write!(code, "{key:?},").unwrap();
     }
     writeln!(code, "];").unwrap();
-    writeln!(code, "/// The network compiled in from `src/learned/weights.json`.").unwrap();
+    writeln!(
+        code,
+        "/// The network compiled in from `src/learned/weights.json`."
+    )
+    .unwrap();
     writeln!(
         code,
         "pub const LEARNED: Network<'static> = Network {{ features_version: {features_version}, catalog: {catalog:?}, \
