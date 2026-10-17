@@ -3057,30 +3057,26 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-17T17:40:22Z",
+      "feedback_since": "2026-10-17T18:36:40Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1127,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "pass_score puts the passed card into the teammate's probe under the instance id it had in the passer's duel, but both duels number their cards from c1, so in a real game that id almost always belongs to another card in the teammate's duel and the scored follow-up plays or resolves the wrong card.",
-          "evidence": "The real pass (crates/engine/src/duos/reduce.rs:177-186) gives the card a fresh id, `format!(\"c{}\", target.next_id)`. Both duels come from `create_game`, which calls `build_game(options, 1, \"\")` (state.rs:1905), so the two duels use the same id range. The probe keeps `given.id` as it was (duos.rs:352-356). The engine finds a card by id with the first match: `hand_card` (play_steps.rs:596) returns the first hand card with that id, so a teammate's own card with the same id is played instead. `snapshot`/`find_instance` (play_steps.rs:133, 937; state.rs:2164) search P1's hand, library, graveyard and the rest before P2, and a side's library before its units and resolving, so the pay and resolve steps read whichever other card has the id. The test suite misses this: `set_hand` mints A1's cards through `new_instance` at duel 0's `next_id`, past every id duel 1 has used, so no collision happens there. In real games, where A1 holds dealt cards c1..c60, R1127000's 'with the passed card added to its hand' does not hold, and the order can be worse than the old cost order.",
-          "severity": "blocking",
-          "where": "crates/ai/src/duos.rs:356"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-1",
+      "question": "",
       "queued_at": "2026-10-17T18:35:07Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "39058760674",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-17T18:36:40Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "muse"
