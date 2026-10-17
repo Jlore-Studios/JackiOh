@@ -2201,13 +2201,16 @@ fn mulligan_window(snapshot: &MatchSnapshot) -> Vec<PlayerId> {
 // Glitch's swap moves the record with the account), and each watcher is sent each recorded view of
 // its friend's seat SPECTATE_DELAY_MS after the state it shows, by the one wait the actor arms for
 // the next view due. A watcher who joins starts from the newest view already that old. Nothing a
-// watcher's socket sends is read: it reaches no reducer, log, relay or clock, and a watcher's
-// leaving changes nothing in the match but the count the players are told (B51). Once the match is
-// over, a watcher sent its seat's last view, the one with the result, is let go (R1107000).
+// watcher's socket sends reaches a reducer, log, relay or clock: a later hello is answered with the
+// view it was last sent, so its page can tell a live socket from a dead one (R1103000), and every
+// other frame is dropped unread. A watcher's leaving changes nothing in the match but the count the
+// players are told (B51). Once the match is over, a watcher sent its seat's last view, the one with
+// the result, is let go (R1107000).
 
 use crate::actor::protocol::watchers_frame;
 use crate::actor::ws_server::WS_CLOSE;
 use crate::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH};
+use crate::social::watch::parse_watch_hello;
 
 /// What a revoked watcher's `forbidden` frame and close say: the words every refused hello carries
 /// (`social::watch`), so a socket learns that it may no longer watch, never which change said so.
@@ -2301,8 +2304,9 @@ impl WatchRefused {
 impl MatchActor {
     /// B50: a watcher's socket, for `profile_id`'s account, on the seat the account that began in
     /// `home` plays. A newer socket of the same account replaces its older one, so an account is one
-    /// watcher; otherwise a match already watched by SPECTATORS_PER_MATCH sockets is `Full`. The
-    /// socket's frames go unread from here on, and the players are told the new count (B51).
+    /// watcher; otherwise a match already watched by SPECTATORS_PER_MATCH sockets is `Full`. From
+    /// here on the socket's hellos are answered (R1103000) and its other frames go unread, and the
+    /// players are told the new count (B51).
     pub fn attach_watcher(
         &self,
         home: PlayerId,
@@ -2344,9 +2348,18 @@ impl MatchActor {
         };
 
         let actor = Arc::downgrade(&self.shared);
+        let heard = actor.clone();
         socket.attach(SocketHandlers {
-            // B50: whatever a watcher sends, nothing reads it.
-            message: Box::new(|_text: String| {}),
+            // B50: nothing a watcher sends reaches the reducer. R1103000: a hello is answered, and
+            // whatever else it sends, nothing reads.
+            message: Box::new(move |text: String| {
+                if parse_watch_hello(&text).is_err() {
+                    return;
+                }
+                if let Some(shared) = heard.upgrade() {
+                    MatchActor { shared }.answer_watcher_hello(id);
+                }
+            }),
             close: Box::new(move || {
                 if let Some(shared) = actor.upgrade() {
                     MatchActor { shared }.detach_watcher(id);
@@ -2429,6 +2442,25 @@ impl MatchActor {
             }
         }
         gone.len()
+    }
+
+    /// R1103000: a watcher's later hello is answered with the view it was last sent, again, so its
+    /// page hears that the socket is alive (R1441's probe). It is never a view sooner than
+    /// SPECTATE_DELAY_MS after the state it shows, and a watcher sent no view yet is sent nothing.
+    fn answer_watcher_hello(&self, id: u64) {
+        let core = self.lock();
+        if core.stopped || core.spectate.closed {
+            return;
+        }
+        let Some(watcher) = core.spectate.watchers.iter().find(|watcher| watcher.id == id) else {
+            return;
+        };
+        let last = core.spectate.records[watcher.home]
+            .iter()
+            .find(|record| watcher.sent == Some(record.seq));
+        if let Some(record) = last {
+            watcher.socket.send(record.frame.as_str());
+        }
     }
 
     /// A watcher's socket went: it leaves, and the players hear the new count (B51).

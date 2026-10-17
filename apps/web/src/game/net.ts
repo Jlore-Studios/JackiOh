@@ -148,6 +148,106 @@ export function pageWake(handler: () => void): () => void {
   };
 }
 
+/**
+ * A socket object with a readyState, such as `SocketLike` or the browser's `WebSocket`.
+ */
+export type WakeProbeTarget = {
+  readonly readyState: number;
+};
+
+export type WakeProbeOptions<S extends WakeProbeTarget> = {
+  socket: () => S | null;
+  sendProbe: (socket: S) => void;
+  replace: (socket: S) => void;
+  disabled?: () => boolean;
+  silentMs?: number;
+  probeMs?: number;
+  timers?: Timers;
+  monotonic?: () => number;
+  now?: () => number;
+  wake?: (handler: () => void) => () => void;
+};
+
+export type WakeProbe = {
+  hear: () => void;
+  cancel: () => void;
+  listen: () => void;
+  onWake: () => void;
+  dispose: () => void;
+};
+
+/**
+ * R1441: coordinates probing a quiet socket when the page wakes (the tab turned visible, the network came back).
+ * If the socket has been quiet past `silentMs`, sends a probe (`hello`). If it does not answer within `probeMs`,
+ * replaces it.
+ */
+export function createWakeProbe<S extends WakeProbeTarget>(options: WakeProbeOptions<S>): WakeProbe {
+  const {
+    socket,
+    sendProbe,
+    replace,
+    disabled = () => false,
+    silentMs = SILENT_SOCKET_MS,
+    probeMs = WAKE_PROBE_MS,
+    timers = defaultTimers,
+    monotonic = defaultMonotonic,
+    now = () => Date.now(),
+    wake = pageWake,
+  } = options;
+
+  let heardAt = 0;
+  let heardWall = 0;
+  let probe: unknown = null;
+  let unwake: (() => void) | null = null;
+
+  function hear(): void {
+    heardAt = monotonic();
+    heardWall = now();
+  }
+
+  function silentFor(): number {
+    return Math.max(monotonic() - heardAt, now() - heardWall);
+  }
+
+  function cancel(): void {
+    if (probe === null) return;
+    timers.clearTimeout(probe);
+    probe = null;
+  }
+
+  function onWake(): void {
+    const live = socket();
+    if (disabled() || live === null || probe !== null) return;
+    if (silentFor() <= silentMs) return;
+    if (live.readyState !== OPEN) {
+      replace(live);
+      return;
+    }
+    try {
+      sendProbe(live);
+    } catch {
+      replace(live);
+      return;
+    }
+    probe = timers.setTimeout(() => {
+      probe = null;
+      if (socket() === live) replace(live);
+    }, probeMs);
+  }
+
+  function listen(): void {
+    unwake ??= wake(onWake);
+  }
+
+  function dispose(): void {
+    cancel();
+    unwake?.();
+    unwake = null;
+  }
+
+  return { hear, cancel, listen, onWake, dispose };
+}
+
 // Frame parsing: total and protocol-shaped
 
 const isString = (value: unknown): value is string => typeof value === "string";
@@ -435,24 +535,22 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   let socket: SocketLike | null = null;
   let retry = 0;
   let pendingRetry: unknown = null;
-  /** R1441: the monotonic reading at which the open socket was created or last heard from. */
-  let heardAt = 0;
-  /**
-   * R1441: the wall clock at the same instant. The monotonic clock leaves a sleeping machine's time
-   * out on most platforms, so a socket heard just before a laptop slept would read as recent on
-   * waking; the wall clock keeps counting.
-   */
-  let heardWall = 0;
-  /** R1441: the timer of a wake probe still waiting for its answer. */
-  let probe: unknown = null;
-  /** R1441: stops listening for the page waking; null while it is not. */
-  let unwake: (() => void) | null = null;
   /** A deliberate close must not reconnect. */
   let stopped = false;
   /** R643: repeated emotes still notify. */
   let emoteSeq = 0;
   /** Set when a socket is created; its first `view` proves the server answered (§9.5), so an error from before it is stale. */
   let awaitingFirstView = false;
+
+  const wakeProbe = createWakeProbe({
+    socket: () => socket,
+    sendProbe: (live) => live.send(JSON.stringify({ type: "hello", token, matchId: options.matchId })),
+    replace: (live) => replace(live),
+    disabled: () => stopped,
+    timers,
+    monotonic,
+    wake,
+  });
 
   function emit(): void {
     for (const listener of [...listeners]) listener();
@@ -467,12 +565,6 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     if (pendingRetry === null) return;
     timers.clearTimeout(pendingRetry);
     pendingRetry = null;
-  }
-
-  function cancelProbe(): void {
-    if (probe === null) return;
-    timers.clearTimeout(probe);
-    probe = null;
   }
 
   function scheduleRetry(): void {
@@ -547,12 +639,12 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     }
     socket = created;
     awaitingFirstView = true;
-    hear();
+    wakeProbe.hear();
     if (snapshot.connection !== "reconnecting") patch({ connection: "connecting" });
 
     created.onopen = () => {
       if (socket !== created) return;
-      hear();
+      wakeProbe.hear();
       retry = 0;
       patch({ connection: "open" });
       // §9.5: `hello` requests a fresh full view.
@@ -565,8 +657,8 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
 
     created.onmessage = (event) => {
       if (socket !== created) return;
-      hear();
-      cancelProbe();
+      wakeProbe.hear();
+      wakeProbe.cancel();
       if (typeof event.data !== "string") return; // Text frames only (`socketFromWs`).
       const frame = parseServerFrame(event.data);
       if (frame !== null) handleFrame(frame);
@@ -578,7 +670,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     created.onclose = (event) => {
       if (socket !== created) return;
       socket = null;
-      cancelProbe();
+      wakeProbe.cancel();
       // R738: clear an aim from before the drop.
       if (snapshot.aim !== null) patch({ aim: null });
       if (stopped) {
@@ -614,7 +706,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     live.onmessage = null;
     live.onerror = null;
     live.onclose = null;
-    cancelProbe();
+    wakeProbe.cancel();
     patch({ connection: "reconnecting", ...(snapshot.aim === null ? {} : { aim: null }) });
     open();
     try {
@@ -622,44 +714,6 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     } catch {
       // Already gone.
     }
-  }
-
-  function hear(): void {
-    heardAt = monotonic();
-    heardWall = Date.now();
-  }
-
-  /** How long the open socket has been quiet: the larger of the two clocks' readings, so a sleep counts. */
-  function silentFor(): number {
-    return Math.max(monotonic() - heardAt, Date.now() - heardWall);
-  }
-
-  /**
-   * R1441: the page woke (its tab turned visible, the network came back). A phone that changed
-   * networks or a laptop that slept can leave a socket that never reports its own end, and the
-   * browser answers the server's pings without telling the page, so a quiet socket looks the same as
-   * a dead one. A socket heard from lately is left alone. One that is not is asked for a full view
-   * (`hello`, §9.5), and replaced if nothing comes back within `WAKE_PROBE_MS`: a healthy one answers
-   * and is kept, so a tab switch never flashes the opponent's disconnect grace.
-   */
-  function onWake(): void {
-    const live = socket;
-    if (stopped || live === null || probe !== null) return;
-    if (silentFor() <= SILENT_SOCKET_MS) return;
-    if (live.readyState !== OPEN) {
-      replace(live);
-      return;
-    }
-    try {
-      live.send(JSON.stringify({ type: "hello", token, matchId: options.matchId }));
-    } catch {
-      replace(live);
-      return;
-    }
-    probe = timers.setTimeout(() => {
-      probe = null;
-      if (socket === live) replace(live);
-    }, WAKE_PROBE_MS);
   }
 
   return {
@@ -674,7 +728,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       stopped = false;
       // A backoff still waiting is cut short: the socket opens now (the match bar's Reconnect now).
       cancelRetry();
-      unwake ??= wake(onWake);
+      wakeProbe.listen();
       open();
     },
     send: (body) => {
@@ -716,9 +770,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     close: () => {
       stopped = true;
       cancelRetry();
-      cancelProbe();
-      unwake?.();
-      unwake = null;
+      wakeProbe.dispose();
       const live = socket;
       socket = null;
       if (live !== null) {
