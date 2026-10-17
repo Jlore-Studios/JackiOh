@@ -400,6 +400,7 @@ mod r783003_flying_lands {
 mod r1081000_flying_backrow {
     use super::*;
     use jackioh_engine::subsystems::audit::{AuditArgs, audit_targets};
+    use jackioh_engine::subsystems::board_history::{record_board_snapshot, restore_board};
     use jackioh_engine::subsystems::quests::{QuestDef, quest_progress_of};
 
     /// A `def_id` card in `player`'s hand, with mana to play it.
@@ -989,5 +990,120 @@ mod r1081000_flying_backrow {
             card.granted_keywords.clear();
         }
         assert!(legal_zones_for(&state, P1, &stacker, &[]).contains(&backrow_zone(2)));
+    }
+
+    #[test]
+    fn r1081000_r653_a_carrier_that_has_taken_its_one_unit_takes_no_flying_stack_unit() {
+        let mut state = super::super::fixtures::field::field_game("r1081000-fuser-once");
+        register_keywords_783();
+        state.turn = 4;
+        state.active = P1;
+        state.phase = Phase::Main;
+        let holder = put(&mut state, &fuser.id, slot(P1, Row::Backrow, 2), json!({}));
+        // A Flying Unit names the carrier's zone as its Unit, and is the one it takes this stay.
+        let bird = in_hand_with_mana(&mut state, &flyer().id, P1);
+        let mut state = act(
+            &state,
+            json!({
+                "type": "play",
+                "instanceId": bird.id,
+                "zone": { "row": "backrow", "lane": 2 },
+                "playerId": "p1",
+            }),
+            None,
+        );
+        assert_eq!(
+            carried_at(&state, slot(P1, Row::Backrow, 2)).map(|unit| unit.id.clone()),
+            Some(bird.id.clone())
+        );
+        assert_eq!(stacked_onto(&live(&state, &holder.id)), Some(bird.id.as_str()));
+        // That Unit goes; the carrier stays, and takes no other, Stack and Flying or not.
+        if let Some(card) = find_instance_mut(&mut state, &bird.id) {
+            card.damage = 10;
+        }
+        {
+            let mut sink = sink_for(&mut state);
+            state_check(&mut sink);
+        }
+        assert!(carried_at(&state, slot(P1, Row::Backrow, 2)).is_none());
+        let stacker = in_hand_with_mana(&mut state, &flying_stacker().id, P1);
+        assert!(!legal_zones_for(&state, P1, &stacker, &[]).contains(&backrow_zone(2)));
+        assert!(
+            play_refusal(&state, &stacker.id, json!({ "row": "backrow", "lane": 2 }))
+                .contains("taken its one Unit")
+        );
+    }
+
+    /// p1's flyer standing in backrow lane 2 with a Flying Stack Unit played on top of it: a pile with
+    /// a Unit dormant beneath its top. Returns the pile's top and the Unit beneath it.
+    fn flyer_beneath_a_stack_flyer(state: &mut GameState) -> (CardInstance, CardInstance) {
+        let under = put(state, &flyer().id, slot(P1, Row::Backrow, 2), json!({}));
+        let top = in_hand_with_mana(state, &flying_stacker().id, P1);
+        *state = act(
+            state,
+            json!({
+                "type": "play",
+                "instanceId": top.id,
+                "zone": { "row": "backrow", "lane": 2 },
+                "playerId": "p1",
+            }),
+            None,
+        );
+        assert_pile(state, slot(P1, Row::Backrow, 2), &top.id, &under.id);
+        (top, under)
+    }
+
+    /// `top` acts in `at` with `under` dormant beneath it, and `under` counts among no one's Units.
+    fn assert_pile(state: &GameState, at: ZoneSlot, top: &str, under: &str) {
+        assert_eq!(card_at(state, at).map(|card| card.id.as_str()), Some(top));
+        assert_eq!(
+            beneath_at(state, at)
+                .iter()
+                .map(|card| card.id.as_str())
+                .collect::<Vec<_>>(),
+            vec![under]
+        );
+        for player in [P1, P2] {
+            assert!(active_units_of(state, player).iter().all(|unit| unit.id != under));
+        }
+    }
+
+    #[test]
+    fn r1081000_a_unit_dormant_beneath_a_backrow_top_swaps_rotates_and_rolls_back_with_its_pile() {
+        // A board swap sets the pile down whole on the other side, the Unit beneath it again.
+        let mut state = board("r1081000-pile-swap");
+        let (top, under) = flyer_beneath_a_stack_flyer(&mut state);
+        record_board_snapshot(&mut state);
+        run_effect(&mut state, swap_board(), P1);
+        assert_pile(&state, slot(P2, Row::Backrow, 2), &top.id, &under.id);
+        assert_eq!(live(&state, &under.id).controller, P2);
+
+        // A Rollback puts it back where the turn began, beneath its top, rather than in a hand.
+        {
+            let mut sink = sink_for(&mut state);
+            restore_board(&mut sink, P1, 0, &[P1, P2]);
+        }
+        assert_pile(&state, slot(P1, Row::Backrow, 2), &top.id, &under.id);
+        assert_eq!(live(&state, &under.id).zone.z(), ZoneName::Field);
+
+        // A rotation moves it along the backrow ring whole, too.
+        let mut ring = board("r1081000-pile-rotate");
+        let (top, under) = flyer_beneath_a_stack_flyer(&mut ring);
+        {
+            let mut sink = sink_for(&mut ring);
+            rotate_rings(
+                &mut sink,
+                &RotationArgs {
+                    direction: RotationDirection::Right,
+                    perspective: P1,
+                    radiant: None,
+                },
+            );
+        }
+        let Zone::Field { player, row, lane } = live(&ring, &top.id).zone else {
+            panic!("the top stays on the field");
+        };
+        assert_ne!((player, lane), (P1, 2), "it moved along the ring");
+        assert_pile(&ring, ZoneSlot { player, row, lane }, &top.id, &under.id);
     }
 }

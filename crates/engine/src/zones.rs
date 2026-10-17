@@ -620,8 +620,9 @@ pub fn place_on_field(
 
 /// R1081000: `place_on_field` for a Unit that stands in a backrow zone itself — a Flying Unit played
 /// into one (the play was vetted by `play_choices`, which read its Flying where it was in hand), or a
-/// Unit already standing in one that is moved whole (a steal, a swap, a rotation, a restore, Reborn's
-/// return). Only these set a Unit down in a backrow zone that no carrier holds; every other placement
+/// Unit already standing in one, or dormant beneath its top, that is moved whole (a steal, a swap, a
+/// rotation, a restore, Reborn's return; a whole zone sets every card down so but the Unit a carrier
+/// holds). Only these set a Unit down in a backrow zone that no carrier holds; every other placement
 /// (a summon, a move out of a carrier's zone) refuses it there, as before.
 pub fn place_standing_on_field(
     state: &mut GameState,

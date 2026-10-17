@@ -106,10 +106,12 @@ fn snapshot_zone(side: &SideSnapshot, slot: &ZoneSlot) -> Vec<CardInstance> {
     out
 }
 
-/// The card a snapshot holds as the top of a backrow zone (R1081000: where a Unit may stand).
-fn snapshot_top<'a>(side: &'a SideSnapshot, slot: &ZoneSlot) -> Option<&'a CardInstance> {
+/// The Unit a snapshot holds on a carrier in a backrow zone (R446). It goes back on its carrier; every
+/// other card of the zone lands where it lay, a Unit standing there or dormant beneath its top included
+/// (R1081000).
+fn snapshot_carried<'a>(side: &'a SideSnapshot, slot: &ZoneSlot) -> Option<&'a CardInstance> {
     let i = usize::try_from(slot.lane - 1).ok()?;
-    side.backrow.get(i).and_then(Option::as_ref)
+    side.carried.as_ref()?.get(i)?.as_ref()
 }
 
 fn zones_of(player: PlayerId) -> Vec<ZoneSlot> {
@@ -143,7 +145,8 @@ struct Placement {
     live: Option<CardInstance>,
     from: Option<PlayerId>,
     was_face_down: bool,
-    /// R1081000: the card stood in its backrow zone as a Unit itself (not on a carrier), so it is set down so.
+    /// R1081000: the card lay in its backrow zone itself (not on a carrier), so it is set down so — a Unit
+    /// standing there or dormant beneath its top as well as any other card.
     stands: bool,
 }
 
@@ -251,8 +254,8 @@ pub fn restore_board(
                     _ => (None, false),
                 };
                 let stands = slot.row == Row::Backrow
-                    && snapshot_top(&snapshot.sides[*player], &slot).is_some_and(|top| top.id == card.id)
-                    && crate::zones::is_standing_unit(sink.state, &card);
+                    && snapshot_carried(&snapshot.sides[*player], &slot)
+                        .is_none_or(|carried| carried.id != card.id);
                 placements.push(Placement {
                     card,
                     slot,

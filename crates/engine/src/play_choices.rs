@@ -424,9 +424,12 @@ fn flies(state: &GameState, card: &CardInstance) -> bool {
     crate::layers::unit_has(state, card, KeywordKind::Flying)
 }
 
-/// R1081000: whether a Flying play takes this backrow zone — the same predicate `legal_zones_for`
+/// R1081000: whether a Flying play stands in this backrow zone — the same predicate `legal_zones_for`
 /// lists by. Without Stack the zone must be open or freed by the play's own Tribute; with Stack
-/// occupancy is waived as for any Stack card (`accepts_stack` still refuses Locked and reserved zones).
+/// occupancy is waived as for any Stack card (`accepts_stack` still refuses Locked and reserved zones),
+/// but a carrier's zone is never stood in: a carrier takes a Unit only as its Unit (R446), which
+/// `zones::why_cannot_carry` judges for a Flying Unit as for any, so a carrier that has taken its one
+/// Unit takes no Flying Stack Unit either (R653).
 fn flying_takes_backrow(
     state: &GameState,
     card: &CardInstance,
@@ -438,10 +441,15 @@ fn flying_takes_backrow(
         return false;
     }
     if plays_on_stack(state, card) {
-        accepts_stack(state, slot)
+        accepts_stack(state, slot) && !holds_carrier(state, slot)
     } else {
         crate::zones::is_open(state, slot) || freed_by_tribute(state, slot, tributes)
     }
+}
+
+/// R446: whether the card acting in this zone is a carrier, which a Unit enters only as its Unit.
+fn holds_carrier(state: &GameState, slot: &ZoneSlot) -> bool {
+    crate::zones::card_at(state, slot).is_some_and(|top| crate::zones::is_carrier(state, top))
 }
 
 /// MD-F12, R1281: whether this Unit may be played onto a stack base.
@@ -551,8 +559,8 @@ pub fn legal_zones_for(
                 .filter(|slot| !immutable_fuser(state, slot)),
         );
     }
-    // R1081000: a Flying Unit is also offered the backrow zones it takes — after its unit-row zones,
-    // in lane order. Zones the carrier list already holds stay listed once, as the carrier.
+    // R1081000: a Flying Unit is also offered the backrow zones it stands in — after its unit-row zones,
+    // in lane order. A carrier's zone it takes only as the carrier's Unit, as listed above.
     if flies(state, card) {
         for slot in crate::zones::slots_of(player, Row::Backrow) {
             if flying_takes_backrow(state, card, &slot, tributes) && !slots.contains(&slot) {
@@ -2462,19 +2470,16 @@ fn refuse_zone(
             lane: zone.lane,
         };
         // R1081000: a Flying Unit may stand in a backrow zone it takes, as `legal_zones_for` lists
-        // them. A carrier still takes it as a carrier, so the R446 path below stays open to it; any
-        // other zone it cannot take is simply not open, as in its unit row.
+        // them. A carrier takes it only as its Unit, on the R446 path below as any Unit (R653: not
+        // once it has taken its one); any other zone it cannot take is simply not open, as in its
+        // unit row.
         if flies(state, card) {
             if flying_takes_backrow(state, card, &slot, tributes) {
                 return Ok(());
             }
-            if crate::zones::why_cannot_carry(state, slot).is_ok() {
-                if immutable_fuser(state, &slot) {
-                    return refuse("an Immutable card takes no Unit in".to_string());
-                }
-                return Ok(());
+            if !holds_carrier(state, &slot) {
+                return refuse(format!("that {} zone is not open", zone.row));
             }
-            return refuse(format!("that {} zone is not open", zone.row));
         }
         crate::zones::why_cannot_carry(state, slot)?;
         if immutable_fuser(state, &slot) {
