@@ -2,7 +2,7 @@
 // download everywhere else. Nothing is uploaded: the GIF is bytes in memory, and the only places it
 // goes are the share sheet the viewer picks a target in and their own downloads folder.
 
-import { REPLAY_GIF_REVOKE_MS } from "../config.ts";
+import { downloadFile } from "../download.ts";
 
 /** The GIF as a file named `name`. */
 export function gifFile(bytes: Uint8Array<ArrayBuffer>, name: string): File {
@@ -23,13 +23,6 @@ export async function shareGif(file: File): Promise<"shared" | "downloaded"> {
     await navigator.share({ files: [file] });
     return "shared";
   }
-  const url = URL.createObjectURL(file);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = file.name;
-  link.click();
-  window.setTimeout(() => {
-    URL.revokeObjectURL(url);
-  }, REPLAY_GIF_REVOKE_MS);
+  downloadFile(file);
   return "downloaded";
 }
