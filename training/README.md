@@ -350,7 +350,7 @@ runner), and keeps each shard's log file as an artifact for up to 90 days. Its l
 replay) and the games an hour to the run's summary. The same base and game numbers always play the
 same games, so an export can be played again on any runner, and a base never names a gate's
 hold-out deals or the dev set (R1006002). `gh run download <run> --pattern 'selfplay-<base>-*'`
-fetches it.
+fetches it. The fit that learns from it is [`training/ml/`](ml/README.md).
 
 ## The ladder bots after a promotion
 
