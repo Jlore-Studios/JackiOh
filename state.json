@@ -2461,11 +2461,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-17T01:56:48Z",
+        "at": "2026-10-17T02:32:46Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "AI-search line: it changes trade ordering in crates/ai/src/candidates.rs and reply.rs, which the hard rule names explicitly"
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "it changes the AI's search (crates/ai/src/candidates.rs and reply.rs), which the rule rates hard; muse's hard rating stands"
       },
       "failures": 0,
       "forced": false,
