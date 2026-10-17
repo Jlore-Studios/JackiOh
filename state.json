@@ -17570,9 +17570,9 @@
     ],
     "idle_since": "2026-10-17T22:56:30Z",
     "last_run": "2026-10-17T22:56:30Z",
-    "provider": "gpt",
+    "provider": null,
     "requested": false,
-    "run_id": "39077031869",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
