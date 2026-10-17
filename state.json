@@ -2819,6 +2819,7 @@
     "1134": {
       "action": "review",
       "asks": [],
+      "cross_rounds": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-17T14:07:25Z",
