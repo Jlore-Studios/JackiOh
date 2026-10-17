@@ -19,7 +19,7 @@ import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
 import Game from "../game/Game.tsx";
 import { CatalogContext } from "../game/catalog.ts";
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
-import { parseServerFrame } from "../game/net.ts";
+import { createWakeProbe, parseServerFrame } from "../game/net.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { Loading, ShellPanel } from "../main.tsx";
 import { matchSocketUrl, serverSocketUrl } from "../net/api.ts";
@@ -63,6 +63,32 @@ function useWatch(matchId: string, friendId: string): { view: PlayerView | null;
     let refused = false;
     let over = false;
 
+    const replace = (stale: WebSocket): void => {
+      if (stopped || refused || over) return;
+      window.clearTimeout(timer);
+      socket = null;
+      wakeProbe.cancel();
+      if (tries >= WATCH_RECONNECT_ATTEMPTS) {
+        setConnection("closed");
+        return;
+      }
+      tries += 1;
+      setConnection("connecting");
+      open();
+      try {
+        stale.close(1000, "replaced");
+      } catch {
+        // Already gone.
+      }
+    };
+
+    const wakeProbe = createWakeProbe<WebSocket>({
+      socket: () => socket,
+      sendProbe: (live) => live.send(JSON.stringify({ type: "hello", matchId, friendId })),
+      replace,
+      disabled: () => stopped || refused || over,
+    });
+
     const open = (): void => {
       const token = readSession()?.accessToken ?? null;
       if (token === null || friendId.length === 0) {
@@ -78,12 +104,18 @@ function useWatch(matchId: string, friendId: string): { view: PlayerView | null;
         return;
       }
       socket = live;
+      wakeProbe.hear();
       live.addEventListener("open", () => {
+        if (socket !== live) return;
         tries = 0;
+        wakeProbe.hear();
         setConnection("open");
         live.send(JSON.stringify({ type: "hello", matchId, friendId }));
       });
       live.addEventListener("message", (event: MessageEvent) => {
+        if (socket !== live) return;
+        wakeProbe.hear();
+        wakeProbe.cancel();
         if (typeof event.data !== "string") return;
         const frame = parseServerFrame(event.data);
         if (frame === null) return;
@@ -98,6 +130,7 @@ function useWatch(matchId: string, friendId: string): { view: PlayerView | null;
       live.addEventListener("close", () => {
         if (stopped || socket !== live) return;
         socket = null;
+        wakeProbe.cancel();
         if (refused) return;
         if (over || tries >= WATCH_RECONNECT_ATTEMPTS) {
           setConnection("closed");
@@ -109,10 +142,12 @@ function useWatch(matchId: string, friendId: string): { view: PlayerView | null;
       });
     };
 
+    wakeProbe.listen();
     open();
     return () => {
       stopped = true;
       window.clearTimeout(timer);
+      wakeProbe.dispose();
       socket?.close();
     };
   }, [matchId, friendId]);
