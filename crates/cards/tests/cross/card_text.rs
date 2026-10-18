@@ -1677,7 +1677,7 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
             }
         }
         assert_eq!(wrong, Vec::<String>::new());
-        // The eight embiggen cards of issue #1175.
+        // The eight embiggen cards of issue #1175, and Meditative+ #3, #5 and #19 (#1179).
         assert_eq!(
             sorted(cards.into_iter().map(str::to_string).collect()),
             strings(&[
@@ -1689,6 +1689,9 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
                 "meditative-021",
                 "meditative-046",
                 "meditative-081",
+                "meditativeplus-003",
+                "meditativeplus-005",
+                "meditativeplus-019",
             ])
         );
     }

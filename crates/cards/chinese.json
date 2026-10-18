@@ -2344,6 +2344,16 @@
     "base": "将胜率最低的牌与胜率最高的牌融合，并将其置入你的手牌。其法力值消耗为({setCost})。",
     "radiant": "将一张胜率最低的光辉牌与一张胜率最高的光辉牌融合，并将其置入你的手牌。其法力值消耗为({setCost})。"
   },
+  "meditativeplus-003": {
+    "name": "奇妙魔杖",
+    "base": "抽{draw}张牌。它们的法力值消耗为(0)。\n加码(4)：改为抽{embiggenedDraw}张牌。",
+    "radiant": "抽{draw}张牌。它们的法力值消耗为(0)。\n加码(4)：改为抽{embiggenedDraw}张牌。"
+  },
+  "meditativeplus-005": {
+    "name": "灵魂鞭笞",
+    "base": "对所有单位造成{damage}点伤害。\n加码(1)：这些伤害具有吸血和穿透。",
+    "radiant": "回响1\n对所有单位造成{damage}点伤害。\n加码(1)：这些伤害具有吸血和穿透。"
+  },
   "meditativeplus-006": {
     "name": "血色绽放",
     "base": "你的下一个法术改为消耗等同于其法力值消耗{multiple}倍的生命值，而非法力值。",
@@ -2354,15 +2364,45 @@
     "base": "圣盾\n光环：你的法术拥有吸血。",
     "radiant": "圣盾\n光环：你的法术拥有吸血，并且对你的英雄和单位的治疗效果翻倍。"
   },
+  "meditativeplus-008": {
+    "name": "大法师",
+    "base": "法术伤害+3",
+    "radiant": "法术伤害+6"
+  },
   "meditativeplus-009": {
     "name": "魔法增幅器",
     "base": "光环：双方玩家拥有法术伤害+{spellDamage}。",
     "radiant": "光环：双方玩家拥有法术伤害+{spellDamage}。"
   },
+  "meditativeplus-010": {
+    "name": "麦地那骗子",
+    "base": "战吼：随机夺取你对手手牌中的{cards}张牌。",
+    "radiant": "战吼：随机夺取你对手手牌中的{cards}张牌。其法力值消耗为(0)。"
+  },
   "meditativeplus-011": {
     "name": "活体法力药水",
     "base": "激活：献祭这张牌。本回合中，你拥有法术伤害+{spellDamage}。",
     "radiant": "激活：本回合中，你拥有法术伤害+{spellDamage}。"
+  },
+  "meditativeplus-012": {
+    "name": "活体护甲药水",
+    "base": "激活：献祭这张牌。直到你的下个回合开始，你的英雄拥有+{armor}点护甲。",
+    "radiant": "激活：直到你的下个回合开始，你的英雄拥有+{armor}点护甲。"
+  },
+  "meditativeplus-013": {
+    "name": "活体生命药水",
+    "base": "激活：献祭这张牌。为你的英雄和你的每个单位恢复{heal}点生命值。",
+    "radiant": "激活：为你的英雄和你的每个单位恢复{heal}点生命值。"
+  },
+  "meditativeplus-014": {
+    "name": "药水袋",
+    "base": "将{cards}张随机药水牌置入你的手牌。",
+    "radiant": "将{cards}张随机光辉药水牌置入你的手牌。"
+  },
+  "meditativeplus-015": {
+    "name": "药水之书",
+    "base": "将{cards}张随机光辉药水牌置入你的手牌。",
+    "radiant": "将{cards}张随机光辉药水牌置入你的手牌。"
   },
   "meditativeplus-016": {
     "name": "贾扎库斯",
@@ -2383,6 +2423,11 @@
     "name": "认知卸载",
     "base": "抽到时施放：获得{mana}点法力值并抽{draw}张牌。AI替你打完本回合剩余的部分。",
     "radiant": "抽到时施放：获得{mana}点法力值并抽{draw}张牌。AI替你打完本回合剩余的部分。"
+  },
+  "meditativeplus-019": {
+    "name": "脏兮兮的手套",
+    "base": "夺取你对手牌库顶的{cards}张牌。\n加码(2)：改为随机夺取其手牌中的{cards}张牌。",
+    "radiant": "夺取你对手牌库顶的{cards}张牌。它们的法力值消耗为(0)。\n加码(2)：改为随机夺取其手牌中的{cards}张牌。"
   },
   "meditativeplus-020": {
     "name": "KY的竞赛",

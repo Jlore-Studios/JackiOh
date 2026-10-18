@@ -324,7 +324,7 @@ from an entry, the decision wins.
 - **Text:** Deal {damage} damage to all Units. / Embiggened (1): With Lifesteal and Pierce.
 - **Radiant:** Echo 1 / Deal {damage} damage to all Units. / Embiggened (1): With Lifesteal and Pierce.
 - **Engine:** `damage_all` over every Unit on both sides, acting animated cards included, one hit each ([[R59]]); Embiggened, the hits carry `DamageFlags { lifesteal, pierce }` ([[R85]], [[R346]]). The Radiant face prints Echo 1 (`StaticFlags.echo`, [[§6.2]]): the repeat is Embiggened if the play was (the instance keeps the flag, [[R81]]).
-- **Rulings:** MP-B01-1: "permanents" that take damage are the Units (a backrow card takes none unless it is an acting animated Unit); heroes are not permanents.
+- **Rulings:** MP-B01-1, built as [[R1179000]]: "permanents" that take damage are the Units (a backrow card takes none unless it is an acting animated Unit); heroes are not permanents.
 - **Numbers:** damage 1 ↑.
 - **Check:** "embiggen" is the Embiggened version. The designer's Radiant face adds Echo 1 only: R275's effect half by a second resolution (2×).
 - **Class:** A.
@@ -386,10 +386,10 @@ from an entry, the decision wins.
 
 > **Designer:** (1) Medina Grifter, Unit, Human, Common · [4/1] · Cry: Steal a card from your opponents hand ~~~ [8/2] · Cry: Steal a card from your opponents hand, it costs (0)
 
-- **Text:** Cry: Steal a random card from your opponent's hand.
-- **Radiant:** Cry: Steal a random card from your opponent's hand. It costs (0).
+- **Text:** Cry: Steal {cards|random card|random cards} from your opponent's hand.
+- **Radiant:** Cry: Steal {cards|random card|random cards} from your opponent's hand. It costs (0).
 - **Engine:** `give_from_hand { from: enemy, cards: random, count: 1 }` (M #21, C #9): the card becomes yours (Steal off the field, [[R12]]), hidden per zone ([[R97]]), the hand cap burning it into your graveyard ([[§2.4]]); the Radiant face's `TakenRiders.cost_override` 0.
-- **Rulings:** MP-B01-2: "a card" is a random one (the opponent's hand is hidden, [[§9.1]]); an empty hand steals nothing and draws no random number ([[R129]]).
+- **Rulings:** MP-B01-2, built as [[R1179001]]: "a card" is a random one (the opponent's hand is hidden, [[§9.1]]); an empty hand steals nothing and draws no random number ([[R129]]).
 - **Numbers:** cards 1 ↑.
 - **Check:** R275: 8/2 and the stolen card at (0).
 - **Class:** B.
@@ -428,7 +428,7 @@ from an entry, the decision wins.
 - **Text:** Activate: Tribute this. Heal your hero and each of your Units {heal}.
 - **Radiant:** Activate: Heal your hero and each of your Units {heal}.
 - **Engine:** An Activate (`tribute_self` on the base face, paid first, so the base potion heals the others), then `heal` on its controller's hero and `for_each_card` over its Units (M #7, M #22).
-- **Rulings:** MP-B01-3: "all allies" is your hero and your Units (Hearthstone's "all friendly characters"); the Radiant potion heals itself too.
+- **Rulings:** MP-B01-3, built as [[R1179002]]: "all allies" is your hero and your Units (Hearthstone's "all friendly characters"); the Radiant potion heals itself too.
 - **Numbers:** heal 5 ↑.
 - **Check:** R275: 6/6 and no Tribute.
 - **Class:** B.
@@ -441,7 +441,7 @@ from an entry, the decision wins.
 - **Text:** Add {cards|random Potion card|random Potion cards} to your hand.
 - **Radiant:** Add {cards|random Radiant Potion card|random Radiant Potion cards} to your hand.
 - **Engine:** `add_random_from_catalog { query: { tags: [Potion] }, count }` (the Radiant face `radiant: true`): the non-token Potion cards of the sets that ship ([[R380]]), repeats allowed ([[R60]]); a crafted potion (M+ #16) is transient and in no pool.
-- **Rulings:** MP-B01-4: "Potions" are Potion-tagged cards: M+ #11, #12 and #13 once the set ships; under a preview the same three ([[R1178000]]).
+- **Rulings:** MP-B01-4, built as [[R1179003]]: "Potions" are Potion-tagged cards: M+ #11, #12 and #13 once the set ships; under a preview the same three ([[R1178000]]).
 - **Numbers:** cards 2 ↑.
 - **Check:** R275: the potions Radiant (twice the stats, no Tribute).
 - **Class:** B.
@@ -519,7 +519,7 @@ from an entry, the decision wins.
 - **Text:** Steal the top {cards|card|cards} of your opponent's deck. / Embiggened (2): Steal {cards|random card|random cards} from their hand instead.
 - **Radiant:** Steal the top {cards|card|cards} of your opponent's deck. They cost (0). / Embiggened (2): Steal {cards|random card|random cards} from their hand instead.
 - **Engine:** Normal: `take_from_library` (C+ #12.3) of the opponent's top cards into your hand, yours from then on ([[R12]]); Embiggened: `give_from_hand { from: enemy, cards: random }` (as M+ #10). The Radiant face's `cost_override` 0 on each card taken, either version. The hand cap burns the overflow ([[§2.4]]).
-- **Rulings:** MP-B01-5: "2 cards from your opponent's deck" is its top 2, the deck being shuffled (no random number, as [[R801]]); fewer cards, fewer; an empty deck gives nothing and deals no fatigue.
+- **Rulings:** MP-B01-5, built as [[R1179004]]: "2 cards from your opponent's deck" is its top 2, the deck being shuffled (no random number, as [[R801]]); fewer cards, fewer; an empty deck gives nothing and deals no fatigue.
 - **Numbers:** cards 2 ↑ (Radiant 3).
 - **Check:** R275: 3 at (0) against 2.
 - **Class:** B.

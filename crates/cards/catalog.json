@@ -16039,6 +16039,80 @@
       "text": "Fuse a Radiant card with the lowest win rate and a Radiant card with the highest win rate, and add it to your hand. It costs ({setCost})."
     }
   },
+  "meditativeplus-003": {
+    "id": "meditativeplus-003",
+    "index": "3",
+    "name": "Wondrous Wand",
+    "set": "Meditative+",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": {
+      "base": 2,
+      "embiggen": 4
+    },
+    "params": [
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "embiggenedDraw",
+        "base": 2,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 47,
+    "base": {
+      "keywords": [],
+      "text": "Draw {draw|card|cards}. They cost (0).\nEmbiggened (4): Draw {embiggenedDraw} instead."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Draw {draw|card|cards}. They cost (0).\nEmbiggened (4): Draw {embiggenedDraw} instead."
+    }
+  },
+  "meditativeplus-005": {
+    "id": "meditativeplus-005",
+    "index": "5",
+    "name": "Spirit Lash",
+    "set": "Meditative+",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": {
+      "base": 0,
+      "embiggen": 1
+    },
+    "params": [
+      {
+        "key": "damage",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 23,
+    "base": {
+      "keywords": [],
+      "text": "Deal {damage} damage to all Units.\nEmbiggened (1): With Lifesteal and Pierce."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Echo 1\nDeal {damage} damage to all Units.\nEmbiggened (1): With Lifesteal and Pierce."
+    }
+  },
   "meditativeplus-006": {
     "id": "meditativeplus-006",
     "index": "6",
@@ -16103,6 +16177,42 @@
       "text": "Divine Shield\nAura: Your Spells have Lifesteal, and healing your hero and Units is twice as effective."
     }
   },
+  "meditativeplus-008": {
+    "id": "meditativeplus-008",
+    "index": "8",
+    "name": "Arch Mage",
+    "set": "Meditative+",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 2,
+    "loc": 6,
+    "base": {
+      "attack": 4,
+      "health": 7,
+      "keywords": [
+        {
+          "kind": "Spell Damage",
+          "n": 3
+        }
+      ],
+      "text": "Spell Damage +3"
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 14,
+      "keywords": [
+        {
+          "kind": "Spell Damage",
+          "n": 6
+        }
+      ],
+      "text": "Spell Damage +6"
+    }
+  },
   "meditativeplus-009": {
     "id": "meditativeplus-009",
     "index": "9",
@@ -16131,6 +16241,42 @@
     "radiant": {
       "keywords": [],
       "text": "Aura: Both players have Spell Damage +{spellDamage}."
+    }
+  },
+  "meditativeplus-010": {
+    "id": "meditativeplus-010",
+    "index": "10",
+    "name": "Medina Grifter",
+    "set": "Meditative+",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "cards",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 24,
+    "base": {
+      "attack": 4,
+      "health": 1,
+      "keywords": [],
+      "text": "Cry: Steal {cards|random card|random cards} from your opponent's hand."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Steal {cards|random card|random cards} from your opponent's hand. It costs (0)."
     }
   },
   "meditativeplus-011": {
@@ -16167,6 +16313,140 @@
       "health": 2,
       "keywords": [],
       "text": "Activate: You have Spell Damage +{spellDamage} this turn."
+    }
+  },
+  "meditativeplus-012": {
+    "id": "meditativeplus-012",
+    "index": "12",
+    "name": "Living Armor Potion",
+    "set": "Meditative+",
+    "type": "Unit",
+    "tags": [
+      "Potion"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "armor",
+        "base": 5,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 38,
+    "base": {
+      "attack": 1,
+      "health": 5,
+      "keywords": [],
+      "text": "Activate: Tribute this. Your hero has +{armor} Armor until the start of your next turn."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 10,
+      "keywords": [],
+      "text": "Activate: Your hero has +{armor} Armor until the start of your next turn."
+    }
+  },
+  "meditativeplus-013": {
+    "id": "meditativeplus-013",
+    "index": "13",
+    "name": "Living Health Potion",
+    "set": "Meditative+",
+    "type": "Unit",
+    "tags": [
+      "Potion"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "heal",
+        "base": 5,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 48,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": "Activate: Tribute this. Heal your hero and each of your Units {heal}."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Activate: Heal your hero and each of your Units {heal}."
+    }
+  },
+  "meditativeplus-014": {
+    "id": "meditativeplus-014",
+    "index": "14",
+    "name": "Potion Pouch",
+    "set": "Meditative+",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "cards",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 19,
+    "base": {
+      "keywords": [],
+      "text": "Add {cards|random Potion card|random Potion cards} to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add {cards|random Radiant Potion card|random Radiant Potion cards} to your hand."
+    }
+  },
+  "meditativeplus-015": {
+    "id": "meditativeplus-015",
+    "index": "15",
+    "name": "Book of Potions",
+    "set": "Meditative+",
+    "type": "Spell",
+    "tags": [
+      "Book"
+    ],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "cards",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 15,
+    "base": {
+      "keywords": [],
+      "text": "Add {cards|random Radiant Potion card|random Radiant Potion cards} to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add {cards|random Radiant Potion card|random Radiant Potion cards} to your hand."
     }
   },
   "meditativeplus-016": {
@@ -16295,6 +16575,39 @@
     "radiant": {
       "keywords": [],
       "text": "Cast on draw: Gain {mana} mana and draw {draw|card|cards}. The AI plays the rest of your turn."
+    }
+  },
+  "meditativeplus-019": {
+    "id": "meditativeplus-019",
+    "index": "19",
+    "name": "Grubby Gloves",
+    "set": "Meditative+",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": {
+      "base": 1,
+      "embiggen": 2
+    },
+    "params": [
+      {
+        "key": "cards",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 29,
+    "base": {
+      "keywords": [],
+      "text": "Steal the top {cards|card|cards} of your opponent's deck.\nEmbiggened (2): Steal {cards|random card|random cards} from their hand instead."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Steal the top {cards|card|cards} of your opponent's deck. They cost (0).\nEmbiggened (2): Steal {cards|random card|random cards} from their hand instead."
     }
   },
   "meditativeplus-020": {
