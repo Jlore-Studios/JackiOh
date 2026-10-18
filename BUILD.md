@@ -179,6 +179,7 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `KY_TEST_REWARDS` | Easy: 3 The Coins; a random (2) Cost KY card; a random Legendary card that costs (0); 2 random Books. Medium: 2 random (4) Cost cards that cost (1); 5 random Books; 5 random KY cards; random Books up to `HAND_CAP`. Hard: KY's Gift that costs (0) | §8.7 C+ #42, R420 |
 | `KY_TEST_EASY_ADDENDS` / `KY_TEST_EASY_MISSES` | 10 ≤ a, b ≤ 99 for an Easy problem's a + b / +1, −1, +2, −2, +10, −10: the three wrong options are a + b moved by three different ones of these | §8.7 C+ #42, R420 |
 | `KY_COMPETITION_MAX` / `KY_COMPETITION_OPERANDS` / `KY_COMPETITION_EASY_OPERANDS` | 30 right answers end a question sequence / 100 ≤ a, b ≤ 999 on the base face / 1 ≤ a, b ≤ 99 on the Radiant face, for a + b or a − b with a ≥ b | §8.9 M+ #20, R1184000 |
+| `SPELL_ANSWER_CHAIN_CAP` | 20: answers one chain of R1180005 names before the next targeted resolution in it calls nothing | §8.9 M+ #17, R1180006 |
 | `KY_COMPETITION_MISSES` / `KY_COMPETITION_EASY_MISSES` | +1, −1, +10, −10, +100, −100 / C+ #42's Easy misses: a question's three wrong options are its answer moved by three different ones of its face's list, none below 0 | §8.9 M+ #20, R1184000 |
 | `PAPAYA_ROWS` / `PAPAYA_MAX_CELLS` | 4 (y 0 your backrow, 1 your units, 2 their units, 3 their backrow) / 4 (degree at most 3), so one cell prompt lists at most 21 answers | §10.6, §8.7 C+ #62, R422 |
 | `MAX_PROMPT_ANSWERS` | 256 | §10.6, §8.7 C+ #62 |
