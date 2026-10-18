@@ -433,10 +433,10 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 58 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983) and KY's Papaya's curve (R831003) carry fx with the listed recipe and the other 19 carry none", () => {
+  it("B1 exactly the 59 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003) and the autopilot (R1183002) carry fx with the listed recipe and the other 20 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
-    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(58);
+    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(59);
   });
 
   it("B1 an fx descriptor is data only: one recipe field and nothing else", () => {

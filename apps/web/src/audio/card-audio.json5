@@ -1883,7 +1883,7 @@
       cast: { voice: "zoomer", text: "Everybody jump on!" },
     },
     "meditativeplus-018": { // Cognitive Offloading
-      cast: { voice: "robot", text: "Autopilot engaged. Please keep your hands off the controls." },
+      cast: { voice: "robot", text: "Autopilot engaged. Hands off the controls, please." },
     },
     "meditativeplus-025": { // KY's Intuition
       cast: { voice: "prof", text: "Read the code. Trust your gut." },
