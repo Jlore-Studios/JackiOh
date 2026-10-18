@@ -4010,7 +4010,10 @@
       "feedback_since": "2026-10-18T10:14:51Z",
       "issue": 1194,
       "kind": "revise",
+      "queued_at": "2026-10-18T12:43:23Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
