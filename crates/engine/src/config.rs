@@ -380,7 +380,8 @@ pub const AI_DIFFICULTY: AiDifficulty = AiDifficulty {
 /// three tiers (R180) and lowers the AI seat's resources instead of raising them: a 12-card deck
 /// (each lesson's own list, R291, so it runs out and fatigues sooner), at most 3 mana crystals, and
 /// a hero that starts at 20 health. The AI's search, evaluation and budget are the ones every tier
-/// plays with. It is not in `DIFFICULTIES`: nobody picks it, the tutorial deals it.
+/// plays with, but with the learned evaluation on this seat keeps the hand eval (R1012003). It is not
+/// in `DIFFICULTIES`: nobody picks it, the tutorial deals it.
 pub const AI_TUTORIAL: Handicap = Handicap {
     deck_size: 12,
     mana_bonus: 0,

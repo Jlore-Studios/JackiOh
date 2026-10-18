@@ -17,7 +17,8 @@
 //!   (points − hand)` (R1012001): fitted to outcomes, the whole correction judges positions a game
 //!   apart better than lines a move apart.
 //! - **Which games.** 1v1 only. A Duos duel keeps the hand eval (D9, R964000): the network never saw
-//!   a team's pool. A finished game keeps its won or lost score.
+//!   a team's pool. Nor does the tutorial's opponent (R1012003): its lessons are scripts written for
+//!   it. A finished game keeps its won or lost score.
 //! - **Arithmetic.** `f64`, every loop in one fixed order, ReLU written as comparisons (never
 //!   `f64::max`, so a signed zero cannot differ), and no libm function. That is the determinism the
 //!   hand eval's own `f64` rests on (D7). Part 6 (#1011) swaps it for integers before it ships.
@@ -27,7 +28,7 @@
 //!   new or custom card (#915) is valued by its dense stats alone (D5). The checked-in network may be
 //!   the null one, whose correction is zero everywhere, until a fit replaces it.
 
-use jackioh_engine::{GameState, PlayerId};
+use jackioh_engine::{AI_TUTORIAL, GameState, PlayerId};
 
 use crate::config::{AI_EVAL, AI_EVAL_KIND, EvalKind, LEARNED_CORRECTION_SHARE, LEARNED_REACH, LearnedReach};
 use crate::evaluate::{NextSwing, evaluate};
@@ -256,7 +257,12 @@ pub fn finalist_score_with(
     match kind {
         EvalKind::Hand => hand,
         EvalKind::Learned => {
-            if state.result.is_some() || state.players[seat].duos.is_some() {
+            // R1012003: the tutorial's opponent (R290) plays a game the network never saw, at 3 mana
+            // with a 12-card deck, as a Duos duel is one (D9).
+            if state.result.is_some()
+                || state.players[seat].duos.is_some()
+                || state.players[seat].handicap == Some(AI_TUTORIAL)
+            {
                 return hand;
             }
             // R1012001: the search takes the correction at its share.

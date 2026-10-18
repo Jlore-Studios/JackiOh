@@ -281,6 +281,45 @@ fn r1010002_a_duos_duel_keeps_the_hand_eval() {
     });
 }
 
+/// R1012003: with the switch on, the tutorial's opponent (`AI_TUTORIAL`, R290) keeps the hand eval;
+/// the other seat, and a seat at any practice tier, still take the network's correction.
+#[test]
+fn r1012003_the_tutorials_opponent_keeps_the_hand_eval_and_every_tier_takes_the_network() {
+    let solo = state();
+    let mut tutorial = solo.clone();
+    tutorial.players[PlayerId::P1].handicap = Some(AI_TUTORIAL);
+    with_tiny(|network, _| {
+        let network = Learned::Float(*network);
+        for next in [NextSwing::Enemy, NextSwing::Seat] {
+            let hand = evaluate(&tutorial, PlayerId::P1, next, &AI_EVAL);
+            assert_eq!(
+                finalist_score_with(&tutorial, PlayerId::P1, next, EvalKind::Learned, &network),
+                hand
+            );
+            let other = finalist_score_with(&tutorial, PlayerId::P2, next, EvalKind::Learned, &network);
+            assert_eq!(
+                other,
+                finalist_score_with(&solo, PlayerId::P2, next, EvalKind::Learned, &network)
+            );
+        }
+        for tier in [AI_DIFFICULTY.medium, AI_DIFFICULTY.hard] {
+            let mut practice = solo.clone();
+            practice.players[PlayerId::P1].handicap = Some(tier);
+            assert_ne!(
+                finalist_score_with(
+                    &practice,
+                    PlayerId::P1,
+                    NextSwing::Seat,
+                    EvalKind::Learned,
+                    &network
+                ),
+                evaluate(&practice, PlayerId::P1, NextSwing::Seat, &AI_EVAL),
+                "a tier's handicap takes the network's correction"
+            );
+        }
+    });
+}
+
 fn state() -> GameState {
     jackioh_cards::register_all();
     scenario(json!({
