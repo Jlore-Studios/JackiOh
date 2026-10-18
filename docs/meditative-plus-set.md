@@ -20,7 +20,7 @@
 - [MP0. What the designer asked for](#mp0-what-the-designer-asked-for)
 - [MP1. Reading this brief](#mp1-reading-this-brief)
 - [MP2. The set: ids, numbers, tags, rarity and the census](#mp2-the-set-ids-numbers-tags-rarity-and-the-census)
-- [MP3. Built on main before it ships (R1420, R1178000)](#mp3-built-on-main-before-it-ships-r1420-r1178000)
+- [MP3. Built on main before it shipped (R1420, R1178000)](#mp3-built-on-main-before-it-shipped-r1420-r1178000)
 - [MP4. The four patches beside the set](#mp4-the-four-patches-beside-the-set)
 - [MP5. The systems, and the decisions](#mp5-the-systems-and-the-decisions)
 - [MP6. Cards, card by card](#mp6-cards-card-by-card)
@@ -45,8 +45,8 @@ Issue #1173, verbatim in `JackiOh_MeditativePlus_Cards.md`:
 - **Freeze**, Hearthstone-style: a Unit loses its next attack or position change, and thaws at the end of
   the turn it could have acted: #1174.
 
-The four rule changes are patches of their own that go live when they merge (MP4); the set is built
-behind [[R1420]]'s gate and ships with its last part (MP3, MP10).
+The four rule changes are patches of their own that go live when they merge (MP4); the set was built
+behind [[R1420]]'s gate and shipped with its last part, in v0.3.15 (MP3, MP10).
 
 ## MP1. Reading this brief
 
@@ -110,53 +110,53 @@ Billy prints X multiples, and is always summoned with its X.
 the table in [[§8.9]]): every entry the set holds must be one of these indices, with its row's name,
 cost, type, tags, rarity and stats.
 
-## MP3. Built on main before it ships (R1420, R1178000)
+## MP3. Built on main before it shipped (R1420, R1178000)
 
-The set is built on `main`, card by card, behind [[R1420]]'s gate, as the Meditative set was
-([[R1178000]]):
+The set was built on `main`, card by card, behind [[R1420]]'s gate, as the Meditative set was
+([[R1178000]]), until the release (#1187) shipped it in v0.3.15. While it was held:
 
-- `SetName::MeditativePlus` is in `CATALOG_SETS` (catalog order, after Meditative) and not in
+- `SetName::MeditativePlus` was in `CATALOG_SETS` (catalog order, after Meditative) and not in
   `SHIPPED_SETS`.
-- A pool that names no set draws from the sets that ship; one that names Meditative+, or names a card by
-  id, reaches it. So a Meditative+ card finds its own tokens and its Potion pool, and no other card, AI
-  deck, determinization or random cast meets one until the set ships.
-- [[§9.4]]'s L3 and `create_game` refuse a Meditative+ card in a deck; no lean names the set; the Almanac
-  and the deck builder show no card, set chip or tag of it; the server neither seeds nor serves it; no
-  voice file is owed for its lines.
-- `patches check` and `patches ship` read the catalog without it: **a card batch adds no pending
-  fragment**, and the release claims all 30 entries in one fragment.
-- The testkit previews the set on one thread (`preview_sets(&[SetName::MeditativePlus])`): a card test
-  that needs Meditative+ cards in a pool that names no set previews it (the Potion pool of #14 and #15,
-  the embiggen pool of #23 reaching the set's own); the fuzz tool previews every set, so every card is
-  fuzzed from the day it lands; the golden traces deal from the shipped sets, so no batch moves a
+- A pool that names no set drew from the sets that ship; one that named Meditative+, or named a card by
+  id, reached it. So a Meditative+ card found its own tokens and its Potion pool, and no other card, AI
+  deck, determinization or random cast met one until the set shipped.
+- [[§9.4]]'s L3 and `create_game` refused a Meditative+ card in a deck; no lean named the set; the
+  Almanac and the deck builder showed no card, set chip or tag of it; the server neither seeded nor
+  served it; no voice file was owed for its lines.
+- `patches check` and `patches ship` read the catalog without it: **a card batch added no pending
+  fragment**, and the release claimed all 30 entries in one fragment.
+- The testkit previewed the set on one thread (`preview_sets(&[SetName::MeditativePlus])`): a card test
+  that needed Meditative+ cards in a pool that names no set previewed it (the Potion pool of #14 and #15,
+  the embiggen pool of #23 reaching the set's own); the fuzz tool previewed every set, so every card was
+  fuzzed from the day it landed; the golden traces dealt from the shipped sets, so no batch moved a
   recorded game.
-- `catalog check` holds the set to its shape (MP2's indices, ids, rarity ceilings) and keeps it out of
-  the totals and the tag census; the cards crate's fixture holds each entry to its row and lets a row
-  wait for its card. The fixture's tag lists (Jlockeed, Catalyst, Prime) take #4, #16 and #16.1 as they
-  land.
-- The Potion tag is in the engine's `Tag` union and the catalog check now; the server's
-  `cards_tags_check` admits it with the release's migration, and its test waits for that while the set is
-  held ([[R1178000]]); the deck builder's `FILTER_TAGS` gains it with the release.
+- `catalog check` held the set to its shape (MP2's indices, ids, rarity ceilings) and kept it out of
+  the totals and the tag census; the cards crate's fixture held each entry to its row and let a row
+  wait for its card. The fixture's tag lists (Jlockeed, Catalyst, Prime) took #4, #16 and #16.1 as they
+  landed.
+- The Potion tag was in the engine's `Tag` union and the catalog check from the foundation on; the
+  server's `cards_tags_check` admits it from the release's migration, and its test waited for that while
+  the set was held ([[R1178000]]); the deck builder's `FILTER_TAGS` gained it with the release.
 
-**What a card batch never touches**: the golden traces, the seed-pinned tests, the pending fragments,
-the shipped totals and tag counts, and other sets' cards' behaviour, except where a part's system says
-so (MP5). A batch whose change moves a golden trace changed something that ships: it says what and why,
-or it is a bug.
+**What a card batch never touched**: the golden traces, the seed-pinned tests, the pending fragments,
+the shipped totals and tag counts, and other sets' cards' behaviour, except where a part's system said
+so (MP5). A batch whose change moved a golden trace changed something that ships: it said what and
+why, or it was a bug.
 
-**What a card batch adds**, per card (`docs/ADDING_CARDS.md`, a set that has not shipped): the
+**What a card batch added**, per card (`docs/ADDING_CARDS.md`, a set that has not shipped): the
 `catalog.json` entry (after the previous Meditative+ entry in index order, its `loc` from `cargo jackioh
-catalog loc`; the census and fixture are already written), the script file with its tests, the
+catalog loc`; the census and fixture were already written), the script file with its tests, the
 `card-audio.json5` entry, the `flavour.json` line and the `chinese.json` entry, and corrections to its
 own [[§8.9]], [[§7]], BUILD M11 and `docs/radiant-audit.md` rows where its build decided a detail
-differently. New verbs, statuses and hooks get their [[§6]] rows and ruling notes in the part that
-builds them.
+differently. New verbs, statuses and hooks got their [[§6]] rows and ruling notes in the part that
+built them.
 
 **The dry run.** The foundation added a temporary Meditative+ card (#8 Arch Mage: its catalog entry,
 script and tests, audio, flavour and Chinese entries) and ran every suite on it: the workspace tests,
 `catalog check`, `patches check`, `spec check`, `fuzz --seeds 200` (its pool 371 cards, the set
 previewed), the WebAssembly build and the web's tests. All were green with no change beyond this
 foundation's, R1420's machinery being generic over the held set; then it was removed. A batch's first
-card needs only the rows MP3 lists.
+card needed only the rows MP3 lists.
 
 ## MP4. The four patches beside the set
 
@@ -205,8 +205,8 @@ system waits for it ("Blocked by").
 
 **Decisions across the set** (these win over any entry in MP6 and over the batch issues' tables):
 
-- **D1 The gate.** Meditative+ is held by [[R1420]] until #1187 ([[R1178000]]); no batch adds a pending
-  fragment or moves a golden trace.
+- **D1 The gate.** Meditative+ was held by [[R1420]] until #1187 shipped it in v0.3.15 ([[R1178000]]);
+  no batch added a pending fragment or moved a golden trace.
 - **D2 R275's stat half** holds as written, every Radiant Unit at twice its stats (MP2).
 - **D3 Bob's Plan's help.** The Wincon pool is the shipped cards tagged Wincon: M #8 Reach the Summit
   and M #20 Aestheticize the Game. The easiest way to each, and the AI card that helps:
@@ -441,7 +441,7 @@ from an entry, the decision wins.
 - **Text:** Add {cards|random Potion card|random Potion cards} to your hand.
 - **Radiant:** Add {cards|random Radiant Potion card|random Radiant Potion cards} to your hand.
 - **Engine:** `add_random_from_catalog { query: { tags: [Potion] }, count }` (the Radiant face `radiant: true`): the non-token Potion cards of the sets that ship ([[R380]]), repeats allowed ([[R60]]); a crafted potion (M+ #16) is transient and in no pool.
-- **Rulings:** MP-B01-4: "Potions" are Potion-tagged cards: M+ #11, #12 and #13 once the set ships; under a preview the same three ([[R1178000]]).
+- **Rulings:** MP-B01-4: "Potions" are Potion-tagged cards: M+ #11, #12 and #13 since the set shipped, and under a preview before it the same three ([[R1178000]]).
 - **Numbers:** cards 2 ↑.
 - **Check:** R275: the potions Radiant (twice the stats, no Tribute).
 - **Class:** B.
@@ -631,8 +631,8 @@ from an entry, the decision wins.
 
 ## MP7. Readings for the designer
 
-Each row is the build's default until the designer says otherwise; a change is a patch of its own after
-the set ships, or a correction to the rows before it.
+Each row is the build's default until the designer says otherwise; a change is a patch of its own now
+that the set has shipped (before it, a change was a correction to the rows).
 
 | # | Card | The unclear words | The default |
 | --- | --- | --- | --- |
@@ -656,23 +656,25 @@ the set ships, or a correction to the rows before it.
 
 ## MP8. Sound, visuals, the AI and the release
 
-- **Sound.** Each card's `card-audio.json5` entry comes with it ([[§10.11]]'s lines); no voice file is
-  rendered or expected before the set ships ([[R1420]]): the release renders them through the `voice`
+- **Sound.** Each card's `card-audio.json5` entry came with it ([[§10.11]]'s lines); no voice file was
+  rendered or expected before the set shipped ([[R1420]]): the release rendered them through the `voice`
   workflow (`[gen:voice]`, R1448). The intro snippets ([[R1352]], `gen:music`) for the Legendary and the
-  Mythics, #1 Bob's Plan, #24 Bob and #26 Scratch Pad, are the release's.
-- **Visuals.** The set mark (R503) shows the plain diamond of a set the client does not know until the
-  release draws Meditative+ a glyph of its own; the client's new screens (the potion and from-scratch
+  Mythics, #1 Bob's Plan, #24 Bob and #26 Scratch Pad, were the release's.
+- **Visuals.** The set mark (R503) showed the plain diamond of a set the client did not know until the
+  release drew Meditative+ a glyph of its own; the client's new screens (the potion and from-scratch
   crafter, the question sequence, the code-block Discover, the autopilot's turn, the health price, the
-  countdown) come with the parts that build their systems.
+  countdown) came with the parts that built their systems.
 - **The AI** (#1186): every new prompt kind and mode answered by `crates/ai` within its budget, the
   sweep (`cargo jackioh sweep`) over the 26 cards with every set previewed, at most 13 of them in
-  `SHADOW_BAN` ([[R186]]); R1390's soft gate keeps the set out of the AI's random decks until then.
-- **The release** (#1187): `SHIPPED_SETS` lists Meditative+; one fragment claims its 30 entries; the
-  server's migration admits Potion and `seed-catalog` seeds the set; deck and trio codes take its offset
-  after Meditative's; the golden traces are re-blessed once for the bigger pools; the Almanac's and the
-  deck builder's chips, `FILTER_TAGS` with Potion, the newest set's ribbon, the `RELEASES` line; every
-  stated total (§8's intro, CLAUDE.md's census, the READMEs) moves to 396 cards and 84 tokens; and
-  REVIEW.md's audit is run as a separate session.
+  `SHADOW_BAN` ([[R186]]); R1390's soft gate was there to keep the set out of the AI's random decks
+  until it met that bar.
+- **The release** (#1187) shipped the set in v0.3.15: `SHIPPED_SETS` lists Meditative+; one fragment
+  claimed its 30 entries; the server's migration admits Potion and `seed-catalog` seeds the set; deck and
+  trio codes take its offset after Meditative's, 4000 + n ([[R1410]]); the golden traces were re-blessed
+  once for the bigger pools; the Almanac's and the deck builder's chips, `FILTER_TAGS` with Potion, the
+  newest set's ribbon, the `RELEASES` line; every stated total (§8's intro, CLAUDE.md's census, the
+  READMEs) moved to 396 cards and 84 tokens, 480 entries; and REVIEW.md's audit was run as a separate
+  session.
 
 ## MP9. Where this brief differs from the batch issues
 

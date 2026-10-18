@@ -637,7 +637,7 @@ The Meditative set's 102 cards and 30 tokens (SPEC §8.8, §7), from the designe
 
 ## Patch v0.3.X: Meditative+ (issue #1173)
 
-The Meditative+ set's 26 cards and 4 tokens (SPEC §8.9, §7), from the designer's list of 2026-10-18, each Radiant face as the design brief (`docs/meditative-plus-set.md`) writes it out, its numbers as `{key}` with the values the brief gives. "Meets" is a Radiant face that meets R275 as the designer wrote it, a reading the brief settled named in the reasoning; every Unit's Radiant face doubles its stats as written, and the two AI cards #1.1 Base Camp and #1.2 Spa Day, which the brief defines, meet it by their own Radiant faces. 30 meet it, none raised. The set does not ship until the last part of its patch (R1420, R1178000); a batch that settles a face differently corrects its row here.
+The Meditative+ set's 26 cards and 4 tokens (SPEC §8.9, §7), from the designer's list of 2026-10-18, each Radiant face as the design brief (`docs/meditative-plus-set.md`) writes it out, its numbers as `{key}` with the values the brief gives. "Meets" is a Radiant face that meets R275 as the designer wrote it, a reading the brief settled named in the reasoning; every Unit's Radiant face doubles its stats as written, and the two AI cards #1.1 Base Camp and #1.2 Spa Day, which the brief defines, meet it by their own Radiant faces. 30 meet it, none raised. The set was held until the last part of its patch, which shipped it in v0.3.15 (#1187, R1420, R1178000); a batch that settled a face differently corrected its row here.
 
 | # | Card | Type | Base | Radiant | Verdict | Reasoning |
 | --- | --- | --- | --- | --- | --- | --- |
