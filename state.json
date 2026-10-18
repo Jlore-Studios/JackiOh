@@ -4475,6 +4475,13 @@
     "1224": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-18T17:18:13Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "it changes the AI's eval and reply_score in crates/ai/src, which the rule rates hard (the AI's search); it also edits a ruling's proven_in"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
