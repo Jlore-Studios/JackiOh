@@ -2414,7 +2414,7 @@
   "that {row} zone is not open": "该{row}区域未开放",
   "{name} has no X to choose now": "{name}现在没有可选择的X",
   "{name} does not cost X": "{name}的法力值消耗不是X",
-  "{name} has no Embiggened version": "{name}没有加码版本",
+  "{name} has no embiggen price": "{name}没有加码价格",
   "{name} needs no Tribute": "{name}不需要献祭",
   "{name} needs Tribute {need}": "{name}需要献祭{need}",
   "{id} cannot be tributed to play {name}": "{id}不能被献祭来打出{name}",
