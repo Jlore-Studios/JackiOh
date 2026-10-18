@@ -4314,6 +4314,9 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "1226": {
+      "suggestion": true
+    },
     "1227": {
       "cleared": {
         "at": "2026-10-18T14:25:24Z",
