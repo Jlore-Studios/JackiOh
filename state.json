@@ -3781,7 +3781,9 @@
     },
     "1156": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6245601248"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -3810,9 +3812,7 @@
       "run_id": "39097249435",
       "started_at": "2026-10-18T04:29:57Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6245601248"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1157": {
