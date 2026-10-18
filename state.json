@@ -4344,9 +4344,12 @@
     "1206": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-18T07:43:41Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1192,
       "kind": "revise",
       "last_findings": [],
