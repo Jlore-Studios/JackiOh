@@ -17,12 +17,16 @@
 //
 // OPEN REPLAY JSON (R1141000, #1160). The way back in: a file the page wrote is parsed in the page, held to
 // its byte and step caps and this build's catalog version, and mounted through an in-memory source. A
-// file it refuses says why and mounts nothing; it is never uploaded or kept.
+// file it refuses says why and mounts nothing; it is never uploaded or kept. A co-op file (R1242000)
+// mounts on the co-op replay player.
 
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, ReactElement } from "react";
 
 import ConsentPrompt from "../auth/ConsentPrompt.tsx";
+import { DuosReplayBack, DuosReplayPlayer } from "../duos/DuosReplay.tsx";
+import type { DuosReplaySteps } from "../duos/DuosReplay.tsx";
+import { DUOS_REPLAY_JSON_FORMAT, parseDuosReplayJson } from "../duos/download.ts";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import type { CardLookup } from "../game/catalog.ts";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
@@ -34,7 +38,7 @@ import { createPracticeHost } from "../practice/host.ts";
 import type { PracticeHost } from "../practice/host.ts";
 import type { PracticeReplayListing } from "../practice/protocol.ts";
 import ReplayPlayer from "../replay/ReplayPlayer.tsx";
-import { downloadFile, onlineGame, parseReplayJsonFile, practiceGame, replayJsonFile } from "../replay/download.ts";
+import { downloadFile, onlineGame, practiceGame, readReplayJsonFile, replayJsonFile, replayStepsOf } from "../replay/download.ts";
 import type { ReplayJsonGame } from "../replay/download.ts";
 import { ReplayFailure, memoryReplaySource, replayFailureOf, replayFailureText } from "../replay/source.ts";
 import type { ReplaySource } from "../replay/source.ts";
@@ -71,7 +75,7 @@ type Listed<Row> =
   | { kind: "ready"; rows: Row[]; next: number | null; loadingMore: boolean };
 
 /** The replay on screen; `matchId` for an online match's, which can be shared with a friend (#936 B59). */
-type Open = { key: string; source: ReplaySource; matchId?: string };
+type Open = { key: string; source: ReplaySource; matchId?: string } | { key: string; duos: DuosReplaySteps };
 
 const RESULT_WORDS: Readonly<Record<PracticeReplayListing["result"], string>> = {
   win: "Win",
@@ -144,9 +148,9 @@ function DownloadJson({ testKey, game, open }: { testKey: string; game: ReplayJs
 
 /**
  * R1141000: Open replay JSON. The chosen file is parsed here and mounted through `onOpen`; one this
- * build refuses (`parseReplayJsonFile`) says why beside the control and mounts nothing. The input is
- * emptied after every choice so the same file can be chosen again, and it waits for `ready`: the
- * card data a replay's cards are named from.
+ * build refuses (`replayStepsOf`, or a co-op file's `parseDuosReplayJson`) says why beside the
+ * control and mounts nothing. The input is emptied after every choice so the same file can be chosen
+ * again, and it waits for `ready`: the card data a replay's cards are named from.
  */
 function OpenReplayJson({ ready, onOpen }: { ready: boolean; onOpen: (opened: Open) => void }): ReactElement {
   const [reading, setReading] = useState(false);
@@ -157,15 +161,17 @@ function OpenReplayJson({ ready, onOpen }: { ready: boolean; onOpen: (opened: Op
     if (file === undefined) return;
     setReading(true);
     setFailed(null);
-    parseReplayJsonFile(file)
-      .then(
-        (steps) => {
-          onOpen({ key: `file-${file.name}`, source: memoryReplaySource(steps) });
-        },
-        (cause: unknown) => {
-          setFailed(replayFailureText(replayFailureOf(cause)));
-        },
-      )
+    readReplayJsonFile(file)
+      .then((json): Open => {
+        const key = `file-${file.name}`;
+        // R1242000: a co-op replay's file is read as its own format; any other as a 1v1 replay's.
+        return json.format === DUOS_REPLAY_JSON_FORMAT
+          ? { key, duos: parseDuosReplayJson(json) }
+          : { key, source: memoryReplaySource(replayStepsOf(json)) };
+      })
+      .then(onOpen, (cause: unknown) => {
+        setFailed(replayFailureText(replayFailureOf(cause)));
+      })
       .finally(() => {
         setReading(false);
         input.value = "";
@@ -283,12 +289,16 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
   if (open !== null) {
     return (
       <CatalogContext.Provider value={lookup}>
-        <ReplayPlayer
-          key={open.key}
-          source={open.source}
-          onLeave={() => setOpen(null)}
-          {...(open.matchId === undefined ? {} : { actions: <ShareWithFriend matchId={open.matchId} /> })}
-        />
+        {"duos" in open ? (
+          <DuosReplayPlayer key={open.key} steps={open.duos} back={<DuosReplayBack onLeave={() => setOpen(null)} />} />
+        ) : (
+          <ReplayPlayer
+            key={open.key}
+            source={open.source}
+            onLeave={() => setOpen(null)}
+            {...(open.matchId === undefined ? {} : { actions: <ShareWithFriend matchId={open.matchId} /> })}
+          />
+        )}
       </CatalogContext.Provider>
     );
   }

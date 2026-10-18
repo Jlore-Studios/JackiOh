@@ -50,6 +50,8 @@ export const duosTestid = {
   clock: "duos-clock",
   // The co-op replay's own (#965): its root; its controls carry the replay player's ids (replayTestid).
   replay: "duos-replay",
+  // R1242000: the co-op replay's Download JSON.
+  replayDownload: "duos-replay-download",
   // `/dev/duos` (B65): the seat switcher.
   devSeat: (seat: DuosSeat): string => `duos-dev-seat-${seat}`,
 } as const;
