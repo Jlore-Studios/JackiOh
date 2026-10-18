@@ -1,10 +1,11 @@
 # training/ml
 
-The learned evaluation's fit (#466, #1009; `docs/learned-eval.md` D4, D5, D8): Python and CPU-only
-PyTorch over the positions `cargo jackioh positions` writes. It is kept apart from `analysis/`, so
-`super.yml`'s notebooks job never installs torch. Nothing in `crates/`, `apps/`, `e2e/` or `spec/`
-reads it; what it makes reaches the AI only as `crates/ai/src/learned/weights.json`, through a
-reviewed pull request (`export.py`, #1010).
+The learned evaluation's fit (#466, #1009; `docs/learned-eval.md` D4, D5, D8) and the policy prior's
+(#1171): Python and CPU-only PyTorch over the positions `cargo jackioh positions` writes. It is kept
+apart from `analysis/`, so `super.yml`'s notebooks job never installs torch. Nothing in `crates/`,
+`apps/`, `e2e/` or `spec/` reads it; what it makes reaches the AI only as `crates/ai/src/learned/weights.json` (`export.py`,
+#1010) or `crates/ai/src/policy/weights.json` (`policy_fit.py`, #1171), through a reviewed pull
+request.
 
 ```
 uv sync --frozen --project training/ml                             # Python 3.13, torch (CPU) and the pins, into training/ml/.venv
@@ -73,3 +74,31 @@ of `origin/main`), the candidate, and an 800-game paired screen on `improve-dev`
 It prints the gate's command (`cargo jackioh promote --lane learn --parent-bin <parent>`) only when the
 screen's `edgeLow` is above zero, and exits 1 otherwise. The learn lane runs it weekly
 (`training/learn.md`).
+
+## The policy prior (#1171)
+
+The policy prior (`crates/ai/src/policy.rs`, R1171000, R1171001) re-sorts the moves the beam expands
+before it takes its first `root_branching` or `branching`, so a move the heuristic tiers rank past
+that prefix can still be searched. Its data is `cargo jackioh positions --every decision --policy`:
+each decision row labelled with the keys of every candidate the AI considered there, in the heuristic
+order, and the move it played.
+
+`python -m jackioh_ml.policy_fit <positions>… --out <dir>` (`jackioh_ml/policy_fit.py`) refuses a file
+without labels or a `policyKeysVersion` that differs between files, holds 10% of the games out whole
+(by `data.game_bucket`, as the evaluation's fit does), and fits one weight per key seen in 20 or more
+training moves on the first 20,000 of the other games: a multinomial logit of the move played among
+the decision's moves that are not End Turn (the beam always keeps End Turn), L2 1e-4, full-batch
+L-BFGS on one thread, so a refit gives the same weights. `<dir>/report.md` and `report.json` give, on
+the held-out decisions that played a move, where it sits in the heuristic order and in the prior's:
+`top1`, `within6` and `within20` (the beam's branching and root branching) and `meanRank`, with the
+prior's log loss beside a uniform choice's. The decision is **go** when the prior's `within6` beats the
+heuristic order's. That is a precondition only: the moves played are the heuristic's own choices, so a
+prior can merely imitate them, and only the screen and the gate judge the strength.
+`<dir>/weights.json` is the table `crates/ai/build.rs` compiles in.
+
+`training/ml/retrain_policy.sh` is the same loop as `retrain.sh` for the prior: the logs, the labelled
+positions, the fit (stopping unless the decision is go), the table into
+`crates/ai/src/policy/weights.json` with `AI_MOVE_ORDER` set to `Learned`, the parent, the candidate
+and the 800-game screen on `improve-dev`, printing the learn lane's gate only when the screen's
+`edgeLow` is above zero. The checked-in table is the null one and the switch is off: turning it on is
+a promotion, the table and the switch in one change.

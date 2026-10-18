@@ -21,6 +21,10 @@
 //! position the search would score that line at: the opponent's reply as the search simulates it,
 //! played out from the true state (R1006006). The file's first line is a header naming the features
 //! (`PositionsHeader`), so a reader takes the feature length from the data.
+//!
+//! `--policy` (#1171) adds to each row of a decision the policy prior's label (`policy_label`): the keys
+//! of every move the AI considers there and which one was played, read from `redact` alone (R1171000),
+//! and the header names `POLICY_KEYS_VERSION`.
 
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -28,8 +32,8 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Context, bail};
 use jackioh_ai::{
-    AI_EVAL, FEATURES_VERSION, NextSwing, create_node_counter, dense_names, evaluate, features_of,
-    hidden_card_ids, simulate_reply,
+    AI_EVAL, FEATURES_VERSION, NextSwing, POLICY_KEYS_VERSION, PolicyLabel, create_node_counter, dense_names,
+    evaluate, features_of, hidden_card_ids, policy_label, simulate_reply,
 };
 use jackioh_engine::{
     ActionBody, CreateGameOptions, GameResult, GameState, Phase, PlayerId, begin_game, catalog_for,
@@ -66,6 +70,9 @@ pub struct Args {
     /// Which positions to write.
     #[arg(long, value_enum, default_value_t = Every::Turn)]
     pub every: Every,
+    /// #1171: label each row with the policy prior's candidates and the one played (R1171000).
+    #[arg(long)]
+    pub policy: bool,
 }
 
 /// The positions file's first line.
@@ -77,6 +84,9 @@ pub struct PositionsHeader {
     pub dense_names: Vec<String>,
     /// The catalog this build compiles in; each row names the one its game was played on.
     pub build_catalog: String,
+    /// #1171: the policy prior's key layout, when the rows carry its labels (`--policy`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub policy_keys_version: Option<u32>,
 }
 
 /// One training row.
@@ -96,6 +106,9 @@ pub struct PositionRow {
     pub hand: f64,
     /// The game's outcome for the seat: 1, 0.5 or 0.
     pub outcome: f64,
+    /// #1171: the decision's policy label (`--policy`, R1171000).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub policy: Option<PolicyLabel>,
 }
 
 /// Why a game left no rows (R1006003).
@@ -190,6 +203,7 @@ pub(crate) fn row_at(
         sparse: found.sparse,
         hand: evaluate(state, seat, next, &AI_EVAL),
         outcome,
+        policy: None,
     }
 }
 
@@ -220,11 +234,13 @@ fn reply_row(
     Ok(Some(row_at(&after, seat, step, game, outcome)))
 }
 
-/// R1006003: `game` folded under its catalog, its rows if it reaches its hash.
+/// R1006003: `game` folded under its catalog, its rows if it reaches its hash. With `policy`, a row
+/// whose seat plays the next action carries that decision's label (R1171000).
 pub(crate) fn fold_game(
     game: &SelfplayGame,
     every: Every,
     build_catalog: &str,
+    policy: bool,
 ) -> Result<Vec<PositionRow>, Dropped> {
     let shipped = catalog_for(&game.catalog, build_catalog).map_err(|_| Dropped::EarlierPatch)?;
     if game.result.is_none() {
@@ -245,7 +261,11 @@ pub(crate) fn fold_game(
                     let Some(outcome) = outcome_for(game.result, seat) else {
                         return Err(Dropped::NoResult);
                     };
-                    rows.push(row_at(&state, seat, step, game, outcome));
+                    let mut row = row_at(&state, seat, step, game, outcome);
+                    if policy && action.player_id == seat {
+                        row.policy = Some(policy_label(&state, seat, &action.body));
+                    }
+                    rows.push(row);
                 }
                 let ended_by = (every == Every::Reply
                     && action.body == ActionBody::EndTurn
@@ -273,17 +293,23 @@ pub(crate) fn fold_game(
     folded.unwrap_or(Err(Dropped::NotReplayed))
 }
 
-pub(crate) fn header(every: Every, build_catalog: &str) -> PositionsHeader {
+pub(crate) fn header(every: Every, build_catalog: &str, policy: bool) -> PositionsHeader {
     PositionsHeader {
         features_version: FEATURES_VERSION,
         every,
         dense_names: dense_names(),
         build_catalog: build_catalog.to_string(),
+        policy_keys_version: policy.then_some(POLICY_KEYS_VERSION),
     }
 }
 
 /// Folds every game of `logs` into `out`, a header first, the rows in game order.
-pub(crate) fn write_positions(logs: &[PathBuf], out: &Path, every: Every) -> anyhow::Result<Counts> {
+pub(crate) fn write_positions(
+    logs: &[PathBuf],
+    out: &Path,
+    every: Every,
+    policy: bool,
+) -> anyhow::Result<Counts> {
     jackioh_cards::register_all();
     let build_catalog = jackioh_cards::catalog_version();
     if let Some(dir) = out.parent()
@@ -295,7 +321,7 @@ pub(crate) fn write_positions(logs: &[PathBuf], out: &Path, every: Every) -> any
     let file =
         std::fs::File::create(out).with_context(|| format!("positions: cannot create {}", out.display()))?;
     let mut writer = BufWriter::new(file);
-    serde_json::to_writer(&mut writer, &header(every, build_catalog))?;
+    serde_json::to_writer(&mut writer, &header(every, build_catalog, policy))?;
     writer.write_all(b"\n")?;
 
     let mut counts = Counts::default();
@@ -323,7 +349,7 @@ pub(crate) fn write_positions(logs: &[PathBuf], out: &Path, every: Every) -> any
             }
             let folded: Vec<Result<Vec<PositionRow>, Dropped>> = chunk
                 .par_iter()
-                .map(|game| fold_game(game, every, build_catalog))
+                .map(|game| fold_game(game, every, build_catalog, policy))
                 .collect();
             for result in &folded {
                 counts.add(result);
@@ -344,7 +370,10 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     if args.logs.is_empty() {
         bail!("positions: name at least one selfplay file");
     }
-    let counts = write_positions(&args.logs, &args.out, args.every)?;
+    if args.policy && args.every == Every::Reply {
+        bail!("positions: --policy labels decisions: use --every decision or turn");
+    }
+    let counts = write_positions(&args.logs, &args.out, args.every, args.policy)?;
     println!(
         "{}",
         serde_json::json!({ "out": args.out.display().to_string(), "every": args.every, "counts": counts })
@@ -356,6 +385,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
 mod tests {
     use super::*;
     use jackioh_ai::{AI_GATE_BUDGET, MatchHooks, dev_game_config, play_match};
+    use jackioh_engine::find_instance;
 
     fn played(n: i32) -> (SelfplayGame, Vec<(GameState, usize)>) {
         jackioh_cards::register_all();
@@ -394,7 +424,8 @@ mod tests {
     fn r1006004_positions_over_a_log_are_the_features_of_the_true_game_as_it_was_played() {
         let (game, live) = played(1);
         assert!(game.result.is_some(), "the test game finishes");
-        let rows = fold_game(&game, Every::Decision, jackioh_cards::catalog_version()).expect("it replays");
+        let rows =
+            fold_game(&game, Every::Decision, jackioh_cards::catalog_version(), false).expect("it replays");
         assert!(rows.len() > 10, "{} rows", rows.len());
         for row in &rows {
             let (state, _) = live
@@ -405,7 +436,8 @@ mod tests {
             assert_eq!(row.dense, truth.dense, "step {}", row.step);
             assert_eq!(row.sparse, truth.sparse, "step {}", row.step);
         }
-        let turns = fold_game(&game, Every::Turn, jackioh_cards::catalog_version()).expect("it replays");
+        let turns =
+            fold_game(&game, Every::Turn, jackioh_cards::catalog_version(), false).expect("it replays");
         assert!(!turns.is_empty() && turns.len() < rows.len());
         let mut keys: Vec<(i32, PlayerId)> = turns.iter().map(|row| (row.turn, row.seat)).collect();
         keys.dedup();
@@ -420,13 +452,22 @@ mod tests {
         let build = jackioh_cards::catalog_version();
         let mut wrong = game.clone();
         wrong.hash = "00000000".to_string();
-        assert_eq!(fold_game(&wrong, Every::Turn, build), Err(Dropped::NotReplayed));
+        assert_eq!(
+            fold_game(&wrong, Every::Turn, build, false),
+            Err(Dropped::NotReplayed)
+        );
         let mut unfinished = game.clone();
         unfinished.result = None;
-        assert_eq!(fold_game(&unfinished, Every::Turn, build), Err(Dropped::NoResult));
+        assert_eq!(
+            fold_game(&unfinished, Every::Turn, build, false),
+            Err(Dropped::NoResult)
+        );
         let mut old = game;
         old.catalog = "0.0.0-never".to_string();
-        assert_eq!(fold_game(&old, Every::Turn, build), Err(Dropped::EarlierPatch));
+        assert_eq!(
+            fold_game(&old, Every::Turn, build, false),
+            Err(Dropped::EarlierPatch)
+        );
     }
 
     /// R1006006: `--every reply` writes one row per end of a seat's turn whose reply leaves the game
@@ -436,7 +477,7 @@ mod tests {
     fn r1006006_reply_rows_are_the_search_s_simulated_replies_one_per_turn_end() {
         let (game, _) = played(3);
         let build = jackioh_cards::catalog_version();
-        let rows = fold_game(&game, Every::Reply, build).expect("it replays");
+        let rows = fold_game(&game, Every::Reply, build, false).expect("it replays");
         let ends = game
             .log
             .iter()
@@ -447,12 +488,68 @@ mod tests {
             "{} rows for {ends} turn ends",
             rows.len()
         );
-        assert_eq!(rows, fold_game(&game, Every::Reply, build).expect("again"));
-        let turns = fold_game(&game, Every::Turn, build).expect("it replays");
+        assert_eq!(rows, fold_game(&game, Every::Reply, build, false).expect("again"));
+        let turns = fold_game(&game, Every::Turn, build, false).expect("it replays");
         // A reply row is the seat's position after the reply, a turn after the one it ended.
         for row in &rows {
             assert!(turns.iter().any(|turn| turn.turn > 0) && row.turn > 0);
         }
+    }
+
+    /// R1171000: `--policy` labels every decision row with the label the live game gives there, the
+    /// same on every fold, its keys naming no instance and no hero; without it the rows are the same
+    /// less their labels, and only a labelled file's header names the key layout.
+    #[test]
+    fn r1171000_policy_labels_over_a_log_are_deterministic_and_name_no_instance() {
+        let (game, live) = played(4);
+        let build = jackioh_cards::catalog_version();
+        let rows = fold_game(&game, Every::Decision, build, true).expect("it replays");
+        assert!(rows.len() > 10, "{} rows", rows.len());
+        for row in &rows {
+            let label = row
+                .policy
+                .as_ref()
+                .unwrap_or_else(|| panic!("step {} has no label", row.step));
+            assert!(
+                label.chosen.is_some(),
+                "step {}: the AI played one of its candidates",
+                row.step
+            );
+            let (state, _) = live
+                .iter()
+                .find(|(_, step)| *step == row.step)
+                .expect("a live state at every row's step");
+            assert_eq!(
+                *label,
+                policy_label(state, row.seat, &game.log[row.step].body),
+                "step {}",
+                row.step
+            );
+            for key in label.candidates.iter().flatten() {
+                assert!(
+                    !key.split([':', '.'])
+                        .any(|part| part.starts_with("hero-") || find_instance(state, part).is_some()),
+                    "step {}: {key}",
+                    row.step
+                );
+            }
+        }
+        assert_eq!(
+            rows,
+            fold_game(&game, Every::Decision, build, true).expect("again")
+        );
+        let plain = fold_game(&game, Every::Decision, build, false).expect("it replays");
+        let cleared: Vec<PositionRow> = rows
+            .iter()
+            .cloned()
+            .map(|row| PositionRow { policy: None, ..row })
+            .collect();
+        assert_eq!(plain, cleared);
+
+        let labelled = serde_json::to_value(header(Every::Decision, build, true)).unwrap();
+        assert_eq!(labelled["policyKeysVersion"], POLICY_KEYS_VERSION);
+        let unlabelled = serde_json::to_value(header(Every::Decision, build, false)).unwrap();
+        assert!(unlabelled.get("policyKeysVersion").is_none(), "{unlabelled}");
     }
 
     #[test]
