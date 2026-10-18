@@ -462,6 +462,7 @@ select jsonb_build_object(
   'lastBoards', jsonb_build_array(m.p1_last_board, m.p2_last_board),
   'glitchBoards', jsonb_build_array(m.p1_glitch_board, m.p2_glitch_board),
   'log', (select jsonb_agg(a.action order by a.seq) from public.match_actions a where a.match_id = m.id),
+  'catalogVersion', m.catalog_version,
   'finalHash', m.final_hash)::text
 from public.matches m where m.id = '<match id>';
 ```
@@ -471,6 +472,20 @@ add `"dealt": ["p1", "p2"]` for an All Random match (its `mode`, its room's or i
 with its reason, and `cargo jackioh think --file match.json --at K` shows the position after K
 actions. A live actor that folded a log out of order rewinds its match, as the text-ordered read of
 `match_actions` did before `store::contract`'s `reads_a_log_of_ten_or_more_actions_back_in_seq_order`.
+
+The file keeps the catalog version the match was played on (`catalogVersion`), and `replay` and `think`
+fold it under that version's catalog (R767000); a version this build neither is nor carries exits 1 as
+`earlier_patch`, so fold it with a build of that version. Without the key, the match folds under this
+build's catalog, not the one it was played on. A co-op match (`(co-op)` in the title) exports from
+`duos_matches`, its catalog version inside `options`, and `cargo jackioh replay < match.json` prints its
+`duos_hash` and `refusedAt`, the index of the log action its fold refused:
+
+```sql
+select jsonb_build_object(
+  'options', m.options || jsonb_build_object('seed', m.seed),
+  'log', (select jsonb_agg(a.action order by a.seq) from public.duos_match_actions a where a.match_id = m.id))::text
+from public.duos_matches m where m.id = '<match id>';
+```
 
 ## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000, R641000, R747000)
 
