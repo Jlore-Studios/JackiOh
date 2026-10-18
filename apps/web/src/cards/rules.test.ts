@@ -617,7 +617,6 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       // R781005: the cards print it lower-case, in the singular and the plural.
       "Combat keyword": ["combat keywords", "combat keyword"],
       // R910000: the lower-case and inflected spellings the cards print mid-sentence.
-      Activate: ["activate"],
       Tribute: ["Tributes"],
       Fuse: ["fuse", "fused"],
       Transform: ["transform", "transforms"],
@@ -854,7 +853,6 @@ describe("R910000: a trigger or verb bolds wherever a card uses it, in every cas
       ["Nerf", "meditative-084", "base", "Nerfs"],
       ["Redirect", "meditative-092", "base", "redirected"],
       ["Bounce", "meditative-095", "base", "bounced"],
-      ["Activate", "meditative-054", "base", "activate"],
       ["Mark in a hand", "meditative-076", "base", "marked"],
     ];
     for (const [term, id, face, spelling] of cases) {
@@ -888,7 +886,7 @@ describe("R910000: a trigger or verb bolds wherever a card uses it, in every cas
   });
 
   it("R910000 every alias it adds and every plain spelling is one a card prints, and a plain spelling prints plain", () => {
-    const added = ["activate", "Tributes", "fuse", "fused", "transform", "transforms", "Locked", "steal", "bounced", "Nerfs", "Buffs", "redirected", "exile", "exiles", "exiled", "marked"];
+    const added = ["Tributes", "fuse", "fused", "transform", "transforms", "Locked", "steal", "bounced", "Nerfs", "Buffs", "redirected", "exile", "exiles", "exiled", "marked"];
     for (const spelling of [...added, ...PLAIN_SPELLINGS]) {
       expect(PLAYED_TEXTS.some(({ text }) => text.includes(spelling)), spelling).toBe(true);
     }

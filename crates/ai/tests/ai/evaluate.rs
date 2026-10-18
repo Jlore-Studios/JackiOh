@@ -667,7 +667,7 @@ mod banked_state_1086 {
     const BEAUTY: &str = "meditative-039-5"; // the 20/20 the counter's fifth step summons (R962)
     const KPOP: &str = "core-050"; // (2) Unit 1/1, Cry: Allure an enemy permanent (R437's mark)
     const FULLSEND: &str = "core-078"; // (4) Spell: end of turn, exile your hand (an unmarked delayed effect)
-    const RIFT: &str = "meditative-019-1"; // (2) Spell token: take an extra turn after this one (R846)
+    const RIFT: &str = "meditative-019-1"; // (0) Spell token: take an extra turn after this one (R846)
     const VANILLA: &str = "core-008"; // (1) Unit 4/4, no keywords
     const PUNISH: &str = "classic-020"; // Field Spell: Activate, a Unit is destroyed at your next turn's start
     const DOOM: &str = "destroy a Unit at the start of your next turn";
