@@ -3690,6 +3690,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "onto": "bot/issue-1173",
       "part_of": 1173,
       "pending_request": false,
@@ -3700,10 +3701,12 @@
       "provider": "claude-7",
       "queued_at": "2026-10-18T16:40:11Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "",
       "run_id": "39148660313",
       "started_at": "2026-10-18T17:15:18Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "1181": {
       "action": "build",
