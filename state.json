@@ -4210,6 +4210,13 @@
     "1219": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-18T14:14:59Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule line 5 fails: a catalog.json card change with card-script tests, spec ruling notes and a golden re-bless; no engine src or AI code, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
