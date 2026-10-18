@@ -119,7 +119,7 @@ pub struct CardView {
     #[cfg_attr(feature = "ts", ts(optional))]
     pub type_: Option<CardType>,
     /// MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
-    /// tag is part of the card, and the view says so.
+    /// tag is part of the card, as CN is of a card in Chinese (R1176000), and the view says so.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub tags: Option<Vec<Tag>>,
@@ -419,7 +419,7 @@ pub struct UnitView {
     #[cfg_attr(feature = "ts", ts(optional))]
     pub type_: Option<CardType>,
     /// MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
-    /// tag is part of the card, and the view says so.
+    /// tag is part of the card, as CN is of a card in Chinese (R1176000), and the view says so.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub tags: Option<Vec<Tag>>,
@@ -618,7 +618,7 @@ pub struct PublicBackrowView {
     #[serde(rename = "type")]
     pub type_: CardType,
     /// MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
-    /// tag is part of the card, and the view says so.
+    /// tag is part of the card, as CN is of a card in Chinese (R1176000), and the view says so.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub tags: Option<Vec<Tag>>,

@@ -36,7 +36,7 @@ pub struct InstanceData {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enchantments: Option<Vec<Enchantment>>,
     /// MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
-    /// tag is part of the card, and the view says so.
+    /// tag is part of the card, as CN is of a card in Chinese (R1176000), and the view says so.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<Tag>>,
 }
@@ -49,7 +49,8 @@ pub fn instance_data_view(state: &GameState, card: &CardInstance) -> InstanceDat
     if type_ != crate::catalog::def_of(Some(state), &card.def_id).type_ {
         out.type_ = Some(type_);
     }
-    // MD-B15, R923: the tags now, where they differ from the definition's (a granted tag).
+    // MD-B15, R923, R1176000: the tags now, where they differ from the definition's (a granted tag,
+    // or CN on a card in Chinese).
     let tags = crate::query::tags_of(state, card);
     if tags != crate::catalog::def_of(Some(state), &card.def_id).tags {
         out.tags = Some(tags);

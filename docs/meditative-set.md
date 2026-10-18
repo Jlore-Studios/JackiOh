@@ -4674,7 +4674,8 @@ differently is corrected in its note, not here.
   in its caster's hand, in its place, with a new card of that definition (§6.3 Replace off the field,
   R31, R35; an Immutable hand card is replaced too). Each costs (0) and is Radiant on the Radiant face.
   Each is a card generated into a hand for R673.
-- **MD-B11** (ME-CN): the `chinese` flag is presentation only. No rule reads it (CLAUDE.md rule 7), and
+- **MD-B11** (ME-CN): the `chinese` flag is how a card is shown, and one rule reads it: a card in
+  Chinese is CN wherever an instance's tags are read (R1176000, issue #1176; until then no rule read it).
   Immutable does not stop it.
   - It rides the card through every zone and through R78's and R766's resets, and nothing removes it.
   - A copy of a Chinese card is Chinese.

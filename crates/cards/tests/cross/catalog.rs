@@ -5614,3 +5614,42 @@ mod no_face_prints_taunt_beside_indestructible_spec_6_1_r347 {
         assert!(both.is_empty(), "{both:?}");
     }
 }
+
+mod every_entry_printed_in_chinese_is_cn_r1176000 {
+    use super::*;
+
+    /// A Han character: the CJK Unified Ideographs, Extension A, the compatibility ideographs, and
+    /// Extensions B onward.
+    fn is_han(c: char) -> bool {
+        matches!(
+            c,
+            '\u{3400}'..='\u{4dbf}' | '\u{4e00}'..='\u{9fff}' | '\u{f900}'..='\u{faff}' | '\u{20000}'..='\u{3134f}'
+        )
+    }
+
+    // R1176000: every card in Chinese is CN. A card printed in Chinese (a Han character in its name or
+    // on either face) is in Chinese from the start, so the catalog gives it the CN tag, and a pool of
+    // CN cards finds it; a card translated in a game is CN by its flag instead (`query::tags_of`).
+    #[test]
+    fn r1176000_every_entry_with_a_han_character_in_its_name_or_text_has_the_cn_tag() {
+        let printed: Vec<&CardDef> = entries()
+            .into_iter()
+            .filter(|entry| {
+                [&entry.name, &entry.base.text, &entry.radiant.text]
+                    .iter()
+                    .any(|text| text.chars().any(is_han))
+            })
+            .collect();
+        // Spiritually 中国 is one: the test finds what it is about.
+        assert!(printed.iter().any(|entry| entry.id == "meditative-032"));
+        let missing: Vec<&str> = printed
+            .iter()
+            .filter(|entry| !entry.tags.contains(&Tag::Cn))
+            .map(|entry| entry.id.as_str())
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "printed in Chinese without the CN tag: {missing:?}"
+        );
+    }
+}

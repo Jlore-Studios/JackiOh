@@ -272,9 +272,9 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub flashback_spent: Option<bool>,
-    /// ME-CN, R1300: the card is shown in Chinese (`effects::translate`). Presentation only: no rule
-    /// reads it. Kept in every zone and through R78's and R766's resets; a copy keeps it, a
-    /// Transform's new card is without it. Only ever `Some(true)`.
+    /// ME-CN, R1300: the card is shown in Chinese (`effects::translate`). One rule reads it: a card
+    /// in Chinese is CN (`query::tags_of`, R1176000). Kept in every zone and through R78's and R766's
+    /// resets; a copy keeps it, a Transform's new card is without it. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub chinese: Option<bool>,

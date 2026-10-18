@@ -82,7 +82,7 @@ type CardInstance = {
   tuning?: { attack?: number; health?: number; addKeywords?: Keyword[]; removeKeywords?: KeywordKind[]; x?: Record<string, number>; numbers?: Record<string, number>; set?: Record<string, number> };  // a Nerf (the engine's Degrade), a Buff (its Upgrade) and KY's Constant (R386, R442, R1320); kept in every zone
   brittle?: { count: number; since: number; printed?: true };  // Brittle X (R385, R441, R638); kept in every zone but ticking on the field only, never copied
   berserk?: true;               // C+ #19.5's status, lost on leaving the field (R412)
-  chinese?: true;               // shown in Chinese, kept everywhere (R1300)
+  chinese?: true;               // shown in Chinese, and so CN; kept everywhere (R1300, R1176000)
   created?: true;               // minted after the decks were built, kept everywhere (R943)
   grantedTags?: Tag[];          // granted by an effect (R923)
   grants?: { grant: string; radiant: boolean; params?: Record<string, number> }[];  // Death abilities other cards granted, in order; a `<defId>#<key>` naming a hook the granting card registers (R1107); lost on leaving the field (R78)
@@ -173,7 +173,7 @@ Patch v0.2.0's cards add to the view, each under the same rules of who may read 
 - **A marked card** carries its mark in both views: #50 K-Pop Fanatic's pending steal on its target, for as long as the delayed steal waits ([[R437]]).
 - **Each seat's Jade Counter** shows beside its hero on both seats once it has risen above 0, and the view carries no key before that ([[R961]]).
 - **A Chinese card** carries `chinese: true` on every view of it the viewer may read — a hand card, a unit, a backrow card, a pile's card and a prompt's option — and on no view they may not read ([[R1301]]). `translated` reports a translation only where both players read the card; a change in a hand, a deck or on a face-down trap is silent ([[R440]]).
-- **A card with a granted tag** carries `tags` on every view of it the viewer may read, where they differ from its definition's — and on no view they may not read ([[R923]]).
+- **A card with a granted tag** carries `tags` on every view of it the viewer may read, where they differ from its definition's — and on no view they may not read ([[R923]]). So does a card in Chinese whose definition lacks CN: its `tags` hold CN ([[R1176000]]).
 - **A Created card** carries `created: true` on every view of it the viewer may read — a hand card, a unit, a backrow card, a pile's card and a prompt's option — and on no view they may not read; the owner's library list marks the entries the owner knows ([[R943]]).
 - **A set hand size** is public on both seats as `handCap`: Meditative #79's rest-of-game setting, absent until one is set ([[R1143]]).
 - **A marked hand** shows its owner each mark on its card and the other player only the count, `handMarked`, never which ([[R1141]]).

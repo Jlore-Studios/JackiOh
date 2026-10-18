@@ -70,6 +70,10 @@ pub const POOL_TOKEN_TAGS: &[Tag] = &[Tag::Fruit, Tag::Prime, Tag::Ai];
 /// Quickdraw, Wincon and Token name families and mechanics, not tribes.
 pub const TRIBAL_TAGS: &[Tag] = &[Tag::Human, Tag::Felinor, Tag::Ky, Tag::Cn, Tag::Jlockeed];
 
+/// R1176000: the tag every card in Chinese has. A card instance whose `chinese` flag is set (R1300)
+/// carries it wherever an instance's tags are read (`query::tags_of`), as a granted tag is (R923).
+pub const CHINESE_TAG: Tag = Tag::Cn;
+
 /// §3
 pub const UNIT_ZONES: i32 = 5;
 /// §3
