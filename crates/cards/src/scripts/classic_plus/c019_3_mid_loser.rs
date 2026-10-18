@@ -51,7 +51,7 @@ pub fn script() -> CardScripts {
 
 // C+ #19.3 Mid Loser — SPEC §8.7 row 19.3, BUILD M9 Classic+ row C+ 19.3: "Cry, on a play from hand, a
 // cast or League of Losers' summon (R1, R411), flips a seeded coin: heads +4/+4 permanently; tails
-// −3/−3 permanently (a damaged Mid Loser can die at the state check) and the opponent's next mana
+// −2/−2 permanently (a damaged Mid Loser can die at the state check) and the opponent's next mana
 // refresh is 1 higher (`nextTurnMod`); a copy or a Rollback's recreation flips nothing; heads and tails
 // amounts read through `param()`; radiant Lucky 1 (two flips, heads kept if either lands) and heads
 // +10/+10".

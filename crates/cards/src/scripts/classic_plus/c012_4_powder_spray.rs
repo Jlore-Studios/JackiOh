@@ -98,7 +98,7 @@ mod tests {
         fn an_immune_to_spells_unit_takes_none() {
             crate::register_all();
             let mut s = spray(false, json!({}), json!({ "field": [{ "def": TOP_LOSER, "radiant": true }] }));
-            assert_eq!(s.stats(TOP_LOSER).health, 10);
+            assert_eq!(s.stats(TOP_LOSER).health, 8);
             s.expect_health(P2, HERO_HEALTH - 3);
         }
 

@@ -40,7 +40,7 @@ pub fn script() -> CardScripts {
 // so it never declares an attack and strikes back with no damage instance (R63); at its controller's
 // end of turn heals your hero 3 (past 30 allowed) and each of your Units 3 up to max health, itself
 // included; an opposing Blood Moon turns each of those heals into Pierce damage (R413); the heal reads
-// through `param()`; radiant 0/10 Divine Shield, Reborn, heal 6".
+// through `param()`; radiant 0/8 Divine Shield, Reborn, heal 6".
 #[cfg(test)]
 mod tests {
     use super::*;
