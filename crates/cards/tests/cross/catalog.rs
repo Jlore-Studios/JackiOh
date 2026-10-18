@@ -5684,21 +5684,28 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
 /// whichever set brings it.
 const TOKENS_NOTE: &str = include_str!("../../../../spec/07-tokens.md");
 
-/// The `(Token, Index)` cells of §7's token table, row by row: the lines after its header row and
-/// its rule, up to the first line that is not a row.
-fn section_7_rows() -> Vec<(String, String)> {
-    let mut lines = TOKENS_NOTE
-        .lines()
-        .skip_while(|line| !line.starts_with("| Token | Index |"))
-        .skip(2);
-    let mut rows: Vec<(String, String)> = Vec::new();
-    for line in lines.by_ref() {
-        if !line.starts_with("| ") {
-            break;
+/// The `(Token, Index, held)` cells of §7's token tables, row by row: the lines after each table's
+/// header row and its rule, up to the first line that is not a row. The first table holds the
+/// shipped sets' tokens; a later one (`held`) a set the catalog holds before it ships (R1420,
+/// R1178000), whose rows may wait for their cards as its census does.
+fn section_7_rows() -> Vec<(String, String, bool)> {
+    let mut rows: Vec<(String, String, bool)> = Vec::new();
+    let mut tables = 0;
+    let mut lines = TOKENS_NOTE.lines();
+    while let Some(line) = lines.next() {
+        if !line.starts_with("| Token | Index |") {
+            continue;
         }
-        let cells: Vec<&str> = line.split('|').map(str::trim).collect();
-        if let (Some(name), Some(index)) = (cells.get(1), cells.get(2)) {
-            rows.push(((*name).to_string(), (*index).to_string()));
+        tables += 1;
+        lines.next();
+        for line in lines.by_ref() {
+            if !line.starts_with("| ") {
+                break;
+            }
+            let cells: Vec<&str> = line.split('|').map(str::trim).collect();
+            if let (Some(name), Some(index)) = (cells.get(1), cells.get(2)) {
+                rows.push(((*name).to_string(), (*index).to_string(), tables > 1));
+            }
         }
     }
     rows
@@ -5721,7 +5728,7 @@ mod r1177001_a_token_is_one_by_all_four_signals_spec_5_7 {
                 (
                     "a §7 row",
                     rows.iter()
-                        .any(|(name, index)| *name == entry.name && *index == entry.index),
+                        .any(|(name, index, _)| *name == entry.name && *index == entry.index),
                 ),
             ];
             // `token` is the one the rules read (R11, R102); the label (R1177001) and every other
@@ -5737,15 +5744,17 @@ mod r1177001_a_token_is_one_by_all_four_signals_spec_5_7 {
             }
         }
         assert_eq!(wrong, Vec::<String>::new(), "the four token signals disagree");
-        // And every row names a token the catalog holds.
+        // And every row of a shipped set names a token the catalog holds; a held set's row may wait
+        // for its card.
         let orphans: Vec<String> = rows
             .iter()
-            .filter(|(name, index)| {
-                !entries()
-                    .into_iter()
-                    .any(|entry| entry.token && entry.name == *name && entry.index == *index)
+            .filter(|(name, index, held)| {
+                !held
+                    && !entries()
+                        .into_iter()
+                        .any(|entry| entry.token && entry.name == *name && entry.index == *index)
             })
-            .map(|(name, index)| format!("{name} ({index})"))
+            .map(|(name, index, _)| format!("{name} ({index})"))
             .collect();
         assert_eq!(orphans, Vec::<String>::new(), "§7 rows with no token");
     }
