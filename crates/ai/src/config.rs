@@ -432,7 +432,8 @@ pub const AI_EVAL_KIND: EvalKind = EvalKind::Hand;
 /// whole correction says how much more often a position is won than the hand eval thinks; a decision
 /// compares lines a move or two apart, where much of that is noise, and the whole of it changed about
 /// one decision in four for little gain. Measured on 1,600 paired games each against the hand eval
-/// (#466, the 36,000-game network): the whole correction +0.010 edge, half of it +0.064.
+/// (#466, the 36,000-game network): the whole correction +0.010 edge, three quarters +0.022, half
+/// +0.064, a quarter +0.086; on TD targets (#1190) and fresh deals, half +0.076 and a quarter +0.049.
 pub const LEARNED_CORRECTION_SHARE: f64 = 0.5;
 const _: () = assert!(LEARNED_CORRECTION_SHARE > 0.0 && LEARNED_CORRECTION_SHARE <= 1.0);
 
