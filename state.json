@@ -4223,6 +4223,13 @@
     "1192": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-18T05:51:39Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "it edits crates/engine/src, which the rule rates hard, but only to merge the two copies of the switch refusal without changing behaviour, plus testkit and fuzz wiring; the planner's prototype ran the check on every state of 2,000 seeds and found no mismatch, so no rules work or ruling is left"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
