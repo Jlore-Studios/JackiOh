@@ -1850,6 +1850,15 @@
       attack: { voice: "sapi-cat", text: "Nyaa, cleaning time!" },
       death: { voice: "sapi-cat", text: "Nyaa... logging off." },
     },
+    "meditativeplus-001": { // Bob's Plan
+      cast: { voice: "sapi-hero", text: "Bob has a plan. Bob always has a plan." },
+    },
+    "meditativeplus-001-1": { // Base Camp
+      cast: { voice: "robot", text: "Base camp established. Summit in sight." },
+    },
+    "meditativeplus-001-2": { // Spa Day
+      cast: { voice: "sapi-heroine", text: "Deep breath in. Cucumber slices on." },
+    },
     "meditativeplus-016": { // Jazakus
       play: { voice: "sapi-mystic", text: "Name your poison. I'll bottle it." },
       attack: { voice: "sapi-mystic", text: "Taste test time!" },
@@ -1859,6 +1868,16 @@
       play: { voice: "sapi-giant", text: "Bigger cauldron. Bigger bottles. Bigger trouble." },
       attack: { voice: "sapi-giant", text: "Drink THIS!" },
       death: { voice: "sapi-giant", text: "The cauldron boils over..." },
+    },
+    "meditativeplus-021": { // Harmony Spirit
+      play: { voice: "sapi-mystic", text: "Be still. Be equal. Be three by three." },
+      attack: { voice: "sapi-mystic", text: "Balance, restored." },
+      death: { voice: "sapi-mystic", text: "The note fades..." },
+    },
+    "meditativeplus-024": { // Bob, Wisconsin's Strongest Soldier
+      play: { voice: "brute", text: "Bob reporting for duty. Pick your poison." },
+      attack: { voice: "brute", text: "For Wisconsin!" },
+      death: { voice: "brute", text: "Tell the fish fry... I'm sorry..." },
     },
     "meditativeplus-026": { // Scratch Pad
       cast: { voice: "sapi-synth", text: "Blank file. No hints. Good luck." },

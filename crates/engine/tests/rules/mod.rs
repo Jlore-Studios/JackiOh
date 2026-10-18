@@ -150,6 +150,7 @@ pub mod mana_before_play;
 pub mod mb22;
 pub mod meditative_riders;
 pub mod modifiers;
+pub mod mplus_b07;
 pub mod mulligan_concurrent;
 pub mod night_market;
 pub mod overflow_events;

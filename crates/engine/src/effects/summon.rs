@@ -76,6 +76,10 @@ pub struct SummonPlacement {
     /// R1088: the card whose effect summoned it, for the client; no rule reads it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_id: Option<String>,
+    /// ME-CN, R1185002: a fresh card summoned in Chinese (`CardInstance.chinese`, R1300), as an
+    /// `addToHand`'s `chinese` rider makes one in a hand (M+ #21 Harmony Spirit's Rush Tokens).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chinese: Option<bool>,
 }
 
 /// `summon`'s arguments (TS `SummonPlacement & { defId?; instance?; randomKeywords? }`, the
@@ -130,6 +134,7 @@ impl SummonArgs {
             armor_override: self.armor_override,
             stats_override: self.stats_override,
             source_id: None,
+            chinese: None,
         }
     }
 }
@@ -266,6 +271,9 @@ fn summon_fresh(
     }
     if let Some(armor) = at.armor_override {
         card.armor_override = Some(armor);
+    }
+    if at.chinese == Some(true) {
+        card.chinese = Some(true);
     }
     if summon_onto(ctx, &mut card, &slot, at, None) {
         Some(card)
@@ -881,10 +889,15 @@ pub struct FillBoardArgs {
     /// MD-B3, R942: the side whose summons are Radiant (Meditative #26's Radiant face).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub radiant_for: Option<PlayerSpec>,
+    /// ME-CN, R1185002: every card the fill summons is in Chinese (M+ #21 Harmony Spirit's Radiant
+    /// face, "Rush Tokens in Chinese").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chinese: Option<bool>,
 }
 
 /// §7 and R64: "fill your board" summons the named token into every empty, unreserved unit zone,
-/// left to right, a Locked one included (`fill_board_zones`, R1136000). With `row: backrow` and
+/// left to right, a Locked one included (`fill_board_zones`, R1136000), each in Chinese with the
+/// `chinese` rider (R1185002). With `row: backrow` and
 /// `side: any` it fills each side's empty, unlocked backrow zones for that side's player, a Locked
 /// one still skipped (MD-B3, R942).
 pub fn fill_board(args: FillBoardArgs) -> Effect {
@@ -913,6 +926,7 @@ pub fn fill_board(args: FillBoardArgs) -> Effect {
                     radiant: if radiant { Some(true) } else { None },
                     stats_override: args.stats_override,
                     armor_override: args.armor_override,
+                    chinese: args.chinese,
                     ..SummonPlacement::default()
                 };
                 summon_fresh(ctx, &args.def_id, player, &at);

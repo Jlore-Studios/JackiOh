@@ -75,6 +75,15 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
   // M #98 Showdown: "Choose a lane. Lock every other lane until the start of your next turn." The
   // board draws lane 1 on the left for both seats (Board.tsx), so each option says where it is.
   "meditative-098": lanes("Lock the other four lanes until the start of your next turn."),
+  // M+ #24 Bob, Wisconsin's Strongest Soldier: "Cry: Choose one: Freeze all enemy Units; put an enemy
+  // Unit into your hand, and your opponent gets 3 Coins; Discover a Unit and make it Radiant; or draw 1
+  // and fill your hand with copies of it." The Coins' count is the card's, so the detail names none.
+  "meditativeplus-024": {
+    freeze: { label: "Freeze", detail: "Freeze every enemy Unit." },
+    take: { label: "Take a Unit", detail: "Put the enemy Unit you choose into your hand. Your opponent gets Coins." },
+    discover: { label: "Discover a Unit", detail: "Discover a Unit and make it Radiant." },
+    copies: { label: "Draw and copy", detail: "Draw 1, then fill your hand with copies of it." },
+  },
 };
 
 /** Showdown's five lanes, `lane-1` to `lane-5`, each named by where it sits on the board. */

@@ -246,7 +246,7 @@ from an entry, the decision wins.
 - **Text:** Add a random Wincon card to your hand, and its plan: a Base Camp for Reach the Summit, a Spa Day for Aestheticize the Game.
 - **Radiant:** Add a random Radiant Wincon card to your hand, and its Radiant plan: a Radiant Base Camp for Reach the Summit, a Radiant Spa Day for Aestheticize the Game.
 - **Engine:** One pick, by the match rng, from the Wincon pool (`{ tags: [Wincon] }`, the shipped sets', [[R380]]; today M #8 Reach the Summit and M #20 Aestheticize the Game), added to your hand (`add_to_hand { defId }`), then the helper token its plan names, from a table in the script keyed by catalog id (`WINCON_PLANS`: `meditative-008` → M+ #1.1 Base Camp, `meditative-020` → M+ #1.2 Spa Day), added after it. A Wincon card with no plan (a later set's) is added alone. The Radiant face adds both Radiant (`radiant: true`). A full hand burns what does not fit, in that order ([[§2.4]]). Quickdraw ([[R640]]).
-- **Rulings:** MP-B07-1: the plan is the helper the brief defines for the card drawn, never a random one; a Wincon card with no plan is added alone. The pick is one `rng.pick` over the pool in catalog order, so it replays ([[R60]]).
+- **Rulings:** MP-B07-1, built as [[R1185000]]: the plan is the helper the brief defines for the card drawn, never a random one; a Wincon card with no plan (or a Glitch, [[R673]]'s odds applying to the pick) is added alone. The pick is one draw over the pool in catalog order, so it replays ([[R60]]).
 - **Numbers:** none (the pool and the plans are the frame).
 - **Check:** The designer's "{for AI creating this: …}" is answered by MP5's D3: the easiest way to each Wincon, and two AI cards (M+ #1.1, #1.2) as the help. R275: Radiant Wincon card and Radiant helpers, both stronger. Quickdraw as written.
 - **Class:** C (the plan table; Ascent levels as a verb for #1.1).
@@ -256,10 +256,10 @@ from an entry, the decision wins.
 
 > **Designer:** (the designer: "you may make some AI cards to help"; defined by this brief, MP5 D3)
 
-- **Text:** Every Reach the Summit you own goes up {levels} Ascent levels. Add {coins|Coin|Coins} to your hand.
-- **Radiant:** Every Reach the Summit you own goes up {levels} Ascent levels. Add {coins|Radiant Coin|Radiant Coins} to your hand.
+- **Text:** Every Reach the Summit you own goes up {levels|Ascent level|Ascent levels}. Add {coins|Coin|Coins} to your hand.
+- **Radiant:** Every Reach the Summit you own goes up {levels|Ascent level|Ascent levels}. Add {coins|Radiant Coin|Radiant Coins} to your hand.
 - **Engine:** NEW: Ascent levels as a verb (B07): raise M #8 Reach the Summit's play count ([[R429]], `counts_plays`) by N on every instance its caster owns, in every zone (hand, deck, graveyard, exile, the field's stack while it resolves), each a public `numberChanged` on a revealed card and hidden in a hand or deck ([[R97]]). Then `add_to_hand { defId: core-t-coin, count }` (Radiant: `radiant: true`). An instance at level 10 or above wins when it is next played (ME-WIN, [[R850]]); raising the count never wins by itself.
-- **Rulings:** MP-B07-2: "you own" is the owner ([[§3.2]]), wherever the card is; a copy made later starts at 0 ([[R57]]); a Reach the Summit you do not own is untouched.
+- **Rulings:** MP-B07-2, built as [[R1185001]]: "you own" is the owner ([[§3.2]]), wherever the card is; a copy made later starts at 0 ([[R57]]); a Reach the Summit you do not own is untouched. The verb is `raise_times_played`, and each card raised reports `numberChanged` "timesPlayed".
 - **Numbers:** levels 2 ↑ (Radiant 3); coins 2 ↑ (the Radiant face's Coins are Radiant: 2 mana each).
 - **Check:** Defined by this brief (⚠ designer, MP7). R275: 3 levels and Radiant Coins against 2 and Coins.
 - **Class:** C (Ascent levels).
@@ -558,7 +558,7 @@ from an entry, the decision wins.
 - **Text:** Taunt / Cry: Set every other Unit's Attack and Health to 3/3.
 - **Radiant:** Taunt / Cry: Set every other Unit's Attack and Health to 3/3. Fill your board with Rush Tokens in Chinese.
 - **Engine:** NEW: set stats (B07), a `stats_override` of 3/3 on every other Unit of both sides with its damage and stat buffs cleared (Hearthstone's "set"), an Immutable one untouched ([[R23]]). The Radiant face then fills its controller's board with Rush Tokens (`fill_board`, M #56, [[R942]], Locked zones included, [[R1136000]]) with the `chinese` rider, so each is CN (#1176).
-- **Rulings:** MP-B07-3: "set" replaces the attack and the max health and heals to it: a 10/10 with 5 damage becomes 3/3 undamaged; auras still apply on top ([[§10.4]]); the Rush Tokens arrive after the set, at their printed 3/3.
+- **Rulings:** MP-B07-3, built as [[R1185002]]: "set" replaces the attack and the max health and heals to it: a 10/10 with 5 damage becomes 3/3 undamaged, its buffs and the stat half of its tuning gone; auras (and a card's own layer-2 count) still apply on top ([[§10.4]]); the Rush Tokens arrive after the set, at their printed 3/3. The verb is `set_stats_all`, and `fill_board` gains the `chinese` rider.
 - **Numbers:** none: the set's 3/3 is the frame (it is good for one side and bad for the other, so no `better` direction fits it).
 - **Check:** "CN keyword" is the CN tag (#1176). R275: 6/14 and a full board of Rush Tokens.
 - **Class:** C (set stats).
@@ -594,10 +594,10 @@ from an entry, the decision wins.
 
 > **Designer:** (3) Bob, Wisconsin's Strongest Soldier, Unit, Spell, Legendary · [5/5] · Cry: Choose one · Freeze all enemy units · Add an enemy unit to your hand and give your opponent 3 coins · Discover a random unit, make it radiant · Draw 1, fill your hand with copies of it ~~~ [10/10] · Cry: Do all of the following in order · Freeze all enemy units · Add an enemy unit to your hand and give your opponent 3 coins · Discover a random unit, make it radiant · Draw 1, fill your hand with copies of it
 
-- **Text:** Cry: Choose one: / Freeze all enemy Units. / Put an enemy Unit into your hand. Your opponent gets {coins|Coin|Coins}. / Discover a Unit. Make it Radiant. / Draw 1. Fill your hand with copies of it.
-- **Radiant:** Cry: Do all of these, in order: / Freeze all enemy Units. / Put an enemy Unit into your hand. Your opponent gets {coins|Coin|Coins}. / Discover a Unit. Make it Radiant. / Draw 1. Fill your hand with copies of it.
+- **Text:** Cry: Choose one: Freeze all enemy Units; put an enemy Unit into your hand, and your opponent gets {coins|Coin|Coins}; Discover a Unit and make it Radiant; or draw 1 and fill your hand with copies of it.
+- **Radiant:** Cry: Do all of these, in order: Freeze all enemy Units; put an enemy Unit into your hand, and your opponent gets {coins|Coin|Coins}; Discover a Unit and make it Radiant; then draw 1 and fill your hand with copies of it.
 - **Engine:** Four declared modes ([[R81]]; M #49.1's every-effect list on the Radiant face). 1: Freeze (#1174) on every enemy Unit. 2: NEW: an enemy Unit into your hand (B07), a declared enemy Unit, the top of its pile ([[R13]]), leaving the field to your hand as yours (`ownership::take_into_hand` extended to the field, [[R747]]'s ownership move; a token ceases to exist, [[R11]]), then `add_to_hand { defId: core-t-coin, count: 3, player: enemy }`. 3: `discover_from_catalog { type: Unit }` with the pick added Radiant (M #88). 4: `draw` 1 then `add_to_hand { copyOf }` until the hand is full ([[R596]], [[R1242]]).
-- **Rulings:** MP-B07-4: mode 2 targets at play time and fizzles with no enemy Unit; a token taken ceases to exist and the Coins are still given; the Radiant face declares mode 2's target with the play and resolves the four in order, each its own step; with no draw (an empty deck: fatigue) mode 4 copies nothing.
+- **Rulings:** MP-B07-4, built as [[R1185003]] (the take) and [[R1185004]] (the modes): mode 2 targets at play time; on the base face the target is needed, so with no enemy Unit mode 2 is not offered ([[R703]]); a token taken ceases to exist and the Coins are still given, as they are whenever a Unit was declared; the Radiant face declares mode 2's target with the play and resolves the four in order, each its own step, giving no Coins when no Unit was declared; with no draw (an empty deck: fatigue) mode 4 copies nothing. The text is one line, as Classic #20's Choose one is (R366's full stops). The verbs are `freeze_all`, `take_to_hand`, `discover_from_catalog` and `draw_priced`'s `fillWithCopies`.
 - **Numbers:** coins 3 ↓.
 - **Check:** The designer's "Unit, Spell" is a Unit ([[R1178002]]). "coins" are The Coin. R275: 10/10 and all four modes.
 - **Class:** C (an enemy Unit into your hand; Freeze from #1174).
