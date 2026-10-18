@@ -4043,10 +4043,14 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "ada2cef985936f5060be4e87b9702d6be8dde6ea",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "1169": {
