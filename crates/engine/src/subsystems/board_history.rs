@@ -151,7 +151,7 @@ struct Placement {
 }
 
 /// R566: a card that stood on the same side of the field just before, under the same id, entered nothing
-/// (R171) and keeps its sickness and exertion; any other — a fresh id included — entered the field on
+/// (R171) and keeps its sickness and exertion (and its freeze, R1174000); any other — a fresh id included — entered the field on
 /// this turn (R83), crossing sides with what it installed (`combat::enter_new_side`). Returns whether it
 /// entered. `card_id` names the placed card in the state (its fresh id when it took one).
 fn stamp_turn_state(sink: &mut EngineSink<'_>, placement: &Placement, card_id: &str, renamed: bool) -> bool {
@@ -165,6 +165,8 @@ fn stamp_turn_state(sink: &mut EngineSink<'_>, placement: &Placement, card_id: &
         && !renamed
     {
         card.exertion = live.exertion;
+        // R1174000: Frozen is the turn's exertion lost, so it is kept with the exertion.
+        card.frozen = live.frozen;
         if live.summoned_turn.is_some() {
             card.summoned_turn = live.summoned_turn;
         }
