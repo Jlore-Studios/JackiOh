@@ -10263,8 +10263,12 @@
     "what": "revise #1248 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-18T21:13:11Z",
-    "notes": [],
+    "at": "2026-10-18T21:20:12Z",
+    "notes": [
+      "#1242 needs a plan",
+      "#1247 needs a plan",
+      "started a night run, as a lane was free: #1242 (medium) is queued to build, for `claude-3`: plan on `claude-3` (claude, `opus`, strong)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
