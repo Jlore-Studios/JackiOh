@@ -4214,6 +4214,10 @@
       "run_id": "39130216637",
       "started_at": "2026-10-18T13:08:45Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-7` (claude, opus) rejected it: `crates/cards/src/scripts/classic_plus/c012_4_powder_spray.rs:101`: Powder Spray's test `an_immune_to_spells_unit_takes_none` still expects a Radiant Top Loser t"
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 1
     },
