@@ -461,7 +461,7 @@
       "text": "End of turn: Deal {damage} damage to each enemy."
     },
     "radiant": {
-      "attack": 8,
+      "attack": 12,
       "health": 20,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
