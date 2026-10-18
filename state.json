@@ -4038,30 +4038,12 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/INDEX.md"
-          ],
-          "from": "72fffbb5d527acd82c38e52b8b0de27fbd78f1e1",
-          "main": "b1580f7a771337e4656f5adca8cecec8183f6198"
-        },
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39108722514",
-            "tier": "strong"
-          }
-        ],
+        "reviews": [],
         "sha": "50d7534e911bca2621c52e6abeeb6c40cbb1ea0a",
-        "tiers": {
-          "claude": "strong"
-        }
+        "tiers": {}
       }
     },
     "1169": {
