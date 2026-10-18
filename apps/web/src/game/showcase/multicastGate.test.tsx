@@ -112,3 +112,27 @@ describe("issue #124 the gate outlasts a burst the runner is still working throu
     expect(ordinalNow()).toBe("1");
   });
 });
+
+describe("issue #1146 a burst that ends the game", () => {
+  it("still holds each cast up as its entry starts, and goes once the runner has played the game over", () => {
+    const { queue, tick } = manual();
+    const tree = (view: PlayerView) => withCatalog(<CardShowcase view={view} queue={queue} />);
+    const { rerender } = render(tree(withEvents(baseView(), [TURN])));
+    const gameOver: GameEvent = { type: "gameOver", winner: "p2", reason: "hero-death" };
+    const next: PlayerView = {
+      ...withEvents(baseView(), [TURN, box(), cast("c1"), resolved("c1"), cast("c2"), resolved("c2"), gameOver]),
+      result: { winner: "p2", reason: "hero-death" },
+    };
+    rerender(tree(next));
+    expect(screen.getByTestId(T.root)).toHaveAttribute("data-showcase", "played");
+    act(() => queue.enqueue(next.events.slice(1), next));
+    for (const id of ["1", "2"]) {
+      tick(); // This cast's entry starts.
+      expect(ordinalNow()).toBe(id);
+      tick(); // Its `cardResolved` starts.
+    }
+    expect(ordinalNow(), "the last cast is up until the runner has played the game over").toBe("2");
+    tick(); // The last entry ends: the board shows the result.
+    expect(screen.queryByTestId(T.root)).toBeNull();
+  });
+});
