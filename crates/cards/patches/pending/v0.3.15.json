@@ -1,0 +1,48 @@
+{
+  "version": "v0.3.15",
+  "title": "Patch v0.3.15: Meditative+, the release: the set ships",
+  "sources": "issue #1173, issue #1186, issue #1187",
+  "notes": "The Meditative+ set ships (R1420, R1178000): its 26 cards and 4 tokens join every pool that names no set, the deck builder, the Almanac and random decks, the AI's included (R1390's gate is empty; issue #1186's sweep of record holds the AI's shadow ban to half the set, R1186000). The set's own mechanics are the rulings of issue #1173's parts. No card of an earlier set changes.",
+  "player": {
+    "title": "Meditative+",
+    "new": [
+      "The Meditative+ set: 26 cards and 4 tokens join the deck builder, the Almanac, random decks and every card pool that names no set."
+    ],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [
+    "meditativeplus-001",
+    "meditativeplus-001-1",
+    "meditativeplus-001-2",
+    "meditativeplus-002",
+    "meditativeplus-003",
+    "meditativeplus-004",
+    "meditativeplus-005",
+    "meditativeplus-006",
+    "meditativeplus-007",
+    "meditativeplus-008",
+    "meditativeplus-009",
+    "meditativeplus-010",
+    "meditativeplus-011",
+    "meditativeplus-012",
+    "meditativeplus-013",
+    "meditativeplus-014",
+    "meditativeplus-015",
+    "meditativeplus-016",
+    "meditativeplus-016-1",
+    "meditativeplus-017",
+    "meditativeplus-018",
+    "meditativeplus-019",
+    "meditativeplus-020",
+    "meditativeplus-020-1",
+    "meditativeplus-021",
+    "meditativeplus-022",
+    "meditativeplus-023",
+    "meditativeplus-024",
+    "meditativeplus-025",
+    "meditativeplus-026"
+  ]
+}
