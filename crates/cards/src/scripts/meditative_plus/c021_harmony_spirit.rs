@@ -11,7 +11,7 @@
 //! bad for the other, so no `better` direction fits it.
 //! THE FILL (Radiant face) comes after the set: Rush Tokens at their printed 3/3 in every empty zone of
 //! yours, a Locked one included (`fill_board`, R942, R1136000), each in Chinese (the `chinese` rider,
-//! R1300), so CN once #1176 makes every card in Chinese CN (`query::tags_of`).
+//! R1300), so CN, every card in Chinese being CN (`query::tags_of`, R1176000).
 
 use jackioh_engine::prelude::*;
 
@@ -52,7 +52,7 @@ pub fn script() -> CardScripts {
 // Meditative+ #21 Harmony Spirit — SPEC §8.9 row 21, BUILD M11 row M+ 21: "Cry: every other Unit of
 // both sides is 3/3 undamaged, a buffed one losing its buffs, an aura still applying on top; an
 // Immutable Unit is untouched; Harmony Spirit itself stays 3/7; radiant 6/14, then each empty zone of
-// yours gets a Rush Token in Chinese, CN (once #1176 lands), at 3/3".
+// yours gets a Rush Token in Chinese, CN (R1176000), at 3/3".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -182,7 +182,7 @@ mod tests {
                 assert!(!token.radiant);
                 assert_eq!(token.chinese, Some(true), "in Chinese");
                 assert_eq!(stats(&s, &token), (3, 3, 3), "the tokens arrive after the set, at their printed 3/3");
-                // CN: holds once #1176 lands (every card in Chinese is CN, `query::tags_of`).
+                // R1176000: every card in Chinese is CN (`query::tags_of`).
                 assert!(tags_of(s.state(), &token).contains(&Tag::Cn), "a Rush Token in Chinese is CN");
             }
             assert!((1..=5).all(|lane| s.unit(P2, lane).is_none_or(|card| card.def_id == BIG)), "the opponent's side is not filled");

@@ -1,8 +1,8 @@
 //! ME-CN's verb (docs/meditative-set.md, group B's Systems, ME-CN; R1300, R1301): "Translate all cards
 //! in your and your opponent's hand and deck into Chinese" (Meditative #32), "convert its text to
-//! Chinese" (#35). It sets the instance's `chinese` flag and nothing else: the flag is presentation
-//! only, so no rule reads it, and Immutable does not stop it (the text is the same, only the language
-//! it is shown in changes, MD-B11).
+//! Chinese" (#35). It sets the instance's `chinese` flag and nothing else. One rule reads the flag: a
+//! card in Chinese is CN, wherever an instance's tags are read (`query::tags_of`, R1176000). Immutable
+//! does not stop it (the text is the same, only the language it is shown in changes, MD-B11).
 //!
 //! Events (R440, R1301): `translated` is sent only for a card both players read where it sits (a
 //! unit, a face-up backrow card). A change in a hand, a deck or on a face-down trap is silent, and its
