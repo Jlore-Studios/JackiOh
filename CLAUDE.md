@@ -109,7 +109,7 @@ cargo jackioh spec check           # rule 3: ruling notes vs proving tests vs R-
 cargo jackioh fuzz --seeds 200     # CI's fuzz gate: random-policy games with replay hashing; --handicap for the handicapped wave, --duos for co-op games (§13)
 cargo jackioh golden check         # the golden traces from the TypeScript engine, replayed (cargo test replays them too)
 cargo jackioh gate                 # the AI's quality gates at smoke size; --full at full size (the daily run's); --duos for the co-op AI team's (§13.7)
-cargo jackioh sweep                # the shadow-ban sweep (R186); copy its SHADOW_BAN rows into crates/ai/src/shadow_ban.rs by hand
+cargo jackioh sweep                # the shadow-ban sweep (R186); --write rewrites crates/ai/src/shadow_ban.rs's tables from the reports of record, --check holds them
 cargo jackioh stats                # an AI development run for the card statistics (R378); --out writes it
 cargo jackioh catalog-version      # the catalog version this checkout compiles in
 cargo jackioh patches <version> <date> "<title>"   # a branch's catalog change as a pending fragment (R388, R646); `patches ship` promotes it after merge
