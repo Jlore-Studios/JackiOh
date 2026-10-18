@@ -29,6 +29,8 @@
 //!                    the old spelling as the record).
 //!   patch v0.3.10   — issue #831's costs, stats, types and tags, in every set's rows: the briefs'
 //!                    lines are what the designer first wrote, the patch what the cards are now.
+//!   patch v0.3.12   — issue #1194's costs: #76 Field of Dreams (2), C+ #64 Mulch Muncher (5) and
+//!                    Meditative #19.1 Temporal Rift (0).
 //!   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
 //!                    being R349's fallback.
 //!   rarity         — SPEC §8's rarity paragraph for Core (32/40/16/7/5) and B2.5's table for
@@ -857,7 +859,7 @@ const CORE: &[SpecRow] = &[
     row(
         "76",
         "Field of Dreams",
-        c(3),
+        c(2),
         T::Spell,
         &[],
         R::Rare,
@@ -2818,7 +2820,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "64",
         "Mulch Muncher",
-        c(10),
+        c(5),
         T::Unit,
         &[],
         R::Rare,
@@ -3345,7 +3347,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "19.1",
         "Temporal Rift",
-        c(2),
+        c(0),
         T::Spell,
         &[G::Token],
         R::Token,

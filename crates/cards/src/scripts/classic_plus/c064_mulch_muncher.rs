@@ -1,4 +1,4 @@
-//! C+ #64 Mulch Muncher (SPEC §8.7 row 64; BUILD M9 row C+ 64). (10) Unit, Rare, 9/9 → 18/18.
+//! C+ #64 Mulch Muncher (SPEC §8.7 row 64; BUILD M9 row C+ 64). (5) Unit, Rare, 9/9 → 18/18.
 //!   Base:    "Rush, Trample / Costs ({discount}) less for each Fruit you've played this game." — discount 1
 //!   Radiant: "Rush, Trample, Divine Shield / (the same)"
 //!
@@ -6,7 +6,9 @@
 //! (`playedThisGameWithTag`, B5 E4: casts count, R70; a Grape is a Fruit; never reset), floored at 0.
 //! R584: the discount is a price for a play, so it holds where a play takes the card from — its
 //! player's hand, or a graveyard a permission lets them play it from (E11) — and counts that player's
-//! Fruits; anywhere else (a deck, a graveyard, the field, a pool) it costs its printed (10) (R65).
+//! Fruits; anywhere else (a deck, a graveyard, the field, a pool) it costs its printed (5) (R65). It
+//! printed (10) until patch v0.3.12 (#1194): the printed cost is read off the definition the game folds
+//! under (R767000), so an older replay prices it as it was.
 //! The keywords are the faces' printed ones, so both faces run this one script.
 
 use jackioh_engine::prelude::*;
@@ -14,10 +16,10 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "classicplus-064";
 
 pub fn script() -> CardScripts {
-    // TS `const PRINTED_COST = queryCost(def)`, read once as the module loads.
-    let printed_cost = query_cost(&crate::card_def(ID));
     let base = Script {
-        cost: Some(cost_hook(move |CostArgs { state, instance }| {
+        cost: Some(cost_hook(|CostArgs { state, instance }| {
+            // The printed cost of the version the game folds under (R767000).
+            let printed_cost = query_cost(def_of(Some(state), ID));
             let at = &instance.zone;
             let for_play = matches!(at, Zone::Hand { .. })
                 || (matches!(at, Zone::Graveyard { .. }) && playable_from_graveyard(state, instance));
@@ -43,7 +45,7 @@ pub fn script() -> CardScripts {
 // C+ #64 Mulch Muncher — SPEC §8.7 row 64, BUILD M9 row C+ 64: Rush, Trample; a `cost` hook (R55's
 // pattern) that costs (1) less for each Fruit-tagged card its controller has played this game (casts
 // included, R70; a Grape counts; the opponent's Fruits don't; never reset), floored at 0 and shown as
-// its current cost in hand; out of play it costs (10) (R65, R584); the Trample excess reaches the hero
+// its current cost in hand; out of play it costs (5) (R65, R584); the Trample excess reaches the hero
 // (R63); the discount reads through `param()`; radiant 18/18 with Divine Shield too.
 #[cfg(test)]
 mod tests {
@@ -98,10 +100,10 @@ mod tests {
     }
 
     #[test]
-    fn prints_a_10_9_9_rush_trample_radiant_18_18_with_divine_shield_and_runs_one_script_on_both_faces() {
+    fn prints_a_5_9_9_rush_trample_radiant_18_18_with_divine_shield_and_runs_one_script_on_both_faces() {
         crate::register_all();
         let def = crate::card_def(super::ID);
-        assert_eq!(def.cost, CardCost::Fixed(10));
+        assert_eq!(def.cost, CardCost::Fixed(5));
         assert_eq!(def.base.attack, Some(9));
         assert_eq!(def.base.health, Some(9));
         assert_eq!(def.base.keywords, vec![Keyword::Rush, Keyword::Trample]);
@@ -123,18 +125,18 @@ mod tests {
         #[test]
         fn r55_costs_1_less_for_each_fruit_its_controller_has_played_this_game_shown_as_its_cost_in_hand() {
             let mut s = with_fruit(false, None);
-            assert_eq!(hand_cost(&s, PlayerId::P1), 10);
+            assert_eq!(hand_cost(&s, PlayerId::P1), 5);
             play_fig(&mut s);
-            assert_eq!(hand_cost(&s, PlayerId::P1), 9);
+            assert_eq!(hand_cost(&s, PlayerId::P1), 4);
             play_fig(&mut s);
-            assert_eq!(hand_cost(&s, PlayerId::P1), 8);
+            assert_eq!(hand_cost(&s, PlayerId::P1), 3);
         }
 
         #[test]
         fn r382_a_grape_is_a_fruit_and_counts() {
             let mut s = scenario(json!({ "p1": { "hand": [MULCH, GRAPE, FILLER], "mana": 10 }, "p2": { "hand": [FILLER] } }));
             s.play(GRAPE, json!({}));
-            assert_eq!(hand_cost(&s, PlayerId::P1), 9);
+            assert_eq!(hand_cost(&s, PlayerId::P1), 4);
         }
 
         #[test]
@@ -155,7 +157,7 @@ mod tests {
                 settle(&mut sink, SettleOptions::default());
             }
             s.state_mut().rng_cursor = rng.cursor();
-            assert_eq!(hand_cost(&s, PlayerId::P1), 9);
+            assert_eq!(hand_cost(&s, PlayerId::P1), 4);
         }
 
         #[test]
@@ -166,7 +168,7 @@ mod tests {
                 "p2": { "hand": [FIG, FILLER], "mana": 10 },
             }));
             play_fig(&mut s);
-            assert_eq!(hand_cost(&s, PlayerId::P1), 10);
+            assert_eq!(hand_cost(&s, PlayerId::P1), 5);
         }
 
         #[test]
@@ -176,15 +178,15 @@ mod tests {
             s.expect_in_zone(FIG, "graveyard");
             s.end_turn().end_turn();
             assert_eq!(s.state().active, PlayerId::P1);
-            assert_eq!(hand_cost(&s, PlayerId::P1), 9);
+            assert_eq!(hand_cost(&s, PlayerId::P1), 4);
         }
 
         #[test]
         fn s2_3_the_cost_floors_at_0() {
             let mut s = with_fruit(false, Some(2));
-            step_param(s.card_mut(MULCH), "discount", 5);
+            step_param(s.card_mut(MULCH), "discount", 2);
             play_fig(&mut s);
-            assert_eq!(hand_cost(&s, PlayerId::P1), 4);
+            assert_eq!(hand_cost(&s, PlayerId::P1), 2);
             play_fig(&mut s);
             assert_eq!(hand_cost(&s, PlayerId::P1), 0);
         }
@@ -194,18 +196,18 @@ mod tests {
             let mut up = with_fruit(false, Some(1));
             step_param(up.card_mut(MULCH), "discount", 1);
             play_fig(&mut up);
-            assert_eq!(hand_cost(&up, PlayerId::P1), 8);
+            assert_eq!(hand_cost(&up, PlayerId::P1), 3);
             let mut down = with_fruit(false, Some(1));
             step_param(down.card_mut(MULCH), "discount", -1);
             play_fig(&mut down);
-            assert_eq!(hand_cost(&down, PlayerId::P1), 9);
+            assert_eq!(hand_cost(&down, PlayerId::P1), 4);
         }
 
         #[test]
-        fn r584_r65_out_of_play_it_costs_10_in_a_pool_in_a_deck_in_a_graveyard_and_on_the_field_whatever_was_played() {
+        fn r584_r65_out_of_play_it_costs_5_in_a_pool_in_a_deck_in_a_graveyard_and_on_the_field_whatever_was_played() {
             let ids: Vec<String> = {
                 crate::register_all();
-                query(&json_as(json!({ "cost": 10 }))).iter().map(|card| card.id.clone()).collect()
+                query(&json_as(json!({ "cost": 5 }))).iter().map(|card| card.id.clone()).collect()
             };
             assert!(ids.contains(&MULCH.to_string()));
             let mut s = scenario(json!({
@@ -214,22 +216,22 @@ mod tests {
             }));
             play_fig(&mut s);
             play_fig(&mut s);
-            assert_eq!(hand_cost(&s, PlayerId::P1), 8);
+            assert_eq!(hand_cost(&s, PlayerId::P1), 3);
             let in_deck = s.pile(PlayerId::P1, "library").into_iter().next().expect("a library card");
             let in_grave = s.pile(PlayerId::P1, "graveyard").into_iter().next().expect("a graveyard card");
-            assert_eq!(effective_cost(s.state(), &in_deck, Default::default()), 10);
-            assert_eq!(effective_cost(s.state(), &in_grave, Default::default()), 10);
+            assert_eq!(effective_cost(s.state(), &in_deck, Default::default()), 5);
+            assert_eq!(effective_cost(s.state(), &in_grave, Default::default()), 5);
             s.play(MULCH, json!({ "zone": 1 }));
             let unit = s.unit(PlayerId::P1, 1).expect("the Muncher on the field");
-            assert_eq!(cost_now(s.state(), &unit), 10);
-            s.expect_mana(PlayerId::P1, 30 - 3 - 3 - 8);
+            assert_eq!(cost_now(s.state(), &unit), 5);
+            s.expect_mana(PlayerId::P1, 30 - 3 - 3 - 3);
         }
 
         #[test]
         fn r63_rush_lets_it_attack_a_unit_at_once_and_its_trample_excess_reaches_the_hero() {
             // One mana left over for the Stockpile, so the turn does not end itself (§2.5) and fatigue p2.
             let mut s = scenario(json!({
-                "p1": { "hand": [MULCH, FILLER], "mana": 11 },
+                "p1": { "hand": [MULCH, FILLER], "mana": 6 },
                 "p2": { "hand": [FILLER], "field": ["core-008"] },
             }));
             s.play(MULCH, json!({ "zone": 1 }));
@@ -248,9 +250,9 @@ mod tests {
         #[test]
         fn is_an_18_18_with_divine_shield_and_its_cost_falls_the_same_way() {
             let mut s = with_fruit(true, Some(1));
-            assert_eq!(hand_cost(&s, PlayerId::P1), 10);
+            assert_eq!(hand_cost(&s, PlayerId::P1), 5);
             play_fig(&mut s);
-            assert_eq!(hand_cost(&s, PlayerId::P1), 9);
+            assert_eq!(hand_cost(&s, PlayerId::P1), 4);
             s.play(MULCH, json!({ "zone": 2 }));
             let unit = s.unit(PlayerId::P1, 2).expect("the Muncher");
             let stats = s.stats(&unit);

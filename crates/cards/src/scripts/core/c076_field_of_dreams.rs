@@ -1,4 +1,5 @@
-//! #76 Field of Dreams (SPEC §8.3, R31, R4, R11, R50, §10.5).
+//! #76 Field of Dreams (SPEC §8.3, R31, R4, R11, R50, §10.5). (2) Spell, Rare; it cost (3) until patch
+//! v0.3.12 (#1194).
 //!
 //! Base: "Replace your hand with the same number of Reminisce; exile this". The radiant cell is
 //! "Radiant Reminisce", so every other clause is kept (§8 Conventions): the faces differ by one flag.
@@ -115,8 +116,23 @@ mod tests {
         ids
     }
 
+    /// Field of Dreams (Radiant on `radiant`) costs (2) and its play spends 2 of 5 mana.
+    fn spends_2(radiant: bool) {
+        assert_eq!(crate::card_def(FIELD_OF_DREAMS).cost, CardCost::Fixed(2));
+        let mut p1 = busy_with_hand(hand_of(json!({ "def": FIELD_OF_DREAMS, "radiant": radiant }), &FILLER));
+        p1["mana"] = json!(5);
+        let mut s = setup(json!({ "p1": p1, "p2": keep_busy() }));
+        s.play(FIELD_OF_DREAMS, json!({}));
+        s.expect_mana(P1, 3);
+    }
+
     mod field_of_dreams_base {
         use super::*;
+
+        #[test]
+        fn costs_2_and_a_play_spends_2() {
+            spends_2(false);
+        }
 
         #[test]
         fn r31_replaces_a_hand_of_n_with_n_reminisce_and_puts_the_replaced_cards_in_the_graveyard() {
@@ -195,6 +211,11 @@ mod tests {
 
     mod field_of_dreams_radiant {
         use super::*;
+
+        #[test]
+        fn costs_2_and_a_play_spends_2() {
+            spends_2(true);
+        }
 
         #[test]
         fn gives_radiant_reminisce_and_still_buries_the_replaced_hand_r31() {
