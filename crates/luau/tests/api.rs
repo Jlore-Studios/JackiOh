@@ -631,7 +631,10 @@ fn verb_cases() -> Vec<(&'static str, Value)> {
         ("bounce", json!({ "target": { "of": "self" } })),
         ("freeze", json!({ "target": { "of": "self" } })),
         ("freeze_all", json!({ "side": "enemy" })),
-        ("set_stats_all", json!({ "side": "any", "attack": 3, "health": 3 })),
+        (
+            "set_stats_all",
+            json!({ "side": "any", "attack": 3, "health": 3 }),
+        ),
         ("take_to_hand", json!({ "target": { "of": "self" } })),
         ("raise_times_played", json!({ "defId": "lx-fx-001", "amount": 1 })),
         ("flicker", json!({ "target": { "of": "self" } })),

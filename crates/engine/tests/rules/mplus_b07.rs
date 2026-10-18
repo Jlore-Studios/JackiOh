@@ -10,8 +10,8 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{big_body, plain, stacker};
 use crate::rules::fixtures::mplus_b07::{
-    RAISE_BY, SET_TO, banner, camp, ghoul, harmony, kidnapper, party, plain_spell, register_b07_fixtures, snatch,
-    spark, stoic, summit, xerox,
+    RAISE_BY, SET_TO, banner, camp, ghoul, harmony, kidnapper, party, plain_spell, register_b07_fixtures,
+    snatch, spark, stoic, summit, xerox,
 };
 
 /// `p1`'s turn 9, its main phase; each side's setup as given, with plain cards to draw so no turn ends
@@ -85,8 +85,16 @@ mod r1185002_set_stats_sets_attack_and_health_outright_its_damage_and_buffs_gone
         assert_eq!(stats_of(&s, &theirs), (7, 4, 4));
 
         s.play(harmony.id.as_str(), json!({ "zone": 3 }));
-        assert_eq!(stats_of(&s, &mine), (SET_TO, SET_TO, SET_TO), "5 damage healed, +2/+2 gone");
-        assert_eq!(stats_of(&s, &theirs), (SET_TO, SET_TO, SET_TO), "the tuning's stats gone");
+        assert_eq!(
+            stats_of(&s, &mine),
+            (SET_TO, SET_TO, SET_TO),
+            "5 damage healed, +2/+2 gone"
+        );
+        assert_eq!(
+            stats_of(&s, &theirs),
+            (SET_TO, SET_TO, SET_TO),
+            "the tuning's stats gone"
+        );
         assert_eq!(s.card(mine.as_str()).damage, 0);
         assert_eq!(s.card(theirs.as_str()).tuning, None);
         // Harmony itself is not "another" Unit.
@@ -121,9 +129,17 @@ mod r1185002_set_stats_sets_attack_and_health_outright_its_damage_and_buffs_gone
         // The banner is set too, and its aura lifts the others it reaches after the set (§10.4).
         assert_eq!(stats_of(&s, &flag), (SET_TO, SET_TO, SET_TO));
         assert_eq!(stats_of(&s, &body), (SET_TO + 1, SET_TO + 1, SET_TO + 1));
-        assert_eq!(stats_of(&s, &immutable), (6, 6, 6), "R23: Immutable, it keeps its 5/5 (+1/+1)");
+        assert_eq!(
+            stats_of(&s, &immutable),
+            (6, 6, 6),
+            "R23: Immutable, it keeps its 5/5 (+1/+1)"
+        );
         assert_eq!(s.card(immutable.as_str()).stats_override, None);
-        assert_eq!(stats_of(&s, &id_at(&s, P1, 4)), (3, 5, 5), "the spirit has the banner's +1/+1 only");
+        assert_eq!(
+            stats_of(&s, &id_at(&s, P1, 4)),
+            (3, 5, 5),
+            "the spirit has the banner's +1/+1 only"
+        );
     }
 
     #[test]
@@ -137,7 +153,11 @@ mod r1185002_set_stats_sets_attack_and_health_outright_its_damage_and_buffs_gone
             }),
         );
         let token = id_at(&s, P2, 1);
-        assert_eq!(stats_of(&s, &token), (4, 4, 4), "R349: a Radiant Ghoul wears its X/X doubled");
+        assert_eq!(
+            stats_of(&s, &token),
+            (4, 4, 4),
+            "R349: a Radiant Ghoul wears its X/X doubled"
+        );
         s.play(harmony.id.as_str(), json!({ "zone": 1 }));
         assert_eq!(stats_of(&s, &token), (SET_TO, SET_TO, SET_TO));
     }
@@ -156,7 +176,11 @@ mod r1185002_set_stats_sets_attack_and_health_outright_its_damage_and_buffs_gone
         let beneath = s.state().players.p2.units[0].as_ref().expect("the pile")[1].clone();
         s.play(harmony.id.as_str(), json!({ "zone": 1 }));
         assert_eq!(stats_of(&s, &top), (SET_TO, SET_TO, SET_TO));
-        assert_eq!(s.card(beneath.id.as_str()).stats_override, None, "R13: dormant, untouched");
+        assert_eq!(
+            s.card(beneath.id.as_str()).stats_override,
+            None,
+            "R13: dormant, untouched"
+        );
     }
 
     #[test]
@@ -168,11 +192,20 @@ mod r1185002_set_stats_sets_attack_and_health_outright_its_damage_and_buffs_gone
         );
         let body = id_at(&s, P2, 1);
         s.play(harmony.id.as_str(), json!({ "zone": 1 }));
-        assert_eq!(s.card(body.as_str()).stats_override, Some(AttackHealth { attack: SET_TO, health: SET_TO }));
+        assert_eq!(
+            s.card(body.as_str()).stats_override,
+            Some(AttackHealth {
+                attack: SET_TO,
+                health: SET_TO
+            })
+        );
         s.play(snatch.id.as_str(), pick(&body));
         let taken = s.card(body.as_str()).clone();
         assert_eq!(taken.zone, Zone::Hand { player: P1 });
-        assert_eq!(taken.stats_override, None, "R78's reset takes the set off with the card leaving");
+        assert_eq!(
+            taken.stats_override, None,
+            "R78's reset takes the set off with the card leaving"
+        );
     }
 
     #[test]
@@ -189,7 +222,11 @@ mod r1185002_set_stats_sets_attack_and_health_outright_its_damage_and_buffs_gone
             assert_eq!(token.def_id, "fx-token-rush");
             assert_eq!(token.chinese, Some(true), "lane {lane}");
         }
-        assert_eq!(s.card(standing.as_str()).chinese, None, "the Unit already there is not translated");
+        assert_eq!(
+            s.card(standing.as_str()).chinese,
+            None,
+            "the Unit already there is not translated"
+        );
     }
 }
 
@@ -205,11 +242,17 @@ mod r1185003_a_unit_on_the_field_is_taken_into_your_hand_as_yours {
         );
         let body = id_at(&s, P2, 2);
         s.card_mut(body.as_str()).buffs = AttackHealth { attack: 1, health: 1 };
-        s.play(kidnapper.id.as_str(), json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": body }] }));
+        s.play(
+            kidnapper.id.as_str(),
+            json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": body }] }),
+        );
         let taken = s.card(body.as_str()).clone();
         assert_eq!(taken.zone, Zone::Hand { player: P1 });
         assert_eq!((taken.owner, taken.controller), (P1, P1));
-        assert_eq!((taken.damage, taken.buffs), (0, AttackHealth { attack: 0, health: 0 }));
+        assert_eq!(
+            (taken.damage, taken.buffs),
+            (0, AttackHealth { attack: 0, health: 0 })
+        );
         assert!(s.unit(P2, 2).is_none());
         let events = types_of(s.last_events());
         assert!(events.contains(&GameEventType::Stolen));
@@ -229,9 +272,16 @@ mod r1185003_a_unit_on_the_field_is_taken_into_your_hand_as_yours {
         );
         let token = s.unit(P2, 1).expect("the token");
         let hand_before = s.hand(P1).len();
-        s.play(kidnapper.id.as_str(), json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": token.id }] }));
+        s.play(
+            kidnapper.id.as_str(),
+            json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": token.id }] }),
+        );
         s.expect_in_zone(&token, "gone");
-        assert_eq!(s.hand(P1).len(), hand_before - 1, "only the kidnapper left the hand");
+        assert_eq!(
+            s.hand(P1).len(),
+            hand_before - 1,
+            "only the kidnapper left the hand"
+        );
         assert!(!types_of(s.last_events()).contains(&GameEventType::AddedToHand));
         assert!(s.pile(P1, "graveyard").is_empty() && s.pile(P2, "graveyard").is_empty());
     }
@@ -246,9 +296,16 @@ mod r1185003_a_unit_on_the_field_is_taken_into_your_hand_as_yours {
         let extra = new_instance(s.state_mut(), plain.id.as_str(), P1, Zone::Hand { player: P1 });
         s.state_mut().players.p1.hand.push(extra);
         let body = id_at(&s, P2, 1);
-        s.play(kidnapper.id.as_str(), json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": body }] }));
+        s.play(
+            kidnapper.id.as_str(),
+            json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": body }] }),
+        );
         let burned = s.card(body.as_str()).clone();
-        assert_eq!(burned.zone, Zone::Graveyard { player: P1 }, "§2.4: burned, and p1 owns it now");
+        assert_eq!(
+            burned.zone,
+            Zone::Graveyard { player: P1 },
+            "§2.4: burned, and p1 owns it now"
+        );
         assert!(types_of(s.last_events()).contains(&GameEventType::Burned));
     }
 
@@ -263,9 +320,16 @@ mod r1185003_a_unit_on_the_field_is_taken_into_your_hand_as_yours {
             }),
         );
         let top = id_at(&s, P2, 1);
-        s.play(kidnapper.id.as_str(), json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": top }] }));
+        s.play(
+            kidnapper.id.as_str(),
+            json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": top }] }),
+        );
         assert_eq!(s.card(top.as_str()).zone, Zone::Hand { player: P1 });
-        assert_eq!(s.unit(P2, 1).expect("the card beneath").def_id, big_body.id, "R13: it resumes on top");
+        assert_eq!(
+            s.unit(P2, 1).expect("the card beneath").def_id,
+            big_body.id,
+            "R13: it resumes on top"
+        );
     }
 
     #[test]
@@ -315,10 +379,21 @@ mod r1185001_a_play_count_raised_on_every_copy_you_own {
         for card in &mine {
             assert_eq!(times_played_of(card), RAISE_BY, "{} in {:?}", card.id, card.zone);
         }
-        let theirs = s.hand(P2).into_iter().find(|card| card.def_id == summit.id).expect("p2's summit");
+        let theirs = s
+            .hand(P2)
+            .into_iter()
+            .find(|card| card.def_id == summit.id)
+            .expect("p2's summit");
         assert_eq!(theirs.times_played, None, "a copy p2 owns is untouched");
-        let other = s.hand(P1).into_iter().find(|card| card.def_id == plain_spell.id).expect("the plain spell");
-        assert_eq!(other.times_played, None, "a card that counts no plays is passed by");
+        let other = s
+            .hand(P1)
+            .into_iter()
+            .find(|card| card.def_id == plain_spell.id)
+            .expect("the plain spell");
+        assert_eq!(
+            other.times_played, None,
+            "a card that counts no plays is passed by"
+        );
         let reported: Vec<i32> = numbers_changed(s.last_events())
             .into_iter()
             .filter(|(_, key, _)| key == "timesPlayed")
@@ -334,12 +409,20 @@ mod r1185001_a_play_count_raised_on_every_copy_you_own {
             json!({ "hand": [camp.id, summit_entry(), plain.id] }),
             json!({ "hand": [plain.id] }),
         );
-        let held = s.hand(P1).into_iter().find(|card| card.def_id == summit.id).expect("the summit");
+        let held = s
+            .hand(P1)
+            .into_iter()
+            .find(|card| card.def_id == summit.id)
+            .expect("the summit");
         s.card_mut(held.id.as_str()).times_played = Some(3);
         s.play(camp.id.as_str(), json!({}));
         assert_eq!(times_played_of(s.card(held.id.as_str())), 3 + RAISE_BY);
         s.play(held.id.as_str(), json!({}));
-        assert_eq!(times_played_of(s.card(held.id.as_str())), 3 + RAISE_BY + 1, "R429: the play counts too");
+        assert_eq!(
+            times_played_of(s.card(held.id.as_str())),
+            3 + RAISE_BY + 1,
+            "R429: the play counts too"
+        );
     }
 
     #[test]
@@ -353,8 +436,18 @@ mod r1185001_a_play_count_raised_on_every_copy_you_own {
             }),
             json!({ "hand": [plain.id] }),
         );
-        let in_hand = s.hand(P1).into_iter().find(|card| card.def_id == summit.id).expect("hand").id;
-        let in_deck = s.pile(P1, "library").into_iter().find(|card| card.def_id == summit.id).expect("deck").id;
+        let in_hand = s
+            .hand(P1)
+            .into_iter()
+            .find(|card| card.def_id == summit.id)
+            .expect("hand")
+            .id;
+        let in_deck = s
+            .pile(P1, "library")
+            .into_iter()
+            .find(|card| card.def_id == summit.id)
+            .expect("deck")
+            .id;
         let in_graveyard = s.pile(P1, "graveyard")[0].id.clone();
         s.play(camp.id.as_str(), json!({}));
         let seen = |viewer: PlayerId| -> Vec<String> {
@@ -390,8 +483,17 @@ mod r1185004_draw_1_then_fill_the_hand_with_copies_of_it {
         let hand = s.hand(P1);
         assert_eq!(hand.len() as i32, hand_cap_of(s.state(), P1));
         let bodies: Vec<&CardInstance> = hand.iter().filter(|card| card.def_id == big_body.id).collect();
-        assert_eq!(bodies.len(), hand.len() - 2, "the drawn card and its copies, beside the two kept");
-        assert!(s.pile(P1, "graveyard").iter().all(|card| card.def_id != big_body.id), "nothing burned");
+        assert_eq!(
+            bodies.len(),
+            hand.len() - 2,
+            "the drawn card and its copies, beside the two kept"
+        );
+        assert!(
+            s.pile(P1, "graveyard")
+                .iter()
+                .all(|card| card.def_id != big_body.id),
+            "nothing burned"
+        );
     }
 
     #[test]
@@ -402,9 +504,16 @@ mod r1185004_draw_1_then_fill_the_hand_with_copies_of_it {
             json!({ "hand": [plain.id] }),
         );
         s.play(xerox.id.as_str(), json!({}));
-        let bodies: Vec<CardInstance> = s.hand(P1).into_iter().filter(|card| card.def_id == big_body.id).collect();
+        let bodies: Vec<CardInstance> = s
+            .hand(P1)
+            .into_iter()
+            .filter(|card| card.def_id == big_body.id)
+            .collect();
         assert_eq!(bodies.len(), 9);
-        assert!(bodies.iter().all(|card| card.radiant), "R57, R1242: a copy keeps the Radiant face");
+        assert!(
+            bodies.iter().all(|card| card.radiant),
+            "R57, R1242: a copy keeps the Radiant face"
+        );
     }
 
     #[test]
@@ -416,11 +525,23 @@ mod r1185004_draw_1_then_fill_the_hand_with_copies_of_it {
         );
         let health = s.state().players.p2.hero.health;
         s.play(xerox.id.as_str(), json!({}));
-        assert_eq!(s.state().players.p2.hero.health, health - 1, "the spark was cast (R58)");
+        assert_eq!(
+            s.state().players.p2.hero.health,
+            health - 1,
+            "the spark was cast (R58)"
+        );
         // R596: the draw's own card never reached the hand, so nothing is copied; the card its chain
         // brought next is that repeat's, not this draw's.
-        let bodies = s.hand(P1).iter().filter(|card| card.def_id == big_body.id).count();
-        assert!(bodies <= 1 && s.hand(P1).len() <= 2, "no copies: {:?}", s.hand(P1));
+        let bodies = s
+            .hand(P1)
+            .iter()
+            .filter(|card| card.def_id == big_body.id)
+            .count();
+        assert!(
+            bodies <= 1 && s.hand(P1).len() <= 2,
+            "no copies: {:?}",
+            s.hand(P1)
+        );
     }
 
     #[test]

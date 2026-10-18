@@ -15910,7 +15910,7 @@
       "meditativeplus-001-2",
       "meditative-020"
     ],
-    "loc": 0,
+    "loc": 38,
     "base": {
       "keywords": [],
       "text": "Add a random Wincon card to your hand, and its plan: a Base Camp for Reach the Summit, a Spa Day for Aestheticize the Game."
@@ -15955,7 +15955,7 @@
         "min": 1
       }
     ],
-    "loc": 0,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "Every Reach the Summit you own goes up {levels|Ascent level|Ascent levels}. Add {coins|Coin|Coins} to your hand."
@@ -15999,7 +15999,7 @@
         "min": 1
       }
     ],
-    "loc": 0,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Heal your hero {heal}. Shuffle {bombs|Love Bomb|Love Bombs} into your deck."
@@ -16084,7 +16084,7 @@
     "refs": [
       "core-t-rush"
     ],
-    "loc": 0,
+    "loc": 28,
     "base": {
       "attack": 3,
       "health": 7,
@@ -16129,7 +16129,7 @@
         "min": 0
       }
     ],
-    "loc": 0,
+    "loc": 85,
     "base": {
       "attack": 5,
       "health": 5,

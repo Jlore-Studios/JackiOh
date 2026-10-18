@@ -292,7 +292,9 @@ mod b3_4_params_the_numbers_a_card_declares {
         // Meditative+ brief defines for Bob's Plan, tune their numbers as their §8.9 rows say (R1185000).
         let with_params: Vec<String> = entries()
             .into_iter()
-            .filter(|card| card.tags.contains(&Tag::Ai) && card.index.starts_with("T-AI-") && card.params.is_some())
+            .filter(|card| {
+                card.tags.contains(&Tag::Ai) && card.index.starts_with("T-AI-") && card.params.is_some()
+            })
             .map(|card| card.id.clone())
             .collect();
         assert_eq!(with_params, Vec::<String>::new());

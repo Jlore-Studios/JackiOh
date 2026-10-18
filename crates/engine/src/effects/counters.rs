@@ -190,7 +190,10 @@ fn owned_copies(state: &GameState, player: PlayerId, def_id: &str) -> Vec<CardIn
             .chain(cards.exile.iter())
             .chain(field)
             .chain(cards.resolving.iter());
-        out.extend(all.filter(|card| card.owner == player && card.def_id == def_id).cloned());
+        out.extend(
+            all.filter(|card| card.owner == player && card.def_id == def_id)
+                .cloned(),
+        );
     }
     out
 }
@@ -223,7 +226,11 @@ pub fn raise_times_played(args: RaiseTimesPlayedArgs) -> Effect {
                 def_id: card.def_id.clone(),
                 key: "timesPlayed".to_string(),
                 value: count,
-                hidden_from: if hidden_from.is_empty() { None } else { Some(hidden_from) },
+                hidden_from: if hidden_from.is_empty() {
+                    None
+                } else {
+                    Some(hidden_from)
+                },
             });
         }
     })

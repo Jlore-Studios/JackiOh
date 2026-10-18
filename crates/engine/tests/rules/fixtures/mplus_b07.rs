@@ -49,12 +49,21 @@ fn card(index: u32, name: &str, type_: &str, stats: Option<(i32, i32)>, keywords
 }
 
 /// A 2/4 Unit: "Cry: Set every other Unit's Attack and Health to 3/3" (M+ #21's shape).
-pub static harmony: LazyLock<CardDef> = LazyLock::new(|| card(11850, "harmony", "Unit", Some((2, 4)), json!([])));
+pub static harmony: LazyLock<CardDef> =
+    LazyLock::new(|| card(11850, "harmony", "Unit", Some((2, 4)), json!([])));
 /// A 5/5 Immutable Unit (R23).
-pub static stoic: LazyLock<CardDef> =
-    LazyLock::new(|| card(11851, "stoic", "Unit", Some((5, 5)), json!([{ "kind": "Immutable" }])));
+pub static stoic: LazyLock<CardDef> = LazyLock::new(|| {
+    card(
+        11851,
+        "stoic",
+        "Unit",
+        Some((5, 5)),
+        json!([{ "kind": "Immutable" }]),
+    )
+});
 /// A 1/1 Unit: "Aura: Your other Units have +1/+1" (§10.4 layer 5).
-pub static banner: LazyLock<CardDef> = LazyLock::new(|| card(11852, "banner", "Unit", Some((1, 1)), json!([])));
+pub static banner: LazyLock<CardDef> =
+    LazyLock::new(|| card(11852, "banner", "Unit", Some((1, 1)), json!([])));
 /// A 0/0 unit token that prints no Radiant form of its own: the Ghoul Token's shape, its X/X doubled on
 /// its Radiant face (R349).
 pub static ghoul: LazyLock<CardDef> = LazyLock::new(|| {
@@ -83,7 +92,8 @@ pub static summit: LazyLock<CardDef> = LazyLock::new(|| card(11855, "summit", "S
 /// A Spell: "Every summit you own gets 2 more plays" (M+ #1.1 Base Camp's shape).
 pub static camp: LazyLock<CardDef> = LazyLock::new(|| card(11856, "camp", "Spell", None, json!([])));
 /// A Spell that does not count its plays: the camp fixture passes it by.
-pub static plain_spell: LazyLock<CardDef> = LazyLock::new(|| card(11857, "plain-spell", "Spell", None, json!([])));
+pub static plain_spell: LazyLock<CardDef> =
+    LazyLock::new(|| card(11857, "plain-spell", "Spell", None, json!([])));
 /// A Spell: "Fill your board with Rush Tokens in Chinese" (M+ #21's Radiant face).
 pub static party: LazyLock<CardDef> = LazyLock::new(|| card(11858, "party", "Spell", None, json!([])));
 /// A Spell: "Draw 1. Fill your hand with copies of it." (M+ #24's fourth mode).
@@ -137,7 +147,11 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         (
             kidnapper.id.clone(),
             both(|| Script {
-                targets: vec![TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit"] }))],
+                targets: vec![TargetDecl::target(
+                    1,
+                    1,
+                    json!({ "side": "enemy", "of": ["unit"] }),
+                )],
                 cry: Some(hook(|_ctx| {
                     vec![take_to_hand(json_as(json!({ "target": { "of": "chosen" } })))]
                 })),
@@ -182,7 +196,9 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
             party.id.clone(),
             both(|| Script {
                 cry: Some(hook(|_ctx| {
-                    vec![fill_board(json_as(json!({ "defId": "fx-token-rush", "chinese": true })))]
+                    vec![fill_board(json_as(
+                        json!({ "defId": "fx-token-rush", "chinese": true }),
+                    ))]
                 })),
                 ..Script::default()
             }),
@@ -190,7 +206,9 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         (
             xerox.id.clone(),
             both(|| Script {
-                cry: Some(hook(|_ctx| vec![draw_priced(json_as(json!({ "fillWithCopies": true })))])),
+                cry: Some(hook(|_ctx| {
+                    vec![draw_priced(json_as(json!({ "fillWithCopies": true })))]
+                })),
                 ..Script::default()
             }),
         ),
@@ -202,7 +220,9 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
                     ..StaticFlags::default()
                 }),
                 cry: Some(hook(|_ctx| {
-                    vec![effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 1 })))]
+                    vec![effects::damage(json_as(
+                        json!({ "to": { "of": "enemyHero" }, "amount": 1 }),
+                    ))]
                 })),
                 ..Script::default()
             }),

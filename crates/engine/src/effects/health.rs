@@ -6,7 +6,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::damage::{DamageTarget, set_hero_health};
-use crate::effects::targets::{BoardScope, PlayerSpec, TargetSpec, cards_in_scope, player_of, resolve_target};
+use crate::effects::targets::{
+    BoardScope, PlayerSpec, TargetSpec, cards_in_scope, player_of, resolve_target,
+};
 use crate::layers::{unit_has, unit_view, worn_stats_override};
 use crate::modifiers::add_modifier;
 use crate::script::Effect;
@@ -115,7 +117,8 @@ pub fn set_stats_all(args: SetStatsAllArgs) -> Effect {
             health: args.health,
         };
         for unit in cards_in_scope(ctx, &args.scope) {
-            if !crate::zones::in_units_row_or_standing(ctx.state, &unit) && !crate::zones::is_carried(ctx.state, &unit)
+            if !crate::zones::in_units_row_or_standing(ctx.state, &unit)
+                && !crate::zones::is_carried(ctx.state, &unit)
             {
                 continue;
             }
