@@ -683,6 +683,26 @@ pub struct MatchActionRow {
     pub at: i64,
 }
 
+/// #1169: a live match's checkpoint (`public.match_checkpoints`, migration 0042), the state its actor
+/// held after the log row `seq`, which a rebuild resumes from when it passes `actor::checkpoint`'s
+/// checks. `body` is the serialised `CheckpointBody` and `body_hash` its FNV-1a.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct MatchCheckpointRow {
+    pub match_id: String,
+    /// The log row the checkpoint follows, and its nonce.
+    pub seq: i64,
+    pub nonce: String,
+    pub catalog_version: String,
+    /// The build's rules fingerprint (`actor::checkpoint::RULES_FINGERPRINT`).
+    pub rules: String,
+    /// `config::MATCH_CHECKPOINT_VERSION` as it was written.
+    pub checkpoint_version: i32,
+    pub body: String,
+    pub body_hash: String,
+    pub at: i64,
+}
+
 // Rooms and tickets
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -1855,10 +1875,22 @@ impl Tx<'_> {
         dispatch!(self, matches_actions(match_id))
     }
 
+    /// #1169: stores the match's checkpoint, only while the match is live and its log holds `row.seq`
+    /// under `row.nonce`, and in place of an earlier seq's only. Answers whether it was stored.
+    pub async fn matches_put_checkpoint(&mut self, row: &MatchCheckpointRow) -> StoreResult<bool> {
+        dispatch!(self, matches_put_checkpoint(row))
+    }
+
+    /// #1169: the match's checkpoint, or `None`.
+    pub async fn matches_checkpoint(&mut self, match_id: &str) -> StoreResult<Option<MatchCheckpointRow>> {
+        dispatch!(self, matches_checkpoint(match_id))
+    }
+
     pub async fn matches_set_clocks(&mut self, match_id: &str, clocks: &MatchClocks) -> StoreResult<()> {
         dispatch!(self, matches_set_clocks(match_id, clocks))
     }
 
+    /// Ends the match, and drops its checkpoint (#1169).
     pub async fn matches_finish(&mut self, match_id: &str, at: i64) -> StoreResult<()> {
         dispatch!(self, matches_finish(match_id, at))
     }
