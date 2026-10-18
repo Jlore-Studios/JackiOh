@@ -72,7 +72,7 @@ mod tests {
     }
 
     /// The cards the Printer added to p1's hand at this start of turn, as `addedToHand` names them
-    /// (a card may change once in the hand: M #37 CN in a bottle transforms as it arrives).
+    /// (M #37 CN in a Bottle among them: added rather than drawn, it stays in the hand as itself).
     fn printed_at_start(s: &mut Scenario) -> Vec<(String, String)> {
         let mark = s.events().len();
         s.start_turn();

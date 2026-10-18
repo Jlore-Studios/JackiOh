@@ -52,7 +52,7 @@ mod tests {
     const SHEEPISH: &str = "core-041"; // a Trap
     const RAPID_DRAW: &str = "classic-026"; // (0) Spell: draw 4, then discard 4 at random
     const COUNTERSPELL: &str = "classic-017"; // Trap: counters the opponent's Spell
-    const JELLY_BEAN: &str = "core-027"; // (1) Spell, cast on draw: make a random hand card Radiant, lose 5 health
+    const JELLY_BEAN: &str = "core-027"; // (1) Spell, cast on draw: make a random hand card Radiant, lose 7 health
     const FILLER: &str = "core-008"; // Mr. Vanilla: a Unit, inert
 
     use crate::scenario;
@@ -151,7 +151,7 @@ mod tests {
             let mut s = forever(false, &[FILLER], json!({ "library": [JELLY_BEAN, STOCKPILE, STOCKPILE] }), json!({}));
             s.end_turn().end_turn();
             let jelly = s.card(JELLY_BEAN).id.clone();
-            s.expect_health(P1, HERO_HEALTH - 5);
+            s.expect_health(P1, HERO_HEALTH - 7);
             assert_eq!(s.card(&jelly).zone.z(), ZoneName::Hand);
             assert!(stamped_with(&s, &jelly, 2));
         }

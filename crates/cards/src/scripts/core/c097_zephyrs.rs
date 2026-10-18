@@ -1,4 +1,4 @@
-//! #97 Zephyrs (SPEC §8.5, §10.7's scorer bullet, §6.3 Discover and Exile, R29, R1446). Spell, cost 0.
+//! #97 Zephyrs (SPEC §8.5, §10.7's scorer bullet, §6.3 Discover and Exile, R29, R1446). Spell, cost 1.
 //!   Base:    "Discover the 'perfect' card; exile this"
 //!   Radiant: "A perfect Radiant card" — the cell restates only which card the Discover hands over,
 //!            so "exile this" is kept and the pick arrives Radiant (§8 Conventions).
@@ -130,14 +130,16 @@ mod tests {
         js(&scored.priority)
     }
 
-    /// The state #97 resolves in: the same game with #97 gone from hand (it costs 0) and no prompt
-    /// open yet, so the scorer's dry run plays (`dry_run_base`), as it does for the Discover.
+    /// The state #97 resolves in: the same game with #97 gone from hand and its cost paid, and no
+    /// prompt open yet, so the scorer's dry run plays (`dry_run_base`), as it does for the Discover.
     fn resolving(setup: &Value) -> GameState {
         let mut options = setup.clone();
         if let Some(hand) = options["p1"]["hand"].as_array_mut() {
             hand.retain(|card| card.as_str() != Some(ZEPHYRS));
         }
-        scenario(options).state().clone()
+        let mut s = scenario(options);
+        s.state_mut().players.p1.mana.current -= query_cost(&crate::card_def(ZEPHYRS));
+        s.state().clone()
     }
 
     /// The first three Core cards of a ranking: Core's own top three, the pool #97 drew on before
@@ -222,7 +224,8 @@ mod tests {
         fn s10_7_lethal_available_max_a_lethal_enabling_card_ranks_first_when_lethal_exists() {
             crate::register_all();
             // p1's 3/3 can already swing at the hero for 3; #45 adds 4 with Charge on its summon turn, and
-            // costs 2 of p1's 4 mana, so 3 + 4 ≥ p2's 7 health is lethal available this turn.
+            // costs 2 of the 3 mana p1 has once #97's 1 is paid, so 3 + 4 ≥ p2's 7 health is lethal
+            // available this turn.
             let setup = json!({
                 "seed": "zephyrs-lethal",
                 "p1": { "hand": [ZEPHYRS], "field": [BOARD] },
@@ -277,9 +280,11 @@ mod tests {
         }
 
         #[test]
-        fn s8_5_costs_0_it_is_castable_with_no_mana_at_all() {
+        fn s8_5_costs_1_it_is_castable_with_1_mana_and_not_with_none() {
             crate::register_all();
-            let mut s = scenario(json!({ "seed": "zephyrs-free", "p1": { "hand": [ZEPHYRS], "mana": 0 } }));
+            let mut broke = scenario(json!({ "seed": "zephyrs-free", "p1": { "hand": [ZEPHYRS], "mana": 0 } }));
+            broke.expect_refused(|s| s.play(ZEPHYRS, json!({})));
+            let mut s = scenario(json!({ "seed": "zephyrs-free", "p1": { "hand": [ZEPHYRS], "mana": 1 } }));
             s.play(ZEPHYRS, json!({}));
             s.expect_mana(P1, 0);
         }
@@ -357,7 +362,8 @@ mod tests {
     /// the three 7/7s.
     const CLEARERS: &[&str] = &["core-017", "core-043", "core-088", "core-100", "core-087", "core-016", "core-055"];
 
-    /// Every Core card that, played from p1's 4 mana, deals 3 or more to the enemy hero this turn:
+    /// Every Core card that, played from the 3 mana p1 has left after #97, deals 3 or more to the enemy
+    /// hero this turn:
     /// #24 Efficiency Dividend (X damage to a target), #35 Lunar Eclipse (3 damage), #44 True Strike (4,
     /// ignoring Armor), #45 Deft Duelist (a 4/3 with Charge), #68 Twisted Sorcerer (Cry: 4 damage) and
     /// #74 Adaptive UI (X damage).
@@ -415,9 +421,10 @@ mod tests {
             crate::register_all();
             // Three #25 4-mana 7/7s (Armor 7): no unit in Core answers one alone, let alone three, while
             // Flood, Big Felinor, Twisting Nether and Ceaseless Void each remove the whole board by text.
+            // p1 holds 5 mana, so the (4) clearers are affordable once #97's 1 is paid.
             let setup = json!({
                 "seed": "r5-zephyrs-clear",
-                "p1": { "hand": [ZEPHYRS, MENACE_FILLER] },
+                "p1": { "hand": [ZEPHYRS, MENACE_FILLER], "mana": 5 },
                 "p2": { "field": ["core-025", "core-025", "core-025"] },
             });
             let core = core_top_three(&subsystems::rank(&resolving(&setup), P1, &options(None)));
@@ -430,8 +437,8 @@ mod tests {
         #[test]
         fn s10_7_lethal_available_max_with_the_enemy_hero_at_3_the_three_best_core_cards_deal_the_last_3() {
             crate::register_all();
-            // p1 has 4 mana (Zephyrs costs 0) and p2 has no board, so any card that puts 3 damage on the
-            // enemy hero this turn is lethal: a burn spell as much as a Charge unit.
+            // p1 has 3 mana once Zephyrs' 1 is paid and p2 has no board, so any card that puts 3 damage on
+            // the enemy hero this turn is lethal: a burn spell as much as a Charge unit.
             let setup = json!({
                 "seed": "r5-zephyrs-lethal",
                 "p1": { "hand": [ZEPHYRS, MENACE_FILLER] },
@@ -529,13 +536,13 @@ mod tests {
         fn s10_7_a_charge_unit_s_swing_is_read_through_the_viewer_s_auras_both_ways_s10_4_layer_5() {
             crate::register_all();
             // #45 Deft Duelist is a printed 4/3 with Charge. Under p1's #14 Jlockeed's Weapons it swings
-            // for 8 the turn it lands, which is lethal on a hero at 8; under p1's own #65.1 Spikey Pillow
+            // for 7 the turn it lands, which is lethal on a hero at 7; under p1's own #65.1 Spikey Pillow
             // it swings for 2, which is not lethal on a hero at 4. The scorer reads the printed 4 both
             // times, and the Duelist has no text for the dry run to play.
             let under_weapons = scenario(json!({
                 "seed": "zephyrs-weapons",
                 "p1": { "hand": [ZEPHYRS, VANILLA], "backrow": ["core-014"], "library": LIBRARY },
-                "p2": { "hand": [VANILLA], "health": 8, "library": LIBRARY },
+                "p2": { "hand": [VANILLA], "health": 7, "library": LIBRARY },
             }));
             let under_pillow = scenario(json!({
                 "seed": "zephyrs-pillow",

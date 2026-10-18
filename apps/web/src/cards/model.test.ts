@@ -223,7 +223,7 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     expect(face("core-044", true).text.full).toBe("Pierce\nDeal 9 damage. Exile this.");
     expect(marksOf("core-044")).toEqual(["9"]);
     expect(marksOf("core-053")).toEqual(["60"]);
-    expect(marksOf("core-013")).toEqual(["5"]);
+    expect(marksOf("core-013")).toEqual(["4"]);
     expect(marksOf("core-047")).toEqual(["50"]);
   });
 
@@ -377,27 +377,27 @@ describe("B8: faceModel cost", () => {
 /* ------------------------------------------------------------------------------------------ B9 */
 
 describe("B9: faceModel stat tones", () => {
-  // core-013 Jlockeed Shredder-10 prints 8/10 on its base face and 16/20 on its radiant one.
+  // core-013 Jlockeed Shredder-10 prints 6/10 on its base face and 8/20 on its radiant one.
   const ID = "core-013";
 
   it("B9 attack above the printed face is buffed, below is reduced, equal is base", () => {
-    expect(face(ID, false, { live: live(9, 10, 10) }).stats?.attackTone).toBe("buffed");
-    expect(face(ID, false, { live: live(7, 10, 10) }).stats?.attackTone).toBe("reduced");
-    expect(face(ID, false, { live: live(8, 10, 10) }).stats?.attackTone).toBe("base");
+    expect(face(ID, false, { live: live(7, 10, 10) }).stats?.attackTone).toBe("buffed");
+    expect(face(ID, false, { live: live(5, 10, 10) }).stats?.attackTone).toBe("reduced");
+    expect(face(ID, false, { live: live(6, 10, 10) }).stats?.attackTone).toBe("base");
     expect(face(ID, false, { live: live(0, 10, 10) }).stats?.attackTone).toBe("reduced");
   });
 
   it("B9 at full health, max health above the printed health is buffed, below is reduced, equal is base", () => {
-    expect(face(ID, false, { live: live(8, 12, 12) }).stats?.healthTone).toBe("buffed");
-    expect(face(ID, false, { live: live(8, 9, 9) }).stats?.healthTone).toBe("reduced");
-    expect(face(ID, false, { live: live(8, 10, 10) }).stats?.healthTone).toBe("base");
+    expect(face(ID, false, { live: live(6, 12, 12) }).stats?.healthTone).toBe("buffed");
+    expect(face(ID, false, { live: live(6, 9, 9) }).stats?.healthTone).toBe("reduced");
+    expect(face(ID, false, { live: live(6, 10, 10) }).stats?.healthTone).toBe("base");
   });
 
   it("B9 health below max health is damaged, whatever max health is", () => {
-    expect(face(ID, false, { live: live(8, 9, 10) }).stats?.healthTone).toBe("damaged");
-    expect(face(ID, false, { live: live(8, 11, 12) }).stats?.healthTone).toBe("damaged");
-    expect(face(ID, false, { live: live(8, 3, 9) }).stats?.healthTone).toBe("damaged");
-    expect(face(ID, false, { live: live(8, 0, 10) }).stats?.healthTone).toBe("damaged");
+    expect(face(ID, false, { live: live(6, 9, 10) }).stats?.healthTone).toBe("damaged");
+    expect(face(ID, false, { live: live(6, 11, 12) }).stats?.healthTone).toBe("damaged");
+    expect(face(ID, false, { live: live(6, 3, 9) }).stats?.healthTone).toBe("damaged");
+    expect(face(ID, false, { live: live(6, 0, 10) }).stats?.healthTone).toBe("damaged");
   });
 
   it("B9 live stats are what the stats carry", () => {
@@ -411,11 +411,11 @@ describe("B9: faceModel stat tones", () => {
   });
 
   it("B9 a radiant card's tones compare with the radiant face", () => {
-    // 16/20 is the radiant face exactly, and would be buffed against the base 8/10.
-    expect(face(ID, true, { live: live(16, 20, 20) }).stats).toMatchObject({ attackTone: "base", healthTone: "base" });
-    expect(face(ID, false, { live: live(16, 20, 20) }).stats).toMatchObject({ attackTone: "buffed", healthTone: "buffed" });
-    // 8/10 is the base face exactly, and is reduced against the radiant 16/20.
-    expect(face(ID, true, { live: live(8, 10, 10) }).stats).toMatchObject({ attackTone: "reduced", healthTone: "reduced" });
+    // 8/20 is the radiant face exactly, and would be buffed against the base 6/10.
+    expect(face(ID, true, { live: live(8, 20, 20) }).stats).toMatchObject({ attackTone: "base", healthTone: "base" });
+    expect(face(ID, false, { live: live(8, 20, 20) }).stats).toMatchObject({ attackTone: "buffed", healthTone: "buffed" });
+    // 6/10 is the base face exactly, and is reduced against the radiant 8/20.
+    expect(face(ID, true, { live: live(6, 10, 10) }).stats).toMatchObject({ attackTone: "reduced", healthTone: "reduced" });
   });
 
   it("B9 with no def (an unknown card) both tones are base", () => {

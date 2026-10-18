@@ -199,7 +199,7 @@ mod tests {
             let jelly = s.card(JELLY).id.clone();
             s.start_turn();
             s.expect_in_zone(&jelly, "graveyard");
-            s.expect_health(P1, 25);
+            s.expect_health(P1, 23);
             let copies = copies(&s, P1);
             assert_eq!(copies.len(), 1);
             assert_eq!(copies[0].def_id, JELLY);

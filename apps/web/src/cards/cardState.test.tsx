@@ -198,18 +198,18 @@ describe("R385 Brittle: a cracked-glass badge with the count, on every face that
 /* ------------------------------------------------------------------------ R386 Nerf / Buff */
 
 describe("R386 R513 a Nerf and a Buff: what changed, marked better or worse", () => {
-  const BOOK = "classic-012"; // Book of Blood: "Deal {damage} damage to a Unit.", damage 5, better up.
+  const BOOK = "classic-012"; // Book of Blood: "Deal {damage} damage to a Unit.", damage 4, better up.
 
   it("R513 R1320 each change is better or worse for the card's controller, and the card as a whole Buffed, Nerfed or Tuned", () => {
     const book = def(BOOK);
     expect(faceTuning(book, false, undefined, undefined)).toBeNull();
-    expect(faceTuning(book, false, undefined, { damage: 5 })).toBeNull();
+    expect(faceTuning(book, false, undefined, { damage: 4 })).toBeNull();
 
-    const up = must(faceTuning(book, false, { numbers: { damage: 1 } }, { damage: 6 }), "a change");
+    const up = must(faceTuning(book, false, { numbers: { damage: 1 } }, { damage: 5 }), "a change");
     expect(up.verdict).toBe("upgraded");
-    expect(up.changes).toEqual([{ kind: "number", key: "damage", printed: 5, value: 6, way: "better" }]);
+    expect(up.changes).toEqual([{ kind: "number", key: "damage", printed: 4, value: 5, way: "better" }]);
 
-    const down = must(faceTuning(book, false, { numbers: { damage: -1 } }, { damage: 4 }), "a change");
+    const down = must(faceTuning(book, false, { numbers: { damage: -1 } }, { damage: 3 }), "a change");
     expect(down.verdict).toBe("degraded");
 
     // A number better lower (Twice Forward's "every {plays} cards", better down).
@@ -252,7 +252,7 @@ describe("R386 R513 a Nerf and a Buff: what changed, marked better or worse", ()
     const set = must(faceTuning(def("core-004"), false, { set: { Armor: 3 } }, undefined), "a set");
     expect(set.verdict).toBe("tuned");
     expect(set.changes.map(changeWords)).toEqual(["Armor set to 3"]);
-    expect(tuningSummary(up)).toBe("Buffed: Damage 5 → 6");
+    expect(tuningSummary(up)).toBe("Buffed: Damage 4 → 5");
     expect(keyWords("drawLimit")).toBe("Draw limit");
     expect(VERDICT_WORD).toEqual({ upgraded: "Buffed", degraded: "Nerfed", tuned: "Tuned" });
   });
@@ -276,23 +276,23 @@ describe("R386 R513 a Nerf and a Buff: what changed, marked better or worse", ()
   });
 
   it("R386 a hand card whose number moved boxes it with ▲ or ▼, keeps the number as its text, and says what was printed", () => {
-    renderBoard(handView({ defId: BOOK, cost: 1, params: { damage: 6 }, tuning: { numbers: { damage: 1 } } }));
+    renderBoard(handView({ defId: BOOK, cost: 1, params: { damage: 5 }, tuning: { numbers: { damage: 1 } } }));
     const face = faceOf(handRoot());
     expect(face.getAttribute("data-tuned")).toBe("upgraded");
     const number = must(face.querySelector<HTMLElement>(".cf-tuned"), "the boxed number");
-    expect(number.textContent).toBe("6");
+    expect(number.textContent).toBe("5");
     expect(number.getAttribute("data-way")).toBe("better");
-    expect(number.getAttribute("data-printed")).toBe("5");
-    expect(number.getAttribute("title")).toBe(tunedRangeWords({ printed: 5, way: "better" }));
-    expect(face.querySelector(".card-text")?.textContent).toContain("Deal 6 damage to a Unit.");
+    expect(number.getAttribute("data-printed")).toBe("4");
+    expect(number.getAttribute("title")).toBe(tunedRangeWords({ printed: 4, way: "better" }));
+    expect(face.querySelector(".card-text")?.textContent).toContain("Deal 5 damage to a Unit.");
     const mark = must(face.querySelector('.cf-state[data-state="tuned"]'), "the tuned mark");
     expect(mark.getAttribute("data-tuned")).toBe("upgraded");
     expect(mark.textContent).toBe("▲");
-    expect(mark.getAttribute("title")).toBe("Buffed: Damage 5 → 6");
+    expect(mark.getAttribute("title")).toBe("Buffed: Damage 4 → 5");
   });
 
   it("R386 a number moved the worse way is marked ▼ and the card Nerfed", () => {
-    renderBoard(handView({ defId: BOOK, cost: 1, params: { damage: 4 }, tuning: { numbers: { damage: -1 } } }));
+    renderBoard(handView({ defId: BOOK, cost: 1, params: { damage: 3 }, tuning: { numbers: { damage: -1 } } }));
     const face = faceOf(handRoot());
     expect(face.getAttribute("data-tuned")).toBe("degraded");
     expect(face.querySelector(".cf-tuned")?.getAttribute("data-way")).toBe("worse");
@@ -344,26 +344,26 @@ describe("R386 R513 a Nerf and a Buff: what changed, marked better or worse", ()
 
   it("R386 the hover preview gives the ribbon, every change in words, and the printed text beside a face whose numbers moved", () => {
     vi.useFakeTimers();
-    renderBoard(handView({ defId: BOOK, cost: 1, params: { damage: 6 }, tuning: { numbers: { damage: 1 }, attack: 0 } }));
+    renderBoard(handView({ defId: BOOK, cost: 1, params: { damage: 5 }, tuning: { numbers: { damage: 1 }, attack: 0 } }));
     const preview = hover(handRoot());
     const ribbon = within(preview).getByTestId(INSPECT_TUNED);
     expect(ribbon.getAttribute("data-tuned")).toBe("upgraded");
     expect(ribbon.querySelector(".inspect-tuned-ribbon")?.textContent).toBe("▲Buffed");
     const lines = Array.from(ribbon.querySelectorAll<HTMLElement>(".inspect-tuned-change"));
     expect(lines.map((line) => line.getAttribute("data-way"))).toEqual(["better"]);
-    expect(lines[0]?.textContent).toBe("▲Damage 5 → 6 (better)");
-    expect(within(preview).getByTestId(INSPECT_PRINTED).textContent).toContain("Deal 5 damage to a Unit.");
+    expect(lines[0]?.textContent).toBe("▲Damage 4 → 5 (better)");
+    expect(within(preview).getByTestId(INSPECT_PRINTED).textContent).toContain("Deal 4 damage to a Unit.");
     expect(preview.querySelector('[data-glossary-term="Buff"]')).not.toBeNull();
     fireEvent.pointerLeave(handRoot(), { pointerType: "mouse" });
 
     const sheet = longPress(handRoot());
-    expect(within(sheet).getByTestId(INSPECT_TUNED).textContent).toContain("Damage 5 → 6");
+    expect(within(sheet).getByTestId(INSPECT_TUNED).textContent).toContain("Damage 4 → 5");
     expect(within(sheet).getByTestId(INSPECT_PRINTED)).toBeInTheDocument();
   });
 
   it("R386 an untuned card, or one whose numbers stand at their printed values, carries no mark", () => {
     vi.useFakeTimers();
-    renderBoard(handView({ defId: BOOK, cost: 1, params: { damage: 5 } }));
+    renderBoard(handView({ defId: BOOK, cost: 1, params: { damage: 4 } }));
     const face = faceOf(handRoot());
     expect(face.getAttribute("data-tuned")).toBeNull();
     expect(face.querySelector(".cf-tuned, .cf-states, .cf-text-tuning")).toBeNull();
