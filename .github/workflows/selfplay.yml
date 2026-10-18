@@ -1,0 +1,224 @@
+# The learned evaluation's self-play export (#466, #1007; docs/learned-eval.md D1, "How much data and
+# compute"): `jackioh selfplay` in shards, on GitHub's runners or on the local runner, by dispatch
+# only (never on a pull request or a schedule). `gh workflow run selfplay.yml -f games=100000 -f
+# seed=<base>` (training/README.md, Where the exports come from).
+#
+#   plan      splits the games into `shards` ranges of game numbers (`--from`, `--games`)
+#   build     one release `jackioh`, as super.yml's `rust-build` builds it, passed on as an artifact
+#   shard     one job per range on `runner`: `jackioh selfplay --from <k> --games <n> --seed <base>`,
+#             its log file uploaded as `selfplay-<base>-<k>` (kept `retention` days, 90 at most)
+#   count     every shard's logs through `jackioh positions` for its counts only (games, positions,
+#             games dropped for not replaying), written to the run's summary
+#
+# A game is a function of its seed (R1006001), so an export is repeatable from its base: the same
+# dispatch plays the same games on any runner, and its shards' files together are the games one
+# machine would have played. A base naming a training gate's hold-out deals or the dev set is refused
+# by `selfplay` itself (R1006002). On GitHub's runners each shard keeps well under the 6-hour job
+# limit (about 1,500 games an hour on four vCPUs); the local runner (`jackioh-selfplay-local`,
+# bot/machine/README.md, The local runner) runs its shards one after another for as long as it
+# needs. The export is slow on purpose, and ci-duration.yml does not watch it.
+#
+# The learn lane (learn.yml, #1012) calls it as a reusable workflow (`workflow_call`, the same inputs,
+# `count` off: its retrain folds the positions itself), and its artifacts are that run's.
+name: selfplay
+
+on:
+  workflow_call:
+    inputs:
+      games:
+        type: string
+        required: true
+      seed:
+        type: string
+        required: true
+      shards:
+        type: string
+        required: false
+        default: "20"
+      runner:
+        type: string
+        required: false
+        default: ubuntu-latest
+      retention:
+        type: string
+        required: false
+        default: "30"
+      count:
+        type: boolean
+        required: false
+        default: true
+  workflow_dispatch:
+    inputs:
+      games:
+        description: "Games to play in all (game numbers 1..games)"
+        required: true
+        default: "100000"
+      seed:
+        description: "The seed base (letters, digits, . _ -): game n is <base>:n. Never a gate's (improve, unban) nor improve-dev"
+        required: true
+      shards:
+        description: "How many jobs to split the games over"
+        required: true
+        default: "20"
+      runner:
+        description: "Where the shards run"
+        type: choice
+        options:
+          - ubuntu-latest
+          - jackioh-selfplay-local
+        default: ubuntu-latest
+      retention:
+        description: "Days to keep the logs (at most 90)"
+        required: true
+        default: "90"
+      count:
+        description: "Fold the export's positions for its counts (the summary)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: plan the shards
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      shards: ${{ steps.split.outputs.shards }}
+    steps:
+      - id: split
+        env:
+          GAMES: ${{ inputs.games }}
+          SHARDS: ${{ inputs.shards }}
+          RETENTION: ${{ inputs.retention }}
+          SEED: ${{ inputs.seed }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, re, sys
+          # The base names the shards' artifacts, which take no `:` or `/`.
+          if not re.fullmatch(r"[A-Za-z0-9._-]+", os.environ["SEED"]):
+              sys.exit(f"the seed base {os.environ['SEED']!r} takes letters, digits, '.', '_' and '-' only")
+          games, shards, retention = (int(os.environ[k]) for k in ("GAMES", "SHARDS", "RETENTION"))
+          if games < 1 or shards < 1 or shards > 256 or not 1 <= retention <= 90:
+              sys.exit(f"games {games}, shards {shards} (1 to 256) and retention {retention} (1 to 90) are out of range")
+          shards = min(shards, games)
+          base, extra = divmod(games, shards)
+          ranges, start = [], 1
+          for k in range(shards):
+              n = base + (1 if k < extra else 0)
+              ranges.append({"from": start, "games": n})
+              start += n
+          print("shards=" + json.dumps(ranges))
+          PY
+
+  build:
+    name: release build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+      - name: jackioh
+        run: cargo build --release -p jackioh-tools
+      # A tarball keeps the executable bit an artifact would drop.
+      - name: pack it
+        run: tar -czf "$RUNNER_TEMP/jackioh.tgz" target/release/jackioh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: selfplay-jackioh
+          path: ${{ runner.temp }}/jackioh.tgz
+          if-no-files-found: error
+          retention-days: 3
+
+  shard:
+    name: shard from ${{ matrix.range.from }}
+    needs: [plan, build]
+    runs-on: ${{ inputs.runner }}
+    # GitHub's runners stop a job at 6 hours; the local runner's shards may take longer.
+    timeout-minutes: ${{ inputs.runner == 'ubuntu-latest' && 350 || 4320 }}
+    strategy:
+      fail-fast: false
+      matrix:
+        range: ${{ fromJSON(needs.plan.outputs.shards) }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: selfplay-jackioh
+          path: ${{ runner.temp }}
+      - name: unpack it
+        run: tar -xzf "$RUNNER_TEMP/jackioh.tgz" -C "$RUNNER_TEMP"
+      - name: play
+        env:
+          SEED: ${{ inputs.seed }}
+          FROM: ${{ matrix.range.from }}
+          GAMES: ${{ matrix.range.games }}
+        run: |
+          echo "cores: $(nproc)"
+          mkdir -p "$RUNNER_TEMP/logs"
+          start=$(date +%s)
+          "$RUNNER_TEMP/target/release/jackioh" selfplay --from "$FROM" --games "$GAMES" --seed "$SEED" \
+            --out "$RUNNER_TEMP/logs" | tee "$RUNNER_TEMP/logs/summary.json"
+          echo "seconds: $(( $(date +%s) - start ))" | tee -a "$RUNNER_TEMP/logs/timing.txt"
+          echo "cores: $(nproc)" >> "$RUNNER_TEMP/logs/timing.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: selfplay-${{ inputs.seed }}-${{ matrix.range.from }}
+          path: ${{ runner.temp }}/logs
+          if-no-files-found: error
+          retention-days: ${{ fromJSON(inputs.retention) }}
+
+  count:
+    name: count the export
+    needs: shard
+    # A caller may leave the counts to its own positions pass.
+    if: ${{ inputs.count }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: selfplay-jackioh
+          path: ${{ runner.temp }}
+      - name: unpack it
+        run: tar -xzf "$RUNNER_TEMP/jackioh.tgz" -C "$RUNNER_TEMP"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: selfplay-${{ inputs.seed }}-*
+          path: ${{ runner.temp }}/export
+      - name: positions, for the counts
+        env:
+          SEED: ${{ inputs.seed }}
+          RUNNER_LABEL: ${{ inputs.runner }}
+        run: |
+          cd "$RUNNER_TEMP"
+          mapfile -t logs < <(find export -name 'selfplay-*.jsonl' | sort -V)
+          "$RUNNER_TEMP/target/release/jackioh" positions "${logs[@]}" --out positions.jsonl > counts.json
+          bytes=$(cat "${logs[@]}" | wc -c)
+          python3 - "$SEED" "$RUNNER_LABEL" "$bytes" <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import glob, json, sys
+          seed, runner, size = sys.argv[1], sys.argv[2], int(sys.argv[3])
+          counts = json.load(open("counts.json"))["counts"]
+          shards = []
+          for path in sorted(glob.glob("export/*/timing.txt")):
+              text = dict(line.split(": ") for line in open(path).read().split("\n") if ": " in line)
+              shards.append((int(text["seconds"]), int(text["cores"])))
+          slowest = max((s for s, _ in shards), default=0)
+          cpu_seconds = sum(s * c for s, c in shards)
+          games = counts["games"]
+          print(f"## Self-play export `{seed}` on `{runner}`\n")
+          print("| | |\n|---|---|")
+          for key in ("games", "replayed", "positions", "notReplayed", "noResult", "earlierPatch", "unreadable"):
+              print(f"| {key} | {counts[key]:,} |")
+          print(f"| shards | {len(shards)} |")
+          print(f"| slowest shard | {slowest / 3600:.2f} h |")
+          if slowest:
+              print(f"| games an hour (all shards) | {games / slowest * 3600:,.0f} |")
+          if cpu_seconds and games:
+              print(f"| vCPU-seconds a game | {cpu_seconds / games:.2f} |")
+          print(f"| logs | {size / 1e6:,.1f} MB, {size / max(games, 1):,.0f} bytes a game |")
+          PY
+          cat counts.json
+          rm -f positions.jsonl
