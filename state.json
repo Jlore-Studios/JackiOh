@@ -10021,9 +10021,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-18T17:15:18Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39148660313",
-    "what": "build #1179 on claude-7"
+    "at": "2026-10-18T17:23:45Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39149327730",
+    "what": "suggestions on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-18T17:18:03Z",
@@ -19112,13 +19112,19 @@
         "number": 1193,
         "title": "Patch v0.3.X: a random deck dealt to a player holds at least two Traps or Field Traps",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-18T16:16:57Z",
+        "number": 1196,
+        "title": "Patch v0.3.X: solo Duos practice against the AI team in the browser",
+        "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-18T16:51:51Z",
-    "last_run": "2026-10-18T13:35:32Z",
-    "provider": null,
+    "idle_since": "2026-10-18T17:23:45Z",
+    "last_run": "2026-10-18T17:23:45Z",
+    "provider": "claude-7",
     "requested": false,
-    "run_id": null,
+    "run_id": "39149327730",
     "taken_asks": []
   },
   "usage": {
