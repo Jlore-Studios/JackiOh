@@ -3720,7 +3720,7 @@
     "1194": {
       "action": "build",
       "asks": [],
-      "failures": 1,
+      "failures": 0,
       "forced": false,
       "handoff": {
         "at": "2026-10-18T10:12:07Z",
@@ -3739,7 +3739,9 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
+      "pr": 1217,
       "provider": "claude-7",
+      "question": "",
       "queued_at": "2026-10-18T04:40:58Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
@@ -3751,7 +3753,7 @@
       ],
       "strikes": 1,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 2
     },
     "1202": {
       "action": "revise",
