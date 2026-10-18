@@ -19567,6 +19567,12 @@
         "number": 1196,
         "title": "Patch v0.3.X: solo Duos practice against the AI team in the browser",
         "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-18T21:57:42Z",
+        "number": 1241,
+        "title": "Patch v0.3.X: Duos replays load a page at a time",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": null,
