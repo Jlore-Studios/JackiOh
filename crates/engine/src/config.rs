@@ -487,6 +487,13 @@ pub const BERSERK_MARK: MarkSpec = MarkSpec {
     color: "red",
 };
 
+/// R1174000: the mark a Unit is announced Frozen with (`added: true`) and thawed with (`added:
+/// false`), public in both views (R437's reusable mark), and its colour key: the client's frost.
+pub const FROZEN_MARK: MarkSpec = MarkSpec {
+    mark: "frozen",
+    color: "cyan",
+};
+
 // ---- v0.2.0 constants: prompts and generation (E18, E19, E23–E25) ----
 
 // generation (E19, E23–E25), below A6a's prompts constants:

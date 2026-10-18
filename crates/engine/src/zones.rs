@@ -1160,6 +1160,8 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.reborn_spent = None;
     // B5 E35: Berserk is a status of the unit on the field, lost as it leaves (R78).
     instance.berserk = None;
+    // R1174000: so is Frozen, which a Bounce, a death or an exile takes off with it.
+    instance.frozen = None;
     // R1040, R1045: a card set face-down as a Trap is its printed card again once it leaves the field.
     instance.set_as = None;
 }

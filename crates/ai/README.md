@@ -187,8 +187,9 @@ pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64
 ```
 
 - With `Hand` nothing changes. With `Learned`, `reply_score` scores a finalist after the opponent's
-  reply as `hand + (b + net(x))·U/a`, the network's logit mapped back onto the hand eval's points
-  (R1010000, R1010001). The beam's pruning keeps the hand eval. 1v1 only: a Duos duel keeps the hand
+  reply with the network's logit mapped back onto the hand eval's points, `points = hand + (b +
+  net(x))·U/a` (R1010000, R1010001), taken at `LEARNED_CORRECTION_SHARE`: `hand + share·(points −
+  hand)` (R1012001). The beam's pruning keeps the hand eval. 1v1 only: a Duos duel keeps the hand
   eval (R1010002).
 - `src/learned/weights.json` is what `training/ml/jackioh_ml/export.py` writes from a fit: the feature
   version and dense names it was fitted on (a test fails on a mismatch), the standardizer, the sparse

@@ -20,7 +20,7 @@ import type { FaceModel } from "./model.ts";
 import { CHINESE_TERMS, readerTerms } from "./chinese.ts";
 import { VERDICT_GLYPH, VERDICT_WORD, tuningSummary } from "./tuning.ts";
 
-export type StateBadgeKind = "brittle" | "quest" | "tuned" | Enchantment["kind"] | "animated" | "berserk" | "created";
+export type StateBadgeKind = "brittle" | "quest" | "tuned" | Enchantment["kind"] | "animated" | "berserk" | "frozen" | "created";
 
 export type StateBadge = {
   kind: StateBadgeKind;
@@ -72,6 +72,12 @@ export function enchantmentWords(enchantment: Enchantment, radiant = false): str
 
 /** B5 E35, §6.1: what a Berserk unit's badge says. */
 export const BERSERK_WORDS = "Berserk: at the start and end of its controller's turn it attacks its own hero";
+
+/** R1174000, §6.1: what a Frozen unit's badge says. */
+export const FROZEN_WORDS = "Frozen: can't attack or switch position; it thaws at the end of the turn it could have acted in";
+
+/** R1174000: the frost badge's glyph, drawn in text presentation (U+FE0E) so it takes the badge's colour. */
+export const FROZEN_GLYPH = "\u2744\uFE0E";
 
 const ENCHANTMENT_ICON: Readonly<Record<Enchantment["kind"], IconName>> = {
   returnAfterResolve: "returnHand",
@@ -161,6 +167,10 @@ export function stateBadges(face: FaceModel): StateBadge[] {
   // B5 E35: a Berserk unit, in its glossary row's words (§6.1).
   if (face.berserk === true) {
     badges.push({ kind: "berserk", text: null, icon: "sword", words: t(BERSERK_WORDS), data: { "data-berserk": "true" } });
+  }
+  // R1174000: a Frozen unit, the frost badge.
+  if (face.frozen === true) {
+    badges.push({ kind: "frozen", text: FROZEN_GLYPH, icon: null, words: t(FROZEN_WORDS), data: { "data-frozen": "true" } });
   }
   // MD-B6, R943: a Created card, made during the game.
   if (face.created === true) {
