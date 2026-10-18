@@ -8,17 +8,27 @@
 //! `denseNames` of one length, `denseIn` that many rows of `width`, `sparseIn` one row of `width`
 //! per key, the keys sorted and unique, each head layer's `w` its `b`'s length times its input's,
 //! `out.w` the last layer's width, and every number finite.
+//!
+//! It compiles the policy prior's table the same way (#1171; `src/policy.rs`): it reads
+//! `src/policy/weights.json`, which `training/ml/jackioh_ml/policy_fit.py` writes, and writes
+//! `$OUT_DIR/policy_weights.rs`, `POLICY_PRIOR`, a `PolicyPrior<'static>` over `const` slices. It fails
+//! the build, naming the field, unless the keys are sorted and unique and there is one finite weight
+//! per key.
 
 // A build script is not the pure crate: it runs at compile time, where data reaches it (rule 4).
 #![allow(clippy::disallowed_methods)]
 
 use std::fmt::Write as _;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
 fn fail(message: &str) -> ! {
     panic!("crates/ai/src/learned/weights.json: {message}");
+}
+
+fn policy_fail(message: &str) -> ! {
+    panic!("crates/ai/src/policy/weights.json: {message}");
 }
 
 fn numbers(value: &Value, field: &str) -> Vec<f64> {
@@ -357,6 +367,73 @@ fn int_code(
     .unwrap();
 }
 
+/// The policy prior's table (`policy_fit.py`), as `POLICY_PRIOR`.
+fn policy_code(dir: &Path) -> String {
+    let path = dir.join("src/policy/weights.json");
+    println!("cargo:rerun-if-changed={}", path.display());
+    let text = std::fs::read_to_string(&path).unwrap_or_else(|error| policy_fail(&error.to_string()));
+    let json: Value = serde_json::from_str(&text).unwrap_or_else(|error| policy_fail(&error.to_string()));
+
+    let field = |name: &str| -> &Value {
+        json.get(name)
+            .unwrap_or_else(|| policy_fail(&format!("no {name}")))
+    };
+    let keys_version = field("keysVersion")
+        .as_u64()
+        .and_then(|v| u32::try_from(v).ok())
+        .unwrap_or_else(|| policy_fail("keysVersion is not a whole number"));
+    let catalog = field("catalog")
+        .as_str()
+        .unwrap_or_else(|| policy_fail("catalog is not text"));
+    let keys: Vec<&str> = field("keys")
+        .as_array()
+        .unwrap_or_else(|| policy_fail("keys is not an array"))
+        .iter()
+        .map(|key| key.as_str().unwrap_or_else(|| policy_fail("a key is not text")))
+        .collect();
+    if keys.windows(2).any(|pair| pair[0] >= pair[1]) {
+        policy_fail("keys are not sorted and unique");
+    }
+    let weights: Vec<f64> = field("weights")
+        .as_array()
+        .unwrap_or_else(|| policy_fail("weights is not an array"))
+        .iter()
+        .map(|item| match item.as_f64() {
+            Some(x) if x.is_finite() => x,
+            _ => policy_fail(&format!(
+                "weights holds a value that is not a finite number: {item}"
+            )),
+        })
+        .collect();
+    if weights.len() != keys.len() {
+        policy_fail(&format!(
+            "weights has {} values, not one per key ({})",
+            weights.len(),
+            keys.len()
+        ));
+    }
+
+    let mut code = String::new();
+    write!(code, "const POLICY_KEYS: &[&str] = &[").unwrap();
+    for key in &keys {
+        write!(code, "{key:?},").unwrap();
+    }
+    writeln!(code, "];").unwrap();
+    writeln!(
+        code,
+        "/// The policy prior compiled in from `src/policy/weights.json`."
+    )
+    .unwrap();
+    writeln!(
+        code,
+        "pub const POLICY_PRIOR: PolicyPrior<'static> = PolicyPrior {{ keys_version: {keys_version}, \
+         catalog: {catalog:?}, keys: POLICY_KEYS, weights: {} }};",
+        slice(&weights)
+    )
+    .unwrap();
+    code
+}
+
 fn main() {
     let dir = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").expect("cargo sets CARGO_MANIFEST_DIR"));
     let path = dir.join("src/learned/weights.json");
@@ -427,4 +504,5 @@ fn main() {
 
     let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").expect("cargo sets OUT_DIR"));
     std::fs::write(out_dir.join("learned_weights.rs"), code).expect("write learned_weights.rs");
+    std::fs::write(out_dir.join("policy_weights.rs"), policy_code(&dir)).expect("write policy_weights.rs");
 }

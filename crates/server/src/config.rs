@@ -614,6 +614,19 @@ pub const MATCH_RECORD_RESULT_BACKOFF_MS: i64 = 250;
 /// before its clock runs out again, so a store that keeps failing is retried at this pace until the
 /// row lands, the match ends or the actor stops, never in a loop.
 pub const MATCH_SERVER_ACTION_RETRY_MS: i64 = 1_000;
+/// #1169: the fewest logged actions a match must hold for the restart drain to store a checkpoint
+/// of it (`actor::checkpoint`). A shorter log is cheap to fold whole, so the drain spends no write on
+/// it: as #1169's plan measured a release build, a fold costs about 0.39 ms an action and the
+/// telemetry's replay about 0.50 ms, while a checkpoint (some 75 KB) takes about 0.3 ms to serialise
+/// and hash, plus its write.
+pub const MATCH_CHECKPOINT_MIN_ACTIONS: i64 = 32;
+/// #1169: the shape of a checkpoint's body and of what the server folds a log to. A checkpoint
+/// stamped with another is refused and the whole log folded. Bump it when a server change alters
+/// either: the body (`actor::checkpoint::CheckpointBody`), the setup a rebuild folds with
+/// (`Registry::rebuild`'s arguments) or the bot turns it reads (`bot_moved_turns`). A change to the
+/// engine, the cards or `actor/engine.rs` and `actor/telemetry.rs` needs none: the rules fingerprint
+/// (`build.rs`) refuses those.
+pub const MATCH_CHECKPOINT_VERSION: i32 = 1;
 
 // ---------------------------------------------------------------------------------------------
 // Bug reports (`bug_reports.rs`): a match its own log does not reproduce. Not in SPEC, and no

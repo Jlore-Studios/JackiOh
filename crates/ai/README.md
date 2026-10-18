@@ -210,6 +210,36 @@ pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64
   browser's WASM build give the same answer bit for bit (R1011000; `tests/fixtures/learned-parity.json`,
   held natively and through the WASM module's `learned_parity`).
 
+## The policy prior (#1171)
+
+`src/policy.rs` is a table of weights, fitted by `training/ml`'s `policy_fit.py` on the moves the AI
+played, that re-sorts the moves the beam expands before it takes its prefix (`docs/learned-eval.md`,
+learned move ordering):
+
+```rust
+pub enum MoveOrder { Heuristic, Learned }
+pub const AI_MOVE_ORDER: MoveOrder;               // config.rs: Heuristic, unless a promotion turns it on
+pub const POLICY_PRIOR: PolicyPrior<'static>;     // compiled in from src/policy/weights.json by build.rs
+pub fn policy_keys(view: &GameState, seat: PlayerId, action: &ActionBody, rank: Option<usize>) -> Vec<String>;
+pub fn policy_label(state: &GameState, seat: PlayerId, played: &ActionBody) -> PolicyLabel;
+pub fn prior_order(state: &GameState, seat: PlayerId, moves: Vec<ActionBody>, prior: &PolicyPrior<'_>) -> Vec<ActionBody>;
+pub fn beam_search_with(det, seat, counter, budget, order: MoveOrder, prior: &PolicyPrior<'_>) -> Vec<Line>;
+```
+
+- With `Heuristic` nothing changes. With `Learned`, `search::expansion` sorts each line's candidates
+  that are not End Turn by the prior, best first and ties in their own order, then takes the first
+  `root_branching` or `branching` and End Turn, as before (R1171001). It never adds, drops or changes
+  a move and spends no node. A table of no keys, the checked-in null one, leaves every order as it is,
+  and so does a Duos duel.
+- A move is a handful of text keys read from `redact` alone (R185, R1171000): its kind, its rank in the
+  heuristic order (capped at `POLICY_RANK_CAP`), the card it plays or acts with (named by R1006000's
+  rule, else `hidden`), where it lands and the class of what it aims at. No key holds an instance, hero
+  or prompt id. Its score is the sum of its keys' weights; a key the table lacks adds nothing.
+- `policy_label` is what `cargo jackioh positions --policy` writes on each decision row: the keys of
+  every candidate decide's probe lists there and which one was played. `src/policy/weights.json`
+  records the `POLICY_KEYS_VERSION` and catalog it was fitted on (a test fails on another version);
+  `build.rs` turns it into constant slices, data at compile time (rule 4).
+
 ## Duos (§13.7)
 
 `src/duos.rs` plays a seat of a Duos game (`jackioh_engine::duos`): one AI plays both seats of team B,
