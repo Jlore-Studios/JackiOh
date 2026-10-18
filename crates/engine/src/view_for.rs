@@ -778,6 +778,8 @@ fn unit_view_of(
         } else {
             None
         },
+        // R1174000: a status, public on the field like the unit itself.
+        frozen: top.frozen.map(|_| true),
         // ME-CN, R1301: public on the field like the unit itself (the pile's top, R13).
         chinese: card.chinese,
         // MD-B6, R943: Created is public the same way.
@@ -796,14 +798,17 @@ fn unit_view_of(
 }
 
 /// R849000: why the viewer's own unit that may act now cannot declare an attack, gated as
-/// `condition_targets_of`. Which targets it may attack stays `legal_actions`' answer.
+/// `condition_targets_of`. Which targets it may attack stays `legal_actions`' answer. R1174000: a
+/// Frozen unit has no exertion, so it may not act, and it is told why all the same while its
+/// controller could otherwise act with it.
 fn attack_reason_of(
     state: &GameState,
     auras: &AuraTable<'_>,
     top: &CardInstance,
     viewer: PlayerId,
 ) -> Option<String> {
-    if top.controller != viewer || !can_act(state, auras, top) {
+    let frozen_in_its_turn = top.frozen.is_some() && turn_open_to(state, top);
+    if top.controller != viewer || !(frozen_in_its_turn || can_act(state, auras, top)) {
         return None;
     }
     why_cannot_declare_in(auras, top).err().map(|error| error.message)
@@ -845,16 +850,16 @@ fn condition_targets_of(
 /// two exertions included (R49); *which* of the two is legal is `combat::can_attack`'s answer and
 /// `legal_actions`', never the view's.
 fn can_act(state: &GameState, auras: &AuraTable<'_>, card: &CardInstance) -> bool {
-    if state.result.is_some() || state.phase != crate::wire::Phase::Main {
-        return false;
-    }
-    if state.pending.is_some() {
-        return false;
-    }
-    if state.active != card.controller {
-        return false;
-    }
-    has_exertion_in(auras, card, ExertionKind::Attack) || has_exertion_in(auras, card, ExertionKind::Switch)
+    turn_open_to(state, card)
+        && (has_exertion_in(auras, card, ExertionKind::Attack) || has_exertion_in(auras, card, ExertionKind::Switch))
+}
+
+/// `can_act`'s first half: the game is on, in its controller's main phase, with no prompt open.
+fn turn_open_to(state: &GameState, card: &CardInstance) -> bool {
+    state.result.is_none()
+        && state.phase == crate::wire::Phase::Main
+        && state.pending.is_none()
+        && state.active == card.controller
 }
 
 /// The tokens a card carries now; an untouched card carries none (§6.3 Plague Counter). A private

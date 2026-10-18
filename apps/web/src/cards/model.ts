@@ -197,6 +197,8 @@ export type FaceModel = {
   animated?: { home?: number } | null;
   /** B5 E35: in play, the unit has gone Berserk (`UnitView.berserk`). */
   berserk?: boolean;
+  /** R1174000: in play, the unit is Frozen (`UnitView.frozen`). */
+  frozen?: boolean;
   /** MD-B6, R943: in play, the card was minted after the decks were built (`CardView.created`). */
   created?: boolean;
   /** E36: the lines of code of the card's script (`CardDef.loc`); a fused card's definition carries its ingredients' sum. */
@@ -255,6 +257,8 @@ export type InPlay = {
   animated?: { home?: number };
   /** B5 E35: the unit has gone Berserk (`UnitView.berserk`). */
   berserk?: true;
+  /** R1174000: the unit is Frozen (`UnitView.frozen`). */
+  frozen?: true;
   /** MD-B6, R943: the card was minted after the decks were built (`CardView.created`). */
   created?: true;
   /** R437: the marks on the card (`CardView.marks`). */
@@ -379,6 +383,7 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
     enchantments: inPlay?.enchantments ?? [],
     animated: inPlay?.animated ?? null,
     berserk: inPlay?.berserk === true,
+    frozen: inPlay?.frozen === true,
     created: inPlay?.created === true,
     loc: def?.loc ?? null,
     marks: inPlay?.marks ?? [],

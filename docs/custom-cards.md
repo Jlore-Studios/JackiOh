@@ -80,6 +80,7 @@ never includes the card itself.
 | `c:heal(target, n)` | Heals n: a unit up to its maximum health, a hero with no cap. |
 | `c:destroy(target)` | Destroys the units it names. |
 | `c:bounce(target)` | Returns the units it names to their owners' hands. |
+| `c:freeze(target)` | Freezes the units it names: each loses its next attack or position switch, and thaws at the end of the turn it could have made one. A hero is never Frozen. |
 | `c:buff(target, attack, health)` | Gives the units it names +attack/+health (health defaults to attack). |
 | `c:give(target, keyword)` | Gives the units it names a keyword: Taunt, Rush, Charge, First Strike, Poisonous, Lifesteal, Reborn, Divine Shield, Trample, Windfury, Ranged or Flying. |
 | `c:draw(n)` | You draw n cards (1 by default). |

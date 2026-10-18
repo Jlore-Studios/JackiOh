@@ -23,7 +23,7 @@ use jackioh_engine::{
     AttackTarget, CardDef, CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, Position,
     UnitView, active_brittle_count, active_units_of, animated_kind_of, armor_of, attack_restriction,
     attacks_per_turn, backrow_is_public, cannot_attack, card_keywords, card_type_of_face, credit_lapsing,
-    effective_life, find_def, has_keyword, hero_armor_of, is_temporary_card, owed_mana_of, own_cost, pierces,
+    effective_life, find_def, frozen_next_turn, has_keyword, hero_armor_of, is_temporary_card, owed_mana_of, own_cost, pierces,
     query_cost, reset_instance, stats_with_buffs, subsystems, takes_strike_back, unit_has, unit_view,
 };
 use serde::{Deserialize, Serialize};
@@ -64,9 +64,13 @@ fn brittle_share(card: &CardInstance, w: &EvalWeights) -> f64 {
     }
 }
 
-/// Whether the unit may attack at all: no "Can't attack" keyword, and no E35 status bars it.
+/// Whether the unit may attack at all: no "Can't attack" keyword, no E35 status bars it, and it is
+/// not Frozen through its controller's next turn (R1174000: one that thaws at this turn's cleanup
+/// swings next turn).
 fn can_swing(state: &GameState, unit: &CardInstance, view: &UnitView) -> bool {
-    !has_keyword(&view.keywords, KeywordKind::CantAttack) && !cannot_attack(state, unit)
+    !has_keyword(&view.keywords, KeywordKind::CantAttack)
+        && !cannot_attack(state, unit)
+        && !frozen_next_turn(state, unit)
 }
 
 /// R49: a unit with Deft, read through the layers, in Defense Position. Its switch to Attack spends
@@ -340,7 +344,8 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 
 /// The face damage `attacker`'s board could deal the other hero next turn: units with attack > 0,
 /// position ATK (with `w.deft_defense_attacks`, a Deft unit in Defense Position too, which can switch
-/// to Attack and still swing, R49), no "Can't attack" and no E35 status barring attacks, sorted
+/// to Attack and still swing, R49), no "Can't attack", no E35 status barring attacks and not Frozen
+/// through that turn (R1174000, `can_swing`), sorted
 /// ascending by attack. Taunt units on the defending side soak up the smallest attackers they bind
 /// first, one §4.4 hit at a time (`damage_past_taunts`). Each remaining attacker's attack goes through
 /// `subsystems::projected_hero_damage` (armor, which a Pierce hit skips (R346), and the Anti-oneshot

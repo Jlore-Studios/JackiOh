@@ -118,6 +118,7 @@ pub mod faces;
 pub mod feng_shui;
 pub mod fixtures;
 pub mod flashback;
+pub mod freeze;
 pub mod fuse;
 pub mod fuse_random;
 pub mod fuse_registry;

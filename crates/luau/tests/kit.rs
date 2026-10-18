@@ -605,6 +605,41 @@ fn r915003_a_target_with_nothing_to_choose_asks_nothing_and_its_verbs_do_nothing
 }
 
 // ---------------------------------------------------------------------------------------------
+// R1174000: c:freeze, the kit's Freeze
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn r1174000_c_freeze_freezes_every_enemy_unit_its_words_name_and_no_hero() {
+    kit(|| {
+        let card = custom_unit(
+            "custom-freeze",
+            "return Card {\n  cry = function(c, n)\n    c:freeze(\"all enemies\")\n  end,\n}\n",
+        );
+        assert_eq!(check_custom_source(&card), Vec::new(), "the freezer loads");
+        let mut s = scenario(json!({
+            "custom": [card],
+            "p1": { "hand": ["custom-freeze", FILLER], "field": [TARGET] },
+            "p2": { "hand": [FILLER], "field": [TARGET, SHIELDED] },
+        }));
+        s.play("custom-freeze", json!({ "zone": 2 }));
+        assert_eq!(failures(&s), Vec::<String>::new());
+        let turn = s.state().turn;
+        for lane in [1, 2] {
+            let unit = s.unit(P2, lane).expect("an enemy unit");
+            assert_eq!(unit.frozen, Some(turn + 1), "the enemy unit in lane {lane} is Frozen");
+        }
+        let friendly = s.unit(P1, 1).expect("the friendly unit");
+        assert_eq!(friendly.frozen, None, "a friendly unit is not");
+        let marks = s
+            .last_events()
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Marked { .. }))
+            .count();
+        assert_eq!(marks, 2, "two Units are Frozen, and the enemy hero is not");
+    });
+}
+
+// ---------------------------------------------------------------------------------------------
 // R915004: a script that fails does nothing, and says so
 // ---------------------------------------------------------------------------------------------
 

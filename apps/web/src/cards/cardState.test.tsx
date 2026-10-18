@@ -28,7 +28,7 @@ import { liveFace } from "../game/faces.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
 import { baseView, card, emptySide, faceUpBackrow, fusedDef, unit } from "../test/fixtures.ts";
 import { CardFace } from "./CardFace.tsx";
-import { BERSERK_WORDS, PILE_WORDS, animatedWords, brittleWords, distinctEnchantments, enchantmentWords, stateBadges } from "./cardState.ts";
+import { BERSERK_WORDS, FROZEN_GLYPH, FROZEN_WORDS, PILE_WORDS, animatedWords, brittleWords, distinctEnchantments, enchantmentWords, stateBadges } from "./cardState.ts";
 import { markColorOf, markWords } from "./marks.ts";
 import { closeInspect } from "./inspect/store.ts";
 import { HOVER_DELAY_MS, LONG_PRESS_MS } from "./inspect/constants.ts";
@@ -586,6 +586,35 @@ describe("B5 E35 Berserk: a sword badge on the unit, in its glossary row's words
     // The same words announce it (`marked`, "berserk"), in the crimson the engine's "red" names.
     expect(markWords("berserk").text).toBe(BERSERK_WORDS);
     expect(markColorOf("red")).toBe("red");
+  });
+});
+
+/* ----------------------------------------------------------------------------- R1174000 Frozen */
+
+describe("R1174000 Frozen: a frost badge on a Frozen unit, on either seat", () => {
+  it("R1174000 a Frozen unit wears the snowflake badge and says why in its preview; a thawed one wears none", () => {
+    vi.useFakeTimers();
+    renderBoard(
+      baseView({
+        you: emptySide("p1", {
+          units: [unit("p1", { instanceId: "u1", defId: "core-008", frozen: true }), unit("p1", { instanceId: "u2", defId: "core-008" }), null, null, null],
+        }),
+        opponent: emptySide("p2", {
+          units: [unit("p2", { instanceId: "u3", defId: "core-008", frozen: true }), null, null, null, null],
+        }),
+      }),
+    );
+    const root = screen.getByTestId(testid.card("u1"));
+    const badge = root.querySelector('.cf-state[data-state="frozen"]');
+    expect(badge?.getAttribute("aria-label")).toBe(FROZEN_WORDS);
+    expect(badge?.textContent).toBe(FROZEN_GLYPH);
+    expect(screen.getByTestId(testid.card("u2")).querySelector('.cf-state[data-state="frozen"]')).toBeNull();
+    expect(screen.getByTestId(testid.card("u3")).querySelector('.cf-state[data-state="frozen"]')).not.toBeNull();
+    const preview = hover(root);
+    expect(within(preview).getByTestId(INSPECT_STATES).textContent).toBe(FROZEN_GLYPH + FROZEN_WORDS);
+    // The same words announce the freeze and its thaw (`marked`, "frozen"), in the engine's "cyan".
+    expect(markWords("frozen").text).toBe(FROZEN_WORDS);
+    expect(markColorOf("cyan")).toBe("cyan");
   });
 });
 

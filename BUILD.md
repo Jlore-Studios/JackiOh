@@ -164,6 +164,7 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `DAMAGE_REDIRECT_CAP` | `2 × BACKROW_ZONES`: redirects of one hit before it lands where it stands | §6.3 Redirect, R460 |
 | `FUSED_ID_CAP` | 120: characters a fused id may spell out before it becomes a digest | R468 |
 | `BERSERK_MARK` | the mark a Berserk unit carries, red | §6.1, R437; C+ #19.5 |
+| `FROZEN_MARK` | the mark a Unit is announced Frozen and thawed with, cyan | §6.1, §6.3 Freeze, R437, R1174000 |
 | `POOL_TOKEN_TAGS` | Fruit: the tags whose pools hold their tokens | §5.1, R382 |
 | `PARAM_DEFAULT_STEP` | 1 for a number up to 5, 2 for 6 to 12, a quarter (rounded) above 12, where a `params` entry names no `step` | §5, §6.3, R386 |
 | `CALL_TO_CHAOS_RADIANT_EFFECTS` | 3: the different effects a Radiant Call to Chaos of any edition resolves | §8 #95, §8.7 C+ #73, §8.8 M #95, R423 |

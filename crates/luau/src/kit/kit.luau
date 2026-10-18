@@ -435,6 +435,13 @@ function C.bounce(c: any, what: any)
 	end, "c:bounce", 2)
 end
 
+-- R1174000: Freeze the units it names; a hero in a group is passed by, as heroes are never Frozen.
+function C.freeze(c: any, what: any)
+	each_one(c, resolve(c, what, 2), function(spec)
+		emit(c, J.freeze({ target = spec }))
+	end, "c:freeze", 2)
+end
+
 function C.buff(c: any, what: any, attack: number, health: number?)
 	local a = whole(attack, "c:buff")
 	local h = whole(if health == nil then attack else health, "c:buff")

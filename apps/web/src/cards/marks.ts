@@ -18,7 +18,7 @@
 import type { CardMark, CardView, GameEvent } from "@jackioh/shared";
 
 import type { FxPreset } from "../fx/types.ts";
-import { BERSERK_WORDS } from "./cardState.ts";
+import { BERSERK_WORDS, FROZEN_WORDS } from "./cardState.ts";
 
 /** The colours one mark is drawn in: a bright rim, a pale core, a deep glow; and its particles. */
 export type MarkPalette = {
@@ -72,6 +72,8 @@ export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
   steal: { name: "Steal", text: "Marked: stolen at the start of its marker's next turn" },
   // B5 E35: the mark a unit going Berserk is announced with (C+ #19.2, C+ #19.5).
   berserk: { name: "Berserk", text: BERSERK_WORDS },
+  // R1174000: the mark a freeze lands and thaws with (`FROZEN_MARK`), in the frost the engine's "cyan" names.
+  frozen: { name: "Frozen", text: FROZEN_WORDS },
   // Classic #20 The Power to Punish: the unit marked for death wears #50's aura, in red (R437).
   destroy: { name: "Destroy", text: "Marked: destroyed at the start of its marker's next turn" },
   // Allure (R963, R1045000): Meditative #39.5 Jade Beauty's every enemy Unit, #50 K-Pop Fanatic's one enemy permanent.
