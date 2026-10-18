@@ -4326,6 +4326,9 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "1224": {
+      "suggestion": true
+    },
     "1225": {
       "asks": [
         "c:6251103608"
