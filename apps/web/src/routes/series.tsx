@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState, type ReactElement } from "rea
 import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import { useSecondsUntil } from "../auth/cooldown.ts";
 import { t } from "../i18n/i18n.ts";
+import { pageWake } from "../game/net.ts";
 import { ApiRequestError, forfeitSeries, getSeries, pickSeriesDeck, type SeriesView } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { BackLink, followInApp } from "./nav.tsx";
@@ -158,26 +159,36 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
   useEffect(() => {
     if (over) return;
     let cancelled = false;
+    // A wake while a read is out would only repeat it; each effect run counts its own.
+    let reading = false;
     const read = (): void => {
       // Let an action's fresher response win over a poll sent before its write.
-      if (inFlight.current) return;
+      if (inFlight.current || reading) return;
+      reading = true;
       sent.current += 1;
       const request = sent.current;
-      attempt(() => getSeries(token, seriesId)).then(
-        (view) => {
-          if (cancelled) return;
-          accept(view, request);
-          setLoadError(null);
-        },
-        (cause: unknown) => {
-          if (!cancelled) setLoadError(messageOf(cause));
-        },
-      );
+      attempt(() => getSeries(token, seriesId))
+        .then(
+          (view) => {
+            if (cancelled) return;
+            accept(view, request);
+            setLoadError(null);
+          },
+          (cause: unknown) => {
+            if (!cancelled) setLoadError(messageOf(cause));
+          },
+        )
+        .finally(() => {
+          reading = false;
+        });
     };
     read();
     const handle = setInterval(read, SERIES_POLL_SECONDS * MS_PER_SECOND);
+    // A throttled tab's interval stalls; waking it reads the series again at once.
+    const stopWake = pageWake(read);
     return () => {
       cancelled = true;
+      stopWake();
       clearInterval(handle);
     };
   }, [token, seriesId, over, accept]);

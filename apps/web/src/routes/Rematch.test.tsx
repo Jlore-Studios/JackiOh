@@ -312,6 +312,62 @@ describe("RematchWatcher", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("a woken page reads the rematch status again at once, with no second read while one is pending", async () => {
+    const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
+    const show = (state: "hidden" | "visible"): void => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+      document.dispatchEvent(new Event("visibilitychange"));
+    };
+    /** Lets an answered read reach its handler and clear its in-flight mark. */
+    const settled = async (): Promise<void> => {
+      await act(async () => {
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      });
+    };
+    try {
+      let answer: (status: RematchStatusResponse) => void = () => undefined;
+      vi.mocked(rematchStatus).mockReturnValueOnce(
+        new Promise<RematchStatusResponse>((resolve) => {
+          answer = resolve;
+        }),
+      );
+      render(<RematchWatcher token={TOKEN} matchId={MATCH_ID} />);
+      expect(vi.mocked(rematchStatus)).toHaveBeenCalledTimes(1);
+
+      // The mount's read is still out: neither kind of wake adds one.
+      show("visible");
+      window.dispatchEvent(new Event("online"));
+      await settled();
+      expect(vi.mocked(rematchStatus)).toHaveBeenCalledTimes(1);
+
+      answer(statusOf());
+      await settled();
+      expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+
+      // A hidden tab reads nothing; the network coming back reads once.
+      show("hidden");
+      await settled();
+      expect(vi.mocked(rematchStatus)).toHaveBeenCalledTimes(1);
+      window.dispatchEvent(new Event("online"));
+      await waitFor(() => {
+        expect(vi.mocked(rematchStatus)).toHaveBeenCalledTimes(2);
+      });
+      await settled();
+      expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+
+      // The offers met while the tab slept: the wake finds the game and takes the seat there.
+      vi.mocked(rematchStatus).mockResolvedValue(statusOf({ youOffered: 1, opponentOffer: 1, matchId: "match-9" }));
+      show("visible");
+      await waitFor(() => {
+        expect(vi.mocked(navigate)).toHaveBeenCalledWith(paths.match("match-9"));
+      });
+      expect(vi.mocked(rematchStatus)).toHaveBeenCalledTimes(3);
+    } finally {
+      if (visibility === undefined) Reflect.deleteProperty(document, "visibilityState");
+      else Object.defineProperty(document, "visibilityState", visibility);
+    }
+  });
+
   it("stays quiet while the seats disagree", async () => {
     render(<RematchWatcher token={TOKEN} matchId={MATCH_ID} />);
 
