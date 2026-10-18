@@ -17,9 +17,36 @@
 # limit (about 1,500 games an hour on four vCPUs); the local runner (`jackioh-selfplay-local`,
 # bot/machine/README.md, The local runner) runs its shards one after another for as long as it
 # needs. The export is slow on purpose, and ci-duration.yml does not watch it.
+#
+# The learn lane (learn.yml, #1012) calls it as a reusable workflow (`workflow_call`, the same inputs,
+# `count` off: its retrain folds the positions itself), and its artifacts are that run's.
 name: selfplay
 
 on:
+  workflow_call:
+    inputs:
+      games:
+        type: string
+        required: true
+      seed:
+        type: string
+        required: true
+      shards:
+        type: string
+        required: false
+        default: "20"
+      runner:
+        type: string
+        required: false
+        default: ubuntu-latest
+      retention:
+        type: string
+        required: false
+        default: "30"
+      count:
+        type: boolean
+        required: false
+        default: true
   workflow_dispatch:
     inputs:
       games:
@@ -44,6 +71,10 @@ on:
         description: "Days to keep the logs (at most 90)"
         required: true
         default: "90"
+      count:
+        description: "Fold the export's positions for its counts (the summary)"
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -110,6 +141,9 @@ jobs:
     timeout-minutes: ${{ inputs.runner == 'ubuntu-latest' && 350 || 4320 }}
     strategy:
       fail-fast: false
+      # GitHub's free plan runs 20 hosted jobs at once for the whole organization: an export takes
+      # at most 12 of them, so CI and the bots' pull requests keep 8 while it plays.
+      max-parallel: 12
       matrix:
         range: ${{ fromJSON(needs.plan.outputs.shards) }}
     steps:
@@ -142,6 +176,8 @@ jobs:
   count:
     name: count the export
     needs: shard
+    # A caller may leave the counts to its own positions pass.
+    if: ${{ inputs.count }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:

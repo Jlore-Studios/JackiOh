@@ -16,6 +16,7 @@ pub mod duos;
 pub mod evaluate;
 pub mod evaluate_v020;
 pub mod features;
+pub mod learned;
 pub mod match_refusal;
 pub mod observe;
 pub mod observe_instance_data;

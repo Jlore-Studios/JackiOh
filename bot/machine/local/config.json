@@ -15,5 +15,6 @@
   "sampleSeconds": 5,
   "containerCpus": 6,
   "containerMemory": "6g",
-  "throttledCpus": 0.5
+  "throttledCpus": 0.5,
+  "yieldingContainers": []
 }
