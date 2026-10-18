@@ -54,6 +54,7 @@ export const MULLIGAN_CLOCK_MS = 45000;
 export const PING_RATE_LIMIT = 5;
 export const PING_RATE_WINDOW_MS = 3000;
 export const PING_SHOW_MS = 2500;
+export const PLAYER_STATS_BYTES_MAX = 65536;
 export const PLAY_TELEMETRY_RETENTION_DAYS = 365;
 export const PRESENCE_HEARTBEAT_MS = 45000;
 export const PRESENCE_TTL_MS = 90000;

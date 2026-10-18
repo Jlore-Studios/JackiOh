@@ -332,6 +332,7 @@ export const AI_EVAL = {
   handPerCost: 0.3,
   handCostCap: 6,
   radiantInHand: 0.5,    // added per own Radiant hand card
+  radiantFaceShare: 0.5, // two Unit faces: this share of the entering face's worth over the printed base face's (#1143)
   opponentHandCost: 2,   // an unseen hand card is valued as if it cost this
   backrowBase: 1.5,      // a readable backrow card: backrowBase + backrowPerCost × queryCost(def)
   backrowPerCost: 0.8,
@@ -492,7 +493,9 @@ export function faceThreat(state: GameState, attacker: PlayerId): number;
     + Σ over `p`'s backrow of `backrowBase + backrowPerCost × queryCost(def)` for cards readable by
     `seat`, or `enemyFaceDown` for each that is not
     + hand: for `seat`, Σ over hand cards of `handCard + handPerCost × min(queryCost(def), handCostCap)`
-    (+ `radiantInHand` if Radiant); for `opp`, `hand.length × (handCard + handPerCost × opponentHandCost)`
+    (+ `radiantInHand` if Radiant; + `radiantFaceShare` × (the stat and keyword worth of the face it will
+    enter with, buffs and tuning included, − its printed base face's) when both its faces are Units,
+    #1143); for `opp`, `hand.length × (handCard + handPerCost × opponentHandCost)`
     + `libraryCard × min(library.length, libraryComfort)`.
   - `threat` = `faceThreat(state, opp) >= hero(seat).health ? AI_EVAL.lethalThreat : threatPerDamage × faceThreat(state, opp)`,
     times `answerableThreat` when `next` is `"seat"`.
