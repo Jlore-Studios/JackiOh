@@ -4380,6 +4380,14 @@
         }
       }
     },
+    "1207": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-18T05:53:59Z",
+      "issue": 1169,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "148": {
       "asks": [
         "c:5974504575"
