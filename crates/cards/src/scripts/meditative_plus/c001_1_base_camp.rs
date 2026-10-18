@@ -115,10 +115,19 @@ mod tests {
             s.play(ID, json!({}));
             let summit = summits(&s, P1)[0].clone();
             assert_eq!(play_cost(s.state(), &summit), 2, "R842: it costs its level");
-            let hand_before = s.hand(P1).len();
+            let hand_before = s.hand(P1).len() as i32;
+            let ascent_2_draws = param_value(
+                s.state(),
+                None,
+                "draw",
+                ParamValueOptions {
+                    def_id: Some(REACH_THE_SUMMIT.into()),
+                    radiant: Some(false),
+                },
+            );
             s.play(&summit, json!({}));
-            // Ascent 2: draw 2 (R841); the card itself left the hand.
-            assert_eq!(s.hand(P1).len(), hand_before - 1 + 2);
+            // Ascent 2: draw (R841); the card itself left the hand.
+            assert_eq!(s.hand(P1).len() as i32, hand_before - 1 + ascent_2_draws);
         }
 
         #[test]

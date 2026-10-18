@@ -359,7 +359,7 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
 
     cy.playByName("Tempo Timmy", { zone: { side: "you", row: "units", lane: 1 } });
 
-    toP1Turn(3);
+    toP1Turn(4);
     cy.fieldCardByName("Tempo Timmy").then((timmy) => {
       select("Silly Silas");
 

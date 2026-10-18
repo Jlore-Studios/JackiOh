@@ -479,6 +479,30 @@ pub fn luck_of(state: &GameState, player: PlayerId) -> i32 {
     sum
 }
 
+/// R1180003 (Meditative+ #7 Life Mage's Radiant face): how many times as large a heal of this
+/// player's hero or Units is — `HEAL_MULTIPLIER` for each "healing is twice as effective" text acting
+/// on their side (§3.2: the units on top of their piles and the face-up backrow), multiplied, so two
+/// Radiant Life Mages make it 4. 1 with none, so every heal is what it was (D9). The opponent's texts
+/// never reach this player's heals.
+pub fn heal_multiplier_of(state: &GameState, player: PlayerId) -> i32 {
+    let mut multiple: i32 = 1;
+    for card in crate::damage::acting_texts_of(state, player) {
+        for text in crate::scripts::texts_of(state, &card) {
+            if text.flags.doubles_healing == Some(true) {
+                multiple = multiple.saturating_mul(crate::config::HEAL_MULTIPLIER);
+            }
+        }
+    }
+    multiple
+}
+
+/// R1180000, R1180001: the player's Spell Damage, the one sum §4.4 step 0 raises each hit of their
+/// Spells by (`damage::spell_damage_of`): their Units' Spell Damage, the Spell Damage auras that reach
+/// them and their "Spell Damage +N this turn". What a card's text or the view reads.
+pub fn player_spell_damage(state: &GameState, player: PlayerId) -> i32 {
+    crate::damage::spell_damage_of(state, player)
+}
+
 /// R662: the permanents of this player's that #85 Unlicensed Experimentation could fuse a played
 /// permanent onto — every one acting for them but `except` (the trap itself) that is not Immutable
 /// (R23). The types are the trap's to match when a permanent is played.

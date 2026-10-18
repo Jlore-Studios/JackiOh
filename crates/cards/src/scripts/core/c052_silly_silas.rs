@@ -1,5 +1,5 @@
 //! #52 Silly Silas (SPEC §8.3, §3.1's rotation-topology ruling, §3.2, §6.3 Rotate; R4, R11, R12,
-//! R14, R33, R78, R81, R88). Unit 4/4 → 8/8, Human, cost 3, Legendary. BUILD wave 3 (rotation).
+//! R14, R33, R78, R81, R88). Unit 4/4 → 8/8, Human, cost 4, Legendary. BUILD wave 3 (rotation).
 //!   Base:    "Cry: choose left or right; rotate every card on the field one step around its ring
 //!            (3.1); cards crossing sides change control"
 //!   Radiant: "Cards that would move to the opponent are bounced to their controller's hand costing 0

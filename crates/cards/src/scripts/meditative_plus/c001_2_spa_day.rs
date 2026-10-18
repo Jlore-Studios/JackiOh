@@ -67,15 +67,35 @@ mod tests {
         s.state().players.p1.hero.health
     }
 
+    /// M #30.1 Love Bomb's heal on the face given, read through its declared number.
+    fn bomb_heal(s: &Scenario, radiant: bool) -> i32 {
+        param_value(
+            s.state(),
+            None,
+            "heal",
+            ParamValueOptions {
+                def_id: Some(LOVE_BOMB.into()),
+                radiant: Some(radiant),
+            },
+        )
+    }
+
+    /// The turn's draw takes a Love Bomb, cast on draw (M #30.1), and its chain the other (R58), then
+    /// finds the deck empty: two heals and the first fatigue (§2.4).
+    fn after_the_bombs_are_drawn(s: &Scenario, before: i32, radiant: bool) -> i32 {
+        before + 2 * bomb_heal(s, radiant) - FATIGUE_DAMAGE(1)
+    }
+
     mod base {
         use super::*;
 
         #[test]
         fn heals_your_hero_25_past_30_with_no_cap() {
             let mut s = spa("spa-day", false, json!([FILLER, FILLER]));
-            assert_eq!(health(&s), 30);
+            let before = health(&s);
+            assert_eq!(before, HERO_HEALTH, "the hero starts full");
             s.play(ID, json!({}));
-            assert_eq!(health(&s), 55, "§6.3: a hero's heal has no cap");
+            assert_eq!(health(&s), before + 25, "§6.3: a hero's heal has no cap");
         }
 
         #[test]
@@ -88,9 +108,7 @@ mod tests {
             let before = health(&s);
             s.end_turn();
             s.end_turn();
-            // The turn's draw takes a Love Bomb, cast on draw (M #30.1), and its chain the other (R58),
-            // then finds the deck empty: two heals of 7 and the first fatigue's 1.
-            assert_eq!(health(&s), before + 7 + 7 - 1);
+            assert_eq!(health(&s), after_the_bombs_are_drawn(&s, before, false));
         }
 
         #[test]
@@ -107,7 +125,7 @@ mod tests {
             let heal = crate::upgrade_number(&mut s, ID, "heal");
             let count = crate::upgrade_number(&mut s, ID, "bombs");
             s.play(ID, json!({}));
-            assert_eq!(health(&s), 30 + heal);
+            assert_eq!(health(&s), HERO_HEALTH + heal);
             assert_eq!(bombs(&s).len() as i32, count);
         }
     }
@@ -119,14 +137,14 @@ mod tests {
         fn heals_50_and_shuffles_2_radiant_love_bombs_healing_14_each() {
             let mut s = spa("spa-day-radiant", true, json!([]));
             s.play(ID, json!({}));
-            assert_eq!(health(&s), 80);
+            assert_eq!(health(&s), HERO_HEALTH + 50);
             let made = bombs(&s);
             assert_eq!(made.len(), 2);
             assert!(made.iter().all(|bomb| bomb.radiant));
             let before = health(&s);
             s.end_turn();
             s.end_turn();
-            assert_eq!(health(&s), before + 14 + 14 - 1);
+            assert_eq!(health(&s), after_the_bombs_are_drawn(&s, before, true));
         }
     }
 }

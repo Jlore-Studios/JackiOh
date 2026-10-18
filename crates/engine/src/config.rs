@@ -763,6 +763,11 @@ pub const MONEY_MACHINE_ODDS: &[RollOdds] = &[
     },
 ];
 
+/// R1180003 (Meditative+ #7 Life Mage's Radiant face, issue #1180): "healing is twice as effective" —
+/// what each such text acting on a player's side multiplies a heal of their hero or Units by. Several
+/// multiply: two Radiant Life Mages make a heal four times as large.
+pub const HEAL_MULTIPLIER: i32 = 2;
+
 /// R962: the Jade Counter a summon of Jade Beauty (Meditative #39.5) is crossed at (ME-JADE).
 pub const JADE_BEAUTY_AT: i32 = 5;
 /// R962: the Jade Counter every Jade Beauty its player controls is made Radiant at (ME-JADE).
@@ -813,14 +818,14 @@ pub const CHAOS_PLUS_DEGRADES: i32 = 3;
 // Meditative #95 Call to Chaos (Meditative Edition) (SPEC §8.8 row 95, R423): its table's numbers.
 /// §8.8 row 95 entry 1: "add 2 copies of it to your hand" (R1242).
 pub const CHAOS_MED_FUSE_COPIES: i32 = 2;
-/// §8.8 row 95 entry 2: "Add 3 random CN cards to your hand".
-pub const CHAOS_MED_CN_CARDS: i32 = 3;
+/// §8.8 row 95 entry 2: "Add 2 random CN cards to your hand" (3 through patch v0.3.7b, #1149).
+pub const CHAOS_MED_CN_CARDS: i32 = 2;
 /// §8.8 row 95 entry 3: "Add 2 random Prime cards to your hand" (R1421).
 pub const CHAOS_MED_PRIME_CARDS: i32 = 2;
-/// §8.8 row 95 entry 4: "Your hero gains 8 Armor".
-pub const CHAOS_MED_HERO_ARMOR: i32 = 8;
-/// §8.8 row 95 entry 4: "and you heal it 8".
-pub const CHAOS_MED_HEAL: i32 = 8;
+/// §8.8 row 95 entry 4: "Your hero gains 6 Armor" (8 through patch v0.3.7b, #1149).
+pub const CHAOS_MED_HERO_ARMOR: i32 = 6;
+/// §8.8 row 95 entry 4: "and you heal it 6" (8 through patch v0.3.7b, #1149).
+pub const CHAOS_MED_HEAL: i32 = 6;
 /// §8.8 row 95 entry 6: "Summon 3 random Acclaimed cards" (R1243).
 pub const CHAOS_MED_ACCLAIMED: i32 = 3;
 /// §8.8 row 95 entry 7: "then Nerf each card bounced", once each (R1244).
