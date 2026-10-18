@@ -57,5 +57,8 @@ and variables → Actions). A pull request opened with a run's own token would s
 the secret a passing run stops at its artifact (`promotion.patch`), which a person can push.
 
 To run it now: `gh workflow run learn.yml` (`-f games=… -f runner=jackioh-selfplay-local -f
-screen=800`). To stop it, disable the workflow (`gh workflow disable learn.yml`); to refuse a
-promotion, close its pull request.
+screen=800`). `-f export_run=<run id>` plays no export and retrains on that earlier run's, kept 30
+days: a change to the fit or the search is measured on the same games without five hours of
+self-play. The gate's deals are the candidate tree's (R850001): a changed tree plays new ones. To
+stop it, disable the workflow (`gh workflow disable learn.yml`); to refuse a promotion, close its
+pull request.
