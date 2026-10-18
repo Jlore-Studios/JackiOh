@@ -22,7 +22,7 @@
 //!                      is §4.2 steps 1 to 5 whole, step 4's trap window included, so an `attack`
 //!                      can come back with a prompt open and the combat still owed on `state.work`
 //!                      (R113): the answer action finishes it, exactly as it finishes a Cry.
-//!   switchPosition   → `combat.switchPosition`, listed by `combat.whyCannotSwitch` (§4.1, R20, R49)
+//!   switchPosition   → `combat.switchPosition`, listed by `combat.whyCannotSwitch` (§4.1, R20, R49; a Frozen unit's refused, R1174000)
 //!   activate         → `subsystems/activate.activateAbility`, listed by `activateActionsFor` (B3.2,
 //!                      R384); a Heroic Power's power is one of its abilities (R752)
 //!   activatePower    → the alias of `activate` every old log carries, naming the rolled power (R752)

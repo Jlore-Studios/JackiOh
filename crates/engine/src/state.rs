@@ -257,6 +257,15 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub berserk: Option<bool>,
+    /// R1174000: this Unit is Frozen (`effects::statuses::freeze`), so it can neither declare an attack
+    /// nor switch its own position (`combat::has_exertion_in`). The number is its thaw, stamped as the
+    /// freeze lands (`freeze::thaw_turn`): it thaws at the cleanup of its controller's first turn
+    /// numbered this or later. A status, never text: R78's reset takes it off with the card leaving
+    /// the field, and a Vanilla removes it. Absent on every other card, so a game nothing freezes in
+    /// serializes and hashes as before (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub frozen: Option<i32>,
     /// R429: how many times this card has been played, the play under way included — counted at §10.5
     /// step 4 (casts too, R70; a countered play never reaches it) for a card whose script asks
     /// (`StaticFlags.countsPlays`, #31 KY's Math Equation) and absent on every other card. Kept in every
@@ -1863,6 +1872,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         brittle: None,
         enchantments: None,
         berserk: None,
+        frozen: None,
         times_played: None,
         flashback_spent: None,
         chinese: None,

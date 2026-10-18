@@ -1307,7 +1307,7 @@ describe("the glossary (B26)", () => {
   // so a keyword only the base form has is neither printed on the radiant face nor explained by it.
   it("B26 a radiant face's glossary follows what it prints, never a base keyword its cell replaced (core-056, core-025)", () => {
     const jilliax = glossaryFor(faceOf("core-056", true)).map((entry) => entry.id);
-    expect(jilliax).toEqual(["Rush", "Taunt", "Lifesteal", "Divine Shield", "Reborn", "Equip"]);
+    expect(jilliax).toEqual(["Rush", "Taunt", "Lifesteal", "Divine Shield", "Reborn", "Embiggened", "Equip"]);
     expect(jilliax).not.toContain("Charge");
     expect(jilliax).not.toContain("Indestructible");
     expect(glossaryFor(faceOf("core-025", true)).map((entry) => entry.id)).toEqual(["Armor", "Reborn"]);
