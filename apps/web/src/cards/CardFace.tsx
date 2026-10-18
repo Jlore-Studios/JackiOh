@@ -38,6 +38,13 @@
 // R1382: a card with every tribal tag (R1424, Meditative #87) prints "All Tribes" on its tags line in
 // place of the five, its other tags after it; its tags themselves are unchanged.
 //
+// R1177001: a token says so on every face. Its type line reads "Token Unit", "Token Spell" (衍生物单位
+// on a Chinese face), so no crowded tag row can cut the word, and the tag row prints no Token chip.
+// Where the type line hides (a face under FACE_TEXT_MIN_HEIGHT_PX, a full-art face) the face wears
+// a token mark instead (`.cf-token`, TokenMark), which the board minion wears too (MinionFace.tsx).
+// A token that prints a rarity (R503) keeps that rarity's frame and gem beside the label. Glitch
+// stays blank (R674): its every word is corrupted, so it wears neither.
+//
 // Issue #814: a Summit face given its Ascent level prints its header and only the next Ascent
 // line (shortText.ts). Issue #1017: a face whose text runs past the measured limit prints a short
 // form, or clamps with "…", and never shrinks its art for it (`faceText`); its whole text stands on
@@ -123,6 +130,46 @@ export function tuningLine(face: FaceModel): string {
     ...tuning.added.map((keyword) => `+${keywordWords(face, keyword)}`),
     ...tuning.removed.map((kind) => `${MINUS}${kindWords(face, kind)}`),
   ].join(" ");
+}
+
+/** R1177001: the word a token's type line and mark print. */
+export const TOKEN_WORD = "Token";
+
+/** R1177001: the token mark's one letter, on a face too narrow for the word (cards.css). */
+export const TOKEN_GLYPH = "T";
+
+/** R1177001: the token mark's one character on a Chinese face, the word's first. */
+const CHINESE_TOKEN_GLYPH = [...CHINESE_TERMS.tags.Token][0] ?? CHINESE_TERMS.tags.Token;
+
+/**
+ * R1177001: the type line in the face's words: the card type, after "Token" on a token ("Token
+ * Field Spell"; on a Chinese face the table's words, 衍生物 then the type, R1301).
+ */
+export function typeLine(face: FaceModel): string {
+  if (face.chinese === true) {
+    const type = CHINESE_TERMS.types[face.type];
+    return face.token === true ? `${CHINESE_TERMS.tags.Token}${type}` : type;
+  }
+  return face.token === true ? `${TOKEN_WORD} ${face.type}` : face.type;
+}
+
+/**
+ * R1177001: the token mark, where a face shows no type line (a small face, a full-art face, the
+ * board minion): the word, or its one letter on the narrowest faces, with "Token" as its name.
+ */
+export function TokenMark({ face }: { face: FaceModel }): ReactElement | null {
+  if (face.token !== true || isGlitch(face.defId)) return null;
+  const chinese = face.chinese === true;
+  return (
+    <span className="cf-token" data-token="true" role="img" aria-label={t("Token")} title={t("Token")}>
+      <span className="cf-token-word" aria-hidden="true">
+        {chinese ? CHINESE_TERMS.tags.Token : TOKEN_WORD}
+      </span>
+      <span className="cf-token-glyph" aria-hidden="true">
+        {chinese ? CHINESE_TOKEN_GLYPH : TOKEN_GLYPH}
+      </span>
+    </span>
+  );
 }
 
 /** A frame tag in the face's words (R1301). */
@@ -333,9 +380,9 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
 
         <CardStates face={face} />
 
-        {!fullArt && (
-          <span className="card-type">{glitch ? GLITCH_WORDS.type : face.chinese === true ? CHINESE_TERMS.types[face.type] : face.type}</span>
-        )}
+        {!fullArt && <span className="card-type">{glitch ? GLITCH_WORDS.type : typeLine(face)}</span>}
+
+        <TokenMark face={face} />
 
         {full && !fullArt && (
           <span
@@ -369,7 +416,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
           </span>
         )}
 
-        {full && !fullArt && !glitch && face.tags.length > 0 && (
+        {full && !fullArt && !glitch && frameTags(face.tags).length > 0 && (
           <span className="cf-tags">
             {frameTags(face.tags).map((tag) => (
               <span key={tag} className="cf-tag" data-tag={tag}>

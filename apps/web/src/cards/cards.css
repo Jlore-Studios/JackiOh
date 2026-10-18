@@ -915,6 +915,66 @@
   text-overflow: ellipsis;
 }
 
+/* ------------------------------------------------------------- R1177001: the token mark --- */
+
+/* A token says so on every face. Where its type line shows ("Token Unit": a full or compact face of
+   150px and more) the mark stays hidden; it shows where that line does not: a small face (below), a
+   full-art face and the board minion. A dark plate like the tag chips with a token-grey ring, read by
+   its word rather than its colour; on the narrowest faces it is the word's first letter, as the
+   Vanilla stamp becomes a "V", and the hover preview spells the type line out. Sizes are the face's
+   container units with a pixel floor, as the state rail's are. Nothing here moves, so reduced motion
+   needs nothing. */
+.cf .cf-token {
+  position: absolute;
+  z-index: 3;
+  bottom: 1.5cqh;
+  left: 50%;
+  display: none;
+  height: max(10px, 11cqmin);
+  padding: 0 max(2.5px, 1.6cqmin);
+  translate: -50% 0;
+  border-radius: max(3px, 2cqmin);
+  background: linear-gradient(180deg, #3a3326, #1d1911);
+  box-shadow:
+    inset 0 0 0 max(1px, 0.5cqmin) var(--rarity-token),
+    0 1px 2px rgb(0 0 0 / 0.6);
+  color: #f3e7c3;
+  font-size: max(7px, 7.5cqmin);
+  font-weight: 800;
+  line-height: max(10px, 11cqmin);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.cf .cf-token-glyph {
+  display: none;
+}
+
+.cf[data-full-art="true"] .cf-token {
+  display: block;
+}
+
+/* The board minion: a tab hung from its name plate, between the attack and health gems, where
+   Hearthstone prints a minion's tribe. Under the gems, so an Armor plate beside health stays whole. */
+.cf[data-layout="minion"] .cf-token {
+  z-index: 2;
+  bottom: calc(var(--mf-stat, 26cqh) - 0.5cqh - max(10px, 11cqmin) + max(2px, 1cqmin));
+  display: block;
+}
+
+/* A phone's minion and the smallest hand cards: the letter alone. 72 is the Vanilla stamp's width. */
+@container cardface (max-width: 72px) {
+  .cf .cf-token-word {
+    display: none;
+  }
+
+  .cf .cf-token-glyph {
+    display: inline;
+  }
+}
+
 /* ---------------------------------------------------------------------------- sword, drop --- */
 
 .cf .cf-stats {
@@ -1127,6 +1187,12 @@
 
   .cf:not([data-layout="minion"]) .cf-num {
     font-size: 16cqw;
+  }
+
+  /* R1177001: the type line is gone, so a token's mark takes its place at the foot, between a
+     Unit's numbers and under anything else's name. */
+  .cf:not([data-layout="minion"]) .cf-token {
+    display: block;
   }
 }
 

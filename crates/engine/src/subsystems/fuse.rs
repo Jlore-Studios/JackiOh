@@ -180,10 +180,17 @@ fn union_keywords(keywords: &[Keyword]) -> Vec<Keyword> {
     out
 }
 
-fn union_tags(defs: &[CardDef]) -> Vec<Tag> {
+/// R102's literal union of the ingredients' tags, but for `Token` (R1177000): the fused card carries
+/// that tag only when it is a token itself (`token`, every ingredient one), so a token fused onto a
+/// real card makes a real card, which neither wears the Token label nor counts as a token by its tag
+/// (`CardDef::is_token`).
+fn union_tags(defs: &[CardDef], token: bool) -> Vec<Tag> {
     let mut seen: IndexSet<Tag> = IndexSet::new();
     for def in defs {
         for tag in &def.tags {
+            if *tag == Tag::Token && !token {
+                continue;
+            }
             seen.insert(*tag);
         }
     }
@@ -502,6 +509,10 @@ fn build_def(
     };
     let refs = union_refs(defs);
     let loc = summed_loc(defs);
+    // A fusion is a real card unless every ingredient was a token, so fusing a token onto a unit
+    // gives a result that no longer ceases to exist off the field (R11), and that sheds the Token tag
+    // (R1177000).
+    let token = defs.iter().all(|def| def.token);
     CardDef {
         // Transient defs are not catalog cards, so no random pool or Discover can reach one (§5.1);
         // the index is the id itself, which keeps `def_by_index` unambiguous.
@@ -517,12 +528,10 @@ fn build_def(
             .or_else(|| defs.first().map(|def| def.set))
             .unwrap_or(SetName::Core),
         type_: fused_type(defs, target_def),
-        tags: union_tags(defs),
+        tags: union_tags(defs, token),
         rarity: rarest_of(defs),
         printed_rarity: None,
-        // A fusion is a real card unless every ingredient was a token, so fusing a token onto a unit
-        // gives a result that no longer ceases to exist off the field (R11).
-        token: defs.iter().all(|def| def.token),
+        token,
         // R470: a kept X-cost or embiggen card that keeps its cost keeps that printed form.
         cost: kept_cost
             .and_then(|kept| kept.form)

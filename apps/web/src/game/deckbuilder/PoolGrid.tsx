@@ -106,6 +106,8 @@ export function placeWords(place: PoolPlace): string | null {
 /**
  * The pool card's accessible name: "Bigot, Unit, (2) Cost, Common, in Control, unavailable. Show details" (R432).
  * A read-only card (the almanac) has no place and no ownership: "Bigot, Unit, (2) Cost, Common. Show details".
+ * A token that prints a rarity (R503) is named by both, as its face shows both (R1177001):
+ * "Top Loser, Unit, (2) Cost, Token, printed Legendary. Show details".
  */
 export function poolCardLabel(
   def: CardDef,
@@ -115,7 +117,11 @@ export function poolCardLabel(
 ): string {
   // The type and rarity in the card frame's own words (cards/chinese.ts, R1303).
   const terms = CARD_TABLES[getLocale()]?.terms;
-  const parts = [readerName(def), terms?.types[def.type] ?? def.type, t(costText(def.cost)), terms?.rarities[def.rarity] ?? def.rarity];
+  const rarity = terms?.rarities[def.rarity] ?? def.rarity;
+  const printed = def.printedRarity;
+  const rarityWords =
+    printed === undefined ? rarity : t("{rarity}, printed {printed}", { rarity, printed: terms?.rarities[printed] ?? printed });
+  const parts = [readerName(def), terms?.types[def.type] ?? def.type, t(costText(def.cost)), rarityWords];
   if (fresh) parts.push(t("new"));
   if (place === "deck") parts.push(t("in this deck"));
   else if (place !== null) parts.push(t("in {deck}, unavailable", { deck: place.name }));

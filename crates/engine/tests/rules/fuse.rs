@@ -156,10 +156,43 @@ fn field_trap_played() -> CardDef {
     def("field-trap-played", 1512, "Field Trap", json!({ "cost": 1 }))
 }
 
+/// R1177000: two tokens, each with `token: true`, rarity Token and the Token tag, as every catalog
+/// token has (§7); the first is a Felinor too, so the tag union's other tags stay observable.
+fn token_unit() -> CardDef {
+    def(
+        "token-unit",
+        1513,
+        "Unit",
+        json!({
+            "tags": ["Felinor", "Token"],
+            "rarity": "Token",
+            "token": true,
+            "base": { "attack": 1, "health": 1, "keywords": [], "text": "" },
+            "radiant": { "attack": 2, "health": 2, "keywords": [], "text": "" },
+        }),
+    )
+}
+fn token_unit_b() -> CardDef {
+    def(
+        "token-unit-b",
+        1514,
+        "Unit",
+        json!({
+            "tags": ["Token"],
+            "rarity": "Token",
+            "token": true,
+            "base": { "attack": 2, "health": 2, "keywords": [], "text": "" },
+            "radiant": { "attack": 4, "health": 4, "keywords": [], "text": "" },
+        }),
+    )
+}
+
 fn defs() -> Vec<CardDef> {
     vec![
         ingredient_a(),
         ingredient_b(),
+        token_unit(),
+        token_unit_b(),
         pricey(),
         x_unit(),
         embiggen_unit(),
@@ -1129,5 +1162,74 @@ mod fuse_traps_and_craft_a_card_r77_m3_t7 {
         assert!(fuse_fresh(&mut lone, json!({ "ingredients": [only], "toHand": "p1" })).is_none());
         assert!(fuse_fresh(&mut lone, json!({ "ingredients": [only, pair] })).is_none());
         assert!(lone.transient_defs.is_empty());
+    }
+}
+
+// R1177000: the Token tag goes with the token flag.
+
+mod r1177000_a_fused_card_wears_the_token_tag_only_when_it_is_a_token {
+    use super::*;
+
+    /// The fused definition's tags, sorted.
+    fn tags_of(def: &CardDef) -> Vec<String> {
+        let mut tags: Vec<String> = def.tags.iter().map(|tag| tag.as_str().to_string()).collect();
+        tags.sort();
+        tags
+    }
+
+    /// The three signals a definition carries, which agree on every card (§5, §7).
+    fn signals(def: &CardDef) -> (bool, bool, bool) {
+        (
+            def.token,
+            def.rarity == Rarity::Token,
+            def.tags.contains(&Tag::Token),
+        )
+    }
+
+    #[test]
+    fn r1177000_a_token_fused_onto_a_real_card_makes_a_real_card_that_drops_the_token_tag_and_keeps_the_rest()
+    {
+        let mut state = game("fuse-token-onto-card");
+        let target = put(&mut state, &ingredient_a().id, slot(P1, Row::Units, 1), json!({})); // Human, Rare
+        let food = put(&mut state, &token_unit().id, slot(P1, Row::Units, 2), json!({})); // Felinor, Token
+
+        let result = must(
+            fuse_fresh(
+                &mut state,
+                json!({ "ingredients": [target, food], "target": target }),
+            ),
+            "a fusion",
+        );
+        let fused = def_of(Some(&state), &result.def_id).clone();
+
+        // R102: not every ingredient was a token, so the fusion is a real card, the rarest
+        // ingredient's rarity; R1177000: the Token tag goes with it, every other tag stays united.
+        assert!(!fused.token);
+        assert_eq!(fused.rarity, Rarity::Rare);
+        assert_eq!(tags_of(&fused), vec!["Felinor", "Human"]);
+        assert!(!fused.is_token());
+        assert_eq!(signals(&fused), (false, false, false));
+    }
+
+    #[test]
+    fn r1177000_tokens_fused_together_make_a_token_that_keeps_the_token_tag() {
+        let mut state = game("fuse-token-onto-token");
+        let target = put(&mut state, &token_unit().id, slot(P1, Row::Units, 1), json!({}));
+        let food = put(&mut state, &token_unit_b().id, slot(P1, Row::Units, 2), json!({}));
+
+        let result = must(
+            fuse_fresh(
+                &mut state,
+                json!({ "ingredients": [target, food], "target": target }),
+            ),
+            "a fusion",
+        );
+        let fused = def_of(Some(&state), &result.def_id).clone();
+
+        assert!(fused.token);
+        assert_eq!(fused.rarity, Rarity::Token);
+        assert_eq!(tags_of(&fused), vec!["Felinor", "Token"]);
+        assert!(fused.is_token());
+        assert_eq!(signals(&fused), (true, true, true));
     }
 }

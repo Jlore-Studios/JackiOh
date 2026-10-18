@@ -324,6 +324,48 @@ mod tests {
             expect_still_armed(&s);
         }
 
+        /// R1177000: a token fused with a real card is a real card (R102's `token`, every ingredient
+        /// a token), and it no longer keeps the Token tag that held the trap off it, so the
+        /// opponent's play of one sets the trap off as any real permanent's does.
+        #[test]
+        fn r1177000_r61_a_token_fused_with_a_real_card_is_a_real_card_whose_play_sets_it_off() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "active": "p2",
+                "p1": { "backrow": [armed(false)], "field": [TIMMY] },
+                "p2": { "hand": [STOCKPILE] },
+            }));
+            // A Rush Token and Mr. Vanilla fused into p2's hand, as Craft a Card fuses (R77).
+            let mut events: Vec<GameEvent> = vec![];
+            let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+            let fused = {
+                let state = s.state_mut();
+                let ingredients: Vec<CardInstance> = [RUSH_TOKEN, MR_VANILLA]
+                    .iter()
+                    .map(|def_id| new_instance(&mut *state, def_id, P2, Zone::Gone { player: P2 }))
+                    .collect();
+                let mut sink = EngineSink::new(state, &mut events, &mut rng);
+                subsystems::fuse(
+                    &mut sink,
+                    subsystems::FuseArgs {
+                        ingredients,
+                        to_hand: Some(P2),
+                        ..subsystems::FuseArgs::default()
+                    },
+                )
+            }
+            .expect("the fused card");
+            s.state_mut().rng_cursor = rng.cursor();
+            let def = def_of(Some(s.state()), &fused.def_id).clone();
+            assert!(!def.token && !def.tags.contains(&Tag::Token) && !def.is_token());
+
+            s.play(&fused.id, json!({ "zone": 1 }));
+
+            assert_eq!(count_of(&s, GameEventType::TrapFired), 1);
+            assert_eq!(count_of(&s, GameEventType::Fused), 1);
+            s.expect_in_zone(&fused, "gone");
+        }
+
         #[test]
         fn r61_recruit_never_sets_it_off_the_units_arrive_by_summoned_and_the_spell_is_no_permanent() {
             crate::register_all();

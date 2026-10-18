@@ -5237,6 +5237,79 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
     }
 }
 
+/// SPEC §7, read at compile time (`include_str!`, no I/O at run time: CLAUDE.md rule 4). Unlike the
+/// transcriptions above this is the note itself on purpose: the test below asks that every token
+/// the catalog holds, of any set, has a row in §7's table, so a token added without one fails
+/// whichever set brings it.
+const TOKENS_NOTE: &str = include_str!("../../../../spec/07-tokens.md");
+
+/// The `(Token, Index)` cells of §7's token table, row by row: the lines after its header row and
+/// its rule, up to the first line that is not a row.
+fn section_7_rows() -> Vec<(String, String)> {
+    let mut lines = TOKENS_NOTE
+        .lines()
+        .skip_while(|line| !line.starts_with("| Token | Index |"))
+        .skip(2);
+    let mut rows: Vec<(String, String)> = Vec::new();
+    for line in lines.by_ref() {
+        if !line.starts_with("| ") {
+            break;
+        }
+        let cells: Vec<&str> = line.split('|').map(str::trim).collect();
+        if let (Some(name), Some(index)) = (cells.get(1), cells.get(2)) {
+            rows.push(((*name).to_string(), (*index).to_string()));
+        }
+    }
+    rows
+}
+
+mod r1177001_a_token_is_one_by_all_four_signals_spec_5_7 {
+    use super::*;
+
+    #[test]
+    fn r1177001_every_token_has_token_true_rarity_token_the_token_tag_and_a_section_7_row_and_no_card_has_any()
+     {
+        let rows = section_7_rows();
+        assert!(rows.len() >= 80, "§7's table reads as {} rows", rows.len());
+        let mut wrong: Vec<String> = Vec::new();
+        for entry in entries() {
+            let signals = [
+                ("token: true", entry.token),
+                ("rarity Token", entry.rarity == Rarity::Token),
+                ("the Token tag", entry.tags.contains(&Tag::Token)),
+                (
+                    "a §7 row",
+                    rows.iter()
+                        .any(|(name, index)| *name == entry.name && *index == entry.index),
+                ),
+            ];
+            // `token` is the one the rules read (R11, R102); the label (R1177001) and every other
+            // signal must agree with it.
+            for (signal, has) in signals {
+                if has != entry.token {
+                    let verdict = if has { "has" } else { "lacks" };
+                    wrong.push(format!(
+                        "{} ({} #{}) {verdict} {signal}",
+                        entry.id, entry.name, entry.index
+                    ));
+                }
+            }
+        }
+        assert_eq!(wrong, Vec::<String>::new(), "the four token signals disagree");
+        // And every row names a token the catalog holds.
+        let orphans: Vec<String> = rows
+            .iter()
+            .filter(|(name, index)| {
+                !entries()
+                    .into_iter()
+                    .any(|entry| entry.token && entry.name == *name && entry.index == *index)
+            })
+            .map(|(name, index)| format!("{name} ({index})"))
+            .collect();
+        assert_eq!(orphans, Vec::<String>::new(), "§7 rows with no token");
+    }
+}
+
 mod faces_that_change_more_than_text_b2_7_e40 {
     use super::*;
 

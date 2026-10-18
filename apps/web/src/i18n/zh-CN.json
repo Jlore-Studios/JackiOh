@@ -146,6 +146,7 @@
   "Mythic": "神话",
   "Token": "衍生物",
   "not deckable": "不可加入卡组",
+  "{rarity}, printed {printed}": "{rarity}，印为{printed}",
   "Sign in": "登录",
   "Reset password": "重置密码",
   "Invite code": "邀请码",

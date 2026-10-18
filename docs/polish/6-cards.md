@@ -432,11 +432,13 @@ span.cf[data-layout="full"][data-card-type][data-rarity?][data-name-tier][data-t
     span.cf-art-frame > CardArt              shape: Unit portrait, Spell window, Field Spell arch, Trap/Field Trap notched
     span.card-name                           the name as ONE text node; inline style --cf-fit only
     span.cf-gem[data-rarity]                 absent for Token and unknown rarity
-    span.card-type                           the CardType string
+    span.card-type                           the CardType string, after "Token" on a token ("Token Unit", R1177001)
+    span.cf-token[data-token][role=img]      tokens only (R1177001): span.cf-token-word "Token" + span.cf-token-glyph "T";
+                                             hidden while the type line shows, shown on a small or full-art face
     span.card-text[data-clamped?]            inline style --cf-fit only
       span.cf-text-base                      RulesText(text.base)
       span.cf-text-radiant                   RulesText(text.radiant), only when non-null
-    span.cf-tags > span.cf-tag[data-tag]     one per tag (Token included)
+    span.cf-tags > span.cf-tag[data-tag]     one per tag but Token, which the type line carries (R1177001)
     span.cf-stats                            Units with stats only
       span.cf-atk[data-face-attack][data-tone]   sword icon + number
       span.cf-hp[data-face-health][data-tone]    drop icon + number
@@ -446,9 +448,11 @@ span.cf[data-layout="full"][data-card-type][data-rarity?][data-name-tier][data-t
   them while it is off, and `none` for everything else. The CSS never animates under
   `prefers-reduced-motion: reduce`.
 - **`layout="compact"`** (a face-up backrow card) renders cost, art, name, rarity gem and
-  `.card-type`, but no `.card-text`, tags or stats.
+  `.card-type` (and a token's `.cf-token`), but no `.card-text`, tags or stats.
 - **Container query.** `@container cardface (max-height: 149px)` hides `.card-text`, `.cf-tags`
-  and `.card-type`. The 149 mirrors `FACE_TEXT_MIN_HEIGHT_PX`. The text stays in the DOM.
+  and `.card-type`, and shows a token's `.cf-token` at the foot in the type line's place
+  (R1177001); at 72px wide or less the mark is its letter. The 149 mirrors `FACE_TEXT_MIN_HEIGHT_PX`.
+  The text stays in the DOM.
 - **Sizing.** `.cf` sits in normal flow: `position: relative; height: 100%; aspect-ratio: 5 / 7;
   max-width: 100%; margin-inline: auto`. It sets `pointer-events: none`. Everything inside is
   positioned against `.cf-scale` in `cqh`/`cqw`, so the card scales as one piece. Font sizes are
@@ -465,6 +469,7 @@ span.cf[data-layout="minion"][data-card-type][data-rarity?][data-foil][data-radi
     span.cf-portrait > CardArt shape="oval"  (ring coloured by rarity; .cf-crest for Legendary/Mythic)
     span.cost-gem[data-cost][data-tone]      small, top left
     span.card-name                           name plate under the portrait, one text node
+    span.cf-token[data-token]                tokens only (R1177001): a tab under the name plate, between the gems
     span.stats
       span.stat.stat-attack[data-attack][data-tone]                      {attack}
       span.stat.stat-health[data-health][data-max-health][data-tone]     {health}<span class="cf-max">/{maxHealth}</span>
@@ -921,8 +926,8 @@ The deck builder does the same for its own buttons by scoping every button rule 
   - `.cf-art-frame > .cf-art`;
   - `.card-name`, holding the name as a single text node;
   - `.cf-gem[data-rarity]`, absent for Token and unknown rarity;
-  - `.card-type` with the type;
-  - one `.cf-tag[data-tag]` per tag;
+  - `.card-type` with the type, "Token" before it on a token (R1177001);
+  - one `.cf-tag[data-tag]` per tag, Token aside;
   - `.card-text`, empty when the card has no text;
   - for Units only, `.cf-atk[data-face-attack][data-tone]` and
     `.cf-hp[data-face-health][data-tone]`.
