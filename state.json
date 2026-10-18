@@ -18137,6 +18137,12 @@
         "number": 1170,
         "title": "Architecture: require a local test module for every card script",
         "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-18T04:18:04Z",
+        "number": 1193,
+        "title": "Patch v0.3.X: a random deck dealt to a player holds at least two Traps or Field Traps",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
