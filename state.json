@@ -9748,8 +9748,10 @@
     "what": "revise #1231 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-18T14:59:17Z",
-    "notes": [],
+    "at": "2026-10-18T15:06:04Z",
+    "notes": [
+      "started a night run, as a lane was free: #1226 (medium) is queued to build, for `claude-2`: build on `claude-2` (claude, `sonnet`, medium); review on `claude-2` (claude, `opus`, strong)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
