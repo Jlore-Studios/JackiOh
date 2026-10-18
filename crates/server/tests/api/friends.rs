@@ -804,7 +804,7 @@ mod b47_status {
     }
 
     #[tokio::test]
-    async fn b47_b50_a_friend_in_a_ranked_match_is_in_match_and_not_watchable() {
+    async fn b47_b50_a_friend_in_a_ranked_match_is_in_match_and_watchable() {
         let app = empty_test_app().await;
         let ada = account(&app, 1, "Ada").await;
         let bea = account(&app, 2, "Bea").await;
@@ -817,7 +817,7 @@ mod b47_status {
         let friend = friend_entry(&lists(&app, &ada).await, &bea.id);
         assert_eq!(friend["status"], "inMatch", "{friend}");
         assert_eq!(friend["matchId"], json!(match_id), "{friend}");
-        assert_eq!(friend["watchable"], json!(false), "{friend}");
+        assert_eq!(friend["watchable"], json!(true), "{friend}");
     }
 
     #[tokio::test]

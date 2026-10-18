@@ -94,7 +94,7 @@ export function SpectatorSwitch(): ReactElement | null {
         />
       </label>
       <p className="settings-hint" id={hintId}>
-        {t("Friends can watch your unranked online games from your seat, {seconds} seconds behind. Ranked games are never watched.", {
+        {t("Friends can watch your online games from your seat, {seconds} seconds behind.", {
           seconds: String(Math.round(SPECTATE_DELAY_MS / MS_PER_SECOND)),
         })}
       </p>
