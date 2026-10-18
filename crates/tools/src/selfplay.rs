@@ -10,7 +10,9 @@
 //! byte-identical for the same base and games whatever `RAYON_NUM_THREADS` says (R1006001). Games are
 //! played and written in chunks, so a long export keeps what it has played; each chunk, and any game
 //! slower than a minute, is named on stderr. A turn that takes more than `SELFPLAY_TURN_ACTIONS`
-//! actions (an endless combo) ends its game without a result (R1006005).
+//! actions (an endless combo) ends its game without a result (R1006005), and so does a decision
+//! whose search runs a board to one of the engine's settle caps, at the cap's first panic (§10.3,
+//! R1006007).
 //!
 //! A base that names a training gate's hold-out deals (`promote::is_gate_seed_base`, R850001) or
 //! the improve lane's dev set (`improve-dev`, the screens' deals) is refused, so no screen ever plays
@@ -106,6 +108,7 @@ fn setups(base: &str, from: i32, games: i32) -> Vec<ArenaGame> {
                 labels: ("self".to_string(), "self".to_string()),
                 paired: false,
                 turn_actions: Some(SELFPLAY_TURN_ACTIONS),
+                stop_unsettled: true,
             }
         })
         .collect()
@@ -298,6 +301,7 @@ mod tests {
             outcome.thrown
         );
         assert!(outcome.turns <= 2, "it ended in its first turn");
+        assert!(game.stop_unsettled, "R1006007");
         let line = game_of(outcome, jackioh_cards::catalog_version(), "test");
         assert_eq!(
             crate::positions::fold_game(
@@ -308,6 +312,48 @@ mod tests {
             ),
             Err(crate::positions::Dropped::NoResult)
         );
+    }
+
+    /// R1006007: watched work gives its value, past any panic it catches that is not a settle cap's,
+    /// and its watcher stops waiting at a cap's first panic, caught, while the work would run on.
+    #[test]
+    fn r1006007_the_watcher_stops_waiting_at_a_settle_caps_first_panic() {
+        use crate::arena::watch_unsettled;
+        use std::panic::catch_unwind;
+        assert_eq!(watch_unsettled(|| 7), Some(7));
+        assert_eq!(
+            watch_unsettled(|| catch_unwind(|| panic!("an endTurn's opponent draw threw")).is_err()),
+            Some(true),
+            "another panic is the work's own"
+        );
+        let (release, wait) = std::sync::mpsc::channel::<()>();
+        let watched = watch_unsettled(move || {
+            let _ = catch_unwind(|| panic!("the resolution loop did not settle in 3 passes (§10.3)"));
+            // The search would go on and reach the loop again; this work waits for the test instead.
+            let _ = wait.recv();
+            7
+        });
+        assert_eq!(watched, None);
+        drop(release);
+    }
+
+    /// R1006007: each of the engine's settle caps panics with the words the hook listens for.
+    #[test]
+    fn r1006007_every_settle_cap_panics_with_the_counted_words() {
+        let sources = [
+            include_str!("../../engine/src/triggers.rs"),
+            include_str!("../../engine/src/state_check.rs"),
+            include_str!("../../engine/src/effects/combat.rs"),
+        ];
+        let caps: Vec<&str> = sources
+            .iter()
+            .flat_map(|source| source.lines())
+            .filter(|line| line.contains("panic!(") && line.contains("passes"))
+            .collect();
+        assert!(caps.len() >= 4, "{caps:?}");
+        for cap in caps {
+            assert!(cap.contains(crate::arena::UNSETTLED_PANIC), "{cap}");
+        }
     }
 
     #[test]

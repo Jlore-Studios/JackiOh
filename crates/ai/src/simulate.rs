@@ -563,12 +563,14 @@ fn card_signature(card: &CardInstance) -> String {
 
 /// What changes how an active unit plays beyond its id, damage, buffs, exertion and position: its
 /// definition and Radiant face, a Vanilla, its stats and keywords through the layers (§10.4), its stat
-/// and armor overrides, a spent Divine Shield, its counters and enchantments, and its memory and
-/// tuning (`rides_signature`, #898).
+/// and armor overrides, a spent Divine Shield, its counters and enchantments, its memory and tuning
+/// (`rides_signature`, #898), and its freeze's thaw (R1174000), written only when it is Frozen so a
+/// position with no Frozen unit signs as before.
 fn unit_play_signature(state: &GameState, unit: &CardInstance) -> String {
     let view = unit_view(state, unit);
+    let frozen = unit.frozen.map(|thaw| format!(":f{thaw}")).unwrap_or_default();
     format!(
-        "{}{}{}:{}/{}/{}/{}:{:?}:{:?}/{:?}:{}:{:?}:{:?}{}",
+        "{}{}{}:{}/{}/{}/{}:{:?}:{:?}/{:?}:{}:{:?}:{:?}{}{frozen}",
         unit.def_id,
         if unit.radiant { "*" } else { "" },
         if unit.vanilla { "~" } else { "" },

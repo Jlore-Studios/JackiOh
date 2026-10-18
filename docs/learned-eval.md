@@ -267,6 +267,23 @@ correction changed the chosen action at about one search decision in four (561 o
 positions a game apart better than lines a move apart. Half of it won +0.064 [+0.024, +0.105] on the
 same deals, so a finalist takes `LEARNED_CORRECTION_SHARE` of the correction (R1012001).
 
+Each row below is 1,600 paired games against the hand eval, 3 finalists. `explore-466` is where the
+variants were chosen; `confirm-466` holds 800 deals none of them was chosen on. The TD network on
+`explore-466` is the prototype (two relabels); on `confirm-466` it is `fit.py`'s (D4, #1190),
+quantized as the lane quantizes it.
+
+| network (36,000 games) | share | `explore-466` | `confirm-466` |
+|---|---|---|---|
+| outcomes | 1 | +0.010 [−0.032, +0.052] | |
+| outcomes | 0.75 | +0.022 [−0.020, +0.064] | |
+| outcomes | 0.5 | +0.064 [+0.024, +0.105] | |
+| outcomes | 0.25 | +0.086 [+0.046, +0.126] | |
+| TD(0.7) (D4) | 1 | +0.065 [+0.024, +0.106] | |
+| TD(0.7) | **0.5** | **+0.096 [+0.054, +0.138]** | **+0.076 [+0.036, +0.116]** |
+| TD(0.7) | 0.25 | | +0.049 [+0.012, +0.087] |
+
+Each game's p95 decision time is about 200 ms in every row.
+
 ### D7. Arithmetic, determinism and size
 
 The issue decides on integer inference (i8 weights, i32 sums, ReLU, shifts) so that native and WASM

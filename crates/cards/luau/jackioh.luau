@@ -278,6 +278,7 @@ tags: {Tag}?,
 notTags: {Tag}?,
 anyTags: {Tag}?,
 luckBased: boolean?,
+embiggen: boolean?,
 stats: AttackHealth?,
 rarity: (Rarity | {Rarity})?,
 set: (SetName | {SetName})?,
@@ -875,6 +876,10 @@ export type ForcedTarget = {
 instanceId: string,
 } | {
 spec: TargetSpec,
+}
+
+export type FreezeArgs = {
+target: TargetSpec,
 }
 
 export type FuseCardsArgs = {
@@ -2039,7 +2044,7 @@ to: TargetSpec,
 value: number,
 }
 
-export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Boss" | "Boss-X" | "Custom"
+export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Meditative+" | "Boss" | "Boss-X" | "Custom"
 
 export type SetNumberArgs = {
 target: TargetSpec?,
@@ -2219,7 +2224,7 @@ to: Position?,
 target: TargetSpec,
 }
 
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Token"
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Token"
 
 export type TakeExtraTurnArgs = {
 player: PlayerSpec?,
@@ -3575,6 +3580,14 @@ end
 
 function J.forced_attacks_on(args: ForcedAttacksOnArgs): EffectCall
 	return { verb = "forced_attacks_on", args = args :: any }
+end
+
+function J.freeze(args: FreezeArgs): EffectCall
+	return { verb = "freeze", args = args :: any }
+end
+
+function J.freeze_all(args: BoardScope): EffectCall
+	return { verb = "freeze_all", args = args :: any }
 end
 
 function J.fuse_cards(args: FuseCardsArgs): EffectCall

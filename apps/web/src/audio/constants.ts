@@ -85,6 +85,8 @@ export const BANNED_RULES_WORDS: readonly string[] = [
   "Immutable", "Indestructible", "Stack", "Echo", "Combo", "Discover", "Recruit", "Tribute",
   "Embiggen", "Radiant", "Armor", "Rush", "Charge", "Cry", "Deathrattle", "Battlecry", "mana",
   "damage", "summon", "exile", "fatigue", "backrow", "graveyard",
+  // R1175000: an embiggen card's text labels its dearer version Embiggened.
+  "Embiggened",
   // Patch v0.2.0's rules words (docs/classic-sets.md B3, B5), Degrade and Upgrade read as Nerf and Buff since
   // patch v0.3.4 (R1320).
   "Animated", "Activate", "Brittle", "Nerf", "Buff", "Spell Damage", "Immune to Spells", "Counter",
