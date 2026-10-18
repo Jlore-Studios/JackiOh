@@ -3709,6 +3709,7 @@
     "1181": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -3722,8 +3723,10 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "landed": "",
       "last_findings": [],
       "onto": "bot/issue-1173",
+      "parked_on": "bot/issue-1181",
       "part_of": 1173,
       "pending_request": false,
       "planned_at": "2026-10-18T17:13:15Z",
@@ -3731,6 +3734,7 @@
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
       "provider": "claude-1",
+      "question": "",
       "queued_at": "2026-10-18T16:40:14Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
