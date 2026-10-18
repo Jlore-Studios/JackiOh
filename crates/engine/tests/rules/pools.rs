@@ -437,3 +437,73 @@ mod r1080_stats_matches_the_printed_base_face_only {
         assert!(pool(json!({ "type": "Unit", "stats": { "attack": 2, "health": 2 } })).is_empty());
     }
 }
+
+/// R1178001: the embiggen pool (`embiggen`, Meditative+ #22 and #23) is the cards that print two prices
+mod r1178001_the_embiggen_pool_is_the_cards_that_print_two_prices {
+    use super::*;
+
+    fn embiggen_defs() -> Vec<CardDef> {
+        vec![
+            card(
+                "core-301",
+                "Core",
+                "301",
+                json!({ "cost": { "base": 2, "embiggen": 4 } }),
+            ),
+            card("core-302", "Core", "302", json!({ "cost": 2 })),
+            card("core-303", "Core", "303", json!({ "cost": "X" })),
+            card(
+                "classic-304",
+                "Classic",
+                "304",
+                json!({ "cost": { "base": 0, "embiggen": 1 } }),
+            ),
+            card(
+                "core-305",
+                "Core",
+                "305",
+                json!({ "tags": ["Token"], "rarity": "Token", "token": true, "cost": { "base": 1, "embiggen": 2 } }),
+            ),
+            card(
+                "meditativeplus-306",
+                "Meditative+",
+                "306",
+                json!({ "cost": { "base": 1, "embiggen": 2 } }),
+            ),
+        ]
+    }
+
+    #[test]
+    fn r1178001_embiggen_true_keeps_the_embiggen_cards_and_false_leaves_them_out() {
+        register_catalog(catalog_of(embiggen_defs()));
+        // Read off the printed cost: two prices, never an X or a single price. A token is in no
+        // pool that does not name tokens (§5.1), and a held set (R1420) in none that names no set.
+        assert_eq!(pool(json!({ "embiggen": true })), vec!["core-301", "classic-304"]);
+        assert_eq!(pool(json!({ "embiggen": false })), vec!["core-302", "core-303"]);
+        assert!(is_embiggen_card(&embiggen_defs()[0]));
+        assert!(!is_embiggen_card(&embiggen_defs()[2]));
+        // Beside `withTokens` the token joins; beside the set's name, or previewed, the held set does.
+        assert_eq!(
+            pool(json!({ "embiggen": true, "withTokens": true })),
+            vec!["core-301", "core-305", "classic-304"]
+        );
+        assert_eq!(
+            pool(json!({ "embiggen": true, "set": "Meditative+" })),
+            vec!["meditativeplus-306"]
+        );
+        let _preview = preview_sets(&[SetName::MeditativePlus]);
+        assert_eq!(
+            pool(json!({ "embiggen": true })),
+            vec!["core-301", "classic-304", "meditativeplus-306"]
+        );
+        // R65's out-of-play cost is still the normal price, so `cost` reads the cheaper one.
+        assert_eq!(pool(json!({ "embiggen": true, "cost": 0 })), vec!["classic-304"]);
+        // Unasked, the field filters nothing.
+        assert_eq!(pool(json!({})).len(), 5);
+        // And it serialises under its own name.
+        assert_eq!(
+            as_json(&q(json!({ "embiggen": true }))),
+            json!({ "embiggen": true })
+        );
+    }
+}

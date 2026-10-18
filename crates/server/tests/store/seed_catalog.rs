@@ -22,6 +22,19 @@ use jackioh_engine::{SHIPPED_SETS, SetName, Tag, set_ships};
 use jackioh_server::cli::seed_catalog::read_catalog;
 
 const REAL_CATALOG: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../cards/catalog.json");
+
+/// R1178000: a tag that only a held set's cards carry waits for that set's release migration
+/// (Meditative+'s Potion, #1187): until the set ships the latest check need not admit it, and only
+/// the entries of that set may carry it. Once the set ships the check must admit it like any tag.
+const AWAITING_RELEASE: &[(Tag, SetName)] = &[(Tag::Potion, SetName::MeditativePlus)];
+
+/// R1178000: the held set `tag` waits for (`AWAITING_RELEASE`), while that set has not shipped.
+fn awaits_release(tag: &str) -> Option<SetName> {
+    AWAITING_RELEASE
+        .iter()
+        .find(|(waiting, set)| waiting.as_str() == tag && !set_ships(*set))
+        .map(|(_, set)| *set)
+}
 const MIGRATIONS: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/migrations");
 
 /// The ASCII whitespace JS's `\s` matches in the migrations' text, skipped from `at`; how many.
@@ -297,7 +310,7 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
         let refused: Vec<&String> = carried.iter().filter(|tag| !tags.contains(tag)).collect();
         assert!(refused.is_empty(), "tags the schema would refuse: {refused:?}");
         // No stale name either: every tag the check admits is one the engine's `Tag` union names
-        // (the r1411 test below holds the two lists equal).
+        // (the r1411 test below holds the two lists equal, but for a tag awaiting its release).
         assert!(
             tags.iter()
                 .all(|tag| Tag::ALL.iter().any(|each| each.as_str() == tag)),
@@ -314,11 +327,13 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
         let (file, tags) = admitted_tags();
         assert_eq!(file, "0030_meditative_set.sql");
         assert!(tags.iter().any(|tag| tag == "Wincon"), "{tags:?}");
+        // R1178000: but for a tag that waits for its held set's release (Potion, #1187's migration).
         assert_eq!(
             tags,
             Tag::ALL
                 .iter()
                 .map(|tag| tag.as_str().to_owned())
+                .filter(|tag| awaits_release(tag).is_none())
                 .collect::<Vec<_>>(),
             "the check lists the engine's `Tag` union, in its order"
         );
@@ -326,10 +341,22 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
         let raw: IndexMap<String, Value> =
             serde_json::from_str(&std::fs::read_to_string(REAL_CATALOG).expect("the real catalog reads"))
                 .expect("the real catalog is a record");
+        // R1178000: a tag awaiting its release may be carried by its held set's entries alone.
         let refused: Vec<String> = raw
             .values()
-            .flat_map(|entry| entry["tags"].as_array().cloned().unwrap_or_default())
-            .filter_map(|tag| tag.as_str().map(str::to_owned))
+            .flat_map(|entry| {
+                let set = serde_json::from_value::<SetName>(entry["set"].clone()).ok();
+                entry["tags"]
+                    .as_array()
+                    .cloned()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter_map(move |tag| {
+                        let tag = tag.as_str()?.to_owned();
+                        let waits = awaits_release(&tag).is_some_and(|held| Some(held) == set);
+                        (!waits).then_some(tag)
+                    })
+            })
             .filter(|tag| !tags.contains(tag))
             .collect::<IndexSet<_>>()
             .into_iter()
@@ -556,5 +583,38 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
 
         restore_fixture_catalog(&admin).await;
         admin.close().await;
+    }
+}
+
+/// R1178000: the release migration's wait. A tag only a held set carries (Meditative+'s Potion) is
+/// in the engine's union before any migration admits it; it waits for the release that ships its set.
+mod r1178000_a_tag_only_a_held_set_carries_waits_for_its_release_migration {
+    use super::*;
+
+    #[tokio::test]
+    async fn r1178000_potion_is_the_engine_s_and_waits_for_the_meditative_plus_release_to_be_admitted() {
+        let (_, tags) = admitted_tags();
+        assert!(Tag::ALL.contains(&Tag::Potion));
+        if set_ships(SetName::MeditativePlus) {
+            assert!(tags.iter().any(|tag| tag == "Potion"), "{tags:?}");
+        } else {
+            assert_eq!(awaits_release("Potion"), Some(SetName::MeditativePlus));
+        }
+        assert_eq!(
+            awaits_release("Wincon"),
+            None,
+            "a shipped set's tag waits for nothing"
+        );
+        // No entry of a set that ships carries a tag that waits: the seed would fail on it.
+        let entries = read_catalog(REAL_CATALOG)
+            .await
+            .expect("the real catalog is read");
+        let waiting: Vec<&str> = entries
+            .iter()
+            .flat_map(|entry| entry.tags.iter())
+            .filter(|tag| awaits_release(tag).is_some())
+            .map(String::as_str)
+            .collect();
+        assert_eq!(waiting, Vec::<&str>::new());
     }
 }

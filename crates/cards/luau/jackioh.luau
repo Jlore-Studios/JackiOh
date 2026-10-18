@@ -278,6 +278,7 @@ tags: {Tag}?,
 notTags: {Tag}?,
 anyTags: {Tag}?,
 luckBased: boolean?,
+embiggen: boolean?,
 stats: AttackHealth?,
 rarity: (Rarity | {Rarity})?,
 set: (SetName | {SetName})?,
@@ -2039,7 +2040,7 @@ to: TargetSpec,
 value: number,
 }
 
-export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Boss" | "Boss-X" | "Custom"
+export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Meditative+" | "Boss" | "Boss-X" | "Custom"
 
 export type SetNumberArgs = {
 target: TargetSpec?,
@@ -2219,7 +2220,7 @@ to: Position?,
 target: TargetSpec,
 }
 
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Token"
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Token"
 
 export type TakeExtraTurnArgs = {
 player: PlayerSpec?,

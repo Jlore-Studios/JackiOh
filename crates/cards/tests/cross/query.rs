@@ -1002,3 +1002,43 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         );
     }
 }
+
+mod r1178001_the_embiggen_pool_meditative_plus_23_enormous_elderberry {
+    use super::*;
+    use jackioh_cards::query::embiggen_cards;
+    use jackioh_engine::{is_embiggen_card, set_ships};
+
+    #[test]
+    fn r1178001_the_embiggen_pool_is_the_eight_shipped_cards_with_two_prices() {
+        register();
+        // The query a card script writes, which names no set (R1420): Core #46 Suppressive Aura, #56
+        // Jilliax, #59 Unbiased Immigration and #84 Going Long, C+ #36 Conjure Bones, Meditative #21
+        // API Key Fishing, #46 Conjure Intellect and #81 Deadman's Hand. The Meditative+ set's own
+        // (#3, #4, #5, #19, #23) join when it ships.
+        assert_eq!(embiggen_cards(), q(json!({ "embiggen": true })));
+        let shipped = strings(&[
+            "core-046",
+            "core-056",
+            "core-059",
+            "core-084",
+            "classicplus-036",
+            "meditative-021",
+            "meditative-046",
+            "meditative-081",
+        ]);
+        if !set_ships(SetName::MeditativePlus) {
+            assert_eq!(ids(query(&embiggen_cards())), shipped);
+        }
+        let expected: Vec<String> = ids(CATALOG
+            .values()
+            .filter(|def| set_is_open(def.set) && !def.token && is_embiggen_card(def)));
+        assert_eq!(sorted(ids(query(&embiggen_cards()))), sorted(expected));
+        // `false` is every other card of the shipped sets.
+        let others = query(&q(json!({ "embiggen": false })));
+        assert!(others.iter().all(|def| !is_embiggen_card(def)));
+        assert_eq!(
+            others.len() + query(&embiggen_cards()).len(),
+            query(&q(json!({}))).len()
+        );
+    }
+}

@@ -8,6 +8,8 @@
  * Flagbearer), Prime (their Prime tokens, Classic+ #38.1 Solarius Prime and #46.1 Felinor
  * Flagbearer Prime) and Acclaimed (Classic #80 BOOM! Big Max and Classic+ #37 Wardrum); the
  * Meditative set adds Wincon (its #8 Reach the Summit and #20 Aestheticize the Game, which win the
- * game another way, R1420's set).
+ * game another way, R1420's set); the Meditative+ set adds Potion (its #11, #12 and #13 Living
+ * Potions and the potions its #16 Jazakus crafts, R1178000), which no rule reads and two pools
+ * name (M+ #14, #15).
  */
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Token";
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Token";

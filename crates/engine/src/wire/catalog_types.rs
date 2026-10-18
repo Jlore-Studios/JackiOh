@@ -166,7 +166,9 @@ string_union! {
     /// Flagbearer), Prime (their Prime tokens, Classic+ #38.1 Solarius Prime and #46.1 Felinor
     /// Flagbearer Prime) and Acclaimed (Classic #80 BOOM! Big Max and Classic+ #37 Wardrum); the
     /// Meditative set adds Wincon (its #8 Reach the Summit and #20 Aestheticize the Game, which win the
-    /// game another way, R1420's set).
+    /// game another way, R1420's set); the Meditative+ set adds Potion (its #11, #12 and #13 Living
+    /// Potions and the potions its #16 Jazakus crafts, R1178000), which no rule reads and two pools
+    /// name (M+ #14, #15).
     pub enum Tag {
         Human = "Human",
         Felinor = "Felinor",
@@ -184,6 +186,7 @@ string_union! {
         Prime = "Prime",
         Acclaimed = "Acclaimed",
         Wincon = "Wincon",
+        Potion = "Potion",
         Token = "Token",
     }
 }
@@ -224,14 +227,16 @@ string_union! {
 }
 
 string_union! {
-    /// §5: Core, Classic and Classic+ ship (R380); Meditative is in the catalog and ships with the
-    /// last part of its patch (R1420); Boss and Boss-X are reserved. Custom is a custom card's
-    /// (§12.1, R915000): never in the catalog and never shipped, so no pool or random deck finds one.
+    /// §5: Core, Classic, Classic+ (R380) and Meditative (v0.3.5, R1420) ship; Meditative+ is in the
+    /// catalog and ships with the last part of its patch (issue #1173, R1420, R1178000); Boss and
+    /// Boss-X are reserved. Custom is a custom card's (§12.1, R915000): never in the catalog and never
+    /// shipped, so no pool or random deck finds one.
     pub enum SetName {
         Core = "Core",
         Classic = "Classic",
         ClassicPlus = "Classic+",
         Meditative = "Meditative",
+        MeditativePlus = "Meditative+",
         Boss = "Boss",
         BossX = "Boss-X",
         Custom = "Custom",
@@ -250,11 +255,13 @@ pub const SHIPPED_SETS: [SetName; 4] = [
 
 /// Every set the catalog orders, shipped or not, in catalog order (B2.2): a set keeps its place
 /// when it ships, so a seeded pick over a pool replays the same before and after (R1420).
-pub const CATALOG_SETS: [SetName; 4] = [
+/// Meditative+ follows Meditative, held until its release (issue #1173, R1178000).
+pub const CATALOG_SETS: [SetName; 5] = [
     SetName::Core,
     SetName::Classic,
     SetName::ClassicPlus,
     SetName::Meditative,
+    SetName::MeditativePlus,
 ];
 
 /// R1420: whether a set ships, i.e. whether `SHIPPED_SETS` lists it.

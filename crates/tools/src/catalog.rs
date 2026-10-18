@@ -6,7 +6,7 @@
 //! sets and fields (docs/classic-sets.md B2, B3.4, E36, E40).
 //!
 //! This checks the shape and the census of the catalog, set by set (Core, Classic, Classic+,
-//! Meditative): that it holds every card and every token exactly once, that every enum value is in
+//! Meditative, Meditative+): that it holds every card and every token exactly once, that every enum value is in
 //! the union the engine's wire types declare, that stats sit on Units (and Animated backrow cards,
 //! B3.1) and nowhere else, that the rarity distribution each set prints is the one the file
 //! carries, and that the v0.2.0 fields (`printedRarity`, `params`, `loc`, a face's `type` and
@@ -190,6 +190,25 @@ fn sets() -> Vec<SetExpectation> {
                 ("Mythic", 6),
             ],
         },
+        // R1420, R1178000: the Meditative+ set (issue #1173, docs/meditative-plus-set.md MP2): 26 cards
+        // and the 4 tokens they define (#1.1 Base Camp and #1.2 Spa Day, the AI generated helpers of
+        // #1 Bob's Plan; #16.1 Jazakus Prime; #20.1 Lil' Kenny), the rarities the designer printed and
+        // #26 Scratch Pad's Mythic. It does not ship yet, so its entries are checked for their shape
+        // alone until the patch that lists it in SHIPPED_SETS (#1187).
+        SetExpectation {
+            set: "Meditative+",
+            segment: "meditativeplus",
+            cards: 26,
+            card_defined_tokens: texts(&["1.1", "1.2", "16.1", "20.1"]),
+            shared_tokens: Vec::new(),
+            rarities: &[
+                ("Common", 5),
+                ("Rare", 9),
+                ("Epic", 9),
+                ("Legendary", 1),
+                ("Mythic", 2),
+            ],
+        },
     ]
 }
 
@@ -204,33 +223,44 @@ fn expected_indices(set: &SetExpectation) -> Vec<String> {
 /// that drifts onto or off a card fails here (R278: Jlockeed is Core #13 and #14's and the three
 /// Classic+ Jlockeed cards'). TS's `Record<Tag, number>`: the `match` is exhaustive over the union.
 /// Each count is Core's, Classic's and Classic+'s, plus the Meditative set's
-/// (docs/meditative-set.md M2's census of its 132 entries), which count once it ships (R1420).
+/// (docs/meditative-set.md M2's census of its 132 entries) and the Meditative+ set's
+/// (docs/meditative-plus-set.md MP2's census of its 30), each of which counts once it ships (R1420).
 fn expected_tag_count(tag: Tag) -> usize {
     match tag {
-        Tag::Human => 38 + meditative(12),
+        // Meditative+ #7 Life Mage, #8 Arch Mage, #10 Medina Grifter, #16 Jazakus and #16.1 Jazakus Prime.
+        Tag::Human => 38 + meditative(12) + meditative_plus(5),
         Tag::Felinor => 11 + meditative(11),
-        Tag::Ky => 9 + meditative(6),
-        Tag::Cn => 7 + meditative(33),
+        // Meditative+ #20 KY's Competition, #20.1 Lil' Kenny and #25 KY's Intuition.
+        Tag::Ky => 9 + meditative(6) + meditative_plus(3),
+        // Meditative+ #21 Harmony Spirit.
+        Tag::Cn => 7 + meditative(33) + meditative_plus(1),
         // Meditative #4 Juicy Kumquat Melon and #55 Dragon Fruit; C+ #61 Bauble Bubble lost it in
-        // patch v0.3.10 (#831).
-        Tag::Fruit => 14 + meditative(2),
+        // patch v0.3.10 (#831). Meditative+ #23 Enormous Elderberry.
+        Tag::Fruit => 14 + meditative(2) + meditative_plus(1),
         // Meditative #95 Call to Chaos (Meditative Edition).
         Tag::CallToChaos => 2 + meditative(1),
-        Tag::Quickdraw => 5 + meditative(5),
-        // Meditative #87 Tatches the Totem (every tribal tag, R1424), #97 and #97.9.
-        Tag::Jlockeed => 6 + meditative(3),
-        Tag::Book => 14,
+        // Meditative+ #1 Bob's Plan.
+        Tag::Quickdraw => 5 + meditative(5) + meditative_plus(1),
+        // Meditative #87 Tatches the Totem (every tribal tag, R1424), #97 and #97.9; Meditative+ #4
+        // Supply Drop (the designer's "Jlockheed").
+        Tag::Jlockeed => 6 + meditative(3) + meditative_plus(1),
+        // Meditative+ #15 Book of Potions.
+        Tag::Book => 14 + meditative_plus(1),
         Tag::Pancake => 10,
-        Tag::Ai => 10,
+        // Meditative+ #1.1 Base Camp and #1.2 Spa Day, #1 Bob's Plan's AI generated helpers.
+        Tag::Ai => 10 + meditative_plus(2),
         Tag::Plague => 17 + meditative(2),
         // Meditative #45, #49 (patch v0.3.10, #831) and #91; their Primes #45.1, #49.1 and #91.1.
-        Tag::Catalyst => 2 + meditative(3),
-        Tag::Prime => 2 + meditative(3),
+        // Meditative+ #16 Jazakus and its #16.1 Jazakus Prime.
+        Tag::Catalyst => 2 + meditative(3) + meditative_plus(1),
+        Tag::Prime => 2 + meditative(3) + meditative_plus(1),
         // Meditative #49 and #49.1; #49.2 and #49.3 lost it in patch v0.3.10 (#831).
         Tag::Acclaimed => 2 + meditative(2),
         // Meditative #8 Reach the Summit and #20 Aestheticize the Game, the tag's only cards.
         Tag::Wincon => meditative(2),
-        Tag::Token => 50 + meditative(30),
+        // Meditative+ #11, #12 and #13, the Living Potions, the tag's only catalog cards (R1178000).
+        Tag::Potion => meditative_plus(3),
+        Tag::Token => 50 + meditative(30) + meditative_plus(4),
     }
 }
 
@@ -238,6 +268,15 @@ fn expected_tag_count(tag: Tag) -> usize {
 /// so the census holds on either side of the patch that lists it in `SHIPPED_SETS`.
 fn meditative(count: usize) -> usize {
     if set_ships(SetName::Meditative) { count } else { 0 }
+}
+
+/// R1420, R1178000: the same for a Meditative+ entry, held until its release (#1187).
+fn meditative_plus(count: usize) -> usize {
+    if set_ships(SetName::MeditativePlus) {
+        count
+    } else {
+        0
+    }
 }
 
 /// `EXPECTED_TAG_COUNTS`, in `TAGS` order.
@@ -1877,11 +1916,106 @@ mod tests {
         let report = check_catalog(&shipped_catalog());
         assert_eq!(report.failures, Vec::<String>::new());
         // B2.1's 268 cards and 50 tokens, and from the patch that ships it (R1420) the Meditative
-        // set's 102 and 30: 370 cards and 80 tokens.
+        // set's 102 and 30: 370 cards and 80 tokens; from its release (#1187) the Meditative+ set's
+        // 26 and 4 (R1178000).
         assert_eq!(
             (report.entries, report.non_token_count, report.token_count),
-            (318 + meditative(132), 268 + meditative(102), 50 + meditative(30))
+            (
+                318 + meditative(132) + meditative_plus(30),
+                268 + meditative(102) + meditative_plus(26),
+                50 + meditative(30) + meditative_plus(4)
+            )
         );
+    }
+
+    /// A Meditative+ entry made from Core #2's (a Common Unit): its id, index, name and set its own.
+    fn meditative_plus_entry(index: &str, id: &str) -> Json {
+        let Json::Object(mut entry) = shipped_catalog()["core-002"].clone() else {
+            panic!("core-002 is an object");
+        };
+        entry.insert("id".to_string(), Json::from(id));
+        entry.insert("index".to_string(), Json::from(index));
+        entry.insert(
+            "name".to_string(),
+            Json::from(format!("Meditative+ fixture {index}")),
+        );
+        entry.insert("set".to_string(), Json::from("Meditative+"));
+        Json::Object(entry)
+    }
+
+    /// The real catalog without the Meditative+ entries the card parts have added so far, so a test
+    /// counts its own fixture alone.
+    fn without_meditative_plus() -> Object {
+        let mut catalog = shipped_catalog();
+        catalog.retain(|_, entry| {
+            entry
+                .as_object()
+                .and_then(|entry| entry.get("set"))
+                .and_then(Json::as_str)
+                != Some("Meditative+")
+        });
+        catalog
+    }
+
+    #[test]
+    fn r1178000_holds_the_meditative_plus_set_to_its_shape_alone_until_it_ships() {
+        // Its brief's indices, ids `meditativeplus-NNN` and `meditativeplus-NNN-k`, outside the totals.
+        let mut catalog = without_meditative_plus();
+        let shipped = check_catalog(&catalog);
+        catalog.insert(
+            "meditativeplus-002".to_string(),
+            meditative_plus_entry("2", "meditativeplus-002"),
+        );
+        let report = check_catalog(&catalog);
+        assert_eq!(report.failures, Vec::<String>::new());
+        if !set_ships(SetName::MeditativePlus) {
+            assert_eq!(
+                (
+                    report.entries,
+                    report.non_token_count,
+                    report.token_count,
+                    report.unshipped_count
+                ),
+                (
+                    shipped.entries,
+                    shipped.non_token_count,
+                    shipped.token_count,
+                    shipped.unshipped_count + 1
+                )
+            );
+        }
+
+        // An index the brief does not list (#27, a third helper #1.3), or an id that does not follow
+        // its index, fails.
+        let mut wrong = without_meditative_plus();
+        for (index, id) in [
+            ("27", "meditativeplus-027"),
+            ("1.3", "meditativeplus-001-3"),
+            ("3", "meditativeplus-x"),
+        ] {
+            wrong.insert(id.to_string(), meditative_plus_entry(index, id));
+        }
+        let failures = check_catalog(&wrong).failures.join("\n");
+        assert!(failures.contains("unexpected index \"27\""), "{failures}");
+        assert!(failures.contains("unexpected index \"1.3\""), "{failures}");
+        assert!(
+            failures.contains("implies id \"meditativeplus-003\""),
+            "{failures}"
+        );
+
+        // No rarity passes its count: a sixth Common is refused while the set is built.
+        if !set_ships(SetName::MeditativePlus) {
+            let mut commons = without_meditative_plus();
+            for n in 2..=7 {
+                let id = format!("meditativeplus-{n:03}");
+                commons.insert(id.clone(), meditative_plus_entry(&n.to_string(), &id));
+            }
+            let failures = check_catalog(&commons).failures;
+            assert_eq!(
+                failures,
+                ["Meditative+: expected 5 Common non-token cards, found 6"]
+            );
+        }
     }
 
     /// A Meditative entry made from Core #2's: its id, index, name and set its own.

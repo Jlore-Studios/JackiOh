@@ -2,7 +2,7 @@
 //! `_generated.ts`, `missing-tests.ts` and `registry.test.ts`'s completeness checks.
 //!
 //! Walks `src/scripts/<set>/<file>.rs` (`<set>` one of `core`, `classic`, `classic_plus`,
-//! `meditative`), reads each
+//! `meditative`, `meditative_plus`), reads each
 //! file's `pub const ID: &str = "…";` line, and writes `$OUT_DIR/registry.rs`:
 //!
 //! ```text
@@ -11,6 +11,7 @@
 //!     pub mod classic { … }
 //!     pub mod classic_plus { … }
 //!     pub mod meditative { … }
+//!     pub mod meditative_plus { … }
 //! }
 //! pub static REGISTRY: &[(&str, fn() -> jackioh_engine::CardScripts)] = &[ (ID, script), … ];  // sorted by ID
 //! ```
@@ -50,7 +51,7 @@ use std::path::{Path, PathBuf};
 
 /// The set directories under `src/scripts/`, in SPEC §5 order (SURFACE §4.1). A set that has not
 /// shipped yet (R1420) has its folder too: its cards are built, tested and registered like any other.
-const SETS: [&str; 4] = ["core", "classic", "classic_plus", "meditative"];
+const SETS: [&str; 5] = ["core", "classic", "classic_plus", "meditative", "meditative_plus"];
 
 /// One card file: its set, its module name, its absolute path and its `ID`.
 struct CardFile {

@@ -87,6 +87,16 @@ pub fn luck_based() -> CardQuery {
     }
 }
 
+/// R1178001: "a random embiggen card" (Meditative+ #23 Enormous Elderberry, #22 Mountaintop
+/// Garden's class): every non-token card that prints two prices (`jackioh_engine::is_embiggen_card`),
+/// from the sets that ship (R1420).
+pub fn embiggen_cards() -> CardQuery {
+    CardQuery {
+        embiggen: Some(true),
+        ..CardQuery::default()
+    }
+}
+
 /// Both trap types, for a pool or filter that says "Trap". SPEC says "Field Trap counts as Trap" for
 /// §8 #51 (KY's Private Tutor's type choice), #85/R61 (Unlicensed Experimentation's type match) and
 /// R35 (Transmogulate's same-type replacement), so a `type: "Trap"` query — which matches the

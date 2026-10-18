@@ -669,12 +669,15 @@ describe("gen-voice.mjs --check (B37)", () => {
   }
 
   it(
-    "R1420 owes no file for a line of a set that has not shipped, and the same line on a shipped card is missing",
+    "R1420 R1178000 owes no file for a line of a set that has not shipped, Meditative+ included, and the same line on a shipped card is missing",
     () => {
-      const unshipped = unrenderedTree("Boss");
-      const quiet = runCheck(["--root", unshipped.root, "--catalog", unshipped.catalog]);
-      expect(quiet.status, describeRun(quiet)).toBe(0);
-      expect(reportedKeys(quiet)).toEqual([]);
+      // The reserved Boss set, and Meditative+, held until its release (R1178000).
+      for (const set of ["Boss", "Meditative+"]) {
+        const unshipped = unrenderedTree(set);
+        const quiet = runCheck(["--root", unshipped.root, "--catalog", unshipped.catalog]);
+        expect(quiet.status, describeRun(quiet)).toBe(0);
+        expect(reportedKeys(quiet)).toEqual([]);
+      }
 
       const shipped = unrenderedTree("Core");
       const loud = runCheck(["--root", shipped.root, "--catalog", shipped.catalog]);

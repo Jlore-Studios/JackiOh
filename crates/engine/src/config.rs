@@ -67,7 +67,8 @@ pub const POOL_TOKEN_TAGS: &[Tag] = &[Tag::Fruit, Tag::Prime, Tag::Ai];
 /// one of them, a card with all of them is "All Tribes" (Meditative #87 Tatches the Totem, and the
 /// card frame says so), and "tribal tag based hate" is an effect that picks its cards by having or
 /// lacking one. Book, Fruit, Pancake, AI, Plague, Catalyst, Prime, Acclaimed, Call to Chaos,
-/// Quickdraw, Wincon and Token name families and mechanics, not tribes.
+/// Quickdraw, Wincon, Potion (Meditative+, R1178000) and Token name families and mechanics, not
+/// tribes.
 pub const TRIBAL_TAGS: &[Tag] = &[Tag::Human, Tag::Felinor, Tag::Ky, Tag::Cn, Tag::Jlockeed];
 
 /// §3
