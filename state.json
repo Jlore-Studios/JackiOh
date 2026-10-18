@@ -4084,6 +4084,13 @@
     "1171": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-18T04:41:17Z",
+        "difficulty": "hard",
+        "provider": "agy",
+        "tier": "medium",
+        "why": "the AI's search (crates/ai/src/search.rs) and candidate generation across crates/ai, crates/tools and training/ml"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
