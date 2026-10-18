@@ -381,7 +381,8 @@ pub const AI_DIFFICULTY: AiDifficulty = AiDifficulty {
 /// three tiers (R180) and lowers the AI seat's resources instead of raising them: a 12-card deck
 /// (each lesson's own list, R291, so it runs out and fatigues sooner), at most 3 mana crystals, and
 /// a hero that starts at 20 health. The AI's search, evaluation and budget are the ones every tier
-/// plays with. It is not in `DIFFICULTIES`: nobody picks it, the tutorial deals it.
+/// plays with, but with the learned evaluation on this seat keeps the hand eval (R1012003). It is not
+/// in `DIFFICULTIES`: nobody picks it, the tutorial deals it.
 pub const AI_TUTORIAL: Handicap = Handicap {
     deck_size: 12,
     mana_bonus: 0,
@@ -802,6 +803,11 @@ pub const MONEY_MACHINE_ODDS: &[RollOdds] = &[
 /// what each such text acting on a player's side multiplies a heal of their hero or Units by. Several
 /// multiply: two Radiant Life Mages make a heal four times as large.
 pub const HEAL_MULTIPLIER: i32 = 2;
+
+/// R1180006 (Meditative+ #17 Dogpile, issue #1180): answers one chain of R1180005 may name — the Spell
+/// that started it answered, then each answer's own cast — before the next targeted resolution calls
+/// nothing. A deck that refills itself with answering cards would otherwise answer forever.
+pub const SPELL_ANSWER_CHAIN_CAP: i32 = 20;
 
 /// R962: the Jade Counter a summon of Jade Beauty (Meditative #39.5) is crossed at (ME-JADE).
 pub const JADE_BEAUTY_AT: i32 = 5;

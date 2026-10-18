@@ -53,16 +53,35 @@ def _unpack(fmt: str, text: str) -> list[int]:
 MAX_SHIFT = 24
 
 
-def _shift_for(largest: float, limit: int, unit: float) -> int:
-    """The largest s in [0, MAX_SHIFT] with `largest·unit·2^s` within `limit`."""
+def _shift_for(largest: float, limit: int, unit: float, clip: bool = False) -> int:
+    """The largest s in [0, MAX_SHIFT] with `largest·unit·2^s` within `limit`. With `clip`, 0 when
+    no shift fits: the weights past the limit are then clipped to it (`_first_layer`)."""
     if largest == 0:
         return MAX_SHIFT
     s = math.floor(math.log2(limit / (largest * unit)))
     while largest * unit * 2.0**s > limit:
         s -= 1
     if s < 0:
+        if clip:
+            return 0
         raise ValueError(f"a weight of {largest} does not fit {limit} at any shift")
     return min(s, MAX_SHIFT)
+
+
+def _first_layer(value: float) -> int:
+    """A first-layer weight in its i16. Only a dense feature with a spread of a few thousandths (one
+    seen on a handful of positions, folded as `W/scale`) is ever past it, and is clipped (#466)."""
+    return max(-I16 - 1, min(I16, round(value)))
+
+
+def clipped(weights: dict) -> int:
+    """How many first-layer weights `quantize` clips."""
+    scale = weights["scale"]
+    folded = [w / scale[j] for j, row in enumerate(weights["denseIn"]) for w in row]
+    sparse = [w for row in weights["sparseIn"] for w in row]
+    largest = max([abs(w) for w in folded + sparse] + [0.0])
+    unit1 = ACTIVATION * 2.0 ** _shift_for(largest, I16, ACTIVATION, clip=True)
+    return sum(1 for w in folded + sparse if round(w * unit1) != _first_layer(w * unit1))
 
 
 def quantize(weights: dict) -> dict:
@@ -74,10 +93,10 @@ def quantize(weights: dict) -> dict:
     folded = [[w / scale[j] for w in row] for j, row in enumerate(weights["denseIn"])]
     bias = [weights["bias"][i] - sum(mean[j] * folded[j][i] for j in range(len(folded))) for i in range(width)]
     largest = max([abs(w) for row in folded for w in row] + [abs(w) for row in weights["sparseIn"] for w in row] + [0.0])
-    s1 = _shift_for(largest, I16, ACTIVATION)
+    s1 = _shift_for(largest, I16, ACTIVATION, clip=True)
     unit1 = ACTIVATION * 2.0**s1
-    dense_q = [round(w * unit1) for row in folded for w in row]
-    sparse_q = [round(w * unit1) for row in weights["sparseIn"] for w in row]
+    dense_q = [_first_layer(w * unit1) for row in folded for w in row]
+    sparse_q = [_first_layer(w * unit1) for row in weights["sparseIn"] for w in row]
     bias_q = [round(b * unit1) for b in bias]
 
     head = []
@@ -206,7 +225,8 @@ def report(float_weights: dict, int_weights: dict, positions: Path) -> dict:
         return total / max(len(rows), 1)
 
     return {"rows": len(rows), "floatLogLoss": loss(0), "intLogLoss": loss(1),
-            "maxLogitDifference": max((abs(x - y) for x, y, _ in rows), default=0.0)}
+            "maxLogitDifference": max((abs(x - y) for x, y, _ in rows), default=0.0),
+            "clippedWeights": clipped(float_weights)}
 
 
 def parity(int_weights: dict, positions: Path, rows: int) -> dict:

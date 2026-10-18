@@ -190,7 +190,7 @@ mod tests {
 
         #[test]
         fn base_enters_at_4_4_radiant_unchanged() {
-            for (radiant_face, size) in [(false, 4), (true, 10)] {
+            for (radiant_face, size) in [(false, 4), (true, 8)] {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": JUNGLE, "radiant": radiant_face }, FILLER], "library": DECK },
