@@ -4005,6 +4005,14 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "1217": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-18T10:14:51Z",
+      "issue": 1194,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "148": {
       "asks": [
         "c:5974504575"
