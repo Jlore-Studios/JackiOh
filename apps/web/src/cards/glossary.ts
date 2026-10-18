@@ -276,7 +276,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Activate: trigger(
     "Activate",
     'Once per turn on your turn, click the card to do an effect; "Activate X" up to X times per turn, "Activate ♾️" any number of times',
-    { row: "Activate / Activate X / Activate ♾️", aliases: ["activate"] },
+    { row: "Activate / Activate X / Activate ♾️" },
   ),
 
   // §6.3 Actions and verbs
