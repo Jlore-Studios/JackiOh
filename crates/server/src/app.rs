@@ -1091,6 +1091,10 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
     init_logging();
     let app = build(env).await?;
 
+    // `bug_reports.rs`: whether GitHub takes the token, which `GET /api/catalog` then reports.
+    let probing = Arc::clone(&app);
+    tokio::spawn(async move { probing.bug_reports.probe().await });
+
     // R609: the build's season is open before the first request, with its soft reset if this build
     // begins one. A failure is loud but not fatal: the first rated game opens it in its own
     // transaction all the same.

@@ -439,7 +439,11 @@ refusal's text, a card or an instance id.
 The night bot takes `bot:build` only from an account at level 2 or more in `.harness/trust.txt` or
 a collaborator (bot/README.md, Who may do what), so the token is made on such an account: a
 fine-grained personal access token for this repository with Issues read and write, set on Render
-under `jackioh-server` → Environment.
+under `jackioh-server` → Environment. At boot the server asks GitHub to open an issue with no
+title, which GitHub refuses as unprocessable when the token may open issues and as forbidden when it
+may not, so nothing is filed; `GET /api/catalog` then reports the answer in `x-bug-reports` (`off`,
+`checking`, `ready`, `refused` or `unreachable`), which `deploy-watch.yml` prints once a deploy is
+live, and a refusal is logged as the alert `bug.reports.refused` with GitHub's message.
 
 To read a reported match, export it (Supabase's SQL editor; the log holds both hands, so it stays
 out of the issue):

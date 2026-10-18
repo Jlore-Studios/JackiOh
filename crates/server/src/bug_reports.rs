@@ -153,18 +153,97 @@ struct Filed {
     at: VecDeque<i64>,
 }
 
+/// The response header `GET /api/catalog` says whether reports can be filed in
+/// (`Readiness::as_str`), beside `x-deployed-commit`, so `deploy-watch.yml` shows it after a deploy.
+pub const BUG_REPORTS_HEADER: &str = "x-bug-reports";
+
+/// Whether a report can be filed, as the boot's `probe` found it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Readiness {
+    /// No token (or a test's app): findings are only logged.
+    Off,
+    /// A token, not yet probed.
+    Checking,
+    /// GitHub accepted the token for opening issues in the repository.
+    Ready,
+    /// GitHub refused it: expired, revoked, or without Issues write on the repository.
+    Refused,
+    /// GitHub did not answer.
+    Unreachable,
+}
+
+impl Readiness {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Readiness::Off => "off",
+            Readiness::Checking => "checking",
+            Readiness::Ready => "ready",
+            Readiness::Refused => "refused",
+            Readiness::Unreachable => "unreachable",
+        }
+    }
+}
+
 /// The app's reporter (`App::bug_reports`).
 pub struct BugReports {
     sink: Sink,
     filed: Mutex<Filed>,
+    readiness: Mutex<Readiness>,
 }
 
 impl BugReports {
     fn with(sink: Sink) -> BugReports {
+        let readiness = match sink {
+            Sink::GitHub { .. } => Readiness::Checking,
+            Sink::Off | Sink::Recording(_) => Readiness::Off,
+        };
         BugReports {
             sink,
             filed: Mutex::new(Filed::default()),
+            readiness: Mutex::new(readiness),
         }
+    }
+
+    /// What the boot's `probe` found.
+    pub fn readiness(&self) -> Readiness {
+        *lock(&self.readiness)
+    }
+
+    /// At boot: asks GitHub to open an issue with no title, which it refuses as unprocessable (422)
+    /// when the token may open issues in the repository and as forbidden or not found otherwise, so
+    /// the token is checked and nothing is filed. Logs `bug.reports.ready`, or the alert
+    /// `bug.reports.refused` with GitHub's answer.
+    pub async fn probe(&self) {
+        let Sink::GitHub { http, token, repo } = &self.sink else {
+            return;
+        };
+        let answer = github(
+            http.post(format!("{BUG_REPORT_API_URL}/repos/{repo}/issues")),
+            token,
+        )
+        .json(&json!({}))
+        .send()
+        .await;
+        let readiness = match answer {
+            Ok(response) if response.status() == reqwest::StatusCode::UNPROCESSABLE_ENTITY => {
+                tracing::info!(event = "bug.reports.ready", repo = %repo);
+                Readiness::Ready
+            }
+            Ok(response) => {
+                let status = response.status().as_u16();
+                let message = response.text().await.unwrap_or_default();
+                log_alert(
+                    "bug.reports.refused",
+                    json!({ "repo": repo, "status": status, "message": message }),
+                );
+                Readiness::Refused
+            }
+            Err(error) => {
+                tracing::warn!(event = "bug.reports.unreachable", repo = %repo, message = %error);
+                Readiness::Unreachable
+            }
+        };
+        *lock(&self.readiness) = readiness;
     }
 
     /// A deployment's: GitHub when the token is set and the server is not the end-to-end one.
@@ -309,6 +388,16 @@ pub fn report_of(deployed_commit: Option<&str>, finding: &Finding) -> BugReport 
     }
 }
 
+/// A request to GitHub's REST API with the token and the headers it asks for.
+fn github(builder: reqwest::RequestBuilder, token: &str) -> reqwest::RequestBuilder {
+    builder
+        .bearer_auth(token)
+        .header("accept", "application/vnd.github+json")
+        .header("user-agent", "jackioh-server")
+        .header("x-github-api-version", "2022-11-28")
+        .timeout(Duration::from_millis(BUG_REPORT_TIMEOUT_MS))
+}
+
 /// Files `report` in `repo` unless an issue whose title names its match exists: `Ok(Some(url))`
 /// filed, `Ok(None)` already there.
 async fn post(
@@ -317,15 +406,7 @@ async fn post(
     repo: &str,
     report: &BugReport,
 ) -> Result<Option<String>, String> {
-    let timeout = Duration::from_millis(BUG_REPORT_TIMEOUT_MS);
-    let request = |builder: reqwest::RequestBuilder| {
-        builder
-            .bearer_auth(token)
-            .header("accept", "application/vnd.github+json")
-            .header("user-agent", "jackioh-server")
-            .header("x-github-api-version", "2022-11-28")
-            .timeout(timeout)
-    };
+    let request = |builder: reqwest::RequestBuilder| github(builder, token);
     let query = format!("repo:{repo} is:issue in:title {}", report.match_id);
     let search = reqwest::Url::parse_with_params(
         &format!("{BUG_REPORT_API_URL}/search/issues"),
@@ -424,5 +505,13 @@ mod tests {
         let reports = BugReports::off();
         reports.file(None, finding("m-0"));
         assert!(reports.recorded().is_empty());
+        assert_eq!(reports.readiness(), Readiness::Off);
+    }
+
+    #[tokio::test]
+    async fn probes_nothing_without_a_token() {
+        let reports = BugReports::off();
+        reports.probe().await;
+        assert_eq!(reports.readiness().as_str(), "off");
     }
 }
