@@ -233,7 +233,8 @@ cannot hold a comment, and three things in them are not obvious:
   GitHub Actions and does nothing here, and the night bot's `bot-state` commits plus its PR branches
   used the day up (every PR then showed a failed Vercel check: `api-deployments-free-per-day`). Two
   settings in `vercel.json` hold it down. `git.deploymentEnabled` creates no deployment at all for
-  the branches machines push to (`bot-state`, `bot/**`, `claude/**`, `copilot/**`, `dependabot/**`,
+  the branches machines push to (`ai/**`, which `training/loop.sh`'s lanes push every 15 minutes
+  while a session runs, `bot-state`, `bot/**`, `claude/**`, `copilot/**`, `dependabot/**`,
   `patch/**`, `patches/**`, `polish/**`, `production` and `promote/**`, which
   `promote-production.yml` moves and opens pull requests from, `squishy-state`, `squishy/**`, `wt/**`); main is never listed. `ignoreCommand` runs
   `scripts/vercel-ignore.sh` for everything else: a commit message containing `[vercel]` builds on

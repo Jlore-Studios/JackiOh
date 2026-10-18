@@ -5,6 +5,7 @@
   "outputDirectory": "dist",
   "git": {
     "deploymentEnabled": {
+      "ai/**": false,
       "bot-state": false,
       "bot/**": false,
       "claude/**": false,
