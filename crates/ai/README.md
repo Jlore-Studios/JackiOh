@@ -75,8 +75,11 @@ which is `decide_styled` at `AI_STYLE_EXACT`, draws only for its determinization
 ## Budgets
 
 A decision's cost is counted in nodes: one node is one `reduce` call the AI makes, the reply's
-included. `AI_BUDGET` is what the browser plays with; `AI_GATE_BUDGET`, the gates' and the sweep's,
-is the same budget, so both measure the AI that ships. The same state, seed and budget always give the
+included. A step whose `reduce` does far more work than most is charged extra nodes up front
+(`surcharge_nodes`: a play that ranks every shipped card, an attack into an armed My Pawn, a fused
+card holding either, and a play the other side's Pareto Optimality judges, per card held; #1240).
+`AI_BUDGET` is what the browser plays with; `AI_GATE_BUDGET`, the gates' and the sweep's, is the
+same budget, so both measure the AI that ships. The same state, seed and budget always give the
 same `Decision`. The browser's wall-clock cap arrives as `should_stop` (the WASM binding's deadline),
 which ends the search early with the best line found.
 
@@ -132,10 +135,11 @@ needs `gate_needed(matchup, n)` wins (the rule spec §9.9 proposes); only wins c
 | `hard-vs-easy` | the AI on Hard | the AI on Easy | 40 of 50 | 16 of 20 |
 
 The perf gate holds each decision of the first ai-vs-greedy game, and two hand-built wide boards,
-within the node budget and under `AI_GATE.max_decision_ms`. Tuning changes the weights in
-`src/config.rs`, never the floors, the seed counts or the brief's rates. The gates see only a broken
-AI; whether a change made it stronger is the training lanes' question (`training/README.md`,
-`cargo jackioh promote`).
+within the node budget and under `AI_GATE.max_decision_ms`, and the two pinned positions
+(`tests/fixtures/pinned-improve-dev-*.json`, #1240) under `AI_GATE.pinned_decision_ms`. Tuning
+changes the weights in `src/config.rs`, never the floors, the seed counts or the brief's rates. The
+gates see only a broken AI; whether a change made it stronger is the training lanes' question
+(`training/README.md`, `cargo jackioh promote`).
 
 A seat the AI plays has a skill (R747000): `SeatController::Ai { budget, skill }`, the chance in
 `[0, 1]` that each decision follows the AI, the rest being a random legal action (`random_action`,
