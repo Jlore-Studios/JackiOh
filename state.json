@@ -3399,10 +3399,8 @@
       "run_id": "39072854096",
       "started_at": "2026-10-17T21:55:15Z",
       "stop_requested": false,
-      "strike_log": [
-        "`claude-2` (claude, opus) rejected it: `apps/web/src/game/showcase/CardShowcase.tsx:269`: The issue's own case still fails. When a view with a result arrives, CardShowcase clears its gated casts, call"
-      ],
-      "strikes": 1,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 1
     },
