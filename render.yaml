@@ -105,5 +105,5 @@ services:
       # the night bot trusts (.harness/trust.txt level 2 or more, or a collaborator). With it the
       # server files a match its own log does not reproduce as a `bot:build` issue
       # (crates/server/README.md, "A match its log does not reproduce"); without it, only logs it.
-      - key: GITHUB_ISSUES_TOKEN
+      - key: CREATE_ISSUES_TOKEN
         sync: false

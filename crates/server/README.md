@@ -139,7 +139,7 @@ placeholders (`app::load_server_env`).
 | `TRUSTED_PROXY_HOPS` | no | R190's `X-Forwarded-For` entries the deployment's proxies append, 0 to 5, default 0 |
 | `RENDER_GIT_COMMIT` | no | set by Render; `GET /api/catalog` reports it as `x-deployed-commit` |
 | `LADDER_BOTS` | no | `on` seats a ladder bot against a ranked ticket of any mode left alone past its fallback time (a Conquest ticket's in a series, R641000), and keeps the bot pool (R1453, R1454, R1452); off unless `on` (unset or `off`), and any other value refuses the boot. The bots decide in this process, so turning it on wants a host with room for the AI's search, such as a paid Render instance |
-| `GITHUB_ISSUES_TOKEN` | no | a token that may open issues in `GITHUB_ISSUES_REPO`, with which the server files a match its own log does not reproduce ([below](#a-match-its-log-does-not-reproduce)); unset, such a match is only logged. Secret |
+| `CREATE_ISSUES_TOKEN` | no | a token that may open issues in `GITHUB_ISSUES_REPO`, with which the server files a match its own log does not reproduce ([below](#a-match-its-log-does-not-reproduce)); unset, such a match is only logged. Secret |
 | `GITHUB_ISSUES_REPO` | no | the `owner/name` those issues go to; default `Jlore-Studios/JackiOh` (`BUG_REPORT_REPO_DEFAULT`) |
 
 `mint-code`, `moderate` and `seed-accounts` read the same environment (`seed-accounts` also
@@ -428,7 +428,7 @@ A match is its `(seed, decks, boards, log)` (§9.3), and the server checks that 
 (`api::results`) and the fold of a finished match for its game record (`api::game_records`). When a
 fold refuses an action the log holds, the match goes on as before (a rebuild keeps the state it
 folded to, a finished match keeps the result it recorded), and `bug_reports.rs` logs it as the
-alert `bug.found` and, with `GITHUB_ISSUES_TOKEN` set, files one GitHub issue for the night bot:
+alert `bug.found` and, with `CREATE_ISSUES_TOKEN` set, files one GitHub issue for the night bot:
 titled `Patch v0.3.Y: match <id> …`, labelled `BUG_REPORT_LABELS` (`patch`, `bot:build`,
 `difficulty:hard`, `priority:high`). It files once per match per process, at most
 `BUG_REPORTS_PER_WINDOW` in `BUG_REPORT_WINDOW_MS`, and nothing when an issue whose title names the

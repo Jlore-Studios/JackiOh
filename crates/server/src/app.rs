@@ -76,7 +76,7 @@ pub struct App {
     /// `actor::engine::registered_thread` here; a test's carries its thread's cards over.
     pub engine_thread: actor::engine::EngineThread,
     /// A match its own log does not reproduce, logged and filed for the night bot
-    /// (`bug_reports.rs`): GitHub with `GITHUB_ISSUES_TOKEN`, a record in a test's app.
+    /// (`bug_reports.rs`): GitHub with `CREATE_ISSUES_TOKEN`, a record in a test's app.
     pub bug_reports: crate::bug_reports::BugReports,
 }
 

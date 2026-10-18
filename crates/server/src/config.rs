@@ -600,7 +600,7 @@ pub const MATCH_SERVER_ACTION_RETRY_MS: i64 = 1_000;
 // R-row: operational, as #861's probes are.
 // ---------------------------------------------------------------------------------------------
 
-/// The repository a report is filed in when `GITHUB_ISSUES_TOKEN` is set and `GITHUB_ISSUES_REPO`
+/// The repository a report is filed in when `CREATE_ISSUES_TOKEN` is set and `GITHUB_ISSUES_REPO`
 /// is not.
 pub const BUG_REPORT_REPO_DEFAULT: &str = "Jlore-Studios/JackiOh";
 /// GitHub's REST API, which a report is filed through.

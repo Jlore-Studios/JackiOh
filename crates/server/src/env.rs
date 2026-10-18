@@ -85,7 +85,7 @@ pub struct Env {
     /// the bot pool (R1454). Off unless it is set to `on`: the bots decide in this process (SPEC §9.12), which
     /// wants a host with room for the AI's search.
     pub ladder_bots: bool,
-    /// `GITHUB_ISSUES_TOKEN`: a token that may open issues in `github_issues_repo`, with which the
+    /// `CREATE_ISSUES_TOKEN`: a token that may open issues in `github_issues_repo`, with which the
     /// server files a report of a match its own log does not reproduce (`bug_reports.rs`). Unset,
     /// a finding is only logged. Secret.
     pub github_issues_token: Option<String>,
@@ -181,7 +181,7 @@ pub const SERVER_ONLY_ENV_VARS: &[&str] = &[
     "TRUSTED_PROXY_HOPS",
     "RENDER_GIT_COMMIT",
     "LADDER_BOTS",
-    "GITHUB_ISSUES_TOKEN",
+    "CREATE_ISSUES_TOKEN",
     "GITHUB_ISSUES_REPO",
 ];
 
@@ -492,7 +492,7 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
     let public_origins = parse_public_origins(read("PUBLIC_ORIGINS"), &mut problems);
     let trusted_proxy_hops = parse_trusted_proxy_hops(read("TRUSTED_PROXY_HOPS"), &mut problems);
     let ladder_bots = parse_ladder_bots(read("LADDER_BOTS"), &mut problems);
-    let github_issues_token = parse_github_issues_token(read("GITHUB_ISSUES_TOKEN"));
+    let github_issues_token = parse_github_issues_token(read("CREATE_ISSUES_TOKEN"));
     let github_issues_repo = parse_github_issues_repo(read("GITHUB_ISSUES_REPO"), &mut problems);
 
     if e2e && node_env == NodeEnv::Production {

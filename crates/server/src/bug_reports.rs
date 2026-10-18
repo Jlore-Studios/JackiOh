@@ -19,7 +19,7 @@
 //! How often. One report per match per process, at most `BUG_REPORTS_PER_WINDOW` in
 //! `BUG_REPORT_WINDOW_MS`, and none when an issue whose title names the match exists already, open or
 //! closed, so a restart files nothing twice. Every finding is logged whatever is filed. Without
-//! `GITHUB_ISSUES_TOKEN` nothing leaves the process, and a test's app records what it would file.
+//! `CREATE_ISSUES_TOKEN` nothing leaves the process, and a test's app records what it would file.
 
 use std::collections::VecDeque;
 use std::sync::Mutex;
@@ -136,7 +136,7 @@ pub struct BugReport {
 enum Sink {
     /// No token: findings are only logged.
     Off,
-    /// `GITHUB_ISSUES_TOKEN` set: an issue in `repo`.
+    /// `CREATE_ISSUES_TOKEN` set: an issue in `repo`.
     GitHub {
         http: reqwest::Client,
         token: String,
