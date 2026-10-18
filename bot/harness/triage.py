@@ -56,12 +56,12 @@ CONVENTION = re.compile(
 #: The titles tools give the pull requests they open, which the title check passes as they are
 #: (`pull_title_ok`): `patches ship: v0.3.1` (patches-ship.yml; several versions joined by ", "),
 #: `Promote main to production: 28 commit(s) up to 6d44be2` (scripts/promote-production.sh, into
-#: `production`) and a training lane's promotion, `AI gen 8 (improve): …` (training/improve.md and
+#: `production`) and a training lane's promotion, `AI gen 8 (improve): …` (training/improve.md, learn.yml and
 #: unban.md). The bots' own pull requests take a title that follows the convention (`pull_title`).
 AUTOMATED_PULL = re.compile(
     r"^(?:patches ship: v\d+\.\d+\.\d+[a-z]?(?:, v\d+\.\d+\.\d+[a-z]?)*$"
     r"|Promote main to production: \d+ commit\(s\) up to [0-9a-f]{7,40}$"
-    r"|AI gen \d+ \((?:improve|unban)\): \S)")
+    r"|AI gen \d+ \((?:improve|unban|learn)\): \S)")
 #: GitHub's Revert button titles its pull request `Revert "<the reverted pull request's title>"`.
 REVERT = re.compile(r'^Revert "(.+)"$')
 #: The organisation's issue types (Settings → Planning → Issue types), used when the token cannot

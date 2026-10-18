@@ -600,7 +600,10 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         };
         let played_rate = stat.and_then(|stat| win_rate(&stat.played));
         let drawn_not_played_rate = stat.and_then(|stat| win_rate(&stat.drawn_not_played));
-        let delta = stat.and_then(played_delta);
+        // R654: the delta waits for the sample floor on both its sides, as a small baseline swings it ±50.
+        let delta = stat
+            .filter(|_| played_games >= CARD_STATS_MIN_SAMPLE && unplayed_games >= CARD_STATS_MIN_SAMPLE)
+            .and_then(played_delta);
         let play_rate = if total_decks > 0 {
             in_deck_games as f64 / total_decks as f64
         } else {

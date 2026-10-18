@@ -8,7 +8,8 @@
 //  - Provisional banner while the current patch is below the publication gate (R654). It, like the
 //    rest of the page, names no data source and none of the gate's workings (R661); its one games
 //    tile counts the patch's games, never the gate's live count.
-//  - Per-row sample floor (20 games): displays "not enough games" below threshold.
+//  - Per-row sample floor (20 games): displays "not enough games" below threshold, and "not enough data"
+//    for a Played Δ the server withholds until both its sides reach the floor (R654).
 //  - URL search params for shareable views.
 //  - Card drill-down modal showing CardFace, patch history, turn curve, and co-played synergy.
 //  - Players tab: the search asks the server a pause after the typing, one page of the server's limit at a time.
@@ -504,6 +505,12 @@ export default function StatsRoute(): ReactElement {
                   minSample,
                 }),
                 { phrase: <em>{t('"not enough games"')}</em> },
+              )}{" "}
+              {withNodes(
+                t("Played Δ needs {minSample} games on each side, played and drawn but not played, and shows {phrase} until then.", {
+                  minSample,
+                }),
+                { phrase: <em>{t('"not enough data"')}</em> },
               )}
             </p>
             <p>
@@ -1118,7 +1125,7 @@ export default function StatsRoute(): ReactElement {
                                   </span>
                                 </span>
                               ) : (
-                                "—"
+                                <span className="stats-not-enough">{t("not enough data")}</span>
                               )}
                             </td>
                           )}

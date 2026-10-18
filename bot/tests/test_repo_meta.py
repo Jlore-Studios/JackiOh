@@ -33,6 +33,7 @@ class PullTitleTests(unittest.TestCase):
         "Promote main to production: 1 commit(s) up to c9ca419",
         "AI gen 8 (improve): the opening plays its two-drops first",  # training/improve.md
         "AI gen 12 (unban): Mirror Image is played again",  # training/unban.md
+        "AI gen 14 (learn): the learned evaluation, retrained on 100,000 games",  # learn.yml
     )
     CONVENTIONAL = (
         "Patch v0.3.X: Activate abilities work again",

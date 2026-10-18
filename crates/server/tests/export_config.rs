@@ -138,6 +138,7 @@ fn constants() -> Vec<(&'static str, Value)> {
             "PLAY_TELEMETRY_RETENTION_DAYS",
             json!(c::PLAY_TELEMETRY_RETENTION_DAYS),
         ),
+        ("PLAYER_STATS_BYTES_MAX", json!(c::PLAYER_STATS_BYTES_MAX)),
         ("PROMPT_CLOCK_MS", json!(c::PROMPT_CLOCK_MS)),
         ("PROMPT_CLOCK_SECONDS", json!(c::PROMPT_CLOCK_SECONDS)),
         (
@@ -240,7 +241,7 @@ fn every_name_is_listed_once() {
         // 64 before #936 and v0.5.0, main's two (CUSTOM_CARDS_PER_ACCOUNT, QUEUE_ENDED_AFTER_READS),
         // SPEC S7's twelve, the social poll and Duos co-op's eight.
         listed,
-        87,
+        88,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -248,8 +249,8 @@ fn every_name_is_listed_once() {
          CUSTOM_CARDS_PER_ACCOUNT (R915008), with \
          RATING_WINDOW_FULL_AFTER_SECONDS in place of the uncapped window's \
          RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001), QUEUE_ENDED_AFTER_READS (R897000), SPEC S7's \
-         twelve (#936) with the social poll (SOCIAL_POLL_MS), and Duos co-op's eight clocks and ping \
-         limits (#946)"
+         twelve (#936) with the social poll (SOCIAL_POLL_MS), Duos co-op's eight clocks and ping \
+         limits (#946), and PLAYER_STATS_BYTES_MAX (R1142000)"
     );
 }
 
