@@ -49,6 +49,7 @@ import Game from "../game/Game.tsx";
 import { DRAG_THRESHOLD_PX } from "../game/drag/model.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import type { PingKind, PingTarget, ReceivedPing } from "../net/duos.ts";
+import { useBoardBusy } from "../replay/ReplayPlayer.tsx";
 import { CardActions, type PingMarker } from "./CardActions.tsx";
 import { DuosChromeContext } from "./context.ts";
 import { LifeStrip, TeammateStrip } from "./LifeStrip.tsx";
@@ -235,6 +236,8 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error, replay 
     container.current = element;
     setHost(element);
   }, []);
+  // The team's result waits for the duel's last burst to play, as the 1v1 result does (Game.tsx).
+  const boardBusy = useBoardBusy(host);
   const portal = useRef<HTMLButtonElement>(null);
   const [showing, setShowing] = useState<Showing>("own");
   const [boardAfterResult, setBoardAfterResult] = useState(false);
@@ -417,7 +420,7 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error, replay 
       <p className="duos-sr-only" role="status" aria-live="polite">
         {heard === undefined ? "" : t("{seat}: {ping}", { seat: seatLabel(heard.from), ping: t(PING_LABEL[heard.ping]) })}
       </p>
-      {over && !boardAfterResult && !replay ? (
+      {over && !boardAfterResult && !replay && !boardBusy ? (
         <ResultPanel
           view={view}
           onShowBoard={() => {

@@ -235,21 +235,29 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
     [queue, refreshGate],
   );
 
-  // Subscribe before Game feeds this view's runner events.
+  /** A game over takes it down, with whatever still waits for its runner entry. */
+  const takeDown = useCallback(() => {
+    gated.current = [];
+    dismiss();
+  }, [dismiss]);
+
+  // Subscribe before Game feeds this view's runner events. Issue #1146: the burst that ended the game
+  // is held up as the runner plays it, and the showcase goes once the board shows the result.
   useLayoutEffect(() => {
     if (queue === undefined) return undefined;
     const onSignal = (signal: RunnerSignal): void => {
       if (signal.kind === "start") {
         release((event) => signal.entry.events.some((played) => sameEvent(played, event)));
         refreshGate();
-      } else release();
+      } else if (viewRef.current.result !== null) takeDown();
+      else release();
     };
     const unsubscribe = queue.subscribeSignals(onSignal);
     return () => {
       unsubscribe();
       release();
     };
-  }, [queue, release, refreshGate]);
+  }, [queue, release, refreshGate, takeDown]);
 
   useEffect(
     () => () => {
@@ -267,9 +275,10 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
       tracker = createPlayTracker();
       trackers.current.set(view.viewer, tracker);
     }
-    if (view.result !== null) {
-      gated.current = [];
-      dismiss();
+    const fresh = previous === undefined ? [] : eventsSince(previous, view.events);
+    // A finished view with nothing left for a runner to play is the board's at once.
+    if (view.result !== null && (queue === undefined || (fresh.length === 0 && queue.idle()))) {
+      takeDown();
       return;
     }
     // Seed the tracker from the first window so its next casts are identified.
@@ -277,7 +286,6 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
       for (const event of view.events) tracker.see(event);
       return;
     }
-    const fresh = eventsSince(previous, view.events);
     const now: ShowcasePlay[] = [];
     for (const item of showcasePlays(fresh, view, tracker)) {
       if (queue !== undefined && item.play.castOnDraw === true) gate(item.event, () => hold([item.play]));
@@ -288,7 +296,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
     }
     hold(now);
     for (const { roll, event } of chaosRollsIn(fresh)) gate(event, () => announceChaos(roll));
-  }, [view, queue, hold, replace, gate, announceChaos, dismiss]);
+  }, [view, queue, hold, replace, gate, announceChaos, takeDown]);
 
   useEffect(() => {
     if (showing === null) return undefined;
