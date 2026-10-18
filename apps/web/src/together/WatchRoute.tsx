@@ -6,7 +6,7 @@
 // no-op `onAction`, no prompt, drag or glow. Nothing a watcher sends after the hello reaches the
 // game, and this screen sends nothing but the hello (CLAUDE.md rule 7).
 //
-// Whether the friend may be watched (an unranked game, the friend allows it, room for one more) is
+// Whether the friend may be watched (a live game, ranked or unranked; the friend allows it, room for one more) is
 // the server's: a refusal is a `forbidden` frame and a closed socket, and this screen says so with
 // the way back. An unexpected close opens the socket again, `WATCH_RECONNECT_ATTEMPTS` times
 // `WATCH_RECONNECT_MS` apart; a finished game is not reopened. A tab that wakes probes a quiet socket
@@ -196,7 +196,7 @@ export function WatchRoute({ matchId, friendId }: { matchId: string; friendId: s
     screen = (
       <ShellPanel>
         <p className="notice" data-testid={watchTestid.refused} role="alert">
-          {t("You can’t watch this game. It may be over, ranked or full, or your friend may have turned watching off.")}
+          {t("You can’t watch this game. It may be over or full, or your friend may have turned watching off.")}
         </p>
         <div className="row">
           <BackToTogether />

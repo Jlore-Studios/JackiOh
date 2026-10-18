@@ -315,7 +315,7 @@ holds, with four seats:
 ### The watch socket (§9.5)
 
 A friend watches at `/ws/watch`, authenticated as `/ws/match` is: `hello {matchId, friendId}` for a
-friend's live, unranked match whose player allows watching (`profiles.allow_spectators`) and has fewer
+friend's live match, ranked or unranked, whose player allows watching (`profiles.allow_spectators`) and has fewer
 than `SPECTATORS_PER_MATCH` watchers. The watcher gets `view {view, legal: []}`, the friend's seat's
 `view_for`, each `SPECTATE_DELAY_MS` after the state it shows; anything else is `error forbidden` and a
 close. Before its hello the socket waits behind the same `actor::guard::HelloGate` as `/ws/duos`: a

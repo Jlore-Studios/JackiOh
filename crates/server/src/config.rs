@@ -187,7 +187,7 @@ pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
 /// asked to agree again. R970001: a second change on a day the page already changed keeps its date
 /// and gives its half a letter (`2026-10-15b`, then `c`); `privacy.test.tsx` holds each version to
 /// the words of both pages, so a change to them fails until this moves.
-pub const TERMS_VERSION: &str = "2026-10-15b/2026-10-15b";
+pub const TERMS_VERSION: &str = "2026-10-15b/2026-10-17";
 
 // ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).
@@ -1878,8 +1878,9 @@ pub const PRESENCE_TTL_MS: i64 = 90_000;
 pub const PRESENCE_HEARTBEAT_MS: i64 = 45_000;
 /// B49: how long a challenge, and the room it opened, stays open unanswered.
 pub const CHALLENGE_TTL_MS: i64 = 120_000;
-/// B50: how far behind the live game a watcher's view runs.
-pub const SPECTATE_DELAY_MS: i64 = 30_000;
+/// B50: how far behind the live game a watcher's view runs. Five seconds keeps each view
+/// clearly behind live play, so a watcher cannot coach the moment, while feeling live.
+pub const SPECTATE_DELAY_MS: i64 = 5_000;
 /// B50: watchers one live match may hold at once.
 pub const SPECTATORS_PER_MATCH: usize = 8;
 /// B53: a chat message's longest body, in characters after trimming (`chat_messages`' check).
