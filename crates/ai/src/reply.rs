@@ -39,6 +39,7 @@ use jackioh_engine::{
 use crate::candidates::{blow, candidate_actions_in, cleaved_neighbours, exchange, side_of};
 use crate::config::{AI_EVAL, AI_REPLY, AI_SEARCH};
 use crate::evaluate::{NextSwing, evaluate, unit_worth};
+use crate::learned::finalist_score;
 use crate::lethal::deft_ready_switch;
 use crate::simulate::{LineStatus, best_auto_answer, line_status, simulate, static_score, surcharge_nodes};
 use crate::types::NodeCounter;
@@ -434,8 +435,13 @@ pub fn reply_score(
     hidden: &IndexSet<String>,
 ) -> Option<f64> {
     let status = line_status(end, seat, root_turn);
-    if status == LineStatus::Over || status == LineStatus::Open {
+    if status == LineStatus::Over {
         return Some(static_score(end, seat, root_turn));
+    }
+    // A line that stopped on the seat's own prompt keeps its static score, from the evaluation that
+    // scores the finalists (#1010).
+    if status == LineStatus::Open {
+        return Some(finalist_score(end, seat, NextSwing::Enemy));
     }
     let unspent = if status == LineStatus::Passed {
         end.players[seat].turn_log.unspent_at_end.unwrap_or(0)
@@ -448,5 +454,5 @@ pub fn reply_score(
     } else {
         NextSwing::Enemy
     };
-    Some(evaluate(&after, seat, next, &AI_EVAL) - AI_EVAL.unspent_mana * f64::from(unspent))
+    Some(finalist_score(&after, seat, next) - AI_EVAL.unspent_mana * f64::from(unspent))
 }

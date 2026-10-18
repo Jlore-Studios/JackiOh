@@ -10,6 +10,10 @@
 // `<Gated>`; an account that owes the age check or the terms in force (R757000, R757001) sees, in place
 // of its online half, a way to the consent screen, and its online games, "Shared with me" and every
 // "Share with a friend" wait until it answers there.
+//
+// DOWNLOAD JSON (R1141000). A row that can be watched can be saved as one JSON file for a bug
+// report: its steps' views and the row's facts, through the same `ReplaySource`, no account named.
+// Its button sits just left of Watch.
 
 import { useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
@@ -26,7 +30,9 @@ import { createPracticeHost } from "../practice/host.ts";
 import type { PracticeHost } from "../practice/host.ts";
 import type { PracticeReplayListing } from "../practice/protocol.ts";
 import ReplayPlayer from "../replay/ReplayPlayer.tsx";
-import { ReplayFailure, replayFailureText } from "../replay/source.ts";
+import { downloadFile, onlineGame, practiceGame, replayJsonFile } from "../replay/download.ts";
+import type { ReplayJsonGame } from "../replay/download.ts";
+import { ReplayFailure, replayFailureOf, replayFailureText } from "../replay/source.ts";
 import type { ReplaySource } from "../replay/source.ts";
 import { onlineReplaySource, practiceReplaySource } from "../replay/sources.ts";
 import { ShareWithFriend } from "../together/ShareReplay.tsx";
@@ -47,6 +53,9 @@ export const replaysTestid = {
   sharedWithMe: "replays-shared-with-me",
   /** R970000: the account owes the consent screen before its online games. */
   consent: "replays-consent",
+  /** R1141000: a row's Download JSON, and why its file could not be made. */
+  download: (key: string): string => `replays-download-${key}`,
+  downloadFailed: (key: string): string => `replays-download-failed-${key}`,
 } as const;
 
 type Listed<Row> =
@@ -90,6 +99,40 @@ function turnsText(turns: number): string {
 /** The row's reason it cannot be shown, if any, worded as the player words it. */
 function unavailableText(reason: PracticeReplayListing["unavailable"]): string | null {
   return reason === undefined ? null : replayFailureText(new ReplayFailure(reason));
+}
+
+/**
+ * R1141000: a row's Download JSON. It reads every step through the source `open` makes, then saves
+ * the file; a page that fails saves nothing and says why on the row.
+ */
+function DownloadJson({ testKey, game, open }: { testKey: string; game: ReplayJsonGame; open: () => ReplaySource | null }): ReactElement {
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+  const save = (): void => {
+    const source = open();
+    if (source === null || saving) return;
+    setSaving(true);
+    setFailed(null);
+    replayJsonFile(game, source, Date.now())
+      .then(downloadFile, (cause: unknown) => {
+        setFailed(replayFailureText(replayFailureOf(cause)));
+      })
+      .finally(() => {
+        setSaving(false);
+      });
+  };
+  return (
+    <>
+      {failed === null ? null : (
+        <span role="alert" className="replays__why" data-testid={replaysTestid.downloadFailed(testKey)}>
+          {failed}
+        </span>
+      )}
+      <button type="button" data-testid={replaysTestid.download(testKey)} onClick={save} disabled={saving}>
+        {saving ? t("Saving…") : t("Download JSON")}
+      </button>
+    </>
+  );
 }
 
 export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory?: () => PracticeHost }): ReactElement {
@@ -218,6 +261,13 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
                     {turnsText(row.turns)} · {formatDateTime(row.endedAt, { dateStyle: "medium", timeStyle: "short" })}
                     {why === null ? null : <span className="replays__why"> · {why}</span>}
                   </span>
+                  {why === null ? (
+                    <DownloadJson
+                      testKey={`practice-${String(row.game)}`}
+                      game={practiceGame(row)}
+                      open={() => (host.current === null ? null : practiceReplaySource(host.current, row))}
+                    />
+                  ) : null}
                   <button type="button" onClick={() => openPractice(row)} disabled={why !== null}>
                     {t("Watch")}
                   </button>
@@ -275,6 +325,13 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
                       {formatDateTime(row.endedAt, { dateStyle: "medium", timeStyle: "short" })}
                       {why === null ? null : <span className="replays__why"> · {why}</span>}
                     </span>
+                    {why === null ? (
+                      <DownloadJson
+                        testKey={`online-${row.matchId}`}
+                        game={onlineGame(row)}
+                        open={() => (token === null ? null : onlineReplaySource(token, row))}
+                      />
+                    ) : null}
                     <button type="button" onClick={() => openOnline(row)} disabled={why !== null}>
                       {t("Watch")}
                     </button>

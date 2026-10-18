@@ -155,6 +155,9 @@ last turn" (the last step, its turn's GIF already being made). A practice result
 the worker's final snapshot (`replay`) and asks its pages through the practice controller's queue; a
 match result loads its first page to learn the replay's length (`OpenedReplay`, `openOnlineMatchReplay`).
 The GIF code still loads on demand, never in the main bundle.
+Each `/replays` row that can be watched also offers "Download JSON" (R1141000): every step's view through the
+row's own source, the row's facts and the build's catalog version, no account named, made in memory and saved
+to the browser's downloads, for a bug report.
 A finished co-op game's result panel offers "Watch the replay" too (§13.9): `duos/DuosReplay.tsx` reads
 `GET /api/duos/matches/:matchId/replay` once and steps the seat's `DuosView`s on `DuosBoard`'s replay mode,
 with the player's controls, a round standing for a turn; it is never in `/replays`.
@@ -168,6 +171,8 @@ src/replay/
                   `start` and `shareOnOpen` for a result screen's two buttons (R768000)
   OpenedReplay.tsx  a source loaded first (a finished match's first page), then the player
   ShareGif.tsx    "Share as GIF" (#513, R513000): the clip, the shape, progress, cancel, Share or Download
+  download.ts     "Download JSON" (#1141, R1141000): every step of a source and the row's facts as one file, and
+                  the download both it and the GIF's share.ts hand a file to
   gif/            what it loads on demand, never in the main bundle: plan.ts (a clip's views to frames, a pure
                   function on a fixed frame clock), raster.ts and raster.worker.ts (the frames drawn on an
                   OffscreenCanvas, in a worker where it can), encoder.ts (GIF bytes by hand), share.ts, export.ts

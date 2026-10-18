@@ -1022,6 +1022,15 @@ pub const TRAINING_IMPROVE: TrainingGate = TrainingGate {
     paired: true,
     vs_parent: 220,
 };
+/// R1012000: the `learn` lane's gate, the learned evaluation's (#466, #1012; `training/learn.md`):
+/// the improve lane's bar, 220 of 400 games on 200 deals each played twice with the seats swapped,
+/// on the lane's own hold-out deals (`learn:<tree>:<d>`). A retrained network beats its parent by
+/// the same margin a hand-tuned change must; no LLM chooses it (`docs/learned-eval.md` D2).
+pub const TRAINING_LEARN: TrainingGate = TrainingGate {
+    games: 400,
+    paired: true,
+    vs_parent: 220,
+};
 /// SURFACE §14.2: the `unban` lane's gate (plus strictly fewer shadow bans than the parent). Its bar
 /// against the parent is lower than improve's was, since unbanning cards is its gain: 60 is two
 /// deviations above an equal successor's 50 of 100. It was 75, then 65 (R732001), and R850000 left it
