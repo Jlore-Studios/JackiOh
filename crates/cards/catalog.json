@@ -15892,6 +15892,123 @@
       "text": "Lucky 2\nCry: Draw 1-2. Add 1-6 to your Jade Counter."
     }
   },
+  "meditativeplus-001": {
+    "id": "meditativeplus-001",
+    "index": "1",
+    "name": "Bob's Plan",
+    "set": "Meditative+",
+    "type": "Spell",
+    "tags": [
+      "Quickdraw"
+    ],
+    "rarity": "Mythic",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "meditativeplus-001-1",
+      "meditative-008",
+      "meditativeplus-001-2",
+      "meditative-020"
+    ],
+    "loc": 38,
+    "base": {
+      "keywords": [],
+      "text": "Add a random Wincon card to your hand, and its plan: a Base Camp for Reach the Summit, a Spa Day for Aestheticize the Game."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add a random Radiant Wincon card to your hand, and its Radiant plan: a Radiant Base Camp for Reach the Summit, a Radiant Spa Day for Aestheticize the Game."
+    }
+  },
+  "meditativeplus-001-1": {
+    "id": "meditativeplus-001-1",
+    "index": "1.1",
+    "name": "Base Camp",
+    "set": "Meditative+",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Token"
+    ],
+    "rarity": "Token",
+    "token": true,
+    "cost": 0,
+    "refs": [
+      "meditative-008",
+      "core-t-coin"
+    ],
+    "params": [
+      {
+        "key": "levels",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "coins",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 24,
+    "base": {
+      "keywords": [],
+      "text": "Every Reach the Summit you own goes up {levels|Ascent level|Ascent levels}. Add {coins|Coin|Coins} to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Every Reach the Summit you own goes up {levels|Ascent level|Ascent levels}. Add {coins|Radiant Coin|Radiant Coins} to your hand."
+    }
+  },
+  "meditativeplus-001-2": {
+    "id": "meditativeplus-001-2",
+    "index": "1.2",
+    "name": "Spa Day",
+    "set": "Meditative+",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Token"
+    ],
+    "rarity": "Token",
+    "token": true,
+    "cost": 2,
+    "refs": [
+      "meditative-030-1"
+    ],
+    "params": [
+      {
+        "key": "heal",
+        "base": 25,
+        "radiant": 50,
+        "better": "up",
+        "step": 5,
+        "min": 5
+      },
+      {
+        "key": "bombs",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 23,
+    "base": {
+      "keywords": [],
+      "text": "Heal your hero {heal}. Shuffle {bombs|Love Bomb|Love Bombs} into your deck."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Heal your hero {heal}. Shuffle {bombs|Radiant Love Bomb|Radiant Love Bombs} into your deck."
+    }
+  },
   "meditativeplus-002": {
     "id": "meditativeplus-002",
     "index": "2",
@@ -16239,6 +16356,80 @@
       },
       "keywords": [],
       "text": "With X at least 4, it has Rush; 8, Divine Shield; 12, First Strike; 16, Cleave; 20, Lifesteal; 30, Indestructible."
+    }
+  },
+  "meditativeplus-021": {
+    "id": "meditativeplus-021",
+    "index": "21",
+    "name": "Harmony Spirit",
+    "set": "Meditative+",
+    "type": "Unit",
+    "tags": [
+      "CN"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "core-t-rush"
+    ],
+    "loc": 28,
+    "base": {
+      "attack": 3,
+      "health": 7,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nCry: Set every other Unit's Attack and Health to 3/3."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 14,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nCry: Set every other Unit's Attack and Health to 3/3. Fill your board with Rush Tokens in Chinese."
+    }
+  },
+  "meditativeplus-024": {
+    "id": "meditativeplus-024",
+    "index": "24",
+    "name": "Bob, Wisconsin's Strongest Soldier",
+    "set": "Meditative+",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Legendary",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "core-t-coin"
+    ],
+    "params": [
+      {
+        "key": "coins",
+        "base": 3,
+        "radiant": 3,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      }
+    ],
+    "loc": 85,
+    "base": {
+      "attack": 5,
+      "health": 5,
+      "keywords": [],
+      "text": "Cry: Choose one: Freeze all enemy Units; put an enemy Unit into your hand, and your opponent gets {coins|Coin|Coins}; Discover a Unit and make it Radiant; or draw 1 and fill your hand with copies of it."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 10,
+      "keywords": [],
+      "text": "Cry: Do all of these, in order: Freeze all enemy Units; put an enemy Unit into your hand, and your opponent gets {coins|Coin|Coins}; Discover a Unit and make it Radiant; then draw 1 and fill your hand with copies of it."
     }
   },
   "meditativeplus-025": {

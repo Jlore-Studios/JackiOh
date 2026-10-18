@@ -1,14 +1,16 @@
 //! Counters on an instance and locks on a zone (§6.3). Plague Counters live on the instance and R78
 //! clears them when the card leaves the field; a Lock lives on the zone and outlives every occupant.
 //! The Plague Counter rules themselves — what a placement is, the multiplier, the report — are
-//! `crate::plague`'s (R471); the placement verbs are `super::plague`'s.
+//! `crate::plague`'s (R471); the placement verbs are `super::plague`'s. R429's play count, which rides
+//! the card through every zone, is raised here too (`raise_times_played`, R1185001).
 
 use serde::{Deserialize, Serialize};
 
 use super::targets::{PlayerSpec, TargetSpec, instance_of, player_of};
 use crate::plague::{place_plague_on, plague_on, remove_plague};
 use crate::script::{Effect, EffectContext};
-use crate::wire::{GameEvent, Row};
+use crate::state::{CardInstance, GameState, find_instance_mut};
+use crate::wire::{GameEvent, PLAYER_IDS, PlayerId, Row};
 use crate::zones::{ZoneSlot, is_locked, lock_zone, row_size, slot_of, unlock_zone};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -152,5 +154,84 @@ pub fn unlock(args: UnlockArgs) -> Effect {
             row: slot.row,
             lane: slot.lane,
         });
+    })
+}
+
+/// `raiseTimesPlayed`'s argument: whose cards (default "self"), of which definition, by how much.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct RaiseTimesPlayedArgs {
+    pub def_id: String,
+    pub amount: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// Every card `player` owns of `def_id`, wherever it is, side by side in `find_instance`'s order
+/// (hand, deck, graveyard, exile, field, the resolving zone).
+fn owned_copies(state: &GameState, player: PlayerId, def_id: &str) -> Vec<CardInstance> {
+    let mut out: Vec<CardInstance> = Vec::new();
+    for side in PLAYER_IDS {
+        let cards = &state.players[side];
+        let field = cards
+            .units
+            .iter()
+            .flatten()
+            .flatten()
+            .chain(cards.backrow.iter().flatten())
+            .chain(cards.backrow_piles.iter().flatten().flatten())
+            .chain(cards.carried.iter().flatten().flatten());
+        let all = cards
+            .hand
+            .iter()
+            .chain(cards.library.iter())
+            .chain(cards.graveyard.iter())
+            .chain(cards.exile.iter())
+            .chain(field)
+            .chain(cards.resolving.iter());
+        out.extend(
+            all.filter(|card| card.owner == player && card.def_id == def_id)
+                .cloned(),
+        );
+    }
+    out
+}
+
+/// R1185001 (M+ #1.1 Base Camp: "Every Reach the Summit you own goes up N Ascent levels"): R429's play
+/// count goes up by `amount` on every card of `defId` the player owns, in every zone, as that many
+/// plays would have raised it — only on a card whose script counts its plays (`countsPlays`, M #8's
+/// Ascent level, R840). Nothing is played, so nothing resolves and nothing wins: a level of 10 or more
+/// wins when the card is next played (R850). A copy made later starts at 0 (R57). Each card reports its
+/// new count with `numberChanged` ("timesPlayed"), hidden where the card is (R97: a hand card from the
+/// other player, a deck card from both, `card_scope::unreadable_by`). An `amount` of 0 or less does
+/// nothing.
+pub fn raise_times_played(args: RaiseTimesPlayedArgs) -> Effect {
+    Effect::new("raiseTimesPlayed", move |ctx| {
+        if args.amount <= 0 {
+            return;
+        }
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        for card in owned_copies(ctx.state, player, &args.def_id) {
+            if crate::scripts::script_of(ctx.state, &card).flags().counts_plays != Some(true) {
+                continue;
+            }
+            let count = crate::times_played::times_played_of(&card) + args.amount;
+            let hidden_from = super::card_scope::unreadable_by(ctx.state, &card);
+            if let Some(live) = find_instance_mut(ctx.state, &card.id) {
+                live.times_played = Some(count);
+            }
+            ctx.events.push(GameEvent::NumberChanged {
+                instance_id: card.id.clone(),
+                def_id: card.def_id.clone(),
+                key: "timesPlayed".to_string(),
+                value: count,
+                hidden_from: if hidden_from.is_empty() {
+                    None
+                } else {
+                    Some(hidden_from)
+                },
+            });
+        }
     })
 }
