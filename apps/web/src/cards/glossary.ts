@@ -62,6 +62,9 @@
 // - The Meditative set's words (R1384): §6.3's Exile, Hand size (matched in lower case, as #79 prints
 //   it) and Mark in a hand (printed "Mark"). Grant tag stays rules vocabulary: #35 says it in plain
 //   words, so no card prints the row's name.
+//
+// Issue #1174 (R1174000) adds §6.1's Frozen, a status that is no keyword kind, and §6.3's Freeze,
+// with "freeze" and "freezes" as its aliases. No card prints either yet (M+ #24 Bob, #1185, will).
 
 import type { KeywordKind } from "@jackioh/shared";
 
@@ -103,6 +106,7 @@ export type VerbTermId =
   | "Trigger a Cry"
   | "Look at a hand"
   | "Allure"
+  | "Freeze"
   | "Jade Counter"
   | "Exile"
   | "Hand size"
@@ -113,6 +117,7 @@ export type StatusTermId =
   | "Can't be attacked"
   | "Only Units in this lane can attack this"
   | "Berserk"
+  | "Frozen"
   | "Combat keyword";
 export type GlossaryTermId = KeywordKind | StatusTermId | TriggerTermId | VerbTermId;
 export type GlossaryEntry = {
@@ -234,6 +239,11 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
     "An attack on it is legal only from the enemy unit zone of its own lane",
   ),
   Berserk: status("Berserk", "While Berserk, at the start and end of its controller's turn this attacks its own hero"),
+  // R1174000: a status set by Freeze (§6.3).
+  Frozen: status(
+    "Frozen",
+    "Can't attack or switch position until it thaws: it loses its next chance to do either, and thaws at the end of the turn it could have done it",
+  ),
   // Patch v0.3.7 (R781005): the pool's name, printed lower-case ("random combat keywords"); patch
   // v0.3.Y (R1025000) took Armor 1 and Spell Damage +1 out of it.
   "Combat keyword": status(
@@ -305,6 +315,10 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
     "Allure",
     "Steal the marked enemy permanents at the start of your next turn; one you have no room for is destroyed",
   ),
+  // R1174000, R910000: the verb that sets Frozen, bold in the spellings a card prints.
+  Freeze: verb("Freeze", "The Unit loses its next attack or position switch, and thaws at the end of the turn it could have made one", {
+    aliases: ["freeze", "freezes"],
+  }),
   "Jade Counter": verb("Jade Counter", "A public count each player has, that only rises"),
   // R1384: §6.3's words the Meditative cards print; "hand size" matches as #79 prints it.
   Exile: verb("Exile", "Send to the exile pile, from anywhere; it triggers no Death", {
