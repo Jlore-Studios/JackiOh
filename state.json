@@ -4030,22 +4030,12 @@
       "taken_asks": [],
       "verdict_rounds": 3,
       "votes": {
-        "approvals": [
-          "gemini"
-        ],
-        "builder": "gemini",
+        "approvals": [],
+        "builder": "claude",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "gemini",
-            "run": "39092315238",
-            "tier": "medium"
-          }
-        ],
-        "sha": "f1d453b800b671c5de490b5aa4e06cb1fcbdb0bb",
-        "tiers": {
-          "gemini": "medium"
-        }
+        "reviews": [],
+        "sha": "ada2cef985936f5060be4e87b9702d6be8dde6ea",
+        "tiers": {}
       }
     },
     "1169": {
