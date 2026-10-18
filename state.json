@@ -4226,6 +4226,14 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "1221": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-18T13:10:16Z",
+      "issue": 1204,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "148": {
       "asks": [
         "c:5974504575"
