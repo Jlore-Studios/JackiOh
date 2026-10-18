@@ -4054,11 +4054,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-18T04:28:48Z",
+        "at": "2026-10-18T05:03:53Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "the migration line: the plan adds crates/server/migrations/0042_match_checkpoints.sql, and the rule names a database migration as hard, so hard holds"
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "a database migration (crates/server/migrations/0042) plus actor, store, build-script and spec work across the server: the rule's hard line holds outright"
       },
       "failures": 0,
       "forced": false,
