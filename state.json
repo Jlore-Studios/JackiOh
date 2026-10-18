@@ -4020,7 +4020,7 @@
       "pending_request": false,
       "provider": "claude-4",
       "question": "",
-      "queued_at": "2026-10-18T04:23:32Z",
+      "queued_at": "2026-10-18T05:54:37Z",
       "round_tier": "medium",
       "run_id": "39097003962",
       "self_check_findings": [],
