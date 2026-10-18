@@ -10060,9 +10060,9 @@
     "what": "build #1181 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-18T18:04:34Z",
+    "at": "2026-10-18T18:11:58Z",
     "notes": [
-      "started a night run, as a lane was free: #1181 (hard) is queued to build, for `claude-1`: build on `claude-1` (claude, `opus`, strong); review on `claude-1` (claude, `opus`, strong)"
+      "started a night run, as a lane was free: #1224 (hard) is queued to build, for `claude-3`: build on `claude-3` (claude, `opus`, strong); review on `claude-3` (claude, `opus`, strong)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
