@@ -257,7 +257,8 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     // face, so its Radiant face is its base text less the exile replacement. Meditative #89 Jlarna's
     // Radiant face is its base text less the end-of-turn Tribute (R1225); #22.1 Fortify Mind's is its
     // base text less the discard penalty (R862), and #48 Tranquility's less "End the turn." (R1021),
-    // as is Classic #29 Book of Vital Kill's since patch v0.3.10 (radiantDiff.test.ts names all nine).
+    // as is Classic #29 Book of Vital Kill's since patch v0.3.10, and Meditative+ #11 Living Mana
+    // Potion's less its Tribute (radiantDiff.test.ts names all ten).
     const pureDeletions = new Set([
       "core-055",
       "classic-028",
@@ -268,6 +269,7 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
       "meditative-022-1",
       "meditative-048",
       "meditative-089",
+      "meditativeplus-011",
     ]);
     for (const card of DEFS) {
       const f = face(card.id, true);

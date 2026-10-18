@@ -10,12 +10,12 @@ use crate::catalog::def_of;
 use crate::config::{
     ANIMATED_FALLBACK_ATTACK, ANIMATED_FALLBACK_HEALTH, BACKROW_ZONES, RADIANT_FALLBACK_FACTOR, UNIT_ZONES,
 };
-use crate::script::{AuraEntry, HookArgs, StatMod};
+use crate::script::{AuraEntry, AuraHook, HookArgs, StatMod};
 use crate::state::{CardInstance, GameState, Position};
 use crate::tuning::{tuned_keywords, x_of};
 use crate::wire::{
-    AttackHealth, CardDef, CardFace, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone, armor_of,
-    has_keyword,
+    AttackHealth, CardDef, CardFace, CardType, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone,
+    armor_of, has_keyword,
 };
 
 /// §10.4: a unit's layered stats and keywords (`unit_view`). Not the view's `wire::UnitView`, which
@@ -257,6 +257,30 @@ fn aura_mods(state: &GameState, unit: &CardInstance) -> Vec<StatMod> {
         .filter(|entry| (entry.applies)(unit))
         .map(|entry| entry.mod_)
         .collect()
+}
+
+/// R1180002 (Meditative+ #7 Life Mage): "Aura: Your Spells have <keyword>." — while the source acts,
+/// each Spell its controller is resolving has the keyword: a card in that player's resolving zone whose
+/// type is Spell, so not a Field Spell or a Trap, nor a Spell set face-down, which is a Trap until it
+/// resolves (R783005). It is a layer (§10.4) on the resolving card, read wherever the Spell's keywords
+/// are read: damage step 8 heals for a Spell's Lifesteal there (R85). A keyword is had once (§6.1), so
+/// two such auras give it once. The test reads instance data only (`faces::card_type_of` reads no
+/// layer), as an aura's must.
+pub fn spells_have_aura(keyword: Keyword) -> AuraHook {
+    crate::script::aura_hook(move |args| {
+        let controller = args.self_.controller;
+        let state = args.state;
+        vec![AuraEntry {
+            applies: Box::new(move |card: &CardInstance| {
+                matches!(card.zone, Zone::Resolving { player } if player == controller)
+                    && crate::faces::card_type_of(state, card) == CardType::Spell
+            }),
+            mod_: StatMod {
+                keywords: Some(vec![keyword.clone()]),
+                ..StatMod::default()
+            },
+        }]
+    })
 }
 
 /// #892: layer 5's aura entries for a whole sweep. `new` asks each source's hook once and every unit

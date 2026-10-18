@@ -1128,6 +1128,15 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         }
         // MD-B22, R946: the watcher's own words.
         ModifierKind::LaneWatch { label, .. } => label.clone(),
+        // R1180001: Meditative+ #11 Living Mana Potion's "Spell Damage +N this turn".
+        ModifierKind::SpellDamage { amount } => format!("You have Spell Damage +{amount} this turn"),
+        // R1180004: Meditative+ #6 Bloodbloom's health price, and the Echo the Radiant one adds.
+        ModifierKind::HealthPrice { multiple, echo } => match echo {
+            Some(echo) if *echo > 0 => format!(
+                "Your next Spell costs health equal to {multiple} times its cost instead of mana, and has Echo {echo}"
+            ),
+            _ => format!("Your next Spell costs health equal to {multiple} times its cost instead of mana"),
+        },
     }
 }
 
@@ -1909,6 +1918,8 @@ fn redact_event(
             // so is the exit mark the event happened at (R174, R212).
             shown.remove("arrivedDuring");
             shown.remove("exitsFrom");
+            // R1180005: the answer names a card in a hand or a deck, and is the engine's bookkeeping.
+            shown.remove("answer");
             if hidden(&instance) {
                 shown.remove("radiant");
                 hide(&mut shown, &["instanceId", "defId"]);

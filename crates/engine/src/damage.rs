@@ -248,9 +248,12 @@ pub fn hero_hit_amount(state: &GameState, player: PlayerId, amount: i32, pierce:
     }
 }
 
-/// E6, §4.4 step 0: the Spell Damage on a player's side — every "Spell Damage +N" among the keywords
-/// of the units acting on their field (the top of each pile, an animated card standing in a unit zone
-/// included), summed, as Armor sums (a numbered keyword, §10.4).
+/// E6, §4.4 step 0: a player's Spell Damage — every "Spell Damage +N" among the keywords of the units
+/// acting on their field (the top of each pile, an animated card standing in a unit zone included),
+/// summed, as Armor sums (a numbered keyword, §10.4). R1180000: one sum, whatever gives it — it adds
+/// every Spell Damage aura acting on either side that reaches this player (Meditative+ #9's "Both
+/// players have Spell Damage +X") and, R1180001, their live "Spell Damage +N this turn" modifiers
+/// (Meditative+ #11). Without either, the number is the Units' alone, as before (D9).
 pub fn spell_damage_of(state: &GameState, player: PlayerId) -> i32 {
     let mut total = 0;
     for card in crate::zones::active_units_of(state, player) {
@@ -260,7 +263,37 @@ pub fn spell_damage_of(state: &GameState, player: PlayerId) -> i32 {
             }
         }
     }
+    total += spell_damage_auras_for(state, player);
+    for modifier in &state.players[player].mods {
+        if let ModifierKind::SpellDamage { amount } = modifier.kind
+            && crate::mana::modifier_is_live(state, modifier)
+        {
+            total += amount.max(0);
+        }
+    }
     total.max(0)
+}
+
+/// R1180000: the Spell Damage the auras acting on either side give this player — each text that
+/// carries `spellDamageAura`, on a card acting on its controller's field (face-up, the top of its
+/// pile: `acting_texts_of`), gives its controller its amount, and the opponent too when it says
+/// `both`. The amount moves with the card's declared number `spellDamage` (R386), so a Nerf or a Buff
+/// moves it.
+fn spell_damage_auras_for(state: &GameState, player: PlayerId) -> i32 {
+    let mut total = 0;
+    for side in crate::wire::PLAYER_IDS {
+        for card in acting_texts_of(state, side) {
+            for text in crate::scripts::texts_of(state, &card) {
+                let Some(aura) = text.flags.spell_damage_aura else {
+                    continue;
+                };
+                if side == player || aura.both == Some(true) {
+                    total += crate::params::declared_or(state, &card, "spellDamage", aura.amount).max(0);
+                }
+            }
+        }
+    }
+    total
 }
 
 /// E6: how much a hit from this source is raised — its controller's Spell Damage, when it is a Spell.
@@ -631,8 +664,21 @@ fn controller_of_now(unit: &Option<CardInstance>, target: &DamageTarget) -> Play
 
 /// §6.3 Heal: units are capped at max health, heroes are not. E5, E8: the heal first meets the "would
 /// be healed" replacements on its stated amount, a heal on an undamaged unit included (R462) — one
-/// that replaced it heals nothing.
+/// that replaced it heals nothing. R1180003: a heal no replacement took is then multiplied by its
+/// controller's healing multiplier (`query::heal_multiplier_of`, Meditative+ #7's Radiant face), the
+/// cap still holding, so a heal a replacement turned into damage is never doubled.
 pub fn heal_unit(sink: &mut DamageSink<'_>, instance: &CardInstance, amount: i32) -> i32 {
+    heal_unit_by(sink, instance, amount, true)
+}
+
+/// R1180003: "heal up to N" on a unit — what it heals is what it would restore to reach N, a floor
+/// no healing multiplier pushes it past (§6.3).
+pub fn heal_unit_up_to_amount(sink: &mut DamageSink<'_>, instance: &CardInstance, amount: i32) -> i32 {
+    heal_unit_by(sink, instance, amount, false)
+}
+
+/// A unit's heal. R1180003: `multiplied` is whether its controller's healing multiplier reaches it.
+fn heal_unit_by(sink: &mut DamageSink<'_>, instance: &CardInstance, amount: i32, multiplied: bool) -> i32 {
     let stated = amount;
     if stated <= 0 {
         return 0;
@@ -649,6 +695,11 @@ pub fn heal_unit(sink: &mut DamageSink<'_>, instance: &CardInstance, amount: i32
     ) {
         return 0;
     }
+    let stated = if multiplied {
+        stated.saturating_mul(crate::query::heal_multiplier_of(sink.state, live.controller))
+    } else {
+        stated
+    };
     let damage_now = find_instance(sink.state, &live.id).map_or(live.damage, |card| card.damage);
     let healed = damage_now.min(stated);
     if let Some(card) = find_instance_mut(sink.state, &live.id) {
@@ -664,6 +715,13 @@ pub fn heal_unit(sink: &mut DamageSink<'_>, instance: &CardInstance, amount: i32
 }
 
 pub fn heal_hero(sink: &mut DamageSink<'_>, player: PlayerId, amount: i32) -> i32 {
+    heal_hero_by(sink, player, amount, true)
+}
+
+/// A hero's heal. R1180003: `multiplied` is whether the player's healing multiplier reaches it —
+/// every heal of an amount, Lifesteal's included, but not "heal up to N", which sets a floor the
+/// multiplier would only push past (§6.3).
+fn heal_hero_by(sink: &mut DamageSink<'_>, player: PlayerId, amount: i32, multiplied: bool) -> i32 {
     if amount <= 0 {
         return 0;
     }
@@ -674,6 +732,12 @@ pub fn heal_hero(sink: &mut DamageSink<'_>, player: PlayerId, amount: i32) -> i3
     if crate::replacements::healing_replaced(sink, &DamageTarget::Hero { player }, healed) {
         return 0;
     }
+    // R1180003: the heal no replacement took, multiplied by the player's healing multiplier.
+    let healed = if multiplied {
+        healed.saturating_mul(crate::query::heal_multiplier_of(sink.state, player))
+    } else {
+        healed
+    };
     // #936 B14: a spent Duos hero heals its team's pool, never past its cap; any other heals as ever.
     let healed = crate::duos_life::hero_heals(sink.state, player, healed);
     if healed <= 0 {
@@ -697,7 +761,8 @@ pub fn heal_hero_up_to(sink: &mut DamageSink<'_>, player: PlayerId, floor: i32) 
     if health >= floor {
         return 0;
     }
-    heal_hero(sink, player, floor - health)
+    // R1180003: a floor, not an amount, so no healing multiplier pushes it past N.
+    heal_hero_by(sink, player, floor - health, false)
 }
 
 /// R18: lose health is not damage. No pipeline, no armor, no cap, no on-damage effects.

@@ -1470,6 +1470,9 @@ mod tests {
         #[test]
         fn r679_a_glitch_that_voids_the_match_is_a_real_ending() {
             register_all();
+            // R1420: the fuzz pool holds the sets that have not shipped, so the decks it deals are
+            // legal only while every set is previewed, as `fuzz_seed` previews them.
+            let _preview = preview_every_set();
             let decks = decks_for_seed(1);
             let mut state = create_game(&CreateGameOptions {
                 seed: "jackioh-fuzz-1".to_string(),
