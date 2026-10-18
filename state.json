@@ -4441,7 +4441,10 @@
       "feedback_since": "2026-10-18T06:12:20Z",
       "issue": 1171,
       "kind": "revise",
+      "queued_at": "2026-10-18T08:41:42Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
