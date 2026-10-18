@@ -103,6 +103,11 @@ applied: Array<AppliedAction>,
  */
 castChain?: number, 
 /**
+ * R1216000: how many spell answers (§10.5 step 7, R1180005) this game has named. Monotonic and
+ * absent until the first answer, so a game that names none hashes as before (D9).
+ */
+answersNamed?: number, 
+/**
  * R174: the field's departures, counted, and each card's latest (`stays.rs`). An effect aimed at a
  * card on the field is aimed at that stay, and a sequence a prompt splits resumes in a later
  * action whose event list does not hold what happened before the pause, so "has this card left
