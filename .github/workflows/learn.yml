@@ -139,6 +139,12 @@ jobs:
             cat "$RUNNER_TEMP/learn/summary.json" 2>/dev/null || echo '{"stage":"failed before the screen"}'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          # retrain.sh writes summary.json whenever it decides (the fit stops it, or the screen does):
+          # a run without one broke, and says so in red rather than as a screen that did not pass.
+          if [ ! -f "$RUNNER_TEMP/learn/summary.json" ]; then
+            echo "::error::retrain.sh stopped (exit $status) before it decided anything"
+            exit 1
+          fi
       - name: the gate, once (promote --lane learn)
         id: gate
         if: ${{ steps.retrain.outputs.passed == 'true' }}
