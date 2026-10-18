@@ -1,4 +1,4 @@
-// Polish task 7: browser layout checks for B18, B29, B30, B31, B32, B43, B44, B45, and B46.
+// Polish task 7: browser layout checks for B18, B29, B30, B31, B32, B43, B44, B45, B46, and B47.
 // B28 is covered by board-layout.cy.tsx; its mount keeps this suite at the product's narrowest container.
 // Measurements use `should` retries after each viewport change.
 
@@ -799,6 +799,48 @@ describe("B44 a play's board pick on a phone held upright", () => {
     cy.get(ts("hand-card-t1")).click();
     cy.get(ts("prompt-modal")).find(".prompt-zones").should("be.visible");
     cy.get(ts("prompt-modal")).find(".prompt-board-hint").should("not.be.visible");
+  });
+});
+
+// B47: a card picker folded away to show the board
+
+/** `transparent`, as the browser computes a background. */
+const CLEAR = "rgba(0, 0, 0, 0)";
+
+function backgroundOf(element: Element): string {
+  const win = element.ownerDocument.defaultView;
+  return win === null ? "" : win.getComputedStyle(element).backgroundColor;
+}
+
+describe("B47 a card picker folds away to show the board", () => {
+  it("B47 at 390x844 a folded Discover is a bar below the field over an undimmed board, and unfolds with its options", () => {
+    cy.viewport(390, 844);
+    mountGame(promptView("discover"));
+
+    cy.get(ts("prompt-scrim")).should(($scrim) => {
+      expect(backgroundOf($scrim[0] as Element), "the open picker dims the board").not.to.eq(CLEAR);
+    });
+    cy.get(ts("prompt-peek")).should(($peek) => {
+      expectTouchSize($peek, "prompt-peek");
+    });
+    cy.get(ts("prompt-peek")).click();
+
+    cy.get(ts("prompt-scrim")).should("have.attr", "data-collapsed", "true").and(($scrim) => {
+      expect(backgroundOf($scrim[0] as Element), "the folded picker leaves the board undimmed").to.eq(CLEAR);
+    });
+    cy.get(ts("prompt-modal"))
+      .should("have.attr", "data-collapsed", "true")
+      .and(($bar) => {
+        const bar = rectOf($bar[0] as Element);
+        const field = rectOf($bar[0]?.ownerDocument.querySelector(`${BOARD} .field`) as Element);
+        expect(bar.height, "a bar, not a sheet").to.be.at.most(72);
+        expect(bar.top, "below the field").to.be.at.least(field.bottom - EPSILON);
+      });
+    cy.get('[data-testid^="prompt-option-"]').should("not.exist");
+    cy.get(ts("prompt-peek")).should("have.attr", "aria-pressed", "true").click();
+
+    cy.get(ts("prompt-modal")).should("not.have.attr", "data-collapsed");
+    cy.get('[data-testid^="prompt-option-"]').should("have.length", 3);
   });
 });
 

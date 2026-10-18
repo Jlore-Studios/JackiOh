@@ -12,9 +12,9 @@
 //   that the click-in carries (Tesla, Jade Beauty, Jlockeed's Evil Blueprints);
 // - "colon": up to its first colon, "…" in its place: the three Call to Chaos editions, whose list
 //   must stay whole in the catalog (each roll's label is a clause of it, R436);
-// - "clamp": its whole text, cut by the rules box at its last line with "…": eight faces still about
+// - "clamp": its whole text, cut by the rules box at its last line with "…": seven faces still about
 //   a line over after the cut (Yile's Virus and Knowledge Breaker, and the Radiant faces of KY's Gift,
-//   Feng Shui, Money Machine and Windfast), which a 200 px tile prints whole.
+//   Feng Shui and Windfast), which a 200 px tile prints whole.
 // Only a face that prints its catalog text takes a short form: in play a #98 Heroic Power prints its
 // rolled power and a Call to Chaos "???" (inPlay.ts) instead.
 //
@@ -54,7 +54,6 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "meditative-045": { base: "clamp", radiant: "clamp" },
   "meditative-049-1": { base: 3, radiant: 3 },
   "meditative-049-2": { base: "clamp", radiant: "clamp" },
-  "meditative-054": { radiant: "clamp" },
   "meditative-091": { radiant: "clamp" },
   "meditative-095": { base: "colon", radiant: "colon" },
   "meditative-097": { base: 1, radiant: 1 },
