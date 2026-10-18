@@ -2,6 +2,7 @@
 //! Rust keyword; `actor.ts` is `match_actor.rs`), part 19.
 //! Written once by part 1 (SURFACE §1).
 
+pub mod checkpoint;
 pub mod clock;
 pub mod contracts;
 pub mod engine;
