@@ -447,7 +447,7 @@
       {
         "key": "damage",
         "base": 2,
-        "radiant": 5,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -455,13 +455,13 @@
     ],
     "loc": 10,
     "base": {
-      "attack": 8,
+      "attack": 6,
       "health": 10,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
     },
     "radiant": {
-      "attack": 16,
+      "attack": 8,
       "health": 20,
       "keywords": [],
       "text": "End of turn: Deal {damage} damage to each enemy."
@@ -482,8 +482,8 @@
     "params": [
       {
         "key": "attack",
-        "base": 4,
-        "radiant": 10,
+        "base": 3,
+        "radiant": 6,
         "better": "up",
         "step": 1,
         "min": 1
@@ -904,8 +904,8 @@
       },
       {
         "key": "loss",
-        "base": 5,
-        "radiant": 5,
+        "base": 7,
+        "radiant": 7,
         "better": "down",
         "step": 1,
         "min": 1
@@ -1547,11 +1547,11 @@
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Steal an enemy permanent."
+      "text": "Steal an enemy Unit."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal an enemy permanent. Make it Radiant."
+      "text": "Steal an enemy Unit. Make it Radiant."
     }
   },
   "core-050": {
@@ -1653,7 +1653,7 @@
     ],
     "rarity": "Legendary",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "loc": 14,
     "base": {
       "attack": 4,
@@ -3159,7 +3159,7 @@
     "tags": [],
     "rarity": "Legendary",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "refs": [
       "core-093-1"
     ],
@@ -3353,7 +3353,7 @@
     "tags": [],
     "rarity": "Mythic",
     "token": false,
-    "cost": 0,
+    "cost": 1,
     "loc": 27,
     "base": {
       "keywords": [],
@@ -4192,8 +4192,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 5,
-        "radiant": 10,
+        "base": 4,
+        "radiant": 8,
         "better": "up",
         "step": 1,
         "min": 1
@@ -6846,7 +6846,7 @@
     "tags": [],
     "rarity": "Rare",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "params": [
       {
         "key": "multiplier",
@@ -6858,7 +6858,7 @@
         "tunedOn": "base"
       }
     ],
-    "loc": 17,
+    "loc": 31,
     "base": {
       "keywords": [],
       "text": "Start of turn: Reveal.\nAura: Enemy Units have −X Attack, where X is {multiplier}× their number.\nWhen your opponent has no Units, Tribute this."
@@ -7881,8 +7881,8 @@
     "cost": 2,
     "loc": 5,
     "base": {
-      "attack": 5,
-      "health": 5,
+      "attack": 4,
+      "health": 4,
       "keywords": [
         {
           "kind": "Armor",
@@ -7935,8 +7935,8 @@
     ],
     "loc": 37,
     "base": {
-      "attack": 5,
-      "health": 5,
+      "attack": 4,
+      "health": 4,
       "keywords": [],
       "text": "End of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk."
     },
@@ -7963,7 +7963,7 @@
     "params": [
       {
         "key": "heads",
-        "base": 5,
+        "base": 4,
         "radiant": 10,
         "better": "up",
         "step": 1,
@@ -7988,8 +7988,8 @@
     ],
     "loc": 18,
     "base": {
-      "attack": 5,
-      "health": 5,
+      "attack": 4,
+      "health": 4,
       "keywords": [],
       "text": "Cry: Flip a coin. Heads (Fed): This gains +{heads}/+{heads}. Tails (Int): This gains −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
     },
@@ -8031,7 +8031,7 @@
     "loc": 14,
     "base": {
       "attack": 0,
-      "health": 5,
+      "health": 4,
       "keywords": [
         {
           "kind": "Divine Shield"
@@ -8069,7 +8069,7 @@
     "params": [
       {
         "key": "attackGain",
-        "base": 5,
+        "base": 4,
         "radiant": 10,
         "better": "up",
         "step": 1,
@@ -8078,8 +8078,8 @@
     ],
     "loc": 23,
     "base": {
-      "attack": 5,
-      "health": 5,
+      "attack": 4,
+      "health": 4,
       "keywords": [
         {
           "kind": "Rush"
@@ -9064,7 +9064,7 @@
     "tags": [],
     "rarity": "Rare",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "loc": 27,
     "base": {
       "keywords": [],
@@ -10451,7 +10451,7 @@
     "tags": [],
     "rarity": "Legendary",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "refs": [
       "classicplus-075",
       "classicplus-075-1"
@@ -11560,14 +11560,14 @@
     "rarity": "Mythic",
     "token": false,
     "cost": 0,
-    "loc": 38,
+    "loc": 41,
     "base": {
       "keywords": [],
-      "text": "Craft a card and add it to your hand."
+      "text": "Craft a card and add it to your hand. Exile this."
     },
     "radiant": {
       "keywords": [],
-      "text": "Craft a Radiant card and add it to your hand."
+      "text": "Craft a Radiant card and add it to your hand. Exile this."
     }
   },
   "meditative-018": {
@@ -12485,7 +12485,7 @@
   "meditative-037": {
     "id": "meditative-037",
     "index": "37",
-    "name": "CN in a bottle",
+    "name": "CN in a Bottle",
     "set": "Meditative",
     "type": "Spell",
     "tags": [
@@ -12493,15 +12493,15 @@
     ],
     "rarity": "Epic",
     "token": false,
-    "cost": "X",
+    "cost": 1,
     "loc": 23,
     "base": {
       "keywords": [],
-      "text": "When this enters your hand: Replace it with a random Radiant card."
+      "text": "Cast on draw: Add a random Radiant card to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "When this enters your hand: Replace it with a random Radiant card. It costs (0)."
+      "text": "Cast on draw: Add a random Radiant card to your hand. It costs (0)."
     }
   },
   "meditative-038": {
@@ -13047,14 +13047,14 @@
     "cost": 4,
     "loc": 29,
     "base": {
-      "attack": 8,
-      "health": 8,
+      "attack": 2,
+      "health": 2,
       "keywords": [],
       "text": "End of turn: Fuse a random enemy permanent into this."
     },
     "radiant": {
-      "attack": 16,
-      "health": 16,
+      "attack": 4,
+      "health": 4,
       "keywords": [],
       "text": "End of turn: Fuse a random enemy permanent and a random card from your opponent's deck into this."
     }
@@ -13594,7 +13594,7 @@
     ],
     "rarity": "Rare",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "loc": 42,
     "base": {
       "attack": 3,
@@ -15122,11 +15122,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "One random effect: Fuse your hand into one card and add 2 copies of it to your hand, all three of which cost (0); add 3 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 8 Armor and you heal it 8; summon a Jade Beauty; summon 3 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
+      "text": "One random effect: Fuse your hand into one card and add 2 copies of it to your hand, all three of which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 6 Armor and you heal it 6; summon a Jade Beauty; summon 3 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Three different random effects, resolved in the order listed: Fuse your hand into one card and add 2 copies of it to your hand, all three of which cost (0); add 3 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 8 Armor and you heal it 8; summon a Jade Beauty; summon 3 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
+      "text": "Three different random effects, resolved in the order listed: Fuse your hand into one card and add 2 copies of it to your hand, all three of which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 6 Armor and you heal it 6; summon a Jade Beauty; summon 3 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
     }
   },
   "meditative-095-1": {

@@ -1,5 +1,5 @@
 //! #27 Blood Ridden Glowy Jelly Bean (SPEC §8.2): "Cast on draw: a random card in your hand becomes
-//! Radiant; you lose 5 health", radiant "2 random cards".
+//! Radiant; you lose 7 health", radiant "2 random cards".
 //!
 //! The radiant cell restates only the number of random cards, so every clause it does not restate is
 //! kept (§8 Conventions). `staticFlags` are read through `scriptOf`, which returns the radiant script
@@ -8,7 +8,7 @@
 //! repeats the draw up to CAST_ON_DRAW_CHAIN_CAP (R58); the cast is free and feeds Combo (R40, R70).
 //!
 //! R60's pick: `setRadiantRandom` pools only non-Radiant cards, takes `count` different ones (all when
-//! fewer exist, none when none do); the resolving card never picks itself. "You lose 5 health" is
+//! fewer exist, none when none do); the resolving card never picks itself. "You lose 7 health" is
 //! R18's `loseHealth`, not damage: it bypasses Armor, #73 Going Long's cap and Fed Fauci's tokens.
 
 use jackioh_engine::prelude::*;
@@ -16,7 +16,7 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "core-027";
 
 /// §8.2: the blood price is the same on both faces; only the number of cards changes. Both are
-/// declared numbers (R386): `loss`, 5, less being better, and `cards`, 2 on the Radiant face and tuned
+/// declared numbers (R386): `loss`, 7, less being better, and `cards`, 2 on the Radiant face and tuned
 /// there alone (R749: the base face's "a random card" prints no number and is always 1).
 fn blood_ridden() -> Script {
     Script {
@@ -41,7 +41,7 @@ pub fn script() -> CardScripts {
 }
 
 // #27 Blood Ridden Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 27): "Cast on draw; a random
-// non-Radiant hand card becomes Radiant (R60); 5 health lost ignoring Going Long (R18); radiant
+// non-Radiant hand card becomes Radiant (R60); 7 health lost ignoring Going Long (R18); radiant
 // 2 cards".
 #[cfg(test)]
 mod tests {
@@ -160,13 +160,13 @@ mod tests {
         }
 
         #[test]
-        fn r18_loses_5_health_not_damage_so_armor_pays_nothing_and_is_left_untouched() {
+        fn r18_loses_7_health_not_damage_so_armor_pays_nothing_and_is_left_untouched() {
             crate::register_all();
             let mut s = drawing(json!(["core-005"]), false, Some(2));
 
             s.start_turn();
 
-            s.expect_health(P1, 25);
+            s.expect_health(P1, 23);
             assert_eq!(s.state().players.p1.hero.armor, 2);
             let lost: Vec<Value> = s
                 .last_events()
@@ -174,7 +174,7 @@ mod tests {
                 .filter(|event| matches!(event, GameEvent::HealthLost { .. }))
                 .map(|event| serde_json::to_value(event).unwrap())
                 .collect();
-            assert!(matches_object(&Value::Array(lost), &json!([{ "player": "p1", "amount": 5 }])));
+            assert!(matches_object(&Value::Array(lost), &json!([{ "player": "p1", "amount": 7 }])));
             // R18: "lose health" never goes through §4.4, so there is no damage instance to cap or absorb.
             assert_eq!(
                 s.last_events()
@@ -190,7 +190,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn flags_2_different_random_cards_and_still_loses_5_health_s8_keeps_the_clause_it_does_not_restate() {
+        fn flags_2_different_random_cards_and_still_loses_7_health_s8_keeps_the_clause_it_does_not_restate() {
             crate::register_all();
             let mut s = drawing(json!(["core-005", "core-016", "core-010"]), true, None);
 
@@ -199,7 +199,7 @@ mod tests {
             let flagged = radiant_hand(s.state());
             assert_eq!(flagged.len(), 2);
             assert_eq!(flagged.iter().collect::<IndexSet<_>>().len(), 2);
-            s.expect_health(P1, 25);
+            s.expect_health(P1, 23);
         }
 
         #[test]
@@ -210,7 +210,7 @@ mod tests {
             s.start_turn();
 
             assert_eq!(radiant_hand(s.state()).len(), 1);
-            s.expect_health(P1, 25);
+            s.expect_health(P1, 23);
         }
 
         #[test]
@@ -242,8 +242,8 @@ mod tests {
     }
 
     #[test]
-    fn r386_an_upgrade_loses_4_health_and_a_degrade_6() {
-        for (upgrade, loss) in [(true, 4), (false, 6)] {
+    fn r386_an_upgrade_loses_6_health_and_a_degrade_8() {
+        for (upgrade, loss) in [(true, 6), (false, 8)] {
             crate::register_all();
             let mut s = drawing(json!(["core-016"]), false, None);
             let moved = if upgrade {
