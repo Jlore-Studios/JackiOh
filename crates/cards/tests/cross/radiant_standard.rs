@@ -21,11 +21,9 @@ fn entries() -> Vec<&'static CardDef> {
 /// R275: the factor a Radiant Unit's attack and health are held to.
 const STAT_FACTOR: i32 = 2;
 
-/// R275's named exceptions to the stat half, by id, with the reason.
-const STAT_EXCEPTIONS: &[(&str, &str)] = &[(
-    "core-013",
-    "R1149002: patch v0.3.12's printed 6/10 → 8/20, the designer's numbers",
-)];
+/// R275's named exceptions to the stat half, by id, with the reason. None remain, so the record
+/// stays empty.
+const STAT_EXCEPTIONS: &[(&str, &str)] = &[];
 
 /// `docs/radiant-audit.md`, the card-by-card record of R275's effect half.
 const AUDIT: &str = include_str!("../../../../docs/radiant-audit.md");
@@ -91,17 +89,17 @@ mod r275_the_radiant_power_standard_spec_5_2 {
         }
         assert_eq!(
             STAT_EXCEPTIONS.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
-            vec!["core-013"]
+            Vec::<&str>::new()
         );
     }
 
     #[test]
-    fn r1149002_jlockeed_shredder_10_is_the_named_exception_its_radiant_attack_8_under_twice_its_6() {
+    fn r1149002_jlockeed_shredder_10_is_no_exception_since_issue_1219_its_radiant_12_20_doubles_its_6_10() {
         let card = CATALOG.get("core-013").expect("Jlockeed Shredder-10");
-        assert_eq!((card.base.attack, card.radiant.attack), (Some(6), Some(8)));
-        // The Health half still doubles.
+        // Issue #1219 raised the Radiant Attack from 8 to 12, so both halves double again.
+        assert_eq!((card.base.attack, card.radiant.attack), (Some(6), Some(12)));
         assert_eq!((card.base.health, card.radiant.health), (Some(10), Some(20)));
-        assert!(is_exception(&card.id));
+        assert!(!is_exception(&card.id));
     }
 
     #[test]
