@@ -5,18 +5,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:6148978753": {
-      "at": "2026-10-13T15:23:44Z",
-      "lines": [
-        "@jgoetzmann-bot option (a)"
-      ]
-    },
-    "c:6149025902": {
-      "at": "2026-10-13T15:26:06Z",
-      "lines": [
-        "@jgoetzmann-bot exception for this issue"
-      ]
-    },
     "c:6152444708": {
       "at": "2026-10-13T18:31:56Z",
       "lines": [
@@ -525,6 +513,12 @@
       "at": "2026-10-18T14:31:37Z",
       "lines": [
         "Approve"
+      ]
+    },
+    "c:6252412691": {
+      "at": "2026-10-18T16:40:02Z",
+      "lines": [
+        "/harness fullsend"
       ]
     }
   },
