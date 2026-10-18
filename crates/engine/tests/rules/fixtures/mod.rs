@@ -31,6 +31,7 @@ pub mod ky_test;
 pub mod last_boards;
 pub mod mb22;
 pub mod meditative_riders;
+pub mod mplus_b07;
 pub mod night_market;
 pub mod outside_data;
 pub mod papaya;

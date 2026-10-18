@@ -285,10 +285,12 @@ mod r279_the_reference_map_spec_5_7_10_10 {
     #[test]
     fn r480_names_the_eight_pancake_tokens_and_the_ten_ai_generated_cards_by_their_tags_from_the_cards_that_make_them()
      {
+        // R1178002: Meditative+ #1.1 Base Camp and #1.2 Spa Day, AI generated cards Bob's Plan names,
+        // join the AI pool once their set ships (#1187), so the pool pinned here is the shipped sets'.
         let indices_of = |tag: Tag| -> Vec<String> {
             entries()
                 .into_iter()
-                .filter(|card| card.token && card.tags.contains(&tag))
+                .filter(|card| card.token && card.tags.contains(&tag) && set_ships(card.set))
                 .map(|card| card.index.clone())
                 .collect()
         };

@@ -802,6 +802,11 @@ pub const MONEY_MACHINE_ODDS: &[RollOdds] = &[
 /// multiply: two Radiant Life Mages make a heal four times as large.
 pub const HEAL_MULTIPLIER: i32 = 2;
 
+/// R1180006 (Meditative+ #17 Dogpile, issue #1180): answers one chain of R1180005 may name — the Spell
+/// that started it answered, then each answer's own cast — before the next targeted resolution calls
+/// nothing. A deck that refills itself with answering cards would otherwise answer forever.
+pub const SPELL_ANSWER_CHAIN_CAP: i32 = 20;
+
 /// R962: the Jade Counter a summon of Jade Beauty (Meditative #39.5) is crossed at (ME-JADE).
 pub const JADE_BEAUTY_AT: i32 = 5;
 /// R962: the Jade Counter every Jade Beauty its player controls is made Radiant at (ME-JADE).

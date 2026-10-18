@@ -2269,7 +2269,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         &[G::Token],
         R::Token,
         st(4, 4),
-        st(10, 10),
+        st(8, 8),
     ),
     row(
         "19.2",
@@ -2279,7 +2279,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         &[G::Token],
         R::Token,
         st(4, 4),
-        st(10, 10),
+        st(8, 8),
     ),
     row(
         "19.3",
@@ -2289,7 +2289,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         &[G::Token],
         R::Token,
         st(4, 4),
-        st(10, 10),
+        st(8, 8),
     ),
     row(
         "19.4",
@@ -2299,7 +2299,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         &[G::Token],
         R::Token,
         st(0, 4),
-        st(0, 10),
+        st(0, 8),
     ),
     row(
         "19.5",
@@ -2309,7 +2309,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         &[G::Token],
         R::Token,
         st(4, 4),
-        st(10, 10),
+        st(8, 8),
     ),
     row(
         "20",

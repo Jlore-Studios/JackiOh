@@ -1850,6 +1850,15 @@
       attack: { voice: "sapi-cat", text: "Nyaa, cleaning time!" },
       death: { voice: "sapi-cat", text: "Nyaa... logging off." },
     },
+    "meditativeplus-001": { // Bob's Plan
+      cast: { voice: "sapi-hero", text: "Bob has a plan. Bob always does." },
+    },
+    "meditativeplus-001-1": { // Base Camp
+      cast: { voice: "robot", text: "Base camp established. Summit in sight." },
+    },
+    "meditativeplus-001-2": { // Spa Day
+      cast: { voice: "sapi-heroine", text: "Deep breath in. Cucumber slices on." },
+    },
     "meditativeplus-002": { // NA Tech
       cast: { voice: "robot", text: "Best and worst, together. Balance achieved." },
     },
@@ -1892,6 +1901,16 @@
       play: { voice: "kid", text: "I got every single one right!" },
       attack: { voice: "kid", text: "Show your work!" },
       death: { voice: "kid", text: "I demand a regrade!" },
+    },
+    "meditativeplus-021": { // Harmony Spirit
+      play: { voice: "sapi-mystic", text: "Be still. Be equal. Be three by three." },
+      attack: { voice: "sapi-mystic", text: "Balance, restored." },
+      death: { voice: "sapi-mystic", text: "The note fades..." },
+    },
+    "meditativeplus-024": { // Bob, Wisconsin's Strongest Soldier
+      play: { voice: "brute", text: "Bob reporting for duty. Pick your poison." },
+      attack: { voice: "brute", text: "For Wisconsin!" },
+      death: { voice: "brute", text: "Tell the fish fry... I'm sorry..." },
     },
     "meditativeplus-025": { // KY's Intuition
       cast: { voice: "prof", text: "Read the code. Trust your gut." },

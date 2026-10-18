@@ -3045,6 +3045,9 @@ pub async fn matches_create(t: &mut PgTx<'_>, m: &MatchRow) -> Result<(), StoreE
 }
 
 pub async fn matches_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<MatchRow>, StoreError> {
+    if !is_uuid(match_id) {
+        return Ok(None);
+    }
     run_as(t, None).await?;
     let row = sqlx::query(concat!(
         "select ",
@@ -3633,6 +3636,9 @@ pub async fn rooms_count_open_by_host(
     host_profile_id: &str,
     at: i64,
 ) -> Result<i64, StoreError> {
+    if !is_uuid(host_profile_id) {
+        return Ok(0);
+    }
     run_as(t, None).await?;
     let row = sqlx::query(concat!(
         "select count(*)::int as n from public.matches
