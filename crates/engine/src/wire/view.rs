@@ -1054,6 +1054,11 @@ pub struct PendingPromptView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub craft_mode: Option<crate::wire::CraftMode>,
+    /// R1184000: a sequence question's right answers so far (Meditative+ #20 KY's Competition), its
+    /// chooser's to see; the prompt then offers Stop after its answers. Absent on every other prompt.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub streak: Option<i32>,
 }
 
 /// The `forYou: false` member of `PendingView`: someone else is answering.

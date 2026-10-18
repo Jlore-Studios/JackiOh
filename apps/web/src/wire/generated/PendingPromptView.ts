@@ -22,4 +22,9 @@ budget?: number,
  * canvas with no presets, tooltips or hints; `potion` and `hugePotion` open it in the potion
  * frame. Absent on every other prompt and on Meditative #17's free crafter.
  */
-craftMode?: CraftMode, };
+craftMode?: CraftMode, 
+/**
+ * R1184000: a sequence question's right answers so far (Meditative+ #20 KY's Competition), its
+ * chooser's to see; the prompt then offers Stop after its answers. Absent on every other prompt.
+ */
+streak?: number, };

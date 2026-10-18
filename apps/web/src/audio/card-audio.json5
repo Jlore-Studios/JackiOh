@@ -1855,7 +1855,7 @@
     },
     "meditativeplus-007": { // Life Mage
       play: { voice: "sapi-heroine", text: "Every spell a little prayer." },
-      attack: { voice: "sapi-heroine", text: "Light, lend me your strength!" },
+      attack: { voice: "sapi-heroine", text: "Light, lend me strength!" },
       death: { voice: "sapi-heroine", text: "My light... fades." },
     },
     "meditativeplus-009": { // Magic Amplifier
@@ -1878,6 +1878,14 @@
     },
     "meditativeplus-017": { // Dogpile
       cast: { voice: "zoomer", text: "Everybody jump on!" },
+    },
+    "meditativeplus-020": { // KY's Competition
+      cast: { voice: "sapi-teacher", text: "Pencils up. Speed round, starting now." },
+    },
+    "meditativeplus-020-1": { // Lil' Kenny
+      play: { voice: "kid", text: "I got every single one right!" },
+      attack: { voice: "kid", text: "Show your work!" },
+      death: { voice: "kid", text: "I demand a regrade!" },
     },
     "meditativeplus-026": { // Scratch Pad
       cast: { voice: "sapi-synth", text: "Blank file. No hints. Good luck." },

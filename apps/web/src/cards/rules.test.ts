@@ -110,6 +110,7 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Trigger End of turn effects",
     "Keep a secret",
     "Guess a secret",
+    "Answer questions in a row",
     "Alternative win condition",
     "Win the game",
     "Switch position",

@@ -424,9 +424,12 @@ fn timeout(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError
             }
             // R79: the AI policy answers, and it never concedes (R84), so the draw is over the prompt's
             // own answers — the concede R211 also offers is not one of them.
-            // R1002: a timeout leaves a night market, drawing nothing.
-            let pick = if let Some(leave) = crate::subsystems::night_market::leave_answer(sink.state) {
-                leave
+            // R1002: a timeout leaves a night market, drawing nothing; R1184001: it stops a question
+            // sequence the same way.
+            let quit = crate::subsystems::night_market::leave_answer(sink.state)
+                .or_else(|| crate::prompts::stop_answer(sink.state));
+            let pick = if let Some(quit) = quit {
+                quit
             } else {
                 let answers: Vec<ActionBody> = legal_actions(sink.state, who)
                     .into_iter()
