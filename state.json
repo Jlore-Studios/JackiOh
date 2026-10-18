@@ -4782,6 +4782,7 @@
       "kind": "revise",
       "pending_request": false,
       "provider": "muse",
+      "question": "Placeholder handoff: spec index/check still running; will report once the proving checks complete.",
       "queued_at": "2026-10-18T16:32:57Z",
       "run_id": "39145457597",
       "self_check_findings": [],
