@@ -3544,12 +3544,30 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "spec/INDEX.md"
+          ],
+          "from": "50d7534e911bca2621c52e6abeeb6c40cbb1ea0a",
+          "main": "6621a17b70b4a1c77d0aed3e4e116c9590631767"
+        },
         "rejections": [],
-        "reviews": [],
-        "sha": "50d7534e911bca2621c52e6abeeb6c40cbb1ea0a",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "39113461000",
+            "tier": "strong"
+          }
+        ],
+        "sha": "ff96b697d5d77732f86814812ec15121d5dce631",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "1169": {
