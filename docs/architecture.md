@@ -51,7 +51,7 @@ deployment decision that can be made later without touching the code.
 | Supabase Postgres | Supabase | Yes (durable) | The 13 tables of BUILD M6 plus `decks`, `trios` and `series` (R250–R263, R330–R341), `tutorial_progress` (R320), `game_records` (R376) and `custom_cards` (R915008), Play together's tables (0038: friends, blocks, presence, challenges, chat, replay shares; SPEC §9.4, §9.5) and the co-op tables (0039: rooms, matches, their logs; SPEC §13), RLS, the private `app` schema |
 | Supabase Data API | Supabase | No | Read-only projections to the browser, RLS-enforced |
 | `jackioh-server` HTTP routes | One process (a Docker image on Render) | No | Redemption, collection reads, deck and trio saves and trio imports, custom cards (saved after the engine's validator, never run, R915008), enqueue in three modes and the empty-queue fallback to a ladder bot (R1453), room create/join, the Conquest series and its sweeper, the tutorial's account copy (R320), the ladder bots' pool (R1454), Play together's friends, blocks, presence, friend challenges, chat and replay shares (SPEC §9.4, §9.5), and co-op rooms (SPEC §13.9) |
-| `jackioh-server` match actor | The same process | **Yes (in memory)** | `GameState`, two WebSockets (one, when a ladder bot holds the other seat and the actor plays it, R1452), the turn clock, the action log, and the watchers of a friend's unranked match, each fed the friend's seat's views late (SPEC §9.5) |
+| `jackioh-server` match actor | The same process | **Yes (in memory)** | `GameState`, two WebSockets (one, when a ladder bot holds the other seat and the actor plays it, R1452), the turn clock, the action log, and the watchers of a friend's live match, ranked or unranked, each fed the friend's seat's views late (SPEC §9.5) |
 | `jackioh-server` co-op actor | The same process | **Yes (in memory)** | One per co-op match (SPEC §13): a `DuosState` (two 1v1 duels and the team life between them), the two human seats' WebSockets, the AI seats it plays itself, the round clock, the co-op action log, the team pings it relays (§5.4) |
 | `crates/engine` + `crates/cards` | Linked into both of the above | No (pure) | Every rule, `reduce`, `view_for`, `fold` |
 
@@ -419,7 +419,7 @@ through `jackioh_ai::duos_decide`. Its loop is §5.1's with four seats:
 - a crashed actor folds its match back with `duos_fold`, and the end writes `duos_matches.result` and
   `ended_at` once and records the result for both humans, unranked.
 
-A watcher (SPEC §9.5) attaches to a friend's live, unranked match at `/ws/watch`. It never sends an
+A watcher (SPEC §9.5) attaches to a friend's live match, ranked or unranked, at `/ws/watch`. It never sends an
 action: the server pushes it the friend's seat's `viewFor`, each `SPECTATE_DELAY_MS` after the state it
 shows, ignores whatever it sends after `hello`, and tells both players' own sockets how many watch.
 

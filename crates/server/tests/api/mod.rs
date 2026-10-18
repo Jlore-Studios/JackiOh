@@ -19,6 +19,7 @@ pub mod decks;
 pub mod duos_rooms;
 pub mod e2e;
 pub mod env_deployed_commit;
+pub mod env_github_issues;
 pub mod friends;
 pub mod game_records;
 pub mod glicko2;

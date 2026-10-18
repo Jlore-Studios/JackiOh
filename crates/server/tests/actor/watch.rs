@@ -1,6 +1,6 @@
 //! B50, B51 (#936, `.fullsend/SPEC.md` S7): watching a friend's live 1v1 game over `GET /ws/watch`.
-//! A friend's hello for a live unranked match that allows spectators and has room gets the friend's
-//! seat's views, each `SPECTATE_DELAY_MS` after the state it shows, with `legal: []`; ranked,
+//! A friend's hello for a live match, ranked or unranked, that allows spectators and has room gets
+//! the friend's seat's views, each `SPECTATE_DELAY_MS` after the state it shows, with `legal: []`;
 //! opted-out, full, non-friend and blocked are `forbidden` then closed; a watcher's frames never
 //! reach the reducer; a watcher leaving changes nothing in the match; the players' own match sockets
 //! hear `watchers {count}` when the count changes. A watcher already in is let go the same way
@@ -279,12 +279,41 @@ mod b50_watching_a_friend {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn b50_a_ranked_match_is_forbidden() {
+    async fn b50_a_ranked_match_is_watchable_like_an_unranked_one() {
         let w = world(true).await;
-
         let watcher = w.watch(&w.watcher).await;
+        assert!(watcher.of_type("error").is_empty(), "{:?}", watcher.frames());
+        tokio::time::sleep(BEFORE_THE_PLAYERS_ACT).await;
+        let acted = Instant::now();
+        w.keep_both().await;
+        let friends_view = last_view_of(&w.p1);
+        assert_eq!(friends_view["phase"], "main", "{friends_view}");
+        let delay = ms(SPECTATE_DELAY_MS);
 
-        assert_forbidden(&watcher).await;
+        let (_, at, frame) = watcher
+            .wait_for(0, delay + DELAY_SLACK, |frame| {
+                frame["type"] == "view" && frame["view"]["phase"] == "main"
+            })
+            .await
+            .unwrap_or_else(|| panic!("the watcher never saw the turn begin: {:?}", watcher.frames()));
+
+        assert!(
+            at >= acted + delay,
+            "shown {:?} after the state, before the delay",
+            at - acted
+        );
+        assert_eq!(frame["legal"], json!([]), "{frame}");
+        assert_eq!(frame["view"]["viewer"], "p1", "the friend's seat: {frame}");
+        assert_eq!(
+            hand_ids(&frame["view"]),
+            hand_ids(&friends_view),
+            "the friend's own hand"
+        );
+        for view in watcher.of_type("view") {
+            assert_eq!(view["legal"], json!([]), "{view}");
+            assert_eq!(view["view"]["viewer"], "p1", "{view}");
+        }
+        assert!(watcher.of_type("error").is_empty(), "{:?}", watcher.frames());
     }
 
     #[tokio::test(start_paused = true)]

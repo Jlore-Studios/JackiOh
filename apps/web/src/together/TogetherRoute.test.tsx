@@ -45,7 +45,7 @@ const ANN: Friend = { profileId: "f-ann", username: "Ann#2", status: "online", m
 const BOB: Friend = { profileId: "f-bob", username: "Bob#3", status: "inMatch", matchId: "m-bob", watchable: true, since: SINCE };
 /** Offline: Chat only. */
 const CY: Friend = { profileId: "f-cy", username: "Cy#4", status: "offline", matchId: null, watchable: false, since: SINCE };
-/** In a ranked (or full, or opted-out) match: Chat only. */
+/** In a match that is full or opted out of watching: Chat only. */
 const DEE: Friend = { profileId: "f-dee", username: "Dee#5", status: "inMatch", matchId: "m-dee", watchable: false, since: SINCE };
 
 const EVE: PlayerRef = { profileId: "p-eve", username: "Eve#6" };
@@ -505,7 +505,7 @@ describe("B56 each friend row's controls", () => {
     expect(offers(rowOf(BOB), TESTID.watch)).toBe(true);
   });
 
-  it("B56 a friend who is not watchable is not offered Watch: idle, offline, or in a ranked match", async () => {
+  it("B56 a friend who is not watchable is not offered Watch: idle, offline, or in a full or opted-out match", async () => {
     await renderPage();
     expect(offers(rowOf(ANN), TESTID.watch)).toBe(false);
     expect(offers(rowOf(CY), TESTID.watch)).toBe(false);

@@ -110,6 +110,36 @@ mod r602_the_ais_view_keeps_what_a_live_face_down_card_visibly_does {
         }
     }
 
+    /// R602 R767000: on v0.3.7, whose kept Siphon Squad is live while set and unrevealed, its "0
+    /// Attack" leaves the AI's units nothing to swing with, and the redaction keeps that and hides the card
+    #[test]
+    fn r602_r767000_on_v0_3_7_the_live_face_down_0_attack_survives_the_redaction() {
+        let shipped = jackioh_cards::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+        jackioh_engine::with_shipped(Some(shipped), || {
+            let state = siphoned(true);
+            let trap = state.players[HUMAN]
+                .backrow
+                .iter()
+                .flatten()
+                .next()
+                .cloned()
+                .expect("a face-down trap");
+            assert_ne!(trap.revealed, Some(true));
+            let seen = redact(&state, AI);
+            assert_eq!(
+                card_by_id(&seen, &trap.id).map(|card| card.def_id.clone()),
+                Some(HIDDEN_DEF_ID.to_string())
+            );
+            for unit in pile_bottoms(&state, AI) {
+                assert_eq!(unit_view(&state, &unit).attack, 0, "{}", unit.def_id);
+                let seen_unit = card_by_id(&seen, &unit.id).cloned().expect("the unit is public");
+                assert_eq!(unit_view(&seen, &seen_unit).attack, 0, "{}", unit.def_id);
+            }
+            let legal: IndexSet<String> = legal_actions(&state, AI).iter().map(action_key).collect();
+            assert!(!legal.iter().any(|key| key.contains("\"attack\"")));
+        });
+    }
+
     /// R602 every move the AI's determinizations offer is legal on the true board, and so is its decision
     #[test]
     fn r602_every_move_the_ais_determinizations_offer_is_legal_on_the_true_board_and_so_is_its_decision() {

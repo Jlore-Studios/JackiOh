@@ -585,6 +585,49 @@ mod m6_t4_crash_recovery {
         );
     }
 
+    /// A rebuild whose fold refuses a logged action keeps the match going and files one report for
+    /// the night bot (`bug_reports.rs`), however often the match is rebuilt, showing the row's seq,
+    /// seat and type and nothing of what the refusal named.
+    #[tokio::test(start_paused = true)]
+    async fn a_rebuild_that_refuses_a_logged_action_keeps_the_match_and_files_one_report() {
+        let h = start_match(StartOptions::default()).await;
+        h.app.matches.stop(MATCH_ID).await;
+        let planted = i64::try_from(h.opening).expect("a seq") + 1;
+        fake(&h.app).lock().await.tables.match_actions.push(from(json!({
+            "matchId": MATCH_ID,
+            "seq": planted,
+            "at": 0,
+            "action": {
+                "type": "attack", "attackerId": "no-such-card", "targetId": "hero-p2",
+                "playerId": "p1", "nonce": "planted"
+            },
+        })));
+
+        for _ in 0..2 {
+            let socket = create_fake_socket();
+            h.app
+                .matches
+                .attach(&h.app, MATCH_ID, "profile-2", socket.socket())
+                .await
+                .expect("profile-2 attaches to the rebuilt match");
+            actor_of(&h).await.idle().await;
+            assert_eq!(last_view(&socket)["viewer"], "p2");
+            h.app.matches.stop(MATCH_ID).await;
+        }
+
+        let reports = h.app.bug_reports.recorded();
+        assert_eq!(reports.len(), 1, "{reports:?}");
+        assert!(reports[0].title.contains(MATCH_ID), "{}", reports[0].title);
+        assert!(
+            reports[0]
+                .body
+                .contains(&format!("| {planted} | p1 | `attack` |")),
+            "{}",
+            reports[0].body
+        );
+        assert!(!reports[0].body.contains("no-such-card"), "{}", reports[0].body);
+    }
+
     #[tokio::test(start_paused = true)]
     async fn folds_the_log_once_when_both_sockets_arrive_together() {
         let (logs, _recording) = Logs::record();

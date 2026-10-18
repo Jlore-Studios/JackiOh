@@ -1,8 +1,8 @@
 //! M #56 House Party (SPEC §8.8 row 56): (3) Spell, Common.
 //!   Base:    "Fill your board with Right-house defenders."
 //!   Radiant: "Fill your board with Radiant Right-house defenders."
-//! Engine: §7's fill with core-003 Right-house defender (R64), no Cry; radiant defenders are
-//!   Radiant and carry Death summoning a base defender.
+//! Engine: §7's fill with core-003 Right-house defender (R64), a Locked zone included (R1136000),
+//!   no Cry; radiant defenders are Radiant and carry Death summoning a base defender.
 
 use jackioh_engine::prelude::*;
 
@@ -37,6 +37,7 @@ mod tests {
     const TIMMY: &str = "core-011";
     const HIT_JOB: &str = "core-016"; // (3) Spell: destroy a Unit.
     const FILLER: &str = "core-005";
+    const SHOWDOWN: &str = "meditative-098"; // (1) Spell: Lock every lane but an empty one you choose.
 
     fn defs_of(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {
         (1..=5)
@@ -72,6 +73,22 @@ mod tests {
             full.iter().map(|id| Some(id.to_string())).collect::<Vec<_>>()
         );
         s.expect_in_zone(PARTY, "graveyard");
+    }
+
+    #[test]
+    fn r1136000_after_showdown_it_fills_all_five_zones_the_locked_ones_included() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "hand": [SHOWDOWN, PARTY, FILLER], "mana": 10, "library": [FILLER, FILLER, FILLER] },
+            "p2": { "hand": [FILLER], "library": [FILLER, FILLER, FILLER] },
+        }));
+        s.play(SHOWDOWN, json!({ "modes": ["lane-3"] }));
+        s.play(PARTY, json!({}));
+        assert_eq!(defs_of(&s, PlayerId::P1), vec![Some(DEFENDER.to_string()); 5]);
+        for lane in [1, 2, 4, 5] {
+            let zone = ZoneSlot { player: PlayerId::P1, row: Row::Units, lane };
+            assert!(is_locked(s.state(), zone), "lane {lane} stays Locked");
+        }
     }
 
     #[test]

@@ -4227,7 +4227,6 @@ pub fn presence_watchable(
             };
             let seated = |who: &str| row.players.0 == who || row.players.1 == who;
             row.status == MatchStatus::Live
-                && row.ranked != Some(true)
                 && seated(id.as_str())
                 && !seated(viewer)
                 && !tables.social.spectators_refused.contains(id.as_str())

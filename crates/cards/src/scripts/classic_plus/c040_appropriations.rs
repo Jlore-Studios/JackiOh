@@ -197,6 +197,24 @@ mod tests {
         s.expect_refused_with(|s| s.play(APPROPRIATIONS, json!({ "x": 0, "modes": ["Military"] })), "X");
     }
 
+    /// R767000: a game on v0.3.7 folds under the kept script, whose Radiant Military gave +5X Attack
+    /// and Healthcare +7X Health
+    #[test]
+    fn r767000_a_game_on_v0_3_7_folds_under_the_kept_script_radiant_5x_attack_and_7x_health() {
+        crate::register_all();
+        let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+        jackioh_engine::with_shipped(Some(shipped), || {
+            let mut s = appropriations(true, json!({}), json!({}));
+            s.play(APPROPRIATIONS, json!({ "x": 2, "modes": ["Military"] }));
+            assert_eq!(mine(&s, VANILLA, "hand").buffs.attack, 10);
+
+            let mut s = appropriations(true, json!({}), json!({}));
+            s.play(APPROPRIATIONS, json!({ "x": 1, "modes": ["Healthcare"] }));
+            let timmy = unit(&s, P1, 1);
+            s.expect_stats(&timmy, json!({ "health": 10 }));
+        });
+    }
+
     mod military {
         use super::*;
 

@@ -156,8 +156,9 @@ fn mutate_hidden(state: &GameState, seat: PlayerId, seed: i64) -> GameState {
             }
             // R403, R602: a face-down trap with no reveal condition is live, so a trap of the same cost
             // can still change what the seat reads off the board (an aura over its units; C #88 Siphon
-            // Squad's sleeps until it is revealed, R1149000). That is not hidden from it, so the swap must leave the seat's view as it was. The
-            // card's own def always does, so there is always a trap to pick.
+            // Squad's sleeps until it is revealed, R1149000). That is not hidden from it, so the swap
+            // must leave the seat's view as it was. The card's own def always does, so there is always
+            // a trap to pick.
             let shown = effective_cost(&out, &card, Default::default());
             let original = card.def_id.clone();
             let seen = view_without_events(&out, seat);

@@ -32,6 +32,7 @@
 // preview, which reads as the played cards' do.
 
 import {
+  castOnDraw,
   deckableOf,
   englishProblems,
   nextGame,
@@ -39,7 +40,6 @@ import {
   GAME_OVER,
   owedPromptKind,
   playStep,
-  castOnDraw,
   printedCost,
   type CatalogRow,
   type PlayStep,

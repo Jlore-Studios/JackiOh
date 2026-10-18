@@ -234,6 +234,20 @@ mod tests {
             assert!(s.pile(P1, "graveyard").iter().all(|card| card.id != spell.id));
         }
 
+        /// R767000: a game on v0.3.7 folds under the kept script, which printed no "Exile this."
+        #[test]
+        fn r767000_a_game_on_v0_3_7_folds_under_the_kept_script_the_spell_goes_to_the_graveyard() {
+            crate::register_all();
+            let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+            jackioh_engine::with_shipped(Some(shipped), || {
+                let mut s = crafted_at(1);
+                let spell = s.card(ID).clone();
+                s.answer(json!([{ "pick": "craft", "recipe": unit_recipe(1, 3, 4) }]));
+                assert!(s.hand(P1)[0].def_id.starts_with("craft:"));
+                s.expect_in_zone(&spell.id, "graveyard");
+            });
+        }
+
         #[test]
         fn r882_a_crafted_spell_deals_its_damage() {
             let mut s = crafted_at(1);

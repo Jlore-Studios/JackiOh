@@ -3109,9 +3109,13 @@ pub async fn matches_append_actions(t: &mut PgTx<'_>, rows: &[MatchActionRow]) -
 
 pub async fn matches_actions(t: &mut PgTx<'_>, match_id: &str) -> Result<Vec<MatchActionRow>, StoreError> {
     run_as(t, None).await?;
+    // Ordered by the table's column, qualified: a bare `order by seq` names the output column first,
+    // which is the `seq::text` above, so Postgres sorted 1, 10, 11, …, 2, … and every rebuild of a
+    // match of ten actions or more folded its log out of order (`store::contract`'s
+    // `reads_a_log_of_ten_or_more_actions_back_in_seq_order`).
     let rows = sqlx::query(
-        "select seq::text, action, at from public.match_actions
-          where match_id = $1::uuid order by seq",
+        "select a.seq::text as seq, a.action, a.at from public.match_actions a
+          where a.match_id = $1::uuid order by a.seq",
     )
     .bind(match_id)
     .fetch_all(&mut **t)
@@ -6822,7 +6826,7 @@ pub async fn presence_watchable(
            join public.matches m on m.id = p.current_match_id
           where p.id = any($2::uuid[]) and p.id <> $1::uuid
             and p.allow_spectators
-            and m.status = 'live' and m.ranked is not true
+            and m.status = 'live'
             and p.id in (m.p1_profile_id, m.p2_profile_id)
             and $1::uuid is distinct from m.p1_profile_id
             and $1::uuid is distinct from m.p2_profile_id

@@ -74,7 +74,7 @@ describe("R377 CardStatsBlock", () => {
     expect(screen.getByText("(30 / 10)")).toBeInTheDocument();
   });
 
-  it("R377 renders dash for Played Δ when below sample floor", async () => {
+  it("R654 renders not enough data for Played Δ when below sample floor", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -107,12 +107,13 @@ describe("R377 CardStatsBlock", () => {
     render(<CardStatsBlock cardId="core-002" />);
 
     expect(await screen.findByText("Played Δ", undefined, SLOW)).toBeInTheDocument();
-    // Delta should display "—" and not any misleading percentage
+    // Delta should display "not enough data" and not any misleading percentage
+    expect(screen.getByText("not enough data")).toBeInTheDocument();
     expect(screen.queryByText("+27%")).not.toBeInTheDocument();
     expect(screen.queryByText("(5 / 3)")).not.toBeInTheDocument();
   });
 
-  it("R377 renders dash for Played Δ when delta is null", async () => {
+  it("R654 renders not enough data for Played Δ when the server withholds the delta", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -145,6 +146,7 @@ describe("R377 CardStatsBlock", () => {
     render(<CardStatsBlock cardId="core-003" />);
 
     expect(await screen.findByText("Played Δ", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.getByText("not enough data")).toBeInTheDocument();
     expect(screen.queryByText("%")).not.toBeInTheDocument();
   });
 });
