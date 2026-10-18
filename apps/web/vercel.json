@@ -11,6 +11,8 @@
       "claude/**": false,
       "copilot/**": false,
       "dependabot/**": false,
+      "learned/**": false,
+      "night-bot/**": false,
       "patch/**": false,
       "patches/**": false,
       "polish/**": false,

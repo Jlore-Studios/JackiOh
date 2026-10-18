@@ -152,6 +152,9 @@ describe("vercel.json deployment flag", () => {
       "claude/stoic-tesla-837kse",
       "copilot/fix-1",
       "dependabot/npm_and_yarn/vite-7",
+      // The learned evaluation's parts and the night bot's own branches.
+      "learned/part-7-lane",
+      "night-bot/suspend-294",
       "patch/v0.1.1",
       "patches/ship-74c8823",
       "polish/3-ai",
