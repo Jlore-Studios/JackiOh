@@ -11,7 +11,8 @@
 //! - **Buff:** `upgrade({ scope: { zones: [field], side, tags: [CN, KY] }, times })` (B3.4). A card
 //!   scope's `tags` means any of them, so the scope takes permanents with either tag (MD-B14).
 //! - The destroyed cards leave at the state check after the whole list (R59), and the two sets
-//!   never overlap. Tags are read with the tags effects have granted (#35, `tags_of`, MD-B15).
+//!   never overlap. Tags are read with the tags effects have granted (#35, `tags_of`, MD-B15) and
+//!   the CN of a card in Chinese (R1176000).
 //! - On the Radiant face the destroy is `side: enemy` and the Buffs `side: self`.
 
 use jackioh_engine::prelude::*;
@@ -171,6 +172,29 @@ mod tests {
                 assert_eq!(standing.granted_tags, Some(vec![Tag::Cn]));
                 // Once from RCTA, twice from Gaokao.
                 assert_eq!(upgraded_for(s.events(), &victim.id), 3);
+            }
+
+            #[test]
+            fn r1176000_a_translated_unit_survives_and_is_buffed() {
+                // A Vanilla in Chinese is CN (R1176000): Gaokao spares it and Buffs it twice, and
+                // destroys the English Vanilla beside it.
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "gaokao-translated",
+                    "p1": {
+                        "hand": [{ "def": GAOKAO }, FILLER],
+                        "field": [{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 2 }],
+                        "library": filler(4),
+                    },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                let translated = s.unit(P1, 1).expect("the Vanilla").id;
+                let english = s.unit(P1, 2).expect("the other Vanilla").id;
+                s.card_mut(&translated).chinese = Some(true);
+                s.play(GAOKAO, json!({}));
+                assert_eq!(s.unit(P1, 1).expect("the translated unit stands").id, translated);
+                assert_eq!(upgraded_for(s.events(), &translated), 2);
+                s.expect_in_zone(&english, "graveyard");
             }
 
             #[test]
