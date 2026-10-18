@@ -3600,30 +3600,26 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-17T20:39:13Z",
+      "feedback_since": "2026-10-18T00:03:40Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1150,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The daily watch spec asserts the waiting panel is visible after a full page visit, a friends-list load, a click and a socket hello. Its own comment says that only works because the delay outlasts all of that. At 5 s instead of 30 s the first view can already be due when the watcher attaches, so the panel never shows and the assertion fails or flakes.",
-          "evidence": "Lines 254-255 read: 'Nothing sits between the join and this, so the waiting panel (up to the delay) is still showing when it is asserted', followed by `cy.get(ts(WATCH_WAITING)).should(\"be.visible\")` at line 270. The actor starts at join (`registry.rs:197` `start`, then `match_actor.rs:580` `spectate_record()`), so the first view is due 5 s after `joinRequestedAt`. When the watcher attaches after that, `attach_watcher` sends it straight away (`match_actor.rs:2381`, 'The newcomer's first view, when one is already SPECTATE_DELAY_MS old'). The same spec gives the friend-row step alone up to `timeouts.view` = 10 s (`e2e/support/config.ts:89`), twice the new delay. The plan told the builder not to touch this file, and the builder neither ran nor changed it.",
-          "severity": "blocking",
-          "where": "e2e/cypress/e2e/44-watch.cy.ts:254"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-2",
+      "question": "",
       "queued_at": "2026-10-17T21:45:42Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "39081283041",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-18T00:03:40Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "muse"
