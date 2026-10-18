@@ -69,9 +69,9 @@ pub fn script() -> CardScripts {
 // permanent on either side, a face-down card its chooser cannot read always offered (MD-B16); it
 // gains the CN tag as a granted tag that every instance-level read sees (M 34's scopes, M 78's
 // filter, Core 2's pick) while pools do not, kept in every zone and by a copy, dropped by a
-// Transform (MD-B15), and the `chinese` flag, which no rule reads (MD-B11); then +2/+2 permanently
-// and one Buff; a target that is CN by resolution fizzles; stats and times read through `param()`;
-// radiant +5/+5 and two Buffs".
+// Transform (MD-B15), and the `chinese` flag, which makes it CN too (MD-B11, R1176000); then +2/+2
+// permanently and one Buff; a target that is CN by resolution fizzles; stats and times read through
+// `param()`; radiant +5/+5 and two Buffs".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -201,6 +201,20 @@ mod tests {
                     },
                     "p2": { "hand": [FILLER], "library": filler(4) },
                 }));
+                s.expect_refused(|s| s.play(RCTA, json!({})));
+            }
+
+            #[test]
+            fn r1176000_a_translated_permanent_is_no_target() {
+                // Translated (M 32's "get ready to learn Chinese"), the Vanilla is CN (R1176000):
+                // the target filter `notTags: [CN]` refuses it, and with no other permanent the
+                // play is refused.
+                let mut s = casting("rcta-translated", false);
+                let victim = s.unit(P1, 1).expect("the Vanilla").id;
+                apply_for_p1(&mut s, &[translate(json_as(json!({ "instanceId": victim })))]);
+                assert_eq!(s.card(&victim).chinese, Some(true));
+                assert!(tags_of(s.state(), s.card(&victim)).contains(&Tag::Cn));
+                s.expect_refused(|s| s.play(RCTA, pick(&victim)));
                 s.expect_refused(|s| s.play(RCTA, json!({})));
             }
 
@@ -341,7 +355,7 @@ mod tests {
             }
 
             #[test]
-            fn r1300_the_chinese_flag_which_no_rule_reads() {
+            fn r1300_r1176000_the_grant_and_the_flag_each_make_it_cn_and_together_once() {
                 let (mut s, victim) = granted("rcta-chinese");
                 assert_eq!(s.card(&victim).chinese, Some(true));
                 let read = |s: &Scenario| {
@@ -351,11 +365,19 @@ mod tests {
                         legal_actions(s.state(), P1),
                     )
                 };
-                let flagged = read(&s);
-                // The flag alone changes no read: unflagged, the card has the same tags, stats and
-                // legal actions.
+                let both = read(&s);
+                // CN once, though the card is CN twice over.
+                assert_eq!(both.0.iter().filter(|tag| **tag == Tag::Cn).count(), 1);
+                // Either alone keeps it CN, so nothing reads differently: the granted tag without the
+                // flag, and the flag (a card in Chinese is CN, R1176000) without the granted tag.
                 s.card_mut(&victim).chinese = None;
-                assert_eq!(read(&s), flagged);
+                assert_eq!(read(&s), both);
+                s.card_mut(&victim).chinese = Some(true);
+                s.card_mut(&victim).granted_tags = None;
+                assert_eq!(read(&s), both);
+                // Neither: a Vanilla as printed again.
+                s.card_mut(&victim).chinese = None;
+                assert_eq!(tags_of(s.state(), s.card(&victim)), crate::card_def(VANILLA).tags);
             }
 
             #[test]

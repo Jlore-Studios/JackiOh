@@ -8,7 +8,8 @@
 //!           Aura: Your Units are Cloaked.
 //!           Death: Shuffle a Radiant Knowledge Breaker Prime into your deck."
 //! Engine:
-//! - Cry: `degrade` over every other CN or KY card on fields, hands and decks, `times`.
+//! - Cry: `degrade` over every other CN or KY card on fields, hands and decks, `times`; a card in
+//!   Chinese is CN (R1176000).
 //! - Death: `shuffle_into` the Prime, Radiant on the Radiant face (C+ #38's shape).
 //! - Aura: Cloaked for the Units in its controller's hand while it acts (`cloak_hand_aura`, R1040);
 //!   until patch v0.3.7 it was ME-ALTPLAY's face-down play permission.
@@ -309,6 +310,43 @@ mod tests {
             let degraded = degraded_ids(&s);
             assert!(!degraded.contains(&felinor), "M 25 is skipped");
             assert!(!degraded.is_empty(), "the Printer beside it is Nerfed");
+        }
+
+        #[test]
+        fn r1176000_cry_nerfs_a_translated_card_on_a_field_in_a_hand_and_in_a_deck() {
+            // A Vanilla in Chinese is CN (R1176000), wherever it is: the Cry Nerfs the translated
+            // ones on p1's field, in p2's hand and in p2's deck, and changes no English Vanilla.
+            let mut s = scenario(json!({
+                "seed": "breaker-translated",
+                "p1": {
+                    "mana": 8,
+                    "hand": [BREAKER, VANILLA],
+                    "field": [{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 3 }],
+                    "library": [VANILLA],
+                },
+                "p2": { "hand": [VANILLA, VANILLA], "library": [VANILLA, VANILLA] },
+            }));
+            let translated = vec![
+                s.unit(P1, 1).expect("p1's Vanilla").id,
+                s.hand(P2)[0].id.clone(),
+                s.pile(P2, "library")[0].id.clone(),
+            ];
+            let english = vec![
+                s.unit(P1, 3).expect("p1's other Vanilla").id,
+                s.hand(P2)[1].id.clone(),
+                s.pile(P2, "library")[1].id.clone(),
+            ];
+            for id in &translated {
+                s.card_mut(id).chinese = Some(true);
+            }
+            s.play(BREAKER, json!({ "zone": 2 }));
+            let degraded = degraded_ids(&s);
+            for id in &translated {
+                assert_eq!(degraded.iter().filter(|hit| *hit == id).count(), 1, "{id} is Nerfed once");
+            }
+            for id in &english {
+                assert!(!degraded.contains(id), "{id} was Nerfed");
+            }
         }
 
         #[test]
