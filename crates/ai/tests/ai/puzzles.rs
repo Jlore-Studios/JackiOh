@@ -399,13 +399,6 @@ mod prompts_through_the_search_b19 {
 
 const COIN: &str = "core-t-coin";
 
-fn in_hand(state: &GameState, player: PlayerId, def_id: &str) -> bool {
-    state.players[player]
-        .hand
-        .iter()
-        .any(|card| card.def_id == def_id)
-}
-
 mod the_coin_r245 {
     use super::*;
 
@@ -440,7 +433,30 @@ mod the_coin_r245 {
             "P17",
             json!({ "p1": { "hand": [COIN, "core-011"], "mana": 1 }, "p2": {} }),
         );
-        assert!(on_field(&run.end, AI, "core-011"), "{}", trace(&run.turn));
-        assert!(in_hand(&run.end, AI, COIN), "{}", trace(&run.turn));
+        // p2 has nothing to do, so R82 ends its turns and `play_ai_turn` plays the AI's next ones too,
+        // where The Coin may be worth spending: the puzzle is the turn with 1 mana, up to its endTurn.
+        let held = |def_id: &str| {
+            run.start.players[AI]
+                .hand
+                .iter()
+                .find(|card| card.def_id == def_id)
+                .map(|card| card.id.clone())
+                .unwrap_or_else(|| panic!("{def_id} is in the AI's hand"))
+        };
+        let (coin, one_drop) = (held(COIN), held("core-011"));
+        let first_turn: Vec<&ActionBody> = run
+            .turn
+            .decisions
+            .iter()
+            .map(|decision| &decision.action)
+            .take_while(|action| !matches!(action, ActionBody::EndTurn))
+            .collect();
+        let played = |id: &str| {
+            first_turn
+                .iter()
+                .any(|action| matches!(action, ActionBody::Play { instance_id, .. } if instance_id == id))
+        };
+        assert!(played(&one_drop), "{}", trace(&run.turn));
+        assert!(!played(&coin), "{}", trace(&run.turn));
     }
 }
