@@ -227,6 +227,12 @@ no longer reaches it. A big engine change means a new export, as A would need an
 
 **Recommendation: B first. D is the follow-up if the learning curve says the labels are the limit.**
 
+**Measured (2026-10-18): B with D.** On the 36,000-game export, one relabel at λ = 0.7 took (c)'s
+held-out turns 4-10 log loss from 0.6093 to 0.6056 (three seeds each, spread 0.0003), and the
+prototype's network (two relabels) won +0.065 [+0.024, +0.106] over 1,600 paired games against the hand eval, where
+the outcomes-only one won +0.010 on the same deals. `fit.py` fits (c) that way by default
+(`TD_LAMBDA`).
+
 ### D5. The network's shape
 
 The search calls the evaluation about once per node, a few hundred to a thousand times a decision,
