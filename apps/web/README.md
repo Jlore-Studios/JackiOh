@@ -164,7 +164,8 @@ with the player's controls, a round standing for a turn; it is never in `/replay
 
 ```
 src/replay/
-  source.ts       ReplaySource (a total and pages of steps), ReplayFailure and the sentence each reason shows
+  source.ts       ReplaySource (a total and pages of steps), `memoryReplaySource` over verified steps, ReplayFailure
+                  and the sentence each reason shows
   sources.ts      the two sources: the practice worker's `replay` requests, the server's replay routes
   steps.ts        the pages fetched so far, by step; load, prefetch, and the turn moves' search; a clip's ends
   ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the controls in its notice slot;
@@ -172,7 +173,8 @@ src/replay/
   OpenedReplay.tsx  a source loaded first (a finished match's first page), then the player
   ShareGif.tsx    "Share as GIF" (#513, R513000): the clip, the shape, progress, cancel, Share or Download
   download.ts     "Download JSON" (#1141, R1141000): every step of a source and the row's facts as one file, and
-                  the download both it and the GIF's share.ts hand a file to
+                  `parseReplayJsonFile` opens one again (#1160); the download both it and the GIF's share.ts
+                  hand a file to
   gif/            what it loads on demand, never in the main bundle: plan.ts (a clip's views to frames, a pure
                   function on a fixed frame clock), raster.ts and raster.worker.ts (the frames drawn on an
                   OffscreenCanvas, in a worker where it can), encoder.ts (GIF bytes by hand), share.ts, export.ts
