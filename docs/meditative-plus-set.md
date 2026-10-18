@@ -463,7 +463,7 @@ from an entry, the decision wins.
 - **Text:** Cry: Craft a custom Potion. It costs (1). / Death: Shuffle a Jazakus Prime into your deck.
 - **Radiant:** Cry: Craft a custom Radiant Potion. It costs (1). / Death: Shuffle a Radiant Jazakus Prime into your deck.
 - **Engine:** NEW: the crafter's potion mode (B04), on M #17's ME-CRAFT ([[R880]] to [[R883]], `subsystems/craft.rs`): the recipe's frame is fixed, a Unit with the Potion tag whose one hook is "Activate: Tribute this. …" with the effects the player builds, at cost (1) and the crafter's budget for (1) (`CRAFT_POTION_COST`); the stats are in the recipe. The crafted potion is a transient definition named by its recipe's digest ([[R882]]), of the Meditative+ set, tagged Potion, added to the hand. Death: `shuffle_into { defId: meditativeplus-016-1 }` (C+ #38's Catalyst shape; Radiant face Radiant).
-- **Rulings:** MP-B04-1: a custom potion is a Unit whose Activate tributes it, so it is a Potion like M+ #11 to #13; the AI, the random policy and a timeout answer the prompt with a preset ([[R881]]).
+- **Rulings:** MP-B04-1, built as [[R1182000]]: a custom potion is a Unit whose Activate tributes it, so it is a Potion like M+ #11 to #13; the AI, the random policy and a timeout answer the prompt with a preset ([[R881]]), four seeded Potions. The build also decided: no cost prompt; the Activate is once per turn and takes targeted blocks, declared with the activation; the Potion is Mythic and named "<words> Potion"; its Radiant face is [[R882]]'s doubling and still tributes itself.
 - **Numbers:** none on the card (the potion's cost and budget are the crafter's named constants).
 - **Check:** "{costs (1)}" is the crafted potion's cost. R275: 4/4, the potion and the Prime Radiant.
 - **Class:** D (the potion crafter).
@@ -475,8 +475,8 @@ from an entry, the decision wins.
 
 - **Text:** Cry: Craft a HUGE custom Potion. It costs (3).
 - **Radiant:** Cry: Craft a HUGE custom Radiant Potion. It costs (3).
-- **Engine:** The potion mode at cost (3) with `CRAFT_HUGE_POTION_BUDGET_MULTIPLE` (5) times the normal potion's points (and lines, `CRAFT_HUGE_POTION_LINES`), so it is about five times a normal potion; otherwise M+ #16's crafter.
-- **Rulings:** MP-B04-2: "about 5 times better" is five times the points budget; the frame is the same.
+- **Engine:** The potion mode at cost (3) (`CRAFT_HUGE_POTION_COST`) with `CRAFT_HUGE_POTION_BUDGET_MULTIPLE` (5) times the normal potion's points, so it is about five times a normal potion; otherwise M+ #16's crafter. The build keeps the frame's lines (24) and effects (8), as MP-B04-2 says, so no `CRAFT_HUGE_POTION_LINES` exists: no potion within 8 effects reaches 24 lines.
+- **Rulings:** MP-B04-2, built as [[R1182001]]: "about 5 times better" is five times the points budget; the frame is the same.
 - **Numbers:** none on the card.
 - **Check:** A token (printed Epic, [[R1178002]]): only M+ #16's Death makes one. R275: 16/16 and a Radiant HUGE potion.
 - **Class:** D (the potion crafter).
@@ -619,7 +619,7 @@ from an entry, the decision wins.
 - **Text:** Code a card from scratch and add it to your hand. Exile this.
 - **Radiant:** Code a Radiant card from scratch and add it to your hand. Exile this.
 - **Engine:** NEW: the crafter's from-scratch mode (B04): M #17's `craft` prompt ([[R880]] to [[R883]]) with a flag the client reads to open an empty canvas with no presets, tooltips or hints; the engine still rolls its four presets so the AI, the random policy and a timeout can answer ([[R881]]). The crafted card is added to the hand (Radiant on the Radiant face); then `exile { target: { of: self } }` sends Scratch Pad to its owner's exile instead of the graveyard ([[R178]]).
-- **Rulings:** MP-B04-3: the cost prompt and the budget are M #17's (0 to 4, 2 + 5 × the cost points, 24 lines); "from scratch" is the client's empty canvas, not a smaller budget.
+- **Rulings:** MP-B04-3, built as [[R1182002]]: the cost prompt and the budget are M #17's (0 to 4, 2 + 5 × the cost points, 24 lines); "from scratch" is the client's empty canvas, not a smaller budget. The canvas starts as a 0/1 Unit with nothing on it and shows no suggestions, prices, tooltips, face glossary or refusal reasons; the points and lines meters stay; the card made is the one M #17 makes of the recipe.
 - **Numbers:** none.
 - **Check:** No rarity in the list: Mythic, as M #17 ([[R1178002]], ⚠ designer). R275: the crafted card Radiant.
 - **Class:** D (the from-scratch crafter).

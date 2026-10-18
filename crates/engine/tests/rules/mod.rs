@@ -38,6 +38,7 @@ pub mod core_patches;
 pub mod cost_rules;
 pub mod counter_warning;
 pub mod craft;
+pub mod craft_modes;
 pub mod crater;
 pub mod credit_line;
 pub mod custom;

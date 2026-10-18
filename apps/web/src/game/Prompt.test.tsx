@@ -588,6 +588,67 @@ describe("the R81 kinds render the same picker when the engine does open them as
     });
   });
 
+  it("R1182002 a from-scratch craft prompt opens the editor on an empty canvas with no suggestions", () => {
+    const onAction = vi.fn();
+    const preset: CraftRecipe = {
+      cost: 2,
+      type: "Unit",
+      adjective: "Pure",
+      noun: "Closure",
+      attack: 5,
+      health: 6,
+      keywords: [],
+      echo: 0,
+      hats: [],
+    };
+    const view = viewWith({
+      pending: pendingFor("craft", [{ key: "craft:#digest", label: "Pure Closure", recipe: preset }], {
+        budget: 2,
+        craftMode: "scratch",
+      }),
+    });
+
+    render(<Prompt view={view} onAction={onAction} />);
+
+    expect(kindOfModal()).toBe("craft");
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-craft-mode", "scratch");
+    expect(screen.queryByTestId("craft-preset-0")).toBeNull();
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("0/12 pts");
+  });
+
+  it("R1182000 a potion craft prompt opens the editor in the potion frame", () => {
+    const onAction = vi.fn();
+    const potion: CraftRecipe = {
+      cost: 1,
+      type: "Unit",
+      adjective: "Pure",
+      noun: "Closure",
+      attack: 2,
+      health: 2,
+      keywords: [],
+      echo: 0,
+      hats: [{ hat: "activate", effects: [{ verb: "damageEnemyHero", n: 4 }] }],
+      frame: "potion",
+    };
+    const view = viewWith({
+      pending: pendingFor("craft", [{ key: "craft:#potion", label: "Pure Closure Potion", recipe: potion }], {
+        budget: 1,
+        craftMode: "potion",
+      }),
+    });
+
+    render(<Prompt view={view} onAction={onAction} />);
+
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-craft-mode", "potion");
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("7/7 pts");
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+    expect(onAction).toHaveBeenCalledWith({
+      type: "answer",
+      choiceId: "ch1",
+      selection: [{ pick: "craft", recipe: potion }],
+    });
+  });
+
   it("#492 an x prompt of a few values is the card picker too, each number on a card", () => {
     const onAction = vi.fn();
     const view = viewWith({

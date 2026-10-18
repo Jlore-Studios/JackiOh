@@ -15891,5 +15891,85 @@
       ],
       "text": "Lucky 2\nCry: Draw 1-2. Add 1-6 to your Jade Counter."
     }
+  },
+  "meditativeplus-016": {
+    "id": "meditativeplus-016",
+    "index": "16",
+    "name": "Jazakus",
+    "set": "Meditative+",
+    "type": "Unit",
+    "tags": [
+      "Human",
+      "Catalyst"
+    ],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "meditativeplus-016-1",
+      "meditativeplus-016"
+    ],
+    "loc": 37,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Craft a custom Potion. It costs (1).\nDeath: Shuffle a Jazakus Prime into your deck."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Craft a custom Radiant Potion. It costs (1).\nDeath: Shuffle a Radiant Jazakus Prime into your deck."
+    }
+  },
+  "meditativeplus-016-1": {
+    "id": "meditativeplus-016-1",
+    "index": "16.1",
+    "name": "Jazakus Prime",
+    "set": "Meditative+",
+    "type": "Unit",
+    "tags": [
+      "Human",
+      "Prime",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "token": true,
+    "cost": 1,
+    "loc": 29,
+    "base": {
+      "attack": 8,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Craft a HUGE custom Potion. It costs (3)."
+    },
+    "radiant": {
+      "attack": 16,
+      "health": 16,
+      "keywords": [],
+      "text": "Cry: Craft a HUGE custom Radiant Potion. It costs (3)."
+    }
+  },
+  "meditativeplus-026": {
+    "id": "meditativeplus-026",
+    "index": "26",
+    "name": "Scratch Pad",
+    "set": "Meditative+",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Mythic",
+    "token": false,
+    "cost": 0,
+    "loc": 43,
+    "base": {
+      "keywords": [],
+      "text": "Code a card from scratch and add it to your hand. Exile this."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Code a Radiant card from scratch and add it to your hand. Exile this."
+    }
   }
 }

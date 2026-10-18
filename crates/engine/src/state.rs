@@ -20,9 +20,9 @@ use crate::config::{
 };
 use crate::rng::Rng;
 use crate::wire::{
-    AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, CustomCard, Enchantment, GameEvent,
-    Keyword, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, RowFlags, SecretChoice,
-    Selection, Tag, Tuning, Zone, ZoneRef, string_union,
+    AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, CraftMode, CustomCard, Enchantment,
+    GameEvent, Keyword, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, RowFlags,
+    SecretChoice, Selection, Tag, Tuning, Zone, ZoneRef, string_union,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -717,6 +717,12 @@ pub struct PendingChoice {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub budget: Option<i32>,
+    /// A `craft` prompt's mode beyond Meditative #17's free crafter: Scratch Pad's empty canvas or a
+    /// potion frame (R1182000 to R1182002), which the answer check and the client read. Absent on
+    /// every other prompt and on Meditative #17's, so a state without one hashes as it did (D9).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub craft_mode: Option<CraftMode>,
     pub resume: Resume,
 }
 

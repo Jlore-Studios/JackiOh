@@ -1850,6 +1850,19 @@
       attack: { voice: "sapi-cat", text: "Nyaa, cleaning time!" },
       death: { voice: "sapi-cat", text: "Nyaa... logging off." },
     },
+    "meditativeplus-016": { // Jazakus
+      play: { voice: "sapi-mystic", text: "Name your poison. I'll bottle it." },
+      attack: { voice: "sapi-mystic", text: "Taste test time!" },
+      death: { voice: "sapi-mystic", text: "My finest brew awaits..." },
+    },
+    "meditativeplus-016-1": { // Jazakus Prime
+      play: { voice: "sapi-giant", text: "Bigger cauldron. Bigger bottles. Bigger trouble." },
+      attack: { voice: "sapi-giant", text: "Drink THIS!" },
+      death: { voice: "sapi-giant", text: "The cauldron boils over..." },
+    },
+    "meditativeplus-026": { // Scratch Pad
+      cast: { voice: "sapi-synth", text: "Blank file. No hints. Good luck." },
+    },
   },
   emotes: {
     vanilla: {
