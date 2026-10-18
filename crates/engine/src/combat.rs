@@ -249,6 +249,51 @@ fn carried_out_of_combat(state: &GameState, unit: &CardInstance) -> bool {
     crate::zones::is_carried(state, unit)
 }
 
+/// §4.1: the position the player's own switch puts a unit in, the other one (a unit with none is in
+/// Attack Position).
+pub fn position_after_switch(unit: &CardInstance) -> Position {
+    if unit.position.unwrap_or(Position::Atk) == Position::Atk {
+        Position::Def
+    } else {
+        Position::Atk
+    }
+}
+
+/// §4.1, R49, R1174000: why the unit could not switch to `to`, or `Ok` when it can.
+/// `switch_position` refuses with it and `legal_actions` lists a `switchPosition` by it
+/// (`reduce::can_switch`), so the two can never disagree. `spend_exertion` is false for a switch
+/// that is an effect (R20), which spends nothing and so is refused by the position alone; a Frozen
+/// Unit's own switch is refused, an effect's is not.
+pub fn why_cannot_switch(
+    state: &GameState,
+    unit: &CardInstance,
+    to: Position,
+    spend_exertion: bool,
+) -> CombatResult {
+    why_cannot_switch_in(&AuraTable::per_read(state), unit, to, spend_exertion)
+}
+
+/// `why_cannot_switch` read through a sweep's `AuraTable` (#892).
+pub fn why_cannot_switch_in(
+    auras: &AuraTable<'_>,
+    unit: &CardInstance,
+    to: Position,
+    spend_exertion: bool,
+) -> CombatResult {
+    // R1174000: a Frozen Unit's own switch is refused; an effect's (R20) is not.
+    if spend_exertion && unit.frozen.is_some() {
+        return Err(EngineError::new(FROZEN_REFUSAL));
+    }
+    if spend_exertion && !has_exertion_in(auras, unit, ExertionKind::Switch) {
+        return Err(EngineError::new("that unit has already acted this turn"));
+    }
+    // §4.1: Spikey Pillow cannot be switched to Defense Position, by an action or by an effect.
+    if to == Position::Def && crate::scripts::flags_of(auras.state(), unit).never_defense == Some(true) {
+        return Err(EngineError::new("that unit cannot be in Defense Position"));
+    }
+    Ok(())
+}
+
 /// Flip a unit between Attack and Defense Position (§4.1). As the player's action it spends the
 /// unit's exertion; as an effect (5pek Controller, #48) it spends nothing (R20). Defense Position's
 /// Taunt and Armor +1 are layers, not state, so they follow from `position` alone (§10.4).
@@ -266,11 +311,7 @@ pub fn switch_position(
     }
 
     let from = unit.position.unwrap_or(Position::Atk);
-    let to = options.to.unwrap_or(if from == Position::Atk {
-        Position::Def
-    } else {
-        Position::Atk
-    });
+    let to = options.to.unwrap_or_else(|| position_after_switch(&unit));
 
     // R91: asking for the position the unit already holds "does nothing: no error, no event and no
     // exertion spent". It is read before the exertion because there is no switch to refuse — a unit
@@ -280,17 +321,7 @@ pub fn switch_position(
         return Ok(());
     }
 
-    // R1174000: a Frozen Unit's own switch is refused; an effect's (R20) is not.
-    if spend_exertion && unit.frozen.is_some() {
-        return Err(EngineError::new(FROZEN_REFUSAL));
-    }
-    if spend_exertion && !has_exertion(sink.state, &unit, ExertionKind::Switch) {
-        return Err(EngineError::new("that unit has already acted this turn"));
-    }
-    // §4.1: Spikey Pillow cannot be switched to Defense Position, by an action or by an effect.
-    if to == Position::Def && crate::scripts::flags_of(sink.state, &unit).never_defense == Some(true) {
-        return Err(EngineError::new("that unit cannot be in Defense Position"));
-    }
+    why_cannot_switch(sink.state, &unit, to, spend_exertion)?;
 
     if let Some(live) = find_instance_mut(sink.state, &unit.id) {
         live.position = Some(to);
