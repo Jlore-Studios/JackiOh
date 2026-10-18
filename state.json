@@ -3649,6 +3649,47 @@
       "taken_asks": [],
       "verdict_rounds": 1
     },
+    "1173": {
+      "closeout": false,
+      "tree": {
+        "adopted": true,
+        "at": "2026-10-18T16:40:07Z",
+        "children": [
+          1174,
+          1175,
+          1176,
+          1177,
+          1178,
+          1179,
+          1180,
+          1181,
+          1182,
+          1183,
+          1184,
+          1185,
+          1186,
+          1187
+        ],
+        "mode": "fullsend",
+        "onto": "bot/issue-1173"
+      }
+    },
+    "1179": {
+      "onto": "bot/issue-1173",
+      "part_of": 1173
+    },
+    "1181": {
+      "onto": "bot/issue-1173",
+      "part_of": 1173
+    },
+    "1186": {
+      "onto": "bot/issue-1173",
+      "part_of": 1173
+    },
+    "1187": {
+      "onto": "bot/issue-1173",
+      "part_of": 1173
+    },
     "1188": {
       "action": "revise",
       "cleared": {
