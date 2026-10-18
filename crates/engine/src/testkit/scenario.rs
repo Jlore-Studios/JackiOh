@@ -177,6 +177,7 @@ thread_local! {
     static SCRIPTS_OVERRIDE: Cell<Option<&'static IndexMap<String, CardScripts>>> = const { Cell::new(None) };
     static WIN_RATES_OVERRIDE: Cell<Option<&'static crate::win_rates::WinRateTable>> =
         const { Cell::new(None) };
+    static CODE_BLOCKS_OVERRIDE: Cell<Option<crate::catalog::CodeBlocks>> = const { Cell::new(None) };
     static SHIPPED_OVERRIDE: Cell<Option<&'static [crate::catalog::ShippedCatalog]>> = const { Cell::new(None) };
 }
 
@@ -228,6 +229,28 @@ pub fn win_rates_override() -> Option<&'static crate::win_rates::WinRateTable> {
     WIN_RATES_OVERRIDE.with(Cell::get)
 }
 
+/// R1183004: the code blocks this thread registered, by catalog id, in place of the compiled ones
+/// (`catalog::code_block_of`), until the thread ends or `clear_overrides()` runs. Leaked, like the
+/// catalog, and sorted by id as the compiled table is.
+pub fn register_code_blocks(blocks: Vec<(&str, &str)>) {
+    let mut owned: Vec<(&'static str, &'static str)> = blocks
+        .into_iter()
+        .map(|(id, code)| {
+            let id: &'static str = Box::leak(id.to_string().into_boxed_str());
+            let code: &'static str = Box::leak(code.to_string().into_boxed_str());
+            (id, code)
+        })
+        .collect();
+    owned.sort_by(|a, b| a.0.cmp(b.0));
+    let blocks: crate::catalog::CodeBlocks = Box::leak(owned.into_boxed_slice());
+    CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(Some(blocks)));
+}
+
+/// The code blocks this thread registered, if any.
+pub fn code_blocks_override() -> Option<crate::catalog::CodeBlocks> {
+    CODE_BLOCKS_OVERRIDE.with(Cell::get)
+}
+
 /// R767000: the shipped catalogs `catalog::shipped_catalog()` finds by version on this thread, in
 /// place of the build's, until the thread ends or `clear_overrides()` runs. Leaked, like the catalog.
 pub fn register_shipped(catalogs: Vec<crate::catalog::ShippedCatalog>) {
@@ -249,6 +272,7 @@ pub struct ThreadOverrides {
     catalog_version: Option<&'static str>,
     scripts: Option<&'static IndexMap<String, CardScripts>>,
     win_rates: Option<&'static crate::win_rates::WinRateTable>,
+    code_blocks: Option<crate::catalog::CodeBlocks>,
     shipped: Option<&'static [crate::catalog::ShippedCatalog]>,
 }
 
@@ -260,6 +284,7 @@ impl ThreadOverrides {
         CATALOG_VERSION_OVERRIDE.with(|cell| cell.set(self.catalog_version));
         SCRIPTS_OVERRIDE.with(|cell| cell.set(self.scripts));
         WIN_RATES_OVERRIDE.with(|cell| cell.set(self.win_rates));
+        CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(self.code_blocks));
         SHIPPED_OVERRIDE.with(|cell| cell.set(self.shipped));
     }
 }
@@ -271,6 +296,7 @@ pub fn thread_overrides() -> ThreadOverrides {
         catalog_version: catalog_version_override(),
         scripts: scripts_override(),
         win_rates: win_rates_override(),
+        code_blocks: code_blocks_override(),
         shipped: shipped_override(),
     }
 }
@@ -282,6 +308,7 @@ pub fn clear_overrides() {
     CATALOG_VERSION_OVERRIDE.with(|cell| cell.set(None));
     SCRIPTS_OVERRIDE.with(|cell| cell.set(None));
     WIN_RATES_OVERRIDE.with(|cell| cell.set(None));
+    CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(None));
     SHIPPED_OVERRIDE.with(|cell| cell.set(None));
 }
 

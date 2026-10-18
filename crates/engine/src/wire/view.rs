@@ -1155,6 +1155,12 @@ pub struct PendingOption {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub created: Option<bool>,
+    /// R1183005 (Meditative+ #25 KY's Intuition): the option is a card's code block, its `label`,
+    /// and names no card (`defId` is absent), so a client draws the code as code. Only ever
+    /// `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub code: Option<bool>,
 }
 
 /// R265, R266: the concurrent mulligan as one seat may see it.

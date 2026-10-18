@@ -284,6 +284,30 @@ quantized as the lane quantizes it.
 
 Each game's p95 decision time is about 200 ms in every row.
 
+**Measured (2026-10-18): B stays.** `LEARNED_REACH` (R1012002) can take the network past the
+finalists. At `Lines` it also scores every complete line, so it chooses which lines become the
+finalists. At `Beam` it also ranks the open lines at each depth, so it prunes the beam too. Each row
+below is 1,600 paired games against the hand eval on `explore-466`, with the learn lane's
+100,000-game TD network (run 5), integer, as it ships.
+
+| reach | share | finalists | `explore-466` | p95 decision time, median game | `confirm-466` |
+|---|---|---|---|---|---|
+| **`Finalists` (B)** | **0.5** | **3** | **+0.073 [+0.030, +0.115]** | 220 ms | **+0.071 [+0.030, +0.112]** |
+| `Lines` | 0.5 | 3 | +0.102 [+0.059, +0.145] | 214 ms | +0.076 [+0.035, +0.116] |
+| `Lines` | 0.75 | 3 | +0.041 [−0.002, +0.084] | 234 ms | |
+| `Lines` | 0.5 | 5 | +0.104 [+0.062, +0.146] | 229 ms | |
+| `Beam` (A) | 0.5 | 3 | +0.054 [+0.011, +0.097] | 234 ms | |
+
+The beam's widths were tuned on the hand eval's scale. Pruning on the network's scale loses lines
+the hand eval would have kept; choosing among the lines it kept does not. On fresh deals `Lines`
+and `Finalists` tie, so most of `Lines`' lead came from its being chosen on `explore-466`. At
+`Finalists` the beam and the shortlist that is replied to keep the hand eval. A network's errors on
+positions unlike its games then reach only the choice among lines the hand eval found. The AI's
+puzzles are such positions, and a network retrained on all of run 5's games missed two of them at
+`Lines` and none at `Finalists`. Neither reach clears the gate's bar (R1012000: 220 of 400, a share
+of 0.55) with this network, whose share on fresh deals is 0.536. What is left to improve is the
+network.
+
 ### D7. Arithmetic, determinism and size
 
 The issue decides on integer inference (i8 weights, i32 sums, ReLU, shifts) so that native and WASM

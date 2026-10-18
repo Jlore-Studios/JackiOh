@@ -50,6 +50,14 @@
 //!   cargo jackioh fuzz --duos                       Duos co-op games: seeds 1–200 (`duos_fuzz.rs`)
 //!   cargo test -p jackioh-tools fuzz                seeds 1–20 of each (see SWEEP_SEEDS)
 //!   cargo jackioh fuzz --from <seed> --seeds 1      one seed a report named
+//!   cargo jackioh fuzz --regress                    the regression corpus
+//!
+//! # The regression corpus (#1197)
+//!
+//! A seed's deal moves whenever a card joins `FUZZ_POOL`, so a seed a past report named stops
+//! reproducing the day the next card lands. Each kept failure therefore pins its own decks in
+//! `crates/tools/fuzz-corpus/`; `--regress` replays them, each with its pinned decks and never a deal
+//! from the live pool, through the gate's checks, and the tools' `cargo test` runs it.
 //!
 //! # The handicapped wave (fuzz-handicap.test.ts)
 //!
@@ -63,27 +71,30 @@
 //! included, to the live hash. Each game also runs the gate's invariant monitor (I1–I8) the same way.
 
 use std::cell::RefCell;
+use std::fs;
 use std::panic::{self, AssertUnwindSafe};
+use std::path::Path;
 use std::sync::{LazyLock, Once};
 use std::time::Instant;
 
-use anyhow::bail;
+use anyhow::{Context, bail};
 use indexmap::{IndexMap, IndexSet};
-use jackioh_cards::{CATALOG, register_all};
+use jackioh_cards::{CATALOG, register_all, shipped_versions};
 use jackioh_engine::testkit::{
     I6_GATE_STRIDE, I8_GATE_STRIDE, create_invariant_monitor, preview_every_set, set_ships,
 };
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, CreateGameOptions, DECK_SIZE, Difficulty,
     FoldArgs, GameState, Handicap, PerPlayerOpt, Phase, PlayerId, Rng, TURN_CAP_PLAYER_TURNS, begin_game,
-    create_game, fold, hash_state, mulligan_owed, reduce, seat_to_act, subsystems,
+    create_game, fold, hash_state, mulligan_owed, reduce, seat_to_act, subsystems, validate_deck,
 };
 use rayon::prelude::*;
+use serde::Deserialize;
 
 use crate::agent::panic_message;
 use crate::gate::MS_PER_SECOND;
 
-/// `cargo jackioh fuzz [--from N] [--seeds N] [--handicap | --duos]` (SURFACE §12).
+/// `cargo jackioh fuzz [--from N] [--seeds N] [--handicap | --duos | --regress]` (SURFACE §12).
 #[derive(clap::Args, Debug)]
 pub struct Args {
     /// The first seed of the wave (TS `JACKIOH_FUZZ_FROM`): 1 for the gate. `--from 700 --seeds 1`
@@ -102,11 +113,19 @@ pub struct Args {
     /// unless `--seeds` says otherwise.
     #[arg(long)]
     pub duos: bool,
+    /// Replay the regression corpus (`crates/tools/fuzz-corpus/`, #1197) instead of a wave: each kept
+    /// failure's pinned decks, never a deal from the live pool.
+    #[arg(long, conflicts_with_all = ["from", "seeds", "handicap", "duos"])]
+    pub regress: bool,
 }
 
-/// Runs the gate, or with `--handicap` the handicapped wave, or with `--duos` the Duos wave; prints its
-/// numbers and, when a seed failed, the report, and fails (exit 1).
+/// Runs the gate, or with `--handicap` the handicapped wave, or with `--duos` the Duos wave, or with
+/// `--regress` the regression corpus; prints its numbers and, when a seed failed, the report, and fails
+/// (exit 1).
 pub fn run(args: Args) -> anyhow::Result<()> {
+    if args.regress {
+        return run_regress();
+    }
     let from = first_seed(args.from);
     if args.duos {
         return crate::duos_fuzz::run(from, args.seeds);
@@ -366,9 +385,8 @@ pub(crate) fn actor_of(state: &GameState, order: &mut Rng) -> PlayerId {
 /// over `legal_actions` minus `AI_SKIPPED_ACTIONS` (R84), ending the turn when nothing else is on
 /// offer or with `AI_END_TURN_PROBABILITY`, and answering an open prompt uniformly (R44) — so this
 /// drives the shipped machinery rather than a second copy of the rule.
-fn play_game(seed: u32) -> Result<GameRun, FuzzFailure> {
+fn play_game(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<GameRun, FuzzFailure> {
     let game_seed = format!("jackioh-fuzz-{seed}");
-    let decks = decks_for_seed(seed);
     register_all();
 
     let begun = begin_game(&create_game(&CreateGameOptions {
@@ -947,6 +965,8 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
 
 /// One seed's passing game, for the wave's numbers.
 struct Passed {
+    /// The final state's hash (§9.3), for --regress's lines.
+    hash: String,
     reason: String,
     actions: usize,
     turn: i32,
@@ -955,13 +975,19 @@ struct Passed {
 /// One seed through the four assertions: never panic, always terminate by hero death or the R2 cap,
 /// and fold `(seed, log)` to the same hash; a failure names every card in this seed's decks.
 fn fuzz_seed(seed: u32) -> Result<Passed, Failure> {
+    fuzz_deal(seed, decks_for_seed(seed))
+}
+
+/// One game through the four assertions: `seed` names the game's and the policy's streams, `decks` the
+/// deal.
+fn fuzz_deal(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<Passed, Failure> {
     // R1420: the fuzz pool is the whole catalog, every set shipped or not, so this worker thread
     // previews every set for the game, its checks and its replay.
     let _preview = preview_every_set();
     let mut reached: Option<At> = None;
     let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<Passed, FuzzFailure> {
         // 1. never panic
-        let run = play_game(seed)?;
+        let run = play_game(seed, decks.clone())?;
         reached = Some(At {
             turn: run.state.turn,
             actions: run.log.len(),
@@ -971,6 +997,7 @@ fn fuzz_seed(seed: u32) -> Result<Passed, Failure> {
         // 3. (seed, log) folds to the same hash
         check_replay(seed, &run)?;
         Ok(Passed {
+            hash: hash_state(&run.state),
             reason: run
                 .state
                 .result
@@ -1004,9 +1031,8 @@ fn fuzz_seed(seed: u32) -> Result<Passed, Failure> {
         }
     };
     // 4. name every card in this seed's decks
-    let decks = decks_for_seed(seed);
-    let mut cards = decks.0;
-    cards.extend(decks.1);
+    let (mut cards, p2) = decks;
+    cards.extend(p2);
     Err(Failure {
         seed,
         stage,
@@ -1109,6 +1135,202 @@ impl Wave {
             round(self.elapsed_ms / MS_PER_SECOND),
         )
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The regression corpus (#1197)
+// ---------------------------------------------------------------------------------------------
+
+/// Where the kept failures live: one JSON file per record (`fuzz-corpus/README.md`).
+pub const CORPUS_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/fuzz-corpus");
+
+/// One kept fuzz failure: the seed and the exact decks it was dealt, so a later card in `FUZZ_POOL`
+/// cannot redeal it.
+#[derive(Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CorpusRecord {
+    /// Names the game's and the policy's streams (`jackioh-fuzz-<seed>`).
+    pub seed: u32,
+    /// What `cargo jackioh catalog-version` printed on the day it failed.
+    pub catalog_version: String,
+    /// p1's deck then p2's, as the report's `seed N p1 deck:` / `p2 deck:` lines print them.
+    pub decks: (Vec<String>, Vec<String>),
+    /// Which run failed, how, and the issue that fixed or filed it.
+    pub found: String,
+    /// Which ids left the catalog: a retired record is listed and not replayed, never edited.
+    #[serde(default)]
+    pub retired: Option<String>,
+}
+
+/// One line per problem with `record`: its shape, then its ids against the live catalog.
+fn lint_record(record: &CorpusRecord) -> Vec<String> {
+    let mut problems: Vec<String> = Vec::new();
+    if record.seed == 0 {
+        problems.push("seed must be 1 or more".to_string());
+    }
+    if !shipped_versions().contains(&record.catalog_version.as_str()) {
+        problems.push(format!(
+            "catalogVersion \"{}\" is no version in crates/cards/patches/patches.json",
+            record.catalog_version
+        ));
+    }
+    if record.found.trim().is_empty() {
+        problems.push("found is empty: say which run failed, how, and the issue".to_string());
+    }
+    let decks = [("p1", &record.decks.0), ("p2", &record.decks.1)];
+    let deck_size = usize::try_from(DECK_SIZE).unwrap_or(0);
+    for (label, deck) in decks {
+        if deck.len() != deck_size {
+            problems.push(format!("{label} deck holds {} ids, not {DECK_SIZE}", deck.len()));
+        }
+    }
+    let ids: Vec<&str> = decks
+        .iter()
+        .flat_map(|(_, deck)| deck.iter().map(String::as_str))
+        .collect();
+    if ids.iter().collect::<IndexSet<_>>().len() < ids.len() {
+        problems.push("an id appears twice across the decks: one shuffle deals distinct cards".to_string());
+    }
+    match &record.retired {
+        Some(why) if why.trim().is_empty() => {
+            problems.push("retired is empty: say which ids left the catalog".to_string());
+        }
+        Some(_) => {}
+        None => {
+            for id in ids {
+                if !CATALOG.contains_key(id) {
+                    problems.push(format!(
+                        "\"{id}\" names no catalog card: mark the record retired, never edit its decks"
+                    ));
+                }
+            }
+            if problems.is_empty() {
+                // R1420: the live catalog with every set previewed, the way `fuzz_deal` deals.
+                let _preview = preview_every_set();
+                for (label, deck) in decks {
+                    if let Err(error) = validate_deck(deck, &CATALOG, label, DECK_SIZE) {
+                        problems.push(error.message);
+                    }
+                }
+            }
+        }
+    }
+    problems
+}
+
+/// A corpus file's name and the record in it.
+type NamedRecord = (String, CorpusRecord);
+
+/// Every `.json` file of `dir`, sorted by name, parsed; with every problem found, a file that is no
+/// record included, one line each, led by the file's name.
+fn read_corpus(dir: &Path) -> anyhow::Result<(Vec<NamedRecord>, Vec<String>)> {
+    let mut paths: Vec<_> = fs::read_dir(dir)
+        .with_context(|| format!("reading {}", dir.display()))?
+        .map(|entry| entry.map(|entry| entry.path()))
+        .collect::<Result<_, _>>()
+        .with_context(|| format!("reading {}", dir.display()))?;
+    paths.retain(|path| path.extension().is_some_and(|extension| extension == "json"));
+    paths.sort();
+    let mut records = Vec::new();
+    let mut problems = Vec::new();
+    for path in paths {
+        let name = path
+            .file_name()
+            .map_or_else(String::new, |name| name.to_string_lossy().into_owned());
+        let text = fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
+        match serde_json::from_str::<CorpusRecord>(&text) {
+            Ok(record) => {
+                problems.extend(
+                    lint_record(&record)
+                        .into_iter()
+                        .map(|problem| format!("{name}: {problem}")),
+                );
+                records.push((name, record));
+            }
+            Err(error) => problems.push(format!("{name}: not a corpus record: {error}")),
+        }
+    }
+    Ok((records, problems))
+}
+
+/// `record` through the gate's four assertions with its pinned decks, never a deal from the live pool.
+fn replay_record(record: &CorpusRecord) -> Result<Passed, Failure> {
+    fuzz_deal(record.seed, record.decks.clone())
+}
+
+/// What `--regress` found: a line per record that passed or is retired, and every problem.
+struct Regress {
+    lines: Vec<String>,
+    failed: Vec<String>,
+}
+
+/// Lints every record of `dir`, then, when all are sound, replays each unretired one in parallel.
+fn regress(dir: &Path) -> anyhow::Result<Regress> {
+    record_panic_locations();
+    register_all();
+    let (records, problems) = read_corpus(dir)?;
+    if !problems.is_empty() {
+        return Ok(Regress {
+            lines: Vec::new(),
+            failed: problems,
+        });
+    }
+    let live: Vec<&NamedRecord> = records.iter().filter(|entry| entry.1.retired.is_none()).collect();
+    let mut results = live
+        .par_iter()
+        .map(|entry| replay_record(&entry.1))
+        .collect::<Vec<_>>()
+        .into_iter();
+    let mut out = Regress {
+        lines: Vec::new(),
+        failed: Vec::new(),
+    };
+    for (name, record) in &records {
+        let CorpusRecord {
+            seed,
+            catalog_version,
+            ..
+        } = record;
+        if let Some(why) = &record.retired {
+            out.lines
+                .push(format!("{name}: seed {seed} ({catalog_version}): retired: {why}"));
+            continue;
+        }
+        match results.next() {
+            Some(Ok(passed)) => out.lines.push(format!(
+                "{name}: seed {seed} ({catalog_version}): passed, {} on turn {}, {} actions, hash {}",
+                passed.reason, passed.turn, passed.actions, passed.hash
+            )),
+            Some(Err(failure)) => out.failed.push(format!(
+                "{name}: seed {seed} ({catalog_version}) failed [{}] at turn {}, {} actions: {}\n  found: {}",
+                failure.stage.as_str(),
+                failure.turn,
+                failure.actions,
+                failure.message,
+                record.found
+            )),
+            None => {}
+        }
+    }
+    Ok(out)
+}
+
+/// `cargo jackioh fuzz --regress`: prints each record's line and the totals, and fails on any problem.
+fn run_regress() -> anyhow::Result<()> {
+    let regress = regress(Path::new(CORPUS_DIR))?;
+    for line in &regress.lines {
+        println!("{line}");
+    }
+    println!(
+        "[fuzz regress] {} record(s) passed or retired, {} problem(s)",
+        regress.lines.len(),
+        regress.failed.len()
+    );
+    if !regress.failed.is_empty() {
+        println!("{}", regress.failed.join("\n"));
+        bail!("fuzz regress: {} problem(s)", regress.failed.len());
+    }
+    Ok(())
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1490,6 +1712,159 @@ mod tests {
                 decks,
             };
             assert_eq!(check_termination(&run).err().map(|failure| failure.message), None);
+        }
+    }
+
+    mod fuzz_regression_corpus {
+        use super::*;
+        use jackioh_cards::CATALOG_VERSION;
+
+        /// A record that lints clean: seed `seed`'s deal from the live pool.
+        fn sound(seed: u32) -> CorpusRecord {
+            CorpusRecord {
+                seed,
+                catalog_version: CATALOG_VERSION.to_string(),
+                decks: decks_for_seed(seed),
+                found: "a test's record".to_string(),
+                retired: None,
+            }
+        }
+
+        #[test]
+        fn a_record_replays_its_pinned_decks_whatever_cards_join_the_live_pool() {
+            register_all();
+            // The pool before its last cards landed: the grown pool redeals seed 1.
+            const EXTRA_CARDS: usize = 3;
+            let before = FUZZ_POOL[..FUZZ_POOL.len() - EXTRA_CARDS].to_vec();
+            let record = CorpusRecord {
+                decks: decks_for_seed_from(1, &before),
+                ..sound(1)
+            };
+            assert_eq!(lint_record(&record), Vec::<String>::new());
+            assert_ne!(decks_for_seed(1), record.decks);
+            let replay = || replay_record(&record).unwrap_or_else(|failure| panic!("{}", failure.message));
+            let first = replay();
+            assert_eq!(first.hash, replay().hash);
+            let live = fuzz_seed(1).unwrap_or_else(|failure| panic!("{}", failure.message));
+            assert_ne!(first.hash, live.hash);
+        }
+
+        #[test]
+        fn the_lint_passes_a_sound_record_and_names_each_malformed_one() {
+            register_all();
+            assert_eq!(lint_record(&sound(1)), Vec::<String>::new());
+            let token = CATALOG
+                .iter()
+                .find(|(_, def)| def.is_token())
+                .map(|(id, _)| id.clone())
+                .unwrap_or_default();
+            let cases: Vec<(CorpusRecord, &str)> = vec![
+                (CorpusRecord { seed: 0, ..sound(1) }, "seed must be"),
+                (
+                    CorpusRecord {
+                        catalog_version: "v9.9.9".to_string(),
+                        ..sound(1)
+                    },
+                    "catalogVersion",
+                ),
+                (
+                    CorpusRecord {
+                        found: " ".to_string(),
+                        ..sound(1)
+                    },
+                    "found is empty",
+                ),
+                (
+                    {
+                        let mut record = sound(1);
+                        record.decks.0.pop();
+                        record
+                    },
+                    "p1 deck holds 19",
+                ),
+                (
+                    {
+                        let mut record = sound(1);
+                        record.decks.1[0] = record.decks.0[0].clone();
+                        record
+                    },
+                    "twice",
+                ),
+                (
+                    {
+                        let mut record = sound(1);
+                        record.decks.0[0] = "core-gone".to_string();
+                        record
+                    },
+                    "mark the record retired",
+                ),
+                (
+                    {
+                        let mut record = sound(1);
+                        record.decks.0[0] = token;
+                        record
+                    },
+                    "Token",
+                ),
+                (
+                    CorpusRecord {
+                        retired: Some(String::new()),
+                        ..sound(1)
+                    },
+                    "retired is empty",
+                ),
+            ];
+            for (record, phrase) in cases {
+                let problems = lint_record(&record).join("\n");
+                assert!(
+                    problems.contains(phrase),
+                    "expected \"{phrase}\" in: {problems:?}"
+                );
+            }
+            // A retired record keeps its unknown ids: it is listed, not linted for them.
+            let mut retired = sound(1);
+            retired.decks.0[0] = "core-gone".to_string();
+            retired.retired = Some("core-gone left the catalog".to_string());
+            assert_eq!(lint_record(&retired), Vec::<String>::new());
+        }
+
+        #[test]
+        fn a_corpus_file_of_the_wrong_shape_does_not_parse() {
+            let record = sound(1);
+            let fields = serde_json::json!({
+                "seed": record.seed,
+                "catalogVersion": record.catalog_version,
+                "decks": record.decks,
+                "found": record.found,
+            });
+            let parses = |value: &serde_json::Value| serde_json::from_str::<CorpusRecord>(&value.to_string());
+            assert_eq!(parses(&fields).ok(), Some(record.clone()));
+
+            let mut missing = fields.clone();
+            missing
+                .as_object_mut()
+                .map(|object| object.remove("catalogVersion"));
+            assert!(parses(&missing).is_err());
+
+            let mut three = fields.clone();
+            three["decks"] = serde_json::json!([record.decks.0, record.decks.1, record.decks.0]);
+            assert!(parses(&three).is_err());
+
+            let mut unknown = fields;
+            unknown["log"] = serde_json::json!([]);
+            assert!(parses(&unknown).is_err());
+        }
+
+        #[test]
+        fn the_checked_in_corpus_lints_clean_and_every_record_replays() {
+            let regress = regress(Path::new(CORPUS_DIR)).unwrap_or_else(|error| panic!("{error:#}"));
+            assert_eq!(
+                regress.failed,
+                Vec::<String>::new(),
+                "{}",
+                regress.failed.join("\n")
+            );
+            assert!(!regress.lines.is_empty());
         }
     }
 

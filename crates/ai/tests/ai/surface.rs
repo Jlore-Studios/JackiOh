@@ -26,6 +26,12 @@ fn eval(state: &GameState, seat: PlayerId) -> f64 {
     evaluate(state, seat, NextSwing::Enemy, &AI_EVAL)
 }
 
+/// A complete line's score where TS's `terminalScore` called `evaluate`: `line_score`, the same as
+/// `eval` while the switch is off and at any reach short of `Lines` (R1012002).
+fn line(state: &GameState, seat: PlayerId) -> f64 {
+    line_score(state, seat, NextSwing::Enemy)
+}
+
 /// TS's `{ rng: createRng(seed), budget }`, with no clock.
 fn ai_options(seed: &str, budget: SearchBudget) -> AiOptions<'static> {
     AiOptions {
@@ -93,7 +99,7 @@ fn ended_turn(state: &GameState) -> GameState {
 }
 
 fn passed_value(ended: &GameState) -> f64 {
-    eval(ended, AI) - AI_EVAL.unspent_mana * f64::from(ended.players[AI].turn_log.unspent_at_end.unwrap_or(0))
+    line(ended, AI) - AI_EVAL.unspent_mana * f64::from(ended.players[AI].turn_log.unspent_at_end.unwrap_or(0))
 }
 
 /// TS's module constant `BOGUS`: an attack by a unit that does not exist.
@@ -148,7 +154,7 @@ mod surface_terminal_score {
         assert_eq!(line_status(&ended, AI, TURN), LineStatus::Passed);
         let counter = create_node_counter(10, None);
         assert_eq!(terminal_score(&ended, AI, TURN, &counter), passed_value(&ended));
-        assert!(passed_value(&ended) < eval(&ended, AI));
+        assert!(passed_value(&ended) < line(&ended, AI));
         assert_eq!(counter.used(), 0);
     }
 
@@ -157,9 +163,9 @@ mod surface_terminal_score {
     fn a_yielded_or_finished_line_is_the_plain_evaluation_with_no_node_spent() {
         let state = quiet_turn();
         let counter = create_node_counter(10, None);
-        assert_eq!(terminal_score(&state, HUMAN, TURN, &counter), eval(&state, HUMAN));
+        assert_eq!(terminal_score(&state, HUMAN, TURN, &counter), line(&state, HUMAN));
         let over = act(&state, AI, &ActionBody::Concede);
-        assert_eq!(terminal_score(&over, AI, TURN, &counter), eval(&over, AI));
+        assert_eq!(terminal_score(&over, AI, TURN, &counter), line(&over, AI));
         assert_eq!(eval(&over, AI), -AI_EVAL.win + f64::from(over.turn));
         assert_eq!(counter.used(), 0);
     }
@@ -170,7 +176,7 @@ mod surface_terminal_score {
         let state = quiet_turn();
         assert_eq!(
             terminal_score(&state, AI, TURN, &create_node_counter(0, None)),
-            eval(&state, AI)
+            line(&state, AI)
         );
     }
 }

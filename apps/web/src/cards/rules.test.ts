@@ -107,6 +107,7 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Immune to damage",
     "Lose all mana",
     "Extra turn",
+    "Autopilot",
     "Trigger End of turn effects",
     "Keep a secret",
     "Guess a secret",
@@ -122,6 +123,9 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Rotate",
     "Replace",
     "Craft",
+    // R1185002, R1185001: M+ #21's set and M+ #1.1's raised play count, plain as Hearthstone prints them.
+    "Set stats",
+    "Raise a play count",
   ],
 };
 
@@ -697,6 +701,9 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
       ["End the turn", "classicplus-026", "base", "End the turn"],
       ["Trigger a Cry", "classic-054", "base", "Trigger a Cry"],
       ["Look at a hand", "classic-011", "base", "Look at your opponent's hand"],
+      // R1174000: M+ #24 Bob prints the verb on both faces; no card prints the status Frozen.
+      ["Freeze", "meditativeplus-024", "base", "Freeze"],
+      ["Freeze", "meditativeplus-024", "radiant", "Freeze"],
     ];
     for (const [term, id, face, spelling] of cases) {
       // As for any term, a number right after it is taken with it ("Nerf 4 random cards").
@@ -734,8 +741,8 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
   });
 
   it("R512 every new term has at least one catalog text that prints it", () => {
-    // R1174000: Frozen is a §6.1 status no card prints yet; M+ #24 Bob (#1185) is the first, and
-    // takes it off this list when it ships.
+    // R1174000: Frozen is a §6.1 status no card prints: M+ #24 Bob (#1185) prints the verb, Freeze
+    // ("Freeze all enemy Units"), and never the status, so it stays on this list until a card does.
     const unprinted: readonly GlossaryTermId[] = ["Frozen"];
     const fresh: readonly GlossaryTermId[] = [
       ...STATUSES.filter((id) => !unprinted.includes(id)),

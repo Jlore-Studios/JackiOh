@@ -100,8 +100,12 @@ empty, and gating a set that ships before the AI is trained on it is listing it 
 practice, the quality gates and both seats of an arena or a promotion deal unshaped. The mulligan still
 reads `shaped_weight` (`mulligan_keep_shaped`).
 `src/shadow_ban.rs` holds `SHADOW_BAN` (each card with the sweep flags that banned it) and
-`SHADOW_WATCH` (cards found at risk and cleared). Both are decided by the sweep, never by hand: run
-`cargo jackioh sweep` and copy the printed rows and header line into the file. The ban governs AI deck
+`SHADOW_WATCH` (cards found at risk and cleared). Both are decided by the sweep, never by hand, and
+never copied in by hand either: `cargo jackioh sweep --write <report>…` rewrites the file's header block
+and both tables from the reports of record (`training/history/sweep-<date>.md`, the output of `--report`,
+oldest first), and `cargo jackioh sweep --check` and a `jackioh-tools` test fail on any difference.
+`SHADOW_WATCH` is every report's rows, the later verdict winning; `SHADOW_BAN` is the newest report's
+rows less `SHADOW_UNBANNED`, the unban lane's removals (`--write` takes none out but those). The ban governs AI deck
 building and nothing else: a banned card stays legal for every player. Since #732 the ban holds
 Meditative cards only, at most half of the set (R732000): no sweep, lane or person adds a card of an
 earlier set, and the unban lane (`training/unban.md`) only removes entries.

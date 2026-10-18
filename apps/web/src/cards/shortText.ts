@@ -57,6 +57,7 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "meditative-091": { radiant: "clamp" },
   "meditative-095": { base: "colon", radiant: "colon" },
   "meditative-097": { base: 1, radiant: 1 },
+  "meditativeplus-024": { base: "clamp", radiant: "clamp" },
 };
 
 /** What ends a short form, in place of its last full stop or colon: the text goes on in the extended description. */

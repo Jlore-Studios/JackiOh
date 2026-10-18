@@ -956,6 +956,36 @@ pub struct DrawCount {
     pub count: i32,
 }
 
+/// R1183002 (Meditative+ #18 Cognitive Offloading): the engine plays the rest of this player's turn
+/// `turn` (`subsystems::autopilot`); `actions` counts what it has taken, toward
+/// `AUTOPILOT_MAX_ACTIONS`. Set by the `autopilot` verb on its caster's own turn, cleared at that
+/// turn's cleanup.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct Autopilot {
+    pub turn: i32,
+    pub actions: i32,
+}
+
+/// R1180006: the answering card last named for a player (R1180005) and the answers before it in that
+/// chain, counting the first as 1; the chain ends when its count reaches SPELL_ANSWER_CHAIN_CAP.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct AnswerChain {
+    pub by: String,
+    pub depth: i32,
+}
+
 /// #936 S3: a Duos duel's side — its team's shared pool, the pool's cap, and whether this seat's own
 /// HP is spent (B12–B15, `duos_life.rs`). Present only in a duel a `DuosState` holds, so a 1v1 state
 /// hashes as before (B3).
@@ -1087,6 +1117,17 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub duos: Option<DuosLife>,
+    /// R1183002: the autopilot plays the rest of this player's turn. Absent but in that turn, so a
+    /// game without Meditative+ #18 hashes as before this field existed (D9).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub autopilot: Option<Autopilot>,
+    /// R1180006: the answer chain under way (R1180005) — the card last named to answer one of this
+    /// player's Spells and how many answers led to it. Absent but while one is, so a game without an
+    /// answering card hashes as before this field existed (D9).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub answer_chain: Option<AnswerChain>,
 }
 
 string_union! {
@@ -1644,6 +1685,8 @@ pub fn create_player_state() -> PlayerState {
         rift_extra_turn: None,
         won_by_effect: None,
         duos: None,
+        autopilot: None,
+        answer_chain: None,
     }
 }
 

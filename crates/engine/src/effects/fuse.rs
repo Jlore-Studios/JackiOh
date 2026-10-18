@@ -516,6 +516,15 @@ pub struct FuseGeneratedArgs {
     /// random AI card). Set: `count` and `query` are ignored; an empty pool fuses nothing (R142).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pools: Option<Vec<CatalogQueryArgs>>,
+    /// R1183001 (Meditative+ #2 NA Tech): every pick leaves out the definitions picked before it, so
+    /// the ingredients are different cards. A pool that only an earlier pick filled is then empty,
+    /// and nothing is fused (R142).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub distinct: Option<bool>,
+    /// R1183001: the fused hand card costs this (a `costOverride`, NA Tech's "It costs (2)"), in
+    /// place of `handPrice`. A card a full hand burns keeps no price, as R77's free one does not.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_override: Option<i32>,
 }
 
 /// E23: "fuse 3 random AI generated cards and add the result to your hand; it costs (0)" (Classic+
@@ -532,7 +541,11 @@ pub fn fuse_generated(args: FuseGeneratedArgs) -> Effect {
         let picked_ids: Vec<String> = if let Some(pools) = &args.pools {
             let mut picked_ids: Vec<String> = Vec::with_capacity(pools.len());
             for pool in pools {
-                let pool = pool_for(ctx, Some(pool));
+                let mut pool = pool_for(ctx, Some(pool));
+                // R1183001: a distinct pick passes over the definitions already picked.
+                if args.distinct == Some(true) {
+                    pool.retain(|def| !picked_ids.contains(&def.id));
+                }
                 let Some(picked) = ctx.sink.rng.pick(&pool) else {
                     return;
                 };
@@ -572,16 +585,28 @@ pub fn fuse_generated(args: FuseGeneratedArgs) -> Effect {
         } else {
             None
         };
-        fuse(
+        // R1183001: a set price replaces `handPrice`, laid on the card once it stands in the hand.
+        let hand_price = if args.cost_override.is_some() {
+            HandPrice::Fused
+        } else {
+            args.hand_price.unwrap_or(HandPrice::Free)
+        };
+        let made = fuse(
             ctx,
             FuseArgs {
                 ingredients,
                 to_hand: Some(player),
-                hand_price: Some(args.hand_price.unwrap_or(HandPrice::Free)),
+                hand_price: Some(hand_price),
                 radiant_ingredients,
                 ..FuseArgs::default()
             },
         );
+        if let (Some(cost), Some(made)) = (args.cost_override, made)
+            && let Some(card) = crate::state::find_instance_mut(ctx.sink.state, &made.id)
+            && card.zone.z() == ZoneName::Hand
+        {
+            card.cost_override = Some(cost);
+        }
     })
 }
 

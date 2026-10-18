@@ -379,6 +379,19 @@ pub fn ai_plays_out_turn(args: AiPlaysOutTurnArgs) -> Effect {
     })
 }
 
+/// R1183002 (Meditative+ #18 Cognitive Offloading): "the AI plays the rest of your turn". The
+/// caster's autopilot is engaged for the turn running (`subsystems::autopilot::engage`) — on the
+/// caster's own turn only, so on the opponent's it does nothing — and `reduce` plays that turn by
+/// the §10.7 scorer once the action that engaged it has settled (`reduce::end_due_turns`), never
+/// here: the rest of this list, and of whatever cast it, finishes first. My Pawn's
+/// `ai_plays_out_turn` above is its random cousin.
+pub fn autopilot() -> Effect {
+    Effect::new("autopilot", move |ctx| {
+        let player = ctx.controller;
+        crate::subsystems::autopilot::engage(ctx, player);
+    })
+}
+
 /// R283: what the list before an AI turn has done, settled before the AI acts — the state check, the
 /// traps' answers to its events, and the ordinary triggers those events woke, each followed by the
 /// check again (§10.3, §4.5, R59) — as the loop settles between two actions of a turn, which the AI's

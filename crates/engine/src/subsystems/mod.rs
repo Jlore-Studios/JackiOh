@@ -4,7 +4,7 @@
 //! the lethal projection (R44), Activate (B3.2, R384), last boards (R417), quests (B5 E33, R404),
 //! copied text (B5 E14, R399), the Classic+ machinery (R416, R419, R420, R422, R423, R425) and the
 //! Meditative set's (the craft, R880; the night market, R1000) and the Meditative+ set's (KY's
-//! Competition's question sequence, R1184000).
+//! Competition's question sequence, R1184000; the autopilot, R1183002).
 //!
 //! One module per `packages/engine/src/subsystems/<x>.ts`, re-exported whole as TS's barrel
 //! (`subsystems/index.ts`) did, so `subsystems.chooseAction` is both
@@ -16,6 +16,9 @@
 pub mod activate;
 pub mod ai_policy;
 pub mod audit;
+// R1183002, R1183003: declared, not globbed: `reduce` and the `autopilot` verb name its functions by
+// path (`subsystems::autopilot::choose`).
+pub mod autopilot;
 pub mod board_history;
 pub mod call_to_chaos;
 pub mod call_to_chaos_meditative;

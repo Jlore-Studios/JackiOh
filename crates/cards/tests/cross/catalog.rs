@@ -32,7 +32,8 @@
 //!                    the old spelling as the record).
 //!   patch v0.3.10   — issue #831's costs, stats, types and tags, in every set's rows: the briefs'
 //!                    lines are what the designer first wrote, the patch what the cards are now.
-//!   patch v0.3.12   — issue #1149's costs, stats and the CN in a Bottle rename.
+//!   patch v0.3.12   — issue #1149's costs, stats and the CN in a Bottle rename, and issue #1219's
+//!                    12 Attack for the Radiant Jlockeed Shredder-10.
 //!   patch v0.3.13   — issue #1194's costs: #76 Field of Dreams (2), C+ #64 Mulch Muncher (5) and
 //!                    Meditative #19.1 Temporal Rift (0).
 //!   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
@@ -254,7 +255,7 @@ const CORE: &[SpecRow] = &[
         &[G::Jlockeed],
         R::Common,
         st(6, 10),
-        st(8, 20),
+        st(12, 20),
     ),
     row(
         "14",
@@ -2269,7 +2270,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         &[G::Token],
         R::Token,
         st(4, 4),
-        st(10, 10),
+        st(8, 8),
     ),
     row(
         "19.2",
@@ -2279,7 +2280,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         &[G::Token],
         R::Token,
         st(4, 4),
-        st(10, 10),
+        st(8, 8),
     ),
     row(
         "19.3",
@@ -2289,7 +2290,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         &[G::Token],
         R::Token,
         st(4, 4),
-        st(10, 10),
+        st(8, 8),
     ),
     row(
         "19.4",
@@ -2299,7 +2300,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         &[G::Token],
         R::Token,
         st(0, 4),
-        st(0, 10),
+        st(0, 8),
     ),
     row(
         "19.5",
@@ -2309,7 +2310,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         &[G::Token],
         R::Token,
         st(4, 4),
-        st(10, 10),
+        st(8, 8),
     ),
     row(
         "20",
