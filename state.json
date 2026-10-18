@@ -18293,9 +18293,9 @@
     ],
     "idle_since": "2026-10-18T05:27:17Z",
     "last_run": "2026-10-18T05:27:17Z",
-    "provider": "muse",
+    "provider": null,
     "requested": false,
-    "run_id": "39100559310",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
