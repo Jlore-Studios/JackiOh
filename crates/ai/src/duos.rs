@@ -29,7 +29,7 @@ use jackioh_engine::config::{
     AI_DIFFICULTY, AI_END_TURN_PROBABILITY, DUOS_HUMAN_TEAM, Difficulty, duos_ai_team,
 };
 use jackioh_engine::duos::{
-    DuosState, duos_begin, duos_create, duos_legal_actions, duos_reduce, duos_seats_to_act,
+    DuosState, duos_begin, duos_create, duos_legal_actions, duos_reduce, duos_seats_to_act, passed_card,
 };
 use jackioh_engine::subsystems::{self, AI_SKIPPED_ACTIONS};
 use jackioh_engine::wire::{
@@ -203,28 +203,31 @@ fn passes_of(state: &DuosState, seat: DuosSeat) -> Vec<String> {
             _ => None,
         })
         .collect();
+    let mate_probe = mate_probe(mate_duel, mate.player());
     let mate_acts = open_round_seat(state, mate);
     let mate_now = spendable_mana(mate_duel, mate.player());
     let mate_next = next_turn_mana(mate_duel, mate_side);
     let own_next = next_turn_mana(&probe, &probe.players[player]);
 
-    // (cost, hand index, id): the plays the teammate can make this round, then (pass cost 0 only)
-    // the cards it can pay for next turn and the seat cannot.
+    // (the teammate's price, hand index, id): the plays the teammate can make this round, then (pass
+    // cost 0 only) the cards it can pay for next turn and the seat cannot.
     let mut now: Vec<(i32, usize, String)> = Vec::new();
     let mut later: Vec<(i32, usize, String)> = Vec::new();
     for (index, card) in probe.players[player].hand.iter().enumerate() {
         let cost = own_cost(&probe, card);
+        let (receiving, given) = received(&probe, card, &mate_probe, mate.player());
+        let mate_cost = own_cost(&receiving, &given);
         if mate_acts
             && !playable.contains(&card.id)
-            && cost <= mate_now
+            && mate_cost <= mate_now
             && has_zone_for(&probe, card, mate_duel, mate.player())
         {
-            now.push((cost, index, card.id.clone()));
-        } else if rules.pass_cost == 0 && cost <= mate_next && cost > own_next {
-            later.push((cost, index, card.id.clone()));
+            now.push((mate_cost, index, card.id.clone()));
+        } else if rules.pass_cost == 0 && mate_cost <= mate_next && cost > own_next {
+            later.push((mate_cost, index, card.id.clone()));
         }
     }
-    rank_now(&mut now, &probe, player, mate_duel, mate.player());
+    rank_now(&mut now, &probe, player, &mate_probe, mate.player());
     best_first(&mut later);
     now.into_iter()
         .chain(later)
@@ -254,7 +257,9 @@ fn own_probe(duel: &GameState, player: PlayerId) -> GameState {
 
 /// A card's own price (R65, R396): its override or printed cost with its cost modifier, floored, read
 /// as a card out of a hand is read. No player's discount and no field aura reaches it, so it is the
-/// part of the price a pass keeps (B20), and no face-down card's aura can move it.
+/// part of the price a pass keeps (B20), and no face-down card's aura can move it. A cost hook reads
+/// the duel it is given, so the teammate's price is read on the teammate's probe (`received`): a card
+/// whose price counts its own duel (Ceaseless Void's counters) costs there what it costs there.
 fn own_cost(duel: &GameState, card: &CardInstance) -> i32 {
     let mut off_hand = card.clone();
     off_hand.zone = Zone::Library { player: card.owner };
@@ -292,14 +297,14 @@ fn rank_now(
     now: &mut [(i32, usize, String)],
     own_probe: &GameState,
     seat_player: PlayerId,
-    mate_duel: &GameState,
+    mate_probe: &GameState,
     mate: PlayerId,
 ) {
     let scored = catch_unwind(AssertUnwindSafe(|| {
         now.iter()
             .map(|(cost, index, id)| {
                 (
-                    pass_score(own_probe, seat_player, id, mate_duel, mate),
+                    pass_score(own_probe, seat_player, id, mate_probe, mate),
                     *cost,
                     *index,
                     id.clone(),
@@ -325,44 +330,25 @@ fn rank_now(
 /// R1127000: the teammate's best bounded follow-up with the passed card in hand: the maximum of
 /// `evaluate` over at most `DUOS_PASS_MAX_FOLLOWUPS` legal `Play` actions (the passed card's own
 /// plays first, then the rest in `legal_actions` order), each applied by one engine step to the
-/// teammate's determinized probe with a copy of the card added to its hand as B20's pass adds it
-/// (the duel's next instance id, its match-made definitions along), scored from the teammate's
-/// seat; `evaluate` of the receiving probe when no follow-up applies. The probe is built exactly
-/// like `own_probe`, on the fixed `DUOS_PASS_PROBE_SEED`, so no hidden opponent card
-/// and no caller stream is ever read; a refused or panicking follow-up is skipped.
+/// teammate's probe (`mate_probe`) with the card added to its hand as B20's pass adds it
+/// (`received`), scored from the teammate's seat; `evaluate` of the receiving probe when no
+/// follow-up applies. No hidden opponent card and no caller stream is ever read; a refused or
+/// panicking follow-up is skipped.
 fn pass_score(
     own_probe: &GameState,
     seat_player: PlayerId,
     card_id: &str,
-    mate_duel: &GameState,
+    mate_probe: &GameState,
     mate: PlayerId,
 ) -> f64 {
     let Some(passed) = own_probe.players[seat_player]
         .hand
         .iter()
         .find(|card| card.id == card_id)
-        .cloned()
     else {
         return f64::NEG_INFINITY;
     };
-    let mate_probe = determinize(
-        &redact(mate_duel, mate),
-        mate,
-        &mut Rng::new(DUOS_PASS_PROBE_SEED, 0),
-        DeterminizeOptions::default(),
-    );
-    let mut receiving = mate_probe;
-    // As the pass itself moves it (B20): its match-made definitions go along, and it takes the next
-    // instance id of the teammate's duel. Both duels number their cards from the same start, so the
-    // id it holds in the seat's duel may name another card in the teammate's.
-    carry_match_defs(own_probe, &mut receiving, &passed.def_id);
-    let mut given = passed;
-    given.id = format!("c{}", receiving.next_id);
-    receiving.next_id += 1;
-    given.owner = mate;
-    given.controller = mate;
-    given.zone = Zone::Hand { player: mate };
-    receiving.players[mate].hand.push(given.clone());
+    let (receiving, given) = received(own_probe, passed, mate_probe, mate);
     let mut best: Option<f64> = None;
     // The passed card's own plays first, then the teammate's other plays in `legal_actions`
     // order: the card sits at the hand's end, so a plain prefix would cut its plays off behind a
@@ -397,6 +383,36 @@ fn pass_score(
         best = Some(best.map_or(value, |held: f64| held.max(value)));
     }
     best.unwrap_or_else(|| evaluate(&receiving, mate, NextSwing::Enemy, &AI_EVAL))
+}
+
+/// The teammate's duel as the seat may read it: one determinization of `redact` from the teammate's
+/// seat on the fixed `DUOS_PASS_PROBE_SEED`, built exactly like `own_probe`, so its own hand and
+/// face-down cards (the team's to share, B29) are there and no hidden opponent card is.
+fn mate_probe(mate_duel: &GameState, mate: PlayerId) -> GameState {
+    determinize(
+        &redact(mate_duel, mate),
+        mate,
+        &mut Rng::new(DUOS_PASS_PROBE_SEED, 0),
+        DeterminizeOptions::default(),
+    )
+}
+
+/// `card` passed into a copy of the teammate's probe, as B20's pass moves it: its match-made
+/// definitions go along, it takes the duel's next instance id (both duels number their cards from
+/// the same start, so the id it holds in the seat's duel may name another card in the teammate's),
+/// and it is the card `passed_card` makes (R1168000). The probe after the pass, and the card in it.
+fn received(
+    own_probe: &GameState,
+    card: &CardInstance,
+    mate_probe: &GameState,
+    mate: PlayerId,
+) -> (GameState, CardInstance) {
+    let mut receiving = mate_probe.clone();
+    carry_match_defs(own_probe, &mut receiving, &card.def_id);
+    let given = passed_card(card.clone(), format!("c{}", receiving.next_id), mate);
+    receiving.next_id += 1;
+    receiving.players[mate].hand.push(given.clone());
+    (receiving, given)
 }
 
 /// B20's carry onto a probe: a card whose definition lives in the seat's duel alone (a fused or

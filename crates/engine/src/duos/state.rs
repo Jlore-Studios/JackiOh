@@ -38,10 +38,34 @@ pub struct DuosState {
     pub end_applied: Vec<bool>,
     /// [duel 0, duel 1]: the passes the round seat has made this round (B19, B22).
     pub passes: Vec<i32>,
+    /// [duel 0, duel 1]: the turns each duel has begun that no round has taken yet, in order, read off
+    /// its `turnStarted` events (R1168001). The next round opens on the first of them, and on one the
+    /// duel has already moved past (a turn that ended as it began, R456) with its seat counted as ended,
+    /// so each duel's turn moves once a round (§13.3).
+    #[serde(default = "no_turns_begun")]
+    pub begun: Vec<Vec<DuosBegunTurn>>,
     /// Each team's open concede offer (B11): the seat that conceded first, waiting for its teammate.
     /// One per team, so one team's concede never touches the other's offer.
     pub concede_offer: PerTeam<Option<DuosSeat>>,
     pub result: Option<DuosResult>,
+}
+
+/// A turn a duel has begun that no round has taken yet (R1168001): its number and whose it is.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct DuosBegunTurn {
+    pub turn: i32,
+    pub player: PlayerId,
+}
+
+/// `DuosState.begun` with nothing begun, one list per duel.
+pub(super) fn no_turns_begun() -> Vec<Vec<DuosBegunTurn>> {
+    vec![Vec::new(); DUOS_DUELS]
 }
 
 /// One team: its rules and its shared pool (B12), the pool every duel's copy is kept equal to (B15).
@@ -139,6 +163,7 @@ pub fn duos_create(options: &DuosCreateOptions) -> DuosState {
         ended: vec![false; DUOS_DUELS],
         end_applied: vec![false; DUOS_DUELS],
         passes: vec![0; DUOS_DUELS],
+        begun: no_turns_begun(),
         concede_offer: PerTeam::new(None, None),
         result: None,
     }
