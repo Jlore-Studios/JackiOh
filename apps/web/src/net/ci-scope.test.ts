@@ -475,6 +475,7 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/scratch/src/lib.rs", [...RUST]],
     ["apps/web/src/wire/generated/Action.ts", ["rust_engine", "rust_server"]],
     ["docs/radiant-audit.md", ["rust_cards"]],
+    ["spec/07-tokens.md", ["rust_cards"]],
     ["e2e/support/config.ts", ["rust_server"]],
     ["render.yaml", ["rust_server", "rust_tools_wasm"]],
     ["apps/web/.env.production", ["rust_tools_wasm"]],

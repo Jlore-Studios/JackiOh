@@ -229,6 +229,19 @@ describe("R630 the almanac's browse pane", () => {
     expect(screen.queryByTestId(DB_DETAIL_ADD)).toBeNull();
   });
 
+  it("R1177001 the grid names a token that prints a rarity by both, Token and the printed rarity, and every token as Token", () => {
+    render(<AlmanacRoute />);
+    for (const token of TOKENS) {
+      const label = screen.getByTestId(poolCardId(token.id)).getAttribute("aria-label") ?? "";
+      const rarity = token.printedRarity === undefined ? "Token" : `Token, printed ${token.printedRarity}`;
+      expect(label, token.id).toContain(`, ${rarity}`);
+      if (token.printedRarity === undefined) expect(label, token.id).not.toContain("printed");
+    }
+    const top = cardOf("classicplus-019-1");
+    expect(poolCardLabel(top)).toBe(`${top.name}, Unit, (2) Cost, Token, printed Legendary. Show details`);
+    expect(poolCardLabel(cardOf("core-t-rush"))).toBe("Rush Token, Unit, (1) Cost, Token. Show details");
+  });
+
   // One filter per test: a full pool is 317 cards, and every render of all of them costs about as
   // much as the rest of a test does.
   it("R630 the search narrows the pool, and a search nothing matches shows the empty state", () => {
