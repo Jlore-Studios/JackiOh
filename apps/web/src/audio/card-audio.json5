@@ -1850,6 +1850,14 @@
       attack: { voice: "sapi-cat", text: "Nyaa, cleaning time!" },
       death: { voice: "sapi-cat", text: "Nyaa... logging off." },
     },
+    "meditativeplus-020": { // KY's Competition
+      cast: { voice: "sapi-teacher", text: "Pencils up. Speed round, starting now." },
+    },
+    "meditativeplus-020-1": { // Lil' Kenny
+      play: { voice: "kid", text: "I got every single one right!" },
+      attack: { voice: "kid", text: "Show your work!" },
+      death: { voice: "kid", text: "I demand a regrade!" },
+    },
   },
   emotes: {
     vanilla: {

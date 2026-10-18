@@ -5701,13 +5701,16 @@ mod faces_that_change_more_than_text_b2_7_e40 {
     }
 
     #[test]
-    fn prints_buff_billy_s_3x_3x_and_6x_6x_as_x_multiples_on_a_0_0_face_and_no_other_face_has_them() {
+    fn prints_buff_billy_s_3x_3x_and_6x_6x_and_lil_kenny_s_x_x_and_2x_2x_as_x_multiples_and_no_other_face_has_them()
+     {
+        // Buff Billy's X is the one it is played for; Meditative+ #20.1 Lil' Kenny's the one M+ #20
+        // summons it with (R1184003).
         let with_x: Vec<String> = entries()
             .into_iter()
             .filter(|entry| entry.base.x_stats.is_some() || entry.radiant.x_stats.is_some())
             .map(|entry| entry.id.clone())
             .collect();
-        assert_eq!(with_x, strings(&["classicplus-069"]));
+        assert_eq!(with_x, strings(&["classicplus-069", "meditativeplus-020-1"]));
         let billy = CATALOG.get("classicplus-069");
         assert_eq!(billy.map(|entry| entry.cost), Some(CardCost::X));
         assert_eq!(
@@ -5717,6 +5720,15 @@ mod faces_that_change_more_than_text_b2_7_e40 {
         assert_eq!(
             billy.and_then(|entry| entry.radiant.x_stats).map(json),
             Some(serde_json::json!({ "attack": 6, "health": 6 }))
+        );
+        let kenny = CATALOG.get("meditativeplus-020-1");
+        assert_eq!(
+            kenny.and_then(|entry| entry.base.x_stats).map(json),
+            Some(serde_json::json!({ "attack": 1, "health": 1 }))
+        );
+        assert_eq!(
+            kenny.and_then(|entry| entry.radiant.x_stats).map(json),
+            Some(serde_json::json!({ "attack": 2, "health": 2 }))
         );
     }
 }

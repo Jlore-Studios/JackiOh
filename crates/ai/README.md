@@ -53,6 +53,12 @@ going second, The Coin). Nothing here reads a difficulty, and a handicap only as
 mulligan's bonus and cap): the tiers change the AI seat's resources only (R180), and the tutorial's
 opponent is the same AI on `AI_TUTORIAL` with the lesson's fixed deck (R290, R291).
 
+A question of a sequence (Meditative+ #20 KY's Competition, R1184000) is answered at once, before
+any search, with the option its redacted statement works out to (`ky_competition::worked_answer`),
+never Stop: the redacted copy judges no answer right (R465), so a search would rank the answers alike
+and spend a decision's budget on a guess up to thirty times a turn, and worked out each answer costs
+one redaction (R1184002).
+
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
 it can see on the field, then its attacks) on every determinization, and plays the first action of the

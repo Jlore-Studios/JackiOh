@@ -1793,6 +1793,8 @@
   "Raise X": "增大X",
   "Numbers": "数字",
   "Answers": "选项",
+  "Right answers in a row: {count}": "连续答对：{count}题",
+  "Stop": "停止",
   "Choose {range}: {count} chosen": "选择{range}：已选{count}项",
   "{name}: kept": "{name}：保留",
   "{name}: going back": "{name}：放回",

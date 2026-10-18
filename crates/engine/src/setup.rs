@@ -75,6 +75,7 @@ fn mulligan_prompt(sink: &EngineSink, player: PlayerId) -> PendingChoice {
         min: 0,
         max: hand.len() as i32,
         budget: None,
+        streak: None,
         resume: Resume {
             def_id: String::new(),
             hook: "mulligan".to_string(),

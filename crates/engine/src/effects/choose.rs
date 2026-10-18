@@ -14,7 +14,8 @@ use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, query};
 use crate::faces::card_type_of;
 use crate::mana::effective_cost;
 use crate::prompts::{
-    ANSWER_KEY, OpenPromptArgs, answer_key_of, cell_option_label, hero_option_label, open_prompt, resume_self,
+    ANSWER_KEY, ANSWER_STOP_KEY, OpenPromptArgs, answer_key_of, cell_option_label, hero_option_label,
+    open_prompt, resume_self,
 };
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, GameState, PromptOption, Resume};
@@ -599,6 +600,11 @@ pub struct ChooseAnswerArgs {
     pub shuffle: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub by: Option<PlayerSpec>,
+    /// R1184000: the problem is one question of a sequence (Meditative+ #20 KY's Competition), with
+    /// this many right answers so far: the prompt carries the streak for its chooser to see and offers
+    /// Stop after the lettered answers.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub streak: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub data: StepData,
 }
@@ -610,6 +616,10 @@ pub struct ChooseAnswerArgs {
 /// prompt's resume data under `prompts::ANSWER_KEY` — which `view_for` never sends and the AI's
 /// redaction strips (R185) — so the key never leaves the engine. The answered step reads the verdict
 /// with `answered_correctly`. At most `ANSWER_OPTION_IDS.len()` options; fewer than two asks nothing.
+///
+/// R1184000: with a `streak`, the problem is a question of a sequence: Stop is offered last, a `none`
+/// pick under no letter (`prompts::ANSWER_STOP_KEY`), which `answered_correctly` never judges right,
+/// and the prompt carries the streak (`PendingChoice.streak`), which its chooser's view shows.
 pub fn choose_answer(args: ChooseAnswerArgs) -> Effect {
     Effect::new("chooseAnswer", move |ctx| {
         // `(text, index)`: TS `{ text, index }`.
@@ -634,7 +644,7 @@ pub fn choose_answer(args: ChooseAnswerArgs) -> Effect {
             .copied()
             .unwrap_or("")
             .to_string();
-        let options: Vec<PromptOption> = shown
+        let mut options: Vec<PromptOption> = shown
             .iter()
             .enumerate()
             .map(|(index, (text, _))| {
@@ -645,6 +655,15 @@ pub fn choose_answer(args: ChooseAnswerArgs) -> Effect {
                 mode_option(&id, text)
             })
             .collect();
+        if args.streak.is_some() {
+            options.push(PromptOption {
+                key: ANSWER_STOP_KEY.to_string(),
+                label: "Stop".to_string(),
+                selection: Selection::None,
+                cost: None,
+                radiant: None,
+            });
+        }
         let mut data = args.data.clone().unwrap_or_default();
         data.insert(ANSWER_KEY.to_string(), Value::String(key));
         let player = player_of(ctx, args.by.unwrap_or(PlayerSpec::SelfSide));
@@ -658,7 +677,12 @@ pub fn choose_answer(args: ChooseAnswerArgs) -> Effect {
             resume,
         );
         asked.owner = Some(owner);
-        open_prompt(ctx, asked);
+        if open_prompt(ctx, asked).is_some()
+            && let Some(streak) = args.streak
+            && let Some(pending) = ctx.sink.state.pending.as_mut()
+        {
+            pending.streak = Some(streak.max(0));
+        }
     })
 }
 

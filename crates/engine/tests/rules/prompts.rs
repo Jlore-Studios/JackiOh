@@ -654,6 +654,7 @@ mod prompts_s10_6_m3_t3 {
             min: 1,
             max: 1,
             budget: None,
+            streak: None,
             resume: inert_resume(),
         };
         assert_eq!(

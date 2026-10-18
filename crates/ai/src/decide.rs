@@ -3,6 +3,9 @@
 //!   1. ai_to_act / redact — the only two reads of the true state (R185).
 //!   2. an unanswered draw offer is declined at once (R188).
 //!   3. the mulligan keeps the cheap cards.
+//!   3b. a question of a sequence (Meditative+ #20 KY's Competition) is answered at once with the
+//!      option its statement works out to (R1184002): no search, so thirty questions cost what one
+//!      redaction does, and never Stop, since a miss costs nothing a Stop keeps.
 //!   4. a single candidate is played with no search: listed on a throwaway determinization, since
 //!      the seat's own legal actions never depend on the hidden cards, so `options.rng` is untouched.
 //!   5. the exact lethal solver, verified on every determinization (a style may pass over it, and
@@ -26,8 +29,9 @@
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexMap;
+use jackioh_engine::subsystems::ky_competition::worked_answer;
 use jackioh_engine::{
-    Action, ActionBody, CardInstance, GameState, PLAYER_IDS, PlayerId, Rng, active_units_of,
+    Action, ActionBody, CardInstance, GameState, PLAYER_IDS, PlayerId, PromptKind, Rng, active_units_of,
     mulligan_prompt_for, reduce,
 };
 
@@ -73,6 +77,27 @@ fn fallback_action(candidates: &[ActionBody]) -> ActionBody {
         .or_else(|| candidates.first())
         .cloned()
         .unwrap_or(ActionBody::EndTurn)
+}
+
+/// Step 3b, R1184002: the answer to a question of a sequence open for `seat` (Meditative+ #20 KY's
+/// Competition): the option whose words are what the statement works out to (`worked_answer`), read
+/// off the redacted prompt, so the key is never read (R465) — a player with a pencil answers so. Its
+/// redacted copy judges no answer right, so a search would score the four answers and Stop alike and
+/// spend a decision's budget on a guess, up to `KY_COMPETITION_MAX` times in one turn, past the turn
+/// clock (R79); worked out, each answer costs one redaction. It never stops: a miss would end the
+/// sequence with the streak a Stop keeps, so answering is never worse. `None` for any other prompt, or
+/// a statement it cannot work out, which the search then answers.
+fn worked_answer_action(public: &GameState, seat: PlayerId) -> Option<ActionBody> {
+    let pending = public.pending.as_ref()?;
+    if pending.player_id != seat || pending.kind != PromptKind::Answer || pending.streak.is_none() {
+        return None;
+    }
+    let answer = worked_answer(&pending.prompt)?.to_string();
+    let option = pending.options.iter().find(|option| option.label == answer)?;
+    Some(ActionBody::Answer {
+        choice_id: pending.id.clone(),
+        selection: vec![option.selection.clone()],
+    })
 }
 
 /// Lines in order, at most `perAction` for any one first action, `count` in all.
@@ -273,6 +298,11 @@ fn plan(
     if public.pending.is_none() && mulligan_prompt_for(&public, seat).is_some() {
         let keep = mulligan_keep_curved(&public, seat, AI_MULLIGAN.keep_max_cost, &AI_MULLIGAN_CURVE);
         return Plan::Immediate(ActionBody::Mulligan { keep }, DecisionReason::Mulligan);
+    }
+
+    // 3b. R1184002: a question of a sequence, worked out from its statement, at once.
+    if let Some(answer) = worked_answer_action(&public, seat) {
+        return Plan::Immediate(answer, DecisionReason::Prompt);
     }
 
     // 4. Forced: a throwaway world lists the candidates without touching options.rng. Every
