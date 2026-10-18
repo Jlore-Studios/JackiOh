@@ -55,7 +55,7 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
   "classicplus-040": {
     Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +2X Attack and Rush." },
     Education: { label: "Education", detail: "Shuffle 2X random Radiant Books into your deck. They have Cast on draw." },
-    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 10X% chance to become Radiant." },
+    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has an 8X% chance to become Radiant." },
     Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +2X Health and Armor X." },
   },
   // M #22 Mind Games: "Choose one in secret: Greed, Attack or Defend." The detail names no
@@ -88,12 +88,12 @@ function lanes(detail: string): Record<string, ModeText> {
  * missing here reads the same on both faces.
  */
 export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText>>>> = {
-  // C+ #40 Appropriations, radiant: every multiple quintupled, the Armor doubled.
+  // C+ #40 Appropriations, radiant: Attack and Armor doubled, the Books and the Culture chance 2.5 times, Health tripled.
   "classicplus-040": {
-    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +5X Attack and Rush." },
+    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +4X Attack and Rush." },
     Education: { label: "Education", detail: "Shuffle 5X random Radiant Books into your deck. They have Cast on draw." },
-    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 25X% chance to become Radiant." },
-    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +7X Health and Armor 2X." },
+    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 20X% chance to become Radiant." },
+    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +6X Health and Armor 2X." },
   },
   // M #98 Showdown, radiant: "This turn, after you put a card into that lane, cast Book of Buff on it."
   "meditative-098": lanes("Lock the other four lanes until the start of your next turn. This turn, Book of Buff is cast on each card you put into this one."),

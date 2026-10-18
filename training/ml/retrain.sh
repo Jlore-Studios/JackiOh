@@ -6,12 +6,15 @@
 #
 #   training/ml/retrain.sh --out <dir> (--logs <dir> | --games <n> --seed <base>) [--parent-bin <path>]
 #                          [--screen-games 800] [--every reply|turn|decision] [--seeds "1 2 3"]
-#                          [--width 32] [--head "32"]
+#                          [--width 32] [--head "32"] [--positions-bin <path>]
 #
 #   1. the logs: `--logs` reuses an export (selfplay.yml's artifacts, or a local run), else `jackioh
 #      selfplay --games <n> --seed <base>` plays one here (R1006001, R1006002);
 #   2. `jackioh positions --every reply` over them, the positions the search scores (R1006006; games
-#      that no longer replay are dropped and counted, R1006003);
+#      that no longer replay are dropped and counted, R1006003). `--positions-bin` folds them with the
+#      build that played them (learn.yml: the export's own `jackioh`), so a rules change merged since
+#      the export drops none of its games, when that build's features are this tree's (the header
+#      both write for an empty log: `featuresVersion` and `denseNames`); else this tree's build folds;
 #   3. the fit (`python -m jackioh_ml.fit`, 32 wide with a head of 32 by default: about 38,000 weights,
 #      the size 20,000 games and more support, D5's "wider only as the data grows"), and its report;
 #      it stops here unless the network beats the
@@ -36,6 +39,7 @@
 set -euo pipefail
 
 out="" logs="" games="" seed="" parent="" screen_games=800 every=reply seeds="1 2 3" width=32 head=32
+positions_bin=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --out) out="$2"; shift 2 ;;
@@ -48,6 +52,7 @@ while [ $# -gt 0 ]; do
     --seeds) seeds="$2"; shift 2 ;;
     --width) width="$2"; shift 2 ;;
     --head) head="$2"; shift 2 ;;
+    --positions-bin) positions_bin="$2"; shift 2 ;;
     *) echo "retrain.sh: unknown argument $1" >&2; exit 2 ;;
   esac
 done
@@ -75,8 +80,20 @@ fi
 mapfile -t files < <(find "$logs" -name 'selfplay-*.jsonl' | sort -V)
 [ "${#files[@]}" -gt 0 ] || { echo "retrain.sh: no selfplay-*.jsonl under $logs" >&2; exit 1; }
 
+fold="$bin"
+if [ -n "$positions_bin" ]; then
+  : > "$out/empty-log.jsonl"
+  "$bin" positions "$out/empty-log.jsonl" --out "$out/header-tree.jsonl" --every "$every" > /dev/null
+  "$positions_bin" positions "$out/empty-log.jsonl" --out "$out/header-export.jsonl" --every "$every" > /dev/null
+  if cmp -s "$out/header-tree.jsonl" "$out/header-export.jsonl"; then
+    fold="$positions_bin"
+    say "the logs are folded by the build that played them ($positions_bin)"
+  else
+    say "$positions_bin writes other features than this tree: this tree's build folds the logs"
+  fi
+fi
 say "positions (--every $every) over ${#files[@]} log files"
-"$bin" positions "${files[@]}" --out "$out/positions.jsonl" --every "$every" | tee "$out/positions.json"
+"$fold" positions "${files[@]}" --out "$out/positions.jsonl" --every "$every" | tee "$out/positions.json"
 
 # The trainer's package lives in training/ml, which `python -m` reads only from the path.
 export PYTHONPATH="$root/training/ml${PYTHONPATH:+:$PYTHONPATH}"
