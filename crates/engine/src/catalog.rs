@@ -375,6 +375,10 @@ pub struct CatalogQueryArgs {
     /// R1444: only Luck-based cards (`is_luck_based`), Meditative #101 Gachaholic's pool.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub luck_based: Option<bool>,
+    /// R1178001: `true` asks for embiggen cards only, the cards with two prices (a printed
+    /// `CardCost::Embiggen`, `is_embiggen_card`), `false` forbids them (Meditative+ #22, #23).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub embiggen: Option<bool>,
     /// R1080: the printed base attack and health a pool asks for.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stats: Option<AttackHealth>,
@@ -425,6 +429,7 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             not_tags: query.not_tags,
             any_tags: query.any_tags,
             luck_based: None,
+            embiggen: None,
             stats: query.stats,
             rarity: query.rarity,
             set: query.set,
@@ -490,6 +495,13 @@ pub fn is_luck_based(def: &CardDef) -> bool {
     })
 }
 
+/// R1178001: whether a definition is an embiggen card, one that prints two prices (`CardCost::Embiggen`:
+/// its normal price and its Embiggened price, #1175's words). Read off the printed cost, never an
+/// instance's, so a cost override, a discount or a Tune never makes a card one or unmakes it.
+pub fn is_embiggen_card(def: &CardDef) -> bool {
+    matches!(def.cost, CardCost::Embiggen { .. })
+}
+
 fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -> bool {
     // R674: Glitch is in no pool, not even one that takes every token; only R673's roll makes one.
     if def.id == GLITCH_DEF_ID && !as_list(&args.def_id).contains(&def.id) {
@@ -550,6 +562,12 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
         return false;
     }
     if args.luck_based == Some(true) && !is_luck_based(def) {
+        return false;
+    }
+    // R1178001: an embiggen card is one that prints two prices.
+    if let Some(wanted) = args.embiggen
+        && is_embiggen_card(def) != wanted
+    {
         return false;
     }
     // R1221: the Tribute-cost filter, read off the registered script.
