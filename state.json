@@ -9516,9 +9516,11 @@
     "what": "build #1219 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-18T14:18:04Z",
+    "at": "2026-10-18T14:24:56Z",
     "notes": [
-      "#1223: typed it Task"
+      "#1226: typed it Task",
+      "#1225: typed it Task",
+      "#1224: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
