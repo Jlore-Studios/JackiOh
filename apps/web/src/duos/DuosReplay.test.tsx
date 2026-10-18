@@ -59,6 +59,7 @@ function step(round: number, result: DuosView["result"] = null): DuosView {
     team: teamView("a"),
     enemy: teamView("b"),
     round,
+    roundSeats: ["a1", "a2"],
     concedeOfferedBy: null,
     result,
   };

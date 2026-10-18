@@ -485,7 +485,9 @@ fn trial_plays(base: &GameState, viewer: PlayerId, card: &CardInstance) -> DryRu
             crate::triggers::settle(&mut sink, crate::triggers::SettleOptions::default());
         }
 
-        let enemy_health = trial.players[enemy].hero.health;
+        // R1168003: in a Duos duel the enemy hero stands until its own HP and its team's pool are both
+        // gone, so lethal is judged against both (§13.4's lethal judge).
+        let enemy_health = crate::duos_life::effective_life(&trial, enemy);
         let won = trial
             .result
             .as_ref()
@@ -759,7 +761,8 @@ fn score_parts(
     };
     let lethal = played.lethal
         || (contribution > 0
-            && projected_board_damage_in(auras, viewer) + contribution >= state.players[enemy].hero.health);
+            && projected_board_damage_in(auras, viewer) + contribution
+                >= crate::duos_life::effective_life(state, enemy));
 
     let kills = killable_units(auras, &enemy_units, face);
     let clears = played.clears || (!enemy_units.is_empty() && kills >= enemy_units.len() as i32);

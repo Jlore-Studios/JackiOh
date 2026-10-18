@@ -42,6 +42,7 @@ const ID = {
   teammateStrip: "duos-teammate-strip",
   pingWheel: "duos-ping-wheel",
   pingMarker: "duos-ping-marker",
+  round: "duos-round",
   ping: (kind: PingKind): string => `duos-ping-${kind}`,
 } as const;
 
@@ -119,6 +120,7 @@ type ViewOptions = {
   seat?: DuosView["seat"];
   spent?: boolean;
   ended?: [boolean, boolean];
+  roundSeats?: DuosView["roundSeats"];
 };
 
 /** A1's DuosView in round 3, unless told otherwise. */
@@ -158,6 +160,7 @@ function duosView(options: ViewOptions = {}): DuosView {
       passCost: PASS_COST,
     },
     round: 3,
+    roundSeats: options.roundSeats ?? ["a1", "a2"],
     concedeOfferedBy: null,
     result: null,
   };
@@ -499,6 +502,26 @@ describe("B63 the portal", () => {
   it("B63 no waiting notice while the seat has not ended", () => {
     renderBoard({ view: duosView({ ended: [false, true] }) });
     expect(document.body).not.toHaveTextContent(/waiting for your teammate/i);
+  });
+
+  it("R1168001 the round line and the waiting notice follow the round seats, not the duel's active player", () => {
+    // A1's round turn ended as it began: duel 0 is already on B1's turn, a turn ahead of the round,
+    // while A1 is still the round seat there, ended.
+    const ahead = duosView({ ended: [true, false] });
+    renderBoard({ view: { ...ahead, own: { ...ahead.own, active: "p2" } } });
+    expect(screen.getByTestId(ID.round)).toHaveTextContent(/your team's turn/i);
+    expect(document.body).toHaveTextContent(/waiting for your teammate/i);
+  });
+
+  it("R1168001 the teammate strip says the teammate is playing only while the round is theirs", () => {
+    // An extra-turn round: A1 plays on in duel 0 while duel 1's round is B2's, though A2 is that
+    // duel's active player for nothing it may do.
+    renderBoard({ view: duosView({ roundSeats: ["a1", "b2"] }) });
+    expect(screen.getByTestId(ID.teammateStrip).querySelector(".duos-teammate__turn")).toHaveAttribute(
+      "data-state",
+      "waiting",
+    );
+    expect(screen.getByTestId(ID.round)).toHaveTextContent(/your team's turn/i);
   });
 });
 

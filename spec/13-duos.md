@@ -8,7 +8,7 @@ Duos needs a signed-in, active account, as Play online does ([[§9.4]]). It runs
 
 ### 13.1 Seats and pairing
 
-Four seats in two teams, paired for the whole game:
+Four seats in two teams, paired for the whole game; a Glitch's seat swap moves none of them ([[R1168002]]):
 
 | Seat | Team | Duel | In its duel | Teammate | Across |
 | --- | --- | --- | --- | --- | --- |
@@ -37,7 +37,7 @@ A round is one team turn. Its round seats are the seats whose turn each duel is 
 - Inside a duel the turn loop is [[§2.2]]'s, run as in a 1v1 game. A seat takes its duel's main-phase actions only while it is that duel's round seat and has not ended its turn.
 - Each round seat ends its own turn. Its `endTurn` marks it ended and changes nothing in its duel yet. Once both round seats have ended, the round closes: duel 0's turn ends ([[§2.2]]'s end-of-turn steps, then the next turn's start, its draw included), then duel 1's, and the next round opens with each duel's new active player as that duel's round seat.
 - A seat that has ended has no main-phase action left, but it still answers a prompt it holds and still receives passes ([[§13.5]]).
-- A duel whose turn ends by itself, through an effect ([[R456]]), counts its round seat as ended, and that duel's new active player waits for the round to close before it acts.
+- A duel whose turn ends by itself, through an effect ([[R456]]), counts its round seat as ended, and that duel's new active player waits for the round to close before it acts. A turn that ends as it begins (a Tommy Tempo drawn at its start) is still a round's turn there: the next round opens on it with its seat counted as ended, so that duel waits out the round while the other plays it ([[R1168001]]). A Glitch reset ([[R676]]) ends the round's turn in its duel, and the new game's first turn is a later round's there, however its count runs ([[R1168002]]).
 - An extra turn ([[R846]]) keeps that duel's next round seat on the same player, so for a round the two duels' round seats can belong to different teams, each acting in its own duel. Nothing waits on a seat that cannot act: each duel's active player is its round seat.
 - [[R82]]'s automatic turn end is the round's to apply: a round seat whose only legal actions in its duel are ending the turn, conceding and draw offers, and which has no pass it may make ([[§13.5]]), is ended for it. A card it could still pass keeps it in the round.
 - Each duel's turn counter moves once a round, so [[§2.5]]'s turn cap (`TURN_CAP_PLAYER_TURNS`, 60) counts rounds, which are team turns: 30 for each team.
@@ -52,10 +52,10 @@ The round has one clock, `DUOS_ROUND_CLOCK_MS` (90 s), in place of [[§9.5]]'s t
 A team's life is in two layers: each seat's own HP and the team's shared pool. A seat starts with its team's `own_health` as its duel hero's health, and the team's pool starts at its `pool_health`, which is also the pool's cap. The humans' team rules are `DUOS_HUMAN_TEAM`: `DUOS_OWN_HEALTH` (20) own HP for each seat, a `DUOS_POOL_HEALTH` (20) pool, and each seat passing up to `DUOS_PASS_CAP` (10) cards a turn at `DUOS_PASS_COST` (1) mana each ([[§13.5]]); the AI team's rules depend on its tier ([[§13.7]]).
 
 - Damage, once Armor has taken its part of the hit ([[§4.4]]), and life loss ([[R18]]), which no Armor stops, come off the seat's own HP first, then off the pool, the excess carrying over. Fatigue is damage and is taken the same way, by the seat that drew.
-- Own HP that reaches 0 or less is spent for the rest of the game: what went past 0 comes off the pool, and from then on the hero's health is the pool. Every word for a hero's health reads own HP while the seat is not spent and the pool once it is.
+- Own HP that reaches 0 or less is spent for the rest of the game: what went past 0 comes off the pool, and from then on the hero's health is the pool. Every word for a hero's health reads own HP while the seat is not spent and the pool once it is. A Glitch reset deals its duel again, and its seats' own HP start over, unspent, on their teams' pools as they stand ([[R1168002]]).
 - While a seat is spent, damage and life loss on its hero come off the pool, and healing on it goes to the pool, never above the pool's cap. While it is not spent, healing works as in a 1v1 game, with no cap, and never reaches the pool.
 - Both duels always agree on a team's pool: after every step the pool is copied to the teammate's duel, and to the teammate's hero's health when the teammate is spent.
-- [[§4.4]] step 4a's lethal judge counts all of a seat's life: a hit is lethal only when it would leave the seat's own HP and its team's pool together, the pool alone once the seat is spent, at 0 or less.
+- [[§4.4]] step 4a's lethal judge counts all of a seat's life: a hit is lethal only when it would leave the seat's own HP and its team's pool together, the pool alone once the seat is spent, at 0 or less. So does every other judge of lethal: [[§10.7]]'s scorer, the Radiant Mayor Medinamogger's Lucky, and My Pawn's projection, which takes a heal landing before the hit at what a spent hero's pool can take ([[R1168003]]).
 - An effect that sets a hero's health sets own HP while the seat is not spent (a value of 0 or less spends it, as damage would) and sets the pool once it is, never above the pool's cap.
 - A health swap (Pocket Chaos, [[R73]]) swaps the two heroes' own HP while neither hero is spent, and does nothing once either is.
 
@@ -69,6 +69,7 @@ A co-op game ends at the first of these, judged after each step. The round's clo
 | A duel reaching the turn cap | Draw (`turnCap`) |
 | A team's concede, offered and confirmed ([[§13.8]]) | That team loses (`concede`) |
 | The hard match ceiling ([[§9.5]]), `MATCH_CEILING_MS` after the match was made ([[R1047000]]) | Draw (`ceiling`) |
+| A Glitch voiding a duel ([[R679]]) | Draw (`voided`, [[R1168002]]) |
 
 A disconnect never ends a co-op game ([[§13.8]]).
 
@@ -82,7 +83,7 @@ On its own turn a seat may pass a card from its hand to its teammate's hand. A p
 - it has passed fewer cards this round than its team's pass cap (`DUOS_PASS_CAP`, 10);
 - its teammate's hand is below that player's hand size ([[§2.4]]: 10, or the size M #79 set, [[R1143]]).
 
-A pass pays the pass cost and moves the card from the passer's hand to the right end of the teammate's, under a new instance id, with the teammate as its owner and its controller, as a steal from a hand makes the thief its owner ([[R12]]). The card keeps its buffs, its cost modifiers and its face. It arrives at once, so a teammate who is a round seat and has not ended may play it the same round. A pass is not a draw, a play or a discard, and nothing triggers on it. Each seat's passes start again each round, and its team sees how many each of its seats has left ([[§13.6]]).
+A pass pays the pass cost and moves the card from the passer's hand to the right end of the teammate's, under a new instance id, with the teammate as its owner and its controller, as a steal from a hand makes the thief its owner ([[R12]]). The card keeps its buffs, its cost modifiers and its face; of what it remembers it keeps only what is the card itself, its return price and Heroic Power's rolled power, and a link into the duel it left stays behind ([[R1168000]]). Its stay in the passer's hand ends as any way out of a hand ends one ([[R1140]]). It arrives at once, so a teammate who is a round seat and has not ended may play it the same round. A pass is not a draw, a play or a discard, and nothing triggers on it. Each seat's passes start again each round, and its team sees how many each of its seats has left ([[§13.6]]).
 
 The team sees the card go across; each opposing seat sees only a card back leave one hand or arrive in the other, as the hand count its 1v1 view already shows, and the events that named the card while it was in the passer's hand stay hidden from the passer's opponent once it has gone ([[R1074000]]). The client offers a pass only where the seat's legal actions hold it, on an inspected hand card or by dragging a hand card onto the portal ([[§13.6]]), with the pass cost and the passes left beside it; it checks nothing itself (CLAUDE.md rule 7).
 
@@ -96,7 +97,7 @@ A team shares its private information, and an opponent's hidden cards stay hidde
 | Its teammate's duel | `view_for` of the teammate's duel from the teammate's seat: their hand, their face-down cards, their mana and their prompts, and their opponent as they see them |
 | Both teams' life | each seat's own HP and whether it is spent, and each team's pool and its cap |
 | Its own team's turn | which of its seats have ended this round, how many passes each has left, and the pass cost |
-| The game | the round number, its own team's standing concede offer, and the result once there is one |
+| The game | the round number, each duel's round seat ([[R1168001]]), its own team's standing concede offer, and the result once there is one |
 
 Of the other team a seat sees the life only: whether those seats have ended and how many passes they have left stay hidden. Nothing of an opponent's hidden cards appears beyond what a 1v1 `view_for` already gives that seat, and the teammate's part shows only what the teammate may see.
 
@@ -106,7 +107,7 @@ The client draws the seat's own duel as the 1v1 board ([[§10.10]]), with a life
 
 One AI plays both seats of team B. Each seat plays its own duel as the practice AI plays a 1v1 game ([[§9.9]]): its mulligan and its prompts by the 1v1 decision, and its own turn by the same search, except that when the search would end the turn, the seat first makes its passes and then ends it. It counts a seat's life as [[§13.4]]'s lethal judge does, its own HP and its team's pool together, and values a seat against the life it started with ([[R964000]]).
 
-- **Passing.** When it can pay, a seat passes a hand card it cannot play this turn and its teammate can: the teammate is a round seat that has not ended, can afford the card and has a zone for it. When passing is free, it also passes a card the teammate can afford next turn and it cannot. It passes the best cards first, and never more than its passes left or its teammate's free hand slots. Best is measured as [[R1127000]] has it: the card that gives the teammate the best bounded legal follow-up.
+- **Passing.** When it can pay, a seat passes a hand card it cannot play this turn and its teammate can: the teammate is a round seat that has not ended, can afford the card, priced in the teammate's duel ([[R1168000]]), and has a zone for it. When passing is free, it also passes a card the teammate can afford next turn and it cannot. It passes the best cards first, and never more than its passes left or its teammate's free hand slots. Best is measured as [[R1127000]] has it: the card that gives the teammate the best bounded legal follow-up.
 - **Information.** It decides from what its team may know ([[R185]]): its own duel through the 1v1 decision's determinization, and its teammate's own state, which the team shares ([[§13.6]]). It never reads an opponent's hidden card.
 - **Determinism.** The same state and AI seed give the same decision, so a co-op game replays exactly.
 - **Concedes.** The AI never concedes ([[R188]]), so an AI seat neither offers a team's concede nor confirms one.

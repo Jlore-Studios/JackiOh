@@ -229,8 +229,25 @@ fn strike_back_heal(state: &GameState, attacker: &CardInstance, target: &AttackT
 /// the same combat gives back: R176, a defender's Lifesteal strike back heals the hero in the same
 /// simultaneous step, so a Trample swing it outheals leaves the hero standing at that check. #936
 /// B17: in a Duos duel the hero stands until its own HP and its team's pool are both gone.
+/// R1168003: a First Strike defender heals before the attacker's hit lands, so a spent Duos hero's
+/// pool takes that heal only up to its cap (B14) before the hit; any other heal lands with or after
+/// the hit, where the subtraction is exact.
 pub fn is_lethal(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> bool {
     let hero = defending_hero(target);
-    let net = projected_damage(state, attacker, target) - strike_back_heal(state, attacker, target);
+    let mut heal = strike_back_heal(state, attacker, target);
+    if heals_first(state, attacker, target) {
+        heal = crate::duos_life::hero_heal_room(state, hero, heal);
+    }
+    let net = projected_damage(state, attacker, target) - heal;
     net >= crate::duos_life::effective_life(state, hero)
+}
+
+/// §4.3 step 1: a defender with First Strike, against an attacker without it, strikes first, so its
+/// Lifesteal heals before the attacker's own hit.
+fn heals_first(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> bool {
+    let DamageTarget::Unit { instance: defender } = target else {
+        return false;
+    };
+    has_keyword(&unit_view(state, defender).keywords, KeywordKind::FirstStrike)
+        && !has_keyword(&unit_view(state, attacker).keywords, KeywordKind::FirstStrike)
 }

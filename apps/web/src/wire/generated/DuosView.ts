@@ -22,6 +22,11 @@ teammate: PlayerView, team: DuosTeamView, enemy: DuosTeamView,
  */
 round: number, 
 /**
+ * [duel 0, duel 1]: each duel's round seat, whose turn the round is on there (B4, R1168001):
+ * public, as each duel's turn is. Whether one has ended stays its own team's (`team.ended`).
+ */
+roundSeats: Array<DuosSeat>, 
+/**
  * The own team's open concede offer (B11).
  */
 concedeOfferedBy: DuosSeat | null, result: DuosResult | null, };

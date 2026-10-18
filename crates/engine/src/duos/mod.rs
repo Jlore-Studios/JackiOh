@@ -28,9 +28,9 @@ mod state;
 mod view;
 
 pub use legal::{duos_legal_actions, duos_seats_to_act};
-pub use reduce::{DUOS_NONCE_PREFIX, duos_begin, duos_reduce};
+pub use reduce::{DUOS_NONCE_PREFIX, duos_begin, duos_reduce, passed_card};
 pub use replay::{DuosReplayInput, DuosReplayResult, duos_fold, duos_hash};
-pub use state::{DuosReduceResult, DuosState, DuosTeam, duos_create, duos_duel_seed};
+pub use state::{DuosBegunTurn, DuosReduceResult, DuosState, DuosTeam, duos_create, duos_duel_seed};
 pub use view::duos_view_for;
 
 /// S4's testkit helper: a begun Duos game with every mulligan kept and round 1 open.

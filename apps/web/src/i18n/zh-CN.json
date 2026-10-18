@@ -1161,6 +1161,7 @@
   "The game reached its turn limit.": "对局达到了回合上限。",
   "One of the duels decided the game.": "其中一场对决决定了胜负。",
   "The game ran out of time.": "对局时间耗尽。",
+  "A Glitch voided one of the duels.": "一次故障让其中一场对决作废。",
   "You offered to concede. If your teammate agrees, the game ends.": "你提议认输。若队友同意，对局即结束。",
   "Your teammate offers to concede.": "你的队友提议认输。",
   "Offer to concede": "提议认输",

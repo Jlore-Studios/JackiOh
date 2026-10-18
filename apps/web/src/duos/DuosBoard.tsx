@@ -141,6 +141,8 @@ function resultWords(result: DuosResult, team: Team): { outcome: "win" | "loss" 
       return { outcome, heading, reason: t("One of the duels decided the game.") };
     case "ceiling":
       return { outcome, heading, reason: t("The game ran out of time.") };
+    case "voided":
+      return { outcome, heading, reason: t("A Glitch voided one of the duels.") };
     default:
       return { outcome, heading, reason: "" };
   }
@@ -325,8 +327,10 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error, replay 
   const flash = livePings.some((ping) => ping.from !== seat && ping.target.duel !== shownDuel);
   const heard = [...livePings].reverse().find((ping) => ping.from !== seat);
 
+  // B4, R1168001: whose turn the round is on in the seat's own duel. The duel's active player may be
+  // a turn ahead of the round there, when its round's turn ended as it began.
   const ended = view.team.ended[slot] === true;
-  const ourTurn = view.own.active === view.own.viewer;
+  const ourTurn = view.roundSeats[slot] === seat;
 
   const rail = (
     <div className="duos-rail">
@@ -357,7 +361,7 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error, replay 
         </button>
         {replay ? null : <ConcedeControl view={view} live={concedeLegal} onConcede={sendConcede} />}
       </div>
-      {!replay && !over && ourTurn && ended ? (
+      {!replay && !over && ended ? (
         <p className="duos-waiting" data-testid={duosTestid.waiting} role="status">
           {t("Waiting for your teammate")}
         </p>

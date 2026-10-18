@@ -11,6 +11,7 @@ export type DuosResult = { outcome: DuosOutcome,
  */
 winner: Team | null, 
 /**
- * `poolEmptied` | `concede` | `turnCap` | `duelResult` | `ceiling` (the `DUOS_REASON_*` constants).
+ * `poolEmptied` | `concede` | `turnCap` | `duelResult` | `ceiling` | `voided` (the `DUOS_REASON_*`
+ * constants).
  */
 reason: string, };
