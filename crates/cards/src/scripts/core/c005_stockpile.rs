@@ -1,6 +1,6 @@
 //! SPEC §8.1 #5 Stockpile — Spell, cost 1.
-//! Base: "Draw 2; heal your hero 2". Radiant: "Draw 5; heal 5" — the cell changes only the numbers
-//! of the base clause (§8 Conventions), and "heal 5" is still the hero.
+//! Base: "Draw 2; heal your hero 2". Radiant: "Draw 4; heal 4" — the cell changes only the numbers
+//! of the base clause (§8 Conventions), and "heal 4" is still the hero.
 //!
 //! Engine cell: the hand cap applies. That is the draw pipeline's job (§2.4, R4: hand size 10, a
 //! card drawn into a full hand is burned to the graveyard), so this file just asks for the draws.
@@ -14,7 +14,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-005";
 
-/// The draw and the heal are the declared numbers `draw` and `heal` (R386): 2 and 2, 5 and 5 on the
+/// The draw and the heal are the declared numbers `draw` and `heal` (R386): 2 and 2, 4 and 4 on the
 /// Radiant face, read off the face that is running.
 pub fn script() -> CardScripts {
     let base = Script {
@@ -31,7 +31,7 @@ pub fn script() -> CardScripts {
 }
 
 // SPEC §8.1 #5 Stockpile. BUILD M4-T4 row 5: "Draw 2, heal 2 (hero may exceed 30); hand cap burns;
-// radiant 5/5".
+// radiant 4/4".
 //
 // §3 gives a hero no maximum health, so the heal runs past 30; R4 caps a hand at 10 and burns what
 // a draw cannot fit to the graveyard. `library[0]` is the top of the library (the next card drawn).
@@ -93,7 +93,7 @@ mod tests {
         }
 
         #[test]
-        fn radiant_draws_5_and_heals_5() {
+        fn radiant_draws_4_and_heals_4() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": {
@@ -104,10 +104,10 @@ mod tests {
             }));
             s.play("core-005", json!({}));
 
-            s.expect_health(PlayerId::P1, 25);
-            assert_eq!(s.hand(PlayerId::P1).len(), 5);
-            s.expect_in_zone("core-020", "hand");
-            s.expect_in_zone("core-008", "library");
+            s.expect_health(PlayerId::P1, 24);
+            assert_eq!(s.hand(PlayerId::P1).len(), 4);
+            s.expect_in_zone("core-011", "hand");
+            s.expect_in_zone("core-020", "library");
         }
 
         #[test]

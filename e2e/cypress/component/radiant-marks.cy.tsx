@@ -47,9 +47,9 @@ function Face({ id, radiant, height = 380 }: { id: string; radiant: boolean; hei
 }
 
 describe("R277 a Radiant face's gold marks", () => {
-  it("R277 True Strike's 9 is the one mark: gold ink, bold, underlined, and AA on the Radiant parchment", () => {
+  it("R277 True Strike's 8 is the one mark: gold ink, bold, underlined, and AA on the Radiant parchment", () => {
     cy.mount(<Face id="core-044" radiant />);
-    cy.get(".cf-mark").should("have.length", 1).and("have.text", "9");
+    cy.get(".cf-mark").should("have.length", 1).and("have.text", "8");
     cy.get(".cf-mark").should(($mark) => {
       const style = getComputedStyle($mark[0] as Element);
       expect(Number(style.fontWeight), "bold").to.be.at.least(700);

@@ -2,7 +2,7 @@
 //! renamed because Classic #60 holds the name (R381, R1178002).
 //!   Base:    "Deal {damage} damage to an enemy.\nIn your hand or deck: After another Spell of yours that
 //!            targeted an enemy resolves, cast this at it." (2)
-//!   Radiant: the same, {damage} 5.
+//!   Radiant: the same, {damage} 4.
 //!
 //! Played, a targeted Spell: its damage to a declared enemy Unit or the enemy hero (R81). In its
 //! owner's hand or deck it answers their Spells that targeted an enemy (R1180005, `targeted.rs`):
@@ -13,7 +13,7 @@
 //! card's hand and deck triggers (R464) read the event, and the one named casts itself there for
 //! free (§6.3 Cast, R70: a play), aimed, or casts nothing if the aim is no longer a legal pick. Every
 //! other copy does nothing, so one answers each Spell; its own cast targeted an enemy, so it can call
-//! the next. Tunes: damage 2 ↑ (Radiant 5).
+//! the next. Tunes: damage 2 ↑ (Radiant 4).
 
 use jackioh_engine::effects::damage;
 use jackioh_engine::prelude::*;
@@ -72,7 +72,7 @@ pub fn script() -> CardScripts {
 // prompt), it is cast free at that enemy for 2 (a play, R70), leaving your hand; from your deck the
 // same, the hand's first; one answers each Spell; a second Dogpile answers the first's cast; an
 // untargeted Spell, a Spell at your own Unit and the opponent's Spells call nothing; a target gone
-// calls nothing; damage reads through `param()`; radiant 5".
+// calls nothing; damage reads through `param()`; radiant 4".
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -298,21 +298,21 @@ mod tests {
     }
 
     #[test]
-    fn radiant_it_deals_5() {
+    fn radiant_it_deals_4() {
         let mut s = game(
             "m+017-radiant",
             json!({ "hand": [TRUE_STRIKE, { "def": ID, "radiant": true }] }),
             json!({}),
         );
         s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
-        assert_eq!(hits_on(&s, "hero-p2"), vec![4, 5]);
+        assert_eq!(hits_on(&s, "hero-p2"), vec![4, 4]);
     }
 
     #[test]
-    fn radiant_played_it_deals_5() {
+    fn radiant_played_it_deals_4() {
         let radiant = json!({ "hand": [{ "def": ID, "radiant": true }] });
         let mut s = game("m+017-radiant-played", radiant, json!({}));
         s.play(ID, json!({ "targets": hero(P2) }));
-        assert_eq!(health(&s, P2), 25);
+        assert_eq!(health(&s, P2), 26);
     }
 }

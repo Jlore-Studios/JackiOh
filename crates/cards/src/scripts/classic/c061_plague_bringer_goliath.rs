@@ -1,7 +1,7 @@
 //! C #61 Plague Bringer Goliath (SPEC §8.6 row 61). (3) Unit, Rare, 7/7 → 14/14.
 //!   Base:    "Tribute 1, Rush, Trample
 //!             Cry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}." — 3 tokens, draw 1
-//!   Radiant: the same text — 3 tokens, draw 3
+//!   Radiant: the same text — 3 tokens, draw 2
 //!
 //! Rush and Trample are printed on both catalog faces; §10.4 layer 1 reads them there. Tribute is the play's
 //! price (§6.3, R101), paid at §10.5 step 2, so with no Unit to tribute it can't be played; on a full unit
@@ -36,7 +36,7 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's draw 3 is its declared `draw`, which `param` reads off the running
+    // The same script: the Radiant face's draw 2 is its declared `draw`, which `param` reads off the running
     // face; its stats are the catalog's.
     let radiant = base.clone();
 
@@ -46,7 +46,7 @@ pub fn script() -> CardScripts {
 // C #61 Plague Bringer Goliath — SPEC §8.6 row 61, BUILD M9 Classic row C 61. Tribute: can't be played without
 // a Unit to tribute, may take its zone on a full board (R391). Cry: three placements on the one permanent a
 // prompt names, face-down ones by id alone (R689, R177), then draw; Trample's excess hits the hero (R63);
-// radiant draws 3; tuned numbers read through `param()` (R386).
+// radiant draws 2; tuned numbers read through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -137,7 +137,7 @@ mod tests {
                 def["params"],
                 json!([
                     { "key": "tokens", "base": 3, "radiant": 3, "better": "up", "step": 1, "min": 1 },
-                    { "key": "draw", "base": 1, "radiant": 3, "better": "up", "step": 1, "min": 1 },
+                    { "key": "draw", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 },
                 ]),
             );
             assert_eq!(def["base"]["keywords"], json!([{ "kind": "Rush" }, { "kind": "Trample" }]));
@@ -432,7 +432,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn is_a_14_14_with_rush_and_trample_the_same_tribute_three_placements_on_the_one_pick_then_draw_3() {
+            fn is_a_14_14_with_rush_and_trample_the_same_tribute_three_placements_on_the_one_pick_then_draw_2() {
                 crate::register_all();
                 let mut s = ready(true, json!({}));
                 let mut alone = scenario(json!({ "p1": { "hand": [{ "def": GOLIATH, "radiant": true }, ANCHOR] } }));
@@ -445,11 +445,11 @@ mod tests {
 
                 assert!(s.state().pending.is_none());
                 assert_eq!(s.card(&menace).counters.plague, Some(3));
-                assert_eq!(draws_by(s.last_events(), P1), 3);
+                assert_eq!(draws_by(s.last_events(), P1), 2);
             }
 
             #[test]
-            fn r386_a_degrade_of_its_draw_draws_2_of_its_tokens_places_two() {
+            fn r386_a_degrade_of_its_draw_draws_1_of_its_tokens_places_two() {
                 crate::register_all();
                 let mut s = ready(true, json!({}));
                 step_param(s.card_mut(GOLIATH), "draw", -1);
@@ -461,7 +461,7 @@ mod tests {
 
                 assert!(s.state().pending.is_none());
                 assert_eq!(s.card(&menace).counters.plague, Some(2));
-                assert_eq!(draws_by(s.last_events(), P1), 2);
+                assert_eq!(draws_by(s.last_events(), P1), 1);
             }
         }
     }

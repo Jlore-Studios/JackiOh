@@ -59,7 +59,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const PRODUCE: &str = "classicplus-068";
-    const FIG: &str = "core-047"; // Fig of Life: (3) Spell, Fruit. "Heal a target 20." / Radiant 50.
+    const FIG: &str = "core-047"; // Fig of Life: (3) Spell, Fruit. "Heal a target 20." / Radiant 40.
     const TRAP: &str = "core-041"; // Sheepish, a Trap with no Fruit tag.
     const FILLER: &str = "core-005";
 
@@ -162,8 +162,8 @@ mod tests {
                 "p2": { "hand": [FILLER] }
             }));
             heal_hero(&mut s, P1);
-            // Fig of Life's Radiant face heals 50, not 20.
-            s.expect_health(P1, 60);
+            // Fig of Life's Radiant face heals 40, not 20.
+            s.expect_health(P1, 50);
             assert!(s.card(FIG).radiant);
             s.expect_events(json!(["radiantSet", "cardPlayed"]));
         }
@@ -325,7 +325,7 @@ mod tests {
                 "p2": { "hand": [FILLER] }
             }));
             heal_hero(&mut s, P1);
-            s.expect_health(P1, 60);
+            s.expect_health(P1, 50);
         }
 
         #[test]
