@@ -303,7 +303,8 @@ mod tests {
             crate::positions::fold_game(
                 &line,
                 crate::positions::Every::Turn,
-                jackioh_cards::catalog_version()
+                jackioh_cards::catalog_version(),
+                false
             ),
             Err(crate::positions::Dropped::NoResult)
         );

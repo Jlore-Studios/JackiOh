@@ -21,6 +21,7 @@ pub mod match_refusal;
 pub mod observe;
 pub mod observe_instance_data;
 pub mod pierce;
+pub mod policy;
 pub mod position_model;
 pub mod prompts_v020;
 pub mod puzzles;

@@ -97,7 +97,7 @@ measured list.
 | Hand-tuned weights and terms | mined out (s35, s41, s51, s60, s63a) | the lane's default activity for 63 sessions |
 | Deeper search (ISMCTS) | failed at the browser's budget (s53, s55) | |
 | A learned leaf evaluation | this note | needs the data pipeline first |
-| A learned move ordering (a policy prior over the root's candidates) | not tried | a follow-up once positions exist: the same data, labelled with the action the search chose |
+| A learned move ordering (a policy prior over the root's candidates) | built behind a switch, off (#1171) | `positions --policy` labels each decision with the AI's candidates and the move played; `policy_fit.py` fits a table that re-sorts each line's moves before the beam's prefix (`crates/ai/src/policy.rs`, R1171000, R1171001); `retrain_policy.sh` screens it |
 | A bigger `AI_BUDGET` | a person's call; no lane may raise it | duel `msP95` reads about 690 ms on the loaded box (s63a) against `AI_GATE.max_decision_ms` 1500, but generation 9's bans are all `timeout` |
 
 ## How much data and compute
