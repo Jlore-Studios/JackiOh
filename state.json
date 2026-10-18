@@ -3552,18 +3552,18 @@
           "conflicts": [
             "spec/INDEX.md"
           ],
-          "from": "50d7534e911bca2621c52e6abeeb6c40cbb1ea0a",
-          "main": "6621a17b70b4a1c77d0aed3e4e116c9590631767"
+          "from": "ff96b697d5d77732f86814812ec15121d5dce631",
+          "main": "92cb1b493ccec61a099266d741d723c0fc1ae56f"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39113461000",
+            "run": "39118301210",
             "tier": "strong"
           }
         ],
-        "sha": "ff96b697d5d77732f86814812ec15121d5dce631",
+        "sha": "879755f26c275a24c2f5ebf78466321695e61b92",
         "tiers": {
           "claude": "strong"
         }
