@@ -333,7 +333,7 @@ from an entry, the decision wins.
 - **Text:** Your next Spell costs Health equal to {multiple} times its Cost instead of mana.
 - **Radiant:** Your next Spell costs Health equal to {multiple} times its Cost instead of mana, and has Echo 1.
 - **Engine:** NEW: health as the price (B02), a player modifier on the caster, until a Spell uses it: `mana::price_of` prices the next Spell (not a Field Spell or a Trap, [[§5.1]]) at 0 mana and `multiple ×` its cost after every modifier ([[R65]]; an X Spell its X, [[R348]]) in health, paid with the play as `lose_health` ([[R18]]); `legal_actions` offers a Spell that only the health price affords. A cast pays nothing and spends nothing ([[R70]]). The Radiant face also grants Echo 1 to that Spell (`EchoNextSpell`'s shape, [[R30]]).
-- **Rulings:** MP-B02-1: the next Spell you play, from your hand, after this resolves; it may cost you the game, as Hearthstone's Bloodbloom (a hero at 0 loses at the state check); a (0) Spell costs 0 health and still uses it; several Bloodblooms do not stack, the newest replacing.
+- **Rulings:** MP-B02-1 ([[R1180004]]): the next Spell you play, from your hand, face-up, after this resolves; it may cost you the game, as Hearthstone's Bloodbloom (a hero at 0 loses at the state check); a (0) Spell costs 0 health and still uses it; several Bloodblooms do not stack, the newest replacing; the Spell still costs its cost for every rule that reads one, and a Spell set face-down or played from a graveyard does not use it.
 - **Numbers:** multiple 3 ↓.
 - **Check:** "[spell_cost * 3]" is 3 × the Spell's cost; "gains Echo" is Echo 1. R275: Echo 1 on the discounted Spell, a whole second resolution.
 - **Class:** C (health as the price).
@@ -346,7 +346,7 @@ from an entry, the decision wins.
 - **Text:** Divine Shield / Aura: Your Spells have Lifesteal.
 - **Radiant:** Divine Shield / Aura: Your Spells have Lifesteal, and healing your hero and Units is twice as effective.
 - **Engine:** NEW: a Spell-wide keyword aura (B02): while it acts, a resolving Spell of its controller's (not a Field Spell or a Trap) has Lifesteal, read by damage step 8 ([[R85]]) as an `AuraEntry` matching the resolving card (`alt_play::cloak_hand_aura`'s pattern, [[R1044]]). NEW on the Radiant face: a healing multiplier at the `healed` replacement moment ([[R413]], [[R462]]; [[R1160]]'s "twice as effective"), doubling every heal of its controller's hero and Units, Lifesteal's included.
-- **Rulings:** MP-B02-2: two Life Mages give Lifesteal once and double healing twice (×4), as two Prophet Velens do in Hearthstone; a Spell's Lifesteal heals once per hit; a heal the doubling turns into Blood Moon's damage ([[R413]]) is not doubled.
+- **Rulings:** MP-B02-2 ([[R1180002]], [[R1180003]]): two Life Mages give Lifesteal once and double healing twice (×4), as two Prophet Velens do in Hearthstone; a Spell's Lifesteal heals once per hit; a heal the doubling turns into Blood Moon's damage ([[R413]]) is not doubled, nor is "heal up to N", a floor.
 - **Numbers:** none (the doubling is the rule's 2, `HEAL_MULTIPLIER`).
 - **Check:** "spells" are Spells ([[§5.1]]); "healing is twice as effective" read for its controller's characters (⚠ designer: or all healing). R275: 2/4 and the doubled healing.
 - **Class:** C (the Spell aura, the heal multiplier).
@@ -371,8 +371,8 @@ from an entry, the decision wins.
 
 - **Text:** Aura: Both players have Spell Damage +{spellDamage}.
 - **Radiant:** Aura: Both players have Spell Damage +{spellDamage}.
-- **Engine:** NEW: Spell Damage beyond Units (B02): `damage::spell_damage_for` sums its Units' keyword, Field Spell auras that give a player Spell Damage (this one gives both), and the player modifier of M+ #11, in that one place ([[§4.4]] step 0).
-- **Rulings:** MP-B02-3: a player's Spell Damage is one sum, whatever gives it; it is read as each hit of a Spell lands.
+- **Engine:** NEW: Spell Damage beyond Units (B02): `damage::spell_damage_of` sums its Units' keyword, Field Spell auras that give a player Spell Damage (this one gives both), and the player modifier of M+ #11, in that one place ([[§4.4]] step 0).
+- **Rulings:** MP-B02-3 ([[R1180000]]): a player's Spell Damage is one sum, whatever gives it; it is read as each hit of a Spell lands.
 - **Numbers:** spellDamage 2 ↑ (Radiant 5).
 - **Check:** R275: +5 against +2, for both players as the designer wrote (a symmetric card, as written).
 - **Class:** C (Spell Damage from an aura).
@@ -397,8 +397,8 @@ from an entry, the decision wins.
 
 - **Text:** Activate: Tribute this. You have Spell Damage +{spellDamage} this turn.
 - **Radiant:** Activate: You have Spell Damage +{spellDamage} this turn.
-- **Engine:** An Activate ([[§6.2]], [[R384]]): `ActivationCost { tribute_self }` on the base face (C #84, M #54), none on the Radiant face (once a turn). NEW: a player modifier "Spell Damage +N this turn" (B02), expiring at the turn's cleanup, read in `spell_damage_for` with the rest (M+ #9).
-- **Rulings:** MP-B02-4: the bonus is the activator's, for the rest of that turn, and stays when the potion leaves; two activations stack.
+- **Engine:** An Activate ([[§6.2]], [[R384]]): `ActivationCost { tribute_self }` on the base face (C #84, M #54), none on the Radiant face (once a turn). NEW: a player modifier "Spell Damage +N this turn" (B02), expiring at the turn's cleanup, read in `damage::spell_damage_of` with the rest (M+ #9).
+- **Rulings:** MP-B02-4 ([[R1180001]]): the bonus is the activator's, for the rest of that turn, and stays when the potion leaves; two activations stack.
 - **Numbers:** spellDamage 5 ↑.
 - **Check:** R275: 10/2 and the Tribute gone, so the bonus comes every turn.
 - **Class:** C (the Spell Damage modifier).
@@ -489,7 +489,7 @@ from an entry, the decision wins.
 - **Text:** Deal {damage} damage to an enemy. / In your hand or deck: After another Spell of yours that targeted an enemy resolves, cast this at it.
 - **Radiant:** Deal {damage} damage to an enemy. / In your hand or deck: After another Spell of yours that targeted an enemy resolves, cast this at it.
 - **Engine:** A targeted Spell (an enemy Unit or the enemy hero, [[R81]]). NEW (B02): the targets a Spell declared or chose in a prompt, kept with the resolving card, and a hand-and-deck trigger (`TriggerZone::Hand`, `Library`, [[R464]]) on that Spell's resolution that casts this card ([[§6.3]] Cast: free, a play, [[R70]]) at the first such enemy still there. One Dogpile answers each Spell, the one in hand first (leftmost), else the topmost in the deck; its own cast is a Spell that targeted an enemy, so it can call the next.
-- **Rulings:** MP-B02-5: "a spell" is a Spell of yours, other than this card; "them" is the enemy it targeted, a Unit or the hero; a target gone or no longer an enemy casts nothing; a Spell that targeted several enemies calls it at the first in declaration order.
+- **Rulings:** MP-B02-5 ([[R1180005]]): "a spell" is a Spell of yours, other than this card; "them" is the enemy it targeted, a Unit or the hero; a target gone or no longer an enemy casts nothing; a Spell that targeted several enemies calls it at the first, in the order it targeted them, still an enemy on the field; an aim that is no longer a legal pick casts nothing.
 - **Numbers:** damage 2 ↑ (Radiant 5).
 - **Check:** Classic #60 is Pile On, so this is Dogpile (R381, [[R1178002]], ⚠ designer). R275: 5 against 2.
 - **Class:** C (the targets kept, the hand-and-deck cast).

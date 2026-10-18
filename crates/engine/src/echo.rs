@@ -31,7 +31,7 @@ use crate::state::{
 };
 use crate::stays::{exit_mark, left_field_after};
 use crate::subsystems::copied_text::copied_echo;
-use crate::wire::{CardType, GameEvent, PlayerId, Zone};
+use crate::wire::{CardType, GameEvent, PlayerId, Selection, Zone};
 use crate::zones::{MoveToZoneOptions, OffFieldZone, exile_to_pile, move_to_zone, report_graveyard_landing};
 
 /// TS `tuning.tunedCount(card, "Echo", printed)`, a private copy (fullsend rule 5). B3.4, R386: the
@@ -313,6 +313,9 @@ pub struct ResolvedCard {
     pub placed_from: Option<u32>,
     /// R119: the permanents that arrived on the field while the play resolved, which do not answer it.
     pub arrived_during: Option<Vec<String>>,
+    /// R1180005: the enemies the Spell targeted as it resolved, in order, taken off the card before it
+    /// lands (`targeted::take_spell_targets`). Empty for anything that noted none.
+    pub targeted: Vec<Selection>,
 }
 
 // §10.5 step 7, both halves, for a play and for a cast (R70) alike.
@@ -388,6 +391,17 @@ pub fn land_after_resolution(sink: &mut EngineSink<'_>, resolved: &ResolvedCard)
     // R174, R212: the stays step 7 read `permanent` on. A cast's event waits for the loop of the
     // effect that cast it (R70), so a response judges the card's stay from here, not the dispatch.
     let exits_from = exit_mark(sink.state);
+    // R1180005: the card that answers a Spell that targeted an enemy, named once the Spell has landed.
+    let answer = if resolved.targeted.is_empty() {
+        None
+    } else {
+        crate::targeted::spell_answer_for(
+            sink.state,
+            resolved.player,
+            &resolved.instance_id,
+            &resolved.targeted,
+        )
+    };
     sink.events.push(GameEvent::CardResolved {
         player: resolved.player,
         instance_id: resolved.instance_id.clone(),
@@ -397,5 +411,6 @@ pub fn land_after_resolution(sink: &mut EngineSink<'_>, resolved: &ResolvedCard)
         radiant: Some(radiant),
         arrived_during,
         exits_from: Some(exits_from),
+        answer,
     });
 }

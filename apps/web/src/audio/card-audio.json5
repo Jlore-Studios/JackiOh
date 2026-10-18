@@ -1850,6 +1850,25 @@
       attack: { voice: "sapi-cat", text: "Nyaa, cleaning time!" },
       death: { voice: "sapi-cat", text: "Nyaa... logging off." },
     },
+    "meditativeplus-006": { // Bloodbloom
+      cast: { voice: "whisper", text: "Pay in blood. The petals open." },
+    },
+    "meditativeplus-007": { // Life Mage
+      play: { voice: "sapi-heroine", text: "Every spell a little prayer." },
+      attack: { voice: "sapi-heroine", text: "Light, lend me your strength!" },
+      death: { voice: "sapi-heroine", text: "My light... fades." },
+    },
+    "meditativeplus-009": { // Magic Amplifier
+      cast: { voice: "robot", text: "Volume up. Everyone gets louder magic." },
+    },
+    "meditativeplus-011": { // Living Mana Potion
+      play: { voice: "bubbles", text: "Glug glug! Bottled brilliance!" },
+      attack: { voice: "bubbles", text: "Splash attack!" },
+      death: { voice: "bubbles", text: "Bottoms up..." },
+    },
+    "meditativeplus-017": { // Dogpile
+      cast: { voice: "zoomer", text: "Everybody jump on!" },
+    },
   },
   emotes: {
     vanilla: {

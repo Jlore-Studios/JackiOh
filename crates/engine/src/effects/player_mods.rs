@@ -121,3 +121,44 @@ pub fn make_hero_immune(args: MakeHeroImmuneArgs) -> Effect {
         add_modifier(ctx, player, expiry, ModifierKind::HeroImmune);
     })
 }
+
+/// `priceNextSpellInHealth`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct HealthPriceArgs {
+    /// How many times the Spell's cost it costs in health (Bloodbloom's declared `multiple`).
+    pub multiple: i32,
+    /// The Echo the priced Spell gains (the Radiant Bloodbloom's 1). Absent: none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub echo: Option<i32>,
+}
+
+/// R1180004 (Meditative+ #6 Bloodbloom): "Your next Spell costs health equal to N times its cost
+/// instead of mana." A `HealthPrice` player modifier on the controller, until a Spell uses it (expiry
+/// `used`): the next Spell they play from their hand, face-up, costs no mana and `multiple` times its
+/// cost in health (`mana::health_price_rule`), lost with the play, and gains `echo` Echo. The newest
+/// replaces any older one, so several never stack.
+pub fn price_next_spell_in_health(args: HealthPriceArgs) -> Effect {
+    Effect::new("priceNextSpellInHealth", move |ctx| {
+        let player = ctx.controller;
+        let older: Vec<String> = ctx.sink.state.players[player]
+            .mods
+            .iter()
+            .filter(|modifier| matches!(modifier.kind, ModifierKind::HealthPrice { .. }))
+            .map(|modifier| modifier.id.clone())
+            .collect();
+        for id in &older {
+            crate::modifiers::remove_modifier(ctx, player, id);
+        }
+        add_modifier(
+            ctx,
+            player,
+            ModifierExpiry::Used,
+            ModifierKind::HealthPrice {
+                multiple: args.multiple.max(0),
+                echo: args.echo.filter(|echo| *echo > 0),
+            },
+        );
+    })
+}

@@ -604,6 +604,12 @@ pub fn answer_prompt(sink: &mut EngineSink<'_>, answer: &AnswerInput) -> Result<
     // B5 E5, E9, R450: the targeting point — a cost it asks for first (then its own answer finishes
     // this one, so there is nothing more to do here), and the pick an interception moves.
     let targeted: Vec<Selection> = crate::targeting_point::target_answer(sink, &pending, &picks);
+    // R1180005: a `target` prompt a resolving Spell's own script opened targets what it picks.
+    if pending.kind == PromptKind::Target
+        && let Some(asking) = pending.resume.instance_id.as_deref()
+    {
+        crate::targeted::note_spell_targets(sink.state, asking, &targeted);
+    }
     continue_answer(sink, &pending, &targeted);
     Ok(())
 }

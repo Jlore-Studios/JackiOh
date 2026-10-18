@@ -50,9 +50,15 @@ pub struct CastHow {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target_enemies: Option<bool>,
     /// MD-B22, R946: an aimed cast takes a named legal pick for its first target declaration
-    /// (Meditative #98's Book of Buff).
+    /// (Meditative #98's Book of Buff): a card by its instance id, or any pick by its prompt key
+    /// (`prompts::option_key`, "hero:p2"), R1180005.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub aim_at: Option<String>,
+    /// R1180005 (Meditative+ #17 Dogpile, "cast this at it"): an aimed cast that casts nothing unless its
+    /// aim is a legal pick of the card's first target declaration as the cast begins, rather than asking
+    /// its caster for another.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub aim_only: Option<bool>,
     /// R453: a resolved Spell goes to exile instead of its graveyard ("Cast them, then exile them").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub afterward: Option<CastAfterward>,
@@ -116,6 +122,12 @@ pub fn cast(args: CastArgs) -> Effect {
             return;
         }
         let controller = ctx.controller;
+        // R1180005: an aim the card cannot legally take casts nothing.
+        if args.how.aim_only == Some(true)
+            && !aim_is_legal(ctx.sink.state, controller, &card, args.how.aim_at.as_deref())
+        {
+            return;
+        }
         if let Some(live) = find_instance_mut(ctx.sink.state, &card.id) {
             live.controller = controller;
         }
@@ -123,6 +135,29 @@ pub fn cast(args: CastArgs) -> Effect {
         let options = options_of(&args.how);
         cast_card(&mut sink_of(ctx), &card, options);
     })
+}
+
+/// R1180005: whether `aimed` names a legal pick of the first target declaration `card` makes as
+/// `caster` casts it now (its face's, a copier's copied text's; R81, R90). No aim, or a card that
+/// declares no target, has none.
+fn aim_is_legal(
+    state: &crate::state::GameState,
+    caster: PlayerId,
+    card: &crate::state::CardInstance,
+    aimed: Option<&str>,
+) -> bool {
+    let Some(aimed) = aimed else {
+        return false;
+    };
+    let face = crate::subsystems::copied_text::text_face_of(state, card);
+    let decls =
+        crate::play_choices::active_target_decls(&crate::play_choices::declared_targets(state, &face), &[]);
+    let Some(first) = decls.first() else {
+        return false;
+    };
+    crate::play_choices::legal_selections_for(state, caster, &face, first)
+        .iter()
+        .any(|option| crate::targeted::aims_at_pick(option, aimed))
 }
 
 /// What `castEach` reads its set from: the ids of the cards, read once as the list reaches the clause
@@ -363,6 +398,7 @@ pub fn cast_random(args: CastRandomArgs) -> Effect {
             target_enemies: args.target_enemies,
             afterward: args.afterward,
             aim_at: None,
+            aim_only: None,
         };
         let radiant = args.radiant == Some(true);
         EffectPart {

@@ -530,6 +530,24 @@ pub enum ModifierKind {
     /// damage instance to it is 0 (a cap of 0 `damage::hero_damage_cap` reads at §4.4 step 3).
     /// Expiry is R757's Armor Up expiry, so it is gone as this player's next turn begins.
     HeroImmune,
+    // ---- Meditative+ (docs/meditative-plus-set.md MP5, issue #1180) ----
+    /// R1180001 (Meditative+ #11 Living Mana Potion): "You have Spell Damage +N this turn" — added to
+    /// this player's Spell Damage, the one sum §4.4 step 0 reads (`damage::spell_damage_of`), while it
+    /// is live. Expiry `thisTurn`; several stack, each its own modifier, and none has a source, so it
+    /// stays when the card that gave it leaves.
+    SpellDamage {
+        amount: i32,
+    },
+    /// R1180004 (Meditative+ #6 Bloodbloom): the next Spell this player plays from their hand, face-up,
+    /// costs no mana and `multiple` times its cost in health (`mana::health_price_rule`), and gains
+    /// `echo` Echo (the Radiant face's 1). Expiry `used`: the play it prices spends it, and a newer
+    /// one replaces it (`effects::price_next_spell_in_health`).
+    HealthPrice {
+        multiple: i32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        echo: Option<i32>,
+    },
 }
 
 /// `{ id; expiry } & (kind union)`: one player-level modifier (§10.1 `PlayerState.mods`). The kind's
