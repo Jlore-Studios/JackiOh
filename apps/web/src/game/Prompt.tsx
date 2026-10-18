@@ -30,9 +30,8 @@
 // the screen: the mulligan, a Discover, a hand pick, a pick, a short "Choose one" (Appropriations'),
 // and two play choices that used to be small controls docked beside the board, an embiggen card's
 // version (the card as its normal version and as its Embiggened version, R1175000) and an X of
-// X_CARD_LIMIT values or fewer
-// (the card once per X). Those two keep their `data-prompt-kind`; `data-prompt-layout="cards"` says
-// which layout a picker has.
+// X_CARD_LIMIT values or fewer (the card once per X). Those two keep their `data-prompt-kind`;
+// `data-prompt-layout="cards"` says which layout a picker has.
 //
 // `data-prompt-source` says which route opened the modal ("engine" or "play"), for layout only:
 // prompt.css turns a play's board picks into a slim bar on a phone while drag to play is on

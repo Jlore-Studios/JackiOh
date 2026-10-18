@@ -176,8 +176,14 @@ impl HeroArmor {
 /// (patch v0.1.1, R1175000). `normal` is the normal version's, at the printed cost 2, `embiggened` the
 /// Embiggened version's, at its Embiggened cost 4 (R81 records which on the instance).
 pub const HERO_ARMOR: HeroArmor = HeroArmor {
-    base: HeroArmorPrice { normal: 2, embiggened: 4 },
-    radiant: HeroArmorPrice { normal: 4, embiggened: 8 },
+    base: HeroArmorPrice {
+        normal: 2,
+        embiggened: 4,
+    },
+    radiant: HeroArmorPrice {
+        normal: 4,
+        embiggened: 8,
+    },
 };
 /// §8 #38 Quickstriker, R281: the multiple of X each granted Combo deals to the enemy hero, by the
 /// granting card's face — "Combo X: deal X damage", radiant "deal 2X damage", one hit either way.

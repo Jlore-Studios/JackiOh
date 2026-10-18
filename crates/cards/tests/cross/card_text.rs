@@ -444,11 +444,17 @@ fn failures(face: &Face) -> Vec<String> {
         out.push("writes a kind of cost as \"odd-cost\", not \"odd Cost\"".to_string());
     }
     if paid_then_digit(text) {
-        out.push("writes an embiggen card's Embiggened version as \"(paid N\", not \"Embiggened (N):\"".to_string());
+        out.push(
+            "writes an embiggen card's Embiggened version as \"(paid N\", not \"Embiggened (N):\""
+                .to_string(),
+        );
     }
     // R1175000: "Paid (N):" was R366's label for the Embiggened version until issue #1175.
     if has_word_start(text, "Paid (", false) {
-        out.push("writes an embiggen card's Embiggened version as \"Paid (N):\", not \"Embiggened (N):\"".to_string());
+        out.push(
+            "writes an embiggen card's Embiggened version as \"Paid (N):\", not \"Embiggened (N):\""
+                .to_string(),
+        );
     }
     // Vocabulary table (patch v0.2.1, issue #45; balance patch 1 retires "Return … to hand" for
     // Bounce, R692): a face that returns a permanent from the field says Bounce; only the faces that
@@ -1648,8 +1654,15 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
                 continue;
             };
             cards.insert(face.card.id.as_str());
-            if !face.text.split('\n').any(|line| line.starts_with(&format!("{label} "))) {
-                wrong.push(format!("does not start a line with {label}: {}", described(&face)));
+            if !face
+                .text
+                .split('\n')
+                .any(|line| line.starts_with(&format!("{label} ")))
+            {
+                wrong.push(format!(
+                    "does not start a line with {label}: {}",
+                    described(&face)
+                ));
             }
             if !LABELS.contains(&label.as_str()) {
                 wrong.push(format!("LABELS has no {label}"));
@@ -1705,9 +1718,14 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
         };
         assert_eq!(
             check("Aura: Draw 1.\nPaid (4): Draw 2 instead."),
-            strings(&["writes an embiggen card's Embiggened version as \"Paid (N):\", not \"Embiggened (N):\""])
+            strings(&[
+                "writes an embiggen card's Embiggened version as \"Paid (N):\", not \"Embiggened (N):\""
+            ])
         );
-        assert_eq!(check("Aura: Draw 1.\nEmbiggened (4): Draw 2 instead."), Vec::<String>::new());
+        assert_eq!(
+            check("Aura: Draw 1.\nEmbiggened (4): Draw 2 instead."),
+            Vec::<String>::new()
+        );
         assert_eq!(
             check("Aura: Draw 1. Embiggened (4): Draw 2 instead."),
             strings(&["does not start \"Embiggened (4):\" on a line of its own"])
