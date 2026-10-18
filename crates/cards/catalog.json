@@ -15892,6 +15892,136 @@
       "text": "Lucky 2\nCry: Draw 1-2. Add 1-6 to your Jade Counter."
     }
   },
+  "meditativeplus-006": {
+    "id": "meditativeplus-006",
+    "index": "6",
+    "name": "Bloodbloom",
+    "set": "Meditative+",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "token": false,
+    "cost": 0,
+    "params": [
+      {
+        "key": "multiple",
+        "base": 3,
+        "radiant": 3,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 19,
+    "base": {
+      "keywords": [],
+      "text": "Your next Spell costs Health equal to {multiple|time|times} its Cost instead of mana."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Your next Spell costs Health equal to {multiple|time|times} its Cost instead of mana, and has Echo 1."
+    }
+  },
+  "meditativeplus-007": {
+    "id": "meditativeplus-007",
+    "index": "7",
+    "name": "Life Mage",
+    "set": "Meditative+",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "loc": 17,
+    "base": {
+      "attack": 1,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Divine Shield\nAura: Your Spells have Lifesteal."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Divine Shield\nAura: Your Spells have Lifesteal, and healing your hero and Units is twice as effective."
+    }
+  },
+  "meditativeplus-009": {
+    "id": "meditativeplus-009",
+    "index": "9",
+    "name": "Magic Amplifier",
+    "set": "Meditative+",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Common",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "spellDamage",
+        "base": 2,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 30,
+    "base": {
+      "keywords": [],
+      "text": "Aura: Both players have Spell Damage +{spellDamage}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: Both players have Spell Damage +{spellDamage}."
+    }
+  },
+  "meditativeplus-011": {
+    "id": "meditativeplus-011",
+    "index": "11",
+    "name": "Living Mana Potion",
+    "set": "Meditative+",
+    "type": "Unit",
+    "tags": [
+      "Potion"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "spellDamage",
+        "base": 5,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 37,
+    "base": {
+      "attack": 5,
+      "health": 1,
+      "keywords": [],
+      "text": "Activate: Tribute this. You have Spell Damage +{spellDamage} this turn."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 2,
+      "keywords": [],
+      "text": "Activate: You have Spell Damage +{spellDamage} this turn."
+    }
+  },
   "meditativeplus-016": {
     "id": "meditativeplus-016",
     "index": "16",
@@ -15950,6 +16080,36 @@
       "health": 16,
       "keywords": [],
       "text": "Cry: Craft a HUGE custom Radiant Potion. It costs (3)."
+    }
+  },
+  "meditativeplus-017": {
+    "id": "meditativeplus-017",
+    "index": "17",
+    "name": "Dogpile",
+    "set": "Meditative+",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 42,
+    "base": {
+      "keywords": [],
+      "text": "Deal {damage} damage to an enemy.\nIn your hand or deck: After another Spell of yours that targeted an enemy resolves, cast this at it."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Deal {damage} damage to an enemy.\nIn your hand or deck: After another Spell of yours that targeted an enemy resolves, cast this at it."
     }
   },
   "meditativeplus-026": {

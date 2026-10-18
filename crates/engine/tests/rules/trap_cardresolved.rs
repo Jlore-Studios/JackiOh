@@ -196,6 +196,7 @@ fn resolved_for(instance: &CardInstance, permanent: bool, cost_paid: i32) -> Gam
         radiant: None,
         arrived_during: None,
         exits_from: None,
+        answer: None,
     }
 }
 

@@ -763,6 +763,11 @@ pub const MONEY_MACHINE_ODDS: &[RollOdds] = &[
     },
 ];
 
+/// R1180003 (Meditative+ #7 Life Mage's Radiant face, issue #1180): "healing is twice as effective" —
+/// what each such text acting on a player's side multiplies a heal of their hero or Units by. Several
+/// multiply: two Radiant Life Mages make a heal four times as large.
+pub const HEAL_MULTIPLIER: i32 = 2;
+
 /// R962: the Jade Counter a summon of Jade Beauty (Meditative #39.5) is crossed at (ME-JADE).
 pub const JADE_BEAUTY_AT: i32 = 5;
 /// R962: the Jade Counter every Jade Beauty its player controls is made Radiant at (ME-JADE).

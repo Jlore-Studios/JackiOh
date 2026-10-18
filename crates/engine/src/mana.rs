@@ -11,7 +11,9 @@ use crate::state::{
     CardInstance, GameState, ModifierExpiry, ModifierKind, PlayerModifier, PlayerState, handicap_of,
 };
 use crate::triggers::{TriggerZone, holders_answering};
-use crate::wire::{CardCost, GameEvent, GameEventType, ManaSpentFor, PLAYER_IDS, PlayerId, Row, Zone};
+use crate::wire::{
+    CardCost, CardType, GameEvent, GameEventType, ManaSpentFor, PLAYER_IDS, PlayerId, Row, Zone,
+};
 
 /// §2.3, R181: max mana is min(turns started + the seat's mana bonus, its mana cap), plus persistent
 /// modifiers, floored at 0. With no handicap the bonus is 0 and the cap is MAX_MANA, which is §2.3's
@@ -363,10 +365,52 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
     }
 }
 
+/// R1180004 (Meditative+ #6 Bloodbloom): the health price a play of this card would use now, as
+/// `(multiple, echo)` — the newest live `HealthPrice` of the player holding it, when the card is a Spell
+/// in that player's hand played face-up: not a Field Spell or a Trap, and not a Spell being set
+/// face-down, which is played as a Trap (R783005). A card anywhere else — a graveyard's play, a cast,
+/// which pays nothing (R70) — never uses it. Every price, legal play and payment reads this one rule.
+pub fn health_price_rule(state: &GameState, instance: &CardInstance) -> Option<(i32, Option<i32>)> {
+    let Zone::Hand { player } = instance.zone else {
+        return None;
+    };
+    if instance.set_as.is_some() || crate::faces::card_type_of(state, instance) != CardType::Spell {
+        return None;
+    }
+    state.players[player]
+        .mods
+        .iter()
+        .rev()
+        .find_map(|modifier| match modifier.kind {
+            ModifierKind::HealthPrice { multiple, echo } if modifier_is_live(state, modifier) => {
+                Some((multiple.max(0), echo))
+            }
+            _ => None,
+        })
+}
+
+/// R1180004: whether a play of this card from its hand would pay its price in health now.
+pub fn health_priced(state: &GameState, instance: &CardInstance) -> bool {
+    health_price_rule(state, instance).is_some()
+}
+
+/// R1180004: the health a play of this card at `cost` would lose now — `multiple` times the cost
+/// after every modifier (R65; an X Spell its X) — or `None` when it pays in mana as usual.
+pub fn health_price_of(state: &GameState, instance: &CardInstance, cost: i32) -> Option<i32> {
+    health_price_rule(state, instance).map(|(multiple, _)| multiple.saturating_mul(cost.max(0)))
+}
+
+/// R1180004: the mana a play of this card at `cost` takes now — nothing under a health price, else the
+/// cost. What every affordability check compares with the player's spendable mana.
+pub fn mana_due_now(state: &GameState, instance: &CardInstance, cost: i32) -> i32 {
+    if health_priced(state, instance) { 0 } else { cost }
+}
+
 pub fn can_afford(state: &GameState, instance: &CardInstance) -> bool {
     // R1223: affordability reads the one function — current mana plus the credit line's offer.
-    effective_cost(state, instance, CostOptions::default())
-        <= crate::credit::spendable_mana(state, instance.controller)
+    // R1180004: a play its health price reaches takes no mana.
+    let cost = effective_cost(state, instance, CostOptions::default());
+    mana_due_now(state, instance, cost) <= crate::credit::spendable_mana(state, instance.controller)
 }
 
 /// R396 (Classic #10, #18, #25, #32, #39): what a card costs wherever a rule compares or counts costs —
