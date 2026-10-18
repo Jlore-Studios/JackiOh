@@ -877,6 +877,10 @@ instanceId: string,
 spec: TargetSpec,
 }
 
+export type FreezeArgs = {
+target: TargetSpec,
+}
+
 export type FuseCardsArgs = {
 defIds: {string}?,
 instanceIds: {string}?,
