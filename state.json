@@ -3969,6 +3969,13 @@
     "1216": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-18T12:27:45Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Easy-rule line 1 (small, room to spare) is the closest call: each single fix may be tiny, but with seven red jobs across fuzz, web and e2e the 10-file/400-line budget cannot be assured until root-caused, and doubt alone rates medium; it is not hard because the expected fixes are legality/data mismat"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
