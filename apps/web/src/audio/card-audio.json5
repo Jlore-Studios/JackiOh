@@ -1855,7 +1855,7 @@
     },
     "meditativeplus-007": { // Life Mage
       play: { voice: "sapi-heroine", text: "Every spell a little prayer." },
-      attack: { voice: "sapi-heroine", text: "Light, lend me your strength!" },
+      attack: { voice: "sapi-heroine", text: "Light, lend me strength!" },
       death: { voice: "sapi-heroine", text: "My light... fades." },
     },
     "meditativeplus-009": { // Magic Amplifier
