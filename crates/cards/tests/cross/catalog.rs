@@ -32,6 +32,7 @@
 //!                    the old spelling as the record).
 //!   patch v0.3.10   — issue #831's costs, stats, types and tags, in every set's rows: the briefs'
 //!                    lines are what the designer first wrote, the patch what the cards are now.
+//!   patch v0.3.12   — issue #1149's costs, stats and the CN in a Bottle rename.
 //!   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
 //!                    being R349's fallback.
 //!   rarity         — SPEC §8's rarity paragraph for Core (32/40/16/7/5) and B2.5's table for
@@ -250,8 +251,8 @@ const CORE: &[SpecRow] = &[
         T::Unit,
         &[G::Jlockeed],
         R::Common,
-        st(8, 10),
-        st(16, 20),
+        st(6, 10),
+        st(8, 20),
     ),
     row(
         "14",
@@ -619,7 +620,7 @@ const CORE: &[SpecRow] = &[
     row(
         "52",
         "Silly Silas",
-        c(3),
+        c(4),
         T::Unit,
         &[G::Human],
         R::Legendary,
@@ -1040,7 +1041,7 @@ const CORE: &[SpecRow] = &[
     row(
         "93",
         "Combo-Index",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[],
         R::Legendary,
@@ -1091,7 +1092,7 @@ const CORE: &[SpecRow] = &[
     row(
         "97",
         "Zephyrs",
-        c(0),
+        c(1),
         T::Spell,
         &[],
         R::Mythic,
@@ -1965,7 +1966,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "88",
         "Siphon Squad",
-        c(2),
+        c(3),
         T::FieldTrap,
         &[],
         R::Rare,
@@ -2265,7 +2266,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Token],
         R::Token,
-        st(5, 5),
+        st(4, 4),
         st(10, 10),
     ),
     row(
@@ -2275,7 +2276,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Token],
         R::Token,
-        st(5, 5),
+        st(4, 4),
         st(10, 10),
     ),
     row(
@@ -2285,7 +2286,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Token],
         R::Token,
-        st(5, 5),
+        st(4, 4),
         st(10, 10),
     ),
     row(
@@ -2295,7 +2296,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Token],
         R::Token,
-        st(0, 5),
+        st(0, 4),
         st(0, 10),
     ),
     row(
@@ -2305,7 +2306,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Token],
         R::Token,
-        st(5, 5),
+        st(4, 4),
         st(10, 10),
     ),
     row(
@@ -2611,7 +2612,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "44",
         "Simplicity Audit",
-        c(2),
+        c(3),
         T::Spell,
         &[],
         R::Rare,
@@ -2991,7 +2992,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "75",
         "J-lease J-Jungle EX-plorer",
-        c(2),
+        c(3),
         T::Unit,
         &[],
         R::Legendary,
@@ -3557,8 +3558,8 @@ const MEDITATIVE: &[SpecRow] = &[
     ),
     row(
         "37",
-        "CN in a bottle",
-        X,
+        "CN in a Bottle",
+        c(1),
         T::Spell,
         &[G::Cn],
         R::Epic,
@@ -3722,8 +3723,8 @@ const MEDITATIVE: &[SpecRow] = &[
         T::Unit,
         &[G::Cn],
         R::Legendary,
-        st(8, 8),
-        st(16, 16),
+        st(2, 2),
+        st(4, 4),
     ),
     row(
         "48",
@@ -3868,7 +3869,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "59",
         "Permanent Upperclassman",
-        c(3),
+        c(4),
         T::Unit,
         &[G::Human],
         R::Rare,

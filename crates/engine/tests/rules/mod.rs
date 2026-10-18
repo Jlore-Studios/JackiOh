@@ -199,6 +199,7 @@ pub mod setup;
 pub mod setup_aside;
 pub mod shuffle_random;
 pub mod sick_view;
+pub mod spell_power;
 pub mod start_of_opponent_turn;
 pub mod state;
 pub mod statecheck;

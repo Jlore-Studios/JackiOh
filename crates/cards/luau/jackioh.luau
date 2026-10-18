@@ -226,6 +226,7 @@ target: TargetSpec?,
 random: boolean?,
 targetEnemies: boolean?,
 aimAt: string?,
+aimOnly: boolean?,
 afterward: CastAfterward?,
 }
 
@@ -239,6 +240,7 @@ cards: {string},
 random: boolean?,
 targetEnemies: boolean?,
 aimAt: string?,
+aimOnly: boolean?,
 afterward: CastAfterward?,
 }
 
@@ -248,6 +250,7 @@ radiant: boolean | nil,
 random: boolean?,
 targetEnemies: boolean?,
 aimAt: string?,
+aimOnly: boolean?,
 afterward: CastAfterward?,
 }
 
@@ -979,6 +982,7 @@ costPaid: number,
 radiant: boolean?,
 arrivedDuring: {string}?,
 exitsFrom: number?,
+answer: SpellAnswer?,
 } | {
 ["type"]: "summoned",
 player: PlayerId,
@@ -1796,6 +1800,15 @@ label: string,
 } | {
 expiry: ModifierExpiry,
 ["kind"]: "heroImmune",
+} | {
+expiry: ModifierExpiry,
+["kind"]: "spellDamage",
+amount: number,
+} | {
+expiry: ModifierExpiry,
+["kind"]: "healthPrice",
+multiple: number,
+echo: number?,
 }
 
 export type PlayerSpec = "self" | "enemy"
@@ -2098,6 +2111,16 @@ radiant: boolean?,
 enchantments: {Enchantment}?,
 }
 
+export type SpellAnswer = {
+by: string,
+at: Selection,
+}
+
+export type SpellDamageAura = {
+amount: number,
+both: boolean?,
+}
+
 export type SplitAmong = "enemies" | "enemyUnits"
 
 export type StatMod = {
@@ -2151,6 +2174,9 @@ creditLapses: boolean?,
 noNaturalMana: boolean?,
 fengShui: boolean?,
 luck: number?,
+spellDamageAura: SpellDamageAura?,
+doublesHealing: boolean?,
+answersTargetedSpells: boolean?,
 }
 
 export type StealAllArgs = {
@@ -4031,11 +4057,11 @@ J.config = {
 	CAST_ON_DRAW_CHAIN_CAP = 20,
 	CHAIN_OF_THOUGHT_REPEATS = 4,
 	CHAOS_MED_ACCLAIMED = 3,
-	CHAOS_MED_CN_CARDS = 3,
+	CHAOS_MED_CN_CARDS = 2,
 	CHAOS_MED_COST = 0,
 	CHAOS_MED_FUSE_COPIES = 2,
-	CHAOS_MED_HEAL = 8,
-	CHAOS_MED_HERO_ARMOR = 8,
+	CHAOS_MED_HEAL = 6,
+	CHAOS_MED_HERO_ARMOR = 6,
 	CHAOS_MED_NERFS = 1,
 	CHAOS_MED_PRIME_CARDS = 2,
 	CRAFTED_CARD_COST = 0,
