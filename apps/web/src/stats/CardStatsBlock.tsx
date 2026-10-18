@@ -88,7 +88,7 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
         </span>
       </>
     ) : (
-      "—"
+      t("not enough data")
     );
 
   const playRateDisplay = `${Math.round(stat.playRate * 100)}%`;
