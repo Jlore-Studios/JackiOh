@@ -3729,6 +3729,9 @@
       "taken_asks": [],
       "verdict_rounds": 2
     },
+    "1195": {
+      "suggestion": true
+    },
     "1202": {
       "action": "revise",
       "asks": [],
