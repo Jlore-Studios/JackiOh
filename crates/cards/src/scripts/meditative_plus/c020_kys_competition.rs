@@ -220,7 +220,10 @@ mod tests {
                 answer(&mut s, true);
             }
             assert!(spent(&s));
-            assert_eq!(kennies(&s), vec![(30, 30, 30, false)]);
+            assert_eq!(
+                kennies(&s),
+                vec![(KY_COMPETITION_MAX, KY_COMPETITION_MAX, KY_COMPETITION_MAX, false)]
+            );
         }
 
         #[test]
@@ -440,7 +443,15 @@ mod tests {
                 answer(&mut s, true);
             }
             assert!(spent(&s));
-            assert_eq!(kennies(&s), vec![(30, 60, 60, true)]);
+            assert_eq!(
+                kennies(&s),
+                vec![(
+                    KY_COMPETITION_MAX,
+                    2 * KY_COMPETITION_MAX,
+                    2 * KY_COMPETITION_MAX,
+                    true
+                )]
+            );
         }
     }
 }

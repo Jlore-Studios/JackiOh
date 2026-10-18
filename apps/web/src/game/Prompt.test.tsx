@@ -423,6 +423,25 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     });
   });
 
+  it("R1175000 the price picker asks for the normal or the Embiggened version, its two cards captioned Normal and Embiggened", () => {
+    render(
+      <Prompt
+        view={viewWith()}
+        interaction={playing([
+          { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, embiggen: false },
+          { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, embiggen: true },
+        ])}
+        onAction={vi.fn()}
+      />,
+    );
+
+    const title = document.querySelector(".prompt-title-ask") ?? document.querySelector(".prompt-title");
+    expect(title).toHaveTextContent("Play the normal or the Embiggened version?");
+    expect(screen.getByTestId("prompt-modal")).not.toHaveTextContent(/embiggen price/i);
+    expect(screen.getByTestId("prompt-option-false")).toHaveTextContent("Normal");
+    expect(screen.getByTestId("prompt-option-true")).toHaveTextContent("Embiggened");
+  });
+
   it("R1086 the picker sends the choice", () => {
     const onAction = vi.fn();
     const view = viewWith();
@@ -585,6 +604,67 @@ describe("the R81 kinds render the same picker when the engine does open them as
       type: "answer",
       choiceId: "ch1",
       selection: [{ pick: "craft", recipe: { ...recipe } }],
+    });
+  });
+
+  it("R1182002 a from-scratch craft prompt opens the editor on an empty canvas with no suggestions", () => {
+    const onAction = vi.fn();
+    const preset: CraftRecipe = {
+      cost: 2,
+      type: "Unit",
+      adjective: "Pure",
+      noun: "Closure",
+      attack: 5,
+      health: 6,
+      keywords: [],
+      echo: 0,
+      hats: [],
+    };
+    const view = viewWith({
+      pending: pendingFor("craft", [{ key: "craft:#digest", label: "Pure Closure", recipe: preset }], {
+        budget: 2,
+        craftMode: "scratch",
+      }),
+    });
+
+    render(<Prompt view={view} onAction={onAction} />);
+
+    expect(kindOfModal()).toBe("craft");
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-craft-mode", "scratch");
+    expect(screen.queryByTestId("craft-preset-0")).toBeNull();
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("0/12 pts");
+  });
+
+  it("R1182000 a potion craft prompt opens the editor in the potion frame", () => {
+    const onAction = vi.fn();
+    const potion: CraftRecipe = {
+      cost: 1,
+      type: "Unit",
+      adjective: "Pure",
+      noun: "Closure",
+      attack: 2,
+      health: 2,
+      keywords: [],
+      echo: 0,
+      hats: [{ hat: "activate", effects: [{ verb: "damageEnemyHero", n: 4 }] }],
+      frame: "potion",
+    };
+    const view = viewWith({
+      pending: pendingFor("craft", [{ key: "craft:#potion", label: "Pure Closure Potion", recipe: potion }], {
+        budget: 1,
+        craftMode: "potion",
+      }),
+    });
+
+    render(<Prompt view={view} onAction={onAction} />);
+
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-craft-mode", "potion");
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("7/7 pts");
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+    expect(onAction).toHaveBeenCalledWith({
+      type: "answer",
+      choiceId: "ch1",
+      selection: [{ pick: "craft", recipe: potion }],
     });
   });
 

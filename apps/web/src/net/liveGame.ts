@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { MATCH_FOUND_NAV_DELAY_MS, QUEUE_ENDED_AFTER_READS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import { getMe, type MeResponse, type QueueMode } from "./api.ts";
+import { pageWake } from "../game/net.ts";
 import { callWithRenewal, type Account } from "./gate.ts";
 import { navigate, paths } from "./navigate.ts";
 import { readSession } from "./session.ts";
@@ -59,16 +60,28 @@ export function useLiveGame(account: Account, read: (token: string) => Promise<M
   useEffect(() => {
     if (token === null || me === null || watched === null) return;
     let cancelled = false;
-    const handle = setInterval(() => {
-      attempt(() => reader.current(token)).then(
-        (next) => {
-          if (!cancelled) setPolled({ after: me, game: liveGameOf(next) });
-        },
-        () => undefined,
-      );
-    }, SERIES_POLL_SECONDS * MS_PER_SECOND);
+    // A wake while a read is out would only repeat it; each effect run counts its own.
+    let reading = false;
+    const check = (): void => {
+      if (reading) return;
+      reading = true;
+      attempt(() => reader.current(token))
+        .then(
+          (next) => {
+            if (!cancelled) setPolled({ after: me, game: liveGameOf(next) });
+          },
+          () => undefined,
+        )
+        .finally(() => {
+          reading = false;
+        });
+    };
+    const handle = setInterval(check, SERIES_POLL_SECONDS * MS_PER_SECOND);
+    // A throttled tab's interval stalls; waking it reads the account again at once.
+    const stopWake = pageWake(check);
     return () => {
       cancelled = true;
+      stopWake();
       clearInterval(handle);
     };
   }, [token, me, watched]);
@@ -154,48 +167,59 @@ export function useQueueFollow(path: string, read: (token: string) => Promise<Me
   useEffect(() => {
     if (!watching) return;
     let cancelled = false;
+    // A wake while a read is out would only repeat it; each effect run counts its own.
+    let reading = false;
     const check = (): void => {
+      if (reading) return;
       const session = readSession();
       if (session === null) {
         forgetQueued();
         return;
       }
-      attempt(() => callWithRenewal(session.accessToken, (token) => reader.current(token))).then(
-        (answer) => {
-          if (cancelled) return;
-          if (answer.kind !== "ok") {
-            if (answer.kind === "signedOut") {
+      reading = true;
+      attempt(() => callWithRenewal(session.accessToken, (token) => reader.current(token)))
+        .then(
+          (answer) => {
+            if (cancelled) return;
+            if (answer.kind !== "ok") {
+              if (answer.kind === "signedOut") {
+                endedReads.current = 0;
+                forgetQueued();
+              }
+              return;
+            }
+            const game = liveGameOf(answer.value);
+            if (game !== null) {
               endedReads.current = 0;
               forgetQueued();
+              setFound(game);
+              return;
             }
-            return;
-          }
-          const game = liveGameOf(answer.value);
-          if (game !== null) {
-            endedReads.current = 0;
-            forgetQueued();
-            setFound(game);
-            return;
-          }
-          // Explicit `false` only: `undefined` (an older server, or a test stub) never ends a wait,
-          // and a failed read leaves the count alone.
-          if (answer.value.queued === false) {
-            endedReads.current += 1;
-            if (endedReads.current >= QUEUE_ENDED_AFTER_READS) {
+            // Explicit `false` only: `undefined` (an older server, or a test stub) never ends a wait,
+            // and a failed read leaves the count alone.
+            if (answer.value.queued === false) {
+              endedReads.current += 1;
+              if (endedReads.current >= QUEUE_ENDED_AFTER_READS) {
+                endedReads.current = 0;
+                forgetQueued();
+              }
+            } else {
               endedReads.current = 0;
-              forgetQueued();
             }
-          } else {
-            endedReads.current = 0;
-          }
-        },
-        () => undefined,
-      );
+          },
+          () => undefined,
+        )
+        .finally(() => {
+          reading = false;
+        });
     };
     check();
     const handle = setInterval(check, SERIES_POLL_SECONDS * MS_PER_SECOND);
+    // A throttled tab's interval stalls; waking it reads the account again at once.
+    const stopWake = pageWake(check);
     return () => {
       cancelled = true;
+      stopWake();
       clearInterval(handle);
     };
   }, [watching]);

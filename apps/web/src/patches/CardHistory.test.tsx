@@ -108,7 +108,7 @@ describe("R388 the History section", () => {
     expect(marks(base, "del.patch-cut")).toEqual(["3", "this turn"]);
     expect(base).toHaveTextContent("Was");
     const cost = within(newest).getAllByTestId(patchTestid.change).find((line) => line.dataset.field === "cost");
-    expect(cost).toHaveTextContent("Cost(1) Cost → becomes (2) Cost, embiggen (4)");
+    expect(cost).toHaveTextContent("Cost(1) Cost → becomes (2) Cost, Embiggened (4)");
     expect(entry(V1)).toHaveTextContent("Added in this patch.");
   });
 

@@ -139,6 +139,8 @@ placeholders (`app::load_server_env`).
 | `TRUSTED_PROXY_HOPS` | no | R190's `X-Forwarded-For` entries the deployment's proxies append, 0 to 5, default 0 |
 | `RENDER_GIT_COMMIT` | no | set by Render; `GET /api/catalog` reports it as `x-deployed-commit` |
 | `LADDER_BOTS` | no | `on` seats a ladder bot against a ranked ticket of any mode left alone past its fallback time (a Conquest ticket's in a series, R641000), and keeps the bot pool (R1453, R1454, R1452); off unless `on` (unset or `off`), and any other value refuses the boot. The bots decide in this process, so turning it on wants a host with room for the AI's search, such as a paid Render instance |
+| `CREATE_ISSUES_TOKEN` | no | a token that may open issues in `GITHUB_ISSUES_REPO`, with which the server files a match its own log does not reproduce ([below](#a-match-its-log-does-not-reproduce)); unset, such a match is only logged. Secret |
+| `GITHUB_ISSUES_REPO` | no | the `owner/name` those issues go to; default `Jlore-Studios/JackiOh` (`BUG_REPORT_REPO_DEFAULT`) |
 
 `mint-code`, `moderate` and `seed-accounts` read the same environment (`seed-accounts` also
 `SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import`, `stats-fold`,
@@ -418,6 +420,50 @@ lethal shift a think time grows by, the concession, draw-answer, timeout and rem
 emote delay windows and the persona weights, each a `pub const` to paste over the row of its name,
 or a comment keeping the hand-set prior when fewer than `TIMING_FIT_MIN_SAMPLES` observations back
 it. Neither takes an option.
+
+## A match its log does not reproduce
+
+A match is its `(seed, decks, boards, log)` (§9.3), and the server checks that in four places: a
+1v1 rebuild (`actor::registry`), a co-op rebuild (`duos::registry`), the reaper's recovery fold
+(`api::results`) and the fold of a finished match for its game record (`api::game_records`). When a
+fold refuses an action the log holds, the match goes on as before (a rebuild keeps the state it
+folded to, a finished match keeps the result it recorded), and `bug_reports.rs` logs it as the
+alert `bug.found` and, with `CREATE_ISSUES_TOKEN` set, files one GitHub issue for the night bot:
+titled `Patch v0.3.Y: match <id> …`, labelled `BUG_REPORT_LABELS` (`patch`, `bot:build`,
+`difficulty:hard`, `priority:high`). It files once per match per process, at most
+`BUG_REPORTS_PER_WINDOW` in `BUG_REPORT_WINDOW_MS`, and nothing when an issue whose title names the
+match exists already. The repository is public and the match may still be live, so the issue names
+the match, the build, the catalog and each refused row's seq, seat and action type, and never a
+refusal's text, a card or an instance id.
+
+The night bot takes `bot:build` only from an account at level 2 or more in `.harness/trust.txt` or
+a collaborator (bot/README.md, Who may do what), so the token is made on such an account: a
+fine-grained personal access token for this repository with Issues read and write, set on Render
+under `jackioh-server` → Environment. At boot the server asks GitHub to open an issue with no
+title, which GitHub refuses as unprocessable when the token may open issues and as forbidden when it
+may not, so nothing is filed; `GET /api/catalog` then reports the answer in `x-bug-reports` (`off`,
+`checking`, `ready`, `refused` or `unreachable`), which `deploy-watch.yml` prints once a deploy is
+live, and a refusal is logged as the alert `bug.reports.refused` with GitHub's message.
+
+To read a reported match, export it (Supabase's SQL editor; the log holds both hands, so it stays
+out of the issue):
+
+```sql
+select jsonb_build_object(
+  'seed', m.seed,
+  'decks', jsonb_build_array(m.p1_deck, m.p2_deck),
+  'lastBoards', jsonb_build_array(m.p1_last_board, m.p2_last_board),
+  'glitchBoards', jsonb_build_array(m.p1_glitch_board, m.p2_glitch_board),
+  'log', (select jsonb_agg(a.action order by a.seq) from public.match_actions a where a.match_id = m.id),
+  'finalHash', m.final_hash)::text
+from public.matches m where m.id = '<match id>';
+```
+
+add `"dealt": ["p1", "p2"]` for an All Random match (its `mode`, its room's or its tickets'
+`random`), and fold it: `cargo jackioh replay < match.json` prints the hash and every refused action
+with its reason, and `cargo jackioh think --file match.json --at K` shows the position after K
+actions. A live actor that folded a log out of order rewinds its match, as the text-ordered read of
+`match_actions` did before `store::contract`'s `reads_a_log_of_ten_or_more_actions_back_in_seq_order`.
 
 ## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000, R641000, R747000)
 

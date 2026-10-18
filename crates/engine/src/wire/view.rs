@@ -480,6 +480,11 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub berserk: Option<bool>,
+    /// R1174000: the unit is Frozen (a status, public on the field on both seats): it can neither
+    /// attack nor switch its own position until it thaws. Absent otherwise. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub frozen: Option<bool>,
     /// ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
     /// may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
     /// Only ever `Some(true)`.
@@ -508,7 +513,8 @@ pub struct UnitView {
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub sick: Option<bool>,
     /// R849000: why the viewer's own unit cannot declare an attack now (`combat::why_cannot_declare`),
-    /// as `ActivationView.reason` (R384). Only while `canAct`; never on the opponent's units.
+    /// as `ActivationView.reason` (R384). Only while `canAct`, or while the unit is Frozen in its
+    /// controller's main phase (R1174000); never on the opponent's units.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub attack_reason: Option<String>,
@@ -1042,6 +1048,12 @@ pub struct PendingPromptView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub budget: Option<i32>,
+    /// A `craft` prompt's mode (R1182000 to R1182002): `scratch` opens the block editor on an empty
+    /// canvas with no presets, tooltips or hints; `potion` and `hugePotion` open it in the potion
+    /// frame. Absent on every other prompt and on Meditative #17's free crafter.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub craft_mode: Option<crate::wire::CraftMode>,
     /// R1184000: a sequence question's right answers so far (Meditative+ #20 KY's Competition), its
     /// chooser's to see; the prompt then offers Stop after its answers. Absent on every other prompt.
     #[serde(default, skip_serializing_if = "Option::is_none")]

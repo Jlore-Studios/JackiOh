@@ -227,6 +227,12 @@ no longer reaches it. A big engine change means a new export, as A would need an
 
 **Recommendation: B first. D is the follow-up if the learning curve says the labels are the limit.**
 
+**Measured (2026-10-18): B with D.** On the 36,000-game export, one relabel at λ = 0.7 took (c)'s
+held-out turns 4-10 log loss from 0.6093 to 0.6056 (three seeds each, spread 0.0003), and the
+prototype's network (two relabels) won +0.065 [+0.024, +0.106] over 1,600 paired games against the hand eval, where
+the outcomes-only one won +0.010 on the same deals. `fit.py` fits (c) that way by default
+(`TD_LAMBDA`).
+
 ### D5. The network's shape
 
 The search calls the evaluation about once per node, a few hundred to a thousand times a decision,
@@ -254,6 +260,29 @@ never breaks the AI.
 onto the hand eval's points (a logit times a fitted scale), because `unspent_mana`, the lethal
 constants and the ladder bots' `temperature` (R1452) are all in evaluation points. A promotion is
 followed by the bots' re-calibration anyway (`docs/bot-calibration.md`).
+
+**Measured (2026-10-18): B takes half the correction.** With the 36,000-game network, the whole
+correction changed the chosen action at about one search decision in four (561 of 2,400 sampled with
+`think`), yet won only +0.010 edge over 1,600 paired games. Fitted to outcomes, the network tells
+positions a game apart better than lines a move apart. Half of it won +0.064 [+0.024, +0.105] on the
+same deals, so a finalist takes `LEARNED_CORRECTION_SHARE` of the correction (R1012001).
+
+Each row below is 1,600 paired games against the hand eval, 3 finalists. `explore-466` is where the
+variants were chosen; `confirm-466` holds 800 deals none of them was chosen on. The TD network on
+`explore-466` is the prototype (two relabels); on `confirm-466` it is `fit.py`'s (D4, #1190),
+quantized as the lane quantizes it.
+
+| network (36,000 games) | share | `explore-466` | `confirm-466` |
+|---|---|---|---|
+| outcomes | 1 | +0.010 [−0.032, +0.052] | |
+| outcomes | 0.75 | +0.022 [−0.020, +0.064] | |
+| outcomes | 0.5 | +0.064 [+0.024, +0.105] | |
+| outcomes | 0.25 | +0.086 [+0.046, +0.126] | |
+| TD(0.7) (D4) | 1 | +0.065 [+0.024, +0.106] | |
+| TD(0.7) | **0.5** | **+0.096 [+0.054, +0.138]** | **+0.076 [+0.036, +0.116]** |
+| TD(0.7) | 0.25 | | +0.049 [+0.012, +0.087] |
+
+Each game's p95 decision time is about 200 ms in every row.
 
 ### D7. Arithmetic, determinism and size
 

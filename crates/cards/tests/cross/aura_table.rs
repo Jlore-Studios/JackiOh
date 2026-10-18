@@ -58,6 +58,9 @@ fn a_table_reads_the_shipped_auras_as_a_single_read_does() {
     }));
     let vanilla = s.backrow(P1, 2).expect("the second Weapons").id;
     s.card_mut(vanilla.as_str()).vanilla = true;
+    // R1149000: a set Siphon Squad sleeps until it is revealed (R686).
+    let siphon = s.backrow(P1, 3).expect("the Siphon").id;
+    s.card_mut(siphon.as_str()).revealed = Some(true);
 
     let state = s.state();
     let dormant = zones::dormant_units_of(state, P1)
@@ -74,18 +77,18 @@ fn a_table_reads_the_shipped_auras_as_a_single_read_does() {
         (
             "p1 lane 1 Mr. Vanilla",
             unit_at(&s, P1, 1),
-            view(7, 3, armed(&[]), 0, Position::Atk),
+            view(6, 3, armed(&[]), 0, Position::Atk),
         ),
         (
             "p1 lane 2 Big D-fender",
             unit_at(&s, P1, 2),
-            view(3, 6, armed(&[]), 0, Position::Atk),
+            view(2, 6, armed(&[]), 0, Position::Atk),
         ),
         (
             "p1 lane 3 Midrange Menace",
             unit_at(&s, P1, 3),
             view(
-                12,
+                11,
                 8,
                 vec![
                     Keyword::Taunt,
@@ -101,7 +104,7 @@ fn a_table_reads_the_shipped_auras_as_a_single_read_does() {
         (
             "p1 lane 4 Back Breaker",
             unit_at(&s, P1, 4),
-            view(6, 1, armed(&[Keyword::Stack]), 0, Position::Atk),
+            view(5, 1, armed(&[Keyword::Stack]), 0, Position::Atk),
         ),
         (
             "p1 dormant Mr. Vanilla",

@@ -165,7 +165,13 @@ jobs:
           "$RUNNER_TEMP/target/release/jackioh" selfplay --from "$FROM" --games "$GAMES" --seed "$SEED" \
             --out "$RUNNER_TEMP/logs" | tee "$RUNNER_TEMP/logs/summary.json"
           echo "seconds: $(( $(date +%s) - start ))" | tee -a "$RUNNER_TEMP/logs/timing.txt"
-          echo "cores: $(nproc)" >> "$RUNNER_TEMP/logs/timing.txt"
+          # The CPUs the shard may use: its container's quota when it has one (the local runner's
+          # --cpus; nproc there counts every processor WSL has), else every processor nproc sees.
+          cores=$(nproc)
+          if read -r quota period 2>/dev/null < /sys/fs/cgroup/cpu.max && [ "$quota" != max ]; then
+            cores=$(( (quota + period - 1) / period ))
+          fi
+          echo "cores: $cores" >> "$RUNNER_TEMP/logs/timing.txt"
       - uses: actions/upload-artifact@v4
         with:
           name: selfplay-${{ inputs.seed }}-${{ matrix.range.from }}

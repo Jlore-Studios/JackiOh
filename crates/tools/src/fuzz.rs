@@ -22,11 +22,13 @@
 //!   4. FAILURE DETAIL: every card id in the failing seed's two decks is named in the report, because
 //!      a bare seed number is useless against a 100-card pool.
 //!
-//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I5 (summoning sickness and exertion,
+//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I5 and I8 (summoning sickness and exertion,
 //! R171, and nothing after game over, R216) hold on the state each action is chosen in and on the
 //! state it produces (stage "invariant"), and I6 (no card a seat may not read in its view or legal
 //! actions, §10.8) holds for both seats on every state, setup's included: every state under
 //! `cargo test`, every I6_GATE_STRIDE-th under the gate.
+//! I8 (no unlisted attack or switch `reduce` accepts, §4.1, §4.2) runs on every state under `cargo test`,
+//! every I8_GATE_STRIDE-th under the gate and `--handicap`.
 //!
 //! Determinism (SPEC §9.3, §10.7, CLAUDE.md rule 4): nothing here reads OS randomness or the clock
 //! for a game (the clock only times the wave). The deck draw, the game and the policy each come from
@@ -58,7 +60,7 @@
 //! check and fatigue step (R183). So this wave plays the same random-policy games with one seat
 //! handicapped, rotating by seed over Medium and Hard and over both seats, and holds them to the same
 //! three assertions: no throw, a real ending inside the cap, and a log that folds back, handicaps
-//! included, to the live hash. Each game also runs the gate's invariant monitor (I1–I6) the same way.
+//! included, to the live hash. Each game also runs the gate's invariant monitor (I1–I8) the same way.
 
 use std::cell::RefCell;
 use std::panic::{self, AssertUnwindSafe};
@@ -68,7 +70,9 @@ use std::time::Instant;
 use anyhow::bail;
 use indexmap::{IndexMap, IndexSet};
 use jackioh_cards::{CATALOG, register_all};
-use jackioh_engine::testkit::{I6_GATE_STRIDE, create_invariant_monitor, preview_every_set, set_ships};
+use jackioh_engine::testkit::{
+    I6_GATE_STRIDE, I8_GATE_STRIDE, create_invariant_monitor, preview_every_set, set_ships,
+};
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, CreateGameOptions, DECK_SIZE, Difficulty,
     FoldArgs, GameState, Handicap, PerPlayerOpt, Phase, PlayerId, Rng, TURN_CAP_PLAYER_TURNS, begin_game,
@@ -153,6 +157,12 @@ fn is_whole_suite_sweep() -> bool {
 /// I6's stride: every state in the test sweep, every I6_GATE_STRIDE-th in the gate.
 pub fn hidden_stride() -> usize {
     if is_whole_suite_sweep() { 1 } else { I6_GATE_STRIDE }
+}
+
+/// I8's stride: every state in the test sweep, every I8_GATE_STRIDE-th in the gate and the
+/// handicapped wave.
+pub fn unlisted_stride() -> usize {
+    if is_whole_suite_sweep() { 1 } else { I8_GATE_STRIDE }
 }
 
 /// How many seeds this run plays (from `first_seed()`, which is 1 unless a developer moves it).
@@ -374,6 +384,7 @@ fn play_game(seed: u32) -> Result<GameRun, FuzzFailure> {
     let mut log: Vec<Action> = Vec::new();
     let mut monitor = create_invariant_monitor(&state);
     let stride = hidden_stride();
+    let unlisted_stride = unlisted_stride();
     let max_actions = max_actions_per_game();
     // Setup's own events: a Unit cast on draw in the opening deal (C+ #26 Tommy Tempo) enters there.
     let mut setup = monitor.after(&begun.events, &state);
@@ -458,6 +469,9 @@ fn play_game(seed: u32) -> Result<GameRun, FuzzFailure> {
         let mut broken = monitor.after(&result.events, &state);
         if log.len().is_multiple_of(stride) || state.result.is_some() {
             broken.extend(monitor.hidden(&state));
+        }
+        if log.len().is_multiple_of(unlisted_stride) {
+            broken.extend(monitor.unlisted(&state));
         }
         if let Some(first) = broken.first() {
             return Err(FuzzFailure::new(
@@ -1067,7 +1081,7 @@ impl Wave {
             0
         };
         format!(
-            "[M4 fuzz] {}\n  seeds {}..{}: {passed} passed, {} failed\n  {} panic(s), {} over the {}-action bound or stalled, {} replay mismatch(es), {} invariant violation(s)\n  endings: {}\n  {average} actions/game on average, {} at most; longest game ended on turn {} of {TURN_CAP_PLAYER_TURNS}\n  pool: {} deck-legal cards, {} excluded; I6 every {} state(s); {}s\n",
+            "[M4 fuzz] {}\n  seeds {}..{}: {passed} passed, {} failed\n  {} panic(s), {} over the {}-action bound or stalled, {} replay mismatch(es), {} invariant violation(s)\n  endings: {}\n  {average} actions/game on average, {} at most; longest game ended on turn {} of {TURN_CAP_PLAYER_TURNS}\n  pool: {} deck-legal cards, {} excluded; I6 every {} state(s), I8 every {} state(s); {}s\n",
             if self.ran >= WAVE_SEEDS {
                 "FULL GATE".to_string()
             } else {
@@ -1091,6 +1105,7 @@ impl Wave {
             FUZZ_POOL.len(),
             POOL_EXCLUSIONS.len(),
             hidden_stride(),
+            unlisted_stride(),
             round(self.elapsed_ms / MS_PER_SECOND),
         )
     }
@@ -1211,6 +1226,7 @@ fn play_seed(seed: u32) -> Outcome {
         let mut log: Vec<Action> = Vec::new();
         let mut monitor = create_invariant_monitor(&state);
         let stride = if is_whole_suite_sweep() { 1 } else { I6_GATE_STRIDE };
+        let unlisted_stride = unlisted_stride();
         let max_actions = max_actions_per_game();
         let mut setup = monitor.after(&begun.events, &state);
         setup.extend(monitor.hidden(&state));
@@ -1243,6 +1259,9 @@ fn play_seed(seed: u32) -> Outcome {
             let mut broken = monitor.after(&result.events, &state);
             if log.len().is_multiple_of(stride) || state.result.is_some() {
                 broken.extend(monitor.hidden(&state));
+            }
+            if log.len().is_multiple_of(unlisted_stride) {
+                broken.extend(monitor.unlisted(&state));
             }
             if let Some(first) = broken.first() {
                 return Err(format!("invariant after action {}: {first}", log.len()));
@@ -1451,6 +1470,9 @@ mod tests {
         #[test]
         fn r679_a_glitch_that_voids_the_match_is_a_real_ending() {
             register_all();
+            // R1420: the fuzz pool holds the sets that have not shipped, so the decks it deals are
+            // legal only while every set is previewed, as `fuzz_seed` previews them.
+            let _preview = preview_every_set();
             let decks = decks_for_seed(1);
             let mut state = create_game(&CreateGameOptions {
                 seed: "jackioh-fuzz-1".to_string(),

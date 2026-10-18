@@ -530,7 +530,14 @@ pub fn chosen_number(ctx: &EffectContext<'_>) -> Option<i32> {
 #[serde(rename_all = "camelCase")]
 pub struct ChooseCraftArgs {
     pub step: String,
+    /// The crafted card's cost. A potion mode fixes its own (R1182000, R1182001), so it is not read
+    /// there and may be left out.
+    #[serde(default)]
     pub cost: i32,
+    /// What the prompt asks for beyond Meditative #17's free crafter: Scratch Pad's empty canvas or
+    /// a potion frame (R1182000 to R1182002). Absent: Meditative #17's prompt, exactly as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mode: Option<crate::wire::CraftMode>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub radiant: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -544,10 +551,17 @@ pub struct ChooseCraftArgs {
 /// `Selection::Craft`: a preset, or the player's own recipe, which the reducer validates (R90).
 /// `legal_actions` enumerates the presets, so the AI, the random policy and a timeout all answer
 /// with one (R881, R79); the reducer still accepts any valid recipe.
+///
+/// `mode` (Meditative+, #1182): a potion mode fixes the cost and the frame and rolls Potions as its
+/// presets (R1182000, R1182001); `scratch` rolls Meditative #17's (R1182002). The open prompt carries
+/// the mode (`PendingChoice.craft_mode`), which the answer check and the client read.
 pub fn choose_craft(args: ChooseCraftArgs) -> Effect {
     Effect::new("chooseCraft", move |ctx| {
-        let cost = args.cost.clamp(0, crate::config::CRAFT_MAX_COST);
-        let recipes = crate::subsystems::craft::craft_presets(&mut *ctx.sink.rng, cost);
+        let cost = match args.mode.and_then(crate::wire::CraftMode::frame) {
+            Some(frame) => crate::subsystems::craft::frame_cost(frame),
+            None => args.cost.clamp(0, crate::config::CRAFT_MAX_COST),
+        };
+        let recipes = crate::subsystems::craft::presets_for(&mut *ctx.sink.rng, args.mode, cost);
         let radiant = args.radiant == Some(true);
         let options: Vec<PromptOption> = recipes
             .into_iter()
@@ -571,7 +585,13 @@ pub fn choose_craft(args: ChooseCraftArgs) -> Effect {
         );
         asked.owner = Some(owner);
         asked.budget = Some(cost);
-        open_prompt(ctx, asked);
+        // The mode rides on the prompt that opened (a random cast answers it at once, from the
+        // mode's own presets, and opens none).
+        if open_prompt(ctx, asked).is_some()
+            && let Some(pending) = ctx.sink.state.pending.as_mut()
+        {
+            pending.craft_mode = args.mode;
+        }
     })
 }
 

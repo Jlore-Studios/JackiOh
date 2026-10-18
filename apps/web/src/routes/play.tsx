@@ -42,6 +42,7 @@ import {
   type SavedTrio,
 } from "../net/api.ts";
 import { namesCustomCard } from "../creator/useCustomCards.ts";
+import { pageWake } from "../game/net.ts";
 import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
 import { MATCH_FOUND_STATUS, forgetQueued, liveGameOf, readQueued, rememberQueued, useQueued } from "../net/liveGame.ts";
 import { navigate, paths } from "../net/navigate.ts";
@@ -440,7 +441,11 @@ function useLobbyWatch(
       endedReads.current = 0;
     }
 
+    // A wake while a read is out would only repeat it; each effect run counts its own.
+    let reading = false;
     const check = (): void => {
+      if (reading) return;
+      reading = true;
       attempt(() => getMe(token))
         .then((me) => {
           if (cancelled || navigated.current || ended.current) return;
@@ -464,7 +469,10 @@ function useLobbyWatch(
             endedReads.current = 0;
           }
         })
-        .catch(() => undefined);
+        .catch(() => undefined)
+        .finally(() => {
+          reading = false;
+        });
     };
 
     // Check every mount so a reload after pairing cannot strand the player.
@@ -478,8 +486,11 @@ function useLobbyWatch(
       check();
       tick.current();
     }, SERIES_POLL_SECONDS * MS_PER_SECOND);
+    // A throttled tab's interval stalls; waking it reads the wait again at once.
+    const stopWake = pageWake(check);
     return () => {
       cancelled = true;
+      stopWake();
       clearInterval(handle);
     };
   }, [token, waiting, queueWait]);

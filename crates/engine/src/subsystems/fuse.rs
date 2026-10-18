@@ -58,9 +58,9 @@ use crate::script::{
     ActivationDecl, AttackMod, AttackModArgs, AttackModHook, AuraEntry, AuraHook, CardScripts,
     ConditionContext, ConditionHook, EchoXHook, Effect, EffectApply, EffectContext, EffectPart, EngineSink,
     FlagOrCount, Hook, HookArgs, ModeAllowedHook, PlagueMultiplierHook, QuestBook, Script, SetStat,
-    SetStatHook, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef, TriggerExtraHook,
-    TriggerRun, TuneMultiplier, WouldCounterHook, attack_mod_hook, aura_hook, condition_hook, hook,
-    mode_allowed_hook, read_hook, target_check, would_counter_hook,
+    SetStatHook, SpellDamageAura, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef,
+    TriggerExtraHook, TriggerRun, TuneMultiplier, WouldCounterHook, attack_mod_hook, aura_hook,
+    condition_hook, hook, mode_allowed_hook, read_hook, target_check, would_counter_hook,
 };
 use crate::state::{CardInstance, GameState, Grant, find_instance, find_instance_mut, new_instance};
 use crate::wire::{
@@ -180,10 +180,17 @@ fn union_keywords(keywords: &[Keyword]) -> Vec<Keyword> {
     out
 }
 
-fn union_tags(defs: &[CardDef]) -> Vec<Tag> {
+/// R102's literal union of the ingredients' tags, but for `Token` (R1177000): the fused card carries
+/// that tag only when it is a token itself (`token`, every ingredient one), so a token fused onto a
+/// real card makes a real card, which neither wears the Token label nor counts as a token by its tag
+/// (`CardDef::is_token`).
+fn union_tags(defs: &[CardDef], token: bool) -> Vec<Tag> {
     let mut seen: IndexSet<Tag> = IndexSet::new();
     for def in defs {
         for tag in &def.tags {
+            if *tag == Tag::Token && !token {
+                continue;
+            }
             seen.insert(*tag);
         }
     }
@@ -502,6 +509,10 @@ fn build_def(
     };
     let refs = union_refs(defs);
     let loc = summed_loc(defs);
+    // A fusion is a real card unless every ingredient was a token, so fusing a token onto a unit
+    // gives a result that no longer ceases to exist off the field (R11), and that sheds the Token tag
+    // (R1177000).
+    let token = defs.iter().all(|def| def.token);
     CardDef {
         // Transient defs are not catalog cards, so no random pool or Discover can reach one (§5.1);
         // the index is the id itself, which keeps `def_by_index` unambiguous.
@@ -517,12 +528,10 @@ fn build_def(
             .or_else(|| defs.first().map(|def| def.set))
             .unwrap_or(SetName::Core),
         type_: fused_type(defs, target_def),
-        tags: union_tags(defs),
+        tags: union_tags(defs, token),
         rarity: rarest_of(defs),
         printed_rarity: None,
-        // A fusion is a real card unless every ingredient was a token, so fusing a token onto a unit
-        // gives a result that no longer ceases to exist off the field (R11).
-        token: defs.iter().all(|def| def.token),
+        token,
         // R470: a kept X-cost or embiggen card that keeps its cost keeps that printed form.
         cost: kept_cost
             .and_then(|kept| kept.form)
@@ -1013,6 +1022,21 @@ fn summed_count(values: impl IntoIterator<Item = Option<FlagOrCount>>) -> Option
     }
 }
 
+/// R1180000 (Meditative+ #9): a fused card's Spell Damage auras add up, as two standing apart do, and
+/// reach the opponent too when either ingredient's does.
+fn summed_spell_damage_aura(
+    values: impl IntoIterator<Item = Option<SpellDamageAura>>,
+) -> Option<SpellDamageAura> {
+    let defined: Vec<SpellDamageAura> = values.into_iter().flatten().collect();
+    if defined.is_empty() {
+        return None;
+    }
+    Some(SpellDamageAura {
+        amount: defined.iter().map(|aura| aura.amount).sum(),
+        both: defined.iter().any(|aura| aura.both == Some(true)).then_some(true),
+    })
+}
+
 /// R1160 (Meditative #84 Volatility, ME-TUNEMULT): a fused card's tune multipliers multiply.
 /// None when no ingredient names one; otherwise each direction is the product of the ingredients
 /// that name it, and a direction none names is none.
@@ -1110,6 +1134,9 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 no_natural_mana: flags(|f| f.no_natural_mana),
                 feng_shui: flags(|f| f.feng_shui),
                 luck: summed_number(defined.iter().map(|f| f.luck)),
+                spell_damage_aura: summed_spell_damage_aura(defined.iter().map(|f| f.spell_damage_aura)),
+                doubles_healing: flags(|f| f.doubles_healing),
+                answers_targeted_spells: flags(|f| f.answers_targeted_spells),
             })
         }
     }

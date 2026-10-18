@@ -9,7 +9,10 @@ use serde::Serialize;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::combat::{armoured, big_dfender, deft_duelist, plain, spikey_pillow, taunter};
+use crate::rules::fixtures::combat::{
+    armoured, big_dfender, deft_duelist, plain, spikey_pillow, stacker, taunter, windfurier,
+};
+use crate::rules::fixtures::field::{flush, playing as field_playing, tower};
 use crate::rules::fixtures::harness::{
     events_of_type, in_hand, json_of, matches_object, new_game, put, sink_for, slot,
 };
@@ -138,6 +141,19 @@ fn has_switch_for(state: &GameState, player: PlayerId, id: Option<&str>) -> bool
         ActionBody::SwitchPosition { instance_id } => id.is_none_or(|id| instance_id == id),
         _ => false,
     })
+}
+
+/// #1192: the list offers a switch exactly when `reduce` accepts it.
+fn switch_agrees(state: &GameState, id: &str) -> bool {
+    let listed = has_switch_for(state, P1, Some(id));
+    let accepted = attempt(
+        state,
+        input(json!({ "type": "switchPosition", "instanceId": id, "playerId": "p1" })),
+    )
+    .error
+    .is_none();
+    assert_eq!(listed, accepted, "{id}: listed {listed}, accepted {accepted}");
+    listed
 }
 
 mod positions_and_exertion_m2_t1 {
@@ -626,5 +642,96 @@ mod positions_and_exertion_m2_t1 {
         assert!(has_keyword(&view.keywords, KeywordKind::Taunt));
         assert_eq!(view.armor, 1);
         assert_eq!(unit.exertion, exertion(false, true));
+    }
+
+    #[test]
+    fn lists_a_switch_exactly_when_reduce_accepts_it_4_1() {
+        let mut state = field_playing("switch-agreement-exertions");
+        let sick = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default());
+        let switched = put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default());
+        let attacked = put(&mut state, &plain.id, slot(P1, Row::Units, 3), Default::default());
+        let windfury = put(
+            &mut state,
+            &windfurier.id,
+            slot(P1, Row::Units, 4),
+            Default::default(),
+        );
+        let deft = put(
+            &mut state,
+            &deft_duelist.id,
+            slot(P1, Row::Units, 5),
+            Default::default(),
+        );
+        let foe = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default());
+        let turn = state.turn;
+        find_instance_mut(&mut state, &sick.id)
+            .expect("the sick unit")
+            .summoned_turn = Some(turn);
+        find_instance_mut(&mut state, &switched.id)
+            .expect("the switched unit")
+            .exertion = exertion(false, true);
+        for id in [&attacked.id, &windfury.id, &deft.id] {
+            find_instance_mut(&mut state, id).expect("the unit").exertion = exertion(true, false);
+        }
+        assert!(has_exertion(
+            &state,
+            by_id(&state, &windfury.id),
+            ExertionKind::Attack
+        ));
+        assert!(switch_agrees(&state, &sick.id));
+        assert!(switch_agrees(&state, &deft.id));
+        assert!(!switch_agrees(&state, &switched.id));
+        assert!(!switch_agrees(&state, &attacked.id));
+        assert!(!switch_agrees(&state, &windfury.id));
+        assert!(!switch_agrees(&state, &foe.id));
+
+        let mut state = field_playing("switch-agreement-board");
+        put(
+            &mut state,
+            &tower.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let rider = hand_card(&mut state, &plain.id, P1);
+        flush(&mut state, P1, 10);
+        state = act(
+            &state,
+            input(
+                json!({ "type": "play", "instanceId": rider.id, "zone": { "row": "backrow", "lane": 2 }, "playerId": "p1" }),
+            ),
+        );
+        assert!(
+            carried_units_of(&state, P1)
+                .iter()
+                .any(|card| card.id == rider.id)
+        );
+        let pillow_atk = put(
+            &mut state,
+            &spikey_pillow.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        let pillow_def = put(
+            &mut state,
+            &spikey_pillow.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
+        find_instance_mut(&mut state, &pillow_def.id)
+            .expect("the pillow in Defense")
+            .position = Some(Position::Def);
+        let dormant = put(&mut state, &plain.id, slot(P1, Row::Units, 3), Default::default());
+        let mut top = new_instance(&mut state, &stacker.id, P1, Zone::Hand { player: P1 });
+        assert!(place_on_field(
+            &mut state,
+            &mut top,
+            slot(P1, Row::Units, 3),
+            PlaceOnFieldOptions { stack: Some(true) }
+        ));
+        assert!(!switch_agrees(&state, &pillow_atk.id));
+        assert!(switch_agrees(&state, &pillow_def.id));
+        assert!(switch_agrees(&state, &rider.id));
+        assert!(!switch_agrees(&state, &dormant.id));
+        assert!(switch_agrees(&state, &top.id));
     }
 }

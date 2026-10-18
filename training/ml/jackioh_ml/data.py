@@ -4,7 +4,8 @@ A positions file is what `cargo jackioh positions` writes (R1006004): a header l
 `featuresVersion` and `denseNames`, then one row per position. `load` reads any number of them into
 one `Positions`: the dense features as a matrix, the sparse ones as CSR (every key a string in
 `keys`, each row's key ids in `sparse_idx[sparse_ptr[i]:sparse_ptr[i + 1]]` with their counts), the
-hand eval's score, the outcome, the turn and the game each row came from.
+hand eval's score, the outcome, the turn, the game each row came from, and the seat and step in it
+(the chain `fit.td_targets` runs along).
 
 The feature length comes from the data, and every file must hold the same `FEATURES_VERSION` and
 dense names (D10): a mismatch is refused, never mixed. A row whose dense length differs from its
@@ -29,6 +30,8 @@ import numpy as np
 
 #: Rows of dense features read before they are packed into an array.
 CHUNK_ROWS = 20_000
+#: A row's seat as its number in `Positions.seat`.
+SEATS = {"p1": 0, "p2": 1}
 
 
 class FeatureMismatch(ValueError):
@@ -44,6 +47,8 @@ class Positions:
     outcome: np.ndarray  # float32: 1, 0.5 or 0
     turn: np.ndarray  # int32
     game: np.ndarray  # int64: an index into `games`
+    seat: np.ndarray  # int8: 0 for p1, 1 for p2
+    step: np.ndarray  # int32: the log entry the row was taken at, in its game
     games: list[str]
     keys: list[str]
     sparse_ptr: np.ndarray  # int64, rows + 1
@@ -71,6 +76,8 @@ class Positions:
             outcome=self.outcome[rows],
             turn=self.turn[rows],
             game=self.game[rows],
+            seat=self.seat[rows],
+            step=self.step[rows],
             games=self.games,
             keys=self.keys,
             sparse_ptr=ptr,
@@ -95,6 +102,8 @@ def load(paths: Iterable[str | Path], expect_version: int | None = None) -> Posi
     outcome = array("f")
     turn = array("i")
     game = array("q")
+    seat = array("b")
+    step = array("i")
     ptr = array("q", [0])
     idx = array("q")
     val = array("f")
@@ -137,6 +146,8 @@ def load(paths: Iterable[str | Path], expect_version: int | None = None) -> Posi
                     game_ids[seed] = len(games)
                     games.append(seed)
                 game.append(game_ids[seed])
+                seat.append(SEATS[row["seat"]])
+                step.append(int(row["step"]))
                 catalogs.add(row.get("catalog", ""))
                 for key, count in row["sparse"]:
                     at = key_ids.get(key)
@@ -160,6 +171,8 @@ def load(paths: Iterable[str | Path], expect_version: int | None = None) -> Posi
         outcome=np.frombuffer(outcome, dtype=np.float32).copy(),
         turn=np.frombuffer(turn, dtype=np.int32).copy(),
         game=np.frombuffer(game, dtype=np.int64).copy(),
+        seat=np.frombuffer(seat, dtype=np.int8).copy(),
+        step=np.frombuffer(step, dtype=np.int32).copy(),
         games=games,
         keys=keys,
         sparse_ptr=np.frombuffer(ptr, dtype=np.int64).copy(),

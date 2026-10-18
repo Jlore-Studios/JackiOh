@@ -6,6 +6,7 @@ import type {
   CardType,
   CraftEffect,
   CraftHatKind,
+  CraftMode,
   CraftRecipe,
   CraftVerb,
   Keyword,
@@ -30,6 +31,8 @@ import {
   VERB_LABELS,
   addEffect,
   addHat,
+  blankRecipe,
+  frameOf,
   moveEffect,
   removeEffect,
   removeHat,
@@ -49,7 +52,13 @@ import "./craft.css";
  * `craftPreview`, so the client decides nothing (CLAUDE.md rule 7). The turn clock keeps running
  * while the player crafts (R79): this is an answer like any other, and the opponent sees only that
  * a prompt is open. Pointer drag moves blocks with a mouse or a finger; every drag has a click,
- * tap and keyboard equivalent, so nothing needs a drag. */
+ * tap and keyboard equivalent, so nothing needs a drag.
+ *
+ * The prompt's `craftMode` (Meditative+, #1182) changes the frame, never the rules: `potion` and
+ * `hugePotion` pin a Unit whose one hat is its Activate (Jazakus and Jazakus Prime, R1182000,
+ * R1182001), with no type or hat palette; `scratch` opens an empty canvas with no suggestions, no
+ * prices, no tooltips and no refusal reasons, only the meters and the Craft button (Scratch Pad,
+ * R1182002). */
 
 const TYPES: readonly CardType[] = ["Unit", "Spell", "Field Spell", "Trap"];
 
@@ -63,19 +72,6 @@ function sheetQuery(): MediaQueryList | null {
     return null;
   }
 }
-
-/** A blank Unit to stand on when no preset carries a recipe (the engine always sends four). */
-const FALLBACK_RECIPE: CraftRecipe = {
-  cost: 0,
-  type: "Unit",
-  adjective: "Pure",
-  noun: "Closure",
-  attack: 1,
-  health: 1,
-  keywords: [],
-  echo: 0,
-  hats: [],
-};
 
 type DragPayload =
   | { from: "palette-hat"; hat: CraftHatKind }
@@ -123,13 +119,25 @@ function effectText(effect: CraftEffect): string {
   return label;
 }
 
+/** The editor's title for the prompt's mode. */
+function titleOf(mode: CraftMode | undefined): string {
+  if (mode === "scratch") return t("Code a card from scratch");
+  if (mode === "potion") return t("Craft a Potion");
+  if (mode === "hugePotion") return t("Craft a HUGE Potion");
+  return t("Craft a card");
+}
+
 export function CraftEditor(props: { pending: PendingPromptView; onAction: (body: ActionBody) => void }) {
   useLocale();
-  const presets: PendingOption[] = props.pending.options;
+  const mode = props.pending.craftMode;
+  const frame = frameOf(mode);
+  // R1182002: from scratch, nothing helps — no suggestion, price, tooltip or refusal reason.
+  const scratch = mode === "scratch";
+  const presets: PendingOption[] = scratch ? [] : props.pending.options;
   const cost = props.pending.budget ?? 0;
-  const radiant = presets.some((option) => option.radiant === true);
+  const radiant = props.pending.options.some((option) => option.radiant === true);
   const [recipe, setRecipe] = useState<CraftRecipe>(
-    () => presets.find((option) => option.recipe !== undefined)?.recipe ?? FALLBACK_RECIPE,
+    () => presets.find((option) => option.recipe !== undefined)?.recipe ?? blankRecipe(cost, frame),
   );
   const [selectedHat, setSelectedHat] = useState(0);
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -248,37 +256,44 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
   const face = faceModel({ defId: def.id, def, radiant });
   // #552: the card being crafted is read as any card is, a hover preview with its glossary and, on a
   // phone, the long-press sheet, so the words its blocks print are a press away. Lines of code is a
-  // hidden stat in matches (the meters above say this card's).
+  // hidden stat in matches (the meters above say this card's). From scratch the glossary is a hint,
+  // so the face is shown and nothing more (R1182002).
   const inspect = useInspectTrigger({ key: "craft-preview", face }, { prefer: "above", showLoc: false });
+  /** A price or a refusal, shown except from scratch (R1182002). */
+  const hint = (text: string): string | undefined => (scratch ? undefined : text);
+  const title = titleOf(mode);
   return (
     <div className="prompt-scrim" data-testid="prompt-scrim">
       <div
         className="prompt craft-editor"
         data-testid="prompt-modal"
         data-prompt-kind="craft"
+        data-craft-mode={mode ?? "free"}
         data-layout={sheet ? "sheet" : "panel"}
         role="dialog"
         aria-modal="true"
-        aria-label={t("Craft a card")}
+        aria-label={title}
       >
-        <p className="prompt-title">{t("Craft a card")}</p>
+        <p className="prompt-title">{title}</p>
         <div className="craft-columns">
           <nav className="craft-palette" aria-label={t("Blocks")} data-drop-palette="true">
             <section aria-label={t("Type and stats")}>
               <h3>{t("Type and stats")}</h3>
-              <div className="craft-row">
-                {TYPES.map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    className="craft-block"
-                    aria-pressed={recipe.type === type}
-                    onClick={() => setRecipe((prev) => setType(prev, type))}
-                  >
-                    {typeName(type)}
-                  </button>
-                ))}
-              </div>
+              {frame === undefined && (
+                <div className="craft-row">
+                  {TYPES.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      className="craft-block"
+                      aria-pressed={recipe.type === type}
+                      onClick={() => setRecipe((prev) => setType(prev, type))}
+                    >
+                      {typeName(type)}
+                    </button>
+                  ))}
+                </div>
+              )}
               {recipe.type === "Unit" && (
                 <div className="craft-row">
                   <Stepper label={t("Attack")} value={recipe.attack} onStep={(delta) => setRecipe((prev) => stepStat(prev, "attack", delta))} />
@@ -361,11 +376,11 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                       className="craft-block"
                       aria-pressed={recipe.keywords.some((block) => block.kind === row.kind)}
                       aria-disabled={!takes}
-                      title={
+                      title={hint(
                         takes
                           ? keywordPriceText(row.kind)
-                          : t("A {type} cannot take {keyword}", { type: typeName(recipe.type), keyword: keywordName(row.kind) })
-                      }
+                          : t("A {type} cannot take {keyword}", { type: typeName(recipe.type), keyword: keywordName(row.kind) }),
+                      )}
                       onClick={() =>
                         clickGuard(() =>
                           setRecipe((prev) => (takesKeyword(prev.type, row.kind) ? toggleKeyword(prev, row.kind) : prev)),
@@ -373,29 +388,33 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                       }
                       onPointerDown={(event) => beginDrag(event, { from: "palette-effect", verb: "grantKeyword" }, t("Give a unit {keyword}", { keyword: keywordName(row.kind) }))}
                     >
-                      {keywordName(row.kind)} · {keywordPriceText(row.kind)}
+                      {keywordName(row.kind)}
+                      {!scratch && ` · ${keywordPriceText(row.kind)}`}
                     </button>
                   );
                 })}
               </div>
             </section>
-            <section aria-label={t("Hats")}>
-              <h3>{t("Hats")}</h3>
-              <div className="craft-row">
-                {CRAFT_HAT_PRICES.filter((row) => takesHat(recipe.type, row.hat)).map((row) => (
-                  <button
-                    key={row.hat}
-                    type="button"
-                    className="craft-block"
-                    title={hatPriceText(row.hat)}
-                    onPointerDown={(event) => beginDrag(event, { from: "palette-hat", hat: row.hat }, t(HAT_LABELS[row.hat]))}
-                    onClick={() => clickGuard(() => setRecipe((prev) => addHat(prev, row.hat)))}
-                  >
-                    {t(HAT_LABELS[row.hat])} · {hatPriceText(row.hat)}
-                  </button>
-                ))}
-              </div>
-            </section>
+            {frame === undefined && (
+              <section aria-label={t("Hats")}>
+                <h3>{t("Hats")}</h3>
+                <div className="craft-row">
+                  {CRAFT_HAT_PRICES.filter((row) => takesHat(recipe.type, row.hat)).map((row) => (
+                    <button
+                      key={row.hat}
+                      type="button"
+                      className="craft-block"
+                      title={hint(hatPriceText(row.hat))}
+                      onPointerDown={(event) => beginDrag(event, { from: "palette-hat", hat: row.hat }, t(HAT_LABELS[row.hat]))}
+                      onClick={() => clickGuard(() => setRecipe((prev) => addHat(prev, row.hat)))}
+                    >
+                      {t(HAT_LABELS[row.hat])}
+                      {!scratch && ` · ${hatPriceText(row.hat)}`}
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
             <section aria-label={t("Effects")}>
               <h3>{t("Effects")}</h3>
               <div className="craft-row">
@@ -404,7 +423,7 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                     key={row.verb}
                     type="button"
                     className="craft-block"
-                    title={verbPriceText(row.verb)}
+                    title={hint(verbPriceText(row.verb))}
                     onPointerDown={(event) => beginDrag(event, { from: "palette-effect", verb: row.verb }, t(VERB_LABELS[row.verb]))}
                     onClick={() =>
                       clickGuard(() =>
@@ -415,7 +434,8 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                       )
                     }
                   >
-                    {t(VERB_LABELS[row.verb])} · {verbPriceText(row.verb)}
+                    {t(VERB_LABELS[row.verb])}
+                    {!scratch && ` · ${verbPriceText(row.verb)}`}
                   </button>
                 ))}
               </div>
@@ -433,9 +453,12 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
               >
                 <header>
                   <strong>{t(HAT_LABELS[hat.hat])}</strong>
-                  <button type="button" aria-label={t("Remove {hat} hat", { hat: t(HAT_LABELS[hat.hat]) })} onClick={() => setRecipe((prev) => removeHat(prev, hi))}>
-                    ×
-                  </button>
+                  {/* R1182000: a Potion's Activate is its frame, pinned to the canvas. */}
+                  {frame === undefined && (
+                    <button type="button" aria-label={t("Remove {hat} hat", { hat: t(HAT_LABELS[hat.hat]) })} onClick={() => setRecipe((prev) => removeHat(prev, hi))}>
+                      ×
+                    </button>
+                  )}
                 </header>
                 {hat.effects.map((effect, ei) => (
                   <div
@@ -532,29 +555,33 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                 {t("{loc}/{budget} lines", { loc: preview.loc, budget: preview.locBudget })}
               </span>
             </p>
-            <ul className="craft-reasons" role="status" aria-label={t("Why this recipe is refused")}>
-              {preview.reasons.map((reason) => (
-                <li key={reason}>{t(reason)}</li>
-              ))}
-            </ul>
-            <span className="craft-face" data-testid="craft-face" {...inspect.handlers}>
+            {!scratch && (
+              <ul className="craft-reasons" role="status" aria-label={t("Why this recipe is refused")}>
+                {preview.reasons.map((reason) => (
+                  <li key={reason}>{t(reason)}</li>
+                ))}
+              </ul>
+            )}
+            <span className="craft-face" data-testid="craft-face" {...(scratch ? {} : inspect.handlers)}>
               <CardFace face={face} />
             </span>
-            {inspect.overlay}
-            <div className="craft-suggestions" aria-label={t("Suggestions")}>
-              {presets.map((option, index) =>
-                option.recipe === undefined ? null : (
-                  <button
-                    key={option.key}
-                    type="button"
-                    data-testid={`craft-preset-${index}`}
-                    onClick={() => setRecipe(option.recipe ?? FALLBACK_RECIPE)}
-                  >
-                    {option.label}
-                  </button>
-                ),
-              )}
-            </div>
+            {!scratch && inspect.overlay}
+            {!scratch && (
+              <div className="craft-suggestions" aria-label={t("Suggestions")}>
+                {presets.map((option, index) =>
+                  option.recipe === undefined ? null : (
+                    <button
+                      key={option.key}
+                      type="button"
+                      data-testid={`craft-preset-${index}`}
+                      onClick={() => setRecipe(option.recipe ?? blankRecipe(cost, frame))}
+                    >
+                      {option.label}
+                    </button>
+                  ),
+                )}
+              </div>
+            )}
             <button
               type="button"
               data-testid="prompt-submit"

@@ -314,7 +314,8 @@ function fusedFaceOf(faces: readonly CardFace[]): CardFace {
 
 /**
  * A fused definition shaped as the engine's Fuse builds one (R77, R102, R179): the ingredients'
- * names joined by " + ", their tags united, the rarest rarity, their costs summed and capped at 4,
+ * names joined by " + ", their tags united (the Token tag only when every ingredient is a token, as
+ * `token` is: R1177000), the rarest rarity, their costs summed and capped at 4,
  * and each face their stats summed, keywords united and texts joined a line per ingredient. The id
  * is `t-<n>:` and the ingredients' ids, and it is its own index. Fixture only: the engine's builder
  * is the one the game runs, and hidden-information.test.ts pins what the view carries of it.
@@ -331,15 +332,16 @@ export function fusedDef(ingredients: readonly CardDef[], n = 1): CardDef {
     (rarest, def) => (RARITY_ORDER.indexOf(def.rarity) > RARITY_ORDER.indexOf(rarest) ? def.rarity : rarest),
     first.rarity,
   );
+  const token = ingredients.every((def) => def.token);
   return {
     id,
     index: id,
     name: ingredients.map((def) => def.name).join(" + "),
     set: first.set,
     type: first.type,
-    tags: [...new Set(ingredients.flatMap((def) => def.tags))],
+    tags: [...new Set(ingredients.flatMap((def) => def.tags))].filter((tag) => token || tag !== "Token"),
     rarity,
-    token: ingredients.every((def) => def.token),
+    token,
     cost,
     // R179, R468: the list the id names, which a Chinese face reads its ingredients' words by (R1301).
     ingredients: ingredients.map((def) => ({ defId: def.id })),
