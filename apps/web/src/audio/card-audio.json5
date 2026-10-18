@@ -1862,8 +1862,14 @@
     "meditativeplus-002": { // NA Tech
       cast: { voice: "robot", text: "Best and worst, together. Balance achieved." },
     },
+    "meditativeplus-003": { // Wondrous Wand
+      cast: { voice: "sapi-wizard", text: "Twice the wishes, none of the warnings." },
+    },
     "meditativeplus-004": { // Supply Drop
       cast: { voice: "sapi-hero", text: "Hold tight. The drop is inbound." },
+    },
+    "meditativeplus-005": { // Spirit Lash
+      cast: { voice: "whisper", text: "Feel the sting on both sides now." },
     },
     "meditativeplus-006": { // Bloodbloom
       cast: { voice: "whisper", text: "Pay in blood. The petals open." },
@@ -1873,13 +1879,39 @@
       attack: { voice: "sapi-heroine", text: "Light, lend me strength!" },
       death: { voice: "sapi-heroine", text: "My light... fades." },
     },
+    "meditativeplus-008": { // Arch Mage
+      play: { voice: "prof", text: "Class is in session. Take notes." },
+      attack: { voice: "prof", text: "Pop quiz!" },
+      death: { voice: "prof", text: "The bell rings... forever?" },
+    },
     "meditativeplus-009": { // Magic Amplifier
       cast: { voice: "robot", text: "Volume up. Everyone gets louder magic." },
+    },
+    "meditativeplus-010": { // Medina Grifter
+      play: { voice: "hustler", text: "Lovely hand you have there. Shame." },
+      attack: { voice: "hustler", text: "Mine now!" },
+      death: { voice: "hustler", text: "You saw nothing, friend." },
     },
     "meditativeplus-011": { // Living Mana Potion
       play: { voice: "bubbles", text: "Glug glug! Bottled brilliance!" },
       attack: { voice: "bubbles", text: "Splash attack!" },
       death: { voice: "bubbles", text: "Bottoms up..." },
+    },
+    "meditativeplus-012": { // Living Armor Potion
+      play: { voice: "bubbles", text: "Bottoms up! Feel that plating settle." },
+      attack: { voice: "bubbles", text: "Clink!" },
+      death: { voice: "bubbles", text: "Drained to the dregs." },
+    },
+    "meditativeplus-013": { // Living Health Potion
+      play: { voice: "sapi-diner", text: "Warm soup, coming right up!" },
+      attack: { voice: "sapi-diner", text: "Sip!" },
+      death: { voice: "sapi-diner", text: "Seconds for everyone..." },
+    },
+    "meditativeplus-014": { // Potion Pouch
+      cast: { voice: "goof", text: "Reach in, pull out something fizzy." },
+    },
+    "meditativeplus-015": { // Book of Potions
+      cast: { voice: "sapi-librarian", text: "Chapter one, brew something glowing." },
     },
     "meditativeplus-016": { // Jazakus
       play: { voice: "sapi-mystic", text: "Name your poison. I'll bottle it." },
@@ -1896,6 +1928,9 @@
     },
     "meditativeplus-018": { // Cognitive Offloading
       cast: { voice: "robot", text: "Autopilot engaged. Hands off the controls, please." },
+    },
+    "meditativeplus-019": { // Grubby Gloves
+      cast: { voice: "crone", text: "Sticky fingers find the top cards." },
     },
     "meditativeplus-020": { // KY's Competition
       cast: { voice: "sapi-teacher", text: "Pencils up. Speed round, starting now." },

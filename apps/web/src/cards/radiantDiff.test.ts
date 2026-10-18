@@ -119,6 +119,7 @@ describe("R277 the word diff", () => {
     // #48 Tranquility's (it does not end the turn, R1021), and patch v0.3.10's Classic #29 Book of Vital
     // Kill's (its Radiant face does not end the turn either). Meditative+ #11 Living Mana Potion's is the
     // designer's: its base text less the Tribute it activates with; its doubled stats carry its marks.
+    // So are #12 Living Armor Potion's and #13 Living Health Potion's: twelve silent faces in all.
     expect(silent).toEqual([
       "core-055",
       "classic-028",
@@ -130,6 +131,8 @@ describe("R277 the word diff", () => {
       "meditative-048",
       "meditative-089",
       "meditativeplus-011",
+      "meditativeplus-012",
+      "meditativeplus-013",
     ]);
   });
 });
