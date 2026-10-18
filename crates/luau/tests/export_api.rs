@@ -825,6 +825,7 @@ mod generator {
             EnchantArgs,
             EnchantNextSpellArgs,
             FlickerArgs,
+            FreezeArgs,
             AddRolledGrapesArgs,
             FuseOntoYourCardArgs,
             FuseCardsArgs,

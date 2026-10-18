@@ -88,6 +88,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit?.animated !== undefined) inPlay.animated = unit.animated;
   // B5 E35: a Berserk unit.
   if (unit?.berserk === true) inPlay.berserk = true;
+  // R1174000: a Frozen unit.
+  if (unit?.frozen === true) inPlay.frozen = true;
   // MD-B6, R943: a Created card, wherever the view carries the mark.
   if (card.created === true) inPlay.created = true;
   // ME-GRANT, R1107: the Death abilities other cards granted the unit, as its lines read them.

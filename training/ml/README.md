@@ -40,7 +40,7 @@ never sit on both sides), keeps another 10% for early stopping, and fits:
 |---|---|---|
 | (a) | the hand eval calibrated to a probability: `σ(a·hand/100 + b)` | L-BFGS to convergence |
 | (b) | a logistic over the dense features and the hand eval, session s15's linear fit | L-BFGS, its L2 picked on the validation games |
-| (c) | D5's network with D4's skip connection: `σ(a·hand/100 + b + net(x))`, its first layer 16 wide over the standardized dense features and one row per sparse key seen in 20 or more positions, a clipped ReLU, a head of 16, starting from (a) with its output at zero | Adam on the log loss, early stopping on the validation games, three seeds |
+| (c) | D5's network with D4's skip connection: `σ(a·hand/100 + b + net(x))`, its first layer 16 wide over the standardized dense features and one row per sparse key seen in 20 or more positions, a clipped ReLU, a head of 16, starting from (a) with its output at zero | Adam on the log loss, early stopping on the validation games' outcomes, three seeds; fitted on the outcomes, then once more from the same start on offline TD(λ) targets (D4's D, `TD_LAMBDA` 0.7, `--td-lambda 1` for the outcomes alone): along each game and seat, a row's target is 0.3 of the seat's next row's prediction and 0.7 of that row's target, the last row's being the outcome |
 
 `<out>/report.md` (and `report.json`) holds: held-out log loss, AUC and calibration, overall and by
 turn band (1-3, 4-10, 11 and on); (c)'s run-to-run spread over its seeds; (c)'s learning curve at
@@ -62,3 +62,14 @@ clips to `[0, 127]`, and one division into the logit (R1011000). `--report` give
 held-out log loss beside the float one's and their largest difference in logits.
 `--random 1011 --positions tests/fixtures/positions.jsonl --parity
 crates/ai/tests/fixtures/learned-parity.json` writes the parity fixture both builds are held to.
+
+## The retrain
+
+`training/ml/retrain.sh` is the whole loop, with no LLM inside it (#1012, D2): the logs (`--logs`, or
+`--games` and `--seed` to play them), the positions, the fit, the integer network (the float one
+quantized, as above, with its report) into `crates/ai/src/learned/weights.json` with the switch on, so
+the screen and the gate play the network that ships, the parent (`--parent-bin`, `tree`, or a build
+of `origin/main`), the candidate, and an 800-game paired screen on `improve-dev`, decided in advance.
+It prints the gate's command (`cargo jackioh promote --lane learn --parent-bin <parent>`) only when the
+screen's `edgeLow` is above zero, and exits 1 otherwise. The learn lane runs it weekly
+(`training/learn.md`).

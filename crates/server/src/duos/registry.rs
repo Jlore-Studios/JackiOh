@@ -27,6 +27,7 @@ use crate::actor::registry::panic_text;
 use crate::actor::ws_server::Socket;
 use crate::api::http::lock;
 use crate::app::App;
+use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::duos::actor::{DuosActor, DuosActorInput, create_duos_actor};
 use crate::duos::engine::{self, Pinned};
 use crate::duos::replay::DuosReplayCache;
@@ -166,6 +167,20 @@ impl DuosRegistry {
             // An action the engine once applied and now refuses is a determinism break: the log no
             // longer folds the match. Rebuild anyway, on the state up to it, and say so loudly.
             tracing::error!(event = "duos.fold.errors", matchId = %match_id, refusedAt = at);
+            app.bug_reports.file(
+                app.env.deployed_commit.as_deref(),
+                Finding {
+                    match_id: match_id.to_string(),
+                    found_in: FoundIn::DuosRebuild,
+                    catalog_version: row.options.catalog_version.clone(),
+                    actions: log.len(),
+                    refused: log
+                        .get(at)
+                        .map(|refused| RefusedRow::of(refused.seq, &refused.action))
+                        .into_iter()
+                        .collect(),
+                },
+            );
         }
         let actions = log.len();
         let actor = create_duos_actor(

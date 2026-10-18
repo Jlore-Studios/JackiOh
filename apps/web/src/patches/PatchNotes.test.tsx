@@ -100,7 +100,7 @@ describe("R388 the Patch notes page", () => {
     expect(marked).toEqual(["4", "Your", "Your"]);
     const struck = Array.from(bolt.querySelectorAll("del.patch-cut")).map((element) => element.textContent);
     expect(struck).toEqual(["3", "this turn", "this turn"]);
-    expect(bolt).toHaveTextContent("(1) Cost → becomes (2) Cost, embiggen (4)");
+    expect(bolt).toHaveTextContent("(1) Cost → becomes (2) Cost, Embiggened (4)");
   });
 
   it("R507 lists a card changed only in data the face doesn't print by name, with what changed", async () => {

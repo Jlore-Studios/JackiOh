@@ -3,10 +3,10 @@
 //!   Base:    "Tribute 5, Indestructible, Can't attack\nActivate: Fill your board with random Jlockeed Units."
 //!   Radiant: "Tribute 5, Indestructible, Can't attack\nActivate 2: Fill your board with random Radiant Jlockeed Units."
 //!   Engine:  "Activate (R384; Activate 2 on the Radiant face). C+ #2 Groom Shroom's fill: each empty,
-//!            unlocked, unreserved unit zone, left to right (R64), gets a random non-token Jlockeed Unit of
-//!            every set (R380; this token is out, §5.1, R387), repeats allowed (R60), summoned, so with no
-//!            Cry (R1); the Radiant face's second activation in a turn fills what the first left empty
-//!            (R1261). Indestructible (R46; never Taunt, R347)."
+//!            unreserved unit zone, a Locked one included, left to right (R64, R1136000), gets a random
+//!            non-token Jlockeed Unit of every set (R380; this token is out, §5.1, R387), repeats allowed
+//!            (R60), summoned, so with no Cry (R1); the Radiant face's second activation in a turn fills
+//!            what the first left empty (R1261). Indestructible (R46; never Taunt, R347)."
 
 use jackioh_engine::prelude::*;
 
@@ -68,10 +68,10 @@ pub fn script() -> CardScripts {
 }
 
 // M 97.9 Jlockeed's Headquarters — SPEC §8.8 row 97.9, BUILD M10 row M 97.9: "Tribute 5, Indestructible,
-// Can't attack; Activate, once a turn: each empty, unlocked unit zone of yours, left to right, gets a
-// random non-token Jlockeed Unit (MD-F17, R1261), with no Cry; a full or Locked board summons nothing and
-// draws nothing; radiant 0/40 (0/50 before patch v0.3.10), Activate 2 (a second use fills what the
-// first left empty), and the Units are Radiant".
+// Can't attack; Activate, once a turn: each empty unit zone of yours, a Locked one included (R1136000),
+// left to right, gets a random non-token Jlockeed Unit (MD-F17, R1261), with no Cry; a full board
+// summons nothing and draws nothing; radiant 0/40 (0/50 before patch v0.3.10), Activate 2 (a second use
+// fills what the first left empty), and the Units are Radiant".
 //
 // The Jlockeed Units of the sets that ship are Jlockeed Shredder-10 (Core #13), Jlockeed's Lobbyist
 // (C+ #48), Jlockeed's J15 Fighter (C+ #51) and Tatches the Totem (M #87, every tribe), the Meditative
@@ -246,13 +246,13 @@ mod tests {
         }
 
         #[test]
-        fn r1261_r64_skips_a_locked_zone_and_a_reserved_one() {
+        fn r1136000_r1261_fills_a_locked_zone_and_skips_a_reserved_one() {
             let mut s = setup("hq-skip", false, &[]);
             lock_zone(s.state_mut(), slot(2));
             reserve_zone(s.state_mut(), slot(4));
             s.activate(ID, json!({}));
-            assert_eq!(summoned(&s).len(), 2);
-            assert!(s.unit(P1, 2).is_none());
+            assert_eq!(summoned(&s).len(), 3);
+            assert!(s.unit(P1, 2).is_some());
             assert!(s.unit(P1, 3).is_some());
             assert!(s.unit(P1, 4).is_none());
             assert!(s.unit(P1, 5).is_some());
@@ -273,15 +273,17 @@ mod tests {
         }
 
         #[test]
-        fn r1261_r129_a_board_of_locked_zones_summons_and_draws_nothing() {
+        fn r1136000_r1261_a_board_of_locked_zones_is_filled_and_stays_locked() {
             let mut s = setup("hq-locked", false, &[]);
             for lane in 2..=5 {
                 lock_zone(s.state_mut(), slot(lane));
             }
-            let cursor = s.state().rng_cursor;
             s.activate(ID, json!({}));
-            assert!(summoned(&s).is_empty());
-            assert_eq!(s.state().rng_cursor, cursor);
+            assert_eq!(summoned(&s).len(), 4);
+            for lane in 2..=5 {
+                assert!(s.unit(P1, lane).is_some(), "lane {lane} is filled");
+                assert!(is_locked(s.state(), slot(lane)), "lane {lane} stays Locked");
+            }
         }
 
         #[test]
@@ -307,7 +309,7 @@ mod tests {
         fn r1261_activate_2_fills_what_the_first_left_empty_with_radiant_units() {
             let mut s = setup("hq-radiant", true, &[]);
             s.expect_stats(ID, json!({ "attack": 0, "maxHealth": 40 }));
-            lock_zone(s.state_mut(), slot(4));
+            reserve_zone(s.state_mut(), slot(4));
             s.activate(ID, json!({}));
             let first = summoned(&s);
             assert_eq!(first.len(), 3);
@@ -317,7 +319,7 @@ mod tests {
                 assert!(JLOCKEED_UNITS.contains(&unit.def_id.as_str()));
             }
             assert!(s.unit(P1, 4).is_none());
-            unlock_zone(s.state_mut(), slot(4));
+            release_zone(s.state_mut(), slot(4));
             s.activate(ID, json!({}));
             let second = summoned(&s);
             assert_eq!(second.len(), 1);

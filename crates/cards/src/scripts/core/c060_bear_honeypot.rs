@@ -130,7 +130,7 @@ pub fn script() -> CardScripts {
 // completion before their action continues (§10.3); this one opens no prompt. Rulings proved here:
 // R17 (fires after the played card has resolved, the moment #41 Sheepish shares since R427), R56 (the
 // cost actually paid), R70 (a cast pays 0), R53 (forced attacks in full), R64 ("fill your board" is
-// every empty unlocked unit zone, left to right), R11 (a dead unit token ceases to exist), R430 (no
+// every empty unit zone, left to right, R1136000), R11 (a dead unit token ceases to exist), R430 (no
 // empty unit zone: the trap waits), §5.1 (a Trap is consumed when it fires), R662 (the yellow glow,
 // at the end of this file).
 #[cfg(test)]
@@ -606,6 +606,28 @@ mod tests {
                 units_of(&g, P1),
                 ["core-008", "core-t-rush", "core-t-rush", "core-t-rush", "core-t-rush"]
             );
+        }
+
+        #[test]
+        fn r1136000_r430_one_open_zone_sets_it_off_and_the_fill_takes_the_locked_ones_too() {
+            crate::register_all();
+            let mut g = scenario(json!({
+                "active": "p2",
+                "p1": { "backrow": [armed(true)] },
+                "p2": spread(spare(), json!({ "hand": ["core-006", "core-005"] })),
+            }));
+            let unit_zone = |lane| ZoneSlot { player: P1, row: Row::Units, lane };
+            for lane in 2..=5 {
+                lock_zone(g.state_mut(), unit_zone(lane));
+            }
+
+            g.play("core-006", json!({ "zone": 1 }));
+
+            assert_eq!(count_of(&g, "trapFired"), 1);
+            assert_eq!(units_of(&g, P1), vec!["core-t-rush"; 5]);
+            for lane in 2..=5 {
+                assert!(is_locked(g.state(), unit_zone(lane)), "lane {lane} stays Locked");
+            }
         }
 
         #[test]

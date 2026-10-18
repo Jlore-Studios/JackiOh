@@ -1,7 +1,8 @@
 //! C+ #2 Groom Shroom (SPEC §8.7 row 2, R405). (3) Trap, Felinor, Epic.
-//! Fires in C+ #1's window (an enemy Unit's declared attack on your hero) and fills every open unit zone
-//! of yours with a random non-token Felinor Unit of any set (R64, R380, R60), each summoned with no Cry
-//! (R1) and granted Taunt; Radiant, on their Radiant faces. The attack still hits your hero (R405).
+//! Fires in C+ #1's window (an enemy Unit's declared attack on your hero) and fills every empty,
+//! unreserved unit zone of yours, a Locked one included (R1136000), with a random non-token Felinor Unit
+//! of any set (R64, R380, R60), each summoned with no Cry (R1) and granted Taunt; Radiant, on their
+//! Radiant faces. The attack still hits your hero (R405).
 
 use jackioh_engine::prelude::*;
 
@@ -81,11 +82,12 @@ pub fn script() -> CardScripts {
 }
 
 // C+ #2 Groom Shroom — SPEC §8.7 row 2, BUILD M9 Classic+ row C+ 2: "Same window as C+ #1; fills
-// every empty, unlocked, unreserved unit zone of yours with a random non-token Felinor Unit of any set
-// (R64, R380; Felinor-tagged Units, never a Felinor Spell, R405; repeats allowed, R60), summoned with no
-// Cry (R1) and granted Taunt; the declared attack still hits your hero and is never moved to a new
-// Taunt, which arrived after §4.2 step 3 (R405); a full board summons nothing and draws no random
-// number (R129); trap consumed; hidden until it fires (R33); radiant the Felinors are Radiant".
+// every empty, unreserved unit zone of yours, a Locked one included (R1136000), with a random non-token
+// Felinor Unit of any set (R64, R380; Felinor-tagged Units, never a Felinor Spell, R405; repeats
+// allowed, R60), summoned with no Cry (R1) and granted Taunt; the declared attack still hits your hero
+// and is never moved to a new Taunt, which arrived after §4.2 step 3 (R405); a full board summons
+// nothing and draws no random number (R129); trap consumed; hidden until it fires (R33); radiant the
+// Felinors are Radiant".
 //
 // Groom Shroom sits face-down in p1's backrow lane 1; p2 is active and attacks with a 3/3 Tempo Timmy.
 // The two engine setups below (`lockZone`, `reserveZone`) put a Lock and a Reborn reservation on a
@@ -240,7 +242,7 @@ mod tests {
         }
 
         #[test]
-        fn r64_skips_a_locked_zone_and_a_zone_reserved_for_a_reborn_return() {
+        fn r1136000_r64_fills_a_locked_zone_and_skips_a_zone_reserved_for_a_reborn_return() {
             crate::register_all();
             let mut s = setup(json!({}), false, None);
             lock_zone(s.state_mut(), ZoneSlot { player: P1, row: Row::Units, lane: 2 });
@@ -249,8 +251,8 @@ mod tests {
             let attacker = s.unit(P2, 1).unwrap();
             s.attack(&attacker, "hero");
 
-            assert_eq!(summoned_ids(&s).len(), 3);
-            assert!(s.unit(P1, 2).is_none());
+            assert_eq!(summoned_ids(&s).len(), 4);
+            assert!(s.unit(P1, 2).is_some());
             assert!(s.unit(P1, 4).is_none());
         }
 

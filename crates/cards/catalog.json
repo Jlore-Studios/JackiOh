@@ -1475,11 +1475,11 @@
     "loc": 18,
     "base": {
       "keywords": [],
-      "text": "Aura: All Units have −{debuff}/−{debuff}.\nPaid (4): −{paidDebuff}/−{paidDebuff} instead."
+      "text": "Aura: All Units have −{debuff}/−{debuff}.\nEmbiggened (4): −{paidDebuff}/−{paidDebuff} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Enemy Units have −{debuff}/−{debuff}.\nPaid (4): −{paidDebuff}/−{paidDebuff} instead."
+      "text": "Aura: Enemy Units have −{debuff}/−{debuff}.\nEmbiggened (4): −{paidDebuff}/−{paidDebuff} instead."
     }
   },
   "core-047": {
@@ -1801,7 +1801,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Rush, Taunt, Lifesteal, Divine Shield\nPaid (3): Equip."
+      "text": "Rush, Taunt, Lifesteal, Divine Shield\nEmbiggened (3): Equip."
     },
     "radiant": {
       "attack": 6,
@@ -1823,7 +1823,7 @@
           "kind": "Reborn"
         }
       ],
-      "text": "Rush, Taunt, Lifesteal, Divine Shield, Reborn\nPaid (3): Equip."
+      "text": "Rush, Taunt, Lifesteal, Divine Shield, Reborn\nEmbiggened (3): Equip."
     }
   },
   "core-057": {
@@ -1927,11 +1927,11 @@
     "loc": 14,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Add a random card to your hand.\nPaid (4): It costs ({setCost})."
+      "text": "Start of turn: Add a random card to your hand.\nEmbiggened (4): It costs ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Add a random Radiant card to your hand.\nPaid (4): It costs ({setCost})."
+      "text": "Start of turn: Add a random Radiant card to your hand.\nEmbiggened (4): It costs ({setCost})."
     }
   },
   "core-060": {
@@ -2858,11 +2858,11 @@
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Your hero has Armor {armor}.\nPaid (4): Armor {paidArmor} instead."
+      "text": "Your hero has Armor {armor}.\nEmbiggened (4): Armor {paidArmor} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero has Armor {armor}.\nPaid (4): Armor {paidArmor} instead."
+      "text": "Your hero has Armor {armor}.\nEmbiggened (4): Armor {paidArmor} instead."
     }
   },
   "core-085": {
@@ -8714,11 +8714,11 @@
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Shuffle {count|Bone Storm|Bone Storms} into your deck.\nPaid (4): {paidCount} instead."
+      "text": "Shuffle {count|Bone Storm|Bone Storms} into your deck.\nEmbiggened (4): {paidCount} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Shuffle {count|Radiant Bone Storm|Radiant Bone Storms} into your deck.\nPaid (4): {paidCount} instead."
+      "text": "Shuffle {count|Radiant Bone Storm|Radiant Bone Storms} into your deck.\nEmbiggened (4): {paidCount} instead."
     }
   },
   "classicplus-036-1": {
@@ -11779,11 +11779,11 @@
     "loc": 37,
     "base": {
       "keywords": [],
-      "text": "{chance}% chance: Steal your opponent's hand.\nPaid (1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
+      "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "{chance}% chance: Steal your opponent's hand.\nPaid (1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
+      "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
     }
   },
   "meditative-022": {
@@ -13026,11 +13026,11 @@
     "loc": 31,
     "base": {
       "keywords": [],
-      "text": "Add a random KY card, a random CN card and a random Book to your hand.\nPaid (4): They cost ({setCost})."
+      "text": "Add a random KY card, a random CN card and a random Book to your hand.\nEmbiggened (4): They cost ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add a random Radiant KY card, a random Radiant CN card and a random Radiant Book to your hand.\nPaid (4): They cost ({setCost})."
+      "text": "Add a random Radiant KY card, a random Radiant CN card and a random Radiant Book to your hand.\nEmbiggened (4): They cost ({setCost})."
     }
   },
   "meditative-047": {
@@ -14451,11 +14451,11 @@
     "loc": 38,
     "base": {
       "keywords": [],
-      "text": "Shuffle a copy of each card in your hand, and of this, into your deck.\nPaid (2): Each copy has a {chance}% chance to become Radiant."
+      "text": "Shuffle a copy of each card in your hand, and of this, into your deck.\nEmbiggened (2): Each copy has a {chance}% chance to become Radiant."
     },
     "radiant": {
       "keywords": [],
-      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw}.\nPaid (2): Each copy has a {chance}% chance to become Radiant."
+      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw}.\nEmbiggened (2): Each copy has a {chance}% chance to become Radiant."
     }
   },
   "meditative-082": {
