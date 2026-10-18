@@ -13,6 +13,9 @@
 //! bare id as a target (R177) and a `stolen` event naming a card its viewer could read where it was
 //! taken (R466).
 //!
+//! I8 (#1192) is proved by handing the oracle `legal_actions` with one attack or one switch taken out,
+//! which `reduce` still accepts; the whole list gives nothing.
+//!
 //! Port of `packages/cards/test/invariants.test.ts` (SURFACE §4.1, §8).
 
 use jackioh_engine::testkit::*;
@@ -847,5 +850,78 @@ mod r97_r419_a_fused_token_rolled_back_to_itself_dies_in_the_open {
         );
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
         assert_eq!(monitor.hidden(g.state()), no_violations());
+    }
+}
+
+/// I8 (#1192): an attack or a switch `reduce` accepts that the list leaves out.
+mod i8_an_attack_or_a_switch_reduce_accepts_that_the_list_leaves_out {
+    use super::*;
+
+    fn board() -> (Scenario, CardInstance, CardInstance) {
+        let g = scenario(json!({
+            "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let unit = unit_at(&g, PlayerId::P1, 1, "p1 should hold a unit in lane 1");
+        let prey = unit_at(&g, PlayerId::P2, 1, "p2 should hold a unit in lane 1");
+        (g, unit, prey)
+    }
+
+    fn without(g: &Scenario, left_out: &ActionBody) -> Vec<ActionBody> {
+        let legal = legal_actions(g.state(), PlayerId::P1);
+        assert!(legal.contains(left_out), "the list should hold {left_out:?}");
+        legal.into_iter().filter(|body| body != left_out).collect()
+    }
+
+    #[test]
+    fn i8_is_clean_when_the_list_holds_every_attack_and_switch() {
+        let (g, _, _) = board();
+        let legal = legal_actions(g.state(), PlayerId::P1);
+        assert_eq!(
+            unlisted_accepted(g.state(), PlayerId::P1, &legal),
+            no_violations()
+        );
+        assert_eq!(
+            create_invariant_monitor(g.state()).unlisted(g.state()),
+            no_violations()
+        );
+    }
+
+    #[test]
+    fn i8_fires_on_a_switch_reduce_accepts_that_the_list_leaves_out() {
+        let (g, unit, _) = board();
+        let left_out = ActionBody::SwitchPosition {
+            instance_id: unit.id.clone(),
+        };
+        let found = unlisted_accepted(g.state(), PlayerId::P1, &without(&g, &left_out));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].starts_with("I8 unlisted switch accepted"),
+            "{}",
+            found[0]
+        );
+        assert!(found[0].contains(&unit.id), "{}", found[0]);
+        assert!(found[0].contains(VANILLA), "{}", found[0]);
+        assert!(found[0].contains("§4.1"), "{}", found[0]);
+    }
+
+    #[test]
+    fn i8_fires_on_an_attack_reduce_accepts_that_the_list_leaves_out() {
+        let (g, unit, prey) = board();
+        let left_out = ActionBody::Attack {
+            attacker_id: unit.id.clone(),
+            target_id: prey.id.clone(),
+        };
+        let found = unlisted_accepted(g.state(), PlayerId::P1, &without(&g, &left_out));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].starts_with("I8 unlisted attack accepted"),
+            "{}",
+            found[0]
+        );
+        assert!(found[0].contains(&unit.id), "{}", found[0]);
+        assert!(found[0].contains(&prey.id), "{}", found[0]);
+        assert!(found[0].contains(VANILLA), "{}", found[0]);
+        assert!(found[0].contains("§4.2"), "{}", found[0]);
     }
 }
