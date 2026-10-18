@@ -141,6 +141,9 @@ jobs:
     timeout-minutes: ${{ inputs.runner == 'ubuntu-latest' && 350 || 4320 }}
     strategy:
       fail-fast: false
+      # GitHub's free plan runs 20 hosted jobs at once for the whole organization: an export takes
+      # at most 12 of them, so CI and the bots' pull requests keep 8 while it plays.
+      max-parallel: 12
       matrix:
         range: ${{ fromJSON(needs.plan.outputs.shards) }}
     steps:

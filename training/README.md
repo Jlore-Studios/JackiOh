@@ -347,7 +347,9 @@ The learned evaluation (#466, `docs/learned-eval.md`) learns from self-play expo
 R1006003). An export is dispatched, never played on the training box, whose two vCPUs the lanes need:
 `gh workflow run selfplay.yml -f games=100000 -f seed=<base> [-f shards=20] [-f
 runner=jackioh-selfplay-local]` plays it in shards on GitHub's runners (free for this public
-repository, about 1,500 games an hour each) or on the local runner (`bot/machine/README.md`, The local
+repository, about 1,500 games an hour each, at most 12 at once so that CI keeps 8 of the
+organization's 20 hosted jobs: 100,000 games in 20 shards take two rounds, about seven hours) or on
+the local runner (`bot/machine/README.md`, The local
 runner), and keeps each shard's log file as an artifact for up to 90 days. Its last job runs
 `positions` over the whole export and writes the counts (games, positions, games that no longer
 replay) and the games an hour to the run's summary. The same base and game numbers always play the
