@@ -94,8 +94,12 @@ const WATCH_OPEN: &str = "pub const SHADOW_WATCH: &[(&str, &str)] = &[";
 /// The line that closes a table written over several lines.
 const TABLE_CLOSE: &str = "];";
 
-/// R732000: the shadow ban holds at most the Meditative set's non-token cards divided by this: half.
-const MEDITATIVE_BAN_DIVISOR: usize = 2;
+/// R732000, R1186000: the sets whose cards the shadow ban holds.
+const BAN_SETS: [SetName; 2] = [SetName::Meditative, SetName::MeditativePlus];
+
+/// R732000, R1186000: the shadow ban holds at most each of `BAN_SETS`' non-token cards divided by
+/// this: half.
+const BAN_DIVISOR: usize = 2;
 
 /// `cargo jackioh sweep …`.
 #[derive(clap::Args, Debug)]
@@ -626,12 +630,14 @@ struct Record {
     watch: Vec<(String, String)>,
 }
 
-/// The tables the reports of record (path and block, oldest first) dictate. `SHADOW_WATCH` is every
-/// report's watch rows, a card's later report winning, and a card a report bans leaves it (R600,
-/// R732000: the 2026-10-12 sweep covered the Meditative set alone, so it kept the 2026-10-07 sweep's rows
-/// for the earlier sets). `SHADOW_BAN` is the newest report's rows, less `unbanned`, the unban lane's
-/// removals (R732001). Refuses an unsorted list, a ban outside the Meditative set or past half of it
-/// (R732000) and an `unbanned` id the newest report does not ban.
+/// The tables the reports of record (path and block, oldest first) dictate. A card takes the row of
+/// the latest report that lists it: a ban takes it off `SHADOW_WATCH` and a watch row off
+/// `SHADOW_BAN` (R600). Each sweep of record covered a set alone, so each keeps the earlier reports'
+/// rows for the other sets: the 2026-10-12 sweep the Meditative set (R732000), #1186's the
+/// Meditative+ set (R1186000). `SHADOW_BAN` holds `BAN_SETS`' cards only, an older sweep's bans of
+/// the earlier sets left out (R732000), less `unbanned`, the unban lane's removals (R732001). Refuses
+/// an unsorted list, a ban in the newest report outside `BAN_SETS`, more than half of a set banned
+/// (R732000, R1186000) and an `unbanned` id no report of record bans.
 fn compose(reports: &[(String, Block)], unbanned: &[&str]) -> Result<Record> {
     let Some((newest_path, newest)) = reports.last() else {
         bail!("no report of record");
@@ -647,32 +653,38 @@ fn compose(reports: &[(String, Block)], unbanned: &[&str]) -> Result<Record> {
         )?;
     }
     ascending(unbanned.iter().copied(), "SHADOW_UNBANNED")?;
-    meditative_only(&newest.ban, newest_path)?;
-    if let Some(id) = unbanned
-        .iter()
-        .find(|id| !newest.ban.iter().any(|(ban, _)| ban == *id))
-    {
-        bail!(
-            "SHADOW_UNBANNED names {id}, which {newest_path} does not ban: a new sweep of record starts with it empty"
-        );
+    for (id, _) in &newest.ban {
+        in_ban_sets(id, newest_path)?;
     }
+    let mut ban: BTreeMap<String, String> = BTreeMap::new();
     let mut watch: BTreeMap<String, String> = BTreeMap::new();
     for (_, block) in reports {
-        for (id, _) in &block.ban {
+        for (id, why) in &block.ban {
             watch.remove(id);
+            ban.insert(id.clone(), why.clone());
         }
-        watch.extend(block.watch.iter().cloned());
+        for (id, why) in &block.watch {
+            ban.remove(id);
+            watch.insert(id.clone(), why.clone());
+        }
+    }
+    ban.retain(|id, _| {
+        jackioh_cards::CATALOG
+            .get(id.as_str())
+            .is_some_and(|def| BAN_SETS.contains(&def.set))
+    });
+    at_most_half(&ban)?;
+    if let Some(id) = unbanned.iter().find(|id| !ban.contains_key(**id)) {
+        bail!("SHADOW_UNBANNED names {id}, which no report of record bans");
     }
     Ok(Record {
         reports: reports
             .iter()
             .map(|(path, block)| (path.clone(), block.header.clone()))
             .collect(),
-        ban: newest
-            .ban
-            .iter()
+        ban: ban
+            .into_iter()
             .filter(|(id, _)| !unbanned.contains(&id.as_str()))
-            .cloned()
             .collect(),
         watch: watch.into_iter().collect(),
     })
@@ -687,30 +699,41 @@ fn ascending<'a>(ids: impl IntoIterator<Item = &'a str>, what: &str) -> Result<(
     }
 }
 
-/// R732000: every `ban` id is a Meditative card, and there are no more than half the set's non-token cards.
-fn meditative_only(ban: &[(String, String)], path: &str) -> Result<()> {
-    for (id, _) in ban {
-        match jackioh_cards::CATALOG.get(id.as_str()) {
-            Some(def) if def.set == SetName::Meditative => {}
-            other => bail!(
-                "{path} bans {id}, {}: the shadow ban holds Meditative cards only (R732000)",
-                other.map_or_else(
-                    || "no catalog card".to_string(),
-                    |def| format!("a {:?} card", def.set)
-                )
-            ),
-        }
+/// R732000, R1186000: a card `path` bans is one of `BAN_SETS`'.
+fn in_ban_sets(id: &str, path: &str) -> Result<()> {
+    match jackioh_cards::CATALOG.get(id) {
+        Some(def) if BAN_SETS.contains(&def.set) => Ok(()),
+        other => bail!(
+            "{path} bans {id}, {}: the shadow ban holds Meditative and Meditative+ cards only (R732000, R1186000)",
+            other.map_or_else(
+                || "no catalog card".to_string(),
+                |def| format!("a {:?} card", def.set)
+            )
+        ),
     }
-    let meditative = jackioh_cards::CATALOG
-        .values()
-        .filter(|def| def.set == SetName::Meditative && !def.token)
-        .count();
-    let most = meditative / MEDITATIVE_BAN_DIVISOR;
-    if ban.len() > most {
-        bail!(
-            "{path} bans {} cards, more than half of the {meditative} Meditative cards (R732000: at most {most})",
-            ban.len()
-        );
+}
+
+/// R732000, R1186000: `ban` holds no more than half of each of `BAN_SETS`' non-token cards.
+fn at_most_half(ban: &BTreeMap<String, String>) -> Result<()> {
+    for set in BAN_SETS {
+        let cards = jackioh_cards::CATALOG
+            .values()
+            .filter(|def| def.set == set && !def.token)
+            .count();
+        let banned = ban
+            .keys()
+            .filter(|id| {
+                jackioh_cards::CATALOG
+                    .get(id.as_str())
+                    .is_some_and(|def| def.set == set)
+            })
+            .count();
+        let most = cards / BAN_DIVISOR;
+        if banned > most {
+            bail!(
+                "the reports of record ban {banned} {set:?} cards, more than half of its {cards} (R732000, R1186000: at most {most})"
+            );
+        }
     }
     Ok(())
 }
@@ -1310,11 +1333,66 @@ mod tests {
         let error = compose_one(block_of(&meditative_ids(1, 52), &[]), &[]).unwrap_err();
         assert!(error.to_string().contains("more than half"), "{error}");
         assert!(compose_one(block_of(&meditative_ids(1, 51), &[]), &[]).is_ok());
-        // Only the newest report's bans are held to it: an older sweep of the earlier sets banned them.
+        // Only the newest report's bans are held to it: an older sweep of the earlier sets banned
+        // them, and they are left out of the table.
         let older = block_of(&["core-001".to_string()], &[]);
         let newest = block_of(&meditative_ids(1, 3), &[]);
         let both = [("a.md".to_string(), older), ("b.md".to_string(), newest)];
-        assert!(compose(&both, &[]).is_ok());
+        assert_eq!(
+            compose(&both, &[]).unwrap().ban,
+            block_of(&meditative_ids(1, 3), &[]).ban
+        );
+    }
+
+    /// The non-token Meditative+ ids, in catalog order.
+    fn meditative_plus_ids() -> Vec<String> {
+        jackioh_cards::CATALOG
+            .values()
+            .filter(|def| def.set == SetName::MeditativePlus && !def.token)
+            .map(|def| def.id.clone())
+            .collect()
+    }
+
+    #[test]
+    fn r1186000_write_holds_meditative_plus_to_half_of_its_own_set() {
+        jackioh_cards::register_all();
+        let ids = meditative_plus_ids();
+        let most = ids.len() / BAN_DIVISOR;
+        let mut over = ids[..=most].to_vec();
+        over.sort();
+        let error = compose_one(block_of(&over, &[]), &[]).unwrap_err();
+        assert!(error.to_string().contains("more than half"), "{error}");
+        assert!(error.to_string().contains("R1186000"), "{error}");
+        let mut half = ids[..most].to_vec();
+        half.sort();
+        assert!(compose_one(block_of(&half, &[]), &[]).is_ok());
+        // Each set is held to its own half: half of Meditative+ and half of Meditative together.
+        let both = [
+            ("a.md".to_string(), block_of(&meditative_ids(1, 51), &[])),
+            ("b.md".to_string(), block_of(&half, &[])),
+        ];
+        assert_eq!(compose(&both, &[]).unwrap().ban.len(), 51 + most);
+    }
+
+    #[test]
+    fn r1186000_a_meditative_plus_sweep_keeps_the_meditative_bans_and_a_later_watch_row_lifts_a_ban() {
+        jackioh_cards::register_all();
+        let meditative = block_of(&meditative_ids(11, 13), &["meditative-022"]);
+        let plus = meditative_plus_ids()[0].clone();
+        let newest = block_of(&[plus.clone()], &["meditative-012"]);
+        let reports = [("a.md".to_string(), meditative), ("b.md".to_string(), newest)];
+        let record = compose(&reports, &["meditative-013"]).unwrap();
+        assert_eq!(
+            record.ban.iter().map(|(id, _)| id.as_str()).collect::<Vec<_>>(),
+            ["meditative-011", plus.as_str()]
+        );
+        assert_eq!(
+            record.watch.iter().map(|(id, _)| id.as_str()).collect::<Vec<_>>(),
+            ["meditative-012", "meditative-022"]
+        );
+        // The unban lane's removals are checked against every report's bans, not the newest's alone.
+        let error = compose(&reports, &["meditative-014"]).unwrap_err();
+        assert!(error.to_string().contains("no report of record bans"), "{error}");
     }
 
     #[test]
