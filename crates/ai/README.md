@@ -144,6 +144,36 @@ deals a live game (R258), both seats AI on the spec's resources at `AI_BUDGET`, 
 record of source `dev` under the patch the run tests, id `dev:<patch>:<seed>` (`dev_record_id`).
 `cargo jackioh stats --out <file>` writes a run; `jackioh-server stats-import <file>` loads it.
 
+## The learned evaluation's features (#466, #1006)
+
+`src/features.rs` turns a position into the learned evaluation's inputs (`docs/learned-eval.md` D3,
+D5, D10). One function serves the replay pass that makes training rows (`cargo jackioh positions`)
+and, once a network ships, its inference in the search, so the two never read a position apart.
+
+```rust
+pub const FEATURES_VERSION: u32;
+pub fn features_of(state: &GameState, seat: PlayerId) -> Features;   // features(&redact(state, seat), seat)
+pub fn features(view: &GameState, seat: PlayerId) -> Features;       // view already redacted
+pub fn dense_names() -> Vec<String>;                                 // the dense layout, in order
+pub struct Features { pub dense: Vec<i32>, pub sparse: Vec<(String, i32)> }
+```
+
+- It reads only `redact` (R185, R1006000): two states that differ only in what the seat cannot see
+  give the same features. The projections that read card text (`unit_view`, `hero_armor_of`,
+  `face_threat`) run on the view less the backrow cards the seat cannot read, which are counted and
+  never read.
+- **dense**: integers, named by `dense_names`: the turn, who acts and whether the seat is p1; per
+  side, the seat's own first, its life (`effective_life`) and armor, mana, crystals and debt, its
+  hand, library, graveyard and backrow (and how much of the backrow the seat can read), its units in
+  aggregate (count, positions, attack, health, armor, damaged, Radiant), one count per keyword kind,
+  the face damage its board threatens and its Jade and extra turns; then the seat's hand by cost.
+- **sparse**: `(key, count)`, sorted, the key `<zone>:<side>:<card id>` for each card the seat can
+  name: `board` (both sides), `hand` (its own) and `backrow` (its own, and the enemy's face-up ones).
+  Ids stay strings, so a patch or a new card never moves an index; an id a network's weights do not
+  know is no input at all.
+- `FEATURES_VERSION` names the layout; any change bumps it, and a network's weights record the
+  version they were fitted on.
+
 ## Duos (§13.7)
 
 `src/duos.rs` plays a seat of a Duos game (`jackioh_engine::duos`): one AI plays both seats of team B,
@@ -162,7 +192,9 @@ pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins
 - `duos_passes` names the hand cards to pass now, best first: a card the seat cannot play this turn
   and its teammate can (a round seat that has not ended, can afford it and has a zone for it), when
   the seat can pay the pass; with `pass_cost` 0 also a card the teammate can afford next turn and the
-  seat cannot; never more than the passes left or the teammate's free hand slots.
+  seat cannot; never more than the passes left or the teammate's free hand slots. Immediate passes
+  rank by the teammate's best bounded follow-up (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays
+  on a fixed-seed probe), ties by cost then hand order; free-pass next-turn cards keep cost order.
 - It knows what its team knows and nothing more: its own duel through `decide`'s `redact` and
   `determinize` (R185), and its teammate's own state, which a team shares (§13.6). An opponent's
   hidden card never changes a decision.

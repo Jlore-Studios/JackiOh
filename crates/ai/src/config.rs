@@ -52,6 +52,16 @@ pub const DUOS_GATE_GAMES_SMOKE: usize = 20;
 /// wins count; a draw is reported beside them.
 pub const DUOS_GATE_WIN_FLOOR: f64 = 0.8;
 
+/// R1127000: the seed of the throwaway determinization `duos_passes` scores a teammate's
+/// follow-ups on. Fixed (never the caller's stream), so the same state reproduces the pass order.
+pub const DUOS_PASS_PROBE_SEED: &str = "ai:duos-pass";
+
+/// R1127000: the most of the teammate's legal `Play` follow-ups one passed card is scored on, the
+/// card's own plays first, then the rest in `legal_actions` order. Bounds scoring at one hand of
+/// cards times this many single `reduce` calls per `duos_passes` call, with no search and no reply
+/// simulation.
+pub const DUOS_PASS_MAX_FOLLOWUPS: usize = 8;
+
 /// `AI_SEARCH`'s shape.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -263,6 +273,11 @@ pub struct EvalWeights {
     pub hand_cost_cap: f64,
     /// Added per own Radiant hand card.
     pub radiant_in_hand: f64,
+    /// #1143: when both faces of an own hand card are Units, the share that counts of what the face
+    /// it will enter with (its Radiant face when it is Radiant, its buffs and tuning) is worth over its
+    /// printed base face, by the stat and keyword weights above and none of the field's layers. On top
+    /// of `radiant_in_hand`, which prices the Radiant text.
+    pub radiant_face_share: f64,
     /// Per Plague Counter on a unit (§10.1, R454: Fed Fauci's stored mana engine, a Corpse
     /// Plantation's unspent price), on top of the body's worth and outside its Brittle share.
     pub plague_counter: f64,
@@ -366,6 +381,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     hand_per_cost: 0.3,
     hand_cost_cap: 6.0,
     radiant_in_hand: 0.5,
+    // #1143: an untuned start for the training lanes, as `animated_share` and `marked_share` are.
+    radiant_face_share: 0.5,
     plague_counter: 0.5,
     grade_counter: 1.5,
     hand_cost_delta: 0.5,
@@ -447,6 +464,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     hand_per_cost: 0.3,
     hand_cost_cap: 6.0,
     radiant_in_hand: 0.5,
+    // The baseline is frozen: it read no hand card's face when the gates were fixed, as it did.
+    radiant_face_share: 0.0,
     // The counter terms came after the gates were fixed, so the frozen baseline gives each nothing,
     // as it did.
     plague_counter: 0.0,
