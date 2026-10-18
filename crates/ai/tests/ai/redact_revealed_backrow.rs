@@ -9,7 +9,7 @@ use jackioh_engine::testkit::*;
 
 use super::support::{AI, HUMAN, card_by_id, register_cards};
 
-/// C #88 Siphon Squad, (2) Field Trap: "Start of Turn: Reveal."
+/// C #88 Siphon Squad, (3) Field Trap: "Start of Turn: Reveal."
 const SIPHON: &str = "classic-088";
 
 /// `determinize` with TS's default options (`{}`).

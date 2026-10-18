@@ -221,9 +221,9 @@ mod r1240_meditative_95s_table {
             labels_of(CHAOS_MED_EFFECTS),
             vec![
                 "Fuse your hand into one card and add 2 copies of it to your hand, all three of which cost (0)",
-                "Add 3 random CN cards to your hand, which cost (0)",
+                "Add 2 random CN cards to your hand, which cost (0)",
                 "Add 2 random Prime cards to your hand, which cost (0)",
-                "Your hero gains 8 Armor and you heal it 8",
+                "Your hero gains 6 Armor and you heal it 6",
                 "Summon a Jade Beauty",
                 "Summon 3 random Acclaimed cards",
                 "Bounce every enemy permanent, then Nerf each card bounced",

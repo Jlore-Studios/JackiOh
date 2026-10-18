@@ -1,8 +1,8 @@
 //! C #12 Book of Blood (SPEC §8.6 row 12). (1) Spell, Book, Epic.
-//!   Base:    "Lifesteal\nDeal {damage} damage to a Unit." — damage 5
-//!   Radiant: "Lifesteal\nDeal {damage} damage to a Unit." — damage 10
+//!   Base:    "Lifesteal\nDeal {damage} damage to a Unit." — damage 4
+//!   Radiant: "Lifesteal\nDeal {damage} damage to a Unit." — damage 8
 //!   Engine:  "A Unit target, either side; the effect states its own Lifesteal (R85), so your hero
-//!            heals the amount dealt. Tunes: damage 5 ↑."
+//!            heals the amount dealt. Tunes: damage 4 ↑."
 //!
 //! "a Unit" narrows §8's "target" to units, on either side, so no hero is offered (R90).
 //!
@@ -34,14 +34,14 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // Same script: `param` reads the Radiant face's 10 off the running face.
+    // Same script: `param` reads the Radiant face's 8 off the running face.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
 // C #12 Book of Blood — SPEC §8.6 row 12, BUILD M9 Classic row C 12: "Targets a Unit only, either
-// side (no hero offered); one hit of 5; its own Lifesteal heals your hero the amount dealt (R85), so
-// Armor lowers the heal and a Divine Shield leaves it at 0 (R63); radiant 10; its tuned number
+// side (no hero offered); one hit of 4; its own Lifesteal heals your hero the amount dealt (R85), so
+// Armor lowers the heal and a Divine Shield leaves it at 0 (R63); radiant 8; its tuned number
 // (damage) reads through `param()` (R386)".
 #[cfg(test)]
 mod tests {
@@ -95,16 +95,16 @@ mod tests {
         use super::*;
 
         #[test]
-        fn deals_5_to_an_enemy_unit_in_one_hit_and_r85_its_lifesteal_heals_your_hero_5() {
+        fn deals_4_to_an_enemy_unit_in_one_hit_and_r85_its_lifesteal_heals_your_hero_4() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
 
             let targets = at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
-            s.expect_stats(MENACE, json!({ "health": 4 }));
-            assert_eq!(hits(&s), vec![5]);
-            s.expect_health(P1, 25);
-            assert_eq!(hero_heals(&s, P1), vec![5]);
+            s.expect_stats(MENACE, json!({ "health": 5 }));
+            assert_eq!(hits(&s), vec![4]);
+            s.expect_health(P1, 24);
+            assert_eq!(hero_heals(&s, P1), vec![4]);
         }
 
         #[test]
@@ -114,8 +114,8 @@ mod tests {
             let targets = at(&s, P1, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
-            s.expect_stats(MENACE, json!({ "health": 4 }));
-            s.expect_health(P1, 25);
+            s.expect_stats(MENACE, json!({ "health": 5 }));
+            s.expect_health(P1, 24);
         }
 
         #[test]
@@ -137,7 +137,7 @@ mod tests {
         }
 
         #[test]
-        fn r85_armor_lowers_the_heal_a_unit_in_defense_position_armor_1_takes_4_and_you_heal_4() {
+        fn r85_armor_lowers_the_heal_a_unit_in_defense_position_armor_1_takes_3_and_you_heal_3() {
             let mut s = scenario(json!({
                 "p1": { "hand": [BOOK, FILLER], "health": 20 },
                 "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "position": "DEF" }] },
@@ -146,8 +146,8 @@ mod tests {
             let targets = at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
-            s.expect_stats(MENACE, json!({ "health": 5 }));
-            s.expect_health(P1, 24);
+            s.expect_stats(MENACE, json!({ "health": 6 }));
+            s.expect_health(P1, 23);
         }
 
         #[test]
@@ -163,16 +163,16 @@ mod tests {
         }
 
         #[test]
-        fn sec4_4_step_5_r85_the_heal_is_the_amount_dealt_which_is_not_capped_at_the_unit_s_health_5_on_a_7_1_heals_5() {
+        fn sec4_4_step_5_r85_the_heal_is_the_amount_dealt_which_is_not_capped_at_the_unit_s_health_4_on_a_7_1_heals_4() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [POINTMASTER] } }));
 
             let targets = at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_in_zone(POINTMASTER, "graveyard");
-            assert_eq!(hits(&s), vec![5]);
-            assert_eq!(hero_heals(&s, P1), vec![5]);
-            s.expect_health(P1, 25);
+            assert_eq!(hits(&s), vec![4]);
+            assert_eq!(hero_heals(&s, P1), vec![4]);
+            s.expect_health(P1, 24);
         }
 
         #[test]
@@ -189,18 +189,18 @@ mod tests {
         }
 
         #[test]
-        fn r386_an_upgrade_makes_it_deal_and_heal_6_a_degrade_4() {
+        fn r386_an_upgrade_makes_it_deal_and_heal_5_a_degrade_3() {
             let mut up = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
             step_param(up.card_mut(BOOK), "damage", 1);
             let targets = at(&up, P2, 1);
             up.play(BOOK, json!({ "targets": targets }));
-            up.expect_stats(MENACE, json!({ "health": 3 })).expect_health(P1, 26);
+            up.expect_stats(MENACE, json!({ "health": 4 })).expect_health(P1, 25);
 
             let mut down = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
             step_param(down.card_mut(BOOK), "damage", -1);
             let targets = at(&down, P2, 1);
             down.play(BOOK, json!({ "targets": targets }));
-            down.expect_stats(MENACE, json!({ "health": 5 })).expect_health(P1, 24);
+            down.expect_stats(MENACE, json!({ "health": 6 })).expect_health(P1, 23);
         }
     }
 
@@ -208,7 +208,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn deals_10_in_one_hit_and_heals_your_hero_10() {
+        fn deals_8_in_one_hit_and_heals_your_hero_8() {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": BOOK, "radiant": true }, FILLER], "health": 20 },
                 "p2": { "hand": [FILLER], "field": [{ "def": TEMPO, "radiant": true, "statsOverride": { "attack": 18, "health": 18 } }] },
@@ -217,9 +217,9 @@ mod tests {
             let targets = at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
-            s.expect_stats(TEMPO, json!({ "health": 8, "maxHealth": 18 }));
-            assert_eq!(hits(&s), vec![10]);
-            s.expect_health(P1, 30);
+            s.expect_stats(TEMPO, json!({ "health": 10, "maxHealth": 18 }));
+            assert_eq!(hits(&s), vec![8]);
+            s.expect_health(P1, 28);
         }
 
         #[test]
@@ -236,7 +236,7 @@ mod tests {
         }
 
         #[test]
-        fn r386_an_upgrade_steps_the_radiant_10_to_11() {
+        fn r386_an_upgrade_steps_the_radiant_8_to_9() {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": BOOK, "radiant": true }, FILLER], "health": 10 },
                 "p2": { "hand": [FILLER], "field": [{ "def": TEMPO, "radiant": true, "statsOverride": { "attack": 18, "health": 18 } }] },
@@ -246,7 +246,7 @@ mod tests {
             let targets = at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
-            s.expect_stats(TEMPO, json!({ "health": 7 })).expect_health(P1, 21);
+            s.expect_stats(TEMPO, json!({ "health": 9 })).expect_health(P1, 19);
         }
     }
 }

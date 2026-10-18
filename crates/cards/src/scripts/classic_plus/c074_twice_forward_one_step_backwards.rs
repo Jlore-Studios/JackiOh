@@ -71,7 +71,7 @@ mod tests {
     const BEAR: &str = "core-060"; // (1) Trap
     const SHREDDER: &str = "core-013"; // (3) Unit: End of turn: deal 2 damage to each enemy.
     const FELINORS: &str = "core-012"; // (2) Unit: Cry: Summon a copy of this.
-    const TIGER_DOJO: &str = "core-014"; // (4) Field Spell: Aura: your Units have +4 attack, Rush and First Strike.
+    const TIGER_DOJO: &str = "core-014"; // (4) Field Spell: Aura: your Units have +3 attack, Rush and First Strike.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
     const HINDER: &str = "core-021"; // (0) Spell, cast on draw
     const TIMMY: &str = "core-011"; // (1) Unit
@@ -433,7 +433,7 @@ mod tests {
             }
 
             #[test]
-            fn r102_a_fused_aura_covers_your_side_a_fused_tiger_dojo_gives_your_units_plus_4_attack() {
+            fn r102_a_fused_aura_covers_your_side_a_fused_tiger_dojo_gives_your_units_plus_3_attack() {
                 let mut s = set_then_their_turn(
                     false,
                     json!({ "field": [TIMMY] }),
@@ -443,7 +443,7 @@ mod tests {
                 let before = s.stats(id_or_empty(s.unit(P1, 1)).as_str()).attack;
                 s.play(RAPID, json!({})).play(TIGER_DOJO, json!({ "zone": 1 }));
                 assert_eq!(s.backrow(P2, 1).map(|card| card.def_id), Some(TIGER_DOJO.to_string()));
-                assert_eq!(s.stats(id_or_empty(s.unit(P1, 1)).as_str()).attack, before + 4);
+                assert_eq!(s.stats(id_or_empty(s.unit(P1, 1)).as_str()).attack, before + 3);
             }
 
             #[test]
