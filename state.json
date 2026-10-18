@@ -4321,6 +4321,17 @@
       "taken_asks": []
     },
     "1225": {
+      "asks": [
+        "c:6251103608"
+      ],
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-10-18T14:31:24Z",
+      "requested_by": "MaxGoetzmann",
+      "stop_requested": false,
       "suggestion": true
     },
     "1226": {
