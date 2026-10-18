@@ -336,9 +336,9 @@ mod r1176000_r767000_a_game_from_before_the_rule {
 
     /// A game from a deck of one translator and the vanilla fixtures against the vanilla fixtures,
     /// each seat taking its first legal play, then its first attack, then the end of its turn, until a
-    /// card in Chinese has been played (`None` if the game ends first): its state, its log and its
-    /// decks.
-    fn played(seed: &str) -> Option<(GameState, Vec<Action>, (Vec<String>, Vec<String>))> {
+    /// card in Chinese has been played (`None` if the game ends first): its state, and its seed, decks
+    /// and log as a replay's input.
+    fn played(seed: &str) -> Option<(GameState, ReplayInput)> {
         let mut mine = vec![translator.id.clone()];
         mine.extend(vanilla_deck(DECK_SIZE - 1, 1));
         let decks = (mine, vanilla_deck(DECK_SIZE, 21));
@@ -368,14 +368,19 @@ mod r1176000_r767000_a_game_from_before_the_rule {
             log.push(action);
             state = result.state;
         }
-        Some((state, log, decks))
+        let input = ReplayInput {
+            seed: seed.to_string(),
+            decks,
+            log,
+            ..Default::default()
+        };
+        Some((state, input))
     }
 
     #[test]
     fn r1176000_r767000_a_fold_that_misses_its_hash_is_refused_not_shown() {
-        let (seed, (live, log, decks)) = (0..jackioh_engine::config::SEED_SEARCH_BOUND)
-            .map(|n| format!("cn-replay-{n}"))
-            .find_map(|seed| played(&seed).map(|game| (seed, game)))
+        let (live, input) = (0..jackioh_engine::config::SEED_SEARCH_BOUND)
+            .find_map(|n| played(&format!("cn-replay-{n}")))
             .expect("a game in which a Chinese card is played");
         // The same game as a build before the rule recorded it: the one thing that differs is the CN
         // the translated plays counted, since nothing else in these decks reads a tag.
@@ -388,12 +393,6 @@ mod r1176000_r767000_a_game_from_before_the_rule {
         let recorded_before = hash_state(&before);
         assert_ne!(recorded_before, hash_state(&live));
 
-        let input = ReplayInput {
-            seed,
-            decks,
-            log,
-            ..Default::default()
-        };
         let record = |hash: &str| ReplayRecord {
             catalog_version: BUILD.to_string(),
             final_hash: hash.to_string(),
