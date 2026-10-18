@@ -48,7 +48,7 @@ const EVER_GROWING_TREE: &str = "meditative-075";
 const LIVING_MANA_POTION: &str = "meditativeplus-011";
 
 /// Every card or token whose base or Radiant text has an Activate ability, each with a case below.
-const ACTIVATE_CARDS: [&str; 27] = [
+const ACTIVATE_CARDS: [&str; 28] = [
     HEROIC_POWER,
     INFINISCEPTER,
     NOSE_HUNTER,
