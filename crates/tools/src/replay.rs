@@ -326,6 +326,7 @@ mod tests {
     /// `COOP_GAME_ACTIONS` actions, the seat and the action drawn from the seed's own stream among what
     /// may be taken (never a concede or an emote, as `duos_fuzz`'s policy). Its `{options, log}` and live hash.
     fn coop_game(seed: u32, shipped: Option<&'static ShippedCatalog>) -> (Value, String) {
+        jackioh_cards::register_all();
         with_shipped(shipped, || {
             let options = DuosCreateOptions {
                 seed: format!("replay-coop-{seed}"),
