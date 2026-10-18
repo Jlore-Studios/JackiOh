@@ -95,6 +95,8 @@ mod tests {
     const TOKEN_MAN: &str = "core-015";
     /// A (1) 4/4 with no text.
     const FILLER: &str = "core-008";
+    /// (2) Field Spell: after you play a card, shuffle 3 copies of it into your library.
+    const CLONE: &str = "core-033";
 
     fn game(seed: &str, p1: Value, p2: Value) -> Scenario {
         let mut sides = json!({
@@ -314,5 +316,31 @@ mod tests {
         let mut s = game("m+017-radiant-played", radiant, json!({}));
         s.play(ID, json!({ "targets": hero(P2) }));
         assert_eq!(health(&s, P2), 25);
+    }
+
+    /// R1216000: answers Unstable Clone Machine keeps manufacturing end at the cap instead of
+    /// settling forever. P2's spell calls P2's Dogpile (an opponent's spell would call nothing);
+    /// every answered cast shuffles 3 copies of itself back into the library, so each answer mints
+    /// its successor; the armored hero survives them all, and the 201st resolution answers nothing.
+    #[test]
+    fn r1216000_clone_machine_answers_end_at_the_cap() {
+        let mut s = game(
+            "m+017-cap",
+            json!({ "hand": [FILLER, FILLER], "armor": 1000 }),
+            json!({
+                "hand": [TRUE_STRIKE, ID, FILLER],
+                "library": [ID, FILLER, FILLER],
+                "field": [CLONE],
+            }),
+        );
+        s.end_turn(); // p2 to move.
+        s.play(TRUE_STRIKE, json!({ "targets": hero(P1) }));
+        assert_eq!(
+            s.state().answers_named,
+            Some(jackioh_engine::SPELL_ANSWER_CAP)
+        );
+        // The game plays on: the chain ended, nothing is owed, and the turn can pass.
+        assert!(s.state().result.is_none());
+        s.end_turn();
     }
 }

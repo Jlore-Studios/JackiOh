@@ -1185,6 +1185,11 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub cast_chain: Option<i32>,
+    /// R1216000: how many spell answers (§10.5 step 7, R1180005) this game has named. Monotonic and
+    /// absent until the first answer, so a game that names none hashes as before (D9).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub answers_named: Option<i32>,
     /// R174: the field's departures, counted, and each card's latest (`stays.rs`). An effect aimed at a
     /// card on the field is aimed at that stay, and a sequence a prompt splits resumes in a later
     /// action whose event list does not hold what happened before the pause, so "has this card left
@@ -2028,6 +2033,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         next_seq: 1,
         applied: Vec::new(),
         cast_chain: None,
+        answers_named: None,
         field_exits: None,
         homes: None,
         casts_resolving: None,

@@ -129,6 +129,9 @@ pub const TIMEOUT_ANSWER_CAP: usize = 500;
 pub const CALL_TO_CHAOS_CHAIN_CAP: i32 = 20;
 /// R58: cast-on-draw cards one draw may cast before the next one goes to hand uncast.
 pub const CAST_ON_DRAW_CHAIN_CAP: i32 = 20;
+/// R1216000: spell answers (§10.5 step 7, R1180005) one game may name before a resolution answers
+/// nothing, so a chain the game's own plays keep feeding ends instead of settling forever.
+pub const SPELL_ANSWER_CAP: i32 = 200;
 
 /// `{ base, radiant }`: a number by the face that prints it.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
