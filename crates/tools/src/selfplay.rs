@@ -11,7 +11,8 @@
 //! played and written in chunks, so a long export keeps what it has played; each chunk, and any game
 //! slower than a minute, is named on stderr. A turn that takes more than `SELFPLAY_TURN_ACTIONS`
 //! actions (an endless combo) ends its game without a result (R1006005), and so does a decision
-//! whose search ran a board to one of the engine's settle caps (§10.3, R1006007).
+//! whose search runs a board to one of the engine's settle caps, at the cap's first panic (§10.3,
+//! R1006007).
 //!
 //! A base that names a training gate's hold-out deals (`promote::is_gate_seed_base`, R850001) or
 //! the improve lane's dev set (`improve-dev`, the screens' deals) is refused, so no screen ever plays
@@ -312,27 +313,30 @@ mod tests {
         );
     }
 
-    /// R1006007: a settle cap's panic is counted on the thread that raised it, caught or not, and no
-    /// other panic is.
+    /// R1006007: watched work gives its value, past any panic it catches that is not a settle cap's,
+    /// and its watcher stops waiting at a cap's first panic, caught, while the work would run on.
     #[test]
-    fn r1006007_a_settle_cap_panic_is_counted_on_its_own_thread() {
-        use crate::arena::{count_unsettled_panics, unsettled_panics};
+    fn r1006007_the_watcher_stops_waiting_at_a_settle_caps_first_panic() {
+        use crate::arena::watch_unsettled;
         use std::panic::catch_unwind;
-        count_unsettled_panics();
-        let before = unsettled_panics();
-        assert!(catch_unwind(|| panic!("the resolution loop did not settle in 3 passes (§10.3)")).is_err());
-        assert_eq!(unsettled_panics(), before + 1);
-        assert!(catch_unwind(|| panic!("an endTurn's opponent draw threw")).is_err());
-        assert_eq!(unsettled_panics(), before + 1, "another panic is not counted");
-        let other = std::thread::spawn(|| {
-            let _ = catch_unwind(|| panic!("the board did not settle in 3 passes"));
-            unsettled_panics()
+        assert_eq!(watch_unsettled(|| 7), Some(7));
+        assert_eq!(
+            watch_unsettled(|| catch_unwind(|| panic!("an endTurn's opponent draw threw")).is_err()),
+            Some(true),
+            "another panic is the work's own"
+        );
+        let (release, wait) = std::sync::mpsc::channel::<()>();
+        let watched = watch_unsettled(move || {
+            let _ = catch_unwind(|| panic!("the resolution loop did not settle in 3 passes (§10.3)"));
+            // The search would go on and reach the loop again; this work waits for the test instead.
+            let _ = wait.recv();
+            7
         });
-        assert_eq!(other.join().unwrap(), 1, "the other thread counts its own");
-        assert_eq!(unsettled_panics(), before + 1, "and not this thread's");
+        assert_eq!(watched, None);
+        drop(release);
     }
 
-    /// R1006007: each of the engine's settle caps panics with the words the hook counts.
+    /// R1006007: each of the engine's settle caps panics with the words the hook listens for.
     #[test]
     fn r1006007_every_settle_cap_panics_with_the_counted_words() {
         let sources = [
