@@ -2,10 +2,10 @@
 //!
 //!   1. ai_to_act / redact — the only two reads of the true state (R185).
 //!   2. an unanswered draw offer is declined at once (R188).
-//!   3. the mulligan keeps the cheap cards.
-//!   3b. a question of a sequence (Meditative+ #20 KY's Competition) is answered at once with the
-//!      option its statement works out to (R1184002): no search, so thirty questions cost what one
-//!      redaction does, and never Stop, since a miss costs nothing a Stop keeps.
+//!   3. the mulligan keeps the cheap cards; a question of a sequence (Meditative+ #20 KY's
+//!      Competition) is answered at once with the option its statement works out to (R1184002): no
+//!      search, so thirty questions cost what one redaction does, and never Stop, since a miss costs
+//!      nothing a Stop keeps.
 //!   4. a single candidate is played with no search: listed on a throwaway determinization, since
 //!      the seat's own legal actions never depend on the hidden cards, so `options.rng` is untouched.
 //!   5. the exact lethal solver, verified on every determinization (a style may pass over it, and
@@ -79,7 +79,7 @@ fn fallback_action(candidates: &[ActionBody]) -> ActionBody {
         .unwrap_or(ActionBody::EndTurn)
 }
 
-/// Step 3b, R1184002: the answer to a question of a sequence open for `seat` (Meditative+ #20 KY's
+/// Step 3, R1184002: the answer to a question of a sequence open for `seat` (Meditative+ #20 KY's
 /// Competition): the option whose words are what the statement works out to (`worked_answer`), read
 /// off the redacted prompt, so the key is never read (R465) — a player with a pencil answers so. Its
 /// redacted copy judges no answer right, so a search would score the four answers and Stop alike and
@@ -300,7 +300,7 @@ fn plan(
         return Plan::Immediate(ActionBody::Mulligan { keep }, DecisionReason::Mulligan);
     }
 
-    // 3b. R1184002: a question of a sequence, worked out from its statement, at once.
+    // 3, R1184002: a question of a sequence, worked out from its statement, at once.
     if let Some(answer) = worked_answer_action(&public, seat) {
         return Plan::Immediate(answer, DecisionReason::Prompt);
     }

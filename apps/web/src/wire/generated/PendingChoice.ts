@@ -10,4 +10,10 @@ export type PendingChoice = { id: string, playerId: PlayerId, kind: PromptKind, 
  * #44's "a total cost of (5) or less"), or a `market` prompt's yuan left (R1000). Absent on every
  * other prompt, so a state without one hashes as it did before the field existed.
  */
-budget?: number, resume: Resume, };
+budget?: number, 
+/**
+ * R1184000: an `answer` prompt that is one question of a sequence (Meditative+ #20 KY's
+ * Competition) carries the right answers so far, which its chooser sees, and offers Stop after
+ * its answers (`prompts::ANSWER_STOP_KEY`). Absent on every other prompt (D14).
+ */
+streak?: number, resume: Resume, };

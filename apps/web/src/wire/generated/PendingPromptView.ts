@@ -15,4 +15,9 @@ forYou: true, choiceId: string, kind: PromptKind, options: Array<PendingOption>,
  * (Classic #44's "total cost of (5) or less") — or a `market` prompt's yuan left (R1000). Absent
  * on every other prompt.
  */
-budget?: number, };
+budget?: number, 
+/**
+ * R1184000: a sequence question's right answers so far (Meditative+ #20 KY's Competition), its
+ * chooser's to see; the prompt then offers Stop after its answers. Absent on every other prompt.
+ */
+streak?: number, };
