@@ -1201,6 +1201,21 @@ fn modifier_views(state: &GameState, player: PlayerId) -> Vec<ModifierView> {
             label: format!("Extra turns owed: {owed}"),
         });
     }
+    // R1181000: an effect made "in N turns" is a badge on its owner's side while it waits (R169), since
+    // the card that made it is not in play to carry a mark (R437).
+    for entry in state.delayed.iter().filter(|entry| entry.owner == player) {
+        if let (Some(due), Some(label)) = (entry.due_own_turn, &entry.label) {
+            let left = due - state.players[entry.at.player].turns_started;
+            views.push(ModifierView {
+                id: entry.id.clone(),
+                label: match left {
+                    ..=0 => format!("{label} now"),
+                    1 => format!("{label} in 1 turn"),
+                    _ => format!("{label} in {left} turns"),
+                },
+            });
+        }
+    }
     views
 }
 

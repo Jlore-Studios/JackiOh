@@ -670,6 +670,14 @@ pub struct StaticFlags {
     /// Spell on its `cardResolved` (`answer`), which the card's hand and deck triggers read.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub answers_targeted_spells: Option<bool>,
+    // ---- Meditative+ (issue #1181) ----
+    /// R1181002 (Meditative+ #22 Mountaintop Garden): while this card acts on the field, every embiggen
+    /// card of both players (R1178001) plays its Embiggened version at its normal price, and its dearer
+    /// price, the normal price plus this premium, plays it Radiant and Embiggened; a Radiant card has its
+    /// normal price only (`mana::garden_premium`). The premium is the card's declared number `premium`
+    /// where it declares it, else this; two Gardens apply the least.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub embiggen_garden: Option<i32>,
 }
 
 /// R1180000 (Meditative+ #9 Magic Amplifier): the Spell Damage an aura gives — `amount` to the

@@ -35,7 +35,7 @@ use crate::prompts::{RESUME_HOOK, SELF_KEY, resume_self};
 use crate::resolve::{HookOptions, make_context};
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, DelayedAt, DelayedEffect, Resume, find_instance, is_turn_of};
-use crate::wire::{CardMark, Phase, PlayerId, Row, ZoneName, opponent_of};
+use crate::wire::{CardMark, GameEvent, Phase, PlayerId, Row, ZoneName, opponent_of};
 use crate::work::RUN_MARKS_KEY;
 use crate::zones::{card_at, slots_of, standing_units_of};
 
@@ -135,6 +135,16 @@ pub struct DelayArgs {
     /// `HAND_WATCH_KEY`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hand_watch: Option<Vec<String>>,
+    /// R1181000 (Meditative+ #4 Supply Drop): "in N turns" — the start (or end) of `at.player`'s Nth turn
+    /// from now, counted in that player's own turns started (an extra turn counts, R846), so one made on
+    /// the other player's turn counts from their next. The boundary of the turn it is made on passes it
+    /// by, as `next` does, and R241 does not drop an end-of-turn one made on the other player's turn.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub turns: Option<i32>,
+    /// R1181000, R169: with `turns`, the caption of the countdown badge on the controller's side, shown
+    /// in both views while the effect waits (`"Supply Drop: 4 damage to each enemy in 2 turns"`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
 }
 
 /// §6.2's "at the start of your next turn" and "end of turn" as one verb (#39 Recycling Initiative,
@@ -161,7 +171,7 @@ pub fn delay(args: DelayArgs) -> Effect {
         // (R70) — has no end of its controller's turn to wait for, and waiting for the next one would
         // run it at the end of a turn the card was never played on, as R155 keeps a return Spell cast
         // then in the graveyard: it is not scheduled at all.
-        if args.next != Some(true) && ends_other_players_turn(ctx, &args.at) {
+        if args.next != Some(true) && args.turns.is_none() && ends_other_players_turn(ctx, &args.at) {
             return;
         }
         // R1140: a hand watch is aimed at cards in a hand now; with none of them there, nothing waits.
@@ -186,6 +196,10 @@ pub fn delay(args: DelayArgs) -> Effect {
             phase: args.at.phase,
             player: delay_player(ctx, &args.at),
         };
+        // R1181000: the count of `at.player`'s turns started at which it comes due.
+        let due_own_turn = args
+            .turns
+            .map(|turns| ctx.sink.state.players[at.player].turns_started + turns);
         let not_before = if args.next == Some(true) {
             Some(next_turn_mark(ctx))
         } else {
@@ -193,10 +207,22 @@ pub fn delay(args: DelayArgs) -> Effect {
         };
         let controller = ctx.controller;
         let entry = schedule_delayed(ctx, controller, at, resume, args.watch.clone(), not_before);
-        if let Some(ids) = &hand_watch
-            && let Some(stored) = ctx.state.delayed.iter_mut().find(|due| due.id == entry.id)
-        {
-            stored.hand_watch = Some(ids.clone());
+        let mut countdown = false;
+        if let Some(stored) = ctx.state.delayed.iter_mut().find(|due| due.id == entry.id) {
+            if let Some(ids) = &hand_watch {
+                stored.hand_watch = Some(ids.clone());
+            }
+            stored.due_own_turn = due_own_turn;
+            stored.label = due_own_turn.and(args.label.clone());
+            countdown = crate::modifiers::has_countdown(stored);
+        }
+        // R1181000, R169: a countdown is a badge on the controller's side while it waits.
+        if countdown {
+            ctx.events.push(GameEvent::ModifierChanged {
+                player: controller,
+                modifier_id: entry.id.clone(),
+                added: true,
+            });
         }
         // R437: the card it waits for carries the mark until it resolves, fizzles or is forgotten; R1141:
         // each hand card it watches, while it is watched.

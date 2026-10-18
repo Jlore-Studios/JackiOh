@@ -14,7 +14,13 @@ import type { Tag } from "./Tag";
 import type { Tuning } from "./Tuning";
 import type { Zone } from "./Zone";
 
-export type CardInstance = { id: string, defId: string, owner: PlayerId, controller: PlayerId, radiant: boolean, zone: Zone, position?: Position, summonedTurn?: number, damage: number, buffs: AttackHealth, grantedKeywords: Array<Keyword>, vanilla: boolean, costMod: number, costOverride?: number, x?: number, embiggened?: boolean, counters: Counters, memory: Record<string, unknown>, 
+export type CardInstance = { id: string, defId: string, owner: PlayerId, controller: PlayerId, radiant: boolean, zone: Zone, position?: Position, summonedTurn?: number, damage: number, buffs: AttackHealth, grantedKeywords: Array<Keyword>, vanilla: boolean, costMod: number, costOverride?: number, x?: number, embiggened?: boolean, 
+/**
+ * R1181003 (Meditative+ #23 Enormous Elderberry's "its Embiggened version costs (0)"): the price of
+ * the Embiggened version alone, in place of its printed dearer price and of `costOverride` for it,
+ * before every modifier (R65); the normal version keeps its price. A price, so R766 takes it off.
+ */
+embiggenCostOverride?: number, counters: Counters, memory: Record<string, unknown>, 
 /**
  * §4.1: `attacked` and `switched` spend the turn's exertion. R636: `attacks` counts the attacks
  * declared this turn once there is a second one (absent, it is 1 when `attacked` and 0 otherwise)
