@@ -590,11 +590,11 @@ fn unit_play_signature(state: &GameState, unit: &CardInstance) -> String {
 }
 
 /// One side's parts of `search_signature` beyond its units and backrow (#898): its mana maximum and
-/// riders, its zone Locks, its modifiers, this turn's log, its fatigue, Jade, extra turns and hand cap,
-/// its graveyard and exile, and its backrow piles. Each is pushed only when it is not the default, as
-/// R1224's debt is, so a position that has none of them signs as before; and each is kept free of the
-/// order the moves came in (sorted, the engine's sequence ids left out), so two orders of the same
-/// moves still sign alike for the beam's duplicate check.
+/// riders, a lost refresh still to come (R844), its zone Locks, its modifiers, this turn's log, its
+/// fatigue, Jade, extra turns and hand cap, its graveyard and exile, and its backrow piles. Each is
+/// pushed only when it is not the default, as R1224's debt is, so a position that has none of them
+/// signs as before; and each is kept free of the order the moves came in (sorted, the engine's sequence
+/// ids left out), so two orders of the same moves still sign alike for the beam's duplicate check.
 fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>) {
     let side = &state.players[player];
     let mana = &side.mana;
@@ -603,6 +603,10 @@ fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>)
             "M{player}{}/{}/{}",
             mana.max, mana.next_turn_mod, mana.perm_mod
         ));
+    }
+    // R844: a lost refresh still to come, only while one is.
+    if let Some(through) = side.lost_refresh_through {
+        parts.push(format!("R{player}{through}"));
     }
     if side
         .locks
