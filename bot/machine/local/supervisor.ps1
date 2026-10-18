@@ -108,7 +108,8 @@ function Get-Runners {
   }
 }
 
-# This PC's load without its runner containers: CPU % of all logical CPUs, memory used in GB.
+# This PC's load without its runner containers and its yielding ones: CPU % of all logical CPUs,
+# memory used in GB.
 function Get-Sample($runners) {
   $cpu = $null
   # CPU time, as `docker stats` measures the runners' share, so the two subtract like for like.
@@ -124,8 +125,15 @@ function Get-Sample($runners) {
   $os = Get-CimInstance Win32_OperatingSystem
   $memGB = ($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / 1MB
   $oursCpu = 0.0; $oursMem = 0.0
-  if (@($runners).Count) {
-    $s = Run 'docker' (@('stats', '--no-stream', '--format', '{{.CPUPerc}}|{{.MemUsage}}') + @($runners | ForEach-Object Id))
+  $ours = @($runners | ForEach-Object Id)
+  # A container that a gate of its own holds to this same rule, and that gives way while a runner
+  # works (`yieldingContainers`: a long dev export), is this machine's work too, not the person's.
+  # Counted as the person's, it would read the PC as busy the moment it got its CPUs back.
+  foreach ($name in @($cfg.yieldingContainers)) {
+    if ($name -and (Run 'docker' @('ps', '-q', '--filter', "name=^$name`$")).Out) { $ours += $name }
+  }
+  if ($ours.Count) {
+    $s = Run 'docker' (@('stats', '--no-stream', '--format', '{{.CPUPerc}}|{{.MemUsage}}') + $ours)
     if ($s.Code -eq 0) {
       foreach ($line in ($s.Out -split "`n")) {
         $f = $line -split '\|'
@@ -262,7 +270,7 @@ while ($true) {
   $over = @($samples | Where-Object { $_.Cpu -ge $cfg.cpuPercentBelow -or $_.Mem -ge $cfg.memoryGBBelow })
   $calm = ($samples.Count -ge $windowSize) -and ($over.Count -eq 0)
   if ($calm -ne $wasCalm) {
-    Log ("{0}: CPU {1:N0}%, memory {2:N1} GB (without the runners)" -f $(if ($calm) { 'calm' } else { 'busy' }), $sample.Cpu, $sample.Mem)
+    Log ("{0}: CPU {1:N0}%, memory {2:N1} GB (without the runners and yielding containers)" -f $(if ($calm) { 'calm' } else { 'busy' }), $sample.Cpu, $sample.Mem)
     $wasCalm = $calm
   }
 
