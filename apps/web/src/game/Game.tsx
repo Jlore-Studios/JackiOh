@@ -442,16 +442,6 @@ export default function Game({
   // The moves `offered` are the newest view's; they apply once the board shows it (see the header).
   const legal = shown === view ? offered : NOTHING_LEGAL;
 
-  // A seat hand-over or a game over must not sit behind a queue of animations.
-  const settleNow = useCallback(() => {
-    runner.drain();
-    setShown(latest.current);
-  }, [runner]);
-
-  useEffect(() => {
-    if (view.result !== null) settleNow();
-  }, [view.result, settleNow]);
-
   const dispatch = useCallback(
     (body: ActionBody) => {
       setInteraction(IDLE);

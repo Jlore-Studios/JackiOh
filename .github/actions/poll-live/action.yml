@@ -70,7 +70,9 @@ runs:
             version=$(jq -r '.version // "(no version)"' "$body")
             reported=$(tr -d '\r' < "$headers" | awk -F': *' 'tolower($1) == "x-deployed-commit" { print tolower($2); exit }')
             if [ "$version" = "$EXPECTED" ] && { [ -z "$want_commit" ] || [ "$reported" = "$want_commit" ]; }; then
-              echo "live: catalog $version, commit ${reported:-(none reported)}"
+              # crates/server/src/bug_reports.rs: whether the server's token can file an issue.
+              reports=$(tr -d '\r' < "$headers" | awk -F': *' 'tolower($1) == "x-bug-reports" { print $2; exit }')
+              echo "live: catalog $version, commit ${reported:-(none reported)}, bug reports ${reports:-(not reported)}"
               finish true
               exit 0
             fi

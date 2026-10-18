@@ -427,6 +427,15 @@ pub enum EvalKind {
 /// it with the weights in one change (#1012).
 pub const AI_EVAL_KIND: EvalKind = EvalKind::Hand;
 
+/// R1012001: the share of the network's correction a finalist's score takes, `hand + share·(points
+/// − hand)` (`learned::finalist_score_with`). The network is fitted to the games' outcomes, so its
+/// whole correction says how much more often a position is won than the hand eval thinks; a decision
+/// compares lines a move or two apart, where much of that is noise, and the whole of it changed about
+/// one decision in four for little gain. Measured on 1,600 paired games each against the hand eval
+/// (#466, the 36,000-game network): the whole correction +0.010 edge, half of it +0.064.
+pub const LEARNED_CORRECTION_SHARE: f64 = 0.5;
+const _: () = assert!(LEARNED_CORRECTION_SHARE > 0.0 && LEARNED_CORRECTION_SHARE <= 1.0);
+
 /// The greedy baseline's own evaluation (baselines.rs): AI_EVAL exactly as it stood when the quality
 /// gates were fixed on the seed series `gate:v2`, frozen here. A baseline the AI is measured against
 /// must not move when the AI is tuned, so tuning AI_EVAL changes the AI and never its yardstick.
