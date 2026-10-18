@@ -7,7 +7,7 @@ import type { Mock } from "vitest";
 import { AI_GATE_BUDGET, FIXTURE_BANNED_IDS } from "@jackioh/ai";
 import { dealEmoteHand } from "@jackioh/engine";
 import { newestShippedSet, opponentOf } from "@jackioh/shared";
-import type { ActionBody, CardDefs, PlayerId } from "@jackioh/shared";
+import type { ActionBody, CardDefs, GameEvent, PlayerId } from "@jackioh/shared";
 
 import { setAudioEngineForTests } from "../audio/engine.ts";
 import type { AudioEngine } from "../audio/types.ts";
@@ -159,6 +159,8 @@ type HostOptions = {
   resume?: "started" | "failed";
   /** R768000: the worker keeps the conceded game as game 3, of two steps, and answers its replay. */
   kept?: boolean;
+  /** Issue #1146: the conceded game's last view carries the burst that ended it. */
+  lethal?: boolean;
 };
 
 /** Fake definitions cost each card by its id's final digit. */
@@ -209,9 +211,17 @@ function snapshotFor(human: PlayerId, aiToAct: boolean): PracticeSnapshot {
 }
 
 /** §2.5: conceding gives the AI the game. */
-function concededSnapshot(human: PlayerId): PracticeSnapshot {
+function concededSnapshot(human: PlayerId, lethal = false): PracticeSnapshot {
   const base = snapshotFor(human, false);
-  return { ...base, view: { ...base.view, result: { winner: opponentOf(human), reason: "concede" } }, legal: [] };
+  const winner = opponentOf(human);
+  const events: GameEvent[] = lethal
+    ? [
+        { type: "turnStarted", player: human, turn: 1 },
+        { type: "damage", sourceId: null, targetId: `hero-${human}`, amount: 30, combat: false },
+        { type: "gameOver", winner, reason: "hero-death" },
+      ]
+    : [];
+  return { ...base, view: { ...base.view, events, result: { winner, reason: "concede" } }, legal: [] };
 }
 
 function routeHost(options: HostOptions = {}): RouteHost {
@@ -283,7 +293,7 @@ function routeHost(options: HostOptions = {}): RouteHost {
         );
       }
       if (body.type === "act" && body.action.type === "concede") {
-        const conceded = concededSnapshot(human);
+        const conceded = concededSnapshot(human, options.lethal);
         return Promise.resolve({
           id: mine,
           type: "snapshot",
@@ -2165,9 +2175,9 @@ describe("practice plays on the full board, with sound and settings", () => {
     expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
   });
 
-  async function concedeWith(pacing: PracticePacing): Promise<void> {
+  async function concedeWith(pacing: PracticePacing, options: HostOptions = {}): Promise<void> {
     visit("?seed=over9&difficulty=easy&deck=random&seat=p1");
-    renderRoute(routeHost(), { pacing });
+    renderRoute(routeHost(options), { pacing });
     await screen.findByTestId(T.hud);
     concedeOnBoard();
     await screen.findByTestId(T.outcome);
@@ -2190,6 +2200,34 @@ describe("practice plays on the full board, with sound and settings", () => {
     setFxSettings({ intensity: "off" });
     try {
       await concedeWith({ ...PRACTICE_PACING_FAST, resultDelayMs: 60_000 });
+      expect(await screen.findByTestId(T.result)).toBeInTheDocument();
+    } finally {
+      resetFxSettingsForTests();
+    }
+  });
+
+  it("issue #1146: with the effects off the dialog still waits for the burst that ended the game", async () => {
+    vi.useFakeTimers();
+    setFxSettings({ intensity: "off" });
+    try {
+      visit("?seed=over9&difficulty=easy&deck=random&seat=p1");
+      renderRoute(routeHost({ lethal: true }), { pacing: { ...PRACTICE_PACING_FAST, resultDelayMs: 0 } });
+      await settle();
+      concedeOnBoard();
+      await settle();
+      await act(async () => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(screen.getByTestId("animation-queue"), "the burst is playing").toBeInTheDocument();
+      expect(screen.queryByTestId(T.result), "and the dialog does not cover it").toBeNull();
+      await act(async () => {
+        vi.advanceTimersByTime(30_000);
+      });
+      await settle();
+      await act(async () => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(screen.queryByTestId("animation-queue")).toBeNull();
       expect(screen.getByTestId(T.result)).toBeInTheDocument();
     } finally {
       resetFxSettingsForTests();

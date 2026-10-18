@@ -891,17 +891,17 @@ function PracticeScreen({
     if (!finished || game === null || boardAnimating) return;
     const effectsOff = reducedMotionNow() || getFxSettings().intensity === "off";
     const delay = effectsOff ? 0 : (pace.current.resultDelayMs ?? 0);
-    if (delay <= 0) {
-      setResultReadyFor(game);
-      return;
-    }
+    // Never open on this render's word alone: the board's queue starts in Game's layout effect, after
+    // this effect ran, and `boardAnimating` learns of it later. The timer runs once the mark is in the
+    // DOM, so it checks the board itself (a mark found re-runs this effect through `boardAnimating`).
     const timer = setTimeout(() => {
+      if (boardRoot?.querySelector("[data-animating]") != null) return;
       setResultReadyFor(game);
     }, delay);
     return () => {
       clearTimeout(timer);
     };
-  }, [finished, game, boardAnimating]);
+  }, [finished, game, boardAnimating, boardRoot]);
   const onViewBoard = useCallback(() => {
     setResultClosedFor(game);
   }, [game]);
