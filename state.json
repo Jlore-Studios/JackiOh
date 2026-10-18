@@ -4006,6 +4006,11 @@
       "taken_asks": []
     },
     "1217": {
+      "cleared": {
+        "at": "2026-10-18T12:42:09Z",
+        "by": "`claude` (strong)",
+        "sha": "18c325fd0c47a493b5f777dce3cd8ffdc17ff3f3"
+      },
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-18T10:14:51Z",
