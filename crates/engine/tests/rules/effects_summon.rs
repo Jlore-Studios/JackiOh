@@ -771,7 +771,7 @@ mod fill_your_board_r64_s7_m3_t1 {
     use super::*;
 
     #[test]
-    fn r64_summons_a_token_into_every_empty_unlocked_unit_zone_left_to_right() {
+    fn r1136000_r64_summons_a_token_into_every_empty_unit_zone_left_to_right_a_locked_one_included() {
         let mut state = game();
         put(&mut state, "fx-1", slot(PlayerId::P1, Row::Units, 2), json!({}));
         lock_zone(&mut state, slot(PlayerId::P1, Row::Units, 4));
@@ -784,9 +784,31 @@ mod fill_your_board_r64_s7_m3_t1 {
 
         assert_eq!(
             lanes_of(&state, PlayerId::P1, Row::Units),
-            json!([RUSH_TOKEN, "fx-1", RUSH_TOKEN, null, RUSH_TOKEN])
+            json!([RUSH_TOKEN, "fx-1", RUSH_TOKEN, RUSH_TOKEN, RUSH_TOKEN])
         );
-        assert_eq!(summoned_lanes(&events), vec![1, 3, 5]);
+        assert_eq!(summoned_lanes(&events), vec![1, 3, 4, 5]);
+        assert!(
+            is_locked(&state, slot(PlayerId::P1, Row::Units, 4)),
+            "the Lock stays"
+        );
+    }
+
+    #[test]
+    fn r1136000_r64_a_zone_reserved_for_a_reborn_unit_still_takes_nothing() {
+        let mut state = game();
+        reserve_zone(&mut state, slot(PlayerId::P1, Row::Units, 3));
+
+        let events = run(
+            &mut state,
+            fill_board(json_as(json!({ "defId": RUSH_TOKEN }))),
+            RunOptions::default(),
+        );
+
+        assert_eq!(
+            lanes_of(&state, PlayerId::P1, Row::Units),
+            json!([RUSH_TOKEN, RUSH_TOKEN, null, RUSH_TOKEN, RUSH_TOKEN])
+        );
+        assert_eq!(summoned_lanes(&events), vec![1, 2, 4, 5]);
     }
 
     #[test]
@@ -933,6 +955,24 @@ mod r1080_fill_board_random {
         let lanes = lanes_of(&state, PlayerId::P1, Row::Units);
         assert_eq!(lanes[0], json!("sm-crier"));
         assert_eq!(lanes[2], json!("sm-felinor"));
+    }
+
+    #[test]
+    fn r1136000_r1080_a_locked_zone_draws_its_own_pick_too() {
+        let mut state = game_with_one_ones();
+        lock_zone(&mut state, slot(PlayerId::P1, Row::Units, 2));
+
+        let events = run(
+            &mut state,
+            fill_board_random(json_as(fill_random_query())),
+            RunOptions::default(),
+        );
+
+        assert_eq!(summoned_lanes(&events), vec![1, 2, 3, 4, 5]);
+        assert!(
+            is_locked(&state, slot(PlayerId::P1, Row::Units, 2)),
+            "the Lock stays"
+        );
     }
 
     #[test]

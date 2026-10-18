@@ -2711,9 +2711,9 @@ impl Tx<'_> {
 
     /// B50, one read for a whole friends list: those of the named profiles whose live 1v1 match
     /// (their in-match flag) `viewer` may watch as the store judges it: the two are friends with
-    /// neither blocking the other, the match is live, not ranked, seats the friend and not `viewer`,
-    /// and the friend allows spectators. In the order named. Room (`SPECTATORS_PER_MATCH`) is the
-    /// actor's to judge.
+    /// neither blocking the other, the match is live, ranked or unranked, seats the friend and not
+    /// `viewer`, and the friend allows spectators. In the order named. Room (`SPECTATORS_PER_MATCH`)
+    /// is the actor's to judge.
     pub async fn presence_watchable(
         &mut self,
         viewer: &str,
@@ -2731,8 +2731,9 @@ impl Tx<'_> {
         dispatch!(self, profiles_find(profile_id))
     }
 
-    /// B50: whether friends may watch `profile_id`'s live unranked games: true unless they turned
-    /// it off (`GET`/`PUT /api/settings`' `allowSpectators`); false for an id no profile holds.
+    /// B50: whether friends may watch `profile_id`'s live games, ranked or unranked: true unless
+    /// they turned it off (`GET`/`PUT /api/settings`' `allowSpectators`); false for an id no profile
+    /// holds.
     pub async fn profiles_allows_spectators(&mut self, profile_id: &str) -> StoreResult<bool> {
         dispatch!(self, profiles_allows_spectators(profile_id))
     }

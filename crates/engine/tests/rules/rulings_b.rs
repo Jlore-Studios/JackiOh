@@ -1730,6 +1730,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
             Some(SMALL.to_string())
         );
 
+        // R1136000: the fill takes every empty zone left, the Locked lane 2 included.
         apply_effects(
             &[effects::fill_board(json_as(json!({ "defId": UNIT_TOKEN })))],
             &mut ctx,
@@ -1741,7 +1742,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
                 .collect::<Vec<_>>(),
             vec![
                 Some(PLAIN.to_string()),
-                None,
+                Some(UNIT_TOKEN.to_string()),
                 Some(SMALL.to_string()),
                 Some(UNIT_TOKEN.to_string()),
                 Some(UNIT_TOKEN.to_string()),
