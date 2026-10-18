@@ -76,7 +76,8 @@ jobs:
             echo "run=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          catalog=$(jq -r '.[-1].version' crates/cards/patches/patches.json | tr -c 'A-Za-z0-9._-\n' '_')
+          # The '-' goes last: between '_' and '\n' it would be a range, which tr refuses.
+          catalog=$(jq -r '.[-1].version' crates/cards/patches/patches.json | tr -c 'A-Za-z0-9._\n-' '_')
           echo "seed=learned-$catalog-$(date -u +%Y%m%d)-$RUN" >> "$GITHUB_OUTPUT"
           echo "run=true" >> "$GITHUB_OUTPUT"
 
@@ -107,10 +108,12 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node: "false"
-      - name: uv
-        run: |
-          python3 -m pip install --user --quiet uv
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      # training/ml pins Python 3.13 (its pyproject.toml), and uv as super.yml's notebooks job does.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: uv, pinned
+        run: python3 -m pip install uv==0.13.0
       - uses: actions/download-artifact@v4
         with:
           pattern: selfplay-${{ needs.plan.outputs.seed }}-*
