@@ -7,10 +7,11 @@
 #
 #   docker build -f crates/server/Dockerfile -t jackioh-server .
 #
-# Four stages build `jackioh-server` in release, cargo-chef's way: the tool (`chef`), the recipe
-# (`planner`), the dependencies (`deps`), then the server (`build`). The dependencies (some 260
-# crates) sit in a layer of their own that a change to the sources alone does not rebuild; the
-# workspace's own four crates and the thin-LTO link are compiled on every change. The image is the
+# Five stages build `jackioh-server` in release, cargo-chef's way: the tool (`chef`), the recipe
+# (`planner`), the dependencies (`deps`), the workspace's crates (`crates`), then the server's binary
+# (`build`). The dependencies (some 260 crates) sit in a layer of their own that a change to the
+# sources alone does not rebuild; the workspace's own four crates and the thin-LTO link are compiled
+# on every change, in two stages so that CI can build them in two jobs. The image is the
 # last stage, a slim Debian with CA certificates (the server calls Supabase Auth over TLS and
 # connects to Supabase's Postgres over TLS) and the one binary. Nothing at run time needs Node, pnpm
 # or the repository: the catalog (crates/cards/catalog.json), the patch history that names the
@@ -58,20 +59,29 @@ RUN cargo chef prepare --recipe-path recipe.json
 # so the build below reuses all of them. This is the layer that stays cached while Cargo.toml,
 # Cargo.lock and the crates' manifests are unchanged.
 # A stage of its own, so CI can build it and write it to the layer cache in a job of its own before
-# the rehearsal builds the rest (crates/server/tests/deploy/rehearse.sh's REHEARSAL_DEPS_ONLY,
+# the rehearsal builds the rest (crates/server/tests/deploy/rehearse.sh's REHEARSAL_STAGE=deps,
 # #653). The layers, and so the image, are the same as with one stage.
 FROM chef AS deps
 COPY --from=planner /src/recipe.json recipe.json
 RUN cargo chef cook --release --locked -p jackioh-server --recipe-path recipe.json
 
-# The server: the real manifests and sources over the skeleton, and the build the image always ran.
-# Only the workspace's own crates (the engine, the cards, the AI and the server) compile here, and
-# the server's own compile and its thin-LTO link are most of it. target/ goes in the same layer: the
-# image takes only the binary, and a layer cache that keeps every stage (buildx's `mode=max`) then
-# holds the dependencies once, in the cook layer, instead of another 300 MB of target/ per build.
-FROM deps AS build
+# The workspace's crates: the real manifests and sources over the skeleton, and the server's library
+# built with everything it builds on (the engine, the cards and the AI). `--lib` leaves out only the
+# server's binary, whose thin-LTO link generates the whole program's machine code; the features and
+# the profile are the same, so the build below compiles the binary alone and reuses everything here,
+# and the binary is byte for byte the one a single stage builds. target/ stays in this layer for it
+# (about 360 MB unpacked). A stage of its own, so CI can build it and write it to the layer cache in a
+# job of its own before the rehearsal (crates/server/tests/deploy/rehearse.sh's REHEARSAL_STAGE=crates,
+# #1223): on 4 cores this compile took 94 s and the binary's 131 s, against 234 s for both in one stage.
+FROM deps AS crates
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
+RUN cargo build --release --locked -p jackioh-server --lib
+
+# The server's binary and its thin-LTO link, the build the image always ran, on the crates above.
+# Nothing is copied here, so nothing the stage above compiled is compiled again. target/ goes in the
+# same layer: the image takes only the binary.
+FROM crates AS build
 RUN cargo build --release --locked -p jackioh-server \
  && cp target/release/jackioh-server /jackioh-server \
  && rm -rf target
