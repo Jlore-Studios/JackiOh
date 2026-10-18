@@ -596,6 +596,30 @@ pub const MATCH_RECORD_RESULT_BACKOFF_MS: i64 = 250;
 pub const MATCH_SERVER_ACTION_RETRY_MS: i64 = 1_000;
 
 // ---------------------------------------------------------------------------------------------
+// Bug reports (`bug_reports.rs`): a match its own log does not reproduce. Not in SPEC, and no
+// R-row: operational, as #861's probes are.
+// ---------------------------------------------------------------------------------------------
+
+/// The repository a report is filed in when `CREATE_ISSUES_TOKEN` is set and `GITHUB_ISSUES_REPO`
+/// is not.
+pub const BUG_REPORT_REPO_DEFAULT: &str = "Jlore-Studios/JackiOh";
+/// GitHub's REST API, which a report is filed through.
+pub const BUG_REPORT_API_URL: &str = "https://api.github.com";
+/// The labels a report carries: a micro patch's type, the night bot's queue (`bot:build`,
+/// bot/README.md), the strong tier (CLAUDE.md rule 11: the server and the engine are hard) and the
+/// front of the queue, since a match that does not rebuild is a broken game.
+pub const BUG_REPORT_LABELS: &[&str] = &["patch", "bot:build", "difficulty:hard", "priority:high"];
+/// How many reports one process files in `BUG_REPORT_WINDOW_MS`. A determinism break shows on every
+/// match a deploy rebuilds, so the first few say it and the rest are only logged.
+pub const BUG_REPORTS_PER_WINDOW: usize = 5;
+/// The window `BUG_REPORTS_PER_WINDOW` counts in: an hour.
+pub const BUG_REPORT_WINDOW_MS: i64 = 60 * 60 * 1000;
+/// How long one request to GitHub may take before the report is given up (it is logged either way).
+pub const BUG_REPORT_TIMEOUT_MS: u64 = 10_000;
+/// How many refused actions a report lists one by one; the rest are counted.
+pub const BUG_REPORT_LISTED_ACTIONS: usize = 10;
+
+// ---------------------------------------------------------------------------------------------
 // Glitch (issue #170; SPEC §7, R678, R679).
 // ---------------------------------------------------------------------------------------------
 

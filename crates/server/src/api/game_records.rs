@@ -24,6 +24,7 @@ use serde_json::{Map, Value, json};
 use crate::actor::engine;
 use crate::actor::registry::pinned_for;
 use crate::app::App;
+use crate::bug_reports::{Finding, FoundIn, refused_rows};
 use crate::config::STATS_FOLD_BATCH_RECORDS;
 use crate::db::store::{Db, MatchRow, ProfileKind, QueueMode, StoreError};
 
@@ -139,17 +140,34 @@ async fn record_live_game_inner(app: &App, match_id: &str) -> Result<Option<Game
     // error.
     let bot_game = began.0 != began.1;
     let pinned = pinned_for(&row);
-    let (summarized, swapped) = engine::off_runtime(app.engine_thread, move || {
+    // A log that does not reach the result is folded once more, only then, for the actions it refuses.
+    let (summarized, swapped, refused) = engine::off_runtime(app.engine_thread, move || {
         let summarized = engine::summarize_game(pinned, &args);
         let swapped = summarized.is_some()
             && bot_game
             && engine::snapshot(&engine::fold(pinned, &args).state).seats_swapped;
-        (summarized, swapped)
+        let refused = if summarized.is_none() {
+            engine::fold(pinned, &args).errors
+        } else {
+            Vec::new()
+        };
+        (summarized, swapped, refused)
     })
     .await?;
     let Some(game) = summarized else {
-        // A fold that does not reach the result is a determinism break (§9.3); say so loudly.
+        // A fold that does not reach the result is a determinism break (§9.3); say so loudly, and file
+        // it for the night bot (`bug_reports.rs`).
         tracing::error!(event = "game.record.unfinished", matchId = %match_id, actions = actions);
+        app.bug_reports.file(
+            app.env.deployed_commit.as_deref(),
+            Finding {
+                match_id: match_id.to_string(),
+                found_in: FoundIn::FinishedLog,
+                catalog_version: row.catalog_version.clone(),
+                actions,
+                refused: refused_rows(&log, &refused),
+            },
+        );
         return Ok(None);
     };
     let pilots = if swapped {
