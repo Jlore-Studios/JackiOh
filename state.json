@@ -5061,6 +5061,13 @@
     "1247": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-18T21:52:46Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule 5 fails: the change is in crates/engine/src/testkit/scenario.rs and a card script's tests, so not easy; it is test tooling with no rule moved, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
