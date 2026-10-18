@@ -4350,8 +4350,10 @@
       "feedback_since": "2026-10-18T05:54:44Z",
       "issue": 1192,
       "kind": "revise",
-      "queued_at": "2026-10-18T07:42:49Z",
+      "queued_at": "2026-10-18T07:43:29Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "muse"
