@@ -58,9 +58,9 @@ use crate::script::{
     ActivationDecl, AttackMod, AttackModArgs, AttackModHook, AuraEntry, AuraHook, CardScripts,
     ConditionContext, ConditionHook, EchoXHook, Effect, EffectApply, EffectContext, EffectPart, EngineSink,
     FlagOrCount, Hook, HookArgs, ModeAllowedHook, PlagueMultiplierHook, QuestBook, Script, SetStat,
-    SetStatHook, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef, TriggerExtraHook,
-    TriggerRun, TuneMultiplier, WouldCounterHook, attack_mod_hook, aura_hook, condition_hook, hook,
-    mode_allowed_hook, read_hook, target_check, would_counter_hook,
+    SetStatHook, SpellDamageAura, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef,
+    TriggerExtraHook, TriggerRun, TuneMultiplier, WouldCounterHook, attack_mod_hook, aura_hook,
+    condition_hook, hook, mode_allowed_hook, read_hook, target_check, would_counter_hook,
 };
 use crate::state::{CardInstance, GameState, Grant, find_instance, find_instance_mut, new_instance};
 use crate::wire::{
@@ -1022,6 +1022,21 @@ fn summed_count(values: impl IntoIterator<Item = Option<FlagOrCount>>) -> Option
     }
 }
 
+/// R1180000 (Meditative+ #9): a fused card's Spell Damage auras add up, as two standing apart do, and
+/// reach the opponent too when either ingredient's does.
+fn summed_spell_damage_aura(
+    values: impl IntoIterator<Item = Option<SpellDamageAura>>,
+) -> Option<SpellDamageAura> {
+    let defined: Vec<SpellDamageAura> = values.into_iter().flatten().collect();
+    if defined.is_empty() {
+        return None;
+    }
+    Some(SpellDamageAura {
+        amount: defined.iter().map(|aura| aura.amount).sum(),
+        both: defined.iter().any(|aura| aura.both == Some(true)).then_some(true),
+    })
+}
+
 /// R1160 (Meditative #84 Volatility, ME-TUNEMULT): a fused card's tune multipliers multiply.
 /// None when no ingredient names one; otherwise each direction is the product of the ingredients
 /// that name it, and a direction none names is none.
@@ -1119,6 +1134,9 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 no_natural_mana: flags(|f| f.no_natural_mana),
                 feng_shui: flags(|f| f.feng_shui),
                 luck: summed_number(defined.iter().map(|f| f.luck)),
+                spell_damage_aura: summed_spell_damage_aura(defined.iter().map(|f| f.spell_damage_aura)),
+                doubles_healing: flags(|f| f.doubles_healing),
+                answers_targeted_spells: flags(|f| f.answers_targeted_spells),
             })
         }
     }

@@ -654,6 +654,35 @@ pub struct StaticFlags {
     /// card's declared number `luck` where it declares it, else this.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub luck: Option<i32>,
+    // ---- Meditative+ (issue #1180) ----
+    /// R1180000 (Meditative+ #9 Magic Amplifier): "Aura: Both players have Spell Damage +X". While this
+    /// card acts on the field, its controller — and with `both`, the opponent too — has Spell Damage +X,
+    /// summed with every other source (`damage::spell_damage_of`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spell_damage_aura: Option<SpellDamageAura>,
+    /// R1180003 (Meditative+ #7 Life Mage's Radiant face): "healing your hero and Units is twice as
+    /// effective". While this card acts on the field, every heal of its controller's hero and Units is
+    /// `HEAL_MULTIPLIER` times as large (`query::heal_multiplier_of`); several multiply.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub doubles_healing: Option<bool>,
+    /// R1180005 (Meditative+ #17 Dogpile): in its owner's hand or deck, this card answers their Spells
+    /// that targeted an enemy (`targeted.rs`): the engine names the one card that answers each such
+    /// Spell on its `cardResolved` (`answer`), which the card's hand and deck triggers read.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub answers_targeted_spells: Option<bool>,
+}
+
+/// R1180000 (Meditative+ #9 Magic Amplifier): the Spell Damage an aura gives — `amount` to the
+/// source's controller, and to the opponent as well when `both`. The amount is the printed number,
+/// moved by as much as a Nerf, a Buff or KY's Constant moved the card's declared `spellDamage`
+/// (`params::declared_or`, R386).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct SpellDamageAura {
+    pub amount: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub both: Option<bool>,
 }
 
 string_union! {

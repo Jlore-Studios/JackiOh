@@ -226,6 +226,7 @@ target: TargetSpec?,
 random: boolean?,
 targetEnemies: boolean?,
 aimAt: string?,
+aimOnly: boolean?,
 afterward: CastAfterward?,
 }
 
@@ -239,6 +240,7 @@ cards: {string},
 random: boolean?,
 targetEnemies: boolean?,
 aimAt: string?,
+aimOnly: boolean?,
 afterward: CastAfterward?,
 }
 
@@ -248,6 +250,7 @@ radiant: boolean | nil,
 random: boolean?,
 targetEnemies: boolean?,
 aimAt: string?,
+aimOnly: boolean?,
 afterward: CastAfterward?,
 }
 
@@ -979,6 +982,7 @@ costPaid: number,
 radiant: boolean?,
 arrivedDuring: {string}?,
 exitsFrom: number?,
+answer: SpellAnswer?,
 } | {
 ["type"]: "summoned",
 player: PlayerId,
@@ -1796,6 +1800,15 @@ label: string,
 } | {
 expiry: ModifierExpiry,
 ["kind"]: "heroImmune",
+} | {
+expiry: ModifierExpiry,
+["kind"]: "spellDamage",
+amount: number,
+} | {
+expiry: ModifierExpiry,
+["kind"]: "healthPrice",
+multiple: number,
+echo: number?,
 }
 
 export type PlayerSpec = "self" | "enemy"
@@ -2098,6 +2111,16 @@ radiant: boolean?,
 enchantments: {Enchantment}?,
 }
 
+export type SpellAnswer = {
+by: string,
+at: Selection,
+}
+
+export type SpellDamageAura = {
+amount: number,
+both: boolean?,
+}
+
 export type SplitAmong = "enemies" | "enemyUnits"
 
 export type StatMod = {
@@ -2151,6 +2174,9 @@ creditLapses: boolean?,
 noNaturalMana: boolean?,
 fengShui: boolean?,
 luck: number?,
+spellDamageAura: SpellDamageAura?,
+doublesHealing: boolean?,
+answersTargetedSpells: boolean?,
 }
 
 export type StealAllArgs = {

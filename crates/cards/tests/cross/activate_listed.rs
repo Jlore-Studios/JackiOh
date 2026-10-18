@@ -45,6 +45,7 @@ const ALUNETH: &str = "meditative-080";
 const YILES_VIRUS: &str = "meditative-049-2";
 const MAESTRO: &str = "meditative-069";
 const EVER_GROWING_TREE: &str = "meditative-075";
+const LIVING_MANA_POTION: &str = "meditativeplus-011";
 
 /// Every card or token whose base or Radiant text has an Activate ability, each with a case below.
 const ACTIVATE_CARDS: [&str; 27] = [
@@ -75,6 +76,7 @@ const ACTIVATE_CARDS: [&str; 27] = [
     YILES_VIRUS,
     MAESTRO,
     EVER_GROWING_TREE,
+    LIVING_MANA_POTION,
 ];
 
 const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2. A spare that keeps R82's auto-end away.
@@ -1328,5 +1330,38 @@ mod m_n75_ever_growing_tree {
             "the fused id names a Radiant ingredient"
         );
         assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+}
+
+mod m_plus_n11_living_mana_potion {
+    use super::*;
+
+    /// The listed `activate`: p1 has Spell Damage +5 this turn (R1180001); the base face Tributes the
+    /// potion, the Radiant face keeps it, once a turn. Held in a preview of the set (R1420, R1178000).
+    fn activates(radiant: bool) {
+        let _preview = preview_sets(&[SetName::MeditativePlus]);
+        let mut s = scenario(json!({
+            "p1": { "field": [on(LIVING_MANA_POTION, radiant)], "hand": [STOCKPILE] },
+            "p2": { "hand": [FILLER] },
+        }));
+        let id = s.card(LIVING_MANA_POTION).id.clone();
+        activate_listed(&mut s, LIVING_MANA_POTION, any);
+        assert_eq!(jackioh_engine::damage::spell_damage_of(s.state(), P1), 5);
+        if radiant {
+            s.expect_in_zone(id.as_str(), "field");
+            assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+        } else {
+            s.expect_in_zone(id.as_str(), "graveyard");
+        }
+    }
+
+    #[test]
+    fn r384_r1180001_base_tributes_itself_for_spell_damage_5_this_turn() {
+        activates(false);
+    }
+
+    #[test]
+    fn r384_r1180001_radiant_stays_for_spell_damage_5_this_turn() {
+        activates(true);
     }
 }
