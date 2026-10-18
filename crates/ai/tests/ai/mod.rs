@@ -17,6 +17,7 @@ pub mod evaluate;
 pub mod evaluate_v020;
 pub mod features;
 pub mod freeze;
+pub mod ky_competition;
 pub mod learned;
 pub mod match_refusal;
 pub mod observe;

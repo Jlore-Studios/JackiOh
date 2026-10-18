@@ -750,6 +750,12 @@ pub struct PendingChoice {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub craft_mode: Option<CraftMode>,
+    /// R1184000: an `answer` prompt that is one question of a sequence (Meditative+ #20 KY's
+    /// Competition) carries the right answers so far, which its chooser sees, and offers Stop after
+    /// its answers (`prompts::ANSWER_STOP_KEY`). Absent on every other prompt (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub streak: Option<i32>,
     pub resume: Resume,
 }
 

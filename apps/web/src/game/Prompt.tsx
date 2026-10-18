@@ -135,6 +135,11 @@ const ARROWS: Record<string, string> = { left: "←", right: "→" };
 const ANSWER_LETTERS: readonly string[] = ["A", "B", "C", "D", "E", "F", "G", "H"];
 /** The answers stand in one column, so the arrows walk them up and down. */
 const ANSWER_COLUMNS = 1;
+/**
+ * R1184000: a question of a sequence (Meditative+ #20) offers Stop after its answers, a `none` pick
+ * under no letter, as the engine keys it (`ANSWER_STOP_KEY`).
+ */
+const ANSWER_STOP = "none";
 /** C #18's 0 to 10 sit as 0–5 over 6–10: the arrows move by this, and prompt.css lays the pad out by it. */
 const NUMBER_PAD_COLUMNS = 6;
 /** B5 E18's kinds take the focus as they open, so a keyboard player can answer at once. */
@@ -214,6 +219,8 @@ type Picker = {
   budget?: { limit: number; costs: ReadonlyMap<string, number> };
   /** R514: the board zones that answer a `cell` prompt, by testid, to the option each answers with. */
   boardKeys?: ReadonlyMap<string, string>;
+  /** R1184000: a sequence question's right answers so far, as the view carries them. */
+  streak?: number;
 };
 
 /** The pickers whose options are cards by nature. */
@@ -403,6 +410,7 @@ function pickerForPending(
       action: answerAction(pending, items.map((item) => item.key).filter((key) => keys.includes(key)), view, legal),
     }),
   };
+  if (pending.kind === "answer" && pending.streak !== undefined) picker.streak = pending.streak;
   if (pending.kind === "pick" && pending.budget !== undefined) {
     picker.budget = { limit: pending.budget, costs: new Map(pending.options.map((option) => [option.key, option.cost ?? 0])) };
   }
@@ -1221,28 +1229,51 @@ function PromptModal(props: {
     }
 
     if (picker.chrome === "answer") {
+      // R1184000: a question of a sequence says how many it has right so far and offers Stop, under
+      // no letter, after the lettered answers; a lone problem (C+ #42) has neither.
+      const answers = items.filter((item) => item.key !== ANSWER_STOP);
+      const stop = items.find((item) => item.key === ANSWER_STOP);
       return (
-        <div className="prompt-answers" role="group" aria-label={t("Answers")} onKeyDown={arrowFocus(ANSWER_COLUMNS)}>
-          {items.map((item, at) => {
-            const letter = ANSWER_LETTERS[at] ?? String(at + 1);
-            return (
+        <>
+          {picker.streak === undefined ? null : (
+            <p className="prompt-streak" data-testid="prompt-streak" data-streak={picker.streak}>
+              {t("Right answers in a row: {count}", { count: picker.streak })}
+            </p>
+          )}
+          <div className="prompt-answers" role="group" aria-label={t("Answers")} onKeyDown={arrowFocus(ANSWER_COLUMNS)}>
+            {answers.map((item, at) => {
+              const letter = ANSWER_LETTERS[at] ?? String(at + 1);
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  data-testid={`prompt-option-${item.key}`}
+                  data-letter={letter}
+                  aria-pressed={pressed(item.key)}
+                  aria-label={`${letter}: ${item.label}`}
+                  onClick={() => pick(item.key)}
+                >
+                  <span className="prompt-answer-letter" aria-hidden="true">
+                    {letter}
+                  </span>
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+            {stop === undefined ? null : (
               <button
-                key={item.key}
+                key={stop.key}
                 type="button"
-                data-testid={`prompt-option-${item.key}`}
-                data-letter={letter}
-                aria-pressed={pressed(item.key)}
-                aria-label={`${letter}: ${item.label}`}
-                onClick={() => pick(item.key)}
+                className="prompt-answer-stop"
+                data-testid={`prompt-option-${stop.key}`}
+                aria-pressed={pressed(stop.key)}
+                onClick={() => pick(stop.key)}
               >
-                <span className="prompt-answer-letter" aria-hidden="true">
-                  {letter}
-                </span>
-                <span>{item.label}</span>
+                {stop.label}
               </button>
-            );
-          })}
-        </div>
+            )}
+          </div>
+        </>
       );
     }
 

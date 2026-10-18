@@ -491,6 +491,22 @@
   font-weight: 900;
 }
 
+/* R1184000: a question sequence (Meditative+ #20) says its streak over the answers and offers Stop,
+   under no letter, after them. */
+.prompt > .prompt-streak {
+  margin: 0;
+  color: #ffd24a;
+  font-weight: 700;
+}
+
+.prompt .prompt-answers > .prompt-answer-stop {
+  justify-content: center;
+  min-height: 44px;
+  margin-top: 4px;
+  border-style: dashed;
+  text-align: center;
+}
+
 /* `reward` (C #90): "Quest complete!" in gold over the quest, and each reward a small gilt card. */
 .prompt > .prompt-quest-banner {
   max-width: none;

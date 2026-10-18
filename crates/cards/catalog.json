@@ -16180,6 +16180,67 @@
       "text": "Cast on draw: Gain {mana} mana and draw {draw|card|cards}. The AI plays the rest of your turn."
     }
   },
+  "meditativeplus-020": {
+    "id": "meditativeplus-020",
+    "index": "20",
+    "name": "KY's Competition",
+    "set": "Meditative+",
+    "type": "Spell",
+    "tags": [
+      "KY"
+    ],
+    "rarity": "Rare",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "meditativeplus-020-1"
+    ],
+    "loc": 12,
+    "base": {
+      "keywords": [],
+      "text": "Answer three-digit sums one after another until you stop or miss one. Then summon a Lil' Kenny with X/X, X your correct answers."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Answer one- and two-digit sums one after another until you stop or miss one. Then summon a Radiant Lil' Kenny with 2X/2X, X your correct answers."
+    }
+  },
+  "meditativeplus-020-1": {
+    "id": "meditativeplus-020-1",
+    "index": "20.1",
+    "name": "Lil' Kenny",
+    "set": "Meditative+",
+    "type": "Unit",
+    "tags": [
+      "KY",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Rare",
+    "token": true,
+    "cost": 1,
+    "loc": 24,
+    "base": {
+      "attack": 0,
+      "health": 0,
+      "xStats": {
+        "attack": 1,
+        "health": 1
+      },
+      "keywords": [],
+      "text": "With X at least 4, it has Rush; 8, Divine Shield; 12, First Strike; 16, Cleave; 20, Lifesteal; 30, Indestructible."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 0,
+      "xStats": {
+        "attack": 2,
+        "health": 2
+      },
+      "keywords": [],
+      "text": "With X at least 4, it has Rush; 8, Divine Shield; 12, First Strike; 16, Cleave; 20, Lifesteal; 30, Indestructible."
+    }
+  },
   "meditativeplus-025": {
     "id": "meditativeplus-025",
     "index": "25",

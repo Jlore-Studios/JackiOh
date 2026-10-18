@@ -26,6 +26,7 @@ pub mod instance_data;
 pub mod jade;
 pub mod keywords_783;
 pub mod kill_credit;
+pub mod ky_competition;
 pub mod ky_test;
 pub mod last_boards;
 pub mod mb22;
