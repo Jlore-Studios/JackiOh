@@ -9464,8 +9464,10 @@
     "what": "revise #1188 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-18T02:42:16Z",
-    "notes": [],
+    "at": "2026-10-18T02:53:09Z",
+    "notes": [
+      "started a night run, as a lane was free: a suggestion survey is due, for `claude-3`"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
