@@ -6,7 +6,7 @@ import type { ActionBody } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { CraftRecipe, PendingOption, PendingPromptView } from "../../wire/index.ts";
+import type { CraftMode, CraftRecipe, PendingOption, PendingPromptView } from "../../wire/index.ts";
 import { CRAFT_HAT_PRICES } from "../../wire/engineConfig.ts";
 import { INSPECT_SHEET, closeInspect } from "../../cards/index.ts";
 import { LONG_PRESS_MS } from "../../cards/inspect/index.ts";
@@ -292,5 +292,145 @@ describe("R880 the crafted card opens on a long-press", () => {
     expect(screen.getByTestId(INSPECT_SHEET)).toHaveTextContent("Pure Closure");
     fireEvent.pointerUp(face, { pointerType: "touch", pointerId: 1 });
     expect(props.onAction).not.toHaveBeenCalled();
+  });
+});
+
+/** A Potion preset (Jazakus's frame): a 2/2 whose Activate deals 4, 3 + 4 = 7 of 7 points. */
+function potionPreset(): CraftRecipe {
+  return {
+    cost: 1,
+    type: "Unit",
+    adjective: "Pure",
+    noun: "Closure",
+    attack: 2,
+    health: 2,
+    keywords: [],
+    echo: 0,
+    hats: [{ hat: "activate", effects: [{ verb: "damageEnemyHero", n: 4 }] }],
+    frame: "potion",
+  };
+}
+
+/** The editor's props for a prompt in `mode`. */
+function modeProps(
+  mode: CraftMode,
+  options: PendingOption[],
+  budget: number,
+): { pending: PendingPromptView; onAction: (body: ActionBody) => void } {
+  return { pending: { ...pendingForCraft(options, budget), craftMode: mode }, onAction: vi.fn() };
+}
+
+// Meditative+ #26 Scratch Pad (R1182002): the empty canvas, with no presets, tooltips or hints.
+describe("R1182002 the from-scratch canvas", () => {
+  it("R1182002 opens empty, with no suggestion, price, tooltip or refusal reason", () => {
+    const props = modeProps("scratch", [presetOption(unitPreset(), 0), presetOption(spellPreset(), 1)], 2);
+    render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
+
+    const modal = screen.getByTestId("prompt-modal");
+    expect(modal.getAttribute("data-craft-mode")).toBe("scratch");
+    expect(modal.getAttribute("aria-label")).toBe("Code a card from scratch");
+    expect(screen.queryByTestId("craft-preset-0")).toBeNull();
+    expect(screen.queryByLabelText("Suggestions")).toBeNull();
+    expect(screen.getByRole("navigation", { name: "Blocks" }).querySelectorAll("[title]")).toHaveLength(0);
+    expect(screen.queryByRole("status")).toBeNull();
+    // The blocks name themselves and nothing more.
+    expect(screen.getByRole("button", { name: "Heal your hero" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Taunt" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cry" })).toBeInTheDocument();
+    // An empty canvas: a 0/1 Unit with nothing on it, which the meters price at 0 points and 3 lines.
+    expect(document.querySelectorAll(".craft-hat")).toHaveLength(0);
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("0/12 pts");
+    expect(screen.getByTestId("craft-loc")).toHaveTextContent("3/24 lines");
+  });
+
+  it("R1182002 Craft sends what the player built, and stays off while the engine refuses it", () => {
+    const props = modeProps("scratch", [presetOption(unitPreset(), 0)], 2);
+    render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
+
+    // A 0/1 Spell is refused (a Spell has exactly one When cast), with no reason shown.
+    fireEvent.click(screen.getByRole("button", { name: "Spell" }));
+    expect(screen.getByTestId("prompt-submit").getAttribute("aria-disabled")).toBe("true");
+    expect(screen.queryByRole("status")).toBeNull();
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+    expect(props.onAction).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Unit" }));
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+    expect(props.onAction).toHaveBeenCalledWith({
+      type: "answer",
+      choiceId: "ch-craft",
+      selection: [
+        {
+          pick: "craft",
+          recipe: { cost: 2, type: "Unit", adjective: "Pure", noun: "Closure", attack: 0, health: 1, keywords: [], echo: 0, hats: [] },
+        },
+      ],
+    });
+  });
+
+  it("R1182002 the face opens no glossary on a long-press", () => {
+    vi.useFakeTimers();
+    try {
+      const props = modeProps("scratch", [presetOption(unitPreset(), 0)], 2);
+      render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
+      const face = screen.getByTestId("craft-face");
+      fireEvent.pointerDown(face, { pointerType: "touch", pointerId: 1, clientX: 10, clientY: 10 });
+      act(() => {
+        vi.advanceTimersByTime(LONG_PRESS_MS);
+      });
+      expect(screen.queryByTestId(INSPECT_SHEET)).toBeNull();
+      fireEvent.pointerUp(face, { pointerType: "touch", pointerId: 1 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+// Meditative+ #16 Jazakus and #16.1 Jazakus Prime (R1182000, R1182001): the potion frame.
+describe("R1182000 the potion frame", () => {
+  it("R1182000 pins a Unit whose one hat is its Activate, with no type or hat palette", () => {
+    const props = modeProps("potion", [presetOption(potionPreset(), 0)], 1);
+    render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
+
+    const modal = screen.getByTestId("prompt-modal");
+    expect(modal.getAttribute("data-craft-mode")).toBe("potion");
+    expect(modal.getAttribute("aria-label")).toBe("Craft a Potion");
+    expect(screen.queryByRole("button", { name: "Spell" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Hats" })).toBeNull();
+    expect(screen.getByLabelText("Activate: Tribute this hat")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Remove Activate: Tribute this hat")).toBeNull();
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("7/7 pts");
+    expect(screen.getByTestId("craft-face")).toHaveTextContent("Pure Closure Potion");
+    // A suggestion is still offered in the potion frame.
+    expect(screen.getByTestId("craft-preset-0")).toHaveTextContent("Pure Closure");
+  });
+
+  it("R1182000 a palette block snaps under the Activate, and Craft sends the framed recipe", () => {
+    const props = modeProps("potion", [presetOption(potionPreset(), 0)], 1);
+    render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /^Gain Armor ·/ }));
+    expect(screen.getByLabelText("Gain Armor 1 under Activate: Tribute this")).toBeInTheDocument();
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("8/7 pts");
+    expect(screen.getByTestId("prompt-submit").getAttribute("aria-disabled")).toBe("true");
+    expect(screen.getByRole("status").textContent).toContain("over the budget of 7");
+
+    fireEvent.click(screen.getByLabelText("Remove Gain Armor 1"));
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+    expect(props.onAction).toHaveBeenCalledWith({
+      type: "answer",
+      choiceId: "ch-craft",
+      selection: [{ pick: "craft", recipe: potionPreset() }],
+    });
+  });
+
+  it("R1182001 a HUGE Potion has five times a Potion's points", () => {
+    const huge: CraftRecipe = { ...potionPreset(), cost: 3, frame: "hugePotion" };
+    const props = modeProps("hugePotion", [presetOption(huge, 0)], 3);
+    render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
+
+    expect(screen.getByTestId("prompt-modal").getAttribute("aria-label")).toBe("Craft a HUGE Potion");
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("7/35 pts");
+    expect(screen.getByTestId("craft-face")).toHaveTextContent("HUGE Pure Closure Potion");
   });
 });

@@ -327,6 +327,7 @@ data: {[string]: JsonValue}?,
 export type ChooseCraftArgs = {
 step: string,
 cost: number,
+mode: CraftMode?,
 radiant: boolean?,
 prompt: string?,
 data: {[string]: JsonValue}?,
@@ -468,17 +469,21 @@ keyword: KeywordKind?,
 cardType: CardType?,
 }
 
+export type CraftFrame = "potion" | "hugePotion"
+
 export type CraftHat = {
 hat: CraftHatKind,
 effects: {CraftEffect},
 }
 
-export type CraftHatKind = "cry" | "death" | "startOfTurn" | "endOfTurn" | "whenCast" | "opponentPlaysUnit" | "opponentPlaysSpell" | "opponentAttacks"
+export type CraftHatKind = "cry" | "death" | "startOfTurn" | "endOfTurn" | "whenCast" | "opponentPlaysUnit" | "opponentPlaysSpell" | "opponentAttacks" | "activate"
 
 export type CraftKeyword = {
 kind: KeywordKind,
 n: number?,
 }
+
+export type CraftMode = "scratch" | "potion" | "hugePotion"
 
 export type CraftRecipe = {
 cost: number,
@@ -490,6 +495,7 @@ health: number,
 keywords: {CraftKeyword},
 echo: number,
 hats: {CraftHat},
+frame: CraftFrame?,
 }
 
 export type CraftVerb = "damageTarget" | "damageEnemyHero" | "damageRandomEnemy" | "damageEachEnemy" | "healTarget" | "healYourHero" | "healYourSide" | "draw" | "gainMana" | "gainArmor" | "summonRush" | "summonFelinor" | "summonSheep" | "buffTarget" | "buffYourUnits" | "grantKeyword" | "destroy" | "bounce" | "addRandom" | "discover" | "opponentDiscards" | "buffRandomCard" | "nerfRandomEnemyCard" | "lockRandomZone"
