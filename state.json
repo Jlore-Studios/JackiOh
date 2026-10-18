@@ -4409,10 +4409,8 @@
       "taken_asks": []
     },
     "1226": {
-      "action": "plan",
-      "asks": [
-        "c:6251092718"
-      ],
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-10-18T14:48:36Z",
         "difficulty": "medium",
@@ -4438,14 +4436,16 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
-      "provider": "claude-7",
+      "provider": "claude-2",
       "queued_at": "2026-10-18T14:30:07Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "39136459445",
-      "started_at": "2026-10-18T14:38:07Z",
+      "run_id": "39139002647",
+      "started_at": "2026-10-18T15:07:40Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6251092718"
+      ]
     },
     "1227": {
       "cleared": {
@@ -9743,9 +9743,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-18T15:02:19Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39138126689",
-    "what": "revise #1231 on claude-4"
+    "at": "2026-10-18T15:07:40Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39139002647",
+    "what": "build #1226 on claude-2"
   },
   "last_sweep": {
     "at": "2026-10-18T15:06:04Z",
