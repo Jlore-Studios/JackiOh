@@ -33,4 +33,10 @@ chinese?: true,
  * MD-B6, R943: the card was minted after the decks were built (`CardInstance.created`). Only on
  * a card the viewer may read, as `chinese` is. Only ever `Some(true)`.
  */
-created?: true, };
+created?: true, 
+/**
+ * R1183005 (Meditative+ #25 KY's Intuition): the option is a card's code block, its `label`,
+ * and names no card (`defId` is absent), so a client draws the code as code. Only ever
+ * `Some(true)`.
+ */
+code?: true, };

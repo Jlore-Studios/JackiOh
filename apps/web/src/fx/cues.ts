@@ -817,6 +817,8 @@ const turnBanner: Recipe = (event, p) => {
   if (event.type === "turnAutoEnded") return [banner(p.D, FX_TEXT.autoEnded, "muted")];
   // B5 E10: an effect cut the turn short.
   if (event.type === "turnCutShort") return [banner(p.D, FX_TEXT.turnCutShort, "muted")];
+  // R1183002: the AI plays the rest of the turn.
+  if (event.type === "autopilotEngaged") return [banner(p.D, FX_TEXT.autopilot, "muted")];
   // R676: a Glitch's banner is its own corrupted name (cards/glitch.ts), whatever it did.
   if (event.type === "glitched") return [banner(p.D, GLITCH_WORDS.name, "muted")];
   // R983: a Feng Shui judgement is 吉 or 凶 on the turn banner.

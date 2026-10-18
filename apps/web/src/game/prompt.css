@@ -200,6 +200,26 @@
   text-shadow: 0 2px 0 rgb(0 0 0 / 0.6);
 }
 
+/* R1183005: Meditative+ #25 KY's Intuition Discovers among blocks of code, so each option is its code
+   alone, as written (Prompt.tsx CardOption): monospaced, kept on its own lines, scrolled within the
+   option's box rather than stretching it, and naming no card. */
+.prompt-card--code,
+.prompt > .prompt-cards .prompt-card.prompt-card--code {
+  width: min(17rem, 100%);
+  text-align: left;
+}
+
+.prompt-code {
+  margin: 0;
+  max-height: 14rem;
+  overflow: auto;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 9px;
+  line-height: 1.35;
+  white-space: pre;
+  color: var(--text);
+}
+
 /* Confirm is the one primary action: filled in End turn's amber (index.css --primary-*), so the
    game has a single "go" colour rather than a blue one beside a gold one. */
 .prompt [data-testid="prompt-submit"]:not([aria-disabled="true"]) {
@@ -469,6 +489,22 @@
   color: #ffd24a;
   font-size: 18px;
   font-weight: 900;
+}
+
+/* R1184000: a question sequence (Meditative+ #20) says its streak over the answers and offers Stop,
+   under no letter, after them. */
+.prompt > .prompt-streak {
+  margin: 0;
+  color: #ffd24a;
+  font-weight: 700;
+}
+
+.prompt .prompt-answers > .prompt-answer-stop {
+  justify-content: center;
+  min-height: 44px;
+  margin-top: 4px;
+  border-style: dashed;
+  text-align: center;
 }
 
 /* `reward` (C #90): "Quest complete!" in gold over the quest, and each reward a small gilt card. */

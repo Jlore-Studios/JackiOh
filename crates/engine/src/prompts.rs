@@ -153,6 +153,29 @@ pub fn answer_key_of(data: &IndexMap<String, Value>) -> Option<String> {
     data.get(ANSWER_KEY).and_then(Value::as_str).map(str::to_string)
 }
 
+/// R1184000: the key of a sequence question's Stop option, a `none` pick as `choose_cell`'s Done and
+/// a night market's Leave are (R1000). It is listed after the lettered answers and is never the key.
+pub const ANSWER_STOP_KEY: &str = "none";
+
+/// R1184001: the answer that stops the question sequence open in `state` (Meditative+ #20), which a
+/// timeout gives instead of the AI policy's draw, as it leaves a night market (R1002): it draws
+/// nothing, and the Kenny the right answers so far have earned is summoned. `None` with no such
+/// prompt open.
+pub fn stop_answer(state: &GameState) -> Option<ActionBody> {
+    let pending = state.pending.as_ref()?;
+    if pending.kind != PromptKind::Answer || pending.streak.is_none() {
+        return None;
+    }
+    pending
+        .options
+        .iter()
+        .find(|option| option.key == ANSWER_STOP_KEY)
+        .map(|option| ActionBody::Answer {
+            choice_id: pending.id.clone(),
+            selection: vec![option.selection.clone()],
+        })
+}
+
 /// A card's data with the two one-prompt control keys taken out (`PROMPT_OWNER_KEY`, `ANSWER_KEY`).
 pub fn without_prompt_keys(data: &IndexMap<String, Value>) -> IndexMap<String, Value> {
     let mut rest = data.clone();
@@ -348,6 +371,7 @@ pub fn open_prompt(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<Pe
         max,
         budget: args.budget.map(|budget| budget.max(0)),
         craft_mode: None,
+        streak: None,
         resume,
     };
 
@@ -1374,6 +1398,7 @@ fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs, luck: i32)
         max,
         budget: None,
         craft_mode: None,
+        streak: None,
         resume: args.resume.clone(),
     };
     let answers = prompt_answers(&probe);

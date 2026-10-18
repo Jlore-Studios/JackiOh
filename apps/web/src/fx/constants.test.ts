@@ -129,6 +129,7 @@ const S2 = {
     inauspicious: "凶",
     chaosRolled: "Call to Chaos:",
     turnCutShort: "Turn cut short",
+    autopilot: "The AI takes the turn",
     victory: "Victory",
     defeat: "Defeat",
     draw: "Draw",

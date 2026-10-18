@@ -140,6 +140,11 @@ const ARROWS: Record<string, string> = { left: "←", right: "→" };
 const ANSWER_LETTERS: readonly string[] = ["A", "B", "C", "D", "E", "F", "G", "H"];
 /** The answers stand in one column, so the arrows walk them up and down. */
 const ANSWER_COLUMNS = 1;
+/**
+ * R1184000: a question of a sequence (Meditative+ #20) offers Stop after its answers, a `none` pick
+ * under no letter, as the engine keys it (`ANSWER_STOP_KEY`).
+ */
+const ANSWER_STOP = "none";
 /** C #18's 0 to 10 sit as 0–5 over 6–10: the arrows move by this, and prompt.css lays the pad out by it. */
 const NUMBER_PAD_COLUMNS = 6;
 /** B5 E18's kinds take the focus as they open, so a keyboard player can answer at once. */
@@ -174,6 +179,11 @@ type PickerItem = {
   caption?: string;
   /** #492: an embiggen option, whose face shows the price that form is played for (`pricedFace`). */
   price?: EmbiggenPrice;
+  /**
+   * R1183005: the option is a card's code block alone (`PendingOption.code`, Meditative+ #25 KY's
+   * Intuition): its label is the code, drawn as code, untranslated, and it names no card.
+   */
+  code?: boolean;
 };
 
 type EmbiggenPrice = "normal" | "embiggen";
@@ -214,6 +224,8 @@ type Picker = {
   budget?: { limit: number; costs: ReadonlyMap<string, number> };
   /** R514: the board zones that answer a `cell` prompt, by testid, to the option each answers with. */
   boardKeys?: ReadonlyMap<string, string>;
+  /** R1184000: a sequence question's right answers so far, as the view carries them. */
+  streak?: number;
 };
 
 /** The pickers whose options are cards by nature. */
@@ -340,6 +352,11 @@ function pickerForPending(
   const items = pending.options.map((option): PickerItem => {
     // The engine's words for the option, in the reader's language where the dictionary has them.
     const base: PickerItem = { key: option.key, label: t(option.label) };
+    // R1183005: a code option is its code as the engine wrote it, never a sentence to translate.
+    if (option.code === true) {
+      base.code = true;
+      base.label = option.label;
+    }
     if (option.defId !== undefined) base.defId = option.defId;
     // B5 E17, E18: a card the view lists nowhere (the opponent's hand, C #11) is drawn from the
     // option itself, Radiant and at its cost where the option says so.
@@ -398,6 +415,7 @@ function pickerForPending(
       action: answerAction(pending, items.map((item) => item.key).filter((key) => keys.includes(key)), view, legal),
     }),
   };
+  if (pending.kind === "answer" && pending.streak !== undefined) picker.streak = pending.streak;
   if (pending.kind === "pick" && pending.budget !== undefined) {
     picker.budget = { limit: pending.budget, costs: new Map(pending.options.map((option) => [option.key, option.cost ?? 0])) };
   }
@@ -743,8 +761,10 @@ function CardOption(props: {
   const pays = face === null || props.item.price === undefined ? undefined : priceLine(face);
   // R247: a number names no card here, so it is drawn on a card back and nothing opens it.
   const number = face === null && NUMBER_OPTION.test(props.item.label) ? props.item.label : null;
+  // R1183005: a code option is drawn as its code, in a block of its own, naming no card.
+  const code = face === null && props.item.code === true ? props.item.label : null;
   // R831004: an option that names a set (#82 KY's Trial's first Discover) shows the set's mark (R503).
-  const mark = face === null && number === null ? setMarkOf(props.item.label) : null;
+  const mark = face === null && number === null && code === null ? setMarkOf(props.item.label) : null;
   const setMark = mark === null || mark.kind === "unknown" ? null : mark;
   const testId = `prompt-option-${props.item.key}`;
   // Lines of code is a hidden stat in matches.
@@ -761,10 +781,11 @@ function CardOption(props: {
     <>
       <button
         type="button"
-        className={number === null ? "prompt-card" : "prompt-card prompt-card--number"}
+        className={number !== null ? "prompt-card prompt-card--number" : code !== null ? "prompt-card prompt-card--code" : "prompt-card"}
         data-testid={testId}
         data-verdict={verdict}
         data-number={number ?? undefined}
+        data-code={code === null ? undefined : "true"}
         data-set={setMark === null ? undefined : props.item.label}
         data-price={face === null ? undefined : props.item.price}
         data-over-budget={props.over === true ? "true" : undefined}
@@ -782,6 +803,10 @@ function CardOption(props: {
               {number}
             </span>
           </span>
+        ) : code !== null ? (
+          <pre className="prompt-code">
+            <code>{code}</code>
+          </pre>
         ) : face === null ? (
           <>
             {setMark === null ? null : <img className="prompt-set-mark" src={setMark.src} alt="" aria-hidden="true" title={setMark.label} />}
@@ -1211,28 +1236,51 @@ function PromptModal(props: {
     }
 
     if (picker.chrome === "answer") {
+      // R1184000: a question of a sequence says how many it has right so far and offers Stop, under
+      // no letter, after the lettered answers; a lone problem (C+ #42) has neither.
+      const answers = items.filter((item) => item.key !== ANSWER_STOP);
+      const stop = items.find((item) => item.key === ANSWER_STOP);
       return (
-        <div className="prompt-answers" role="group" aria-label={t("Answers")} onKeyDown={arrowFocus(ANSWER_COLUMNS)}>
-          {items.map((item, at) => {
-            const letter = ANSWER_LETTERS[at] ?? String(at + 1);
-            return (
+        <>
+          {picker.streak === undefined ? null : (
+            <p className="prompt-streak" data-testid="prompt-streak" data-streak={picker.streak}>
+              {t("Right answers in a row: {count}", { count: picker.streak })}
+            </p>
+          )}
+          <div className="prompt-answers" role="group" aria-label={t("Answers")} onKeyDown={arrowFocus(ANSWER_COLUMNS)}>
+            {answers.map((item, at) => {
+              const letter = ANSWER_LETTERS[at] ?? String(at + 1);
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  data-testid={`prompt-option-${item.key}`}
+                  data-letter={letter}
+                  aria-pressed={pressed(item.key)}
+                  aria-label={`${letter}: ${item.label}`}
+                  onClick={() => pick(item.key)}
+                >
+                  <span className="prompt-answer-letter" aria-hidden="true">
+                    {letter}
+                  </span>
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+            {stop === undefined ? null : (
               <button
-                key={item.key}
+                key={stop.key}
                 type="button"
-                data-testid={`prompt-option-${item.key}`}
-                data-letter={letter}
-                aria-pressed={pressed(item.key)}
-                aria-label={`${letter}: ${item.label}`}
-                onClick={() => pick(item.key)}
+                className="prompt-answer-stop"
+                data-testid={`prompt-option-${stop.key}`}
+                aria-pressed={pressed(stop.key)}
+                onClick={() => pick(stop.key)}
               >
-                <span className="prompt-answer-letter" aria-hidden="true">
-                  {letter}
-                </span>
-                <span>{item.label}</span>
+                {stop.label}
               </button>
-            );
-          })}
-        </div>
+            )}
+          </div>
+        </>
       );
     }
 
