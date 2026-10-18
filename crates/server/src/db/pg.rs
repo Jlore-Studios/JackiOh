@@ -6822,7 +6822,7 @@ pub async fn presence_watchable(
            join public.matches m on m.id = p.current_match_id
           where p.id = any($2::uuid[]) and p.id <> $1::uuid
             and p.allow_spectators
-            and m.status = 'live' and m.ranked is not true
+            and m.status = 'live'
             and p.id in (m.p1_profile_id, m.p2_profile_id)
             and $1::uuid is distinct from m.p1_profile_id
             and $1::uuid is distinct from m.p2_profile_id

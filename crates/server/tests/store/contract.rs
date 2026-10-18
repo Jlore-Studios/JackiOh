@@ -7227,8 +7227,8 @@ mod social {
 
     /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
     /// profiles are named: whom a series that is not over holds, each one's newest live co-op match,
-    /// and whose live 1v1 the viewer may watch (friends, unblocked, live, unranked, seating the friend
-    /// and not the viewer, the friend allowing it). Each answers in the order named.
+    /// and whose live 1v1 the viewer may watch (friends, unblocked, live, ranked or unranked, seating
+    /// the friend and not the viewer, the friend allowing it). Each answers in the order named.
     async fn s7_presence_reads_many_profiles_at_once(harness: &StoreHarness) {
         let viewer = active_profile(harness, None).await;
         let rival = active_profile(harness, None).await;
@@ -7276,7 +7276,7 @@ mod social {
         .collect();
         assert_eq!(
             q!(harness, t => t.presence_watchable(&viewer.id, &named)),
-            vec![watched.id.clone()]
+            vec![watched.id.clone(), ranked.id.clone()]
         );
         assert!(q!(harness, t => t.presence_watchable("not-a-uuid", &named)).is_empty());
         assert!(q!(harness, t => t.presence_watchable(&viewer.id, &[])).is_empty());
