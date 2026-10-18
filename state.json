@@ -4103,11 +4103,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-18T04:41:17Z",
+        "at": "2026-10-18T06:11:18Z",
         "difficulty": "hard",
-        "provider": "agy",
-        "tier": "medium",
-        "why": "the AI's search (crates/ai/src/search.rs) and candidate generation across crates/ai, crates/tools and training/ml"
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "changes the AI's search (crates/ai/src/search.rs) across crates/ai, crates/tools and training/ml, with two new rulings"
       },
       "failures": 0,
       "forced": false,
