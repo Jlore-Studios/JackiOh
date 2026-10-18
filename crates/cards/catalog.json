@@ -15915,11 +15915,11 @@
     "loc": 19,
     "base": {
       "keywords": [],
-      "text": "Your next Spell costs Health equal to {multiple} times its Cost instead of mana."
+      "text": "Your next Spell costs Health equal to {multiple|time|times} its Cost instead of mana."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your next Spell costs Health equal to {multiple} times its Cost instead of mana, and has Echo 1."
+      "text": "Your next Spell costs Health equal to {multiple|time|times} its Cost instead of mana, and has Echo 1."
     }
   },
   "meditativeplus-007": {

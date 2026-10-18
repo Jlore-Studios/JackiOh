@@ -1,7 +1,7 @@
 //! M+ #6 Bloodbloom (SPEC §8.9 row 6, BUILD M11 row M+ 6): (0) Spell, Epic.
-//!   Base:    "Your next Spell costs Health equal to {multiple} times its Cost instead of mana."
-//!   Radiant: "Your next Spell costs Health equal to {multiple} times its Cost instead of mana, and has
-//!            Echo 1."
+//!   Base:    "Your next Spell costs Health equal to {multiple|time|times} its Cost instead of mana."
+//!   Radiant: "Your next Spell costs Health equal to {multiple|time|times} its Cost instead of mana,
+//!            and has Echo 1."
 //!
 //! Health as the price (R1180004, `effects::price_next_spell_in_health`): a `HealthPrice` player
 //! modifier on the caster, until a Spell uses it. The next Spell they play from their hand, face-up,

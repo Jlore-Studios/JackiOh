@@ -310,7 +310,8 @@ mod tests {
 
     #[test]
     fn radiant_played_it_deals_5() {
-        let mut s = game("m+017-radiant-played", json!({ "hand": [{ "def": ID, "radiant": true }] }), json!({}));
+        let radiant = json!({ "hand": [{ "def": ID, "radiant": true }] });
+        let mut s = game("m+017-radiant-played", radiant, json!({}));
         s.play(ID, json!({ "targets": hero(P2) }));
         assert_eq!(health(&s, P2), 25);
     }

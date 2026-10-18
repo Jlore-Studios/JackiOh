@@ -330,8 +330,8 @@ from an entry, the decision wins.
 
 > **Designer:** (0) Bloodbloom, Spell, Epic · Your next spell costs [spell_cost * 3] health instead of mana ~~~ Your next spell costs [spell_cost * 3] health instead of mana, it also gains Echo
 
-- **Text:** Your next Spell costs Health equal to {multiple} times its Cost instead of mana.
-- **Radiant:** Your next Spell costs Health equal to {multiple} times its Cost instead of mana, and has Echo 1.
+- **Text:** Your next Spell costs Health equal to {multiple|time|times} its Cost instead of mana.
+- **Radiant:** Your next Spell costs Health equal to {multiple|time|times} its Cost instead of mana, and has Echo 1.
 - **Engine:** NEW: health as the price (B02), a player modifier on the caster, until a Spell uses it: `mana::price_of` prices the next Spell (not a Field Spell or a Trap, [[§5.1]]) at 0 mana and `multiple ×` its cost after every modifier ([[R65]]; an X Spell its X, [[R348]]) in health, paid with the play as `lose_health` ([[R18]]); `legal_actions` offers a Spell that only the health price affords. A cast pays nothing and spends nothing ([[R70]]). The Radiant face also grants Echo 1 to that Spell (`EchoNextSpell`'s shape, [[R30]]).
 - **Rulings:** MP-B02-1 ([[R1180004]]): the next Spell you play, from your hand, face-up, after this resolves; it may cost you the game, as Hearthstone's Bloodbloom (a hero at 0 loses at the state check); a (0) Spell costs 0 health and still uses it; several Bloodblooms do not stack, the newest replacing; the Spell still costs its cost for every rule that reads one, and a Spell set face-down or played from a graveyard does not use it.
 - **Numbers:** multiple 3 ↓.
