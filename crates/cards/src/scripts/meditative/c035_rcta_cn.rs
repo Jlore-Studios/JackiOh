@@ -58,7 +58,7 @@ fn rcta() -> Script {
 }
 
 pub fn script() -> CardScripts {
-    // Both faces share the one script: the declared `stats` (2, radiant 5) and `times` (1,
+    // Both faces share the one script: the declared `stats` (2, radiant 4) and `times` (1,
     // radiant 2) are what differ.
     let base = rcta();
     let radiant = rcta();
@@ -71,7 +71,7 @@ pub fn script() -> CardScripts {
 // filter, Core 2's pick) while pools do not, kept in every zone and by a copy, dropped by a
 // Transform (MD-B15), and the `chinese` flag, which makes it CN too (MD-B11, R1176000); then +2/+2
 // permanently and one Buff; a target that is CN by resolution fizzles; stats and times read through
-// `param()`; radiant +5/+5 and two Buffs".
+// `param()`; radiant +4/+4 and two Buffs".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -397,14 +397,14 @@ mod tests {
             use super::*;
 
             #[test]
-            fn plus_5_5_and_two_buffs() {
+            fn plus_4_4_and_two_buffs() {
                 let mut s = casting("rcta-radiant", true);
                 let victim = s.unit(P1, 1).expect("the Vanilla");
                 s.play(RCTA, pick(&victim.id));
                 let changed = s.card(&victim.id).clone();
                 assert_eq!(changed.granted_tags, Some(vec![Tag::Cn]));
                 assert_eq!(changed.chinese, Some(true));
-                assert_eq!((changed.buffs.attack, changed.buffs.health), (5, 5));
+                assert_eq!((changed.buffs.attack, changed.buffs.health), (4, 4));
                 assert_eq!(upgraded_for(s.events(), &victim.id), 2);
             }
         }

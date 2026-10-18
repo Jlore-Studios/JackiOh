@@ -1,8 +1,8 @@
 //! C #31 Cookie Guild (SPEC §8.6 row 31). (2) Unit, Human, Common, 2/4 → 4/8.
 //!   Base:    "Cry: Recruit {units|Unit|Units} of ({costLimit}) Cost or less." — 1 Unit, (2)
-//!   Radiant: "Cry: Recruit {units|Unit|Units} of ({costLimit}) Cost or less." — 3 Units, (2)
+//!   Radiant: "Cry: Recruit {units|Unit|Units} of ({costLimit}) Cost or less." — 2 Units, (2)
 //!   Engine:  "Recruit (§6.3) filtered to Units whose deck cost (R65) is (2) or less, an X Unit counting
-//!            0 there (R396); three scans on the Radiant face, as #69 Call to Arms does, stopping when
+//!            0 there (R396); two scans on the Radiant face, as #69 Call to Arms does, stopping when
 //!            the board is full. Tunes: cost limit 2 ↑; units 1 ↑."
 //!
 //! §6.3 Recruit is one top-down scan for the first permanent that matches, summoned per R64 into the
@@ -27,7 +27,7 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's three scans are its declared `units`, which `param` reads off the running face.
+    // The same script: the Radiant face's two scans are its declared `units`, which `param` reads off the running face.
     let radiant = base.clone();
 
     CardScripts { base, radiant }
@@ -35,7 +35,7 @@ pub fn script() -> CardScripts {
 
 // C #31 Cookie Guild — SPEC §8.6 row 31, BUILD M9 Classic row C 31: Cry: Recruit the first (2) Cost or
 // less Unit from the top of your deck (its cost in the deck per R65: an X Unit 0, skipped unless the only
-// valid target, R690), summoned without a Cry into your leftmost open zone; radiant 4/8: three scans,
+// valid target, R690), summoned without a Cry into your leftmost open zone; radiant 4/8: two scans,
 // stopping when the row fills (as #69); numbers read through `param()` (R386).
 #[cfg(test)]
 mod tests {
@@ -253,7 +253,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn makes_three_top_down_scans_each_taking_the_next_match() {
+            fn makes_two_top_down_scans_each_taking_the_next_match() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
@@ -267,13 +267,13 @@ mod tests {
 
                 assert_eq!(
                     unit_defs(&s, P1),
-                    lanes([Some(GUILD), Some(FELINORS), Some(TEMPO), Some(BIG_D), None])
+                    lanes([Some(GUILD), Some(FELINORS), Some(TEMPO), None, None])
                 );
-                assert_eq!(library_defs(&s, P1), vec![MENACE, STOCKPILE, VANILLA]);
+                assert_eq!(library_defs(&s, P1), vec![MENACE, STOCKPILE, BIG_D, VANILLA]);
             }
 
             #[test]
-            fn fewer_matches_than_three_it_recruits_what_there_is() {
+            fn fewer_matches_than_two_it_recruits_what_there_is() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": GUILD, "radiant": true }, ANCHOR], "library": [MENACE, TEMPO] },
@@ -286,13 +286,13 @@ mod tests {
             }
 
             #[test]
-            fn stops_when_the_row_fills_the_third_match_stays_in_the_deck() {
+            fn stops_when_the_row_fills_the_second_match_stays_in_the_deck() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": GUILD, "radiant": true }, ANCHOR],
                         "library": [TEMPO, VANILLA, BIG_D],
-                        "field": [MENACE, MENACE],
+                        "field": [MENACE, MENACE, MENACE],
                     },
                     "p2": { "hand": [ANCHOR] },
                 }));
@@ -301,13 +301,13 @@ mod tests {
 
                 assert_eq!(
                     unit_defs(&s, P1),
-                    lanes([Some(MENACE), Some(MENACE), Some(GUILD), Some(TEMPO), Some(VANILLA)])
+                    lanes([Some(MENACE), Some(MENACE), Some(MENACE), Some(GUILD), Some(TEMPO)])
                 );
-                assert_eq!(library_defs(&s, P1), vec![BIG_D]);
+                assert_eq!(library_defs(&s, P1), vec![VANILLA, BIG_D]);
             }
 
             #[test]
-            fn r386_a_degrade_of_units_makes_two_scans() {
+            fn r386_a_degrade_of_units_makes_one_scan() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": GUILD, "radiant": true }, ANCHOR], "library": [TEMPO, VANILLA, BIG_D] },
@@ -317,8 +317,8 @@ mod tests {
 
                 s.play(GUILD, json!({}));
 
-                assert_eq!(unit_defs(&s, P1), lanes([Some(GUILD), Some(TEMPO), Some(VANILLA), None, None]));
-                assert_eq!(library_defs(&s, P1), vec![BIG_D]);
+                assert_eq!(unit_defs(&s, P1), lanes([Some(GUILD), Some(TEMPO), None, None, None]));
+                assert_eq!(library_defs(&s, P1), vec![VANILLA, BIG_D]);
             }
         }
     }

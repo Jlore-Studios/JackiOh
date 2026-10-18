@@ -1001,12 +1001,12 @@ mod m_n97_6_university {
     }
 
     #[test]
-    fn r384_radiant_activate_buffs_the_other_permanent_five_times_once_a_turn() {
+    fn r384_radiant_activate_buffs_the_other_permanent_four_times_once_a_turn() {
         let mut s = campus(true);
         let id = s.card(UNIVERSITY).id.clone();
         let other = s.card(VANILLA).id.clone();
         let events = activate_listed(&mut s, UNIVERSITY, any);
-        assert_eq!(upgrades_of(&events, &other), 5);
+        assert_eq!(upgrades_of(&events, &other), 4);
         assert_eq!(upgrades_of(&events, &id), 0);
         assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
     }
