@@ -138,10 +138,10 @@ mod tests {
 
             s.play("core-028", json!({}));
 
-            // #13 Jlockeed Shredder-10 is 6/10 → 8/20. R22: the base layer swaps, the 2 damage stays (so
+            // #13 Jlockeed Shredder-10 is 6/10 → 12/20. R22: the base layer swaps, the 2 damage stays (so
             // health is 18, not a fresh 20), and setting a flag is no entry to the field, so no Cry re-fires.
             assert!(s.card(&unit_id).radiant);
-            s.expect_stats(&unit_id, json!({ "attack": 8, "maxHealth": 20, "health": 18 }));
+            s.expect_stats(&unit_id, json!({ "attack": 12, "maxHealth": 20, "health": 18 }));
             assert_eq!(s.card(&unit_id).damage, 2);
             assert_eq!(
                 s.last_events()
