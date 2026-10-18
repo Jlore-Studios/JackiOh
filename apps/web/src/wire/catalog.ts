@@ -39,6 +39,7 @@ export type Tag =
   | "Prime"
   | "Acclaimed"
   | "Wincon"
+  | "Potion"
   | "Token";
 
 /** §8: Core's by mechanical complexity, Classic's and Classic+'s the designer's; every token carries "Token". */
@@ -48,10 +49,11 @@ export type Rarity = "Common" | "Rare" | "Epic" | "Legendary" | "Mythic" | "Toke
 export type PrintedRarity = Exclude<Rarity, "Token">;
 
 /**
- * §5: Core, Classic and Classic+ ship (R380); Meditative is in the catalog and ships with the last
- * part of its patch (R1420); Boss and Boss-X are reserved.
+ * §5: Core, Classic, Classic+ (R380) and Meditative (v0.3.5, R1420) ship; Meditative+ is in the
+ * catalog and ships with the last part of its patch (issue #1173, R1178000); Boss and Boss-X are
+ * reserved.
  */
-export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Boss" | "Boss-X" | "Custom";
+export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Meditative+" | "Boss" | "Boss-X" | "Custom";
 
 /**
  * The sets that ship, in catalog order. A pool that names no set draws from all of them (R380), and

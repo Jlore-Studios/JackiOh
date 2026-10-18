@@ -20,9 +20,10 @@ trap backrow. This file binds every agent, not only Claude.
   is every boundary between the crates and the client) and `docs/v0.4.0/` (the Luau card scripts, #442, and
   their return to Rust in v0.5.0, #902: `README.md` the run's record, `PORTING.md` and `api-gaps.md` kept as
   the record and for the custom-card host).
-- The designer's source notes (`JackiOh_*.md`, `ARCHITECTURE-CCG.md`, with the design briefs
-  `docs/classic-sets.md` and `docs/meditative-set.md`) are what REVIEW Part A checks the spec against; read
-  them only when the task is about them.
+- The designer's source notes (`JackiOh_*.md`, the newest `JackiOh_MeditativePlus_Cards.md`,
+  `ARCHITECTURE-CCG.md`, with the design briefs `docs/classic-sets.md`, `docs/meditative-set.md` and
+  `docs/meditative-plus-set.md`) are what REVIEW Part A checks the spec against; read them only when the
+  task is about them.
 
 ## Rules of engagement
 
