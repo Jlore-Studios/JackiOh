@@ -37,6 +37,11 @@
 // prompt.css turns a play's board picks into a slim bar on a phone while drag to play is on
 // (polish task 7), because their answers already glow on the board.
 //
+// #1204: a card picker (`isCardLayout`) has "View the board" (`prompt-peek`), which folds it to a bar
+// of its title and "Back to the choice" over an undimmed board (`data-collapsed` on the panel and the
+// scrim, prompt.css). Presentation only: the picks so far stay in `PromptModal`'s state, the fold
+// sends nothing, and a new prompt is a new `PromptModal` (its `key`), so it opens unfolded.
+//
 // The mulligan is both seats' at once (R265): each answers its own, in either order, and an answer
 // is sealed until the other is in. So the mulligan picker says whether the opponent has answered
 // yet (`mulligan-opponent-status`, from `view.mulligan`), its confirm reads "Ready", and once the
@@ -1002,6 +1007,8 @@ function PromptModal(props: {
   const fits = (keys: readonly string[]): boolean => picker.budget === undefined || spent(keys) <= picker.budget.limit;
   const inRange = selected.length >= picker.min && selected.length <= picker.max && fits(selected);
   const panel = useRef<HTMLDivElement>(null);
+  /** #1204: the card picker folded to a bar so the board shows. Never sent; `selected` outlasts it. */
+  const [folded, setFolded] = useState(false);
 
   function send(keys: readonly string[]): void {
     const out = picker.submit(keys);
@@ -1261,7 +1268,7 @@ function PromptModal(props: {
   const range = picker.min === picker.max ? `${picker.min}` : `${picker.min}–${picker.max}`;
 
   return (
-    <div className="prompt-scrim" data-testid="prompt-scrim">
+    <div className="prompt-scrim" data-testid="prompt-scrim" data-collapsed={folded ? "true" : undefined}>
       <div
         ref={panel}
         className={`prompt prompt-${picker.chrome}`}
@@ -1274,8 +1281,9 @@ function PromptModal(props: {
            too (BUILD M5-T2). Derived by `highlightFor`, which reads only `legalActions` and the
            prompt's own options. */
         data-board-testids={props.boardTestids.join(" ")}
+        data-collapsed={folded ? "true" : undefined}
         role="dialog"
-        aria-modal="true"
+        aria-modal={!folded}
         aria-label={picker.title}
       >
         {picker.chrome === "reward" ? (
@@ -1284,33 +1292,44 @@ function PromptModal(props: {
           </p>
         ) : null}
         <PickerTitle title={picker.title} sourceDefId={picker.sourceDefId} sourceCard={picker.sourceCard} />
-        <p className="prompt-count">
-          {t("Choose {range}: {count} chosen", { range, count: selected.length })}
-        </p>
-        {props.status}
-        {body()}
-        {(picker.chrome === "target" || picker.chrome === "cell") && props.boardTestids.length > 0 ? (
-          <p className="prompt-board-note">{t("Highlighted on the board as well.")}</p>
-        ) : null}
-        {/* Shown only where the picker folds to a bar with no options in it (prompt.css). */}
-        {props.source === "play" ? <BoardHint chrome={picker.chrome} /> : null}
+        {folded ? null : (
+          <>
+            <p className="prompt-count">
+              {t("Choose {range}: {count} chosen", { range, count: selected.length })}
+            </p>
+            {props.status}
+            {body()}
+            {(picker.chrome === "target" || picker.chrome === "cell") && props.boardTestids.length > 0 ? (
+              <p className="prompt-board-note">{t("Highlighted on the board as well.")}</p>
+            ) : null}
+            {/* Shown only where the picker folds to a bar with no options in it (prompt.css). */}
+            {props.source === "play" ? <BoardHint chrome={picker.chrome} /> : null}
+          </>
+        )}
         <div className="prompt-actions">
-          <button
-            type="button"
-            data-testid="prompt-submit"
-            aria-disabled={!inRange}
-            onClick={() => {
-              if (inRange) send(selected);
-            }}
-          >
-            {/* R265: the mulligan's answer is sealed until both seats have given theirs. */}
-            {picker.chrome === "mulligan" ? t("Ready") : t("Confirm")}
-          </button>
-          {props.onCancel === undefined ? null : (
+          {folded ? null : (
+            <button
+              type="button"
+              data-testid="prompt-submit"
+              aria-disabled={!inRange}
+              onClick={() => {
+                if (inRange) send(selected);
+              }}
+            >
+              {/* R265: the mulligan's answer is sealed until both seats have given theirs. */}
+              {picker.chrome === "mulligan" ? t("Ready") : t("Confirm")}
+            </button>
+          )}
+          {folded || props.onCancel === undefined ? null : (
             <button type="button" data-testid="prompt-cancel" onClick={props.onCancel}>
               {t("Cancel")}
             </button>
           )}
+          {isCardLayout(picker) ? (
+            <button type="button" data-testid="prompt-peek" aria-pressed={folded} onClick={() => setFolded((was) => !was)}>
+              {folded ? t("Back to the choice") : t("View the board")}
+            </button>
+          ) : null}
         </div>
       </div>
     </div>
