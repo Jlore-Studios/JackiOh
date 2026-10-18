@@ -32,7 +32,7 @@ use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::config::HAND_CAP;
+use crate::config::{CHINESE_TAG, HAND_CAP};
 use crate::damage::DamageTarget;
 use crate::layers::{AuraTable, face_of, unit_has};
 use crate::script::{EffectContext, FlagOrCount, StaticFlags};
@@ -297,9 +297,10 @@ pub fn played_this_turn_of_type(state: &GameState, player: PlayerId, types: &[Ca
         .sum()
 }
 
-/// MD-B15, R923: every tag a card instance carries — its definition's tags, then each granted tag
-/// (`CardInstance.granted_tags`, Meditative #35) it lacks, in order. Every instance-level tag read
-/// goes through this; catalog pools read definitions and never see granted tags.
+/// MD-B15, R923, R1176000: every tag a card instance carries — its definition's tags, then each
+/// granted tag (`CardInstance.granted_tags`, Meditative #35) it lacks, in order, then CN when the card
+/// is in Chinese (`CardInstance.chinese`, R1300) and lacks it. Every instance-level tag read goes
+/// through this; catalog pools read definitions and never see a granted tag or a translation.
 pub fn tags_of(state: &GameState, card: &CardInstance) -> Vec<Tag> {
     let mut tags: Vec<Tag> = crate::catalog::def_of(Some(state), &card.def_id).tags.clone();
     if let Some(granted) = card.granted_tags.as_deref() {
@@ -308,6 +309,10 @@ pub fn tags_of(state: &GameState, card: &CardInstance) -> Vec<Tag> {
                 tags.push(*tag);
             }
         }
+    }
+    // R1176000: every card in Chinese is CN, for as long as it is in Chinese (which is for good).
+    if card.chinese == Some(true) && !tags.contains(&CHINESE_TAG) {
+        tags.push(CHINESE_TAG);
     }
     tags
 }

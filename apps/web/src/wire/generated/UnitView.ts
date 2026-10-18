@@ -23,7 +23,7 @@ import type { Tuning } from "./Tuning";
 export type UnitView = { instanceId: string, defId: string, radiant: boolean, cost: number, power?: string, conditionActive?: true, counteredOnPlay?: true, preview?: Array<PreviewValue>, type?: CardType, 
 /**
  * MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
- * tag is part of the card, and the view says so.
+ * tag is part of the card, as CN is of a card in Chinese (R1176000), and the view says so.
  */
 tags?: Array<Tag>, brittle?: number, element?: CardElement, params?: { [key in string]: number }, tuning?: Tuning, enchantments?: Array<Enchantment>, marks?: Array<CardMark>, activations?: Array<ActivationView>, quest?: QuestView, copies?: CopiedTextView, owner: PlayerId, controller: PlayerId, attack: number, maxHealth: number, health: number, keywords: Array<Keyword>, armor: number, position: Position, counters: Counters, 
 /**

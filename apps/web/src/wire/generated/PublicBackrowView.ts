@@ -38,7 +38,7 @@ created?: true, cost: number, attack?: number, health?: number, power?: string, 
 faceDown: false, type: CardType, 
 /**
  * MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
- * tag is part of the card, and the view says so.
+ * tag is part of the card, as CN is of a card in Chinese (R1176000), and the view says so.
  */
 tags?: Array<Tag>, counters: BackrowCounters, owner: PlayerId, controller: PlayerId, 
 /**
