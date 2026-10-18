@@ -548,7 +548,7 @@ export const ALL_TRIBES = "All Tribes";
  * crowded tag row can cut it. Read off the tags: no catalog field.
  */
 export function frameTags(tags: readonly Tag[]): readonly (Tag | typeof ALL_TRIBES)[] {
-  const printed = tags.filter((tag) => tag !== "Token");
+  const printed: readonly Tag[] = tags.filter((tag) => tag !== "Token");
   if (!TRIBAL_TAGS.every((tribe) => printed.includes(tribe))) return printed;
   return [ALL_TRIBES, ...printed.filter((tag) => !TRIBAL_TAGS.includes(tag))];
 }
