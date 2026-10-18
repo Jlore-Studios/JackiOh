@@ -4352,7 +4352,9 @@
     },
     "1224": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6251107067"
+      ],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -4375,9 +4377,7 @@
       "started_at": "2026-10-18T14:44:09Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6251107067"
-      ]
+      "taken_asks": []
     },
     "1225": {
       "action": "plan",
