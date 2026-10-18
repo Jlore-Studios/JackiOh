@@ -3802,8 +3802,9 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
+      "pr": 1214,
       "provider": "claude-3",
-      "question": "Games recorded before this change will stop replaying. Do you accept that, so the build can go ahead? Changing OPENING_DRAW from [3, 4] to [4, 4] means the server's replays (Watch and Download) and practice replays of every game recorded before the deploy no longer reach their recorded hash. R767000 refuses them as `rules_changed`. A practice game in progress cannot resume (R668), and an online match that is live during the deploy is rebuilt from its log and keeps going on a different state; the server only logs `match.fold.errors`. Options: (a) accept that old games retire as `rules_changed`: comment so on #1156 and the bot builds the plan as written; (b) keep old games replaying by versioning OPENING_DRAW per game, which is the rules-versioning scheme the issue says not to invent and would need its own design; (c) drop or rethink the change.",
+      "question": "",
       "queued_at": "2026-10-18T04:22:53Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
@@ -3813,7 +3814,7 @@
       "taken_asks": [
         "c:6245601248"
       ],
-      "verdict_rounds": 1
+      "verdict_rounds": 2
     },
     "1157": {
       "action": "revise",
