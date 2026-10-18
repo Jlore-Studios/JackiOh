@@ -47,3 +47,11 @@ export const REPLAY_GIF_SIZES = {
 } as const;
 
 export type ReplayGifPreset = keyof typeof REPLAY_GIF_SIZES;
+
+// Opening a downloaded replay file (#1160, R1141000). The file is untrusted input, so it is held to
+// named caps before anything of it is kept.
+
+/** A replay file over this many bytes is refused unread: a full game's views are single-digit megabytes. */
+export const REPLAY_JSON_MAX_BYTES = 32 * 1024 * 1024;
+/** A replay file of more steps than this is refused; the turn cap (`TURN_CAP_PLAYER_TURNS`, 60) keeps a real game to the low thousands. */
+export const REPLAY_JSON_MAX_STEPS = 5000;

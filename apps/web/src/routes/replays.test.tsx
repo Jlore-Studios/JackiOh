@@ -3,7 +3,8 @@
 // the list; names a game it cannot show and keeps its Watch button off; and is a route a production
 // build keeps, with the GIF code still loaded on demand. R970000: an account that owes the consent
 // screen meets it before the online half, which waits on its answer. R1141000: a row that can be
-// watched downloads as one JSON file of its steps' views and its own facts, no account named.
+// watched downloads as one JSON file of its steps' views and its own facts, no account named, and
+// that file opens again in the player, in the page, or is refused where it stands (#1160).
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -29,9 +30,10 @@ import type { PracticeHost } from "../practice/host.ts";
 import { memorySaveStore } from "../practice/saveStore.ts";
 import type { PracticeSaveStore } from "../practice/saveStore.ts";
 import { replayTestid } from "../replay/ReplayPlayer.tsx";
-import { REPLAY_JSON_FORMAT, REPLAY_JSON_VERSION } from "../replay/download.ts";
+import { REPLAY_JSON_MAX_BYTES, REPLAY_JSON_MAX_STEPS } from "../replay/config.ts";
+import { REPLAY_JSON_FORMAT, REPLAY_JSON_VERSION, practiceGame, replayJsonFile } from "../replay/download.ts";
 import type { ReplayJson } from "../replay/download.ts";
-import { foldedReplaySteps } from "../test/replay.ts";
+import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
 import { ReplaysRoute, replaysTestid } from "./replays.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
@@ -302,6 +304,7 @@ describe("R1141000 Download JSON", () => {
     // The game's seed and setup stay in the worker (CLAUDE.md rule 7).
     expect(text).not.toContain("replays-list");
     expect(text).not.toMatch(/"(seed|log|decks|handicaps|state)":/u);
+    expect(text).not.toMatch(/"(profileId|accountId)":/u);
     await waitFor(() => expect(screen.getByTestId(replaysTestid.download("practice-1"))).toHaveTextContent("Download JSON"));
   });
 
@@ -332,6 +335,8 @@ describe("R1141000 Download JSON", () => {
     });
     expect(text).not.toContain("rival");
     expect(text).not.toContain("profile-p2");
+    expect(text).not.toMatch(/"(seed|log|decks|handicaps|state)":/u);
+    expect(text).not.toMatch(/"(profileId|accountId)":/u);
     expect(getReplaySteps).toHaveBeenCalledWith(TOKEN, "m-1", 0, REPLAY_PAGE_STEPS);
     expect(getReplaySteps).toHaveBeenCalledWith(TOKEN, "m-1", REPLAY_PAGE_STEPS, REPLAY_PAGE_STEPS);
   });
@@ -355,5 +360,115 @@ describe("R1141000 Download JSON", () => {
     expect(await within(row).findByTestId(replaysTestid.downloadFailed("online-m-1"))).toHaveTextContent("This replay has expired.");
     expect(saved).toEqual([]);
     expect(screen.getByTestId(replaysTestid.download("online-m-1"))).toBeEnabled();
+  });
+});
+
+describe("R1141000 Open replay JSON", () => {
+  /** The file a download of a practice game makes: `replayJsonFile` over the folded steps. */
+  function downloaded(): Promise<File> {
+    const game = practiceGame({
+      game: 1,
+      endedAt: 0,
+      result: "loss",
+      turns: steps[steps.length - 1]?.turn ?? 0,
+      steps: steps.length,
+      portraits: { p1: "vanilla", p2: "vanilla" },
+    });
+    return replayJsonFile(game, fakeReplaySource(steps), 0);
+  }
+
+  /** The route, unsigned, over a device that keeps no game, once its card data is read and the input is ready. */
+  async function openInput(): Promise<HTMLInputElement> {
+    renderRoute(memorySaveStore());
+    await screen.findByTestId(replaysTestid.noPractice);
+    const input = screen.getByTestId<HTMLInputElement>(replaysTestid.openFile);
+    await waitFor(() => expect(input).toBeEnabled());
+    return input;
+  }
+
+  function choose(input: HTMLInputElement, file: File): void {
+    fireEvent.change(input, { target: { files: [file] } });
+  }
+
+  it("R1141000 a file saved by replayJsonFile opens with its steps in order and turns to move by", async () => {
+    const input = await openInput();
+    expect(screen.getByLabelText("Open replay JSON")).toBe(input);
+    choose(input, await downloaded());
+
+    const player = await screen.findByTestId(replayTestid.player);
+    await waitFor(() => expect(player).toHaveAttribute("data-step", "0"));
+    expect(screen.queryByTestId(replaysTestid.root)).toBeNull();
+    // No match id, so no share with a friend.
+    expect(screen.queryByText("Share with a friend")).toBeNull();
+
+    fireEvent.click(screen.getByTestId(replayTestid.forwardStep));
+    await waitFor(() => expect(player).toHaveAttribute("data-step", "1"));
+    const secondTurn = steps.findIndex((step) => step.turn !== steps[0]?.turn);
+    expect(secondTurn).toBeGreaterThan(1);
+    fireEvent.click(screen.getByTestId(replayTestid.forwardTurn));
+    await waitFor(() => expect(player).toHaveAttribute("data-step", String(secondTurn)));
+    fireEvent.click(screen.getByTestId(replayTestid.backTurn));
+    await waitFor(() => expect(player).toHaveAttribute("data-step", "0"));
+    fireEvent.click(screen.getByTestId(replayTestid.end));
+    await waitFor(() => expect(player).toHaveAttribute("data-step", String(steps.length - 1)));
+
+    fireEvent.click(screen.getByTestId(replayTestid.back));
+    expect(await screen.findByTestId(replaysTestid.root)).toBeInTheDocument();
+    expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+    expect(screen.queryByTestId(replaysTestid.openFailed)).toBeNull();
+    // The input was emptied, so the same file can be chosen again.
+    expect(screen.getByTestId<HTMLInputElement>(replaysTestid.openFile).value).toBe("");
+  });
+
+  it("R1141000 invalid, stale and over-limit files refuse before mounting", async () => {
+    const input = await openInput();
+    const file = (over: Record<string, unknown>): File =>
+      new File(
+        [JSON.stringify({ format: REPLAY_JSON_FORMAT, version: REPLAY_JSON_VERSION, catalogVersion: CATALOG_VERSION, savedAt: 0, game: {}, steps, ...over })],
+        "replay.json",
+      );
+    const gap = [steps[0], steps[2]];
+    const refused: [File, string][] = [
+      [new File(["{ not json"], "replay.json"), "This file is not a JackiOh replay file."],
+      [file({ format: "jackioh-deck" }), "This replay file uses an unsupported format."],
+      [file({ version: 2 }), "This replay file uses an unsupported format."],
+      [file({ catalogVersion: "v0.0.0" }), "This replay file is from another patch and cannot be opened here."],
+      [file({ steps: gap }), "This file is not a JackiOh replay file."],
+      [file({ steps: Array.from({ length: REPLAY_JSON_MAX_STEPS + 1 }, (_, step) => ({ step, turn: 0, view: {} })) }), "This replay file is too big to open."],
+      [new File(["x".repeat(REPLAY_JSON_MAX_BYTES + 1)], "replay.json"), "This replay file is too big to open."],
+    ];
+    for (const [bad, sentence] of refused) {
+      choose(input, bad);
+      await waitFor(() => expect(screen.getByTestId(replaysTestid.openFailed)).toHaveTextContent(sentence));
+      await waitFor(() => expect(input).toBeEnabled());
+      expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+      expect(screen.getByTestId(replaysTestid.root)).toBeInTheDocument();
+    }
+    // A good file after the refusals opens, and the sentence is gone from the list it returns to.
+    choose(input, await downloaded());
+    expect(await screen.findByTestId(replayTestid.player)).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(replayTestid.back));
+    await screen.findByTestId(replaysTestid.root);
+    expect(screen.queryByTestId(replaysTestid.openFailed)).toBeNull();
+  });
+
+  it("R1141000 opening makes no API request and keeps nothing of the file in storage", async () => {
+    const input = await openInput();
+    const fetching = vi.spyOn(globalThis, "fetch");
+    const writing = vi.spyOn(Storage.prototype, "setItem");
+    choose(input, await downloaded());
+    const player = await screen.findByTestId(replayTestid.player);
+    await waitFor(() => expect(player).toHaveAttribute("data-step", "0"));
+    fireEvent.click(screen.getByTestId(replayTestid.forwardStep));
+    await waitFor(() => expect(player).toHaveAttribute("data-step", "1"));
+
+    expect(getReplays).not.toHaveBeenCalled();
+    expect(getReplaySteps).not.toHaveBeenCalled();
+    // The board's music is fetched as on any board; nothing is sent to the API.
+    expect(fetching.mock.calls.map(([url]) => String(url)).filter((url) => url.includes("/api/"))).toEqual([]);
+    // The board saves its own music rotation as on any board; nothing of the file or its steps is kept.
+    const written = writing.mock.calls.map(([key, value]) => `${key}=${value}`);
+    expect(written.filter((entry) => /jackioh-replay|replay\.json|catalogVersion|"step"/u.test(entry))).toEqual([]);
+    vi.restoreAllMocks();
   });
 });
