@@ -2,7 +2,7 @@
 //! show it to both players. `redact` hides the card (R185, R33), so without more the AI's
 //! determinizations would give its units their stats back and it would declare attacks the engine
 //! refuses. It keeps every unit's shown Attack and Health instead, and the card stays a placeholder.
-//! C #88 Siphon Squad's aura shrank the enemy's Attack from the moment it was set until patch v0.3.11,
+//! C #88 Siphon Squad's aura shrank the enemy's Attack from the moment it was set until patch v0.3.12,
 //! which makes it dormant until it is revealed (R1149000): set and unrevealed it changes nothing, and
 //! revealed, both players read the card and the drop.
 //!
@@ -168,7 +168,7 @@ mod r602_the_ais_view_keeps_what_a_live_face_down_card_visibly_does {
 mod r602_a_determinization_agrees_with_the_board_it_was_dealt_from {
     use super::*;
 
-    /// The same board as `siphoned`, but p2's face-down trap is a plain (2) one, Counterspell: no unit is shrunk. It shows (2); Siphon Squad shows (3) since patch v0.3.11, so R762 keeps it out of a (2) sample, and R602 keeps out any other live-aura trap.
+    /// The same board as `siphoned`, but p2's face-down trap is a plain (2) one, Counterspell: no unit is shrunk. It shows (2); Siphon Squad shows (3) since patch v0.3.12, so R762 keeps it out of a (2) sample, and R602 keeps out any other live-aura trap.
     fn plain() -> GameState {
         jackioh_cards::register_all();
         scenario(json!({

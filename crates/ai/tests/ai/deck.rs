@@ -656,7 +656,7 @@ mod r1370_a_deck_that_leans_on_a_set {
         register_cards();
         // Dealt by the deck builder before R1370, with the cursor its rng stopped at: before the Meditative
         // set was in any pool, so the literals gate it (R1390: a gate deals what the draw dealt before).
-        // Re-dealt for patch v0.3.10 (#831) and again for patch v0.3.11 (#1149), whose costs move the
+        // Re-dealt for patch v0.3.10 (#831) and again for patch v0.3.12 (#1149), whose costs move the
         // builder's curve: the same seeds stop at the same cursors.
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (

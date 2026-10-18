@@ -1,17 +1,28 @@
 import type {
   CardType,
   CraftEffect,
+  CraftFrame,
   CraftHat,
   CraftHatKind,
   CraftKeyword,
+  CraftMode,
   CraftRecipe,
   CraftVerb,
   Keyword,
 } from "../../wire/index.ts";
-import { CRAFT_HAT_PRICES, CRAFT_KEYWORD_PRICES, CRAFT_MAX_N, CRAFT_VERB_PRICES } from "../../wire/engineConfig.ts";
+import {
+  CRAFT_ADJECTIVES,
+  CRAFT_HAT_PRICES,
+  CRAFT_KEYWORD_PRICES,
+  CRAFT_MAX_N,
+  CRAFT_NOUNS,
+  CRAFT_VERB_PRICES,
+} from "../../wire/engineConfig.ts";
 
 /** ME-CRAFT (Meditative #17, R880–R883): the block editor's pure recipe helpers. Every helper
- * returns a new recipe and leaves its argument alone, so the editor's state stays immutable. */
+ * returns a new recipe and leaves its argument alone, so the editor's state stays immutable.
+ * Meditative+ (#1182) adds the potion frame (R1182000, R1182001) and the empty canvas
+ * (R1182002). */
 
 /** What the palette calls each effect verb, in the block table's words. */
 export const VERB_LABELS: Record<CraftVerb, string> = {
@@ -51,7 +62,35 @@ export const HAT_LABELS: Record<CraftHatKind, string> = {
   opponentPlaysUnit: "Opponent plays a Unit",
   opponentPlaysSpell: "Opponent plays a Spell",
   opponentAttacks: "Opponent attacks",
+  activate: "Activate: Tribute this",
 };
+
+/** R1182000: a Potion's one hat, pinned to the canvas: the frame takes no other. */
+export const POTION_HAT: CraftHatKind = "activate";
+
+/** The frame a craft prompt's mode fixes: a Potion or a HUGE Potion, none for Meditative #17's
+ * crafter or Scratch Pad's canvas (R1182000, R1182002). */
+export function frameOf(mode: CraftMode | undefined): CraftFrame | undefined {
+  return mode === "potion" || mode === "hugePotion" ? mode : undefined;
+}
+
+/** An empty canvas at the prompt's cost: a 0/1 Unit with nothing on it (Scratch Pad's start,
+ * R1182002), or, in a frame, a 0/1 Potion whose Activate holds nothing yet (R1182000). The engine
+ * refuses what is still missing; the editor only starts from it. */
+export function blankRecipe(cost: number, frame?: CraftFrame): CraftRecipe {
+  const blank: CraftRecipe = {
+    cost,
+    type: "Unit",
+    adjective: CRAFT_ADJECTIVES[0] ?? "Pure",
+    noun: CRAFT_NOUNS[0] ?? "Closure",
+    attack: 0,
+    health: 1,
+    keywords: [],
+    echo: 0,
+    hats: [],
+  };
+  return frame === undefined ? blank : { ...blank, hats: [{ hat: POTION_HAT, effects: [] }], frame };
+}
 
 /** Whether a card type may take a hat: its `CRAFT_HAT_PRICES` row lists the type (R883). */
 export function takesHat(type: CardType, hat: CraftHatKind): boolean {

@@ -1048,6 +1048,12 @@ pub struct PendingPromptView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub budget: Option<i32>,
+    /// A `craft` prompt's mode (R1182000 to R1182002): `scratch` opens the block editor on an empty
+    /// canvas with no presets, tooltips or hints; `potion` and `hugePotion` open it in the potion
+    /// frame. Absent on every other prompt and on Meditative #17's free crafter.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub craft_mode: Option<crate::wire::CraftMode>,
 }
 
 /// The `forYou: false` member of `PendingView`: someone else is answering.

@@ -11,7 +11,7 @@ import { ReplayFailure } from "../replay/source.ts";
 import type { ReplaySource } from "../replay/source.ts";
 import { beginGame, catalogVersion, createGame, reduce } from "../wasm/index.ts";
 
-// Re-picked for patch v0.3.11 (#1149): Zephyrs and CN in a Bottle left the (0) Cost cards, so `cheap20`
+// Re-picked for patch v0.3.12 (#1149): Zephyrs and CN in a Bottle left the (0) Cost cards, so `cheap20`
 // changed, and "replay-player" now ends with the viewer's hand empty.
 const SEED = "replay-player-5";
 /** Two pages' worth of actions and a few over, then a concede: the game ends, in a few turns. */

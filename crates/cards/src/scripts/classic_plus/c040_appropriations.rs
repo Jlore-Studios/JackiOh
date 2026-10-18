@@ -6,7 +6,7 @@
 //!   Culture:    each card on your field, in your hand and in your deck has an 8X% chance to become Radiant.
 //!   Healthcare: your Units on the field, in your hand and in your deck get +2X Health and Armor X.
 //!   Radiant:    +4X Attack; 5X Books; 20X%; +6X Health and Armor 2X.
-//!   Patch v0.3.11 (#1149) lowered Culture's 10X% to 8X% and the Radiant's +5X Attack, 25X% and +7X
+//!   Patch v0.3.12 (#1149) lowered Culture's 10X% to 8X% and the Radiant's +5X Attack, 25X% and +7X
 //!   Health; `script_v0_3_7b` keeps the numbers before it.
 //!
 //! Military and Healthcare are E38's buffs and grants over your field (tops of piles), hand and deck,

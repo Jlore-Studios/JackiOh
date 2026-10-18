@@ -78,7 +78,8 @@ pub fn draw_picks(
 
 /// R1201: how an attack target ranks for `attacker` — first one whose strike back the attacker
 /// survives, then one the attacker destroys (MD-E10's order after the aim's side, which every
-/// legal attack target already is: an enemy).
+/// legal attack target already is: an enemy). A Duos hero is destroyed only once its own HP and
+/// its team's pool are both gone (R1168003).
 fn attack_score(
     state: &GameState,
     attacker: &crate::state::CardInstance,
@@ -87,7 +88,7 @@ fn attack_score(
     let view = crate::layers::unit_view(state, attacker);
     match target {
         DamageTarget::Hero { player } => {
-            let health = state.players[*player].hero.health;
+            let health = crate::duos_life::effective_life(state, *player);
             (true, view.attack >= health)
         }
         DamageTarget::Unit { instance } => {

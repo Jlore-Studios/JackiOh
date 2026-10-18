@@ -4,7 +4,7 @@
 //! Reading the radiant cell (§8 Conventions): the second sentence adds an effect and keeps the base
 //! clause, so the radiant face steals the same Unit and then sets its flag.
 //!
-//! Unit only since patch v0.3.11 (#1149): the declaration offers the enemy's Units and no Field Spell,
+//! Unit only since patch v0.3.12 (#1149): the declaration offers the enemy's Units and no Field Spell,
 //! Trap or Field Trap. It is a DECLARED play-time target in the play action's `targets` (R81),
 //! validated by R90, and only the top card of a Stack pile is on offer (R13). An enemy board with no
 //! Unit fizzles and the spell still counts as played (§8 Conventions). Through v0.3.7b it stole any

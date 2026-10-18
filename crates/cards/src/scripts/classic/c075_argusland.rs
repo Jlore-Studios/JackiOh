@@ -177,7 +177,7 @@ mod tests {
         /// it guards its controller's hero: stolen by a Radiant Magic Jammed, it halves hits on the thief's hero
         #[test]
         fn it_guards_its_controllers_hero_stolen_by_a_radiant_magic_jammed_it_halves_hits_on_the_thiefs_hero() {
-            // Snom Bunny Mind Control steals only a Unit since patch v0.3.11; the Radiant Magic Jammed
+            // Snom Bunny Mind Control steals only a Unit since patch v0.3.12; the Radiant Magic Jammed
             // steals a backrow card. p2's one mana pays for it, so nothing is left to play after it.
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "field": [VANILLA], "backrow": [ARGUSLAND], "library": [FILLER] },

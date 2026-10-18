@@ -89,10 +89,11 @@ const KNOWN_KEYS: ReadonlySet<string> = new Set([
   "radiant",
 ]);
 
+/** A price in R432's words: "(2) Cost", "(X) Cost", and an embiggen card's "(2) Cost, Embiggened (4)" (R1175000). */
 export function costText(cost: CardCost): string {
   if (typeof cost === "number") return `(${String(cost)}) Cost`;
   if (cost === "X") return "(X) Cost";
-  return `(${String(cost.base)}) Cost, embiggen (${String(cost.embiggen)})`;
+  return `(${String(cost.base)}) Cost, Embiggened (${String(cost.embiggen)})`;
 }
 
 export function statsText(face: CardFace): string {

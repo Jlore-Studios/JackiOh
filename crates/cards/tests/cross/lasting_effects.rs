@@ -185,7 +185,7 @@ mod r209_twinspells_grant_follows_its_current_face {
         assert_eq!(g.state().active, PlayerId::P1);
 
         // "Activate: Steal an enemy permanent. Make it Radiant." (Snom Bunny Mind Control steals only a
-        // Unit since patch v0.3.11.) Twinspell is p1's now, and Radiant on the field, where §5.2 has its
+        // Unit since patch v0.3.12.) Twinspell is p1's now, and Radiant on the field, where §5.2 has its
         // text be the radiant one from then on: "Echo +2".
         g.activate(
             CHURCH,

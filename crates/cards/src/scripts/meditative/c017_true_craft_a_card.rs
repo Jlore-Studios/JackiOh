@@ -20,7 +20,7 @@
 //! THE FACES differ only in `radiant`: the Radiant face crafts the card Radiant, whose face
 //! doubles every number and stat (`CRAFT_RADIANT_MULTIPLIER` 2, R275 by construction).
 //!
-//! "EXILE THIS" since patch v0.3.11 (#1149), as #97 Zephyrs and #72 Reminisce: the cry parks the
+//! "EXILE THIS" since patch v0.3.12 (#1149), as #97 Zephyrs and #72 Reminisce: the cry parks the
 //! exile behind its prompts, so it runs once the card is minted, and the Spell ends in its owner's
 //! exile, not the graveyard. Through v0.3.7b it went to the graveyard; `script_v0_3_7b` keeps that
 //! for those versions' replays (R767000).

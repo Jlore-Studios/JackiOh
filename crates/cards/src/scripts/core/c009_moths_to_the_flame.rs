@@ -165,7 +165,7 @@ mod tests {
                 "seed": "core-009-stops",
                 "p1": { "field": ["core-009"], "library": LIBRARY },
                 // 8 then 6 is lethal to a 1/14 after two combats; lane 3 never gets to attack. Bigot is
-                // set to 8/1 (it prints 4/1 since patch v0.3.10), the Shredder a 6/10 since patch v0.3.11.
+                // set to 8/1 (it prints 4/1 since patch v0.3.10), the Shredder a 6/10 since patch v0.3.12.
                 "p2": { "field": [{ "def": "core-002", "statsOverride": { "attack": 8, "health": 1 } }, "core-013", "core-007"] }
             }));
             let moths = s.card("core-009").clone();

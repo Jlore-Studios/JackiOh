@@ -404,7 +404,7 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     cy.get(ts(heroId("opponent"))).find(healthIs(27)).should("exist");
   });
 
-  it("R81 embiggen — Suppressive Aura asks which price was paid and the aura matches that price", () => {
+  it("R81 embiggen — Suppressive Aura asks for its normal or its Embiggened version and the aura matches the version played", () => {
     openGame(SEEDS.embiggen);
     // Both prices must be affordable (§2.3, R65).
     toP1Turn(4);

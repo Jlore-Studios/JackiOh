@@ -24,7 +24,7 @@ const STAT_FACTOR: i32 = 2;
 /// R275's named exceptions to the stat half, by id, with the reason.
 const STAT_EXCEPTIONS: &[(&str, &str)] = &[(
     "core-013",
-    "R1149002: patch v0.3.11's printed 6/10 → 8/20, the designer's numbers",
+    "R1149002: patch v0.3.12's printed 6/10 → 8/20, the designer's numbers",
 )];
 
 /// `docs/radiant-audit.md`, the card-by-card record of R275's effect half.
