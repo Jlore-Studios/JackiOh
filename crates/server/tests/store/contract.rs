@@ -51,12 +51,12 @@ use jackioh_server::config::USERNAME_CHANGE_COOLDOWN_MS;
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
     BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, CustomCardWrite, Db,
-    FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow, MatchClocks,
-    MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow,
-    PlayerStatsListOptions, Profile, ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow,
-    RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room, SavedCustomCard, SavedDeck, SavedTrio,
-    Season, SeriesRow, StatsTotalsQuery, StoreError, TermsSource, Ticket, TutorialMergeInput,
-    TutorialProgressRow, Tx, UsernameClaim, UsernameClaimOutcome,
+    FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow,
+    MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits,
+    PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
+    ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room,
+    SavedCustomCard, SavedDeck, SavedTrio, Season, SeriesRow, StatsTotalsQuery, StoreError, TermsSource,
+    Ticket, TutorialMergeInput, TutorialProgressRow, Tx, UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{SeasonRank, fresh_rank};
@@ -447,7 +447,8 @@ pub const TRUNCATE: &str = "truncate
   public.game_records, public.record_totals, public.card_totals, public.decklist_totals,
   public.tutorial_progress, public.player_settings,
   public.rated_games, public.bot_ratings, public.season_ranks, public.seasons,
-  public.series, public.results, public.match_actions, public.tickets, public.matches,
+  public.series, public.results, public.match_checkpoints, public.match_actions, public.tickets,
+  public.matches,
   public.trios, public.decks, public.custom_cards,
   public.loadout_deck_cards, public.loadout_decks, public.loadouts,
   public.collection_grants, public.collection,
@@ -3426,6 +3427,22 @@ mod matches {
         assert!(log.iter().all(|entry| entry["at"].is_number()));
     }
 
+    /// §9.3, §9.5: a log reads back in seq's numeric order, past nine actions too. Postgres resolved
+    /// `select seq::text … order by seq` to the text column, so a rebuild folded 1, 10, 11, …, 2, …
+    /// and rewound every live match of ten actions or more to its ninth.
+    async fn reads_a_log_of_ten_or_more_actions_back_in_seq_order(harness: &StoreHarness) {
+        let row = live_match(harness).await;
+        for seq in 1..=12 {
+            let nonce = format!("n{seq}");
+            q!(harness, t => t.matches_append_actions(&[action_row(&row.id, seq, "p1", &nonce, harness.now())]));
+        }
+        let seqs: Vec<i64> = q!(harness, t => t.matches_actions(&row.id))
+            .iter()
+            .map(|entry| entry.seq)
+            .collect();
+        assert_eq!(seqs, (1..=12).collect::<Vec<i64>>(), "{}", harness.name);
+    }
+
     async fn refuses_a_seq_that_already_exists(harness: &StoreHarness) {
         let row = live_match(harness).await;
         q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", harness.now())]));
@@ -3663,11 +3680,134 @@ mod matches {
         assert_eq!(finished["status"], "finished");
     }
 
+    /// #1169: a checkpoint row as the actor writes one (its body opaque to the store).
+    fn checkpoint(match_id: &str, seq: i64, nonce: &str, body: &str, at: i64) -> MatchCheckpointRow {
+        from(json!({
+            "matchId": match_id,
+            "seq": seq,
+            "nonce": nonce,
+            "catalogVersion": "v-checkpoint",
+            "rules": "0123456789abcdef",
+            "checkpointVersion": 1,
+            "body": body,
+            "bodyHash": format!("hash-of-{body}"),
+            "at": at,
+        }))
+    }
+
+    /// A stored checkpoint without its `at`, which only has to be a time: Postgres keeps it as a
+    /// `timestamptz`.
+    fn stored(row: Option<MatchCheckpointRow>) -> Option<Value> {
+        row.map(|row| {
+            let mut value = j(&row);
+            assert!(value["at"].is_number(), "{value}");
+            if let Value::Object(map) = &mut value {
+                map.remove("at");
+            }
+            value
+        })
+    }
+
+    fn written(row: &MatchCheckpointRow) -> Option<Value> {
+        stored(Some(row.clone()))
+    }
+
+    /// #1169: every field comes back as written, and only a later seq's checkpoint replaces it.
+    async fn checkpoint_round_trips_and_only_a_later_seq_replaces_it(harness: &StoreHarness) {
+        let row = live_match(harness).await;
+        let now = harness.now();
+        q!(harness, t => t.matches_append_actions(&[
+            action_row(&row.id, 1, "p1", "n1", now),
+            action_row(&row.id, 2, "p2", "n2", now),
+            action_row(&row.id, 3, "p1", "n3", now),
+        ]));
+        let second = checkpoint(&row.id, 2, "n2", "{\"at\":2}", now);
+        assert!(q!(harness, t => t.matches_put_checkpoint(&second)));
+        assert_eq!(
+            stored(q!(harness, t => t.matches_checkpoint(&row.id))),
+            written(&second)
+        );
+
+        let earlier = checkpoint(&row.id, 1, "n1", "{\"at\":1}", now);
+        assert!(!q!(harness, t => t.matches_put_checkpoint(&earlier)));
+        let same = checkpoint(&row.id, 2, "n2", "{\"at\":\"again\"}", now);
+        assert!(!q!(harness, t => t.matches_put_checkpoint(&same)));
+        assert_eq!(
+            stored(q!(harness, t => t.matches_checkpoint(&row.id))),
+            written(&second)
+        );
+
+        let third = checkpoint(&row.id, 3, "n3", "{\"at\":3}", now);
+        assert!(q!(harness, t => t.matches_put_checkpoint(&third)));
+        assert_eq!(
+            stored(q!(harness, t => t.matches_checkpoint(&row.id))),
+            written(&third)
+        );
+    }
+
+    /// #1169: never for a row the log does not hold under that nonce, nor for a match that is not live.
+    async fn checkpoint_is_stored_only_for_a_logged_row_of_a_live_match(harness: &StoreHarness) {
+        let row = live_match(harness).await;
+        let now = harness.now();
+        q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", now)]));
+        let wrong_nonce = checkpoint(&row.id, 1, "other", "{}", now);
+        assert!(!q!(harness, t => t.matches_put_checkpoint(&wrong_nonce)));
+        let unlogged = checkpoint(&row.id, 2, "n2", "{}", now);
+        assert!(!q!(harness, t => t.matches_put_checkpoint(&unlogged)));
+        let unknown = checkpoint(&id(), 1, "n1", "{}", now);
+        assert!(!q!(harness, t => t.matches_put_checkpoint(&unknown)));
+        assert!(q!(harness, t => t.matches_checkpoint(&row.id)).is_none());
+
+        q!(harness, t => t.matches_finish(&row.id, now));
+        let finished = checkpoint(&row.id, 1, "n1", "{}", now);
+        assert!(!q!(harness, t => t.matches_put_checkpoint(&finished)));
+        assert!(q!(harness, t => t.matches_checkpoint(&row.id)).is_none());
+    }
+
+    /// #1169: an ended match is never rebuilt from its checkpoint; another match keeps its own.
+    async fn finishing_a_match_drops_its_checkpoint(harness: &StoreHarness) {
+        let now = harness.now();
+        let ending = live_match(harness).await;
+        let other = live_match(harness).await;
+        for row in [&ending, &other] {
+            q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", now)]));
+            let saved = checkpoint(&row.id, 1, "n1", "{}", now);
+            assert!(q!(harness, t => t.matches_put_checkpoint(&saved)));
+        }
+        q!(harness, t => t.matches_finish(&ending.id, now));
+        assert!(q!(harness, t => t.matches_checkpoint(&ending.id)).is_none());
+        assert_eq!(
+            stored(q!(harness, t => t.matches_checkpoint(&other.id))),
+            written(&checkpoint(&other.id, 1, "n1", "{}", now))
+        );
+    }
+
+    /// #1169, R679: a voided match's checkpoint goes with it.
+    async fn voiding_a_match_drops_its_checkpoint(harness: &StoreHarness) {
+        let row = live_match(harness).await;
+        let now = harness.now();
+        q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", now)]));
+        let saved = checkpoint(&row.id, 1, "n1", "{}", now);
+        assert!(q!(harness, t => t.matches_put_checkpoint(&saved)));
+        q!(harness, t => t.matches_forget_voided(&row.id));
+        assert!(q!(harness, t => t.matches_checkpoint(&row.id)).is_none());
+    }
+
+    async fn an_unknown_match_has_no_checkpoint(harness: &StoreHarness) {
+        assert!(q!(harness, t => t.matches_checkpoint(&id())).is_none());
+    }
+
     both_stores!(
+        checkpoint_round_trips_and_only_a_later_seq_replaces_it,
+        checkpoint_is_stored_only_for_a_logged_row_of_a_live_match,
+        finishing_a_match_drops_its_checkpoint,
+        voiding_a_match_drops_its_checkpoint,
+        an_unknown_match_has_no_checkpoint,
         r768_records_a_final_hash_once,
         round_trips_a_match_row_clocks_included,
         refuses_a_second_match_with_the_same_id,
         appends_actions_in_order_and_reads_them_back,
+        reads_a_log_of_ten_or_more_actions_back_in_seq_order,
         refuses_a_seq_that_already_exists,
         r776000_answers_a_repeated_nonce_at_its_seq_and_raises_a_seq_clash_otherwise,
         stores_the_clocks_the_clients_render,
@@ -7227,8 +7367,8 @@ mod social {
 
     /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
     /// profiles are named: whom a series that is not over holds, each one's newest live co-op match,
-    /// and whose live 1v1 the viewer may watch (friends, unblocked, live, unranked, seating the friend
-    /// and not the viewer, the friend allowing it). Each answers in the order named.
+    /// and whose live 1v1 the viewer may watch (friends, unblocked, live, ranked or unranked, seating
+    /// the friend and not the viewer, the friend allowing it). Each answers in the order named.
     async fn s7_presence_reads_many_profiles_at_once(harness: &StoreHarness) {
         let viewer = active_profile(harness, None).await;
         let rival = active_profile(harness, None).await;
@@ -7276,7 +7416,7 @@ mod social {
         .collect();
         assert_eq!(
             q!(harness, t => t.presence_watchable(&viewer.id, &named)),
-            vec![watched.id.clone()]
+            vec![watched.id.clone(), ranked.id.clone()]
         );
         assert!(q!(harness, t => t.presence_watchable("not-a-uuid", &named)).is_empty());
         assert!(q!(harness, t => t.presence_watchable(&viewer.id, &[])).is_empty());

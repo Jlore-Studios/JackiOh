@@ -159,6 +159,26 @@ pub const AUTH_SIGN_OUT_WAIT_SECONDS: i64 = 5;
 pub const AUTH_SESSION_LIVE_CACHE_SECONDS: i64 = 30;
 /// A request to the auth provider that has not answered in this long is a network failure.
 pub const AUTH_PROVIDER_TIMEOUT_SECONDS: i64 = 30;
+// ---------------------------------------------------------------------------------------------
+// The sign-in key set (SPEC §9.2, R1144000). The server verifies Supabase's asymmetric tokens
+// against the project's published JWKS, fetched on first use. A fetched set is kept this long
+// before it is fetched again; a refetch that fails keeps serving the last good set for at most
+// `JWKS_STALE_MAX_MS` past that age, retried at most once per `JWKS_COOLDOWN_MS`, so a Supabase
+// blip signs nobody out. A successful fetch replaces the set whole, so a dropped key is refused
+// at once. Server-only: the client imports none of these (`tests/export_config.rs`).
+// ---------------------------------------------------------------------------------------------
+
+/// R1144000: how long a fetched key set is trusted before it is fetched again (jose's default).
+pub const JWKS_CACHE_MAX_AGE_MS: i64 = 10 * 60 * 1000;
+/// R1144000: a failed refetch, and a key miss on a recently fetched set, is retried at most this
+/// often (jose's `cooldownDuration`), so requests share one fetch instead of queuing fetches.
+pub const JWKS_COOLDOWN_MS: i64 = 30_000;
+/// R1144000: how long the key-set request may take (jose's `timeoutDuration`).
+pub const JWKS_FETCH_TIMEOUT_MS: i64 = 5_000;
+/// R1144000: how long past `JWKS_CACHE_MAX_AGE_MS` a failed refetch keeps serving the last good
+/// set. About one Supabase access-token lifetime, so no token outlives its own `exp` through the
+/// stale set; past it the token is refused until the key endpoint answers again.
+pub const JWKS_STALE_MAX_MS: i64 = 3_600_000;
 /// A request to this server that has not answered in this long is a network failure. Longer than the
 /// provider's, because Render's free tier takes about 50 s to wake a sleeping instance.
 pub const API_REQUEST_TIMEOUT_SECONDS: i64 = 75;
@@ -187,7 +207,7 @@ pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
 /// asked to agree again. R970001: a second change on a day the page already changed keeps its date
 /// and gives its half a letter (`2026-10-15b`, then `c`); `privacy.test.tsx` holds each version to
 /// the words of both pages, so a change to them fails until this moves.
-pub const TERMS_VERSION: &str = "2026-10-15b/2026-10-15b";
+pub const TERMS_VERSION: &str = "2026-10-15b/2026-10-17";
 
 // ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).
@@ -594,6 +614,43 @@ pub const MATCH_RECORD_RESULT_BACKOFF_MS: i64 = 250;
 /// before its clock runs out again, so a store that keeps failing is retried at this pace until the
 /// row lands, the match ends or the actor stops, never in a loop.
 pub const MATCH_SERVER_ACTION_RETRY_MS: i64 = 1_000;
+/// #1169: the fewest logged actions a match must hold for the restart drain to store a checkpoint
+/// of it (`actor::checkpoint`). A shorter log is cheap to fold whole, so the drain spends no write on
+/// it: as #1169's plan measured a release build, a fold costs about 0.39 ms an action and the
+/// telemetry's replay about 0.50 ms, while a checkpoint (some 75 KB) takes about 0.3 ms to serialise
+/// and hash, plus its write.
+pub const MATCH_CHECKPOINT_MIN_ACTIONS: i64 = 32;
+/// #1169: the shape of a checkpoint's body and of what the server folds a log to. A checkpoint
+/// stamped with another is refused and the whole log folded. Bump it when a server change alters
+/// either: the body (`actor::checkpoint::CheckpointBody`), the setup a rebuild folds with
+/// (`Registry::rebuild`'s arguments) or the bot turns it reads (`bot_moved_turns`). A change to the
+/// engine, the cards or `actor/engine.rs` and `actor/telemetry.rs` needs none: the rules fingerprint
+/// (`build.rs`) refuses those.
+pub const MATCH_CHECKPOINT_VERSION: i32 = 1;
+
+// ---------------------------------------------------------------------------------------------
+// Bug reports (`bug_reports.rs`): a match its own log does not reproduce. Not in SPEC, and no
+// R-row: operational, as #861's probes are.
+// ---------------------------------------------------------------------------------------------
+
+/// The repository a report is filed in when `CREATE_ISSUES_TOKEN` is set and `GITHUB_ISSUES_REPO`
+/// is not.
+pub const BUG_REPORT_REPO_DEFAULT: &str = "Jlore-Studios/JackiOh";
+/// GitHub's REST API, which a report is filed through.
+pub const BUG_REPORT_API_URL: &str = "https://api.github.com";
+/// The labels a report carries: a micro patch's type, the night bot's queue (`bot:build`,
+/// bot/README.md), the strong tier (CLAUDE.md rule 11: the server and the engine are hard) and the
+/// front of the queue, since a match that does not rebuild is a broken game.
+pub const BUG_REPORT_LABELS: &[&str] = &["patch", "bot:build", "difficulty:hard", "priority:high"];
+/// How many reports one process files in `BUG_REPORT_WINDOW_MS`. A determinism break shows on every
+/// match a deploy rebuilds, so the first few say it and the rest are only logged.
+pub const BUG_REPORTS_PER_WINDOW: usize = 5;
+/// The window `BUG_REPORTS_PER_WINDOW` counts in: an hour.
+pub const BUG_REPORT_WINDOW_MS: i64 = 60 * 60 * 1000;
+/// How long one request to GitHub may take before the report is given up (it is logged either way).
+pub const BUG_REPORT_TIMEOUT_MS: u64 = 10_000;
+/// How many refused actions a report lists one by one; the rest are counted.
+pub const BUG_REPORT_LISTED_ACTIONS: usize = 10;
 
 // ---------------------------------------------------------------------------------------------
 // Glitch (issue #170; SPEC §7, R678, R679).
@@ -778,7 +835,8 @@ pub const PLAYER_SETTINGS_BYTES_MAX: usize = 4096;
 pub const PUBLIC_STATS_MIN_LIVE_GAMES: i64 = 1000;
 
 /// SPEC §11 R654: minimum sample of games for a card row to display a win-rate percentage. Below it,
-/// the row displays "not enough games".
+/// the row displays "not enough games". Its played delta needs this many on each side, played and
+/// drawn but not played, and displays "not enough data" until then.
 pub const CARD_STATS_MIN_SAMPLE: i64 = 20;
 
 /// SPEC §9.11 (R377): the fewest in-deck games a card needs before `jackioh-server balance-watch`
@@ -829,8 +887,8 @@ pub const PLAYER_STATS_CACHE_TTL_SECONDS: i64 = 60;
 pub const PLAYER_STATS_PAGE_LIMIT: usize = 50;
 
 /// The most text the stored player statistics JSON of one account may come to, in bytes.
-/// Bounds request body and stored payload.
-pub const PLAYER_STATS_BYTES_MAX: usize = 16384;
+/// Bounds request body and stored payload (R1142000: raised from 16384 to 65536 so pruned catalog fits).
+pub const PLAYER_STATS_BYTES_MAX: usize = 65536;
 
 // ---------------------------------------------------------------------------------------------
 // Play telemetry (SPEC §9.11, R1442): how humans pace their moves, for the ladder bots (#636).
@@ -1877,8 +1935,9 @@ pub const PRESENCE_TTL_MS: i64 = 90_000;
 pub const PRESENCE_HEARTBEAT_MS: i64 = 45_000;
 /// B49: how long a challenge, and the room it opened, stays open unanswered.
 pub const CHALLENGE_TTL_MS: i64 = 120_000;
-/// B50: how far behind the live game a watcher's view runs.
-pub const SPECTATE_DELAY_MS: i64 = 30_000;
+/// B50: how far behind the live game a watcher's view runs. Five seconds keeps each view
+/// clearly behind live play, so a watcher cannot coach the moment, while feeling live.
+pub const SPECTATE_DELAY_MS: i64 = 5_000;
 /// B50: watchers one live match may hold at once.
 pub const SPECTATORS_PER_MATCH: usize = 8;
 /// B53: a chat message's longest body, in characters after trimming (`chat_messages`' check).

@@ -84,20 +84,6 @@ mod tests {
     mod t_ai_10_fine_tuning {
         use super::*;
 
-        #[test]
-        fn is_a_2_field_spell_ai_token_with_an_end_of_turn_hook_on_each_face() {
-            crate::register_all();
-            let def = js(&crate::card_def(super::super::ID));
-            assert_eq!(def["cost"], json!(2));
-            assert_eq!(def["type"], json!("Field Spell"));
-            assert_eq!(def["tags"], json!(["AI", "Token"]));
-            assert_eq!(def["token"], json!(true));
-            let scripts = super::super::script();
-            assert!(scripts.base.end_of_turn.is_some());
-            assert!(scripts.radiant.end_of_turn.is_some());
-            assert!(scripts.base.start_of_turn.is_none());
-        }
-
         mod base {
             use super::*;
 

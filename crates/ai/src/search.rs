@@ -12,10 +12,14 @@ use indexmap::IndexSet;
 use jackioh_engine::{ActionBody, GameState, Phase, PlayerId};
 
 use crate::candidates::{candidate_actions, candidate_set};
-use crate::config::AI_EVAL;
+use crate::config::{AI_EVAL, AI_MOVE_ORDER, MoveOrder};
 use crate::evaluate::{NextSwing, evaluate};
+use crate::learned::finalist_score;
+use crate::policy::{POLICY_PRIOR, PolicyPrior, prior_order};
 use crate::reply::{hidden_card_ids, reply_score};
-use crate::simulate::{LineStatus, close_line, line_status, search_signature, simulate, static_score};
+use crate::simulate::{
+    LineStatus, close_line, line_status, own_prompt_score, search_signature, simulate, static_score,
+};
 use crate::types::{NodeCounter, SearchBudget};
 
 /// A complete line. `end` is the state it was scored at (after its closing endTurn), which `decide`
@@ -51,8 +55,16 @@ fn best_first_lines(mut lines: Vec<Line>) -> Vec<Line> {
     lines
 }
 
-/// The first `width` candidates that are not endTurn, plus endTurn when it is legal.
-fn expansion(state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody> {
+/// The first `width` candidates that are not endTurn, plus endTurn when it is legal. With
+/// `MoveOrder::Learned` the candidates are sorted by `prior` before the first `width` are taken
+/// (`prior_order`, R1171001); with `MoveOrder::Heuristic` they keep `candidate_actions`' order.
+pub fn expansion(
+    state: &GameState,
+    seat: PlayerId,
+    width: usize,
+    order: MoveOrder,
+    prior: &PolicyPrior<'_>,
+) -> Vec<ActionBody> {
     let candidates = candidate_actions(state, seat);
     let end = candidates
         .iter()
@@ -61,8 +73,11 @@ fn expansion(state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody>
     let mut moves: Vec<ActionBody> = candidates
         .into_iter()
         .filter(|action| !matches!(action, ActionBody::EndTurn))
-        .take(width)
         .collect();
+    if order == MoveOrder::Learned {
+        moves = prior_order(state, seat, moves, prior);
+    }
+    moves.truncate(width);
     if let Some(end) = end {
         moves.push(end);
     }
@@ -70,16 +85,29 @@ fn expansion(state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody>
 }
 
 /// Beam search on one determinization. The frontier starts at `det`. Each open line expands its first
-/// rootBranching (depth 0) or branching (deeper) candidates, plus endTurn. Every child is simulated
-/// and scored with `evaluate`; children whose status is not "open" become complete lines scored by
-/// terminalScore; the best beamWidth open children (stable) form the next frontier. The loop stops at
-/// maxDepth (open lines are closed by terminalScore) or when the counter refuses. Returns complete
-/// lines, best first.
+/// rootBranching (depth 0) or branching (deeper) candidates, in the order `AI_MOVE_ORDER` names
+/// (`expansion`, R1171001), plus endTurn. Every child is simulated and scored with `evaluate`, a child
+/// waiting on the seat's own prompt where its answers lead (`own_prompt_score`, #1112); children whose
+/// status is not "open" become complete lines scored by terminalScore; the best beamWidth open children
+/// (stable) form the next frontier. The loop stops at maxDepth (open lines are closed by terminalScore)
+/// or when the counter refuses. Returns complete lines, best first.
 pub fn beam_search(
     det: &GameState,
     seat: PlayerId,
     counter: &dyn NodeCounter,
     budget: SearchBudget,
+) -> Vec<Line> {
+    beam_search_with(det, seat, counter, budget, AI_MOVE_ORDER, &POLICY_PRIOR)
+}
+
+/// `beam_search` with a given move order and policy prior, for tests and screens (R1171001).
+pub fn beam_search_with(
+    det: &GameState,
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+    budget: SearchBudget,
+    order: MoveOrder,
+    prior: &PolicyPrior<'_>,
 ) -> Vec<Line> {
     let root_turn = det.turn;
     let mut complete: Vec<Line> = Vec::new();
@@ -105,7 +133,7 @@ pub fn beam_search(
             if stopped {
                 break;
             }
-            for action in expansion(&line.state, seat, width) {
+            for action in expansion(&line.state, seat, width, order, prior) {
                 let next = match simulate(&line.state, seat, &action, counter) {
                     None => {
                         stopped = true;
@@ -134,7 +162,9 @@ pub fn beam_search(
                     continue;
                 }
                 seen.insert(signature);
-                let score = evaluate(&next, seat, NextSwing::Enemy, &AI_EVAL);
+                // #1112: a child waiting on the seat's own prompt is ranked where its answers lead.
+                let score = own_prompt_score(&next, seat, counter)
+                    .unwrap_or_else(|| evaluate(&next, seat, NextSwing::Enemy, &AI_EVAL));
                 children.push(OpenLine {
                     state: next,
                     actions,
@@ -226,6 +256,9 @@ pub fn score_line(
     {
         match simulate(&state, seat, &ActionBody::EndTurn, counter) {
             None => return None,
+            // A finalist whose endTurn is refused keeps its static score, from the evaluation that
+            // scores the finalists when they are replied to (#1010).
+            Some(Err(_)) if reply => return Some(finalist_score(&state, seat, NextSwing::Enemy)),
             Some(Err(_)) => return Some(evaluate(&state, seat, NextSwing::Enemy, &AI_EVAL)),
             Some(Ok(next)) => state = next,
         }

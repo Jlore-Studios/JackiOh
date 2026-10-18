@@ -162,7 +162,7 @@ pub fn script() -> CardScripts {
             let Some(eaten) = eaten_of(ctx) else {
                 return vec![];
             };
-            // R64: "fill your board" summons into every empty, unlocked unit zone left to right.
+            // R64: "fill your board" summons into every empty unit zone (R1136000) left to right.
             if def_of(Some(&*ctx.state), &eaten.def_id).type_ == CardType::Unit {
                 return vec![fill_board(json_as(copy_args(&eaten)))];
             }
@@ -448,7 +448,7 @@ mod tests {
                 s.attack(BIGOT, &cube);
 
                 s.expect_in_zone(&cube, "graveyard");
-                // R64: "fill your board" takes every empty, unlocked unit zone, the Cube's own included.
+                // R64: "fill your board" takes every empty unit zone (R1136000), the Cube's own included.
                 assert_eq!(
                     row(&s, P1),
                     lanes([Some(TIMMY), Some(TIMMY), Some(TIMMY), Some(TIMMY), Some(TIMMY)])

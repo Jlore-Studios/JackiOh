@@ -18,7 +18,8 @@ use tokio::sync::OnceCell;
 
 use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, GameSource, PilotFilter, SourceFilter,
-    StatsTotals, Tally, TotalsKey, add_stats, card_drills_of, card_stats_of, sources_of, win_rate,
+    StatsTotals, Tally, TotalsKey, add_stats, card_drills_of, card_stats_of, played_delta, sources_of,
+    win_rate,
 };
 use jackioh_engine::{CardCost, CardDef, Pilot};
 
@@ -51,6 +52,13 @@ pub struct PublicCardStat {
     pub drawn_win_rate: Option<f64>,
     pub played_games: i64,
     pub played_win_rate: Option<f64>,
+    pub played_radiant_games: i64,
+    pub played_radiant_win_rate: Option<f64>,
+    pub played_normal_games: i64,
+    pub played_normal_win_rate: Option<f64>,
+    pub drawn_not_played_games: i64,
+    pub drawn_not_played_win_rate: Option<f64>,
+    pub played_delta: Option<f64>,
     pub play_rate: f64,
     pub has_enough_games: bool,
 }
@@ -576,6 +584,10 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         let (in_deck_games, _) = stat.map(|stat| tally_of(&stat.in_deck)).unwrap_or((0, 0));
         let rate = stat.and_then(|stat| win_rate(&stat.in_deck));
         let (played_games, played_wins) = stat.map(|stat| tally_of(&stat.played)).unwrap_or((0, 0));
+        let (played_radiant_games, _) = stat.map(|stat| tally_of(&stat.played_radiant)).unwrap_or((0, 0));
+        let played_radiant_rate = stat.and_then(|stat| win_rate(&stat.played_radiant));
+        let (played_normal_games, _) = stat.map(|stat| tally_of(&stat.played_normal)).unwrap_or((0, 0));
+        let played_normal_rate = stat.and_then(|stat| win_rate(&stat.played_normal));
         let (unplayed_games, unplayed_wins) = stat
             .map(|stat| tally_of(&stat.drawn_not_played))
             .unwrap_or((0, 0));
@@ -587,6 +599,11 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             None
         };
         let played_rate = stat.and_then(|stat| win_rate(&stat.played));
+        let drawn_not_played_rate = stat.and_then(|stat| win_rate(&stat.drawn_not_played));
+        // R654: the delta waits for the sample floor on both its sides, as a small baseline swings it ±50.
+        let delta = stat
+            .filter(|_| played_games >= CARD_STATS_MIN_SAMPLE && unplayed_games >= CARD_STATS_MIN_SAMPLE)
+            .and_then(played_delta);
         let play_rate = if total_decks > 0 {
             in_deck_games as f64 / total_decks as f64
         } else {
@@ -606,6 +623,13 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             drawn_win_rate: drawn_rate,
             played_games,
             played_win_rate: played_rate,
+            played_radiant_games,
+            played_radiant_win_rate: played_radiant_rate,
+            played_normal_games,
+            played_normal_win_rate: played_normal_rate,
+            drawn_not_played_games: unplayed_games,
+            drawn_not_played_win_rate: drawn_not_played_rate,
+            played_delta: delta,
             play_rate,
             has_enough_games,
         });

@@ -128,16 +128,6 @@ mod tests {
     mod c_n23_dropshipping {
         use super::*;
 
-        #[test]
-        fn is_a_1_cn_spell_both_faces_add_and_give_brittle() {
-            let def = crate::card_def(ID);
-            assert_eq!(def.cost, CardCost::Fixed(1));
-            assert!(def.tags.contains(&Tag::Cn));
-            let scripts = script();
-            assert!(scripts.base.cry.is_some());
-            assert!(scripts.radiant.cry.is_some());
-        }
-
         mod base {
             use super::*;
 

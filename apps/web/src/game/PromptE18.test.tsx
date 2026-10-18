@@ -181,6 +181,56 @@ describe("answer (C+ #42)", () => {
   });
 });
 
+describe("a question sequence (Meditative+ #20 KY's Competition)", () => {
+  const QUESTION = "482 − 197 = ?";
+  const ANSWERS = ["285", "295", "185", "286"];
+
+  function sequenceView(streak: number): PlayerView {
+    return baseView({
+      pending: pendingFor(
+        "answer",
+        [...ANSWERS.map((text, at) => ({ key: `mode:${"ABCD"[at] ?? ""}`, label: text })), { key: "none", label: "Stop" }],
+        { prompt: QUESTION, streak },
+      ),
+    });
+  }
+
+  it("R1184000 shows the question, its streak so far, the answers lettered A to D and Stop under no letter last", () => {
+    renderPrompt(sequenceView(3));
+    expect(modal()).toHaveAttribute("data-prompt-kind", "answer");
+    expect(modal().querySelector(".prompt-title")?.textContent).toBe(QUESTION);
+    const streak = screen.getByTestId("prompt-streak");
+    expect(streak).toHaveAttribute("data-streak", "3");
+    expect(streak.textContent).toContain("3");
+    expect(optionKeys()).toEqual(["mode:A", "mode:B", "mode:C", "mode:D", "none"]);
+    const letters = ["A", "B", "C", "D"].map((letter) => screen.getByTestId(`prompt-option-mode:${letter}`).getAttribute("data-letter"));
+    expect(letters).toEqual(["A", "B", "C", "D"]);
+    const stop = screen.getByTestId("prompt-option-none");
+    expect(stop).not.toHaveAttribute("data-letter");
+    expect(stop.textContent).toBe("Stop");
+  });
+
+  it("R1184000 a press on an answer sends that answer, and Stop sends a none pick", () => {
+    const onAnswer = renderPrompt(sequenceView(0));
+    fireEvent.click(screen.getByTestId("prompt-option-mode:A"));
+    answered(onAnswer, [{ pick: "mode", option: "A" }]);
+    cleanup();
+    const onStop = renderPrompt(sequenceView(0));
+    fireEvent.click(screen.getByTestId("prompt-option-none"));
+    answered(onStop, [{ pick: "none" }]);
+  });
+
+  it("R1184000 a lone problem (C+ #42) shows no streak and no Stop", () => {
+    renderPrompt(
+      baseView({
+        pending: pendingFor("answer", ANSWERS.map((text, at) => ({ key: `mode:${"ABCD"[at] ?? ""}`, label: text })), { prompt: QUESTION }),
+      }),
+    );
+    expect(screen.queryByTestId("prompt-streak")).toBeNull();
+    expect(screen.queryByTestId("prompt-option-none")).toBeNull();
+  });
+});
+
 // cell
 
 describe("cell (C+ #62)", () => {

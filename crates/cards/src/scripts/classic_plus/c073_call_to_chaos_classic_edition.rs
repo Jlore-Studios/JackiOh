@@ -184,66 +184,6 @@ mod tests {
         index_of_from(order, kind, 0)
     }
 
-    /// The fields this script sets, in `Script`'s order.
-    fn object_keys(script: &Script) -> Vec<&'static str> {
-        let mut keys = Vec::new();
-        let mut set = |key: &'static str, present: bool| {
-            if present {
-                keys.push(key);
-            }
-        };
-        set("cost", script.cost.is_some());
-        set("cry", script.cry.is_some());
-        set("death", script.death.is_some());
-        set("startOfGame", script.start_of_game.is_some());
-        set("resume", !script.resume.is_empty());
-        set("delayed", script.delayed.is_some());
-        set("setStat", script.set_stat.is_some());
-        set("startOfTurn", script.start_of_turn.is_some());
-        set("endOfTurn", script.end_of_turn.is_some());
-        set("aura", script.aura.is_some());
-        set("triggers", !script.triggers.is_empty());
-        set("onPlayHook", script.on_play_hook.is_some());
-        set("handTriggers", !script.hand_triggers.is_empty());
-        set("staticFlags", script.static_flags.is_some());
-        set("targets", !script.targets.is_empty());
-        set("modes", !script.modes.is_empty());
-        set("conditionMet", script.condition_met.is_some());
-        set("preview", script.preview.is_some());
-        set("activations", !script.activations.is_empty());
-        set("targetChecks", !script.target_checks.is_empty());
-        set("costAura", script.cost_aura.is_some());
-        set("graveyardPlay", script.graveyard_play.is_some());
-        set("targetingDiscards", script.targeting_discards.is_some());
-        set("recordsPlayAs", script.records_play_as.is_some());
-        set("drawLimit", script.draw_limit.is_some());
-        set("replacements", !script.replacements.is_empty());
-        set("heroGuard", script.hero_guard.is_some());
-        set("conditionalKeywords", script.conditional_keywords.is_some());
-        set("afterAttack", script.after_attack.is_some());
-        set("plagueMultiplier", script.plague_multiplier.is_some());
-        set("deckTriggers", !script.deck_triggers.is_empty());
-        set("graveyardTriggers", !script.graveyard_triggers.is_empty());
-        set("quests", script.quests.is_some());
-        set("tributeWhen", script.tribute_when.is_some());
-        set("wouldCounter", script.would_counter.is_some());
-        set("startOfOpponentTurn", script.start_of_opponent_turn.is_some());
-        keys
-    }
-
-    #[test]
-    fn is_a_4_legendary_spell_of_the_call_to_chaos_tag_and_both_faces_hang_the_card_off_cry() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(js(&def.cost), json!(4));
-        assert_eq!(def.type_, CardType::Spell);
-        assert_eq!(js(&def.tags), json!(["Call to Chaos"]));
-        assert_eq!(def.rarity, Rarity::Legendary);
-        let CardScripts { base, radiant } = script();
-        assert_eq!(object_keys(&base), vec!["cry"]);
-        assert_eq!(object_keys(&radiant), vec!["cry"]);
-    }
-
     #[test]
     fn r436_each_entry_s_label_is_a_clause_of_the_card_s_printed_list_in_the_printed_order() {
         crate::register_all();

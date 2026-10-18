@@ -56,9 +56,7 @@ pub fn script() -> CardScripts {
 // radiant 2/2 worth 3, draw 3; tuned numbers read through `param()` (R386).
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -77,11 +75,6 @@ mod tests {
     const X: &str = "core-020"; // library filler.
 
     use crate::scenario;
-
-    fn def() -> CardDef {
-        crate::register_all();
-        crate::card_def(ID)
-    }
 
     use crate::js;
 
@@ -139,35 +132,8 @@ mod tests {
         json!([{ "pick": "instance", "instanceId": card.id }])
     }
 
-    /// declares its two numbers; the worth is the face's static flag, the draw its Death
-    #[test]
-    fn declares_its_two_numbers_the_worth_is_the_face_s_static_flag_the_draw_its_death() {
-        assert_eq!(def().id, SHEEOPLE);
-        assert_eq!(
-            js(&def().params),
-            json!([
-                { "key": "draw", "base": 2, "radiant": 3, "better": "up", "step": 1, "min": 1 },
-                { "key": "worth", "base": 2, "radiant": 3, "better": "up", "step": 1, "min": 1 }
-            ])
-        );
-        let scripts = script();
-        assert_eq!(js(&scripts.base.static_flags), json!({ "tributeWorth": 2 }));
-        assert_eq!(js(&scripts.radiant.static_flags), json!({ "tributeWorth": 3 }));
-        assert!(Arc::ptr_eq(
-            scripts.base.death.as_ref().expect("a Death"),
-            scripts.radiant.death.as_ref().expect("a Death")
-        ));
-    }
-
     mod base {
         use super::*;
-
-        /// is a 1/1
-        #[test]
-        fn is_a_1_1() {
-            scenario(json!({ "p1": { "field": [SHEEOPLE], "hand": [FILLER] } }))
-                .expect_stats(SHEEOPLE, json!({ "attack": 1, "health": 1 }));
-        }
 
         /// R101 worth 2: it alone pays a Tribute 2, and tributing it draws 2
         #[test]

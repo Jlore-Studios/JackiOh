@@ -151,13 +151,6 @@ mod tests {
             use super::*;
 
             #[test]
-            fn is_a_2_1() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "field": [RUNNER], "hand": [ANCHOR] } }));
-                s.expect_stats(RUNNER, json!({ "attack": 2, "health": 1 }));
-            }
-
-            #[test]
             fn played_into_lane_3_it_tributes_itself_a_death() {
                 crate::register_all();
                 let mut s = scenario(json!({

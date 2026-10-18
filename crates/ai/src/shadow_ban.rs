@@ -311,6 +311,32 @@ pub const SHADOW_BAN_IDS: &[&str] = &{
     ids
 };
 
+/// Issue #1113: the frozen fixture pool. A copy of `SHADOW_BAN_IDS` as it stood when the seeded
+/// fixtures were dealt from it, so a shadow-ban change re-deals none of them: R290's tier games,
+/// the `cargo test` gate smokes behind `fixture_game_config`, and the named practice seeds deal
+/// with `banned: Some(FIXTURE_BANNED_IDS)`. It is never updated with the table; a fixture that
+/// needs a new deal changes its seed instead. Live paths (`game_config`, `gate --full`,
+/// promotion, sweep, practice without its test-only pool) keep dealing the live table.
+pub const FIXTURE_BANNED_IDS: &[&str] = &[
+    "meditative-011",
+    "meditative-012",
+    "meditative-017",
+    "meditative-025",
+    "meditative-029",
+    "meditative-030",
+    "meditative-031",
+    "meditative-049",
+    "meditative-058",
+    "meditative-069",
+    "meditative-075",
+    "meditative-078",
+    "meditative-085",
+    "meditative-087",
+    "meditative-091",
+    "meditative-096",
+    "meditative-099",
+];
+
 /// R390, R600: the cards the last sweep of record found at risk by their own numbers and did not ban,
 /// each with those numbers. The next sweep counts them at risk from the start (`at_risk_ids`), so a
 /// card on track to be banned stays watched from one sweep to the next. It changes no deck.

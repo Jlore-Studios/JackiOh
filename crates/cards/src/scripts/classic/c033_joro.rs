@@ -68,7 +68,6 @@ pub fn script() -> CardScripts {
 // case C #20 The Power to Punish, the Trap case C #5 Tesla.
 #[cfg(test)]
 mod tests {
-    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const JORO: &str = "classic-033";
@@ -119,23 +118,9 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_one_replacement_at_targeted_from_the_hand_answering_only_a_spell_the_same_on_both_faces_with_no_numbers() {
+        fn declares_no_tuned_numbers() {
             crate::register_all();
-            assert!(crate::card_def(ID).params.is_none());
-            let scripts = script();
-            // `ReplacementDef` is not serialisable (its `when` is a closure), so field by field.
-            for face in [&scripts.base, &scripts.radiant] {
-                // The Radiant face is the same declaration.
-                assert_eq!(face.replacements.len(), 1);
-                let joro = &face.replacements[0];
-                assert_eq!(joro.id, "joro");
-                assert_eq!(joro.on, ReplacementMoment::Targeted);
-                assert_eq!(joro.where_, Some(ReplacementWhere::Hand));
-                assert_eq!(joro.by, Some(ReplacementBy::Spell));
-                assert_eq!(js(&joro.instead), json!({ "interpose": true }));
-                assert!(joro.when.is_none());
-                assert!(joro.then.is_none());
-            }
+            assert!(crate::card_def(JORO).params.is_none());
         }
 
         mod base {

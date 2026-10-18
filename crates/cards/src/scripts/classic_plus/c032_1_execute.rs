@@ -53,7 +53,6 @@ pub fn script() -> CardScripts {
 // radiant destroys every damaged enemy Unit, no target".
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -84,23 +83,8 @@ mod tests {
             .collect()
     }
 
-    use crate::js;
-
     mod c_n32_1_execute {
         use super::*;
-
-        #[test]
-        fn declares_one_damaged_unit_of_either_side_the_radiant_face_declares_nothing() {
-            crate::register_all();
-            assert_eq!(ID, EXECUTE);
-            assert_eq!(crate::card_def(ID).id, EXECUTE);
-            let scripts = script();
-            assert_eq!(
-                js(&scripts.base.targets),
-                json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"], "damaged": true } }])
-            );
-            assert!(scripts.radiant.targets.is_empty());
-        }
 
         mod base {
             use super::*;

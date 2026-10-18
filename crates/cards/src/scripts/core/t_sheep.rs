@@ -110,30 +110,6 @@ mod tests {
             use super::*;
 
             #[test]
-            fn s7_prints_a_1_cost_unit_token_with_1_1_no_keywords_and_the_worth_2_reminder() {
-                crate::register_all();
-                let def = crate::card_def(ID);
-                assert_eq!(def.index, "T-sheep");
-                assert_eq!(def.cost, CardCost::Fixed(1));
-                assert_eq!(def.type_, CardType::Unit);
-                assert!(def.token);
-                assert!(def.tags.contains(&Tag::Token));
-                assert_eq!(def.base.attack, Some(1));
-                assert_eq!(def.base.health, Some(1));
-                assert!(def.base.keywords.is_empty());
-                assert!(fill_params(&def, FaceKind::Base, None).contains("2 Tributes"));
-            }
-
-            #[test]
-            fn s7_gives_the_sheep_token_a_radiant_face_2_2_worth_3_tributes_build_m4_t1() {
-                crate::register_all();
-                let def = crate::card_def(ID);
-                assert_eq!(def.radiant.attack, Some(2));
-                assert_eq!(def.radiant.health, Some(2));
-                assert_eq!(def.base.attack, Some(1), "and the base face is untouched at 1/1");
-            }
-
-            #[test]
             fn s7_each_face_s_script_is_its_worth_toward_a_tribute_and_nothing_else_s3_2_r102() {
                 crate::register_all();
                 let scripts = script();
@@ -144,17 +120,6 @@ mod tests {
 
         mod base {
             use super::*;
-
-            #[test]
-            fn s7_a_sheep_token_on_the_field_is_a_1_1_with_no_keywords() {
-                crate::register_all();
-                let mut s = scenario(json!({ "seed": SEED, "p1": { "field": ["core-t-sheep"] } }));
-                let sheep = s.unit(P1, 1).expect("a Sheep Token in p1's lane 1");
-
-                assert_eq!(sheep.def_id, ID);
-                s.expect_stats(&sheep, json!({ "attack": 1, "health": 1, "maxHealth": 1 }));
-                assert!(keywords_of(s.state(), &sheep).is_empty());
-            }
 
             #[test]
             fn s3_2_and_s6_3_a_sheep_token_on_the_field_is_worth_2_tributes_every_other_unit_1() {

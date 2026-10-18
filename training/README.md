@@ -11,8 +11,11 @@ docs/v0.3.0/SURFACE.md §14.
 | `improve` | a stronger AI: beat its predecessor in 220 of 400 games, 200 deals each played twice with the seats swapped (R850000) | [`improve.md`](improve.md) |
 | `unban` | an AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, while beating it in 60 of 100 | [`unban.md`](unban.md) |
 | `gather` | no change to the AI: development records for the card win rates (R378), without end | [`gather.md`](gather.md) |
+| `learn` | a stronger learned evaluation, retrained on fresh self-play by a script with no LLM in it: improve's bar, 220 of 400 paired games, on deals of its own (R1012000) | [`learn.md`](learn.md) |
 
-The `gather` lane runs no Devin session and opens no pull request (The gather lane, below).
+The `gather` lane runs no Devin session and opens no pull request (The gather lane, below). The
+`learn` lane runs no Devin session either and needs no box: it is a GitHub workflow,
+`.github/workflows/learn.yml`, and its contract is [`learn.md`](learn.md).
 
 Generation 8 (`training/history/unban.jsonl`, 2026-10-10) removed the last ban on the earlier sets,
 Core, Classic and Classic+. Generation 9 (#732, `training/history/meditative.jsonl`) brought the
@@ -76,10 +79,12 @@ review, with auto-merge on, once a promotion is in it. Each cycle:
    its stack and going to the gate only with a stack that screened above its parent
    ([`improve.md`](improve.md)). A session ends after a promotion or after four hours. Meanwhile,
    every 15 minutes (`TRAIN_PROGRESS_SECONDS`), the loop pushes the checkout as it is to `ai/<lane>`
-   as one `[skip ci]` commit when it changed, rewrites the session's comment on the draft, and
-   rewrites the draft's description when a new pass of the gate changed it. When the session ends,
-   the loop stops any `jackioh` process it left running as the lane's user (an arena or a gate cut
-   off by the time limit, and the parent agents it spawned), so the next measurement has the box.
+   as one `[skip ci]` commit when it changed (`[skip ci]` stops CI, not Vercel: `vercel.json` switches
+   Vercel off for `ai/**`, or each push would spend one of its 100 daily deployments), rewrites the
+   session's comment on the draft, and rewrites the draft's description when a new pass of the gate
+   changed it. When the session ends, the loop stops any `jackioh` process it left running as the
+   lane's user (an arena or a gate cut off by the time limit, and the parent agents it spawned), so
+   the next measurement has the box.
    Without a promotion, the `improve` lane saves the session's commits as its stack.
 4. When the session ends with a promotion commit, fold every commit of the session into it (the
    improve lane's stack included) and land it on `main`. If `main`'s crates did not move
@@ -336,6 +341,23 @@ The live games' records are what the gather lane's figures sit beside, and they 
   `r1451_r677_a_bots_pilot_is_filed_on_the_seat_it_ended_in`, and in `tests/store/card_stats.rs`
   `r1451_counts_every_seat_of_development_data_unless_a_pilot_is_named` and
   `r1451_reads_a_ladder_bots_side_of_a_live_game_only_when_asked`.
+
+## Where the exports come from
+
+The learned evaluation (#466, `docs/learned-eval.md`) learns from self-play exports: game logs
+`cargo jackioh selfplay` plays, which `cargo jackioh positions` folds into training rows (R1006001,
+R1006003). An export is dispatched, never played on the training box, whose two vCPUs the lanes need:
+`gh workflow run selfplay.yml -f games=100000 -f seed=<base> [-f shards=20] [-f
+runner=jackioh-selfplay-local]` plays it in shards on GitHub's runners (free for this public
+repository, about 1,500 games an hour each, at most 12 at once so that CI keeps 8 of the
+organization's 20 hosted jobs: 100,000 games in 20 shards take two rounds, about seven hours) or on
+the local runner (`bot/machine/README.md`, The local
+runner), and keeps each shard's log file as an artifact for up to 90 days. Its last job runs
+`positions` over the whole export and writes the counts (games, positions, games that no longer
+replay) and the games an hour to the run's summary. The same base and game numbers always play the
+same games, so an export can be played again on any runner, and a base never names a gate's
+hold-out deals or the dev set (R1006002). `gh run download <run> --pattern 'selfplay-<base>-*'`
+fetches it. The fit that learns from it is [`training/ml/`](ml/README.md).
 
 ## The ladder bots after a promotion
 

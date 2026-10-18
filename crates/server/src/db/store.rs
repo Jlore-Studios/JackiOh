@@ -683,6 +683,26 @@ pub struct MatchActionRow {
     pub at: i64,
 }
 
+/// #1169: a live match's checkpoint (`public.match_checkpoints`, migration 0042), the state its actor
+/// held after the log row `seq`, which a rebuild resumes from when it passes `actor::checkpoint`'s
+/// checks. `body` is the serialised `CheckpointBody` and `body_hash` its FNV-1a.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct MatchCheckpointRow {
+    pub match_id: String,
+    /// The log row the checkpoint follows, and its nonce.
+    pub seq: i64,
+    pub nonce: String,
+    pub catalog_version: String,
+    /// The build's rules fingerprint (`actor::checkpoint::RULES_FINGERPRINT`).
+    pub rules: String,
+    /// `config::MATCH_CHECKPOINT_VERSION` as it was written.
+    pub checkpoint_version: i32,
+    pub body: String,
+    pub body_hash: String,
+    pub at: i64,
+}
+
 // Rooms and tickets
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -1855,10 +1875,22 @@ impl Tx<'_> {
         dispatch!(self, matches_actions(match_id))
     }
 
+    /// #1169: stores the match's checkpoint, only while the match is live and its log holds `row.seq`
+    /// under `row.nonce`, and in place of an earlier seq's only. Answers whether it was stored.
+    pub async fn matches_put_checkpoint(&mut self, row: &MatchCheckpointRow) -> StoreResult<bool> {
+        dispatch!(self, matches_put_checkpoint(row))
+    }
+
+    /// #1169: the match's checkpoint, or `None`.
+    pub async fn matches_checkpoint(&mut self, match_id: &str) -> StoreResult<Option<MatchCheckpointRow>> {
+        dispatch!(self, matches_checkpoint(match_id))
+    }
+
     pub async fn matches_set_clocks(&mut self, match_id: &str, clocks: &MatchClocks) -> StoreResult<()> {
         dispatch!(self, matches_set_clocks(match_id, clocks))
     }
 
+    /// Ends the match, and drops its checkpoint (#1169).
     pub async fn matches_finish(&mut self, match_id: &str, at: i64) -> StoreResult<()> {
         dispatch!(self, matches_finish(match_id, at))
     }
@@ -2711,9 +2743,9 @@ impl Tx<'_> {
 
     /// B50, one read for a whole friends list: those of the named profiles whose live 1v1 match
     /// (their in-match flag) `viewer` may watch as the store judges it: the two are friends with
-    /// neither blocking the other, the match is live, not ranked, seats the friend and not `viewer`,
-    /// and the friend allows spectators. In the order named. Room (`SPECTATORS_PER_MATCH`) is the
-    /// actor's to judge.
+    /// neither blocking the other, the match is live, ranked or unranked, seats the friend and not
+    /// `viewer`, and the friend allows spectators. In the order named. Room (`SPECTATORS_PER_MATCH`)
+    /// is the actor's to judge.
     pub async fn presence_watchable(
         &mut self,
         viewer: &str,
@@ -2731,8 +2763,9 @@ impl Tx<'_> {
         dispatch!(self, profiles_find(profile_id))
     }
 
-    /// B50: whether friends may watch `profile_id`'s live unranked games: true unless they turned
-    /// it off (`GET`/`PUT /api/settings`' `allowSpectators`); false for an id no profile holds.
+    /// B50: whether friends may watch `profile_id`'s live games, ranked or unranked: true unless
+    /// they turned it off (`GET`/`PUT /api/settings`' `allowSpectators`); false for an id no profile
+    /// holds.
     pub async fn profiles_allows_spectators(&mut self, profile_id: &str) -> StoreResult<bool> {
         dispatch!(self, profiles_allows_spectators(profile_id))
     }

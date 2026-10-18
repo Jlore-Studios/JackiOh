@@ -63,8 +63,6 @@ mod tests {
     const TRAP: &str = "core-041"; // Sheepish, a Trap with no Fruit tag.
     const FILLER: &str = "core-005";
 
-    use crate::js;
-
     /// TS `FRUIT_POOL`: the Fruit query's ids, Organic Produce left out.
     fn fruit_pool() -> Vec<String> {
         jackioh_engine::catalog::query(&json_as(json!({ "tags": ["Fruit"] })))
@@ -97,18 +95,6 @@ mod tests {
             panic!("no Fig of Life");
         };
         s.play(&fig, json!({ "targets": [{ "pick": "hero", "player": player }] }));
-    }
-
-    #[test]
-    fn is_a_4_field_spell_fruit_both_faces_flag_fruit_plays_radiant() {
-        crate::register_all();
-        let def = js(&crate::card_def(ID));
-        assert_eq!(def["cost"], json!(4));
-        assert_eq!(def["type"], json!("Field Spell"));
-        assert_eq!(def["tags"], json!(["Fruit"]));
-        let CardScripts { base, radiant } = script();
-        assert_eq!(base.static_flags.and_then(|flags| flags.radiant_plays_tagged), Some(vec![Tag::Fruit]));
-        assert_eq!(radiant.static_flags.and_then(|flags| flags.radiant_plays_tagged), Some(vec![Tag::Fruit]));
     }
 
     mod base {

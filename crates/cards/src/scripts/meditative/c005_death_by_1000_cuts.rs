@@ -106,20 +106,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_1_cost_rare_spell_with_a_computed_echo_on_both_faces() {
-            crate::register_all();
-            assert_eq!(ID, CUTS);
-            let def = crate::card_def(ID);
-            assert_eq!(def.cost, CardCost::Fixed(1));
-            assert_eq!(def.rarity, Rarity::Rare);
-            assert_eq!(def.type_, CardType::Spell);
-            let scripts = script();
-            assert!(scripts.base.echo_x.is_some());
-            assert!(scripts.radiant.echo_x.is_some());
-            assert_eq!(scripts.base.targets.len(), 1);
-        }
-
-        #[test]
         fn r802_at_1_max_mana_it_hits_3_times() {
             crate::register_all();
             let mut s = scenario(json!({

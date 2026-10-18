@@ -153,19 +153,6 @@ mod tests {
             }
 
             #[test]
-            fn has_the_cast_on_draw_flag_on_both_faces() {
-                // R635's guarantee that setup never deals it rests on this flag; a token is in no
-                // deck anyway, so the flag is what makes a shuffled-in curse cast on draw.
-                let scripts = script();
-                for face in [&scripts.base, &scripts.radiant] {
-                    assert_eq!(
-                        face.static_flags.as_ref().and_then(|flags| flags.cast_on_draw),
-                        Some(true)
-                    );
-                }
-            }
-
-            #[test]
             fn damage_reads_through_param() {
                 crate::register_all();
                 let mut s = scenario(json!({

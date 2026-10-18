@@ -155,19 +155,26 @@ last turn" (the last step, its turn's GIF already being made). A practice result
 the worker's final snapshot (`replay`) and asks its pages through the practice controller's queue; a
 match result loads its first page to learn the replay's length (`OpenedReplay`, `openOnlineMatchReplay`).
 The GIF code still loads on demand, never in the main bundle.
+Each `/replays` row that can be watched also offers "Download JSON" (R1141000): every step's view through the
+row's own source, the row's facts and the build's catalog version, no account named, made in memory and saved
+to the browser's downloads, for a bug report.
 A finished co-op game's result panel offers "Watch the replay" too (§13.9): `duos/DuosReplay.tsx` reads
 `GET /api/duos/matches/:matchId/replay` once and steps the seat's `DuosView`s on `DuosBoard`'s replay mode,
 with the player's controls, a round standing for a turn; it is never in `/replays`.
 
 ```
 src/replay/
-  source.ts       ReplaySource (a total and pages of steps), ReplayFailure and the sentence each reason shows
+  source.ts       ReplaySource (a total and pages of steps), `memoryReplaySource` over verified steps, ReplayFailure
+                  and the sentence each reason shows
   sources.ts      the two sources: the practice worker's `replay` requests, the server's replay routes
   steps.ts        the pages fetched so far, by step; load, prefetch, and the turn moves' search; a clip's ends
   ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the controls in its notice slot;
                   `start` and `shareOnOpen` for a result screen's two buttons (R768000)
   OpenedReplay.tsx  a source loaded first (a finished match's first page), then the player
   ShareGif.tsx    "Share as GIF" (#513, R513000): the clip, the shape, progress, cancel, Share or Download
+  download.ts     "Download JSON" (#1141, R1141000): every step of a source and the row's facts as one file, and
+                  `parseReplayJsonFile` opens one again (#1160); the download both it and the GIF's share.ts
+                  hand a file to
   gif/            what it loads on demand, never in the main bundle: plan.ts (a clip's views to frames, a pure
                   function on a fixed frame clock), raster.ts and raster.worker.ts (the frames drawn on an
                   OffscreenCanvas, in a worker where it can), encoder.ts (GIF bytes by hand), share.ts, export.ts
@@ -555,4 +562,4 @@ strings go in and out; the state is an opaque JSON object the client hands back 
 
 ## Internationalisation
 
-The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English.
+The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English. That fallback is for the engine's and the server's sentences: every literal sentence the client wraps in `t()` (a string, a template with no substitutions, or either branch of `t(cond ? "a" : "b")`) has an entry in `src/i18n/zh-CN.json`, an identity entry when it reads as written, and `src/i18n/i18n.test.ts` (R711000) fails on one that has none, naming its file and line.

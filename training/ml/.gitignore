@@ -1,0 +1,5 @@
+.venv/
+.pytest_cache/
+# Positions, fits and reports are data: they go on #466 and in the runs, never in git.
+data/
+out/

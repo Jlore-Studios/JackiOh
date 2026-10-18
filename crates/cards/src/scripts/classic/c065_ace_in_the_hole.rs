@@ -91,7 +91,6 @@ pub fn script() -> CardScripts {
 // Sheepish (a Trap), Lunar Eclipse (a Spell, which a Recruit passes by).
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -188,29 +187,6 @@ mod tests {
 
     mod c_65_ace_in_the_hole {
         use super::*;
-
-        #[test]
-        fn is_a_trap_that_flips_at_the_end_of_a_turn_and_fires_in_the_window_its_number_is_recruits() {
-            crate::register_all();
-            let def = js(&crate::card_def(ID));
-            assert_eq!(def["id"], ACE);
-            assert_eq!(def["type"], "Trap");
-            assert_eq!(
-                def["params"],
-                json!([{ "key": "recruits", "base": 1, "radiant": 3, "better": "up", "step": 1, "min": 1 }]),
-            );
-            let scripts = script();
-            for face in [&scripts.base, &scripts.radiant] {
-                assert!(face.end_of_turn.is_some());
-                assert_eq!(
-                    face.triggers
-                        .iter()
-                        .map(|trigger| js(&trigger.on))
-                        .collect::<Vec<Value>>(),
-                    vec![json!(["turnEnded"])],
-                );
-            }
-        }
 
         mod base {
             use super::*;

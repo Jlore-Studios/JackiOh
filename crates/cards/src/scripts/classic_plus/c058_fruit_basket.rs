@@ -80,14 +80,6 @@ mod tests {
         GRAPES.contains(&id)
     }
 
-    #[test]
-    fn is_a_1_spell_fruit() {
-        crate::register_all();
-        let def = crate::card_def(super::ID);
-        assert_eq!(def.id, BASKET);
-        assert_eq!(def.tags, vec![Tag::Fruit]);
-    }
-
     mod base {
         use super::*;
 

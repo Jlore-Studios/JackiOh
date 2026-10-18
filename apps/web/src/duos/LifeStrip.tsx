@@ -141,7 +141,9 @@ export function TeammateStrip({ view, link }: { view: DuosView; link: TeammateLi
   const ended = view.team.ended[slot] === true;
   const side = view.teammate.you;
   const hand = Array.isArray(side.hand) ? side.hand.length : side.hand.count;
-  const theirTurn = view.result === null && view.teammate.active === view.teammate.viewer;
+  // B4, R1168001: the round's turn in the teammate's duel, not the duel's active player, which may be
+  // a turn ahead of the round there.
+  const theirTurn = view.result === null && view.roundSeats[slot] === seat;
   return (
     <div
       className="duos-teammate"

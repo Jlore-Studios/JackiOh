@@ -37,22 +37,22 @@ before yours, so a pending-claimed card needs no edit there (R646). What stays h
 Also grep the Markdown for the stated totals (`370 cards`, `80 tokens`, `450`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
 `spec/`, `docs/architecture.md`.
 
-**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and a set held the same way later is one too) differs in five places, the Meditative paths below standing for its own:
-- Its script goes in `src/scripts/meditative/`.
-- Rows 1, 4, 5, 6 and 7 are already written. §8.8, §7, the `MEDITATIVE` fixture, the census in `crates/tools/src/catalog.rs`,
-  `docs/radiant-audit.md` and BUILD M10 list every card of the set, so a card part corrects its rows only where its build
+**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set is one now, issue #1173, R1178000) differs in five places, the Meditative+ paths below standing for any held set's:
+- Its script goes in `src/scripts/meditative_plus/` (id `meditativeplus-NNN`, a token's `meditativeplus-NNN-k`).
+- Rows 1, 4, 5, 6 and 7 are already written. §8.9, §7, the `MEDITATIVE_PLUS` fixture, the census in `crates/tools/src/catalog.rs`,
+  `docs/radiant-audit.md` and BUILD M11 list every card of the set, so a card part corrects its rows only where its build
   decided otherwise.
 - There is no row 11. The patches tool reads the catalog without the set, so its cards need no fragment until the release
   claims the whole set at once. The stated totals above don't move either: they count the shipped sets.
 - The set's cards are in no pool that names no set, in no deck and in no random deck. A test that needs them there opens the set
-  with the engine testkit's `preview_sets(&[SetName::Meditative])` (one thread, until its guard drops).
+  with the engine testkit's `preview_sets(&[SetName::MeditativePlus])` (one thread, until its guard drops).
 - `cargo jackioh fuzz` previews every set, so the card is fuzzed from the day it lands, while the golden traces deal from the
   shipped sets and must not move.
 - Its `card-audio.json5` entry is written as for any card, but no voice file is expected for it until the set ships
   (`gen-voice.mjs --check` leaves it out), so [§7](#7-what-cannot-be-done-on-linux)'s rendering is owed by the release, not by the card.
   Its intro (row 12) is the release's too: the intros' totality test reads the sets that ship.
 - Tests that count the catalog count the sets that ship (`set_is_open` in Rust, `setShips` in the web), never every entry.
-  `docs/meditative-set.md` M3 says the rest.
+  `docs/meditative-plus-set.md` MP3 says the rest (`docs/meditative-set.md` M3 for the Meditative set's build).
 
 ## 2. Templates
 
@@ -111,7 +111,7 @@ pub fn script() -> CardScripts {
 Read a declared number with `param(ctx, "draw")`, never a literal. Declared targets and modes go in `targets` and `modes`
 ([cards README §1](../crates/cards/README.md#1-the-card-file)). A card with no script of its own for one face reuses `base`.
 
-**Tests**, at the bottom of the same file (two cases in the shape of C+ #6's). Build every game with the testkit's `scenario()`
+**Tests**, at the bottom of the same file (in the shape of C+ #6's; printed cost and stats need no test, `tests/cross/catalog.rs` proves them). Build every game with the testkit's `scenario()`
 after `crate::register_all()`, and name a test after the ruling it pins (`fn r64_the_copy_lands_in_the_leftmost_free_zone`):
 
 ```rust
@@ -119,17 +119,6 @@ after `crate::register_all()`, and name a test after the ruling it pins (`fn r64
 mod tests {
     use super::ID;
     use jackioh_engine::testkit::*;
-
-    #[test]
-    fn is_a_1_1_1_human_unit_radiant_2_2() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.cost, CardCost::Fixed(1));
-        assert_eq!(
-            [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-            [Some(1), Some(1), Some(2), Some(2)]
-        );
-    }
 
     #[test]
     fn radiant_enters_the_field_when_played() {
@@ -215,7 +204,7 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   card of two ingredients that define `targetChecks` threw from `legalActions` (#104), a client table made the animation runner replay a
   whole event window (#106), `determinize` put a Siphon Squad in a hidden slot the seat's own view rules out (#107), and a deeply nested
   fusion resumed Final Gambit's step against the wrong ingredient (#105). If a wave fails at a seed that has nothing to do with
-  your card, print the failing game's state, find which card the panic or the diff names, and file it rather than editing the test.
+  your card, print the failing game's state, find which card the panic or the diff names, and file it rather than editing the test. A failure you fix or file gets a record in `crates/tools/fuzz-corpus/` in the same change (its README), so its deal survives the next card.
 - **A renamed card** (a patch that changes a `name`) fails `voice-lines.test.ts` until its comment in `card-audio.json5`, the name on the
   line of its id, says the new name (R655).
 - **A card patched to Legendary or Mythic** (or a token's `printedRarity`) fails `music-assets.test.ts` until it has row 12's intro, and one

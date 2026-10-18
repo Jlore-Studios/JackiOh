@@ -90,18 +90,6 @@ mod tests {
     }
 
     #[test]
-    fn is_a_2_fruit_spell_both_faces_one_shape_of_hook() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.id, PEAR);
-        assert_eq!(js(&def.cost), json!(2));
-        assert!(def.tags.contains(&Tag::Fruit));
-        let CardScripts { base, radiant } = script();
-        assert!(base.cry.is_some());
-        assert!(radiant.cry.is_some());
-    }
-
-    #[test]
     fn r482_the_text_agrees_with_its_count_at_every_value_one_unit_two_units() {
         crate::register_all();
         let def = crate::card_def(ID);

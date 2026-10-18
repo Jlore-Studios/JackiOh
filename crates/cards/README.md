@@ -2,8 +2,9 @@
 
 450 catalog entries in the four shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
 Glitch, a hidden token), Classic+ (78 cards and 38 tokens) and Meditative (102 cards and 30 tokens,
-spec §8.8), 370 cards and 80 tokens in all. A set the catalog holds before it ships, as Meditative
-was while issue #496 built it, is in no pool that names no set, no deck and no random deck until the
+spec §8.8), 370 cards and 80 tokens in all, and the Meditative+ set (26 cards and 4 tokens, spec §8.9), held
+until its release (#1187). A set the catalog holds before it ships, as Meditative was while issue #496 built it and
+Meditative+ is now (R1178000), is in no pool that names no set, no deck and no random deck until the
 patch that lists it in `SHIPPED_SETS` (R1420), and a test opens it with the testkit's
 `preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
 catalog's patch history. This file is the contract between the card files. The spec (`spec/08-catalog.md`
@@ -28,7 +29,8 @@ crates/cards
 │   ├── core/           one Core card or token per file
 │   ├── classic/        one Classic card per file
 │   ├── classic_plus/   one Classic+ card or token per file
-│   └── meditative/     one Meditative card or token per file (the set ships with #496's release, R1420)
+│   ├── meditative/     one Meditative card or token per file (shipped in v0.3.5, R1420)
+│   └── meditative_plus/ one Meditative+ card or token per file (held until #1187, R1178000)
 └── tests/cards.rs      the cross-card tests: tests/cross/<x>.rs (catalog, query, references, radiant
                         standard, flavour, condition_active, preview, invariants, …)
 ```
@@ -143,6 +145,8 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `after_attacked_of(ctx)` | in an `after_attacked` hook, its combat's facts (R1026) |
 | `param(ctx, key)` | the running card's current value of a declared number (`params`, R386) |
 | `luck_of(state, player)` | the player's Luck for best-of rolls (R987, Meditative #40) |
+| `player_spell_damage(state, player)` | the player's Spell Damage, the one sum §4.4 step 0 reads: Units, auras for one player or both, "this turn" modifiers (R1180000, R1180001) |
+| `heal_multiplier_of(state, player)` | how many times as large a heal of the player's hero or Units is now (R1180003, Meditative+ #7) |
 | `subsystems::feng_shui::{last_element, element_preview}` | the last-played elements and their `preview` lines (R982, Meditative #40) |
 | `subsystems::activation_paid(ctx)` | what an Activate paid (R384, C #21) |
 
@@ -228,7 +232,10 @@ A card's tests are the `#[cfg(test)] mod tests` at the bottom of its file, built
 what each does). For **base and radiant separately**: one test per behaviour in the card's spec §8 row
 and every must-pass case in its BUILD table row (M4-T4 for Core, M9 for Classic and Classic+). A
 test that proves a ruling is named after it: `fn r64_the_copy_lands_in_the_leftmost_free_zone`
-(CLAUDE.md rule 3).
+(CLAUDE.md rule 3). A test that only reads printed data back with no action (cost, stats, type, tags
+or rarity, which `tests/cross/catalog.rs` proves for every entry) proves nothing a card test should,
+so write none (#1125). A "no tuned numbers" clause still gets its
+`params.is_none()` test: `catalog.rs` does not assert `params`.
 
 A card that declares `condition_met` proves both answers in `tests/cross/condition_active.rs`, and
 one that declares `preview` proves its values in `tests/cross/preview.rs`; each file also pins the
@@ -243,6 +250,7 @@ cargo test -p jackioh-cards --lib -- --skip scripts::classic:: --skip scripts::c
 cargo test -p jackioh-cards --lib -- scripts::classic::  # CI shard (#882)
 cargo test -p jackioh-cards --lib -- scripts::classic_plus::  # CI shard (#882)
 cargo test -p jackioh-cards --lib -- scripts::meditative::  # CI shard (#882)
+cargo test -p jackioh-cards --lib -- scripts::meditative_plus::  # the Meditative+ cards (Core's shard runs them too, its skips not naming them)
 cargo test -p jackioh-cards --test cards        # the cross-card tests only
 cargo clippy -p jackioh-cards --all-targets -- -D warnings
 ```

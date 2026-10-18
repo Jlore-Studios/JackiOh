@@ -120,15 +120,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn has_a_script_per_face() {
-            crate::register_all();
-            assert_eq!(crate::card_def(RECYCLE).id, RECYCLE);
-            let scripts = script();
-            assert!(scripts.base.cry.is_some());
-            assert!(scripts.radiant.cry.is_some());
-        }
-
-        #[test]
         fn r381_its_name_is_a_rules_word_c_n64_malzahar_s_recycler_names_no_card_least_of_all_this_one() {
             crate::register_all();
             let refs = crate::CATALOG

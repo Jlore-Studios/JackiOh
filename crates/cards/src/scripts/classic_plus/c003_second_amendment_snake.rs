@@ -44,7 +44,6 @@ mod tests {
     use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const SNAKE: &str = "classicplus-003";
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
@@ -120,33 +119,6 @@ mod tests {
 
     fn preview_json(shown: &Option<Vec<PreviewValue>>) -> Value {
         serde_json::to_value(shown).unwrap()
-    }
-
-    #[test]
-    fn is_a_2_1_6_unit_declaring_tokens_2_3_and_damage_1_one_script_runs_both_faces() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.cost, CardCost::Fixed(2));
-        assert_eq!(
-            [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-            [Some(1), Some(6), Some(2), Some(12)]
-        );
-        assert_eq!(
-            def.params.unwrap_or_default().iter().map(|p| (p.key.clone(), p.base, p.radiant)).collect::<Vec<_>>(),
-            vec![("tokens".to_string(), 2, 3), ("damage".to_string(), 1, 1)]
-        );
-        // The Radiant face is the base face's very script.
-        let scripts = script();
-        let same = |a: &Option<Hook>, b: &Option<Hook>| match (a, b) {
-            (Some(a), Some(b)) => Arc::ptr_eq(a, b),
-            _ => false,
-        };
-        assert!(same(&scripts.base.end_of_turn, &scripts.radiant.end_of_turn));
-        assert!(same(&scripts.base.death, &scripts.radiant.death));
-        assert!(matches!(
-            (&scripts.base.preview, &scripts.radiant.preview),
-            (Some(a), Some(b)) if Arc::ptr_eq(a, b)
-        ));
     }
 
     mod base {

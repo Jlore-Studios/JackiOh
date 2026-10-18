@@ -23,7 +23,7 @@ import type { Tuning } from "./Tuning";
 export type UnitView = { instanceId: string, defId: string, radiant: boolean, cost: number, power?: string, conditionActive?: true, counteredOnPlay?: true, preview?: Array<PreviewValue>, type?: CardType, 
 /**
  * MD-B15, R923: the card's tags, set only where they differ from its definition's — a granted
- * tag is part of the card, and the view says so.
+ * tag is part of the card, as CN is of a card in Chinese (R1176000), and the view says so.
  */
 tags?: Array<Tag>, brittle?: number, element?: CardElement, params?: { [key in string]: number }, tuning?: Tuning, enchantments?: Array<Enchantment>, marks?: Array<CardMark>, activations?: Array<ActivationView>, quest?: QuestView, copies?: CopiedTextView, owner: PlayerId, controller: PlayerId, attack: number, maxHealth: number, health: number, keywords: Array<Keyword>, armor: number, position: Position, counters: Counters, 
 /**
@@ -47,6 +47,11 @@ animated?: AnimatedView,
  * Only ever `Some(true)`.
  */
 berserk?: true, 
+/**
+ * R1174000: the unit is Frozen (a status, public on the field on both seats): it can neither
+ * attack nor switch its own position until it thaws. Absent otherwise. Only ever `Some(true)`.
+ */
+frozen?: true, 
 /**
  * ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
  * may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
@@ -76,6 +81,7 @@ grants?: Array<string>,
 sick?: true, 
 /**
  * R849000: why the viewer's own unit cannot declare an attack now (`combat::why_cannot_declare`),
- * as `ActivationView.reason` (R384). Only while `canAct`; never on the opponent's units.
+ * as `ActivationView.reason` (R384). Only while `canAct`, or while the unit is Frozen in its
+ * controller's main phase (R1174000); never on the opponent's units.
  */
 attackReason?: string, };

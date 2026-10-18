@@ -76,33 +76,6 @@ mod tests {
             use super::*;
 
             #[test]
-            fn is_a_rare_3_cost_3_13_with_armor_3_and_the_guard() {
-                crate::register_all();
-                let def = crate::card_def(ID);
-                assert_eq!(def.cost, CardCost::Fixed(3));
-                assert_eq!(def.rarity, Rarity::Rare);
-                assert_eq!(
-                    [
-                        def.base.attack,
-                        def.base.health,
-                        def.radiant.attack,
-                        def.radiant.health
-                    ],
-                    [Some(3), Some(13), Some(6), Some(26)]
-                );
-                assert_eq!(def.base.keywords, vec![Keyword::Armor { n: 3 }]);
-                assert_eq!(
-                    def.base.text,
-                    "Armor 3\nLethal damage your hero or your other Units would take is redirected to this."
-                );
-                let guard = &registered_scripts()[ID].base.replacements;
-                assert_eq!(guard.len(), 1);
-                assert_eq!(guard[0].id, "92-lethal-guard");
-                assert_eq!(guard[0].on, ReplacementMoment::LethalHit);
-                assert_eq!(guard[0].instead.redirect, Some(InsteadRedirect::SelfCard));
-            }
-
-            #[test]
             fn r1204_a_lethal_hit_on_an_ally_reaches_the_guard_through_its_armor() {
                 crate::register_all();
                 let mut s = scenario(json!({

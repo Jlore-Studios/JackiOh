@@ -20,9 +20,9 @@ use crate::config::{
 };
 use crate::rng::Rng;
 use crate::wire::{
-    AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, CustomCard, Enchantment, GameEvent,
-    Keyword, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, RowFlags, SecretChoice,
-    Selection, Tag, Tuning, Zone, ZoneRef, string_union,
+    AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, CraftMode, CustomCard, Enchantment,
+    GameEvent, Keyword, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, RowFlags,
+    SecretChoice, Selection, Tag, Tuning, Zone, ZoneRef, string_union,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -257,6 +257,15 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub berserk: Option<bool>,
+    /// R1174000: this Unit is Frozen (`effects::statuses::freeze`), so it can neither declare an attack
+    /// nor switch its own position (`combat::has_exertion_in`). The number is its thaw, stamped as the
+    /// freeze lands (`freeze::thaw_turn`): it thaws at the cleanup of its controller's first turn
+    /// numbered this or later. A status, never text: R78's reset takes it off with the card leaving
+    /// the field, and a Vanilla removes it. Absent on every other card, so a game nothing freezes in
+    /// serializes and hashes as before (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub frozen: Option<i32>,
     /// R429: how many times this card has been played, the play under way included — counted at §10.5
     /// step 4 (casts too, R70; a countered play never reaches it) for a card whose script asks
     /// (`StaticFlags.countsPlays`, #31 KY's Math Equation) and absent on every other card. Kept in every
@@ -272,9 +281,9 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub flashback_spent: Option<bool>,
-    /// ME-CN, R1300: the card is shown in Chinese (`effects::translate`). Presentation only: no rule
-    /// reads it. Kept in every zone and through R78's and R766's resets; a copy keeps it, a
-    /// Transform's new card is without it. Only ever `Some(true)`.
+    /// ME-CN, R1300: the card is shown in Chinese (`effects::translate`). One rule reads it: a card
+    /// in Chinese is CN (`query::tags_of`, R1176000). Kept in every zone and through R78's and R766's
+    /// resets; a copy keeps it, a Transform's new card is without it. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub chinese: Option<bool>,
@@ -530,6 +539,24 @@ pub enum ModifierKind {
     /// damage instance to it is 0 (a cap of 0 `damage::hero_damage_cap` reads at §4.4 step 3).
     /// Expiry is R757's Armor Up expiry, so it is gone as this player's next turn begins.
     HeroImmune,
+    // ---- Meditative+ (docs/meditative-plus-set.md MP5, issue #1180) ----
+    /// R1180001 (Meditative+ #11 Living Mana Potion): "You have Spell Damage +N this turn" — added to
+    /// this player's Spell Damage, the one sum §4.4 step 0 reads (`damage::spell_damage_of`), while it
+    /// is live. Expiry `thisTurn`; several stack, each its own modifier, and none has a source, so it
+    /// stays when the card that gave it leaves.
+    SpellDamage {
+        amount: i32,
+    },
+    /// R1180004 (Meditative+ #6 Bloodbloom): the next Spell this player plays from their hand, face-up,
+    /// costs no mana and `multiple` times its cost in health (`mana::health_price_rule`), and gains
+    /// `echo` Echo (the Radiant face's 1). Expiry `used`: the play it prices spends it, and a newer
+    /// one replaces it (`effects::price_next_spell_in_health`).
+    HealthPrice {
+        multiple: i32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        echo: Option<i32>,
+    },
 }
 
 /// `{ id; expiry } & (kind union)`: one player-level modifier (§10.1 `PlayerState.mods`). The kind's
@@ -717,6 +744,18 @@ pub struct PendingChoice {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub budget: Option<i32>,
+    /// A `craft` prompt's mode beyond Meditative #17's free crafter: Scratch Pad's empty canvas or a
+    /// potion frame (R1182000 to R1182002), which the answer check and the client read. Absent on
+    /// every other prompt and on Meditative #17's, so a state without one hashes as it did (D9).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub craft_mode: Option<CraftMode>,
+    /// R1184000: an `answer` prompt that is one question of a sequence (Meditative+ #20 KY's
+    /// Competition) carries the right answers so far, which its chooser sees, and offers Stop after
+    /// its answers (`prompts::ANSWER_STOP_KEY`). Absent on every other prompt (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub streak: Option<i32>,
     pub resume: Resume,
 }
 
@@ -1863,6 +1902,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         brittle: None,
         enchantments: None,
         berserk: None,
+        frozen: None,
         times_played: None,
         flashback_spent: None,
         chinese: None,

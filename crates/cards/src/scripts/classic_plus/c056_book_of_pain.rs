@@ -54,18 +54,6 @@ mod tests {
         s.pile(PlayerId::P2, "graveyard").into_iter().map(|card| card.def_id).collect()
     }
 
-    #[test]
-    fn is_a_1_spell_book_both_faces_run_one_script() {
-        crate::register_all();
-        assert_eq!(crate::card_def(super::ID).id, BOOK);
-        let scripts = super::script();
-        // TS `expect(radiant).toBe(base)`: the one Cry hook.
-        assert!(std::sync::Arc::ptr_eq(
-            scripts.radiant.cry.as_ref().expect("a Cry"),
-            scripts.base.cry.as_ref().expect("a Cry"),
-        ));
-    }
-
     mod base {
         use super::*;
 

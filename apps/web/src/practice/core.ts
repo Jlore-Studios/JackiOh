@@ -194,7 +194,10 @@ function decksAndHandicap(config: PracticeStartConfig): { humanDeck: string[]; a
   const handicap = AI_DIFFICULTY[config.difficulty];
   return {
     humanDeck: humanDeckFor(config.seed, config.deck),
-    aiDeck: buildAiDeck(createRng(`${config.seed}:ai-deck`), handicap.deckSize, { manaCap: handicap.manaCap }),
+    aiDeck: buildAiDeck(createRng(`${config.seed}:ai-deck`), handicap.deckSize, {
+      manaCap: handicap.manaCap,
+      ...(config.aiBanned === undefined ? {} : { banned: [...config.aiBanned] }),
+    }),
     handicap,
   };
 }

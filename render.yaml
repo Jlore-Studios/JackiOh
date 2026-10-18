@@ -101,3 +101,9 @@ services:
       # WebSocket Origin check (R162), so a missing entry fails the socket, not just a fetch.
       - key: PUBLIC_ORIGINS
         sync: false
+      # Optional: a fine-grained token, with Issues read and write on this repository, of an account
+      # the night bot trusts (.harness/trust.txt level 2 or more, or a collaborator). With it the
+      # server files a match its own log does not reproduce as a `bot:build` issue
+      # (crates/server/README.md, "A match its log does not reproduce"); without it, only logs it.
+      - key: CREATE_ISSUES_TOKEN
+        sync: false

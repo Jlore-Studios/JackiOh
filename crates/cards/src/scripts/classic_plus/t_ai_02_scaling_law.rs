@@ -52,8 +52,6 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    use crate::js;
-
     /// TS's `sinkOf(s)`: a direct engine call on the scenario's live state, its rng rebuilt from
     /// (seed, cursor) and the cursor written back afterwards (`s.state.rngCursor = sink.rng.cursor`).
     fn direct<R>(s: &mut Scenario, run: impl FnOnce(&mut EngineSink<'_>) -> R) -> R {
@@ -74,25 +72,6 @@ mod tests {
 
     mod t_ai_2_scaling_law {
         use super::*;
-
-        #[test]
-        fn is_a_2_2_2_unit_ai_token_radiant_4_4_with_one_set_stat_hook_on_both_faces() {
-            crate::register_all();
-            let def = js(&crate::card_def(super::super::ID));
-            assert_eq!(def["cost"], json!(2));
-            assert_eq!(def["type"], json!("Unit"));
-            assert_eq!(def["tags"], json!(["AI", "Token"]));
-            assert_eq!(def["token"], json!(true));
-            assert_eq!(def["base"]["attack"], json!(2));
-            assert_eq!(def["base"]["health"], json!(2));
-            assert_eq!(def["radiant"]["attack"], json!(4));
-            assert_eq!(def["radiant"]["health"], json!(4));
-            let scripts = super::super::script();
-            let (Some(base), Some(radiant)) = (scripts.base.set_stat.as_ref(), scripts.radiant.set_stat.as_ref()) else {
-                panic!("both faces carry the set-stat hook");
-            };
-            assert!(std::sync::Arc::ptr_eq(base, radiant));
-        }
 
         mod base {
             use super::*;

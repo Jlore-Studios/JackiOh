@@ -332,6 +332,7 @@ export const AI_EVAL = {
   handPerCost: 0.3,
   handCostCap: 6,
   radiantInHand: 0.5,    // added per own Radiant hand card
+  radiantFaceShare: 0.5, // two Unit faces: this share of the entering face's worth over the printed base face's (#1143)
   opponentHandCost: 2,   // an unseen hand card is valued as if it cost this
   backrowBase: 1.5,      // a readable backrow card: backrowBase + backrowPerCost × queryCost(def)
   backrowPerCost: 0.8,
@@ -492,7 +493,9 @@ export function faceThreat(state: GameState, attacker: PlayerId): number;
     + Σ over `p`'s backrow of `backrowBase + backrowPerCost × queryCost(def)` for cards readable by
     `seat`, or `enemyFaceDown` for each that is not
     + hand: for `seat`, Σ over hand cards of `handCard + handPerCost × min(queryCost(def), handCostCap)`
-    (+ `radiantInHand` if Radiant); for `opp`, `hand.length × (handCard + handPerCost × opponentHandCost)`
+    (+ `radiantInHand` if Radiant; + `radiantFaceShare` × (the stat and keyword worth of the face it will
+    enter with, buffs and tuning included, − its printed base face's) when both its faces are Units,
+    #1143); for `opp`, `hand.length × (handCard + handPerCost × opponentHandCost)`
     + `libraryCard × min(library.length, libraryComfort)`.
   - `threat` = `faceThreat(state, opp) >= hero(seat).health ? AI_EVAL.lethalThreat : threatPerDamage × faceThreat(state, opp)`,
     times `answerableThreat` when `next` is `"seat"`.
@@ -558,6 +561,8 @@ export type SimStep = { ok: true; state: GameState } | { ok: false; error: strin
 export function simulate(state: GameState, seat: PlayerId, action: ActionBody, counter: NodeCounter): SimStep | null;
 /** `simulate` as before #891, the greedy baseline's: every prompt of the other seat gets the first entry of legalActions. */
 export function simulateFirstAnswers(state: GameState, seat: PlayerId, action: ActionBody, counter: NodeCounter): SimStep | null;
+/** #1112: a state at `seat`'s own prompt scored where its answers lead (each prompt on the way gets its holder's best answer, as in `simulate`, each answer one node, at most AI_SEARCH.maxAutoAnswers prompts) by `evaluate`; null when no prompt of the seat's is open, the counter refuses a node or the lookahead fails. */
+export function ownPromptScore(state: GameState, seat: PlayerId, counter: NodeCounter): number | null;
 
 /**
  * A line's value: "over"/"yielded" → evaluate; "passed" → evaluate − AI_EVAL.unspentMana ×
@@ -605,7 +610,8 @@ export type Line = { actions: ActionBody[]; score: number; status: LineStatus; e
 /**
  * Beam search on one determinization. The frontier starts at `det`. Each open line expands its first
  * rootBranching (depth 0) or branching (deeper) candidates, plus endTurn. Every child is simulated
- * and scored with `evaluate`; children whose status is not "open" become complete lines scored by
+ * and scored with `evaluate`, a child waiting on the seat's own prompt where its answers lead
+ * (`ownPromptScore`, #1112); children whose status is not "open" become complete lines scored by
  * terminalScore; the best beamWidth open children (stable) form the next frontier. The loop stops at
  * maxDepth (open lines are closed by terminalScore) or when the counter refuses. Returns complete
  * lines, best first.

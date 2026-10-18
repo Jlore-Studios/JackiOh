@@ -115,10 +115,12 @@ fn v2_the_reader_sees_through_tables_and_inline_tables() {
     assert_eq!(names, ["serde", "rand", "regex", "libc"]);
 }
 
-/// The readers part 28 left standing: both read structure, never prose.
+/// The readers part 28 left standing, and those since: each reads structure, never prose.
 const STRUCTURAL_READERS: &[&str] = &[
     // The audit's table of Radiant faces, one row per card (R275).
     "crates/cards/tests/cross/radiant_standard.rs",
+    // SPEC §7's table of tokens, its Token and Index cells, one row per token (R1177001).
+    "crates/cards/tests/cross/catalog.rs",
     // This file names the patterns it looks for.
     "crates/tools/tests/acceptance.rs",
 ];

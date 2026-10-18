@@ -15,8 +15,13 @@ use jackioh_engine::{CardDef, CardDefs, CardScripts, ShippedCatalog};
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
-use crate::scripts::core::c050_k_pop_fanatic;
-use crate::scripts::meditative::{c074_montana_giant, c097_2_wishing_well, c097_8_prison};
+use crate::scripts::classic::{c064_malzahars_recycler, c088_siphon_squad};
+use crate::scripts::classic_plus::{c033_ivory_tower, c040_appropriations};
+use crate::scripts::core::{c049_snom_bunny_mind_control, c050_k_pop_fanatic};
+use crate::scripts::meditative::{
+    c017_true_craft_a_card, c037_cn_in_a_bottle, c054_money_machine, c074_montana_giant, c080_aluneth,
+    c097_2_wishing_well, c097_8_prison,
+};
 use crate::{CATALOG, REGISTRY, catalog_json};
 
 /// R767000, R388: the scripts kept for shipped versions, `(ID, version, script)`: a patch that changes
@@ -28,6 +33,14 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// v0.3.7b, and #1039's: Montaña Giant read a full hand as `HAND_CAP` cards, not its player's hand cap
 /// (R1143), through v0.3.7b. K-Pop Fanatic's plain steal is kept beside them: it marked its target
 /// purple and left one it had no room for with the opponent through v0.3.7b, before it Allured (R1045000).
+/// #1149's five are kept beside them, each as it ran through v0.3.7b: Snom Bunny Mind Control stole any
+/// enemy permanent, not only a Unit; Siphon Squad's aura worked from the moment it was set, not once it
+/// was revealed (R1149000); True Craft a Card went to the graveyard, not to exile; CN in a Bottle was
+/// replaced on any arrival in a hand, not cast on draw (R1149001); Appropriations' Culture and the
+/// Radiant's Military and Healthcare had their higher multiples. #1194's four ran their v0.3.7b scripts
+/// through v0.3.7b too: Malzahar's Recycler discarded at the end of its controller's turn, Ivory Tower had
+/// no Aura, Money Machine rolled its controller's card and either player could Tribute it, and Aluneth's
+/// draws took no discount.
 /// A card patch before them that changed a script's behaviour kept none, and a game it alters is refused
 /// by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
@@ -47,6 +60,43 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.3.7b",
         c050_k_pop_fanatic::script_v0_3_7b,
     ),
+    (
+        c049_snom_bunny_mind_control::ID,
+        "v0.3.7b",
+        c049_snom_bunny_mind_control::script_v0_3_7b,
+    ),
+    (
+        c088_siphon_squad::ID,
+        "v0.3.7b",
+        c088_siphon_squad::script_v0_3_7b,
+    ),
+    (
+        c017_true_craft_a_card::ID,
+        "v0.3.7b",
+        c017_true_craft_a_card::script_v0_3_7b,
+    ),
+    (
+        c037_cn_in_a_bottle::ID,
+        "v0.3.7b",
+        c037_cn_in_a_bottle::script_v0_3_7b,
+    ),
+    (
+        c040_appropriations::ID,
+        "v0.3.7b",
+        c040_appropriations::script_v0_3_7b,
+    ),
+    (
+        c064_malzahars_recycler::ID,
+        "v0.3.7b",
+        c064_malzahars_recycler::script_v0_3_7b,
+    ),
+    (c033_ivory_tower::ID, "v0.3.7b", c033_ivory_tower::script_v0_3_7b),
+    (
+        c054_money_machine::ID,
+        "v0.3.7b",
+        c054_money_machine::script_v0_3_7b,
+    ),
+    (c080_aluneth::ID, "v0.3.7b", c080_aluneth::script_v0_3_7b),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -273,6 +323,89 @@ mod tests {
         }));
         assert!(!anti_oneshot());
         assert_eq!(jackioh_engine::catalog::catalog_version(), crate::CATALOG_VERSION);
+    }
+
+    #[test]
+    fn r767000_a_v0_3_7b_fold_runs_the_scripts_and_prices_1194_kept() {
+        use jackioh_engine::testkit::*;
+
+        crate::register_all();
+        let v0_3_7b = catalog_at("v0.3.7b").expect("v0.3.7b is carried");
+        let menace = "core-019"; // (3) Unit
+        let filler = "core-005";
+        let board = || {
+            crate::scenario(json!({
+                "seed": "kept-1194",
+                "p1": {
+                    "hand": [menace, "classicplus-064", filler],
+                    "backrow": [c080_aluneth::ID, c064_malzahars_recycler::ID, c033_ivory_tower::ID, c054_money_machine::ID],
+                    "library": [menace, menace, menace, menace, menace, menace],
+                },
+                "p2": { "hand": [filler], "library": [filler, filler, filler] },
+            }))
+        };
+        let held = |s: &Scenario, def_id: &str| {
+            s.hand(PlayerId::P1)
+                .into_iter()
+                .find(|card| card.def_id == def_id)
+                .expect("in hand")
+        };
+        let abilities = |s: &Scenario, def_id: &str| -> Vec<String> {
+            let card = s.card(def_id).clone();
+            jackioh_engine::scripts::script_of(s.state(), &card)
+                .activations
+                .iter()
+                .map(|decl| decl.id.clone())
+                .collect()
+        };
+        jackioh_engine::with_shipped(Some(v0_3_7b), || {
+            let mut s = board();
+            // Mulch Muncher's printed (10), Ivory Tower with no Aura, the Recycler and Money Machine's
+            // old Activates.
+            assert_eq!(
+                effective_cost(s.state(), &held(&s, "classicplus-064"), Default::default()),
+                10
+            );
+            assert!(!unit_has(s.state(), &held(&s, menace), KeywordKind::Flying));
+            assert!(abilities(&s, c064_malzahars_recycler::ID).is_empty());
+            assert_eq!(abilities(&s, c054_money_machine::ID), vec!["tribute".to_string()]);
+            // The Recycler discards 2 at the end of the turn and Aluneth's 3 draws (and the
+            // Recycler's 2) take no discount.
+            s.end_turn();
+            let discarded = s
+                .last_events()
+                .iter()
+                .filter(|event| {
+                    matches!(
+                        event,
+                        GameEvent::Discarded {
+                            owner: PlayerId::P1,
+                            ..
+                        }
+                    )
+                })
+                .count();
+            assert_eq!(discarded, 2);
+            let costs: Vec<i32> = s
+                .hand(PlayerId::P1)
+                .iter()
+                .filter(|card| card.def_id == menace)
+                .map(|card| effective_cost(s.state(), card, Default::default()))
+                .collect();
+            assert!(costs.iter().all(|cost| *cost == 3), "{costs:?}");
+        });
+        // The build's own: the new prices and scripts.
+        let s = board();
+        assert_eq!(
+            effective_cost(s.state(), &held(&s, "classicplus-064"), Default::default()),
+            5
+        );
+        assert!(unit_has(s.state(), &held(&s, menace), KeywordKind::Flying));
+        assert_eq!(
+            abilities(&s, c064_malzahars_recycler::ID),
+            vec!["discard".to_string()]
+        );
+        assert_eq!(abilities(&s, c054_money_machine::ID), vec!["coin".to_string()]);
     }
 
     #[test]

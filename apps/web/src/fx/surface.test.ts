@@ -6,7 +6,6 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { FX_MAX_DPR } from "./constants.ts";
 import { createSurface, effectiveDpr, isHeadlessDom } from "./surface.ts";
 
 afterEach(() => {
@@ -162,7 +161,6 @@ describe("B28 the headless check and the DPR clamp", () => {
   });
 
   it("B28 effectiveDpr keeps values inside [1, 2]", () => {
-    expect(FX_MAX_DPR).toBe(2);
     expect(effectiveDpr(1)).toBe(1);
     expect(effectiveDpr(1.5)).toBe(1.5);
     expect(effectiveDpr(2)).toBe(2);

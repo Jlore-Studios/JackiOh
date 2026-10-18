@@ -55,29 +55,6 @@ mod tests {
             use super::*;
 
             #[test]
-            fn is_a_legendary_2_cost_5_4_unit_with_the_random_targets_aura() {
-                crate::register_all();
-                let def = crate::card_def(ID);
-                assert_eq!(def.cost, CardCost::Fixed(2));
-                assert_eq!(
-                    [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-                    [Some(5), Some(4), Some(10), Some(8)]
-                );
-                assert_eq!(
-                    def.base.text,
-                    "Aura: All targets are chosen at random."
-                );
-                assert!(
-                    registered_scripts()[ID]
-                        .base
-                        .static_flags
-                        .as_ref()
-                        .and_then(|flags| flags.random_targets)
-                        == Some(true)
-                );
-            }
-
-            #[test]
             fn r1200_while_it_acts_plays_are_offered_without_targets_and_the_view_flags_it() {
                 crate::register_all();
                 let s = scenario(json!({

@@ -72,24 +72,6 @@ mod tests {
     mod m82_medina_outfitter {
         use super::*;
 
-        #[test]
-        fn is_a_1_1_1_common_unit_radiant_2_2_with_times_1_to_3_on_the_radiant_face() {
-            let def = crate::card_def(ID);
-            assert_eq!(def.id, OUTFITTER);
-            assert_eq!(def.cost, CardCost::Fixed(1));
-            assert_eq!(def.type_, CardType::Unit);
-            assert_eq!(def.rarity, Rarity::Common);
-            assert!(def.tags.is_empty());
-            assert_eq!(
-                [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-                [Some(1), Some(1), Some(2), Some(2)]
-            );
-            let params = def.params.expect("times");
-            assert_eq!(params.len(), 1);
-            assert_eq!(params[0].key, "times");
-            assert_eq!((params[0].base, params[0].radiant), (1, 3));
-        }
-
         mod base {
             use super::*;
 

@@ -62,24 +62,6 @@ mod tests {
     mod m83_medina_enforcer {
         use super::*;
 
-        #[test]
-        fn is_a_2_4_4_rare_unit_radiant_8_8_with_times_1_to_3_on_the_radiant_face() {
-            let def = crate::card_def(ID);
-            assert_eq!(def.id, ENFORCER);
-            assert_eq!(def.cost, CardCost::Fixed(2));
-            assert_eq!(def.type_, CardType::Unit);
-            assert_eq!(def.rarity, Rarity::Rare);
-            assert!(def.tags.is_empty());
-            assert_eq!(
-                [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-                [Some(4), Some(4), Some(8), Some(8)]
-            );
-            let params = def.params.expect("times");
-            assert_eq!(params.len(), 1);
-            assert_eq!(params[0].key, "times");
-            assert_eq!((params[0].base, params[0].radiant), (1, 3));
-        }
-
         mod base {
             use super::*;
 

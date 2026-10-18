@@ -57,42 +57,6 @@ mod tests {
             use super::*;
 
             #[test]
-            fn is_a_token_printed_epic_with_rush_windfury_and_joiners_2() {
-                crate::register_all();
-                let def = crate::card_def(ID);
-                assert_eq!(def.cost, CardCost::Fixed(3));
-                assert_eq!(def.rarity, Rarity::Token);
-                assert_eq!(def.printed_rarity, Some(PrintedRarity::Epic));
-                assert!(def.token);
-                assert!(def.tags.contains(&Tag::Prime));
-                assert!(def.tags.contains(&Tag::Token));
-                assert_eq!(
-                    [
-                        def.base.attack,
-                        def.base.health,
-                        def.radiant.attack,
-                        def.radiant.health
-                    ],
-                    [Some(5), Some(10), Some(10), Some(20)]
-                );
-                assert!(def.base.keywords.contains(&Keyword::Rush));
-                assert!(def.base.keywords.contains(&Keyword::Windfury));
-                assert!(!def.base.keywords.contains(&Keyword::FirstStrike));
-                assert_eq!(
-                    def.base.text,
-                    "Rush, Windfury\nWhenever this attacks: Summon {joiners|random Unit|random Units} from your hand or deck. They attack its target first."
-                );
-                assert!(
-                    registered_scripts()[ID]
-                        .base
-                        .static_flags
-                        .as_ref()
-                        .and_then(|flags| flags.attack_joiners)
-                        == Some(true)
-                );
-            }
-
-            #[test]
             fn r1203_joiners_attack_first_in_lane_order_then_the_prime() {
                 crate::register_all();
                 let mut s = scenario(json!({

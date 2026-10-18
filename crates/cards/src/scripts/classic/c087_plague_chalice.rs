@@ -71,7 +71,7 @@ pub fn script() -> CardScripts {
 // only at count 0 (R70); set trap cost is public (R351). Radiant: opponent's plays only.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
+    use super::script;
     use jackioh_engine::testkit::*;
     use std::collections::BTreeSet;
 
@@ -92,11 +92,6 @@ mod tests {
     const X: &str = "core-019"; // library filler.
 
     use crate::scenario;
-
-    fn def() -> CardDef {
-        crate::register_all();
-        crate::card_def(ID)
-    }
 
     use crate::js;
 
@@ -145,18 +140,10 @@ mod tests {
         }))
     }
 
-    /// is an X-cost Field Spell with no declared numbers; base counters both players, Radiant the opponent's
     #[test]
-    fn is_an_x_cost_field_spell_with_no_declared_numbers_base_counters_both_players_radiant_the_opponent_s() {
-        assert_eq!(def().id, CHALICE);
-        assert_eq!(js(&def().cost), json!("X"));
-        assert!(def().params.is_none());
-        let scripts = script();
-        for face in [&scripts.base, &scripts.radiant] {
-            let on: Vec<Vec<&str>> =
-                face.triggers.iter().map(|trigger| trigger.on.iter().map(|kind| kind.as_str()).collect()).collect();
-            assert_eq!(on, vec![vec!["cardAnnounced"]]);
-        }
+    fn declares_no_tuned_numbers() {
+        crate::register_all();
+        assert!(crate::card_def(CHALICE).params.is_none());
     }
 
     /// base

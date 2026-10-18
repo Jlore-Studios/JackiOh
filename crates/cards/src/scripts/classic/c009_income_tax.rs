@@ -105,7 +105,7 @@ mod tests {
     const TAX: &str = "classic-009";
     const PALANTIR: &str = "classic-004"; // (2) Field Spell: "Aura: Your opponent can't draw more than 1 card each turn."
     const STOCKPILE: &str = "core-005"; // (1) Spell: "Draw 2. Heal your hero 2."
-    const JELLY_BEAN: &str = "core-027"; // (1) Spell: "Cast on draw: Make a random card in your hand Radiant. Lose 5 health."
+    const JELLY_BEAN: &str = "core-027"; // (1) Spell: "Cast on draw: Make a random card in your hand Radiant. Lose 7 health."
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const MENACE: &str = "core-019"; // (3) Unit 9/9
     const SEVEN: &str = "core-025"; // (4) Unit 7/7
@@ -324,7 +324,7 @@ mod tests {
             let cast_at = must(cast_at, "cast of the Jelly Bean");
             let trap_at = must(trap_at, "trapFired");
             assert!(cast_at < trap_at);
-            s.expect_health(P1, 27); // 30 − 5 + 2
+            s.expect_health(P1, 25); // 30 − 7 + 2
         }
 
         #[test]

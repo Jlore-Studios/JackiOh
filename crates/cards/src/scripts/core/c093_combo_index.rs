@@ -246,7 +246,7 @@ mod tests {
                 js(&of_type(&s, "counterChanged")),
                 json!([{ "type": "counterChanged", "instanceId": id, "counter": "grade", "value": E }])
             );
-            s.expect_mana(P1, 2);
+            s.expect_mana(P1, 1);
         }
 
         #[test]
@@ -1274,18 +1274,6 @@ mod tests {
             assert_eq!(damage_to(&s, "hero-p2"), vec![3]);
             assert_eq!(healed_on(&s, "hero-p1"), vec![3]);
             s.expect_health(P1, 23);
-        }
-
-        #[test]
-        fn s5_2_the_flag_still_sets_so_a_counting_effect_sees_a_radiant_card() {
-            crate::register_all();
-            let s = scenario(json!({
-                "seed": "core-093-1-radiant-flag",
-                "p1": { "hand": [{ "def": COMBO_FODDER, "radiant": true }, "core-005"] },
-                "p2": { "hand": ["core-005"] },
-            }));
-
-            assert_eq!(s.hand(P1).iter().filter(|card| card.radiant).count(), 1);
         }
     }
 

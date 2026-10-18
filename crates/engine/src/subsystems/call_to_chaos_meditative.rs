@@ -286,7 +286,7 @@ pub const CHAOS_MED_EFFECTS: &[ChaosEffectDef] = &[
     },
     ChaosEffectDef {
         name: "cn",
-        label: "Add 3 random CN cards to your hand, which cost (0)",
+        label: "Add 2 random CN cards to your hand, which cost (0)",
         build: build_cn,
     },
     ChaosEffectDef {
@@ -296,7 +296,7 @@ pub const CHAOS_MED_EFFECTS: &[ChaosEffectDef] = &[
     },
     ChaosEffectDef {
         name: "armor",
-        label: "Your hero gains 8 Armor and you heal it 8",
+        label: "Your hero gains 6 Armor and you heal it 6",
         build: build_armor,
     },
     ChaosEffectDef {

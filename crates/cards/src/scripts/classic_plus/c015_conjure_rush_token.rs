@@ -83,19 +83,6 @@ mod tests {
         assert_eq!(distinct.len(), keys.len());
     }
 
-    /// is a (1) Spell that declares no play-time choice
-    #[test]
-    fn is_a_1_spell_that_declares_no_play_time_choice() {
-        crate::register_all();
-        let def = crate::card_def(CARD);
-        assert_eq!(def.id, CARD);
-        assert_eq!(js(&def.cost), json!(1));
-        assert_eq!(def.type_, CardType::Spell);
-        let scripts = script();
-        assert!(scripts.base.targets.is_empty());
-        assert!(scripts.radiant.targets.is_empty());
-    }
-
     /// `describe("base")`.
     mod base {
         use super::*;

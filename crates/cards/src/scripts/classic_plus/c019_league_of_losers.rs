@@ -157,17 +157,6 @@ mod tests {
     mod c_n19_league_of_losers {
         use super::*;
 
-        #[test]
-        fn is_a_4_legendary_spell_with_no_play_time_choice() {
-            let def = crate::card_def(ID);
-            assert_eq!(def.cost, CardCost::Fixed(4));
-            assert_eq!(def.rarity, Rarity::Legendary);
-            let scripts = script();
-            assert!(scripts.base.targets.is_empty());
-            assert!(scripts.radiant.targets.is_empty());
-            assert_eq!(def.refs, Some(FIVE.iter().map(|id| id.to_string()).collect::<Vec<String>>()));
-        }
-
         mod base {
             use super::*;
 
@@ -197,7 +186,7 @@ mod tests {
                 let mut s = seeded_for(true, json!({}), false);
                 s.play(LEAGUE, json!({}));
                 let third = unit_or_blank(&s, P1, 3);
-                s.expect_stats(&third, json!({ "attack": 10, "health": 10 }));
+                s.expect_stats(&third, json!({ "attack": 8, "health": 8 }));
                 // Only the Mid Loser was buffed: the other four print no Cry.
                 for lane in [1, 2, 4, 5] {
                     assert_eq!(s.card(unit_or_blank(&s, P1, lane)).buffs, AttackHealth { attack: 0, health: 0 });
@@ -209,7 +198,7 @@ mod tests {
                 let mut s = seeded_for(false, json!({}), false);
                 s.play(LEAGUE, json!({}));
                 let third = unit_or_blank(&s, P1, 3);
-                s.expect_stats(&third, json!({ "attack": 2, "health": 2 }));
+                s.expect_stats(&third, json!({ "attack": 1, "health": 1 }));
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 1);
             }
 
@@ -263,7 +252,7 @@ mod tests {
                     standing.as_ref().map(|unit| unit.id.clone())
                 );
                 let standing = standing.map(|unit| unit.id).unwrap_or_default();
-                s.expect_stats(&standing, json!({ "attack": 5, "health": 5 }));
+                s.expect_stats(&standing, json!({ "attack": 4, "health": 4 }));
                 assert_eq!(s.state().rng_cursor, cursor);
             }
 

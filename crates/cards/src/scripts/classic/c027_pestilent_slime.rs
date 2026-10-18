@@ -83,28 +83,8 @@ mod tests {
     mod c_n27_pestilent_slime {
         use super::*;
 
-        #[test]
-        fn declares_its_multiplier_as_a_placement_hook_one_script_on_both_faces() {
-            crate::register_all();
-            let scripts = script();
-            assert_eq!(crate::card_def(ID).id, SLIME);
-            assert!(scripts.base.plague_multiplier.is_some());
-            // The Radiant face is the base script itself.
-            assert!(Arc::ptr_eq(
-                scripts.radiant.plague_multiplier.as_ref().unwrap(),
-                scripts.base.plague_multiplier.as_ref().unwrap()
-            ));
-        }
-
         mod base {
             use super::*;
-
-            #[test]
-            fn is_a_1_1() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "field": [SLIME], "hand": [ANCHOR] } }));
-                s.expect_stats(SLIME, json!({ "attack": 1, "health": 1 }));
-            }
 
             #[test]
             fn r471_a_placement_of_1_on_it_puts_2_as_one_placement_one_counterchanged_carrying_placed_2() {

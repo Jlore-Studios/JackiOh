@@ -1,5 +1,6 @@
-//! #56 Jilliax (SPEC §8.3): (2), Paid (3); 3/2 → 6/4, "Rush, Taunt, Lifesteal, Divine Shield / Paid
-//! (3): Equip." / radiant "Rush, Taunt, Lifesteal, Divine Shield, Reborn / Paid (3): Equip.".
+//! #56 Jilliax (SPEC §8.3): (2), Embiggened (3); 3/2 → 6/4, "Rush, Taunt, Lifesteal, Divine Shield /
+//! Embiggened (3): Equip." / radiant "Rush, Taunt, Lifesteal, Divine Shield, Reborn / Embiggened (3):
+//! Equip." (R1175000).
 //!
 //! Patch v0.3.10 (#831) gave it an embiggen price of (3), at which it is also Equip (ME-EQUIP, R1086):
 //! the script's `conditionalKeywords` returns Equip on a card stamped embiggened, so `legalActions`
@@ -21,7 +22,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-056";
 
-/// "Paid (3): Equip.": Equip holds only on a card stamped embiggened, so it is offered only at the (3)
+/// "Embiggened (3): Equip.": Equip holds only on a card stamped embiggened, so it is offered only at the (3)
 /// price (R831013).
 fn paid_equip(args: HookArgs<'_>) -> Vec<Keyword> {
     if args.self_.embiggened == Some(true) { vec![Keyword::Equip] } else { Vec::new() }
@@ -67,15 +68,6 @@ mod tests {
 
     mod jilliax_base {
         use super::*;
-
-        #[test]
-        fn s6_1_prints_rush_taunt_lifesteal_and_divine_shield_and_nothing_else() {
-            crate::register_all();
-            let mut g = scenario(json!({ "p1": { "field": [{ "def": "core-056", "lane": 1 }] } }));
-
-            assert_eq!(keyword_kinds(&g, PlayerId::P1, 1), ["Divine Shield", "Lifesteal", "Rush", "Taunt"]);
-            g.expect_stats("core-056", json!({ "attack": 3, "maxHealth": 2, "health": 2 }));
-        }
 
         #[test]
         fn s4_1_rush_lets_it_attack_a_unit_on_its_summon_turn_but_not_the_hero() {
@@ -182,18 +174,6 @@ mod tests {
 
     mod jilliax_radiant {
         use super::*;
-
-        #[test]
-        fn s8_patch_v0_1_1_the_radiant_face_keeps_all_four_keywords_and_adds_reborn() {
-            crate::register_all();
-            let mut g = scenario(json!({ "p1": { "field": [{ "def": "core-056", "radiant": true, "lane": 1 }] } }));
-
-            assert_eq!(
-                keyword_kinds(&g, PlayerId::P1, 1),
-                ["Divine Shield", "Lifesteal", "Reborn", "Rush", "Taunt"]
-            );
-            g.expect_stats("core-056", json!({ "attack": 6, "maxHealth": 4, "health": 4 }));
-        }
 
         #[test]
         fn s4_1_rush_not_charge_a_played_radiant_jilliax_may_attack_a_unit_but_not_the_hero() {

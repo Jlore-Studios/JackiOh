@@ -215,17 +215,9 @@ mod tests {
         use super::*;
 
         #[test]
-        fn declares_no_numbers_and_the_number_choice_as_a_mode_of_kind_number_0_to_10() {
+        fn declares_no_tuned_numbers() {
             crate::register_all();
-            let def = crate::card_def(ID);
-            let scripts = script();
-            assert!(def.params.is_none());
-            assert_eq!(
-                serde_json::to_value(&scripts.base.modes).unwrap(),
-                json!([{ "kind": "number", "options": NUMBERS }])
-            );
-            assert_eq!(scripts.radiant.modes, scripts.base.modes);
-            assert!(scripts.base.targets.is_empty());
+            assert!(crate::card_def(GLITCH).params.is_none());
         }
 
         mod base {

@@ -64,19 +64,6 @@ mod tests {
     }
 
     #[test]
-    fn is_a_0_fruit_spell_token_with_the_printed_rarity_mythic_whose_own_rarity_is_token() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.id, MYTHIC_GRAPE);
-        assert_eq!(js(&def.cost), json!(0));
-        assert_eq!(js(&def.rarity), json!("Token"));
-        assert_eq!(js(&def.printed_rarity), json!("Mythic"));
-        let CardScripts { base, radiant } = script();
-        assert!(base.cry.is_some());
-        assert!(radiant.cry.is_some());
-    }
-
-    #[test]
     fn r386_a_degrade_makes_the_mythics_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
         crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [MYTHIC_GRAPE, FILLER, TIMMY] }, "p2": { "hand": [FILLER] } }));

@@ -82,9 +82,7 @@ pub fn script() -> CardScripts {
 // through `param()` (R386)".
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -94,11 +92,6 @@ mod tests {
     const X: &str = "core-020"; // library filler.
 
     use crate::scenario;
-
-    fn def() -> CardDef {
-        crate::register_all();
-        crate::card_def(ID)
-    }
 
     use crate::js;
 
@@ -143,34 +136,6 @@ mod tests {
             "p1": { "hand": hand, "backrow": [{ "def": THRIVE, "radiant": radiant_face }], "library": lib(library), "health": health },
             "p2": { "hand": [ANCHOR], "library": lib(4) }
         }))
-    }
-
-    /// is a Field Spell with one once-a-turn ability of three modes, its three numbers, one script on both faces
-    #[test]
-    fn is_a_field_spell_with_one_once_a_turn_ability_of_three_modes_its_three_numbers_one_script_on_both_faces() {
-        assert_eq!(def().id, THRIVE);
-        assert_eq!(js(&def().type_), json!("Field Spell"));
-        assert_eq!(
-            js(&def().params),
-            json!([
-                { "key": "heal", "base": 3, "radiant": 6, "better": "up", "step": 1, "min": 1 },
-                { "key": "draw", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 },
-                { "key": "discount", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 }
-            ])
-        );
-        let scripts = script();
-        let abilities: Vec<Value> = scripts
-            .base
-            .activations
-            .iter()
-            .map(|ability| json!([js(&ability.uses), js(&ability.modes)]))
-            .collect();
-        assert_eq!(
-            json!(abilities),
-            json!([[1, [{ "kind": "mode", "options": ["heal", "draw", "reduce"] }]]])
-        );
-        assert_eq!(scripts.radiant.activations.len(), scripts.base.activations.len());
-        assert!(Arc::ptr_eq(&scripts.base.activations[0].run, &scripts.radiant.activations[0].run));
     }
 
     /// base

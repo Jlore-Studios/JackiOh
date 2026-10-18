@@ -1,7 +1,8 @@
 //! Simulation through the real reducer (docs/polish/3-ai.md, SPEC §9.9). Every `reduce` call the AI
 //! makes goes through `simulate` and costs one node of the decision's counter, the opponent's
-//! auto-answers included (every answer `best_auto_answer` tries), so budgets are counted in engine
-//! calls and a decision is deterministic.
+//! auto-answers and the beam's look past the seat's own prompts included (every answer
+//! `best_auto_answer` tries, `own_prompt_score`'s too), so budgets are counted in engine calls and a
+//! decision is deterministic.
 //!
 //! Port of `packages/ai/src/simulate.ts`. A TS counter is one object every part of a decision shares
 //! (a sub-counter holds its parent while the parent is spent elsewhere too), so the counters keep
@@ -330,6 +331,42 @@ pub(crate) fn best_auto_answer(
     Some(best.map(|(state, _)| state).ok_or(failure))
 }
 
+/// #1112: what a state waiting on `seat`'s own prompt is worth once its prompts are answered, which is
+/// how the beam ranks a child that waits there (search.rs): every prompt open on the way, the seat's
+/// and any the other seat holds, gets its holder's best of its first AI_SEARCH.max_auto_answer_options
+/// answers (`best_auto_answer`, nonce `ahead:${counter.used}`, each answer tried one node of
+/// `counter`), at most AI_SEARCH.max_auto_answers prompts, and the state reached is scored by
+/// `evaluate` as the beam scores a child. Only a score: the child stays at its prompt, so the beam
+/// still picks its real answers. `None` when no prompt of the seat's is open, when the counter
+/// refuses a node, and when no answer is accepted, the prompts outrun the cap or the engine panics
+/// (a failed simulation, as in `simulate`): the child then keeps its plain evaluation.
+pub fn own_prompt_score(state: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> Option<f64> {
+    let holder = |state: &GameState| match (&state.result, &state.pending) {
+        (None, Some(pending)) => Some(pending.player_id),
+        _ => None,
+    };
+    if holder(state) != Some(seat) {
+        return None;
+    }
+    let options = AI_SEARCH.max_auto_answer_options.max(1) as usize;
+    let run = catch_unwind(AssertUnwindSafe(|| -> Option<f64> {
+        let mut current = state.clone();
+        let mut answered: usize = 0;
+        while let Some(answerer) = holder(&current) {
+            if answered >= AI_SEARCH.max_auto_answers as usize {
+                return None;
+            }
+            current = best_auto_answer(&current, answerer, options, counter, "ahead")?.ok()?;
+            answered += 1;
+        }
+        Some(evaluate(&current, seat, NextSwing::Enemy, &AI_EVAL))
+    }));
+    run.unwrap_or_else(|_| {
+        note_sim_error(counter);
+        None
+    })
+}
+
 /// One AI action on a determinized state: reduce (nonce `sim:${counter.used}`), then, while a prompt
 /// of the other seat is open, answer it with the answerer's best of its first
 /// AI_SEARCH.max_auto_answer_options answers (`best_auto_answer`: each answer tried one more node, at
@@ -526,12 +563,14 @@ fn card_signature(card: &CardInstance) -> String {
 
 /// What changes how an active unit plays beyond its id, damage, buffs, exertion and position: its
 /// definition and Radiant face, a Vanilla, its stats and keywords through the layers (§10.4), its stat
-/// and armor overrides, a spent Divine Shield, its counters and enchantments, and its memory and
-/// tuning (`rides_signature`, #898).
+/// and armor overrides, a spent Divine Shield, its counters and enchantments, its memory and tuning
+/// (`rides_signature`, #898), and its freeze's thaw (R1174000), written only when it is Frozen so a
+/// position with no Frozen unit signs as before.
 fn unit_play_signature(state: &GameState, unit: &CardInstance) -> String {
     let view = unit_view(state, unit);
+    let frozen = unit.frozen.map(|thaw| format!(":f{thaw}")).unwrap_or_default();
     format!(
-        "{}{}{}:{}/{}/{}/{}:{:?}:{:?}/{:?}:{}:{:?}:{:?}{}",
+        "{}{}{}:{}/{}/{}/{}:{:?}:{:?}/{:?}:{}:{:?}:{:?}{}{frozen}",
         unit.def_id,
         if unit.radiant { "*" } else { "" },
         if unit.vanilla { "~" } else { "" },

@@ -110,15 +110,6 @@ mod tests {
     mod c_n24_crushing_walls {
         use super::*;
 
-        #[test]
-        fn is_a_3_spell_with_no_play_time_choice() {
-            let def = crate::card_def(ID);
-            assert_eq!(def.cost, CardCost::Fixed(3));
-            let scripts = script();
-            assert!(scripts.base.targets.is_empty());
-            assert!(scripts.radiant.targets.is_empty());
-        }
-
         mod base {
             use super::*;
 

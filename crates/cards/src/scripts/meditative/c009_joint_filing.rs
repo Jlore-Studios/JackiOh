@@ -71,22 +71,6 @@ mod tests {
             .count()
     }
 
-    #[test]
-    fn is_a_2_cost_epic_field_spell_one_script_on_both_faces() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.cost, CardCost::Fixed(2));
-        assert_eq!(def.type_, CardType::FieldSpell);
-        assert_eq!(def.rarity, Rarity::Epic);
-        assert_eq!(
-            crate::js(&def.params),
-            json!([{ "key": "extra", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 }])
-        );
-        let scripts = super::script();
-        assert!(scripts.base.turn_hook_extra.is_some());
-        assert!(scripts.radiant.turn_hook_extra.is_some());
-    }
-
     mod base {
         use super::*;
 

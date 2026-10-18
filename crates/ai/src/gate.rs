@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::deck::{AiDeckOptions, build_ai_deck};
 use crate::match_::{MatchConfig, MatchHooks, MatchRecord, SeatController, play_match};
+use crate::shadow_ban::FIXTURE_BANNED_IDS;
 use crate::types::SearchBudget;
 
 /// `"ai-vs-random" | "ai-vs-greedy" | "hard-vs-easy"`.
@@ -217,6 +218,32 @@ fn opponent_controller(matchup: Matchup, budget: SearchBudget) -> SeatController
 /// neither side is dealt cards the other side's rule keeps out. Handicaps: ai-vs-* use Easy for both
 /// seats; hard-vs-easy gives the subject AI_DIFFICULTY.hard and the other AI_DIFFICULTY.easy.
 pub fn game_config(matchup: Matchup, n: i32, budget: SearchBudget, series: &str) -> MatchConfig {
+    game_config_with_banned(matchup, n, budget, series, None)
+}
+
+/// Issue #1113: game n of a matchup as `game_config` deals it, but every seat's deck comes from
+/// the frozen fixture pool (`FIXTURE_BANNED_IDS`) instead of the live shadow ban. The seeded
+/// fixtures (`cargo test`'s gate smokes) play this, so a shadow-ban change re-deals none of them.
+/// Live paths (`run_gate_games`, the `gate` CLI at any size, promotion, sweep) stay on
+/// `game_config`.
+pub fn fixture_game_config(matchup: Matchup, n: i32, budget: SearchBudget, series: &str) -> MatchConfig {
+    game_config_with_banned(
+        matchup,
+        n,
+        budget,
+        series,
+        Some(FIXTURE_BANNED_IDS.iter().map(|id| id.to_string()).collect()),
+    )
+}
+
+/// `game_config` dealing `banned`: `None` is the live shadow ban (R186), `Some` the list named.
+fn game_config_with_banned(
+    matchup: Matchup,
+    n: i32,
+    budget: SearchBudget,
+    series: &str,
+    banned: Option<Vec<String>>,
+) -> MatchConfig {
     let seed = format!("{series}:{}:{n}", matchup.as_str());
     let subject_seat = subject_seat_of(n);
     let other_seat = subject_seat.opponent();
@@ -234,6 +261,7 @@ pub fn game_config(matchup: Matchup, n: i32, budget: SearchBudget, series: &str)
             handicap.deck_size,
             &AiDeckOptions {
                 mana_cap: Some(handicap.mana_cap),
+                banned: banned.clone(),
                 ..AiDeckOptions::default()
             },
         )
@@ -285,9 +313,25 @@ pub fn game_config(matchup: Matchup, n: i32, budget: SearchBudget, series: &str)
 /// handicaps to fill replay_hash/replay_errors. CI plays a gate in shards, each one every k-th game
 /// (`gate_shard_games`), and holds the wins of all of them together against `gate_needed`.
 pub fn run_gate_games(matchup: Matchup, numbers: &[i32], budget: SearchBudget) -> GateReport {
+    run_games(matchup, numbers, budget, game_config)
+}
+
+/// Issue #1113: `run_gate_games` through `fixture_game_config`: the seeded fixtures' games, dealt
+/// from the frozen fixture pool instead of the live shadow ban.
+pub fn run_fixture_gate_games(matchup: Matchup, numbers: &[i32], budget: SearchBudget) -> GateReport {
+    run_games(matchup, numbers, budget, fixture_game_config)
+}
+
+/// The games `config_for` deals, each folded with its handicaps to fill replay_hash/replay_errors.
+fn run_games(
+    matchup: Matchup,
+    numbers: &[i32],
+    budget: SearchBudget,
+    config_for: fn(Matchup, i32, SearchBudget, &str) -> MatchConfig,
+) -> GateReport {
     let mut games: Vec<GateGame> = Vec::new();
     for &n in numbers {
-        let config = game_config(matchup, n, budget, AI_GATE.seed_series);
+        let config = config_for(matchup, n, budget, AI_GATE.seed_series);
         let subject_seat = subject_seat_of(n);
         let record = play_match(&config, &mut MatchHooks::default());
 

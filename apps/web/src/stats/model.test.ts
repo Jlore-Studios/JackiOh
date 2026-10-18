@@ -12,6 +12,7 @@ import {
   outcomeFor,
   topCards,
   winPercent,
+  formatPlayedDelta,
 } from "./model.ts";
 
 describe("R639 a game's log", () => {
@@ -82,5 +83,14 @@ describe("R639 the device's totals", () => {
     expect(topCards(stats, "played", 1)).toEqual([{ id: "core-002", count: 5 }]);
     expect(topCards(stats, "destroyed", 3)).toEqual([]);
     expect(topCards(stats, "played", 0)).toEqual([]);
+  });
+});
+
+describe("R377 formatPlayedDelta", () => {
+  it("R377 formats signed percentage points and returns null for null", () => {
+    expect(formatPlayedDelta(0.2)).toBe("+20%");
+    expect(formatPlayedDelta(-0.082)).toBe("-8%");
+    expect(formatPlayedDelta(0)).toBe("0%");
+    expect(formatPlayedDelta(null)).toBeNull();
   });
 });

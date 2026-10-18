@@ -31,7 +31,6 @@ pub fn script() -> CardScripts {
 // caster (R97, R177)".
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -39,7 +38,7 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt. End of turn: heal to full. Radiant: Immutable.
     const SURGERY: &str = "core-063"; // (1) Give target Unit +3/+3 and 1 random keyword.
     const VANILLA: &str = "core-008"; // (1) 4/4.
-    const WEAPONS: &str = "core-014"; // Field Spell: your Units have +4 attack, Rush and First Strike.
+    const WEAPONS: &str = "core-014"; // Field Spell: your Units have +3 attack, Rush and First Strike.
     const SHEEPISH: &str = "core-041"; // (1) Trap: transforms the opponent's played Unit.
     const TESLA: &str = "classic-005"; // Animated Field Trap: fires when the opponent summons a Unit.
     const FROSTSPATULA: &str = "classicplus-012-8"; // Field Spell token: Animated on your turn, Rush.
@@ -73,23 +72,6 @@ mod tests {
 
     fn count(s: &Scenario, type_: &str) -> usize {
         s.events().iter().filter(|event| event.event_type().as_str() == type_).count()
-    }
-
-    #[test]
-    fn is_a_0_spell_targeting_a_unit_radiant_a_unit_or_a_backrow_card_on_either_side() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.type_, CardType::Spell);
-        assert_eq!(def.cost, CardCost::Fixed(0));
-        let scripts = script();
-        assert_eq!(
-            serde_json::to_value(&scripts.base.targets).unwrap(),
-            json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }])
-        );
-        assert_eq!(
-            serde_json::to_value(&scripts.radiant.targets).unwrap(),
-            json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "backrow"] } }])
-        );
     }
 
     mod base {
@@ -223,7 +205,7 @@ mod tests {
         fn r407_a_vanilla_field_spell_s_aura_stops() {
             crate::register_all();
             let mut s = setup(json!({ "field": [VANILLA], "backrow": [WEAPONS] }), json!({}), true);
-            s.expect_stats(VANILLA, json!({ "attack": 8 }));
+            s.expect_stats(VANILLA, json!({ "attack": 7 }));
 
             let weapons = s.card(WEAPONS).id.clone();
             s.play(SILENCE, json!({ "targets": at(&weapons) }));

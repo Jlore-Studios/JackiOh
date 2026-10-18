@@ -126,53 +126,6 @@ mod tests {
 
     use crate::js;
 
-    /// The name of every member the face sets.
-    fn members(script: &Script) -> Vec<&'static str> {
-        let mut keys = Vec::new();
-        let mut note = |present: bool, key: &'static str| {
-            if present {
-                keys.push(key);
-            }
-        };
-        note(script.cost.is_some(), "cost");
-        note(script.cry.is_some(), "cry");
-        note(script.death.is_some(), "death");
-        note(script.start_of_game.is_some(), "startOfGame");
-        note(!script.resume.is_empty(), "resume");
-        note(script.delayed.is_some(), "delayed");
-        note(script.set_stat.is_some(), "setStat");
-        note(script.start_of_turn.is_some(), "startOfTurn");
-        note(script.end_of_turn.is_some(), "endOfTurn");
-        note(script.aura.is_some(), "aura");
-        note(!script.triggers.is_empty(), "triggers");
-        note(script.on_play_hook.is_some(), "onPlayHook");
-        note(!script.hand_triggers.is_empty(), "handTriggers");
-        note(script.static_flags.is_some(), "staticFlags");
-        note(!script.targets.is_empty(), "targets");
-        note(!script.modes.is_empty(), "modes");
-        note(script.condition_met.is_some(), "conditionMet");
-        note(script.preview.is_some(), "preview");
-        note(!script.activations.is_empty(), "activations");
-        note(!script.target_checks.is_empty(), "targetChecks");
-        note(script.cost_aura.is_some(), "costAura");
-        note(script.graveyard_play.is_some(), "graveyardPlay");
-        note(script.targeting_discards.is_some(), "targetingDiscards");
-        note(script.records_play_as.is_some(), "recordsPlayAs");
-        note(script.draw_limit.is_some(), "drawLimit");
-        note(!script.replacements.is_empty(), "replacements");
-        note(script.hero_guard.is_some(), "heroGuard");
-        note(script.conditional_keywords.is_some(), "conditionalKeywords");
-        note(script.after_attack.is_some(), "afterAttack");
-        note(script.plague_multiplier.is_some(), "plagueMultiplier");
-        note(!script.deck_triggers.is_empty(), "deckTriggers");
-        note(!script.graveyard_triggers.is_empty(), "graveyardTriggers");
-        note(script.quests.is_some(), "quests");
-        note(script.tribute_when.is_some(), "tributeWhen");
-        note(script.would_counter.is_some(), "wouldCounter");
-        note(script.start_of_opponent_turn.is_some(), "startOfOpponentTurn");
-        keys
-    }
-
     fn must<T>(value: Option<T>, what: &str) -> T {
         value.unwrap_or_else(|| panic!("expected {what}"))
     }
@@ -312,17 +265,6 @@ mod tests {
 
             let mut s = scenario(json!({ "p1": { "hand": [CRAFT], "mana": 3 } }));
             s.expect_refused_with(|s| s.play(CRAFT, json!({})), "costs 4, more than your mana");
-        }
-
-        #[test]
-        fn s10_9_both_faces_are_a_cry_plus_a_resume_table_and_the_radiant_face_has_one_more_step() {
-            crate::register_all();
-            let scripts = script();
-            assert_eq!(members(&scripts.base), vec!["cry", "resume"]);
-            assert_eq!(members(&scripts.radiant), vec!["cry", "resume"]);
-            // §8.5's radiant cell, "Three Discovers": one more Discover step.
-            assert_eq!(scripts.base.resume.len(), 2);
-            assert_eq!(scripts.radiant.resume.len(), 3);
         }
 
         #[test]

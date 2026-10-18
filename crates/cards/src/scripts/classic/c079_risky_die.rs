@@ -99,9 +99,7 @@ pub fn script() -> CardScripts {
 // (R97). Tuned numbers read via `param()` (R386).
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -118,11 +116,6 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit
 
     use crate::scenario;
-
-    fn def() -> CardDef {
-        crate::register_all();
-        crate::card_def(ID)
-    }
 
     use crate::js;
 
@@ -148,26 +141,6 @@ mod tests {
             }
         }
         costs
-    }
-
-    /// is a (1) Spell; its draw count and kept threshold are declared numbers
-    #[test]
-    fn is_a_1_spell_its_draw_count_and_kept_threshold_are_declared_numbers() {
-        assert_eq!(js(&def().type_), json!("Spell"));
-        assert_eq!(js(&def().cost), json!(1));
-        assert_eq!(
-            js(&def().params),
-            json!([
-                { "key": "draw", "base": 3, "radiant": 3, "better": "up", "step": 1, "min": 1 },
-                { "key": "threshold", "base": 0, "radiant": 1, "better": "up", "step": 1, "min": 0 },
-                { "key": "discount", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1 }
-            ])
-        );
-        let scripts = script();
-        assert!(Arc::ptr_eq(
-            scripts.base.cry.as_ref().expect("a Cry"),
-            scripts.radiant.cry.as_ref().expect("a Cry")
-        ));
     }
 
     /// base

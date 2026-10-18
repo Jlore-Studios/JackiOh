@@ -1,20 +1,25 @@
 //! M #80 Aluneth (SPEC §8.8 row 80). (2) Field Spell, tags Quickdraw, Legendary.
 //!
-//! Base:    "Indestructible, Untributable, Immutable\nEnd of turn: Draw 3."
-//! Radiant: "Indestructible, Immutable\nActivate: Exile this.\nEnd of turn: Draw 3."
+//! Base:    "Indestructible, Untributable, Immutable\nEnd of turn: Draw 3. They cost ({discount}) less."
+//! Radiant: "Indestructible, Immutable\nActivate: Exile this.\nEnd of turn: Draw 3. They cost ({discount})
+//!          less."
 //! Engine:  "Quickdraw (R640) deals it in the opening hand. An Indestructible Field Spell that draws
 //!          3 at its controller's end of turn, each draw its own (burning past the cap, fatigue past
-//!          the deck). Immutable blocks Transform, Vanilla, Fuse-onto, Buff, Nerf and KY's Constant
-//!          (R23, R386). NEW: the keyword Untributable (R1220): no Tribute cost may take it, and every
-//!          Sacrifice of it does nothing; it is not in R21's pool, and a Nerf never removes it. The
-//!          Radiant face drops Untributable and adds an Activate (R384) that exiles it, with no Death.
+//!          the deck), and each card a draw puts in the hand costs (1) less. Immutable blocks
+//!          Transform, Vanilla, Fuse-onto, Buff, Nerf and KY's Constant (R23, R386). NEW: the keyword
+//!          Untributable (R1220): no Tribute cost may take it, and every Sacrifice of it does nothing;
+//!          it is not in R21's pool, and a Nerf never removes it. The Radiant face drops Untributable
+//!          and adds an Activate (R384) that exiles it, with no Death.
 //!          Voice: \"Come, child. Let us wreak havoc.\" (R204). Tunes: none."
 //!
-//! Indestructible, Untributable and Immutable are catalog keywords (§10.4 layers, R1220); the draw is
-//! one `draw` of 3, which burns past the cap and takes fatigue past the deck card by card (§2.4);
-//! Quickdraw is the static flag `setup.rs` reads (R640), beside the catalog tag filters see.
+//! Indestructible, Untributable and Immutable are catalog keywords (§10.4 layers, R1220); the draws are
+//! three `drawPriced` draws, C+ #65.2's: each burns past the cap and takes fatigue past the deck (§2.4),
+//! and each prices only the card it put in the hand, `costMod` −`discount`, the declared number (patch
+//! v0.3.13, #1194); a card cast on draw, a burned card and a fatigue draw get nothing. Quickdraw is the
+//! static flag `setup.rs` reads (R640), beside the catalog tag filters see. `script_v0_3_7b` keeps the
+//! undiscounted draw for the replays of v0.3.7b and before (R767000).
 
-use jackioh_engine::effects::{draw, exile};
+use jackioh_engine::effects::{draw, draw_priced, exile};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-080";
@@ -22,13 +27,27 @@ pub const ID: &str = "meditative-080";
 /// What the end of its controller's turn draws.
 const DRAWS: i32 = 3;
 
-fn aluneth(radiant: bool) -> Script {
+/// "Draw 3. They cost ({discount}) less.": one `drawPriced` per draw (§2.4), each pricing the card it
+/// put in the hand (C+ #65.2's), `discount` the declared number (R386).
+fn draws_discounted(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let discount = -param(ctx, "discount");
+    (0..DRAWS)
+        .map(|_| draw_priced(json_as(json!({ "costMod": discount }))))
+        .collect()
+}
+
+/// R767000: "Draw 3." as v0.3.7b and every version before it printed it, with no discount.
+fn draws_v0_3_7b(_ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    vec![draw(json_as(json!({ "count": DRAWS })))]
+}
+
+fn aluneth(radiant: bool, draws: fn(&mut EffectContext<'_>) -> Vec<Effect>) -> Script {
     let mut script = Script {
         static_flags: Some(StaticFlags {
             quickdraw: Some(true),
             ..StaticFlags::default()
         }),
-        end_of_turn: Some(hook(|_ctx| vec![draw(json_as(json!({ "count": DRAWS })))])),
+        end_of_turn: Some(hook(draws)),
         ..Script::default()
     };
     if radiant {
@@ -49,13 +68,23 @@ fn aluneth(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: aluneth(false),
-        radiant: aluneth(true),
+        base: aluneth(false, draws_discounted),
+        radiant: aluneth(true, draws_discounted),
+    }
+}
+
+/// R767000: the scripts v0.3.7b and every version before it ran, whose end of turn drew 3 with no
+/// discount (patch v0.3.13, #1194); `KEPT_SCRIPTS` folds those versions' replays under them.
+pub fn script_v0_3_7b() -> CardScripts {
+    CardScripts {
+        base: aluneth(false, draws_v0_3_7b),
+        radiant: aluneth(true, draws_v0_3_7b),
     }
 }
 
 // M #80 Aluneth — SPEC §8.8 row 80, BUILD M10 row M 80: "Quickdraw: in the opening hand (R640); at
-// your end of turn only, three draws, burning past the cap and taking fatigue past the deck;
+// your end of turn only, three draws, burning past the cap and taking fatigue past the deck, each card
+// they put in the hand costing (1) less (the declared `discount`) and no other draw's;
 // destroy effects leave it (Indestructible); no Tribute cost can use it and a Sacrifice of it does
 // nothing (R1220); a Nerf, a Buff, a Transform, a Vanilla and KY's Constant leave it unchanged;
 // exile, bounce and steal work; Untributable is never in R21's pool; radiant no Untributable, and
@@ -70,6 +99,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const VANILLA: &str = "core-008";
+    const MENACE: &str = "core-019"; // (3) Unit
     const FILLER: &str = "core-016";
     const JAMMED: &str = "core-036"; // destroy target backrow card, Lock its zone
     const NETHER: &str = "core-088"; // Twisting Nether: destroy all permanents
@@ -81,6 +111,37 @@ mod tests {
             "p1": { "backrow": [{ "def": ID, "radiant": radiant }], "hand": [FILLER], "library": [VANILLA, VANILLA, VANILLA, VANILLA] },
             "p2": { "hand": [FILLER], "library": [VANILLA, VANILLA, VANILLA, VANILLA] },
         }))
+    }
+
+    /// The costs of the Menaces in p1's hand, lowest first.
+    fn menace_costs(s: &Scenario) -> Vec<i32> {
+        let mut costs: Vec<i32> = s
+            .hand(P1)
+            .iter()
+            .filter(|card| card.def_id == MENACE)
+            .map(|card| effective_cost(s.state(), card, Default::default()))
+            .collect();
+        costs.sort();
+        costs
+    }
+
+    /// Aluneth's end of turn draws three (3) Menaces: each costs (1) less; p1's next turn's own draw,
+    /// a fourth, does not.
+    fn discounted_draws(radiant: bool) {
+        crate::register_all();
+        let mut s = crate::scenario(json!({
+            "seed": "aluneth-discount",
+            "p1": {
+                "backrow": [{ "def": ID, "radiant": radiant }],
+                "hand": [FILLER],
+                "library": [MENACE, MENACE, MENACE, MENACE, MENACE],
+            },
+            "p2": { "hand": [FILLER], "library": [VANILLA, VANILLA, VANILLA, VANILLA] },
+        }));
+        s.end_turn();
+        assert_eq!(menace_costs(&s), vec![2, 2, 2]);
+        s.end_turn();
+        assert_eq!(menace_costs(&s), vec![2, 2, 2, 3]);
     }
 
     mod m80_aluneth {
@@ -124,6 +185,11 @@ mod tests {
                 assert_eq!(s.hand(P1).len(), 1 + DRAWS as usize);
                 s.end_turn(); // p2's end of turn: none for p1, only its own turn's draw (§2.2).
                 assert_eq!(s.hand(P1).len(), 1 + DRAWS as usize + 1);
+            }
+
+            #[test]
+            fn each_card_it_draws_costs_1_less_and_no_other_draw_does() {
+                discounted_draws(false);
             }
 
             #[test]
@@ -218,6 +284,11 @@ mod tests {
 
         mod radiant {
             use super::*;
+
+            #[test]
+            fn each_card_it_draws_costs_1_less_too() {
+                discounted_draws(true);
+            }
 
             #[test]
             fn radiant_activate_exiles_it() {

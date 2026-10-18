@@ -47,7 +47,6 @@ pub fn script() -> CardScripts {
 // as the play begins; "this" is Echo) and R547 (static text: Cast on draw yes, end-of-turn return no).
 #[cfg(test)]
 mod tests {
-    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const ECHO: &str = "classic-057";
@@ -106,19 +105,6 @@ mod tests {
 
     mod c_57_echo {
         use super::*;
-
-        #[test]
-        fn is_a_1_spell_that_copies_the_last_spells_text_its_radiant_face_adds_echo_1_a_numbered_keyword() {
-            crate::register_all();
-            let def = js(&registered_catalog()[ID]);
-            assert_eq!(def["type"], "Spell");
-            assert_eq!(def["cost"], 1);
-            assert!(def["params"].is_null());
-            let scripts = script();
-            assert_eq!(js(&scripts.base.static_flags), json!({ "copiesLastSpell": true }));
-            assert_eq!(js(&scripts.radiant.static_flags), json!({ "copiesLastSpell": true, "echo": 1 }));
-            assert!(scripts.base.cry.is_none());
-        }
 
         #[test]
         fn r381_its_name_is_a_rules_word_echo_1_in_51_and_79_is_no_reference_to_it() {

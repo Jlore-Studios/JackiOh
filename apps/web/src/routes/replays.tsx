@@ -10,9 +10,17 @@
 // `<Gated>`; an account that owes the age check or the terms in force (R757000, R757001) sees, in place
 // of its online half, a way to the consent screen, and its online games, "Shared with me" and every
 // "Share with a friend" wait until it answers there.
+//
+// DOWNLOAD JSON (R1141000). A row that can be watched can be saved as one JSON file for a bug
+// report: its steps' views and the row's facts, through the same `ReplaySource`, no account named.
+// Its button sits just left of Watch.
+//
+// OPEN REPLAY JSON (R1141000, #1160). The way back in: a file the page wrote is parsed in the page, held to
+// its byte and step caps and this build's catalog version, and mounted through an in-memory source. A
+// file it refuses says why and mounts nothing; it is never uploaded or kept.
 
 import { useEffect, useRef, useState } from "react";
-import type { ReactElement } from "react";
+import type { ChangeEvent, ReactElement } from "react";
 
 import ConsentPrompt from "../auth/ConsentPrompt.tsx";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
@@ -26,7 +34,9 @@ import { createPracticeHost } from "../practice/host.ts";
 import type { PracticeHost } from "../practice/host.ts";
 import type { PracticeReplayListing } from "../practice/protocol.ts";
 import ReplayPlayer from "../replay/ReplayPlayer.tsx";
-import { ReplayFailure, replayFailureText } from "../replay/source.ts";
+import { downloadFile, onlineGame, parseReplayJsonFile, practiceGame, replayJsonFile } from "../replay/download.ts";
+import type { ReplayJsonGame } from "../replay/download.ts";
+import { ReplayFailure, memoryReplaySource, replayFailureOf, replayFailureText } from "../replay/source.ts";
 import type { ReplaySource } from "../replay/source.ts";
 import { onlineReplaySource, practiceReplaySource } from "../replay/sources.ts";
 import { ShareWithFriend } from "../together/ShareReplay.tsx";
@@ -47,6 +57,12 @@ export const replaysTestid = {
   sharedWithMe: "replays-shared-with-me",
   /** R970000: the account owes the consent screen before its online games. */
   consent: "replays-consent",
+  /** R1141000: a row's Download JSON, and why its file could not be made. */
+  download: (key: string): string => `replays-download-${key}`,
+  downloadFailed: (key: string): string => `replays-download-failed-${key}`,
+  /** R1141000: the file input that opens a downloaded replay, and why a file was refused. */
+  openFile: "replays-open-file",
+  openFailed: "replays-open-failed",
 } as const;
 
 type Listed<Row> =
@@ -90,6 +106,89 @@ function turnsText(turns: number): string {
 /** The row's reason it cannot be shown, if any, worded as the player words it. */
 function unavailableText(reason: PracticeReplayListing["unavailable"]): string | null {
   return reason === undefined ? null : replayFailureText(new ReplayFailure(reason));
+}
+
+/**
+ * R1141000: a row's Download JSON. It reads every step through the source `open` makes, then saves
+ * the file; a page that fails saves nothing and says why on the row.
+ */
+function DownloadJson({ testKey, game, open }: { testKey: string; game: ReplayJsonGame; open: () => ReplaySource | null }): ReactElement {
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+  const save = (): void => {
+    const source = open();
+    if (source === null || saving) return;
+    setSaving(true);
+    setFailed(null);
+    replayJsonFile(game, source, Date.now())
+      .then(downloadFile, (cause: unknown) => {
+        setFailed(replayFailureText(replayFailureOf(cause)));
+      })
+      .finally(() => {
+        setSaving(false);
+      });
+  };
+  return (
+    <>
+      {failed === null ? null : (
+        <span role="alert" className="replays__why" data-testid={replaysTestid.downloadFailed(testKey)}>
+          {failed}
+        </span>
+      )}
+      <button type="button" data-testid={replaysTestid.download(testKey)} onClick={save} disabled={saving}>
+        {saving ? t("Saving…") : t("Download JSON")}
+      </button>
+    </>
+  );
+}
+
+/**
+ * R1141000: Open replay JSON. The chosen file is parsed here and mounted through `onOpen`; one this
+ * build refuses (`parseReplayJsonFile`) says why beside the control and mounts nothing. The input is
+ * emptied after every choice so the same file can be chosen again, and it waits for `ready`: the
+ * card data a replay's cards are named from.
+ */
+function OpenReplayJson({ ready, onOpen }: { ready: boolean; onOpen: (opened: Open) => void }): ReactElement {
+  const [reading, setReading] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+  const choose = (event: ChangeEvent<HTMLInputElement>): void => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (file === undefined) return;
+    setReading(true);
+    setFailed(null);
+    parseReplayJsonFile(file)
+      .then(
+        (steps) => {
+          onOpen({ key: `file-${file.name}`, source: memoryReplaySource(steps) });
+        },
+        (cause: unknown) => {
+          setFailed(replayFailureText(replayFailureOf(cause)));
+        },
+      )
+      .finally(() => {
+        setReading(false);
+        input.value = "";
+      });
+  };
+  return (
+    <p>
+      <label htmlFor="replays-open-file">{t("Open replay JSON")}</label>{" "}
+      <input
+        id="replays-open-file"
+        type="file"
+        accept="application/json,.json"
+        data-testid={replaysTestid.openFile}
+        onChange={choose}
+        disabled={!ready || reading}
+      />
+      {failed === null ? null : (
+        <span role="alert" className="replays__why" data-testid={replaysTestid.openFailed}>
+          {failed}
+        </span>
+      )}
+    </p>
+  );
 }
 
 export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory?: () => PracticeHost }): ReactElement {
@@ -199,6 +298,7 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
       <BackLink />
       <h1>{t("Replays")}</h1>
       <p className="auth-hint">{t("Watch your recent games again, step by step, and share a turn as a GIF.")}</p>
+      <OpenReplayJson ready={lookup !== null} onOpen={setOpen} />
 
       <section className="replays__section" aria-labelledby="replays-practice-heading">
         <h2 id="replays-practice-heading">{t("Practice games on this device")}</h2>
@@ -218,6 +318,13 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
                     {turnsText(row.turns)} · {formatDateTime(row.endedAt, { dateStyle: "medium", timeStyle: "short" })}
                     {why === null ? null : <span className="replays__why"> · {why}</span>}
                   </span>
+                  {why === null ? (
+                    <DownloadJson
+                      testKey={`practice-${String(row.game)}`}
+                      game={practiceGame(row)}
+                      open={() => (host.current === null ? null : practiceReplaySource(host.current, row))}
+                    />
+                  ) : null}
                   <button type="button" onClick={() => openPractice(row)} disabled={why !== null}>
                     {t("Watch")}
                   </button>
@@ -275,6 +382,13 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
                       {formatDateTime(row.endedAt, { dateStyle: "medium", timeStyle: "short" })}
                       {why === null ? null : <span className="replays__why"> · {why}</span>}
                     </span>
+                    {why === null ? (
+                      <DownloadJson
+                        testKey={`online-${row.matchId}`}
+                        game={onlineGame(row)}
+                        open={() => (token === null ? null : onlineReplaySource(token, row))}
+                      />
+                    ) : null}
                     <button type="button" onClick={() => openOnline(row)} disabled={why !== null}>
                       {t("Watch")}
                     </button>

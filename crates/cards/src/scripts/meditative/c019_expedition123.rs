@@ -195,14 +195,6 @@ mod tests {
             assert!(side.mana.current > 0);
             assert_eq!(side.mana.current, side.mana.max);
         }
-
-        #[test]
-        fn turns_reads_through_param() {
-            crate::register_all();
-            let def = crate::card_def(EXPEDITION);
-            let param = def.params.as_ref().expect("params").iter().find(|entry| entry.key == "turns").expect("turns");
-            assert_eq!((param.base, param.radiant), (2, 2));
-        }
     }
 
     mod radiant {

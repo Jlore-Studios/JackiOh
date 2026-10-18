@@ -45,6 +45,7 @@ const SLOW = { timeout: 5_000 } as const;
  */
 const AGREED_TEXT: Readonly<Record<string, string>> = {
   "2026-10-15b/2026-10-15b": "33b0dd18c38c52456ee05a0cfaa51d881cc168411edac71c1672a9254d997e13",
+  "2026-10-15b/2026-10-17": "37fbbebe49f56312ba164323c624142fa3e88a5294677e1c654c6cfc86de2774",
 };
 
 /** Both pages' English text, the Terms then the Privacy Policy, as rendered. */
@@ -88,7 +89,7 @@ describe("the privacy policy", () => {
   it("shows the date it was last updated", () => {
     render(<PrivacyRoute />);
     expect(screen.getByTestId(privacyTestid.updated)).toHaveTextContent(`Last updated ${PRIVACY_LAST_UPDATED}`);
-    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-15");
+    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-17");
   });
 
   it("R757000 the policy names the minimum age and what is kept of the check, and holds no owner slot", () => {

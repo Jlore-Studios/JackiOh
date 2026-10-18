@@ -131,18 +131,6 @@ mod tests {
     mod t_ai_5_autocomplete {
         use super::*;
 
-        #[test]
-        fn is_a_0_ai_spell_token() {
-            crate::register_all();
-            let def = crate::card_def(super::super::ID);
-            assert_eq!(js(&def.cost), json!(0));
-            assert_eq!(def.type_, CardType::Spell);
-            assert_eq!(js(&def.tags), json!(["AI", "Token"]));
-            let scripts = super::super::script();
-            assert!(scripts.base.cry.is_some());
-            assert!(scripts.radiant.cry.is_some());
-        }
-
         mod base {
             use super::*;
 

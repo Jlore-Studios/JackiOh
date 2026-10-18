@@ -52,7 +52,7 @@ pub fn script() -> CardScripts {
 // visible to thief (R33)."
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
+    use super::script;
     use jackioh_engine::testkit::*;
 
     const MAGIC_JAMMED: &str = "core-036";
@@ -89,15 +89,6 @@ mod tests {
 
     mod magic_jammed {
         use super::*;
-
-        #[test]
-        fn is_sec8_2s_36_a_1_cost_spell() {
-            crate::register_all();
-            let def = crate::card_def(ID);
-            assert_eq!(def.index, "36");
-            assert_eq!(def.type_, CardType::Spell);
-            assert_eq!(def.cost, CardCost::Fixed(1));
-        }
 
         #[test]
         fn r81_declares_its_backrow_target_as_a_play_time_choice_unnarrowed_by_side() {

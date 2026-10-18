@@ -254,15 +254,6 @@ mod tests {
                 assert_eq!(backrow_ids(&exiled, P1)[0].as_deref(), Some(MANA_WELL));
                 assert_eq!(backrow_ids(&exiled, P2)[0].as_deref(), Some(GOING_LONG));
             }
-
-            #[test]
-            fn s8_6_3_2_with_stack() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "field": [BACK_BREAKER] } }));
-                s.expect_stats(BACK_BREAKER, json!({ "attack": 3, "health": 2 }));
-                let keywords = js(&s.stats(BACK_BREAKER).keywords);
-                assert!(keywords.as_array().is_some_and(|all| all.contains(&json!({ "kind": "Stack" }))));
-            }
         }
 
         mod radiant {

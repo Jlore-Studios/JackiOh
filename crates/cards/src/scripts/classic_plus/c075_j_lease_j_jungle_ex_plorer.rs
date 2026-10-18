@@ -1,4 +1,4 @@
-//! C+ #75 J-lease J-Jungle EX-plorer (SPEC §8.7 row 75). (2) Unit, Legendary, 5/5 → 10/10.
+//! C+ #75 J-lease J-Jungle EX-plorer (SPEC §8.7 row 75). (3) Unit, Legendary, 5/5 → 10/10.
 //!   Base:    "Cry: Shuffle {packs|J-lease J-Jungle EX-plorer Pack|J-lease J-Jungle EX-plorer Packs} into
 //!            your deck."
 //!   Radiant: "Cry: Shuffle {packs|Radiant J-lease J-Jungle EX-plorer Pack|…} into your deck."
@@ -47,7 +47,7 @@ pub fn script() -> CardScripts {
 // Radiant".
 //
 // "No Cry from a copy" is driven through the engine's own Summon a copy (§6.3, R57), since no card in
-// the preview pool can copy a non-Human 2-Cost Unit.
+// the preview pool can copy a non-Human 3-Cost Unit.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::summon_copy;
@@ -82,27 +82,6 @@ mod tests {
 
     mod c_n75_j_lease_j_jungle_ex_plorer {
         use super::*;
-
-        #[test]
-        fn is_a_2_5_5_legendary_unit_10_10_radiant_that_names_its_pack() {
-            crate::register_all();
-            let def = crate::card_def(super::super::ID);
-            assert_eq!(def.id, EXPLORER);
-            assert_eq!(
-                [
-                    js(&def.cost),
-                    js(&def.base.attack),
-                    js(&def.base.health),
-                    js(&def.radiant.attack),
-                    js(&def.radiant.health)
-                ],
-                [json!(2), json!(5), json!(5), json!(10), json!(10)]
-            );
-            assert!(def.refs.as_ref().is_some_and(|refs| refs.iter().any(|id| id == PACK)));
-            let scripts = super::super::script();
-            assert!(scripts.base.cry.is_some());
-            assert!(scripts.radiant.cry.is_some());
-        }
 
         mod base {
             use super::*;

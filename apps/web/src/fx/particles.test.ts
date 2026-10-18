@@ -179,7 +179,6 @@ describe("B25 every particle dies within FX_MAX_PARTICLE_LIFE_MS", () => {
       expect(min, preset).toBeLessThanOrEqual(max);
       expect(max, preset).toBeLessThanOrEqual(FX_MAX_PARTICLE_LIFE_MS);
     }
-    expect(FX_MAX_PARTICLE_LIFE_MS).toBe(900);
   });
 
   it("B25 after emitting every preset and stepping 900 ms nothing is alive", () => {

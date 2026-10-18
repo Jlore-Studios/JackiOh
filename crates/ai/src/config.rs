@@ -52,6 +52,16 @@ pub const DUOS_GATE_GAMES_SMOKE: usize = 20;
 /// wins count; a draw is reported beside them.
 pub const DUOS_GATE_WIN_FLOOR: f64 = 0.8;
 
+/// R1127000: the seed of the throwaway determinization `duos_passes` scores a teammate's
+/// follow-ups on. Fixed (never the caller's stream), so the same state reproduces the pass order.
+pub const DUOS_PASS_PROBE_SEED: &str = "ai:duos-pass";
+
+/// R1127000: the most of the teammate's legal `Play` follow-ups one passed card is scored on, the
+/// card's own plays first, then the rest in `legal_actions` order. Bounds scoring at one hand of
+/// cards times this many single `reduce` calls per `duos_passes` call, with no search and no reply
+/// simulation.
+pub const DUOS_PASS_MAX_FOLLOWUPS: usize = 8;
+
 /// `AI_SEARCH`'s shape.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -263,6 +273,11 @@ pub struct EvalWeights {
     pub hand_cost_cap: f64,
     /// Added per own Radiant hand card.
     pub radiant_in_hand: f64,
+    /// #1143: when both faces of an own hand card are Units, the share that counts of what the face
+    /// it will enter with (its Radiant face when it is Radiant, its buffs and tuning) is worth over its
+    /// printed base face, by the stat and keyword weights above and none of the field's layers. On top
+    /// of `radiant_in_hand`, which prices the Radiant text.
+    pub radiant_face_share: f64,
     /// Per Plague Counter on a unit (§10.1, R454: Fed Fauci's stored mana engine, a Corpse
     /// Plantation's unspent price), on top of the body's worth and outside its Brittle share.
     pub plague_counter: f64,
@@ -366,6 +381,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     hand_per_cost: 0.3,
     hand_cost_cap: 6.0,
     radiant_in_hand: 0.5,
+    // #1143: an untuned start for the training lanes, as `animated_share` and `marked_share` are.
+    radiant_face_share: 0.5,
     plague_counter: 0.5,
     grade_counter: 1.5,
     hand_cost_delta: 0.5,
@@ -394,6 +411,50 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     closing_from: 10.0,
     closing_weight: 3.0,
 };
+
+/// Which evaluation scores the search's finalists (#1010; `learned.rs`, `docs/learned-eval.md` D6).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum EvalKind {
+    /// `evaluate` with `AI_EVAL`: the hand-written evaluation, everywhere.
+    Hand,
+    /// The finalists after the opponent's reply are scored by the learned network's correction of
+    /// the hand eval (`learned::finalist_score`), 1v1 only; the beam keeps the hand eval.
+    Learned,
+}
+
+/// The switch: one line turns the learned evaluation on or off. A promotion that ships a network sets
+/// it with the weights in one change (#1012).
+pub const AI_EVAL_KIND: EvalKind = EvalKind::Hand;
+
+/// R1012001: the share of the network's correction a finalist's score takes, `hand + share·(points
+/// − hand)` (`learned::finalist_score_with`). The network is fitted to the games' outcomes, so its
+/// whole correction says how much more often a position is won than the hand eval thinks; a decision
+/// compares lines a move or two apart, where much of that is noise, and the whole of it changed about
+/// one decision in four for little gain. Measured on 1,600 paired games each against the hand eval
+/// (#466, the 36,000-game network): the whole correction +0.010 edge, three quarters +0.022, half
+/// +0.064, a quarter +0.086; on TD targets (#1190) and fresh deals, half +0.076 and a quarter +0.049.
+pub const LEARNED_CORRECTION_SHARE: f64 = 0.5;
+const _: () = assert!(LEARNED_CORRECTION_SHARE > 0.0 && LEARNED_CORRECTION_SHARE <= 1.0);
+
+/// Which order the beam expands each line's moves in (#1171; `policy.rs`, R1171001).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum MoveOrder {
+    /// `candidate_actions`' own order, the heuristic tiers.
+    Heuristic,
+    /// That order re-sorted by the policy prior `POLICY_PRIOR` (`policy::prior_order`), 1v1 only.
+    Learned,
+}
+
+/// The switch: one line turns the policy prior on or off. A promotion that ships a table sets it with
+/// the table in one change.
+pub const AI_MOVE_ORDER: MoveOrder = MoveOrder::Heuristic;
+
+/// R1171000: move-order ranks at or past this share one key (`rank:24`); every rank the root expands
+/// has its own.
+pub const POLICY_RANK_CAP: usize = 24;
+const _: () = assert!(POLICY_RANK_CAP >= AI_BUDGET.root_branching);
 
 /// The greedy baseline's own evaluation (baselines.rs): AI_EVAL exactly as it stood when the quality
 /// gates were fixed on the seed series `gate:v2`, frozen here. A baseline the AI is measured against
@@ -447,6 +508,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     hand_per_cost: 0.3,
     hand_cost_cap: 6.0,
     radiant_in_hand: 0.5,
+    // The baseline is frozen: it read no hand card's face when the gates were fixed, as it did.
+    radiant_face_share: 0.0,
     // The counter terms came after the gates were fixed, so the frozen baseline gives each nothing,
     // as it did.
     plague_counter: 0.0,

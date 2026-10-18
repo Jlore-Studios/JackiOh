@@ -14,7 +14,8 @@ use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, query};
 use crate::faces::card_type_of;
 use crate::mana::effective_cost;
 use crate::prompts::{
-    ANSWER_KEY, OpenPromptArgs, answer_key_of, cell_option_label, hero_option_label, open_prompt, resume_self,
+    ANSWER_KEY, ANSWER_STOP_KEY, OpenPromptArgs, answer_key_of, cell_option_label, hero_option_label,
+    open_prompt, resume_self,
 };
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, GameState, PromptOption, Resume};
@@ -529,7 +530,14 @@ pub fn chosen_number(ctx: &EffectContext<'_>) -> Option<i32> {
 #[serde(rename_all = "camelCase")]
 pub struct ChooseCraftArgs {
     pub step: String,
+    /// The crafted card's cost. A potion mode fixes its own (R1182000, R1182001), so it is not read
+    /// there and may be left out.
+    #[serde(default)]
     pub cost: i32,
+    /// What the prompt asks for beyond Meditative #17's free crafter: Scratch Pad's empty canvas or
+    /// a potion frame (R1182000 to R1182002). Absent: Meditative #17's prompt, exactly as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mode: Option<crate::wire::CraftMode>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub radiant: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -543,10 +551,17 @@ pub struct ChooseCraftArgs {
 /// `Selection::Craft`: a preset, or the player's own recipe, which the reducer validates (R90).
 /// `legal_actions` enumerates the presets, so the AI, the random policy and a timeout all answer
 /// with one (R881, R79); the reducer still accepts any valid recipe.
+///
+/// `mode` (Meditative+, #1182): a potion mode fixes the cost and the frame and rolls Potions as its
+/// presets (R1182000, R1182001); `scratch` rolls Meditative #17's (R1182002). The open prompt carries
+/// the mode (`PendingChoice.craft_mode`), which the answer check and the client read.
 pub fn choose_craft(args: ChooseCraftArgs) -> Effect {
     Effect::new("chooseCraft", move |ctx| {
-        let cost = args.cost.clamp(0, crate::config::CRAFT_MAX_COST);
-        let recipes = crate::subsystems::craft::craft_presets(&mut *ctx.sink.rng, cost);
+        let cost = match args.mode.and_then(crate::wire::CraftMode::frame) {
+            Some(frame) => crate::subsystems::craft::frame_cost(frame),
+            None => args.cost.clamp(0, crate::config::CRAFT_MAX_COST),
+        };
+        let recipes = crate::subsystems::craft::presets_for(&mut *ctx.sink.rng, args.mode, cost);
         let radiant = args.radiant == Some(true);
         let options: Vec<PromptOption> = recipes
             .into_iter()
@@ -570,7 +585,13 @@ pub fn choose_craft(args: ChooseCraftArgs) -> Effect {
         );
         asked.owner = Some(owner);
         asked.budget = Some(cost);
-        open_prompt(ctx, asked);
+        // The mode rides on the prompt that opened (a random cast answers it at once, from the
+        // mode's own presets, and opens none).
+        if open_prompt(ctx, asked).is_some()
+            && let Some(pending) = ctx.sink.state.pending.as_mut()
+        {
+            pending.craft_mode = args.mode;
+        }
     })
 }
 
@@ -599,6 +620,11 @@ pub struct ChooseAnswerArgs {
     pub shuffle: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub by: Option<PlayerSpec>,
+    /// R1184000: the problem is one question of a sequence (Meditative+ #20 KY's Competition), with
+    /// this many right answers so far: the prompt carries the streak for its chooser to see and offers
+    /// Stop after the lettered answers.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub streak: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub data: StepData,
 }
@@ -610,6 +636,10 @@ pub struct ChooseAnswerArgs {
 /// prompt's resume data under `prompts::ANSWER_KEY` — which `view_for` never sends and the AI's
 /// redaction strips (R185) — so the key never leaves the engine. The answered step reads the verdict
 /// with `answered_correctly`. At most `ANSWER_OPTION_IDS.len()` options; fewer than two asks nothing.
+///
+/// R1184000: with a `streak`, the problem is a question of a sequence: Stop is offered last, a `none`
+/// pick under no letter (`prompts::ANSWER_STOP_KEY`), which `answered_correctly` never judges right,
+/// and the prompt carries the streak (`PendingChoice.streak`), which its chooser's view shows.
 pub fn choose_answer(args: ChooseAnswerArgs) -> Effect {
     Effect::new("chooseAnswer", move |ctx| {
         // `(text, index)`: TS `{ text, index }`.
@@ -634,7 +664,7 @@ pub fn choose_answer(args: ChooseAnswerArgs) -> Effect {
             .copied()
             .unwrap_or("")
             .to_string();
-        let options: Vec<PromptOption> = shown
+        let mut options: Vec<PromptOption> = shown
             .iter()
             .enumerate()
             .map(|(index, (text, _))| {
@@ -645,6 +675,15 @@ pub fn choose_answer(args: ChooseAnswerArgs) -> Effect {
                 mode_option(&id, text)
             })
             .collect();
+        if args.streak.is_some() {
+            options.push(PromptOption {
+                key: ANSWER_STOP_KEY.to_string(),
+                label: "Stop".to_string(),
+                selection: Selection::None,
+                cost: None,
+                radiant: None,
+            });
+        }
         let mut data = args.data.clone().unwrap_or_default();
         data.insert(ANSWER_KEY.to_string(), Value::String(key));
         let player = player_of(ctx, args.by.unwrap_or(PlayerSpec::SelfSide));
@@ -658,7 +697,12 @@ pub fn choose_answer(args: ChooseAnswerArgs) -> Effect {
             resume,
         );
         asked.owner = Some(owner);
-        open_prompt(ctx, asked);
+        if open_prompt(ctx, asked).is_some()
+            && let Some(streak) = args.streak
+            && let Some(pending) = ctx.sink.state.pending.as_mut()
+        {
+            pending.streak = Some(streak.max(0));
+        }
     })
 }
 

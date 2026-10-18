@@ -342,6 +342,15 @@ export function registeredCatalog(): CardDefs {
 }
 
 /** The catalog version compiled into the module (the newest entry of patches.json). */
+/**
+ * R1011000: the learned evaluation's parity fixture, computed by the normal WASM module: its integer
+ * network's correction for each case. Only the tests call it, so it is the normal module's own export
+ * and the Luau module (R915009) carries no copy of it.
+ */
+export function learnedParity(fixtureJson: string): number[] {
+  return call("learnedParity", () => parsed<number[]>(normal.learned_parity(fixtureJson)));
+}
+
 export function catalogVersion(): string {
   return call("catalogVersion", () => engine.catalog_version());
 }
@@ -521,6 +530,8 @@ export type AiConstants = {
   AI_BUDGET: SearchBudget;
   AI_GATE_BUDGET: SearchBudget;
   SHADOW_BAN_IDS: readonly string[];
+  /** Issue #1113: the frozen fixture pool, the same ids in the same order as SHADOW_BAN_IDS. */
+  FIXTURE_BANNED_IDS: readonly string[];
   AI_DECK: AiDeckConstants;
 };
 

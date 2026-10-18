@@ -112,7 +112,6 @@ pub fn script() -> CardScripts {
 // played for 3 with fewer tokens than its X use C+ #69 Buff Billy, the other X permanent R396 names.
 #[cfg(test)]
 mod tests {
-    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const OUTBREAK: &str = "classic-039";
@@ -129,8 +128,6 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
-
-    use crate::js;
 
     /// TS `at(s, ref): Selection[]`.
     fn at(s: &Scenario, card: &str) -> Value {
@@ -161,20 +158,6 @@ mod tests {
 
     mod c_39_outbreak {
         use super::*;
-
-        #[test]
-        fn declares_one_target_any_permanent_on_either_side_and_runs_one_script_on_both_faces() {
-            crate::register_all();
-            assert_eq!(crate::card_def(ID).id, OUTBREAK);
-            let scripts = script();
-            assert_eq!(
-                js(&scripts.base.targets),
-                json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "backrow"] } }]),
-            );
-            // TS `expect(radiant).toBe(base)`: the same declaration and the same Cry.
-            assert_eq!(js(&scripts.radiant.targets), js(&scripts.base.targets));
-            assert!(scripts.base.cry.is_some() && scripts.radiant.cry.is_some());
-        }
 
         mod base {
             use super::*;

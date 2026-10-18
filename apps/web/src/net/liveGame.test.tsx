@@ -119,6 +119,64 @@ describe("R765 the live game an account read names", () => {
     expect(read).toHaveBeenCalledTimes(reads);
   });
 
+  it("a woken page reads the live game again at once, never overlapping", async () => {
+    vi.useFakeTimers();
+    const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
+    const show = (state: "hidden" | "visible"): void => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+      document.dispatchEvent(new Event("visibilitychange"));
+    };
+    try {
+      const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me("m-1"));
+      const account = ready(me("m-1"));
+      const { result } = renderHook(() => useLiveGame(account, read));
+      await advance(POLL_MS);
+      expect(read).toHaveBeenCalledTimes(1);
+
+      // A hidden tab reads nothing; a visible one reads once.
+      show("hidden");
+      await flush();
+      expect(read).toHaveBeenCalledTimes(1);
+      show("visible");
+      await flush();
+      expect(read).toHaveBeenCalledTimes(2);
+
+      // While one read is out, neither kind of wake adds another.
+      let answer: (me: MeResponse) => void = () => undefined;
+      read.mockReturnValueOnce(
+        new Promise<MeResponse>((resolve) => {
+          answer = resolve;
+        }),
+      );
+      show("visible");
+      await flush();
+      expect(read).toHaveBeenCalledTimes(3);
+      show("visible");
+      window.dispatchEvent(new Event("online"));
+      await flush();
+      expect(read).toHaveBeenCalledTimes(3);
+      expect(result.current?.path).toBe("/match/m-1");
+
+      // Its answer lands, and the next wake reads again: the game ended while the tab slept.
+      read.mockResolvedValue(me(null));
+      answer(me("m-1"));
+      await flush();
+      expect(result.current?.path).toBe("/match/m-1");
+      window.dispatchEvent(new Event("online"));
+      await flush();
+      expect(read).toHaveBeenCalledTimes(4);
+      expect(result.current).toBeNull();
+
+      // With no game left it no longer listens.
+      show("visible");
+      await flush();
+      expect(read).toHaveBeenCalledTimes(4);
+    } finally {
+      if (visibility === undefined) Reflect.deleteProperty(document, "visibilityState");
+      else Object.defineProperty(document, "visibilityState", visibility);
+    }
+  });
+
   it("R765 an account with no live game is not polled", async () => {
     vi.useFakeTimers();
     const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me("m-1"));
@@ -221,6 +279,64 @@ describe("R765 a pairing takes the player to the game from any screen", () => {
     const reads = read.mock.calls.length;
     await advance(POLL_MS * 3);
     expect(read).toHaveBeenCalledTimes(reads);
+  });
+
+  it("a woken page reads the queue follow again at once, then follows the pairing", async () => {
+    vi.useFakeTimers();
+    const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
+    const show = (state: "hidden" | "visible"): void => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+      document.dispatchEvent(new Event("visibilitychange"));
+    };
+    try {
+      signIn();
+      rememberQueued("bo1");
+      const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me(null));
+      render(<Follower path={paths.decks} read={read} />);
+      await flush();
+      expect(read).toHaveBeenCalledTimes(1);
+
+      show("hidden");
+      await flush();
+      expect(read).toHaveBeenCalledTimes(1);
+      show("visible");
+      await flush();
+      expect(read).toHaveBeenCalledTimes(2);
+
+      // While one read is out, a second wake adds none.
+      let answer: (me: MeResponse) => void = () => undefined;
+      read.mockReturnValueOnce(
+        new Promise<MeResponse>((resolve) => {
+          answer = resolve;
+        }),
+      );
+      window.dispatchEvent(new Event("online"));
+      await flush();
+      expect(read).toHaveBeenCalledTimes(3);
+      show("visible");
+      await flush();
+      expect(read).toHaveBeenCalledTimes(3);
+      answer(me(null));
+      await flush();
+
+      // Paired while the tab slept: the wake finds the game, announces it and takes the player there.
+      read.mockResolvedValue(me("m-9"));
+      show("visible");
+      await flush();
+      expect(read).toHaveBeenCalledTimes(4);
+      expect(screen.getByTestId("found")).toHaveTextContent(MATCH_FOUND_STATUS);
+      expect(readQueued(), "paired: out of the queue").toBeNull();
+      await advance(MATCH_FOUND_NAV_DELAY_MS);
+      expect(navigate).toHaveBeenCalledWith("/match/m-9");
+
+      // Out of the queue it listens no more.
+      show("visible");
+      await flush();
+      expect(read).toHaveBeenCalledTimes(4);
+    } finally {
+      if (visibility === undefined) Reflect.deleteProperty(document, "visibilityState");
+      else Object.defineProperty(document, "visibilityState", visibility);
+    }
   });
 
   it("R765 a Conquest pairing goes to the series screen", async () => {

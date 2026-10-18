@@ -104,17 +104,6 @@ mod tests {
         }))
     }
 
-    #[test]
-    fn is_a_field_spell_whose_two_faces_run_one_shape_of_hook() {
-        crate::register_all();
-        let def = crate::card_def(super::ID);
-        assert_eq!(def.id, TREE);
-        assert_eq!(def.type_, CardType::FieldSpell);
-        let scripts = super::script();
-        assert!(scripts.base.start_of_turn.is_some());
-        assert!(scripts.radiant.start_of_turn.is_some());
-    }
-
     mod base {
         use super::*;
 

@@ -53,6 +53,12 @@ going second, The Coin). Nothing here reads a difficulty, and a handicap only as
 mulligan's bonus and cap): the tiers change the AI seat's resources only (R180), and the tutorial's
 opponent is the same AI on `AI_TUTORIAL` with the lesson's fixed deck (R290, R291).
 
+A question of a sequence (Meditative+ #20 KY's Competition, R1184000) is answered at once, before
+any search, with the option its redacted statement works out to (`ky_competition::worked_answer`),
+never Stop: the redacted copy judges no answer right (R465), so a search would rank the answers alike
+and spend a decision's budget on a guess up to thirty times a turn, and worked out each answer costs
+one redaction (R1184002).
+
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
 it can see on the field, then its attacks) on every determinization, and plays the first action of the
@@ -100,6 +106,13 @@ building and nothing else: a banned card stays legal for every player. Since #73
 Meditative cards only, at most half of the set (R732000): no sweep, lane or person adds a card of an
 earlier set, and the unban lane (`training/unban.md`) only removes entries.
 
+`FIXTURE_BANNED_IDS` (issue #1113) is the frozen fixture pool: a copy of the table as it stood
+when the seeded fixtures were dealt from it. It is never updated with the table; a fixture that
+needs a new deal changes its seed instead. R290's tier games, the `cargo test` gate smokes behind
+`fixture_game_config`/`run_fixture_gate_games`, and the named practice seeds (R265's mulligan
+seeds, B34's walk, R677's glitch-swap) and spec 13's URL games deal the AI from it. `gate --full`,
+promotion, sweep and live practice keep the live table.
+
 ## Matches and the quality gates
 
 `play_match(&MatchConfig, &mut MatchHooks) -> MatchRecord` plays one whole game between two
@@ -137,6 +150,96 @@ deals a live game (R258), both seats AI on the spec's resources at `AI_BUDGET`, 
 record of source `dev` under the patch the run tests, id `dev:<patch>:<seed>` (`dev_record_id`).
 `cargo jackioh stats --out <file>` writes a run; `jackioh-server stats-import <file>` loads it.
 
+## The learned evaluation's features (#466, #1006)
+
+`src/features.rs` turns a position into the learned evaluation's inputs (`docs/learned-eval.md` D3,
+D5, D10). One function serves the replay pass that makes training rows (`cargo jackioh positions`)
+and, once a network ships, its inference in the search, so the two never read a position apart.
+
+```rust
+pub const FEATURES_VERSION: u32;
+pub fn features_of(state: &GameState, seat: PlayerId) -> Features;   // features(&redact(state, seat), seat)
+pub fn features(view: &GameState, seat: PlayerId) -> Features;       // view already redacted
+pub fn dense_names() -> Vec<String>;                                 // the dense layout, in order
+pub struct Features { pub dense: Vec<i32>, pub sparse: Vec<(String, i32)> }
+```
+
+- It reads only `redact` (R185, R1006000): two states that differ only in what the seat cannot see
+  give the same features. The projections that read card text (`unit_view`, `hero_armor_of`,
+  `face_threat`) run on the view less the backrow cards the seat cannot read, which are counted and
+  never read.
+- **dense**: integers, named by `dense_names`: the turn, who acts and whether the seat is p1; per
+  side, the seat's own first, its life (`effective_life`) and armor, mana, crystals and debt, its
+  hand, library, graveyard and backrow (and how much of the backrow the seat can read), its units in
+  aggregate (count, positions, attack, health, armor, damaged, Radiant), one count per keyword kind,
+  the face damage its board threatens and its Jade and extra turns; then the seat's hand by cost.
+- **sparse**: `(key, count)`, sorted, the key `<zone>:<side>:<card id>` for each card the seat can
+  name: `board` (both sides), `hand` (its own) and `backrow` (its own, and the enemy's face-up ones).
+  Ids stay strings, so a patch or a new card never moves an index; an id a network's weights do not
+  know is no input at all.
+- `FEATURES_VERSION` names the layout; any change bumps it, and a network's weights record the
+  version they were fitted on.
+
+## The learned evaluation (#466, #1010)
+
+`src/learned.rs` is a small network over `features` that corrects the hand eval where the search
+finally scores a line (`docs/learned-eval.md` D4, D6, D7, D9):
+
+```rust
+pub enum EvalKind { Hand, Learned }
+pub const AI_EVAL_KIND: EvalKind;                 // config.rs: Hand, unless a promotion turns it on
+pub const LEARNED: Network<'static>;              // compiled in from src/learned/weights.json by build.rs
+pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64;
+```
+
+- With `Hand` nothing changes. With `Learned`, `reply_score` scores a finalist after the opponent's
+  reply with the network's logit mapped back onto the hand eval's points, `points = hand + (b +
+  net(x))·U/a` (R1010000, R1010001), taken at `LEARNED_CORRECTION_SHARE`: `hand + share·(points −
+  hand)` (R1012001). The beam's pruning keeps the hand eval. 1v1 only: a Duos duel keeps the hand
+  eval (R1010002).
+- `src/learned/weights.json` is what `training/ml/jackioh_ml/export.py` writes from a fit: the feature
+  version and dense names it was fitted on (a test fails on a mismatch), the standardizer, the sparse
+  keys it has rows for (an unknown key is no input), the layers and the skip connection. `build.rs`
+  turns it into constant slices: data at compile time, no static at run time (rule 4). The checked-in
+  file may be the null network, whose correction is zero everywhere.
+- Inference is `f64`, one fixed order, clipped ReLUs as comparisons, no libm, for a float network
+  (`"format": 1`, `Learned::Float`), which part 5's native screen measures. The network that ships is
+  an integer one (`"format": 2`, `Learned::Int`, `src/learned/int.rs`, #1011): `training/ml`'s
+  `quantize.py` folds the standardizer into an i16 first layer over the raw features, i8 head layers,
+  i64 sums, floor shifts and clips, and one IEEE division at the end, so the native gates and the
+  browser's WASM build give the same answer bit for bit (R1011000; `tests/fixtures/learned-parity.json`,
+  held natively and through the WASM module's `learned_parity`).
+
+## The policy prior (#1171)
+
+`src/policy.rs` is a table of weights, fitted by `training/ml`'s `policy_fit.py` on the moves the AI
+played, that re-sorts the moves the beam expands before it takes its prefix (`docs/learned-eval.md`,
+learned move ordering):
+
+```rust
+pub enum MoveOrder { Heuristic, Learned }
+pub const AI_MOVE_ORDER: MoveOrder;               // config.rs: Heuristic, unless a promotion turns it on
+pub const POLICY_PRIOR: PolicyPrior<'static>;     // compiled in from src/policy/weights.json by build.rs
+pub fn policy_keys(view: &GameState, seat: PlayerId, action: &ActionBody, rank: Option<usize>) -> Vec<String>;
+pub fn policy_label(state: &GameState, seat: PlayerId, played: &ActionBody) -> PolicyLabel;
+pub fn prior_order(state: &GameState, seat: PlayerId, moves: Vec<ActionBody>, prior: &PolicyPrior<'_>) -> Vec<ActionBody>;
+pub fn beam_search_with(det, seat, counter, budget, order: MoveOrder, prior: &PolicyPrior<'_>) -> Vec<Line>;
+```
+
+- With `Heuristic` nothing changes. With `Learned`, `search::expansion` sorts each line's candidates
+  that are not End Turn by the prior, best first and ties in their own order, then takes the first
+  `root_branching` or `branching` and End Turn, as before (R1171001). It never adds, drops or changes
+  a move and spends no node. A table of no keys, the checked-in null one, leaves every order as it is,
+  and so does a Duos duel.
+- A move is a handful of text keys read from `redact` alone (R185, R1171000): its kind, its rank in the
+  heuristic order (capped at `POLICY_RANK_CAP`), the card it plays or acts with (named by R1006000's
+  rule, else `hidden`), where it lands and the class of what it aims at. No key holds an instance, hero
+  or prompt id. Its score is the sum of its keys' weights; a key the table lacks adds nothing.
+- `policy_label` is what `cargo jackioh positions --policy` writes on each decision row: the keys of
+  every candidate decide's probe lists there and which one was played. `src/policy/weights.json`
+  records the `POLICY_KEYS_VERSION` and catalog it was fitted on (a test fails on another version);
+  `build.rs` turns it into constant slices, data at compile time (rule 4).
+
 ## Duos (§13.7)
 
 `src/duos.rs` plays a seat of a Duos game (`jackioh_engine::duos`): one AI plays both seats of team B,
@@ -155,7 +258,9 @@ pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins
 - `duos_passes` names the hand cards to pass now, best first: a card the seat cannot play this turn
   and its teammate can (a round seat that has not ended, can afford it and has a zone for it), when
   the seat can pay the pass; with `pass_cost` 0 also a card the teammate can afford next turn and the
-  seat cannot; never more than the passes left or the teammate's free hand slots.
+  seat cannot; never more than the passes left or the teammate's free hand slots. Immediate passes
+  rank by the teammate's best bounded follow-up (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays
+  on a fixed-seed probe), ties by cost then hand order; free-pass next-turn cards keep cost order.
 - It knows what its team knows and nothing more: its own duel through `decide`'s `redact` and
   `determinize` (R185), and its teammate's own state, which a team shares (§13.6). An opponent's
   hidden card never changes a decision.

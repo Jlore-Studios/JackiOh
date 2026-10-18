@@ -45,6 +45,7 @@ use jackioh_engine::{
     hand_holds, portrait_or_default,
 };
 
+use crate::actor::checkpoint::{CheckpointBody, checkpoint_row};
 use crate::actor::clock::{Timer, after, create_match_clock};
 use crate::actor::contracts::{
     ActorDeps, ClockExpiry, ClockView, CreateMatchClockInput, ExpiryHandler, MatchClock, RecordResultInput,
@@ -66,10 +67,13 @@ use crate::bots::seat::{self, BotJob, BotMove, fallback_action, never_played};
 use crate::bots::signals::{RematchPlan, aim_lead_ms, idles_turn, rematch_plan};
 use crate::config::{
     AI_EMOTE, AIM_RELAY_INTERVAL_MS, BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_REMATCH_FIT,
-    BOT_STRENGTHS, BOT_TIMEOUT_FIT, BOT_WRITE_RETRY_MS, MATCH_RECORD_RESULT_ATTEMPTS,
-    MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_SERVER_ACTION_RETRY_MS, MATCH_VOIDED_CLOSE_CODE,
+    BOT_STRENGTHS, BOT_TIMEOUT_FIT, BOT_WRITE_RETRY_MS, MATCH_CHECKPOINT_MIN_ACTIONS,
+    MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_SERVER_ACTION_RETRY_MS,
+    MATCH_VOIDED_CLOSE_CODE,
 };
-use crate::db::store::{BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, StoreError};
+use crate::db::store::{
+    BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, PlayTelemetry, StoreError,
+};
 use crate::ranked::ladder::RankTier;
 
 const PLAYERS: [PlayerId; 2] = PLAYER_IDS;
@@ -135,7 +139,7 @@ pub fn bot_moved_turns(
     dealt: Option<Vec<PlayerId>>,
 ) -> PerPlayer<Option<i32>> {
     let (last_boards, glitch_boards) = last_boards_of(match_row);
-    let mut state = engine::fold(
+    let state = engine::fold(
         pinned,
         &engine::fold_args(
             &match_row.seed,
@@ -147,8 +151,18 @@ pub fn bot_moved_turns(
         ),
     )
     .state;
+    bot_moved_turns_from(pinned, state, log, PerPlayer::new(None, None))
+}
+
+/// `bot_moved_turns` carried on from `moved` as it stood on `state`, over the rows after it: how a
+/// rebuild resumes a checkpoint's bot turns (#1169).
+pub fn bot_moved_turns_from(
+    pinned: Pinned,
+    mut state: EngineState,
+    log: &[MatchActionRow],
+    mut moved: PerPlayer<Option<i32>>,
+) -> PerPlayer<Option<i32>> {
     let bot_nonce = format!("{SERVER_NONCE_PREFIX}bot-");
-    let mut moved = PerPlayer::new(None, None);
     for row in log {
         let result = engine::reduce(pinned, &state, &row.action);
         if result.error.is_some() {
@@ -205,6 +219,8 @@ enum Task {
     },
     /// TS `idle()`: answered once every task queued before it has run.
     Idle(oneshot::Sender<()>),
+    /// #1169: the restart drain's checkpoint, answered once it is written or passed over.
+    Checkpoint(oneshot::Sender<()>),
     /// R1452: the move a bot home's `seat::play` came back with, decided on the state as it stood
     /// when the log's next seq was `version`, in turn `turn`.
     BotMove {
@@ -227,6 +243,7 @@ impl Task {
             Task::Disconnect { .. } => "disconnect".to_string(),
             Task::Attach { .. } => "attach".to_string(),
             Task::Idle(_) => "idle".to_string(),
+            Task::Checkpoint(_) => "checkpoint".to_string(),
             Task::BotMove { .. } => "bot-move".to_string(),
         }
     }
@@ -718,6 +735,10 @@ impl MatchActor {
                 self.push_watchers_to(&core, home);
             }
             Task::Idle(done) => {
+                let _ = done.send(());
+            }
+            Task::Checkpoint(done) => {
+                self.write_checkpoint().await;
                 let _ = done.send(());
             }
             Task::BotMove {
@@ -2004,6 +2025,64 @@ impl MatchActor {
         let _ = drained.await;
     }
 
+    /// #1169: resolves once the checkpoint of the state after the log's newest row is written (or
+    /// passed over, `write_checkpoint`), after every task queued before it. The restart drain calls it
+    /// before `stop`; a crash or the reaper's `stop` writes none, and the next rebuild folds from the
+    /// last checkpoint there is or from the start.
+    pub async fn checkpoint(&self) {
+        let (done, written) = oneshot::channel();
+        if self.shared.inbox.send(Task::Checkpoint(done)).is_err() {
+            return;
+        }
+        let _ = written.await;
+    }
+
+    /// #1169: the checkpoint of the state after the log's newest row, its play telemetry (R1442) and
+    /// its bots' turns (R639000), stored for the next rebuild to resume (`actor::checkpoint`). None
+    /// for a match that has ended, been voided or stopped, or whose log is shorter than
+    /// `MATCH_CHECKPOINT_MIN_ACTIONS`. A write that fails is logged and costs nothing more: the next
+    /// rebuild folds the whole log. No state reaches a log line.
+    async fn write_checkpoint(&self) {
+        let (seq, nonce, body) = {
+            let core = self.lock();
+            let seq = core.next_seq - 1;
+            if core.finished || core.voided || core.stopped || seq < MATCH_CHECKPOINT_MIN_ACTIONS {
+                return;
+            }
+            let Some((nonce, _)) = core.acks.last() else {
+                return;
+            };
+            let body = CheckpointBody {
+                state: core.state.clone(),
+                telemetry: core.telemetry.clone(),
+                bot_moved_turn: core.bot_moved_turn.clone(),
+            };
+            (seq, nonce.clone(), body)
+        };
+        let match_id = self.match_id_str();
+        let row = match checkpoint_row(&self.shared.match_row, seq, &nonce, &body, now_ms()) {
+            Ok(row) => row,
+            Err(error) => {
+                tracing::warn!(event = "match.checkpoint.failed", matchId = %match_id, seq = seq, message = %error);
+                return;
+            }
+        };
+        match one_tx!(self.shared.deps.db, |t| t.matches_put_checkpoint(&row).await?) {
+            Ok(true) => {
+                tracing::info!(event = "match.checkpoint.written", matchId = %match_id, seq = seq, bytes = row.body.len());
+            }
+            Ok(false) => tracing::info!(event = "match.checkpoint.kept", matchId = %match_id, seq = seq),
+            Err(error) => {
+                tracing::warn!(event = "match.checkpoint.failed", matchId = %match_id, seq = seq, message = %error);
+            }
+        }
+    }
+
+    /// R1442: the play telemetry the actor holds now, as both seats' people would write it. For tests.
+    pub fn telemetry(&self) -> PlayTelemetry {
+        self.lock().telemetry.finish(&telemetry::LIVE_PILOTS, None)
+    }
+
     pub fn view_for(&self, player: PlayerId) -> PlayerView {
         let core = self.lock();
         self.view_of(&core, player)
@@ -2196,7 +2275,7 @@ fn mulligan_window(snapshot: &MatchSnapshot) -> Vec<PlayerId> {
 
 // ---- Social: watching and shared replays (#939, #940) ----
 //
-// B50, B51: a friend's live, unranked game, watched from their seat. Each change records the view
+// B50, B51: a friend's live 1v1 game, ranked or unranked, watched from their seat. Each change records the view
 // of each seat as the change left it, keyed by the account that began in it (`home`; R677: a
 // Glitch's swap moves the record with the account), and each watcher is sent each recorded view of
 // its friend's seat SPECTATE_DELAY_MS after the state it shows, by the one wait the actor arms for
@@ -2243,8 +2322,8 @@ struct Watcher {
     sent: Option<u64>,
 }
 
-/// B50, B51: what the actor keeps for its watchers, and only for an unranked match, the one kind S7
-/// lets anyone watch. Each seat's record holds the newest view at least SPECTATE_DELAY_MS old and
+/// B50, B51: what the actor keeps for its watchers, for any live 1v1 match, ranked or unranked.
+/// Each seat's record holds the newest view at least SPECTATE_DELAY_MS old and
 /// every view since: all a watcher can still be owed, and nothing older.
 struct Spectate {
     records: PerPlayer<VecDeque<SpectateFrame>>,
@@ -2288,7 +2367,7 @@ fn close_finished_watchers(watchers: Vec<Watcher>) {
 pub enum WatchRefused {
     /// SPECTATORS_PER_MATCH sockets already watch the match.
     Full,
-    /// The match is ranked, voided, or its actor is going away.
+    /// The match is voided, or its actor is going away.
     Closed,
 }
 
@@ -2315,11 +2394,7 @@ impl MatchActor {
     ) -> Result<(), WatchRefused> {
         let (id, replaced, done) = {
             let mut core = self.lock();
-            if core.stopped
-                || core.voided
-                || core.spectate.closed
-                || self.shared.match_row.ranked == Some(true)
-            {
+            if core.stopped || core.voided || core.spectate.closed {
                 return Err(WatchRefused::Closed);
             }
             let at = core
@@ -2507,9 +2582,9 @@ impl MatchActor {
     }
 
     /// B50: records each seat's view of the state as it stands now, the clock's time left in it as
-    /// its player was shown, and sends whatever has come due. Nothing is kept for a ranked match.
+    /// its player was shown, and sends whatever has come due.
     fn spectate_record_in(&self, core: &mut Core) {
-        if core.spectate.closed || self.shared.match_row.ranked == Some(true) {
+        if core.spectate.closed {
             return;
         }
         let now = now_ms();

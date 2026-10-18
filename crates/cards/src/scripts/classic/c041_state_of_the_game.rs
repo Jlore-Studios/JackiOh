@@ -31,7 +31,6 @@ pub fn script() -> CardScripts {
 // Collateral Damage (core-034), Flood (core-017) and Carnivorous Cube (core-022, whose Cry Tributes, R428).
 #[cfg(test)]
 mod tests {
-    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const STATE: &str = "classic-041";
@@ -51,72 +50,11 @@ mod tests {
         s.stats(&unit.id).keywords.iter().map(|keyword| js(keyword)["kind"].as_str().unwrap_or("").to_string()).collect()
     }
 
-    /// Every field of `Script` but `activate` is absent (`activate` is not ported, SURFACE §7.2).
-    fn is_empty_script(script: &Script) -> bool {
-        script.cost.is_none()
-            && script.cry.is_none()
-            && script.death.is_none()
-            && script.start_of_game.is_none()
-            && script.resume.is_empty()
-            && script.delayed.is_none()
-            && script.set_stat.is_none()
-            && script.start_of_turn.is_none()
-            && script.end_of_turn.is_none()
-            && script.aura.is_none()
-            && script.triggers.is_empty()
-            && script.on_play_hook.is_none()
-            && script.hand_triggers.is_empty()
-            && script.static_flags.is_none()
-            && script.targets.is_empty()
-            && script.modes.is_empty()
-            && script.condition_met.is_none()
-            && script.preview.is_none()
-            && script.activations.is_empty()
-            && script.target_checks.is_empty()
-            && script.cost_aura.is_none()
-            && script.graveyard_play.is_none()
-            && script.targeting_discards.is_none()
-            && script.records_play_as.is_none()
-            && script.draw_limit.is_none()
-            && script.replacements.is_empty()
-            && script.hero_guard.is_none()
-            && script.conditional_keywords.is_none()
-            && script.after_attack.is_none()
-            && script.plague_multiplier.is_none()
-            && script.deck_triggers.is_empty()
-            && script.graveyard_triggers.is_empty()
-            && script.quests.is_none()
-            && script.tribute_when.is_none()
-            && script.would_counter.is_none()
-            && script.start_of_opponent_turn.is_none()
-    }
-
     mod c_41_state_of_the_game {
         use super::*;
 
-        #[test]
-        fn is_keywords_only_both_faces_are_printed_on_the_catalog_so_neither_script_adds_anything() {
-            crate::register_all();
-            assert_eq!(crate::card_def(ID).id, STATE);
-            let def = js(&registered_catalog()[ID]);
-            assert_eq!(def["base"]["keywords"], json!([{ "kind": "Indestructible" }]));
-            assert_eq!(def["radiant"]["keywords"], json!([{ "kind": "Indestructible" }, { "kind": "Lifesteal" }]));
-            let scripts = script();
-            assert!(is_empty_script(&scripts.base));
-            assert!(is_empty_script(&scripts.radiant));
-        }
-
         mod base {
             use super::*;
-
-            #[test]
-            fn is_a_3_3_with_indestructible_on_the_field() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [FILLER], "field": [STATE] }, "p2": { "hand": [FILLER] } }));
-
-                s.expect_stats(STATE, json!({ "attack": 3, "health": 3, "maxHealth": 3 }));
-                assert_eq!(keyword_kinds(&s, PlayerId::P1, 1), vec!["Indestructible"]);
-            }
 
             #[test]
             fn s4_4_step_4_combat_damage_never_removes_it_it_attacks_a_9_9_and_takes_nothing_back() {

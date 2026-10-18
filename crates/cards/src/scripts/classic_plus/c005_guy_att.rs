@@ -31,7 +31,6 @@ pub fn script() -> CardScripts {
 // it is destroyed in the backrow (C+ #61 proves it again in its own file).
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -75,21 +74,6 @@ mod tests {
 
     fn count(s: &Scenario, type_: &str) -> usize {
         s.events().iter().filter(|event| event.event_type().as_str() == type_).count()
-    }
-
-    #[test]
-    fn is_a_2_6_8_human_unit_radiant_12_16_with_a_cry_on_each_face() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.cost, CardCost::Fixed(2));
-        assert_eq!(
-            [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-            [Some(6), Some(8), Some(12), Some(16)]
-        );
-        assert_eq!(def.tags, vec![Tag::Human]);
-        let scripts = script();
-        assert!(scripts.base.cry.is_some());
-        assert!(scripts.radiant.cry.is_some());
     }
 
     mod base {

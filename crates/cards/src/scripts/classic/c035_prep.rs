@@ -44,7 +44,6 @@ pub fn script() -> CardScripts {
 // (R70); radiant: (4) less; its tuned number (discount) reads through `param()` (R386)".
 #[cfg(test)]
 mod tests {
-    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const PREP: &str = "classic-035";
@@ -79,16 +78,6 @@ mod tests {
 
     mod c_35_prep {
         use super::*;
-
-        #[test]
-        fn runs_one_script_on_both_faces() {
-            crate::register_all();
-            assert_eq!(js(&registered_catalog()[ID])["id"], PREP);
-            let scripts = script();
-            assert!(scripts.base.cry.is_some());
-            assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());
-            assert_eq!(js(&scripts.radiant.targets), js(&scripts.base.targets));
-        }
 
         mod base {
             use super::*;

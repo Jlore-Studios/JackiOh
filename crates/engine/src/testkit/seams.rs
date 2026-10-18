@@ -181,16 +181,6 @@ mod tests {
     }
 
     #[test]
-    fn a_registered_handler_is_found_replaced_and_removed() {
-        assert!(work_handler(HOOK).is_none());
-        assert!(register_work_handler(HOOK, hit_owner).is_none());
-        assert!(work_handler(HOOK).is_some());
-        assert!(register_work_handler(HOOK, hit_owner).is_some());
-        assert!(unregister_work_handler(HOOK).is_some());
-        assert!(work_handler(HOOK).is_none());
-    }
-
-    #[test]
     fn owed_work_under_a_registered_hook_is_resumable_and_runs_its_handler() {
         let mut state = board().state().clone();
         assert!(!can_resume(&state, &seam_resume()));

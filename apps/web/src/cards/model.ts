@@ -135,6 +135,13 @@ export type FaceModel = {
    * `rarity` stays "Token" for everything else.
    */
   printedRarity?: PrintedRarity | null;
+  /**
+   * R1177001: the card is a token (`CardDef.token`), which every token's face says: its type line
+   * ("Token Unit") and, where that line hides, its token mark. On every catalog card the flag agrees
+   * with rarity Token, the Token tag and §7's row, and on a fused card with its tag (R1177000).
+   * Absent (false) on a face built by hand and on a card with no definition.
+   */
+  token?: boolean;
   index: string | null;
   set: SetName | null;
   radiant: boolean;
@@ -197,6 +204,8 @@ export type FaceModel = {
   animated?: { home?: number } | null;
   /** B5 E35: in play, the unit has gone Berserk (`UnitView.berserk`). */
   berserk?: boolean;
+  /** R1174000: in play, the unit is Frozen (`UnitView.frozen`). */
+  frozen?: boolean;
   /** MD-B6, R943: in play, the card was minted after the decks were built (`CardView.created`). */
   created?: boolean;
   /** E36: the lines of code of the card's script (`CardDef.loc`); a fused card's definition carries its ingredients' sum. */
@@ -255,6 +264,8 @@ export type InPlay = {
   animated?: { home?: number };
   /** B5 E35: the unit has gone Berserk (`UnitView.berserk`). */
   berserk?: true;
+  /** R1174000: the unit is Frozen (`UnitView.frozen`). */
+  frozen?: true;
   /** MD-B6, R943: the card was minted after the decks were built (`CardView.created`). */
   created?: true;
   /** R437: the marks on the card (`CardView.marks`). */
@@ -352,6 +363,7 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
     tags: source.inPlay !== undefined && source.tags !== undefined ? source.tags : (def?.tags ?? []),
     rarity: def?.rarity ?? null,
     printedRarity: def?.printedRarity ?? null,
+    token: def?.token === true,
     index: def?.index ?? null,
     set: def?.set ?? null,
     radiant: source.radiant,
@@ -379,6 +391,7 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
     enchantments: inPlay?.enchantments ?? [],
     animated: inPlay?.animated ?? null,
     berserk: inPlay?.berserk === true,
+    frozen: inPlay?.frozen === true,
     created: inPlay?.created === true,
     loc: def?.loc ?? null,
     marks: inPlay?.marks ?? [],
@@ -536,11 +549,13 @@ export const ALL_TRIBES = "All Tribes";
 /**
  * R1382, R1162: the tags the frame prints. A card with every tribal tag (`TRIBAL_TAGS`, R1424) prints
  * `ALL_TRIBES` in their place, then its non-tribal tags in order; any other card prints its tags.
- * Read off the tags: no catalog field.
+ * The Token tag is never a chip (R1177001): a token's type line says it ("Token Unit"), where no
+ * crowded tag row can cut it. Read off the tags: no catalog field.
  */
 export function frameTags(tags: readonly Tag[]): readonly (Tag | typeof ALL_TRIBES)[] {
-  if (!TRIBAL_TAGS.every((tribe) => tags.includes(tribe))) return tags;
-  return [ALL_TRIBES, ...tags.filter((tag) => !TRIBAL_TAGS.includes(tag))];
+  const printed: readonly Tag[] = tags.filter((tag) => tag !== "Token");
+  if (!TRIBAL_TAGS.every((tribe) => printed.includes(tribe))) return printed;
+  return [ALL_TRIBES, ...printed.filter((tag) => !TRIBAL_TAGS.includes(tag))];
 }
 
 /**

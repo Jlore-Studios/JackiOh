@@ -26,15 +26,22 @@
 // (`b50_b51_a_full_match_is_forbidden_to_one_watcher_more`) and the client shows it as any other
 // `forbidden` (WatchRoute.test.tsx).
 //
+// The first view is due `SPECTATE_DELAY_MS` after the join, and a watcher who comes later is sent it
+// at once, so the waiting panel shows only to one who comes sooner. A page visit alone can take that
+// long, so the browser is on Play together before the join: `one` asks `two` to be friends, and `two`
+// accepts there just after it, which reads the friends list again with `one` in the match.
+//
 // Networked: it needs `E2E=1 cargo run --release -p jackioh-server` beside the client. Daily only,
 // as every spec outside scripts/shard-specs.mjs's SMOKE. `SPECTATE_DELAY_MS` is the server's, fixed
-// at compile time, so the first view takes about 30 s to arrive and the spec waits it out.
+// at compile time, and the spec waits it out.
 
 import { SPECTATE_DELAY_MS } from "../../../apps/web/src/wire/serverConfig.ts";
 import { E2E_RESEED_PATH, accounts, inviteCodes, seedFor, server, timeouts, type E2EAccount } from "../../support/config.ts";
 import {
   GAME,
   TOGETHER_FRIEND_ROW,
+  TOGETHER_REQUEST_ACCEPT,
+  TOGETHER_REQUEST_ROW,
   TOGETHER_ROOT,
   TOGETHER_WATCH,
   WATCH_BACK,
@@ -67,9 +74,6 @@ const CLOCK_SLACK_MS = 1_000;
 
 // HTTP contract (SPEC S7), as far as this spec reads it
 
-type PlayerRef = { profileId: string; username: string };
-type RequestBody = { requestId: string; from: PlayerRef; to: PlayerRef };
-type FriendsBody = { friends: PlayerRef[]; incoming: RequestBody[]; outgoing: RequestBody[]; blocked: PlayerRef[] };
 type MeBody = { profile: { id: string }; username?: { name: string } };
 type JoinBody = { matchId: string; seat: string };
 
@@ -85,13 +89,14 @@ function me(account: E2EAccount): Cypress.Chainable<MeBody> {
   return cy.request<MeBody>({ method: "GET", url: api("/api/auth/me"), headers: bearer(account) }).its("body");
 }
 
-function friendsOf(account: E2EAccount): Cypress.Chainable<FriendsBody> {
-  return cy.request<FriendsBody>({ method: "GET", url: api("/api/friends"), headers: bearer(account) }).its("body");
-}
-
 /** A friend row of the page, by the profile it shows. */
 function friendRow(profileId: string): string {
   return `${ts(TOGETHER_FRIEND_ROW)}[data-profile-id="${profileId}"]`;
+}
+
+/** The page's row for a friend request to the watcher, by the profile that sent it. */
+function incomingRequestRow(profileId: string): string {
+  return `${ts(TOGETHER_REQUEST_ROW)}[data-direction="incoming"][data-profile-id="${profileId}"]`;
 }
 
 /** The watch link a friend row's Watch follows (`watchLink` in apps/web/src/together/watchLink.ts). */
@@ -192,6 +197,7 @@ describe("44 watching a friend's live game", () => {
     let oneId = "";
     let oneName = "";
     let twoId = "";
+    let twoName = "";
     let matchId = "";
     let joinRequestedAt = 0;
 
@@ -201,9 +207,11 @@ describe("44 watching a friend's live game", () => {
     });
     me(two).then((body) => {
       twoId = body.profile.id;
+      twoName = body.username?.name ?? "";
     });
     cy.then(() => {
       expect(oneName, "R1435: the friend watched has a username to be found by").to.not.eq("");
+      expect(twoName, "R1435: the watcher has a username to be found by").to.not.eq("");
     });
 
     // §9.5: a friend allows watching until they say otherwise.
@@ -211,22 +219,15 @@ describe("44 watching a friend's live game", () => {
       .its("body.settings.allowSpectators")
       .should("eq", true);
 
-    // Two friends: `two` asks, `one` accepts.
+    // B43: `one` asks `two` to be friends, and `two` opens Play together, where the request waits.
     cy.then(() => {
-      cy.request({ method: "POST", url: api("/api/friends/requests"), headers: bearer(two), body: { username: oneName } })
+      cy.request({ method: "POST", url: api("/api/friends/requests"), headers: bearer(one), body: { username: twoName } })
         .its("status")
         .should("eq", 201);
-      friendsOf(one).then((body) => {
-        const request = body.incoming.find((got) => got.from.profileId === twoId);
-        expect(request, "B43: the request reached the friend").to.not.eq(undefined);
-        cy.request({
-          method: "POST",
-          url: api(`/api/friends/requests/${request?.requestId ?? ""}/accept`),
-          headers: bearer(one),
-        })
-          .its("status")
-          .should("eq", 200);
-      });
+    });
+    cy.visitAs(two, TOGETHER, { onBeforeLoad: recordWatchFrames });
+    cy.then(() => {
+      cy.get(incomingRequestRow(oneId), { timeout: timeouts.view }).should("be.visible");
     });
 
     // An unranked match: `one` hosts the room (seat p1), `pending` joins it (p2). No deck to bring:
@@ -252,10 +253,14 @@ describe("44 watching a friend's live game", () => {
       });
     });
 
-    // B56: the friend's row offers Watch, and the click opens the watch screen. Nothing sits between
-    // the join and this, so the waiting panel (up to the delay) is still showing when it is asserted.
-    cy.visitAs(two, TOGETHER, { onBeforeLoad: recordWatchFrames });
+    // B45: `two` accepts, and the page reads the friends list again. B56: the new friend's row offers
+    // Watch, and the click opens the watch screen in the page already loaded. Only those clicks sit
+    // between the join and the watcher's hello, so the waiting panel (up to the delay) is still showing
+    // when it is asserted.
     cy.then(() => {
+      cy.get(incomingRequestRow(oneId)).within(() => {
+        cy.get(ts(TOGETHER_REQUEST_ACCEPT)).click();
+      });
       cy.get(friendRow(oneId), { timeout: timeouts.view })
         .should("have.attr", "data-status", "inMatch")
         .and("have.attr", "data-watchable", "true")

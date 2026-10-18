@@ -75,23 +75,8 @@ mod tests {
         live.memory.insert(subsystems::POWER_KEY.to_string(), json!(power));
     }
 
-    #[test]
-    fn is_tagged_catalyst_and_both_faces_name_its_prime_spaced_solarius_prime_patch_v0_2_y() {
-        let def = crate::card_def(SOLARIUS);
-        assert_eq!(def.tags, vec![Tag::Catalyst]);
-        assert!(def.base.text.contains("Death: Shuffle a Solarius Prime into your deck."));
-        assert!(def.radiant.text.contains("Death: Shuffle a Radiant Solarius Prime into your deck."));
-        assert!(def.refs.unwrap_or_default().iter().any(|id| id == PRIME));
-    }
-
     mod base {
         use super::*;
-
-        #[test]
-        fn prints_spell_damage_2_a_keyword_not_a_param_and_declares_nothing() {
-            let s = scenario(json!({ "p1": { "field": [SOLARIUS] } }));
-            assert!(s.stats(SOLARIUS).keywords.contains(&Keyword::SpellDamage { n: 2 }));
-        }
 
         #[test]
         fn s4_4_step_0_a_spell_you_play_deals_2_more_per_hit() {

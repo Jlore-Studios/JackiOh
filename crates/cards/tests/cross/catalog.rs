@@ -25,10 +25,16 @@
 //!                    by their sections' own sentences, the Grapes tagged Fruit, every token tagged
 //!                    Token and rated "Token", B2.5) and B8's table of the ten AI generated cards
 //!                    (tagged AI). Buff Billy's "3X/3X → 6X/6X" prints 0/0 (its `xStats` carry X).
+//!   MEDITATIVE     — docs/meditative-set.md's card headers (M6), with §8.8's later patches.
+//!   MEDITATIVE_PLUS — docs/meditative-plus-set.md's card headers (MP6, issue #1178): the set is
+//!                    held (R1420, R1178000), so a row waits for its card until the set ships.
 //!   patch v0.3.Y    — issue #1067 renamed Jlockheed to Jlockeed in every name (the briefs keep
 //!                    the old spelling as the record).
 //!   patch v0.3.10   — issue #831's costs, stats, types and tags, in every set's rows: the briefs'
 //!                    lines are what the designer first wrote, the patch what the cards are now.
+//!   patch v0.3.12   — issue #1149's costs, stats and the CN in a Bottle rename.
+//!   patch v0.3.13   — issue #1194's costs: #76 Field of Dreams (2), C+ #64 Mulch Muncher (5) and
+//!                    Meditative #19.1 Temporal Rift (0).
 //!   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
 //!                    being R349's fallback.
 //!   rarity         — SPEC §8's rarity paragraph for Core (32/40/16/7/5) and B2.5's table for
@@ -247,8 +253,8 @@ const CORE: &[SpecRow] = &[
         T::Unit,
         &[G::Jlockeed],
         R::Common,
-        st(8, 10),
-        st(16, 20),
+        st(6, 10),
+        st(8, 20),
     ),
     row(
         "14",
@@ -616,7 +622,7 @@ const CORE: &[SpecRow] = &[
     row(
         "52",
         "Silly Silas",
-        c(3),
+        c(4),
         T::Unit,
         &[G::Human],
         R::Legendary,
@@ -857,7 +863,7 @@ const CORE: &[SpecRow] = &[
     row(
         "76",
         "Field of Dreams",
-        c(3),
+        c(2),
         T::Spell,
         &[],
         R::Rare,
@@ -1037,7 +1043,7 @@ const CORE: &[SpecRow] = &[
     row(
         "93",
         "Combo-Index",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[],
         R::Legendary,
@@ -1088,7 +1094,7 @@ const CORE: &[SpecRow] = &[
     row(
         "97",
         "Zephyrs",
-        c(0),
+        c(1),
         T::Spell,
         &[],
         R::Mythic,
@@ -1962,7 +1968,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "88",
         "Siphon Squad",
-        c(2),
+        c(3),
         T::FieldTrap,
         &[],
         R::Rare,
@@ -2262,7 +2268,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Token],
         R::Token,
-        st(5, 5),
+        st(4, 4),
         st(10, 10),
     ),
     row(
@@ -2272,7 +2278,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Token],
         R::Token,
-        st(5, 5),
+        st(4, 4),
         st(10, 10),
     ),
     row(
@@ -2282,7 +2288,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Token],
         R::Token,
-        st(5, 5),
+        st(4, 4),
         st(10, 10),
     ),
     row(
@@ -2292,7 +2298,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Token],
         R::Token,
-        st(0, 5),
+        st(0, 4),
         st(0, 10),
     ),
     row(
@@ -2302,7 +2308,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Token],
         R::Token,
-        st(5, 5),
+        st(4, 4),
         st(10, 10),
     ),
     row(
@@ -2608,7 +2614,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "44",
         "Simplicity Audit",
-        c(2),
+        c(3),
         T::Spell,
         &[],
         R::Rare,
@@ -2818,7 +2824,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "64",
         "Mulch Muncher",
-        c(10),
+        c(5),
         T::Unit,
         &[],
         R::Rare,
@@ -2988,7 +2994,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "75",
         "J-lease J-Jungle EX-plorer",
-        c(2),
+        c(3),
         T::Unit,
         &[],
         R::Legendary,
@@ -3345,7 +3351,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "19.1",
         "Temporal Rift",
-        c(2),
+        c(0),
         T::Spell,
         &[G::Token],
         R::Token,
@@ -3554,8 +3560,8 @@ const MEDITATIVE: &[SpecRow] = &[
     ),
     row(
         "37",
-        "CN in a bottle",
-        X,
+        "CN in a Bottle",
+        c(1),
         T::Spell,
         &[G::Cn],
         R::Epic,
@@ -3719,8 +3725,8 @@ const MEDITATIVE: &[SpecRow] = &[
         T::Unit,
         &[G::Cn],
         R::Legendary,
-        st(8, 8),
-        st(16, 16),
+        st(2, 2),
+        st(4, 4),
     ),
     row(
         "48",
@@ -3865,7 +3871,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "59",
         "Permanent Upperclassman",
-        c(3),
+        c(4),
         T::Unit,
         &[G::Human],
         R::Rare,
@@ -4456,11 +4462,302 @@ const MEDITATIVE: &[SpecRow] = &[
     ),
 ];
 
+/// R1420, R1178000: the Meditative+ set's rows, transcribed from docs/meditative-plus-set.md's card
+/// headers (MP6), in number order with each token after its card. The set does not ship yet: an
+/// entry it holds must equal its row, and a row with no entry is a card still being built, until it
+/// ships (issue #1187). #17 is Dogpile, Classic #60 holding the name Pile On (R381, R1178002); #20.1
+/// Lil' Kenny prints 0/0, its X/X its summon's (`xStats`, as C+ #69 Buff Billy's 3X/3X).
+const MEDITATIVE_PLUS: &[SpecRow] = &[
+    row(
+        "1",
+        "Bob's Plan",
+        c(1),
+        T::Spell,
+        &[G::Quickdraw],
+        R::Mythic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "1.1",
+        "Base Camp",
+        c(0),
+        T::Spell,
+        &[G::Ai, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "1.2",
+        "Spa Day",
+        c(2),
+        T::Spell,
+        &[G::Ai, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row("2", "NA Tech", c(1), T::Spell, &[], R::Epic, NO_STATS, NO_STATS),
+    row(
+        "3",
+        "Wondrous Wand",
+        emb(2, 4),
+        T::Spell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "4",
+        "Supply Drop",
+        emb(2, 4),
+        T::Spell,
+        &[G::Jlockeed],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "5",
+        "Spirit Lash",
+        emb(0, 1),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "6",
+        "Bloodbloom",
+        c(0),
+        T::Spell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "7",
+        "Life Mage",
+        c(1),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(1, 2),
+        st(2, 4),
+    ),
+    row(
+        "8",
+        "Arch Mage",
+        c(2),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(4, 7),
+        st(8, 14),
+    ),
+    row(
+        "9",
+        "Magic Amplifier",
+        c(1),
+        T::FieldSpell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "10",
+        "Medina Grifter",
+        c(1),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(4, 1),
+        st(8, 2),
+    ),
+    row(
+        "11",
+        "Living Mana Potion",
+        c(1),
+        T::Unit,
+        &[G::Potion],
+        R::Rare,
+        st(5, 1),
+        st(10, 2),
+    ),
+    row(
+        "12",
+        "Living Armor Potion",
+        c(1),
+        T::Unit,
+        &[G::Potion],
+        R::Rare,
+        st(1, 5),
+        st(2, 10),
+    ),
+    row(
+        "13",
+        "Living Health Potion",
+        c(1),
+        T::Unit,
+        &[G::Potion],
+        R::Rare,
+        st(3, 3),
+        st(6, 6),
+    ),
+    row(
+        "14",
+        "Potion Pouch",
+        c(1),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "15",
+        "Book of Potions",
+        c(1),
+        T::Spell,
+        &[G::Book],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "16",
+        "Jazakus",
+        c(1),
+        T::Unit,
+        &[G::Human, G::Catalyst],
+        R::Epic,
+        st(2, 2),
+        st(4, 4),
+    ),
+    row(
+        "16.1",
+        "Jazakus Prime",
+        c(1),
+        T::Unit,
+        &[G::Human, G::Prime, G::Token],
+        R::Token,
+        st(8, 8),
+        st(16, 16),
+    ),
+    row("17", "Dogpile", c(1), T::Spell, &[], R::Rare, NO_STATS, NO_STATS),
+    row(
+        "18",
+        "Cognitive Offloading",
+        c(1),
+        T::Spell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "19",
+        "Grubby Gloves",
+        emb(1, 2),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "20",
+        "KY's Competition",
+        c(2),
+        T::Spell,
+        &[G::Ky],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "20.1",
+        "Lil' Kenny",
+        c(1),
+        T::Unit,
+        &[G::Ky, G::Token],
+        R::Token,
+        st(0, 0),
+        st(0, 0),
+    ),
+    row(
+        "21",
+        "Harmony Spirit",
+        c(2),
+        T::Unit,
+        &[G::Cn],
+        R::Rare,
+        st(3, 7),
+        st(6, 14),
+    ),
+    row(
+        "22",
+        "Mountaintop Garden",
+        c(3),
+        T::FieldSpell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "23",
+        "Enormous Elderberry",
+        emb(2, 4),
+        T::Spell,
+        &[G::Fruit],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "24",
+        "Bob, Wisconsin's Strongest Soldier",
+        c(3),
+        T::Unit,
+        &[],
+        R::Legendary,
+        st(5, 5),
+        st(10, 10),
+    ),
+    row(
+        "25",
+        "KY's Intuition",
+        c(1),
+        T::Spell,
+        &[G::Ky],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "26",
+        "Scratch Pad",
+        c(0),
+        T::Spell,
+        &[],
+        R::Mythic,
+        NO_STATS,
+        NO_STATS,
+    ),
+];
+
 const FIXTURES: &[(SetName, &[SpecRow])] = &[
     (SetName::Core, CORE),
     (SetName::Classic, CLASSIC),
     (SetName::ClassicPlus, CLASSIC_PLUS),
     (SetName::Meditative, MEDITATIVE),
+    (SetName::MeditativePlus, MEDITATIVE_PLUS),
 ];
 
 /// BUILD M4-T1 and B2.4, plus the mechanics patch's Plague and patch v0.2.Y's Catalyst, Prime and
@@ -4482,6 +4779,7 @@ const ALLOWED_TAGS: &[&str] = &[
     "Prime",
     "Acclaimed",
     "Wincon",
+    "Potion",
     "Token",
 ];
 
@@ -4528,6 +4826,17 @@ const RARITY_COUNTS: &[(&str, &[(&str, usize)])] = &[
             ("Mythic", 6),
         ],
     ),
+    // R1420, R1178000: docs/meditative-plus-set.md MP2's distribution, a ceiling until the set ships.
+    (
+        "Meditative+",
+        &[
+            ("Common", 5),
+            ("Rare", 9),
+            ("Epic", 9),
+            ("Legendary", 1),
+            ("Mythic", 2),
+        ],
+    ),
 ];
 
 /// B2.1: cards and tokens per set.
@@ -4558,6 +4867,12 @@ const SET_SIZES: &[SetSize] = &[
         set: "Meditative",
         cards: 102,
         tokens: 30,
+    },
+    // R1420, R1178000: docs/meditative-plus-set.md MP2, a ceiling until the set ships.
+    SetSize {
+        set: "Meditative+",
+        cards: 26,
+        tokens: 4,
     },
 ];
 
@@ -4753,6 +5068,20 @@ fn fixture_report(set: SetName) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+/// R1420, R1178000: the ids of a held set's entries among `ids` that the catalog holds yet (a card
+/// still being built has none), or all of them once its set ships, when a missing one fails the
+/// list it is in. The ids of a shipped set pass unchanged.
+fn landed(ids: &[&str]) -> Vec<String> {
+    ids.iter()
+        .filter(|id| {
+            CATALOG.contains_key(**id)
+                || !id.starts_with("meditativeplus-")
+                || set_ships(SetName::MeditativePlus)
+        })
+        .map(|id| (*id).to_string())
+        .collect()
 }
 
 /// `/^\d+$/`.
@@ -4970,6 +5299,89 @@ mod r1420_every_meditative_entry_equals_its_fixture_row_while_the_set_is_built {
     }
 }
 
+mod r1178000_every_meditative_plus_entry_equals_its_fixture_row_while_the_set_is_built {
+    use super::*;
+
+    #[test]
+    fn r1178000_every_meditative_plus_entry_equals_its_fixture_row_and_none_is_missing_once_it_ships() {
+        assert_eq!(fixture_report(SetName::MeditativePlus), "");
+        let by_key = by_key();
+        let missing: Vec<&str> = MEDITATIVE_PLUS
+            .iter()
+            .filter(|row| !by_key.contains_key(&key_of("Meditative+", row.index)))
+            .map(|row| row.name)
+            .collect();
+        if set_ships(SetName::MeditativePlus) {
+            assert_eq!(
+                missing,
+                Vec::<&str>::new(),
+                "a shipped set holds every card it lists"
+            );
+        }
+        // Every entry of the set is `meditativeplus-NNN` or `meditativeplus-NNN-k` (B2.2's segment,
+        // no hyphen), and none of them ships before the release (#1187).
+        for entry in entries()
+            .into_iter()
+            .filter(|entry| entry.set == SetName::MeditativePlus)
+        {
+            assert!(entry.id.starts_with("meditativeplus-"), "{}", entry.id);
+        }
+    }
+
+    #[test]
+    fn r1178000_the_set_s_census_is_26_cards_and_4_tokens_5_9_9_1_2() {
+        let tokens: Vec<&str> = MEDITATIVE_PLUS
+            .iter()
+            .filter(|row| row.rarity == Rarity::Token)
+            .map(|row| row.index)
+            .collect();
+        assert_eq!(tokens, ["1.1", "1.2", "16.1", "20.1"]);
+        let mut rarities: BTreeMap<&str, usize> = BTreeMap::new();
+        for row in MEDITATIVE_PLUS.iter().filter(|row| row.rarity != Rarity::Token) {
+            *rarities.entry(row.rarity.as_str()).or_insert(0) += 1;
+        }
+        let expected: BTreeMap<&str, usize> = RARITY_COUNTS
+            .iter()
+            .find(|(set, _)| *set == "Meditative+")
+            .map(|(_, counts)| counts.iter().copied().collect())
+            .unwrap_or_default();
+        assert_eq!(rarities, expected);
+        assert_eq!(MEDITATIVE_PLUS.len(), set_size("Meditative+"));
+        // The Potion tag is the set's, on #11, #12 and #13 (#16's crafted potions are transient).
+        let potions: Vec<&str> = MEDITATIVE_PLUS
+            .iter()
+            .filter(|row| row.tags.contains(&Tag::Potion))
+            .map(|row| row.index)
+            .collect();
+        assert_eq!(potions, ["11", "12", "13"]);
+    }
+
+    #[test]
+    fn r1178002_names_its_17_dogpile_since_classic_60_is_pile_on_and_shares_no_name() {
+        assert_eq!(
+            CATALOG.get("classic-060").map(|entry| entry.name.as_str()),
+            Some("Pile On")
+        );
+        let names: Vec<&str> = MEDITATIVE_PLUS
+            .iter()
+            .filter(|row| row.rarity != Rarity::Token)
+            .map(|row| row.name)
+            .collect();
+        assert!(names.contains(&"Dogpile"));
+        let others: Vec<&str> = entries()
+            .into_iter()
+            .filter(|entry| entry.set != SetName::MeditativePlus && !entry.token)
+            .map(|entry| entry.name.as_str())
+            .collect();
+        let clashes: Vec<&&str> = names.iter().filter(|name| others.contains(name)).collect();
+        assert_eq!(
+            clashes,
+            Vec::<&&str>::new(),
+            "R381, R739: one name names one card"
+        );
+    }
+}
+
 mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
     use super::*;
 
@@ -5157,8 +5569,40 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
                 .into_iter()
                 .filter(|entry| entry.printed_rarity.is_some())
                 .all(|entry| entry.token
-                    && (entry.set == SetName::ClassicPlus || entry.set == SetName::Meditative))
+                    && (entry.set == SetName::ClassicPlus
+                        || entry.set == SetName::Meditative
+                        || entry.set == SetName::MeditativePlus))
         );
+    }
+
+    #[test]
+    fn r1178000_prints_the_designer_s_rarity_on_meditative_plus_16_1_and_20_1_and_none_on_its_ai_helpers() {
+        // §7: Jazakus Prime the designer's Epic, Lil' Kenny his Rare; the plan's AI generated
+        // helpers, #1.1 Base Camp and #1.2 Spa Day, none, as the T-AI cards (B2.5).
+        const MEDITATIVE_PLUS_PRINTED: &[(&str, Option<&str>)] = &[
+            ("1.1", None),
+            ("1.2", None),
+            ("16.1", Some("Epic")),
+            ("20.1", Some("Rare")),
+        ];
+        let mut wrong: Vec<String> = Vec::new();
+        for entry in entries()
+            .into_iter()
+            .filter(|entry| entry.set == SetName::MeditativePlus)
+        {
+            let printed = entry.printed_rarity.map(|rarity| rarity.as_str());
+            match MEDITATIVE_PLUS_PRINTED
+                .iter()
+                .find(|(index, _)| *index == entry.index)
+            {
+                None if printed.is_some() => wrong.push(format!("{} prints {printed:?}", entry.id)),
+                Some((_, rarity)) if printed != *rarity => {
+                    wrong.push(format!("{} prints {printed:?}, not {rarity:?}", entry.id));
+                }
+                _ => {}
+            }
+        }
+        assert_eq!(wrong, Vec::<String>::new());
     }
 
     #[test]
@@ -5237,6 +5681,88 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
     }
 }
 
+/// SPEC §7, read at compile time (`include_str!`, no I/O at run time: CLAUDE.md rule 4). Unlike the
+/// transcriptions above this is the note itself on purpose: the test below asks that every token
+/// the catalog holds, of any set, has a row in §7's table, so a token added without one fails
+/// whichever set brings it.
+const TOKENS_NOTE: &str = include_str!("../../../../spec/07-tokens.md");
+
+/// The `(Token, Index, held)` cells of §7's token tables, row by row: the lines after each table's
+/// header row and its rule, up to the first line that is not a row. The first table holds the
+/// shipped sets' tokens; a later one (`held`) a set the catalog holds before it ships (R1420,
+/// R1178000), whose rows may wait for their cards as its census does.
+fn section_7_rows() -> Vec<(String, String, bool)> {
+    let mut rows: Vec<(String, String, bool)> = Vec::new();
+    let mut tables = 0;
+    let mut lines = TOKENS_NOTE.lines();
+    while let Some(line) = lines.next() {
+        if !line.starts_with("| Token | Index |") {
+            continue;
+        }
+        tables += 1;
+        lines.next();
+        for line in lines.by_ref() {
+            if !line.starts_with("| ") {
+                break;
+            }
+            let cells: Vec<&str> = line.split('|').map(str::trim).collect();
+            if let (Some(name), Some(index)) = (cells.get(1), cells.get(2)) {
+                rows.push(((*name).to_string(), (*index).to_string(), tables > 1));
+            }
+        }
+    }
+    rows
+}
+
+mod r1177001_a_token_is_one_by_all_four_signals_spec_5_7 {
+    use super::*;
+
+    #[test]
+    fn r1177001_every_token_has_token_true_rarity_token_the_token_tag_and_a_section_7_row_and_no_card_has_any()
+     {
+        let rows = section_7_rows();
+        assert!(rows.len() >= 80, "§7's table reads as {} rows", rows.len());
+        let mut wrong: Vec<String> = Vec::new();
+        for entry in entries() {
+            let signals = [
+                ("token: true", entry.token),
+                ("rarity Token", entry.rarity == Rarity::Token),
+                ("the Token tag", entry.tags.contains(&Tag::Token)),
+                (
+                    "a §7 row",
+                    rows.iter()
+                        .any(|(name, index, _)| *name == entry.name && *index == entry.index),
+                ),
+            ];
+            // `token` is the one the rules read (R11, R102); the label (R1177001) and every other
+            // signal must agree with it.
+            for (signal, has) in signals {
+                if has != entry.token {
+                    let verdict = if has { "has" } else { "lacks" };
+                    wrong.push(format!(
+                        "{} ({} #{}) {verdict} {signal}",
+                        entry.id, entry.name, entry.index
+                    ));
+                }
+            }
+        }
+        assert_eq!(wrong, Vec::<String>::new(), "the four token signals disagree");
+        // And every row of a shipped set names a token the catalog holds; a held set's row may wait
+        // for its card.
+        let orphans: Vec<String> = rows
+            .iter()
+            .filter(|(name, index, held)| {
+                !held
+                    && !entries()
+                        .into_iter()
+                        .any(|entry| entry.token && entry.name == *name && entry.index == *index)
+            })
+            .map(|(name, index, _)| format!("{name} ({index})"))
+            .collect();
+        assert_eq!(orphans, Vec::<String>::new(), "§7 rows with no token");
+    }
+}
+
 mod faces_that_change_more_than_text_b2_7_e40 {
     use super::*;
 
@@ -5260,13 +5786,16 @@ mod faces_that_change_more_than_text_b2_7_e40 {
     }
 
     #[test]
-    fn prints_buff_billy_s_3x_3x_and_6x_6x_as_x_multiples_on_a_0_0_face_and_no_other_face_has_them() {
+    fn prints_buff_billy_s_3x_3x_and_6x_6x_and_lil_kenny_s_x_x_and_2x_2x_as_x_multiples_and_no_other_face_has_them()
+     {
+        // Buff Billy's X is the one it is played for; Meditative+ #20.1 Lil' Kenny's the one M+ #20
+        // summons it with (R1184003).
         let with_x: Vec<String> = entries()
             .into_iter()
             .filter(|entry| entry.base.x_stats.is_some() || entry.radiant.x_stats.is_some())
             .map(|entry| entry.id.clone())
             .collect();
-        assert_eq!(with_x, strings(&["classicplus-069"]));
+        assert_eq!(with_x, strings(&["classicplus-069", "meditativeplus-020-1"]));
         let billy = CATALOG.get("classicplus-069");
         assert_eq!(billy.map(|entry| entry.cost), Some(CardCost::X));
         assert_eq!(
@@ -5276,6 +5805,15 @@ mod faces_that_change_more_than_text_b2_7_e40 {
         assert_eq!(
             billy.and_then(|entry| entry.radiant.x_stats).map(json),
             Some(serde_json::json!({ "attack": 6, "health": 6 }))
+        );
+        let kenny = CATALOG.get("meditativeplus-020-1");
+        assert_eq!(
+            kenny.and_then(|entry| entry.base.x_stats).map(json),
+            Some(serde_json::json!({ "attack": 1, "health": 1 }))
+        );
+        assert_eq!(
+            kenny.and_then(|entry| entry.radiant.x_stats).map(json),
+            Some(serde_json::json!({ "attack": 2, "health": 2 }))
         );
     }
 }
@@ -5355,7 +5893,7 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
     use super::*;
 
     #[test]
-    fn r278_tags_core_13_and_14_the_three_classic_plus_jlockeed_cards_48_51_and_52_classic_4_palantir_and_meditative_87_97_and_97_9_and_no_other_entry()
+    fn r278_tags_core_13_and_14_the_three_classic_plus_jlockeed_cards_48_51_and_52_classic_4_palantir_meditative_87_97_and_97_9_and_meditative_plus_4_and_no_other_entry()
      {
         let mut tagged: Vec<String> = entries()
             .into_iter()
@@ -5375,7 +5913,10 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
                 "meditative-087",
                 "meditative-097",
                 "meditative-097-9",
-            ]),
+            ])
+            .into_iter()
+            .chain(landed(&["meditativeplus-004"]))
+            .collect::<Vec<_>>(),
             "entries tagged Jlockeed"
         );
         // The tag follows the name: every entry whose name says Jlockeed carries it — one
@@ -5390,9 +5931,10 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
             .map(|entry| entry.id.clone())
             .collect();
         named.sort();
+        // Meditative+ #4 Supply Drop, the designer's "Jlockheed" Spell, names no faction either.
         let expected: Vec<String> = tagged
             .into_iter()
-            .filter(|id| id != "classic-004" && id != "meditative-087")
+            .filter(|id| id != "classic-004" && id != "meditative-087" && id != "meditativeplus-004")
             .collect();
         assert_eq!(named, expected, "entries whose name names Jlockeed");
     }
@@ -5448,18 +5990,22 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
     }
 
     #[test]
-    fn tags_classic_plus_38_solarius_and_46_felinor_flagbearer_and_meditative_45_49_and_91_catalyst_and_no_other_entry()
+    fn tags_classic_plus_38_solarius_and_46_felinor_flagbearer_meditative_45_49_and_91_and_meditative_plus_16_catalyst_and_no_other_entry()
      {
         // Meditative #49 YileGPT Tamed since patch v0.3.10 (#831).
         assert_eq!(
             tagged(Tag::Catalyst),
-            strings(&[
-                "classicplus-038",
-                "classicplus-046",
-                "meditative-045",
-                "meditative-049",
-                "meditative-091"
-            ])
+            [
+                strings(&[
+                    "classicplus-038",
+                    "classicplus-046",
+                    "meditative-045",
+                    "meditative-049",
+                    "meditative-091"
+                ]),
+                landed(&["meditativeplus-016"])
+            ]
+            .concat()
         );
     }
 
@@ -5467,13 +6013,17 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
     fn tags_the_prime_tokens_prime_each_named_its_catalyst_s_name_and_a_spaced_prime_and_no_other_entry() {
         assert_eq!(
             tagged(Tag::Prime),
-            strings(&[
-                "classicplus-038-1",
-                "classicplus-046-1",
-                "meditative-045-1",
-                "meditative-049-1",
-                "meditative-091-1"
-            ])
+            [
+                strings(&[
+                    "classicplus-038-1",
+                    "classicplus-046-1",
+                    "meditative-045-1",
+                    "meditative-049-1",
+                    "meditative-091-1"
+                ]),
+                landed(&["meditativeplus-016-1"])
+            ]
+            .concat()
         );
         // Every entry named "<card> Prime" carries the tag, and each Prime is the token its Catalyst
         // defines. M #49.1 YileGPT Unleashed, the token M #49's Death puts in the deck, took the tag in
@@ -5612,5 +6162,44 @@ mod no_face_prints_taunt_beside_indestructible_spec_6_1_r347 {
             })
             .collect();
         assert!(both.is_empty(), "{both:?}");
+    }
+}
+
+mod every_entry_printed_in_chinese_is_cn_r1176000 {
+    use super::*;
+
+    /// A Han character: the CJK Unified Ideographs, Extension A, the compatibility ideographs, and
+    /// Extensions B onward.
+    fn is_han(c: char) -> bool {
+        matches!(
+            c,
+            '\u{3400}'..='\u{4dbf}' | '\u{4e00}'..='\u{9fff}' | '\u{f900}'..='\u{faff}' | '\u{20000}'..='\u{3134f}'
+        )
+    }
+
+    // R1176000: every card in Chinese is CN. A card printed in Chinese (a Han character in its name or
+    // on either face) is in Chinese from the start, so the catalog gives it the CN tag, and a pool of
+    // CN cards finds it; a card translated in a game is CN by its flag instead (`query::tags_of`).
+    #[test]
+    fn r1176000_every_entry_with_a_han_character_in_its_name_or_text_has_the_cn_tag() {
+        let printed: Vec<&CardDef> = entries()
+            .into_iter()
+            .filter(|entry| {
+                [&entry.name, &entry.base.text, &entry.radiant.text]
+                    .iter()
+                    .any(|text| text.chars().any(is_han))
+            })
+            .collect();
+        // Spiritually 中国 is one: the test finds what it is about.
+        assert!(printed.iter().any(|entry| entry.id == "meditative-032"));
+        let missing: Vec<&str> = printed
+            .iter()
+            .filter(|entry| !entry.tags.contains(&Tag::Cn))
+            .map(|entry| entry.id.as_str())
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "printed in Chinese without the CN tag: {missing:?}"
+        );
     }
 }

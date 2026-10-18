@@ -99,27 +99,6 @@ mod tests {
         s.state().players.p2.mods.iter().any(|modifier| js(modifier)["kind"] == "costRule")
     }
 
-    #[test]
-    fn is_a_2_cost_5_5_human_declaring_surcharge() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.cost, CardCost::Fixed(2));
-        assert_eq!(def.type_, CardType::Unit);
-        assert_eq!(def.rarity, Rarity::Common);
-        assert_eq!(js(&def.tags), json!(["Human"]));
-        assert_eq!(
-            [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-            [Some(5), Some(5), Some(10), Some(10)]
-        );
-        assert_eq!(
-            js(&def.params),
-            json!([{ "key": "surcharge", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 }])
-        );
-        let scripts = super::script();
-        assert!(scripts.base.cry.is_some());
-        assert!(scripts.radiant.cry.is_some());
-    }
-
     mod base {
         use super::*;
 

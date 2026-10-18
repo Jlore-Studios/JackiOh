@@ -252,7 +252,7 @@ pub async fn put_settings(app: &Arc<App>, req: Req) -> ApiResult {
 // ---- Social: watching and shared replays (#939, #940) ----
 
 /// S7: both routes answer `{ settings: { groups, allowSpectators }, allowSpectators }`: the account's
-/// groups as before, and whether its live unranked games may be watched by its friends (B50), on the
+/// groups as before, and whether its live games, ranked or unranked, may be watched by its friends (B50), on the
 /// settings and beside them, so a client reading either finds it.
 fn settings_answer(view: PlayerSettingsView, allow_spectators: bool) -> Value {
     json!({

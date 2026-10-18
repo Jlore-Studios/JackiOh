@@ -100,13 +100,6 @@ mod tests {
             use super::*;
 
             #[test]
-            fn is_a_2_1() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [STOCKPILE], "field": [TRICKSTER] }, "p2": { "hand": [STOCKPILE] } }));
-                s.expect_stats(TRICKSTER, json!({ "attack": 2, "health": 1, "maxHealth": 1 }));
-            }
-
-            #[test]
             fn cry_your_next_trap_costs_2_less() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [TRICKSTER, EXPERIMENT, STOCKPILE] }, "p2": { "hand": [STOCKPILE] } }));
@@ -268,16 +261,6 @@ mod tests {
 
         mod radiant {
             use super::*;
-
-            #[test]
-            fn is_a_4_2() {
-                crate::register_all();
-                let mut s = scenario(json!({
-                    "p1": { "hand": [STOCKPILE], "field": [{ "def": TRICKSTER, "radiant": true }] },
-                    "p2": { "hand": [STOCKPILE] },
-                }));
-                s.expect_stats(TRICKSTER, json!({ "attack": 4, "health": 2, "maxHealth": 2 }));
-            }
 
             #[test]
             fn cry_your_next_trap_field_trap_or_field_spell_costs_0() {

@@ -24,15 +24,17 @@ use tokio::sync::OnceCell;
 
 use jackioh_engine::{PLAYER_IDS, PerPlayer, PlayerId, portrait_or_default};
 
+use crate::actor::checkpoint;
 use crate::actor::contracts::one_tx;
 use crate::actor::engine;
 use crate::actor::match_actor::{
-    MatchActor, MatchActorInput, bot_moved_turns, create_match_actor, last_boards_of,
+    MatchActor, MatchActorInput, bot_moved_turns, bot_moved_turns_from, create_match_actor, last_boards_of,
 };
 use crate::actor::telemetry;
 use crate::actor::ws_server::Socket;
 use crate::api::http::{ApiError, ApiErrorCode, lock};
 use crate::app::{App, now_ms};
+use crate::bug_reports::{Finding, FoundIn, refused_rows};
 use crate::config::{GLITCH_BOARDS_SAMPLED, MATCH_CEILING_MINUTES, REMATCH_OFFER_TTL_MS};
 use crate::db::store::{
     BotRow, LastBoardKind, MatchClocks, MatchRow, MatchStatus, ProfileKind, QueueMode, StartMatchInput,
@@ -318,7 +320,7 @@ impl Registry {
 
     async fn rebuild(&self, app: &Arc<App>, match_id: &str) -> Result<MatchActor, RebuildError> {
         let store = |error: crate::db::store::StoreError| RebuildError::Internal(error.to_string());
-        let (match_row, log, mode, bots) = one_tx!(app.db, |t| {
+        let (match_row, log, mode, bots, saved) = one_tx!(app.db, |t| {
             let match_row = t.matches_get(match_id).await?;
             let log = t.matches_actions(match_id).await?;
             let mode = t.matches_mode_of(match_id).await?;
@@ -327,7 +329,12 @@ impl Registry {
                 Some(row) => bots_of(&mut t, &row.players).await?,
                 None => PerPlayer::new(None, None),
             };
-            (match_row, log, mode, bots)
+            // #1169: the checkpoint the last restart drain stored, read with the log it follows.
+            let saved = match &match_row {
+                Some(_) => t.matches_checkpoint(match_id).await?,
+                None => None,
+            };
+            (match_row, log, mode, bots, saved)
         })
         .map_err(store)?;
         let Some(match_row) = match_row else {
@@ -347,10 +354,33 @@ impl Registry {
         );
         let live = match_row.status == MatchStatus::Live;
         let has_bot = bots.p1.is_some() || bots.p2.is_some();
+        let saved_seq = saved.as_ref().map(|saved| saved.seq);
         let (row, rows) = (match_row.clone(), log.clone());
         // #1035: the three folds in one job off the runtime, as Duos's rebuild folds: a long log is a
         // long fold. A panic in the first is the rebuild's internal error.
-        let (folded, replayed, bot_turns) = engine::off_runtime(app.engine_thread, move || {
+        let (folded, replayed, bot_turns, from) = engine::off_runtime(app.engine_thread, move || {
+            // #1169: a checkpoint that passes every check resumes all three folds after its row, and
+            // they fold only the rows after it; any other folds the whole log, as before. `Ok` is the
+            // seq they resumed after, `Err` the refusal of a checkpoint (`None` when there was none).
+            let verified =
+                saved.map(|saved| checkpoint::verify(&saved, &row, &rows).map(|body| (saved.seq, body)));
+            if let Some(Ok((seq, body))) = verified {
+                let tail = &rows[usize::try_from(seq).unwrap_or(rows.len()).min(rows.len())..];
+                let folded = checkpoint::fold_tail(pinned, body.state.clone(), tail);
+                let replayed = live.then(|| {
+                    std::panic::catch_unwind(AssertUnwindSafe(|| {
+                        telemetry::replay_from(pinned, body.telemetry, body.state.clone(), tail).0
+                    }))
+                    .map_err(panic_text)
+                });
+                let bot_turns = (has_bot && live).then(|| {
+                    std::panic::catch_unwind(AssertUnwindSafe(|| {
+                        bot_moved_turns_from(pinned, body.state, tail, body.bot_moved_turn)
+                    }))
+                    .map_err(panic_text)
+                });
+                return (folded, replayed, bot_turns, Ok(seq));
+            }
             let folded = engine::fold(pinned, &args);
             // R1442: the play telemetry the log holds, so a rebuilt actor's think times carry on. A
             // match already finished has none left to write, and is not replayed twice.
@@ -365,10 +395,19 @@ impl Registry {
                 std::panic::catch_unwind(AssertUnwindSafe(|| bot_moved_turns(pinned, &row, &rows, dealt)))
                     .map_err(panic_text)
             });
-            (folded, replayed, bot_turns)
+            (folded, replayed, bot_turns, Err(verified.and_then(Result::err)))
         })
         .await
         .map_err(RebuildError::Internal)?;
+        // #1169: only the reason, never the body, which holds both hands and both libraries.
+        if let Err(Some(reason)) = from {
+            tracing::warn!(
+                event = "match.checkpoint.refused",
+                matchId = %match_id,
+                seq = saved_seq.unwrap_or(0),
+                reason = reason.as_str(),
+            );
+        }
         // R1442: a replay that panics costs the telemetry alone: the actor records afresh from the
         // match's creation.
         let telemetry = match replayed {
@@ -391,8 +430,18 @@ impl Registry {
         if !folded.errors.is_empty() {
             // An action the engine once accepted and now refuses is a determinism break: the log no
             // longer reconstructs the match (§9.3). Rebuild anyway — a live match is better than a dead
-            // one — but say so loudly.
+            // one — but say so loudly, and file it for the night bot (`bug_reports.rs`).
             tracing::error!(event = "match.fold.errors", matchId = %match_id, errors = ?folded.errors);
+            app.bug_reports.file(
+                app.env.deployed_commit.as_deref(),
+                Finding {
+                    match_id: match_id.to_string(),
+                    found_in: FoundIn::Rebuild,
+                    catalog_version: match_row.catalog_version.clone(),
+                    actions: log.len(),
+                    refused: refused_rows(&log, &folded.errors),
+                },
+            );
         }
 
         let actions = log.len();
@@ -411,7 +460,8 @@ impl Registry {
             },
         );
         lock(&self.actors).insert(match_id.to_string(), actor.clone());
-        tracing::info!(event = "match.rebuilt", matchId = %match_id, actions = actions);
+        let from_seq = from.unwrap_or(0);
+        tracing::info!(event = "match.rebuilt", matchId = %match_id, actions = actions, fromSeq = from_seq);
         Ok(actor)
     }
 
@@ -474,14 +524,17 @@ impl Registry {
     /// `MatchActor::halt` sends its open sockets 1001, and its queue drains, so a result being
     /// written lands — and answers how many actors it stopped. `halt` sets `stopped` first, so
     /// `on_socket_gone` stores no grace. The next process rebuilds each match from its log (§9.5),
-    /// and R744 starts the grace of a seat that does not come back. The log is untouched, so replay
-    /// is unaffected.
+    /// from the checkpoint each live match stores first when it passes (#1169), and R744 starts the
+    /// grace of a seat that does not come back. The log is untouched, so replay is unaffected.
     pub async fn stop_all(&self) -> usize {
         let actors: Vec<(String, MatchActor)> = lock(&self.actors).drain(..).collect();
         let count = actors.len();
         let mut stopping = tokio::task::JoinSet::new();
         for (match_id, actor) in actors {
             stopping.spawn(async move {
+                // #1169: before the 1001 frames go out, so a client that reconnects at once to the
+                // next process finds the checkpoint already stored.
+                actor.checkpoint().await;
                 actor.stop().await;
                 tracing::info!(event = "match.stopped", matchId = %match_id);
             });

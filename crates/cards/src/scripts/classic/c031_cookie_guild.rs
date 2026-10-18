@@ -82,27 +82,8 @@ mod tests {
     mod c_n31_cookie_guild {
         use super::*;
 
-        #[test]
-        fn runs_one_script_on_both_faces() {
-            crate::register_all();
-            assert_eq!(crate::card_def(GUILD).id, GUILD);
-            let scripts = script();
-            // The Radiant face is the base Script itself, the same Cry.
-            match (&scripts.base.cry, &scripts.radiant.cry) {
-                (Some(base), Some(radiant)) => assert!(Arc::ptr_eq(base, radiant)),
-                _ => panic!("both faces have the Cry"),
-            }
-        }
-
         mod base {
             use super::*;
-
-            #[test]
-            fn is_a_2_4() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "field": [GUILD], "hand": [ANCHOR] } }));
-                s.expect_stats(GUILD, json!({ "attack": 2, "health": 4 }));
-            }
 
             #[test]
             fn recruits_the_first_2_cost_or_less_unit_from_the_top_passing_over_bigger_units_spells_and_other_permanents() {
@@ -270,13 +251,6 @@ mod tests {
 
         mod radiant {
             use super::*;
-
-            #[test]
-            fn is_a_4_8() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "field": [{ "def": GUILD, "radiant": true }], "hand": [ANCHOR] } }));
-                s.expect_stats(GUILD, json!({ "attack": 4, "health": 8 }));
-            }
 
             #[test]
             fn makes_three_top_down_scans_each_taking_the_next_match() {

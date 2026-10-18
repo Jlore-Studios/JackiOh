@@ -44,6 +44,10 @@ use jackioh_ai::{
     binomial_tail, build_ai_deck, candidate_actions, decide, game_config, gate_needed, gate_shard_games,
     greedy_action, play_match, run_gate_games,
 };
+/// Issue #1113: the seeded fixtures' deck rule and runners; the `cargo test` smokes alone play
+/// them, so they (and this import) exist only in test builds.
+#[cfg(test)]
+use jackioh_ai::{FIXTURE_BANNED_IDS, fixture_game_config, run_fixture_gate_games};
 use jackioh_engine::config::{AI_DIFFICULTY, HUMAN_HANDICAP};
 use jackioh_engine::rng::Rng;
 use jackioh_engine::{
@@ -187,6 +191,22 @@ fn gate_deck(seed: &str, seat: PlayerId, handicap: &Handicap) -> Vec<String> {
         handicap.deck_size,
         &AiDeckOptions {
             mana_cap: Some(handicap.mana_cap),
+            ..AiDeckOptions::default()
+        },
+    )
+}
+
+/// Issue #1113: the fixture games' deck rule: `gate_deck` from the frozen fixture pool
+/// (`FIXTURE_BANNED_IDS`), so a shadow-ban change re-deals none of them.
+#[cfg(test)]
+fn fixture_gate_deck(seed: &str, seat: PlayerId, handicap: &Handicap) -> Vec<String> {
+    let mut rng = Rng::new(&format!("{seed}:deck:{seat}"), 0);
+    build_ai_deck(
+        &mut rng,
+        handicap.deck_size,
+        &AiDeckOptions {
+            mana_cap: Some(handicap.mana_cap),
+            banned: Some(FIXTURE_BANNED_IDS.iter().map(|id| id.to_string()).collect()),
             ..AiDeckOptions::default()
         },
     )
@@ -431,9 +451,24 @@ fn merge(dir: &Path) -> Result<()> {
 /// Plays the listed games of a matchup (1-based), each folded with its handicaps to fill
 /// replayHash/replayErrors; one game per rayon task, collected in the listed order.
 fn play_gate(matchup: Matchup, played: &[i32]) -> GateReport {
+    play_gate_with(matchup, played, run_gate_games)
+}
+
+/// Issue #1113: `play_gate` through `fixture_game_config`: the seeded fixtures' games, dealt from
+/// the frozen fixture pool.
+#[cfg(test)]
+fn play_fixture_gate(matchup: Matchup, played: &[i32]) -> GateReport {
+    play_gate_with(matchup, played, run_fixture_gate_games)
+}
+
+fn play_gate_with(
+    matchup: Matchup,
+    played: &[i32],
+    run: fn(Matchup, &[i32], SearchBudget) -> GateReport,
+) -> GateReport {
     let per_game: Vec<Vec<GateGame>> = played
         .par_iter()
-        .map(|&n| run_gate_games(matchup, &[n], AI_GATE_BUDGET).games)
+        .map(|&n| run(matchup, &[n], AI_GATE_BUDGET).games)
         .collect();
     let games: Vec<GateGame> = per_game.into_iter().flatten().collect();
     let wins = games.iter().filter(|game| game.won).count() as i32;
@@ -543,6 +578,41 @@ fn check_game_config(matchup: Matchup) -> Result<()> {
         expect_eq(
             deck_of(&config, other),
             &gate_deck(&seed, other, &easy),
+            &format!("{label}: the opponent's deck"),
+        )?;
+    }
+    Ok(())
+}
+
+/// Issue #1113: `fixture_game_config` seats the subject and its opponent as the matchup says,
+/// alternating seats, on the specified handicaps, every deck from the frozen fixture pool
+/// (`build_ai_deck` under `FIXTURE_BANNED_IDS`).
+#[cfg(test)]
+fn check_fixture_game_config(matchup: Matchup) -> Result<()> {
+    let name = matchup_name(matchup);
+    let hard_vs_easy = name == "hard-vs-easy";
+    for n in 1..=GAME_CONFIG_PROBES {
+        let config = fixture_game_config(matchup, n, AI_GATE_BUDGET, AI_GATE.seed_series);
+        let seed = gate_seed(matchup, n);
+        let subject = subject_seat_of(n);
+        let other = opponent_of(subject);
+        let subject_handicap = if hard_vs_easy {
+            AI_DIFFICULTY.hard
+        } else {
+            AI_DIFFICULTY.easy
+        };
+        let easy = AI_DIFFICULTY.easy;
+        let label = format!("{name} fixture game {n}");
+
+        expect_eq(config.seed.as_str(), seed.as_str(), &format!("{label}: seed"))?;
+        expect_eq(
+            deck_of(&config, subject),
+            &fixture_gate_deck(&seed, subject, &subject_handicap),
+            &format!("{label}: the subject's deck"),
+        )?;
+        expect_eq(
+            deck_of(&config, other),
+            &fixture_gate_deck(&seed, other, &easy),
             &format!("{label}: the opponent's deck"),
         )?;
     }
@@ -1131,7 +1201,8 @@ pub fn run(args: Args) -> Result<()> {
 #[cfg(test)]
 mod tests {
     //! The gates' smoke run: every check that reads no game, and 4 games of each matchup held to
-    //! `gateNeeded(matchup, 4)` and B31.
+    //! `gateNeeded(matchup, 4)` and B31. The greedy and hard-vs-easy smokes play the frozen fixture
+    //! pool (issue #1113); ai-vs-random keeps the live table.
 
     use super::*;
 
@@ -1139,10 +1210,21 @@ mod tests {
     const SMOKE_GAMES: i32 = 4;
 
     fn smoke(name: &str) {
+        smoke_with(name, play_gate);
+    }
+
+    /// Issue #1113: the seeded fixtures' smoke: the same games, dealt from the frozen fixture
+    /// pool, so a shadow-ban change re-deals none of them. Only the greedy and hard-vs-easy
+    /// smokes play it; ai-vs-random keeps the live table.
+    fn smoke_fixture(name: &str) {
+        smoke_with(name, play_fixture_gate);
+    }
+
+    fn smoke_with(name: &str, play: fn(Matchup, &[i32]) -> GateReport) {
         jackioh_cards::register_all();
         let matchup = parse_matchup(name).unwrap();
         let played: Vec<i32> = (1..=SMOKE_GAMES).collect();
-        let run = play_gate(matchup, &played);
+        let run = play(matchup, &played);
         check_report(&run, &played).unwrap();
         check_clean(&run).unwrap();
         let needed = needed(matchup, SMOKE_GAMES);
@@ -1197,7 +1279,14 @@ mod tests {
 
     #[test]
     fn b29_b31_the_easy_ai_wins_against_the_greedy_baseline_and_every_game_is_clean() {
-        smoke("ai-vs-greedy");
+        smoke_fixture("ai-vs-greedy");
+    }
+
+    #[test]
+    fn fixture_game_config_deals_both_seats_from_the_frozen_fixture_pool() {
+        jackioh_cards::register_all();
+        check_fixture_game_config(parse_matchup("ai-vs-greedy").unwrap()).unwrap();
+        check_fixture_game_config(parse_matchup("hard-vs-easy").unwrap()).unwrap();
     }
 
     #[test]
@@ -1208,7 +1297,7 @@ mod tests {
 
     #[test]
     fn b30_b31_the_hard_ai_wins_against_itself_on_easy_and_every_game_is_clean() {
-        smoke("hard-vs-easy");
+        smoke_fixture("hard-vs-easy");
     }
 
     /// The clock is judged only in an optimised build: an unoptimised test binary slows the search and

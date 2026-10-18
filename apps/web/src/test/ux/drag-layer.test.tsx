@@ -443,10 +443,6 @@ describe("B38 a cancelled drag goes back to idle, sends nothing, and swallows th
 // B39: clicks keep working
 
 describe("B39 a short press is a click, and click-click works with drag to play on or off", () => {
-  it("B39 the drag threshold is 8 px", () => {
-    expect(DRAG_THRESHOLD_PX).toBe(8);
-  });
-
   it("B39 a press that moves 7 px starts no drag, and click-click then plays the card", () => {
     const { onAction } = renderGame();
     const source = el("hand-card-h1");

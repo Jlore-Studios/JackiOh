@@ -51,7 +51,7 @@ deployment decision that can be made later without touching the code.
 | Supabase Postgres | Supabase | Yes (durable) | The 13 tables of BUILD M6 plus `decks`, `trios` and `series` (R250–R263, R330–R341), `tutorial_progress` (R320), `game_records` (R376) and `custom_cards` (R915008), Play together's tables (0038: friends, blocks, presence, challenges, chat, replay shares; SPEC §9.4, §9.5) and the co-op tables (0039: rooms, matches, their logs; SPEC §13), RLS, the private `app` schema |
 | Supabase Data API | Supabase | No | Read-only projections to the browser, RLS-enforced |
 | `jackioh-server` HTTP routes | One process (a Docker image on Render) | No | Redemption, collection reads, deck and trio saves and trio imports, custom cards (saved after the engine's validator, never run, R915008), enqueue in three modes and the empty-queue fallback to a ladder bot (R1453), room create/join, the Conquest series and its sweeper, the tutorial's account copy (R320), the ladder bots' pool (R1454), Play together's friends, blocks, presence, friend challenges, chat and replay shares (SPEC §9.4, §9.5), and co-op rooms (SPEC §13.9) |
-| `jackioh-server` match actor | The same process | **Yes (in memory)** | `GameState`, two WebSockets (one, when a ladder bot holds the other seat and the actor plays it, R1452), the turn clock, the action log, and the watchers of a friend's unranked match, each fed the friend's seat's views late (SPEC §9.5) |
+| `jackioh-server` match actor | The same process | **Yes (in memory)** | `GameState`, two WebSockets (one, when a ladder bot holds the other seat and the actor plays it, R1452), the turn clock, the action log, and the watchers of a friend's live match, ranked or unranked, each fed the friend's seat's views late (SPEC §9.5) |
 | `jackioh-server` co-op actor | The same process | **Yes (in memory)** | One per co-op match (SPEC §13): a `DuosState` (two 1v1 duels and the team life between them), the two human seats' WebSockets, the AI seats it plays itself, the round clock, the co-op action log, the team pings it relays (§5.4) |
 | `crates/engine` + `crates/cards` | Linked into both of the above | No (pure) | Every rule, `reduce`, `view_for`, `fold` |
 
@@ -233,8 +233,9 @@ cannot hold a comment, and three things in them are not obvious:
   GitHub Actions and does nothing here, and the night bot's `bot-state` commits plus its PR branches
   used the day up (every PR then showed a failed Vercel check: `api-deployments-free-per-day`). Two
   settings in `vercel.json` hold it down. `git.deploymentEnabled` creates no deployment at all for
-  the branches machines push to (`bot-state`, `bot/**`, `claude/**`, `copilot/**`, `dependabot/**`,
-  `patch/**`, `patches/**`, `polish/**`, `production` and `promote/**`, which
+  the branches machines push to (`ai/**`, which `training/loop.sh`'s lanes push every 15 minutes
+  while a session runs, `bot-state`, `bot/**`, `claude/**`, `copilot/**`, `dependabot/**`,
+  `learned/**`, `night-bot/**`, `patch/**`, `patches/**`, `polish/**`, `production` and `promote/**`, which
   `promote-production.yml` moves and opens pull requests from, `squishy-state`, `squishy/**`, `wt/**`); main is never listed. `ignoreCommand` runs
   `scripts/vercel-ignore.sh` for everything else: a commit message containing `[vercel]` builds on
   any branch (the flag for a preview); any other branch is cancelled; and main builds unless every
@@ -376,7 +377,7 @@ Notes that matter:
 | The result's write fails | tried again, `MATCH_RECORD_RESULT_ATTEMPTS` tries in all with a doubling wait from `MATCH_RECORD_RESULT_BACKOFF_MS`; if none lands, the match row stays `live` with both players in it, the actor is dropped from the map and both sockets close (1001), and the next socket rebuilds the actor, which writes the result as it arms (R1437) |
 | A clock's action can't be written | its clock runs out again `MATCH_SERVER_ACTION_RETRY_MS` later until the row lands, the match ends or the actor stops; a new turn, an answered prompt, a closed mulligan window or a reconnect cancels it (R776000) |
 | The log already holds the actor's next seq | `StoreError::SeqClash`: the actor is dropped from the map, both sockets close (1001), and the next socket rebuilds it from the log (R776000) |
-| Process boot | nothing: no actor is rebuilt until a socket for its match arrives, when `actor/registry.rs` folds `(seed, decks, log)`; the rebuilt clock restarts the turn clock from full and keeps the ceiling from `started_at` |
+| Process boot | nothing: no actor is rebuilt until a socket for its match arrives, when `actor/registry.rs` folds `(seed, decks, log)`, from the checkpoint the last drain stored when it passes (#1169); the rebuilt clock restarts the turn clock from full and keeps the ceiling from `started_at` |
 | First socket on an actor while the other seat has never attached to it (a restart, a no-show) | start that seat's grace at its stored `grace_deadline_at` if the restart left one (never later than a fresh window, at once if already past), else a fresh 60 s; it expires as a loss like any other. A match no socket returns to is the reaper's ceiling draw (R112, R744) |
 | Idle | The process has no hibernation; an actor with no sockets and an expired grace has already ended. On Durable Objects this row would read "hibernate". |
 
@@ -418,7 +419,7 @@ through `jackioh_ai::duos_decide`. Its loop is §5.1's with four seats:
 - a crashed actor folds its match back with `duos_fold`, and the end writes `duos_matches.result` and
   `ended_at` once and records the result for both humans, unranked.
 
-A watcher (SPEC §9.5) attaches to a friend's live, unranked match at `/ws/watch`. It never sends an
+A watcher (SPEC §9.5) attaches to a friend's live match, ranked or unranked, at `/ws/watch`. It never sends an
 action: the server pushes it the friend's seat's `viewFor`, each `SPECTATE_DELAY_MS` after the state it
 shows, ignores whatever it sends after `hello`, and tells both players' own sockets how many watch.
 
@@ -470,9 +471,12 @@ its result is in (R376), with the mode read off the series, the room or the tick
 match. Nothing on a match's own path reads or writes that table, so a server deployed before
 migration 0014 is applied loses records (each logged as `game.record.failed`), never a match.
 
-No snapshots. ARCHITECTURE-CCG §2.2: "Append each action as it resolves; don't persist snapshots.
-Periodic snapshots are an optimisation for later if replay gets slow." A 30-player-turn cap (R2) puts
-a hard bound on log length, so that day is far off.
+One snapshot, and only beside the log. ARCHITECTURE-CCG §2.2: "Append each action as it resolves;
+don't persist snapshots. Periodic snapshots are an optimisation for later if replay gets slow." A
+30-player-turn cap (R2) bounds a log's length, so nothing is written as a match is played. The
+restart drain alone stores one checkpoint per live match (`match_checkpoints`, migration 0042,
+#1169), which the very next boot's rebuild resumes when every check passes, folding only the rows
+after it, and otherwise ignores for the whole log; a finished match drops it, and no replay reads it.
 
 `match_actions` is append-only as a **database** property: `app.deny_row_mutation()` is attached
 `before update or delete`. `collection_grants` gets the same trigger for the same reason.

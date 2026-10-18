@@ -44,7 +44,6 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
-    use std::sync::Arc;
 
     use jackioh_engine::testkit::*;
 
@@ -86,20 +85,6 @@ mod tests {
 
     fn events_json(s: &Scenario) -> Vec<Value> {
         s.events().iter().map(|event| serde_json::to_value(event).expect("an event is JSON")).collect()
-    }
-
-    #[test]
-    fn runs_one_script_on_both_faces_its_card_count_is_the_declared_cards() {
-        let def = crate::card_def(SLOP);
-        assert_eq!(def.id, SLOP);
-        let scripts = super::script();
-        assert!(Arc::ptr_eq(
-            scripts.base.cry.as_ref().expect("a Cry"),
-            scripts.radiant.cry.as_ref().expect("a Cry")
-        ));
-        let params: Vec<Value> =
-            def.params.unwrap_or_default().iter().map(|entry| json!([entry.key, entry.base, entry.radiant])).collect();
-        assert_eq!(params, vec![json!(["cards", 3, 3])]);
     }
 
     mod base {

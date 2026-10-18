@@ -1,25 +1,48 @@
 //! C #64 Malzahar's Recycler (SPEC §8.6 row 64). (1) Field Spell, Rare.
-//!   Base:    "End of turn: Discard 2 random cards. / Whenever you discard cards, draw that many."
-//!   Radiant: "End of turn: Discard 2 random cards. / Whenever you discard cards, draw your deck."
-//!   Engine:  The end-of-turn discard (§6.2's hook) is 2 random cards of the hand (R682), all of a
-//!            smaller one. "Whenever you discard cards" answers your own `discarded` events, one draw
-//!            each, once the discarding effect has finished (queued triggers, §10.3), so an effect
-//!            that discards 2 draws 2; whoever's effect made you discard counts, the opponent's own
-//!            discards never. A Brittle crumble (§6.1, R385) is not a discard.
+//!   Base:    "Activate: Discard 2 random cards. / Whenever you discard cards, draw that many."
+//!   Radiant: "Activate: Discard 2 random cards. / Whenever you discard cards, draw your deck."
+//!   Engine:  The Activate (R384, once a turn) pays its discard as its cost: 2 random cards of the hand
+//!            (R682), so a hand of fewer than 2 cannot activate it, and the ability does nothing more.
+//!            "Whenever you discard cards" answers your own `discarded` events, one draw each, once the
+//!            discarding effect has finished (queued triggers, §10.3), so an effect that discards 2
+//!            draws 2; whoever's effect made you discard counts, the opponent's own discards never. A
+//!            Brittle crumble (§6.1, R385) is not a discard.
 //!            Radiant: each answer draws the deck as its size stands then (R58), so the first answer
 //!            takes it all and the rest find it empty, no fatigue (R87); most of it burns at the hand
 //!            cap (§2.4), which is the card.
+//!   It discarded at its controller's end of turn until patch v0.3.13 (#1194); `script_v0_3_7b` keeps
+//!   that for the replays of v0.3.7b and before (R767000).
 
 use jackioh_engine::effects::{discard_random, draw};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-064";
 
-/// "End of turn: Discard 2 random cards." — random (R682).
-const END_OF_TURN_DISCARDS: i32 = 2;
+/// "Discard 2 random cards." — random (R682).
+const DISCARDS: i32 = 2;
 
+/// "Activate: Discard 2 random cards.": the discard is the ability's cost, paid as it is activated
+/// (R384), so the ability itself does nothing more; the `recycle` answer draws.
+fn discard_two() -> ActivationDecl {
+    ActivationDecl {
+        id: "discard".to_string(),
+        label: "Discard 2 random cards".to_string(),
+        uses: ActivationUses::Count(1),
+        cost: Some(ActivationCost {
+            discard_random: Some(DISCARDS),
+            ..ActivationCost::default()
+        }),
+        targets: vec![],
+        modes: vec![],
+        can_activate: None,
+        has: None,
+        run: hook(|_ctx| vec![]),
+    }
+}
+
+/// R767000: "End of turn: Discard 2 random cards.", as v0.3.7b and every version before it printed it.
 fn end_of_turn(_ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    vec![discard_random(json_as(json!({ "count": END_OF_TURN_DISCARDS })))]
+    vec![discard_random(json_as(json!({ "count": DISCARDS })))]
 }
 
 /// Whether this event is a card its controller discarded.
@@ -47,6 +70,24 @@ fn draw_deck(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
 
 pub fn script() -> CardScripts {
     let base = Script {
+        activations: vec![discard_two()],
+        triggers: vec![answer(hook(draw_one))],
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        activations: vec![discard_two()],
+        triggers: vec![answer(hook(draw_deck))],
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
+
+/// R767000: the scripts v0.3.7b and every version before it ran, which discarded at the end of their
+/// controller's turn; `KEPT_SCRIPTS` folds those versions' replays under them.
+pub fn script_v0_3_7b() -> CardScripts {
+    let base = Script {
         end_of_turn: Some(hook(end_of_turn)),
         triggers: vec![answer(hook(draw_one))],
         ..Script::default()
@@ -65,7 +106,7 @@ pub fn script() -> CardScripts {
 // played against you, Core #80 Zao Gao, Core #21 Hinder and C #89 Paul Allen's Ghost's targeting cost.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
+    use jackioh_engine::subsystems::activate::why_cannot_activate_ability;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -128,7 +169,7 @@ mod tests {
         json!(picks)
     }
 
-    /// p1's Recycler on the field; p1 to end its turn.
+    /// p1's Recycler on the field, in p1's main phase.
     /// `opts`: `{ radiant?, hand, library? }`.
     fn recycling(opts: Value) -> Scenario {
         let radiant = opts["radiant"] == true;
@@ -156,32 +197,19 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_1_field_spell_with_an_end_of_turn_discard_and_a_discard_trigger_no_tuned_numbers() {
+        fn declares_no_tuned_numbers() {
             crate::register_all();
-            let def = js(&crate::card_def(ID));
-            assert_eq!(def["type"], "Field Spell");
-            assert_eq!(def["cost"], 1);
-            assert!(def["params"].is_null());
-            let scripts = script();
-            assert!(scripts.base.end_of_turn.is_some());
-            assert_eq!(
-                scripts.base.triggers.iter().map(|trigger| js(&trigger.on)).collect::<Vec<Value>>(),
-                vec![json!(["discarded"])],
-            );
-            assert_eq!(
-                scripts.radiant.triggers.iter().map(|trigger| js(&trigger.on)).collect::<Vec<Value>>(),
-                vec![json!(["discarded"])],
-            );
+            assert!(crate::card_def(RECYCLER).params.is_none());
         }
 
         mod base {
             use super::*;
 
             #[test]
-            fn r682_at_the_end_of_your_turn_2_random_cards_are_discarded_and_its_own_discard_draws_2() {
+            fn r384_r682_its_activate_discards_2_random_cards_its_own_discard_draws_2_and_not_again_this_turn() {
                 crate::register_all();
                 let mut s = recycling(json!({ "hand": [MENACE, VANILLA, FILLER] }));
-                s.end_turn();
+                s.activate(RECYCLER, json!({}));
                 // R682: no prompt opens — the two discards land at once, at random.
                 assert!(
                     !s.events().iter().map(js).any(|event| event["type"] == "promptOpened" && event["player"] == "p1")
@@ -190,21 +218,24 @@ mod tests {
                     discarded_by(s.last_events(), P1).iter().map(|event| event["defId"].clone()).collect();
                 assert_eq!(discarded.len(), 2);
                 assert!(all_among(&discarded, &[MENACE, VANILLA, FILLER]));
-                assert_eq!(s.state().active, P2);
-                // The two draws happen at p1's end of turn, before p2's turn starts.
-                let events = s.last_events();
-                let p2_starts = find_index(events, "turnStarted");
-                assert_eq!(drawn_by(&events[..p2_starts], P1).len(), 2);
+                // The two draws answer the discards in the same action, still p1's main phase.
+                assert_eq!(s.state().active, P1);
+                assert_eq!(drawn_by(s.last_events(), P1).len(), 2);
                 assert_eq!(s.hand(P1).len(), 3);
+                // R384: "Activate" is once a turn.
+                let recycler = s.card(RECYCLER).id.clone();
+                let refused =
+                    why_cannot_activate_ability(s.state(), P1, &recycler, None).err().map(|error| error.message);
+                assert_eq!(refused.as_deref(), Some("that ability has already been used this turn"));
             }
 
             #[test]
             fn r682_the_random_discards_come_from_the_match_rng_the_same_game_discards_the_same_cards() {
                 crate::register_all();
                 let mut first = recycling(json!({ "hand": [MENACE, VANILLA, FILLER] }));
-                first.end_turn();
+                first.activate(RECYCLER, json!({}));
                 let mut second = recycling(json!({ "hand": [MENACE, VANILLA, FILLER] }));
-                second.end_turn();
+                second.activate(RECYCLER, json!({}));
                 let ids = |s: &Scenario| -> Vec<Value> {
                     discarded_by(s.last_events(), P1).iter().map(|event| event["instanceId"].clone()).collect()
                 };
@@ -212,25 +243,28 @@ mod tests {
             }
 
             #[test]
-            fn r682_with_fewer_than_2_cards_it_discards_them_all_and_draws_that_many() {
+            fn r384_its_discard_is_its_cost_with_fewer_than_2_cards_in_hand_it_cannot_be_activated() {
                 crate::register_all();
-                let mut s = recycling(json!({ "hand": [MENACE] }));
-                s.end_turn();
-                assert!(s.state().pending.is_none());
-                let events = s.last_events();
-                let p2_starts = find_index(events, "turnStarted");
-                assert_eq!(discarded_by(events, P1).len(), 1);
-                assert_eq!(drawn_by(&events[..p2_starts], P1).len(), 1);
+                let s = recycling(json!({ "hand": [MENACE] }));
+                let recycler = s.card(RECYCLER).id.clone();
+                let refused =
+                    why_cannot_activate_ability(s.state(), P1, &recycler, None).err().map(|error| error.message);
+                assert_eq!(refused.as_deref(), Some("that ability needs 2 cards in your hand to discard"));
+                assert!(!legal_actions(s.state(), P1).into_iter().any(|body| {
+                    matches!(body, ActionBody::Activate { instance_id, .. } if instance_id == recycler)
+                }));
             }
 
             #[test]
-            fn with_an_empty_hand_it_asks_nothing_and_draws_nothing() {
+            fn it_no_longer_discards_at_the_end_of_your_turn() {
                 crate::register_all();
-                let mut s = recycling(json!({ "hand": [] }));
+                let mut s = recycling(json!({ "hand": [MENACE, VANILLA, FILLER] }));
                 s.end_turn();
-                assert!(!s.events().iter().map(js).any(|event| event["type"] == "promptOpened"));
-                let p2_starts = find_index(s.last_events(), "turnStarted");
-                assert_eq!(drawn_by(&s.last_events()[..p2_starts], P1).len(), 0);
+                let events = s.last_events();
+                let p2_starts = find_index(events, "turnStarted");
+                assert_eq!(discarded_by(&events[..p2_starts], P1).len(), 0);
+                assert_eq!(drawn_by(&events[..p2_starts], P1).len(), 0);
+                assert_eq!(s.hand(P1).len(), 3);
             }
 
             #[test]
@@ -322,19 +356,19 @@ mod tests {
                 s.play(LAST_HURRAH, json!({}));
                 assert_eq!(s.hand(P1).len(), 5);
                 s.end_turn();
-                // The Recycler's own end-of-turn discard comes first (two random discards, two fatigue draws) …
-                // … then, after `turnEnded`, Last Hurrah discards the other three, and each is answered (R62).
+                // After `turnEnded`, Last Hurrah discards the whole hand of five, and each discard is
+                // answered from the deck it emptied: five fatigue draws (R62).
                 let events = s.last_events();
                 let after = &events[find_index(events, "turnEnded")..];
                 let before_next_turn = &after[..find_index(after, "turnStarted")];
-                assert_eq!(discarded_by(before_next_turn, P1).len(), 3);
+                assert_eq!(discarded_by(before_next_turn, P1).len(), 5);
                 assert_eq!(
                     before_next_turn
                         .iter()
                         .map(js)
                         .filter(|event| event["type"] == "fatigue" && event["player"] == "p1")
                         .count(),
-                    3,
+                    5,
                 );
                 assert_eq!(s.state().players.p1.fatigue_count, 5);
             }
@@ -375,7 +409,7 @@ mod tests {
                         "library": [VANILLA, VANILLA],
                     },
                 }));
-                s.end_turn();
+                s.activate(RECYCLER, json!({}));
                 // R682: the Recycler's two discards are random, so no prompt opens — and the two draws set off the tax.
                 assert!(s.events().iter().map(js).any(|event| event["type"] == "trapFired"));
                 let pending = js(&s.state().pending);
@@ -435,7 +469,7 @@ mod tests {
             fn r97_r682_no_prompt_opens_and_the_cards_drawn_are_never_named_in_the_opponents_view() {
                 crate::register_all();
                 let mut s = recycling(json!({ "hand": [MENACE, VANILLA, FILLER] }));
-                s.end_turn();
+                s.activate(RECYCLER, json!({}));
                 // R682: no prompt opens at all — nothing to redact options from.
                 assert!(s.state().pending.is_none());
                 assert!(s.view(P2).pending.is_none());
@@ -467,19 +501,18 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r58_its_own_end_of_turn_discard_draws_your_whole_deck_as_its_size_stands_then() {
+            fn r58_its_activate_s_discard_draws_your_whole_deck_as_its_size_stands_then() {
                 crate::register_all();
                 let mut s = recycling(json!({
                     "radiant": true,
                     "hand": [MENACE, VANILLA],
                     "library": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA],
                 }));
-                s.end_turn();
+                s.activate(RECYCLER, json!({}));
                 // R682: no prompt — and the whole two-card hand goes, so both discards are certain.
                 assert!(s.state().pending.is_none());
-                let events = s.last_events();
-                let p2_starts = find_index(events, "turnStarted");
-                assert_eq!(drawn_by(&events[..p2_starts], P1).len(), 5);
+                assert_eq!(discarded_by(s.last_events(), P1).len(), 2);
+                assert_eq!(drawn_by(s.last_events(), P1).len(), 5);
                 assert_eq!(s.pile(P1, "library").len(), 0);
                 // Each discard is answered: the second finds the deck empty and draws nothing, and no fatigue.
                 assert_eq!(s.state().players.p1.fatigue_count, 0);
@@ -489,9 +522,9 @@ mod tests {
             fn r58_s2_4_a_deck_bigger_than_the_hands_room_burns_past_the_hand_cap() {
                 crate::register_all();
                 let library: Vec<&str> = (0..12).map(|_| VANILLA).collect();
-                let mut s = recycling(json!({ "radiant": true, "hand": [MENACE], "library": library }));
-                s.end_turn();
-                // R682: the one-card hand goes with no prompt.
+                let mut s = recycling(json!({ "radiant": true, "hand": [MENACE, VANILLA], "library": library }));
+                s.activate(RECYCLER, json!({}));
+                // R682: the two-card hand goes with no prompt.
                 assert!(s.state().pending.is_none());
                 assert_eq!(s.hand(P1).len(), 10);
                 assert_eq!(s.events().iter().map(js).filter(|event| event["type"] == "burned").count(), 2);

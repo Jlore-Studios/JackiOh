@@ -48,7 +48,7 @@ use crate::damage::{DamageArgs, DamageTarget, deal_damage};
 use crate::draw::{add_to_hand, draw};
 use crate::draw_complete::{CAST_ON_DRAW_KEY, release_draw};
 use crate::echo::{
-    EXILE_ON_LANDING, ResolvedCard, drop_echo_repeats, echo_repeats_owed, exile_on_landing,
+    EXILE_ON_LANDING, ResolvedCard, add_echo_repeats, drop_echo_repeats, echo_repeats_owed, exile_on_landing,
     land_after_resolution, queue_echo_repeats, take_echo_repeat,
 };
 use crate::faces::card_type_of;
@@ -491,6 +491,16 @@ pub struct PlayRun {
     /// declaration takes when it is a legal pick (Meditative #98's Book of Buff). Absent otherwise.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub aim_at: Option<String>,
+    // ---- Meditative+ (issue #1180) ----
+    /// R1180004 (Meditative+ #6 Bloodbloom): the health this play pays its price with, in place of any
+    /// mana — its player's health price times the cost step 1 read — fixed at step 1 as the price is,
+    /// and lost at step 2. Absent for every play no health price reaches (D9).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub health_price: Option<i32>,
+    /// R1180004: the Echo the health price gives the Spell it prices (the Radiant Bloodbloom's 1),
+    /// queued with its own at step 4. Absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub health_echo: Option<i32>,
 }
 
 /// A run with every cursor at rest and every optional field absent, for `validate_play` and
@@ -544,6 +554,8 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         extra_cries: None,
         aim_at: None,
         equip_host: None,
+        health_price: None,
+        health_echo: None,
     }
 }
 
@@ -758,6 +770,12 @@ pub fn validate_play(
 
     let mut run = blank_run(card.id.clone(), card.def_id.clone(), player);
     run.cost_paid = cost;
+    // R1180004: a Spell its player's health price reaches pays its price in health, `multiple` times
+    // the cost read here, and takes the Echo the price gives.
+    if let Some((multiple, echo)) = crate::mana::health_price_rule(state, &card) {
+        run.health_price = Some(multiple.saturating_mul(cost.max(0)));
+        run.health_echo = echo.filter(|echo| *echo > 0);
+    }
     run.zone = zone;
     // R1086: an Equip play names its host at step 1, off the same function the listing and the
     // refusal read.
@@ -933,6 +951,29 @@ fn consume_used_discounts(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardI
     }
 }
 
+/// R1180004: a play the health price paid for spends it — every `HealthPrice` its player holds, since
+/// a newer one replaces an older (`effects::price_next_spell_in_health`).
+fn spend_health_prices(sink: &mut EngineSink<'_>, player: PlayerId) {
+    let ids: Vec<String> = sink.state.players[player]
+        .mods
+        .iter()
+        .filter(|modifier| matches!(modifier.kind, ModifierKind::HealthPrice { .. }))
+        .map(|modifier| modifier.id.clone())
+        .collect();
+    for id in &ids {
+        remove_modifier(sink, player, id);
+    }
+}
+
+/// §6.2 Echo, R30: what this play's resolution owes, queued once — the card's Echo and R30's grant
+/// (`queue_echo_repeats`), and R1180004's, the Echo a health price gave the Spell it priced.
+fn queue_play_echo(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance) {
+    queue_echo_repeats(sink, card, run.player);
+    if let Some(echo) = run.health_echo {
+        add_echo_repeats(sink, card, run.player, echo);
+    }
+}
+
 fn pay_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     let Some(card) = snapshot(sink.state, &run.instance_id) else {
         return;
@@ -943,7 +984,13 @@ fn pay_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
 
     // R454: Plague Counters pay their part of the price, and the mana the rest.
     // R1223: the rest may be borrowed past current mana, up to the credit limit, and counts as spent.
-    let due = mana_due(run.cost_paid, run.plague.as_ref());
+    // R1180004: a play the health price reaches takes no mana; it loses its health price instead,
+    // below, and spends the price.
+    let due = if run.health_price.is_some() {
+        0
+    } else {
+        mana_due(run.cost_paid, run.plague.as_ref())
+    };
     let before = sink.state.players[run.player].mana.current;
     let borrowed = crate::credit::pay_mana(sink.state, run.player, due);
     let changed = mana_event(run.player, &sink.state.players[run.player]);
@@ -955,6 +1002,13 @@ fn pay_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         && let Some(holder) = snapshot(sink.state, &plague.from)
     {
         spend_plague_tokens(sink, &holder, plague.tokens);
+    }
+    // R1180004, R18: the health price is lost, not dealt — no Armor, no cap, nothing that answers a
+    // hit — and a hero it takes to 0 loses at the next state check. A (0) Spell loses nothing and
+    // still spends the price.
+    if let Some(lost) = run.health_price {
+        crate::damage::lose_health(sink, run.player, lost);
+        spend_health_prices(sink, run.player);
     }
     // B5 E5, R450, R682: a targeting cost is part of the price, paid with it (Classic #89) — random
     // cards from the hand, drawn at pay time. Never the card being played or a hand card it picks.
@@ -1758,7 +1812,7 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     // The repeats still resolve at step 6, which only takes what is queued.
     run.echo_queued = true;
     let card = live(sink.state, &card);
-    queue_echo_repeats(sink, &card, run.player);
+    queue_play_echo(sink, run, &card);
     // E39 (Classic+ #14): "the next Spell you play gains …" is gained as it is played, as Echo is (R178).
     let card = live(sink.state, &card);
     stamp_next_spell(sink, &card, run.player);
@@ -2065,6 +2119,8 @@ fn resolve_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
 
 /// Step 5's run of the card's own Cry or spell script, with the play's choices.
 fn run_script_cry(sink: &mut EngineSink<'_>, run: &PlayRun, face: &CardInstance) {
+    // R1180005: a Spell's declared targets, or a cast's choices, are what it targets as it resolves.
+    crate::targeted::note_spell_targets(sink.state, &run.instance_id, &run.targets);
     run_hook_resumable(
         sink,
         face,
@@ -2350,13 +2406,14 @@ fn ask_repeat_targets(
         if options.is_empty() {
             continue;
         }
-        // MD-B22, R946: an aimed cast takes the named legal pick for its first declaration.
+        // MD-B22, R946: an aimed cast takes the named legal pick for its first declaration — R1180005:
+        // a hero named by its prompt key as much as a card by its id.
         if at == 0
             && run.cast == Some(true)
             && let Some(aimed) = run.aim_at.clone()
             && let Some(pick) = options
                 .iter()
-                .find(|option| matches!(option, Selection::Instance { instance_id } if instance_id == &aimed))
+                .find(|option| crate::targeted::aims_at_pick(option, &aimed))
         {
             if let Some(repeat) = run.repeat.as_mut() {
                 repeat.targets.push(pick.clone());
@@ -2520,7 +2577,7 @@ fn resolve_echo_repeats(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     if !run.echo_queued {
         // Once per resolution: `queue_echo_repeats` consumes R30's grant (`echo.rs`).
         run.echo_queued = true;
-        queue_echo_repeats(sink, &opening, run.player);
+        queue_play_echo(sink, run, &opening);
     }
 
     loop {
@@ -2589,6 +2646,8 @@ fn resolve_repeat(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
             ResolvePart::ComboDraw => combo_draw_step(sink, run),
             ResolvePart::Script => {
                 let repeat = run.repeat.take().unwrap_or_default();
+                // R1180005: an Echo repeat's fresh picks are targeted too.
+                crate::targeted::note_spell_targets(sink.state, &run.instance_id, &repeat.targets);
                 // B5 E14, R399: an Echo repeat of a copier runs its copied text again.
                 let face = text_face_of(sink.state, &card);
                 let data = run.mana_before.map(|mana| {
@@ -2645,6 +2704,8 @@ fn finish_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
     // discount or a surcharge it was played at stays behind with the rest of its `costMod` (R766).
     let played_at = resolving.map_or(0, crate::query::return_price_of);
     let arrived = arrived_during(sink.state, run);
+    // R1180005: the enemies the Spell targeted, taken off it before the landing resets it (R78).
+    let targeted = crate::targeted::take_spell_targets(sink.state, &run.instance_id);
     land_after_resolution(
         sink,
         &ResolvedCard {
@@ -2659,6 +2720,7 @@ fn finish_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
             // R174, R61: whether the card is still in play is asked of the stay step 4 put it on.
             placed_from: run.placed_from,
             arrived_during: Some(arrived),
+            targeted,
         },
     );
     if landing {

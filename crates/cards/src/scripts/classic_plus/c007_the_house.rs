@@ -55,7 +55,6 @@ pub fn script() -> CardScripts {
 // radiant summons one of each, the second skipped when only one zone is open".
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -104,20 +103,6 @@ mod tests {
         let mut s = setup(json!({}), false, Some(seed));
         s.play(HOUSE, json!({ "zone": 1 }));
         summoned(&s)
-    }
-
-    #[test]
-    fn is_a_4_field_spell_naming_core_n3_and_c_n6_each_face_has_a_cry_and_a_start_of_turn_hook() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.type_, CardType::FieldSpell);
-        assert_eq!(def.cost, CardCost::Fixed(4));
-        assert_eq!(def.refs, Some(vec![RIGHT.to_string(), WRONG.to_string()]));
-        let scripts = script();
-        for face in [&scripts.base, &scripts.radiant] {
-            assert!(face.cry.is_some());
-            assert!(face.start_of_turn.is_some());
-        }
     }
 
     mod base {

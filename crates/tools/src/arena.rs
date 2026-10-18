@@ -33,10 +33,12 @@
 //! `edge`, `edgeLow`, `edgeHigh`; R850000). Draws and games without a result count as games `a` did
 //! not win, as the gate counts them.
 
+use std::cell::RefCell;
 use std::io::{BufRead, BufReader, Write};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::sync::{Once, mpsc};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, anyhow, bail};
@@ -59,6 +61,58 @@ use crate::patches::utc_date_of;
 
 /// The referee's ceiling on actions in one game; the engine's turn cap (R2) ends every real game first.
 const ARENA_MAX_ACTIONS: usize = 3000;
+
+/// R1006007: the words each of the engine's settle caps panics with (§10.3, R283; `triggers.rs`,
+/// `state_check.rs`, `effects/combat.rs`), when a board runs to its cap instead of settling.
+pub(crate) const UNSETTLED_PANIC: &str = "did not settle";
+
+thread_local! {
+    /// R1006007: on a thread `watch_unsettled` started, what tells its watcher that the work raised an
+    /// `UNSETTLED_PANIC` panic.
+    static UNSETTLED: RefCell<Option<Box<dyn Fn()>>> = const { RefCell::new(None) };
+}
+
+/// R1006007: put a panic hook in front of the one in place (which still prints every panic) that tells
+/// a watched thread's watcher of each `UNSETTLED_PANIC` panic the thread raises, caught or not. The AI's
+/// search catches a panicking line and goes on, so without the hook nothing outside it sees one.
+fn tell_unsettled_panics() {
+    static HOOK: Once = Once::new();
+    HOOK.call_once(|| {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            if info
+                .payload_as_str()
+                .is_some_and(|message| message.contains(UNSETTLED_PANIC))
+            {
+                UNSETTLED.with(|tell| {
+                    if let Some(tell) = &*tell.borrow() {
+                        tell();
+                    }
+                });
+            }
+            previous(info);
+        }));
+    });
+}
+
+/// R1006007: `work` on a thread of its own: its value, or `None` as soon as it raises an
+/// `UNSETTLED_PANIC` panic, caught or not. A loop the cap stops can take minutes to reach it, and the
+/// search may reach it again on every determinization of the decision, so the watcher stops waiting at
+/// the first. The thread runs on until its work returns or the process ends.
+pub(crate) fn watch_unsettled<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'static) -> Option<T> {
+    tell_unsettled_panics();
+    let (sender, receiver) = mpsc::channel::<Option<T>>();
+    let tell = sender.clone();
+    std::thread::spawn(move || {
+        UNSETTLED.with(|cell| {
+            *cell.borrow_mut() = Some(Box::new(move || {
+                let _ = tell.send(None);
+            }))
+        });
+        let _ = sender.send(Some(work()));
+    });
+    receiver.recv().ok().flatten()
+}
 
 /// The directory game records go to when `--out` names none (docs/v0.3.0/README.md §8).
 pub(crate) const TRAINING_OUT_ENV: &str = "JACKIOH_TRAINING_OUT";
@@ -294,6 +348,12 @@ pub(crate) struct ArenaGame {
     pub labels: (String, String),
     /// R850000: whether the game is one of a deal's two, which share its seed.
     pub paired: bool,
+    /// R1006005: the most actions one turn may take before the game ends without a result; `None`
+    /// (the arena's games, the gates') for no such ceiling, only `ARENA_MAX_ACTIONS`.
+    pub turn_actions: Option<usize>,
+    /// R1006007: whether a decision whose search ran a board to a settle cap ends the game without a
+    /// result (self-play's games); the arena's and the gates' games play on.
+    pub stop_unsettled: bool,
 }
 
 /// What a game came to: match.ts's `MatchRecord` minus search statistics, plus each seat's decision times.
@@ -376,6 +436,8 @@ pub(crate) fn game_setup(
         a_seat,
         labels: (a.label.clone(), b.label.clone()),
         paired,
+        turn_actions: None,
+        stop_unsettled: false,
     })
 }
 
@@ -660,7 +722,24 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
     let mut fallbacks = 0;
     let mut times: PerPlayer<Vec<f64>> = PerPlayer::new(Vec::new(), Vec::new());
 
+    let mut turn = state.turn;
+    let mut this_turn = 0usize;
     while state.result.is_none() && log.len() < ARENA_MAX_ACTIONS {
+        // R1006005: a turn that will not end (an endless combo the AI keeps finding worth playing)
+        // ends the game without a result once it passes the ceiling.
+        if state.turn != turn {
+            turn = state.turn;
+            this_turn = 0;
+        }
+        if let Some(ceiling) = game.turn_actions
+            && this_turn >= ceiling
+        {
+            thrown.push(format!(
+                "{this_turn} actions in turn {turn}, the ceiling of one turn (R1006005)"
+            ));
+            break;
+        }
+        this_turn += 1;
         let Some(seat) = seat_to_act(&state) else {
             thrown.push(format!(
                 "no seat to act while the game is live (turn {})",
@@ -670,14 +749,40 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
         };
 
         let started = Instant::now();
-        let choice = choose_for(
-            &mut live[seat],
-            game.skills[seat],
-            &state,
-            seat,
-            &ctl[seat],
-            &mut rngs[seat],
-        );
+        let choice = if game.stop_unsettled && matches!(live[seat], Live::SelfAi) {
+            // R1006007: a decision whose search runs a board to a settle cap ends the game without
+            // a result, at the cap's first panic: the search would reach the loop again and again.
+            let (skill, at, ctl_seed, start) = (
+                game.skills[seat],
+                state.clone(),
+                ctl[seat].clone(),
+                rngs[seat].clone(),
+            );
+            let watched = watch_unsettled(move || {
+                let mut rng = start;
+                let choice = choose_for(&mut Live::SelfAi, skill, &at, seat, &ctl_seed, &mut rng);
+                (choice, rng)
+            });
+            let Some((choice, next)) = watched else {
+                thrown.push(format!(
+                    "{}: a line the search played did not settle (turn {}, R1006007)",
+                    seat.as_str(),
+                    state.turn
+                ));
+                break;
+            };
+            rngs[seat] = next;
+            choice
+        } else {
+            choose_for(
+                &mut live[seat],
+                game.skills[seat],
+                &state,
+                seat,
+                &ctl[seat],
+                &mut rngs[seat],
+            )
+        };
         times[seat].push(started.elapsed().as_secs_f64() * MS_PER_SECOND);
         let chosen = match choice {
             Ok(chosen) => chosen,
@@ -1213,6 +1318,8 @@ mod tests {
             a_seat: PlayerId::P1,
             labels: ("self".to_string(), "random".to_string()),
             paired: false,
+            turn_actions: None,
+            stop_unsettled: false,
         };
         assert_eq!(
             record_id("0.2.0", &game),

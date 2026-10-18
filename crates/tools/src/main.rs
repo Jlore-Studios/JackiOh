@@ -18,8 +18,10 @@ mod gate;
 mod golden;
 mod luau;
 mod patches;
+mod positions;
 mod promote;
 mod replay;
+mod selfplay;
 mod spec;
 mod stats;
 mod sweep;
@@ -74,6 +76,10 @@ enum Command {
     Agent(agent::Args),
     /// The promotion gate (part 29).
     Promote(promote::Args),
+    /// Self-play game logs for the learned evaluation (#1006).
+    Selfplay(selfplay::Args),
+    /// Self-play logs folded into the learned evaluation's training rows (#1006).
+    Positions(positions::Args),
 }
 
 fn main() -> ExitCode {
@@ -96,6 +102,8 @@ fn main() -> ExitCode {
         Command::Arena(args) => arena::run(args),
         Command::Agent(args) => agent::run(args),
         Command::Promote(args) => promote::run(args),
+        Command::Selfplay(args) => selfplay::run(args),
+        Command::Positions(args) => positions::run(args),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,

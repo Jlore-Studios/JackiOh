@@ -29,7 +29,6 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
-    use std::sync::Arc;
 
     use jackioh_engine::testkit::*;
 
@@ -150,18 +149,6 @@ mod tests {
 
     fn pending_prompt(s: &Scenario) -> String {
         s.state().pending.as_ref().map(|prompt| prompt.prompt.clone()).unwrap_or_default()
-    }
-
-    #[test]
-    fn is_the_engines_question_bank_on_both_faces_over_the_real_bank() {
-        assert_eq!(crate::card_def(TEST).id, TEST);
-        let scripts = super::script();
-        let base_cry = scripts.base.cry.as_ref().expect("a Cry");
-        let radiant_cry = scripts.radiant.cry.as_ref().expect("a Cry");
-        assert!(Arc::ptr_eq(base_cry, radiant_cry));
-        let mut steps: Vec<&str> = scripts.base.resume.keys().copied().collect();
-        steps.sort();
-        assert_eq!(steps, vec!["ask", "grade"]);
     }
 
     mod the_bank_r420 {

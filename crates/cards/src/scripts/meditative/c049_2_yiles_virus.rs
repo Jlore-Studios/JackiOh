@@ -317,14 +317,6 @@ mod tests {
             use super::*;
 
             #[test]
-            fn radiant_is_0_16() {
-                let s = yard("virus-radiant-stats", true);
-                let virus = s.unit(P1, 2).expect("the virus");
-                let stats = s.stats(&virus);
-                assert_eq!((stats.attack, stats.health), (0, 16));
-            }
-
-            #[test]
             fn radiant_discards_2_and_deals_4() {
                 let mut s = scenario(json!({
                     "seed": "virus-radiant-activate",

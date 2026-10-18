@@ -24,7 +24,7 @@ import {
 } from "@jackioh/engine";
 import type { GameState, Rng } from "@jackioh/engine";
 import type { Difficulty } from "@jackioh/engine/config";
-import { AI_DECK, AI_GATE_BUDGET, SHADOW_BAN_IDS, aiToAct, buildAiDeck } from "@jackioh/ai";
+import { AI_DECK, AI_GATE_BUDGET, FIXTURE_BANNED_IDS, SHADOW_BAN_IDS, aiToAct, buildAiDeck } from "@jackioh/ai";
 import { newestShippedSet, opponentOf } from "@jackioh/shared";
 import type { Action, ActionBody, PlayerId } from "@jackioh/shared";
 
@@ -213,7 +213,10 @@ describe("B34 the core answers with the human's view and nothing else", () => {
   it("B34 every snapshot of a played-out opening is viewFor/legalActions of the true state and leaks no hidden AI card", { timeout: 120_000 }, () => {
     const human: PlayerId = "p2";
     const d = driver();
-    const started = d.send({ type: "start", config: config({ seed: "b34-walk", humanSeat: human }) });
+    const started = d.send({
+      type: "start",
+      config: config({ seed: "b34-walk", humanSeat: human, aiBanned: [...FIXTURE_BANNED_IDS] }),
+    });
     expectRule7(d, started, human, "p1");
 
     const rng = createRng("b34-walk:human");
@@ -582,7 +585,12 @@ describe("R265 the practice mulligan: the AI answers its own at once, and the hu
     it(`R265 seated ${human}: the AI answers first without waiting, the human's picker stays open, and the human's answer starts the game`, { timeout: 60_000 }, () => {
       const ai = opponentOf(human);
       const d = driver();
-      const started = snapshotOf(d.send({ type: "start", config: config({ seed: `r265-ai-first-${human}-h`, humanSeat: human }) }));
+      const started = snapshotOf(
+        d.send({
+          type: "start",
+          config: config({ seed: `r265-ai-first-${human}-h`, humanSeat: human, aiBanned: [...FIXTURE_BANNED_IDS] }),
+        }),
+      );
       expect(started.aiToAct, "the AI owes its mulligan from the start").toBe(true);
       expect(started.view.mulligan).toEqual({ youReady: false, opponentReady: false });
       const keep = keepAll(started);
@@ -613,7 +621,12 @@ describe("R265 the practice mulligan: the AI answers its own at once, and the hu
     it(`R265 seated ${human}: the human answers first and waits with its answer sealed, and the AI's answer starts the game`, { timeout: 60_000 }, () => {
       const ai = opponentOf(human);
       const d = driver();
-      const started = snapshotOf(d.send({ type: "start", config: config({ seed: `r265-human-first-${human}-d`, humanSeat: human }) }));
+      const started = snapshotOf(
+        d.send({
+          type: "start",
+          config: config({ seed: `r265-human-first-${human}-d`, humanSeat: human, aiBanned: [...FIXTURE_BANNED_IDS] }),
+        }),
+      );
       const hand = handOf(started);
       const kept = hand.slice(1);
       const sealed = snapshotOf(d.send({ type: "act", action: { type: "mulligan", keep: kept } }));
@@ -674,6 +687,38 @@ describe("R265 the practice mulligan: the AI answers its own at once, and the hu
       expect(replayed.errors).toEqual([]);
       expect(hashState(replayed.state)).toBe(debug.hash);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Issue #1113: the AI's test-only pool
+// ---------------------------------------------------------------------------------------------
+
+describe("the AI deck is dealt with aiBanned when set, and the live shadow ban when absent", () => {
+  it("a game started with aiBanned deals the AI that deck", () => {
+    const seed = "aipool-empty";
+    const human: PlayerId = "p2";
+    const ai = opponentOf(human);
+    const d = driver();
+    const started = d.send({ type: "start", config: config({ seed, humanSeat: human, aiBanned: [] }) });
+    expect(started.type).toBe("started");
+    const handicap = AI_DIFFICULTY.easy;
+    expect(debugOf(d).decks[seatIndex(ai)]).toEqual(
+      buildAiDeck(createRng(`${seed}:ai-deck`), handicap.deckSize, { manaCap: handicap.manaCap, banned: [] }),
+    );
+  });
+
+  it("a game started without aiBanned deals the AI the live table's deck", () => {
+    const seed = "aipool-live";
+    const human: PlayerId = "p2";
+    const ai = opponentOf(human);
+    const d = driver();
+    const started = d.send({ type: "start", config: config({ seed, humanSeat: human }) });
+    expect(started.type).toBe("started");
+    const handicap = AI_DIFFICULTY.easy;
+    expect(debugOf(d).decks[seatIndex(ai)]).toEqual(
+      buildAiDeck(createRng(`${seed}:ai-deck`), handicap.deckSize, { manaCap: handicap.manaCap }),
+    );
   });
 });
 

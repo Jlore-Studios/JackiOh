@@ -32,7 +32,7 @@ use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::config::HAND_CAP;
+use crate::config::{CHINESE_TAG, HAND_CAP};
 use crate::damage::DamageTarget;
 use crate::layers::{AuraTable, face_of, unit_has};
 use crate::script::{EffectContext, FlagOrCount, StaticFlags};
@@ -297,9 +297,10 @@ pub fn played_this_turn_of_type(state: &GameState, player: PlayerId, types: &[Ca
         .sum()
 }
 
-/// MD-B15, R923: every tag a card instance carries — its definition's tags, then each granted tag
-/// (`CardInstance.granted_tags`, Meditative #35) it lacks, in order. Every instance-level tag read
-/// goes through this; catalog pools read definitions and never see granted tags.
+/// MD-B15, R923, R1176000: every tag a card instance carries — its definition's tags, then each
+/// granted tag (`CardInstance.granted_tags`, Meditative #35) it lacks, in order, then CN when the card
+/// is in Chinese (`CardInstance.chinese`, R1300) and lacks it. Every instance-level tag read goes
+/// through this; catalog pools read definitions and never see a granted tag or a translation.
 pub fn tags_of(state: &GameState, card: &CardInstance) -> Vec<Tag> {
     let mut tags: Vec<Tag> = crate::catalog::def_of(Some(state), &card.def_id).tags.clone();
     if let Some(granted) = card.granted_tags.as_deref() {
@@ -308,6 +309,10 @@ pub fn tags_of(state: &GameState, card: &CardInstance) -> Vec<Tag> {
                 tags.push(*tag);
             }
         }
+    }
+    // R1176000: every card in Chinese is CN, for as long as it is in Chinese (which is for good).
+    if card.chinese == Some(true) && !tags.contains(&CHINESE_TAG) {
+        tags.push(CHINESE_TAG);
     }
     tags
 }
@@ -477,6 +482,30 @@ pub fn luck_of(state: &GameState, player: PlayerId) -> i32 {
         }
     }
     sum
+}
+
+/// R1180003 (Meditative+ #7 Life Mage's Radiant face): how many times as large a heal of this
+/// player's hero or Units is — `HEAL_MULTIPLIER` for each "healing is twice as effective" text acting
+/// on their side (§3.2: the units on top of their piles and the face-up backrow), multiplied, so two
+/// Radiant Life Mages make it 4. 1 with none, so every heal is what it was (D9). The opponent's texts
+/// never reach this player's heals.
+pub fn heal_multiplier_of(state: &GameState, player: PlayerId) -> i32 {
+    let mut multiple: i32 = 1;
+    for card in crate::damage::acting_texts_of(state, player) {
+        for text in crate::scripts::texts_of(state, &card) {
+            if text.flags.doubles_healing == Some(true) {
+                multiple = multiple.saturating_mul(crate::config::HEAL_MULTIPLIER);
+            }
+        }
+    }
+    multiple
+}
+
+/// R1180000, R1180001: the player's Spell Damage, the one sum §4.4 step 0 raises each hit of their
+/// Spells by (`damage::spell_damage_of`): their Units' Spell Damage, the Spell Damage auras that reach
+/// them and their "Spell Damage +N this turn". What a card's text or the view reads.
+pub fn player_spell_damage(state: &GameState, player: PlayerId) -> i32 {
+    crate::damage::spell_damage_of(state, player)
 }
 
 /// R662: the permanents of this player's that #85 Unlicensed Experimentation could fuse a played

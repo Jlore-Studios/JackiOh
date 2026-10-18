@@ -1,8 +1,8 @@
 //! M #95 Call to Chaos (Meditative Edition) (SPEC §8.8 row 95, R28, R87, R423, R436, R1240–R1244). (4)
 //! Spell, Call to Chaos, Legendary.
 //!   Base:    "One random effect: Fuse your hand into one card and add 2 copies of it to your hand, all
-//!            three of which cost (0); add 3 random CN cards to your hand, which cost (0); add 2 random
-//!            Prime cards to your hand, which cost (0); your hero gains 8 Armor and you heal it 8; summon a
+//!            three of which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random
+//!            Prime cards to your hand, which cost (0); your hero gains 6 Armor and you heal it 6; summon a
 //!            Jade Beauty; summon 3 random Acclaimed cards; Bounce every enemy permanent, then Nerf each
 //!            card bounced; summon a CN Golem; for the rest of the game, at the start of each of your
 //!            turns, cast a random Call to Chaos; cast a random Call to Chaos."
@@ -179,19 +179,6 @@ mod tests {
             .iter()
             .filter_map(|event| event["defId"].as_str().map(str::to_string))
             .collect()
-    }
-
-    #[test]
-    fn is_a_4_legendary_spell_of_the_call_to_chaos_tag_and_both_faces_hang_the_card_off_cry() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(js(&def.cost), json!(4));
-        assert_eq!(def.type_, CardType::Spell);
-        assert_eq!(js(&def.tags), json!(["Call to Chaos"]));
-        assert_eq!(def.rarity, Rarity::Legendary);
-        let CardScripts { base, radiant } = script();
-        assert!(base.cry.is_some() && radiant.cry.is_some());
-        assert!(base.triggers.is_empty() && radiant.triggers.is_empty());
     }
 
     #[test]

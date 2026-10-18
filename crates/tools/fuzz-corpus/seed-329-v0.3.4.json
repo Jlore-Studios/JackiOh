@@ -1,0 +1,9 @@
+{
+  "seed": 329,
+  "catalogVersion": "v0.3.4",
+  "decks": [
+    ["core-012", "classicplus-016", "core-084", "core-007", "core-039", "classicplus-066", "core-082", "classicplus-032", "classicplus-004", "classic-072", "classic-074", "core-095", "core-003", "core-037", "core-005", "core-051", "core-042", "classic-020", "core-091", "classic-040"],
+    ["classicplus-013", "classicplus-036", "classic-066", "core-028", "core-099", "classicplus-003", "classicplus-048", "core-038", "classicplus-071", "classicplus-023", "core-016", "core-049", "classicplus-029", "classic-050", "classic-055", "core-020", "core-052", "classicplus-025", "classic-049", "classicplus-020"]
+  ],
+  "found": "The daily run's plain fuzz, shard 1 (#562): I5, nothing after game over: p1's The Power to Punish (classic-020) marked p2's Pointmaster (core-020), which died with its hero, and a mark event followed gameOver. Fixed by #594. The decks are decks_for_seed(329) over the 268-card pool of catalog.json at 6cf223d25's parent (v0.3.4)."
+}

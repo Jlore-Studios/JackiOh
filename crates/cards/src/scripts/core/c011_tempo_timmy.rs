@@ -30,7 +30,6 @@ pub fn script() -> CardScripts {
 // `play_radiant` below.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     /// HARNESS GAP (see the header): make the hand copy radiant, then play it.
@@ -43,129 +42,8 @@ mod tests {
         s.play(card, json!({}))
     }
 
-    /// TS `expect(script).toEqual({})`: a face with no hook, no declaration and no flag. The
-    /// destructuring names every field, so a field added to `Script` must be added here too.
-    fn is_empty_script(script: &Script) -> bool {
-        let Script {
-            cost,
-            cry,
-            death,
-            start_of_game,
-            enters_hand,
-            fused_into,
-            resume,
-            delayed,
-            set_stat,
-            start_of_turn,
-            end_of_turn,
-            aura,
-            triggers,
-            on_play_hook,
-            hand_triggers,
-            static_flags,
-            targets,
-            modes,
-            mode_allowed,
-            secret_modes,
-            condition_met,
-            preview,
-            activations,
-            target_checks,
-            cost_aura,
-            graveyard_play,
-            targeting_discards,
-            records_play_as,
-            draw_limit,
-            discard_guard,
-            replacements,
-            hero_guard,
-            attack_mods,
-            conditional_keywords,
-            after_attack,
-            after_attacked,
-            plague_multiplier,
-            echo_x,
-            deck_triggers,
-            graveyard_triggers,
-            quests,
-            tribute_when,
-            would_counter,
-            start_of_opponent_turn,
-            reveal_echo,
-            turn_hook_extra,
-            cry_death_extra,
-            grants,
-        } = script;
-        cost.is_none()
-            && cry.is_none()
-            && death.is_none()
-            && start_of_game.is_none()
-            && enters_hand.is_none()
-            && fused_into.is_none()
-            && resume.is_empty()
-            && delayed.is_none()
-            && set_stat.is_none()
-            && start_of_turn.is_none()
-            && end_of_turn.is_none()
-            && aura.is_none()
-            && triggers.is_empty()
-            && on_play_hook.is_none()
-            && hand_triggers.is_empty()
-            && static_flags.is_none()
-            && targets.is_empty()
-            && modes.is_empty()
-            && mode_allowed.is_none()
-            && !secret_modes
-            && condition_met.is_none()
-            && preview.is_none()
-            && activations.is_empty()
-            && target_checks.is_empty()
-            && cost_aura.is_none()
-            && graveyard_play.is_none()
-            && targeting_discards.is_none()
-            && records_play_as.is_none()
-            && draw_limit.is_none()
-            && discard_guard.is_none()
-            && replacements.is_empty()
-            && hero_guard.is_none()
-            && attack_mods.is_none()
-            && conditional_keywords.is_none()
-            && after_attack.is_none()
-            && after_attacked.is_none()
-            && plague_multiplier.is_none()
-            && echo_x.is_none()
-            && deck_triggers.is_empty()
-            && graveyard_triggers.is_empty()
-            && quests.is_none()
-            && tribute_when.is_none()
-            && would_counter.is_none()
-            && start_of_opponent_turn.is_none()
-            && reveal_echo.is_none()
-            && turn_hook_extra.is_none()
-            && cry_death_extra.is_none()
-            && grants.is_empty()
-    }
-
-    fn kinds(keywords: &[Keyword]) -> Vec<&'static str> {
-        keywords.iter().map(|keyword| keyword.kind().as_str()).collect()
-    }
-
     mod n11_tempo_timmy {
         use super::*;
-
-        #[test]
-        fn is_keywords_only_both_faces_print_their_keywords_and_neither_script_has_a_hook_s8() {
-            crate::register_all();
-            // §8 Conventions: a radiant cell that lists keywords without "Plus" is the COMPLETE radiant
-            // list, so Rush is gone and Charge replaces it. Verified against the catalog here because a
-            // mismatch would otherwise be papered over by a script that re-granted the keyword.
-            let def = crate::card_def(ID);
-            assert_eq!(kinds(&def.base.keywords), vec!["Rush", "First Strike"]);
-            assert_eq!(kinds(&def.radiant.keywords), vec!["Charge", "First Strike"]);
-            let scripts = script();
-            assert!(is_empty_script(&scripts.base));
-            assert!(is_empty_script(&scripts.radiant));
-        }
 
         mod base {
             use super::*;

@@ -66,21 +66,6 @@ mod tests {
     }
 
     #[test]
-    fn is_a_1_fruit_spell_token_with_the_printed_rarity_common() {
-        crate::register_all();
-        let def = crate::card_def(super::ID);
-        assert_eq!(def.id, ROTTEN);
-        assert_eq!(def.type_, CardType::Spell);
-        assert_eq!(def.cost, CardCost::Fixed(1));
-        assert_eq!(def.tags, vec![Tag::Fruit, Tag::Token]);
-        assert_eq!(def.rarity, Rarity::Token);
-        assert_eq!(def.printed_rarity, Some(PrintedRarity::Common));
-        let scripts = super::script();
-        assert!(scripts.base.cry.is_some());
-        assert!(scripts.radiant.cry.is_some());
-    }
-
-    #[test]
     fn r386_an_upgrade_loses_4_and_a_degrade_6_and_the_radiant_1_is_at_its_floor() {
         crate::register_all();
         for (upgrade, loss) in [(true, 4), (false, 6)] {

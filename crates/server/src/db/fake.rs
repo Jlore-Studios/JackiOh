@@ -108,8 +108,8 @@ use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult, CollectionEntry,
     CollectionGrant, ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, Db,
     EmoteEventRow, FavouriteCard, FrozenTrio, FunStats, GameRecordQuery, InviteCluster, InviteCode,
-    LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchPhase, MatchRow, MatchSeats,
-    MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
+    LastBoardEntry, LastBoardKind, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchPhase, MatchRow,
+    MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
     PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
     PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
     PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow,
@@ -224,6 +224,8 @@ pub struct FakeTables {
     pub series: Vec<SeriesRow>,
     pub matches: Vec<MatchRow>,
     pub match_actions: Vec<MatchActionRow>,
+    // #1169: migration 0042's `public.match_checkpoints`, one row per live match at most.
+    pub match_checkpoints: Vec<MatchCheckpointRow>,
     pub rooms: Vec<Room>,
     // R1450: the reservations Postgres holds as open rows.
     pub reserved: Vec<ReservedMatch>,
@@ -1365,6 +1367,45 @@ pub fn matches_actions(f: &mut FakeTx<'_>, match_id: &str) -> Result<Vec<MatchAc
     Ok(rows)
 }
 
+/// #1169: as Postgres's one statement: stored only while the match is live and its log holds `seq`
+/// under `nonce`, and in place of an earlier seq's only.
+pub fn matches_put_checkpoint(f: &mut FakeTx<'_>, row: &MatchCheckpointRow) -> Result<bool, StoreError> {
+    call(f, "matches.putCheckpoint")?;
+    let tables = f.tables();
+    let live = tables
+        .matches
+        .iter()
+        .any(|existing| existing.id == row.match_id && existing.status == MatchStatus::Live);
+    let logged = tables.match_actions.iter().any(|logged| {
+        logged.match_id == row.match_id && logged.seq == row.seq && logged.action.nonce == row.nonce
+    });
+    if !live || !logged {
+        return Ok(false);
+    }
+    match tables
+        .match_checkpoints
+        .iter_mut()
+        .find(|existing| existing.match_id == row.match_id)
+    {
+        None => tables.match_checkpoints.push(row.clone()),
+        Some(existing) if existing.seq < row.seq => *existing = row.clone(),
+        Some(_) => return Ok(false),
+    }
+    Ok(true)
+}
+
+pub fn matches_checkpoint(
+    f: &mut FakeTx<'_>,
+    match_id: &str,
+) -> Result<Option<MatchCheckpointRow>, StoreError> {
+    call(f, "matches.checkpoint")?;
+    Ok(f.tables()
+        .match_checkpoints
+        .iter()
+        .find(|row| row.match_id == match_id)
+        .cloned())
+}
+
 pub fn matches_set_clocks(
     f: &mut FakeTx<'_>,
     match_id: &str,
@@ -1385,6 +1426,8 @@ pub fn matches_finish(f: &mut FakeTx<'_>, match_id: &str, at: i64) -> Result<(),
     };
     row.status = MatchStatus::Finished;
     row.finished_at = Some(at);
+    // #1169: as Postgres's `matches_finish`, the ending drops the checkpoint.
+    keep_only(&mut f.tables().match_checkpoints, |row| row.match_id != match_id);
     Ok(())
 }
 
@@ -3219,6 +3262,8 @@ pub fn forget_voided_rows(tables: &mut FakeTables, match_id: &str) {
     }
     keep_only(&mut tables.matches, |row| row.id != match_id);
     keep_only(&mut tables.match_actions, |row| row.match_id != match_id);
+    // #1169: 0042's checkpoint goes with the match (`on delete cascade`).
+    keep_only(&mut tables.match_checkpoints, |row| row.match_id != match_id);
     for profile in tables.profiles.iter_mut() {
         if profile.in_match_id.as_deref() == Some(match_id) {
             profile.in_match_id = None;
@@ -4227,7 +4272,6 @@ pub fn presence_watchable(
             };
             let seated = |who: &str| row.players.0 == who || row.players.1 == who;
             row.status == MatchStatus::Live
-                && row.ranked != Some(true)
                 && seated(id.as_str())
                 && !seated(viewer)
                 && !tables.social.spectators_refused.contains(id.as_str())

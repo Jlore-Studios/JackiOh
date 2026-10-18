@@ -650,17 +650,32 @@ pub fn choose_action(
     to_json(&json!({ "action": action, "rngCursor": rng.cursor() }))
 }
 
-/// `{ AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, AI_DECK }` for practice, the tutorial harness, the
-/// "More cards from the newest set" toggle (`AI_DECK.leanMinShare`, R1370) and their tests.
-/// `SHADOW_BAN_IDS` is TypeScript's `Object.keys(SHADOW_BAN).sort()` (`jackioh_ai::SHADOW_BAN_IDS`).
+/// `{ AI_BUDGET, AI_GATE_BUDGET, SHADOW_BAN_IDS, FIXTURE_BANNED_IDS, AI_DECK }` for practice,
+/// the tutorial harness, the "More cards from the newest set" toggle (`AI_DECK.leanMinShare`,
+/// R1370) and their tests. `SHADOW_BAN_IDS` is TypeScript's `Object.keys(SHADOW_BAN).sort()`
+/// (`jackioh_ai::SHADOW_BAN_IDS`); `FIXTURE_BANNED_IDS` is the frozen fixture pool (issue #1113),
+/// the same ids in the same order.
 #[wasm_bindgen]
 pub fn constants() -> Result<String, JsError> {
     to_json(&json!({
         "AI_BUDGET": jackioh_ai::AI_BUDGET,
         "AI_GATE_BUDGET": jackioh_ai::AI_GATE_BUDGET,
         "SHADOW_BAN_IDS": jackioh_ai::SHADOW_BAN_IDS,
+        "FIXTURE_BANNED_IDS": jackioh_ai::FIXTURE_BANNED_IDS,
         "AI_DECK": jackioh_ai::AI_DECK,
     }))
+}
+
+/// R1011000: the learned evaluation's parity fixture (`crates/ai/tests/fixtures/learned-parity.json`)
+/// as this build computes it: its integer network's correction for each case, in order. The web's
+/// tests hold the WASM build to the fixture's numbers bit for bit, as `cargo test -p jackioh-ai` holds
+/// the native one.
+#[wasm_bindgen]
+pub fn learned_parity(fixture_json: &str) -> Result<String, JsError> {
+    let fixture: serde_json::Value = serde_json::from_str(fixture_json)
+        .map_err(|error| JsError::new(&format!("the parity fixture is not JSON: {error}")))?;
+    let answers = jackioh_ai::parity_answers(&fixture).map_err(|error| JsError::new(&error))?;
+    to_json(&answers)
 }
 
 // ---------------------------------------------------------------------------------------------

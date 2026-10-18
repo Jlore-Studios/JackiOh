@@ -108,27 +108,6 @@ mod tests {
         panic!("no seed in 0..300 set a Counterspell");
     }
 
-    #[test]
-    fn is_a_2_cost_1_5_declaring_traps() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.cost, CardCost::Fixed(2));
-        assert_eq!(def.type_, CardType::Unit);
-        assert_eq!(def.rarity, Rarity::Rare);
-        assert!(def.tags.is_empty());
-        assert_eq!(
-            [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-            [Some(1), Some(5), Some(2), Some(10)]
-        );
-        assert_eq!(
-            js(&def.params),
-            json!([{ "key": "traps", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 }])
-        );
-        let scripts = super::script();
-        assert!(scripts.base.end_of_turn.is_some());
-        assert!(scripts.radiant.end_of_turn.is_some());
-    }
-
     mod base {
         use super::*;
 

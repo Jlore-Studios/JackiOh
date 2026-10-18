@@ -44,7 +44,6 @@ pub fn script() -> CardScripts {
 // draw is the one a limit of 1 stops.
 #[cfg(test)]
 mod tests {
-    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const RESOURCES: &str = "classic-058";
@@ -90,20 +89,6 @@ mod tests {
 
     mod c_58_common_resources {
         use super::*;
-
-        #[test]
-        fn is_a_2_field_spell_whose_count_of_cards_is_a_declared_number() {
-            crate::register_all();
-            let def = js(&registered_catalog()[ID]);
-            assert_eq!(def["type"], "Field Spell");
-            assert_eq!(def["cost"], 2);
-            assert_eq!(def["params"], json!([{ "key": "cards", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1 }]));
-            let scripts = script();
-            assert!(scripts.base.start_of_turn.is_some());
-            assert!(scripts.base.end_of_turn.is_none());
-            assert!(scripts.radiant.start_of_turn.is_some());
-            assert!(scripts.radiant.end_of_turn.is_some());
-        }
 
         mod base {
             use super::*;

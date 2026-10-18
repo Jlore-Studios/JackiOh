@@ -7,8 +7,10 @@
 //! (B3.3) discounts its card, an Animated backrow card (B3.1) is partly a unit already, and an own hand
 //! card's `costMod` (B3.4, R65) moves its worth. #1086 prices what a side has banked in public state:
 //! Jade steps (R962), the enemy units its delayed effects have marked (R437), extra turns (R846), and
-//! an own Temporary hand card at a discount (R637). It reads only what the seat may know or what a
-//! determinization sampled, and nothing here reads a handicap or a difficulty (R180).
+//! an own Temporary hand card at a discount (R637). #1143 prices an own hand Unit by the face it will
+//! enter with (its Radiant face, buffs and tuning) over its printed base face. It reads only what the
+//! seat may know or what a determinization sampled, and nothing here reads a handicap or a difficulty
+//! (R180).
 //!
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
 //! are passed explicitly.
@@ -18,11 +20,12 @@ use jackioh_engine::config::{
 };
 use jackioh_engine::effects::DELAYED_DESTROY_HOOK;
 use jackioh_engine::{
-    AttackTarget, CardInstance, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
-    active_brittle_count, active_units_of, animated_kind_of, attack_restriction, attacks_per_turn,
-    backrow_is_public, cannot_attack, card_keywords, credit_lapsing, effective_life, find_def, has_keyword,
-    hero_armor_of, is_temporary_card, owed_mana_of, own_cost, pierces, query_cost, reset_instance,
-    subsystems, takes_strike_back, unit_has, unit_view,
+    AttackTarget, CardDef, CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, Position,
+    UnitView, active_brittle_count, active_units_of, animated_kind_of, armor_of, attack_restriction,
+    attacks_per_turn, backrow_is_public, cannot_attack, card_keywords, card_type_of_face, credit_lapsing,
+    effective_life, find_def, frozen_next_turn, has_keyword, hero_armor_of, is_temporary_card, owed_mana_of,
+    own_cost, pierces, query_cost, reset_instance, stats_with_buffs, subsystems, takes_strike_back, unit_has,
+    unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -62,9 +65,13 @@ fn brittle_share(card: &CardInstance, w: &EvalWeights) -> f64 {
     }
 }
 
-/// Whether the unit may attack at all: no "Can't attack" keyword, and no E35 status bars it.
+/// Whether the unit may attack at all: no "Can't attack" keyword, no E35 status bars it, and it is
+/// not Frozen through its controller's next turn (R1174000: one that thaws at this turn's cleanup
+/// swings next turn).
 fn can_swing(state: &GameState, unit: &CardInstance, view: &UnitView) -> bool {
-    !has_keyword(&view.keywords, KeywordKind::CantAttack) && !cannot_attack(state, unit)
+    !has_keyword(&view.keywords, KeywordKind::CantAttack)
+        && !cannot_attack(state, unit)
+        && !frozen_next_turn(state, unit)
 }
 
 /// R49: a unit with Deft, read through the layers, in Defense Position. Its switch to Attack spends
@@ -138,8 +145,49 @@ fn cost_shift(state: &GameState, card: &CardInstance) -> i32 {
     }
 }
 
-/// An own hand card, a Temporary one (R637) at `temporary_discount` off. maxi-tail: a Degrade or
-/// Upgrade of a hand card's stats is not read here.
+/// #1143: a Unit's worth off its own stats and keywords by the weights `unit_worth` reads a view with,
+/// none of the field's layers, position or damage: attack (none with "Can't attack"), health, Armor,
+/// each keyword and Spell Damage per point.
+fn face_worth(attack: i32, health: i32, keywords: &[Keyword], w: &EvalWeights) -> f64 {
+    let mut value = w.health * f64::from(health) + w.armor_point * f64::from(armor_of(keywords));
+    if !has_keyword(keywords, KeywordKind::CantAttack) {
+        value += w.attack * f64::from(attack);
+    }
+    for keyword in keywords {
+        if let Some(weight) = w.keyword.of(keyword.kind()) {
+            value += weight;
+        }
+        if let Keyword::SpellDamage { n } = keyword {
+            value += w.spell_damage * f64::from(*n);
+        }
+    }
+    value
+}
+
+/// #1143: what the face an own hand card will enter with is worth over its printed base face
+/// (`face_worth`): the running face (§5.2) with the buffs and tuning it carries onto the field (§10.4
+/// layers 1 and 4, `stats_with_buffs`) and its own keywords, granted ones included (`card_keywords`).
+/// 0 unless both its faces are Units (B2.7: a face may print its own type).
+fn face_uplift(state: &GameState, card: &CardInstance, def: &CardDef, w: &EvalWeights) -> f64 {
+    let unit = |radiant| card_type_of_face(state, &card.def_id, radiant) == CardType::Unit;
+    if !unit(false) || !unit(true) {
+        return 0.0;
+    }
+    let stats = stats_with_buffs(state, card);
+    let entering = face_worth(stats.attack, stats.max_health, &card_keywords(state, card), w);
+    let base = &def.base;
+    let printed = face_worth(
+        base.attack.unwrap_or(0),
+        base.health.unwrap_or(0),
+        &base.keywords,
+        w,
+    );
+    entering - printed
+}
+
+/// An own hand card, a Temporary one (R637) at `temporary_discount` off, a Radiant one with
+/// `radiant_in_hand` for its Radiant text, and one with two Unit faces with `radiant_face_share` of
+/// what the face it will enter with adds to its printed one (`face_uplift`, #1143).
 fn hand_card_value(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f64 {
     let def = find_def(Some(state), &card.def_id);
     let cost = match def {
@@ -152,13 +200,18 @@ fn hand_card_value(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f
     } else {
         w.hand_cost_delta * f64::from(cost_shift(state, card))
     };
+    // #1143: no reading at a zero share (the frozen baseline's).
+    let uplift = match def {
+        Some(def) if w.radiant_face_share != 0.0 => w.radiant_face_share * face_uplift(state, card, def, w),
+        _ => 0.0,
+    };
     // R637: `is_temporary_card` reads the definition, so a card without one is never asked.
     let temporary = if def.is_some() && is_temporary_card(state, card) {
         1.0 - w.temporary_discount
     } else {
         1.0
     };
-    (w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + radiant - shift)
+    (w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + radiant + uplift - shift)
         * brittle_share(card, w)
         * temporary
 }
@@ -292,7 +345,8 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 
 /// The face damage `attacker`'s board could deal the other hero next turn: units with attack > 0,
 /// position ATK (with `w.deft_defense_attacks`, a Deft unit in Defense Position too, which can switch
-/// to Attack and still swing, R49), no "Can't attack" and no E35 status barring attacks, sorted
+/// to Attack and still swing, R49), no "Can't attack", no E35 status barring attacks and not Frozen
+/// through that turn (R1174000, `can_swing`), sorted
 /// ascending by attack. Taunt units on the defending side soak up the smallest attackers they bind
 /// first, one §4.4 hit at a time (`damage_past_taunts`). Each remaining attacker's attack goes through
 /// `subsystems::projected_hero_damage` (armor, which a Pierce hit skips (R346), and the Anti-oneshot

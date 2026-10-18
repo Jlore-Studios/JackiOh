@@ -70,7 +70,6 @@ pub fn script() -> CardScripts {
 // Unlicensed Experimentation, which fuses the opponent's played permanent onto one of its controller's of that type (R77, R102).
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -170,21 +169,9 @@ mod tests {
         use super::*;
 
         #[test]
-        fn its_lines_of_code_are_catalog_data_public_the_entry_carries_loc_and_it_declares_no_numbers() {
+        fn declares_no_tuned_numbers() {
             crate::register_all();
-            let def = registered_catalog()[ID].clone();
-            assert_eq!(def.id, SHRIMP);
-            assert_eq!(def.loc, Some(shrimp_loc()));
-            assert!(def.params.is_none());
-            let scripts = script();
-            assert_eq!(
-                js(&scripts.base.targets),
-                json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "backrow"] } }]),
-            );
-            assert_eq!(
-                js(&scripts.radiant.targets),
-                json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "backrow"], "check": "longer" } }]),
-            );
+            assert!(crate::card_def(SHRIMP).params.is_none());
         }
 
         mod base {

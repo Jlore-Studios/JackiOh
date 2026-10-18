@@ -37,7 +37,8 @@
 # them, no job does), and the notebooks' project, analysis/ (#445: no file in crates/, apps/, e2e/,
 # spec/ or a per-pull-request job reads it; super.yml's `notebooks` job runs its tests once a day).
 # Nothing a test, a build or a check reads is on the list. The other docs are
-# not: `spec check` reads spec/, the radiant-standard test reads docs/radiant-audit.md, web tests
+# not: `spec check` reads spec/, the radiant-standard test reads docs/radiant-audit.md, the catalog
+# test reads spec/07-tokens.md's table of tokens, web tests
 # read two spec/ notes (06-keywords.md and 05-card-types.md), and the `training gate` job reads
 # training/history/. A `full=false` diff prints every other line false too.
 #
@@ -65,7 +66,7 @@
 #    on the pull request that adds it.
 #  - The files outside a crate that its tests read run that crate's groups: apps/web/src/wire/
 #    (the engine's and the server's export tests write it) engine and server; docs/radiant-audit.md
-#    (radiant_standard.rs) cards; e2e/support/config.ts (the server's tests/api/e2e.rs) server;
+#    (radiant_standard.rs) and spec/07-tokens.md (the catalog test's table of tokens, R1177001) cards; e2e/support/config.ts (the server's tests/api/e2e.rs) server;
 #    crates/server/.env.example, render.yaml and apps/web/.env.production (the catalog version's
 #    sites, which the tools' patches tests read) tools, wasm, the first as well as server;
 #    render.yaml too (the server's tests/api/health.rs reads its healthCheckPath, #861) server; and
@@ -203,7 +204,7 @@ for file in $files; do
       on $RUST
       ;;
     apps/web/src/wire/*) on rust_engine rust_server ;;
-    docs/radiant-audit.md) on rust_cards ;;
+    docs/radiant-audit.md | spec/07-tokens.md) on rust_cards ;;
     e2e/support/config.ts) on rust_server ;;
     render.yaml) on rust_server rust_tools_wasm ;;
     apps/web/.env.production | packages/* | apps/server/* | ladder/*) on rust_tools_wasm ;;
@@ -216,6 +217,7 @@ for file in $files; do
   case "$file" in
     crates/server/Cargo.toml | crates/tools/Cargo.toml | crates/luau/Cargo.toml) on web ;;
     crates/server/src/env.rs | crates/server/Dockerfile | crates/server/tests/deploy/* | crates/engine/tests/fixtures/*) on web ;;
+    crates/ai/tests/fixtures/learned-parity.json) on web ;;
     crates/server/* | crates/tools/* | crates/luau/* | crates/*/README.md) ;;
     crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/*) ;;
     docs/* | training/* | reviews/* | analysis/*) ;;

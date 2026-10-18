@@ -8,7 +8,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { legalActions, type GameState } from "@jackioh/engine";
-import { AI_GATE_BUDGET, aiToAct } from "@jackioh/ai";
+import { AI_GATE_BUDGET, FIXTURE_BANNED_IDS, aiToAct } from "@jackioh/ai";
 import type { ActionBody, PlayerId } from "@jackioh/shared";
 
 import { createPracticeCore } from "./core.ts";
@@ -60,8 +60,19 @@ function debugOf(d: Driver): PracticeDebug {
 }
 
 /** Started with the human on p2, the AI's mulligan answered, the human's still open. */
-function opened(d: Driver, seed: string): PracticeSnapshot {
-  let last = snapshotOf(d.send({ type: "start", config: { seed, difficulty: "easy", humanSeat: HUMAN, deck: { kind: "random" } } }));
+function opened(d: Driver, seed: string, aiBanned?: readonly string[]): PracticeSnapshot {
+  let last = snapshotOf(
+    d.send({
+      type: "start",
+      config: {
+        seed,
+        difficulty: "easy",
+        humanSeat: HUMAN,
+        deck: { kind: "random" },
+        ...(aiBanned === undefined ? {} : { aiBanned: [...aiBanned] }),
+      },
+    }),
+  );
   if (last.aiToAct) last = snapshotOf(d.send({ type: "aiStep" }));
   return last;
 }
@@ -79,7 +90,7 @@ beforeEach(() => {
 describe("R677 a Glitch swap in practice", () => {
   it("R677 after a swap the human sees, acts from and is credited in the AI's former seat, and the AI plays the human's", { timeout: 60_000 }, () => {
     const d = driver();
-    const before = opened(d, "glitch-swap");
+    const before = opened(d, "glitch-swap", [...FIXTURE_BANNED_IDS]);
     expect(before.view.viewer).toBe(HUMAN);
 
     hook.next = (state) => {

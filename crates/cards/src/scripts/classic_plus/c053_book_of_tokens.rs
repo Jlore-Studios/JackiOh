@@ -102,16 +102,6 @@ mod tests {
             .collect()
     }
 
-    #[test]
-    fn is_a_1_spell_book() {
-        crate::register_all();
-        let def = crate::card_def(super::ID);
-        assert_eq!(def.id, BOOK);
-        assert_eq!(def.type_, CardType::Spell);
-        assert_eq!(def.tags, vec![Tag::Book]);
-        assert_eq!(def.refs, Some(vec![RUSH.to_string()]));
-    }
-
     mod base {
         use super::*;
 

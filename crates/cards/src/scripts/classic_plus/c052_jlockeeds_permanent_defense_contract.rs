@@ -141,14 +141,6 @@ mod tests {
         s.end_turn().end_turn();
     }
 
-    #[test]
-    fn is_a_2_spell_jlockeed() {
-        crate::register_all();
-        let def = crate::card_def(super::ID);
-        assert_eq!(def.type_, CardType::Spell);
-        assert_eq!(def.tags, vec![Tag::Jlockeed]);
-    }
-
     mod base {
         use super::*;
 

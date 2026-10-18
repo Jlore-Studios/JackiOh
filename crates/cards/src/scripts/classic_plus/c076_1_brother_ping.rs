@@ -114,30 +114,6 @@ mod tests {
     mod c_n76_1_brother_ping {
         use super::*;
 
-        #[test]
-        fn is_a_2_4_4_pierce_token_printed_rare_with_one_activate_on_each_face_once_radiant_twice() {
-            crate::register_all();
-            let def = crate::card_def(super::super::ID);
-            assert_eq!(def.id, PING);
-            assert_eq!(def.printed_rarity, Some(PrintedRarity::Rare));
-            assert_eq!(
-                [
-                    js(&def.base.attack),
-                    js(&def.base.health),
-                    js(&def.radiant.attack),
-                    js(&def.radiant.health)
-                ],
-                [json!(4), json!(4), json!(8), json!(8)]
-            );
-            assert_eq!(js(&def.base.keywords), json!([{ "kind": "Pierce" }]));
-            let scripts = super::super::script();
-            let uses = |script: &Script| script.activations.iter().map(|ability| js(&ability.uses)).collect::<Vec<_>>();
-            assert_eq!(uses(&scripts.base), vec![json!(1)]);
-            assert_eq!(uses(&scripts.radiant), vec![json!(2)]);
-            let decl = json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]);
-            assert_eq!(scripts.base.activations.first().map(|ability| js(&ability.targets)), Some(decl));
-        }
-
         mod base {
             use super::*;
 

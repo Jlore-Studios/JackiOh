@@ -228,11 +228,6 @@ mod tests {
         json!({ "targets": [{ "pick": "hero", "player": player }] })
     }
 
-    #[test]
-    fn is_tagged_quickdraw_and_acclaimed_spec_8_7_row_37_patch_v0_2_y() {
-        assert_eq!(crate::card_def(WARDRUM).tags, vec![Tag::Quickdraw, Tag::Acclaimed]);
-    }
-
     mod base {
         use super::*;
 

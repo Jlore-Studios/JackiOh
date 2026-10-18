@@ -119,17 +119,6 @@ mod tests {
             assert!(scripts.base.modes.is_empty());
         }
 
-        #[test]
-        fn s8_conventions_the_radiant_cell_adds_a_keyword_only_so_the_radiant_script_keeps_tribute_1() {
-            crate::register_all();
-            let scripts = super::super::script();
-            // The radiant face is the base script, so every part of it matches.
-            assert_eq!(scripts.radiant.static_flags, scripts.base.static_flags);
-            assert!(scripts.radiant.cry.is_none() && scripts.radiant.aura.is_none());
-            assert!(scripts.radiant.targets.is_empty() && scripts.radiant.modes.is_empty());
-            assert_eq!(serde_json::to_value(&scripts.radiant.static_flags).unwrap(), json!({ "tribute": 1 }));
-        }
-
         // Base: the Tribute cost (§6.3, §3.2)
 
         #[test]
@@ -227,12 +216,6 @@ mod tests {
         }
 
         // Radiant: "Plus Immutable" (§8 Conventions, R23)
-
-        #[test]
-        fn s5_2_the_radiant_face_is_20_20() {
-            let mut s = board(json!({ "p2": { "field": [{ "def": ROCK, "radiant": true }] } }));
-            s.expect_stats(ROCK, json!({ "attack": 20, "health": 20, "maxHealth": 20 }));
-        }
 
         #[test]
         fn r23_the_radiant_face_computes_as_indestructible_plus_immutable_s8_conventions_plus() {

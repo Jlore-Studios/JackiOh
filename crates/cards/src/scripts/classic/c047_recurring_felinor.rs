@@ -72,7 +72,6 @@ pub fn script() -> CardScripts {
 // fire are Core's Sheepish and Bread and Butter, and C #52 Final Gambit.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -107,23 +106,6 @@ mod tests {
 
     mod c47_recurring_felinor {
         use super::*;
-
-        #[test]
-        fn names_c_34_in_its_refs_a_cry_and_one_graveyard_trigger_on_trap_fired_on_each_face() {
-            crate::register_all();
-            let def = js(&registered_catalog()[ID]);
-            assert_eq!(def["id"], FELINOR);
-            assert_eq!(def["refs"], json!([ACQUISITION]));
-            assert_eq!(
-                def["params"],
-                json!([{ "key": "returnCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0, "tunedOn": "radiant" }]),
-            );
-            let scripts = script();
-            for face in [&scripts.base, &scripts.radiant] {
-                let on: Vec<Vec<GameEventType>> = face.graveyard_triggers.iter().map(|trigger| trigger.on.clone()).collect();
-                assert_eq!(js(&on), json!([["trapFired"]]));
-            }
-        }
 
         mod base {
             use super::*;

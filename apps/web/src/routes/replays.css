@@ -1,4 +1,5 @@
-/* `/replays` (R768000): the recent games, one row each, the Watch button at its end. */
+/* `/replays` (R768000): the recent games, one row each, its buttons together at its end: Download
+   JSON (R1141000), then Watch. */
 
 .replays__section {
   margin-top: 24px;
@@ -23,6 +24,7 @@
 }
 
 .replays__what {
+  flex: auto;
   min-width: 0;
   overflow-wrap: anywhere;
 }

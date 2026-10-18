@@ -250,6 +250,9 @@ fn to_placeholder(card: &mut CardInstance) {
     card.granted_keywords = Vec::new();
     // MD-B15, R923: a granted tag is read by rules, so a placeholder carries none.
     card.granted_tags = None;
+    // R1301, R1176000: whether the hidden card is in Chinese goes with its face, and a card in
+    // Chinese is CN, so a placeholder is not in Chinese.
+    card.chinese = None;
     // ME-ALTPLAY, R1046: a placeholder names no face-down form.
     card.set_as = None;
     // MD-B6, R943: whether the hidden card was minted after the deal goes with its face.
@@ -299,6 +302,8 @@ fn to_placeholder_json(card: &mut Value) {
         "enchantments",
         // MD-B15, R923: a granted tag is read by rules, so a placeholder carries none.
         "grantedTags",
+        // R1301, R1176000: nor is it in Chinese, which makes a card CN.
+        "chinese",
         // ME-ALTPLAY, R1046: a placeholder names no face-down form.
         "setAs",
         // MD-B6, R943: whether the hidden card was minted after the deal goes with its face.

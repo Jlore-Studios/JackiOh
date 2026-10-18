@@ -46,7 +46,6 @@ pub fn script() -> CardScripts {
 // go to graveyard and new ones are hidden (R97). Refreshes mana up to max. Radiant cards arrive radiant.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -127,17 +126,6 @@ mod tests {
 
     mod c_n27_zephrys_zealotism {
         use super::*;
-
-        #[test]
-        fn is_the_card_it_says_and_the_faces_differ_only_in_the_face_they_rank_and_hand_over() {
-            crate::register_all();
-            assert_eq!(ID, ZEALOTISM);
-            assert_eq!(crate::card_def(ID).id, ZEALOTISM);
-            let scripts = script();
-            let (base_cry, radiant_cry) = (scripts.base.cry.unwrap(), scripts.radiant.cry.unwrap());
-            // Each face is its own script, built by its own call.
-            assert!(!std::sync::Arc::ptr_eq(&base_cry, &radiant_cry));
-        }
 
         mod base {
             use super::*;

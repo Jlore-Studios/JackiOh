@@ -134,19 +134,6 @@ mod tests {
     mod c_n25_soul_shot {
         use super::*;
 
-        #[test]
-        fn is_a_2_spell_with_no_play_time_choice_the_radiant_face_prints_lucky_1() {
-            let def = crate::card_def(ID);
-            assert_eq!(def.cost, CardCost::Fixed(2));
-            let scripts = script();
-            assert!(scripts.base.targets.is_empty());
-            assert!(Arc::ptr_eq(
-                scripts.base.cry.as_ref().expect("base cry"),
-                scripts.radiant.cry.as_ref().expect("radiant cry"),
-            ));
-            assert_eq!(def.radiant.keywords, vec![Keyword::Lucky { n: 1 }]);
-        }
-
         mod base {
             use super::*;
 

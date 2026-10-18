@@ -100,6 +100,15 @@ enchantments?: Array<Enchantment>,
  */
 berserk?: true, 
 /**
+ * R1174000: this Unit is Frozen (`effects::statuses::freeze`), so it can neither declare an attack
+ * nor switch its own position (`combat::has_exertion_in`). The number is its thaw, stamped as the
+ * freeze lands (`freeze::thaw_turn`): it thaws at the cleanup of its controller's first turn
+ * numbered this or later. A status, never text: R78's reset takes it off with the card leaving
+ * the field, and a Vanilla removes it. Absent on every other card, so a game nothing freezes in
+ * serializes and hashes as before (D14).
+ */
+frozen?: number, 
+/**
  * R429: how many times this card has been played, the play under way included — counted at §10.5
  * step 4 (casts too, R70; a countered play never reaches it) for a card whose script asks
  * (`StaticFlags.countsPlays`, #31 KY's Math Equation) and absent on every other card. Kept in every
@@ -115,9 +124,9 @@ timesPlayed?: number,
  */
 flashbackSpent?: true, 
 /**
- * ME-CN, R1300: the card is shown in Chinese (`effects::translate`). Presentation only: no rule
- * reads it. Kept in every zone and through R78's and R766's resets; a copy keeps it, a
- * Transform's new card is without it. Only ever `Some(true)`.
+ * ME-CN, R1300: the card is shown in Chinese (`effects::translate`). One rule reads it: a card
+ * in Chinese is CN (`query::tags_of`, R1176000). Kept in every zone and through R78's and R766's
+ * resets; a copy keeps it, a Transform's new card is without it. Only ever `Some(true)`.
  */
 chinese?: true, 
 /**

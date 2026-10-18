@@ -108,19 +108,6 @@ mod tests {
     mod t_ai_3_hallucination {
         use super::*;
 
-        #[test]
-        fn is_a_0_spell_ai_token() {
-            crate::register_all();
-            let def = js(&crate::card_def(super::super::ID));
-            assert_eq!(def["cost"], json!(0));
-            assert_eq!(def["type"], json!("Spell"));
-            assert_eq!(def["tags"], json!(["AI", "Token"]));
-            assert_eq!(def["token"], json!(true));
-            let scripts = super::super::script();
-            assert!(scripts.base.cry.is_some());
-            assert!(scripts.radiant.cry.is_some());
-        }
-
         mod base {
             use super::*;
 

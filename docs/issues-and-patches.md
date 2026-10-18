@@ -149,7 +149,8 @@ suggestions (`bot:suggestion`) are asked for conventional titles; retitle one th
   part. The alternative is the one v0.2.0 used: build on an integration branch named after the
   version, keep a draft PR to main open, and land the whole thing as the last part. A new set may
   instead be built on main behind the release gate (R1420), as the Meditative set was (#496,
-  `docs/meditative-set.md` M3, shipped by #553). Its cards are in the catalog but in no pool, deck, list or patch
+  `docs/meditative-set.md` M3, shipped by #553) and the Meditative+ set is (#1173,
+  `docs/meditative-plus-set.md` MP3, R1178000). Its cards are in the catalog but in no pool, deck, list or patch
   until its last part adds the set to `SHIPPED_SETS`, so its parts need no fragment, move no golden
   trace and can merge in any order. Work under the same tracker that players should see as soon as
   it lands is a patch of its own, titled without `(part n of m)`, and goes live when it merges.
@@ -220,7 +221,7 @@ part that narrows the task shows the gap instead of hiding it.
   pattern is triage's (`bot/harness/triage.py`, `CONVENTION`), plus the titles tools give their own
   pull requests (`AUTOMATED_PULL`): `patches ship: v0.3.1` (`patches-ship.yml`),
   `Promote main to production: N commit(s) up to abc1234` (`scripts/promote-production.sh`), a
-  training lane's `AI gen N (improve): …` or `AI gen N (unban): …`, and GitHub's `Revert "…"` of
+  training lane's `AI gen N (improve): …`, `AI gen N (unban): …` or `AI gen N (learn): …`, and GitHub's `Revert "…"` of
   a title that passes. The bots title theirs from the builder's answer when it follows the
   convention, else from the issue (`triage.pull_title`), and merge by squash, so their branch
   commits' subjects (`bot: build pass 1 for #85`) never become one on `main`.

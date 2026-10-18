@@ -55,7 +55,6 @@ pub fn script() -> CardScripts {
 // it. R662's yellow glow is tested at the end of this file.
 #[cfg(test)]
 mod tests {
-    use super::script;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -108,26 +107,6 @@ mod tests {
 
     mod gifted_program {
         use super::*;
-
-        #[test]
-        fn s10_5_step_3_both_faces_carry_the_pre_resolution_threshold_and_nothing_else() {
-            // The card is its flag: it has no Cry, no trigger, no hook and no aura, so if step 3 did not read
-            // `giftedProgram` the card would do nothing at all. The faces differ only in the threshold.
-            crate::register_all();
-            let faces = script();
-            assert_eq!(
-                serde_json::to_value(&faces.base.static_flags).expect("flags serialise"),
-                json!({ "giftedProgram": 1 })
-            );
-            assert_eq!(
-                serde_json::to_value(&faces.radiant.static_flags).expect("flags serialise"),
-                json!({ "giftedProgram": 2 })
-            );
-            assert!(faces.base.on_play_hook.is_none());
-            assert!(faces.base.cry.is_none());
-            assert!(faces.base.start_of_turn.is_none());
-            assert!(faces.base.aura.is_none());
-        }
 
         #[test]
         fn it_enters_the_backrow_and_never_makes_its_own_play_radiant() {

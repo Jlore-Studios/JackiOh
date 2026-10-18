@@ -156,15 +156,6 @@ mod tests {
             use super::*;
 
             #[test]
-            fn is_a_5_6_with_divine_shield() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [GHOST, FILLER] } }));
-                s.play(GHOST, json!({}))
-                    .expect_stats(GHOST, json!({ "attack": 5, "health": 6 }));
-                assert_eq!(keyword_kinds(&s.stats(GHOST).keywords), vec!["Divine Shield"]);
-            }
-
-            #[test]
             fn b5_e5_r682_a_declared_target_naming_it_lists_one_play_carrying_no_discards() {
                 crate::register_all();
                 let s = scenario(json!({

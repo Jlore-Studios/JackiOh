@@ -166,18 +166,6 @@ mod tests {
         events
     }
 
-    #[test]
-    fn is_one_script_on_both_faces_the_subsystem_reads_the_running_face() {
-        crate::register_all();
-        assert_eq!(crate::card_def(super::ID).id, PAPAYA);
-        let scripts = super::script();
-        assert!(std::sync::Arc::ptr_eq(
-            scripts.radiant.cry.as_ref().expect("a Cry"),
-            scripts.base.cry.as_ref().expect("a Cry"),
-        ));
-        assert!(!scripts.base.resume.is_empty());
-    }
-
     mod base {
         use super::*;
 

@@ -73,6 +73,11 @@ pub struct SummonPlacement {
     pub armor_override: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stats_override: Option<StatsOverride>,
+    /// R1184003: the X the card is summoned with, as if played for it (B2.7): a face that prints its
+    /// stats as multiples of X (`xStats`) is those multiples of it, and whatever reads the card's X
+    /// (`tuning::x_of`) reads it — Meditative+ #20.1 Lil' Kenny's X/X and its keywords by X.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x: Option<i32>,
     /// R1088: the card whose effect summoned it, for the client; no rule reads it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_id: Option<String>,
@@ -100,6 +105,9 @@ pub struct SummonArgs {
     pub armor_override: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stats_override: Option<StatsOverride>,
+    /// R1184003: the X the card is summoned with (`SummonPlacement.x`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x: Option<i32>,
     /// Create a fresh card of this definition, a token included (§7).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub def_id: Option<String>,
@@ -129,6 +137,7 @@ impl SummonArgs {
             radiant: self.radiant,
             armor_override: self.armor_override,
             stats_override: self.stats_override,
+            x: self.x,
             source_id: None,
         }
     }
@@ -267,6 +276,10 @@ fn summon_fresh(
     if let Some(armor) = at.armor_override {
         card.armor_override = Some(armor);
     }
+    // R1184003: its X before it lands, so it arrives at its X stats and with its X-read keywords.
+    if let Some(x) = at.x {
+        card.x = Some(x);
+    }
     if summon_onto(ctx, &mut card, &slot, at, None) {
         Some(card)
     } else {
@@ -312,6 +325,9 @@ fn summon_existing(
     }
     if let Some(armor) = at.armor_override {
         moving.armor_override = Some(armor);
+    }
+    if let Some(x) = at.x {
+        moving.x = Some(x);
     }
     if summon_onto(ctx, &mut moving, &slot, at, former_id) {
         Some(moving)
@@ -883,9 +899,10 @@ pub struct FillBoardArgs {
     pub radiant_for: Option<PlayerSpec>,
 }
 
-/// §7 and R64: "fill your board" summons the named token into every empty, unlocked unit zone,
-/// left to right. With `row: backrow` and `side: any` it fills each side's empty, unlocked backrow
-/// zones for that side's player (MD-B3, R942).
+/// §7 and R64: "fill your board" summons the named token into every empty, unreserved unit zone,
+/// left to right, a Locked one included (`fill_board_zones`, R1136000). With `row: backrow` and
+/// `side: any` it fills each side's empty, unlocked backrow zones for that side's player, a Locked
+/// one still skipped (MD-B3, R942).
 pub fn fill_board(args: FillBoardArgs) -> Effect {
     Effect::new("fillBoard", move |ctx| {
         let row = args.row.unwrap_or(Row::Units);
@@ -901,7 +918,12 @@ pub fn fill_board(args: FillBoardArgs) -> Effect {
             }
             let radiant = args.radiant == Some(true)
                 || args.radiant_for.map(|spec| player_of(ctx, spec)) == Some(player);
-            for slot in open_zones(ctx.state, player, row) {
+            // R1136000: a unit fill enters a Locked zone; R942's backrow fill still skips one.
+            let slots = match row {
+                Row::Units => fill_board_zones(ctx.state, player),
+                Row::Backrow => open_zones(ctx.state, player, row),
+            };
+            for slot in slots {
                 let at = SummonPlacement {
                     lane: Some(slot.lane),
                     radiant: if radiant { Some(true) } else { None },
@@ -928,10 +950,10 @@ pub struct FillBoardRandomArgs {
     pub radiant: Option<bool>,
 }
 
-/// R1080 (M #51): "fill your board" where every empty, unlocked unit zone, left to right (R64), gets
-/// its own pick from the match rng (R60), repeats allowed. The pool is `summon_random`'s — every set
-/// (R380) but the card that generated it (R387) — kept to the cards that go in the unit row. With no
-/// open zone nothing is drawn (R129). Summons fire no Cry (R1).
+/// R1080 (M #51): "fill your board" where every empty, unreserved unit zone, a Locked one included,
+/// left to right (R64, R1136000), gets its own pick from the match rng (R60), repeats allowed. The pool
+/// is `summon_random`'s — every set (R380) but the card that generated it (R387) — kept to the cards
+/// that go in the unit row. With no zone to fill nothing is drawn (R129). Summons fire no Cry (R1).
 pub fn fill_board_random(args: FillBoardRandomArgs) -> Effect {
     Effect::new("fillBoardRandom", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));

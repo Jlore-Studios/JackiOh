@@ -24,6 +24,9 @@
 //                         read, a game on a random deck around that card (R915005), on the remembered
 //                         difficulty; a card the account does not have shows the setup, saying so
 //   ?pace=fast            e2e pacing, honoured only outside a production build
+//   ?aipool=fixture      issue #1113, e2e only: the seeded fixtures deal the AI from the frozen
+//                         fixture pool instead of the live shadow ban, honoured only outside a
+//                         production build
 //
 // With none of the params that start a game, a free game left in progress on this device (a reload,
 // a closed tab) picks up where it was (R668, `practice/resume.ts`); one that starts a game discards it.
@@ -47,6 +50,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { FIXTURE_BANNED_IDS } from "@jackioh/ai";
 import { CUSTOM_ID_PREFIX, DIFFICULTIES, type Difficulty } from "@jackioh/engine/config";
 import { LEAN_NEWEST, isLeanPick } from "@jackioh/shared";
 import type { ActionBody, CardDefs, LeanPick, PlayerId, PlayerView, SandboxOp } from "@jackioh/shared";
@@ -149,6 +153,8 @@ type PracticeParams = {
   /** #921: a custom card's id, to try on a random deck around it. */
   try?: string;
   pace?: "fast";
+  /** Issue #1113, e2e only: the seeded fixtures' pool. Dropped in a production build. */
+  aipool?: "fixture";
 };
 
 function isDifficulty(value: unknown): value is Difficulty {
@@ -179,6 +185,10 @@ export function readPracticeParams(search: string): PracticeParams {
   if (tried !== null && tried.startsWith(CUSTOM_ID_PREFIX)) out.try = tried;
 
   if (params.get("pace") === "fast") out.pace = "fast";
+
+  // Issue #1113, e2e only: the seeded fixtures deal the AI from the frozen pool. Read at call
+  // time, not the module-level DEV_ONLY, so a test can stub MODE to production and watch it drop.
+  if (import.meta.env.MODE !== "production" && params.get("aipool") === "fixture") out.aipool = "fixture";
 
   return out;
 }
@@ -255,6 +265,9 @@ function configFor(choice: PracticeSetupChoice, params: PracticeParams): Practic
     difficulty: choice.difficulty,
     humanSeat: params.seat ?? randomSeat(),
     deck: choice.deck,
+    // Issue #1113, e2e only: the seeded fixtures deal the AI from the frozen pool. `EngineGate`
+    // in main.tsx holds this screen until the module is loaded, so the binding below is set.
+    ...(params.aipool === "fixture" ? { aiBanned: [...FIXTURE_BANNED_IDS] } : {}),
     // R923000: a sandbox game, with its dev tools.
     ...(choice.sandbox === true ? { sandbox: true } : {}),
     // R915006: the custom cards the deck names, which the game carries.
@@ -400,6 +413,28 @@ function useBoardBusy(root: HTMLElement | null, controller: PracticeController |
       observer.disconnect();
     };
   }, [root, controller]);
+}
+
+/**
+ * Whether the board under `root` is still animating: any element carrying `data-animating`, the
+ * one mark `useBoardBusy` above reads. A voice line (`data-speaking`) is left out on purpose, so the
+ * victory line never holds the result dialog back.
+ */
+export function useBoardAnimating(root: HTMLElement | null): boolean {
+  const [animating, setAnimating] = useState(false);
+  useEffect(() => {
+    if (root === null || typeof MutationObserver !== "function") return;
+    const report = (): void => {
+      setAnimating(root.querySelector("[data-animating]") !== null);
+    };
+    const observer = new MutationObserver(report);
+    observer.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ["data-animating"] });
+    report();
+    return () => {
+      observer.disconnect();
+    };
+  }, [root]);
+  return animating;
 }
 
 /**
@@ -848,21 +883,25 @@ function PracticeScreen({
   const [resultReadyFor, setResultReadyFor] = useState<PracticeStartConfig | null>(null);
   // This game's own end: a Play again renders once with the old controller's finished state.
   const finished = state.config === game && state.snapshot?.view.result != null;
+  const boardAnimating = useBoardAnimating(boardRoot);
   useEffect(() => {
-    if (!finished || game === null) return;
+    // The burst that ended the game plays out first (Game.tsx no longer drains it): the dialog
+    // opens once the board has settled, and `delay` is the wait after that for the board's own
+    // Victory or Defeat sequence.
+    if (!finished || game === null || boardAnimating) return;
     const effectsOff = reducedMotionNow() || getFxSettings().intensity === "off";
     const delay = effectsOff ? 0 : (pace.current.resultDelayMs ?? 0);
-    if (delay <= 0) {
-      setResultReadyFor(game);
-      return;
-    }
+    // Never open on this render's word alone: the board's queue starts in Game's layout effect, after
+    // this effect ran, and `boardAnimating` learns of it later. The timer runs once the mark is in the
+    // DOM, so it checks the board itself (a mark found re-runs this effect through `boardAnimating`).
     const timer = setTimeout(() => {
+      if (boardRoot?.querySelector("[data-animating]") != null) return;
       setResultReadyFor(game);
     }, delay);
     return () => {
       clearTimeout(timer);
     };
-  }, [finished, game]);
+  }, [finished, game, boardAnimating, boardRoot]);
   const onViewBoard = useCallback(() => {
     setResultClosedFor(game);
   }, [game]);

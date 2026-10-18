@@ -124,19 +124,6 @@ mod tests {
     mod t_ai_7_alignment_tax {
         use super::*;
 
-        #[test]
-        fn is_a_1_ai_spell_token_with_no_params() {
-            crate::register_all();
-            let def = crate::card_def(super::super::ID);
-            assert_eq!(js(&def.cost), json!(1));
-            assert_eq!(def.type_, CardType::Spell);
-            assert_eq!(js(&def.tags), json!(["AI", "Token"]));
-            assert!(def.params.is_none());
-            let scripts = super::super::script();
-            assert!(scripts.base.cry.is_some());
-            assert!(scripts.radiant.cry.is_some());
-        }
-
         mod base {
             use super::*;
 

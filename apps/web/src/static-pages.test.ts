@@ -154,7 +154,7 @@ describe("the static pages", () => {
     const text = doc.getElementById("core-002")?.textContent ?? "";
     expect(text).toContain(fillParams(bolt, "base"));
     expect(text).toContain(fillParams(bolt, "radiant"));
-    expect(text).toContain("2 embiggen 4");
+    expect(text).toContain("(2) Cost, Embiggened (4)");
   });
 
   it.each([

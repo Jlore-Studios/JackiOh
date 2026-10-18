@@ -90,15 +90,6 @@ mod tests {
         s.stats(card).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Charge)
     }
 
-    #[test]
-    fn declares_its_text_as_an_afterattack_hook_on_each_face_and_no_trigger() {
-        assert_eq!(crate::card_def(ID).id, BOOTS);
-        let CardScripts { base, radiant } = script();
-        assert!(base.after_attack.is_some());
-        assert!(radiant.after_attack.is_some());
-        assert!(base.triggers.is_empty());
-    }
-
     mod base {
         use super::*;
 

@@ -1160,6 +1160,8 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.reborn_spent = None;
     // B5 E35: Berserk is a status of the unit on the field, lost as it leaves (R78).
     instance.berserk = None;
+    // R1174000: so is Frozen, which a Bounce, a death or an exile takes off with it.
+    instance.frozen = None;
     // R1040, R1045: a card set face-down as a Trap is its printed card again once it leaves the field.
     instance.set_as = None;
 }
@@ -1623,10 +1625,14 @@ pub fn acts_on_field(state: &GameState, instance: &CardInstance) -> bool {
     instance.zone.z() == ZoneName::Field && !is_buried(state, instance)
 }
 
-/// R64: "fill your board" takes every empty, unlocked unit zone, left to right. The caller makes
-/// each card; this returns the zones to fill, in order.
+/// R64, R1136000: "fill your board" takes every empty, unreserved unit zone, left to right, a Locked
+/// one included (a Lock refuses only plays, R688). The caller makes each card; this returns the
+/// zones to fill, in order.
 pub fn fill_board_zones(state: &GameState, player: PlayerId) -> Vec<ZoneSlot> {
-    open_zones(state, player, Row::Units)
+    slots_of(player, Row::Units)
+        .into_iter()
+        .filter(|slot| takes_move(state, slot))
+        .collect()
 }
 
 pub fn slot_of(_state: &GameState, instance: &CardInstance) -> Option<ZoneSlot> {

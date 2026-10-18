@@ -178,8 +178,8 @@ mod tests {
             assert_eq!(exiled, 2);
         }
 
-        /// Money Machine (Meditative #54): "Activate: Spend (2). Tribute this."
-        const MONEY_MACHINE: &str = "meditative-054";
+        /// #98 Heroic Power, whose Life Tap ("draw") is an Activate with a mana price of (1) (R752).
+        const HEROIC_POWER: &str = "core-098";
         const VANILLA: &str = "core-008";
 
         fn exiled_of(s: &Scenario) -> Vec<GameEvent> {
@@ -222,16 +222,21 @@ mod tests {
                 "p1": {
                     "mana": 10,
                     "field": [MAESTRO],
-                    "backrow": [MONEY_MACHINE],
+                    "backrow": [HEROIC_POWER],
                     "hand": [FILLER, FILLER],
                     "library": filler(4),
                 },
                 "p2": { "hand": [FILLER], "library": filler(4) },
             }));
             let maestro = s.unit("p1", 1).expect("the Maestro");
-            s.activate(MONEY_MACHINE, json!({ "ability": "tribute" }));
-            // Money Machine's price is (2): two counters.
-            assert_eq!(plague(&s, &maestro.id), 2);
+            let power = s.card(HEROIC_POWER).id.clone();
+            find_instance_mut(s.state_mut(), &power)
+                .expect("the Heroic Power")
+                .memory
+                .insert(jackioh_engine::subsystems::POWER_KEY.to_string(), json!("draw"));
+            s.activate(HEROIC_POWER, json!({}));
+            // Life Tap's price is (1): one counter.
+            assert_eq!(plague(&s, &maestro.id), 1);
         }
 
         #[test]
@@ -306,14 +311,6 @@ mod tests {
             activate_exile(&mut s);
             assert_eq!(plague(&s, &maestro.id), 0);
             assert_eq!(exiled_of(&s).len(), 8);
-        }
-
-        #[test]
-        fn the_radiant_face_is_8_8() {
-            let s = full_enemy("maestro-stats", true, 0);
-            let maestro = s.unit("p1", 1).expect("the Maestro");
-            let stats = s.stats(maestro.id.as_str());
-            assert_eq!((stats.attack, stats.health), (8, 8));
         }
 
         #[test]

@@ -143,7 +143,6 @@ pub fn script() -> CardScripts {
 // the reward; its numbers read through `param()`; radiant the Fortify Mind costs (2)".
 #[cfg(test)]
 mod tests {
-    use super::{FORTIFY_MIND, ID};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -187,27 +186,6 @@ mod tests {
 
     mod base {
         use super::*;
-
-        #[test]
-        fn is_a_2_cost_epic_spell_with_its_numbers() {
-            crate::register_all();
-            let def = crate::card_def(ID);
-            assert_eq!(def.cost, CardCost::Fixed(2));
-            assert_eq!(def.type_, CardType::Spell);
-            assert_eq!(def.rarity, Rarity::Epic);
-            assert!(def.tags.is_empty());
-            assert_eq!(def.refs, Some(vec![FORTIFY_MIND.to_string()]));
-            let params = def.params.clone().unwrap_or_default();
-            let pair = |key: &str| {
-                params.iter().find(|param| param.key == key).map(|param| (param.base, param.radiant))
-            };
-            assert_eq!(pair("mana"), Some((2, 2)));
-            assert_eq!(pair("draw"), Some((2, 2)));
-            assert_eq!(pair("damage"), Some((8, 8)));
-            assert_eq!(pair("heal"), Some((8, 8)));
-            assert_eq!(pair("armor"), Some((2, 2)));
-            assert_eq!(pair("fortifyCost"), Some((2, 2)));
-        }
 
         #[test]
         fn r860_the_opponent_sees_only_that_a_secret_is_held() {

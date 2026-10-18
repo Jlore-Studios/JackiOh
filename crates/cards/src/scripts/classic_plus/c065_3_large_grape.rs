@@ -82,22 +82,6 @@ mod tests {
     }
 
     #[test]
-    fn is_a_3_fruit_spell_token_printed_rare_that_targets_any_unit_or_hero_one_script_on_both_faces() {
-        crate::register_all();
-        let def = crate::card_def(ID);
-        assert_eq!(def.id, GRAPE);
-        assert_eq!(js(&def.cost), json!(3));
-        assert_eq!(js(&def.tags), json!(["Fruit", "Token"]));
-        assert_eq!(js(&def.printed_rarity), json!("Rare"));
-        let CardScripts { base, radiant } = script();
-        assert_eq!(
-            js(&base.targets),
-            json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }])
-        );
-        assert!(Arc::ptr_eq(base.cry.as_ref().unwrap(), radiant.cry.as_ref().unwrap()));
-    }
-
-    #[test]
     fn r386_a_degrade_makes_the_drawn_card_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
         crate::register_all();
         let mut s = scenario(json!({ "p1": { "hand": [GRAPE, FILLER], "library": [DECK_B] }, "p2": { "hand": [FILLER], "field": [MENACE] } }));

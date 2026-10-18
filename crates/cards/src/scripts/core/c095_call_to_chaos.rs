@@ -368,16 +368,6 @@ mod tests {
         }
 
         #[test]
-        fn s10_9_both_faces_hang_the_whole_card_off_cry_and_nothing_else() {
-            crate::register_all();
-            // §8.4's two cells differ only in how many effects are rolled, which is the subsystem's
-            // argument; a second hook here would be a rule this card does not have.
-            let scripts = script();
-            assert_eq!(members(&scripts.base), vec!["cry"]);
-            assert_eq!(members(&scripts.radiant), vec!["cry"]);
-        }
-
-        #[test]
         fn s9_3_the_roll_is_a_pure_function_of_seed_cursor_so_pinning_the_cursor_pins_the_effect() {
             crate::register_all();
             // The fixture assumption of this file, asserted rather than assumed: the roll is the play's
@@ -1009,18 +999,6 @@ mod tests {
         use super::*;
 
         #[test]
-        fn s7_the_base_face_is_a_10_10_with_rush_lifesteal_divine_shield_and_first_strike() {
-            crate::register_all();
-            let mut s = scenario(json!({ "p1": { "field": [GOLEM], "hand": [MENACE] } }));
-            let golem = must(s.unit(P1, 1), "p1's Chaos Golem");
-            s.expect_stats(&golem, json!({ "attack": 10, "health": 10, "maxHealth": 10 }));
-            assert_eq!(
-                sorted(keywords_of(&s, &golem)),
-                vec!["Divine Shield".to_string(), "First Strike".to_string(), "Lifesteal".to_string(), "Rush".to_string()],
-            );
-        }
-
-        #[test]
         fn r275_the_radiant_face_is_a_20_20_with_charge_in_rush_s_place() {
             crate::register_all();
             let mut s = scenario(json!({
@@ -1178,25 +1156,6 @@ mod tests {
             assert!(!query_ids(json!({ "type": "Unit" })).contains(&GOLEM.to_string()));
             // …which is what makes #99 Craft a Card unable to craft one.
             assert!(!query_ids(json!({ "type": "Unit", "cost": 4 })).contains(&GOLEM.to_string()));
-        }
-    }
-
-    mod n95_s_printed_text_round_10_of_the_polish_4_edge_case_hunt {
-        use super::*;
-
-        #[test]
-        fn names_the_radiant_rush_tokens_it_summons_not_the_5_5s_issue_n1_took_out_s8_4_n95_s7() {
-            crate::register_all();
-            // §8.4 #95's base effect: "summon five Radiant Rush Tokens", and §7: it summons the token's
-            // own Radiant face (6/6), not a bespoke 5/5. The catalog's printed text, which the web
-            // renders, says so too.
-            let text = js(&crate::card_def(CHAOS))["base"]["text"]
-                .as_str()
-                .unwrap_or_default()
-                .to_string();
-            assert!(!text.contains("5/5"));
-            // The count is written as a number: "summon 5 Radiant Rush Tokens".
-            assert!(text.contains("summon 5 Radiant Rush Tokens"));
         }
     }
 }

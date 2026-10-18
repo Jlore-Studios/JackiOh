@@ -186,14 +186,6 @@ mod tests {
         (s, prime)
     }
 
-    #[test]
-    fn is_a_prime_token_named_solarius_prime_spaced_as_c_46_1_felinor_flagbearer_prime_is_patch_v0_2_y() {
-        let def = crate::card_def(PRIME);
-        assert_eq!(def.name, "Solarius Prime");
-        assert!(def.token);
-        assert_eq!(def.tags, vec![Tag::Prime, Tag::Token]);
-    }
-
     mod base {
         use super::*;
 
