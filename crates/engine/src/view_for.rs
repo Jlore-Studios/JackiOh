@@ -851,7 +851,8 @@ fn condition_targets_of(
 /// `legal_actions`', never the view's.
 fn can_act(state: &GameState, auras: &AuraTable<'_>, card: &CardInstance) -> bool {
     turn_open_to(state, card)
-        && (has_exertion_in(auras, card, ExertionKind::Attack) || has_exertion_in(auras, card, ExertionKind::Switch))
+        && (has_exertion_in(auras, card, ExertionKind::Attack)
+            || has_exertion_in(auras, card, ExertionKind::Switch))
 }
 
 /// `can_act`'s first half: the game is on, in its controller's main phase, with no prompt open.

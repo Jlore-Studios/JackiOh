@@ -51,9 +51,9 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
 
     fn offers_switch(s: &Scenario, id: &str) -> bool {
         let unit = s.card(id).clone();
-        legal_actions(s.state(), unit.controller)
-            .iter()
-            .any(|action| matches!(action, ActionBody::SwitchPosition { instance_id } if *instance_id == unit.id))
+        legal_actions(s.state(), unit.controller).iter().any(
+            |action| matches!(action, ActionBody::SwitchPosition { instance_id } if *instance_id == unit.id),
+        )
     }
 
     /// The `marked` events of the last step that freeze (`true`) or thaw (`false`) `id`.
@@ -79,14 +79,25 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
     fn refused_frozen(s: &Scenario, body: ActionBody, nonce: &str) {
         let before = hash_state(s.state());
         let player = s.state().active;
-        let result = reduce(s.state(), &ActionInput { body, player_id: player }.with_nonce(nonce));
+        let result = reduce(
+            s.state(),
+            &ActionInput {
+                body,
+                player_id: player,
+            }
+            .with_nonce(nonce),
+        );
         assert_eq!(result.error.as_deref(), Some(FROZEN), "{nonce}");
         assert!(result.events.is_empty(), "{nonce}: a refusal emits nothing");
-        assert_eq!(hash_state(&result.state), before, "{nonce}: a refusal leaves the state unchanged");
+        assert_eq!(
+            hash_state(&result.state),
+            before,
+            "{nonce}: a refusal leaves the state unchanged"
+        );
     }
 
     #[test]
-    fn r1174000_frozen_on_the_opponents_turn_it_neither_attacks_nor_switches_on_yours_and_thaws_at_your_cleanup() {
+    fn r1174000_frozen_on_the_opponents_turn_it_cannot_act_on_yours_and_thaws_at_your_cleanup() {
         let mut s = board(
             "p2",
             json!([plain.id]),
@@ -96,7 +107,11 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
         );
         let unit = id_at(&s, P1, 1);
         s.play(chill.id.as_str(), pick(&unit));
-        assert_eq!(thaw_of(&s, &unit), Some(10), "frozen on turn 9, it thaws at its controller's turn 10");
+        assert_eq!(
+            thaw_of(&s, &unit),
+            Some(10),
+            "frozen on turn 9, it thaws at its controller's turn 10"
+        );
         assert_eq!(frost_marks(s.last_events(), &unit), vec![true]);
 
         s.end_turn();
@@ -125,15 +140,23 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
             (mine.frozen, mine.can_act, mine.attack_reason.as_deref()),
             (Some(true), false, Some(FROZEN))
         );
-        let theirs = s.view(P2).opponent.units[0].clone().expect("p1's unit, seen by p2");
+        let theirs = s.view(P2).opponent.units[0]
+            .clone()
+            .expect("p1's unit, seen by p2");
         assert_eq!((theirs.frozen, theirs.attack_reason), (Some(true), None));
 
         s.end_turn();
         assert_eq!(thaw_of(&s, &unit), None, "it thawed at its controller's cleanup");
         assert_eq!(frost_marks(s.last_events(), &unit), vec![false]);
-        assert_eq!(s.view(P2).opponent.units[0].clone().expect("p1's unit").frozen, None);
+        assert_eq!(
+            s.view(P2).opponent.units[0].clone().expect("p1's unit").frozen,
+            None
+        );
         s.end_turn();
-        assert!(offers_attack(&s, &unit), "thawed, it attacks on its controller's next turn");
+        assert!(
+            offers_attack(&s, &unit),
+            "thawed, it attacks on its controller's next turn"
+        );
     }
 
     #[test]
@@ -151,13 +174,21 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
         assert_eq!(thaw_of(&s, &unit), Some(10));
 
         s.end_turn();
-        assert_eq!(thaw_of(&s, &unit), Some(10), "it does not thaw at the end of the turn it attacked in");
+        assert_eq!(
+            thaw_of(&s, &unit),
+            Some(10),
+            "it does not thaw at the end of the turn it attacked in"
+        );
         s.end_turn();
         assert_eq!((s.state().active, s.state().turn), (P1, 11));
         assert!(!offers_attack(&s, &unit));
         assert!(!offers_switch(&s, &unit));
         s.end_turn();
-        assert_eq!(thaw_of(&s, &unit), None, "it thaws at the cleanup of its controller's next turn");
+        assert_eq!(
+            thaw_of(&s, &unit),
+            None,
+            "it thaws at the cleanup of its controller's next turn"
+        );
         s.end_turn();
         assert!(offers_attack(&s, &unit));
     }
@@ -255,8 +286,15 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
         );
         let unit = id_at(&s, P1, 1);
         s.end_turn();
-        assert_eq!(thaw_of(&s, &unit), Some(10), "frozen by an end-of-turn trigger, it is not thawed by that cleanup");
-        assert!(s.unit(P1, 2).is_none(), "the shiver is gone, so nothing freezes it again");
+        assert_eq!(
+            thaw_of(&s, &unit),
+            Some(10),
+            "frozen by an end-of-turn trigger, it is not thawed by that cleanup"
+        );
+        assert!(
+            s.unit(P1, 2).is_none(),
+            "the shiver is gone, so nothing freezes it again"
+        );
         s.end_turn();
         assert!(!offers_attack(&s, &unit));
         s.end_turn();
@@ -274,8 +312,16 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
         );
         let unit = id_at(&s, P1, 1);
         s.attack(unit.as_str(), "hero");
-        assert_eq!(s.state().players.p2.hero.health, HERO_HEALTH - 3, "the attack went on");
-        assert_eq!(thaw_of(&s, &unit), Some(10), "it spent its exertion, so it misses its next turn");
+        assert_eq!(
+            s.state().players.p2.hero.health,
+            HERO_HEALTH - 3,
+            "the attack went on"
+        );
+        assert_eq!(
+            thaw_of(&s, &unit),
+            Some(10),
+            "it spent its exertion, so it misses its next turn"
+        );
         s.end_turn();
         s.end_turn();
         assert!(!offers_attack(&s, &unit));
@@ -299,7 +345,10 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
         // A fresh exertion gives it an action left, which a freeze landing now would thaw after
         // this turn; the later thaw it already has stands.
         s.play(rally.id.as_str(), pick(&unit));
-        assert!(!offers_attack(&s, &unit), "a fresh exertion is no attack while Frozen");
+        assert!(
+            !offers_attack(&s, &unit),
+            "a fresh exertion is no attack while Frozen"
+        );
         s.play(chill.id.as_str(), pick(&unit));
         assert_eq!(thaw_of(&s, &unit), Some(10));
         s.end_turn();
@@ -317,7 +366,11 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
         );
         let unit = id_at(&s, P2, 5);
         s.play(chill.id.as_str(), pick(&unit));
-        assert_eq!(thaw_of(&s, &unit), Some(10), "frozen on its controller's opponent's turn");
+        assert_eq!(
+            thaw_of(&s, &unit),
+            Some(10),
+            "frozen on its controller's opponent's turn"
+        );
         s.play(grab.id.as_str(), pick(&unit));
         assert_eq!(s.card(unit.as_str()).controller, P1);
         assert_eq!(
@@ -366,7 +419,10 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
         s.play(unit.as_str(), json!({ "zone": 3 }));
         let back = id_at(&s, P1, 3);
         assert_eq!(thaw_of(&s, &back), None);
-        assert!(offers_switch(&s, &back), "back on the field it is a new arrival, free to switch");
+        assert!(
+            offers_switch(&s, &back),
+            "back on the field it is a new arrival, free to switch"
+        );
     }
 
     #[test]
@@ -381,14 +437,22 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
         let unit = id_at(&s, P1, 1);
         s.play(chill.id.as_str(), pick(&unit));
         s.play(shove.id.as_str(), pick(&unit));
-        assert_eq!(s.card(unit.as_str()).position, Some(Position::Def), "the effect's switch happened");
+        assert_eq!(
+            s.card(unit.as_str()).position,
+            Some(Position::Def),
+            "the effect's switch happened"
+        );
         s.play(goad.id.as_str(), json!({}));
         assert_eq!(
             s.state().players.p2.hero.health,
             HERO_HEALTH - 3,
             "the forced attack happened"
         );
-        assert_eq!(thaw_of(&s, &unit), Some(9), "and neither spent nor thawed anything");
+        assert_eq!(
+            thaw_of(&s, &unit),
+            Some(9),
+            "and neither spent nor thawed anything"
+        );
     }
 
     #[test]
@@ -400,9 +464,14 @@ mod r1174000_a_frozen_unit_loses_its_next_attack_or_switch_and_thaws_after_it {
             json!([plain.id, plain.id]),
             json!([{ "def": plain.id, "lane": 4 }, { "def": plain.id, "lane": 5 }]),
         );
-        s.play(chill.id.as_str(), json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
+        s.play(
+            chill.id.as_str(),
+            json!({ "targets": [{ "pick": "hero", "player": "p2" }] }),
+        );
         assert!(
-            !s.last_events().iter().any(|event| matches!(event, GameEvent::Marked { .. })),
+            !s.last_events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::Marked { .. })),
             "a freeze aimed at a hero does nothing"
         );
         s.play(frost.id.as_str(), json!({ "zone": 2 }));

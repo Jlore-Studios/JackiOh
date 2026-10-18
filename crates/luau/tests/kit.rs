@@ -626,7 +626,11 @@ fn r1174000_c_freeze_freezes_every_enemy_unit_its_words_name_and_no_hero() {
         let turn = s.state().turn;
         for lane in [1, 2] {
             let unit = s.unit(P2, lane).expect("an enemy unit");
-            assert_eq!(unit.frozen, Some(turn + 1), "the enemy unit in lane {lane} is Frozen");
+            assert_eq!(
+                unit.frozen,
+                Some(turn + 1),
+                "the enemy unit in lane {lane} is Frozen"
+            );
         }
         let friendly = s.unit(P1, 1).expect("the friendly unit");
         assert_eq!(friendly.frozen, None, "a friendly unit is not");

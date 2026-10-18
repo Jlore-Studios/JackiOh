@@ -3577,6 +3577,14 @@ function J.forced_attacks_on(args: ForcedAttacksOnArgs): EffectCall
 	return { verb = "forced_attacks_on", args = args :: any }
 end
 
+function J.freeze(args: FreezeArgs): EffectCall
+	return { verb = "freeze", args = args :: any }
+end
+
+function J.freeze_all(args: BoardScope): EffectCall
+	return { verb = "freeze_all", args = args :: any }
+end
+
 function J.fuse_cards(args: FuseCardsArgs): EffectCall
 	return { verb = "fuse_cards", args = args :: any }
 end
