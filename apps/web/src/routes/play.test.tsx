@@ -255,6 +255,53 @@ describe("the lobby's match watch", () => {
     expect(vi.mocked(navigate)).not.toHaveBeenCalled();
   });
 
+  it("a woken page reads the wait again at once, and a hidden tab reads nothing", async () => {
+    const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
+    const show = (state: "hidden" | "visible"): void => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+      document.dispatchEvent(new Event("visibilitychange"));
+    };
+    /** Lets a read that has been answered reach its handler and clear its in-flight mark. */
+    const settled = async (): Promise<void> => {
+      await act(async () => {
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      });
+    };
+    try {
+      rememberQueued("bo1");
+      render(<PlayRoute token={TOKEN} />);
+      await waitFor(() => {
+        expect(vi.mocked(getMe)).toHaveBeenCalledTimes(1);
+      });
+      await settled();
+
+      show("hidden");
+      await settled();
+      expect(vi.mocked(getMe)).toHaveBeenCalledTimes(1);
+
+      show("visible");
+      await waitFor(() => {
+        expect(vi.mocked(getMe)).toHaveBeenCalledTimes(2);
+      });
+      await settled();
+      expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+
+      // Paired while the tab slept: the wake finds the match and takes the player there.
+      vi.mocked(getMe).mockResolvedValue(me("match-42"));
+      show("visible");
+      expect(await screen.findByTestId(playTestid.status)).toHaveTextContent(MATCH_FOUND_STATUS);
+      await waitFor(
+        () => {
+          expect(vi.mocked(navigate)).toHaveBeenCalledWith("/match/match-42");
+        },
+        { timeout: 5000 },
+      );
+    } finally {
+      if (visibility === undefined) Reflect.deleteProperty(document, "visibilityState");
+      else Object.defineProperty(document, "visibilityState", visibility);
+    }
+  });
+
   /** A lobby that cannot reach the server is still a lobby, not an error screen. */
   it("ignores a failed read rather than surfacing it as a lobby error", async () => {
     vi.mocked(getMe).mockRejectedValue(new Error("network down"));
