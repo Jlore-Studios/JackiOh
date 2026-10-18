@@ -1,0 +1,26 @@
+{
+  "version": "v0.3.11",
+  "title": "Patch v0.3.11: the Human tag on Clip-Farming Critikal, Medina Outfitter, Medina Enforcer, Playtester and MC Tech",
+  "sources": "#1151",
+  "notes": "Tags classic-040, meditative-057, meditative-082, meditative-083 and meditative-085 Human; no text, stats, cost or rarity change.",
+  "player": {
+    "title": "Five more Humans",
+    "new": [
+      "MC Tech is a Human.",
+      "Clip-Farming Critikal is a Human.",
+      "Medina Outfitter is a Human.",
+      "Medina Enforcer is a Human.",
+      "Playtester is a Human."
+    ],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [
+    "classic-040",
+    "meditative-082",
+    "meditative-083",
+    "meditative-085"
+  ]
+}

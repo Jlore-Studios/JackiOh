@@ -244,6 +244,22 @@ mod tests {
         }
 
         #[test]
+        fn base_postdoc_copies_a_newly_human_medina_enforcer() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [POSTDOC], "mana": 4 },
+                "p2": { "field": ["meditative-083"] },
+            }));
+            let enforcer = s.card("meditative-083").clone();
+
+            s.play(POSTDOC, json!({ "targets": [sel(&enforcer)] }));
+
+            let copy = unit_at(&s, P1, COPY_LANE);
+            assert_eq!(copy.def_id, "meditative-083");
+            assert!(copy.vanilla);
+        }
+
+        #[test]
         fn r81_the_base_face_declares_a_human_only_pick_and_the_radiant_face_declares_any_unit() {
             // The pick travels in the play action, so the narrowing lives in the declaration `legalActions`
             // and R90 read — not in the hook. This is the only place the base/radiant difference exists.

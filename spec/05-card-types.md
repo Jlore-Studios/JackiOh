@@ -79,6 +79,7 @@ Classic and Classic+ (patch v0.2.0) have their own, recorded under [[R381]] (nam
 | C #1, C #7, C #63, C #86, C+ #17, C+ #63, C+ #66, C+ #75 | A Radiant face that drops a clause, is missing, repeats the base face, or copies another card (C+ #17's base face too, which repeated C+ #16's: 6 keywords on both faces) | The faces [[§8.6]] and [[§8.7]] print (the audit's reasons, `docs/radiant-audit.md`) |
 | C #23 "are this turn", C #36 "at 4", C #42 "a 2", C #68 "cost can't", C #78, C #81 and C #84 "Active", C #90 "work of stats", C+ #11 "Year", C+ #12.3 "deck Deck", C+ #14 "Then next", C+ #17 "Conjure Tush Token++", C+ #41 "number number", C+ #65 and C+ #66 "Graphes" and "roles", C+ #73.1 "Firststrike" | Typos | Read as meant: "this turn", "4", "2", "can't", Activate, "worth of stats", "Your", "deck", "The next", Conjure Rush Token++, "a number", Grapes and "rolls", First Strike |
 | C+ #38.1 Solarius Prime | Named "Solarius-Prime", hyphenated, where C+ #46.1 Felinor Flagbearer Prime is spaced | Patch v0.2.Y (#322) names both Prime tokens spaced, their card's name then "Prime", and C+ #38's Death names it that way. [[R279]]'s naming rule then reads C+ #38's own name inside "Solarius Prime", so C+ #38's `refs` list C+ #38 beside C+ #38.1, as C+ #46's list C+ #46 beside C+ #46.1 |
+| Classic #40 MC Tech | Reads as a person ("He checks your board, counts your toys, and borrows one") but carries no tag | Patch v0.3.11 (#1151) tags it Human, a designer's decision |
 
 Meditative (patch v0.3.5) has its own, recorded in [[§8.8]]'s Engine cells and the rulings cited:
 
@@ -89,3 +90,4 @@ Meditative (patch v0.3.5) has its own, recorded in [[§8.8]]'s Engine cells and 
 | M #69 The Maestro | Uses Plague Counters ("Plague Tokens", [[R740]]) without the Plague tag | Plague joins Human, since the tags row above puts it on every card that uses Plague Counters |
 | M #49.1 YileGPT Unleashed | "Unleased", "Glitch in the systems" | Read as meant: "Unleashed", C #18 Glitch in the System |
 | M #93.1 Growing Felinor Sr, M #93.2 Growing Felinor Sr Sr | Both Deaths summon a Growing Felinor Sr: the Sr itself, a chain that never ends, and the Sr Sr a size down | Copy slips: each summons the next size up, M #93.2 and M #93.3 ([[R1180]]) |
+| M #57 Clip-Farming Critikal, M #82 Medina Outfitter, M #83 Medina Enforcer, M #85 Playtester | Read as people but carry no tag | Patch v0.3.11 (#1151) tags all four Human, a designer's decision |

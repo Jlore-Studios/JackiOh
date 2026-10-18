@@ -207,7 +207,7 @@ fn expected_indices(set: &SetExpectation) -> Vec<String> {
 /// (docs/meditative-set.md M2's census of its 132 entries), which count once it ships (R1420).
 fn expected_tag_count(tag: Tag) -> usize {
     match tag {
-        Tag::Human => 38 + meditative(12),
+        Tag::Human => 39 + meditative(16),
         Tag::Felinor => 11 + meditative(11),
         Tag::Ky => 9 + meditative(6),
         Tag::Cn => 7 + meditative(33),

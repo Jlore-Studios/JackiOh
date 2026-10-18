@@ -29,6 +29,7 @@
 //!                    the old spelling as the record).
 //!   patch v0.3.10   — issue #831's costs, stats, types and tags, in every set's rows: the briefs'
 //!                    lines are what the designer first wrote, the patch what the cards are now.
+//!   patch v0.3.11 — issue #1151 tags classic-040, meditative-057, meditative-082, meditative-083 and meditative-085 Human.
 //!   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
 //!                    being R349's fallback.
 //!   rarity         — SPEC §8's rarity paragraph for Core (32/40/16/7/5) and B2.5's table for
@@ -1515,7 +1516,16 @@ const CLASSIC: &[SpecRow] = &[
         NO_STATS,
         NO_STATS,
     ),
-    row("40", "MC Tech", c(1), T::Unit, &[], R::Rare, st(3, 3), st(6, 6)),
+    row(
+        "40",
+        "MC Tech",
+        c(1),
+        T::Unit,
+        &[G::Human],
+        R::Rare,
+        st(3, 3),
+        st(6, 6),
+    ),
     row(
         "41",
         "State of the Game",
@@ -3847,7 +3857,7 @@ const MEDITATIVE: &[SpecRow] = &[
         "Clip-Farming Critikal",
         c(1),
         T::Unit,
-        &[],
+        &[G::Human],
         R::Common,
         st(4, 1),
         st(8, 2),
@@ -4117,7 +4127,7 @@ const MEDITATIVE: &[SpecRow] = &[
         "Medina Outfitter",
         c(1),
         T::Unit,
-        &[],
+        &[G::Human],
         R::Common,
         st(1, 1),
         st(2, 2),
@@ -4127,7 +4137,7 @@ const MEDITATIVE: &[SpecRow] = &[
         "Medina Enforcer",
         c(2),
         T::Unit,
-        &[],
+        &[G::Human],
         R::Rare,
         st(4, 4),
         st(8, 8),
@@ -4147,7 +4157,7 @@ const MEDITATIVE: &[SpecRow] = &[
         "Playtester",
         c(2),
         T::Unit,
-        &[],
+        &[G::Human],
         R::Rare,
         st(4, 5),
         st(8, 10),

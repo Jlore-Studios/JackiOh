@@ -81,6 +81,21 @@ mod tests {
         }
 
         #[test]
+        fn medina_enforcer_is_human_so_bigot_cannot_target_it() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": ["core-002"] },
+                "p2": { "field": ["meditative-083"] }
+            }));
+            let human = s.card("meditative-083").id.clone();
+            s.expect_refused(|s| {
+                s.play("core-002", json!({ "targets": [{ "pick": "instance", "instanceId": human }] }))
+            });
+            s.expect_in_zone("meditative-083", "field");
+            s.expect_in_zone("core-002", "hand");
+        }
+
+        #[test]
         fn r90_no_legal_target_the_play_is_still_legal_the_unit_enters_and_the_cry_fizzles() {
             crate::register_all();
             let mut s = scenario(json!({
