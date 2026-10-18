@@ -391,17 +391,14 @@ pub fn land_after_resolution(sink: &mut EngineSink<'_>, resolved: &ResolvedCard)
     // R174, R212: the stays step 7 read `permanent` on. A cast's event waits for the loop of the
     // effect that cast it (R70), so a response judges the card's stay from here, not the dispatch.
     let exits_from = exit_mark(sink.state);
-    // R1180005: the card that answers a Spell that targeted an enemy, named once the Spell has landed.
-    let answer = if resolved.targeted.is_empty() {
-        None
-    } else {
-        crate::targeted::spell_answer_for(
-            sink.state,
-            resolved.player,
-            &resolved.instance_id,
-            &resolved.targeted,
-        )
-    };
+    // R1180005: the card that answers a Spell that targeted an enemy, named once the Spell has landed;
+    // R1180006 bounds the chain of answers.
+    let answer = crate::targeted::name_spell_answer(
+        sink.state,
+        resolved.player,
+        &resolved.instance_id,
+        &resolved.targeted,
+    );
     sink.events.push(GameEvent::CardResolved {
         player: resolved.player,
         instance_id: resolved.instance_id.clone(),

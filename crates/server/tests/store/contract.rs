@@ -3392,6 +3392,13 @@ mod matches {
         assert!(q!(harness, t => t.matches_get(&id())).is_none());
     }
 
+    /// SPEC §9.1: an id that is not a uuid names no match, so it answers as a missing one does
+    /// (as `matches_seats` and `duos_matches_get` do) and not as a database error.
+    async fn a_malformed_match_id_is_no_match(harness: &StoreHarness) {
+        live_match(harness).await;
+        assert!(q!(harness, t => t.matches_get("not-a-uuid")).is_none());
+    }
+
     async fn refuses_a_second_match_with_the_same_id(harness: &StoreHarness) {
         let row = live_match(harness).await;
         let again: MatchRow = from(spread(j(&row), json!({ "seed": "other" })));
@@ -3805,6 +3812,7 @@ mod matches {
         an_unknown_match_has_no_checkpoint,
         r768_records_a_final_hash_once,
         round_trips_a_match_row_clocks_included,
+        a_malformed_match_id_is_no_match,
         refuses_a_second_match_with_the_same_id,
         appends_actions_in_order_and_reads_them_back,
         reads_a_log_of_ten_or_more_actions_back_in_seq_order,
@@ -4105,6 +4113,48 @@ mod rooms {
         assert!(codes(q!(harness, t => t.rooms_open_by_host("not-a-uuid", now + 60_000))).is_empty());
     }
 
+    /// R890000: the advisory half of `MAX_OPEN_ROOMS_PER_HOST` counts the host's rooms nobody has
+    /// claimed and whose expiry has not passed; a claimed one, an expired one and another host's do
+    /// not count, and a malformed id holds none.
+    async fn r890000_counts_a_host_s_open_rooms_and_none_for_a_malformed_id(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        assert_eq!(q!(harness, t => t.rooms_count_open_by_host(&host.id, now)), 0);
+
+        for (code, owner, over) in [
+            ("ABC234", &host.id, json!({})),
+            ("BCD345", &host.id, json!({})),
+            ("CDE456", &host.id, json!({ "expiresAt": now + 1_000 })),
+            ("DEF567", &other.id, json!({})),
+        ] {
+            assert!(q!(harness, t => t.rooms_create(&room(harness, code, owner, over.clone()))));
+        }
+        must(
+            q!(harness, t => t.rooms_claim("BCD345", &guest.id, &id(), now)),
+            "the claim",
+        );
+
+        assert_eq!(q!(harness, t => t.rooms_count_open_by_host(&host.id, now)), 2);
+        assert_eq!(
+            q!(harness, t => t.rooms_count_open_by_host(&host.id, now + 60_000)),
+            1
+        );
+        assert_eq!(
+            q!(harness, t => t.rooms_count_open_by_host(&other.id, now + 60_000)),
+            1
+        );
+        assert_eq!(
+            q!(harness, t => t.rooms_count_open_by_host(&guest.id, now + 60_000)),
+            0
+        );
+        assert_eq!(
+            q!(harness, t => t.rooms_count_open_by_host("not-a-uuid", now + 60_000)),
+            0
+        );
+    }
+
     both_stores!(
         r768_reads_a_match_s_seats_in_every_status_an_open_one_included,
         creates_a_room_and_reads_it_back_by_code,
@@ -4117,6 +4167,7 @@ mod rooms {
         r1450_reaps_an_expired_unjoined_room_and_frees_its_code,
         r1450_reaps_a_claimed_room_whose_match_never_started_and_lets_both_players_go,
         r1075000_lists_a_host_s_open_rooms_newest_first,
+        r890000_counts_a_host_s_open_rooms_and_none_for_a_malformed_id,
     );
 }
 

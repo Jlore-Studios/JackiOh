@@ -19,10 +19,15 @@
 //!     so one card answers each Spell. Its own cast is a Spell that targeted an enemy, so it can call the
 //!     next. `answer` is engine bookkeeping: a view never forwards it (§10.8), since it names a hidden
 //!     card.
+//!  3. **The chain's bound** (R1180006). The player's `answerChain` holds the card last named and how
+//!     many answers the chain has named. Its resolution continues the chain, any other resolution starts
+//!     a new one, and once SPELL_ANSWER_CHAIN_CAP answers are named the next names none: a deck that
+//!     refills itself with answering cards, aimed at an enemy that never falls, would answer forever.
 
 use serde_json::Value;
 
-use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
+use crate::config::SPELL_ANSWER_CHAIN_CAP;
+use crate::state::{AnswerChain, CardInstance, GameState, find_instance, find_instance_mut};
 use crate::wire::{CardType, PlayerId, Selection, SpellAnswer, Zone, opponent_of};
 
 /// R1180005: where a resolving Spell keeps the enemies it targeted, in its memory (§10.1), until step 7
@@ -131,6 +136,32 @@ pub fn spell_answer_for(
         by: by.id.clone(),
         at: at.clone(),
     })
+}
+
+/// R1180005, R1180006: name the answer to `player`'s resolution of `resolved_id` and walk the chain.
+/// The resolution of the card last named continues its chain; any other starts a new one. Once the
+/// chain has named SPELL_ANSWER_CHAIN_CAP answers, the next resolution in it names none, and the chain
+/// ends with the first resolution that names nothing.
+pub fn name_spell_answer(
+    state: &mut GameState,
+    player: PlayerId,
+    resolved_id: &str,
+    targeted: &[Selection],
+) -> Option<SpellAnswer> {
+    let depth = match &state.players[player].answer_chain {
+        Some(chain) if chain.by == resolved_id => chain.depth,
+        _ => 0,
+    };
+    let answer = if targeted.is_empty() || depth >= SPELL_ANSWER_CHAIN_CAP {
+        None
+    } else {
+        spell_answer_for(state, player, resolved_id, targeted)
+    };
+    state.players[player].answer_chain = answer.as_ref().map(|named| AnswerChain {
+        by: named.by.clone(),
+        depth: depth + 1,
+    });
+    answer
 }
 
 /// R1180005, R946: whether `option` is the pick an aimed cast names — an instance by its id, or any

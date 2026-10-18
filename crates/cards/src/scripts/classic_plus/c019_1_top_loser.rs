@@ -120,7 +120,7 @@ mod tests {
 
         #[test]
         fn base_enters_at_4_4_radiant_unchanged() {
-            for (radiant_face, size) in [(false, 4), (true, 10)] {
+            for (radiant_face, size) in [(false, 4), (true, 8)] {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": TOP, "radiant": radiant_face }, FILLER], "library": DECK },
@@ -315,7 +315,7 @@ mod tests {
                 );
                 s.play(WHIRLWIND, json!({}));
                 let loser = top(&s);
-                s.expect_stats(&loser, json!({ "health": 10 }));
+                s.expect_stats(&loser, json!({ "health": 8 }));
                 s.play(NETHER, json!({}));
                 assert_eq!(s.unit(P2, 3).map(|unit| unit.def_id), Some(TOP.to_string()));
                 assert!(s.unit(P2, 1).is_none());
@@ -331,7 +331,7 @@ mod tests {
                     json!({ "zone": 1, "targets": [{ "pick": "instance", "instanceId": loser.id }] }),
                 );
                 let loser = top(&s);
-                s.expect_stats(&loser, json!({ "health": 8 }));
+                s.expect_stats(&loser, json!({ "health": 6 }));
                 let mut felinor = top_loser(json!({ "hand": [BIG_FELINOR, FILLER] }), true, json!({}));
                 let loser = top(&felinor);
                 felinor.play(BIG_FELINOR, json!({ "zone": 1 }));
@@ -345,7 +345,7 @@ mod tests {
                 let target = top(&s);
                 s.attack(attacker, &target);
                 let target = top(&s);
-                s.expect_stats(&target, json!({ "health": 7 }));
+                s.expect_stats(&target, json!({ "health": 5 }));
             }
 
             #[test]
@@ -364,7 +364,7 @@ mod tests {
             ) {
                 let mut aura = top_loser(json!({ "backrow": [{ "def": AURA, "lane": 1 }] }), true, json!({}));
                 let loser = top(&aura);
-                aura.expect_stats(&loser, json!({ "attack": 9, "health": 9 }));
+                aura.expect_stats(&loser, json!({ "attack": 7, "health": 7 }));
 
                 let mut s = scenario(json!({
                     "active": "p2",

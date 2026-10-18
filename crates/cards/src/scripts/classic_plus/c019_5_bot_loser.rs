@@ -146,7 +146,7 @@ mod tests {
 
         #[test]
         fn base_enters_at_4_4_radiant_unchanged() {
-            for (radiant_face, size) in [(false, 4), (true, 10)] {
+            for (radiant_face, size) in [(false, 4), (true, 8)] {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": BOT, "radiant": radiant_face }, FILLER], "library": DECK },
@@ -306,13 +306,13 @@ mod tests {
             use super::*;
 
             #[test]
-            fn t_10_10_charge_first_strike_it_gets_10_attack_per_kill() {
+            fn t_8_8_charge_first_strike_it_gets_8_attack_per_kill() {
                 let mut s = with_bot(json!({}), true, json!({ "field": [{ "def": VANILLA, "lane": 3 }] }));
                 let me = bot(&s, P1);
                 let target = unit_or_blank(&s, P2, 3);
                 s.attack(&me, target);
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 20, "health": 10 }));
+                s.expect_stats(&me, json!({ "attack": 16, "health": 8 }));
             }
 
             #[test]
