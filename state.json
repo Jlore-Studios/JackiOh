@@ -9406,9 +9406,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-18T01:36:14Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39087052237",
-    "what": "build #1159 on claude-6"
+    "at": "2026-10-18T01:43:40Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39087470467",
+    "what": "suggestions on gpt"
   },
   "last_sweep": {
     "at": "2026-10-18T01:42:40Z",
@@ -17857,11 +17857,11 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-10-18T00:57:58Z",
-    "last_run": "2026-10-17T22:56:30Z",
-    "provider": null,
+    "idle_since": "2026-10-18T01:43:40Z",
+    "last_run": "2026-10-18T01:43:40Z",
+    "provider": "gpt",
     "requested": false,
-    "run_id": null,
+    "run_id": "39087470467",
     "taken_asks": []
   },
   "usage": {
