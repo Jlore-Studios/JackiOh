@@ -4322,6 +4322,13 @@
     "1223": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-18T15:06:34Z",
+        "difficulty": "medium",
+        "provider": "claude-2",
+        "tier": "strong",
+        "why": "fails 'one place' (crates/server and apps/web) and the Dockerfile is a build config; no engine, AI or spec work, so not hard"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-2",
