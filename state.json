@@ -3824,6 +3824,9 @@
         }
       }
     },
+    "1204": {
+      "suggestion": true
+    },
     "1206": {
       "action": "review",
       "cleared": {
