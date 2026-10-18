@@ -4348,6 +4348,13 @@
     "1225": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-18T14:54:30Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "Rule lines 2 and 3 fail: the change spans crates/tools and crates/server and edits spec/rulings/R767000.md (plus the regenerated spec/INDEX.md). It is not hard because it touches no engine, AI or card code."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
