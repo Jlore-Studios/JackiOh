@@ -4915,6 +4915,13 @@
     "1242": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-18T21:42:16Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule line 3 fails outright: a new ruling R1242000 plus edits to \u00a713.9, \u00a79.5, R1141000 and INDEX.md, ~16 files"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
