@@ -22,7 +22,8 @@ import type { Action, PlayerId } from "@jackioh/shared";
 import { beginGame, createGame, reduce, type FoldInput, catalogVersion } from "./index.ts";
 import { resolveDecks } from "../game/decks.ts";
 
-const SEED = "replay-wasm";
+/** The first `replay-wasm-N` whose game lasts past two checkpoints since both seats open on four cards (R1156000). */
+const SEED = "replay-wasm-1";
 /** Three checkpoints' worth of actions and a few over: the game's end need not be reached. */
 const GAME_ACTIONS = 3 * REPLAY_CHECKPOINT_EVERY + 5;
 const SEATS: readonly PlayerId[] = ["p1", "p2"];

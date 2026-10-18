@@ -1005,3 +1005,136 @@ mod hand_faces_1143 {
         assert_eq!(greedy(&buffed(&plain, AI, 0, buffs)), greedy(&plain));
     }
 }
+
+mod r844_coming_refreshes_1224 {
+    use super::*;
+    use jackioh_ai::coming_mana;
+
+    /// `state` with `player`'s next `turns` refreshes lost (R844; 0 covers only the turn it started).
+    fn losing(state: &GameState, player: PlayerId, turns: i32) -> GameState {
+        let mut out = clone(state);
+        let side = &mut out.players[player];
+        side.lost_refresh_through = Some(side.turns_started + turns);
+        out
+    }
+
+    /// `state` with `player`'s next-turn rider at `rider` (§2.3).
+    fn riding(state: &GameState, player: PlayerId, rider: i32) -> GameState {
+        let mut out = clone(state);
+        out.players[player].mana.next_turn_mod = rider;
+        out
+    }
+
+    /// The crystals `player`'s refresh gives at `state`, its maximum.
+    fn crystals(state: &GameState, player: PlayerId) -> f64 {
+        f64::from(state.players[player].mana.max)
+    }
+
+    #[test]
+    fn r844_each_refresh_still_to_lose_costs_its_side_lost_refresh_per_crystal_it_would_have_given() {
+        let plain = board(base());
+        for turns in [1, 2] {
+            let lost = losing(&plain, AI, turns);
+            let price = AI_EVAL.lost_refresh * f64::from(turns) * crystals(&plain, AI);
+            assert!(
+                eval(&lost, AI) < eval(&plain, AI),
+                "{turns} lost refreshes cost nothing"
+            );
+            assert_close(eval(&plain, AI) - eval(&lost, AI), price, 9);
+            assert_close(eval(&lost, HUMAN) - eval(&plain, HUMAN), price, 9);
+
+            let theirs = losing(&plain, HUMAN, turns);
+            let theirs_price = AI_EVAL.lost_refresh * f64::from(turns) * crystals(&plain, HUMAN);
+            assert_close(eval(&theirs, AI) - eval(&plain, AI), theirs_price, 9);
+            assert_close(eval(&plain, HUMAN) - eval(&theirs, HUMAN), theirs_price, 9);
+        }
+    }
+
+    #[test]
+    fn r844_a_refresh_already_lost_this_turn_is_not_priced_again() {
+        let plain = board(base());
+        assert_eq!(eval(&losing(&plain, AI, 0), AI), eval(&plain, AI));
+    }
+
+    #[test]
+    fn r844_a_lost_refresh_takes_the_next_turn_rider_with_it() {
+        let plain = board(base());
+        let both = riding(&losing(&plain, AI, 1), AI, 2);
+        assert_close(
+            eval(&plain, AI) - eval(&both, AI),
+            AI_EVAL.lost_refresh * (crystals(&plain, AI) + 2.0),
+            9,
+        );
+    }
+
+    #[test]
+    fn r844_a_lost_refresh_is_priced_from_the_states_crystals_alike_at_every_tier() {
+        let plain = board(base());
+        let lost = losing(&plain, AI, 1);
+        let mut hard = clone(&lost);
+        hard.players[AI].handicap = Some(AI_DIFFICULTY.hard);
+        assert_eq!(eval(&hard, AI), eval(&lost, AI));
+    }
+
+    #[test]
+    fn a_next_turn_rider_moves_its_sides_score_by_next_turn_mana_per_crystal() {
+        let plain = board(base());
+        for rider in [2, -1] {
+            let worth = AI_EVAL.next_turn_mana * f64::from(rider);
+            let mine = riding(&plain, AI, rider);
+            let theirs = riding(&plain, HUMAN, rider);
+            assert_close(eval(&mine, AI) - eval(&plain, AI), worth, 9);
+            assert_close(eval(&mine, HUMAN) - eval(&plain, HUMAN), -worth, 9);
+            assert_close(eval(&theirs, AI) - eval(&plain, AI), -worth, 9);
+            assert_close(eval(&theirs, HUMAN) - eval(&plain, HUMAN), worth, 9);
+        }
+        assert!(eval(&riding(&plain, AI, 2), AI) > eval(&plain, AI));
+        assert!(eval(&riding(&plain, AI, -1), AI) < eval(&plain, AI));
+    }
+
+    #[test]
+    fn a_next_turn_rider_below_the_crystals_counts_only_down_to_a_refresh_of_0() {
+        let plain = board(base());
+        assert_close(
+            eval(&plain, AI) - eval(&riding(&plain, AI, -10), AI),
+            AI_EVAL.next_turn_mana * crystals(&plain, AI),
+            9,
+        );
+    }
+
+    #[test]
+    fn r844_coming_mana_is_the_seats_coming_refreshes_less_the_enemys() {
+        let plain = board(base());
+        assert_eq!(coming_mana(&plain, AI, &AI_EVAL), 0.0);
+        let lost = losing(&plain, AI, 1);
+        assert_close(
+            coming_mana(&lost, AI, &AI_EVAL),
+            -AI_EVAL.lost_refresh * crystals(&plain, AI),
+            9,
+        );
+        assert_close(
+            coming_mana(&lost, HUMAN, &AI_EVAL),
+            AI_EVAL.lost_refresh * crystals(&plain, AI),
+            9,
+        );
+        let hindered = riding(&plain, HUMAN, -1);
+        assert_close(coming_mana(&hindered, AI, &AI_EVAL), AI_EVAL.next_turn_mana, 9);
+        assert_eq!(coming_mana(&lost, AI, &GREEDY_EVAL), 0.0);
+        assert_eq!(coming_mana(&hindered, AI, &GREEDY_EVAL), 0.0);
+    }
+
+    #[test]
+    fn greedy_eval_prices_no_coming_refresh_and_no_rider() {
+        let greedy = |state: &GameState| evaluate(state, AI, NextSwing::Enemy, &GREEDY_EVAL);
+        let plain = board(base());
+        for changed in [
+            losing(&plain, AI, 1),
+            losing(&plain, HUMAN, 2),
+            riding(&plain, AI, 2),
+            riding(&plain, HUMAN, -1),
+            riding(&losing(&plain, AI, 1), AI, 2),
+        ] {
+            assert_eq!(greedy(&changed), greedy(&plain));
+        }
+    }
+}

@@ -118,6 +118,20 @@ mod signature {
     }
 
     #[test]
+    fn a_lost_refresh_is_signed() {
+        assert_signed(|state| {
+            let through = state.players[HUMAN].turns_started + 1;
+            state.players[HUMAN].lost_refresh_through = Some(through);
+        });
+        let mut one = base();
+        let through = one.players[AI].turns_started + 1;
+        one.players[AI].lost_refresh_through = Some(through);
+        let mut two = one.clone();
+        two.players[AI].lost_refresh_through = Some(through + 1);
+        assert_ne!(search_signature(&one, AI), search_signature(&two, AI));
+    }
+
+    #[test]
     fn a_hand_cap_is_signed() {
         assert_signed(|state| state.players[AI].hand_cap = Some(5));
     }

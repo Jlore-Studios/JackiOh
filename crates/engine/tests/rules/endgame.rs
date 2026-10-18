@@ -147,7 +147,7 @@ mod ending_the_game_m1_t8 {
     #[test]
     fn r2_r389_ends_in_a_draw_after_the_60th_player_turn_not_the_59th() {
         let mut state = playing("cap", None);
-        // R389: do-nothing decks fatigue out at player-turn 48 (§2.4, R3); #75 Infinite Reserves on both
+        // R389: do-nothing decks fatigue out at player-turn 47 (§2.4, R3); #75 Infinite Reserves on both
         // sides turns every empty-library draw into a card, so nothing but the cap ends this game.
         put(
             &mut state,

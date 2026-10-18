@@ -593,8 +593,17 @@ async fn r639000_a_face_down_enemy_card_stops_neither_the_standing_read_nor_the_
 
 #[test]
 fn r639000_an_even_board_reads_level_though_its_deficit_does_not() {
-    // Both seats have only ended their turns: no board, both heroes whole.
-    let state = opened_at("seed-even", BOT_CONCEDE_FIT.min_turn);
+    // Both seats have only ended their turns: no board, both heroes whole. The seed is the first
+    // whose seats cast nothing on draw by then (Core #27 Blood Ridden Glowy Jelly Bean costs its
+    // hero health, R58), so nothing has hurt a hero or reached a graveyard.
+    let seed = seed_where("seed-even", |seed| {
+        let state = opened_at(seed, BOT_CONCEDE_FIT.min_turn);
+        PLAYER_IDS.iter().all(|&seat| {
+            state.players[seat].hero.health == jackioh_engine::config::HERO_HEALTH
+                && state.players[seat].graveyard.is_empty()
+        })
+    });
+    let state = opened_at(&seed, BOT_CONCEDE_FIT.min_turn);
     let bot = state.active;
     let read = standing(&state, bot, "even", bot);
     // R1442's deficit counts the enemy hero's health against the seat, so an even board reads

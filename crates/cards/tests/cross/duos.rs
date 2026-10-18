@@ -521,6 +521,8 @@ mod pass_links {
         assert!(!ids.is_empty(), "A1's hand is watched");
         let mut state = close_round(state);
         top_up(&mut state);
+        // Room for every watched card: A1's five and A2's own six would pass the hand cap (R1156000).
+        side_mut(&mut state, A2).hand.clear();
         for id in &ids {
             if side(&state, A1).hand.iter().any(|card| &card.id == id) {
                 state = ok(&state, A1, pass(id));

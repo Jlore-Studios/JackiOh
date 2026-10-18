@@ -608,16 +608,16 @@ to 150 seconds instead and the cap stays 30.
 Knock-on work:
 
 - §2.5's reason for 30 ("lines up with a 20-card deck … keeps fatigue rare") no longer holds and is
-  rewritten. One draw a turn empties a 20-card deck on the first player's 17th turn and the second
-  player's 16th (3 or 4 opening cards, §2.4), and fatigue, N damage on the Nth empty draw, then kills a
-  hero at 30 health on the eighth. So two decks that do nothing end by fatigue on the second player's
-  24th turn, player-turn 48, and 60 is reached only by games that heal, gain Armor, refill a deck
+  rewritten. One draw a turn empties a 20-card deck on each player's 16th turn (4 opening cards, §2.4,
+  R1156000), and fatigue, N damage on the Nth empty draw, then kills a hero at 30 health on the eighth.
+  So two decks that do nothing end by fatigue on the first player's 24th turn, player-turn 47, and 60
+  is reached only by games that heal, gain Armor, refill a deck
   (Classic #30) or replace fatigue (Core #75 Infinite Reserves). The cap becomes a backstop, fatigue
   the usual end of a long game, and CN-Virus, Pile On, Last Hurrah, Rapid Draw and Second Wind bring
   it sooner. R2 loses "decide". **⚠ designer:** if "double" meant longer games that still end on the
   cap, the cap alone won't do it; the deck size or fatigue would have to change too.
 - The hard match ceiling (`MATCH_CEILING_MINUTES`, 60, R79): 60 player-turns at a full 75-second
-  clock is 75 minutes, and even a game that fatigues out at player-turn 48 can take 60, so a slow game
+  clock is 75 minutes, and even a game that fatigues out at player-turn 47 can take nearly 60, so a slow game
   would hit the ceiling first. Raise it to 120 minutes (proposal) or accept that such games end as
   ceiling draws.
 - The AI weighs face damage "more as the turn cap nears" by reading the constant, so it adapts; the
@@ -625,7 +625,7 @@ Knock-on work:
   (fewer turn-cap draws).
 - Fuzz still "always terminates within the cap"; long seeds take longer. The e2e spec
   `08-turn-cap-draw.cy.ts` can't reach the cap as written: its two do-nothing decks fatigue out at
-  player-turn 48, and it asserts both heroes are still at `HERO_HEALTH` when the Draw appears. It
+  player-turn 47, and it asserts both heroes are still at `HERO_HEALTH` when the Draw appears. It
   needs decks that never fatigue (both seats play Core #75 Infinite Reserves) or a game seeded near
   the cap, and its R2 arithmetic (15 turns each) becomes 30. Any client text that prints the cap
   reads the constant.
@@ -3627,7 +3627,7 @@ the designer's answer should land in SPEC before the card it touches ships.
 | 6 | B2.8 | Classic #72 shares Counterspell's name. Rename? | "Grand Counterspell" suggested |
 | 7 | B3.4 | Upgrade's list was blank. Mirror of Degrade? | Yes |
 | 8 | B4.2 | Labels for the pre-v0.1.1 history | v0.1.0, v0.1.0-r1 … r3 |
-| 9 | B4.3 | "Double turn limit": the turn cap (30 → 60) or the turn clock (75 → 150 s)? At 60, two 20-card decks fatigue out at player-turn 48, so the cap is rarely reached | The cap; match ceiling 60 → 120 min |
+| 9 | B4.3 | "Double turn limit": the turn cap (30 → 60) or the turn clock (75 → 150 s)? At 60, two 20-card decks fatigue out at player-turn 47, so the cap is rarely reached | The cap; match ceiling 60 → 120 min |
 | 10 | C #1 | Does the Radiant keep "Draw 1"? | Yes |
 | 11 | C #4 | Is Palantir's base steal optional? | Yes ("Tribute this to …") |
 | 12 | C #5 | Does Tesla keep firing while animated? | Yes (a Field Trap) |
