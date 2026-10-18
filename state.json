@@ -18052,11 +18052,11 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-18T03:00:33Z",
-    "last_run": "2026-10-18T03:00:33Z",
-    "provider": "claude-3",
+    "idle_since": "2026-10-18T02:22:12Z",
+    "last_run": "2026-10-18T01:43:40Z",
+    "provider": null,
     "requested": false,
-    "run_id": "39091710881",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
