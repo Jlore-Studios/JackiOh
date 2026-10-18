@@ -3846,21 +3846,26 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-17T23:41:22Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_tier": "medium",
+      "pr": 1189,
       "provider": "claude-6",
+      "question": "",
       "queued_at": "2026-10-17T23:17:32Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "medium",
       "run_id": "39087052237",
       "started_at": "2026-10-18T01:36:14Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": [
         "c:6242957135"
-      ]
+      ],
+      "verdict_rounds": 1
     },
     "1160": {
       "action": "build",
