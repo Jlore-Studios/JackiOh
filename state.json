@@ -5151,9 +5151,12 @@
         "sha": "b1bea04830f93d7ecb47fad0e907e107b10e1c94"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-18T21:43:12Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1242,
       "kind": "review",
       "pending_request": false,
