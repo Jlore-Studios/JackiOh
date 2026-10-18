@@ -419,7 +419,8 @@ pub enum EvalKind {
     /// `evaluate` with `AI_EVAL`: the hand-written evaluation, everywhere.
     Hand,
     /// The finalists after the opponent's reply are scored by the learned network's correction of
-    /// the hand eval (`learned::finalist_score`), 1v1 only; the beam keeps the hand eval.
+    /// the hand eval (`learned::finalist_score`), 1v1 only, and as much more of the search as
+    /// `LEARNED_REACH` says.
     Learned,
 }
 
@@ -455,6 +456,30 @@ pub const AI_MOVE_ORDER: MoveOrder = MoveOrder::Heuristic;
 /// has its own.
 pub const POLICY_RANK_CAP: usize = 24;
 const _: () = assert!(POLICY_RANK_CAP >= AI_BUDGET.root_branching);
+
+/// How far into the search the learned evaluation reaches with the switch on (`docs/learned-eval.md`
+/// D6). Each step takes in the one before it.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "camelCase")]
+pub enum LearnedReach {
+    /// D6's option B: the finalists after the opponent's reply.
+    Finalists,
+    /// Every complete line too, where the beam closes it (`static_score`): the network also picks
+    /// which lines become the finalists.
+    Lines,
+    /// Every open line too, where the beam ranks it at each depth (D6's option A in the beam).
+    Beam,
+}
+
+/// R1012002: the learned evaluation's reach (`learned::line_score`, `learned::open_score`). Measured
+/// on 1,600 paired games each against the hand eval (#466, the learn lane's 100,000-game network at
+/// half the correction, 3 finalists): the finalists alone +0.073 edge, every complete line +0.102, the
+/// whole beam +0.054; on fresh deals, the finalists +0.071 and every complete line +0.076, a tie.
+/// Ranking open lines on the network prunes the beam on a scale its widths were never tuned for. At
+/// the finalists alone the beam and its shortlist keep the hand eval, so the network's errors on
+/// positions unlike its games (the puzzles' bare boards and empty libraries) reach only the choice
+/// among lines the hand eval found: at `Lines` a retrained network missed two of the AI's puzzles.
+pub const LEARNED_REACH: LearnedReach = LearnedReach::Finalists;
 
 /// The greedy baseline's own evaluation (baselines.rs): AI_EVAL exactly as it stood when the quality
 /// gates were fixed on the seed series `gate:v2`, frozen here. A baseline the AI is measured against

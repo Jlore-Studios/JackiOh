@@ -75,8 +75,9 @@ so a fold of a game played on an older catalog version reads that version's card
   a card reads instead of `GameState` fields. `crates/cards/README.md` lists them.
 - `prelude` is what a card file names: `use jackioh_engine::prelude::*;`.
 - `subsystems/` holds the card-specific systems (fuse, rotation, scorer, the random policy
-  `ai_policy`, heroic power, combo index, Call to Chaos, quests, …), each tested through fixture
-  scripts in `tests/rules/fixtures/`.
+  `ai_policy`, the scorer-driven `autopilot` that `reduce` drives through a turn, R1183002, heroic
+  power, combo index, Call to Chaos, quests, …), each tested through fixture scripts in
+  `tests/rules/fixtures/`.
 - `scripts::script_of(state, def_id)` finds a card's script; a fused card's is composed from its
   ingredients on lookup (`subsystems::fuse::compose_fused_scripts`), and a crafted card's (Meditative
   #17, R882) from its recipe (`subsystems::craft::compile_crafted_scripts`).

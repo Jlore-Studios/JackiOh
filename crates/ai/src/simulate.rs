@@ -21,6 +21,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::{AI_EVAL, AI_SEARCH};
 use crate::evaluate::{NextSwing, evaluate};
+use crate::learned::{line_score, open_score};
 use crate::types::{NodeCounter, StoppedBy};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -336,7 +337,7 @@ pub(crate) fn best_auto_answer(
 /// and any the other seat holds, gets its holder's best of its first AI_SEARCH.max_auto_answer_options
 /// answers (`best_auto_answer`, nonce `ahead:${counter.used}`, each answer tried one node of
 /// `counter`), at most AI_SEARCH.max_auto_answers prompts, and the state reached is scored by
-/// `evaluate` as the beam scores a child. Only a score: the child stays at its prompt, so the beam
+/// `open_score` as the beam scores a child. Only a score: the child stays at its prompt, so the beam
 /// still picks its real answers. `None` when no prompt of the seat's is open, when the counter
 /// refuses a node, and when no answer is accepted, the prompts outrun the cap or the engine panics
 /// (a failed simulation, as in `simulate`): the child then keeps its plain evaluation.
@@ -359,7 +360,7 @@ pub fn own_prompt_score(state: &GameState, seat: PlayerId, counter: &dyn NodeCou
             current = best_auto_answer(&current, answerer, options, counter, "ahead")?.ok()?;
             answered += 1;
         }
-        Some(evaluate(&current, seat, NextSwing::Enemy, &AI_EVAL))
+        Some(open_score(&current, seat, NextSwing::Enemy))
     }));
     run.unwrap_or_else(|_| {
         note_sim_error(counter);
@@ -463,10 +464,10 @@ fn simulate_answering(
     }
 }
 
-/// A passed turn's value: the evaluation, less the crystals the seat left unspent.
+/// A passed turn's value: the line's score (`line_score`), less the crystals the seat left unspent.
 fn passed_score(state: &GameState, seat: PlayerId) -> f64 {
     let unspent = state.players[seat].turn_log.unspent_at_end.unwrap_or(0);
-    evaluate(state, seat, NextSwing::Enemy, &AI_EVAL) - AI_EVAL.unspent_mana * f64::from(unspent)
+    line_score(state, seat, NextSwing::Enemy) - AI_EVAL.unspent_mana * f64::from(unspent)
 }
 
 /// `closeLine`'s step: the line's turn ended here, or `None` where TS handed `state` back itself
@@ -499,18 +500,18 @@ pub fn static_score(state: &GameState, seat: PlayerId, root_turn: i32) -> f64 {
     if line_status(state, seat, root_turn) == LineStatus::Passed {
         passed_score(state, seat)
     } else {
-        evaluate(state, seat, NextSwing::Enemy, &AI_EVAL)
+        line_score(state, seat, NextSwing::Enemy)
     }
 }
 
-/// A line's value: "over"/"yielded" → evaluate; "passed" → evaluate − AI_EVAL.unspentMana ×
+/// A line's value: "over"/"yielded" → `line_score`; "passed" → `line_score` − AI_EVAL.unspentMana ×
 /// (players[seat].turnLog.unspentAtEnd ?? 0); "open" → simulate endTurn if the seat is in its main
-/// phase and a node is left, then score that, else evaluate.
+/// phase and a node is left, then score that, else `line_score` (R1012002).
 pub fn terminal_score(state: &GameState, seat: PlayerId, root_turn: i32, counter: &dyn NodeCounter) -> f64 {
     let status = line_status(state, seat, root_turn);
     if status == LineStatus::Open {
         return match close_line_step(state, seat, root_turn, counter) {
-            None => evaluate(state, seat, NextSwing::Enemy, &AI_EVAL),
+            None => line_score(state, seat, NextSwing::Enemy),
             Some(closed) => static_score(&closed, seat, root_turn),
         };
     }

@@ -107,6 +107,7 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Immune to damage",
     "Lose all mana",
     "Extra turn",
+    "Autopilot",
     "Trigger End of turn effects",
     "Keep a secret",
     "Guess a secret",

@@ -12,9 +12,9 @@ use indexmap::IndexSet;
 use jackioh_engine::{ActionBody, GameState, Phase, PlayerId};
 
 use crate::candidates::{candidate_actions, candidate_set};
-use crate::config::{AI_EVAL, AI_MOVE_ORDER, MoveOrder};
-use crate::evaluate::{NextSwing, evaluate};
-use crate::learned::finalist_score;
+use crate::config::{AI_MOVE_ORDER, MoveOrder};
+use crate::evaluate::NextSwing;
+use crate::learned::{finalist_score, line_score, open_score};
 use crate::policy::{POLICY_PRIOR, PolicyPrior, prior_order};
 use crate::reply::{hidden_card_ids, reply_score};
 use crate::simulate::{
@@ -114,7 +114,7 @@ pub fn beam_search_with(
     let mut frontier: Vec<OpenLine> = vec![OpenLine {
         state: det.clone(),
         actions: Vec::new(),
-        score: evaluate(det, seat, NextSwing::Enemy, &AI_EVAL),
+        score: open_score(det, seat, NextSwing::Enemy),
     }];
     let mut left_open: Vec<OpenLine> = Vec::new();
     let mut stopped = false;
@@ -164,7 +164,7 @@ pub fn beam_search_with(
                 seen.insert(signature);
                 // #1112: a child waiting on the seat's own prompt is ranked where its answers lead.
                 let score = own_prompt_score(&next, seat, counter)
-                    .unwrap_or_else(|| evaluate(&next, seat, NextSwing::Enemy, &AI_EVAL));
+                    .unwrap_or_else(|| open_score(&next, seat, NextSwing::Enemy));
                 children.push(OpenLine {
                     state: next,
                     actions,
@@ -197,7 +197,7 @@ pub fn beam_search_with(
         // TS asked whether `closeLine` handed back the very state it was given (no step was taken):
         // a step always moves the state on, so equality answers the same question.
         let score = if end == line.state {
-            evaluate(&end, seat, NextSwing::Enemy, &AI_EVAL)
+            line_score(&end, seat, NextSwing::Enemy)
         } else {
             static_score(&end, seat, root_turn)
         };
@@ -259,7 +259,7 @@ pub fn score_line(
             // A finalist whose endTurn is refused keeps its static score, from the evaluation that
             // scores the finalists when they are replied to (#1010).
             Some(Err(_)) if reply => return Some(finalist_score(&state, seat, NextSwing::Enemy)),
-            Some(Err(_)) => return Some(evaluate(&state, seat, NextSwing::Enemy, &AI_EVAL)),
+            Some(Err(_)) => return Some(line_score(&state, seat, NextSwing::Enemy)),
             Some(Ok(next)) => state = next,
         }
     }
