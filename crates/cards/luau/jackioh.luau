@@ -692,6 +692,7 @@ costMod: number?,
 costOverride: number?,
 player: PlayerSpec?,
 radiant: boolean?,
+fillWithCopies: boolean?,
 }
 
 export type DrawWhileArgs = {
@@ -808,6 +809,7 @@ armorOverride: number?,
 row: Row?,
 side: ScopeSide?,
 radiantFor: PlayerSpec?,
+chinese: boolean?,
 }
 
 export type FillBoardRandomArgs = {
@@ -1854,6 +1856,12 @@ instanceId: string?,
 
 export type RadiantZone = "hand" | "library" | "field"
 
+export type RaiseTimesPlayedArgs = {
+defId: string,
+amount: number,
+player: PlayerSpec?,
+}
+
 export type RandomEntryLuau = {
 label: string,
 effects: {JsonValue},
@@ -2090,6 +2098,17 @@ attack: number?,
 maxHealth: number?,
 }
 
+export type SetStatsAllArgs = {
+attack: number,
+health: number,
+side: ScopeSide?,
+rows: {Row}?,
+types: {CardType}?,
+tags: {Tag}?,
+notTags: {Tag}?,
+excludeSelf: boolean?,
+}
+
 export type ShuffleCardIntoArgs = {
 instanceId: string,
 }
@@ -2282,6 +2301,13 @@ radiant: boolean?,
 }
 
 export type TakeFromLibraryPick = "random" | "top" | "bottom" | "chosen"
+
+export type TakeToHandArgs = {
+target: TargetSpec,
+costOverride: number?,
+costMod: number?,
+radiant: boolean?,
+}
 
 export type TargetAim = "harm" | "help"
 
@@ -3778,6 +3804,10 @@ function J.radiant_chance(args: RadiantChanceLuauArgs): EffectCall
 	return { verb = "radiant_chance", args = args :: any }
 end
 
+function J.raise_times_played(args: RaiseTimesPlayedArgs): EffectCall
+	return { verb = "raise_times_played", args = args :: any }
+end
+
 function J.recruit(args: RecruitArgs): EffectCall
 	return { verb = "recruit", args = args :: any }
 end
@@ -3862,6 +3892,10 @@ function J.set_radiant_random(args: SetRadiantRandomArgs): EffectCall
 	return { verb = "set_radiant_random", args = args :: any }
 end
 
+function J.set_stats_all(args: SetStatsAllArgs): EffectCall
+	return { verb = "set_stats_all", args = args :: any }
+end
+
 function J.shuffle_card_into(args: ShuffleCardIntoArgs): EffectCall
 	return { verb = "shuffle_card_into", args = args :: any }
 end
@@ -3940,6 +3974,10 @@ end
 
 function J.take_from_library(args: TakeFromLibraryArgs): EffectCall
 	return { verb = "take_from_library", args = args :: any }
+end
+
+function J.take_to_hand(args: TakeToHandArgs): EffectCall
+	return { verb = "take_to_hand", args = args :: any }
 end
 
 function J.transform(args: TransformArgs): EffectCall
