@@ -4905,6 +4905,13 @@
     "1243": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-18T20:47:24Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "fails line 2 (one place): it spans crates/tools, crates/server, apps/web and spec/README.md, and the phrases the scanner rejects also widen its reach to five stale sites the issue does not name"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
