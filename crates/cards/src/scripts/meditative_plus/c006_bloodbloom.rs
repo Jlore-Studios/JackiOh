@@ -62,7 +62,7 @@ mod tests {
     const TWINSPELL: &str = "core-079";
     /// (1) Trap.
     const MY_PAWN: &str = "core-096";
-    /// (1) Spell, Cast on draw: make a random card in your hand Radiant, lose 5 health.
+    /// (1) Spell, Cast on draw: make a random card in your hand Radiant, lose its `loss` in health.
     const JELLY_BEAN: &str = "core-027";
     /// A (1) 4/4 with no text: a hand card and a library filler.
     const FILLER: &str = "core-008";
@@ -166,8 +166,17 @@ mod tests {
         s.play(ID, json!({}));
         s.end_turn();
         s.end_turn();
-        // The Jelly Bean was drawn and cast (R70): its own 5 health, no price paid.
-        assert_eq!(health(&s, P1), 25);
+        // The Jelly Bean was drawn and cast (R70): its own health loss, no price paid.
+        let loss = jackioh_engine::prelude::param_value(
+            s.state(),
+            None,
+            "loss",
+            jackioh_engine::prelude::ParamValueOptions {
+                def_id: Some(JELLY_BEAN.to_string()),
+                radiant: Some(false),
+            },
+        );
+        assert_eq!(health(&s, P1), 30 - loss);
         assert_eq!(prices(&s).len(), 1);
     }
 
