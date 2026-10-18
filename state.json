@@ -3925,15 +3925,24 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/server/tests/api/mod.rs",
+            "spec/11-rulings.md"
+          ],
+          "from": "175d1d530f0a8dfc20780ad1bb53a8428c37d0e5",
+          "main": "04812c82cc3b55959fd93500c42abc1526f3a541"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39083776591",
+            "run": "39089312081",
             "tier": "strong"
           }
         ],
-        "sha": "175d1d530f0a8dfc20780ad1bb53a8428c37d0e5",
+        "sha": "c8b8a8f1985d1216131cab877568f4b783fc99e2",
         "tiers": {
           "claude": "strong"
         }
