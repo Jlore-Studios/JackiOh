@@ -3802,9 +3802,7 @@
       "run_id": "39109556451",
       "started_at": "2026-10-18T07:58:51Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6245601248"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 2
     },
     "1157": {
