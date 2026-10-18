@@ -3755,6 +3755,17 @@
       ]
     },
     "1197": {
+      "asks": [
+        "c:6250150343"
+      ],
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-10-18T12:53:42Z",
+      "requested_by": "MaxGoetzmann",
+      "stop_requested": false,
       "suggestion": true
     },
     "1202": {
