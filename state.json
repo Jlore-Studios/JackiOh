@@ -3527,6 +3527,7 @@
       "planned_by_id": "muse",
       "planned_tier": "medium",
       "provider": "muse",
+      "question": "Issue #1151's v0.3.11 cannot ship while pending v0.3.10 claims meditative-057: the branch tags 057 Human (5 catalog changes) but the fragment claims 4, so `patches ship` bails with nothing shipped; claiming 057 instead fails `patches check` as a double-claim. Please either ship v0.3.10 first and let the bot add meditative-057 to v0.3.11's claims and merge, or approve descoping v0.3.11 to the other four cards with 057 deferred to a follow-up patch.",
       "queued_at": "2026-10-17T21:13:43Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "39080003725",
