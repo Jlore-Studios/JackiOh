@@ -10,6 +10,7 @@ pub mod cleave;
 pub mod combat_mods;
 pub mod decide;
 pub mod deck;
+pub mod deploy_guard;
 pub mod determinize_shown_cost;
 pub mod dev_run;
 pub mod duos;

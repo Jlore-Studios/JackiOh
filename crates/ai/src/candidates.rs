@@ -6,14 +6,15 @@
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::{
-    ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, Row, Selection,
-    UnitView, ZoneChoice, ZoneSlot, adjacent, attack_mod_for, beneath_at, canonical, card_at, carried_at,
-    effective_cost, find_instance, has_keyword, is_locked, lane_multiplier_for, legal_actions, pierces,
-    row_size, slot_of, subsystems, takes_strike_back, unit_view,
+    ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, ParamValueOptions, PlayerId,
+    Row, Selection, UnitView, ZoneChoice, ZoneSlot, active_units_of, adjacent, attack_mod_for, beneath_at,
+    canonical, card_at, carried_at, effective_cost, find_instance, has_keyword, is_locked, is_open,
+    lane_multiplier_for, legal_actions, param_value, pierces, row_size, slot_of, slots_of, subsystems,
+    takes_strike_back, unit_view,
 };
 use serde_json::Value;
 
-use crate::config::AI_SEARCH;
+use crate::config::{AI_DEPLOY_GUARD, AI_SEARCH};
 
 /// Canonical JSON of an action body (keys sorted), for equality across determinizations. TS's
 /// `JSON.stringify` with a key-sorting replacer is SURFACE §5.2's `canonical`.
@@ -600,4 +601,111 @@ pub fn candidate_actions_in(state: &GameState, seat: PlayerId, legal: Vec<Action
     out.extend(switches);
     out.extend(ends);
     out
+}
+
+// The bounds `deploy_guard` refuses a play at, each tied to the turn or the hand the card's own
+// downside is armed past (the lane's records: every card below is cast into a losing game far more
+// often than it is held in a winning one).
+
+/// M #3 Jlockwork Machine: the last turn its Rush body still ends the game before the three cards
+/// every enemy play exiles reach the deck's bottom.
+const AI_DEPLOY_JLOCKWORK_LAST_TURN: i32 = 11;
+/// M #68 Catnip: the first turn a set copy could meet an enemy Spell — an earlier set is a card and
+/// a backrow zone spent on nothing.
+const AI_DEPLOY_CATNIP_EARLIEST_TURN: i32 = 4;
+/// M #80 Aluneth: a base-face cast is kept only for a hand with nothing else in it — the card
+/// itself counts, so this is Aluneth plus at most one other.
+const AI_DEPLOY_ALUNETH_MAX_HAND: usize = 2;
+
+/// What a −p/−p aura costs the units of one side: a unit it leaves at or under 0 max health dies
+/// (R69) and is worth its whole body; a survivor loses the attack it can and the health.
+fn suppressed_loss(state: &GameState, player: PlayerId, penalty: i32) -> i32 {
+    active_units_of(state, player)
+        .into_iter()
+        .map(|unit| {
+            let view = unit_view(state, unit);
+            if view.health <= penalty {
+                view.attack.max(0) + view.health.max(0)
+            } else {
+                view.attack.min(penalty).max(0) + penalty
+            }
+        })
+        .sum()
+}
+
+/// The deploy guard (AI_DEPLOY_GUARD): whether a `Play` is a move the deciding seat's beam may
+/// take. The records show a handful of cards cast into their own funeral far more often than held
+/// in a winning hand — an Indestructible draw-3 engine that cannot be turned off, a body that
+/// hands the enemy a Poisonous token, a field spell that eats the unit played onto it — so the
+/// beam refuses them, exactly where their printed downside is armed. Every check reads what the
+/// seat can see — hand size, the turn, zone occupancy, the layers' unit views (R185) — and keeps a
+/// cast whose downside is not armed, so the change is to a refusal the state, not the card, asks
+/// for: Aluneth under a Radiant face's own exile or an empty hand, DOOM when its gift has no open
+/// zone to land in (a summon with none fizzles, §6.1), Jlockwork and Catnip inside their windows,
+/// Suppressive Aura where its debuff costs the enemy board more, Back Breaker with nothing of ours
+/// in the backrow its Death takes.
+pub fn deploy_guard(state: &GameState, seat: PlayerId, action: &ActionBody) -> bool {
+    if !AI_DEPLOY_GUARD {
+        return true;
+    }
+    let ActionBody::Play {
+        instance_id,
+        zone,
+        embiggen,
+        ..
+    } = action
+    else {
+        return true;
+    };
+    // C+ #33 Ivory Tower: the unit play that names its zone fuses the unit in and it ceases to
+    // exist (R446, R653) — a body paid for a carried text the records never saw win. The carrier's
+    // is the one backrow zone a Unit's play may name.
+    if let Some(zone) = zone
+        && zone.row == Row::Backrow
+        && card_at(
+            state,
+            ZoneSlot {
+                player: seat,
+                row: Row::Backrow,
+                lane: zone.lane,
+            },
+        )
+        .is_some_and(|top| top.def_id == "classicplus-033")
+    {
+        return false;
+    }
+    let Some(card) = find_instance(state, instance_id) else {
+        return true;
+    };
+    match card.def_id.as_str() {
+        // The Tower's own cast is the same deal: a field spell whose only text eats a unit.
+        "classicplus-033" => false,
+        "meditative-080" => card.radiant || state.players[seat].hand.len() <= AI_DEPLOY_ALUNETH_MAX_HAND,
+        "meditative-070" => !slots_of(seat.opponent(), Row::Units)
+            .iter()
+            .any(|slot| is_open(state, *slot)),
+        "meditative-003" => state.turn <= AI_DEPLOY_JLOCKWORK_LAST_TURN,
+        "meditative-068" => state.turn >= AI_DEPLOY_CATNIP_EARLIEST_TURN,
+        // C #46 Suppressive Aura's base face debuffs every unit on both sides: a comeback card,
+        // kept only where the penalty costs the enemy board more than ours. The Radiant face
+        // debuffs the enemy alone.
+        "core-046" => {
+            card.radiant || {
+                let key = if *embiggen == Some(true) {
+                    "paidDebuff"
+                } else {
+                    "debuff"
+                };
+                let penalty = param_value(state, Some(card), key, ParamValueOptions::default());
+                suppressed_loss(state, seat.opponent(), penalty) > suppressed_loss(state, seat, penalty)
+            }
+        }
+        // C #51 Back Breaker's base face destroys every backrow card on its Death — ours included.
+        // Kept while ours is empty, or outnumbered by theirs for the sweeper it then is.
+        "classic-051" => {
+            let own = state.players[seat].backrow.iter().flatten().count();
+            card.radiant || own == 0 || state.players[seat.opponent()].backrow.iter().flatten().count() > own
+        }
+        _ => true,
+    }
 }

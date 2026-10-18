@@ -33,13 +33,14 @@ fn states() -> Vec<(GameState, PlayerId)> {
         .collect()
 }
 
-/// Today's expansion, written out: the first `width` candidates that are not End Turn, then End Turn
-/// when it is one.
+/// Today's expansion, written out: the first `width` candidates that are not End Turn and pass the
+/// deploy guard (candidates.rs), then End Turn when it is one.
 fn todays(state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody> {
     let candidates = candidate_actions(state, seat);
     let mut moves: Vec<ActionBody> = candidates
         .iter()
         .filter(|action| **action != ActionBody::EndTurn)
+        .filter(|action| candidates::deploy_guard(state, seat, action))
         .take(width)
         .cloned()
         .collect();
