@@ -9217,8 +9217,11 @@
     "what": "revise #1217 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-18T12:39:53Z",
-    "notes": [],
+    "at": "2026-10-18T12:50:09Z",
+    "notes": [
+      "#1218 needs a plan",
+      "started a night run, as a lane was free: #1218 (medium) is queued to build, for `agy`: plan on `agy` (agy, `gemini-3.8-flash-high`, medium)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
