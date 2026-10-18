@@ -32,10 +32,13 @@
 #      would be, must still serve render.yaml's version, warn naming the stale value, and leave the
 #      database stamped with render.yaml's version, never the stale one.
 #
-# REHEARSAL_DEPS_ONLY=1 stops after building the Dockerfile's `deps` stage (the image's
-# dependencies, `cargo chef cook`) with the cache flags below: no database, no image, no boot. CI
-# runs it as a job of its own before the rehearsal (#653), so a change to a manifest or Cargo.lock,
-# which recompiles every dependency, is paid there, and the rehearsal's own build finds them cached.
+# REHEARSAL_STAGE=deps stops after building the Dockerfile's `deps` stage (the image's
+# dependencies, `cargo chef cook`), and REHEARSAL_STAGE=crates after its `crates` stage (the
+# workspace's crates and the server's library, compiled on them), with the cache flags below: no
+# database, no image, no boot. REHEARSAL_DEPS_ONLY=1 is REHEARSAL_STAGE=deps. CI builds each stage in
+# a job of its own before the rehearsal (#653, #1223), so a change to a manifest or Cargo.lock, which
+# recompiles every dependency, is paid in the first, the workspace's crates in the second, and the
+# rehearsal's own build compiles only the server's binary and its thin-LTO link.
 #
 # Needs Docker, or an existing superuser connection via REHEARSAL_PGHOST / REHEARSAL_PGPORT
 # (a socket directory or a host) and REHEARSAL_PGPASSWORD; it creates and drops its own database.
@@ -62,6 +65,14 @@ PGHOST_=${REHEARSAL_PGHOST:-}
 PGPORT_=${REHEARSAL_PGPORT:-5432}
 PGPASSWORD_=${REHEARSAL_PGPASSWORD:-postgres}
 SERVER_UP=""
+# The one Dockerfile stage to build alone (REHEARSAL_STAGE, or `deps` for REHEARSAL_DEPS_ONLY), or
+# empty for the whole rehearsal.
+STAGE=${REHEARSAL_STAGE:-}
+if [ -z "$STAGE" ] && [ -n "${REHEARSAL_DEPS_ONLY:-}" ]; then STAGE=deps; fi
+case "$STAGE" in
+  "" | deps | crates) ;;
+  *) echo "FAIL: REHEARSAL_STAGE is deps or crates, not $STAGE" >&2; exit 1 ;;
+esac
 
 cleanup() {
   if [ -n "$SERVER_UP" ]; then docker rm -f "$SERVER" >/dev/null 2>&1 || true; fi
@@ -97,11 +108,11 @@ echo "image: $DOCKERFILE (context $CONTEXT)"
 echo "catalog version: $CATALOG_VERSION"
 echo "health check: $HEALTH_CHECK_PATH"
 
-# REHEARSAL_DEPS_ONLY (above) builds the `deps` stage alone, left in the build cache and written to
+# STAGE (above) builds that one stage alone, left in the build cache and written to
 # REHEARSAL_CACHE_TO, with no image to tag or load.
-if [ -n "${REHEARSAL_DEPS_ONLY:-}" ]; then
-  echo "--- the image's dependencies alone: the Dockerfile's deps stage, built as Render builds it ---"
-  set -- --target deps
+if [ -n "$STAGE" ]; then
+  echo "--- the Dockerfile's $STAGE stage alone, built as Render builds it ---"
+  set -- --target "$STAGE"
 else
   echo "--- the image, built as Render builds it ---"
   set -- -t "$IMAGE"
@@ -115,13 +126,13 @@ fi
 if [ -n "${REHEARSAL_CACHE_FROM:-}" ]; then
   set -- "$@" --cache-from "$REHEARSAL_CACHE_FROM"
   if [ -n "${REHEARSAL_CACHE_TO:-}" ]; then set -- "$@" --cache-to "$REHEARSAL_CACHE_TO"; fi
-  if [ -z "${REHEARSAL_DEPS_ONLY:-}" ]; then set -- "$@" --load; fi
+  if [ -z "$STAGE" ]; then set -- "$@" --load; fi
   docker buildx build "$@" -f "$REPO/$DOCKERFILE" "$REPO/$CONTEXT"
 else
   docker build "$@" -f "$REPO/$DOCKERFILE" "$REPO/$CONTEXT"
 fi
-if [ -n "${REHEARSAL_DEPS_ONLY:-}" ]; then
-  echo "--- the deps stage is built and cached: the rehearsal proper builds the image on it ---"
+if [ -n "$STAGE" ]; then
+  echo "--- the $STAGE stage is built and cached: the rehearsal proper builds the image on it ---"
   exit 0
 fi
 
