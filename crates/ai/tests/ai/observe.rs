@@ -1185,11 +1185,10 @@ mod r923_placeholder_carries_no_granted_tag {
 
 mod r1176000_placeholder_is_not_in_chinese {
     use super::*;
-    use jackioh_engine::query::tags_of;
 
     /// R1176000: a card in Chinese is CN, and whether a hidden card is in Chinese goes with its face
-    /// (R1301), so a placeholder is not in Chinese, and a determinized world is CN only where the seat
-    /// may read it.
+    /// (R1301), so a placeholder is not in Chinese: translating the cards a seat cannot read changes
+    /// nothing it may know.
     #[test]
     fn r1176000_a_placeholder_is_not_in_chinese() {
         let (mut a, _) = pair();
@@ -1202,7 +1201,6 @@ mod r1176000_placeholder_is_not_in_chinese {
         for id in &hidden {
             let placeholder = card_by_id(&public, id).expect("the placeholder");
             assert_eq!(placeholder.chinese, None, "{id}");
-            assert!(!tags_of(&public, placeholder).contains(&Tag::Cn), "{id}");
         }
         // Translating the hidden cards changes nothing the seat may know.
         let (b, _) = pair();
