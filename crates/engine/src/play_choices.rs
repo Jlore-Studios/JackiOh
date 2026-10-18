@@ -323,13 +323,15 @@ pub fn tagged_play_radiant(state: &GameState, player: PlayerId, card: &CardInsta
 
 /// §10.5 step 3: whether this play is made Radiant as it is played — #64 Gifted Program's first cheap
 /// card (R213), a tag rule's (Classic+ #68), Meditative #40 Feng Shui's reward for an auspicious
-/// play (R983), or Meditative #53 Prestige's next play (R831005). Step 1 reads it to know the face
-/// the play's choices answer (R214), and step 3 applies it.
+/// play (R983), Meditative #53 Prestige's next play (R831005), or Meditative+ #22 Mountaintop
+/// Garden's dearer price (R1181002, read off the card stamped with the play's embiggen choice). Step 1
+/// reads it to know the face the play's choices answer (R214), and step 3 applies it.
 pub fn play_made_radiant(state: &GameState, player: PlayerId, card: &CardInstance, cost_paid: i32) -> bool {
     gifted_makes_radiant(state, player, cost_paid)
         || tagged_play_radiant(state, player, card)
         || crate::subsystems::feng_shui::rewards(state, player, card)
         || radiant_next_play(state, player)
+        || crate::mana::garden_dearer_price(state, card).is_some()
 }
 
 /// R831005: whether a live `radiantNextPlay` modifier of the player makes their next play Radiant.
@@ -349,22 +351,35 @@ fn cost_with(state: &GameState, card: &CardInstance, x: Option<i32>, embiggen: O
         } else {
             card.x
         },
-        embiggened: if has_embiggen_price(state, card) {
-            Some(embiggen == Some(true))
-        } else {
-            card.embiggened
-        },
-        ..card.clone()
+        ..stamped_with_embiggen(state, card, embiggen)
     };
     crate::mana::play_cost(state, &probe)
+}
+
+/// The card stamped with a play's embiggen choice, as §10.5 step 1 stamps it before it reads the price
+/// (`play_steps::validate_play`): an embiggen card carries the version chosen, any other card is as it
+/// is. R214, R1181002: the face a play's choices answer is read off it, since Mountaintop Garden's
+/// dearer price makes the play Radiant.
+fn stamped_with_embiggen(state: &GameState, card: &CardInstance, embiggen: Option<bool>) -> CardInstance {
+    if has_embiggen_price(state, card) {
+        CardInstance {
+            embiggened: Some(embiggen == Some(true)),
+            ..card.clone()
+        }
+    } else {
+        card.clone()
+    }
 }
 
 /// #492, R81: what a play of this card at its embiggen price costs now, or None for a card with no
 /// embiggen price. It is `cost_with`, the price §10.5 step 1 reads for a play with `embiggen: true`,
 /// and so `mana::play_cost` on the card stamped embiggened, as the pay step charges it: the view's
 /// `embiggenCost` (§10.8) is this number, so the client never prices a play itself (CLAUDE.md rule 7).
+/// R1181002: a Radiant card under Mountaintop Garden has its normal price only, so None.
 pub fn embiggen_play_cost(state: &GameState, card: &CardInstance) -> Option<i32> {
-    has_embiggen_price(state, card).then(|| cost_with(state, card, None, Some(true)))
+    legal_embiggen_choices(state, card)
+        .contains(&true)
+        .then(|| cost_with(state, card, None, Some(true)))
 }
 
 // ---------------------------------------------------------------------------
@@ -729,11 +744,15 @@ pub fn has_embiggen_price(state: &GameState, card: &CardInstance) -> bool {
     )
 }
 
+/// R1181002: while Mountaintop Garden reaches a Radiant card, its dearer price (a Radiant play) is no
+/// choice, and it has its normal price only.
 pub fn legal_embiggen_choices(state: &GameState, card: &CardInstance) -> Vec<bool> {
-    if has_embiggen_price(state, card) {
-        vec![false, true]
-    } else {
+    if !has_embiggen_price(state, card) {
         Vec::new()
+    } else if card.radiant && crate::mana::garden_reaches(state, card) {
+        vec![false]
+    } else {
+        vec![false, true]
     }
 }
 
@@ -1898,7 +1917,12 @@ pub fn hand_play_choices_truncated(state: &GameState, player: PlayerId, card: &C
                 && listed_play_choices(
                     state,
                     player,
-                    &resolving_face(state, player, card, price.cost),
+                    &resolving_face(
+                        state,
+                        player,
+                        &stamped_with_embiggen(state, card, price.embiggen),
+                        price.cost,
+                    ),
                     None,
                 )
                 .truncated
@@ -2147,7 +2171,12 @@ pub fn why_hand_card_unplayable(state: &GameState, player: PlayerId, card: &Card
     // answer — a needed pick (R703) or a mode with no allowed option (R831008). The probe is the
     // listing's default (this price, its zone, its first Tribute set, no picks), so the refusal is
     // the one §10.5 step 1 gives that play.
-    let face = resolving_face(state, player, card, cheapest.cost);
+    let face = resolving_face(
+        state,
+        player,
+        &stamped_with_embiggen(state, card, cheapest.embiggen),
+        cheapest.cost,
+    );
     if play_choice_combinations(state, player, &face, None).is_empty() {
         let paid: &[String] = tribute_sets.first().map(Vec::as_slice).unwrap_or(&[]);
         let probe = PlayAction {
@@ -2191,7 +2220,7 @@ pub fn face_for_action(
     resolving_face(
         state,
         player,
-        card,
+        &stamped_with_embiggen(state, card, action.embiggen),
         cost_with(state, card, action.x, action.embiggen),
     )
 }
@@ -2309,8 +2338,8 @@ pub fn priced_play_actions(
         if paid.is_empty() {
             continue;
         }
-        // R214: the choices of the face step 5 will resolve, which this price decides (#64).
-        let face = resolving_face(state, player, card, cost);
+        // R214: the choices of the face step 5 will resolve, which this price decides (#64, R1181002).
+        let face = resolving_face(state, player, &stamped_with_embiggen(state, card, embiggen), cost);
         let bound = declares_bound_tribute(state, &face);
         for tributes in &tribute_sets {
             // R1086: the plain zones first, then the Equip host zones after them (D14: a game that
@@ -2564,13 +2593,17 @@ fn refuse_embiggen(
     card: &CardInstance,
     embiggen: Option<bool>,
 ) -> Result<(), EngineError> {
-    if has_embiggen_price(state, card) {
+    if embiggen != Some(true) || legal_embiggen_choices(state, card).contains(&true) {
         return Ok(());
     }
-    if embiggen == Some(true) {
-        return refuse(format!("{} has no embiggen price", name_of(state, &card.def_id)));
+    if has_embiggen_price(state, card) {
+        // R1181002: a Radiant card under Mountaintop Garden.
+        return refuse(format!(
+            "{} has only its normal price now",
+            name_of(state, &card.def_id)
+        ));
     }
-    Ok(())
+    refuse(format!("{} has no embiggen price", name_of(state, &card.def_id)))
 }
 
 fn refuse_tributes(
@@ -2798,14 +2831,25 @@ fn why_face_down_refused(
         ));
     }
     refuse_x(state, player, card, action.x)?;
-    refuse_embiggen(state, card, action.embiggen)?;
+    // R1181002: a card set face-down is no play Mountaintop Garden reaches, so its prices are read off
+    // the card stamped set, as the listing reads them (`face_down_play_actions`).
+    let set = CardInstance {
+        set_as: Some(crate::state::SetAs {
+            reveal,
+            set_turn: state.turn,
+            echo: None,
+            revealing: None,
+        }),
+        ..card.clone()
+    };
+    refuse_embiggen(state, &set, action.embiggen)?;
     refuse_tributes(state, player, card, action.tributes.as_deref())?;
     // B5 E5 discards still apply to a face-down play.
     let face = resolving_face(
         state,
         player,
         card,
-        cost_with(state, card, action.x, action.embiggen),
+        cost_with(state, &set, action.x, action.embiggen),
     );
     let required = targeting_discards_required(state, player, &face, &[], &[], None);
     crate::targeting::why_targeting_discards_unpayable(state, player, required, &play_uses(card, &[]))
@@ -2826,17 +2870,10 @@ pub fn why_choices_refused(
         return why_face_down_refused(state, player, card, action);
     }
     let tributes: &[String] = action.tributes.as_deref().unwrap_or(&[]);
+    // R831013: an Equip a price grants is read off the card stamped with the play's embiggen, as the
+    // listing reads it off that price's probe (Core #56 Jilliax); R1181002: so is the face.
+    let stamped = stamped_with_embiggen(state, card, action.embiggen);
     if action.equip == Some(true) {
-        // R831013: an Equip a price grants is read off the card stamped with the play's embiggen, as
-        // the listing reads it off that price's probe (Core #56 Jilliax).
-        let stamped = if has_embiggen_price(state, card) {
-            CardInstance {
-                embiggened: Some(action.embiggen == Some(true)),
-                ..card.clone()
-            }
-        } else {
-            card.clone()
-        };
         refuse_equip(state, player, &stamped, action.zone.as_ref(), tributes)?;
     } else {
         refuse_zone(state, player, card, action.zone.as_ref(), tributes)?;
@@ -2849,7 +2886,7 @@ pub fn why_choices_refused(
     let face = resolving_face(
         state,
         player,
-        card,
+        &stamped,
         cost_with(state, card, action.x, action.embiggen),
     );
     let targets: &[Selection] = action.targets.as_deref().unwrap_or(&[]);

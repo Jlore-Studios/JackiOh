@@ -330,6 +330,14 @@ describe("B8: faceModel cost", () => {
     expect(face("core-084", true).cost.alt).toBe("4");
   });
 
+  it("R1181003 the second badge shows the view's embiggenCost", () => {
+    // Meditative+ #23 Enormous Elderberry's "its Embiggened version costs (0)", and Mountaintop Garden's
+    // dearer price: the view prices the Embiggened version, and the badge beside the gem says so.
+    expect(face("core-084", false, { liveCost: 2, liveEmbiggenCost: 0 }).cost).toEqual({ text: "2", value: "2", tone: "base", alt: "0" });
+    expect(face("core-046", false, { liveCost: 2, liveEmbiggenCost: 4 }).cost.alt).toBe("4");
+    expect(face("core-046", false, { liveEmbiggenCost: 6 }).cost.alt).toBe("6");
+  });
+
   it("B8 an embiggen card's gem shows the view's live number, toned against its base price, and drops the embiggen price", () => {
     // /fullsend's "your cards cost 1 less" makes one cost 1 in hand: the gem says 1, not 2.
     expect(face("core-059", false, { liveCost: 1 }).cost).toEqual({ text: "1", value: "1", tone: "down", alt: null });

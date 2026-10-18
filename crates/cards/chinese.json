@@ -2349,6 +2349,11 @@
     "base": "抽{draw}张牌。它们的法力值消耗为(0)。\n加码(4)：改为抽{embiggenedDraw}张牌。",
     "radiant": "抽{draw}张牌。它们的法力值消耗为(0)。\n加码(4)：改为抽{embiggenedDraw}张牌。"
   },
+  "meditativeplus-004": {
+    "name": "空投补给",
+    "base": "抉择：{turns}个回合后，对每个敌人造成{damage}点伤害，具有穿透和吸血；或者{turns}个回合后，将{cards}张随机光辉Jlockeed牌置入你的手牌，每张的法力值消耗为({suppliesCost})。\n加码(4)：改为{embiggenedTurns}个回合后；造成{embiggenedDamage}点伤害，或者置入{embiggenedCards}张。",
+    "radiant": "抉择：{turns}个回合后，对每个敌人造成{damage}点伤害，具有穿透和吸血；或者{turns}个回合后，将{cards}张随机光辉Jlockeed牌置入你的手牌，每张的法力值消耗为({suppliesCost})。\n加码(4)：改为{embiggenedTurns}个回合后；造成{embiggenedDamage}点伤害，或者用它们填满你的手牌。"
+  },
   "meditativeplus-005": {
     "name": "灵魂鞭笞",
     "base": "对所有单位造成{damage}点伤害。\n加码(1)：这些伤害具有吸血和穿透。",
@@ -2443,6 +2448,16 @@
     "name": "和谐之灵",
     "base": "嘲讽\n战吼：将所有其他单位的攻击力和生命值变为3/3。",
     "radiant": "嘲讽\n战吼：将所有其他单位的攻击力和生命值变为3/3。用中文的突袭衍生物填满你的场面。"
+  },
+  "meditativeplus-022": {
+    "name": "山顶花园",
+    "base": "光环：加码牌以其普通价格打出其加码版本。多花({premium})点，不是光辉的牌也以光辉打出。",
+    "radiant": "光环：加码牌以其普通价格打出其加码版本。多花({premium})点，不是光辉的牌也以光辉打出。"
+  },
+  "meditativeplus-023": {
+    "name": "巨型接骨木莓",
+    "base": "将{cards}张随机加码牌置入你的手牌。其加码版本的法力值消耗为(0)。\n加码(4)：改为置入{embiggenedCards}张。",
+    "radiant": "将{cards}张随机光辉加码牌置入你的手牌。其加码版本的法力值消耗为(0)。\n加码(4)：改为置入{embiggenedCards}张。"
   },
   "meditativeplus-024": {
     "name": "鲍勃，威斯康星最强士兵",

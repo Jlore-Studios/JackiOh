@@ -387,6 +387,10 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         }
         // The thirteen numbers patch v0.3.3 marked (issue #556), and the Meditative set's own, which
         // §8.8 tunes "on the base face only": M #14's draws, M #49.1's picks (#529) and M #76's marks.
+        // The Meditative+ set, held until it ships (R1178000), joins batch by batch (M+ #4's
+        // `embiggenedCards`); each of its numbers is held to the rule above, and the pinned lists are
+        // the shipped sets'.
+        base_only.retain(|entry| !entry.starts_with("meditativeplus-"));
         let (meditative, shipped): (Vec<String>, Vec<String>) = base_only
             .into_iter()
             .partition(|entry| entry.starts_with("meditative-"));

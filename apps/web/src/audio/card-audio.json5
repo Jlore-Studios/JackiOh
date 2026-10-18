@@ -1865,6 +1865,9 @@
     "meditativeplus-003": { // Wondrous Wand
       cast: { voice: "sapi-wizard", text: "Twice the wishes, none of the warnings." },
     },
+    "meditativeplus-004": { // Supply Drop
+      cast: { voice: "sapi-hero", text: "Hold tight. The drop is inbound." },
+    },
     "meditativeplus-005": { // Spirit Lash
       cast: { voice: "whisper", text: "Feel the sting on both sides now." },
     },
@@ -1941,6 +1944,12 @@
       play: { voice: "sapi-mystic", text: "Be still. Be equal. Be three by three." },
       attack: { voice: "sapi-mystic", text: "Balance, restored." },
       death: { voice: "sapi-mystic", text: "The note fades..." },
+    },
+    "meditativeplus-022": { // Mountaintop Garden
+      cast: { voice: "whisper", text: "Up here, everything grows bigger." },
+    },
+    "meditativeplus-023": { // Enormous Elderberry
+      cast: { voice: "crone", text: "One berry. Far too big." },
     },
     "meditativeplus-024": { // Bob, Wisconsin's Strongest Soldier
       play: { voice: "brute", text: "Bob reporting for duty. Pick your poison." },
