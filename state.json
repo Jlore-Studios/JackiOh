@@ -3832,6 +3832,13 @@
     "1204": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-18T13:09:09Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Fails easy rule 7: the task asks for a Cypress component spec (mobile-ux.cy.tsx) and CSS layout work (a folded bar, an undimmed scrim) that is judged by eye; it spans apps/web and e2e/"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
