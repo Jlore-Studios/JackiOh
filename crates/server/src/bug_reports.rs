@@ -372,9 +372,10 @@ pub fn report_of(deployed_commit: Option<&str>, finding: &Finding) -> BugReport 
     body.push_str(
         "\nA refused action is one the engine accepted live and refuses on the fold: either the log \
          was read or written out of order, or `reduce` is not deterministic. This report holds no \
-         hidden information; read the log, the seed and the decks from the database as \
-         crates/server/README.md (\"A match its log does not reproduce\") says, and fold them with \
-         `cargo jackioh replay`.\n\n\
+         hidden information; read the log, the seed, the decks and the catalog version from the \
+         database as crates/server/README.md (\"A match its log does not reproduce\") says, and fold \
+         them with `cargo jackioh replay`, keeping the catalog version in the file: without it the \
+         match folds under this build's catalog, not the one it was played on.\n\n\
          Filed by the server (`crates/server/src/bug_reports.rs`), once per match.\n",
     );
     BugReport {
@@ -489,6 +490,17 @@ mod tests {
             report.body
         );
         assert!(report.labels.contains(&"bot:build".to_string()));
+    }
+
+    #[test]
+    fn the_report_asks_for_the_catalog_version_in_the_folded_file() {
+        let body = report_of(None, &finding("m-0")).body;
+        for needle in [
+            "the catalog version from the database",
+            "fold them with `cargo jackioh replay`, keeping the catalog version in the file",
+        ] {
+            assert!(body.contains(needle), "{needle:?} missing from:\n{body}");
+        }
     }
 
     #[test]
