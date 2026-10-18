@@ -4130,9 +4130,12 @@
         "resolved_by": "`claude` (strong)",
         "sha": "f5f40fdcfb499102b82fd4dad727b58514116a98"
       },
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-18T12:43:35Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1194,
       "kind": "revise",
       "last_findings": [],
