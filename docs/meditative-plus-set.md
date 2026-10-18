@@ -531,8 +531,8 @@ from an entry, the decision wins.
 
 - **Text:** Answer three-digit sums one after another until you stop or miss one. Then summon a Lil' Kenny with X/X, X your correct answers.
 - **Radiant:** Answer one- and two-digit sums one after another until you stop or miss one. Then summon a Radiant Lil' Kenny with 2X/2X, X your correct answers.
-- **Engine:** NEW: a question sequence (B06): C+ #42 KY's Test's `answer` prompt ([[R420]], `subsystems/ky_test.rs`) asked again after each right answer, with a Stop option, the streak in a plain-data `Resume` record (`work.rs`), each problem rolled from the match rng (three-digit addition or subtraction; the Radiant face one- or two-digit), the key never leaving the engine; at most `KY_COMPETITION_MAX` (30) questions. Then a summon of M+ #20.1 with `stats_override` X/X (Radiant face: Radiant, its own face doubling to 2X/2X, [[R349]]'s rule as written on its face), with X = 0 summoning nothing.
-- **Rulings:** MP-B06-1: a wrong answer ends it and X counts the right ones before it; Stop ends it with X so far; a timeout ends it as a Stop; the AI, the random policy and a timeout answer it ([[R79]]).
+- **Engine:** NEW: a question sequence (B06): C+ #42 KY's Test's `answer` prompt ([[R420]], `subsystems/ky_test.rs`) asked again after each right answer, with a Stop option, the streak in a plain-data `Resume` record (`work.rs`), each problem rolled from the match rng (three-digit addition or subtraction; the Radiant face one- or two-digit), the key never leaving the engine; at most `KY_COMPETITION_MAX` (30) questions. Then a summon of M+ #20.1 with its X (`summon`'s `x`, [[R1184003]]; built so by B06 rather than with a `stats_override`, which a Radiant Kenny would wear as X/X, [[R349]]), Radiant on the Radiant face, its own face's `xStats` making it 2X/2X, with X = 0 summoning nothing.
+- **Rulings:** MP-B06-1, built as [[R1184000]] and [[R1184001]]: a wrong answer ends it and X counts the right ones before it; Stop ends it with X so far; a timeout ends it as a Stop; the AI, the random policy and a timeout answer it ([[R79]]). B06 also decided the questions (a subtraction's larger operand first; misses ±1, ±10, ±100 on the base face, C+ #42's on the Radiant face, none below 0) and the AI's answer: it works each question out from its statement, at once, with no search, and never stops ([[R1184002]]).
 - **Numbers:** none (the cap is `KY_COMPETITION_MAX`; the digits are the frame).
 - **Check:** "in a row": the sequence stops at the first miss, so every answer counted was in a row. The Radiant face's easier questions are R275's effect half; 2X/2X is its Kenny's Radiant face.
 - **Class:** D (the question sequence).
@@ -544,8 +544,8 @@ from an entry, the decision wins.
 
 - **Text:** With X at least 4, it has Rush; 8, Divine Shield; 12, First Strike; 16, Cleave; 20, Lifesteal; 30, Indestructible.
 - **Radiant:** With X at least 4, it has Rush; 8, Divine Shield; 12, First Strike; 16, Cleave; 20, Lifesteal; 30, Indestructible.
-- **Engine:** Printed 0/0 with `xStats` 1/1 (Radiant 2/2), always summoned as X/X (`stats_override`, as the Bread and Ghoul Tokens, [[§7]]). Keywords by X: `Script.conditional_keywords` reading the instance's X (C #69's shape, `layers::conditional_keywords_of`), cumulative.
-- **Rulings:** MP-B06-2: the thresholds read X, not the current stats (a buff gives no keyword; the Radiant face's 2X/2X reads X too); a Vanilla removes them ([[R781003]]) and keeps X/X.
+- **Engine:** Printed 0/0 with `xStats` 1/1 (Radiant 2/2), always summoned with its X (`summon`'s `x`, [[R1184003]]), so X/X. Keywords by X: `Script.conditional_keywords` reading the instance's X (C #69's shape, `layers::conditional_keywords_of`), cumulative.
+- **Rulings:** MP-B06-2, built as [[R1184003]]: the thresholds read X, not the current stats (a buff gives no keyword; the Radiant face's 2X/2X reads X too); a Vanilla removes them ([[R781003]]) and keeps X/X; a copy has no X (B2.7), as a copy of C+ #69 has none.
 - **Numbers:** none (the thresholds are the frame, named constants).
 - **Check:** A token (printed Rare, [[R1178002]]): only M+ #20 makes one. R275: 2X/2X, the same keywords.
 - **Class:** B.
