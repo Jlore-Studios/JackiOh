@@ -369,6 +369,8 @@ pub fn vanilla(args: TransformTarget) -> Effect {
             new_instance_id: card.id.clone(),
             hidden_from: None,
         });
+        // R1174000: a Vanilla removes Frozen, as Hearthstone's Silence removes Freeze.
+        crate::freeze::unfreeze(&mut ctx.sink, &card.id);
     })
 }
 
