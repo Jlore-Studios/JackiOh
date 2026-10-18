@@ -1717,6 +1717,26 @@ mod r732000_the_shadow_ban_holds_meditative_cards_only {
     }
 
     #[test]
+    fn r732000_the_unbanned_ids_are_sorted_meditative_cards_out_of_the_ban() {
+        jackioh_cards::register_all();
+        assert!(
+            SHADOW_UNBANNED.windows(2).all(|pair| pair[0] < pair[1]),
+            "{SHADOW_UNBANNED:?}: not sorted by id"
+        );
+        for &def_id in SHADOW_UNBANNED {
+            assert_eq!(
+                def_of(None, def_id).set,
+                SetName::Meditative,
+                "{def_id}: the shadow ban takes no card of an earlier set (R732000)"
+            );
+            assert!(
+                !SHADOW_BAN_IDS.contains(&def_id),
+                "{def_id}: unbanned, so out of SHADOW_BAN"
+            );
+        }
+    }
+
+    #[test]
     fn r732000_the_gate_is_lifted_and_generation_json_counts_the_table() {
         // Generation 9 lifted R1390's gate on that table; every promotion since records its own count.
         assert!(AI_DECK_GATED_SETS.is_empty(), "{AI_DECK_GATED_SETS:?}");
