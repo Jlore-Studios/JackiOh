@@ -23,6 +23,7 @@ pub mod call_to_chaos;
 pub mod call_to_chaos_meditative;
 pub mod call_to_chaos_plus;
 pub mod carried_damage;
+pub mod chinese_is_cn;
 pub mod cloaked;
 pub mod combat_positions;
 pub mod combat_property;

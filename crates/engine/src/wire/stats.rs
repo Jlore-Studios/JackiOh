@@ -99,6 +99,10 @@ pub struct SeatSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub played_turns: Option<Vec<i32>>,
+    /// R1147000: whether each card in `played` was Radiant as played, in the same order.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub played_radiant: Option<Vec<bool>>,
 }
 
 /// R376: a finished game, read off its replay by the engine's `summarize_game`.
@@ -252,6 +256,8 @@ string_union! {
         GoingSecond = "goingSecond",
         Played = "played",
         DrawnNotPlayed = "drawnNotPlayed",
+        PlayedRadiant = "playedRadiant",
+        PlayedNormal = "playedNormal",
     }
 }
 
@@ -274,6 +280,12 @@ pub struct CardStats {
     pub going_second: Tally,
     pub played: Tally,
     pub drawn_not_played: Tally,
+    /// R1147000: played Radiant at least once.
+    #[serde(default)]
+    pub played_radiant: Tally,
+    /// R1147000: played, never Radiant.
+    #[serde(default)]
+    pub played_normal: Tally,
 }
 
 /// `stats[breakdown]`.
@@ -288,6 +300,8 @@ impl Index<Breakdown> for CardStats {
             Breakdown::GoingSecond => &self.going_second,
             Breakdown::Played => &self.played,
             Breakdown::DrawnNotPlayed => &self.drawn_not_played,
+            Breakdown::PlayedRadiant => &self.played_radiant,
+            Breakdown::PlayedNormal => &self.played_normal,
         }
     }
 }
@@ -326,6 +340,8 @@ fn empty_stats(card: &str) -> CardStats {
         going_second: empty_tally(),
         played: empty_tally(),
         drawn_not_played: empty_tally(),
+        played_radiant: empty_tally(),
+        played_normal: empty_tally(),
     }
 }
 
@@ -539,6 +555,8 @@ pub fn add_stats(into: &mut CardStats, other: &CardStats) {
     add_tally(&mut into.going_second, &other.going_second);
     add_tally(&mut into.played, &other.played);
     add_tally(&mut into.drawn_not_played, &other.drawn_not_played);
+    add_tally(&mut into.played_radiant, &other.played_radiant);
+    add_tally(&mut into.played_normal, &other.played_normal);
 }
 
 /// A seat's place in `PLAYER_IDS`, as `FirstMet` and `FirstSeen` keep it.
@@ -582,6 +600,19 @@ impl StatsTotals {
                 .played_turns
                 .as_ref()
                 .filter(|turns| turns.len() == summary.played.len());
+            // R1147000: cards played Radiant at least once, read only when every play has a face flag.
+            let played_radiant: Option<IndexSet<&str>> = summary
+                .played_radiant
+                .as_ref()
+                .filter(|flags| flags.len() == summary.played.len())
+                .map(|flags| {
+                    summary
+                        .played
+                        .iter()
+                        .zip(flags.iter())
+                        .filter_map(|(id, &radiant)| if radiant { Some(id.as_str()) } else { None })
+                        .collect()
+                });
 
             let key = TotalsKey {
                 patch: record.patch.clone(),
@@ -616,6 +647,16 @@ impl StatsTotals {
                 );
                 if played.contains(card) {
                     count(&mut stats.played, outcome);
+                    if let Some(radiant) = &played_radiant {
+                        count(
+                            if radiant.contains(card) {
+                                &mut stats.played_radiant
+                            } else {
+                                &mut stats.played_normal
+                            },
+                            outcome,
+                        );
+                    }
                 } else if in_hand.contains(card) {
                     count(&mut stats.drawn_not_played, outcome);
                 }
@@ -994,6 +1035,8 @@ impl Index<Breakdown> for BreakdownTitles {
             Breakdown::GoingSecond => "Going second",
             Breakdown::Played => "Played",
             Breakdown::DrawnNotPlayed => "Drawn, not played",
+            Breakdown::PlayedRadiant => "Played Radiant",
+            Breakdown::PlayedNormal => "Played normal",
         }
     }
 }
@@ -1163,6 +1206,7 @@ pub fn format_card_stats(report: &CardStatsReport, name_of: impl Fn(&str) -> Opt
         "Each cell is the win rate of the decks that held the card, with those games in brackets. A game counts once for".to_string(),
         "each deck that held the card, and a draw is a game not won. Played Δ is the played win rate minus the drawn-but-".to_string(),
         "not-played win rate, in points: drawn means the card reached the hand, in the opening hand or by a later draw.".to_string(),
+        "Played Radiant counts the decks that played the card Radiant at least once, Played normal the other played ones.".to_string(),
         String::new(),
         line(&header),
     ];
@@ -1238,6 +1282,7 @@ fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineEr
         drawn: ids(record.get("drawn"), &format!("{at}.drawn"))?,
         played: ids(record.get("played"), &format!("{at}.played"))?,
         played_turns: None,
+        played_radiant: None,
     };
     if let Some(Value::Array(turns)) = record.get("playedTurns") {
         let mut out: Vec<i32> = Vec::with_capacity(turns.len());
@@ -1255,6 +1300,20 @@ fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineEr
             }
         }
         summary.played_turns = Some(out);
+    }
+    if let Some(Value::Array(flags)) = record.get("playedRadiant") {
+        let mut out: Vec<bool> = Vec::with_capacity(flags.len());
+        for (idx, flag) in flags.iter().enumerate() {
+            match flag.as_bool() {
+                Some(b) => out.push(b),
+                None => {
+                    return Err(EngineError::new(format!(
+                        "{at}.playedRadiant[{idx}] is not a boolean"
+                    )));
+                }
+            }
+        }
+        summary.played_radiant = Some(out);
     }
     Ok(summary)
 }
@@ -1350,6 +1409,7 @@ mod tests {
             drawn: list(drawn),
             played: list(played),
             played_turns: None,
+            played_radiant: None,
         }
     }
 
@@ -1549,6 +1609,8 @@ mod tests {
                 going_second: tally(5, 2, 0),
                 played: tally(4, 3, 0),
                 drawn_not_played: tally(5, 2, 1),
+                played_radiant: tally(0, 0, 0),
+                played_normal: tally(0, 0, 0),
             };
             assert_eq!(win_rate(&stats.played), Some(0.75));
             assert_eq!(win_rate(&stats.drawn_not_played), Some(0.4));
@@ -1716,7 +1778,7 @@ mod tests {
             assert!(heading.contains("Played Δ"));
 
             let alpha = lines.iter().find(|line| line.starts_with("a Alpha")).unwrap();
-            // In deck, opening hand, going first, going second, played, drawn-not-played; then the delta.
+            // In deck, opening hand, going first, going second, played, drawn-not-played, played-radiant, played-normal; then the delta.
             assert_eq!(
                 split_wide(alpha)[1..],
                 [
@@ -1726,13 +1788,17 @@ mod tests {
                     "— (0)",
                     "100.0% (1)",
                     "— (0)",
+                    "— (0)",
+                    "— (0)",
                     "—"
                 ]
             );
             let beta = lines.iter().find(|line| line.starts_with("b ")).unwrap();
             assert_eq!(
                 split_wide(beta)[1..],
-                ["0.0% (1)", "— (0)", "— (0)", "0.0% (1)", "— (0)", "0.0% (1)", "—"]
+                [
+                    "0.0% (1)", "— (0)", "— (0)", "0.0% (1)", "— (0)", "0.0% (1)", "— (0)", "— (0)", "—"
+                ]
             );
 
             assert_eq!(format_tally(&tally(3, 1, 1)), "33.3% (3)");
@@ -1754,6 +1820,46 @@ mod tests {
                 }),
                 "AI development runs, All Random, patch v0.2.5, AI pilots"
             );
+        }
+
+        #[test]
+        fn r1147000_splits_the_played_decks_by_the_face_the_card_was_played_on() {
+            let mut s1 = seat(&["a", "b"], &[], &[], &["a", "b", "a"]);
+            s1.played_radiant = Some(vec![false, false, true]);
+            let mut s2 = seat(&["a"], &[], &[], &["a"]);
+            s2.played_radiant = Some(vec![false]);
+
+            let m1 = GameRecord {
+                id: "m1".to_string(),
+                game: game(Winner::P1, GameOverReason::HeroDeath, 5, s1, s2),
+                ..record()
+            };
+
+            let s1_m2 = seat(&["a"], &[], &[], &["a"]);
+            let mut s2_m2 = seat(&["a"], &[], &[], &["a"]);
+            s2_m2.played_radiant = Some(vec![true, true]); // wrong length
+
+            let m2 = GameRecord {
+                id: "m2".to_string(),
+                game: game(Winner::P2, GameOverReason::HeroDeath, 5, s1_m2, s2_m2),
+                ..record()
+            };
+
+            let report = card_stats(&[m1, m2], &live());
+            let stats_a = stats_of(&report, "a");
+            assert_eq!(stats_a.played, tally(4, 2, 0));
+            assert_eq!(stats_a.played_radiant, tally(1, 1, 0));
+            assert_eq!(stats_a.played_normal, tally(1, 0, 0));
+
+            let stats_b = stats_of(&report, "b");
+            assert_eq!(stats_b.played_normal, tally(1, 1, 0));
+
+            let mut json_a = serde_json::to_value(stats_a).unwrap();
+            json_a.as_object_mut().unwrap().remove("playedRadiant");
+            json_a.as_object_mut().unwrap().remove("playedNormal");
+            let deserialized: CardStats = serde_json::from_value(json_a).unwrap();
+            assert_eq!(deserialized.played_radiant, tally(0, 0, 0));
+            assert_eq!(deserialized.played_normal, tally(0, 0, 0));
         }
     }
 
@@ -1791,6 +1897,18 @@ mod tests {
                         .collect();
                     let played: IndexSet<&str> = summary.played.iter().map(String::as_str).collect();
                     let first = record.game.first == seat;
+                    let played_radiant: Option<IndexSet<&str>> = summary
+                        .played_radiant
+                        .as_ref()
+                        .filter(|flags| flags.len() == summary.played.len())
+                        .map(|flags| {
+                            summary
+                                .played
+                                .iter()
+                                .zip(flags.iter())
+                                .filter_map(|(id, &radiant)| if radiant { Some(id.as_str()) } else { None })
+                                .collect()
+                        });
                     let deck: IndexSet<&str> = summary.deck.iter().map(String::as_str).collect();
                     for card in deck {
                         let stats = by_card
@@ -1810,6 +1928,16 @@ mod tests {
                         );
                         if played.contains(card) {
                             count(&mut stats.played, outcome);
+                            if let Some(radiant) = &played_radiant {
+                                count(
+                                    if radiant.contains(card) {
+                                        &mut stats.played_radiant
+                                    } else {
+                                        &mut stats.played_normal
+                                    },
+                                    outcome,
+                                );
+                            }
                         } else if in_hand.contains(card) {
                             count(&mut stats.drawn_not_played, outcome);
                         }
@@ -1979,12 +2107,16 @@ mod tests {
                         .collect(),
                 ),
             };
+            let played_radiant = played_turns
+                .as_ref()
+                .map(|t| t.iter().map(|turn| turn % 2 == 1).collect());
             SeatSummary {
                 deck,
                 opening,
                 drawn,
                 played,
                 played_turns,
+                played_radiant,
             }
         }
 
@@ -2270,6 +2402,35 @@ mod tests {
                     .message
                     .starts_with("line 1: ")
             );
+        }
+
+        #[test]
+        fn r1147000_reads_back_each_plays_face_and_refuses_a_flag_that_is_not_a_boolean() {
+            let mut s = seat(&["a", "b"], &[], &[], &["a", "b"]);
+            s.played_radiant = Some(vec![true, false]);
+            let written = GameRecord {
+                game: game(Winner::P1, GameOverReason::HeroDeath, 5, s, seat_default()),
+                ..record()
+            };
+            let json = serde_json::to_value(&written).unwrap();
+            assert_eq!(json["game"]["seats"]["p1"]["playedRadiant"], json!([true, false]));
+            assert_eq!(parse_game_record(&json).unwrap(), written);
+
+            let bad_seat = with(
+                &serde_json::to_value(seat(&["a", "b"], &[], &[], &["a", "b"])).unwrap(),
+                "playedRadiant",
+                json!([1]),
+            );
+            let bad_record = with(
+                &json,
+                "game",
+                with(
+                    &json["game"],
+                    "seats",
+                    with(&json["game"]["seats"], "p1", bad_seat),
+                ),
+            );
+            assert!(refusal(&bad_record).contains("game.seats.p1.playedRadiant[0]"));
         }
     }
 

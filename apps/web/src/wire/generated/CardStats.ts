@@ -4,4 +4,12 @@ import type { Tally } from "./Tally";
 /**
  * `{ card: string } & Record<Breakdown, Tally>`: one card's breakdowns.
  */
-export type CardStats = { card: string, inDeck: Tally, openingHand: Tally, goingFirst: Tally, goingSecond: Tally, played: Tally, drawnNotPlayed: Tally, };
+export type CardStats = { card: string, inDeck: Tally, openingHand: Tally, goingFirst: Tally, goingSecond: Tally, played: Tally, drawnNotPlayed: Tally, 
+/**
+ * R1147000: played Radiant at least once.
+ */
+playedRadiant: Tally, 
+/**
+ * R1147000: played, never Radiant.
+ */
+playedNormal: Tally, };

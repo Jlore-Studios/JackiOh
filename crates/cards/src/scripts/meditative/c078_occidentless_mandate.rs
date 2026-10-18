@@ -16,7 +16,8 @@
 //!   non-token CN cards of every set that ships (R380, R1420), never this card (R387), repeats allowed
 //!   (R60); the hand cap burns the overflow (§2.4). The Radiant face's are Radiant and cost `discount`
 //!   less (`costMod`; an X card ignores it, R65).
-//! - **Tribal hate** (R1424): "non-CN" picks cards by lacking a tribal tag. The count and the exile read
+//! - **Tribal hate** (R1424): "non-CN" picks cards by lacking a tribal tag, and a card in Chinese has
+//!   it (R1176000). The count and the exile read
 //!   one scope, so a card that a tribal-hate immunity keeps out of the scope is kept out of both.
 
 use jackioh_engine::effects::add_random_from_catalog;
@@ -134,6 +135,23 @@ mod tests {
                 s.expect_in_zone(&trap, "exile");
                 // An exile runs no Death and destroys nothing.
                 assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Destroyed));
+            }
+
+            #[test]
+            fn r1176000_spares_a_translated_permanent_and_does_not_count_it() {
+                // A Vanilla in Chinese is CN (R1176000): it is not "non-CN", so it is neither exiled
+                // nor counted, on either side; p1's English Vanilla is both.
+                let mut s = decreed("mandate-translated", false, json!([VANILLA, VANILLA]), json!([VANILLA]));
+                let translated = s.unit(P1, 1).expect("p1's Vanilla").id;
+                let enemy = s.unit(P2, 1).expect("p2's Vanilla").id;
+                let english = s.unit(P1, 2).expect("p1's other Vanilla");
+                s.card_mut(&translated).chinese = Some(true);
+                s.card_mut(&enemy).chinese = Some(true);
+                s.play(ID, json!({}));
+                assert_eq!(s.unit(P1, 1).expect("the translated Vanilla stands").id, translated);
+                assert_eq!(s.unit(P2, 1).expect("the enemy's translated Vanilla stands").id, enemy);
+                s.expect_in_zone(&english, "exile");
+                assert_eq!(added(&s).len(), 1, "one card for the one English Vanilla of p1's");
             }
 
             #[test]

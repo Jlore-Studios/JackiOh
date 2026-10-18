@@ -1205,3 +1205,28 @@ mod r923_placeholder_carries_no_granted_tag {
         }
     }
 }
+
+mod r1176000_placeholder_is_not_in_chinese {
+    use super::*;
+
+    /// R1176000: a card in Chinese is CN, and whether a hidden card is in Chinese goes with its face
+    /// (R1301), so a placeholder is not in Chinese: translating the cards a seat cannot read changes
+    /// nothing it may know.
+    #[test]
+    fn r1176000_a_placeholder_is_not_in_chinese() {
+        let (mut a, _) = pair();
+        let hidden: Vec<String> = hidden_instance_ids(&a, AI).into_iter().collect();
+        assert!(!hidden.is_empty());
+        for id in &hidden {
+            find_instance_mut(&mut a, id).expect("the hidden card").chinese = Some(true);
+        }
+        let public = redact(&a, AI);
+        for id in &hidden {
+            let placeholder = card_by_id(&public, id).expect("the placeholder");
+            assert_eq!(placeholder.chinese, None, "{id}");
+        }
+        // Translating the hidden cards changes nothing the seat may know.
+        let (b, _) = pair();
+        assert_eq!(hash_state(&redact(&a, AI)), hash_state(&redact(&b, AI)));
+    }
+}
