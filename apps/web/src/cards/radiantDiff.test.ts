@@ -117,7 +117,8 @@ describe("R277 the word diff", () => {
     // replacement. Meditative #89 Jlarna's Radiant face is the designer's: its base text less the
     // end-of-turn Tribute (R1225). So are #22.1 Fortify Mind's (no penalty when discarded, R862) and
     // #48 Tranquility's (it does not end the turn, R1021), and patch v0.3.10's Classic #29 Book of Vital
-    // Kill's (its Radiant face does not end the turn either).
+    // Kill's (its Radiant face does not end the turn either). Meditative+ #11 Living Mana Potion's is the
+    // designer's: its base text less the Tribute it activates with; its doubled stats carry its marks.
     expect(silent).toEqual([
       "core-055",
       "classic-028",
@@ -128,6 +129,7 @@ describe("R277 the word diff", () => {
       "meditative-022-1",
       "meditative-048",
       "meditative-089",
+      "meditativeplus-011",
     ]);
   });
 });
