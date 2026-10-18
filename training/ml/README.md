@@ -52,3 +52,13 @@ the seat's board, both ways; and #1009's decision:
 - **stop** otherwise: more compute will not help, and the features or the model must change.
 
 `<out>/model.pt` keeps the best seed's network with its vocabulary and standardizer, for `export.py`.
+
+## The integer network
+
+`python -m jackioh_ml.quantize --weights <float weights.json> --out <integer weights.json>
+[--positions <file> --report <report.json>]` (#1011) makes the network that ships: the standardizer
+folded into an i16 first layer over the raw dense features, i8 head layers, i64 sums, floor shifts and
+clips to `[0, 127]`, and one division into the logit (R1011000). `--report` gives the integer network's
+held-out log loss beside the float one's and their largest difference in logits.
+`--random 1011 --positions tests/fixtures/positions.jsonl --parity
+crates/ai/tests/fixtures/learned-parity.json` writes the parity fixture both builds are held to.
