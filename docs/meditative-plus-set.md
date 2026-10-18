@@ -151,8 +151,12 @@ own [[§8.9]], [[§7]], BUILD M11 and `docs/radiant-audit.md` rows where its bui
 differently. New verbs, statuses and hooks get their [[§6]] rows and ruling notes in the part that
 builds them.
 
-**The dry run.** The foundation added a temporary Meditative+ card and ran every suite on it, then
-removed it, so the first batch meets no surprise; what it found is in its pull request.
+**The dry run.** The foundation added a temporary Meditative+ card (#8 Arch Mage: its catalog entry,
+script and tests, audio, flavour and Chinese entries) and ran every suite on it: the workspace tests,
+`catalog check`, `patches check`, `spec check`, `fuzz --seeds 200` (its pool 371 cards, the set
+previewed), the WebAssembly build and the web's tests. All were green with no change beyond this
+foundation's, R1420's machinery being generic over the held set; then it was removed. A batch's first
+card needs only the rows MP3 lists.
 
 ## MP4. The four patches beside the set
 
