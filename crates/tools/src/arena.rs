@@ -33,10 +33,12 @@
 //! `edge`, `edgeLow`, `edgeHigh`; R850000). Draws and games without a result count as games `a` did
 //! not win, as the gate counts them.
 
+use std::cell::Cell;
 use std::io::{BufRead, BufReader, Write};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::sync::Once;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, anyhow, bail};
@@ -59,6 +61,40 @@ use crate::patches::utc_date_of;
 
 /// The referee's ceiling on actions in one game; the engine's turn cap (R2) ends every real game first.
 const ARENA_MAX_ACTIONS: usize = 3000;
+
+/// R1006007: the words each of the engine's settle caps panics with (§10.3, R283; `triggers.rs`,
+/// `state_check.rs`, `effects/combat.rs`), when a board runs to its cap instead of settling.
+pub(crate) const UNSETTLED_PANIC: &str = "did not settle";
+
+thread_local! {
+    /// R1006007: how many `UNSETTLED_PANIC` panics this thread has raised, caught or not. A game is
+    /// played on one thread from start to end, so the count's rise over a decision is that decision's.
+    static UNSETTLED: Cell<u64> = const { Cell::new(0) };
+}
+
+/// R1006007: put a panic hook in front of the one in place (which still prints every panic) that counts
+/// `UNSETTLED_PANIC` panics on the thread raising them. The AI's search catches a panicking line and
+/// goes on, so without the count nothing outside the search sees one.
+pub(crate) fn count_unsettled_panics() {
+    static HOOK: Once = Once::new();
+    HOOK.call_once(|| {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            if info
+                .payload_as_str()
+                .is_some_and(|message| message.contains(UNSETTLED_PANIC))
+            {
+                UNSETTLED.with(|count| count.set(count.get() + 1));
+            }
+            previous(info);
+        }));
+    });
+}
+
+/// The `UNSETTLED_PANIC` panics this thread has raised since `count_unsettled_panics`.
+pub(crate) fn unsettled_panics() -> u64 {
+    UNSETTLED.with(Cell::get)
+}
 
 /// The directory game records go to when `--out` names none (docs/v0.3.0/README.md §8).
 pub(crate) const TRAINING_OUT_ENV: &str = "JACKIOH_TRAINING_OUT";
@@ -297,6 +333,9 @@ pub(crate) struct ArenaGame {
     /// R1006005: the most actions one turn may take before the game ends without a result; `None`
     /// (the arena's games, the gates') for no such ceiling, only `ARENA_MAX_ACTIONS`.
     pub turn_actions: Option<usize>,
+    /// R1006007: whether a decision whose search ran a board to a settle cap ends the game without a
+    /// result (self-play's games); the arena's and the gates' games play on.
+    pub stop_unsettled: bool,
 }
 
 /// What a game came to: match.ts's `MatchRecord` minus search statistics, plus each seat's decision times.
@@ -380,6 +419,7 @@ pub(crate) fn game_setup(
         labels: (a.label.clone(), b.label.clone()),
         paired,
         turn_actions: None,
+        stop_unsettled: false,
     })
 }
 
@@ -640,6 +680,9 @@ fn accept(
 /// `createRng("<seed>:ctl:<seat>")`, the nonce `m<log length>`. "No move" is replaced by the random
 /// policy; a refused action is recorded in `rejected` and replaced; a throw ends the game.
 pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
+    if game.stop_unsettled {
+        count_unsettled_panics();
+    }
     let options = CreateGameOptions {
         seed: game.seed.clone(),
         decks: game.decks.clone(),
@@ -691,6 +734,7 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
         };
 
         let started = Instant::now();
+        let unsettled = unsettled_panics();
         let choice = choose_for(
             &mut live[seat],
             game.skills[seat],
@@ -700,6 +744,16 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
             &mut rngs[seat],
         );
         times[seat].push(started.elapsed().as_secs_f64() * MS_PER_SECOND);
+        // R1006007: a board the search ran to a settle cap is a loop it can reach again at every
+        // decision, each time at the cap's whole cost, so the game ends here without a result.
+        if game.stop_unsettled && unsettled_panics() > unsettled {
+            thrown.push(format!(
+                "{}: a line the search played did not settle (turn {}, R1006007)",
+                seat.as_str(),
+                state.turn
+            ));
+            break;
+        }
         let chosen = match choice {
             Ok(chosen) => chosen,
             Err(message) => {
@@ -1235,6 +1289,7 @@ mod tests {
             labels: ("self".to_string(), "random".to_string()),
             paired: false,
             turn_actions: None,
+            stop_unsettled: false,
         };
         assert_eq!(
             record_id("0.2.0", &game),

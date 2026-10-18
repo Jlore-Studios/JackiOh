@@ -10,7 +10,8 @@
 //! byte-identical for the same base and games whatever `RAYON_NUM_THREADS` says (R1006001). Games are
 //! played and written in chunks, so a long export keeps what it has played; each chunk, and any game
 //! slower than a minute, is named on stderr. A turn that takes more than `SELFPLAY_TURN_ACTIONS`
-//! actions (an endless combo) ends its game without a result (R1006005).
+//! actions (an endless combo) ends its game without a result (R1006005), and so does a decision
+//! whose search ran a board to one of the engine's settle caps (§10.3, R1006007).
 //!
 //! A base that names a training gate's hold-out deals (`promote::is_gate_seed_base`, R850001) or
 //! the improve lane's dev set (`improve-dev`, the screens' deals) is refused, so no screen ever plays
@@ -106,6 +107,7 @@ fn setups(base: &str, from: i32, games: i32) -> Vec<ArenaGame> {
                 labels: ("self".to_string(), "self".to_string()),
                 paired: false,
                 turn_actions: Some(SELFPLAY_TURN_ACTIONS),
+                stop_unsettled: true,
             }
         })
         .collect()
@@ -298,6 +300,7 @@ mod tests {
             outcome.thrown
         );
         assert!(outcome.turns <= 2, "it ended in its first turn");
+        assert!(game.stop_unsettled, "R1006007");
         let line = game_of(outcome, jackioh_cards::catalog_version(), "test");
         assert_eq!(
             crate::positions::fold_game(
@@ -307,6 +310,45 @@ mod tests {
             ),
             Err(crate::positions::Dropped::NoResult)
         );
+    }
+
+    /// R1006007: a settle cap's panic is counted on the thread that raised it, caught or not, and no
+    /// other panic is.
+    #[test]
+    fn r1006007_a_settle_cap_panic_is_counted_on_its_own_thread() {
+        use crate::arena::{count_unsettled_panics, unsettled_panics};
+        use std::panic::catch_unwind;
+        count_unsettled_panics();
+        let before = unsettled_panics();
+        assert!(catch_unwind(|| panic!("the resolution loop did not settle in 3 passes (§10.3)")).is_err());
+        assert_eq!(unsettled_panics(), before + 1);
+        assert!(catch_unwind(|| panic!("an endTurn's opponent draw threw")).is_err());
+        assert_eq!(unsettled_panics(), before + 1, "another panic is not counted");
+        let other = std::thread::spawn(|| {
+            let _ = catch_unwind(|| panic!("the board did not settle in 3 passes"));
+            unsettled_panics()
+        });
+        assert_eq!(other.join().unwrap(), 1, "the other thread counts its own");
+        assert_eq!(unsettled_panics(), before + 1, "and not this thread's");
+    }
+
+    /// R1006007: each of the engine's settle caps panics with the words the hook counts.
+    #[test]
+    fn r1006007_every_settle_cap_panics_with_the_counted_words() {
+        let sources = [
+            include_str!("../../engine/src/triggers.rs"),
+            include_str!("../../engine/src/state_check.rs"),
+            include_str!("../../engine/src/effects/combat.rs"),
+        ];
+        let caps: Vec<&str> = sources
+            .iter()
+            .flat_map(|source| source.lines())
+            .filter(|line| line.contains("panic!(") && line.contains("passes"))
+            .collect();
+        assert!(caps.len() >= 4, "{caps:?}");
+        for cap in caps {
+            assert!(cap.contains(crate::arena::UNSETTLED_PANIC), "{cap}");
+        }
     }
 
     #[test]
