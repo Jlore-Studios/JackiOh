@@ -392,7 +392,9 @@ mod tests {
         use jackioh_engine::{Phase, PlayerId, Row, Zone};
         let outcome = fuzz_duos_seed_with(7, |step, state, action, monitor| {
             if state.round >= 1 && state.duels[0].phase == Phase::Main && step == 4 {
-                let mut card = state.duels[0].players[PlayerId::P1].hand[0].clone();
+                // Moved, not copied: a copy left in hand shares the id, and both the monitor and
+                // the reducer would find that copy (whatever the seed's deck put there) first.
+                let mut card = state.duels[0].players[PlayerId::P1].hand.remove(0);
                 card.def_id = "core-001".to_string();
                 card.granted_keywords.clear();
                 card.zone = Zone::Field {
