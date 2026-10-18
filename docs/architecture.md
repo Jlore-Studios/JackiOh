@@ -247,8 +247,13 @@ cannot hold a comment, and three things in them are not obvious:
   bundle is `apps/web` plus the WASM module compiled from `crates/engine`, `crates/cards`, `crates/ai`
   and `crates/wasm`, and `crates/cards/src/scripts/` holds the card scripts, which are compiled in, so
   the list never names a crate's `src/`. Diffing against the last build, not the previous
-  commit, means a commit whose build was cancelled or failed is never skipped past. Any doubt builds:
-  no previous sha, a shallow clone without it, an empty diff, a path off the list. A cancelled build
+  commit, means a commit whose build was cancelled or failed is never skipped past. main also waits
+  an hour (`MIN_GAP_SECONDS`) after the last build: a commit committed sooner is skipped, and the
+  first push after the hour builds it with the rest, since each build stores a whole copy of the
+  site (about 76 MB in October 2026) against the Hobby plan's 10 GB of Deployment Storage; the
+  project's Deployment Retention Policy, a dashboard setting, keeps every kind of deployment 1 day.
+  Any doubt builds: no previous sha, a shallow clone without it, an empty diff, a commit dated
+  before the last build, a path off the list. A cancelled build
   still counts against the 100, which is why the machine branches are switched off outright rather
   than left to the script. Vercel reads the config from the commit that is pushed, so a branch cut
   before this landed deploys until it merges main, and `bot-state` is an orphan branch with no
