@@ -36,8 +36,9 @@
 //!
 //! After the action the resolution loop of §10.3 runs (`triggers.settle`): it dispatches the events
 //! the action emitted, drains whatever a prompt left owed in `state.work`, runs the state check and
-//! pops the trigger queue until nothing is left or a prompt stops it. Then a turn an effect has cut
-//! short ends (B5 E10, R456), and a turn with nothing left to do ends by itself (R82).
+//! pops the trigger queue until nothing is left or a prompt stops it. Then a turn the autopilot owes
+//! is played by it (R1183002, `subsystems::autopilot`), a turn an effect has cut short ends (B5 E10,
+//! R456), and a turn with nothing left to do ends by itself (R82).
 //!
 //! Port of `packages/engine/src/reduce.ts` (SURFACE §4.1, §6.1). Two departures, both SURFACE's:
 //! `reduce` and `begin_game` take no `rng` (the match rng is always rebuilt from `(state.seed,
@@ -54,7 +55,9 @@ use crate::combat::{
     AttackTarget, attack_targets_in, declare_attack, position_after_switch, switch_position,
     why_cannot_switch_in,
 };
-use crate::config::{MAX_MULLIGAN_SUBSETS, NONCE_HISTORY, TIMEOUT_ANSWER_CAP, TURN_CAP_PLAYER_TURNS};
+use crate::config::{
+    AUTOPILOT_MAX_ACTIONS, MAX_MULLIGAN_SUBSETS, NONCE_HISTORY, TIMEOUT_ANSWER_CAP, TURN_CAP_PLAYER_TURNS,
+};
 use crate::game_over::end_game;
 use crate::layers::AuraTable;
 use crate::modifiers::remove_modifier;
@@ -280,7 +283,9 @@ fn can_switch(auras: &AuraTable<'_>, unit: &CardInstance) -> bool {
     why_cannot_switch_in(auras, unit, position_after_switch(unit), true).is_ok()
 }
 
-fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError> {
+/// One action applied to the sink's state as `reduce` applies it, before the resolution loop: the
+/// reducer's own step, and the autopilot's trials' (R1183003) on their copies.
+pub(crate) fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError> {
     match &action.body {
         ActionBody::Mulligan { keep } => {
             // R265: each seat answers its own mulligan, in either order; the answer is sealed (R266).
@@ -424,9 +429,12 @@ fn timeout(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError
             }
             // R79: the AI policy answers, and it never concedes (R84), so the draw is over the prompt's
             // own answers — the concede R211 also offers is not one of them.
-            // R1002: a timeout leaves a night market, drawing nothing.
-            let pick = if let Some(leave) = crate::subsystems::night_market::leave_answer(sink.state) {
-                leave
+            // R1002: a timeout leaves a night market, drawing nothing; R1184001: it stops a question
+            // sequence the same way.
+            let quit = crate::subsystems::night_market::leave_answer(sink.state)
+                .or_else(|| crate::prompts::stop_answer(sink.state));
+            let pick = if let Some(quit) = quit {
+                quit
             } else {
                 let answers: Vec<ActionBody> = legal_actions(sink.state, who)
                     .into_iter()
@@ -581,8 +589,16 @@ fn turn_cut_due(state: &GameState) -> Option<TurnEndsRider> {
 /// short (`turnCutShort`, then every end-of-turn step, as if End turn were pressed), and one with
 /// nothing but ending it left to do, unless its player turned that off (R345). Either may start a
 /// turn that is due to end in its turn (a Tommy Tempo drawn at its start), hence the loop.
-fn end_due_turns(sink: &mut EngineSink<'_>) {
+///
+/// R1183002: first of all, a turn the autopilot owes is played (`run_autopilot`), which ends it or
+/// leaves it waiting on the other player's answer. `drive_autopilot` is off inside the autopilot's
+/// own steps, so it never plays one turn twice over.
+fn end_due_turns(sink: &mut EngineSink<'_>, drive_autopilot: bool) {
     for _guard in 0..=TURN_CAP_PLAYER_TURNS {
+        if drive_autopilot && let Some(player) = crate::subsystems::autopilot::due(sink.state) {
+            run_autopilot(sink, player);
+            continue;
+        }
         if let Some(cut) = turn_cut_due(sink.state) {
             let player = sink.state.active;
             remove_modifier(sink, player, &cut.id);
@@ -602,6 +618,59 @@ fn end_due_turns(sink: &mut EngineSink<'_>) {
         end_turn(sink);
         settle(sink, SettleOptions::default());
     }
+}
+
+/// R1183002, R1183003: the autopilot plays `player`'s turn — `subsystems::autopilot::choose`'s action,
+/// one at a time, each through the reducer's own step (`autopilot_step`), while it is due. At
+/// `AUTOPILOT_MAX_ACTIONS`, or should an action it chose be refused, the rest of the turn is a
+/// timeout's (R79): the player's open prompts answered by the random policy, then the turn ended.
+/// Returns once the turn has ended, the game is over or the other player owes an answer.
+fn run_autopilot(sink: &mut EngineSink<'_>, player: PlayerId) {
+    let turn = sink.state.turn;
+    while sink.state.turn == turn && crate::subsystems::autopilot::due(sink.state) == Some(player) {
+        let Some(status) = sink.state.players[player].autopilot else {
+            return;
+        };
+        let nonce = format!("autopilot:{player}:t{turn}:a{}", status.actions);
+        let chosen = if status.actions < AUTOPILOT_MAX_ACTIONS {
+            crate::subsystems::autopilot::choose(sink.state, player)
+        } else {
+            None
+        };
+        let Some(body) = chosen else {
+            let _ = timeout(sink, &Action::new(ActionBody::Timeout, player, nonce));
+            return;
+        };
+        if let Some(status) = sink.state.players[player].autopilot.as_mut() {
+            status.actions += 1;
+        }
+        if autopilot_step(sink, &Action::new(body, player, nonce.clone())).is_err() {
+            let _ = timeout(sink, &Action::new(ActionBody::Timeout, player, nonce));
+            return;
+        }
+    }
+}
+
+/// R1183002: one autopilot action as `reduce` takes a player's — applied, counted against a "your
+/// turn ends" rider (R456), and settled, then every turn due to end ended — without a second state
+/// copy or a nonce in the log: the action is part of the one that handed the turn over, and its
+/// events are that action's. A refused action leaves the state as it was.
+fn autopilot_step(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError> {
+    let (saved, events_at, rng) = (sink.state.clone(), sink.events.len(), sink.rng.clone());
+    let counted = turn_action_counted(sink.state, action);
+    if let Err(error) = apply_action(sink, action) {
+        *sink.state = saved;
+        sink.events.truncate(events_at);
+        *sink.rng = rng;
+        return Err(error);
+    }
+    if let Some(rider_id) = counted {
+        count_turn_action(sink.state, action.player_id, &rider_id);
+    }
+    settle(sink, SettleOptions::default());
+    answer_for_locked_out(sink);
+    end_due_turns(sink, false);
+    Ok(())
 }
 
 /// §2.5, R82: when nothing but ending the turn is left, the turn ends by itself — unless the active
@@ -703,7 +772,7 @@ pub fn reduce(state: &GameState, action: &Action) -> ReduceResult {
         // owed, the state check and the trigger queue — and stops where a prompt is waiting.
         settle(&mut sink, SettleOptions::default());
         answer_for_locked_out(&mut sink);
-        end_due_turns(&mut sink);
+        end_due_turns(&mut sink, true);
         // R676: a Glitch's reset goes once the action that drew it has settled.
         if sink.state.reset_owed == Some(true) {
             reset_match(&mut sink);

@@ -49,6 +49,7 @@ pub mod aura_table;
 pub mod card_text;
 pub mod catalog;
 pub mod chinese;
+pub mod code_blocks;
 pub mod combat_windows;
 pub mod condition_active;
 pub mod control_change;

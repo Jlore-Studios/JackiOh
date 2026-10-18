@@ -832,6 +832,15 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "curve" },
     target: () => testid.board,
   },
+  // R1183002: a banner says the AI plays the rest of the turn; the actions it takes follow as their
+  // own events, each animated as a player's would be.
+  autopilotEngaged: {
+    animation: "jk-banner",
+    durationMs: 600,
+    testid: "turn-banner",
+    fx: { recipe: "banner" },
+    target: () => testid.banner,
+  },
 };
 
 /**

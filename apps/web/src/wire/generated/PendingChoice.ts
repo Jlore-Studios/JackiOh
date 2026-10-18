@@ -17,4 +17,10 @@ budget?: number,
  * potion frame (R1182000 to R1182002), which the answer check and the client read. Absent on
  * every other prompt and on Meditative #17's, so a state without one hashes as it did (D9).
  */
-craftMode?: CraftMode, resume: Resume, };
+craftMode?: CraftMode, 
+/**
+ * R1184000: an `answer` prompt that is one question of a sequence (Meditative+ #20 KY's
+ * Competition) carries the right answers so far, which its chooser sees, and offers Stop after
+ * its answers (`prompts::ANSWER_STOP_KEY`). Absent on every other prompt (D14).
+ */
+streak?: number, resume: Resume, };

@@ -53,6 +53,12 @@ going second, The Coin). Nothing here reads a difficulty, and a handicap only as
 mulligan's bonus and cap): the tiers change the AI seat's resources only (R180), and the tutorial's
 opponent is the same AI on `AI_TUTORIAL` with the lesson's fixed deck (R290, R291).
 
+A question of a sequence (Meditative+ #20 KY's Competition, R1184000) is answered at once, before
+any search, with the option its redacted statement works out to (`ky_competition::worked_answer`),
+never Stop: the redacted copy judges no answer right (R465), so a search would rank the answers alike
+and spend a decision's budget on a guess up to thirty times a turn, and worked out each answer costs
+one redaction (R1184002).
+
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
 it can see on the field, then its attacks) on every determinization, and plays the first action of the
@@ -203,6 +209,36 @@ pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64
   i64 sums, floor shifts and clips, and one IEEE division at the end, so the native gates and the
   browser's WASM build give the same answer bit for bit (R1011000; `tests/fixtures/learned-parity.json`,
   held natively and through the WASM module's `learned_parity`).
+
+## The policy prior (#1171)
+
+`src/policy.rs` is a table of weights, fitted by `training/ml`'s `policy_fit.py` on the moves the AI
+played, that re-sorts the moves the beam expands before it takes its prefix (`docs/learned-eval.md`,
+learned move ordering):
+
+```rust
+pub enum MoveOrder { Heuristic, Learned }
+pub const AI_MOVE_ORDER: MoveOrder;               // config.rs: Heuristic, unless a promotion turns it on
+pub const POLICY_PRIOR: PolicyPrior<'static>;     // compiled in from src/policy/weights.json by build.rs
+pub fn policy_keys(view: &GameState, seat: PlayerId, action: &ActionBody, rank: Option<usize>) -> Vec<String>;
+pub fn policy_label(state: &GameState, seat: PlayerId, played: &ActionBody) -> PolicyLabel;
+pub fn prior_order(state: &GameState, seat: PlayerId, moves: Vec<ActionBody>, prior: &PolicyPrior<'_>) -> Vec<ActionBody>;
+pub fn beam_search_with(det, seat, counter, budget, order: MoveOrder, prior: &PolicyPrior<'_>) -> Vec<Line>;
+```
+
+- With `Heuristic` nothing changes. With `Learned`, `search::expansion` sorts each line's candidates
+  that are not End Turn by the prior, best first and ties in their own order, then takes the first
+  `root_branching` or `branching` and End Turn, as before (R1171001). It never adds, drops or changes
+  a move and spends no node. A table of no keys, the checked-in null one, leaves every order as it is,
+  and so does a Duos duel.
+- A move is a handful of text keys read from `redact` alone (R185, R1171000): its kind, its rank in the
+  heuristic order (capped at `POLICY_RANK_CAP`), the card it plays or acts with (named by R1006000's
+  rule, else `hidden`), where it lands and the class of what it aims at. No key holds an instance, hero
+  or prompt id. Its score is the sum of its keys' weights; a key the table lacks adds nothing.
+- `policy_label` is what `cargo jackioh positions --policy` writes on each decision row: the keys of
+  every candidate decide's probe lists there and which one was played. `src/policy/weights.json`
+  records the `POLICY_KEYS_VERSION` and catalog it was fitted on (a test fails on another version);
+  `build.rs` turns it into constant slices, data at compile time (rule 4).
 
 ## Duos (§13.7)
 

@@ -201,6 +201,8 @@ export const GAME_EVENT_TYPES = [
   "scriptFailed",
   // #831's patch (C+ #62 KY's Papaya, R831003).
   "curveDrawn",
+  // Meditative+ #18 Cognitive Offloading's autopilot (R1183002).
+  "autopilotEngaged",
 ] as const satisfies readonly GameEventType[];
 
 /**

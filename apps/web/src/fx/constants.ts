@@ -150,6 +150,8 @@ export const FX_TEXT = {
   chaosRolled: "Call to Chaos:",
   /** B5 E10: an effect ended the turn. */
   turnCutShort: "Turn cut short",
+  /** R1183002: the AI plays the rest of the turn (Meditative+ #18). */
+  autopilot: "The AI takes the turn",
   victory: "Victory",
   defeat: "Defeat",
   draw: "Draw",

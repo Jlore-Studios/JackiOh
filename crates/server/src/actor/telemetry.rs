@@ -19,6 +19,8 @@
 //! rank bucket, which the log does not hold). Rule 7 holds throughout: `legal_actions` and the AI's
 //! evaluation read the true state here on the server, and nothing here reaches a socket.
 
+use serde::{Deserialize, Serialize};
+
 use jackioh_ai::{AI_EVAL, NextSwing, evaluate};
 use jackioh_engine::{
     Action, ActionBody, ActionType, EmoteId, GameEventType, PLAYER_IDS, PerPlayer, PlayerId,
@@ -80,10 +82,13 @@ fn empty_signals(match_id: &str, seat: PlayerId) -> MatchSignalRow {
     }
 }
 
-/// One match's telemetry as it is gathered (see the module header).
-#[derive(Clone, Debug)]
+/// One match's telemetry as it is gathered (see the module header). #1169: a checkpoint carries it
+/// as JSON, all but the catalog, which the rebuild that reads it back pins again (`replay_from`).
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Recorder {
     /// R388, R767000: the catalog the legal count and the concession's evaluation read.
+    #[serde(skip)]
     pinned: Pinned,
     match_id: String,
     /// By engine seat: when the seat began to owe the move it owes now (the push that made it so),
@@ -276,7 +281,7 @@ pub fn replay(
     dealt: Option<Vec<PlayerId>>,
 ) -> (Recorder, usize) {
     let (last_boards, glitch_boards) = last_boards_of(match_row);
-    let mut state = engine::fold(
+    let state = engine::fold(
         pinned,
         &engine::fold_args(
             &match_row.seed,
@@ -288,12 +293,24 @@ pub fn replay(
         ),
     )
     .state;
-    let mut recorder = Recorder::new(
+    let recorder = Recorder::new(
         pinned,
         &match_row.id,
         match_row.created_at,
         &engine::snapshot(&state),
     );
+    replay_from(pinned, recorder, state, log)
+}
+
+/// `replay` carried on from `recorder` as it stood on `state`, over the rows after it: how a rebuild
+/// resumes a checkpoint's recorder (#1169), pinned again to the match's catalog.
+pub fn replay_from(
+    pinned: Pinned,
+    mut recorder: Recorder,
+    mut state: EngineState,
+    log: &[MatchActionRow],
+) -> (Recorder, usize) {
+    recorder.pinned = pinned;
     let mut refused = 0;
     for row in log {
         let result = engine::reduce(pinned, &state, &row.action);

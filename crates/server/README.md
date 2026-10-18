@@ -29,7 +29,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 
 | Layer | Modules | Rule |
 | --- | --- | --- |
-| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` or a return as `loop.returned`, both alerts, and restarts the loop), `serve`; on SIGTERM or Ctrl-C, `serve_until`'s drain (loops aborted, requests finished, actors stopped with 1001, store closed) inside `SHUTDOWN_DRAIN_SECONDS` |
+| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` or a return as `loop.returned`, both alerts, and restarts the loop), `serve`; on SIGTERM or Ctrl-C, `serve_until`'s drain (loops aborted, requests finished, each live match checkpointed and its actor stopped with 1001, store closed) inside `SHUTDOWN_DRAIN_SECONDS` |
 | Handlers | `api/*.rs` | `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`; no SQL of their own |
 | Match | `actor/match_actor.rs`, `clock.rs`, `registry.rs`, `rooms.rs`, `ws_server.rs` | state in memory; time from `tokio::time` |
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
@@ -248,10 +248,15 @@ What the actor holds, each with a test named after it:
   malformed-frame budget, past which its socket is closed with 1008 (R835002).
 - Every resolved action is appended to `match_actions`. A rebuilt actor folds `(seed, decks, log)`
   with the last boards, Glitch boards and dealt seats frozen into the match at its start (R417, R678,
-  R433), and a reconnect gets a fresh view, never a log replay (§9.5). A match is played, rebuilt,
-  reaped and recorded under the catalog version it started on (R388, R767000): a start on a version
-  this build neither is nor carries is refused, and a rebuild of such a match logs
-  `match.catalog.unpinned` and plays on this build's catalog, as Duos's does.
+  R433), and a reconnect gets a fresh view, never a log replay (§9.5). The restart drain stores a
+  checkpoint of each live match of `MATCH_CHECKPOINT_MIN_ACTIONS` actions or more
+  (`match_checkpoints`, migration 0042, `actor/checkpoint.rs`), and the next rebuild folds only the
+  rows after it when it passes every check (`MATCH_CHECKPOINT_VERSION`, the build's rules
+  fingerprint from `build.rs`, the catalog, its row's seq and nonce, its hash), or else logs
+  `match.checkpoint.refused` with the reason and folds the whole log; finishing drops it (#1169).
+  A match is played, rebuilt, reaped and recorded under the catalog version it started on (R388,
+  R767000): a start on a version this build neither is nor carries is refused, and a rebuild of such
+  a match logs `match.catalog.unpinned` and plays on this build's catalog, as Duos's does.
 - Clocks (R79, R268) are `config.rs` constants and live here, never in the engine: an expiry is a
   server-only action (`timeout`, `disconnectExpired`, `ceilingReached`) that goes through `reduce` and
   the log like any other. Every terminal reason writes exactly one `results` row and moves the rating
@@ -666,6 +671,13 @@ loop first folds any record not yet folded (`api::game_records::fold_pending`), 
 `app.purge_expired_rows`' fourth cutoff empties the detail of each folded record written more than
 `GAME_RECORD_RAW_RETENTION_DAYS` ago (R1044001). The store folds under a transaction-level advisory
 lock per patch and source, so two folds into the same rows never interleave.
+
+Migration 0042 adds `match_checkpoints` (#1169): at most one row per live match, the state, play
+telemetry and bot turns its actor held after one log row, written by the restart drain and read by
+the next rebuild. It holds both hands and both libraries, so it is server-only like `matches` (RLS
+on, no policy, no grant). It is written only while the match is live and its log holds that row,
+replaced only by a later seq, deleted by `matches_finish` and with a voided match (on delete
+cascade); the retention purge never meets one.
 
 ## Tests
 

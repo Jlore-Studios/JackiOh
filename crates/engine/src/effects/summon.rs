@@ -73,6 +73,11 @@ pub struct SummonPlacement {
     pub armor_override: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stats_override: Option<StatsOverride>,
+    /// R1184003: the X the card is summoned with, as if played for it (B2.7): a face that prints its
+    /// stats as multiples of X (`xStats`) is those multiples of it, and whatever reads the card's X
+    /// (`tuning::x_of`) reads it — Meditative+ #20.1 Lil' Kenny's X/X and its keywords by X.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x: Option<i32>,
     /// R1088: the card whose effect summoned it, for the client; no rule reads it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_id: Option<String>,
@@ -104,6 +109,9 @@ pub struct SummonArgs {
     pub armor_override: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stats_override: Option<StatsOverride>,
+    /// R1184003: the X the card is summoned with (`SummonPlacement.x`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x: Option<i32>,
     /// Create a fresh card of this definition, a token included (§7).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub def_id: Option<String>,
@@ -133,6 +141,7 @@ impl SummonArgs {
             radiant: self.radiant,
             armor_override: self.armor_override,
             stats_override: self.stats_override,
+            x: self.x,
             source_id: None,
             chinese: None,
         }
@@ -275,6 +284,10 @@ fn summon_fresh(
     if at.chinese == Some(true) {
         card.chinese = Some(true);
     }
+    // R1184003: its X before it lands, so it arrives at its X stats and with its X-read keywords.
+    if let Some(x) = at.x {
+        card.x = Some(x);
+    }
     if summon_onto(ctx, &mut card, &slot, at, None) {
         Some(card)
     } else {
@@ -320,6 +333,9 @@ fn summon_existing(
     }
     if let Some(armor) = at.armor_override {
         moving.armor_override = Some(armor);
+    }
+    if let Some(x) = at.x {
+        moving.x = Some(x);
     }
     if summon_onto(ctx, &mut moving, &slot, at, former_id) {
         Some(moving)

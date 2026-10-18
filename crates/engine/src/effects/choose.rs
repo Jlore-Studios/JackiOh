@@ -14,7 +14,8 @@ use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, query};
 use crate::faces::card_type_of;
 use crate::mana::effective_cost;
 use crate::prompts::{
-    ANSWER_KEY, OpenPromptArgs, answer_key_of, cell_option_label, hero_option_label, open_prompt, resume_self,
+    ANSWER_KEY, ANSWER_STOP_KEY, OpenPromptArgs, answer_key_of, cell_option_label, hero_option_label,
+    open_prompt, resume_self,
 };
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, GameState, PromptOption, Resume};
@@ -619,6 +620,11 @@ pub struct ChooseAnswerArgs {
     pub shuffle: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub by: Option<PlayerSpec>,
+    /// R1184000: the problem is one question of a sequence (Meditative+ #20 KY's Competition), with
+    /// this many right answers so far: the prompt carries the streak for its chooser to see and offers
+    /// Stop after the lettered answers.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub streak: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub data: StepData,
 }
@@ -630,6 +636,10 @@ pub struct ChooseAnswerArgs {
 /// prompt's resume data under `prompts::ANSWER_KEY` — which `view_for` never sends and the AI's
 /// redaction strips (R185) — so the key never leaves the engine. The answered step reads the verdict
 /// with `answered_correctly`. At most `ANSWER_OPTION_IDS.len()` options; fewer than two asks nothing.
+///
+/// R1184000: with a `streak`, the problem is a question of a sequence: Stop is offered last, a `none`
+/// pick under no letter (`prompts::ANSWER_STOP_KEY`), which `answered_correctly` never judges right,
+/// and the prompt carries the streak (`PendingChoice.streak`), which its chooser's view shows.
 pub fn choose_answer(args: ChooseAnswerArgs) -> Effect {
     Effect::new("chooseAnswer", move |ctx| {
         // `(text, index)`: TS `{ text, index }`.
@@ -654,7 +664,7 @@ pub fn choose_answer(args: ChooseAnswerArgs) -> Effect {
             .copied()
             .unwrap_or("")
             .to_string();
-        let options: Vec<PromptOption> = shown
+        let mut options: Vec<PromptOption> = shown
             .iter()
             .enumerate()
             .map(|(index, (text, _))| {
@@ -665,6 +675,15 @@ pub fn choose_answer(args: ChooseAnswerArgs) -> Effect {
                 mode_option(&id, text)
             })
             .collect();
+        if args.streak.is_some() {
+            options.push(PromptOption {
+                key: ANSWER_STOP_KEY.to_string(),
+                label: "Stop".to_string(),
+                selection: Selection::None,
+                cost: None,
+                radiant: None,
+            });
+        }
         let mut data = args.data.clone().unwrap_or_default();
         data.insert(ANSWER_KEY.to_string(), Value::String(key));
         let player = player_of(ctx, args.by.unwrap_or(PlayerSpec::SelfSide));
@@ -678,7 +697,12 @@ pub fn choose_answer(args: ChooseAnswerArgs) -> Effect {
             resume,
         );
         asked.owner = Some(owner);
-        open_prompt(ctx, asked);
+        if open_prompt(ctx, asked).is_some()
+            && let Some(streak) = args.streak
+            && let Some(pending) = ctx.sink.state.pending.as_mut()
+        {
+            pending.streak = Some(streak.max(0));
+        }
     })
 }
 
@@ -1072,13 +1096,37 @@ pub fn choose_pick(args: ChoosePickArgs) -> Effect {
 /// (§10.8). `index` offers the definitions' §5 indices instead — #82 KY's Trial's "Discover among 3
 /// distinct random numbers" — so each option is the number, labelled with it and naming no
 /// definition, and the resume step turns the number it gets back into its card (`def_by_index`, with
-/// the set its pool named, since a number is unique only within its set).
+/// the set its pool named, since a number is unique only within its set). `code` (R1183005,
+/// Meditative+ #25 KY's Intuition) offers each card as its code block alone (`code_block_of`): the
+/// option is its place in the offer (`code-0`, `code-1`, …), labelled with the code, and the cards
+/// behind the places ride the prompt's resume data, which no view sends, so the chooser reads no
+/// id, name or face until the pick; the resume step reads its card with `discovered_code_card`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum DiscoverOffer {
     Card,
     Index,
+    Code,
+}
+
+/// R1183005: a code option's string is this and its place in the offer (`code-0`).
+pub const CODE_OPTION_PREFIX: &str = "code-";
+
+/// R1183005: the resume data key holding the cards behind a code Discover's places, in order.
+pub const CODE_OFFERS_KEY: &str = "codeOffers";
+
+/// R1183005: in a code Discover's resume step, the catalog id of the card whose code was picked, or
+/// `None` when the answer named no place the offer made.
+pub fn discovered_code_card(ctx: &EffectContext<'_>) -> Option<String> {
+    let picked = chosen_options(ctx).into_iter().next()?;
+    let at: usize = picked.strip_prefix(CODE_OPTION_PREFIX)?.parse().ok()?;
+    ctx.data
+        .get(CODE_OFFERS_KEY)?
+        .as_array()?
+        .get(at)?
+        .as_str()
+        .map(str::to_string)
 }
 
 /// `discover_from_catalog`'s pool as a function of the context (TS's `query` when it is a function).
@@ -1141,11 +1189,16 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
             .as_ref()
             .map(|card| card.def_id.clone())
             .or_else(|| ctx.def_id.clone());
-        let pool = query(&excluding_def_id(
+        let mut pool = query(&excluding_def_id(
             Some(&*ctx.state),
             &asked,
             generating.as_deref(),
         ));
+        // R1183005: a code Discover offers only cards with a code block.
+        let by_code = args.offer == Some(DiscoverOffer::Code);
+        if by_code {
+            pool.retain(|def| crate::catalog::code_block_of(&def.id).is_some());
+        }
         if pool.is_empty() {
             return;
         }
@@ -1153,9 +1206,31 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
         let shuffled = ctx.rng.shuffle(&pool);
         let end = slice_end(shuffled.len(), args.count.unwrap_or(3));
         let by_index = args.offer == Some(DiscoverOffer::Index);
+        let mut data = args.data.clone().unwrap_or_default();
+        if by_code {
+            let offered: Vec<Value> = shuffled[..end]
+                .iter()
+                .map(|def| Value::from(def.id.clone()))
+                .collect();
+            data.insert(CODE_OFFERS_KEY.to_string(), Value::Array(offered));
+        }
         let options: Vec<PromptOption> = shuffled[..end]
             .iter()
-            .map(|def| {
+            .enumerate()
+            .map(|(at, def)| {
+                // R1183005: the place in the offer, labelled with the card's code and nothing else.
+                if by_code {
+                    let option = format!("{CODE_OPTION_PREFIX}{at}");
+                    return PromptOption {
+                        key: format!("mode:{option}"),
+                        label: crate::catalog::code_block_of(&def.id)
+                            .unwrap_or_default()
+                            .to_string(),
+                        selection: Selection::Mode { option },
+                        cost: None,
+                        radiant: None,
+                    };
+                }
                 // R247: a number is offered as itself, so nothing in the option names the card it stands for.
                 let option = if by_index {
                     def.index.clone()
@@ -1176,7 +1251,7 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
             })
             .collect();
         let player = ctx.controller;
-        let resume = resume_self(ctx, &args.step, args.data.clone().unwrap_or_default());
+        let resume = resume_self(ctx, &args.step, data);
         open_prompt(
             ctx,
             ask(
