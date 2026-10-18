@@ -947,10 +947,10 @@ describe("R1382: a card with every tribal tag prints All Tribes", () => {
 /** Every token a face can show: the catalog's, Glitch aside (it stays blank, R674). */
 const TOKENS: readonly CardDef[] = DEFS.filter((card) => card.token && card.id !== GLITCH_DEF_ID);
 
-/** The rules of `css` inside its first `@container cardface (<query>)` block, up to the next one. */
+/** The rules of `css` inside its first `@container <query>` block, up to the next one. */
 function containerBlock(css: string, query: string): string {
-  const at = css.indexOf(`@container cardface (${query})`);
-  if (at < 0) throw new Error(`cards.css has no @container cardface (${query})`);
+  const at = css.indexOf(`@container ${query}`);
+  if (at < 0) throw new Error(`cards.css has no @container ${query}`);
   const next = css.indexOf("@container", at + 1);
   return css.slice(at, next < 0 ? undefined : next);
 }
@@ -1009,6 +1009,11 @@ describe("R1177001: every token says Token, on every layout", () => {
     const token = minionFace("core-t-rush");
     expect(token.getAttribute("data-layout")).toBe("minion");
     expect(one(token, ".cf-token").getAttribute("aria-label")).toBe("Token");
+    // In the stats row, after attack, so it takes the room between the numbers; the numbers keep
+    // their own text.
+    const row = [...one(token, ".stats").children].map((child) => child.className);
+    expect(row.slice(0, 2)).toEqual(["stat stat-attack", "cf-token"]);
+    expect(one(token, ".stat-health").textContent).toBe("4/4");
     // R943's Created mark is unchanged.
     one(token, '.cf-state[data-state="created"]');
     cleanup();
@@ -1062,13 +1067,15 @@ describe("R1177001: every token says Token, on every layout", () => {
   it("R1177001 cards.css shows the mark only where the type line hides: a small face, a full-art face, the minion", () => {
     const mark = /\.cf \.cf-token \{[^}]*\}/u.exec(cardsCss)?.[0] ?? "";
     expect(mark).toContain("display: none");
-    expect(cardsCss).toMatch(/\.cf\[data-layout="minion"\] \.cf-token \{[^}]*display: block/u);
-    expect(cardsCss).toMatch(/\.cf\[data-full-art="true"\] \.cf-token \{[^}]*display: block/u);
-    const small = containerBlock(cardsCss, `max-height: ${String(FACE_TEXT_MIN_HEIGHT_PX - 1)}px`);
-    expect(small).toMatch(/\.cf-token \{[^}]*display: block/u);
+    // The mark is a size container of its own, so the pill can tell whether the word fits.
+    expect(mark).toContain("container: tokenmark / inline-size");
+    expect(cardsCss).toMatch(/\.cf\[data-layout="minion"\] \.stats > \.cf-token \{[^}]*display: flex/u);
+    expect(cardsCss).toMatch(/\.cf\[data-full-art="true"\] \.cf-token \{[^}]*display: flex/u);
+    const small = containerBlock(cardsCss, `cardface (max-height: ${String(FACE_TEXT_MIN_HEIGHT_PX - 1)}px)`);
+    expect(small).toMatch(/\.cf-token \{[^}]*display: flex/u);
     expect(small).toMatch(/\.card-type \{[^}]*display: none/u);
-    // The narrowest faces print the letter for the word, at the Vanilla stamp's width.
-    const narrow = containerBlock(cardsCss, "max-width: 72px");
+    // Where the slot has no room for the word, the pill prints its letter.
+    const narrow = containerBlock(cardsCss, "tokenmark (max-width: 4.8em)");
     expect(narrow).toMatch(/\.cf-token-word \{[^}]*display: none/u);
     expect(narrow).toMatch(/\.cf-token-glyph \{[^}]*display: inline/u);
   });

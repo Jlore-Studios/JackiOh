@@ -433,8 +433,9 @@ span.cf[data-layout="full"][data-card-type][data-rarity?][data-name-tier][data-t
     span.card-name                           the name as ONE text node; inline style --cf-fit only
     span.cf-gem[data-rarity]                 absent for Token and unknown rarity
     span.card-type                           the CardType string, after "Token" on a token ("Token Unit", R1177001)
-    span.cf-token[data-token][role=img]      tokens only (R1177001): span.cf-token-word "Token" + span.cf-token-glyph "T";
-                                             hidden while the type line shows, shown on a small or full-art face
+    span.cf-token[data-token][role=img]      tokens only (R1177001): a slot at the foot (a `tokenmark` size container)
+      span.cf-token-pill                     span.cf-token-word "Token" + span.cf-token-glyph "T", the letter where
+                                             the slot has no room for the word; hidden while the type line shows
     span.card-text[data-clamped?]            inline style --cf-fit only
       span.cf-text-base                      RulesText(text.base)
       span.cf-text-radiant                   RulesText(text.radiant), only when non-null
@@ -451,8 +452,8 @@ span.cf[data-layout="full"][data-card-type][data-rarity?][data-name-tier][data-t
   `.card-type` (and a token's `.cf-token`), but no `.card-text`, tags or stats.
 - **Container query.** `@container cardface (max-height: 149px)` hides `.card-text`, `.cf-tags`
   and `.card-type`, and shows a token's `.cf-token` at the foot in the type line's place
-  (R1177001); at 72px wide or less the mark is its letter. The 149 mirrors `FACE_TEXT_MIN_HEIGHT_PX`.
-  The text stays in the DOM.
+  (R1177001), between a Unit's stats; where that room is narrower than the word, the mark is its
+  letter. The 149 mirrors `FACE_TEXT_MIN_HEIGHT_PX`. The text stays in the DOM.
 - **Sizing.** `.cf` sits in normal flow: `position: relative; height: 100%; aspect-ratio: 5 / 7;
   max-width: 100%; margin-inline: auto`. It sets `pointer-events: none`. Everything inside is
   positioned against `.cf-scale` in `cqh`/`cqw`, so the card scales as one piece. Font sizes are
@@ -469,9 +470,9 @@ span.cf[data-layout="minion"][data-card-type][data-rarity?][data-foil][data-radi
     span.cf-portrait > CardArt shape="oval"  (ring coloured by rarity; .cf-crest for Legendary/Mythic)
     span.cost-gem[data-cost][data-tone]      small, top left
     span.card-name                           name plate under the portrait, one text node
-    span.cf-token[data-token]                tokens only (R1177001): a tab under the name plate, between the gems
     span.stats
       span.stat.stat-attack[data-attack][data-tone]                      {attack}
+      span.cf-token[data-token]                                          tokens only (R1177001): the room between the numbers
       span.stat.stat-health[data-health][data-max-health][data-tone]     {health}<span class="cf-max">/{maxHealth}</span>
       span.stat.stat-armor[data-armor]                                   only when armor > 0
     span.keywords > span.keyword.keyword-icon[data-keyword][data-n?][data-chip?][title]   text `${KEYWORD_MARK}` + (` ${n}` when numbered)

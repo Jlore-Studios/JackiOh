@@ -135,7 +135,7 @@ export function tuningLine(face: FaceModel): string {
 /** R1177001: the word a token's type line and mark print. */
 export const TOKEN_WORD = "Token";
 
-/** R1177001: the token mark's one letter, on a face too narrow for the word (cards.css). */
+/** R1177001: the token mark's one letter, where the foot has no room for the word (cards.css). */
 export const TOKEN_GLYPH = "T";
 
 /** R1177001: the token mark's one character on a Chinese face, the word's first. */
@@ -155,18 +155,17 @@ export function typeLine(face: FaceModel): string {
 
 /**
  * R1177001: the token mark, where a face shows no type line (a small face, a full-art face, the
- * board minion): the word, or its one letter on the narrowest faces, with "Token" as its name.
+ * board minion): a slot at the foot holding a pill, the word or, where the slot is too narrow for
+ * it, its one letter (cards.css), with "Token" as its name.
  */
 export function TokenMark({ face }: { face: FaceModel }): ReactElement | null {
   if (face.token !== true || isGlitch(face.defId)) return null;
   const chinese = face.chinese === true;
   return (
     <span className="cf-token" data-token="true" role="img" aria-label={t("Token")} title={t("Token")}>
-      <span className="cf-token-word" aria-hidden="true">
-        {chinese ? CHINESE_TERMS.tags.Token : TOKEN_WORD}
-      </span>
-      <span className="cf-token-glyph" aria-hidden="true">
-        {chinese ? CHINESE_TOKEN_GLYPH : TOKEN_GLYPH}
+      <span className="cf-token-pill" aria-hidden="true">
+        <span className="cf-token-word">{chinese ? CHINESE_TERMS.tags.Token : TOKEN_WORD}</span>
+        <span className="cf-token-glyph">{chinese ? CHINESE_TOKEN_GLYPH : TOKEN_GLYPH}</span>
       </span>
     </span>
   );

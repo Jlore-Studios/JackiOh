@@ -43,8 +43,9 @@
 // ME-CN, R1301: a Chinese unit's name plate is the model's Chinese name and its keyword titles are
 // the table's words (chinese.ts); its chips keep their marks, and its art the English name's motif.
 //
-// R1177001: a token unit wears the token mark (CardFace.tsx's TokenMark, `.cf-token`), as its full
-// face says "Token Unit": the board is where a token is met most, and it vanishes when it leaves.
+// R1177001: a token unit wears the token mark (CardFace.tsx's TokenMark, `.cf-token`) in its stats
+// row, in the room between attack and health, as its full face says "Token Unit": the board is where
+// a token is met most. The row's tests read its stats by their own classes, never its whole text.
 
 import { useRef, type ReactElement } from "react";
 
@@ -176,9 +177,6 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
           {face.name}
         </span>
 
-        {/* R1177001: a token unit says so, as its full face's type line does. */}
-        <TokenMark face={face} />
-
         {unit.vanilla === true && (
           <span className="cf-vanilla" title={t("Vanilla: its text is gone")}>
             <span className="cf-vanilla-word">{t("Vanilla")}</span>
@@ -199,6 +197,8 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
           <span className="stat stat-attack" data-attack={unit.attack} data-tone={attackTone} data-tuned={face.tuning?.attack}>
             {unit.attack}
           </span>
+          {/* R1177001: a token unit says so between its numbers, as its full face's type line does. */}
+          <TokenMark face={face} />
           <span
             className="stat stat-health"
             data-health={unit.health}
