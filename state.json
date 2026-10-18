@@ -3677,6 +3677,7 @@
     "1179": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -3690,8 +3691,10 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "landed": "bbd186293885ea965a4775db0029e3b32fe0838d",
       "last_findings": [],
       "onto": "bot/issue-1173",
+      "parked_on": "",
       "part_of": 1173,
       "pending_request": false,
       "planned_at": "2026-10-18T17:07:24Z",
@@ -3699,6 +3702,7 @@
       "planned_by_id": "claude-4",
       "planned_tier": "strong",
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-10-18T16:40:11Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
