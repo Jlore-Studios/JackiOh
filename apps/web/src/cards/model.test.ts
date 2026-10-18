@@ -220,11 +220,11 @@ function marksOf(id: string): string[] {
 
 describe("R277: a Radiant face prints its whole text and marks what differs from the base", () => {
   it("R277 a changed number is the only mark (core-044, core-053, core-013, core-047)", () => {
-    expect(face("core-044", true).text.full).toBe("Pierce\nDeal 9 damage. Exile this.");
-    expect(marksOf("core-044")).toEqual(["9"]);
+    expect(face("core-044", true).text.full).toBe("Pierce\nDeal 8 damage. Exile this.");
+    expect(marksOf("core-044")).toEqual(["8"]);
     expect(marksOf("core-053")).toEqual(["60"]);
     expect(marksOf("core-013")).toEqual(["4"]);
-    expect(marksOf("core-047")).toEqual(["50"]);
+    expect(marksOf("core-047")).toEqual(["40"]);
   });
 
   it("R277 a keyword line prints the radiant form's whole list and marks what it adds (core-056, core-025, core-019)", () => {

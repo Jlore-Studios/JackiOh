@@ -110,7 +110,7 @@ describe("R399 R511 Echo prints the text it copies", () => {
 
   it("R511 a copy of a Spell with no declared numbers is its text as printed, on the face it was played on", () => {
     renderHand([echo({ copies: { defId: STOCKPILE, radiant: true } })]);
-    expect(rulesText(screen.getByTestId(testid.handCard("e1")))).toBe("Draw 5. Heal your hero 5.");
+    expect(rulesText(screen.getByTestId(testid.handCard("e1")))).toBe("Draw 4. Heal your hero 4.");
   });
 
   it("R511 a Radiant Echo keeps its own Echo 1, marked as its Radiant face marks it, over the text it copies", () => {
