@@ -79,6 +79,21 @@ fn zones_at(plays: &[(Option<ZoneChoice>, Option<bool>)], embiggened: bool) -> V
 
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
+/// The modes of the first play `legalActions` lists for p1's hand card, so a card that declares one
+/// (Meditative+ #4 Supply Drop's Combat or Supplies, R81) is played with a mode it is offered at;
+/// none for a card that declares none.
+fn listed_modes(g: &Scenario, card: &str) -> Option<Vec<String>> {
+    legal_actions(g.state(), P1)
+        .into_iter()
+        .find_map(|action| match action {
+            ActionBody::Play {
+                instance_id, modes, ..
+            } if instance_id == card => Some(modes),
+            _ => None,
+        })
+        .flatten()
+}
+
 /// A play of p1's hand card at the price asked for, through `reduce`.
 fn play(g: &Scenario, card: &str, zone: Option<ZoneChoice>, embiggen: bool) -> ReduceResult {
     let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
@@ -90,7 +105,7 @@ fn play(g: &Scenario, card: &str, zone: Option<ZoneChoice>, embiggen: bool) -> R
         equip: None,
         tributes: None,
         targets: None,
-        modes: None,
+        modes: listed_modes(g, card),
         plague: None,
         face_down: None,
     };

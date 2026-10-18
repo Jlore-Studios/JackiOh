@@ -84,6 +84,7 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Targets chosen randomly",
     "Fatigue",
     "Attack summon",
+    "In N turns",
   ],
   "§6.3": [
     "Summon",

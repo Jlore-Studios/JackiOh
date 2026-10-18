@@ -118,6 +118,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
     // MD-B15, R923: the view's tags where they differ from the definition's (a granted tag).
     ...(card.tags === undefined ? {} : { tags: card.tags }),
     liveCost: card.cost,
+    // R1181003: the second badge is the view's price for the Embiggened version, where it has one.
+    ...(card.embiggenCost === undefined ? {} : { liveEmbiggenCost: card.embiggenCost }),
     ...(unit === undefined
       ? {}
       : { live: { attack: unit.attack, health: unit.health, maxHealth: unit.maxHealth, keywords: unit.keywords } }),

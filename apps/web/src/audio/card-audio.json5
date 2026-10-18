@@ -1862,6 +1862,9 @@
     "meditativeplus-002": { // NA Tech
       cast: { voice: "robot", text: "Best and worst, together. Balance achieved." },
     },
+    "meditativeplus-004": { // Supply Drop
+      cast: { voice: "sapi-hero", text: "Hold tight. The drop is inbound." },
+    },
     "meditativeplus-006": { // Bloodbloom
       cast: { voice: "whisper", text: "Pay in blood. The petals open." },
     },
@@ -1906,6 +1909,12 @@
       play: { voice: "sapi-mystic", text: "Be still. Be equal. Be three by three." },
       attack: { voice: "sapi-mystic", text: "Balance, restored." },
       death: { voice: "sapi-mystic", text: "The note fades..." },
+    },
+    "meditativeplus-022": { // Mountaintop Garden
+      cast: { voice: "whisper", text: "Up here, everything grows bigger." },
+    },
+    "meditativeplus-023": { // Enormous Elderberry
+      cast: { voice: "crone", text: "One berry. Far too big." },
     },
     "meditativeplus-024": { // Bob, Wisconsin's Strongest Soldier
       play: { voice: "brute", text: "Bob reporting for duty. Pick your poison." },

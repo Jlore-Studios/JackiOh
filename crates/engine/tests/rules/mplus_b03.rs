@@ -40,7 +40,9 @@ fn hits(events: &[GameEvent]) -> Vec<(String, i32)> {
     events
         .iter()
         .filter_map(|event| match event {
-            GameEvent::Damage { target_id, amount, .. } => Some((target_id.clone(), *amount)),
+            GameEvent::Damage {
+                target_id, amount, ..
+            } => Some((target_id.clone(), *amount)),
             _ => None,
         })
         .collect()
@@ -93,7 +95,9 @@ fn played(s: &Scenario) -> (i32, Option<bool>) {
         .iter()
         .find_map(|event| match event {
             GameEvent::CardPlayed {
-                cost_paid, embiggened, ..
+                cost_paid,
+                embiggened,
+                ..
             } => Some((*cost_paid, *embiggened)),
             _ => None,
         })
@@ -123,13 +127,19 @@ mod r1181000_in_n_turns_counts_its_owners_turns_and_shows_a_countdown {
         for _ in 0..4 {
             s.end_turn();
         }
-        assert!(hits(s.events()).is_empty(), "two of p1's turns have started: nothing yet");
+        assert!(
+            hits(s.events()).is_empty(),
+            "two of p1's turns have started: nothing yet"
+        );
 
         s.end_turn().end_turn();
         let events = s.last_events().to_vec();
         assert_eq!(
             hits(&events),
-            vec![(theirs.clone(), LATER_DAMAGE), ("hero-p2".to_string(), LATER_DAMAGE)],
+            vec![
+                (theirs.clone(), LATER_DAMAGE),
+                ("hero-p2".to_string(), LATER_DAMAGE)
+            ],
             "each enemy, the Unit then the hero"
         );
         let first_hit = events
@@ -141,15 +151,27 @@ mod r1181000_in_n_turns_counts_its_owners_turns_and_shows_a_countdown {
             .position(|event| matches!(event, GameEvent::Drawn { player: P1, .. }))
             .expect("p1's turn draw");
         assert!(first_hit < draw, "R62: the delayed effect before the draw");
-        assert_eq!(s.state().players.p2.hero.health, 30 - LATER_DAMAGE, "Pierce: through the Armor");
+        assert_eq!(
+            s.state().players.p2.hero.health,
+            30 - LATER_DAMAGE,
+            "Pierce: through the Armor"
+        );
         assert_eq!(s.state().players.p2.hero.armor, 3, "the Armor untouched");
-        assert_eq!(s.state().players.p1.hero.health, 20 + 2 * LATER_DAMAGE, "Lifesteal, once per hit");
+        assert_eq!(
+            s.state().players.p1.hero.health,
+            20 + 2 * LATER_DAMAGE,
+            "Lifesteal, once per hit"
+        );
         assert!(s.state().delayed.is_empty());
     }
 
     #[test]
     fn r1181000_an_extra_turn_counts() {
-        let mut s = board("r1181000-extra", json!({ "hand": [LATER.id, plain.id] }), json!({}));
+        let mut s = board(
+            "r1181000-extra",
+            json!({ "hand": [LATER.id, plain.id] }),
+            json!({}),
+        );
         s.play(LATER.id.as_str(), json!({}));
         s.state_mut().players.p1.extra_turns = Some(1);
         for _ in 0..4 {
@@ -182,7 +204,10 @@ mod r1181000_in_n_turns_counts_its_owners_turns_and_shows_a_countdown {
                         ..HookOptions::default()
                     },
                 );
-                apply_effects(&[effects::cast_new(json_as(json!({ "def": LATER.id })))], &mut ctx);
+                apply_effects(
+                    &[effects::cast_new(json_as(json!({ "def": LATER.id })))],
+                    &mut ctx,
+                );
             }
             settle(&mut sink, SettleOptions::default());
         }
@@ -202,7 +227,11 @@ mod r1181000_in_n_turns_counts_its_owners_turns_and_shows_a_countdown {
 
     #[test]
     fn r1181000_the_countdown_is_a_badge_on_both_seats() {
-        let mut s = board("r1181000-badge", json!({ "hand": [LATER.id, plain.id] }), json!({}));
+        let mut s = board(
+            "r1181000-badge",
+            json!({ "hand": [LATER.id, plain.id] }),
+            json!({}),
+        );
         assert!(badges(&s, P1, P1).is_empty());
         s.play(LATER.id.as_str(), json!({}));
         let id = s.state().delayed[0].id.clone();
@@ -212,7 +241,11 @@ mod r1181000_in_n_turns_counts_its_owners_turns_and_shows_a_countdown {
         )));
         let three = countdown(&format!("in {LATER_TURNS} turns"));
         assert_eq!(badges(&s, P1, P1), vec![three.clone()]);
-        assert_eq!(badges(&s, P2, P1), vec![three], "public: the opponent sees it too (R169)");
+        assert_eq!(
+            badges(&s, P2, P1),
+            vec![three],
+            "public: the opponent sees it too (R169)"
+        );
         assert!(badges(&s, P2, P2).is_empty());
 
         s.end_turn().end_turn();
@@ -263,13 +296,20 @@ mod r1181002_mountaintop_garden_plays_embiggen_cards_embiggened_and_its_dearer_p
         assert_eq!(offered(&s, &ids[0]), vec![Some(false), Some(true)]);
 
         s.play(ids[0].as_str(), json!({ "zone": 2 }));
-        assert_eq!(played(&s), (SWELL_BASE, Some(true)), "the normal price, the Embiggened version");
+        assert_eq!(
+            played(&s),
+            (SWELL_BASE, Some(true)),
+            "the normal price, the Embiggened version"
+        );
         assert!(!s.card(ids[0].as_str()).radiant);
         assert_eq!(s.card(ids[0].as_str()).embiggened, Some(true));
 
         s.play(ids[1].as_str(), json!({ "zone": 3, "embiggen": true }));
         assert_eq!(played(&s), (SWELL_BASE + GARDEN_PREMIUM, Some(true)));
-        assert!(s.card(ids[1].as_str()).radiant, "the dearer price plays it Radiant");
+        assert!(
+            s.card(ids[1].as_str()).radiant,
+            "the dearer price plays it Radiant"
+        );
         assert_eq!(s.card(ids[1].as_str()).embiggened, Some(true));
         assert!(s.last_events().iter().any(|event| matches!(
             event,
@@ -308,7 +348,10 @@ mod r1181002_mountaintop_garden_plays_embiggen_cards_embiggened_and_its_dearer_p
             json!({ "backrow": [GARDEN.id] }),
         );
         let ids = swells_in_hand(&s);
-        assert_eq!(shown(&s, &ids[0]).embiggen_cost, Some(SWELL_BASE + GARDEN_PREMIUM));
+        assert_eq!(
+            shown(&s, &ids[0]).embiggen_cost,
+            Some(SWELL_BASE + GARDEN_PREMIUM)
+        );
         s.play(ids[0].as_str(), json!({ "zone": 1 }));
         assert_eq!(played(&s), (SWELL_BASE, Some(true)));
         s.play(ids[1].as_str(), json!({ "zone": 2, "embiggen": true }));
@@ -340,7 +383,11 @@ mod r1181002_mountaintop_garden_plays_embiggen_cards_embiggened_and_its_dearer_p
         );
         let id = swells_in_hand(&s)[0].clone();
         let card = shown(&s, &id);
-        assert_eq!((card.cost, card.embiggen_cost), (1, Some(3)), "R65: after the Garden's price");
+        assert_eq!(
+            (card.cost, card.embiggen_cost),
+            (1, Some(3)),
+            "R65: after the Garden's price"
+        );
         s.play(id.as_str(), json!({ "zone": 2, "embiggen": true }));
         assert_eq!(played(&s), (3, Some(true)));
     }
@@ -360,8 +407,41 @@ mod r1181002_mountaintop_garden_plays_embiggen_cards_embiggened_and_its_dearer_p
     }
 
     #[test]
+    fn r1181002_a_card_set_face_down_keeps_its_printed_prices_r783005() {
+        let mut s = board(
+            "r1181002-face-down",
+            json!({ "hand": [SWELL.id, SWELL.id, plain.id], "backrow": [GARDEN.id], "mana": 10 }),
+            json!({}),
+        );
+        let ids = swells_in_hand(&s);
+        for id in &ids {
+            s.card_mut(id).granted_keywords.push(Keyword::Cloaked);
+        }
+        let mana = |s: &Scenario| s.state().players.p1.mana.current;
+
+        let before = mana(&s);
+        s.play(ids[0].as_str(), json!({ "zone": 2, "faceDown": "cloaked" }));
+        assert_eq!(before - mana(&s), SWELL_BASE);
+        let set = s.backrow(P1, 2).expect("the set swell");
+        assert_eq!(set.embiggened, Some(false), "set as its normal version");
+
+        let before = mana(&s);
+        s.play(
+            ids[1].as_str(),
+            json!({ "zone": 3, "faceDown": "cloaked", "embiggen": true }),
+        );
+        assert_eq!(before - mana(&s), SWELL_EMBIGGEN, "the printed Embiggened price");
+        let set = s.backrow(P1, 3).expect("the set swell");
+        assert!(!set.radiant, "a set card is not played Radiant");
+    }
+
+    #[test]
     fn r1181002_without_a_garden_the_prices_are_printed() {
-        let s = board("r1181002-none", json!({ "hand": [{ "def": SWELL.id, "radiant": true }, plain.id] }), json!({}));
+        let s = board(
+            "r1181002-none",
+            json!({ "hand": [{ "def": SWELL.id, "radiant": true }, plain.id] }),
+            json!({}),
+        );
         let id = swells_in_hand(&s)[0].clone();
         assert_eq!(offered(&s, &id), vec![Some(false), Some(true)]);
         assert_eq!(shown(&s, &id).embiggen_cost, Some(SWELL_EMBIGGEN));
@@ -388,7 +468,11 @@ mod r1181003_a_price_for_the_embiggened_version_alone {
         assert_eq!(offered(&s, &ids[0]), vec![Some(false), Some(true)]);
 
         s.play(ids[0].as_str(), json!({ "zone": 1 }));
-        assert_eq!(played(&s), (SWELL_BASE, Some(false)), "the normal version keeps its price");
+        assert_eq!(
+            played(&s),
+            (SWELL_BASE, Some(false)),
+            "the normal version keeps its price"
+        );
         s.play(ids[1].as_str(), json!({ "zone": 2, "embiggen": true }));
         assert_eq!(played(&s), (ELDER_COST, Some(true)));
     }
@@ -410,7 +494,11 @@ mod r1181003_a_price_for_the_embiggened_version_alone {
 
     #[test]
     fn r1181003_reset_price_takes_it_off_r766() {
-        let mut s = board("r1181003-reset", json!({ "hand": [ELDER.id, plain.id] }), json!({}));
+        let mut s = board(
+            "r1181003-reset",
+            json!({ "hand": [ELDER.id, plain.id] }),
+            json!({}),
+        );
         s.play(ELDER.id.as_str(), json!({}));
         let id = swells_in_hand(&s)[0].clone();
         let mut card = s.card(id.as_str()).clone();

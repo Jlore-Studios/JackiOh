@@ -290,6 +290,8 @@ export type FaceSource = {
   radiant: boolean;
   /** CardView.cost. */
   liveCost?: number;
+  /** R1181003: CardView.embiggenCost, what a play of the Embiggened version costs now. */
+  liveEmbiggenCost?: number;
   /** UnitView's current numbers. */
   live?: { attack: number; health: number; maxHealth: number; keywords: readonly Keyword[] };
   /** Set on every face drawn in a game, absent in the collection (see the header). */
@@ -368,7 +370,7 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
     set: def?.set ?? null,
     radiant: source.radiant,
     // Glitch's gem shows glyphs, never a number (glitch.ts); `data-cost` still carries the view's.
-    cost: isGlitch(source.defId) ? { ...costOf(def, source.liveCost), text: GLITCH_WORDS.cost, tone: "base", alt: null } : costOf(def, source.liveCost),
+    cost: isGlitch(source.defId) ? { ...costOf(def, source.liveCost, source.liveEmbiggenCost), text: GLITCH_WORDS.cost, tone: "base", alt: null } : costOf(def, source.liveCost, source.liveEmbiggenCost),
     stats: statsOf(type, def !== undefined, printed, source.live ?? handLive(inPlay?.handStats, printed), grewOf(def, source)),
     text,
     // The renderer links only the names that stand in the text, so play's own words link what they name.
@@ -575,7 +577,7 @@ function costTone(live: number | undefined, printed: number): FaceCost["tone"] {
   return "base";
 }
 
-function costOf(def: CardDef | undefined, liveCost: number | undefined): FaceCost {
+function costOf(def: CardDef | undefined, liveCost: number | undefined, liveEmbiggenCost: number | undefined): FaceCost {
   const live = liveCost === undefined ? undefined : String(liveCost);
 
   if (def === undefined) {
@@ -596,9 +598,11 @@ function costOf(def: CardDef | undefined, liveCost: number | undefined): FaceCos
   // price B beside it. Otherwise it shows the view's number and drops B, which it can no longer
   // vouch for (the client never works out a discounted embiggen price, CLAUDE.md rule 7). A card
   // whose live cost is B was paid B, on the field: that is its printed price, so the tone is base.
+  // R1181003: B is the view's `embiggenCost` where it has one (Enormous Elderberry's (0), Mountaintop
+  // Garden's dearer price).
   const base = String(printed.base);
   if (liveCost === undefined || liveCost === printed.base) {
-    return { text: base, value: live ?? base, tone: "base", alt: String(printed.embiggen) };
+    return { text: base, value: live ?? base, tone: "base", alt: String(liveEmbiggenCost ?? printed.embiggen) };
   }
   const text = String(liveCost);
   const tone = liveCost === printed.embiggen ? "base" : costTone(liveCost, printed.base);

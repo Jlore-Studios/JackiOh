@@ -57,6 +57,7 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "meditative-091": { radiant: "clamp" },
   "meditative-095": { base: "colon", radiant: "colon" },
   "meditative-097": { base: 1, radiant: 1 },
+  "meditativeplus-004": { base: "clamp", radiant: "clamp" },
   "meditativeplus-024": { base: "clamp", radiant: "clamp" },
 };
 

@@ -168,6 +168,8 @@ mod signature {
                 },
                 watch: None,
                 hand_watch: None,
+                due_own_turn: None,
+                label: None,
             });
         });
     }
