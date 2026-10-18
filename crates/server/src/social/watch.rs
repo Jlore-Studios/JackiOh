@@ -3,7 +3,7 @@
 //! `/ws/watch` is authenticated as `/ws/match` is (the token from `?token=`, §9.4's gate) and then
 //! takes one frame, the hello: `{"type":"hello","matchId":"…","friendId":"…"}`. It is let in when
 //! the two accounts are friends with neither blocking the other, the friend holds a seat in the live
-//! match it names, a 1v1 that is not ranked and in which the watcher holds no seat (a player never
+//! match it names, a 1v1, ranked or unranked, in which the watcher holds no seat (a player never
 //! sees the other seat), and the friend allows spectators (`allowSpectators`, `api/settings.rs`).
 //! The actor then judges room (SPECTATORS_PER_MATCH) and from there sends the friend's seat's views,
 //! each SPECTATE_DELAY_MS after the state it shows, with `legal: []` (`MatchActor::attach_watcher`).
@@ -243,9 +243,9 @@ pub fn revoke_between(app: &App, x: &str, y: &str) -> usize {
 }
 
 /// B50's store checks, in one transaction: `viewer_id` and `friend_id` are two accounts that are
-/// friends with neither blocking the other; `match_id` is live, not ranked, seats `friend_id` and not
-/// `viewer_id`; and `friend_id` allows spectators. A Duos match is no row of `matches`, so it is
-/// never one.
+/// friends with neither blocking the other; `match_id` is live, ranked or unranked, seats
+/// `friend_id` and not `viewer_id`; and `friend_id` allows spectators. A Duos match is no row of
+/// `matches`, so it is never one.
 async fn watchable_in(
     tx: &mut Tx<'_>,
     viewer_id: &str,
@@ -267,8 +267,7 @@ async fn watchable_in(
         return Ok(false);
     };
     let seated = |id: &str| row.players.0 == id || row.players.1 == id;
-    if row.status != MatchStatus::Live || row.ranked == Some(true) || !seated(friend_id) || seated(viewer_id)
-    {
+    if row.status != MatchStatus::Live || !seated(friend_id) || seated(viewer_id) {
         return Ok(false);
     }
     tx.profiles_allows_spectators(friend_id).await

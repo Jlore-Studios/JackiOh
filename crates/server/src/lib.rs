@@ -16,12 +16,15 @@
 //! - `loops`: the background loops' supervisor, which logs a loop that panics (#842) or returns
 //!   (#1093) and starts it again.
 //! - `username`: a username's checks, stored form and key (SPEC §9.4, R1432–R1434; #579).
+//! - `bug_reports`: a match its own log does not reproduce, logged and filed as a GitHub issue for
+//!   the night bot while the match goes on.
 
 pub mod actor;
 pub mod api;
 pub mod app;
 pub mod auth;
 pub mod bots;
+pub mod bug_reports;
 pub mod cli;
 pub mod config;
 pub mod db;

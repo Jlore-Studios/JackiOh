@@ -33,6 +33,7 @@ use crate::actor::telemetry;
 use crate::actor::ws_server::Socket;
 use crate::api::http::{ApiError, ApiErrorCode, lock};
 use crate::app::{App, now_ms};
+use crate::bug_reports::{Finding, FoundIn, refused_rows};
 use crate::config::{GLITCH_BOARDS_SAMPLED, MATCH_CEILING_MINUTES, REMATCH_OFFER_TTL_MS};
 use crate::db::store::{
     BotRow, LastBoardKind, MatchClocks, MatchRow, MatchStatus, ProfileKind, QueueMode, StartMatchInput,
@@ -391,8 +392,18 @@ impl Registry {
         if !folded.errors.is_empty() {
             // An action the engine once accepted and now refuses is a determinism break: the log no
             // longer reconstructs the match (§9.3). Rebuild anyway — a live match is better than a dead
-            // one — but say so loudly.
+            // one — but say so loudly, and file it for the night bot (`bug_reports.rs`).
             tracing::error!(event = "match.fold.errors", matchId = %match_id, errors = ?folded.errors);
+            app.bug_reports.file(
+                app.env.deployed_commit.as_deref(),
+                Finding {
+                    match_id: match_id.to_string(),
+                    found_in: FoundIn::Rebuild,
+                    catalog_version: match_row.catalog_version.clone(),
+                    actions: log.len(),
+                    refused: refused_rows(&log, &folded.errors),
+                },
+            );
         }
 
         let actions = log.len();

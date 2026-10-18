@@ -2196,7 +2196,7 @@ fn mulligan_window(snapshot: &MatchSnapshot) -> Vec<PlayerId> {
 
 // ---- Social: watching and shared replays (#939, #940) ----
 //
-// B50, B51: a friend's live, unranked game, watched from their seat. Each change records the view
+// B50, B51: a friend's live 1v1 game, ranked or unranked, watched from their seat. Each change records the view
 // of each seat as the change left it, keyed by the account that began in it (`home`; R677: a
 // Glitch's swap moves the record with the account), and each watcher is sent each recorded view of
 // its friend's seat SPECTATE_DELAY_MS after the state it shows, by the one wait the actor arms for
@@ -2243,8 +2243,8 @@ struct Watcher {
     sent: Option<u64>,
 }
 
-/// B50, B51: what the actor keeps for its watchers, and only for an unranked match, the one kind S7
-/// lets anyone watch. Each seat's record holds the newest view at least SPECTATE_DELAY_MS old and
+/// B50, B51: what the actor keeps for its watchers, for any live 1v1 match, ranked or unranked.
+/// Each seat's record holds the newest view at least SPECTATE_DELAY_MS old and
 /// every view since: all a watcher can still be owed, and nothing older.
 struct Spectate {
     records: PerPlayer<VecDeque<SpectateFrame>>,
@@ -2288,7 +2288,7 @@ fn close_finished_watchers(watchers: Vec<Watcher>) {
 pub enum WatchRefused {
     /// SPECTATORS_PER_MATCH sockets already watch the match.
     Full,
-    /// The match is ranked, voided, or its actor is going away.
+    /// The match is voided, or its actor is going away.
     Closed,
 }
 
@@ -2315,11 +2315,7 @@ impl MatchActor {
     ) -> Result<(), WatchRefused> {
         let (id, replaced, done) = {
             let mut core = self.lock();
-            if core.stopped
-                || core.voided
-                || core.spectate.closed
-                || self.shared.match_row.ranked == Some(true)
-            {
+            if core.stopped || core.voided || core.spectate.closed {
                 return Err(WatchRefused::Closed);
             }
             let at = core
@@ -2507,9 +2503,9 @@ impl MatchActor {
     }
 
     /// B50: records each seat's view of the state as it stands now, the clock's time left in it as
-    /// its player was shown, and sends whatever has come due. Nothing is kept for a ranked match.
+    /// its player was shown, and sends whatever has come due.
     fn spectate_record_in(&self, core: &mut Core) {
-        if core.spectate.closed || self.shared.match_row.ranked == Some(true) {
+        if core.spectate.closed {
             return;
         }
         let now = now_ms();
