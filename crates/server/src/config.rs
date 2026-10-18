@@ -207,7 +207,7 @@ pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
 /// asked to agree again. R970001: a second change on a day the page already changed keeps its date
 /// and gives its half a letter (`2026-10-15b`, then `c`); `privacy.test.tsx` holds each version to
 /// the words of both pages, so a change to them fails until this moves.
-pub const TERMS_VERSION: &str = "2026-10-15b/2026-10-15b";
+pub const TERMS_VERSION: &str = "2026-10-15b/2026-10-17";
 
 // ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).
@@ -614,6 +614,30 @@ pub const MATCH_RECORD_RESULT_BACKOFF_MS: i64 = 250;
 /// before its clock runs out again, so a store that keeps failing is retried at this pace until the
 /// row lands, the match ends or the actor stops, never in a loop.
 pub const MATCH_SERVER_ACTION_RETRY_MS: i64 = 1_000;
+
+// ---------------------------------------------------------------------------------------------
+// Bug reports (`bug_reports.rs`): a match its own log does not reproduce. Not in SPEC, and no
+// R-row: operational, as #861's probes are.
+// ---------------------------------------------------------------------------------------------
+
+/// The repository a report is filed in when `CREATE_ISSUES_TOKEN` is set and `GITHUB_ISSUES_REPO`
+/// is not.
+pub const BUG_REPORT_REPO_DEFAULT: &str = "Jlore-Studios/JackiOh";
+/// GitHub's REST API, which a report is filed through.
+pub const BUG_REPORT_API_URL: &str = "https://api.github.com";
+/// The labels a report carries: a micro patch's type, the night bot's queue (`bot:build`,
+/// bot/README.md), the strong tier (CLAUDE.md rule 11: the server and the engine are hard) and the
+/// front of the queue, since a match that does not rebuild is a broken game.
+pub const BUG_REPORT_LABELS: &[&str] = &["patch", "bot:build", "difficulty:hard", "priority:high"];
+/// How many reports one process files in `BUG_REPORT_WINDOW_MS`. A determinism break shows on every
+/// match a deploy rebuilds, so the first few say it and the rest are only logged.
+pub const BUG_REPORTS_PER_WINDOW: usize = 5;
+/// The window `BUG_REPORTS_PER_WINDOW` counts in: an hour.
+pub const BUG_REPORT_WINDOW_MS: i64 = 60 * 60 * 1000;
+/// How long one request to GitHub may take before the report is given up (it is logged either way).
+pub const BUG_REPORT_TIMEOUT_MS: u64 = 10_000;
+/// How many refused actions a report lists one by one; the rest are counted.
+pub const BUG_REPORT_LISTED_ACTIONS: usize = 10;
 
 // ---------------------------------------------------------------------------------------------
 // Glitch (issue #170; SPEC §7, R678, R679).
@@ -1898,8 +1922,9 @@ pub const PRESENCE_TTL_MS: i64 = 90_000;
 pub const PRESENCE_HEARTBEAT_MS: i64 = 45_000;
 /// B49: how long a challenge, and the room it opened, stays open unanswered.
 pub const CHALLENGE_TTL_MS: i64 = 120_000;
-/// B50: how far behind the live game a watcher's view runs.
-pub const SPECTATE_DELAY_MS: i64 = 30_000;
+/// B50: how far behind the live game a watcher's view runs. Five seconds keeps each view
+/// clearly behind live play, so a watcher cannot coach the moment, while feeling live.
+pub const SPECTATE_DELAY_MS: i64 = 5_000;
 /// B50: watchers one live match may hold at once.
 pub const SPECTATORS_PER_MATCH: usize = 8;
 /// B53: a chat message's longest body, in characters after trimming (`chat_messages`' check).

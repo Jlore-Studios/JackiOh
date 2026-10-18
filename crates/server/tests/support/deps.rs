@@ -190,6 +190,7 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
         queue_presence: jackioh_server::api::queue::QueuePresence::new(),
         social: jackioh_server::social::Social::default(),
         engine_thread: test_engine_thread,
+        bug_reports: jackioh_server::bug_reports::BugReports::recording(),
     });
     if options.e2e && !options.skip_fixtures && !restarted {
         jackioh_server::api::e2e::seed_e2e_fixtures(&app)

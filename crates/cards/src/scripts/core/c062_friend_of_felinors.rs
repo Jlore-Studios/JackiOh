@@ -4,7 +4,7 @@
 //! Conventions read as an addition ("Then") rather than a replacement, so the radiant face fills the
 //! board first and buffs afterwards.
 //!
-//! R64 defines "fill your board": every empty, unlocked unit zone, left to right — so an occupied
+//! R64 defines "fill your board": every empty unit zone, left to right (R1136000) — so an occupied
 //! zone is untouched and a full board produces nothing. `fill_board` is that verb; this file never
 //! counts zones itself.
 //!

@@ -75,6 +75,9 @@ pub struct App {
     /// #1035: the setup of the blocking job a whole-log fold runs in (`actor::engine::off_runtime`):
     /// `actor::engine::registered_thread` here; a test's carries its thread's cards over.
     pub engine_thread: actor::engine::EngineThread,
+    /// A match its own log does not reproduce, logged and filed for the night bot
+    /// (`bug_reports.rs`): GitHub with `CREATE_ISSUES_TOKEN`, a record in a test's app.
+    pub bug_reports: crate::bug_reports::BugReports,
 }
 
 // ---------------------------------------------------------------------------
@@ -755,6 +758,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         (db::store::Db::Pg(pool), auth)
     };
 
+    let bug_reports = crate::bug_reports::BugReports::from_env(&env);
     let app = Arc::new(App {
         env,
         db,
@@ -776,6 +780,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
         social: crate::social::Social::default(),
         engine_thread: actor::engine::registered_thread,
+        bug_reports,
     });
 
     if app.env.e2e {
@@ -1085,6 +1090,10 @@ async fn bind_listener(port: u16) -> std::io::Result<tokio::net::TcpListener> {
 pub async fn serve(env: Env) -> anyhow::Result<()> {
     init_logging();
     let app = build(env).await?;
+
+    // `bug_reports.rs`: whether GitHub takes the token, which `GET /api/catalog` then reports.
+    let probing = Arc::clone(&app);
+    tokio::spawn(async move { probing.bug_reports.probe().await });
 
     // R609: the build's season is open before the first request, with its soft reset if this build
     // begins one. A failure is loud but not fatal: the first rated game opens it in its own
