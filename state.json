@@ -4365,6 +4365,13 @@
     "1226": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-18T14:48:36Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule 11 and line 7: this is store work whose Postgres half only the Docker db suite proves; otherwise it is two files in one crate"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
