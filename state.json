@@ -4008,6 +4008,9 @@
         }
       }
     },
+    "1169": {
+      "suggestion": true
+    },
     "1188": {
       "action": "revise",
       "asks": [],
