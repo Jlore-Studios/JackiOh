@@ -250,6 +250,7 @@ export function hasMovesLeft(highlight: Highlight | undefined): boolean;
 | `log-toggle` | `aria-expanded` | a `<button>` in `.control-bar`, shown on phones only; toggles `data-log` | `Board.tsx` (fix stage, B43) |
 | `.hand-slot` | `data-landing` | `"true"` while its card, just dropped and played, waits for the board to catch up | `Hand.tsx` via `drag/landing.ts` (fix stage, B42) |
 | `prompt-modal` | `data-prompt-source` | `"engine"` (`view.pending`) or `"play"` (a play in flight, R81) | `Prompt.tsx` (fix stage, B44) |
+| `prompt-modal`, `prompt-scrim` | `data-collapsed` | `"true"` while a card picker is folded by `prompt-peek` (a `<button>` with `aria-pressed`), else absent | `Prompt.tsx` (#1204, B47) |
 | `drag-landing`, `drag-landing-card` | `data-instance-id`, `data-landing` | the dropped card drawn where it landed, outside `drag-layer` | `DragLayer.tsx` (fix stage, B42) |
 
 Every existing `data-testid`, `data-legal`, `data-selected` and `data-animating` is kept exactly
@@ -820,6 +821,8 @@ is on the screen, and the top of every hand card is on the screen. At 1024×768 
 in a sidebar right of the field. `board-layout.cy.tsx` runs at 1024×768 and 390×664 too, and
 asserts no vertical scroll.
 
+B47. Every card picker (`data-prompt-layout="cards"`) has "View the board", `prompt-peek` (`aria-pressed`, at least 44 px tall on a phone); no board picker has one. Pressing it folds the picker to a bar of its title and "Back to the choice", sets `data-collapsed` on `prompt-modal` and `prompt-scrim`, takes the options, Confirm and Cancel out of the page and clears the scrim's dim; pressing it again brings the picker back with the same options chosen. Folding sends nothing, and a new prompt opens unfolded. At 390×844 a folded Discover is a bar at most 72 px tall below the field, over a transparent scrim.
+
 ## Tests
 
 | Behaviours | Project | New test file | Harness |
@@ -837,6 +840,7 @@ asserts no vertical scroll.
 | B28 | Cypress component | (existing `board-layout.cy.tsx`, `VIEWPORTS` extended by slice 5) | tester B runs it and adds no duplicate |
 | B41 | vitest `web` | (existing `settings.test.tsx`) | `render(<Game/>)`, `rerender` with a `turnStarted` event, `writeSettings` |
 | B42 | vitest `web` | (existing `drag-layer.test.tsx`) | as B36; `vi.useFakeTimers()` for the timeout |
+| B47 | vitest `web`, Cypress component | (existing `Prompt.test.tsx`, `mobile-ux.cy.tsx`) | `render(<Prompt/>)` with `pendingFor` and `playing()`; `mountGame(promptView("discover"))` at 390×844 |
 | B43, B44 (attributes and CSS text) | vitest `web` | (existing `board-ux.test.tsx`) | `render(<Board/>)`, `render(<Game/>)`, CSS read as text |
 | B18 (End turn, Radiant), B29 (switch), B43–B46 | Cypress component | (existing `mobile-ux.cy.tsx`; `board-layout.cy.tsx` for B46's two new sizes) | mounts `BackLink` and a `match-bar`, or a `hotseat-bar`, round `Game` for B46 |
 | R196 | vitest `engine`, `cards` | (existing `conditionActive.test.ts`, `condition-active.test.ts`) | the real `fuse`; `subsystems.fuse(..., { toHand: "p1" })` in a `scenario()` |

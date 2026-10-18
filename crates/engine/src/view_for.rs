@@ -1524,6 +1524,7 @@ fn prompt_view(state: &GameState, viewer: PlayerId, pending: &PendingChoice) -> 
         prompt: pending.prompt.clone(),
         budget: pending.budget,
         craft_mode: pending.craft_mode,
+        streak: pending.streak,
     })
 }
 

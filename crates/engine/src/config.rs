@@ -570,6 +570,21 @@ pub const KY_TEST_EASY_ADDENDS: IntRange = IntRange { min: 10, max: 99 };
 /// R420: an Easy problem's three wrong sums are a + b moved by three different ones of these.
 pub const KY_TEST_EASY_MISSES: &[i32] = &[1, -1, 2, -2, 10, -10];
 
+// Meditative+ #20 KY's Competition's question sequence (SPEC §8.9 row 20, R1184000).
+
+/// R1184000: the most right answers one sequence counts; the question that brings the streak to it
+/// is its last, and the Kenny is summoned at once.
+pub const KY_COMPETITION_MAX: i32 = 30;
+/// R1184000: a question's two operands on the base face: three-digit numbers.
+pub const KY_COMPETITION_OPERANDS: IntRange = IntRange { min: 100, max: 999 };
+/// R1184000: a question's two operands on the Radiant face: one- and two-digit numbers.
+pub const KY_COMPETITION_EASY_OPERANDS: IntRange = IntRange { min: 1, max: 99 };
+/// R1184000: the base face's three wrong options are the answer moved by three different ones of
+/// these, a slip in one column of a three-digit sum, never below 0.
+pub const KY_COMPETITION_MISSES: &[i32] = &[1, -1, 10, -10, 100, -100];
+/// R1184000: the Radiant face's wrong options, C+ #42's Easy misses (R580), never below 0.
+pub const KY_COMPETITION_EASY_MISSES: &[i32] = KY_TEST_EASY_MISSES;
+
 /// `KyTestReward.pool`: a pool of non-token cards of every set (R380).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct KyTestRewardPool {

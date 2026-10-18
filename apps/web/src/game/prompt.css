@@ -471,6 +471,22 @@
   font-weight: 900;
 }
 
+/* R1184000: a question sequence (Meditative+ #20) says its streak over the answers and offers Stop,
+   under no letter, after them. */
+.prompt > .prompt-streak {
+  margin: 0;
+  color: #ffd24a;
+  font-weight: 700;
+}
+
+.prompt .prompt-answers > .prompt-answer-stop {
+  justify-content: center;
+  min-height: 44px;
+  margin-top: 4px;
+  border-style: dashed;
+  text-align: center;
+}
+
 /* `reward` (C #90): "Quest complete!" in gold over the quest, and each reward a small gilt card. */
 .prompt > .prompt-quest-banner {
   max-width: none;
@@ -932,6 +948,48 @@
   .prompt:has(> .prompt-cards) > .prompt-actions button {
     flex: 0 1 180px;
   }
+}
+
+/* --- a card picker folded to show the board (#1204, docs/polish/7-mobile-ux.md B47) --------- */
+
+/* "View the board" (Prompt.tsx `prompt-peek`) folds a card picker to a slim bar on the bottom edge,
+   its title and "Back to the choice" as B44's bar lays them out, over a scrim with no dim, so the
+   whole board can be read before choosing. The scrim stays click-through, so hover, tap-to-inspect
+   and the clock work as under any picker. The small pickers never fold and keep their dock. */
+.prompt-scrim[data-collapsed] {
+  place-items: end center;
+  background: transparent;
+}
+
+.prompt[data-collapsed] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "title actions";
+  align-items: center;
+  gap: 0 8px;
+  padding-top: 6px;
+  padding-bottom: max(6px, env(safe-area-inset-bottom));
+}
+
+.prompt[data-collapsed] > .prompt-title {
+  grid-area: title;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* No list scrolls under the button, so the sticky footer's rule and gap would only make the bar taller. */
+.prompt[data-collapsed] > .prompt-actions {
+  grid-area: actions;
+  margin: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.prompt[data-collapsed] > .prompt-actions button {
+  flex: 0 0 auto;
+  padding-inline: 12px;
 }
 
 /* R514: while a cell prompt is open (C+ #62), the zones it offers glow green as a zone pick's do
