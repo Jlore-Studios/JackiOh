@@ -4045,6 +4045,13 @@
     "1169": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-18T04:28:48Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "the migration line: the plan adds crates/server/migrations/0042_match_checkpoints.sql, and the rule names a database migration as hard, so hard holds"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
