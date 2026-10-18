@@ -409,8 +409,8 @@ mod tests {
                 s.answer(json!("damage"));
                 s.answer(json!([{ "pick": "hero", "player": "p2" }]));
 
-                // Efficiency Dividend's damage mode deals X+1 = 4, and the cast paid nothing for its X.
-                s.expect_health(P2, 26);
+                // Efficiency Dividend's damage mode deals X = 3, and the cast paid nothing for its X.
+                s.expect_health(P2, 27);
                 s.expect_mana(P1, 3);
             }
         }
