@@ -8,7 +8,8 @@
 //! itself ([[R387]]), Glitch, a token or an id the catalog no longer holds. With none qualifying,
 //! CN Tech's script falls back to a random non-token card (that fallback lives in the card file,
 //! not here). The table changes only with a card patch, so a game's seed and log replay on the
-//! build that played it (MD-D1, MD-D2).
+//! build that played it (MD-D1, MD-D2). Meditative+ #2 NA Tech also reads the other end, the
+//! trailer (R1183000), with the same eligibility and tie-breaks.
 
 use serde::{Deserialize, Serialize};
 
@@ -48,15 +49,37 @@ pub struct WinRateTable {
 
 /// MD-D1: the card with the highest win rate, leaving `exclude_def_id` (CN Tech itself, [[R387]])
 /// out. Only rows with at least `CN_TECH_MIN_GAMES` games qualify, and only ids the catalog still
-/// holds as deckable cards — which rules out tokens (Glitch is one) and sets that do not ship.
-/// Ties break by more games, then by the catalog id, ascending. The rate is compared exactly, as
+/// holds as deckable cards — which rules out tokens (Glitch is one) and sets that do not ship. Ties
+/// break by more games, then by the catalog id, ascending. The rate is compared exactly, as
 /// `wins_a * games_b` against `wins_b * games_a` in `i64`, so no float ever decides it. `None` when
 /// no row qualifies (a new patch, an empty table).
 pub fn win_rate_leader(exclude_def_id: &str) -> Option<String> {
+    ranked_end(&[exclude_def_id], RateEnd::Highest)
+}
+
+/// R1183000 (Meditative+ #2 NA Tech): the card with the lowest win rate — [[R1100]]'s leader read
+/// from the other end of the same compiled table. The same eligibility (`CN_TECH_MIN_GAMES` games,
+/// deckable cards of the sets that ship, never an id in `exclude_def_ids`: NA Tech itself, [[R387]],
+/// and the leader, so the two ends are two cards) and the same tie-breaks, more games and then the
+/// catalog id ascending; only the rate is ranked the other way. `None` when no row qualifies.
+pub fn win_rate_trailer(exclude_def_ids: &[&str]) -> Option<String> {
+    ranked_end(exclude_def_ids, RateEnd::Lowest)
+}
+
+/// Which end of the table a pick reads.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum RateEnd {
+    Highest,
+    Lowest,
+}
+
+/// The one walk both ends share: the eligible rows, the exact rate compared toward `end`, then more
+/// games, then the catalog id ascending.
+fn ranked_end(exclude_def_ids: &[&str], end: RateEnd) -> Option<String> {
     let table = crate::catalog::registered_win_rates();
     let mut best: Option<&WinRateRow> = None;
     for row in &table.cards {
-        if row.games < CN_TECH_MIN_GAMES || row.id == exclude_def_id {
+        if row.games < CN_TECH_MIN_GAMES || exclude_def_ids.contains(&row.id.as_str()) {
             continue;
         }
         let Some(def) = crate::catalog::find_def(None, &row.id) else {
@@ -70,7 +93,11 @@ pub fn win_rate_leader(exclude_def_id: &str) -> Option<String> {
             Some(held) => {
                 let left = i64::from(row.wins) * i64::from(held.games);
                 let right = i64::from(held.wins) * i64::from(row.games);
-                left > right
+                let better = match end {
+                    RateEnd::Highest => left > right,
+                    RateEnd::Lowest => left < right,
+                };
+                better
                     || left == right
                         && (row.games > held.games || row.games == held.games && row.id < held.id)
             }

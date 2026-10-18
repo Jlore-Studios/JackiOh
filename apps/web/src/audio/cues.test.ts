@@ -231,6 +231,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   scriptFailed: { type: "scriptFailed", player: "p1", instanceId: "u1", defId: "custom-fixture", message: "cry failed on line 3: boom" },
   // #831's patch (C+ #62, R831003).
   curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
+  autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -319,6 +320,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   // #915 (R915004).
   scriptFailed: "notify",
   curveDrawn: "whoosh",
+  autopilotEngaged: "notify",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */
@@ -346,6 +348,7 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "attackDeclared",
   "attackCancelled",
   "turnAutoEnded",
+  "autopilotEngaged",
   "countered",
   "stolen",
   "unlocked",
