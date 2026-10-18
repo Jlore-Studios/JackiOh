@@ -4011,7 +4011,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-18T03:05:28Z",
+      "feedback_since": "2026-10-18T04:29:05Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1147,
@@ -4024,11 +4024,11 @@
       "round_tier": "medium",
       "run_id": "39097003962",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-18T04:29:05Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "gemini"
