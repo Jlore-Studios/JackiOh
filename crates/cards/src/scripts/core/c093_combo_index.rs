@@ -246,7 +246,7 @@ mod tests {
                 js(&of_type(&s, "counterChanged")),
                 json!([{ "type": "counterChanged", "instanceId": id, "counter": "grade", "value": E }])
             );
-            s.expect_mana(P1, 2);
+            s.expect_mana(P1, 1);
         }
 
         #[test]

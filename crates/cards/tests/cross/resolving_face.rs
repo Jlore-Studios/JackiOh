@@ -22,7 +22,9 @@ const TIMMY: &str = "core-011";
 const HINDER: &str = "core-021";
 const PANTHER: &str = "core-032";
 const PEK_CONTROLLER: &str = "core-048";
-const MIND_CONTROL: &str = "core-049";
+/// Meditative #97.4 Mega Church, a Unit token: "Activate: Steal an enemy permanent." An Activate is no
+/// card played.
+const CHURCH: &str = "meditative-097-4";
 const SILAS: &str = "core-052";
 const RENO: &str = "core-053";
 const FRIEND: &str = "core-062";
@@ -102,10 +104,10 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
         // p1's turn begins. p1 holds #9 Moths to the Flame, worn down to 4 health; p2 holds Gifted
         // Program, a Prem Panther, and a Hinder on top of the library.
         let mut g = scenario(json!({
-            // Snom Bunny Mind Control (4) and Stockpile (1).
+            // A Mega Church's Activate takes the Gifted Program; Stockpile (1).
             "p1": {
-                "hand": [MIND_CONTROL, STOCKPILE],
-                "field": [{ "def": MOTHS, "lane": 1, "damage": 10 }],
+                "hand": [STOCKPILE],
+                "field": [{ "def": MOTHS, "lane": 1, "damage": 10 }, { "def": CHURCH, "lane": 2 }],
                 "library": LIBRARY,
             },
             "p2": {
@@ -137,10 +139,10 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
         }
         assert_eq!(g.state().players.p1.mana.next_turn_mod, -2); // the radiant face ran: "2 lower"
 
-        // p1 takes the Gifted Program, and has played nothing costing 1 or less this turn: Snom Bunny
-        // Mind Control cost 4. Stockpile is p1's first cheap card, so it resolves its radiant text.
-        g.state_mut().players.p1.mana.current = 5;
-        g.play(MIND_CONTROL, json!({ "targets": at(&gifted) }));
+        // p1 takes the Gifted Program, and has played nothing costing 1 or less this turn: an Activate
+        // plays no card. Stockpile is p1's first cheap card, so it resolves its radiant text.
+        g.state_mut().players.p1.mana.current = 1;
+        g.activate(CHURCH, json!({ "targets": at(&gifted) }));
         assert_eq!(g.card(gifted.as_str()).controller, PlayerId::P1);
         let stockpile = g.card(STOCKPILE).id.clone();
         let hand_before = g.hand(PlayerId::P1).len();

@@ -32,7 +32,7 @@ const PLAIN_UNIT_COST = 2;
 const COSTS: Record<string, number> = {
   [CARDS.myPawn]: 1,
   [BEAR_HONEYPOT]: 1,
-  [CARDS.sillySilas]: 3,
+  [CARDS.sillySilas]: 4,
   [CARDS.pocketChaos]: 4,
 };
 

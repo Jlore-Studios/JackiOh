@@ -134,7 +134,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_2_5_5_rush_first_strike_token_printed_legendary_the_radiant_face_is_charge_and_never_berserk() {
+        fn is_a_2_4_4_rush_first_strike_token_printed_legendary_the_radiant_face_is_charge_and_never_berserk() {
             let def = crate::card_def(ID);
             assert_eq!(def.base.keywords, vec![Keyword::Rush, Keyword::FirstStrike]);
             assert_eq!(def.radiant.keywords, vec![Keyword::Charge, Keyword::FirstStrike]);
@@ -144,20 +144,34 @@ mod tests {
             assert!(scripts.base.start_of_turn.is_some());
         }
 
+        #[test]
+        fn base_enters_at_4_4_radiant_unchanged() {
+            for (radiant_face, size) in [(false, 4), (true, 10)] {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [{ "def": BOT, "radiant": radiant_face }, FILLER], "library": DECK },
+                    "p2": { "hand": [FILLER], "library": DECK },
+                }));
+                s.play(BOT, json!({ "zone": 3 }));
+                let me = bot(&s, P1);
+                s.expect_stats(&me, json!({ "attack": size, "health": size, "maxHealth": size }));
+            }
+        }
+
         mod base {
             use super::*;
 
             #[test]
-            fn r42_whenever_it_destroys_a_unit_it_gets_5_attack_permanently() {
+            fn r42_whenever_it_destroys_a_unit_it_gets_4_attack_permanently() {
                 let mut s = with_bot(json!({}), false, json!({ "field": [{ "def": VANILLA, "lane": 3 }] }));
                 let me = bot(&s, P1);
                 let target = unit_or_blank(&s, P2, 3);
                 s.attack(&me, target);
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 10, "health": 5 }));
+                s.expect_stats(&me, json!({ "attack": 8, "health": 4 }));
                 s.end_turn().end_turn();
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 10 }));
+                s.expect_stats(&me, json!({ "attack": 8 }));
             }
 
             #[test]
@@ -172,7 +186,7 @@ mod tests {
                 s.start_turn();
                 assert!(s.unit(P2, 1).is_none());
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 10 }));
+                s.expect_stats(&me, json!({ "attack": 8 }));
             }
 
             #[test]
@@ -186,7 +200,7 @@ mod tests {
                 let target = unit_or_blank(&s, P2, 1);
                 s.attack(attacker, target);
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 5 }));
+                s.expect_stats(&me, json!({ "attack": 4 }));
             }
 
             #[test]
@@ -196,13 +210,13 @@ mod tests {
                 let me = bot(&s, P1);
                 send_berserk(&mut s, &me);
                 s.end_turn();
-                // The end of p1's turn: 5 to p1's own hero.
-                s.expect_health(P1, 25);
+                // The end of p1's turn: 4 to p1's own hero.
+                s.expect_health(P1, 26);
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "health": 5 }));
+                s.expect_stats(&me, json!({ "health": 4 }));
                 s.end_turn();
-                // The start of p1's next turn: 5 more.
-                s.expect_health(P1, 20);
+                // The start of p1's next turn: 4 more.
+                s.expect_health(P1, 22);
                 let own: Vec<bool> = s
                     .events()
                     .iter()
@@ -226,7 +240,7 @@ mod tests {
                 );
                 let id = bot(&s, P1).id;
                 step_param(s.card_mut(&id), "attackGain", 0);
-                s.card_mut(&id).buffs.attack += 5;
+                s.card_mut(&id).buffs.attack += 6;
                 let me = bot(&s, P1);
                 send_berserk(&mut s, &me);
                 s.end_turn();
@@ -277,14 +291,14 @@ mod tests {
             }
 
             #[test]
-            fn r386_the_gain_reads_through_param_an_upgrade_makes_it_6() {
+            fn r386_the_gain_reads_through_param_an_upgrade_makes_it_5() {
                 let mut s = with_bot(json!({}), false, json!({ "field": [{ "def": VANILLA, "lane": 3 }] }));
                 let id = bot(&s, P1).id;
                 step_param(s.card_mut(&id), "attackGain", 1);
                 let target = unit_or_blank(&s, P2, 3);
                 s.attack(&id, target);
                 let me = bot(&s, P1);
-                s.expect_stats(&me, json!({ "attack": 11 }));
+                s.expect_stats(&me, json!({ "attack": 9 }));
             }
         }
 
@@ -339,7 +353,7 @@ mod tests {
                 send_berserk(&mut s, &me);
                 assert!(glows(&s));
                 s.end_turn();
-                s.expect_health(P1, 25);
+                s.expect_health(P1, 26);
             }
 
             #[test]

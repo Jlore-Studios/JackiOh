@@ -38,7 +38,7 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt. End of turn: heal to full. Radiant: Immutable.
     const SURGERY: &str = "core-063"; // (1) Give target Unit +3/+3 and 1 random keyword.
     const VANILLA: &str = "core-008"; // (1) 4/4.
-    const WEAPONS: &str = "core-014"; // Field Spell: your Units have +4 attack, Rush and First Strike.
+    const WEAPONS: &str = "core-014"; // Field Spell: your Units have +3 attack, Rush and First Strike.
     const SHEEPISH: &str = "core-041"; // (1) Trap: transforms the opponent's played Unit.
     const TESLA: &str = "classic-005"; // Animated Field Trap: fires when the opponent summons a Unit.
     const FROSTSPATULA: &str = "classicplus-012-8"; // Field Spell token: Animated on your turn, Rush.
@@ -205,7 +205,7 @@ mod tests {
         fn r407_a_vanilla_field_spell_s_aura_stops() {
             crate::register_all();
             let mut s = setup(json!({ "field": [VANILLA], "backrow": [WEAPONS] }), json!({}), true);
-            s.expect_stats(VANILLA, json!({ "attack": 8 }));
+            s.expect_stats(VANILLA, json!({ "attack": 7 }));
 
             let weapons = s.card(WEAPONS).id.clone();
             s.play(SILENCE, json!({ "targets": at(&weapons) }));

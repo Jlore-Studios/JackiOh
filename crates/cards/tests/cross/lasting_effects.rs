@@ -18,7 +18,8 @@ use jackioh_engine::testkit::*;
 const STOCKPILE: &str = "core-005";
 const VANILLA: &str = "core-008";
 const MAGIC_JAMMED: &str = "core-036";
-const MIND_CONTROL: &str = "core-049";
+/// Meditative #97.4 Mega Church, a Unit token: "Activate: Steal an enemy permanent. [Make it Radiant.]"
+const CHURCH: &str = "meditative-097-4";
 const SILAS: &str = "core-052";
 const TWINSPELL: &str = "core-079";
 const MANA_WELL: &str = "core-006";
@@ -164,14 +165,15 @@ mod r209_twinspells_grant_follows_its_current_face {
     use super::*;
 
     #[test]
-    fn r209_a_twinspell_stolen_by_radiant_snom_bunny_mind_control_grants_echo_2_to_the_thiefs_next_spell() {
+    fn r209_a_twinspell_stolen_by_a_radiant_mega_church_grants_echo_2_to_the_thiefs_next_spell() {
         jackioh_cards::register_all();
         let library = [LIBRARY, LIBRARY].concat();
         let mut g = scenario(json!({
             "active": "p2",
             "turn": 8,
             "p1": {
-                "hand": [{ "def": MIND_CONTROL, "radiant": true }, STOCKPILE, VANILLA, "core-t-coin"],
+                "hand": [STOCKPILE, VANILLA],
+                "field": [{ "def": CHURCH, "lane": 1, "radiant": true }],
                 "mana": 10,
                 "library": library,
             },
@@ -181,14 +183,12 @@ mod r209_twinspells_grant_follows_its_current_face {
         g.play(TWINSPELL, json!({ "zone": 2 }));
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
-        // #49 costs (4) since patch v0.2.0 (issue #40): The Coin, played before Twinspell is p1's, pays
-        // for Stockpile after it.
-        g.play("core-t-coin", json!({}));
 
-        // "Steal target enemy permanent; it also becomes Radiant". Twinspell is p1's now, and Radiant
-        // on the field, where §5.2 has its text be the radiant one from then on: "Echo +2".
-        g.play(
-            MIND_CONTROL,
+        // "Activate: Steal an enemy permanent. Make it Radiant." (Snom Bunny Mind Control steals only a
+        // Unit since patch v0.3.11.) Twinspell is p1's now, and Radiant on the field, where §5.2 has its
+        // text be the radiant one from then on: "Echo +2".
+        g.activate(
+            CHURCH,
             json!({ "targets": [{ "pick": "instance", "instanceId": twin.id }] }),
         );
         assert_eq!(g.card(&twin).controller, PlayerId::P1);

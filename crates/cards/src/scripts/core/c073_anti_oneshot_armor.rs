@@ -9,7 +9,7 @@
 //! `jackioh_engine::config`, so "Cap 3" needs no radiant-specific code here.
 //!
 //! R18: "lose health" is not damage, and `lose_health` never calls `hero_damage_cap`, so #27 Blood
-//! Ridden Glowy Jelly Bean's "you lose 5 health" goes through in full past this card.
+//! Ridden Glowy Jelly Bean's "you lose 7 health" goes through in full past this card.
 //! §5.1 names this the example of a Field Spell with a Cry and §3.2 makes a played Field Spell public,
 //! so nothing here touches `face_up`. The Cry fires only when played from hand or cast (R1).
 
@@ -41,8 +41,8 @@ pub fn script() -> CardScripts {
 // #73 Anti-oneshot Armor — SPEC §8.3, BUILD M4-T4: "A 12 hit becomes 5 (radiant 3), per instance,
 // hero only; Cry draws 1 (radiant 2, R275)", plus R18's "lose health bypasses the cap".
 // The 12-damage hit is a radiant core-002 Bigot set to 12/2 (`statsOverride`; it prints 8/2 since patch
-// v0.3.10): a `field` setup fires no Cry (R1), so the attack is a bare 12-damage instance. R18's "lose 5 health" is read against the RADIANT cap of 3:
-// 5 fits under the base cap of 5, so only the radiant face can tell a clamp from a bypass.
+// v0.3.10): a `field` setup fires no Cry (R1), so the attack is a bare 12-damage instance. R18's "lose 7 health" is read against both caps:
+// 7 is over the base cap of 5 and the radiant cap of 3, so either face tells a clamp from a bypass.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -178,10 +178,11 @@ mod tests {
                 "p2": { "hand": ["core-005"] },
             }));
 
-            // #27 Blood Ridden Glowy Jelly Bean: "you lose 5 health".
+            // #27 Blood Ridden Glowy Jelly Bean: "you lose 7 health".
             s.play("core-027", json!({}));
 
-            s.expect_health(P1, 25).expect_events(json!(["healthLost"]));
+            // Were the cap to apply, this would be 25. R18 says it does not.
+            s.expect_health(P1, 23).expect_events(json!(["healthLost"]));
             // Not a damage instance at all: nothing for the pipeline to clamp.
             assert!(damage_to(&s, "hero-p1").is_empty());
         }
@@ -313,7 +314,7 @@ mod tests {
         }
 
         #[test]
-        fn r18_a_5_point_lose_health_goes_through_in_full_past_the_radiant_cap_of_3() {
+        fn r18_a_7_point_lose_health_goes_through_in_full_past_the_radiant_cap_of_3() {
             let mut s = setup(json!({
                 "seed": "core-073-r18-radiant",
                 "p1": {
@@ -327,7 +328,7 @@ mod tests {
             s.play("core-027", json!({}));
 
             // Were the cap to apply, this would be 27. R18 says it does not.
-            s.expect_health(P1, 25).expect_events(json!(["healthLost"]));
+            s.expect_health(P1, 23).expect_events(json!(["healthLost"]));
             assert!(damage_to(&s, "hero-p1").is_empty());
         }
     }

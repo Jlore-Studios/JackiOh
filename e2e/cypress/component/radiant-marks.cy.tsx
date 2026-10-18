@@ -72,7 +72,7 @@ describe("R277 a Radiant face's gold marks", () => {
   it("R277 on the collection's dark reading panel the mark is the bright gold, still AA", () => {
     cy.mount(<CardDetail def={def("core-013")} onClose={() => undefined} />);
     cy.viewport(390, 844);
-    cy.get(".inspect-rules-line--radiant .cf-mark").should("have.text", "5").and(($mark) => {
+    cy.get(".inspect-rules-line--radiant .cf-mark").should("have.text", "4").and(($mark) => {
       const style = getComputedStyle($mark[0] as Element);
       expect(contrast(style.color, "rgb(26, 29, 40)"), "bright gold on the dark panel").to.be.at.least(AA);
     });

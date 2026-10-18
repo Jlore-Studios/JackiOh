@@ -1,4 +1,4 @@
-//! M #47 饕餮 (SPEC §8.8 row 47): (4) Unit, CN, Legendary, 8/8 → 16/16.
+//! M #47 饕餮 (SPEC §8.8 row 47): (4) Unit, CN, Legendary, 2/2 → 4/4.
 //!
 //! Base:    "End of turn: Fuse a random enemy permanent into this."
 //! Radiant: "End of turn: Fuse a random enemy permanent and a random card from your opponent's deck
@@ -49,7 +49,7 @@ pub fn script() -> CardScripts {
 // M #47 饕餮 — SPEC §8.8 row 47, BUILD M10 row M 47: "At your end of turn only, one random enemy
 // permanent (tops of piles, both rows, face-down ones included, never an Immutable one) is fused
 // into it (MD-C20) … with no enemy permanent, nothing; an Immutable 饕餮 eats nothing (R23); the
-// fused definition survives a JSON round trip (R468); radiant 16/16 and also a random non-Immutable
+// fused definition survives a JSON round trip (R468); radiant 4/4 and also a random non-Immutable
 // card of the opponent's deck".
 #[cfg(test)]
 mod tests {
@@ -106,6 +106,20 @@ mod tests {
     mod m47_taotie {
         use super::*;
 
+        #[test]
+        fn enters_as_a_2_2_and_radiant_a_4_4() {
+            for (radiant, size) in [(false, 2), (true, 4)] {
+                let mut s = scenario(json!({
+                    "seed": "taotie-enters",
+                    "p1": { "hand": [{ "def": TAOTIE, "radiant": radiant }, FILLER], "library": [FILLER] },
+                    "p2": { "hand": [FILLER], "library": [FILLER] },
+                }));
+                s.play(TAOTIE, json!({ "zone": 1 }));
+                let taotie = s.unit(P1, 1).expect("taotie");
+                s.expect_stats(&taotie, json!({ "attack": size, "health": size, "maxHealth": size }));
+            }
+        }
+
         mod base {
             use super::*;
 
@@ -120,11 +134,11 @@ mod tests {
 
                 s.end_turn();
 
-                // The meal is gone with no Death, and 饕餮 summed its stats (R77): 8 + 3 attack.
+                // The meal is gone with no Death, and 饕餮 summed its stats (R77): 2 + 3 attack.
                 assert!(s.unit(P2, 1).is_none());
                 let after = s.unit(P1, 1).expect("taotie");
                 assert_eq!(after.id, before.id);
-                s.expect_stats(&after, json!({ "attack": 11, "health": 12 }));
+                s.expect_stats(&after, json!({ "attack": 5, "health": 6 }));
             }
 
             #[test]
@@ -138,7 +152,7 @@ mod tests {
                 s.end_turn();
 
                 let after = s.unit(P1, 1).expect("taotie");
-                s.expect_stats(&after, json!({ "attack": 8, "health": 8 }));
+                s.expect_stats(&after, json!({ "attack": 2, "health": 2 }));
             }
 
             #[test]
@@ -157,7 +171,7 @@ mod tests {
                 assert!(!fused(&s));
                 assert_eq!(s.unit(P2, 1).map(|unit| unit.def_id), Some(BODY.to_string()));
                 let taotie = s.unit(P1, 1).expect("taotie");
-                s.expect_stats(&taotie, json!({ "attack": 8, "health": 8 }));
+                s.expect_stats(&taotie, json!({ "attack": 2, "health": 2 }));
             }
 
             #[test]
@@ -211,7 +225,7 @@ mod tests {
                 assert!(!fused(&s));
                 assert_eq!(s.unit(P2, 1).map(|unit| unit.def_id), Some(WALL.to_string()));
                 let taotie = s.unit(P1, 1).expect("taotie");
-                s.expect_stats(&taotie, json!({ "attack": 8, "health": 8 }));
+                s.expect_stats(&taotie, json!({ "attack": 2, "health": 2 }));
             }
 
             #[test]
@@ -234,16 +248,16 @@ mod tests {
             fn r1020_keywords_tags_and_text_joined_damage_kept_cost_4_and_no_death() {
                 let mut s = table("taotie-joined", json!([]), json!([{ "def": MROW, "lane": 1 }]));
                 let id = s.unit(P1, 1).expect("taotie").id;
-                s.card_mut(id.as_str()).damage = 2;
+                s.card_mut(id.as_str()).damage = 1;
                 let mrow = s.unit(P2, 1).expect("mrow");
 
                 s.end_turn();
 
                 let after = s.card(id.as_str()).clone();
                 let def = fused_def(&s, &after);
-                // Stats summed (8 + 1 / 8 + 1), the 2 damage kept.
-                s.expect_stats(&after, json!({ "attack": 9, "maxHealth": 9, "health": 7 }));
-                assert_eq!(after.damage, 2);
+                // Stats summed (2 + 1 / 2 + 1), the 1 damage kept.
+                s.expect_stats(&after, json!({ "attack": 3, "maxHealth": 3, "health": 2 }));
+                assert_eq!(after.damage, 1);
                 // Keywords, tags and text joined; the cost 饕餮's (4).
                 let keywords = serde_json::to_string(&s.stats(&after).keywords).expect("JSON");
                 assert!(keywords.contains("Can't attack"), "{keywords}");
@@ -325,9 +339,9 @@ mod tests {
                 let id = s.unit(P1, 1).expect("taotie").id;
                 let felinor = s.unit(P1, 2).expect("p1's other Unit");
 
-                s.end_turn(); // 饕餮 eats the Saintess: 10/10.
+                s.end_turn(); // 饕餮 eats the Saintess: 4/4.
                 assert!(!s.card(&felinor).radiant);
-                s.card_mut(id.as_str()).damage = 7;
+                s.card_mut(id.as_str()).damage = 1;
                 s.play(
                     ECLIPSE,
                     json!({ "targets": [{ "pick": "instance", "instanceId": id }] }),
@@ -358,7 +372,7 @@ mod tests {
                 assert_eq!(same.def_id, after.def_id);
                 assert_ne!(same.def_id, TAOTIE);
                 let view = unit_view(&round_tripped, same);
-                assert_eq!(view.attack, 11);
+                assert_eq!(view.attack, 5);
                 assert!(s.unit(P2, 1).is_none());
             }
         }
@@ -367,14 +381,14 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r1020_radiant_is_16_16() {
+            fn r1020_radiant_is_4_4() {
                 let mut s = scenario(json!({
                     "seed": "taotie-radiant-stats",
                     "p1": { "field": [{ "def": TAOTIE, "radiant": true, "lane": 1 }], "hand": [FILLER], "library": [FILLER] },
                     "p2": { "hand": [FILLER], "library": [FILLER] },
                 }));
                 let taotie = s.unit(P1, 1).expect("taotie");
-                s.expect_stats(&taotie, json!({ "attack": 16, "health": 16 }));
+                s.expect_stats(&taotie, json!({ "attack": 4, "health": 4 }));
             }
 
             #[test]
@@ -394,7 +408,7 @@ mod tests {
                 let walls = s.pile(P2, "library").len()
                     + s.hand(P2).iter().filter(|card| card.def_id == WALL).count();
                 assert_eq!(walls, 3);
-                s.expect_stats(&taotie, json!({ "attack": 22, "health": 24 }));
+                s.expect_stats(&taotie, json!({ "attack": 10, "health": 12 }));
             }
 
             #[test]
@@ -415,10 +429,10 @@ mod tests {
                 let after = s.unit(P1, 1).expect("taotie");
                 assert_eq!(after.id, before.id);
                 // Both fusions summed their stats (R77), and the kept card is Radiant, so it shows
-                // the fusion's radiant form, the sum of the radiant forms: 16 + 6 + 6 attack and
-                // 16 + 8 + 8 health (a Radiant Duplicating Felinors is 6/8 since patch v0.3.10).
+                // the fusion's radiant form, the sum of the radiant forms: 4 + 6 + 6 attack and
+                // 4 + 8 + 8 health (a Radiant Duplicating Felinors is 6/8 since patch v0.3.10).
                 assert!(after.radiant);
-                s.expect_stats(&after, json!({ "attack": 28, "health": 32 }));
+                s.expect_stats(&after, json!({ "attack": 16, "health": 20 }));
             }
         }
     }

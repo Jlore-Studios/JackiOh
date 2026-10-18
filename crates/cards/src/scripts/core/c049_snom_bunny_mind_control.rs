@@ -1,19 +1,19 @@
-//! #49 Snom Bunny Mind Control (SPEC §8.2): "Steal target enemy permanent", radiant "It also becomes
-//! Radiant".
+//! #49 Snom Bunny Mind Control (SPEC §8.2): "Steal an enemy Unit.", radiant "Steal an enemy Unit.
+//! Make it Radiant."
 //!
-//! Reading the radiant cell (§8 Conventions): "Also" adds an effect and keeps the base clause, so the
-//! radiant face steals the same permanent and then sets its flag.
+//! Reading the radiant cell (§8 Conventions): the second sentence adds an effect and keeps the base
+//! clause, so the radiant face steals the same Unit and then sets its flag.
 //!
-//! "Permanent" is §6.3's word: Unit, Field Spell, Trap and Field Trap, so the declaration offers
-//! both rows of the enemy board. It is a DECLARED play-time target in the play action's `targets`
-//! (R81), validated by R90: a face-down enemy trap is a legal pick the client can name without
-//! seeing it (§9.1), and only the top card of a Stack pile is on offer (R13). An empty enemy board
-//! fizzles and the spell still counts as played (§8 Conventions).
+//! Unit only since patch v0.3.11 (#1149): the declaration offers the enemy's Units and no Field Spell,
+//! Trap or Field Trap. It is a DECLARED play-time target in the play action's `targets` (R81),
+//! validated by R90, and only the top card of a Stack pile is on offer (R13). An enemy board with no
+//! Unit fizzles and the spell still counts as played (§8 Conventions). Through v0.3.7b it stole any
+//! enemy permanent, a face-down Trap included; `script_v0_3_7b` keeps that for those versions'
+//! replays (R767000).
 //!
 //! Where the card lands is §6.3 Steal and R15 (`effects/steal.rs`). Control is field-only (R12), so
 //! the steal moves `controller` and nothing else: the card keeps its owner, damage, buffs, counters
-//! and position (R78 is about leaving). R33: `face_up` is untouched, so the new controller is the
-//! one who may read a face-down trap.
+//! and position (R78 is about leaving).
 //!
 //! The radiant clause is `set_radiant`, the flag and nothing else (R74): the base stat layer swaps at
 //! once, damage and buffs stay and no Cry re-fires (R22). It resolves the selection by instance id,
@@ -23,20 +23,36 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-049";
 
-/// §6.3: a permanent is a Unit, Field Spell, Trap or Field Trap, so both enemy rows are on offer.
+/// "An enemy Unit": the enemy's Units, never a card of the backrow's other types.
+fn enemy_unit() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit"] }))]
+}
+
+/// v0.3.7b's declaration: §6.3's permanent is a Unit, Field Spell, Trap or Field Trap, so both enemy
+/// rows were on offer.
 fn enemy_permanent() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit", "backrow"] }))]
 }
 
 pub fn script() -> CardScripts {
+    scripts_with(enemy_unit)
+}
+
+/// R767000: the scripts v0.3.7b and every version before it ran, a steal of any enemy permanent;
+/// `KEPT_SCRIPTS` folds those versions' replays under them.
+pub fn script_v0_3_7b() -> CardScripts {
+    scripts_with(enemy_permanent)
+}
+
+fn scripts_with(targets: fn() -> Vec<TargetDecl>) -> CardScripts {
     CardScripts {
         base: Script {
-            targets: enemy_permanent(),
+            targets: targets(),
             cry: Some(hook(|_ctx| vec![steal(json_as(json!({ "target": { "of": "chosen" } })))])),
             ..Script::default()
         },
         radiant: Script {
-            targets: enemy_permanent(),
+            targets: targets(),
             cry: Some(hook(|_ctx| {
                 vec![
                     steal(json_as(json!({ "target": { "of": "chosen" } }))),
@@ -57,8 +73,8 @@ pub fn script() -> CardScripts {
 //
 // The radiant clause is R22/R74; an already Radiant card is untouched (§6.3 Make Radiant). The
 // props are #25, #20, #45 (4/3 → 8/6, the damage-and-radiant case), #11, #8, #15 (its Cry would
-// summon a Rush Token, which checks "no Cry re-fires") and #41 Sheepish, a face-down Trap that
-// fires on a UNIT play, so this Spell never sets it off.
+// summon a Rush Token, which checks "no Cry re-fires"), #41 Sheepish, a face-down Trap, and #14
+// Jlockeed's Weapons, a Field Spell: neither is a Unit, so neither is on offer.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -71,6 +87,31 @@ mod tests {
     const VANILLA: &str = "core-008";
     const TOKEN_MAKER: &str = "core-015";
     const SHEEPISH: &str = "core-041";
+    const WEAPONS: &str = "core-014";
+
+    const P1: PlayerId = PlayerId::P1;
+
+    /// The target lists of every `play` `legal_actions` offers p1 for this card (R81).
+    fn offered(state: &GameState, card: &CardInstance) -> Vec<Vec<String>> {
+        legal_actions(state, P1)
+            .into_iter()
+            .filter_map(|action| match action {
+                ActionBody::Play {
+                    instance_id, targets, ..
+                } if instance_id == card.id => Some(
+                    targets
+                        .unwrap_or_default()
+                        .into_iter()
+                        .filter_map(|target| match target {
+                            Selection::Instance { instance_id } => Some(instance_id),
+                            _ => None,
+                        })
+                        .collect(),
+                ),
+                _ => None,
+            })
+            .collect()
+    }
 
     /// The radiant face in hand, so the radiant text is the one that resolves (§5.2).
     fn radiant_mind_control() -> Value {
@@ -145,24 +186,61 @@ mod tests {
         }
 
         #[test]
-        fn r15_r33_base_a_face_down_enemy_trap_is_a_permanent_and_it_stays_face_down() {
+        fn units_only_legal_actions_offers_no_enemy_field_spell_or_trap() {
+            for radiant in [false, true] {
+                crate::register_all();
+                let mut g = scenario(json!({
+                    "p1": { "hand": [{ "def": MIND_CONTROL, "radiant": radiant }] },
+                    "p2": {
+                        "field": [{ "def": VANILLA, "lane": 2 }],
+                        "backrow": [{ "def": WEAPONS, "lane": 1 }, { "def": SHEEPISH, "lane": 3 }],
+                    },
+                }));
+                let vanilla = g.unit(PlayerId::P2, 2).expect("setup: p2's Vanilla").clone();
+                let weapons = g.backrow(PlayerId::P2, 1).expect("setup: p2's Weapons").clone();
+                let card = g.card(MIND_CONTROL).clone();
+
+                assert_eq!(offered(g.state(), &card), vec![vec![vanilla.id.clone()]]);
+                // Named anyway, the Field Spell is refused (R90): the reducer reads the same declaration.
+                let named = json!({ "targets": [{ "pick": "instance", "instanceId": weapons.id }] });
+                g.expect_refused_with(|g| g.play(MIND_CONTROL, named.clone()), "not a legal target");
+                assert_eq!(g.card(&weapons).controller, PlayerId::P2);
+            }
+        }
+
+        #[test]
+        fn r767000_a_game_on_v0_3_7_folds_under_the_kept_script_a_face_down_enemy_trap_is_on_offer() {
+            crate::register_all();
+            let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+            jackioh_engine::with_shipped(Some(shipped), || {
+                let mut g = scenario(json!({
+                    "p1": { "hand": [MIND_CONTROL] },
+                    "p2": { "backrow": [{ "def": SHEEPISH, "lane": 2 }] },
+                }));
+                let trap = g.backrow(PlayerId::P2, 2).expect("setup: p2's Sheepish").clone();
+                let card = g.card(MIND_CONTROL).clone();
+                assert_eq!(offered(g.state(), &card), vec![vec![trap.id.clone()]]);
+
+                g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": trap.id }] }));
+
+                assert_eq!(g.card(&trap).controller, PlayerId::P1);
+            });
+        }
+
+        #[test]
+        fn s8_an_enemy_board_with_no_unit_offers_nothing_and_the_spell_fizzles() {
             crate::register_all();
             let mut g = scenario(json!({
                 "p1": { "hand": [MIND_CONTROL] },
-                "p2": { "backrow": [{ "def": SHEEPISH, "lane": 2 }] },
+                "p2": { "backrow": [{ "def": WEAPONS, "lane": 1 }, { "def": SHEEPISH, "lane": 2 }] },
             }));
-            let trap = g.backrow(PlayerId::P2, 2).expect("setup: p2 should hold Sheepish in backrow lane 2").clone();
-            assert_ne!(trap.face_up, Some(true));
+            let weapons = g.backrow(PlayerId::P2, 1).expect("setup: p2's Weapons").clone();
 
-            g.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": trap.id }] }));
+            g.play(MIND_CONTROL, json!({}));
 
-            // §6.3's "permanent" is Unit, Field Spell, Trap or Field Trap, and R15 places it in its row.
-            assert_eq!(g.backrow(PlayerId::P1, 2).map(|c| c.id.clone()), Some(trap.id.clone()));
-            assert!(g.backrow(PlayerId::P2, 2).is_none());
-            assert_eq!(g.card(&trap).controller, PlayerId::P1);
-            assert_eq!(g.card(&trap).owner, PlayerId::P2);
-            // R33: `face_up` is untouched — who may READ it follows the controller, in `view_for`.
-            assert_ne!(g.card(&trap).face_up, Some(true));
+            g.expect_in_zone(MIND_CONTROL, "graveyard");
+            assert_eq!(g.card(&weapons).controller, PlayerId::P2);
+            assert!(!g.events().iter().any(|event| event.event_type().as_str() == "controlChanged"));
         }
 
         #[test]
@@ -227,7 +305,7 @@ mod tests {
         }
 
         #[test]
-        fn r81_both_faces_declare_one_enemy_permanent_and_the_radiant_face_adds_the_flag() {
+        fn r81_both_faces_declare_one_enemy_unit_and_the_radiant_face_adds_the_flag() {
             crate::register_all();
             let def = crate::card_def(super::super::ID);
             assert_eq!(def.id, MIND_CONTROL);
@@ -237,7 +315,7 @@ mod tests {
             for face in [&scripts.base, &scripts.radiant] {
                 assert_eq!(
                     serde_json::to_value(&face.targets).unwrap(),
-                    json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit", "backrow"] } }])
+                    json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "enemy", "of": ["unit"] } }])
                 );
                 assert!(face.modes.is_empty());
             }

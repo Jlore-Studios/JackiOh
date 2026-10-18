@@ -1,5 +1,5 @@
-//! #13 Jlockeed Shredder-10 (SPEC §8.1): 8/10 → 16/20 Unit, cost 3. Base "End of turn: deal 2 damage
-//! to each enemy unit and the enemy hero", radiant "5 damage" — a radiant cell that changes only a
+//! #13 Jlockeed Shredder-10 (SPEC §8.1): 6/10 → 8/20 Unit, cost 3. Base "End of turn: deal 2 damage
+//! to each enemy unit and the enemy hero", radiant "4 damage" — a radiant cell that changes only a
 //! number changes only that number (§8 Conventions). §8's Engine cell: "One damage instance per
 //! target, controller's end of turn".
 //!
@@ -21,7 +21,7 @@ fn shred(amount: i32) -> Effect {
     damage_all(json_as(json!({ "side": "enemy", "amount": amount, "heroes": true })))
 }
 
-/// The amount is the declared number `damage` (R386): 2, 5 on the Radiant face.
+/// The amount is the declared number `damage` (R386): 2, 4 on the Radiant face.
 pub fn script() -> CardScripts {
     let base = Script {
         end_of_turn: Some(hook(|ctx| vec![shred(param(&*ctx, "damage"))])),
@@ -33,7 +33,7 @@ pub fn script() -> CardScripts {
 
 // #13 Jlockeed Shredder-10 (SPEC §8.1, BUILD M4-T4 row 13): "Controller's end of turn: 2 to every
 // enemy unit and hero as separate instances; units it kills die after all hits land (R59); not on
-// the opponent's end; radiant 5 (R51)".
+// the opponent's end; radiant 4 (R51)".
 //
 // The board: p2 lane 1 is Pointmaster (7/1), which 2 damage kills, and lane 2 is Mr. Vanilla (4/4),
 // which survives at 2. A lane-1 death makes R59 observable: the later hits must still land.
@@ -148,7 +148,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r51_deals_5_to_every_enemy_unit_and_the_enemy_hero() {
+            fn r51_deals_4_to_every_enemy_unit_and_the_enemy_hero() {
                 crate::register_all();
                 let mut s = shredder_board(true);
                 let pointmaster = s.card("core-020").clone();
@@ -158,8 +158,30 @@ mod tests {
 
                 s.expect_in_zone(&pointmaster, "graveyard"); // 7/2
                 s.expect_in_zone(&vanilla, "graveyard"); // 4/4, which 2 would have survived
-                s.expect_health(PlayerId::P2, 25);
-                assert_eq!(hits(&s).iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![5, 5, 5]);
+                s.expect_health(PlayerId::P2, 26);
+                assert_eq!(hits(&s).iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![4, 4, 4]);
+            }
+        }
+
+        #[test]
+        fn enters_as_a_6_10_and_radiant_an_8_20() {
+            for (radiant, attack, health, amount) in [(false, 6, 10, 2), (true, 8, 20, 4)] {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": {
+                        "hand": [{ "def": "core-013", "radiant": radiant }, "core-005"],
+                        "library": ["core-005"]
+                    },
+                    "p2": { "hand": ["core-005"], "library": ["core-005"] }
+                }));
+
+                s.play("core-013", json!({}));
+                s.expect_stats("core-013", json!({ "attack": attack, "health": health, "maxHealth": health }));
+
+                // And it deals 2 [4] to the enemy hero at its controller's end of turn.
+                s.end_turn();
+                s.expect_health(PlayerId::P2, 30 - amount);
+                assert_eq!(hits(&s).iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![amount]);
             }
         }
 

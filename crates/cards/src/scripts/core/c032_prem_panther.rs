@@ -352,7 +352,7 @@ mod tests {
             let mut s = scn(json!({
                 "seed": "panther-cleave-dies",
                 "p1": {
-                    "field": [{ "def": "32", "radiant": true }],
+                    "field": [{ "def": "32", "radiant": true, "damage": 2 }],
                     "hand": ["5"],
                     "library": ["15", "15", "15", "15", "15", "15", "15", "15"],
                 },
@@ -360,8 +360,8 @@ mod tests {
             }));
             let panther = must(s.unit("p1", 1), "the radiant Panther");
 
-            // 10 kills the 8/10 and cleaves both 1/1s; 8 back kills the 10/8. Three kills the attack
-            // destroyed, so p1 draws 6 though the Panther died (balance patch 1).
+            // 10 kills the 6/10 and cleaves both 1/1s; 6 back kills the 10/8, 2 damage down already. Three
+            // kills the attack destroyed, so p1 draws 6 though the Panther died (balance patch 1).
             let shredder = must(s.unit("p2", 2), "p2's Shredder");
             s.attack(&panther, &shredder);
 

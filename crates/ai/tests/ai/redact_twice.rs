@@ -18,8 +18,8 @@ fn text(state: &GameState) -> String {
     serde_json::to_string(state).expect("a GameState serialises")
 }
 
-/// p1 (the AI) faces p2's face-down Siphon Squad, whose aura is live (R602) and whose cost both
-/// players see (R351).
+/// p1 (the AI) faces p2's face-down Siphon Squad, whose aura sleeps until it is revealed (R1149000)
+/// and whose cost both players see (R351).
 fn facing_a_face_down_trap() -> GameState {
     jackioh_cards::register_all();
     scenario(json!({

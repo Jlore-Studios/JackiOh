@@ -118,18 +118,32 @@ mod tests {
     mod c_n19_1_top_loser {
         use super::*;
 
+        #[test]
+        fn base_enters_at_4_4_radiant_unchanged() {
+            for (radiant_face, size) in [(false, 4), (true, 10)] {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [{ "def": TOP, "radiant": radiant_face }, FILLER], "library": DECK },
+                    "p2": { "hand": [FILLER], "library": DECK },
+                }));
+                s.play(TOP, json!({ "zone": 1 }));
+                let unit = unit_or_blank(&s, P1, 1);
+                s.expect_stats(&unit, json!({ "attack": size, "health": size, "maxHealth": size }));
+            }
+        }
+
         mod base {
             use super::*;
 
             #[test]
-            fn has_armor_3_a_4_damage_hit_leaves_it_at_4() {
+            fn has_armor_3_a_4_damage_hit_leaves_it_at_3() {
                 let mut s = top_loser(json!({ "field": [{ "def": VANILLA, "lane": 3 }] }), false, json!({}));
                 assert_eq!(s.stats(top(&s)).armor, 3);
                 let attacker = unit_or_blank(&s, P1, 3);
                 let target = top(&s);
                 s.attack(attacker, &target);
                 let target = top(&s);
-                s.expect_stats(&target, json!({ "health": 4 }));
+                s.expect_stats(&target, json!({ "health": 3 }));
             }
 
             #[test]
@@ -142,7 +156,7 @@ mod tests {
                 let target = top(&s);
                 s.attack(attacker, &target);
                 let target = top(&s);
-                s.expect_stats(&target, json!({ "health": 5 }));
+                s.expect_stats(&target, json!({ "health": 4 }));
             }
 
             #[test]
@@ -184,7 +198,7 @@ mod tests {
                 s.expect_refused_with(|s| s.attack(&beside, &loser), "lane");
                 s.attack(&across, &loser);
                 let loser = top(&s);
-                s.expect_stats(&loser, json!({ "health": 4 }));
+                s.expect_stats(&loser, json!({ "health": 3 }));
             }
 
             #[test]

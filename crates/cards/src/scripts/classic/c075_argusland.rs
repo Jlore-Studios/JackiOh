@@ -46,11 +46,10 @@ mod tests {
     const MENACE: &str = "core-019"; // 9/9 Taunt
     const LUNAR: &str = "core-035"; // (1) Spell: deal 3 damage to a target.
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const BLOOD_BEAN: &str = "core-027"; // Cast on draw: make a random hand card Radiant. Lose 5 health.
+    const BLOOD_BEAN: &str = "core-027"; // Cast on draw: make a random hand card Radiant. Lose 7 health.
     const GOING_LONG: &str = "core-084"; // Field Spell: your hero has Armor 2.
     const ANTI_ONESHOT: &str = "core-073"; // Field Spell: your hero can't take more than 5 damage at a time.
     const MAGIC_JAMMED: &str = "core-036"; // (1) Spell: destroy target backrow card; lock its zone.
-    const MIND_CONTROL: &str = "core-049"; // (4) Spell: steal target enemy permanent.
     const MY_PAWN: &str = "core-096"; // Trap: cancels a declared attack that would be lethal to your hero (R44).
     const FILLER: &str = "core-005";
 
@@ -142,16 +141,16 @@ mod tests {
             s.expect_health(P1, 20);
         }
 
-        /// R18 losing health is not damage: Blood Ridden Glowy Jelly Bean's 5 is lost whole
+        /// R18 losing health is not damage: Blood Ridden Glowy Jelly Bean's 7 is lost whole
         #[test]
-        fn r18_losing_health_is_not_damage_blood_ridden_glowy_jelly_beans_5_is_lost_whole() {
+        fn r18_losing_health_is_not_damage_blood_ridden_glowy_jelly_beans_7_is_lost_whole() {
             let mut s = scenario(json!({
                 "p1": { "hand": [STOCKPILE, FILLER], "backrow": [ARGUSLAND], "library": [BLOOD_BEAN, FILLER, FILLER], "health": 20 },
                 "p2": { "hand": [FILLER] },
             }));
             s.play(STOCKPILE, json!({}));
             assert!(hero_hits(&s, P1).is_empty());
-            s.expect_health(P1, 17);
+            s.expect_health(P1, 15);
         }
 
         /// damage to a Unit is untouched: Lunar Eclipse deals its whole 3 to your Mr. Vanilla
@@ -175,16 +174,18 @@ mod tests {
             assert_eq!(hero_hits(&s, P2), vec![4]);
         }
 
-        /// it guards its controller's hero: stolen by Snom Bunny Mind Control, it halves hits on the thief's hero
+        /// it guards its controller's hero: stolen by a Radiant Magic Jammed, it halves hits on the thief's hero
         #[test]
-        fn it_guards_its_controllers_hero_stolen_by_snom_bunny_mind_control_it_halves_hits_on_the_thiefs_hero() {
+        fn it_guards_its_controllers_hero_stolen_by_a_radiant_magic_jammed_it_halves_hits_on_the_thiefs_hero() {
+            // Snom Bunny Mind Control steals only a Unit since patch v0.3.11; the Radiant Magic Jammed
+            // steals a backrow card. p2's one mana pays for it, so nothing is left to play after it.
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "field": [VANILLA], "backrow": [ARGUSLAND], "library": [FILLER] },
-                "p2": { "hand": [MIND_CONTROL, FILLER], "field": [PANTHER] },
+                "p2": { "hand": [{ "def": MAGIC_JAMMED, "radiant": true }, FILLER], "field": [PANTHER], "mana": 1 },
                 "active": "p2",
             }));
             let argusland = s.card(ARGUSLAND).id.clone();
-            s.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": argusland }] }));
+            s.play(MAGIC_JAMMED, json!({ "targets": [{ "pick": "instance", "instanceId": argusland }] }));
             assert_eq!(s.card(ARGUSLAND).controller, P2);
             s.attack(PANTHER, "hero");
             assert_eq!(hero_hits(&s, P1), vec![5]);
@@ -311,9 +312,9 @@ mod tests {
                 "p2": { "hand": [FILLER] },
             }));
             s.play(STOCKPILE, json!({}));
-            // The Bean is cast on draw (lose 5) and its draw is replaced; the next two are fatigue 1 and 2, each quartered to 1.
+            // The Bean is cast on draw (lose 7) and its draw is replaced; the next two are fatigue 1 and 2, each quartered to 1.
             assert_eq!(hero_hits(&s, P1), vec![1, 1]);
-            s.expect_health(P1, 20 - 5 - 1 - 1 + 2);
+            s.expect_health(P1, 20 - 7 - 1 - 1 + 2);
         }
 
         /// damage to a Unit is untouched

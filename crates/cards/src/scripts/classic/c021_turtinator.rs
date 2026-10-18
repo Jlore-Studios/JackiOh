@@ -74,7 +74,7 @@ mod tests {
     const POINTMASTER: &str = "core-020"; // 7/1.
     const D_FENDER: &str = "core-001"; // 0/7.
     const SAINTESS: &str = "core-081"; // 2/2, "Death: Make your other Units Radiant."
-    const WEAPONS: &str = "core-014"; // Field Spell, "Aura: Your Units have +4 Attack, Rush and First Strike."
+    const WEAPONS: &str = "core-014"; // Field Spell, "Aura: Your Units have +3 Attack, Rush and First Strike."
     const SHEEP: &str = "core-t-sheep"; // 1/1, worth 2 Tributes.
     const ROCK: &str = "core-066"; // 10/10 Indestructible.
 
@@ -173,12 +173,12 @@ mod tests {
             fn r78_the_amount_is_the_tributed_unit_s_attack_as_it_stood_an_aura_s_bonus_included() {
                 crate::register_all();
                 let mut s = setup(json!({ "field": [TURTLE, TIMMY], "backrow": [WEAPONS] }), json!({}));
-                s.expect_stats(TIMMY, json!({ "attack": 7 }));
+                s.expect_stats(TIMMY, json!({ "attack": 6 }));
 
                 eat(&mut s, TIMMY, enemy_hero(), TURTLE);
 
-                // Timmy is 3 in the graveyard; the aura's +4 counted, because it was paid as it stood.
-                s.expect_health(P2, 23);
+                // Timmy is 3 in the graveyard; the aura's +3 counted, because it was paid as it stood.
+                s.expect_health(P2, 24);
             }
 
             #[test]

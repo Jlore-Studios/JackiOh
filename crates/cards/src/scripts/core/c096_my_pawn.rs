@@ -189,7 +189,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const MY_PAWN: &str = "core-096";
-    /// #13 Jlockeed Shredder-10, 8/10 with no keywords: a plain 8-damage swing.
+    /// #13 Jlockeed Shredder-10, 6/10 with no keywords: a plain 6-damage swing.
     const ATTACKER: &str = "core-013";
     /// #73 Anti-oneshot Armor: `staticFlags.antiOneshot`, so §4.4 step 3 clamps to 5 (radiant 3).
     const ANTI_ONESHOT: &str = "core-073";
@@ -251,7 +251,7 @@ mod tests {
         field: Option<Vec<Value>>,
     }
 
-    /// p1 holds the trap; p2 is active and swings at p1's hero for 8.
+    /// p1 holds the trap; p2 is active and swings at p1's hero for 6.
     fn swing(p1: Swing) -> Scenario {
         let mut side = json!({ "health": p1.health });
         if let Some(armor) = p1.armor {
@@ -317,32 +317,32 @@ mod tests {
         #[test]
         fn r44_fires_when_the_projected_damage_is_at_least_the_hero_s_health() {
             crate::register_all();
-            let s = swing(Swing { health: 8, ..Swing::default() });
+            let s = swing(Swing { health: 6, ..Swing::default() });
             assert!(arms(&s, &attack_declared(&id_of(&s, ATTACKER), "hero-p1", false)));
         }
 
         #[test]
         fn r44_does_not_fire_when_the_hero_would_survive_by_one() {
             crate::register_all();
-            let s = swing(Swing { health: 9, ..Swing::default() });
+            let s = swing(Swing { health: 7, ..Swing::default() });
             assert!(!arms(&s, &attack_declared(&id_of(&s, ATTACKER), "hero-p1", false)));
         }
 
         #[test]
-        fn r44_counts_armor_1_armor_makes_the_same_8_damage_swing_survivable_at_8_health() {
+        fn r44_counts_armor_1_armor_makes_the_same_6_damage_swing_survivable_at_6_health() {
             crate::register_all();
-            let armored = swing(Swing { health: 8, armor: Some(1), ..Swing::default() });
+            let armored = swing(Swing { health: 6, armor: Some(1), ..Swing::default() });
             assert!(!arms(&armored, &attack_declared(&id_of(&armored, ATTACKER), "hero-p1", false)));
 
-            // 8 − 1 Armor = 7, which is exactly lethal at 7 (§4.4 step 2, §4.5 step 2).
-            let exact = swing(Swing { health: 7, armor: Some(1), ..Swing::default() });
+            // 6 − 1 Armor = 5, which is exactly lethal at 5 (§4.4 step 2, §4.5 step 2).
+            let exact = swing(Swing { health: 5, armor: Some(1), ..Swing::default() });
             assert!(arms(&exact, &attack_declared(&id_of(&exact, ATTACKER), "hero-p1", false)));
         }
 
         #[test]
-        fn r44_counts_the_anti_oneshot_cap_an_8_damage_swing_projects_5() {
+        fn r44_counts_the_anti_oneshot_cap_a_6_damage_swing_projects_5() {
             crate::register_all();
-            let capped = swing(Swing { health: 8, backrow: vec![json!(ANTI_ONESHOT)], ..Swing::default() });
+            let capped = swing(Swing { health: 6, backrow: vec![json!(ANTI_ONESHOT)], ..Swing::default() });
             assert!(!arms(&capped, &attack_declared(&id_of(&capped, ATTACKER), "hero-p1", false)));
 
             let exact = swing(Swing { health: 5, backrow: vec![json!(ANTI_ONESHOT)], ..Swing::default() });
@@ -373,16 +373,16 @@ mod tests {
         #[test]
         fn r44_counts_trample_excess_from_an_attack_on_a_unit_and_nothing_without_trample() {
             crate::register_all();
-            let mut s = swing(Swing { health: 7, field: Some(vec![json!(SMALL)]), ..Swing::default() });
+            let mut s = swing(Swing { health: 5, field: Some(vec![json!(SMALL)]), ..Swing::default() });
             let attacker = id_of(&s, ATTACKER);
             let victim = id_of(&s, SMALL);
 
-            // §4.4 step 9 sends only the excess on: 8 − the 1/1's 1 health = 7, exactly lethal at 7.
+            // §4.4 step 9 sends only the excess on: 6 − the 1/1's 1 health = 5, exactly lethal at 5.
             // Granting the keyword on a fixture is a test's business, not a card's (CLAUDE.md rule 5).
             grant_trample(&mut s, &attacker);
             assert!(arms(&s, &attack_declared(&attacker, &victim, false)));
 
-            let plain = swing(Swing { health: 7, field: Some(vec![json!(SMALL)]), ..Swing::default() });
+            let plain = swing(Swing { health: 5, field: Some(vec![json!(SMALL)]), ..Swing::default() });
             // No Trample: the hit stops on the unit, so no hero damage is projected at all.
             assert!(!arms(&plain, &attack_declared(&id_of(&plain, ATTACKER), &id_of(&plain, SMALL), false)));
         }
@@ -397,17 +397,17 @@ mod tests {
             let s = scenario(json!({
                 "seed": "my-pawn-own",
                 "active": "p1",
-                "p1": { "health": 8, "backrow": [MY_PAWN], "field": [ATTACKER] },
-                "p2": { "health": 8 },
+                "p1": { "health": 6, "backrow": [MY_PAWN], "field": [ATTACKER] },
+                "p2": { "health": 6 },
             }));
-            // p1's own 8-damage swing would be lethal to p2, and p1's trap is not interested.
+            // p1's own 6-damage swing would be lethal to p2, and p1's trap is not interested.
             assert!(!arms(&s, &attack_declared(&id_of(&s, ATTACKER), "hero-p2", false)));
         }
 
         #[test]
         fn r121_a_forced_attack_is_declared_by_the_effect_not_the_player_so_a_trigger_keyed_to_an_opponent_s_declaration_does_not_arm() {
             crate::register_all();
-            let s = swing(Swing { health: 8, ..Swing::default() });
+            let s = swing(Swing { health: 6, ..Swing::default() });
             // §4.2's last paragraph and R53: a forced attack skips steps 1 to 3 and spends no exertion,
             // and it can happen on the trap owner's own turn, where "an AI plays the rest of their turn"
             // names nobody. `forced` is on the event for exactly this distinction.

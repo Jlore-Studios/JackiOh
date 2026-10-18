@@ -101,9 +101,10 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_2_0_5_divine_shield_unit_token_printed_legendary_one_script_serves_both_faces() {
+        fn is_a_2_0_4_divine_shield_unit_token_printed_legendary_one_script_serves_both_faces() {
             let def = crate::card_def(ID);
             assert_eq!(def.base.attack, Some(0));
+            assert_eq!(def.base.health, Some(4));
             assert_eq!(def.base.keywords, vec![Keyword::DivineShield]);
             assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield, Keyword::Reborn]);
             let scripts = script();
@@ -111,6 +112,20 @@ mod tests {
                 scripts.base.end_of_turn.as_ref().expect("base end of turn"),
                 scripts.radiant.end_of_turn.as_ref().expect("radiant end of turn"),
             ));
+        }
+
+        #[test]
+        fn base_enters_at_0_4_radiant_unchanged() {
+            for (radiant_face, health) in [(false, 4), (true, 10)] {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [{ "def": SUPPORT, "radiant": radiant_face }, FILLER], "library": DECK },
+                    "p2": { "hand": [FILLER], "library": DECK },
+                }));
+                s.play(SUPPORT, json!({ "zone": 3 }));
+                let me = loser(&s);
+                s.expect_stats(&me, json!({ "attack": 0, "health": health, "maxHealth": health }));
+            }
         }
 
         mod base {
@@ -142,7 +157,7 @@ mod tests {
                     GameEvent::Damage { source_id: Some(source), .. } if *source == me.id
                 )));
                 // Its Divine Shield took the hit.
-                s.expect_stats(&me, json!({ "health": 5 }));
+                s.expect_stats(&me, json!({ "health": 4 }));
                 assert!(!has_keyword(&s, &me.id, KeywordKind::DivineShield));
             }
 
@@ -160,7 +175,7 @@ mod tests {
                     false,
                     json!({ "field": [{ "def": VANILLA, "lane": 1, "damage": 3 }] }),
                 );
-                loser_mut(&mut s).damage = 4;
+                loser_mut(&mut s).damage = 3;
                 s.end_turn();
                 let first = unit_or_blank(&s, P1, 1);
                 s.expect_stats(&first, json!({ "health": 4 }));
@@ -199,7 +214,7 @@ mod tests {
                 s.expect_health(P1, 17);
                 s.expect_in_zone(&vanilla, "graveyard");
                 let me = loser(&s);
-                s.expect_stats(&me, json!({ "health": 5 }));
+                s.expect_stats(&me, json!({ "health": 4 }));
                 assert!(!has_keyword(&s, &me.id, KeywordKind::DivineShield));
                 assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Healed));
             }

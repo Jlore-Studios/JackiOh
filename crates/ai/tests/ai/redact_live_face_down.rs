@@ -1,8 +1,10 @@
-//! R602 and R403: a face-down trap with no reveal condition is live (C #88 Siphon Squad's aura
-//! shrinks the enemy's Attack from the moment it is set), and the units it shrinks show it to both
-//! players. `redact` hides the card (R185, R33), so without more the AI's determinizations would give
-//! its units their Attack back and it would declare attacks the engine refuses. It keeps every unit's
-//! shown Attack and Health instead, and the card stays a placeholder.
+//! R602 and R403: a face-down trap with no reveal condition is live, and the units its aura changes
+//! show it to both players. `redact` hides the card (R185, R33), so without more the AI's
+//! determinizations would give its units their stats back and it would declare attacks the engine
+//! refuses. It keeps every unit's shown Attack and Health instead, and the card stays a placeholder.
+//! C #88 Siphon Squad's aura shrank the enemy's Attack from the moment it was set until patch v0.3.11,
+//! which makes it dormant until it is revealed (R1149000): set and unrevealed it changes nothing, and
+//! revealed, both players read the card and the drop.
 //!
 //! Port of `packages/ai/test/redact-live-face-down.test.ts`.
 
@@ -35,7 +37,7 @@ fn pile_bottoms(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
         .collect()
 }
 
-/// p1 (the AI) swings into p2, whose face-down Siphon Squad sets p1's units' Attack to 0 (Radiant).
+/// p1 (the AI) swings into p2, whose face-down Siphon Squad, set and unrevealed, sleeps (R1149000).
 fn siphoned(radiant: bool) -> GameState {
     jackioh_cards::register_all();
     scenario(json!({
@@ -54,7 +56,7 @@ mod r602_the_ais_view_keeps_what_a_live_face_down_card_visibly_does {
 
     /// R602 R403 redact keeps each unit's shown Attack and Health and still hides the card
     #[test]
-    fn r602_r403_redact_keeps_each_units_shown_attack_and_health_and_still_hides_the_card() {
+    fn r602_r403_r1149000_redact_keeps_each_units_shown_attack_and_health_and_still_hides_the_card() {
         for radiant in [false, true] {
             let state = siphoned(radiant);
             let trap = state.players[HUMAN]
@@ -82,10 +84,29 @@ mod r602_the_ais_view_keeps_what_a_live_face_down_card_visibly_does {
                 );
             }
         }
-        // The Radiant face's "0 Attack" leaves the AI's units nothing to swing with, and its view says so.
-        let zero = siphoned(true);
-        for unit in zero.players[AI].units.iter().flatten().flatten() {
-            assert_eq!(unit_view(&zero, unit).attack, 0);
+        // R1149000: unrevealed, the Radiant face's "0 Attack" sleeps and the AI's units keep their
+        // printed Attack; revealed, it leaves them nothing to swing with, and the AI's view says so.
+        let mut zero = siphoned(true);
+        let printed: Vec<i32> = pile_bottoms(&zero, AI)
+            .iter()
+            .map(|unit| unit_view(&zero, unit).attack)
+            .collect();
+        assert_eq!(printed, vec![9, 3]);
+        let trap_id = zero.players[HUMAN]
+            .backrow
+            .iter()
+            .flatten()
+            .next()
+            .map(|card| card.id.clone())
+            .expect("a face-down trap");
+        if let Some(trap) = find_instance_mut(&mut zero, &trap_id) {
+            trap.revealed = Some(true);
+        }
+        let seen = redact(&zero, AI);
+        for unit in pile_bottoms(&zero, AI) {
+            assert_eq!(unit_view(&zero, &unit).attack, 0);
+            let seen_unit = card_by_id(&seen, &unit.id).cloned().expect("the unit is public");
+            assert_eq!(unit_view(&seen, &seen_unit).attack, 0);
         }
     }
 
@@ -94,7 +115,6 @@ mod r602_the_ais_view_keeps_what_a_live_face_down_card_visibly_does {
     fn r602_every_move_the_ais_determinizations_offer_is_legal_on_the_true_board_and_so_is_its_decision() {
         let state = siphoned(true);
         let legal: IndexSet<String> = legal_actions(&state, AI).iter().map(action_key).collect();
-        assert!(!legal.iter().any(|key| key.contains("\"attack\"")));
         let seen = redact(&state, AI);
         for k in 0..8 {
             let world = det(
@@ -118,7 +138,7 @@ mod r602_the_ais_view_keeps_what_a_live_face_down_card_visibly_does {
 mod r602_a_determinization_agrees_with_the_board_it_was_dealt_from {
     use super::*;
 
-    /// The same board as `siphoned`, but p2's face-down trap is a plain (2) one, Counterspell: no unit is shrunk. It shows (2), as Siphon Squad does, so R762 leaves Siphon Squad in the pool and R602 alone keeps it out.
+    /// The same board as `siphoned`, but p2's face-down trap is a plain (2) one, Counterspell: no unit is shrunk. It shows (2); Siphon Squad shows (3) since patch v0.3.11, so R762 keeps it out of a (2) sample, and R602 keeps out any other live-aura trap.
     fn plain() -> GameState {
         jackioh_cards::register_all();
         scenario(json!({

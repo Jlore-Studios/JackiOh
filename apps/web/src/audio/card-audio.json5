@@ -1471,7 +1471,7 @@
     "meditative-036": { // CN Peptides
       cast: { voice: "prof", text: "Totally safe. Probably. Fifty fifty." },
     },
-    "meditative-037": { // CN in a bottle
+    "meditative-037": { // CN in a Bottle
       cast: { voice: "alien", text: "Shake the bottle. See what comes out." },
     },
     "meditative-038": { // H1B Printer

@@ -265,8 +265,8 @@ mod tests {
 
             #[test]
             fn discount_reads_through_param() {
-                // A card that replaces itself on arrival (M #37 CN in a bottle) carries no discount, so the
-                // pool's roll must land on one that keeps it: search for a seed where it does.
+                // A card turned into another on arrival would carry no discount (M #37 CN in a Bottle did
+                // until #1149 made it Cast on draw), so search for a seed where the pool's roll keeps it.
                 let play = |seed: &str| {
                     let mut s = decreed(seed, true, json!([VANILLA]), json!([]));
                     set_param(s.card_mut(ID), "discount", 3);

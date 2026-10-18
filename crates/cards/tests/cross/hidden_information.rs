@@ -48,7 +48,9 @@ const MENACE: &str = "core-019";
 const MATH_EQUATION: &str = "core-031";
 const SHEEPISH: &str = "core-041";
 const SPEK: &str = "core-048";
-const MIND_CONTROL: &str = "core-049";
+/// Classic #39 Outbreak, a (1) Spell that targets any permanent: one Plague Counter, and an enemy
+/// card it covers its cost with is stolen.
+const OUTBREAK: &str = "classic-039";
 const TWINSPELL: &str = "core-079";
 const SEVEN_SEVEN: &str = "core-025";
 const LUNAR_ECLIPSE: &str = "core-035";
@@ -144,7 +146,7 @@ mod r177_a_prompt_option_that_offers_a_face_down_card {
         let mut s = scenario(json!({
             // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-l10-echo",
-            "p1": { "hand": [TWINSPELL, MIND_CONTROL, STOCKPILE], "mana": 10, "library": [HIT_JOB, HIT_JOB] },
+            "p1": { "hand": [TWINSPELL, OUTBREAK, STOCKPILE], "mana": 10, "library": [HIT_JOB, HIT_JOB] },
             "p2": {
                 "field": [MENACE],
                 "backrow": [
@@ -160,8 +162,9 @@ mod r177_a_prompt_option_that_offers_a_face_down_card {
         let menace = must(s.unit("p2", 1), "p2's unit");
 
         s.play(TWINSPELL, json!({}));
+        // One counter on the (3) Menace steals nothing, so p1 draws 1.
         s.play(
-            MIND_CONTROL,
+            OUTBREAK,
             json!({ "targets": [{ "pick": "instance", "instanceId": menace.id }] }),
         );
 
@@ -190,7 +193,7 @@ mod r177_a_prompt_option_that_offers_a_face_down_card {
             assert!(!matches_any(&option.label, &["Pawn", "Sheepish", "core-0"]));
             assert!(!matches_any(&option.key, &["Pawn", "Sheepish", "core-0"]));
         }
-        // The chooser still answers with the id it was given.
+        // The chooser still answers with the id it was given: one counter covers the (1) Sheepish.
         s.answer(json!([{ "pick": "instance", "instanceId": sheep.id }]));
         assert_eq!(s.card(&sheep).controller, PlayerId::P1);
     }

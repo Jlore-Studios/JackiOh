@@ -652,16 +652,15 @@ mod r65_pools_and_filters_read_a_definition_s_cost_out_of_play {
     fn r65_an_x_cost_card_s_query_cost_is_0_and_it_answers_a_cost_0_query() {
         register();
         // Core #24 Efficiency Dividend, #74 Adaptive UI, Classic #87 Plague Chalice, Classic+ #40
-        // Appropriations and #69 Buff Billy, and since the release Meditative #37 CN in a bottle and
-        // #43 CN Jade Market (§8.8), are the X-cost cards of the sets that ship (#98 Heroic Power
-        // costs (0) since R752).
+        // Appropriations and #69 Buff Billy, and since the release Meditative #43 CN Jade Market
+        // (§8.8), are the X-cost cards of the sets that ship (#98 Heroic Power costs (0) since R752,
+        // Meditative #37 CN in a Bottle (1) since R1149001).
         let x_cards = strings(&[
             "core-024",
             "core-074",
             "classic-087",
             "classicplus-040",
             "classicplus-069",
-            "meditative-037",
             "meditative-043",
         ]);
         assert_eq!(

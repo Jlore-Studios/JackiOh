@@ -1,0 +1,56 @@
+{
+  "version": "v0.3.11",
+  "title": "Balance pass over 18 cards",
+  "sources": "#1149",
+  "notes": "The designer's balance pass over 18 cards (issue #1149). Costs: classic-088 Siphon Squad (3), core-052 Silly Silas (4), core-097 Zephyrs (1), classicplus-075 J-lease J-Jungle EX-plorer (3), core-093 Combo-Index (3), classicplus-044 Simplicity Audit (3), meditative-059 Permanent Upperclassman (4). Numbers: meditative-047 饕餮 2/2 [4/4]; core-027 Blood Ridden Glowy Jelly Bean loses 7; core-014 Jlockeed's Weapons +3 [+6]; classic-012 Book of Blood 4 [8]; core-013 Jlockeed Shredder-10 6/10 [8/20] and 2 [4] damage, R275's named exception (R1149002); the League of Losers tokens' base 5s become 4s (classicplus-019-1 to -5: 4/4, Support 0/4, Mid Loser's heads 4, Bot Loser's attackGain 4). Reworks: meditative-037 is renamed CN in a Bottle, costs (1) and casts on draw (R1149001, superseding R926); core-049 Snom Bunny Mind Control targets only enemy Units; meditative-017 True Craft a Card exiles itself (loc 41). Fix: classic-088 Siphon Squad's aura and preview sleep until it is revealed (R1149000, amending R403; loc 31). Nerfs measured with cargo jackioh stats: meditative-095 Call to Chaos (Meditative Edition) adds 2 CN cards, not 3, and gives 6 Armor and heals 6, not 8 (CHAOS_MED_CN_CARDS, CHAOS_MED_HERO_ARMOR, CHAOS_MED_HEAL); classicplus-040 Appropriations' Culture is 8X% [20X%], its Radiant Military +4X and Healthcare +6X Health, script constants, so its entry is unchanged and unclaimed. Ten of the changed cards were already claimed by a pending patch when this one merged, and a card ships in one patch, so their #1149 changes ship under that patch's claim: core-013, core-014, core-049, core-093, classic-088, classicplus-019-2, classicplus-019-3, classicplus-019-5 and meditative-059 under v0.3.8, and core-052 under v0.3.10. This note's player lines still describe them.",
+  "player": {
+    "title": "A balance pass over 18 cards",
+    "new": [],
+    "balance": [
+      "Siphon Squad costs (3), up from (2).",
+      "Silly Silas costs (4), up from (3).",
+      "Zephyrs costs (1), up from (0).",
+      "J-lease J-Jungle EX-plorer costs (3), up from (2).",
+      "Combo-Index costs (3), up from (2).",
+      "Simplicity Audit costs (3), up from (2).",
+      "Permanent Upperclassman costs (4), up from (3).",
+      "饕餮 is a 2/2, down from 8/8, and a 4/4 Radiant, down from 16/16.",
+      "Blood Ridden Glowy Jelly Bean makes you lose 7 health, up from 5.",
+      "Jlockeed's Weapons gives your Units +3 Attack, down from +4, and +6 Radiant, down from +10.",
+      "Book of Blood deals 4 damage, down from 5, and 8 Radiant, down from 10.",
+      "Jlockeed Shredder-10 is a 6/10, down from 8/10, and an 8/20 Radiant, down from 16/20.",
+      "Radiant Jlockeed Shredder-10 deals 4 damage to each enemy at the end of your turn, down from 5.",
+      "Top Loser, Jungle Loser, Mid Loser and Bot Loser are 4/4, down from 5/5; their Radiant faces are unchanged.",
+      "Support Loser is a 0/4, down from 0/5.",
+      "Mid Loser's Heads gives it +4/+4, down from +5/+5.",
+      "Bot Loser gains +4 Attack whenever it destroys a Unit, down from +5.",
+      "Call to Chaos (Meditative Edition) adds 2 CN cards, down from 3, and gives your hero 6 Armor and heals it 6, down from 8.",
+      "Appropriations' Culture has an 8X% chance, down from 10X%, and 20X% Radiant, down from 25X%.",
+      "Radiant Appropriations' Military gives +4X Attack, down from +5X, and its Healthcare +6X Health, down from +7X."
+    ],
+    "changes": [
+      "CN in a Bottle costs (1) and is Cast on draw: drawn, it adds a random Radiant card to your hand. In your hand any other way, playing it does the same.",
+      "Snom Bunny Mind Control steals only an enemy Unit, no longer a Field Spell or Trap.",
+      "True Craft a Card exiles itself once it has crafted its card."
+    ],
+    "text": [
+      "CN in a bottle is renamed CN in a Bottle."
+    ],
+    "fixes": [
+      "Siphon Squad no longer lowers your opponent's Attack while it is set and unrevealed: its aura starts once it is revealed."
+    ]
+  },
+  "cards": [
+    "core-027",
+    "core-097",
+    "classic-012",
+    "classicplus-019-1",
+    "classicplus-019-4",
+    "classicplus-044",
+    "classicplus-075",
+    "meditative-017",
+    "meditative-037",
+    "meditative-047",
+    "meditative-095"
+  ]
+}

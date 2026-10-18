@@ -3,9 +3,11 @@
 //!   Military:   your Units on the field, in your hand and in your deck get +2X Attack and Rush.
 //!   Education:  shuffle 2X random Radiant Books into your deck; they have Cast on draw and aim at
 //!               enemies when they harm and at your side when they help.
-//!   Culture:    each card on your field, in your hand and in your deck has a 10X% chance to become Radiant.
+//!   Culture:    each card on your field, in your hand and in your deck has an 8X% chance to become Radiant.
 //!   Healthcare: your Units on the field, in your hand and in your deck get +2X Health and Armor X.
-//!   Radiant:    +5X Attack; 5X Books; 25X%; +7X Health and Armor 2X.
+//!   Radiant:    +4X Attack; 5X Books; 20X%; +6X Health and Armor 2X.
+//!   Patch v0.3.11 (#1149) lowered Culture's 10X% to 8X% and the Radiant's +5X Attack, 25X% and +7X
+//!   Health; `script_v0_3_7b` keeps the numbers before it.
 //!
 //! Military and Healthcare are E38's buffs and grants over your field (tops of piles), hand and deck,
 //! carried onto the field as a card enters, silent where a card is hidden (R440). Education's Books are
@@ -33,8 +35,11 @@ struct Face {
     armor: i32,
 }
 
-const BASE: Face = Face { attack: 2, books: 2, percent: 10, health: 2, armor: 1 };
-const RADIANT: Face = Face { attack: 5, books: 5, percent: 25, health: 7, armor: 2 };
+const BASE: Face = Face { attack: 2, books: 2, percent: 8, health: 2, armor: 1 };
+const RADIANT: Face = Face { attack: 4, books: 5, percent: 20, health: 6, armor: 2 };
+/// R767000: the multiples through patch v0.3.7b, before #1149's nerf.
+const BASE_V0_3_7B: Face = Face { attack: 2, books: 2, percent: 10, health: 2, armor: 1 };
+const RADIANT_V0_3_7B: Face = Face { attack: 5, books: 5, percent: 25, health: 7, armor: 2 };
 const ALL: i32 = 100;
 
 /// Your Units on the field, in your hand and in your deck (an E38 card scope).
@@ -83,6 +88,16 @@ pub fn script() -> CardScripts {
     CardScripts {
         base: appropriations(BASE),
         radiant: appropriations(RADIANT),
+    }
+}
+
+/// R767000: the scripts v0.3.7b and every version before it ran, Culture at 10X% [25X%], the Radiant's
+/// Military at +5X Attack and its Healthcare at +7X Health; `KEPT_SCRIPTS` folds those versions'
+/// replays under them.
+pub fn script_v0_3_7b() -> CardScripts {
+    CardScripts {
+        base: appropriations(BASE_V0_3_7B),
+        radiant: appropriations(RADIANT_V0_3_7B),
     }
 }
 
@@ -255,12 +270,12 @@ mod tests {
         }
 
         #[test]
-        fn radiant_5x_attack_and_rush() {
+        fn radiant_4x_attack_and_rush() {
             let mut s = appropriations(true, json!({}), json!({}));
             s.play(APPROPRIATIONS, json!({ "x": 2, "modes": ["Military"] }));
             let timmy = unit(&s, P1, 1);
-            s.expect_stats(&timmy, json!({ "attack": 13 }));
-            assert_eq!(mine(&s, VANILLA, "hand").buffs.attack, 10);
+            s.expect_stats(&timmy, json!({ "attack": 11 }));
+            assert_eq!(mine(&s, VANILLA, "hand").buffs.attack, 8);
         }
     }
 
@@ -410,7 +425,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r60_each_card_on_your_field_in_your_hand_and_in_your_deck_rolls_its_own_10x_over_seeds_some_turn_and_some_do_not() {
+        fn r60_each_card_on_your_field_in_your_hand_and_in_your_deck_rolls_its_own_8x_over_seeds_some_turn_and_some_do_not() {
             let mut turned = 0;
             let mut stayed = 0;
             for n in 0..10 {
@@ -437,6 +452,39 @@ mod tests {
             assert!(stayed > 0);
         }
 
+        /// Culture at `x` on seed `n`: how many of p1's five cards (field 1, hand 2, deck 2) turned
+        /// Radiant, and how many stayed.
+        fn culture(radiant: bool, x: i32, n: u32) -> (usize, usize) {
+            let mut s = scenario(json!({
+                "seed": format!("culture-step-{n}"),
+                "p1": {
+                    "hand": [{ "def": APPROPRIATIONS, "radiant": radiant }, VANILLA, ECLIPSE],
+                    "field": [TIMMY],
+                    "library": [MENACE, FILLER],
+                    "mana": x,
+                },
+                "p2": { "hand": [VANILLA], "field": [TIMMY] },
+            }));
+            s.play(APPROPRIATIONS, json!({ "x": x, "modes": ["Culture"] }));
+            let mut cards = s.hand(P1);
+            cards.extend(s.pile(P1, "library"));
+            cards.push(unit(&s, P1, 1));
+            let turned = cards.iter().filter(|card| card.radiant).count();
+            (turned, cards.len() - turned)
+        }
+
+        #[test]
+        fn base_8x_at_x_12_is_96_so_some_card_stays_over_seeds_and_at_x_13_every_card_turns() {
+            assert!((0..40).any(|n| culture(false, 12, n).1 > 0));
+            assert_eq!(culture(false, 13, 0), (5, 0));
+        }
+
+        #[test]
+        fn radiant_20x_at_x_4_is_80_so_some_card_stays_over_seeds() {
+            assert!((0..40).any(|n| culture(true, 4, n).1 > 0));
+            assert_eq!(culture(true, 5, 0), (5, 0));
+        }
+
         #[test]
         fn r581_every_card_is_rolled_a_radiant_one_too_so_the_draws_never_count_the_hidden_radiant_cards() {
             let rolls = |hand_radiant: bool| -> u32 {
@@ -459,9 +507,9 @@ mod tests {
         }
 
         #[test]
-        fn r311_r177_radiant_at_x_4_is_100_every_card_turns_the_decks_listed_as_they_went_in_the_hands_hidden_from_the_opponent() {
-            let mut s = appropriations(true, json!({}), json!({}));
-            s.play(APPROPRIATIONS, json!({ "x": 4, "modes": ["Culture"] }));
+        fn r311_r177_radiant_at_x_5_is_100_every_card_turns_the_decks_listed_as_they_went_in_the_hands_hidden_from_the_opponent() {
+            let mut s = appropriations(true, json!({ "mana": 5 }), json!({}));
+            s.play(APPROPRIATIONS, json!({ "x": 5, "modes": ["Culture"] }));
             let mut cards = s.hand(P1);
             cards.extend(s.pile(P1, "library"));
             for card in &cards {
@@ -523,11 +571,11 @@ mod tests {
         }
 
         #[test]
-        fn radiant_7x_health_and_armor_2x() {
+        fn radiant_6x_health_and_armor_2x() {
             let mut s = appropriations(true, json!({}), json!({}));
             s.play(APPROPRIATIONS, json!({ "x": 1, "modes": ["Healthcare"] }));
             let timmy = unit(&s, P1, 1);
-            s.expect_stats(&timmy, json!({ "health": 10 }));
+            s.expect_stats(&timmy, json!({ "health": 9 }));
             assert_eq!(s.stats(&timmy).armor, 2);
         }
     }

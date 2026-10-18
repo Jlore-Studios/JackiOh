@@ -164,9 +164,9 @@ mod tests {
             let mut s = scenario(json!({
                 "seed": "core-009-stops",
                 "p1": { "field": ["core-009"], "library": LIBRARY },
-                // 6 then 8 is lethal to a 1/14 after two combats; lane 3 never gets to attack. Bigot is
-                // set to its old 6/1 (it prints 4/1 since patch v0.3.10).
-                "p2": { "field": [{ "def": "core-002", "statsOverride": { "attack": 6, "health": 1 } }, "core-013", "core-007"] }
+                // 8 then 6 is lethal to a 1/14 after two combats; lane 3 never gets to attack. Bigot is
+                // set to 8/1 (it prints 4/1 since patch v0.3.10), the Shredder a 6/10 since patch v0.3.11.
+                "p2": { "field": [{ "def": "core-002", "statsOverride": { "attack": 8, "health": 1 } }, "core-013", "core-007"] }
             }));
             let moths = s.card("core-009").clone();
             let bigot = s.card("core-002").clone();
@@ -180,8 +180,8 @@ mod tests {
                 vec![bigot.id.clone(), shredder.id.clone()]
             );
             s.expect_in_zone(&moths, "graveyard");
-            // Each forced attack was its own combat with its own state check: the 6/1 died to the
-            // strike-back of the combat it started, before the 8/10 attacked.
+            // Each forced attack was its own combat with its own state check: the 8/1 died to the
+            // strike-back of the combat it started, before the 6/10 attacked.
             s.expect_in_zone(&bigot, "graveyard");
             s.expect_stats(&shredder, json!({ "health": 9, "maxHealth": 10 }));
             // Lane 3 was never asked: undamaged, unexerted, still on the field.

@@ -1,5 +1,5 @@
-//! #14 Jlockeed's Weapons (SPEC §8.1): Field Spell, cost 4. Base "Aura: your units have +4 attack,
-//! Rush, First Strike", radiant "+10 attack": only the number changes (§8 Conventions).
+//! #14 Jlockeed's Weapons (SPEC §8.1): Field Spell, cost 4. Base "Aura: your units have +3 attack,
+//! Rush, First Strike", radiant "+6 attack": only the number changes (§8 Conventions).
 //!
 //! An aura is §10.4 layer 5, gathered from every permanent in play by `aura_mods` in
 //! `engine/src/layers.rs` and recomputed on every read, so it covers units summoned later (BUILD
@@ -16,7 +16,7 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "core-014";
 
 /// +`attack` attack, Rush and First Strike to the controller's units on the field (§10.4 layer 5);
-/// `attack` is the declared number (R386), 4 and 10 on the Radiant face.
+/// `attack` is the declared number (R386), 3 and 6 on the Radiant face.
 fn weapons_aura() -> AuraHook {
     aura_hook(|args: HookArgs<'_>| {
         let attack = param(&args, "attack");
@@ -45,8 +45,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #14 Jlockeed's Weapons (SPEC §8.1, BUILD M4-T4 row 14): "Allies +4 attack, Rush, First Strike
-// while present; later summons get it; gone when destroyed; radiant +10". The keywords are tested
+// #14 Jlockeed's Weapons (SPEC §8.1, BUILD M4-T4 row 14): "Allies +3 attack, Rush, First Strike
+// while present; later summons get it; gone when destroyed; radiant +6". The keywords are tested
 // through the rules: Rush (§4.1) as a fresh unit attacking, First Strike (§4.3 step 1) as the ally
 // killing Bigot (4/1) unharmed. Bigot is seeded on the field, so its Cry never fires (R1).
 // CROSS-CARD DEPENDENCY: the removal test plays #36 Magic Jammed on the ally Field Spell (its target
@@ -69,7 +69,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn gives_allied_units_4_attack_while_it_is_on_the_field() {
+            fn gives_allied_units_3_attack_while_it_is_on_the_field() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "backrow": ["core-014"], "field": ["core-008"], "hand": ["core-005"], "library": ["core-005"] },
@@ -77,7 +77,7 @@ mod tests {
                 }));
 
                 // Mr. Vanilla is printed 4/4.
-                s.expect_stats("core-008", json!({ "attack": 8, "health": 4, "maxHealth": 4 }));
+                s.expect_stats("core-008", json!({ "attack": 7, "health": 4, "maxHealth": 4 }));
                 // "Your units": the enemy's Bigot (4/1) is untouched.
                 s.expect_stats("core-002", json!({ "attack": 4, "health": 1, "maxHealth": 1 }));
             }
@@ -112,8 +112,8 @@ mod tests {
                 s.play("core-015", json!({}));
                 let first = lane(&s, PlayerId::P1, 1);
                 let second = lane(&s, PlayerId::P1, 2);
-                s.expect_stats(&first, json!({ "attack": 5, "health": 1 }));
-                s.expect_stats(&second, json!({ "attack": 7, "health": 3 }));
+                s.expect_stats(&first, json!({ "attack": 4, "health": 1 }));
+                s.expect_stats(&second, json!({ "attack": 6, "health": 3 }));
 
                 // Summoning sick this turn, and it attacks a unit anyway: that is the granted Rush.
                 let bigot = s.card("core-002").clone();
@@ -136,7 +136,7 @@ mod tests {
                     "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
                 }));
                 let weapons = s.card("core-014").clone();
-                s.expect_stats("core-008", json!({ "attack": 8 }));
+                s.expect_stats("core-008", json!({ "attack": 7 }));
 
                 // #36 Magic Jammed, aimed at the ally Field Spell (see the header).
                 s.play("core-036", json!({ "targets": [{ "pick": "instance", "instanceId": weapons.id }] }));
@@ -155,7 +155,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn gives_10_attack_and_keeps_both_keywords_s8_conventions_only_the_number_changes() {
+            fn gives_6_attack_and_keeps_both_keywords_s8_conventions_only_the_number_changes() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
@@ -167,7 +167,7 @@ mod tests {
                     "p2": { "field": ["core-002"], "hand": ["core-005"], "library": ["core-005"] }
                 }));
 
-                s.expect_stats("core-008", json!({ "attack": 14, "health": 4, "maxHealth": 4 }));
+                s.expect_stats("core-008", json!({ "attack": 10, "health": 4, "maxHealth": 4 }));
 
                 let bigot = s.card("core-002").clone();
                 s.attack("core-008", "core-002");
@@ -177,7 +177,7 @@ mod tests {
             }
 
             #[test]
-            fn covers_a_unit_summoned_after_it_at_10_rush_included() {
+            fn covers_a_unit_summoned_after_it_at_6_rush_included() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
@@ -192,8 +192,8 @@ mod tests {
 
                 let first = lane(&s, PlayerId::P1, 1);
                 let second = lane(&s, PlayerId::P1, 2);
-                s.expect_stats(&first, json!({ "attack": 11, "health": 1 }));
-                s.expect_stats(&second, json!({ "attack": 13, "health": 3 }));
+                s.expect_stats(&first, json!({ "attack": 7, "health": 1 }));
+                s.expect_stats(&second, json!({ "attack": 9, "health": 3 }));
                 let bigot = s.card("core-002").clone();
                 s.attack("core-015", "core-002");
                 s.expect_in_zone(&bigot, "graveyard");
@@ -202,8 +202,8 @@ mod tests {
         }
 
         #[test]
-        fn r386_an_upgrade_gives_5_attack_and_a_degrade_3() {
-            for (upgrade, attack) in [(true, 5), (false, 3)] {
+        fn r386_an_upgrade_gives_4_attack_and_a_degrade_2() {
+            for (upgrade, attack) in [(true, 4), (false, 2)] {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "backrow": ["core-014"], "field": ["core-008"] } }));
                 let moved = if upgrade {
@@ -218,7 +218,7 @@ mod tests {
         }
     }
 
-    /// R1081000: a Unit standing in the backrow is one of "your units": it gets the +4 attack.
+    /// R1081000: a Unit standing in the backrow is one of "your units": it gets the +3 attack.
     #[test]
     fn r1081000_a_unit_standing_in_the_backrow_is_one_of_your_units() {
         crate::register_all();
@@ -228,7 +228,7 @@ mod tests {
         }));
         let vanilla = s.card("core-008").id.clone();
         crate::stand_in_backrow(&mut s, &vanilla, 2);
-        s.expect_stats(vanilla.as_str(), json!({ "attack": 8, "health": 4 }));
+        s.expect_stats(vanilla.as_str(), json!({ "attack": 7, "health": 4 }));
         assert!(s.stats(vanilla.as_str()).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Rush));
     }
 }

@@ -187,7 +187,7 @@ describe("R502 #27 Blood Ridden's blood drain", () => {
     drawn(caster, "c27", BLOOD),
     played(caster, "c27", BLOOD),
     ...Array.from({ length: count }, (): GameEvent => ({ type: "radiantSet", instanceId: radiantId, defId: radiantDef, zone: { z: "hand", player: caster } })),
-    { type: "healthLost", player: caster, amount: 5 },
+    { type: "healthLost", player: caster, amount: 7 },
     resolved(caster, "c27", BLOOD),
   ];
 
@@ -221,7 +221,7 @@ describe("R502 #27 Blood Ridden's blood drain", () => {
   it("R502 its blood price spills at the caster's hero on top of the row's own drain and splat", () => {
     const cues = cuesFor(planAll(bloodStream("p2", "hidden", "hidden"), fullBoardView(), envOf()), "healthLost");
     expect(cues.filter((cue) => cue.kind === "burst" && cue.preset === "blood").length).toBeGreaterThanOrEqual(2);
-    expect(cues).toContainEqual(expect.objectContaining({ kind: "splat", tone: "loss", amount: 5 }));
+    expect(cues).toContainEqual(expect.objectContaining({ kind: "splat", tone: "loss", amount: 7 }));
     expect(cues).toContainEqual(expect.objectContaining({ kind: "burst", preset: "void" }));
   });
 
@@ -322,7 +322,7 @@ describe("R502 the per-card table", () => {
       const results = [
         ...planAll(hinderStream("p2", "p1"), fullBoardView(), envOf({ next: afterHinder(fullBoardView(), "you", 2) }), D),
         ...planAll(
-          [drawn("p2", "c27", BLOOD), played("p2", "c27", BLOOD), { type: "radiantSet", instanceId: "hidden", defId: "hidden", zone: { z: "hand", player: "p2" } }, { type: "healthLost", player: "p2", amount: 5 }],
+          [drawn("p2", "c27", BLOOD), played("p2", "c27", BLOOD), { type: "radiantSet", instanceId: "hidden", defId: "hidden", zone: { z: "hand", player: "p2" } }, { type: "healthLost", player: "p2", amount: 7 }],
           fullBoardView(),
           envOf(),
           D,

@@ -1,6 +1,6 @@
 //! Meditative #17 True Craft a Card (SPEC §8.8, ME-CRAFT, R880–R883). Spell, cost 0, Mythic.
-//!   Base:    "Craft a card and add it to your hand."
-//!   Radiant: "Craft a Radiant card and add it to your hand."
+//!   Base:    "Craft a card and add it to your hand. Exile this."
+//!   Radiant: "Craft a Radiant card and add it to your hand. Exile this."
 //!
 //! THE CHAIN (§10.6). The Spell resolves and opens a `number` prompt (Classic #18's kind) for the
 //! crafted card's cost, 0 to `CRAFT_MAX_COST` (4); its answer re-enters `resume.cost`, which opens
@@ -20,6 +20,11 @@
 //! THE FACES differ only in `radiant`: the Radiant face crafts the card Radiant, whose face
 //! doubles every number and stat (`CRAFT_RADIANT_MULTIPLIER` 2, R275 by construction).
 //!
+//! "EXILE THIS" since patch v0.3.11 (#1149), as #97 Zephyrs and #72 Reminisce: the cry parks the
+//! exile behind its prompts, so it runs once the card is minted, and the Spell ends in its owner's
+//! exile, not the graveyard. Through v0.3.7b it went to the graveyard; `script_v0_3_7b` keeps that
+//! for those versions' replays (R767000).
+//!
 //! THE CLOCK runs while crafting, as for Classic+ #42 KY's Test (R420, R79): no prompt of its own.
 //! The opponent sees only that a prompt is open, then a hidden card (R97).
 //!
@@ -28,7 +33,7 @@
 //!
 //! `CRAFT_MAX_COST` lives in `config.rs` (CLAUDE.md rule 9).
 
-use jackioh_engine::effects::{choose_craft, choose_number, chosen_number, chosen_recipe, craft_card};
+use jackioh_engine::effects::{choose_craft, choose_number, chosen_number, chosen_recipe, craft_card, exile};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-017";
@@ -38,7 +43,8 @@ const COST: &str = "cost";
 const CRAFT: &str = "craft";
 
 /// The two faces differ only in `radiant`, as Core #99's differ only in their Discover count.
-fn true_craft_a_card(radiant: bool) -> Script {
+/// `exiles` is "Exile this.", which v0.3.7b's card did not print.
+fn true_craft_a_card(radiant: bool, exiles: bool) -> Script {
     let open_editor: Hook = hook(move |ctx| match chosen_number(ctx) {
         Some(cost) => vec![choose_craft(json_as(json!({
             "step": CRAFT,
@@ -55,13 +61,17 @@ fn true_craft_a_card(radiant: bool) -> Script {
         None => vec![],
     });
     Script {
-        cry: Some(hook(|_ctx| {
-            vec![choose_number(json_as(json!({
+        cry: Some(hook(move |_ctx| {
+            let mut effects = vec![choose_number(json_as(json!({
                 "step": COST,
                 "from": 0,
                 "to": CRAFT_MAX_COST,
                 "prompt": "Choose the crafted card's Cost",
-            })))]
+            })))];
+            if exiles {
+                effects.push(exile(json_as(json!({ "target": { "of": "self" } }))));
+            }
+            effects
         })),
         resume: IndexMap::from([(COST, open_editor), (CRAFT, mint)]),
         ..Script::default()
@@ -70,8 +80,17 @@ fn true_craft_a_card(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: true_craft_a_card(false),
-        radiant: true_craft_a_card(true),
+        base: true_craft_a_card(false, true),
+        radiant: true_craft_a_card(true, true),
+    }
+}
+
+/// R767000: the scripts v0.3.7b and every version before it ran, with no "Exile this."; `KEPT_SCRIPTS`
+/// folds those versions' replays under them.
+pub fn script_v0_3_7b() -> CardScripts {
+    CardScripts {
+        base: true_craft_a_card(false, false),
+        radiant: true_craft_a_card(true, false),
     }
 }
 
@@ -85,6 +104,7 @@ pub fn script() -> CardScripts {
 // a transient definition whose id names the recipe and whose script rebuilds after a JSON round
 // trip and a replay (R179, R468), of the Meditative set, not a token, Mythic, its `loc` the
 // counted lines, every number a param that a Nerf or Buff moves (MD-A32); the hand cap burns it;
+// the Spell is exiled once the card is minted, on both faces (#1149);
 // the AI and a timeout answer only with presets (MD-A31); the opponent sees only that a prompt is
 // open, then a hidden card (R97); the editor's preview reports the same validity as the reducer;
 // radiant the card is Radiant, its face doubling every number and stat".
@@ -202,6 +222,16 @@ mod tests {
             assert_eq!(def.rarity, Rarity::Mythic);
             assert!(!def.token);
             assert!(!hand[0].radiant, "the base face crafts it plain");
+        }
+
+        #[test]
+        fn r882_it_is_exiled_after_it_resolves() {
+            let mut s = crafted_at(1);
+            let spell = s.card(ID).clone();
+            s.answer(json!([{ "pick": "craft", "recipe": unit_recipe(1, 3, 4) }]));
+            assert!(s.hand(P1)[0].def_id.starts_with("craft:"));
+            s.expect_in_zone(&spell.id, "exile");
+            assert!(s.pile(P1, "graveyard").iter().all(|card| card.id != spell.id));
         }
 
         #[test]
@@ -585,6 +615,22 @@ mod tests {
             let params = def.params.as_ref().expect("a declared number");
             assert_eq!(params.len(), 1);
             assert_eq!([params[0].base, params[0].radiant], [3, 6]);
+        }
+
+        #[test]
+        fn r882_it_is_exiled_after_it_resolves() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": ID, "radiant": true }], "mana": 10 },
+                "p2": { "hand": ["core-053"], "library": ["core-001", "core-002"] },
+            }));
+            let spell = s.card(ID).clone();
+            s.play(ID, json!({}));
+            s.answer(json!(["1"]));
+            s.answer(json!([{ "pick": "craft", "recipe": unit_recipe(1, 3, 4) }]));
+            assert!(s.hand(P1)[0].radiant);
+            s.expect_in_zone(&spell.id, "exile");
+            assert!(s.pile(P1, "graveyard").iter().all(|card| card.id != spell.id));
         }
 
         #[test]

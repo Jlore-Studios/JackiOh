@@ -55,7 +55,6 @@ mod tests {
     const TRANSMOGULATE: &str = "core-083"; // (2) Spell: replace every card of yours with a random Legendary
     const SILAS: &str = "core-052"; // Radiant: cards crossing to the opponent bounce to their controller's hand
     const CUBE: &str = "core-022"; // Carnivorous Cube: its Cry tributes one of your other Units
-    const MIND_CONTROL: &str = "core-049"; // (4) Spell: steal target enemy permanent
     const VANILLA: &str = "core-008";
     const FILLER: &str = "core-011"; // Tempo Timmy, a (1) Unit (never a Stockpile, so the adds read plainly)
 
@@ -183,10 +182,11 @@ mod tests {
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [BAUBLE], "hand": [FILLER], "library": [FILLER] },
-                "p2": { "hand": [MIND_CONTROL, FILLER], "library": [FILLER] },
+                // The Radiant Magic Jammed steals a backrow card (Snom Bunny Mind Control only a Unit).
+                "p2": { "hand": [{ "def": JAMMED, "radiant": true }, FILLER], "library": [FILLER] },
             }));
             let bauble = s.card(BAUBLE).id.clone();
-            s.play(MIND_CONTROL, json!({ "targets": [{ "pick": "instance", "instanceId": bauble }] }));
+            s.play(JAMMED, json!({ "targets": [{ "pick": "instance", "instanceId": bauble }] }));
             s.expect_in_zone(BAUBLE, "field");
             assert_eq!(s.card(BAUBLE).controller, PlayerId::P2);
             assert!(!any_stockpile_added(&s));

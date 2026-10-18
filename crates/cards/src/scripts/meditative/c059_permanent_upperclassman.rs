@@ -1,4 +1,4 @@
-//! M #59 Permanent Upperclassman (SPEC §8.8 row 59): (3) Unit, Human, Rare, 3/3 → 6/6.
+//! M #59 Permanent Upperclassman (SPEC §8.8 row 59): (4) Unit, Human, Rare, 3/3 → 6/6.
 //!
 //! Base:    "Cry: Summon a random (4) Cost Unit. It gains "Death: Fuse a random Book and a random AI
 //!          generated card into your hand.""
@@ -78,8 +78,8 @@ mod tests {
         json!(vec!["core-005"; count])
     }
 
-    /// p1 holds the Upperclassman (base unless `radiant_face`); both sides keep cards in hand so no
-    /// turn auto-ends.
+    /// p1 holds the Upperclassman (base unless `radiant_face`); both sides keep cards in hand, and p1
+    /// the mana to play its spare one once the (4) is paid, so no turn auto-ends.
     fn casting(seed: &str, radiant_face: bool) -> Scenario {
         crate::register_all();
         scenario(json!({
@@ -87,6 +87,7 @@ mod tests {
             "p1": {
                 "hand": [{ "def": UPPERCLASSMAN, "radiant": radiant_face }, FILLER],
                 "library": filler(4),
+                "mana": 5,
             },
             "p2": { "hand": [FILLER], "library": filler(4) },
         }))

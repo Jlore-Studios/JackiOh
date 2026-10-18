@@ -14,8 +14,8 @@
 // driver in support/playthrough.ts: whoever owes the move answers its prompt with its first legal
 // answer, plays a card still to play, or ends the turn. A card another card turned into something
 // else (Spiritually 中国 makes a hand Gachaholics) goes into the next game, until every card is done.
-// A card no one plays from a hand, one that replaces itself as it enters one (Meditative #37 CN in a
-// bottle, R925, R926), is done once the game it is dealt into has begun.
+// A card cast as it is drawn (Meditative #37 CN in a Bottle, R58) is never played from a hand: it is
+// done once it lands in a graveyard.
 //
 // After every play:
 //   - `cy.settled()`: the play's animations and cues (which ride the runner's entries, SPEC §10.11)
@@ -39,8 +39,8 @@ import {
   GAME_OVER,
   owedPromptKind,
   playStep,
+  castOnDraw,
   printedCost,
-  replacedOnArrival,
   type CatalogRow,
   type PlayStep,
 } from "../../support/playthrough.ts";
@@ -66,7 +66,7 @@ const HAND_CARD = '[data-testid^="hand-card-"]';
 
 type Handle = Parameters<typeof playStep>[0];
 
-/** The deckable Meditative cards, and those not yet played (or, for an arrival card, not yet replaced). */
+/** The deckable Meditative cards, and those not yet played (or, for a Cast on draw card, not yet cast). */
 let cards: CatalogRow[] = [];
 let filler: CatalogRow | undefined;
 const remaining = new Set<string>();
@@ -82,8 +82,21 @@ function handicapFor(size: number, mana: number) {
   return { deckSize: size, manaBonus: mana, manaCap: mana, extraOpeningCards: Math.max(0, size - opening), extraDrawsPerTurn: 0, heroHealth: HERO_HEALTH };
 }
 
-/** One game: the cards it deals that are still to play, and the end steps that say nothing more can come. */
+/**
+ * One game: the cards it deals that are still to play, those of them cast as they are drawn, and the
+ * end steps that say nothing more can come.
+ */
 type Game = { label: string; toPlay: Set<string>; arrivals: CatalogRow[]; emptyEnds: number };
+
+/** The cards in either graveyard, by definition id: where a card cast as it was drawn lands. */
+function graveyardDefIds(handle: JackiOhDevHandle): Set<string> {
+  const ids = new Set<string>();
+  for (const seat of ["p1", "p2"] as const) {
+    const side = handle.state.players[seat] as { graveyard?: { defId: string }[] };
+    for (const card of side.graveyard ?? []) ids.add(card.defId);
+  }
+  return ids;
+}
 
 /** After a play: the animations drained, the log in English, and the card's inspect view read. */
 function afterPlay(game: Game, step: Extract<PlayStep, { kind: "play" }>): void {
@@ -141,16 +154,6 @@ function drive(game: Game, budget: number): void {
       const step = playStep(handle as Handle, game.toPlay, doc);
       Cypress.log({ name: "step", message: `${game.label}: ${JSON.stringify(step)}` });
       if (step.kind === "over" && step.why !== GAME_OVER) throw new Error(`${game.label}: ${step.why}`);
-      if (step.kind === "mulligan") {
-        // Both mulligans in: a card that replaces itself as it enters a hand has done so.
-        const state = handle.state as { mulligan?: unknown };
-        if (state.mulligan === undefined || state.mulligan === null) {
-          for (const def of game.arrivals) {
-            game.toPlay.delete(def.id);
-            remaining.delete(def.id);
-          }
-        }
-      }
       if (step.kind === "answer") {
         expect(step.error, `${game.label}: the ${step.promptKind} answer`).to.eq(null);
         expect(step.shown, `${game.label}: the board shows the ${step.promptKind} prompt the view holds`).to.eq(step.drawn);
@@ -160,6 +163,13 @@ function drive(game: Game, budget: number): void {
         game.toPlay.delete(step.defId);
         remaining.delete(step.defId);
         afterPlay(game, step);
+      }
+      // A card cast as it was drawn has had its turn once it is in a graveyard.
+      const graveyard = graveyardDefIds(handle);
+      for (const def of game.arrivals) {
+        if (!graveyard.has(def.id)) continue;
+        game.toPlay.delete(def.id);
+        remaining.delete(def.id);
       }
       if (finished(game, step)) return;
       drive(game, budget - 1);
@@ -227,7 +237,7 @@ describe("36 — every Meditative card plays once on /dev/hotseat with the set p
       const game: Game = {
         label: `game ${String(index)}`,
         toPlay: new Set(dealt.filter((def) => remaining.has(def.id)).map((def) => def.id)),
-        arrivals: dealt.filter((def) => remaining.has(def.id) && replacedOnArrival(def)),
+        arrivals: dealt.filter((def) => remaining.has(def.id) && castOnDraw(def)),
         emptyEnds: 0,
       };
       const [idA, idB] = [`36-game-${String(index)}-a`, `36-game-${String(index)}-b`];
@@ -248,7 +258,7 @@ describe("36 — every Meditative card plays once on /dev/hotseat with the set p
     });
   }
 
-  it("every deckable Meditative card was played, or replaced itself as it entered a hand", () => {
+  it("every deckable Meditative card was played, or was cast as it was drawn", () => {
     expect([...remaining], "cards no game played").to.deep.equal([]);
   });
 });

@@ -66,8 +66,8 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
         g.end_turn(); // p2 → p1: the start-of-turn draw casts Blood Ridden
 
         assert_eq!(g.state().active, P1);
-        // Both resolutions ran: 5 health each (R18), and the grant was spent (R30).
-        g.expect_health(P1, 20);
+        // Both resolutions ran: 7 health each (R18), and the grant was spent (R30).
+        g.expect_health(P1, 16);
         g.expect_in_zone(BLOOD_RIDDEN, "graveyard");
         let drawn_after: Vec<CardInstance> = g
             .hand(P1)
@@ -95,13 +95,13 @@ mod r70_a_cast_on_draw_card_is_cast_through_10_5_s_steps_and_is_whole_before_the
     fn r59_the_state_check_runs_after_each_cast_on_draw_cast_so_a_hero_at_0_ends_the_game_before_the_draw_repeats_4_5_2_4()
      {
         register_all();
-        // §4.5: the check runs after "one cast-on-draw cast". p1 is at 5 and the start-of-turn draw casts
-        // Blood Ridden Glowy Jelly Bean ("you lose 5 health"): p1's hero is at 0 when that cast resolves,
+        // §4.5: the check runs after "one cast-on-draw cast". p1 is at 7 and the start-of-turn draw casts
+        // Blood Ridden Glowy Jelly Bean ("you lose 7 health"): p1's hero is at 0 when that cast resolves,
         // so the game ends there, and the draw never repeats into the Mr. Vanilla beneath it.
         let mut g = scenario(json!({
             "active": "p2",
             "turn": 8,
-            "p1": { "health": 5, "field": [{ "def": VANILLA, "lane": 1 }], "library": [BLOOD_RIDDEN, VANILLA, VANILLA] },
+            "p1": { "health": 7, "field": [{ "def": VANILLA, "lane": 1 }], "library": [BLOOD_RIDDEN, VANILLA, VANILLA] },
             "p2": { "field": [{ "def": VANILLA, "lane": 1 }], "library": [VANILLA, VANILLA] },
         }));
 

@@ -36,7 +36,7 @@ mod tests {
     const LUNAR: &str = "core-035"; // (1) Deal 3 damage to a target.
     const TRUE_STRIKE: &str = "core-044"; // (1) Pierce. Deal 4 damage.
     const STOCKPILE: &str = "core-005"; // (1) Draw 2. Heal your hero 2.
-    const JELLY_BEAN: &str = "core-027"; // Cast on draw: make a random hand card Radiant. Lose 5 health.
+    const JELLY_BEAN: &str = "core-027"; // Cast on draw: make a random hand card Radiant. Lose 7 health.
     const ANTI_ONESHOT: &str = "core-073"; // Field Spell: hits on your hero are capped at 5 (Radiant 3).
     const BIG_MAX: &str = "classic-080"; // 13/8 Rush, Trample, Indestructible.
     const SNAKE: &str = "classicplus-003"; // Death: a hit of {damage} on a random enemy per Plague Counter.
@@ -194,9 +194,9 @@ mod tests {
                 "p2": { "hand": [FILLER] },
             }));
 
-            s.play(STOCKPILE, json!({})); // draws the Jelly Bean, which casts itself: lose 5; then heal 2
+            s.play(STOCKPILE, json!({})); // draws the Jelly Bean, which casts itself: lose 7; then heal 2
 
-            s.expect_health(P1, 17);
+            s.expect_health(P1, 15);
             assert_eq!(hero_hits(&s, P1), Vec::<i32>::new());
         }
 

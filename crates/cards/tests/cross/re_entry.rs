@@ -604,7 +604,8 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         let mut g = scenario(json!({
             "p1": { "hand": [CUBE, VANILLA], "library": LIBRARY },
             "p2": {
-                "hand": [{ "def": SILAS, "radiant": true }, TIMMY, VANILLA],
+                // The Coin pays for Timmy beside Silas: Silas costs (4).
+                "hand": [{ "def": SILAS, "radiant": true }, TIMMY, VANILLA, COIN],
                 "field": [{ "def": SORCERER, "lane": 5 }],
                 "backrow": [{ "def": EXPERIMENTATION, "lane": 3 }],
                 "library": LIBRARY,
@@ -627,6 +628,7 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         );
         g.play(silas.as_str(), json!({ "zone": 3, "modes": ["right"] }));
         g.expect_in_zone(fused.id.as_str(), "hand");
+        g.play(COIN, json!({}));
         g.play(TIMMY, json!({ "zone": 1 }));
         let saintess = unit_at(&g, PlayerId::P2, 1).id;
         // A Timmy that has been granted Reborn (Plastic Surgery's pool, R21), with no shield or Armor to
@@ -649,7 +651,8 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         let mut g = scenario(json!({
             "p1": { "hand": [CUBE, VANILLA], "library": LIBRARY },
             "p2": {
-                "hand": [{ "def": SILAS, "radiant": true }, TIMMY, VANILLA],
+                // The Coin pays for Timmy beside Silas: Silas costs (4).
+                "hand": [{ "def": SILAS, "radiant": true }, TIMMY, VANILLA, COIN],
                 "field": [{ "def": POSTDOC, "lane": 5 }],
                 "backrow": [{ "def": EXPERIMENTATION, "lane": 3 }],
                 "library": LIBRARY,
@@ -669,6 +672,7 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         );
         g.play(silas.as_str(), json!({ "zone": 3, "modes": ["right"] }));
         g.expect_in_zone(fused.id.as_str(), "hand");
+        g.play(COIN, json!({}));
         g.play(TIMMY, json!({ "zone": 1 }));
         let timmy = unit_at(&g, PlayerId::P2, 1).id;
         let before = g.events().len();
@@ -695,6 +699,9 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
                 "hand": [SILAS, VANILLA, VANILLA, VANILLA],
                 "backrow": [{ "def": MANA_WELL, "lane": 1 }, { "def": MANA_WELL, "lane": 2 }],
                 "library": LIBRARY,
+                // Silas costs (4): the fifth mana keeps a Vanilla playable, so the turn does not end by
+                // itself (R82).
+                "mana": 5,
             },
             "p2": {
                 // The Coin pays for Flood beside Magic Jammed: Flood costs (4).

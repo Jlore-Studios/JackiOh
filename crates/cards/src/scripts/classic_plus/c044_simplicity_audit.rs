@@ -1,4 +1,4 @@
-//! C+ #44 Simplicity Audit (SPEC §8.7 row 44, E36, R280, R583). (2) Spell, Rare.
+//! C+ #44 Simplicity Audit (SPEC §8.7 row 44, E36, R280, R583). (3) Spell, Rare.
 //!   Exile every permanent whose card has fewer lines of code than this one. Radiant: choose all
 //!   permanents or only your opponent's (a mode declared at play, R81) — and "highlight targets".
 //!
