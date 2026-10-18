@@ -1851,7 +1851,7 @@
       death: { voice: "sapi-cat", text: "Nyaa... logging off." },
     },
     "meditativeplus-001": { // Bob's Plan
-      cast: { voice: "sapi-hero", text: "Bob has a plan. Bob always has a plan." },
+      cast: { voice: "sapi-hero", text: "Bob has a plan. Bob always does." },
     },
     "meditativeplus-001-1": { // Base Camp
       cast: { voice: "robot", text: "Base camp established. Summit in sight." },
