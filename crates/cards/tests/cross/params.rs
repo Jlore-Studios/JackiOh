@@ -457,8 +457,14 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             .iter()
             .filter(|entry| entry.starts_with("meditative-"))
             .count();
+        // The Meditative+ set, held until it ships (R1178000), joins the count batch by batch; each
+        // of its numbers is held to the rule above, and the pinned counts are the shipped sets'.
+        let held = radiant_only
+            .iter()
+            .filter(|entry| entry.starts_with("meditativeplus-"))
+            .count();
         assert_eq!(
-            (radiant_only.len() - meditative, meditative),
+            (radiant_only.len() - meditative - held, meditative),
             (43, 22),
             "{radiant_only:#?}"
         );
