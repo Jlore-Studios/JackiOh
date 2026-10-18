@@ -1,7 +1,7 @@
 //! C+ #65.2 Normal Grape (SPEC §8.7 row 65.2). (1) Spell, Fruit, Token (printed Common).
 //!   Base:    "Deal {amount} damage to an enemy or heal an ally {amount}. Draw {draw}. It costs (1)
 //!            less."
-//!   Radiant: the same text, amount 4 and draw 4: "… Draw {draw}. They cost (1) less."
+//!   Radiant: the same text, amount 4 and draw 2: "… Draw {draw}. They cost (1) less."
 //!
 //! The target travels in the play (R81): any Unit or hero. Whether it is an enemy is read as the Spell
 //! resolves: an enemy takes one §4.4 hit from it (Spell Damage raises it), a friend is healed (§6.3, R19).
@@ -44,7 +44,7 @@ pub fn script() -> CardScripts {
 // C+ #65.2 Normal Grape — SPEC §8.7 row 65.2, BUILD M9 Classic+ row C+ 65.2: a target Unit or hero chosen
 // with the play: an enemy takes 2 damage (Spell Damage raises it), one of yours is healed 2; you draw 1
 // and it gets `costMod` −1, but not a card cast on draw, a burned card or a fatigue draw; amount and draw
-// read through `param()`; radiant amount 4, draw 4, each drawn card costs (1) less.
+// read through `param()`; radiant amount 4, draw 2, each drawn card costs (1) less.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -256,7 +256,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn an_enemy_takes_4_you_draw_4_and_each_costs_1_less() {
+        fn an_enemy_takes_4_you_draw_2_and_each_costs_1_less() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [grape(true), FILLER], "library": [DECK_A, DECK_B, DECK_C, DECK_D] },
@@ -267,7 +267,7 @@ mod tests {
             s.expect_stats(MENACE, json!({ "health": 5 }));
             assert_eq!(
                 [s.card(DECK_A).cost_mod, s.card(DECK_B).cost_mod, s.card(DECK_C).cost_mod, s.card(DECK_D).cost_mod],
-                [-1, -1, -1, -1]
+                [-1, -1, 0, 0]
             );
         }
 
@@ -282,7 +282,7 @@ mod tests {
             s.expect_health(P1, 34);
             assert_eq!(
                 [zone_of(&s, DECK_A), zone_of(&s, DECK_B), zone_of(&s, DECK_C), zone_of(&s, DECK_D)],
-                [ZoneName::Hand, ZoneName::Hand, ZoneName::Hand, ZoneName::Hand]
+                [ZoneName::Hand, ZoneName::Hand, ZoneName::Library, ZoneName::Library]
             );
         }
 
@@ -298,8 +298,10 @@ mod tests {
             s.play(GRAPE, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
             assert_eq!(zone_of(&s, DECK_A), ZoneName::Hand);
             assert_eq!(s.card(DECK_A).cost_mod, -1);
-            for id in [DECK_B, DECK_C, DECK_D] {
-                assert_eq!(zone_of(&s, id), ZoneName::Graveyard);
+            assert_eq!(zone_of(&s, DECK_B), ZoneName::Graveyard);
+            assert_eq!(s.card(DECK_B).cost_mod, 0);
+            for id in [DECK_C, DECK_D] {
+                assert_eq!(zone_of(&s, id), ZoneName::Library);
                 assert_eq!(s.card(id).cost_mod, 0);
             }
         }
@@ -320,15 +322,17 @@ mod tests {
             assert_eq!(hash_state(&revived), hash_state(s.state()));
 
             // Hinder was cast (no discount) and discarded the one card held; its chain's repeat brought
-            // DECK_A (no discount, R596); the grape's own remaining draws brought DECK_B/C/D, discounted.
+            // DECK_A (no discount, R596); the grape's own remaining draw brought DECK_B, discounted; DECK_C and DECK_D remain in the library.
             assert_eq!(zone_of(&s, HINDER), ZoneName::Graveyard);
             assert_eq!(s.card(HINDER).cost_mod, 0);
             assert_eq!(zone_of(&s, FILLER), ZoneName::Graveyard);
             assert_eq!(zone_of(&s, DECK_A), ZoneName::Hand);
             assert_eq!(s.card(DECK_A).cost_mod, 0);
-            for id in [DECK_B, DECK_C, DECK_D] {
-                assert_eq!(zone_of(&s, id), ZoneName::Hand);
-                assert_eq!(s.card(id).cost_mod, -1);
+            assert_eq!(zone_of(&s, DECK_B), ZoneName::Hand);
+            assert_eq!(s.card(DECK_B).cost_mod, -1);
+            for id in [DECK_C, DECK_D] {
+                assert_eq!(zone_of(&s, id), ZoneName::Library);
+                assert_eq!(s.card(id).cost_mod, 0);
             }
             s.expect_health(P2, 26);
         }

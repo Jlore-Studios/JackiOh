@@ -148,7 +148,7 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
         let hand_before = g.hand(PlayerId::P1).len();
         g.play(STOCKPILE, json!({}));
         assert!(g.card(stockpile.as_str()).radiant);
-        assert_eq!(g.hand(PlayerId::P1).len(), hand_before - 1 + 5);
+        assert_eq!(g.hand(PlayerId::P1).len(), hand_before - 1 + 4);
     }
 
     #[test]
