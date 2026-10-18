@@ -3708,7 +3708,9 @@
     },
     "1181": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6254491118"
+      ],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -3726,7 +3728,7 @@
       "planned_tier": "strong",
       "provider": "claude-1",
       "question": "",
-      "queued_at": "2026-10-18T16:40:14Z",
+      "queued_at": "2026-10-18T20:04:12Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
       "run_id": "39152576869",
