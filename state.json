@@ -3744,6 +3744,13 @@
     "1195": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-18T13:13:35Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "Fails easy's one-place and no-crates/ai/src lines: tools code plus a new const in crates/ai/src/shadow_ban.rs plus docs. Not hard: no engine rules or AI search, and the cross-crate design is settled in this plan."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
