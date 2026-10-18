@@ -427,7 +427,8 @@ span.cf[data-layout="full"][data-card-type][data-rarity?][data-name-tier][data-t
        [data-foil="animated|static|none"][data-radiant-face?]
   span.cf-scale                              container-type: size; container-name: cardface
     span.cost-gem[data-cost][data-tone][data-digits?]  {cost.text}  (+ span.cf-cost-alt when cost.alt);
-                                             data-digits="3" on a three-character price (100) steps its size down
+                                             data-digits="3" on a three-character price (100) steps its size down;
+                                             the alt is role="img", aria-label and title "Embiggened (N)" (R1175000)
     span.cf-crest                            Legendary and Mythic only
     span.cf-art-frame > CardArt              shape: Unit portrait, Spell window, Field Spell arch, Trap/Field Trap notched
     span.card-name                           the name as ONE text node; inline style --cf-fit only
