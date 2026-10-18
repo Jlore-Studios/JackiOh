@@ -3783,6 +3783,13 @@
     "1197": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-18T13:13:54Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "fails 'one place' (docs/ADDING_CARDS.md beside crates/tools) and sits near the 400-line limit; new tooling design, but no engine, AI, spec or catalog work, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
