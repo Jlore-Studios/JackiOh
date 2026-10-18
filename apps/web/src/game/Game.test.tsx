@@ -266,6 +266,24 @@ describe("the result overlay", () => {
     expect(health).toHaveTextContent("0");
     expect(health).toHaveAttribute("data-health", "-6");
   });
+
+  it("waits for the lethal burst, so the player sees how the game ended", () => {
+    const before = withEvents(baseView({ active: "p2" }), START);
+    const { rerender } = render(<Game view={before} legal={[]} onAction={vi.fn()} />);
+    expect(screen.queryByTestId("result-overlay")).toBeNull();
+
+    // The killing blow and the game over arrive together: the blow plays before the result covers it.
+    const after = withEvents(finished(), [...START, HIT, { type: "gameOver", winner: "p2", reason: "hero-death" }]);
+    rerender(<Game view={after} legal={[]} onAction={vi.fn()} />);
+    expect(screen.getByTestId("animation-queue")).toBeInTheDocument();
+    expect(screen.queryByTestId("result-overlay")).toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(screen.queryByTestId("animation-queue")).toBeNull();
+    expect(screen.getByTestId("result-overlay")).toBeInTheDocument();
+  });
 });
 
 describe("each event animates once", () => {

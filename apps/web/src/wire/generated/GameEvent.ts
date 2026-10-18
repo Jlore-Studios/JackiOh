@@ -19,6 +19,7 @@ import type { RedirectWhat } from "./RedirectWhat";
 import type { RotationDirection } from "./RotationDirection";
 import type { Row } from "./Row";
 import type { SecretChoice } from "./SecretChoice";
+import type { SpellAnswer } from "./SpellAnswer";
 import type { SwapWhat } from "./SwapWhat";
 import type { TuningChange } from "./TuningChange";
 import type { Winner } from "./Winner";
@@ -57,7 +58,13 @@ arrivedDuring?: Array<string>,
  * here, not from the dispatch, so that body is not "it". Engine bookkeeping: a view never
  * forwards it.
  */
-exitsFrom?: number, } | { "type": "summoned", player: PlayerId, instanceId: string, defId: string, row: Row, lane: number, 
+exitsFrom?: number, 
+/**
+ * R1180005: the card in the player's hand or deck that answers this Spell, which targeted an
+ * enemy, and the enemy it is cast at (Meditative+ #17 Dogpile). Engine bookkeeping, and it names
+ * a hidden card: a view never forwards it.
+ */
+answer?: SpellAnswer, } | { "type": "summoned", player: PlayerId, instanceId: string, defId: string, row: Row, lane: number, 
 /**
  * `formerId` (R227): as on `cardPlayed`, when this summon put an existing card face-down.
  */

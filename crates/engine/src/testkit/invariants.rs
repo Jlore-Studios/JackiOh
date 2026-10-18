@@ -21,7 +21,7 @@
 //!     then `transformed` (Classic+ #73.1 Classic Golem) passes "may attack again this turn" to the new
 //!     instance, so that instance is not sick (I1) and carries no `summonedTurn` (I4a) for that stint.
 //!
-//! The seven checks:
+//! The eight checks:
 //!   I1 no sick attack is ever offered (§4.1, §6.1, R83, R171). In the main phase with no prompt
 //!      open, a unit of the acting player that entered on this turn has no attack target unless it
 //!      has Rush or Charge, and no hero target unless it has Charge; the chosen `attack`, if any, is
@@ -78,6 +78,16 @@
 //!      ended mid-sequence keeps what it owed (`settle` stops at the result, and nothing runs after it,
 //!      I5), so a game over is not checked: the fuzz reaches such game overs (Classic #52 Final
 //!      Gambit's `afterRedirect`, Classic #56 Spell Tyrant's `resolve`).
+//!   I8 every attack and switch `reduce` accepts is listed (§4.1, §4.2, §9.1, §10.2; #1192): the server
+//!      reduces what a client sends without reading `legal_actions`. For the seat that may act, every
+//!      `switchPosition` naming a card on either field (a pile's top, a card dormant under it, a Unit a
+//!      carrier holds) and every `attack` from a card on its field on any of those or either hero is
+//!      built from the board alone; each the list lacks is reduced on a copy without the action history
+//!      (as `scorer::dry_run_base` leaves it: nothing a refusal reads is in it), and each accepted is
+//!      reported. Not probed: kinds never listed by design (R345, R923000, R79), and `play` and `answer`
+//!      (R90's bound lists a slice, #992). Under a Mayor (R1200) a named target is refused. Its first
+//!      run, every state of seeds 1–1000 of both waves (2026-10-18), found nothing. `I8_GATE_STRIDE`
+//!      is how often the 1,000-seed waves run it.
 //!
 //! Every message leads with its id, names the instance, its def and the turn, and cites the SPEC
 //! reference, so the fuzz report's `signatureOf` groups one bug into one entry.
@@ -97,9 +107,9 @@ use crate::damage::DamageTarget;
 use crate::duos::{DuosState, duos_view_for};
 use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::wire::{
-    ActionBody, CardType, DUOS_DUELS, DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat, DuosView, Enchantment,
-    GameEvent, KeywordKind, PLAYER_IDS, Phase, PlayerId, PlayerView, Selection, Team, TuningChange, ZoneName,
-    has_keyword, opponent_of,
+    Action, ActionBody, CardType, DUOS_DUELS, DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat, DuosView,
+    Enchantment, GameEvent, KeywordKind, PLAYER_IDS, Phase, PlayerId, PlayerView, Selection, Team,
+    TuningChange, ZoneName, has_keyword, opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -113,6 +123,18 @@ use crate::wire::{
 /// judged hidden unless it is a token: 419 s (×1.23).
 /// `pnpm test --project cards fuzz`, seeds 1–100, every state: 38 s before, 55 s after (×1.45).
 pub const I6_GATE_STRIDE: usize = 5;
+
+/// I8 under the 1,000-seed waves: every this-many-th state (#1192); the test sweep checks every state.
+///
+/// Measured on 2026-10-18 (2 cores, idle), seeds 1–1000: `cargo jackioh fuzz` 103 s before I8,
+/// 104 s with this stride (+1%); `--handicap` 130 s, 129 s. The planner (2026-10-18, four
+/// cores): 36 s with no monitor, 52 s with I1–I7 (×1.45, so the 25% budget is spent before I8; the
+/// figures above are the TS gate's); I8 on every state, reducing on the full state, 314 s and 417 s.
+pub const I8_GATE_STRIDE: usize = 100;
+
+/// The nonce of every action I8 reduces. The copy it reduces on holds no action history, so no
+/// nonce could be taken for a replay (§9.3); this one names the probe in a debugger.
+const PROBE_NONCE: &str = "i8-probe";
 
 /// What one seat may not read: instance ids, and the definitions that name a card only it hides.
 struct HiddenSet {
@@ -896,6 +918,70 @@ pub fn hidden_information_violations(
     found
 }
 
+/// I8's cards on one side: every card on that side's field, each pile's top and the cards dormant
+/// under it in both rows, and a Unit a carrier holds (§3.2, R13, R446).
+fn field_cards_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
+    let side = &state.players[player];
+    let mut out: Vec<&CardInstance> = Vec::new();
+    out.extend(side.units.iter().flatten().flatten());
+    out.extend(side.backrow.iter().flatten());
+    out.extend(side.backrow_piles.iter().flatten().flatten());
+    out.extend(side.carried.iter().flatten().flatten());
+    out
+}
+
+/// I8 for one seat: every `switchPosition` and `attack` built from the board alone that `legal` does
+/// not hold and `reduce` accepts (§4.1, §4.2, §9.1). Empty when clean.
+pub fn unlisted_accepted(state: &GameState, player: PlayerId, legal: &[ActionBody]) -> Vec<String> {
+    let mut probed = state.clone();
+    probed.applied = Vec::new();
+    let accepts = |body: ActionBody| {
+        !legal.contains(&body)
+            && crate::reduce::reduce(&probed, &Action::new(body, player, PROBE_NONCE))
+                .error
+                .is_none()
+    };
+    let field: Vec<&CardInstance> = PLAYER_IDS
+        .into_iter()
+        .flat_map(|side| field_cards_of(state, side))
+        .collect();
+    let mut found: Vec<String> = Vec::new();
+    for card in &field {
+        if accepts(ActionBody::SwitchPosition {
+            instance_id: card.id.clone(),
+        }) {
+            found.push(format!(
+                "I8 unlisted switch accepted: {player} may switch {} on turn {}, though legalActions does not \
+                 list it (§4.1, §9.1)",
+                name_of(card),
+                state.turn
+            ));
+        }
+    }
+    let mut target_ids: Vec<String> = field.iter().map(|card| card.id.clone()).collect();
+    target_ids.extend(
+        PLAYER_IDS
+            .into_iter()
+            .map(|side| crate::reduce::attack_target_id(&DamageTarget::Hero { player: side })),
+    );
+    for attacker in field_cards_of(state, player) {
+        for target_id in &target_ids {
+            if accepts(ActionBody::Attack {
+                attacker_id: attacker.id.clone(),
+                target_id: target_id.clone(),
+            }) {
+                found.push(format!(
+                    "I8 unlisted attack accepted: {player} may attack {target_id} with {} on turn {}, though \
+                     legalActions does not list it (§4.2, §9.1)",
+                    name_of(attacker),
+                    state.turn
+                ));
+            }
+        }
+    }
+    found
+}
+
 /// The turn and stint of an instance's latest declared attack, and how many it has declared in them.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct AttackMark {
@@ -934,7 +1020,7 @@ fn keywords_now(state: &GameState, card: &CardInstance) -> Vec<crate::wire::Keyw
 
 /// TS `InvariantMonitor`, made by `create_invariant_monitor`: the shadow of this file's header and
 /// the checks run against it. `before` is I1 and I3, `after` feeds one action's events into the
-/// shadow and runs I2, I4, I5 and I7, and `hidden` is I6 for both seats.
+/// shadow and runs I2, I4, I5 and I7, `hidden` is I6 for both seats and `unlisted` is I8.
 #[derive(Clone, Debug)]
 pub struct InvariantMonitor {
     turn: i32,
@@ -1376,6 +1462,16 @@ impl InvariantMonitor {
             }
         }
         found
+    }
+
+    /// I8 on a state the fuzz reached, for the seat that may act: every unlisted attack and switch
+    /// `reduce` accepts. Empty when clean.
+    pub fn unlisted(&self, state: &GameState) -> Vec<String> {
+        let Some(player) = crate::reduce::seat_to_act(state) else {
+            return Vec::new();
+        };
+        let legal = crate::reduce::legal_actions(state, player);
+        unlisted_accepted(state, player, &legal)
     }
 }
 

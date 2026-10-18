@@ -159,6 +159,26 @@ pub const AUTH_SIGN_OUT_WAIT_SECONDS: i64 = 5;
 pub const AUTH_SESSION_LIVE_CACHE_SECONDS: i64 = 30;
 /// A request to the auth provider that has not answered in this long is a network failure.
 pub const AUTH_PROVIDER_TIMEOUT_SECONDS: i64 = 30;
+// ---------------------------------------------------------------------------------------------
+// The sign-in key set (SPEC §9.2, R1144000). The server verifies Supabase's asymmetric tokens
+// against the project's published JWKS, fetched on first use. A fetched set is kept this long
+// before it is fetched again; a refetch that fails keeps serving the last good set for at most
+// `JWKS_STALE_MAX_MS` past that age, retried at most once per `JWKS_COOLDOWN_MS`, so a Supabase
+// blip signs nobody out. A successful fetch replaces the set whole, so a dropped key is refused
+// at once. Server-only: the client imports none of these (`tests/export_config.rs`).
+// ---------------------------------------------------------------------------------------------
+
+/// R1144000: how long a fetched key set is trusted before it is fetched again (jose's default).
+pub const JWKS_CACHE_MAX_AGE_MS: i64 = 10 * 60 * 1000;
+/// R1144000: a failed refetch, and a key miss on a recently fetched set, is retried at most this
+/// often (jose's `cooldownDuration`), so requests share one fetch instead of queuing fetches.
+pub const JWKS_COOLDOWN_MS: i64 = 30_000;
+/// R1144000: how long the key-set request may take (jose's `timeoutDuration`).
+pub const JWKS_FETCH_TIMEOUT_MS: i64 = 5_000;
+/// R1144000: how long past `JWKS_CACHE_MAX_AGE_MS` a failed refetch keeps serving the last good
+/// set. About one Supabase access-token lifetime, so no token outlives its own `exp` through the
+/// stale set; past it the token is refused until the key endpoint answers again.
+pub const JWKS_STALE_MAX_MS: i64 = 3_600_000;
 /// A request to this server that has not answered in this long is a network failure. Longer than the
 /// provider's, because Render's free tier takes about 50 s to wake a sleeping instance.
 pub const API_REQUEST_TIMEOUT_SECONDS: i64 = 75;
@@ -594,6 +614,30 @@ pub const MATCH_RECORD_RESULT_BACKOFF_MS: i64 = 250;
 /// before its clock runs out again, so a store that keeps failing is retried at this pace until the
 /// row lands, the match ends or the actor stops, never in a loop.
 pub const MATCH_SERVER_ACTION_RETRY_MS: i64 = 1_000;
+
+// ---------------------------------------------------------------------------------------------
+// Bug reports (`bug_reports.rs`): a match its own log does not reproduce. Not in SPEC, and no
+// R-row: operational, as #861's probes are.
+// ---------------------------------------------------------------------------------------------
+
+/// The repository a report is filed in when `CREATE_ISSUES_TOKEN` is set and `GITHUB_ISSUES_REPO`
+/// is not.
+pub const BUG_REPORT_REPO_DEFAULT: &str = "Jlore-Studios/JackiOh";
+/// GitHub's REST API, which a report is filed through.
+pub const BUG_REPORT_API_URL: &str = "https://api.github.com";
+/// The labels a report carries: a micro patch's type, the night bot's queue (`bot:build`,
+/// bot/README.md), the strong tier (CLAUDE.md rule 11: the server and the engine are hard) and the
+/// front of the queue, since a match that does not rebuild is a broken game.
+pub const BUG_REPORT_LABELS: &[&str] = &["patch", "bot:build", "difficulty:hard", "priority:high"];
+/// How many reports one process files in `BUG_REPORT_WINDOW_MS`. A determinism break shows on every
+/// match a deploy rebuilds, so the first few say it and the rest are only logged.
+pub const BUG_REPORTS_PER_WINDOW: usize = 5;
+/// The window `BUG_REPORTS_PER_WINDOW` counts in: an hour.
+pub const BUG_REPORT_WINDOW_MS: i64 = 60 * 60 * 1000;
+/// How long one request to GitHub may take before the report is given up (it is logged either way).
+pub const BUG_REPORT_TIMEOUT_MS: u64 = 10_000;
+/// How many refused actions a report lists one by one; the rest are counted.
+pub const BUG_REPORT_LISTED_ACTIONS: usize = 10;
 
 // ---------------------------------------------------------------------------------------------
 // Glitch (issue #170; SPEC §7, R678, R679).

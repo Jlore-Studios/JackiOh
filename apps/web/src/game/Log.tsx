@@ -57,7 +57,7 @@ const PROMPT_WORDS: Readonly<Record<PromptKind, string>> = {
   tribute: "a Tribute",
   direction: "a direction",
   x: "X",
-  embiggen: "a price",
+  embiggen: "the normal or the Embiggened version",
   number: "a number",
   answer: "an answer",
   cell: "a cell",

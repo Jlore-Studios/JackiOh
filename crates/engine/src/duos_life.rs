@@ -27,6 +27,13 @@ pub fn hero_heals(state: &mut GameState, player: PlayerId, amount: i32) -> i32 {
     side_heals(&mut state.players[player], amount)
 }
 
+/// What a heal of `amount` on `player`'s hero would heal (B14), without healing it: all of it unless
+/// the hero is spent, when its team's pool takes no more than its cap allows. R1168003: My Pawn's
+/// projection reads it for a heal that lands before the hit (`subsystems::lethal::is_lethal`).
+pub fn hero_heal_room(state: &GameState, player: PlayerId, amount: i32) -> i32 {
+    healed_by(&state.players[player], amount)
+}
+
 /// E7's "set a hero's health to N" on `player`'s hero (B13, B14).
 pub fn hero_set(state: &mut GameState, player: PlayerId, value: i32) {
     side_set(&mut state.players[player], value);
@@ -79,20 +86,24 @@ fn side_loses(side: &mut PlayerState, amount: i32) {
     side.hero.health = life.pool;
 }
 
+/// B14: a spent hero heals its team's pool, never past the pool's cap; any other heals in full.
+fn healed_by(side: &PlayerState, amount: i32) -> i32 {
+    match side.duos {
+        Some(life) if life.spent => amount.min(life.pool_cap - life.pool).max(0),
+        _ => amount,
+    }
+}
+
 fn side_heals(side: &mut PlayerState, amount: i32) -> i32 {
+    let healed = healed_by(side, amount);
     match side.duos.as_mut() {
         Some(life) if life.spent => {
-            // B14: a spent hero heals its team's pool, never past the pool's cap.
-            let healed = amount.min(life.pool_cap - life.pool).max(0);
             life.pool += healed;
             side.hero.health = life.pool;
-            healed
         }
-        _ => {
-            side.hero.health += amount;
-            amount
-        }
+        _ => side.hero.health += healed,
     }
+    healed
 }
 
 fn side_set(side: &mut PlayerState, value: i32) {

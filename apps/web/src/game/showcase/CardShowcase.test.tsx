@@ -228,4 +228,36 @@ describe("mounted by the board", () => {
     expect(screen.getByTestId(T.root)).not.toHaveAttribute("data-animating");
     expect(screen.getByTestId(T.root).querySelector("[data-animating]")).toBeNull();
   });
+
+  it("issue #1146 Game holds up each card a winning Jogg's Box casts, before the result covers the board", () => {
+    const BOX = "classicplus-047";
+    const SPELL = "core-010";
+    const ours: GameEvent = { type: "turnStarted", player: "p1", turn: 5 };
+    const cast = (id: string): GameEvent[] => [
+      { type: "cardPlayed", player: "p1", instanceId: id, defId: SPELL, costPaid: 0 },
+      { type: "damage", sourceId: id, targetId: "hero-p2", amount: 3, combat: false },
+      { type: "cardResolved", player: "p1", instanceId: id, defId: SPELL, permanent: false, costPaid: 0 },
+    ];
+    const { rerender } = render(withCatalog(<Game view={withEvents(baseView(), [ours])} legal={[]} onAction={vi.fn()} />));
+    const won: PlayerView = {
+      ...withEvents(baseView(), [
+        ours,
+        { type: "cardPlayed", player: "p1", instanceId: "box", defId: BOX, costPaid: 4 },
+        ...cast("c1"),
+        ...cast("c2"),
+        { type: "gameOver", winner: "p1", reason: "hero-death" },
+      ]),
+      result: { winner: "p1", reason: "hero-death" },
+    };
+    rerender(withCatalog(<Game view={won} legal={[]} onAction={vi.fn()} />));
+    const ordinals = new Set<string>();
+    for (let ms = 0; ms < 20_000 && screen.queryByTestId("result-overlay") === null; ms += 50) {
+      const ordinal = screen.queryByTestId(T.ordinal)?.getAttribute("data-ordinal");
+      if (ordinal != null) ordinals.add(ordinal);
+      advance(50);
+    }
+    expect([...ordinals]).toEqual(["1", "2"]);
+    expect(screen.getByTestId("result-overlay")).toBeInTheDocument();
+    expect(screen.queryByTestId(T.root), "the game over takes it down as the result comes up").toBeNull();
+  });
 });

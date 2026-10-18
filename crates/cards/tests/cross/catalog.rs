@@ -32,6 +32,7 @@
 //!                    the old spelling as the record).
 //!   patch v0.3.10   — issue #831's costs, stats, types and tags, in every set's rows: the briefs'
 //!                    lines are what the designer first wrote, the patch what the cards are now.
+//!   patch v0.3.12   — issue #1149's costs, stats and the CN in a Bottle rename.
 //!   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
 //!                    being R349's fallback.
 //!   rarity         — SPEC §8's rarity paragraph for Core (32/40/16/7/5) and B2.5's table for
@@ -250,8 +251,8 @@ const CORE: &[SpecRow] = &[
         T::Unit,
         &[G::Jlockeed],
         R::Common,
-        st(8, 10),
-        st(16, 20),
+        st(6, 10),
+        st(8, 20),
     ),
     row(
         "14",
@@ -619,7 +620,7 @@ const CORE: &[SpecRow] = &[
     row(
         "52",
         "Silly Silas",
-        c(3),
+        c(4),
         T::Unit,
         &[G::Human],
         R::Legendary,
@@ -1040,7 +1041,7 @@ const CORE: &[SpecRow] = &[
     row(
         "93",
         "Combo-Index",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[],
         R::Legendary,
@@ -1091,7 +1092,7 @@ const CORE: &[SpecRow] = &[
     row(
         "97",
         "Zephyrs",
-        c(0),
+        c(1),
         T::Spell,
         &[],
         R::Mythic,
@@ -1965,7 +1966,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "88",
         "Siphon Squad",
-        c(2),
+        c(3),
         T::FieldTrap,
         &[],
         R::Rare,
@@ -2265,7 +2266,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Token],
         R::Token,
-        st(5, 5),
+        st(4, 4),
         st(10, 10),
     ),
     row(
@@ -2275,7 +2276,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Token],
         R::Token,
-        st(5, 5),
+        st(4, 4),
         st(10, 10),
     ),
     row(
@@ -2285,7 +2286,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Token],
         R::Token,
-        st(5, 5),
+        st(4, 4),
         st(10, 10),
     ),
     row(
@@ -2295,7 +2296,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Token],
         R::Token,
-        st(0, 5),
+        st(0, 4),
         st(0, 10),
     ),
     row(
@@ -2305,7 +2306,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Token],
         R::Token,
-        st(5, 5),
+        st(4, 4),
         st(10, 10),
     ),
     row(
@@ -2611,7 +2612,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "44",
         "Simplicity Audit",
-        c(2),
+        c(3),
         T::Spell,
         &[],
         R::Rare,
@@ -2991,7 +2992,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "75",
         "J-lease J-Jungle EX-plorer",
-        c(2),
+        c(3),
         T::Unit,
         &[],
         R::Legendary,
@@ -3557,8 +3558,8 @@ const MEDITATIVE: &[SpecRow] = &[
     ),
     row(
         "37",
-        "CN in a bottle",
-        X,
+        "CN in a Bottle",
+        c(1),
         T::Spell,
         &[G::Cn],
         R::Epic,
@@ -3722,8 +3723,8 @@ const MEDITATIVE: &[SpecRow] = &[
         T::Unit,
         &[G::Cn],
         R::Legendary,
-        st(8, 8),
-        st(16, 16),
+        st(2, 2),
+        st(4, 4),
     ),
     row(
         "48",
@@ -3868,7 +3869,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "59",
         "Permanent Upperclassman",
-        c(3),
+        c(4),
         T::Unit,
         &[G::Human],
         R::Rare,
@@ -5675,6 +5676,88 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             .map(|entry| entry.id.clone())
             .collect();
         assert_eq!(cards, Vec::<String>::new());
+    }
+}
+
+/// SPEC §7, read at compile time (`include_str!`, no I/O at run time: CLAUDE.md rule 4). Unlike the
+/// transcriptions above this is the note itself on purpose: the test below asks that every token
+/// the catalog holds, of any set, has a row in §7's table, so a token added without one fails
+/// whichever set brings it.
+const TOKENS_NOTE: &str = include_str!("../../../../spec/07-tokens.md");
+
+/// The `(Token, Index, held)` cells of §7's token tables, row by row: the lines after each table's
+/// header row and its rule, up to the first line that is not a row. The first table holds the
+/// shipped sets' tokens; a later one (`held`) a set the catalog holds before it ships (R1420,
+/// R1178000), whose rows may wait for their cards as its census does.
+fn section_7_rows() -> Vec<(String, String, bool)> {
+    let mut rows: Vec<(String, String, bool)> = Vec::new();
+    let mut tables = 0;
+    let mut lines = TOKENS_NOTE.lines();
+    while let Some(line) = lines.next() {
+        if !line.starts_with("| Token | Index |") {
+            continue;
+        }
+        tables += 1;
+        lines.next();
+        for line in lines.by_ref() {
+            if !line.starts_with("| ") {
+                break;
+            }
+            let cells: Vec<&str> = line.split('|').map(str::trim).collect();
+            if let (Some(name), Some(index)) = (cells.get(1), cells.get(2)) {
+                rows.push(((*name).to_string(), (*index).to_string(), tables > 1));
+            }
+        }
+    }
+    rows
+}
+
+mod r1177001_a_token_is_one_by_all_four_signals_spec_5_7 {
+    use super::*;
+
+    #[test]
+    fn r1177001_every_token_has_token_true_rarity_token_the_token_tag_and_a_section_7_row_and_no_card_has_any()
+     {
+        let rows = section_7_rows();
+        assert!(rows.len() >= 80, "§7's table reads as {} rows", rows.len());
+        let mut wrong: Vec<String> = Vec::new();
+        for entry in entries() {
+            let signals = [
+                ("token: true", entry.token),
+                ("rarity Token", entry.rarity == Rarity::Token),
+                ("the Token tag", entry.tags.contains(&Tag::Token)),
+                (
+                    "a §7 row",
+                    rows.iter()
+                        .any(|(name, index, _)| *name == entry.name && *index == entry.index),
+                ),
+            ];
+            // `token` is the one the rules read (R11, R102); the label (R1177001) and every other
+            // signal must agree with it.
+            for (signal, has) in signals {
+                if has != entry.token {
+                    let verdict = if has { "has" } else { "lacks" };
+                    wrong.push(format!(
+                        "{} ({} #{}) {verdict} {signal}",
+                        entry.id, entry.name, entry.index
+                    ));
+                }
+            }
+        }
+        assert_eq!(wrong, Vec::<String>::new(), "the four token signals disagree");
+        // And every row of a shipped set names a token the catalog holds; a held set's row may wait
+        // for its card.
+        let orphans: Vec<String> = rows
+            .iter()
+            .filter(|(name, index, held)| {
+                !held
+                    && !entries()
+                        .into_iter()
+                        .any(|entry| entry.token && entry.name == *name && entry.index == *index)
+            })
+            .map(|(name, index, _)| format!("{name} ({index})"))
+            .collect();
+        assert_eq!(orphans, Vec::<String>::new(), "§7 rows with no token");
     }
 }
 

@@ -94,8 +94,8 @@ mod tests {
 
             s.play("core-026", json!({ "targets": [{ "pick": "instance", "instanceId": chosen }] }));
 
-            // #13 Jlockeed Shredder-10 is 8/10 → 16/20: no card id changed, only the flag.
-            s.expect_stats(&chosen, json!({ "attack": 16, "maxHealth": 20 }));
+            // #13 Jlockeed Shredder-10 is 6/10 → 8/20: no card id changed, only the flag.
+            s.expect_stats(&chosen, json!({ "attack": 8, "maxHealth": 20 }));
             assert_eq!(s.card(&chosen).def_id, "core-013");
             assert_eq!(s.card(&chosen).zone.z(), ZoneName::Hand);
         }

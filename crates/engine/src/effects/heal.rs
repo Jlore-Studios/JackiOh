@@ -6,7 +6,9 @@
 use serde::{Deserialize, Serialize};
 
 use super::targets::{TargetSpec, resolve_target};
-use crate::damage::{DamageTarget, heal_hero, heal_hero_up_to, heal_to_full, heal_unit};
+use crate::damage::{
+    DamageTarget, heal_hero, heal_hero_up_to, heal_to_full, heal_unit, heal_unit_up_to_amount,
+};
 use crate::layers::unit_view;
 use crate::script::Effect;
 
@@ -65,8 +67,9 @@ pub fn heal(args: HealArgs) -> Effect {
                     // A unit reaches N only if its own damage is in the way; healing never raises max
                     // health. B5 E8: the heal is what it would restore, which is what a conversion into
                     // damage deals (R462).
+                    // R1180003: a floor, so no healing multiplier reaches it.
                     let missing = *up_to - unit_view(ctx.state, &instance).health;
-                    heal_unit(ctx, &instance, instance.damage.min(missing));
+                    heal_unit_up_to_amount(ctx, &instance, instance.damage.min(missing));
                 }
             },
         }

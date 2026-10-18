@@ -165,8 +165,20 @@ pub fn has_exertion(state: &GameState, unit: &CardInstance, kind: ExertionKind) 
     has_exertion_in(&AuraTable::per_read(state), unit, kind)
 }
 
-/// `has_exertion` read through a sweep's `AuraTable` (#892).
+/// `has_exertion` read through a sweep's `AuraTable` (#892). R1174000: a Frozen Unit has neither
+/// half, whatever it spent (`freeze.rs`).
 pub fn has_exertion_in(auras: &AuraTable<'_>, unit: &CardInstance, kind: ExertionKind) -> bool {
+    unit.frozen.is_none() && exertion_unspent_in(auras, unit, kind)
+}
+
+/// R1174000: the half of the unit's exertion it has not spent this turn, Frozen or not — what a
+/// freeze landing now takes away (`freeze::thaw_turn`). Every other reader asks `has_exertion`.
+pub fn exertion_unspent(state: &GameState, unit: &CardInstance, kind: ExertionKind) -> bool {
+    exertion_unspent_in(&AuraTable::per_read(state), unit, kind)
+}
+
+/// `exertion_unspent` read through a sweep's `AuraTable` (#892).
+pub fn exertion_unspent_in(auras: &AuraTable<'_>, unit: &CardInstance, kind: ExertionKind) -> bool {
     let spent = &unit.exertion;
     if kind == ExertionKind::Attack {
         let attacks = spent.attacks.unwrap_or(if spent.attacked { 1 } else { 0 });
@@ -218,6 +230,8 @@ pub fn enter_new_side(sink: &mut EngineSink<'_>, card: &CardInstance, from: Play
         };
         controller = live.controller;
     }
+    // R1174000: a Frozen card stays Frozen, its thaw stamped again for its new controller.
+    crate::freeze::restamp(sink.state, &card.id);
     crate::modifiers::move_sourced_modifiers(sink, &card.id, from, controller);
 }
 
@@ -233,6 +247,51 @@ pub fn is_active_on_field(state: &GameState, unit: &CardInstance) -> bool {
 /// with its Taunt (§4.2 step 3).
 fn carried_out_of_combat(state: &GameState, unit: &CardInstance) -> bool {
     crate::zones::is_carried(state, unit)
+}
+
+/// §4.1: the position the player's own switch puts a unit in, the other one (a unit with none is in
+/// Attack Position).
+pub fn position_after_switch(unit: &CardInstance) -> Position {
+    if unit.position.unwrap_or(Position::Atk) == Position::Atk {
+        Position::Def
+    } else {
+        Position::Atk
+    }
+}
+
+/// §4.1, R49, R1174000: why the unit could not switch to `to`, or `Ok` when it can.
+/// `switch_position` refuses with it and `legal_actions` lists a `switchPosition` by it
+/// (`reduce::can_switch`), so the two can never disagree. `spend_exertion` is false for a switch
+/// that is an effect (R20), which spends nothing and so is refused by the position alone; a Frozen
+/// Unit's own switch is refused, an effect's is not.
+pub fn why_cannot_switch(
+    state: &GameState,
+    unit: &CardInstance,
+    to: Position,
+    spend_exertion: bool,
+) -> CombatResult {
+    why_cannot_switch_in(&AuraTable::per_read(state), unit, to, spend_exertion)
+}
+
+/// `why_cannot_switch` read through a sweep's `AuraTable` (#892).
+pub fn why_cannot_switch_in(
+    auras: &AuraTable<'_>,
+    unit: &CardInstance,
+    to: Position,
+    spend_exertion: bool,
+) -> CombatResult {
+    // R1174000: a Frozen Unit's own switch is refused; an effect's (R20) is not.
+    if spend_exertion && unit.frozen.is_some() {
+        return Err(EngineError::new(FROZEN_REFUSAL));
+    }
+    if spend_exertion && !has_exertion_in(auras, unit, ExertionKind::Switch) {
+        return Err(EngineError::new("that unit has already acted this turn"));
+    }
+    // §4.1: Spikey Pillow cannot be switched to Defense Position, by an action or by an effect.
+    if to == Position::Def && crate::scripts::flags_of(auras.state(), unit).never_defense == Some(true) {
+        return Err(EngineError::new("that unit cannot be in Defense Position"));
+    }
+    Ok(())
 }
 
 /// Flip a unit between Attack and Defense Position (§4.1). As the player's action it spends the
@@ -252,11 +311,7 @@ pub fn switch_position(
     }
 
     let from = unit.position.unwrap_or(Position::Atk);
-    let to = options.to.unwrap_or(if from == Position::Atk {
-        Position::Def
-    } else {
-        Position::Atk
-    });
+    let to = options.to.unwrap_or_else(|| position_after_switch(&unit));
 
     // R91: asking for the position the unit already holds "does nothing: no error, no event and no
     // exertion spent". It is read before the exertion because there is no switch to refuse — a unit
@@ -266,13 +321,7 @@ pub fn switch_position(
         return Ok(());
     }
 
-    if spend_exertion && !has_exertion(sink.state, &unit, ExertionKind::Switch) {
-        return Err(EngineError::new("that unit has already acted this turn"));
-    }
-    // §4.1: Spikey Pillow cannot be switched to Defense Position, by an action or by an effect.
-    if to == Position::Def && crate::scripts::flags_of(sink.state, &unit).never_defense == Some(true) {
-        return Err(EngineError::new("that unit cannot be in Defense Position"));
-    }
+    why_cannot_switch(sink.state, &unit, to, spend_exertion)?;
 
     if let Some(live) = find_instance_mut(sink.state, &unit.id) {
         live.position = Some(to);
@@ -286,6 +335,9 @@ pub fn switch_position(
     });
     Ok(())
 }
+
+/// R1174000: why a Frozen Unit may neither declare an attack nor switch its own position.
+pub const FROZEN_REFUSAL: &str = "that Unit is Frozen";
 
 /// §4.2 step 1: "choose an attacker that can attack", in the order the step lists — exertion
 /// unspent, Attack Position, not sick unless Rush or Charge, attack above 0, no "Can't attack" —
@@ -303,6 +355,10 @@ pub fn why_cannot_declare_in(auras: &AuraTable<'_>, attacker: &CardInstance) -> 
     }
     if carried_out_of_combat(state, attacker) {
         return Err(EngineError::new("a Unit on a carrier cannot attack"));
+    }
+    // R1174000: a Frozen Unit has lost its attack, which it is told ahead of what it spent.
+    if attacker.frozen.is_some() {
+        return Err(EngineError::new(FROZEN_REFUSAL));
     }
     if !has_exertion_in(auras, attacker, ExertionKind::Attack) {
         return Err(EngineError::new("that unit has already acted this turn"));

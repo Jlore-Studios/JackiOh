@@ -10,6 +10,9 @@
 //!   connection, `training/ml/jackioh_ml/models.py`). Mapped back onto the hand eval's points, that is
 //!   `hand + (b + net(x))·U/a` (`Network::points`). So `unspent_mana`, the lethal constants and a
 //!   ladder bot's `temperature` (R1452), all in evaluation points, keep their meaning.
+//! - **How much.** A finalist takes `LEARNED_CORRECTION_SHARE` of the correction, `hand + share·
+//!   (points − hand)` (R1012001): fitted to outcomes, the whole correction judges positions a game
+//!   apart better than lines a move apart.
 //! - **Which games.** 1v1 only. A Duos duel keeps the hand eval (D9, R964000): the network never saw
 //!   a team's pool. A finished game keeps its won or lost score.
 //! - **Arithmetic.** `f64`, every loop in one fixed order, ReLU written as comparisons (never
@@ -23,7 +26,7 @@
 
 use jackioh_engine::{GameState, PlayerId};
 
-use crate::config::{AI_EVAL, AI_EVAL_KIND, EvalKind};
+use crate::config::{AI_EVAL, AI_EVAL_KIND, EvalKind, LEARNED_CORRECTION_SHARE};
 use crate::evaluate::{NextSwing, evaluate};
 use crate::features::{Features, features_of};
 
@@ -187,7 +190,8 @@ impl Network<'_> {
 }
 
 /// The score a finalist gets where `reply_score` scores it: the hand eval, or with
-/// `EvalKind::Learned` the network's correction of it (1v1 only, D9).
+/// `EvalKind::Learned` the network's correction of it at `LEARNED_CORRECTION_SHARE` (1v1 only, D9;
+/// R1012001).
 pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64 {
     finalist_score_with(state, seat, next, AI_EVAL_KIND, &LEARNED)
 }
@@ -207,7 +211,9 @@ pub fn finalist_score_with(
             if state.result.is_some() || state.players[seat].duos.is_some() {
                 return hand;
             }
-            network.points(hand, &features_of(state, seat))
+            // R1012001: the search takes the correction at its share.
+            let points = network.points(hand, &features_of(state, seat));
+            hand + LEARNED_CORRECTION_SHARE * (points - hand)
         }
     }
 }

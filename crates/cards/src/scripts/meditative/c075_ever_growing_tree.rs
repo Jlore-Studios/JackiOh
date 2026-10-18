@@ -301,7 +301,7 @@ mod tests {
 
             #[test]
             fn r1087_a_fused_aura_works_from_then_on() {
-                // Jlockeed's Weapons: "Aura: Your Units have +4 Attack, Rush and First Strike."
+                // Jlockeed's Weapons: "Aura: Your Units have +3 Attack, Rush and First Strike."
                 let mut s = narrowed("tree-aura", &[WEAPONS]);
                 assert_eq!(s.stats(VANILLA).attack, 4);
                 let tree = s.card(TREE).id.clone();
@@ -309,12 +309,12 @@ mod tests {
                 assert_eq!(parts_of(&s, &tree)[0], WEAPONS);
                 assert_eq!(
                     s.stats(VANILLA).attack,
-                    8,
+                    7,
                     "the fused aura reaches the Unit at once"
                 );
                 s.end_turn();
                 s.end_turn();
-                assert_eq!(s.stats(VANILLA).attack, 8, "and keeps working");
+                assert_eq!(s.stats(VANILLA).attack, 7, "and keeps working");
             }
 
             #[test]

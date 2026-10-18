@@ -334,10 +334,10 @@ from an entry, the decision wins.
 
 > **Designer:** (0) Bloodbloom, Spell, Epic · Your next spell costs [spell_cost * 3] health instead of mana ~~~ Your next spell costs [spell_cost * 3] health instead of mana, it also gains Echo
 
-- **Text:** Your next Spell costs Health equal to {multiple} times its Cost instead of mana.
-- **Radiant:** Your next Spell costs Health equal to {multiple} times its Cost instead of mana, and has Echo 1.
+- **Text:** Your next Spell costs Health equal to {multiple|time|times} its Cost instead of mana.
+- **Radiant:** Your next Spell costs Health equal to {multiple|time|times} its Cost instead of mana, and has Echo 1.
 - **Engine:** NEW: health as the price (B02), a player modifier on the caster, until a Spell uses it: `mana::price_of` prices the next Spell (not a Field Spell or a Trap, [[§5.1]]) at 0 mana and `multiple ×` its cost after every modifier ([[R65]]; an X Spell its X, [[R348]]) in health, paid with the play as `lose_health` ([[R18]]); `legal_actions` offers a Spell that only the health price affords. A cast pays nothing and spends nothing ([[R70]]). The Radiant face also grants Echo 1 to that Spell (`EchoNextSpell`'s shape, [[R30]]).
-- **Rulings:** MP-B02-1: the next Spell you play, from your hand, after this resolves; it may cost you the game, as Hearthstone's Bloodbloom (a hero at 0 loses at the state check); a (0) Spell costs 0 health and still uses it; several Bloodblooms do not stack, the newest replacing.
+- **Rulings:** MP-B02-1 ([[R1180004]]): the next Spell you play, from your hand, face-up, after this resolves; it may cost you the game, as Hearthstone's Bloodbloom (a hero at 0 loses at the state check); a (0) Spell costs 0 health and still uses it; several Bloodblooms do not stack, the newest replacing; the Spell still costs its cost for every rule that reads one, and a Spell set face-down or played from a graveyard does not use it.
 - **Numbers:** multiple 3 ↓.
 - **Check:** "[spell_cost * 3]" is 3 × the Spell's cost; "gains Echo" is Echo 1. R275: Echo 1 on the discounted Spell, a whole second resolution.
 - **Class:** C (health as the price).
@@ -350,7 +350,7 @@ from an entry, the decision wins.
 - **Text:** Divine Shield / Aura: Your Spells have Lifesteal.
 - **Radiant:** Divine Shield / Aura: Your Spells have Lifesteal, and healing your hero and Units is twice as effective.
 - **Engine:** NEW: a Spell-wide keyword aura (B02): while it acts, a resolving Spell of its controller's (not a Field Spell or a Trap) has Lifesteal, read by damage step 8 ([[R85]]) as an `AuraEntry` matching the resolving card (`alt_play::cloak_hand_aura`'s pattern, [[R1044]]). NEW on the Radiant face: a healing multiplier at the `healed` replacement moment ([[R413]], [[R462]]; [[R1160]]'s "twice as effective"), doubling every heal of its controller's hero and Units, Lifesteal's included.
-- **Rulings:** MP-B02-2: two Life Mages give Lifesteal once and double healing twice (×4), as two Prophet Velens do in Hearthstone; a Spell's Lifesteal heals once per hit; a heal the doubling turns into Blood Moon's damage ([[R413]]) is not doubled.
+- **Rulings:** MP-B02-2 ([[R1180002]], [[R1180003]]): two Life Mages give Lifesteal once and double healing twice (×4), as two Prophet Velens do in Hearthstone; a Spell's Lifesteal heals once per hit; a heal the doubling turns into Blood Moon's damage ([[R413]]) is not doubled, nor is "heal up to N", a floor.
 - **Numbers:** none (the doubling is the rule's 2, `HEAL_MULTIPLIER`).
 - **Check:** "spells" are Spells ([[§5.1]]); "healing is twice as effective" read for its controller's characters (⚠ designer: or all healing). R275: 2/4 and the doubled healing.
 - **Class:** C (the Spell aura, the heal multiplier).
@@ -375,8 +375,8 @@ from an entry, the decision wins.
 
 - **Text:** Aura: Both players have Spell Damage +{spellDamage}.
 - **Radiant:** Aura: Both players have Spell Damage +{spellDamage}.
-- **Engine:** NEW: Spell Damage beyond Units (B02): `damage::spell_damage_for` sums its Units' keyword, Field Spell auras that give a player Spell Damage (this one gives both), and the player modifier of M+ #11, in that one place ([[§4.4]] step 0).
-- **Rulings:** MP-B02-3: a player's Spell Damage is one sum, whatever gives it; it is read as each hit of a Spell lands.
+- **Engine:** NEW: Spell Damage beyond Units (B02): `damage::spell_damage_of` sums its Units' keyword, Field Spell auras that give a player Spell Damage (this one gives both), and the player modifier of M+ #11, in that one place ([[§4.4]] step 0).
+- **Rulings:** MP-B02-3 ([[R1180000]]): a player's Spell Damage is one sum, whatever gives it; it is read as each hit of a Spell lands.
 - **Numbers:** spellDamage 2 ↑ (Radiant 5).
 - **Check:** R275: +5 against +2, for both players as the designer wrote (a symmetric card, as written).
 - **Class:** C (Spell Damage from an aura).
@@ -401,8 +401,8 @@ from an entry, the decision wins.
 
 - **Text:** Activate: Tribute this. You have Spell Damage +{spellDamage} this turn.
 - **Radiant:** Activate: You have Spell Damage +{spellDamage} this turn.
-- **Engine:** An Activate ([[§6.2]], [[R384]]): `ActivationCost { tribute_self }` on the base face (C #84, M #54), none on the Radiant face (once a turn). NEW: a player modifier "Spell Damage +N this turn" (B02), expiring at the turn's cleanup, read in `spell_damage_for` with the rest (M+ #9).
-- **Rulings:** MP-B02-4: the bonus is the activator's, for the rest of that turn, and stays when the potion leaves; two activations stack.
+- **Engine:** An Activate ([[§6.2]], [[R384]]): `ActivationCost { tribute_self }` on the base face (C #84, M #54), none on the Radiant face (once a turn). NEW: a player modifier "Spell Damage +N this turn" (B02), expiring at the turn's cleanup, read in `damage::spell_damage_of` with the rest (M+ #9).
+- **Rulings:** MP-B02-4 ([[R1180001]]): the bonus is the activator's, for the rest of that turn, and stays when the potion leaves; two activations stack.
 - **Numbers:** spellDamage 5 ↑.
 - **Check:** R275: 10/2 and the Tribute gone, so the bonus comes every turn.
 - **Class:** C (the Spell Damage modifier).
@@ -467,7 +467,7 @@ from an entry, the decision wins.
 - **Text:** Cry: Craft a custom Potion. It costs (1). / Death: Shuffle a Jazakus Prime into your deck.
 - **Radiant:** Cry: Craft a custom Radiant Potion. It costs (1). / Death: Shuffle a Radiant Jazakus Prime into your deck.
 - **Engine:** NEW: the crafter's potion mode (B04), on M #17's ME-CRAFT ([[R880]] to [[R883]], `subsystems/craft.rs`): the recipe's frame is fixed, a Unit with the Potion tag whose one hook is "Activate: Tribute this. …" with the effects the player builds, at cost (1) and the crafter's budget for (1) (`CRAFT_POTION_COST`); the stats are in the recipe. The crafted potion is a transient definition named by its recipe's digest ([[R882]]), of the Meditative+ set, tagged Potion, added to the hand. Death: `shuffle_into { defId: meditativeplus-016-1 }` (C+ #38's Catalyst shape; Radiant face Radiant).
-- **Rulings:** MP-B04-1: a custom potion is a Unit whose Activate tributes it, so it is a Potion like M+ #11 to #13; the AI, the random policy and a timeout answer the prompt with a preset ([[R881]]).
+- **Rulings:** MP-B04-1, built as [[R1182000]]: a custom potion is a Unit whose Activate tributes it, so it is a Potion like M+ #11 to #13; the AI, the random policy and a timeout answer the prompt with a preset ([[R881]]), four seeded Potions. The build also decided: no cost prompt; the Activate is once per turn and takes targeted blocks, declared with the activation; the Potion is Mythic and named "<words> Potion"; its Radiant face is [[R882]]'s doubling and still tributes itself.
 - **Numbers:** none on the card (the potion's cost and budget are the crafter's named constants).
 - **Check:** "{costs (1)}" is the crafted potion's cost. R275: 4/4, the potion and the Prime Radiant.
 - **Class:** D (the potion crafter).
@@ -479,8 +479,8 @@ from an entry, the decision wins.
 
 - **Text:** Cry: Craft a HUGE custom Potion. It costs (3).
 - **Radiant:** Cry: Craft a HUGE custom Radiant Potion. It costs (3).
-- **Engine:** The potion mode at cost (3) with `CRAFT_HUGE_POTION_BUDGET_MULTIPLE` (5) times the normal potion's points (and lines, `CRAFT_HUGE_POTION_LINES`), so it is about five times a normal potion; otherwise M+ #16's crafter.
-- **Rulings:** MP-B04-2: "about 5 times better" is five times the points budget; the frame is the same.
+- **Engine:** The potion mode at cost (3) (`CRAFT_HUGE_POTION_COST`) with `CRAFT_HUGE_POTION_BUDGET_MULTIPLE` (5) times the normal potion's points, so it is about five times a normal potion; otherwise M+ #16's crafter. The build keeps the frame's lines (24) and effects (8), as MP-B04-2 says, so no `CRAFT_HUGE_POTION_LINES` exists: no potion within 8 effects reaches 24 lines.
+- **Rulings:** MP-B04-2, built as [[R1182001]]: "about 5 times better" is five times the points budget; the frame is the same.
 - **Numbers:** none on the card.
 - **Check:** A token (printed Epic, [[R1178002]]): only M+ #16's Death makes one. R275: 16/16 and a Radiant HUGE potion.
 - **Class:** D (the potion crafter).
@@ -493,7 +493,7 @@ from an entry, the decision wins.
 - **Text:** Deal {damage} damage to an enemy. / In your hand or deck: After another Spell of yours that targeted an enemy resolves, cast this at it.
 - **Radiant:** Deal {damage} damage to an enemy. / In your hand or deck: After another Spell of yours that targeted an enemy resolves, cast this at it.
 - **Engine:** A targeted Spell (an enemy Unit or the enemy hero, [[R81]]). NEW (B02): the targets a Spell declared or chose in a prompt, kept with the resolving card, and a hand-and-deck trigger (`TriggerZone::Hand`, `Library`, [[R464]]) on that Spell's resolution that casts this card ([[§6.3]] Cast: free, a play, [[R70]]) at the first such enemy still there. One Dogpile answers each Spell, the one in hand first (leftmost), else the topmost in the deck; its own cast is a Spell that targeted an enemy, so it can call the next.
-- **Rulings:** MP-B02-5: "a spell" is a Spell of yours, other than this card; "them" is the enemy it targeted, a Unit or the hero; a target gone or no longer an enemy casts nothing; a Spell that targeted several enemies calls it at the first in declaration order.
+- **Rulings:** MP-B02-5 ([[R1180005]]): "a spell" is a Spell of yours, other than this card; "them" is the enemy it targeted, a Unit or the hero; a target gone or no longer an enemy casts nothing; a Spell that targeted several enemies calls it at the first, in the order it targeted them, still an enemy on the field; an aim that is no longer a legal pick casts nothing.
 - **Numbers:** damage 2 ↑ (Radiant 5).
 - **Check:** Classic #60 is Pile On, so this is Dogpile (R381, [[R1178002]], ⚠ designer). R275: 5 against 2.
 - **Class:** C (the targets kept, the hand-and-deck cast).
@@ -623,7 +623,7 @@ from an entry, the decision wins.
 - **Text:** Code a card from scratch and add it to your hand. Exile this.
 - **Radiant:** Code a Radiant card from scratch and add it to your hand. Exile this.
 - **Engine:** NEW: the crafter's from-scratch mode (B04): M #17's `craft` prompt ([[R880]] to [[R883]]) with a flag the client reads to open an empty canvas with no presets, tooltips or hints; the engine still rolls its four presets so the AI, the random policy and a timeout can answer ([[R881]]). The crafted card is added to the hand (Radiant on the Radiant face); then `exile { target: { of: self } }` sends Scratch Pad to its owner's exile instead of the graveyard ([[R178]]).
-- **Rulings:** MP-B04-3: the cost prompt and the budget are M #17's (0 to 4, 2 + 5 × the cost points, 24 lines); "from scratch" is the client's empty canvas, not a smaller budget.
+- **Rulings:** MP-B04-3, built as [[R1182002]]: the cost prompt and the budget are M #17's (0 to 4, 2 + 5 × the cost points, 24 lines); "from scratch" is the client's empty canvas, not a smaller budget. The canvas starts as a 0/1 Unit with nothing on it and shows no suggestions, prices, tooltips, face glossary or refusal reasons; the points and lines meters stay; the card made is the one M #17 makes of the recipe.
 - **Numbers:** none.
 - **Check:** No rarity in the list: Mythic, as M #17 ([[R1178002]], ⚠ designer). R275: the crafted card Radiant.
 - **Class:** D (the from-scratch crafter).

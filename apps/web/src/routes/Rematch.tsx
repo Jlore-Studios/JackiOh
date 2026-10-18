@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, type ReactElement } from "react";
 
 import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
-import type { ConnectionState } from "../game/net.ts";
+import { pageWake, type ConnectionState } from "../game/net.ts";
 import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
 import { t } from "../i18n/i18n.ts";
 import { navigate, paths } from "../net/navigate.ts";
@@ -51,18 +51,29 @@ function useRematchStatus(token: string, matchId: string, onStatus: (answer: Rem
   latest.current = onStatus;
   useEffect(() => {
     let cancelled = false;
+    // A wake while a read is out would only repeat it; each effect run counts its own.
+    let reading = false;
     const read = (): void => {
-      rematchStatus(token, matchId).then(
-        (answer) => {
-          if (!cancelled) latest.current(answer);
-        },
-        () => undefined,
-      );
+      if (reading) return;
+      reading = true;
+      rematchStatus(token, matchId)
+        .then(
+          (answer) => {
+            if (!cancelled) latest.current(answer);
+          },
+          () => undefined,
+        )
+        .finally(() => {
+          reading = false;
+        });
     };
     read();
     const handle = window.setInterval(read, SERIES_POLL_SECONDS * MS_PER_SECOND);
+    // A throttled tab's interval stalls; waking it reads the status again at once.
+    const stopWake = pageWake(read);
     return () => {
       cancelled = true;
+      stopWake();
       window.clearInterval(handle);
     };
   }, [token, matchId]);

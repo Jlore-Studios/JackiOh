@@ -1471,7 +1471,7 @@
     "meditative-036": { // CN Peptides
       cast: { voice: "prof", text: "Totally safe. Probably. Fifty fifty." },
     },
-    "meditative-037": { // CN in a bottle
+    "meditative-037": { // CN in a Bottle
       cast: { voice: "alien", text: "Shake the bottle. See what comes out." },
     },
     "meditative-038": { // H1B Printer
@@ -1853,11 +1853,43 @@
     "meditativeplus-002": { // NA Tech
       cast: { voice: "robot", text: "Best and worst, together. Balance achieved." },
     },
+    "meditativeplus-006": { // Bloodbloom
+      cast: { voice: "whisper", text: "Pay in blood. The petals open." },
+    },
+    "meditativeplus-007": { // Life Mage
+      play: { voice: "sapi-heroine", text: "Every spell a little prayer." },
+      attack: { voice: "sapi-heroine", text: "Light, lend me your strength!" },
+      death: { voice: "sapi-heroine", text: "My light... fades." },
+    },
+    "meditativeplus-009": { // Magic Amplifier
+      cast: { voice: "robot", text: "Volume up. Everyone gets louder magic." },
+    },
+    "meditativeplus-011": { // Living Mana Potion
+      play: { voice: "bubbles", text: "Glug glug! Bottled brilliance!" },
+      attack: { voice: "bubbles", text: "Splash attack!" },
+      death: { voice: "bubbles", text: "Bottoms up..." },
+    },
+    "meditativeplus-016": { // Jazakus
+      play: { voice: "sapi-mystic", text: "Name your poison. I'll bottle it." },
+      attack: { voice: "sapi-mystic", text: "Taste test time!" },
+      death: { voice: "sapi-mystic", text: "My finest brew awaits..." },
+    },
+    "meditativeplus-016-1": { // Jazakus Prime
+      play: { voice: "sapi-giant", text: "Bigger cauldron. Bigger bottles. Bigger trouble." },
+      attack: { voice: "sapi-giant", text: "Drink THIS!" },
+      death: { voice: "sapi-giant", text: "The cauldron boils over..." },
+    },
+    "meditativeplus-017": { // Dogpile
+      cast: { voice: "zoomer", text: "Everybody jump on!" },
+    },
     "meditativeplus-018": { // Cognitive Offloading
       cast: { voice: "robot", text: "Autopilot engaged. Please keep your hands off the controls." },
     },
     "meditativeplus-025": { // KY's Intuition
       cast: { voice: "prof", text: "Read the code. Trust your gut." },
+    },
+    "meditativeplus-026": { // Scratch Pad
+      cast: { voice: "sapi-synth", text: "Blank file. No hints. Good luck." },
     },
   },
   emotes: {

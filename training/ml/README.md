@@ -40,7 +40,7 @@ never sit on both sides), keeps another 10% for early stopping, and fits:
 |---|---|---|
 | (a) | the hand eval calibrated to a probability: `σ(a·hand/100 + b)` | L-BFGS to convergence |
 | (b) | a logistic over the dense features and the hand eval, session s15's linear fit | L-BFGS, its L2 picked on the validation games |
-| (c) | D5's network with D4's skip connection: `σ(a·hand/100 + b + net(x))`, its first layer 16 wide over the standardized dense features and one row per sparse key seen in 20 or more positions, a clipped ReLU, a head of 16, starting from (a) with its output at zero | Adam on the log loss, early stopping on the validation games, three seeds |
+| (c) | D5's network with D4's skip connection: `σ(a·hand/100 + b + net(x))`, its first layer 16 wide over the standardized dense features and one row per sparse key seen in 20 or more positions, a clipped ReLU, a head of 16, starting from (a) with its output at zero | Adam on the log loss, early stopping on the validation games' outcomes, three seeds; fitted on the outcomes, then once more from the same start on offline TD(λ) targets (D4's D, `TD_LAMBDA` 0.7, `--td-lambda 1` for the outcomes alone): along each game and seat, a row's target is 0.3 of the seat's next row's prediction and 0.7 of that row's target, the last row's being the outcome |
 
 `<out>/report.md` (and `report.json`) holds: held-out log loss, AUC and calibration, overall and by
 turn band (1-3, 4-10, 11 and on); (c)'s run-to-run spread over its seeds; (c)'s learning curve at

@@ -50,7 +50,7 @@ pub fn script() -> CardScripts {
 }
 
 // C+ #19.3 Mid Loser — SPEC §8.7 row 19.3, BUILD M9 Classic+ row C+ 19.3: "Cry, on a play from hand, a
-// cast or League of Losers' summon (R1, R411), flips a seeded coin: heads +5/+5 permanently; tails
+// cast or League of Losers' summon (R1, R411), flips a seeded coin: heads +4/+4 permanently; tails
 // −3/−3 permanently (a damaged Mid Loser can die at the state check) and the opponent's next mana
 // refresh is 1 higher (`nextTurnMod`); a copy or a Rollback's recreation flips nothing; heads and tails
 // amounts read through `param()`; radiant Lucky 1 (two flips, heads kept if either lands) and heads
@@ -125,15 +125,39 @@ mod tests {
     mod c_n19_3_mid_loser {
         use super::*;
 
+        /// Seeded on the field, so no Cry has flipped (R1): the printed body alone.
+        #[test]
+        fn base_enters_at_4_4_radiant_unchanged() {
+            for (radiant_face, size) in [(false, 4), (true, 10)] {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [FILLER], "field": [{ "def": MID, "lane": 1, "radiant": radiant_face }], "library": DECK },
+                    "p2": { "hand": [FILLER], "library": DECK },
+                }));
+                let me = mid(&s);
+                s.expect_stats(&me, json!({ "attack": size, "health": size, "maxHealth": size }));
+            }
+        }
+
+        #[test]
+        fn heads_gives_4_4_on_the_base_face_and_10_10_on_the_radiant() {
+            for (radiant_face, lucky, heads) in [(false, 0, 4), (true, 1, 10)] {
+                let mut s = seeded(from_hand(radiant_face), |each| next_flip(each, lucky) == Flip::Heads);
+                s.play(MID, json!({}));
+                let me = mid(&s);
+                assert_eq!(s.card(&me).buffs, AttackHealth { attack: heads, health: heads });
+            }
+        }
+
         mod base {
             use super::*;
 
             #[test]
-            fn r1_played_from_a_hand_heads_5_5_permanently_and_the_opponent_gains_nothing() {
+            fn r1_played_from_a_hand_heads_4_4_permanently_and_the_opponent_gains_nothing() {
                 let mut s = seeded(from_hand(false), |each| next_flip(each, 0) == Flip::Heads);
                 s.play(MID, json!({}));
                 let me = mid(&s);
-                s.expect_stats(&me, json!({ "attack": 10, "health": 10, "maxHealth": 10 }));
+                s.expect_stats(&me, json!({ "attack": 8, "health": 8, "maxHealth": 8 }));
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 0);
             }
 
@@ -165,7 +189,7 @@ mod tests {
                 let before = s.state().players[P2].mana.max;
                 s.play(MID, json!({}));
                 let me = mid(&s);
-                s.expect_stats(&me, json!({ "attack": 2, "health": 2, "maxHealth": 2 }));
+                s.expect_stats(&me, json!({ "attack": 1, "health": 1, "maxHealth": 1 }));
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 1);
                 s.end_turn();
                 assert_eq!(s.state().players[P2].mana.current, before + 1);
@@ -173,14 +197,16 @@ mod tests {
 
             #[test]
             fn s4_5_tails_on_a_damaged_mid_loser_can_kill_it_at_the_state_check_heads_saves_it() {
-                // The opponent's Tesla answers the summon with 4 damage: a 5/5 left at 1 health.
+                // The opponent's Tesla, its 4 stepped down to 3, answers the summon: a 4/4 left at 1 health.
                 let tesla = |seed: &str| -> Scenario {
                     crate::register_all();
-                    scenario(json!({
+                    let mut s = scenario(json!({
                         "seed": seed,
                         "p1": { "hand": [MID, FILLER], "library": DECK },
                         "p2": { "hand": [FILLER], "library": DECK, "backrow": [{ "def": TESLA, "lane": 1, "faceUp": false }] },
-                    }))
+                    }));
+                    step_param(s.card_mut(TESLA), "damage", -1);
+                    s
                 };
                 let mut tails = seeded(tesla, |each| next_flip(each, 0) == Flip::Tails);
                 let doomed = tails.card(MID).clone();
@@ -197,11 +223,11 @@ mod tests {
                 let mut heads = seeded(tesla, |each| next_flip(each, 0) == Flip::Heads);
                 heads.play(MID, json!({}));
                 let me = mid(&heads);
-                heads.expect_stats(&me, json!({ "attack": 10, "health": 6, "maxHealth": 10 }));
+                heads.expect_stats(&me, json!({ "attack": 8, "health": 5, "maxHealth": 8 }));
             }
 
             #[test]
-            fn r1_a_copy_flips_nothing_carnivorous_cube_s_copies_of_an_eaten_mid_loser_are_plain_5_5s() {
+            fn r1_a_copy_flips_nothing_carnivorous_cube_s_copies_of_an_eaten_mid_loser_are_plain_4_4s() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [CUBE, HIT_JOB, FILLER], "field": [{ "def": MID, "lane": 1 }], "mana": 6, "library": DECK },
@@ -224,7 +250,7 @@ mod tests {
                     .collect();
                 assert_eq!(copies.len(), 2);
                 for copy in &copies {
-                    s.expect_stats(copy, json!({ "attack": 5, "health": 5 }));
+                    s.expect_stats(copy, json!({ "attack": 4, "health": 4 }));
                 }
                 assert_eq!(s.state().rng_cursor, cursor);
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 0);
@@ -245,22 +271,22 @@ mod tests {
                 );
                 s.play(LEAGUE, json!({}));
                 let third = unit_or_blank(&s, P1, 3);
-                s.expect_stats(&third, json!({ "attack": 10, "health": 10 }));
+                s.expect_stats(&third, json!({ "attack": 8, "health": 8 }));
             }
 
             #[test]
-            fn r386_heads_and_tails_read_through_param_an_upgrade_makes_heads_6_6_and_tails_2_2() {
+            fn r386_heads_and_tails_read_through_param_an_upgrade_makes_heads_5_5_and_tails_2_2() {
                 let mut heads = seeded(from_hand(false), |each| next_flip(each, 0) == Flip::Heads);
                 step_param(heads.card_mut(MID), "heads", 1);
                 heads.play(MID, json!({}));
                 let me = mid(&heads);
-                heads.expect_stats(&me, json!({ "attack": 11, "health": 11 }));
+                heads.expect_stats(&me, json!({ "attack": 9, "health": 9 }));
 
                 let mut tails = seeded(from_hand(false), |each| next_flip(each, 0) == Flip::Tails);
                 step_param(tails.card_mut(MID), "tails", -1);
                 tails.play(MID, json!({}));
                 let me = mid(&tails);
-                tails.expect_stats(&me, json!({ "attack": 3, "health": 3 }));
+                tails.expect_stats(&me, json!({ "attack": 2, "health": 2 }));
             }
 
             #[test]

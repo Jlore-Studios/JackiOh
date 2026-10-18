@@ -1,5 +1,5 @@
 //! C+ #36 Conjure Bones (SPEC §8.7 row 36): (2) embiggen (4) Spell, Rare.
-//!   Base:    "Shuffle {count} Bone Storms into your deck. Paid (4): {paidCount} instead."
+//!   Base:    "Shuffle {count} Bone Storms into your deck. Embiggened (4): {paidCount} instead."
 //!   Radiant: the same, the Bone Storms Radiant.
 //! The embiggen price is a play-time choice that lands on the instance (R81, `ctx.embiggened`);
 //! `shuffleInto` puts each fresh token at a random position and R80's cap turns the rest away.

@@ -5,6 +5,10 @@
 //! A recipe is plain data, like every other `Selection`: it serialises as the client writes it
 //! (camelCase, every `Option` optional and skipped when absent), so it survives the JSON round trip
 //! a paused state takes (§10.6, R113) and names the transient definition it compiles to (R882).
+//!
+//! Meditative+ (#1182) adds two modes on the same prompt: the potion frame of M+ #16 Jazakus and
+//! M+ #16.1 Jazakus Prime, which the recipe itself carries (`frame`), and Scratch Pad's from-scratch
+//! canvas (M+ #26), which only the prompt carries (`CraftMode::Scratch`): R1182000 to R1182002.
 
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +18,8 @@ use crate::wire::string_union;
 string_union! {
     /// One hat a recipe may put an effect under: the hook the block becomes. A Unit takes `cry`,
     /// `death`, `startOfTurn` and `endOfTurn`; a Field Spell takes `cry`, `startOfTurn` and
-    /// `endOfTurn`; a Spell takes `whenCast`; a Trap takes exactly one reveal hat (R883).
+    /// `endOfTurn`; a Spell takes `whenCast`; a Trap takes exactly one reveal hat (R883). A Potion
+    /// takes `activate` and nothing else, and no other recipe takes it (R1182000).
     pub enum CraftHatKind {
         Cry = "cry",
         Death = "death",
@@ -24,6 +29,41 @@ string_union! {
         OpponentPlaysUnit = "opponentPlaysUnit",
         OpponentPlaysSpell = "opponentPlaysSpell",
         OpponentAttacks = "opponentAttacks",
+        Activate = "activate",
+    }
+}
+
+string_union! {
+    /// R1182000, R1182001: the fixed frame a recipe is crafted in — a Potion (Meditative+ #16
+    /// Jazakus, cost (1)) or a HUGE Potion (Meditative+ #16.1 Jazakus Prime, cost (3), five times a
+    /// Potion's points): a Unit tagged Potion whose one hook is "Activate: Tribute this." with the
+    /// effects the player builds. A recipe of Meditative #17's crafter carries none.
+    pub enum CraftFrame {
+        Potion = "potion",
+        HugePotion = "hugePotion",
+    }
+}
+
+string_union! {
+    /// What a `craft` prompt asks for, beyond Meditative #17's free crafter (no mode): `scratch` is
+    /// Scratch Pad's empty canvas (Meditative+ #26, R1182002) — the same recipes and budget, the
+    /// client showing no presets, tooltips or hints — and `potion` and `hugePotion` the potion frame
+    /// (R1182000, R1182001), whose answer must carry that frame.
+    pub enum CraftMode {
+        Scratch = "scratch",
+        Potion = "potion",
+        HugePotion = "hugePotion",
+    }
+}
+
+impl CraftMode {
+    /// The frame the answer's recipe must carry: the potion modes' own, none from scratch.
+    pub fn frame(self) -> Option<CraftFrame> {
+        match self {
+            CraftMode::Scratch => None,
+            CraftMode::Potion => Some(CraftFrame::Potion),
+            CraftMode::HugePotion => Some(CraftFrame::HugePotion),
+        }
     }
 }
 
@@ -128,12 +168,23 @@ pub struct CraftRecipe {
     pub keywords: Vec<CraftKeyword>,
     pub echo: i32,
     pub hats: Vec<CraftHat>,
+    /// R1182000: the potion frame the recipe is crafted in. Absent on every recipe of Meditative
+    /// #17's crafter and Scratch Pad's, so their JSON, their digest and the id it names are what
+    /// they were before the field existed (R882, D9).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub frame: Option<CraftFrame>,
 }
 
 impl CraftRecipe {
-    /// "Pure Closure": the name the card is made under (R883).
+    /// "Pure Closure": the name the card is made under (R883); a Potion is "Pure Closure Potion"
+    /// and a HUGE one "HUGE Pure Closure Potion" (R1182000, R1182001).
     pub fn name(&self) -> String {
-        format!("{} {}", self.adjective, self.noun)
+        match self.frame {
+            None => format!("{} {}", self.adjective, self.noun),
+            Some(CraftFrame::Potion) => format!("{} {} Potion", self.adjective, self.noun),
+            Some(CraftFrame::HugePotion) => format!("HUGE {} {} Potion", self.adjective, self.noun),
+        }
     }
 }
 

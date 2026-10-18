@@ -19,6 +19,12 @@ export type ReplaySource = {
   page(from: number, count: number): Promise<readonly ReplayStep[]>;
 };
 
+/** A source over steps already held in memory (#1160): a file opened from the player's own device. */
+export function memoryReplaySource(steps: readonly ReplayStep[]): ReplaySource {
+  const held = [...steps];
+  return { total: held.length, page: (from, count) => Promise.resolve(held.slice(from, from + count)) };
+}
+
 /**
  * Why a replay cannot be shown: part 1's two refusals (R768), a replay that has expired (its log was
  * purged, or the practice game is no longer kept) and `error`, anything else (the network, a rate

@@ -347,6 +347,7 @@ pub fn open_prompt(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<Pe
         min: clamp(args.min.unwrap_or(1), 0, max),
         max,
         budget: args.budget.map(|budget| budget.max(0)),
+        craft_mode: None,
         resume,
     };
 
@@ -487,7 +488,12 @@ pub fn why_answer_refused(pending: &PendingChoice, answer: &AnswerInput) -> Resu
         let Some(Selection::Craft { recipe }) = picks.first() else {
             return Err(EngineError::new("that prompt takes a crafted recipe"));
         };
-        return match crate::subsystems::craft::validate_recipe(recipe, pending.budget.unwrap_or(-1)) {
+        // R1182000, R1182002: and in the frame the prompt's mode names, if any.
+        return match crate::subsystems::craft::validate_answer(
+            recipe,
+            pending.budget.unwrap_or(-1),
+            pending.craft_mode,
+        ) {
             Ok(()) => Ok(()),
             Err(reasons) => Err(EngineError::new(format!(
                 "that recipe cannot be crafted: {}",
@@ -604,6 +610,12 @@ pub fn answer_prompt(sink: &mut EngineSink<'_>, answer: &AnswerInput) -> Result<
     // B5 E5, E9, R450: the targeting point — a cost it asks for first (then its own answer finishes
     // this one, so there is nothing more to do here), and the pick an interception moves.
     let targeted: Vec<Selection> = crate::targeting_point::target_answer(sink, &pending, &picks);
+    // R1180005: a `target` prompt a resolving Spell's own script opened targets what it picks.
+    if pending.kind == PromptKind::Target
+        && let Some(asking) = pending.resume.instance_id.as_deref()
+    {
+        crate::targeted::note_spell_targets(sink.state, asking, &targeted);
+    }
     continue_answer(sink, &pending, &targeted);
     Ok(())
 }
@@ -1361,6 +1373,7 @@ fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs, luck: i32)
         min: clamp(args.min.unwrap_or(1), 0, max),
         max,
         budget: None,
+        craft_mode: None,
         resume: args.resume.clone(),
     };
     let answers = prompt_answers(&probe);

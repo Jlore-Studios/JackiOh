@@ -111,13 +111,14 @@ mod tests {
         fn r1183002_then_the_engine_plays_the_rest_of_your_turn_and_ends_it() {
             let mut s = on_top("offload-turn", false, json!([TIMMY]), json!([VANILLA]));
             s.end_turn();
-            // It played Tempo Timmy and swung Mr. Vanilla at the empty board's hero for 4; Timmy's Rush
+            // It played Tempo Timmy and swung Mr. Vanilla at the empty board's hero; Timmy's Rush
             // reaches no hero the turn it lands (§6.1).
             assert!(
                 (1..=5).any(|lane| s.unit(P1, lane).is_some_and(|unit| unit.def_id == TIMMY)),
                 "Tempo Timmy was played"
             );
-            s.expect_health("p2", HERO_HEALTH - 4);
+            let swing = crate::card_def(VANILLA).base.attack.unwrap_or(0);
+            s.expect_health("p2", HERO_HEALTH - swing);
             assert_eq!(s.state().active, P2, "the turn was ended");
             assert_eq!(s.state().players.p1.autopilot, None, "the status ended with it");
         }

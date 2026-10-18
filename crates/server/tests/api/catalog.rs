@@ -29,6 +29,7 @@ use jackioh_engine::{CardDefs, validator};
 use jackioh_server::api::catalog::{self as catalog_api, Catalog, DEPLOYED_COMMIT_HEADER};
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
+use jackioh_server::bug_reports::BUG_REPORTS_HEADER;
 use jackioh_server::env::load_env;
 
 // Harness
@@ -754,5 +755,20 @@ mod r164_where_l6_s_ban_list_lives_section_9_4_r105 {
         assert!(unknown.headers.get(DEPLOYED_COMMIT_HEADER).is_none());
         // The header is not the body: the bytes stay the same for everybody.
         assert_eq!(known.text, unknown.text);
+    }
+
+    /// `bug_reports.rs`: whether the server can file a match its log does not reproduce, beside the
+    /// commit, so deploy-watch.yml shows it after a deploy. A server with no token says `off`.
+    #[tokio::test]
+    async fn reports_whether_bug_reports_can_be_filed_in_a_header() {
+        let answer = get(&test_app().await, "/api/catalog", None).await;
+        assert_eq!(BUG_REPORTS_HEADER, "x-bug-reports");
+        assert_eq!(
+            answer
+                .headers
+                .get(BUG_REPORTS_HEADER)
+                .and_then(|value| value.to_str().ok()),
+            Some("off")
+        );
     }
 }

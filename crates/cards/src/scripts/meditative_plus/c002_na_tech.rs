@@ -151,7 +151,16 @@ mod tests {
                 "a transient definition (R77)"
             );
             assert!(registered_catalog().get(&def.id).is_none(), "in no pool");
-            assert_eq!((def.base.attack, def.base.health), (Some(4), Some(4)));
+            let (leader, trailer) = (crate::card_def(LEADER), crate::card_def(TRAILER));
+            let summed = |a: Option<i32>, b: Option<i32>| Some(a.unwrap_or(0) + b.unwrap_or(0));
+            assert_eq!(
+                (def.base.attack, def.base.health),
+                (
+                    summed(leader.base.attack, trailer.base.attack),
+                    summed(leader.base.health, trailer.base.health)
+                ),
+                "summed stats"
+            );
             let kinds: Vec<KeywordKind> = def.base.keywords.iter().map(Keyword::kind).collect();
             for kind in [
                 KeywordKind::Taunt,
@@ -258,8 +267,16 @@ mod tests {
             assert!(card.radiant, "every ingredient Radiant: the card is (R469)");
             assert_eq!(card.cost_override, Some(0));
             let def = def_of(Some(s.state()), &card.def_id).clone();
-            // The Radiant faces summed: 2/2 and 6/6, Charge from Tempo Timmy's Radiant face.
-            assert_eq!((def.radiant.attack, def.radiant.health), (Some(8), Some(8)));
+            // The Radiant faces summed, Charge from Tempo Timmy's Radiant face.
+            let (leader, trailer) = (crate::card_def(LEADER), crate::card_def(TRAILER));
+            let summed = |a: Option<i32>, b: Option<i32>| Some(a.unwrap_or(0) + b.unwrap_or(0));
+            assert_eq!(
+                (def.radiant.attack, def.radiant.health),
+                (
+                    summed(leader.radiant.attack, trailer.radiant.attack),
+                    summed(leader.radiant.health, trailer.radiant.health)
+                )
+            );
             assert!(has_keyword(&def.radiant.keywords, KeywordKind::Charge));
         }
 
