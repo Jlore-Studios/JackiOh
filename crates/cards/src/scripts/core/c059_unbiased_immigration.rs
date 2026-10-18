@@ -1,6 +1,6 @@
 //! #59 Unbiased Immigration (SPEC §8.3): Field Spell, cost 2 embiggen 4, Rare. "Start of turn: add a
-//! random card to your hand (paid 4: it costs 0)" / radiant "A random Radiant card (paid 4: it costs
-//! 0)". Engine cell: "Non-token pool excluding #59", every set's (R380). §8 Conventions: the radiant
+//! random card to your hand (Embiggened (4): it costs (0))" / radiant "A random Radiant card
+//! (Embiggened (4): it costs (0))". Engine cell: "Non-token pool excluding #59", every set's (R380). §8 Conventions: the radiant
 //! cell restates the whole clause, so it replaces it: one card per start of turn either way.
 //!
 //! The embiggen price is not a prompt (R81, §10.6): it travels in the `play` action, so the card
@@ -29,7 +29,7 @@ fn add_random_card(ctx: &EffectContext, as_radiant: bool) -> Effect {
     if as_radiant {
         args["radiant"] = json!(true);
     }
-    // "(paid 4: it costs 0)" — the embiggen price, not the mana actually spent after discounts. The
+    // "(Embiggened (4): it costs (0))" — the Embiggened version, not the mana actually spent after discounts. The
     // (0) is the declared number `setCost` (R386).
     if ctx.embiggened {
         args["costOverride"] = json!(param(ctx, "setCost"));

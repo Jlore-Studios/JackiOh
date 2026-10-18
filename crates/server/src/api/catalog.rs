@@ -19,6 +19,7 @@ use sha2::{Digest, Sha256};
 
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req};
 use crate::app::App;
+use crate::bug_reports::BUG_REPORTS_HEADER;
 
 /// The patch list (R388, B4.2): `patches.json`, the list of patches in the order they were made.
 /// Compiled in from the cards crate's copy, like the catalog itself.
@@ -224,7 +225,8 @@ pub async fn get_catalog(app: &Arc<App>, _req: Req) -> ApiResult {
     let mut builder = Response::builder()
         .status(200)
         .header("content-type", "application/json; charset=utf-8")
-        .header("cache-control", "no-store");
+        .header("cache-control", "no-store")
+        .header(BUG_REPORTS_HEADER, app.bug_reports.readiness().as_str());
     if let Some(commit) = &catalog.commit {
         builder = builder.header(DEPLOYED_COMMIT_HEADER, commit.as_str());
     }

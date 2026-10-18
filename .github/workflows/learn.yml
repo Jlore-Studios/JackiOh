@@ -76,7 +76,8 @@ jobs:
             echo "run=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          catalog=$(jq -r '.[-1].version' crates/cards/patches/patches.json | tr -c 'A-Za-z0-9._-\n' '_')
+          # The '-' goes last: between '_' and '\n' it would be a range, which tr refuses.
+          catalog=$(jq -r '.[-1].version' crates/cards/patches/patches.json | tr -c 'A-Za-z0-9._\n-' '_')
           echo "seed=learned-$catalog-$(date -u +%Y%m%d)-$RUN" >> "$GITHUB_OUTPUT"
           echo "run=true" >> "$GITHUB_OUTPUT"
 
@@ -107,10 +108,12 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node: "false"
-      - name: uv
-        run: |
-          python3 -m pip install --user --quiet uv
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      # training/ml pins Python 3.13 (its pyproject.toml), and uv as super.yml's notebooks job does.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: uv, pinned
+        run: python3 -m pip install uv==0.13.0
       - uses: actions/download-artifact@v4
         with:
           pattern: selfplay-${{ needs.plan.outputs.seed }}-*
@@ -124,7 +127,7 @@ jobs:
           git switch -c ai/learn
           status=0
           # The tree is main's, so the exporter retrain.sh builds first is main's AI: the parent.
-          training/ml/retrain.sh --logs "$RUNNER_TEMP/export" --out "$RUNNER_TEMP/learn" \
+          bash training/ml/retrain.sh --logs "$RUNNER_TEMP/export" --out "$RUNNER_TEMP/learn" \
             --parent-bin tree --screen-games "$SCREEN" || status=$?
           echo "passed=$([ "$status" = 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           {
@@ -136,6 +139,12 @@ jobs:
             cat "$RUNNER_TEMP/learn/summary.json" 2>/dev/null || echo '{"stage":"failed before the screen"}'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          # retrain.sh writes summary.json whenever it decides (the fit stops it, or the screen does):
+          # a run without one broke, and says so in red rather than as a screen that did not pass.
+          if [ ! -f "$RUNNER_TEMP/learn/summary.json" ]; then
+            echo "::error::retrain.sh stopped (exit $status) before it decided anything"
+            exit 1
+          fi
       - name: the gate, once (promote --lane learn)
         id: gate
         if: ${{ steps.retrain.outputs.passed == 'true' }}

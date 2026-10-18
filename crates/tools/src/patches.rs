@@ -2793,6 +2793,27 @@ mod tests {
                 );
             }
 
+            // R1178000: the Meditative+ set is the next held set: a patch reads the catalog without its
+            // cards, and claims none of them, until its release (#1187) lists it in `SHIPPED_SETS`.
+            #[test]
+            fn r1178000_a_patch_reads_the_catalog_without_the_meditative_plus_set_until_it_ships() {
+                use jackioh_engine::wire::{SetName, set_ships};
+                let held = json(&catalog_of(vec![
+                    in_set(card("aaa", 1), "Core"),
+                    in_set(card("meditativeplus-011", 1), "Meditative+"),
+                    card("bbb", 2),
+                ]));
+                let view = crate::patches::shipped_text(&held).unwrap();
+                if set_ships(SetName::MeditativePlus) {
+                    assert_eq!(view, held);
+                } else {
+                    assert_eq!(
+                        view,
+                        json(&catalog_of(vec![in_set(card("aaa", 1), "Core"), card("bbb", 2)]))
+                    );
+                }
+            }
+
             // The issue's acceptance scenario on a three-card catalog: branch A adds fragment v0.2.5
             // changing card aaa, branch B adds fragment v0.2.0 changing card bbb. A merges, then B
             // merges with no conflict under pending/, and promotion ships v0.2.5 before v0.2.0

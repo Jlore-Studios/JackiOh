@@ -80,6 +80,11 @@
   background: radial-gradient(circle, #b3122e 0%, #5a0716 100%);
 }
 
+/* R1174000: Frozen, the snowflake on an ice-blue disc (cards/marks.ts's cyan). */
+.cf .cf-state[data-state="frozen"] {
+  background: radial-gradient(circle, #4fe3ff 0%, #0b5d73 100%);
+}
+
 /* R386: the card's tuned mark, ▲ Buffed, ▼ Nerfed, ◆ Tuned (R1320). */
 .cf .cf-state[data-state="tuned"][data-tuned="upgraded"] .cf-state-text {
   color: var(--cf-state-better);

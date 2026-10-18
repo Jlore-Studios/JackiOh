@@ -67,7 +67,8 @@ pub const POOL_TOKEN_TAGS: &[Tag] = &[Tag::Fruit, Tag::Prime, Tag::Ai];
 /// one of them, a card with all of them is "All Tribes" (Meditative #87 Tatches the Totem, and the
 /// card frame says so), and "tribal tag based hate" is an effect that picks its cards by having or
 /// lacking one. Book, Fruit, Pancake, AI, Plague, Catalyst, Prime, Acclaimed, Call to Chaos,
-/// Quickdraw, Wincon and Token name families and mechanics, not tribes.
+/// Quickdraw, Wincon, Potion (Meditative+, R1178000) and Token name families and mechanics, not
+/// tribes.
 pub const TRIBAL_TAGS: &[Tag] = &[Tag::Human, Tag::Felinor, Tag::Ky, Tag::Cn, Tag::Jlockeed];
 
 /// R1176000: the tag every card in Chinese has. A card instance whose `chinese` flag is set (R1300)
@@ -146,17 +147,18 @@ impl ByFace {
 /// §8 #73: largest single damage instance a hero with Anti-oneshot Armor takes.
 pub const ANTI_ONESHOT_CAP: ByFace = ByFace { base: 5, radiant: 3 };
 
-/// `{ paid, embiggen }`: #84 Going Long's Armor by the price paid.
+/// `{ normal, embiggened }`: #84 Going Long's Armor by the version played, its normal version at the
+/// cheaper price or its Embiggened version at its Embiggened cost (R1175000).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct HeroArmorPrice {
-    pub paid: i32,
-    pub embiggen: i32,
+    pub normal: i32,
+    pub embiggened: i32,
 }
 
 impl HeroArmorPrice {
-    /// `value[embiggened ? "embiggen" : "paid"]`.
+    /// `value[embiggened ? "embiggened" : "normal"]`.
     pub const fn on(&self, embiggened: bool) -> i32 {
-        if embiggened { self.embiggen } else { self.paid }
+        if embiggened { self.embiggened } else { self.normal }
     }
 }
 
@@ -175,12 +177,18 @@ impl HeroArmor {
 }
 
 /// §8 #84 Going Long: the Armor it gives its controller's hero (§4.4 step 2), by face and by which
-/// price was paid — "Armor 2. Paid (4): Armor 4", radiant "Armor 4. Paid (4): Armor 8" (patch
-/// v0.1.1). `paid` is the printed cost 2, `embiggen` the embiggen price 4 (R81 records which on the
-/// instance).
+/// version was played — "Armor 2. Embiggened (4): Armor 4", radiant "Armor 4. Embiggened (4): Armor 8"
+/// (patch v0.1.1, R1175000). `normal` is the normal version's, at the printed cost 2, `embiggened` the
+/// Embiggened version's, at its Embiggened cost 4 (R81 records which on the instance).
 pub const HERO_ARMOR: HeroArmor = HeroArmor {
-    base: HeroArmorPrice { paid: 2, embiggen: 4 },
-    radiant: HeroArmorPrice { paid: 4, embiggen: 8 },
+    base: HeroArmorPrice {
+        normal: 2,
+        embiggened: 4,
+    },
+    radiant: HeroArmorPrice {
+        normal: 4,
+        embiggened: 8,
+    },
 };
 /// §8 #38 Quickstriker, R281: the multiple of X each granted Combo deals to the enemy hero, by the
 /// granting card's face — "Combo X: deal X damage", radiant "deal 2X damage", one hit either way.
@@ -489,6 +497,13 @@ pub struct MarkSpec {
 pub const BERSERK_MARK: MarkSpec = MarkSpec {
     mark: "berserk",
     color: "red",
+};
+
+/// R1174000: the mark a Unit is announced Frozen with (`added: true`) and thawed with (`added:
+/// false`), public in both views (R437's reusable mark), and its colour key: the client's frost.
+pub const FROZEN_MARK: MarkSpec = MarkSpec {
+    mark: "frozen",
+    color: "cyan",
 };
 
 // ---- v0.2.0 constants: prompts and generation (E18, E19, E23–E25) ----
@@ -1071,7 +1086,8 @@ pub const SEED_SEARCH_BOUND: usize = 4000;
 
 /// The highest cost a crafted card may have (0 to 4).
 pub const CRAFT_MAX_COST: i32 = 4;
-/// How many seeded presets a `craft` prompt offers: a Unit, a Spell, a Field Spell and a Trap.
+/// How many seeded presets a `craft` prompt offers: a Unit, a Spell, a Field Spell and a Trap; in
+/// the potion frame, this many Potions (R1182000).
 pub const CRAFT_PRESETS: usize = 4;
 /// The point budget is this base plus this per point of the chosen cost (2, 7, 12, 17, 22).
 pub const CRAFT_POINTS_BASE: i32 = 2;
@@ -1479,7 +1495,25 @@ pub const CRAFT_HAT_PRICES: &[CraftHatPrice] = &[
         multiplier: 1,
         types: &[CardType::Trap],
     },
+    // R1182000: a Potion's one hat, "Activate: Tribute this.", an `ActivationDecl` with its Tribute
+    // cost (as many lines as a reveal hat's trigger). No type takes it in Meditative #17's free
+    // crafter: only the potion frame does, and the potion frame takes nothing else.
+    CraftHatPrice {
+        hat: CraftHatKind::Activate,
+        lines: 4,
+        multiplier: 1,
+        types: &[],
+    },
 ];
+
+/// R1182000: a Potion's fixed cost (Meditative+ #16 Jazakus: "It costs (1)."). Its points are the
+/// crafter's budget at that cost, `craft_points_budget(CRAFT_POTION_COST)`.
+pub const CRAFT_POTION_COST: i32 = 1;
+/// R1182001: a HUGE Potion's fixed cost (Meditative+ #16.1 Jazakus Prime: "It costs (3).").
+pub const CRAFT_HUGE_POTION_COST: i32 = 3;
+/// R1182001: a HUGE Potion has this many times a Potion's points ("about 5 times better than the
+/// normal custom potion"); its lines, effects and numbers are the frame's, as a Potion's.
+pub const CRAFT_HUGE_POTION_BUDGET_MULTIPLE: i32 = 5;
 
 // ---------------------------------------------------------------------------------------------
 // Meditative #40 Feng Shui (R980, R981, R985). Hidden numbers: printed nowhere, never tuned, and not

@@ -945,8 +945,9 @@ Visual pass 2 (stage effects), and the review that followed it:
   clamped to [`FX_LUNGE_MIN_PX`, `FX_LUNGE_MAX_PX`], and throws a spark burst at the target at
   `FX_LUNGE_CONTACT_AT·D`. Without the layer, jk-lunge falls back to BUILD's straight lunge.
   *Observed:* `stage.test.tsx`.
-- **B49** The killing blow. A finished view drains the runner, so the layer keeps the drained entries
-  and plays `planLethal` before `planResult`, which waits `leadMs`. *Observed:* `cues.test.ts`,
+- **B49** The killing blow. A finished view no longer drains the runner — the burst that ended the
+  game plays out first — so the layer keeps drained entries only when a drain (a seat hand-over) cut
+  them short and plays `planLethal` before `planResult`, which waits `leadMs`. *Observed:* `cues.test.ts`,
   `FxLayer.test.tsx`.
 - **B50** The game-over state stays: `result-overlay` is a fixed panel mid-screen and the
   `turn-banner` hides once it is up. While a layer banner is up the `turn-banner` hides too, and a

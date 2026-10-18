@@ -22,7 +22,7 @@
 //!                      is §4.2 steps 1 to 5 whole, step 4's trap window included, so an `attack`
 //!                      can come back with a prompt open and the combat still owed on `state.work`
 //!                      (R113): the answer action finishes it, exactly as it finishes a Cry.
-//!   switchPosition   → `combat.switchPosition` (§4.1, R20, R49)
+//!   switchPosition   → `combat.switchPosition`, listed by `combat.whyCannotSwitch` (§4.1, R20, R49; a Frozen unit's refused, R1174000)
 //!   activate         → `subsystems/activate.activateAbility`, listed by `activateActionsFor` (B3.2,
 //!                      R384); a Heroic Power's power is one of its abilities (R752)
 //!   activatePower    → the alias of `activate` every old log carries, naming the rolled power (R752)
@@ -51,7 +51,8 @@ use std::ops::ControlFlow;
 use serde::{Deserialize, Serialize};
 
 use crate::combat::{
-    AttackTarget, ExertionKind, attack_targets_in, declare_attack, has_exertion_in, switch_position,
+    AttackTarget, attack_targets_in, declare_attack, position_after_switch, switch_position,
+    why_cannot_switch_in,
 };
 use crate::config::{MAX_MULLIGAN_SUBSETS, NONCE_HISTORY, TIMEOUT_ANSWER_CAP, TURN_CAP_PLAYER_TURNS};
 use crate::game_over::end_game;
@@ -62,7 +63,6 @@ use crate::play_steps::run_play_steps;
 use crate::prompts::{AnswerInput, answer_prompt, prompt_answers};
 use crate::rng::Rng;
 use crate::script::EngineSink;
-use crate::scripts::flags_of;
 use crate::setup::{answer_mulligan, begin_setup, mulligan_owed, mulligan_prompt_for, why_mulligan_refused};
 use crate::state::{
     AppliedAction, CardInstance, EngineError, GameState, ModifierExpiry, ModifierKind, find_instance,
@@ -75,7 +75,7 @@ use crate::triggers::{SettleOptions, settle};
 use crate::turn::{answer_draw, can_offer_draw, concede, end_turn, has_standing_draw_offer, offer_draw};
 use crate::wire::{
     Action, ActionBody, ActionType, GameEvent, GameOverReason, NON_ACTIVE_ACTION_TYPES,
-    PROMPT_OPEN_ACTION_TYPES, Phase, PlayerId, Position, Row, Winner, opponent_of,
+    PROMPT_OPEN_ACTION_TYPES, Phase, PlayerId, Row, Winner, opponent_of,
 };
 use crate::zones::{active_units_of, card_at, carried_units_of, slots_of, standing_units_of};
 
@@ -274,14 +274,10 @@ fn activation_actions(state: &GameState, player: PlayerId, card: &CardInstance) 
         .collect()
 }
 
-/// §4.1 and R49: whether this unit's own switch is on offer at all.
+/// §4.1 and R49: whether this unit's own switch is on offer at all: `combat.whyCannotSwitch`, the
+/// refusal `switch_position` gives the same switch, so the list and the reducer cannot disagree.
 fn can_switch(auras: &AuraTable<'_>, unit: &CardInstance) -> bool {
-    if !has_exertion_in(auras, unit, ExertionKind::Switch) {
-        return false;
-    }
-    // §4.1: Spikey Pillow can never be in Defense Position, so a unit in Attack has nowhere to go.
-    unit.position.unwrap_or(Position::Atk) == Position::Def
-        || flags_of(auras.state(), unit).never_defense != Some(true)
+    why_cannot_switch_in(auras, unit, position_after_switch(unit), true).is_ok()
 }
 
 fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError> {

@@ -2,14 +2,16 @@
 // file a player attaches to a bug report. Nothing but each step's view leaves (R768, CLAUDE.md rule 7)
 // and no account (as a GIF names none, R513000): the steps, the row's own facts and the build's
 // catalog version. Nothing is uploaded or kept: the file is made in memory and handed to the
-// browser's downloads.
+// browser's downloads. And back in (#1160): a file the page wrote opens again, parsed in the page
+// against that same shape, nothing sent and nothing stored.
 
 import { CATALOG_VERSION } from "@jackioh/cards";
 import type { ReplayStep } from "@jackioh/engine";
 
 import type { OnlineReplayListing } from "../net/api.ts";
 import type { PracticeReplaySummary } from "../practice/protocol.ts";
-import { REPLAY_GIF_REVOKE_MS } from "./config.ts";
+import { REPLAY_GIF_REVOKE_MS, REPLAY_JSON_MAX_BYTES, REPLAY_JSON_MAX_STEPS } from "./config.ts";
+import { ReplayFailure } from "./source.ts";
 import type { ReplaySource } from "./source.ts";
 import { createStepCache, loadClip } from "./steps.ts";
 
@@ -73,4 +75,48 @@ export function downloadFile(file: File): void {
   window.setTimeout(() => {
     URL.revokeObjectURL(url);
   }, REPLAY_GIF_REVOKE_MS);
+}
+
+const TOO_BIG = "This replay file is too big to open.";
+const NOT_A_REPLAY = "This file is not a JackiOh replay file.";
+const UNSUPPORTED = "This replay file uses an unsupported format.";
+const OTHER_PATCH = "This replay file is from another patch and cannot be opened here.";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The steps of a file `replayJsonFile` wrote (#1160), or a `ReplayFailure` saying why it is refused:
+ * too big, not JSON of the documented shape, another format or version, or another catalog version
+ * (a file from a newer build is refused as a stale one is, since its views may differ). The file is
+ * untrusted, so it is held to the caps before its text is read and again before its steps are kept.
+ * A step is checked for its index, a turn that never goes back and a view that is an object; the
+ * catalog gate is what makes that enough, and the page never enforces rules on a view (rule 7).
+ */
+export async function parseReplayJsonFile(file: File): Promise<ReplayStep[]> {
+  if (file.size > REPLAY_JSON_MAX_BYTES) throw new ReplayFailure("error", TOO_BIG);
+  const text = await file.text();
+  if (text.length > REPLAY_JSON_MAX_BYTES) throw new ReplayFailure("error", TOO_BIG);
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new ReplayFailure("error", NOT_A_REPLAY);
+  }
+  if (!isRecord(json)) throw new ReplayFailure("error", NOT_A_REPLAY);
+  if (json.format !== REPLAY_JSON_FORMAT || json.version !== REPLAY_JSON_VERSION) throw new ReplayFailure("error", UNSUPPORTED);
+  if (json.catalogVersion !== CATALOG_VERSION) throw new ReplayFailure("error", OTHER_PATCH);
+  const { steps } = json;
+  if (!Array.isArray(steps) || steps.length === 0) throw new ReplayFailure("error", NOT_A_REPLAY);
+  if (steps.length > REPLAY_JSON_MAX_STEPS) throw new ReplayFailure("error", TOO_BIG);
+  const checked: ReplayStep[] = [];
+  let turn = 0;
+  for (const [index, step] of (steps as unknown[]).entries()) {
+    if (!isRecord(step) || step.step !== index || !isRecord(step.view)) throw new ReplayFailure("error", NOT_A_REPLAY);
+    if (typeof step.turn !== "number" || !Number.isInteger(step.turn) || step.turn < turn) throw new ReplayFailure("error", NOT_A_REPLAY);
+    turn = step.turn;
+    checked.push({ step: index, turn, view: step.view as ReplayStep["view"] });
+  }
+  return checked;
 }

@@ -48,6 +48,11 @@ animated?: AnimatedView,
  */
 berserk?: true, 
 /**
+ * R1174000: the unit is Frozen (a status, public on the field on both seats): it can neither
+ * attack nor switch its own position until it thaws. Absent otherwise. Only ever `Some(true)`.
+ */
+frozen?: true, 
+/**
  * ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
  * may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
  * Only ever `Some(true)`.
@@ -76,6 +81,7 @@ grants?: Array<string>,
 sick?: true, 
 /**
  * R849000: why the viewer's own unit cannot declare an attack now (`combat::why_cannot_declare`),
- * as `ActivationView.reason` (R384). Only while `canAct`; never on the opponent's units.
+ * as `ActivationView.reason` (R384). Only while `canAct`, or while the unit is Frozen in its
+ * controller's main phase (R1174000); never on the opponent's units.
  */
 attackReason?: string, };

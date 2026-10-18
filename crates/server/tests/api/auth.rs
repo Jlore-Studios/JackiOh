@@ -15,9 +15,9 @@
 //!
 //! Nothing here reaches the internet or the wall clock. [`GoTrue`] is a scripted GoTrue on
 //! `127.0.0.1` answering the five endpoints the provider calls (the JWKS, `/auth/v1/user`, the admin
-//! user lookup, the admin delete and the password grant) and counting every call. Its JWKS is
-//! empty, so tier 1 fails *locally*; the cache clock is [`Clock`], a manual one, through the
-//! provider's `now` seam.
+//! user lookup, the admin delete and the password grant) and counting every call. Its JWKS answers
+//! an empty set until a test scripts it (`answer_jwks`), so tier 1 fails *locally* by default; the
+//! cache clock is [`Clock`], a manual one, through the provider's `now` seam.
 //!
 //! Tokens are signed with `jsonwebtoken` against `SUPABASE_JWT_SECRET`, which is `verify`'s tier 2.
 //! They carry an `exp` far in the future, so the expiry check passes without the test reading a clock.
@@ -53,7 +53,7 @@ const ALICE: &str = "a11ce000-0000-4000-8000-000000000001";
 const BOB: &str = "b0b00000-0000-4000-8000-000000000002";
 
 /// 2100-01-01: an expiry no test run reaches.
-const FAR_FUTURE: i64 = 4_102_444_800;
+pub(crate) const FAR_FUTURE: i64 = 4_102_444_800;
 
 /// `EMAIL_CONFIRMED_CACHE_TTL_MS` in the provider. R159 says only "briefly", so it is read as an
 /// order of magnitude: the tests check that *some* window exists and that it *ends* (ten windows on).
@@ -176,12 +176,25 @@ pub(crate) enum GrantReply {
 type AdminScript = Arc<dyn Fn(&str) -> AdminReply + Send + Sync>;
 type UserScript = Arc<dyn Fn(&str) -> UserReply + Send + Sync>;
 
+/// What the scripted JWKS endpoint answers.
+#[derive(Clone)]
+pub(crate) enum JwksReply {
+    /// 200 with this key set.
+    Serve(Value),
+    /// 500: the key endpoint is down.
+    Fail,
+    /// Never answers.
+    Hang,
+}
+
 struct GoTrueState {
     admin: AdminScript,
     user: UserScript,
+    jwks: JwksReply,
     deletion: DeletionReply,
     lookups: IndexMap<String, u32>,
     user_calls: u32,
+    jwks_calls: u32,
     deleted: Vec<String>,
     /// Users a delete removed: every later admin lookup answers 404 for them, as GoTrue does.
     gone: IndexSet<String>,
@@ -197,9 +210,22 @@ pub(crate) struct GoTrue {
     state: Arc<Mutex<GoTrueState>>,
 }
 
-async fn jwks() -> Json<Value> {
-    // No keys: every token fails tier 1 here and reaches the shared secret.
-    Json(json!({ "keys": [] }))
+async fn jwks(State(state): State<Arc<Mutex<GoTrueState>>>) -> Response {
+    let reply = {
+        let mut state = state.lock().expect("GoTrue state");
+        state.jwks_calls += 1;
+        state.jwks.clone()
+    };
+    match reply {
+        // No keys by default: every token fails tier 1 here and reaches the shared secret.
+        JwksReply::Serve(keys) => (StatusCode::OK, Json(keys)).into_response(),
+        JwksReply::Fail => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "msg": "upstream unavailable" })),
+        )
+            .into_response(),
+        JwksReply::Hang => std::future::pending::<Response>().await,
+    }
 }
 
 async fn admin_user(State(state): State<Arc<Mutex<GoTrueState>>>, Path(id): Path<String>) -> Response {
@@ -329,9 +355,11 @@ impl GoTrue {
         let state = Arc::new(Mutex::new(GoTrueState {
             admin: Arc::new(|user_id: &str| AdminReply::Ok(confirmed_user(user_id))),
             user: Arc::new(|_: &str| UserReply::Unreachable),
+            jwks: JwksReply::Serve(json!({ "keys": [] })),
             deletion: DeletionReply::Deleted,
             lookups: IndexMap::new(),
             user_calls: 0,
+            jwks_calls: 0,
             deleted: Vec::new(),
             gone: IndexSet::new(),
             grant: GrantReply::Refused,
@@ -368,6 +396,10 @@ impl GoTrue {
         self.state.lock().expect("GoTrue state").user = Arc::new(reply);
     }
 
+    pub(crate) fn answer_jwks(&self, reply: JwksReply) {
+        self.state.lock().expect("GoTrue state").jwks = reply;
+    }
+
     pub(crate) fn answer_deletion(&self, reply: DeletionReply) {
         self.state.lock().expect("GoTrue state").deletion = reply;
     }
@@ -383,6 +415,11 @@ impl GoTrue {
 
     fn user_calls(&self) -> u32 {
         self.state.lock().expect("GoTrue state").user_calls
+    }
+
+    /// How many times the key set was actually fetched.
+    fn jwks_calls(&self) -> u32 {
+        self.state.lock().expect("GoTrue state").jwks_calls
     }
 
     pub(crate) fn deleted(&self) -> Vec<String> {
@@ -406,6 +443,19 @@ pub(crate) fn supabase_auth(gotrue: &GoTrue, clock: &Clock) -> Auth {
         url: gotrue.url.clone(),
         secret_key: "secret-key".to_string(),
         jwt_secret: Some(JWT_SECRET.to_string()),
+        now: Some(Arc::new(move || clock.now())),
+        ..SupabaseAuthInput::default()
+    }))
+}
+
+/// The Supabase provider under test with no shared secret, so tier 1 (the published key set) is
+/// the only local tier (R1144000).
+pub(crate) fn supabase_auth_no_secret(gotrue: &GoTrue, clock: &Clock) -> Auth {
+    let clock = clock.clone();
+    Auth::Supabase(SupabaseAuth::new(SupabaseAuthInput {
+        url: gotrue.url.clone(),
+        secret_key: "secret-key".to_string(),
+        jwt_secret: None,
         now: Some(Arc::new(move || clock.now())),
         ..SupabaseAuthInput::default()
     }))
@@ -1546,5 +1596,233 @@ mod r665_two_step_sign_in_an_account_with_an_authenticator_app_needs_an_aal2_tok
                 .user_id,
             ALICE
         );
+    }
+}
+
+// R1144000: a failed refresh of the sign-in key set keeps the last good keys
+
+/// R1144000 — a failed refresh of the sign-in key set keeps the last good keys (§9.2, §9.4;
+/// precedent: R159's outage keeps the identity).
+///
+/// Tier 1's first tests: no shared secret here, so the published set is the only local tier, and
+/// every token is ES256 signed by the test-only key (`es256_test_only`).
+mod r1144000_a_failed_key_set_refresh_keeps_the_last_good_keys {
+    use super::*;
+    use crate::api::es256_test_only as es256;
+    use jackioh_server::config::{
+        JWKS_CACHE_MAX_AGE_MS, JWKS_COOLDOWN_MS, JWKS_FETCH_TIMEOUT_MS, JWKS_STALE_MAX_MS,
+    };
+    use std::future::{Future, poll_fn};
+    use std::pin::Pin;
+    use std::task::Poll;
+
+    /// The provider with no shared secret, so tier 1 is the only local tier.
+    async fn no_secret() -> (GoTrue, Clock, Auth) {
+        let gotrue = GoTrue::start().await;
+        let clock = Clock::new();
+        let auth = supabase_auth_no_secret(&gotrue, &clock);
+        (gotrue, clock, auth)
+    }
+
+    /// A tier-1 token for `user_id` under `kid`, with §9.2's issuer and audience.
+    fn token_for_as(gotrue: &GoTrue, user_id: &str, kid: &str) -> String {
+        es256::sign_with_kid(
+            kid,
+            &gotrue.issuer(),
+            user_id,
+            json!({
+                "email": format!("{user_id}@example.test"),
+                "app_metadata": { "provider": "email" },
+            }),
+        )
+    }
+
+    /// A tier-1 token for `user_id`: ES256, signed by the test-only key.
+    fn token_for(gotrue: &GoTrue, user_id: &str) -> String {
+        es256::sign(
+            &gotrue.issuer(),
+            user_id,
+            json!({
+                "email": format!("{user_id}@example.test"),
+                "app_metadata": { "provider": "email" },
+            }),
+        )
+    }
+
+    /// Every future started before any is awaited (`join_all`); the answers in order.
+    async fn join_all<F: Future>(futures: Vec<F>) -> Vec<F::Output> {
+        let mut futures: Vec<Pin<Box<F>>> = futures.into_iter().map(Box::pin).collect();
+        let mut outputs: Vec<Option<F::Output>> = futures.iter().map(|_| None).collect();
+        poll_fn(|cx| {
+            let mut pending = false;
+            for (future, output) in futures.iter_mut().zip(outputs.iter_mut()) {
+                if output.is_none() {
+                    match future.as_mut().poll(cx) {
+                        Poll::Ready(value) => *output = Some(value),
+                        Poll::Pending => pending = true,
+                    }
+                }
+            }
+            if pending { Poll::Pending } else { Poll::Ready(()) }
+        })
+        .await;
+        outputs
+            .into_iter()
+            .map(|output| output.expect("every future finished"))
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn r1144000_verifies_an_es256_token_through_the_published_set() {
+        let (gotrue, _clock, auth) = no_secret().await;
+        gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body()));
+
+        let verified = auth
+            .verify(&token_for(&gotrue, ALICE))
+            .await
+            .expect("tier 1 verifies");
+        assert_eq!(verified.user_id, ALICE);
+        assert!(verified.email_verified);
+        assert_eq!(gotrue.jwks_calls(), 1);
+    }
+
+    #[tokio::test]
+    async fn r1144000_a_failed_refetch_serves_the_stale_set_and_retries_at_most_once_per_cooldown() {
+        let (gotrue, clock, auth) = no_secret().await;
+        gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body()));
+        let token = token_for(&gotrue, ALICE);
+        assert_eq!(auth.verify(&token).await.expect("fresh verifies").user_id, ALICE);
+        assert_eq!(gotrue.jwks_calls(), 1);
+
+        clock.charge(JWKS_CACHE_MAX_AGE_MS + 1).await;
+        gotrue.answer_jwks(JwksReply::Fail);
+        assert_eq!(auth.verify(&token).await.expect("stale verifies").user_id, ALICE);
+        assert_eq!(gotrue.jwks_calls(), 2);
+
+        // Inside the cooldown no request fetches again: the stale set answers them all.
+        assert!(auth.verify(&token).await.is_ok());
+        assert!(auth.verify(&token).await.is_ok());
+        assert_eq!(gotrue.jwks_calls(), 2);
+
+        // Past the cooldown the next request retries the endpoint once.
+        clock.charge(JWKS_COOLDOWN_MS).await;
+        assert!(auth.verify(&token).await.is_ok());
+        assert_eq!(gotrue.jwks_calls(), 3);
+    }
+
+    #[tokio::test]
+    async fn r1144000_a_stale_set_past_its_cap_is_refused() {
+        let (gotrue, clock, auth) = no_secret().await;
+        gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body()));
+        let token = token_for(&gotrue, ALICE);
+        assert!(auth.verify(&token).await.is_ok());
+        assert_eq!(gotrue.jwks_calls(), 1);
+
+        clock.charge(JWKS_CACHE_MAX_AGE_MS + 1).await;
+        gotrue.answer_jwks(JwksReply::Fail);
+        assert!(auth.verify(&token).await.is_ok());
+        assert_eq!(gotrue.jwks_calls(), 2);
+
+        // Past the stale cap the last good set is no longer trusted.
+        clock.charge(JWKS_STALE_MAX_MS).await;
+        let before = gotrue.jwks_calls();
+        assert!(auth.verify(&token).await.is_err());
+        assert_eq!(gotrue.jwks_calls(), before + 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1144000_ten_concurrent_verifications_make_one_fetch_while_the_route_hangs() {
+        let (gotrue, _clock, auth) = no_secret().await;
+        gotrue.answer_jwks(JwksReply::Hang);
+        let token = token_for(&gotrue, ALICE);
+
+        // One fetch in flight, not ten serialized ones: all finish inside three fetch timeouts,
+        // and each waits at most the one fetch's own timeout.
+        let bound = Duration::from_millis((JWKS_FETCH_TIMEOUT_MS * 3) as u64);
+        let results = tokio::time::timeout(bound, join_all((0..10).map(|_| auth.verify(&token)).collect()))
+            .await
+            .expect("ten verifications finish together");
+        assert_eq!(results.len(), 10);
+        // Nothing cached and no second tier: every one is refused…
+        assert!(results.iter().all(|result| result.is_err()));
+        // …after exactly one fetch.
+        assert_eq!(gotrue.jwks_calls(), 1);
+    }
+
+    #[tokio::test]
+    async fn r1144000_a_dropped_fetching_request_does_not_wedge_the_waiters() {
+        let (gotrue, _clock, auth) = no_secret().await;
+        gotrue.answer_jwks(JwksReply::Hang);
+        let token = token_for(&gotrue, ALICE);
+
+        // The fetching request hangs up mid-fetch (a client that disconnects) while a second
+        // request waits on it. The endpoint recovers meanwhile.
+        let fetching = tokio::time::timeout(Duration::from_millis(300), auth.verify(&token));
+        let waiting = async {
+            // The hanging fetch has reached the route before it recovers.
+            while gotrue.jwks_calls() < 1 {
+                tokio::task::yield_now().await;
+            }
+            gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body()));
+            tokio::time::timeout(
+                Duration::from_millis(JWKS_FETCH_TIMEOUT_MS as u64),
+                auth.verify(&token),
+            )
+            .await
+        };
+        let (fetching, waiting) = tokio::join!(fetching, waiting);
+        assert!(fetching.is_err(), "the fetching request was dropped");
+        // The waiter took over the fetch instead of waiting forever.
+        assert_eq!(
+            waiting
+                .expect("the waiter is not wedged")
+                .expect("verifies")
+                .user_id,
+            ALICE
+        );
+        assert_eq!(gotrue.jwks_calls(), 2);
+
+        // A later request reads the cache.
+        assert!(auth.verify(&token).await.is_ok());
+        assert_eq!(gotrue.jwks_calls(), 2);
+    }
+
+    #[tokio::test]
+    async fn r1144000_a_key_a_successful_refetch_dropped_is_refused() {
+        let (gotrue, clock, auth) = no_secret().await;
+        gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body()));
+        let token_a = token_for(&gotrue, ALICE);
+        assert!(auth.verify(&token_a).await.is_ok());
+        assert_eq!(gotrue.jwks_calls(), 1);
+
+        // The endpoint rotates to a set without the old key: the refetch replaces the set whole.
+        gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body_b()));
+        clock.charge(JWKS_CACHE_MAX_AGE_MS + 1).await;
+        assert!(auth.verify(&token_a).await.is_err());
+        assert_eq!(gotrue.jwks_calls(), 2);
+
+        // …and the replacement key verifies, without another fetch.
+        let token_b = token_for_as(&gotrue, ALICE, es256::TEST_ONLY_ES256_KID_B);
+        assert_eq!(
+            auth.verify(&token_b).await.expect("the new key verifies").user_id,
+            ALICE
+        );
+        assert_eq!(gotrue.jwks_calls(), 2);
+    }
+
+    #[tokio::test]
+    async fn r1144000_a_failed_refetch_is_logged() {
+        let log = Captured::default();
+        let _guard = log.install();
+        let (gotrue, clock, auth) = no_secret().await;
+        gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body()));
+        let token = token_for(&gotrue, ALICE);
+        assert!(auth.verify(&token).await.is_ok());
+
+        clock.charge(JWKS_CACHE_MAX_AGE_MS + 1).await;
+        gotrue.answer_jwks(JwksReply::Fail);
+        assert!(auth.verify(&token).await.is_ok());
+        let logged = log.text();
+        assert!(logged.contains("auth.jwks.fetch_failed"), "{logged}");
     }
 }
