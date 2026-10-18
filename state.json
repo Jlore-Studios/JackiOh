@@ -4073,20 +4073,20 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "spec/11-rulings.md"
+            "crates/engine/tests/golden/games.jsonl"
           ],
-          "from": "eb833b6e936fd00676083031f0d1f8a272fb3458",
-          "main": "487ea0de1b5b49dcc70f3b46592fcb63b3e0902b"
+          "from": "34749e4aee7f2704adbee8636260bb13a390c2e2",
+          "main": "1d353c144ca939d81ca69f651a70d86b7b3be805"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39126348995",
+            "run": "39131265651",
             "tier": "strong"
           }
         ],
-        "sha": "34749e4aee7f2704adbee8636260bb13a390c2e2",
+        "sha": "882c91dd3a958991abaf66eeea3660c5b64ffa4c",
         "tiers": {
           "claude": "strong"
         }
