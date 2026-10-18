@@ -270,6 +270,7 @@ mod tests {
             labels: (labels.0.to_owned(), labels.1.to_owned()),
             paired,
             turn_actions: None,
+            stop_unsettled: false,
         }
     }
 
