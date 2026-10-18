@@ -18466,9 +18466,9 @@
     ],
     "idle_since": "2026-10-18T07:27:31Z",
     "last_run": "2026-10-18T06:59:23Z",
-    "provider": "claude-6",
+    "provider": null,
     "requested": false,
-    "run_id": "39105948377",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
