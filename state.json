@@ -4905,6 +4905,17 @@
       ]
     },
     "1243": {
+      "asks": [
+        "c:6254757200"
+      ],
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-10-18T20:29:22Z",
+      "requested_by": "jgoetzmann",
+      "stop_requested": false,
       "suggestion": true
     },
     "1245": {
