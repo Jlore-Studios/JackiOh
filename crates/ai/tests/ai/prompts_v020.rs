@@ -478,7 +478,7 @@ mod e18_a_whole_game_with_the_new_prompts {
         // of the opponent's hand) and Ancient Acquisition (no prompt since R684: its returns are random),
         // beside cheap Units: eight cards and a hero of 20, so that the game is short and the prompt cards
         // are drawn. On this seed greedy's Pickle
-        // hands the AI three mode prompts on greedy's turn, and the AI's Back from the GY asks a pick.
+        // hands the AI mode prompts on greedy's turn, and the AI's Back from the GY asks a pick.
         install();
         let deck: Vec<String> = [
             PICKLE,
@@ -499,7 +499,7 @@ mod e18_a_whole_game_with_the_new_prompts {
             ..HUMAN_HANDICAP
         };
         let config = MatchConfig {
-            seed: "e18-match".to_string(),
+            seed: "e18-match-3".to_string(),
             decks: (deck.clone(), deck),
             handicaps: Some(PerPlayerOpt {
                 p1: Some(handicap),

@@ -307,7 +307,7 @@ mod r224_setup_waits_for_a_question {
                 .unwrap_or_else(|| "no".to_string())
         );
 
-        // Every card in p1's library is one of these, so each of the three opening draws asks in turn.
+        // Every card in p1's library is one of these, so each of p1's four opening draws asks in turn.
         // Answering each goes on with the opening deal, and the first mulligan opens only once nothing is
         // asking.
         let mut state = started.state;

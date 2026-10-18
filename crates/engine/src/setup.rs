@@ -36,12 +36,13 @@ fn seat_of(player: PlayerId) -> usize {
     player.seat()
 }
 
-/// §2.1: the Nth seat draws N+2, so the table is the source of truth, not two constants.
+/// §2.1, R1156000: the seat's entry in the opening-draw table, the source of truth, not two constants.
 pub fn opening_draw_for(player: PlayerId) -> i32 {
     OPENING_DRAW
         .get(seat_of(player))
+        .or(OPENING_DRAW.last())
         .copied()
-        .unwrap_or(seat_of(player) as i32 + 3)
+        .unwrap_or_default()
 }
 
 /// §2.1, R182: the seat's opening-draw table entry plus its handicap's extra cards. Quickdraw cards

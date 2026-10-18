@@ -298,7 +298,7 @@ mod r635_cast_on_draw_cards_sit_out_the_deal_and_are_shuffled_in_after_the_mulli
             let bottom = &side.library[side.library.len() - 8..];
             assert!(defs_of(bottom).iter().all(|d| is_cod(d)));
 
-            // The mulligan returns the whole hand: three replacements, none of them a cast-on-draw card, and
+            // The mulligan returns the whole hand: four replacements, none of them a cast-on-draw card, and
             // nothing cast on the way (turn 1's own draw comes after setup's last event).
             let returned = ids_of(&side.hand);
             let answered = answer_both(state, keep_p1(vec![]));
@@ -495,7 +495,7 @@ mod r748_a_hand_the_other_cards_cannot_fill_takes_cast_on_draw_cards_cast_at_the
             0
         );
         assert!(drawn_by(&before_turn_one(&answered.events), PlayerId::P1).is_empty());
-        // Turn 1's draw meets the other seventeen: it casts them all, and the draw after the last one
+        // Turn 1's draw meets the other sixteen: it casts them all, and the draw after the last one
         // finds the library empty.
         let from = answered
             .events
@@ -522,9 +522,9 @@ mod r748_a_hand_the_other_cards_cannot_fill_takes_cast_on_draw_cards_cast_at_the
             decks: (deck_of(0, DECK_SIZE, None), other()),
             ..Default::default()
         });
-        // Five more, as a Unstable Clone Machine's or a CN-Virus's copies would add: 25 cards, all of them
+        // Six more, as a Unstable Clone Machine's or a CN-Virus's copies would add: 26 cards, all of them
         // cast on draw.
-        for def_id in [cod(1), cod(2), cod(3), cod(4), cod(5)] {
+        for def_id in [cod(1), cod(2), cod(3), cod(4), cod(5), cod(6)] {
             let card = new_instance(
                 &mut game,
                 &def_id,
@@ -537,11 +537,11 @@ mod r748_a_hand_the_other_cards_cannot_fill_takes_cast_on_draw_cards_cast_at_the
         assert_eq!(begun.state.players.p1.hand.len() as i32, OPENING_DRAW[0]);
         assert_eq!(
             begun.state.players.p1.library.len() as i32,
-            DECK_SIZE + 5 - OPENING_DRAW[0]
+            DECK_SIZE + 6 - OPENING_DRAW[0]
         );
 
         let settled = answer_both(&begun.state, keep_all()).state;
-        // The hand's three at the start of the game, then turn 1's twenty casts; the next card goes to the
+        // The hand's four at the start of the game, then turn 1's twenty casts; the next card goes to the
         // hand uncast, which ends the chain.
         assert_eq!(
             settled.players.p1.graveyard.len() as i32,
@@ -553,8 +553,8 @@ mod r748_a_hand_the_other_cards_cannot_fill_takes_cast_on_draw_cards_cast_at_the
     }
 
     #[test]
-    fn r748_one_other_card_and_two_cast_on_draw_cards_fill_the_hand_and_each_seats_are_cast_player_1s_first()
-    {
+    fn r748_one_other_card_and_three_cast_on_draw_cards_fill_the_hand_and_each_seats_are_cast_player_1s_first()
+     {
         let begun = start(
             "r748-one",
             (deck_of(0, DECK_SIZE - 1, None), deck_of(0, DECK_SIZE - 2, None)),
@@ -569,10 +569,10 @@ mod r748_a_hand_the_other_cards_cannot_fill_takes_cast_on_draw_cards_cast_at_the
         let casting =
             |cards: &[CardInstance]| -> usize { defs_of(cards).iter().filter(|d| is_cod(d)).count() };
         assert_eq!(others(&p1[..]), vec!["fx-1".to_string()]);
-        assert_eq!(casting(&p1[..]), 2);
+        assert_eq!(casting(&p1[..]), 3);
         assert_eq!(others(&p2[..]).len(), 2);
         assert_eq!(casting(&p2[..]), 2);
-        assert_eq!(state.players.p1.library.len() as i32, DECK_SIZE - 3);
+        assert_eq!(state.players.p1.library.len() as i32, DECK_SIZE - OPENING_DRAW[0]);
         assert_eq!(count(&begun.events, GameEventType::Fatigue), 0);
         assert_eq!(count(&begun.events, GameEventType::CardPlayed), 0);
 
@@ -603,9 +603,9 @@ mod r748_a_hand_the_other_cards_cannot_fill_takes_cast_on_draw_cards_cast_at_the
 
     #[test]
     fn r748_a_mulligan_the_other_cards_cannot_replace_is_dealt_cast_on_draw_cards_for_the_rest() {
-        let begun = start("r748-short", (deck_of(0, DECK_SIZE - 5, None), other()), None);
+        let begun = start("r748-short", (deck_of(0, DECK_SIZE - 7, None), other()), None);
         let state = &begun.state;
-        assert_eq!(state.players.p1.hand.len(), 3);
+        assert_eq!(state.players.p1.hand.len() as i32, OPENING_DRAW[0]);
         assert!(!defs_of(&state.players.p1.hand).iter().any(|d| is_cod(d)));
         assert_eq!(
             state
@@ -615,13 +615,13 @@ mod r748_a_hand_the_other_cards_cannot_fill_takes_cast_on_draw_cards_cast_at_the
                 .iter()
                 .filter(|card| !is_cod(&card.def_id))
                 .count(),
-            2
+            3
         );
 
         let answered = answer_both(state, keep_p1(vec![]));
         let dealt = before_turn_one(&answered.events);
         let replacements = drawn_by(&dealt, PlayerId::P1);
-        assert_eq!(replacements.len(), 3);
+        assert_eq!(replacements.len() as i32, OPENING_DRAW[0]);
         let filled: Vec<String> = replacements
             .iter()
             .filter(|(_, def_id)| is_cod(def_id))
@@ -737,8 +737,8 @@ mod r640_a_quickdraw_card_replaces_one_of_the_opening_draws {
     }
 
     #[test]
-    fn r640_a_seat_holding_all_five_quickdraw_cards_is_dealt_only_as_many_as_it_has_draws_p1s_three_and_p2s_four()
-     {
+    fn r640_a_seat_holding_all_five_quickdraw_cards_is_dealt_only_as_many_as_it_has_draws_four_for_each_seat()
+    {
         let mut hands: IndexSet<String> = IndexSet::new();
         for n in 0..60 {
             let begun = start(
@@ -751,25 +751,25 @@ mod r640_a_quickdraw_card_replaces_one_of_the_opening_draws {
 
             assert_eq!(p1.hand.len() as i32, OPENING_DRAW[0]);
             assert_eq!(p2.hand.len() as i32, OPENING_DRAW[1]);
-            assert_eq!(quick_in(&p1.hand), 3);
+            assert_eq!(quick_in(&p1.hand), 4);
             assert_eq!(quick_in(&p2.hand), 4);
-            assert_eq!(quick_in(&p1.library), 2);
+            assert_eq!(quick_in(&p1.library), 1);
             assert_eq!(quick_in(&p2.library), 1);
-            assert_eq!(p1.library.len() as i32, DECK_SIZE - 3);
+            assert_eq!(p1.library.len() as i32, DECK_SIZE - 4);
             assert_eq!(p2.library.len() as i32, DECK_SIZE - 4);
-            assert_eq!(drawn_by(&begun.events, PlayerId::P1).len(), 3);
+            assert_eq!(drawn_by(&begun.events, PlayerId::P1).len(), 4);
             assert_eq!(drawn_by(&begun.events, PlayerId::P2).len(), 4);
             assert_eq!(count(&begun.events, GameEventType::Burned), 0);
             let mut defs = defs_of(&p1.hand);
             defs.sort();
             hands.insert(defs.join(","));
         }
-        // Which of the five fill the hand is the shuffle's choice, not always the same three.
+        // Which of the five fill the hand is the shuffle's choice, not always the same four.
         assert!(hands.len() > 3);
     }
 
     #[test]
-    fn r640_a_handicapped_seat_is_dealt_up_to_its_larger_hand_four_for_p1_and_five_for_p2_under_medium() {
+    fn r640_a_handicapped_seat_is_dealt_up_to_its_larger_hand_five_for_each_seat_under_medium() {
         let medium = AI_DIFFICULTY.medium;
         let decks = (
             deck_of(5, 0, Some(medium.deck_size)),
@@ -788,8 +788,8 @@ mod r640_a_quickdraw_card_replaces_one_of_the_opening_draws {
 
         assert_eq!(p1.hand.len() as i32, OPENING_DRAW[0] + medium.extra_opening_cards);
         assert_eq!(p2.hand.len() as i32, OPENING_DRAW[1] + medium.extra_opening_cards);
-        assert_eq!(quick_in(&p1.hand), 4);
-        assert_eq!(quick_in(&p1.library), 1);
+        assert_eq!(quick_in(&p1.hand), 5);
+        assert_eq!(quick_in(&p1.library), 0);
         assert_eq!(quick_in(&p2.hand), 5);
         assert_eq!(quick_in(&p2.library), 0);
     }
@@ -837,7 +837,7 @@ mod r640_a_quickdraw_card_replaces_one_of_the_opening_draws {
                 .collect();
             let answered = answer_both(&begun.state, keep_p1(vec![]));
             let replacements = drawn_by(&before_turn_one(&answered.events), PlayerId::P1);
-            assert_eq!(replacements.len(), 3);
+            assert_eq!(replacements.len() as i32, OPENING_DRAW[0]);
             for (instance_id, def_id) in &replacements {
                 if is_qd(def_id) && !dealt.contains(instance_id) {
                     drawn_surplus += 1;
@@ -848,13 +848,13 @@ mod r640_a_quickdraw_card_replaces_one_of_the_opening_draws {
     }
 
     #[test]
-    fn r640_r748_two_quickdraw_cards_and_one_cast_on_draw_card_fill_the_hand_uncast() {
+    fn r640_r748_two_quickdraw_cards_and_two_cast_on_draw_cards_fill_the_hand_uncast() {
         let begun = start("r636-mixed", (deck_of(2, 18, None), other()), None);
         let side = &begun.state.players.p1;
         assert_eq!(defs_of(&side.hand).iter().filter(|d| is_qd(d)).count(), 2);
-        assert_eq!(defs_of(&side.hand).iter().filter(|d| is_cod(d)).count(), 1);
+        assert_eq!(defs_of(&side.hand).iter().filter(|d| is_cod(d)).count(), 2);
         assert_eq!(side.hand.len() as i32, OPENING_DRAW[0]);
-        assert_eq!(side.library.len(), 17);
+        assert_eq!(side.library.len(), 16);
         assert_eq!(side.fatigue_count, 0);
         assert_eq!(count(&begun.events, GameEventType::Fatigue), 0);
         assert_eq!(count(&begun.events, GameEventType::CardPlayed), 0);

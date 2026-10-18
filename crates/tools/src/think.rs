@@ -259,12 +259,12 @@ mod tests {
     use jackioh_engine::zones::active_units_of;
     use serde_json::{Value, json};
 
-    /// The hotseat game e2e spec 01 recorded (SURFACE §13): 37 log entries, 9 turns.
+    /// The hotseat game e2e spec 01 recorded (SURFACE §13): 41 log entries, 9 turns.
     const HOTSEAT: &str = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../engine/tests/golden/01-hotseat-full-game.json"
     );
-    /// A mid-game position in it: turn 4, p2 to act with four cards in hand, a search of 327 nodes.
+    /// A mid-game position in it: turn 4, p2 to act with four cards in hand, a search of 307 nodes.
     const MID_GAME: usize = 13;
 
     fn hotseat() -> ReplayInput {
@@ -381,7 +381,7 @@ mod tests {
 
         let whole = inspect(&input, None, None, false).unwrap();
         assert_eq!(whole.at, input.log.len());
-        assert_eq!(whole.hash, "5c3d578c");
+        assert_eq!(whole.hash, "8784adae");
         assert!(whole.result.is_some());
         assert_eq!(whole.reason, None);
         assert!(render(&whole).contains("decision none"));
@@ -395,7 +395,7 @@ mod tests {
         let found = inspect(&hotseat(), Some(MID_GAME), None, false).unwrap();
         let text = render(&found);
         for needle in [
-            "at 13/37 turn 4 active p2 seat p2",
+            "at 13/41 turn 4 active p2 seat p2",
             "hand(p2): ",
             "seatToAct p2 legal ",
             " eval ",
@@ -424,7 +424,7 @@ mod tests {
         let input: ReplayInput = serde_json::from_value(value).unwrap();
         let found = inspect(&input, None, None, false).unwrap();
         assert_eq!(found.fold_errors, vec!["refused-1".to_string()]);
-        assert_eq!(found.hash, "5c3d578c");
+        assert_eq!(found.hash, "8784adae");
         assert!(render(&found).contains("foldErrors 1: refused-1"));
     }
 

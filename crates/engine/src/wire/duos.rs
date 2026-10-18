@@ -1,7 +1,7 @@
 //! Duos co-op's wire types (#936, fullsend SPEC S2): two ordinary 1v1 games ("duels") side by side,
 //! A1 vs B1 and A2 vs B2, whose teams share a life pool, pass cards to each other and end their turns
-//! together. Team A is `p1` in both duels (goes first, draws 3) and team B is `p2` (draws 4, takes The
-//! Coin), so every card still sees a 1v1 game.
+//! together. Team A is `p1` in both duels (goes first) and team B is `p2` (takes The Coin); both draw 4
+//! (R1156000), so every card still sees a 1v1 game.
 //!
 //! What a seat sends (`DuosAction`), what it sees (`DuosView`) and what a step reports (`DuosEvent`).
 //! The state and the reducer that use them are `crate::duos`; the life rules are `crate::duos_life`.

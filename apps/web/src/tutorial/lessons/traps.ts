@@ -12,29 +12,32 @@ export const lesson: TutorialLesson = {
   // This seed deals Bear Honeypot and Going Long in the opening hand, Rush Token Farm as the first
   // draw and Tempo Timmy on turn 4, and the AI's Sheepish in its first draw: the AI sets it on its
   // third turn, just before Tempo Timmy arrives to test it. Scanned with scripts/lesson-deal.ts.
+  // Since the opening hand grew from three cards to four (R1156000), the order deals Jlockeed
+  // Shredder-10 as the hand's fourth card: every card that came before it still arrives on the turn it
+  // did, and only the ones after it, past the lesson's turns, come a turn sooner.
   seed: "tutorial-traps-2225",
   humanSeat: "p1",
   humanDeck: [
     "core-084", // Going Long (Quickdraw)
     "core-060", // Bear Honeypot
     "core-041", // Sheepish
-    "core-058", // Rush Token Farm
+    "core-013", // Jlockeed Shredder-10
     "core-006", // Mana Well
     "core-015", // Me and Mr Token
-    "core-011", // Tempo Timmy
+    "core-068", // Twisted Sorcerer
     "core-003", // Right-house defender
     "core-020", // Pointmaster
-    "core-068", // Twisted Sorcerer
-    "core-032", // Prem Panther
+    "core-037", // Gravedigger
+    "core-011", // Tempo Timmy
     "core-045", // Deft Duelist
     "core-056", // Jilliax
-    "core-002", // Bigot
+    "core-016", // Hit Job
     "core-019", // Midrange Menace
-    "core-013", // Jlockeed Shredder-10
+    "core-002", // Bigot
     "core-025", // 4-mana 7/7
     "core-044", // True Strike
-    "core-016", // Hit Job
-    "core-037", // Gravedigger
+    "core-032", // Prem Panther
+    "core-058", // Rush Token Farm
   ],
   aiDeck: [
     "core-041", // Sheepish
