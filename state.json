@@ -4866,6 +4866,13 @@
     "1240": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-18T20:20:12Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "the change is in the AI's search budget (crates/ai/src/simulate.rs), which the rule rates hard outright; it also spans crates/ai, crates/tools, spec/ and training/"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
