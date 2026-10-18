@@ -680,6 +680,8 @@ pub fn clear_return_flags(state: &mut GameState) {
 
 fn cleanup(sink: &mut EngineSink, player: PlayerId) {
     crate::modifiers::expire_modifiers(sink, player);
+    // R1174000: beside the "this turn" modifiers, `player`'s Frozen Units whose thaw is due thaw.
+    crate::freeze::thaw_at_cleanup(sink, player);
     let side = &mut sink.state.players[player];
     side.turn_log.unspent_at_end = Some(side.mana.current);
     let handed_over = side.ai_turn;

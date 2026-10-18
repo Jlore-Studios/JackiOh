@@ -629,6 +629,8 @@ fn verb_cases() -> Vec<(&'static str, Value)> {
         ("exile_all", json!({ "side": "enemy" })),
         ("exile_hand", json!({ "player": "self" })),
         ("bounce", json!({ "target": { "of": "self" } })),
+        ("freeze", json!({ "target": { "of": "self" } })),
+        ("freeze_all", json!({ "side": "enemy" })),
         ("flicker", json!({ "target": { "of": "self" } })),
         ("switch_position_of", json!({ "target": { "of": "self" } })),
         ("swap", json!({})),

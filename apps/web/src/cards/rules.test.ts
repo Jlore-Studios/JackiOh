@@ -154,6 +154,7 @@ const STATUSES: readonly StatusTermId[] = [
   "Can't be attacked",
   "Only Units in this lane can attack this",
   "Berserk",
+  "Frozen",
   "Combat keyword",
 ];
 
@@ -181,6 +182,7 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Trigger a Cry",
   "Look at a hand",
   "Allure",
+  "Freeze",
   "Jade Counter",
   "Exile",
   "Hand size",
@@ -625,6 +627,8 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       Buff: ["Buffs"],
       Redirect: ["redirected"],
       Exile: ["exile", "exiles", "exiled"],
+      // R1174000: Freeze's spellings; Frozen is its own §6.1 status.
+      Freeze: ["freeze", "freezes"],
     };
     for (const [key, entry] of Object.entries(GLOSSARY)) {
       expect(entry.aliases, key).toEqual(printed[key as GlossaryTermId] ?? []);
@@ -730,8 +734,11 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
   });
 
   it("R512 every new term has at least one catalog text that prints it", () => {
+    // R1174000: Frozen is a §6.1 status no card prints yet; M+ #24 Bob (#1185) is the first, and
+    // takes it off this list when it ships.
+    const unprinted: readonly GlossaryTermId[] = ["Frozen"];
     const fresh: readonly GlossaryTermId[] = [
-      ...STATUSES,
+      ...STATUSES.filter((id) => !unprinted.includes(id)),
       "Activate",
       "Counter",
       "Steal",
@@ -748,6 +755,7 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
     ];
     const found = new Set(PLAYED_TEXTS.flatMap(({ text }) => termsIn(text)));
     for (const term of fresh) expect(found.has(term), term).toBe(true);
+    for (const term of unprinted) expect(found.has(term), `${term} is printed now: take it off the list`).toBe(false);
   });
 
   it("R512 tokens stay lossless over every text a player reads, numbers filled in", () => {
@@ -911,5 +919,16 @@ describe("R1045000: K-Pop Fanatic Allures the enemy permanent it chooses", () =>
     expect(GLOSSARY.Allure.rule).toContain("permanents");
     // Jade Beauty keeps Allure-ing Units only, as it prints.
     expect(played("meditative-039-5")).toContain("Allure every enemy Unit.");
+  });
+});
+
+describe("R1174000: Freeze and Frozen", () => {
+  it("R1174000 Freeze is a §6.3 verb that bolds as it is inflected, and Frozen a §6.1 status", () => {
+    expect(GLOSSARY.Freeze.section).toBe("§6.3");
+    expect(GLOSSARY.Frozen.section).toBe("§6.1");
+    expect(termsIn("Freeze every enemy Unit.")).toEqual(["Freeze"]);
+    expect(termsIn("Cry: freeze a Unit. It freezes, and a Frozen Unit thaws later.")).toEqual(["Cry", "Freeze", "Frozen"]);
+    // Matching is whole words and case-sensitive.
+    expect(termsIn("A freezer, frozen solid.")).toEqual([]);
   });
 });

@@ -165,8 +165,20 @@ pub fn has_exertion(state: &GameState, unit: &CardInstance, kind: ExertionKind) 
     has_exertion_in(&AuraTable::per_read(state), unit, kind)
 }
 
-/// `has_exertion` read through a sweep's `AuraTable` (#892).
+/// `has_exertion` read through a sweep's `AuraTable` (#892). R1174000: a Frozen Unit has neither
+/// half, whatever it spent (`freeze.rs`).
 pub fn has_exertion_in(auras: &AuraTable<'_>, unit: &CardInstance, kind: ExertionKind) -> bool {
+    unit.frozen.is_none() && exertion_unspent_in(auras, unit, kind)
+}
+
+/// R1174000: the half of the unit's exertion it has not spent this turn, Frozen or not — what a
+/// freeze landing now takes away (`freeze::thaw_turn`). Every other reader asks `has_exertion`.
+pub fn exertion_unspent(state: &GameState, unit: &CardInstance, kind: ExertionKind) -> bool {
+    exertion_unspent_in(&AuraTable::per_read(state), unit, kind)
+}
+
+/// `exertion_unspent` read through a sweep's `AuraTable` (#892).
+pub fn exertion_unspent_in(auras: &AuraTable<'_>, unit: &CardInstance, kind: ExertionKind) -> bool {
     let spent = &unit.exertion;
     if kind == ExertionKind::Attack {
         let attacks = spent.attacks.unwrap_or(if spent.attacked { 1 } else { 0 });
@@ -218,6 +230,8 @@ pub fn enter_new_side(sink: &mut EngineSink<'_>, card: &CardInstance, from: Play
         };
         controller = live.controller;
     }
+    // R1174000: a Frozen card stays Frozen, its thaw stamped again for its new controller.
+    crate::freeze::restamp(sink.state, &card.id);
     crate::modifiers::move_sourced_modifiers(sink, &card.id, from, controller);
 }
 
@@ -266,6 +280,10 @@ pub fn switch_position(
         return Ok(());
     }
 
+    // R1174000: a Frozen Unit's own switch is refused; an effect's (R20) is not.
+    if spend_exertion && unit.frozen.is_some() {
+        return Err(EngineError::new(FROZEN_REFUSAL));
+    }
     if spend_exertion && !has_exertion(sink.state, &unit, ExertionKind::Switch) {
         return Err(EngineError::new("that unit has already acted this turn"));
     }
@@ -287,6 +305,9 @@ pub fn switch_position(
     Ok(())
 }
 
+/// R1174000: why a Frozen Unit may neither declare an attack nor switch its own position.
+pub const FROZEN_REFUSAL: &str = "that Unit is Frozen";
+
 /// §4.2 step 1: "choose an attacker that can attack", in the order the step lists — exertion
 /// unspent, Attack Position, not sick unless Rush or Charge, attack above 0, no "Can't attack" —
 /// with §3.2's "is it even on the field" first. The order is what decides which reason a unit that
@@ -303,6 +324,10 @@ pub fn why_cannot_declare_in(auras: &AuraTable<'_>, attacker: &CardInstance) -> 
     }
     if carried_out_of_combat(state, attacker) {
         return Err(EngineError::new("a Unit on a carrier cannot attack"));
+    }
+    // R1174000: a Frozen Unit has lost its attack, which it is told ahead of what it spent.
+    if attacker.frozen.is_some() {
+        return Err(EngineError::new(FROZEN_REFUSAL));
     }
     if !has_exertion_in(auras, attacker, ExertionKind::Attack) {
         return Err(EngineError::new("that unit has already acted this turn"));
