@@ -4009,6 +4009,8 @@
     "1167": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -4025,18 +4027,31 @@
       },
       "interruptions": 0,
       "issue": 1147,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The new ruling says a record whose `playedRadiant` length differs from `played` is refused, but the code accepts such a record and only leaves it out of both breakdowns. The ruling's own proving test feeds one in and expects exactly that.",
+          "evidence": "`seat_summary` in crates/engine/src/wire/stats.rs (diff around line 1301) parses `playedRadiant` with no length check. `StatsTotals::fold` uses `.filter(|flags| flags.len() == summary.played.len())` and skips the split when the lengths differ. `r1147000_splits_the_played_decks_by_the_face_the_card_was_played_on` builds m2 with `played_radiant = [true, true]` for one play ('wrong length') and asserts it counts in `played` (tally 4) but in neither split. Line 18 of the same note says such a record is 'neither breakdown is counted', which contradicts line 13.",
+          "severity": "blocking",
+          "where": "spec/rulings/R1147000.md:13"
+        },
+        {
+          "claim": "The ruling says the reader records the face on `CardPlayed` or `PlacedCard`. No `PlacedCard` event exists, and the code reads only `CardPlayed`.",
+          "evidence": "`grep -rn PlacedCard crates apps/web/src` finds nothing. \u00a710's event list has no such event. `read()` in crates/engine/src/game_summary.rs pushes `played_radiant` only in the `GameEvent::CardPlayed` arm.",
+          "severity": "blocking",
+          "where": "spec/rulings/R1147000.md:17"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
-      "queued_at": "2026-10-18T05:54:37Z",
+      "queued_at": "2026-10-18T06:04:44Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
       "run_id": "39102181766",
       "self_check_findings": [],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-10-18T05:57:23Z",
       "stop_requested": false,
       "taken_asks": [],
