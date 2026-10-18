@@ -25,4 +25,8 @@ played: Array<string>,
 /**
  * Turn number (1-indexed) each card in `played` was played on.
  */
-playedTurns?: Array<number>, };
+playedTurns?: Array<number>, 
+/**
+ * R1147000: whether each card in `played` was Radiant as played, in the same order.
+ */
+playedRadiant?: Array<boolean>, };

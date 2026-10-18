@@ -14,15 +14,17 @@
 //! window has no `cardPlayed` (§10.5, R448), so it is none; a play step 3 replaced (R449) is followed
 //! by its `transformed` to the card it resolves as, the one its `cardPlayed` names. A card a Counter
 //! sends to the countering player's hand and that player's effect then casts in the same step (C #4
-//! Palantir, R831001) passes through a hand too, and is a cast all the same.
+//! Palantir, R831001) passes through a hand too, and is a cast all the same. Each play keeps whether
+//! it was Radiant as `cardPlayed` placed it (R1147000), so step-3 Radiant (Gifted Program, Feng Shui
+//! per R0983, C+ #68) counts.
 //!
 //! Port of `packages/engine/src/gameSummary.ts` (part 5).
 
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 
 use crate::reduce::{begin_game, reduce};
 use crate::replay::FoldArgs;
-use crate::state::{CreateGameOptions, GameState, create_game};
+use crate::state::{CreateGameOptions, GameState, create_game, find_instance};
 use crate::wire::{CounteredTo, GameEvent, GameSummary, PLAYER_IDS, PerPlayer, PlayerId, SeatSummary};
 
 /// Each seat's hand as instance id → catalog id, in hand order.
@@ -30,13 +32,40 @@ type Hands = PerPlayer<IndexMap<String, String>>;
 
 struct Reading {
     hands: Hands,
+    radiant: IndexSet<String>,
     /// The seat of the first `turnStarted`, and both hands at that moment; `None` until a turn has begun.
     first: Option<PlayerId>,
     opening: Option<PerPlayer<Vec<String>>>,
     drawn: PerPlayer<Vec<String>>,
     played: PerPlayer<Vec<String>>,
     played_turns: PerPlayer<Vec<i32>>,
+    played_radiant: PerPlayer<Vec<bool>>,
     current_turn: i32,
+}
+
+/// Instance ids of the Radiant cards each seat holds in its hand or resolving zone as an action begins.
+fn radiant_of(state: &GameState, hands: &Hands) -> IndexSet<String> {
+    let mut radiant = IndexSet::new();
+    for player in PLAYER_IDS {
+        for card in state.players[player]
+            .hand
+            .iter()
+            .chain(state.players[player].resolving.iter())
+        {
+            if card.radiant && hands[player].contains_key(&card.id) {
+                radiant.insert(card.id.clone());
+            }
+        }
+    }
+    radiant
+}
+
+fn mark_radiant(reading: &mut Reading, after: &GameState, id: &str) {
+    if find_instance(after, id).is_some_and(|c| c.radiant) {
+        reading.radiant.insert(id.to_string());
+    } else {
+        reading.radiant.shift_remove(id);
+    }
 }
 
 /// Each seat's hand as an action begins: the cards the state holds there, and those of `following`
@@ -72,7 +101,7 @@ fn leave(hands: &mut Hands, instance_id: &str) {
 }
 
 /// One step's events, in the order they happened.
-fn read(reading: &mut Reading, events: &[GameEvent]) {
+fn read(reading: &mut Reading, events: &[GameEvent], after: &GameState) {
     // The cards this step countered into a hand: a `cardPlayed` naming one in the same step is the
     // countering player's cast (R831001), never a play from hand.
     let mut stolen: Vec<&str> = Vec::new();
@@ -119,6 +148,13 @@ fn read(reading: &mut Reading, events: &[GameEvent]) {
                 def_id,
             } => {
                 reading.hands[*player].insert(instance_id.clone(), def_id.clone());
+                mark_radiant(reading, after, instance_id);
+            }
+            GameEvent::RadiantSet { instance_id, .. } => {
+                reading.radiant.insert(instance_id.clone());
+            }
+            GameEvent::Deradianted { instance_id, .. } => {
+                reading.radiant.shift_remove(instance_id);
             }
             GameEvent::CardPlayed {
                 player,
@@ -139,6 +175,7 @@ fn read(reading: &mut Reading, events: &[GameEvent]) {
                 reading.played[*player].push(def_id.clone());
                 let turn = reading.current_turn;
                 reading.played_turns[*player].push(turn);
+                reading.played_radiant[*player].push(reading.radiant.contains(id));
                 reading.hands[*player].shift_remove(id);
             }
             GameEvent::Transformed {
@@ -154,6 +191,7 @@ fn read(reading: &mut Reading, events: &[GameEvent]) {
                     }
                     hand.shift_remove(instance_id);
                     hand.insert(new_instance_id.clone(), to_def_id.clone());
+                    mark_radiant(reading, after, new_instance_id);
                 }
             }
             GameEvent::Fused { instance_ids, .. } => {
@@ -185,6 +223,7 @@ fn seat_summary(
         _ => Vec::new(),
     };
     let played_turns = &reading.played_turns[player];
+    let played_radiant = &reading.played_radiant[player];
     SeatSummary {
         deck,
         opening: reading
@@ -198,6 +237,11 @@ fn seat_summary(
             None
         } else {
             Some(played_turns.clone())
+        },
+        played_radiant: if played_radiant.is_empty() {
+            None
+        } else {
+            Some(played_radiant.clone())
         },
     }
 }
@@ -219,29 +263,34 @@ pub fn summarize_game(input: &FoldArgs) -> Option<GameSummary> {
         glitch_boards: input.glitch_boards.clone(),
         ..Default::default()
     });
+    let hands = hands_of(&start, None);
+    let radiant = radiant_of(&start, &hands);
     let mut reading = Reading {
-        hands: hands_of(&start, None),
+        hands,
+        radiant,
         first: None,
         opening: None,
         drawn: per_seat(),
         played: per_seat(),
         played_turns: per_seat(),
+        played_radiant: per_seat(),
         current_turn: 1,
     };
 
     let begun = begin_game(&start);
-    read(&mut reading, &begun.events);
+    read(&mut reading, &begun.events, &begun.state);
     let mut state = begun.state;
 
     for action in &input.log {
         // The state's own hands as the action begins, so nothing the events do not spell out (a card
         // whose control changed, say) carries from one action into the next, but a play still in flight.
         reading.hands = hands_of(&state, Some(&reading.hands));
+        reading.radiant = radiant_of(&state, &reading.hands);
         let result = reduce(&state, action);
         if result.error.is_some() {
             continue;
         }
-        read(&mut reading, &result.events);
+        read(&mut reading, &result.events, &result.state);
         state = result.state;
     }
 

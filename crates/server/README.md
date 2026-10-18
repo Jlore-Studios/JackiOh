@@ -353,6 +353,8 @@ folds `STATS_FOLD_BATCH_RECORDS` (500) records to a transaction. A record writte
 0041 is not folded until the retention loop folds it at boot or `stats-fold` does (R1044000). Once
 folded, a record's detail is emptied `GAME_RECORD_RAW_RETENTION_DAYS` (7) after it was written by the
 retention purge; its row and id stay, so the same game is never written or counted again (R1044001).
+Records track the face each card was played on, and `playedRadiant` and `playedNormal` split the played
+decks into those that played the card Radiant at least once and those that never did (R1147000).
 
 `stats-cards` takes `--source=live|dev|all` (live unless told otherwise), `--mode=bo1|bo3|random`,
 `--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`. With no `--pilot` it

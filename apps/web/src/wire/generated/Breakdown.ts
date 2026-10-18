@@ -9,4 +9,4 @@
  *  - `drawnNotPlayed`: the card reached the seat's hand — in the opening hand or by a later draw —
  *    and the seat never played it. This is the played delta's baseline.
  */
-export type Breakdown = "inDeck" | "openingHand" | "goingFirst" | "goingSecond" | "played" | "drawnNotPlayed";
+export type Breakdown = "inDeck" | "openingHand" | "goingFirst" | "goingSecond" | "played" | "drawnNotPlayed" | "playedRadiant" | "playedNormal";

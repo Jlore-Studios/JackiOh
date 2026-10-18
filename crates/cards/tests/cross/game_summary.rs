@@ -7,8 +7,9 @@
 //!    second seat's;
 //!  - the plays are the hand cards the logged `play` actions named, less those countered in their
 //!    announce window (§10.5 step 3a, R448), each as the card it resolves as after step 3's
-//!    replacement (C #23 Devil's Pact, R449); #96 My Pawn plays out a turn inside an attack's action
-//!    with no `play` logged, so such a game may hold more plays than the log names, never fewer;
+//!    replacement (C #23 Devil's Pact, R449), with the face it was played on (R1147000); #96 My Pawn
+//!    plays out a turn inside an attack's action with no `play` logged, so such a game may hold more
+//!    plays than the log names, never fewer;
 //!  - a cast on its draw (#21 Hinder, #90.1 CN-Virus, §2.4) is no play, and the draws are every card
 //!    drawn from the first turn on, less those burned on a full hand (R4) or cast on their draw.
 
@@ -128,6 +129,8 @@ fn subsequence(part: &[String], whole: &[String]) -> bool {
 struct Play {
     id: String,
     def_id: String,
+    radiant: bool,
+    placed: bool,
     open: bool,
     announced: bool,
 }
@@ -146,7 +149,8 @@ mod summarize_game_over_real_cards_s9_11 {
     use super::*;
 
     #[test]
-    fn r376_reads_opening_hands_plays_and_casts_off_real_games_as_the_state_and_the_log_show_them() {
+    fn r376_r1147000_reads_opening_hands_plays_their_faces_and_casts_off_real_games_as_the_state_and_the_log_show_them()
+     {
         register_all();
         let pool = pool();
         let size = DECK_SIZE as usize;
@@ -156,6 +160,7 @@ mod summarize_game_over_real_cards_s9_11 {
         let mut draw_casts = 0;
         let mut countered_plays = 0;
         let mut replaced_plays = 0;
+        let mut radiant_plays = 0;
 
         for n in 1..=GAMES {
             let seed = format!("summary-cards-{n}");
@@ -195,6 +200,8 @@ mod summarize_game_over_real_cards_s9_11 {
                     plays[player].push(Play {
                         id: card.id.clone(),
                         def_id: card.def_id.clone(),
+                        radiant: card.radiant,
+                        placed: false,
                         open: true,
                         announced: false,
                     });
@@ -222,7 +229,34 @@ mod summarize_game_over_real_cards_s9_11 {
                             {
                                 plays[seat][at].id = new_instance_id.clone();
                                 plays[seat][at].def_id = to_def_id.clone();
+                                plays[seat][at].radiant =
+                                    find_instance(&result.state, new_instance_id).is_some_and(|c| c.radiant);
                                 replaced_plays += 1;
+                            }
+                        }
+                        GameEvent::RadiantSet { instance_id, .. } => {
+                            if let Some((seat, at)) = open_play(&plays, instance_id)
+                                && !plays[seat][at].placed
+                            {
+                                plays[seat][at].radiant = true;
+                            }
+                        }
+                        GameEvent::Deradianted { instance_id, .. } => {
+                            if let Some((seat, at)) = open_play(&plays, instance_id)
+                                && !plays[seat][at].placed
+                            {
+                                plays[seat][at].radiant = false;
+                            }
+                        }
+                        GameEvent::CardPlayed {
+                            instance_id,
+                            former_id,
+                            ..
+                        } => {
+                            if let Some((seat, at)) = open_play(&plays, instance_id)
+                                .or_else(|| former_id.as_deref().and_then(|id| open_play(&plays, id)))
+                            {
+                                plays[seat][at].placed = true;
                             }
                         }
                         // A Death the play's own Tribute set off can discard the hand the card still stands in
@@ -405,6 +439,14 @@ mod summarize_game_over_real_cards_s9_11 {
                     assert!(subsequence(&logged, played), "{seed} {}", player.as_str());
                 } else {
                     assert_eq!(*played, logged, "{seed} {}", player.as_str());
+                    let expected_radiant: Vec<bool> = plays[player].iter().map(|play| play.radiant).collect();
+                    assert_eq!(
+                        summary.seats[player].played_radiant.clone().unwrap_or_default(),
+                        expected_radiant,
+                        "{seed} {}",
+                        player.as_str()
+                    );
+                    radiant_plays += expected_radiant.iter().filter(|&&r| r).count();
                 }
             }
             if pawn {
@@ -420,6 +462,7 @@ mod summarize_game_over_real_cards_s9_11 {
         assert!(replaced_plays > 0);
         assert!(draw_casts > 0);
         assert!(burns > 0);
+        assert!(radiant_plays > 0);
         assert!(pawn_games < GAMES / 2);
     }
 }

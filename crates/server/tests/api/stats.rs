@@ -67,18 +67,29 @@ struct RecordOptions {
     p2_played: Option<Vec<&'static str>>,
     p1_played_turns: Option<Vec<usize>>,
     p2_played_turns: Option<Vec<usize>>,
+    p1_played_radiant: Option<Vec<bool>>,
+    p2_played_radiant: Option<Vec<bool>>,
     turns: Option<i32>,
 }
 
 /// One seat's summary: the first three cards are the opening hand, the rest drawn.
-fn seat(deck: &[&str], played: &[&str], played_turns: Option<Vec<usize>>) -> Value {
-    json!({
+fn seat(
+    deck: &[&str],
+    played: &[&str],
+    played_turns: Option<Vec<usize>>,
+    played_radiant: Option<Vec<bool>>,
+) -> Value {
+    let mut val = json!({
         "deck": deck,
         "opening": deck.iter().take(3).collect::<Vec<_>>(),
         "drawn": deck.iter().skip(3).collect::<Vec<_>>(),
         "played": played,
         "playedTurns": played_turns.unwrap_or_else(|| (1..=played.len()).collect()),
-    })
+    });
+    if let Some(flags) = played_radiant {
+        val["playedRadiant"] = json!(flags);
+    }
+    val
 }
 
 /// A `GameRecord`, as the JSON the store takes it from.
@@ -117,8 +128,8 @@ fn make_game_record(id: &str, options: RecordOptions) -> Value {
             "reason": "hero-death",
             "turns": options.turns.unwrap_or(5),
             "seats": {
-                "p1": seat(&p1_deck, &p1_played, options.p1_played_turns),
-                "p2": seat(&p2_deck, &p2_played, options.p2_played_turns),
+                "p1": seat(&p1_deck, &p1_played, options.p1_played_turns, options.p1_played_radiant),
+                "p2": seat(&p2_deck, &p2_played, options.p2_played_turns, options.p2_played_radiant),
             }
         }
     })
@@ -601,6 +612,53 @@ mod r654_public_card_and_player_stats {
         assert_eq!(card002["drawnNotPlayedGames"], json!(40));
         assert_eq!(card002["drawnNotPlayedWinRate"].as_f64(), Some(26.0 / 40.0));
         assert!(card002["playedDelta"].is_null());
+    }
+
+    #[tokio::test]
+    async fn r1147000_get_api_stats_cards_splits_the_played_games_by_the_face_the_card_was_played_on() {
+        let app = test_app().await;
+        let records = vec![
+            make_game_record(
+                "live-1",
+                RecordOptions {
+                    source: Some("live"),
+                    p1_deck: Some(vec!["core-001", "core-002"]),
+                    p1_played: Some(vec!["core-001", "core-002"]),
+                    p1_played_radiant: Some(vec![true, false]),
+                    winner: Some("p1"),
+                    ..RecordOptions::default()
+                },
+            ),
+            make_game_record(
+                "live-2",
+                RecordOptions {
+                    source: Some("live"),
+                    p1_deck: Some(vec!["core-001", "core-002"]),
+                    p1_played: Some(vec!["core-001", "core-002"]),
+                    p1_played_radiant: Some(vec![false, false]),
+                    winner: Some("p2"),
+                    ..RecordOptions::default()
+                },
+            ),
+        ];
+        insert_records(&app, records).await;
+
+        let (status, _, data) = get_public(&app, "/api/stats/cards?source=live").await;
+        assert_eq!(status, 200);
+
+        let card001 = find(&data["cards"], "id", &json!("core-001")).expect("core-001 is listed");
+        assert_eq!(card001["playedGames"], json!(2));
+        assert_eq!(card001["playedRadiantGames"], json!(1));
+        assert_eq!(card001["playedRadiantWinRate"].as_f64(), Some(1.0));
+        assert_eq!(card001["playedNormalGames"], json!(1));
+        assert_eq!(card001["playedNormalWinRate"].as_f64(), Some(0.0));
+
+        let card002 = find(&data["cards"], "id", &json!("core-002")).expect("core-002 is listed");
+        assert_eq!(card002["playedGames"], json!(2));
+        assert_eq!(card002["playedRadiantGames"], json!(0));
+        assert!(card002["playedRadiantWinRate"].is_null());
+        assert_eq!(card002["playedNormalGames"], json!(2));
+        assert_eq!(card002["playedNormalWinRate"].as_f64(), Some(0.5));
     }
 
     #[tokio::test]

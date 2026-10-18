@@ -52,6 +52,10 @@ pub struct PublicCardStat {
     pub drawn_win_rate: Option<f64>,
     pub played_games: i64,
     pub played_win_rate: Option<f64>,
+    pub played_radiant_games: i64,
+    pub played_radiant_win_rate: Option<f64>,
+    pub played_normal_games: i64,
+    pub played_normal_win_rate: Option<f64>,
     pub drawn_not_played_games: i64,
     pub drawn_not_played_win_rate: Option<f64>,
     pub played_delta: Option<f64>,
@@ -580,6 +584,10 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         let (in_deck_games, _) = stat.map(|stat| tally_of(&stat.in_deck)).unwrap_or((0, 0));
         let rate = stat.and_then(|stat| win_rate(&stat.in_deck));
         let (played_games, played_wins) = stat.map(|stat| tally_of(&stat.played)).unwrap_or((0, 0));
+        let (played_radiant_games, _) = stat.map(|stat| tally_of(&stat.played_radiant)).unwrap_or((0, 0));
+        let played_radiant_rate = stat.and_then(|stat| win_rate(&stat.played_radiant));
+        let (played_normal_games, _) = stat.map(|stat| tally_of(&stat.played_normal)).unwrap_or((0, 0));
+        let played_normal_rate = stat.and_then(|stat| win_rate(&stat.played_normal));
         let (unplayed_games, unplayed_wins) = stat
             .map(|stat| tally_of(&stat.drawn_not_played))
             .unwrap_or((0, 0));
@@ -612,6 +620,10 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             drawn_win_rate: drawn_rate,
             played_games,
             played_win_rate: played_rate,
+            played_radiant_games,
+            played_radiant_win_rate: played_radiant_rate,
+            played_normal_games,
+            played_normal_win_rate: played_normal_rate,
             drawn_not_played_games: unplayed_games,
             drawn_not_played_win_rate: drawn_not_played_rate,
             played_delta: delta,

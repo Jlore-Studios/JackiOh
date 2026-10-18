@@ -47,6 +47,10 @@ const MOCK_CARD_STATS_PROVISIONAL = {
       playedDelta: 0.2,
       playRate: 0.5,
       hasEnoughGames: true,
+      playedRadiantGames: 30,
+      playedRadiantWinRate: 0.7,
+      playedNormalGames: 20,
+      playedNormalWinRate: 0.4,
     },
     {
       id: "core-002",
@@ -65,6 +69,10 @@ const MOCK_CARD_STATS_PROVISIONAL = {
       playedDelta: 0.267,
       playRate: 0.1,
       hasEnoughGames: false, // Below sample threshold (20)
+      playedRadiantGames: 5,
+      playedRadiantWinRate: 1.0,
+      playedNormalGames: 5,
+      playedNormalWinRate: 1.0,
     },
     {
       id: "core-003",
@@ -83,6 +91,10 @@ const MOCK_CARD_STATS_PROVISIONAL = {
       playedDelta: -0.1,
       playRate: 0.3,
       hasEnoughGames: true,
+      playedRadiantGames: 20,
+      playedRadiantWinRate: 0.4,
+      playedNormalGames: 10,
+      playedNormalWinRate: 0.5,
     },
   ],
   summary: {
@@ -112,6 +124,100 @@ const MOCK_CARD_STATS_CLEARED = {
     activePatch: "0.1.0",
     source: "live",
   },
+};
+
+const MOCK_KEYWORD_CARDS = {
+  ...MOCK_CARD_STATS_PROVISIONAL,
+  cards: [
+    {
+      id: "core-001",
+      name: "Spark Pup",
+      cost: 1,
+      rarity: "Common",
+      set: "core",
+      games: 50,
+      winRate: 0.6,
+      drawnGames: 40,
+      drawnWinRate: 0.65,
+      playedGames: 30,
+      playedWinRate: 0.7,
+      drawnNotPlayedGames: 10,
+      drawnNotPlayedWinRate: 0.5,
+      playedDelta: 0.2,
+      playRate: 0.5,
+      hasEnoughGames: true,
+      playedRadiantGames: 30,
+      playedRadiantWinRate: 0.7,
+      playedNormalGames: 20,
+      playedNormalWinRate: 0.4,
+    },
+    {
+      id: "core-019",
+      name: "Midrange Menace",
+      cost: 3,
+      rarity: "Common",
+      set: "core",
+      games: 40,
+      winRate: 0.55,
+      drawnGames: 35,
+      drawnWinRate: 0.5,
+      playedGames: 25,
+      playedWinRate: 0.6,
+      drawnNotPlayedGames: 10,
+      drawnNotPlayedWinRate: 0.5,
+      playedDelta: 0.1,
+      playRate: 0.4,
+      hasEnoughGames: true,
+      playedRadiantGames: 25,
+      playedRadiantWinRate: 0.6,
+      playedNormalGames: 15,
+      playedNormalWinRate: 0.45,
+    },
+    {
+      id: "core-032",
+      name: "Prem Panther",
+      cost: 4,
+      rarity: "Rare",
+      set: "core",
+      games: 30,
+      winRate: 0.5,
+      drawnGames: 25,
+      drawnWinRate: 0.45,
+      playedGames: 20,
+      playedWinRate: 0.5,
+      drawnNotPlayedGames: 5,
+      drawnNotPlayedWinRate: 0.5,
+      playedDelta: 0.0,
+      playRate: 0.3,
+      hasEnoughGames: true,
+      playedRadiantGames: 10,
+      playedRadiantWinRate: 0.8,
+      playedNormalGames: 20,
+      playedNormalWinRate: 0.5,
+    },
+    {
+      id: "core-055",
+      name: "Lava Golem",
+      cost: 5,
+      rarity: "Epic",
+      set: "core",
+      games: 25,
+      winRate: 0.45,
+      drawnGames: 20,
+      drawnWinRate: 0.4,
+      playedGames: 15,
+      playedWinRate: 0.45,
+      drawnNotPlayedGames: 5,
+      drawnNotPlayedWinRate: 0.4,
+      playedDelta: 0.05,
+      playRate: 0.2,
+      hasEnoughGames: true,
+      playedRadiantGames: 0,
+      playedRadiantWinRate: null,
+      playedNormalGames: 25,
+      playedNormalWinRate: 0.45,
+    },
+  ],
 };
 
 const MOCK_PLAYERS = {
@@ -531,7 +637,7 @@ describe("R654 public statistics route", () => {
 
     // Lava Hound (below sample floor: 10 games < 20): renders "—"
     const houndRow = screen.getByText("Lava Hound").closest("tr")!;
-    expect(within(houndRow).getAllByText("—")).toHaveLength(2);
+    expect(within(houndRow).getAllByText("—")).toHaveLength(5);
   });
 
   it("R377 sorts cards by Played Δ descending and ascending", async () => {
@@ -564,5 +670,190 @@ describe("R654 public statistics route", () => {
     expect(rows[0]).toHaveTextContent("Aqua Warden");
     expect(rows[1]).toHaveTextContent("Spark Pup");
     expect(rows[2]).toHaveTextContent("Lava Hound");
+  });
+
+  it("R1147000 face rates + Normal/Radiant click-sorts", async () => {
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+
+    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+
+    const radiantHeader = screen.getByRole("columnheader", { name: /Radiant/i });
+    const normalHeader = screen.getByRole("columnheader", { name: /Normal/i });
+
+    expect(radiantHeader).toBeInTheDocument();
+    expect(normalHeader).toBeInTheDocument();
+
+    // Spark Pup: 30 radiant (70%), 20 normal (40%)
+    const pupRow = screen.getByText("Spark Pup").closest("tr")!;
+    expect(within(pupRow).getByText("70%")).toBeInTheDocument();
+    expect(within(pupRow).getByText("40%")).toBeInTheDocument();
+
+    // Aqua Warden: 20 radiant (40%), 10 normal (<20 => —)
+    const wardenRow = screen.getByText("Aqua Warden").closest("tr")!;
+    expect(within(wardenRow).getByText("40%")).toBeInTheDocument();
+
+    // Lava Hound (<20 games total => — for both)
+    const houndRow = screen.getByText("Lava Hound").closest("tr")!;
+    expect(within(houndRow).getAllByText("—")).toHaveLength(4);
+
+    // Sort by Radiant descending: Spark Pup (70%) > Aqua Warden (40%) > Lava Hound (—)
+    await user.click(radiantHeader);
+    expect(radiantHeader).toHaveAttribute("aria-sort", "descending");
+
+    let rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
+    expect(rows[0]).toHaveTextContent("Spark Pup");
+    expect(rows[1]).toHaveTextContent("Aqua Warden");
+    expect(rows[2]).toHaveTextContent("Lava Hound");
+
+    // Sort by Radiant ascending: Aqua Warden (40%) > Spark Pup (70%) > Lava Hound (—)
+    await user.click(radiantHeader);
+    expect(radiantHeader).toHaveAttribute("aria-sort", "ascending");
+
+    rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
+    expect(rows[0]).toHaveTextContent("Aqua Warden");
+    expect(rows[1]).toHaveTextContent("Spark Pup");
+    expect(rows[2]).toHaveTextContent("Lava Hound");
+
+    // Sort by Normal descending: Spark Pup (40%) > Aqua Warden (—) / Lava Hound (—)
+    await user.click(normalHeader);
+    expect(normalHeader).toHaveAttribute("aria-sort", "descending");
+
+    rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
+    expect(rows[0]).toHaveTextContent("Spark Pup");
+  });
+
+  it("R654 keyword filter+sort", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/api/stats/cards")) {
+          return Promise.resolve(new Response(JSON.stringify(MOCK_KEYWORD_CARDS), { status: 200 }));
+        }
+        return Promise.resolve(new Response("{}", { status: 200 }));
+      }),
+    );
+
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+
+    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+
+    // Keyword column header is present
+    const keywordHeader = screen.getByRole("columnheader", { name: /Keywords/i });
+    expect(keywordHeader).toBeInTheDocument();
+
+    // Verify keyword labels in table
+    const table = screen.getByTestId(statsTestid.cardsTable);
+    expect(within(table).getByText("Immutable, Taunt")).toBeInTheDocument();
+    expect(within(table).getByText("Cleave, Rush")).toBeInTheDocument();
+    expect(within(table).getByText("Taunt")).toBeInTheDocument();
+
+    // Filter by keyword: "Taunt"
+    const keywordSelect = screen.getByLabelText(/Filter by keyword/i);
+    await user.selectOptions(keywordSelect, "Taunt");
+
+    let rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
+    expect(rows).toHaveLength(2);
+    expect(screen.getByText("Midrange Menace")).toBeInTheDocument();
+    expect(screen.getByText("Lava Golem")).toBeInTheDocument();
+    expect(screen.queryByText("Spark Pup")).not.toBeInTheDocument();
+    expect(screen.queryByText("Prem Panther")).not.toBeInTheDocument();
+
+    // Reset filter to All keywords
+    await user.selectOptions(keywordSelect, "");
+    rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
+    expect(rows).toHaveLength(4);
+
+    // Click Keywords header to sort ascending: Cleave, Rush -> Immutable, Taunt -> Taunt -> (none)
+    await user.click(keywordHeader);
+    expect(keywordHeader).toHaveAttribute("aria-sort", "ascending");
+
+    rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
+    expect(rows[0]).toHaveTextContent("Prem Panther");
+    expect(rows[1]).toHaveTextContent("Midrange Menace");
+    expect(rows[2]).toHaveTextContent("Lava Golem");
+    expect(rows[3]).toHaveTextContent("Spark Pup");
+
+    // Click Keywords header to toggle descending: Taunt -> Immutable, Taunt -> Cleave, Rush -> (none)
+    await user.click(keywordHeader);
+    expect(keywordHeader).toHaveAttribute("aria-sort", "descending");
+
+    rows = screen.getByTestId(statsTestid.cardsTable).querySelectorAll("tbody tr");
+    expect(rows[0]).toHaveTextContent("Lava Golem");
+    expect(rows[1]).toHaveTextContent("Midrange Menace");
+    expect(rows[2]).toHaveTextContent("Prem Panther");
+    expect(rows[3]).toHaveTextContent("Spark Pup");
+  });
+
+  it("R654 sort control mirrors headers", async () => {
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+
+    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+
+    const sortSelect = screen.getByTestId(statsTestid.sortSelect);
+    const sortDirBtn = screen.getByTestId(statsTestid.sortDir);
+
+    expect(sortSelect).toHaveValue("winRate");
+    expect(sortDirBtn).toHaveTextContent("↓");
+
+    // Change sort select to "name"
+    await user.selectOptions(sortSelect, "name");
+    expect(sortSelect).toHaveValue("name");
+    // defaultDirection for name is asc
+    expect(sortDirBtn).toHaveTextContent("↑");
+    const nameHeader = screen.getByRole("columnheader", { name: /Name/i });
+    expect(nameHeader).toHaveAttribute("aria-sort", "ascending");
+
+    // Toggle direction button
+    await user.click(sortDirBtn);
+    expect(sortDirBtn).toHaveTextContent("↓");
+    expect(nameHeader).toHaveAttribute("aria-sort", "descending");
+
+    // Clicking table header updates select control
+    const costHeader = screen.getByRole("columnheader", { name: /Cost/i });
+    await user.click(costHeader);
+    expect(sortSelect).toHaveValue("cost");
+    expect(sortDirBtn).toHaveTextContent("↑");
+  });
+
+  it("R654 grid view and toggle", async () => {
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+
+    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByTestId(statsTestid.cardsGrid)).not.toBeInTheDocument();
+
+    // Column toggles are visible in table view
+    expect(screen.getByText("Columns:")).toBeInTheDocument();
+
+    const viewGridBtn = screen.getByTestId(statsTestid.viewGrid);
+    const viewTableBtn = screen.getByTestId(statsTestid.viewTable);
+
+    expect(viewTableBtn).toHaveAttribute("aria-pressed", "true");
+    expect(viewGridBtn).toHaveAttribute("aria-pressed", "false");
+
+    // Switch to Grid view
+    await user.click(viewGridBtn);
+
+    expect(viewGridBtn).toHaveAttribute("aria-pressed", "true");
+    expect(viewTableBtn).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId(statsTestid.cardsGrid)).toBeInTheDocument();
+    expect(screen.queryByTestId(statsTestid.cardsTable)).not.toBeInTheDocument();
+
+    // Column toggles are hidden in grid view
+    expect(screen.queryByText("Columns:")).not.toBeInTheDocument();
+
+    // Verify grid cards render figures
+    const gridItems = screen.getByTestId(statsTestid.cardsGrid).querySelectorAll("li.stats-grid-item");
+    expect(gridItems).toHaveLength(3);
+
+    // Switch back to Table view
+    await user.click(viewTableBtn);
+    expect(screen.getByTestId(statsTestid.cardsTable)).toBeInTheDocument();
+    expect(screen.queryByTestId(statsTestid.cardsGrid)).not.toBeInTheDocument();
+    expect(screen.getByText("Columns:")).toBeInTheDocument();
   });
 });

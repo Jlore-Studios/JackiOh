@@ -15,10 +15,10 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
-import { SHIPPED_SETS, type CardDefs } from "@jackioh/shared";
+import { KEYWORD_KINDS, SHIPPED_SETS, type CardDefs, type KeywordKind } from "@jackioh/shared";
 import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
-import { chineseName, drawnInChinese, readerName } from "../cards/chinese.ts";
+import { chineseName, drawnInChinese, readerName, readerTerms } from "../cards/chinese.ts";
 import { CardFace } from "../cards/CardFace.tsx";
 import { faceModel } from "../cards/model.ts";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
@@ -48,6 +48,42 @@ function shownName(id: string, name: string): string {
   return drawnInChinese(false) ? chineseName(id, name, CATALOG[id]) : name;
 }
 
+function keywordKinds(id: string): KeywordKind[] {
+  const def = CATALOG[id];
+  if (!def) return [];
+  const kinds = new Set<KeywordKind>();
+  for (const kw of def.base?.keywords ?? []) {
+    kinds.add(kw.kind as KeywordKind);
+  }
+  for (const kw of def.radiant?.keywords ?? []) {
+    kinds.add(kw.kind as KeywordKind);
+  }
+  return KEYWORD_KINDS.filter((kind) => kinds.has(kind));
+}
+
+function keywordName(kind: KeywordKind): string {
+  return readerTerms()?.keywords[kind] ?? kind;
+}
+
+function keywordLabel(id: string, language?: string): string {
+  const kinds = keywordKinds(id);
+  if (kinds.length === 0) return "";
+  const names = kinds.map(keywordName);
+  names.sort((a, b) => a.localeCompare(b, language));
+  return names.join(", ");
+}
+
+function faceRate(
+  games: number | undefined,
+  rate: number | null | undefined,
+  minSample: number,
+): number | null {
+  if (games === undefined || rate === undefined || rate === null || games < minSample) {
+    return null;
+  }
+  return rate;
+}
+
 /**
  * A translated sentence with an element inside it: the sentence is one dictionary entry, written with
  * `{token}`s, and each token is replaced by the node given for it, so a language may order them as it
@@ -61,8 +97,52 @@ function withNodes(sentence: string, nodes: Readonly<Record<string, ReactNode>>)
 }
 
 type TabKey = "cards" | "players";
-type SortColumn = "name" | "cost" | "rarity" | "games" | "winRate" | "drawnWinRate" | "playRate" | "playedDelta";
+type ViewKey = "table" | "grid";
+type SortColumn =
+  | "name"
+  | "cost"
+  | "rarity"
+  | "keyword"
+  | "games"
+  | "winRate"
+  | "drawnWinRate"
+  | "radiantWinRate"
+  | "normalWinRate"
+  | "playRate"
+  | "playedDelta";
 type SortDirection = "asc" | "desc";
+
+const SORT_COLUMNS: readonly SortColumn[] = [
+  "name",
+  "cost",
+  "rarity",
+  "keyword",
+  "games",
+  "winRate",
+  "drawnWinRate",
+  "radiantWinRate",
+  "normalWinRate",
+  "playRate",
+  "playedDelta",
+] as const;
+
+const SORT_LABELS: Record<SortColumn, string> = {
+  name: "Name",
+  cost: "Cost",
+  rarity: "Rarity",
+  keyword: "Keywords",
+  games: "Games",
+  winRate: "Win rate",
+  drawnWinRate: "When drawn",
+  radiantWinRate: "Radiant",
+  normalWinRate: "Normal",
+  playRate: "Play rate",
+  playedDelta: "Played Δ",
+};
+
+function defaultDirection(col: SortColumn): SortDirection {
+  return col === "name" || col === "cost" || col === "rarity" || col === "keyword" ? "asc" : "desc";
+}
 
 export default function StatsRoute(): ReactElement {
   const locale = useLocale();
@@ -81,6 +161,8 @@ export default function StatsRoute(): ReactElement {
   const [setFilter, setSetFilter] = useState<string>(initialParams.get("set") ?? "");
   const [rarityFilter, setRarityFilter] = useState<string>(initialParams.get("rarity") ?? "");
   const [costFilter, setCostFilter] = useState<string>(initialParams.get("cost") ?? "");
+  const [keywordFilter, setKeywordFilter] = useState<string>(initialParams.get("keyword") ?? "");
+  const [view, setView] = useState<ViewKey>(initialParams.get("view") === "grid" ? "grid" : "table");
   const [cardDrillDownId, setCardDrillDownId] = useState<string | null>(initialParams.get("card"));
 
   // Column visibility
@@ -88,9 +170,12 @@ export default function StatsRoute(): ReactElement {
     thumbnail: true,
     cost: true,
     rarity: true,
+    keywords: true,
     games: true,
     winRate: true,
     drawnWinRate: true,
+    radiantWinRate: true,
+    normalWinRate: true,
     playRate: true,
     playedDelta: false,
     personal: true,
@@ -129,12 +214,14 @@ export default function StatsRoute(): ReactElement {
     if (setFilter) params.set("set", setFilter);
     if (rarityFilter) params.set("rarity", rarityFilter);
     if (costFilter) params.set("cost", costFilter);
+    if (keywordFilter) params.set("keyword", keywordFilter);
+    if (view !== "table") params.set("view", view);
     if (cardDrillDownId) params.set("card", cardDrillDownId);
 
     const query = params.toString();
     const target = query ? `${paths.stats}?${query}` : paths.stats;
     navigate(target, { replace: true });
-  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, cardDrillDownId]);
+  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId]);
 
   useEffect(() => {
     updateUrl();
@@ -231,13 +318,26 @@ export default function StatsRoute(): ReactElement {
     return () => controller.abort();
   }, [cardDrillDownId]);
 
+  const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
+
+  const keywordOptions = useMemo(() => {
+    const present = new Set<KeywordKind>();
+    for (const [id, def] of Object.entries(CATALOG)) {
+      if (def.token) continue;
+      for (const kind of keywordKinds(id)) {
+        present.add(kind);
+      }
+    }
+    return KEYWORD_KINDS.filter((kind) => present.has(kind));
+  }, []);
+
   // Toggle sort
   const handleSort = (col: SortColumn) => {
     if (sortCol === col) {
       setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setSortCol(col);
-      setSortDir(col === "name" || col === "cost" || col === "rarity" ? "asc" : "desc");
+      setSortDir(defaultDirection(col));
     }
   };
 
@@ -256,6 +356,10 @@ export default function StatsRoute(): ReactElement {
       );
     }
 
+    if (keywordFilter) {
+      list = list.filter((c) => keywordKinds(c.id).includes(keywordFilter as KeywordKind));
+    }
+
     const flip = sortDir === "desc" ? -1 : 1;
     const language = locale === "en" ? undefined : locale;
     const compareNames = (a: { id: string; name: string }, b: { id: string; name: string }): number =>
@@ -272,6 +376,31 @@ export default function StatsRoute(): ReactElement {
         if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
         if (a.drawnWinRate !== null && b.drawnWinRate !== null && a.drawnWinRate !== b.drawnWinRate) {
           return (a.drawnWinRate - b.drawnWinRate) * flip;
+        }
+      } else if (sortCol === "radiantWinRate") {
+        const aRate = faceRate(a.playedRadiantGames, a.playedRadiantWinRate, minSample);
+        const bRate = faceRate(b.playedRadiantGames, b.playedRadiantWinRate, minSample);
+        if (aRate !== null && bRate === null) return -1;
+        if (aRate === null && bRate !== null) return 1;
+        if (aRate !== null && bRate !== null && aRate !== bRate) {
+          return (aRate - bRate) * flip;
+        }
+      } else if (sortCol === "normalWinRate") {
+        const aRate = faceRate(a.playedNormalGames, a.playedNormalWinRate, minSample);
+        const bRate = faceRate(b.playedNormalGames, b.playedNormalWinRate, minSample);
+        if (aRate !== null && bRate === null) return -1;
+        if (aRate === null && bRate !== null) return 1;
+        if (aRate !== null && bRate !== null && aRate !== bRate) {
+          return (aRate - bRate) * flip;
+        }
+      } else if (sortCol === "keyword") {
+        const aLabel = keywordLabel(a.id, language);
+        const bLabel = keywordLabel(b.id, language);
+        if (aLabel && !bLabel) return -1;
+        if (!aLabel && bLabel) return 1;
+        if (aLabel && bLabel) {
+          const diff = aLabel.localeCompare(bLabel, language);
+          if (diff !== 0) return diff * flip;
         }
       } else if (sortCol === "games") {
         if (a.games !== b.games) return (a.games - b.games) * flip;
@@ -299,11 +428,10 @@ export default function StatsRoute(): ReactElement {
     });
 
     return list;
-  }, [cardStatsData, search, sortCol, sortDir, locale]);
+  }, [cardStatsData, search, keywordFilter, sortCol, sortDir, locale, minSample]);
 
   const summary = cardStatsData?.summary;
   const isProvisional = cardStatsData?.source === "provisional";
-  const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
 
   const drillDownDef = cardDrillDownId ? CATALOG[cardDrillDownId] : undefined;
   const drillDownFace = drillDownDef ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: false }) : null;
@@ -385,6 +513,16 @@ export default function StatsRoute(): ReactElement {
                   "{whenDrawn} shows win rate when the card was in hand or played; {playRate} shows the percentage of all recorded decks containing the card.",
                 ),
                 { whenDrawn: <em>{t("When drawn")}</em>, playRate: <em>{t("Play rate")}</em> },
+              )}
+            </p>
+            <p>
+              <strong>{t("Radiant vs Normal:")}</strong>{" "}
+              {withNodes(
+                t(
+                  "{radiant} shows win rate for decks that played the card Radiant at least once; {normal} shows decks that played it but never Radiant. Each needs {minSample} games.",
+                  { minSample },
+                ),
+                { radiant: <em>{t("Radiant")}</em>, normal: <em>{t("Normal")}</em> },
               )}
             </p>
           </div>
@@ -477,73 +615,171 @@ export default function StatsRoute(): ReactElement {
                   <option value="5">5</option>
                   <option value="6">6+</option>
                 </select>
+
+                <select
+                  className="stats-select"
+                  value={keywordFilter}
+                  onChange={(e) => setKeywordFilter(e.target.value)}
+                  aria-label={t("Filter by keyword")}
+                >
+                  <option value="">{t("All keywords")}</option>
+                  {keywordOptions.map((kind) => (
+                    <option key={kind} value={kind}>
+                      {keywordName(kind)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="stats-sort">
+                <span className="stats-sort-label" id="stats-sort-label">
+                  {t("Sort")}
+                </span>
+                <select
+                  className="stats-select"
+                  aria-labelledby="stats-sort-label"
+                  data-testid={statsTestid.sortSelect}
+                  value={sortCol}
+                  onChange={(e) => {
+                    const next = e.target.value as SortColumn;
+                    setSortCol(next);
+                    setSortDir(defaultDirection(next));
+                  }}
+                >
+                  {SORT_COLUMNS.map((col) => (
+                    <option key={col} value={col}>
+                      {t(SORT_LABELS[col])}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="stats-sort-dir link-button"
+                  data-testid={statsTestid.sortDir}
+                  aria-label={
+                    sortDir === "asc"
+                      ? t("Ascending; switch to descending")
+                      : t("Descending; switch to ascending")
+                  }
+                  title={sortDir === "asc" ? t("Ascending") : t("Descending")}
+                  onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                >
+                  {sortDir === "asc" ? "↑" : "↓"}
+                </button>
+              </div>
+
+              <div className="stats-view-toggle" role="group" aria-label={t("View")}>
+                <button
+                  type="button"
+                  className={`stats-view-btn ${view === "table" ? "stats-view-btn--active" : ""}`}
+                  data-testid={statsTestid.viewTable}
+                  aria-pressed={view === "table"}
+                  onClick={() => setView("table")}
+                >
+                  {t("Table")}
+                </button>
+                <button
+                  type="button"
+                  className={`stats-view-btn ${view === "grid" ? "stats-view-btn--active" : ""}`}
+                  data-testid={statsTestid.viewGrid}
+                  aria-pressed={view === "grid"}
+                  onClick={() => setView("grid")}
+                >
+                  {t("Grid")}
+                </button>
               </div>
 
               {/* Column visibility toggles */}
-              <div className="stats-col-toggles">
-                <span className="stats-col-toggles-label">{t("Columns:")}</span>
-                <label className="stats-col-toggle">
-                  <input
-                    type="checkbox"
-                    checked={visibleCols.cost}
-                    onChange={(e) => setVisibleCols((c) => ({ ...c, cost: e.target.checked }))}
-                  />
-                  {t("Cost")}
-                </label>
-                <label className="stats-col-toggle">
-                  <input
-                    type="checkbox"
-                    checked={visibleCols.rarity}
-                    onChange={(e) => setVisibleCols((c) => ({ ...c, rarity: e.target.checked }))}
-                  />
-                  {t("Rarity")}
-                </label>
-                <label className="stats-col-toggle">
-                  <input
-                    type="checkbox"
-                    checked={visibleCols.games}
-                    onChange={(e) => setVisibleCols((c) => ({ ...c, games: e.target.checked }))}
-                  />
-                  {t("Games")}
-                </label>
-                <label className="stats-col-toggle">
-                  <input
-                    type="checkbox"
-                    checked={visibleCols.drawnWinRate}
-                    onChange={(e) => setVisibleCols((c) => ({ ...c, drawnWinRate: e.target.checked }))}
-                  />
-                  {t("When drawn")}
-                </label>
-                <label className="stats-col-toggle">
-                  <input
-                    type="checkbox"
-                    checked={visibleCols.playRate}
-                    onChange={(e) => setVisibleCols((c) => ({ ...c, playRate: e.target.checked }))}
-                  />
-                  {t("Play rate")}
-                </label>
-                <label className="stats-col-toggle">
-                  <input
-                    type="checkbox"
-                    checked={visibleCols.playedDelta}
-                    onChange={(e) => setVisibleCols((c) => ({ ...c, playedDelta: e.target.checked }))}
-                  />
-                  {t("Played Δ")}
-                </label>
-                {signedIn && (
+              {view === "table" && (
+                <div className="stats-col-toggles">
+                  <span className="stats-col-toggles-label">{t("Columns:")}</span>
                   <label className="stats-col-toggle">
                     <input
                       type="checkbox"
-                      checked={visibleCols.personal}
-                      onChange={(e) => setVisibleCols((c) => ({ ...c, personal: e.target.checked }))}
+                      checked={visibleCols.cost}
+                      onChange={(e) => setVisibleCols((c) => ({ ...c, cost: e.target.checked }))}
                     />
-                    {t("Your stats")}
+                    {t("Cost")}
                   </label>
-                )}
-              </div>
+                  <label className="stats-col-toggle">
+                    <input
+                      type="checkbox"
+                      checked={visibleCols.rarity}
+                      onChange={(e) => setVisibleCols((c) => ({ ...c, rarity: e.target.checked }))}
+                    />
+                    {t("Rarity")}
+                  </label>
+                  <label className="stats-col-toggle">
+                    <input
+                      type="checkbox"
+                      checked={visibleCols.keywords}
+                      onChange={(e) => setVisibleCols((c) => ({ ...c, keywords: e.target.checked }))}
+                    />
+                    {t("Keywords")}
+                  </label>
+                  <label className="stats-col-toggle">
+                    <input
+                      type="checkbox"
+                      checked={visibleCols.games}
+                      onChange={(e) => setVisibleCols((c) => ({ ...c, games: e.target.checked }))}
+                    />
+                    {t("Games")}
+                  </label>
+                  <label className="stats-col-toggle">
+                    <input
+                      type="checkbox"
+                      checked={visibleCols.drawnWinRate}
+                      onChange={(e) => setVisibleCols((c) => ({ ...c, drawnWinRate: e.target.checked }))}
+                    />
+                    {t("When drawn")}
+                  </label>
+                  <label className="stats-col-toggle">
+                    <input
+                      type="checkbox"
+                      checked={visibleCols.radiantWinRate}
+                      onChange={(e) => setVisibleCols((c) => ({ ...c, radiantWinRate: e.target.checked }))}
+                    />
+                    {t("Radiant")}
+                  </label>
+                  <label className="stats-col-toggle">
+                    <input
+                      type="checkbox"
+                      checked={visibleCols.normalWinRate}
+                      onChange={(e) => setVisibleCols((c) => ({ ...c, normalWinRate: e.target.checked }))}
+                    />
+                    {t("Normal")}
+                  </label>
+                  <label className="stats-col-toggle">
+                    <input
+                      type="checkbox"
+                      checked={visibleCols.playRate}
+                      onChange={(e) => setVisibleCols((c) => ({ ...c, playRate: e.target.checked }))}
+                    />
+                    {t("Play rate")}
+                  </label>
+                  <label className="stats-col-toggle">
+                    <input
+                      type="checkbox"
+                      checked={visibleCols.playedDelta}
+                      onChange={(e) => setVisibleCols((c) => ({ ...c, playedDelta: e.target.checked }))}
+                    />
+                    {t("Played Δ")}
+                  </label>
+                  {signedIn && (
+                    <label className="stats-col-toggle">
+                      <input
+                        type="checkbox"
+                        checked={visibleCols.personal}
+                        onChange={(e) => setVisibleCols((c) => ({ ...c, personal: e.target.checked }))}
+                      />
+                      {t("Your stats")}
+                    </label>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Table */}
+            {/* Table or Grid */}
             {cardStatsLoading ? (
               <p className="stats-loading">{t("Loading card statistics…")}</p>
             ) : cardStatsError ? (
@@ -555,6 +791,46 @@ export default function StatsRoute(): ReactElement {
               </div>
             ) : filteredCards.length === 0 ? (
               <p className="stats-empty">{t("No cards match the selected filters.")}</p>
+            ) : view === "grid" ? (
+              <ul className="stats-grid" data-testid={statsTestid.cardsGrid}>
+                {filteredCards.map((card) => {
+                  const def = CATALOG[card.id];
+                  const face = def ? faceModel({ defId: card.id, def, radiant: false }) : null;
+                  const radiant = faceRate(card.playedRadiantGames, card.playedRadiantWinRate, minSample);
+                  const normal = faceRate(card.playedNormalGames, card.playedNormalWinRate, minSample);
+
+                  return (
+                    <li key={card.id} className="stats-grid-item" data-card-id={card.id}>
+                      <button
+                        type="button"
+                        className="stats-grid-card"
+                        onClick={() => setCardDrillDownId(card.id)}
+                        aria-label={shownName(card.id, card.name)}
+                      >
+                        {face && (
+                          <div className="stats-grid-face">
+                            <CardFace face={face} layout="full" lazyArt />
+                          </div>
+                        )}
+                      </button>
+                      <dl className="stats-grid-figures">
+                        <dt>{t("Win rate")}</dt>
+                        <dd>
+                          {card.hasEnoughGames && card.winRate !== null
+                            ? `${Math.round(card.winRate * 100)}%`
+                            : t("not enough games")}
+                        </dd>
+                        <dt>{t("Radiant")}</dt>
+                        <dd>{radiant !== null ? `${Math.round(radiant * 100)}%` : "—"}</dd>
+                        <dt>{t("Normal")}</dt>
+                        <dd>{normal !== null ? `${Math.round(normal * 100)}%` : "—"}</dd>
+                        <dt>{t("Games")}</dt>
+                        <dd>{card.games}</dd>
+                      </dl>
+                    </li>
+                  );
+                })}
+              </ul>
             ) : (
               <div className="stats-table-wrapper">
                 <table className="stats-table" data-testid={statsTestid.cardsTable}>
@@ -610,6 +886,23 @@ export default function StatsRoute(): ReactElement {
                           {t("Rarity")} {sortCol === "rarity" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
+                      {visibleCols.keywords && (
+                        <th
+                          scope="col"
+                          className="stats-th stats-th--sortable"
+                          aria-sort={sortCol === "keyword" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                          onClick={() => handleSort("keyword")}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleSort("keyword");
+                            }
+                          }}
+                          tabIndex={0}
+                        >
+                          {t("Keywords")} {sortCol === "keyword" && (sortDir === "asc" ? "↑" : "↓")}
+                        </th>
+                      )}
                       {visibleCols.games && (
                         <th
                           scope="col"
@@ -659,6 +952,40 @@ export default function StatsRoute(): ReactElement {
                           {t("When drawn")} {sortCol === "drawnWinRate" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
+                      {visibleCols.radiantWinRate && (
+                        <th
+                          scope="col"
+                          className="stats-th stats-th--sortable"
+                          aria-sort={sortCol === "radiantWinRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                          onClick={() => handleSort("radiantWinRate")}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleSort("radiantWinRate");
+                            }
+                          }}
+                          tabIndex={0}
+                        >
+                          {t("Radiant")} {sortCol === "radiantWinRate" && (sortDir === "asc" ? "↑" : "↓")}
+                        </th>
+                      )}
+                      {visibleCols.normalWinRate && (
+                        <th
+                          scope="col"
+                          className="stats-th stats-th--sortable"
+                          aria-sort={sortCol === "normalWinRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                          onClick={() => handleSort("normalWinRate")}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleSort("normalWinRate");
+                            }
+                          }}
+                          tabIndex={0}
+                        >
+                          {t("Normal")} {sortCol === "normalWinRate" && (sortDir === "asc" ? "↑" : "↓")}
+                        </th>
+                      )}
                       {visibleCols.playRate && (
                         <th
                           scope="col"
@@ -704,6 +1031,8 @@ export default function StatsRoute(): ReactElement {
                     {filteredCards.map((card) => {
                       const personalPlayed = playerStats.cards[card.id]?.played ?? 0;
                       const personalRate = winPercent(playerStats);
+                      const radiantRate = faceRate(card.playedRadiantGames, card.playedRadiantWinRate, minSample);
+                      const normalRate = faceRate(card.playedNormalGames, card.playedNormalWinRate, minSample);
 
                       return (
                         <tr
@@ -738,6 +1067,11 @@ export default function StatsRoute(): ReactElement {
                               </span>
                             </td>
                           )}
+                          {visibleCols.keywords && (
+                            <td className="stats-td stats-td--keywords">
+                              {keywordLabel(card.id, locale === "en" ? undefined : locale) || "—"}
+                            </td>
+                          )}
                           {visibleCols.games && <td className="stats-td">{card.games}</td>}
                           <td className="stats-td stats-td--winrate">
                             {card.hasEnoughGames && card.winRate !== null ? (
@@ -759,6 +1093,16 @@ export default function StatsRoute(): ReactElement {
                               {card.hasEnoughGames && card.drawnWinRate !== null
                                 ? `${Math.round(card.drawnWinRate * 100)}%`
                                 : "—"}
+                            </td>
+                          )}
+                          {visibleCols.radiantWinRate && (
+                            <td className="stats-td">
+                              {radiantRate !== null ? `${Math.round(radiantRate * 100)}%` : "—"}
+                            </td>
+                          )}
+                          {visibleCols.normalWinRate && (
+                            <td className="stats-td">
+                              {normalRate !== null ? `${Math.round(normalRate * 100)}%` : "—"}
                             </td>
                           )}
                           {visibleCols.playRate && (
