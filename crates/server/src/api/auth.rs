@@ -29,21 +29,12 @@ use crate::auth::{ACCOUNT_DELETION_UNAVAILABLE_MESSAGE, AuthError, PasswordGrant
 use crate::config::USERNAME_SIGN_IN_WINDOW_MS;
 use crate::username::sign_in_name;
 
-// NOT IN SPEC, and no R-row yet — PROPOSED RULING for §11:
-//   Topic: The scope of the identical sign-up and sign-in error (extends R145)
-//   Ruling: Sign-up and sign-in answer identically for every outcome that depends on **whether an
-//     account exists** — "no such account", "wrong password" and "already registered" — so neither
-//     endpoint becomes an account-enumeration oracle. This is R145's principle one door earlier:
-//     R145 makes the redemption error identical for everything that depends on the code and
-//     distinct for everything that depends only on the caller's own account, and an email address
-//     is exactly the fact an unauthenticated caller must not be able to probe. §9.8's brute-force
-//     row asks for the invite gate to resist enumeration, which a sign-up endpoint that says "that
-//     address is taken" undoes. One error per endpoint rather than one for both, because the two
-//     endpoints are already distinguishable by the route.
-//   Affects: §9.2, §9.4, §9.8, R145; `api/auth.ts`.
+// R160: sign-up and sign-in answer identically for every outcome that depends on whether an
+// account exists ("no such account", "wrong password", "already registered"), so neither endpoint
+// is an account-enumeration oracle; one error per endpoint, since the route already tells them apart.
 //
-// §9.4 does not write these strings; the ruling above is about their being one string, not about
-// their wording. (Sign-up's own string went with the route, SURFACE §11.3.)
+// §9.4 does not write these strings; R160 is about their being one string, not about their
+// wording. (Sign-up's own string went with the route, SURFACE §11.3.)
 const SIGN_IN_FAILED_MESSAGE: &str = "That email and password do not match an account.";
 
 // R1443: the one refusal of a sign-in by username, whatever was wrong (R160), and its two answers
