@@ -68,7 +68,8 @@ pub const POOL_TOKEN_TAGS: &[Tag] = &[Tag::Fruit, Tag::Prime, Tag::Ai];
 /// one of them, a card with all of them is "All Tribes" (Meditative #87 Tatches the Totem, and the
 /// card frame says so), and "tribal tag based hate" is an effect that picks its cards by having or
 /// lacking one. Book, Fruit, Pancake, AI, Plague, Catalyst, Prime, Acclaimed, Call to Chaos,
-/// Quickdraw, Wincon and Token name families and mechanics, not tribes.
+/// Quickdraw, Wincon, Potion (Meditative+, R1178000) and Token name families and mechanics, not
+/// tribes.
 pub const TRIBAL_TAGS: &[Tag] = &[Tag::Human, Tag::Felinor, Tag::Ky, Tag::Cn, Tag::Jlockeed];
 
 /// §3
@@ -1082,7 +1083,8 @@ pub const SEED_SEARCH_BOUND: usize = 4000;
 
 /// The highest cost a crafted card may have (0 to 4).
 pub const CRAFT_MAX_COST: i32 = 4;
-/// How many seeded presets a `craft` prompt offers: a Unit, a Spell, a Field Spell and a Trap.
+/// How many seeded presets a `craft` prompt offers: a Unit, a Spell, a Field Spell and a Trap; in
+/// the potion frame, this many Potions (R1182000).
 pub const CRAFT_PRESETS: usize = 4;
 /// The point budget is this base plus this per point of the chosen cost (2, 7, 12, 17, 22).
 pub const CRAFT_POINTS_BASE: i32 = 2;
@@ -1490,7 +1492,25 @@ pub const CRAFT_HAT_PRICES: &[CraftHatPrice] = &[
         multiplier: 1,
         types: &[CardType::Trap],
     },
+    // R1182000: a Potion's one hat, "Activate: Tribute this.", an `ActivationDecl` with its Tribute
+    // cost (as many lines as a reveal hat's trigger). No type takes it in Meditative #17's free
+    // crafter: only the potion frame does, and the potion frame takes nothing else.
+    CraftHatPrice {
+        hat: CraftHatKind::Activate,
+        lines: 4,
+        multiplier: 1,
+        types: &[],
+    },
 ];
+
+/// R1182000: a Potion's fixed cost (Meditative+ #16 Jazakus: "It costs (1)."). Its points are the
+/// crafter's budget at that cost, `craft_points_budget(CRAFT_POTION_COST)`.
+pub const CRAFT_POTION_COST: i32 = 1;
+/// R1182001: a HUGE Potion's fixed cost (Meditative+ #16.1 Jazakus Prime: "It costs (3).").
+pub const CRAFT_HUGE_POTION_COST: i32 = 3;
+/// R1182001: a HUGE Potion has this many times a Potion's points ("about 5 times better than the
+/// normal custom potion"); its lines, effects and numbers are the frame's, as a Potion's.
+pub const CRAFT_HUGE_POTION_BUDGET_MULTIPLE: i32 = 5;
 
 // ---------------------------------------------------------------------------------------------
 // Meditative #40 Feng Shui (R980, R981, R985). Hidden numbers: printed nowhere, never tuned, and not

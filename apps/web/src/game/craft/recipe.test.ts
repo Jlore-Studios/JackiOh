@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import type { CardType, CraftRecipe } from "../../wire/index.ts";
 import { CRAFT_HAT_PRICES, CRAFT_KEYWORD_PRICES } from "../../wire/engineConfig.ts";
-import { setType, takesHat, takesKeyword } from "./recipe.ts";
+import { POTION_HAT, blankRecipe, frameOf, setType, takesHat, takesKeyword } from "./recipe.ts";
 
 const CARD_TYPES: readonly CardType[] = ["Unit", "Spell", "Field Spell", "Trap", "Field Trap"];
 
@@ -57,5 +57,30 @@ describe("R883 the crafter's type rules are the engine's tables", () => {
         expect(takesKeyword(type, row.kind), `${type} ${row.kind}`).toBe(keywordAllowed(type, row.spell));
       }
     }
+  });
+});
+
+describe("R1182000 R1182002 the potion frame and the empty canvas", () => {
+  it("R1182000 no type takes the Activate hat outside the potion frame", () => {
+    for (const type of CARD_TYPES) expect(takesHat(type, POTION_HAT), type).toBe(false);
+  });
+
+  it("R1182000 a potion mode fixes its frame and no other mode does", () => {
+    expect(frameOf("potion")).toBe("potion");
+    expect(frameOf("hugePotion")).toBe("hugePotion");
+    expect(frameOf("scratch")).toBeUndefined();
+    expect(frameOf(undefined)).toBeUndefined();
+  });
+
+  it("R1182002 the empty canvas is a 0/1 Unit with nothing on it at the prompt's cost", () => {
+    const blank = blankRecipe(3);
+    expect(blank).toMatchObject({ cost: 3, type: "Unit", attack: 0, health: 1, keywords: [], echo: 0, hats: [] });
+    expect(blank.frame).toBeUndefined();
+  });
+
+  it("R1182000 a blank Potion holds its frame and its one Activate, empty", () => {
+    const blank = blankRecipe(1, "potion");
+    expect(blank.frame).toBe("potion");
+    expect(blank.hats).toEqual([{ hat: POTION_HAT, effects: [] }]);
   });
 });

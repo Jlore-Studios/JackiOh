@@ -37,22 +37,22 @@ before yours, so a pending-claimed card needs no edit there (R646). What stays h
 Also grep the Markdown for the stated totals (`370 cards`, `80 tokens`, `450`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
 `spec/`, `docs/architecture.md`.
 
-**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and a set held the same way later is one too) differs in five places, the Meditative paths below standing for its own:
-- Its script goes in `src/scripts/meditative/`.
-- Rows 1, 4, 5, 6 and 7 are already written. §8.8, §7, the `MEDITATIVE` fixture, the census in `crates/tools/src/catalog.rs`,
-  `docs/radiant-audit.md` and BUILD M10 list every card of the set, so a card part corrects its rows only where its build
+**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set is one now, issue #1173, R1178000) differs in five places, the Meditative+ paths below standing for any held set's:
+- Its script goes in `src/scripts/meditative_plus/` (id `meditativeplus-NNN`, a token's `meditativeplus-NNN-k`).
+- Rows 1, 4, 5, 6 and 7 are already written. §8.9, §7, the `MEDITATIVE_PLUS` fixture, the census in `crates/tools/src/catalog.rs`,
+  `docs/radiant-audit.md` and BUILD M11 list every card of the set, so a card part corrects its rows only where its build
   decided otherwise.
 - There is no row 11. The patches tool reads the catalog without the set, so its cards need no fragment until the release
   claims the whole set at once. The stated totals above don't move either: they count the shipped sets.
 - The set's cards are in no pool that names no set, in no deck and in no random deck. A test that needs them there opens the set
-  with the engine testkit's `preview_sets(&[SetName::Meditative])` (one thread, until its guard drops).
+  with the engine testkit's `preview_sets(&[SetName::MeditativePlus])` (one thread, until its guard drops).
 - `cargo jackioh fuzz` previews every set, so the card is fuzzed from the day it lands, while the golden traces deal from the
   shipped sets and must not move.
 - Its `card-audio.json5` entry is written as for any card, but no voice file is expected for it until the set ships
   (`gen-voice.mjs --check` leaves it out), so [§7](#7-what-cannot-be-done-on-linux)'s rendering is owed by the release, not by the card.
   Its intro (row 12) is the release's too: the intros' totality test reads the sets that ship.
 - Tests that count the catalog count the sets that ship (`set_is_open` in Rust, `setShips` in the web), never every entry.
-  `docs/meditative-set.md` M3 says the rest.
+  `docs/meditative-plus-set.md` MP3 says the rest (`docs/meditative-set.md` M3 for the Meditative set's build).
 
 ## 2. Templates
 

@@ -1,6 +1,11 @@
 //! Test-only cards for ME-CRAFT (Meditative #17 True Craft a Card, R880–R883): `pm-crafter`
 //! runs the card's own chain — a `number` prompt for the cost, then a `craft` prompt, then the
 //! mint — so the engine is proved without `crates/cards` (CLAUDE.md: the engine never imports it).
+//!
+//! Meditative+ (#1182): `pm-potion-crafter` and `pm-huge-potion-crafter` open the crafter in a
+//! potion frame at once (Jazakus and Jazakus Prime's Cry, R1182000, R1182001), and
+//! `pm-scratch-crafter` runs `pm-crafter`'s chain with the from-scratch flag (Scratch Pad's,
+//! R1182002).
 
 use std::sync::LazyLock;
 
@@ -35,6 +40,56 @@ fn crafter_script(radiant: bool) -> Script {
         })),
         resume: IndexMap::from([("cost", open_editor), ("craft", mint)]),
         ..Script::default()
+    }
+}
+
+/// A potion crafter's script on a fixture Spell: the craft prompt in the frame `mode` names, then
+/// the mint (Meditative+ #16's and #16.1's Cry).
+fn potion_crafter_script(mode: &'static str, radiant: bool) -> Script {
+    let mint: Hook = hook(move |ctx| match chosen_recipe(ctx) {
+        Some(recipe) => vec![craft_card(json_as(json!({
+            "recipe": recipe,
+            "radiant": radiant,
+        })))],
+        None => vec![],
+    });
+    Script {
+        cry: Some(hook(move |_ctx| {
+            vec![choose_craft(json_as(json!({
+                "step": "craft",
+                "mode": mode,
+                "radiant": radiant,
+            })))]
+        })),
+        resume: IndexMap::from([("craft", mint)]),
+        ..Script::default()
+    }
+}
+
+/// `pm-crafter`'s chain with the from-scratch flag on its craft prompt (Meditative+ #26's).
+fn scratch_crafter_script(radiant: bool) -> Script {
+    let open_editor: Hook = hook(move |ctx| match chosen_number(ctx) {
+        Some(cost) => vec![choose_craft(json_as(json!({
+            "step": "craft",
+            "cost": cost,
+            "mode": "scratch",
+            "radiant": radiant,
+        })))],
+        None => vec![],
+    });
+    let crafter = crafter_script(radiant);
+    let mut resume = crafter.resume.clone();
+    resume.insert("cost", open_editor);
+    Script { resume, ..crafter }
+}
+
+/// A fixture Spell named `id` at `index`, as `pm-crafter` is.
+fn fixture_spell(id: &str, index: &str, name: &str) -> CardDef {
+    CardDef {
+        id: id.to_string(),
+        index: index.to_string(),
+        name: name.to_string(),
+        ..crafter()
     }
 }
 
@@ -93,14 +148,41 @@ static CRAFTER_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(
                 radiant: quickdraw_crafter_script(true),
             },
         ),
+        (
+            "pm-potion-crafter".to_string(),
+            CardScripts {
+                base: potion_crafter_script("potion", false),
+                radiant: potion_crafter_script("potion", true),
+            },
+        ),
+        (
+            "pm-huge-potion-crafter".to_string(),
+            CardScripts {
+                base: potion_crafter_script("hugePotion", false),
+                radiant: potion_crafter_script("hugePotion", true),
+            },
+        ),
+        (
+            "pm-scratch-crafter".to_string(),
+            CardScripts {
+                base: scratch_crafter_script(false),
+                radiant: scratch_crafter_script(true),
+            },
+        ),
     ])
 });
 
 /// This file's defs, by id.
 pub fn catalog() -> IndexMap<String, CardDef> {
+    let potion = fixture_spell("pm-potion-crafter", "3403", "crafter (potion)");
+    let huge = fixture_spell("pm-huge-potion-crafter", "3404", "crafter (HUGE potion)");
+    let scratch = fixture_spell("pm-scratch-crafter", "3405", "crafter (from scratch)");
     IndexMap::from([
         (crafter().id.clone(), crafter()),
         (quickdraw_crafter().id.clone(), quickdraw_crafter()),
+        (potion.id.clone(), potion),
+        (huge.id.clone(), huge),
+        (scratch.id.clone(), scratch),
     ])
 }
 

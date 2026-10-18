@@ -380,6 +380,65 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
         assert!(picked.first().is_some_and(|first| options.contains(first)));
     }
 
+    /// R1182000, R1182001: a potion prompt (Jazakus's, Jazakus Prime's) is answered with one of its
+    /// Potion presets, in the frame the prompt names.
+    #[test]
+    fn r1182000_r1182001_the_ai_answers_a_potion_prompt_with_one_of_its_potions() {
+        install();
+        for (mode, frame) in [
+            ("potion", CraftFrame::Potion),
+            ("hugePotion", CraftFrame::HugePotion),
+        ] {
+            let effect = effects::choose_craft(json_as(json!({ "step": "craft", "mode": mode })));
+            let seed = format!("r1182000-{mode}");
+            let state = asked(&seed, effect, json!({}), AI);
+            let options: Vec<Selection> = state
+                .pending
+                .as_ref()
+                .map(|pending| {
+                    pending
+                        .options
+                        .iter()
+                        .map(|option| option.selection.clone())
+                        .collect()
+                })
+                .unwrap_or_default();
+            assert_eq!(options.len(), 4);
+            let picked = selection_of(&answered(&state, &seed));
+            assert!(picked.first().is_some_and(|first| options.contains(first)));
+            match picked.first() {
+                Some(Selection::Craft { recipe }) => assert_eq!(recipe.frame, Some(frame)),
+                other => panic!("a Potion, not {other:?}"),
+            }
+        }
+    }
+
+    /// R1182002: Scratch Pad's prompt shows its player no presets, but the AI answers it with one.
+    #[test]
+    fn r1182002_the_ai_answers_a_from_scratch_prompt_with_one_of_its_presets() {
+        install();
+        let effect = effects::choose_craft(json_as(json!({ "step": "craft", "cost": 3, "mode": "scratch" })));
+        let state = asked("r1182002-scratch", effect, json!({}), AI);
+        assert_eq!(
+            state.pending.as_ref().and_then(|pending| pending.craft_mode),
+            Some(CraftMode::Scratch)
+        );
+        let options: Vec<Selection> = state
+            .pending
+            .as_ref()
+            .map(|pending| {
+                pending
+                    .options
+                    .iter()
+                    .map(|option| option.selection.clone())
+                    .collect()
+            })
+            .unwrap_or_default();
+        assert_eq!(options.len(), 4);
+        let picked = selection_of(&answered(&state, "r1182002-scratch"));
+        assert!(picked.first().is_some_and(|first| options.contains(first)));
+    }
+
     /// E18: a mode prompt the opponent's card hands the AI, on the opponent's turn, is answered against the card's owner
     #[test]
     fn e18_a_mode_prompt_the_opponents_card_hands_the_ai_on_the_opponents_turn_is_answered_against_the_cards_owner()
