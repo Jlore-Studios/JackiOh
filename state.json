@@ -4550,36 +4550,26 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-18T13:08:45Z",
+      "feedback_since": "2026-10-18T15:02:19Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1218,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "Powder Spray's test `an_immune_to_spells_unit_takes_none` still expects a Radiant Top Loser to have 10 health, but the change makes it 8, so `cargo test -p jackioh-cards` fails.",
-          "evidence": "Line 100 seeds `{ \"def\": TOP_LOSER, \"radiant\": true }` (TOP_LOSER = classicplus-019-1) on the field with no damage, and line 101 is `assert_eq!(s.stats(TOP_LOSER).health, 10);`. The catalog now gives the Radiant face 8 health. The builder made this same edit in c019_1_top_loser.rs's own Whirlwind test (10 \u2192 8) but never touched this file, and only ran tests filtered to `c019`, `cross::catalog` and `radiant_standard`.",
-          "severity": "blocking",
-          "where": "crates/cards/src/scripts/classic_plus/c012_4_powder_spray.rs:101"
-        },
-        {
-          "claim": "Whirlwind's test `s6_1_an_immune_to_spells_unit_takes_none` still expects a Radiant Top Loser to have 10 health after Whirlwind; it now has 8, so the test fails.",
-          "evidence": "Line 187 seeds `{ \"def\": TOP_LOSER, \"lane\": 1, \"radiant\": true }`, and line 191 is `s.expect_stats(&immune, json!({ \"health\": 10 }));`. Nothing damages it (it is Immune to Spells), so the value is now the catalog's Radiant health, 8.",
-          "severity": "blocking",
-          "where": "crates/cards/src/scripts/classic_plus/c021_whirlwind.rs:191"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-4",
+      "question": "",
       "queued_at": "2026-10-18T14:55:18Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "39138126689",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-18T15:02:19Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "gemini"
