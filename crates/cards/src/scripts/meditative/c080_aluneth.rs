@@ -15,7 +15,7 @@
 //! Indestructible, Untributable and Immutable are catalog keywords (§10.4 layers, R1220); the draws are
 //! three `drawPriced` draws, C+ #65.2's: each burns past the cap and takes fatigue past the deck (§2.4),
 //! and each prices only the card it put in the hand, `costMod` −`discount`, the declared number (patch
-//! v0.3.12, #1194); a card cast on draw, a burned card and a fatigue draw get nothing. Quickdraw is the
+//! v0.3.13, #1194); a card cast on draw, a burned card and a fatigue draw get nothing. Quickdraw is the
 //! static flag `setup.rs` reads (R640), beside the catalog tag filters see. `script_v0_3_7b` keeps the
 //! undiscounted draw for the replays of v0.3.7b and before (R767000).
 
@@ -74,7 +74,7 @@ pub fn script() -> CardScripts {
 }
 
 /// R767000: the scripts v0.3.7b and every version before it ran, whose end of turn drew 3 with no
-/// discount (patch v0.3.12, #1194); `KEPT_SCRIPTS` folds those versions' replays under them.
+/// discount (patch v0.3.13, #1194); `KEPT_SCRIPTS` folds those versions' replays under them.
 pub fn script_v0_3_7b() -> CardScripts {
     CardScripts {
         base: aluneth(false, draws_v0_3_7b),

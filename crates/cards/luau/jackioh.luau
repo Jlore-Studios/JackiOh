@@ -278,6 +278,7 @@ tags: {Tag}?,
 notTags: {Tag}?,
 anyTags: {Tag}?,
 luckBased: boolean?,
+embiggen: boolean?,
 stats: AttackHealth?,
 rarity: (Rarity | {Rarity})?,
 set: (SetName | {SetName})?,
@@ -326,6 +327,7 @@ data: {[string]: JsonValue}?,
 export type ChooseCraftArgs = {
 step: string,
 cost: number,
+mode: CraftMode?,
 radiant: boolean?,
 prompt: string?,
 data: {[string]: JsonValue}?,
@@ -467,17 +469,21 @@ keyword: KeywordKind?,
 cardType: CardType?,
 }
 
+export type CraftFrame = "potion" | "hugePotion"
+
 export type CraftHat = {
 hat: CraftHatKind,
 effects: {CraftEffect},
 }
 
-export type CraftHatKind = "cry" | "death" | "startOfTurn" | "endOfTurn" | "whenCast" | "opponentPlaysUnit" | "opponentPlaysSpell" | "opponentAttacks"
+export type CraftHatKind = "cry" | "death" | "startOfTurn" | "endOfTurn" | "whenCast" | "opponentPlaysUnit" | "opponentPlaysSpell" | "opponentAttacks" | "activate"
 
 export type CraftKeyword = {
 kind: KeywordKind,
 n: number?,
 }
+
+export type CraftMode = "scratch" | "potion" | "hugePotion"
 
 export type CraftRecipe = {
 cost: number,
@@ -489,6 +495,7 @@ health: number,
 keywords: {CraftKeyword},
 echo: number,
 hats: {CraftHat},
+frame: CraftFrame?,
 }
 
 export type CraftVerb = "damageTarget" | "damageEnemyHero" | "damageRandomEnemy" | "damageEachEnemy" | "healTarget" | "healYourHero" | "healYourSide" | "draw" | "gainMana" | "gainArmor" | "summonRush" | "summonFelinor" | "summonSheep" | "buffTarget" | "buffYourUnits" | "grantKeyword" | "destroy" | "bounce" | "addRandom" | "discover" | "opponentDiscards" | "buffRandomCard" | "nerfRandomEnemyCard" | "lockRandomZone"
@@ -2043,7 +2050,7 @@ to: TargetSpec,
 value: number,
 }
 
-export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Boss" | "Boss-X" | "Custom"
+export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Meditative+" | "Boss" | "Boss-X" | "Custom"
 
 export type SetNumberArgs = {
 target: TargetSpec?,
@@ -2223,7 +2230,7 @@ to: Position?,
 target: TargetSpec,
 }
 
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Token"
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Token"
 
 export type TakeExtraTurnArgs = {
 player: PlayerSpec?,
@@ -4024,11 +4031,11 @@ J.config = {
 	CAST_ON_DRAW_CHAIN_CAP = 20,
 	CHAIN_OF_THOUGHT_REPEATS = 4,
 	CHAOS_MED_ACCLAIMED = 3,
-	CHAOS_MED_CN_CARDS = 3,
+	CHAOS_MED_CN_CARDS = 2,
 	CHAOS_MED_COST = 0,
 	CHAOS_MED_FUSE_COPIES = 2,
-	CHAOS_MED_HEAL = 8,
-	CHAOS_MED_HERO_ARMOR = 8,
+	CHAOS_MED_HEAL = 6,
+	CHAOS_MED_HERO_ARMOR = 6,
 	CHAOS_MED_NERFS = 1,
 	CHAOS_MED_PRIME_CARDS = 2,
 	CRAFTED_CARD_COST = 0,

@@ -656,8 +656,8 @@ mod r1370_a_deck_that_leans_on_a_set {
         register_cards();
         // Dealt by the deck builder before R1370, with the cursor its rng stopped at: before the Meditative
         // set was in any pool, so the literals gate it (R1390: a gate deals what the draw dealt before).
-        // Re-dealt for patch v0.3.10 (#831), whose costs move the builder's curve, and again for patch
-        // v0.3.12 (#1194): the same seeds stop at the same cursors.
+        // Re-dealt for patch v0.3.10 (#831), again for patch v0.3.12 (#1149) and again for patch v0.3.13
+        // (#1194), whose costs move the builder's curve: the same seeds stop at the same cursors.
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
@@ -679,12 +679,12 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classicplus-037",
                     "classicplus-078",
                     "core-012",
-                    "core-010",
-                    "core-052",
-                    "classicplus-003",
-                    "classicplus-032",
-                    "core-070",
-                    "classicplus-009",
+                    "core-009",
+                    "core-055",
+                    "classic-088",
+                    "classicplus-036",
+                    "core-077",
+                    "classicplus-010",
                 ],
             ),
             (
@@ -707,12 +707,12 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-089",
                     "classicplus-044",
                     "core-030",
-                    "classic-060",
-                    "classicplus-066",
+                    "classic-049",
+                    "classicplus-067",
                     "core-099",
-                    "classicplus-063",
+                    "classicplus-068",
                     "core-026",
-                    "core-047",
+                    "core-051",
                 ],
             ),
             (
@@ -746,10 +746,10 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-060",
                     "classicplus-007",
                     "classicplus-038",
-                    "core-019",
-                    "classic-014",
+                    "core-027",
                     "classic-009",
-                    "core-100",
+                    "classic-005",
+                    "core-095",
                     "classicplus-019",
                 ],
             ),
@@ -769,16 +769,16 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-002",
                     "classic-022",
                     "classic-086",
-                    "classic-067",
+                    "classic-069",
                     "classicplus-044",
                     "core-001",
+                    "core-071",
                     "core-067",
-                    "core-062",
-                    "core-059",
-                    "classicplus-051",
-                    "core-055",
-                    "classic-071",
-                    "classicplus-024",
+                    "core-074",
+                    "classicplus-046",
+                    "core-091",
+                    "classic-083",
+                    "classicplus-026",
                 ],
             ),
         ];

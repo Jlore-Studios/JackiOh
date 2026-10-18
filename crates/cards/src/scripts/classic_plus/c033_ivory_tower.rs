@@ -7,7 +7,7 @@
 //! that play has resolved, the Unit on it is fused into this per R77, this the kept card: a Field Spell
 //! still, with the Unit's text and keywords, and the Unit ceases to exist. The Radiant face makes the
 //! Unit Radiant as it lands, so its Cry runs on that face, and fuses it in on its Radiant face (R469).
-//! The Aura (patch v0.3.12, #1194) lends Flying and Stack to its controller's Units on the field and to
+//! The Aura (patch v0.3.13, #1194) lends Flying and Stack to its controller's Units on the field and to
 //! the Unit cards in their hand and resolving zone, where a play's placement reads them (R1194000);
 //! `script_v0_3_7b` keeps the Tower without it for the replays of v0.3.7b and before (R767000).
 
@@ -110,7 +110,7 @@ pub fn script() -> CardScripts {
     tower(Some(flying_and_stack()))
 }
 
-/// R767000: the scripts v0.3.7b and every version before it ran, with no Aura (patch v0.3.12, #1194);
+/// R767000: the scripts v0.3.7b and every version before it ran, with no Aura (patch v0.3.13, #1194);
 /// `KEPT_SCRIPTS` folds those versions' replays under them.
 pub fn script_v0_3_7b() -> CardScripts {
     tower(None)

@@ -126,7 +126,7 @@ describe("R506 the director follows the plays in progress", () => {
       drawn("c7", BLOOD_BEAN_DEF_ID),
       played("c7", BLOOD_BEAN_DEF_ID),
       radiantInHand("c3", "core-004"),
-      healthLost("p2", 5),
+      healthLost("p2", 7),
       resolved("c7", BLOOD_BEAN_DEF_ID),
     ]);
     const drain = sink.sfx.find((s) => s.id === "bloodDrain");

@@ -15,11 +15,12 @@ use jackioh_engine::{CardDef, CardDefs, CardScripts, ShippedCatalog};
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
-use crate::scripts::classic::c064_malzahars_recycler;
-use crate::scripts::classic_plus::c033_ivory_tower;
-use crate::scripts::core::c050_k_pop_fanatic;
+use crate::scripts::classic::{c064_malzahars_recycler, c088_siphon_squad};
+use crate::scripts::classic_plus::{c033_ivory_tower, c040_appropriations};
+use crate::scripts::core::{c049_snom_bunny_mind_control, c050_k_pop_fanatic};
 use crate::scripts::meditative::{
-    c054_money_machine, c074_montana_giant, c080_aluneth, c097_2_wishing_well, c097_8_prison,
+    c017_true_craft_a_card, c037_cn_in_a_bottle, c054_money_machine, c074_montana_giant, c080_aluneth,
+    c097_2_wishing_well, c097_8_prison,
 };
 use crate::{CATALOG, REGISTRY, catalog_json};
 
@@ -32,9 +33,14 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// v0.3.7b, and #1039's: Montaña Giant read a full hand as `HAND_CAP` cards, not its player's hand cap
 /// (R1143), through v0.3.7b. K-Pop Fanatic's plain steal is kept beside them: it marked its target
 /// purple and left one it had no room for with the opponent through v0.3.7b, before it Allured (R1045000).
-/// #1194's four ran their v0.3.7b scripts through v0.3.7b: Malzahar's Recycler discarded at the end of
-/// its controller's turn, Ivory Tower had no Aura, Money Machine rolled its controller's card and either
-/// player could Tribute it, and Aluneth's draws took no discount.
+/// #1149's five are kept beside them, each as it ran through v0.3.7b: Snom Bunny Mind Control stole any
+/// enemy permanent, not only a Unit; Siphon Squad's aura worked from the moment it was set, not once it
+/// was revealed (R1149000); True Craft a Card went to the graveyard, not to exile; CN in a Bottle was
+/// replaced on any arrival in a hand, not cast on draw (R1149001); Appropriations' Culture and the
+/// Radiant's Military and Healthcare had their higher multiples. #1194's four ran their v0.3.7b scripts
+/// through v0.3.7b too: Malzahar's Recycler discarded at the end of its controller's turn, Ivory Tower had
+/// no Aura, Money Machine rolled its controller's card and either player could Tribute it, and Aluneth's
+/// draws took no discount.
 /// A card patch before them that changed a script's behaviour kept none, and a game it alters is refused
 /// by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
@@ -53,6 +59,31 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c050_k_pop_fanatic::ID,
         "v0.3.7b",
         c050_k_pop_fanatic::script_v0_3_7b,
+    ),
+    (
+        c049_snom_bunny_mind_control::ID,
+        "v0.3.7b",
+        c049_snom_bunny_mind_control::script_v0_3_7b,
+    ),
+    (
+        c088_siphon_squad::ID,
+        "v0.3.7b",
+        c088_siphon_squad::script_v0_3_7b,
+    ),
+    (
+        c017_true_craft_a_card::ID,
+        "v0.3.7b",
+        c017_true_craft_a_card::script_v0_3_7b,
+    ),
+    (
+        c037_cn_in_a_bottle::ID,
+        "v0.3.7b",
+        c037_cn_in_a_bottle::script_v0_3_7b,
+    ),
+    (
+        c040_appropriations::ID,
+        "v0.3.7b",
+        c040_appropriations::script_v0_3_7b,
     ),
     (
         c064_malzahars_recycler::ID,

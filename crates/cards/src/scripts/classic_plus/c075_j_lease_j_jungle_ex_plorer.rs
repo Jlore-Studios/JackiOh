@@ -1,4 +1,4 @@
-//! C+ #75 J-lease J-Jungle EX-plorer (SPEC §8.7 row 75). (2) Unit, Legendary, 5/5 → 10/10.
+//! C+ #75 J-lease J-Jungle EX-plorer (SPEC §8.7 row 75). (3) Unit, Legendary, 5/5 → 10/10.
 //!   Base:    "Cry: Shuffle {packs|J-lease J-Jungle EX-plorer Pack|J-lease J-Jungle EX-plorer Packs} into
 //!            your deck."
 //!   Radiant: "Cry: Shuffle {packs|Radiant J-lease J-Jungle EX-plorer Pack|…} into your deck."
@@ -47,7 +47,7 @@ pub fn script() -> CardScripts {
 // Radiant".
 //
 // "No Cry from a copy" is driven through the engine's own Summon a copy (§6.3, R57), since no card in
-// the preview pool can copy a non-Human 2-Cost Unit.
+// the preview pool can copy a non-Human 3-Cost Unit.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::summon_copy;

@@ -7,7 +7,7 @@
 //! R584: the discount is a price for a play, so it holds where a play takes the card from — its
 //! player's hand, or a graveyard a permission lets them play it from (E11) — and counts that player's
 //! Fruits; anywhere else (a deck, a graveyard, the field, a pool) it costs its printed (5) (R65). It
-//! printed (10) until patch v0.3.12 (#1194): the printed cost is read off the definition the game folds
+//! printed (10) until patch v0.3.13 (#1194): the printed cost is read off the definition the game folds
 //! under (R767000), so an older replay prices it as it was.
 //! The keywords are the faces' printed ones, so both faces run this one script.
 

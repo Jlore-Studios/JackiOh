@@ -10,7 +10,7 @@
 //!            Radiant: each answer draws the deck as its size stands then (R58), so the first answer
 //!            takes it all and the rest find it empty, no fatigue (R87); most of it burns at the hand
 //!            cap (§2.4), which is the card.
-//!   It discarded at its controller's end of turn until patch v0.3.12 (#1194); `script_v0_3_7b` keeps
+//!   It discarded at its controller's end of turn until patch v0.3.13 (#1194); `script_v0_3_7b` keeps
 //!   that for the replays of v0.3.7b and before (R767000).
 
 use jackioh_engine::effects::{discard_random, draw};

@@ -595,6 +595,34 @@ fn b28_nothing_is_passed_to_a_teammate_that_cannot_afford_it() {
     assert_eq!(json_of(&got), json_of(&Some(end_turn())));
 }
 
+/// Ceaseless Void (Core #100): its price counts its own duel's draws, plays, deaths and exiles (R55).
+const VOID: &str = "core-100";
+
+/// Sets duel `duel`'s game counters so Ceaseless Void costs `price` there.
+fn price_void(state: &mut DuosState, duel: usize, price: i32) {
+    let counters = &mut state.duels[duel].counters;
+    counters.drawn = cost(VOID) - price;
+    counters.played = 0;
+    counters.destroyed = 0;
+    counters.exiled = 0;
+}
+
+#[test]
+fn r1168000_b28_a_card_is_priced_in_the_teammates_duel_where_it_would_be_played() {
+    register_cards();
+    let price = cost(MID);
+    // Cheap in A1's duel, dear in A2's: A2 cannot afford it, so it is not passed.
+    let (mut dear_there, _) = passing("duos-ai-priced-there", None, &[VOID], DUOS_PASS_COST, price);
+    price_void(&mut dear_there, 0, price);
+    price_void(&mut dear_there, 1, price + 1);
+    assert!(duos_passes(&dear_there, A1).is_empty());
+    // Dear in A1's duel, cheap in A2's: A2 can, so it is.
+    let (mut cheap_there, ids) = passing("duos-ai-priced-there", None, &[VOID], DUOS_PASS_COST, price);
+    price_void(&mut cheap_there, 0, price + 1);
+    price_void(&mut cheap_there, 1, price);
+    assert_eq!(duos_passes(&cheap_there, A1), ids);
+}
+
 #[test]
 fn b28_nothing_is_passed_to_a_teammate_with_no_zone_for_it() {
     let seed = "duos-ai-teammate-no-zone";

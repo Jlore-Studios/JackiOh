@@ -1070,7 +1070,7 @@ mod m_n54_money_machine {
         shuffles_a_coin_in(true);
     }
 
-    /// Patch v0.3.12: on p2's own turn, p2's `legal_actions` lists no `activate` off p1's Machine
+    /// Patch v0.3.13: on p2's own turn, p2's `legal_actions` lists no `activate` off p1's Machine
     /// (R384: only its controller activates it).
     #[test]
     fn r1105_the_opponent_is_not_listed_it_on_their_own_turn() {
@@ -1271,7 +1271,7 @@ mod m_n75_ever_growing_tree {
     }
 
     /// Activates the Tree as `legalActions` lists it and takes the first of the three Field Spells it
-    /// Discovers (patch v0.3.12); the events of the pick.
+    /// Discovers (patch v0.3.13); the events of the pick.
     fn grow(s: &mut Scenario) -> Vec<GameEvent> {
         activate_listed(s, EVER_GROWING_TREE, any);
         let offered: Vec<String> = s

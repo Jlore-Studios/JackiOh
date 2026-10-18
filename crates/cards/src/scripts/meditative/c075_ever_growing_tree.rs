@@ -3,7 +3,7 @@
 //! Base:    "Activate: Discover a Field Spell. Fuse it into this."
 //! Radiant: "Activate: Discover a Radiant Field Spell. Fuse it into this."
 //! Engine: Activate (R384, once a turn). A Discover of three (`discover_from_catalog`, R831012; the
-//! Activate fused one random Field Spell until patch v0.3.10, #831, and offered two until patch v0.3.12,
+//! Activate fused one random Field Spell until patch v0.3.10, #831, and offered two until patch v0.3.13,
 //! #1194) over the non-token Field Spells of
 //! every set, never this card or an ingredient already in it (R387), then `fuse_cards` of the one
 //! chosen with the Tree as the kept instance (R77, R102), its cost kept; on the Radiant face the pick
@@ -16,7 +16,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-075";
 
-/// Patch v0.3.12 (#1194): "Discover a Field Spell", Discover's three (§6.3, R831012; two in patch
+/// Patch v0.3.13 (#1194): "Discover a Field Spell", Discover's three (§6.3, R831012; two in patch
 /// v0.3.10, #831).
 const TREE_OFFERS: i32 = 3;
 
@@ -313,7 +313,7 @@ mod tests {
 
             #[test]
             fn r1087_a_fused_aura_works_from_then_on() {
-                // Jlockeed's Weapons: "Aura: Your Units have +4 Attack, Rush and First Strike."
+                // Jlockeed's Weapons: "Aura: Your Units have +3 Attack, Rush and First Strike."
                 let mut s = narrowed("tree-aura", &[WEAPONS]);
                 assert_eq!(s.stats(VANILLA).attack, 4);
                 let tree = s.card(TREE).id.clone();
@@ -321,12 +321,12 @@ mod tests {
                 assert_eq!(parts_of(&s, &tree)[0], WEAPONS);
                 assert_eq!(
                     s.stats(VANILLA).attack,
-                    8,
+                    7,
                     "the fused aura reaches the Unit at once"
                 );
                 s.end_turn();
                 s.end_turn();
-                assert_eq!(s.stats(VANILLA).attack, 8, "and keeps working");
+                assert_eq!(s.stats(VANILLA).attack, 7, "and keeps working");
             }
 
             #[test]

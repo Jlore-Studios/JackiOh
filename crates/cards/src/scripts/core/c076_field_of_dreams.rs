@@ -1,5 +1,5 @@
 //! #76 Field of Dreams (SPEC §8.3, R31, R4, R11, R50, §10.5). (2) Spell, Rare; it cost (3) until patch
-//! v0.3.12 (#1194).
+//! v0.3.13 (#1194).
 //!
 //! Base: "Replace your hand with the same number of Reminisce; exile this". The radiant cell is
 //! "Radiant Reminisce", so every other clause is kept (§8 Conventions): the faces differ by one flag.

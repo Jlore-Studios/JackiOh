@@ -685,7 +685,7 @@ const SUPPRESSIVE_AURA: &str = "core-046"; // Field Spell, 2 embiggen 4
 const GOING_LONG: &str = "core-084"; // Field Spell, 2 embiggen 4, Quickdraw — hero Armor 2 (paid 4: 5)
 const BIG_FELINOR: &str = "core-043"; // Unit, 3 — 3/10
 const PILLOW: &str = "core-065-1"; // Unit token — 0/2 → 0/4, the −2 attack aura
-const WEAPONS: &str = "core-014"; // Field Spell, 4 — your units +4 attack, Rush, First Strike
+const WEAPONS: &str = "core-014"; // Field Spell, 4 — your units +3 attack, Rush, First Strike
 const LAYER_LIBRARY: [&str; 6] = [MR_VANILLA; 6];
 
 fn backrow_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
@@ -781,7 +781,7 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
         // p1's radiant Spikey Pillow prints "Aura: your non-Spikey-Pillow units have −2 attack"; p2's
         // Tempo Timmy is fused onto it by p1's Unlicensed Experimentation (R61, R77), and the fused card
         // keeps that aura in full. The real Spikey Pillow p1's Masochism Mask summons is a Spikey
-        // Pillow, so the aura spares it; Jlockeed's Weapons gives it +4 attack and its own base aura −2.
+        // Pillow, so the aura spares it; Jlockeed's Weapons gives it +3 attack and its own base aura −2.
         let mut g = scenario(json!({
             "active": "p2",
             "p1": {
@@ -810,8 +810,8 @@ mod r102_a_fused_cards_layers_are_each_ingredients {
         let pillow = unit_at(&g, P1, 2);
         assert_eq!(pillow.def_id, PILLOW);
 
-        // 0 printed + 4 (Weapons) − 2 (its own base aura), and nothing from the fused radiant aura.
-        g.expect_stats(&pillow.id, json!({ "attack": 2 }));
+        // 0 printed + 3 (Weapons) − 2 (its own base aura), and nothing from the fused radiant aura.
+        g.expect_stats(&pillow.id, json!({ "attack": 1 }));
     }
 }
 

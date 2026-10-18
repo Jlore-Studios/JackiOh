@@ -4,7 +4,7 @@
 //!          into your deck."
 //! Radiant: "End of turn: Shuffle a The Coin into your opponent's deck.\nActivate: Shuffle a Radiant The
 //!          Coin into your deck."
-//! Engine (patch v0.3.12, #1194):
+//! Engine (patch v0.3.13, #1194):
 //! - **End of turn** (its controller's): one fresh shuffle of The Coin (§7) into the opponent's deck, a
 //!   base Coin on either face, R80's cap turning a full library away. Nothing is rolled, and the
 //!   shuffle is open: the opponent's list names the Coin it was shown going in (R311).

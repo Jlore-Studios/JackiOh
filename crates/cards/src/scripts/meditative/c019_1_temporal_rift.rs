@@ -1,5 +1,5 @@
 //! Meditative #19.1 Temporal Rift (SPEC §8.8 row 19.1, SPEC §7). (0) Spell, Token (printed Epic); it
-//! cost (2) until patch v0.3.12 (#1194).
+//! cost (2) until patch v0.3.13 (#1194).
 //!   Base:    "Take an extra turn after this one. You can take only one extra turn from Temporal Rift
 //!             each game."
 //!   Radiant: "Take an extra turn after this one. Gain {mana} mana and {nextMana} mana next turn. Draw
