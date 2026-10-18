@@ -3781,9 +3781,7 @@
     },
     "1156": {
       "action": "build",
-      "asks": [
-        "c:6245601248"
-      ],
+      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
@@ -3804,15 +3802,17 @@
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
-      "provider": "claude-2",
+      "provider": "claude-3",
       "question": "Games recorded before this change will stop replaying. Do you accept that, so the build can go ahead? Changing OPENING_DRAW from [3, 4] to [4, 4] means the server's replays (Watch and Download) and practice replays of every game recorded before the deploy no longer reach their recorded hash. R767000 refuses them as `rules_changed`. A practice game in progress cannot resume (R668), and an online match that is live during the deploy is rebuilt from its log and keeps going on a different state; the server only logs `match.fold.errors`. Options: (a) accept that old games retire as `rules_changed`: comment so on #1156 and the bot builds the plan as written; (b) keep old games replaying by versioning OPENING_DRAW per game, which is the rules-versioning scheme the issue says not to invent and would need its own design; (c) drop or rethink the change.",
       "queued_at": "2026-10-18T04:22:53Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
-      "run_id": "39097249435",
-      "started_at": "2026-10-18T04:29:57Z",
+      "run_id": "39109556451",
+      "started_at": "2026-10-18T07:58:51Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:6245601248"
+      ],
       "verdict_rounds": 1
     },
     "1157": {
@@ -9846,9 +9846,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-18T07:44:06Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39108722514",
-    "what": "revise #1167 on claude-3"
+    "at": "2026-10-18T07:58:51Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39109556451",
+    "what": "build #1156 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-18T07:53:50Z",
