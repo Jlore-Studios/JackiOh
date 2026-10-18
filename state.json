@@ -10290,12 +10290,8 @@
     "what": "plan #1247 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-18T21:20:12Z",
-    "notes": [
-      "#1242 needs a plan",
-      "#1247 needs a plan",
-      "started a night run, as a lane was free: #1242 (medium) is queued to build, for `claude-3`: plan on `claude-3` (claude, `opus`, strong)"
-    ],
+    "at": "2026-10-18T21:27:27Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
