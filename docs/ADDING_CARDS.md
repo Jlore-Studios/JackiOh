@@ -204,7 +204,7 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   card of two ingredients that define `targetChecks` threw from `legalActions` (#104), a client table made the animation runner replay a
   whole event window (#106), `determinize` put a Siphon Squad in a hidden slot the seat's own view rules out (#107), and a deeply nested
   fusion resumed Final Gambit's step against the wrong ingredient (#105). If a wave fails at a seed that has nothing to do with
-  your card, print the failing game's state, find which card the panic or the diff names, and file it rather than editing the test.
+  your card, print the failing game's state, find which card the panic or the diff names, and file it rather than editing the test. A failure you fix or file gets a record in `crates/tools/fuzz-corpus/` in the same change (its README), so its deal survives the next card.
 - **A renamed card** (a patch that changes a `name`) fails `voice-lines.test.ts` until its comment in `card-audio.json5`, the name on the
   line of its id, says the new name (R655).
 - **A card patched to Legendary or Mythic** (or a token's `printedRarity`) fails `music-assets.test.ts` until it has row 12's intro, and one
