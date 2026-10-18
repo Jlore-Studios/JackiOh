@@ -3779,30 +3779,26 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-17T21:55:15Z",
+      "feedback_since": "2026-10-18T00:52:10Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1146,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The issue's own case still fails. When a view with a result arrives, CardShowcase clears its gated casts, calls dismiss() and returns before it plans or gates anything. So in a lethal Jogg's Box burst the cards Box casts are never put up, even though the board's queue now plays the burst and holds each cast entry for the showcase.",
-          "evidence": "CardShowcase.tsx:269-273 runs `if (view.result !== null) { gated.current = []; dismiss(); return; }` in its layout effect, and Game.tsx:671 passes it the newest `view`, not `shown`. Its header says a card another card casts (C+ #47 Jogg's Box) 'replaces the current display on its runner entry'. animations.ts:896-903 says CAST_ENTRY_MS holds the board 'long enough for the showcase to put the cast card up'. The diff does not touch CardShowcase, so a lethal Box burst holds the board 800 ms per cast with no cast card shown. The player still cannot see which spells won the game, which is what #1146 reports. CardShowcase.test.tsx:174 'a game over takes it down' pins the old behaviour.",
-          "severity": "blocking",
-          "where": "apps/web/src/game/showcase/CardShowcase.tsx:269"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
+      "question": "",
       "queued_at": "2026-10-18T00:01:42Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "39084315989",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-18T00:52:10Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "muse"
