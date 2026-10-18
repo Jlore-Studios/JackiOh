@@ -3943,7 +3943,25 @@
       "feedback_since": "2026-10-17T21:56:27Z",
       "issue": 1147,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "gemini"
+        ],
+        "builder": "gemini",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "gemini",
+            "run": "39072893335",
+            "tier": "medium"
+          }
+        ],
+        "sha": "8cc25267214d5ec0231a2d0d40b461237d013db9",
+        "tiers": {
+          "gemini": "medium"
+        }
+      }
     },
     "148": {
       "asks": [
