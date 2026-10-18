@@ -199,6 +199,8 @@ describe("scripts/ci-scope.sh", () => {
     "spec/rulings/R0195.md",
     "spec/README.md",
     "training/history/improve.jsonl",
+    // The tools' test of shadow_ban.rs reads the sweep reports of record.
+    "training/history/sweep-2026-10-12.md",
     "training/loop.sh.bak",
     "training/lanes/x.ts",
     "SPEC.md",
@@ -482,6 +484,7 @@ describe("scripts/ci-scope.sh", () => {
     ["packages/engine/src/x.ts", ["rust_tools_wasm"]],
     ["apps/server/src/x.ts", ["rust_tools_wasm"]],
     ["ladder/x.ts", ["rust_tools_wasm"]],
+    ["training/history/sweep-2026-10-12.md", ["rust_tools_wasm"]],
     // A crate's manifest also runs the group whose acceptance test holds the map to `cargo metadata`.
     ["crates/server/Cargo.toml", ["rust_server", "rust_tools_wasm"]],
     ["crates/ai/Cargo.toml", ["rust_server", "rust_ai", "rust_ai_slow_a", "rust_ai_slow_b", "rust_tools_wasm"]],
