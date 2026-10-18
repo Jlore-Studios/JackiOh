@@ -1390,6 +1390,7 @@ fn bare_option(key: String, label: String) -> PendingOption {
         chinese: None,
         recipe: None,
         created: None,
+        code: None,
     }
 }
 
@@ -1457,6 +1458,12 @@ fn option_view(state: &GameState, viewer: PlayerId, option: &PromptOption) -> Pe
             base
         }
         Selection::Mode { option } => {
+            // R1183005: a code Discover's option is its place in the offer, its label the code alone;
+            // the card behind it stays in the prompt's resume data, which no view sends.
+            if option.starts_with(crate::effects::choose::CODE_OPTION_PREFIX) {
+                base.code = Some(true);
+                return base;
+            }
             // §6.3 Discover offers definitions, as `mode` options whose string is a catalog def id; a
             // night market's Radiant lot names its card with a suffix (R831002).
             let id = option
@@ -2201,7 +2208,9 @@ fn redact_event(
         | GameEventType::SecretRevealed
         | GameEventType::Predicted
         // R831003: the curve is board positions only.
-        | GameEventType::CurveDrawn => event.clone(),
+        | GameEventType::CurveDrawn
+        // R1183002: the autopilot names a player and a turn.
+        | GameEventType::AutopilotEngaged => event.clone(),
 
         // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
 

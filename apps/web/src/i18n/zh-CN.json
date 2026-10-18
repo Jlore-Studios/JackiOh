@@ -2951,5 +2951,8 @@
   "This replay has expired.": "这个回放已过期。",
   "{name} (needs a fix)": "{name}（需要修正）",
   "Fix it in {decks} to play it here.": "在{decks}中修正它，即可在这里使用。",
-  "Fix them in {decks} to play them here.": "在{decks}中修正它们，即可在这里使用。"
+  "Fix them in {decks} to play them here.": "在{decks}中修正它们，即可在这里使用。",
+  "The AI takes the turn": "AI接管了回合",
+  "The AI plays the rest of {whose} turn": "AI替{whose}打完本回合剩余的部分",
+  "Discover a card by its code": "通过代码发现一张牌"
 }

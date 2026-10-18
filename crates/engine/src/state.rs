@@ -917,6 +917,22 @@ pub struct DrawCount {
     pub count: i32,
 }
 
+/// R1183002 (Meditative+ #18 Cognitive Offloading): the engine plays the rest of this player's turn
+/// `turn` (`subsystems::autopilot`); `actions` counts what it has taken, toward
+/// `AUTOPILOT_MAX_ACTIONS`. Set by the `autopilot` verb on its caster's own turn, cleared at that
+/// turn's cleanup.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct Autopilot {
+    pub turn: i32,
+    pub actions: i32,
+}
+
 /// #936 S3: a Duos duel's side — its team's shared pool, the pool's cap, and whether this seat's own
 /// HP is spent (B12–B15, `duos_life.rs`). Present only in a duel a `DuosState` holds, so a 1v1 state
 /// hashes as before (B3).
@@ -1048,6 +1064,11 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub duos: Option<DuosLife>,
+    /// R1183002: the autopilot plays the rest of this player's turn. Absent but in that turn, so a
+    /// game without Meditative+ #18 hashes as before this field existed (D9).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub autopilot: Option<Autopilot>,
 }
 
 string_union! {
@@ -1605,6 +1626,7 @@ pub fn create_player_state() -> PlayerState {
         rift_extra_turn: None,
         won_by_effect: None,
         duos: None,
+        autopilot: None,
     }
 }
 

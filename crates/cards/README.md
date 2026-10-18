@@ -20,7 +20,8 @@ crates/cards
 ├── chinese-terms.json  the frame's Chinese words: types, tags, rarities, keywords, labels (R1303)
 ├── patches/            the catalog's history (R388, R646): patches.json, one snapshot per patch,
 │                       shipped.json, index.json, and pending/ (one fragment per patch being built)
-├── build.rs            generates the registry from src/scripts/** and compiles the catalog version in
+├── build.rs            generates the registry from src/scripts/**, compiles the catalog version in, and
+│                       cuts every card's code block from its script (R1183004)
 ├── clippy.toml         the purity lint (CLAUDE.md rule 4), the engine's file
 ├── src/lib.rs          CATALOG, CATALOG_IDS, CATALOG_VERSION, card_def, register_all, the registry
 ├── src/query.rs        spec §5.1's catalog.query, the only random-pool source
@@ -204,7 +205,10 @@ Field Trap counts as a Trap, pass `TRAP_TYPES`.
 ## 4. The registry
 
 `build.rs` walks `src/scripts/<set>/*.rs`, reads each `pub const ID`, and writes the module tree and
-`REGISTRY` (id → `script`) into `$OUT_DIR/registry.rs`. There is nothing to wire and nothing to
+`REGISTRY` (id → `script`) into `$OUT_DIR/registry.rs`, and every card's code block but a token's
+into `$OUT_DIR/code_blocks.rs` (`CODE_BLOCKS`, R1183004: its script's lines of code less its `ID`
+line, cut to the engine's `CODE_BLOCK_MAX_LINES`, which `register_all` hands to the engine for
+Meditative+ #25's code Discover). There is nothing to wire and nothing to
 regenerate by hand: drop the file in its folder and build. The build fails, naming the path, on a file
 without `ID`, an `ID` the catalog lacks, two files claiming one id, a file outside a set folder, a
 file name that is not a Rust identifier, or a catalog id with no file. It also compiles in

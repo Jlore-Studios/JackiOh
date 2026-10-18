@@ -1052,13 +1052,37 @@ pub fn choose_pick(args: ChoosePickArgs) -> Effect {
 /// (§10.8). `index` offers the definitions' §5 indices instead — #82 KY's Trial's "Discover among 3
 /// distinct random numbers" — so each option is the number, labelled with it and naming no
 /// definition, and the resume step turns the number it gets back into its card (`def_by_index`, with
-/// the set its pool named, since a number is unique only within its set).
+/// the set its pool named, since a number is unique only within its set). `code` (R1183005,
+/// Meditative+ #25 KY's Intuition) offers each card as its code block alone (`code_block_of`): the
+/// option is its place in the offer (`code-0`, `code-1`, …), labelled with the code, and the cards
+/// behind the places ride the prompt's resume data, which no view sends, so the chooser reads no
+/// id, name or face until the pick; the resume step reads its card with `discovered_code_card`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum DiscoverOffer {
     Card,
     Index,
+    Code,
+}
+
+/// R1183005: a code option's string is this and its place in the offer (`code-0`).
+pub const CODE_OPTION_PREFIX: &str = "code-";
+
+/// R1183005: the resume data key holding the cards behind a code Discover's places, in order.
+pub const CODE_OFFERS_KEY: &str = "codeOffers";
+
+/// R1183005: in a code Discover's resume step, the catalog id of the card whose code was picked, or
+/// `None` when the answer named no place the offer made.
+pub fn discovered_code_card(ctx: &EffectContext<'_>) -> Option<String> {
+    let picked = chosen_options(ctx).into_iter().next()?;
+    let at: usize = picked.strip_prefix(CODE_OPTION_PREFIX)?.parse().ok()?;
+    ctx.data
+        .get(CODE_OFFERS_KEY)?
+        .as_array()?
+        .get(at)?
+        .as_str()
+        .map(str::to_string)
 }
 
 /// `discover_from_catalog`'s pool as a function of the context (TS's `query` when it is a function).
@@ -1121,11 +1145,16 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
             .as_ref()
             .map(|card| card.def_id.clone())
             .or_else(|| ctx.def_id.clone());
-        let pool = query(&excluding_def_id(
+        let mut pool = query(&excluding_def_id(
             Some(&*ctx.state),
             &asked,
             generating.as_deref(),
         ));
+        // R1183005: a code Discover offers only cards with a code block.
+        let by_code = args.offer == Some(DiscoverOffer::Code);
+        if by_code {
+            pool.retain(|def| crate::catalog::code_block_of(&def.id).is_some());
+        }
         if pool.is_empty() {
             return;
         }
@@ -1133,9 +1162,31 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
         let shuffled = ctx.rng.shuffle(&pool);
         let end = slice_end(shuffled.len(), args.count.unwrap_or(3));
         let by_index = args.offer == Some(DiscoverOffer::Index);
+        let mut data = args.data.clone().unwrap_or_default();
+        if by_code {
+            let offered: Vec<Value> = shuffled[..end]
+                .iter()
+                .map(|def| Value::from(def.id.clone()))
+                .collect();
+            data.insert(CODE_OFFERS_KEY.to_string(), Value::Array(offered));
+        }
         let options: Vec<PromptOption> = shuffled[..end]
             .iter()
-            .map(|def| {
+            .enumerate()
+            .map(|(at, def)| {
+                // R1183005: the place in the offer, labelled with the card's code and nothing else.
+                if by_code {
+                    let option = format!("{CODE_OPTION_PREFIX}{at}");
+                    return PromptOption {
+                        key: format!("mode:{option}"),
+                        label: crate::catalog::code_block_of(&def.id)
+                            .unwrap_or_default()
+                            .to_string(),
+                        selection: Selection::Mode { option },
+                        cost: None,
+                        radiant: None,
+                    };
+                }
                 // R247: a number is offered as itself, so nothing in the option names the card it stands for.
                 let option = if by_index {
                     def.index.clone()
@@ -1156,7 +1207,7 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
             })
             .collect();
         let player = ctx.controller;
-        let resume = resume_self(ctx, &args.step, args.data.clone().unwrap_or_default());
+        let resume = resume_self(ctx, &args.step, data);
         open_prompt(
             ctx,
             ask(

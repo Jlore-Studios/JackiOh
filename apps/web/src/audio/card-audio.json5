@@ -1850,6 +1850,15 @@
       attack: { voice: "sapi-cat", text: "Nyaa, cleaning time!" },
       death: { voice: "sapi-cat", text: "Nyaa... logging off." },
     },
+    "meditativeplus-002": { // NA Tech
+      cast: { voice: "robot", text: "Best and worst, together. Balance achieved." },
+    },
+    "meditativeplus-018": { // Cognitive Offloading
+      cast: { voice: "robot", text: "Autopilot engaged. Please keep your hands off the controls." },
+    },
+    "meditativeplus-025": { // KY's Intuition
+      cast: { voice: "prof", text: "Read the code. Trust your gut." },
+    },
   },
   emotes: {
     vanilla: {

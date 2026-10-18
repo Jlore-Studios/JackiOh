@@ -169,6 +169,11 @@ type PickerItem = {
   caption?: string;
   /** #492: an embiggen option, whose face shows the price that form is played for (`pricedFace`). */
   price?: EmbiggenPrice;
+  /**
+   * R1183005: the option is a card's code block alone (`PendingOption.code`, Meditative+ #25 KY's
+   * Intuition): its label is the code, drawn as code, untranslated, and it names no card.
+   */
+  code?: boolean;
 };
 
 type EmbiggenPrice = "normal" | "embiggen";
@@ -335,6 +340,11 @@ function pickerForPending(
   const items = pending.options.map((option): PickerItem => {
     // The engine's words for the option, in the reader's language where the dictionary has them.
     const base: PickerItem = { key: option.key, label: t(option.label) };
+    // R1183005: a code option is its code as the engine wrote it, never a sentence to translate.
+    if (option.code === true) {
+      base.code = true;
+      base.label = option.label;
+    }
     if (option.defId !== undefined) base.defId = option.defId;
     // B5 E17, E18: a card the view lists nowhere (the opponent's hand, C #11) is drawn from the
     // option itself, Radiant and at its cost where the option says so.
@@ -737,8 +747,10 @@ function CardOption(props: {
   const pays = face === null || props.item.price === undefined ? undefined : priceLine(face);
   // R247: a number names no card here, so it is drawn on a card back and nothing opens it.
   const number = face === null && NUMBER_OPTION.test(props.item.label) ? props.item.label : null;
+  // R1183005: a code option is drawn as its code, in a block of its own, naming no card.
+  const code = face === null && props.item.code === true ? props.item.label : null;
   // R831004: an option that names a set (#82 KY's Trial's first Discover) shows the set's mark (R503).
-  const mark = face === null && number === null ? setMarkOf(props.item.label) : null;
+  const mark = face === null && number === null && code === null ? setMarkOf(props.item.label) : null;
   const setMark = mark === null || mark.kind === "unknown" ? null : mark;
   const testId = `prompt-option-${props.item.key}`;
   // Lines of code is a hidden stat in matches.
@@ -755,10 +767,11 @@ function CardOption(props: {
     <>
       <button
         type="button"
-        className={number === null ? "prompt-card" : "prompt-card prompt-card--number"}
+        className={number !== null ? "prompt-card prompt-card--number" : code !== null ? "prompt-card prompt-card--code" : "prompt-card"}
         data-testid={testId}
         data-verdict={verdict}
         data-number={number ?? undefined}
+        data-code={code === null ? undefined : "true"}
         data-set={setMark === null ? undefined : props.item.label}
         data-price={face === null ? undefined : props.item.price}
         data-over-budget={props.over === true ? "true" : undefined}
@@ -776,6 +789,10 @@ function CardOption(props: {
               {number}
             </span>
           </span>
+        ) : code !== null ? (
+          <pre className="prompt-code">
+            <code>{code}</code>
+          </pre>
         ) : face === null ? (
           <>
             {setMark === null ? null : <img className="prompt-set-mark" src={setMark.src} alt="" aria-hidden="true" title={setMark.label} />}

@@ -687,6 +687,8 @@ fn cleanup(sink: &mut EngineSink, player: PlayerId) {
         crate::traps::end_handed_over_turn(sink);
     }
     sink.state.players[player].ai_turn = false;
+    // R1183002: the autopilot played this turn and ends with it.
+    sink.state.players[player].autopilot = None;
     clear_return_flags(sink.state);
     // R637: a Temporary card still in `player`'s hand is discarded now, after every end-of-turn step.
     crate::temporary::discard_temporary_cards(sink, player);
