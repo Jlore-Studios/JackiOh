@@ -4415,6 +4415,14 @@
         }
       }
     },
+    "1212": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-18T06:12:20Z",
+      "issue": 1171,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "148": {
       "asks": [
         "c:5974504575"
