@@ -7892,8 +7892,8 @@
       "text": "Armor 3\nCan't be in Defense Position. Only Units in this lane can attack this."
     },
     "radiant": {
-      "attack": 10,
-      "health": 10,
+      "attack": 8,
+      "health": 8,
       "keywords": [
         {
           "kind": "Armor",
@@ -7941,8 +7941,8 @@
       "text": "End of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk."
     },
     "radiant": {
-      "attack": 10,
-      "health": 10,
+      "attack": 8,
+      "health": 8,
       "keywords": [],
       "text": "End of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."
     }
@@ -7971,8 +7971,8 @@
       },
       {
         "key": "tails",
-        "base": 3,
-        "radiant": 3,
+        "base": 2,
+        "radiant": 2,
         "better": "down",
         "step": 1,
         "min": 1
@@ -7994,8 +7994,8 @@
       "text": "Cry: Flip a coin. Heads (Fed): This gains +{heads}/+{heads}. Tails (Int): This gains −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
     },
     "radiant": {
-      "attack": 10,
-      "health": 10,
+      "attack": 8,
+      "health": 8,
       "keywords": [
         {
           "kind": "Lucky",
@@ -8041,7 +8041,7 @@
     },
     "radiant": {
       "attack": 0,
-      "health": 10,
+      "health": 8,
       "keywords": [
         {
           "kind": "Divine Shield"
@@ -8070,7 +8070,7 @@
       {
         "key": "attackGain",
         "base": 4,
-        "radiant": 10,
+        "radiant": 8,
         "better": "up",
         "step": 1,
         "min": 1
@@ -8091,8 +8091,8 @@
       "text": "Rush, First Strike\nWhenever this destroys a Unit, it gains +{attackGain} Attack.\nWhile Berserk: Start of turn and end of turn: this attacks your hero."
     },
     "radiant": {
-      "attack": 10,
-      "health": 10,
+      "attack": 8,
+      "health": 8,
       "keywords": [
         {
           "kind": "Charge"

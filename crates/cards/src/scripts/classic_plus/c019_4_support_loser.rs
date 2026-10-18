@@ -116,7 +116,7 @@ mod tests {
 
         #[test]
         fn base_enters_at_0_4_radiant_unchanged() {
-            for (radiant_face, health) in [(false, 4), (true, 10)] {
+            for (radiant_face, health) in [(false, 4), (true, 8)] {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": SUPPORT, "radiant": radiant_face }, FILLER], "library": DECK },
@@ -241,10 +241,10 @@ mod tests {
             use super::*;
 
             #[test]
-            fn is_0_10_with_divine_shield_and_reborn_and_heals_6() {
+            fn is_0_8_with_divine_shield_and_reborn_and_heals_6() {
                 let mut s = support(json!({ "field": [{ "def": VANILLA, "lane": 1, "damage": 3 }] }), true, json!({}));
                 let me = loser(&s);
-                s.expect_stats(&me, json!({ "attack": 0, "health": 10 }));
+                s.expect_stats(&me, json!({ "attack": 0, "health": 8 }));
                 s.end_turn();
                 s.expect_health(P1, 36);
                 let first = unit_or_blank(&s, P1, 1);
