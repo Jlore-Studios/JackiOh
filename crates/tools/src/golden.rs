@@ -9,7 +9,7 @@
 //! mismatch names the seed, the step, which hash and the action, writes the Rust side's canonical
 //! text to `target/golden-diff/<seed>-<step>-<which>.json`, and prints the `record.ts --dump-step`
 //! command that writes TS's side next to it, run in a checkout of 05f5cfd (the last commit that has
-//! the TypeScript). The hotseat fixture must fold to "5c3d578c". Games run in
+//! the TypeScript). The hotseat fixture must fold to "8784adae". Games run in
 //! parallel (rayon); the report lists every divergent game, earliest seed first. Exit 1 on any
 //! divergence.
 //!
@@ -67,7 +67,7 @@ pub(crate) const GAMES_PATH: &str =
 const HOTSEAT: &str = include_str!("../../engine/tests/golden/01-hotseat-full-game.json");
 
 /// The hotseat fixture's final state hash (`hotseat-replay.test.ts`'s `EXPECTED_HASH`, SURFACE §5.2).
-const HOTSEAT_HASH: &str = "5c3d578c";
+const HOTSEAT_HASH: &str = "8784adae";
 
 /// §13.3: where a divergence leaves the Rust side's canonical text (the workspace's `target/`).
 const DIFF_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../target/golden-diff");

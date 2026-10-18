@@ -1,10 +1,9 @@
 //! #24 Efficiency Dividend (SPEC §8.2, R65, R81, R68, §5.1).
 //!
-//! Base: "Choose one: Deal X+1 damage, heal a target 4X, or gain X mana next turn. End of turn: Return
-//! this to hand". Radiant: "Deal 2X+1 damage, heal a target 8X, or gain X+1 mana next turn", the modes,
-//! target and return to hand kept (§8 Conventions). Patch v0.3.10 (#831) set these numbers (X, 2X and
-//! floor(X/2) before; 2X, 4X and X on the Radiant face). The price is
-//! still X, bounded by the play validator, so nothing here re-checks it (R65).
+//! Base: "Choose one: Deal X damage, heal a target 4X, or gain X mana next turn. End of turn: Return
+//! this to hand". Radiant: "Deal 2X damage, heal a target 8X, or gain X+1 mana next turn", the modes,
+//! target and return to hand kept (§8 Conventions). Patch v0.3.14 (#1220) dropped the +1s that v0.3.10
+//! (#831) set. The price is still X, bounded by the play validator, so nothing here re-checks it (R65).
 //!
 //! R81: X, the mode and the target all travel in the `play` action and never pause resolution, so the
 //! hook reads `ctx.x`, `ctx.modes` (through `chosenOptions`) and `{ of: "chosen" }`. "Gain X mana next
@@ -41,14 +40,11 @@ fn targets() -> Vec<TargetDecl> {
     }]
 }
 
-/// Patch v0.3.10 (#831): "Deal X+1" (Radiant "2X+1") damage: the declared multiple of X, plus this.
-const DIVIDEND_DAMAGE_FLAT: i32 = 1;
-
-/// "Gain X mana next turn" on the base face, "X+1" on the Radiant: this much more there.
+/// The Radiant mana mode's +1, a constant of the card.
 const DIVIDEND_RADIANT_MANA: i32 = 1;
 
 /// The damage and heal modes' multiples are the declared numbers `damage` and `heal` (R386): X and 4X,
-/// 2X and 8X on the Radiant face, where `damage` is tuned alone (R749: the base face's "Deal X+1
+/// 2X and 8X on the Radiant face, where `damage` is tuned alone (R749: the base face's "Deal X
 /// damage" prints no multiple and is always 1X). `bonus_mana` is the mana mode's Radiant difference.
 fn dividend(bonus_mana: i32) -> Script {
     Script {
@@ -60,7 +56,7 @@ fn dividend(bonus_mana: i32) -> Script {
             let mode = chosen_options(ctx).into_iter().next();
             match mode.as_deref() {
                 Some(MODE_DAMAGE) => {
-                    let amount = param(&*ctx, "damage") * paid + DIVIDEND_DAMAGE_FLAT;
+                    let amount = param(&*ctx, "damage") * paid;
                     vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
                 }
                 Some(MODE_HEAL) => {
@@ -97,7 +93,7 @@ pub fn script() -> CardScripts {
 }
 
 // #24 Efficiency Dividend — SPEC §8.2, BUILD M4-T4 row 24: "X chosen with the play, bounded by
-// mana (R81); three modes; next-turn mana +X; returns to hand". Radiant (R275) deals 2X+1, heals 8X and
+// mana (R81); three modes; next-turn mana +X; returns to hand". Radiant (R275) deals 2X, heals 8X and
 // gains X+1, still for X paid; each radiant mode is checked at an odd and an even X, and X = 0 is
 // refused (R348).
 // Nothing prompts (R81), so `state.pending` stays null. Both sides keep a unit and a card in hand so
@@ -189,12 +185,12 @@ mod tests {
             }
 
             #[test]
-            fn the_damage_mode_deals_x_plus_1_damage_to_the_chosen_hero() {
+            fn the_damage_mode_deals_x_damage_to_the_chosen_hero() {
                 crate::register_all();
                 let mut s = dividend_in("dividend-damage", false, None);
                 s.play(DIVIDEND, json!({ "x": 3, "modes": ["damage"], "targets": at_hero("p2") }));
 
-                s.expect_health(P2, 26);
+                s.expect_health(P2, 27);
             }
 
             #[test]
@@ -207,7 +203,7 @@ mod tests {
                     json!({ "x": 1, "modes": ["damage"], "targets": [{ "pick": "instance", "instanceId": timmy.id }] }),
                 );
 
-                s.expect_stats(&timmy, json!({ "health": 1, "maxHealth": 3 }));
+                s.expect_stats(&timmy, json!({ "health": 2, "maxHealth": 3 }));
             }
 
             #[test]
@@ -259,23 +255,23 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r275_the_damage_mode_deals_2x_plus_1_x_2_deals_5_and_costs_2() {
+            fn r275_the_damage_mode_deals_2x_x_2_deals_4_and_costs_2() {
                 crate::register_all();
                 let mut s = dividend_in("dividend-radiant-damage", true, None);
                 s.play(DIVIDEND, json!({ "x": 2, "modes": ["damage"], "targets": at_hero("p2") }));
 
-                // R65: X = 2 is what it cost; 5 is what it dealt.
-                s.expect_health(P2, 25);
+                // R65: X = 2 is what it cost; 4 is what it dealt.
+                s.expect_health(P2, 26);
                 s.expect_mana(P1, 2);
             }
 
             #[test]
-            fn r275_the_damage_mode_at_an_odd_x_x_3_deals_7() {
+            fn r275_the_damage_mode_at_an_odd_x_x_3_deals_6() {
                 crate::register_all();
                 let mut s = dividend_in("dividend-radiant-damage-odd", true, None);
                 s.play(DIVIDEND, json!({ "x": 3, "modes": ["damage"], "targets": at_hero("p2") }));
 
-                s.expect_health(P2, 23);
+                s.expect_health(P2, 24);
                 s.expect_mana(P1, 1);
             }
 
@@ -294,7 +290,7 @@ mod tests {
             }
 
             #[test]
-            fn r275_the_damage_mode_can_pick_a_unit_x_1_deals_3_to_it() {
+            fn r275_the_damage_mode_can_pick_a_unit_x_1_deals_2_to_it() {
                 crate::register_all();
                 let mut s = dividend_in("dividend-radiant-damage-unit", true, None);
                 let timmy = s.card(TIMMY).clone();
@@ -303,7 +299,7 @@ mod tests {
                     json!({ "x": 1, "modes": ["damage"], "targets": [{ "pick": "instance", "instanceId": timmy.id }] }),
                 );
 
-                s.expect_in_zone(&timmy, "graveyard");
+                s.expect_stats(&timmy, json!({ "health": 1, "maxHealth": 3 }));
             }
 
             #[test]
@@ -393,7 +389,7 @@ mod tests {
             }
 
             #[test]
-            fn r386_an_upgrade_deals_3x_plus_1_and_a_degrade_1x_plus_1() {
+            fn r386_an_upgrade_deals_3x_and_a_degrade_1x() {
                 for (upgrade, per_x) in [(true, 3), (false, 1)] {
                     crate::register_all();
                     let mut s = dividend_in("dividend-radiant-tuned", true, None);
@@ -404,7 +400,7 @@ mod tests {
                     };
                     assert_eq!(moved, per_x);
                     s.play(DIVIDEND, json!({ "x": 2, "modes": ["damage"], "targets": at_hero("p2") }));
-                    s.expect_health(P2, 30 - (2 * per_x + 1));
+                    s.expect_health(P2, 30 - 2 * per_x);
                 }
             }
         }
@@ -426,7 +422,7 @@ mod tests {
         }
 
         #[test]
-        fn r749_the_base_face_s_1x_plus_1_damage_is_never_tuned() {
+        fn r749_the_base_face_s_1x_damage_is_never_tuned() {
             crate::register_all();
             let s = dividend_in("dividend-base-untuned", false, None);
             assert!(!crate::can_upgrade_number(&s, DIVIDEND, "damage"));

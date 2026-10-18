@@ -187,7 +187,7 @@ describe("readInjectedDecks (ASSUMPTION A1: cy.seedGame's fixture decks)", () =>
   });
 });
 
-/** R180 fixture: spec 25's 4-card fatigue library. */
+/** R180 fixture: a 4-card library's handicap (R184), shaped like spec 25's fatigue fixture's. */
 const FOUR_CARDS = { deckSize: 4, manaBonus: 0, manaCap: 4, extraOpeningCards: 0, extraDrawsPerTurn: 0 };
 
 describe("readInjectedHandicaps (R180: a fixture deck's handicap, spec 25)", () => {

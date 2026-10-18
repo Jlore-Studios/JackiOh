@@ -1,7 +1,7 @@
 //! Meditative #39.3 Dud (SPEC §8.8 row 39.3). (0) Spell, CN, Token (printed Common).
 //!
 //!   Base:    "Deal {damage} damage." — damage 2
-//!   Radiant: "Deal {damage} damage." — damage 5
+//!   Radiant: "Deal {damage} damage." — damage 4
 //!
 //! Engine: the target is declared with the play (any unit or hero, B1's convention for "Deal N
 //! damage"), and `damage` is one instance through §4.4.
@@ -27,13 +27,13 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's 5 is its declared `damage`, which `param` reads off the running face.
+    // The same script: the Radiant face's 4 is its declared `damage`, which `param` reads off the running face.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
 // Meditative #39.3 Dud — SPEC §8.8 row 39.3, BUILD M10 row M 39.3: "One hit of 2 on a declared Unit
-// or hero on either side; damage reads through `param()`; radiant 5".
+// or hero on either side; damage reads through `param()`; radiant 4".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -62,7 +62,7 @@ mod tests {
             "p2": { "hand": [FILLER] },
         }));
         s.expect_refused(|s| s.play(ID, json!({})));
-        // Both faces run the one script: the Radiant face's 5 is its declared `damage`.
+        // Both faces run the one script: the Radiant face's 4 is its declared `damage`.
         let CardScripts { base, radiant } = script();
         assert!(Arc::ptr_eq(base.cry.as_ref().unwrap(), radiant.cry.as_ref().unwrap()));
         assert_eq!(radiant.targets, base.targets);
@@ -88,7 +88,7 @@ mod tests {
     }
 
     #[test]
-    fn radiant_deals_5() {
+    fn radiant_deals_4() {
         crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [{ "def": ID, "radiant": true }, FILLER], "field": [{ "def": MENACE, "lane": 1 }] },
@@ -98,6 +98,6 @@ mod tests {
 
         s.play(ID, json!({ "targets": at(&s, P2, 2) }));
 
-        s.expect_stats(&prey_id, json!({ "attack": 9, "health": 4 }));
+        s.expect_stats(&prey_id, json!({ "attack": 9, "health": 5 }));
     }
 }

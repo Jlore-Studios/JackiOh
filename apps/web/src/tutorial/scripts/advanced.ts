@@ -173,7 +173,7 @@ export const script: LessonScript = {
       id: "coin",
       title: coin,
       text: () =>
-        t("The AI went first. To make up for it, you started with one extra card and got {coin}: a free spell that gives 1 extra mana, this turn only.", {
+        t("The AI went first. To make up for it, you got {coin}: a free spell that gives 1 extra mana, this turn only.", {
           coin: coin(),
         }),
       anchor: { kind: "handCard", defId: COIN },

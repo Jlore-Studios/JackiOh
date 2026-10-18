@@ -1,4 +1,4 @@
-//! #47 Fig of Life (SPEC §8.2): "Heal a target 20", radiant "50" — a radiant cell that changes only
+//! #47 Fig of Life (SPEC §8.2): "Heal a target 20", radiant "40" — a radiant cell that changes only
 //! a number changes only that number (§8 Conventions), so the two faces are one effect at two sizes.
 //!
 //! R19 is the whole of the §8.2 Engine cell ("any unit or hero"): `side: "any"` with
@@ -17,7 +17,7 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "core-047";
 
 /// The two faces differ only in how much the target is healed: the declared number `heal` (R386), 20
-/// and 50 on the Radiant face, read off the face that is running.
+/// and 40 on the Radiant face, read off the face that is running.
 fn fig_of_life() -> Script {
     Script {
         // R19: any unit or hero, either side.
@@ -43,7 +43,7 @@ pub fn script() -> CardScripts {
 }
 
 // #47 Fig of Life — SPEC §8.2, BUILD M4-T4: "Heals a unit up to max or the hero without cap (R19);
-// radiant 50".
+// radiant 40".
 //
 // R19 is the §8.2 Engine cell in full ("Fig of Life may target any unit or hero"): the tests heal
 // an ally unit, an enemy unit, an own hero and an enemy hero.
@@ -161,9 +161,9 @@ mod tests {
             g.expect_health(PlayerId::P1, 30);
         }
 
-        /// "radiant: 50 onto a unit is still capped by its max health (§8 Conventions: only the number)"
+        /// "radiant: 40 onto a unit is still capped by its max health (§8 Conventions: only the number)"
         #[test]
-        fn radiant_50_onto_a_unit_is_still_capped_by_its_max_health() {
+        fn radiant_40_onto_a_unit_is_still_capped_by_its_max_health() {
             let mut g = scenario(json!({
                 "p1": { "hand": [radiant_fig()], "field": [{ "def": SEVEN_SEVEN, "lane": 1, "damage": 6 }] },
             }));
@@ -175,9 +175,9 @@ mod tests {
             g.expect_stats(&ally, json!({ "health": 7, "maxHealth": 7 }));
         }
 
-        /// "radiant: 50 onto a hero has no cap — 30 becomes 80"
+        /// "radiant: 40 onto a hero has no cap — 30 becomes 70"
         #[test]
-        fn radiant_50_onto_a_hero_has_no_cap_30_becomes_80() {
+        fn radiant_40_onto_a_hero_has_no_cap_30_becomes_70() {
             let mut g = scenario(json!({
                 "p1": { "hand": [radiant_fig()], "field": [BYSTANDER] },
                 "p2": { "field": [BYSTANDER] },
@@ -185,7 +185,7 @@ mod tests {
 
             g.play(FIG, at_hero("p1"));
 
-            g.expect_health(PlayerId::P1, 80);
+            g.expect_health(PlayerId::P1, 70);
         }
 
         /// "radiant: an undamaged unit is healed for nothing and the spell still resolves"

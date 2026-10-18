@@ -3,7 +3,8 @@
 // scripted opening. The human gets units for turns 1–4, while Lesson 1's AI gets plain units only
 // (R291): The Coin and Archivist first, then Moths to the Flame. Patch v0.3.10 gave Moths Pierce, and
 // the AI then played it, in Defense Position, at once: Moths now sits where Gary the Gambler did, a
-// draw later, and Gary where Big D-fender did.
+// draw later, and Gary where Big D-fender did. Since the opening hand grew from three cards to four
+// (R1156000), it also holds Gravedigger, the first draw before, and each later card comes a turn sooner.
 
 import type { TutorialLesson } from "../lessons.ts";
 
