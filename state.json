@@ -3748,6 +3748,8 @@
       "pending_request": false,
       "provider": "claude-2",
       "queued_at": "2026-10-17T22:31:24Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "39080839134",
       "self_check_findings": [],
       "started_at": "2026-10-17T23:56:24Z",
