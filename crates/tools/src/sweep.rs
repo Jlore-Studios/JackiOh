@@ -50,6 +50,7 @@ use jackioh_ai::{
     sweep_at_risk, sweep_card, sweep_verdict,
 };
 use jackioh_engine::catalog::{CatalogQueryArgs, query};
+use jackioh_engine::testkit::preview_every_set;
 use jackioh_engine::wire::SetName;
 
 use crate::arena::utc_date;
@@ -961,6 +962,9 @@ pub fn run(args: Args) -> Result<()> {
         return run_check(reports);
     }
 
+    // R1420: as `fuzz` does, every set is previewed, so a set that has not shipped yet is swept
+    // (its ids are in the pool) and its cards are dealt as filler, as they will be once it ships.
+    let _preview = preview_every_set();
     let pool: Vec<String> = query(&CatalogQueryArgs::default())
         .iter()
         .map(|def| def.id.clone())
