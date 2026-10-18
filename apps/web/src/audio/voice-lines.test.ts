@@ -431,6 +431,7 @@ describe("every voice line is short, plain flavour (B34)", () => {
       "Immutable", "Indestructible", "Stack", "Echo", "Combo", "Discover", "Recruit", "Tribute",
       "Embiggen", "Radiant", "Armor", "Rush", "Charge", "Cry", "Deathrattle", "Battlecry", "mana",
       "damage", "summon", "exile", "fatigue", "backrow", "graveyard",
+      "Embiggened",
       "Animated", "Activate", "Brittle", "Nerf", "Buff", "Spell Damage", "Immune to Spells", "Counter",
       "Flicker", "Plague Counter",
     ]);

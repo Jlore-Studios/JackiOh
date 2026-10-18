@@ -142,17 +142,18 @@ impl ByFace {
 /// §8 #73: largest single damage instance a hero with Anti-oneshot Armor takes.
 pub const ANTI_ONESHOT_CAP: ByFace = ByFace { base: 5, radiant: 3 };
 
-/// `{ paid, embiggen }`: #84 Going Long's Armor by the price paid.
+/// `{ normal, embiggened }`: #84 Going Long's Armor by the version played, its normal version at the
+/// cheaper price or its Embiggened version at its Embiggened cost (R1175000).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct HeroArmorPrice {
-    pub paid: i32,
-    pub embiggen: i32,
+    pub normal: i32,
+    pub embiggened: i32,
 }
 
 impl HeroArmorPrice {
-    /// `value[embiggened ? "embiggen" : "paid"]`.
+    /// `value[embiggened ? "embiggened" : "normal"]`.
     pub const fn on(&self, embiggened: bool) -> i32 {
-        if embiggened { self.embiggen } else { self.paid }
+        if embiggened { self.embiggened } else { self.normal }
     }
 }
 
@@ -171,12 +172,12 @@ impl HeroArmor {
 }
 
 /// §8 #84 Going Long: the Armor it gives its controller's hero (§4.4 step 2), by face and by which
-/// price was paid — "Armor 2. Paid (4): Armor 4", radiant "Armor 4. Paid (4): Armor 8" (patch
-/// v0.1.1). `paid` is the printed cost 2, `embiggen` the embiggen price 4 (R81 records which on the
-/// instance).
+/// version was played — "Armor 2. Embiggened (4): Armor 4", radiant "Armor 4. Embiggened (4): Armor 8"
+/// (patch v0.1.1, R1175000). `normal` is the normal version's, at the printed cost 2, `embiggened` the
+/// Embiggened version's, at its Embiggened cost 4 (R81 records which on the instance).
 pub const HERO_ARMOR: HeroArmor = HeroArmor {
-    base: HeroArmorPrice { paid: 2, embiggen: 4 },
-    radiant: HeroArmorPrice { paid: 4, embiggen: 8 },
+    base: HeroArmorPrice { normal: 2, embiggened: 4 },
+    radiant: HeroArmorPrice { normal: 4, embiggened: 8 },
 };
 /// §8 #38 Quickstriker, R281: the multiple of X each granted Combo deals to the enemy hero, by the
 /// granting card's face — "Combo X: deal X damage", radiant "deal 2X damage", one hit either way.

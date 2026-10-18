@@ -407,7 +407,7 @@ describe("#492 one card picker, front and centre, for every short choice", () =>
     const bigger = screen.getByTestId("prompt-option-true");
     // CLAUDE.md rule 7: the client never works out a discounted embiggen price.
     expect(gem(bigger)).toEqual({ text: "?", alt: null });
-    expect(bigger.querySelector(".prompt-card-caption-detail")?.textContent).toBe("Pay the embiggen price");
+    expect(bigger.querySelector(".prompt-card-caption-detail")?.textContent).toBe("Pay the Embiggened cost");
   });
 
   it("#492 a few X values are the card once per X, each captioned with its X", () => {

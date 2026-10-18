@@ -221,6 +221,19 @@ function SetMarkBadge({ set }: { set: string | null }): ReactElement | null {
   );
 }
 
+/**
+ * B8, R1175000: an embiggen card's Embiggened cost, small beside the gem, named "Embiggened (4)" for a
+ * screen reader and on hover, as the card's text labels that version.
+ */
+function EmbiggenedCost({ cost }: { cost: string }): ReactElement {
+  const label = t("Embiggened ({cost})", { cost });
+  return (
+    <span className="cf-cost-alt" role="img" aria-label={label} title={label}>
+      {cost}
+    </span>
+  );
+}
+
 /** Longer than two characters (Ceaseless Void's 100): cards.css steps the gem's number down. */
 const LONG_COST_CHARS = 3;
 
@@ -288,7 +301,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
       <span className="cf-scale">
         <span className="cost-gem" data-cost={face.cost.value} data-tone={face.cost.tone} data-digits={costDigits(face.cost.text)}>
           {face.cost.text}
-          {face.cost.alt !== null && <span className="cf-cost-alt">{face.cost.alt}</span>}
+          {face.cost.alt !== null && <EmbiggenedCost cost={face.cost.alt} />}
         </span>
 
         {face.element != null && (

@@ -2560,7 +2560,7 @@ fn refuse_embiggen(
         return Ok(());
     }
     if embiggen == Some(true) {
-        return refuse(format!("{} has no embiggen price", name_of(state, &card.def_id)));
+        return refuse(format!("{} has no Embiggened version", name_of(state, &card.def_id)));
     }
     Ok(())
 }

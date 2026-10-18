@@ -81,7 +81,7 @@ export type TriggerTermId =
 export type VerbTermId =
   | "Discover"
   | "Tribute"
-  | "Embiggen"
+  | "Embiggened"
   | "Recruit"
   | "Fuse"
   | "Transform"
@@ -273,7 +273,13 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Discover: verb("Discover", "Choose 1 of 3 options"),
   // Short (R500; see the header).
   Tribute: verb("Tribute", SHORT_REMINDERS.Tribute, { row: "Tribute X", aliases: ["Tributes"] }),
-  Embiggen: verb("Embiggen", "Two prices, bigger effect for the bigger one"),
+  // R1175000: an embiggen card's text labels its Embiggened version "Embiggened (N):", so the entry is
+  // the word it prints, on §6.3's Embiggen row, and shows beside every embiggen card.
+  Embiggened: verb(
+    "Embiggened",
+    "An embiggen card has two prices. Its normal version costs the cheaper one; its Embiggened version costs more and does more.",
+    { row: "Embiggen" },
+  ),
   Recruit: verb("Recruit", "Summon from deck, scanning top down"),
   // R910000: the lower-case and past spellings the cards print mid-sentence.
   Fuse: verb("Fuse", "Combine effects, stats and cost, cost capped at 4", { aliases: ["fuse", "fused"] }),

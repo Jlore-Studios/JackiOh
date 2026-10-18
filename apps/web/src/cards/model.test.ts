@@ -229,7 +229,7 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
 
   it("R277 a keyword line prints the radiant form's whole list and marks what it adds (core-056, core-025, core-019)", () => {
     const jilliax = face("core-056", true);
-    expect(jilliax.text.full).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn\nPaid (3): Equip.");
+    expect(jilliax.text.full).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn\nEmbiggened (3): Equip.");
     expect(marksOf("core-056")).toEqual(["Reborn"]);
     expect(marksOf("core-025")).toEqual(["Reborn"]);
     expect(marksOf("core-019")).toEqual(["Immutable"]);

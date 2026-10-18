@@ -2,7 +2,8 @@
 //! should be short, neatly formatted, and use consistent terminology").
 //!
 //! The checks are the ruling's, one by one: the library is the deck and a tribute a Tribute; an
-//! embiggen card's bigger price is "Paid (N): …"; the printed keywords lead the text as one
+//! embiggen card's Embiggened version is "Embiggened (N): …" (R1175000; "Paid (N): …" until issue
+//! #1175); the printed keywords lead the text as one
 //! comma-separated list on a line of their own; each labelled ability starts a line of its own; and
 //! every other line is sentences that end with a full stop. Patch v0.2.0 turned the cost words round
 //! (R432, issue #40): "(N) Cost" is the noun ("a (1) Cost or less card", "(4)+ Cost cards") and
@@ -16,7 +17,7 @@
 //! `readPatches`) is compiled in with `include_str!` (a pure crate's tests read no files).
 
 use indexmap::{IndexMap, IndexSet};
-use jackioh_cards::{CATALOG, catalog_json, chinese_terms_json};
+use jackioh_cards::{CATALOG, catalog_json, chinese_json, chinese_terms_json};
 use jackioh_engine::{CardDef, FaceKind, Keyword, KeywordKind, fill_params};
 use serde_json::{Map, Value, json};
 
@@ -64,14 +65,19 @@ fn keyword_label(keyword: &Keyword) -> String {
     }
 }
 
-/// The labels that start a line of their own (R366; Activate is B3.2's, Quest Classic #90's).
+/// The labels that start a line of their own (R366; Activate is B3.2's, Quest Classic #90's). An
+/// embiggen card's Embiggened version is labelled with its Embiggened cost, one label per cost a card
+/// prints (R1175000).
 pub(super) const LABELS: &[&str] = &[
     "Cry:",
     "Death:",
     "Start of turn:",
     "End of turn:",
     "Aura:",
-    "Paid (4):",
+    "Embiggened (1):",
+    "Embiggened (2):",
+    "Embiggened (3):",
+    "Embiggened (4):",
     "Activate:",
     "Activate 2:",
     "Activate ♾️:",
@@ -438,7 +444,11 @@ fn failures(face: &Face) -> Vec<String> {
         out.push("writes a kind of cost as \"odd-cost\", not \"odd Cost\"".to_string());
     }
     if paid_then_digit(text) {
-        out.push("writes an embiggen price as \"(paid N\" rather than \"Paid (N):\"".to_string());
+        out.push("writes an embiggen card's Embiggened version as \"(paid N\", not \"Embiggened (N):\"".to_string());
+    }
+    // R1175000: "Paid (N):" was R366's label for the Embiggened version until issue #1175.
+    if has_word_start(text, "Paid (", false) {
+        out.push("writes an embiggen card's Embiggened version as \"Paid (N):\", not \"Embiggened (N):\"".to_string());
     }
     // Vocabulary table (patch v0.2.1, issue #45; balance patch 1 retires "Return … to hand" for
     // Bounce, R692): a face that returns a permanent from the field says Bounce; only the faces that
@@ -495,7 +505,7 @@ fn failures(face: &Face) -> Vec<String> {
         }
     }
     // Every other line is sentences, each ending with a full stop, and a labelled ability ("Death:",
-    // "Aura:", "Paid (4):") starts a line of its own.
+    // "Aura:", "Embiggened (4):") starts a line of its own.
     for (at, line) in lines.iter().enumerate() {
         if at == 0 && has_list {
             if line.ends_with('.') {
@@ -816,7 +826,7 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
     }
 
     #[test]
-    fn r432_writes_a_specific_cost_as_the_noun_n_cost_a_price_as_the_verb_costs_n_and_an_embiggen_price_as_paid_n()
+    fn r432_writes_a_specific_cost_as_the_noun_n_cost_a_price_as_the_verb_costs_n_and_an_embiggened_version_as_embiggened_n()
      {
         let wrong: Vec<String> = swept()
             .iter()
@@ -1602,6 +1612,109 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
     }
 }
 
+// ---------------------------------------------------------------------------------------------
+// R1175000 (issue #1175): a card with two prices is an embiggen card. Played at the cheaper price it is
+// its normal version; at the dearer one, its Embiggened cost, it is its Embiggened version, and its
+// text labels that version "Embiggened (N): …" where R366 wrote "Paid (N): …".
+// ---------------------------------------------------------------------------------------------
+
+mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
+    use super::*;
+    use jackioh_engine::CardCost;
+
+    /// The label an embiggen card's Embiggened version starts its line with, "Embiggened (4):", its
+    /// Embiggened cost in it; none for a card with one price.
+    fn embiggened_label(card: &CardDef) -> Option<String> {
+        match card.cost {
+            CardCost::Embiggen { embiggen, .. } => Some(format!("Embiggened ({embiggen}):")),
+            _ => None,
+        }
+    }
+
+    /// `chinese.json`'s text of one face (R1303).
+    fn chinese_face(table: &Value, id: &str, face: FaceKind) -> String {
+        table[id][face.as_str()].as_str().unwrap_or_default().to_string()
+    }
+
+    #[test]
+    fn r1175000_every_embiggen_card_starts_a_line_with_embiggened_n_its_embiggened_cost_on_both_faces_in_english_and_chinese()
+     {
+        let terms = chinese_terms();
+        let table: Value = serde_json::from_str(chinese_json()).expect("crates/cards/chinese.json is JSON");
+        let mut wrong: Vec<String> = Vec::new();
+        let mut cards: IndexSet<&str> = IndexSet::new();
+        for face in faces_of(&entries()) {
+            let Some(label) = embiggened_label(face.card) else {
+                continue;
+            };
+            cards.insert(face.card.id.as_str());
+            if !face.text.split('\n').any(|line| line.starts_with(&format!("{label} "))) {
+                wrong.push(format!("does not start a line with {label}: {}", described(&face)));
+            }
+            if !LABELS.contains(&label.as_str()) {
+                wrong.push(format!("LABELS has no {label}"));
+            }
+            let chinese_label = terms["labels"][label.as_str()].as_str().unwrap_or_default();
+            let chinese = chinese_face(&table, &face.card.id, face.face);
+            if chinese_label.is_empty() || !chinese.split('\n').any(|line| line.starts_with(chinese_label)) {
+                wrong.push(format!(
+                    "{} {}: the Chinese face does not start a line with {label}'s \"{chinese_label}\": {chinese}",
+                    face.card.id, face.face
+                ));
+            }
+        }
+        assert_eq!(wrong, Vec::<String>::new());
+        // The eight embiggen cards of issue #1175.
+        assert_eq!(
+            sorted(cards.into_iter().map(str::to_string).collect()),
+            strings(&[
+                "classicplus-036",
+                "core-046",
+                "core-056",
+                "core-059",
+                "core-084",
+                "meditative-021",
+                "meditative-046",
+                "meditative-081",
+            ])
+        );
+    }
+
+    #[test]
+    fn r1175000_only_an_embiggen_card_says_embiggened_and_no_face_says_paid_n_in_english_or_chinese() {
+        let table: Value = serde_json::from_str(chinese_json()).expect("crates/cards/chinese.json is JSON");
+        let wrong: Vec<String> = faces_of(&entries())
+            .iter()
+            .filter(|face| {
+                face.text.contains("Embiggened (") != embiggened_label(face.card).is_some()
+                    || face.text.contains("Paid (")
+                    || chinese_face(&table, &face.card.id, face.face).contains("已支付")
+            })
+            .map(described)
+            .collect();
+        assert_eq!(wrong, Vec::<String>::new());
+        // The detector refuses the retired label and passes the new one.
+        let dummy_card = entries()[0];
+        let check = |text: &str| -> Vec<String> {
+            failures(&Face {
+                card: dummy_card,
+                face: FaceKind::Base,
+                text: text.to_string(),
+                keywords: Vec::new(),
+            })
+        };
+        assert_eq!(
+            check("Aura: Draw 1.\nPaid (4): Draw 2 instead."),
+            strings(&["writes an embiggen card's Embiggened version as \"Paid (N):\", not \"Embiggened (N):\""])
+        );
+        assert_eq!(check("Aura: Draw 1.\nEmbiggened (4): Draw 2 instead."), Vec::<String>::new());
+        assert_eq!(
+            check("Aura: Draw 1. Embiggened (4): Draw 2 instead."),
+            strings(&["does not start \"Embiggened (4):\" on a line of its own"])
+        );
+    }
+}
+
 mod patch_v0_2_9_wording_issue_44 {
     use super::*;
 
@@ -1774,6 +1887,7 @@ mod the_hand_written_patterns_read_as_their_regular_expressions {
         assert!(!word_dash_cost("a 3odd-cost card"));
         assert!(paid_then_digit("(Paid 4: draw)"));
         assert!(!paid_then_digit("Paid (4): draw"));
+        assert!(!paid_then_digit("Embiggened (4): draw"));
     }
 
     #[test]

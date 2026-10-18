@@ -55,7 +55,7 @@ describe("R388 a card's changes, from two snapshots", () => {
   it("R388 writes a cost as card text does (R432): numbers, X and embiggen", () => {
     expect(costText(3)).toBe("(3) Cost");
     expect(costText("X")).toBe("(X) Cost");
-    expect(costText({ base: 2, embiggen: 4 })).toBe("(2) Cost, embiggen (4)");
+    expect(costText({ base: 2, embiggen: 4 })).toBe("(2) Cost, Embiggened (4)");
   });
 
   it("R388 writes stats as attack/health, X stats in brackets, and nothing for a face with none", () => {
@@ -81,7 +81,7 @@ describe("R388 a card's changes, from two snapshots", () => {
     expect(changedWords(base)).toEqual({ added: ["4", "Your"], removed: ["3", "this turn"] });
     // The Radiant number is 6 before and after: the placeholder alone changes nothing.
     expect(changedWords(text(changes, "radiant.text"))).toEqual({ added: ["Your"], removed: ["this turn"] });
-    expect(field(changes, "cost")).toMatchObject({ before: "(1) Cost", after: "(2) Cost, embiggen (4)" });
+    expect(field(changes, "cost")).toMatchObject({ before: "(1) Cost", after: "(2) Cost, Embiggened (4)" });
     expect(field(changes, "radiant.keywords")).toMatchObject({ label: "Radiant keywords", before: "none", after: "Pierce" });
     expect(field(changes, "params")).toMatchObject({ before: "none", after: "damage 4, Radiant 6, step 1, at least 1, more is better" });
     expect(changes.some((change) => change.field === "base.keywords")).toBe(false);

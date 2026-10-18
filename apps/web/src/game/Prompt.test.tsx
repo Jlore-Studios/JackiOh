@@ -423,6 +423,25 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     });
   });
 
+  it("R1175000 the price picker asks for the normal or the Embiggened version, its two cards captioned Normal and Embiggened", () => {
+    render(
+      <Prompt
+        view={viewWith()}
+        interaction={playing([
+          { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, embiggen: false },
+          { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, embiggen: true },
+        ])}
+        onAction={vi.fn()}
+      />,
+    );
+
+    const title = document.querySelector(".prompt-title-ask") ?? document.querySelector(".prompt-title");
+    expect(title).toHaveTextContent("Play the normal or the Embiggened version?");
+    expect(screen.getByTestId("prompt-modal")).not.toHaveTextContent(/embiggen price/i);
+    expect(screen.getByTestId("prompt-option-false")).toHaveTextContent("Normal");
+    expect(screen.getByTestId("prompt-option-true")).toHaveTextContent("Embiggened");
+  });
+
   it("R1086 the picker sends the choice", () => {
     const onAction = vi.fn();
     const view = viewWith();

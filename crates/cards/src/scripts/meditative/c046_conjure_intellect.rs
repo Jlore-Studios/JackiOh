@@ -1,9 +1,9 @@
 //! M #46 Conjure Intellect (SPEC §8.8 row 46): (2, embiggen 4) Spell, Epic.
 //!
 //! Base:    "Add a random KY card, a random CN card and a random Book to your hand.
-//!           Paid (4): They cost ({setCost})."
+//!           Embiggened (4): They cost ({setCost})."
 //! Radiant: "Add a random Radiant KY card, a random Radiant CN card and a random Radiant Book to
-//!           your hand. Paid (4): They cost ({setCost})."
+//!           your hand. Embiggened (4): They cost ({setCost})."
 //! Engine: three independent `add_random_from_catalog` draws, with `tags: [KY]`, then `[CN]`, then
 //! `[Book]`: non-token cards of every set (R380, R382), never this card (R387), repeats allowed
 //! (R60). `costOverride` is `setCost` when the embiggen price was paid (`ctx.embiggened`, R81, R65);
@@ -22,7 +22,7 @@ fn pool(tag: &str) -> Value {
 fn conjure(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            // "(paid 4: it costs 0)" — the embiggen price, read as the Cry resolves, so the paid
+            // "Embiggened (4): They cost (0)" — the Embiggened version, read as the Cry resolves, so the paid
             // face is the declared `setCost` (R386).
             let paid = ctx.embiggened.then(|| param(&*ctx, "setCost"));
             ["KY", "CN", "Book"]

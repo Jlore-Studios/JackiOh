@@ -1,9 +1,9 @@
 //! #84 Going Long (SPEC §8.4 row 84): Field Spell, Quickdraw, cost 2 embiggen 4, Rare.
-//!   Base:    "Your hero has Armor 2 (paid 4: 4)"
-//!   Radiant: "Armor 4 (paid 4: 8)" — the cell changes only the two numbers (§8 Conventions).
+//!   Base:    "Your hero has Armor 2 (Embiggened (4): 4)"
+//!   Radiant: "Armor 4 (Embiggened (4): 8)" — the cell changes only the two numbers (§8 Conventions).
 //!   Engine:  "Hero armor in pipeline step 2".
 //!
-//! Four numbers: paid 2 → 2, paid 4 → 4; radiant paid 2 → 4, radiant paid 4 → 8 (`config.HERO_ARMOR`). The embiggen choice
+//! Four numbers: normal 2, Embiggened 4; radiant normal 4, Embiggened 8 (`config.HERO_ARMOR`). The embiggen choice
 //! lands on the instance (R81) and Radiant is its flag, so the engine reads both off the card in the
 //! backrow and no card-side code is needed. Quickdraw is §6.2's static flag: setup moves the card into
 //! the opening hand on either face. The Armor is the `heroArmor` static flag, #73's shape: the pipeline
@@ -32,7 +32,7 @@ fn going_long() -> Script {
 
 pub fn script() -> CardScripts {
     let base = going_long();
-    // "Armor 4 (paid 4: 10)": two numbers, both of them the pipeline's to read (`HERO_ARMOR.radiant`).
+    // "Armor 4 (Embiggened (4): 8)": two numbers, both of them the pipeline's to read (`HERO_ARMOR.radiant`).
     let radiant = going_long();
     CardScripts { base, radiant }
 }

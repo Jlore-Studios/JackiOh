@@ -296,15 +296,16 @@ function swap(html: string, pattern: RegExp, value: string): string {
   return html.replace(pattern, (_whole, lead: string) => lead + value);
 }
 
+/** A price in R432's words, as the patch diff writes it (patches/diff.ts): "(2) Cost, Embiggened (4)" for an embiggen card (R1175000). */
 const costText = (cost: CardCost): string =>
-  typeof cost === "object" ? `${String(cost.base)} embiggen ${String(cost.embiggen)}` : String(cost);
+  typeof cost === "object" ? `(${String(cost.base)}) Cost, Embiggened (${String(cost.embiggen)})` : `(${String(cost)}) Cost`;
 
 function almanacList(cards: CardDefs): string {
   const entries: string[] = [];
   for (const id of almanacShelf(cards)) {
     const def = cards[id];
     if (def === undefined) continue;
-    const facts = `${def.set} · ${def.type} · ${def.rarity} · Cost ${costText(def.cost)}`;
+    const facts = `${def.set} · ${def.type} · ${def.rarity} · ${costText(def.cost)}`;
     const base = fillParams(def, "base");
     const radiant = fillParams(def, "radiant");
     entries.push(

@@ -1,5 +1,6 @@
-//! #56 Jilliax (SPEC §8.3): (2), Paid (3); 3/2 → 6/4, "Rush, Taunt, Lifesteal, Divine Shield / Paid
-//! (3): Equip." / radiant "Rush, Taunt, Lifesteal, Divine Shield, Reborn / Paid (3): Equip.".
+//! #56 Jilliax (SPEC §8.3): (2), Embiggened (3); 3/2 → 6/4, "Rush, Taunt, Lifesteal, Divine Shield /
+//! Embiggened (3): Equip." / radiant "Rush, Taunt, Lifesteal, Divine Shield, Reborn / Embiggened (3):
+//! Equip." (R1175000).
 //!
 //! Patch v0.3.10 (#831) gave it an embiggen price of (3), at which it is also Equip (ME-EQUIP, R1086):
 //! the script's `conditionalKeywords` returns Equip on a card stamped embiggened, so `legalActions`
@@ -21,7 +22,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-056";
 
-/// "Paid (3): Equip.": Equip holds only on a card stamped embiggened, so it is offered only at the (3)
+/// "Embiggened (3): Equip.": Equip holds only on a card stamped embiggened, so it is offered only at the (3)
 /// price (R831013).
 fn paid_equip(args: HookArgs<'_>) -> Vec<Keyword> {
     if args.self_.embiggened == Some(true) { vec![Keyword::Equip] } else { Vec::new() }

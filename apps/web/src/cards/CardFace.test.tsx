@@ -319,6 +319,17 @@ describe("B8: the cost gem renders the model's cost", () => {
     expect(one(gem, ".cf-cost-alt").textContent).toContain("4");
   });
 
+  it("B8 R1175000 the second cost badge is named for the Embiggened version, for a screen reader and on hover", () => {
+    for (const [id, cost] of [["core-046", "4"], ["core-056", "3"], ["meditative-021", "1"], ["meditative-081", "2"]] as const) {
+      const alt = one(one(catalogFace(id), ".cost-gem"), ".cf-cost-alt");
+      expect(alt.textContent, id).toBe(cost);
+      expect(alt.getAttribute("role"), id).toBe("img");
+      expect(alt.getAttribute("aria-label"), id).toBe(`Embiggened (${cost})`);
+      expect(alt.getAttribute("title"), id).toBe(`Embiggened (${cost})`);
+      cleanup();
+    }
+  });
+
   it("B8 an embiggen card's gem prints the view's live cost: a discounted 1, or the 4 it was paid on the field", () => {
     const discounted = one(catalogFace("core-084", false, "full", { liveCost: 1 }), ".cost-gem");
     expect(gemText(discounted)).toBe("1");
@@ -557,14 +568,15 @@ describe("B14: the radiant face", () => {
 
   it("B14 a radiant face prints its own keyword line, never the base keywords it replaced (core-056, core-025)", () => {
     const jilliax = one(catalogFace("core-056", true), ".card-text");
-    // Patch v0.3.10 adds "Paid (3): Equip." to both faces, below the keyword line.
-    expect(jilliax.textContent).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn\nPaid (3): Equip.");
+    // Patch v0.3.10 adds "Embiggened (3): Equip." to both faces, below the keyword line ("Paid (3)" until R1175000).
+    expect(jilliax.textContent).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn\nEmbiggened (3): Equip.");
     expect([...jilliax.querySelectorAll("strong.cf-term")].map((term) => term.getAttribute("data-term"))).toEqual([
       "Rush",
       "Taunt",
       "Lifesteal",
       "Divine Shield",
       "Reborn",
+      "Embiggened",
       "Equip",
     ]);
     cleanup();
@@ -576,7 +588,7 @@ describe("B14: the radiant face", () => {
     expect(bigot.textContent).toBe("Cry: Destroy all enemy non-Human Units.");
     expect(bigot.querySelectorAll('strong.cf-term[data-term="Cry"]')).toHaveLength(1);
     cleanup();
-    expect(one(catalogFace("core-046", true), ".card-text").textContent).toBe("Aura: Enemy Units have −2/−2.\nPaid (4): −4/−4 instead.");
+    expect(one(catalogFace("core-046", true), ".card-text").textContent).toBe("Aura: Enemy Units have −2/−2.\nEmbiggened (4): −4/−4 instead.");
   });
 
   it("R277 R276 the five cards that had no radiant form print a radiant face that differs, marked (core-038, core-080, core-093-1, core-095-1, core-096)", () => {

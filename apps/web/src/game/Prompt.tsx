@@ -28,8 +28,9 @@
 //
 // #492: one card picker (`CardChoice`) holds every picker whose options are cards, in the middle of
 // the screen: the mulligan, a Discover, a hand pick, a pick, a short "Choose one" (Appropriations'),
-// and two play choices that used to be small controls docked beside the board, an embiggen price
-// (the card at its normal price and at its embiggen price) and an X of X_CARD_LIMIT values or fewer
+// and two play choices that used to be small controls docked beside the board, an embiggen card's
+// version (the card as its normal version and as its Embiggened version, R1175000) and an X of
+// X_CARD_LIMIT values or fewer
 // (the card once per X). Those two keep their `data-prompt-kind`; `data-prompt-layout="cards"` says
 // which layout a picker has.
 //
@@ -500,14 +501,15 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
     }
     case "embiggen": {
       // #492: the two prices are two cards, front and centre: the card being played at the price it
-      // shows in hand, and the same card at its embiggen price, each named for the form it plays.
+      // shows in hand, and the same card at its Embiggened cost, each named for the version it plays
+      // (R1175000: an embiggen card's normal version and its Embiggened version).
       const played = playedRef(interaction, view);
       return {
         ...common,
         chrome: "embiggen",
         cards: true,
         ...(played === null ? {} : { sourceDefId: played.defId }),
-        title: t("Pay the embiggen price?"),
+        title: t("Play the normal or the Embiggened version?"),
         items: need.values.map((value) => {
           const label = value ? t("Embiggened") : t("Normal");
           const item: PickerItem = { key: String(value), label };
@@ -676,9 +678,9 @@ function pricedFace(face: FaceModel, price: EmbiggenPrice, card: CardView | unde
   return { ...face, cost: { text: String(live), value: String(live), tone, alt: null } };
 }
 
-/** What an embiggen option pays, in R432's words: "Pay (4)". */
+/** What an embiggen option pays, in R432's words: "Pay (4)", or "Pay the Embiggened cost" when nothing vouches for it (R1175000). */
 function priceLine(face: FaceModel): string {
-  return face.cost.text === UNKNOWN_PRICE ? t("Pay the embiggen price") : t("Pay ({cost})", { cost: face.cost.text });
+  return face.cost.text === UNKNOWN_PRICE ? t("Pay the Embiggened cost") : t("Pay ({cost})", { cost: face.cost.text });
 }
 
 /** R1301: the view flagged the option's card Chinese, by the option or by the card it lists. */

@@ -160,7 +160,7 @@ const STATUSES: readonly StatusTermId[] = [
 const VERBS_6_3: readonly VerbTermId[] = [
   "Discover",
   "Tribute",
-  "Embiggen",
+  "Embiggened",
   "Recruit",
   "Fuse",
   "Transform",

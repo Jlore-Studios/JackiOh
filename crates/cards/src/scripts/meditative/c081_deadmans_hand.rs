@@ -1,18 +1,18 @@
 //! M #81 Deadman's Hand (SPEC §8.8 row 81): (0) embiggen (2) Spell, Rare.
 //!
-//! Base:    "Shuffle a copy of each card in your hand, and of this, into your deck.\nPaid (2): Each
-//!          copy has a {chance}% chance to become Radiant."
+//! Base:    "Shuffle a copy of each card in your hand, and of this, into your deck.\nEmbiggened (2):
+//!          Each copy has a {chance}% chance to become Radiant."
 //! Radiant: "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw
-//!          {draw|card|cards}.\nPaid (2): Each copy has a {chance}% chance to become Radiant."
+//!          {draw|card|cards}.\nEmbiggened (2): Each copy has a {chance}% chance to become Radiant."
 //! Engine:
 //! - **The copies:** for each card in this player's hand, in hand order, then for this card on the
 //!   face it was played with, a library copy (`shuffle_into { copyOf }`: R57's Radiant flag, and the
 //!   `tuning`, enchantments and `chinese` flag `copyOf` carries) at a random position (§6.3), R80's
 //!   cap turning the rest away. The hand is kept. A copy is not generation (R387).
-//! - **The roll** (R1144): "embiggen cards" is the embiggen price, the only text that names it. Paid
-//!   at (2) (`ctx.embiggened`, §2.3), each copy whose card is not already Radiant rolls `chance` on the
-//!   match rng once, before it goes in, so it goes in on the face it rolled (R311); at (0) none rolls,
-//!   and a Radiant card's copy is Radiant without a roll (R129).
+//! - **The roll** (R1144): "Embiggened (2)" is the Embiggened version, the only text that names it.
+//!   Played at (2) (`ctx.embiggened`, §2.3), each copy whose card is not already Radiant rolls
+//!   `chance` on the match rng once, before it goes in, so it goes in on the face it rolled (R311);
+//!   at (0) none rolls, and a Radiant card's copy is Radiant without a roll (R129).
 //! - **Then** the Radiant face's draw.
 //! - **Hidden information** (R311): the owner's library list names the copies on the faces they went
 //!   in with; the opponent reads how many went in.
