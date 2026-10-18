@@ -45,7 +45,7 @@ fn game(seed: &str, p1: Value, p2: Value) -> Scenario {
                     (Some(Value::Array(list)), Value::Array(more)) => {
                         // A side's own entries come first, so the defaults never take a lane it names.
                         let mut merged = more;
-                        merged.extend(list.drain(..));
+                        merged.append(list);
                         *list = merged;
                     }
                     (_, value) => {
