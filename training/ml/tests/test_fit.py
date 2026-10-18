@@ -21,6 +21,8 @@ def test_one_fit_end_to_end(tmp_path):
     assert (tmp_path / "report.md").read_text(encoding="utf-8").startswith("# The learned evaluation's offline fit")
     assert json.loads((tmp_path / "report.json").read_text(encoding="utf-8"))["featuresVersion"] == report["featuresVersion"]
     assert (tmp_path / "model.pt").exists()
+    assert all((tmp_path / f"model-seed{seed}.pt").exists() for seed in (1, 2))
+    assert [s["validation"] > 0 for s in report["seeds"]] == [True, True]
 
 
 def test_the_metrics():

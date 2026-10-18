@@ -52,7 +52,9 @@ the seat's board, both ways; and #1009's decision:
 - **more data** when the curve is still falling at its largest size;
 - **stop** otherwise: more compute will not help, and the features or the model must change.
 
-`<out>/model.pt` keeps the best seed's network with its vocabulary and standardizer, for `export.py`.
+`<out>/model.pt` keeps the best seed's network with its vocabulary and standardizer, for `export.py`, and
+`<out>/model-seed<N>.pt` each seed's: `retrain.sh` ships the best by validation whose integer network passes
+the AI's tests with the switch on (#466).
 
 ## The integer network
 

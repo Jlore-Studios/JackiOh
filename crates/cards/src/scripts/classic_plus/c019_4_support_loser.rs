@@ -40,7 +40,7 @@ pub fn script() -> CardScripts {
 // so it never declares an attack and strikes back with no damage instance (R63); at its controller's
 // end of turn heals your hero 3 (past 30 allowed) and each of your Units 3 up to max health, itself
 // included; an opposing Blood Moon turns each of those heals into Pierce damage (R413); the heal reads
-// through `param()`; radiant 0/10 Divine Shield, Reborn, heal 6".
+// through `param()`; radiant 0/8 Divine Shield, Reborn, heal 6".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -116,7 +116,7 @@ mod tests {
 
         #[test]
         fn base_enters_at_0_4_radiant_unchanged() {
-            for (radiant_face, health) in [(false, 4), (true, 10)] {
+            for (radiant_face, health) in [(false, 4), (true, 8)] {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": SUPPORT, "radiant": radiant_face }, FILLER], "library": DECK },
@@ -241,10 +241,10 @@ mod tests {
             use super::*;
 
             #[test]
-            fn is_0_10_with_divine_shield_and_reborn_and_heals_6() {
+            fn is_0_8_with_divine_shield_and_reborn_and_heals_6() {
                 let mut s = support(json!({ "field": [{ "def": VANILLA, "lane": 1, "damage": 3 }] }), true, json!({}));
                 let me = loser(&s);
-                s.expect_stats(&me, json!({ "attack": 0, "health": 10 }));
+                s.expect_stats(&me, json!({ "attack": 0, "health": 8 }));
                 s.end_turn();
                 s.expect_health(P1, 36);
                 let first = unit_or_blank(&s, P1, 1);

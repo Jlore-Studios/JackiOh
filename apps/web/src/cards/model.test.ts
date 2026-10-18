@@ -382,7 +382,7 @@ describe("B8: faceModel cost", () => {
 /* ------------------------------------------------------------------------------------------ B9 */
 
 describe("B9: faceModel stat tones", () => {
-  // core-013 Jlockeed Shredder-10 prints 6/10 on its base face and 8/20 on its radiant one.
+  // core-013 Jlockeed Shredder-10 prints 6/10 on its base face and 12/20 on its radiant one.
   const ID = "core-013";
 
   it("B9 attack above the printed face is buffed, below is reduced, equal is base", () => {
@@ -416,10 +416,10 @@ describe("B9: faceModel stat tones", () => {
   });
 
   it("B9 a radiant card's tones compare with the radiant face", () => {
-    // 8/20 is the radiant face exactly, and would be buffed against the base 6/10.
-    expect(face(ID, true, { live: live(8, 20, 20) }).stats).toMatchObject({ attackTone: "base", healthTone: "base" });
-    expect(face(ID, false, { live: live(8, 20, 20) }).stats).toMatchObject({ attackTone: "buffed", healthTone: "buffed" });
-    // 6/10 is the base face exactly, and is reduced against the radiant 8/20.
+    // 12/20 is the radiant face exactly, and would be buffed against the base 6/10.
+    expect(face(ID, true, { live: live(12, 20, 20) }).stats).toMatchObject({ attackTone: "base", healthTone: "base" });
+    expect(face(ID, false, { live: live(12, 20, 20) }).stats).toMatchObject({ attackTone: "buffed", healthTone: "buffed" });
+    // 6/10 is the base face exactly, and is reduced against the radiant 12/20.
     expect(face(ID, true, { live: live(6, 10, 10) }).stats).toMatchObject({ attackTone: "reduced", healthTone: "reduced" });
   });
 
