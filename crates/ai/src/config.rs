@@ -437,6 +437,25 @@ pub const AI_EVAL_KIND: EvalKind = EvalKind::Hand;
 pub const LEARNED_CORRECTION_SHARE: f64 = 0.5;
 const _: () = assert!(LEARNED_CORRECTION_SHARE > 0.0 && LEARNED_CORRECTION_SHARE <= 1.0);
 
+/// Which order the beam expands each line's moves in (#1171; `policy.rs`, R1171001).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum MoveOrder {
+    /// `candidate_actions`' own order, the heuristic tiers.
+    Heuristic,
+    /// That order re-sorted by the policy prior `POLICY_PRIOR` (`policy::prior_order`), 1v1 only.
+    Learned,
+}
+
+/// The switch: one line turns the policy prior on or off. A promotion that ships a table sets it with
+/// the table in one change.
+pub const AI_MOVE_ORDER: MoveOrder = MoveOrder::Heuristic;
+
+/// R1171000: move-order ranks at or past this share one key (`rank:24`); every rank the root expands
+/// has its own.
+pub const POLICY_RANK_CAP: usize = 24;
+const _: () = assert!(POLICY_RANK_CAP >= AI_BUDGET.root_branching);
+
 /// The greedy baseline's own evaluation (baselines.rs): AI_EVAL exactly as it stood when the quality
 /// gates were fixed on the seed series `gate:v2`, frozen here. A baseline the AI is measured against
 /// must not move when the AI is tuned, so tuning AI_EVAL changes the AI and never its yardstick.
