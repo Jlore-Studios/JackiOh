@@ -202,6 +202,44 @@ fn r1012001_a_finalist_takes_the_correction_at_its_share() {
     });
 }
 
+/// R1012002: the learned evaluation reaches as far into the search as `LearnedReach` says, each step
+/// taking in the one before it: a complete line takes a finalist's score from `Lines` on, an open
+/// line from `Beam` on, and with the switch off every one keeps the hand eval.
+#[test]
+fn r1012002_the_reach_says_which_of_the_beam_s_scores_the_network_gives() {
+    let solo = state();
+    with_tiny(|network, _| {
+        let network = Learned::Float(*network);
+        let next = NextSwing::Enemy;
+        let hand = evaluate(&solo, PlayerId::P1, next, &AI_EVAL);
+        let learned = finalist_score_with(&solo, PlayerId::P1, next, EvalKind::Learned, &network);
+        assert_ne!(learned, hand, "the network moves this position");
+        for (reach, line, open) in [
+            (LearnedReach::Finalists, hand, hand),
+            (LearnedReach::Lines, learned, hand),
+            (LearnedReach::Beam, learned, learned),
+        ] {
+            let kind = EvalKind::Learned;
+            assert_eq!(
+                line_score_with(&solo, PlayerId::P1, next, reach, kind, &network),
+                line,
+                "{reach:?}: a complete line"
+            );
+            assert_eq!(
+                open_score_with(&solo, PlayerId::P1, next, reach, kind, &network),
+                open,
+                "{reach:?}: an open line"
+            );
+            for score in [line_score_with, open_score_with] {
+                assert_eq!(
+                    score(&solo, PlayerId::P1, next, reach, EvalKind::Hand, &network),
+                    hand
+                );
+            }
+        }
+    });
+}
+
 /// R1010002: with the switch on, a 1v1 finalist takes the network's score (at its share, R1012001)
 /// and a Duos duel's keeps the hand eval's (D9, R964000).
 #[test]
