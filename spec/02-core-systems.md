@@ -76,4 +76,4 @@ At the state check's game-end point a hero at 0 or less loses first, even holdin
 
 ### 2.6 Deckbuilding
 
-Exactly 20 cards, no duplicate card ids, no Token-tagged cards. There is one format: a deck may mix Core, Classic, Classic+ and Meditative cards under these rules, and nothing is set-restricted ([[R380]], [[R1420]]). The three decks of a trio, which Conquest plays (section 9.5), share no card (section 9.4), so a trio needs 60 distinct cards, now from 370 non-token cards. A saved deck may be incomplete while it is being built; these rules are checked when it is queued ([[R250]], [[R253]]).
+Exactly 20 cards, no duplicate card ids, no Token-tagged cards. There is one format: a deck may mix Core, Classic, Classic+, Meditative and Meditative+ cards under these rules, and nothing is set-restricted ([[R380]], [[R1420]], [[R1178000]]). The three decks of a trio, which Conquest plays (section 9.5), share no card (section 9.4), so a trio needs 60 distinct cards, now from 396 non-token cards. A saved deck may be incomplete while it is being built; these rules are checked when it is queued ([[R250]], [[R253]]).

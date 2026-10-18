@@ -103,7 +103,7 @@ command).
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings      # includes rule 4's purity lint
 cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts   # every crate's tests, the golden replay included; rewrites apps/web/src/wire/ (commit any diff)
-cargo jackioh catalog check        # catalog.json's shape and census: 370 cards and 80 tokens across Core, Classic, Classic+ and Meditative
+cargo jackioh catalog check        # catalog.json's shape and census: 396 cards and 84 tokens across Core, Classic, Classic+, Meditative and Meditative+
 cargo jackioh patches check        # every catalog change claimed by exactly one pending fragment
 cargo jackioh spec check           # rule 3: ruling notes vs proving tests vs R-ids cited in code
 cargo jackioh fuzz --seeds 200     # CI's fuzz gate: random-policy games with replay hashing; --handicap for the handicapped wave, --duos for co-op games (§13)

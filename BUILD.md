@@ -67,7 +67,7 @@ jackioh/
       tests/golden.rs, golden/ the golden traces recorded from the TypeScript engine before it was deleted
       tests/export_config.rs   writes apps/web/src/wire/engineConfig.ts
     cards/                     jackioh-cards
-      catalog.json             370 cards + 80 tokens over Core, Classic, Classic+ and Meditative (schema in M4-T1, M9-T1)
+      catalog.json             396 cards + 84 tokens over Core, Classic, Classic+, Meditative and Meditative+ (schema in M4-T1, M9-T1)
       flavour.json             flavour lines and artist credits (R660)
       patches/                 patches.json and one whole-catalog snapshot per card patch (M9-T2, R388); pending/ fragments (R646)
       build.rs                 the registry, generated from src/scripts/**; the compiled-in catalog version
@@ -461,7 +461,7 @@ Acceptance: `pnpm test --filter cards` runs a test file per catalog entry (111 f
 | 79 | Twinspell | 2 | Next spell echoes once (radiant twice); consumed to GY on use (R30); survives cleanup |
 | 80 | Zao Gao | 2 | Discards 2 random cards, no prompt (R354); two Rush Tokens each with two distinct pool keywords; radiant the tokens are Radiant 6/6 Rush, Cleave, and roll three keywords they do not have; tagged CN |
 | 81 | Radiant Saintess | 2 | Death makes every other unit you control Radiant; no Reborn, so she dies once; radiant also every card in your hand, hidden from the opponent (R177) |
-| 82 | KY's Trial | 2 | Three different sets of the four that ship, then three distinct numbers of the chosen one, never 82 or a token index (R54, R831004; patch v0.3.10, the Core set alone before); chosen card is radiant; radiant costs 0 |
+| 82 | KY's Trial | 2 | Three different sets of the five that ship, then three distinct numbers of the chosen one, never 82 or a token index (R54, R831004; patch v0.3.10, the Core set alone before); chosen card is radiant; radiant costs 0 |
 | 83 | Transmogulate | 3 | Zone counts preserved, the hand included (R365); board cards replaced by same-type Legendaries in place; pool is every non-token Legendary of every set but #83, and a Field Trap becomes a Legendary Trap or Field Trap (R35, R380); radiant gives radiant cards |
 | 84 | Going Long | 2 | In opening hand; embiggen 2 → Armor 2, 4 → Armor 4 on the hero; radiant 4 / 8 |
 | 85 | Unlicensed Experimentation | 3 | Fires after the Cry of a permanent the opponent played (R17); tokens, Recruit and copies don't set it off (R61); fuses onto a random same-type permanent per R77: stats summed, keywords unioned, cost capped at 4, the target instance kept with its damage and position; opponent's card gone with no Death trigger; Immutable permanents are never chosen and with no legal target the trap is consumed for nothing (R61); radiant fuses onto all |
@@ -1134,7 +1134,7 @@ SPEC §8.9 and §7's Meditative+ rows. The set is built on main behind R1420's r
 ## 5. Definition of done
 
 - CI green on the pull request, its four checks (`rust`, `web`, `e2e smoke`, `db`) and `bot selftest`: `cargo fmt --check`; `cargo clippy --workspace --all-targets -- -D warnings`; `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` with no change to `apps/web/src/wire/`; `cargo jackioh catalog check`, `patches check`, `spec check` and `fuzz --seeds 200`; the web's typecheck, eslint and unit tests; the e2e smoke specs; the db suites when the change touches what they test. The daily super run (`super.yml`) green on the result.
-- `crates/cards/tests/cross/catalog.rs` passes: 370 cards and 80 tokens; Core 100 and 11 with rarity counts 32/40/16/7/5, Classic 90 and 1 with 35/26/18/10/1, Classic+ 78 and 38 with 13/24/25/13/3, Meditative 102 and 30 with 29/29/22/16/6 (§8).
+- `crates/cards/tests/cross/catalog.rs` passes: 396 cards and 84 tokens; Core 100 and 11 with rarity counts 32/40/16/7/5, Classic 90 and 1 with 35/26/18/10/1, Classic+ 78 and 38 with 13/24/25/13/3, Meditative 102 and 30 with 29/29/22/16/6, Meditative+ 26 and 4 with 5/9/9/1/2 (§8).
 - Every catalog id has its script file and every script file names a catalog id (`crates/cards/build.rs` refuses to build otherwise).
 - `cargo jackioh spec check` is clean: every SPEC §11 row, R1–R439 and the blocks the workstreams used, has a ruling note with a proving test.
 - Fuzz gate: `cargo jackioh fuzz` runs 1,000 seeds with the full card pool and prints its own counts (seeds, panics, games over the action bound, replay mismatches, invariant violations, endings). CI plays seeds 1–200 on every pull request and the daily run 10,000, plain and with `--handicap`. The card pool is never reduced, and any exclusion must be a named entry in `POOL_EXCLUSIONS` (`crates/tools/src/fuzz.rs`) with a reason, printed on every run so a narrowing cannot be hidden.
