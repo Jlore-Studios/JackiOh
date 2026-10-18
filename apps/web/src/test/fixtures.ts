@@ -20,6 +20,10 @@ import type {
   UnitView,
 } from "@jackioh/shared";
 
+import type { DuosTeamView } from "../wire/generated/DuosTeamView.ts";
+import type { DuosView } from "../wire/generated/DuosView.ts";
+import type { Team } from "../wire/generated/Team.ts";
+
 let counter = 0;
 
 /** Deterministic instance ids, so snapshots are stable. */
@@ -285,6 +289,41 @@ export const waitingPending: PendingView = { forYou: false, pendingFor: "p2" };
 
 export function withEvents(view: PlayerView, events: GameEvent[]): PlayerView {
   return { ...view, events };
+}
+
+// ---------------------------------------------------------------------------------------------
+// A co-op replay's steps (R1242000): the seat's `DuosView`s, drawn from the server's answer alone
+// ---------------------------------------------------------------------------------------------
+
+/** One team's life as a co-op replay shows it: its pool and both seats' own HP. */
+export function duosTeamView(team: Team): DuosTeamView {
+  return {
+    team,
+    pool: 20,
+    poolCap: 20,
+    sides: [
+      { own: 10, spent: false },
+      { own: 10, spent: false },
+    ],
+    ended: [false, false],
+    passesLeft: [0, 0],
+    passCost: 1,
+  };
+}
+
+/** One step of a co-op replay: the seat's own duel and its teammate's, at `round`. */
+export function duosView(round: number, result: DuosView["result"] = null): DuosView {
+  return {
+    seat: "a1",
+    own: baseView(),
+    teammate: baseView(),
+    team: duosTeamView("a"),
+    enemy: duosTeamView("b"),
+    round,
+    roundSeats: ["a1", "a2"],
+    concedeOfferedBy: null,
+    result,
+  };
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -10,6 +10,10 @@
 // as live play's do (R201's speed included). Any other move, a step back or a jump, gives the board
 // a fresh key: it mounts on that view with nothing animating, and its portal shows the own duel again.
 // The controls sit outside the board, so a remount never takes the scrubber from under the pointer.
+//
+// DOWNLOAD JSON (R1242000). A replay whose steps are loaded offers Download JSON in its controls:
+// the seat's views as one file, made in the page. A replay that is loading, refused or expired
+// offers none.
 
 import { useCallback, useEffect, useState, type ReactElement, type ReactNode } from "react";
 
@@ -19,12 +23,14 @@ import { t, useLocale } from "../i18n/i18n.ts";
 import { ApiRequestError } from "../net/api.ts";
 import { getDuosReplay, type ReceivedPing } from "../net/duos.ts";
 import { REPLAY_OPEN_ATTEMPTS, REPLAY_OPEN_RETRY_MS, REPLAY_PLAY_GAP_MS } from "../replay/config.ts";
+import { downloadFile } from "../replay/download.ts";
 import { replayTestid, useBoardBusy } from "../replay/ReplayPlayer.tsx";
 import { ReplayFailure, replayFailureOf, replayFailureText } from "../replay/source.ts";
 import { onlineFailure } from "../replay/sources.ts";
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
 import { DuosChromeContext } from "./context.ts";
+import { duosReplayJsonFile } from "./download.ts";
 import { DuosBoard } from "./DuosBoard.tsx";
 import { duosTestid } from "./testids.ts";
 import "../replay/replay.css";
@@ -82,7 +88,7 @@ export function previousRound(steps: DuosReplaySteps, at: number): number {
   return first;
 }
 
-function DuosReplayPlayer({ steps, back }: { steps: DuosReplaySteps; back: ReactNode }): ReactElement {
+export function DuosReplayPlayer({ steps, back, actions }: { steps: DuosReplaySteps; back: ReactNode; actions?: ReactNode }): ReactElement {
   useLocale();
   const last = steps.length - 1;
   const [shown, setShown] = useState<Shown>({ at: 0, board: 0 });
@@ -196,11 +202,21 @@ function DuosReplayPlayer({ steps, back }: { steps: DuosReplaySteps; back: React
         <span className="replay-readout" data-testid={replayTestid.readout}>
           {t("Step {step} of {steps} · Round {round}", { step: shown.at + 1, steps: steps.length, round: view.round })}
         </span>
+        {actions}
       </div>
       <DuosChromeContext.Provider value={{ back }}>
         <DuosBoard key={shown.board} view={view} legal={NOTHING} onAction={ignore} pings={NO_PINGS} onPing={ignore} replay />
       </DuosChromeContext.Provider>
     </div>
+  );
+}
+
+export function DuosReplayBack({ onLeave }: { onLeave: () => void }): ReactElement {
+  useLocale();
+  return (
+    <button type="button" className="link-button" data-testid={replayTestid.back} onClick={onLeave}>
+      {t("← Back")}
+    </button>
   );
 }
 
@@ -224,12 +240,26 @@ export default function DuosReplay({ matchId, onLeave }: { matchId: string; onLe
     };
   }, [matchId]);
 
-  const back = (
-    <button type="button" className="link-button" data-testid={replayTestid.back} onClick={onLeave}>
-      {t("← Back")}
-    </button>
-  );
-  if (steps !== null) return <DuosReplayPlayer steps={steps} back={back} />;
+  const back = <DuosReplayBack onLeave={onLeave} />;
+  if (steps !== null) {
+    return (
+      <DuosReplayPlayer
+        steps={steps}
+        back={back}
+        actions={
+          <button
+            type="button"
+            data-testid={duosTestid.replayDownload}
+            onClick={() => {
+              downloadFile(duosReplayJsonFile(steps));
+            }}
+          >
+            {t("Download JSON")}
+          </button>
+        }
+      />
+    );
+  }
   return (
     <div className="app-shell">
       {back}
