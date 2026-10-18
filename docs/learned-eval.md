@@ -255,6 +255,12 @@ onto the hand eval's points (a logit times a fitted scale), because `unspent_man
 constants and the ladder bots' `temperature` (R1452) are all in evaluation points. A promotion is
 followed by the bots' re-calibration anyway (`docs/bot-calibration.md`).
 
+**Measured (2026-10-18): B takes half the correction.** With the 36,000-game network, the whole
+correction changed the chosen action at about one search decision in four (561 of 2,400 sampled with
+`think`), yet won only +0.010 edge over 1,600 paired games. Fitted to outcomes, the network tells
+positions a game apart better than lines a move apart. Half of it won +0.064 [+0.024, +0.105] on the
+same deals, so a finalist takes `LEARNED_CORRECTION_SHARE` of the correction (R1012001).
+
 ### D7. Arithmetic, determinism and size
 
 The issue decides on integer inference (i8 weights, i32 sums, ReLU, shifts) so that native and WASM

@@ -171,8 +171,39 @@ fn r1010001_a_tiny_network_gives_the_outputs_the_python_reference_computes() {
     });
 }
 
-/// R1010002: with the switch on, a 1v1 finalist takes the network's score and a Duos duel's keeps
-/// the hand eval's (D9, R964000).
+/// R1012001: a finalist takes the network's correction at `LEARNED_CORRECTION_SHARE`: its score lies
+/// between the hand eval's and the network's whole one.
+#[test]
+fn r1012001_a_finalist_takes_the_correction_at_its_share() {
+    let solo = state();
+    with_tiny(|network, _| {
+        for next in [NextSwing::Seat, NextSwing::Enemy] {
+            let hand = evaluate(&solo, PlayerId::P1, next, &AI_EVAL);
+            let points = network.points(hand, &features_of(&solo, PlayerId::P1));
+            let finalist = finalist_score_with(
+                &solo,
+                PlayerId::P1,
+                next,
+                EvalKind::Learned,
+                &Learned::Float(*network),
+            );
+            assert_ne!(points, hand, "the network moves this position");
+            assert_eq!(finalist, hand + LEARNED_CORRECTION_SHARE * (points - hand));
+            let (low, high) = if points < hand {
+                (points, hand)
+            } else {
+                (hand, points)
+            };
+            assert!(
+                low <= finalist && finalist <= high,
+                "{finalist} outside [{low}, {high}]"
+            );
+        }
+    });
+}
+
+/// R1010002: with the switch on, a 1v1 finalist takes the network's score (at its share, R1012001)
+/// and a Duos duel's keeps the hand eval's (D9, R964000).
 #[test]
 fn r1010002_a_duos_duel_keeps_the_hand_eval() {
     let solo = state();
@@ -194,7 +225,8 @@ fn r1010002_a_duos_duel_keeps_the_hand_eval() {
             &Learned::Float(*network),
         );
         let features = features_of(&solo, PlayerId::P1);
-        assert_eq!(learned, network.points(hand, &features));
+        let points = network.points(hand, &features);
+        assert_eq!(learned, hand + LEARNED_CORRECTION_SHARE * (points - hand));
         assert_ne!(learned, hand, "the network moves this position");
 
         let duos_hand = evaluate(&duos, PlayerId::P1, NextSwing::Seat, &AI_EVAL);
