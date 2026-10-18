@@ -17,7 +17,7 @@ a position weighs less on it. Every model is still judged on the held-out outcom
 
 `<out>/model.pt` keeps the best seed's network (c) with its vocabulary and standardizer, which
 `export.py` turns into the Rust weights; `<out>/model-b.pt` is (b), the linear correction alone, in the
-same form.
+same form. `<out>/model-seed<N>.pt` is each seed's network, which `retrain.sh` tries in validation order.
 """
 
 from __future__ import annotations
@@ -403,6 +403,7 @@ def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS,
                              "calibration": calibration(p_lin, y_held)}
 
     best_model, best_loss = None, math.inf
+    seed_nets: list[tuple[int, NetModel]] = []
     report["seeds"] = []
     def network(seed: int, start: LinearModel) -> Callable[[], NetModel]:
         def make() -> NetModel:
@@ -415,8 +416,10 @@ def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS,
     for seed in seeds:
         net, fitted = fit_network(network(seed, linear), data, positions, fit_rows, valid_rows, seed, td_lambda, log=log)
         p_net = predict(net, data, held)
-        entry = {"seed": seed, "epochs": fitted["epochs"], "heldOut": metrics(p_net, y_held, positions.turn[held])}
+        entry = {"seed": seed, "epochs": fitted["epochs"], "validation": fitted["validation"],
+                 "heldOut": metrics(p_net, y_held, positions.turn[held])}
         report["seeds"].append(entry)
+        seed_nets.append((seed, net))
         if fitted["validation"] < best_loss:
             best_model, best_loss, best_p = net, fitted["validation"], p_net
     targets = "the outcomes" if td_lambda >= 1.0 else f"TD({td_lambda:g}) targets"
@@ -455,6 +458,10 @@ def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS,
                     "featuresVersion": positions.features_version, "catalogs": sorted(positions.catalogs)}, out / name)
 
     save(best_model, "model.pt")
+    # Every seed's network too, for retrain.sh: it ships the best by validation whose integer network
+    # passes the AI's tests with the switch on (#466).
+    for seed, net in seed_nets:
+        save(net, f"model-seed{seed}.pt")
     # (b) as a network whose head is zero: the linear correction alone, which `export.py` reads alike.
     torch.manual_seed(0)
     linear_net = NetModel(len(positions.dense_names), len(vocab.keys), width=width, head=head)
