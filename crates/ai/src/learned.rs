@@ -5,7 +5,10 @@
 //! - **Where.** `AI_EVAL_KIND` (`config.rs`) chooses. With `EvalKind::Hand`, the default, nothing
 //!   changes. With `EvalKind::Learned`, `finalist_score` scores the finalists after the opponent's
 //!   reply (`reply_score`, the lines `score_line` re-scores on every determinization): D6's option B.
-//!   The beam's pruning keeps the hand eval, so the network picks among the lines the hand eval found.
+//!   `LEARNED_REACH` takes it further (R1012002): at `Lines`, every complete line where the beam
+//!   closes it (`line_score`, in `static_score`), so the network also picks the finalists; at `Beam`,
+//!   every open line the beam ranks too (`open_score`). Short of `Beam`, the beam's pruning keeps the
+//!   hand eval, so the network picks among the lines the hand eval found.
 //! - **What.** The network learned the seat's chance to win as `a·hand/U + b + net(x)` (D4's skip
 //!   connection, `training/ml/jackioh_ml/models.py`). Mapped back onto the hand eval's points, that is
 //!   `hand + (b + net(x))·U/a` (`Network::points`). So `unspent_mana`, the lethal constants and a
@@ -26,7 +29,7 @@
 
 use jackioh_engine::{GameState, PlayerId};
 
-use crate::config::{AI_EVAL, AI_EVAL_KIND, EvalKind, LEARNED_CORRECTION_SHARE};
+use crate::config::{AI_EVAL, AI_EVAL_KIND, EvalKind, LEARNED_CORRECTION_SHARE, LEARNED_REACH, LearnedReach};
 use crate::evaluate::{NextSwing, evaluate};
 use crate::features::{Features, features_of};
 
@@ -194,6 +197,51 @@ impl Network<'_> {
 /// R1012001).
 pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64 {
     finalist_score_with(state, seat, next, AI_EVAL_KIND, &LEARNED)
+}
+
+/// R1012002: the score a complete line gets where the beam closes it (`static_score`): a finalist's
+/// with `LEARNED_REACH` at `Lines` or past it, so the network also picks the finalists; the hand eval
+/// otherwise.
+pub fn line_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64 {
+    line_score_with(state, seat, next, LEARNED_REACH, AI_EVAL_KIND, &LEARNED)
+}
+
+/// R1012002: the score an open line gets where the beam ranks it at each depth: a finalist's with
+/// `LEARNED_REACH` at `Beam`, the hand eval otherwise.
+pub fn open_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64 {
+    open_score_with(state, seat, next, LEARNED_REACH, AI_EVAL_KIND, &LEARNED)
+}
+
+/// `line_score` under a given reach, switch and network, for tests and screens.
+pub fn line_score_with(
+    state: &GameState,
+    seat: PlayerId,
+    next: NextSwing,
+    reach: LearnedReach,
+    kind: EvalKind,
+    network: &Learned<'_>,
+) -> f64 {
+    if reach >= LearnedReach::Lines {
+        finalist_score_with(state, seat, next, kind, network)
+    } else {
+        evaluate(state, seat, next, &AI_EVAL)
+    }
+}
+
+/// `open_score` under a given reach, switch and network, for tests and screens.
+pub fn open_score_with(
+    state: &GameState,
+    seat: PlayerId,
+    next: NextSwing,
+    reach: LearnedReach,
+    kind: EvalKind,
+    network: &Learned<'_>,
+) -> f64 {
+    if reach >= LearnedReach::Beam {
+        finalist_score_with(state, seat, next, kind, network)
+    } else {
+        evaluate(state, seat, next, &AI_EVAL)
+    }
 }
 
 /// `finalist_score` under a given switch and network, for tests and screens.
