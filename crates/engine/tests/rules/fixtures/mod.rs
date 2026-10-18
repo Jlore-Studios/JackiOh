@@ -18,6 +18,7 @@ pub mod damage_combat;
 pub mod datacenter;
 pub mod feng_shui;
 pub mod field;
+pub mod freeze;
 pub mod fruit;
 pub mod generation;
 pub mod harness;

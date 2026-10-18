@@ -50,6 +50,9 @@ pub const DUOS_REASON_TURN_CAP: &str = "turnCap";
 pub const DUOS_REASON_DUEL_RESULT: &str = "duelResult";
 /// `DuosResult.reason`: the server's wall-clock ceiling (R79) ended the game as a draw.
 pub const DUOS_REASON_CEILING: &str = "ceiling";
+/// `DuosResult.reason`: a Glitch voided one of the duels (R679), which ends the co-op game as a draw
+/// (R1168002).
+pub const DUOS_REASON_VOIDED: &str = "voided";
 
 impl Team {
     /// The team's `PlayerId` in both duels: team A is `p1`, team B is `p2`.
@@ -333,7 +336,8 @@ pub struct DuosResult {
     pub outcome: DuosOutcome,
     /// The winning team: `Some` exactly when `outcome` is `win`.
     pub winner: Option<Team>,
-    /// `poolEmptied` | `concede` | `turnCap` | `duelResult` | `ceiling` (the `DUOS_REASON_*` constants).
+    /// `poolEmptied` | `concede` | `turnCap` | `duelResult` | `ceiling` | `voided` (the `DUOS_REASON_*`
+    /// constants).
     pub reason: String,
 }
 
@@ -392,6 +396,9 @@ pub struct DuosView {
     pub enemy: DuosTeamView,
     /// The 1-based team-round counter, 0 while the mulligans are open (B2).
     pub round: i32,
+    /// [duel 0, duel 1]: each duel's round seat, whose turn the round is on there (B4, R1168001):
+    /// public, as each duel's turn is. Whether one has ended stays its own team's (`team.ended`).
+    pub round_seats: Vec<DuosSeat>,
     /// The own team's open concede offer (B11).
     pub concede_offered_by: Option<DuosSeat>,
     pub result: Option<DuosResult>,
