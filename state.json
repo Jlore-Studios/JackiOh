@@ -3414,7 +3414,7 @@
         "tier": "medium",
         "why": "Not easy: engine, server, web and spec with a new ruling. Least sure of hard-line 'engine rules or the resolution loop': game_summary.rs and wire/stats.rs change, but they only read a finished replay and count records, never reduce or legal_actions, so medium, not hard"
       },
-      "failures": 1,
+      "failures": 0,
       "forced": false,
       "handoff": {
         "at": "2026-10-17T21:42:00Z",
@@ -3427,15 +3427,18 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-17T21:42:35Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_tier": "medium",
+      "pr": 1167,
       "provider": "agy",
+      "question": "",
       "queued_at": "2026-10-17T20:03:19Z",
       "requested_by": "jgoetzmann",
-      "round_tier": "",
+      "round_tier": "medium",
       "run_id": "39072893335",
       "started_at": "2026-10-17T21:56:27Z",
       "stop_requested": false,
@@ -3444,7 +3447,7 @@
       ],
       "strikes": 1,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "1149": {
       "action": "build",
