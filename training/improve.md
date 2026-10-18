@@ -105,8 +105,12 @@ job one change of a kind those notes have not ruled out, screened as below, befo
 Put it behind a switch, a named constant in `crates/ai/src/config.rs`, so one line turns it off. It
 must hold the browser's time limit: do not raise `AI_BUDGET` or `AI_GATE_BUDGET`, and every duel
 line's `msP95` (the 95th percentile of the AI's decision time, in milliseconds) stays under 2000, the
-sweep's `timeout` threshold. A change too large for one session goes on the stack in measured steps,
-each screened and kept on its own.
+sweep's `timeout` threshold. `cargo jackioh gate` also times the two pinned positions
+(`crates/ai/tests/fixtures/pinned-improve-dev-*.json`, #1240) under `AI_GATE.pinned_decision_ms`.
+They came from the candidate of the screen in `training/history/improve-cycle-2026-10-16.md`, on an
+older catalog, and today's dev deals deal other decks, so `improve-dev:154` and `:200` no longer
+reach them. A change too large for one session goes on the stack in measured steps, each screened and
+kept on its own.
 
 ## How you measure
 

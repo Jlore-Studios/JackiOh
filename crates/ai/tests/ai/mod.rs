@@ -25,6 +25,7 @@ pub mod observe;
 pub mod observe_instance_data;
 pub mod outside_data;
 pub mod pierce;
+pub mod pinned;
 pub mod policy;
 pub mod position_model;
 pub mod prompts_v020;

@@ -102,18 +102,26 @@ pub struct AiSearch {
     /// The cards a simulated Play of which `simulate` charges `expensive_def_nodes` for (its
     /// `surcharge_nodes`): resolving one ranks every shipped card for the state (the §10.7 scorer,
     /// R29's Zephyrs faces), about a hundred ordinary reduces, so a hand that holds one is budgeted
-    /// for what the step really costs.
+    /// for what the step really costs. A fused card holding one is charged the same (`stands_for_any`,
+    /// #1240).
     pub expensive_def_ids: &'static [&'static str],
     /// Nodes a Play of an `expensive_def_ids` card pays beyond the one every `simulate` takes.
     pub expensive_def_nodes: i32,
     /// The cards an armed backrow copy of which makes a simulated Attack cost `ai_turn_trap_nodes`
     /// (§8.5 core-096's "an AI plays the rest of their turn": a whole random turn inside the one
     /// reduce). `surcharge_nodes` asks it only of an attack that could be the lethal one the trap
-    /// answers, so an ordinary poke at an armed board is not priced like losing the turn.
+    /// answers, so an ordinary poke at an armed board is not priced like losing the turn. A fused card
+    /// holding one is charged the same (`stands_for_any`, #1240).
     pub ai_turn_trap_ids: &'static [&'static str],
     /// Nodes an Attack into an armed `ai_turn_trap_ids` card pays beyond the one every `simulate`
     /// takes — the playout's rough share of the nodes it burns.
     pub ai_turn_trap_nodes: i32,
+    /// #1240: nodes a Play pays for each card in its player's hand, beyond the one `simulate` takes,
+    /// while a card of the other side judges that player's plays (Pareto Optimality,
+    /// `subsystems::watching`): the judge runs §10.7's scorer once per playable card. On
+    /// improve-dev:154's pinned position such a play cost 7 ms against an unjudged one's 0.6 ms with
+    /// five cards held, about 2.3 ordinary steps per card, rounded up.
+    pub judged_card_nodes: i32,
 }
 
 pub const AI_SEARCH: AiSearch = AiSearch {
@@ -133,6 +141,7 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     expensive_def_nodes: 100,
     ai_turn_trap_ids: &["core-096"],
     ai_turn_trap_nodes: 40,
+    judged_card_nodes: 3,
 };
 
 /// `AI_EVAL.keyword`: the worth of each keyword in `unitView.keywords` (spent Divine Shield and Reborn
