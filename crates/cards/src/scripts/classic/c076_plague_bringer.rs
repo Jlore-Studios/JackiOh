@@ -144,10 +144,11 @@ mod tests {
             let theirs = must(s.unit(P2, 2), "p2's Vanilla");
 
             s.expect_stats(&bringer, json!({ "attack": 4, "health": 4 }));
+            // §6.1: Rush lifts sickness for a unit target only: the face is refused while Bringer stands.
+            s.expect_refused_with(|s| s.attack(&bringer, "hero"), "Rush cannot hit the hero");
             s.attack(&bringer, &theirs);
 
             s.expect_in_zone(&theirs, "graveyard");
-            s.expect_refused(|s| s.attack(&bringer, "hero"));
         }
 
         /// Cry: two placements on the one permanent a single prompt names, over every permanent on either side, itself and face-down cards included
