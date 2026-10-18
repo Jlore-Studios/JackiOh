@@ -4017,7 +4017,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-18T07:44:06Z",
+      "feedback_since": "2026-10-18T08:54:51Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1147,
@@ -4029,14 +4029,14 @@
       "queued_at": "2026-10-18T08:50:24Z",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "39113238525",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-18T08:54:51Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 3,
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "claude"
