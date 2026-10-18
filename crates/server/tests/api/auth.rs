@@ -1750,6 +1750,44 @@ mod r1144000_a_failed_key_set_refresh_keeps_the_last_good_keys {
     }
 
     #[tokio::test]
+    async fn r1144000_a_dropped_fetching_request_does_not_wedge_the_waiters() {
+        let (gotrue, _clock, auth) = no_secret().await;
+        gotrue.answer_jwks(JwksReply::Hang);
+        let token = token_for(&gotrue, ALICE);
+
+        // The fetching request hangs up mid-fetch (a client that disconnects) while a second
+        // request waits on it. The endpoint recovers meanwhile.
+        let fetching = tokio::time::timeout(Duration::from_millis(300), auth.verify(&token));
+        let waiting = async {
+            // The hanging fetch has reached the route before it recovers.
+            while gotrue.jwks_calls() < 1 {
+                tokio::task::yield_now().await;
+            }
+            gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body()));
+            tokio::time::timeout(
+                Duration::from_millis(JWKS_FETCH_TIMEOUT_MS as u64),
+                auth.verify(&token),
+            )
+            .await
+        };
+        let (fetching, waiting) = tokio::join!(fetching, waiting);
+        assert!(fetching.is_err(), "the fetching request was dropped");
+        // The waiter took over the fetch instead of waiting forever.
+        assert_eq!(
+            waiting
+                .expect("the waiter is not wedged")
+                .expect("verifies")
+                .user_id,
+            ALICE
+        );
+        assert_eq!(gotrue.jwks_calls(), 2);
+
+        // A later request reads the cache.
+        assert!(auth.verify(&token).await.is_ok());
+        assert_eq!(gotrue.jwks_calls(), 2);
+    }
+
+    #[tokio::test]
     async fn r1144000_a_key_a_successful_refetch_dropped_is_refused() {
         let (gotrue, clock, auth) = no_secret().await;
         gotrue.answer_jwks(JwksReply::Serve(es256::jwks_body()));

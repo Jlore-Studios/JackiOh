@@ -479,10 +479,32 @@ struct KeyCache {
     /// When the last refetch failed, so failures are retried at most once per `JWKS_COOLDOWN_MS`
     /// (R1144000). Cleared by a success.
     last_failed_at: Option<i64>,
-    /// The fetch in flight, if one request is fetching while others wait (R1144000). Set under
-    /// the lock before the fetch starts and taken back under the lock when it lands, so at most
-    /// one fetch runs at a time and no request waits past one fetch timeout.
-    inflight: Option<Arc<tokio::sync::Notify>>,
+}
+
+/// What `keys_for` does next, decided under the cache's lock.
+enum Next<'a> {
+    Serve(Vec<DecodingKey>),
+    Wait(std::pin::Pin<Box<tokio::sync::futures::OwnedNotified>>),
+    Fetch(FetchGuard<'a>),
+}
+
+/// Holds the right to fetch the key set. Dropping it, when the fetch lands or when the request
+/// fetching is dropped mid-fetch (a client that hangs up), frees the slot and wakes the waiters,
+/// so no waiter is stuck behind a fetch that will never finish.
+struct FetchGuard<'a> {
+    inflight: &'a Mutex<Option<Arc<tokio::sync::Notify>>>,
+    mine: Arc<tokio::sync::Notify>,
+}
+
+impl Drop for FetchGuard<'_> {
+    fn drop(&mut self) {
+        let mut slot = self.inflight.lock().unwrap_or_else(|p| p.into_inner());
+        if slot.as_ref().is_some_and(|held| Arc::ptr_eq(held, &self.mine)) {
+            *slot = None;
+        }
+        drop(slot);
+        self.mine.notify_waiters();
+    }
 }
 
 /// Why a key-set refetch did not produce a set. Fixed wording only: the cause is logged, never
@@ -518,6 +540,9 @@ pub struct SupabaseAuth {
     clients: SupabaseAuthClients,
     /// The JWKS. Fetched on first use so constructing the provider does no I/O.
     key_set: tokio::sync::Mutex<KeyCache>,
+    /// The key-set fetch in flight, if one request is fetching while others wait (R1144000). Set
+    /// when a fetch starts and cleared by its `FetchGuard`, so at most one fetch runs at a time.
+    inflight: Mutex<Option<Arc<tokio::sync::Notify>>>,
     // The shared secret is discouraged: a leaked one lets an attacker mint any `sub`. It is only
     // tried when the JWKS path has already failed, and only if configured.
     hs_key: Option<Vec<u8>>,
@@ -567,7 +592,6 @@ impl SupabaseAuth {
                 fetched_at: 0,
                 fixed: true,
                 last_failed_at: None,
-                inflight: None,
             },
             None => KeyCache::default(),
         };
@@ -578,6 +602,7 @@ impl SupabaseAuth {
             http,
             clients,
             key_set: tokio::sync::Mutex::new(key_cache),
+            inflight: Mutex::new(None),
             hs_key: input.jwt_secret.map(String::into_bytes),
             confirmed: Mutex::new(IndexMap::new()),
             mfa_enrolled: Mutex::new(IndexSet::new()),
@@ -700,75 +725,83 @@ impl SupabaseAuth {
     /// endpoint that is down signs nobody out. A successful fetch replaces the set whole, so a key
     /// the endpoint dropped is refused at once.
     async fn keys_for(&self, header: &Header) -> Vec<DecodingKey> {
-        let now = (self.now)();
-        enum Next {
-            Serve(Vec<DecodingKey>),
-            Wait(std::pin::Pin<Box<tokio::sync::futures::OwnedNotified>>),
-            Fetch,
-        }
-        let next = {
-            let mut cache = self.key_set.lock().await;
-            if cache.fixed {
-                return cache
+        loop {
+            let now = (self.now)();
+            let next = {
+                let cache = self.key_set.lock().await;
+                if cache.fixed {
+                    return cache
+                        .keys
+                        .as_ref()
+                        .map(|keys| Self::candidates(keys, header))
+                        .unwrap_or_default();
+                }
+                let found = cache
                     .keys
                     .as_ref()
                     .map(|keys| Self::candidates(keys, header))
                     .unwrap_or_default();
+                let age = now - cache.fetched_at;
+                let stale = age >= JWKS_CACHE_MAX_AGE_MS;
+                let within_cap = cache.keys.is_some() && age < JWKS_CACHE_MAX_AGE_MS + JWKS_STALE_MAX_MS;
+                let cooling = matches!(cache.last_failed_at, Some(at) if now - at < JWKS_COOLDOWN_MS);
+                // Refetch when the set is stale, or on a key miss past the cooldown (a rotation
+                // may have dropped the key). A miss on a just-fetched set is answered from the
+                // cache, or every unknown key would fetch.
+                if !stale && !(found.is_empty() && age >= JWKS_COOLDOWN_MS) {
+                    Next::Serve(found)
+                } else if cooling {
+                    // A refetch failed a moment ago: serve the stale set while it is inside the
+                    // cap rather than fetching on every request.
+                    Next::Serve(if within_cap { found } else { Vec::new() })
+                } else {
+                    self.join_or_start_fetch()
+                }
+            };
+            match next {
+                Next::Serve(found) => return found,
+                // The fetch landed, failed or was dropped: decide again from the cache.
+                Next::Wait(wait) => wait.await,
+                Next::Fetch(guard) => {
+                    let outcome = self.fetch_key_set().await;
+                    let mut cache = self.key_set.lock().await;
+                    let landed = (self.now)();
+                    match outcome {
+                        Ok(keys) => {
+                            cache.keys = Some(keys);
+                            cache.fetched_at = landed;
+                            cache.last_failed_at = None;
+                        }
+                        Err(cause) => {
+                            cache.last_failed_at = Some(landed);
+                            tracing::warn!(event = "auth.jwks.fetch_failed", reason = %cause);
+                        }
+                    }
+                    drop(guard);
+                    return Self::served(&cache, header, landed);
+                }
             }
-            let found = cache
-                .keys
-                .as_ref()
-                .map(|keys| Self::candidates(keys, header))
-                .unwrap_or_default();
-            let age = now - cache.fetched_at;
-            let stale = age >= JWKS_CACHE_MAX_AGE_MS;
-            let within_cap = cache.keys.is_some() && age < JWKS_CACHE_MAX_AGE_MS + JWKS_STALE_MAX_MS;
-            let cooling = matches!(cache.last_failed_at, Some(at) if now - at < JWKS_COOLDOWN_MS);
-            // Refetch when the set is stale, or on a key miss past the cooldown (a rotation may
-            // have dropped the key). A miss on a just-fetched set is answered from the cache, or
-            // every unknown key would fetch.
-            if !stale && !(found.is_empty() && age >= JWKS_COOLDOWN_MS) {
-                Next::Serve(found)
-            } else if cooling {
-                // A refetch failed a moment ago: serve the stale set while it is inside the cap
-                // rather than fetching on every request.
-                Next::Serve(if within_cap { found } else { Vec::new() })
-            } else if let Some(inflight) = cache.inflight.clone() {
-                // One request is already fetching. The wait is registered before the lock is
-                // dropped (`enable`), so the fetch's wake-up cannot be missed.
-                let mut wait = Box::pin(inflight.notified_owned());
+        }
+    }
+
+    /// Joins the fetch in flight, or claims the right to start one. The wait is registered
+    /// (`enable`) under the slot's lock, which `FetchGuard::drop` takes before it wakes anyone, so
+    /// a fetch that ends in that window cannot be missed.
+    fn join_or_start_fetch(&self) -> Next<'_> {
+        let mut slot = self.inflight.lock().unwrap_or_else(|p| p.into_inner());
+        match slot.as_ref() {
+            Some(inflight) => {
+                let mut wait = Box::pin(Arc::clone(inflight).notified_owned());
                 wait.as_mut().enable();
                 Next::Wait(wait)
-            } else {
-                cache.inflight = Some(Arc::new(tokio::sync::Notify::new()));
-                Next::Fetch
             }
-        };
-        match next {
-            Next::Serve(found) => found,
-            Next::Wait(wait) => {
-                wait.await;
-                let cache = self.key_set.lock().await;
-                Self::served(&cache, header, now)
-            }
-            Next::Fetch => {
-                let outcome = self.fetch_key_set().await;
-                let mut cache = self.key_set.lock().await;
-                match outcome {
-                    Ok(keys) => {
-                        cache.keys = Some(keys);
-                        cache.fetched_at = now;
-                        cache.last_failed_at = None;
-                    }
-                    Err(cause) => {
-                        cache.last_failed_at = Some(now);
-                        tracing::warn!(event = "auth.jwks.fetch_failed", reason = %cause);
-                    }
-                }
-                if let Some(inflight) = cache.inflight.take() {
-                    inflight.notify_waiters();
-                }
-                Self::served(&cache, header, now)
+            None => {
+                let mine = Arc::new(tokio::sync::Notify::new());
+                *slot = Some(Arc::clone(&mine));
+                Next::Fetch(FetchGuard {
+                    inflight: &self.inflight,
+                    mine,
+                })
             }
         }
     }
