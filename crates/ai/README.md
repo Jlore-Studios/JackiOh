@@ -144,6 +144,65 @@ deals a live game (R258), both seats AI on the spec's resources at `AI_BUDGET`, 
 record of source `dev` under the patch the run tests, id `dev:<patch>:<seed>` (`dev_record_id`).
 `cargo jackioh stats --out <file>` writes a run; `jackioh-server stats-import <file>` loads it.
 
+## The learned evaluation's features (#466, #1006)
+
+`src/features.rs` turns a position into the learned evaluation's inputs (`docs/learned-eval.md` D3,
+D5, D10). One function serves the replay pass that makes training rows (`cargo jackioh positions`)
+and, once a network ships, its inference in the search, so the two never read a position apart.
+
+```rust
+pub const FEATURES_VERSION: u32;
+pub fn features_of(state: &GameState, seat: PlayerId) -> Features;   // features(&redact(state, seat), seat)
+pub fn features(view: &GameState, seat: PlayerId) -> Features;       // view already redacted
+pub fn dense_names() -> Vec<String>;                                 // the dense layout, in order
+pub struct Features { pub dense: Vec<i32>, pub sparse: Vec<(String, i32)> }
+```
+
+- It reads only `redact` (R185, R1006000): two states that differ only in what the seat cannot see
+  give the same features. The projections that read card text (`unit_view`, `hero_armor_of`,
+  `face_threat`) run on the view less the backrow cards the seat cannot read, which are counted and
+  never read.
+- **dense**: integers, named by `dense_names`: the turn, who acts and whether the seat is p1; per
+  side, the seat's own first, its life (`effective_life`) and armor, mana, crystals and debt, its
+  hand, library, graveyard and backrow (and how much of the backrow the seat can read), its units in
+  aggregate (count, positions, attack, health, armor, damaged, Radiant), one count per keyword kind,
+  the face damage its board threatens and its Jade and extra turns; then the seat's hand by cost.
+- **sparse**: `(key, count)`, sorted, the key `<zone>:<side>:<card id>` for each card the seat can
+  name: `board` (both sides), `hand` (its own) and `backrow` (its own, and the enemy's face-up ones).
+  Ids stay strings, so a patch or a new card never moves an index; an id a network's weights do not
+  know is no input at all.
+- `FEATURES_VERSION` names the layout; any change bumps it, and a network's weights record the
+  version they were fitted on.
+
+## The learned evaluation (#466, #1010)
+
+`src/learned.rs` is a small network over `features` that corrects the hand eval where the search
+finally scores a line (`docs/learned-eval.md` D4, D6, D7, D9):
+
+```rust
+pub enum EvalKind { Hand, Learned }
+pub const AI_EVAL_KIND: EvalKind;                 // config.rs: Hand, unless a promotion turns it on
+pub const LEARNED: Network<'static>;              // compiled in from src/learned/weights.json by build.rs
+pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64;
+```
+
+- With `Hand` nothing changes. With `Learned`, `reply_score` scores a finalist after the opponent's
+  reply as `hand + (b + net(x))·U/a`, the network's logit mapped back onto the hand eval's points
+  (R1010000, R1010001). The beam's pruning keeps the hand eval. 1v1 only: a Duos duel keeps the hand
+  eval (R1010002).
+- `src/learned/weights.json` is what `training/ml/jackioh_ml/export.py` writes from a fit: the feature
+  version and dense names it was fitted on (a test fails on a mismatch), the standardizer, the sparse
+  keys it has rows for (an unknown key is no input), the layers and the skip connection. `build.rs`
+  turns it into constant slices: data at compile time, no static at run time (rule 4). The checked-in
+  file may be the null network, whose correction is zero everywhere.
+- Inference is `f64`, one fixed order, clipped ReLUs as comparisons, no libm, for a float network
+  (`"format": 1`, `Learned::Float`), which part 5's native screen measures. The network that ships is
+  an integer one (`"format": 2`, `Learned::Int`, `src/learned/int.rs`, #1011): `training/ml`'s
+  `quantize.py` folds the standardizer into an i16 first layer over the raw features, i8 head layers,
+  i64 sums, floor shifts and clips, and one IEEE division at the end, so the native gates and the
+  browser's WASM build give the same answer bit for bit (R1011000; `tests/fixtures/learned-parity.json`,
+  held natively and through the WASM module's `learned_parity`).
+
 ## Duos (§13.7)
 
 `src/duos.rs` plays a seat of a Duos game (`jackioh_engine::duos`): one AI plays both seats of team B,

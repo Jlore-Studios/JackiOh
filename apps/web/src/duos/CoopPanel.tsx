@@ -13,6 +13,7 @@ import { useEffect, useId, useState, type FormEvent, type ReactElement } from "r
 
 import { DIFFICULTIES, type Difficulty } from "@jackioh/engine/config";
 
+import { pageWake } from "../game/net.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { ApiRequestError, getDecks, type SavedDeck } from "../net/api.ts";
 import {
@@ -115,26 +116,37 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
   useEffect(() => {
     if (room === null) return undefined;
     let cancelled = false;
+    // A wake while a read is out would only repeat it; each effect run counts its own.
+    let reading = false;
     const check = (): void => {
-      getDuosRoom(room).then(
-        (answer) => {
-          if (cancelled || answer.matchId === null) return;
-          storeRoom(null);
-          setRoom(null);
-          navigate(paths.duos(answer.matchId));
-        },
-        (cause: unknown) => {
-          if (cancelled || !(cause instanceof ApiRequestError) || cause.status !== 404) return;
-          storeRoom(null);
-          setRoom(null);
-          setError(t("Your co-op room closed before anyone joined."));
-        },
-      );
+      if (reading) return;
+      reading = true;
+      getDuosRoom(room)
+        .then(
+          (answer) => {
+            if (cancelled || answer.matchId === null) return;
+            storeRoom(null);
+            setRoom(null);
+            navigate(paths.duos(answer.matchId));
+          },
+          (cause: unknown) => {
+            if (cancelled || !(cause instanceof ApiRequestError) || cause.status !== 404) return;
+            storeRoom(null);
+            setRoom(null);
+            setError(t("Your co-op room closed before anyone joined."));
+          },
+        )
+        .finally(() => {
+          reading = false;
+        });
     };
     check();
     const timer = window.setInterval(check, COOP_ROOM_POLL_MS);
+    // A throttled tab's interval stalls; waking it reads the room again at once.
+    const stopWake = pageWake(check);
     return () => {
       cancelled = true;
+      stopWake();
       window.clearInterval(timer);
     };
   }, [room]);

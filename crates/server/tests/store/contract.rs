@@ -3426,6 +3426,22 @@ mod matches {
         assert!(log.iter().all(|entry| entry["at"].is_number()));
     }
 
+    /// §9.3, §9.5: a log reads back in seq's numeric order, past nine actions too. Postgres resolved
+    /// `select seq::text … order by seq` to the text column, so a rebuild folded 1, 10, 11, …, 2, …
+    /// and rewound every live match of ten actions or more to its ninth.
+    async fn reads_a_log_of_ten_or_more_actions_back_in_seq_order(harness: &StoreHarness) {
+        let row = live_match(harness).await;
+        for seq in 1..=12 {
+            let nonce = format!("n{seq}");
+            q!(harness, t => t.matches_append_actions(&[action_row(&row.id, seq, "p1", &nonce, harness.now())]));
+        }
+        let seqs: Vec<i64> = q!(harness, t => t.matches_actions(&row.id))
+            .iter()
+            .map(|entry| entry.seq)
+            .collect();
+        assert_eq!(seqs, (1..=12).collect::<Vec<i64>>(), "{}", harness.name);
+    }
+
     async fn refuses_a_seq_that_already_exists(harness: &StoreHarness) {
         let row = live_match(harness).await;
         q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", harness.now())]));
@@ -3668,6 +3684,7 @@ mod matches {
         round_trips_a_match_row_clocks_included,
         refuses_a_second_match_with_the_same_id,
         appends_actions_in_order_and_reads_them_back,
+        reads_a_log_of_ten_or_more_actions_back_in_seq_order,
         refuses_a_seq_that_already_exists,
         r776000_answers_a_repeated_nonce_at_its_seq_and_raises_a_seq_clash_otherwise,
         stores_the_clocks_the_clients_render,
@@ -7227,8 +7244,8 @@ mod social {
 
     /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
     /// profiles are named: whom a series that is not over holds, each one's newest live co-op match,
-    /// and whose live 1v1 the viewer may watch (friends, unblocked, live, unranked, seating the friend
-    /// and not the viewer, the friend allowing it). Each answers in the order named.
+    /// and whose live 1v1 the viewer may watch (friends, unblocked, live, ranked or unranked, seating
+    /// the friend and not the viewer, the friend allowing it). Each answers in the order named.
     async fn s7_presence_reads_many_profiles_at_once(harness: &StoreHarness) {
         let viewer = active_profile(harness, None).await;
         let rival = active_profile(harness, None).await;
@@ -7276,7 +7293,7 @@ mod social {
         .collect();
         assert_eq!(
             q!(harness, t => t.presence_watchable(&viewer.id, &named)),
-            vec![watched.id.clone()]
+            vec![watched.id.clone(), ranked.id.clone()]
         );
         assert!(q!(harness, t => t.presence_watchable("not-a-uuid", &named)).is_empty());
         assert!(q!(harness, t => t.presence_watchable(&viewer.id, &[])).is_empty());

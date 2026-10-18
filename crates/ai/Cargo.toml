@@ -13,6 +13,11 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 indexmap = { workspace = true }
 
+[build-dependencies]
+# build.rs reads src/learned/weights.json (#1010). Build scripts are not the pure crate: they run at
+# compile time, which is where data reaches a pure crate (CLAUDE.md rule 4).
+serde_json = { workspace = true, features = ["float_roundtrip"] }
+
 [dev-dependencies]
 jackioh-cards = { workspace = true }
 jackioh-engine = { workspace = true, features = ["testkit"] }

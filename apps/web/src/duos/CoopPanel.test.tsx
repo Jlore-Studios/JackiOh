@@ -12,6 +12,7 @@ import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import type { Friend } from "../net/social.ts";
 import { must, refusal, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { CoopPanel } from "./CoopPanel.tsx";
+import { COOP_ROOM_POLL_MS } from "./config.ts";
 
 const SLOW = { timeout: 5_000 } as const;
 /** SPEC S6/S8 give the host's wait for the guest no interval; the host's way on comes well inside this. */
@@ -243,6 +244,58 @@ describe("B60 creating a room", () => {
       await waitFor(() => {
         expect(window.location.pathname).toBe("/duos/dm-5");
       }, HOST_WAIT);
+    },
+    TEST_MS,
+  );
+
+  it(
+    "a woken page reads the co-op room again at once, and a joined room still takes the host to the game",
+    async () => {
+      const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
+      const show = (state: "hidden" | "visible"): void => {
+        Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+        document.dispatchEvent(new Event("visibilitychange"));
+      };
+      // The host's own poll ticks on nothing, so only a wake can read the room again.
+      const interval = window.setInterval.bind(window);
+      vi.spyOn(window, "setInterval").mockImplementation(((handler: TimerHandler, ms?: number, ...args: unknown[]) =>
+        ms === COOP_ROOM_POLL_MS ? interval(() => undefined, ms) : interval(handler, ms, ...args)) as typeof window.setInterval);
+      try {
+        const room: Room = { created: false, guestJoined: false };
+        const server = serve(room);
+        await renderPanel();
+        await createRoom(server);
+        // The host's own read on mount, answered before anything wakes.
+        await waitFor(() => {
+          expect(server.to("GET", `/api/duos/rooms/${CODE}`)).toHaveLength(1);
+        }, SLOW);
+        await pause(50);
+
+        show("hidden");
+        await pause(50);
+        expect(server.to("GET", `/api/duos/rooms/${CODE}`)).toHaveLength(1);
+
+        // Wakes that land together are one read.
+        show("visible");
+        show("visible");
+        window.dispatchEvent(new Event("online"));
+        await waitFor(() => {
+          expect(server.to("GET", `/api/duos/rooms/${CODE}`)).toHaveLength(2);
+        }, SLOW);
+        await pause(50);
+        expect(server.to("GET", `/api/duos/rooms/${CODE}`)).toHaveLength(2);
+        expect(window.location.pathname).toBe("/together");
+
+        // The guest joined while the tab slept: the wake finds the match and takes the host there.
+        room.guestJoined = true;
+        show("visible");
+        await waitFor(() => {
+          expect(window.location.pathname).toBe("/duos/dm-5");
+        }, SLOW);
+      } finally {
+        if (visibility === undefined) Reflect.deleteProperty(document, "visibilityState");
+        else Object.defineProperty(document, "visibilityState", visibility);
+      }
     },
     TEST_MS,
   );

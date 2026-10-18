@@ -1623,10 +1623,14 @@ pub fn acts_on_field(state: &GameState, instance: &CardInstance) -> bool {
     instance.zone.z() == ZoneName::Field && !is_buried(state, instance)
 }
 
-/// R64: "fill your board" takes every empty, unlocked unit zone, left to right. The caller makes
-/// each card; this returns the zones to fill, in order.
+/// R64, R1136000: "fill your board" takes every empty, unreserved unit zone, left to right, a Locked
+/// one included (a Lock refuses only plays, R688). The caller makes each card; this returns the
+/// zones to fill, in order.
 pub fn fill_board_zones(state: &GameState, player: PlayerId) -> Vec<ZoneSlot> {
-    open_zones(state, player, Row::Units)
+    slots_of(player, Row::Units)
+        .into_iter()
+        .filter(|slot| takes_move(state, slot))
+        .collect()
 }
 
 pub fn slot_of(_state: &GameState, instance: &CardInstance) -> Option<ZoneSlot> {

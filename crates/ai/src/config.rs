@@ -412,6 +412,21 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     closing_weight: 3.0,
 };
 
+/// Which evaluation scores the search's finalists (#1010; `learned.rs`, `docs/learned-eval.md` D6).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum EvalKind {
+    /// `evaluate` with `AI_EVAL`: the hand-written evaluation, everywhere.
+    Hand,
+    /// The finalists after the opponent's reply are scored by the learned network's correction of
+    /// the hand eval (`learned::finalist_score`), 1v1 only; the beam keeps the hand eval.
+    Learned,
+}
+
+/// The switch: one line turns the learned evaluation on or off. A promotion that ships a network sets
+/// it with the weights in one change (#1012).
+pub const AI_EVAL_KIND: EvalKind = EvalKind::Hand;
+
 /// The greedy baseline's own evaluation (baselines.rs): AI_EVAL exactly as it stood when the quality
 /// gates were fixed on the seed series `gate:v2`, frozen here. A baseline the AI is measured against
 /// must not move when the AI is tuned, so tuning AI_EVAL changes the AI and never its yardstick.

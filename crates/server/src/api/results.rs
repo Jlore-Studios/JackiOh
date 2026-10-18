@@ -45,6 +45,7 @@ use crate::api::queue::json_list;
 use crate::api::ranked::{RankedGameInput, RankedSideInput, rate_ranked_game};
 use crate::api::series::{SeriesGameResult, advance_series_in_tx, resume_series};
 use crate::app::{App, now_ms};
+use crate::bug_reports::{Finding, FoundIn, refused_rows};
 use crate::config::{
     MATCH_REAPER_INTERVAL_SECONDS, OPEN_MATCH_REAP_GRACE_MS, RATING_START, RESULT_WRITE_ATTEMPTS,
 };
@@ -523,7 +524,7 @@ async fn fold_terminal_input(app: &Arc<App>, match_row: &MatchRow, now: i64) -> 
     let args = engine::fold_args(
         &match_row.seed,
         &match_row.decks,
-        log.into_iter().map(|row| row.action).collect(),
+        log.iter().map(|row| row.action.clone()).collect(),
         last_boards,
         glitch_boards,
         registry::dealt_for(mode),
@@ -540,6 +541,16 @@ async fn fold_terminal_input(app: &Arc<App>, match_row: &MatchRow, now: i64) -> 
     };
     if !folded.errors.is_empty() {
         tracing::error!(event = "reaper.fold.errors", matchId = %match_row.id, errors = ?folded.errors);
+        app.bug_reports.file(
+            app.env.deployed_commit.as_deref(),
+            Finding {
+                match_id: match_row.id.clone(),
+                found_in: FoundIn::Reaper,
+                catalog_version: match_row.catalog_version.clone(),
+                actions: log.len(),
+                refused: refused_rows(&log, &folded.errors),
+            },
+        );
         return None;
     }
     let snapshot = engine::snapshot(&folded.state);

@@ -294,6 +294,9 @@ pub(crate) struct ArenaGame {
     pub labels: (String, String),
     /// R850000: whether the game is one of a deal's two, which share its seed.
     pub paired: bool,
+    /// R1006005: the most actions one turn may take before the game ends without a result; `None`
+    /// (the arena's games, the gates') for no such ceiling, only `ARENA_MAX_ACTIONS`.
+    pub turn_actions: Option<usize>,
 }
 
 /// What a game came to: match.ts's `MatchRecord` minus search statistics, plus each seat's decision times.
@@ -376,6 +379,7 @@ pub(crate) fn game_setup(
         a_seat,
         labels: (a.label.clone(), b.label.clone()),
         paired,
+        turn_actions: None,
     })
 }
 
@@ -660,7 +664,24 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
     let mut fallbacks = 0;
     let mut times: PerPlayer<Vec<f64>> = PerPlayer::new(Vec::new(), Vec::new());
 
+    let mut turn = state.turn;
+    let mut this_turn = 0usize;
     while state.result.is_none() && log.len() < ARENA_MAX_ACTIONS {
+        // R1006005: a turn that will not end (an endless combo the AI keeps finding worth playing)
+        // ends the game without a result once it passes the ceiling.
+        if state.turn != turn {
+            turn = state.turn;
+            this_turn = 0;
+        }
+        if let Some(ceiling) = game.turn_actions
+            && this_turn >= ceiling
+        {
+            thrown.push(format!(
+                "{this_turn} actions in turn {turn}, the ceiling of one turn (R1006005)"
+            ));
+            break;
+        }
+        this_turn += 1;
         let Some(seat) = seat_to_act(&state) else {
             thrown.push(format!(
                 "no seat to act while the game is live (turn {})",
@@ -1213,6 +1234,7 @@ mod tests {
             a_seat: PlayerId::P1,
             labels: ("self".to_string(), "random".to_string()),
             paired: false,
+            turn_actions: None,
         };
         assert_eq!(
             record_id("0.2.0", &game),

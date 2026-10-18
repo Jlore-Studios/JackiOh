@@ -59,7 +59,7 @@ export const privacyTestid = {
 } as const;
 
 /** The date the text below last changed, as the page shows it. */
-export const PRIVACY_LAST_UPDATED = "2026-10-15";
+export const PRIVACY_LAST_UPDATED = "2026-10-17";
 
 export default function PrivacyRoute(): ReactElement {
   const locale = useLocale();
@@ -189,13 +189,14 @@ export default function PrivacyRoute(): ReactElement {
             {PRESENCE_TTL_MS / MS_PER_SECOND} seconds after your browser last told us. A friend you chat with sees
             your messages, and a friend you share a replay with can watch that game from your seat. If you let
             friends watch your games (the &ldquo;Let friends watch my games&rdquo; setting, on unless you turn it
-            off), a friend can watch your unranked online games from your seat, {SPECTATE_DELAY_MS / MS_PER_SECOND}{" "}
-            seconds behind; ranked games are never watched.
+            off), a friend can watch your ranked and unranked online games from your seat,{" "}
+            {SPECTATE_DELAY_MS / MS_PER_SECOND} seconds behind.
           </p>
           <p>
             Your opponent&rsquo;s friends can see your moves too. If your opponent lets friends watch their games,
-            their friends can watch an unranked game you play against them from your opponent&rsquo;s seat, which
-            shows your moves as your opponent sees them, {SPECTATE_DELAY_MS / MS_PER_SECOND} seconds behind. And
+            their friends can watch a ranked or unranked game you play against them from your opponent&rsquo;s
+            seat, which shows your moves as your opponent sees them, {SPECTATE_DELAY_MS / MS_PER_SECOND} seconds
+            behind. And
             either player of a finished game may share its replay with their own friends: a replay your opponent
             shares shows the game from their seat, your moves included.
           </p>

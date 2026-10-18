@@ -4,13 +4,15 @@
 //!            +{aura}/+{aura}." — aura 1
 //!   Radiant: the same text, aura 2.
 //!   Engine:  "A unit-token card that lives in the deck and hand until it is played (R11). Its Cry fills
-//!            every empty, unlocked unit zone left to right (R64) with copies per R57 (Radiant flag,
-//!            buffs and granted keywords kept), which do not fire their Cry (R1), so nothing loops;
-//!            copies are not generation (R387). Every copy's aura lifts the others. Tunes: aura 1 ↑."
+//!            every empty, unreserved unit zone, a Locked one included (R64, R688, R1136000), with copies
+//!            per R57 (Radiant flag, buffs and granted keywords kept), which do not fire their Cry (R1), so
+//!            nothing loops; copies are not generation (R387). Every copy's aura lifts the others. Tunes:
+//!            aura 1 ↑."
 //!
 //! "Fill your board" is one `summonCopy` per unit zone: each takes the leftmost empty, unlocked,
-//! unreserved zone (R64) and fizzles once none is left (§3.2), so a full board makes none. A copy is a
-//! summon, which fires no Cry (R1). The aura is #46's base aura ("your other Felinors").
+//! unreserved zone (R64), else the leftmost empty Locked one (R688), and fizzles once none is left
+//! (§3.2), so a full board makes none. A copy is a summon, which fires no Cry (R1). The aura is #46's
+//! base aura ("your other Felinors").
 
 use jackioh_engine::effects::summon_copy;
 use jackioh_engine::prelude::*;
