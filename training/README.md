@@ -79,10 +79,12 @@ review, with auto-merge on, once a promotion is in it. Each cycle:
    its stack and going to the gate only with a stack that screened above its parent
    ([`improve.md`](improve.md)). A session ends after a promotion or after four hours. Meanwhile,
    every 15 minutes (`TRAIN_PROGRESS_SECONDS`), the loop pushes the checkout as it is to `ai/<lane>`
-   as one `[skip ci]` commit when it changed, rewrites the session's comment on the draft, and
-   rewrites the draft's description when a new pass of the gate changed it. When the session ends,
-   the loop stops any `jackioh` process it left running as the lane's user (an arena or a gate cut
-   off by the time limit, and the parent agents it spawned), so the next measurement has the box.
+   as one `[skip ci]` commit when it changed (`[skip ci]` stops CI, not Vercel: `vercel.json` switches
+   Vercel off for `ai/**`, or each push would spend one of its 100 daily deployments), rewrites the
+   session's comment on the draft, and rewrites the draft's description when a new pass of the gate
+   changed it. When the session ends, the loop stops any `jackioh` process it left running as the
+   lane's user (an arena or a gate cut off by the time limit, and the parent agents it spawned), so
+   the next measurement has the box.
    Without a promotion, the `improve` lane saves the session's commits as its stack.
 4. When the session ends with a promotion commit, fold every commit of the session into it (the
    improve lane's stack included) and land it on `main`. If `main`'s crates did not move
@@ -347,7 +349,9 @@ The learned evaluation (#466, `docs/learned-eval.md`) learns from self-play expo
 R1006003). An export is dispatched, never played on the training box, whose two vCPUs the lanes need:
 `gh workflow run selfplay.yml -f games=100000 -f seed=<base> [-f shards=20] [-f
 runner=jackioh-selfplay-local]` plays it in shards on GitHub's runners (free for this public
-repository, about 1,500 games an hour each) or on the local runner (`bot/machine/README.md`, The local
+repository, about 1,500 games an hour each, at most 12 at once so that CI keeps 8 of the
+organization's 20 hosted jobs: 100,000 games in 20 shards take two rounds, about seven hours) or on
+the local runner (`bot/machine/README.md`, The local
 runner), and keeps each shard's log file as an artifact for up to 90 days. Its last job runs
 `positions` over the whole export and writes the counts (games, positions, games that no longer
 replay) and the games an hour to the run's summary. The same base and game numbers always play the

@@ -139,6 +139,11 @@ function deploys(branch: string): boolean {
 describe("vercel.json deployment flag", () => {
   it("creates no deployment for the branches machines push to, and never for main", () => {
     for (const branch of [
+      // The training lanes' branches and the improve lane's stack (training/loop.sh), pushed every
+      // 15 minutes while a session runs.
+      "ai/improve",
+      "ai/unban",
+      "ai/improve-stack",
       "bot-state",
       "bot/issue-63",
       // Squishy's state and issue branches.
@@ -147,6 +152,9 @@ describe("vercel.json deployment flag", () => {
       "claude/stoic-tesla-837kse",
       "copilot/fix-1",
       "dependabot/npm_and_yarn/vite-7",
+      // The learned evaluation's parts and the night bot's own branches.
+      "learned/part-7-lane",
+      "night-bot/suspend-294",
       "patch/v0.1.1",
       "patches/ship-74c8823",
       "polish/3-ai",

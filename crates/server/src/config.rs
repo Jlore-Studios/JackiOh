@@ -798,7 +798,8 @@ pub const PLAYER_SETTINGS_BYTES_MAX: usize = 4096;
 pub const PUBLIC_STATS_MIN_LIVE_GAMES: i64 = 1000;
 
 /// SPEC §11 R654: minimum sample of games for a card row to display a win-rate percentage. Below it,
-/// the row displays "not enough games".
+/// the row displays "not enough games". Its played delta needs this many on each side, played and
+/// drawn but not played, and displays "not enough data" until then.
 pub const CARD_STATS_MIN_SAMPLE: i64 = 20;
 
 /// SPEC §9.11 (R377): the fewest in-deck games a card needs before `jackioh-server balance-watch`
