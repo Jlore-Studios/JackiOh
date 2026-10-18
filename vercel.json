@@ -5,11 +5,14 @@
   "outputDirectory": "dist",
   "git": {
     "deploymentEnabled": {
+      "ai/**": false,
       "bot-state": false,
       "bot/**": false,
       "claude/**": false,
       "copilot/**": false,
       "dependabot/**": false,
+      "learned/**": false,
+      "night-bot/**": false,
       "patch/**": false,
       "patches/**": false,
       "polish/**": false,

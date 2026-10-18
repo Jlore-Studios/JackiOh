@@ -359,8 +359,8 @@ jobs:
           set -euo pipefail
           lane=${HEAD_REF#ai/}
           case "$lane" in
-            improve | unban) ;;
-            *) echo "::error::$HEAD_REF is not a training lane's branch (ai/improve or ai/unban)"; exit 1 ;;
+            improve | unban | learn) ;;
+            *) echo "::error::$HEAD_REF is not a training lane's branch (ai/improve, ai/unban or ai/learn)"; exit 1 ;;
           esac
           # --no-renames, so a file moved into crates/ai/ still shows where it came from.
           outside=$(git diff --no-renames --name-only "$BASE...HEAD" | grep -Ev '^(crates/ai/|training/history/)' || true)
