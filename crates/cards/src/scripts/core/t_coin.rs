@@ -396,7 +396,7 @@ mod tests {
                 .collect();
             let types: Vec<Value> = named.iter().map(|event| event["type"].clone()).collect();
             assert_eq!(types, vec![json!("addedToHand")]);
-            // Four opening draws for p2, three for p1, and p1's turn-1 draw: the Coin is not among them.
+            // Four opening draws for each seat and p1's turn-1 draw: the Coin is not among them.
             assert_eq!(state.counters.drawn as usize, opening_draw(0) + opening_draw(1) + 1);
         }
 

@@ -164,10 +164,11 @@ describe("R399 R511 Echo prints the text it copies", () => {
 
 describe("R399 R511 Echo through the real engine", () => {
   it("R399 R511 once a Spell is played, Echo in its owner's hand prints that Spell's text, and the other seat sees no hand card", () => {
-    // A four-card deck all dealt at once (R182, R184), so Echo and Book of Knowledge are both in hand.
+    // A four-card deck all dealt at once (R184; the opening draw is four, R1156000), so Echo and Book of
+    // Knowledge are both in hand.
     const rest = devDeck("cheap20").filter((id) => id !== ECHO && id !== KNOWLEDGE);
     const deck = [ECHO, KNOWLEDGE, ...rest.slice(0, 2)];
-    const handicap = { ...HUMAN_HANDICAP, deckSize: deck.length, extraOpeningCards: 1 };
+    const handicap = { ...HUMAN_HANDICAP, deckSize: deck.length };
     const game = realGame("echo-copies", [deck, devDeck("first20")], { p1: handicap });
     const catalog = lookupFromDefs(game.catalog);
     const hand = (): CardView[] => game.view("p1").you.hand as CardView[];

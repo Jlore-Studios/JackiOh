@@ -1,7 +1,7 @@
 {
   "id": "25-hand-full-a",
   "spec": "25-overflow-animations.cy.ts",
-  "description": "Player 1's deck for R317's burned card. 08-do-nothing-a with #100 Ceaseless Void swapped for #5 Stockpile, and a handicap that is a human's but for six extra opening cards (R182): 3 + 6 = 9 in the opening hand, 10 after the turn-1 draw, which is HAND_CAP, so the turn-3 draw burns (SPEC 2.4) on seat 2's device, whose end-turn started the turn. Stockpile (1 mana, draw 2) then burns one more on seat 1's own device: it leaves the hand, so its first draw refills it to 10 and its second burns. Every other card costs 3 or more and none has a Cast-on-draw, a Quickdraw or a hand trigger (08-do-nothing-a's description has the full reasoning), so on 1 and 2 mana Stockpile is the only play and nothing resolves by itself; Stockpile being playable is also what keeps turn 1 from ending by itself (R82). Stockpile is not always in the first ten cards: the spec's seed is one where it is, and where the burned cards are #6 Mana Well (turn 3) and #66 The Rock (Stockpile's second draw), which the spec names.",
+  "description": "Player 1's deck for R317's burned card. 08-do-nothing-a with #100 Ceaseless Void swapped for #5 Stockpile, and a handicap that is a human's but for five extra opening cards (R182): 4 + 5 = 9 in the opening hand (six extra before the opening draw grew to four, R1156000: the same nine cards, so the same game), 10 after the turn-1 draw, which is HAND_CAP, so the turn-3 draw burns (SPEC 2.4) on seat 2's device, whose end-turn started the turn. Stockpile (1 mana, draw 2) then burns one more on seat 1's own device: it leaves the hand, so its first draw refills it to 10 and its second burns. Every other card costs 3 or more and none has a Cast-on-draw, a Quickdraw or a hand trigger (08-do-nothing-a's description has the full reasoning), so on 1 and 2 mana Stockpile is the only play and nothing resolves by itself; Stockpile being playable is also what keeps turn 1 from ending by itself (R82). Stockpile is not always in the first ten cards: the spec's seed is one where it is, and where the burned cards are #6 Mana Well (turn 3) and #66 The Rock (Stockpile's second draw), which the spec names.",
   "cards": [
     "core-005",
     "core-006",
@@ -28,7 +28,7 @@
     "deckSize": 20,
     "manaBonus": 0,
     "manaCap": 4,
-    "extraOpeningCards": 6,
+    "extraOpeningCards": 5,
     "extraDrawsPerTurn": 0
   }
 }

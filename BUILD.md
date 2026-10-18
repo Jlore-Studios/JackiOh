@@ -122,7 +122,7 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `HERO_HEALTH` | 30 | §2 |
 | `TURN_CAP_PLAYER_TURNS` | 60 | §2.5, R2, R389 |
 | `HAND_CAP` | 10 | §2.4, R4 (decide) |
-| `OPENING_DRAW` | `[3, 4]` (index = seat, Nth seat = N+2) | §2.1 |
+| `OPENING_DRAW` | `[4, 4]` (index = seat) | §2.1, R1156000 |
 | `OPENING_COINS` | `[0, 1]` (index = seat: The Coin for the seat going second) | §2.1, R244 |
 | `COIN_DEF_ID` | `"core-t-coin"` | §7, R245 |
 | `UNIT_ZONES` / `BACKROW_ZONES` | 5 / 5 | §3 |
@@ -234,7 +234,7 @@ Acceptance:
 **M1-T5 Setup and mulligan.** Files: `engine/src/setup.ts`.
 Shuffle both libraries with the match rng; opening draws from `OPENING_DRAW`; Quickdraw cards replace a draw (§6.2); both players' mulligan prompts open at once, each answer sealed until both are in, then both resolve in seat order (R265–R267); returned cards redraw first, then shuffle back (R9); cards that cast on draw are set aside through the deal and the mulligan and shuffled into the library once both mulligans are resolved (R635), save those a hand the other cards cannot fill takes, uncast, and casts at the start of the game (R748); The Coin to the seat going second once both mulligans are answered (`OPENING_COINS`, R244); start-of-game hooks (Heroic Power).
 Acceptance:
-- P1 hand = 3, P2 hand = 4 after setup; libraries 17 and 16.
+- P1 hand = 4, P2 hand = 4 after setup; libraries 16 and 16 (R1156000).
 - Once both mulligans are answered P2 holds its 4 cards plus The Coin as its last card, and P1 none; a handicapped seat going second gets it too; it is not a draw (R244).
 - A deck with two Quickdraw cards puts both in the opening hand and draws one fewer random card... (exactly `OPENING_DRAW[seat] − quickdrawCount` random draws, minimum 0). A deck with more Quickdraw cards than the seat has draws is dealt as many as it has draws, the first ones in the shuffle's order, and the rest stay in the library (R640): the opening hand is always `OPENING_DRAW[seat]` cards (plus a handicap's extra cards, R182).
 - A cast-on-draw card is never cast by setup, and never dealt while another card is left (R635): not by the opening draw, not by a mulligan's replacement. The rest are in the library once setup is done, at random places, and the other seat's events and counts say nothing of them. A deck with fewer other cards than the hand fills the rest of it with cast-on-draw cards, uncast, and so does a mulligan's replacement; each still in a hand once both mulligans are resolved is cast at the start of the game, after the start-of-game effects and before turn 1, Player 1's first (R748). Setup deals no fatigue.

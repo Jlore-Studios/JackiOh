@@ -4,7 +4,7 @@
 // Fixtures: #7 Jewelosco Scarab, #15 Me and Mr Token, #17 Flood, #24 Efficiency Dividend, and
 // #30 Archivist cover choices; #46 Suppressive Aura, #55 Lava Golem, and #67 Zoomerbin Oomen cover zones.
 
-import { seedFor } from "../../support/config.ts";
+import { constants, seedFor } from "../../support/config.ts";
 import {
   GAME,
   MULLIGAN_OPPONENT_READY,
@@ -119,7 +119,9 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
       expect(state.mulligan?.p1.prompt?.kind, "player 1's is a mulligan PendingChoice").to.eq("mulligan");
       expect(state.mulligan?.p2.prompt?.kind, "and so is player 2's").to.eq("mulligan");
       const hand = handOf(state, "p1");
-      expect(hand, "player 1's opening hand is three cards (§2.1)").to.have.length(3);
+      expect(hand, "player 1's opening hand is OPENING_DRAW[0] cards (§2.1, R1156000)").to.have.length(
+        constants.OPENING_DRAW[0],
+      );
       const kept = hand.slice(0, 1);
       const returned = hand.slice(1);
 
@@ -156,7 +158,9 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
       cy.gameState().should((after) => {
         const now = handOf(after, "p1");
         // R10 adds turn one's draw to R9's replacements.
-        expect(now, "R9's three replacements, plus R10's turn-1 draw").to.have.length(4);
+        expect(now, "the kept card and R9's replacements, plus R10's turn-1 draw").to.have.length(
+          constants.OPENING_DRAW[0] + 1,
+        );
         expect(now, "the kept card stayed in hand").to.include(kept[0]);
         for (const id of returned) {
           expect(now, "a returned card left the hand").to.not.include(id);

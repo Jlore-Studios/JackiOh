@@ -40,7 +40,7 @@
 //! `target`. The filler `test-card-<n>` cards are 0-cost Spells that do nothing.
 //!
 //! Not ported: `createFakeEngine` itself (the real engine stands where it stood), `FAKE_HAND_SIZE`
-//! (the real opening hands are `OPENING_DRAW`'s, three for p1 and four for p2), the fake's
+//! (the real opening hands are `OPENING_DRAW`'s, four for each seat), the fake's
 //! `dealRandomDeck` (`actor::engine::deal_random_deck` is the real R258 deal). The two Glitch cards
 //! force one outcome each where the engine's own Glitch (`subsystems::glitch`) draws it from the
 //! match rng: each is a test-made `Effect` that writes exactly what that outcome writes (TS's fake

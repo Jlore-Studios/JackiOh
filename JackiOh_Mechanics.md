@@ -5,7 +5,7 @@
   * There is a 60 turn cap, where an auto-draw happens  
   * If you have no valid actions, your turn is automatically skipped  
   * You can offer draw at any time (with appropriate spam restrictions)  
-  * Player 1 draws 3 cards at the start of the game. Player 2 draws 4 cards. Etc. etc.  
+  * Both players draw 4 cards at the start of the game.  
   * Mulligan  
     * You predraw your opening hand before the game starts. You may choose to return any number of them to the deck to redraw a card in its place (without replacement).  
   * The player who goes second gets The Coin after the mulligan: a 0 mana spell, gain +1 mana this turn (Hearthstone's rule)  
