@@ -1,4 +1,4 @@
-//! #13 Jlockeed Shredder-10 (SPEC §8.1): 6/10 → 8/20 Unit, cost 3. Base "End of turn: deal 2 damage
+//! #13 Jlockeed Shredder-10 (SPEC §8.1): 6/10 → 12/20 Unit, cost 3. Base "End of turn: deal 2 damage
 //! to each enemy unit and the enemy hero", radiant "4 damage" — a radiant cell that changes only a
 //! number changes only that number (§8 Conventions). §8's Engine cell: "One damage instance per
 //! target, controller's end of turn".
@@ -164,8 +164,8 @@ mod tests {
         }
 
         #[test]
-        fn enters_as_a_6_10_and_radiant_an_8_20() {
-            for (radiant, attack, health, amount) in [(false, 6, 10, 2), (true, 8, 20, 4)] {
+        fn enters_as_a_6_10_and_radiant_a_12_20() {
+            for (radiant, attack, health, amount) in [(false, 6, 10, 2), (true, 12, 20, 4)] {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
