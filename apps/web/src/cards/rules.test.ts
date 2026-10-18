@@ -734,8 +734,11 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
   });
 
   it("R512 every new term has at least one catalog text that prints it", () => {
+    // R1174000: Frozen is a §6.1 status no card prints yet; M+ #24 Bob (#1185) is the first, and
+    // takes it off this list when it ships.
+    const unprinted: readonly GlossaryTermId[] = ["Frozen"];
     const fresh: readonly GlossaryTermId[] = [
-      ...STATUSES,
+      ...STATUSES.filter((id) => !unprinted.includes(id)),
       "Activate",
       "Counter",
       "Steal",
@@ -752,6 +755,7 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
     ];
     const found = new Set(PLAYED_TEXTS.flatMap(({ text }) => termsIn(text)));
     for (const term of fresh) expect(found.has(term), term).toBe(true);
+    for (const term of unprinted) expect(found.has(term), `${term} is printed now: take it off the list`).toBe(false);
   });
 
   it("R512 tokens stay lossless over every text a player reads, numbers filled in", () => {
