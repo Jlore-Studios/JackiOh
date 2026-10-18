@@ -21,7 +21,9 @@ runner). Each run:
 1. **Waits** while the lane's pull request (`ai/learn`) is open: a promotion is on its way to `main`.
 2. **Exports** `games` games (100,000 by default) through `selfplay.yml` on a fresh base,
    `learned-<catalog>-<date>-<run>`, never a gate's deals or the dev set's (R1006002).
-3. **Retrains** with `training/ml/retrain.sh` on `main`: the positions (R1006003, R1006004), the fit
+3. **Retrains** with `training/ml/retrain.sh` on `main`: the positions (R1006003, R1006004), folded by
+   the export's own build while its features are `main`'s (`--positions-bin`), so a rules change merged
+   since the export drops none of its games (run 5 lost 10,707 of 100,000 to #1199 and #1200), the fit
    and its report (`training/ml/README.md`), the integer network that ships (D7, R1011000) into
    `crates/ai/src/learned/weights.json` and the switch, `AI_EVAL_KIND`, on. It stops when the network does not beat the calibrated hand eval
    on held-out turns 4 to 10.
