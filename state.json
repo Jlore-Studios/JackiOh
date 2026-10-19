@@ -10407,8 +10407,10 @@
     "what": "review #1316 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-19T14:24:06Z",
-    "notes": [],
+    "at": "2026-10-19T14:31:39Z",
+    "notes": [
+      "started a night run, as a lane was free: #1316 (medium) is queued to revise, for `claude-6`: build on `claude-6` (claude, `opus`, strong); review on `claude-6` (claude, `opus`, strong)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
