@@ -20022,7 +20022,7 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": "2026-10-19T02:19:20Z",
+    "idle_since": null,
     "last_run": "2026-10-19T02:19:20Z",
     "provider": "claude-3",
     "requested": false,
