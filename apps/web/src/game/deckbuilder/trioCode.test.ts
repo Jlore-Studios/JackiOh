@@ -366,3 +366,60 @@ describe("R1410 a trio's decks carry the Meditative set's numbers, 3000 + n (the
     expect(before.slots[1]?.dropped.unknown).toEqual([3001, 3097]);
   });
 });
+
+describe("R1410 a trio's decks carry the Meditative+ set's numbers, 4000 + n (the release, v0.3.15, issue #1187)", () => {
+  const base = catalog.cards[fixtureCardId(1)] as CardDef;
+  const inSet = (id: string, set: CardDef["set"], index: string): CardDef => ({ ...base, id, index, name: id, set });
+  const fiveSets: CatalogSnapshot = {
+    version: catalog.version,
+    cards: {
+      ...catalog.cards,
+      "classic-043": inSet("classic-043", "Classic", "43"),
+      "classicplus-078": inSet("classicplus-078", "Classic+", "78"),
+      "meditative-001": inSet("meditative-001", "Meditative", "1"),
+      "meditative-097": inSet("meditative-097", "Meditative", "97"),
+      "meditativeplus-001": inSet("meditativeplus-001", "Meditative+", "1"),
+      "meditativeplus-024": inSet("meditativeplus-024", "Meditative+", "24"),
+    },
+  };
+  /** The same catalog without the set, as a catalog from before the release holds it (R1420). */
+  const withoutSet: CatalogSnapshot = {
+    version: catalog.version,
+    cards: Object.fromEntries(Object.entries(fiveSets.cards).filter(([, def]) => def.set !== "Meditative+")),
+  };
+
+  /**
+   * A version 2 trio code of Core, Classic, Classic+ and Meditative cards in its first two slots,
+   * exactly as this client wrote it before the Meditative+ set had an offset (pinned here).
+   */
+  const MINTED_BEFORE = "JKT2.EkJlZm9yZSBNZWRpdGF0aXZlKwMEQ2FsbQO5FyuZGAdDbGFzc2ljApMInhB31A";
+  const MINTED_SLOTS: readonly TrioCodeSlot[] = [
+    { name: "Calm", cards: ["meditative-001", fixtureCardId(43), "meditative-097"] },
+    { name: "Classic", cards: ["classic-043", "classicplus-078"] },
+    null,
+  ];
+
+  it("R1410 a trio code minted before the Meditative+ set had a number is byte for byte the code written now, and reads back the same", () => {
+    expect(encodeTrioCode("Before Meditative+", MINTED_SLOTS, fiveSets)).toBe(MINTED_BEFORE);
+    for (const cards of [fiveSets, withoutSet]) {
+      const decoded = expectOk(decodeTrioCode(MINTED_BEFORE, cards, null));
+      expect(decoded.name).toBe("Before Meditative+");
+      expect(decoded.slots.map((slot) => slot?.cards ?? null)).toEqual(MINTED_SLOTS.map((slot) => slot?.cards ?? null));
+    }
+  });
+
+  it("R1410 writes a Meditative+ card in a trio's deck and reads it back from its own set", () => {
+    const slots: readonly TrioCodeSlot[] = [
+      null,
+      null,
+      { name: "Bob", cards: ["meditativeplus-024", fixtureCardId(1), "meditative-097", "meditativeplus-001"] },
+    ];
+    const code = encodeTrioCode("Meditative+", slots, fiveSets);
+    const decoded = expectOk(decodeTrioCode(code, fiveSets, null));
+    expect(decoded.slots[2]?.cards).toEqual(["meditativeplus-024", fixtureCardId(1), "meditative-097", "meditativeplus-001"]);
+    // A catalog without the set (one from before the release, R1420) drops both as unknown.
+    const before = expectOk(decodeTrioCode(code, withoutSet, null));
+    expect(before.slots[2]?.cards).toEqual([fixtureCardId(1), "meditative-097"]);
+    expect(before.slots[2]?.dropped.unknown).toEqual([4024, 4001]);
+  });
+});

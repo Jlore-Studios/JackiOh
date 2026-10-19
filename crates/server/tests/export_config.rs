@@ -69,6 +69,7 @@ fn constants() -> Vec<(&'static str, Value)> {
                 "Classic": c::CATALOG_NUMBER_SET_OFFSETS.classic,
                 "Classic+": c::CATALOG_NUMBER_SET_OFFSETS.classic_plus,
                 "Meditative": c::CATALOG_NUMBER_SET_OFFSETS.meditative,
+                "Meditative+": c::CATALOG_NUMBER_SET_OFFSETS.meditative_plus,
             }),
         ),
         ("CODE_ALPHABET", json!(c::CODE_ALPHABET)),

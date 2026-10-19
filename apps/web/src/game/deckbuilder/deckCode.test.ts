@@ -486,7 +486,7 @@ describe("R1410 the Meditative set's numbers: 3000 + n (the release, issue #553)
   const MINTED_CARDS: readonly string[] = [fixtureCardId(43), CLASSIC_43, PLUS_78, fixtureCardId(1), CLASSIC_1];
 
   it("R1410 numbers a Meditative card 3000 + n, after Classic+'s 2000, and moves no other set's offset", () => {
-    expect(CATALOG_NUMBER_SET_OFFSETS).toEqual({ Core: 0, Classic: 1000, "Classic+": 2000, Meditative: 3000 });
+    expect(CATALOG_NUMBER_SET_OFFSETS).toMatchObject({ Core: 0, Classic: 1000, "Classic+": 2000, Meditative: 3000 });
     expect(catalogNumberOf({ set: "Meditative", index: "1" })).toBe(3001);
     expect(catalogNumberOf({ set: "Meditative", index: "102" })).toBe(3102);
     // The set's tokens carry "N.k" indices, so no code can name one, as for every set.
@@ -531,5 +531,101 @@ describe("R1410 the Meditative set's numbers: 3000 + n (the release, issue #553)
     // A version 1 code's numbers are Core's, so 3001 there was never a Meditative card.
     const v1 = `${DECK_CODE_PREFIX}${String(DECK_CODE_CORE_ONLY_VERSION)}.`;
     expect(expectOk(decodeDeckCode(rawCode("Old", [1, 3001], [], v1), fourSets, null)).dropped.unknown).toEqual([3001]);
+  });
+});
+
+describe("R1410 the Meditative+ set's numbers: 4000 + n (the release, v0.3.15, issue #1187)", () => {
+  function setDef(id: string, set: CardDef["set"], index: string): CardDef {
+    return { ...unitDef(id, index, false), set };
+  }
+  const CLASSIC_43 = "classic-043";
+  const PLUS_78 = "classicplus-078";
+  const MEDITATIVE_1 = "meditative-001";
+  const MEDITATIVE_102 = "meditative-102";
+  const MEDITATIVE_PLUS_1 = "meditativeplus-001";
+  const MEDITATIVE_PLUS_26 = "meditativeplus-026";
+  const MEDITATIVE_PLUS_TOKEN = "meditativeplus-016-1";
+  const fiveSets: CatalogSnapshot = {
+    version: catalog.version,
+    cards: {
+      ...catalog.cards,
+      [CLASSIC_43]: setDef(CLASSIC_43, "Classic", "43"),
+      [PLUS_78]: setDef(PLUS_78, "Classic+", "78"),
+      [MEDITATIVE_1]: setDef(MEDITATIVE_1, "Meditative", "1"),
+      [MEDITATIVE_102]: setDef(MEDITATIVE_102, "Meditative", "102"),
+      [MEDITATIVE_PLUS_1]: setDef(MEDITATIVE_PLUS_1, "Meditative+", "1"),
+      [MEDITATIVE_PLUS_26]: setDef(MEDITATIVE_PLUS_26, "Meditative+", "26"),
+      [MEDITATIVE_PLUS_TOKEN]: {
+        ...setDef(MEDITATIVE_PLUS_TOKEN, "Meditative+", "16.1"),
+        token: true,
+        tags: ["Human", "Prime", "Token"],
+        rarity: "Token",
+      },
+    },
+  };
+  /** The same catalog without the set, as a catalog from before the release holds it (R1420). */
+  const withoutSet: CatalogSnapshot = {
+    version: catalog.version,
+    cards: Object.fromEntries(Object.entries(fiveSets.cards).filter(([, def]) => def.set !== "Meditative+")),
+  };
+
+  /**
+   * A version 2 code of Core, Classic, Classic+ and Meditative cards, exactly as this client wrote it
+   * before the Meditative+ set had an offset (encoded with the offsets of v0.3.5 and pinned here).
+   */
+  const MINTED_BEFORE = "JKO2.EkJlZm9yZSBNZWRpdGF0aXZlKwYrkwieELkXnhgBIfE";
+  const MINTED_CARDS: readonly string[] = [fixtureCardId(43), CLASSIC_43, PLUS_78, MEDITATIVE_1, MEDITATIVE_102, fixtureCardId(1)];
+
+  it("R1410 numbers a Meditative+ card 4000 + n, after Meditative's 3000, and moves no other set's offset", () => {
+    expect(CATALOG_NUMBER_SET_OFFSETS).toMatchObject({ Core: 0, Classic: 1000, "Classic+": 2000, Meditative: 3000, "Meditative+": 4000 });
+    expect(catalogNumberOf({ set: "Meditative+", index: "1" })).toBe(4001);
+    expect(catalogNumberOf({ set: "Meditative+", index: "26" })).toBe(4026);
+    // The set's tokens carry "N.k" indices, so no code can name one, as for every set.
+    expect(catalogNumberOf({ set: "Meditative+", index: "16.1" })).toBeUndefined();
+    // The other sets' numbers are the ones every earlier code carries.
+    expect(catalogNumberOf({ set: "Core", index: "43" })).toBe(43);
+    expect(catalogNumberOf({ set: "Classic", index: "43" })).toBe(1043);
+    expect(catalogNumberOf({ set: "Classic+", index: "78" })).toBe(2078);
+    expect(catalogNumberOf({ set: "Meditative", index: "102" })).toBe(3102);
+  });
+
+  it("R1410 a code minted before the Meditative+ set had a number is byte for byte the code written now, and reads back the same", () => {
+    expect(encodeDeckCode("Before Meditative+", MINTED_CARDS, fiveSets)).toBe(MINTED_BEFORE);
+    for (const cards of [fiveSets, withoutSet]) {
+      const decoded = expectOk(decodeDeckCode(MINTED_BEFORE, cards, null));
+      expect(decoded.name).toBe("Before Meditative+");
+      expect(decoded.cards).toEqual(MINTED_CARDS);
+      expect(decoded.dropped).toEqual({ unknown: [], tokens: [], duplicates: [], overflow: [] });
+    }
+  });
+
+  it("R1410 writes the five sets' cards as five sets' numbers, LEB128, and reads each back to its own set", () => {
+    const cards = [fixtureCardId(1), CLASSIC_43, PLUS_78, MEDITATIVE_102, MEDITATIVE_PLUS_1, MEDITATIVE_PLUS_26];
+    const code = encodeDeckCode("Five sets", [...cards, MEDITATIVE_PLUS_TOKEN], fiveSets);
+    expect(code.startsWith(`${DECK_CODE_PREFIX}2.`)).toBe(true);
+    const bytes = bodyBytes(code);
+    const nameLength = bytes[0] ?? 0;
+    // [count 6] [1] [1043] [2078] [3102] [4001: 0xa1 0x1f] [4026: 0xba 0x1f]; the token has no number.
+    expect(bytes.slice(1 + nameLength, bytes.length - 2)).toEqual([
+      6,
+      1,
+      ...varint(1043),
+      ...varint(2078),
+      ...varint(3102),
+      ...varint(4001),
+      ...varint(4026),
+    ]);
+    expect(varint(4001)).toEqual([0xa1, 0x1f]);
+    expect(expectOk(decodeDeckCode(code, fiveSets, null)).cards).toEqual(cards);
+  });
+
+  it("R1410 a catalog that does not hold the set (one from before the release, R1420) drops its numbers as unknown", () => {
+    const code = encodeDeckCode("Too soon", [fixtureCardId(1), MEDITATIVE_PLUS_1, MEDITATIVE_102, MEDITATIVE_PLUS_26], fiveSets);
+    const decoded = expectOk(decodeDeckCode(code, withoutSet, null));
+    expect(decoded.cards).toEqual([fixtureCardId(1), MEDITATIVE_102]);
+    expect(decoded.dropped.unknown).toEqual([4001, 4026]);
+    // A version 1 code's numbers are Core's, so 4001 there was never a Meditative+ card.
+    const v1 = `${DECK_CODE_PREFIX}${String(DECK_CODE_CORE_ONLY_VERSION)}.`;
+    expect(expectOk(decodeDeckCode(rawCode("Old", [1, 4001], [], v1), fiveSets, null)).dropped.unknown).toEqual([4001]);
   });
 });
