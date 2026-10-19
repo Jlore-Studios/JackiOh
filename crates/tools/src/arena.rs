@@ -1105,7 +1105,7 @@ pub(crate) fn paired_interval(edges: &[f64]) -> (f64, f64, f64) {
     (mean, (mean - half).max(-1.0), (mean + half).min(1.0))
 }
 
-fn round_share(share: f64) -> f64 {
+pub(crate) fn round_share(share: f64) -> f64 {
     (share * SHARE_PRECISION).round() / SHARE_PRECISION
 }
 
