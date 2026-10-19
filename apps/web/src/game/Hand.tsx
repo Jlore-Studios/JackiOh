@@ -168,6 +168,7 @@ export default function Hand(props: HandProps): ReactElement {
             testId={handTestid}
             card={card}
             className="card-hand"
+            inOwnHand={yours}
             target={{ on: "hand", instanceId: card.instanceId }}
             touchHold={props.touchHold}
             highlight={props.highlight}

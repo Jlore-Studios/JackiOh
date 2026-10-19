@@ -69,3 +69,25 @@ export const ART_NEAR_MARGIN_PX = 600;
  * flicked straight past never dwells this long; the first screen waits it too, so it stays short.
  */
 export const ART_DWELL_MS = 150;
+
+/**
+ * R1295000: the most faces whose cosmetic foil moves at once (cosmetics.ts). A face past it wears
+ * its foil's still version until a moving one leaves, so a full hand and board never animate a
+ * dozen sheens together.
+ */
+export const COSMETIC_FOIL_ANIMATED_MAX = 6;
+
+/**
+ * R1295000: the Radiant gold, as a window in HSL that holds every colour cards.css's Radiant face
+ * declares. No border's colours may fall inside it (cosmetics.test.tsx), so no border passes for
+ * a Radiant trim. The hue's two ends, in degrees.
+ */
+export const RADIANT_GOLD_HUE_MIN_DEG = 38;
+/** R1295000: the Radiant gold window's upper hue (RADIANT_GOLD_HUE_MIN_DEG). */
+export const RADIANT_GOLD_HUE_MAX_DEG = 56;
+/** R1295000: the Radiant gold window's least saturation, 0 to 1: a greyer colour reads as no gold. */
+export const RADIANT_GOLD_SATURATION_MIN = 0.5;
+/** R1295000: the Radiant gold window's darkest lightness, 0 to 1: below it a gold reads as brown. */
+export const RADIANT_GOLD_LIGHTNESS_MIN = 0.3;
+/** R1295000: the Radiant gold window's lightest lightness, 0 to 1: above it a gold reads as cream. */
+export const RADIANT_GOLD_LIGHTNESS_MAX = 0.9;

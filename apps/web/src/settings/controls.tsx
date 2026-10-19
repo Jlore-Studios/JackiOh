@@ -5,6 +5,7 @@
 
 import { useId, type CSSProperties, type ReactElement } from "react";
 
+import { cosmeticsOf, resolveCosmetic, useCosmetics, writeCosmetics, type CosmeticKind } from "../cards/cosmetics.ts";
 import { CARD_SETTINGS_FIELDS, useCardSettings, writeCardSettings, type CardSettings } from "../cards/settings.ts";
 import { FX_SPEED_DEFAULT, FX_SPEED_MAX, FX_SPEED_MIN, FX_SPEED_STEP } from "../fx/constants.ts";
 import { useFxSettings, type FxIntensity } from "../fx/settings.ts";
@@ -186,6 +187,38 @@ export function AnimatedFoilSwitch(): ReactElement {
 /** R1017001: the hero portraits' cards drawn as full art, or with their text like any card. */
 export function FullArtSwitch(): ReactElement {
   return <CardSettingSwitch setting="fullArt" />;
+}
+
+/** R1295000: a row per card cosmetic, in the registry's kinds' order, each list in the registry's order. */
+const COSMETIC_ROWS: readonly { kind: CosmeticKind; label: string; hint: string }[] = [
+  { kind: "foil", label: "Foil", hint: "A sheen over the art of your own cards. Mythic and Radiant cards keep their own foil." },
+  { kind: "finish", label: "Finish", hint: "How your own cards are printed. Radiant cards keep their gold." },
+  { kind: "border", label: "Border", hint: "The trim around your own cards. Radiant cards keep their gold trim." },
+];
+
+/**
+ * R1295000: the card cosmetics your own cards wear in a game, every one unlocked. A pick this
+ * client does not know (a newer client's) shows as its kind's default, which is what it draws.
+ */
+export function CardCosmeticsControls(): ReactElement {
+  const picks = useCosmetics();
+  return (
+    <>
+      {COSMETIC_ROWS.map((row) => (
+        <SelectRow
+          key={row.kind}
+          label={t(row.label)}
+          hint={t(row.hint)}
+          testId={`setting-cosmetic-${row.kind}`}
+          value={resolveCosmetic(row.kind, picks[row.kind])}
+          options={cosmeticsOf(row.kind).map((cosmetic) => ({ value: cosmetic.id, label: cosmetic.name }))}
+          onChange={(value) => {
+            writeCosmetics({ [row.kind]: value });
+          }}
+        />
+      ))}
+    </>
+  );
 }
 
 /** R669: the vibration on a drop, a hit and the viewer's turn start, on a phone that has one. */

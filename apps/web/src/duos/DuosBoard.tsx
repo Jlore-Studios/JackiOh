@@ -388,6 +388,7 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error, replay 
           legal={replay ? NOTHING : duelLegal}
           onAction={replay ? ignore : sendDuel}
           replay={replay}
+          wearCosmetics
           error={error ?? null}
           autoEndTurn={false}
           resultForm="chip"

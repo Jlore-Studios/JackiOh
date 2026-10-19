@@ -1,0 +1,159 @@
+/*
+ * R1295000: the card cosmetics a player's own cards wear (cosmetics.ts), each on its own attribute
+ * so none touches the rarity foil (`data-foil`, cards.css): a border on `data-frame`, a finish on
+ * `data-finish` and a foil on `data-cosmetic-foil`. A face wearing the defaults carries none of
+ * them, so nothing here reaches it. This sheet loads after cards.css, whose `--cf-edge` and
+ * `--cf-frame` it overrides at the same specificity.
+ *
+ * A border is three trim colours, none in the Radiant gold (cosmetics.test.tsx holds them out of
+ * it), drawn as the full face's edge and the art's bezel, and on the board minion, whose panel
+ * covers its edge, as a rim inside the panel. A finish is the print: a linen weave over the face,
+ * a panel in black ink, or a gold hairline round the edge. A foil is a sheen over the art window
+ * only. Each foil's still version comes first; it moves only inside the motion gate below, and
+ * only on a face that holds one of COSMETIC_FOIL_ANIMATED_MAX slots (`data-cosmetic-motion`), by
+ * transform or opacity alone. Under reduced motion (the media query, or the settings' Reduce
+ * motion on <html>) every foil holds its still version.
+ */
+
+/* ---------------------------------------------------------------------------- borders --- */
+
+.cf[data-frame="border-bone"] {
+  --trim-1: #e8e2d4;
+  --trim-2: #b9b09a;
+  --trim-3: #8c8472;
+}
+
+.cf[data-frame="border-circuit"] {
+  --trim-1: #7fffd4;
+  --trim-2: #1fbf8f;
+  --trim-3: #0f3d2e;
+}
+
+.cf[data-frame="border-wood"] {
+  --trim-1: #b07a46;
+  --trim-2: #8a5a32;
+  --trim-3: #5a3a22;
+}
+
+.cf[data-frame] {
+  --cf-edge: linear-gradient(150deg, var(--trim-1), var(--trim-2) 40%, var(--trim-3));
+  --cf-bezel: var(--trim-2);
+}
+
+.cf[data-frame="border-circuit"] {
+  --cf-edge: repeating-linear-gradient(90deg, var(--trim-1) 0 1px, transparent 1px 6px), linear-gradient(150deg, var(--trim-2), var(--trim-3));
+}
+
+.cf[data-frame="border-wood"] {
+  --cf-edge: repeating-linear-gradient(100deg, var(--trim-3) 0 2px, transparent 2px 7px), linear-gradient(150deg, var(--trim-1), var(--trim-2));
+}
+
+.cf[data-layout="minion"][data-frame] .cf-scale {
+  box-shadow:
+    inset 0 0 0 1.2cqmin var(--trim-2),
+    inset 0 -3cqh 5cqh #0007;
+}
+
+/* --------------------------------------------------------------------------- finishes --- */
+
+.cf[data-finish]::before {
+  content: "";
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.cf[data-finish="finish-linen"]::before {
+  background:
+    repeating-linear-gradient(0deg, #ffffff14 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, #00000014 0 1px, transparent 1px 3px);
+  mix-blend-mode: soft-light;
+}
+
+.cf[data-finish="finish-matte-black-ink"] {
+  --cf-frame: color-mix(in srgb, var(--cf-type) 30%, #161616);
+}
+
+.cf[data-finish="finish-gilded-edge"]::before {
+  box-shadow:
+    inset 0 0 0 1px #e0b84f,
+    inset 0 0 0 2px #0000004d;
+}
+
+/* ------------------------------------------------------------------------------ foils --- */
+
+.cf[data-cosmetic-foil] .cf-art::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.cf[data-cosmetic-foil="foil-holo-sweep"] .cf-art::after {
+  background: linear-gradient(90deg, transparent 0%, #dff4ff59 35%, #ffffff80 50%, #c8fff059 65%, transparent 100%);
+}
+
+.cf[data-cosmetic-foil="foil-rainbow"] .cf-art::after {
+  width: 200%;
+  background: repeating-linear-gradient(90deg, #ff5f6d40 0%, #f6ff8c40 8.33%, #6ac8ff40 16.67%, #ff5f6d40 25%);
+}
+
+.cf[data-cosmetic-foil="foil-cracked-ice"] .cf-art::after {
+  background:
+    linear-gradient(32deg, transparent 47%, #e6f6ffb3 48%, transparent 49%),
+    linear-gradient(-58deg, transparent 61%, #e6f6ff99 62%, transparent 63%),
+    linear-gradient(160deg, #bfe8ff33, #ffffff14);
+}
+
+/* The holo band crosses the window and leaves it; the rainbow drifts one period of its stripes, so
+   the loop has no seam; the cracked ice glints in place. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-holo-sweep"][data-cosmetic-motion="animated"] .cf-art::after {
+    will-change: transform;
+    animation: cosmetic-foil-sweep 7s linear infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-rainbow"][data-cosmetic-motion="animated"] .cf-art::after {
+    will-change: transform;
+    animation: cosmetic-foil-drift 9s linear infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-cracked-ice"][data-cosmetic-motion="animated"] .cf-art::after {
+    will-change: opacity;
+    animation: cosmetic-foil-glint 3s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes cosmetic-foil-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes cosmetic-foil-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-25%);
+  }
+}
+
+@keyframes cosmetic-foil-glint {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}

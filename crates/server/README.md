@@ -36,6 +36,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Persistence | `db/store.rs` (`Db`, `Tx`), `db/pg.rs`, `db/fake.rs`, `db/migrate.rs` | one method per store operation, over Postgres or the in-memory fake |
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
 | Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs`, `calibrate.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, the pool, and the strengths' measured seed ratings (R1453, R641000, R1454, R1452, R748000) |
+| Cosmetics | `cosmetics.rs`, `cosmetics.json` | the card cosmetics registry and its check: no id twice, ids a settings text can carry, one default per kind (R1295000) |
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
 | Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings) and `live_match_of` (§13) |
@@ -721,6 +722,8 @@ real Postgres, so only the three Docker suites check them (CI's `db` job).
 
 `tests/export_config.rs` writes `apps/web/src/wire/serverConfig.ts`, the constants the client and e2e
 read; CI fails when a run changes it.
+`tests/export_cosmetics.rs` writes `apps/web/src/wire/generated/cosmetics.ts` from `cosmetics.json`,
+the card cosmetics registry `src/cosmetics.rs` checks (R1295000); CI fails when a run changes it too.
 
 ## Conventions
 

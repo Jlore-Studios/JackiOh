@@ -816,8 +816,8 @@ pub const TUTORIAL_LESSON_ID_MAX_LENGTH: usize = 40;
 // interpret, so these only bound what one account can hold.
 // ---------------------------------------------------------------------------------------------
 
-/// SPEC §11 R633: the most setting groups one account keeps (the client has four: gameplay, audio,
-/// effects and card display). Mirrored in `app.settings` (0018).
+/// SPEC §11 R633: the most setting groups one account keeps (the client has five: gameplay, audio,
+/// effects, card display and card cosmetics, R1295000). Mirrored in `app.settings` (0018).
 pub const PLAYER_SETTINGS_GROUPS_MAX: usize = 8;
 /// SPEC §11 R633: the most settings in one group.
 pub const PLAYER_SETTINGS_KEYS_MAX: usize = 32;
