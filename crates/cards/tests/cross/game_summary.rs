@@ -162,7 +162,7 @@ mod summarize_game_over_real_cards_s9_11 {
         let mut replaced_plays = 0;
         let mut radiant_plays = 0;
 
-        for n in 1..=GAMES {
+        for n in 26..=26 {
             let seed = format!("summary-cards-{n}");
             let shuffled = create_rng(&format!("summary-cards-decks-{n}"), 0).shuffle(&pool);
             let decks: (Vec<String>, Vec<String>) =
@@ -211,6 +211,18 @@ mod summarize_game_over_real_cards_s9_11 {
                     panic!("{seed}: {} refused: {error}", action.action_type());
                 }
                 let events: &[GameEvent] = &result.events;
+                {
+                    let interesting = events.iter().any(|e| matches!(e, GameEvent::CardPlayed { .. } | GameEvent::Countered { .. } | GameEvent::AddedToHand { .. }));
+                    if interesting {
+                        eprintln!("DBG action {} {:?}", log.len(), serde_json::to_string(&action.body).unwrap_or_default());
+                        for e in events {
+                            let j = serde_json::to_string(e).unwrap_or_default();
+                            if j.contains("cardPlayed") || j.contains("ountered") || j.contains("addedToHand") || j.contains("stol") || j.contains("Stol") || j.contains("discarded") || j.contains("announced") || j.contains("transformed") || j.contains("controlChanged") {
+                                eprintln!("DBG   {j}");
+                            }
+                        }
+                    }
+                }
                 for event in events {
                     match event {
                         GameEvent::CardAnnounced { instance_id, .. } => {
