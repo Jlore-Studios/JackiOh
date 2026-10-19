@@ -5657,6 +5657,8 @@
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-10-19T06:07:11Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "39208114527",
       "self_check_findings": [],
       "started_at": "2026-10-19T06:10:11Z",
