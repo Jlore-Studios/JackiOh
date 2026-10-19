@@ -601,8 +601,8 @@ mod e18_a_whole_game_with_the_new_prompts {
                             let Some(pending) = after.pending.as_ref() else {
                                 return;
                             };
-                            // R1279000: no prompt opens for a player who is not active, so a
-                            // mode prompt is held by whoever's turn it is.
+                            // R1279000: no opponent-held prompt opens while its holder is not
+                            // active, so a mode prompt is held by whoever's turn it is.
                             let mode = pending.kind == PromptKind::Mode;
                             let new_kind = [
                                 PromptKind::Number,

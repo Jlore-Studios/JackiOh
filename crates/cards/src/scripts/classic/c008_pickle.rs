@@ -18,7 +18,7 @@
 //! card declares (`param`) are read once as the Spell resolves and carried with it, so every question
 //! of one resolution reads the same numbers.
 //!
-//! THE WAIT (R1279000): no prompt opens for a player who is not active, so while the opponent is not
+//! THE WAIT (R1279000): no opponent-held prompt opens while its holder is not active, so while the opponent is not
 //! the active player the Cry schedules the first question with the engine's `delay` (at the start of
 //! the opponent's next turn) carrying the chain, and the `delayed` hook asks it when that turn starts.
 //! Each later question follows its answer on the opponent's turn as before.
@@ -220,7 +220,7 @@ fn pickle() -> Script {
                 numbers: read_numbers(ctx),
                 n: 1,
             };
-            // R1279000: no prompt opens for a player who is not active. While the opponent is not
+            // R1279000: no opponent-held prompt opens while its holder is not active. While the opponent is not
             // the active player the first question waits for the start of their next turn, carrying
             // the chain in the delay's data; on their turn it asks at once, as before.
             if ctx.state.active == opponent_of(ctx.controller) {
@@ -397,7 +397,7 @@ mod tests {
                 crate::register_all();
                 let mut s = pickle(false, Piles::default());
                 s.play(PICKLE, json!({}));
-                // No prompt opens for a player who is not active.
+                // No opponent-held prompt opens while its holder is not active.
                 assert!(s.state().pending.is_none());
                 s.end_turn();
                 let pending = open(&s);

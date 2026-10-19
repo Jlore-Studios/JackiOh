@@ -191,7 +191,7 @@ fn reward_effects(ctx: &EffectContext<'_>, id: &str, defer_g: bool) -> Vec<Effec
             "prompt": "Bounce a permanent",
         })))],
         "G" => {
-            // R1279000: no prompt opens for a player who is not active. While the opponent is not
+            // R1279000: no opponent-held prompt opens while its holder is not active. While the opponent is not
             // the active player the discard waits for the start of their next turn; on their turn
             // it asks at once, as before.
             if defer_g && reward_g_defers(ctx) {
@@ -1145,7 +1145,7 @@ mod tests {
                 on_quest(&mut s, "4", 1, json!({}));
                 any_action(&mut s);
                 s.answer(json!("G"));
-                // No prompt opens for a player who is not active (R1279000).
+                // No opponent-held prompt opens while its holder is not active (R1279000).
                 assert!(s.state().pending.is_none());
                 s.end_turn();
                 let pending = must(s.state().pending.clone(), "the discard prompt");
@@ -1920,7 +1920,7 @@ mod tests {
                 }));
                 on_quest(&mut s, "5", 12, json!({ "done": ["1", "2"] }));
                 any_action(&mut s);
-                // No prompt opens for a player who is not active (R1279000): G waits, while H's
+                // No opponent-held prompt opens while its holder is not active (R1279000): G waits, while H's
                 // draw landed and its quest opened at once.
                 assert!(s.state().pending.is_none());
                 expect_line_matches(&s, json!({ "active": ["9"], "done": ["1", "2", "5"] }));
