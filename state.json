@@ -5615,6 +5615,13 @@
     "1267": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-19T05:41:57Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "rule 9 (stands alone): with no GitHub access I cannot verify no open PR touches these files, so easy is unprovable"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
