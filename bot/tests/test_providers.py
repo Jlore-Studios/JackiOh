@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -44,6 +45,7 @@ class ParseTests(unittest.TestCase):
                                          "claude-6", "claude-5", "muse", "agy", "gpt",
                                          "claude-2", "devin"))
         self.assertEqual((pool.max_parallel, pool.machine_parallel), (11, 6))
+        self.assertTrue(pool.balance)  # the load balancer (`plan.balance`)
         self.assertEqual({p.cli for p in pool.ordered()}, set(providers.CLIS))
         self.assertEqual(len([p for p in pool.ordered() if p.cli == "claude"]), 7)
         first = pool.get("claude-1")
@@ -97,6 +99,7 @@ class ParseTests(unittest.TestCase):
         broken(lambda r: r["providers"]["gpt"].update(roles=["build", "dance"]))
         broken(lambda r: r.update(priority=["claude-1"]))
         broken(lambda r: r.update(max_parallel=0))
+        broken(lambda r: r.update(balance="yes"))
 
     def test_tier_mistakes_are_errors(self):
         def broken(change, words) -> None:
@@ -246,6 +249,39 @@ class AvailabilityTests(unittest.TestCase):
         self.assertIn("spent 65 of its 60 minutes", self.why("muse", s, pool=budget))
         providers.note_usage(s, "muse", None, None, NIGHT - timedelta(days=9), minutes=999)
         self.assertIn("spent 65", self.why("muse", s, pool=budget))  # a week-old run has gone
+
+    def test_room_is_the_share_of_its_allowance_left(self):
+        """`room`, the load balancer's reading: the tightest window's share of its cap that the
+        last reading leaves free (a window with no cap has the whole allowance), and of its
+        minute budgets; a window reset since the reading is all free, a refusal leaves none."""
+        pool = providers.load(ROOT)
+        later = clock.iso(NIGHT + timedelta(days=1))
+
+        def room(provider_id, at=NIGHT, pool=pool, refused=None, **windows):
+            entry = {"usage": {window: {"utilization": used, "resets_at": later}
+                               for window, used in windows.items()}}
+            if refused:
+                entry["refused_until"] = refused
+            return providers.room(pool.get(provider_id), entry, at, self.zone)
+
+        self.assertEqual(room("claude-5"), 1.0)  # no reading
+        # claude-5's caps are 40% of its 5-hour session and 60% of its week.
+        self.assertAlmostEqual(room("claude-5", five_hour=0.2, seven_day=0.3), 0.5)
+        self.assertAlmostEqual(room("claude-5", five_hour=0.1, seven_day=0.45), 0.25)
+        self.assertEqual(room("claude-5", five_hour=0.5), 0.0)  # past its cap
+        self.assertEqual(room("claude-5", at=NIGHT + timedelta(days=2), five_hour=0.5), 1.0)
+        self.assertEqual(room("claude-5", refused=later), 0.0)
+        # claude-3 has no caps: its readings count against the whole allowance.
+        self.assertAlmostEqual(room("claude-3", seven_day=0.7), 0.3)
+        # claude-7: 70% of its session in its 01:00–10:00 window, 50% outside it.
+        morning = DAY - timedelta(hours=2, minutes=30)  # 09:30 CDT
+        self.assertAlmostEqual(room("claude-7", at=morning, five_hour=0.35), 0.5)
+        self.assertAlmostEqual(room("claude-7", at=DAY, five_hour=0.35), 0.3)
+        budget = pool_with(muse={"limits": {"mode": "caps", "seven_day_minutes": 60}})
+        entry: dict = {"providers": {}}
+        providers.note_usage(entry, "muse", None, None, NIGHT - timedelta(hours=1), minutes=45)
+        self.assertAlmostEqual(providers.room(budget.get("muse"), entry["providers"]["muse"],
+                                              NIGHT, self.zone), 0.25)
 
     def test_the_old_top_level_readings_belong_to_the_first_claude_account(self):
         later = clock.iso(NIGHT + timedelta(hours=2))
@@ -579,38 +615,19 @@ class MatchingTests(unittest.TestCase):
                          (5, "agy", "build"))
         gh.runs["4"] = {"status": "in_progress"}
         ctx.store.update(lambda s: state_item(s, 5).update(run_id="4"))
-        gh.add_issue(7, labels=(LABEL_BUILD,))
-        planned = plan_mod.make(ctx)
-        # Then the Sonnet seats in usage order: claude-3 (claude-1 works by day too, but its
-        # Sonnet comes after claude-3's and claude-7's).
-        self.assertEqual((planned["number"], planned["provider"], planned["action"]),
-                         (7, "claude-3", "build"))
-        gh.runs["5"] = {"status": "in_progress"}
-        ctx.store.update(lambda s: state_item(s, 7).update(run_id="5"))
-        gh.add_issue(8, labels=(LABEL_BUILD,))
-        planned = plan_mod.make(ctx)
-        self.assertEqual((planned["number"], planned["provider"], planned["action"]),
-                         (8, "claude-7", "build"))
-        gh.runs["6"] = {"status": "in_progress"}
-        ctx.store.update(lambda s: state_item(s, 8).update(run_id="6"))
-        gh.add_issue(9, labels=(LABEL_BUILD,))
-        planned = plan_mod.make(ctx)
-        # claude-3 holds both its lanes (#4 and #7); the capped accounts hold one lane each
-        # (#695), so claude-1's Sonnet is next.
-        self.assertEqual((planned["number"], planned["provider"], planned["action"]),
-                         (9, "claude-1", "build"))
-        gh.runs["7"] = {"status": "in_progress"}
-        ctx.store.update(lambda s: state_item(s, 9).update(run_id="7"))
-        gh.add_issue(10, labels=(LABEL_BUILD,))
-        planned = plan_mod.make(ctx)
-        self.assertEqual((planned["number"], planned["provider"], planned["action"]),
-                         (10, "claude-4", "build"))
-        gh.runs["8"] = {"status": "in_progress"}
-        ctx.store.update(lambda s: state_item(s, 10).update(run_id="8"))
-        gh.add_issue(11, labels=(LABEL_BUILD,))
-        planned = plan_mod.make(ctx)
-        self.assertEqual((planned["number"], planned["provider"], planned["action"]),
-                         (11, "claude-6", "build"))
+        # Then the Sonnet seats: claude-3 holds #4 on one of its two lanes, so the load
+        # balancer (`plan.balance`) gives each next one to an account holding none, in usage
+        # order (claude-1 works by day too, after claude-7), and claude-3's second lane comes
+        # after all of them; the capped accounts hold one lane each (#695).
+        for run, (number, provider) in enumerate(((7, "claude-7"), (8, "claude-1"),
+                                                  (9, "claude-4"), (10, "claude-6"),
+                                                  (11, "claude-5"), (12, "claude-3")), start=5):
+            gh.add_issue(number, labels=(LABEL_BUILD,))
+            planned = plan_mod.make(ctx)
+            self.assertEqual((planned["number"], planned["provider"], planned["action"]),
+                             (number, provider, "build"))
+            gh.runs[str(run)] = {"status": "in_progress"}
+            ctx.store.update(lambda s, n=number, r=str(run): state_item(s, n).update(run_id=r))
         # Past 90% claude-2 is held; claude-3's readings never stop it, only a refusal does.
         later = clock.iso(DAY + timedelta(days=2))
         full = {"five_hour": {"utilization": 0.99, "resets_at": later},
@@ -621,6 +638,38 @@ class MatchingTests(unittest.TestCase):
             pool.get("claude-2"), state, DAY, "America/Chicago", everyone))
         self.assertIsNone(providers.availability(
             pool.get("claude-3"), state, DAY, "America/Chicago", everyone))
+
+    def test_the_load_balancer_spreads_a_tier_by_room(self):
+        """`balance` (on in providers.json): among the seats of one model, the subscription with
+        the most room under its caps (`providers.room`) builds, whatever the usage order; level
+        ones (the same `BALANCE_STEP`) go by the runs they hold, then the usage order. Off, the
+        usage order alone decides, and claude-3 is spent first up to its cap."""
+        later = clock.iso(NIGHT + timedelta(days=2))
+
+        def builder(claude_3, claude_7, balance=True):
+            gh = FakeGitHub()
+            gh.add_issue(4, labels=(LABEL_BUILD, "difficulty:hard"))
+            cfg = make_config(env=secrets("CLAUDE_CODE_OAUTH_TOKEN_3",
+                                          "CLAUDE_CODE_OAUTH_TOKEN_7"))
+            ctx = make_ctx(gh, cfg=dataclasses.replace(
+                cfg, pool=dataclasses.replace(cfg.pool, balance=balance)))
+            ctx.store.update(lambda s: s.setdefault("providers", {}).update({
+                name: {"usage": {"seven_day": {"utilization": week, "resets_at": later}}}
+                for name, week in (("claude-3", claude_3), ("claude-7", claude_7))}))
+            return plan_mod.make(ctx)["provider"]
+
+        self.assertEqual(builder(0.8, 0.1), "claude-7")  # 20% of its week left to 90%
+        self.assertEqual(builder(0.8, 0.1, balance=False), "claude-3")
+        self.assertEqual(builder(0.12, 0.08), "claude-3")  # level: the usage order
+        self.assertEqual(builder(0.05, 0.5), "claude-3")
+        # Reviewers and planners go in the same order (`ranked`).
+        pool = make_config().pool
+        seats = [pool.best_seat(pool.get(name)) for name in ("claude-7", "claude-3", "claude-1")]
+        self.assertEqual([s.provider.id for s in plan_mod.ranked(pool, seats)],
+                         ["claude-3", "claude-7", "claude-1"])
+        spread = {"claude-3": (-2, 1), "claude-7": (-9, 0), "claude-1": (-9, 1)}
+        self.assertEqual([s.provider.id for s in plan_mod.ranked(pool, seats, spread)],
+                         ["claude-7", "claude-1", "claude-3"])
 
     def test_hard_work_waits_for_a_strong_model_and_comes_first(self):
         gh = FakeGitHub()

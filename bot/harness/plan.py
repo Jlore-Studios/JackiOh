@@ -17,9 +17,10 @@ is forced, under its limits):
 
 - **build, revise, fix**: the first free seat in the lane's tier order (#695: Muse before
   agy before Sonnet, GPT before Devin), on the weakest seat of a subscription that meets the
-  tier; ties break by the usage order (`priority`), with `build_last` ones such as claude-2
-  after all of them. The subscription that planned the item builds only when no other lane
-  seat is free, so planner and builder differ (and the run may switch: `work._switch`). A
+  tier; ties break by the load balancer (`balance`: the most room under its caps, then the
+  fewest runs held) and then the usage order (`priority`), with `build_last` ones such as
+  claude-2 after all of them. The subscription that planned the item builds only when no other
+  lane seat is free, so planner and builder differ (and the run may switch: `work._switch`). A
   builder above the item's tier (no seat of that tier free, or one comes later in the tier
   order) is said in the run's log.
 - **plan**: a build that has no plan yet gets a planning session first, on the lane's weakest
@@ -50,7 +51,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import timedelta
 from itertools import islice
-from typing import Any, Iterator
+from typing import Any, Iterator, Mapping
 
 from harness import asks, declined, issueplan, review_rule, threads
 from harness import journal as journal_mod
@@ -300,20 +301,52 @@ def free_providers(ctx: Context, state: dict[str, Any], lanes: Lanes, role: str,
             if _usable(ctx, state, p, lanes, role, forced=forced, quiet_ok=quiet_ok)]
 
 
-def ranked(pool: Pool, seats: list[Seat]) -> list[Seat]:
-    """`seats` in the order the router tries them: the usage order (`priority`), then the
-    tier's own preference order."""
+#: A subscription's place in the load balancer (`balance`): minus its room in steps, then the
+#: runs it holds. Lower goes first.
+Balance = Mapping[str, tuple[int, int]]
+#: Every subscription's place while the load balancer is off: all level, so the usage order
+#: decides.
+LEVEL = (0, 0)
+
+
+def balance(ctx: Context, state: dict[str, Any], lanes: Lanes) -> Balance:
+    """The load balancer (`balance` in providers.json): each subscription's key, so that among
+    seats the router would otherwise order by the usage order alone, the one with the most room
+    under its caps goes first (`providers.room`, in steps of `BALANCE_STEP`), then the one
+    holding the fewest runs, and only then the usage order. Work spreads over a tier's
+    subscriptions instead of spending the first in `priority` to its cap (claude-3 took 168
+    runs in a week to claude-5's 13) while the rest sit idle. Empty when it is off."""
+    pool = ctx.cfg.pool
+    if not pool.balance:
+        return {}
+    at = ctx.now()
+    spread = {}
+    for provider in pool.ordered():
+        room = providers_mod.room(provider, providers_mod.peek_record(state, provider.id), at,
+                                  ctx.cfg.timezone)
+        held = lanes.count(provider.id) + lanes.planning_by(provider.id)
+        spread[provider.id] = (-round(room / providers_mod.BALANCE_STEP), held)
+    return spread
+
+
+def ranked(pool: Pool, seats: list[Seat], spread: Balance | None = None) -> list[Seat]:
+    """`seats` in the order the router tries them: the load balancer's (`spread`), then the
+    usage order (`priority`), then the tier's own preference order."""
     order = {name: i for i, name in enumerate(pool.priority)}
-    return sorted(seats, key=lambda seat: (order.get(seat.provider.id, len(order)), seat.rank))
+    spread = spread or {}
+    return sorted(seats, key=lambda seat: (spread.get(seat.provider.id, LEVEL),
+                                           order.get(seat.provider.id, len(order)), seat.rank))
 
 
 def builder_seat(pool: Pool, providers: list[Provider], difficulty: str, *,
-                 part: bool = False, avoid: str = "",
-                 audit_tier: str = "") -> tuple[Seat | None, str]:
+                 part: bool = False, avoid: str = "", audit_tier: str = "",
+                 spread: Balance | None = None) -> tuple[Seat | None, str]:
     """Who builds an item of `difficulty`: the first free seat in the lane's tier order
     (#695: Muse before agy before Sonnet, GPT before Devin), on its weakest seat that meets
     the tier; with a note when that seat is above the tier, saying why (none of that tier is
-    free, or the tier order puts this one first). One lane, one owner (#725): a medium or
+    free, or the tier order puts this one first). Among subscriptions whose seat is the same
+    model (the Claude accounts' Sonnet or Opus), the load balancer (`spread`) goes before the
+    usage order. One lane, one owner (#725): a medium or
     hard item stays with the subscription that planned it (`avoid`) when that one can build
     it, so planner and builder are the same; an easy item still goes weak-first, since its
     planner (medium) must not spend its lane building what a weak seat builds. A revision
@@ -361,11 +394,12 @@ def builder_seat(pool: Pool, providers: list[Provider], difficulty: str, *,
     others = [p for p in providers if p.id != avoid]
     fallback = bool(avoid) and difficulty == "easy" and not any(
         seat for p in others for seat in pool.seats(p) if builds(p, seat))
+    spread = spread or {}
     order = sorted(providers if (fallback or owner_first) else others,
                    key=lambda provider: (
         weakest_key(provider),
         not (provider.easy_first and difficulty == "easy"), strongest(provider) if part else 0,
-        provider.build_last,
+        provider.build_last, spread.get(provider.id, LEVEL),
         pool.priority.index(provider.id) if provider.id in pool.priority else len(pool.priority)))
     if owner_first:
         owned = [p for p in order if p.id == avoid]
@@ -430,7 +464,7 @@ def lane_planners(ctx: Context, state: dict[str, Any], lanes: Lanes, *, forced: 
         if providers_mod.availability(provider, state, ctx.now(), cfg.timezone, cfg.secrets,
                                       forced=forced, starting=True) is None:
             seats.append(seat)
-    return sorted(ranked(cfg.pool, seats), key=lambda seat: (
+    return sorted(ranked(cfg.pool, seats, balance(ctx, state, lanes)), key=lambda seat: (
         -TIER_RANK[seat.tier], lanes.planning_by(seat.provider.id)))
 
 
@@ -443,13 +477,14 @@ def run_reviewer(pool: Pool, provider: Provider, difficulty: str) -> Seat | None
     return pool.best_seat(provider, "medium")
 
 
-def review_seat(pool: Pool, providers: list[Provider], candidate: Candidate) -> Seat | None:
+def review_seat(pool: Pool, providers: list[Provider], candidate: Candidate,
+                spread: Balance | None = None) -> Seat | None:
     """A review run's reviewer: the lane's final audit (#725). A medium or hard item waits for
     a strong seat (Opus); an easy item takes the weakest free seat that ships it (medium, then
     strong). No weak review runs go out: weak builders review themselves in fresh sessions, and
     a weak approval never ships. Within a tier, a family that has not approved the head yet
-    goes before one that has (the same model may review it twice). A stand-in seat
-    (`takes_over`) reviews nothing."""
+    goes before one that has (the same model may review it twice), then the load balancer's
+    order (`spread`, `ranked`). A stand-in seat (`takes_over`) reviews nothing."""
     seats = [seat for provider in providers for seat in pool.own_seats(provider)]
     # An easy item takes the weakest seat that ships it (medium first, saving the Opus gate);
     # a medium or hard one waits for strong (#725). A person asking `/harness review <tier>`
@@ -464,7 +499,7 @@ def review_seat(pool: Pool, providers: list[Provider], candidate: Candidate) -> 
         if not candidate.review_floor and not review_rule.helps(
                 candidate.approval_tiers, tier, candidate.difficulty):
             continue  # a person's explicit request reviews at any tier
-        found = ranked(pool, [seat for seat in seats if seat.tier == tier])
+        found = ranked(pool, [seat for seat in seats if seat.tier == tier], spread)
         found.sort(key=lambda seat: seat.family in candidate.approved)  # stable: keeps the order
         if found:
             return found[0]
@@ -480,8 +515,9 @@ def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lan
     def free(role: str) -> list[Provider]:
         return free_providers(ctx, state, lanes, role, forced=forced, quiet_ok=quiet_ok)
 
+    spread = balance(ctx, state, lanes)
     if candidate.kind == "review":
-        seat = review_seat(pool, free("review"), candidate)
+        seat = review_seat(pool, free("review"), candidate, spread)
         if seat is None:
             return None
         return Assignment(seat.provider, "review", candidate.difficulty, review=seat)
@@ -505,7 +541,7 @@ def assign(ctx: Context, state: dict[str, Any], candidate: Candidate, lanes: Lan
                                  avoid=candidate.planned_by
                                  if candidate.kind == "build" else "",
                                  audit_tier=candidate.audit_tier
-                                 if candidate.kind == "revise" else "")
+                                 if candidate.kind == "revise" else "", spread=spread)
     if builder is None:
         return None
     notes = [f"#{candidate.number}: {note}"] if note else []

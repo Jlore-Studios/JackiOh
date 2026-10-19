@@ -3,6 +3,7 @@
   "machine_parallel": 6,
   "plan_lanes": 6,
   "start_headroom": { "five_hour": 0.05, "seven_day": 0.05 },
+  "balance": true,
   "priority": ["claude-3", "claude-7", "claude-1", "claude-4", "claude-6", "claude-5", "muse", "agy", "gpt", "claude-2", "devin"],
   "tiers": {
     "weak": [
