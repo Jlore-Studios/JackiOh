@@ -9,17 +9,18 @@
  * and the sand) and a set of custom properties the viewer's zones read: the lane line, the unit
  * pads and the backrow slots. A zone that is locked, reserved or glowing keeps the mark its state
  * gave it. A backdrop is a layer behind the whole board (Backdrop.tsx): a tint with
- * BACKDROP_PARTICLE_MAX particles, input-transparent and `z-index: -1` inside the board's own
- * stacking context. Each field's still version comes first, particles at their places; it moves
- * only inside the motion gate below, by transform and opacity alone. Under reduced motion (the
- * media query, or the settings' Reduce motion on <html>) every field holds its still version.
+ * BACKDROP_PARTICLE_MAX particles, input-transparent and `z-index: -1`. The board is only
+ * `position: relative` and makes no stacking context of its own (no `isolation`), so the cards
+ * mid-animation (z-index 40 to 50) stay above the effects layer (38), as fx/fx.css has it (R200).
+ * Each field's still version comes first, particles at their places; it moves only inside the
+ * motion gate below, by transform and opacity alone. Under reduced motion (the media query, or
+ * the settings' Reduce motion on <html>) every field holds its still version.
  */
 
 /* --------------------------------------------------------------------------- backdrops --- */
 
 .board[data-backdrop] {
   position: relative;
-  isolation: isolate;
 }
 
 .board-backdrop {
