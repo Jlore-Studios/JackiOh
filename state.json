@@ -5175,6 +5175,13 @@
     "1287": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-19T12:41:36Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "Rule 1 fails: 11 files, the tests included, which is over the 10-file limit. Moving the rematch map into App also changes the App struct and the test app's constructor."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
