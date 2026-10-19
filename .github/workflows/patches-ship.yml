@@ -2,12 +2,14 @@
 # main that touches crates/cards/patches/pending/, opened as a pull request.
 #
 # A branch that changes card data adds one fragment under pending/ and never edits the history.
-# Once it merges, `cargo jackioh patches ship` (crates/tools, docs/v0.3.0/SURFACE.md §12) snapshots
-# the catalog as each fragment's first-parent commit left it, appends the patches in ship order,
-# records shipped.json, deletes the fragments and bumps CATALOG_VERSION everywhere it lives
-# (render.yaml, crates/server/.env.example, apps/web/.env.production). It needs main's whole
-# history (fetch-depth: 0), and it writes nothing when a fragment's commit does not match its claims,
-# so a refusal fails this run, loudly, with main untouched.
+# Once it merges, `cargo jackioh patches ship` (crates/tools, docs/v0.3.0/SURFACE.md §12) appends the
+# patches in ship order, each snapshot the patch before it with the cards its fragment claims as the
+# catalog holds them (R1280000), records shipped.json, deletes the fragments and bumps CATALOG_VERSION
+# everywhere it lives (render.yaml, crates/server/.env.example, apps/web/.env.production). It needs
+# main's whole history (fetch-depth: 0) for the commits' order and dates. It ships whenever
+# `patches check` passes, which CI holds every pull request to; a refusal writes nothing, fails this
+# run and opens (or comments on) an issue for the night bot, so the queue never waits unseen: patch
+# v0.3.8 to v0.3.15 waited four days behind one refusal (#1280).
 #
 # The result goes up from `patches/ship-<short sha>`, never a `bot/` branch (bot-commands.yml treats
 # those as the night bot's), and auto-merges by squash like the night bot's own pull requests. It is
@@ -32,6 +34,8 @@ concurrency:
 
 permissions:
   contents: read
+  # The refusal's issue (the last step).
+  issues: write
 
 jobs:
   ship:
@@ -81,7 +85,7 @@ jobs:
           body=$(printf '%s\n' \
             "Promotes the card patches pending on main at $head (SPEC R646): $versions." \
             "" \
-            "\`patches ship\` snapshotted the catalog as each fragment's merge commit left it, appended the patches in ship order, recorded \`shipped.json\`, deleted the fragments and bumped \`CATALOG_VERSION\`. Opened by \`.github/workflows/patches-ship.yml\`; it merges itself once CI passes.")
+            "\`patches ship\` appended the patches in ship order, each snapshot the patch before it with the cards its fragment claims (R1280000), recorded \`shipped.json\`, deleted the fragments and bumped \`CATALOG_VERSION\`. Opened by \`.github/workflows/patches-ship.yml\`; it merges itself once CI passes.")
           url=$(gh pr create --base main --head "$branch" --title "patches ship: $versions" --body "$body")
           gh pr merge "$url" --auto --squash
 
@@ -94,3 +98,26 @@ jobs:
             done
           echo "### patches ship: $versions" >> "$GITHUB_STEP_SUMMARY"
           echo "$url" >> "$GITHUB_STEP_SUMMARY"
+
+      # R1280000: a refused promotion leaves every pending patch unshipped and the catalog version where
+      # it was, so it opens one issue (or comments on the one open) with the run, queued for the night
+      # bot as ci-duration.yml queues its own, instead of failing quietly on every push to main.
+      - name: report a refused promotion
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          title="patches ship refused to promote the pending patches"
+          body=$(printf '%s\n' \
+            "\`cargo jackioh patches ship\` refused on main at $GITHUB_SHA ([the run]($RUN_URL)), so no pending patch shipped and \`CATALOG_VERSION\` did not move (R646, R1280000)." \
+            "" \
+            "The run's \`ship\` step names the refusal. Fix the fragment or the tool on a branch whose \`cargo jackioh patches check\` passes; once it merges, run this workflow again (Actions -> patches ship -> Run workflow) if it touched nothing under \`crates/cards/patches/pending/\`.")
+          open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --repo "$REPO" --body "$body"
+          else
+            gh issue create --repo "$REPO" --title "$title" --body "$body" --label "bot:build" --label "difficulty:medium" --label "priority:high"
+          fi
