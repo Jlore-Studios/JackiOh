@@ -635,11 +635,10 @@ export function getPopulation(token: string): Promise<PopulationResponse> {
 /**
  * `GET /api/catalog`: card data for a screen that has no game running.
  *
- * NOT IN SPEC, and no R-row yet. §9.4 calls the catalog "static, versioned, shipped with the
- * client", but the deckbuilder needs names and costs before any engine is loaded and the client
- * has no catalog of its own to ship yet, so the server serves the one it already holds. The
- * proposed §11 row is written out once, on the server half, above `createCatalogRoutes` in
- * `crates/server/src/api/catalog.rs`; this is the caller, not a second statement of the rule.
+ * R163: §9.4 calls the catalog "static, versioned, shipped with the client", but the deckbuilder
+ * needs names and costs before any engine is loaded and the client has no catalog of its own to
+ * ship yet, so the server serves the one it already holds (`get_catalog` in
+ * `crates/server/src/api/catalog.rs`); this is the caller, not a second statement of the rule.
  */
 // It returns the whole `CardDefs` record and not a projection, because `@jackioh/validator`'s
 // `CatalogSnapshot.cards` is a `CardDefs` — the deckbuilder's client-side verdict (§9.4: "the
@@ -961,6 +960,10 @@ export type PublicCardStat = {
   drawnWinRate: number | null;
   playedGames: number;
   playedWinRate: number | null;
+  playedRadiantGames?: number;
+  playedRadiantWinRate?: number | null;
+  playedNormalGames?: number;
+  playedNormalWinRate?: number | null;
   drawnNotPlayedGames: number;
   drawnNotPlayedWinRate: number | null;
   playedDelta: number | null;

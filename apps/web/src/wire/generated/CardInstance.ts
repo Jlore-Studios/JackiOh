@@ -14,7 +14,13 @@ import type { Tag } from "./Tag";
 import type { Tuning } from "./Tuning";
 import type { Zone } from "./Zone";
 
-export type CardInstance = { id: string, defId: string, owner: PlayerId, controller: PlayerId, radiant: boolean, zone: Zone, position?: Position, summonedTurn?: number, damage: number, buffs: AttackHealth, grantedKeywords: Array<Keyword>, vanilla: boolean, costMod: number, costOverride?: number, x?: number, embiggened?: boolean, counters: Counters, memory: Record<string, unknown>, 
+export type CardInstance = { id: string, defId: string, owner: PlayerId, controller: PlayerId, radiant: boolean, zone: Zone, position?: Position, summonedTurn?: number, damage: number, buffs: AttackHealth, grantedKeywords: Array<Keyword>, vanilla: boolean, costMod: number, costOverride?: number, x?: number, embiggened?: boolean, 
+/**
+ * R1181003 (Meditative+ #23 Enormous Elderberry's "its Embiggened version costs (0)"): the price of
+ * the Embiggened version alone, in place of its printed dearer price and of `costOverride` for it,
+ * before every modifier (R65); the normal version keeps its price. A price, so R766 takes it off.
+ */
+embiggenCostOverride?: number, counters: Counters, memory: Record<string, unknown>, 
 /**
  * §4.1: `attacked` and `switched` spend the turn's exertion. R636: `attacks` counts the attacks
  * declared this turn once there is a second one (absent, it is 1 when `attacked` and 0 otherwise)
@@ -100,6 +106,15 @@ enchantments?: Array<Enchantment>,
  */
 berserk?: true, 
 /**
+ * R1174000: this Unit is Frozen (`effects::statuses::freeze`), so it can neither declare an attack
+ * nor switch its own position (`combat::has_exertion_in`). The number is its thaw, stamped as the
+ * freeze lands (`freeze::thaw_turn`): it thaws at the cleanup of its controller's first turn
+ * numbered this or later. A status, never text: R78's reset takes it off with the card leaving
+ * the field, and a Vanilla removes it. Absent on every other card, so a game nothing freezes in
+ * serializes and hashes as before (D14).
+ */
+frozen?: number, 
+/**
  * R429: how many times this card has been played, the play under way included — counted at §10.5
  * step 4 (casts too, R70; a countered play never reaches it) for a card whose script asks
  * (`StaticFlags.countsPlays`, #31 KY's Math Equation) and absent on every other card. Kept in every
@@ -115,9 +130,9 @@ timesPlayed?: number,
  */
 flashbackSpent?: true, 
 /**
- * ME-CN, R1300: the card is shown in Chinese (`effects::translate`). Presentation only: no rule
- * reads it. Kept in every zone and through R78's and R766's resets; a copy keeps it, a
- * Transform's new card is without it. Only ever `Some(true)`.
+ * ME-CN, R1300: the card is shown in Chinese (`effects::translate`). One rule reads it: a card
+ * in Chinese is CN (`query::tags_of`, R1176000). Kept in every zone and through R78's and R766's
+ * resets; a copy keeps it, a Transform's new card is without it. Only ever `Some(true)`.
  */
 chinese?: true, 
 /**

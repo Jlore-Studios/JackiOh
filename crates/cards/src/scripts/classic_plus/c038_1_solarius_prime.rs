@@ -1,7 +1,7 @@
 //! C+ #38.1 Solarius Prime (SPEC §8.7 row 38.1): (4) Unit, Token (printed Epic), 9/5 → 18/10.
 //!   Base:    "Spell Damage +3. Cry: Cast {casts} random Spells. Each aims at enemies when it harms
 //!            and at your side when it helps."
-//!   Radiant: "Spell Damage +7. Cry: Cast {casts} random Radiant Spells. Each aims at enemies when it
+//!   Radiant: "Spell Damage +6. Cry: Cast {casts} random Radiant Spells. Each aims at enemies when it
 //!            harms and at your side when it helps."
 //! E12's random casts (R452, R656): non-token Spells of every set (R380), repeats allowed (R60), every
 //! choice random, each target pick aimed by its declaration — enemies when it harms, friends when it
@@ -221,8 +221,12 @@ mod tests {
                     sets.insert(def_of(Some(s.state()), &text(&event, "defId")).set.to_string());
                 }
             }
-            // Re-pinned for v0.3.5: the Meditative set joins the pool.
-            assert_eq!(sets.into_iter().collect::<Vec<_>>(), vec!["Classic", "Classic+", "Core", "Meditative"]);
+            // Re-pinned for v0.3.5: the Meditative set joins the pool; and for v0.3.15 (Meditative+ ships,
+            // #1187): the Meditative+ set joins it.
+            assert_eq!(
+                sets.into_iter().collect::<Vec<_>>(),
+                vec!["Classic", "Classic+", "Core", "Meditative", "Meditative+"]
+            );
         }
 
         #[test]
@@ -364,9 +368,9 @@ mod tests {
         use super::*;
 
         #[test]
-        fn prints_spell_damage_7() {
+        fn prints_spell_damage_6() {
             let s = scenario(json!({ "p1": { "field": [{ "def": PRIME, "radiant": true }] } }));
-            assert!(s.stats(PRIME).keywords.contains(&Keyword::SpellDamage { n: 7 }));
+            assert!(s.stats(PRIME).keywords.contains(&Keyword::SpellDamage { n: 6 }));
         }
 
         #[test]
@@ -387,12 +391,12 @@ mod tests {
         }
 
         #[test]
-        fn its_spell_damage_7_raises_the_casts_each_deals_the_enemy_hero_at_least_8_in_all() {
+        fn its_spell_damage_6_raises_the_casts_each_deals_the_enemy_hero_at_least_7_in_all() {
             let mut checked = 0;
             for seed in seeds() {
                 let (s, prime) = play_prime(&seed, PrimeOptions { radiant: true, ..PrimeOptions::default() });
                 for total in hero_damage_by_cast(&s, &prime) {
-                    assert!(total >= 8, "{seed}");
+                    assert!(total >= 7, "{seed}");
                     checked += 1;
                 }
             }

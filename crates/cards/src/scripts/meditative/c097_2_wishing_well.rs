@@ -5,7 +5,7 @@
 //!            included. One `rng.chance`, the Radiant face's Lucky 1 and its controller's Luck (R987)
 //!            rolling it again and keeping a success (§6.1 Lucky); a success adds a random non-token card
 //!            of every set (R380), Radiant, hidden in your hand (R97), burned by a full hand (§2.4).
-//!            Tunes: chance 10 ↑ (Radiant 12, step 2); Lucky 1 ↑, on the Radiant face only."
+//!            Tunes: chance 10 ↑ (the same on both faces, step 2); Lucky 1 ↑, on the Radiant face only."
 //!
 //! One script serves both faces: the Radiant face's Lucky 1 is a numbered keyword on the face, read as
 //! Nerf and Buff have moved it, plus any Lucky given to the Well (`lucky_on`, R1438) and its controller's
@@ -76,7 +76,7 @@ fn face(read_lucky: LuckyOf) -> Script {
 
 pub fn script() -> CardScripts {
     let base = face(lucky_of);
-    // The Radiant face's Lucky 1 and 0/12 are catalog data, and its 12% is the declared `chance`.
+    // The Radiant face's Lucky 1 and 0/12 are catalog data, and its 10% is the declared `chance`.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -93,7 +93,7 @@ pub fn script_v0_3_7b() -> CardScripts {
 // M 97.2 Wishing Well — SPEC §8.8 row 97.2, BUILD M10 row M 97.2: "Can't attack; Activate, once a turn in
 // your main phase, the turn it arrives included: a 10% roll adds a random Radiant non-token card to your
 // hand, a failure nothing; a second use that turn is refused; chance reads through `param()`; radiant 0/12,
-// 12% with Lucky 1, two rolls keeping a success".
+// 10% with Lucky 1, two rolls keeping a success".
 //
 // The seed sweeps assert what holds for any seed (a miss draws once, or twice with Lucky 1; the Radiant
 // face hits wherever the base face does), never what one seed drew. Every scenario keeps a 0-cost Spell
@@ -171,7 +171,7 @@ mod tests {
         );
         assert_eq!(
             js(&def.params),
-            json!([{ "key": "chance", "base": 10, "radiant": 12, "better": "up", "step": 2, "min": 1, "max": 100 }])
+            json!([{ "key": "chance", "base": 10, "radiant": 10, "better": "up", "step": 2, "min": 1, "max": 100 }])
         );
         let scripts = script();
         let uses = |script: &Script| {
@@ -261,14 +261,14 @@ mod tests {
         use super::*;
 
         #[test]
-        fn lucky_1_at_12_hits_wherever_the_base_10_hits_and_at_more_seeds() {
+        fn lucky_1_at_the_same_10_hits_wherever_the_base_10_hits_and_at_more_seeds() {
             let (mut base_hits, mut radiant_hits, mut extra) = (0, 0, 0);
             for n in 0..SEEDS {
                 let seed = format!("well-{n}");
                 let (base, _) = wish(&seed, false);
                 let (radiant, drawn) = wish(&seed, true);
-                // Lucky 1 rolls twice and keeps a success, at 12%, so the first roll alone already hits
-                // wherever the base face's 10% does.
+                // Lucky 1 rolls twice and keeps a success, at the same 10%, so the first roll alone already hits
+                // wherever the base face's does.
                 assert!(
                     radiant || !base,
                     "{seed}: the base face hit and the Radiant face missed"

@@ -175,7 +175,7 @@ describe("scripts/ci-scope.sh", () => {
     ).toEqual([]);
     // Squishy (#60): its switches and its two workflows, which only the bot's harness reads.
     expect(onFor(".squishy/config.json", ".github/workflows/squishy-run.yml", ".github/workflows/squishy-commands.yml")).toEqual([]);
-    // The training lanes' standing prompts and loop: Devin and the training box read them, no job does.
+    // The training lanes' standing prompts and loop: Muse and the training box read them, no job does.
     expect(onFor("training/README.md", "training/improve.md", "training/unban.md", "training/loop.sh")).toEqual([]);
     // The notebooks' project (#445): only super.yml's daily `notebooks` job reads it.
     expect(onFor("analysis/notebooks/01-card-win-rates.ipynb", "analysis/jackioh_records/load.py", "analysis/uv.lock")).toEqual([]);
@@ -199,6 +199,8 @@ describe("scripts/ci-scope.sh", () => {
     "spec/rulings/R0195.md",
     "spec/README.md",
     "training/history/improve.jsonl",
+    // The tools' test of shadow_ban.rs reads the sweep reports of record.
+    "training/history/sweep-2026-10-12.md",
     "training/loop.sh.bak",
     "training/lanes/x.ts",
     "SPEC.md",
@@ -475,12 +477,14 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/scratch/src/lib.rs", [...RUST]],
     ["apps/web/src/wire/generated/Action.ts", ["rust_engine", "rust_server"]],
     ["docs/radiant-audit.md", ["rust_cards"]],
+    ["spec/07-tokens.md", ["rust_cards"]],
     ["e2e/support/config.ts", ["rust_server"]],
     ["render.yaml", ["rust_server", "rust_tools_wasm"]],
     ["apps/web/.env.production", ["rust_tools_wasm"]],
     ["packages/engine/src/x.ts", ["rust_tools_wasm"]],
     ["apps/server/src/x.ts", ["rust_tools_wasm"]],
     ["ladder/x.ts", ["rust_tools_wasm"]],
+    ["training/history/sweep-2026-10-12.md", ["rust_tools_wasm"]],
     // A crate's manifest also runs the group whose acceptance test holds the map to `cargo metadata`.
     ["crates/server/Cargo.toml", ["rust_server", "rust_tools_wasm"]],
     ["crates/ai/Cargo.toml", ["rust_server", "rust_ai", "rust_ai_slow_a", "rust_ai_slow_b", "rust_tools_wasm"]],

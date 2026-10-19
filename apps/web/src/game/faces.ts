@@ -88,6 +88,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit?.animated !== undefined) inPlay.animated = unit.animated;
   // B5 E35: a Berserk unit.
   if (unit?.berserk === true) inPlay.berserk = true;
+  // R1174000: a Frozen unit.
+  if (unit?.frozen === true) inPlay.frozen = true;
   // MD-B6, R943: a Created card, wherever the view carries the mark.
   if (card.created === true) inPlay.created = true;
   // ME-GRANT, R1107: the Death abilities other cards granted the unit, as its lines read them.
@@ -116,6 +118,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
     // MD-B15, R923: the view's tags where they differ from the definition's (a granted tag).
     ...(card.tags === undefined ? {} : { tags: card.tags }),
     liveCost: card.cost,
+    // R1181003: the second badge is the view's price for the Embiggened version, where it has one.
+    ...(card.embiggenCost === undefined ? {} : { liveEmbiggenCost: card.embiggenCost }),
     ...(unit === undefined
       ? {}
       : { live: { attack: unit.attack, health: unit.health, maxHealth: unit.maxHealth, keywords: unit.keywords } }),

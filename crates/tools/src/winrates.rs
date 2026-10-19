@@ -200,6 +200,16 @@ mod tests {
                 wins: 0,
                 draws: 0,
             },
+            played_radiant: jackioh_engine::Tally {
+                games: 0,
+                wins: 0,
+                draws: 0,
+            },
+            played_normal: jackioh_engine::Tally {
+                games: 0,
+                wins: 0,
+                draws: 0,
+            },
             drawn_not_played: jackioh_engine::Tally {
                 games: 0,
                 wins: 0,
@@ -258,6 +268,13 @@ mod tests {
             drawn: Vec::new(),
             played: Vec::new(),
             played_turns: None,
+            played_radiant: None,
+            fatigue_draws: None,
+            fatigue_damage: None,
+            traps_set: None,
+            traps_fired: None,
+            position_switches: None,
+            radiant_upgrades: None,
         };
         let line = |id: &str, source: GameSource, pilots: PerPlayer<Pilot>| {
             let record = GameRecord {

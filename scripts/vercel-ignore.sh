@@ -13,12 +13,22 @@
 #      integration tests (a crate's tests/), web test files (*.test.ts, *.test.tsx, apps/web/src/test/),
 #      tooling and READMEs are never imported, so a commit that touches only those leaves the site
 #      byte for byte what it was and does not deploy.
+#   4. main also waits MIN_GAP_SECONDS after the last commit Vercel built: a commit committed less
+#      than that after it is skipped, whatever it changed, and the first push after the wait builds
+#      it with everything skipped before it. Each build stores a whole copy of the site (about 76 MB
+#      in October 2026: the two WASM modules and the audio) against the Hobby plan's 10 GB of
+#      Deployment Storage, and main then merged 22 to 29 bundle changes a day; the hour about halves
+#      the builds. The cost: the last merges of a burst reach staging with the next push after the
+#      hour, or at once with the flag or a redeploy from Vercel's dashboard with "Skip Ignored Build
+#      Step" ticked. The times are the commits' committer dates, not the clock, so a commit gets the
+#      same answer whenever this runs (a plain redeploy of a skipped commit is skipped again).
 #
-# Rule 3 diffs against VERCEL_GIT_PREVIOUS_SHA, the last commit Vercel built, and only when that
-# commit is an ancestor of HEAD. A commit whose build was cancelled or failed (the daily deployment
-# cap does that) is therefore never skipped past: the next push still diffs against what is really
-# live. Anything that goes wrong, and any doubt (no previous sha, a shallow clone without it, an
-# empty diff, a path off the list), builds. vercel.json only lets a clean exit 0 through.
+# Rules 3 and 4 diff against VERCEL_GIT_PREVIOUS_SHA, the last commit Vercel built, and only when
+# that commit is an ancestor of HEAD. A commit whose build was cancelled or failed (the daily
+# deployment cap does that) is therefore never skipped past: the next push still diffs against what
+# is really live. Anything that goes wrong, and any doubt (no previous sha, a shallow clone without
+# it, an empty diff, a commit date that cannot be read or that comes before the last build's, a path
+# off the list), builds. vercel.json only lets a clean exit 0 through.
 #
 # Adding a path to the list means checking that apps/web, the four crates the WASM module is built
 # from (and the root files pnpm and cargo read) do not read it. A name alone is not proof:
@@ -41,6 +51,19 @@ git merge-base --is-ancestor "$prev" HEAD 2>/dev/null || exit 1
 # --no-renames: a move lists both paths, so a file moved onto the skip list still counts where it was.
 files=$(git diff --no-renames --name-only "$prev" HEAD 2>/dev/null) || exit 1
 [ -n "$files" ] || exit 1
+
+# Rule 4, after the empty diff, so a redeploy of the built commit still builds.
+MIN_GAP_SECONDS=3600
+built_at=$(git show -s --format=%ct "$prev" 2>/dev/null) || exit 1
+head_at=$(git show -s --format=%ct HEAD 2>/dev/null) || exit 1
+for at in "$built_at" "$head_at"; do
+  case "$at" in
+    '' | *[!0-9]*) exit 1 ;;
+  esac
+done
+if [ "$head_at" -ge "$built_at" ] && [ $((head_at - built_at)) -lt "$MIN_GAP_SECONDS" ]; then
+  exit 0
+fi
 
 # The loop below splits `git diff`'s output on whitespace; no name may expand as a glob. The first
 # case that matches wins, so each file the build reads inside a skipped directory comes first.

@@ -82,7 +82,15 @@ export const RELEASES: readonly Release[] = [
       "The music no longer switches to a theme when a Legendary or Mythic is played: its own few bars play, then the station carries on.",
       "Replays: watch your finished games again, step by step, share a turn as a GIF, and download a game as a file to attach to a bug report.",
       "Play together: friends, chat, challenges, watching and shared replays, and Duos co-op against an AI team.",
+      "Every token says so: its type line reads Token Unit or Token Spell, and on the board and on small cards it wears a Token mark.",
     ],
+  },
+  {
+    id: "meditativeplus",
+    name: "Meditative+",
+    first: "v0.3.15",
+    summary: "The Meditative+ set, 26 cards and 4 tokens, shipped in v0.3.15, with a new tag, Potion.",
+    technical: [],
   },
 ];
 

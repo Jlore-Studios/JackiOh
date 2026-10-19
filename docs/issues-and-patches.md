@@ -149,7 +149,8 @@ suggestions (`bot:suggestion`) are asked for conventional titles; retitle one th
   part. The alternative is the one v0.2.0 used: build on an integration branch named after the
   version, keep a draft PR to main open, and land the whole thing as the last part. A new set may
   instead be built on main behind the release gate (R1420), as the Meditative set was (#496,
-  `docs/meditative-set.md` M3, shipped by #553). Its cards are in the catalog but in no pool, deck, list or patch
+  `docs/meditative-set.md` M3, shipped by #553) and the Meditative+ set was (#1173,
+  `docs/meditative-plus-set.md` MP3, R1178000, shipped by #1187). Its cards are in the catalog but in no pool, deck, list or patch
   until its last part adds the set to `SHIPPED_SETS`, so its parts need no fragment, move no golden
   trace and can merge in any order. Work under the same tracker that players should see as soon as
   it lands is a patch of its own, titled without `(part n of m)`, and goes live when it merges.
@@ -173,7 +174,7 @@ issue:
 - **Gives the measure**: a length tier, a list of terms, a grouping method ("group cards by the
   verbs their scripts call", never "compare similar texts"). An example in the issue is a test
   case for the pass, not its scope.
-- **Is `difficulty:hard`**: a pass over 450 entries touches about 40 files or more (CLAUDE.md
+- **Is `difficulty:hard`**: a pass over 480 entries touches about 40 files or more (CLAUDE.md
   rule 11).
 
 A run that splits such an issue says in the tracker, part by part, what each part leaves out, so a
@@ -211,6 +212,17 @@ part that narrows the task shows the gap instead of hiding it.
   own pull request, in the style of the lines there ("Background music and a main menu theme."). A
   major version's changes before its first card patch are its line's too: v0.3.0, the Rust rewrite,
   is Meditative's.
+
+## Win rates in a balance patch
+
+A balance patch's `notes` that cite a card's win rate quote `cargo jackioh stats compare`, never two plain
+`stats` runs' rows (R1284000): about 150 of 2,000 All Random games hold a given card, and #1149's own notes
+put that noise at five points. Play the card into one seat's deck in every game on a worktree of the base
+commit (`scripts/worktree.sh`), `cargo jackioh stats --force <id> --games N --out before.jsonl`, and the same
+with `--out after.jsonl` on the branch; then `cargo jackioh stats compare --before before.jsonl --after
+after.jsonl --card <id>`. Quote both rates and the paired difference with their intervals, and the line about
+`SHADOW_BAN` or `SHADOW_WATCH` if it prints one. A forced run's file is never `stats-import`ed: it is not a
+sample of All Random. The base build needs the flag, so the first such comparison is the one after #1284 lands.
 
 ## Pull requests
 

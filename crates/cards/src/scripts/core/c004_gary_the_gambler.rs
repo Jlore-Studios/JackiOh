@@ -1,11 +1,11 @@
 //! SPEC §8.1 #4 Gary the Gambler — 1/1 → 2/2 Unit, Human, cost 1.
 //! Base: "Cry: flip 5 coins; +1 attack per heads, +1 max health per tails. Then flip a coin:
 //! heads gains Divine Shield, tails gains Rush".
-//! Radiant: "7 coins; +2 per heads, +2 per tails" plus the same rider verbatim — the cell changes
-//! only the numbers of the base clause (§8 Conventions), so it is the same flip at 7 coins and 2
+//! Radiant: "10 coins; +1 per heads, +1 per tails" plus the same rider verbatim — the cell changes
+//! only the numbers of the base clause (§8 Conventions), so it is the same flip at 10 coins and 1
 //! per side with an identical keyword coin.
 //!
-//! Engine cell: 5 or 7 seeded rolls and a permanent buff layer (§10.4 layer 4), then one seeded
+//! Engine cell: 5 or 10 seeded rolls and a permanent buff layer (§10.4 layer 4), then one seeded
 //! coin granting Divine Shield on heads, Rush on tails. R1440 (revising R32/R130): a coin flip is a
 //! luck-based roll whose better side is heads, so Gary's own Lucky X (none printed; a Lucky given to
 //! it, R1438) flips each coin X more times and keeps heads. The verbs read that Lucky themselves, so
@@ -26,7 +26,7 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "core-004";
 
 /// The coins and the gain per side are the declared numbers `coins`, `perHeads` and `perTails`
-/// (R386): 5, 1 and 1, and 7, 2 and 2 on the Radiant face, read off the face that is up.
+/// (R386): 5, 1 and 1, and 10, 1 and 1 on the Radiant face, read off the face that is up.
 pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|ctx| {
@@ -51,14 +51,14 @@ pub fn script() -> CardScripts {
 }
 
 // SPEC §8.1 #4 Gary the Gambler. BUILD M4-T4 row 4: "Fixed seed → fixed stats; heads+tails = 5
-// (radiant 7 at +2 each); second coin grants Divine Shield on heads, Rush on tails, identical on
+// (radiant 10 at +1 each); second coin grants Divine Shield on heads, Rush on tails, identical on
 // both faces; with no Lucky the 5 coins and the second coin take exactly 6 seeded draws (R32/R130);
 // with Lucky X each coin flips 1 + X times keeping heads (R1440), so a given Lucky 1 (R1438) takes
 // 12 draws and lands more heads over many seeds".
 //
 // The flips land as ONE permanent layer-4 buff (§10.4), so `buffs.attack` is the heads total and
 // `buffs.health` the tails total: the invariant the row asks for is that those two always account
-// for exactly 5 flips (radiant 7) at the card's per-flip rate, whatever the seed rolled. The exact
+// for exactly 5 flips (radiant 10) at the card's per-flip rate, whatever the seed rolled. The exact
 // numbers under a fixed seed are asserted as determinism — the same seed twice gives the same
 // stats. After the stat flip, one more seeded coin grants Divine Shield on heads, Rush on tails
 // (§10.4 granted keywords), identical on both faces.
@@ -111,7 +111,29 @@ mod tests {
         }
 
         #[test]
-        fn radiant_flips_7_coins_at_2_a_side_so_the_two_gains_total_14() {
+        fn radiant_a_fixed_seed_gives_fixed_stats_10_coins_at_exactly_1_a_side() {
+            crate::register_all();
+            let mut first = scenario(json!({
+                "seed": "core-004-radiant-fixed",
+                "p1": { "hand": [{ "def": "core-004", "radiant": true }] }
+            }));
+            first.play("core-004", json!({}));
+            let mut second = scenario(json!({
+                "seed": "core-004-radiant-fixed",
+                "p1": { "hand": [{ "def": "core-004", "radiant": true }] }
+            }));
+            second.play("core-004", json!({}));
+
+            let gains1 = gains(&first, "core-004");
+            let gains2 = gains(&second, "core-004");
+            assert_eq!(gains1, gains2);
+            let (attack, health) = gains1;
+            assert_eq!(attack + health, 10);
+            assert!(attack >= 1 && health >= 1);
+        }
+
+        #[test]
+        fn radiant_flips_10_coins_at_1_a_side_so_the_two_gains_total_10() {
             crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-004-radiant",
@@ -120,9 +142,7 @@ mod tests {
             s.play("core-004", json!({}));
 
             let (attack, health) = gains(&s, "core-004");
-            assert_eq!(attack + health, 14);
-            assert_eq!(attack % 2, 0);
-            assert_eq!(health % 2, 0);
+            assert_eq!(attack + health, 10);
             // Radiant 2/2 plus the buff.
             s.expect_stats(
                 "core-004",
@@ -132,13 +152,16 @@ mod tests {
 
         /// The draws a play of Gary takes beyond what a play costs by itself (a Mr. Vanilla's on the
         /// same seed), with `lucky` given to it in the hand.
-        fn coin_draws(seed: &str, lucky: i32) -> i64 {
+        fn coin_draws(seed: &str, radiant: bool, lucky: i32) -> i64 {
             let mut control = scenario(json!({ "seed": seed, "p1": { "hand": ["core-008"] } }));
             let control_before = i64::from(control.state().rng_cursor);
             control.play("core-008", json!({}));
             let overhead = i64::from(control.state().rng_cursor) - control_before;
 
-            let mut s = scenario(json!({ "seed": seed, "p1": { "hand": ["core-004"] } }));
+            let mut s = scenario(json!({
+                "seed": seed,
+                "p1": { "hand": [{ "def": "core-004", "radiant": radiant }] }
+            }));
             if lucky > 0 {
                 crate::give_lucky(&mut s, "core-004", lucky);
             }
@@ -154,14 +177,20 @@ mod tests {
             // so a Lucky flip shows up as extra draws on the cursor. Gary prints no Lucky, so with none
             // given each flip is the one draw it always was (R1440). The control play cancels whatever
             // a play costs in draws by itself. 5 stat flips + 1 keyword coin.
-            assert_eq!(coin_draws("core-004-r32", 0), 6);
+            assert_eq!(coin_draws("core-004-r32", false, 0), 6);
+        }
+
+        #[test]
+        fn r32_r130_radiant_with_no_lucky_10_coins_plus_the_rider_coin_take_exactly_11_seeded_rolls() {
+            crate::register_all();
+            assert_eq!(coin_draws("core-004-r32", true, 0), 11);
         }
 
         #[test]
         fn r1438_r1440_given_lucky_1_its_6_coins_take_12_draws() {
             crate::register_all();
             // Lucky 1 given in the hand rides onto the field (R1438), and each of the 6 coins flips twice.
-            assert_eq!(coin_draws("core-004-r32", 1), 12);
+            assert_eq!(coin_draws("core-004-r32", false, 1), 12);
         }
 
         #[test]
@@ -218,7 +247,7 @@ mod tests {
         }
 
         #[test]
-        fn radiant_the_same_exact_rider_on_top_of_7_coins_at_2() {
+        fn radiant_the_same_exact_rider_on_top_of_10_coins_at_1() {
             crate::register_all();
             let mut seen: IndexSet<String> = IndexSet::new();
             for n in 1..=200 {
@@ -229,11 +258,9 @@ mod tests {
                 }));
                 s.play("core-004", json!({}));
 
-                // The stat flip is untouched: 7 coins at +2 a side, totalling 14.
+                // The stat flip is untouched: 10 coins at +1 a side, totalling 10.
                 let (attack, health) = gains(&s, "core-004");
-                assert_eq!(attack + health, 14);
-                assert_eq!(attack % 2, 0);
-                assert_eq!(health % 2, 0);
+                assert_eq!(attack + health, 10);
 
                 // Byte-identical rider: the same two keywords, one per face.
                 let kind = granted_kind(&s, "core-004");
@@ -271,7 +298,7 @@ mod tests {
         }
 
         #[test]
-        fn r386_an_upgrade_makes_heads_worth_2_attack_and_tails_2_health_and_a_radiant_degrade_1() {
+        fn r386_an_upgrade_makes_heads_worth_2_attack_and_tails_2_health_and_a_radiant_degrade_flips_9() {
             crate::register_all();
             let mut s = scenario(json!({ "seed": "core-004-tuned", "p1": { "hand": ["core-004"] } }));
             assert_eq!(crate::upgrade_number(&mut s, "core-004", "perHeads"), 2);
@@ -284,11 +311,12 @@ mod tests {
                 "seed": "core-004-tuned",
                 "p1": { "hand": [{ "def": "core-004", "radiant": true }] }
             }));
-            assert_eq!(crate::degrade_number(&mut radiant, "core-004", "perHeads"), 1);
-            assert_eq!(crate::degrade_number(&mut radiant, "core-004", "perTails"), 1);
+            assert!(!crate::can_degrade_number(&radiant, "core-004", "perHeads"));
+            assert!(!crate::can_degrade_number(&radiant, "core-004", "perTails"));
+            assert_eq!(crate::degrade_number(&mut radiant, "core-004", "coins"), 9);
             radiant.play("core-004", json!({}));
             let (attack, health) = gains(&radiant, "core-004");
-            assert_eq!(attack + health, 7);
+            assert_eq!(attack + health, 9);
         }
     }
 }

@@ -206,6 +206,7 @@ describe("the filter vocabulary (B31, B34)", () => {
       "Catalyst",
       "Acclaimed",
       "Wincon",
+      "Potion",
     ]);
     // Only the ten AI tokens carry "AI" and the Prime tokens "Prime", and the pool never offers a
     // Token.
@@ -616,12 +617,13 @@ describe("the set chips (R380: one format, every set)", () => {
   const setOf = (id: string): string | undefined => CORE_CATALOG[id]?.set;
 
   it("offers one chip per shipped set, Classic+ with a testid of its own", () => {
-    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative"]);
+    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative", "Meditative+"]);
     expect(FILTER_SETS.map(filterSetId)).toEqual([
       "db-filter-set-core",
       "db-filter-set-classic",
       "db-filter-set-classic-plus",
       "db-filter-set-meditative",
+      "db-filter-set-meditative-plus",
     ]);
   });
 
@@ -640,7 +642,9 @@ describe("the set chips (R380: one format, every set)", () => {
     expect(pool(["Core"])).toHaveLength(deckableIn(["Core"]));
     expect(pool(["Core", "Classic"])).toHaveLength(deckableIn(["Core", "Classic"]));
     expect(pool(["Meditative"])).toHaveLength(deckableIn(["Meditative"]));
-    expect(pool([])).toHaveLength(deckableIn(["Core", "Classic", "Classic+", "Meditative"]));
+    expect(pool(["Meditative+"])).toHaveLength(deckableIn(["Meditative+"]));
+    expect(new Set(pool(["Meditative+"]).map(setOf))).toEqual(new Set(["Meditative+"]));
+    expect(pool([])).toHaveLength(deckableIn(["Core", "Classic", "Classic+", "Meditative", "Meditative+"]));
   });
 });
 
@@ -655,6 +659,9 @@ describe("the Jlockeed tag (R278)", () => {
     // and once the Meditative set ships (R1420), its #87 Tatches the Totem and #97 Jlockeed's Evil Blueprints
     // (#97.9 Jlockeed's Headquarters is a token, which the pool never offers).
     const meditative = setShips("Meditative") ? ["meditative-087", "meditative-097"] : [];
+    // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the pool gains Meditative+ #4 Supply Drop, the
+    // set's one Jlockeed card.
+    const meditativePlus = setShips("Meditative+") ? ["meditativeplus-004"] : [];
     expect([...kept].sort()).toEqual([
       "classic-004",
       "classicplus-048",
@@ -663,6 +670,7 @@ describe("the Jlockeed tag (R278)", () => {
       "core-013",
       "core-014",
       ...meditative,
+      ...meditativePlus,
     ]);
   });
 });
@@ -717,9 +725,9 @@ describe("the almanac's pool (R630)", () => {
   it("R1420 shows no card of a set that has not shipped, on the almanac's shelf or in the deck builder's pool", () => {
     const base = CORE_CATALOG["core-002"];
     if (base === undefined) throw new Error("no core-002 in the catalog");
-    // A set that has not shipped: Meditative until its patch (issue #553), and from then on Boss, which
-    // is reserved (§5) and ships no card.
-    const unshipped: SetName = setShips("Meditative") ? "Boss" : "Meditative";
+    // A set that has not shipped: Meditative+ until its patch (issue #1187, R1178000), and from then on
+    // Boss, which is reserved (§5) and ships no card.
+    const unshipped: SetName = setShips("Meditative+") ? "Boss" : "Meditative+";
     const building: CardDef = { ...base, id: "unshipped-002", index: "2", set: unshipped, name: "Set being built" };
     const token: CardDef = { ...building, id: "unshipped-002-1", index: "2.1", token: true, tags: ["Token"], rarity: "Token" };
     const withSet: CatalogSnapshot = {
@@ -776,6 +784,17 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     expect([...FILTER_SETS]).toEqual([...SHIPPED_SETS]);
     expect(FILTER_SETS.includes("Meditative")).toBe(setShips("Meditative"));
     expect(filterSetId("Meditative")).toBe("db-filter-set-meditative");
+  });
+
+  it("R1178000 the Meditative+ set has a chip and lends its tags, Potion included, once it ships (v0.3.15)", () => {
+    expect(FILTER_SETS.includes("Meditative+")).toBe(setShips("Meditative+"));
+    expect(setShips("Meditative+")).toBe(true);
+    expect(filterSetId("Meditative+")).toBe("db-filter-set-meditative-plus");
+    expect(FILTER_TAGS).toContain("Potion");
+    expect(filterTagId("Potion")).toBe("db-filter-tag-potion");
+    const potion = fixture("mp-11", "Meditative+", ["Potion", "Human"]);
+    expect([...shippedTags(["Human", "Potion"], [potion])]).toEqual(setShips("Meditative+") ? ["Human", "Potion"] : []);
+    expect([...shippedTags(["Human", "Potion"], [fixture("c-1", "Core", ["Potion"])])]).toEqual(["Potion"]);
   });
 
   it("R1381 a tag chip shows while a card that ships carries it", () => {

@@ -51,12 +51,12 @@ use jackioh_server::config::USERNAME_CHANGE_COOLDOWN_MS;
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
     BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, CustomCardWrite, Db,
-    FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow, MatchClocks,
-    MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow,
-    PlayerStatsListOptions, Profile, ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow,
-    RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room, SavedCustomCard, SavedDeck, SavedTrio,
-    Season, SeriesRow, StatsTotalsQuery, StoreError, TermsSource, Ticket, TutorialMergeInput,
-    TutorialProgressRow, Tx, UsernameClaim, UsernameClaimOutcome,
+    FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow,
+    MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits,
+    PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
+    ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room,
+    SavedCustomCard, SavedDeck, SavedTrio, Season, SeriesRow, StatsTotalsQuery, StoreError, TermsSource,
+    Ticket, TutorialMergeInput, TutorialProgressRow, Tx, UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{SeasonRank, fresh_rank};
@@ -447,7 +447,8 @@ pub const TRUNCATE: &str = "truncate
   public.game_records, public.record_totals, public.card_totals, public.decklist_totals,
   public.tutorial_progress, public.player_settings,
   public.rated_games, public.bot_ratings, public.season_ranks, public.seasons,
-  public.series, public.results, public.match_actions, public.tickets, public.matches,
+  public.series, public.results, public.match_checkpoints, public.match_actions, public.tickets,
+  public.matches,
   public.trios, public.decks, public.custom_cards,
   public.loadout_deck_cards, public.loadout_decks, public.loadouts,
   public.collection_grants, public.collection,
@@ -3391,6 +3392,13 @@ mod matches {
         assert!(q!(harness, t => t.matches_get(&id())).is_none());
     }
 
+    /// SPEC §9.1: an id that is not a uuid names no match, so it answers as a missing one does
+    /// (as `matches_seats` and `duos_matches_get` do) and not as a database error.
+    async fn a_malformed_match_id_is_no_match(harness: &StoreHarness) {
+        live_match(harness).await;
+        assert!(q!(harness, t => t.matches_get("not-a-uuid")).is_none());
+    }
+
     async fn refuses_a_second_match_with_the_same_id(harness: &StoreHarness) {
         let row = live_match(harness).await;
         let again: MatchRow = from(spread(j(&row), json!({ "seed": "other" })));
@@ -3679,9 +3687,132 @@ mod matches {
         assert_eq!(finished["status"], "finished");
     }
 
+    /// #1169: a checkpoint row as the actor writes one (its body opaque to the store).
+    fn checkpoint(match_id: &str, seq: i64, nonce: &str, body: &str, at: i64) -> MatchCheckpointRow {
+        from(json!({
+            "matchId": match_id,
+            "seq": seq,
+            "nonce": nonce,
+            "catalogVersion": "v-checkpoint",
+            "rules": "0123456789abcdef",
+            "checkpointVersion": 1,
+            "body": body,
+            "bodyHash": format!("hash-of-{body}"),
+            "at": at,
+        }))
+    }
+
+    /// A stored checkpoint without its `at`, which only has to be a time: Postgres keeps it as a
+    /// `timestamptz`.
+    fn stored(row: Option<MatchCheckpointRow>) -> Option<Value> {
+        row.map(|row| {
+            let mut value = j(&row);
+            assert!(value["at"].is_number(), "{value}");
+            if let Value::Object(map) = &mut value {
+                map.remove("at");
+            }
+            value
+        })
+    }
+
+    fn written(row: &MatchCheckpointRow) -> Option<Value> {
+        stored(Some(row.clone()))
+    }
+
+    /// #1169: every field comes back as written, and only a later seq's checkpoint replaces it.
+    async fn checkpoint_round_trips_and_only_a_later_seq_replaces_it(harness: &StoreHarness) {
+        let row = live_match(harness).await;
+        let now = harness.now();
+        q!(harness, t => t.matches_append_actions(&[
+            action_row(&row.id, 1, "p1", "n1", now),
+            action_row(&row.id, 2, "p2", "n2", now),
+            action_row(&row.id, 3, "p1", "n3", now),
+        ]));
+        let second = checkpoint(&row.id, 2, "n2", "{\"at\":2}", now);
+        assert!(q!(harness, t => t.matches_put_checkpoint(&second)));
+        assert_eq!(
+            stored(q!(harness, t => t.matches_checkpoint(&row.id))),
+            written(&second)
+        );
+
+        let earlier = checkpoint(&row.id, 1, "n1", "{\"at\":1}", now);
+        assert!(!q!(harness, t => t.matches_put_checkpoint(&earlier)));
+        let same = checkpoint(&row.id, 2, "n2", "{\"at\":\"again\"}", now);
+        assert!(!q!(harness, t => t.matches_put_checkpoint(&same)));
+        assert_eq!(
+            stored(q!(harness, t => t.matches_checkpoint(&row.id))),
+            written(&second)
+        );
+
+        let third = checkpoint(&row.id, 3, "n3", "{\"at\":3}", now);
+        assert!(q!(harness, t => t.matches_put_checkpoint(&third)));
+        assert_eq!(
+            stored(q!(harness, t => t.matches_checkpoint(&row.id))),
+            written(&third)
+        );
+    }
+
+    /// #1169: never for a row the log does not hold under that nonce, nor for a match that is not live.
+    async fn checkpoint_is_stored_only_for_a_logged_row_of_a_live_match(harness: &StoreHarness) {
+        let row = live_match(harness).await;
+        let now = harness.now();
+        q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", now)]));
+        let wrong_nonce = checkpoint(&row.id, 1, "other", "{}", now);
+        assert!(!q!(harness, t => t.matches_put_checkpoint(&wrong_nonce)));
+        let unlogged = checkpoint(&row.id, 2, "n2", "{}", now);
+        assert!(!q!(harness, t => t.matches_put_checkpoint(&unlogged)));
+        let unknown = checkpoint(&id(), 1, "n1", "{}", now);
+        assert!(!q!(harness, t => t.matches_put_checkpoint(&unknown)));
+        assert!(q!(harness, t => t.matches_checkpoint(&row.id)).is_none());
+
+        q!(harness, t => t.matches_finish(&row.id, now));
+        let finished = checkpoint(&row.id, 1, "n1", "{}", now);
+        assert!(!q!(harness, t => t.matches_put_checkpoint(&finished)));
+        assert!(q!(harness, t => t.matches_checkpoint(&row.id)).is_none());
+    }
+
+    /// #1169: an ended match is never rebuilt from its checkpoint; another match keeps its own.
+    async fn finishing_a_match_drops_its_checkpoint(harness: &StoreHarness) {
+        let now = harness.now();
+        let ending = live_match(harness).await;
+        let other = live_match(harness).await;
+        for row in [&ending, &other] {
+            q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", now)]));
+            let saved = checkpoint(&row.id, 1, "n1", "{}", now);
+            assert!(q!(harness, t => t.matches_put_checkpoint(&saved)));
+        }
+        q!(harness, t => t.matches_finish(&ending.id, now));
+        assert!(q!(harness, t => t.matches_checkpoint(&ending.id)).is_none());
+        assert_eq!(
+            stored(q!(harness, t => t.matches_checkpoint(&other.id))),
+            written(&checkpoint(&other.id, 1, "n1", "{}", now))
+        );
+    }
+
+    /// #1169, R679: a voided match's checkpoint goes with it.
+    async fn voiding_a_match_drops_its_checkpoint(harness: &StoreHarness) {
+        let row = live_match(harness).await;
+        let now = harness.now();
+        q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", now)]));
+        let saved = checkpoint(&row.id, 1, "n1", "{}", now);
+        assert!(q!(harness, t => t.matches_put_checkpoint(&saved)));
+        q!(harness, t => t.matches_forget_voided(&row.id));
+        assert!(q!(harness, t => t.matches_checkpoint(&row.id)).is_none());
+    }
+
+    async fn an_unknown_match_has_no_checkpoint(harness: &StoreHarness) {
+        assert!(q!(harness, t => t.matches_checkpoint(&id())).is_none());
+    }
+
     both_stores!(
+        checkpoint_round_trips_and_only_a_later_seq_replaces_it,
+        checkpoint_is_stored_only_for_a_logged_row_of_a_live_match,
+        finishing_a_match_drops_its_checkpoint,
+        voiding_a_match_drops_its_checkpoint,
+        an_unknown_match_has_no_checkpoint,
         r768_records_a_final_hash_once,
         round_trips_a_match_row_clocks_included,
+        a_malformed_match_id_is_no_match,
         refuses_a_second_match_with_the_same_id,
         appends_actions_in_order_and_reads_them_back,
         reads_a_log_of_ten_or_more_actions_back_in_seq_order,
@@ -3982,6 +4113,48 @@ mod rooms {
         assert!(codes(q!(harness, t => t.rooms_open_by_host("not-a-uuid", now + 60_000))).is_empty());
     }
 
+    /// R890000: the advisory half of `MAX_OPEN_ROOMS_PER_HOST` counts the host's rooms nobody has
+    /// claimed and whose expiry has not passed; a claimed one, an expired one and another host's do
+    /// not count, and a malformed id holds none.
+    async fn r890000_counts_a_host_s_open_rooms_and_none_for_a_malformed_id(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        assert_eq!(q!(harness, t => t.rooms_count_open_by_host(&host.id, now)), 0);
+
+        for (code, owner, over) in [
+            ("ABC234", &host.id, json!({})),
+            ("BCD345", &host.id, json!({})),
+            ("CDE456", &host.id, json!({ "expiresAt": now + 1_000 })),
+            ("DEF567", &other.id, json!({})),
+        ] {
+            assert!(q!(harness, t => t.rooms_create(&room(harness, code, owner, over.clone()))));
+        }
+        must(
+            q!(harness, t => t.rooms_claim("BCD345", &guest.id, &id(), now)),
+            "the claim",
+        );
+
+        assert_eq!(q!(harness, t => t.rooms_count_open_by_host(&host.id, now)), 2);
+        assert_eq!(
+            q!(harness, t => t.rooms_count_open_by_host(&host.id, now + 60_000)),
+            1
+        );
+        assert_eq!(
+            q!(harness, t => t.rooms_count_open_by_host(&other.id, now + 60_000)),
+            1
+        );
+        assert_eq!(
+            q!(harness, t => t.rooms_count_open_by_host(&guest.id, now + 60_000)),
+            0
+        );
+        assert_eq!(
+            q!(harness, t => t.rooms_count_open_by_host("not-a-uuid", now + 60_000)),
+            0
+        );
+    }
+
     both_stores!(
         r768_reads_a_match_s_seats_in_every_status_an_open_one_included,
         creates_a_room_and_reads_it_back_by_code,
@@ -3994,6 +4167,7 @@ mod rooms {
         r1450_reaps_an_expired_unjoined_room_and_frees_its_code,
         r1450_reaps_a_claimed_room_whose_match_never_started_and_lets_both_players_go,
         r1075000_lists_a_host_s_open_rooms_newest_first,
+        r890000_counts_a_host_s_open_rooms_and_none_for_a_malformed_id,
     );
 }
 
@@ -7167,11 +7341,13 @@ mod social {
         q!(harness, t => t.friends_make(&c.id, &b.id, now - 10_000));
         let over = id();
         q!(harness, t => t.matches_create(&match_row(&over, &a.id, &c.id, harness, now - 9_000)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&over, 1, "p1", "n1", now - 8_000)]));
         q!(harness, t => t.matches_finish(&over, now - 5_000));
         let live = id();
         q!(harness, t => t.matches_create(&match_row(&live, &a.id, &c.id, harness, now - 9_000)));
         let elsewhere = id();
         q!(harness, t => t.matches_create(&match_row(&elsewhere, &b.id, &c.id, harness, now - 9_000)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&elsewhere, 1, "p1", "n1", now - 8_000)]));
         q!(harness, t => t.matches_finish(&elsewhere, now - 5_000));
 
         let share = |match_id: &str, sharer: &str, at: i64| -> ReplayShare {
@@ -7240,6 +7416,41 @@ mod social {
             vec![c.id.clone()]
         );
         assert!(q!(harness, t => t.shares_sharers("not-a-uuid", &b.id)).is_empty());
+    }
+
+    /// §9.5's "or the retention purge takes the log": a share of a finished match is listed and
+    /// read while its log is kept, and neither once the purge has taken it.
+    async fn s7_replay_shares_hide_a_match_whose_log_the_purge_took(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let day: i64 = 86_400_000;
+        q!(harness, t => t.friends_make(&a.id, &b.id, now - 92 * day));
+        let over = id();
+        q!(harness, t => t.matches_create(&match_row(&over, &a.id, &b.id, harness, now - 92 * day)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&over, 1, "p1", "n1", now - 92 * day)]));
+        q!(harness, t => t.matches_finish(&over, now - 91 * day));
+        let share: ReplayShare = from(json!({
+            "matchId": over, "sharer": a.id, "friend": b.id, "createdAt": now - 91 * day,
+        }));
+        q!(harness, t => t.shares_put(&share));
+
+        assert_eq!(
+            q!(harness, t => t.shares_sharers(&over, &b.id)),
+            vec![a.id.clone()]
+        );
+        assert_eq!(q!(harness, t => t.shares_for(&b.id)).len(), 1);
+
+        let cutoffs: RetentionPurgeInput = from(json!({
+            "codeAttemptsBefore": now - 30 * day,
+            "matchActionsEndedBefore": now - 90 * day,
+            "playTelemetryEndedBefore": now - 365 * day,
+            "gameRecordsRecordedBefore": now - 7 * day,
+        }));
+        q!(harness, t => t.purge_expired(&cutoffs));
+        assert!(q!(harness, t => t.matches_actions(&over)).is_empty());
+        assert!(q!(harness, t => t.shares_sharers(&over, &b.id)).is_empty());
+        assert!(q!(harness, t => t.shares_for(&b.id)).is_empty());
     }
 
     /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
@@ -7358,6 +7569,7 @@ mod social {
         let now = harness.now();
         let over = id();
         q!(harness, t => t.matches_create(&match_row(&over, &a.id, &b.id, harness, now - 9_000)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&over, 1, "p1", "n1", now - 8_000)]));
         q!(harness, t => t.matches_finish(&over, now - 5_000));
         for (sharer, friend) in [(&a, &b), (&b, &a), (&a, &c), (&b, &c)] {
             q!(harness, t => t.friends_make(&sharer.id, &friend.id, now - 10_000));
@@ -7439,6 +7651,7 @@ mod social {
         s7_a_freed_room_goes_only_while_unjoined,
         s7_chat_pages_reads_reports_and_purges,
         s7_replay_shares_are_read_while_friends_and_unblocked,
+        s7_replay_shares_hide_a_match_whose_log_the_purge_took,
         s7_a_deleted_profile_takes_its_social_rows,
         s7_presence_reads_many_profiles_at_once,
         s7_shares_between_a_pair_go_together,

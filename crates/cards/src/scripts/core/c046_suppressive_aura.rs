@@ -1,5 +1,5 @@
-//! #46 Suppressive Aura (SPEC §8.2): "Aura: All Units have −1/−1. Paid (4): −2/−2 instead.", radiant
-//! "Aura: Enemy Units have −2/−2. Paid (4): −4/−4 instead." The radiant cell restates the whole
+//! #46 Suppressive Aura (SPEC §8.2): "Aura: All Units have −1/−1. Embiggened (4): −2/−2 instead.",
+//! radiant "Aura: Enemy Units have −2/−2. Embiggened (4): −4/−4 instead." The radiant cell restates the whole
 //! clause and replaces the base one (§8 Conventions). Neither face prints a keyword.
 //!
 //! A pure §10.4 layer-5 contribution: `Script.aura` is read on every stat read, never applied once

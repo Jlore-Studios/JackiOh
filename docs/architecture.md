@@ -247,8 +247,13 @@ cannot hold a comment, and three things in them are not obvious:
   bundle is `apps/web` plus the WASM module compiled from `crates/engine`, `crates/cards`, `crates/ai`
   and `crates/wasm`, and `crates/cards/src/scripts/` holds the card scripts, which are compiled in, so
   the list never names a crate's `src/`. Diffing against the last build, not the previous
-  commit, means a commit whose build was cancelled or failed is never skipped past. Any doubt builds:
-  no previous sha, a shallow clone without it, an empty diff, a path off the list. A cancelled build
+  commit, means a commit whose build was cancelled or failed is never skipped past. main also waits
+  an hour (`MIN_GAP_SECONDS`) after the last build: a commit committed sooner is skipped, and the
+  first push after the hour builds it with the rest, since each build stores a whole copy of the
+  site (about 76 MB in October 2026) against the Hobby plan's 10 GB of Deployment Storage; the
+  project's Deployment Retention Policy, a dashboard setting, keeps every kind of deployment 1 day.
+  Any doubt builds: no previous sha, a shallow clone without it, an empty diff, a commit dated
+  before the last build, a path off the list. A cancelled build
   still counts against the 100, which is why the machine branches are switched off outright rather
   than left to the script. Vercel reads the config from the commit that is pushed, so a branch cut
   before this landed deploys until it merges main, and `bot-state` is an orphan branch with no
@@ -377,7 +382,7 @@ Notes that matter:
 | The result's write fails | tried again, `MATCH_RECORD_RESULT_ATTEMPTS` tries in all with a doubling wait from `MATCH_RECORD_RESULT_BACKOFF_MS`; if none lands, the match row stays `live` with both players in it, the actor is dropped from the map and both sockets close (1001), and the next socket rebuilds the actor, which writes the result as it arms (R1437) |
 | A clock's action can't be written | its clock runs out again `MATCH_SERVER_ACTION_RETRY_MS` later until the row lands, the match ends or the actor stops; a new turn, an answered prompt, a closed mulligan window or a reconnect cancels it (R776000) |
 | The log already holds the actor's next seq | `StoreError::SeqClash`: the actor is dropped from the map, both sockets close (1001), and the next socket rebuilds it from the log (R776000) |
-| Process boot | nothing: no actor is rebuilt until a socket for its match arrives, when `actor/registry.rs` folds `(seed, decks, log)`; the rebuilt clock restarts the turn clock from full and keeps the ceiling from `started_at` |
+| Process boot | nothing: no actor is rebuilt until a socket for its match arrives, when `actor/registry.rs` folds `(seed, decks, log)`, from the checkpoint the last drain stored when it passes (#1169); the rebuilt clock restarts the turn clock from full and keeps the ceiling from `started_at` |
 | First socket on an actor while the other seat has never attached to it (a restart, a no-show) | start that seat's grace at its stored `grace_deadline_at` if the restart left one (never later than a fresh window, at once if already past), else a fresh 60 s; it expires as a loss like any other. A match no socket returns to is the reaper's ceiling draw (R112, R744) |
 | Idle | The process has no hibernation; an actor with no sockets and an expired grace has already ended. On Durable Objects this row would read "hibernate". |
 
@@ -471,9 +476,12 @@ its result is in (R376), with the mode read off the series, the room or the tick
 match. Nothing on a match's own path reads or writes that table, so a server deployed before
 migration 0014 is applied loses records (each logged as `game.record.failed`), never a match.
 
-No snapshots. ARCHITECTURE-CCG §2.2: "Append each action as it resolves; don't persist snapshots.
-Periodic snapshots are an optimisation for later if replay gets slow." A 30-player-turn cap (R2) puts
-a hard bound on log length, so that day is far off.
+One snapshot, and only beside the log. ARCHITECTURE-CCG §2.2: "Append each action as it resolves;
+don't persist snapshots. Periodic snapshots are an optimisation for later if replay gets slow." A
+30-player-turn cap (R2) bounds a log's length, so nothing is written as a match is played. The
+restart drain alone stores one checkpoint per live match (`match_checkpoints`, migration 0042,
+#1169), which the very next boot's rebuild resumes when every check passes, folding only the rows
+after it, and otherwise ignores for the whole log; a finished match drops it, and no replay reads it.
 
 `match_actions` is append-only as a **database** property: `app.deny_row_mutation()` is attached
 `before update or delete`. `collection_grants` gets the same trigger for the same reason.
@@ -695,7 +703,9 @@ step that is not yet implemented says which BUILD task delivers it.
    `0029_play_telemetry.sql` → `0030_meditative_set.sql` → `0031_meditative_endings.sql` →
    `0032_ladder_bots.sql` → `0033_bot_trios.sql` → `0034_account_consent.sql` →
    `0035_replay_final_hash.sql` → `0036_lean_set.sql` → `0037_custom_cards.sql` → `0038_social.sql` →
-   `0039_duos.sql` — and records them in `app.migrations`. Expected result: 43 tables
+   `0039_duos.sql` → `0040_moderation_switch_grant.sql` → `0041_card_totals.sql` →
+   `0042_match_checkpoints.sql` → `0043_meditative_plus_set.sql` — and records them in
+   `app.migrations`. Expected result: 47 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can
@@ -774,9 +784,9 @@ step that is not yet implemented says which BUILD task delivers it.
    - `insert into public.collection …` as an `authenticated` user → must be refused. There is no
      policy, so there is no path (§9.4).
 6. **Seed the catalog.** `target/release/jackioh-server seed-catalog`. It writes the catalog compiled
-   into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 450
-   (370 cards + 80 tokens over Core, Classic, Classic+ and Meditative: patch v0.2.0, Glitch, issue #170,
-   and the Meditative set, issue #553) and
+   into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 480
+   (396 cards + 84 tokens over Core, Classic, Classic+, Meditative and Meditative+: patch v0.2.0, Glitch,
+   issue #170, the Meditative set, issue #553, and the Meditative+ set, issue #1187) and
    `select app.catalog_version();` → your `CATALOG_VERSION`, the latest card patch's version (R388).
 7. **Mint an invite code.** `target/release/jackioh-server mint-code`. It generates 16 characters
    from `CODE_ALPHABET`, formats them `XXXX-XXXX-XXXX-XXXX`, HMACs with `CODE_PEPPER` and inserts

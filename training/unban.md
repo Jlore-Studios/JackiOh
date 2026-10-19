@@ -38,18 +38,19 @@ Everything below is for a table that still has entries.
    `TRAINING_UNBAN` in `crates/engine/src/config.rs`). CI refuses a pull request
    from this lane that touches anything outside `crates/ai/**` and `training/history/**`, and
    re-runs the gate itself.
-3. Only remove entries from `SHADOW_BAN`; never add one, and keep the table sorted by id. Above all
-   never add a card of an earlier set (Core, Classic, Classic+): the table holds Meditative cards
-   only (R732000), and a test fails on any other. When you
-   remove one, say in the comment above the table which generation removed it and why the AI now
+3. Only remove entries from `SHADOW_BAN`, never add one: add the card's id to `SHADOW_UNBANNED` (sorted
+   by id) and run `cargo jackioh sweep --write`, which drops its row; never edit the table's rows by
+   hand (`cargo jackioh sweep --check` fails on it). Above all never add a card of an earlier set
+   (Core, Classic, Classic+): the table holds Meditative and Meditative+ cards only (R732000, R1186000), and a
+   test fails on any other. When you remove one, say in the comment above the table which generation removed it and why the AI now
    plays it. `SHADOW_WATCH` is the sweep's (R390): leave it. Do not raise `AI_BUDGET` or
    `AI_GATE_BUDGET`: the browser runs the AI at that budget under a time limit (SPEC §9.9). Leave
    `AI_DECK_GATED_SETS` in `crates/ai/src/config.rs` as it is: which sets the AI's decks are gated
    from is a person's call (R1390), never a lane's.
-4. Keep `cargo test -p jackioh-ai` and `cargo clippy -p jackioh-ai --all-targets -- -D warnings`
-   passing. Never weaken a test to make a change pass; a test that pins the ban list itself is
-   updated to the new list. The AI stays pure (CLAUDE.md rule 4): no clock, no I/O, no randomness but
-   the `Rng` it is handed.
+4. Keep `cargo test -p jackioh-ai`, `cargo clippy -p jackioh-ai --all-targets -- -D warnings` and
+   `cargo jackioh sweep --check` passing. Never weaken a test to make a change pass; a test that pins
+   the ban list itself is updated to the new list. The AI stays pure (CLAUDE.md rule 4): no clock, no
+   I/O, no randomness but the `Rng` it is handed.
 
 ## The Meditative set first
 

@@ -8,11 +8,12 @@ against a practice AI.
 
 | Read | For |
 |---|---|
-| [`SPEC.md`](SPEC.md), [`spec/`](spec/README.md) | The rules, all 370 cards and 80 tokens of Core, Classic, Classic+ and Meditative, the architecture and the engine design, one note per section and per ruling. The only source of rules |
+| [`SPEC.md`](SPEC.md), [`spec/`](spec/README.md) | The rules, all 396 cards and 84 tokens of Core, Classic, Classic+, Meditative and Meditative+, the architecture and the engine design, one note per section and per ruling. The only source of rules |
 | [`BUILD.md`](BUILD.md) | The work order: milestones, acceptance criteria, the definition of done |
 | [`REVIEW.md`](REVIEW.md) | The audit procedure |
 | [`CLAUDE.md`](CLAUDE.md) | How the codebase is laid out, the rules every change follows, and every command |
 | [`bot/README.md`](bot/README.md) | The night bot that builds issues while nobody is awake |
+| [`bot/machine/README.md`](bot/machine/README.md) | The two AWS boxes: the night box and the training box |
 
 ## How it is built
 
@@ -46,26 +47,72 @@ pnpm --dir apps/web test       # the client's tests
 
 `CLAUDE.md` lists every command, including the server, the database suites and the Cypress specs.
 
-## The night bot
-
-`@jgoetzmann-bot` works from 21:00 to 07:00 Central. Label an issue `bot:build`, assign it the bot,
-or comment `@jgoetzmann-bot <what you want>`. Overnight, one subscription owns each item end to
-end: hard items go to Opus throughout; medium items go to a medium model for up to 3 review rounds,
-then to Opus for the final audit; easy items go to a weak model, then to a medium model whose audit
-ships them. Every builder reviews itself in a fresh adversarial session — never an approval from
-its own context — the checks run every round, and the bot opens a pull request that merges itself
-once CI passes and the lane's final audit approves.
-`/harness status`, `/harness halt` and `/harness start` work in any comment. When the queue is
-empty, the bot suggests improvements as issues, at most four at a time. It starts only when the
-Claude subscription is quiet. It reads the usage twice, ten minutes apart, and holds back while
-you or another agent are using it. The exception is its partner bot, bright-bots-harness, which
-it may run alongside.
+## Where it runs
 
 ```mermaid
 flowchart LR
-  A["Issue labelled bot:build<br/>or @jgoetzmann-bot ..."] --> Q{"subscription quiet?<br/>21:00–07:00 Central"}
-  Q -- "yes" --> B["plan"]
-  B --> C["lane owner builds<br/>(Opus / medium / weak)"]
+  subgraph play["Playing"]
+    W["web client<br/>Cloudflare, Vercel for staging"]
+    SV["jackioh-server<br/>Render, Ohio"]
+    DB["Postgres and Auth<br/>Supabase, us-east-2"]
+    W -- "API, WebSocket" --> SV
+    SV --> DB
+  end
+  subgraph gh["GitHub"]
+    CI["CI on every pull request"]
+    NB["the night bot and Squishy<br/>GitHub Actions"]
+    HR["GitHub's runners<br/>the Claude accounts' work"]
+    NB -- "work job" --> HR
+  end
+  subgraph aws["AWS, us-east-2"]
+    NV["night box<br/>Codex, agy, Muse, Devin"]
+    TB["training box<br/>improve, unban, gather"]
+    ST["starter Lambda<br/>every 5 minutes"]
+    ST -- "starts it when a job waits" --> NV
+  end
+  NB -- "work job" --> NV
+  TB -- "ai/* pull requests" --> CI
+  NB -- "bot pull requests" --> CI
+```
+
+| Part | Where | What runs there | Read |
+|---|---|---|---|
+| The web client | Cloudflare; Vercel is staging | the Vite and React app, with the engine and the AI as WebAssembly | [`apps/web`](apps/web/README.md), [`docs/deploy-cloudflare.md`](docs/deploy-cloudflare.md) |
+| The server | Render, in Ohio | `jackioh-server`: the HTTP API and one match actor per match. `/api/catalog` is Render's health check | [`crates/server`](crates/server/README.md), [`render.yaml`](render.yaml) |
+| The database and sign-in | Supabase, in `us-east-2` | Postgres and Auth | [`docs/deploy-cloudflare.md`](docs/deploy-cloudflare.md) |
+| CI | GitHub's runners | the five required checks on every pull request, and the slow suites once a day | [`CLAUDE.md`](CLAUDE.md), CI |
+| The night bot | GitHub Actions | `bot-commands.yml` answers comments and labels within seconds; each `bot-night.yml` run is four jobs: gate, plan, work and deliver. Only the work job runs a model, and it holds no GitHub write token | [`bot/README.md`](bot/README.md) |
+| The Claude accounts' work | GitHub's runners | the work jobs of `claude-1` to `claude-7`, logged in from secrets | [`bot/README.md`](bot/README.md), Subscriptions |
+| The night box | AWS EC2, `m7i-flex.large`, tagged `jackioh-night-vm` | the work jobs of Codex, agy, Muse and Devin, each a Linux user of its own with its own runners. A Lambda starts it when a job waits, and it powers off after 30 idle minutes | [`bot/machine/README.md`](bot/machine/README.md) |
+| The training box | AWS EC2, `m7i-flex.large`, tagged `jackioh-train-box`, always on | the AI's training lanes, `improve`, `unban` and `gather`, as systemd services outside the night bot | [`training/README.md`](training/README.md), [`bot/machine/README.md`](bot/machine/README.md#the-training-box) |
+| Squishy | GitHub Actions and GitHub's runners | `@squishy-squooby`, the same harness on its own Claude account | [`bot/README.md`](bot/README.md#squishy) |
+| The local runner | the owner's PC, in Docker | the learned evaluation's self-play exports, and night-box jobs while the PC is idle | [`bot/machine/README.md`](bot/machine/README.md#the-local-runner) |
+
+The AWS account is on the Free plan: its credits pay for both boxes, and a Lambda opens an issue
+when they fall under $20. [`docs/architecture.md`](docs/architecture.md) covers the code's own
+architecture: the crates, the wire and the client.
+
+## The night bot
+
+`@jgoetzmann-bot` builds the issues you hand it, at any hour, on whichever of its subscriptions is
+free: seven Claude accounts (Opus and Sonnet), and ChatGPT through Codex, Gemini through agy, Muse
+and Devin on the night box. Label an issue `bot:build`, assign it the bot, or comment
+`/harness build` or `@jgoetzmann-bot <what you want>`.
+
+Every item has a difficulty, which decides who may plan, build and approve it. A medium or strong
+model plans it first (a strong one for a hard item) and rates an item nobody rated. One
+subscription owns it from then on: it builds it, runs the checks, and reviews itself in a fresh
+adversarial session, never an approval from its own context, fixing what that finds for up to 3
+rounds (10 for a hard item). Then the lane's final audit approves it: a strong model for a medium
+or hard item, a medium one for an easy item. The pull request merges itself once CI passes on the
+commit the audit approved. When nothing is queued, the bot suggests improvements as issues, at
+most four at a time. `/harness status`, `/harness halt` and `/harness start` work in any comment,
+and the pinned **Night bot status** issue shows what it is doing.
+
+```mermaid
+flowchart LR
+  A["Issue labelled bot:build<br/>or @jgoetzmann-bot ..."] --> P["plan<br/>(medium or strong;<br/>strong for hard)"]
+  P --> C["lane owner builds<br/>(Opus / medium / weak)"]
   C --> D["repository checks"]
   D --> E{"fresh adversarial<br/>self-review session"}
   E -- "findings" --> F["same owner<br/>fixes them"] --> D
@@ -74,8 +121,8 @@ flowchart LR
   G --> H{"CI"}
   H -- "green" --> I["merged into main"]
   H -- "red" --> F
-  B -- "queue empty" --> J["up to 4<br/>suggestion issues"]
+  P -- "queue empty" --> J["up to 4<br/>suggestion issues"]
 ```
 
-[`bot/README.md`](bot/README.md) has the full picture: commands, labels, safety, setup and
-operations.
+[`bot/README.md`](bot/README.md) has the full picture: commands, labels, subscriptions, safety,
+setup and operations.

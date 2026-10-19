@@ -98,7 +98,12 @@ struct Registered {
     version: String,
     index: indexmap::IndexMap<String, usize, IdHash>,
     win_rates: crate::win_rates::WinRateTable,
+    code_blocks: CodeBlocks,
 }
+
+/// R1183004 (Meditative+ #25 KY's Intuition): each card's code block, by catalog id, sorted by id —
+/// the excerpt of its own script `crates/cards/build.rs` compiles in (`code_block_of`).
+pub type CodeBlocks = &'static [(&'static str, &'static str)];
 
 static REGISTERED: OnceLock<Registered> = OnceLock::new();
 
@@ -131,18 +136,41 @@ fn registered() -> &'static CardDefs {
     }
 }
 
-/// TS `registerCatalog(defs, catalogVersion = "test")`, with the compiled win-rate table beside
-/// them (ME-STATS, MD-D1). Set once per process: a second call is ignored (the registry is a
-/// `OnceLock`, SURFACE §3); a test that needs another catalog sets the testkit's override instead
-/// (SURFACE §8).
-pub fn register_catalog(defs: CardDefs, catalog_version: &str, win_rates: crate::win_rates::WinRateTable) {
+/// TS `registerCatalog(defs, catalogVersion = "test")`, with the compiled win-rate table (ME-STATS,
+/// MD-D1) and the compiled code blocks (R1183004) beside them. Set once per process: a second call
+/// is ignored (the registry is a `OnceLock`, SURFACE §3); a test that needs another catalog sets the
+/// testkit's override instead (SURFACE §8).
+pub fn register_catalog(
+    defs: CardDefs,
+    catalog_version: &str,
+    win_rates: crate::win_rates::WinRateTable,
+    code_blocks: CodeBlocks,
+) {
     let index = defs.keys().enumerate().map(|(at, id)| (id.clone(), at)).collect();
     let _ = REGISTERED.set(Registered {
         defs,
         version: catalog_version.to_string(),
         index,
         win_rates,
+        code_blocks,
     });
+}
+
+/// R1183004: a card's code block — the testkit's override first, then the compiled table — or
+/// `None` for a card with none (a token, a fused or crafted definition, a fixture).
+pub fn code_block_of(def_id: &str) -> Option<&'static str> {
+    #[cfg(feature = "testkit")]
+    if let Some(blocks) = crate::testkit::scenario::code_blocks_override() {
+        return find_code_block(blocks, def_id);
+    }
+    find_code_block(REGISTERED.get()?.code_blocks, def_id)
+}
+
+fn find_code_block(blocks: CodeBlocks, def_id: &str) -> Option<&'static str> {
+    blocks
+        .binary_search_by(|(id, _)| (*id).cmp(def_id))
+        .ok()
+        .map(|at| blocks[at].1)
 }
 
 /// ME-STATS: the win-rate table CN Tech reads — the testkit's override first, then the registered
@@ -375,6 +403,10 @@ pub struct CatalogQueryArgs {
     /// R1444: only Luck-based cards (`is_luck_based`), Meditative #101 Gachaholic's pool.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub luck_based: Option<bool>,
+    /// R1178001: `true` asks for embiggen cards only, the cards with two prices (a printed
+    /// `CardCost::Embiggen`, `is_embiggen_card`), `false` forbids them (Meditative+ #22, #23).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub embiggen: Option<bool>,
     /// R1080: the printed base attack and health a pool asks for.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stats: Option<AttackHealth>,
@@ -425,6 +457,7 @@ impl From<CatalogQuery> for CatalogQueryArgs {
             not_tags: query.not_tags,
             any_tags: query.any_tags,
             luck_based: None,
+            embiggen: None,
             stats: query.stats,
             rarity: query.rarity,
             set: query.set,
@@ -490,6 +523,13 @@ pub fn is_luck_based(def: &CardDef) -> bool {
     })
 }
 
+/// R1178001: whether a definition is an embiggen card, one that prints two prices (`CardCost::Embiggen`:
+/// its normal price and its Embiggened price, #1175's words). Read off the printed cost, never an
+/// instance's, so a cost override, a discount or a Tune never makes a card one or unmakes it.
+pub fn is_embiggen_card(def: &CardDef) -> bool {
+    matches!(def.cost, CardCost::Embiggen { .. })
+}
+
 fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -> bool {
     // R674: Glitch is in no pool, not even one that takes every token; only R673's roll makes one.
     if def.id == GLITCH_DEF_ID && !as_list(&args.def_id).contains(&def.id) {
@@ -550,6 +590,12 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
         return false;
     }
     if args.luck_based == Some(true) && !is_luck_based(def) {
+        return false;
+    }
+    // R1178001: an embiggen card is one that prints two prices.
+    if let Some(wanted) = args.embiggen
+        && is_embiggen_card(def) != wanted
+    {
         return false;
     }
     // R1221: the Tribute-cost filter, read off the registered script.

@@ -250,6 +250,9 @@ fn to_placeholder(card: &mut CardInstance) {
     card.granted_keywords = Vec::new();
     // MD-B15, R923: a granted tag is read by rules, so a placeholder carries none.
     card.granted_tags = None;
+    // R1301, R1176000: whether the hidden card is in Chinese goes with its face, and a card in
+    // Chinese is CN, so a placeholder is not in Chinese.
+    card.chinese = None;
     // ME-ALTPLAY, R1046: a placeholder names no face-down form.
     card.set_as = None;
     // MD-B6, R943: whether the hidden card was minted after the deal goes with its face.
@@ -257,6 +260,8 @@ fn to_placeholder(card: &mut CardInstance) {
     card.buffs = AttackHealth { attack: 0, health: 0 };
     card.damage = 0;
     card.cost_override = None;
+    // R1181003: the price of the Embiggened version alone (Enormous Elderberry's (0)) goes with its face.
+    card.embiggen_cost_override = None;
     card.x = None;
     card.embiggened = None;
     card.return_to_hand_at_end_of_turn = None;
@@ -288,6 +293,8 @@ fn to_placeholder_json(card: &mut Value) {
     object.insert("damage".to_string(), Value::from(0));
     for key in [
         "costOverride",
+        // R1181003: the Embiggened version's own price.
+        "embiggenCostOverride",
         "x",
         "embiggened",
         "returnToHandAtEndOfTurn",
@@ -299,6 +306,8 @@ fn to_placeholder_json(card: &mut Value) {
         "enchantments",
         // MD-B15, R923: a granted tag is read by rules, so a placeholder carries none.
         "grantedTags",
+        // R1301, R1176000: nor is it in Chinese, which makes a card CN.
+        "chinese",
         // ME-ALTPLAY, R1046: a placeholder names no face-down form.
         "setAs",
         // MD-B6, R943: whether the hidden card was minted after the deal goes with its face.

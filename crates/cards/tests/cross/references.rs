@@ -14,9 +14,10 @@
 //! Patch v0.2.0 adds two things to the rule. R381 (B2.8): four Classic cards are named like rules
 //! words — #10 Exile, #36 Burn, #57 Echo and #30 Recycle — so a text that says "Exile …" or "Echo 1"
 //! names none of them unless its `refs` lists the card (a card's `refs` stays curated). R480: the
-//! eight Pancake tokens and the ten AI generated cards reach play only through a pool a card names by
-//! its tag ("a random Pancake token", "a random AI generated card"), so a text naming that pool names
-//! each of its members for the rule that every token is named by some card.
+//! eight Pancake tokens and the AI generated cards (the ten T-AI cards, and since v0.3.15 Meditative+
+//! #1.1 and #1.2) reach play through a pool a card names by its tag ("a random Pancake token", "a
+//! random AI generated card"), so a text naming that pool names each of its members for the rule that
+//! every token is named by some card.
 //!
 //! Port of `packages/cards/test/references.test.ts`.
 
@@ -283,12 +284,16 @@ mod r279_the_reference_map_spec_5_7_10_10 {
     }
 
     #[test]
-    fn r480_names_the_eight_pancake_tokens_and_the_ten_ai_generated_cards_by_their_tags_from_the_cards_that_make_them()
+    fn r480_names_the_eight_pancake_tokens_and_the_twelve_ai_generated_cards_by_their_tags_from_the_cards_that_make_them()
      {
+        // R1178002: Meditative+ #1.1 Base Camp and #1.2 Spa Day, AI generated cards Bob's Plan names,
+        // join the AI pool once their set ships (#1187), so the pool pinned here is the shipped sets'.
+        // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the AI generated cards are twelve, the ten
+        // T-AI cards and M+ #1.1 and #1.2 (§7, R1421).
         let indices_of = |tag: Tag| -> Vec<String> {
             entries()
                 .into_iter()
-                .filter(|card| card.token && card.tags.contains(&tag))
+                .filter(|card| card.token && card.tags.contains(&tag) && set_ships(card.set))
                 .map(|card| card.index.clone())
                 .collect()
         };
@@ -300,7 +305,7 @@ mod r279_the_reference_map_spec_5_7_10_10 {
             indices_of(Tag::Ai),
             strings(&[
                 "T-AI-1", "T-AI-2", "T-AI-3", "T-AI-4", "T-AI-5", "T-AI-6", "T-AI-7", "T-AI-8", "T-AI-9",
-                "T-AI-10",
+                "T-AI-10", "1.1", "1.2",
             ])
         );
         assert_eq!(

@@ -20,9 +20,9 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     "bounce all enemy units": { label: "Bounce enemy units", detail: "Your opponent's units return to their hand. Then draw 1." },
     "destroy all enemy units": { label: "Destroy enemy units", detail: "Destroy every enemy unit. Then draw 1." },
   },
-  // #24 Efficiency Dividend: "Deal X+1 damage, heal a target 4X, or gain X mana next turn".
+  // #24 Efficiency Dividend: "Deal X damage, heal a target 4X, or gain X mana next turn".
   "core-024": {
-    damage: { label: "Deal X+1 damage", detail: "Deal X plus 1 damage." },
+    damage: { label: "Deal X damage", detail: "Deal X damage." },
     heal: { label: "Heal 4X", detail: "Heal a target by four times X." },
     mana: { label: "Mana next turn", detail: "Gain X mana next turn." },
   },
@@ -55,7 +55,7 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
   "classicplus-040": {
     Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +2X Attack and Rush." },
     Education: { label: "Education", detail: "Shuffle 2X random Radiant Books into your deck. They have Cast on draw." },
-    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 10X% chance to become Radiant." },
+    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has an 8X% chance to become Radiant." },
     Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +2X Health and Armor X." },
   },
   // M #22 Mind Games: "Choose one in secret: Greed, Attack or Defend." The detail names no
@@ -75,6 +75,22 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
   // M #98 Showdown: "Choose a lane. Lock every other lane until the start of your next turn." The
   // board draws lane 1 on the left for both seats (Board.tsx), so each option says where it is.
   "meditative-098": lanes("Lock the other four lanes until the start of your next turn."),
+  // M+ #4 Supply Drop: "Choose one: In 3 turns, deal 4 damage to each enemy, with Pierce and Lifesteal;
+  // or in 3 turns, add 1 random Radiant Jlockeed card to your hand, and each costs (2)." The wait and
+  // the numbers are the card's and its Embiggened version's, so the detail names none.
+  "meditativeplus-004": {
+    combat: { label: "Combat", detail: "In a few turns, deal damage to each enemy, with Pierce and Lifesteal." },
+    supplies: { label: "Supplies", detail: "In a few turns, add Radiant Jlockeed cards to your hand." },
+  },
+  // M+ #24 Bob, Wisconsin's Strongest Soldier: "Cry: Choose one: Freeze all enemy Units; put an enemy
+  // Unit into your hand, and your opponent gets 3 Coins; Discover a Unit and make it Radiant; or draw 1
+  // and fill your hand with copies of it." The Coins' count is the card's, so the detail names none.
+  "meditativeplus-024": {
+    freeze: { label: "Freeze", detail: "Freeze every enemy Unit." },
+    take: { label: "Take a Unit", detail: "Put the enemy Unit you choose into your hand. Your opponent gets Coins." },
+    discover: { label: "Discover a Unit", detail: "Discover a Unit and make it Radiant." },
+    copies: { label: "Draw and copy", detail: "Draw 1, then fill your hand with copies of it." },
+  },
 };
 
 /** Showdown's five lanes, `lane-1` to `lane-5`, each named by where it sits on the board. */
@@ -88,19 +104,19 @@ function lanes(detail: string): Record<string, ModeText> {
  * missing here reads the same on both faces.
  */
 export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText>>>> = {
-  // C+ #40 Appropriations, radiant: every multiple quintupled, the Armor doubled.
+  // C+ #40 Appropriations, radiant: Attack and Armor doubled, the Books and the Culture chance 2.5 times, Health tripled.
   "classicplus-040": {
-    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +5X Attack and Rush." },
+    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +4X Attack and Rush." },
     Education: { label: "Education", detail: "Shuffle 5X random Radiant Books into your deck. They have Cast on draw." },
-    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 25X% chance to become Radiant." },
-    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +7X Health and Armor 2X." },
+    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 20X% chance to become Radiant." },
+    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +6X Health and Armor 2X." },
   },
   // M #98 Showdown, radiant: "This turn, after you put a card into that lane, cast Book of Buff on it."
   "meditative-098": lanes("Lock the other four lanes until the start of your next turn. This turn, Book of Buff is cast on each card you put into this one."),
-  // #24 Efficiency Dividend, radiant: "Deal 2X+1 damage, heal a target 8X, or gain X+1 mana next turn"
+  // #24 Efficiency Dividend, radiant: "Deal 2X damage, heal a target 8X, or gain X+1 mana next turn"
   // (§8 #24, R275).
   "core-024": {
-    damage: { label: "Deal 2X+1 damage", detail: "Deal twice X plus 1 damage." },
+    damage: { label: "Deal 2X damage", detail: "Deal twice X damage." },
     heal: { label: "Heal 8X", detail: "Heal a target by eight times X." },
     mana: { label: "Mana next turn", detail: "Gain X plus 1 mana next turn." },
   },

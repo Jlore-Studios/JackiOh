@@ -314,6 +314,7 @@ mod r942 {
             row: Some(Row::Backrow),
             side: Some(ScopeSide::Any),
             radiant_for: None,
+            chinese: None,
         })
         .apply)(&mut ctx);
         // Both backrows filled for their owners, the Locked zone skipped.

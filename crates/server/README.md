@@ -29,7 +29,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 
 | Layer | Modules | Rule |
 | --- | --- | --- |
-| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` or a return as `loop.returned`, both alerts, and restarts the loop), `serve`; on SIGTERM or Ctrl-C, `serve_until`'s drain (loops aborted, requests finished, actors stopped with 1001, store closed) inside `SHUTDOWN_DRAIN_SECONDS` |
+| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` or a return as `loop.returned`, both alerts, and restarts the loop), `serve`; on SIGTERM or Ctrl-C, `serve_until`'s drain (loops aborted, requests finished, each live match checkpointed and its actor stopped with 1001, store closed) inside `SHUTDOWN_DRAIN_SECONDS` |
 | Handlers | `api/*.rs` | `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`; no SQL of their own |
 | Match | `actor/match_actor.rs`, `clock.rs`, `registry.rs`, `rooms.rs`, `ws_server.rs` | state in memory; time from `tokio::time` |
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
@@ -248,10 +248,15 @@ What the actor holds, each with a test named after it:
   malformed-frame budget, past which its socket is closed with 1008 (R835002).
 - Every resolved action is appended to `match_actions`. A rebuilt actor folds `(seed, decks, log)`
   with the last boards, Glitch boards and dealt seats frozen into the match at its start (R417, R678,
-  R433), and a reconnect gets a fresh view, never a log replay (§9.5). A match is played, rebuilt,
-  reaped and recorded under the catalog version it started on (R388, R767000): a start on a version
-  this build neither is nor carries is refused, and a rebuild of such a match logs
-  `match.catalog.unpinned` and plays on this build's catalog, as Duos's does.
+  R433), and a reconnect gets a fresh view, never a log replay (§9.5). The restart drain stores a
+  checkpoint of each live match of `MATCH_CHECKPOINT_MIN_ACTIONS` actions or more
+  (`match_checkpoints`, migration 0042, `actor/checkpoint.rs`), and the next rebuild folds only the
+  rows after it when it passes every check (`MATCH_CHECKPOINT_VERSION`, the build's rules
+  fingerprint from `build.rs`, the catalog, its row's seq and nonce, its hash), or else logs
+  `match.checkpoint.refused` with the reason and folds the whole log; finishing drops it (#1169).
+  A match is played, rebuilt, reaped and recorded under the catalog version it started on (R388,
+  R767000): a start on a version this build neither is nor carries is refused, and a rebuild of such
+  a match logs `match.catalog.unpinned` and plays on this build's catalog, as Duos's does.
 - Clocks (R79, R268) are `config.rs` constants and live here, never in the engine: an expiry is a
   server-only action (`timeout`, `disconnectExpired`, `ceilingReached`) that goes through `reduce` and
   the log like any other. Every terminal reason writes exactly one `results` row and moves the rating
@@ -355,6 +360,8 @@ folds `STATS_FOLD_BATCH_RECORDS` (500) records to a transaction. A record writte
 0041 is not folded until the retention loop folds it at boot or `stats-fold` does (R1044000). Once
 folded, a record's detail is emptied `GAME_RECORD_RAW_RETENTION_DAYS` (7) after it was written by the
 retention purge; its row and id stay, so the same game is never written or counted again (R1044001).
+Records track the face each card was played on, and `playedRadiant` and `playedNormal` split the played
+decks into those that played the card Radiant at least once and those that never did (R1147000).
 
 `stats-cards` takes `--source=live|dev|all` (live unless told otherwise), `--mode=bo1|bo3|random`,
 `--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`. With no `--pilot` it
@@ -436,6 +443,11 @@ match exists already. The repository is public and the match may still be live, 
 the match, the build, the catalog and each refused row's seq, seat and action type, and never a
 refusal's text, a card or an instance id.
 
+A live action whose `reduce` panics (R1253000) is filed the same way, as `FoundIn::Live`
+(`FoundIn::DuosLive` in co-op): the issue names the match, the seq the action would have taken, its
+seat and its type, never the panic's message, which only the server's log line `match.action.panicked`
+(`duos.action.panicked`) holds.
+
 The night bot takes `bot:build` only from an account at level 2 or more in `.harness/trust.txt` or
 a collaborator (bot/README.md, Who may do what), so the token is made on such an account: a
 fine-grained personal access token for this repository with Issues read and write, set on Render
@@ -455,6 +467,7 @@ select jsonb_build_object(
   'lastBoards', jsonb_build_array(m.p1_last_board, m.p2_last_board),
   'glitchBoards', jsonb_build_array(m.p1_glitch_board, m.p2_glitch_board),
   'log', (select jsonb_agg(a.action order by a.seq) from public.match_actions a where a.match_id = m.id),
+  'catalogVersion', m.catalog_version,
   'finalHash', m.final_hash)::text
 from public.matches m where m.id = '<match id>';
 ```
@@ -464,6 +477,20 @@ add `"dealt": ["p1", "p2"]` for an All Random match (its `mode`, its room's or i
 with its reason, and `cargo jackioh think --file match.json --at K` shows the position after K
 actions. A live actor that folded a log out of order rewinds its match, as the text-ordered read of
 `match_actions` did before `store::contract`'s `reads_a_log_of_ten_or_more_actions_back_in_seq_order`.
+
+The file keeps the catalog version the match was played on (`catalogVersion`), and `replay` and `think`
+fold it under that version's catalog (R767000); a version this build neither is nor carries exits 1 as
+`earlier_patch`, so fold it with a build of that version. Without the key, the match folds under this
+build's catalog, not the one it was played on. A co-op match (`(co-op)` in the title) exports from
+`duos_matches`, its catalog version inside `options`, and `cargo jackioh replay < match.json` prints its
+`duos_hash` and `refusedAt`, the index of the log action its fold refused:
+
+```sql
+select jsonb_build_object(
+  'options', m.options || jsonb_build_object('seed', m.seed),
+  'log', (select jsonb_agg(a.action order by a.seq) from public.duos_match_actions a where a.match_id = m.id))::text
+from public.duos_matches m where m.id = '<match id>';
+```
 
 ## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000, R641000, R747000)
 
@@ -664,6 +691,13 @@ loop first folds any record not yet folded (`api::game_records::fold_pending`), 
 `app.purge_expired_rows`' fourth cutoff empties the detail of each folded record written more than
 `GAME_RECORD_RAW_RETENTION_DAYS` ago (R1044001). The store folds under a transaction-level advisory
 lock per patch and source, so two folds into the same rows never interleave.
+
+Migration 0042 adds `match_checkpoints` (#1169): at most one row per live match, the state, play
+telemetry and bot turns its actor held after one log row, written by the restart drain and read by
+the next rebuild. It holds both hands and both libraries, so it is server-only like `matches` (RLS
+on, no policy, no grant). It is written only while the match is live and its log holds that row,
+replaced only by a later seq, deleted by `matches_finish` and with a voided match (on delete
+cascade); the retention purge never meets one.
 
 ## Tests
 

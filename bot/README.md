@@ -11,7 +11,7 @@ lanes run on a box of their own, outside the harness: [`machine/`](machine/READM
 Every model has a tier (weak,
 medium or strong) and every item a difficulty (easy, medium or hard), which decides who may plan,
 build and review it ([Difficulty and tiers](#difficulty-and-tiers)). A medium or strong model plans
-each item first (a strong one for medium and hard items) and rates an item nobody rated, under a
+each item first (a strong one for hard items) and rates an item nobody rated, under a
 strict [easy rule](#the-easy-rule); one subscription owns the item end to end (a medium or
 hard item stays with its planner), builds it,
 runs the repository's checks, and reviews itself in a fresh adversarial session, going round
@@ -20,7 +20,7 @@ until its lane's verdict rounds run out or its reviewer approves. Then the lane'
 pushes. Three failures of an item's own raise its difficulty a step and rebuild it from
 `main` ([Rating, strikes and the step up](#rating-strikes-and-the-step-up)). A change merges itself into `main` once CI passes and its lane's final audit approved the
 same commit: one strong model for a medium or hard item, one medium model for an easy item. When it has nothing to do, it proposes
-improvements to the game as issues, at most four open at a time.
+improvements to the game as issues, at most ten open at a time.
 
 It runs on GitHub Actions. The model sessions run on the bot's own machine on AWS, where each
 subscription is a Linux user of its own with its own runner ([`machine/`](machine/README.md));
@@ -44,7 +44,7 @@ flowchart TD
     GA["gate (no write token)<br/>work a free subscription can take?"]
     GA -- "the partner bot, or another subscription" --> PL
     PL["plan (bot token, no model)<br/>HALT? halted? a free lane?<br/>claim one item and one subscription: bot:working"]
-    PL --> PN["planner (medium or strong; strong for medium and hard)<br/>rates an unrated item, writes the plan"]
+    PL --> PN["planner (medium or strong; strong for hard)<br/>rates an unrated item, writes the plan"]
     PN --> B["work, on that subscription's own runner<br/>(its login only) builder: the lane's owner"]
     B --> G["the repository's checks<br/>cargo fmt, clippy, catalog, patches,<br/>spec, cargo tests, web unit tests"]
     G -- "a weak builder (Codex, Devin)" --> SC["self check: the builder's own model,<br/>a fresh session, until clean (up to 3)"]
@@ -55,7 +55,7 @@ flowchart TD
     R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push, open the PR;<br/>auto-merge on the lane's final audit"]
     D -- "not enough approvals yet" --> X["review run = the final audit (bot:cross-review)<br/>strong for medium/hard, medium first for easy"]
     X -- "approved" --> CI
-    PL -- "a lane idle 30 minutes" --> S["suggestion survey<br/>up to 4 open bot:suggestion issues;<br/>a person's approve comment or bot:build approves one,<br/>reject closes it"]
+    PL -- "a lane idle 30 minutes" --> S["suggestion survey<br/>up to 10 open bot:suggestion issues;<br/>a person's approve comment or bot:build approves one,<br/>reject closes it"]
   end
   D --> CI["CI on the PR: rust (fmt, clippy, tests, checks, fuzz),<br/>web, e2e smoke, db, bot selftest"]
   CI -- "green" --> M["squash-merged into main;<br/>the issue closes"]
@@ -217,7 +217,7 @@ Why it is built this way:
 - **Medium builders, strong planners and a strong reconcile.** A part is one blind pass whose
   every flaw the reconcile's build, checks and review must clear anyway, so its builder may be a
   tier under its difficulty once a strong model has planned it: the strong models spend their
-  hours on the plans and the reconcile, and the medium subscriptions (Muse's four lanes) on the
+  hours on the plans and the reconcile, and the medium subscriptions (Muse's two lanes) on the
   building.
 
 What to watch: the parent is hard, so three failures of its own block it instead of stepping it
@@ -361,7 +361,7 @@ in place of the `bot:*` ones.
 | Label | Meaning |
 |---|---|
 | `bot:build` | an issue waiting for a free subscription |
-| `bot:needs-plan` | the Needs plan stage, beside `bot:build`: it waits for a plan its difficulty may build from (a medium or strong model's for an easy or unrated item, a strong one's for the rest), which goes into its description; the planner rates an unrated item |
+| `bot:needs-plan` | the Needs plan stage, beside `bot:build`: it waits for a plan its difficulty may build from (a medium or strong model's for an easy, medium or unrated item, a strong one's for a hard item), which goes into its description; the planner rates an unrated item |
 | `bot:planned` | it has a plan, in its description (the builder starts from it); it stays after the item leaves the queue |
 | `bot:fullsend` | beside `bot:build`: build it as [fullsend](#fullsend), in parts that land on its own branch, then one reconcile and one pull request; it counts as `difficulty:hard` |
 | `bot:tree` | a fullsend parent whose parts the bot opened and watches; once they have all closed, the sweep queues its reconcile |
@@ -434,7 +434,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh`; weak since 2026-10-11, so easy items only | on the machine, as `agent-gpt` | any time | all of 5 hours (100%), all of the week (Codex reports both; #798) |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | all of 5 hours (100%), all of the week (its own `agy -p /usage`, the Gemini pool's row; #798) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2), on the Devin plan that came with Windsurf, which is canceled; off from 2026-10-05 to 2026-10-06 (#311: every call failed in seconds), on again since a `devin -p` call answered on the machine (#318) | on the machine, as `agent-devin` | any time until 2026-11-02 (`off_from`), when the plan runs out | none: until it refuses |
-| `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on four lanes; Meta's $50 plan since 2026-10-11, four times the usage of the one before | on the machine, as `agent-muse` | any time | all of 5 hours (100%), all of the week (its TUI's `/usage` panel; #798) |
+| `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on two lanes; Meta's $50 plan since 2026-10-11, four times the usage of the one before | on the machine, as `agent-muse` | any time | all of 5 hours (100%), all of the week (its TUI's `/usage` panel; #798) |
 
 The Claude accounts' model jobs run on GitHub's runners (`ubuntu-latest`), which install their
 CLI each time; every other subscription's runs on its own runner on the machine, `night-vm-<id>`.
@@ -495,7 +495,7 @@ prints each one and whether it could start now, and `/harness status` does the s
     (`providers.start_reason`, `providers.frees_at`).
   - **One run at a time** on a capped subscription, its planning run included: two runs
     deciding from one reading pass a cap together. A subscription given more `lanes` takes that
-    many (Muse has four, on one login): each run takes its own reading before it starts and
+    many (Muse has two, on one login): each run takes its own reading before it starts and
     watches it during every call, so two of them pass a cap by at most one reading's worth.
   - **A refusal** parks the subscription until the reset its message names ("resets in
     1h44m44s", "try again in 5 days 2 hours"). One that names none waits for the window the
@@ -525,7 +525,7 @@ each apart from the other, so Claude runs never wait for the night box's slots n
 GitHub's lanes; `plan_lanes` is how many planning runs may go on top of those (the planning
 lane, below; 6), `priority` the usage order within a tier (below), and `tiers` each tier's models,
 which the router tries weakest-first inside the subscription. A subscription's own `lanes`
-(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill its box alone, Muse's is 4, and claude-1, claude-2, claude-3 and claude-7 have 2 each. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
+(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill its box alone, Muse's is 2, and claude-3's is 2. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on as
@@ -599,7 +599,7 @@ services on the training box, [`machine/`](machine/README.md#the-training-box).)
 
 - **Planning: the Needs plan stage.** Every build starts from a plan its difficulty may build
   from. A queued item without one carries `bot:needs-plan`: one with no plan, and one whose plan
-  came from a model under its plan floor (a medium model's plan of a medium or hard item). A
+  came from a model under its plan floor (a medium model's plan of a hard item). A
   planner on the **planning lane** plans those first, so a subscription never plans and builds
   the same item: `plan_lanes` runs on top of
   `max_parallel`, which take no build lane, so a subscription plans while it builds, up to as
@@ -920,7 +920,7 @@ account.
    one waiting, so runs started together would be cancelled; each claim starts the next, and six
    lanes fill in a few minutes.) Once a lane has been free for 30 minutes with nothing in the
    queue it can start (`suggestions.idle_minutes`; work held back behind a dependency or waiting
-   for another subscription does not count), it runs a suggestion survey, while fewer than four
+   for another subscription does not count), it runs a suggestion survey, while fewer than ten
    are open (#797). The sweep keeps that clock (`suggest.idle_since`), and each survey starts it
    again. Every survey also reads the log of suggestions that came to nothing (`suggest.declined`:
    rejected by a vote, closed unbuilt, or approved and then handed to people or failed for good,

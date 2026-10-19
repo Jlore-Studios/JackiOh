@@ -83,7 +83,7 @@ describe("R502 the planner's memory across entries", () => {
     const memory = createFxMemory();
     memory.remember([drawn("p2", "c27", "core-027"), played("p2", "c27", "core-027")]);
     expect(memory.resolving()).toEqual({ player: "p2", instanceId: "c27", defId: "core-027", castOnDraw: true, step: 0, seen: {} });
-    memory.remember([{ type: "healthLost", player: "p2", amount: 5 }]);
+    memory.remember([{ type: "healthLost", player: "p2", amount: 7 }]);
     expect(memory.resolving()?.step).toBe(1);
     expect(memory.resolving()?.seen).toEqual({ healthLost: 1 });
     memory.remember([played("p2", "c95", "core-095")]);

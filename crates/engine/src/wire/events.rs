@@ -7,6 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::wire::actions::Selection;
 use crate::wire::catalog_types::{CardType, Keyword, PlayerId, PromptKind, Row, Zone, ZoneName, ZoneRef};
 use crate::wire::emotes::EmoteId;
 use crate::wire::string_union;
@@ -160,6 +161,21 @@ pub struct GameResult {
     pub reason: GameOverReason,
 }
 
+/// R1180005 (Meditative+ #17 Dogpile): the card in a player's hand or deck that answers a resolved
+/// Spell of theirs that targeted an enemy (`by`), and the enemy it is cast at (`at`), as §10.5 step 7
+/// named them (`targeted.rs`). Engine bookkeeping on `cardResolved`: a view never forwards it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct SpellAnswer {
+    pub by: String,
+    pub at: Selection,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -243,6 +259,12 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         exits_from: Option<u32>,
+        /// R1180005: the card in the player's hand or deck that answers this Spell, which targeted an
+        /// enemy, and the enemy it is cast at (Meditative+ #17 Dogpile). Engine bookkeeping, and it names
+        /// a hidden card: a view never forwards it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        answer: Option<SpellAnswer>,
     },
     Summoned {
         player: PlayerId,
@@ -866,6 +888,13 @@ pub enum GameEvent {
         player: PlayerId,
         cells: Vec<ZoneRef>,
     },
+    /// R1183002 (Meditative+ #18 Cognitive Offloading): the engine plays the rest of `player`'s
+    /// turn `turn` (the autopilot); the actions it takes follow as their own events. Public: a player
+    /// and a number.
+    AutopilotEngaged {
+        player: PlayerId,
+        turn: i32,
+    },
 }
 
 /// serde's `skip_serializing_if` for a number left off the wire at 0 (D14: `damage.absorbed`).
@@ -995,6 +1024,7 @@ string_union! {
         Predicted = "predicted",
         ScriptFailed = "scriptFailed",
         CurveDrawn = "curveDrawn",
+        AutopilotEngaged = "autopilotEngaged",
     }
 }
 
@@ -1161,6 +1191,7 @@ impl GameEvent {
             GameEvent::Predicted { .. } => GameEventType::Predicted,
             GameEvent::ScriptFailed { .. } => GameEventType::ScriptFailed,
             GameEvent::CurveDrawn { .. } => GameEventType::CurveDrawn,
+            GameEvent::AutopilotEngaged { .. } => GameEventType::AutopilotEngaged,
         }
     }
 }
@@ -1232,8 +1263,9 @@ mod tests {
         // Meditative added ten to the 66: `translated` (R1301), `discardPrevented` (R800), `emoted`
         // (R1127), `fengShui` (R983), `jadeChanged` (R961), the three secret events (R860, R864),
         // `deradianted` (R1102) and `manaSpent` (R1109); custom cards one, `scriptFailed` (R915004);
-        // and #831's patch one more, `curveDrawn` (R831003).
-        assert_eq!(GAME_EVENT_TYPES.len(), 78);
+        // and #831's patch one more, `curveDrawn` (R831003); and Meditative+ #18 one,
+        // `autopilotEngaged` (R1183002).
+        assert_eq!(GAME_EVENT_TYPES.len(), 79);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

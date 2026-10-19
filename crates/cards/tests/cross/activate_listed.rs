@@ -25,6 +25,7 @@ const POWER_TO_PUNISH: &str = "classic-020";
 const TURTINATOR: &str = "classic-021";
 const DEVILS_PACT: &str = "classic-023";
 const TRANSMUTABLE_TOXINS: &str = "classic-042";
+const MALZAHARS_RECYCLER: &str = "classic-064";
 const CORPSE_PLANTATION: &str = "classic-074";
 const MUTATE_SPELL: &str = "classic-078";
 const POWER_TO_THRIVE: &str = "classic-081";
@@ -44,9 +45,12 @@ const ALUNETH: &str = "meditative-080";
 const YILES_VIRUS: &str = "meditative-049-2";
 const MAESTRO: &str = "meditative-069";
 const EVER_GROWING_TREE: &str = "meditative-075";
+const LIVING_MANA_POTION: &str = "meditativeplus-011";
+const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
+const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
 /// Every card or token whose base or Radiant text has an Activate ability, each with a case below.
-const ACTIVATE_CARDS: [&str; 26] = [
+const ACTIVATE_CARDS: [&str; 30] = [
     HEROIC_POWER,
     INFINISCEPTER,
     NOSE_HUNTER,
@@ -54,6 +58,7 @@ const ACTIVATE_CARDS: [&str; 26] = [
     TURTINATOR,
     DEVILS_PACT,
     TRANSMUTABLE_TOXINS,
+    MALZAHARS_RECYCLER,
     CORPSE_PLANTATION,
     MUTATE_SPELL,
     POWER_TO_THRIVE,
@@ -73,6 +78,9 @@ const ACTIVATE_CARDS: [&str; 26] = [
     YILES_VIRUS,
     MAESTRO,
     EVER_GROWING_TREE,
+    LIVING_MANA_POTION,
+    LIVING_ARMOR_POTION,
+    LIVING_HEALTH_POTION,
 ];
 
 const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2. A spare that keeps R82's auto-end away.
@@ -83,6 +91,7 @@ const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
 const X: &str = "core-020"; // library filler.
 const CONJURE_KY: &str = "core-057"; // (2) Spell: Add 3 random KY cards to your hand.
 const APPLE: &str = "classicplus-059"; // All Purpose Apple, Doctors Orders' card.
+const THE_COIN: &str = "core-t-coin"; // Money Machine's card.
 
 /// Writes JSON for a field entry on the face asked for.
 fn on(def: &str, radiant: bool) -> Value {
@@ -546,6 +555,40 @@ mod c_n42_transmutable_toxins {
     }
 }
 
+mod c_n64_malzahars_recycler {
+    use super::*;
+
+    /// p1's Recycler in its backrow, three cards in hand and four in the library.
+    fn recycler(radiant: bool) -> Scenario {
+        scenario(json!({
+            "p1": { "backrow": [on(MALZAHARS_RECYCLER, radiant)], "hand": [STOCKPILE, STOCKPILE, STOCKPILE], "library": [X, X, X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X, X] },
+        }))
+    }
+
+    #[test]
+    fn r384_base_discards_2_random_cards_and_draws_2_once_a_turn() {
+        let mut s = recycler(false);
+        activate_listed(&mut s, MALZAHARS_RECYCLER, any);
+        assert_eq!(s.pile(P1, "graveyard").len(), 2);
+        assert_eq!(s.hand(P1).len(), 3);
+        assert_eq!(s.pile(P1, "library").len(), 2);
+        let id = s.card(MALZAHARS_RECYCLER).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r384_radiant_discards_2_random_cards_and_draws_the_deck_once_a_turn() {
+        let mut s = recycler(true);
+        activate_listed(&mut s, MALZAHARS_RECYCLER, any);
+        assert_eq!(s.pile(P1, "graveyard").len(), 2);
+        assert_eq!(s.hand(P1).len(), 1 + 4);
+        assert_eq!(s.pile(P1, "library").len(), 0);
+        let id = s.card(MALZAHARS_RECYCLER).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+}
+
 mod c_n74_corpse_plantation {
     use super::*;
 
@@ -962,12 +1005,12 @@ mod m_n97_6_university {
     }
 
     #[test]
-    fn r384_radiant_activate_buffs_the_other_permanent_five_times_once_a_turn() {
+    fn r384_radiant_activate_buffs_the_other_permanent_four_times_once_a_turn() {
         let mut s = campus(true);
         let id = s.card(UNIVERSITY).id.clone();
         let other = s.card(VANILLA).id.clone();
         let events = activate_listed(&mut s, UNIVERSITY, any);
-        assert_eq!(upgrades_of(&events, &other), 5);
+        assert_eq!(upgrades_of(&events, &other), 4);
         assert_eq!(upgrades_of(&events, &id), 0);
         assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
     }
@@ -1001,31 +1044,42 @@ mod m_n97_9_jlockeeds_headquarters {
 mod m_n54_money_machine {
     use super::*;
 
-    /// Its controller uses the listed `activate`: 2 of p1's mana, and the Machine is Tributed.
-    fn tributes_itself(radiant: bool) {
+    /// Its controller uses the listed `activate`: free, a The Coin (Radiant on the Radiant face) into
+    /// p1's deck, the Machine staying, once a turn.
+    fn shuffles_a_coin_in(radiant: bool) {
         let mut s = scenario(json!({
-            "p1": { "backrow": [on(MONEY_MACHINE, radiant)], "hand": [STOCKPILE] },
+            "p1": { "backrow": [on(MONEY_MACHINE, radiant)], "hand": [STOCKPILE], "library": [X, X] },
             "p2": { "hand": [FILLER] },
         }));
         let mana = s.state().players.p1.mana.current;
         activate_listed(&mut s, MONEY_MACHINE, any);
-        assert_eq!(s.state().players.p1.mana.current, mana - 2);
-        s.expect_in_zone(MONEY_MACHINE, "graveyard");
+        let coins: Vec<CardInstance> = s
+            .pile(P1, "library")
+            .into_iter()
+            .filter(|card| card.def_id == THE_COIN)
+            .collect();
+        assert_eq!(coins.len(), 1);
+        assert_eq!(coins[0].radiant, radiant);
+        assert_eq!(s.state().players.p1.mana.current, mana);
+        s.expect_in_zone(MONEY_MACHINE, "field");
+        let id = s.card(MONEY_MACHINE).id.clone();
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
     }
 
     #[test]
-    fn r384_r1105_base_spends_2_and_tributes_itself() {
-        tributes_itself(false);
+    fn r384_base_shuffles_a_coin_into_your_deck_once_a_turn() {
+        shuffles_a_coin_in(false);
     }
 
     #[test]
-    fn r384_r1105_radiant_spends_2_and_tributes_itself() {
-        tributes_itself(true);
+    fn r384_radiant_shuffles_a_radiant_coin_into_your_deck_once_a_turn() {
+        shuffles_a_coin_in(true);
     }
 
-    /// MD-D9: on p2's own turn, p2's `legal_actions` lists the `activate` off p1's Machine too.
+    /// Patch v0.3.13: on p2's own turn, p2's `legal_actions` lists no `activate` off p1's Machine
+    /// (R384: only its controller activates it).
     #[test]
-    fn r1105_the_opponent_is_listed_it_on_their_own_turn() {
+    fn r1105_the_opponent_is_not_listed_it_on_their_own_turn() {
         let s = scenario(json!({
             "active": "p2",
             "p1": { "backrow": [MONEY_MACHINE], "hand": [STOCKPILE] },
@@ -1033,7 +1087,7 @@ mod m_n54_money_machine {
         }));
         let id = s.card(MONEY_MACHINE).id.clone();
         assert!(
-            legal_actions(s.state(), P2).into_iter().any(
+            !legal_actions(s.state(), P2).into_iter().any(
                 |action| matches!(action, ActionBody::Activate { instance_id, .. } if instance_id == id)
             )
         );
@@ -1222,8 +1276,8 @@ mod m_n75_ever_growing_tree {
         (s, id)
     }
 
-    /// Activates the Tree as `legalActions` lists it and takes the first of the two Field Spells it
-    /// offers (patch v0.3.10); the events of the pick.
+    /// Activates the Tree as `legalActions` lists it and takes the first of the three Field Spells it
+    /// Discovers (patch v0.3.13); the events of the pick.
     fn grow(s: &mut Scenario) -> Vec<GameEvent> {
         activate_listed(s, EVER_GROWING_TREE, any);
         let offered: Vec<String> = s
@@ -1238,7 +1292,7 @@ mod m_n75_ever_growing_tree {
                 _ => None,
             })
             .collect();
-        assert_eq!(offered.len(), 2);
+        assert_eq!(offered.len(), 3);
         s.answer(json!(offered[0]));
         s.last_events().to_vec()
     }
@@ -1280,5 +1334,104 @@ mod m_n75_ever_growing_tree {
             "the fused id names a Radiant ingredient"
         );
         assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+}
+
+mod m_plus_n11_living_mana_potion {
+    use super::*;
+
+    /// The listed `activate`: p1 has Spell Damage +5 this turn (R1180001); the base face Tributes the
+    /// potion, the Radiant face keeps it, once a turn. Held in a preview of the set (R1420, R1178000).
+    fn activates(radiant: bool) {
+        let _preview = preview_sets(&[SetName::MeditativePlus]);
+        let mut s = scenario(json!({
+            "p1": { "field": [on(LIVING_MANA_POTION, radiant)], "hand": [STOCKPILE] },
+            "p2": { "hand": [FILLER] },
+        }));
+        let id = s.card(LIVING_MANA_POTION).id.clone();
+        activate_listed(&mut s, LIVING_MANA_POTION, any);
+        assert_eq!(jackioh_engine::damage::spell_damage_of(s.state(), P1), 5);
+        if radiant {
+            s.expect_in_zone(id.as_str(), "field");
+            assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+        } else {
+            s.expect_in_zone(id.as_str(), "graveyard");
+        }
+    }
+
+    #[test]
+    fn r384_r1180001_base_tributes_itself_for_spell_damage_5_this_turn() {
+        activates(false);
+    }
+
+    #[test]
+    fn r384_r1180001_radiant_stays_for_spell_damage_5_this_turn() {
+        activates(true);
+    }
+}
+
+mod m_plus_n12_living_armor_potion {
+    use super::*;
+
+    /// The listed `activate`: p1's hero has 5 Armor (R757); the base face Tributes the potion,
+    /// the Radiant face keeps it, once a turn. Held in a preview of the set (R1420, R1178000).
+    fn activates(radiant: bool) {
+        let _preview = preview_sets(&[SetName::MeditativePlus]);
+        let mut s = scenario(json!({
+            "p1": { "field": [on(LIVING_ARMOR_POTION, radiant)], "hand": [STOCKPILE] },
+            "p2": { "hand": [FILLER] },
+        }));
+        let id = s.card(LIVING_ARMOR_POTION).id.clone();
+        activate_listed(&mut s, LIVING_ARMOR_POTION, any);
+        assert_eq!(jackioh_engine::damage::hero_armor_of(s.state(), P1), 5);
+        if radiant {
+            s.expect_in_zone(id.as_str(), "field");
+            assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+        } else {
+            s.expect_in_zone(id.as_str(), "graveyard");
+        }
+    }
+
+    #[test]
+    fn r384_base_tributes_itself_for_5_armor() {
+        activates(false);
+    }
+
+    #[test]
+    fn r384_radiant_stays_for_5_armor() {
+        activates(true);
+    }
+}
+
+mod m_plus_n13_living_health_potion {
+    use super::*;
+
+    /// The listed `activate`: p1's hero heals 5 (R1179002); the base face Tributes the potion,
+    /// the Radiant face keeps it, once a turn. Held in a preview of the set (R1420, R1178000).
+    fn activates(radiant: bool) {
+        let _preview = preview_sets(&[SetName::MeditativePlus]);
+        let mut s = scenario(json!({
+            "p1": { "health": 20, "field": [on(LIVING_HEALTH_POTION, radiant)], "hand": [STOCKPILE] },
+            "p2": { "hand": [FILLER] },
+        }));
+        let id = s.card(LIVING_HEALTH_POTION).id.clone();
+        activate_listed(&mut s, LIVING_HEALTH_POTION, any);
+        assert_eq!(health(&s, P1), 25);
+        if radiant {
+            s.expect_in_zone(id.as_str(), "field");
+            assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+        } else {
+            s.expect_in_zone(id.as_str(), "graveyard");
+        }
+    }
+
+    #[test]
+    fn r384_base_tributes_itself_and_heals_your_hero_5() {
+        activates(false);
+    }
+
+    #[test]
+    fn r384_radiant_stays_and_heals_your_hero_5() {
+        activates(true);
     }
 }

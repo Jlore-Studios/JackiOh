@@ -8,6 +8,7 @@ comparisons nothing to compare; and the sweep's with a sweep that has flags, whi
 """
 
 import json
+import math
 from pathlib import Path
 
 import nbformat
@@ -206,6 +207,54 @@ def test_the_newest_patch_follows_the_revision_letters(monkeypatch, tmp_path):
     path = write_records(tmp_path / "patches.jsonl", games)
     text = streams(run(NOTEBOOKS[0], monkeypatch, {"JACKIOH_RECORDS": path}))
     assert "reading live games of patch v0.2.10d (the one before it: v0.2.10b)" in text
+
+
+def test_the_decks_notebook_reports_fatigue_traps_switches_and_upgrades(monkeypatch, tmp_path):
+    """R1256000: notebook 02 reads the per-seat counts on records that carry them, and only on those."""
+    zeros = {"fatigue_draws": 0, "fatigue_damage": 0, "traps_set": 0, "traps_fired": 0, "position_switches": 0, "radiant_upgrades": 0}
+    games = [
+        record(
+            "g1",
+            seat(["a"], **{**zeros, "fatigue_draws": 8, "fatigue_damage": 36}),
+            seat(["b"], **{**zeros, "fatigue_draws": 7, "fatigue_damage": 28}),
+            winner="p2",
+        ),
+        record("g2", seat(["a"], **{**zeros, "traps_set": 1, "traps_fired": 1}), seat(["b"], **zeros)),
+        record("g3", seat(["a"], **{**zeros, "position_switches": 1}), seat(["b"], **zeros)),
+        record("g4", seat(["a"], **{**zeros, "radiant_upgrades": 1}), seat(["b"], **zeros)),
+        # A record written before the counts, of the same patch and mode: not one of the games counted.
+        record("g5", seat(["a"]), seat(["b"])),
+        # A mode whose one game took no fatigue hit and set no trap.
+        record("g6", seat(["a"], **zeros), seat(["b"], **zeros), mode="bo3"),
+    ]
+    path = write_records(tmp_path / "counts.jsonl", games)
+    executed = run(NOTEBOOKS[1], monkeypatch, {"JACKIOH_RECORDS": path})
+    outputs = outputs_of(executed)
+    assert not [output for output in outputs if output.output_type == "error"]
+    text = "".join(output.text for output in outputs if output.output_type == "stream")
+    assert "No record in these files carries per-seat counts" not in text
+    # The section's table, a row per mode: games, fatigue hit and kill shares, traps fired per set, switches and
+    # upgrades per game. One of four games took a fatigue hit and ended in a fatigue kill; the one set trap fired.
+    table = "".join(output.text for output in executed.cells[-1].outputs if output.output_type == "stream")
+    assert table.splitlines()[0].split() == [
+        "games",
+        "fatigue_hit_share",
+        "fatigue_kill_share",
+        "traps_fired_per_set",
+        "switches_per_game",
+        "upgrades_per_game",
+    ]
+    rows = {
+        line.split()[-7]: [math.nan if value == "<NA>" else float(value) for value in line.split()[-6:]]
+        for line in table.splitlines()[2:]
+    }
+    assert rows["bo1"] == [4, 0.25, 0.25, 1.0, 0.25, 0.25]
+    assert rows["bo3"][:3] == [1, 0.0, 0.0]
+    assert math.isnan(rows["bo3"][3])
+    assert rows["bo3"][4:] == [0.0, 0.0]
+    # The earlier sections still ran, and the new section drew its figure.
+    assert "live games of patch v0.1.1" in text
+    assert any(output.output_type == "display_data" and "image/png" in output.data for output in outputs)
 
 
 @pytest.mark.parametrize("path", NOTEBOOKS, ids=lambda path: path.stem)

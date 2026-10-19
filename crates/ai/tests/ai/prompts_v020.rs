@@ -380,6 +380,65 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
         assert!(picked.first().is_some_and(|first| options.contains(first)));
     }
 
+    /// R1182000, R1182001: a potion prompt (Jazakus's, Jazakus Prime's) is answered with one of its
+    /// Potion presets, in the frame the prompt names.
+    #[test]
+    fn r1182000_r1182001_the_ai_answers_a_potion_prompt_with_one_of_its_potions() {
+        install();
+        for (mode, frame) in [
+            ("potion", CraftFrame::Potion),
+            ("hugePotion", CraftFrame::HugePotion),
+        ] {
+            let effect = effects::choose_craft(json_as(json!({ "step": "craft", "mode": mode })));
+            let seed = format!("r1182000-{mode}");
+            let state = asked(&seed, effect, json!({}), AI);
+            let options: Vec<Selection> = state
+                .pending
+                .as_ref()
+                .map(|pending| {
+                    pending
+                        .options
+                        .iter()
+                        .map(|option| option.selection.clone())
+                        .collect()
+                })
+                .unwrap_or_default();
+            assert_eq!(options.len(), 4);
+            let picked = selection_of(&answered(&state, &seed));
+            assert!(picked.first().is_some_and(|first| options.contains(first)));
+            match picked.first() {
+                Some(Selection::Craft { recipe }) => assert_eq!(recipe.frame, Some(frame)),
+                other => panic!("a Potion, not {other:?}"),
+            }
+        }
+    }
+
+    /// R1182002: Scratch Pad's prompt shows its player no presets, but the AI answers it with one.
+    #[test]
+    fn r1182002_the_ai_answers_a_from_scratch_prompt_with_one_of_its_presets() {
+        install();
+        let effect = effects::choose_craft(json_as(json!({ "step": "craft", "cost": 3, "mode": "scratch" })));
+        let state = asked("r1182002-scratch", effect, json!({}), AI);
+        assert_eq!(
+            state.pending.as_ref().and_then(|pending| pending.craft_mode),
+            Some(CraftMode::Scratch)
+        );
+        let options: Vec<Selection> = state
+            .pending
+            .as_ref()
+            .map(|pending| {
+                pending
+                    .options
+                    .iter()
+                    .map(|option| option.selection.clone())
+                    .collect()
+            })
+            .unwrap_or_default();
+        assert_eq!(options.len(), 4);
+        let picked = selection_of(&answered(&state, "r1182002-scratch"));
+        assert!(picked.first().is_some_and(|first| options.contains(first)));
+    }
+
     /// E18: a mode prompt the opponent's card hands the AI, on the opponent's turn, is answered against the card's owner
     #[test]
     fn e18_a_mode_prompt_the_opponents_card_hands_the_ai_on_the_opponents_turn_is_answered_against_the_cards_owner()
@@ -470,6 +529,9 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
 mod e18_a_whole_game_with_the_new_prompts {
     use super::*;
 
+    /// The most games E18 plays for both kinds of prompt to open.
+    const E18_GAMES: usize = 6;
+
     /// E18: playMatch finishes a short AI-vs-greedy game in which E18 prompts open, with no refusal, throw or fallback
     #[test]
     fn e18_play_match_finishes_a_short_ai_vs_greedy_game_in_which_e18_prompts_open_with_no_refusal_throw_or_fallback()
@@ -477,8 +539,8 @@ mod e18_a_whole_game_with_the_new_prompts {
         // Pickle (mode prompts the opponent holds), Back from the GY (a budgeted pick), Mind Melt (a pick
         // of the opponent's hand) and Ancient Acquisition (no prompt since R684: its returns are random),
         // beside cheap Units: eight cards and a hero of 20, so that the game is short and the prompt cards
-        // are drawn. On this seed greedy's Pickle
-        // hands the AI three mode prompts on greedy's turn, and the AI's Back from the GY asks a pick.
+        // are drawn. On these seeds greedy's Pickle hands the AI mode prompts on greedy's turn, and the
+        // AI's Back from the GY asks a pick.
         install();
         let deck: Vec<String> = [
             PICKLE,
@@ -498,52 +560,68 @@ mod e18_a_whole_game_with_the_new_prompts {
             hero_health: AI_TUTORIAL.hero_health,
             ..HUMAN_HANDICAP
         };
-        let config = MatchConfig {
-            seed: "e18-match".to_string(),
-            decks: (deck.clone(), deck),
-            handicaps: Some(PerPlayerOpt {
-                p1: Some(handicap),
-                p2: Some(handicap),
-            }),
-            controllers: PerPlayer {
-                p1: SeatController::Ai {
-                    budget: None,
-                    skill: None,
-                },
-                p2: SeatController::Greedy,
-            },
-            max_actions: None,
-        };
+        // Which prompts a game opens hangs on how the AI plays it, which a retrained network moves
+        // (#466): further seeds are played until both kinds have opened, every game held to the same.
         let mut opened: Vec<String> = Vec::new();
-        let record = {
-            let mut hooks = MatchHooks {
-                after_action: Some(Box::new(
-                    |_before: &GameState, after: &GameState, _seat: PlayerId, _action: &ActionBody| {
-                        let Some(pending) = after.pending.as_ref() else {
-                            return;
-                        };
-                        let theirs = pending.kind == PromptKind::Mode && pending.player_id != after.active;
-                        let new_kind = [
-                            PromptKind::Number,
-                            PromptKind::Answer,
-                            PromptKind::Cell,
-                            PromptKind::Reward,
-                            PromptKind::Pick,
-                        ]
-                        .contains(&pending.kind);
-                        if theirs || new_kind {
-                            opened.push(pending.kind.as_str().to_string());
-                        }
-                    },
-                )),
-                ..Default::default()
+        for game in 0..E18_GAMES {
+            let seed = if game == 0 {
+                "e18-match".to_string()
+            } else {
+                format!("e18-match-{game}")
             };
-            play_match(&config, &mut hooks)
-        };
-        assert!(record.result.is_some());
-        assert!(record.thrown.is_empty());
-        assert!(record.rejected.is_empty());
-        assert_eq!(record.fallbacks, 0);
+            let config = MatchConfig {
+                seed: seed.clone(),
+                decks: (deck.clone(), deck.clone()),
+                handicaps: Some(PerPlayerOpt {
+                    p1: Some(handicap),
+                    p2: Some(handicap),
+                }),
+                controllers: PerPlayer {
+                    p1: SeatController::Ai {
+                        budget: None,
+                        skill: None,
+                    },
+                    p2: SeatController::Greedy,
+                },
+                max_actions: None,
+            };
+            let record = {
+                let mut hooks = MatchHooks {
+                    after_action: Some(Box::new(
+                        |_before: &GameState, after: &GameState, _seat: PlayerId, _action: &ActionBody| {
+                            let Some(pending) = after.pending.as_ref() else {
+                                return;
+                            };
+                            let theirs =
+                                pending.kind == PromptKind::Mode && pending.player_id != after.active;
+                            let new_kind = [
+                                PromptKind::Number,
+                                PromptKind::Answer,
+                                PromptKind::Cell,
+                                PromptKind::Reward,
+                                PromptKind::Pick,
+                            ]
+                            .contains(&pending.kind);
+                            if theirs || new_kind {
+                                opened.push(pending.kind.as_str().to_string());
+                            }
+                        },
+                    )),
+                    ..Default::default()
+                };
+                play_match(&config, &mut hooks)
+            };
+            assert!(record.result.is_some(), "{seed}");
+            assert!(record.thrown.is_empty(), "{seed}");
+            assert!(record.rejected.is_empty(), "{seed}");
+            assert_eq!(record.fallbacks, 0, "{seed}");
+            if ["mode", "pick"]
+                .iter()
+                .all(|kind| opened.iter().any(|seen| seen == kind))
+            {
+                break;
+            }
+        }
         assert!(opened.iter().any(|kind| kind == "mode"), "{}", opened.join(" "));
         assert!(opened.iter().any(|kind| kind == "pick"), "{}", opened.join(" "));
     }

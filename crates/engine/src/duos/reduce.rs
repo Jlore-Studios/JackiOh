@@ -28,15 +28,18 @@ use crate::catalog::fused_id_specs;
 use crate::config::{DUOS_SETTLE_CAP, SETUP_TURN};
 use crate::mana::mana_event;
 use crate::reduce::{begin_game, reduce};
-use crate::state::{EngineError, GameState};
+use crate::resolve::RETURN_PRICE_KEY;
+use crate::state::{CardInstance, EngineError, GameState};
+use crate::subsystems::hero_power::POWER_KEY;
 use crate::wire::{
     Action, ActionBody, DUOS_DUELS, DUOS_REASON_CEILING, DUOS_REASON_CONCEDE, DUOS_REASON_DUEL_RESULT,
-    DUOS_REASON_POOL_EMPTIED, DUOS_REASON_TURN_CAP, DuosAction, DuosActionBody, DuosEvent, DuosOutcome,
-    DuosResult, DuosSeat, GameEvent, GameOverReason, PLAYER_IDS, PerTeam, Phase, Team, Zone,
+    DUOS_REASON_POOL_EMPTIED, DUOS_REASON_TURN_CAP, DUOS_REASON_VOIDED, DuosAction, DuosActionBody,
+    DuosEvent, DuosOutcome, DuosResult, DuosSeat, GameEvent, GameOverReason, PerTeam, Phase, PlayerId, Team,
+    Zone,
 };
 
 use super::legal::{auto_end_due, why_duel_refused, why_pass_refused};
-use super::state::{DuosReduceResult, DuosState, duos_seat};
+use super::state::{DuosBegunTurn, DuosReduceResult, DuosState, duos_seat};
 
 /// The namespace of the wrapper's own nonces: a seat's action whose nonce starts with it is refused,
 /// so the nonces the round's close reaches the duels under are never a seat's (R270's rule, as the
@@ -45,9 +48,6 @@ pub const DUOS_NONCE_PREFIX: &str = "duos:";
 
 /// The nonce the settle runs under after `duos_begin`, which has no action of its own.
 const BEGIN_NONCE: &str = "duos:begin";
-
-/// A duel's first turn: the one setup starts (`setup.rs`), Player 1's, so team A's in both duels (§13.1).
-const FIRST_TURN: i32 = SETUP_TURN + 1;
 
 /// Deal both duels and open all four mulligans (B1, B2): each duel's `begin_game`, duel 0 first.
 /// Refused once either duel has begun.
@@ -67,8 +67,8 @@ pub fn duos_begin(state: &DuosState) -> DuosReduceResult {
     for duel in 0..DUOS_DUELS {
         let dealt = begin_game(&next.duels[duel]);
         next.duels[duel] = dealt.state;
+        duel_changed(&mut next, duel, &dealt.events);
         push_duel_events(&mut events, duel, dealt.events);
-        duel_changed(&mut next, duel);
     }
     settle(&mut next, BEGIN_NONCE, &mut events);
     DuosReduceResult {
@@ -118,8 +118,8 @@ fn apply(state: &mut DuosState, action: &DuosAction, events: &mut Vec<DuosEvent>
                 return Err(EngineError::new(error));
             }
             state.duels[duel] = result.state;
+            duel_changed(state, duel, &result.events);
             push_duel_events(events, duel, result.events);
-            duel_changed(state, duel);
             Ok(())
         }
         DuosActionBody::Pass { instance_id } => {
@@ -152,9 +152,9 @@ fn concede(state: &mut DuosState, seat: DuosSeat, events: &mut Vec<DuosEvent>) -
 }
 
 /// B20: pay the pass cost, take the card out of the passer's hand and put it at the right end of the
-/// teammate's under the next instance id of the teammate's duel, owned and controlled by the
-/// teammate, everything else on it kept (buffs, cost modifiers, face). Not a draw, a play or a
-/// discard: nothing in either duel hears it, and only the mana it paid is reported there.
+/// teammate's under the next instance id of the teammate's duel, as `passed_card` makes it. Not a
+/// draw, a play or a discard: nothing in either duel hears it, and only the mana it paid is reported
+/// there. Its stay in the passer's hand ends as any removal from a hand ends one (R1140).
 fn pass(state: &mut DuosState, seat: DuosSeat, instance_id: &str, events: &mut Vec<DuosEvent>) {
     let from = seat.duel();
     let mate = seat.teammate();
@@ -171,6 +171,7 @@ fn pass(state: &mut DuosState, seat: DuosSeat, instance_id: &str, events: &mut V
         let paid = mana_event(seat.player(), side);
         push_duel_events(events, from, vec![paid]);
     }
+    crate::zones::forget_hand_watch(&mut state.duels[from], instance_id);
 
     carry_match_defs(state, from, to, &card.def_id);
 
@@ -178,11 +179,7 @@ fn pass(state: &mut DuosState, seat: DuosSeat, instance_id: &str, events: &mut V
     let new_instance_id = format!("c{}", target.next_id);
     target.next_id += 1;
     let receiver = mate.player();
-    let mut moved = card;
-    moved.id = new_instance_id.clone();
-    moved.owner = receiver;
-    moved.controller = receiver;
-    moved.zone = Zone::Hand { player: receiver };
+    let moved = passed_card(card, new_instance_id.clone(), receiver);
     target.players[receiver].hand.push(moved);
 
     state.passes[from] += 1;
@@ -192,6 +189,27 @@ fn pass(state: &mut DuosState, seat: DuosSeat, instance_id: &str, events: &mut V
         instance_id: instance_id.to_string(),
         new_instance_id,
     });
+}
+
+/// R1168000: the memory entries a passed card keeps — its own return price (R153) and Heroic Power's
+/// rolled power (R43), which are the card itself. Anything else a card remembers in a hand names
+/// something of the duel it left (a Fortify Mind's secret, R862; a Journey Complete's journey,
+/// R1246), and those ids name other things in the teammate's duel (§13.1), so it stays behind.
+const PASSED_MEMORY: &[&str] = &[RETURN_PRICE_KEY, POWER_KEY];
+
+/// B20, R1168000: `card` as a pass puts it in `receiver`'s hand under `id`: owned and controlled by
+/// the receiver, everything on it kept (buffs, cost modifiers, face) but the memory that names the
+/// duel it left. The AI's pass model makes its copy here too, so the two cannot drift.
+pub fn passed_card(card: CardInstance, id: String, receiver: PlayerId) -> CardInstance {
+    let mut moved = card;
+    moved.id = id;
+    moved.owner = receiver;
+    moved.controller = receiver;
+    moved.zone = Zone::Hand { player: receiver };
+    moved
+        .memory
+        .retain(|key, _| PASSED_MEMORY.contains(&key.as_str()));
+    moved
 }
 
 /// A card whose definition lives in its duel alone — a fused or crafted card's (R77, R102) — takes it
@@ -268,37 +286,79 @@ fn first_round_due(state: &DuosState) -> bool {
 fn round_closed(state: &DuosState) -> bool {
     state.ended.iter().all(|ended| *ended)
         && state.end_applied.iter().all(|applied| *applied)
-        && (0..DUOS_DUELS).all(|duel| state.duels[duel].turn != state.round_turns[duel])
+        && (0..DUOS_DUELS).all(|duel| turn_moved(state, duel))
 }
 
-/// B2, B5, B8, B22: the next round — each duel's active player is its round seat (an extra turn,
-/// R846, keeps a duel's seat on the same team), nobody has ended or passed, and each team's open
-/// concede offer lapses (B11).
+/// Whether duel `duel` has left the round's turn: its turn has moved on, or a Glitch reset (R676)
+/// dealt it again, which is no turn of the round's however its new count runs (R1168002).
+fn turn_moved(state: &DuosState, duel: usize) -> bool {
+    state.round_turns[duel] == SETUP_TURN || state.duels[duel].turn != state.round_turns[duel]
+}
+
+/// B2, B5, B8, B22: the next round — each duel's round seat is the seat of the turn the duel has
+/// begun past the last round's (`take_round_turn`; an extra turn, R846, keeps it on the same team),
+/// nobody has ended or passed, and each team's open concede offer lapses (B11).
 ///
-/// Round 1 is both duels' first turns, team A's (B2). A duel whose first turn an effect already
-/// ended while the other duel's mulligans were still open (R456: a Tommy Tempo drawn at its start)
-/// opens round 1 on that turn all the same: its first turn's seat is the round seat, counted as
-/// ended with End turn already reached (B7), so the duel's new active player waits for round 1 to
-/// close. Opening it on the new active player instead would give round 1 to one seat of each team
-/// and leave that duel a turn ahead of the other for the rest of the game.
+/// Round 1 is both duels' first turns, team A's (B2). A duel whose first turn an effect already ended
+/// while the other duel's mulligans were still open (R456: a Tommy Tempo drawn at its start) opens
+/// round 1 on that turn all the same, its seat counted as ended, and so does any later round whose
+/// turn ended as it began (R1168001): opening a round on the duel's new active player instead would
+/// leave that duel a turn ahead of the other for the rest of the game.
 fn open_round(state: &mut DuosState, events: &mut Vec<DuosEvent>) {
     state.round += 1;
     for duel in 0..DUOS_DUELS {
-        let game = &state.duels[duel];
-        let first_turn_over = state.round == 1 && game.turn > FIRST_TURN;
-        let (seat, turn) = if first_turn_over {
-            (DuosSeat::of(duel, PLAYER_IDS[0]), FIRST_TURN)
-        } else {
-            (DuosSeat::of(duel, game.active), game.turn)
-        };
-        state.round_seats[duel] = seat;
-        state.round_turns[duel] = turn;
-        state.ended[duel] = first_turn_over;
-        state.end_applied[duel] = first_turn_over;
         state.passes[duel] = 0;
+        if take_round_turn(state, duel) {
+            continue;
+        }
+        // No turn begun since the last round's: a duel a Glitch reset (R676) sent back to its setup,
+        // whose first turn joins the round as it begins (`duel_changed`).
+        let game = &state.duels[duel];
+        state.round_seats[duel] = DuosSeat::of(duel, game.active);
+        state.round_turns[duel] = game.turn;
+        state.ended[duel] = false;
+        state.end_applied[duel] = false;
     }
     state.concede_offer = PerTeam::new(None, None);
     events.push(DuosEvent::RoundStarted { round: state.round });
+}
+
+/// R1168001: give duel `duel` the round's turn — the first turn it has begun past the last round's,
+/// whose seat is the round seat. One the duel has already moved past (it ended as it began, R456)
+/// counts as ended with End turn already reached (B7), so the duel's new active player waits for the
+/// round to close and each duel's turn moves once a round (§13.3). Whether there was one.
+fn take_round_turn(state: &mut DuosState, duel: usize) -> bool {
+    let after = state.round_turns[duel];
+    let begun = &mut state.begun[duel];
+    let Some(at) = begun.iter().position(|begun| begun.turn > after) else {
+        return false;
+    };
+    let taken = begun[at];
+    begun.drain(..=at);
+    let over = state.duels[duel].turn > taken.turn;
+    state.round_seats[duel] = DuosSeat::of(duel, taken.player);
+    state.round_turns[duel] = taken.turn;
+    state.ended[duel] = over;
+    state.end_applied[duel] = over;
+    true
+}
+
+/// R1168001: queue the turns duel `duel` began in `events`, in order. A turn numbered at or below
+/// one already queued means its count started over (a Glitch reset, R676): what was queued goes.
+fn record_begun(state: &mut DuosState, duel: usize, events: &[GameEvent]) {
+    for event in events {
+        let GameEvent::TurnStarted { player, turn, .. } = event else {
+            continue;
+        };
+        let begun = &mut state.begun[duel];
+        if begun.last().is_some_and(|last| last.turn >= *turn) {
+            begun.clear();
+        }
+        begun.push(DuosBegunTurn {
+            turn: *turn,
+            player: *player,
+        });
+    }
 }
 
 /// B5: End turn reaches `duel` at the round's close, as its active player. Whether it did: a duel
@@ -319,8 +379,8 @@ fn end_round_turn(state: &mut DuosState, duel: usize, nonce: &str, events: &mut 
     }
     state.end_applied[duel] = true;
     state.duels[duel] = result.state;
+    duel_changed(state, duel, &result.events);
     push_duel_events(events, duel, result.events);
-    duel_changed(state, duel);
     true
 }
 
@@ -331,16 +391,28 @@ fn round_end_nonce(nonce: &str, round: i32, duel: usize) -> String {
     format!("{DUOS_NONCE_PREFIX}end:r{round}:d{duel}:{nonce}")
 }
 
-/// What follows any change to duel `duel` (B7, B15).
-fn duel_changed(state: &mut DuosState, duel: usize) {
+/// What follows any change to duel `duel`, whose step produced `events` (B7, B15, R1168001).
+fn duel_changed(state: &mut DuosState, duel: usize, events: &[GameEvent]) {
     sync_pools(state, duel);
-    if state.round == 0 || state.end_applied[duel] || state.duels[duel].turn == state.round_turns[duel] {
+    record_begun(state, duel, events);
+    if state.round == 0 {
+        return;
+    }
+    if state.duels[duel].turn < state.round_turns[duel] {
+        // R1168002: a Glitch reset (R676) dealt the duel again and its turn count started over. The
+        // round's turn there is over, and no turn it began before the reset is one a round takes.
+        state.begun[duel].clear();
+        state.round_turns[duel] = SETUP_TURN;
+        state.ended[duel] = true;
+        state.end_applied[duel] = true;
+        return;
+    }
+    if state.end_applied[duel] || state.duels[duel].turn == state.round_turns[duel] {
         return;
     }
     if state.round_turns[duel] == SETUP_TURN {
-        // A duel a Glitch reset (R676) sent back to its setup joins the round as its first turn begins.
-        state.round_turns[duel] = state.duels[duel].turn;
-        state.round_seats[duel] = DuosSeat::of(duel, state.duels[duel].active);
+        // A duel a Glitch reset sent back to its setup joins the round as its first turn begins.
+        take_round_turn(state, duel);
         return;
     }
     // B7: the turn moved without the round closing — an effect ended it (R456) — so the round seat
@@ -390,8 +462,9 @@ fn judge(state: &mut DuosState, events: &mut Vec<DuosEvent>) -> bool {
 }
 
 /// B16: a team whose pool is at 0 or less loses (both at once: a draw); otherwise a duel's own ending
-/// ends the game with its team's result — `turnCap` for R2's cap, `ceiling` for R79's, `duelResult`
-/// for any other. Two duels that ended at once and disagree are a draw.
+/// ends the game with its team's result — `turnCap` for R2's cap, `ceiling` for R79's, `voided` for a
+/// Glitch's void (R679, R1168002), `duelResult` for any other. Two duels that ended at once and
+/// disagree are a draw.
 fn result_now(state: &DuosState) -> Option<DuosResult> {
     let emptied: Vec<Team> = Team::ALL
         .iter()
@@ -411,6 +484,7 @@ fn result_now(state: &DuosState) -> Option<DuosResult> {
         let reason = match ended.reason {
             GameOverReason::TurnCap => DUOS_REASON_TURN_CAP,
             GameOverReason::MatchCeiling => DUOS_REASON_CEILING,
+            GameOverReason::Voided => DUOS_REASON_VOIDED,
             _ => DUOS_REASON_DUEL_RESULT,
         };
         let this = match ended.winner.player() {

@@ -1160,6 +1160,8 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.reborn_spent = None;
     // B5 E35: Berserk is a status of the unit on the field, lost as it leaves (R78).
     instance.berserk = None;
+    // R1174000: so is Frozen, which a Bounce, a death or an exile takes off with it.
+    instance.frozen = None;
     // R1040, R1045: a card set face-down as a Trap is its printed card again once it leaves the field.
     instance.set_as = None;
 }
@@ -1167,12 +1169,13 @@ pub fn reset_instance(instance: &mut CardInstance) {
 /// R766 (#473): a card that reaches a graveyard or an exile pile is its printed card again, its price
 /// included — `costMod` (a discount, a surcharge, a Degrade's or Upgrade's cost step, KY's Constant's
 /// cost) and `costOverride` (a "(0)" given in a hand) both go, so it costs its printed cost (R65), or a
-/// fused card its fused definition's (R77). Its Radiant face, its `tuning`, its Brittle and times-played
-/// counts, its enchantments, its `chinese` flag (R1300) and its granted tags (R923) are what the card
-/// is or what happened to it, not a price, and stay.
+/// fused card its fused definition's (R77); so does the Embiggened version's own price (R1181003). Its
+/// Radiant face, its `tuning`, its Brittle and times-played counts, its enchantments, its `chinese` flag
+/// (R1300) and its granted tags (R923) are what the card is or what happened to it, not a price, and stay.
 pub fn reset_price(instance: &mut CardInstance) {
     instance.cost_mod = 0;
     instance.cost_override = None;
+    instance.embiggen_cost_override = None;
 }
 
 /// R174: drop the delayed effects aimed at a card that is leaving the field (`DelayedEffect.watch`).

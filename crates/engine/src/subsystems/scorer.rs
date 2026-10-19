@@ -289,8 +289,9 @@ const NOTHING: DryRun = DryRun {
     heals: false,
 };
 
-/// The seed a dry run draws from: its own, so the match's rng is never touched (§9.3).
-const DRY_RUN_SEED: &str = "zephyrs-dry-run";
+/// The seed a dry run draws from: its own, so the match's rng is never touched (§9.3). The
+/// autopilot's trials draw from it too (R1183003).
+pub(crate) const DRY_RUN_SEED: &str = "zephyrs-dry-run";
 
 /// TS's `let dryRunning`: set while a dry run is playing a candidate, so a candidate whose play would
 /// ask the scorer again scores on printed data rather than running a dry run inside a dry run. A dry
@@ -331,7 +332,7 @@ fn play_fields(action: &PlayAction) -> PlayFields<'_> {
 /// enemy card is what a clear takes off the board, and a Tribute of the enemy's units (#55, R101) is
 /// one — so those plays come first, whatever order `playActionsFor` found them in, and a board full
 /// of the viewer's own permanents cannot crowd the one enemy unit out of the plays tried.
-fn dry_run_plays(state: &GameState, viewer: PlayerId, card: &CardInstance) -> Vec<PlayAction> {
+pub(crate) fn dry_run_plays(state: &GameState, viewer: PlayerId, card: &CardInstance) -> Vec<PlayAction> {
     // MD-D28, R1125: a card in the graveyard a permission lets its player play is played from there
     // (`play_choices::graveyard_play_actions_for`), as the judge's candidates may be.
     let in_graveyard = state.players[viewer]
@@ -485,7 +486,9 @@ fn trial_plays(base: &GameState, viewer: PlayerId, card: &CardInstance) -> DryRu
             crate::triggers::settle(&mut sink, crate::triggers::SettleOptions::default());
         }
 
-        let enemy_health = trial.players[enemy].hero.health;
+        // R1168003: in a Duos duel the enemy hero stands until its own HP and its team's pool are both
+        // gone, so lethal is judged against both (§13.4's lethal judge).
+        let enemy_health = crate::duos_life::effective_life(&trial, enemy);
         let won = trial
             .result
             .as_ref()
@@ -565,10 +568,17 @@ pub fn dry_run_base(state: &GameState, viewer: PlayerId) -> Option<GameState> {
     {
         return None;
     }
+    Some(concealed_copy(state, viewer))
+}
+
+/// R222: a copy of the state as `viewer` may read it — every card hidden from them a stand-in with
+/// no text — without the history of actions. `dry_run_base`'s copy, and the autopilot's at any
+/// moment of its turn, a prompt of its player's open included (R1183003).
+pub fn concealed_copy(state: &GameState, viewer: PlayerId) -> GameState {
     let mut base = state.clone();
     base.applied = Vec::new();
     conceal_from(&mut base, viewer);
-    Some(base)
+    base
 }
 
 /// R222: the stand-ins for the cards the viewer may not read — a hand or library card, and a
@@ -759,7 +769,8 @@ fn score_parts(
     };
     let lethal = played.lethal
         || (contribution > 0
-            && projected_board_damage_in(auras, viewer) + contribution >= state.players[enemy].hero.health);
+            && projected_board_damage_in(auras, viewer) + contribution
+                >= crate::duos_life::effective_life(state, enemy));
 
     let kills = killable_units(auras, &enemy_units, face);
     let clears = played.clears || (!enemy_units.is_empty() && kills >= enemy_units.len() as i32);

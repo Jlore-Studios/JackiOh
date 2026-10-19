@@ -5,7 +5,7 @@ evaluation (`crates/ai/src/learned.rs`) trained on the AI's own games and promot
 `main` through the same kind of gate every generation passes. Its decisions are a script's, not an
 LLM's (D2), so this file is its contract rather than a prompt, as `gather.md` is the gather lane's.
 
-It is the other half of the AI. The `improve` and `unban` lanes are **supervised**: a Devin session
+It is the other half of the AI. The `improve` and `unban` lanes are **supervised**: a Muse session
 reads the AI, changes the hand-written evaluation or the search, and measures each change
 (`improve.md`, `unban.md`). The `learn` lane is **learned**: a network fitted to the outcomes of
 games corrects the hand eval where the search finally scores a line. The hand eval stays the
@@ -21,10 +21,14 @@ runner). Each run:
 1. **Waits** while the lane's pull request (`ai/learn`) is open: a promotion is on its way to `main`.
 2. **Exports** `games` games (100,000 by default) through `selfplay.yml` on a fresh base,
    `learned-<catalog>-<date>-<run>`, never a gate's deals or the dev set's (R1006002).
-3. **Retrains** with `training/ml/retrain.sh` on `main`: the positions (R1006003, R1006004), the fit
+3. **Retrains** with `training/ml/retrain.sh` on `main`: the positions (R1006003, R1006004), folded by
+   the export's own build while its features are `main`'s (`--positions-bin`), so a rules change merged
+   since the export drops none of its games (run 5 lost 10,707 of 100,000 to #1199 and #1200), the fit
    and its report (`training/ml/README.md`), the integer network that ships (D7, R1011000) into
    `crates/ai/src/learned/weights.json` and the switch, `AI_EVAL_KIND`, on. It stops when the network does not beat the calibrated hand eval
-   on held-out turns 4 to 10.
+   on held-out turns 4 to 10. The fit trains six seeds; the best by validation whose integer network
+   passes the AI's tests with the switch on ships (`cargo test -p jackioh-ai`, as the promotion's CI
+   will run them), and it stops when none does.
 4. **Screens** the candidate against the AI on `main` on the improve lane's dev set: 800 paired games
    (`arena --set improve-dev --games 800`), a count fixed before it is played, never extended or played
    again to read better (`improve.md`, How you measure). It goes on only when `edgeLow` is above zero.
@@ -55,5 +59,8 @@ and variables → Actions). A pull request opened with a run's own token would s
 the secret a passing run stops at its artifact (`promotion.patch`), which a person can push.
 
 To run it now: `gh workflow run learn.yml` (`-f games=… -f runner=jackioh-selfplay-local -f
-screen=800`). To stop it, disable the workflow (`gh workflow disable learn.yml`); to refuse a
-promotion, close its pull request.
+screen=800`). `-f export_run=<run id>` plays no export and retrains on that earlier run's, kept 30
+days: a change to the fit or the search is measured on the same games without five hours of
+self-play. The gate's deals are the candidate tree's (R850001): a changed tree plays new ones. To
+stop it, disable the workflow (`gh workflow disable learn.yml`); to refuse a promotion, close its
+pull request.

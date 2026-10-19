@@ -73,9 +73,18 @@ pub struct SummonPlacement {
     pub armor_override: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stats_override: Option<StatsOverride>,
+    /// R1184003: the X the card is summoned with, as if played for it (B2.7): a face that prints its
+    /// stats as multiples of X (`xStats`) is those multiples of it, and whatever reads the card's X
+    /// (`tuning::x_of`) reads it — Meditative+ #20.1 Lil' Kenny's X/X and its keywords by X.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x: Option<i32>,
     /// R1088: the card whose effect summoned it, for the client; no rule reads it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_id: Option<String>,
+    /// ME-CN, R1185002: a fresh card summoned in Chinese (`CardInstance.chinese`, R1300), as an
+    /// `addToHand`'s `chinese` rider makes one in a hand (M+ #21 Harmony Spirit's Rush Tokens).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chinese: Option<bool>,
 }
 
 /// `summon`'s arguments (TS `SummonPlacement & { defId?; instance?; randomKeywords? }`, the
@@ -100,6 +109,9 @@ pub struct SummonArgs {
     pub armor_override: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stats_override: Option<StatsOverride>,
+    /// R1184003: the X the card is summoned with (`SummonPlacement.x`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x: Option<i32>,
     /// Create a fresh card of this definition, a token included (§7).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub def_id: Option<String>,
@@ -129,7 +141,9 @@ impl SummonArgs {
             radiant: self.radiant,
             armor_override: self.armor_override,
             stats_override: self.stats_override,
+            x: self.x,
             source_id: None,
+            chinese: None,
         }
     }
 }
@@ -267,6 +281,13 @@ fn summon_fresh(
     if let Some(armor) = at.armor_override {
         card.armor_override = Some(armor);
     }
+    if at.chinese == Some(true) {
+        card.chinese = Some(true);
+    }
+    // R1184003: its X before it lands, so it arrives at its X stats and with its X-read keywords.
+    if let Some(x) = at.x {
+        card.x = Some(x);
+    }
     if summon_onto(ctx, &mut card, &slot, at, None) {
         Some(card)
     } else {
@@ -312,6 +333,9 @@ fn summon_existing(
     }
     if let Some(armor) = at.armor_override {
         moving.armor_override = Some(armor);
+    }
+    if let Some(x) = at.x {
+        moving.x = Some(x);
     }
     if summon_onto(ctx, &mut moving, &slot, at, former_id) {
         Some(moving)
@@ -881,10 +905,15 @@ pub struct FillBoardArgs {
     /// MD-B3, R942: the side whose summons are Radiant (Meditative #26's Radiant face).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub radiant_for: Option<PlayerSpec>,
+    /// ME-CN, R1185002: every card the fill summons is in Chinese (M+ #21 Harmony Spirit's Radiant
+    /// face, "Rush Tokens in Chinese").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chinese: Option<bool>,
 }
 
 /// §7 and R64: "fill your board" summons the named token into every empty, unreserved unit zone,
-/// left to right, a Locked one included (`fill_board_zones`, R1136000). With `row: backrow` and
+/// left to right, a Locked one included (`fill_board_zones`, R1136000), each in Chinese with the
+/// `chinese` rider (R1185002). With `row: backrow` and
 /// `side: any` it fills each side's empty, unlocked backrow zones for that side's player, a Locked
 /// one still skipped (MD-B3, R942).
 pub fn fill_board(args: FillBoardArgs) -> Effect {
@@ -913,6 +942,7 @@ pub fn fill_board(args: FillBoardArgs) -> Effect {
                     radiant: if radiant { Some(true) } else { None },
                     stats_override: args.stats_override,
                     armor_override: args.armor_override,
+                    chinese: args.chinese,
                     ..SummonPlacement::default()
                 };
                 summon_fresh(ctx, &args.def_id, player, &at);

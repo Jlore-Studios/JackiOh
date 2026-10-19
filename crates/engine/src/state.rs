@@ -20,9 +20,9 @@ use crate::config::{
 };
 use crate::rng::Rng;
 use crate::wire::{
-    AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, CustomCard, Enchantment, GameEvent,
-    Keyword, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, RowFlags, SecretChoice,
-    Selection, Tag, Tuning, Zone, ZoneRef, string_union,
+    AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, CraftMode, CustomCard, Enchantment,
+    GameEvent, Keyword, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, RowFlags,
+    SecretChoice, Selection, Tag, Tuning, Zone, ZoneRef, string_union,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -165,6 +165,12 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub embiggened: Option<bool>,
+    /// R1181003 (Meditative+ #23 Enormous Elderberry's "its Embiggened version costs (0)"): the price of
+    /// the Embiggened version alone, in place of its printed dearer price and of `costOverride` for it,
+    /// before every modifier (R65); the normal version keeps its price. A price, so R766 takes it off.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub embiggen_cost_override: Option<i32>,
     pub counters: Counters,
     #[cfg_attr(feature = "ts", ts(type = "Record<string, unknown>"))]
     pub memory: IndexMap<String, Value>,
@@ -257,6 +263,15 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub berserk: Option<bool>,
+    /// R1174000: this Unit is Frozen (`effects::statuses::freeze`), so it can neither declare an attack
+    /// nor switch its own position (`combat::has_exertion_in`). The number is its thaw, stamped as the
+    /// freeze lands (`freeze::thaw_turn`): it thaws at the cleanup of its controller's first turn
+    /// numbered this or later. A status, never text: R78's reset takes it off with the card leaving
+    /// the field, and a Vanilla removes it. Absent on every other card, so a game nothing freezes in
+    /// serializes and hashes as before (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub frozen: Option<i32>,
     /// R429: how many times this card has been played, the play under way included — counted at §10.5
     /// step 4 (casts too, R70; a countered play never reaches it) for a card whose script asks
     /// (`StaticFlags.countsPlays`, #31 KY's Math Equation) and absent on every other card. Kept in every
@@ -272,9 +287,9 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub flashback_spent: Option<bool>,
-    /// ME-CN, R1300: the card is shown in Chinese (`effects::translate`). Presentation only: no rule
-    /// reads it. Kept in every zone and through R78's and R766's resets; a copy keeps it, a
-    /// Transform's new card is without it. Only ever `Some(true)`.
+    /// ME-CN, R1300: the card is shown in Chinese (`effects::translate`). One rule reads it: a card
+    /// in Chinese is CN (`query::tags_of`, R1176000). Kept in every zone and through R78's and R766's
+    /// resets; a copy keeps it, a Transform's new card is without it. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub chinese: Option<bool>,
@@ -530,6 +545,24 @@ pub enum ModifierKind {
     /// damage instance to it is 0 (a cap of 0 `damage::hero_damage_cap` reads at §4.4 step 3).
     /// Expiry is R757's Armor Up expiry, so it is gone as this player's next turn begins.
     HeroImmune,
+    // ---- Meditative+ (docs/meditative-plus-set.md MP5, issue #1180) ----
+    /// R1180001 (Meditative+ #11 Living Mana Potion): "You have Spell Damage +N this turn" — added to
+    /// this player's Spell Damage, the one sum §4.4 step 0 reads (`damage::spell_damage_of`), while it
+    /// is live. Expiry `thisTurn`; several stack, each its own modifier, and none has a source, so it
+    /// stays when the card that gave it leaves.
+    SpellDamage {
+        amount: i32,
+    },
+    /// R1180004 (Meditative+ #6 Bloodbloom): the next Spell this player plays from their hand, face-up,
+    /// costs no mana and `multiple` times its cost in health (`mana::health_price_rule`), and gains
+    /// `echo` Echo (the Radiant face's 1). Expiry `used`: the play it prices spends it, and a newer
+    /// one replaces it (`effects::price_next_spell_in_health`).
+    HealthPrice {
+        multiple: i32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        echo: Option<i32>,
+    },
 }
 
 /// `{ id; expiry } & (kind union)`: one player-level modifier (§10.1 `PlayerState.mods`). The kind's
@@ -599,6 +632,17 @@ pub struct DelayedEffect {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub hand_watch: Option<Vec<String>>,
+    /// R1181000 (Meditative+ #4 Supply Drop's "in 3 turns"): the `turns_started` count of `at.player`
+    /// at which the entry comes due, so it waits through that player's turns before then. Absent on
+    /// every other entry (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub due_own_turn: Option<i32>,
+    /// R1181000: the caption of the countdown badge an entry with `due_own_turn` shows its owner's side
+    /// in both views while it waits (R169). Absent: no badge.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub label: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -717,6 +761,18 @@ pub struct PendingChoice {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub budget: Option<i32>,
+    /// A `craft` prompt's mode beyond Meditative #17's free crafter: Scratch Pad's empty canvas or a
+    /// potion frame (R1182000 to R1182002), which the answer check and the client read. Absent on
+    /// every other prompt and on Meditative #17's, so a state without one hashes as it did (D9).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub craft_mode: Option<CraftMode>,
+    /// R1184000: an `answer` prompt that is one question of a sequence (Meditative+ #20 KY's
+    /// Competition) carries the right answers so far, which its chooser sees, and offers Stop after
+    /// its answers (`prompts::ANSWER_STOP_KEY`). Absent on every other prompt (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub streak: Option<i32>,
     pub resume: Resume,
 }
 
@@ -917,6 +973,36 @@ pub struct DrawCount {
     pub count: i32,
 }
 
+/// R1183002 (Meditative+ #18 Cognitive Offloading): the engine plays the rest of this player's turn
+/// `turn` (`subsystems::autopilot`); `actions` counts what it has taken, toward
+/// `AUTOPILOT_MAX_ACTIONS`. Set by the `autopilot` verb on its caster's own turn, cleared at that
+/// turn's cleanup.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct Autopilot {
+    pub turn: i32,
+    pub actions: i32,
+}
+
+/// R1180006: the answering card last named for a player (R1180005) and the answers before it in that
+/// chain, counting the first as 1; the chain ends when its count reaches SPELL_ANSWER_CHAIN_CAP.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct AnswerChain {
+    pub by: String,
+    pub depth: i32,
+}
+
 /// #936 S3: a Duos duel's side — its team's shared pool, the pool's cap, and whether this seat's own
 /// HP is spent (B12–B15, `duos_life.rs`). Present only in a duel a `DuosState` holds, so a 1v1 state
 /// hashes as before (B3).
@@ -1048,6 +1134,17 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub duos: Option<DuosLife>,
+    /// R1183002: the autopilot plays the rest of this player's turn. Absent but in that turn, so a
+    /// game without Meditative+ #18 hashes as before this field existed (D9).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub autopilot: Option<Autopilot>,
+    /// R1180006: the answer chain under way (R1180005) — the card last named to answer one of this
+    /// player's Spells and how many answers led to it. Absent but while one is, so a game without an
+    /// answering card hashes as before this field existed (D9).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub answer_chain: Option<AnswerChain>,
 }
 
 string_union! {
@@ -1605,6 +1702,8 @@ pub fn create_player_state() -> PlayerState {
         rift_extra_turn: None,
         won_by_effect: None,
         duos: None,
+        autopilot: None,
+        answer_chain: None,
     }
 }
 
@@ -1840,6 +1939,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         cost_override: None,
         x: None,
         embiggened: None,
+        embiggen_cost_override: None,
         counters: Counters::default(),
         memory: IndexMap::new(),
         exertion: Exertion {
@@ -1863,6 +1963,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         brittle: None,
         enchantments: None,
         berserk: None,
+        frozen: None,
         times_played: None,
         flashback_spent: None,
         chinese: None,

@@ -75,14 +75,14 @@ use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, ConsentRow,
     CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, EmoteEventRow, FrozenDeck, FrozenTrio,
-    GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow,
-    MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits,
-    PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
-    PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
-    PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayRow,
-    ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio,
-    Season, SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError,
-    TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome,
+    GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow, MatchCheckpointRow,
+    MatchClocks, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry, PlayerSettingsGroup,
+    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
+    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
+    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput,
+    RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard,
+    SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StatsTotalsQuery,
+    StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome,
     TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
     UsernameClaim, UsernameClaimOutcome,
 };
@@ -3045,6 +3045,9 @@ pub async fn matches_create(t: &mut PgTx<'_>, m: &MatchRow) -> Result<(), StoreE
 }
 
 pub async fn matches_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<MatchRow>, StoreError> {
+    if !is_uuid(match_id) {
+        return Ok(None);
+    }
     run_as(t, None).await?;
     let row = sqlx::query(concat!(
         "select ",
@@ -3133,6 +3136,69 @@ pub async fn matches_actions(t: &mut PgTx<'_>, match_id: &str) -> Result<Vec<Mat
         .collect()
 }
 
+/// #1169: one statement, so the guards and the write cannot come apart: the row goes in only while
+/// the match is live and its log holds `seq` under `nonce`, and replaces only an earlier seq's.
+pub async fn matches_put_checkpoint(t: &mut PgTx<'_>, row: &MatchCheckpointRow) -> Result<bool, StoreError> {
+    run_as(t, None).await?;
+    let done = sqlx::query(concat!(
+        "insert into public.match_checkpoints
+           (match_id, seq, nonce, catalog_version, rules, checkpoint_version, body, body_hash, at)
+         select $1::uuid, $2::bigint, $3::text, $4::text, $5::text, $6::integer, $7::text, $8::text, ",
+        ts!("$9"),
+        "
+          where exists (select 1 from public.matches m where m.id = $1::uuid and m.status = 'live')
+            and exists (select 1 from public.match_actions a
+                         where a.match_id = $1::uuid and a.seq = $2::bigint and a.nonce = $3::text)
+         on conflict (match_id) do update set
+           seq = excluded.seq, nonce = excluded.nonce, catalog_version = excluded.catalog_version,
+           rules = excluded.rules, checkpoint_version = excluded.checkpoint_version, body = excluded.body,
+           body_hash = excluded.body_hash, at = excluded.at
+          where public.match_checkpoints.seq < excluded.seq"
+    ))
+    .bind(row.match_id.as_str())
+    .bind(row.seq)
+    .bind(row.nonce.as_str())
+    .bind(row.catalog_version.as_str())
+    .bind(row.rules.as_str())
+    .bind(row.checkpoint_version)
+    .bind(row.body.as_str())
+    .bind(row.body_hash.as_str())
+    .bind(row.at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(done.rows_affected() > 0)
+}
+
+pub async fn matches_checkpoint(
+    t: &mut PgTx<'_>,
+    match_id: &str,
+) -> Result<Option<MatchCheckpointRow>, StoreError> {
+    run_as(t, None).await?;
+    let row = sqlx::query(
+        "select seq::text as seq, nonce, catalog_version, rules, checkpoint_version, body, body_hash, at
+           from public.match_checkpoints where match_id = $1::uuid",
+    )
+    .bind(match_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.map(|row| -> Result<MatchCheckpointRow, StoreError> {
+        Ok(MatchCheckpointRow {
+            match_id: match_id.to_string(),
+            seq: int_of(&get::<String>(&row, "seq")?)?,
+            nonce: get(&row, "nonce")?,
+            catalog_version: get(&row, "catalog_version")?,
+            rules: get(&row, "rules")?,
+            checkpoint_version: get(&row, "checkpoint_version")?,
+            body: get(&row, "body")?,
+            body_hash: get(&row, "body_hash")?,
+            at: ms_of(get(&row, "at")?),
+        })
+    })
+    .transpose()
+}
+
 pub async fn matches_set_clocks(
     t: &mut PgTx<'_>,
     match_id: &str,
@@ -3193,6 +3259,12 @@ pub async fn matches_finish(t: &mut PgTx<'_>, match_id: &str, at: i64) -> Result
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
+    // #1169: a match that has ended is never rebuilt from its checkpoint, so it goes with the ending.
+    sqlx::query("delete from public.match_checkpoints where match_id = $1::uuid")
+        .bind(match_id)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
     if done.rows_affected() == 0 {
         // Already over is a no-op (§9.5: the actor and the reaper can both reach an ending);
         // a match that was never there is an error, as it is in the fake.
@@ -3564,6 +3636,9 @@ pub async fn rooms_count_open_by_host(
     host_profile_id: &str,
     at: i64,
 ) -> Result<i64, StoreError> {
+    if !is_uuid(host_profile_id) {
+        return Ok(0);
+    }
     run_as(t, None).await?;
     let row = sqlx::query(concat!(
         "select count(*)::int as n from public.matches
@@ -7344,11 +7419,13 @@ fn from_ticket_status(status: &TicketStatus) -> Result<&'static str, StoreError>
 use crate::db::store::{ReplayShare, SharedReplayRow};
 
 /// B52: what a share `s`, joined to its match `m`, is read through on: the match is over, the
-/// sharer held a seat in it, and the two are still friends (`a < b`) with neither blocking the other.
+/// sharer held a seat in it, the retention purge has not taken its action log (as `replays_list`
+/// does), and the two are still friends (`a < b`) with neither blocking the other.
 macro_rules! readable_share {
     () => {
         "m.status = 'over'
             and s.sharer in (m.p1_profile_id, m.p2_profile_id)
+            and exists (select 1 from public.match_actions a where a.match_id = m.id)
             and exists (select 1 from public.friendships f
                          where f.a = least(s.sharer, s.friend) and f.b = greatest(s.sharer, s.friend))
             and not exists (select 1 from public.blocks k

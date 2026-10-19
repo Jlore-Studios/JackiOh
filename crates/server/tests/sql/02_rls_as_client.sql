@@ -388,7 +388,8 @@ declare
   t text;
   missing text := '';
 begin
-  foreach t in array array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records', 'player_stats',
+  foreach t in array array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'match_checkpoints', 'series',
+                           'game_records', 'player_stats',
                            'seasons', 'season_ranks', 'bot_ratings', 'rated_games',
                            'action_timings', 'emote_events', 'match_signals', 'bots',
                            'age_checks', 'terms_acceptances',
@@ -414,8 +415,10 @@ declare
   -- `bots` (0032, R1454): which profiles are ladder bots, which R1452 says no client read tells.
   -- `age_checks` and `terms_acceptances` (0034, R757000, R757001): what each account agreed to,
   -- which the server alone records. The three totals tables (0041, R1044000): the game records
-  -- folded, which the server alone reads and serves as the public figures.
-  forbidden constant text[] := array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'series', 'game_records', 'player_stats',
+  -- folded, which the server alone reads and serves as the public figures. `match_checkpoints`
+  -- (0042, #1169): a live match's whole state, both hands and both libraries, as `matches`.
+  forbidden constant text[] := array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'match_checkpoints',
+                                     'series', 'game_records', 'player_stats',
                                      'seasons', 'season_ranks', 'bot_ratings', 'rated_games',
                                      'action_timings', 'emote_events', 'match_signals', 'bots',
                                      'age_checks', 'terms_acceptances',

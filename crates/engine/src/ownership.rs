@@ -6,7 +6,8 @@
 //!
 //! Two ways in, one change of owner (`change_owner`):
 //!   - `take_into_hand`: the card goes straight to the thief's hand (E2's countered Spell, E16's cards
-//!     handed over, Classic+ #12.3's card out of the deck).
+//!     handed over, Classic+ #12.3's card out of the deck, and since R1185003 a Unit taken off the field,
+//!     M+ #24 Bob's "Put an enemy Unit into your hand").
 //!   - `draw_from_library_of`: a draw of the thief's own, taken from the other player's library (Classic
 //!     #58: "draw the bottom card of your opponent's deck") — §2.4's draw from the moment the card has
 //!     left the library, so the thief's hand cap, a cast on draw for the thief and the game draw counter
@@ -94,24 +95,41 @@ pub(crate) fn readers_where_it_lies(state: &GameState, card: &CardInstance) -> V
     }
 }
 
-/// `"hand" | "burned"`: where a card taken into a hand went — the hand, or its new owner's graveyard
-/// because the hand was full (§2.4, R4).
+/// `"hand" | "burned" | "vanished"`: where a card taken into a hand went — the hand, its new owner's
+/// graveyard because the hand was full (§2.4, R4), or nowhere, a unit token taken off the field having
+/// ceased to exist (R11, R1185003).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum TakenTo {
     #[serde(rename = "hand")]
     Hand,
     #[serde(rename = "burned")]
     Burned,
+    #[serde(rename = "vanished")]
+    Vanished,
 }
 
 /// E2, E16: move `card` to `thief`'s hand as the thief's own card. `stolen` is emitted first, naming
 /// the pile it came from and both players, then the hand's own `addedToHand` or `burned` (§2.4).
 /// A card that has ceased to exist is not taken. Returns where it went, or `None` when it was not taken.
+///
+/// R1185003: a card on the field leaves it on the way, as a Bounce takes it (R747's ownership move, the
+/// thief's hand in place of the controller's): R78's reset, the pile beneath it resuming (R13) and the
+/// thief's hand cap. A unit token taken off the field ceases to exist instead (R11), so no hand and no
+/// graveyard sees it.
 pub fn take_into_hand(sink: &mut EngineSink<'_>, card: &CardInstance, thief: PlayerId) -> Option<TakenTo> {
     if !change_owner(sink, card, thief) {
         return None;
     }
     let mut card = live(sink.state, card);
+    if card.zone.z() == ZoneName::Field && crate::zones::is_unit_token(sink.state, &card) {
+        crate::zones::move_to_zone(
+            sink.state,
+            &mut card,
+            crate::zones::OffFieldZone::Hand,
+            Default::default(),
+        );
+        return Some(TakenTo::Vanished);
+    }
     // `draw::add_to_hand` burns a card entering a full hand (§2.4, R4): the same test, read before
     // the move, names where it went.
     let burns =

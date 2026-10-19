@@ -11,7 +11,9 @@ use crate::state::{
     CardInstance, GameState, ModifierExpiry, ModifierKind, PlayerModifier, PlayerState, handicap_of,
 };
 use crate::triggers::{TriggerZone, holders_answering};
-use crate::wire::{CardCost, GameEvent, GameEventType, ManaSpentFor, PLAYER_IDS, PlayerId, Row, Zone};
+use crate::wire::{
+    CardCost, CardType, GameEvent, GameEventType, ManaSpentFor, PLAYER_IDS, PlayerId, Row, Zone,
+};
 
 /// §2.3, R181: max mana is min(turns started + the seat's mana bonus, its mana cap), plus persistent
 /// modifiers, floored at 0. With no handicap the bonus is 0 and the cap is MAX_MANA, which is §2.3's
@@ -264,9 +266,71 @@ pub fn cost_rules_spent_by(state: &GameState, instance: &CardInstance) -> Vec<St
         .collect()
 }
 
+/// R1181002 (Meditative+ #22 Mountaintop Garden): the premium the Gardens acting on either side ask
+/// for an embiggen card's dearer price, the least of them, or `None` while no Garden acts. Each text
+/// that carries `embiggenGarden`, on a card acting on its controller's field (`acting_texts_of`),
+/// reaches both players' cards; its premium moves with the card's declared number `premium` (R386).
+pub fn garden_premium(state: &GameState) -> Option<i32> {
+    let mut least: Option<i32> = None;
+    for side in PLAYER_IDS {
+        for card in crate::damage::acting_texts_of(state, side) {
+            for text in crate::scripts::texts_of(state, &card) {
+                let Some(flag) = text.flags.embiggen_garden else {
+                    continue;
+                };
+                let premium = crate::params::declared_or(state, &card, "premium", flag).max(0);
+                least = Some(least.map_or(premium, |held| held.min(premium)));
+            }
+        }
+    }
+    least
+}
+
+/// R1181002: whether a Garden reaches a play of this card now — an embiggen card played face-up from
+/// a hand, or from a graveyard (R454), while a Garden acts. A cast (R545) and a card set face-down
+/// (R783005) are not reached.
+pub fn garden_reaches(state: &GameState, card: &CardInstance) -> bool {
+    garden_premium_for(state, card).is_some()
+}
+
+/// R1181002: the premium a Garden asks of a play of this card now, where one reaches it.
+fn garden_premium_for(state: &GameState, card: &CardInstance) -> Option<i32> {
+    if card.set_as.is_some()
+        || !matches!(card.zone, Zone::Hand { .. } | Zone::Graveyard { .. })
+        || !crate::play_choices::has_embiggen_price(state, card)
+    {
+        return None;
+    }
+    garden_premium(state)
+}
+
+/// R1181002: the price a Garden sets on the dearer play of an embiggen card that is not Radiant — its
+/// normal price plus the premium, in place of its printed Embiggened price — or `None` where no Garden
+/// reaches it, or for any other play.
+pub fn garden_dearer_price(state: &GameState, card: &CardInstance) -> Option<i32> {
+    if card.embiggened != Some(true) || card.radiant {
+        return None;
+    }
+    let CardCost::Embiggen { base, .. } = def_of(Some(state), &card.def_id).cost else {
+        return None;
+    };
+    Some(base + garden_premium_for(state, card)?)
+}
+
+/// R65, R1181003: the override a price starts from — for the Embiggened version, its own price
+/// (`embiggenCostOverride`, Meditative+ #23) before `costOverride`; for every other play,
+/// `costOverride`.
+pub fn override_of(card: &CardInstance) -> Option<i32> {
+    if card.embiggened == Some(true) {
+        card.embiggen_cost_override.or(card.cost_override)
+    } else {
+        card.cost_override
+    }
+}
+
 fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) -> Price {
     let side = &state.players[instance.controller];
-    let override_ = instance.cost_override;
+    let override_ = override_of(instance);
     let floor = cost_floor_of(instance);
     // R675: Glitch costs (0) wherever it is and whatever would change that.
     if instance.def_id == GLITCH_DEF_ID {
@@ -290,7 +354,11 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
         };
     }
 
-    let mut cost = override_.unwrap_or_else(|| printed_cost(state, instance)) + instance.cost_mod;
+    // R1181002: under a Garden the dearer play of a card that is not Radiant starts from the normal
+    // price plus the premium.
+    let mut cost = override_.unwrap_or_else(|| {
+        garden_dearer_price(state, instance).unwrap_or_else(|| printed_cost(state, instance))
+    }) + instance.cost_mod;
     // R65: a player's discounts price a play, and a play takes a card from its hand — or from its
     // graveyard, while a permission lets its player play it from there (E11, R454).
     let for_play = options.as_play == Some(true)
@@ -363,10 +431,52 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
     }
 }
 
+/// R1180004 (Meditative+ #6 Bloodbloom): the health price a play of this card would use now, as
+/// `(multiple, echo)` — the newest live `HealthPrice` of the player holding it, when the card is a Spell
+/// in that player's hand played face-up: not a Field Spell or a Trap, and not a Spell being set
+/// face-down, which is played as a Trap (R783005). A card anywhere else — a graveyard's play, a cast,
+/// which pays nothing (R70) — never uses it. Every price, legal play and payment reads this one rule.
+pub fn health_price_rule(state: &GameState, instance: &CardInstance) -> Option<(i32, Option<i32>)> {
+    let Zone::Hand { player } = instance.zone else {
+        return None;
+    };
+    if instance.set_as.is_some() || crate::faces::card_type_of(state, instance) != CardType::Spell {
+        return None;
+    }
+    state.players[player]
+        .mods
+        .iter()
+        .rev()
+        .find_map(|modifier| match modifier.kind {
+            ModifierKind::HealthPrice { multiple, echo } if modifier_is_live(state, modifier) => {
+                Some((multiple.max(0), echo))
+            }
+            _ => None,
+        })
+}
+
+/// R1180004: whether a play of this card from its hand would pay its price in health now.
+pub fn health_priced(state: &GameState, instance: &CardInstance) -> bool {
+    health_price_rule(state, instance).is_some()
+}
+
+/// R1180004: the health a play of this card at `cost` would lose now — `multiple` times the cost
+/// after every modifier (R65; an X Spell its X) — or `None` when it pays in mana as usual.
+pub fn health_price_of(state: &GameState, instance: &CardInstance, cost: i32) -> Option<i32> {
+    health_price_rule(state, instance).map(|(multiple, _)| multiple.saturating_mul(cost.max(0)))
+}
+
+/// R1180004: the mana a play of this card at `cost` takes now — nothing under a health price, else the
+/// cost. What every affordability check compares with the player's spendable mana.
+pub fn mana_due_now(state: &GameState, instance: &CardInstance, cost: i32) -> i32 {
+    if health_priced(state, instance) { 0 } else { cost }
+}
+
 pub fn can_afford(state: &GameState, instance: &CardInstance) -> bool {
     // R1223: affordability reads the one function — current mana plus the credit line's offer.
-    effective_cost(state, instance, CostOptions::default())
-        <= crate::credit::spendable_mana(state, instance.controller)
+    // R1180004: a play its health price reaches takes no mana.
+    let cost = effective_cost(state, instance, CostOptions::default());
+    mana_due_now(state, instance, cost) <= crate::credit::spendable_mana(state, instance.controller)
 }
 
 /// R396 (Classic #10, #18, #25, #32, #39): what a card costs wherever a rule compares or counts costs —

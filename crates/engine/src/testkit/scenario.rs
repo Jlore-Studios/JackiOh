@@ -129,6 +129,9 @@
 //!   with the engine's own message, which is the mechanism the M4-T4 table's "Play refused
 //!   without a tribute" / "locked zone rejects play" / "Uncastable at 4 mana" rows use:
 //!   `s.expect_refused_with(|s| s.play(x, json!({})), "tribute")` (TS `toThrow(/tribute/)`).
+//!   `expect_refused` and `expect_refused_with` pass on those refusals alone (#1247): any other panic
+//!   in the step (a reference that matches nothing, `answer` with no prompt open, a step's argument
+//!   check, an engine crash) fails the test as itself. A test of those panics uses `expect_throw_with`.
 //!
 //! TS's fallbacks for `reduce`'s long-gone placeholder refusals ("combat arrives with M2", "prompts
 //! arrive with M3") are not ported: `attack` and `answer` are plain actions, as every other step is.
@@ -177,6 +180,7 @@ thread_local! {
     static SCRIPTS_OVERRIDE: Cell<Option<&'static IndexMap<String, CardScripts>>> = const { Cell::new(None) };
     static WIN_RATES_OVERRIDE: Cell<Option<&'static crate::win_rates::WinRateTable>> =
         const { Cell::new(None) };
+    static CODE_BLOCKS_OVERRIDE: Cell<Option<crate::catalog::CodeBlocks>> = const { Cell::new(None) };
     static SHIPPED_OVERRIDE: Cell<Option<&'static [crate::catalog::ShippedCatalog]>> = const { Cell::new(None) };
 }
 
@@ -228,6 +232,28 @@ pub fn win_rates_override() -> Option<&'static crate::win_rates::WinRateTable> {
     WIN_RATES_OVERRIDE.with(Cell::get)
 }
 
+/// R1183004: the code blocks this thread registered, by catalog id, in place of the compiled ones
+/// (`catalog::code_block_of`), until the thread ends or `clear_overrides()` runs. Leaked, like the
+/// catalog, and sorted by id as the compiled table is.
+pub fn register_code_blocks(blocks: Vec<(&str, &str)>) {
+    let mut owned: Vec<(&'static str, &'static str)> = blocks
+        .into_iter()
+        .map(|(id, code)| {
+            let id: &'static str = Box::leak(id.to_string().into_boxed_str());
+            let code: &'static str = Box::leak(code.to_string().into_boxed_str());
+            (id, code)
+        })
+        .collect();
+    owned.sort_by(|a, b| a.0.cmp(b.0));
+    let blocks: crate::catalog::CodeBlocks = Box::leak(owned.into_boxed_slice());
+    CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(Some(blocks)));
+}
+
+/// The code blocks this thread registered, if any.
+pub fn code_blocks_override() -> Option<crate::catalog::CodeBlocks> {
+    CODE_BLOCKS_OVERRIDE.with(Cell::get)
+}
+
 /// R767000: the shipped catalogs `catalog::shipped_catalog()` finds by version on this thread, in
 /// place of the build's, until the thread ends or `clear_overrides()` runs. Leaked, like the catalog.
 pub fn register_shipped(catalogs: Vec<crate::catalog::ShippedCatalog>) {
@@ -249,6 +275,7 @@ pub struct ThreadOverrides {
     catalog_version: Option<&'static str>,
     scripts: Option<&'static IndexMap<String, CardScripts>>,
     win_rates: Option<&'static crate::win_rates::WinRateTable>,
+    code_blocks: Option<crate::catalog::CodeBlocks>,
     shipped: Option<&'static [crate::catalog::ShippedCatalog]>,
 }
 
@@ -260,6 +287,7 @@ impl ThreadOverrides {
         CATALOG_VERSION_OVERRIDE.with(|cell| cell.set(self.catalog_version));
         SCRIPTS_OVERRIDE.with(|cell| cell.set(self.scripts));
         WIN_RATES_OVERRIDE.with(|cell| cell.set(self.win_rates));
+        CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(self.code_blocks));
         SHIPPED_OVERRIDE.with(|cell| cell.set(self.shipped));
     }
 }
@@ -271,6 +299,7 @@ pub fn thread_overrides() -> ThreadOverrides {
         catalog_version: catalog_version_override(),
         scripts: scripts_override(),
         win_rates: win_rates_override(),
+        code_blocks: code_blocks_override(),
         shipped: shipped_override(),
     }
 }
@@ -282,6 +311,7 @@ pub fn clear_overrides() {
     CATALOG_VERSION_OVERRIDE.with(|cell| cell.set(None));
     SCRIPTS_OVERRIDE.with(|cell| cell.set(None));
     WIN_RATES_OVERRIDE.with(|cell| cell.set(None));
+    CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(None));
     SHIPPED_OVERRIDE.with(|cell| cell.set(None));
 }
 
@@ -1239,7 +1269,9 @@ fn refusal_of(run: impl FnOnce()) -> Option<String> {
     }
 }
 
-/// TS `expect(() => …).toThrow()` for a call that is not a scenario step (`scenario(…)` itself).
+/// TS `expect(() => …).toThrow()`: any panic passes, so it is for a call that is not a refused step —
+/// `scenario(…)` itself, a harness check that fails loudly (`Scenario::expect_refused` takes a refusal
+/// only).
 pub fn expect_throw(run: impl FnOnce()) {
     if refusal_of(run).is_none() {
         panic!("expect_throw: the call ran through; it should have been refused");
@@ -1292,6 +1324,9 @@ pub struct Scenario {
     log: Vec<GameEvent>,
     last: Vec<GameEvent>,
     step: u32,
+    /// Set by `refuse` just before a step panics with a refusal, and read by `expect_refused` and
+    /// `expect_refused_with` once the step has unwound: any other panic is no refusal (#1247).
+    refused: bool,
 }
 
 impl Scenario {
@@ -1302,6 +1337,7 @@ impl Scenario {
             log: Vec::new(),
             last: Vec::new(),
             step: 0,
+            refused: false,
         }
     }
 
@@ -1486,8 +1522,16 @@ impl Scenario {
 
     fn action(&mut self, body: ActionBody, player: PlayerId, what: &str) {
         if let Some(error) = self.try_action(body, player) {
-            panic!("{error} — {what}");
+            self.refuse(format!("{error} — {what}"));
         }
+    }
+
+    /// A refusal: `reduce`'s error, or an answer the open prompt does not offer. It panics with
+    /// `message` as it stands, after marking the scenario so that `expect_refused` can tell it from
+    /// any other panic.
+    fn refuse(&mut self, message: String) -> ! {
+        self.refused = true;
+        panic!("{message}");
     }
 
     /// A direct engine call, threading the rng cursor the way `reduce` does. The state is changed in
@@ -1603,7 +1647,11 @@ impl Scenario {
                 self.current.active.as_str()
             );
         };
-        let picks = or_fail(to_selections(&self.current, &selection, &pending));
+        let picks = match to_selections(&self.current, &selection, &pending) {
+            Ok(picks) => picks,
+            Err(Unreadable::NotOffered(message)) => self.refuse(message),
+            Err(Unreadable::Malformed(message)) => panic!("{message}"),
+        };
         let who = pending.player_id;
         let what = format!(
             "answer {} prompt {} with {}",
@@ -1882,11 +1930,7 @@ impl Scenario {
         &mut self,
         step: impl for<'a> FnOnce(&'a mut Scenario) -> &'a mut Scenario,
     ) -> &mut Scenario {
-        if refusal_of(|| {
-            step(&mut *self);
-        })
-        .is_none()
-        {
+        if self.refusal_in("expect_refused", step).is_none() {
             panic!("expect_refused: the step ran through; it should have been refused");
         }
         self
@@ -1898,9 +1942,7 @@ impl Scenario {
         step: impl for<'a> FnOnce(&'a mut Scenario) -> &'a mut Scenario,
         text: &str,
     ) -> &mut Scenario {
-        match refusal_of(|| {
-            step(&mut *self);
-        }) {
+        match self.refusal_in("expect_refused_with", step) {
             None => panic!(
                 "expect_refused_with: the step ran through; it should have been refused with \"{text}\""
             ),
@@ -1911,6 +1953,36 @@ impl Scenario {
         }
         self
     }
+
+    /// The refusal `step` met, or `None` when it ran through. Only `refuse` marks a refusal; any other
+    /// panic in the step (a reference that matches nothing, `answer` with no prompt open, an engine
+    /// crash) is the test's own failure, so it fails as itself with a note that it was no refusal.
+    fn refusal_in(
+        &mut self,
+        helper: &str,
+        step: impl for<'a> FnOnce(&'a mut Scenario) -> &'a mut Scenario,
+    ) -> Option<String> {
+        self.refused = false;
+        let outcome = refusal_of(|| {
+            step(&mut *self);
+        });
+        let refused = std::mem::take(&mut self.refused);
+        let message = outcome?;
+        if !refused {
+            panic!(
+                "{helper}: the step panicked, but neither `reduce` nor the open prompt refused it: {message}"
+            );
+        }
+        Some(message)
+    }
+}
+
+/// Why `to_selections` could not read an answer.
+enum Unreadable {
+    /// A pick the open prompt does not offer: a refusal, as `reduce`'s own would be.
+    NotOffered(String),
+    /// An answer of the wrong shape: the test's own mistake.
+    Malformed(String),
 }
 
 /// §10.6: a prompt's answer is a `Selection[]`. A string (or a list of strings) is matched against
@@ -1921,22 +1993,27 @@ fn to_selections(
     state: &GameState,
     selection: &Value,
     pending: &PendingChoice,
-) -> Result<Vec<Selection>, String> {
+) -> Result<Vec<Selection>, Unreadable> {
     match selection {
-        Value::String(text) => Ok(vec![match_option(state, text, pending)?]),
+        Value::String(text) => Ok(vec![
+            match_option(state, text, pending).map_err(Unreadable::NotOffered)?,
+        ]),
         Value::Array(items) if items.is_empty() => Ok(Vec::new()),
         Value::Array(items) if items[0].is_string() => items
             .iter()
             .map(|item| match item.as_str() {
-                Some(text) => match_option(state, text, pending),
-                None => Err(format!("answer: {item} is not a string, as the first pick was")),
+                Some(text) => match_option(state, text, pending).map_err(Unreadable::NotOffered),
+                None => Err(Unreadable::Malformed(format!(
+                    "answer: {item} is not a string, as the first pick was"
+                ))),
             })
             .collect(),
-        Value::Array(_) => serde_json::from_value::<Vec<Selection>>(selection.clone())
-            .map_err(|error| format!("answer({selection}): not a list of selections: {error}")),
-        other => Err(format!(
+        Value::Array(_) => serde_json::from_value::<Vec<Selection>>(selection.clone()).map_err(|error| {
+            Unreadable::Malformed(format!("answer({selection}): not a list of selections: {error}"))
+        }),
+        other => Err(Unreadable::Malformed(format!(
             "answer({other}): an answer is a list of selections, a string or a list of strings"
-        )),
+        ))),
     }
 }
 
@@ -2529,26 +2606,23 @@ mod tests {
 
         #[test]
         fn throws_a_diagnosable_error_when_nothing_matches() {
-            let mut s = scenario(json!({ "p1": { "field": ["core-025"] } }));
-            s.expect_refused_with(
-                |s| {
+            let s = scenario(json!({ "p1": { "field": ["core-025"] } }));
+            expect_throw_with(
+                || {
                     s.card("core-056");
-                    s
                 },
                 "nothing matching \"core-056\"",
             );
             // The error lists what was there instead.
-            s.expect_refused_with(
-                |s| {
+            expect_throw_with(
+                || {
                     s.card("core-056");
-                    s
                 },
                 "core-025",
             );
-            s.expect_refused_with(
-                |s| {
+            expect_throw_with(
+                || {
                     s.card("not-a-card");
-                    s
                 },
                 "nothing matching \"not-a-card\"",
             );
@@ -2616,15 +2690,20 @@ mod tests {
             let mut taken = scenario(json!({ "p1": { "hand": ["core-025"], "field": [anchor()] } }));
             taken.expect_refused_with(|s| s.play("core-025", json!({ "zone": 5 })), "not open");
 
+            // The harness's own argument and reference checks are no refusals (#1247).
             let mut wrong = scenario(json!({ "p1": { "hand": ["core-010"], "field": [anchor()] } }));
-            wrong.expect_refused_with(
-                |s| s.play("core-010", json!({ "zone": 1 })),
+            expect_throw_with(
+                || {
+                    wrong.play("core-010", json!({ "zone": 1 }));
+                },
                 "a Spell takes no zone",
             );
 
             let mut absent = scenario(json!({ "p1": { "hand": ["core-025"], "field": [anchor()] } }));
-            absent.expect_refused_with(
-                |s| s.play("core-056", json!({})),
+            expect_throw_with(
+                || {
+                    absent.play("core-056", json!({}));
+                },
                 "nothing matching \"core-056\" is in a hand",
             );
         }
@@ -2735,8 +2814,18 @@ mod tests {
         #[test]
         fn throws_when_no_prompt_is_open_naming_the_phase_and_the_turn() {
             let mut s = scenario(json!({ "p1": { "field": [anchor()] } }));
-            s.expect_refused_with(|s| s.answer(json!("anything")), "no prompt is open");
-            s.expect_refused_with(|s| s.answer(json!([{ "pick": "none" }])), "no prompt is open");
+            expect_throw_with(
+                || {
+                    s.answer(json!("anything"));
+                },
+                "no prompt is open",
+            );
+            expect_throw_with(
+                || {
+                    s.answer(json!([{ "pick": "none" }]));
+                },
+                "no prompt is open",
+            );
         }
 
         // A real prompt chain (`s.play(x, …).answer(json!("a")).answer(json!("b"))`) needs a card
@@ -2751,8 +2840,10 @@ mod tests {
         fn expect_in_zone() {
             let mut s = scenario(json!({ "p1": { "hand": ["core-025"], "field": [anchor()] } }));
             s.expect_in_zone("core-025", "hand");
-            s.expect_refused_with(
-                |s| s.expect_in_zone("core-025", "graveyard"),
+            expect_throw_with(
+                || {
+                    s.expect_in_zone("core-025", "graveyard");
+                },
                 "should be in graveyard but is in hand",
             );
         }
@@ -2763,8 +2854,10 @@ mod tests {
             // makes it vanish, which needs card scripts. Here: a live card is not "gone".
             let mut s = scenario(json!({ "p1": { "field": ["core-025", anchor()] } }));
             let unit = s.unit("p1", 1).expect("a unit in lane 1");
-            s.expect_refused_with(
-                |s| s.expect_in_zone(unit, "gone"),
+            expect_throw_with(
+                || {
+                    s.expect_in_zone(unit, "gone");
+                },
                 "should be in gone but is in field",
             );
         }
@@ -2773,8 +2866,10 @@ mod tests {
         fn expect_stats() {
             let mut s = scenario(json!({ "p1": { "field": ["core-025"] } }));
             s.expect_stats("core-025", json!({ "attack": 7, "health": 7, "maxHealth": 7 }));
-            s.expect_refused_with(
-                |s| s.expect_stats("core-025", json!({ "attack": 6 })),
+            expect_throw_with(
+                || {
+                    s.expect_stats("core-025", json!({ "attack": 6 }));
+                },
                 "attack should be 6 but is 7",
             );
         }
@@ -2786,19 +2881,36 @@ mod tests {
             s.expect_events(json!(["cardPlayed", "summoned"]));
             // A subsequence, not contiguous: manaChanged sits between them in the log.
             s.expect_events(json!(["manaChanged", "summoned"]));
-            s.expect_refused_with(
-                |s| s.expect_events(json!(["summoned", "cardPlayed"])),
+            expect_throw_with(
+                || {
+                    s.expect_events(json!(["summoned", "cardPlayed"]));
+                },
                 "not a subsequence",
             );
-            s.expect_refused_with(|s| s.expect_events(json!(["gameOver"])), "not a subsequence");
+            expect_throw_with(
+                || {
+                    s.expect_events(json!(["gameOver"]));
+                },
+                "not a subsequence",
+            );
         }
 
         #[test]
         fn expect_health_and_expect_mana() {
             let mut s = scenario(json!({ "p1": { "health": 11, "mana": 2 } }));
             s.expect_health("p1", 11).expect_mana("p1", 2);
-            s.expect_refused_with(|s| s.expect_health("p1", 30), "should be at 30 but is at 11");
-            s.expect_refused_with(|s| s.expect_mana("p1", 4), "should have 4 mana but has 2");
+            expect_throw_with(
+                || {
+                    s.expect_health("p1", 30);
+                },
+                "should be at 30 but is at 11",
+            );
+            expect_throw_with(
+                || {
+                    s.expect_mana("p1", 4);
+                },
+                "should have 4 mana but has 2",
+            );
         }
 
         #[test]
@@ -2842,6 +2954,109 @@ mod tests {
             assert_eq!(s.events(), s.last_events()); // one step so far
             assert!(s.hand("p1").is_empty());
             assert!(std::hint::black_box(HAND_CAP) > 0);
+        }
+    }
+
+    mod refusals {
+        //! #1247: `expect_refused` and `expect_refused_with` pass on a refusal alone, `reduce`'s error or
+        //! an answer the open prompt does not offer. Any other panic in the step fails them, as itself.
+        use super::*;
+
+        /// A prompt opened by hand, as the engine's rules tests open one (`tests/rules/emotes.rs`):
+        /// one option, keyed "a".
+        fn open_prompt(s: &mut Scenario) {
+            let prompt: PendingChoice = serde_json::from_value(json!({
+                "id": "q1",
+                "playerId": "p1",
+                "kind": "answer",
+                "prompt": "test prompt",
+                "options": [{ "key": "a", "label": "A", "selection": { "pick": "none" } }],
+                "min": 1,
+                "max": 1,
+                "resume": { "defId": "core-025", "hook": "q", "step": "q", "radiant": false, "data": {} },
+            }))
+            .expect("a prompt literal reads as a PendingChoice");
+            s.state_mut().pending = Some(prompt);
+        }
+
+        /// What the helper failed with: it did fail, saying the step's panic was no refusal.
+        fn no_refusal(run: impl FnOnce()) -> String {
+            let message = refusal_of(run).expect("the helper should have failed the test");
+            assert!(
+                message.contains("neither `reduce` nor the open prompt refused it"),
+                "{message}"
+            );
+            message
+        }
+
+        #[test]
+        fn expect_refused_fails_on_a_reference_that_matches_nothing_and_on_answer_with_no_prompt_open() {
+            let mut s = scenario(json!({ "p1": { "hand": ["core-025"], "field": [anchor()] } }));
+            let message = no_refusal(|| {
+                s.expect_refused(|s| s.play("core-056", json!({})));
+            });
+            assert!(message.starts_with("expect_refused: "), "{message}");
+            assert!(
+                message.contains("nothing matching \"core-056\" is in a hand"),
+                "{message}"
+            );
+
+            let message = no_refusal(|| {
+                s.expect_refused(|s| s.answer(json!("anything")));
+            });
+            assert!(message.contains("no prompt is open"), "{message}");
+
+            // An answer of the wrong shape is the test's mistake too, with a prompt open.
+            open_prompt(&mut s);
+            let message = no_refusal(|| {
+                s.expect_refused(|s| s.answer(json!(7)));
+            });
+            assert!(message.contains("an answer is a list of selections"), "{message}");
+        }
+
+        #[test]
+        fn expect_refused_passes_on_a_reduce_refusal_and_on_an_answer_the_prompt_does_not_offer() {
+            let mut s = scenario(json!({ "p1": { "hand": ["core-025"], "mana": 3, "field": [anchor()] } }));
+            s.expect_refused(|s| s.play("core-025", json!({})));
+            s.expect_in_zone("core-025", "hand").expect_mana("p1", 3);
+
+            open_prompt(&mut s);
+            s.expect_refused(|s| s.answer(json!("b")));
+            assert!(s.state().pending.is_some(), "the prompt is still open");
+        }
+
+        #[test]
+        fn expect_refused_with_fails_on_a_panic_that_is_no_refusal_even_when_it_holds_the_words() {
+            let mut s = scenario(json!({ "p1": { "hand": ["core-025"], "field": [anchor()] } }));
+            let message = no_refusal(|| {
+                s.expect_refused_with(|s| s.play("core-056", json!({})), "nothing matching");
+            });
+            assert!(message.starts_with("expect_refused_with: "), "{message}");
+            assert!(
+                message.contains("nothing matching \"core-056\" is in a hand"),
+                "{message}"
+            );
+
+            let message = no_refusal(|| {
+                s.expect_refused_with(|s| s.answer(json!("anything")), "no prompt is open");
+            });
+            assert!(message.contains("no prompt is open"), "{message}");
+        }
+
+        #[test]
+        fn expect_refused_with_passes_on_a_reduce_refusal_and_on_an_answer_the_prompt_does_not_offer() {
+            let mut s = scenario(json!({ "p1": { "hand": ["core-025"], "mana": 3, "field": [anchor()] } }));
+            s.expect_refused_with(|s| s.play("core-025", json!({})), "more than your mana");
+
+            open_prompt(&mut s);
+            s.expect_refused_with(|s| s.answer(json!("b")), "has no such option");
+            // A refusal whose text lacks the words still fails.
+            expect_throw_with(
+                || {
+                    s.expect_refused_with(|s| s.answer(json!("b")), "Taunt");
+                },
+                "does not contain \"Taunt\"",
+            );
         }
     }
 

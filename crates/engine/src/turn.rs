@@ -133,6 +133,7 @@ fn due_entries(state: &GameState, phase: Phase, player: PlayerId, due_before: u3
                 && effect
                     .not_before
                     .is_none_or(|not_before| state.turn >= not_before)
+                && crate::modifiers::own_turn_reached(state, effect)
         })
         .collect();
     delayed.sort_by_key(|a| a.seq);
@@ -189,6 +190,14 @@ fn run_due_entry(sink: &mut EngineSink, player: PlayerId, entry: &DueEntry) -> b
             };
             // `modifiers.dropDelayed(state, effect.id)`.
             sink.state.delayed.retain(|due| due.id != effect.id);
+            // R1181000, R169: a countdown's badge goes as its entry resolves.
+            if crate::modifiers::has_countdown(&live) {
+                sink.events.push(GameEvent::ModifierChanged {
+                    player: live.owner,
+                    modifier_id: live.id.clone(),
+                    added: false,
+                });
+            }
             // B5 E27: the engine's own delayed kinds (a destroy, a hand discarded) run as verbs; every other
             // entry re-enters its card's step (R126).
             if !crate::effects::delay::run_engine_delayed(sink, &live) {
@@ -680,6 +689,8 @@ pub fn clear_return_flags(state: &mut GameState) {
 
 fn cleanup(sink: &mut EngineSink, player: PlayerId) {
     crate::modifiers::expire_modifiers(sink, player);
+    // R1174000: beside the "this turn" modifiers, `player`'s Frozen Units whose thaw is due thaw.
+    crate::freeze::thaw_at_cleanup(sink, player);
     let side = &mut sink.state.players[player];
     side.turn_log.unspent_at_end = Some(side.mana.current);
     let handed_over = side.ai_turn;
@@ -687,6 +698,8 @@ fn cleanup(sink: &mut EngineSink, player: PlayerId) {
         crate::traps::end_handed_over_turn(sink);
     }
     sink.state.players[player].ai_turn = false;
+    // R1183002: the autopilot played this turn and ends with it.
+    sink.state.players[player].autopilot = None;
     clear_return_flags(sink.state);
     // R637: a Temporary card still in `player`'s hand is discarded now, after every end-of-turn step.
     crate::temporary::discard_temporary_cards(sink, player);

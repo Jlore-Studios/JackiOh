@@ -402,6 +402,8 @@ mod r1301_who_sees_it {
             min: 1,
             max: 1,
             budget: None,
+            craft_mode: None,
+            streak: None,
             resume: Resume {
                 def_id: String::new(),
                 hook: "resume".into(),

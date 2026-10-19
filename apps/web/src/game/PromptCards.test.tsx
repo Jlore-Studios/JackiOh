@@ -304,6 +304,58 @@ describe("R247: #82 KY's Trial's Discover offers numbers", () => {
   });
 });
 
+describe("R1183005: Meditative+ #25 KY's Intuition's Discover offers code", () => {
+  /**
+   * The chooser's view as `viewFor` builds it for M+ #25 (crates/engine's `option_view`): each option
+   * is a place in the offer, keyed `mode:code-<n>`, labelled with a card's code block and marked
+   * `code`, with no definition.
+   */
+  const CODES = [
+    'fn tech(radiant: bool) -> Script {\n    Script {\n        cry: Some(hook(move |_ctx| ...)),',
+    "pub fn script() -> CardScripts {\n    let base = Script::default();",
+    'fn bomb() -> Script {\n    heal(json_as(json!({ "target": { "of": "selfHero" } })))',
+  ] as const;
+
+  function codeView(): PlayerView {
+    return baseView({
+      you: emptySide("p1", { hand: [card({ instanceId: "h1", defId: "core-002" })] }),
+      opponent: emptySide("p2", { hand: { count: 3 } }),
+      pending: pendingFor(
+        "discover",
+        CODES.map((code, at) => ({ key: `mode:code-${at}`, label: code, code: true as const })),
+        { prompt: "Discover a card by its code" },
+      ),
+    });
+  }
+
+  it("R1183005 draws each option as its code alone, with no face, name or preview", () => {
+    vi.useFakeTimers();
+    renderPrompt(codeView());
+    const modal = screen.getByTestId("prompt-modal");
+    expect(modal).toHaveAttribute("data-prompt-kind", "discover");
+    CODES.forEach((code, at) => {
+      const option = screen.getByTestId(`prompt-option-mode:code-${at}`);
+      expect(option).toHaveAttribute("data-code", "true");
+      // The code as written, its lines kept: never a sentence to translate.
+      expect(option.querySelector("pre.prompt-code code")?.textContent).toBe(code);
+      expect(option.querySelector(".cf"), code).toBeNull();
+      expect(option.querySelector(".card-name"), code).toBeNull();
+      fireEvent.pointerEnter(option, { pointerType: "mouse" });
+      act(() => {
+        vi.advanceTimersByTime(HOVER_DELAY_MS * 2);
+      });
+      expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
+    });
+  });
+
+  it("R1183005 picking a block answers with its place in the offer", () => {
+    const onAction = vi.fn();
+    renderPrompt(codeView(), onAction);
+    fireEvent.click(screen.getByTestId("prompt-option-mode:code-1"));
+    expect(onAction).toHaveBeenCalledWith({ type: "answer", choiceId: "ch1", selection: [{ pick: "mode", option: "code-1" }] });
+  });
+});
+
 describe("#492 one card picker, front and centre, for every short choice", () => {
   const AURA = "core-046"; // Suppressive Aura, "2 embiggen 4"
   const APPROPRIATIONS = "classicplus-040"; // an X Spell with a "Choose one" of four
@@ -407,7 +459,7 @@ describe("#492 one card picker, front and centre, for every short choice", () =>
     const bigger = screen.getByTestId("prompt-option-true");
     // CLAUDE.md rule 7: the client never works out a discounted embiggen price.
     expect(gem(bigger)).toEqual({ text: "?", alt: null });
-    expect(bigger.querySelector(".prompt-card-caption-detail")?.textContent).toBe("Pay the embiggen price");
+    expect(bigger.querySelector(".prompt-card-caption-detail")?.textContent).toBe("Pay the Embiggened cost");
   });
 
   it("#492 a few X values are the card once per X, each captioned with its X", () => {

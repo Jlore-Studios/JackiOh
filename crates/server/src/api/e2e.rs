@@ -168,10 +168,10 @@ pub const E2E_INVITE_CODES: E2EInviteCodes = E2EInviteCodes {
 /// expired, which is all R144's reseed needs; the rule it exercises is §9.4 step 5's rejection.
 const EXPIRED_CODE_AGE_MS: i64 = 60 * 60 * 1000;
 
-/// Not in SPEC, and no R-row: the fixtures take the default rather than choosing. `max_uses` of one
-/// matches `DEFAULT_INVITE_CODE_MAX_USES` in `codes.rs` — where the proposed ruling for that default
-/// is written out — and the db agent's `max_uses int not null default 1`, so the exhausted fixture
-/// is exhausted at one use. Restating the number is all this does; it decides nothing.
+/// R161's default, which the fixtures take rather than choosing: `max_uses` of one matches
+/// `DEFAULT_INVITE_CODE_MAX_USES` in `codes.rs` and the db agent's `max_uses int not null default 1`,
+/// so the exhausted fixture is exhausted at one use. Restating the number is all this does; it
+/// decides nothing.
 const FIXTURE_CODE_MAX_USES: i64 = 1;
 
 // ---------------------------------------------------------------------------

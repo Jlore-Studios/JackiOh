@@ -283,7 +283,7 @@ function runCheck(extraArgs: readonly string[] = []): CheckRun {
 }
 
 /** A problem line starts with the key it is about (Surface: "each starting with the key"). */
-const KEY_AT_START = /^((?:core|classic|classicplus|meditative|boss)-[a-z0-9]+(?:-[a-z0-9]+)*-(?:play|attack|death|cast|trigger[0-9]+))(?![a-z0-9])/;
+const KEY_AT_START = /^((?:core|classic|classicplus|meditative|meditativeplus|boss)-[a-z0-9]+(?:-[a-z0-9]+)*-(?:play|attack|death|cast|trigger[0-9]+))(?![a-z0-9])/;
 
 /** The keys the run reported a problem for, sorted and deduplicated. */
 function reportedKeys(run: CheckRun): string[] {
@@ -669,17 +669,21 @@ describe("gen-voice.mjs --check (B37)", () => {
   }
 
   it(
-    "R1420 owes no file for a line of a set that has not shipped, and the same line on a shipped card is missing",
+    "R1420 R1178000 owes no file for a line of a set that has not shipped, and the same line on a shipped card, Meditative+'s since v0.3.15 included, is missing",
     () => {
+      // The reserved Boss set, which ships no card.
       const unshipped = unrenderedTree("Boss");
       const quiet = runCheck(["--root", unshipped.root, "--catalog", unshipped.catalog]);
       expect(quiet.status, describeRun(quiet)).toBe(0);
       expect(reportedKeys(quiet)).toEqual([]);
 
-      const shipped = unrenderedTree("Core");
-      const loud = runCheck(["--root", shipped.root, "--catalog", shipped.catalog]);
-      expect(loud.status, describeRun(loud)).toBe(1);
-      expect(reportedKeys(loud)).toContain("boss-999-cast");
+      // Core, and Meditative+, whose files are owed from the release that ships it (R1178000).
+      for (const set of ["Core", "Meditative+"]) {
+        const shipped = unrenderedTree(set);
+        const loud = runCheck(["--root", shipped.root, "--catalog", shipped.catalog]);
+        expect(loud.status, describeRun(loud)).toBe(1);
+        expect(reportedKeys(loud)).toContain("boss-999-cast");
+      }
     },
     CHECK_TIMEOUT_MS,
   );

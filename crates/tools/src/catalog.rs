@@ -6,7 +6,7 @@
 //! sets and fields (docs/classic-sets.md B2, B3.4, E36, E40).
 //!
 //! This checks the shape and the census of the catalog, set by set (Core, Classic, Classic+,
-//! Meditative): that it holds every card and every token exactly once, that every enum value is in
+//! Meditative, Meditative+): that it holds every card and every token exactly once, that every enum value is in
 //! the union the engine's wire types declare, that stats sit on Units (and Animated backrow cards,
 //! B3.1) and nowhere else, that the rarity distribution each set prints is the one the file
 //! carries, and that the v0.2.0 fields (`printedRarity`, `params`, `loc`, a face's `type` and
@@ -190,6 +190,25 @@ fn sets() -> Vec<SetExpectation> {
                 ("Mythic", 6),
             ],
         },
+        // R1420, R1178000: the Meditative+ set (issue #1173, docs/meditative-plus-set.md MP2): 26 cards
+        // and the 4 tokens they define (#1.1 Base Camp and #1.2 Spa Day, the AI generated helpers of
+        // #1 Bob's Plan; #16.1 Jazakus Prime; #20.1 Lil' Kenny), the rarities the designer printed and
+        // #26 Scratch Pad's Mythic. It does not ship yet, so its entries are checked for their shape
+        // alone until the patch that lists it in SHIPPED_SETS (#1187).
+        SetExpectation {
+            set: "Meditative+",
+            segment: "meditativeplus",
+            cards: 26,
+            card_defined_tokens: texts(&["1.1", "1.2", "16.1", "20.1"]),
+            shared_tokens: Vec::new(),
+            rarities: &[
+                ("Common", 5),
+                ("Rare", 9),
+                ("Epic", 9),
+                ("Legendary", 1),
+                ("Mythic", 2),
+            ],
+        },
     ]
 }
 
@@ -204,33 +223,44 @@ fn expected_indices(set: &SetExpectation) -> Vec<String> {
 /// that drifts onto or off a card fails here (R278: Jlockeed is Core #13 and #14's and the three
 /// Classic+ Jlockeed cards'). TS's `Record<Tag, number>`: the `match` is exhaustive over the union.
 /// Each count is Core's, Classic's and Classic+'s, plus the Meditative set's
-/// (docs/meditative-set.md M2's census of its 132 entries), which count once it ships (R1420).
+/// (docs/meditative-set.md M2's census of its 132 entries) and the Meditative+ set's
+/// (docs/meditative-plus-set.md MP2's census of its 30), each of which counts once it ships (R1420).
 fn expected_tag_count(tag: Tag) -> usize {
     match tag {
-        Tag::Human => 39 + meditative(16),
+        // Meditative+ #7 Life Mage, #8 Arch Mage, #10 Medina Grifter, #16 Jazakus and #16.1 Jazakus Prime.
+        Tag::Human => 39 + meditative(16) + meditative_plus(5),
         Tag::Felinor => 11 + meditative(11),
-        Tag::Ky => 9 + meditative(6),
-        Tag::Cn => 7 + meditative(33),
+        // Meditative+ #20 KY's Competition, #20.1 Lil' Kenny and #25 KY's Intuition.
+        Tag::Ky => 9 + meditative(6) + meditative_plus(3),
+        // Meditative+ #21 Harmony Spirit.
+        Tag::Cn => 7 + meditative(33) + meditative_plus(1),
         // Meditative #4 Juicy Kumquat Melon and #55 Dragon Fruit; C+ #61 Bauble Bubble lost it in
-        // patch v0.3.10 (#831).
-        Tag::Fruit => 14 + meditative(2),
+        // patch v0.3.10 (#831). Meditative+ #23 Enormous Elderberry.
+        Tag::Fruit => 14 + meditative(2) + meditative_plus(1),
         // Meditative #95 Call to Chaos (Meditative Edition).
         Tag::CallToChaos => 2 + meditative(1),
-        Tag::Quickdraw => 5 + meditative(5),
-        // Meditative #87 Tatches the Totem (every tribal tag, R1424), #97 and #97.9.
-        Tag::Jlockeed => 6 + meditative(3),
-        Tag::Book => 14,
+        // Meditative+ #1 Bob's Plan.
+        Tag::Quickdraw => 5 + meditative(5) + meditative_plus(1),
+        // Meditative #87 Tatches the Totem (every tribal tag, R1424), #97 and #97.9; Meditative+ #4
+        // Supply Drop (the designer's "Jlockheed").
+        Tag::Jlockeed => 6 + meditative(3) + meditative_plus(1),
+        // Meditative+ #15 Book of Potions.
+        Tag::Book => 14 + meditative_plus(1),
         Tag::Pancake => 10,
-        Tag::Ai => 10,
+        // Meditative+ #1.1 Base Camp and #1.2 Spa Day, #1 Bob's Plan's AI generated helpers.
+        Tag::Ai => 10 + meditative_plus(2),
         Tag::Plague => 17 + meditative(2),
         // Meditative #45, #49 (patch v0.3.10, #831) and #91; their Primes #45.1, #49.1 and #91.1.
-        Tag::Catalyst => 2 + meditative(3),
-        Tag::Prime => 2 + meditative(3),
+        // Meditative+ #16 Jazakus and its #16.1 Jazakus Prime.
+        Tag::Catalyst => 2 + meditative(3) + meditative_plus(1),
+        Tag::Prime => 2 + meditative(3) + meditative_plus(1),
         // Meditative #49 and #49.1; #49.2 and #49.3 lost it in patch v0.3.10 (#831).
         Tag::Acclaimed => 2 + meditative(2),
         // Meditative #8 Reach the Summit and #20 Aestheticize the Game, the tag's only cards.
         Tag::Wincon => meditative(2),
-        Tag::Token => 50 + meditative(30),
+        // Meditative+ #11, #12 and #13, the Living Potions, the tag's only catalog cards (R1178000).
+        Tag::Potion => meditative_plus(3),
+        Tag::Token => 50 + meditative(30) + meditative_plus(4),
     }
 }
 
@@ -238,6 +268,15 @@ fn expected_tag_count(tag: Tag) -> usize {
 /// so the census holds on either side of the patch that lists it in `SHIPPED_SETS`.
 fn meditative(count: usize) -> usize {
     if set_ships(SetName::Meditative) { count } else { 0 }
+}
+
+/// R1420, R1178000: the same for a Meditative+ entry, held until its release (#1187).
+fn meditative_plus(count: usize) -> usize {
+    if set_ships(SetName::MeditativePlus) {
+        count
+    } else {
+        0
+    }
 }
 
 /// `EXPECTED_TAG_COUNTS`, in `TAGS` order.
@@ -853,7 +892,12 @@ pub struct CatalogReport {
 
 /// `validate-catalog.ts`'s top level over a parsed catalog (an object keyed by card id).
 pub fn check_catalog(catalog: &Object) -> CatalogReport {
-    let sets = sets();
+    check_catalog_against(catalog, sets())
+}
+
+/// `check_catalog` against these set expectations: `sets()`, or in a test those and a stand-in set
+/// that does not ship, while the catalog holds none (R1420).
+fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> CatalogReport {
     // R1420: the totals are the shipped catalog's.
     let expected_non_token: usize = sets.iter().filter(|set| set.ships()).map(|set| set.cards).sum();
     let expected_token: usize = sets
@@ -1877,64 +1921,123 @@ mod tests {
         let report = check_catalog(&shipped_catalog());
         assert_eq!(report.failures, Vec::<String>::new());
         // B2.1's 268 cards and 50 tokens, and from the patch that ships it (R1420) the Meditative
-        // set's 102 and 30: 370 cards and 80 tokens.
+        // set's 102 and 30: 370 cards and 80 tokens; from its release (#1187) the Meditative+ set's
+        // 26 and 4 (R1178000).
         assert_eq!(
             (report.entries, report.non_token_count, report.token_count),
-            (318 + meditative(132), 268 + meditative(102), 50 + meditative(30))
+            (
+                318 + meditative(132) + meditative_plus(30),
+                268 + meditative(102) + meditative_plus(26),
+                50 + meditative(30) + meditative_plus(4)
+            )
         );
     }
 
-    /// A Meditative entry made from Core #2's: its id, index, name and set its own.
-    fn meditative_entry(index: &str, id: &str) -> Json {
+    /// An entry of `set` made from Core #2's (a Common Unit): its id, index, name and set its own.
+    fn fixture_entry(set: &str, index: &str, id: &str) -> Json {
         let Json::Object(mut entry) = shipped_catalog()["core-002"].clone() else {
             panic!("core-002 is an object");
         };
         entry.insert("id".to_string(), Json::from(id));
         entry.insert("index".to_string(), Json::from(index));
-        entry.insert(
-            "name".to_string(),
-            Json::from(format!("Meditative fixture {index}")),
-        );
-        entry.insert("set".to_string(), Json::from("Meditative"));
+        entry.insert("name".to_string(), Json::from(format!("{set} fixture {index}")));
+        entry.insert("set".to_string(), Json::from(set));
         Json::Object(entry)
+    }
+
+    /// The shipped catalog with one field of one entry written over.
+    fn with_field(id: &str, field: &str, value: Json) -> Object {
+        let mut catalog = shipped_catalog();
+        let Some(Json::Object(entry)) = catalog.get_mut(id) else {
+            panic!("{id} is an object");
+        };
+        entry.insert(field.to_string(), value);
+        catalog
+    }
+
+    #[test]
+    fn r1178000_holds_the_meditative_plus_set_to_every_count_since_it_shipped() {
+        // Since its release (#1187) its 30 entries count toward the totals, and none is held apart.
+        let shipped = check_catalog(&shipped_catalog());
+        assert_eq!(shipped.failures, Vec::<String>::new());
+        assert_eq!(shipped.unshipped_count, 0);
+
+        // So a card it lacks fails, as any shipped set's would: the totals and the index.
+        let mut missing = shipped_catalog();
+        missing.shift_remove("meditativeplus-002");
+        let failures = check_catalog(&missing).failures;
+        for expected in [
+            format!(
+                "catalog: expected {} entries, found {}",
+                shipped.entries,
+                shipped.entries - 1
+            ),
+            "Meditative+: index \"2\" is missing".to_string(),
+            "Meditative+: expected 9 Epic non-token cards, found 8".to_string(),
+        ] {
+            assert!(failures.contains(&expected), "{expected} in {failures:#?}");
+        }
+
+        // Its rarities are held to their counts both ways: M+ #2, an Epic, made a sixth Common.
+        assert_eq!(
+            check_catalog(&with_field("meditativeplus-002", "rarity", Json::from("Common"))).failures,
+            [
+                "Meditative+: expected 5 Common non-token cards, found 6",
+                "Meditative+: expected 9 Epic non-token cards, found 8"
+            ]
+        );
+
+        // Its tags are in the census: M+ #11 Living Mana Potion without its Potion tag.
+        assert_eq!(
+            check_catalog(&with_field("meditativeplus-011", "tags", Json::Array(Vec::new()))).failures,
+            ["catalog: expected 3 entries tagged \"Potion\", found 2"]
+        );
+
+        // An index the brief does not list (#27, a third helper #1.3), or an id that does not follow
+        // its index, still fails.
+        let mut wrong = shipped_catalog();
+        for (index, id) in [
+            ("27", "meditativeplus-027"),
+            ("1.3", "meditativeplus-001-3"),
+            ("3", "meditativeplus-x"),
+        ] {
+            wrong.insert(id.to_string(), fixture_entry("Meditative+", index, id));
+        }
+        let failures = check_catalog(&wrong).failures.join("\n");
+        assert!(failures.contains("unexpected index \"27\""), "{failures}");
+        assert!(failures.contains("unexpected index \"1.3\""), "{failures}");
+        assert!(
+            failures.contains("implies id \"meditativeplus-003\""),
+            "{failures}"
+        );
+    }
+
+    /// R1420's stand-in for a set being built, since the catalog holds none once Meditative+ ships
+    /// (R1178000): `sets()` and the reserved Boss set, which `SHIPPED_SETS` does not list, with a
+    /// brief of three cards (one Common, two Rare) and the token #1.1.
+    fn with_a_held_set() -> Vec<SetExpectation> {
+        let mut sets = sets();
+        sets.push(SetExpectation {
+            set: "Boss",
+            segment: "boss",
+            cards: 3,
+            card_defined_tokens: texts(&["1.1"]),
+            shared_tokens: Vec::new(),
+            rarities: &[("Common", 1), ("Rare", 2)],
+        });
+        sets
     }
 
     #[test]
     fn r1420_holds_a_set_being_built_to_its_shape_alone_outside_the_totals() {
-        // Once the Meditative set ships it counts toward every total like the others, and no set
-        // the catalog orders is being built; the shape checks below still hold it.
-        if !set_ships(SetName::Meditative) {
-            r1420_a_set_being_built_counts_toward_no_total();
-        }
+        assert!(!set_ships(SetName::Boss));
+        let shipped = check_catalog_against(&shipped_catalog(), with_a_held_set());
+        assert_eq!(shipped.failures, Vec::<String>::new());
 
-        // An index the brief does not list, or an id that does not follow it, still fails.
-        let mut wrong = shipped_catalog();
-        wrong.insert(
-            "meditative-150".to_string(),
-            meditative_entry("150", "meditative-150"),
-        );
-        wrong.insert("meditative-x".to_string(), meditative_entry("3", "meditative-x"));
-        let failures = check_catalog(&wrong).failures.join("\n");
-        assert!(failures.contains("unexpected index \"150\""), "{failures}");
-        assert!(failures.contains("implies id \"meditative-003\""), "{failures}");
-    }
-
-    fn r1420_a_set_being_built_counts_toward_no_total() {
-        // The real catalog with the Meditative entries the card parts have added so far taken out,
-        // so this test counts its own fixture alone.
-        let mut catalog = shipped_catalog();
-        catalog.retain(|_, entry| {
-            entry
-                .as_object()
-                .and_then(|entry| entry.get("set"))
-                .and_then(Json::as_str)
-                != Some("Meditative")
-        });
-        catalog.insert(
-            "meditative-002".to_string(),
-            meditative_entry("2", "meditative-002"),
-        );
-        let report = check_catalog(&catalog);
+        // Its brief's entries need not all be there, and those that are count toward no total.
+        let mut held = shipped_catalog();
+        held.insert("boss-002".to_string(), fixture_entry("Boss", "2", "boss-002"));
+        let report = check_catalog_against(&held, with_a_held_set());
         assert_eq!(report.failures, Vec::<String>::new());
         assert_eq!(
             (
@@ -1943,8 +2046,42 @@ mod tests {
                 report.token_count,
                 report.unshipped_count
             ),
-            (318, 268, 50, 1)
+            (
+                shipped.entries,
+                shipped.non_token_count,
+                shipped.token_count,
+                shipped.unshipped_count + 1
+            )
         );
+
+        // No rarity passes its count: a second Common is refused while the set is built.
+        let mut commons = held.clone();
+        commons.insert("boss-001".to_string(), fixture_entry("Boss", "1", "boss-001"));
+        assert_eq!(
+            check_catalog_against(&commons, with_a_held_set()).failures,
+            ["Boss: expected 1 Common non-token cards, found 2"]
+        );
+
+        // An index its brief does not list, or an id that does not follow it, fails, as it does for
+        // a set that ships (the Meditative set's, from v0.3.5).
+        let mut wrong = held;
+        wrong.insert("boss-004".to_string(), fixture_entry("Boss", "4", "boss-004"));
+        wrong.insert("boss-x".to_string(), fixture_entry("Boss", "3", "boss-x"));
+        wrong.insert(
+            "meditative-150".to_string(),
+            fixture_entry("Meditative", "150", "meditative-150"),
+        );
+        wrong.insert(
+            "meditative-x".to_string(),
+            fixture_entry("Meditative", "3", "meditative-x"),
+        );
+        let failures = check_catalog_against(&wrong, with_a_held_set())
+            .failures
+            .join("\n");
+        assert!(failures.contains("Boss: unexpected index \"4\""), "{failures}");
+        assert!(failures.contains("implies id \"boss-003\""), "{failures}");
+        assert!(failures.contains("unexpected index \"150\""), "{failures}");
+        assert!(failures.contains("implies id \"meditative-003\""), "{failures}");
     }
 
     #[test]

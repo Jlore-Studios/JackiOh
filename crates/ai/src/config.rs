@@ -102,18 +102,26 @@ pub struct AiSearch {
     /// The cards a simulated Play of which `simulate` charges `expensive_def_nodes` for (its
     /// `surcharge_nodes`): resolving one ranks every shipped card for the state (the §10.7 scorer,
     /// R29's Zephyrs faces), about a hundred ordinary reduces, so a hand that holds one is budgeted
-    /// for what the step really costs.
+    /// for what the step really costs. A fused card holding one is charged the same (`stands_for_any`,
+    /// #1240).
     pub expensive_def_ids: &'static [&'static str],
     /// Nodes a Play of an `expensive_def_ids` card pays beyond the one every `simulate` takes.
     pub expensive_def_nodes: i32,
     /// The cards an armed backrow copy of which makes a simulated Attack cost `ai_turn_trap_nodes`
     /// (§8.5 core-096's "an AI plays the rest of their turn": a whole random turn inside the one
     /// reduce). `surcharge_nodes` asks it only of an attack that could be the lethal one the trap
-    /// answers, so an ordinary poke at an armed board is not priced like losing the turn.
+    /// answers, so an ordinary poke at an armed board is not priced like losing the turn. A fused card
+    /// holding one is charged the same (`stands_for_any`, #1240).
     pub ai_turn_trap_ids: &'static [&'static str],
     /// Nodes an Attack into an armed `ai_turn_trap_ids` card pays beyond the one every `simulate`
     /// takes — the playout's rough share of the nodes it burns.
     pub ai_turn_trap_nodes: i32,
+    /// #1240: nodes a Play pays for each card in its player's hand, beyond the one `simulate` takes,
+    /// while a card of the other side judges that player's plays (Pareto Optimality,
+    /// `subsystems::watching`): the judge runs §10.7's scorer once per playable card. On
+    /// improve-dev:154's pinned position such a play cost 7 ms against an unjudged one's 0.6 ms with
+    /// five cards held, about 2.3 ordinary steps per card, rounded up.
+    pub judged_card_nodes: i32,
 }
 
 pub const AI_SEARCH: AiSearch = AiSearch {
@@ -133,6 +141,7 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     expensive_def_nodes: 100,
     ai_turn_trap_ids: &["core-096"],
     ai_turn_trap_nodes: 40,
+    judged_card_nodes: 3,
 };
 
 /// `AI_EVAL.keyword`: the worth of each keyword in `unitView.keywords` (spent Divine Shield and Reborn
@@ -308,11 +317,24 @@ pub struct EvalWeights {
     /// Per library card up to libraryComfort.
     pub library_card: f64,
     pub library_comfort: f64,
+    /// #1255: the share of `hand_card_value` a library card the seat can name counts at (its own deck's
+    /// cards it was shown going in, R185, R311; in the enemy's, a card a line shuffled in openly), with
+    /// what a Journey Complete's journey returns (R1246), times the share of the library its next
+    /// `library_comfort` draws reach. A dealt card counts only what it gained since the deal (a Radiant
+    /// flag, its face, a cost change), as `library_card` counts it already. A curse
+    /// (`AI_LIBRARY_CURSES`) counts against the side whose deck holds it.
+    pub library_known_share: f64,
     /// Per crystal left at the end of the seat's own turn (terminal only).
     pub unspent_mana: f64,
     /// R1224: per mana owed on the coming refreshes (Jlarna's credit line) — a debt is coming
     /// turns' mana spent early.
     pub owed_mana: f64,
+    /// R844: per crystal a side will not get from the refreshes it still has to lose past this turn's,
+    /// each at its last refresh's crystals (`mana.max`), the first with the rider it spends.
+    pub lost_refresh: f64,
+    /// §2.3: per crystal a side's next-turn rider moves its coming refresh by, signed, floored as the
+    /// refresh floors it, and nothing while that refresh is lost (R844).
+    pub next_turn_mana: f64,
     /// Per point of faceThreat(enemy) against the seat.
     pub threat_per_damage: f64,
     /// When faceThreat(enemy) >= the seat's life (`effective_life`, R964000).
@@ -399,9 +421,16 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     enemy_face_down: 2.0,
     library_card: 0.1,
     library_comfort: 10.0,
+    // #1255: screened at 400 games on improve-dev, 202-197, edge +0.013 (-0.032 to +0.057) vs control
+    // 766e52aaa: 77 of the 200 deals played differently, 12 went to it and 9 to the control.
+    library_known_share: 0.5,
     unspent_mana: 0.8,
     // R1224: a debt counts the way unspent mana does — coming turns' mana, spent early.
     owed_mana: 0.8,
+    // #1224: untuned starts: a crystal a coming refresh will or will not give counts as one left
+    // unspent does.
+    lost_refresh: 0.8,
+    next_turn_mana: 0.8,
     threat_per_damage: 0.4,
     lethal_threat: 150.0,
     pressure_per_damage: 0.5,
@@ -412,6 +441,13 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     closing_weight: 3.0,
 };
 
+/// #1255: the cast-on-draw cards that hurt whoever draws them, which their makers shuffle into the
+/// enemy's deck: Ancient Curse (Meditative #28 Shade-iris's and #29 Forbiddenous Factory's) and
+/// CN-Virus (Core #90 CN-Viral Injection's, Meditative #95.1 CN Golem's). One the seat can name counts
+/// against the side whose library holds it (`library_known_worth`), so one in the enemy's deck counts
+/// for the seat. Ids, not indexes, as `AI_DETERMINIZE`'s are.
+pub const AI_LIBRARY_CURSES: &[&str] = &["meditative-028-1", "core-090-1"];
+
 /// Which evaluation scores the search's finalists (#1010; `learned.rs`, `docs/learned-eval.md` D6).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -419,13 +455,67 @@ pub enum EvalKind {
     /// `evaluate` with `AI_EVAL`: the hand-written evaluation, everywhere.
     Hand,
     /// The finalists after the opponent's reply are scored by the learned network's correction of
-    /// the hand eval (`learned::finalist_score`), 1v1 only; the beam keeps the hand eval.
+    /// the hand eval (`learned::finalist_score`), 1v1 only, and as much more of the search as
+    /// `LEARNED_REACH` says.
     Learned,
 }
 
 /// The switch: one line turns the learned evaluation on or off. A promotion that ships a network sets
 /// it with the weights in one change (#1012).
 pub const AI_EVAL_KIND: EvalKind = EvalKind::Hand;
+
+/// R1012001: the share of the network's correction a finalist's score takes, `hand + share·(points
+/// − hand)` (`learned::finalist_score_with`). The network is fitted to the games' outcomes, so its
+/// whole correction says how much more often a position is won than the hand eval thinks; a decision
+/// compares lines a move or two apart, where much of that is noise, and the whole of it changed about
+/// one decision in four for little gain. Measured on 1,600 paired games each against the hand eval
+/// (#466, the 36,000-game network): the whole correction +0.010 edge, three quarters +0.022, half
+/// +0.064, a quarter +0.086; on TD targets (#1190) and fresh deals, half +0.076 and a quarter +0.049.
+pub const LEARNED_CORRECTION_SHARE: f64 = 0.5;
+const _: () = assert!(LEARNED_CORRECTION_SHARE > 0.0 && LEARNED_CORRECTION_SHARE <= 1.0);
+
+/// Which order the beam expands each line's moves in (#1171; `policy.rs`, R1171001).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum MoveOrder {
+    /// `candidate_actions`' own order, the heuristic tiers.
+    Heuristic,
+    /// That order re-sorted by the policy prior `POLICY_PRIOR` (`policy::prior_order`), 1v1 only.
+    Learned,
+}
+
+/// The switch: one line turns the policy prior on or off. A promotion that ships a table sets it with
+/// the table in one change.
+pub const AI_MOVE_ORDER: MoveOrder = MoveOrder::Heuristic;
+
+/// R1171000: move-order ranks at or past this share one key (`rank:24`); every rank the root expands
+/// has its own.
+pub const POLICY_RANK_CAP: usize = 24;
+const _: () = assert!(POLICY_RANK_CAP >= AI_BUDGET.root_branching);
+
+/// How far into the search the learned evaluation reaches with the switch on (`docs/learned-eval.md`
+/// D6). Each step takes in the one before it.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "camelCase")]
+pub enum LearnedReach {
+    /// D6's option B: the finalists after the opponent's reply.
+    Finalists,
+    /// Every complete line too, where the beam closes it (`static_score`): the network also picks
+    /// which lines become the finalists.
+    Lines,
+    /// Every open line too, where the beam ranks it at each depth (D6's option A in the beam).
+    Beam,
+}
+
+/// R1012002: the learned evaluation's reach (`learned::line_score`, `learned::open_score`). Measured
+/// on 1,600 paired games each against the hand eval (#466, the learn lane's 100,000-game network at
+/// half the correction, 3 finalists): the finalists alone +0.073 edge, every complete line +0.102, the
+/// whole beam +0.054; on fresh deals, the finalists +0.071 and every complete line +0.076, a tie.
+/// Ranking open lines on the network prunes the beam on a scale its widths were never tuned for. At
+/// the finalists alone the beam and its shortlist keep the hand eval, so the network's errors on
+/// positions unlike its games (the puzzles' bare boards and empty libraries) reach only the choice
+/// among lines the hand eval found: at `Lines` a retrained network missed two of the AI's puzzles.
+pub const LEARNED_REACH: LearnedReach = LearnedReach::Finalists;
 
 /// The greedy baseline's own evaluation (baselines.rs): AI_EVAL exactly as it stood when the quality
 /// gates were fixed on the seed series `gate:v2`, frozen here. A baseline the AI is measured against
@@ -497,10 +587,15 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     enemy_face_down: 2.0,
     library_card: 0.1,
     library_comfort: 10.0,
+    // The baseline is frozen: it priced no library card by what it is, as it did.
+    library_known_share: 0.0,
     unspent_mana: 0.8,
     // The baseline is frozen: a debt counted nothing when the gates were fixed, as everything after
     // them did.
     owed_mana: 0.0,
+    // #1224's mana terms came after the gates were fixed too: nothing, as it gave them.
+    lost_refresh: 0.0,
+    next_turn_mana: 0.0,
     threat_per_damage: 0.4,
     lethal_threat: 150.0,
     pressure_per_damage: 0.5,

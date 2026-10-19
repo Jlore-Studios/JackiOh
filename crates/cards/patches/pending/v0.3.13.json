@@ -1,0 +1,30 @@
+{
+  "version": "v0.3.13",
+  "title": "Buff eight low-win-rate cards",
+  "sources": "#1194",
+  "notes": "Issue #1194 buffs eight cards with low win rates, on both faces: #76 Field of Dreams costs (2), was (3); C+ #64 Mulch Muncher (5), was (10), its Fruit discount kept; Meditative #19.1 Temporal Rift (0), was (2); Meditative #80 Aluneth's three end-of-turn draws each cost (1) less (a new discount param); C #64 Malzahar's Recycler discards its 2 random cards on a once-a-turn Activate, paid as its cost, in place of its end of turn; C+ #33 Ivory Tower gains Aura: Your Units have Flying and Stack., which reaches its controller's Units in hand (R1194000); Meditative #75 Ever Growing Tree Discovers 1 of 3 Field Spells, was 1 of 2; Meditative #54 Money Machine is reworked: at end of turn one The Coin into the opponent's deck, and a controller-only Activate shuffles a The Coin (Radiant on the Radiant face) into your deck, with no roll, price or Tribute. Five of them were already claimed by a pending patch when this one was written, and a card ships in one patch, so their changes ship under that patch's claim: classic-064, meditative-019-1, meditative-054 and meditative-080 under v0.3.8 and meditative-075 under v0.3.10. This note's player lines still describe them. Four scripts are kept for v0.3.7b's replays (R767000): the Recycler's, Ivory Tower's, Money Machine's and Aluneth's.",
+  "player": {
+    "title": "Eight cards buffed",
+    "new": [],
+    "balance": [
+      "Field of Dreams costs (2), down from (3).",
+      "Mulch Muncher costs (5), down from (10). Each Fruit you've played still makes it cost (1) less.",
+      "Temporal Rift costs (0), down from (2).",
+      "Aluneth: the 3 cards it draws at the end of your turn each cost (1) less."
+    ],
+    "changes": [
+      "Malzahar's Recycler discards its 2 random cards when you Activate it, once a turn, instead of at the end of your turn, and still draws for them.",
+      "Ivory Tower: Aura: Your Units have Flying and Stack, in your hand as on the field, so they can be played onto an occupied zone or into an empty backrow zone.",
+      "Ever Growing Tree: its Activate Discovers a Field Spell to fuse into it, a choice of 3 where it was 2.",
+      "Money Machine: at the end of your turn it shuffles a The Coin into your opponent's deck, and nothing into yours.",
+      "Money Machine: its Activate, once a turn and yours alone, shuffles a The Coin into your deck (Radiant: a Radiant one). It no longer costs mana or Tributes it, and your opponent can't use it."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [
+    "core-076",
+    "classicplus-033",
+    "classicplus-064"
+  ]
+}

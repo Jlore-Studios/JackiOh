@@ -47,9 +47,9 @@ function Face({ id, radiant, height = 380 }: { id: string; radiant: boolean; hei
 }
 
 describe("R277 a Radiant face's gold marks", () => {
-  it("R277 True Strike's 9 is the one mark: gold ink, bold, underlined, and AA on the Radiant parchment", () => {
+  it("R277 True Strike's 8 is the one mark: gold ink, bold, underlined, and AA on the Radiant parchment", () => {
     cy.mount(<Face id="core-044" radiant />);
-    cy.get(".cf-mark").should("have.length", 1).and("have.text", "9");
+    cy.get(".cf-mark").should("have.length", 1).and("have.text", "8");
     cy.get(".cf-mark").should(($mark) => {
       const style = getComputedStyle($mark[0] as Element);
       expect(Number(style.fontWeight), "bold").to.be.at.least(700);
@@ -72,7 +72,7 @@ describe("R277 a Radiant face's gold marks", () => {
   it("R277 on the collection's dark reading panel the mark is the bright gold, still AA", () => {
     cy.mount(<CardDetail def={def("core-013")} onClose={() => undefined} />);
     cy.viewport(390, 844);
-    cy.get(".inspect-rules-line--radiant .cf-mark").should("have.text", "5").and(($mark) => {
+    cy.get(".inspect-rules-line--radiant .cf-mark").should("have.text", "4").and(($mark) => {
       const style = getComputedStyle($mark[0] as Element);
       expect(contrast(style.color, "rgb(26, 29, 40)"), "bright gold on the dark panel").to.be.at.least(AA);
     });

@@ -3,17 +3,19 @@
 //! When the server finds a match its own log does not reproduce (§9.3's determinism break), it keeps
 //! the match going, as the rebuild always has ("a live match is better than a dead one",
 //! `actor::registry::rebuild`), logs the finding (`bug.found`) and files one GitHub issue the night
-//! bot builds (`BUG_REPORT_LABELS`: `bot:build`, bot/README.md). It looks in four places:
+//! bot builds (`BUG_REPORT_LABELS`: `bot:build`, bot/README.md). It looks in six places:
 //!
 //!  - a 1v1 rebuild whose fold refuses an action the log holds (`actor::registry`);
 //!  - a co-op rebuild that does (`duos::registry`);
 //!  - the reaper's recovery fold that does (`api::results`);
-//!  - a finished match whose log does not fold to its end (`api::game_records`).
+//!  - a finished match whose log does not fold to its end (`api::game_records`);
+//!  - a 1v1 live action whose `reduce` panicked (`actor::match_actor`, R1253000);
+//!  - a co-op one (`duos::actor`).
 //!
 //! What a report says. The repository is public and the match may still be live, so a report names
 //! the match, where it was found, the build and the catalog, and each refused row's seq, seat and
-//! action type, never a refusal's text, a card or an instance id, any of which could show a hand to
-//! the opponent. A maintainer reads the rest from the database (crates/server/README.md, "A match its
+//! action type, never a refusal's text or a panic's message, a card or an instance id, any of which
+//! could show a hand to the opponent. A maintainer reads the rest from the database (crates/server/README.md, "A match its
 //! log does not reproduce").
 //!
 //! How often. One report per match per process, at most `BUG_REPORTS_PER_WINDOW` in
@@ -48,6 +50,10 @@ pub enum FoundIn {
     Reaper,
     /// A finished match's log, folded for its game record (R376).
     FinishedLog,
+    /// A 1v1 match's live action whose `reduce` panicked (R1253000).
+    Live,
+    /// A co-op match's live action that did.
+    DuosLive,
 }
 
 impl FoundIn {
@@ -57,7 +63,13 @@ impl FoundIn {
             FoundIn::DuosRebuild => "(co-op) does not rebuild from its log",
             FoundIn::Reaper => "does not fold from its log for the reaper",
             FoundIn::FinishedLog => "does not fold from its log to its result",
+            FoundIn::Live => "panicked on a live action",
+            FoundIn::DuosLive => "(co-op) panicked on a live action",
         }
+    }
+
+    fn is_live(self) -> bool {
+        matches!(self, FoundIn::Live | FoundIn::DuosLive)
     }
 
     fn said(self) -> &'static str {
@@ -74,6 +86,14 @@ impl FoundIn {
             FoundIn::FinishedLog => {
                 "folding the finished match's log for its game record; the result stands as the \
                  match recorded it"
+            }
+            FoundIn::Live => {
+                "the 1v1 match's live actor; the action was answered `internal` and not applied, and a \
+                 clock's action ends the match as the ceiling's draw"
+            }
+            FoundIn::DuosLive => {
+                "the co-op match's live actor; the action was answered `internal` and not applied, and the \
+                 AI's or the ceiling's ends the match as the ceiling's draw"
             }
         }
     }
@@ -347,18 +367,34 @@ pub fn report_of(deployed_commit: Option<&str>, finding: &Finding) -> BugReport 
         finding.match_id,
         finding.found_in.title()
     );
-    let mut body = format!(
-        "The server found a match its own log does not reproduce (SPEC §9.3), in {}.\n\n\
-         - Match: `{}`\n\
-         - Build: `{}`, catalog `{}`\n\
-         - Log: {} actions read; the fold refused {}\n",
-        finding.found_in.said(),
-        finding.match_id,
-        deployed_commit.unwrap_or("unknown"),
-        finding.catalog_version,
-        finding.actions,
-        finding.refused.len(),
-    );
+    let live = finding.found_in.is_live();
+    let mut body = if live {
+        format!(
+            "The engine panicked on a live action (SPEC §9.3: `reduce` is pure, so the same action on \
+             the same state panics again), in {}.\n\n\
+             - Match: `{}`\n\
+             - Build: `{}`, catalog `{}`\n\
+             - Log: {} actions before it; the action that panicked was never logged\n",
+            finding.found_in.said(),
+            finding.match_id,
+            deployed_commit.unwrap_or("unknown"),
+            finding.catalog_version,
+            finding.actions,
+        )
+    } else {
+        format!(
+            "The server found a match its own log does not reproduce (SPEC §9.3), in {}.\n\n\
+             - Match: `{}`\n\
+             - Build: `{}`, catalog `{}`\n\
+             - Log: {} actions read; the fold refused {}\n",
+            finding.found_in.said(),
+            finding.match_id,
+            deployed_commit.unwrap_or("unknown"),
+            finding.catalog_version,
+            finding.actions,
+            finding.refused.len(),
+        )
+    };
     if !finding.refused.is_empty() {
         body.push_str("\n| seq | seat | action |\n|---|---|---|\n");
         for row in finding.refused.iter().take(BUG_REPORT_LISTED_ACTIONS) {
@@ -369,14 +405,24 @@ pub fn report_of(deployed_commit: Option<&str>, finding: &Finding) -> BugReport 
             body.push_str(&format!("\nand {more} more.\n"));
         }
     }
-    body.push_str(
+    body.push_str(if live {
+        "\nThe server answered the action `internal` and keeps that answer for a resend. This report \
+         holds no hidden information and not the panic's message, which can name a card; the \
+         server's log line `match.action.panicked` (`duos.action.panicked` for co-op) holds it. Read \
+         the log, the seed, the decks and the catalog version from the database as \
+         crates/server/README.md (\"A match its log does not reproduce\") says, fold them with \
+         `cargo jackioh replay`, keeping the catalog version in the file, and find the loop or cap \
+         the action above reaches from the folded state.\n\n\
+         Filed by the server (`crates/server/src/bug_reports.rs`), once per match.\n"
+    } else {
         "\nA refused action is one the engine accepted live and refuses on the fold: either the log \
          was read or written out of order, or `reduce` is not deterministic. This report holds no \
-         hidden information; read the log, the seed and the decks from the database as \
-         crates/server/README.md (\"A match its log does not reproduce\") says, and fold them with \
-         `cargo jackioh replay`.\n\n\
-         Filed by the server (`crates/server/src/bug_reports.rs`), once per match.\n",
-    );
+         hidden information; read the log, the seed, the decks and the catalog version from the \
+         database as crates/server/README.md (\"A match its log does not reproduce\") says, and fold \
+         them with `cargo jackioh replay`, keeping the catalog version in the file: without it the \
+         match folds under this build's catalog, not the one it was played on.\n\n\
+         Filed by the server (`crates/server/src/bug_reports.rs`), once per match.\n"
+    });
     BugReport {
         match_id: finding.match_id.clone(),
         title,
@@ -489,6 +535,44 @@ mod tests {
             report.body
         );
         assert!(report.labels.contains(&"bot:build".to_string()));
+    }
+
+    #[test]
+    fn the_report_asks_for_the_catalog_version_in_the_folded_file() {
+        let body = report_of(None, &finding("m-0")).body;
+        for needle in [
+            "the catalog version from the database",
+            "fold them with `cargo jackioh replay`, keeping the catalog version in the file",
+        ] {
+            assert!(body.contains(needle), "{needle:?} missing from:\n{body}");
+        }
+    }
+
+    #[test]
+    fn a_live_panic_reports_the_action_it_would_have_logged_and_no_fold() {
+        let live = Finding {
+            found_in: FoundIn::Live,
+            ..finding("m-0")
+        };
+        let report = report_of(None, &live);
+        assert_eq!(report.title, "Patch v0.3.Y: match m-0 panicked on a live action");
+        for needle in ["The engine panicked on a live action", "| 10 | p1 | `endTurn` |"] {
+            assert!(
+                report.body.contains(needle),
+                "{needle:?} missing from:\n{}",
+                report.body
+            );
+        }
+        assert!(!report.body.contains("the fold refused"), "{}", report.body);
+        let duos = Finding {
+            found_in: FoundIn::DuosLive,
+            ..finding("m-1")
+        };
+        assert!(
+            report_of(None, &duos)
+                .title
+                .contains("(co-op) panicked on a live action")
+        );
     }
 
     #[test]

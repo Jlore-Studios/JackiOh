@@ -10,6 +10,7 @@ import { loadWasm } from "../../../apps/web/src/wasm/index.ts";
 import { FIT_FLOOR_PX, TEXT_TIER_MAX } from "../../../apps/web/src/cards/constants.ts";
 import { faceModel } from "../../../apps/web/src/cards/model.ts";
 import { showsFullArt } from "../../../apps/web/src/cards/fullArt.ts";
+import { setShips } from "../../../apps/web/src/wire/catalog.ts";
 import {
   CARD_POOL,
   DB_DETAIL_ADD,
@@ -32,8 +33,8 @@ const VIEWPORTS = [
   { label: "desktop", width: 1280, height: 720 },
 ] as const;
 
-/** Deckable cards follow validator L3: no token by flag or tag. */
-const DECKABLE = Object.values(CATALOG).filter((def) => !def.token && !def.tags.includes("Token"));
+/** Deckable cards follow validator L3: no token by flag or tag, and none of a set not shipped yet (R1420). */
+const DECKABLE = Object.values(CATALOG).filter((def) => !def.token && !def.tags.includes("Token") && setShips(def.set));
 
 const COLLECTION: Record<string, number> = Object.fromEntries(DECKABLE.map((def) => [def.id, 1]));
 

@@ -57,7 +57,7 @@ const PROMPT_WORDS: Readonly<Record<PromptKind, string>> = {
   tribute: "a Tribute",
   direction: "a direction",
   x: "X",
-  embiggen: "a price",
+  embiggen: "the normal or the Embiggened version",
   number: "a number",
   answer: "an answer",
   cell: "a cell",
@@ -488,6 +488,9 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return t("{seat} could not be made to discard", { seat: name.seat(event.player) });
     case "turnCutShort":
       return capitalised(t("{whose} turn was cut short", { whose: name.whose(event.player) }));
+    case "autopilotEngaged":
+      // R1183002: the engine plays the rest of that turn; its actions log as their own lines.
+      return t("The AI plays the rest of {whose} turn", { whose: name.whose(event.player) });
     case "glitched":
       // R676: what a Glitch did, under its corrupted name (cards/glitch.ts).
       return t("{glitch}: {outcome}", { glitch: GLITCH_WORDS.name, outcome: t(GLITCH_OUTCOME_LINE[event.outcome]) });

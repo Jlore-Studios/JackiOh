@@ -267,14 +267,19 @@ pub struct DrawPricedArgs {
     /// becomes Radiant (§5.2, §6.3 Make Radiant).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub radiant: Option<bool>,
+    /// R1185004 (M+ #24 Bob, "Draw 1. Fill your hand with copies of it."): then copies of the card the
+    /// draw put in the hand are added until the hand is full.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fill_with_copies: Option<bool>,
 }
 
 /// C+ #65.2 "Draw N. Each costs (1) less." / #65.3 "Draw N. Each costs (0).": ONE draw (§2.4 — "draw N"
 /// is N of these, one effect each, so a draw whose cast-on-draw card asks pauses the rest of the list
 /// and the answer makes the rest, R113), and the card that draw put in the hand takes the price: a
 /// `costMod` that stacks with every other modifier, or a `costOverride` (R65), and with `radiant` the
-/// Radiant face (Meditative #79). A card cast on draw, a burned card, a fatigue draw and a limited draw
-/// take nothing (`cardThisDrawPutInHand`, R596).
+/// Radiant face (Meditative #79), and with `fillWithCopies` the hand filled with copies of it (M+ #24
+/// Bob, R1185004). A card cast on draw, a burned card, a fatigue draw and a limited draw take nothing
+/// and are copied by nothing (`cardThisDrawPutInHand`, R596).
 pub fn draw_priced(args: DrawPricedArgs) -> Effect {
     Effect::new("drawPriced", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
@@ -310,7 +315,35 @@ pub fn draw_priced(args: DrawPricedArgs) -> Effect {
             });
             (price.apply)(ctx);
         }
+        if args.fill_with_copies == Some(true) {
+            fill_hand_with_copies(ctx, player, &card.id);
+        }
     })
+}
+
+/// R1185004: copies of `source` (`addToHand`'s `copyOf`, R1242's riders: the Radiant face, the Chinese
+/// flag, granted tags, `statsOverride`, `tuning`; never a price) into `player`'s hand, one at a time
+/// while it has room (§2.4's cap, `hand_cap_of`), so none is burned; at most the room the hand had
+/// as the fill began. A source no longer anywhere adds nothing.
+fn fill_hand_with_copies(ctx: &mut EffectContext<'_>, player: PlayerId, source: &str) {
+    let room = |ctx: &EffectContext<'_>| {
+        crate::query::hand_cap_of(ctx.state, player) - ctx.state.players[player].hand.len() as i32
+    };
+    let mut left = room(ctx);
+    while left > 0 && room(ctx) > 0 {
+        let player_spec = if player == ctx.controller {
+            PlayerSpec::SelfSide
+        } else {
+            PlayerSpec::Enemy
+        };
+        let copy = add_to_hand(AddToHandArgs {
+            copy_of: Some(source.to_string()),
+            player: Some(player_spec),
+            ..AddToHandArgs::default()
+        });
+        (copy.apply)(ctx);
+        left -= 1;
+    }
 }
 
 // ---------------------------------------------------------------------------------------------

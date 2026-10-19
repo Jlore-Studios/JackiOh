@@ -155,9 +155,10 @@ fn mutate_hidden(state: &GameState, seat: PlayerId, seed: i64) -> GameState {
                 continue;
             }
             // R403, R602: a face-down trap with no reveal condition is live, so a trap of the same cost
-            // can still change what the seat reads off the board (C #88 Siphon Squad shrinks its units'
-            // Attack). That is not hidden from it, so the swap must leave the seat's view as it was. The
-            // card's own def always does, so there is always a trap to pick.
+            // can still change what the seat reads off the board (an aura over its units; C #88 Siphon
+            // Squad's sleeps until it is revealed, R1149000). That is not hidden from it, so the swap
+            // must leave the seat's view as it was. The card's own def always does, so there is always
+            // a trap to pick.
             let shown = effective_cost(&out, &card, Default::default());
             let original = card.def_id.clone();
             let seen = view_without_events(&out, seat);
@@ -194,11 +195,33 @@ fn mutate_hidden(state: &GameState, seat: PlayerId, seed: i64) -> GameState {
     out
 }
 
-/// viewFor without its event tail, which B10 exempts.
+/// viewFor without its event tail, which B10 exempts, and without the match-made definitions only that
+/// tail names (R243 copies a definition beside any id the view names, its events' included): a state
+/// read just after a Fuse names the ingredient its event reported, and a redaction, which keeps no
+/// events, does not.
 fn view_without_events(state: &GameState, seat: PlayerId) -> Value {
+    fn named(value: &Value, out: &mut IndexSet<String>) {
+        match value {
+            Value::String(text) => {
+                out.insert(text.clone());
+            }
+            Value::Array(items) => items.iter().for_each(|item| named(item, out)),
+            Value::Object(fields) => fields.values().for_each(|item| named(item, out)),
+            _ => {}
+        }
+    }
     let mut view = js(view_for(state, seat));
     if let Some(map) = view.as_object_mut() {
         map.remove("events");
+        let defs = map.remove("defs");
+        let mut ids: IndexSet<String> = IndexSet::new();
+        named(&Value::Object(map.clone()), &mut ids);
+        if let Some(Value::Object(mut defs)) = defs {
+            defs.retain(|id, _| ids.contains(id));
+            if !defs.is_empty() {
+                map.insert("defs".to_string(), Value::Object(defs));
+            }
+        }
     }
     view
 }
@@ -1180,5 +1203,56 @@ mod r923_placeholder_carries_no_granted_tag {
             let placeholder = card_by_id(&public, id).expect("the placeholder");
             assert_eq!(placeholder.granted_tags, None, "{id}");
         }
+    }
+}
+
+mod r1176000_placeholder_is_not_in_chinese {
+    use super::*;
+
+    /// R1176000: a card in Chinese is CN, and whether a hidden card is in Chinese goes with its face
+    /// (R1301), so a placeholder is not in Chinese: translating the cards a seat cannot read changes
+    /// nothing it may know.
+    #[test]
+    fn r1176000_a_placeholder_is_not_in_chinese() {
+        let (mut a, _) = pair();
+        let hidden: Vec<String> = hidden_instance_ids(&a, AI).into_iter().collect();
+        assert!(!hidden.is_empty());
+        for id in &hidden {
+            find_instance_mut(&mut a, id).expect("the hidden card").chinese = Some(true);
+        }
+        let public = redact(&a, AI);
+        for id in &hidden {
+            let placeholder = card_by_id(&public, id).expect("the placeholder");
+            assert_eq!(placeholder.chinese, None, "{id}");
+        }
+        // Translating the hidden cards changes nothing the seat may know.
+        let (b, _) = pair();
+        assert_eq!(hash_state(&redact(&a, AI)), hash_state(&redact(&b, AI)));
+    }
+}
+
+mod r1181003_placeholder_names_no_embiggened_price {
+    use super::*;
+
+    /// R1181003: the price of an embiggen card's Embiggened version alone (Meditative+ #23 Enormous
+    /// Elderberry's (0)) is the card's, so a placeholder carries none: which hidden cards the
+    /// Elderberry added is nothing the seat may know.
+    #[test]
+    fn r1181003_a_placeholder_names_no_embiggened_price() {
+        let (mut a, _) = pair();
+        let hidden: Vec<String> = hidden_instance_ids(&a, AI).into_iter().collect();
+        assert!(!hidden.is_empty());
+        for id in &hidden {
+            find_instance_mut(&mut a, id)
+                .expect("the hidden card")
+                .embiggen_cost_override = Some(0);
+        }
+        let public = redact(&a, AI);
+        for id in &hidden {
+            let placeholder = card_by_id(&public, id).expect("the placeholder");
+            assert_eq!(placeholder.embiggen_cost_override, None, "{id}");
+        }
+        let (b, _) = pair();
+        assert_eq!(hash_state(&redact(&a, AI)), hash_state(&redact(&b, AI)));
     }
 }

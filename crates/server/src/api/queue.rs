@@ -635,11 +635,8 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
 
 /// One pairing sweep. Oldest ticket first, each against the oldest qualifying opponent.
 ///
-/// NOT IN SPEC, and no R-row yet — PROPOSED RULING for §11: the oldest ticket is paired first, against
-/// the oldest opponent its window admits, not the closest in rating. §9.5 fixes the window and is
-/// silent on the choice inside it; the window already is the rating rule, so picking the closest
-/// re-applies it and leaves the longest waiter waiting again. Ties break on ticket id, so a sweep is
-/// deterministic. Affects: §9.5, R108; `api/queue.rs`.
+/// R166: the oldest ticket is paired first, against the oldest opponent its window admits, not the
+/// closest in rating. Ties break on ticket id, so a sweep is deterministic.
 ///
 /// Answers what this sweep made and which pairs failed to start. A failed claim or start for
 /// one pair is logged (`queue.start_failed`) and the sweep moves on to the next pair instead of
@@ -1313,12 +1310,9 @@ async fn enqueue_route(app: &Arc<App>, req: Req) -> ApiResult {
 /// `DELETE /api/queue` (active): leaving the queue. Idempotent; `cancelled: false` when there was
 /// nothing open to cancel.
 ///
-/// NOT IN SPEC, and no R-row yet — PROPOSED RULING for §11: a queued player may cancel, and
-/// cancelling is idempotent. §9.5 never says how a player leaves, yet its "not in a match" assertion
-/// has no other way to become satisfiable again. Idempotent because the sweeper (R108) can pair a
-/// ticket between the client deciding to cancel and the request arriving: cancel never unmakes a
-/// pairing, it only closes a ticket still open.
-/// Affects: §9.5, R108, R143; `api/queue.rs`, migration `0004_matches.sql`.
+/// R167: a queued player may cancel, and cancelling is idempotent, because the sweeper (R108) can
+/// pair a ticket between the client deciding to cancel and the request arriving: cancel never
+/// unmakes a pairing, it only closes a ticket still open.
 pub async fn dequeue(app: &Arc<App>, req: Req) -> ApiResult {
     dequeue_route(app, req).await
 }

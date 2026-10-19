@@ -20,6 +20,10 @@ import type {
   UnitView,
 } from "@jackioh/shared";
 
+import type { DuosTeamView } from "../wire/generated/DuosTeamView.ts";
+import type { DuosView } from "../wire/generated/DuosView.ts";
+import type { Team } from "../wire/generated/Team.ts";
+
 let counter = 0;
 
 /** Deterministic instance ids, so snapshots are stable. */
@@ -288,6 +292,41 @@ export function withEvents(view: PlayerView, events: GameEvent[]): PlayerView {
 }
 
 // ---------------------------------------------------------------------------------------------
+// A co-op replay's steps (R1242000): the seat's `DuosView`s, drawn from the server's answer alone
+// ---------------------------------------------------------------------------------------------
+
+/** One team's life as a co-op replay shows it: its pool and both seats' own HP. */
+export function duosTeamView(team: Team): DuosTeamView {
+  return {
+    team,
+    pool: 20,
+    poolCap: 20,
+    sides: [
+      { own: 10, spent: false },
+      { own: 10, spent: false },
+    ],
+    ended: [false, false],
+    passesLeft: [0, 0],
+    passCost: 1,
+  };
+}
+
+/** One step of a co-op replay: the seat's own duel and its teammate's, at `round`. */
+export function duosView(round: number, result: DuosView["result"] = null): DuosView {
+  return {
+    seat: "a1",
+    own: baseView(),
+    teammate: baseView(),
+    team: duosTeamView("a"),
+    enemy: duosTeamView("b"),
+    round,
+    roundSeats: ["a1", "a2"],
+    concedeOfferedBy: null,
+    result,
+  };
+}
+
+// ---------------------------------------------------------------------------------------------
 // A match-made definition, as `PlayerView.defs` carries one (R243)
 // ---------------------------------------------------------------------------------------------
 
@@ -314,7 +353,8 @@ function fusedFaceOf(faces: readonly CardFace[]): CardFace {
 
 /**
  * A fused definition shaped as the engine's Fuse builds one (R77, R102, R179): the ingredients'
- * names joined by " + ", their tags united, the rarest rarity, their costs summed and capped at 4,
+ * names joined by " + ", their tags united (the Token tag only when every ingredient is a token, as
+ * `token` is: R1177000), the rarest rarity, their costs summed and capped at 4,
  * and each face their stats summed, keywords united and texts joined a line per ingredient. The id
  * is `t-<n>:` and the ingredients' ids, and it is its own index. Fixture only: the engine's builder
  * is the one the game runs, and hidden-information.test.ts pins what the view carries of it.
@@ -331,15 +371,16 @@ export function fusedDef(ingredients: readonly CardDef[], n = 1): CardDef {
     (rarest, def) => (RARITY_ORDER.indexOf(def.rarity) > RARITY_ORDER.indexOf(rarest) ? def.rarity : rarest),
     first.rarity,
   );
+  const token = ingredients.every((def) => def.token);
   return {
     id,
     index: id,
     name: ingredients.map((def) => def.name).join(" + "),
     set: first.set,
     type: first.type,
-    tags: [...new Set(ingredients.flatMap((def) => def.tags))],
+    tags: [...new Set(ingredients.flatMap((def) => def.tags))].filter((tag) => token || tag !== "Token"),
     rarity,
-    token: ingredients.every((def) => def.token),
+    token,
     cost,
     // R179, R468: the list the id names, which a Chinese face reads its ingredients' words by (R1301).
     ingredients: ingredients.map((def) => ({ defId: def.id })),

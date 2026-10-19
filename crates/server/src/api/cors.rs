@@ -3,14 +3,11 @@
 //! are not. The allowed list is `PUBLIC_ORIGINS` (`env.rs`; `actor/ws_server.rs` also reads it).
 //! §9 never writes out the header set: it is derived from what `apps/web/src/net/api.ts` sends.
 //!
-//! NOT IN SPEC, and no R-row yet — PROPOSED RULING for §11:
-//!   Topic: The CORS contract for the REST surface
-//!   Ruling: Echo an allowed origin, never `*`, and never send `Access-Control-Allow-Credentials`
-//!     (§9.1's client uses a bearer header). Every response the layer touches carries `Vary:
-//!     Origin`. An unlisted origin gets the ordinary response with no CORS headers, not a 403:
-//!     §9.1 puts the rules in the server, so CORS is never load-bearing for a refusal. The list is
-//!     the one §9.2's WebSocket `Origin` check reads.
-//!   Affects: §9.1, §9.2, §9.8; `env.rs`.
+//! R162 is the contract: echo an allowed origin, never `*`, and never send
+//! `Access-Control-Allow-Credentials` (§9.1's client uses a bearer header). Every response the layer
+//! touches carries `Vary: Origin`. An unlisted origin gets the ordinary response with no CORS headers,
+//! not a 403, so CORS is never load-bearing for a refusal. The list is the one §9.2's WebSocket
+//! `Origin` check reads.
 
 use std::future::Future;
 

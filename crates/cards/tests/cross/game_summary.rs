@@ -3,12 +3,14 @@
 //! gate plays them, and checked against oracles it does not use:
 //!
 //!  - the opening hands are the hands the state holds once the mulligans resolve (p1's less its
-//!    first turn's draw, and with any card that turn's start discarded), and The Coin is in the
-//!    second seat's;
+//!    first turn's draw and any card that turn's start added to a hand with no draw, and with any card
+//!    that turn's start discarded), and The Coin is in the second seat's;
 //!  - the plays are the hand cards the logged `play` actions named, less those countered in their
 //!    announce window (§10.5 step 3a, R448), each as the card it resolves as after step 3's
-//!    replacement (C #23 Devil's Pact, R449); #96 My Pawn plays out a turn inside an attack's action
-//!    with no `play` logged, so such a game may hold more plays than the log names, never fewer;
+//!    replacement (C #23 Devil's Pact, R449), with the face it was played on (R1147000); #96 My Pawn
+//!    plays out a turn inside an attack's action, and M+ #18 Cognitive Offloading's autopilot the rest
+//!    of its caster's turn inside the action that cast it (R1183002), with no `play` logged, so such a
+//!    game may hold more plays than the log names, never fewer;
 //!  - a cast on its draw (#21 Hinder, #90.1 CN-Virus, §2.4) is no play, and the draws are every card
 //!    drawn from the first turn on, less those burned on a full hand (R4) or cast on their draw.
 
@@ -128,6 +130,8 @@ fn subsequence(part: &[String], whole: &[String]) -> bool {
 struct Play {
     id: String,
     def_id: String,
+    radiant: bool,
+    placed: bool,
     open: bool,
     announced: bool,
 }
@@ -146,7 +150,8 @@ mod summarize_game_over_real_cards_s9_11 {
     use super::*;
 
     #[test]
-    fn r376_reads_opening_hands_plays_and_casts_off_real_games_as_the_state_and_the_log_show_them() {
+    fn r376_r1147000_reads_opening_hands_plays_their_faces_and_casts_off_real_games_as_the_state_and_the_log_show_them()
+     {
         register_all();
         let pool = pool();
         let size = DECK_SIZE as usize;
@@ -156,6 +161,7 @@ mod summarize_game_over_real_cards_s9_11 {
         let mut draw_casts = 0;
         let mut countered_plays = 0;
         let mut replaced_plays = 0;
+        let mut radiant_plays = 0;
 
         for n in 1..=GAMES {
             let seed = format!("summary-cards-{n}");
@@ -195,6 +201,8 @@ mod summarize_game_over_real_cards_s9_11 {
                     plays[player].push(Play {
                         id: card.id.clone(),
                         def_id: card.def_id.clone(),
+                        radiant: card.radiant,
+                        placed: false,
                         open: true,
                         announced: false,
                     });
@@ -222,7 +230,34 @@ mod summarize_game_over_real_cards_s9_11 {
                             {
                                 plays[seat][at].id = new_instance_id.clone();
                                 plays[seat][at].def_id = to_def_id.clone();
+                                plays[seat][at].radiant =
+                                    find_instance(&result.state, new_instance_id).is_some_and(|c| c.radiant);
                                 replaced_plays += 1;
+                            }
+                        }
+                        GameEvent::RadiantSet { instance_id, .. } => {
+                            if let Some((seat, at)) = open_play(&plays, instance_id)
+                                && !plays[seat][at].placed
+                            {
+                                plays[seat][at].radiant = true;
+                            }
+                        }
+                        GameEvent::Deradianted { instance_id, .. } => {
+                            if let Some((seat, at)) = open_play(&plays, instance_id)
+                                && !plays[seat][at].placed
+                            {
+                                plays[seat][at].radiant = false;
+                            }
+                        }
+                        GameEvent::CardPlayed {
+                            instance_id,
+                            former_id,
+                            ..
+                        } => {
+                            if let Some((seat, at)) = open_play(&plays, instance_id)
+                                .or_else(|| former_id.as_deref().and_then(|id| open_play(&plays, id)))
+                            {
+                                plays[seat][at].placed = true;
                             }
                         }
                         // A Death the play's own Tribute set off can discard the hand the card still stands in
@@ -265,10 +300,14 @@ mod summarize_game_over_real_cards_s9_11 {
                         play.open = play.open && resolving.contains(play.id.as_str());
                     }
                 }
-                if events
-                    .iter()
-                    .any(|event| matches!(event, GameEvent::TrapFired { def_id, .. } if def_id == MY_PAWN))
-                {
+                // Re-pinned for v0.3.15 (Meditative+ ships, #1187): M+ #18 Cognitive Offloading joins
+                // the decks, and its autopilot (R1183002) plays the rest of a turn with no `play` logged,
+                // as My Pawn's random turn does (summary-cards-26 plays M+ #10 Medina Grifter, the card it
+                // steals and C #78 so), so a game it engages in is held to My Pawn's check.
+                if events.iter().any(|event| {
+                    matches!(event, GameEvent::TrapFired { def_id, .. } if def_id == MY_PAWN)
+                        || matches!(event, GameEvent::AutopilotEngaged { .. })
+                }) {
                     pawn = true;
                 }
                 // A cast on its draw is a `cardPlayed` naming a drawn card before any hand took it: its announce
@@ -343,6 +382,31 @@ mod summarize_game_over_real_cards_s9_11 {
                                 }
                             }
                         }
+                        // Re-pinned for v0.3.15 (Meditative+ ships, #1187): a card turn 1 added to a hand
+                        // with no draw, and that the hand still holds, was in no opening hand either: the
+                        // bigger pool deals summary-cards-36's p1 M #37 CN in a Bottle as turn 1's draw,
+                        // which, cast on its draw (§2.4), adds a random card.
+                        for event in &events[from..] {
+                            if let GameEvent::AddedToHand {
+                                player,
+                                instance_id,
+                                def_id,
+                            } = event
+                                && !drawn_here.contains(&instance_id)
+                                && result.state.players[*player]
+                                    .hand
+                                    .iter()
+                                    .any(|card| card.id == *instance_id)
+                            {
+                                let held = match player {
+                                    PlayerId::P1 => &mut p1,
+                                    PlayerId::P2 => &mut p2,
+                                };
+                                if let Some(at) = held.iter().rposition(|id| id == def_id) {
+                                    held.remove(at);
+                                }
+                            }
+                        }
                         opening = Some(PerPlayer::new(p1, p2));
                     }
                     begun = true;
@@ -405,6 +469,14 @@ mod summarize_game_over_real_cards_s9_11 {
                     assert!(subsequence(&logged, played), "{seed} {}", player.as_str());
                 } else {
                     assert_eq!(*played, logged, "{seed} {}", player.as_str());
+                    let expected_radiant: Vec<bool> = plays[player].iter().map(|play| play.radiant).collect();
+                    assert_eq!(
+                        summary.seats[player].played_radiant.clone().unwrap_or_default(),
+                        expected_radiant,
+                        "{seed} {}",
+                        player.as_str()
+                    );
+                    radiant_plays += expected_radiant.iter().filter(|&&r| r).count();
                 }
             }
             if pawn {
@@ -420,6 +492,7 @@ mod summarize_game_over_real_cards_s9_11 {
         assert!(replaced_plays > 0);
         assert!(draw_casts > 0);
         assert!(burns > 0);
+        assert!(radiant_plays > 0);
         assert!(pawn_games < GAMES / 2);
     }
 }
@@ -550,5 +623,341 @@ mod r831001_a_stolen_cast_is_no_play {
         // p1's play was countered, so it is none (R448); p2 cast it, which is no play either.
         assert!(summary.seats.p1.played.is_empty());
         assert_eq!(summary.seats.p2.played, [COIN_DEF_ID, PALANTIR]);
+    }
+}
+
+mod r1256000_per_seat_counts {
+    use super::*;
+
+    const SHEEPISH: &str = "core-041"; // (1) Trap: set face-down, fires when the opponent plays a Unit.
+    const VANILLA: &str = "core-008"; // (1) 4/4 Unit with no text.
+    const GLOWY: &str = "core-026"; // (3) Spell: make a card in your hand Radiant.
+
+    /// Twenty distinct deckable Core/Classic Units, leaving out anything whose text would change
+    /// depletion (a cast on its draw, Quickdraw): nothing is ever played, so the libraries drain
+    /// one card a turn until the heroes fatigue out.
+    fn fatigue_pool() -> Vec<String> {
+        let mut ids: Vec<String> = CATALOG
+            .iter()
+            .filter(|(_, def)| {
+                deckable(def)
+                    && def.type_ == CardType::Unit
+                    && matches!(def.set, SetName::Core | SetName::Classic)
+                    && !def.base.text.to_lowercase().contains("cast on draw")
+                    && !def.radiant.text.to_lowercase().contains("cast on draw")
+                    && !def.base.text.to_lowercase().contains("quickdraw")
+                    && !def.radiant.text.to_lowercase().contains("quickdraw")
+            })
+            .map(|(id, _)| id.clone())
+            .collect();
+        ids.sort();
+        ids
+    }
+
+    fn units_except(first: &str) -> Vec<String> {
+        pool()
+            .into_iter()
+            .filter(|id| id != first && CATALOG.get(id).is_some_and(|def| def.type_ == CardType::Unit))
+            .take(DECK_SIZE as usize - 1)
+            .collect()
+    }
+
+    fn act(state: &GameState, log: &mut Vec<Action>, body: Value) -> GameState {
+        let mut action = body;
+        action["nonce"] = json!(format!("summary-counts-{}", log.len()));
+        let action: Action = json_as(action);
+        let result = reduce(state, &action);
+        if let Some(error) = result.error {
+            panic!("{error}");
+        }
+        log.push(action);
+        result.state
+    }
+
+    fn act_body(state: &GameState, log: &mut Vec<Action>, body: ActionBody, player: PlayerId) -> GameState {
+        let action = Action::new(body, player, format!("summary-counts-{}", log.len()));
+        let result = reduce(state, &action);
+        if let Some(error) = result.error {
+            panic!("{error}");
+        }
+        log.push(action);
+        result.state
+    }
+
+    fn mulligans(state: GameState, log: &mut Vec<Action>) -> GameState {
+        let mut state = state;
+        for player in [PlayerId::P1, PlayerId::P2] {
+            let keep: Vec<String> = state.players[player]
+                .hand
+                .iter()
+                .map(|card| card.id.clone())
+                .collect();
+            state = act(
+                &state,
+                log,
+                json!({ "type": "mulligan", "keep": keep, "playerId": player }),
+            );
+        }
+        state
+    }
+
+    fn end_turn(state: GameState, log: &mut Vec<Action>, player: PlayerId) -> GameState {
+        // R82: a turn with nothing left to do has ended by itself.
+        if state.active != player || state.result.is_some() {
+            return state;
+        }
+        act(&state, log, json!({ "type": "endTurn", "playerId": player }))
+    }
+
+    fn hand_id(state: &GameState, player: PlayerId, def_id: &str) -> Option<String> {
+        state.players[player]
+            .hand
+            .iter()
+            .find(|card| card.def_id == def_id)
+            .map(|card| card.id.clone())
+    }
+
+    /// The `play` offer for a hand card, with its zone and price as offered.
+    fn play_offer(state: &GameState, player: PlayerId, instance_id: &str) -> Option<ActionBody> {
+        legal_actions(state, player)
+            .into_iter()
+            .find(|body| matches!(body, ActionBody::Play { instance_id: id, .. } if id == instance_id))
+    }
+
+    fn summarize(seed: String, decks: (Vec<String>, Vec<String>), log: Vec<Action>) -> GameSummary {
+        summarize_game(&FoldArgs {
+            seed,
+            decks,
+            log,
+            ..FoldArgs::default()
+        })
+        .unwrap_or_else(|| panic!("a finished game has a summary"))
+    }
+
+    fn zeros(seat: &SeatSummary) {
+        assert_eq!(seat.fatigue_draws, Some(0));
+        assert_eq!(seat.fatigue_damage, Some(0));
+        assert_eq!(seat.traps_set, Some(0));
+        assert_eq!(seat.traps_fired, Some(0));
+        assert_eq!(seat.position_switches, Some(0));
+        assert_eq!(seat.radiant_upgrades, Some(0));
+    }
+
+    #[test]
+    fn r1256000_fatigue_draws_and_damage_count_per_seat() {
+        register_all();
+        let pool = fatigue_pool();
+        let size = DECK_SIZE as usize;
+        assert!(pool.len() >= 2 * size, "need two distinct decks");
+        let shuffled = create_rng("summary-fatigue-decks", 0).shuffle(&pool);
+        let decks: (Vec<String>, Vec<String>) =
+            (shuffled[..size].to_vec(), shuffled[size..size * 2].to_vec());
+        let seed = "summary-fatigue".to_string();
+
+        let mut state = begin_game(&create_game(&CreateGameOptions {
+            seed: seed.clone(),
+            decks: decks.clone(),
+            ..CreateGameOptions::default()
+        }))
+        .state;
+        let mut log: Vec<Action> = Vec::new();
+        state = mulligans(state, &mut log);
+        while state.result.is_none() && log.len() < MAX_ACTIONS {
+            let player = seat_to_act(&state).expect("a seat to act");
+            state = end_turn(state, &mut log, player);
+        }
+        let end = state.result.expect("an endTurn-only game fatigues out");
+        // p1 draws first, so p1 takes the eighth hit (1+…+8 = 36 at 30 HP) first.
+        assert_eq!(end.winner, Winner::P2);
+        assert_eq!(end.reason, GameOverReason::HeroDeath);
+
+        let summary = summarize(seed, decks, log);
+        assert_eq!(summary.seats.p1.fatigue_draws, Some(8));
+        assert_eq!(summary.seats.p1.fatigue_damage, Some(36));
+        assert_eq!(summary.seats.p2.fatigue_draws, Some(7));
+        assert_eq!(summary.seats.p2.fatigue_damage, Some(28));
+        for seat in [&summary.seats.p1, &summary.seats.p2] {
+            assert_eq!(seat.traps_set, Some(0));
+            assert_eq!(seat.traps_fired, Some(0));
+            assert_eq!(seat.position_switches, Some(0));
+            assert_eq!(seat.radiant_upgrades, Some(0));
+        }
+    }
+
+    /// p1 sets the Sheepish and p2 plays a Unit into it; the set and the firing count for p1.
+    fn trap_game(seed: &str, decks: &(Vec<String>, Vec<String>)) -> Option<Vec<Action>> {
+        let mut state = begin_game(&create_game(&CreateGameOptions {
+            seed: seed.to_string(),
+            decks: decks.clone(),
+            ..CreateGameOptions::default()
+        }))
+        .state;
+        hand_id(&state, PlayerId::P1, SHEEPISH)?;
+        hand_id(&state, PlayerId::P2, VANILLA)?;
+        let mut log: Vec<Action> = Vec::new();
+        state = mulligans(state, &mut log);
+        let sheepish = hand_id(&state, PlayerId::P1, SHEEPISH)?;
+        state = act_body(
+            &state,
+            &mut log,
+            play_offer(&state, PlayerId::P1, &sheepish)?,
+            PlayerId::P1,
+        );
+        state = end_turn(state, &mut log, PlayerId::P1);
+        let vanilla = hand_id(&state, PlayerId::P2, VANILLA)?;
+        state = act_body(
+            &state,
+            &mut log,
+            play_offer(&state, PlayerId::P2, &vanilla)?,
+            PlayerId::P2,
+        );
+        state = act(&state, &mut log, json!({ "type": "concede", "playerId": "p1" }));
+        assert!(state.result.is_some());
+        Some(log)
+    }
+
+    #[test]
+    fn r1256000_a_trap_set_and_fired_counts_for_its_controller() {
+        register_all();
+        let deck = |first: &str| -> Vec<String> {
+            std::iter::once(first.to_string())
+                .chain(units_except(first))
+                .collect()
+        };
+        let decks = (deck(SHEEPISH), deck(VANILLA));
+        let found = (0..300).find_map(|n| {
+            let seed = format!("summary-trap-{n}");
+            trap_game(&seed, &decks).map(|log| (seed, log))
+        });
+        let Some((seed, log)) = found else {
+            panic!("a seed below 300 deals the Sheepish and the Vanilla in time");
+        };
+
+        let summary = summarize(seed, decks, log);
+        // p2's Unit resolved into p1's set trap, which fired for its controller.
+        assert_eq!(summary.seats.p1.fatigue_draws, Some(0));
+        assert_eq!(summary.seats.p1.fatigue_damage, Some(0));
+        assert_eq!(summary.seats.p1.traps_set, Some(1));
+        assert_eq!(summary.seats.p1.traps_fired, Some(1));
+        assert_eq!(summary.seats.p1.position_switches, Some(0));
+        assert_eq!(summary.seats.p1.radiant_upgrades, Some(0));
+        zeros(&summary.seats.p2);
+    }
+
+    /// p1 plays the Vanilla and switches its position; the switch counts for p1.
+    fn switch_game(seed: &str, decks: &(Vec<String>, Vec<String>)) -> Option<Vec<Action>> {
+        let mut state = begin_game(&create_game(&CreateGameOptions {
+            seed: seed.to_string(),
+            decks: decks.clone(),
+            ..CreateGameOptions::default()
+        }))
+        .state;
+        hand_id(&state, PlayerId::P1, VANILLA)?;
+        let mut log: Vec<Action> = Vec::new();
+        state = mulligans(state, &mut log);
+        let vanilla = hand_id(&state, PlayerId::P1, VANILLA)?;
+        state = act_body(
+            &state,
+            &mut log,
+            play_offer(&state, PlayerId::P1, &vanilla)?,
+            PlayerId::P1,
+        );
+        state = end_turn(state, &mut log, PlayerId::P1);
+        state = end_turn(state, &mut log, PlayerId::P2);
+        state = act(
+            &state,
+            &mut log,
+            json!({ "type": "switchPosition", "instanceId": vanilla, "playerId": "p1" }),
+        );
+        state = act(&state, &mut log, json!({ "type": "concede", "playerId": "p1" }));
+        assert!(state.result.is_some());
+        Some(log)
+    }
+
+    #[test]
+    fn r1256000_a_position_switch_counts_for_the_unit_s_controller() {
+        register_all();
+        let deck = |first: &str| -> Vec<String> {
+            std::iter::once(first.to_string())
+                .chain(units_except(first))
+                .collect()
+        };
+        let decks = (deck(VANILLA), deck(VANILLA));
+        let found = (0..300).find_map(|n| {
+            let seed = format!("summary-switch-{n}");
+            switch_game(&seed, &decks).map(|log| (seed, log))
+        });
+        let Some((seed, log)) = found else {
+            panic!("a seed below 300 deals the Vanilla in time");
+        };
+
+        let summary = summarize(seed, decks, log);
+        assert_eq!(summary.seats.p1.position_switches, Some(1));
+        assert_eq!(summary.seats.p1.fatigue_draws, Some(0));
+        assert_eq!(summary.seats.p1.fatigue_damage, Some(0));
+        assert_eq!(summary.seats.p1.traps_set, Some(0));
+        assert_eq!(summary.seats.p1.traps_fired, Some(0));
+        assert_eq!(summary.seats.p1.radiant_upgrades, Some(0));
+        zeros(&summary.seats.p2);
+    }
+
+    /// p1 plays Glowy Jelly Bean on another hand card; the upgrade counts for p1.
+    fn glowy_game(seed: &str, decks: &(Vec<String>, Vec<String>)) -> Option<Vec<Action>> {
+        let mut state = begin_game(&create_game(&CreateGameOptions {
+            seed: seed.to_string(),
+            decks: decks.clone(),
+            ..CreateGameOptions::default()
+        }))
+        .state;
+        hand_id(&state, PlayerId::P1, GLOWY)?;
+        let mut log: Vec<Action> = Vec::new();
+        state = mulligans(state, &mut log);
+        state = end_turn(state, &mut log, PlayerId::P1);
+        state = end_turn(state, &mut log, PlayerId::P2);
+        state = end_turn(state, &mut log, PlayerId::P1);
+        state = end_turn(state, &mut log, PlayerId::P2);
+        // p1's third turn holds the (3) the Bean costs; its script takes the target declared.
+        let glowy = hand_id(&state, PlayerId::P1, GLOWY)?;
+        let target = state.players[PlayerId::P1]
+            .hand
+            .iter()
+            .find(|card| card.id != glowy)
+            .map(|card| card.id.clone())?;
+        state = act(
+            &state,
+            &mut log,
+            json!({ "type": "play", "instanceId": glowy, "playerId": "p1",
+                "targets": [{ "pick": "instance", "instanceId": target }] }),
+        );
+        state = act(&state, &mut log, json!({ "type": "concede", "playerId": "p1" }));
+        assert!(state.result.is_some());
+        Some(log)
+    }
+
+    #[test]
+    fn r1256000_a_card_made_radiant_in_hand_counts_for_its_owner() {
+        register_all();
+        let deck = |first: &str| -> Vec<String> {
+            std::iter::once(first.to_string())
+                .chain(units_except(first))
+                .collect()
+        };
+        let decks = (deck(GLOWY), deck(VANILLA));
+        let found = (0..300).find_map(|n| {
+            let seed = format!("summary-glowy-{n}");
+            glowy_game(&seed, &decks).map(|log| (seed, log))
+        });
+        let Some((seed, log)) = found else {
+            panic!("a seed below 300 deals the Bean in time");
+        };
+
+        let summary = summarize(seed, decks, log);
+        assert_eq!(summary.seats.p1.radiant_upgrades, Some(1));
+        assert_eq!(summary.seats.p1.fatigue_draws, Some(0));
+        assert_eq!(summary.seats.p1.fatigue_damage, Some(0));
+        assert_eq!(summary.seats.p1.traps_set, Some(0));
+        assert_eq!(summary.seats.p1.traps_fired, Some(0));
+        assert_eq!(summary.seats.p1.position_switches, Some(0));
+        zeros(&summary.seats.p2);
     }
 }

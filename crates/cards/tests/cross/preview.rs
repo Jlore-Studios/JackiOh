@@ -2020,10 +2020,20 @@ mod c_88_siphon_squad_previews_x_the_attack_its_aura_takes_off_each_enemy_unit_r
         }))
     }
 
+    /// R686: the set Siphon shows its face, as its own start of turn leaves it, and wakes (R1149000).
+    fn reveal(s: &mut Scenario) {
+        let siphon = must(
+            s.backrow(PlayerId::P1, 1).map(|card| card.id.clone()),
+            "the Siphon",
+        );
+        s.card_mut(&siphon).revealed = Some(true);
+    }
+
     #[test]
     fn r280_the_label_is_in_the_base_faces_text_with_no_placeholder_in_it() {
         jackioh_cards::register_all();
-        let s = siphon_board(Some(false), false, 2);
+        let mut s = siphon_board(Some(false), false, 2);
+        reveal(&mut s);
         let list = must(
             shown_of(&s.view(PlayerId::P1).you.backrow[0]),
             "the controller's preview",
@@ -2039,13 +2049,19 @@ mod c_88_siphon_squad_previews_x_the_attack_its_aura_takes_off_each_enemy_unit_r
     }
 
     #[test]
-    fn r280_face_down_its_controller_sees_x_and_it_is_what_the_aura_takes_off_each_enemy_unit() {
+    fn r280_r1149000_face_down_and_unrevealed_its_controller_sees_no_preview_and_the_aura_takes_nothing() {
         jackioh_cards::register_all();
-        let s = siphon_board(Some(false), false, 2);
-        let value = value_of(&s.view(PlayerId::P1).you.backrow[0]);
-
-        assert_eq!(value, 4);
+        let mut s = siphon_board(Some(false), false, 2);
         let menace = must(s.unit(PlayerId::P2, 1).map(|card| card.id.clone()), "p2's Menace");
+
+        assert_eq!(shown_of(&s.view(PlayerId::P1).you.backrow[0]), None);
+        assert_eq!(s.stats(menace.as_str()).attack, 9);
+
+        // Revealed, still face-down: its controller sees X, and it is what the aura takes off each
+        // enemy Unit.
+        reveal(&mut s);
+        let value = value_of(&s.view(PlayerId::P1).you.backrow[0]);
+        assert_eq!(value, 4);
         assert_eq!(s.stats(menace.as_str()).attack, 9 - value);
     }
 
@@ -2085,6 +2101,7 @@ mod c_88_siphon_squad_previews_x_the_attack_its_aura_takes_off_each_enemy_unit_r
     fn r280_r386_an_upgrade_of_its_multiplier_moves_the_preview_with_the_aura() {
         jackioh_cards::register_all();
         let mut s = siphon_board(Some(false), false, 2);
+        reveal(&mut s);
         let siphon = must(
             s.backrow(PlayerId::P1, 1).map(|card| card.id.clone()),
             "the Siphon",
@@ -2109,11 +2126,12 @@ mod c_88_siphon_squad_previews_x_the_attack_its_aura_takes_off_each_enemy_unit_r
     fn r280_the_hook_writes_nothing_and_reads_no_library_no_hand_and_not_state_active() {
         jackioh_cards::register_all();
         for active in PLAYER_IDS {
-            let s = scenario(json!({
+            let mut s = scenario(json!({
                 "active": active,
                 "p1": { "hand": [RAPID_REPLENISH], "backrow": [{ "def": SIPHON_SQUAD, "faceUp": false }], "library": [MENACE] },
                 "p2": { "hand": [STOCKPILE], "field": [MENACE], "library": [MENACE] },
             }));
+            reveal(&mut s);
             let card = must(s.backrow(PlayerId::P1, 1), "the Siphon");
             let hook = must(preview_hook(SIPHON_SQUAD, FaceKind::Base), "its hook");
             let (state, self_) = guarded(s.state(), &card.id);

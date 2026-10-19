@@ -49,6 +49,7 @@ count: number?,
 player: PlayerSpec?,
 radiant: boolean?,
 costOverride: number?,
+embiggenCostOverride: number?,
 costMod: number?,
 temporary: boolean?,
 chinese: boolean?,
@@ -87,6 +88,7 @@ instance: TargetSpec?,
 player: PlayerSpec?,
 radiant: boolean?,
 costOverride: number?,
+embiggenCostOverride: number?,
 costMod: number?,
 temporary: boolean?,
 chinese: boolean?,
@@ -226,6 +228,7 @@ target: TargetSpec?,
 random: boolean?,
 targetEnemies: boolean?,
 aimAt: string?,
+aimOnly: boolean?,
 afterward: CastAfterward?,
 }
 
@@ -239,6 +242,7 @@ cards: {string},
 random: boolean?,
 targetEnemies: boolean?,
 aimAt: string?,
+aimOnly: boolean?,
 afterward: CastAfterward?,
 }
 
@@ -248,6 +252,7 @@ radiant: boolean | nil,
 random: boolean?,
 targetEnemies: boolean?,
 aimAt: string?,
+aimOnly: boolean?,
 afterward: CastAfterward?,
 }
 
@@ -278,6 +283,7 @@ tags: {Tag}?,
 notTags: {Tag}?,
 anyTags: {Tag}?,
 luckBased: boolean?,
+embiggen: boolean?,
 stats: AttackHealth?,
 rarity: (Rarity | {Rarity})?,
 set: (SetName | {SetName})?,
@@ -303,6 +309,7 @@ options: {string},
 correct: number,
 shuffle: boolean?,
 by: PlayerSpec?,
+streak: number?,
 data: {[string]: JsonValue}?,
 }
 
@@ -326,6 +333,7 @@ data: {[string]: JsonValue}?,
 export type ChooseCraftArgs = {
 step: string,
 cost: number,
+mode: CraftMode?,
 radiant: boolean?,
 prompt: string?,
 data: {[string]: JsonValue}?,
@@ -467,17 +475,21 @@ keyword: KeywordKind?,
 cardType: CardType?,
 }
 
+export type CraftFrame = "potion" | "hugePotion"
+
 export type CraftHat = {
 hat: CraftHatKind,
 effects: {CraftEffect},
 }
 
-export type CraftHatKind = "cry" | "death" | "startOfTurn" | "endOfTurn" | "whenCast" | "opponentPlaysUnit" | "opponentPlaysSpell" | "opponentAttacks"
+export type CraftHatKind = "cry" | "death" | "startOfTurn" | "endOfTurn" | "whenCast" | "opponentPlaysUnit" | "opponentPlaysSpell" | "opponentAttacks" | "activate"
 
 export type CraftKeyword = {
 kind: KeywordKind,
 n: number?,
 }
+
+export type CraftMode = "scratch" | "potion" | "hugePotion"
 
 export type CraftRecipe = {
 cost: number,
@@ -489,6 +501,7 @@ health: number,
 keywords: {CraftKeyword},
 echo: number,
 hats: {CraftHat},
+frame: CraftFrame?,
 }
 
 export type CraftVerb = "damageTarget" | "damageEnemyHero" | "damageRandomEnemy" | "damageEachEnemy" | "healTarget" | "healYourHero" | "healYourSide" | "draw" | "gainMana" | "gainArmor" | "summonRush" | "summonFelinor" | "summonSheep" | "buffTarget" | "buffYourUnits" | "grantKeyword" | "destroy" | "bounce" | "addRandom" | "discover" | "opponentDiscards" | "buffRandomCard" | "nerfRandomEnemyCard" | "lockRandomZone"
@@ -541,6 +554,8 @@ watch: string?,
 next: boolean?,
 mark: CardMark?,
 handWatch: {string}?,
+turns: number?,
+label: string?,
 }
 
 export type DelayAt = {
@@ -641,7 +656,7 @@ step: string,
 prompt: string?,
 }
 
-export type DiscoverOffer = "card" | "index"
+export type DiscoverOffer = "card" | "index" | "code"
 
 export type DoRandomEntriesArgs = {
 count: number,
@@ -681,6 +696,7 @@ costMod: number?,
 costOverride: number?,
 player: PlayerSpec?,
 radiant: boolean?,
+fillWithCopies: boolean?,
 }
 
 export type DrawWhileArgs = {
@@ -797,6 +813,7 @@ armorOverride: number?,
 row: Row?,
 side: ScopeSide?,
 radiantFor: PlayerSpec?,
+chinese: boolean?,
 }
 
 export type FillBoardRandomArgs = {
@@ -877,6 +894,10 @@ instanceId: string,
 spec: TargetSpec,
 }
 
+export type FreezeArgs = {
+target: TargetSpec,
+}
+
 export type FuseCardsArgs = {
 defIds: {string}?,
 instanceIds: {string}?,
@@ -901,6 +922,8 @@ radiant: boolean?,
 toHand: PlayerSpec?,
 handPrice: HandPrice?,
 pools: {CatalogQueryArgs}?,
+distinct: boolean?,
+costOverride: number?,
 }
 
 export type FuseInto = {
@@ -968,6 +991,7 @@ costPaid: number,
 radiant: boolean?,
 arrivedDuring: {string}?,
 exitsFrom: number?,
+answer: SpellAnswer?,
 } | {
 ["type"]: "summoned",
 player: PlayerId,
@@ -1383,9 +1407,13 @@ message: string,
 ["type"]: "curveDrawn",
 player: PlayerId,
 cells: {ZoneRef},
+} | {
+["type"]: "autopilotEngaged",
+player: PlayerId,
+turn: number,
 }
 
-export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn"
+export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn" | "autopilotEngaged"
 
 export type GameOverReason = "hero-death" | "both-heroes-dead" | "concede" | "draw-accepted" | "turn-cap" | "disconnect" | "match-ceiling" | "voided" | "alt-win" | "won-by-effect"
 
@@ -1785,6 +1813,15 @@ label: string,
 } | {
 expiry: ModifierExpiry,
 ["kind"]: "heroImmune",
+} | {
+expiry: ModifierExpiry,
+["kind"]: "spellDamage",
+amount: number,
+} | {
+expiry: ModifierExpiry,
+["kind"]: "healthPrice",
+multiple: number,
+echo: number?,
 }
 
 export type PlayerSpec = "self" | "enemy"
@@ -1822,6 +1859,12 @@ instanceId: string?,
 }
 
 export type RadiantZone = "hand" | "library" | "field"
+
+export type RaiseTimesPlayedArgs = {
+defId: string,
+amount: number,
+player: PlayerSpec?,
+}
 
 export type RandomEntryLuau = {
 label: string,
@@ -2039,7 +2082,7 @@ to: TargetSpec,
 value: number,
 }
 
-export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Boss" | "Boss-X" | "Custom"
+export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Meditative+" | "Boss" | "Boss-X" | "Custom"
 
 export type SetNumberArgs = {
 target: TargetSpec?,
@@ -2057,6 +2100,17 @@ player: PlayerSpec?,
 export type SetStat = {
 attack: number?,
 maxHealth: number?,
+}
+
+export type SetStatsAllArgs = {
+attack: number,
+health: number,
+side: ScopeSide?,
+rows: {Row}?,
+types: {CardType}?,
+tags: {Tag}?,
+notTags: {Tag}?,
+excludeSelf: boolean?,
 }
 
 export type ShuffleCardIntoArgs = {
@@ -2085,6 +2139,16 @@ count: number,
 player: PlayerSpec?,
 radiant: boolean?,
 enchantments: {Enchantment}?,
+}
+
+export type SpellAnswer = {
+by: string,
+at: Selection,
+}
+
+export type SpellDamageAura = {
+amount: number,
+both: boolean?,
 }
 
 export type SplitAmong = "enemies" | "enemyUnits"
@@ -2140,6 +2204,10 @@ creditLapses: boolean?,
 noNaturalMana: boolean?,
 fengShui: boolean?,
 luck: number?,
+spellDamageAura: SpellDamageAura?,
+doublesHealing: boolean?,
+answersTargetedSpells: boolean?,
+embiggenGarden: number?,
 }
 
 export type StealAllArgs = {
@@ -2169,6 +2237,7 @@ stack: boolean?,
 radiant: boolean?,
 armorOverride: number?,
 statsOverride: AttackHealth?,
+x: number?,
 defId: string?,
 rememberAs: string?,
 instance: TargetSpec?,
@@ -2219,7 +2288,7 @@ to: Position?,
 target: TargetSpec,
 }
 
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Token"
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Token"
 
 export type TakeExtraTurnArgs = {
 player: PlayerSpec?,
@@ -2237,6 +2306,13 @@ radiant: boolean?,
 }
 
 export type TakeFromLibraryPick = "random" | "top" | "bottom" | "chosen"
+
+export type TakeToHandArgs = {
+target: TargetSpec,
+costOverride: number?,
+costMod: number?,
+radiant: boolean?,
+}
 
 export type TargetAim = "harm" | "help"
 
@@ -3577,6 +3653,14 @@ function J.forced_attacks_on(args: ForcedAttacksOnArgs): EffectCall
 	return { verb = "forced_attacks_on", args = args :: any }
 end
 
+function J.freeze(args: FreezeArgs): EffectCall
+	return { verb = "freeze", args = args :: any }
+end
+
+function J.freeze_all(args: BoardScope): EffectCall
+	return { verb = "freeze_all", args = args :: any }
+end
+
 function J.fuse_cards(args: FuseCardsArgs): EffectCall
 	return { verb = "fuse_cards", args = args :: any }
 end
@@ -3725,6 +3809,10 @@ function J.radiant_chance(args: RadiantChanceLuauArgs): EffectCall
 	return { verb = "radiant_chance", args = args :: any }
 end
 
+function J.raise_times_played(args: RaiseTimesPlayedArgs): EffectCall
+	return { verb = "raise_times_played", args = args :: any }
+end
+
 function J.recruit(args: RecruitArgs): EffectCall
 	return { verb = "recruit", args = args :: any }
 end
@@ -3809,6 +3897,10 @@ function J.set_radiant_random(args: SetRadiantRandomArgs): EffectCall
 	return { verb = "set_radiant_random", args = args :: any }
 end
 
+function J.set_stats_all(args: SetStatsAllArgs): EffectCall
+	return { verb = "set_stats_all", args = args :: any }
+end
+
 function J.shuffle_card_into(args: ShuffleCardIntoArgs): EffectCall
 	return { verb = "shuffle_card_into", args = args :: any }
 end
@@ -3887,6 +3979,10 @@ end
 
 function J.take_from_library(args: TakeFromLibraryArgs): EffectCall
 	return { verb = "take_from_library", args = args :: any }
+end
+
+function J.take_to_hand(args: TakeToHandArgs): EffectCall
+	return { verb = "take_to_hand", args = args :: any }
 end
 
 function J.transform(args: TransformArgs): EffectCall
@@ -4012,11 +4108,11 @@ J.config = {
 	CAST_ON_DRAW_CHAIN_CAP = 20,
 	CHAIN_OF_THOUGHT_REPEATS = 4,
 	CHAOS_MED_ACCLAIMED = 3,
-	CHAOS_MED_CN_CARDS = 3,
+	CHAOS_MED_CN_CARDS = 2,
 	CHAOS_MED_COST = 0,
 	CHAOS_MED_FUSE_COPIES = 2,
-	CHAOS_MED_HEAL = 8,
-	CHAOS_MED_HERO_ARMOR = 8,
+	CHAOS_MED_HEAL = 6,
+	CHAOS_MED_HERO_ARMOR = 6,
 	CHAOS_MED_NERFS = 1,
 	CHAOS_MED_PRIME_CARDS = 2,
 	CRAFTED_CARD_COST = 0,

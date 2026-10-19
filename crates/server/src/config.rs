@@ -614,6 +614,19 @@ pub const MATCH_RECORD_RESULT_BACKOFF_MS: i64 = 250;
 /// before its clock runs out again, so a store that keeps failing is retried at this pace until the
 /// row lands, the match ends or the actor stops, never in a loop.
 pub const MATCH_SERVER_ACTION_RETRY_MS: i64 = 1_000;
+/// #1169: the fewest logged actions a match must hold for the restart drain to store a checkpoint
+/// of it (`actor::checkpoint`). A shorter log is cheap to fold whole, so the drain spends no write on
+/// it: as #1169's plan measured a release build, a fold costs about 0.39 ms an action and the
+/// telemetry's replay about 0.50 ms, while a checkpoint (some 75 KB) takes about 0.3 ms to serialise
+/// and hash, plus its write.
+pub const MATCH_CHECKPOINT_MIN_ACTIONS: i64 = 32;
+/// #1169: the shape of a checkpoint's body and of what the server folds a log to. A checkpoint
+/// stamped with another is refused and the whole log folded. Bump it when a server change alters
+/// either: the body (`actor::checkpoint::CheckpointBody`), the setup a rebuild folds with
+/// (`Registry::rebuild`'s arguments) or the bot turns it reads (`bot_moved_turns`). A change to the
+/// engine, the cards or `actor/engine.rs` and `actor/telemetry.rs` needs none: the rules fingerprint
+/// (`build.rs`) refuses those.
+pub const MATCH_CHECKPOINT_VERSION: i32 = 1;
 
 // ---------------------------------------------------------------------------------------------
 // Bug reports (`bug_reports.rs`): a match its own log does not reproduce. Not in SPEC, and no
@@ -680,7 +693,7 @@ pub const DECK_CODE_VERSION: i32 = 2;
 pub const DECK_CODE_CORE_ONLY_VERSION: i32 = 1;
 
 /// The shape of `CATALOG_NUMBER_SET_OFFSETS` (SURFACE §4.2), keyed by set name exactly as TS's object
-/// is (`"Core"`, `"Classic"`, `"Classic+"`, `"Meditative"`).
+/// is (`"Core"`, `"Classic"`, `"Classic+"`, `"Meditative"`, `"Meditative+"`).
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CatalogNumberSetOffsets {
     #[serde(rename = "Core")]
@@ -691,18 +704,22 @@ pub struct CatalogNumberSetOffsets {
     pub classic_plus: i32,
     #[serde(rename = "Meditative")]
     pub meditative: i32,
+    #[serde(rename = "Meditative+")]
+    pub meditative_plus: i32,
 }
 
 /// SPEC §11 R255, R339 (B2.2), R1410: a card's catalog number in a version 2 deck or trio code is
 /// its §5 index plus its set's offset — Core n, Classic 1000 + n, Classic+ 2000 + n, Meditative
-/// 3000 + n — still written as LEB128. No set holds 1000 cards, so a number names one set and one
-/// card. Meditative's offset is the next thousand in catalog order (R1420), and it moved no other
-/// set's, so a code minted before the set shipped reads as it always did.
+/// 3000 + n, Meditative+ 4000 + n — still written as LEB128. No set holds 1000 cards, so a number
+/// names one set and one card. Meditative's offset is the next thousand in catalog order (R1420),
+/// and so is Meditative+'s after it (v0.3.15, issue #1187, R1178000); neither moved another set's,
+/// so a code minted before a set shipped reads as it always did.
 pub const CATALOG_NUMBER_SET_OFFSETS: CatalogNumberSetOffsets = CatalogNumberSetOffsets {
     core: 0,
     classic: 1000,
     classic_plus: 2000,
     meditative: 3000,
+    meditative_plus: 4000,
 };
 /// SPEC §11 R255: raw deck-code input longer than this is refused before it is read. A v1 code for
 /// a full deck with the longest name is under 200 characters, so this leaves room for whatever a

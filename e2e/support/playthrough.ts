@@ -158,11 +158,11 @@ export function deckableOf(catalog: Readonly<Record<string, CatalogRow>>, set: s
 }
 
 /**
- * A card no player ever plays from a hand: it replaces itself the moment it enters one (Meditative #37
- * CN in a bottle, MD-B19, R925, R926). Its turn in the play-through is that replacement.
+ * A card cast as it is drawn (Meditative #37 CN in a Bottle, §2.4, R58): drawn, it is cast and lands in
+ * its owner's graveyard, never played from a hand. Its turn in the play-through is that cast.
  */
-export function replacedOnArrival(def: CatalogRow): boolean {
-  return /^When this enters your hand:/.test(def.base.text);
+export function castOnDraw(def: CatalogRow): boolean {
+  return /^Cast on draw:/.test(def.base.text);
 }
 
 /** A seat's share of one game: few enough Units and backrow cards that its zones never fill. */
@@ -199,8 +199,8 @@ export function printedCost(def: CatalogRow): number {
 
 /* ------------------------------------------------------------------------------- the words */
 
-/** A catalog id (`core-001`, `classicplus-t-ai-01`, `meditative-039-5`): never in a line a player reads. */
-const CATALOG_ID = /\b(?:core|classic|classicplus|meditative)-(?:t-)?[0-9a-z]+(?:-[0-9a-z]+)?\b/;
+/** A catalog id (`core-001`, `classicplus-t-ai-01`, `meditative-039-5`, `meditativeplus-001-1`): never in a line a player reads. */
+const CATALOG_ID = /\b(?:core|classic|classicplus|meditative|meditativeplus)-(?:t-)?[0-9a-z]+(?:-[0-9a-z]+)?\b/;
 /** What a slip upstream prints: a value with no words. */
 const LEAKS = /\bundefined\b|\bNaN\b|\bnull\b|\[object /;
 /** A placeholder a text never filled ("{chance}"); a computed value a face prints in play, "{7}", is R280's. */

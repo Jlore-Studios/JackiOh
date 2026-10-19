@@ -36,12 +36,12 @@ mod setup_m1_t5 {
     use super::*;
 
     #[test]
-    fn r265_deals_3_and_4_from_shuffled_libraries_and_opens_both_mulligans_at_once() {
+    fn r265_deals_the_opening_draw_from_shuffled_libraries_and_opens_both_mulligans_at_once() {
         let state = started("setup", None);
         assert_eq!(state.players.p1.hand.len() as i32, OPENING_DRAW[0]);
         assert_eq!(state.players.p2.hand.len() as i32, OPENING_DRAW[1]);
-        assert_eq!(state.players.p1.library.len() as i32, DECK_SIZE - 3);
-        assert_eq!(state.players.p2.library.len() as i32, DECK_SIZE - 4);
+        assert_eq!(state.players.p1.library.len() as i32, DECK_SIZE - OPENING_DRAW[0]);
+        assert_eq!(state.players.p2.library.len() as i32, DECK_SIZE - OPENING_DRAW[1]);
         assert_eq!(state.phase, Phase::Mulligan);
         // §10.1's one prompt stays free: the two mulligans are their own step.
         assert!(state.pending.is_none());
@@ -76,12 +76,12 @@ mod setup_m1_t5 {
         assert!(hand.contains(&heroic_power().id));
         assert_eq!(hand.len() as i32, OPENING_DRAW[0]);
         assert_eq!(state.players.p1.library.len() as i32, DECK_SIZE - OPENING_DRAW[0]);
-        // Two Quickdraw cards and an opening draw of 3 leaves exactly one random draw.
+        // Two Quickdraw cards out of the opening draw leave exactly two random draws.
         let others = hand
             .iter()
             .filter(|def_id| **def_id != going_long().id && **def_id != heroic_power().id)
             .count();
-        assert_eq!(others, 1);
+        assert_eq!(others as i32, OPENING_DRAW[0] - 2);
     }
 
     #[test]
@@ -333,6 +333,44 @@ mod the_coin_r244 {
         let p2 = &state.players.p2.hand;
         assert_eq!(p2.len() as i32, OPENING_DRAW[1] + 1);
         assert_eq!(p2.last().map(|c| c.def_id.as_str()), Some(COIN_DEF_ID));
+        setup_catalog();
+    }
+
+    #[test]
+    fn r1156000_both_seats_open_on_four_cards_and_only_the_second_holds_the_coin_after_the_mulligan() {
+        setup_catalog();
+        let mut catalog = registered_catalog().clone();
+        catalog.insert(coin().id, coin());
+        register_catalog(catalog);
+        let created = create_game(&CreateGameOptions {
+            seed: "r1156000".into(),
+            decks: (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 21)),
+            ..Default::default()
+        });
+        let dealt = begin_game(&created).state;
+        assert_eq!(OPENING_DRAW.to_vec(), vec![4, 4]);
+        assert_eq!(dealt.phase, Phase::Mulligan);
+        for player in [PlayerId::P1, PlayerId::P2] {
+            assert_eq!(dealt.players[player].hand.len(), 4);
+            assert_eq!(dealt.players[player].library.len() as i32, DECK_SIZE - 4);
+            let prompt = mulligan_prompt_for(&dealt, player).expect("an open mulligan");
+            assert_eq!(prompt.options.len(), 4);
+        }
+
+        let state = keep_all(&dealt);
+
+        let coins = |player: PlayerId| {
+            state.players[player]
+                .hand
+                .iter()
+                .filter(|c| c.def_id == COIN_DEF_ID)
+                .count()
+        };
+        assert_eq!(coins(PlayerId::P1), 0);
+        assert_eq!(coins(PlayerId::P2), 1);
+        // P2's four and The Coin; P1's four and its turn-1 draw.
+        assert_eq!(state.players.p2.hand.len(), 5);
+        assert_eq!(state.players.p1.hand.len(), 5);
         setup_catalog();
     }
 

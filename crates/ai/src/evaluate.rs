@@ -8,9 +8,13 @@
 //! card's `costMod` (B3.4, R65) moves its worth. #1086 prices what a side has banked in public state:
 //! Jade steps (R962), the enemy units its delayed effects have marked (R437), extra turns (R846), and
 //! an own Temporary hand card at a discount (R637). #1143 prices an own hand Unit by the face it will
-//! enter with (its Radiant face, buffs and tuning) over its printed base face. It reads only what the
-//! seat may know or what a determinization sampled, and nothing here reads a handicap or a difficulty
-//! (R180).
+//! enter with (its Radiant face, buffs and tuning) over its printed base face. #1224 prices what a
+//! side's coming refreshes will or will not give: the refreshes it still has to lose (R844) and its
+//! next-turn rider (§2.3). #1255 prices the library cards the seat can name (R185, R311) at a share of
+//! their hand worth, a dealt one only by what it gained since the deal (a Radiant flag), a Journey
+//! Complete with the cards its journey returns (R1246), a curse against the side whose deck holds it.
+//! It reads only what the seat may know or what a determinization sampled, and nothing here reads a
+//! handicap or a difficulty (R180).
 //!
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
 //! are passed explicitly.
@@ -20,16 +24,18 @@ use jackioh_engine::config::{
 };
 use jackioh_engine::effects::DELAYED_DESTROY_HOOK;
 use jackioh_engine::{
-    AttackTarget, CardDef, CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, Position,
-    UnitView, active_brittle_count, active_units_of, animated_kind_of, armor_of, attack_restriction,
-    attacks_per_turn, backrow_is_public, cannot_attack, card_keywords, card_type_of_face, credit_lapsing,
-    effective_life, find_def, has_keyword, hero_armor_of, is_temporary_card, owed_mana_of, own_cost, pierces,
-    query_cost, reset_instance, stats_with_buffs, subsystems, takes_strike_back, unit_has, unit_view,
+    AttackTarget, CardDef, CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, PlayerState,
+    Position, UnitView, ZoneName, active_brittle_count, active_units_of, animated_kind_of, armor_of,
+    attack_restriction, attacks_per_turn, backrow_is_public, cannot_attack, card_keywords, card_type_of_face,
+    credit_lapsing, effective_life, find_def, find_instance, frozen_next_turn, has_keyword, hero_armor_of,
+    is_temporary_card, lost_refreshes_left, owed_mana_of, own_cost, pierces, query_cost, reset_instance,
+    stats_with_buffs, subsystems, takes_strike_back, unit_has, unit_view,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::candidates::{Side, blow, cleaved_neighbours, side_of};
-use crate::config::{AI_EVAL, EvalWeights};
+use crate::config::{AI_EVAL, AI_LIBRARY_CURSES, EvalWeights};
 
 /// The life `player` started the game with, where the hero value and `closing` are anchored (R964000):
 /// HERO_HEALTH in a 1v1 game; in a Duos duel the seat's own HP and its team's pool at its cap (§13.4;
@@ -64,9 +70,13 @@ fn brittle_share(card: &CardInstance, w: &EvalWeights) -> f64 {
     }
 }
 
-/// Whether the unit may attack at all: no "Can't attack" keyword, and no E35 status bars it.
+/// Whether the unit may attack at all: no "Can't attack" keyword, no E35 status bars it, and it is
+/// not Frozen through its controller's next turn (R1174000: one that thaws at this turn's cleanup
+/// swings next turn).
 fn can_swing(state: &GameState, unit: &CardInstance, view: &UnitView) -> bool {
-    !has_keyword(&view.keywords, KeywordKind::CantAttack) && !cannot_attack(state, unit)
+    !has_keyword(&view.keywords, KeywordKind::CantAttack)
+        && !cannot_attack(state, unit)
+        && !frozen_next_turn(state, unit)
 }
 
 /// R49: a unit with Deft, read through the layers, in Defense Position. Its switch to Attack spends
@@ -211,6 +221,76 @@ fn hand_card_value(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f
         * temporary
 }
 
+/// R1246: the key Meditative #96 writes on the Journey Complete it shuffles in, the ids of the hand
+/// cards it exiled.
+const JOURNEY_MEMORY_KEY: &str = "journey";
+
+/// R185, R311, R312, R943: whether the seat can name a library card. In its own library (`own`), one it
+/// was shown going in (`known_as`: `redact` makes every other a placeholder, which a determinization
+/// fills with no record); in the enemy's, only one minted after the deal and shuffled in openly
+/// (`created` and `known_as`), as the cards a line puts there are. A dealt card's record is its
+/// owner's, never the seat's.
+fn nameable(card: &CardInstance, own: bool) -> bool {
+    card.known_as.is_some() && (own || card.created == Some(true))
+}
+
+/// R1246, R1248: what a Journey Complete returns when drawn: each card of its journey still in an exile
+/// pile (as the card itself asks), at the hand worth it will have back in hand, Radiant. 0 for any
+/// other card.
+fn journey_worth(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f64 {
+    let Some(ids) = card.memory.get(JOURNEY_MEMORY_KEY).and_then(Value::as_array) else {
+        return 0.0;
+    };
+    ids.iter()
+        .filter_map(Value::as_str)
+        .filter_map(|id| find_instance(state, id))
+        .filter(|went| went.zone.z() == ZoneName::Exile)
+        .map(|went| {
+            let mut back = went.clone();
+            back.radiant = true;
+            hand_card_value(state, &back, w)
+        })
+        .sum()
+}
+
+/// #1255: what a dealt card is worth in hand as it was dealt, by its printed cost alone (no Radiant flag,
+/// face uplift or cost shift): `library_card` already counts it, so only what it gained since counts.
+fn printed_hand_worth(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f64 {
+    find_def(Some(state), &card.def_id).map_or(0.0, |def| {
+        w.hand_card + w.hand_per_cost * f64::from(query_cost(def)).min(w.hand_cost_cap)
+    })
+}
+
+/// #1255: the cards to come that `seat` can name in `player`'s library (`nameable`): one shuffled in
+/// since the deal at its `hand_card_value` and what its journey returns, a dealt one at what it gained
+/// since (its hand worth over `printed_hand_worth`: a Radiant flag, its face, a cost change), a curse
+/// (`AI_LIBRARY_CURSES`) against the side whose deck holds it, all at `library_known_share` times the
+/// share of the library its next `library_comfort` draws reach. No order is known (R185), so each card
+/// is as likely as any to come among them. One walk of a library of at most LIBRARY_CAP cards (R80).
+fn library_known_worth(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights) -> f64 {
+    let library = &state.players[player].library;
+    if library.is_empty() {
+        return 0.0;
+    }
+    let mut worth = 0.0;
+    for card in library {
+        if !nameable(card, player == seat) {
+            continue;
+        }
+        let mut value = hand_card_value(state, card, w) + journey_worth(state, card, w);
+        if card.created != Some(true) {
+            value -= printed_hand_worth(state, card, w);
+        }
+        if AI_LIBRARY_CURSES.contains(&card.def_id.as_str()) {
+            worth -= value;
+        } else {
+            worth += value;
+        }
+    }
+    let size = library.len() as f64;
+    w.library_known_share * size.min(w.library_comfort) / size * worth
+}
+
 /// R962: the steps a Jade Counter at `jade` has climbed toward the next threshold it has not crossed.
 /// It only rises (R961): toward JADE_BEAUTY_AT, then toward JADE_ASCEND_AT, then none.
 fn jade_steps(jade: i32) -> i32 {
@@ -221,6 +301,39 @@ fn jade_steps(jade: i32) -> i32 {
     } else {
         0
     }
+}
+
+/// R844: the crystals `side` will not get from the refreshes it still has to lose past this turn's
+/// (one lost this turn is already in its current mana). Each is priced at `mana.max`, not the coming
+/// turn's maximum, which reads the handicap (`max_mana_for`; R180); the first also loses the rider
+/// it spends, floored at 0 as a refresh is.
+fn lost_crystals(side: &PlayerState) -> i32 {
+    let left = lost_refreshes_left(side);
+    if left == 0 {
+        return 0;
+    }
+    (side.mana.max + side.mana.next_turn_mod).max(0) + (left - 1) * side.mana.max
+}
+
+/// §2.3: the crystals `side`'s next-turn rider moves its coming refresh by, no lower than a refresh
+/// of 0, and none while that refresh is lost, which spends it (R844; `lost_crystals` counts it).
+fn rider_crystals(side: &PlayerState) -> i32 {
+    if lost_refreshes_left(side) > 0 {
+        return 0;
+    }
+    side.mana.next_turn_mod.max(-side.mana.max)
+}
+
+/// R844, §2.3: what `side`'s coming refreshes will or will not give, both public badges (R169,
+/// R185): its rider for or against it, the refreshes it still has to lose against it.
+fn coming_refreshes(side: &PlayerState, w: &EvalWeights) -> f64 {
+    w.next_turn_mana * f64::from(rider_crystals(side)) - w.lost_refresh * f64::from(lost_crystals(side))
+}
+
+/// R844, §2.3: `coming_refreshes` for `seat` less its enemy's, the share of `evaluate` the coming
+/// refreshes make up and spend as they run; `reply_score` takes it from the line's end.
+pub fn coming_mana(state: &GameState, seat: PlayerId, w: &EvalWeights) -> f64 {
+    coming_refreshes(&state.players[seat], w) - coming_refreshes(&state.players[seat.opponent()], w)
 }
 
 /// R437: the `unit_worth` of the enemy units a delayed effect `player` owns has marked, each once (a
@@ -265,7 +378,8 @@ fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
 }
 
 /// Everything on one side but the hero: the board, what it has banked (a debt, Jade steps, extra
-/// turns, the enemy units it has marked), the backrow, the hand and the library.
+/// turns, the enemy units it has marked), what its coming refreshes will or will not give, the backrow,
+/// the hand and the library.
 fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights) -> f64 {
     let side = &state.players[player];
     let mut value = 0.0;
@@ -275,6 +389,8 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
 
     // R1224: a debt is coming turns' mana spent early, so it counts against the side that owes it.
     value -= w.owed_mana * f64::from(owed_mana_of(state, player));
+    // R844, §2.3: what the side's coming refreshes will or will not give.
+    value += coming_refreshes(side, w);
     // #1086: what the side has banked in state both seats see (R185): Jade steps (R962), extra
     // turns (R846) and the enemy units it has marked (R437; no `unit_worth` call at a zero share).
     value += w.jade_step * f64::from(jade_steps(side.jade.unwrap_or(0)));
@@ -329,6 +445,10 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     }
 
     value += w.library_card * (side.library.len() as f64).min(w.library_comfort);
+    // #1255: the library cards the seat can name (no reading at a zero share, the frozen baseline's).
+    if w.library_known_share != 0.0 {
+        value += library_known_worth(state, player, seat, w);
+    }
     value
 }
 
@@ -340,7 +460,8 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 
 /// The face damage `attacker`'s board could deal the other hero next turn: units with attack > 0,
 /// position ATK (with `w.deft_defense_attacks`, a Deft unit in Defense Position too, which can switch
-/// to Attack and still swing, R49), no "Can't attack" and no E35 status barring attacks, sorted
+/// to Attack and still swing, R49), no "Can't attack", no E35 status barring attacks and not Frozen
+/// through that turn (R1174000, `can_swing`), sorted
 /// ascending by attack. Taunt units on the defending side soak up the smallest attackers they bind
 /// first, one §4.4 hit at a time (`damage_past_taunts`). Each remaining attacker's attack goes through
 /// `subsystems::projected_hero_damage` (armor, which a Pierce hit skips (R346), and the Anti-oneshot

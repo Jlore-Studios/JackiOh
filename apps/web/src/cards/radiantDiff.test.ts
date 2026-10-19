@@ -44,11 +44,11 @@ function marks(base: string, radiant: string): string[] {
 }
 
 describe("R277 the word diff", () => {
-  it("R277 marks a changed number and nothing else (the user's example: True Strike's 9)", () => {
+  it("R277 marks a changed number and nothing else (the user's example: True Strike's 8)", () => {
     expect(marks("Deal 4 damage to the enemy hero", "Deal 9 damage to the enemy hero")).toEqual(["9"]);
     const trueStrike = CATALOG["core-044"];
     if (trueStrike === undefined) throw new Error("the catalog has no core-044");
-    expect(marks(fillParams(trueStrike, "base"), fillParams(trueStrike, "radiant"))).toEqual(["9"]);
+    expect(marks(fillParams(trueStrike, "base"), fillParams(trueStrike, "radiant"))).toEqual(["8"]);
   });
 
   it("R277 marks an added phrase as one stretch, over its spaces and inner separators", () => {
@@ -117,7 +117,9 @@ describe("R277 the word diff", () => {
     // replacement. Meditative #89 Jlarna's Radiant face is the designer's: its base text less the
     // end-of-turn Tribute (R1225). So are #22.1 Fortify Mind's (no penalty when discarded, R862) and
     // #48 Tranquility's (it does not end the turn, R1021), and patch v0.3.10's Classic #29 Book of Vital
-    // Kill's (its Radiant face does not end the turn either).
+    // Kill's (its Radiant face does not end the turn either). Meditative+ #11 Living Mana Potion's is the
+    // designer's: its base text less the Tribute it activates with; its doubled stats carry its marks.
+    // So are #12 Living Armor Potion's and #13 Living Health Potion's: twelve silent faces in all.
     expect(silent).toEqual([
       "core-055",
       "classic-028",
@@ -128,6 +130,9 @@ describe("R277 the word diff", () => {
       "meditative-022-1",
       "meditative-048",
       "meditative-089",
+      "meditativeplus-011",
+      "meditativeplus-012",
+      "meditativeplus-013",
     ]);
   });
 });

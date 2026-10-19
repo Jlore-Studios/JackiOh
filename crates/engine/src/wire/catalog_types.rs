@@ -166,7 +166,9 @@ string_union! {
     /// Flagbearer), Prime (their Prime tokens, Classic+ #38.1 Solarius Prime and #46.1 Felinor
     /// Flagbearer Prime) and Acclaimed (Classic #80 BOOM! Big Max and Classic+ #37 Wardrum); the
     /// Meditative set adds Wincon (its #8 Reach the Summit and #20 Aestheticize the Game, which win the
-    /// game another way, R1420's set).
+    /// game another way, R1420's set); the Meditative+ set adds Potion (its #11, #12 and #13 Living
+    /// Potions and the potions its #16 Jazakus crafts, R1178000), which no rule reads and two pools
+    /// name (M+ #14, #15).
     pub enum Tag {
         Human = "Human",
         Felinor = "Felinor",
@@ -184,6 +186,7 @@ string_union! {
         Prime = "Prime",
         Acclaimed = "Acclaimed",
         Wincon = "Wincon",
+        Potion = "Potion",
         Token = "Token",
     }
 }
@@ -224,14 +227,15 @@ string_union! {
 }
 
 string_union! {
-    /// §5: Core, Classic and Classic+ ship (R380); Meditative is in the catalog and ships with the
-    /// last part of its patch (R1420); Boss and Boss-X are reserved. Custom is a custom card's
-    /// (§12.1, R915000): never in the catalog and never shipped, so no pool or random deck finds one.
+    /// §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15,
+    /// issue #1173, R1178000) ship; Boss and Boss-X are reserved. Custom is a custom card's (§12.1, R915000): never in the catalog and never
+    /// shipped, so no pool or random deck finds one.
     pub enum SetName {
         Core = "Core",
         Classic = "Classic",
         ClassicPlus = "Classic+",
         Meditative = "Meditative",
+        MeditativePlus = "Meditative+",
         Boss = "Boss",
         BossX = "Boss-X",
         Custom = "Custom",
@@ -241,20 +245,23 @@ string_union! {
 /// The sets that ship, in catalog order. A pool that names no set draws from all of them (R380),
 /// and only from them: a set the catalog holds that is not listed here is in no such pool, in no
 /// deck and on no list a player reads until it is (R1420).
-pub const SHIPPED_SETS: [SetName; 4] = [
+pub const SHIPPED_SETS: [SetName; 5] = [
     SetName::Core,
     SetName::Classic,
     SetName::ClassicPlus,
     SetName::Meditative,
+    SetName::MeditativePlus,
 ];
 
 /// Every set the catalog orders, shipped or not, in catalog order (B2.2): a set keeps its place
 /// when it ships, so a seeded pick over a pool replays the same before and after (R1420).
-pub const CATALOG_SETS: [SetName; 4] = [
+/// Meditative+ follows Meditative (issue #1173, R1178000).
+pub const CATALOG_SETS: [SetName; 5] = [
     SetName::Core,
     SetName::Classic,
     SetName::ClassicPlus,
     SetName::Meditative,
+    SetName::MeditativePlus,
 ];
 
 /// R1420: whether a set ships, i.e. whether `SHIPPED_SETS` lists it.
@@ -263,7 +270,8 @@ pub fn set_ships(set: SetName) -> bool {
 }
 
 /// R1371: the newest set that ships, the last entry of `SHIPPED_SETS` (catalog order): Classic+
-/// until the Meditative set ships, then whichever set ships after it. "More cards from the newest
+/// until the Meditative set shipped, Meditative until Meditative+ did, then whichever set ships
+/// after it. "More cards from the newest
 /// set" (R1372, R1373) leans a random deck on it, and every caller asks this function at deal time
 /// rather than naming a set. A set previewed under the testkit (R1420) is not shipped, so it is
 /// never the newest: a test that leans on one names it.

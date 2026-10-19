@@ -15,7 +15,7 @@ One note per top-level section, its subsections inside:
 - [[§5]] [05-card-types.md](05-card-types.md): card anatomy, the card types, Radiant, the catalog's data decisions.
 - [[§6]] [06-keywords.md](06-keywords.md): the keyword glossary: unit keywords, triggers and timing words, actions and verbs.
 - [[§7]] [07-tokens.md](07-tokens.md): the tokens.
-- [[§8]] [08-catalog.md](08-catalog.md): every card of Core, Classic, Classic+ and Meditative ([[R1420]]).
+- [[§8]] [08-catalog.md](08-catalog.md): every card of Core, Classic, Classic+, Meditative and Meditative+ ([[R1420]], [[R1178000]]).
 - [[§9]] [09-architecture.md](09-architecture.md): trust, topology, accounts and friends, matchmaking and Play together (challenges, watching a friend, shared replays, chat), abuse, the practice AI, the tutorial, card statistics, the ranked ladder.
 - [[§10]] [10-engine-guide.md](10-engine-guide.md): the engine: state, actions, events, layers, playing a card, prompts, randomness, the view, card scripts, the client's rendering and audio.
 - [[§11]] [11-rulings.md](11-rulings.md): where the rulings came from; the rulings themselves are the notes in [rulings/](rulings/).
@@ -54,4 +54,4 @@ When a decision the spec does not make is needed (CLAUDE.md rule 3), follow Hear
 3. Say in [11-rulings.md](11-rulings.md) where the ruling came from, and edit the sections it changes, linking it.
 4. Run `cargo jackioh spec index` to rewrite [INDEX.md](INDEX.md), then `cargo jackioh spec check`.
 
-`cargo jackioh spec check` fails when a note's `id` does not match its file name or repeats another's; when a `proven_in` path is missing or holds no test named after the ruling; when an `r<n>` test name or an `R<n>` cited anywhere in `crates/`, `apps/web/src/` or `e2e/` (comments included) has no note; when a `[[…]]` link resolves to no note or section; when a note's `title` or `cards` is missing or empty; and when [INDEX.md](INDEX.md) is not what `cargo jackioh spec index` writes from the notes. It reads ids, file names and test names, never the wording, so a reworded sentence fails nothing (#133).
+`cargo jackioh spec check` fails when a note's `id` does not match its file name or repeats another's; when a `proven_in` path is missing or holds no test named after the ruling; when an `r<n>` test name or an `R<n>` cited anywhere in `crates/`, `apps/web/src/` or `e2e/` (comments included) has no note; when a `[[…]]` link resolves to no note or section; when a note's `title` or `cards` is missing or empty; when [INDEX.md](INDEX.md) is not what `cargo jackioh spec index` writes from the notes; and when a code file in those three trees still says its ruling is to be written (`proposed ruling` or `no R-row yet`, in any case; #1243). It reads ids, file names and test names, and of the wording only those two phrases, so a reworded sentence fails nothing (#133).

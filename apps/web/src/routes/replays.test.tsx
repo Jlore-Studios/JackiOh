@@ -19,6 +19,9 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { consentTestid } from "../auth/testids.ts";
+import type { DuosReplaySteps } from "../duos/DuosReplay.tsx";
+import { duosReplayJson, duosReplayJsonFile } from "../duos/download.ts";
+import { duosTestid } from "../duos/testids.ts";
 import { ApiRequestError, getMe, getReplaySteps, getReplays, postConsent } from "../net/api.ts";
 import type { OnlineReplayListing } from "../net/api.ts";
 import { documentTitleFor, screenNameFor } from "../net/head.ts";
@@ -33,6 +36,7 @@ import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { REPLAY_JSON_MAX_BYTES, REPLAY_JSON_MAX_STEPS } from "../replay/config.ts";
 import { REPLAY_JSON_FORMAT, REPLAY_JSON_VERSION, practiceGame, replayJsonFile } from "../replay/download.ts";
 import type { ReplayJson } from "../replay/download.ts";
+import { duosView } from "../test/fixtures.ts";
 import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
 import { ReplaysRoute, replaysTestid } from "./replays.tsx";
 
@@ -450,6 +454,67 @@ describe("R1141000 Open replay JSON", () => {
     fireEvent.click(screen.getByTestId(replayTestid.back));
     await screen.findByTestId(replaysTestid.root);
     expect(screen.queryByTestId(replaysTestid.openFailed)).toBeNull();
+  });
+
+  const DUOS_STEPS: DuosReplaySteps = [duosView(0), duosView(1), duosView(1), duosView(2, { outcome: "win", winner: "b", reason: "concede" })];
+
+  it("R1242000 a co-op file opens on the co-op replay player, offers no download and makes no request", async () => {
+    const input = await openInput();
+    const fetching = vi.spyOn(globalThis, "fetch");
+    choose(input, duosReplayJsonFile(DUOS_STEPS));
+
+    const player = await screen.findByTestId(duosTestid.replay);
+    await waitFor(() => expect(player).toHaveAttribute("data-step", "0"));
+    expect(screen.queryByTestId(duosTestid.replayDownload)).toBeNull();
+
+    fireEvent.click(screen.getByTestId(replayTestid.forwardTurn));
+    await waitFor(() => expect(player).toHaveAttribute("data-step", "1"));
+    fireEvent.click(screen.getByTestId(replayTestid.end));
+    await waitFor(() => expect(player).toHaveAttribute("data-step", "3"));
+
+    expect(getReplays).not.toHaveBeenCalled();
+    expect(getReplaySteps).not.toHaveBeenCalled();
+    expect(fetching.mock.calls.map(([url]) => String(url)).filter((url) => url.includes("/api/"))).toEqual([]);
+    fetching.mockRestore();
+
+    fireEvent.click(screen.getByTestId(replayTestid.back));
+    expect(await screen.findByTestId(replaysTestid.root)).toBeInTheDocument();
+    expect(screen.queryByTestId(duosTestid.replay)).toBeNull();
+    expect(screen.getByTestId<HTMLInputElement>(replaysTestid.openFile).value).toBe("");
+  });
+
+  it("R1242000 malformed, wrong-version, wrong-catalog, oversized and over-step co-op files refuse before mounting", async () => {
+    const input = await openInput();
+    const base = duosReplayJson(DUOS_STEPS);
+    const file = (over: Record<string, unknown>): File =>
+      new File([JSON.stringify({ ...base, ...over })], "jackioh-duos-replay.json");
+    const refused: [File, string][] = [
+      [new File(["{ not json"], "jackioh-duos-replay.json"), "This file is not a JackiOh replay file."],
+      [file({ version: 2 }), "This replay file uses an unsupported format."],
+      [file({ catalogVersion: "v0.0.0" }), "This replay file is from another patch and cannot be opened here."],
+      [file({ seat: "p1" }), "This file is not a JackiOh replay file."],
+      [file({ steps: base.steps.filter((_, index) => index !== 1) }), "This file is not a JackiOh replay file."],
+      [
+        file({
+          steps: Array.from({ length: REPLAY_JSON_MAX_STEPS + 1 }, (_, step) => ({ step, round: 0, view: { seat: "a1", round: 0 } })),
+        }),
+        "This replay file is too big to open.",
+      ],
+      [
+        new File([`${JSON.stringify(base)}${" ".repeat(REPLAY_JSON_MAX_BYTES)}`], "jackioh-duos-replay.json"),
+        "This replay file is too big to open.",
+      ],
+    ];
+    for (const [bad, sentence] of refused) {
+      choose(input, bad);
+      await waitFor(() => expect(screen.getByTestId(replaysTestid.openFailed)).toHaveTextContent(sentence));
+      await waitFor(() => expect(input).toBeEnabled());
+      expect(screen.queryByTestId(duosTestid.replay)).toBeNull();
+      expect(screen.getByTestId(replaysTestid.root)).toBeInTheDocument();
+    }
+    // A good file after the refusals opens.
+    choose(input, duosReplayJsonFile(DUOS_STEPS));
+    expect(await screen.findByTestId(duosTestid.replay)).toBeInTheDocument();
   });
 
   it("R1141000 opening makes no API request and keeps nothing of the file in storage", async () => {

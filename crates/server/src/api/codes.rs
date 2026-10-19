@@ -30,13 +30,8 @@ use crate::db::store::{Db, InviteCode, Profile, ProfileStatus, RedeemInviteCodeI
 
 // Wording and defaults SPEC does not pin down
 
-// NOT IN SPEC, and no R-row yet — PROPOSED RULING for §11:
-//   Topic: How many accounts one invite code activates
-//   Ruling: An invite code is single-use unless its mint says otherwise. §9.4 gives a code a
-//     `uses` counter and an "exhausted" state but no default; a multi-use default would turn one
-//     leaked code into an open door, the failure §9.8's brute-force row is about. A larger
-//     `max_uses` stays available to whoever mints deliberately.
-//   Affects: §9.4, §9.8, R106, R107; migration `0001_profiles_and_invites.sql`.
+// R161: an invite code is single-use unless its mint says otherwise; a larger `max_uses` stays
+// available to whoever mints deliberately.
 //
 // Matches `invite_codes.max_uses int not null default 1` in migration 0001.
 pub const DEFAULT_INVITE_CODE_MAX_USES: i32 = 1;
@@ -218,7 +213,7 @@ pub struct RedeemInput<'a> {
     /// takes from the auth server's `email_confirmed_at`, never from a user-editable claim.
     ///
     /// Not in SPEC: `Profile` carries no verification flag and the authority is the auth provider.
-    /// How long a positive answer may be remembered is the proposed ruling in `auth.rs`.
+    /// How long a positive answer may be remembered is R159 (`EMAIL_CONFIRMED_CACHE_TTL_MS` in `auth.rs`).
     pub email_verified: bool,
     /// Omitted by a direct caller, in which case this redemption gets a breaker of its own.
     pub breaker: Option<&'a Mutex<BreakerState>>,

@@ -84,6 +84,7 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Targets chosen randomly",
     "Fatigue",
     "Attack summon",
+    "In N turns",
   ],
   "§6.3": [
     "Summon",
@@ -107,9 +108,11 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Immune to damage",
     "Lose all mana",
     "Extra turn",
+    "Autopilot",
     "Trigger End of turn effects",
     "Keep a secret",
     "Guess a secret",
+    "Answer questions in a row",
     "Alternative win condition",
     "Win the game",
     "Switch position",
@@ -121,6 +124,9 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Rotate",
     "Replace",
     "Craft",
+    // R1185002, R1185001: M+ #21's set and M+ #1.1's raised play count, plain as Hearthstone prints them.
+    "Set stats",
+    "Raise a play count",
   ],
 };
 
@@ -154,13 +160,14 @@ const STATUSES: readonly StatusTermId[] = [
   "Can't be attacked",
   "Only Units in this lane can attack this",
   "Berserk",
+  "Frozen",
   "Combat keyword",
 ];
 
 const VERBS_6_3: readonly VerbTermId[] = [
   "Discover",
   "Tribute",
-  "Embiggen",
+  "Embiggened",
   "Recruit",
   "Fuse",
   "Transform",
@@ -181,6 +188,7 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Trigger a Cry",
   "Look at a hand",
   "Allure",
+  "Freeze",
   "Jade Counter",
   "Exile",
   "Hand size",
@@ -615,7 +623,6 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       // R781005: the cards print it lower-case, in the singular and the plural.
       "Combat keyword": ["combat keywords", "combat keyword"],
       // R910000: the lower-case and inflected spellings the cards print mid-sentence.
-      Activate: ["activate"],
       Tribute: ["Tributes"],
       Fuse: ["fuse", "fused"],
       Transform: ["transform", "transforms"],
@@ -625,6 +632,8 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       Buff: ["Buffs"],
       Redirect: ["redirected"],
       Exile: ["exile", "exiles", "exiled"],
+      // R1174000: Freeze's spellings; Frozen is its own §6.1 status.
+      Freeze: ["freeze", "freezes"],
     };
     for (const [key, entry] of Object.entries(GLOSSARY)) {
       expect(entry.aliases, key).toEqual(printed[key as GlossaryTermId] ?? []);
@@ -693,6 +702,9 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
       ["End the turn", "classicplus-026", "base", "End the turn"],
       ["Trigger a Cry", "classic-054", "base", "Trigger a Cry"],
       ["Look at a hand", "classic-011", "base", "Look at your opponent's hand"],
+      // R1174000: M+ #24 Bob prints the verb on both faces; no card prints the status Frozen.
+      ["Freeze", "meditativeplus-024", "base", "Freeze"],
+      ["Freeze", "meditativeplus-024", "radiant", "Freeze"],
     ];
     for (const [term, id, face, spelling] of cases) {
       // As for any term, a number right after it is taken with it ("Nerf 4 random cards").
@@ -730,8 +742,11 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
   });
 
   it("R512 every new term has at least one catalog text that prints it", () => {
+    // R1174000: Frozen is a §6.1 status no card prints: M+ #24 Bob (#1185) prints the verb, Freeze
+    // ("Freeze all enemy Units"), and never the status, so it stays on this list until a card does.
+    const unprinted: readonly GlossaryTermId[] = ["Frozen"];
     const fresh: readonly GlossaryTermId[] = [
-      ...STATUSES,
+      ...STATUSES.filter((id) => !unprinted.includes(id)),
       "Activate",
       "Counter",
       "Steal",
@@ -748,6 +763,7 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
     ];
     const found = new Set(PLAYED_TEXTS.flatMap(({ text }) => termsIn(text)));
     for (const term of fresh) expect(found.has(term), term).toBe(true);
+    for (const term of unprinted) expect(found.has(term), `${term} is printed now: take it off the list`).toBe(false);
   });
 
   it("R512 tokens stay lossless over every text a player reads, numbers filled in", () => {
@@ -846,7 +862,6 @@ describe("R910000: a trigger or verb bolds wherever a card uses it, in every cas
       ["Nerf", "meditative-084", "base", "Nerfs"],
       ["Redirect", "meditative-092", "base", "redirected"],
       ["Bounce", "meditative-095", "base", "bounced"],
-      ["Activate", "meditative-054", "base", "activate"],
       ["Mark in a hand", "meditative-076", "base", "marked"],
     ];
     for (const [term, id, face, spelling] of cases) {
@@ -880,7 +895,7 @@ describe("R910000: a trigger or verb bolds wherever a card uses it, in every cas
   });
 
   it("R910000 every alias it adds and every plain spelling is one a card prints, and a plain spelling prints plain", () => {
-    const added = ["activate", "Tributes", "fuse", "fused", "transform", "transforms", "Locked", "steal", "bounced", "Nerfs", "Buffs", "redirected", "exile", "exiles", "exiled", "marked"];
+    const added = ["Tributes", "fuse", "fused", "transform", "transforms", "Locked", "steal", "bounced", "Nerfs", "Buffs", "redirected", "exile", "exiles", "exiled", "marked"];
     for (const spelling of [...added, ...PLAIN_SPELLINGS]) {
       expect(PLAYED_TEXTS.some(({ text }) => text.includes(spelling)), spelling).toBe(true);
     }
@@ -911,5 +926,16 @@ describe("R1045000: K-Pop Fanatic Allures the enemy permanent it chooses", () =>
     expect(GLOSSARY.Allure.rule).toContain("permanents");
     // Jade Beauty keeps Allure-ing Units only, as it prints.
     expect(played("meditative-039-5")).toContain("Allure every enemy Unit.");
+  });
+});
+
+describe("R1174000: Freeze and Frozen", () => {
+  it("R1174000 Freeze is a §6.3 verb that bolds as it is inflected, and Frozen a §6.1 status", () => {
+    expect(GLOSSARY.Freeze.section).toBe("§6.3");
+    expect(GLOSSARY.Frozen.section).toBe("§6.1");
+    expect(termsIn("Freeze every enemy Unit.")).toEqual(["Freeze"]);
+    expect(termsIn("Cry: freeze a Unit. It freezes, and a Frozen Unit thaws later.")).toEqual(["Cry", "Freeze", "Frozen"]);
+    // Matching is whole words and case-sensitive.
+    expect(termsIn("A freezer, frozen solid.")).toEqual([]);
   });
 });

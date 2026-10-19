@@ -94,6 +94,15 @@ mod r275_the_radiant_power_standard_spec_5_2 {
     }
 
     #[test]
+    fn r1149002_jlockeed_shredder_10_is_no_exception_since_issue_1219_its_radiant_12_20_doubles_its_6_10() {
+        let card = CATALOG.get("core-013").expect("Jlockeed Shredder-10");
+        // Issue #1219 raised the Radiant Attack from 8 to 12, so both halves double again.
+        assert_eq!((card.base.attack, card.radiant.attack), (Some(6), Some(12)));
+        assert_eq!((card.base.health, card.radiant.health), (Some(10), Some(20)));
+        assert!(!is_exception(&card.id));
+    }
+
+    #[test]
     fn r275_is_recorded_card_by_card_docs_radiant_audit_md_has_one_row_for_every_catalog_entry() {
         let missing: Vec<String> = entries()
             .into_iter()

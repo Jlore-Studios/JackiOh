@@ -1,8 +1,8 @@
 //! M #95 Call to Chaos (Meditative Edition) (SPEC §8.8 row 95, R28, R87, R423, R436, R1240–R1244). (4)
 //! Spell, Call to Chaos, Legendary.
 //!   Base:    "One random effect: Fuse your hand into one card and add 2 copies of it to your hand, all
-//!            three of which cost (0); add 3 random CN cards to your hand, which cost (0); add 2 random
-//!            Prime cards to your hand, which cost (0); your hero gains 8 Armor and you heal it 8; summon a
+//!            three of which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random
+//!            Prime cards to your hand, which cost (0); your hero gains 6 Armor and you heal it 6; summon a
 //!            Jade Beauty; summon 3 random Acclaimed cards; Bounce every enemy permanent, then Nerf each
 //!            card bounced; summon a CN Golem; for the rest of the game, at the start of each of your
 //!            turns, cast a random Call to Chaos; cast a random Call to Chaos."
@@ -59,13 +59,15 @@ mod tests {
     /// Meditative set shipping, this card (R1240, R1420).
     const EDITIONS: [&str; 3] = [CORE_CHAOS, PLUS_CHAOS, ID];
     /// The Prime tokens of the sets that ship (R1421): C+ #38.1, C+ #46.1, M #45.1, M #49.1 (patch
-    /// v0.3.10, #831) and M #91.1.
-    const PRIME_TOKENS: [&str; 5] = [
+    /// v0.3.10, #831), M #91.1 and M+ #16.1 Jazakus Prime. Re-pinned for v0.3.15 (Meditative+ ships,
+    /// #1187): M+ #16.1 joins the Prime pool.
+    const PRIME_TOKENS: [&str; 6] = [
         "classicplus-038-1",
         "classicplus-046-1",
         "meditative-045-1",
         "meditative-049-1",
         "meditative-091-1",
+        "meditativeplus-016-1",
     ];
     const JADE_BEAUTY: &str = "meditative-039-5";
     const GOLEM: &str = "meditative-095-1";

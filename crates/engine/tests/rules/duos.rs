@@ -818,6 +818,17 @@ mod b1_two_ordinary_duels {
     }
 
     #[test]
+    fn r1156000_every_seat_of_both_teams_opens_on_four_cards() {
+        setup();
+        let state = duos_begin(&duos_create(&options("r1156000"))).state;
+        for seat in DUOS_SEATS {
+            let own = side(&state, seat);
+            assert_eq!(own.hand.len(), 4, "{seat}");
+            assert_eq!(own.library.len() as i32, DECK_SIZE - 4, "{seat}");
+        }
+    }
+
+    #[test]
     fn b1_the_four_seats_map_onto_the_two_duels() {
         assert_eq!(DUOS_SEATS, [A1, A2, B1, B2]);
         for (seat, team, duel_index, player, teammate, across) in [

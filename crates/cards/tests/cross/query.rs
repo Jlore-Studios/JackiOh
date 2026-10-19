@@ -5,7 +5,8 @@
 //! catalog drifts, the failure names the exact card that appeared or vanished. An index repeats across
 //! sets since patch v0.2.0 ("43" is a Core, a Classic and a Classic+ card, B2.2), so pools are named by
 //! id; and a pool that names no set draws from every set that ships (R380, R1420, B2.6), in catalog
-//! order: Core, then Classic, then Classic+, then Meditative (since v0.3.5), each by §5 index. Each
+//! order: Core, then Classic, then Classic+, then Meditative (since v0.3.5), then Meditative+ (since
+//! v0.3.15), each by §5 index. Each
 //! pool test also states, in words and in code, the argument object the card script must pass — that
 //! is the part the card files are going to copy.
 //!
@@ -249,7 +250,8 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
             .contains(&"core-096".to_string())
         );
         // The (1) Cost KY cards but #31: Meditative #45 Knowledge Breaker and #87 Tatches the Totem
-        // (§8.8) are (1) KY cards too since the set ships (R1420).
+        // (§8.8) are (1) KY cards too since the set ships (R1420). Re-pinned for v0.3.15 (Meditative+
+        // ships, #1187): M+ #25 KY's Intuition (§8.9) is a (1) KY card too.
         assert_eq!(
             ids(query(&q(
                 json!({ "cost": 1, "tags": ["KY"], "excludeDefId": "core-031" })
@@ -262,6 +264,7 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
                 "classicplus-062",
                 "meditative-045",
                 "meditative-087",
+                "meditativeplus-025",
             ])
         );
     }
@@ -347,7 +350,7 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
     }
 }
 
-mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_and_meditative_34_38_45_79_87_build_m4_t4_row_57_b2_6 {
+mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_meditative_34_38_45_79_87_and_meditative_plus_20_25_build_m4_t4_row_57_b2_6 {
     use super::*;
 
     // THE ARGUMENTS A CARD SCRIPT PASSES:
@@ -355,11 +358,13 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_and_meditative
     //   or, equivalently and harder to get wrong,
     //     catalog::pool("core-057", &q(json!({ "tags": ["KY"] })))
     // Nothing else is needed: tokens are excluded by default (§5.1), which is what keeps #51.1 KY's
-    // Empty Notebook, Classic+ #42.1 KY's Gift and Meditative #45.1 Knowledge Breaker Prime — tokens
-    // that carry the KY tag — out of the pool; and a pool that names no set reaches every set that
-    // ships (R380, R1420), so the Classic+ KY cards join it, and since the release (v0.3.5) §8.8's KY
-    // cards: #34 高考, #38 H1B Printer, #45 Knowledge Breaker, #79 Touched by KY and #87 Tatches the
-    // Totem (every tribe).
+    // Empty Notebook, Classic+ #42.1 KY's Gift, Meditative #45.1 Knowledge Breaker Prime and
+    // Meditative+ #20.1 Lil' Kenny — tokens that carry the KY tag — out of the pool; and a pool that
+    // names no set reaches every set that ships (R380, R1420), so the Classic+ KY cards join it, and
+    // since the release (v0.3.5) §8.8's KY cards: #34 高考, #38 H1B Printer, #45 Knowledge Breaker,
+    // #79 Touched by KY and #87 Tatches the Totem (every tribe). Re-pinned for v0.3.15 (Meditative+
+    // ships, #1187): §8.9's two KY cards join it, M+ #20 KY's Competition and #25 KY's Intuition, so
+    // the pool is thirteen.
     const KY_POOL: &[&str] = &[
         "core-031",
         "core-051",
@@ -372,10 +377,12 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_and_meditative
         "meditative-045",
         "meditative-079",
         "meditative-087",
+        "meditativeplus-020",
+        "meditativeplus-025",
     ];
 
     #[test]
-    fn build_row_57_the_query_a_card_script_writes_returns_exactly_those_eleven_defs() {
+    fn build_row_57_the_query_a_card_script_writes_returns_exactly_those_thirteen_defs() {
         register();
         assert_eq!(
             ids(catalog.query(&q(json!({ "tags": ["KY"], "excludeDefId": "core-057" })))),
@@ -411,6 +418,8 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_and_meditative
                 "Knowledge Breaker",
                 "Touched by KY",
                 "Tatches the Totem",
+                "KY's Competition",
+                "KY's Intuition",
             ])
         );
         assert!(card_def_by_index(SetName::Core, "51.1").tags.contains(&Tag::Ky)); // it really is in the tag …
@@ -422,10 +431,13 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_and_meditative
         );
         let prime = card_def_by_index(SetName::Meditative, "45.1");
         assert!(prime.tags.contains(&Tag::Ky) && prime.token);
+        let kenny = card_def_by_index(SetName::MeditativePlus, "20.1");
+        assert!(kenny.tags.contains(&Tag::Ky) && kenny.token);
         let pool_ids = ids(catalog.pool("core-057", &q(json!({ "tags": ["KY"] }))));
         assert!(!pool_ids.contains(&"core-051-1".to_string()));
         assert!(!pool_ids.contains(&"classicplus-042-1".to_string()));
         assert!(!pool_ids.contains(&"meditative-045-1".to_string()));
+        assert!(!pool_ids.contains(&"meditativeplus-020-1".to_string()));
         assert!(!pool_ids.contains(&"core-057".to_string()));
     }
 }
@@ -550,8 +562,10 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
     // R35: "Pool: the Legendary-rarity cards except #83", which since patch v0.2.0 reaches every set,
     // and since v0.3.5 the Meditative set's sixteen Legendaries (§8.8: #7, #11, #26, #40, #42, #45,
     // #47, #51, #63, #65, #75, #79, #80, #86, #87 and #95; #45.1 and the other Legendary-printed
-    // tokens are tokens, R1420). For replacing a card on the board, the script narrows the same pool
-    // by type and asks for TRAP_TYPES when the board card is a trap ("Field Trap counts as Trap").
+    // tokens are tokens, R1420). Re-pinned for v0.3.15 (Meditative+ ships, #1187): the set's one
+    // Legendary, M+ #24 Bob, Wisconsin's Strongest Soldier (§8.9), joins it. For replacing a card on
+    // the board, the script narrows the same pool by type and asks for TRAP_TYPES when the board card
+    // is a trap ("Field Trap counts as Trap").
     const R35_POOL: &[&str] = &[
         "core-052",
         "core-085",
@@ -598,6 +612,7 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
         "meditative-086",
         "meditative-087",
         "meditative-095",
+        "meditativeplus-024",
     ];
 
     #[test]
@@ -652,16 +667,15 @@ mod r65_pools_and_filters_read_a_definition_s_cost_out_of_play {
     fn r65_an_x_cost_card_s_query_cost_is_0_and_it_answers_a_cost_0_query() {
         register();
         // Core #24 Efficiency Dividend, #74 Adaptive UI, Classic #87 Plague Chalice, Classic+ #40
-        // Appropriations and #69 Buff Billy, and since the release Meditative #37 CN in a bottle and
-        // #43 CN Jade Market (§8.8), are the X-cost cards of the sets that ship (#98 Heroic Power
-        // costs (0) since R752).
+        // Appropriations and #69 Buff Billy, and since the release Meditative #43 CN Jade Market
+        // (§8.8), are the X-cost cards of the sets that ship (#98 Heroic Power costs (0) since R752,
+        // Meditative #37 CN in a Bottle (1) since R1149001).
         let x_cards = strings(&[
             "core-024",
             "core-074",
             "classic-087",
             "classicplus-040",
             "classicplus-069",
-            "meditative-037",
             "meditative-043",
         ]);
         assert_eq!(
@@ -727,16 +741,20 @@ mod s9_3_r60_pool_order_is_deterministic_so_a_seeded_pick_replays {
     }
 
     #[test]
-    fn r60_a_multi_result_pool_comes_back_in_catalog_order_set_core_classic_classic_plus_then_5_index_ascending()
+    fn r60_a_multi_result_pool_comes_back_in_catalog_order_set_core_classic_classic_plus_meditative_meditative_plus_then_5_index_ascending()
      {
         register();
         let units = query(&q(json!({ "type": "Unit" })));
+        // Re-pinned for v0.3.15 (Meditative+ ships, #1187): its Units follow Meditative's, so the set
+        // ranks name it after Meditative rather than ranking every set after Classic+ alike.
         let set_rank = |set: SetName| -> f64 {
             match set {
                 SetName::Core => 0.0,
                 SetName::Classic => 1.0,
                 SetName::ClassicPlus => 2.0,
-                _ => 3.0,
+                SetName::Meditative => 3.0,
+                SetName::MeditativePlus => 4.0,
+                _ => 5.0,
             }
         };
         let keys: Vec<(f64, f64)> = units
@@ -999,6 +1017,46 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
                 "withTokens": true,
             })))),
             expected
+        );
+    }
+}
+
+mod r1178001_the_embiggen_pool_meditative_plus_23_enormous_elderberry {
+    use super::*;
+    use jackioh_cards::query::embiggen_cards;
+    use jackioh_engine::{is_embiggen_card, set_ships};
+
+    #[test]
+    fn r1178001_the_embiggen_pool_is_the_eight_shipped_cards_with_two_prices() {
+        register();
+        // The query a card script writes, which names no set (R1420): Core #46 Suppressive Aura, #56
+        // Jilliax, #59 Unbiased Immigration and #84 Going Long, C+ #36 Conjure Bones, Meditative #21
+        // API Key Fishing, #46 Conjure Intellect and #81 Deadman's Hand. The Meditative+ set's own
+        // (#3, #4, #5, #19, #23) join when it ships.
+        assert_eq!(embiggen_cards(), q(json!({ "embiggen": true })));
+        let shipped = strings(&[
+            "core-046",
+            "core-056",
+            "core-059",
+            "core-084",
+            "classicplus-036",
+            "meditative-021",
+            "meditative-046",
+            "meditative-081",
+        ]);
+        if !set_ships(SetName::MeditativePlus) {
+            assert_eq!(ids(query(&embiggen_cards())), shipped);
+        }
+        let expected: Vec<String> = ids(CATALOG
+            .values()
+            .filter(|def| set_is_open(def.set) && !def.token && is_embiggen_card(def)));
+        assert_eq!(sorted(ids(query(&embiggen_cards()))), sorted(expected));
+        // `false` is every other card of the shipped sets.
+        let others = query(&q(json!({ "embiggen": false })));
+        assert!(others.iter().all(|def| !is_embiggen_card(def)));
+        assert_eq!(
+            others.len() + query(&embiggen_cards()).len(),
+            query(&q(json!({}))).len()
         );
     }
 }

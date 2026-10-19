@@ -10,13 +10,13 @@
 // Plus: the other seat sees "waiting for choice" and no options at all, a disabled confirm fires
 // nothing, and `min`/`max` gate the confirm for `tribute` and `mulligan`.
 
-import type { ActionBody, CraftRecipe, PlayerView } from "@jackioh/shared";
+import type { ActionBody, CraftRecipe, PendingOption, PlayerView } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import Prompt from "./Prompt.tsx";
 import { IDLE, type Interaction } from "./actions.ts";
-import { X_CARD_LIMIT, testid } from "./contract.ts";
+import { DISCOVER_OPTION_LIMIT, X_CARD_LIMIT, testid } from "./contract.ts";
 import { baseView, card, emptySide, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
 
 afterEach(cleanup);
@@ -300,7 +300,7 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     expect(onAction).toHaveBeenCalledWith({ type: "play", instanceId: "h3", modes: ["board"] });
   });
 
-  it("#24 Efficiency Dividend's options say X+1, 4X and X on its base face and 2X+1, 8X and X+1 on its Radiant face (§8 #24)", () => {
+  it("#24 Efficiency Dividend's options say X, 4X and X on its base face and 2X, 8X and X+1 on its Radiant face (§8 #24)", () => {
     const modes = ["damage", "heal", "mana"];
     const pickerFor = (radiant: boolean): void => {
       const view = viewWith({
@@ -314,13 +314,13 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     };
 
     pickerFor(false);
-    expect(screen.getByTestId("prompt-option-damage")).toHaveTextContent("Deal X plus 1 damage.");
+    expect(screen.getByTestId("prompt-option-damage")).toHaveTextContent("Deal X damage.");
     expect(screen.getByTestId("prompt-option-heal")).toHaveTextContent("Heal a target by four times X.");
     expect(screen.getByTestId("prompt-option-mana")).toHaveTextContent("Gain X mana next turn.");
     cleanup();
 
     pickerFor(true);
-    expect(screen.getByTestId("prompt-option-damage")).toHaveTextContent("Deal twice X plus 1 damage.");
+    expect(screen.getByTestId("prompt-option-damage")).toHaveTextContent("Deal twice X damage.");
     expect(screen.getByTestId("prompt-option-heal")).toHaveTextContent("Heal a target by eight times X.");
     expect(screen.getByTestId("prompt-option-mana")).toHaveTextContent("Gain X plus 1 mana next turn.");
   });
@@ -421,6 +421,25 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
       zone: { row: "units", lane: 1 },
       embiggen: true,
     });
+  });
+
+  it("R1175000 the price picker asks for the normal or the Embiggened version, its two cards captioned Normal and Embiggened", () => {
+    render(
+      <Prompt
+        view={viewWith()}
+        interaction={playing([
+          { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, embiggen: false },
+          { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, embiggen: true },
+        ])}
+        onAction={vi.fn()}
+      />,
+    );
+
+    const title = document.querySelector(".prompt-title-ask") ?? document.querySelector(".prompt-title");
+    expect(title).toHaveTextContent("Play the normal or the Embiggened version?");
+    expect(screen.getByTestId("prompt-modal")).not.toHaveTextContent(/embiggen price/i);
+    expect(screen.getByTestId("prompt-option-false")).toHaveTextContent("Normal");
+    expect(screen.getByTestId("prompt-option-true")).toHaveTextContent("Embiggened");
   });
 
   it("R1086 the picker sends the choice", () => {
@@ -585,6 +604,67 @@ describe("the R81 kinds render the same picker when the engine does open them as
       type: "answer",
       choiceId: "ch1",
       selection: [{ pick: "craft", recipe: { ...recipe } }],
+    });
+  });
+
+  it("R1182002 a from-scratch craft prompt opens the editor on an empty canvas with no suggestions", () => {
+    const onAction = vi.fn();
+    const preset: CraftRecipe = {
+      cost: 2,
+      type: "Unit",
+      adjective: "Pure",
+      noun: "Closure",
+      attack: 5,
+      health: 6,
+      keywords: [],
+      echo: 0,
+      hats: [],
+    };
+    const view = viewWith({
+      pending: pendingFor("craft", [{ key: "craft:#digest", label: "Pure Closure", recipe: preset }], {
+        budget: 2,
+        craftMode: "scratch",
+      }),
+    });
+
+    render(<Prompt view={view} onAction={onAction} />);
+
+    expect(kindOfModal()).toBe("craft");
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-craft-mode", "scratch");
+    expect(screen.queryByTestId("craft-preset-0")).toBeNull();
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("0/12 pts");
+  });
+
+  it("R1182000 a potion craft prompt opens the editor in the potion frame", () => {
+    const onAction = vi.fn();
+    const potion: CraftRecipe = {
+      cost: 1,
+      type: "Unit",
+      adjective: "Pure",
+      noun: "Closure",
+      attack: 2,
+      health: 2,
+      keywords: [],
+      echo: 0,
+      hats: [{ hat: "activate", effects: [{ verb: "damageEnemyHero", n: 4 }] }],
+      frame: "potion",
+    };
+    const view = viewWith({
+      pending: pendingFor("craft", [{ key: "craft:#potion", label: "Pure Closure Potion", recipe: potion }], {
+        budget: 1,
+        craftMode: "potion",
+      }),
+    });
+
+    render(<Prompt view={view} onAction={onAction} />);
+
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-craft-mode", "potion");
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("7/7 pts");
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+    expect(onAction).toHaveBeenCalledWith({
+      type: "answer",
+      choiceId: "ch1",
+      selection: [{ pick: "craft", recipe: potion }],
     });
   });
 
@@ -828,5 +908,246 @@ describe("R1044 the face-down picker asks how to play it", () => {
 
     expect(onAction).toHaveBeenCalledWith(cloaked);
     expect(onInteraction).toHaveBeenCalledWith(IDLE);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// #1204: a card picker folds away to show the board and comes back with its pick kept.
+// ---------------------------------------------------------------------------------------------
+
+describe("#1204 View the board folds a card picker to a bar", () => {
+  const DISCOVER_OPTIONS: PendingOption[] = [
+    { key: "mode:core-043", label: "Flood", defId: "core-043" },
+    { key: "mode:core-055", label: "Archivist", defId: "core-055" },
+    { key: "mode:core-066", label: "Lava Golem", defId: "core-066" },
+  ];
+  const HAND_OPTIONS: PendingOption[] = [
+    { key: "instance:h1", label: "One", instanceId: "h1" },
+    { key: "instance:h2", label: "Two", instanceId: "h2" },
+  ];
+  const MULLIGAN_OPTIONS: PendingOption[] = [
+    { key: "h1", label: "One", instanceId: "h1" },
+    { key: "h2", label: "Two", instanceId: "h2" },
+  ];
+  const EMBIGGEN: ActionBody[] = [
+    { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, embiggen: false },
+    { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, embiggen: true },
+  ];
+  const peek = (): HTMLElement => screen.getByTestId("prompt-peek");
+
+  it("#1204 every card picker offers View the board, and no board picker does", () => {
+    const xValues = (values: number[]): ActionBody[] =>
+      values.map((x): ActionBody => ({ type: "play", instanceId: "h2", x }));
+    const rows: [string, PlayerView, Interaction | undefined, boolean][] = [
+      ["discover", viewWith({ pending: pendingFor("discover", DISCOVER_OPTIONS) }), undefined, true],
+      ["hand", viewWith({ pending: pendingFor("hand", HAND_OPTIONS) }), undefined, true],
+      ["pick", viewWith({ pending: pendingFor("pick", HAND_OPTIONS, { min: 1, max: 2 }) }), undefined, true],
+      ["mulligan", viewWith({ pending: pendingFor("mulligan", MULLIGAN_OPTIONS, { min: 0, max: 2 }) }), undefined, true],
+      ["embiggen", viewWith(), playing(EMBIGGEN), true],
+      ["x", viewWith(), playing(xValues([1, 2, 3]), "h2"), true],
+      [
+        "target",
+        viewWith({
+          pending: pendingFor("target", [
+            { key: "instance:e1", label: "Enemy unit", instanceId: "e1" },
+            { key: "hero:p2", label: "Enemy hero", player: "p2" },
+          ]),
+        }),
+        undefined,
+        false,
+      ],
+      [
+        "zone",
+        viewWith(),
+        playing([
+          { type: "play", instanceId: "h1", zone: { row: "units", lane: 3 } },
+          { type: "play", instanceId: "h1", zone: { row: "units", lane: 5 } },
+        ]),
+        false,
+      ],
+      [
+        "tribute",
+        viewWith(),
+        playing([
+          { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, tributes: ["u1", "u2"] },
+          { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, tributes: ["u1", "e1"] },
+        ]),
+        false,
+      ],
+      [
+        "direction",
+        viewWith(),
+        playing([
+          { type: "play", instanceId: "h1", zone: { row: "units", lane: 2 }, modes: ["left"] },
+          { type: "play", instanceId: "h1", zone: { row: "units", lane: 2 }, modes: ["right"] },
+        ]),
+        false,
+      ],
+      [
+        "mode",
+        viewWith({
+          pending: pendingFor(
+            "mode",
+            Array.from({ length: DISCOVER_OPTION_LIMIT + 1 }, (_, at) => ({
+              key: `mode:m${String(at)}`,
+              label: `Mode ${String(at)}`,
+            })),
+          ),
+        }),
+        undefined,
+        false,
+      ],
+      [
+        "number",
+        viewWith({
+          pending: pendingFor(
+            "number",
+            ["0", "1", "2"].map((n) => ({ key: `mode:${n}`, label: n })),
+          ),
+        }),
+        undefined,
+        false,
+      ],
+      [
+        "cell",
+        viewWith({
+          pending: pendingFor("cell", [
+            { key: "zone:p2:units:2", label: "p2 units 2", player: "p2", row: "units", lane: 2 },
+            { key: "none", label: "Done" },
+          ]),
+        }),
+        undefined,
+        false,
+      ],
+      ["x", viewWith(), playing(xValues(Array.from({ length: X_CARD_LIMIT + 1 }, (_, x) => x)), "h2"), false],
+    ];
+
+    for (const [kind, view, interaction, offered] of rows) {
+      render(<Prompt view={view} interaction={interaction} onAction={vi.fn()} />);
+      expect(kindOfModal(), kind).toBe(kind);
+      expect(screen.queryByTestId("prompt-peek") !== null, kind).toBe(offered);
+      cleanup();
+    }
+  });
+
+  it("#1204 View the board folds the picker to its title and a way back, and the way back restores it", () => {
+    render(<Prompt view={viewWith({ pending: pendingFor("discover", DISCOVER_OPTIONS) })} onAction={vi.fn()} />);
+    const modal = screen.getByTestId("prompt-modal");
+    const scrim = screen.getByTestId("prompt-scrim");
+
+    expect(peek()).toHaveAttribute("aria-pressed", "false");
+    expect(peek()).toHaveTextContent("View the board");
+    expect(modal).not.toHaveAttribute("data-collapsed");
+
+    fireEvent.click(peek());
+
+    expect(modal).toHaveAttribute("data-collapsed", "true");
+    expect(scrim).toHaveAttribute("data-collapsed", "true");
+    expect(modal).toHaveAttribute("aria-modal", "false");
+    expect(modal.querySelector(".prompt-title")).toHaveTextContent("Choose (discover)");
+    expect(optionTestids()).toEqual([]);
+    expect(screen.getAllByRole("button").map((button) => button.getAttribute("data-testid"))).toEqual(["prompt-peek"]);
+    expect(peek()).toHaveAttribute("aria-pressed", "true");
+    expect(peek()).toHaveTextContent("Back to the choice");
+
+    fireEvent.click(peek());
+
+    expect(modal).not.toHaveAttribute("data-collapsed");
+    expect(scrim).not.toHaveAttribute("data-collapsed");
+    expect(modal).toHaveAttribute("aria-modal", "true");
+    expect(optionTestids()).toHaveLength(3);
+    expect(screen.getByTestId("prompt-submit")).toBeInTheDocument();
+    expect(peek()).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("#1204 a choice made before the fold is still made after it, and Confirm sends the same answer", () => {
+    const view = viewWith({ pending: pendingFor("pick", HAND_OPTIONS, { min: 1, max: 2 }) });
+
+    const plain = vi.fn();
+    render(<Prompt view={view} onAction={plain} />);
+    fireEvent.click(screen.getByTestId("prompt-option-instance:h2"));
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+    cleanup();
+
+    const folded = vi.fn();
+    render(<Prompt view={view} onAction={folded} />);
+    fireEvent.click(screen.getByTestId("prompt-option-instance:h2"));
+    fireEvent.click(peek());
+    fireEvent.click(peek());
+    expect(screen.getByTestId("prompt-option-instance:h2")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("prompt-option-instance:h1")).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+
+    expect(folded.mock.calls).toEqual(plain.mock.calls);
+    expect(folded).toHaveBeenCalledTimes(1);
+    expect(folded).toHaveBeenCalledWith({
+      type: "answer",
+      choiceId: "ch1",
+      selection: [{ pick: "instance", instanceId: "h2" }],
+    });
+    cleanup();
+
+    const onAction = vi.fn();
+    render(
+      <Prompt
+        view={viewWith({ pending: pendingFor("mulligan", MULLIGAN_OPTIONS, { min: 0, max: 2 }) })}
+        onAction={onAction}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("prompt-option-h2"));
+    fireEvent.click(peek());
+    fireEvent.click(peek());
+    expect(screen.getByTestId("prompt-option-h2")).toHaveAttribute("data-verdict", "redraw");
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+
+    expect(onAction).toHaveBeenCalledWith({ type: "mulligan", keep: ["h1"] });
+  });
+
+  it("#1204 folding and unfolding send nothing", () => {
+    const onAction = vi.fn();
+    const onInteraction = vi.fn();
+    const onCancel = vi.fn();
+
+    render(
+      <Prompt
+        view={viewWith()}
+        interaction={playing(EMBIGGEN)}
+        onAction={onAction}
+        onInteraction={onInteraction}
+        onCancel={onCancel}
+      />,
+    );
+
+    fireEvent.click(peek());
+    expect(screen.queryByTestId("prompt-cancel")).toBeNull();
+    fireEvent.click(peek());
+    expect(screen.getByTestId("prompt-cancel")).toBeInTheDocument();
+
+    expect(onAction).not.toHaveBeenCalled();
+    expect(onInteraction).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("#1204 the same prompt stays folded across a new view, and a new prompt opens unfolded", () => {
+    const onAction = vi.fn();
+    const { rerender } = render(
+      <Prompt view={viewWith({ pending: pendingFor("discover", DISCOVER_OPTIONS) })} onAction={onAction} />,
+    );
+    fireEvent.click(peek());
+
+    rerender(<Prompt view={viewWith({ pending: pendingFor("discover", DISCOVER_OPTIONS) })} onAction={onAction} />);
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-collapsed", "true");
+
+    rerender(
+      <Prompt
+        view={viewWith({ pending: pendingFor("discover", DISCOVER_OPTIONS, { choiceId: "ch2" }) })}
+        onAction={onAction}
+      />,
+    );
+    expect(screen.getByTestId("prompt-modal")).not.toHaveAttribute("data-collapsed");
+    expect(screen.getByTestId("prompt-scrim")).not.toHaveAttribute("data-collapsed");
+    expect(optionTestids()).toHaveLength(3);
+    expect(peek()).toHaveAttribute("aria-pressed", "false");
+    expect(onAction).not.toHaveBeenCalled();
   });
 });

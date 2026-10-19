@@ -113,6 +113,12 @@ pub struct AiGate {
     pub calibration_games: i32,
     /// The yardstick's time on the development machine, alone (the median of 25 runs, 2026-09-23).
     pub calibration_ref_ms: f64,
+    /// #1240: the most one decision at AI_BUDGET on each pinned position
+    /// (`tests/fixtures/pinned-improve-dev-*.json`) may take on the development machine, as the perf
+    /// gate times it; kept under `max_decision_ms`. Before #1240 charged the work they do
+    /// (`surcharge_nodes`), improve-dev:154's took about 1.1 s and improve-dev:200's about 20 s; after
+    /// it, the gate timed them at 276 and 570 ms.
+    pub pinned_decision_ms: f64,
 }
 
 pub const AI_GATE: AiGate = AiGate {
@@ -140,6 +146,7 @@ pub const AI_GATE: AiGate = AiGate {
     perf_repeats: 3,
     calibration_games: 2,
     calibration_ref_ms: 72.0,
+    pinned_decision_ms: 1000.0,
 };
 
 /// The series tuning runs play, so no tuned seed is a gate seed.

@@ -27,16 +27,18 @@
 //! and a clock alarm can never interleave two `reduce` calls or two log appends. In Rust the queue
 //! is one tokio task per match draining an mpsc inbox, one task at a time (each run as its own
 //! spawned task, so a task that panics is logged as `match.task.threw` and the queue goes on, as
-//! TS's `fireAndForget` caught a throw). What TS ran synchronously outside the queue (taking a
+//! TS's `fireAndForget` caught a throw). A `reduce` that panics is caught in `apply_action` and never
+//! kills its task (R1253000). What TS ran synchronously outside the queue (taking a
 //! socket, parsing a frame, relaying an emote or an aim, a socket going away) runs synchronously
 //! here too, on the caller's thread, under the actor's lock — which is never held across an
 //! `.await` and never while a socket is closed (a close calls back into the actor).
 
 use std::collections::VecDeque;
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 use std::time::Duration;
 
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use tokio::sync::{mpsc, oneshot};
 
 use jackioh_engine::{
@@ -45,6 +47,7 @@ use jackioh_engine::{
     hand_holds, portrait_or_default,
 };
 
+use crate::actor::checkpoint::{CheckpointBody, checkpoint_row};
 use crate::actor::clock::{Timer, after, create_match_clock};
 use crate::actor::contracts::{
     ActorDeps, ClockExpiry, ClockView, CreateMatchClockInput, ExpiryHandler, MatchClock, RecordResultInput,
@@ -57,6 +60,7 @@ use crate::actor::protocol::{
     ack_message, aim_relay_message, clock_message, emote_relay_message, encode, error_message,
     parse_client_message, portraits_message, prompt_for_opponent, prompt_for_you, view_message,
 };
+use crate::actor::registry::panic_text;
 use crate::actor::telemetry::{self, Recorder};
 use crate::actor::ws_server::Socket;
 use crate::api::rematch::{RematchStakes, STAKE_NORMAL, offer_for_bot};
@@ -64,12 +68,16 @@ use crate::app::now_ms;
 use crate::bots::persona::{AiEmote, EmotePersona};
 use crate::bots::seat::{self, BotJob, BotMove, fallback_action, never_played};
 use crate::bots::signals::{RematchPlan, aim_lead_ms, idles_turn, rematch_plan};
+use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::config::{
     AI_EMOTE, AIM_RELAY_INTERVAL_MS, BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_REMATCH_FIT,
-    BOT_STRENGTHS, BOT_TIMEOUT_FIT, BOT_WRITE_RETRY_MS, MATCH_RECORD_RESULT_ATTEMPTS,
-    MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_SERVER_ACTION_RETRY_MS, MATCH_VOIDED_CLOSE_CODE,
+    BOT_STRENGTHS, BOT_TIMEOUT_FIT, BOT_WRITE_RETRY_MS, MATCH_CHECKPOINT_MIN_ACTIONS,
+    MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_SERVER_ACTION_RETRY_MS,
+    MATCH_VOIDED_CLOSE_CODE,
 };
-use crate::db::store::{BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, StoreError};
+use crate::db::store::{
+    BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, PlayTelemetry, StoreError,
+};
 use crate::ranked::ladder::RankTier;
 
 const PLAYERS: [PlayerId; 2] = PLAYER_IDS;
@@ -135,7 +143,7 @@ pub fn bot_moved_turns(
     dealt: Option<Vec<PlayerId>>,
 ) -> PerPlayer<Option<i32>> {
     let (last_boards, glitch_boards) = last_boards_of(match_row);
-    let mut state = engine::fold(
+    let state = engine::fold(
         pinned,
         &engine::fold_args(
             &match_row.seed,
@@ -147,8 +155,18 @@ pub fn bot_moved_turns(
         ),
     )
     .state;
+    bot_moved_turns_from(pinned, state, log, PerPlayer::new(None, None))
+}
+
+/// `bot_moved_turns` carried on from `moved` as it stood on `state`, over the rows after it: how a
+/// rebuild resumes a checkpoint's bot turns (#1169).
+pub fn bot_moved_turns_from(
+    pinned: Pinned,
+    mut state: EngineState,
+    log: &[MatchActionRow],
+    mut moved: PerPlayer<Option<i32>>,
+) -> PerPlayer<Option<i32>> {
     let bot_nonce = format!("{SERVER_NONCE_PREFIX}bot-");
-    let mut moved = PerPlayer::new(None, None);
     for row in log {
         let result = engine::reduce(pinned, &state, &row.action);
         if result.error.is_some() {
@@ -205,6 +223,8 @@ enum Task {
     },
     /// TS `idle()`: answered once every task queued before it has run.
     Idle(oneshot::Sender<()>),
+    /// #1169: the restart drain's checkpoint, answered once it is written or passed over.
+    Checkpoint(oneshot::Sender<()>),
     /// R1452: the move a bot home's `seat::play` came back with, decided on the state as it stood
     /// when the log's next seq was `version`, in turn `turn`.
     BotMove {
@@ -227,6 +247,7 @@ impl Task {
             Task::Disconnect { .. } => "disconnect".to_string(),
             Task::Attach { .. } => "attach".to_string(),
             Task::Idle(_) => "idle".to_string(),
+            Task::Checkpoint(_) => "checkpoint".to_string(),
             Task::BotMove { .. } => "bot-move".to_string(),
         }
     }
@@ -264,6 +285,10 @@ struct Core {
     /// it already answered with. Rebuilt from the log, so a client that reconnects and retries an
     /// action from before the crash still gets its original ack.
     acks: IndexMap<String, ServerMessage>,
+    /// R1253000: the nonces of actions whose `reduce` panicked: never logged, so a rebuild starts empty;
+    /// a resend gets `panicked_answer` again with no second reduce. Not `acks`: `write_checkpoint`
+    /// reads `acks.last()` as the newest row's nonce.
+    panicked: IndexSet<String>,
     /// Keyed by the seat each account BEGAN in (`home`).
     sockets: PerPlayer<Option<Socket>>,
     /// R744: which accounts (keyed by home, like `sockets`) have had a socket on this actor.
@@ -412,6 +437,15 @@ fn persona_for(
     )
 }
 
+/// R1253000: the answer a panicked action gets, first and on every resend of its nonce.
+fn panicked_answer(nonce: &str) -> ServerMessage {
+    error_message(
+        SocketErrorCode::Internal,
+        "the server could not apply this action; it has been reported",
+        Some(nonce),
+    )
+}
+
 fn panic_message(error: tokio::task::JoinError) -> String {
     if !error.is_panic() {
         return error.to_string();
@@ -511,6 +545,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         state,
         next_seq,
         acks,
+        panicked: IndexSet::new(),
         sockets: PerPlayer::new(None, None),
         // R1452: a bot's seat is never away, so R744's grace never starts for it.
         attached_once: PerPlayer::new(bots.p1.is_some(), bots.p2.is_some()),
@@ -720,6 +755,10 @@ impl MatchActor {
             Task::Idle(done) => {
                 let _ = done.send(());
             }
+            Task::Checkpoint(done) => {
+                self.write_checkpoint().await;
+                let _ = done.send(());
+            }
             Task::BotMove {
                 home,
                 version,
@@ -853,7 +892,13 @@ impl MatchActor {
             // rebuild, so a rebuilt actor cannot collide with a nonce already in the log. Its prefix is
             // one no client may send (R270), so no client can pre-empt it.
             let nonce = format!("{SERVER_NONCE_PREFIX}{}-{next_seq}", expiry.kind());
-            let reply = self.apply_action(player, nonce, body).await;
+            let reply = self.apply_action(player, nonce.clone(), body).await;
+            // R1253000: `reduce` is pure, so a retry would panic again: the match ends now, as the
+            // reaper would end it at the ceiling, and nothing is retried.
+            if self.lock().panicked.contains(&nonce) {
+                self.end_as_ceiling_draw().await;
+                return;
+            }
             // R776000: a row the store did not take. The clock that ran out runs out again, and the
             // action is derived again then, under the same nonce while no other row has taken its seq.
             // The `return` ends R268's loop: the retried mulligan expiry derives the seats still owing.
@@ -1129,7 +1174,7 @@ impl MatchActor {
         // The write finishes the match row in the same transaction, so nothing else here does: a row
         // finished apart from it would outlive a failed write, with no result and both players stuck
         // in the match. R1437: a write that never lands leaves the match `live` for the next socket.
-        if !self.record_result_with_retries(input).await {
+        if !self.record_result_with_retries(input, true).await {
             self.let_go_unrecorded();
             return;
         }
@@ -1246,10 +1291,15 @@ impl MatchActor {
     /// that finds the match's row already written answers that row (`api/results.rs`). It runs on the
     /// actor's queue, which the game's end has left nothing to do but refuse actions and push views.
     /// Answers whether the result landed.
-    async fn record_result_with_retries(&self, input: RecordResultInput) -> bool {
+    async fn record_result_with_retries(&self, input: RecordResultInput, rated: bool) -> bool {
         let mut wait_ms = MATCH_RECORD_RESULT_BACKOFF_MS;
         for attempt in 1..=MATCH_RECORD_RESULT_ATTEMPTS {
-            match crate::api::results::record_result(&self.shared.deps, input.clone()).await {
+            let written = if rated {
+                crate::api::results::record_result(&self.shared.deps, input.clone()).await
+            } else {
+                crate::api::results::record_ceiling_draw(&self.shared.deps, input.clone()).await
+            };
+            match written {
                 Ok(_) => return true,
                 Err(error) => {
                     tracing::error!(event = "match.recordResult.failed", matchId = %self.match_id_str(), attempt = attempt, message = %error);
@@ -1261,6 +1311,32 @@ impl MatchActor {
             }
         }
         false
+    }
+
+    /// R1253000, R112: a clock's action whose `reduce` panicked ends the match as the reaper ends one at
+    /// the ceiling, a draw by `match-ceiling` with `turns = 0` and both ratings unchanged, written as
+    /// R1437 writes any ending. No result is in the state, and no telemetry or game record follows,
+    /// as after the reaper's. The actor lets go as the reaper's `stop` does, without waiting on the
+    /// queue this runs in; a write that never lands lets go as `let_go_unrecorded` says.
+    async fn end_as_ceiling_draw(&self) {
+        let at = now_ms();
+        {
+            let mut core = self.lock();
+            if core.finished || core.stopped {
+                return;
+            }
+            core.finished = true;
+            core.finished_at = Some(at);
+            self.shared.clock.stop();
+        }
+        let input = crate::api::results::ceiling_draw_input(&self.shared.match_row, at);
+        if !self.record_result_with_retries(input, false).await {
+            self.let_go_unrecorded();
+            return;
+        }
+        tracing::warn!(event = "match.panicked.drawn", matchId = %self.match_id_str());
+        self.shared.deps.matches.forget(self.match_id_str());
+        self.halt();
     }
 
     /// R1437: the result never landed, so the match is still `live` and both players are still in it.
@@ -1286,6 +1362,37 @@ impl MatchActor {
         tracing::warn!(event = "match.log.diverged", matchId = %self.match_id_str());
     }
 
+    /// R1253000: a live `reduce` panicked (a settle cap's `panic!`, say). Nothing was logged or kept, so
+    /// the state, the log and `next_seq` stand. The nonce keeps its answer, since `reduce` is pure and
+    /// the same action on the same state panics again, and the finding is filed for the night bot
+    /// (`bug_reports.rs`): the seq the action would have taken, its seat and its type, never the
+    /// panic's message, which only the private log line holds.
+    fn on_reduce_panicked(&self, action: &Action, seq: i64, message: &str) -> ServerMessage {
+        tracing::error!(
+            event = "match.action.panicked",
+            matchId = %self.match_id_str(),
+            seq = seq,
+            player = %action.player_id,
+            "type" = %action.action_type(),
+            message = %message,
+        );
+        self.lock().panicked.insert(action.nonce.clone());
+        self.shared.deps.bug_reports.file(
+            self.shared.deps.env.deployed_commit.as_deref(),
+            Finding {
+                match_id: self.match_id_str().to_string(),
+                found_in: FoundIn::Live,
+                catalog_version: self.shared.match_row.catalog_version.clone(),
+                actions: usize::try_from(seq - 1).unwrap_or(0),
+                refused: vec![RefusedRow::of(
+                    seq,
+                    &serde_json::to_value(action).unwrap_or(serde_json::Value::Null),
+                )],
+            },
+        );
+        panicked_answer(&action.nonce)
+    }
+
     /// The one path every action takes — a client's and the clock's alike. Reduce, append exactly one
     /// log row at the next gapless seq, then push.
     async fn apply_action(&self, player: PlayerId, nonce: String, body: ActionBody) -> ServerMessage {
@@ -1293,6 +1400,9 @@ impl MatchActor {
             let core = self.lock();
             if let Some(existing) = core.acks.get(&nonce) {
                 return existing.clone();
+            }
+            if core.panicked.contains(&nonce) {
+                return panicked_answer(&nonce);
             }
             if core.finished {
                 return error_message(
@@ -1303,8 +1413,18 @@ impl MatchActor {
             }
             // §9.1: the seat is the server's, never the client's.
             let action = Action::new(body, player, nonce.clone());
-            let result = engine::reduce(self.shared.pinned, &core.state, &action);
-            (action, result, core.next_seq)
+            // R1253000: `reduce` takes `&state` and returns a new one, so a panic leaves nothing
+            // half-applied, as the rebuild's folds rely on.
+            let reduced = catch_unwind(AssertUnwindSafe(|| {
+                engine::reduce(self.shared.pinned, &core.state, &action)
+            }));
+            let seq = core.next_seq;
+            // Before `on_reduce_panicked`, which takes the lock again.
+            drop(core);
+            match reduced {
+                Ok(result) => (action, result, seq),
+                Err(payload) => return self.on_reduce_panicked(&action, seq, &panic_text(payload)),
+            }
         };
 
         if let Some(reason) = &result.error {
@@ -2002,6 +2122,64 @@ impl MatchActor {
             return;
         }
         let _ = drained.await;
+    }
+
+    /// #1169: resolves once the checkpoint of the state after the log's newest row is written (or
+    /// passed over, `write_checkpoint`), after every task queued before it. The restart drain calls it
+    /// before `stop`; a crash or the reaper's `stop` writes none, and the next rebuild folds from the
+    /// last checkpoint there is or from the start.
+    pub async fn checkpoint(&self) {
+        let (done, written) = oneshot::channel();
+        if self.shared.inbox.send(Task::Checkpoint(done)).is_err() {
+            return;
+        }
+        let _ = written.await;
+    }
+
+    /// #1169: the checkpoint of the state after the log's newest row, its play telemetry (R1442) and
+    /// its bots' turns (R639000), stored for the next rebuild to resume (`actor::checkpoint`). None
+    /// for a match that has ended, been voided or stopped, or whose log is shorter than
+    /// `MATCH_CHECKPOINT_MIN_ACTIONS`. A write that fails is logged and costs nothing more: the next
+    /// rebuild folds the whole log. No state reaches a log line.
+    async fn write_checkpoint(&self) {
+        let (seq, nonce, body) = {
+            let core = self.lock();
+            let seq = core.next_seq - 1;
+            if core.finished || core.voided || core.stopped || seq < MATCH_CHECKPOINT_MIN_ACTIONS {
+                return;
+            }
+            let Some((nonce, _)) = core.acks.last() else {
+                return;
+            };
+            let body = CheckpointBody {
+                state: core.state.clone(),
+                telemetry: core.telemetry.clone(),
+                bot_moved_turn: core.bot_moved_turn.clone(),
+            };
+            (seq, nonce.clone(), body)
+        };
+        let match_id = self.match_id_str();
+        let row = match checkpoint_row(&self.shared.match_row, seq, &nonce, &body, now_ms()) {
+            Ok(row) => row,
+            Err(error) => {
+                tracing::warn!(event = "match.checkpoint.failed", matchId = %match_id, seq = seq, message = %error);
+                return;
+            }
+        };
+        match one_tx!(self.shared.deps.db, |t| t.matches_put_checkpoint(&row).await?) {
+            Ok(true) => {
+                tracing::info!(event = "match.checkpoint.written", matchId = %match_id, seq = seq, bytes = row.body.len());
+            }
+            Ok(false) => tracing::info!(event = "match.checkpoint.kept", matchId = %match_id, seq = seq),
+            Err(error) => {
+                tracing::warn!(event = "match.checkpoint.failed", matchId = %match_id, seq = seq, message = %error);
+            }
+        }
+    }
+
+    /// R1442: the play telemetry the actor holds now, as both seats' people would write it. For tests.
+    pub fn telemetry(&self) -> PlayTelemetry {
+        self.lock().telemetry.finish(&telemetry::LIVE_PILOTS, None)
     }
 
     pub fn view_for(&self, player: PlayerId) -> PlayerView {

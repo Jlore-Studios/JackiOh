@@ -20,9 +20,10 @@ trap backrow. This file binds every agent, not only Claude.
   is every boundary between the crates and the client) and `docs/v0.4.0/` (the Luau card scripts, #442, and
   their return to Rust in v0.5.0, #902: `README.md` the run's record, `PORTING.md` and `api-gaps.md` kept as
   the record and for the custom-card host).
-- The designer's source notes (`JackiOh_*.md`, `ARCHITECTURE-CCG.md`, with the design briefs
-  `docs/classic-sets.md` and `docs/meditative-set.md`) are what REVIEW Part A checks the spec against; read
-  them only when the task is about them.
+- The designer's source notes (`JackiOh_*.md`, the newest `JackiOh_MeditativePlus_Cards.md`,
+  `ARCHITECTURE-CCG.md`, with the design briefs `docs/classic-sets.md`, `docs/meditative-set.md` and
+  `docs/meditative-plus-set.md`) are what REVIEW Part A checks the spec against; read them only when the
+  task is about them.
 
 ## Rules of engagement
 
@@ -102,13 +103,13 @@ command).
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings      # includes rule 4's purity lint
 cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts   # every crate's tests, the golden replay included; rewrites apps/web/src/wire/ (commit any diff)
-cargo jackioh catalog check        # catalog.json's shape and census: 370 cards and 80 tokens across Core, Classic, Classic+ and Meditative
+cargo jackioh catalog check        # catalog.json's shape and census: 396 cards and 84 tokens across Core, Classic, Classic+, Meditative and Meditative+
 cargo jackioh patches check        # every catalog change claimed by exactly one pending fragment
 cargo jackioh spec check           # rule 3: ruling notes vs proving tests vs R-ids cited in code
 cargo jackioh fuzz --seeds 200     # CI's fuzz gate: random-policy games with replay hashing; --handicap for the handicapped wave, --duos for co-op games (§13)
 cargo jackioh golden check         # the golden traces from the TypeScript engine, replayed (cargo test replays them too)
 cargo jackioh gate                 # the AI's quality gates at smoke size; --full at full size (the daily run's); --duos for the co-op AI team's (§13.7)
-cargo jackioh sweep                # the shadow-ban sweep (R186); copy its SHADOW_BAN rows into crates/ai/src/shadow_ban.rs by hand
+cargo jackioh sweep                # the shadow-ban sweep (R186); --write rewrites crates/ai/src/shadow_ban.rs's tables from the reports of record, --check holds them
 cargo jackioh stats                # an AI development run for the card statistics (R378); --out writes it
 cargo jackioh catalog-version      # the catalog version this checkout compiles in
 cargo jackioh patches <version> <date> "<title>"   # a branch's catalog change as a pending fragment (R388, R646); `patches ship` promotes it after merge
