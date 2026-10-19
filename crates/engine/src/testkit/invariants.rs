@@ -517,10 +517,8 @@ fn standing_of(
             // it went, judged by what it left as. Any other card in no pile went unseen (a Glitch's reset
             // or boards, R676, R678), named by no leaving, and stays as hidden as every definition it wore.
             let token = match lineage.gone_as.get(id) {
-                Some(def) => crate::catalog::def_of(Some(state), def).token,
-                None => defs
-                    .iter()
-                    .all(|def| crate::catalog::def_of(Some(&*state), def).token),
+                Some(def) => is_token_def(state, def, viewer),
+                None => defs.iter().all(|def| is_token_def(state, def, viewer)),
             };
             return Some(Standing {
                 reads: token,
@@ -530,6 +528,18 @@ fn standing_of(
         id = successor.as_str();
     }
     None
+}
+
+/// Whether `def_id` is a token's definition. A match-made one (R77's Fuse, a crafted card) the state
+/// no longer holds, because a Glitch's reset (R676) dealt the game again without its `transient_defs`
+/// (fuzz seed 8183, #1216), is rebuilt from its id alone as C+ #29 rebuilds one (R179), on a scratch
+/// copy; one that cannot be rebuilt (a digest, R468) counts as no token, so it stays hidden.
+fn is_token_def(state: &GameState, def_id: &str, viewer: PlayerId) -> bool {
+    if let Some(def) = crate::catalog::find_def(Some(state), def_id) {
+        return def.token;
+    }
+    let mut scratch = state.clone();
+    crate::subsystems::fuse::rebuild_fused_def(&mut scratch, def_id, viewer).is_some_and(|def| def.token)
 }
 
 /// The hidden set, worked out from the state's zones on their own terms and never from `view_for`'s
