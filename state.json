@@ -6228,6 +6228,7 @@
         "by": "`claude` (strong)",
         "sha": "daad9339afcd4ef8053c711d3f177bb5f494b67d"
       },
+      "closed_at": "2026-10-19T21:18:32Z",
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-19T16:46:29Z",
@@ -6236,6 +6237,7 @@
       "issue": 1299,
       "kind": "revise",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-10-19T20:59:19Z",
