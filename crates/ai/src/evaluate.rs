@@ -12,8 +12,9 @@
 //! side's coming refreshes will or will not give: the refreshes it still has to lose (R844) and its
 //! next-turn rider (§2.3). #1255 prices the library cards the seat can name (R185, R311) at a share of
 //! their hand worth, a dealt one only by what it gained since the deal (a Radiant flag), a Journey
-//! Complete with the cards its journey returns (R1246), a curse against the side whose deck holds it. It reads only what the seat may know or what
-//! a determinization sampled, and nothing here reads a handicap or a difficulty (R180).
+//! Complete with the cards its journey returns (R1246), a curse against the side whose deck holds it.
+//! It reads only what the seat may know or what a determinization sampled, and nothing here reads a
+//! handicap or a difficulty (R180).
 //!
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
 //! are passed explicitly.

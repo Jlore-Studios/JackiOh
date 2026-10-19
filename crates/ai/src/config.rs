@@ -421,8 +421,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     enemy_face_down: 2.0,
     library_card: 0.1,
     library_comfort: 10.0,
-    // #1255: screened at 400 games on improve-dev, 197-202, edge -0.013 (-0.058 to +0.033) vs control
-    // 7c60d988a: 65 of the 200 deals played differently, 10 went to it and 12 to the control.
+    // #1255: screened at 400 games on improve-dev, 202-197, edge +0.013 (-0.032 to +0.057) vs control
+    // 766e52aaa: 77 of the 200 deals played differently, 12 went to it and 9 to the control.
     library_known_share: 0.5,
     unspent_mana: 0.8,
     // R1224: a debt counts the way unspent mana does — coming turns' mana, spent early.

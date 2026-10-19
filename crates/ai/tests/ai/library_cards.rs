@@ -1,9 +1,10 @@
 //! #1255: the AI prices the library cards it can name (SPEC §9.9 "Evaluation"; R185, R311). Its own
 //! deck's cards it was shown going in count at `library_known_share` of their hand worth, a dealt one
 //! only by what it gained since the deal (a Radiant flag and its face), so Core #42 Eugenics' flags and
-//! a shuffled-in Journey Complete (with the cards its journey returns, R1246) are cards to come. A curse counts against the side whose deck
-//! holds it, so one the seat shuffled into the enemy's deck counts for it. A card the seat cannot name
-//! (an enemy's dealt card, an own card it was never shown, R312) counts only by number, as before.
+//! a shuffled-in Journey Complete (with the cards its journey returns, R1246) are cards to come. A curse
+//! counts against the side whose deck holds it, so one the seat shuffled into the enemy's deck counts
+//! for it. A card the seat cannot name (an enemy's dealt card, an own card it was never shown, R312)
+//! counts only by number, as before.
 //!
 //! The weights are tuning numbers, so the sums below are written in them, never as literals.
 
