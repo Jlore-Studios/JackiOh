@@ -1,5 +1,5 @@
 //! C #9 Income Tax (SPEC §8.6 row 9, §6.3 Steal, §10.6; R12, R33, R58, R61, R78, R97, R99, R317,
-//! R521). Trap, cost 3, Legendary.
+//! R521, R1279000). Trap, cost 3, Legendary.
 //!   Base:    "Activates when the cards your opponent has drawn in a turn reach {draws}: They keep one
 //!            card of their choice and give you the rest of their hand."
 //!   Radiant: the same, then "The cards you get cost ({discount}) less."
@@ -12,6 +12,12 @@
 //! §3.2), your hand cap burning the overflow (R317), unread by them (R97); one card or none asks
 //! nothing (R61). The Radiant `costMod` (R78) is read at firing and carried to the answer: the trap is
 //! in the graveyard by then.
+//!
+//! THE WAIT (R1279000): the keep is the drawer's choice, so while it is not their turn no prompt opens
+//! at once. The firing schedules the keep with the engine's `delay` (at the start of the drawer's next
+//! turn) carrying the discount exactly as the prompt's data does, and the `deferred` resume step opens
+//! the identical keep prompt when that turn starts. On the drawer's own turn it asks at once, as before.
+//! The faces do not print the wait: the sentence would put both over the face's text limit (R1017000).
 
 use jackioh_engine::prelude::*;
 
@@ -20,12 +26,32 @@ pub const ID: &str = "classic-009";
 /// Where the Radiant face's discount travels from the firing to the answer (§10.6).
 const DISCOUNT: &str = "discount";
 
+/// The deferred keep's step in the `resume` table (R1279000).
+const DEFERRED_STEP: &str = "deferred";
+
 fn taxes(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
     matches!(
         event,
         GameEvent::Drawn { player, turn_draw, .. }
             if *player == opponent_of(ctx.controller) && *turn_draw == Some(param(ctx, "draws"))
     )
+}
+
+/// The keep-one prompt the firing opens, and the deferred step opens again (§10.6).
+fn keep_prompt(data: Value) -> Effect {
+    choose_from_hand(json_as(json!({
+        "of": "enemy",
+        "by": "enemy",
+        "count": 1,
+        "step": "keep",
+        "prompt": "Income Tax: keep one card; your opponent takes the rest",
+        "data": data,
+    })))
+}
+
+/// The deferred step's data back as the prompt's data (§10.6's data is JSON).
+fn carried_data(ctx: &EffectContext<'_>) -> Value {
+    Value::Object(ctx.data.clone().into_iter().collect())
 }
 
 fn tax(radiant: bool) -> TriggerDef {
@@ -37,12 +63,15 @@ fn tax(radiant: bool) -> TriggerDef {
         if radiant {
             data[DISCOUNT] = json!(param(&*ctx, "discount"));
         }
-        vec![choose_from_hand(json_as(json!({
-            "of": "enemy",
-            "by": "enemy",
-            "count": 1,
-            "step": "keep",
-            "prompt": "Income Tax: keep one card; your opponent takes the rest",
+        // R1279000: the keep is the drawer's choice, so while it is not their turn it waits for
+        // the start of their next turn, carrying the discount; on their turn it asks at once.
+        if ctx.state.active == opponent_of(ctx.controller) {
+            return vec![keep_prompt(data)];
+        }
+        vec![delay(json_as(json!({
+            "at": { "phase": "start", "player": "enemy" },
+            "step": DEFERRED_STEP,
+            "hook": RESUME_HOOK,
             "data": data,
         })))]
     })
@@ -61,18 +90,76 @@ fn discount_of(ctx: &EffectContext<'_>) -> i32 {
     }
 }
 
+/// R1279000: the wait is over; the identical keep prompt opens, read off the later hand. A hand
+/// of one card or none still asks nothing (R61): there is nothing to keep from.
+fn deferred() -> Hook {
+    hook(|ctx| {
+        if zone_count(ctx.state, opponent_of(ctx.controller), OffFieldZone::Hand) <= 1 {
+            return vec![];
+        }
+        vec![keep_prompt(carried_data(ctx))]
+    })
+}
+
 pub fn script() -> CardScripts {
     let base = Script {
         triggers: vec![tax(false)],
+        resume: IndexMap::from([
+            (
+                "keep",
+                hook(|_ctx| vec![give_from_hand(json_as(json!({ "from": "enemy", "cards": "unchosen" })))]),
+            ),
+            (DEFERRED_STEP, deferred()),
+        ]),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        triggers: vec![tax(true)],
+        resume: IndexMap::from([
+            (
+                "keep",
+                hook(|ctx| {
+                    vec![give_from_hand(json_as(json!({
+                        "from": "enemy",
+                        "cards": "unchosen",
+                        "costMod": -discount_of(ctx),
+                    })))]
+                }),
+            ),
+            (DEFERRED_STEP, deferred()),
+        ]),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
+
+/// R767000: the scripts v0.3.16 and every version before it ran, kept for their replays: the keep
+/// prompt opened at once on either player's turn.
+pub fn script_v0_3_16() -> CardScripts {
+    fn tax_old(radiant: bool) -> TriggerDef {
+        TriggerDef::new("income-tax", &[GameEventType::Drawn], move |ctx, _event| {
+            if zone_count(ctx.state, opponent_of(ctx.controller), OffFieldZone::Hand) <= 1 {
+                return vec![];
+            }
+            let mut data = json!({});
+            if radiant {
+                data[DISCOUNT] = json!(param(&*ctx, "discount"));
+            }
+            vec![keep_prompt(data)]
+        })
+        .with_when(taxes)
+    }
+    let base = Script {
+        triggers: vec![tax_old(false)],
         resume: IndexMap::from([(
             "keep",
             hook(|_ctx| vec![give_from_hand(json_as(json!({ "from": "enemy", "cards": "unchosen" })))]),
         )]),
         ..Script::default()
     };
-
     let radiant = Script {
-        triggers: vec![tax(true)],
+        triggers: vec![tax_old(true)],
         resume: IndexMap::from([(
             "keep",
             hook(|ctx| {
@@ -90,8 +177,10 @@ pub fn script() -> CardScripts {
 
 // C #9 Income Tax — SPEC §8.6 row 9, BUILD M9 Classic row C 9: fires on the opponent's second draw of a
 // turn, on either turn, after a cast-on-draw card is cast (R58); a draw a limit stops does not count
-// (§2.4); the rest of their hand becomes yours (R12), overflow burned (R317); radiant: (1) less, kept in
-// every zone (R78); tuned numbers read through `param()` (R386). Here p2 sets the trap, p1 draws.
+// (§2.4); the keep prompt opens at once on the drawer's turn and waits for the start of their next
+// turn otherwise (R1279000); the rest of their hand becomes yours (R12), overflow burned (R317);
+// radiant: (1) less, kept in every zone (R78); tuned numbers read through `param()` (R386). Here p2
+// sets the trap, p1 draws.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -255,8 +344,9 @@ mod tests {
         }
 
         #[test]
-        fn on_your_turn_too_their_second_draw_of_your_turn_sets_it_off_c_4_palantir_casts_a_stolen_draw_for_them() {
+        fn r1279000_firing_on_your_turn_defers_the_keep_to_their_next_turn_start() {
             // p1's Palantir steals p2's Stockpile and casts it (R831001), so p1 draws 2 on p2's turn.
+            // The keep is p1's choice while p2 is active, so no prompt opens until p1's next turn.
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": {
@@ -266,19 +356,67 @@ mod tests {
                 },
                 "p2": {
                     "hand": [STOCKPILE, VANILLA],
-                    "backrow": [{ "def": TAX, "faceUp": false }],
+                    "backrow": [{ "def": TAX, "faceUp": false, "radiant": true }],
                     "library": [VANILLA, VANILLA],
                 },
             }));
             s.play(STOCKPILE, json!({}));
             assert_eq!(drawn_by(s.events(), P1), 2);
             assert_eq!(s.state().active, P2);
+            assert!(fired(&s));
+            assert!(s.state().pending.is_none());
+            s.end_turn();
+            assert_eq!(s.state().active, P1);
             let keep = open(&s);
             assert_eq!(keep.player_id, P1);
+            assert_eq!(keep.kind, PromptKind::Hand);
             assert_eq!(keep.resume.def_id, TAX);
             answer_with(&mut s, MENACE);
             s.expect_in_zone(TAX, "graveyard");
-            assert_eq!(hand_defs(&s, P1), [MENACE]);
+            // The owed start-of-turn draw landed after the keep resolved.
+            assert_eq!(hand_defs(&s, P1), [MENACE, TIMMY]);
+            // The turn's draw waits behind the open keep, so 3 cards move: the Radiant discount
+            // rode the delay's data, and p2's own card is untouched.
+            assert_eq!(s.hand(P2).len(), 4);
+            let p2_hand = s.hand(P2);
+            let moved: Vec<&CardInstance> =
+                p2_hand.iter().filter(|card| card.cost_mod == -1).collect();
+            assert_eq!(moved.len(), 3);
+            for card in moved {
+                assert_eq!(card.owner, P2);
+            }
+        }
+
+        #[test]
+        fn r1279000_r767000_a_game_on_v0_3_15_folds_under_the_kept_script_the_keep_opening_at_once_off_turn() {
+            crate::register_all();
+            let shipped = crate::shipped_catalog("v0.3.15").expect("v0.3.15 is carried");
+            jackioh_engine::with_shipped(Some(shipped), || {
+                // p1's Palantir steals p2's Stockpile and casts it (R831001), so p1 draws 2 on
+                // p2's turn; the old script asked at once.
+                let mut s = scenario(json!({
+                    "active": "p2",
+                    "p1": {
+                        "hand": [VANILLA, MENACE],
+                        "backrow": [{ "def": PALANTIR, "faceUp": true }],
+                        "library": [FELINORS, SEVEN, TIMMY],
+                    },
+                    "p2": {
+                        "hand": [STOCKPILE, VANILLA],
+                        "backrow": [{ "def": TAX, "faceUp": false }],
+                        "library": [VANILLA, VANILLA],
+                    },
+                }));
+                s.play(STOCKPILE, json!({}));
+                assert_eq!(drawn_by(s.events(), P1), 2);
+                assert_eq!(s.state().active, P2);
+                let keep = open(&s);
+                assert_eq!(keep.player_id, P1);
+                assert_eq!(keep.resume.def_id, TAX);
+                answer_with(&mut s, MENACE);
+                s.expect_in_zone(TAX, "graveyard");
+                assert_eq!(hand_defs(&s, P1), [MENACE]);
+            });
         }
 
         #[test]

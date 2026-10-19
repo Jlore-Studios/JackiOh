@@ -41,6 +41,13 @@
 # Postgres with `jackioh-server stats-import`, once per file, when the box has DATABASE_URL.
 # Everything goes to ~/logs/<lane>.log.
 #
+# The box cleans itself (`free_disk`), as the night box does (bot/machine/clean.sh): each cycle
+# starts, with no session of its lane going, by reading the disk, and under TRAIN_DISK_FLOOR_GB
+# free the lane deletes its own builds but the release one (the parent and the gate's) and its
+# download caches, all of which come back by themselves. Its test builds carry no debug info, as on
+# the night box: with it, the sessions' `cargo test` runs had built 20 GB of target/debug a lane in
+# two weeks and left the disk 6 GB free (2026-10-19).
+#
 # The gather lane (`loop.sh gather`, training/gather.md) improves nothing and opens no pull request,
 # so it needs neither Muse nor gh: each cycle checks out main, builds jackioh from it, loads the
 # finished days as above, and plays the next TRAIN_GATHER_GAMES games of its own seed series with
@@ -57,7 +64,8 @@
 # (default 18000: the standing prompt's four hours, plus an hour for the last gate run to finish,
 # since the improve lane's 400 games take half an hour or more on the box's two cores),
 # TRAIN_PROGRESS_SECONDS (default 900), TRAIN_IDLE_SECONDS (default 900: how long an idle unban lane
-# waits between looks), TRAIN_GATHER_GAMES (default 100: the gather lane's games a cycle).
+# waits between looks), TRAIN_GATHER_GAMES (default 100: the gather lane's games a cycle),
+# TRAIN_DISK_FLOOR_GB (default 20: the free disk under which a cycle cleans first).
 
 # shellcheck disable=SC2016 # the backticks in printf's formats are Markdown's, for GitHub
 set -u
@@ -106,9 +114,16 @@ session_limit="${TRAIN_SESSION_SECONDS:-18000}"
 progress_every="${TRAIN_PROGRESS_SECONDS:-900}"
 idle_pause="${TRAIN_IDLE_SECONDS:-900}"
 gather_games="${TRAIN_GATHER_GAMES:-100}"
+disk_floor="${TRAIN_DISK_FLOOR_GB:-20}"
 
 mkdir -p "$logs" "$out" "$work" || exit 1
 exec >>"$logs/$lane.log" 2>&1
+
+# No debug info in the lane's test builds, Muse's included, as on the night box (bot-night.yml):
+# the release builds, which the gate measures, never had any.
+CARGO_PROFILE_DEV_DEBUG=0
+CARGO_PROFILE_TEST_DEBUG=0
+export CARGO_PROFILE_DEV_DEBUG CARGO_PROFILE_TEST_DEBUG
 
 # `cargo jackioh arena` and `promote` append every game they play to this directory (R376).
 JACKIOH_TRAINING_OUT="$out"
@@ -137,6 +152,20 @@ idle_generation=""
 note() {
   printf '\n- %s (loop): %s.\n' "$(date -u +%Y-%m-%dT%H:%MZ)" "$1" >>"$out/attempts.md"
   log "$1"
+}
+
+# Gives back disk when the box has under TRAIN_DISK_FLOOR_GB free: the lane's own builds but the
+# release one, its download caches and its /tmp leftovers older than 6 hours, all of which come back
+# by themselves. It runs at the start of a cycle, when no session of this lane is going; each lane
+# cleans its own home, so a full disk is cleared by whichever lane looks first.
+free_disk() {
+  avail=$(df --output=avail -BG / 2>/dev/null | tail -n 1 | tr -dc 0-9)
+  [ -n "$avail" ] && [ "$avail" -lt "$disk_floor" ] || return 0
+  find "$repo/target" -mindepth 1 -maxdepth 1 ! -name release -exec rm -rf {} + 2>/dev/null
+  rm -rf "$HOME/.cargo/registry/cache" "$HOME/.local/share/pnpm/store" "$HOME/.cache/pnpm" \
+    "$HOME/.npm/_cacache" 2>/dev/null
+  find /tmp -mindepth 1 -maxdepth 1 -user "$(id -u)" -mmin +360 -exec rm -rf {} + 2>/dev/null
+  log "the disk had ${avail} GB free, under TRAIN_DISK_FLOOR_GB ($disk_floor): deleted this lane's builds but the release one, and its download caches; $(df --output=avail -BG / | tail -n 1 | tr -dc 0-9) GB free now"
 }
 
 # Stops the jackioh processes the session left running as the lane's user, such as an arena or a
@@ -742,6 +771,7 @@ cycle() {
   cd "$repo" || return 1
   stamp=$(date -u +%Y%m%dT%H%M%SZ)
   sleep_for="$pause"
+  free_disk
   if [ "$lane" = gather ]; then
     gather
     return

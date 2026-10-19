@@ -160,6 +160,20 @@ class SetupTests(unittest.TestCase):
         self.assertIn('--model "$MUSE_MODEL"', loop)
         self.assertNotIn("devin", loop.lower())
 
+    def test_the_training_lanes_clean_their_own_disk(self):
+        """The training box has no clean-up timer: each lane's cycle starts by giving back its own
+        builds but the release one when the disk is short, and its test builds carry no debug info,
+        as the night box's jobs (`bot-night.yml`)."""
+        loop = (REPO_ROOT / "training" / "loop.sh").read_text(encoding="utf-8")
+        self.assertIn('disk_floor="${TRAIN_DISK_FLOOR_GB:-20}"', loop)
+        self.assertIn("cycle() {\n  cd \"$repo\" || return 1\n", loop)
+        cycle = loop[loop.index("cycle() {"):]
+        self.assertLess(cycle.index("free_disk"), cycle.index("gather"))
+        self.assertIn('find "$repo/target" -mindepth 1 -maxdepth 1 ! -name release', loop)
+        for setting in ("CARGO_PROFILE_DEV_DEBUG=0", "CARGO_PROFILE_TEST_DEBUG=0"):
+            self.assertIn(setting, loop)
+            self.assertIn(setting, (REPO_ROOT / ".github/workflows/bot-night.yml").read_text())
+
     def test_the_night_box_has_a_chrome_for_the_ui_walkthroughs(self):
         """#816: scripts/browse.sh finds google-chrome-stable on PATH; the training box needs none."""
         self.assertIn("google-chrome-stable_current_amd64.deb", self.night)

@@ -42,7 +42,9 @@ use crate::config::{AI_EVAL, AI_REPLY, AI_SEARCH};
 use crate::evaluate::{NextSwing, coming_mana, evaluate, unit_worth};
 use crate::learned::finalist_score;
 use crate::lethal::deft_ready_switch;
-use crate::simulate::{LineStatus, best_auto_answer, line_status, simulate, static_score, surcharge_nodes};
+use crate::simulate::{
+    LineStatus, best_auto_answer, charge_announced, line_status, simulate, static_score, surcharge_nodes,
+};
 use crate::types::NodeCounter;
 
 /// The opponent's static value of `attacker` hitting `target` (§4.3): the unit it kills, less its own
@@ -165,7 +167,10 @@ fn reduce_for(
     }
     let action = Action::new(action.clone(), actor, format!("reply:{}", counter.used()));
     match catch_unwind(AssertUnwindSafe(|| reduce_unpiloted(state, &action))) {
-        Ok(next) if next.error.is_none() => Some(next.state),
+        Ok(next) if next.error.is_none() => {
+            charge_announced(counter, state, &action.body, &next);
+            Some(next.state)
+        }
         _ => None,
     }
 }

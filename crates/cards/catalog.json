@@ -4070,11 +4070,11 @@
     "loc": 84,
     "base": {
       "keywords": [],
-      "text": "Your opponent chooses {choices|time|times}: they discard {discard|random card|random cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw}."
+      "text": "At the start of your opponent's next turn, they choose {choices|time|times}: they discard {discard|random card|random cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your opponent chooses {choices|time|times}: they discard {discard|random card|random cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw}."
+      "text": "At the start of your opponent's next turn, they choose {choices|time|times}: they discard {discard|random card|random cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw}."
     }
   },
   "classic-009": {
