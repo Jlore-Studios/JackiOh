@@ -6049,6 +6049,7 @@
         "resolved_by": "`muse` (medium)",
         "sha": "d0a17c8ef912f62e818587c5eed0c39e667a1c30"
       },
+      "closed_at": "2026-10-19T18:38:52Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -6058,6 +6059,7 @@
       "issue": 1151,
       "kind": "revise",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "muse",
       "question": "",
