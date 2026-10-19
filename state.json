@@ -6120,7 +6120,9 @@
     },
     "1327": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:6278053541"
+      ],
       "audit_tier": "strong",
       "cross_rounds": 1,
       "died": 0,
@@ -6165,13 +6167,14 @@
       "pending_request": false,
       "provider": "claude-3",
       "question": "This PR needs #1294's \"Numbers\" table, and no copy of it is in the repository (I searched the tree, every git ref, the bot's state and #1299's journal). The bot can't reach GitHub, so it can't read #1294. Please paste the table, or just its values, into a comment on #1327 that starts with @jgoetzmann-bot, or into #1298's description. The values it needs: pack price; pity thresholds for Epic, Legendary and Mythic; Chase Shard size; Jlore for a ladder win and loss and a practice win and loss; XP per action, win bonus, practice scale and per-game cap; track levels and the unlock level; quest interval in hours, quests held at most, the quest Jlore minimum and maximum, and XP per Jlore. Also, if the table gives them: pack slots, the unowned weighting, the bar sizes, cosmetic pack slots and odds, chase drop rate, ladder XP target mean and practice seed TTL. Any constant the table does not give comes out of this PR and goes in with the sub-issue that first needs it (\u00a714's intro). One thing you can check quickly: the issue's starting rates of 29.0%, 8.2% and 3.0% land exactly on the 30/10/5% targets when the thresholds are 10/20/30, so I expect the table says 10/20/30, not the 40 this PR made up. Or reply 'ship the subset' and I'll keep only the numbers #1298 itself states, plus thresholds of 10/20/30. #1298 then stays open for the rest.",
-      "queued_at": "2026-10-19T19:15:10Z",
+      "queued_at": "2026-10-19T21:43:40Z",
+      "requested_by": "MaxGoetzmann",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
       "run_id": "39309431066",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "request",
       "started_at": "2026-10-19T19:29:40Z",
       "stop_requested": false,
       "taken_asks": [],
