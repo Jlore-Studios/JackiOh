@@ -19284,6 +19284,12 @@
         "number": 1283,
         "title": "Patch v0.3.Y: the AI's lethal holds against every trap a face-down card could be, not three guesses",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-19T12:21:53Z",
+        "number": 1289,
+        "title": "Patch v0.3.Y: the practice AI's pauses shorten with the effects-speed setting",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-10-19T11:29:30Z",
