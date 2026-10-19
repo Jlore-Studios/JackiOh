@@ -10,11 +10,12 @@
 
 use jackioh_ai::{
     AI_BUDGET, AI_DEV_RUN, AiDeckOptions, DevRunOptions, MatchHooks, SearchBudget, SeatController,
-    build_ai_deck, dev_game_config, dev_game_record, dev_record_id, play_match,
+    build_ai_deck, dev_game_config, dev_game_record, dev_record_id, forced_dev_game_config, play_match,
 };
 use jackioh_engine::testkit::{
     CardStatsFilter, DECK_SIZE, DEFAULT_CARD_STATS_FILTER, FoldArgs, GameRecord, PerPlayer, PilotFilter,
-    SourceFilter, card_stats, create_rng, json, json_as, summarize_game,
+    PlayerId, SourceFilter, card_stats, create_rng, json, json_as, registered_catalog, summarize_game,
+    validate_deck,
 };
 
 use super::support::register_cards;
@@ -87,6 +88,7 @@ mod the_ais_development_run_9_11 {
             series: "dev-test".to_string(),
             patch: "v0.2.5".to_string(),
             budget: Some(QUICK),
+            force: None,
         };
         let records: Vec<Option<GameRecord>> =
             [1, 2].into_iter().map(|n| dev_game_record(n, &options)).collect();
@@ -157,5 +159,89 @@ mod the_ais_development_run_9_11 {
             ..DEFAULT_CARD_STATS_FILTER
         };
         assert_eq!(card_stats(&finished, &dev_humans).games, 0);
+    }
+
+    /// The card the R1284000 tests force: a Core card, deckable on every build.
+    const FORCED: &str = "core-090";
+
+    #[test]
+    fn r1284000_a_forced_run_deals_the_card_to_p1_in_odd_games_and_p2_in_even_ones() {
+        register_cards();
+        let series = "dev-force-core-090";
+        let banned: AiDeckOptions = json_as(json!({ "banned": [FORCED] }));
+        for n in 1..=20 {
+            let config = forced_dev_game_config(n, series, None, FORCED);
+            let plain = dev_game_config(n, series, None);
+            let (holder, other, held_seat) = if n % 2 == 1 {
+                (&config.decks.0, &config.decks.1, PlayerId::P1)
+            } else {
+                (&config.decks.1, &config.decks.0, PlayerId::P2)
+            };
+            let count = |deck: &[String]| deck.iter().filter(|id| id.as_str() == FORCED).count();
+            assert_eq!(
+                (count(holder), count(other)),
+                (1, 0),
+                "game {n}: {held_seat:?} holds it"
+            );
+            for deck in [holder, other] {
+                assert!(
+                    validate_deck(deck, registered_catalog(), "deck", DECK_SIZE).is_ok(),
+                    "game {n}: a deck is not 20 distinct deck-legal cards"
+                );
+            }
+            // R258's deal with the card banned: the other seat's deck whole, the holder's but for one slot.
+            let seat_of = |seat: &str| {
+                build_ai_deck(
+                    &mut create_rng(&format!("{}:{seat}-deck", config.seed), 0),
+                    DECK_SIZE,
+                    &banned,
+                )
+            };
+            let (dealt_holder, dealt_other) = match held_seat {
+                PlayerId::P1 => (seat_of("p1"), seat_of("p2")),
+                PlayerId::P2 => (seat_of("p2"), seat_of("p1")),
+            };
+            assert_eq!(other, &dealt_other, "game {n}");
+            let replaced: Vec<usize> = (0..holder.len())
+                .filter(|at| holder[*at] != dealt_holder[*at])
+                .collect();
+            assert_eq!(replaced.len(), 1, "game {n}");
+            assert_eq!(holder[replaced[0]], FORCED, "game {n}");
+            // Only the decks differ from a plain run's game.
+            assert_eq!(config.seed, plain.seed);
+            assert_eq!(config.controllers, plain.controllers);
+            assert_eq!(config.handicaps, plain.handicaps);
+        }
+    }
+
+    #[test]
+    fn r1284000_a_forced_record_lists_the_card_in_its_holders_deck_and_repeats_byte_for_byte() {
+        register_cards();
+        let options = DevRunOptions {
+            series: "dev-test".to_string(),
+            patch: "v0.2.5".to_string(),
+            budget: Some(QUICK),
+            force: Some(FORCED.to_string()),
+        };
+        for n in [1, 2] {
+            let record = dev_game_record(n, &options)
+                .unwrap_or_else(|| panic!("dev-test:{n} did not finish with {FORCED} forced"));
+            let config = forced_dev_game_config(n, &options.series, options.budget, FORCED);
+            assert_eq!(
+                (
+                    record.game.seats.p1.deck.clone(),
+                    record.game.seats.p2.deck.clone()
+                ),
+                config.decks,
+                "game {n}"
+            );
+            assert_eq!(record.id, format!("dev:v0.2.5:dev-test:{n}"));
+            let again = dev_game_record(n, &options).expect("the same game finishes again");
+            assert_eq!(
+                serde_json::to_string(&record).expect("a record serialises"),
+                serde_json::to_string(&again).expect("a record serialises"),
+                "game {n}"
+            );
+        }
     }
 }

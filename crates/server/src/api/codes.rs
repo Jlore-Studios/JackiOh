@@ -213,7 +213,7 @@ pub struct RedeemInput<'a> {
     /// takes from the auth server's `email_confirmed_at`, never from a user-editable claim.
     ///
     /// Not in SPEC: `Profile` carries no verification flag and the authority is the auth provider.
-    /// How long a positive answer may be remembered is R159 (`EMAIL_CONFIRMED_CACHE_TTL_MS` in `auth.rs`).
+    /// How long a positive answer may be remembered is R159 (`EMAIL_CONFIRMED_CACHE_TTL_MS` in `config.rs`).
     pub email_verified: bool,
     /// Omitted by a direct caller, in which case this redemption gets a breaker of its own.
     pub breaker: Option<&'a Mutex<BreakerState>>,
