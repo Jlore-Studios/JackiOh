@@ -1949,8 +1949,9 @@ pub fn decks_get(f: &mut FakeTx<'_>, deck_id: &str) -> Result<Option<SavedDeck>,
     Ok(f.tables().decks.iter().find(|deck| deck.id == deck_id).cloned())
 }
 
-/// Inserts a deck whose id is new, or replaces `name`, `cards`, `portrait`, `catalog_version` and
-/// `updated_at` of the profile's own deck (its `created_at` is kept).
+/// Inserts a deck whose id is new, or replaces `name`, `cards`, `portrait`, the three cosmetic
+/// picks (R1297000), `catalog_version` and `updated_at` of the profile's own deck (its
+/// `created_at` is kept).
 pub fn decks_upsert(
     f: &mut FakeTx<'_>,
     deck: &SavedDeck,
@@ -1966,6 +1967,9 @@ pub fn decks_upsert(
         existing.name = deck.name.clone();
         existing.cards = deck.cards.clone();
         existing.portrait = deck.portrait.clone();
+        existing.table_cosmetic = deck.table_cosmetic.clone();
+        existing.field_cosmetic = deck.field_cosmetic.clone();
+        existing.card_back_cosmetic = deck.card_back_cosmetic.clone();
         existing.catalog_version = deck.catalog_version.clone();
         existing.updated_at = deck.updated_at;
         return Ok(UpsertOutcome::Updated);

@@ -40,7 +40,14 @@ import "./inspect.css";
 import "./list-play.css";
 
 /** One face in the list, or a card back (`face: null`, R312). `key` is stable for what it shows; `count` is 1 when absent. */
-export type CardListEntry = { key: string; face: FaceModel | null; count?: number; play?: CardListPlay };
+export type CardListEntry = {
+  key: string;
+  face: FaceModel | null;
+  count?: number;
+  play?: CardListPlay;
+  /** R1297000: the card back a faceless entry wears (the viewer's own pick, board.tsx); absent: the default. */
+  back?: string;
+};
 
 /** B5 E11: a card the viewer may play from this pile now. `testId` is the button's (`pile-play-<id>`, game/contract.ts). */
 export type CardListPlay = { testId: string; glow: boolean; onPlay: () => void };
@@ -86,7 +93,7 @@ function EntryFace({ entry }: { entry: CardListEntry }): ReactElement {
   const count = countOf(entry);
   return (
     <>
-      {entry.face === null ? <CardBack /> : <CardFace face={entry.face} layout="full" />}
+      {entry.face === null ? <CardBack back={entry.back} /> : <CardFace face={entry.face} layout="full" />}
       {count > 1 ? (
         <span className="inspect-list-badge" aria-hidden="true">
           ×{count}

@@ -2,7 +2,8 @@
 //! Discover offers code blocks (R1183005): the AI needs nothing new for it, since `legal_actions` lists
 //! its three answers and the search tries each through `reduce`. Cognitive Offloading's autopilot
 //! (R1183002, R1183003) is the engine's, never this crate's: a seat it plays for is never asked to
-//! act, and a line that draws into it comes back with that turn already played.
+//! act, and a line of the search that draws into it comes back with that turn owed, not played
+//! (`reduce_unpiloted`), scored where the turn begins as every line that hands a turn over is (#1337).
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -63,4 +64,46 @@ fn r1183002_a_seat_the_autopilot_plays_for_is_never_asked_to_act() {
             .any(|card| card.def_id == OFFLOADING)
     );
     assert!(!ai_to_act(&state, AI), "nothing waits on the AI's seat");
+}
+
+#[test]
+fn r1183002_a_line_that_hands_the_autopilot_a_turn_comes_back_with_that_turn_owed() {
+    register_cards();
+    let s = scenario(json!({
+        "seed": "ai-autopilot-line",
+        "p1": { "hand": [FILLER], "field": ["core-019"], "library": [FILLER, FILLER, FILLER] },
+        "p2": {
+            "hand": ["core-008", "core-011"],
+            "field": ["core-019"],
+            "library": [OFFLOADING, FILLER, FILLER, FILLER],
+        },
+    }));
+    let state = s.state().clone();
+    // The search ends the AI's turn: p2's draw casts Cognitive Offloading.
+    let line = simulate(&state, AI, &ActionBody::EndTurn, &create_node_counter(20, None))
+        .expect("the counter gives the step a node")
+        .expect("End turn is accepted");
+    assert_eq!(line.active, HUMAN, "the line passed the turn");
+    assert_eq!(
+        subsystems::autopilot::due(&line),
+        Some(HUMAN),
+        "p2's turn is owed to the autopilot"
+    );
+    assert!(
+        ["core-008", "core-011"]
+            .iter()
+            .all(|id| line.players.p2.hand.iter().any(|card| card.def_id == *id)),
+        "and nothing was played for p2 inside the AI's step"
+    );
+    assert_eq!(
+        line_status(&line, AI, state.turn),
+        LineStatus::Passed,
+        "the search scores it where p2's turn begins"
+    );
+    // The game itself plays that turn through.
+    let game = reduce(&state, &Action::new(ActionBody::EndTurn, AI, "game".to_string()));
+    assert_eq!(
+        game.state.active, AI,
+        "a game's End turn plays p2's turn for them"
+    );
 }

@@ -2,7 +2,8 @@
 //! (R253, R257, R264).
 //!
 //! A profile keeps up to `MAX_SAVED_DECKS` named decks and `MAX_SAVED_TRIOS` trios, both DRAFTS
-//! (R250, R252): a save checks structure only — D1–D5 for a deck (D5 is the portrait's, R641),
+//! (R250, R252): a save checks structure only — D1–D5 for a deck (D5 is the portrait's, R641;
+//! its playmat, backdrop and card back are checked against the cosmetics registry, R1297000),
 //! T1–T3 for a trio — and legality is judged at queue (R253). The save routes never call the L1–L6
 //! validator; the queue-time helpers at the bottom always do.
 //!
@@ -35,6 +36,7 @@ use crate::api::http::{
 };
 use crate::app::App;
 use crate::config::{DECK_NAME_MAX_LENGTH, DRAFT_ISSUES_REPORTED_MAX, MAX_SAVED_DECKS, MAX_SAVED_TRIOS};
+use crate::cosmetics::{self, CosmeticKind};
 use crate::db::store::{
     FrozenDeck, FrozenTrio, SavedDeck, SavedTrio, StoreError, TrioSlots, TrioUpsertOutcome, Tx, UpsertOutcome,
 };
@@ -80,6 +82,14 @@ pub struct DeckView {
     pub name: String,
     pub cards: Vec<String>,
     pub portrait: Option<String>,
+    /// R1297000: the deck's playmat, backdrop and card back picks, left out when it has none, so
+    /// a deck without them serializes as it did before.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub table_cosmetic: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub field_cosmetic: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_back_cosmetic: Option<String>,
     pub catalog_version: String,
     pub created_at: i64,
     pub updated_at: i64,
@@ -102,9 +112,26 @@ fn deck_view(deck: &SavedDeck) -> DeckView {
         name: deck.name.clone(),
         cards: deck.cards.clone(),
         portrait: deck.portrait.clone(),
+        table_cosmetic: deck.table_cosmetic.clone(),
+        field_cosmetic: deck.field_cosmetic.clone(),
+        card_back_cosmetic: deck.card_back_cosmetic.clone(),
         catalog_version: deck.catalog_version.clone(),
         created_at: deck.created_at,
         updated_at: deck.updated_at,
+    }
+}
+
+/// R1297000: a deck's pick of `kind` under `key`, absent or `null` meaning none. An id the shipped
+/// registry does not list under that kind is refused, so a deck never carries an id of another kind
+/// or one nothing can draw; the client still draws an unknown id as the default, since a later build
+/// may drop one a deck already holds.
+fn deck_cosmetic(body: &Value, key: &str, kind: CosmeticKind) -> Result<Option<String>, ApiError> {
+    let pick = optional_str(body, key)?;
+    match pick {
+        Some(id) if !cosmetics::is_id_of(kind, &id) => {
+            Err(bad_request(format!("\"{key}\" is not a cosmetic id of its kind")))
+        }
+        pick => Ok(pick),
     }
 }
 
@@ -444,6 +471,9 @@ pub async fn put_deck(app: &Arc<App>, req: Req) -> ApiResult {
     let cards = string_list(&req.body, "cards")?;
     let catalog_version = str(&req.body, "catalogVersion")?;
     let portrait = optional_str(&req.body, "portrait")?;
+    let table_cosmetic = deck_cosmetic(&req.body, "tableCosmetic", CosmeticKind::Table)?;
+    let field_cosmetic = deck_cosmetic(&req.body, "fieldCosmetic", CosmeticKind::Field)?;
+    let card_back_cosmetic = deck_cosmetic(&req.body, "cardBackCosmetic", CosmeticKind::CardBack)?;
 
     assert_current_catalog(app, &catalog_version)?;
     let name = validator::normalize_name(&raw_name);
@@ -463,6 +493,9 @@ pub async fn put_deck(app: &Arc<App>, req: Req) -> ApiResult {
                 name: name.clone(),
                 cards: cards.clone(),
                 portrait: portrait.clone(),
+                table_cosmetic: table_cosmetic.clone(),
+                field_cosmetic: field_cosmetic.clone(),
+                card_back_cosmetic: card_back_cosmetic.clone(),
                 catalog_version: catalog_version.clone(),
                 created_at: now,
                 updated_at: now,
@@ -632,6 +665,9 @@ pub async fn import_trio(app: &Arc<App>, req: Req) -> ApiResult {
                     name: deck.name.clone(),
                     cards: deck.cards.clone(),
                     portrait: None,
+                    table_cosmetic: None,
+                    field_cosmetic: None,
+                    card_back_cosmetic: None,
                     catalog_version: input.catalog_version.clone(),
                     created_at: at,
                     updated_at: at,

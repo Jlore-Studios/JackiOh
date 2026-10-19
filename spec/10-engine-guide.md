@@ -231,6 +231,8 @@ The hero each seat plays is a portrait ([[R641]]): the card art of its roster en
 
 Your own cards wear the card cosmetics you pick, a foil over the art, a finish and a border, every one unlocked, on a board you play, while the opponent's cards and every other surface draw the defaults ([[R1295000]]). Each is an attribute of its own on the face, apart from the rarity foil, so a Mythic face wears no cosmetic foil, a Radiant face none of the three, and no border falls in the Radiant gold. A foil moves only on a few faces at once and holds its still version under Reduce Motion, and an id the client does not know draws as its kind's default.
 
+Your own side wears three more cosmetics a deck can pick, every one unlocked, on a board you play: a playmat under the lanes, a backdrop behind the board and the back of your face-down cards and your deck ([[R1297000]]). The deck's pick wins over the account's and the account's over the default, while the opponent's side draws as it always did. A back depends on the seat alone, so every back of a seat looks alike and says nothing of its card. The backdrop is a capped set of particles that holds still under Reduce Motion, sits behind everything and takes no input.
+
 ### 10.11 Audio
 
 The client plays sound from the same event stream it animates ([[§10.10]]), and none of it is a rule.

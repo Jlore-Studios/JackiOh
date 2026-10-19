@@ -15,7 +15,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
     Action, ActionBody, CardInstance, GameState, PLAYER_IDS, Phase, PlayerId, TurnLog, active_units_of,
-    effective_life, find_instance, legal_actions, max_mana_for, opponent_of, owed_mana_of, reduce,
+    effective_life, find_instance, legal_actions, max_mana_for, opponent_of, owed_mana_of, reduce_unpiloted,
     self_def_ids, subsystems, unit_view,
 };
 use serde::{Deserialize, Serialize};
@@ -322,7 +322,7 @@ pub(crate) fn best_auto_answer(
             return None;
         }
         let action = Action::new(answer, answerer, format!("{prefix}:{}", counter.used()));
-        let next = match catch_unwind(AssertUnwindSafe(|| reduce(state, &action))) {
+        let next = match catch_unwind(AssertUnwindSafe(|| reduce_unpiloted(state, &action))) {
             Ok(next) => next,
             Err(payload) => {
                 note_sim_error(counter);
@@ -448,7 +448,7 @@ fn simulate_answering(
         }
     }
     let run = catch_unwind(AssertUnwindSafe(|| -> Option<SimStep> {
-        let first = reduce(
+        let first = reduce_unpiloted(
             state,
             &Action::new(action.clone(), seat, format!("sim:{}", counter.used())),
         );

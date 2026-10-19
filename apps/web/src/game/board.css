@@ -54,9 +54,11 @@
   min-width: 0;
   padding: 8px;
   border-radius: 16px;
-  background:
+  /* Named so table.css can repaint it under a worn backdrop (R1297000). */
+  --board-surface:
     radial-gradient(120% 70% at 50% 45%, rgb(90 52 27 / 28%), transparent 70%),
     var(--bg);
+  background: var(--board-surface);
   color: var(--text);
 }
 

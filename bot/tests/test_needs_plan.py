@@ -91,24 +91,27 @@ class StageTests(unittest.TestCase):
 class PlanningLaneTests(unittest.TestCase):
     def test_planning_comes_first_easy_first_and_takes_no_build_lane(self):
         """claude-3 plans while it builds; claude-1, capped like the rest, plans only
-        when it holds nothing else; Devin builds once a strong model planned it. claude-7, idle
-        and ahead of claude-1 in the usage order, would plan first, so it has no secret here."""
+        when it holds nothing else; Devin builds once a strong model planned it. The load
+        balancer (`plan.balance`) gives the first plan to claude-1, which holds nothing, over
+        claude-3, which builds; claude-2, claude-5, claude-6 and claude-7, idle too, would plan
+        the second, so they have no secret here."""
         gh = FakeGitHub()
-        ctx = lane_ctx(gh, env=secrets(*(s for s in providers.SECRETS
-                                         if s != "CLAUDE_CODE_OAUTH_TOKEN_7")))
+        ctx = lane_ctx(gh, env=secrets(*(s for s in providers.SECRETS if s not in (
+            "CLAUDE_CODE_OAUTH_TOKEN_2", "CLAUDE_CODE_OAUTH_TOKEN_5",
+            "CLAUDE_CODE_OAUTH_TOKEN_6", "CLAUDE_CODE_OAUTH_TOKEN_7"))))
         busy(gh, ctx, ("claude-3", 50), ("claude-4", 52), ("agy", 53), ("muse", 54), ("gpt", 55))
         queue(gh, ctx, 3, "priority:high", planned=False)    # medium and urgent
         queue(gh, ctx, 4, EASY, "priority:low", planned=False)  # easy: Devin's, once planned
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["number"], planned["provider"]),
-                         ("plan", 4, "claude-3"))  # building #50 does not stop it planning
-        self.assertEqual(seats(planned)["plan"], ("claude-3", "opus", "strong"))
+                         ("plan", 4, "claude-1"))  # claude-1 holds nothing else
+        self.assertEqual(seats(planned)["plan"], ("claude-1", "opus", "strong"))
         self.assertEqual(gh.label_names(4), {LABEL_WORKING, LABEL_NEEDS_PLAN, EASY,
                                              "priority:low"})
         running(gh, ctx, planned)
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["number"], planned["provider"]),
-                         ("plan", 3, "claude-1"))  # claude-1 holds nothing else
+                         ("plan", 3, "claude-3"))  # building #50 does not stop it planning
         running(gh, ctx, planned)
         # Both planning lanes are taken, and claude-1, planning, does not build too.
         self.assertNotIn(plan_mod.make(ctx)["action"], ("plan", "build"))
@@ -296,6 +299,8 @@ class PersonsPlanTests(unittest.TestCase):
                                                             planned_tier="medium"))
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["number"]), ("build", 4))
-        self.assertEqual(seats(planned)["build"], ("claude-3", "sonnet", "medium"))
-        self.assertEqual(seats(planned)["review"], ("claude-3", "opus", "strong"))
+        # claude-3 holds a run on one of its two lanes, so the load balancer gives this one to
+        # claude-7, the first idle account in the usage order (`plan.balance`).
+        self.assertEqual(seats(planned)["build"], ("claude-7", "sonnet", "medium"))
+        self.assertEqual(seats(planned)["review"], ("claude-7", "opus", "strong"))
         self.assertNotIn(LABEL_NEEDS_PLAN, gh.label_names(4))

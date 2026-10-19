@@ -176,7 +176,7 @@ fn reward_g_defers(ctx: &EffectContext<'_>) -> bool {
 }
 
 /// One reward's own effects, before the quest it leads to opens. `defer_g` is R1279000's
-/// wait: the kept v0.3.7b scripts pass `false`, asking G at once on any turn.
+/// wait: the kept v0.3.16 scripts pass `false`, asking G at once on any turn.
 fn reward_effects(ctx: &EffectContext<'_>, id: &str, defer_g: bool) -> Vec<Effect> {
     match id {
         "A" => vec![heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": REWARD_HEAL })))],
@@ -385,9 +385,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts v0.3.7b and every version before it ran, kept for their replays: reward G
+/// R767000: the scripts v0.3.16 and every version before it ran, kept for their replays: reward G
 /// asked at once on any turn, and its quest opened beside the prompt.
-pub fn script_v0_3_7b() -> CardScripts {
+pub fn script_v0_3_16() -> CardScripts {
     CardScripts {
         base: in_too_deep(false, false),
         radiant: in_too_deep(true, false),
@@ -1222,9 +1222,9 @@ mod tests {
             }
 
             #[test]
-            fn r1279000_r767000_a_game_on_v0_3_7_folds_under_the_kept_script_reward_g_asking_at_once_with_its_quest() {
+            fn r1279000_r767000_a_game_on_v0_3_15_folds_under_the_kept_script_reward_g_asking_at_once_with_its_quest() {
                 crate::register_all();
-                let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+                let shipped = crate::shipped_catalog("v0.3.15").expect("v0.3.15 is carried");
                 jackioh_engine::with_shipped(Some(shipped), || {
                     let mut s = scenario(json!({
                         "p1": spare(json!({ "backrow": [ITD] })),

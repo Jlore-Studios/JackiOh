@@ -134,9 +134,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: the scripts v0.3.7b and every version before it ran, kept for their replays: the keep
+/// R767000: the scripts v0.3.16 and every version before it ran, kept for their replays: the keep
 /// prompt opened at once on either player's turn.
-pub fn script_v0_3_7b() -> CardScripts {
+pub fn script_v0_3_16() -> CardScripts {
     fn tax_old(radiant: bool) -> TriggerDef {
         TriggerDef::new("income-tax", &[GameEventType::Drawn], move |ctx, _event| {
             if zone_count(ctx.state, opponent_of(ctx.controller), OffFieldZone::Hand) <= 1 {
@@ -388,9 +388,9 @@ mod tests {
         }
 
         #[test]
-        fn r1279000_r767000_a_game_on_v0_3_7_folds_under_the_kept_script_the_keep_opening_at_once_off_turn() {
+        fn r1279000_r767000_a_game_on_v0_3_15_folds_under_the_kept_script_the_keep_opening_at_once_off_turn() {
             crate::register_all();
-            let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+            let shipped = crate::shipped_catalog("v0.3.15").expect("v0.3.15 is carried");
             jackioh_engine::with_shipped(Some(shipped), || {
                 // p1's Palantir steals p2's Stockpile and casts it (R831001), so p1 draws 2 on
                 // p2's turn; the old script asked at once.

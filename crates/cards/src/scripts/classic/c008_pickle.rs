@@ -28,7 +28,7 @@
 //! empty deck is fatigue (§2.4), which still does something. The options name no card. R800's guard
 //! stops a forced discard only while its holder is not active: every new question opens on their
 //! turn (R1279000), where the guard sleeps and "discard" stands as long as their hand holds a
-//! card, while the kept v0.3.7b questions answering off their turn still filter it.
+//! card, while the kept v0.3.16 questions answering off their turn still filter it.
 //!
 //! "DISCARD" is random from their hand (R682: no "of your choice"), so no prompt opens and the next
 //! question follows at once. You read only the discard events, never the cards (R177).
@@ -144,7 +144,7 @@ fn ask(ctx: &EffectContext<'_>, chain: &ChainData, pending: Pending) -> Vec<Effe
     let state: &GameState = &*ctx.state;
     let mut options: Vec<&str> = Vec::new();
     // R800's guard stops a forced discard only while its holder is not active, so the read stays:
-    // it filters "discard" for a guarded holder answering off their turn (the kept v0.3.7b
+    // it filters "discard" for a guarded holder answering off their turn (the kept v0.3.16
     // questions) and sleeps on the holder's own turn (R1279000), where every new question opens.
     if zone_count(state, enemy, OffFieldZone::Hand) - pending.hand_loss.unwrap_or(0) > 0
         && !jackioh_engine::draw::discard_guarded(state, enemy)
@@ -259,9 +259,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: the scripts v0.3.7b and every version before it ran, kept for their replays: the first
+/// R767000: the scripts v0.3.16 and every version before it ran, kept for their replays: the first
 /// question opened during your turn, on the opponent's own clock (R79).
-pub fn script_v0_3_7b() -> CardScripts {
+pub fn script_v0_3_16() -> CardScripts {
     let base = Script {
         cry: Some(hook(|ctx| {
             let chain = ChainData {
@@ -451,9 +451,9 @@ mod tests {
             }
 
             #[test]
-            fn r1279000_r767000_a_game_on_v0_3_7_folds_under_the_kept_script_the_first_question_opening_during_your_turn() {
+            fn r1279000_r767000_a_game_on_v0_3_15_folds_under_the_kept_script_the_first_question_opening_during_your_turn() {
                 crate::register_all();
-                let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+                let shipped = crate::shipped_catalog("v0.3.15").expect("v0.3.15 is carried");
                 jackioh_engine::with_shipped(Some(shipped), || {
                     let mut s = pickle(false, Piles::default());
                     s.play(PICKLE, json!({}));
@@ -467,9 +467,9 @@ mod tests {
             }
 
             #[test]
-            fn r800_r767000_a_game_on_v0_3_7_filters_discard_for_a_guarded_hand_answering_off_turn() {
+            fn r800_r767000_a_game_on_v0_3_15_filters_discard_for_a_guarded_hand_answering_off_turn() {
                 crate::register_all();
-                let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+                let shipped = crate::shipped_catalog("v0.3.15").expect("v0.3.15 is carried");
                 jackioh_engine::with_shipped(Some(shipped), || {
                     // The old script asked during your turn, where R800's guard is awake: a
                     // guarded holder is not offered "discard".
