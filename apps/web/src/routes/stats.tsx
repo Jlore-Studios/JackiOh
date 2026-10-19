@@ -169,16 +169,16 @@ export default function StatsRoute(): ReactElement {
   // Column visibility
   const [visibleCols, setVisibleCols] = useState({
     thumbnail: true,
-    cost: true,
-    rarity: true,
-    keywords: true,
+    cost: false,
+    rarity: false,
+    keywords: false,
     games: true,
     winRate: true,
     drawnWinRate: true,
     radiantWinRate: true,
     normalWinRate: true,
     playRate: true,
-    playedDelta: false,
+    playedDelta: true,
     personal: true,
   });
 
