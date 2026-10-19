@@ -281,6 +281,10 @@ class Pool:
     plan_lanes: int = 0
     #: Each tier's models, in the order the router tries them.
     tiers: Mapping[str, tuple[TierEntry, ...]] = field(default_factory=dict)
+    #: The load balancer (`plan.balance`): within a tier, the subscription with the most room
+    #: under its caps goes first, then the one holding the fewest runs, and only then the usage
+    #: order. Off, the usage order alone breaks the tie.
+    balance: bool = False
 
     def on_machine(self, provider_id: str) -> bool:
         provider = self.get(provider_id)
@@ -571,8 +575,11 @@ def parse(raw: Any) -> Pool:
                                      or extra.takes_over == provider.id):
                 raise ConfigError(f"{PROVIDERS_PATH}: {provider.id}'s {extra.model} takes over "
                                   f"{extra.takes_over!r}, which is not another provider")
+    balance = raw.get("balance", False)
+    if not isinstance(balance, bool):
+        raise ConfigError(f"{PROVIDERS_PATH}: balance must be true or false")
     pool = Pool(lanes, priority, providers, machine_parallel=machine, plan_lanes=plan_lanes,
-                tiers=tiers)
+                tiers=tiers, balance=balance)
     # Every model a provider runs has its place in its own tier's order, so the router always
     # knows which to try first, and a model never has two tiers.
     for provider in providers.values():
@@ -777,6 +784,41 @@ def refusal(provider: Provider, entry: Mapping[str, Any], at: datetime,
         if used >= budget:
             return f"it has spent {used:.0f} of its {budget} minutes in the {WINDOW_NAMES[window]} window"
     return None
+
+
+#: The load balancer's step (`room`, `plan.balance`): two subscriptions whose room rounds to the
+#: same step count as level, and the one holding fewer runs, then the usage order, goes first. A
+#: reading is only as fresh as its subscription's last run, so a closer split means nothing.
+BALANCE_STEP = 0.1
+
+
+def room(provider: Provider, entry: Mapping[str, Any], at: datetime,
+         zone_name: str | None = None) -> float:
+    """How much of its allowance this provider has free now, from 0 to 1: its tightest window,
+    each the share of its cap (1 where it has none) its last reading leaves free, and of its
+    minute budgets. As in `refusal`, a window that has reset since the reading is all free, and
+    a refusal not yet over leaves nothing."""
+    until = parse_iso(entry.get("refused_until"))
+    if until is not None and until > at:
+        return 0.0
+    usage = current_usage(provider, entry)
+    observed = parse_iso(usage.get("observed_at"))
+    caps = provider.caps_at(at, zone_name)
+    free = [1.0]
+    for window, span in WINDOWS.items():
+        reading = usage.get(window)
+        if not isinstance(reading, Mapping):
+            continue
+        resets = parse_iso(reading.get("resets_at")) or (observed + span if observed else None)
+        utilization = reading.get("utilization")
+        if resets is None or resets <= at or not isinstance(utilization, (int, float)):
+            continue
+        cap = caps.get(window, 1.0)
+        free.append(max(0.0, cap - utilization) / cap if cap > 0 else 0.0)
+    for window, budget in provider.limits.budgets.items():
+        used = minutes_spent(entry, at - WINDOWS[window])
+        free.append(max(0.0, 1 - used / budget) if budget > 0 else 0.0)
+    return min(free)
 
 
 def start_under(provider: Provider, window: str, cap: float) -> float:
