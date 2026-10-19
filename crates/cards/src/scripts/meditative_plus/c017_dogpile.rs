@@ -95,6 +95,8 @@ mod tests {
     const TOKEN_MAN: &str = "core-015";
     /// A (1) 4/4 with no text.
     const FILLER: &str = "core-008";
+    /// (2) Field Spell: after you play a card, shuffle 3 copies of it into your library.
+    const CLONE_MACHINE: &str = "core-033";
 
     fn game(seed: &str, p1: Value, p2: Value) -> Scenario {
         let mut sides = json!({
@@ -314,5 +316,32 @@ mod tests {
         let mut s = game("m+017-radiant-played", radiant, json!({}));
         s.play(ID, json!({ "targets": hero(P2) }));
         assert_eq!(health(&s, P2), 26);
+    }
+
+    /// R1180006, fuzz seeds 934, 2632, 2995 and 5204 (#1216): Core #33 Unstable Clone Machine shuffles 3
+    /// copies of every answered cast into the library, so each answer mints its successor; the armored
+    /// hero survives them all, the chain still ends at its cap of casts, and the turn can pass.
+    #[test]
+    fn r1180006_clone_machine_answers_end_at_the_chain_cap() {
+        let mut s = game(
+            "m+017-clone-machine",
+            json!({ "hand": [FILLER, FILLER], "armor": 1000 }),
+            json!({
+                "hand": [TRUE_STRIKE, ID, FILLER],
+                "library": [ID, FILLER, FILLER],
+                "field": [CLONE_MACHINE],
+            }),
+        );
+        s.end_turn();
+        s.play(TRUE_STRIKE, json!({ "targets": hero(P1) }));
+        let cast = s
+            .events()
+            .iter()
+            .filter(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id == ID))
+            .count();
+        let cap = usize::try_from(jackioh_engine::config::SPELL_ANSWER_CHAIN_CAP).unwrap_or(0);
+        assert_eq!(cast, cap);
+        assert!(s.state().result.is_none());
+        s.end_turn();
     }
 }

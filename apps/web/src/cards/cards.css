@@ -115,6 +115,26 @@
   left: auto;
 }
 
+/* R1081000: a Flying minion's face hovers 6% higher (keywords.css), its name plate with it, so its
+   counters rise as far and still clear the plate (B21). With motion reduced the face stays down, and
+   the counters with it. */
+.card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter,
+.zone .card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter {
+  bottom: 45%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter,
+  .zone .card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter {
+    bottom: 39%;
+  }
+}
+
+:root[data-reduce-motion="true"] .card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter,
+:root[data-reduce-motion="true"] .zone .card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter {
+  bottom: 39%;
+}
+
 .card.cf-host--compact > .counter {
   top: auto;
   bottom: 43%;
