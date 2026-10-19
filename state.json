@@ -5098,6 +5098,13 @@
     "1282": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-19T12:44:36Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "fails 'one place': a crate, the training loop and the analysis notebook and tests; the rest of the rule holds (no spec, engine or AI change)"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
