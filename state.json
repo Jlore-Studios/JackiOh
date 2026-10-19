@@ -6204,7 +6204,9 @@
     },
     "1338": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:6277163180"
+      ],
       "cleared": {
         "at": "2026-10-19T18:33:54Z",
         "by": "`claude` (strong)",
@@ -6228,9 +6230,7 @@
       "source": "request",
       "started_at": "2026-10-19T21:00:30Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6277163180"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
         "approvals": [
