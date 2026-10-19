@@ -217,7 +217,7 @@ Why it is built this way:
 - **Medium builders, strong planners and a strong reconcile.** A part is one blind pass whose
   every flaw the reconcile's build, checks and review must clear anyway, so its builder may be a
   tier under its difficulty once a strong model has planned it: the strong models spend their
-  hours on the plans and the reconcile, and the medium subscriptions (Muse's four lanes) on the
+  hours on the plans and the reconcile, and the medium subscriptions (Muse's two lanes) on the
   building.
 
 What to watch: the parent is hard, so three failures of its own block it instead of stepping it
@@ -434,7 +434,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh`; weak since 2026-10-11, so easy items only | on the machine, as `agent-gpt` | any time | all of 5 hours (100%), all of the week (Codex reports both; #798) |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | all of 5 hours (100%), all of the week (its own `agy -p /usage`, the Gemini pool's row; #798) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2), on the Devin plan that came with Windsurf, which is canceled; off from 2026-10-05 to 2026-10-06 (#311: every call failed in seconds), on again since a `devin -p` call answered on the machine (#318) | on the machine, as `agent-devin` | any time until 2026-11-02 (`off_from`), when the plan runs out | none: until it refuses |
-| `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on four lanes; Meta's $50 plan since 2026-10-11, four times the usage of the one before | on the machine, as `agent-muse` | any time | all of 5 hours (100%), all of the week (its TUI's `/usage` panel; #798) |
+| `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on two lanes; Meta's $50 plan since 2026-10-11, four times the usage of the one before | on the machine, as `agent-muse` | any time | all of 5 hours (100%), all of the week (its TUI's `/usage` panel; #798) |
 
 The Claude accounts' model jobs run on GitHub's runners (`ubuntu-latest`), which install their
 CLI each time; every other subscription's runs on its own runner on the machine, `night-vm-<id>`.
@@ -495,7 +495,7 @@ prints each one and whether it could start now, and `/harness status` does the s
     (`providers.start_reason`, `providers.frees_at`).
   - **One run at a time** on a capped subscription, its planning run included: two runs
     deciding from one reading pass a cap together. A subscription given more `lanes` takes that
-    many (Muse has four, on one login): each run takes its own reading before it starts and
+    many (Muse has two, on one login): each run takes its own reading before it starts and
     watches it during every call, so two of them pass a cap by at most one reading's worth.
   - **A refusal** parks the subscription until the reset its message names ("resets in
     1h44m44s", "try again in 5 days 2 hours"). One that names none waits for the window the
@@ -525,7 +525,7 @@ each apart from the other, so Claude runs never wait for the night box's slots n
 GitHub's lanes; `plan_lanes` is how many planning runs may go on top of those (the planning
 lane, below; 6), `priority` the usage order within a tier (below), and `tiers` each tier's models,
 which the router tries weakest-first inside the subscription. A subscription's own `lanes`
-(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill its box alone, Muse's is 4, and claude-1, claude-2, claude-3 and claude-7 have 2 each. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
+(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill its box alone, Muse's is 2, and claude-3's is 2. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on as
