@@ -12,7 +12,8 @@
 //!     stepping from its backrow zone into a unit zone enters it on that turn, R383, except an
 //!     "Animated on your turn" card animating at its controller's start of turn that has been on
 //!     that side since the turn began: that enters nothing, R1062; one animating on the other
-//!     player's turn, as Pareto Optimality's attack animates The Cane, R1126, enters), or a
+//!     player's turn, as Pareto Optimality's attack animates The Cane, R1126, enters, and so does one
+//!     that fired as a trap this turn, animating as its firing's last step), or a
 //!     `transformed` whose new instance differs from the old. `fused` keeps the target's entry (R77), and a move along one
 //!     side or a Stack card resuming emits nothing and changes nothing;
 //!   - `lastAttack`, the turn and stint of each instance's latest declared (not forced) attack,
@@ -30,7 +31,8 @@
 //!      checked the same way. It reads `attack_targets`, which is what `legal_actions` enumerates with.
 //!   I2 one declared attack per stint per turn, two for a unit that had Windfury in that stint (R636):
 //!      seen on a state between actions, or gained inside the action, granted (`keywordGranted`) or
-//!      Buffed (`upgraded`, R386).
+//!      Buffed (`upgraded`, R386), or carried onto the field by an entry inside the action, as the
+//!      card was before the action or as the action left it (the autopilot's turn, R1183002).
 //!      A unit that re-entered may attack again within its keywords (R83, R171); forced attacks are not
 //!      declarations and are skipped (R53).
 //!   I3 every card on the field arrived by an event (§10.3: every visible state change emits one).
@@ -1054,6 +1056,16 @@ pub struct InvariantMonitor {
     /// Conjure token and fight with it twice inside one outer action, where no between-action state ever
     /// holds it, or Buff an attacker My Pawn stopped into Windfury and attack with it again (R636).
     windfury: IndexMap<String, i32>,
+    /// R636: the cards off the field that carry Windfury as the action begins, in what they are made
+    /// of (`layers::card_keywords`: the face, its tuning, a grant), read by `before`. A unit that
+    /// enters with it is seen with it in the stint it enters, so one that enters and declares twice
+    /// inside one action, which no state between actions holds on the field, is within its keywords:
+    /// the autopilot plays a whole turn in one action (R1183002; fuzz seeds 5325, 6431, 9388, and 6732
+    /// and 7295 of the handicapped wave, #1216).
+    carried_windfury: IndexSet<String>,
+    /// The cards that fired as traps this turn: one animates as its firing's last step, not at the
+    /// start of the turn, and that is an entry even on its controller's turn (R383, R1062).
+    fired: IndexSet<String>,
     readied: IndexSet<String>,
     /// R424: the latest declared attack, and whether its attacker destroyed its target (R42).
     attack: Option<ShadowAttack>,
@@ -1076,6 +1088,8 @@ impl InvariantMonitor {
             stint: IndexMap::new(),
             last_attack: IndexMap::new(),
             windfury: IndexMap::new(),
+            carried_windfury: IndexSet::new(),
+            fired: IndexSet::new(),
             readied: IndexSet::new(),
             attack: None,
         }
@@ -1091,6 +1105,23 @@ impl InvariantMonitor {
                 let stint = self.stint_of(&card.id);
                 self.windfury.insert(card.id.clone(), stint);
             }
+        }
+    }
+
+    /// R636: a unit that just entered and carries Windfury, as it was before the action
+    /// (`carried_windfury`) or as the action left it, has it in this stint.
+    fn note_entry_windfury(&mut self, id: &str, state: &GameState) {
+        let left_with = find_instance(state, id).is_some_and(|card| {
+            let keywords = if card.zone.z() == ZoneName::Field {
+                keywords_now(state, card)
+            } else {
+                crate::layers::card_keywords(state, card)
+            };
+            has_keyword(&keywords, KeywordKind::Windfury)
+        });
+        if left_with || self.carried_windfury.contains(id) {
+            let stint = self.stint_of(id);
+            self.windfury.insert(id.to_string(), stint);
         }
     }
 
@@ -1163,6 +1194,19 @@ impl InvariantMonitor {
     pub fn before(&mut self, state: &GameState, player: PlayerId, action: &ActionBody) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
         self.note_windfury(state);
+        self.carried_windfury = PLAYER_IDS
+            .into_iter()
+            .flat_map(|player| {
+                let side = &state.players[player];
+                side.hand
+                    .iter()
+                    .chain(side.library.iter())
+                    .chain(side.graveyard.iter())
+                    .chain(side.exile.iter())
+            })
+            .filter(|card| has_keyword(&crate::layers::card_keywords(state, card), KeywordKind::Windfury))
+            .map(|card| card.id.clone())
+            .collect();
 
         // R1202: declaring spends the declarer's exertion before its substitute is even summoned,
         // so a substitute barred from the target spends with no declaration following (fuzz seed
@@ -1269,11 +1313,16 @@ impl InvariantMonitor {
                     self.turn = *turn;
                     self.active = *player;
                     self.attack = None;
+                    self.fired.clear();
                 }
                 GameEvent::CardPlayed { instance_id, .. }
                 | GameEvent::Summoned { instance_id, .. }
                 | GameEvent::ControlChanged { instance_id, .. } => {
                     self.enter(instance_id);
+                    self.note_entry_windfury(instance_id, state);
+                }
+                GameEvent::TrapFired { instance_id, .. } => {
+                    self.fired.insert(instance_id.clone());
                 }
                 GameEvent::Animated {
                     player,
@@ -1286,9 +1335,13 @@ impl InvariantMonitor {
                     // ME-ALTPLAY, R1041: a set Unit keeps its set turn as `summonedTurn`, so its reveal
                     // animation enters nothing either. R1062: nor does an "Animated on your turn" card
                     // animating at its controller's start of turn that has been on that side since the
-                    // turn began; on the other player's turn (R1126) it enters, as R383 has it.
+                    // turn began; on the other player's turn (R1126) it enters, as R383 has it. One that
+                    // fired as a trap this turn animates as its firing's last step, not at the start of
+                    // the turn, and enters even then (fuzz seed 5644, #1216: a face-down Field Trap
+                    // fused with Fiery Waraxe, set on an earlier turn, fired on its controller's turn).
                     if *carried != Some(true)
-                        && !self.on_its_side_before_this_turn(instance_id, *player, state)
+                        && (self.fired.contains(instance_id)
+                            || !self.on_its_side_before_this_turn(instance_id, *player, state))
                     {
                         let is_unit_def = find_instance(state, instance_id).is_some_and(|card| {
                             crate::catalog::def_of(Some(state), &card.def_id).type_
@@ -1296,6 +1349,7 @@ impl InvariantMonitor {
                         });
                         if !is_unit_def {
                             self.enter(instance_id);
+                            self.note_entry_windfury(instance_id, state);
                         }
                     }
                 }
@@ -1306,6 +1360,7 @@ impl InvariantMonitor {
                 } => {
                     if new_instance_id != instance_id {
                         self.enter(new_instance_id);
+                        self.note_entry_windfury(new_instance_id, state);
                     }
                     if self
                         .attack
