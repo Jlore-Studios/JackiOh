@@ -5612,15 +5612,24 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/tools/README.md",
+            "crates/tools/src/stats.rs"
+          ],
+          "from": "d6b76ff1e423d3d8f5a57a91331fd80c9e7031ba",
+          "main": "f2115dba364501a21f37bf01de4300df02334f59"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39254480377",
+            "run": "39263297567",
             "tier": "strong"
           }
         ],
-        "sha": "d6b76ff1e423d3d8f5a57a91331fd80c9e7031ba",
+        "sha": "f342ce2416344fc72fe457b5314966c0d0d4fa5e",
         "tiers": {
           "claude": "strong"
         }
