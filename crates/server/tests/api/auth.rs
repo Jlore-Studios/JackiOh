@@ -39,7 +39,9 @@ use tower::ServiceExt;
 
 use jackioh_server::app::App;
 use jackioh_server::auth::{Auth, AuthError, SupabaseAuth, SupabaseAuthInput};
-use jackioh_server::config::{AUTH_PROVIDER_TIMEOUT_SECONDS, AUTH_SESSION_LIVE_CACHE_SECONDS};
+use jackioh_server::config::{
+    AUTH_PROVIDER_TIMEOUT_SECONDS, AUTH_SESSION_LIVE_CACHE_SECONDS, EMAIL_CONFIRMED_CACHE_TTL_MS,
+};
 use jackioh_server::db::store::{Db, Profile};
 
 use crate::support::deps::{call, test_app};
@@ -690,6 +692,25 @@ mod r159_how_long_a_verified_email_stays_verified {
                 .email_verified
         );
         assert_eq!(h.gotrue.lookups(), counts(&[(ALICE, 2), (BOB, 1)]));
+    }
+
+    #[tokio::test]
+    async fn r159_each_remembered_email_forgets_those_past_the_window() {
+        let h = Harness::new().await;
+        let Auth::Supabase(provider) = &h.auth else {
+            panic!("the harness builds the Supabase provider")
+        };
+        let carol = "ca201000-0000-4000-8000-000000000003";
+
+        h.auth.verify(&h.token_for(ALICE)).await.expect("alice verifies");
+        h.clock.charge(EMAIL_CONFIRMED_CACHE_TTL_MS - 1).await;
+        h.auth.verify(&h.token_for(BOB)).await.expect("bob verifies");
+        assert_eq!(provider.confirmed_count(), 2);
+
+        // Alice's entry is now a full window old: the next insert drops it, and Bob's stays.
+        h.clock.charge(1).await;
+        h.auth.verify(&h.token_for(carol)).await.expect("carol verifies");
+        assert_eq!(provider.confirmed_count(), 2);
     }
 
     #[tokio::test]

@@ -14,13 +14,14 @@
 //!
 //! The response carries only offer stakes, presence booleans and ids (CLAUDE.md rule 7).
 //!
-//! The offers live in a module-level map, like `queue.rs`'s `E2E_SEED_BY_TICKET`: rendezvous state
-//! for two sockets, not rows, so a restart drops them and both clients re-offer. Entries without a
-//! created game are swept on read past `REMATCH_OFFER_TTL_MS`; one that made a game keeps its id so
-//! a late poller still learns where to go.
+//! The offers live in memory, one map per `App` (`RematchOffers`): rendezvous state for two sockets,
+//! not rows, so a restart drops them and both clients re-offer. An entry without a created game is
+//! swept on read past `REMATCH_OFFER_TTL_MS`; one that made a game keeps its id so a late poller
+//! still learns where to go. The reaper's tick sweeps every entry past that window whose finished
+//! match no actor holds (`sweep_rematch_offers`).
 
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use indexmap::IndexMap;
 use jackioh_engine::{LeanPick, PlayerId};
@@ -76,25 +77,41 @@ struct OfferEntry {
     generation: u64,
 }
 
-static OFFERS_BY_MATCH: LazyLock<Mutex<IndexMap<String, OfferEntry>>> =
-    LazyLock::new(|| Mutex::new(IndexMap::new()));
+/// R672's offers, by the finished match's id: rendezvous state for two sockets, not rows. One per
+/// `App` (`App::rematch_offers`), like `QueuePresence`, so parallel tests never share offers and one
+/// test's sweep never reaches another's.
+#[derive(Default)]
+pub struct RematchOffers(Mutex<IndexMap<String, OfferEntry>>);
 
 static NEXT_GENERATION: AtomicU64 = AtomicU64::new(1);
 
-fn offers() -> MutexGuard<'static, IndexMap<String, OfferEntry>> {
-    OFFERS_BY_MATCH
+fn offers(app: &App) -> MutexGuard<'_, IndexMap<String, OfferEntry>> {
+    app.rematch_offers
+        .0
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 /// For the tests; nothing in `src/` calls it.
-pub fn clear_rematch_offers() {
-    offers().clear();
+pub fn clear_rematch_offers(app: &App) {
+    offers(app).clear();
 }
 
 /// For the tests; nothing in `src/` calls it.
-pub fn rematch_offer_count() -> usize {
-    offers().len()
+pub fn rematch_offer_count(app: &App) -> usize {
+    offers(app).len()
+}
+
+/// The reaper's tick (`api::results::run_reaper`, after `Registry::reap_finished`): drops each
+/// entry whose latest offer is older than `REMATCH_OFFER_TTL_MS` and whose finished match no actor
+/// holds any more. An unanswered one is what `live_entry` sweeps on a read nobody makes; one that
+/// made a game goes too, since both seats' `in_match_id` already names that game. An open socket
+/// keeps its actor, and so its offers. Answers how many it dropped.
+pub fn sweep_rematch_offers(app: &App, now: i64) -> usize {
+    let mut map = offers(app);
+    let before = map.len();
+    map.retain(|match_id, entry| now - entry.at <= REMATCH_OFFER_TTL_MS || app.matches.has(match_id));
+    before - map.len()
 }
 
 // Small private copies (fullsend rule 5): the error shapes
@@ -131,7 +148,8 @@ fn stakes_of(body: &Value) -> Result<RematchStakes, ApiError> {
 }
 
 /// The live entry for a match, sweeping one whose offers went stale. An entry that already made a
-/// game is never swept: the id is how a late poller finds the game.
+/// game is never swept here: the id is how a late poller finds the game, until the reaper's
+/// `sweep_rematch_offers`.
 fn live_entry<'a>(
     offers: &'a mut IndexMap<String, OfferEntry>,
     match_id: &str,
@@ -574,7 +592,7 @@ async fn offer_as(
     // One new game per pair of equal offers: check and claim run under one lock, so two offers
     // landing together cannot mint two games; a failed create clears the claim.
     let (claimed, answered) = {
-        let mut map = offers();
+        let mut map = offers(app);
         if live_entry(&mut map, &match_row.id, now).is_none() {
             let generation = NEXT_GENERATION.fetch_add(1, Ordering::Relaxed);
             map.insert(
@@ -617,7 +635,7 @@ async fn offer_as(
             }
             .await;
             if let Err(error) = created {
-                let mut map = offers();
+                let mut map = offers(app);
                 if let Some(entry) = map.get_mut(&match_row.id)
                     && entry.generation == generation
                 {
@@ -654,7 +672,7 @@ async fn rematch_status_route(app: &App, req: Req) -> ApiResult {
     }
 
     let (you_offered, opponent_offer, created) = {
-        let mut map = offers();
+        let mut map = offers(app);
         match live_entry(&mut map, &match_row.id, now_ms()) {
             None => (None, None, None),
             Some(entry) => (
