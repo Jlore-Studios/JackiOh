@@ -311,9 +311,34 @@ mod tests {
         fn r1101_the_compiled_table_names_both_ends() {
             crate::register_all();
             clear_overrides();
-            let leader = win_rate_leader(ID).expect("the compiled table names a leader");
-            let trailer = win_rate_trailer(&[ID, leader.as_str()]).expect("and a lowest");
+            // R1100's and R1183000's comparison written out: the exact rate, toward the highest or
+            // the lowest, then more games, then the smaller id.
+            let ranks_before = |a: &WinRateRow, b: &WinRateRow, lowest: bool| {
+                let left = i64::from(a.wins) * i64::from(b.games);
+                let right = i64::from(b.wins) * i64::from(a.games);
+                let rate = if lowest { left < right } else { left > right };
+                rate || left == right && (a.games > b.games || a.games == b.games && a.id < b.id)
+            };
+            let end = |skipped: &[&str], lowest: bool| -> String {
+                crate::WIN_RATES
+                    .cards
+                    .iter()
+                    .filter(|row| row.games >= CN_TECH_MIN_GAMES && !skipped.contains(&row.id.as_str()))
+                    .filter(|row| crate::CATALOG.get(&row.id).is_some_and(deckable))
+                    .reduce(|best, row| if ranks_before(row, best, lowest) { row } else { best })
+                    .expect("a qualifying row")
+                    .id
+                    .clone()
+            };
+            let leader = end(&[ID], false);
+            let trailer = end(&[ID, leader.as_str()], true);
+            assert_eq!(win_rate_leader(ID), Some(leader.clone()));
+            assert_eq!(win_rate_trailer(&[ID, leader.as_str()]), Some(trailer.clone()));
             assert_ne!(leader, trailer);
+            // And the card fuses them, the trailer first.
+            let mut s = casting("na-tech-compiled", false, 1);
+            let card = fused(&mut s);
+            assert_eq!(ingredients(&s, &card), vec![(trailer, false), (leader, false)]);
         }
     }
 }

@@ -2,8 +2,9 @@
 //! game was played on. Every shipped version but the newest, which is the build's own: its
 //! definitions rebuilt from `build.rs`'s `history.json` (the snapshot's entries as they differ from
 //! `catalog.json`'s), in catalog order, and its scripts the build's own but where one is kept in
-//! `KEPT_SCRIPTS`. Each carries the win-rate table it shipped with (R1266000, `win_rates_at`). The
-//! browser's module carries only the newest of them (`build.rs`'s `BROWSER_CARRIED_FROM`).
+//! `KEPT_SCRIPTS`. Each carries the win-rate table it shipped with (R1266000): its
+//! `patches/win_rates/<version>.json`, or the empty table when it has none (R1329000, `table_of`).
+//! The browser's module carries only the newest of them (`build.rs`'s `BROWSER_CARRIED_FROM`).
 //!
 //! A version's catalog is built the first time a replay asks for it and kept for the process: one of
 //! the catalog statics a pure crate may hold (CLAUDE.md rule 4), never game state.
@@ -22,7 +23,7 @@ use crate::scripts::meditative::{
     c017_true_craft_a_card, c037_cn_in_a_bottle, c054_money_machine, c074_montana_giant, c080_aluneth,
     c097_2_wishing_well, c097_8_prison,
 };
-use crate::{CATALOG, REGISTRY, WIN_RATES, catalog_json};
+use crate::{CATALOG, REGISTRY, catalog_json};
 
 /// R767000, R388: the scripts kept for shipped versions, `(ID, version, script)`: a patch that changes
 /// what a card's script does, not only a number its definition holds, keeps the script it replaces
@@ -103,13 +104,17 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
 /// that builds the scripts that version ran.
 pub type KeptScript = (&'static str, &'static str, fn() -> CardScripts);
 
-/// `history.json`: every shipped version in order, the definition patches, and each carried version.
+/// `history.json`: every shipped version in order, the definition patches, the win-rate tables, and
+/// each carried version.
 #[derive(Deserialize, Default)]
 struct History {
     #[serde(default)]
     order: Vec<String>,
     #[serde(default)]
     patches: Vec<DefPatch>,
+    /// R1329000: every table a version's `win_rates/<version>.json` holds, each once.
+    #[serde(default, rename = "winRates")]
+    win_rates: Vec<WinRateTable>,
     #[serde(default)]
     versions: Vec<VersionDelta>,
 }
@@ -124,7 +129,8 @@ struct DefPatch {
     unset: Vec<String>,
 }
 
-/// One carried version: the catalog ids its snapshot lacks, and each id that differs, by patch.
+/// One carried version: the catalog ids its snapshot lacks, each id that differs, by patch, and its
+/// win-rate table, by index, when it has a file.
 #[derive(Deserialize, Default)]
 struct VersionDelta {
     #[serde(default)]
@@ -133,6 +139,8 @@ struct VersionDelta {
     absent: IndexSet<String>,
     #[serde(default)]
     changed: IndexMap<String, usize>,
+    #[serde(default, rename = "winRates")]
+    win_rates: Option<usize>,
 }
 
 static HISTORY: LazyLock<History> = LazyLock::new(|| {
@@ -209,11 +217,7 @@ fn build(delta: &VersionDelta) -> ShippedCatalog {
             covering(&HISTORY.order, KEPT_SCRIPTS, &delta.version, id).map(|script| (id.clone(), script()))
         })
         .collect();
-    ShippedCatalog::new(&delta.version, defs, scripts).with_win_rates(win_rates_at(
-        &HISTORY.order,
-        &WIN_RATES,
-        &delta.version,
-    ))
+    ShippedCatalog::new(&delta.version, defs, scripts).with_win_rates(table_of(&HISTORY, delta))
 }
 
 /// `version`'s definition of `id`: the catalog's raw entry with `patch` applied.
@@ -243,15 +247,13 @@ fn covering<'a, T>(order: &[String], kept: &'a [(&str, &str, T)], version: &str,
         .map(|(_, script)| script)
 }
 
-/// R1266000: the win-rate table `version` shipped with: `table` (the build's) when `order` holds its
-/// `patch` and `version` is that one or a later one, else the empty table every version before it
-/// shipped with. A refresh that replaces the build's table keeps the one it replaces here.
-fn win_rates_at(order: &[String], table: &WinRateTable, version: &str) -> WinRateTable {
-    let at = |wanted: &str| order.iter().position(|listed| listed == wanted);
-    match (at(&table.patch), at(version)) {
-        (Some(from), Some(played)) if played >= from => table.clone(),
-        _ => WinRateTable::default(),
-    }
+/// R1266000, R1329000: the win-rate table `delta`'s version shipped with: the one its
+/// `win_rates/<version>.json` holds, or the empty table every version shipped with before
+/// `patches ship` kept one (a version with no file).
+fn table_of(history: &History, delta: &VersionDelta) -> WinRateTable {
+    delta
+        .win_rates
+        .map_or_else(WinRateTable::default, |at| history.win_rates[at].clone())
 }
 
 /// R767000: whether `id` has a script on `version`: one kept for it, or the build's own.
@@ -281,43 +283,32 @@ mod tests {
     }
 
     #[test]
-    fn r1266000_a_version_carries_the_table_from_its_patch_on_and_the_empty_one_before() {
-        let order: Vec<String> = ["v1", "v2", "v3"].map(String::from).to_vec();
-        let table = |patch: &str| WinRateTable {
-            patch: patch.to_string(),
-            cards: vec![jackioh_engine::WinRateRow {
-                id: "core-001".to_string(),
-                wins: 30,
-                games: 40,
+    fn r1329000_a_version_carries_the_table_its_file_held_and_one_with_no_file_the_empty_table() {
+        let history: History = serde_json::from_value(serde_json::json!({
+            "order": ["v1", "v2", "v3"],
+            "winRates": [{
+                "patch": "v2",
+                "source": "provisional",
+                "cards": [{ "id": "core-001", "wins": 30, "games": 40 }],
             }],
-            ..WinRateTable::default()
-        };
-        let filled = table("v2");
-        let empty = WinRateTable::default();
-        assert_eq!(win_rates_at(&order, &filled, "v1"), empty, "before its patch");
-        assert_eq!(
-            win_rates_at(&order, &filled, "v0"),
-            empty,
-            "a version the order does not hold"
-        );
-        assert_eq!(win_rates_at(&order, &filled, "v2"), filled);
-        assert_eq!(win_rates_at(&order, &filled, "v3"), filled, "a later version");
-        assert_eq!(
-            win_rates_at(&order, &table("v4"), "v3"),
-            empty,
-            "a table for a version still pending ships with none of them"
-        );
+            "versions": [
+                { "version": "v1" },
+                { "version": "v2", "winRates": 0 },
+                { "version": "v3", "winRates": 0 },
+            ],
+        }))
+        .expect("a history");
+        let tables: Vec<WinRateTable> = history
+            .versions
+            .iter()
+            .map(|delta| table_of(&history, delta))
+            .collect();
+        assert_eq!(tables[0], WinRateTable::default(), "no file, no rows");
+        assert_eq!(tables[1].cards.len(), 1);
+        assert_eq!(tables[2], tables[1], "two versions share the one table");
 
         crate::register_all();
-        for version in carried_versions() {
-            let carried = shipped_catalog(version).expect("carried");
-            assert_eq!(
-                carried.win_rates(),
-                &win_rates_at(&HISTORY.order, &WIN_RATES, version),
-                "{version}"
-            );
-        }
-        // Every version through v0.3.7b shipped with a table of no rows.
+        // Every version through v0.3.7b shipped before `patches ship` kept a table: no rows.
         for version in ["v0.1.0", "v0.3.7b"] {
             let carried = catalog_at(version).expect("in patches.json").win_rates();
             assert!(carried.cards.is_empty(), "{version}: {carried:?}");

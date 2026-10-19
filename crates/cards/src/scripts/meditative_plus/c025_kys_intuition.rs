@@ -223,6 +223,55 @@ mod tests {
             assert_eq!(hand[0].cost_override, Some(0));
         }
 
+        // R1329000: the code blocks stay the build's under every fold, since no final hash holds them.
+        // Two tables of the same cards, the second with every code rewritten, offer the same cards;
+        // the open prompt's labels differ, but a game that answers it and then ends, or ends with it
+        // open, ends on one hash under either table.
+        #[test]
+        fn r1329000_a_code_discover_s_labels_never_reach_a_final_hash() {
+            let rewritten: Vec<(String, String)> = crate::CODE_BLOCKS
+                .iter()
+                .map(|(id, code)| ((*id).to_string(), format!("{code}\n// rewritten")))
+                .collect();
+            let tables: [Vec<(&str, &str)>; 2] = [
+                crate::CODE_BLOCKS.to_vec(),
+                rewritten
+                    .iter()
+                    .map(|(id, code)| (id.as_str(), code.as_str()))
+                    .collect(),
+            ];
+            let mut runs = Vec::new();
+            for table in tables {
+                let cast = || {
+                    register_code_blocks(table.clone());
+                    casting("r1329000-blocks", false, 1)
+                };
+                let mut answered = cast();
+                let open_hash = hash_state(answered.state());
+                let offer = offered(&answered);
+                answered.answer(json!("code-0"));
+                answered.act(ActionBody::Concede, P2, "p2 concedes after the pick");
+                let mut unanswered = cast();
+                unanswered.act(ActionBody::Concede, P2, "p2 concedes under the open Discover");
+                for s in [&answered, &unanswered] {
+                    assert!(s.state().result.is_some(), "the game is over");
+                }
+                runs.push((
+                    offer,
+                    open_hash,
+                    hash_state(answered.state()),
+                    hash_state(unanswered.state()),
+                ));
+                clear_overrides();
+            }
+            let [(offer_a, open_a, answered_a, unanswered_a), (offer_b, open_b, answered_b, unanswered_b)] =
+                <[_; 2]>::try_from(runs).expect("two runs");
+            assert_eq!(offer_a, offer_b, "the same cards are offered");
+            assert_ne!(open_a, open_b, "the open prompt shows each table's code");
+            assert_eq!(answered_a, answered_b, "answered, then ended");
+            assert_eq!(unanswered_a, unanswered_b, "ended with the prompt open");
+        }
+
         #[test]
         fn r824000_its_set_cost_is_tuned_on_the_radiant_face_alone() {
             let def = crate::card_def(ID);
