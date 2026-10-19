@@ -5733,6 +5733,13 @@
     "1279": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-19T07:42:38Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 1 (at most 10 files and 400 lines): 12 files plus test rewrites across three card files will exceed it \u2014 and a card/rules patch adding an R number is never easy anyway"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
