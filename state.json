@@ -5365,6 +5365,7 @@
       "planned_by_id": "claude-5",
       "planned_tier": "strong",
       "provider": "claude-5",
+      "question": "Paste #1294's model table into a comment on #1296. Include every row and its numbers, any constant names it gives, and any decision from #1294's thread that \u00a714 must carry. Then take the `human required` label off and comment `/harness build`. Neither the planner nor the builder can read another issue: a build sees only #1296's own body and trusted comments (`bot/harness/threads.py`, `issue_thread`). Without the table, \u00a714 would be made up, and the change merges by itself.",
       "queued_at": "2026-10-19T13:14:11Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "39258634368",
