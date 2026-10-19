@@ -5732,18 +5732,35 @@
     "1316": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-19T11:23:21Z",
       "issue": 1216,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The change fixes two fuzz failures (seed 1708, an I6 false positive, and seed 2550, an I4 false positive) but adds no regression-corpus record for either, which the repo requires in the same change.",
+          "evidence": "crates/tools/fuzz-corpus/README.md, 'Adding a record': 'In the same change that fixes or files a failure, copy the report's seed N p1 deck: and p2 deck: lines ... into seed-<n>-<version>.json'; docs/ADDING_CARDS.md:207 says the same. The corpus has only seed-329 and seed-8183 (the latter added by #1237 for this same issue). The new comments say 'fuzz seed 1708 (#1216)' and 'fuzz seed 2550, #1216' without the 'of the handicapped wave' tag the file uses elsewhere (seeds 7758, 5967), so both are plain-wave 1v1 seeds, which the corpus covers. Without the records, `fuzz --regress` (run by `cargo test -p jackioh-tools`, so by the rust check) never replays the real games. Only the hand-built tests prove the fix.",
+          "severity": "blocking",
+          "where": "crates/tools/fuzz-corpus/"
+        },
+        {
+          "claim": "Nothing shows the fuzz jobs now pass, and the pull request says nothing about which super job each fix unblocks or how it was checked, though the issue requires that and the PR closes #1216.",
+          "evidence": "Issue #1216: 'say in the pull request which job here the fix makes pass and how you checked it'; the plan's Done-when asks for all four fuzz quarters to pass, plain and --handicap. The PR body reads '_The builder wrote no description._' and its gate table lists only fmt, catalog, patches and spec check. No fuzz run is reported, and the earlier round's 2 blocking findings were not recorded. The fixes cover seeds 1708 and 2550, which are not among the seeds of run 39125668099 that #1237 root-caused (934, 2632, 2995, 5204, 8183). So `Closes #1216` closes the issue with no evidence that the quarters are green.",
+          "severity": "blocking",
+          "where": "task"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-6",
-      "queued_at": "2026-10-19T14:14:57Z",
+      "queued_at": "2026-10-19T14:29:03Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "39267265630",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-10-19T14:19:42Z",
       "stop_requested": false,
       "taken_asks": [],
