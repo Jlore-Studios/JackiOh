@@ -562,6 +562,12 @@
       "lines": [
         "/harness build --force"
       ]
+    },
+    "c:6261240514": {
+      "at": "2026-10-19T06:38:15Z",
+      "lines": [
+        "/harness fullsend --force"
+      ]
     }
   },
   "items": {
