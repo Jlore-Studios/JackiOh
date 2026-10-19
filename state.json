@@ -4942,6 +4942,17 @@
       "merged": true
     },
     "1266": {
+      "asks": [
+        "c:6266984362"
+      ],
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-10-19T12:16:32Z",
+      "requested_by": "MaxGoetzmann",
+      "stop_requested": false,
       "suggestion": true
     },
     "1267": {
