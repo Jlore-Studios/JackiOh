@@ -29,4 +29,28 @@ playedTurns?: Array<number>,
 /**
  * R1147000: whether each card in `played` was Radiant as played, in the same order.
  */
-playedRadiant?: Array<boolean>, };
+playedRadiant?: Array<boolean>, 
+/**
+ * R1256000: draws from an empty library this seat took.
+ */
+fatigueDraws?: number, 
+/**
+ * R1256000: the nominal pre-Armor hits those draws dealt (their `amount`s added).
+ */
+fatigueDamage?: number, 
+/**
+ * R1256000: Traps this seat set face-down from its hand.
+ */
+trapsSet?: number, 
+/**
+ * R1256000: Traps of this seat's that fired, whoever's effect fired them.
+ */
+trapsFired?: number, 
+/**
+ * R1256000: position switches by units this seat controlled.
+ */
+positionSwitches?: number, 
+/**
+ * R1256000: cards of this seat's that an effect made Radiant.
+ */
+radiantUpgrades?: number, };

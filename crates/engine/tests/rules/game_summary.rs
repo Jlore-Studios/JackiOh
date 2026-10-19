@@ -454,8 +454,13 @@ mod summarize_game_s9_11 {
                 "reason": "concede",
                 "turns": 0,
                 "seats": {
-                    "p1": { "deck": p1_deck(), "opening": [], "drawn": [], "played": [] },
-                    "p2": { "deck": p2_deck(), "opening": [], "drawn": [], "played": [] },
+                    // R1256000: a fresh summary always knows the counts, even before a turn began.
+                    "p1": { "deck": p1_deck(), "opening": [], "drawn": [], "played": [],
+                        "fatigueDraws": 0, "fatigueDamage": 0, "trapsSet": 0,
+                        "trapsFired": 0, "positionSwitches": 0, "radiantUpgrades": 0 },
+                    "p2": { "deck": p2_deck(), "opening": [], "drawn": [], "played": [],
+                        "fatigueDraws": 0, "fatigueDamage": 0, "trapsSet": 0,
+                        "trapsFired": 0, "positionSwitches": 0, "radiantUpgrades": 0 },
                 },
             })
         );
