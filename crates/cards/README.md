@@ -282,7 +282,8 @@ Every change to card data is a patch, and every patch is kept.
   empty, and when a fragment's or a shipped patch's player note is missing, empty or names a ruling,
   an issue or a § (R724001).
 - After the merge, `.github/workflows/patches-ship.yml` runs `cargo jackioh patches ship`: it
-  appends each fragment in first-parent order with its player note, snapshots the catalog, records `shipped.json`, deletes
+  appends each fragment in first-parent order with its player note, snapshots the patch before it
+  with the cards the fragment claims as the catalog holds them (R1280000), records `shipped.json`, deletes
   the fragment and bumps the catalog version at every site that carries it (`render.yaml`,
   `crates/server/.env.example`, and `apps/web/.env.production` when it names one). The binaries take
   the version from `patches.json` at compile time; `cargo jackioh catalog-version` prints it.
