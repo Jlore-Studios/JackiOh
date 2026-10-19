@@ -428,7 +428,7 @@ impl StoreHarness {
     }
 
     /// §14.10: each of a profile's collection grants' `dev` mark, oldest first, which no port read
-    /// returns: in Postgres `collection_grants.dev` (migration 0044), in memory the grant's own.
+    /// returns: in Postgres `collection_grants.dev` (migration 0045), in memory the grant's own.
     pub async fn collection_dev_marks(&self, profile_id: &str) -> Vec<bool> {
         match &self.ends {
             Ends::Memory { data, .. } => data
@@ -518,7 +518,7 @@ pub async fn seed_cards(admin: &PgPool) {
     .expect("seed the fixture cards");
 }
 
-/// The cosmetics the economy cases own (migration 0044's `public.cosmetics`, which `seed-catalog`
+/// The cosmetics the economy cases own (migration 0045's `public.cosmetics`, which `seed-catalog`
 /// fills from the registry and the truncate keeps, as `cards`): a per-card one and an account one.
 /// The fake keeps no table of cosmetics, so it needs none.
 pub const FOIL_COSMETIC: &str = "fixture-foil-rare";
@@ -1846,7 +1846,7 @@ mod collection {
         );
     }
 
-    /// §14.10: a grant a dev tool wrote keeps its `dev` mark (migration 0044); any other reads unmarked.
+    /// §14.10: a grant a dev tool wrote keeps its `dev` mark (migration 0045); any other reads unmarked.
     async fn a_collection_grant_keeps_its_dev_mark(harness: &StoreHarness) {
         let profile = pending_profile(harness, None).await;
         let card_id = must(harness.playable_ids.first().cloned(), "a card");
@@ -1938,6 +1938,73 @@ mod decks {
             json!({ "createdAt": j(&pictured)["createdAt"] }),
         ));
         assert_eq!(q!(harness, t => t.decks_get(&pictured.id)), Some(expected));
+    }
+
+    async fn r1297000_round_trips_a_deck_s_cosmetics_and_clears_them_in_place(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let plain = saved_deck(harness, &profile.id, json!({}));
+        // One tick later, so "oldest first" below asks a real ordering question, not a tie.
+        let dressed = saved_deck(
+            harness,
+            &profile.id,
+            json!({
+                "tableCosmetic": "table-felt",
+                "fieldCosmetic": "field-rain",
+                "cardBackCosmetic": "card-back-blueprint",
+                "createdAt": harness.now() + 1_000,
+                "updatedAt": harness.now() + 1_000,
+            }),
+        );
+        // PREMISE: a deck that names none holds none, and the keys stay out of its JSON.
+        assert_eq!(plain.table_cosmetic, None);
+        assert!(j(&plain).get("tableCosmetic").is_none());
+        assert_ne!(plain, dressed);
+
+        assert_eq!(lit(&q!(harness, t => t.decks_upsert(&plain, 10))), "created");
+        assert_eq!(lit(&q!(harness, t => t.decks_upsert(&dressed, 10))), "created");
+        assert_eq!(q!(harness, t => t.decks_get(&plain.id)), Some(plain.clone()));
+        assert_eq!(q!(harness, t => t.decks_get(&dressed.id)), Some(dressed.clone()));
+        let listed = q!(harness, t => t.decks_list(&profile.id));
+        assert_eq!(listed, vec![plain.clone(), dressed.clone()]);
+        assert_eq!(listed[1].table_cosmetic.as_deref(), Some("table-felt"));
+        assert_eq!(listed[1].field_cosmetic.as_deref(), Some("field-rain"));
+        assert_eq!(
+            listed[1].card_back_cosmetic.as_deref(),
+            Some("card-back-blueprint")
+        );
+
+        // An update swaps each pick like any other field and clears one that is now absent.
+        let swapped: SavedDeck = from(spread(
+            j(&dressed),
+            json!({ "tableCosmetic": "table-wood", "fieldCosmetic": null, "updatedAt": harness.now() + 2_000 }),
+        ));
+        assert_eq!(lit(&q!(harness, t => t.decks_upsert(&swapped, 10))), "updated");
+        let kept = must(q!(harness, t => t.decks_get(&dressed.id)), "the re-saved deck");
+        assert_eq!(kept.table_cosmetic.as_deref(), Some("table-wood"));
+        assert_eq!(kept.field_cosmetic, None);
+        assert_eq!(kept.card_back_cosmetic.as_deref(), Some("card-back-blueprint"));
+        assert_eq!(kept.created_at, dressed.created_at);
+
+        // A save with none writes none: nothing is kept from the row the save replaces.
+        let cleared: SavedDeck = from(spread(
+            j(&kept),
+            json!({
+                "tableCosmetic": null,
+                "fieldCosmetic": null,
+                "cardBackCosmetic": null,
+                "updatedAt": harness.now() + 3_000,
+            }),
+        ));
+        assert_eq!(lit(&q!(harness, t => t.decks_upsert(&cleared, 10))), "updated");
+        let after = must(q!(harness, t => t.decks_get(&dressed.id)), "the cleared deck");
+        assert_eq!(
+            (
+                after.table_cosmetic,
+                after.field_cosmetic,
+                after.card_back_cosmetic
+            ),
+            (None, None, None)
+        );
     }
 
     async fn r256_updates_the_name_cards_and_version_in_place_and_keeps_created_at(harness: &StoreHarness) {
@@ -2042,6 +2109,7 @@ mod decks {
         r250_lists_nothing_before_anything_is_saved,
         r250_creates_a_draft_deck_and_reads_it_back_exactly_card_order_included,
         r641_round_trips_the_portrait_null_and_a_known_id_and_re_saves_it_in_place,
+        r1297000_round_trips_a_deck_s_cosmetics_and_clears_them_in_place,
         r256_updates_the_name_cards_and_version_in_place_and_keeps_created_at,
         r250_lists_a_profile_s_decks_oldest_first_and_only_its_own,
         r250_refuses_a_create_past_the_cap_and_still_updates_at_the_cap,
@@ -7977,7 +8045,7 @@ mod duos {
 }
 
 // ---------------------------------------------------------------------------
-// The economy (SPEC §14.11; migration 0044)
+// The economy (SPEC §14.11; migration 0045)
 // ---------------------------------------------------------------------------
 
 mod economy {

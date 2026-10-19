@@ -151,7 +151,8 @@ class DashboardTests(unittest.TestCase):
         self.assertIn(muse_row, body)
         self.assertIn(claude_row, body)
         self.assertLess(body.index(muse_row), body.index(claude_row))
-        self.assertIn("by `bot-status`, which rewrites this issue every 5 minutes", body)
+        self.assertTrue(body.startswith("**Last updated at 2026-09-29 22:00 CDT**\n\n# 🤖 "))
+        self.assertIn("`bot-status` rewrites this issue every 5 minutes", body)
         # A timeline of the runs going now: GitHub's runners, then the machine.
         self.assertIn("```mermaid\ngantt\n    title Runs going now, as of 22:00 (Central time)",
                       body)
@@ -397,7 +398,7 @@ class StatisticsTests(unittest.TestCase):
         with mock.patch.object(stats, "collect", side_effect=AssertionError("counted")):
             self.assertEqual(dashboard.update(soon, stats=True), f"rewrote #{number}")
         self.assertEqual(stats.kept(gh.threads[number]["body"]), block)
-        self.assertIn("Updated 2026-09-29 12:20 CDT", gh.threads[number]["body"])
+        self.assertIn("Last updated at 2026-09-29 12:20 CDT", gh.threads[number]["body"])
         # Forced, or once 30 minutes have passed, they are counted afresh.
         self.assertTrue(dashboard.update(soon, stats=True, force_stats=True).endswith("afresh"))
         later = make_ctx(gh, at=DAY + timedelta(minutes=51))

@@ -1,4 +1,4 @@
--- The economy's holdings and ledgers (migration 0044, SPEC §14.10, §14.11; issue #1299). Runs after
+-- The economy's holdings and ledgers (migration 0045, SPEC §14.10, §14.11; issue #1299). Runs after
 -- 24_card_totals.sql; profiles 1 and 2 are active by then (03 activated them), and core-001 is in
 -- public.cards (01's CHECK 10).
 \set ON_ERROR_STOP on
@@ -7,7 +7,7 @@
 -- expected refusal is matched on its sqlstate, each check that could pass vacuously carries a guard,
 -- and every block runs inside a transaction that is rolled back.
 
-\echo '### 0044: a row in every economy table for two profiles, the migration re-applied twice over them ###'
+\echo '### 0045: a row in every economy table for two profiles, the migration re-applied twice over them ###'
 begin;
 insert into public.cosmetics (id, kind, name, rarity)
 values ('test-foil', 'foil', 'Test foil', 'Rare'), ('test-board', 'board', 'Test board', 'Epic');
@@ -65,7 +65,7 @@ begin
                            'account_cosmetics', 'cosmetic_grants', 'collection_grants'] loop
     execute format('select count(*) from public.%I', t) into n;
     if n = 0 then
-      raise exception 'FAIL (0044): public.% has no row; the re-apply below would prove nothing', t;
+      raise exception 'FAIL (0045): public.% has no row; the re-apply below would prove nothing', t;
     end if;
     insert into economy_counts values (t, n);
   end loop;
@@ -73,8 +73,8 @@ end $$;
 
 -- What run.sh's apply_migration filters, a re-run's "already exists, skipping", is quieted here.
 set local client_min_messages = warning;
-\i /tmp/0044_economy.sql
-\i /tmp/0044_economy.sql
+\i /tmp/0045_economy.sql
+\i /tmp/0045_economy.sql
 set local client_min_messages = notice;
 
 do $$
@@ -86,7 +86,7 @@ begin
   for r in select c.tbl, c.n as before from economy_counts c loop
     execute format('select count(*) from public.%I', r.tbl) into n;
     if n <> r.before then
-      raise exception 'FAIL (0044): re-applying the migration changed public.% from % rows to %', r.tbl, r.before, n;
+      raise exception 'FAIL (0045): re-applying the migration changed public.% from % rows to %', r.tbl, r.before, n;
     end if;
   end loop;
 
@@ -99,14 +99,14 @@ begin
   if exists (select 1 from public.collection_grants where dev) then
     raise exception 'FAIL (§14.10): a collection grant no dev tool wrote is marked dev';
   end if;
-  raise notice 'OK (0044): the migration re-applies over a row in every table and changes none, and collection_grants.dev defaults to false';
+  raise notice 'OK (0045): the migration re-applies over a row in every table and changes none, and collection_grants.dev defaults to false';
 end $$;
 
-\echo '### 0044: the checks refuse what the store refuses (src/economy/store.rs) ###'
+\echo '### 0045: the checks refuse what the store refuses (src/economy/store.rs) ###'
 do $$
 declare
   p1 constant uuid := '11111111-1111-1111-1111-111111111111';
-  -- [what, statement]. Each breaks one of 0044's checks and nothing else.
+  -- [what, statement]. Each breaks one of 0045's checks and nothing else.
   refused constant text[][] := array[
     ['a wallet below zero', format($q$update public.wallets set jlore = -1 where profile_id = %L$q$, p1)],
     ['a dev reason without the dev mark',
@@ -154,7 +154,7 @@ begin
   for i in 1 .. array_length(refused, 1) loop
     begin
       execute refused[i][2];
-      raise exception 'FAIL (0044): the schema took %', refused[i][1];
+      raise exception 'FAIL (0045): the schema took %', refused[i][1];
     exception
       when check_violation then null;
     end;
@@ -162,7 +162,7 @@ begin
   -- The vacuity guard: a dev grant with its mark, and another reason's row marked, are taken.
   insert into public.jlore_grants (profile_id, delta, reason, dev) values (p1, 5, 'dev', true);
   insert into public.jlore_grants (profile_id, delta, reason, dev) values (p1, 5, 'quest', true);
-  raise notice 'OK (0044): % rows the checks refuse are refused, and a marked dev grant is taken',
+  raise notice 'OK (0045): % rows the checks refuse are refused, and a marked dev grant is taken',
     array_length(refused, 1);
 end $$;
 
@@ -296,7 +296,7 @@ declare
   n   bigint;
 begin
   if not exists (select 1 from public.profiles where id = gone) then
-    raise exception 'FAIL (0044): the leaver has no profile; the cascade below would prove nothing';
+    raise exception 'FAIL (0045): the leaver has no profile; the cascade below would prove nothing';
   end if;
   foreach who in array array[gone, p1] loop
     insert into public.wallets (profile_id, jlore) values (who, 1);
@@ -322,17 +322,17 @@ begin
   foreach t in array tables loop
     execute format('select count(*) from public.%I where profile_id = %L', t, gone) into n;
     if n <> 0 then
-      raise exception 'FAIL (0044): % rows of public.% outlived their deleted account', n, t;
+      raise exception 'FAIL (0045): % rows of public.% outlived their deleted account', n, t;
     end if;
     execute format('select count(*) from public.%I where profile_id = %L', t, p1) into n;
     if n = 0 then
-      raise exception 'FAIL (0044): deleting one account took another''s rows of public.%', t;
+      raise exception 'FAIL (0045): deleting one account took another''s rows of public.%', t;
     end if;
   end loop;
   if not exists (select 1 from public.cosmetics where id = 'test-foil') then
-    raise exception 'FAIL (0044): deleting an account took a cosmetic of the registry';
+    raise exception 'FAIL (0045): deleting an account took a cosmetic of the registry';
   end if;
-  raise notice 'OK (0044): deleting an account deletes its rows of all % tables, ledgers included, and no other account''s',
+  raise notice 'OK (0045): deleting an account deletes its rows of all % tables, ledgers included, and no other account''s',
     array_length(tables, 1);
 end $$;
 rollback;

@@ -715,12 +715,13 @@ def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
     state, issues, live, halted, explained = (view.state, view.issues, view.live, view.halted,
                                               view.explained)
     updated = _local(ctx, ctx.now()).strftime("%Y-%m-%d %H:%M %Z")
-    lines = [f"# 🤖 {TITLE}", ""]
+    # The first line, so a glance at the issue says how fresh it is.
+    lines = [f"**Last updated at {updated}**", "", f"# 🤖 {TITLE}", ""]
     if halted:
         lines += ["> [!WARNING]", f"> 🛑 **Halted**: {halted}. Nothing starts until it is lifted.",
                   ""]
     lines += [f"> {headline(ctx, live, explained)}", "",
-              f"<sub>Updated {updated} by `bot-status`, which rewrites this issue every "
+              f"<sub>`bot-status` rewrites this issue every "
               f"{EVERY_MINUTES} minutes; the statistics are counted every "
               f"{int(stats_mod.STATS_EVERY.total_seconds() // 60)}. Times are Central; hover one "
               f"to see how long it ran. `{SLASH} status` gives the same facts on demand.</sub>", "",

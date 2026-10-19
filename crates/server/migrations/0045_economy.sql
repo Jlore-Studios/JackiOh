@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0044: The economy's holdings and their ledgers (SPEC §14.11; issue #1299)
+-- Migration 0045: The economy's holdings and their ledgers (SPEC §14.11; issue #1299)
 -- ============================================================================
 -- Serves SPEC §14.11 (The ledger), quoted:
 --   "Every holding of the economy follows that pattern, a current-state table
@@ -50,7 +50,7 @@
 -- Nothing reads or writes these tables yet but their store methods: the
 -- economy's parts build on them behind ECONOMY_LIVE (§14.12).
 --
--- Apply order: ... -> 0042 -> 0043 -> 0044 (this file).
+-- Apply order: ... -> 0043 -> 0044 -> 0045 (this file).
 -- This file only ADDS objects. Safe to re-apply: create-if-not-exists,
 -- add-column-if-not-exists, drop-and-create of triggers and policies,
 -- comment-on, revoke and grant.

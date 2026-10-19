@@ -1,4 +1,4 @@
-//! The economy's store (SPEC §14.11; migration 0044): every holding of §14 beside its append-only
+//! The economy's store (SPEC §14.11; migration 0045): every holding of §14 beside its append-only
 //! ledger, over Postgres (`pg` below) or the in-memory fake (`fake` below, whose tables are
 //! `FakeTables::economy`).
 //!
@@ -310,7 +310,7 @@ pub struct EconomyTables {
 }
 
 // ---------------------------------------------------------------------------
-// What both stores refuse alike: migration 0044's checks
+// What both stores refuse alike: migration 0045's checks
 // ---------------------------------------------------------------------------
 
 fn refused(why: String) -> StoreError {
@@ -533,7 +533,7 @@ impl Tx<'_> {
     }
 }
 
-/// Migration 0044's `on delete cascade`, in the fake (`db::fake::remove_profile_rows`): every row of
+/// Migration 0045's `on delete cascade`, in the fake (`db::fake::remove_profile_rows`): every row of
 /// a deleted profile goes, its ledgers' with it (0012's rule).
 pub fn remove_economy_rows(tables: &mut EconomyTables, profile_id: &str) {
     tables.wallets.retain(|(owner, _)| owner != profile_id);
@@ -559,7 +559,7 @@ pub fn remove_economy_rows(tables: &mut EconomyTables, profile_id: &str) {
 }
 
 // ---------------------------------------------------------------------------
-// Postgres (migration 0044)
+// Postgres (migration 0045)
 // ---------------------------------------------------------------------------
 
 mod pg {

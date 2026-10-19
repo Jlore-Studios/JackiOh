@@ -5,7 +5,14 @@
 
 import { useId, type CSSProperties, type ReactElement } from "react";
 
-import { cosmeticsOf, resolveCosmetic, useCosmetics, writeCosmetics, type CosmeticKind } from "../cards/cosmetics.ts";
+import {
+  cosmeticsOf,
+  resolveCosmetic,
+  useCosmetics,
+  writeCosmetics,
+  type CardSlotKind,
+  type DeckSlotKind,
+} from "../cards/cosmetics.ts";
 import { CARD_SETTINGS_FIELDS, useCardSettings, writeCardSettings, type CardSettings } from "../cards/settings.ts";
 import { FX_SPEED_DEFAULT, FX_SPEED_MAX, FX_SPEED_MIN, FX_SPEED_STEP } from "../fx/constants.ts";
 import { useFxSettings, type FxIntensity } from "../fx/settings.ts";
@@ -190,7 +197,7 @@ export function FullArtSwitch(): ReactElement {
 }
 
 /** R1295000: a row per card cosmetic, in the registry's kinds' order, each list in the registry's order. */
-const COSMETIC_ROWS: readonly { kind: CosmeticKind; label: string; hint: string }[] = [
+const COSMETIC_ROWS: readonly { kind: CardSlotKind; label: string; hint: string }[] = [
   { kind: "foil", label: "Foil", hint: "A sheen over the art of your own cards. Mythic and Radiant cards keep their own foil." },
   { kind: "finish", label: "Finish", hint: "How your own cards are printed. Radiant cards keep their gold." },
   { kind: "border", label: "Border", hint: "The trim around your own cards. Radiant cards keep their gold trim." },
@@ -205,6 +212,38 @@ export function CardCosmeticsControls(): ReactElement {
   return (
     <>
       {COSMETIC_ROWS.map((row) => (
+        <SelectRow
+          key={row.kind}
+          label={t(row.label)}
+          hint={t(row.hint)}
+          testId={`setting-cosmetic-${row.kind}`}
+          value={resolveCosmetic(row.kind, picks[row.kind])}
+          options={cosmeticsOf(row.kind).map((cosmetic) => ({ value: cosmetic.id, label: cosmetic.name }))}
+          onChange={(value) => {
+            writeCosmetics({ [row.kind]: value });
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
+/** R1297000: a row per deck slot, in the registry's order. */
+const DECK_COSMETIC_ROWS: readonly { kind: DeckSlotKind; label: string; hint: string }[] = [
+  { kind: "table", label: "Playmat", hint: "The playmat on your side. A deck can pick its own." },
+  { kind: "field", label: "Backdrop", hint: "The backdrop behind your side. Reduce motion holds it still." },
+  { kind: "cardBack", label: "Card back", hint: "The back of your own face-down cards and your deck." },
+];
+
+/**
+ * R1297000: the playmat, backdrop and card back your own side wears in a game, every one unlocked.
+ * A deck's own pick, set in the deckbuilder, beats these.
+ */
+export function DeckCosmeticsControls(): ReactElement {
+  const picks = useCosmetics();
+  return (
+    <>
+      {DECK_COSMETIC_ROWS.map((row) => (
         <SelectRow
           key={row.kind}
           label={t(row.label)}

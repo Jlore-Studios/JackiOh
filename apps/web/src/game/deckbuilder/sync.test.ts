@@ -816,6 +816,97 @@ describe("a trio import", () => {
   });
 });
 
+// The deck's playmat, backdrop and card back (R1297000)
+
+describe("the deck's playmat, backdrop and card back (R1297000)", () => {
+  it("R1297000 a deck's picks ride the snapshot, the mirror and the PUT, and null clears one", async () => {
+    const server = fakeServer();
+    const storage = memoryStorage();
+    const clock = manualClock();
+    const store = open({ api: server.api, clock, storage });
+
+    // A created deck carries its picks, in the snapshot and the mirror before any save.
+    const id = store.createDeck({ name: "Aggro", tableCosmetic: "table-felt", cardBackCosmetic: "card-back-blueprint" }) ?? "";
+    expect(store.getSnapshot().decks[0]).toMatchObject({ tableCosmetic: "table-felt", cardBackCosmetic: "card-back-blueprint" });
+    expect(store.getSnapshot().decks[0]?.fieldCosmetic).toBeUndefined();
+    const mirrored = parseMirror(storage.data.get(mirrorKey(PROFILE)) ?? null);
+    expect(mirrored?.decks[0]?.item).toMatchObject({ tableCosmetic: "table-felt", cardBackCosmetic: "card-back-blueprint" });
+
+    // The PUT sends the picks it has and leaves out the rest.
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.decks.get(id)).toEqual({
+      name: "Aggro",
+      cards: [],
+      catalogVersion: CATALOG_VERSION,
+      portrait: null,
+      tableCosmetic: "table-felt",
+      cardBackCosmetic: "card-back-blueprint",
+    });
+
+    // A new pick merges in; an unrelated edit keeps every pick.
+    store.updateDeck(id, { fieldCosmetic: "field-rain" });
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    store.updateDeck(id, { name: "Aggro v2" });
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.decks.get(id)).toMatchObject({
+      name: "Aggro v2",
+      tableCosmetic: "table-felt",
+      fieldCosmetic: "field-rain",
+      cardBackCosmetic: "card-back-blueprint",
+    });
+
+    // null clears one: the PUT leaves it out, which the server stores as none.
+    store.updateDeck(id, { tableCosmetic: null });
+    expect(store.getSnapshot().unsynced.has(id)).toBe(true);
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.decks.get(id)?.tableCosmetic).toBeUndefined();
+    expect(server.decks.get(id)).toMatchObject({ fieldCosmetic: "field-rain", cardBackCosmetic: "card-back-blueprint" });
+    expect(store.getSnapshot().decks[0]?.tableCosmetic ?? null).toBeNull();
+  });
+
+  it("R1297000 the server's picks come in, the same pick again is a no-op, and a mirror without them reads as none", async () => {
+    const server = fakeServer();
+    const clock = manualClock();
+    const store = open({
+      api: server.api,
+      clock,
+      server: response([{ ...savedDeck("d1", "Aggro", [], 1), fieldCosmetic: "field-embers" }]),
+    });
+    expect(store.getSnapshot().decks[0]?.fieldCosmetic).toBe("field-embers");
+
+    store.updateDeck("d1", { fieldCosmetic: "field-embers", tableCosmetic: null });
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.calls).toEqual([]);
+
+    store.updateDeck("d1", { cardBackCosmetic: "card-back-lacquer" });
+    expect(store.getSnapshot().unsynced.has("d1")).toBe(true);
+    await clock.advance(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.decks.get("d1")).toMatchObject({ fieldCosmetic: "field-embers", cardBackCosmetic: "card-back-lacquer" });
+
+    // A mirror row written before the columns, and one holding a pick no text can be, keep none.
+    const storage = memoryStorage();
+    storage.setItem(
+      mirrorKey(PROFILE),
+      JSON.stringify({
+        v: 1,
+        decks: [
+          { item: { id: "d2", name: "Old deck", cards: [], createdAt: 1, updatedAt: 1 }, dirty: true },
+          { item: { id: "d3", name: "Odd deck", cards: [], tableCosmetic: 7, fieldCosmetic: "", createdAt: 2, updatedAt: 2 }, dirty: true },
+        ],
+        trios: [],
+        deletedDecks: [],
+        deletedTrios: [],
+      }),
+    );
+    const mirrored = parseMirror(storage.getItem(mirrorKey(PROFILE)));
+    for (const entry of mirrored?.decks ?? []) {
+      expect(entry.item.tableCosmetic).toBeUndefined();
+      expect(entry.item.fieldCosmetic).toBeUndefined();
+      expect(entry.item.cardBackCosmetic).toBeUndefined();
+    }
+  });
+});
+
 // The deck's portrait (R641)
 
 describe("the deck's portrait (R641)", () => {

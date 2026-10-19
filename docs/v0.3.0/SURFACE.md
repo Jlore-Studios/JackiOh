@@ -406,6 +406,7 @@ wire types, `effects` and `subsystems` as modules, and these entry points every 
 pub fn create_game(args: &CreateGameArgs) -> GameState;            // TS createGame({seed, decks, catalog?, handicaps?, lastBoards?, glitchBoards?, dealt?, sandbox?})
 pub fn begin_game(state: &GameState) -> ReduceResult;
 pub fn reduce(state: &GameState, action: &Action) -> ReduceResult;
+pub fn reduce_unpiloted(state: &GameState, action: &Action) -> ReduceResult; // the AI's simulated steps: an autopilot's turn left owed (#1337)
 pub fn legal_actions(state: &GameState, player: PlayerId) -> Vec<ActionBody>;
 pub fn view_for(state: &GameState, player: PlayerId) -> PlayerView;
 pub fn seat_to_act(state: &GameState) -> Option<PlayerId>;

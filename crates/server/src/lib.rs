@@ -19,7 +19,7 @@
 //! - `bug_reports`: a match its own log does not reproduce, logged and filed as a GitHub issue for
 //!   the night bot while the match goes on.
 //! - `cosmetics`: the cosmetics registry, `cosmetics.json`, and its check (#1295, R1295000).
-//! - `economy`: the economy's store, migration 0044's holdings and ledgers (SPEC §14.11, #1299).
+//! - `economy`: the economy's store, migration 0045's holdings and ledgers (SPEC §14.11, #1299).
 
 pub mod actor;
 pub mod api;

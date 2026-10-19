@@ -43,7 +43,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 62 tables of migrations 0001-0044 ==='
+\echo '=== CHECK 2: the 62 tables of migrations 0001-0045 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -67,7 +67,7 @@ declare
   -- (0042, #1169), and the economy's wallets, jlore_grants, inventory, inventory_grants,
   -- economy_counters, economy_counter_grants, set_tracks, set_track_grants, held_quests,
   -- quest_schedules, quest_grants, cosmetics, card_cosmetics, account_cosmetics and cosmetic_grants
-  -- (0044, SPEC §14.11, #1299).
+  -- (0045, SPEC §14.11, #1299).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033, 0035, 0036, 0040 and 0043 add no table. The three loadout tables stay after
   -- 0007, unread and unwritten (R254), so they are still expected here.
@@ -284,7 +284,7 @@ declare
   -- and both are enforced by app.deny_row_mutation() fired BEFORE UPDATE OR DELETE FOR
   -- EACH ROW. A listing cannot tell a live guard from a disabled one or from a trigger
   -- that only fires on INSERT, so the flags are asserted, not printed.
-  -- SPEC §14.11 (0044) holds the economy's six ledgers to the same rule.
+  -- SPEC §14.11 (0045) holds the economy's six ledgers to the same rule.
   ledgers constant text[] := array['collection_grants', 'match_actions', 'jlore_grants', 'inventory_grants',
                                    'economy_counter_grants', 'set_track_grants', 'quest_grants',
                                    'cosmetic_grants'];

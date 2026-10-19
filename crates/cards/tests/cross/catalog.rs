@@ -36,6 +36,8 @@
 //!                    12 Attack for the Radiant Jlockeed Shredder-10.
 //!   patch v0.3.13   — issue #1194's costs: #76 Field of Dreams (2), C+ #64 Mulch Muncher (5) and
 //!                    Meditative #19.1 Temporal Rift (0).
+//!   patch v0.3.16   — issue #1151 tags C #40 MC Tech and Meditative #57, #82, #83 and #85 Human
+//!                    (#57's tag ships under patch v0.3.10's claim of that card).
 //!   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
 //!                    being R349's fallback.
 //!   rarity         — SPEC §8's rarity paragraph for Core (32/40/16/7/5) and B2.5's table for
@@ -1522,7 +1524,16 @@ const CLASSIC: &[SpecRow] = &[
         NO_STATS,
         NO_STATS,
     ),
-    row("40", "MC Tech", c(1), T::Unit, &[], R::Rare, st(3, 3), st(6, 6)),
+    row(
+        "40",
+        "MC Tech",
+        c(1),
+        T::Unit,
+        &[G::Human],
+        R::Rare,
+        st(3, 3),
+        st(6, 6),
+    ),
     row(
         "41",
         "State of the Game",
@@ -3854,7 +3865,7 @@ const MEDITATIVE: &[SpecRow] = &[
         "Clip-Farming Critikal",
         c(1),
         T::Unit,
-        &[],
+        &[G::Human],
         R::Common,
         st(4, 1),
         st(8, 2),
@@ -4124,7 +4135,7 @@ const MEDITATIVE: &[SpecRow] = &[
         "Medina Outfitter",
         c(1),
         T::Unit,
-        &[],
+        &[G::Human],
         R::Common,
         st(1, 1),
         st(2, 2),
@@ -4134,7 +4145,7 @@ const MEDITATIVE: &[SpecRow] = &[
         "Medina Enforcer",
         c(2),
         T::Unit,
-        &[],
+        &[G::Human],
         R::Rare,
         st(4, 4),
         st(8, 8),
@@ -4154,7 +4165,7 @@ const MEDITATIVE: &[SpecRow] = &[
         "Playtester",
         c(2),
         T::Unit,
-        &[],
+        &[G::Human],
         R::Rare,
         st(4, 5),
         st(8, 10),

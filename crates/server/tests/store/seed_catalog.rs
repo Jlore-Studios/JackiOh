@@ -652,7 +652,7 @@ mod r1178000_a_tag_only_a_held_set_carries_waits_for_its_release_migration {
     }
 }
 
-/// `test:db` only: SPEC §14.2's cosmetics registry (R1295000) into migration 0044's
+/// `test:db` only: SPEC §14.2's cosmetics registry (R1295000) into migration 0045's
 /// `public.cosmetics`, written by the catalog's own transaction. Seeded with no cards, so the
 /// fixture catalog the rest of the suite runs against stays as it is.
 mod db_seed_catalog_writes_the_cosmetics_registry {

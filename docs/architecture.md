@@ -704,8 +704,8 @@ step that is not yet implemented says which BUILD task delivers it.
    `0032_ladder_bots.sql` → `0033_bot_trios.sql` → `0034_account_consent.sql` →
    `0035_replay_final_hash.sql` → `0036_lean_set.sql` → `0037_custom_cards.sql` → `0038_social.sql` →
    `0039_duos.sql` → `0040_moderation_switch_grant.sql` → `0041_card_totals.sql` →
-   `0042_match_checkpoints.sql` → `0043_meditative_plus_set.sql` → `0044_economy.sql` — and records
-   them in `app.migrations`. Expected result: 62 tables
+   `0042_match_checkpoints.sql` → `0043_meditative_plus_set.sql` → `0044_deck_cosmetics.sql` →
+   `0045_economy.sql` — and records them in `app.migrations`. Expected result: 62 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can
@@ -774,7 +774,7 @@ step that is not yet implemented says which BUILD task delivers it.
    `replay_shares`, each readable only by its own players, and `profiles.allow_spectators`, on by
    default. 0039 adds the co-op tables (SPEC §13.9): `duos_rooms`, which a room's two people read but
    its frozen deck choices, and the server-only `duos_matches` and `duos_match_actions`. Every row of
-   both goes with an account that is deleted; neither needs anything else from the bring-up. 0044
+   both goes with an account that is deleted; neither needs anything else from the bring-up. 0045
    adds the economy's fifteen tables (SPEC §14.11): each holding (Jlore, packs and tokens, pity and
    the bars, set tracks, quests, owned cosmetics) beside its append-only ledger, which its own
    account reads and no client role writes, and `cosmetics`, which step 6 fills; `collection_grants`

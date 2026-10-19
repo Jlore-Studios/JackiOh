@@ -14,7 +14,7 @@
 //! catalog), at `CATALOG_VERSION`, which is then required.
 //!
 //! In the same transaction it copies the cosmetics registry compiled in (`crate::cosmetics`,
-//! R1295000) into `public.cosmetics` (migration 0044, SPEC §14.2), which the owned cosmetics
+//! R1295000) into `public.cosmetics` (migration 0045, SPEC §14.2), which the owned cosmetics
 //! reference as `collection` references `public.cards`.
 //! Surface contract: docs/v0.3.0/SURFACE.md §11.3.
 
@@ -229,7 +229,7 @@ async fn write_catalog(
         .await?;
     }
     // SPEC §14.2: the cosmetics registry (`cosmetics.json`, R1295000) beside the catalog, in
-    // migration 0044's `public.cosmetics`, so an owned cosmetic has a real foreign key. Upserted and
+    // migration 0045's `public.cosmetics`, so an owned cosmetic has a real foreign key. Upserted and
     // never deleted, as a card is. The registry marks no chase yet, so `chase` keeps its default.
     let cosmetics = crate::cosmetics::shipped().map_err(|error| anyhow!("cosmetics.json: {error}"))?;
     sqlx::query(
