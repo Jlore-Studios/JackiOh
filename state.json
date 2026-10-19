@@ -3682,7 +3682,7 @@
       "verdict_rounds": 1
     },
     "1173": {
-      "closeout": false,
+      "closeout": true,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
