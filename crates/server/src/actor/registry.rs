@@ -340,6 +340,11 @@ impl Registry {
         let Some(match_row) = match_row else {
             return Err(RebuildError::NotFound);
         };
+        if match_row.status == MatchStatus::Finished && log.is_empty() {
+            // R1285000: a finished match whose log the retention purge has taken (`api/retention.rs`):
+            // nothing left to show, so nothing is folded or filed, as the co-op rebuild answers.
+            return Err(RebuildError::NotFound);
+        }
         let pinned = pinned_for(&match_row);
 
         let dealt = dealt_for(mode);

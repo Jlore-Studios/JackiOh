@@ -213,6 +213,17 @@ part that narrows the task shows the gap instead of hiding it.
   major version's changes before its first card patch are its line's too: v0.3.0, the Rust rewrite,
   is Meditative's.
 
+## Win rates in a balance patch
+
+A balance patch's `notes` that cite a card's win rate quote `cargo jackioh stats compare`, never two plain
+`stats` runs' rows (R1284000): about 150 of 2,000 All Random games hold a given card, and #1149's own notes
+put that noise at five points. Play the card into one seat's deck in every game on a worktree of the base
+commit (`scripts/worktree.sh`), `cargo jackioh stats --force <id> --games N --out before.jsonl`, and the same
+with `--out after.jsonl` on the branch; then `cargo jackioh stats compare --before before.jsonl --after
+after.jsonl --card <id>`. Quote both rates and the paired difference with their intervals, and the line about
+`SHADOW_BAN` or `SHADOW_WATCH` if it prints one. A forced run's file is never `stats-import`ed: it is not a
+sample of All Random. The base build needs the flag, so the first such comparison is the one after #1284 lands.
+
 ## Pull requests
 
 - **Title.** A pull request's title becomes the subject of the squash commit it lands as, so it

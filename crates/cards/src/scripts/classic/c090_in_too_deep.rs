@@ -1,7 +1,8 @@
 //! C #90 In Too Deep (SPEC §8.6 row 90). (1) Field Spell, Quickdraw (§2.1), Mythic.
 //! Indestructible; ten quests, thirteen rewards. Base offers a reward prompt (§10.6), to a non-active
 //! player too (R79); reward G's discard prompt waits for the start of the opponent's next turn while
-//! they are not active (R1279000); Radiant gives every reward and opens all paths (R543).
+//! they are not active, its quest behind it on this stay (R1279000, R174); Radiant gives every reward
+//! and opens all paths (R543).
 //! Engine: Quests (§10.1, R404), the engine/card split (B5 E33), views (§10.8).
 //! Rewards: A heal, B damage (§8), C return (R60, §2.4), D Plague (§6.3, R471, R689), E buff (R60),
 //! F bounce (R78), G discard (R16, R1279000), H draw, I Recruit (§6.3), J mana (R540), K exile deck,
@@ -155,6 +156,8 @@ const DISCARD_STEP: &str = "rewardG";
 const REWARD_STEP: &str = "reward";
 /// The deferred reward-G discard's step, re-entered at the start of the opponent's next turn.
 const REWARD_G_DEFERRED_STEP: &str = "rewardGDeferred";
+/// The deferred reward G's path, re-entered behind its discard while this card keeps its stay (R174).
+const REWARD_G_PATH_STEP: &str = "rewardGPath";
 
 /// Reward G's own prompt: the opponent discards 2 cards of their choice (R16).
 fn reward_g_prompt() -> Effect {
@@ -195,11 +198,23 @@ fn reward_effects(ctx: &EffectContext<'_>, id: &str, defer_g: bool) -> Vec<Effec
             // the active player the discard waits for the start of their next turn; on their turn
             // it asks at once, as before.
             if defer_g && reward_g_defers(ctx) {
-                vec![delay(json_as(json!({
+                let mut effects = vec![delay(json_as(json!({
                     "at": { "phase": "start", "player": "enemy" },
                     "step": REWARD_G_DEFERRED_STEP,
                     "hook": RESUME_HOOK,
-                })))]
+                })))];
+                // The discard is the reward earned and comes even if this card is gone (R76); the
+                // quest it leads to is this stay's, so it waits behind it watching this card and is
+                // forgotten if the card leaves the field meanwhile (R174, R78).
+                if let Some(card) = &ctx.self_ {
+                    effects.push(delay(json_as(json!({
+                        "at": { "phase": "start", "player": "enemy" },
+                        "step": REWARD_G_PATH_STEP,
+                        "hook": RESUME_HOOK,
+                        "watch": card.id,
+                    }))));
+                }
+                effects
             } else {
                 vec![reward_g_prompt()]
             }
@@ -314,17 +329,11 @@ fn in_too_deep(radiant: bool, defer_g: bool) -> Script {
                     }
                 }),
             ),
-            // R1279000: the wait is over; G's prompt opens with its path behind it, as on the
-            // opponent's turn, so the path opens after the answer, or at once when their hand is
-            // empty and nothing asks.
-            (
-                REWARD_G_DEFERRED_STEP,
-                hook(|_ctx| {
-                    let mut effects = vec![reward_g_prompt()];
-                    effects.extend(path_of("G"));
-                    effects
-                }),
-            ),
+            // R1279000: the wait is over; G's prompt opens, and its path, due behind it at the same
+            // point (R68), opens after the answer, or at once when their hand is empty and nothing
+            // asks.
+            (REWARD_G_DEFERRED_STEP, hook(|_ctx| vec![reward_g_prompt()])),
+            (REWARD_G_PATH_STEP, hook(|_ctx| path_of("G"))),
             (
                 TARGET_DAMAGE_STEP,
                 hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": REWARD_DAMAGE })))]),
@@ -1307,6 +1316,41 @@ mod tests {
             }
 
             #[test]
+            fn r1279000_r174_reward_g_s_waiting_quest_ends_with_the_stay_a_replayed_in_too_deep_does_not_open_it() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": spare(json!({ "backrow": [ITD], "mana": 10 })),
+                    "p2": { "hand": [VANILLA, TIMMY, MENACE], "library": SPARE_LIBRARY },
+                }));
+                on_quest(&mut s, "5", 12, json!({}));
+                any_action(&mut s);
+                s.answer(json!("G"));
+                assert!(s.state().pending.is_none());
+                // While G waits, reward F (its quest line set as a later path would have left it)
+                // bounces In Too Deep itself, and it is played again: a new stay on quest 1 (R78).
+                on_quest(&mut s, "4", 1, json!({}));
+                s.play(STOCKPILE, json!({}));
+                s.answer(json!("F"));
+                let itd = s.card(ITD).id.clone();
+                s.answer(json!(itd));
+                s.expect_in_zone(ITD, "hand");
+                s.play(ITD, json!({}));
+                assert_eq!(active_of(&s), ids(&["1"]));
+                s.end_turn();
+                // The discard is the reward earned, so it still comes (R76).
+                let pending = must(s.state().pending.clone(), "the discard prompt");
+                assert_eq!((pending.kind, pending.player_id), (PromptKind::Hand, P2));
+                let hand = s.hand(P2);
+                let first = must(hand.first().cloned(), "a card");
+                let second = must(hand.get(1).cloned(), "a card");
+                s.answer(json!([first.id, second.id]));
+                let left: Vec<String> = s.hand(P2).iter().map(|card| card.def_id.clone()).collect();
+                assert_eq!(left, vec![MENACE, VANILLA]);
+                // Quest 8 was the old stay's path: the card that came back is not on it (R174).
+                assert_eq!(active_of(&s), ids(&["1"]));
+            }
+
+            #[test]
             fn r542_quest_5_damage_your_cards_deal_to_the_enemy_hero_and_enemy_units_12_in_all_your_own_side_and_the_opponents_hits_count_for_nothing() {
                 crate::register_all();
                 let mut s = scenario(json!({
@@ -1961,6 +2005,34 @@ mod tests {
                     &s,
                     json!({ "active": ["9", "8"], "done": ["1", "2", "5"], "progress": { "9": 0 } }),
                 );
+            }
+
+            #[test]
+            fn r1279000_r174_quest_4_s_f_bouncing_in_too_deep_itself_leaves_g_s_discard_waiting_and_its_quest_to_no_one() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": spare(json!({ "backrow": [radiant_itd()], "mana": 10 })),
+                    "p2": { "hand": [VANILLA, TIMMY, MENACE], "library": SPARE_LIBRARY },
+                }));
+                on_quest(&mut s, "4", 1, json!({}));
+                any_action(&mut s);
+                // F asks first, and G's delays wait behind its answer: In Too Deep bounced itself, so
+                // G's quest has no stay to wait on (R174), while its discard is scheduled (R76).
+                assert_eq!(pending_kind(&s), Some(PromptKind::Target));
+                let itd = s.card(ITD).id.clone();
+                s.answer(json!(itd));
+                s.expect_in_zone(ITD, "hand");
+                s.play(ITD, json!({}));
+                assert_eq!(active_of(&s), ids(&["1"]));
+                s.end_turn();
+                let pending = must(s.state().pending.clone(), "G's discard");
+                assert_eq!((pending.kind, pending.player_id), (PromptKind::Hand, P2));
+                let hand = s.hand(P2);
+                let a = must(hand.first().cloned(), "a");
+                let b = must(hand.get(1).cloned(), "b");
+                s.answer(json!([a.id, b.id]));
+                assert_eq!(s.hand(P2).len(), 2);
+                assert_eq!(active_of(&s), ids(&["1"]));
             }
 
             #[test]

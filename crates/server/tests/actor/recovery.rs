@@ -1660,3 +1660,49 @@ mod r1253000_a_live_action_the_engine_panics_on {
         assert!(!reports[0].body.contains(PANIC_TEXT), "{}", reports[0].body);
     }
 }
+
+/// R1285000: a finished match whose log the retention purge has taken is not rebuilt.
+mod r1285000_a_finished_match_whose_log_was_purged {
+    use super::*;
+
+    use jackioh_server::api::retention::purge_expired;
+    use jackioh_server::config::MATCH_ACTION_RETENTION_DAYS;
+
+    /// Unit conversion, not configuration.
+    const MS_PER_DAY: i64 = 86_400_000;
+
+    #[tokio::test(start_paused = true)]
+    async fn r1285000_answers_not_found_on_attach_folds_nothing_and_files_no_report() {
+        let h = start_match(StartOptions::default()).await;
+        let actor = actor_of(&h).await;
+        let reply = to_json(
+            &actor
+                .submit(PlayerId::P1, "gg".to_string(), from(json!({ "type": "concede" })))
+                .await,
+        );
+        assert_eq!(reply["type"], "ack", "the concession was refused: {reply}");
+        assert_eq!(match_row(&h.app).await["status"], "finished");
+        drop(actor);
+        h.app.matches.stop(MATCH_ID).await;
+
+        advance(MATCH_ACTION_RETENTION_DAYS * MS_PER_DAY + 1).await;
+        let purged = purge_expired(&h.app).await.expect("the purge runs");
+        assert!(purged.match_actions > 0, "{purged:?}");
+        assert_eq!(
+            table(&h.app, |data| json!(data.tables.match_actions)).await,
+            Vec::<Value>::new()
+        );
+
+        let socket = create_fake_socket();
+        let refused = h
+            .app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-2", socket.socket())
+            .await
+            .expect_err("nothing is left to show");
+        assert!(format!("{refused:?}").contains("no such match"), "{refused:?}");
+        assert!(!h.app.matches.has(MATCH_ID));
+        assert!(socket.of_type("view").is_empty());
+        assert!(h.app.bug_reports.recorded().is_empty());
+    }
+}

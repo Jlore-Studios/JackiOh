@@ -43,6 +43,7 @@ use crate::api::game_records::record_live_game;
 use crate::api::http::{ApiError, ApiErrorCode};
 use crate::api::queue::json_list;
 use crate::api::ranked::{RankedGameInput, RankedSideInput, rate_ranked_game};
+use crate::api::rematch::sweep_rematch_offers;
 use crate::api::series::{SeriesGameResult, advance_series_in_tx, resume_series};
 use crate::app::{App, now_ms};
 use crate::bug_reports::{Finding, FoundIn, refused_rows};
@@ -631,7 +632,8 @@ fn seats_of(match_row: &MatchRow) -> (MatchSeat, MatchSeat) {
 /// interval after boot, each next one an interval after the last finished, a failure logged and the
 /// next sweep tried all the same. Runs until its task is aborted. Each tick resolves the stuck
 /// matches, then deletes the `open` rows past their grace (R1450), then drops the finished actors
-/// whose rematch window has passed (`Registry::reap_finished`).
+/// whose rematch window has passed (`Registry::reap_finished`), then the rematch offers past that
+/// window whose finished match no actor holds (`rematch::sweep_rematch_offers`).
 pub async fn run_reaper(app: Arc<App>) {
     loop {
         tokio::time::sleep(Duration::from_secs(MATCH_REAPER_INTERVAL_SECONDS as u64)).await;
@@ -649,5 +651,6 @@ pub async fn run_reaper(app: Arc<App>) {
             tracing::warn!(event = "matches.open_reaper_failed", message = %error.message);
         }
         app.matches.reap_finished(now_ms()).await;
+        sweep_rematch_offers(&app, now_ms());
     }
 }
