@@ -1,10 +1,8 @@
 //! C #9 Income Tax (SPEC §8.6 row 9, §6.3 Steal, §10.6; R12, R33, R58, R61, R78, R97, R99, R317,
 //! R521, R1279000). Trap, cost 3, Legendary.
 //!   Base:    "Activates when the cards your opponent has drawn in a turn reach {draws}: They keep one
-//!            card of their choice and give you the rest of their hand. If it is not their turn, they
-//!            keep at the start of their next turn."
-//!   Radiant: the same, then "The cards you get cost ({discount}) less. If it is not their turn, they
-//!            keep at the start of their next turn."
+//!            card of their choice and give you the rest of their hand."
+//!   Radiant: the same, then "The cards you get cost ({discount}) less."
 //!
 //! The condition (R99, a trap's `when`) is the engine's draw count per player per turn (§10.1, B5 E4),
 //! on either turn, riding each `drawn` event as `turnDraw`: it counts the start-of-turn draw and a burned
@@ -19,6 +17,7 @@
 //! at once. The firing schedules the keep with the engine's `delay` (at the start of the drawer's next
 //! turn) carrying the discount exactly as the prompt's data does, and the `deferred` resume step opens
 //! the identical keep prompt when that turn starts. On the drawer's own turn it asks at once, as before.
+//! The faces do not print the wait: the sentence would put both over the face's text limit (R1017000).
 
 use jackioh_engine::prelude::*;
 
