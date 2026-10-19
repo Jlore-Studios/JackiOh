@@ -5123,9 +5123,10 @@
       "started_at": "2026-10-19T07:43:33Z",
       "stop_requested": false,
       "strike_log": [
-        "`claude-3` (claude, opus) rejected it: `crates/cards/src/scripts/classic/c090_in_too_deep.rs:311`: When reward G is deferred, quest 8 now opens only inside the DISCARD_STEP answer. If the opponent's h"
+        "`claude-3` (claude, opus) rejected it: `crates/cards/src/scripts/classic/c090_in_too_deep.rs:311`: When reward G is deferred, quest 8 now opens only inside the DISCARD_STEP answer. If the opponent's h",
+        "`claude-3` (claude, opus) rejected it: `crates/cards/src/scripts/classic/c090_in_too_deep.rs:321`: The deferred reward-G step opens quest 8 on whatever In Too Deep stands under the old instance id whe"
       ],
-      "strikes": 1,
+      "strikes": 2,
       "taken_asks": [],
       "verdict_rounds": 3
     },
