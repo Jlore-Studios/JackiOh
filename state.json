@@ -3197,7 +3197,6 @@
     },
     "1147": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-17T21:42:32Z",
@@ -3210,7 +3209,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-17T21:42:35Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -3218,27 +3216,22 @@
       "planned_tier": "medium",
       "pr": 1167,
       "provider": "agy",
-      "question": "",
       "queued_at": "2026-10-17T20:03:19Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
       "run_id": "39072893335",
       "started_at": "2026-10-17T21:56:27Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1149": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-17T22:31:00Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -3246,16 +3239,13 @@
       "planned_tier": "strong",
       "pr": 1202,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-17T20:31:07Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
       "run_id": "39092608735",
       "started_at": "2026-10-18T03:10:28Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 2
     },
     "1150": {
@@ -3421,13 +3411,11 @@
     },
     "1156": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T00:42:37Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -3435,16 +3423,13 @@
       "planned_tier": "strong",
       "pr": 1214,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-18T04:22:53Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
       "run_id": "39109556451",
       "started_at": "2026-10-18T07:58:51Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 2
     },
     "1157": {
@@ -3571,7 +3556,6 @@
     },
     "1167": {
       "action": "revise",
-      "asks": [],
       "audit_tier": "strong",
       "cleared": {
         "at": "2026-10-18T11:01:42Z",
@@ -3590,52 +3574,21 @@
       "interruptions": 0,
       "issue": 1147,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-18T10:14:10Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
       "run_id": "39118301210",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-18T10:14:22Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/INDEX.md"
-          ],
-          "from": "ff96b697d5d77732f86814812ec15121d5dce631",
-          "main": "92cb1b493ccec61a099266d741d723c0fc1ae56f"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39118301210",
-            "tier": "strong"
-          }
-        ],
-        "sha": "879755f26c275a24c2f5ebf78466321695e61b92",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "1169": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-18T05:03:53Z",
@@ -3648,7 +3601,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T05:03:56Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -3656,22 +3608,18 @@
       "planned_tier": "strong",
       "pr": 1207,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-18T04:14:32Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
       "run_id": "39102099943",
       "started_at": "2026-10-18T05:53:59Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1171": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-18T06:11:18Z",
@@ -3684,7 +3632,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T06:11:21Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -3692,37 +3639,23 @@
       "planned_tier": "strong",
       "pr": 1212,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-18T04:17:59Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
       "run_id": "39103172199",
       "started_at": "2026-10-18T06:12:20Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1173": {
       "action": "plan",
-      "asks": [],
       "closeout": true,
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-19T06:42:54Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "# Reconcile #1173 (fullsend)\n\n## State\n- Plan: (1) merge origin/bot/issue-1181; (2) Phase 3 build + damage.md; (3) reconcile; (4) green (fmt, clippy, tests, spec/catalog/patches check); (5) cull; (6) Done-when check (#1187: set ships).\n- Done: nothing yet.\n- Next: merge origin/bot/issue-1181.\n\n## Log\n- 2026-10-19: starting; about to merge origin/bot/issue-1181.\n- origin/bot/issue-1181 no longer exists on the remote (fetch: \"couldn't find remote ref\"); its two build-pass commits (620d1269b, af4d6f0d3) and the journal's merge record are already on this branch, so step 1 had nothing to merge.\n- cargo build --workspace --all-targets (testkit, ts): clean, 0 errors. cargo fmt --check clean.\n- Running full workspace tests --no-fail-fast into /tmp/test1173.txt.\n- Review subagent (read-only) over #1179/#1181: engine logic matches rulings; found AI placeholder keeps embiggen_cost_override (fixed: observe.rs + test r1181003_a_placeholder_names_no_embiggened_price, R1181003 proven_in + sentence), M+14 \"never a crafted potion\" untested (added r1179003_never_a_crafted_potion), stale comments c003/c015/c023 (fixed), c012/c013 hand-rolled JSON merge (repointed to crate::merged). Left: model.ts alt badge shows printed dearer price for a Radiant card under a Garden (display only; R1181002/3 don't require dropping it).\n- Full workspace tests at HEAD (aff9ce283, before my edits landed in the build): exit 0, every binary ok (ai 486+62+18, cards 6074+804, engine 429+2999+golden 20, server 1713, luau, tools). apps/web/src/wire clean.\n- Next: tool checks (catalog/patches/spec), spec index, clippy, re-run ai+cards tests for my edits, wasm build + web tests.\n- spec index (990), spec/catalog/patches check ok; clippy --workspace --all-targets -D warnings clean; cards+ai tests re-run with my edits: ok (new tests pass).\n- Launched a separate-session REVIEW.md M11 audit (subagent) writing to .fullsend/m11-review.md (rule 8; the branch's earlier one, reviews/2026-10-19-m11-review.md, was FAIL). Building wasm for web tests.\n",
-        "provider": "claude-7",
-        "reason": "stopped by @jgoetzmann",
-        "trail": ""
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "parked": [
         "bot/issue-1181"
       ],
@@ -3736,7 +3669,6 @@
       "stop_requested": true,
       "stopped_at": "2026-10-19T06:40:33Z",
       "stopped_by": "jgoetzmann",
-      "taken_asks": [],
       "tree": {
         "adopted": true,
         "at": "2026-10-18T16:40:07Z",
@@ -3763,14 +3695,12 @@
     },
     "1179": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "bbd186293885ea965a4775db0029e3b32fe0838d",
-      "last_findings": [],
       "onto": "bot/issue-1173",
       "parked_on": "",
       "part_of": 1173,
@@ -3780,26 +3710,22 @@
       "planned_by_id": "claude-4",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-18T16:40:11Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
       "run_id": "39149470954",
       "started_at": "2026-10-18T17:25:43Z",
       "stop_requested": false,
-      "taken_asks": [],
       "verdict_rounds": 0
     },
     "1181": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "landed": "af4d6f0d3e467f64f7ba0ffbdb970f21a5dfee83",
-      "last_findings": [],
       "onto": "bot/issue-1173",
       "parked_on": "",
       "part_of": 1173,
@@ -3809,14 +3735,12 @@
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-18T20:04:12Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
       "run_id": "39161841846",
       "started_at": "2026-10-18T20:11:15Z",
       "stop_requested": false,
-      "taken_asks": [],
       "verdict_rounds": 0
     },
     "1186": {
@@ -3919,13 +3843,11 @@
     },
     "1194": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T07:12:25Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -3933,21 +3855,17 @@
       "planned_tier": "strong",
       "pr": 1217,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-18T04:40:58Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
       "run_id": "39118421576",
       "started_at": "2026-10-18T10:14:51Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 2
     },
     "1195": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-18T13:13:35Z",
@@ -3960,7 +3878,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T13:13:38Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -3968,22 +3885,18 @@
       "planned_tier": "strong",
       "pr": 1227,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-18T12:51:38Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39130657851",
       "started_at": "2026-10-18T13:15:17Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 2
     },
     "1197": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-18T13:13:54Z",
@@ -3996,7 +3909,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T13:13:57Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -4004,22 +3916,18 @@
       "planned_tier": "strong",
       "pr": 1230,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-18T12:53:42Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39130697350",
       "started_at": "2026-10-18T13:15:49Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1202": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-18T10:00:17Z",
         "by": "`claude` (strong)",
@@ -4034,42 +3942,19 @@
       "interruptions": 0,
       "issue": 1149,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-18T08:41:47Z",
       "round_tier": "strong",
       "run_id": "39112716810",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-18T08:46:42Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39112716810",
-            "tier": "strong"
-          }
-        ],
-        "sha": "2cacd75738eafa876d366d8ee75e2a4d94bbb6dd",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "1204": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-18T13:09:09Z",
@@ -4082,7 +3967,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T13:09:12Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -4090,17 +3974,14 @@
       "planned_tier": "strong",
       "pr": 1221,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-18T12:54:33Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39130310306",
       "started_at": "2026-10-18T13:10:16Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1206": {
@@ -4145,30 +4026,10 @@
       "feedback_since": "2026-10-18T05:53:59Z",
       "issue": 1169,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39102099943",
-            "tier": "strong"
-          }
-        ],
-        "sha": "6f9245c003f5416340270b7e029fabec9355bd23",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1212": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-18T09:35:35Z",
         "by": "`claude` (strong)",
@@ -4185,50 +4046,19 @@
       "interruptions": 0,
       "issue": 1171,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-18T08:41:42Z",
       "round_tier": "strong",
       "run_id": "39112370615",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-18T08:42:35Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/INDEX.md"
-          ],
-          "from": "00f6296400fa4907ad4c738871fe5014b2ff7fa3",
-          "main": "8dda31d244f2c48bde4248e28a36dcdaad86ea4e"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39112370615",
-            "tier": "strong"
-          }
-        ],
-        "sha": "6a486177e4f6d822bfc6e99b00ff4903de260c22",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "1214": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-18T20:12:27Z",
         "by": "`claude` (strong)",
@@ -4245,47 +4075,16 @@
       "interruptions": 0,
       "issue": 1156,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-18T18:54:06Z",
       "round_tier": "strong",
       "run_id": "39156240670",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-18T18:54:23Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 6,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/engine/tests/golden/games.jsonl",
-            "spec/INDEX.md"
-          ],
-          "from": "1c8416656d2c07001e22ff276052745be4a996fd",
-          "main": "83102dd947b90a8077365544ca1a87c6a0dfdef8"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39156240670",
-            "tier": "strong"
-          }
-        ],
-        "sha": "c2973677e4aa15b1e81a18a11bf2b39cc32a8d68",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 6
     },
     "1216": {
       "action": "build",
@@ -4322,7 +4121,6 @@
     },
     "1217": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-18T13:47:36Z",
         "by": "`claude` (strong)",
@@ -4339,51 +4137,19 @@
       "interruptions": 0,
       "issue": 1194,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-18T12:43:23Z",
       "round_tier": "strong",
       "run_id": "39128408313",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-18T12:43:35Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/engine/tests/golden/games.jsonl",
-            "spec/11-rulings.md"
-          ],
-          "from": "18c325fd0c47a493b5f777dce3cd8ffdc17ff3f3",
-          "main": "1d353c144ca939d81ca69f651a70d86b7b3be805"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39128408313",
-            "tier": "strong"
-          }
-        ],
-        "sha": "f5f40fdcfb499102b82fd4dad727b58514116a98",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "1218": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-18T13:07:53Z",
@@ -4396,7 +4162,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T13:07:54Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
@@ -4404,19 +4169,15 @@
       "planned_tier": "medium",
       "pr": 1231,
       "provider": "agy",
-      "question": "",
       "round_tier": "medium",
       "run_id": "39130216637",
       "started_at": "2026-10-18T13:08:45Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1219": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-18T14:14:59Z",
@@ -4429,7 +4190,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T14:15:02Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -4437,27 +4197,22 @@
       "planned_tier": "strong",
       "pr": 1238,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-18T13:12:03Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39142442359",
       "started_at": "2026-10-18T15:53:07Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1220": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T14:45:40Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -4465,16 +4220,13 @@
       "planned_tier": "strong",
       "pr": 1248,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-18T13:59:09Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39156312386",
       "started_at": "2026-10-18T18:55:16Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 2
     },
     "1221": {
@@ -4489,30 +4241,10 @@
       "feedback_since": "2026-10-18T13:10:16Z",
       "issue": 1204,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39130310306",
-            "tier": "strong"
-          }
-        ],
-        "sha": "25b1d7cc91a8f5d0f77d5af725f89b4307e5fc43",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1223": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-18T15:06:34Z",
@@ -4525,7 +4257,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T15:06:37Z",
       "planned_by": "`claude-2` (claude, `opus`, strong)",
@@ -4533,19 +4264,15 @@
       "planned_tier": "strong",
       "pr": 1236,
       "provider": "claude-7",
-      "question": "",
       "round_tier": "medium",
       "run_id": "39139519479",
       "started_at": "2026-10-18T15:17:53Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1224": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-18T17:18:13Z",
@@ -4558,7 +4285,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T17:18:15Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -4566,22 +4292,18 @@
       "planned_tier": "strong",
       "pr": 1246,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-18T14:31:42Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
       "run_id": "39152926691",
       "started_at": "2026-10-18T18:13:28Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1225": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-18T14:54:30Z",
@@ -4594,7 +4316,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T14:54:34Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -4602,22 +4323,18 @@
       "planned_tier": "strong",
       "pr": 1245,
       "provider": "claude-2",
-      "question": "",
       "queued_at": "2026-10-18T14:31:24Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39143253148",
       "started_at": "2026-10-18T16:06:39Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 2
     },
     "1226": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-18T14:48:36Z",
@@ -4630,7 +4347,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T14:48:41Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -4638,17 +4354,14 @@
       "planned_tier": "strong",
       "pr": 1235,
       "provider": "claude-2",
-      "question": "",
       "queued_at": "2026-10-18T14:30:07Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39139002647",
       "started_at": "2026-10-18T15:07:40Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1227": {
@@ -4663,26 +4376,7 @@
       "feedback_since": "2026-10-18T13:15:17Z",
       "issue": 1195,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39130657851",
-            "tier": "strong"
-          }
-        ],
-        "sha": "1f77de9907b83da77fd1f707edd3944223754ba4",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1230": {
       "cleared": {
@@ -4696,30 +4390,10 @@
       "feedback_since": "2026-10-18T13:15:49Z",
       "issue": 1197,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39130697350",
-            "tier": "strong"
-          }
-        ],
-        "sha": "b680fe963d41448a0921b68339a01b7bb1518f4a",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1231": {
       "action": "revise",
-      "asks": [],
       "audit_tier": "strong",
       "cleared": {
         "at": "2026-10-18T16:35:44Z",
@@ -4736,40 +4410,18 @@
       "interruptions": 0,
       "issue": 1218,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-18T14:55:18Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
       "run_id": "39138126689",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-18T15:02:19Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39138126689",
-            "tier": "strong"
-          }
-        ],
-        "sha": "599c506ac8e0e7b5acd0d14c794acc22adc02746",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "1235": {
       "cleared": {
@@ -4783,26 +4435,7 @@
       "feedback_since": "2026-10-18T15:07:40Z",
       "issue": 1226,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39139002647",
-            "tier": "strong"
-          }
-        ],
-        "sha": "8fa31aab154f38bf74414dfadc283f6fe5475075",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1236": {
       "cleared": {
@@ -4816,81 +4449,30 @@
       "feedback_since": "2026-10-18T15:17:53Z",
       "issue": 1223,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39139519479",
-            "tier": "strong"
-          }
-        ],
-        "sha": "ba5e8f07bb2a7706135d56b6445af3a964ae38a1",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1237": {
       "action": "revise",
-      "asks": [],
       "closed_at": "2026-10-19T08:39:18Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-18T12:28:40Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-10-18T17:24:06Z",
-        "family": "muse",
-        "kind": "work",
-        "notes": "## State\n\nConflict revision of PR #1237 (`bot/issue-1216`): `main` moved and the harness\nmerged it in, leaving markers in `spec/08-catalog.md`, `spec/11-rulings.md`,\n`spec/INDEX.md` (the only three unmerged paths).\n\n- Done: all three resolved keeping both sides. `08-catalog.md`: branch's Dogpile\n  row 17 (with the `SPELL_ANSWER_CAP`/`R1216000` sentence) + `main`'s rewritten\n  Cognitive Offloading row 18 (new autopilot text, R1183002/R1183003). `11-rulings.md`:\n  `main`'s R1184000\u2013R1184003, R1194000, R1183000\u2013R1183005 notes kept verbatim, branch's\n  R1216000 note kept after them. `INDEX.md`: `main`'s rows plus R1216000 last.\n- No ruling-number collision: `main`'s highest ruling is R1194000, so R1216000 keeps\n  its number, note name, test names and citations unchanged.\n- Verified intact after auto-merge: `answers_named` (state.rs/echo.rs),\n  `SPELL_ANSWER_CAP` (config.rs), both `r1216000` tests, the Life Mage voice fix,\n  `answersNamed` in `GameState.ts`, `spec/rulings/R1216000.md`.\n- Next: `cargo jackioh spec index` + `spec check` (running), then proving checks\n  (fmt, clippy, targeted tests, catalog/patches check). Do NOT stage/commit: the\n  harness finishes the merge.\n\n## Log\n\n- Resolved the three spec conflict files by hand merge, verified zero markers via\n  `git grep -n -E '^(<<<<<<<|=======|>>>>>>>)'`, and confirmed every branch change\n  survived the auto-merge.\n- Ran `cargo jackioh spec index` (rewrote INDEX, 970 rulings) and `spec check`\n  (970 rulings, 2173 proofs: ok). `fmt --check`, `catalog check`, `patches check`\n  clean; both `r1216000` tests pass post-merge.\n- Final `git grep` for markers prints nothing. The three files still show as\n  unmerged (UU) because resolving does not stage: the harness stages/commits.\n  Do NOT run `git add`, `git commit`, or `git merge --abort`.\n",
-        "provider": "muse",
-        "reason": "the builder needs a person to decide something",
-        "trail": "- <!-- bot: {\"status\": \"blocked\", \"question\": \"Placeholder handoff: spec index/check still running; will report once the proving checks complete.\"} -->\n- (This turn ends here while the verification command finishes; the result will wake the session and the final report follows.<!-- bot: {\"status\": \"done\", \"title\": \"CI: daily super run failed\"} -->\n- ## Conflict revision report\n- This revision only resolves the merge conflict (`main` moved; the harness merged it into `bot/issue-1216`). There were no new review comments and no CI failure to answer, so no product code changed.\n- ### Each conflicted file\n- - `spec/08-catalog.md`: kept both sides. Row 17 keeps this branch's Dogpile text with the `SPELL_ANSWER_CAP` (200) / `R1216000` sentence; row 18 takes `main`'s rewritten Cognitive Offloading text (the new autopilot wording with `R1183002`/`R1183003`). The branch's stale row-18 wording and `main`'s \u2026\n- - `spec/11-rulings.md`: kept both sides verbatim, no renames. `main`'s notes (R1184000\u2013R1184003, R1194000, R1183000\u2013R1183005) come first, then this branch's `R1216000` note.\n- - `spec/INDEX.md`: kept `main`'s rows plus the `R1216000` row in numeric order, then rewrote the file with `cargo jackioh spec index` as required (never hand-merged as final).\n- ### No ruling-number collision\n- `main`'s highest ruling is R1194000 and it has no `R1216000.md`, so the branch's ruling keeps its number, note name, test names (`r1216000_\u2026`) and every citation unchanged. `main`'s notes are untouched.\n- ### Verification (all commands run, all output seen)\n- - `git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- .` prints nothing; all other merged files were auto-merged by git and only the three spec files needed hands.\n- - `cargo jackioh spec index` \u2192 wrote `spec/INDEX.md` (970 rulings); `cargo jackioh spec check` \u2192 970 rulings, 2173 proofs: ok.\n- - `cargo fmt --check` clean; `cargo jackioh catalog check` and `patches check` pass.\n- - Both R1216000 regression tests pass against the merged tree: `cargo test -p jackioh-cards r1216000` (`r1216000_clone_machine_answers_end_at_the_cap ... ok`) and `cargo test -p jackioh-engine --features testkit --test rules r1216000` (`r1216000_names_at_most_spell_answer_cap_spell_answers_per_game\u2026\n- - Confirmed intact after the auto-merge: `answers_named` in `state.rs`/`echo.rs`, `SPELL_ANSWER_CAP` in `config.rs`, the Life Mage voice fix in `card-audio.json5`, and `answersNamed` in `GameState.ts`.\n- - No checks weakened, no tests touched, nothing staged or committed; the merge is left open for the harness to conclude.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-1237 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-1237/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
-      },
       "interruptions": 0,
       "issue": 1216,
       "kind": "revise",
       "merged": true,
       "pending_request": false,
       "provider": "muse",
-      "question": "Placeholder handoff: spec index/check still running; will report once the proving checks complete.",
       "queued_at": "2026-10-18T16:32:57Z",
       "run_id": "39145457597",
-      "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-18T16:33:10Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "39127392457",
-            "tier": "medium"
-          }
-        ],
-        "sha": "60b5678a511d33e6030df5f02b5caf1388470036",
-        "tiers": {
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "1238": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-18T18:10:03Z",
         "by": "`claude` (strong)",
@@ -4907,51 +4489,19 @@
       "interruptions": 0,
       "issue": 1219,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-18T16:55:52Z",
       "round_tier": "medium",
       "run_id": "39147206724",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-18T16:56:03Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/cards/patches/pending/v0.3.12.json",
-            "crates/engine/tests/golden/games.jsonl"
-          ],
-          "from": "6682fa4a927f5f3d8bb37153a15a2e99c4a22a50",
-          "main": "050c14fb732085099b2e439b0db080a08d5ea3f0"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39147206724",
-            "tier": "strong"
-          }
-        ],
-        "sha": "9b18e51657f1a89e044c9b6d503ed3480df51626",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "1240": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-18T20:20:12Z",
@@ -4964,7 +4514,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T20:20:16Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -4972,22 +4521,18 @@
       "planned_tier": "strong",
       "pr": 1251,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-18T18:54:16Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
       "run_id": "39162879922",
       "started_at": "2026-10-18T20:25:30Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1242": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-18T21:42:16Z",
@@ -5000,7 +4545,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T21:42:17Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -5008,22 +4552,18 @@
       "planned_tier": "strong",
       "pr": 1249,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-18T21:18:46Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39169032667",
       "started_at": "2026-10-18T21:43:12Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1243": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-18T20:47:24Z",
@@ -5036,7 +4576,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T20:47:26Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -5044,17 +4583,14 @@
       "planned_tier": "strong",
       "pr": 1250,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-18T20:29:22Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
       "run_id": "39164928046",
       "started_at": "2026-10-18T20:54:59Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1245": {
@@ -5069,26 +4605,7 @@
       "feedback_since": "2026-10-18T16:06:39Z",
       "issue": 1225,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39143253148",
-            "tier": "strong"
-          }
-        ],
-        "sha": "ce6e421830c133fe8150438fdcb0ab6d91af961f",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1246": {
       "cleared": {
@@ -5102,30 +4619,10 @@
       "feedback_since": "2026-10-18T18:13:28Z",
       "issue": 1224,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39152926691",
-            "tier": "strong"
-          }
-        ],
-        "sha": "c4a1a0e63cb06e94f6c553ec86a5b31ac58197b8",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1247": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-18T21:52:46Z",
@@ -5138,7 +4635,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-18T21:52:49Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -5146,22 +4642,18 @@
       "planned_tier": "strong",
       "pr": 1252,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-18T21:19:18Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39169801396",
       "started_at": "2026-10-18T21:57:21Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1248": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-18T21:24:45Z",
         "by": "`claude` (strong)",
@@ -5178,50 +4670,19 @@
       "interruptions": 0,
       "issue": 1220,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-18T20:54:52Z",
       "round_tier": "medium",
       "run_id": "39165482892",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-18T20:55:47Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/engine/tests/golden/games.jsonl"
-          ],
-          "from": "abcff06faf29eb45f87973201bc3009ba4d0d201",
-          "main": "c38f84fcdaa4eb49bfd22591b6768276b0b7cde9"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "39165482892",
-            "tier": "medium"
-          }
-        ],
-        "sha": "e6a8750d7aada57d9e45073a74963fd2433e9fb5",
-        "tiers": {
-          "muse": "medium"
-        }
-      }
+      "verdict_rounds": 1
     },
     "1249": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-18T22:27:53Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -5244,35 +4705,8 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "39171928298",
-      "self_check_findings": [],
       "started_at": "2026-10-18T22:23:59Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "39169032667",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "39171928298",
-            "tier": "strong"
-          }
-        ],
-        "sha": "b1bea04830f93d7ecb47fad0e907e107b10e1c94",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "1250": {
       "cleared": {
@@ -5286,26 +4720,7 @@
       "feedback_since": "2026-10-18T20:54:59Z",
       "issue": 1243,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39164928046",
-            "tier": "strong"
-          }
-        ],
-        "sha": "a0616ead380fc5b96cfae62f874c13d6f7eab927",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1251": {
       "cleared": {
@@ -5319,26 +4734,7 @@
       "feedback_since": "2026-10-18T20:25:30Z",
       "issue": 1240,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39162879922",
-            "tier": "strong"
-          }
-        ],
-        "sha": "57388b7a97e7bb978b46b94ebfe9f79955d448d6",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1252": {
       "cleared": {
@@ -5352,30 +4748,10 @@
       "feedback_since": "2026-10-18T21:57:21Z",
       "issue": 1247,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39169801396",
-            "tier": "strong"
-          }
-        ],
-        "sha": "938ee0f6560596a8ecae3186807567a5b021d631",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1253": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-19T02:05:58Z",
@@ -5388,7 +4764,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-19T02:06:01Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -5396,22 +4771,18 @@
       "planned_tier": "strong",
       "pr": 1259,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-19T01:38:19Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39188383879",
       "started_at": "2026-10-19T02:06:58Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1254": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-19T02:19:38Z",
@@ -5424,7 +4795,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-19T02:19:39Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -5432,22 +4802,18 @@
       "planned_tier": "strong",
       "pr": 1262,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-19T01:37:46Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39189454106",
       "started_at": "2026-10-19T02:20:30Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1255": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-19T02:02:55Z",
@@ -5460,7 +4826,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-19T02:02:57Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -5468,22 +4833,18 @@
       "planned_tier": "strong",
       "pr": 1292,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-19T01:36:51Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
       "run_id": "39218925137",
       "started_at": "2026-10-19T07:55:11Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 2
     },
     "1256": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-19T01:52:20Z",
@@ -5496,7 +4857,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-19T01:52:22Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -5504,17 +4864,14 @@
       "planned_tier": "medium",
       "pr": 1261,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-19T01:36:32Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39187334868",
       "started_at": "2026-10-19T01:53:26Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1259": {
@@ -5529,30 +4886,10 @@
       "feedback_since": "2026-10-19T02:06:58Z",
       "issue": 1253,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39188383879",
-            "tier": "strong"
-          }
-        ],
-        "sha": "239ae7d08835fc0f9bea8b159d55afaa37ea3144",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1261": {
       "action": "revise",
-      "asks": [],
       "audit_tier": "strong",
       "cleared": {
         "at": "2026-10-19T06:53:33Z",
@@ -5569,40 +4906,18 @@
       "interruptions": 0,
       "issue": 1256,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-2",
-      "question": "",
       "queued_at": "2026-10-19T05:13:30Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
       "run_id": "39203500320",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-19T05:15:03Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39203500320",
-            "tier": "strong"
-          }
-        ],
-        "sha": "414ded6d2a3b8bbafc20fca265489a3aa748b34c",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "1262": {
       "cleared": {
@@ -5616,30 +4931,10 @@
       "feedback_since": "2026-10-19T02:20:30Z",
       "issue": 1254,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39189454106",
-            "tier": "strong"
-          }
-        ],
-        "sha": "12184126ace302b6034821d761e821f6a9bf5f6c",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1267": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-19T05:41:57Z",
@@ -5652,7 +4947,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-19T05:41:59Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -5660,22 +4954,18 @@
       "planned_tier": "medium",
       "pr": 1274,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-19T05:31:46Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
       "run_id": "39205921551",
       "started_at": "2026-10-19T05:42:56Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1274": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-19T06:14:16Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -5698,35 +4988,8 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "39208114527",
-      "self_check_findings": [],
       "started_at": "2026-10-19T06:10:11Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "39205921551",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "39208114527",
-            "tier": "strong"
-          }
-        ],
-        "sha": "630f9fff3081601ee76e61cbc323a275fe44c678",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "1279": {
       "action": "build",
@@ -5771,26 +5034,7 @@
       "feedback_since": "2026-10-19T07:55:11Z",
       "issue": 1255,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39218925137",
-            "tier": "strong"
-          }
-        ],
-        "sha": "482566abd10c097b7cd72060480a64f7ccca9fdb",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1293": {
       "difficulty": "medium",
@@ -6371,31 +5615,6 @@
       "started_at": "2026-10-13T07:12:07Z",
       "stop_requested": false
     },
-    "577": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-11T13:15:09Z",
-        "difficulty": "hard",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "hard's 'engine rules (crates/engine/src/)': the code edit is small, but the scorer will dry-run about 200 cards (Meditative's among them) it has never scored, and a panic or hidden-information leak there means fixing engine code"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-11T13:15:11Z",
-      "planned_by": "`claude-3` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "pr": 674,
-      "provider": "claude-3",
-      "run_id": "38161414420",
-      "started_at": "2026-10-11T17:52:30Z",
-      "stop_requested": false,
-      "strikes": 0
-    },
     "616": {
       "action": "build",
       "failures": 1,
@@ -6411,24 +5630,6 @@
       "started_at": "2026-10-12T06:04:04Z",
       "stop_requested": false,
       "strikes": 1
-    },
-    "638": {
-      "action": "build",
-      "failures": 0,
-      "forced": false,
-      "interruptions": 1,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-11T00:48:25Z",
-      "planned_by": "`claude-7` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "provider": "claude-3",
-      "queued_at": "2026-10-11T23:32:06Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "38185168470",
-      "started_at": "2026-10-11T23:41:19Z",
-      "stop_requested": false,
-      "strikes": 0
     },
     "639": {
       "action": "build",
@@ -6493,101 +5694,6 @@
       "strikes": 0,
       "verdict_rounds": 1
     },
-    "647": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-11T16:11:39Z",
-      "planned_by": "`claude-7` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "pr": 673,
-      "provider": "claude-3",
-      "queued_at": "2026-10-10T23:57:15Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "38161463742",
-      "started_at": "2026-10-11T17:53:27Z",
-      "stop_requested": false,
-      "strikes": 0
-    },
-    "648": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-11T16:41:07Z",
-        "difficulty": "medium",
-        "provider": "claude-1",
-        "tier": "strong",
-        "why": "rule 5 fails: the invariant lives in crates/engine/src/testkit/invariants.rs and cites R113 (rule 3); it is testkit code, not rules or the resolution loop, so not hard"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-11T16:41:10Z",
-      "planned_by": "`claude-1` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "pr": 670,
-      "provider": "agy",
-      "run_id": "38156573004",
-      "started_at": "2026-10-11T16:43:09Z",
-      "stop_requested": false,
-      "strikes": 0
-    },
-    "649": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-11T18:14:03Z",
-        "difficulty": "easy",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "Line 5 (no rules work) was the one in doubt. It holds because pool() reuses the engine's existing pub catalog::excluding_def_id, so only crates/cards/src/query.rs and a test in crates/cards/tests/ change, and nothing in crates/engine/src/."
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-11T18:14:04Z",
-      "planned_by": "`claude-3` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "pr": 672,
-      "provider": "devin",
-      "run_id": "38162965968",
-      "started_at": "2026-10-11T18:15:03Z",
-      "stop_requested": false,
-      "strikes": 0
-    },
-    "650": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-11T16:10:17Z",
-        "difficulty": "medium",
-        "provider": "claude-2",
-        "tier": "strong",
-        "why": "easy rule line 3 fails: the change cites R768 (new constant doc, test titles), and line 8: the cache size is a design choice the plan had to make"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-11T16:10:19Z",
-      "planned_by": "`claude-2` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "pr": 665,
-      "provider": "claude-1",
-      "run_id": "38154360837",
-      "started_at": "2026-10-11T16:11:31Z",
-      "stop_requested": false,
-      "strikes": 0
-    },
     "655": {
       "action": "build",
       "difficulty_by": {
@@ -6610,418 +5716,6 @@
       "requested_by": "jgoetzmann",
       "run_id": "38237972543",
       "started_at": "2026-10-12T10:42:46Z",
-      "stop_requested": false
-    },
-    "659": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-12T00:45:28Z",
-        "difficulty": "medium",
-        "provider": "claude-6",
-        "tier": "strong",
-        "why": "rules 2 and 7 fail: an e2e Cypress spec in e2e/ plus a fix in crates/tools, two places; nothing touches engine or AI, so not hard"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-12T00:45:30Z",
-      "planned_by": "`claude-6` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "pr": 694,
-      "provider": "muse",
-      "queued_at": "2026-10-11T23:20:55Z",
-      "requested_by": "jgoetzmann",
-      "run_id": "38189313515",
-      "started_at": "2026-10-12T00:47:27Z",
-      "stop_requested": false,
-      "strikes": 0
-    },
-    "665": {
-      "cleared": {
-        "at": "2026-10-11T16:44:48Z",
-        "by": "`claude` (strong)",
-        "sha": "838050a147364b7c55c924490526b1f94dd11913"
-      },
-      "closed_at": "2026-10-11T16:52:03Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-11T16:11:31Z",
-      "issue": 650,
-      "kind": "revise",
-      "merged": true
-    },
-    "666": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-11T20:02:44Z",
-        "difficulty": "medium",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "rule 3 fails: deleting stale open rows is a \u00a79.5 lifecycle decision the spec does not make, so the change adds ruling R1450 and edits spec/; the item is also already set to medium"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-11T20:02:46Z",
-      "planned_by": "`claude-3` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "pr": 680,
-      "provider": "agy",
-      "queued_at": "2026-10-11T19:40:12Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "38171239643",
-      "started_at": "2026-10-11T20:13:35Z",
-      "stop_requested": false,
-      "strikes": 0
-    },
-    "667": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-11T20:30:25Z",
-        "difficulty": "medium",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "Fails 'one place': docs/architecture.md and docs/v0.3.0/SURFACE.md sit outside crates/server; the server change itself is small and was prototyped green"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-11T20:30:27Z",
-      "planned_by": "`claude-3` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "pr": 684,
-      "provider": "claude-6",
-      "queued_at": "2026-10-11T19:40:30Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "38172524006",
-      "started_at": "2026-10-11T20:31:31Z",
-      "stop_requested": false,
-      "strikes": 0
-    },
-    "668": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-11T19:56:25Z",
-        "difficulty": "medium",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "'One place' fails: the guard is in crates/tools, the done state in training/ docs, and the stale comment the issue names is in crates/ai/src (rule 5)"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-11T19:56:27Z",
-      "planned_by": "`claude-3` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "pr": 679,
-      "provider": "claude-3",
-      "queued_at": "2026-10-11T19:39:55Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "38170130117",
-      "started_at": "2026-10-11T19:57:26Z",
-      "stop_requested": false,
-      "strikes": 0
-    },
-    "669": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-11T19:58:26Z",
-        "difficulty": "medium",
-        "provider": "claude-6",
-        "tier": "strong",
-        "why": "rule 3 fails: besides crates/tools the plan edits spec/README.md (a note in spec/) and CLAUDE.md, to keep the written list of what spec check fails on true"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-11T19:58:28Z",
-      "planned_by": "`claude-6` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "pr": 678,
-      "provider": "claude-6",
-      "queued_at": "2026-10-11T19:39:21Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "38170259236",
-      "started_at": "2026-10-11T19:59:30Z",
-      "stop_requested": false,
-      "strikes": 0
-    },
-    "670": {
-      "action": "review",
-      "cleared": {
-        "at": "2026-10-11T17:50:46Z",
-        "by": "`gemini` (medium) twice",
-        "sha": "aa353dffe05b3f9234fefe56d83f00700b0c93cc"
-      },
-      "closed_at": "2026-10-11T17:51:02Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-11T16:43:09Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 648,
-      "kind": "review",
-      "merged": true,
-      "pending_request": false,
-      "provider": "agy",
-      "queued_at": "2026-10-11T17:23:39Z",
-      "review_floor": "",
-      "review_notes": "",
-      "run_id": "38159472150",
-      "started_at": "2026-10-11T17:24:38Z",
-      "stop_requested": false
-    },
-    "672": {
-      "action": "review",
-      "cleared": {
-        "at": "2026-10-11T18:47:30Z",
-        "by": "`claude` (strong)",
-        "sha": "93374b7b006525b221cca78908c3465bca34c558"
-      },
-      "closed_at": "2026-10-11T18:47:59Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "easy",
-      "failures": 0,
-      "feedback_since": "2026-10-11T18:15:03Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 649,
-      "kind": "review",
-      "merged": true,
-      "pending_request": false,
-      "provider": "claude-3",
-      "queued_at": "2026-10-11T18:40:39Z",
-      "review_floor": "",
-      "review_notes": "",
-      "run_id": "38164833557",
-      "started_at": "2026-10-11T18:43:44Z",
-      "stop_requested": false
-    },
-    "673": {
-      "cleared": {
-        "at": "2026-10-11T18:41:05Z",
-        "by": "`claude` (strong)",
-        "sha": "50e447211b8c01d13aac8110977ce44efa5a5aaa"
-      },
-      "closed_at": "2026-10-11T18:51:58Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-11T17:53:27Z",
-      "issue": 647,
-      "kind": "revise",
-      "merged": true
-    },
-    "674": {
-      "cleared": {
-        "at": "2026-10-11T19:05:25Z",
-        "by": "`claude` (strong)",
-        "sha": "4d6d3fceafeb4a4894da216e5b6c5ac93965c0fd"
-      },
-      "closed_at": "2026-10-11T19:13:25Z",
-      "difficulty": "hard",
-      "failures": 0,
-      "feedback_since": "2026-10-11T17:52:30Z",
-      "issue": 577,
-      "kind": "revise",
-      "merged": true
-    },
-    "678": {
-      "cleared": {
-        "at": "2026-10-11T20:27:26Z",
-        "by": "`claude` (strong)",
-        "sha": "d4f98c2223c791dc0f0236c0ae5d073c23efd87a"
-      },
-      "closed_at": "2026-10-11T20:34:44Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-11T19:59:30Z",
-      "issue": 669,
-      "kind": "revise",
-      "merged": true
-    },
-    "679": {
-      "cleared": {
-        "at": "2026-10-11T20:36:49Z",
-        "by": "`claude` (strong)",
-        "sha": "4995e9233533ace837e0ee059863dbac11e3012d"
-      },
-      "closed_at": "2026-10-11T20:45:21Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-11T19:57:26Z",
-      "issue": 668,
-      "kind": "revise",
-      "merged": true
-    },
-    "680": {
-      "action": "review",
-      "cleared": {
-        "at": "2026-10-11T20:50:45Z",
-        "by": "`gemini` (medium) twice",
-        "sha": "8ef8ae99966cabfc74d32db98e95fa71cd0ae3e6"
-      },
-      "closed_at": "2026-10-11T20:51:02Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-11T20:13:35Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 666,
-      "kind": "review",
-      "merged": true,
-      "pending_request": false,
-      "provider": "agy",
-      "queued_at": "2026-10-11T20:39:10Z",
-      "review_floor": "",
-      "review_notes": "",
-      "run_id": "38173494058",
-      "started_at": "2026-10-11T20:45:29Z",
-      "stop_requested": false
-    },
-    "684": {
-      "action": "revise",
-      "cleared": {
-        "at": "2026-10-11T22:07:52Z",
-        "by": "`claude` (strong)",
-        "carried_from": "f98786d4dfaeac25f318007227c875fe9eaad4c2",
-        "resolved_by": "`claude` (strong)",
-        "sha": "9a4e253c86ff9741e2a111c34185623faf5cd77d"
-      },
-      "closed_at": "2026-10-11T22:16:17Z",
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-11T21:27:33Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 667,
-      "kind": "revise",
-      "merged": true,
-      "pending_request": false,
-      "provider": "claude-7",
-      "queued_at": "2026-10-11T21:27:13Z",
-      "run_id": "38176307109",
-      "source": "",
-      "started_at": "2026-10-11T21:27:33Z",
-      "stop_requested": false
-    },
-    "690": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-12T00:35:54Z",
-        "difficulty": "medium",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "hard rule's 'design across crates' line was closest: it touches spec docs plus tools, but no crate behavior changes since the id parsing is already digit-agnostic, so medium holds"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-12T00:52:31Z",
-      "planned_by": "`claude-6` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "pr": 693,
-      "provider": "muse",
-      "run_id": "38189765567",
-      "started_at": "2026-10-12T00:54:50Z",
-      "stop_requested": false,
-      "strikes": 0
-    },
-    "692": {
-      "action": "revise",
-      "closed_at": "2026-10-12T04:46:21Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 1,
-      "kind": "revise",
-      "merged": true,
-      "pending_request": false,
-      "provider": "claude-3",
-      "queued_at": "2026-10-12T02:17:58Z",
-      "review_floor": "",
-      "review_notes": "",
-      "run_id": "38204214616",
-      "source": "conflict",
-      "started_at": "2026-10-12T04:33:27Z",
-      "stop_requested": false
-    },
-    "693": {
-      "action": "review",
-      "cleared": {
-        "at": "2026-10-12T01:30:08Z",
-        "by": "`muse` (medium), `gemini` (medium)",
-        "sha": "0dedb013bf6031293f36a737b479c499a170e93d"
-      },
-      "closed_at": "2026-10-12T02:13:29Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-12T00:54:50Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 690,
-      "kind": "review",
-      "merged": true,
-      "pending_request": false,
-      "provider": "agy",
-      "queued_at": "2026-10-12T01:24:33Z",
-      "review_floor": "",
-      "review_notes": "",
-      "run_id": "38191784812",
-      "started_at": "2026-10-12T01:25:36Z",
-      "stop_requested": false
-    },
-    "694": {
-      "action": "review",
-      "cleared": {
-        "at": "2026-10-12T01:49:26Z",
-        "by": "`muse` (medium), `gemini` (medium)",
-        "sha": "a39edf8d25ce99e9f376b4e39c9306c619f798a5"
-      },
-      "closed_at": "2026-10-12T01:49:41Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-12T00:47:27Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 659,
-      "kind": "review",
-      "merged": true,
-      "pending_request": false,
-      "provider": "agy",
-      "queued_at": "2026-10-12T01:35:03Z",
-      "review_floor": "",
-      "review_notes": "",
-      "run_id": "38192469026",
-      "started_at": "2026-10-12T01:36:03Z",
       "stop_requested": false
     },
     "696": {
@@ -20264,9 +18958,9 @@
     }
   },
   "pruned": {
-    "at": "2026-10-18T09:45:56Z",
-    "dropped": 11,
-    "shed": 38
+    "at": "2026-10-19T11:03:52Z",
+    "dropped": 24,
+    "shed": 54
   },
   "rate_limited_until": "2026-10-02T21:30:00Z",
   "run_requested": null,
