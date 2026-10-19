@@ -5671,11 +5671,13 @@
         "by": "`claude` (strong)",
         "sha": "04028170820d7da391bf13f19158aa289ce32f59"
       },
+      "closed_at": "2026-10-19T14:09:40Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-19T12:42:41Z",
       "issue": 1287,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
