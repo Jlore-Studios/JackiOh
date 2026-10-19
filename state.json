@@ -16876,13 +16876,13 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-19T18:10:00Z",
-          "utilization": 0.15
+          "resets_at": "2026-10-19T23:10:00Z",
+          "utilization": 0.6
         },
-        "observed_at": "2026-10-19T13:29:26Z",
+        "observed_at": "2026-10-19T21:26:22Z",
         "seven_day": {
           "resets_at": "2026-10-26T09:00:00Z",
-          "utilization": 0.01
+          "utilization": 0.19
         },
         "status": "allowed"
       }
