@@ -5290,6 +5290,11 @@
       "ci_reruns": {
         "1ec6052b7f0f37ea10e8647b7eab2be9e056a085": 1
       },
+      "cleared": {
+        "at": "2026-10-19T14:57:53Z",
+        "by": "`claude` (strong)",
+        "sha": "89fb7fe8d97d72ef8d980be4a5d9cd1b7f5d34a3"
+      },
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
