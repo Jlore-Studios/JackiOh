@@ -54,6 +54,7 @@ use crate::db::store::{
     LastBoardKind, MatchRow, MatchSeat, Profile, ProfileKind, RatedGameKind, RatedReason, ResultRow,
     SeriesRow, SeriesStatus, StoreError, Tx,
 };
+use crate::economy::rewards::{GameSummary, pay_game_rewards};
 
 /// A failure this file reports to its caller (the actor, the reaper): TS rethrew the error itself,
 /// so the sentence is the error's own.
@@ -288,6 +289,42 @@ async fn write_once(
         rating_after: after,
     };
     tx.results_insert(&row).await.map_err(insert_error)?;
+
+    // §14.8: a finished ladder game — a ranked match that is not a game of a Conquest series —
+    // pays Jlore and XP through the one reward hook, in this same transaction, so a payout
+    // failure rolls the row back with it. Deliberately gated on `ranked_match` rather than
+    // `rating_policy`: a reaper ceiling draw is unrated yet still pays ([[R1302002]]). Nothing is
+    // paid for series games, room challenges, voided matches (that path never reaches here), or
+    // bot sides ([[R1454]]). The server ran the match, so it counts each seat's actions from its
+    // own log; the client reports nothing.
+    if series.is_none() && ranked_match {
+        let log = tx.matches_actions(&input.match_id).await.map_err(failed)?;
+        let winner_side = winner_side_of(&input.outcome, &input.seats);
+        for (index, seat) in [seat_a, seat_b].into_iter().enumerate() {
+            let actions = log
+                .iter()
+                .filter(|logged| logged.action.player_id == seat.player)
+                .count();
+            let bot = matches!(
+                by_id.get(&seat.profile_id).map(|profile| profile.kind),
+                Some(ProfileKind::Bot)
+            );
+            pay_game_rewards(
+                tx,
+                &GameSummary {
+                    profile_id: seat.profile_id.clone(),
+                    player: seat.player,
+                    won: winner_side.map(|side| side == index),
+                    actions: i64::try_from(actions).unwrap_or(i64::MAX),
+                    match_id: input.match_id.clone(),
+                    at: input.at,
+                    bot,
+                },
+            )
+            .await
+            .map_err(failed)?;
+        }
+    }
 
     // R417, R565: each seat's board as this game ended, read from its own side, becomes its last
     // server board, with the result or not at all. The reaper's ceiling draw reads no state, so it writes none.

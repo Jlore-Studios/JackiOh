@@ -295,6 +295,19 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::collection::get_collection),
     ),
+    // api/economy.rs (#1302)
+    (
+        "GET",
+        "/api/wallet",
+        AuthLevel::Active,
+        h!(api::economy::get_wallet),
+    ),
+    (
+        "GET",
+        "/api/tracks",
+        AuthLevel::Active,
+        h!(api::economy::get_tracks),
+    ),
     // api/decks.rs
     ("GET", "/api/decks", AuthLevel::Active, h!(api::decks::list_decks)),
     (
