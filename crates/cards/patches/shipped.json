@@ -148,5 +148,50 @@
     "version": "v0.3.7b",
     "commit": "799b3aeede37ce6d37380852164a52192d7e2379",
     "blob": "535d7f6a6ae5b9f06c595255496065705070e6ae"
+  },
+  {
+    "version": "v0.3.8",
+    "commit": "d787d2a8fb00749737be6fddde97855e77b4b6ef",
+    "blob": "471404577d4e211502594d0482820f2b57250756"
+  },
+  {
+    "version": "v0.3.9",
+    "commit": "bc67b77df9ef570c7db41b4b51b96792feb25c2a",
+    "blob": "a820094110797f43b12dce5bd045a3638205d8ac"
+  },
+  {
+    "version": "v0.3.10",
+    "commit": "f28f4fe8cc187a70cb06e7a3541607e88730ba58",
+    "blob": "ac9216ba7da6b82b47546fe670f576c59858e992"
+  },
+  {
+    "version": "v0.3.10b",
+    "commit": "84c1fb5323d15a27f3b69094d9d34c8f61a665f7",
+    "blob": "1cd1c483178858f1dd974e22ad02b47df9a66c39"
+  },
+  {
+    "version": "v0.3.11",
+    "commit": "b1580f7a771337e4656f5adca8cecec8183f6198",
+    "blob": "3b47b9be73ba1db54a2e95d9a302cab13eb2f907"
+  },
+  {
+    "version": "v0.3.12",
+    "commit": "92cb1b493ccec61a099266d741d723c0fc1ae56f",
+    "blob": "d485050edc488aa3ad7ddb63c66bdef441f85cb3"
+  },
+  {
+    "version": "v0.3.13",
+    "commit": "8714cced6f1a847c3f4b5b8ed24b403a4d1ad40e",
+    "blob": "9d3142d92407627d5340ac641df6e37a924e87f8"
+  },
+  {
+    "version": "v0.3.14",
+    "commit": "2bc35ff6fcfdf46d7f6299be864127b94bd52ffa",
+    "blob": "5ad276c321fcee21d21964538cbb5c37e5f1aea5"
+  },
+  {
+    "version": "v0.3.15",
+    "commit": "6c9bcfee3d649d2c6b9b90a83d0042dde3f3b9c5",
+    "blob": "411866b9f2223ac1e80950f4c4feda9dfca6eb72"
   }
 ]

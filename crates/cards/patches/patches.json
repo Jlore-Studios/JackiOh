@@ -9482,5 +9482,2178 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.3.8",
+    "date": "2026-10-14",
+    "title": "Card wording consistency",
+    "source": "#814 (parts 1, 4 and 5), #820, #911, #912, #1017, #1045",
+    "notes": "Same effect, same words: cards that run the same engine verb print the same clause (draw, random discard, steal, Make Radiant, adjacent, gains, Attack and Health, Recruit, Return to hand, (N) Cost, each enemy, Plague Counter placement, damage or heal), and core-073 Anti-oneshot Armor prints 'at a time' like classicplus-011 Anime Armor (#911). Shorter words for long faces: Fortify Mind's rules sentence, Jade Beauty without the Allure reminder its glossary line gives, Jungle Loser's Radiant face without its parenthesis, The Maestro's opponent and piles (#912). Cut to the face's text limit (#1017, R1017000): every face over six lines of 28 characters, which a 170 px face holds at the reading floor, reworded shorter (79 faces on 47 cards); Mind Games, Fortify Mind, YileGPT Unleashed, Yile's Virus and Reach the Summit put the lines their faces print first, and the client prints a short form or a clamp for the cards a list still keeps over it. Tesla's clarification, Jade Beauty's Allure reminder and Jlockeed's Evil Blueprints' 'Piece together the blueprint' return as a last line the face hides behind its '…' (R1017000). Wording only; mechanics, params and numbers unchanged, but for core-050 K-Pop Fanatic (#1045, R1045000), which ships under this claim: its Cry Allures the enemy permanent it chooses, as Jade Beauty Allures every enemy Unit, so its text is shorter, its target carries Allure's pink mark, and a target with no open zone in its row on the stealer's side is destroyed instead of staying with the opponent.",
+    "player": {
+      "title": "Card wording consistency",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "K-Pop Fanatic Allures the enemy permanent it chooses: if you have no room for it when you steal it, it is destroyed."
+      ],
+      "text": [
+        "Anti-oneshot Armor reads at a time, matching Anime Armor; nothing plays differently.",
+        "Cards that draw say Draw 2, never Draw 2 cards.",
+        "Every card that makes a player discard now says the discard is random, as it always was.",
+        "Mega Church steals, as Snom Bunny Mind Control does, and Jade Beauty's Allure says it steals the Units it charms.",
+        "The Radiant faces of Snom Bunny Mind Control, K-Pop Fanatic and Mega Church say make it Radiant, and Expedition12 says Make a card in your hand Radiant.",
+        "Golly Bob Howdy, Polymorph and Mushroom Power say adjacent, as Hit Job and Collateral Damage do.",
+        "Death Boil, Normal Grape and Large Grape print one sentence: deal damage to an enemy or heal an ally.",
+        "Attack and Health are capitalised on every card, and Mid Loser and Bot Loser gain their stats as other Units do.",
+        "Gravedigger returns a card from your graveyard to hand, and Call to Arms recruits Units of (1) Cost or less, as Cookie Guild does.",
+        "Permanent Underclassman and Upperclassman summon a (1) and a (4) Cost Unit, and Upperclassman's Death says the fusion goes to your hand.",
+        "Rotten Grape says Lose 5 health, Jlockeed Shredder-10 hits each enemy, Fed Fauci places its Plague Counter and Claude's Datacenter adds an AI generated card.",
+        "Fortify Mind says who beats whom in one short sentence, and The Maestro names your opponent's field, hand, deck and graveyard.",
+        "Jade Beauty no longer repeats what Allure does, which the keyword's glossary line says; Jungle Loser's Radiant face drops its reminder in brackets.",
+        "Over forty cards say the same in fewer words, so no card's art shrinks to make room for its text. Nothing plays differently.",
+        "Reach the Summit, Heroic Power, Combo-Index, Mind Games, Fortify Mind, YileGPT Unleashed and Call to Chaos show their first lines and …; hover one to read all of it on its left.",
+        "Tesla, Jade Beauty and Jlockeed's Evil Blueprints keep a reminder or a line of flavour after their …, there to read when you hover them."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "d787d2a8fb00749737be6fddde97855e77b4b6ef"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-004",
+        "name": "Gary the Gambler",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-013",
+        "name": "Jlockeed Shredder-10",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.attack",
+          "base.text",
+          "radiant.attack",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-014",
+        "name": "Jlockeed's Weapons",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-021",
+        "name": "Hinder",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "core-037",
+        "name": "Gravedigger",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "core-049",
+        "name": "Snom Bunny Mind Control",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-050",
+        "name": "K-Pop Fanatic",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-051",
+        "name": "KY's Private Tutor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-065-1",
+        "name": "Spikey Pillow",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-069",
+        "name": "Call to Arms",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-073",
+        "name": "Anti-oneshot Armor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-087",
+        "name": "Pocket Chaos",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-091",
+        "name": "Fed Fauci",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-093",
+        "name": "Combo-Index",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-096",
+        "name": "My Pawn",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-008",
+        "name": "Pickle",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-019",
+        "name": "Lizard's Breath",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-020",
+        "name": "The Power to Punish",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-023",
+        "name": "Devil's Pact",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-026",
+        "name": "Rapid Draw",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-028",
+        "name": "Second Wind",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-039",
+        "name": "Outbreak",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-042",
+        "name": "Transmutable Toxins",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-043",
+        "name": "Plague Nuke",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-064",
+        "name": "Malzahar's Recycler",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-088",
+        "name": "Siphon Squad",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-089",
+        "name": "Paul Allen's Ghost",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-012-1",
+        "name": "Devour",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-012-2",
+        "name": "Death Boil",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-019",
+        "name": "League of Losers",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-019-2",
+        "name": "Jungle Loser",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-019-3",
+        "name": "Mid Loser",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.attack",
+          "base.health",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-019-5",
+        "name": "Bot Loser",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.attack",
+          "base.health",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-020",
+        "name": "Mushroom Power",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-034",
+        "name": "Memory Leak",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-037",
+        "name": "Wardrum",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-042-1",
+        "name": "KY's Gift",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-056",
+        "name": "Book of Pain",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-065-1",
+        "name": "Rotten Grape",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-065-2",
+        "name": "Normal Grape",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-065-3",
+        "name": "Large Grape",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-070",
+        "name": "Chaos Machine",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-073-1",
+        "name": "Classic Golem",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-078",
+        "name": "Claude's Datacenter",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-001",
+        "name": "Disruptive Disruptor",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-002",
+        "name": "Rampaging Rhino",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-007",
+        "name": "Introspection",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-008",
+        "name": "Reach the Summit",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-018",
+        "name": "Expedition12",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-019-1",
+        "name": "Temporal Rift",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-020",
+        "name": "Aestheticize the Game",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-022",
+        "name": "Mind Games",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-022-1",
+        "name": "Fortify Mind",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-023",
+        "name": "Golly Bob Howdy",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-024",
+        "name": "Polymorph",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-026",
+        "name": "Alternate Fate",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-030",
+        "name": "Fickle E-Kitten",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-039-5",
+        "name": "Jade Beauty",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-040",
+        "name": "Feng Shui",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-045",
+        "name": "Knowledge Breaker",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-054",
+        "name": "Money Machine",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-058",
+        "name": "Permanent Underclassman",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "base.grants",
+          "radiant.text",
+          "radiant.grants"
+        ]
+      },
+      {
+        "id": "meditative-059",
+        "name": "Permanent Upperclassman",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "base.grants",
+          "radiant.text",
+          "radiant.grants"
+        ]
+      },
+      {
+        "id": "meditative-069",
+        "name": "The Maestro",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-079",
+        "name": "Touched by KY",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-080",
+        "name": "Aluneth",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-081",
+        "name": "Deadman's Hand",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-087",
+        "name": "Tatches the Totem",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-096",
+        "name": "Meditative Journey",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-097",
+        "name": "Jlockeed's Evil Blueprints",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-097-4",
+        "name": "Mega Church",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-099",
+        "name": "Paranoia",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.3.9",
+    "date": "2026-10-15",
+    "title": "A University's Buffs stop at five",
+    "source": "#884",
+    "notes": "meditative-097-6 University: its times param gets max 5 (its Radiant value), and an Activate N counts at most ACTIVATE_UNLIMITED_CAP uses a turn, so its own Buffs no longer feed a turn that never ends (R884000).",
+    "player": {
+      "title": "University's Buffs capped",
+      "new": [],
+      "balance": [
+        "University's number of Buffs can be Buffed up to 5, its Radiant value, and never past it."
+      ],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "An Activate ability Buffed past 100 uses is used at most 100 times a turn, so a University that keeps Buffing itself no longer stalls the game."
+      ]
+    },
+    "commits": [
+      "bc67b77df9ef570c7db41b4b51b96792feb25c2a"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "meditative-097-6",
+        "name": "University",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.3.10",
+    "date": "2026-10-15",
+    "title": "Meditative patch notes round 1",
+    "source": "#831",
+    "notes": "Round 1 of the designer's Meditative patch notes (issue #831): costs, stats, keywords, tags, a rename and behaviour changes for 74 cards, among them Silly Silas into Locked zones (R831000), Palantir's cast (R831001), CN Flea Market's Radiant lots (R831002), KY's Papaya's Discover and curve animation (R831003), KY's Test, Gift and Trial (R831004), Prestige (R831005), Windfast (R831006), Tesla (R831007), Showdown's empty lane (R831008), The Power to Thrive (R831009), Tommy Tempo (R831010), Twice Forward One Step Backwards (R831011), Ever Growing Tree (R831012), Jilliax's Equip (R831013), Eugenics (R831014), Corpse Plantation (R831015) and Plague Crawler (R831016). CN Flea Market's ten new shop cards are left to the designer. Eight of the 74 were already claimed by a pending patch when this one merged, and a card ships in one patch, so their #831 changes ship under that patch's claim: classic-064, classicplus-042-1, classicplus-078, core-050, meditative-001, meditative-002 and meditative-080 under v0.3.8, and meditative-097-6 under v0.3.9. This note's player lines still describe them.",
+    "player": {
+      "title": "Meditative patch notes, round 1",
+      "new": [],
+      "balance": [
+        "The House costs (4), up from (3).",
+        "Exile costs (2), up from (1).",
+        "Felinor Feelings costs (1), up from (0).",
+        "First Day of 学校 costs (1), up from (0).",
+        "Doctors Orders costs (2), up from (1).",
+        "K-Pop Fanatic costs (2), up from (1).",
+        "Brawl costs (3), up from (2).",
+        "Claude's Datacenter costs (3), up from (2).",
+        "Crop Dusting costs (1), down from (2).",
+        "Fruit Tree costs (3), up from (2).",
+        "H1B Printer costs (3), up from (2).",
+        "Income Tax costs (3), up from (2).",
+        "Malzahar's Recycler costs (1), down from (2).",
+        "Spiritually 中国 costs (3), up from (2).",
+        "Pareto Optimality costs (3), up from (2).",
+        "Jlarna costs (4), up from (3).",
+        "Aluneth costs (2), down from (3).",
+        "Palantir costs (2), up from (1).",
+        "CN Flea Market costs (1), up from (0).",
+        "Showdown costs (1), down from (2).",
+        "Juicy Kumquat Melon costs (2), down from (4).",
+        "Bigot is a 4/1, down from 6/1, and an 8/2 Radiant, down from 12/2.",
+        "Clip-Farming Critikal is a 4/1, down from 5/1, and an 8/2 Radiant, down from 10/2.",
+        "Fear Mongerer is a 5/7, down from 6/8, and a 10/14 Radiant, down from 12/16.",
+        "Frostspatula is a 7/3, down from 10/3, and a 14/6 Radiant, down from 20/6.",
+        "Volatility is a 1/1, down from 3/3, and a 2/2 Radiant, down from 6/6.",
+        "Tommy Tempo is a 5/5, down from 9/9, and a 10/10 Radiant, down from 18/18.",
+        "Radiant Duplicating Felinors is a 6/8, down from 6/9.",
+        "Radiant Corpse Eater is a 4/4, down from 6/6.",
+        "Radiant Rampaging Rhino is a 10/18, down from 11/20.",
+        "Radiant Empty Plot is a 0/6, down from 0/8.",
+        "Radiant Bunker is a 10/20, down from 10/30, with Armor 6, up from Armor 5.",
+        "Radiant Jlockeed's Headquarters is a 0/40, down from 0/50.",
+        "Radiant Buff Billy is a 6X/6X, down from 7X/7X.",
+        "Auspicious Rock gives Jade 75% of the time, up from 70%, and Red Jade 5%, down from 10%.",
+        "Catboy Maid SSR+ adds 1 to 3 Jade, down from 1 to 4, and 1 to 6 Radiant, down from 1 to 10.",
+        "Withering Storm Nerfs 5 cards, up from 4.",
+        "Expedition123 makes you lose all your mana for 2 turns, down from 3.",
+        "Efficiency Dividend deals X+1 damage, heals 4X or gives X mana next turn; Radiant, 2X+1 damage, 8X healing or X+1 mana.",
+        "The True Sheep's Discovered card costs (1), and (0) Radiant.",
+        "Disruptive Disruptor's Radiant face draws 2."
+      ],
+      "changes": [
+        "Silly Silas now rotates cards into Locked zones.",
+        "Palantir steals any (1) Cost Spell your opponent plays and casts it for you, its choices random but in your favour.",
+        "Radiant Palantir steals up to 3 (1) Cost Spells, then Tributes itself.",
+        "CN Flea Market also sells each card Radiant, at its Radiant price.",
+        "Book of Vital Kill ends your turn; its Radiant face no longer adds a Book of Flame.",
+        "KY's Papaya's points are each chosen from 3 random cells, and its curve is drawn across the board.",
+        "KY's Test's Hard problems are harder, and the KY's Gift it rewards costs its printed (4).",
+        "KY's Gift is an Activate instead of a start of turn effect.",
+        "KY's Trial works across every set: Discover one of 3 sets, then one of 3 numbers in it.",
+        "Mutate Spell's base face can be used once a turn; its Radiant face exiles enemy permanents instead of fusing them.",
+        "Plague Doctor's base face also places a Plague Counter on itself before it deals damage.",
+        "Prestige makes the next card you play this turn Radiant; its Radiant face clears only the enemy cards on the field.",
+        "Prestige no longer adds an AI generated card.",
+        "Windfast gains Rush and summons a random Unit from your hand.",
+        "Jackiestan Auctioneer counts and reveals only on cards its controller plays.",
+        "Tesla zaps only the Unit that reveals it.",
+        "Legion of the Hungry is a Spell instead of a Field Spell.",
+        "Showdown needs an empty lane.",
+        "The Power to Thrive's last option reduces the Cost of a card in your hand by (1), or (2) Radiant, instead of giving mana.",
+        "University buffs your other permanents, no longer itself.",
+        "Tommy Tempo loses all your mana as it enters and gains +1/+1 for each mana lost, +2/+2 Radiant.",
+        "Turtinator can be activated once a turn.",
+        "Twice Forward One Step Backwards is Animated, a 0/1 (0/2 Radiant), and fuses in a copy of the card, leaving the card where it is.",
+        "Volatility gains Cry: Buff this.",
+        "Disruptive Disruptor gains Cry: Draw 1.",
+        "Ever Growing Tree lets you choose which of 2 random Field Spells to fuse into it.",
+        "Jilliax can be played for (3) to gain Equip.",
+        "Eugenics exiles every card in your deck that costs (2) or less; its Radiant face makes every card left Radiant.",
+        "Plague Crawler can place its Plague Counters on itself.",
+        "Corpse Plantation places its Plague Counters with its Cry, and its Activate lets you play one Unit from your graveyard.",
+        "Death by 1000 cuts, Moths to the Flame and CN-Virus gain Pierce.",
+        "Book of Flame gains Trample.",
+        "Fiery Waraxe gains First Strike.",
+        "Jlockwork Machine gains Rush.",
+        "Rampaging Rhino gains Rush and Windfury; its Radiant face has First Strike, Rush and Windfury instead of Trample.",
+        "Devin Bot loses Reborn.",
+        "Bauble Bubble loses the Fruit tag, and Juicy Kumquat Melon gains it.",
+        "YileGPT Tamed is a Catalyst and YileGPT Unleashed a Prime, so Prime pools can offer it.",
+        "Yile's Virus and AI Girlfriend lose the Acclaimed tag."
+      ],
+      "text": [
+        "Silly Silas's Radiant text is shorter; it plays the same.",
+        "Expedition1234 is renamed Expedition123."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "f28f4fe8cc187a70cb06e7a3541607e88730ba58"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-002",
+        "name": "Bigot",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "core-009",
+        "name": "Moths to the Flame",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-012",
+        "name": "Duplicating Felinors",
+        "kind": "changed",
+        "fields": [
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-024",
+        "name": "Efficiency Dividend",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-042",
+        "name": "Eugenics",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-052",
+        "name": "Silly Silas",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-056",
+        "name": "Jilliax",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-082",
+        "name": "KY's Trial",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-089",
+        "name": "Corpse Eater",
+        "kind": "changed",
+        "fields": [
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "core-090-1",
+        "name": "CN-Virus",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-004",
+        "name": "Palantir",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-005",
+        "name": "Tesla",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-009",
+        "name": "Income Tax",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-010",
+        "name": "Exile",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-016",
+        "name": "Book of Flame",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-021",
+        "name": "Turtinator",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-029",
+        "name": "Book of Vital Kill",
+        "kind": "changed",
+        "fields": [
+          "refs",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-032",
+        "name": "Felinor Feelings",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-038",
+        "name": "Jackiestan Auctioneer",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-053",
+        "name": "Plague Crawler",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-059",
+        "name": "Plague Doctor",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text"
+        ]
+      },
+      {
+        "id": "classic-063",
+        "name": "Crop Dusting",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "params",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-074",
+        "name": "Corpse Plantation",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-078",
+        "name": "Mutate Spell",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-081",
+        "name": "The Power to Thrive",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-007",
+        "name": "The House",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-008",
+        "name": "Withering Storm",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text"
+        ]
+      },
+      {
+        "id": "classicplus-012-7",
+        "name": "Legion of the Hungry",
+        "kind": "changed",
+        "fields": [
+          "type",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-012-8",
+        "name": "Frostspatula",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "classicplus-026",
+        "name": "Tommy Tempo",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.attack",
+          "base.health",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-032-2",
+        "name": "Brawl",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-060",
+        "name": "Doctors Orders",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-061",
+        "name": "Bauble Bubble",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-062",
+        "name": "KY's Papaya",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-063",
+        "name": "Fruit Tree",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-069",
+        "name": "Buff Billy",
+        "kind": "changed",
+        "fields": [
+          "radiant.xStats",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-074",
+        "name": "Twice Forward One Step Backwards",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "base.attack",
+          "base.health",
+          "radiant.keywords",
+          "radiant.text",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "meditative-003",
+        "name": "Jlockwork Machine",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text"
+        ]
+      },
+      {
+        "id": "meditative-004",
+        "name": "Juicy Kumquat Melon",
+        "kind": "changed",
+        "fields": [
+          "tags",
+          "cost"
+        ]
+      },
+      {
+        "id": "meditative-005",
+        "name": "Death by 1000 cuts",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-012",
+        "name": "Fear Mongerer",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "meditative-019",
+        "name": "Expedition123",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-032",
+        "name": "Spiritually 中国",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "meditative-033",
+        "name": "First Day of 学校",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "meditative-038",
+        "name": "H1B Printer",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "meditative-039-1",
+        "name": "Auspicious Rock",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-042",
+        "name": "CN Flea Market",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "meditative-049",
+        "name": "YileGPT Tamed",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "meditative-049-1",
+        "name": "YileGPT Unleashed",
+        "kind": "changed",
+        "fields": [
+          "tags",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-049-2",
+        "name": "Yile's Virus",
+        "kind": "changed",
+        "fields": [
+          "tags",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-049-3",
+        "name": "AI Girlfriend",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "meditative-051",
+        "name": "Devin Bot",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-053",
+        "name": "Prestige",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-057",
+        "name": "Clip-Farming Critikal",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "meditative-066",
+        "name": "Fiery Waraxe",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-071",
+        "name": "Pareto Optimality",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-075",
+        "name": "Ever Growing Tree",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-084",
+        "name": "Volatility",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "base.text",
+          "radiant.attack",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-088",
+        "name": "The True Sheep",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-089",
+        "name": "Jlarna",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-091",
+        "name": "Windfast",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-097-1",
+        "name": "Empty Plot",
+        "kind": "changed",
+        "fields": [
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "meditative-097-5",
+        "name": "Bunker",
+        "kind": "changed",
+        "fields": [
+          "radiant.health",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-097-9",
+        "name": "Jlockeed's Headquarters",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "base.text",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-098",
+        "name": "Showdown",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-102",
+        "name": "Catboy Maid SSR+",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.3.10b",
+    "date": "2026-10-16",
+    "title": "Standardize Jlockeed spelling",
+    "source": "#1067",
+    "notes": "Patch v0.3.Y (#1067): the five cards spelled Jlockheed print Jlockeed like Core's two, under the one Jlockeed tag (R278). Names and face text only; no number, tag, pool or behavior changes.",
+    "player": {
+      "title": "Standardize Jlockeed spelling",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "Five cards spelled Jlockheed now spell it Jlockeed, like Core's two. Nothing plays differently."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "84c1fb5323d15a27f3b69094d9d34c8f61a665f7"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "classicplus-048",
+        "name": "Jlockeed's Lobbyist",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-051",
+        "name": "Jlockeed's J15 Fighter",
+        "kind": "changed",
+        "fields": [
+          "name"
+        ]
+      },
+      {
+        "id": "classicplus-052",
+        "name": "Jlockeed's Permanent Defense Contract",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.3.11",
+    "date": "2026-10-18",
+    "title": "Embiggen cards have a normal version and an Embiggened version, in every text and screen",
+    "source": "#1175",
+    "notes": "Issue #1175 (part of #1173): a card with two prices is an embiggen card, played as its normal version at the cheaper price or as its Embiggened version at its Embiggened cost (R1175000). The embiggen cards' texts label that version \"Embiggened (N): ...\" where R366 wrote \"Paid (N): ...\", on both faces, in English and Chinese (\"加码(N)：\"). Wording only: no number, keyword, script or rule changes. Eight cards say it; two were already claimed by a pending patch when this one was written, and a card ships in one patch, so their wording ships under that patch's claim: core-056 under v0.3.10 and meditative-081 under v0.3.8. This note's player line still describes them.",
+    "player": {
+      "title": "Embiggened cards",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "Cards with two prices now say Embiggened (N) for their dearer version, and the cheaper one is their normal version. Nothing plays differently."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "b1580f7a771337e4656f5adca8cecec8183f6198"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-046",
+        "name": "Suppressive Aura",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-059",
+        "name": "Unbiased Immigration",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-084",
+        "name": "Going Long",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-036",
+        "name": "Conjure Bones",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-021",
+        "name": "API Key Fishing",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-046",
+        "name": "Conjure Intellect",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.3.12",
+    "date": "2026-10-18",
+    "title": "Balance pass over 18 cards",
+    "source": "#1149, #1218, #1219",
+    "notes": "The designer's balance pass over 18 cards (issue #1149). Costs: classic-088 Siphon Squad (3), core-052 Silly Silas (4), core-097 Zephyrs (1), classicplus-075 J-lease J-Jungle EX-plorer (3), core-093 Combo-Index (3), classicplus-044 Simplicity Audit (3), meditative-059 Permanent Upperclassman (4). Numbers: meditative-047 饕餮 2/2 [4/4]; core-027 Blood Ridden Glowy Jelly Bean loses 7; core-014 Jlockeed's Weapons +3 [+6]; classic-012 Book of Blood 4 [8]; core-013 Jlockeed Shredder-10 6/10 [8/20] and 2 [4] damage, R275's named exception (R1149002); the League of Losers tokens' base 5s become 4s (classicplus-019-1 to -5: 4/4, Support 0/4, Mid Loser's heads 4, Bot Loser's attackGain 4). Reworks: meditative-037 is renamed CN in a Bottle, costs (1) and casts on draw (R1149001, superseding R926); core-049 Snom Bunny Mind Control targets only enemy Units; meditative-017 True Craft a Card exiles itself (loc 41). Fix: classic-088 Siphon Squad's aura and preview sleep until it is revealed (R1149000, amending R403; loc 31). Nerfs measured with cargo jackioh stats: meditative-095 Call to Chaos (Meditative Edition) adds 2 CN cards, not 3, and gives 6 Armor and heals 6, not 8 (CHAOS_MED_CN_CARDS, CHAOS_MED_HERO_ARMOR, CHAOS_MED_HEAL); classicplus-040 Appropriations' Culture is 8X% [20X%], its Radiant Military +4X and Healthcare +6X Health, script constants, so its entry is unchanged and unclaimed. Win rates, In deck, AI pilots, 2000 All Random games on seeds 1 to 2000 before and after (cargo jackioh stats, then stats report --source dev --pilot ai): meditative-095 59.9% (152 decks) to 57.0% (149); classicplus-040 55.1% (107) to 57.1% (98), within the noise of about 100 decks; core-095 51.6% (182) to 53.0% (151) and classicplus-073 56.4% (179) to 51.4% (185), whose code did not change, which puts the noise at about 5 points. Ten of the changed cards were already claimed by a pending patch when this one merged, and a card ships in one patch, so their #1149 changes ship under that patch's claim: core-013, core-014, core-049, core-093, classic-088, classicplus-019-2, classicplus-019-3, classicplus-019-5 and meditative-059 under v0.3.8, and core-052 under v0.3.10. This note's player lines still describe them. Issue #1218 standardized the Radiant base stats of the Loser tokens to 8/8 (Support Loser 0/8) and Bot Loser's Radiant attack gain to +8, and Mid Loser's Tails debuff to −2/−2, sharing the pending claims of the tokens. Issue #1219 then raised core-013's Radiant Attack from 8 to 12 before this patch shipped: it is 6/10 [12/20], which R275 holds with no exception (R1149002 superseded), and the player line says 12/20; it still ships under v0.3.8's claim.",
+    "player": {
+      "title": "A balance pass over 18 cards",
+      "new": [],
+      "balance": [
+        "Siphon Squad costs (3), up from (2).",
+        "Silly Silas costs (4), up from (3).",
+        "Zephyrs costs (1), up from (0).",
+        "J-lease J-Jungle EX-plorer costs (3), up from (2).",
+        "Combo-Index costs (3), up from (2).",
+        "Simplicity Audit costs (3), up from (2).",
+        "Permanent Upperclassman costs (4), up from (3).",
+        "饕餮 is a 2/2, down from 8/8, and a 4/4 Radiant, down from 16/16.",
+        "Blood Ridden Glowy Jelly Bean makes you lose 7 health, up from 5.",
+        "Jlockeed's Weapons gives your Units +3 Attack, down from +4, and +6 Radiant, down from +10.",
+        "Book of Blood deals 4 damage, down from 5, and 8 Radiant, down from 10.",
+        "Jlockeed Shredder-10 is a 6/10, down from 8/10, and a 12/20 Radiant, down from 16/20.",
+        "Radiant Jlockeed Shredder-10 deals 4 damage to each enemy at the end of your turn, down from 5.",
+        "Top Loser, Jungle Loser, Mid Loser and Bot Loser are 4/4 (Radiant 8/8), down from 5/5 (Radiant 10/10).",
+        "Support Loser is a 0/4 (Radiant 0/8), down from 0/5 (Radiant 0/10).",
+        "Mid Loser's Heads gives it +4/+4, down from +5/+5.",
+        "Mid Loser gains −2/−2 on Tails, down from −3/−3.",
+        "Bot Loser gains +4 Attack (+8 Radiant) whenever it destroys a Unit, down from +5 (+10 Radiant).",
+        "Call to Chaos (Meditative Edition) adds 2 CN cards, down from 3, and gives your hero 6 Armor and heals it 6, down from 8.",
+        "Appropriations' Culture has an 8X% chance, down from 10X%, and 20X% Radiant, down from 25X%.",
+        "Radiant Appropriations' Military gives +4X Attack, down from +5X, and its Healthcare +6X Health, down from +7X."
+      ],
+      "changes": [
+        "CN in a Bottle costs (1) and is Cast on draw: drawn, it adds a random Radiant card to your hand. In your hand any other way, playing it does the same.",
+        "Snom Bunny Mind Control steals only an enemy Unit, no longer a Field Spell or Trap.",
+        "True Craft a Card exiles itself once it has crafted its card."
+      ],
+      "text": [
+        "CN in a bottle is renamed CN in a Bottle."
+      ],
+      "fixes": [
+        "Siphon Squad no longer lowers your opponent's Attack while it is set and unrevealed: its aura starts once it is revealed."
+      ]
+    },
+    "commits": [
+      "92cb1b493ccec61a099266d741d723c0fc1ae56f"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-027",
+        "name": "Blood Ridden Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-097",
+        "name": "Zephyrs",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classic-012",
+        "name": "Book of Blood",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-019-1",
+        "name": "Top Loser",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-019-4",
+        "name": "Support Loser",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-044",
+        "name": "Simplicity Audit",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-075",
+        "name": "J-lease J-Jungle EX-plorer",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "meditative-017",
+        "name": "True Craft a Card",
+        "kind": "changed",
+        "fields": [
+          "loc",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-037",
+        "name": "CN in a Bottle",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-047",
+        "name": "饕餮",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "meditative-095",
+        "name": "Call to Chaos (Meditative Edition)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.3.13",
+    "date": "2026-10-18",
+    "title": "Buff eight low-win-rate cards",
+    "source": "#1194",
+    "notes": "Issue #1194 buffs eight cards with low win rates, on both faces: #76 Field of Dreams costs (2), was (3); C+ #64 Mulch Muncher (5), was (10), its Fruit discount kept; Meditative #19.1 Temporal Rift (0), was (2); Meditative #80 Aluneth's three end-of-turn draws each cost (1) less (a new discount param); C #64 Malzahar's Recycler discards its 2 random cards on a once-a-turn Activate, paid as its cost, in place of its end of turn; C+ #33 Ivory Tower gains Aura: Your Units have Flying and Stack., which reaches its controller's Units in hand (R1194000); Meditative #75 Ever Growing Tree Discovers 1 of 3 Field Spells, was 1 of 2; Meditative #54 Money Machine is reworked: at end of turn one The Coin into the opponent's deck, and a controller-only Activate shuffles a The Coin (Radiant on the Radiant face) into your deck, with no roll, price or Tribute. Five of them were already claimed by a pending patch when this one was written, and a card ships in one patch, so their changes ship under that patch's claim: classic-064, meditative-019-1, meditative-054 and meditative-080 under v0.3.8 and meditative-075 under v0.3.10. This note's player lines still describe them. Four scripts are kept for v0.3.7b's replays (R767000): the Recycler's, Ivory Tower's, Money Machine's and Aluneth's.",
+    "player": {
+      "title": "Eight cards buffed",
+      "new": [],
+      "balance": [
+        "Field of Dreams costs (2), down from (3).",
+        "Mulch Muncher costs (5), down from (10). Each Fruit you've played still makes it cost (1) less.",
+        "Temporal Rift costs (0), down from (2).",
+        "Aluneth: the 3 cards it draws at the end of your turn each cost (1) less."
+      ],
+      "changes": [
+        "Malzahar's Recycler discards its 2 random cards when you Activate it, once a turn, instead of at the end of your turn, and still draws for them.",
+        "Ivory Tower: Aura: Your Units have Flying and Stack, in your hand as on the field, so they can be played onto an occupied zone or into an empty backrow zone.",
+        "Ever Growing Tree: its Activate Discovers a Field Spell to fuse into it, a choice of 3 where it was 2.",
+        "Money Machine: at the end of your turn it shuffles a The Coin into your opponent's deck, and nothing into yours.",
+        "Money Machine: its Activate, once a turn and yours alone, shuffles a The Coin into your deck (Radiant: a Radiant one). It no longer costs mana or Tributes it, and your opponent can't use it."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "8714cced6f1a847c3f4b5b8ed24b403a4d1ad40e"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-076",
+        "name": "Field of Dreams",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-033",
+        "name": "Ivory Tower",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-064",
+        "name": "Mulch Muncher",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.3.14",
+    "date": "2026-10-18",
+    "title": "Radiant numbers normalized to ×2",
+    "source": "#1220",
+    "notes": "Issue #1220 normalizes Radiant numbers to ×2 across 22 cards and tokens. Numbers on the Radiant face: core-005 Stockpile draws 4, was 5, and heals 4, was 5; core-028 Knockoff Temu Glowy Jelly Bean makes 4 Radiant, was 5; core-044 True Strike deals 8, was 9; core-047 Fig of Life heals 40, was 50; classic-031 Cookie Guild recruits 2, was 3; classic-061 Plague Bringer Goliath draws 2, was 3; classicplus-028 Nuestro hogar, nuestras tumbas heals 6, was 8; classicplus-038 Solarius has Spell Damage +4, was +5; classicplus-038-1 Solarius Prime has Spell Damage +6, was +7; meditative-035 RCTA (CN) gives +4/+4, was +5/+5; meditative-039-3 Dud deals 4, was 5; meditative-092 Unan has Armor 6, was 7; meditative-097-2 Wishing Well has 10% chance, was 12%; core-004 Gary the Gambler flips 10 coins, was 7, at +1/+1 a side, was +2/+2; core-024 Efficiency Dividend deals X damage, was X+1, and Radiant deals 2X damage, was 2X+1; classic-063 Crop Dusting places 2 counters, was 3, and draws 2, was 3; classicplus-065-2 Normal Grape draws 2, was 4; meditative-007 Introspection heals 6, was 8; meditative-096 Meditative Journey exiles up to 4 cards, was 5; meditative-097-6 University Buffs 4 times, was 5; meditativeplus-009 Magic Amplifier has Spell Damage +4, was +5; meditativeplus-017 Dogpile deals 4, was 5. Seven cards ship under older claims: core-004, classicplus-065-2, meditative-007 and meditative-096 under v0.3.8; meditative-097-6 under v0.3.9; core-024 and classic-063 under v0.3.10. This note's player lines describe those seven too. The M+ cards are unshipped (R1420). No script is kept (R767000).",
+    "player": {
+      "title": "Radiant numbers set at double",
+      "new": [],
+      "balance": [
+        "Radiant Stockpile draws 4 and heals 4, down from 5 and 5.",
+        "Radiant Knockoff Temu Glowy Jelly Bean makes 4 random cards among your deck, hand and board Radiant, down from 5.",
+        "Radiant True Strike deals 8 damage, down from 9.",
+        "Radiant Fig of Life heals your hero 40, down from 50.",
+        "Radiant Cookie Guild recruits 2 Units, down from 3.",
+        "Radiant Plague Bringer Goliath draws 2 cards, down from 3.",
+        "Radiant Crop Dusting places 2 Plague Counters and draws 2 cards, down from 3 each.",
+        "Radiant Nuestro hogar, nuestras tumbas heals your hero 6, down from 8.",
+        "Radiant Solarius has Spell Damage +4, down from +5.",
+        "Radiant Solarius Prime has Spell Damage +6, down from +7.",
+        "Radiant Normal Grape draws 2 cards, down from 4.",
+        "Radiant Introspection heals your hero and Units 6, down from 8.",
+        "Radiant RCTA (CN) gives a non-CN permanent +4/+4, down from +5/+5.",
+        "Radiant Dud deals 4 damage, down from 5.",
+        "Radiant Unan has Armor 6, down from 7.",
+        "Radiant Meditative Journey chooses up to 4 cards in your hand, down from 5.",
+        "Radiant Wishing Well has a 10% chance, the same as its normal version, down from 12%. It keeps Lucky 1.",
+        "Radiant University Buffs each of your other permanents 4 times, down from 5."
+      ],
+      "changes": [
+        "Efficiency Dividend's damage choice deals X damage, and 2X on its Radiant version, where it dealt X+1 and 2X+1.",
+        "Radiant Gary the Gambler flips 10 coins and gains +1 Attack per heads and +1 Health per tails, where it flipped 7 at +2 each."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "2bc35ff6fcfdf46d7f6299be864127b94bd52ffa"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-005",
+        "name": "Stockpile",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-028",
+        "name": "Knockoff Temu Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-044",
+        "name": "True Strike",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-047",
+        "name": "Fig of Life",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-031",
+        "name": "Cookie Guild",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-061",
+        "name": "Plague Bringer Goliath",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-028",
+        "name": "Nuestro hogar, nuestras tumbas",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-038",
+        "name": "Solarius",
+        "kind": "changed",
+        "fields": [
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-038-1",
+        "name": "Solarius Prime",
+        "kind": "changed",
+        "fields": [
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-035",
+        "name": "RCTA (CN)",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-039-3",
+        "name": "Dud",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-092",
+        "name": "Unan",
+        "kind": "changed",
+        "fields": [
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-097-2",
+        "name": "Wishing Well",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.3.15",
+    "date": "2026-10-19",
+    "title": "Patch v0.3.15: Meditative+, the release: the set ships",
+    "source": "issue #1173, issue #1186, issue #1187, issue #1266",
+    "notes": "The Meditative+ set ships (R1420, R1178000): its 26 cards and 4 tokens join every pool that names no set, the deck builder, the Almanac and random decks, the AI's included (R1390's gate is empty; issue #1186's sweep of record holds the AI's shadow ban to half the set, R1186000). The set's own mechanics are the rulings of issue #1173's parts. Core #82 KY's Trial, which works across every set that ships (R831004), Discovers among five sets now; no other card of an earlier set changes. Beside the set, the win-rate table Meditative #50 CN Tech and Meditative+ #2 NA Tech read is filled for the first time, from a development run of this patch's cards (issue #1266, R1266000); no card's data changes for it.",
+    "player": {
+      "title": "Meditative+",
+      "new": [
+        "The Meditative+ set: 26 cards and 4 tokens join the deck builder, the Almanac, random decks and every card pool that names no set."
+      ],
+      "balance": [],
+      "changes": [
+        "KY's Trial can offer the Meditative+ set.",
+        "CN Tech and NA Tech pick their cards from win rates the AI measured on this patch's cards, no longer at random."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "6c9bcfee3d649d2c6b9b90a83d0042dde3f3b9c5"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "meditativeplus-001",
+        "name": "Bob's Plan",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-001-1",
+        "name": "Base Camp",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-001-2",
+        "name": "Spa Day",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-002",
+        "name": "NA Tech",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-003",
+        "name": "Wondrous Wand",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-004",
+        "name": "Supply Drop",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-005",
+        "name": "Spirit Lash",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-006",
+        "name": "Bloodbloom",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-007",
+        "name": "Life Mage",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-008",
+        "name": "Arch Mage",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-009",
+        "name": "Magic Amplifier",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-010",
+        "name": "Medina Grifter",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-011",
+        "name": "Living Mana Potion",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-012",
+        "name": "Living Armor Potion",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-013",
+        "name": "Living Health Potion",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-014",
+        "name": "Potion Pouch",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-015",
+        "name": "Book of Potions",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-016",
+        "name": "Jazakus",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-016-1",
+        "name": "Jazakus Prime",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-017",
+        "name": "Dogpile",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-018",
+        "name": "Cognitive Offloading",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-019",
+        "name": "Grubby Gloves",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-020",
+        "name": "KY's Competition",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-020-1",
+        "name": "Lil' Kenny",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-021",
+        "name": "Harmony Spirit",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-022",
+        "name": "Mountaintop Garden",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-023",
+        "name": "Enormous Elderberry",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-024",
+        "name": "Bob, Wisconsin's Strongest Soldier",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-025",
+        "name": "KY's Intuition",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-026",
+        "name": "Scratch Pad",
+        "kind": "added"
+      }
+    ]
   }
 ]
