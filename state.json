@@ -6124,6 +6124,7 @@
         "c:6278053541"
       ],
       "audit_tier": "strong",
+      "closed_at": "2026-10-19T21:46:04Z",
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
@@ -6162,6 +6163,7 @@
           "where": "task"
         }
       ],
+      "merged": true,
       "pending_at": "2026-10-19T17:36:08Z",
       "pending_by": "MaxGoetzmann",
       "pending_request": false,
