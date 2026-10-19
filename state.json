@@ -3683,9 +3683,17 @@
     },
     "1173": {
       "closeout": false,
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
       "parked": [
         "bot/issue-1181"
       ],
+      "pending_request": false,
+      "queued_at": "2026-10-19T05:13:46Z",
+      "requested_by": "jgoetzmann-bot",
+      "stop_requested": false,
       "tree": {
         "adopted": true,
         "at": "2026-10-18T16:40:07Z",
