@@ -19,7 +19,6 @@ pub mod features;
 pub mod freeze;
 pub mod ky_competition;
 pub mod learned;
-pub mod library_cards;
 pub mod lost_mana;
 pub mod match_refusal;
 pub mod meditative_plus;
