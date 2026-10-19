@@ -21090,11 +21090,11 @@
         "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": "2026-10-19T23:45:58Z",
-    "last_run": "2026-10-19T23:45:58Z",
-    "provider": "claude-7",
+    "idle_since": "2026-10-19T23:12:59Z",
+    "last_run": "2026-10-19T21:29:39Z",
+    "provider": null,
     "requested": false,
-    "run_id": "39343500136",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
