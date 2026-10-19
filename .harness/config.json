@@ -56,7 +56,7 @@
     "bot selftest"
   ],
   "ci_reruns": 1,
-  "suggestions": { "enabled": true, "max_open": 4, "idle_minutes": 30 },
+  "suggestions": { "enabled": true, "max_open": 10, "idle_minutes": 30 },
   "quiet": {
     "enabled": true,
     "interval_minutes": 10,

@@ -247,8 +247,13 @@ cannot hold a comment, and three things in them are not obvious:
   bundle is `apps/web` plus the WASM module compiled from `crates/engine`, `crates/cards`, `crates/ai`
   and `crates/wasm`, and `crates/cards/src/scripts/` holds the card scripts, which are compiled in, so
   the list never names a crate's `src/`. Diffing against the last build, not the previous
-  commit, means a commit whose build was cancelled or failed is never skipped past. Any doubt builds:
-  no previous sha, a shallow clone without it, an empty diff, a path off the list. A cancelled build
+  commit, means a commit whose build was cancelled or failed is never skipped past. main also waits
+  an hour (`MIN_GAP_SECONDS`) after the last build: a commit committed sooner is skipped, and the
+  first push after the hour builds it with the rest, since each build stores a whole copy of the
+  site (about 76 MB in October 2026) against the Hobby plan's 10 GB of Deployment Storage; the
+  project's Deployment Retention Policy, a dashboard setting, keeps every kind of deployment 1 day.
+  Any doubt builds: no previous sha, a shallow clone without it, an empty diff, a commit dated
+  before the last build, a path off the list. A cancelled build
   still counts against the 100, which is why the machine branches are switched off outright rather
   than left to the script. Vercel reads the config from the commit that is pushed, so a branch cut
   before this landed deploys until it merges main, and `bot-state` is an orphan branch with no
@@ -698,7 +703,9 @@ step that is not yet implemented says which BUILD task delivers it.
    `0029_play_telemetry.sql` → `0030_meditative_set.sql` → `0031_meditative_endings.sql` →
    `0032_ladder_bots.sql` → `0033_bot_trios.sql` → `0034_account_consent.sql` →
    `0035_replay_final_hash.sql` → `0036_lean_set.sql` → `0037_custom_cards.sql` → `0038_social.sql` →
-   `0039_duos.sql` — and records them in `app.migrations`. Expected result: 43 tables
+   `0039_duos.sql` → `0040_moderation_switch_grant.sql` → `0041_card_totals.sql` →
+   `0042_match_checkpoints.sql` → `0043_meditative_plus_set.sql` — and records them in
+   `app.migrations`. Expected result: 47 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can
@@ -777,9 +784,9 @@ step that is not yet implemented says which BUILD task delivers it.
    - `insert into public.collection …` as an `authenticated` user → must be refused. There is no
      policy, so there is no path (§9.4).
 6. **Seed the catalog.** `target/release/jackioh-server seed-catalog`. It writes the catalog compiled
-   into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 450
-   (370 cards + 80 tokens over Core, Classic, Classic+ and Meditative: patch v0.2.0, Glitch, issue #170,
-   and the Meditative set, issue #553) and
+   into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 480
+   (396 cards + 84 tokens over Core, Classic, Classic+, Meditative and Meditative+: patch v0.2.0, Glitch,
+   issue #170, the Meditative set, issue #553, and the Meditative+ set, issue #1187) and
    `select app.catalog_version();` → your `CATALOG_VERSION`, the latest card patch's version (R388).
 7. **Mint an invite code.** `target/release/jackioh-server mint-code`. It generates 16 characters
    from `CODE_ALPHABET`, formats them `XXXX-XXXX-XXXX-XXXX`, HMACs with `CODE_PEPPER` and inserts

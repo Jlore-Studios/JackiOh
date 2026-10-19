@@ -5,7 +5,7 @@
 # it; whoever proposes a change to the features or the model measures it with this same script.
 #
 #   training/ml/retrain.sh --out <dir> (--logs <dir> | --games <n> --seed <base>) [--parent-bin <path>]
-#                          [--screen-games 800] [--every reply|turn|decision] [--seeds "1 2 3"]
+#                          [--screen-games 800] [--every reply|turn|decision] [--seeds "1 2 3 4 5 6"]
 #                          [--width 32] [--head "32"] [--positions-bin <path>]
 #
 #   1. the logs: `--logs` reuses an export (selfplay.yml's artifacts, or a local run), else `jackioh
@@ -23,7 +23,12 @@
 #      the integer network that ships (`python -m jackioh_ml.quantize`, D7, R1011000) into
 #      crates/ai/src/learned/weights.json, with its held-out loss beside the float one's
 #      (<out>/quantize-report.json); and the switch, AI_EVAL_KIND, set to Learned in
-#      crates/ai/src/config.rs. The screen and the gate play the integer network, as players would;
+#      crates/ai/src/config.rs. The screen and the gate play the integer network, as players would.
+#      Each seed's network is tried, best validation first, and the first one whose integer network
+#      passes `cargo test -p jackioh-ai` with the switch on ships (<out>/ai-tests-seed<N>.txt): a
+#      promotion must pass those tests in CI, and each seed misjudges a puzzle or two of its own (#466;
+#      six seeds, since run 8's three all failed).
+#      It stops here when none passes;
 #   5. the parent: `--parent-bin <path>`; `--parent-bin tree`, the exporter of step 1, built from this
 #      tree before the weights changed (when the tree is main, as in learn.yml); else `jackioh` built from
 #      origin/main in a worktree of its own (never this tree's target/, #585);
@@ -38,7 +43,7 @@
 # (R850001), by a candidate a screen has already passed.
 set -euo pipefail
 
-out="" logs="" games="" seed="" parent="" screen_games=800 every=reply seeds="1 2 3" width=32 head=32
+out="" logs="" games="" seed="" parent="" screen_games=800 every=reply seeds="1 2 3 4 5 6" width=32 head=32
 positions_bin=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -110,14 +115,37 @@ if ! python3 -c "import sys; sys.exit(0 if float(sys.argv[1]) > 0 else 1)" "$gai
 fi
 
 say "the weights and the switch"
-uv run --frozen --project training/ml python -m jackioh_ml.export --model "$out/fit/model.pt" \
-  --out "$out/weights-float.json"
-uv run --frozen --project training/ml python -m jackioh_ml.quantize --weights "$out/weights-float.json" \
-  --out crates/ai/src/learned/weights.json --positions "$out/positions.jsonl" \
-  --report "$out/quantize-report.json"
 sed -i 's/^pub const AI_EVAL_KIND: EvalKind = EvalKind::Hand;/pub const AI_EVAL_KIND: EvalKind = EvalKind::Learned;/' \
   crates/ai/src/config.rs
 grep -q '^pub const AI_EVAL_KIND: EvalKind = EvalKind::Learned;' crates/ai/src/config.rs
+# The seeds' networks, best validation first: the first whose integer network passes the AI's tests
+# with the switch on ships, as a promotion must pass them in CI. Each seed misjudges a puzzle or two
+# of its own (#466), and the seeds are alike in strength (the report's spread).
+mapfile -t order < <(python3 -c "import json,sys
+for s in sorted(json.load(open(sys.argv[1]))['seeds'], key=lambda s: s['validation']): print(s['seed'])" \
+  "$out/fit/report.json")
+shipped=""
+for s in "${order[@]}"; do
+  uv run --frozen --project training/ml python -m jackioh_ml.export --model "$out/fit/model-seed$s.pt" \
+    --out "$out/weights-float-seed$s.json"
+  uv run --frozen --project training/ml python -m jackioh_ml.quantize --weights "$out/weights-float-seed$s.json" \
+    --out crates/ai/src/learned/weights.json --positions "$out/positions.jsonl" \
+    --report "$out/quantize-report-seed$s.json"
+  say "the AI's tests with seed $s's network and the switch on"
+  if cargo test -p jackioh-ai > "$out/ai-tests-seed$s.txt" 2>&1; then
+    shipped=$s
+    break
+  fi
+  say "seed $s's network fails the AI's tests: $(grep -E '^test .* FAILED$' "$out/ai-tests-seed$s.txt" | sed 's/^test //; s/ \.\.\. FAILED$//' | tr '\n' ' ')"
+done
+if [ -z "$shipped" ]; then
+  say "no seed's network passes the AI's tests with the switch on: no screen"
+  printf '{"stage":"tests","gain":%s,"screened":false}\n' "$gain" > "$out/summary.json"
+  exit 1
+fi
+say "seed $shipped's network ships"
+cp "$out/weights-float-seed$shipped.json" "$out/weights-float.json"
+cp "$out/quantize-report-seed$shipped.json" "$out/quantize-report.json"
 
 if [ "$parent" = tree ]; then
   cp "$out/tree-jackioh" "$out/parent-jackioh"

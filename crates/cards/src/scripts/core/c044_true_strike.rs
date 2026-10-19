@@ -1,6 +1,6 @@
 //! #44 True Strike (SPEC §8.2, R346). Spell, cost 1, Common.
 //!   Base:    "Pierce / Deal 4 damage. Exile this."
-//!   Radiant: "Pierce / Deal 9 damage. Exile this." (the faces differ only in the number.)
+//!   Radiant: "Pierce / Deal 8 damage. Exile this." (the faces differ only in the number.)
 //!   Engine:  "Pierce: skips pipeline step 2; Divine Shield still applies."
 //!
 //! PIERCE ON A SPELL (R346): its damage ignores Armor. §4.4 step 2 reads Pierce off the source
@@ -21,7 +21,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-044";
 
-/// The faces differ only in the declared number `damage` (R386): 4 and 9, read off the running face.
+/// The faces differ only in the declared number `damage` (R386): 4 and 8, read off the running face.
 fn true_strike() -> Script {
     Script {
         targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))],
@@ -45,7 +45,7 @@ pub fn script() -> CardScripts {
 
 // #44 True Strike (SPEC §8.2, §4.4, §5.1, §6.3 Exile; R63, R65, R81, R90, R346).
 // Must-pass row (BUILD M4-T4 #44): "4 damage through Armor 7; Divine Shield still blocks; exiled;
-// radiant 9." Pierce skips §4.4 step 2 only, so each half is one test: #25 4-mana 7/7 (Armor 7) takes
+// radiant 8." Pierce skips §4.4 step 2 only, so each half is one test: #25 4-mana 7/7 (Armor 7) takes
 // the full hit, #56 Jilliax (Divine Shield) takes none because step 1 negates the whole instance.
 #[cfg(test)]
 mod tests {
@@ -96,7 +96,7 @@ mod tests {
             assert_eq!(serde_json::to_value(&def.radiant.keywords).unwrap(), json!([{ "kind": "Pierce" }]));
             // The face as printed: its declared `damage` filled in (R386, R482).
             assert_eq!(fill_params(&def, FaceKind::Base, None), "Pierce\nDeal 4 damage. Exile this.");
-            assert_eq!(fill_params(&def, FaceKind::Radiant, None), "Pierce\nDeal 9 damage. Exile this.");
+            assert_eq!(fill_params(&def, FaceKind::Radiant, None), "Pierce\nDeal 8 damage. Exile this.");
         }
 
         #[test]
@@ -206,17 +206,17 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r346_deals_9_damage_with_pierce_only_the_number_changed() {
+        fn r346_deals_8_damage_with_pierce_only_the_number_changed() {
             // Radiant #43 Big Felinor is a 6/20 with no Armor, so the damage dealt is visible exactly.
             let mut s = spell(json!({ "def": "core-043", "radiant": true }), true);
             let pick = at_unit(&s, 1);
             s.play("core-044", pick);
 
-            s.expect_stats("core-043", json!({ "attack": 6, "health": 11, "maxHealth": 20 }));
+            s.expect_stats("core-043", json!({ "attack": 6, "health": 12, "maxHealth": 20 }));
         }
 
         #[test]
-        fn nine_through_armor_7_kills_the_4_mana_7_7_outright() {
+        fn eight_through_armor_7_kills_the_4_mana_7_7_outright() {
             let mut s = spell(json!({ "def": "core-025" }), true);
             let pick = at_unit(&s, 1);
             s.play("core-044", pick);
@@ -226,7 +226,7 @@ mod tests {
         }
 
         #[test]
-        fn r63_divine_shield_still_blocks_all_9() {
+        fn r63_divine_shield_still_blocks_all_8() {
             let mut s = spell(json!({ "def": "core-056" }), true);
             let pick = at_unit(&s, 1);
             s.play("core-044", pick);
@@ -247,7 +247,7 @@ mod tests {
         }
 
         #[test]
-        fn nine_to_a_hero_ignoring_its_armor() {
+        fn eight_to_a_hero_ignoring_its_armor() {
             let mut s = scenario(json!({
                 "seed": "true-strike",
                 "p1": { "hand": [{ "def": "core-044", "radiant": true }, "core-021"] },
@@ -255,7 +255,7 @@ mod tests {
             }));
             s.play("core-044", json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
 
-            s.expect_health(PlayerId::P2, 21);
+            s.expect_health(PlayerId::P2, 22);
         }
 
         #[test]

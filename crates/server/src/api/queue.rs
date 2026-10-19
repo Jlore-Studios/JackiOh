@@ -144,7 +144,8 @@ fn forget_seed(ticket_id: &str) {
 /// already sends every `SERIES_POLL_SECONDS` from wherever it is, so a silent profile reads as
 /// gone and its ticket expires before it can seat anyone. In memory, beside `E2E_SEED_BY_TICKET`:
 /// a restart loses it, and live clients re-touch within one poll, so `enqueued_at` covers what was
-/// never heard. One per `App`, not module state: profile ids repeat across parallel tests.
+/// never heard. One per `App`, not module state: profile ids repeat across parallel tests. Each
+/// sweep forgets a profile with no open ticket once it has been silent a window (`sweep`).
 pub struct QueuePresence {
     born: i64,
     heard: Mutex<IndexMap<String, i64>>,
@@ -173,6 +174,20 @@ impl QueuePresence {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .shift_remove(profile_id);
+    }
+
+    /// The sweep's tidy-up (`try_pair`): forgets each profile unheard from for longer than
+    /// `QUEUE_TICKET_STALE_MS` that owns none of the `open` tickets, whose entry nothing reads, so the
+    /// map stays the size of the queue rather than of everyone heard since boot. An open ticket's
+    /// owner keeps its entry for the sweep's verdict, so no verdict changes.
+    pub fn sweep(&self, now: i64, open: &[Ticket]) {
+        let owners: IndexSet<&str> = open.iter().map(|ticket| ticket.profile_id.as_str()).collect();
+        self.heard
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .retain(|profile_id, heard| {
+                now - *heard <= QUEUE_TICKET_STALE_MS || owners.contains(profile_id.as_str())
+            });
     }
 
     /// Whether the server has listened long enough to judge any ticket: one full
@@ -635,11 +650,8 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
 
 /// One pairing sweep. Oldest ticket first, each against the oldest qualifying opponent.
 ///
-/// NOT IN SPEC, and no R-row yet — PROPOSED RULING for §11: the oldest ticket is paired first, against
-/// the oldest opponent its window admits, not the closest in rating. §9.5 fixes the window and is
-/// silent on the choice inside it; the window already is the rating rule, so picking the closest
-/// re-applies it and leaves the longest waiter waiting again. Ties break on ticket id, so a sweep is
-/// deterministic. Affects: §9.5, R108; `api/queue.rs`.
+/// R166: the oldest ticket is paired first, against the oldest opponent its window admits, not the
+/// closest in rating. Ties break on ticket id, so a sweep is deterministic.
 ///
 /// Answers what this sweep made and which pairs failed to start. A failed claim or start for
 /// one pair is logged (`queue.start_failed`) and the sweep moves on to the next pair instead of
@@ -657,6 +669,9 @@ pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
         .await
         .map_err(|error| ApiError::internal(error.to_string()))?;
     open.sort_by(|x, y| x.enqueued_at.cmp(&y.enqueued_at).then_with(|| x.id.cmp(&y.id)));
+    // R897000: a profile with no open ticket is never judged, so one silent for a window is forgotten
+    // here, before an empty queue returns; an open ticket's owner keeps its entry for the verdict below.
+    app.queue_presence.sweep(now, &open);
     // R1453: one ticket alone can still pair, with a bot.
     if open.is_empty() {
         tx.commit()
@@ -1313,12 +1328,9 @@ async fn enqueue_route(app: &Arc<App>, req: Req) -> ApiResult {
 /// `DELETE /api/queue` (active): leaving the queue. Idempotent; `cancelled: false` when there was
 /// nothing open to cancel.
 ///
-/// NOT IN SPEC, and no R-row yet — PROPOSED RULING for §11: a queued player may cancel, and
-/// cancelling is idempotent. §9.5 never says how a player leaves, yet its "not in a match" assertion
-/// has no other way to become satisfiable again. Idempotent because the sweeper (R108) can pair a
-/// ticket between the client deciding to cancel and the request arriving: cancel never unmakes a
-/// pairing, it only closes a ticket still open.
-/// Affects: §9.5, R108, R143; `api/queue.rs`, migration `0004_matches.sql`.
+/// R167: a queued player may cancel, and cancelling is idempotent, because the sweeper (R108) can
+/// pair a ticket between the client deciding to cancel and the request arriving: cancel never
+/// unmakes a pairing, it only closes a ticket still open.
 pub async fn dequeue(app: &Arc<App>, req: Req) -> ApiResult {
     dequeue_route(app, req).await
 }

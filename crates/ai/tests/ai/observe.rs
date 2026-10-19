@@ -1230,3 +1230,29 @@ mod r1176000_placeholder_is_not_in_chinese {
         assert_eq!(hash_state(&redact(&a, AI)), hash_state(&redact(&b, AI)));
     }
 }
+
+mod r1181003_placeholder_names_no_embiggened_price {
+    use super::*;
+
+    /// R1181003: the price of an embiggen card's Embiggened version alone (Meditative+ #23 Enormous
+    /// Elderberry's (0)) is the card's, so a placeholder carries none: which hidden cards the
+    /// Elderberry added is nothing the seat may know.
+    #[test]
+    fn r1181003_a_placeholder_names_no_embiggened_price() {
+        let (mut a, _) = pair();
+        let hidden: Vec<String> = hidden_instance_ids(&a, AI).into_iter().collect();
+        assert!(!hidden.is_empty());
+        for id in &hidden {
+            find_instance_mut(&mut a, id)
+                .expect("the hidden card")
+                .embiggen_cost_override = Some(0);
+        }
+        let public = redact(&a, AI);
+        for id in &hidden {
+            let placeholder = card_by_id(&public, id).expect("the placeholder");
+            assert_eq!(placeholder.embiggen_cost_override, None, "{id}");
+        }
+        let (b, _) = pair();
+        assert_eq!(hash_state(&redact(&a, AI)), hash_state(&redact(&b, AI)));
+    }
+}

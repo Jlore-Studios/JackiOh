@@ -5,6 +5,9 @@
 // no backrow or material beyond lesson 3. GIGA Glowy Jelly Bean is deliberately uncast: the tutorial
 // AI reaches at most 4 mana (cap 3 and The Coin).
 // Prem Panther draws only after attacking and surviving (R426), so it stays below the scripted deal.
+// Since the opening hand grew from three cards to four (R1156000), the order deals 4-mana 7/7, which
+// the coach never names, as its fourth card: every card that came before the 7/7 still arrives on the
+// turn it did, and only the ones after it, past the coach's turns, come a turn sooner.
 // Patch v0.3.10 gave Jilliax a (3) price at which it is Equip, and the AI paid it to equip a token on
 // its 3 mana: Jilliax now sits where Mr. Vanilla did, past the turns the coach teaches Taunt on.
 // Gary the Gambler holds Me and Mr Token's place (#898): once the AI judged Taunts by their Armor per
@@ -24,23 +27,23 @@ export const lesson: TutorialLesson = {
   humanDeck: [
     "core-008", // Mr. Vanilla
     "core-011", // Tempo Timmy
-    "core-035", // Lunar Eclipse
-    "core-044", // True Strike
-    "core-016", // Hit Job
-    "core-068", // Twisted Sorcerer
+    "core-025", // 4-mana 7/7
+    "core-045", // Deft Duelist
     "core-001", // Big D-fender
+    "core-068", // Twisted Sorcerer
+    "core-044", // True Strike
     "core-012", // Duplicating Felinors
     "core-003", // Right-house defender
-    "core-045", // Deft Duelist
+    "core-035", // Lunar Eclipse
+    "core-005", // Stockpile
+    "core-016", // Hit Job
     "core-019", // Midrange Menace
-    "core-013", // Jlockeed Shredder-10
-    "core-020", // Pointmaster
     "core-037", // Gravedigger
     "core-056", // Jilliax
     "core-032", // Prem Panther
-    "core-025", // 4-mana 7/7
+    "core-020", // Pointmaster
     "core-053", // Reno
-    "core-005", // Stockpile
+    "core-013", // Jlockeed Shredder-10
     "core-077", // Professor Curvature
   ],
   aiDeck: [

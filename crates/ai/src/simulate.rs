@@ -15,12 +15,14 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
     Action, ActionBody, CardInstance, GameState, PLAYER_IDS, Phase, PlayerId, TurnLog, active_units_of,
-    effective_life, find_instance, legal_actions, max_mana_for, opponent_of, owed_mana_of, reduce, unit_view,
+    effective_life, find_instance, legal_actions, max_mana_for, opponent_of, owed_mana_of, reduce,
+    self_def_ids, subsystems, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::config::{AI_EVAL, AI_SEARCH};
 use crate::evaluate::{NextSwing, evaluate};
+use crate::learned::{line_score, open_score};
 use crate::types::{NodeCounter, StoppedBy};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -241,12 +243,23 @@ pub type SimStep = Result<GameState, String>;
 /// the state (the §10.7 scorer) or an Attack that could set off a trap which hands the attacker a
 /// whole random turn (§8.5 core-096). One reduce of either costs the wall clock a hundred cheap
 /// sims do, so the step is budgeted its share up front — otherwise a hand or backrow holding one
-/// burns a decision's 2 s on a few sims (R186's sweep flag) as easily as on a few cheap ones.
+/// burns a decision's 2 s on a few sims (R186's sweep flag) as easily as on a few cheap ones. A Play
+/// that the other side's Pareto Optimality judges (`subsystems::watching`) pays `judged_card_nodes`
+/// for each card its player holds, and a fused card is charged as its ingredients are: uncharged,
+/// improve-dev:200's pinned decision took 20 s (#1240).
 pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) -> usize {
     match action {
-        ActionBody::Play { instance_id, .. } => find_instance(state, instance_id)
-            .filter(|card| AI_SEARCH.expensive_def_ids.contains(&card.def_id.as_str()))
-            .map_or(0, |_| AI_SEARCH.expensive_def_nodes.max(0) as usize),
+        ActionBody::Play { instance_id, .. } => {
+            let expensive = find_instance(state, instance_id)
+                .filter(|card| stands_for_any(state, &card.def_id, AI_SEARCH.expensive_def_ids))
+                .map_or(0, |_| AI_SEARCH.expensive_def_nodes.max(0) as usize);
+            let judged = if subsystems::watching(state, actor) {
+                AI_SEARCH.judged_card_nodes.max(0) as usize * state.players[actor].hand.len()
+            } else {
+                0
+            };
+            expensive + judged
+        }
         ActionBody::Attack { attacker_id, .. } => {
             let defender = opponent_of(actor);
             // The trap's `when` asks a would-be-lethal declaration at its controller's hero; the
@@ -259,7 +272,7 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
                 .backrow
                 .iter()
                 .flatten()
-                .any(|card| AI_SEARCH.ai_turn_trap_ids.contains(&card.def_id.as_str()));
+                .any(|card| stands_for_any(state, &card.def_id, AI_SEARCH.ai_turn_trap_ids));
             if lethalish && trapped {
                 AI_SEARCH.ai_turn_trap_nodes.max(0) as usize
             } else {
@@ -268,6 +281,14 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
         }
         _ => 0,
     }
+}
+
+/// #1240: whether `def_id` is one of `ids`, or a fused definition (R77) one of whose ingredients is
+/// (`self_def_ids`, fused ingredients included), since a fused card runs every ingredient's script.
+fn stands_for_any(state: &GameState, def_id: &str, ids: &[&str]) -> bool {
+    self_def_ids(Some(state), def_id)
+        .iter()
+        .any(|id| ids.contains(&id.as_str()))
 }
 
 /// One auto-answer (#891): of the first `options` answers `answerer`'s prompt lists (legal_actions
@@ -336,7 +357,7 @@ pub(crate) fn best_auto_answer(
 /// and any the other seat holds, gets its holder's best of its first AI_SEARCH.max_auto_answer_options
 /// answers (`best_auto_answer`, nonce `ahead:${counter.used}`, each answer tried one node of
 /// `counter`), at most AI_SEARCH.max_auto_answers prompts, and the state reached is scored by
-/// `evaluate` as the beam scores a child. Only a score: the child stays at its prompt, so the beam
+/// `open_score` as the beam scores a child. Only a score: the child stays at its prompt, so the beam
 /// still picks its real answers. `None` when no prompt of the seat's is open, when the counter
 /// refuses a node, and when no answer is accepted, the prompts outrun the cap or the engine panics
 /// (a failed simulation, as in `simulate`): the child then keeps its plain evaluation.
@@ -359,7 +380,7 @@ pub fn own_prompt_score(state: &GameState, seat: PlayerId, counter: &dyn NodeCou
             current = best_auto_answer(&current, answerer, options, counter, "ahead")?.ok()?;
             answered += 1;
         }
-        Some(evaluate(&current, seat, NextSwing::Enemy, &AI_EVAL))
+        Some(open_score(&current, seat, NextSwing::Enemy))
     }));
     run.unwrap_or_else(|_| {
         note_sim_error(counter);
@@ -463,10 +484,10 @@ fn simulate_answering(
     }
 }
 
-/// A passed turn's value: the evaluation, less the crystals the seat left unspent.
+/// A passed turn's value: the line's score (`line_score`), less the crystals the seat left unspent.
 fn passed_score(state: &GameState, seat: PlayerId) -> f64 {
     let unspent = state.players[seat].turn_log.unspent_at_end.unwrap_or(0);
-    evaluate(state, seat, NextSwing::Enemy, &AI_EVAL) - AI_EVAL.unspent_mana * f64::from(unspent)
+    line_score(state, seat, NextSwing::Enemy) - AI_EVAL.unspent_mana * f64::from(unspent)
 }
 
 /// `closeLine`'s step: the line's turn ended here, or `None` where TS handed `state` back itself
@@ -499,18 +520,18 @@ pub fn static_score(state: &GameState, seat: PlayerId, root_turn: i32) -> f64 {
     if line_status(state, seat, root_turn) == LineStatus::Passed {
         passed_score(state, seat)
     } else {
-        evaluate(state, seat, NextSwing::Enemy, &AI_EVAL)
+        line_score(state, seat, NextSwing::Enemy)
     }
 }
 
-/// A line's value: "over"/"yielded" → evaluate; "passed" → evaluate − AI_EVAL.unspentMana ×
+/// A line's value: "over"/"yielded" → `line_score`; "passed" → `line_score` − AI_EVAL.unspentMana ×
 /// (players[seat].turnLog.unspentAtEnd ?? 0); "open" → simulate endTurn if the seat is in its main
-/// phase and a node is left, then score that, else evaluate.
+/// phase and a node is left, then score that, else `line_score` (R1012002).
 pub fn terminal_score(state: &GameState, seat: PlayerId, root_turn: i32, counter: &dyn NodeCounter) -> f64 {
     let status = line_status(state, seat, root_turn);
     if status == LineStatus::Open {
         return match close_line_step(state, seat, root_turn, counter) {
-            None => evaluate(state, seat, NextSwing::Enemy, &AI_EVAL),
+            None => line_score(state, seat, NextSwing::Enemy),
             Some(closed) => static_score(&closed, seat, root_turn),
         };
     }
@@ -589,11 +610,11 @@ fn unit_play_signature(state: &GameState, unit: &CardInstance) -> String {
 }
 
 /// One side's parts of `search_signature` beyond its units and backrow (#898): its mana maximum and
-/// riders, its zone Locks, its modifiers, this turn's log, its fatigue, Jade, extra turns and hand cap,
-/// its graveyard and exile, and its backrow piles. Each is pushed only when it is not the default, as
-/// R1224's debt is, so a position that has none of them signs as before; and each is kept free of the
-/// order the moves came in (sorted, the engine's sequence ids left out), so two orders of the same
-/// moves still sign alike for the beam's duplicate check.
+/// riders, a lost refresh still to come (R844), its zone Locks, its modifiers, this turn's log, its
+/// fatigue, Jade, extra turns and hand cap, its graveyard and exile, and its backrow piles. Each is
+/// pushed only when it is not the default, as R1224's debt is, so a position that has none of them
+/// signs as before; and each is kept free of the order the moves came in (sorted, the engine's sequence
+/// ids left out), so two orders of the same moves still sign alike for the beam's duplicate check.
 fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>) {
     let side = &state.players[player];
     let mana = &side.mana;
@@ -602,6 +623,10 @@ fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>)
             "M{player}{}/{}/{}",
             mana.max, mana.next_turn_mod, mana.perm_mod
         ));
+    }
+    // R844: a lost refresh still to come, only while one is.
+    if let Some(through) = side.lost_refresh_through {
+        parts.push(format!("R{player}{through}"));
     }
     if side
         .locks

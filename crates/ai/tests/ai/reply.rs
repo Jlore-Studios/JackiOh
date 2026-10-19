@@ -283,9 +283,10 @@ mod reply_score {
         .expect("a reply");
         let counter = create_node_counter(20, None);
         let score = reply_score(&ended, AI, TURN, &counter, &hidden_card_ids(&ended, AI));
+        // A finalist's score (#1010): the hand eval while the switch is off.
         assert_eq!(
             score,
-            Some(evaluate(&after, AI, NextSwing::Seat, &AI_EVAL) - AI_EVAL.unspent_mana * 2.0)
+            Some(finalist_score(&after, AI, NextSwing::Seat) - AI_EVAL.unspent_mana * 2.0)
         );
         assert_eq!(counter.used(), 2);
         // The state it was scored at carries the reply's 4 damage.

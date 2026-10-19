@@ -68,6 +68,9 @@ pub struct App {
     /// SPEC §11 R897000: when each queued profile was last heard from. One per app, so parallel
     /// tests never share presence.
     pub queue_presence: api::queue::QueuePresence,
+    /// SPEC §11 R672: the rematch offers in memory (`api::rematch`). One per app, so parallel tests
+    /// never share offers.
+    pub rematch_offers: api::rematch::RematchOffers,
     // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
     /// SPEC S7: the friend requests' and chat's own allowances (B43, B53), held here for the
     /// limiter's reason.
@@ -777,6 +780,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         replays: api::replays::Replays::default(),
         card_stats: api::stats::KeptReports::default(),
         queue_presence: api::queue::QueuePresence::new(),
+        rematch_offers: api::rematch::RematchOffers::default(),
         // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
         social: crate::social::Social::default(),
         engine_thread: actor::engine::registered_thread,

@@ -103,6 +103,30 @@ pub struct SeatSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub played_radiant: Option<Vec<bool>>,
+    /// R1256000: draws from an empty library this seat took.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub fatigue_draws: Option<i32>,
+    /// R1256000: the nominal pre-Armor hits those draws dealt (their `amount`s added).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub fatigue_damage: Option<i32>,
+    /// R1256000: Traps this seat set face-down from its hand.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub traps_set: Option<i32>,
+    /// R1256000: Traps of this seat's that fired, whoever's effect fired them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub traps_fired: Option<i32>,
+    /// R1256000: position switches by units this seat controlled.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub position_switches: Option<i32>,
+    /// R1256000: cards of this seat's that an effect made Radiant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub radiant_upgrades: Option<i32>,
 }
 
 /// R376: a finished game, read off its replay by the engine's `summarize_game`.
@@ -1233,6 +1257,23 @@ fn whole_number(value: &Value) -> Option<i64> {
     }
 }
 
+/// R1256000: one of the per-seat counts: absent reads as `None`, anything but a non-negative
+/// whole number is refused, as R1147000's malformed fields are.
+fn seat_count(value: Option<&Value>, at: &str) -> Result<Option<i32>, EngineError> {
+    match value {
+        None => Ok(None),
+        Some(value) => match whole_number(value)
+            .filter(|n| *n >= 0)
+            .and_then(|n| i32::try_from(n).ok())
+        {
+            Some(n) => Ok(Some(n)),
+            None => Err(EngineError::new(format!(
+                "{at} is not a non-negative whole number"
+            ))),
+        },
+    }
+}
+
 fn ids(value: Option<&Value>, at: &str) -> Result<Vec<String>, EngineError> {
     let list = value.and_then(Value::as_array).filter(|items| {
         items
@@ -1283,6 +1324,12 @@ fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineEr
         played: ids(record.get("played"), &format!("{at}.played"))?,
         played_turns: None,
         played_radiant: None,
+        fatigue_draws: seat_count(record.get("fatigueDraws"), &format!("{at}.fatigueDraws"))?,
+        fatigue_damage: seat_count(record.get("fatigueDamage"), &format!("{at}.fatigueDamage"))?,
+        traps_set: seat_count(record.get("trapsSet"), &format!("{at}.trapsSet"))?,
+        traps_fired: seat_count(record.get("trapsFired"), &format!("{at}.trapsFired"))?,
+        position_switches: seat_count(record.get("positionSwitches"), &format!("{at}.positionSwitches"))?,
+        radiant_upgrades: seat_count(record.get("radiantUpgrades"), &format!("{at}.radiantUpgrades"))?,
     };
     if let Some(Value::Array(turns)) = record.get("playedTurns") {
         let mut out: Vec<i32> = Vec::with_capacity(turns.len());
@@ -1410,6 +1457,12 @@ mod tests {
             played: list(played),
             played_turns: None,
             played_radiant: None,
+            fatigue_draws: None,
+            fatigue_damage: None,
+            traps_set: None,
+            traps_fired: None,
+            position_switches: None,
+            radiant_upgrades: None,
         }
     }
 
@@ -2117,6 +2170,12 @@ mod tests {
                 played,
                 played_turns,
                 played_radiant,
+                fatigue_draws: None,
+                fatigue_damage: None,
+                traps_set: None,
+                traps_fired: None,
+                position_switches: None,
+                radiant_upgrades: None,
             }
         }
 
@@ -2431,6 +2490,89 @@ mod tests {
                 ),
             );
             assert!(refusal(&bad_record).contains("game.seats.p1.playedRadiant[0]"));
+        }
+
+        #[test]
+        fn r1256000_reads_back_the_per_seat_counts_absent_on_older_records() {
+            // A record written before the change holds none of the six keys, and still reads.
+            let json = serde_json::to_value(record()).unwrap();
+            assert!(
+                !json["game"]["seats"]["p1"]
+                    .as_object()
+                    .unwrap()
+                    .contains_key("fatigueDraws")
+            );
+            let read = parse_game_record(&json).unwrap();
+            for seat in [read.game.seats.p1, read.game.seats.p2] {
+                assert_eq!(seat.fatigue_draws, None);
+                assert_eq!(seat.fatigue_damage, None);
+                assert_eq!(seat.traps_set, None);
+                assert_eq!(seat.traps_fired, None);
+                assert_eq!(seat.position_switches, None);
+                assert_eq!(seat.radiant_upgrades, None);
+            }
+
+            // A full round-trip keeps every count.
+            let mut s = seat(&["a"], &[], &[], &[]);
+            s.fatigue_draws = Some(8);
+            s.fatigue_damage = Some(36);
+            s.traps_set = Some(1);
+            s.traps_fired = Some(1);
+            s.position_switches = Some(2);
+            s.radiant_upgrades = Some(3);
+            let written = GameRecord {
+                game: game(Winner::P2, GameOverReason::HeroDeath, 48, s, seat_default()),
+                ..record()
+            };
+            let json = serde_json::to_value(&written).unwrap();
+            assert_eq!(json["game"]["seats"]["p1"]["fatigueDraws"], json!(8));
+            assert_eq!(json["game"]["seats"]["p1"]["radiantUpgrades"], json!(3));
+            assert_eq!(parse_game_record(&json).unwrap(), written);
+        }
+
+        #[test]
+        fn r1256000_refuses_a_count_that_is_not_a_non_negative_whole_number() {
+            let json = serde_json::to_value(record()).unwrap();
+            let bad = |key: &str, value: Value| {
+                refusal(&with(
+                    &json,
+                    "game",
+                    with(
+                        &json["game"],
+                        "seats",
+                        with(
+                            &json["game"]["seats"],
+                            "p2",
+                            with(&serde_json::to_value(seat_default()).unwrap(), key, value),
+                        ),
+                    ),
+                ))
+            };
+            for key in [
+                "fatigueDraws",
+                "fatigueDamage",
+                "trapsSet",
+                "trapsFired",
+                "positionSwitches",
+                "radiantUpgrades",
+            ] {
+                assert!(
+                    bad(key, json!(-1)).contains(&format!("game.seats.p2.{key}")),
+                    "{key}"
+                );
+                assert!(
+                    bad(key, json!(1.5)).contains(&format!("game.seats.p2.{key}")),
+                    "{key}"
+                );
+                assert!(
+                    bad(key, json!(true)).contains(&format!("game.seats.p2.{key}")),
+                    "{key}"
+                );
+                assert!(
+                    bad(key, json!("3")).contains(&format!("game.seats.p2.{key}")),
+                    "{key}"
+                );
+            }
         }
     }
 

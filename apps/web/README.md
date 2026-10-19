@@ -161,6 +161,7 @@ to the browser's downloads, for a bug report.
 A finished co-op game's result panel offers "Watch the replay" too (§13.9): `duos/DuosReplay.tsx` reads
 `GET /api/duos/matches/:matchId/replay` once and steps the seat's `DuosView`s on `DuosBoard`'s replay mode,
 with the player's controls, a round standing for a turn; it is never in `/replays`.
+A loaded co-op replay offers "Download JSON" too (R1242000, `duos/download.ts`): the seat's views as one file, made in the page, which `/replays` opens again from its Open replay JSON.
 
 ```
 src/replay/
@@ -173,8 +174,8 @@ src/replay/
   OpenedReplay.tsx  a source loaded first (a finished match's first page), then the player
   ShareGif.tsx    "Share as GIF" (#513, R513000): the clip, the shape, progress, cancel, Share or Download
   download.ts     "Download JSON" (#1141, R1141000): every step of a source and the row's facts as one file, and
-                  `parseReplayJsonFile` opens one again (#1160); the download both it and the GIF's share.ts
-                  hand a file to
+                  `parseReplayJsonFile` (`readReplayJsonFile`, then `replayStepsOf`) opens one again (#1160);
+                  the download both it and the GIF's share.ts hand a file to
   gif/            what it loads on demand, never in the main bundle: plan.ts (a clip's views to frames, a pure
                   function on a fixed frame clock), raster.ts and raster.worker.ts (the frames drawn on an
                   OffscreenCanvas, in a worker where it can), encoder.ts (GIF bytes by hand), share.ts, export.ts
@@ -267,6 +268,8 @@ duos/DuosBoard.tsx       Game.tsx for the own duel, the life strip (both teams' 
                          teammate strip and the ping wheel
 duos/DuosReplay.tsx      a finished co-op game's replay (#965): the server's steps read once, stepped on
                          DuosBoard's `replay` mode (nothing live) with the replay player's controls
+duos/download.ts        a finished co-op replay's "Download JSON" (R1242000): the seat's views as one
+                         file, and `parseDuosReplayJson` opening one again from `/replays`
 ```
 
 The landing page offers Play together beside Play online. The replays list and the replay player offer

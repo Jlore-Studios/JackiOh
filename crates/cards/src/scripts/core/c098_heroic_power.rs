@@ -555,11 +555,28 @@ mod tests {
         #[test]
         fn r759_2_ky_brainstorm_adds_a_random_ky_card_then_every_spell_in_your_hand_costs_1_less() {
             crate::register_all();
-            let (mut s, card) = on_field(
-                "brainstorm",
-                OnField { p1: Some(json!({ "hand": [SPARE, JAMMED], "mana": 8 })), ..OnField::default() },
-            );
-            s.activate(&card, json!({}));
+            let brainstorm = |seed: &str| {
+                let (mut s, card) = on_field(
+                    "brainstorm",
+                    OnField {
+                        p1: Some(json!({ "hand": [SPARE, JAMMED], "mana": 8 })),
+                        seed: Some(seed.to_string()),
+                        ..OnField::default()
+                    },
+                );
+                s.activate(&card, json!({}));
+                s
+            };
+            // The added card's own discount needs it to be a Spell. Re-pinned for v0.3.15 (Meditative+
+            // ships, #1187): M+ #20 and #25 join the KY pool, so "hp-brainstorm" now adds a KY card that
+            // is no Spell; the seed is the first that adds a Spell.
+            let seed = seed_where("hp-brainstorm", |seed| {
+                brainstorm(seed)
+                    .hand(P1)
+                    .last()
+                    .is_some_and(|added| crate::card_def(&added.def_id).type_ == CardType::Spell)
+            });
+            let s = brainstorm(&seed);
             let hand = s.hand(P1);
             let added = must(hand.last().cloned(), "the KY card");
             assert!(tags_of(&added.def_id).contains(&json!("KY")));

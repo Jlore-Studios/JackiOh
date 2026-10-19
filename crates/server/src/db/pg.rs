@@ -3045,6 +3045,9 @@ pub async fn matches_create(t: &mut PgTx<'_>, m: &MatchRow) -> Result<(), StoreE
 }
 
 pub async fn matches_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<MatchRow>, StoreError> {
+    if !is_uuid(match_id) {
+        return Ok(None);
+    }
     run_as(t, None).await?;
     let row = sqlx::query(concat!(
         "select ",
@@ -3633,6 +3636,9 @@ pub async fn rooms_count_open_by_host(
     host_profile_id: &str,
     at: i64,
 ) -> Result<i64, StoreError> {
+    if !is_uuid(host_profile_id) {
+        return Ok(0);
+    }
     run_as(t, None).await?;
     let row = sqlx::query(concat!(
         "select count(*)::int as n from public.matches
@@ -7413,11 +7419,13 @@ fn from_ticket_status(status: &TicketStatus) -> Result<&'static str, StoreError>
 use crate::db::store::{ReplayShare, SharedReplayRow};
 
 /// B52: what a share `s`, joined to its match `m`, is read through on: the match is over, the
-/// sharer held a seat in it, and the two are still friends (`a < b`) with neither blocking the other.
+/// sharer held a seat in it, the retention purge has not taken its action log (as `replays_list`
+/// does), and the two are still friends (`a < b`) with neither blocking the other.
 macro_rules! readable_share {
     () => {
         "m.status = 'over'
             and s.sharer in (m.p1_profile_id, m.p2_profile_id)
+            and exists (select 1 from public.match_actions a where a.match_id = m.id)
             and exists (select 1 from public.friendships f
                          where f.a = least(s.sharer, s.friend) and f.b = greatest(s.sharer, s.friend))
             and not exists (select 1 from public.blocks k

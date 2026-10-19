@@ -140,7 +140,7 @@ export const script: LessonScript = {
     info({
       id: "welcome",
       title: "Welcome to JackiOh",
-      text: "You'll learn by playing a real game against a gentle opponent. These three cards are your opening hand.",
+      text: "You'll learn by playing a real game against a gentle opponent. These four cards are your opening hand.",
       anchor: { kind: "prompt" },
       when: (ctx) => mulliganOpen(ctx.view),
       moot: (ctx, since) => since === null && ctx.view.phase !== "mulligan" && ctx.view.phase !== "setup",
@@ -148,7 +148,7 @@ export const script: LessonScript = {
     keepHand({
       id: "keep",
       title: "Keep your hand",
-      text: "You could swap cards here (lesson 4 shows how), but these are good ones. Press Ready to keep all three.",
+      text: "You could swap cards here (lesson 4 shows how), but these are good ones. Press Ready to keep all four.",
     }),
     info({
       id: "your-hero",

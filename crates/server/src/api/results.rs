@@ -43,6 +43,7 @@ use crate::api::game_records::record_live_game;
 use crate::api::http::{ApiError, ApiErrorCode};
 use crate::api::queue::json_list;
 use crate::api::ranked::{RankedGameInput, RankedSideInput, rate_ranked_game};
+use crate::api::rematch::sweep_rematch_offers;
 use crate::api::series::{SeriesGameResult, advance_series_in_tx, resume_series};
 use crate::app::{App, now_ms};
 use crate::bug_reports::{Finding, FoundIn, refused_rows};
@@ -385,6 +386,14 @@ pub async fn record_result(app: &Arc<App>, input: RecordResultInput) -> Result<R
     Ok(written.row)
 }
 
+/// R1253000: `ceiling_draw_input`'s draw, written as the reaper writes it (both ratings unchanged,
+/// no game record), then the series' next game (R332, R334).
+pub async fn record_ceiling_draw(app: &Arc<App>, input: RecordResultInput) -> Result<ResultRow, ApiError> {
+    let written = write_result(app, &input, RatingPolicy::Unchanged).await?;
+    resume_series(app, written.series.as_ref()).await;
+    Ok(written.row)
+}
+
 /// R679: the `VoidMatch` port the actor holds (TS `ActorDeps.voidMatch`, made by
 /// `createVoidMatch(deps)`) — what a Glitch's void outcome does instead of `record_result`. The match
 /// never happened: no `results` row, no rating move, no last board, no game record. The store
@@ -414,6 +423,23 @@ pub async fn void_match(app: &Arc<App>, input: VoidMatchInput) -> Result<(), Api
 
 /// R112: the reaper's ceiling draw records no turn count (R833000: a log that ends records its own).
 const REAPER_TURNS: i32 = 0;
+
+/// R112: the ceiling's draw the reaper writes; R1253000: and a live actor whose clock's action
+/// panicked.
+pub fn ceiling_draw_input(match_row: &MatchRow, at: i64) -> RecordResultInput {
+    RecordResultInput {
+        match_id: match_row.id.clone(),
+        seats: seats_of(match_row),
+        outcome: TerminalOutcome {
+            winner: Winner::Draw,
+            reason: GameOverReason::MatchCeiling,
+        },
+        turns: REAPER_TURNS,
+        at,
+        last_boards: None,
+        final_hash: None,
+    }
+}
 
 /// §9.5's reaper: "a reaper resolves anything past the ceiling". Every `live` match whose
 /// `clocks.ceiling_at` has passed is ended with both players' in-match state cleared, and its
@@ -463,18 +489,7 @@ pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError>
                 }
             }
         }
-        let input = RecordResultInput {
-            match_id: match_row.id.clone(),
-            seats: seats_of(&match_row),
-            outcome: TerminalOutcome {
-                winner: Winner::Draw,
-                reason: GameOverReason::MatchCeiling,
-            },
-            turns: REAPER_TURNS,
-            at: now,
-            last_boards: None,
-            final_hash: None,
-        };
+        let input = ceiling_draw_input(&match_row, now);
         let advanced = match write_result(app, &input, RatingPolicy::Unchanged).await {
             Ok(written) => written.series,
             Err(error) => {
@@ -617,7 +632,8 @@ fn seats_of(match_row: &MatchRow) -> (MatchSeat, MatchSeat) {
 /// interval after boot, each next one an interval after the last finished, a failure logged and the
 /// next sweep tried all the same. Runs until its task is aborted. Each tick resolves the stuck
 /// matches, then deletes the `open` rows past their grace (R1450), then drops the finished actors
-/// whose rematch window has passed (`Registry::reap_finished`).
+/// whose rematch window has passed (`Registry::reap_finished`), then the rematch offers past that
+/// window whose finished match no actor holds (`rematch::sweep_rematch_offers`).
 pub async fn run_reaper(app: Arc<App>) {
     loop {
         tokio::time::sleep(Duration::from_secs(MATCH_REAPER_INTERVAL_SECONDS as u64)).await;
@@ -635,5 +651,6 @@ pub async fn run_reaper(app: Arc<App>) {
             tracing::warn!(event = "matches.open_reaper_failed", message = %error.message);
         }
         app.matches.reap_finished(now_ms()).await;
+        sweep_rematch_offers(&app, now_ms());
     }
 }

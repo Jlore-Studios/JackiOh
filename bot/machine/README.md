@@ -39,8 +39,9 @@ place. With one user per subscription, a session can read only its own login and
 only in its own home, and its runner, labelled with its id alone, takes only its jobs. A Claude
 account's token comes from its GitHub secret, handed to that job alone, and is never written to
 the home. At most `machine_parallel` (6) jobs run here at once, each as its own user; Devin has
-`"lanes": 6` on the six runners here, and Muse has four (`night-vm-muse` and `night-vm-muse-2`
-to `night-vm-muse-4`, all under `agent-muse` and its one login). A lane the harness counts but no
+`"lanes": 6` on the six runners here, and Muse has two (#1273), which its four runners
+(`night-vm-muse` and `night-vm-muse-2` to `night-vm-muse-4`, all under `agent-muse` and its one
+login) take in turn. A lane the harness counts but no
 runner serves only queues its job until another runner of that label is free, so after raising a
 subscription's `lanes`, run `register-runners.sh` (Building it, step 4) to add the new runners.
 
@@ -118,7 +119,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 The AI training lanes (`training/README.md`, #306 part 39) run on a second, bigger box that
 is always on: `jackioh-train@improve`, `jackioh-train@unban` and `jackioh-train@gather`, three systemd
 services that run `training/loop.sh <lane>` forever, each as its own user with its own checkout and
-Rust (the two training lanes also hold a Devin login and GitHub token, which the gather lane needs
+Rust (the two training lanes also hold a Muse login and GitHub token, which the gather lane needs
 neither of). They run outside the harness: no runner, no GitHub Actions job, no slot of
 `machine_parallel`, no `training` label. A training lane opens its own pull requests from `ai/<lane>`,
 and CI's `training gate` re-runs its promotion before anything merges; the gather lane opens none.
@@ -129,8 +130,8 @@ and CI's `training gate` re-runs its promotion before anything merges; the gathe
 | Way in | Session Manager only, like the night box: no inbound port, no key pair. It uses the night box's subnet and instance profile (`jackioh-night-vm`: `AmazonSSMManagedInstanceCore`, and `CloudWatchAgentServerPolicy`). IMDSv2 required. |
 | Users | `agent-train-improve`, `agent-train-unban` and `agent-train-gather`: a home only each can read, no `sudo`, no Docker |
 | In each home | `~/JackiOh`, the lane's checkout (`loop.sh` resets it to `main` every cycle; its `target/` stays, so builds after the first are incremental); Rust (rustup and the toolchain `rust-toolchain.toml` pins, with `rustfmt` and `clippy`); `~/training-out/<lane>/` (the games' records, `attempts.md`, the gate's reports); `~/logs/<lane>.log` (the loop's log) |
-| CLIs | `devin` (as on the night box), `gh` (GitHub's apt repository), `git` (pushing through `gh`'s login), Node 24 and pnpm (corepack), with which the loop and Devin run the web's tests that play the AI before a promotion goes up |
-| Services | `jackioh-train@.service`: `User=agent-train-%i`, `training/loop.sh %i` from the lane's checkout, `Restart=always` after `RestartSec=60`, `DEVIN_MODEL=swe-2-max` (the knob for Devin's model), `RAYON_NUM_THREADS=2` (the three lanes' games share the box's vCPUs), `JACKIOH_TRAINING_OUT` the lane's `~/training-out/<lane>`; all three enabled, so they start at boot |
+| CLIs | `muse` (as on the night box; #1272 moved the lanes from Devin, whose plan ends on 2026-11-02), `gh` (GitHub's apt repository), `git` (pushing through `gh`'s login), Node 24 and pnpm (corepack), with which the loop and Muse run the web's tests that play the AI before a promotion goes up |
+| Services | `jackioh-train@.service`: `User=agent-train-%i`, `training/loop.sh %i` from the lane's checkout, `Restart=always` after `RestartSec=60`, `MUSE_MODEL=muse-spark-1.3-contributor` (the knob for Muse's model) and `MUSE_NO_AUTO_UPDATE=1`, `RAYON_NUM_THREADS=2` (the three lanes' games share the box's vCPUs), `JACKIOH_TRAINING_OUT` the lane's `~/training-out/<lane>`; all three enabled, so they start at boot |
 | Idle stop | none: the box never powers itself off, and no starter wakes it |
 
 Build it once, after the cutover has put `training/loop.sh` on `main` (a lane runs whatever `main`
@@ -140,14 +141,14 @@ holds; before that its service restarts every minute and does nothing):
 2. **Set it up**: `TAG=jackioh-train-box bot/machine/on-machine.sh bot/machine/setup.sh --training`.
    It installs the CLIs, makes both users with their checkouts and Rust, writes the service and
    starts both lanes; they wait, retrying every minute, until the logins below are in.
-3. **Log each lane in once**, as its own user (`aws ssm start-session --target <instance>`): Devin,
+3. **Log each lane in once**, as its own user (`aws ssm start-session --target <instance>`): Muse,
    then a fine-grained GitHub token that can write contents and pull requests on this repository
    only, one token per lane:
 
    ```sh
-   sudo -iu agent-train-improve devin auth login --force-manual-token-flow   # paste the page's token
+   sudo -iu agent-train-improve muse login
    sudo -iu agent-train-improve gh auth login --hostname github.com --git-protocol https --with-token < improve-token.txt
-   sudo -iu agent-train-unban devin auth login --force-manual-token-flow
+   sudo -iu agent-train-unban muse login
    sudo -iu agent-train-unban gh auth login --hostname github.com --git-protocol https --with-token < unban-token.txt
    ```
 
@@ -156,31 +157,32 @@ holds; before that its service restarts every minute and does nothing):
    that user to commit as someone else. Delete the token files after.
 4. **Check it**: `systemctl status jackioh-train@improve jackioh-train@unban`, then `sudo reboot`
    and the same again (both come back by themselves). A lane's first cycle builds `jackioh` from
-   `main` (minutes), starts Devin, and writes `GameRecord` lines to
+   `main` (minutes), starts Muse, and writes `GameRecord` lines to
    `~agent-train-<lane>/training-out/<lane>/<date>.jsonl`:
-   `sudo tail -f ~agent-train-improve/logs/improve.log`. `devin --version` and a one-line
-   `devin -p` as each user show whether Devin answers; if it does not, leave the services as they
+   `sudo tail -f ~agent-train-improve/logs/improve.log`. `muse --version` and a one-line
+   `muse exec` as each user show whether Muse answers; if it does not, leave the services as they
    are: they retry every minute, which costs nothing, and start working once it does.
 
 Running the lanes:
 
-- **Stop a lane** (its Devin session ends with it): `sudo systemctl stop jackioh-train@improve`;
+- **Stop a lane** (its Muse session ends with it): `sudo systemctl stop jackioh-train@improve`;
   `sudo systemctl disable jackioh-train@improve` keeps it stopped across reboots, and `sudo
   systemctl enable --now jackioh-train@improve` starts it again.
-- **Watch a lane**: each keeps a pull request open from `ai/<lane>`, a draft while Devin works, with
+- **Watch a lane**: each keeps a pull request open from `ai/<lane>`, a draft while Muse works, with
   one comment per session rewritten every 15 minutes (`training/README.md`, Watching a lane on
   GitHub). To refuse one promotion, close its pull request: the lane starts again from `main` with a
   new draft.
-- **Change Devin's model**: edit `DEVIN_MODEL` in `setup.sh`'s unit, run `setup.sh --training`
+- **Change Muse's model**: edit `MUSE_MODEL` in `setup.sh`'s unit, run `setup.sh --training`
   again, then `sudo systemctl restart jackioh-train@improve jackioh-train@unban` (a running lane
-  reads a changed unit only when it restarts). SWE-2 is free on Devin's CLI only through
-  2026-10-16.
+  reads a changed unit only when it restarts). The lanes spend the same Muse plan as the night bot's
+  `muse` seat, which its usage readings show (the status issue).
 - **Updating** the CLIs or Rust: run `setup.sh --training` again; it changes nothing else and never
   restarts a lane.
-- **Disk**: each lane's `target/` (a few GB), its records and logs, and Devin's session database in
-  `~/.local/share/devin/cli/` (about 700 MB a day of sessions on the night box; the loop never
-  resumes one) grow on the 100 GB disk; the night box's clean-up does not run here. To give the
-  database back, stop the lane, delete `sessions.db*` there as that user, and start it again.
+- **Disk**: each lane's `target/` (a few GB), its records and logs grow on the 100 GB disk; the
+  night box's clean-up does not run here. Muse keeps every session in
+  `~/.local/share/muse/sessions/` (a few hundred MB a day); the loop deletes one 8 hours after it
+  ended, as `clean.sh` does on the night box. A box set up before #1272 also holds Devin's session
+  database in `~/.local/share/devin/cli/`; delete it as that user.
 - **Cost**: the box is always on: about $70 a month for the instance (on-demand `m7i-flex.large` in
   `us-east-2`; an `m7i.xlarge` would be about $150) plus about $8 for its disk.
 

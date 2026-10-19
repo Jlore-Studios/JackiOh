@@ -75,8 +75,11 @@ which is `decide_styled` at `AI_STYLE_EXACT`, draws only for its determinization
 ## Budgets
 
 A decision's cost is counted in nodes: one node is one `reduce` call the AI makes, the reply's
-included. `AI_BUDGET` is what the browser plays with; `AI_GATE_BUDGET`, the gates' and the sweep's,
-is the same budget, so both measure the AI that ships. The same state, seed and budget always give the
+included. A step whose `reduce` does far more work than most is charged extra nodes up front
+(`surcharge_nodes`: a play that ranks every shipped card, an attack into an armed My Pawn, a fused
+card holding either, and a play the other side's Pareto Optimality judges, per card held; #1240).
+`AI_BUDGET` is what the browser plays with; `AI_GATE_BUDGET`, the gates' and the sweep's, is the
+same budget, so both measure the AI that ships. The same state, seed and budget always give the
 same `Decision`. The browser's wall-clock cap arrives as `should_stop` (the WASM binding's deadline),
 which ends the search early with the best line found.
 
@@ -100,10 +103,16 @@ empty, and gating a set that ships before the AI is trained on it is listing it 
 practice, the quality gates and both seats of an arena or a promotion deal unshaped. The mulligan still
 reads `shaped_weight` (`mulligan_keep_shaped`).
 `src/shadow_ban.rs` holds `SHADOW_BAN` (each card with the sweep flags that banned it) and
-`SHADOW_WATCH` (cards found at risk and cleared). Both are decided by the sweep, never by hand: run
-`cargo jackioh sweep` and copy the printed rows and header line into the file. The ban governs AI deck
+`SHADOW_WATCH` (cards found at risk and cleared). Both are decided by the sweep, never by hand, and
+never copied in by hand either: `cargo jackioh sweep --write <report>…` rewrites the file's header block
+and both tables from the reports of record (`training/history/sweep-<date>.md`, the output of `--report`,
+oldest first), and `cargo jackioh sweep --check` and a `jackioh-tools` test fail on any difference.
+A card takes the row of the latest report that lists it, in either table (R1186000); `SHADOW_BAN`
+keeps the Meditative and Meditative+ rows, less `SHADOW_UNBANNED`, the unban lane's removals (`--write`
+takes none out but those). The ban governs AI deck
 building and nothing else: a banned card stays legal for every player. Since #732 the ban holds
-Meditative cards only, at most half of the set (R732000): no sweep, lane or person adds a card of an
+Meditative cards only, at most half of the set (R732000), and since #1186 Meditative+ cards too, each
+set held to its own half (R1186000): no sweep, lane or person adds a card of an
 earlier set, and the unban lane (`training/unban.md`) only removes entries.
 
 `FIXTURE_BANNED_IDS` (issue #1113) is the frozen fixture pool: a copy of the table as it stood
@@ -128,10 +137,11 @@ needs `gate_needed(matchup, n)` wins (the rule spec §9.9 proposes); only wins c
 | `hard-vs-easy` | the AI on Hard | the AI on Easy | 40 of 50 | 16 of 20 |
 
 The perf gate holds each decision of the first ai-vs-greedy game, and two hand-built wide boards,
-within the node budget and under `AI_GATE.max_decision_ms`. Tuning changes the weights in
-`src/config.rs`, never the floors, the seed counts or the brief's rates. The gates see only a broken
-AI; whether a change made it stronger is the training lanes' question (`training/README.md`,
-`cargo jackioh promote`).
+within the node budget and under `AI_GATE.max_decision_ms`, and the two pinned positions
+(`tests/fixtures/pinned-improve-dev-*.json`, #1240) under `AI_GATE.pinned_decision_ms`. Tuning
+changes the weights in `src/config.rs`, never the floors, the seed counts or the brief's rates. The
+gates see only a broken AI; whether a change made it stronger is the training lanes' question
+(`training/README.md`, `cargo jackioh promote`).
 
 A seat the AI plays has a skill (R747000): `SeatController::Ai { budget, skill }`, the chance in
 `[0, 1]` that each decision follows the AI, the rest being a random legal action (`random_action`,
@@ -149,6 +159,9 @@ the same way, and the skill-to-Elo curve is measured with the arena.
 deals a live game (R258), both seats AI on the spec's resources at `AI_BUDGET`, filed as a game
 record of source `dev` under the patch the run tests, id `dev:<patch>:<seed>` (`dev_record_id`).
 `cargo jackioh stats --out <file>` writes a run; `jackioh-server stats-import <file>` loads it.
+`forced_dev_game_config`, which `DevRunOptions.force` selects, deals the same game with one card in one
+seat's deck, p1's in odd games and p2's in even ones (R1284000). Both decks are dealt with the card
+banned, and the holder's card at the slot `${seed}:force` picks is replaced by it.
 
 ## The learned evaluation's features (#466, #1006)
 
@@ -172,9 +185,11 @@ pub struct Features { pub dense: Vec<i32>, pub sparse: Vec<(String, i32)> }
   side, the seat's own first, its life (`effective_life`) and armor, mana, crystals and debt, its
   hand, library, graveyard and backrow (and how much of the backrow the seat can read), its units in
   aggregate (count, positions, attack, health, armor, damaged, Radiant), one count per keyword kind,
-  the face damage its board threatens and its Jade and extra turns; then the seat's hand by cost.
+  the face damage its board threatens and its Jade and extra turns; then the seat's hand by cost,
+  and how many of its cards are Radiant (R1012004).
 - **sparse**: `(key, count)`, sorted, the key `<zone>:<side>:<card id>` for each card the seat can
-  name: `board` (both sides), `hand` (its own) and `backrow` (its own, and the enemy's face-up ones).
+  name: `board` (both sides), `hand` (its own) and `backrow` (its own, and the enemy's face-up ones),
+  and `hand_radiant` (its own) beside `hand` for a Radiant card in its hand (R1012004).
   Ids stay strings, so a patch or a new card never moves an index; an id a network's weights do not
   know is no input at all.
 - `FEATURES_VERSION` names the layout; any change bumps it, and a network's weights record the

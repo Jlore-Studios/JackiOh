@@ -1,6 +1,6 @@
 //! C+ #38 Solarius (SPEC §8.7 row 38): (2) Unit, Epic, 3/2 → 6/4.
 //!   Base:    "Spell Damage +2. Death: Shuffle a Solarius Prime into your deck." (no Cry, balance patch 1)
-//!   Radiant: "Spell Damage +5. Death: Shuffle a Radiant Solarius Prime into your deck."
+//!   Radiant: "Spell Damage +4. Death: Shuffle a Radiant Solarius Prime into your deck."
 //! Spell Damage is the catalog's numbered keyword, which §4.4 step 0 reads off the field;
 //! the Death shuffles a fresh C+ #38.1 in at a random position, R80's cap turning it away.
 
@@ -259,13 +259,13 @@ mod tests {
         use super::*;
 
         #[test]
-        fn spell_damage_5_a_3_damage_spell_deals_8() {
+        fn spell_damage_4_a_3_damage_spell_deals_7() {
             let mut s = scenario(json!({
                 "p1": { "hand": [LUNAR_ECLIPSE, FILLER], "field": [{ "def": SOLARIUS, "radiant": true }] },
                 "p2": { "hand": [FILLER] },
             }));
             s.play(LUNAR_ECLIPSE, at_hero());
-            s.expect_health(P2, HERO_HEALTH - 8);
+            s.expect_health(P2, HERO_HEALTH - 7);
         }
 
         #[test]

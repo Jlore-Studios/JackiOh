@@ -198,7 +198,7 @@ mod tests {
                 let mut s = seeded_for(false, json!({}), false);
                 s.play(LEAGUE, json!({}));
                 let third = unit_or_blank(&s, P1, 3);
-                s.expect_stats(&third, json!({ "attack": 1, "health": 1 }));
+                s.expect_stats(&third, json!({ "attack": 2, "health": 2 }));
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 1);
             }
 
@@ -313,7 +313,7 @@ mod tests {
                     assert_eq!(s.unit(P1, lane).map(|unit| unit.radiant), Some(true));
                 }
                 let first = unit_or_blank(&s, P1, 1);
-                s.expect_stats(&first, json!({ "attack": 10, "health": 10 }));
+                s.expect_stats(&first, json!({ "attack": 8, "health": 8 }));
             }
 
             #[test]

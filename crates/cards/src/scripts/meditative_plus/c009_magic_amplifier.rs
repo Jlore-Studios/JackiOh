@@ -1,6 +1,6 @@
 //! M+ #9 Magic Amplifier (SPEC §8.9 row 9, BUILD M11 row M+ 9): (1) Field Spell, Common.
 //!   Base:    "Aura: Both players have Spell Damage +{spellDamage}." (2)
-//!   Radiant: "Aura: Both players have Spell Damage +{spellDamage}." (5)
+//!   Radiant: "Aura: Both players have Spell Damage +{spellDamage}." (4)
 //!
 //! Spell Damage beyond Units (R1180000): the engine's `spellDamageAura` static flag, for both players.
 //! While the Amplifier acts on the field — face-up, in its controller's backrow — each player's Spell
@@ -8,7 +8,7 @@
 //! gains its number, beside their Units' keyword and any "this turn" modifier (M+ #11). A Field
 //! Spell's or a Trap's hit is not a Spell's and is never raised; face-down or gone it gives nothing.
 //! The number is the declared `spellDamage`, read through `params::declared_or` as each hit lands, so
-//! a Nerf or a Buff moves it (R386). Tunes: spellDamage 2 ↑ (Radiant 5).
+//! a Nerf or a Buff moves it (R386). Tunes: spellDamage 2 ↑ (Radiant 4).
 
 use jackioh_engine::prelude::*;
 
@@ -50,7 +50,7 @@ pub fn script() -> CardScripts {
 // M+ #9 Magic Amplifier — SPEC §8.9 row 9, BUILD M11 row M+ 9: "while it acts face-up, every hit of
 // either player's Spells deals 2 more, added to Units' Spell Damage (C+ 38, M+ 8); a Field Spell's and
 // a Trap's hits do not; face-down or gone it gives nothing; spellDamage reads through `param()`;
-// radiant +5".
+// radiant +4".
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -203,14 +203,14 @@ mod tests {
     }
 
     #[test]
-    fn radiant_both_players_have_spell_damage_5() {
+    fn radiant_both_players_have_spell_damage_4() {
         let mut s = game(
             "m+009-radiant",
             json!({ "backrow": [{ "def": ID, "radiant": true }], "hand": [TRUE_STRIKE] }),
             json!({}),
         );
-        assert_eq!(spell_damage_of(s.state(), P2), 5);
+        assert_eq!(spell_damage_of(s.state(), P2), 4);
         s.play(TRUE_STRIKE, json!({ "targets": hero(P2) }));
-        assert_eq!(health(&s, P2), 21);
+        assert_eq!(health(&s, P2), 22);
     }
 }

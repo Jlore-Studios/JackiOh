@@ -38,7 +38,7 @@ use jackioh_engine::{
 
 use crate::candidates::{blow, candidate_actions_in, cleaved_neighbours, exchange, side_of};
 use crate::config::{AI_EVAL, AI_REPLY, AI_SEARCH};
-use crate::evaluate::{NextSwing, evaluate, unit_worth};
+use crate::evaluate::{NextSwing, coming_mana, evaluate, unit_worth};
 use crate::learned::finalist_score;
 use crate::lethal::deft_ready_switch;
 use crate::simulate::{LineStatus, best_auto_answer, line_status, simulate, static_score, surcharge_nodes};
@@ -424,9 +424,10 @@ pub fn simulate_reply(
 
 /// A closed line's value after the opponent's reply: `end` is where the line stopped. A line that
 /// handed the opponent the turn is scored at the seat's next decision, where the seat swings first,
-/// less the crystals it left unspent; a line that ended the game, or stopped on the seat's own
-/// prompt, keeps its static score. `hidden` is as for `simulate_reply` (TS's default:
-/// `hidden_card_ids(end, seat)`). `None` when the counter ran out.
+/// less the crystals it left unspent and with the coming refreshes priced as at the line's end
+/// (`coming_mana`); a line that ended the game, or stopped on the seat's own prompt, keeps its static
+/// score. `hidden` is as for `simulate_reply` (TS's default: `hidden_card_ids(end, seat)`).
+/// `None` when the counter ran out.
 pub fn reply_score(
     end: &GameState,
     seat: PlayerId,
@@ -454,5 +455,12 @@ pub fn reply_score(
     } else {
         NextSwing::Enemy
     };
-    Some(finalist_score(&after, seat, next) - AI_EVAL.unspent_mana * f64::from(unspent))
+    // R844, §2.3: the coming refreshes count as the line's end priced them (`coming_mana`): what the
+    // reply's refreshes spent (lost, or moved by a rider) still counts, and what the reply set does not.
+    let spent = if after.result.is_none() {
+        coming_mana(end, seat, &AI_EVAL) - coming_mana(&after, seat, &AI_EVAL)
+    } else {
+        0.0
+    };
+    Some(finalist_score(&after, seat, next) + spent - AI_EVAL.unspent_mana * f64::from(unspent))
 }

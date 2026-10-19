@@ -41,7 +41,7 @@ never sit on both sides), keeps another 10% for early stopping, and fits:
 |---|---|---|
 | (a) | the hand eval calibrated to a probability: `σ(a·hand/100 + b)` | L-BFGS to convergence |
 | (b) | a logistic over the dense features and the hand eval, session s15's linear fit | L-BFGS, its L2 picked on the validation games |
-| (c) | D5's network with D4's skip connection: `σ(a·hand/100 + b + net(x))`, its first layer 16 wide over the standardized dense features and one row per sparse key seen in 20 or more positions, a clipped ReLU, a head of 16, starting from (a) with its output at zero | Adam on the log loss, early stopping on the validation games' outcomes, three seeds; fitted on the outcomes, then once more from the same start on offline TD(λ) targets (D4's D, `TD_LAMBDA` 0.7, `--td-lambda 1` for the outcomes alone): along each game and seat, a row's target is 0.3 of the seat's next row's prediction and 0.7 of that row's target, the last row's being the outcome |
+| (c) | D5's network with D4's skip connection: `σ(a·hand/100 + b + net(x))`, its first layer 16 wide over the standardized dense features and one row per sparse key seen in 20 or more positions, a clipped ReLU, a head of 16, starting from (a) with its output at zero | Adam on the log loss, early stopping on the validation games' outcomes, three seeds; fitted on the outcomes, then twice more from the same start (`TD_RELABELS`), each on offline TD(λ) targets from the fit before it (D4's D, `TD_LAMBDA` 0.3; `--td-lambda 1` for the outcomes alone, `--td-relabels`): along each game and seat, a row's target is 0.7 of the seat's next row's prediction and 0.3 of that row's target, the last row's being the outcome |
 
 `<out>/report.md` (and `report.json`) holds: held-out log loss, AUC and calibration, overall and by
 turn band (1-3, 4-10, 11 and on); (c)'s run-to-run spread over its seeds; (c)'s learning curve at
@@ -52,7 +52,9 @@ the seat's board, both ways; and #1009's decision:
 - **more data** when the curve is still falling at its largest size;
 - **stop** otherwise: more compute will not help, and the features or the model must change.
 
-`<out>/model.pt` keeps the best seed's network with its vocabulary and standardizer, for `export.py`.
+`<out>/model.pt` keeps the best seed's network with its vocabulary and standardizer, for `export.py`, and
+`<out>/model-seed<N>.pt` each seed's: `retrain.sh` ships the best by validation whose integer network passes
+the AI's tests with the switch on (#466).
 
 ## The integer network
 

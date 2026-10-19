@@ -20,7 +20,7 @@
 - [MP0. What the designer asked for](#mp0-what-the-designer-asked-for)
 - [MP1. Reading this brief](#mp1-reading-this-brief)
 - [MP2. The set: ids, numbers, tags, rarity and the census](#mp2-the-set-ids-numbers-tags-rarity-and-the-census)
-- [MP3. Built on main before it ships (R1420, R1178000)](#mp3-built-on-main-before-it-ships-r1420-r1178000)
+- [MP3. Built on main before it shipped (R1420, R1178000)](#mp3-built-on-main-before-it-shipped-r1420-r1178000)
 - [MP4. The four patches beside the set](#mp4-the-four-patches-beside-the-set)
 - [MP5. The systems, and the decisions](#mp5-the-systems-and-the-decisions)
 - [MP6. Cards, card by card](#mp6-cards-card-by-card)
@@ -45,8 +45,8 @@ Issue #1173, verbatim in `JackiOh_MeditativePlus_Cards.md`:
 - **Freeze**, Hearthstone-style: a Unit loses its next attack or position change, and thaws at the end of
   the turn it could have acted: #1174.
 
-The four rule changes are patches of their own that go live when they merge (MP4); the set is built
-behind [[R1420]]'s gate and ships with its last part (MP3, MP10).
+The four rule changes are patches of their own that go live when they merge (MP4); the set was built
+behind [[R1420]]'s gate and shipped with its last part, in v0.3.15 (MP3, MP10).
 
 ## MP1. Reading this brief
 
@@ -110,53 +110,53 @@ Billy prints X multiples, and is always summoned with its X.
 the table in [[§8.9]]): every entry the set holds must be one of these indices, with its row's name,
 cost, type, tags, rarity and stats.
 
-## MP3. Built on main before it ships (R1420, R1178000)
+## MP3. Built on main before it shipped (R1420, R1178000)
 
-The set is built on `main`, card by card, behind [[R1420]]'s gate, as the Meditative set was
-([[R1178000]]):
+The set was built on `main`, card by card, behind [[R1420]]'s gate, as the Meditative set was
+([[R1178000]]), until the release (#1187) shipped it in v0.3.15. While it was held:
 
-- `SetName::MeditativePlus` is in `CATALOG_SETS` (catalog order, after Meditative) and not in
+- `SetName::MeditativePlus` was in `CATALOG_SETS` (catalog order, after Meditative) and not in
   `SHIPPED_SETS`.
-- A pool that names no set draws from the sets that ship; one that names Meditative+, or names a card by
-  id, reaches it. So a Meditative+ card finds its own tokens and its Potion pool, and no other card, AI
-  deck, determinization or random cast meets one until the set ships.
-- [[§9.4]]'s L3 and `create_game` refuse a Meditative+ card in a deck; no lean names the set; the Almanac
-  and the deck builder show no card, set chip or tag of it; the server neither seeds nor serves it; no
-  voice file is owed for its lines.
-- `patches check` and `patches ship` read the catalog without it: **a card batch adds no pending
-  fragment**, and the release claims all 30 entries in one fragment.
-- The testkit previews the set on one thread (`preview_sets(&[SetName::MeditativePlus])`): a card test
-  that needs Meditative+ cards in a pool that names no set previews it (the Potion pool of #14 and #15,
-  the embiggen pool of #23 reaching the set's own); the fuzz tool previews every set, so every card is
-  fuzzed from the day it lands; the golden traces deal from the shipped sets, so no batch moves a
+- A pool that names no set drew from the sets that ship; one that named Meditative+, or named a card by
+  id, reached it. So a Meditative+ card found its own tokens and its Potion pool, and no other card, AI
+  deck, determinization or random cast met one until the set shipped.
+- [[§9.4]]'s L3 and `create_game` refused a Meditative+ card in a deck; no lean named the set; the
+  Almanac and the deck builder showed no card, set chip or tag of it; the server neither seeded nor
+  served it; no voice file was owed for its lines.
+- `patches check` and `patches ship` read the catalog without it: **a card batch added no pending
+  fragment**, and the release claimed all 30 entries in one fragment.
+- The testkit previewed the set on one thread (`preview_sets(&[SetName::MeditativePlus])`): a card test
+  that needed Meditative+ cards in a pool that names no set previewed it (the Potion pool of #14 and #15,
+  the embiggen pool of #23 reaching the set's own); the fuzz tool previewed every set, so every card was
+  fuzzed from the day it landed; the golden traces dealt from the shipped sets, so no batch moved a
   recorded game.
-- `catalog check` holds the set to its shape (MP2's indices, ids, rarity ceilings) and keeps it out of
-  the totals and the tag census; the cards crate's fixture holds each entry to its row and lets a row
-  wait for its card. The fixture's tag lists (Jlockeed, Catalyst, Prime) take #4, #16 and #16.1 as they
-  land.
-- The Potion tag is in the engine's `Tag` union and the catalog check now; the server's
-  `cards_tags_check` admits it with the release's migration, and its test waits for that while the set is
-  held ([[R1178000]]); the deck builder's `FILTER_TAGS` gains it with the release.
+- `catalog check` held the set to its shape (MP2's indices, ids, rarity ceilings) and kept it out of
+  the totals and the tag census; the cards crate's fixture held each entry to its row and let a row
+  wait for its card. The fixture's tag lists (Jlockeed, Catalyst, Prime) took #4, #16 and #16.1 as they
+  landed.
+- The Potion tag was in the engine's `Tag` union and the catalog check from the foundation on; the
+  server's `cards_tags_check` admits it from the release's migration, and its test waited for that while
+  the set was held ([[R1178000]]); the deck builder's `FILTER_TAGS` gained it with the release.
 
-**What a card batch never touches**: the golden traces, the seed-pinned tests, the pending fragments,
-the shipped totals and tag counts, and other sets' cards' behaviour, except where a part's system says
-so (MP5). A batch whose change moves a golden trace changed something that ships: it says what and why,
-or it is a bug.
+**What a card batch never touched**: the golden traces, the seed-pinned tests, the pending fragments,
+the shipped totals and tag counts, and other sets' cards' behaviour, except where a part's system said
+so (MP5). A batch whose change moved a golden trace changed something that ships: it said what and
+why, or it was a bug.
 
-**What a card batch adds**, per card (`docs/ADDING_CARDS.md`, a set that has not shipped): the
+**What a card batch added**, per card (`docs/ADDING_CARDS.md`, a set that has not shipped): the
 `catalog.json` entry (after the previous Meditative+ entry in index order, its `loc` from `cargo jackioh
-catalog loc`; the census and fixture are already written), the script file with its tests, the
+catalog loc`; the census and fixture were already written), the script file with its tests, the
 `card-audio.json5` entry, the `flavour.json` line and the `chinese.json` entry, and corrections to its
 own [[§8.9]], [[§7]], BUILD M11 and `docs/radiant-audit.md` rows where its build decided a detail
-differently. New verbs, statuses and hooks get their [[§6]] rows and ruling notes in the part that
-builds them.
+differently. New verbs, statuses and hooks got their [[§6]] rows and ruling notes in the part that
+built them.
 
 **The dry run.** The foundation added a temporary Meditative+ card (#8 Arch Mage: its catalog entry,
 script and tests, audio, flavour and Chinese entries) and ran every suite on it: the workspace tests,
 `catalog check`, `patches check`, `spec check`, `fuzz --seeds 200` (its pool 371 cards, the set
 previewed), the WebAssembly build and the web's tests. All were green with no change beyond this
 foundation's, R1420's machinery being generic over the held set; then it was removed. A batch's first
-card needs only the rows MP3 lists.
+card needed only the rows MP3 lists.
 
 ## MP4. The four patches beside the set
 
@@ -189,7 +189,7 @@ system waits for it ("Blocked by").
 | A healing multiplier | doubled healing on a player's characters at the `healed` replacement ([[R413]], [[R462]], [[R1160]]) | #7 | B02 |
 | Health as the price | the next Spell paid in health (3 × its cost), read by `price_of`, `legal_actions` and the payment ([[R18]]) | #6 | B02 |
 | After a Spell targeting an enemy | a resolving Spell's enemy targets kept, and a hand-and-deck trigger that casts the card at them ([[R464]]) | #17 | B02 |
-| In N turns | a `delay` counted in the caster's turns, with a public countdown mark ([[R437]]) | #4 | B03, #1181 |
+| In N turns | a `delay` counted in the caster's turns, with a public countdown badge ([[R1181000]]) | #4 | B03, #1181 |
 | A price for one version | a cost override on the Embiggened price alone | #23 | B03 |
 | Mountaintop's aura | the Embiggened effect at the normal price; the dearer price turned into a Radiant play | #22 | B03 |
 | Potion and from-scratch crafting | ME-CRAFT's potion mode (a fixed Potion frame, cost (1), HUGE at (3) with five times the points) and from-scratch mode (an empty canvas, presets kept for the AI); the client's block editor for both | #16, #16.1, #26 | B04, #1182 |
@@ -205,8 +205,8 @@ system waits for it ("Blocked by").
 
 **Decisions across the set** (these win over any entry in MP6 and over the batch issues' tables):
 
-- **D1 The gate.** Meditative+ is held by [[R1420]] until #1187 ([[R1178000]]); no batch adds a pending
-  fragment or moves a golden trace.
+- **D1 The gate.** Meditative+ was held by [[R1420]] until #1187 shipped it in v0.3.15 ([[R1178000]]);
+  no batch added a pending fragment or moved a golden trace.
 - **D2 R275's stat half** holds as written, every Radiant Unit at twice its stats (MP2).
 - **D3 Bob's Plan's help.** The Wincon pool is the shipped cards tagged Wincon: M #8 Reach the Summit
   and M #20 Aestheticize the Game. The easiest way to each, and the AI card that helps:
@@ -246,7 +246,7 @@ from an entry, the decision wins.
 - **Text:** Add a random Wincon card to your hand, and its plan: a Base Camp for Reach the Summit, a Spa Day for Aestheticize the Game.
 - **Radiant:** Add a random Radiant Wincon card to your hand, and its Radiant plan: a Radiant Base Camp for Reach the Summit, a Radiant Spa Day for Aestheticize the Game.
 - **Engine:** One pick, by the match rng, from the Wincon pool (`{ tags: [Wincon] }`, the shipped sets', [[R380]]; today M #8 Reach the Summit and M #20 Aestheticize the Game), added to your hand (`add_to_hand { defId }`), then the helper token its plan names, from a table in the script keyed by catalog id (`WINCON_PLANS`: `meditative-008` → M+ #1.1 Base Camp, `meditative-020` → M+ #1.2 Spa Day), added after it. A Wincon card with no plan (a later set's) is added alone. The Radiant face adds both Radiant (`radiant: true`). A full hand burns what does not fit, in that order ([[§2.4]]). Quickdraw ([[R640]]).
-- **Rulings:** MP-B07-1: the plan is the helper the brief defines for the card drawn, never a random one; a Wincon card with no plan is added alone. The pick is one `rng.pick` over the pool in catalog order, so it replays ([[R60]]).
+- **Rulings:** MP-B07-1, built as [[R1185000]]: the plan is the helper the brief defines for the card drawn, never a random one; a Wincon card with no plan (or a Glitch, [[R673]]'s odds applying to the pick) is added alone. The pick is one draw over the pool in catalog order, so it replays ([[R60]]).
 - **Numbers:** none (the pool and the plans are the frame).
 - **Check:** The designer's "{for AI creating this: …}" is answered by MP5's D3: the easiest way to each Wincon, and two AI cards (M+ #1.1, #1.2) as the help. R275: Radiant Wincon card and Radiant helpers, both stronger. Quickdraw as written.
 - **Class:** C (the plan table; Ascent levels as a verb for #1.1).
@@ -256,10 +256,10 @@ from an entry, the decision wins.
 
 > **Designer:** (the designer: "you may make some AI cards to help"; defined by this brief, MP5 D3)
 
-- **Text:** Every Reach the Summit you own goes up {levels} Ascent levels. Add {coins|Coin|Coins} to your hand.
-- **Radiant:** Every Reach the Summit you own goes up {levels} Ascent levels. Add {coins|Radiant Coin|Radiant Coins} to your hand.
+- **Text:** Every Reach the Summit you own goes up {levels|Ascent level|Ascent levels}. Add {coins|Coin|Coins} to your hand.
+- **Radiant:** Every Reach the Summit you own goes up {levels|Ascent level|Ascent levels}. Add {coins|Radiant Coin|Radiant Coins} to your hand.
 - **Engine:** NEW: Ascent levels as a verb (B07): raise M #8 Reach the Summit's play count ([[R429]], `counts_plays`) by N on every instance its caster owns, in every zone (hand, deck, graveyard, exile, the field's stack while it resolves), each a public `numberChanged` on a revealed card and hidden in a hand or deck ([[R97]]). Then `add_to_hand { defId: core-t-coin, count }` (Radiant: `radiant: true`). An instance at level 10 or above wins when it is next played (ME-WIN, [[R850]]); raising the count never wins by itself.
-- **Rulings:** MP-B07-2: "you own" is the owner ([[§3.2]]), wherever the card is; a copy made later starts at 0 ([[R57]]); a Reach the Summit you do not own is untouched.
+- **Rulings:** MP-B07-2, built as [[R1185001]]: "you own" is the owner ([[§3.2]]), wherever the card is; a copy made later starts at 0 ([[R57]]); a Reach the Summit you do not own is untouched. The verb is `raise_times_played`, and each card raised reports `numberChanged` "timesPlayed".
 - **Numbers:** levels 2 ↑ (Radiant 3); coins 2 ↑ (the Radiant face's Coins are Radiant: 2 mana each).
 - **Check:** Defined by this brief (⚠ designer, MP7). R275: 3 levels and Radiant Coins against 2 and Coins.
 - **Class:** C (Ascent levels).
@@ -285,7 +285,7 @@ from an entry, the decision wins.
 - **Text:** Fuse the card with the lowest win rate and the card with the highest win rate, and add it to your hand. It costs ({setCost}).
 - **Radiant:** Fuse a Radiant card with the lowest win rate and a Radiant card with the highest win rate, and add it to your hand. It costs ({setCost}).
 - **Engine:** NEW: the lowest win rate (B05), `win_rates::win_rate_trailer` beside M #50 CN Tech's `win_rate_leader` ([[R1100]]): the same compiled table (`crates/cards/data/win_rates.json`, which ships empty), the same eligibility (`CN_TECH_MIN_GAMES` games, non-token cards of the sets that ship) and ties broken the same way read from the other end. NEW: a two-ingredient fuse from two picks (`fuse_generated`'s shape, one ingredient per pick, [[R1108]]), added with `costOverride` ([[R77]], [[R102]]); the Radiant face makes both ingredients Radiant first. With no eligible card a random non-token card stands in for each missing ingredient, as M #50's fallback, and two different cards are fused (the trailer skips the leader).
-- **Rulings:** MP-B05-1: the lowest is the leader's mirror over the same table and floor; with one eligible card it is the leader and a random card the other; the fused card is a transient definition ([[R77]]), never in a pool.
+- **Rulings:** MP-B05-1, built as [[R1183000]] and [[R1183001]]: the lowest is the leader's mirror over the same table and floor, the same tie-breaks (more games, then the id) with only the rate ranked the other way; with one eligible card it is the leader and a random card the other; the two picks are `distinct`; the fused card is a transient definition ([[R77]]), never in a pool, at a `costOverride` of setCost once it stands in the hand.
 - **Numbers:** setCost 2 ↓ (Radiant 0).
 - **Check:** "winrate" is R1100's win rate. The table ships empty, so until a stats run fills it the card fuses two random cards (⚠ designer). R275: Radiant ingredients and (0) against (2).
 - **Class:** C (the trailer, the two-pick fuse).
@@ -308,10 +308,10 @@ from an entry, the decision wins.
 
 > **Designer:** (2 embiggen 4) Supply Drop, Spell, Jlockheed, Epic · Choose Combat or Supplies: Combat: Pierce, Lifesteal, In 3 turns add deal 4 damage to all enemies, embiggen 5 turns 9 damage · Supplies: In 3 turns add a Radiant Jlockheed card to your hand, it costs (2) embiggen 5 turns 5 Radiant Jlockheed cards ~~~ Choose Combat or Supplies: Combat: Pierce, Lifesteal, In 3 turns add deal 9 damage to all enemies, embiggen 5 turns 15 damage · Supplies: In 3 turns add 2 Radiant Jlockheed card to your hand, it costs (0) embiggen 5 turns fill your hand with Radiant Jlockheed cards
 
-- **Text:** Choose one: / Combat: In {turns} turns, deal {damage} damage to each enemy, with Pierce and Lifesteal. / Supplies: In {turns} turns, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand. They cost ({suppliesCost}). / Embiggened (4): In {embiggenedTurns} turns instead; Combat deals {embiggenedDamage}, Supplies adds {embiggenedCards}.
-- **Radiant:** Choose one: / Combat: In {turns} turns, deal {damage} damage to each enemy, with Pierce and Lifesteal. / Supplies: In {turns} turns, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand. They cost ({suppliesCost}). / Embiggened (4): In {embiggenedTurns} turns instead; Combat deals {embiggenedDamage}, Supplies fills your hand.
-- **Engine:** Two declared modes ([[R81]]). NEW: "in N turns" (B03), a `delay` whose `not_before` counts the caster's turns (cast on your turn T, it resolves at the start of your turn N turns later, before the draw, [[R458]]'s timing), with a public countdown mark on the caster's side ([[R437]]) that a Spell leaves behind, since the card is in the graveyard by then. Combat: one hit on the enemy hero and on every enemy Unit, Pierce ([[R346]]) and Lifesteal ([[R85]]) carried by the delayed effect, all before one state check ([[R59]]). Supplies: `add_random_from_catalog { tags: [Jlockeed], radiant, costOverride }` excluding Supply Drop itself ([[R387]]); the Radiant Embiggened face fills the hand (M #77's count, `hand_cap_of` less the hand).
-- **Rulings:** MP-B03-1: "in 3 turns" is the start of your third turn from now, counted in your own turns (an extra turn counts, [[R846]]); the delayed effect is the caster's, kept if the card leaves the graveyard; "all enemies" is the enemy hero and every enemy Unit; the Lifesteal heals the caster's hero once per hit.
+- **Text:** Choose one: In {turns|turn|turns}, deal {damage} damage to each enemy, with Pierce and Lifesteal; or in {turns|turn|turns}, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand, and each costs ({suppliesCost}). / Embiggened (4): In {embiggenedTurns|turn|turns} instead; deal {embiggenedDamage} damage, or add {embiggenedCards}.
+- **Radiant:** Choose one: In {turns|turn|turns}, deal {damage} damage to each enemy, with Pierce and Lifesteal; or in {turns|turn|turns}, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand, and each costs ({suppliesCost}). / Embiggened (4): In {embiggenedTurns|turn|turns} instead; deal {embiggenedDamage} damage, or fill your hand with them. (#1181 made the modes one line: a bare "Choose one:" line ends with no full stop, which [[R366]] forbids.)
+- **Engine:** Two declared modes ([[R81]]). NEW: "in N turns" (B03), a `delay` with `turns`, counted in the caster's own turns started (`DelayedEffect.dueOwnTurn`: cast on your turn T, it resolves at the start of your Nth turn from then, before the draw, [[R458]]'s timing), with a public countdown badge on the caster's side (`label`, [[R169]]) rather than a card mark ([[R437]]), since the card is in the graveyard by then. The numbers are fixed as the Spell resolves and carried in the delayed effect's data. Combat: one hit on the enemy hero and on every enemy Unit, Pierce ([[R346]]) and Lifesteal ([[R85]]) carried by the delayed effect, all before one state check ([[R59]]). Supplies: `add_random_from_catalog { tags: [Jlockeed], radiant, costOverride }` excluding Supply Drop itself ([[R387]]); the Radiant Embiggened face fills the hand (M #77's count, `hand_cap_of` less the hand).
+- **Rulings:** MP-B03-1, built as [[R1181000]] and [[R1181001]]: "in 3 turns" is the start of your third turn from now, counted in your own turns (an extra turn counts, [[R846]]); the delayed effect is the caster's, kept if the card leaves the graveyard; "all enemies" is the enemy hero and every enemy Unit; the Lifesteal heals the caster's hero once per hit, and the caster's Spell Damage raises each hit; the chosen mode is public, the badge naming it.
 - **Numbers:** turns 3 ↓; embiggenedTurns 5 ↓; damage 4 ↑ (Radiant 9); embiggenedDamage 9 ↑ (Radiant 15); cards 1 ↑ (Radiant 2); suppliesCost 2 ↓ (Radiant 0); embiggenedCards 5 ↑ (the base face only, `tunedOn: base`, the Radiant face filling the hand, [[R1431]]).
 - **Check:** "Jlockheed" is the tag `Jlockeed` ([[R278]]); "add deal" is a typo for "deal"; "embiggen" is the Embiggened version (#1175). The countdown being public is the brief's (⚠ designer: Hearthstone shows a Dormant count). R275: 9 and 15 against 4 and 9; 2 cards at (0) and a full hand against 1 at (2) and 5.
 - **Class:** C (in N turns).
@@ -324,7 +324,7 @@ from an entry, the decision wins.
 - **Text:** Deal {damage} damage to all Units. / Embiggened (1): With Lifesteal and Pierce.
 - **Radiant:** Echo 1 / Deal {damage} damage to all Units. / Embiggened (1): With Lifesteal and Pierce.
 - **Engine:** `damage_all` over every Unit on both sides, acting animated cards included, one hit each ([[R59]]); Embiggened, the hits carry `DamageFlags { lifesteal, pierce }` ([[R85]], [[R346]]). The Radiant face prints Echo 1 (`StaticFlags.echo`, [[§6.2]]): the repeat is Embiggened if the play was (the instance keeps the flag, [[R81]]).
-- **Rulings:** MP-B01-1: "permanents" that take damage are the Units (a backrow card takes none unless it is an acting animated Unit); heroes are not permanents.
+- **Rulings:** MP-B01-1, built as [[R1179000]]: "permanents" that take damage are the Units (a backrow card takes none unless it is an acting animated Unit); heroes are not permanents.
 - **Numbers:** damage 1 ↑.
 - **Check:** "embiggen" is the Embiggened version. The designer's Radiant face adds Echo 1 only: R275's effect half by a second resolution (2×).
 - **Class:** A.
@@ -377,8 +377,8 @@ from an entry, the decision wins.
 - **Radiant:** Aura: Both players have Spell Damage +{spellDamage}.
 - **Engine:** NEW: Spell Damage beyond Units (B02): `damage::spell_damage_of` sums its Units' keyword, Field Spell auras that give a player Spell Damage (this one gives both), and the player modifier of M+ #11, in that one place ([[§4.4]] step 0).
 - **Rulings:** MP-B02-3 ([[R1180000]]): a player's Spell Damage is one sum, whatever gives it; it is read as each hit of a Spell lands.
-- **Numbers:** spellDamage 2 ↑ (Radiant 5).
-- **Check:** R275: +5 against +2, for both players as the designer wrote (a symmetric card, as written).
+- **Numbers:** spellDamage 2 ↑ (Radiant 4; the designer's 5 until #1220 set Radiant numbers at double).
+- **Check:** R275: +4 against +2, for both players as the designer wrote (a symmetric card, as written).
 - **Class:** C (Spell Damage from an aura).
 
 #### Meditative+ #10 · Medina Grifter
@@ -386,10 +386,10 @@ from an entry, the decision wins.
 
 > **Designer:** (1) Medina Grifter, Unit, Human, Common · [4/1] · Cry: Steal a card from your opponents hand ~~~ [8/2] · Cry: Steal a card from your opponents hand, it costs (0)
 
-- **Text:** Cry: Steal a random card from your opponent's hand.
-- **Radiant:** Cry: Steal a random card from your opponent's hand. It costs (0).
+- **Text:** Cry: Steal {cards|random card|random cards} from your opponent's hand.
+- **Radiant:** Cry: Steal {cards|random card|random cards} from your opponent's hand. It costs (0).
 - **Engine:** `give_from_hand { from: enemy, cards: random, count: 1 }` (M #21, C #9): the card becomes yours (Steal off the field, [[R12]]), hidden per zone ([[R97]]), the hand cap burning it into your graveyard ([[§2.4]]); the Radiant face's `TakenRiders.cost_override` 0.
-- **Rulings:** MP-B01-2: "a card" is a random one (the opponent's hand is hidden, [[§9.1]]); an empty hand steals nothing and draws no random number ([[R129]]).
+- **Rulings:** MP-B01-2, built as [[R1179001]]: "a card" is a random one (the opponent's hand is hidden, [[§9.1]]); an empty hand steals nothing and draws no random number ([[R129]]).
 - **Numbers:** cards 1 ↑.
 - **Check:** R275: 8/2 and the stolen card at (0).
 - **Class:** B.
@@ -428,7 +428,7 @@ from an entry, the decision wins.
 - **Text:** Activate: Tribute this. Heal your hero and each of your Units {heal}.
 - **Radiant:** Activate: Heal your hero and each of your Units {heal}.
 - **Engine:** An Activate (`tribute_self` on the base face, paid first, so the base potion heals the others), then `heal` on its controller's hero and `for_each_card` over its Units (M #7, M #22).
-- **Rulings:** MP-B01-3: "all allies" is your hero and your Units (Hearthstone's "all friendly characters"); the Radiant potion heals itself too.
+- **Rulings:** MP-B01-3, built as [[R1179002]]: "all allies" is your hero and your Units (Hearthstone's "all friendly characters"); the Radiant potion heals itself too.
 - **Numbers:** heal 5 ↑.
 - **Check:** R275: 6/6 and no Tribute.
 - **Class:** B.
@@ -441,7 +441,7 @@ from an entry, the decision wins.
 - **Text:** Add {cards|random Potion card|random Potion cards} to your hand.
 - **Radiant:** Add {cards|random Radiant Potion card|random Radiant Potion cards} to your hand.
 - **Engine:** `add_random_from_catalog { query: { tags: [Potion] }, count }` (the Radiant face `radiant: true`): the non-token Potion cards of the sets that ship ([[R380]]), repeats allowed ([[R60]]); a crafted potion (M+ #16) is transient and in no pool.
-- **Rulings:** MP-B01-4: "Potions" are Potion-tagged cards: M+ #11, #12 and #13 once the set ships; under a preview the same three ([[R1178000]]).
+- **Rulings:** MP-B01-4, built as [[R1179003]]: "Potions" are Potion-tagged cards: M+ #11, #12 and #13 since the set shipped, and under a preview before it the same three ([[R1178000]]).
 - **Numbers:** cards 2 ↑.
 - **Check:** R275: the potions Radiant (twice the stats, no Tribute).
 - **Class:** B.
@@ -494,8 +494,8 @@ from an entry, the decision wins.
 - **Radiant:** Deal {damage} damage to an enemy. / In your hand or deck: After another Spell of yours that targeted an enemy resolves, cast this at it.
 - **Engine:** A targeted Spell (an enemy Unit or the enemy hero, [[R81]]). NEW (B02): the targets a Spell declared or chose in a prompt, kept with the resolving card, and a hand-and-deck trigger (`TriggerZone::Hand`, `Library`, [[R464]]) on that Spell's resolution that casts this card ([[§6.3]] Cast: free, a play, [[R70]]) at the first such enemy still there. One Dogpile answers each Spell, the one in hand first (leftmost), else the topmost in the deck; its own cast is a Spell that targeted an enemy, so it can call the next.
 - **Rulings:** MP-B02-5 ([[R1180005]]): "a spell" is a Spell of yours, other than this card; "them" is the enemy it targeted, a Unit or the hero; a target gone or no longer an enemy casts nothing; a Spell that targeted several enemies calls it at the first, in the order it targeted them, still an enemy on the field; an aim that is no longer a legal pick casts nothing.
-- **Numbers:** damage 2 ↑ (Radiant 5).
-- **Check:** Classic #60 is Pile On, so this is Dogpile (R381, [[R1178002]], ⚠ designer). R275: 5 against 2.
+- **Numbers:** damage 2 ↑ (Radiant 4; the designer's 5 until #1220 set Radiant numbers at double).
+- **Check:** Classic #60 is Pile On, so this is Dogpile (R381, [[R1178002]], ⚠ designer). R275: 4 against 2.
 - **Class:** C (the targets kept, the hand-and-deck cast).
 
 #### Meditative+ #18 · Cognitive Offloading
@@ -506,7 +506,7 @@ from an entry, the decision wins.
 - **Text:** Cast on draw: Gain {mana} mana and draw {draw|card|cards}. The AI plays the rest of your turn.
 - **Radiant:** Cast on draw: Gain {mana} mana and draw {draw|card|cards}. The AI plays the rest of your turn.
 - **Engine:** Cast on draw (`StaticFlags.cast_on_draw`, [[§6.2]], [[R635]]): `gain_mana` (temporary), `draw`, then NEW: the autopilot (B05), a status on the caster for the rest of the turn under which the engine plays for them, one greedy legal action at a time by the §10.7 scorer (`subsystems/scorer.rs`, as M #71's judge, never `crates/ai`), up to `AUTOPILOT_MAX_ACTIONS`, then ends the turn; Core #96 My Pawn's `ai_plays_out_turn` is its random cousin. Played from the hand (past [[R58]]'s cap), it does the same.
-- **Rulings:** MP-B05-2: only on its caster's own turn; drawn on the opponent's turn it gains and draws and the autopilot does nothing; a prompt the autopilot meets is answered by the same scorer; the client shows the turn played for you and takes no input but a concession.
+- **Rulings:** MP-B05-2, built as [[R1183002]] and [[R1183003]]: only on its caster's own turn; drawn on the opponent's turn it gains and draws and the autopilot does nothing; the engine plays the turn once the action that engaged it has settled, each action through the reducer's own step; each choice is the scorer's, tried on the player's concealed board (a prompt's best answer, else the first harmless play in the scorer's order, else a worthwhile attack, else the end of the turn); a question for the opponent pauses it; the client shows the turn played for you (`autopilotEngaged`'s banner) and takes no input but a concession.
 - **Numbers:** mana 1 ↑ (Radiant 3); draw 1 ↑ (Radiant 2).
 - **Check:** "the AI" is the engine's scorer, deterministic and seeded ([[§9.3]]). R275: 3 mana and 2 cards against 1 and 1.
 - **Class:** D (the autopilot).
@@ -519,7 +519,7 @@ from an entry, the decision wins.
 - **Text:** Steal the top {cards|card|cards} of your opponent's deck. / Embiggened (2): Steal {cards|random card|random cards} from their hand instead.
 - **Radiant:** Steal the top {cards|card|cards} of your opponent's deck. They cost (0). / Embiggened (2): Steal {cards|random card|random cards} from their hand instead.
 - **Engine:** Normal: `take_from_library` (C+ #12.3) of the opponent's top cards into your hand, yours from then on ([[R12]]); Embiggened: `give_from_hand { from: enemy, cards: random }` (as M+ #10). The Radiant face's `cost_override` 0 on each card taken, either version. The hand cap burns the overflow ([[§2.4]]).
-- **Rulings:** MP-B01-5: "2 cards from your opponent's deck" is its top 2, the deck being shuffled (no random number, as [[R801]]); fewer cards, fewer; an empty deck gives nothing and deals no fatigue.
+- **Rulings:** MP-B01-5, built as [[R1179004]]: "2 cards from your opponent's deck" is its top 2, the deck being shuffled (no random number, as [[R801]]); fewer cards, fewer; an empty deck gives nothing and deals no fatigue.
 - **Numbers:** cards 2 ↑ (Radiant 3).
 - **Check:** R275: 3 at (0) against 2.
 - **Class:** B.
@@ -558,7 +558,7 @@ from an entry, the decision wins.
 - **Text:** Taunt / Cry: Set every other Unit's Attack and Health to 3/3.
 - **Radiant:** Taunt / Cry: Set every other Unit's Attack and Health to 3/3. Fill your board with Rush Tokens in Chinese.
 - **Engine:** NEW: set stats (B07), a `stats_override` of 3/3 on every other Unit of both sides with its damage and stat buffs cleared (Hearthstone's "set"), an Immutable one untouched ([[R23]]). The Radiant face then fills its controller's board with Rush Tokens (`fill_board`, M #56, [[R942]], Locked zones included, [[R1136000]]) with the `chinese` rider, so each is CN (#1176).
-- **Rulings:** MP-B07-3: "set" replaces the attack and the max health and heals to it: a 10/10 with 5 damage becomes 3/3 undamaged; auras still apply on top ([[§10.4]]); the Rush Tokens arrive after the set, at their printed 3/3.
+- **Rulings:** MP-B07-3, built as [[R1185002]]: "set" replaces the attack and the max health and heals to it: a 10/10 with 5 damage becomes 3/3 undamaged, its buffs and the stat half of its tuning gone; auras (and a card's own layer-2 count) still apply on top ([[§10.4]]); the Rush Tokens arrive after the set, at their printed 3/3. The verb is `set_stats_all`, and `fill_board` gains the `chinese` rider.
 - **Numbers:** none: the set's 3/3 is the frame (it is good for one side and bad for the other, so no `better` direction fits it).
 - **Check:** "CN keyword" is the CN tag (#1176). R275: 6/14 and a full board of Rush Tokens.
 - **Class:** C (set stats).
@@ -568,10 +568,10 @@ from an entry, the decision wins.
 
 > **Designer:** (3) Mountaintop Garden, Field Spell, Epic · Aura: All embiggened innately gain their Embiggened effect (without paying the extra cost); cards instead of an embiggened (cost +2) effect to make them Radiant (if they are not Radiant already) ~~~ Aura: All embiggened innately gain their Embiggened effect (without paying the extra cost); cards instead of an embiggened (cost +1) effect to make them Radiant (if they are not Radiant already)
 
-- **Text:** Aura: Embiggen cards play their Embiggened version at their normal price. For ({premium}) more, a card that isn't Radiant is played Radiant instead.
-- **Radiant:** Aura: Embiggen cards play their Embiggened version at their normal price. For ({premium}) more, a card that isn't Radiant is played Radiant instead.
+- **Text:** Aura: Embiggen cards play their Embiggened version at their normal price. For ({premium}) more, a card that isn't Radiant is also played Radiant.
+- **Radiant:** Aura: Embiggen cards play their Embiggened version at their normal price. For ({premium}) more, a card that isn't Radiant is also played Radiant. (#1181 wrote "also": the dearer play is Radiant and Embiggened, not Radiant instead.)
 - **Engine:** NEW: Mountaintop's aura (B03), while it acts, for every embiggen card of both players ([[R1178001]]): a play at the normal price is stamped `embiggened` (read where `play_steps` stamps it; [[R545]]'s casts unchanged, a cast resolving at its base), and the dearer choice (`play_choices::legal_embiggen_choices`) is priced at the normal price + premium and plays the card Radiant and Embiggened; a Radiant card offers the normal price only.
-- **Rulings:** MP-B03-2: "All" is both players' embiggen cards (⚠ designer); a cost modifier applies to both prices ([[R65]]); two Gardens are one aura, the cheaper premium applying.
+- **Rulings:** MP-B03-2, built as [[R1181002]]: "All" is both players' embiggen cards (⚠ designer); a cost modifier applies to both prices ([[R65]]); two Gardens are one aura, the cheaper premium applying; a cast and a face-down set are untouched.
 - **Numbers:** premium 2 ↓ (Radiant 1).
 - **Check:** "embiggened" is the embiggen card class (#1175); "(cost +2)" is the premium over the normal price. R275: a premium of 1 against 2.
 - **Class:** C (the aura over embiggen prices).
@@ -584,7 +584,7 @@ from an entry, the decision wins.
 - **Text:** Add {cards|random embiggen card|random embiggen cards} to your hand. Their Embiggened version costs (0). / Embiggened (4): Add {embiggenedCards} instead.
 - **Radiant:** Add {cards|random Radiant embiggen card|random Radiant embiggen cards} to your hand. Their Embiggened version costs (0). / Embiggened (4): Add {embiggenedCards} instead.
 - **Engine:** `add_random_from_catalog { query: { embiggen: true } }` ([[R1178001]], the foundation's field), never itself ([[R387]]), then NEW: a price for one version (B03), a cost override on the Embiggened price alone (`mana::price_of`, `play_choices::legal_embiggen_choices`), shown on the face's second badge; the normal version keeps its price.
-- **Rulings:** MP-B03-3: "its embiggened form costs (0)" is the Embiggened price alone, read before modifiers like any `costOverride`; a Radiant card stays an embiggen card.
+- **Rulings:** MP-B03-3, built as [[R1181003]]: "its embiggened form costs (0)" is the Embiggened price alone (`embiggenCostOverride`), read before modifiers like any `costOverride`, and under Mountaintop Garden it prices the dearer choice; [[R766]] takes it off; a Radiant card stays an embiggen card.
 - **Numbers:** cards 1 ↑; embiggenedCards 3 ↑.
 - **Check:** "embiggened card" is an embiggen card (#1175). R275: the cards Radiant.
 - **Class:** C (a price for one version).
@@ -594,10 +594,10 @@ from an entry, the decision wins.
 
 > **Designer:** (3) Bob, Wisconsin's Strongest Soldier, Unit, Spell, Legendary · [5/5] · Cry: Choose one · Freeze all enemy units · Add an enemy unit to your hand and give your opponent 3 coins · Discover a random unit, make it radiant · Draw 1, fill your hand with copies of it ~~~ [10/10] · Cry: Do all of the following in order · Freeze all enemy units · Add an enemy unit to your hand and give your opponent 3 coins · Discover a random unit, make it radiant · Draw 1, fill your hand with copies of it
 
-- **Text:** Cry: Choose one: / Freeze all enemy Units. / Put an enemy Unit into your hand. Your opponent gets {coins|Coin|Coins}. / Discover a Unit. Make it Radiant. / Draw 1. Fill your hand with copies of it.
-- **Radiant:** Cry: Do all of these, in order: / Freeze all enemy Units. / Put an enemy Unit into your hand. Your opponent gets {coins|Coin|Coins}. / Discover a Unit. Make it Radiant. / Draw 1. Fill your hand with copies of it.
+- **Text:** Cry: Choose one: Freeze all enemy Units; put an enemy Unit into your hand, and your opponent gets {coins|Coin|Coins}; Discover a Unit and make it Radiant; or draw 1 and fill your hand with copies of it.
+- **Radiant:** Cry: Do all of these, in order: Freeze all enemy Units; put an enemy Unit into your hand, and your opponent gets {coins|Coin|Coins}; Discover a Unit and make it Radiant; then draw 1 and fill your hand with copies of it.
 - **Engine:** Four declared modes ([[R81]]; M #49.1's every-effect list on the Radiant face). 1: Freeze (#1174) on every enemy Unit. 2: NEW: an enemy Unit into your hand (B07), a declared enemy Unit, the top of its pile ([[R13]]), leaving the field to your hand as yours (`ownership::take_into_hand` extended to the field, [[R747]]'s ownership move; a token ceases to exist, [[R11]]), then `add_to_hand { defId: core-t-coin, count: 3, player: enemy }`. 3: `discover_from_catalog { type: Unit }` with the pick added Radiant (M #88). 4: `draw` 1 then `add_to_hand { copyOf }` until the hand is full ([[R596]], [[R1242]]).
-- **Rulings:** MP-B07-4: mode 2 targets at play time and fizzles with no enemy Unit; a token taken ceases to exist and the Coins are still given; the Radiant face declares mode 2's target with the play and resolves the four in order, each its own step; with no draw (an empty deck: fatigue) mode 4 copies nothing.
+- **Rulings:** MP-B07-4, built as [[R1185003]] (the take) and [[R1185004]] (the modes): mode 2 targets at play time; on the base face the target is needed, so with no enemy Unit mode 2 is not offered ([[R703]]); a token taken ceases to exist and the Coins are still given, as they are whenever a Unit was declared; the Radiant face declares mode 2's target with the play and resolves the four in order, each its own step, giving no Coins when no Unit was declared; with no draw (an empty deck: fatigue) mode 4 copies nothing. The text is one line, as Classic #20's Choose one is (R366's full stops). The verbs are `freeze_all`, `take_to_hand`, `discover_from_catalog` and `draw_priced`'s `fillWithCopies`.
 - **Numbers:** coins 3 ↓.
 - **Check:** The designer's "Unit, Spell" is a Unit ([[R1178002]]). "coins" are The Coin. R275: 10/10 and all four modes.
 - **Class:** C (an enemy Unit into your hand; Freeze from #1174).
@@ -610,7 +610,7 @@ from an entry, the decision wins.
 - **Text:** Discover one of 3 blocks of card code. Add the Radiant card with that code to your hand.
 - **Radiant:** Discover one of 3 blocks of card code. Add the Radiant card with that code to your hand. It costs (0).
 - **Engine:** NEW: code blocks (B05): each card's excerpt compiled in from its own script by `crates/cards/build.rs` (the lines above `#[cfg(test)]`, header comments and `use` lines dropped, at most `CODE_BLOCK_MAX_LINES`), held beside the catalog, and a Discover over 3 random non-token cards of the shipped sets ([[R380]]) whose options the view shows as code alone, never the card's id, name or face, until one is picked ([[§10.8]], CLAUDE.md rule 7); the pick is added Radiant (M #88), the Radiant face with `costOverride` 0. The WASM size cap (#442 L12) is checked.
-- **Rulings:** MP-B05-3: the three are distinct cards; a card's code block is its own script's, the same on both faces; the AI chooses by the scorer over the hidden cards it would get (the engine knows them), as any Discover.
+- **Rulings:** MP-B05-3, built as [[R1183004]] and [[R1183005]]: the three are distinct cards; a card's code block is its own script's lines of code less its `ID` line, its own id written `ID` and its name `???`, the same on both faces; the cards behind the options ride the prompt's resume data; the AI chooses as in any Discover, its search trying each answer.
 - **Numbers:** setCost 0, on the Radiant face only (`tunedOn: radiant`, [[R824000]]).
 - **Check:** "should come from an actual coded card": the excerpt is the card's real script. R275: the card at (0).
 - **Class:** D (code blocks).
@@ -631,8 +631,8 @@ from an entry, the decision wins.
 
 ## MP7. Readings for the designer
 
-Each row is the build's default until the designer says otherwise; a change is a patch of its own after
-the set ships, or a correction to the rows before it.
+Each row is the build's default until the designer says otherwise; a change is a patch of its own now
+that the set has shipped (before it, a change was a correction to the rows).
 
 | # | Card | The unclear words | The default |
 | --- | --- | --- | --- |
@@ -656,23 +656,25 @@ the set ships, or a correction to the rows before it.
 
 ## MP8. Sound, visuals, the AI and the release
 
-- **Sound.** Each card's `card-audio.json5` entry comes with it ([[§10.11]]'s lines); no voice file is
-  rendered or expected before the set ships ([[R1420]]): the release renders them through the `voice`
-  workflow (`[gen:voice]`, R1448). The intro snippets ([[R1352]], `gen:music`) for the Legendary and the
-  Mythics, #1 Bob's Plan, #24 Bob and #26 Scratch Pad, are the release's.
-- **Visuals.** The set mark (R503) shows the plain diamond of a set the client does not know until the
-  release draws Meditative+ a glyph of its own; the client's new screens (the potion and from-scratch
+- **Sound.** Each card's `card-audio.json5` entry came with it ([[§10.11]]'s lines); no voice file was
+  rendered or expected before the set shipped ([[R1420]]), and the files are owed with the release, rendered
+  through the `voice` workflow (`[gen:voice]`, R1448). The intro snippets ([[R1352]], `gen:music`) for the Legendary and the
+  Mythics, #1 Bob's Plan, #24 Bob and #26 Scratch Pad, were the release's.
+- **Visuals.** The set mark (R503) showed the plain diamond of a set the client did not know until the
+  release drew Meditative+ a glyph of its own; the client's new screens (the potion and from-scratch
   crafter, the question sequence, the code-block Discover, the autopilot's turn, the health price, the
-  countdown) come with the parts that build their systems.
+  countdown) came with the parts that built their systems.
 - **The AI** (#1186): every new prompt kind and mode answered by `crates/ai` within its budget, the
   sweep (`cargo jackioh sweep`) over the 26 cards with every set previewed, at most 13 of them in
-  `SHADOW_BAN` ([[R186]]); R1390's soft gate keeps the set out of the AI's random decks until then.
-- **The release** (#1187): `SHIPPED_SETS` lists Meditative+; one fragment claims its 30 entries; the
-  server's migration admits Potion and `seed-catalog` seeds the set; deck and trio codes take its offset
-  after Meditative's; the golden traces are re-blessed once for the bigger pools; the Almanac's and the
-  deck builder's chips, `FILTER_TAGS` with Potion, the newest set's ribbon, the `RELEASES` line; every
-  stated total (§8's intro, CLAUDE.md's census, the READMEs) moves to 396 cards and 84 tokens; and
-  REVIEW.md's audit is run as a separate session.
+  `SHADOW_BAN` ([[R186]]); R1390's soft gate was there to keep the set out of the AI's random decks
+  until it met that bar.
+- **The release** (#1187) shipped the set in v0.3.15: `SHIPPED_SETS` lists Meditative+; one fragment
+  claimed its 30 entries; the server's migration admits Potion and `seed-catalog` seeds the set; deck and
+  trio codes take its offset after Meditative's, 4000 + n ([[R1410]]); the golden traces were re-blessed
+  once for the bigger pools; the Almanac's and the deck builder's chips, `FILTER_TAGS` with Potion, the
+  newest set's ribbon, the `RELEASES` line; every stated total (§8's intro, CLAUDE.md's census, the
+  READMEs) moved to 396 cards and 84 tokens, 480 entries; and REVIEW.md's audit was run as a separate
+  session.
 
 ## MP9. Where this brief differs from the batch issues
 

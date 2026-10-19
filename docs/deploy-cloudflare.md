@@ -11,7 +11,7 @@ database and auth (Supabase).
 | --- | --- | --- |
 | Purpose | See main as it is now; preview a branch on request | What players use |
 | Builds from | `main`, plus any branch whose commit message says `[vercel]` | `production` only |
-| How often | Every push to main that changes the bundle | Once a day (an open issue counts down, and anyone can hold or delay it), plus catalog bumps as soon as CI passes |
+| How often | A push to main that changes the bundle, once an hour has passed since the last build (`scripts/vercel-ignore.sh`) | Once a day (an open issue counts down, and anyone can hold or delay it), plus catalog bumps as soon as CI passes |
 | Gate | Vercel's own build | `main`'s push-to-main CI run must have passed |
 | Routing and headers | `vercel.json` (source of truth) | `apps/web/public/_redirects`, `_headers`, `wrangler.jsonc` |
 | Domain | `jackioh.vercel.app` | jackioh.com |

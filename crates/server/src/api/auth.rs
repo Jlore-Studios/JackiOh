@@ -21,7 +21,7 @@ use serde_json::{Value, json};
 
 use crate::api::consent::{age_check_owed, terms_owed};
 use crate::api::http::{
-    ApiError, ApiErrorCode, ApiResult, Caller, Req, address_key, json, now_ms, rate_limited,
+    ApiError, ApiErrorCode, ApiResult, Caller, Req, address_key, json, log_info, now_ms, rate_limited,
 };
 use crate::api::username::own_username;
 use crate::app::App;
@@ -29,21 +29,12 @@ use crate::auth::{ACCOUNT_DELETION_UNAVAILABLE_MESSAGE, AuthError, PasswordGrant
 use crate::config::USERNAME_SIGN_IN_WINDOW_MS;
 use crate::username::sign_in_name;
 
-// NOT IN SPEC, and no R-row yet — PROPOSED RULING for §11:
-//   Topic: The scope of the identical sign-up and sign-in error (extends R145)
-//   Ruling: Sign-up and sign-in answer identically for every outcome that depends on **whether an
-//     account exists** — "no such account", "wrong password" and "already registered" — so neither
-//     endpoint becomes an account-enumeration oracle. This is R145's principle one door earlier:
-//     R145 makes the redemption error identical for everything that depends on the code and
-//     distinct for everything that depends only on the caller's own account, and an email address
-//     is exactly the fact an unauthenticated caller must not be able to probe. §9.8's brute-force
-//     row asks for the invite gate to resist enumeration, which a sign-up endpoint that says "that
-//     address is taken" undoes. One error per endpoint rather than one for both, because the two
-//     endpoints are already distinguishable by the route.
-//   Affects: §9.2, §9.4, §9.8, R145; `api/auth.ts`.
+// R160: sign-up and sign-in answer identically for every outcome that depends on whether an
+// account exists ("no such account", "wrong password", "already registered"), so neither endpoint
+// is an account-enumeration oracle; one error per endpoint, since the route already tells them apart.
 //
-// §9.4 does not write these strings; the ruling above is about their being one string, not about
-// their wording. (Sign-up's own string went with the route, SURFACE §11.3.)
+// §9.4 does not write these strings; R160 is about their being one string, not about their
+// wording. (Sign-up's own string went with the route, SURFACE §11.3.)
 const SIGN_IN_FAILED_MESSAGE: &str = "That email and password do not match an account.";
 
 // R1443: the one refusal of a sign-in by username, whatever was wrong (R160), and its two answers
@@ -293,6 +284,12 @@ pub(crate) async fn remove_account(app: &App, caller: &Caller) -> Result<(), Api
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     tx.profiles_remove(&profile.id).await?;
     tx.commit().await?;
+    // The friendships went with the profile by cascade, so a watch of a friend by this account
+    // ends at once, as an unfriend or a block ends one (`social::watch::revoke_between`).
+    let watchers = app
+        .matches
+        .revoke_watchers(|watcher, _| watcher == profile.id.as_str());
+    log_info("account.watchers_revoked", json!({ "watchersRevoked": watchers }));
     match app.auth.delete_user(&caller.user.user_id).await {
         Ok(()) => Ok(()),
         Err(AuthError::Unavailable(message)) => Err(ApiError::new(ApiErrorCode::Unavailable, message)),

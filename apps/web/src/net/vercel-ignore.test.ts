@@ -1,5 +1,6 @@
 // scripts/vercel-ignore.sh, run the way vercel.json runs it (its `ignoreCommand`), in a throwaway git
-// repo: Vercel deploys on the last push and only when the push can change what the site serves.
+// repo: Vercel deploys on the last push, only when the push can change what the site serves, and on
+// main only once MIN_GAP_SECONDS have passed since the last build.
 // Exit 1 builds, exit 0 skips, and every doubt must build: a skipped deploy that should have run
 // leaves production stale, while an extra build costs one deployment.
 
@@ -15,8 +16,16 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "../../../..");
 const { ignoreCommand } = JSON.parse(readFileSync(join(ROOT, "vercel.json"), "utf8")) as { ignoreCommand: string };
 
+/** How long main waits after the last build (rule 4), read from the script so it is stated once. */
+const MIN_GAP_SECONDS = Number(/^MIN_GAP_SECONDS=(\d+)$/m.exec(readFileSync(join(ROOT, "scripts/vercel-ignore.sh"), "utf8"))?.[1]);
+
+/** A day, in seconds: the default distance between two commits, past rule 4's wait. */
+const DAY = 86_400;
+
 let repo = "";
 let base = "";
+/** The committer date of every git call, in seconds since the epoch; `commit` moves it on. */
+let now = Date.UTC(2026, 0, 1) / 1000;
 
 /** Where the throwaway repo lives: the checkout's own ignored `.cache/`, not the machine's shared temp
  * directory, and with git's background upkeep off, so nothing but this file touches it while it runs
@@ -30,7 +39,15 @@ function git(...args: string[]): string {
   return execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", ...quiet, ...args], {
     cwd: repo,
     encoding: "utf8",
+    env: { ...process.env, GIT_COMMITTER_DATE: `@${String(now)} +0000` },
   }).trim();
+}
+
+/** Commits what is staged, `after` seconds after the commit before it (a day unless a test says). */
+function commit(message: string, after = DAY): string {
+  now += after;
+  git("commit", "-q", "-m", message);
+  return git("rev-parse", "HEAD");
 }
 
 /** A commit on main, on top of the base, that adds each file (and more commits for more arrays). */
@@ -42,7 +59,7 @@ function commits(...pushes: string[][]): void {
       writeFileSync(join(repo, file), `${file}\n`);
     }
     git("add", "-A");
-    git("commit", "-q", "-m", "change");
+    commit("change");
   }
 }
 
@@ -71,8 +88,7 @@ beforeAll(() => {
   copyFileSync(join(ROOT, "scripts/vercel-ignore.sh"), join(repo, "scripts/vercel-ignore.sh"));
   writeFileSync(join(repo, "README.md"), "start\n");
   git("add", "-A");
-  git("commit", "-q", "-m", "built");
-  base = git("rev-parse", "HEAD");
+  base = commit("built");
 });
 
 afterAll(() => {
@@ -199,11 +215,10 @@ describe("scripts/vercel-ignore.sh", () => {
     const built = git("rev-parse", "HEAD");
     writeFileSync(join(repo, "apps/web/src/game/Board.tsx"), "export const board = 1;\n".repeat(20));
     git("add", "-A");
-    git("commit", "-q", "-m", "board");
-    const withBoard = git("rev-parse", "HEAD");
+    const withBoard = commit("board");
     mkdirSync(join(repo, "docs"), { recursive: true });
     git("mv", "apps/web/src/game/Board.tsx", "docs/Board.tsx");
-    git("commit", "-q", "-m", "moved into docs");
+    commit("moved into docs");
     expect(builds({ previous: withBoard })).toBe(true);
     expect(builds({ previous: built })).toBe(true);
   });
@@ -217,13 +232,41 @@ describe("scripts/vercel-ignore.sh", () => {
     expect(builds({ previous: built })).toBe(false);
   });
 
+  it("waits MIN_GAP_SECONDS after the last build on main, then builds what the wait skipped", () => {
+    expect(MIN_GAP_SECONDS, "the script states MIN_GAP_SECONDS").toBeGreaterThan(0);
+    commits(["crates/engine/src/a.rs"]);
+    const built = git("rev-parse", "HEAD");
+    // A bundle change committed in the wait's last second is skipped, unless the flag asks for it.
+    writeFileSync(join(repo, "crates/engine/src/a.rs"), "changed\n");
+    git("add", "-A");
+    commit("soon after", MIN_GAP_SECONDS - 1);
+    expect(builds({ previous: built })).toBe(false);
+    expect(builds({ previous: built, message: "Fix staging [vercel]" })).toBe(true);
+    // Once the wait is over, a push that only touched the docs builds, carrying the skipped change.
+    mkdirSync(join(repo, "docs"), { recursive: true });
+    writeFileSync(join(repo, "docs/after.md"), "x\n");
+    git("add", "-A");
+    commit("after the wait", 1);
+    expect(builds({ previous: built })).toBe(true);
+  });
+
+  it("builds a commit dated before the last build, rather than wait on a clock it cannot trust", () => {
+    commits(["crates/engine/src/a.rs"]);
+    const built = git("rev-parse", "HEAD");
+    writeFileSync(join(repo, "crates/engine/src/a.rs"), "changed\n");
+    git("add", "-A");
+    commit("dated earlier", -60);
+    expect(builds({ previous: built })).toBe(true);
+  });
+
   it("builds on any doubt about what was last built", () => {
     commits(["bot/harness/state.py"]);
     expect(builds({ previous: null })).toBe(true);
     expect(builds({ previous: "" })).toBe(true);
     expect(builds({ previous: "0".repeat(40) })).toBe(true);
     expect(builds({ previous: "not-a-commit" })).toBe(true);
-    // Nothing changed since the last build (a redeploy of the same commit).
+    // Nothing changed since the last build (a redeploy of the same commit, which rule 4's wait does
+    // not skip either).
     expect(builds({ previous: git("rev-parse", "HEAD") })).toBe(true);
     // The last build is not an ancestor of this commit (a preview from another branch). Every file
     // between the two is a skippable one, so only the ancestry check can make this a build.
@@ -231,8 +274,7 @@ describe("scripts/vercel-ignore.sh", () => {
     mkdirSync(join(repo, "docs"), { recursive: true });
     writeFileSync(join(repo, "docs/elsewhere.md"), "x\n");
     git("add", "-A");
-    git("commit", "-q", "-m", "elsewhere");
-    const elsewhere = git("rev-parse", "HEAD");
+    const elsewhere = commit("elsewhere");
     commits(["bot/harness/state.py"]);
     expect(builds({ previous: elsewhere })).toBe(true);
   });

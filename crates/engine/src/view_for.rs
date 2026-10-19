@@ -1201,6 +1201,21 @@ fn modifier_views(state: &GameState, player: PlayerId) -> Vec<ModifierView> {
             label: format!("Extra turns owed: {owed}"),
         });
     }
+    // R1181000: an effect made "in N turns" is a badge on its owner's side while it waits (R169), since
+    // the card that made it is not in play to carry a mark (R437).
+    for entry in state.delayed.iter().filter(|entry| entry.owner == player) {
+        if let (Some(due), Some(label)) = (entry.due_own_turn, &entry.label) {
+            let left = due - state.players[entry.at.player].turns_started;
+            views.push(ModifierView {
+                id: entry.id.clone(),
+                label: match left {
+                    ..=0 => format!("{label} now"),
+                    1 => format!("{label} in 1 turn"),
+                    _ => format!("{label} in {left} turns"),
+                },
+            });
+        }
+    }
     views
 }
 
@@ -1405,6 +1420,7 @@ fn bare_option(key: String, label: String) -> PendingOption {
         chinese: None,
         recipe: None,
         created: None,
+        code: None,
     }
 }
 
@@ -1472,6 +1488,12 @@ fn option_view(state: &GameState, viewer: PlayerId, option: &PromptOption) -> Pe
             base
         }
         Selection::Mode { option } => {
+            // R1183005: a code Discover's option is its place in the offer, its label the code alone;
+            // the card behind it stays in the prompt's resume data, which no view sends.
+            if option.starts_with(crate::effects::choose::CODE_OPTION_PREFIX) {
+                base.code = Some(true);
+                return base;
+            }
             // §6.3 Discover offers definitions, as `mode` options whose string is a catalog def id; a
             // night market's Radiant lot names its card with a suffix (R831002).
             let id = option
@@ -2220,7 +2242,9 @@ fn redact_event(
         | GameEventType::SecretRevealed
         | GameEventType::Predicted
         // R831003: the curve is board positions only.
-        | GameEventType::CurveDrawn => event.clone(),
+        | GameEventType::CurveDrawn
+        // R1183002: the autopilot names a player and a turn.
+        | GameEventType::AutopilotEngaged => event.clone(),
 
         // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
 

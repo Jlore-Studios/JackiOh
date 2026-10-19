@@ -9,7 +9,7 @@
 //! mismatch names the seed, the step, which hash and the action, writes the Rust side's canonical
 //! text to `target/golden-diff/<seed>-<step>-<which>.json`, and prints the `record.ts --dump-step`
 //! command that writes TS's side next to it, run in a checkout of 05f5cfd (the last commit that has
-//! the TypeScript). The hotseat fixture must fold to "5c3d578c". Games run in
+//! the TypeScript). The hotseat fixture must fold to "8784adae". Games run in
 //! parallel (rayon); the report lists every divergent game, earliest seed first. Exit 1 on any
 //! divergence.
 //!
@@ -46,8 +46,8 @@ use jackioh_engine::replay::{canonical, fnv1a32_utf16};
 use jackioh_engine::rng::Rng;
 use jackioh_engine::subsystems::choose_action;
 use jackioh_engine::{
-    Action, CreateGameArgs, FoldArgs, GameEvent, GameOverReason, GameState, Handicap, PerPlayerOpt, PlayerId,
-    Winner, begin_game, create_game, deckable, fold, hash_state, legal_actions, reduce, view_for,
+    Action, CardDef, CreateGameArgs, FoldArgs, GameEvent, GameOverReason, GameState, Handicap, PerPlayerOpt,
+    PlayerId, Winner, begin_game, create_game, deckable, fold, hash_state, legal_actions, reduce, view_for,
 };
 
 use crate::fuzz::{
@@ -67,7 +67,7 @@ pub(crate) const GAMES_PATH: &str =
 const HOTSEAT: &str = include_str!("../../engine/tests/golden/01-hotseat-full-game.json");
 
 /// The hotseat fixture's final state hash (`hotseat-replay.test.ts`'s `EXPECTED_HASH`, SURFACE §5.2).
-const HOTSEAT_HASH: &str = "5c3d578c";
+const HOTSEAT_HASH: &str = "8784adae";
 
 /// §13.3: where a divergence leaves the Rust side's canonical text (the workspace's `target/`).
 const DIFF_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../target/golden-diff");
@@ -748,34 +748,49 @@ fn parse_seed_range(text: &str) -> Result<Vec<u32>> {
     Ok((first..=last).collect())
 }
 
-/// What `--force` puts in a deck: each id as it is, or for a token the card whose `refs` name it
-/// (R279); no id twice, in the order given.
+/// What forcing a card into a deck puts there for the catalog entry `def` of `id`: the card itself, or for
+/// a token the card whose `refs` name it (R279); a card of a set that has not shipped is refused (R1420).
+pub(crate) fn carrier_of(id: &str, def: &CardDef) -> Result<String> {
+    if def.is_token() {
+        CATALOG
+            .iter()
+            .filter(|(_, carrier)| {
+                deckable(carrier)
+                    && carrier
+                        .refs
+                        .as_ref()
+                        .is_some_and(|refs| refs.iter().any(|named| named == id))
+            })
+            .map(|(carrier_id, _)| carrier_id)
+            .min()
+            .cloned()
+            .ok_or_else(|| {
+                anyhow!(
+                    "--force {id}: no deckable card's refs name this token (R279: it comes from a pool \
+                     or a rule); force the card that makes it"
+                )
+            })
+    } else if deckable(def) {
+        Ok(id.to_string())
+    } else {
+        bail!("--force {id}: {:?} has not shipped (R1420)", def.set);
+    }
+}
+
+/// What `--force id` puts in a deck: the id as it is, or for a token the card whose `refs` name it
+/// (R279); an id the catalog lacks is refused.
+pub(crate) fn resolve_forced(id: &str) -> Result<String> {
+    let def = CATALOG
+        .get(id)
+        .ok_or_else(|| anyhow!("--force {id}: not in the catalog"))?;
+    carrier_of(id, def)
+}
+
+/// What `--force` puts in a deck: each id as `resolve_forced` reads it; no id twice, in the order given.
 pub(crate) fn resolve_force(ids: &[String]) -> Result<Vec<String>> {
     let mut forced: Vec<String> = Vec::new();
     for id in ids {
-        let def = CATALOG
-            .get(id)
-            .ok_or_else(|| anyhow!("--force {id}: not in the catalog"))?;
-        let resolved = if def.is_token() {
-            CATALOG
-                .iter()
-                .filter(|(_, carrier)| {
-                    deckable(carrier) && carrier.refs.as_ref().is_some_and(|refs| refs.contains(id))
-                })
-                .map(|(carrier_id, _)| carrier_id)
-                .min()
-                .cloned()
-                .ok_or_else(|| {
-                    anyhow!(
-                        "--force {id}: no deckable card's refs name this token (R279: it comes from a pool \
-                         or a rule); force the card that makes it"
-                    )
-                })?
-        } else if deckable(def) {
-            id.clone()
-        } else {
-            bail!("--force {id}: {:?} has not shipped (R1420)", def.set);
-        };
+        let resolved = resolve_forced(id)?;
         if !forced.contains(&resolved) {
             forced.push(resolved);
         }

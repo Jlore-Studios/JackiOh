@@ -6,7 +6,7 @@
 // wasm-bindgen and the emsdk, which write a module that names the run that built it.
 
 import { spawnSync } from "node:child_process";
-import { appendFileSync, chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -66,13 +66,14 @@ function world(): string {
     mkdirSync(dirname(join(root, file)), { recursive: true });
     writeFileSync(join(root, file), `${file}\n`);
   }
-  // cargo logs each build and leaves what that target's build leaves in target/, naming the run.
+  // cargo logs each build and leaves what that target's build leaves in target/ (CARGO_TARGET_DIR
+  // when it is set, as cargo does), naming the run.
   sh(
     join(root, "bin/cargo"),
     [
       'echo "$*" >> "$CARGO_LOG"',
       'target=""; prev=""; for a in "$@"; do [ "$prev" = --target ] && target=$a; prev=$a; done',
-      'dir="target/$target/release"; mkdir -p "$dir"',
+      'dir="${CARGO_TARGET_DIR:-target}/$target/release"; mkdir -p "$dir"',
       'case "$target" in',
       '  wasm32-unknown-unknown) echo "normal $RUN" > "$dir/jackioh_wasm.wasm" ;;',
       '  wasm32-unknown-emscripten) echo "luau $RUN" > "$dir/jackioh-wasm-luau.js"; echo "luau $RUN" > "$dir/jackioh_wasm_luau.wasm" ;;',
@@ -237,5 +238,43 @@ describe("scripts/build-wasm.sh on Vercel", () => {
     const paths = [...manifest.matchAll(/path = "(crates\/[^"]+)"/gu)].map((m) => m[1] ?? "");
     expect(paths.length).toBeGreaterThan(0);
     expect(listed).toEqual(["crates/wasm", ...paths].sort());
+  });
+});
+
+describe("scripts/build-wasm.sh's directories", () => {
+  it("builds into CARGO_TARGET_DIR and keeps wasm-bindgen and the emsdk in JACKIOH_CACHE_DIR, as the night bot's model job sets them (#1263)", () => {
+    const root = world();
+    const shared = mkdtempSync(join(tmpdir(), "build-wasm-shared-"));
+    roots.push(shared);
+    // The tools live only in the shared cache: a script that looked in the root's .cache would
+    // clone the emsdk and download wasm-bindgen there, which the last line catches.
+    renameSync(join(root, ".cache"), join(shared, "cache"));
+    run(root, "shared", { vercel: false, env: { CARGO_TARGET_DIR: join(shared, "target"), JACKIOH_CACHE_DIR: join(shared, "cache") } });
+    const built = files(pkg(root));
+    expect(built["jackioh_wasm_bg.wasm"]).toBe("normal shared\n");
+    expect(built["luau/jackioh_wasm_luau.wasm"]).toBe("luau shared\n");
+    expect(existsSync(join(root, "target"))).toBe(false);
+    expect(existsSync(join(root, ".cache"))).toBe(false);
+  });
+
+  it("clones the emsdk again when the one it finds cannot activate the pin", () => {
+    const root = world();
+    // Another pin's emsdk, as a shared or restored one can be: it refuses to activate this one.
+    sh(join(root, ".cache/emsdk/emsdk"), '[ "$1" = activate ] && exit 1; exit 0');
+    // git clones an emsdk that activates, and marks it.
+    sh(
+      join(root, "bin/git"),
+      [
+        'for a in "$@"; do dir=$a; done',
+        'mkdir -p "$dir/upstream/emscripten" "$dir/node/22.16.0_64bit/bin"',
+        'printf "#!/bin/sh\\nexit 0\\n" > "$dir/emsdk"; chmod +x "$dir/emsdk"',
+        'printf "#!/bin/sh\\nexit 0\\n" > "$dir/node/22.16.0_64bit/bin/node"; chmod +x "$dir/node/22.16.0_64bit/bin/node"',
+        'touch "$dir/cloned"',
+      ].join("\n"),
+    );
+    const repinned = run(root, "repinned", { vercel: false });
+    expect(repinned.out).toContain("cannot activate emsdk");
+    expect(existsSync(join(root, ".cache/emsdk/cloned"))).toBe(true);
+    expect(files(pkg(root))["luau/jackioh_wasm_luau.wasm"]).toBe("luau repinned\n");
   });
 });

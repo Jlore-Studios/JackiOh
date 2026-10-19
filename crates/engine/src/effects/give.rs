@@ -4,6 +4,8 @@
 //! Common Resources). Every one of them is `ownership.ts`'s change of owner: the card becomes the
 //! taker's for good, its later piles are the taker's, and the taker's hand cap burns what does not fit
 //! into the taker's graveyard (§2.4). Swapping whole decks is R73's library swap (`swap.ts`), not this.
+//! Since R1185003 a named card on the field may be taken too (M+ #24 Bob: "Put an enemy Unit into
+//! your hand"), as a Bounce takes it, into the taker's hand (`take_to_hand`).
 //!
 //! Port of `packages/engine/src/effects/give.ts`. TS wrote the riders through the live instance; Rust
 //! writes them through `state::find_instance_mut` by the card's id.
@@ -11,11 +13,11 @@
 use serde::{Deserialize, Serialize};
 
 use crate::effects::choose::{LibraryFilter, matches_library_filter};
-use crate::effects::targets::{PlayerSpec, player_of};
+use crate::effects::targets::{PlayerSpec, TargetSpec, instance_of, player_of};
 use crate::ownership::{LibraryEnd, TakenTo, draw_from_library_of, take_into_hand};
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance_mut};
-use crate::wire::{PlayerId, Selection, opponent_of};
+use crate::wire::{PlayerId, Selection, Zone, ZoneName, opponent_of};
 
 /// What a taken card is given as it lands in the taker's hand: a cost (`costOverride`, Classic+ #12.3's
 /// "it costs (0)"), a discount (`costMod`, Classic #9 Radiant's "cost (1) less") and the Radiant face
@@ -223,5 +225,34 @@ pub fn draw_from_opponent(args: DrawFromOpponentArgs) -> Effect {
         let from = player_of(ctx, PlayerSpec::Enemy);
         let end = args.end.unwrap_or(LibraryEnd::Bottom);
         draw_from_library_of(ctx, drawer, from, end);
+    })
+}
+
+/// `takeToHand`'s argument: `{ target } & TakenRiders`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct TakeToHandArgs {
+    pub target: TargetSpec,
+    #[serde(flatten)]
+    pub riders: TakenRiders,
+}
+
+/// R1185003 (M+ #24 Bob, "Put an enemy Unit into your hand"): the card `target` names goes to this
+/// card's controller's hand as theirs (`ownership::take_into_hand`, the riders as `take_with` gives
+/// them). A card on the field leaves it as a Bounce would take it to its controller's hand (R747), but
+/// to the taker's, owned by the taker from then on: R78's reset, the pile beneath it resuming (R13),
+/// no Death; a unit token ceases to exist (R11); the taker's full hand burns it into the taker's
+/// graveyard (§2.4). A target gone, or already in the taker's hand, takes nothing.
+pub fn take_to_hand(args: TakeToHandArgs) -> Effect {
+    Effect::new("takeToHand", move |ctx| {
+        let Some(card) = instance_of(ctx, &args.target) else {
+            return;
+        };
+        let taker = ctx.controller;
+        if matches!(card.zone, Zone::Hand { player } if player == taker) || card.zone.z() == ZoneName::Gone {
+            return;
+        }
+        take_with(ctx, &card, taker, &args.riders);
     })
 }

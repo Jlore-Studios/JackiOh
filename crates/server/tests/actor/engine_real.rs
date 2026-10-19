@@ -285,7 +285,7 @@ mod a_finished_matchs_record_r376_src_match_engine_real_ts {
         assert_eq!(summary["seats"]["p1"]["deck"], json!(decks.0));
         assert_eq!(
             summary["seats"]["p1"]["opening"].as_array().map(Vec::len),
-            Some(3)
+            Some(4)
         );
         // §2.1, R244: the seat going second opens with its four cards and The Coin.
         assert_eq!(

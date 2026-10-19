@@ -13,7 +13,7 @@ mod config_constants_build_s2 {
         assert_eq!(MAX_COPIES, 1);
         assert_eq!(MAX_MANA, 4);
         assert_eq!(HERO_HEALTH, 30);
-        assert_eq!(OPENING_DRAW.to_vec(), vec![3, 4]);
+        assert_eq!(OPENING_DRAW.to_vec(), vec![4, 4]);
         assert_eq!(OPENING_COINS.to_vec(), vec![0, 1]);
         assert_eq!(COIN_DEF_ID, "core-t-coin");
         assert_eq!(UNIT_ZONES, 5);

@@ -170,7 +170,7 @@ export type FixtureDeck = {
   cards: string[];
   /**
    * The seat's handicap (R180), for a scenario SPEC's own resources cannot reach in a few turns:
-   * spec 25's 4-card library that fatigues on turn 3, 9-card opening hand, 60-card library.
+   * spec 25's 5-card library that fatigues on turn 3, 9-card opening hand, 60-card library.
    * `seedGame` gives fixture A's to p1 and fixture B's to p2. Absent for every other fixture.
    */
   handicap?: FixtureHandicap;

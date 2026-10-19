@@ -3392,6 +3392,13 @@ mod matches {
         assert!(q!(harness, t => t.matches_get(&id())).is_none());
     }
 
+    /// SPEC §9.1: an id that is not a uuid names no match, so it answers as a missing one does
+    /// (as `matches_seats` and `duos_matches_get` do) and not as a database error.
+    async fn a_malformed_match_id_is_no_match(harness: &StoreHarness) {
+        live_match(harness).await;
+        assert!(q!(harness, t => t.matches_get("not-a-uuid")).is_none());
+    }
+
     async fn refuses_a_second_match_with_the_same_id(harness: &StoreHarness) {
         let row = live_match(harness).await;
         let again: MatchRow = from(spread(j(&row), json!({ "seed": "other" })));
@@ -3805,6 +3812,7 @@ mod matches {
         an_unknown_match_has_no_checkpoint,
         r768_records_a_final_hash_once,
         round_trips_a_match_row_clocks_included,
+        a_malformed_match_id_is_no_match,
         refuses_a_second_match_with_the_same_id,
         appends_actions_in_order_and_reads_them_back,
         reads_a_log_of_ten_or_more_actions_back_in_seq_order,
@@ -4105,6 +4113,48 @@ mod rooms {
         assert!(codes(q!(harness, t => t.rooms_open_by_host("not-a-uuid", now + 60_000))).is_empty());
     }
 
+    /// R890000: the advisory half of `MAX_OPEN_ROOMS_PER_HOST` counts the host's rooms nobody has
+    /// claimed and whose expiry has not passed; a claimed one, an expired one and another host's do
+    /// not count, and a malformed id holds none.
+    async fn r890000_counts_a_host_s_open_rooms_and_none_for_a_malformed_id(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        assert_eq!(q!(harness, t => t.rooms_count_open_by_host(&host.id, now)), 0);
+
+        for (code, owner, over) in [
+            ("ABC234", &host.id, json!({})),
+            ("BCD345", &host.id, json!({})),
+            ("CDE456", &host.id, json!({ "expiresAt": now + 1_000 })),
+            ("DEF567", &other.id, json!({})),
+        ] {
+            assert!(q!(harness, t => t.rooms_create(&room(harness, code, owner, over.clone()))));
+        }
+        must(
+            q!(harness, t => t.rooms_claim("BCD345", &guest.id, &id(), now)),
+            "the claim",
+        );
+
+        assert_eq!(q!(harness, t => t.rooms_count_open_by_host(&host.id, now)), 2);
+        assert_eq!(
+            q!(harness, t => t.rooms_count_open_by_host(&host.id, now + 60_000)),
+            1
+        );
+        assert_eq!(
+            q!(harness, t => t.rooms_count_open_by_host(&other.id, now + 60_000)),
+            1
+        );
+        assert_eq!(
+            q!(harness, t => t.rooms_count_open_by_host(&guest.id, now + 60_000)),
+            0
+        );
+        assert_eq!(
+            q!(harness, t => t.rooms_count_open_by_host("not-a-uuid", now + 60_000)),
+            0
+        );
+    }
+
     both_stores!(
         r768_reads_a_match_s_seats_in_every_status_an_open_one_included,
         creates_a_room_and_reads_it_back_by_code,
@@ -4117,6 +4167,7 @@ mod rooms {
         r1450_reaps_an_expired_unjoined_room_and_frees_its_code,
         r1450_reaps_a_claimed_room_whose_match_never_started_and_lets_both_players_go,
         r1075000_lists_a_host_s_open_rooms_newest_first,
+        r890000_counts_a_host_s_open_rooms_and_none_for_a_malformed_id,
     );
 }
 
@@ -7290,11 +7341,13 @@ mod social {
         q!(harness, t => t.friends_make(&c.id, &b.id, now - 10_000));
         let over = id();
         q!(harness, t => t.matches_create(&match_row(&over, &a.id, &c.id, harness, now - 9_000)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&over, 1, "p1", "n1", now - 8_000)]));
         q!(harness, t => t.matches_finish(&over, now - 5_000));
         let live = id();
         q!(harness, t => t.matches_create(&match_row(&live, &a.id, &c.id, harness, now - 9_000)));
         let elsewhere = id();
         q!(harness, t => t.matches_create(&match_row(&elsewhere, &b.id, &c.id, harness, now - 9_000)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&elsewhere, 1, "p1", "n1", now - 8_000)]));
         q!(harness, t => t.matches_finish(&elsewhere, now - 5_000));
 
         let share = |match_id: &str, sharer: &str, at: i64| -> ReplayShare {
@@ -7363,6 +7416,41 @@ mod social {
             vec![c.id.clone()]
         );
         assert!(q!(harness, t => t.shares_sharers("not-a-uuid", &b.id)).is_empty());
+    }
+
+    /// §9.5's "or the retention purge takes the log": a share of a finished match is listed and
+    /// read while its log is kept, and neither once the purge has taken it.
+    async fn s7_replay_shares_hide_a_match_whose_log_the_purge_took(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let day: i64 = 86_400_000;
+        q!(harness, t => t.friends_make(&a.id, &b.id, now - 92 * day));
+        let over = id();
+        q!(harness, t => t.matches_create(&match_row(&over, &a.id, &b.id, harness, now - 92 * day)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&over, 1, "p1", "n1", now - 92 * day)]));
+        q!(harness, t => t.matches_finish(&over, now - 91 * day));
+        let share: ReplayShare = from(json!({
+            "matchId": over, "sharer": a.id, "friend": b.id, "createdAt": now - 91 * day,
+        }));
+        q!(harness, t => t.shares_put(&share));
+
+        assert_eq!(
+            q!(harness, t => t.shares_sharers(&over, &b.id)),
+            vec![a.id.clone()]
+        );
+        assert_eq!(q!(harness, t => t.shares_for(&b.id)).len(), 1);
+
+        let cutoffs: RetentionPurgeInput = from(json!({
+            "codeAttemptsBefore": now - 30 * day,
+            "matchActionsEndedBefore": now - 90 * day,
+            "playTelemetryEndedBefore": now - 365 * day,
+            "gameRecordsRecordedBefore": now - 7 * day,
+        }));
+        q!(harness, t => t.purge_expired(&cutoffs));
+        assert!(q!(harness, t => t.matches_actions(&over)).is_empty());
+        assert!(q!(harness, t => t.shares_sharers(&over, &b.id)).is_empty());
+        assert!(q!(harness, t => t.shares_for(&b.id)).is_empty());
     }
 
     /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
@@ -7481,6 +7569,7 @@ mod social {
         let now = harness.now();
         let over = id();
         q!(harness, t => t.matches_create(&match_row(&over, &a.id, &b.id, harness, now - 9_000)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&over, 1, "p1", "n1", now - 8_000)]));
         q!(harness, t => t.matches_finish(&over, now - 5_000));
         for (sharer, friend) in [(&a, &b), (&b, &a), (&a, &c), (&b, &c)] {
             q!(harness, t => t.friends_make(&sharer.id, &friend.id, now - 10_000));
@@ -7562,6 +7651,7 @@ mod social {
         s7_a_freed_room_goes_only_while_unjoined,
         s7_chat_pages_reads_reports_and_purges,
         s7_replay_shares_are_read_while_friends_and_unblocked,
+        s7_replay_shares_hide_a_match_whose_log_the_purge_took,
         s7_a_deleted_profile_takes_its_social_rows,
         s7_presence_reads_many_profiles_at_once,
         s7_shares_between_a_pair_go_together,

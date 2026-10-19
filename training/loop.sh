@@ -2,8 +2,8 @@
 # training/loop.sh <lane>: one AI training lane, forever (docs/v0.3.0/README.md §8; training/README.md).
 #
 # The training box runs it as the systemd service jackioh-train@<lane> (Restart=always), as the
-# lane's own Linux user (agent-train-<lane>) with its own checkout, Devin login and GitHub token.
-# The lane keeps one pull request open from ai/<lane>: a draft while Devin works, which shows the
+# lane's own Linux user (agent-train-<lane>) with its own checkout, Muse login and GitHub token.
+# The lane keeps one pull request open from ai/<lane>: a draft while Muse works, which shows the
 # work as it goes, and ready for review, with auto-merge on, once a promotion is in it. Each cycle:
 #
 #   1. a promotion waiting on CI (the pull request is ready): if main moved under it, land it on
@@ -23,7 +23,7 @@
 #      session's draft (opening one when none is open). The draft's description opens with the
 #      gate's latest pass, which `promote` rewrites in ~/training-out/<lane>/last-pass.md every
 #      time it runs: how many games the candidate beat the AI on main in, by seat and game by game;
-#   3. run one Devin session on the lane's standing prompt (training/<lane>.md). Every
+#   3. run one Muse session on the lane's standing prompt (training/<lane>.md). Every
 #      TRAIN_PROGRESS_SECONDS, push the checkout as it is to ai/<lane> as one `[skip ci]` commit
 #      when it changed, rewrite the session's comment on the draft (how long it has run, the diff
 #      against main and what attempts.md gained), and rewrite the draft's description when a new
@@ -42,7 +42,7 @@
 # Everything goes to ~/logs/<lane>.log.
 #
 # The gather lane (`loop.sh gather`, training/gather.md) improves nothing and opens no pull request,
-# so it needs neither Devin nor gh: each cycle checks out main, builds jackioh from it, loads the
+# so it needs neither Muse nor gh: each cycle checks out main, builds jackioh from it, loads the
 # finished days as above, and plays the next TRAIN_GATHER_GAMES games of its own seed series with
 # `jackioh stats` (R378: the AI on main against itself on All Random decks), without end. It
 # appends them to ~/training-out/gather/<date>.jsonl and rewrites the patch's card figures,
@@ -50,10 +50,11 @@
 #
 # Stop a lane with `sudo systemctl stop jackioh-train@<lane>` (and `disable` to keep it stopped).
 #
-# Environment: DEVIN_MODEL (required, but by the gather lane), GH_TOKEN (the lane user's own, for
-# gh), DATABASE_URL (optional), TRAIN_PAUSE_SECONDS (default 60), TRAIN_SESSION_SECONDS (default
-# 18000: the standing prompt's four hours, plus an hour for the last gate run to finish, since the
-# improve lane's 400 games take half an hour or more on the box's two cores),
+# Environment: MUSE_MODEL (required, but by the gather lane), MUSE_EFFORT (default xhigh),
+# MUSE_STEPS (default 1000: the most model steps one session may take), GH_TOKEN (the lane user's
+# own, for gh), DATABASE_URL (optional), TRAIN_PAUSE_SECONDS (default 60), TRAIN_SESSION_SECONDS
+# (default 18000: the standing prompt's four hours, plus an hour for the last gate run to finish,
+# since the improve lane's 400 games take half an hour or more on the box's two cores),
 # TRAIN_PROGRESS_SECONDS (default 900), TRAIN_IDLE_SECONDS (default 900: how long an idle unban lane
 # waits between looks), TRAIN_GATHER_GAMES (default 100: the gather lane's games a cycle).
 
@@ -116,8 +117,8 @@ log() {
   printf '%s %s: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$lane" "$*"
 }
 
-if [ "$lane" != gather ] && [ -z "${DEVIN_MODEL:-}" ]; then
-  log "DEVIN_MODEL is not set; the lane cannot run"
+if [ "$lane" != gather ] && [ -z "${MUSE_MODEL:-}" ]; then
+  log "MUSE_MODEL is not set; the lane cannot run"
   exit 2
 fi
 
@@ -130,7 +131,8 @@ report=""
 sleep_for="$pause"
 idle_generation=""
 
-# Notes $1, a clause, in attempts.md (which the standing prompt has Devin read first) and the log.
+# Notes $1, a clause, in attempts.md (which the standing prompt has the session read first) and
+# the log.
 note() {
   printf '\n- %s (loop): %s.\n' "$(date -u +%Y-%m-%dT%H:%MZ)" "$1" >>"$out/attempts.md"
   log "$1"
@@ -359,7 +361,7 @@ parent_bans() {
 }
 
 # The unban lane with nothing to unban: the parent shadow-bans no card, and a promotion needs strictly
-# fewer, so a Devin session could only find that out (as #635's did, a minute each, on 2026-10-10).
+# fewer, so a session could only find that out (as #635's did, a minute each, on 2026-10-10).
 # The cycle starts none and waits idle_pause instead. The first idle cycle of a generation says so
 # once, in the log, the draft's title and a comment; a session starts again once main's AI bans a
 # card (a sweep of record, such as the one that lifted R1390's gate on the Meditative set, #732).
@@ -373,7 +375,7 @@ idle() {
   gh pr edit "$pr" --title "AI gen $((generation + 1)) ($lane): idle, the AI on main bans no card" >/dev/null ||
     log "cannot retitle #$pr"
   cat >"$work/note.md" <<EOF
-**Idle:** the AI on \`main\` (generation $generation, $idle_at) shadow-bans no card, and a promotion of this lane needs strictly fewer bans than its parent, so no Devin session starts. The loop looks again every $((idle_pause / 60)) minutes and starts one once \`main\`'s AI bans a card again: a sweep of record adds the cards it misplays, as the one that brought the Meditative set into the AI's decks did (#732).
+**Idle:** the AI on \`main\` (generation $generation, $idle_at) shadow-bans no card, and a promotion of this lane needs strictly fewer bans than its parent, so no Muse session starts. The loop looks again every $((idle_pause / 60)) minutes and starts one once \`main\`'s AI bans a card again: a sweep of record adds the cards it misplays, as the one that brought the Meditative set into the AI's decks did (#732).
 EOF
   comment "$pr" "$work/note.md" >/dev/null
 }
@@ -532,7 +534,7 @@ rewrite() {
 
 # The promotion at $1 does not go up, or comes back down: $2 says why, as a clause. Keeps the
 # commit as a local branch for the next session, notes it in attempts.md (which the standing prompt
-# has Devin read first), and turns pull request $3 back into a draft with a comment saying so.
+# has the session read first), and turns pull request $3 back into a draft with a comment saying so.
 set_back() {
   keep="$branch-set-back-$stamp"
   short=$(git rev-parse --short "$1")
@@ -640,7 +642,8 @@ watch() {
 }
 
 # Pushes the checkout as it is (HEAD and every change on it, committed or not) to ai/<lane> as one
-# `[skip ci]` commit, when it differs from what is there, without touching Devin's HEAD or index.
+# `[skip ci]` commit, when it differs from what is there, without touching the session's HEAD or
+# index.
 push_wip() {
   index="$work/wip.index"
   rm -f "$index"
@@ -665,8 +668,8 @@ progress() {
   push_wip
   {
     printf '### Session %s\n\n' "$stamp"
-    printf 'Devin (`%s`) on [`training/%s.md`](https://github.com/%s/blob/main/training/%s.md), from `main` at %s (AI generation %s). %s\n\n' \
-      "$DEVIN_MODEL" "$lane" "$slug" "$lane" "$(git rev-parse --short "$base")" "$generation" "$1"
+    printf 'Muse (`%s`) on [`training/%s.md`](https://github.com/%s/blob/main/training/%s.md), from `main` at %s (AI generation %s). %s\n\n' \
+      "$MUSE_MODEL" "$lane" "$slug" "$lane" "$(git rev-parse --short "$base")" "$generation" "$1"
     [ -z "$stack_note" ] || printf '%s\n\n' "$stack_note"
     if [ -n "$wip" ]; then
       printf '**The checkout at %s** ([its diff against `main`](https://github.com/%s/compare/%s...%s)):\n\n```\n' \
@@ -686,7 +689,9 @@ progress() {
   describe
 }
 
-# One Devin session on the standing prompt, its comment kept current; sets $devin_status.
+# One Muse session on the standing prompt, its comment kept current; sets $session_status. Its
+# transcript goes to ~/logs/<lane>-<stamp>.log; Muse's own copy of a session ended 8 hours ago goes,
+# a few hundred MB a day, as bot/machine/clean.sh does on the night box.
 session() {
   started=$(date +%s)
   attempts_mark=0
@@ -697,22 +702,30 @@ session() {
   printf '### Session %s\n\nStarting.\n' "$stamp" >"$work/session.md"
   session_comment=$(comment "$pr" "$work/session.md") || session_comment=""
   progress "Started at $(date -u +'%H:%M UTC'); this comment is rewritten every $((progress_every / 60)) minutes while it runs."
-  log "Devin session $stamp starting on training/$lane.md"
-  timeout "$session_limit" devin -p --prompt-file "training/$lane.md" --model "$DEVIN_MODEL" \
-    --permission-mode dangerous --respect-workspace-trust false --export "$logs/$lane-$stamp.json" </dev/null &
-  devin_pid=$!
+  log "Muse session $stamp starting on training/$lane.md"
+  timeout "$session_limit" muse exec --yolo --disable-web-tools --workspace "$repo" \
+    --model "$MUSE_MODEL" --reasoning-effort "${MUSE_EFFORT:-xhigh}" \
+    --prompt-file "training/$lane.md" --max-model-steps "${MUSE_STEPS:-1000}" \
+    </dev/null >"$logs/$lane-$stamp.log" 2>&1 &
+  session_pid=$!
   checked=$started
-  while kill -0 "$devin_pid" 2>/dev/null; do
+  while kill -0 "$session_pid" 2>/dev/null; do
     sleep 30
     now=$(date +%s)
     [ $((now - checked)) -ge "$progress_every" ] || continue
     checked=$now
     progress "Running for $(((now - started) / 60)) minutes; this comment is rewritten every $((progress_every / 60)) minutes while it runs."
   done
-  wait "$devin_pid"
-  devin_status=$?
-  log "Devin session $stamp ended with status $devin_status"
+  wait "$session_pid"
+  session_status=$?
+  log "Muse session $stamp ended with status $session_status"
   stop_strays
+  sessions="$HOME/.local/share/muse/sessions"
+  if [ -d "$sessions" ]; then
+    find "$sessions" -mindepth 4 -maxdepth 4 -type d -mmin +480 -exec rm -rf {} + 2>/dev/null
+    find "$sessions" -mindepth 1 -type d -empty -delete 2>/dev/null
+  fi
+  return 0
 }
 
 cycle() {
@@ -793,7 +806,7 @@ cycle() {
   fi
   title="AI gen $((generation + 1)) ($lane): in training, nothing promoted yet"
   cat >"$work/draft.md" <<EOF
-The \`$lane\` training lane at work ([\`training/README.md\`](https://github.com/$slug/blob/main/training/README.md)). Devin runs on the training box one session after another, and this draft follows it:
+The \`$lane\` training lane at work ([\`training/README.md\`](https://github.com/$slug/blob/main/training/README.md)). Muse runs on the training box one session after another, and this draft follows it:
 
 - the top of this description is the gate's latest pass (\`cargo jackioh promote\`: a dry run, a promotion or a re-check), rewritten within $((progress_every / 60)) minutes of each one: how many of its games the candidate beat the AI on \`main\` in, as p1, as p2 and in all, and each game as a square;
 - each session gets a comment, rewritten every $((progress_every / 60)) minutes while it runs: how long it has run, the checkout's diff against \`main\`, and what \`~/training-out/$lane/attempts.md\` gained (each attempt, its dry run's numbers and whether it was kept);
@@ -824,20 +837,21 @@ EOF
     log "cannot open the draft pull request; the session runs without one"
   fi
 
-  # 3. One Devin session on the standing prompt.
+  # 3. One Muse session on the standing prompt.
   session
   minutes=$((($(date +%s) - started) / 60))
 
   # 4. A promotion: land it on main and put it up.
   if ! promoted; then
     save_stack
-    progress "Ended after $minutes minutes (Devin's exit status $devin_status) with no promotion; the next session starts from $start_from."
+    progress "Ended after $minutes minutes (Muse's exit status $session_status) with no promotion; the next session starts from $start_from."
     return 0
   fi
-  progress "Ended after $minutes minutes (Devin's exit status $devin_status) with a promotion, \`$(git log -1 --format=%s)\`, which the loop checks again before it goes up."
+  progress "Ended after $minutes minutes (Muse's exit status $session_status) with a promotion, \`$(git log -1 --format=%s)\`, which the loop checks again before it goes up."
   promo=$(git rev-parse HEAD)
   session_head=$promo
-  # One commit on main, as land expects: anything Devin committed before it (the stack) is folded in.
+  # One commit on main, as land expects: anything the session committed before it (the stack) is
+  # folded in.
   if [ "$(git rev-parse HEAD^)" != "$base" ]; then
     git reset --quiet --soft "$base" && git commit --quiet -C "$promo" && promo=$(git rev-parse HEAD)
   fi

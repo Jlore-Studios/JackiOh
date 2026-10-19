@@ -529,6 +529,9 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
 mod e18_a_whole_game_with_the_new_prompts {
     use super::*;
 
+    /// The most games E18 plays for both kinds of prompt to open.
+    const E18_GAMES: usize = 6;
+
     /// E18: playMatch finishes a short AI-vs-greedy game in which E18 prompts open, with no refusal, throw or fallback
     #[test]
     fn e18_play_match_finishes_a_short_ai_vs_greedy_game_in_which_e18_prompts_open_with_no_refusal_throw_or_fallback()
@@ -536,8 +539,8 @@ mod e18_a_whole_game_with_the_new_prompts {
         // Pickle (mode prompts the opponent holds), Back from the GY (a budgeted pick), Mind Melt (a pick
         // of the opponent's hand) and Ancient Acquisition (no prompt since R684: its returns are random),
         // beside cheap Units: eight cards and a hero of 20, so that the game is short and the prompt cards
-        // are drawn. On this seed greedy's Pickle
-        // hands the AI three mode prompts on greedy's turn, and the AI's Back from the GY asks a pick.
+        // are drawn. On these seeds greedy's Pickle hands the AI mode prompts on greedy's turn, and the
+        // AI's Back from the GY asks a pick.
         install();
         let deck: Vec<String> = [
             PICKLE,
@@ -557,52 +560,68 @@ mod e18_a_whole_game_with_the_new_prompts {
             hero_health: AI_TUTORIAL.hero_health,
             ..HUMAN_HANDICAP
         };
-        let config = MatchConfig {
-            seed: "e18-match".to_string(),
-            decks: (deck.clone(), deck),
-            handicaps: Some(PerPlayerOpt {
-                p1: Some(handicap),
-                p2: Some(handicap),
-            }),
-            controllers: PerPlayer {
-                p1: SeatController::Ai {
-                    budget: None,
-                    skill: None,
-                },
-                p2: SeatController::Greedy,
-            },
-            max_actions: None,
-        };
+        // Which prompts a game opens hangs on how the AI plays it, which a retrained network moves
+        // (#466): further seeds are played until both kinds have opened, every game held to the same.
         let mut opened: Vec<String> = Vec::new();
-        let record = {
-            let mut hooks = MatchHooks {
-                after_action: Some(Box::new(
-                    |_before: &GameState, after: &GameState, _seat: PlayerId, _action: &ActionBody| {
-                        let Some(pending) = after.pending.as_ref() else {
-                            return;
-                        };
-                        let theirs = pending.kind == PromptKind::Mode && pending.player_id != after.active;
-                        let new_kind = [
-                            PromptKind::Number,
-                            PromptKind::Answer,
-                            PromptKind::Cell,
-                            PromptKind::Reward,
-                            PromptKind::Pick,
-                        ]
-                        .contains(&pending.kind);
-                        if theirs || new_kind {
-                            opened.push(pending.kind.as_str().to_string());
-                        }
-                    },
-                )),
-                ..Default::default()
+        for game in 0..E18_GAMES {
+            let seed = if game == 0 {
+                "e18-match".to_string()
+            } else {
+                format!("e18-match-{game}")
             };
-            play_match(&config, &mut hooks)
-        };
-        assert!(record.result.is_some());
-        assert!(record.thrown.is_empty());
-        assert!(record.rejected.is_empty());
-        assert_eq!(record.fallbacks, 0);
+            let config = MatchConfig {
+                seed: seed.clone(),
+                decks: (deck.clone(), deck.clone()),
+                handicaps: Some(PerPlayerOpt {
+                    p1: Some(handicap),
+                    p2: Some(handicap),
+                }),
+                controllers: PerPlayer {
+                    p1: SeatController::Ai {
+                        budget: None,
+                        skill: None,
+                    },
+                    p2: SeatController::Greedy,
+                },
+                max_actions: None,
+            };
+            let record = {
+                let mut hooks = MatchHooks {
+                    after_action: Some(Box::new(
+                        |_before: &GameState, after: &GameState, _seat: PlayerId, _action: &ActionBody| {
+                            let Some(pending) = after.pending.as_ref() else {
+                                return;
+                            };
+                            let theirs =
+                                pending.kind == PromptKind::Mode && pending.player_id != after.active;
+                            let new_kind = [
+                                PromptKind::Number,
+                                PromptKind::Answer,
+                                PromptKind::Cell,
+                                PromptKind::Reward,
+                                PromptKind::Pick,
+                            ]
+                            .contains(&pending.kind);
+                            if theirs || new_kind {
+                                opened.push(pending.kind.as_str().to_string());
+                            }
+                        },
+                    )),
+                    ..Default::default()
+                };
+                play_match(&config, &mut hooks)
+            };
+            assert!(record.result.is_some(), "{seed}");
+            assert!(record.thrown.is_empty(), "{seed}");
+            assert!(record.rejected.is_empty(), "{seed}");
+            assert_eq!(record.fallbacks, 0, "{seed}");
+            if ["mode", "pick"]
+                .iter()
+                .all(|kind| opened.iter().any(|seen| seen == kind))
+            {
+                break;
+            }
+        }
         assert!(opened.iter().any(|kind| kind == "mode"), "{}", opened.join(" "));
         assert!(opened.iter().any(|kind| kind == "pick"), "{}", opened.join(" "));
     }

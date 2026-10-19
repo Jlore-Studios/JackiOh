@@ -88,16 +88,17 @@ mod r389_b4_3_the_turn_cap {
     }
 
     #[test]
-    fn r389_r3_two_do_nothing_20_card_decks_fatigue_out_before_the_cap_so_fatigue_ends_such_a_game_2_4() {
+    fn r389_r3_r1156000_two_do_nothing_20_card_decks_fatigue_out_before_the_cap_so_fatigue_ends_such_a_game_2_4()
+     {
         let over = pass_until_over(playing("fatigue"));
         assert_eq!(
             over.result.map(|result| result.reason),
             Some(GameOverReason::HeroDeath)
         );
         assert!(over.turn < TURN_CAP_PLAYER_TURNS);
-        // B4.3's arithmetic: the second player's library empties first (four opening cards to three),
-        // and their eighth fatigue draw kills them on their 24th turn, player-turn 48.
-        assert_eq!(over.turn, 48);
-        assert_eq!(over.result.map(|result| result.winner), Some(Winner::P1));
+        // B4.3's arithmetic: both libraries hold 16 and empty on each seat's 16th turn; the eighth fatigue
+        // draw kills on a seat's 24th, the first player's first, at player-turn 47.
+        assert_eq!(over.turn, 47);
+        assert_eq!(over.result.map(|result| result.winner), Some(Winner::P2));
     }
 }

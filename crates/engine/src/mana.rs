@@ -266,9 +266,71 @@ pub fn cost_rules_spent_by(state: &GameState, instance: &CardInstance) -> Vec<St
         .collect()
 }
 
+/// R1181002 (Meditative+ #22 Mountaintop Garden): the premium the Gardens acting on either side ask
+/// for an embiggen card's dearer price, the least of them, or `None` while no Garden acts. Each text
+/// that carries `embiggenGarden`, on a card acting on its controller's field (`acting_texts_of`),
+/// reaches both players' cards; its premium moves with the card's declared number `premium` (R386).
+pub fn garden_premium(state: &GameState) -> Option<i32> {
+    let mut least: Option<i32> = None;
+    for side in PLAYER_IDS {
+        for card in crate::damage::acting_texts_of(state, side) {
+            for text in crate::scripts::texts_of(state, &card) {
+                let Some(flag) = text.flags.embiggen_garden else {
+                    continue;
+                };
+                let premium = crate::params::declared_or(state, &card, "premium", flag).max(0);
+                least = Some(least.map_or(premium, |held| held.min(premium)));
+            }
+        }
+    }
+    least
+}
+
+/// R1181002: whether a Garden reaches a play of this card now — an embiggen card played face-up from
+/// a hand, or from a graveyard (R454), while a Garden acts. A cast (R545) and a card set face-down
+/// (R783005) are not reached.
+pub fn garden_reaches(state: &GameState, card: &CardInstance) -> bool {
+    garden_premium_for(state, card).is_some()
+}
+
+/// R1181002: the premium a Garden asks of a play of this card now, where one reaches it.
+fn garden_premium_for(state: &GameState, card: &CardInstance) -> Option<i32> {
+    if card.set_as.is_some()
+        || !matches!(card.zone, Zone::Hand { .. } | Zone::Graveyard { .. })
+        || !crate::play_choices::has_embiggen_price(state, card)
+    {
+        return None;
+    }
+    garden_premium(state)
+}
+
+/// R1181002: the price a Garden sets on the dearer play of an embiggen card that is not Radiant — its
+/// normal price plus the premium, in place of its printed Embiggened price — or `None` where no Garden
+/// reaches it, or for any other play.
+pub fn garden_dearer_price(state: &GameState, card: &CardInstance) -> Option<i32> {
+    if card.embiggened != Some(true) || card.radiant {
+        return None;
+    }
+    let CardCost::Embiggen { base, .. } = def_of(Some(state), &card.def_id).cost else {
+        return None;
+    };
+    Some(base + garden_premium_for(state, card)?)
+}
+
+/// R65, R1181003: the override a price starts from — for the Embiggened version, its own price
+/// (`embiggenCostOverride`, Meditative+ #23) before `costOverride`; for every other play,
+/// `costOverride`.
+pub fn override_of(card: &CardInstance) -> Option<i32> {
+    if card.embiggened == Some(true) {
+        card.embiggen_cost_override.or(card.cost_override)
+    } else {
+        card.cost_override
+    }
+}
+
 fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) -> Price {
     let side = &state.players[instance.controller];
-    let override_ = instance.cost_override;
+    let override_ = override_of(instance);
     let floor = cost_floor_of(instance);
     // R675: Glitch costs (0) wherever it is and whatever would change that.
     if instance.def_id == GLITCH_DEF_ID {
@@ -292,7 +354,11 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
         };
     }
 
-    let mut cost = override_.unwrap_or_else(|| printed_cost(state, instance)) + instance.cost_mod;
+    // R1181002: under a Garden the dearer play of a card that is not Radiant starts from the normal
+    // price plus the premium.
+    let mut cost = override_.unwrap_or_else(|| {
+        garden_dearer_price(state, instance).unwrap_or_else(|| printed_cost(state, instance))
+    }) + instance.cost_mod;
     // R65: a player's discounts price a play, and a play takes a card from its hand — or from its
     // graveyard, while a permission lets its player play it from there (E11, R454).
     let for_play = options.as_play == Some(true)

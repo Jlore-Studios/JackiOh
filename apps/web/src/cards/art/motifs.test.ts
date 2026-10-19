@@ -80,7 +80,8 @@ describe("R503 the Book, Pancake and AI families", () => {
         if (card.tags.includes(tag)) expect(themeFor(card.tags, card.type), card.id).toBe(theme);
       }
     }
-    expect(DEFS.filter((card) => themeFor(card.tags, card.type) === "ai")).toHaveLength(10);
+    // T-AI-1 to 10, and Meditative+ #1.1 Base Camp and #1.2 Spa Day, the plans Bob's Plan adds.
+    expect(DEFS.filter((card) => themeFor(card.tags, card.type) === "ai")).toHaveLength(12);
   });
 
   it("R503 each family has its palette, its own emblem first in its pool, a hue drift and its motes", () => {

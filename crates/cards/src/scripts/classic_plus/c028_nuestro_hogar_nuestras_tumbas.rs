@@ -1,7 +1,7 @@
 //! C+ #28 Nuestro hogar, nuestras tumbas (SPEC §8.7 row 28; §4.5, §6.1, R8, R19, R386). (2) Unit,
 //! Common, 3/4 → 6/8.
 //!   Base:    "Taunt, Reborn / Death: Heal your hero {heal}." — heal 3
-//!   Radiant: "Taunt, Reborn, Divine Shield / Death: Heal your hero {heal}." — heal 8
+//!   Radiant: "Taunt, Reborn, Divine Shield / Death: Heal your hero {heal}." — heal 6
 //!   Engine:  "Death fires on both deaths of a Reborn unit (§4.5), so it heals twice. Tunes: heal 3 ↑."
 //!
 //! The keywords are the catalog's (Taunt, Reborn; Divine Shield on the Radiant face), which the layers
@@ -22,14 +22,14 @@ pub fn script() -> CardScripts {
         })),
         ..Script::default()
     };
-    // The same script: the Radiant face's 8 is its declared `heal`, and its Divine Shield is catalog data.
+    // The same script: the Radiant face's 6 is its declared `heal`, and its Divine Shield is catalog data.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
 // C+ #28 Nuestro hogar, nuestras tumbas — SPEC §8.7 row 28, BUILD M9 Classic+ row C+ 28: "Taunt,
 // Reborn; Death heals your hero 3 on both deaths (R8), past 30 allowed; exile or a bounce heals
-// nothing; the heal reads through `param()`; radiant Divine Shield too, heal 8".
+// nothing; the heal reads through `param()`; radiant Divine Shield too, heal 6".
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -205,15 +205,15 @@ mod tests {
             }
 
             #[test]
-            fn r8_the_divine_shield_takes_the_first_hit_its_death_heals_your_hero_8() {
+            fn r8_the_divine_shield_takes_the_first_hit_its_death_heals_your_hero_6() {
                 crate::register_all();
                 let mut s = kill_twice(true, 20);
-                s.expect_health(P2, 28);
-                assert_eq!(healed(&s), [8]);
+                s.expect_health(P2, 26);
+                assert_eq!(healed(&s), [6]);
             }
 
             #[test]
-            fn r386_an_upgrade_steps_from_8_it_heals_9() {
+            fn r386_an_upgrade_steps_from_6_it_heals_7() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [MENACE, MENACE] },
@@ -224,7 +224,7 @@ mod tests {
                 s.attack(&first, HOGAR);
                 let second = unit_or(&s, P1, 2, MENACE);
                 s.attack(&second, HOGAR);
-                s.expect_health(P2, 29);
+                s.expect_health(P2, 27);
             }
         }
     }
