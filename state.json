@@ -3710,7 +3710,7 @@
       "asks": [],
       "closeout": true,
       "failures": 0,
-      "forced": true,
+      "forced": false,
       "handoff": {
         "at": "2026-10-19T06:19:59Z",
         "family": "claude",
@@ -3733,7 +3733,9 @@
       "round_tier": "strong",
       "run_id": "39209792012",
       "started_at": "2026-10-19T06:35:27Z",
-      "stop_requested": false,
+      "stop_requested": true,
+      "stopped_at": "2026-10-19T06:40:33Z",
+      "stopped_by": "jgoetzmann",
       "taken_asks": [
         "c:6261157907"
       ],
