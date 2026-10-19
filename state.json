@@ -6135,13 +6135,17 @@
     },
     "1327": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:6273319171"
+      ],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-19T16:29:34Z",
       "issue": 1298,
       "kind": "revise",
-      "pending_request": false,
+      "pending_at": "2026-10-19T17:36:08Z",
+      "pending_by": "MaxGoetzmann",
+      "pending_request": true,
       "provider": "muse",
       "queued_at": "2026-10-19T17:23:11Z",
       "run_id": "39293106223",
