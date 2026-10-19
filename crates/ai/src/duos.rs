@@ -39,7 +39,7 @@ use jackioh_engine::wire::{
 use jackioh_engine::{
     Action, ActionBody, ActionType, CardInstance, CostOptions, GameState, PlayerId, PlayerState, Rng, Zone,
     effective_cost, hand_cap_of, legal_actions, max_mana_for, natural_mana_on, needs_zone, open_zones,
-    reduce, refreshed_mana, row_for_card, spendable_mana,
+    reduce_unpiloted, refreshed_mana, row_for_card, spendable_mana,
 };
 use serde::{Deserialize, Serialize};
 
@@ -370,7 +370,7 @@ fn pass_score(
         .take(DUOS_PASS_MAX_FOLLOWUPS);
     for (at, body) in plays.enumerate() {
         let applied = catch_unwind(AssertUnwindSafe(|| {
-            reduce(
+            reduce_unpiloted(
                 &receiving,
                 &Action::new(body, mate, format!("duos-pass-score:{at}")),
             )

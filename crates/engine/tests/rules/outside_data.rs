@@ -271,6 +271,54 @@ mod r1183002_the_autopilot {
     }
 
     #[test]
+    fn r1183002_a_searchs_step_leaves_the_turn_it_hands_the_autopilot_owed() {
+        register_outside_data();
+        let s = scenario(json!({
+            "p1": { "hand": [FILLER], "library": filler(4) },
+            "p2": { "hand": ["fx-5"], "library": [offload_on_draw.id, FILLER, FILLER, FILLER] },
+        }));
+        let end_turn = Action::new(ActionBody::EndTurn, P1, "search:end".to_string());
+        let played = reduce(s.state(), &end_turn);
+        let owed = reduce_unpiloted(s.state(), &end_turn);
+        assert_eq!(
+            played.state.active, P1,
+            "a game's End turn plays p2's turn through"
+        );
+        assert!(owed.error.is_none());
+        assert!(
+            owed.events
+                .iter()
+                .any(|event| matches!(event, GameEvent::AutopilotEngaged { player: P2, .. })),
+            "the draw cast it and engaged the autopilot all the same"
+        );
+        assert_eq!(owed.state.active, P2, "the step stops where p2's turn begins");
+        assert_eq!(
+            subsystems::autopilot::due(&owed.state),
+            Some(P2),
+            "owed, not played"
+        );
+        assert!(
+            owed.state.players[P2]
+                .hand
+                .iter()
+                .any(|card| card.def_id == "fx-5"),
+            "nothing was played for p2"
+        );
+    }
+
+    #[test]
+    fn r1183002_without_an_autopilot_a_searchs_step_is_reduces() {
+        let s = board("od-unpiloted", json!(["fx-1"]));
+        for body in legal_actions(s.state(), P1) {
+            let action = Action::new(body, P1, "search:same".to_string());
+            let (game, search) = (reduce(s.state(), &action), reduce_unpiloted(s.state(), &action));
+            assert_eq!(hash_state(&search.state), hash_state(&game.state), "{action:?}");
+            assert_eq!(search.events, game.events, "{action:?}");
+            assert_eq!(search.error, game.error, "{action:?}");
+        }
+    }
+
+    #[test]
     fn r1183002_the_seat_waits_locked_out_while_the_other_player_answers() {
         let mut s = board("od-auto-wait", json!([offload.id, ask_enemy.id]));
         s.play(offload.id.as_str(), json!({}));

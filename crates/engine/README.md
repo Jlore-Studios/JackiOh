@@ -15,6 +15,7 @@ What the other crates call:
 | `create_game(&CreateGameOptions) -> GameState` | a game at setup: seed, decks, and the optional catalog, handicaps (R180), last boards (R417), Glitch boards (R678), dealt seats (R433) and the practice sandbox flag (R923000) |
 | `begin_game(&GameState) -> ReduceResult` | setup run (§2.1): the opening draws and the mulligan prompts |
 | `reduce(&GameState, &Action) -> ReduceResult` | the next state and its events, or `error: Some(reason)` with the input state unchanged and no events |
+| `reduce_unpiloted(&GameState, &Action) -> ReduceResult` | `reduce` for a search's world (`crates/ai`): a turn the autopilot owes (R1183002) is left owed, not played; a game's turns never go through it |
 | `legal_actions(&GameState, PlayerId) -> Vec<ActionBody>` | every action that player may send now |
 | `view_for(&GameState, PlayerId) -> PlayerView` | the only thing a client may see (§10.8); `view_for_with_clock` adds the server's clock (R79) |
 | `seat_to_act(&GameState)` | the seat the game waits on first, for code that plays both seats (R265) |
