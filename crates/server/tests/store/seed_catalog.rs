@@ -7,11 +7,12 @@
 //! The second (`test:db` only: it runs when `DATABASE_URL` is set): `seed_catalog` writes the real
 //! catalog into `public.cards`, where every migration's constraints apply. `cards_tags_check` (0002)
 //! admits 'Jlockeed' (R278, #13 and #14) from 0010, Book, Pancake and AI (B2.4) from 0015, Plague
-//! from 0020, Catalyst, Prime and Acclaimed from 0026 and the Meditative set's Wincon (R1411) from
-//! 0030. The seed runs in one transaction, so one such row fails the whole catalog. The first half
-//! compares the tags with the migrations' text; the second checks that the database really accepts
-//! them. Both count the catalog of the sets that ship (`SHIPPED_SETS`), so they hold before and after
-//! the patch that ships the Meditative set (R1420).
+//! from 0020, Catalyst, Prime and Acclaimed from 0026, the Meditative set's Wincon (R1411) from 0030
+//! and the Meditative+ set's Potion (R1178000) from 0043. The seed runs in one transaction, so one
+//! such row fails the whole catalog. The first half compares the tags with the migrations' text; the
+//! second checks that the database really accepts them. Both count the catalog of the sets that ship
+//! (`SHIPPED_SETS`), so they hold before and after the patches that ship the Meditative set and the
+//! Meditative+ set (R1420).
 
 use std::path::{Path, PathBuf};
 
@@ -24,8 +25,8 @@ use jackioh_server::cli::seed_catalog::read_catalog;
 const REAL_CATALOG: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../cards/catalog.json");
 
 /// R1178000: a tag that only a held set's cards carry waits for that set's release migration
-/// (Meditative+'s Potion, #1187): until the set ships the latest check need not admit it, and only
-/// the entries of that set may carry it. Once the set ships the check must admit it like any tag.
+/// (Meditative+'s Potion, #1187's 0043): until the set ships the latest check need not admit it, and
+/// only the entries of that set may carry it. Once the set ships the check must admit it like any tag.
 const AWAITING_RELEASE: &[(Tag, SetName)] = &[(Tag::Potion, SetName::MeditativePlus)];
 
 /// R1178000: the held set `tag` waits for (`AWAITING_RELEASE`), while that set has not shipped.
@@ -202,8 +203,8 @@ mod read_catalog_ {
             .collect::<IndexSet<_>>()
             .into_iter()
             .collect();
-        // R1420: the sets that ship, in catalog order: Core, Classic and Classic+, and Meditative
-        // from the patch that ships it.
+        // R1420: the sets that ship, in catalog order: Core, Classic and Classic+, Meditative from
+        // the patch that ships it, and Meditative+ from the patch that ships it (R1178000).
         assert_eq!(
             sets,
             SHIPPED_SETS
@@ -282,8 +283,8 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             .expect("the real catalog is read");
         let (file, tags) = admitted_tags();
         assert_eq!(
-            file, "0030_meditative_set.sql",
-            "0030 re-adds the check with Wincon (R1411)"
+            file, "0043_meditative_plus_set.sql",
+            "0043 re-adds the check with Potion (R1178000)"
         );
         let mut carried: Vec<String> = entries
             .iter()
@@ -307,6 +308,11 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
                 "the catalog carries {tag}"
             );
         }
+        // R1178000: and Potion, once the Meditative+ set ships.
+        assert_eq!(
+            carried.iter().any(|carried| carried == "Potion"),
+            set_ships(SetName::MeditativePlus)
+        );
         let refused: Vec<&String> = carried.iter().filter(|tag| !tags.contains(tag)).collect();
         assert!(refused.is_empty(), "tags the schema would refuse: {refused:?}");
         // No stale name either: every tag the check admits is one the engine's `Tag` union names
@@ -318,16 +324,19 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
         );
     }
 
-    /// R1411: the migration that ships the Meditative set. The check admits exactly the tags the
-    /// engine names, in its order, Wincon among them, so every entry of every set the catalog holds
-    /// seeds the day its set ships, the Meditative set's included.
+    /// R1411: the migration that ships the Meditative set, and 0043 after it, which ships the
+    /// Meditative+ set (R1178000). The check admits exactly the tags the engine names, in its order,
+    /// Wincon and Potion among them, so every entry of every set the catalog holds seeds the day its
+    /// set ships, the Meditative and Meditative+ sets' included.
     #[tokio::test]
     async fn r1411_the_tag_check_admits_exactly_the_engine_s_tags_so_every_set_the_catalog_holds_seeds_the_day_it_ships()
      {
         let (file, tags) = admitted_tags();
-        assert_eq!(file, "0030_meditative_set.sql");
+        assert_eq!(file, "0043_meditative_plus_set.sql");
         assert!(tags.iter().any(|tag| tag == "Wincon"), "{tags:?}");
-        // R1178000: but for a tag that waits for its held set's release (Potion, #1187's migration).
+        assert!(tags.iter().any(|tag| tag == "Potion"), "{tags:?}");
+        // R1178000: but for a tag that waits for its held set's release. Potion waited for 0043,
+        // which lands with the gate that ships Meditative+, so none waits once the set ships.
         assert_eq!(
             tags,
             Tag::ALL
@@ -362,9 +371,12 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             .into_iter()
             .collect();
         assert!(refused.is_empty(), "tags the schema would refuse: {refused:?}");
-        // The set's other columns: its types and rarities are ones 0002's checks admit, and no check
-        // names a set.
-        for entry in raw.values().filter(|entry| entry["set"] == json!("Meditative")) {
+        // The sets' other columns: their types and rarities are ones 0002's checks admit, and no
+        // check names a set.
+        for entry in raw
+            .values()
+            .filter(|entry| entry["set"] == json!("Meditative") || entry["set"] == json!("Meditative+"))
+        {
             assert!(
                 ["Unit", "Spell", "Field Spell", "Trap", "Field Trap"]
                     .contains(&entry["type"].as_str().unwrap_or_default()),
@@ -394,6 +406,12 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
     /// seeded until then. The counts are its census (docs/meditative-set.md M2).
     fn meditative(n: usize) -> usize {
         if set_ships(SetName::Meditative) { n } else { 0 }
+    }
+
+    /// R1178000: `n` once the Meditative+ set ships, and nothing before. The counts are its census
+    /// (docs/meditative-plus-set.md, SPEC §8.9).
+    fn meditative_plus(n: usize) -> usize {
+        if set_ships(SetName::MeditativePlus) { n } else { 0 }
     }
 
     /// The harness's truncate: every table but `public.cards`, including the three that reference it.
@@ -490,6 +508,10 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         if set_ships(SetName::Meditative) {
             expected.extend(["meditative-087", "meditative-097", "meditative-097-9"]);
         }
+        // R1178000: the Meditative+ set's one, #4 Supply Drop, once it ships.
+        if set_ships(SetName::MeditativePlus) {
+            expected.push("meditativeplus-004");
+        }
         assert_eq!(jlockeed, expected);
         let tagged = |tag: &str| {
             entries
@@ -507,14 +529,24 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         }
         assert_eq!(tagged("Plague"), 17 + meditative(2));
         // v0.3.10 (#967) made Meditative #49 YileGPT Tamed a Catalyst and its #49.1 a Prime, beside #45
-        // and #91 and their tokens, and left Acclaimed on #49 and #49.1 alone.
-        for (tag, theirs) in [("Catalyst", 3), ("Prime", 3), ("Acclaimed", 2)] {
+        // and #91 and their tokens, and left Acclaimed on #49 and #49.1 alone. Meditative+ adds a
+        // Catalyst and a Prime, #16 Jazakus and its #16.1 Jazakus Prime, and no Acclaimed.
+        for (tag, theirs, plus) in [("Catalyst", 3, 1), ("Prime", 3, 1), ("Acclaimed", 2, 0)] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
-            assert_eq!(tagged(tag), 2 + meditative(theirs), "{tag}");
+            assert_eq!(
+                tagged(tag),
+                2 + meditative(theirs) + meditative_plus(plus),
+                "{tag}"
+            );
         }
         // R1411: Wincon, the tag 0030 admits, is on the Meditative set's #8 and #20 alone.
         assert_eq!(rows_tagged("Wincon"), tagged("Wincon"));
         assert_eq!(tagged("Wincon"), meditative(2));
+        // R1178000: Potion, the tag 0043 admits, is on the Meditative+ set's #11, #12 and #13, the
+        // Living Potions, alone (a potion #16 or #16.1 crafts is a transient definition made in play,
+        // R882, and no catalog entry).
+        assert_eq!(rows_tagged("Potion"), tagged("Potion"));
+        assert_eq!(tagged("Potion"), meditative_plus(3));
         // Each row's tags are the catalog's, so the check admitted them and nothing rewrote them.
         let by_id: IndexMap<&str, &Vec<String>> = entries
             .iter()
@@ -587,7 +619,8 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
 }
 
 /// R1178000: the release migration's wait. A tag only a held set carries (Meditative+'s Potion) is
-/// in the engine's union before any migration admits it; it waits for the release that ships its set.
+/// in the engine's union before any migration admits it; it waits for the release that ships its set,
+/// whose migration (0043, #1187) admits it.
 mod r1178000_a_tag_only_a_held_set_carries_waits_for_its_release_migration {
     use super::*;
 
