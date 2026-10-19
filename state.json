@@ -5322,22 +5322,12 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39247607074",
-            "tier": "strong"
-          }
-        ],
+        "reviews": [],
         "sha": "89fb7fe8d97d72ef8d980be4a5d9cd1b7f5d34a3",
-        "tiers": {
-          "claude": "strong"
-        }
+        "tiers": {}
       }
     },
     "1295": {
