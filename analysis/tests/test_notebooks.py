@@ -208,6 +208,35 @@ def test_the_newest_patch_follows_the_revision_letters(monkeypatch, tmp_path):
     assert "reading live games of patch v0.2.10d (the one before it: v0.2.10b)" in text
 
 
+def test_the_decks_notebook_reports_fatigue_traps_switches_and_upgrades(monkeypatch, tmp_path):
+    """R1256000: notebook 02 reads the per-seat counts on records that carry them."""
+    zeros = {"fatigue_draws": 0, "fatigue_damage": 0, "traps_set": 0, "traps_fired": 0, "position_switches": 0, "radiant_upgrades": 0}
+    games = [
+        record(
+            "g1",
+            seat(["a"], **{**zeros, "fatigue_draws": 8, "fatigue_damage": 36}),
+            seat(["b"], **{**zeros, "fatigue_draws": 7, "fatigue_damage": 28}),
+            winner="p2",
+        ),
+        record("g2", seat(["a"], **{**zeros, "traps_set": 1, "traps_fired": 1}), seat(["b"], **zeros)),
+        record("g3", seat(["a"], **{**zeros, "position_switches": 1}), seat(["b"], **zeros)),
+        record("g4", seat(["a"], **{**zeros, "radiant_upgrades": 1}), seat(["b"], **zeros)),
+    ]
+    path = write_records(tmp_path / "counts.jsonl", games)
+    executed = run(NOTEBOOKS[1], monkeypatch, {"JACKIOH_RECORDS": path})
+    outputs = outputs_of(executed)
+    assert not [output for output in outputs if output.output_type == "error"]
+    text = "".join(output.text for output in outputs if output.output_type == "stream")
+    # One of four games took a fatigue hit and ended in a fatigue kill; the one set trap fired.
+    assert "fatigue_hit_share" in text
+    assert "0.25" in text
+    assert "1.0" in text
+    assert "No record in these files carries per-seat counts" not in text
+    # The earlier sections still ran, and the new section drew its figure.
+    assert "live games of patch v0.1.1" in text
+    assert any(output.output_type == "display_data" and "image/png" in output.data for output in outputs)
+
+
 @pytest.mark.parametrize("path", NOTEBOOKS, ids=lambda path: path.stem)
 def test_a_relative_path_is_read_from_the_repository_root(path, monkeypatch):
     """The README's commands name files relative to the repository root, though the kernel runs in notebooks/."""

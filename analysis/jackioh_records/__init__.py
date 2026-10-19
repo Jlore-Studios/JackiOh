@@ -70,6 +70,13 @@ SEATS_COLUMNS = {
     "pilot": "str",
     "went_first": "bool",
     "result": "str",
+    # R1256000: per-seat counts, NA on records written before the change.
+    "fatigue_draws": "Int64",
+    "fatigue_damage": "Int64",
+    "traps_set": "Int64",
+    "traps_fired": "Int64",
+    "position_switches": "Int64",
+    "radiant_upgrades": "Int64",
 }
 SEAT_CARDS_COLUMNS = {
     "game": "str",
@@ -113,6 +120,16 @@ def _first_turns(played: list[str], turns: list[int] | None) -> dict[str, int]:
     return first
 
 
+def _count(summary: dict, name: str) -> int | None:
+    """R1256000: one per-seat count: absent is None, anything but a non-negative int is refused."""
+    if name not in summary:
+        return None
+    value = summary[name]
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{name} is not a non-negative whole number (got {value!r})")
+    return value
+
+
 def _read_record(record: dict, games: list[dict], seats: list[dict], seat_cards: list[dict]) -> None:
     game = record["game"]
     game_id = record["id"]
@@ -138,6 +155,12 @@ def _read_record(record: dict, games: list[dict], seats: list[dict], seat_cards:
                 "pilot": record["pilots"][seat],
                 "went_first": game["first"] == seat,
                 "result": _result(winner, seat),
+                "fatigue_draws": _count(summary, "fatigueDraws"),
+                "fatigue_damage": _count(summary, "fatigueDamage"),
+                "traps_set": _count(summary, "trapsSet"),
+                "traps_fired": _count(summary, "trapsFired"),
+                "position_switches": _count(summary, "positionSwitches"),
+                "radiant_upgrades": _count(summary, "radiantUpgrades"),
             }
         )
         opening = set(summary["opening"])

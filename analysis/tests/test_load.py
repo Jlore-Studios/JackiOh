@@ -126,6 +126,67 @@ def test_refuses_a_record_id_it_has_read_where_it_would_count_the_game_twice(tmp
         load(a)
 
 
+def test_reads_the_per_seat_counts_and_leaves_them_missing_on_older_records(tmp_path):
+    """R1256000: the six counts are columns; a record without them reads as NA."""
+    records = load(
+        write_records(
+            tmp_path / "counts.jsonl",
+            [
+                record(
+                    "g1",
+                    seat(
+                        ["a"],
+                        fatigue_draws=8,
+                        fatigue_damage=36,
+                        traps_set=1,
+                        traps_fired=1,
+                        position_switches=2,
+                        radiant_upgrades=3,
+                    ),
+                    seat(["b"]),
+                ),
+            ],
+        )
+    )
+    assert list(records.seats.columns) == [
+        "game",
+        "seat",
+        "pilot",
+        "went_first",
+        "result",
+        "fatigue_draws",
+        "fatigue_damage",
+        "traps_set",
+        "traps_fired",
+        "position_switches",
+        "radiant_upgrades",
+    ]
+    p1 = records.seats[records.seats["seat"] == "p1"].iloc[0]
+    assert (p1["fatigue_draws"], p1["fatigue_damage"]) == (8, 36)
+    assert (p1["traps_set"], p1["traps_fired"]) == (1, 1)
+    assert (p1["position_switches"], p1["radiant_upgrades"]) == (2, 3)
+    p2 = records.seats[records.seats["seat"] == "p2"].iloc[0]
+    assert p2[["fatigue_draws", "fatigue_damage", "traps_set", "traps_fired", "position_switches", "radiant_upgrades"]].isna().all()
+
+
+def test_refuses_a_count_that_is_not_a_non_negative_whole_number(tmp_path):
+    good = two_games()[0]
+    for key, bad in (
+        ("fatigueDraws", -1),
+        ("fatigueDamage", 1.5),
+        ("trapsSet", True),
+        ("trapsFired", "3"),
+        ("positionSwitches", -1),
+        ("radiantUpgrades", 1.5),
+    ):
+        lined = json.loads(json.dumps(good))
+        lined["game"]["seats"]["p1"][key] = bad
+        path = tmp_path / "bad.jsonl"
+        path.write_text(json.dumps(lined) + "\n", encoding="utf-8")
+        with pytest.raises(ValueError, match=r"bad\.jsonl: line 1: not a game record"):
+            load(path)
+
+
 def test_loads_the_fixture_whole():
     records = load(FIXTURES / "dev-40.jsonl")
     assert len(records.games) == 40
