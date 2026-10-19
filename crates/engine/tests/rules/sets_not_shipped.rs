@@ -344,10 +344,7 @@ mod r1178000_the_meditative_plus_set_ships_from_its_release_in_its_place_after_m
         // for tokens (§5.1), or for the Prime or AI tag they carry (R1421), so a Human pool leaves
         // out Jazakus Prime.
         for (args, expected) in [
-            (
-                json!({}),
-                vec!["meditativeplus-011", "meditativeplus-021"],
-            ),
+            (json!({}), vec!["meditativeplus-011", "meditativeplus-021"]),
             (json!({ "tags": ["CN"] }), vec!["meditativeplus-021"]),
             (json!({ "tags": ["Potion"] }), vec!["meditativeplus-011"]),
             (json!({ "tags": ["Prime"] }), vec!["meditativeplus-016-1"]),

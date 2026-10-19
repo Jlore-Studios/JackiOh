@@ -1940,10 +1940,7 @@ mod tests {
         };
         entry.insert("id".to_string(), Json::from(id));
         entry.insert("index".to_string(), Json::from(index));
-        entry.insert(
-            "name".to_string(),
-            Json::from(format!("{set} fixture {index}")),
-        );
+        entry.insert("name".to_string(), Json::from(format!("{set} fixture {index}")));
         entry.insert("set".to_string(), Json::from(set));
         Json::Object(entry)
     }
@@ -1983,8 +1980,7 @@ mod tests {
 
         // Its rarities are held to their counts both ways: M+ #2, an Epic, made a sixth Common.
         assert_eq!(
-            check_catalog(&with_field("meditativeplus-002", "rarity", Json::from("Common")))
-                .failures,
+            check_catalog(&with_field("meditativeplus-002", "rarity", Json::from("Common"))).failures,
             [
                 "Meditative+: expected 5 Common non-token cards, found 6",
                 "Meditative+: expected 9 Epic non-token cards, found 8"
@@ -1993,12 +1989,7 @@ mod tests {
 
         // Its tags are in the census: M+ #11 Living Mana Potion without its Potion tag.
         assert_eq!(
-            check_catalog(&with_field(
-                "meditativeplus-011",
-                "tags",
-                Json::Array(Vec::new())
-            ))
-            .failures,
+            check_catalog(&with_field("meditativeplus-011", "tags", Json::Array(Vec::new()))).failures,
             ["catalog: expected 3 entries tagged \"Potion\", found 2"]
         );
 
@@ -2045,10 +2036,7 @@ mod tests {
 
         // Its brief's entries need not all be there, and those that are count toward no total.
         let mut held = shipped_catalog();
-        held.insert(
-            "boss-002".to_string(),
-            fixture_entry("Boss", "2", "boss-002"),
-        );
+        held.insert("boss-002".to_string(), fixture_entry("Boss", "2", "boss-002"));
         let report = check_catalog_against(&held, with_a_held_set());
         assert_eq!(report.failures, Vec::<String>::new());
         assert_eq!(
@@ -2068,10 +2056,7 @@ mod tests {
 
         // No rarity passes its count: a second Common is refused while the set is built.
         let mut commons = held.clone();
-        commons.insert(
-            "boss-001".to_string(),
-            fixture_entry("Boss", "1", "boss-001"),
-        );
+        commons.insert("boss-001".to_string(), fixture_entry("Boss", "1", "boss-001"));
         assert_eq!(
             check_catalog_against(&commons, with_a_held_set()).failures,
             ["Boss: expected 1 Common non-token cards, found 2"]
@@ -2080,10 +2065,7 @@ mod tests {
         // An index its brief does not list, or an id that does not follow it, fails, as it does for
         // a set that ships (the Meditative set's, from v0.3.5).
         let mut wrong = held;
-        wrong.insert(
-            "boss-004".to_string(),
-            fixture_entry("Boss", "4", "boss-004"),
-        );
+        wrong.insert("boss-004".to_string(), fixture_entry("Boss", "4", "boss-004"));
         wrong.insert("boss-x".to_string(), fixture_entry("Boss", "3", "boss-x"));
         wrong.insert(
             "meditative-150".to_string(),

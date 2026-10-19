@@ -498,10 +498,7 @@ mod r1178001_the_embiggen_pool_is_the_cards_that_print_two_prices {
             pool(json!({ "embiggen": true, "withTokens": true })),
             vec!["core-301", "core-305", "classic-304", "meditativeplus-306"]
         );
-        assert_eq!(
-            pool(json!({ "embiggen": true, "set": "Boss" })),
-            vec!["boss-307"]
-        );
+        assert_eq!(pool(json!({ "embiggen": true, "set": "Boss" })), vec!["boss-307"]);
         let _preview = preview_sets(&[SetName::Boss]);
         assert_eq!(
             pool(json!({ "embiggen": true })),
