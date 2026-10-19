@@ -45,6 +45,12 @@
 # wasm-bindgen, and builds the Luau module alone. CI builds each module in a job of its own, side by
 # side (ci.yml's `web (wasm module)` and `web (wasm luau module)`): one after the other they took
 # over seven minutes (#959). With JACKIOH_WASM_LUAU=0 it would build nothing, so that pair fails.
+#
+# CARGO_TARGET_DIR: where cargo builds, which is where the modules are read from; unset, target/
+# under the root. Cargo runs from the root, so a relative one is the root's. JACKIOH_CACHE_DIR: where
+# wasm-bindgen (bin/) and the emsdk (emsdk/) are kept; unset, .cache/ under the root. The night bot's
+# model job sets both, so every item's worktree builds into the checkout's cached target/ and uses
+# the one emsdk the job restored, instead of starting from nothing each time (#1263).
 
 set -eu
 
@@ -57,14 +63,16 @@ EMSDK_VERSION="5.0.7"
 LUAU_TARGET="wasm32-unknown-emscripten"
 
 ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
-BIN_DIR="$ROOT/.cache/bin"
+TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/target}"
+TOOLS_DIR="${JACKIOH_CACHE_DIR:-$ROOT/.cache}"
+BIN_DIR="$TOOLS_DIR/bin"
 WASM_BINDGEN="$BIN_DIR/wasm-bindgen"
 OUT_DIR="$ROOT/apps/web/src/wasm/pkg"
-MODULE="$ROOT/target/$WASM_TARGET/release/jackioh_wasm.wasm"
-EMSDK_DIR="$ROOT/.cache/emsdk"
+MODULE="$TARGET_DIR/$WASM_TARGET/release/jackioh_wasm.wasm"
+EMSDK_DIR="$TOOLS_DIR/emsdk"
 LUAU_OUT_DIR="$OUT_DIR/luau"
-LUAU_JS="$ROOT/target/$LUAU_TARGET/release/jackioh-wasm-luau.js"
-LUAU_WASM="$ROOT/target/$LUAU_TARGET/release/jackioh_wasm_luau.wasm"
+LUAU_JS="$TARGET_DIR/$LUAU_TARGET/release/jackioh-wasm-luau.js"
+LUAU_WASM="$TARGET_DIR/$LUAU_TARGET/release/jackioh_wasm_luau.wasm"
 
 cd "$ROOT"
 
@@ -149,7 +157,7 @@ if [ "${JACKIOH_WASM_NORMAL:-1}" = 1 ]; then
       Darwin-arm64) triple="aarch64-apple-darwin" ;;
       *)
         echo "build-wasm: no wasm-bindgen-cli release for $(uname -s)-$(uname -m); install it with" >&2
-        echo "  cargo install wasm-bindgen-cli --version $WASM_BINDGEN_VERSION --root $ROOT/.cache" >&2
+        echo "  cargo install wasm-bindgen-cli --version $WASM_BINDGEN_VERSION --root $TOOLS_DIR" >&2
         exit 1
         ;;
     esac
@@ -228,6 +236,13 @@ fi
 # no clone, only what a build cache gave back of one: Vercel's restores every node_modules it saved,
 # and an installed emsdk holds two (its Node's and emscripten's), so a deploy found those alone and
 # `git clone` refused the non-empty directory. Only this script writes there, so it starts over.
+# So does an installed emsdk that cannot activate this pin: one shared through JACKIOH_CACHE_DIR, or
+# restored from a cache, can be another pin's, from the branch the job started on (#1263).
+if [ -x "$EMSDK_DIR/emsdk" ] && [ -d "$EMSDK_DIR/upstream/emscripten" ] \
+  && ! (cd "$EMSDK_DIR" && ./emsdk activate "$EMSDK_VERSION" >/dev/null 2>&1); then
+  echo "build-wasm: $EMSDK_DIR cannot activate emsdk $EMSDK_VERSION; cloning it again"
+  rm -rf "$EMSDK_DIR"
+fi
 if [ ! -x "$EMSDK_DIR/emsdk" ]; then
   rm -rf "$EMSDK_DIR"
   echo "build-wasm: cloning emsdk $EMSDK_VERSION into $EMSDK_DIR"
