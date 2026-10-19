@@ -317,6 +317,12 @@ pub struct EvalWeights {
     /// Per library card up to libraryComfort.
     pub library_card: f64,
     pub library_comfort: f64,
+    /// #1255: the share of `hand_card_value` a library card the seat can name counts at (its own deck's
+    /// cards it was shown going in, R185, R311; in the enemy's, a card a line shuffled in openly), with
+    /// what a Journey Complete's journey returns (R1246), times the share of the library its next
+    /// `library_comfort` draws reach. A curse (`AI_LIBRARY_CURSES`) counts against the side whose deck
+    /// holds it. On top of `library_card`'s count.
+    pub library_known_share: f64,
     /// Per crystal left at the end of the seat's own turn (terminal only).
     pub unspent_mana: f64,
     /// R1224: per mana owed on the coming refreshes (Jlarna's credit line) — a debt is coming
@@ -414,6 +420,9 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     enemy_face_down: 2.0,
     library_card: 0.1,
     library_comfort: 10.0,
+    // #1255: screened at 400 games on improve-dev, 204-195, edge +0.023 (-0.028 to +0.073) vs control
+    // 7c60d988a; 0.5 first read 193-206, edge -0.033 (-0.091 to +0.026).
+    library_known_share: 0.25,
     unspent_mana: 0.8,
     // R1224: a debt counts the way unspent mana does — coming turns' mana, spent early.
     owed_mana: 0.8,
@@ -430,6 +439,13 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     closing_from: 10.0,
     closing_weight: 3.0,
 };
+
+/// #1255: the cast-on-draw cards that hurt whoever draws them, which their makers shuffle into the
+/// enemy's deck: Ancient Curse (Meditative #28 Shade-iris's and #29 Forbiddenous Factory's) and
+/// CN-Virus (Core #90 CN-Viral Injection's, Meditative #95.1 CN Golem's). One the seat can name counts
+/// against the side whose library holds it (`library_known_worth`), so one in the enemy's deck counts
+/// for the seat. Ids, not indexes, as `AI_DETERMINIZE`'s are.
+pub const AI_LIBRARY_CURSES: &[&str] = &["meditative-028-1", "core-090-1"];
 
 /// Which evaluation scores the search's finalists (#1010; `learned.rs`, `docs/learned-eval.md` D6).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -570,6 +586,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     enemy_face_down: 2.0,
     library_card: 0.1,
     library_comfort: 10.0,
+    // The baseline is frozen: it priced no library card by what it is, as it did.
+    library_known_share: 0.0,
     unspent_mana: 0.8,
     // The baseline is frozen: a debt counted nothing when the gates were fixed, as everything after
     // them did.

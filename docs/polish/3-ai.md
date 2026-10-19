@@ -339,6 +339,7 @@ export const AI_EVAL = {
   enemyFaceDown: 2,      // a backrow card the seat cannot read (on the enemy's side of the ledger)
   libraryCard: 0.1,      // per library card up to libraryComfort
   libraryComfort: 10,
+  libraryKnownShare: 0.25, // a library card the seat can name: this share of its hand worth × min(1, libraryComfort / library.length) (#1255)
   unspentMana: 0.8,      // per crystal left at the end of the seat's own turn (terminal only)
   threatPerDamage: 0.4,  // per point of faceThreat(enemy) against the seat
   lethalThreat: 150,     // when faceThreat(enemy) >= the seat's hero health
@@ -496,7 +497,11 @@ export function faceThreat(state: GameState, attacker: PlayerId): number;
     (+ `radiantInHand` if Radiant; + `radiantFaceShare` × (the stat and keyword worth of the face it will
     enter with, buffs and tuning included, − its printed base face's) when both its faces are Units,
     #1143); for `opp`, `hand.length × (handCard + handPerCost × opponentHandCost)`
-    + `libraryCard × min(library.length, libraryComfort)`.
+    + `libraryCard × min(library.length, libraryComfort)`
+    + `libraryKnownShare × min(library.length, libraryComfort) / library.length` × Σ over the library
+    cards `seat` can name (its own: shown going in; the enemy's: shuffled in openly) of their hand
+    worth, a Journey Complete plus its journey's cards' Radiant hand worth, an `AI_LIBRARY_CURSES` card
+    negative (#1255).
   - `threat` = `faceThreat(state, opp) >= hero(seat).health ? AI_EVAL.lethalThreat : threatPerDamage × faceThreat(state, opp)`,
     times `answerableThreat` when `next` is `"seat"`.
   - `pressure` = `faceThreat(state, seat) >= hero(opp).health ? AI_EVAL.lethalPressure : pressurePerDamage × faceThreat(state, seat)`,
