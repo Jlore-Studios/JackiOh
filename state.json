@@ -6438,20 +6438,21 @@
           "by": "`claude` (strong)",
           "conflicts": [
             "spec/11-rulings.md",
-            "spec/INDEX.md"
+            "spec/INDEX.md",
+            "spec/rulings/R767000.md"
           ],
-          "from": "170c5d8e9ae16b9b314502e5bf0dfcb195f049dc",
-          "main": "e6d675d01b94641b50d62ab6f4470dae63f5c6e6"
+          "from": "80d4b194bafefa81022e5a58f9e1551f9377ca6e",
+          "main": "402651365937a39f14d215df30ef85409b24db0a"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39329432713",
+            "run": "39336299155",
             "tier": "strong"
           }
         ],
-        "sha": "80d4b194bafefa81022e5a58f9e1551f9377ca6e",
+        "sha": "3cf5e7135c5a9643436be910d41098e43dc011eb",
         "tiers": {
           "claude": "strong"
         }
