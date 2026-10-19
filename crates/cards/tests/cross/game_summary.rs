@@ -163,7 +163,7 @@ mod summarize_game_over_real_cards_s9_11 {
         let mut replaced_plays = 0;
         let mut radiant_plays = 0;
 
-        for n in 1..=GAMES {
+        for n in 36..=36 {
             let seed = format!("summary-cards-{n}");
             let shuffled = create_rng(&format!("summary-cards-decks-{n}"), 0).shuffle(&pool);
             let decks: (Vec<String>, Vec<String>) =
@@ -212,6 +212,11 @@ mod summarize_game_over_real_cards_s9_11 {
                     panic!("{seed}: {} refused: {error}", action.action_type());
                 }
                 let events: &[GameEvent] = &result.events;
+                if log.len() < 12 {
+                    eprintln!("DBG action {} phase {:?}->{:?} turn {} {}", log.len(), state.phase, result.state.phase, result.state.turn, serde_json::to_string(&action.body).unwrap_or_default());
+                    for e in events { eprintln!("DBG   {}", serde_json::to_string(e).unwrap_or_default()); }
+                    eprintln!("DBG   hand p1 {:?}", hand(&result.state, PlayerId::P1));
+                }
                 for event in events {
                     match event {
                         GameEvent::CardAnnounced { instance_id, .. } => {
