@@ -577,4 +577,31 @@ mod b52_sharing_a_replay {
         assert_eq!(status, 404, "{body}");
         assert!(w.shared_with(&w.c).await.is_empty());
     }
+
+    #[tokio::test]
+    async fn b52_sharing_a_match_whose_log_the_purge_took_is_404_and_lists_nothing() {
+        let w = world("share-purged").await;
+        assert_eq!(w.share(&w.a, &w.c).await.0, 204);
+        assert_eq!(w.shared_with(&w.c).await.len(), 1);
+
+        // The retention purge takes the log; the share row itself stays.
+        fake(&w.app)
+            .lock()
+            .await
+            .tables
+            .match_actions
+            .retain(|row| row.match_id != w.match_id);
+
+        // Sharing again answers what a match the caller held no seat in answers.
+        let (status, body) = w.share(&w.a, &w.c).await;
+        let (_, unknown_body) = w.share_match(&uuid(798), &w.a, &w.c).await;
+        assert_eq!(status, 404, "{body}");
+        assert_eq!(body, unknown_body);
+        // The friend's list leaves the match out, and its replay route answers what an
+        // unknown id answers, while the seat holder's own replay is gone (410), as before.
+        assert!(w.shared_with(&w.c).await.is_empty());
+        w.assert_unknown_to(&w.c).await;
+        let (status, body) = w.replay(&w.a).await;
+        assert_eq!(status, 410, "{body}");
+    }
 }

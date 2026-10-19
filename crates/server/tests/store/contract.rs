@@ -7341,11 +7341,13 @@ mod social {
         q!(harness, t => t.friends_make(&c.id, &b.id, now - 10_000));
         let over = id();
         q!(harness, t => t.matches_create(&match_row(&over, &a.id, &c.id, harness, now - 9_000)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&over, 1, "p1", "n1", now - 8_000)]));
         q!(harness, t => t.matches_finish(&over, now - 5_000));
         let live = id();
         q!(harness, t => t.matches_create(&match_row(&live, &a.id, &c.id, harness, now - 9_000)));
         let elsewhere = id();
         q!(harness, t => t.matches_create(&match_row(&elsewhere, &b.id, &c.id, harness, now - 9_000)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&elsewhere, 1, "p1", "n1", now - 8_000)]));
         q!(harness, t => t.matches_finish(&elsewhere, now - 5_000));
 
         let share = |match_id: &str, sharer: &str, at: i64| -> ReplayShare {
@@ -7414,6 +7416,41 @@ mod social {
             vec![c.id.clone()]
         );
         assert!(q!(harness, t => t.shares_sharers("not-a-uuid", &b.id)).is_empty());
+    }
+
+    /// §9.5's "or the retention purge takes the log": a share of a finished match is listed and
+    /// read while its log is kept, and neither once the purge has taken it.
+    async fn s7_replay_shares_hide_a_match_whose_log_the_purge_took(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let day: i64 = 86_400_000;
+        q!(harness, t => t.friends_make(&a.id, &b.id, now - 92 * day));
+        let over = id();
+        q!(harness, t => t.matches_create(&match_row(&over, &a.id, &b.id, harness, now - 92 * day)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&over, 1, "p1", "n1", now - 92 * day)]));
+        q!(harness, t => t.matches_finish(&over, now - 91 * day));
+        let share: ReplayShare = from(json!({
+            "matchId": over, "sharer": a.id, "friend": b.id, "createdAt": now - 91 * day,
+        }));
+        q!(harness, t => t.shares_put(&share));
+
+        assert_eq!(
+            q!(harness, t => t.shares_sharers(&over, &b.id)),
+            vec![a.id.clone()]
+        );
+        assert_eq!(q!(harness, t => t.shares_for(&b.id)).len(), 1);
+
+        let cutoffs: RetentionPurgeInput = from(json!({
+            "codeAttemptsBefore": now - 30 * day,
+            "matchActionsEndedBefore": now - 90 * day,
+            "playTelemetryEndedBefore": now - 365 * day,
+            "gameRecordsRecordedBefore": now - 7 * day,
+        }));
+        q!(harness, t => t.purge_expired(&cutoffs));
+        assert!(q!(harness, t => t.matches_actions(&over)).is_empty());
+        assert!(q!(harness, t => t.shares_sharers(&over, &b.id)).is_empty());
+        assert!(q!(harness, t => t.shares_for(&b.id)).is_empty());
     }
 
     /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
@@ -7532,6 +7569,7 @@ mod social {
         let now = harness.now();
         let over = id();
         q!(harness, t => t.matches_create(&match_row(&over, &a.id, &b.id, harness, now - 9_000)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&over, 1, "p1", "n1", now - 8_000)]));
         q!(harness, t => t.matches_finish(&over, now - 5_000));
         for (sharer, friend) in [(&a, &b), (&b, &a), (&a, &c), (&b, &c)] {
             q!(harness, t => t.friends_make(&sharer.id, &friend.id, now - 10_000));
@@ -7613,6 +7651,7 @@ mod social {
         s7_a_freed_room_goes_only_while_unjoined,
         s7_chat_pages_reads_reports_and_purges,
         s7_replay_shares_are_read_while_friends_and_unblocked,
+        s7_replay_shares_hide_a_match_whose_log_the_purge_took,
         s7_a_deleted_profile_takes_its_social_rows,
         s7_presence_reads_many_profiles_at_once,
         s7_shares_between_a_pair_go_together,
