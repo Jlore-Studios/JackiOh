@@ -102,6 +102,11 @@ review, with auto-merge on, once a promotion is in it. Each cycle:
    stack, so a set-back promotion is where the next session starts.
 5. Sleep 60 seconds and repeat.
 
+Every lane's cycle, the gather lane's too, starts by reading the disk: under 20 GB free
+(`TRAIN_DISK_FLOOR_GB`) the lane deletes its own builds but the release one and its download caches,
+which come back by themselves, so the box cleans itself (`bot/machine/README.md`, The training box).
+Its test builds, Muse's included, carry no debug info, as on the night box.
+
 A lane never merges anything itself: CI does, through branch protection, once its checks pass.
 
 ### The improve stack
