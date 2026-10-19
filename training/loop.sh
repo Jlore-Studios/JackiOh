@@ -46,7 +46,8 @@
 # finished days as above, and plays the next TRAIN_GATHER_GAMES games of its own seed series with
 # `jackioh stats` (R378: the AI on main against itself on All Random decks), without end. It
 # appends them to ~/training-out/gather/<date>.jsonl and rewrites the patch's card figures,
-# cards-<patch>.txt and .json, from every game it holds.
+# cards-<patch>.txt and .json, and its game figures, games-<patch>.txt and .json (the first seat's
+# wins, the endings, the turns), from every game it holds.
 #
 # Stop a lane with `sudo systemctl stop jackioh-train@<lane>` (and `disable` to keep it stopped).
 #
@@ -290,7 +291,8 @@ import_records() {
 # under the patch main compiles in (R378). Game n's seed is gather:<n>, and cursor-<patch> holds the
 # next n, so no game is played twice for a patch and a new patch starts again at 1. The cursor moves
 # before the batch's games join the day's file: a batch the loop never finished is played again,
-# and none is appended twice. Then the patch's card figures are rewritten from every game it holds.
+# and none is appended twice. Then the patch's card figures and game figures are rewritten from
+# every game it holds.
 gather() {
   clean_checkout || return 1
   git fetch --quiet origin main || {
@@ -338,6 +340,14 @@ gather() {
     log "$(jq -r .games "$cards.json") games of $patch so far; their card figures are in $cards.txt"
   else
     log "the card figures of $patch could not be written"
+  fi
+  figures="$out/games-$patch"
+  if "$jackioh" stats report --games --source=dev --patch "$patch" "$out"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].jsonl >"$figures.txt.new" &&
+    "$jackioh" stats report --games --source=dev --patch "$patch" --json "$out"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].jsonl >"$figures.json.new"; then
+    mv "$figures.txt.new" "$figures.txt" && mv "$figures.json.new" "$figures.json"
+    log "the first seat's wins, the endings and the turns of $patch are in $figures.txt"
+  else
+    log "the game figures of $patch could not be written"
   fi
 }
 

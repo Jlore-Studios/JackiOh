@@ -78,7 +78,7 @@ one; `test_notebooks.py` fails on a notebook that holds any), and `test_notebook
 | Notebook | What |
 |---|---|
 | `01-card-win-rates.ipynb` | R377's breakdowns for every card beside their games, by set and rarity, the 15 best and worst cards by in-deck win rate and by played delta, one patch against the one before it, and a development run against live games of the same patch (R378) |
-| `02-decks-and-play.ipynb` | Mana curves by mode and pilot, play rate and the cards most often drawn and not played, the turn cards are first played on, and the first player's win rate and the length of a game by mode and patch |
+| `02-decks-and-play.ipynb` | Mana curves by mode and pilot, play rate and the cards most often drawn and not played, the turn cards are first played on, and the first player's win rate, how games end and the length of a game by mode and patch |
 | `03-ai-sweep-and-generations.ipynb` | A shadow-ban sweep's pass-1 lines per card and tier with its flags, and the AI's generations against random play and their parents, per lane |
 
 Each one's first cell reads its inputs from the environment and defaults to the fixtures, saying so when it does:
@@ -120,11 +120,16 @@ record named twice is trimmed first.
 `cargo jackioh stats report <file>… [--source] [--mode] [--patch] [--pilot] [--card] [--json]` prints the same
 figures from `jackioh_engine::card_stats`, with no database. `tests/test_card_stats.py` checks the loader's
 `card_stats` against that report over a committed fixture: wins and games exactly, rates to 1e-9.
+`cargo jackioh stats report --games <file>… [--source] [--mode] [--patch] [--pilot] [--json]` prints the game
+figures (the first seat's wins, how games end, the turns, fatigue and traps), and `tests/test_notebooks.py` holds
+notebook 02's first-seat and ending figures, per patch, mode and source, equal to that report's `--json` over the
+fixtures' files (wins, draws and endings exactly, the share to its three places).
 
 | File | What |
 |---|---|
 | `fixtures/dev-40.jsonl` | 40 AI development games (R378), as `cargo jackioh stats` writes them |
 | `fixtures/dev-40.report.json` | `stats report` over them, as JSON |
+| `fixtures/games.report.json` | `stats report --games --source=all` over both fixtures' games, as JSON: the figures notebook 02's first-seat and ending cells are held to |
 | `fixtures/live-40.jsonl` | 40 more AI games, filed as live ones: `make_live.py` gives them live ids, patches v0.3.0 (16) and v0.3.1 (24), the modes bo1 and bo3 and a human first seat. Not played by anyone: the notebooks' live and patch comparisons need records of that shape |
 | `fixtures/sweep-small.jsonl` | `cargo jackioh sweep --json` over four cards (pass 1 at Easy and Hard), as it wrote it |
 | `fixtures/repo/` | The files `load_generations` reads under a repository root: `crates/ai/generation.json` and `training/history/*.jsonl`. **Made up**: three promotions on two lanes, so the charts have a line. The real histories are empty until the first promotion |
@@ -136,6 +141,7 @@ cargo jackioh stats --games 40 --series analysis-fixture --out analysis/fixtures
 cargo jackioh stats report analysis/fixtures/dev-40.jsonl --source=all --json > analysis/fixtures/dev-40.report.json
 cargo jackioh stats --games 40 --patch v0.3.0 --series analysis-fixture-prev --out /tmp/prev-40.jsonl
 python3 analysis/fixtures/make_live.py /tmp/prev-40.jsonl > analysis/fixtures/live-40.jsonl
+cargo jackioh stats report --games --source=all --json analysis/fixtures/dev-40.jsonl analysis/fixtures/live-40.jsonl > analysis/fixtures/games.report.json
 cargo jackioh sweep --json core-002 core-011 classic-020 classicplus-005 > analysis/fixtures/sweep-small.jsonl   # about 70 seconds
 ```
 
