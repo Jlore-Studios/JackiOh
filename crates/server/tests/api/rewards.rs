@@ -3,8 +3,10 @@
 //!
 //! Won and lost games pay exactly `JLORE_LADDER_WIN`/`JLORE_LADDER_LOSS`; XP counts the log's
 //! actions plus the win bonus up to `XP_GAME_CAP`; the second track unlocks at
-//! `SET_TRACK_UNLOCK_LEVEL`; and draws, concedes and reaper-resolved games pay per R1302000–
-//! R1302003, whose proving tests live here. Series games, room games and bot sides pay nothing.
+//! `SET_TRACK_UNLOCK_LEVEL`; and draws, concedes, reaper-resolved games, the moves that count and
+//! a track's last level pay per R1302000–R1302005, whose proving tests live here. Series games,
+//! room games, voided matches and bot sides pay nothing. Every level position is read through the
+//! constants and the level curve, so the tests hold whatever values #1333 sets.
 //!
 //! The engine is driven for real where the outcome matters (a win, a mutual-lethal draw, a
 //! concede); the action log the hook counts is appended as rows, which need no engine legality.
@@ -21,16 +23,17 @@ use jackioh_server::actor::contracts::{RecordResultInput, TerminalOutcome};
 use jackioh_server::api::results::{ceiling_draw_input, record_ceiling_draw, record_result};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
-    JLORE_LADDER_LOSS, JLORE_LADDER_WIN, MATCH_CEILING_MINUTES, SET_TRACK_FIRST_LEVEL,
+    JLORE_LADDER_LOSS, JLORE_LADDER_WIN, MATCH_CEILING_MINUTES, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS,
     SET_TRACK_UNLOCK_LEVEL, XP_GAME_CAP,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, MatchActionRow, MatchRow, MatchSeat, ResultRow, StoreError};
-use jackioh_server::economy::math::{level_for_xp, total_xp_for_level};
-use jackioh_server::economy::rewards::game_xp;
+use jackioh_server::economy::math::total_xp_for_level;
+use jackioh_server::economy::rewards::{game_xp, track_level};
 use jackioh_server::economy::store::{
     EconomyLedger, EconomyReason, InventoryEntry, InventoryItem, JloreReason, SetTrack, TrackGrant,
 };
+use jackioh_server::economy::track_rewards::reward_for_level;
 
 use crate::support::deps::{add_user, call, test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
@@ -414,7 +417,11 @@ mod track_unlock {
         let tracks = tracks_of(&app, A).await;
         let unlocked = track_of(&tracks, second_newest()).expect("the second track unlocks");
         assert_eq!(unlocked.xp, game_xp(1, true));
-        assert_eq!(level_for_xp(unlocked.xp), 1);
+        assert_eq!(unlocked.level, track_level(unlocked.xp));
+        assert_eq!(
+            unlocked.rewards_claimed, unlocked.level,
+            "its levels reached have paid"
+        );
     }
 
     #[tokio::test]
@@ -446,7 +453,8 @@ mod track_unlock {
     }
 }
 
-// R1302000–R1302003: what a draw, a concede, a reaper-resolved game and an unlocking backlog pay.
+// R1302000–R1302005: what a draw, a concede, a reaper-resolved game, an unlocking backlog, the
+// server's own rows and a track's last level pay.
 
 mod rulings {
     use super::*;
@@ -591,6 +599,86 @@ mod rulings {
             .expect("the next older track unlocks second");
         assert_eq!(next.xp, game_xp(3, true));
     }
+
+    #[tokio::test]
+    async fn r1302004_server_rows_and_the_auto_end_setting_earn_no_xp() {
+        install_test_cards();
+        let app = scenario().await;
+        // A takes four moves; around them the log holds A's automatic-end setting and the rows
+        // the server writes itself. B's every row is the server's: a clock that ran out each turn.
+        let mut log = actions_of("p1", 4);
+        log.extend([
+            json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": "p1" }),
+            json!({ "type": "disconnectExpired", "player": "p1", "playerId": "p1" }),
+            json!({ "type": "ceilingReached", "playerId": "p1" }),
+        ]);
+        log.extend((0..5).map(|_| json!({ "type": "timeout", "playerId": "p2" })));
+        append_log_to(&app, MATCH_ID, &log).await;
+        let outcome = play(&[json!({ "type": "concede", "playerId": "p2" })]);
+        record_on(&app, MATCH_ID, outcome).await;
+
+        assert_eq!(
+            track_of(&tracks_of(&app, A).await, newest())
+                .expect("A's newest track")
+                .xp,
+            game_xp(4, true),
+            "only A's four moves count"
+        );
+        // B took no move and lost: its game pays the loss rate and no XP at all.
+        assert_eq!(game_xp(0, false), 0);
+        assert_eq!(game_jlore_paid(&app, B).await, i64::from(JLORE_LADDER_LOSS));
+        assert!(tracks_of(&app, B).await.is_empty(), "B earns no XP");
+    }
+
+    #[tokio::test]
+    async fn r1302005_a_track_pays_no_level_past_its_last() {
+        install_test_cards();
+        let app = scenario().await;
+        let last = i64::from(SET_TRACK_LEVELS);
+        let newest_packs = |inventory: Vec<InventoryEntry>| -> i64 {
+            inventory
+                .iter()
+                .filter(|entry| entry.item == InventoryItem::SetPack && entry.key == newest().as_str())
+                .map(|entry| entry.count)
+                .sum()
+        };
+        // A's newest track one XP short of its last level, every level before it paid.
+        let start = total_xp_for_level(SET_TRACK_LEVELS) - 1;
+        grant_track(&app, A, newest(), start, last - 1, last - 1).await;
+
+        // Game one reaches the last level, which pays once.
+        append_log_to(&app, MATCH_ID, &actions_of("p1", 5)).await;
+        let outcome = play(&[json!({ "type": "concede", "playerId": "p2" })]);
+        record_on(&app, MATCH_ID, outcome).await;
+        let track = track_of(&tracks_of(&app, A).await, newest()).expect("A's newest track");
+        assert_eq!((track.level, track.rewards_claimed), (last, last));
+        let packs = newest_packs(inventory_of(&app, A).await);
+        assert_eq!(packs, reward_for_level(last).set_packs);
+
+        // A setup grant carries the track one XP short of where a level past the last would be.
+        let short = total_xp_for_level(SET_TRACK_LEVELS + 1) - 1 - track.xp;
+        assert!(short > 0, "game one stays short of a level past the last");
+        grant_track(&app, A, newest(), short, SET_TRACK_FIRST_LEVEL, 0).await;
+        let before = track.xp + short;
+
+        // Game two's XP lands in full, yet reaches no level and pays nothing.
+        create_match(&app, MATCH_2, true, false).await;
+        append_log_to(&app, MATCH_2, &actions_of("p1", 5)).await;
+        let outcome = play(&[json!({ "type": "concede", "playerId": "p2" })]);
+        record_on(&app, MATCH_2, outcome).await;
+        let track = track_of(&tracks_of(&app, A).await, newest()).expect("A's newest track");
+        assert_eq!(track.xp, before + game_xp(5, true));
+        assert_eq!((track.level, track.rewards_claimed), (last, last));
+        assert_eq!(newest_packs(inventory_of(&app, A).await), packs);
+        let grants: Vec<_> = ledger_of(&app, A)
+            .await
+            .tracks
+            .into_iter()
+            .filter(|grant| grant.set_id == newest().as_str() && grant.reference.as_deref() == Some(MATCH_2))
+            .map(|grant| (grant.xp, grant.levels, grant.rewards))
+            .collect();
+        assert_eq!(grants, vec![(game_xp(5, true), 0, 0)]);
+    }
 }
 
 // A level's rewards are granted once: crossing one level over two games pays it a single time,
@@ -608,55 +696,84 @@ mod level_rewards_once {
             .sum()
     }
 
-    fn track_packs(inventory: &[InventoryEntry]) -> i64 {
+    /// The inventory's count of `item`, summed over its keys.
+    fn held(inventory: &[InventoryEntry], item: InventoryItem) -> i64 {
         inventory
             .iter()
-            .filter(|entry| entry.item == InventoryItem::SetPack)
+            .filter(|entry| entry.item == item)
             .map(|entry| entry.count)
             .sum()
+    }
+
+    /// What the track rewards paid so far: Jlore, set packs and card tokens.
+    async fn track_paid(app: &App, profile: &str) -> (i64, i64, i64) {
+        let inventory = inventory_of(app, profile).await;
+        (
+            track_jlore_total(&ledger_of(app, profile).await),
+            held(&inventory, InventoryItem::SetPack),
+            held(&inventory, InventoryItem::CardToken),
+        )
+    }
+
+    /// One small ladder loss for A on `match_id`: one counted action, conceded.
+    async fn small_loss(app: &Arc<App>, match_id: &str) {
+        append_log_to(app, match_id, &actions_of("p1", 1)).await;
+        let outcome = play(&[json!({ "type": "concede", "playerId": "p1" })]);
+        record_on(app, match_id, outcome).await;
     }
 
     #[tokio::test]
     async fn each_level_pays_once_and_a_repeated_write_pays_nothing() {
         install_test_cards();
         let app = scenario().await;
-        // Game one: 30 counted actions won. Level 1 reached, so level 1 pays.
-        append_log_to(&app, MATCH_ID, &actions_of("p1", 30)).await;
-        let outcome = play(&[json!({ "type": "concede", "playerId": "p2" })]);
-        record_on(&app, MATCH_ID, outcome).await;
-        let one_game = game_xp(30, true);
+        // A's newest track sits two small losses below its next level, every level it holds paid,
+        // and short of the unlock level, so no older track's rewards join the ledger. Every
+        // position is read through the constants, so the premises hold whatever #1333 sets.
+        let one_game = game_xp(1, false);
+        let level = i64::from(SET_TRACK_UNLOCK_LEVEL) - 2;
+        let next = u32::try_from(level + 1).expect("a level");
+        let start = total_xp_for_level(next) - 2 * one_game;
         assert!(
-            level_for_xp(one_game) == 1,
-            "one game stays on level 1: {one_game}"
+            one_game > 0 && level >= SET_TRACK_FIRST_LEVEL,
+            "a level under the unlock level"
         );
-        assert_eq!(track_jlore_total(&ledger_of(&app, A).await), 100);
+        assert_eq!(track_level(start), level, "the start stands on the level below");
+        assert!(
+            total_xp_for_level(next + 1) > start + 3 * one_game,
+            "three small losses stay short of the level after next"
+        );
+        let reward = reward_for_level(i64::from(next));
+        let paid = (reward.jlore, reward.set_packs, reward.card_tokens);
+        assert_ne!(paid, (0, 0, 0), "the level crossed pays something");
+        grant_track(&app, A, newest(), start, level, level).await;
 
-        // Game two crosses into level 2: only level 2 pays now.
+        // Game one stays on the level below: nothing pays.
+        small_loss(&app, MATCH_ID).await;
+        let track = track_of(&tracks_of(&app, A).await, newest()).expect("A's newest track");
+        assert_eq!((track.level, track.rewards_claimed), (level, level));
+        assert_eq!(track_paid(&app, A).await, (0, 0, 0));
+
+        // Game two crosses into the next level: it pays, once.
         create_match(&app, MATCH_2, true, false).await;
-        append_log_to(&app, MATCH_2, &actions_of("p1", 30)).await;
-        let outcome = play(&[json!({ "type": "concede", "playerId": "p2" })]);
-        record_on(&app, MATCH_2, outcome).await;
-        assert_eq!(level_for_xp(2 * one_game), 2, "two games reach level 2");
-        assert_eq!(track_jlore_total(&ledger_of(&app, A).await), 100);
-        assert_eq!(track_packs(&inventory_of(&app, A).await), 1);
+        small_loss(&app, MATCH_2).await;
+        let track = track_of(&tracks_of(&app, A).await, newest()).expect("A's newest track");
+        assert_eq!((track.level, track.rewards_claimed), (level + 1, level + 1));
+        assert_eq!(track_paid(&app, A).await, paid);
 
-        // Game three stays on level 2: no level pays again.
+        // Game three stays on it: no level pays again.
         create_match(&app, MATCH_3, true, false).await;
-        append_log_to(&app, MATCH_3, &actions_of("p1", 1)).await;
-        let outcome = play(&[json!({ "type": "concede", "playerId": "p1" })]);
-        record_on(&app, MATCH_3, outcome).await;
-        assert_eq!(level_for_xp(2 * one_game + game_xp(1, false)), 2);
-        assert_eq!(track_jlore_total(&ledger_of(&app, A).await), 100);
-        assert_eq!(track_packs(&inventory_of(&app, A).await), 1);
+        small_loss(&app, MATCH_3).await;
+        let track = track_of(&tracks_of(&app, A).await, newest()).expect("A's newest track");
+        assert_eq!(track.xp, start + 3 * one_game);
+        assert_eq!((track.level, track.rewards_claimed), (level + 1, level + 1));
+        assert_eq!(track_paid(&app, A).await, paid);
 
         // A repeated write of the same match pays nothing twice.
         let before = j(&ledger_of(&app, A).await);
+        let outcome = play(&[json!({ "type": "concede", "playerId": "p1" })]);
         record_on(&app, MATCH_3, outcome).await;
         assert_eq!(j(&ledger_of(&app, A).await), before);
-        assert_eq!(
-            game_jlore_paid(&app, A).await,
-            2 * i64::from(JLORE_LADDER_WIN) + i64::from(JLORE_LADDER_LOSS)
-        );
+        assert_eq!(game_jlore_paid(&app, A).await, 3 * i64::from(JLORE_LADDER_LOSS));
     }
 }
 
@@ -664,6 +781,8 @@ mod level_rewards_once {
 
 mod no_payout {
     use super::*;
+    use jackioh_server::actor::contracts::VoidMatchInput;
+    use jackioh_server::api::results::void_match;
     use jackioh_server::api::series::{ensure_series_game, start_series};
     use jackioh_server::api::series_rules::{NewSeriesInput, pick_deck};
     use jackioh_server::db::store::SeriesRow;
@@ -792,6 +911,25 @@ mod no_payout {
     }
 
     #[tokio::test]
+    async fn voided_match_pays_nothing() {
+        install_test_cards();
+        let app = scenario().await;
+        append_log_to(&app, MATCH_ID, &actions_of("p1", 30)).await;
+        void_match(
+            &app,
+            VoidMatchInput {
+                match_id: MATCH_ID.to_owned(),
+                players: (A.to_owned(), B.to_owned()),
+                at: now_ms(),
+            },
+        )
+        .await
+        .expect("the match is voided");
+        assert_paid_nothing(&app).await;
+        assert_eq!(table(&app, |data| j(&data.tables.results)).await, json!([]));
+    }
+
+    #[tokio::test]
     async fn bot_side_earns_nothing() {
         install_test_cards();
         let app = test_app().await;
@@ -900,7 +1038,6 @@ mod joint_commit {
 mod reads {
     use super::*;
     use jackioh_server::economy::math::xp_to_next_level;
-    use jackioh_server::economy::track_rewards::reward_for_level;
 
     /// The scenario's profiles as signed-in accounts, with their tokens.
     async fn authed() -> (Arc<App>, String) {
@@ -935,11 +1072,11 @@ mod reads {
 
         let (status, _, body) = call(&app, "GET", "/api/wallet", Some(&token), Value::Null).await;
         assert_eq!(status, 200);
-        // The game's Jlore plus level 1's track Jlore.
-        assert_eq!(
-            body,
-            json!({ "jlore": i64::from(JLORE_LADDER_WIN) + reward_for_level(1).jlore })
-        );
+        // The game's Jlore plus the track Jlore of every level that game reached, each once.
+        let levels: i64 = (1..=track_level(game_xp(10, true)))
+            .map(|level| reward_for_level(level).jlore)
+            .sum();
+        assert_eq!(body, json!({ "jlore": i64::from(JLORE_LADDER_WIN) + levels }));
     }
 
     #[tokio::test]
@@ -971,17 +1108,22 @@ mod reads {
         let (status, _, body) = call(&app, "GET", "/api/tracks", Some(&token), Value::Null).await;
         assert_eq!(status, 200);
         let one_game = game_xp(10, true);
+        let level = track_level(one_game);
+        assert!(
+            level < i64::from(SET_TRACK_LEVELS),
+            "one game leaves a next level"
+        );
         let tracks = body["tracks"].as_array().expect("five tracks");
         assert_eq!(tracks.len(), SHIPPED_SETS.len());
         assert_eq!(
             tracks[SHIPPED_SETS.len() - 1],
             json!({
                 "setId": newest().as_str(),
-                "level": i64::from(level_for_xp(one_game)),
+                "level": level,
                 "xp": one_game,
                 "xpToNext": xp_to_next_level(one_game),
-                "nextRewards": j(&reward_for_level(2)),
-                "rewardsClaimed": 1,
+                "nextRewards": j(&reward_for_level(level + 1)),
+                "rewardsClaimed": level,
                 "unlocked": true,
             })
         );
@@ -990,6 +1132,30 @@ mod reads {
                 .iter()
                 .all(|track| track["unlocked"] == json!(false)),
             "older tracks stay locked: {tracks:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn r1302005_a_track_on_its_last_level_reads_no_next_level() {
+        install_test_cards();
+        let (app, token) = authed().await;
+        let last = i64::from(SET_TRACK_LEVELS);
+        let xp = total_xp_for_level(SET_TRACK_LEVELS + 1);
+        grant_track(&app, A, newest(), xp, last, last).await;
+
+        let (status, _, body) = call(&app, "GET", "/api/tracks", Some(&token), Value::Null).await;
+        assert_eq!(status, 200);
+        assert_eq!(
+            body["tracks"][SHIPPED_SETS.len() - 1],
+            json!({
+                "setId": newest().as_str(),
+                "level": last,
+                "xp": xp,
+                "xpToNext": null,
+                "nextRewards": null,
+                "rewardsClaimed": last,
+                "unlocked": true,
+            })
         );
     }
 }

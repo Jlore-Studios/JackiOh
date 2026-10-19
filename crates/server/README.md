@@ -174,7 +174,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET` | `/api/codes/status` | user | whether redemption is paused, and the caller's attempts left (R192) |
 | `GET` | `/api/collection` | active | the ledger; there is no write route |
 | `GET` | `/api/wallet` | active | the caller's Jlore balance (§14.1); read-only, like the collection |
-| `GET` | `/api/tracks` | active | the caller's set tracks in catalog order — level, XP, the XP to the next level, the next rewards and how many levels have paid (§14.7); read-only, like the collection |
+| `GET` | `/api/tracks` | active | the caller's set tracks in catalog order — level, XP, the XP to the next level, the next rewards (both `null` on the last level, R1302005) and how many levels have paid (§14.7); read-only, like the collection |
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641) and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000) |
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |

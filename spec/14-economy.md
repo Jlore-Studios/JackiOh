@@ -81,7 +81,7 @@ The Chase Shard bar counts the cosmetic packs the account opens. At `CHASE_SHARD
 
 ### 14.7 Set tracks and XP
 
-Each set that ships has a track ([[R1420]]) of `SET_TRACK_LEVELS` levels. A track starts at its first level with no XP, and going from level n to the next costs `SET_TRACK_XP_PER_LEVEL` × n XP: the cost rises with every level and is never capped. The XP of games ([[§14.8]]) and quests ([[§14.9]]) goes to every active track, each gaining all of it; a dev account's own grant goes to the track it picks ([[§14.10]]). The newest set's track is active from the start, and an older set's once it unlocks: the older tracks unlock one at a time once the newest set's track reaches `SET_TRACK_UNLOCK_LEVEL`, nearest-older first, one per payout ([[R1302003]]).
+Each set that ships has a track ([[R1420]]) of `SET_TRACK_LEVELS` levels. A track starts at its first level with no XP, and going from level n to the next costs `SET_TRACK_XP_PER_LEVEL` × n XP: the cost rises with every level and is never capped. The XP of games ([[§14.8]]) and quests ([[§14.9]]) goes to every active track, each gaining all of it; a dev account's own grant goes to the track it picks ([[§14.10]]). The newest set's track is active from the start, and an older set's once it unlocks: the older tracks unlock one at a time once the newest set's track reaches `SET_TRACK_UNLOCK_LEVEL`, nearest-older first, one per payout ([[R1302003]]). A track's last level is the last it reaches; XP past it still lands ([[R1302005]]).
 
 Each level pays rewards, cards, Jlore and card packs, from a reward table per set kept as data. A level pays once, as ledger rows, when its track reaches it ([[§14.11]]). A track does not pay out every card of its set; pack luck covers the rest ([[§14.3]]).
 
@@ -89,7 +89,7 @@ Each level pays rewards, cards, Jlore and card packs, from a reward table per se
 
 Games earn Jlore and XP for the people who play them, never for a ladder bot. A ladder game, a ranked match ([[§9.12]]) that is not a game of a Conquest series, pays its winner `JLORE_LADDER_WIN` and its loser `JLORE_LADDER_LOSS`. A practice game ([[§9.9]]) pays `JLORE_PRACTICE_WIN` for a win and `JLORE_PRACTICE_LOSS` for a loss. Whether a game of a ranked Conquest series, an unranked game or a co-op game ([[§13]]) earns, the sub-issues that build earning rule.
 
-XP stands in for time played: `XP_PER_ACTION` for each action the player took, and `XP_WIN_BONUS` more for a win, the game's total never above `XP_GAME_CAP`, so a loop of empty actions cannot farm it. A practice game earns the XP the same game would earn on the ladder, times `XP_PRACTICE_SCALE`. The amounts are tuned so a ladder game averages `XP_LADDER_TARGET_MEAN`. What a draw, a concede or a game the reaper ends pays, [[R1302000]], [[R1302001]] and [[R1302002]] rule.
+XP stands in for time played: `XP_PER_ACTION` for each action the player took, a move of the game and never a row the server writes itself ([[R1302004]]), and `XP_WIN_BONUS` more for a win, the game's total never above `XP_GAME_CAP`, so a loop of empty actions cannot farm it. A practice game earns the XP the same game would earn on the ladder, times `XP_PRACTICE_SCALE`. The amounts are tuned so a ladder game averages `XP_LADDER_TARGET_MEAN`. What a draw, a concede or a game the reaper ends pays, [[R1302000]], [[R1302001]] and [[R1302002]] rule.
 
 Every payout goes through one reward hook on the server, which takes a finished game's summary (the account, the mode, the result and the actions taken), pays it, and moves the account's quests ([[§14.9]]).
 

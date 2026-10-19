@@ -8,26 +8,28 @@
 //!
 //! - On the ladder the server ran the match, so the caller counts the actions from its own log
 //!   and pays in the transaction that records the result; the client reports nothing. The caller
-//!   is `api::results`'s write, gated on a ranked non-series match there.
+//!   is `api::results`'s write, gated on a ranked non-series match there. An action counts when
+//!   [`is_player_action`] says the player took it ([[R1302004]]): every caller counts with it.
 //! - Jlore is [`game_jlore`]: `JLORE_LADDER_WIN` for a win, `JLORE_LADDER_LOSS` otherwise.
 //! - XP is [`game_xp`]: `XP_PER_ACTION` for each counted action, `XP_WIN_BONUS` more for a win,
 //!   never above `XP_GAME_CAP`, so a loop of empty actions cannot farm it. It goes to every
 //!   active track, each gaining all of it; the newest set's track is active from the start, and
 //!   an older set's once it unlocks, one at a time, once the newest reaches
 //!   `SET_TRACK_UNLOCK_LEVEL` ([[R1302003]]). A level pays its [`reward_for_level`](super::track_rewards::reward_for_level)
-//!   once, as ledger rows, when its track reaches it.
+//!   once, as ledger rows, when its track reaches it; a track's last level is
+//!   `SET_TRACK_LEVELS`, and XP past it lands but reaches no level ([`track_level`], [[R1302005]]).
 //!
 //! Every number is read through its [`crate::config`] constant (CLAUDE.md rule 9).
 
-use jackioh_engine::PlayerId;
 use jackioh_engine::wire::{SHIPPED_SETS, SetName, newest_shipped_set};
+use jackioh_engine::{ActionBody, PlayerId};
 
 use super::math::level_for_xp;
 use super::store::{EconomyReason, InventoryGrant, InventoryItem, JloreGrant, JloreReason, TrackGrant};
 use super::track_rewards::reward_for_level;
 use crate::config::{
-    JLORE_LADDER_LOSS, JLORE_LADDER_WIN, SET_TRACK_FIRST_LEVEL, SET_TRACK_UNLOCK_LEVEL, XP_GAME_CAP,
-    XP_PER_ACTION, XP_WIN_BONUS,
+    JLORE_LADDER_LOSS, JLORE_LADDER_WIN, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL,
+    XP_GAME_CAP, XP_PER_ACTION, XP_WIN_BONUS,
 };
 use crate::db::store::{StoreResult, Tx};
 
@@ -39,7 +41,8 @@ pub struct GameSummary {
     pub player: PlayerId,
     /// `Some(true)` for a win, `Some(false)` for a loss, `None` for a draw ([[R1302000]]).
     pub won: Option<bool>,
-    /// How many of the match log's actions carry their seat.
+    /// How many actions the player took: the log's rows of their seat that
+    /// [`is_player_action`] counts.
     pub actions: i64,
     /// The match, for the ledger rows' `reference`.
     pub match_id: String,
@@ -47,6 +50,39 @@ pub struct GameSummary {
     pub at: i64,
     /// A bot's side: never paid ([[R1454]]).
     pub bot: bool,
+}
+
+/// Whether a logged action is one the player took, so earns `XP_PER_ACTION` (SPEC §14.8,
+/// [[R1302004]]): every move of the game, an emote a card hears (MD-D29) among them. The server's
+/// own rows are not ([[R79]]: a clock that ran out, a disconnect that expired, the hard ceiling),
+/// nor [[R345]]'s automatic-end setting, nor a practice sandbox's tool ([[R923000]]). Every kind is
+/// named, so a new one is counted or not by a decision, never by default.
+pub fn is_player_action(body: &ActionBody) -> bool {
+    match body {
+        ActionBody::Mulligan { .. }
+        | ActionBody::Play { .. }
+        | ActionBody::Attack { .. }
+        | ActionBody::SwitchPosition { .. }
+        | ActionBody::Activate { .. }
+        | ActionBody::ActivatePower { .. }
+        | ActionBody::Answer { .. }
+        | ActionBody::OfferDraw
+        | ActionBody::AnswerDraw { .. }
+        | ActionBody::Emote { .. }
+        | ActionBody::Concede
+        | ActionBody::EndTurn => true,
+        ActionBody::SetAutoEndTurn { .. }
+        | ActionBody::Sandbox { .. }
+        | ActionBody::Timeout
+        | ActionBody::DisconnectExpired { .. }
+        | ActionBody::CeilingReached => false,
+    }
+}
+
+/// The level a set track with `total_xp` XP stands on (SPEC §14.7, [[R1302005]]): the level
+/// curve's, never past the track's last level, `SET_TRACK_LEVELS`.
+pub fn track_level(total_xp: i64) -> i64 {
+    i64::from(level_for_xp(total_xp).min(SET_TRACK_LEVELS))
 }
 
 /// A game's XP (SPEC §14.8): `XP_PER_ACTION` for each action taken, `XP_WIN_BONUS` more for a
@@ -111,7 +147,7 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
     );
     for set in &active {
         let (old_xp, old_level, old_claimed) = held(*set);
-        let new_level = i64::from(level_for_xp(old_xp + xp));
+        let new_level = track_level(old_xp + xp);
         tx.economy_tracks_grant(&TrackGrant {
             profile_id: summary.profile_id.clone(),
             set_id: set.as_str().to_string(),
@@ -130,7 +166,7 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
     // `SET_TRACK_UNLOCK_LEVEL`; it counts as active from this payout, carrying this game's XP.
     // The gate reads the newest track after this game's XP landed, so the payout that reaches
     // the unlock level is the one that unlocks.
-    let newest_level = i64::from(level_for_xp(held(newest).0 + xp));
+    let newest_level = track_level(held(newest).0 + xp);
     if newest_level >= i64::from(SET_TRACK_UNLOCK_LEVEL)
         && let Some(set) = SHIPPED_SETS
             .iter()
@@ -139,7 +175,7 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
             .skip(1)
             .find(|set| !tracks.iter().any(|track| track.set_id == set.as_str()))
     {
-        let new_level = i64::from(level_for_xp(xp));
+        let new_level = track_level(xp);
         tx.economy_tracks_grant(&TrackGrant {
             profile_id: summary.profile_id.clone(),
             set_id: set.as_str().to_string(),
@@ -212,6 +248,54 @@ async fn pay_level_rewards(
 mod tests {
     use super::*;
     use crate::config::{XP_GAME_CAP, XP_PER_ACTION, XP_WIN_BONUS};
+    use crate::economy::math::total_xp_for_level;
+    use serde_json::json;
+
+    fn body(action: serde_json::Value) -> ActionBody {
+        serde_json::from_value(action).expect("an ActionBody")
+    }
+
+    #[test]
+    fn r1302004_only_moves_the_player_took_count() {
+        for taken in [
+            json!({ "type": "mulligan", "keep": [] }),
+            json!({ "type": "play", "instanceId": "c1" }),
+            json!({ "type": "attack", "attackerId": "c1", "targetId": "c2" }),
+            json!({ "type": "switchPosition", "instanceId": "c1" }),
+            json!({ "type": "activate", "instanceId": "c1" }),
+            json!({ "type": "activatePower", "instanceId": "c1" }),
+            json!({ "type": "answer", "choiceId": "q1", "selection": [] }),
+            json!({ "type": "offerDraw" }),
+            json!({ "type": "answerDraw", "accept": false }),
+            json!({ "type": "emote", "emote": "greetings" }),
+            json!({ "type": "concede" }),
+            json!({ "type": "endTurn" }),
+        ] {
+            assert!(is_player_action(&body(taken.clone())), "{taken} is a move");
+        }
+        for not_taken in [
+            json!({ "type": "setAutoEndTurn", "enabled": false }),
+            json!({ "type": "timeout" }),
+            json!({ "type": "disconnectExpired", "player": "p1" }),
+            json!({ "type": "ceilingReached" }),
+        ] {
+            assert!(
+                !is_player_action(&body(not_taken.clone())),
+                "{not_taken} is no move"
+            );
+        }
+    }
+
+    #[test]
+    fn r1302005_a_track_stops_at_its_last_level() {
+        let last = i64::from(SET_TRACK_LEVELS);
+        let at_last = total_xp_for_level(SET_TRACK_LEVELS);
+        assert_eq!(track_level(0), SET_TRACK_FIRST_LEVEL);
+        assert_eq!(track_level(at_last - 1), last - 1);
+        assert_eq!(track_level(at_last), last);
+        assert_eq!(track_level(total_xp_for_level(SET_TRACK_LEVELS + 1)), last);
+        assert_eq!(track_level(i64::MAX), last);
+    }
 
     #[test]
     fn xp_counts_actions_and_stops_at_the_cap() {
