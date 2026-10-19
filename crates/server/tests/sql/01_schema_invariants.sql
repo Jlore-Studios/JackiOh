@@ -43,7 +43,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 43 tables of migrations 0001-0039 ==='
+\echo '=== CHECK 2: the 62 tables of migrations 0001-0044 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -63,21 +63,29 @@ declare
   -- R915008), and the friend_requests, friendships, blocks, presence, challenges, chat_messages,
   -- chat_reports and replay_shares of Play together (0038, #936) and its Duos co-op's duos_rooms,
   -- duos_matches and duos_match_actions (0039, #946), the card statistics' record_totals,
-  -- card_totals and decklist_totals (0041, R1044000), and the live matches' match_checkpoints
-  -- (0042, #1169).
+  -- card_totals and decklist_totals (0041, R1044000), the live matches' match_checkpoints
+  -- (0042, #1169), and the economy's wallets, jlore_grants, inventory, inventory_grants,
+  -- economy_counters, economy_counter_grants, set_tracks, set_track_grants, held_quests,
+  -- quest_schedules, quest_grants, cosmetics, card_cosmetics, account_cosmetics and cosmetic_grants
+  -- (0044, SPEC §14.11, #1299).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033, 0035, 0036, 0040 and 0043 add no table. The three loadout tables stay after
   -- 0007, unread and unwritten (R254), so they are still expected here.
   expected constant text[] := array[
-    'action_timings', 'age_checks', 'blocks', 'bot_ratings', 'bots', 'card_totals', 'cards', 'challenges',
-    'chat_messages', 'chat_reports', 'code_attempts', 'collection', 'collection_grants', 'custom_cards',
-    'decklist_totals', 'decks', 'duos_match_actions', 'duos_matches', 'duos_rooms', 'emote_events',
-    'friend_requests', 'friendships', 'game_records', 'invite_codes', 'last_boards', 'loadout_deck_cards',
+    'account_cosmetics', 'action_timings', 'age_checks', 'blocks', 'bot_ratings', 'bots', 'card_cosmetics',
+    'card_totals', 'cards', 'challenges',
+    'chat_messages', 'chat_reports', 'code_attempts', 'collection', 'collection_grants', 'cosmetic_grants',
+    'cosmetics', 'custom_cards',
+    'decklist_totals', 'decks', 'duos_match_actions', 'duos_matches', 'duos_rooms', 'economy_counter_grants',
+    'economy_counters', 'emote_events',
+    'friend_requests', 'friendships', 'game_records', 'held_quests', 'inventory', 'inventory_grants',
+    'invite_codes', 'jlore_grants', 'last_boards', 'loadout_deck_cards',
     'loadout_decks', 'loadouts', 'match_actions', 'match_checkpoints', 'match_signals', 'matches',
     'player_settings',
-    'player_stats', 'presence', 'profiles', 'rated_games', 'record_totals', 'replay_shares', 'results',
-    'season_ranks', 'seasons', 'series', 'terms_acceptances', 'tickets', 'trios',
-    'tutorial_progress'];
+    'player_stats', 'presence', 'profiles', 'quest_grants', 'quest_schedules', 'rated_games', 'record_totals',
+    'replay_shares', 'results',
+    'season_ranks', 'seasons', 'series', 'set_track_grants', 'set_tracks', 'terms_acceptances', 'tickets',
+    'trios', 'tutorial_progress', 'wallets'];
   actual  text[];
   missing text[];
   extra   text[];
@@ -276,7 +284,10 @@ declare
   -- and both are enforced by app.deny_row_mutation() fired BEFORE UPDATE OR DELETE FOR
   -- EACH ROW. A listing cannot tell a live guard from a disabled one or from a trigger
   -- that only fires on INSERT, so the flags are asserted, not printed.
-  ledgers constant text[] := array['collection_grants', 'match_actions'];
+  -- SPEC §14.11 (0044) holds the economy's six ledgers to the same rule.
+  ledgers constant text[] := array['collection_grants', 'match_actions', 'jlore_grants', 'inventory_grants',
+                                   'economy_counter_grants', 'set_track_grants', 'quest_grants',
+                                   'cosmetic_grants'];
   tbl     text;
   r       record;
 begin

@@ -2525,18 +2525,19 @@ pub async fn collection_append_grants(
                 "card_id": grant.card_id,
                 "delta": grant.delta,
                 "reason": grant.reason,
+                "dev": grant.dev,
                 "at": grant.at,
             })
         })
         .collect();
     run_as(t, Some(first.profile_id.as_str())).await?;
     sqlx::query(concat!(
-        "insert into public.collection_grants (profile_id, card_id, delta, reason, at)
-         select g.profile_id::uuid, g.card_id, g.delta, g.reason, ",
+        "insert into public.collection_grants (profile_id, card_id, delta, reason, dev, at)
+         select g.profile_id::uuid, g.card_id, g.delta, g.reason, g.dev, ",
         ts!("g.at"),
         "
            from jsonb_to_recordset($1::jsonb)
-             as g(profile_id text, card_id text, delta int, reason text, at double precision)"
+             as g(profile_id text, card_id text, delta int, reason text, dev boolean, at double precision)"
     ))
     .bind(json(&rows)?)
     .execute(&mut **t)

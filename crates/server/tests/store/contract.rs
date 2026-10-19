@@ -253,6 +253,7 @@ impl StoreHarness {
             .await
             .expect("truncate every table");
         seed_cards(&admin).await;
+        seed_cosmetics(&admin).await;
         let pool = PgPoolOptions::new()
             .connect(&url)
             .await
@@ -426,6 +427,27 @@ impl StoreHarness {
         }
     }
 
+    /// §14.10: each of a profile's collection grants' `dev` mark, oldest first, which no port read
+    /// returns: in Postgres `collection_grants.dev` (migration 0044), in memory the grant's own.
+    pub async fn collection_dev_marks(&self, profile_id: &str) -> Vec<bool> {
+        match &self.ends {
+            Ends::Memory { data, .. } => data
+                .lock()
+                .await
+                .grants_for(profile_id)
+                .iter()
+                .map(|grant| grant.dev)
+                .collect(),
+            Ends::Postgres { admin } => sqlx::query_scalar(
+                "select dev from public.collection_grants where profile_id = $1::uuid order by id",
+            )
+            .bind(profile_id)
+            .fetch_all(admin)
+            .await
+            .expect("read the collection grants' dev marks"),
+        }
+    }
+
     pub async fn close(self) {
         if let Db::Pg(pool) = &self.db {
             pool.close().await;
@@ -494,6 +516,25 @@ pub async fn seed_cards(admin: &PgPool) {
     .execute(admin)
     .await
     .expect("seed the fixture cards");
+}
+
+/// The cosmetics the economy cases own (migration 0044's `public.cosmetics`, which `seed-catalog`
+/// fills from the registry and the truncate keeps, as `cards`): a per-card one and an account one.
+/// The fake keeps no table of cosmetics, so it needs none.
+pub const FOIL_COSMETIC: &str = "fixture-foil-rare";
+pub const BOARD_COSMETIC: &str = "fixture-board-epic";
+
+pub async fn seed_cosmetics(admin: &PgPool) {
+    sqlx::query(
+        "insert into public.cosmetics (id, kind, name, rarity)
+         values ($1, 'foil', 'Fixture foil', 'Rare'), ($2, 'board', 'Fixture board', 'Epic')
+         on conflict (id) do nothing",
+    )
+    .bind(FOIL_COSMETIC)
+    .bind(BOARD_COSMETIC)
+    .execute(admin)
+    .await
+    .expect("seed the fixture cosmetics");
 }
 
 /// `Date.now()`.
@@ -1805,10 +1846,23 @@ mod collection {
         );
     }
 
+    /// §14.10: a grant a dev tool wrote keeps its `dev` mark (migration 0044); any other reads unmarked.
+    async fn a_collection_grant_keeps_its_dev_mark(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let card_id = must(harness.playable_ids.first().cloned(), "a card");
+        let marked = CollectionGrant {
+            dev: true,
+            ..grant(&profile.id, &card_id, -1, harness.now())
+        };
+        q!(harness, t => t.collection_append_grants(&[grant(&profile.id, &card_id, 1, harness.now()), marked]));
+        assert_eq!(harness.collection_dev_marks(&profile.id).await, vec![false, true]);
+    }
+
     both_stores!(
         sets_absolute_quantities_and_appends_grants,
         rolls_both_ledger_writes_back_when_the_transaction_throws,
         commits_what_a_transaction_that_returns_wrote,
+        a_collection_grant_keeps_its_dev_mark,
     );
 }
 
@@ -7919,6 +7973,535 @@ mod duos {
         s6_matches_finish_once_and_the_log_is_append_only,
         s6_a_deleted_profile_takes_its_rooms_and_matches,
         s6_the_purge_takes_the_logs_of_matches_that_ended_before_the_cutoff,
+    );
+}
+
+// ---------------------------------------------------------------------------
+// The economy (SPEC §14.11; migration 0044)
+// ---------------------------------------------------------------------------
+
+mod economy {
+    use super::*;
+    use jackioh_server::config::SET_TRACK_FIRST_LEVEL;
+    use jackioh_server::economy::store::{
+        CosmeticGrant, CounterGrant, InventoryGrant, JloreGrant, QuestGrant, TrackGrant,
+    };
+
+    fn jlore(profile_id: &str, delta: i64, reason: &str, dev: bool, at: i64) -> JloreGrant {
+        from(json!({
+            "profileId": profile_id, "delta": delta, "reason": reason, "reference": null, "dev": dev, "at": at,
+        }))
+    }
+
+    fn item(profile_id: &str, item: &str, key: &str, delta: i64, at: i64) -> InventoryGrant {
+        from(json!({
+            "profileId": profile_id, "item": item, "key": key, "delta": delta, "reason": "pack_open",
+            "reference": "pack:1", "dev": false, "at": at,
+        }))
+    }
+
+    fn counter(profile_id: &str, counter: &str, pack: &str, delta: i64, at: i64) -> CounterGrant {
+        from(json!({
+            "profileId": profile_id, "counter": counter, "pack": pack, "delta": delta, "reason": "pack_open",
+            "reference": null, "dev": false, "at": at,
+        }))
+    }
+
+    fn track(profile_id: &str, set_id: &str, change: [i64; 3], at: i64) -> TrackGrant {
+        let [xp, levels, rewards] = change;
+        from(json!({
+            "profileId": profile_id, "setId": set_id, "xp": xp, "levels": levels, "rewards": rewards,
+            "reason": "game", "reference": null, "dev": false, "at": at,
+        }))
+    }
+
+    fn quest(profile_id: &str, quest_id: &str, change: &str, progress: i64, at: i64) -> QuestGrant {
+        from(json!({
+            "profileId": profile_id, "questId": quest_id, "change": change, "progress": progress,
+            "reason": "quest", "reference": null, "dev": false, "at": at,
+        }))
+    }
+
+    fn cosmetic(
+        profile_id: &str,
+        card_id: Option<&str>,
+        cosmetic_id: &str,
+        delta: i64,
+        at: i64,
+    ) -> CosmeticGrant {
+        from(json!({
+            "profileId": profile_id, "cardId": card_id, "cosmeticId": cosmetic_id, "delta": delta,
+            "reason": "pack_open", "reference": null, "dev": false, "at": at,
+        }))
+    }
+
+    /// Every economy read of a profile, as one JSON value.
+    async fn economy_of(harness: &StoreHarness, profile_id: &str) -> Value {
+        json!({
+            "jlore": q!(harness, t => t.economy_jlore_get(profile_id)),
+            "inventory": j(&q!(harness, t => t.economy_inventory_get(profile_id))),
+            "counters": j(&q!(harness, t => t.economy_counters_get(profile_id))),
+            "tracks": j(&q!(harness, t => t.economy_tracks_get(profile_id))),
+            "quests": j(&q!(harness, t => t.economy_quests_get(profile_id))),
+            "cosmetics": j(&q!(harness, t => t.economy_cosmetics_get(profile_id))),
+            "ledger": j(&q!(harness, t => t.economy_ledger_get(profile_id))),
+        })
+    }
+
+    /// What `economy_of` reads of a profile with no economy at all.
+    fn no_economy() -> Value {
+        json!({
+            "jlore": 0,
+            "inventory": [],
+            "counters": [],
+            "tracks": [],
+            "quests": { "held": [], "nextDueAt": null },
+            "cosmetics": { "cards": [], "account": [] },
+            "ledger": { "jlore": [], "inventory": [], "counters": [], "tracks": [], "quests": [], "cosmetics": [] },
+        })
+    }
+
+    /// One write of every kind, in `t`; the error's text on a failure.
+    async fn write_one_of_each(
+        t: &mut Tx<'_>,
+        harness: &StoreHarness,
+        profile_id: &str,
+        at: i64,
+    ) -> Result<(), String> {
+        let card_id = must(harness.playable_ids.first().cloned(), "a card");
+        let shown = |error: StoreError| error.to_string();
+        t.economy_jlore_grant(&jlore(profile_id, 100, "game", false, at))
+            .await
+            .map_err(shown)?;
+        t.economy_inventory_grant(&item(profile_id, "global_pack", "", 1, at))
+            .await
+            .map_err(shown)?;
+        t.economy_counters_grant(&counter(profile_id, "pity_epic", "", 1, at))
+            .await
+            .map_err(shown)?;
+        t.economy_tracks_grant(&track(profile_id, "Core", [10, 0, 0], at))
+            .await
+            .map_err(shown)?;
+        t.economy_quests_change(&quest(profile_id, "win-games", "arrived", 0, at))
+            .await
+            .map_err(shown)?;
+        t.economy_quests_set_next_due(profile_id, Some(at + 1))
+            .await
+            .map_err(shown)?;
+        t.economy_cosmetics_grant(&cosmetic(profile_id, Some(&card_id), FOIL_COSMETIC, 1, at))
+            .await
+            .map_err(shown)?;
+        t.economy_cosmetics_grant(&cosmetic(profile_id, None, BOARD_COSMETIC, 1, at))
+            .await
+            .map_err(shown)?;
+        Ok(())
+    }
+
+    /// §14.1: Jlore is a whole balance never below zero; a spend the wallet cannot cover is refused
+    /// and changes nothing. §14.11: every change is one ledger row.
+    async fn jlore_adds_spends_and_refuses_what_the_wallet_cannot_cover(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let now = harness.now();
+        assert_eq!(q!(harness, t => t.economy_jlore_get(&profile.id)), 0);
+        assert_eq!(
+            q!(harness, t => t.economy_jlore_grant(&jlore(&profile.id, 100, "game", false, now))),
+            Some(100)
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_jlore_grant(&jlore(&profile.id, -30, "pack_purchase", false, now + 1))),
+            Some(70)
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_jlore_grant(&jlore(&profile.id, -71, "pack_purchase", false, now + 2))),
+            None
+        );
+        assert_eq!(q!(harness, t => t.economy_jlore_get(&profile.id)), 70);
+
+        let ledger = q!(harness, t => t.economy_ledger_get(&profile.id));
+        assert_eq!(
+            j(&ledger.jlore),
+            json!([
+                { "profileId": profile.id, "delta": 100, "reason": "game", "reference": null, "dev": false, "at": now },
+                { "profileId": profile.id, "delta": -30, "reason": "pack_purchase", "reference": null, "dev": false, "at": now + 1 },
+            ])
+        );
+    }
+
+    /// §14.10: a dev grant is always marked `dev`, and a row of another reason may be marked too;
+    /// §14.11: a grant of nothing is no row. Each refusal is an error that writes nothing.
+    async fn a_dev_reason_needs_the_dev_mark_and_a_zero_delta_is_refused(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let now = harness.now();
+        assert_eq!(
+            q!(harness, t => t.economy_jlore_grant(&jlore(&profile.id, 500, "dev", true, now))),
+            Some(500)
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_jlore_grant(&jlore(&profile.id, 10, "quest", true, now))),
+            Some(510)
+        );
+        assert!(
+            call!(harness, t => t.economy_jlore_grant(&jlore(&profile.id, 5, "dev", false, now))).is_err()
+        );
+        assert!(
+            call!(harness, t => t.economy_jlore_grant(&jlore(&profile.id, 0, "game", false, now))).is_err()
+        );
+        let unmarked = InventoryGrant {
+            reason: from(json!("dev")),
+            ..item(&profile.id, "global_pack", "", 1, now)
+        };
+        assert!(call!(harness, t => t.economy_inventory_grant(&unmarked)).is_err());
+        assert!(
+            call!(harness, t => t.economy_inventory_grant(&item(&profile.id, "global_pack", "", 0, now)))
+                .is_err()
+        );
+
+        assert_eq!(q!(harness, t => t.economy_jlore_get(&profile.id)), 510);
+        let ledger = q!(harness, t => t.economy_ledger_get(&profile.id));
+        let marks: Vec<(String, bool)> = ledger
+            .jlore
+            .iter()
+            .map(|grant| (lit(&grant.reason), grant.dev))
+            .collect();
+        assert_eq!(
+            marks,
+            vec![("dev".to_string(), true), ("quest".to_string(), true)]
+        );
+        assert!(ledger.inventory.is_empty());
+    }
+
+    /// §14.3, §14.5, §14.6: packs by kind and tokens by rarity, each its own count, a count spent to
+    /// zero kept; a key its item does not take is refused.
+    async fn inventory_counts_packs_and_tokens_by_kind(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let now = harness.now();
+        let grant = |name: &str, key: &str, delta: i64| item(&profile.id, name, key, delta, now);
+        assert_eq!(
+            q!(harness, t => t.economy_inventory_grant(&grant("set_pack", "Core", 2))),
+            Some(2)
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_inventory_grant(&grant("set_pack", "Core", -1))),
+            Some(1)
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_inventory_grant(&grant("set_pack", "Core", -1))),
+            Some(0)
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_inventory_grant(&grant("global_pack", "", 1))),
+            Some(1)
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_inventory_grant(&grant("card_token", "", 1))),
+            Some(1)
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_inventory_grant(&grant("cosmetic_token", "Rare", 3))),
+            Some(3)
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_inventory_grant(&grant("cosmetic_pack", "", -1))),
+            None
+        );
+        for (name, key) in [
+            ("global_pack", "Core"),
+            ("cosmetic_token", ""),
+            ("set_pack", ""),
+            ("cosmetic_token", "Token"),
+        ] {
+            assert!(
+                call!(harness, t => t.economy_inventory_grant(&grant(name, key, 1))).is_err(),
+                "{name} keyed {key:?}"
+            );
+        }
+
+        assert_eq!(
+            j(&q!(harness, t => t.economy_inventory_get(&profile.id))),
+            json!([
+                { "item": "card_token", "key": "", "count": 1 },
+                { "item": "cosmetic_token", "key": "Rare", "count": 3 },
+                { "item": "global_pack", "key": "", "count": 1 },
+                { "item": "set_pack", "key": "Core", "count": 0 },
+            ])
+        );
+        let ledger = q!(harness, t => t.economy_ledger_get(&profile.id));
+        let deltas: Vec<i64> = ledger.inventory.iter().map(|row| row.delta).collect();
+        assert_eq!(deltas, vec![2, -1, -1, 1, 1, 3]);
+        assert_eq!(j(&ledger.inventory[0])["reference"], json!("pack:1"));
+    }
+
+    /// §14.4–§14.6: a pity counter per rarity, kept over all packs or per pack, and the account's
+    /// bars, cycle and Chase Shard; none goes below zero, and only a pity counter names a pack.
+    async fn counters_keep_pity_per_rarity_and_the_bars(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let now = harness.now();
+        let grant = |name: &str, pack: &str, delta: i64| counter(&profile.id, name, pack, delta, now);
+        assert_eq!(
+            q!(harness, t => t.economy_counters_grant(&grant("pity_epic", "", 3))),
+            Some(3)
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_counters_grant(&grant("pity_epic", "", -3))),
+            Some(0)
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_counters_grant(&grant("pity_mythic", "global", 1))),
+            Some(1)
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_counters_grant(&grant("card_token_bar", "", 40))),
+            Some(40)
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_counters_grant(&grant("cosmetic_token_cycle", "", 1))),
+            Some(1)
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_counters_grant(&grant("chase_shard_bar", "", 1))),
+            Some(1)
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_counters_grant(&grant("pity_legendary", "", -1))),
+            None
+        );
+        assert!(
+            call!(harness, t => t.economy_counters_grant(&grant("card_token_bar", "global", 1))).is_err()
+        );
+
+        assert_eq!(
+            j(&q!(harness, t => t.economy_counters_get(&profile.id))),
+            json!([
+                { "counter": "card_token_bar", "pack": "", "value": 40 },
+                { "counter": "chase_shard_bar", "pack": "", "value": 1 },
+                { "counter": "cosmetic_token_cycle", "pack": "", "value": 1 },
+                { "counter": "pity_epic", "pack": "", "value": 0 },
+                { "counter": "pity_mythic", "pack": "global", "value": 1 },
+            ])
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_ledger_get(&profile.id)).counters.len(),
+            6
+        );
+    }
+
+    /// §14.7: a track starts at its first level with no XP; it gains XP, levels and rewards paid,
+    /// never XP below zero, a level below the first, or more levels paid than reached.
+    async fn a_set_track_gains_xp_levels_and_claims_rewards(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let now = harness.now();
+        let first = SET_TRACK_FIRST_LEVEL;
+        let grant = |set_id: &str, change: [i64; 3]| track(&profile.id, set_id, change, now);
+        let core = |xp: i64, level: i64, rewards: i64| json!({ "setId": "Core", "xp": xp, "level": level, "rewardsClaimed": rewards });
+        assert_eq!(
+            j(&q!(harness, t => t.economy_tracks_grant(&grant("Core", [50, 0, 0])))),
+            core(50, first, 0)
+        );
+        assert_eq!(
+            j(&q!(harness, t => t.economy_tracks_grant(&grant("Core", [0, 1, 2])))),
+            core(50, first + 1, 2)
+        );
+        for change in [[0, 0, 1], [-60, 0, 0], [0, -2, 0], [0, 0, -3]] {
+            assert_eq!(
+                q!(harness, t => t.economy_tracks_grant(&grant("Core", change))),
+                None,
+                "{change:?}"
+            );
+        }
+        assert!(call!(harness, t => t.economy_tracks_grant(&grant("Core", [0, 0, 0]))).is_err());
+        assert_eq!(
+            j(&q!(harness, t => t.economy_tracks_grant(&grant("Classic", [10, 0, 0])))),
+            json!({ "setId": "Classic", "xp": 10, "level": first, "rewardsClaimed": 0 })
+        );
+
+        assert_eq!(
+            j(&q!(harness, t => t.economy_tracks_get(&profile.id))),
+            json!([
+                { "setId": "Classic", "xp": 10, "level": first, "rewardsClaimed": 0 },
+                core(50, first + 1, 2),
+            ])
+        );
+        let ledger = q!(harness, t => t.economy_ledger_get(&profile.id));
+        let changes: Vec<(String, i64, i64, i64)> = ledger
+            .tracks
+            .iter()
+            .map(|row| (row.set_id.clone(), row.xp, row.levels, row.rewards))
+            .collect();
+        assert_eq!(
+            changes,
+            vec![
+                ("Core".to_string(), 50, 0, 0),
+                ("Core".to_string(), 0, 1, 2),
+                ("Classic".to_string(), 10, 0, 0),
+            ]
+        );
+    }
+
+    /// §14.9: a quest is held once at a time, its progress never below zero, and it completes once;
+    /// the next arrival's time is set and cleared without a ledger row.
+    async fn a_quest_arrives_progresses_and_completes_once(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let now = harness.now();
+        let change = |quest_id: &str, change: &str, progress: i64, at: i64| {
+            quest(&profile.id, quest_id, change, progress, at)
+        };
+        assert!(q!(harness, t => t.economy_quests_change(&change("win-games", "arrived", 0, now))));
+        assert!(!q!(harness, t => t.economy_quests_change(&change("win-games", "arrived", 0, now + 1))));
+        assert!(q!(harness, t => t.economy_quests_change(&change("win-games", "progressed", 2, now + 2))));
+        assert!(!q!(harness, t => t.economy_quests_change(&change("win-games", "progressed", -3, now + 3))));
+        assert!(!q!(harness, t => t.economy_quests_change(&change("play-spells", "progressed", 1, now + 3))));
+        assert!(q!(harness, t => t.economy_quests_change(&change("play-spells", "arrived", 0, now + 4))));
+        assert!(
+            call!(harness, t => t.economy_quests_change(&change("win-games", "progressed", 0, now))).is_err()
+        );
+        assert!(
+            call!(harness, t => t.economy_quests_change(&change("deal-damage", "arrived", 1, now))).is_err()
+        );
+
+        let book = q!(harness, t => t.economy_quests_get(&profile.id));
+        assert_eq!(
+            j(&book),
+            json!({
+                "held": [
+                    { "questId": "win-games", "progress": 2, "arrivedAt": now },
+                    { "questId": "play-spells", "progress": 0, "arrivedAt": now + 4 },
+                ],
+                "nextDueAt": null,
+            })
+        );
+        q!(harness, t => t.economy_quests_set_next_due(&profile.id, Some(now + 60_000)));
+        assert_eq!(
+            q!(harness, t => t.economy_quests_get(&profile.id)).next_due_at,
+            Some(now + 60_000)
+        );
+        q!(harness, t => t.economy_quests_set_next_due(&profile.id, None));
+        assert_eq!(
+            q!(harness, t => t.economy_quests_get(&profile.id)).next_due_at,
+            None
+        );
+
+        assert!(q!(harness, t => t.economy_quests_change(&change("win-games", "completed", 0, now + 5))));
+        assert!(!q!(harness, t => t.economy_quests_change(&change("win-games", "completed", 0, now + 6))));
+        assert!(q!(harness, t => t.economy_quests_change(&change("play-spells", "removed", 0, now + 7))));
+        assert_eq!(
+            q!(harness, t => t.economy_quests_get(&profile.id)).held,
+            Vec::new()
+        );
+
+        let ledger = q!(harness, t => t.economy_ledger_get(&profile.id));
+        let changes: Vec<(String, String, i64)> = ledger
+            .quests
+            .iter()
+            .map(|row| (row.quest_id.clone(), lit(&row.change), row.progress))
+            .collect();
+        assert_eq!(
+            changes,
+            vec![
+                ("win-games".to_string(), "arrived".to_string(), 0),
+                ("win-games".to_string(), "progressed".to_string(), 2),
+                ("play-spells".to_string(), "arrived".to_string(), 0),
+                ("win-games".to_string(), "completed".to_string(), 0),
+                ("play-spells".to_string(), "removed".to_string(), 0),
+            ]
+        );
+    }
+
+    /// §14.2: a per-card cosmetic is owned once on each card, an account cosmetic once on the
+    /// account; a clear of one not owned changes nothing.
+    async fn a_cosmetic_is_owned_once_per_card_and_per_account(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let now = harness.now();
+        let first = must(harness.playable_ids.first().cloned(), "a card");
+        let second = must(harness.playable_ids.get(1).cloned(), "a card");
+        let grant = |card_id: Option<&str>, cosmetic_id: &str, delta: i64| {
+            cosmetic(&profile.id, card_id, cosmetic_id, delta, now)
+        };
+        assert!(q!(harness, t => t.economy_cosmetics_grant(&grant(Some(&second), FOIL_COSMETIC, 1))));
+        assert!(!q!(harness, t => t.economy_cosmetics_grant(&grant(Some(&second), FOIL_COSMETIC, 1))));
+        assert!(q!(harness, t => t.economy_cosmetics_grant(&grant(Some(&first), FOIL_COSMETIC, 1))));
+        assert!(q!(harness, t => t.economy_cosmetics_grant(&grant(None, BOARD_COSMETIC, 1))));
+        assert!(q!(harness, t => t.economy_cosmetics_grant(&grant(None, BOARD_COSMETIC, -1))));
+        assert!(!q!(harness, t => t.economy_cosmetics_grant(&grant(None, BOARD_COSMETIC, -1))));
+        // The account's holding is apart from every card's: an id owned on cards is new to it.
+        assert!(q!(harness, t => t.economy_cosmetics_grant(&grant(None, FOIL_COSMETIC, 1))));
+        assert!(
+            call!(harness, t => t.economy_cosmetics_grant(&grant(Some(&first), BOARD_COSMETIC, 2))).is_err()
+        );
+
+        assert_eq!(
+            j(&q!(harness, t => t.economy_cosmetics_get(&profile.id))),
+            json!({
+                "cards": [
+                    { "cardId": first, "cosmeticId": FOIL_COSMETIC },
+                    { "cardId": second, "cosmeticId": FOIL_COSMETIC },
+                ],
+                "account": [FOIL_COSMETIC],
+            })
+        );
+        let ledger = q!(harness, t => t.economy_ledger_get(&profile.id));
+        let rows: Vec<(Option<String>, i64)> = ledger
+            .cosmetics
+            .iter()
+            .map(|row| (row.card_id.clone(), row.delta))
+            .collect();
+        assert_eq!(
+            rows,
+            vec![
+                (Some(second.clone()), 1),
+                (Some(first.clone()), 1),
+                (None, 1),
+                (None, -1),
+                (None, 1),
+            ]
+        );
+    }
+
+    /// §14.11: a holding and its ledger row are written in the caller's transaction, so a dropped
+    /// transaction leaves neither.
+    async fn every_economy_write_rolls_back_with_its_transaction(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let now = harness.now();
+        let failed: Result<(), String> = async {
+            let mut t = harness.db.begin(None).await.map_err(|error| error.to_string())?;
+            write_one_of_each(&mut t, harness, &profile.id, now).await?;
+            // The fault: `t` is dropped here without a commit, which is the rollback.
+            Err::<(), String>("fault injected after every write".to_string())
+        }
+        .await;
+        assert!(must(failed.err(), "the injected fault").contains("fault injected"));
+        assert_eq!(economy_of(harness, &profile.id).await, no_economy());
+    }
+
+    /// 0012's rule: every economy row of a deleted account goes with it, and nobody else's does.
+    async fn a_deleted_account_takes_its_economy_with_it(harness: &StoreHarness) {
+        let gone = pending_profile(harness, None).await;
+        let kept = pending_profile(harness, None).await;
+        let now = harness.now();
+        for profile_id in [&gone.id, &kept.id] {
+            let mut t = harness.db.begin(None).await.expect("begin");
+            write_one_of_each(&mut t, harness, profile_id, now)
+                .await
+                .unwrap_or_else(|error| panic!("{}: the writes: {error}", harness.name));
+            t.commit().await.expect("commit");
+        }
+        let before = economy_of(harness, &kept.id).await;
+        assert_ne!(before, no_economy());
+
+        assert!(q!(harness, t => t.profiles_remove(&gone.id)));
+        assert_eq!(economy_of(harness, &gone.id).await, no_economy());
+        assert_eq!(economy_of(harness, &kept.id).await, before);
+    }
+
+    both_stores!(
+        jlore_adds_spends_and_refuses_what_the_wallet_cannot_cover,
+        a_dev_reason_needs_the_dev_mark_and_a_zero_delta_is_refused,
+        inventory_counts_packs_and_tokens_by_kind,
+        counters_keep_pity_per_rarity_and_the_bars,
+        a_set_track_gains_xp_levels_and_claims_rewards,
+        a_quest_arrives_progresses_and_completes_once,
+        a_cosmetic_is_owned_once_per_card_and_per_account,
+        every_economy_write_rolls_back_with_its_transaction,
+        a_deleted_account_takes_its_economy_with_it,
     );
 }
 

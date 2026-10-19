@@ -651,3 +651,88 @@ mod r1178000_a_tag_only_a_held_set_carries_waits_for_its_release_migration {
         assert_eq!(waiting, Vec::<&str>::new());
     }
 }
+
+/// `test:db` only: SPEC §14.2's cosmetics registry (R1295000) into migration 0044's
+/// `public.cosmetics`, written by the catalog's own transaction. Seeded with no cards, so the
+/// fixture catalog the rest of the suite runs against stays as it is.
+mod db_seed_catalog_writes_the_cosmetics_registry {
+    use super::*;
+    use jackioh_server::cli::seed_catalog::{CatalogEntry, seed_catalog};
+    use jackioh_server::cosmetics::shipped;
+    use sqlx::PgPool;
+
+    /// The store contract's fixture catalog version.
+    const CATALOG_VERSION: &str = "core-1";
+
+    /// The registry's rows of `public.cosmetics`, by id, in the registry's own JSON shape.
+    async fn registry_rows(admin: &PgPool, ids: &[String]) -> Vec<Value> {
+        sqlx::query_scalar(
+            r#"select jsonb_build_object('id', id, 'kind', kind, 'name', name, 'rarity', rarity,
+                                         'default', is_default, 'chase', chase)
+                 from public.cosmetics where id = any($1::text[]) order by id collate "C""#,
+        )
+        .bind(ids)
+        .fetch_all(admin)
+        .await
+        .expect("the cosmetics read back")
+    }
+
+    #[tokio::test]
+    async fn the_registry_is_seeded_with_the_catalog_in_one_transaction_and_reseeded_in_place() {
+        let Ok(url) = std::env::var("DATABASE_URL") else {
+            return;
+        };
+        if url.is_empty() {
+            return;
+        }
+        let admin = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .connect(&url)
+            .await
+            .expect("the admin connection opens");
+        let mut registry = shipped().expect("the registry parses");
+        registry.sort_by(|a, b| a.id.cmp(&b.id));
+        let ids: Vec<String> = registry.iter().map(|cosmetic| cosmetic.id.clone()).collect();
+        let expected: Vec<Value> = registry
+            .iter()
+            .map(|cosmetic| {
+                let mut row = serde_json::to_value(cosmetic).expect("a cosmetic serialises");
+                row["chase"] = json!(false);
+                row
+            })
+            .collect();
+
+        seed_catalog(&url, CATALOG_VERSION, &[])
+            .await
+            .expect("the registry is seeded");
+        assert_eq!(registry_rows(&admin, &ids).await, expected);
+
+        // One transaction: a catalog the tag check refuses writes no cosmetic either.
+        let first = &registry[0].id;
+        sqlx::query("update public.cosmetics set name = 'Stale', rarity = 'Mythic' where id = $1")
+            .bind(first)
+            .execute(&admin)
+            .await
+            .expect("a row is edited by hand");
+        let mut misspelt = card("core-001");
+        misspelt["tags"] = json!(["Jlocked"]);
+        let misspelt: CatalogEntry = serde_json::from_value(misspelt).expect("an entry");
+        let refused = seed_catalog(&url, CATALOG_VERSION, &[misspelt])
+            .await
+            .expect_err("the unknown tag is refused");
+        assert!(format!("{refused:#}").contains("cards_tags_check"), "{refused:#}");
+        let (name,): (String,) = sqlx::query_as("select name from public.cosmetics where id = $1")
+            .bind(first)
+            .fetch_one(&admin)
+            .await
+            .expect("the row reads back");
+        assert_eq!(name, "Stale");
+
+        // A reseed puts every row back as the registry has it.
+        seed_catalog(&url, CATALOG_VERSION, &[])
+            .await
+            .expect("the registry is reseeded");
+        assert_eq!(registry_rows(&admin, &ids).await, expected);
+        admin.close().await;
+    }
+}

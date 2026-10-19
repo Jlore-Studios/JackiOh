@@ -102,6 +102,7 @@ pub async fn grant_cards(app: &App, input: GrantInput) -> Result<(), ApiError> {
             card_id: card_id.clone(),
             delta: *delta,
             reason: input.reason.clone(),
+            dev: false,
             at,
         });
     }

@@ -373,6 +373,11 @@ pub struct CollectionGrant {
     pub delta: i64,
     /// Constrained to a closed set in the schema: pack, craft, reward, refund, admin, launch.
     pub reason: String,
+    /// §14.10: a row a dev tool wrote for a dev account itself (migration 0044's
+    /// `collection_grants.dev`). Written only when true, and absent reads as false, as every row
+    /// before it was.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub dev: bool,
     pub at: i64,
 }
 

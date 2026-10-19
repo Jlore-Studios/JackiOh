@@ -704,8 +704,8 @@ step that is not yet implemented says which BUILD task delivers it.
    `0032_ladder_bots.sql` → `0033_bot_trios.sql` → `0034_account_consent.sql` →
    `0035_replay_final_hash.sql` → `0036_lean_set.sql` → `0037_custom_cards.sql` → `0038_social.sql` →
    `0039_duos.sql` → `0040_moderation_switch_grant.sql` → `0041_card_totals.sql` →
-   `0042_match_checkpoints.sql` → `0043_meditative_plus_set.sql` — and records them in
-   `app.migrations`. Expected result: 47 tables
+   `0042_match_checkpoints.sql` → `0043_meditative_plus_set.sql` → `0044_economy.sql` — and records
+   them in `app.migrations`. Expected result: 62 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can
@@ -774,7 +774,11 @@ step that is not yet implemented says which BUILD task delivers it.
    `replay_shares`, each readable only by its own players, and `profiles.allow_spectators`, on by
    default. 0039 adds the co-op tables (SPEC §13.9): `duos_rooms`, which a room's two people read but
    its frozen deck choices, and the server-only `duos_matches` and `duos_match_actions`. Every row of
-   both goes with an account that is deleted; neither needs anything else from the bring-up.
+   both goes with an account that is deleted; neither needs anything else from the bring-up. 0044
+   adds the economy's fifteen tables (SPEC §14.11): each holding (Jlore, packs and tokens, pity and
+   the bars, set tracks, quests, owned cosmetics) beside its append-only ledger, which its own
+   account reads and no client role writes, and `cosmetics`, which step 6 fills; `collection_grants`
+   gains its `dev` mark (§14.10). Nothing reads or writes them yet.
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL
@@ -788,6 +792,8 @@ step that is not yet implemented says which BUILD task delivers it.
    (396 cards + 84 tokens over Core, Classic, Classic+, Meditative and Meditative+: patch v0.2.0, Glitch,
    issue #170, the Meditative set, issue #553, and the Meditative+ set, issue #1187) and
    `select app.catalog_version();` → your `CATALOG_VERSION`, the latest card patch's version (R388).
+   In the same transaction it writes the cosmetics registry compiled in, `crates/server/cosmetics.json`
+   (R1295000), into `public.cosmetics`: `select count(*) from public.cosmetics;` → 12.
 7. **Mint an invite code.** `target/release/jackioh-server mint-code`. It generates 16 characters
    from `CODE_ALPHABET`, formats them `XXXX-XXXX-XXXX-XXXX`, HMACs with `CODE_PEPPER` and inserts
    only the hash (§9.4). The plaintext goes to stdout **once** — the database cannot give it back —
