@@ -6460,18 +6460,41 @@
     "1356": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-19T21:58:00Z",
       "issue": 1302,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The hook counts every log row whose `player_id` is the seat's engine seat as an action the player took. That includes rows the server writes itself (`Timeout`, `DisconnectExpired`, `CeilingReached`) and `SetAutoEndTurn`, a setting either seat can toggle at any moment. An idle player earns XP from their own timeouts, and any player can reach `XP_GAME_CAP` in seconds without making a move.",
+          "evidence": "results.rs:302-305 filters only on `logged.action.player_id == seat.player`. In crates/engine/src/wire/actions.rs:266-281, SetAutoEndTurn is 'A setting, not a move: it is accepted from either seat at any moment of a live game' and Timeout/DisconnectExpired/CeilingReached are 'Server-only (R79): never sent by a client'. match_actor.rs:849-868 builds `(player, ActionBody::Timeout)` for the timed-out seat and `(snapshot.active, ActionBody::CeilingReached)`. actor/telemetry.rs:163 already tells server-sent actions apart, so the repo has the distinction. \u00a714.8 says `XP_PER_ACTION` is for 'each action the player took' and that XP 'stands in for time played'. At the 5/s rate limit (MATCH_ACTIONS_PER_SECOND), about 75 toggles reach the current cap in ~15 s, then a concede against a ladder bot pays cap XP and the loss Jlore, and the player can queue again.",
+          "severity": "blocking",
+          "where": "crates/server/src/api/results.rs:302"
+        },
+        {
+          "claim": "Several tests hard-code where the placeholder XP values put a track (level 1 after one game, level 2 after two, `rewardsClaimed: 1`, a track Jlore total of `100`). They will fail once #1333 sets the real values, which breaks the issue's explicit requirement that tests 'keep passing when #1333 sets them'.",
+          "evidence": "`each_level_pays_once_and_a_repeated_write_pays_nothing` asserts `level_for_xp(game_xp(30, true)) == 1`, `level_for_xp(2 * one_game) == 2` and `track_jlore_total == 100`. `get_tracks_serves_levels_xp_and_next_rewards` pins `\"rewardsClaimed\": 1` and `reward_for_level(2)` after a 10-action win. `newest_at_unlock_level_unlocks_the_second_track` asserts `level_for_xp(game_xp(1, true)) == 1`. With the issue's own target of about 1,000 XP a game (e.g. `XP_PER_ACTION` 10, bonus 200), a 30-action win is 500 XP, which is level 3, so these assertions fail. The issue's text: 'Tests read values through the constants, not literals, so they keep passing when #1333 sets them.' The round-1 reviewer saw this and let it through as a note.",
+          "severity": "blocking",
+          "where": "crates/server/tests/api/rewards.rs:629"
+        },
+        {
+          "claim": "The hook never reads `SET_TRACK_LEVELS`. A track keeps levelling past its last level and pays rewards forever, and the reward table makes up rewards for every level past 10 with no end.",
+          "evidence": "\u00a714.7: 'Each set that ships has a track ([[R1420]]) of `SET_TRACK_LEVELS` levels' (config.rs:2142 sets it to 100). `new_level = level_for_xp(old_xp + xp)` is uncapped (math.rs `level_for_xp` runs to u32::MAX), and `pay_level_rewards` pays `reward_for_level(reached)` for each level reached. track_rewards.rs pays 25 Jlore, a pack every fifth level and a full level-10 bundle every tenth, for any level. `grep SET_TRACK_LEVELS` finds it only in config.rs, export_config and the spec. `GET /api/tracks` would also report levels past 100.",
+          "severity": "blocking",
+          "where": "crates/server/src/economy/rewards.rs:111"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-2",
-      "queued_at": "2026-10-19T22:44:47Z",
+      "queued_at": "2026-10-19T22:52:56Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "39337104464",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-10-19T22:46:59Z",
       "stop_requested": false,
       "taken_asks": [],
