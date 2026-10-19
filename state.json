@@ -20795,9 +20795,9 @@
     ],
     "idle_since": "2026-10-19T21:29:39Z",
     "last_run": "2026-10-19T21:29:39Z",
-    "provider": "muse",
+    "provider": null,
     "requested": false,
-    "run_id": "39327530486",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
