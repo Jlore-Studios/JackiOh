@@ -6467,7 +6467,7 @@
       "failures": 0,
       "feedback_since": "2026-10-19T21:58:00Z",
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "issue": 1302,
       "kind": "revise",
       "last_findings": [
