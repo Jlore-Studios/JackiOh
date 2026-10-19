@@ -5294,39 +5294,26 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-19T11:06:02Z",
+      "feedback_since": "2026-10-19T11:51:36Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1279,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "When reward G is deferred, quest 8 now opens only inside the DISCARD_STEP answer. If the opponent's hand is empty when their turn starts, no prompt opens, the answer never comes, and quest 8 never opens, so In Too Deep's quest line stops at G.",
-          "evidence": "REWARD_STEP (line 311) and the radiant trigger (line 276) drop path_of(\"G\") when G defers, and only DISCARD_STEP (line 337) adds it back. The deferred step (REWARD_G_DEFERRED_STEP) only emits reward_g_prompt(), and choose_from_hand returns without opening a prompt when the hand is empty (crates/engine/src/effects/choose.rs, `if hand.is_empty() { return; }`), so the step that opens quest 8 never runs. The delayed stage runs before the turn's draw (turn.rs header: refresh \u2192 Brittle \u2192 animate \u2192 delayed \u2192 triggers \u2192 draw), so an opponent who ended your turn with no cards always hits this. The old code always appended path_of(\"G\"), so quest 8 opened even with an empty hand. This breaks BUILD C 90 \"each reward opens its next quest per the tree\", and no test covers G with an empty hand.",
-          "severity": "blocking",
-          "where": "crates/cards/src/scripts/classic/c090_in_too_deep.rs:311"
-        },
-        {
-          "claim": "Pickle, Income Tax and In Too Deep all change how they play, but no patch record or player note says so. The pending v0.3.8 fragment that carries Pickle's text change still says its cards' mechanics are unchanged.",
-          "evidence": "classic-008 is claimed by pending v0.3.8, which says \"Wording only; mechanics, params and numbers unchanged, but for core-050 K-Pop Fanatic\". classic-009 is claimed by v0.3.10, whose only Income Tax line is \"Income Tax costs (3), up from (2).\" No fragment claims classic-090. The branch edits no fragment. The precedent is #1045: it added both a notes clause and a player `changes` line to v0.3.8 for K-Pop's mechanic change under that fragment's claim. ADDING_CARDS \u00a73 and issues-and-patches.md (Patch notes players read) put how a card plays under `changes`.",
-          "severity": "blocking",
-          "where": "crates/cards/patches/pending/v0.3.8.json"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
       "queued_at": "2026-10-19T11:50:48Z",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "medium",
+      "round_tier": "strong",
       "run_id": "39247607074",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-19T11:51:36Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "muse"
