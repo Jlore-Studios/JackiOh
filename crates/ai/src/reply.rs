@@ -33,7 +33,8 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use indexmap::IndexSet;
 use jackioh_engine::{
     Action, ActionBody, CardInstance, GameState, KeywordKind, PlayerId, Selection, effective_life,
-    find_instance, has_keyword, legal_actions, pierces, reduce, subsystems, takes_strike_back, unit_view,
+    find_instance, has_keyword, legal_actions, pierces, reduce_unpiloted, subsystems, takes_strike_back,
+    unit_view,
 };
 
 use crate::candidates::{blow, candidate_actions_in, cleaved_neighbours, exchange, side_of};
@@ -163,7 +164,7 @@ fn reduce_for(
         }
     }
     let action = Action::new(action.clone(), actor, format!("reply:{}", counter.used()));
-    match catch_unwind(AssertUnwindSafe(|| reduce(state, &action))) {
+    match catch_unwind(AssertUnwindSafe(|| reduce_unpiloted(state, &action))) {
         Ok(next) if next.error.is_none() => Some(next.state),
         _ => None,
     }

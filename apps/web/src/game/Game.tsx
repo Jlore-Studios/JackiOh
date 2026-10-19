@@ -38,6 +38,7 @@ import {
 
 import type { ActionBody, Aim, EmoteGate, EmoteId, GameEvent, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
 
+import type { DeckCosmetics } from "../cards/cosmetics.ts";
 import type { EmoteShow } from "../emotes/session.ts";
 import type { HeroEmotes } from "./Hero.tsx";
 import Board from "./Board.tsx";
@@ -145,6 +146,12 @@ export type GameProps = {
    */
   wearCosmetics?: boolean;
   /**
+   * R1297000: the picks of the deck the viewer plays (cards/cosmetics.ts), which beat the account's
+   * on the viewer's own side. The practice route sets it from the saved deck it plays; online
+   * matches, hotseat and Duos leave it off and wear the account's choice.
+   */
+  deckCosmetics?: DeckCosmetics | null;
+  /**
    * R738: the opponent's aim. `emit` sends this seat's own as it changes; `opponent` is the
    * opponent's as last relayed, drawn as its arrow. Online play sets it; hotseat and tests do not.
    */
@@ -193,6 +200,7 @@ export default function Game({
   emotes,
   trackStats = false,
   wearCosmetics = false,
+  deckCosmetics = null,
   aim,
   replay = false,
 }: GameProps): ReactElement {
@@ -638,6 +646,7 @@ export default function Game({
       <Board
         view={shown}
         wearCosmetics={wearCosmetics && !replay}
+        deckCosmetics={deckCosmetics}
         highlight={highlight}
         animating={animating}
         animated={animated}

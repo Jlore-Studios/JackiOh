@@ -103,6 +103,7 @@ describe("SETTINGS_SLOTS mounts every task's controls in its own section", () =>
       ["visuals", "card-foil"],
       ["visuals", "card-full-art"],
       ["visuals", "card-cosmetics"],
+      ["visuals", "deck-cosmetics"],
       ["audio", "audio"],
       ["gameplay", "language"],
     ]);

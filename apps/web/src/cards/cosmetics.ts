@@ -4,6 +4,12 @@
 // `settings/groups.ts`). The ids are the registry's (`crates/server/cosmetics.json`, generated into
 // `wire/generated/cosmetics.ts`), every one unlocked.
 //
+// R1297000: the same store holds three deck slots beside them: the playmat (`table`), the ambient
+// backdrop (`field`) and the back of the viewer's face-down cards and deck (`cardBack`). Each saved
+// deck may carry its own picks (`DeckCosmetics`); a viewer's side wears the deck's, else the
+// account's, else the kind's default (`wornDeckCosmetics`), and an id this client does not know
+// draws as the default. The opponent's side draws the defaults, as every card cosmetic does.
+//
 // The picks are the device's own: nothing here reaches the engine, an action, `PlayerView`, the
 // log or a replay, and a face wears them only where the board says it is the viewer's own card in
 // a game (`worn`, game/wearer.ts); every other face draws the defaults (CLAUDE.md rule 7). Each
@@ -24,6 +30,11 @@ import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
 import { foilFor, type FaceModel } from "./model.ts";
 
 export type CosmeticKind = (typeof COSMETIC_KINDS)[number];
+/** R1297000: the kinds a card wears, and the kinds a deck carries (the registry's order). */
+export const CARD_SLOT_KINDS = ["foil", "finish", "border"] as const satisfies readonly CosmeticKind[];
+export const DECK_SLOT_KINDS = ["table", "field", "cardBack"] as const satisfies readonly CosmeticKind[];
+export type CardSlotKind = (typeof CARD_SLOT_KINDS)[number];
+export type DeckSlotKind = (typeof DECK_SLOT_KINDS)[number];
 export type Cosmetic = (typeof COSMETICS)[number];
 export type CosmeticId = Cosmetic["id"];
 /** A pick per kind. A stored pick is any short text, an id this client may not know among them. */
@@ -43,10 +54,14 @@ function defaultOf(kind: CosmeticKind): CosmeticId {
   return found.id;
 }
 
+/** Every kind's default: the three card slots and the three deck slots (R1297000). */
 export const DEFAULT_CARD_COSMETICS: Readonly<Record<CosmeticKind, CosmeticId>> = Object.freeze({
   foil: defaultOf("foil"),
   finish: defaultOf("finish"),
   border: defaultOf("border"),
+  table: defaultOf("table"),
+  field: defaultOf("field"),
+  cardBack: defaultOf("cardBack"),
 });
 
 /** `id` when it is one of `kind`'s, and the kind's default otherwise: never an error. */
@@ -130,12 +145,94 @@ export function useCosmetics(): CardCosmetics {
  * that is not the viewer's own), the default foil on a face with its rarity foil (Mythic, Radiant)
  * and the default finish and border on a Radiant face, whose gold is its own.
  */
-export function wornCosmetics(face: FaceModel, picks: CardCosmetics | null): Record<CosmeticKind, CosmeticId> {
-  if (picks === null) return DEFAULT_CARD_COSMETICS;
+export function wornCosmetics(face: FaceModel, picks: CardCosmetics | null): Record<CardSlotKind, CosmeticId> {
+  if (picks === null) {
+    return { foil: DEFAULT_CARD_COSMETICS.foil, finish: DEFAULT_CARD_COSMETICS.finish, border: DEFAULT_CARD_COSMETICS.border };
+  }
   return {
     foil: foilFor(face, true) === "none" ? resolveCosmetic("foil", picks.foil) : DEFAULT_CARD_COSMETICS.foil,
     finish: face.radiant ? DEFAULT_CARD_COSMETICS.finish : resolveCosmetic("finish", picks.finish),
     border: face.radiant ? DEFAULT_CARD_COSMETICS.border : resolveCosmetic("border", picks.border),
+  };
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1297000: the deck slots. A saved deck carries its own picks, each a registry id or absent; the
+// board resolves them with the account's picks beneath and the kind's default under those.
+// ---------------------------------------------------------------------------------------------
+
+/** The picks a saved deck carries, as the server and the deckbuilder's mirror hold them. */
+export type DeckCosmeticFields = {
+  tableCosmetic?: string | null;
+  fieldCosmetic?: string | null;
+  cardBackCosmetic?: string | null;
+};
+
+/** A deck's picks by slot: `null` where it has none, which the account's choice fills. */
+export type DeckCosmetics = Readonly<Record<DeckSlotKind, string | null>>;
+
+/** The deck's picks by slot, or null when it has none at all. */
+export function deckCosmeticsOf(fields: DeckCosmeticFields): DeckCosmetics | null {
+  const picks: DeckCosmetics = {
+    table: fields.tableCosmetic ?? null,
+    field: fields.fieldCosmetic ?? null,
+    cardBack: fields.cardBackCosmetic ?? null,
+  };
+  return DECK_SLOT_KINDS.every((kind) => typeof picks[kind] !== "string") ? null : picks;
+}
+
+/** The deck fields of `raw` that hold a pick: a text of 1 to COSMETIC_ID_MAX_LENGTH characters. */
+export function pickedDeckCosmetics(raw: unknown): DeckCosmeticFields {
+  const record = raw !== null && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const keep = (value: unknown): string | undefined =>
+    typeof value === "string" && value !== "" && value.length <= COSMETIC_ID_MAX_LENGTH ? value : undefined;
+  const table = keep(record["tableCosmetic"]);
+  const field = keep(record["fieldCosmetic"]);
+  const cardBack = keep(record["cardBackCosmetic"]);
+  return {
+    ...(table === undefined ? {} : { tableCosmetic: table }),
+    ...(field === undefined ? {} : { fieldCosmetic: field }),
+    ...(cardBack === undefined ? {} : { cardBackCosmetic: cardBack }),
+  };
+}
+
+/** The deck-field patch that sets `kind`'s pick to `id`, or clears it with null. */
+export function deckCosmeticPatch(kind: DeckSlotKind, id: string | null): DeckCosmeticFields {
+  switch (kind) {
+    case "table":
+      return { tableCosmetic: id };
+    case "field":
+      return { fieldCosmetic: id };
+    case "cardBack":
+      return { cardBackCosmetic: id };
+  }
+}
+
+/**
+ * `kind`'s id to draw: the deck's pick when it has one (even an unknown id, which then draws as
+ * the default: the deck's word is final), else the account's, else the default.
+ */
+export function resolveDeckCosmetic(
+  kind: DeckSlotKind,
+  deck: DeckCosmetics | null | undefined,
+  account: CardCosmetics,
+): CosmeticId {
+  return resolveCosmetic(kind, deck?.[kind] ?? account[kind]);
+}
+
+/** The deck slots a side wears: the defaults when `worn` is false (the opponent's side). */
+export function wornDeckCosmetics(
+  worn: boolean,
+  deck: DeckCosmetics | null | undefined,
+  account: CardCosmetics,
+): Record<DeckSlotKind, CosmeticId> {
+  if (!worn) {
+    return { table: DEFAULT_CARD_COSMETICS.table, field: DEFAULT_CARD_COSMETICS.field, cardBack: DEFAULT_CARD_COSMETICS.cardBack };
+  }
+  return {
+    table: resolveDeckCosmetic("table", deck, account),
+    field: resolveDeckCosmetic("field", deck, account),
+    cardBack: resolveDeckCosmetic("cardBack", deck, account),
   };
 }
 

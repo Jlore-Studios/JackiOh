@@ -2007,7 +2007,7 @@ pub const PING_SHOW_MS: i64 = 2_500;
 // `apps/web/src/wire/serverConfig.ts` by `tests/export_config.rs` (CLAUDE.md rules 7, 9).
 // The table in SPEC §14 lists every constant; the values are #1294's Numbers table, and where
 // that table gives no value this issue chose one (noted below), since the checkout cannot read
-// it. `PACK_BASE_RATES` is tuned by the seeded simulation in `economy.rs`, which also derives
+// it. `PACK_BASE_RATES` is tuned by the seeded simulation in `economy/math.rs`, which also derives
 // both bars' points-per-duplicate from their target packs.
 // ---------------------------------------------------------------------------------------------
 
@@ -2066,7 +2066,7 @@ pub const PACK_UNOWNED_WEIGHTS: PackUnownedWeights = PackUnownedWeights {
     unowned: 4.0,
 };
 /// SPEC §14.4: the chance a card pack holds each rarity before pity. Tuned by the seeded
-/// simulation in `economy.rs` from #1298's starting points (Epic 29.0%, Legendary 8.2%,
+/// simulation in `economy/math.rs` from #1298's starting points (Epic 29.0%, Legendary 8.2%,
 /// Mythic 3.0%): Epic and Legendary already center on their targets, and Mythic is tuned to
 /// 3.7% so its effective rate centers on 5% instead of sitting low at ~4.3%.
 pub const PACK_BASE_RATES: PackRarityRates = PackRarityRates {
@@ -2087,7 +2087,7 @@ pub const PACK_TARGET_RATES: PackRarityRates = PackRarityRates {
 pub const PACK_RATE_TOLERANCE: f64 = 0.02;
 /// SPEC §14.4: the longest an account waits for an Epic: of any 10 card packs in a row, at
 /// least one holds an Epic. #1294's table gives no value; with `PACK_BASE_RATES`, 10/20/40
-/// lands the effective rates on `PACK_TARGET_RATES` (see the simulation in `economy.rs`).
+/// lands the effective rates on `PACK_TARGET_RATES` (see the simulation in `economy/math.rs`).
 pub const PITY_EPIC_PACKS: usize = 10;
 /// SPEC §14.4: the longest an account waits for a Legendary: of any 20 card packs in a row, at
 /// least one holds one.
@@ -2102,7 +2102,7 @@ pub const CARD_TOKEN_BAR_SIZE: i64 = 150;
 /// SPEC §14.5: the points that fill the cosmetic token bar, likewise exactly at its target.
 pub const COSMETIC_TOKEN_BAR_SIZE: i64 = 150;
 /// SPEC §14.5: the points a spent duplicate adds to the card token bar. Derived by the
-/// simulation in `economy.rs`: one point per duplicate fills `CARD_TOKEN_BAR_SIZE` in
+/// simulation in `economy/math.rs`: one point per duplicate fills `CARD_TOKEN_BAR_SIZE` in
 /// `CARD_TOKEN_BAR_TARGET_PACKS` packs of `PACK_SLOTS` duplicates each.
 pub const CARD_TOKEN_BAR_POINTS_PER_DUPLICATE: i64 = 1;
 /// SPEC §14.5: the points a spent duplicate adds to the cosmetic token bar, likewise.
@@ -2138,7 +2138,7 @@ pub const CHASE_SHARD_PACKS: i64 = 20;
 /// so luck finds one sometimes and the Shard stays the way to choose one.
 pub const CHASE_DROP_RATE: f64 = 0.02;
 /// SPEC §14.7: the levels of a set track. #1294's table gives no value; 100 levels, whose whole
-/// curve costs 495,000 XP (`total_xp_for_level` in `economy.rs`), a set's lifetime of play.
+/// curve costs 495,000 XP (`total_xp_for_level` in `economy/math.rs`), a set's lifetime of play.
 pub const SET_TRACK_LEVELS: u32 = 100;
 /// SPEC §14.7: the XP step of the level curve: going from level n to the next costs this times
 /// n. Forced to 100: only then is level 10 at 4,500 XP and level 100 at 495,000 XP (#1298).
@@ -2186,3 +2186,8 @@ pub const QUEST_JLORE_MAX: i32 = 100;
 /// SPEC §14.9: the XP of each Jlore a quest pays. #1294's table gives no value; 1-for-1 keeps
 /// quests' two payouts in step.
 pub const QUEST_XP_PER_JLORE: i32 = 1;
+
+// ---- Economy (SPEC §14, #1299) ----
+
+/// §14.7: the level a set track starts at, with no XP (migration 0045's `set_tracks.level` default).
+pub const SET_TRACK_FIRST_LEVEL: i64 = 1;

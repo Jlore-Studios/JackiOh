@@ -770,3 +770,39 @@ describe("the save status (R256)", () => {
     expect(status).toHaveAttribute("aria-live", "polite");
   });
 });
+
+describe("the deck's playmat, backdrop and card back (R1297000)", () => {
+  it("R1297000 the editor's selects show the deck's picks and a pick saves", async () => {
+    const { server, tick } = mount({
+      decks: [{ ...savedDeck("a", "Aggro", ONE, 1), tableCosmetic: "table-felt", cardBackCosmetic: "card-back-gone" }],
+      initialOpen: { kind: "deck", id: "a" },
+    });
+    const select = (kind: string): HTMLSelectElement => screen.getByTestId<HTMLSelectElement>(`deck-cosmetic-${kind}`);
+
+    // The deck's own pick, "Your settings' choice" where it has none, and a pick no registry lists reads as the default.
+    expect(select("table").value).toBe("table-felt");
+    expect(select("field").value).toBe("");
+    expect(select("cardBack").value).toBe("card-back-standard");
+    expect([...select("field").options].map((option) => option.value)).toEqual([
+      "",
+      "field-none",
+      "field-embers",
+      "field-rain",
+      "field-fireflies",
+    ]);
+    expect(select("field").options[0]?.textContent).toBe("Your settings' choice");
+
+    // A pick saves with the deck, beside the cards and the portrait.
+    fireEvent.change(select("field"), { target: { value: "field-rain" } });
+    expect(select("field").value).toBe("field-rain");
+    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.decks.get("a")).toMatchObject({ tableCosmetic: "table-felt", fieldCosmetic: "field-rain", cardBackCosmetic: "card-back-gone" });
+
+    // The empty option clears the pick again, and the PUT leaves it out.
+    fireEvent.change(select("table"), { target: { value: "" } });
+    expect(select("table").value).toBe("");
+    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(server.decks.get("a")?.tableCosmetic).toBeUndefined();
+    expect(server.decks.get("a")).toMatchObject({ fieldCosmetic: "field-rain" });
+  });
+});

@@ -35,10 +35,12 @@ import {
   type TrioSlots,
 } from "../../net/api.ts";
 import { isRecord } from "../../wire/json.ts";
+import { pickedDeckCosmetics, type DeckCosmeticFields } from "../../cards/cosmetics.ts";
 
 // The shapes
 
-export type DeckItem = { id: string; name: string; cards: readonly string[]; portrait: string | null; createdAt: number; updatedAt: number };
+/** R1297000: a deck also carries its playmat, backdrop and card back picks, each absent or null where it has none. */
+export type DeckItem = { id: string; name: string; cards: readonly string[]; portrait: string | null; createdAt: number; updatedAt: number } & DeckCosmeticFields;
 export type TrioItem = { id: string; name: string; deckIds: TrioSlots; createdAt: number; updatedAt: number };
 
 export type SyncState = "saved" | "saving" | "offline" | "error";
@@ -102,8 +104,8 @@ export type DeckStore = {
   getSnapshot(): WorkshopSnapshot;
   subscribe(listener: () => void): () => void;
   /** Null at `limits.decks`. The UI supplies the name. */
-  createDeck(init: { name: string; cards?: readonly string[]; portrait?: string | null }): string | null;
-  updateDeck(id: string, patch: { name?: string; cards?: readonly string[]; portrait?: string | null }): void;
+  createDeck(init: { name: string; cards?: readonly string[]; portrait?: string | null } & DeckCosmeticFields): string | null;
+  updateDeck(id: string, patch: { name?: string; cards?: readonly string[]; portrait?: string | null } & DeckCosmeticFields): void;
   /** Also empties every trio slot that named it (R252), as the server does. */
   deleteDeck(id: string): void;
   /** Null at `limits.trios`. */
@@ -215,7 +217,8 @@ function deckFrom(value: unknown): DeckItem | null {
   if (!isFiniteNumber(createdAt) || !isFiniteNumber(updatedAt)) return null;
   // R641: the portrait rides the same row; an old mirror without it reads as `vanilla` (null).
   const portrait = "portrait" in value && typeof value.portrait === "string" ? value.portrait : null;
-  return { id, name, cards: [...cards], portrait, createdAt, updatedAt };
+  // R1297000: the deck slots ride the same row; an old mirror without them reads as no pick.
+  return { id, name, cards: [...cards], portrait, ...pickedDeckCosmetics(value), createdAt, updatedAt };
 }
 
 function slotsFrom(value: unknown): TrioSlots | null {
@@ -516,7 +519,8 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
   }
 
   function deckInput(item: DeckItem): DeckInput {
-    return { name: deckNameForSave(item.name, limits.nameLength), cards: [...item.cards], catalogVersion, portrait: item.portrait };
+    // R1297000: a pick the deck does not have is left out, which the server stores as none.
+    return { name: deckNameForSave(item.name, limits.nameLength), cards: [...item.cards], catalogVersion, portrait: item.portrait, ...pickedDeckCosmetics(item) };
   }
 
   function trioInput(item: TrioItem): TrioInput {
@@ -706,6 +710,7 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
         name: deckNameForSave(slot.name, limits.nameLength),
         cards: [...slot.cards],
         // D5: an import carries no portrait; the deck reads `vanilla` until the player picks one.
+        // R1297000: nor any playmat, backdrop or card back.
         portrait: null,
         createdAt: stamped,
         updatedAt: stamped,
@@ -797,7 +802,15 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
     createDeck(init) {
       if (decks.length >= limits.decks) return null;
       const now = clock.now();
-      const item: DeckItem = { id: newId(), name: init.name, cards: [...(init.cards ?? [])], portrait: init.portrait ?? null, createdAt: now, updatedAt: now };
+      const item: DeckItem = {
+        id: newId(),
+        name: init.name,
+        cards: [...(init.cards ?? [])],
+        portrait: init.portrait ?? null,
+        ...pickedDeckCosmetics(init),
+        createdAt: now,
+        updatedAt: now,
+      };
       const entry = tracked(item, true);
       decks = [...decks, entry];
       changed();
@@ -811,8 +824,20 @@ export function createDeckStore(options: DeckStoreOptions): DeckStore {
       const name = patch.name ?? entry.item.name;
       const cards = patch.cards ?? entry.item.cards;
       const portrait = patch.portrait === undefined ? entry.item.portrait : patch.portrait;
-      if (name === entry.item.name && sameList(cards, entry.item.cards) && portrait === entry.item.portrait) return;
-      edited(entry, { ...entry.item, name, cards: [...cards], portrait, updatedAt: clock.now() });
+      // R1297000: each deck slot merges as the portrait does; null clears a pick, and an absent
+      // key and a null are the same pick, none.
+      const picks = {
+        tableCosmetic: patch.tableCosmetic === undefined ? (entry.item.tableCosmetic ?? null) : patch.tableCosmetic,
+        fieldCosmetic: patch.fieldCosmetic === undefined ? (entry.item.fieldCosmetic ?? null) : patch.fieldCosmetic,
+        cardBackCosmetic: patch.cardBackCosmetic === undefined ? (entry.item.cardBackCosmetic ?? null) : patch.cardBackCosmetic,
+      };
+      const samePicks =
+        picks.tableCosmetic === (entry.item.tableCosmetic ?? null) &&
+        picks.fieldCosmetic === (entry.item.fieldCosmetic ?? null) &&
+        picks.cardBackCosmetic === (entry.item.cardBackCosmetic ?? null);
+      if (name === entry.item.name && sameList(cards, entry.item.cards) && portrait === entry.item.portrait && samePicks) return;
+      const { tableCosmetic: _table, fieldCosmetic: _field, cardBackCosmetic: _cardBack, ...rest } = entry.item;
+      edited(entry, { ...rest, name, cards: [...cards], portrait, ...pickedDeckCosmetics(picks), updatedAt: clock.now() });
     },
 
     deleteDeck(id) {

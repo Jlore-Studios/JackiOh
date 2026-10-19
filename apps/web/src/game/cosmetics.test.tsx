@@ -2,15 +2,20 @@
 // the units and face-up backrow cards it owns, a unit the opponent has taken included — and only on
 // a board that wears them (`wearCosmetics`). The opponent's cards, and every card on a board that
 // wears none, draw the defaults whatever the device picked.
+//
+// R1297000: the same holds for the deck slots: the playmat under the viewer's half of the field, the
+// backdrop behind it, and the back of the viewer's face-down cards and deck pile. A saved deck's
+// picks beat the account's; the opponent's side and a board that wears none draw as they always did.
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { PlayerView } from "@jackioh/shared";
 
-import { cosmeticsOf, resetCosmeticsForTests, writeCosmetics, type CosmeticKind } from "../cards/cosmetics.ts";
-import { baseView, card, emptySide, faceUpBackrow, resetIds, unit } from "../test/fixtures.ts";
+import { DEFAULT_CARD_COSMETICS, cosmeticsOf, deckCosmeticsOf, resetCosmeticsForTests, writeCosmetics, type CosmeticKind } from "../cards/cosmetics.ts";
+import { baseView, card, emptySide, faceUpBackrow, fullBoardView, resetIds, unit } from "../test/fixtures.ts";
 import Board from "./Board.tsx";
+import { BACKDROP_PARTICLE_MAX } from "./config.ts";
 
 /** The registry's first entry of `kind` that is not its default. */
 function item(kind: CosmeticKind): string {
@@ -80,5 +85,107 @@ describe("R1295000 the board's cards and the device's cosmetics", () => {
     render(<Board view={view()} />);
     expect(document.querySelectorAll(".cf").length).toBeGreaterThan(0);
     expect(document.querySelectorAll(".cf[data-frame], .cf[data-finish], .cf[data-cosmetic-foil]")).toHaveLength(0);
+  });
+});
+
+const TABLE = item("table");
+const FIELD = item("field");
+const BACK = item("cardBack");
+
+/** The `data-card-back` of every `.cf-back` inside `root`, one entry each (null for the default). */
+function backs(root: ParentNode): (string | null)[] {
+  return [...root.querySelectorAll<HTMLElement>(".cf-back")].map((back) => back.getAttribute("data-card-back"));
+}
+
+function ownBacks(): HTMLElement[] {
+  return [...document.querySelectorAll<HTMLElement>('.zone[data-side="you"] .cf-back')];
+}
+
+function theirBacks(): HTMLElement[] {
+  return [...document.querySelectorAll<HTMLElement>('.zone[data-side="opponent"] .cf-back, .hand-opponent .cf-back')];
+}
+
+describe("R1297000 the board's deck slots and the device's cosmetics", () => {
+  it("R1297000 the viewer's side wears the playmat, backdrop and card back; the opponent's ignores the local loadout", () => {
+    writeCosmetics({ table: TABLE, field: FIELD, cardBack: BACK });
+    render(<Board view={fullBoardView()} wearCosmetics />);
+
+    expect(document.querySelector(".field")?.getAttribute("data-table")).toBe(TABLE);
+    const backdrop = document.querySelector<HTMLElement>(".board-backdrop[aria-hidden]");
+    expect(backdrop?.getAttribute("data-backdrop")).toBe(FIELD);
+    expect(backdrop?.querySelectorAll(".board-backdrop-particle")).toHaveLength(BACKDROP_PARTICLE_MAX);
+    expect(backdrop?.textContent).toBe("");
+    // The layer is the board's first child, behind everything it holds, and the board names it.
+    expect(document.querySelector(".board > :first-child")).toBe(backdrop);
+    expect(document.querySelector(".board")?.getAttribute("data-backdrop")).toBe(FIELD);
+
+    // Every face-down card of the viewer's own side, and their deck pile, wear one back.
+    const own = ownBacks();
+    expect(own.length).toBeGreaterThan(0);
+    for (const back of own) expect(back.getAttribute("data-card-back")).toBe(BACK);
+    const pile = screen.getByTestId("library-you");
+    expect(pile.getAttribute("data-card-back")).toBe(BACK);
+
+    // The opponent's backs and deck pile draw as they did.
+    const theirs = theirBacks();
+    expect(theirs.length).toBeGreaterThan(0);
+    for (const back of theirs) expect(back.hasAttribute("data-card-back")).toBe(false);
+    expect(screen.getByTestId("library-opponent").hasAttribute("data-card-back")).toBe(false);
+    // A back says nothing of the card it hides: no text, whatever it looks like.
+    for (const back of [...own, ...theirs]) expect(back.textContent).toBe("");
+  });
+
+  it("R1297000 a saved deck's picks beat the account's on the board", () => {
+    const otherBack = cosmeticsOf("cardBack").filter((cosmetic) => !cosmetic.default)[1]?.id ?? "";
+    expect(otherBack).not.toBe(BACK);
+    writeCosmetics({ table: TABLE, cardBack: otherBack });
+    const deck = deckCosmeticsOf({ cardBackCosmetic: BACK, fieldCosmetic: FIELD });
+
+    render(<Board view={fullBoardView()} wearCosmetics deckCosmetics={deck} />);
+
+    // The deck's backdrop and back; the account's table, since the deck picked none.
+    expect(document.querySelector(".board")?.getAttribute("data-backdrop")).toBe(FIELD);
+    expect(document.querySelector(".field")?.getAttribute("data-table")).toBe(TABLE);
+    for (const back of ownBacks()) expect(back.getAttribute("data-card-back")).toBe(BACK);
+    expect(screen.getByTestId("library-you").getAttribute("data-card-back")).toBe(BACK);
+    for (const back of theirBacks()) expect(back.hasAttribute("data-card-back")).toBe(false);
+  });
+
+  it("R1297000 a deck's unknown pick draws the default, and the opponent's side is the default either way", () => {
+    writeCosmetics({ table: TABLE, field: FIELD, cardBack: BACK });
+    const deck = deckCosmeticsOf({ tableCosmetic: "table-marble", fieldCosmetic: "field-snow", cardBackCosmetic: "card-back-gold" });
+    render(<Board view={fullBoardView()} wearCosmetics deckCosmetics={deck} />);
+
+    expect(document.querySelector(".field")?.hasAttribute("data-table")).toBe(false);
+    expect(document.querySelector(".board-backdrop")).toBeNull();
+    expect(document.querySelector(".board")?.hasAttribute("data-backdrop")).toBe(false);
+    expect(document.querySelectorAll("[data-card-back]")).toHaveLength(0);
+    expect(DEFAULT_CARD_COSMETICS.table).not.toBe("table-marble");
+  });
+
+  it("R1297000 the deck sheet's cards the viewer was never shown wear the viewer's card back", () => {
+    writeCosmetics({ cardBack: BACK });
+    const view = fullBoardView();
+    render(<Board view={{ ...view, you: { ...view.you, libraryCount: 3, ownLibrary: { cards: [], unknown: 3 } } }} wearCosmetics />);
+
+    fireEvent.click(screen.getByTestId("library-you"));
+    const sheet = screen.getByRole("dialog");
+    const inside = [...sheet.querySelectorAll<HTMLElement>(".cf-back")];
+    expect(inside).toHaveLength(1);
+    expect(inside[0]?.getAttribute("data-card-back")).toBe(BACK);
+    expect(inside[0]?.textContent).toBe("");
+  });
+
+  it("R1297000 a board that wears none draws the deck slots as today", () => {
+    writeCosmetics({ table: TABLE, field: FIELD, cardBack: BACK });
+    // Neither the account's picks nor a deck's reach a board nobody wears them on.
+    render(<Board view={fullBoardView()} deckCosmetics={deckCosmeticsOf({ tableCosmetic: TABLE, fieldCosmetic: FIELD, cardBackCosmetic: BACK })} />);
+
+    expect(document.querySelector(".field")?.hasAttribute("data-table")).toBe(false);
+    expect(document.querySelector(".board-backdrop")).toBeNull();
+    expect(document.querySelector(".board")?.hasAttribute("data-backdrop")).toBe(false);
+    expect(document.querySelectorAll("[data-card-back]")).toHaveLength(0);
+    expect(backs(document).every((back) => back === null)).toBe(true);
+    expect(document.querySelectorAll(".cf-back").length).toBeGreaterThan(0);
   });
 });

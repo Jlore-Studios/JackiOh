@@ -523,8 +523,9 @@ accounts' lanes added up, so it holds none of them back), `machine_parallel` how
 on the bot's machine (6; its two vCPUs run each job's checks; GitHub's runners have four each),
 each apart from the other, so Claude runs never wait for the night box's slots nor its runs for
 GitHub's lanes; `plan_lanes` is how many planning runs may go on top of those (the planning
-lane, below; 6), `priority` the usage order within a tier (below), and `tiers` each tier's models,
-which the router tries weakest-first inside the subscription. A subscription's own `lanes`
+lane, below; 6), `priority` the usage order within a tier (below), `balance` the load balancer
+that comes before it (below; on), and `tiers` each tier's models, which the router tries
+weakest-first inside the subscription. A subscription's own `lanes`
 (default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill its box alone, Muse's is 2, and claude-3's is 2. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
@@ -581,8 +582,8 @@ takes it first (weak models take the easy items while they have a free lane, the
 items pass the weak models by; hard items go only to strong models). One lane, one owner
 (#725): a medium or hard item stays with the subscription that planned it when that one can
 build it, so planner and builder are the same; an easy item still goes weak-first, since its
-medium planner must not spend its lane building what a weak seat builds. Inside a tier the owner's
-order holds: spend claude-3 (any hour, no caps), claude-7
+medium planner must not spend its lane building what a weak seat builds. Inside a tier, after the
+load balancer (below), the owner's order holds: spend claude-3 (any hour, no caps), claude-7
 (held to half its 5-hour session from 10:00 to 01:00 and to 70% of it from 01:00 to 10:00, with
 no weekly cap) and claude-1 first, up to their caps; then claude-4, claude-6 and
 then claude-5, last of the Claude accounts (claude-4 and claude-6 held to half their 5-hour session outside 03:00–15:00 and to 70% of it inside it, with
@@ -596,6 +597,23 @@ planned, goes first to the medium subscriptions (Muse first), which may build it
 difficulty ([Fullsend](#fullsend)). (There is no training
 lane in the harness any more, and no `training` label: the AI's two training lanes run as
 services on the training box, [`machine/`](machine/README.md#the-training-box).)
+
+**The load balancer** (`balance: true`, `plan.balance`) spreads a tier's work over its
+subscriptions instead of spending the first in the usage order up to its cap while the rest sit
+idle: claude-3, first, took 168 runs in a week to claude-5's 13, and ran into its limit while
+the others read 0%. Where the router would otherwise go by the usage order alone (between
+subscriptions whose seat is the same model, the seven Claude accounts' Sonnet or Opus; between
+the reviewers and the planners of a tier), it puts first the one with the most **room**: the
+share of its allowance its last reading leaves free under the caps that hold now (a window with
+no cap counts the whole allowance), its tightest window counting, a window reset since the
+reading all free, a refusal not yet over none (`providers.room`). Room goes in steps of 10%
+(`providers.BALANCE_STEP`), since a reading is only as fresh as its subscription's last run; level
+ones go by the runs they hold now, the fewest first, and only then by the usage order. So with
+nothing read yet each account gets one run before claude-3 gets its second, and an account at
+80% of its week waits behind one at 10%. The tier order (Muse before agy before Sonnet, Codex
+before Devin), `easy_first`, `build_last` and one lane, one owner all come before it, and it
+starts nothing the caps would not: it only orders the subscriptions that may start now.
+`"balance": false` puts the usage order back on its own.
 
 - **Planning: the Needs plan stage.** Every build starts from a plan its difficulty may build
   from. A queued item without one carries `bot:needs-plan`: one with no plan, and one whose plan
@@ -1100,7 +1118,7 @@ days.
 | ask for a review only | `/harness review [strong\|medium] [notes]` on the bot's pull request |
 | keep the bot off an item altogether | label it `human` |
 | give the bot back an item it handed you (`human required`) | do the person's part its comment names, take the label off, then `/harness build` |
-| change which subscription is spent first | reorder `priority` in `.harness/providers.json` |
+| change which subscription is spent first | reorder `priority` in `.harness/providers.json`; with `balance` on, it orders only subscriptions with the same room and runs held ([the load balancer](#difficulty-and-tiers)) |
 | have an item picked up sooner or later | label it `priority:high`, `priority:medium` or `priority:low` |
 | stop one item | `/harness stop` on its issue or pull request |
 | drop an item it is working on | close the issue or pull request: the run goes on until it ends, holding its lane, but nothing it made is delivered or queued again |

@@ -336,6 +336,85 @@ begin
   raise notice 'OK (R250): D1 (blank, too long, control character, bidi override), D2, D4 and a malformed cards value all refused';
 end $$;
 
+\echo '### R1297000: app.upsert_deck carries a deck''s playmat, backdrop and card back (migration 0044) ###'
+do $$
+declare
+  p1 constant uuid := '11111111-1111-1111-1111-111111111111';
+  d  constant uuid := 'a1000000-0000-4000-8000-0000000000c1';
+  t0 constant timestamptz := '2026-01-01 00:00:00+00';
+  t1 constant timestamptz := '2026-01-01 00:05:00+00';
+  v_row record;
+  probe text;
+begin
+  -- A create keeps the three picks beside the portrait.
+  if app.upsert_deck(p1, d, 'Dressed', '["core-001"]', 'core-1', t0, 10, 'gary',
+                     'table-felt', 'field-rain', 'card-back-blueprint') <> 'created' then
+    raise exception 'FAIL (R1297000): a deck with picks was not created';
+  end if;
+  select * into v_row from public.decks where id = d;
+  if v_row.table_cosmetic is distinct from 'table-felt'
+     or v_row.field_cosmetic is distinct from 'field-rain'
+     or v_row.card_back_cosmetic is distinct from 'card-back-blueprint'
+     or v_row.portrait is distinct from 'gary' then
+    raise exception 'FAIL (R1297000): the row holds %, % and % beside portrait %, expected the three picks and gary',
+      v_row.table_cosmetic, v_row.field_cosmetic, v_row.card_back_cosmetic, v_row.portrait;
+  end if;
+
+  -- An update swaps a pick, clears one with NULL and keeps created_at.
+  if app.upsert_deck(p1, d, 'Dressed', '["core-001"]', 'core-1', t1, 10, 'gary',
+                     'table-wood', null, 'card-back-blueprint') <> 'updated' then
+    raise exception 'FAIL (R1297000): a deck with new picks was not updated';
+  end if;
+  select * into v_row from public.decks where id = d;
+  if v_row.table_cosmetic is distinct from 'table-wood'
+     or v_row.field_cosmetic is not null
+     or v_row.card_back_cosmetic is distinct from 'card-back-blueprint'
+     or v_row.created_at <> t0 then
+    raise exception 'FAIL (R1297000): the update left %, % and %, created_at %, expected table-wood, NULL and card-back-blueprint, kept',
+      v_row.table_cosmetic, v_row.field_cosmetic, v_row.card_back_cosmetic, v_row.created_at;
+  end if;
+
+  -- The eight- and seven-argument signatures stay callable and mean "no picks": a save through
+  -- one clears them (so nothing that saves a deck's picks may call them).
+  if app.upsert_deck(p1, d, 'Dressed', '["core-001"]', 'core-1', t1, 10, 'gary') <> 'updated' then
+    raise exception 'FAIL (R1297000): the eight-argument signature no longer updates';
+  end if;
+  select * into v_row from public.decks where id = d;
+  if v_row.table_cosmetic is not null or v_row.field_cosmetic is not null or v_row.card_back_cosmetic is not null then
+    raise exception 'FAIL (R1297000): the eight-argument signature left picks behind';
+  end if;
+  if app.upsert_deck(p1, d, 'Dressed', '["core-001"]', 'core-1', t1, 10) <> 'updated' then
+    raise exception 'FAIL (R1297000): the seven-argument signature no longer updates';
+  end if;
+
+  -- The shape check names the pick it refuses, and nothing is written for it.
+  foreach probe in array array['table', 'field', 'card back'] loop
+    begin
+      perform app.upsert_deck(p1, d, 'Dressed', '["core-001"]', 'core-1', t1, 10, null,
+        case probe when 'table' then 'Table Felt' end,
+        case probe when 'field' then 'field_rain' end,
+        case probe when 'card back' then repeat('a', 41) end);
+      raise exception 'FAIL (R1297000): a malformed % pick was saved', probe;
+    exception when others then
+      if sqlerrm like 'FAIL%' then raise; end if;
+      if sqlerrm <> format('deck: the %s cosmetic is not a cosmetic id', probe) then
+        raise exception 'FAIL (R1297000): the % probe raised "%", expected "deck: the % cosmetic is not a cosmetic id"',
+          probe, sqlerrm, probe;
+      end if;
+    end;
+  end loop;
+
+  -- The column CHECKs hold the same shape for a write that does not go through the function.
+  begin
+    update public.decks set table_cosmetic = 'Not A Slug' where id = d;
+    raise exception 'FAIL (R1297000): decks.table_cosmetic took a value that is no slug';
+  exception when check_violation then null;
+  end;
+
+  delete from public.decks where id = d;
+  raise notice 'OK (R1297000): picks created, swapped and cleared; the eight- and seven-argument signatures clear them; a malformed pick refused by the function and by the CHECKs';
+end $$;
+
 \echo '-- a profile that is not active saves no deck (rolled back)'
 begin;
 insert into auth.users (id, email, email_confirmed_at)
