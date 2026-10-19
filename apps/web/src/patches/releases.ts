@@ -85,6 +85,13 @@ export const RELEASES: readonly Release[] = [
       "Every token says so: its type line reads Token Unit or Token Spell, and on the board and on small cards it wears a Token mark.",
     ],
   },
+  {
+    id: "meditativeplus",
+    name: "Meditative+",
+    first: "v0.3.15",
+    summary: "The Meditative+ set, 26 cards and 4 tokens, shipped in v0.3.15, with a new tag, Potion.",
+    technical: [],
+  },
 ];
 
 /** The title the page shows for a patch: its player note's, or its record's when it has no note. */

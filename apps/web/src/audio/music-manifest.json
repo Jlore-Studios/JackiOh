@@ -1321,6 +1321,42 @@
       "loopStart": null,
       "loopEnd": null,
       "handoff": 4.40367
+    },
+    "intro-meditativeplus-001": {
+      "hash": "d52cd4d05a0dfcce",
+      "bytes": 51697,
+      "bpm": 120,
+      "beatsPerBar": 4,
+      "loop": false,
+      "intro": 4,
+      "duration": 5,
+      "loopStart": null,
+      "loopEnd": null,
+      "handoff": 4
+    },
+    "intro-meditativeplus-024": {
+      "hash": "599e1edc723ab9bc",
+      "bytes": 55412,
+      "bpm": 112,
+      "beatsPerBar": 4,
+      "loop": false,
+      "intro": 4.285714,
+      "duration": 5.285714,
+      "loopStart": null,
+      "loopEnd": null,
+      "handoff": 4.285714
+    },
+    "intro-meditativeplus-026": {
+      "hash": "c2b625dd85cb2d1a",
+      "bytes": 54793,
+      "bpm": 112,
+      "beatsPerBar": 4,
+      "loop": false,
+      "intro": 4.285714,
+      "duration": 5.285714,
+      "loopStart": null,
+      "loopEnd": null,
+      "handoff": 4.285714
     }
   }
 }

@@ -636,7 +636,8 @@ function draw() {
  *     where music-cards.json gives one, else the first of its tags the card art reads (its tribe),
  *     then the tags the art has no family for (Jlockeed, Acclaimed), else its type;
  *   - its set lends a glint of its own into the cadence (Core a harp, Classic a dulcimer, Classic+ a
- *     celesta, Meditative a kalimba), and a Mythic adds a prismatic shimmer over a soft choir.
+ *     celesta, Meditative a kalimba, Meditative+ a music box), and a Mythic adds a prismatic shimmer
+ *     over a soft choir.
  * The melody is the JackiOh motif (MOTIF_CELL's contour, varied) and an answer that cadences on the
  * tonic: two bars of 4/4 or three of 3/4, whose music runs INTRO_SPAN_S and then rings out for
  * INTRO_TAIL_S, the last INTRO_FADE_S of it faded (gen-music.mjs's `tail` and `post.fadeOutS`).
@@ -659,13 +660,13 @@ const INTRO_SPAN_S = [3, 5];
 /** Where in INTRO_SPAN_S a derived intro's tempo lands, by its family's feel. */
 const INTRO_FEELS = { slow: [4.2, 4.95], mid: [3.7, 4.6], fast: [3.2, 4.1] };
 const INTRO_TONICS = Object.keys(TONIC);
-const INTRO_SETS = ["Core", "Classic", "Classic+", "Meditative"];
+const INTRO_SETS = ["Core", "Classic", "Classic+", "Meditative", "Meditative+"];
 /**
  * The set's glint into the cadence (a set not listed here takes Classic+'s). The Meditative set's is a
  * kalimba, a plucked run that rings like the set's East-Asian colours (compose.mjs's GM table names no
- * koto or shamisen).
+ * koto or shamisen); the Meditative+ set's is a music box, the kalimba's plucked comb wound up.
  */
-const INTRO_SET_GLINT = { Core: GM.harp, Classic: GM.dulcimer, "Classic+": GM.celesta, Meditative: GM.kalimba };
+const INTRO_SET_GLINT = { Core: GM.harp, Classic: GM.dulcimer, "Classic+": GM.celesta, Meditative: GM.kalimba, "Meditative+": GM.musicBox };
 
 /** The first tag that names a family wins, in the card art's order, then the tags it draws none for. */
 const INTRO_TAG_FAMILIES = [
@@ -1662,6 +1663,35 @@ const INTRO_CARDS = [
     tune: { palette: { lead: GM.trombone, second: GM.tremolo, bass: GM.contrabass, color: GM.bells, style: "dark", center: 60 }, mode: "harmonic" },
   },
   { card: "meditative-097-9", name: "Jlockeed's Headquarters", set: "Meditative", type: "Unit", tags: ["Jlockeed", "Token"], rarity: "Mythic" },
+  // ---- Meditative+ ----
+  {
+    card: "meditativeplus-001", name: "Bob's Plan", set: "Meditative+", type: "Spell", tags: ["Quickdraw"], rarity: "Mythic",
+    // A plan in two moves over a quick gallop: the pan flute climbs as Reach the Summit's theme does, then
+    // turns home through Aestheticize the Game's lift to the octave, in D major.
+    tune: {
+      palette: { lead: GM.panFlute, second: GM.harp, bass: GM.acBass, color: GM.dulcimer, style: "gallop", center: 74 },
+      tonic: "D", mode: "major", bpm: 120, prog: ["I", ["V", "I"]],
+      melody: [[0, 0.5], [1, 0.5], [4, 1.5], [2, 0.5], [1, 0.5], [0, 0.5], [4, 0.5], [5, 0.5], [7, 1], [1, 0.5], [0, 1.5]],
+    },
+  },
+  {
+    card: "meditativeplus-024", name: "Bob, Wisconsin's Strongest Soldier", set: "Meditative+", type: "Unit", tags: [], rarity: "Legendary",
+    // Wisconsin's strongest on parade: the trumpet's motif over brass on every beat, a tuba and a snare's march, in B-flat.
+    tune: {
+      palette: { lead: GM.trumpet, second: GM.brass, bass: GM.tuba, color: GM.glock, style: "march", center: 67 },
+      tonic: "Bb", mode: "major", bpm: 112,
+    },
+  },
+  {
+    card: "meditativeplus-026", name: "Scratch Pad", set: "Meditative+", type: "Spell", tags: [], rarity: "Mythic",
+    // A blank page: True Craft a Card's climb to the octave on an electric piano, in E major, then written
+    // back down a step at a time to the tonic.
+    tune: {
+      palette: { lead: GM.ep1, second: GM.marimba, bass: GM.fingerBass, color: GM.crystal, style: "sparkle", center: 76 },
+      tonic: "E", mode: "major", bpm: 112, prog: ["I", ["V", "I"]],
+      melody: [[7, 0.5], [8, 0.5], [11, 1.5], [9, 0.5], [8, 0.5], [7, 0.5], [10, 0.5], [9, 0.5], [8, 1], [7, 2]],
+    },
+  },
 ];
 
 /* ------------------------------------------------------------------------------------------- *

@@ -15,8 +15,9 @@
 // builds none, and its tag chips are `ALMANAC_TAGS`.
 //
 // Both lists of chips follow what ships (R1380, R1381): the set chips are `SHIPPED_SETS`, and a tag
-// chip shows only while a card of a shipped set carries its tag (`shippedTags`), so the Meditative
-// set's chip and Wincon's arrive with the set and never before.
+// chip shows only while a card of a shipped set carries its tag (`shippedTags`), so a set's chip and
+// its tags' (the Meditative set's and Wincon's, the Meditative+ set's and Potion's) arrive with the
+// set and never before.
 
 import { CATALOG } from "@jackioh/cards";
 import {
@@ -74,6 +75,9 @@ export const FILTER_TAGS: readonly Tag[] = [
   // The Meditative set's (R1381): #8 Reach the Summit and #20 Aestheticize the Game, which win the
   // game another way (R1420's set). The chip shows once a shipped card carries it.
   "Wincon",
+  // The Meditative+ set's (R1178000), shipped in v0.3.15: M+ #11, #12 and #13, the Living Potions,
+  // and the potions M+ #16 Jazakus and #16.1 Jazakus Prime craft.
+  "Potion",
 ];
 
 /**

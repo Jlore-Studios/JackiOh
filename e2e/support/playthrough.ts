@@ -199,8 +199,8 @@ export function printedCost(def: CatalogRow): number {
 
 /* ------------------------------------------------------------------------------- the words */
 
-/** A catalog id (`core-001`, `classicplus-t-ai-01`, `meditative-039-5`): never in a line a player reads. */
-const CATALOG_ID = /\b(?:core|classic|classicplus|meditative)-(?:t-)?[0-9a-z]+(?:-[0-9a-z]+)?\b/;
+/** A catalog id (`core-001`, `classicplus-t-ai-01`, `meditative-039-5`, `meditativeplus-001-1`): never in a line a player reads. */
+const CATALOG_ID = /\b(?:core|classic|classicplus|meditative|meditativeplus)-(?:t-)?[0-9a-z]+(?:-[0-9a-z]+)?\b/;
 /** What a slip upstream prints: a value with no words. */
 const LEAKS = /\bundefined\b|\bNaN\b|\bnull\b|\[object /;
 /** A placeholder a text never filled ("{chance}"); a computed value a face prints in play, "{7}", is R280's. */
