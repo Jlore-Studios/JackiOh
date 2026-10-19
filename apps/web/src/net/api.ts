@@ -412,6 +412,10 @@ export type SavedDeck = {
   catalogVersion: string;
   /** R641: the deck's hero portrait, `null` meaning `vanilla` (D5). */
   portrait: string | null;
+  /** R1297000: the deck's own playmat, backdrop and card back, each an id of its kind and absent where the deck has none. */
+  tableCosmetic?: string | null;
+  fieldCosmetic?: string | null;
+  cardBackCosmetic?: string | null;
   createdAt: number;
   updatedAt: number;
 };
@@ -438,7 +442,16 @@ export function getDecks(token: string): Promise<DecksResponse> {
   return apiRequest<DecksResponse>("/api/decks", { token });
 }
 
-export type DeckInput = { name: string; cards: readonly string[]; catalogVersion: string; portrait?: string | null };
+export type DeckInput = {
+  name: string;
+  cards: readonly string[];
+  catalogVersion: string;
+  portrait?: string | null;
+  /** R1297000: the deck's playmat, backdrop and card back; left out where it has none, which clears a stored pick. */
+  tableCosmetic?: string | null;
+  fieldCosmetic?: string | null;
+  cardBackCosmetic?: string | null;
+};
 
 /**
  * `PUT /api/decks/:id`: creates the deck when the id is new, else replaces its name and cards.

@@ -10,6 +10,7 @@ import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 import "../../auth/tavern.css";
 import "./deckbuilder.css";
 import "./workshop.css";
+import { deckCosmeticPatch } from "../../cards/cosmetics.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import type { DecksResponse } from "../../net/api.ts";
 import { BackLink } from "../../routes/nav.tsx";
@@ -482,6 +483,9 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         }}
         onPortrait={(portrait) => {
           store.updateDeck(openDeck.id, { portrait });
+        }}
+        onCosmetic={(kind, id) => {
+          store.updateDeck(openDeck.id, deckCosmeticPatch(kind, id));
         }}
         onCards={(cards) => {
           store.updateDeck(openDeck.id, { cards });

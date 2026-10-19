@@ -12,7 +12,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 
-import { CardCosmeticsControls } from "../settings/controls.tsx";
+import { CardCosmeticsControls, DeckCosmeticsControls } from "../settings/controls.tsx";
+import { SETTINGS_SLOTS } from "../settings/slots.ts";
 import { unit } from "../test/fixtures.ts";
 import { CardFace } from "./CardFace.tsx";
 import {
@@ -24,13 +25,20 @@ import {
   RADIANT_GOLD_SATURATION_MIN,
 } from "./constants.ts";
 import {
+  CARD_SLOT_KINDS,
   COSMETICS_SETTINGS_KEY,
+  DECK_SLOT_KINDS,
   DEFAULT_CARD_COSMETICS,
   cosmeticsOf,
+  deckCosmeticPatch,
+  deckCosmeticsOf,
   normalizeCosmetics,
+  pickedDeckCosmetics,
   readCosmetics,
   resetCosmeticsForTests,
   resolveCosmetic,
+  resolveDeckCosmetic,
+  wornDeckCosmetics,
   writeCosmetics,
   type CosmeticKind,
 } from "./cosmetics.ts";
@@ -47,6 +55,7 @@ function sheet(name: string): string {
 
 const cosmeticsCss = sheet("cosmetics.css");
 const cardsCss = sheet("cards.css");
+const tableCss = readFileSync(join(HERE, "..", "game", "table.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
 
 /** The balanced `{ … }` block of `css` opened at `open`, inner text without the braces. */
 function blockFrom(css: string, open: number): string {
@@ -163,7 +172,7 @@ describe("R1295000 the cosmetics store and how a face wears it", () => {
 
   it("R1295000 the store keeps an id it does not know and the face draws the default", () => {
     writeCosmetics({ foil: "foil-aurora", border: PICKS.border });
-    expect(readCosmetics()).toEqual({ foil: "foil-aurora", finish: DEFAULT_CARD_COSMETICS.finish, border: PICKS.border });
+    expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, foil: "foil-aurora", border: PICKS.border });
     expect(JSON.parse(localStorage.getItem(COSMETICS_SETTINGS_KEY) ?? "{}")).toMatchObject({ foil: "foil-aurora" });
     // Read back from storage on a fresh page, it is still there.
     resetCosmeticsForTests();
@@ -354,5 +363,173 @@ describe("R1295000 the cosmetics stylesheet", () => {
     }
     // Reduced motion is the absence of the gate, never a rule of its own to keep in step.
     expect(cosmeticsCss).not.toContain("prefers-reduced-motion: reduce");
+  });
+});
+
+describe("R1297000 the deck slots", () => {
+  const TABLE = firstItem("table");
+  const FIELD = firstItem("field");
+  const BACK = firstItem("cardBack");
+  const DECK_PICKS = deckCosmeticsOf({ tableCosmetic: TABLE, fieldCosmetic: FIELD, cardBackCosmetic: BACK });
+
+  it("R1297000 the deck's choice beats the account's, which beats the default", () => {
+    expect(DECK_PICKS).toEqual({ table: TABLE, field: FIELD, cardBack: BACK });
+    const otherTable = cosmeticsOf("table").filter((cosmetic) => !cosmetic.default)[1]?.id ?? "";
+    expect(otherTable).not.toBe(TABLE);
+    const account = { ...DEFAULT_CARD_COSMETICS, table: otherTable, cardBack: otherTable };
+
+    // The deck's pick wins over the account's.
+    expect(resolveDeckCosmetic("table", DECK_PICKS, account)).toBe(TABLE);
+    // A deck with no pick for a kind leaves it to the account's.
+    const partial = deckCosmeticsOf({ tableCosmetic: TABLE });
+    expect(partial).toEqual({ table: TABLE, field: null, cardBack: null });
+    expect(resolveDeckCosmetic("field", partial, { ...account, field: FIELD })).toBe(FIELD);
+    expect(resolveDeckCosmetic("table", partial, account)).toBe(TABLE);
+    // Neither: the kind's default; a deck with no picks at all is null.
+    expect(resolveDeckCosmetic("field", null, DEFAULT_CARD_COSMETICS)).toBe(DEFAULT_CARD_COSMETICS.field);
+    expect(resolveDeckCosmetic("cardBack", partial, DEFAULT_CARD_COSMETICS)).toBe(DEFAULT_CARD_COSMETICS.cardBack);
+    expect(deckCosmeticsOf({})).toBeNull();
+    expect(deckCosmeticsOf({ tableCosmetic: null, fieldCosmetic: null })).toBeNull();
+
+    // A side that is not the viewer's wears the defaults whatever the deck and the account say.
+    expect(wornDeckCosmetics(false, DECK_PICKS, account)).toEqual({
+      table: DEFAULT_CARD_COSMETICS.table,
+      field: DEFAULT_CARD_COSMETICS.field,
+      cardBack: DEFAULT_CARD_COSMETICS.cardBack,
+    });
+    expect(wornDeckCosmetics(true, DECK_PICKS, account)).toEqual({ table: TABLE, field: FIELD, cardBack: BACK });
+  });
+
+  it("R1297000 an unknown id falls back to its kind's default, from the deck or the account", () => {
+    const unknown = deckCosmeticsOf({ tableCosmetic: "table-marble", cardBackCosmetic: "card-back-gold" });
+    // The deck's word is final: its unknown pick draws as the default, and the account's does not step in.
+    const account = { ...DEFAULT_CARD_COSMETICS, table: TABLE, cardBack: BACK };
+    expect(resolveDeckCosmetic("table", unknown, account)).toBe(DEFAULT_CARD_COSMETICS.table);
+    expect(resolveDeckCosmetic("cardBack", unknown, account)).toBe(DEFAULT_CARD_COSMETICS.cardBack);
+    // An unknown account id, with no deck pick, draws as the default too.
+    expect(resolveDeckCosmetic("field", null, { ...DEFAULT_CARD_COSMETICS, field: "field-snow" })).toBe(DEFAULT_CARD_COSMETICS.field);
+    // An id of another kind is no id of this one.
+    expect(resolveCosmetic("table", FIELD)).toBe(DEFAULT_CARD_COSMETICS.table);
+    expect(resolveCosmetic("cardBack", TABLE)).toBe(DEFAULT_CARD_COSMETICS.cardBack);
+  });
+
+  it("R1297000 the store keeps the deck slots beside the card slots", () => {
+    expect([...CARD_SLOT_KINDS, ...DECK_SLOT_KINDS]).toEqual(["foil", "finish", "border", "table", "field", "cardBack"]);
+    expect(readCosmetics()).toEqual(DEFAULT_CARD_COSMETICS);
+    expect(Object.keys(DEFAULT_CARD_COSMETICS)).toHaveLength(6);
+
+    writeCosmetics({ table: TABLE, cardBack: BACK, border: PICKS.border });
+    expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, table: TABLE, cardBack: BACK, border: PICKS.border });
+    // An id this client does not know is kept in the deck slots too.
+    writeCosmetics({ field: "field-snow" });
+    expect(readCosmetics().field).toBe("field-snow");
+    resetCosmeticsForTests();
+    expect(readCosmetics().field).toBe("field-snow");
+    expect(normalizeCosmetics({ table: "", cardBack: 3, field: "f".repeat(41) })).toEqual(DEFAULT_CARD_COSMETICS);
+
+    // A deck's picks read as the deck fields keep them: texts of a pick's length, and nothing else.
+    expect(pickedDeckCosmetics({ tableCosmetic: TABLE, fieldCosmetic: null, cardBackCosmetic: "", extra: 1 })).toEqual({ tableCosmetic: TABLE });
+    expect(pickedDeckCosmetics({ fieldCosmetic: "f".repeat(41) })).toEqual({});
+    expect(pickedDeckCosmetics("junk")).toEqual({});
+    expect(deckCosmeticPatch("table", TABLE)).toEqual({ tableCosmetic: TABLE });
+    expect(deckCosmeticPatch("field", null)).toEqual({ fieldCosmetic: null });
+    expect(deckCosmeticPatch("cardBack", BACK)).toEqual({ cardBackCosmetic: BACK });
+  });
+
+  it("R1297000 the settings rows write the account's playmat, backdrop and card back", () => {
+    render(<DeckCosmeticsControls />);
+    for (const kind of DECK_SLOT_KINDS) {
+      const select = screen.getByTestId<HTMLSelectElement>(`setting-cosmetic-${kind}`);
+      expect(select.value).toBe(DEFAULT_CARD_COSMETICS[kind]);
+      expect([...select.options].map((option) => option.value)).toEqual(cosmeticsOf(kind).map((cosmetic) => cosmetic.id));
+    }
+    fireEvent.change(screen.getByTestId("setting-cosmetic-table"), { target: { value: TABLE } });
+    fireEvent.change(screen.getByTestId("setting-cosmetic-field"), { target: { value: FIELD } });
+    fireEvent.change(screen.getByTestId("setting-cosmetic-cardBack"), { target: { value: BACK } });
+    expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, table: TABLE, field: FIELD, cardBack: BACK });
+    expect(screen.getByTestId<HTMLSelectElement>("setting-cosmetic-cardBack").value).toBe(BACK);
+
+    // An id this client does not know shows as the default, which is what the board draws.
+    act(() => {
+      writeCosmetics({ table: "table-marble" });
+    });
+    expect(screen.getByTestId<HTMLSelectElement>("setting-cosmetic-table").value).toBe(DEFAULT_CARD_COSMETICS.table);
+  });
+
+  it("R1297000 each settings reset puts back only its own kinds", () => {
+    const reset = (id: string): void => {
+      const slot = SETTINGS_SLOTS.find((candidate) => candidate.id === id);
+      if (slot?.reset === undefined) throw new Error(`no ${id} slot with a reset`);
+      slot.reset();
+    };
+    writeCosmetics({ foil: PICKS.foil, table: TABLE, cardBack: BACK });
+    reset("card-cosmetics");
+    expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, table: TABLE, cardBack: BACK });
+    writeCosmetics({ foil: PICKS.foil });
+    reset("deck-cosmetics");
+    expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, foil: PICKS.foil });
+  });
+
+  it("R1297000 every backdrop has a still version and moves only inside the motion gate", () => {
+    const gate = tableCss.indexOf("@media (prefers-reduced-motion: no-preference)");
+    expect(gate).toBeGreaterThan(0);
+    const gated = blockFrom(tableCss, tableCss.indexOf("{", gate));
+    const gateEnd = tableCss.indexOf(gated) + gated.length;
+
+    for (const field of cosmeticsOf("field").filter((cosmetic) => !cosmetic.default)) {
+      // The still version: a tint on the layer and a look for its particles, both before the gate.
+      const tint = tableCss.indexOf(`.board-backdrop[data-backdrop="${field.id}"] {`);
+      expect(tint, `${field.id}'s tint`).toBeGreaterThanOrEqual(0);
+      expect(tint).toBeLessThan(gate);
+      expect(blockFrom(tableCss, tableCss.indexOf("{", tint))).toMatch(/background\s*:/);
+      const particle = tableCss.indexOf(`.board-backdrop[data-backdrop="${field.id}"] .board-backdrop-particle {`);
+      expect(particle, `${field.id}'s particles`).toBeGreaterThanOrEqual(0);
+      expect(particle).toBeLessThan(gate);
+      const still = blockFrom(tableCss, tableCss.indexOf("{", particle));
+      expect(still).toMatch(/background\s*:/);
+      expect(still).not.toMatch(/animation/);
+
+      const moving = rules(gated).find((rule) =>
+        rule.selector.includes(`:root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="${field.id}"] .board-backdrop-particle`),
+      );
+      expect(moving, `${field.id}'s moving rule`).toBeDefined();
+      expect(moving?.body).toMatch(/animation\s*:\s*backdrop-/);
+    }
+    // The base particle sits at its own place, so the still field shows them where they would be.
+    expect(ruleBody(tableCss, /\.board-backdrop-particle\s*\{/)).toMatch(/left:\s*var\(--x\)/);
+
+    // Nothing animates outside the gate.
+    for (const match of tableCss.matchAll(/animation\s*:/g)) {
+      expect(match.index).toBeGreaterThan(gate);
+      expect(match.index).toBeLessThan(gateEnd);
+    }
+    // Each loop moves by transform or opacity alone.
+    const frames = [...tableCss.matchAll(/@keyframes\s+(backdrop-[a-z-]+)\s*\{/g)];
+    expect(frames.length).toBe(cosmeticsOf("field").filter((cosmetic) => !cosmetic.default).length);
+    for (const frame of frames) {
+      const body = blockFrom(tableCss, (frame.index ?? 0) + frame[0].length - 1);
+      const properties = [...body.matchAll(/([a-z-]+)\s*:/g)].map((match) => match[1]);
+      expect(properties.length, frame[1]).toBeGreaterThan(0);
+      for (const property of properties) expect(["transform", "opacity"], `${frame[1] ?? ""}: ${property ?? ""}`).toContain(property);
+    }
+    expect(tableCss).not.toContain("prefers-reduced-motion: reduce");
+  });
+
+  it("R1297000 the backdrop never takes input", () => {
+    const layer = ruleBody(tableCss, /\.board-backdrop\s*\{/);
+    expect(layer).toMatch(/pointer-events:\s*none/);
+    expect(layer).toMatch(/z-index:\s*-1\b/);
+    // The mat's surface is no hit target either, and each look names every table the registry lists.
+    expect(ruleBody(tableCss, /\.field\[data-table\]::before\s*\{/)).toMatch(/pointer-events:\s*none/);
+    for (const table of cosmeticsOf("table").filter((cosmetic) => !cosmetic.default)) {
+      expect(tableCss, table.id).toContain(`.field[data-table="${table.id}"]::before`);
+    }
+    // A card back is a look, never text: no content, and a look for each non-default back.
+    for (const back of cosmeticsOf("cardBack").filter((cosmetic) => !cosmetic.default)) {
+      expect(cosmeticsCss, back.id).toContain(`[data-card-back="${back.id}"]`);
+    }
+    const backs = cosmeticsCss.indexOf('.cf-back[data-card-back="');
+    expect(backs).toBeGreaterThan(0);
+    expect(cosmeticsCss.slice(backs)).not.toMatch(/content\s*:/);
   });
 });

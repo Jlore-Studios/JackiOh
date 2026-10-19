@@ -393,6 +393,16 @@ pub struct SavedDeck {
     pub cards: Vec<String>,
     /// R641: the deck's hero portrait, or `null` — the default, `vanilla` (D5).
     pub portrait: Option<String>,
+    /// R1297000: the deck's playmat, a `table` id of the cosmetics registry, or absent — the
+    /// account's choice, then the kind's default. Cosmetic only, never part of `PlayerView`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub table_cosmetic: Option<String>,
+    /// R1297000: the deck's ambient backdrop, a `field` id, or absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub field_cosmetic: Option<String>,
+    /// R1297000: the deck's card back, a `cardBack` id, or absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_back_cosmetic: Option<String>,
     /// The catalog version the client held at the last save. Informational: the queue re-validates
     /// (R253).
     pub catalog_version: String,

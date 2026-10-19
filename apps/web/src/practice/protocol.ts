@@ -24,6 +24,8 @@ import type {
 import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
 import type { Difficulty, Handicap } from "@jackioh/engine/config";
 
+import type { DeckCosmetics } from "../cards/cosmetics.ts";
+
 export type PracticeDeckChoice =
   /**
    * R1373, R924000: `leanSet`, "More cards from": the worker deals the random deck leaning on that
@@ -34,7 +36,7 @@ export type PracticeDeckChoice =
   | { kind: "random"; leanSet?: LeanPick; leanNewest?: boolean }
   | { kind: "preset"; id: string }
   /** `index` is the 1-based deck number the setup's `saved:<n>` value names. */
-  | { kind: "saved"; index: number; cards: string[]; portrait?: string | null }
+  | { kind: "saved"; index: number; cards: string[]; portrait?: string | null; cosmetics?: DeckCosmetics }
   /**
    * #920: the creator's "Try it": a fresh random deck of one card fewer, and the custom card `card`
    * (one of the config's `customCards`).

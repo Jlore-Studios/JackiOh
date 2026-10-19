@@ -18,19 +18,30 @@ use crate::config::PLAYER_SETTINGS_TEXT_MAX_LENGTH;
 /// The registry's text, compiled in.
 pub const COSMETICS_JSON: &str = include_str!("../cosmetics.json");
 
-/// The slot a cosmetic fills on a card (R1295000): a foil over the art, a finish on the print and
-/// a border round the frame.
+/// The slot a cosmetic fills: on a card, a foil over the art, a finish on the print and a border
+/// round the frame (R1295000); on a deck, the playmat (`Table`), the ambient backdrop behind the
+/// board (`Field`) and the back of its face-down cards and deck (`CardBack`) (R1297000).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "camelCase")]
 pub enum CosmeticKind {
     Foil,
     Finish,
     Border,
+    Table,
+    Field,
+    CardBack,
 }
 
 impl CosmeticKind {
     /// Every kind, in the order the settings list them.
-    pub const ALL: [Self; 3] = [Self::Foil, Self::Finish, Self::Border];
+    pub const ALL: [Self; 6] = [
+        Self::Foil,
+        Self::Finish,
+        Self::Border,
+        Self::Table,
+        Self::Field,
+        Self::CardBack,
+    ];
 }
 
 /// How rare a cosmetic is, so a pack can later roll per-card cosmetics by rarity (R1295000).
@@ -123,6 +134,16 @@ pub fn shipped() -> Result<Vec<Cosmetic>, String> {
     parse(COSMETICS_JSON)
 }
 
+/// Whether the shipped registry lists `id` under `kind`: a deck's pick is kept only when it is
+/// (R1297000).
+pub fn is_id_of(kind: CosmeticKind, id: &str) -> bool {
+    shipped().is_ok_and(|cosmetics| {
+        cosmetics
+            .iter()
+            .any(|cosmetic| cosmetic.kind == kind && cosmetic.id == id)
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -143,6 +164,9 @@ mod tests {
             entry("foil-none", CosmeticKind::Foil, true),
             entry("finish-plain", CosmeticKind::Finish, true),
             entry("border-standard", CosmeticKind::Border, true),
+            entry("table-tavern", CosmeticKind::Table, true),
+            entry("field-none", CosmeticKind::Field, true),
+            entry("card-back-standard", CosmeticKind::CardBack, true),
         ]
     }
 
@@ -166,6 +190,46 @@ mod tests {
             );
         }
         assert!(problems(&defaults()).is_empty(), "{:?}", problems(&defaults()));
+    }
+
+    #[test]
+    fn r1297000_the_deck_slots_have_one_default_and_three_items_each() {
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        for kind in [CosmeticKind::Table, CosmeticKind::Field, CosmeticKind::CardBack] {
+            let of_kind: Vec<&Cosmetic> = cosmetics
+                .iter()
+                .filter(|cosmetic| cosmetic.kind == kind)
+                .collect();
+            assert_eq!(
+                of_kind.iter().filter(|cosmetic| cosmetic.default).count(),
+                1,
+                "{kind:?}'s defaults"
+            );
+            assert_eq!(
+                of_kind.iter().filter(|cosmetic| !cosmetic.default).count(),
+                3,
+                "{kind:?}'s items"
+            );
+        }
+        // A kind's name travels as the camel-case word the web's settings group keys on.
+        assert_eq!(
+            serde_json::to_string(&CosmeticKind::CardBack).unwrap(),
+            "\"cardBack\""
+        );
+        assert_eq!(
+            serde_json::to_string(&CosmeticKind::Border).unwrap(),
+            "\"border\""
+        );
+    }
+
+    #[test]
+    fn r1297000_is_id_of_knows_each_kind_s_ids_only() {
+        assert!(is_id_of(CosmeticKind::Table, "table-felt"));
+        assert!(is_id_of(CosmeticKind::Field, "field-none"));
+        assert!(is_id_of(CosmeticKind::CardBack, "card-back-blueprint"));
+        assert!(!is_id_of(CosmeticKind::Table, "field-rain"));
+        assert!(!is_id_of(CosmeticKind::CardBack, "card-back-gold"));
+        assert!(!is_id_of(CosmeticKind::Border, ""));
     }
 
     #[test]
@@ -195,7 +259,10 @@ mod tests {
         );
         let json = r#"{"cosmetics":[
             {"id":"foil-none","kind":"foil","name":"No foil","rarity":"Common","default":true},
-            {"id":"finish-plain","kind":"finish","name":"Plain","rarity":"Common","default":true}
+            {"id":"finish-plain","kind":"finish","name":"Plain","rarity":"Common","default":true},
+            {"id":"table-tavern","kind":"table","name":"Tavern table","rarity":"Common","default":true},
+            {"id":"field-none","kind":"field","name":"No backdrop","rarity":"Common","default":true},
+            {"id":"card-back-standard","kind":"cardBack","name":"Standard back","rarity":"Common","default":true}
         ]}"#;
         assert_eq!(
             parse(json),

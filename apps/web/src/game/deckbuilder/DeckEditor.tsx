@@ -17,6 +17,7 @@ import { portraitOrDefault } from "@jackioh/shared";
 
 import { PortraitPicker } from "../../emotes/PortraitPicker.tsx";
 import { closeInspect } from "../../cards/index.ts";
+import { cosmeticsOf, resolveCosmetic, type DeckSlotKind } from "../../cards/cosmetics.ts";
 import { readerName } from "../../cards/chinese.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { paths } from "../../net/navigate.ts";
@@ -96,6 +97,8 @@ export type DeckEditorProps = {
   onRename: (name: string) => void;
   /** R641, issue §8: a portrait is saved through the deck upsert. */
   onPortrait: (portrait: string) => void;
+  /** R1297000: a playmat, backdrop or card back pick is saved through the deck upsert; null clears it. */
+  onCosmetic: (kind: DeckSlotKind, id: string | null) => void;
   onCards: (cards: readonly string[]) => void;
   onDelete: () => void;
   onSaveNow: () => void;
@@ -115,9 +118,16 @@ function droppedCardId(event: DragEvent<HTMLElement>, held: string | null): stri
   return null;
 }
 
+/** R1297000: the deck's three slots, the deck field each is saved in and its label. */
+const DECK_COSMETIC_FIELDS: readonly { kind: DeckSlotKind; key: "tableCosmetic" | "fieldCosmetic" | "cardBackCosmetic"; label: string }[] = [
+  { kind: "table", key: "tableCosmetic", label: "Playmat" },
+  { kind: "field", key: "fieldCosmetic", label: "Backdrop" },
+  { kind: "cardBack", key: "cardBackCosmetic", label: "Card back" },
+];
+
 export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const { deck, decks, trios, catalog, collection, limits, saved, refusal } = props;
-  const { filter, onFilter, sort, onSort, onRename, onPortrait, onCards, onDelete, onSaveNow, onBack } = props;
+  const { filter, onFilter, sort, onSort, onRename, onPortrait, onCosmetic, onCards, onDelete, onSaveNow, onBack } = props;
 
   useLocale();
   const label = deckLabel(deck, limits.nameLength);
@@ -384,6 +394,33 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           onRemove={remove}
           onInspect={openDetail}
         >
+          {/* R1297000: the deck's own playmat, backdrop and card back; "Your settings' choice" leaves the
+              pick to the account's (settings), then the default. */}
+          <div className="ws-compare ws-deck-cosmetics">
+            {DECK_COSMETIC_FIELDS.map((slot) => {
+              const pick = deck[slot.key] ?? null;
+              return (
+                <label className="ws-compare-pick" key={slot.kind}>
+                  <span className="ws-field-label">{t(slot.label)}</span>
+                  <select
+                    className="ws-select"
+                    data-testid={`deck-cosmetic-${slot.kind}`}
+                    value={pick === null ? "" : resolveCosmetic(slot.kind, pick)}
+                    onChange={(event) => {
+                      onCosmetic(slot.kind, event.target.value === "" ? null : event.target.value);
+                    }}
+                  >
+                    <option value="">{t("Your settings' choice")}</option>
+                    {cosmeticsOf(slot.kind).map((cosmetic) => (
+                      <option key={cosmetic.id} value={cosmetic.id}>
+                        {t(cosmetic.name)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              );
+            })}
+          </div>
           <div className="ws-compare">
             <label className="ws-compare-pick">
               <span className="ws-field-label">{t("Compare with")}</span>
