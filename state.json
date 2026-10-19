@@ -5507,8 +5507,10 @@
       "feedback_since": "2026-10-19T01:53:26Z",
       "issue": 1256,
       "kind": "revise",
-      "queued_at": "2026-10-19T04:01:44Z",
+      "queued_at": "2026-10-19T04:03:12Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "muse"
