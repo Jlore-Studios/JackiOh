@@ -3695,6 +3695,7 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "parked": [
         "bot/issue-1181"
       ],
@@ -3702,6 +3703,7 @@
       "provider": "claude-4",
       "queued_at": "2026-10-19T05:13:46Z",
       "requested_by": "jgoetzmann-bot",
+      "round_tier": "strong",
       "run_id": "39203436787",
       "started_at": "2026-10-19T05:14:18Z",
       "stop_requested": false,
@@ -3727,7 +3729,8 @@
         ],
         "mode": "fullsend",
         "onto": "bot/issue-1173"
-      }
+      },
+      "verdict_rounds": 0
     },
     "1179": {
       "action": "build",
