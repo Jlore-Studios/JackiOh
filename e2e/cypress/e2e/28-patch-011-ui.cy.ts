@@ -1,10 +1,11 @@
 // Spec 28 checks the DOM only (CLAUDE.md rule 7; SPEC §10.10).
-// Face-down cost is SPEC §8 #41 (R351, R370, R432); #93 Combo-Index relies on R82 and R372.
+// Face-down cost is SPEC §8 #41 (R351, R370, R432); #93 Combo-Index relies on R82, R345 and R372.
 // Face-down traps (R371, R373), Combo-Index, and the landing fan (R374) are covered here.
 // `--expose shots=1` captures treatments; use 1600x1200 because Headless Chrome crops tall viewports.
 
 import { landingFanCardTestid, landingTestid } from "../../../apps/web/src/auth/testids.ts";
 import { createRng } from "../../../apps/web/src/fx/rng.ts";
+import { SETTINGS_STORAGE_KEY } from "../../../apps/web/src/settings/store.ts";
 import { FX_SETTINGS_KEY, seedFor } from "../../support/config.ts";
 import {
   INSPECT_EXTENDED,
@@ -111,9 +112,23 @@ function faceDownTrap(viewport: Viewport | null): void {
   });
 }
 
+/**
+ * R345: R82's automatic turn end off. Combo-Index (3) spends the last of player 1's three mana, so R82
+ * would end that turn inside the play and raise the grade to D before its E could be read (#1216).
+ */
+function endTurnByHand(viewport: Viewport | null): { onBeforeLoad: (win: Cypress.AUTWindow) => void } {
+  const fx = quiet(viewport).onBeforeLoad;
+  return {
+    onBeforeLoad: (win) => {
+      fx?.(win);
+      win.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ autoEndTurn: false }));
+    },
+  };
+}
+
 function comboIndex(viewport: Viewport | null): void {
   if (viewport !== null) cy.viewport(viewport.width, viewport.height);
-  cy.seedGame({ seed: COMBO_SEED, a: "28-combo-a", b: "03-sheepish-b", ...quiet(viewport) });
+  cy.seedGame({ seed: COMBO_SEED, a: "28-combo-a", b: "03-sheepish-b", ...endTurnByHand(viewport) });
   cy.advanceToTurn(5);
 
   cy.playByName(COMBO_INDEX, { zone: { side: "you", row: "backrow", lane: 1 } });

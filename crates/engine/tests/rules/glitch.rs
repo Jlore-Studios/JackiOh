@@ -10,6 +10,7 @@
 
 use jackioh_engine::catalog::{CatalogQueryArgs, find_def, pick_generated, query};
 use jackioh_engine::effects::glitch;
+use jackioh_engine::effects::{FuseCardsArgs, PlayerSpec, fuse_cards};
 use jackioh_engine::mana::play_cost;
 use jackioh_engine::reduce::reduce;
 use jackioh_engine::replay::hash_state;
@@ -297,6 +298,46 @@ mod r676_glitchs_outcome_and_the_reset {
                 .iter()
                 .any(|event| json_of(event)["type"] == json!("glitched"))
         );
+    }
+
+    #[test]
+    fn r676_a_reset_drops_the_games_fusions_and_the_i6_oracle_still_reads_the_log_that_names_one() {
+        // Fuzz seed 8183 (#1216): a card fused before a reset wore a definition only the old game's
+        // `transient_defs` held, and I6 read its token flag off the new game's state.
+        let mut start = game(&seed_for(GlitchOutcome::Reset));
+        let crafter = spell_def(9002, json!({ "id": "glitch-crafter", "cost": 0 }));
+        let mut catalog = registered_catalog().clone();
+        catalog.insert(crafter.id.clone(), crafter.clone());
+        register_catalog(catalog);
+        let parts = vec![spell_def(1, json!({})).id, spell_def(2, json!({})).id];
+        let craft = Script {
+            cry: Some(hook(move |_ctx| {
+                vec![fuse_cards(FuseCardsArgs {
+                    def_ids: Some(parts.clone()),
+                    to_hand: Some(PlayerSpec::SelfSide),
+                    ..FuseCardsArgs::default()
+                })]
+            })),
+            ..Script::default()
+        };
+        let mut scripts = registered_scripts().clone();
+        scripts.insert(
+            crafter.id.clone(),
+            CardScripts {
+                base: craft.clone(),
+                radiant: craft,
+            },
+        );
+        register_scripts(scripts);
+        let monitor = create_invariant_monitor(&start);
+        let card = in_hand(&mut start, &crafter.id, P1, 1).into_iter().next();
+        let id = card.map(|card| card.id).unwrap_or_default();
+        let mut crafted = reduce(&start, &play_action(&id, P1, "craft")).state;
+        assert_eq!(crafted.transient_defs.len(), 1);
+        let state = play_glitch(&mut crafted).state;
+        assert_eq!(state.resets, Some(1));
+        assert!(state.transient_defs.is_empty());
+        assert_eq!(monitor.hidden(&state), Vec::<String>::new());
     }
 
     #[test]
