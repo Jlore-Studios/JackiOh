@@ -26,7 +26,7 @@ fn render() -> String {
     let mut out = String::from(HEADER);
     out.push_str(&format!(
         "export const COSMETIC_KINDS = {} as const;\n",
-        json(&CosmeticKind::ALL)
+        json(&CosmeticKind::PICKED)
     ));
     out.push_str(&format!(
         "export const COSMETIC_RARITIES = {} as const;\n",

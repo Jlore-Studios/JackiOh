@@ -47,6 +47,7 @@ export const DUOS_MULLIGAN_CLOCK_MS = 45000;
 export const DUOS_PROMPT_CLOCK_MS = 30000;
 export const DUOS_ROOM_TTL_MS = 600000;
 export const DUOS_ROUND_CLOCK_MS = 90000;
+export const ECONOMY_LIVE = false;
 export const FRIEND_REQUESTS_PER_HOUR = 20;
 export const GATE_SLOW_NOTICE_SECONDS = 5;
 export const INVITE_CODE_FORMAT = {"alphabet":"23456789ABCDEFGHJKLMNPQRSTUVWXYZ","groupSize":4,"length":16,"maxInputLength":64,"separator":"-"};

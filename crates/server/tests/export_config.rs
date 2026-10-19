@@ -218,9 +218,9 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("PING_SHOW_MS", json!(c::PING_SHOW_MS)),
         // ---- end Duos co-op (#946) ----
         // ---- The collection economy (SPEC §14, #1294; built by #1298) ----
-        // Every number of §14's constant table but the environment's DEV_PROFILE_IDS and the
-        // going-live sub-issue's ECONOMY_LIVE, so the client reads the same balances as the
-        // server (CLAUDE.md rule 9).
+        // Every number of §14's constant table but the environment's DEV_PROFILE_IDS, so the client
+        // reads the same balances as the server (CLAUDE.md rule 9), and the ECONOMY_LIVE switch the
+        // client's full-art faces read (R1313000).
         ("PACK_PRICE_JLORE", json!(c::PACK_PRICE_JLORE)),
         ("PACK_SLOTS", json!(c::PACK_SLOTS)),
         (
@@ -299,6 +299,7 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("QUEST_JLORE_MIN", json!(c::QUEST_JLORE_MIN)),
         ("QUEST_JLORE_MAX", json!(c::QUEST_JLORE_MAX)),
         ("QUEST_XP_PER_JLORE", json!(c::QUEST_XP_PER_JLORE)),
+        ("ECONOMY_LIVE", json!(c::ECONOMY_LIVE)),
         // ---- end the collection economy ----
     ]
 }
@@ -323,10 +324,10 @@ fn every_name_is_listed_once() {
     // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- 64 + S7's twelve.
     assert_eq!(
         // 64 before #936 and v0.5.0, main's two (CUSTOM_CARDS_PER_ACCOUNT, QUEUE_ENDED_AFTER_READS),
-        // SPEC S7's twelve, the social poll and Duos co-op's eight, and SPEC §14's thirty-eight
-        // economy numbers (#1298).
+        // SPEC S7's twelve, the social poll and Duos co-op's eight, SPEC §14's thirty-eight
+        // economy numbers (#1298) and its ECONOMY_LIVE switch (R1313000).
         listed,
-        88 + 38,
+        88 + 38 + 1,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -335,8 +336,8 @@ fn every_name_is_listed_once() {
          RATING_WINDOW_FULL_AFTER_SECONDS in place of the uncapped window's \
          RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001), QUEUE_ENDED_AFTER_READS (R897000), SPEC S7's \
          twelve (#936) with the social poll (SOCIAL_POLL_MS), Duos co-op's eight clocks and ping \
-         limits (#946), PLAYER_STATS_BYTES_MAX (R1142000), and SPEC §14's thirty-eight economy \
-         numbers (#1298)"
+         limits (#946), PLAYER_STATS_BYTES_MAX (R1142000), SPEC §14's thirty-eight economy \
+         numbers (#1298), and ECONOMY_LIVE (R1313000)"
     );
 }
 

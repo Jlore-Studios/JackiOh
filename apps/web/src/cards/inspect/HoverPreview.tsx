@@ -65,7 +65,7 @@ export function HoverPreview({ face, anchor, prefer = "beside", note }: HoverPre
   const ref = useRef<HTMLDivElement>(null);
   const entries = glossaryFor(face);
   const resolve = useDefResolver();
-  const fullArtOn = useFullArt();
+  const fullArtOn = useFullArt(face.defId);
   const named = resolve === null ? 0 : namedCards(face, resolve).length;
   const notes = hasStateNotes(face);
   const flavoured = face.known && (flavourFor(face.defId) !== null || showsEasterEgg(face));
