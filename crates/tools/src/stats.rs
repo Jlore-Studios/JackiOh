@@ -1,5 +1,5 @@
-//! `cargo jackioh stats [--games N] [--from N] [--patch v] [--series name] [--out file]` (SPEC §9.11,
-//! R378; SURFACE §12): an internal AI development run of the build in this checkout. Port of
+//! `cargo jackioh stats [--games N] [--from N] [--patch v] [--series name] [--force id] [--out file]`
+//! (SPEC §9.11, R378; SURFACE §12): an internal AI development run of the build in this checkout. Port of
 //! `packages/ai/scripts/stats.ts` (`pnpm ai:stats`).
 //!
 //! Plays AI-against-AI All Random games (`devGameRecord`, `crates/ai/src/dev_run.rs`), writes each
@@ -16,6 +16,12 @@
 //! cargo jackioh stats --patch v0.2.5 --out v0.2.5.jsonl
 //!                                                   a pre-release run of v0.2.5, kept in a file
 //! cargo jackioh stats --series tuning-a             another seed series: other games
+//! cargo jackioh stats --force core-090 --out a.jsonl
+//!                                                   core-090 in one seat's deck in every game, p1's in
+//!                                                   odd games and p2's in even ones (R1284000)
+//! cargo jackioh stats compare --before a.jsonl --after b.jsonl --card core-090
+//!                                                   two such runs of the same seeds, on two builds,
+//!                                                   compared on the seat that holds the card (R1284000)
 //! ```
 //!
 //! A game takes seconds at the browser's budget, so a full run takes a while; progress goes to
@@ -33,6 +39,9 @@
 //! written before those counts is unknown for them, not zero. The training lanes keep these figures
 //! beside the card figures (`training/README.md`).
 //!
+//! A forced run files under a series of its own (`dev-force-<id>`) and is for `stats compare` and
+//! `stats report`, never for `stats-import` (R1284000).
+//!
 //! `cargo jackioh stats fit-dealt <file>…` refits `DEALT_Q` and `DEALT_Q_PRIOR` over arena record
 //! files and prints them to paste (`dealt_fit.rs`).
 //!
@@ -43,31 +52,31 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use anyhow::{Context, Result, anyhow};
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use serde::Serialize;
 use serde_json::Value;
 
-use jackioh_ai::{AI_DEV_RUN, DevRunOptions, dev_game_record};
+use jackioh_ai::{AI_DEV_RUN, DevRunOptions, SHADOW_BAN, SHADOW_WATCH, dev_game_record};
 use jackioh_engine::{
-    CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, GAME_MODES, GAME_OVER_REASONS, GameMode,
-    GameOverReason, GameRecord, GameSource, GameSummary, PILOT_FILTERS, PLAYER_IDS, PilotFilter,
-    SOURCE_FILTERS, SourceFilter, Winner, card_stats, describe_filter, format_card_stats,
-    parse_game_record_lines, record_matches, seats_counted, sources_of,
+    CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, DEV_RECORD_ID_PREFIX, GAME_MODES,
+    GAME_OVER_REASONS, GameMode, GameOverReason, GameRecord, GameSource, GameSummary, PILOT_FILTERS,
+    PLAYER_IDS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, Winner, card_stats, describe_filter,
+    format_card_stats, parse_game_record_lines, record_matches, seats_counted, sources_of,
 };
 
-use crate::arena;
-use crate::dealt_fit;
+use crate::arena::{self, paired_interval, wilson_interval};
+use crate::{dealt_fit, golden};
 
 /// Seconds print with this many decimals.
 const SECONDS_DECIMALS: usize = 1;
 
-/// A share prints as a percentage with this many decimals.
+/// Percentages print with this many decimals.
 const PERCENT_DECIMALS: usize = 1;
 
 /// A mean or a per-set figure prints with this many decimals.
 const MEAN_DECIMALS: usize = 2;
 
-/// A share is this many percent.
+/// A share as a percentage.
 const PERCENT: f64 = 100.0;
 
 /// The turns are cut into this many parts by their quartiles.
@@ -125,6 +134,9 @@ pub struct Args {
     /// The seed series. Default AI_DEV_RUN.series ("dev").
     #[arg(long, value_name = "NAME")]
     pub series: Option<String>,
+    /// R1284000: deal this card to p1 in odd games and p2 in even ones; a token goes in through its card (R279).
+    #[arg(long, value_name = "ID")]
+    pub force: Option<String>,
     /// Write the records here, one JSON line per game (`stats-import` reads it).
     #[arg(long, value_name = "FILE")]
     pub out: Option<PathBuf>,
@@ -138,6 +150,23 @@ pub enum Command {
     Report(ReportArgs),
     /// DEALT_Q's refit over arena record files, printed to paste into crates/ai/src/shadow_ban.rs.
     FitDealt(dealt_fit::Args),
+    /// R1284000: two forced runs compared: the holder's win rate before and after, and the paired difference.
+    Compare(CompareArgs),
+}
+
+/// `cargo jackioh stats compare --before <file>… --after <file>… --card <id>`: two runs of
+/// `stats --force <id>` over the same seeds on two builds (R1284000).
+#[derive(clap::Args, Debug, Clone, PartialEq)]
+pub struct CompareArgs {
+    /// The run on the build before the change: record files, read in the order named.
+    #[arg(long, required = true, num_args = 1.., value_name = "FILE")]
+    pub before: Vec<PathBuf>,
+    /// The run on the build after it.
+    #[arg(long, required = true, num_args = 1.., value_name = "FILE")]
+    pub after: Vec<PathBuf>,
+    /// The card both runs forced, read as it is written in the records' decks (a token is not resolved).
+    #[arg(long, value_name = "ID")]
+    pub card: String,
 }
 
 /// `cargo jackioh stats report <file>… [--source] [--mode] [--patch] [--pilot] [--card] [--games] [--json]`:
@@ -338,7 +367,7 @@ fn game_group(key: (String, GameMode, GameSource), records: &[&GameRecord]) -> G
         .iter()
         .filter(|record| record.game.winner.player() == Some(record.game.first))
         .count();
-    let (low, high) = arena::wilson_interval(first_wins, n);
+    let (low, high) = wilson_interval(first_wins, n);
 
     let mut reasons: IndexMap<GameOverReason, usize> =
         GAME_OVER_REASONS.iter().map(|reason| (*reason, 0)).collect();
@@ -405,11 +434,6 @@ pub fn game_report(records: &[GameRecord], filter: &CardStatsFilter) -> GameRepo
             .map(|(key, records)| game_group(key, &records))
             .collect(),
     }
-}
-
-/// A share as a percentage.
-fn percent(share: f64) -> String {
-    format!("{:.*}%", PERCENT_DECIMALS, share * PERCENT)
 }
 
 /// The game report as `stats report --games` prints it: lines of text, or JSON.
@@ -510,18 +534,240 @@ fn run_report(args: &ReportArgs) -> Result<()> {
     Ok(())
 }
 
+/// R1284000: whether the seat whose deck alone holds `card` won; `None` when no seat or both seats hold it.
+/// A draw is a game not won.
+fn holder_won(record: &GameRecord, card: &str) -> Option<bool> {
+    let holders: Vec<PlayerId> = record
+        .game
+        .seats
+        .iter()
+        .filter(|(_, seat)| seat.deck.iter().any(|id| id == card))
+        .map(|(player, _)| player)
+        .collect();
+    match holders.as_slice() {
+        [holder] => Some(record.game.winner == Winner::from(*holder)),
+        _ => None,
+    }
+}
+
+/// R1284000: the game a development record is, the seed its id ends with, so the same game on two builds
+/// (two patches) has one key.
+fn game_key(record: &GameRecord) -> &str {
+    record
+        .id
+        .strip_prefix(&format!("{DEV_RECORD_ID_PREFIX}{}:", record.patch))
+        .unwrap_or(&record.id)
+}
+
+/// R1284000: the win rate of the seat that holds the card over one side's records, with its 95% Wilson
+/// interval (R850000's `wilson_interval`).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct HolderRate {
+    /// Games in which exactly one seat holds the card.
+    pub games: usize,
+    pub wins: usize,
+    pub share: f64,
+    pub low: f64,
+    pub high: f64,
+    /// Games no seat or both seats hold the card in, which no rate counts.
+    pub left_out: usize,
+}
+
+fn holder_rate(records: &[GameRecord], card: &str) -> HolderRate {
+    let results: Vec<bool> = records
+        .iter()
+        .filter_map(|record| holder_won(record, card))
+        .collect();
+    let games = results.len();
+    let wins = results.iter().filter(|won| **won).count();
+    let (low, high) = wilson_interval(wins, games);
+    HolderRate {
+        games,
+        wins,
+        share: if games == 0 {
+            0.0
+        } else {
+            wins as f64 / games as f64
+        },
+        low,
+        high,
+        left_out: records.len() - games,
+    }
+}
+
+/// R1284000: the holder's result in each game both sides played, after less before (−1, 0 or 1), as a mean
+/// with its 95% interval (R850000's `paired_interval`).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PairedDifference {
+    pub games: usize,
+    pub mean: f64,
+    pub low: f64,
+    pub high: f64,
+}
+
+/// The games on both sides, by `game_key`, each side's first record of a game; `None` when no game is on both.
+fn paired_difference(before: &[GameRecord], after: &[GameRecord], card: &str) -> Option<PairedDifference> {
+    let mut before_won: IndexMap<&str, bool> = IndexMap::new();
+    for record in before {
+        if let Some(won) = holder_won(record, card) {
+            before_won.entry(game_key(record)).or_insert(won);
+        }
+    }
+    let mut seen: IndexSet<&str> = IndexSet::new();
+    let mut edges: Vec<f64> = Vec::new();
+    for record in after {
+        let key = game_key(record);
+        let (Some(after_won), Some(before_won)) = (holder_won(record, card), before_won.get(key)) else {
+            continue;
+        };
+        if seen.insert(key) {
+            edges.push(f64::from(u8::from(after_won)) - f64::from(u8::from(*before_won)));
+        }
+    }
+    if edges.is_empty() {
+        return None;
+    }
+    let (mean, low, high) = paired_interval(&edges);
+    Some(PairedDifference {
+        games: edges.len(),
+        mean,
+        low,
+        high,
+    })
+}
+
+/// R186, R390: the table that lists `card` and why, `SHADOW_BAN` before `SHADOW_WATCH`.
+fn shadow_row(card: &str) -> Option<(&'static str, &'static str)> {
+    let listed = |table: &'static [(&'static str, &'static str)]| {
+        table
+            .iter()
+            .find(|(id, _)| *id == card)
+            .map(|(_, reason)| *reason)
+    };
+    listed(SHADOW_BAN)
+        .map(|reason| ("SHADOW_BAN", reason))
+        .or_else(|| listed(SHADOW_WATCH).map(|reason| ("SHADOW_WATCH", reason)))
+}
+
+/// R1284000: what `stats compare` prints, as data.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Comparison {
+    pub card: String,
+    pub before: HolderRate,
+    pub after: HolderRate,
+    pub paired: Option<PairedDifference>,
+    /// The table that lists the card and the reason it gives: the AI plays it badly or times out on it.
+    pub shadow: Option<(&'static str, &'static str)>,
+}
+
+/// R1284000: the two sides' records compared on the seat that holds `card`.
+pub fn compare(before: &[GameRecord], after: &[GameRecord], card: &str) -> Comparison {
+    Comparison {
+        card: card.to_string(),
+        before: holder_rate(before, card),
+        after: holder_rate(after, card),
+        paired: paired_difference(before, after, card),
+        shadow: shadow_row(card),
+    }
+}
+
+/// R1284000: the comparison the arguments ask for, over the records of the files they name.
+pub fn comparison(args: &CompareArgs) -> Result<Comparison> {
+    let before = read_records(&args.before)?;
+    let after = read_records(&args.after)?;
+    Ok(compare(&before, &after, &args.card))
+}
+
+/// A share as a percentage, as `31.4%`.
+fn percent(share: f64) -> String {
+    format!("{:.*}%", PERCENT_DECIMALS, share * PERCENT)
+}
+
+/// A difference of shares in percentage points, signed, as `+3.0`.
+fn points(share: f64) -> String {
+    format!("{:+.*}", PERCENT_DECIMALS, share * PERCENT)
+}
+
+/// R1284000: the comparison as lines of text, the card named with the catalog's `name` when it has one.
+pub fn render_compare(comparison: &Comparison, name: Option<&str>) -> String {
+    let card = &comparison.card;
+    let named = match name {
+        Some(name) => format!("{card} {name}"),
+        None => card.clone(),
+    };
+    let mut lines = vec![format!(
+        "{named}: the win rate of the seat whose deck alone holds it (R1284000)"
+    )];
+    for (label, rate) in [("before", &comparison.before), ("after", &comparison.after)] {
+        lines.push(format!(
+            "  {label:<6}  {} of {} games, 95% interval {} to {}",
+            percent(rate.share),
+            rate.games,
+            percent(rate.low),
+            percent(rate.high)
+        ));
+    }
+    lines.push(match &comparison.paired {
+        Some(paired) => format!(
+            "  paired  {} points over the {} games on both sides, 95% interval {} to {}",
+            points(paired.mean),
+            paired.games,
+            points(paired.low),
+            points(paired.high)
+        ),
+        None => "  paired  no game is on both sides".to_string(),
+    });
+    let (before_left, after_left) = (comparison.before.left_out, comparison.after.left_out);
+    if before_left + after_left > 0 {
+        lines.push(format!(
+            "  left out: {before_left} game(s) before and {after_left} after, where no seat or both seats hold {card}"
+        ));
+    }
+    if let Some((table, reason)) = comparison.shadow {
+        lines.push(format!(
+            "  {card} is in {table} ({reason}): its figures measure the AI as much as the card"
+        ));
+    }
+    lines.join("\n")
+}
+
+/// `cargo jackioh stats compare`.
+fn run_compare(args: &CompareArgs) -> Result<()> {
+    jackioh_cards::register_all();
+    let compared = comparison(args)?;
+    let name = jackioh_cards::CATALOG.get(&args.card).map(|def| def.name.clone());
+    println!("{}", render_compare(&compared, name.as_deref()));
+    Ok(())
+}
+
+/// R1284000: the options of the run `args` ask for, `patch` being the version it tests. `--force`'s id is
+/// resolved as `golden record --force` resolves it, so a token goes in through its card and an unknown id or
+/// an unshipped set's card is refused. A forced run's default series holds the card's id, so its records'
+/// ids never collide with a plain run's in `stats-import`.
+fn run_options(args: &Args, patch: String) -> Result<DevRunOptions> {
+    let force = args.force.as_deref().map(golden::resolve_forced).transpose()?;
+    let series = match (&args.series, &force) {
+        (Some(series), _) => series.clone(),
+        (None, Some(card)) => format!("{}-force-{card}", AI_DEV_RUN.series),
+        (None, None) => AI_DEV_RUN.series.to_string(),
+    };
+    Ok(DevRunOptions {
+        series,
+        patch,
+        budget: None,
+        force,
+    })
+}
+
 /// `cargo jackioh stats`.
 pub fn run(args: Args) -> Result<()> {
     match &args.command {
         Some(Command::Report(report)) => return run_report(report),
         Some(Command::FitDealt(fit)) => return dealt_fit::run(fit),
+        Some(Command::Compare(compared)) => return run_compare(compared),
         None => {}
     }
     let games = args.games.unwrap_or(AI_DEV_RUN.games);
-    let series = args
-        .series
-        .clone()
-        .unwrap_or_else(|| AI_DEV_RUN.series.to_string());
     jackioh_cards::register_all();
 
     let patch = match args.patch.clone() {
@@ -532,6 +778,12 @@ pub fn run(args: Args) -> Result<()> {
             newest_patch(&serde_json::from_str(&text).with_context(|| format!("parsing {PATCHES_PATH}"))?)?
         }
     };
+    // Before `--out` is created, so a refused id writes no file.
+    let options = run_options(&args, patch)?;
+    let series = &options.series;
+    if let Some(card) = &options.force {
+        eprintln!("[ai:stats] {card} forced: p1's deck in odd games, p2's in even ({series})");
+    }
     // A path the user typed means the directory they typed it in.
     let out = match &args.out {
         None => None,
@@ -548,14 +800,7 @@ pub fn run(args: Args) -> Result<()> {
     let started = Instant::now();
     for n in args.from..args.from + games {
         let game_started = Instant::now();
-        let record = dev_game_record(
-            n,
-            &DevRunOptions {
-                series: series.clone(),
-                patch: patch.clone(),
-                budget: None,
-            },
-        );
+        let record = dev_game_record(n, &options);
         let seconds = format!("{:.*}", SECONDS_DECIMALS, game_started.elapsed().as_secs_f64());
         let Some(record) = record else {
             eprintln!("[ai:stats] {series}:{n} did not finish; no record ({seconds}s)");
@@ -590,7 +835,7 @@ pub fn run(args: Args) -> Result<()> {
         &CardStatsFilter {
             source: SourceFilter::Dev,
             mode: Some(GameMode::Random),
-            patch: Some(patch),
+            patch: Some(options.patch.clone()),
             pilot: PilotFilter::Ai,
         },
     );
@@ -629,6 +874,7 @@ mod tests {
                 from: 1,
                 patch: None,
                 series: None,
+                force: None,
                 out: None,
                 command: None
             }
@@ -639,6 +885,7 @@ mod tests {
                 "--from=51",
                 "--patch=v0.2.5",
                 "--series=a",
+                "--force=core-090",
                 "--out=run.jsonl"
             ])
             .unwrap(),
@@ -647,6 +894,7 @@ mod tests {
                 from: 51,
                 patch: Some("v0.2.5".to_string()),
                 series: Some("a".to_string()),
+                force: Some("core-090".to_string()),
                 out: Some(PathBuf::from("run.jsonl")),
                 command: None,
             }
@@ -1151,6 +1399,266 @@ mod tests {
             absent.contains(&format!("reading {}", named(&missing))),
             "{absent}"
         );
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    /// The options a run of `argv` plays, as `run` reads them under the patch "v0.2.5".
+    fn options_of(argv: &[&str]) -> Result<DevRunOptions> {
+        jackioh_cards::register_all();
+        run_options(&parse(argv).unwrap(), "v0.2.5".to_string())
+    }
+
+    #[test]
+    fn r1284000_force_takes_a_tokens_card_and_refuses_an_unknown_id_or_an_unshipped_sets_card() {
+        let plain = options_of(&[]).unwrap();
+        assert_eq!((plain.series.as_str(), plain.force), ("dev", None));
+        assert_eq!(plain.patch, "v0.2.5");
+
+        // A forced run files under a series of its own, unless it is told one.
+        let forced = options_of(&["--force=core-090"]).unwrap();
+        assert_eq!(
+            (forced.series.as_str(), forced.force.as_deref()),
+            ("dev-force-core-090", Some("core-090"))
+        );
+        // R279: a token goes in through the card whose refs name it, and the series names that card.
+        let token = options_of(&["--force=core-t-felinor"]).unwrap();
+        assert_eq!(
+            (token.series.as_str(), token.force.as_deref()),
+            ("dev-force-classic-032", Some("classic-032"))
+        );
+        assert_eq!(
+            options_of(&["--force=core-090", "--series=a"]).unwrap().series,
+            "a"
+        );
+
+        let unknown = options_of(&["--force=no-such-card"]).unwrap_err().to_string();
+        assert!(unknown.contains("not in the catalog"), "{unknown}");
+        let carried = options_of(&["--force=classic-t-glitch"]).unwrap_err().to_string();
+        assert!(
+            carried.contains("no deckable card's refs name this token"),
+            "{carried}"
+        );
+        // R1420: no catalog set is unshipped today, so a card of the reserved Boss set is made from one.
+        let mut unshipped = jackioh_cards::CATALOG["core-090"].clone();
+        unshipped.set = jackioh_engine::SetName::Boss;
+        let refused = golden::carrier_of("core-090", &unshipped)
+            .unwrap_err()
+            .to_string();
+        assert!(refused.contains("has not shipped (R1420)"), "{refused}");
+    }
+
+    /// `compare`'s options as `main.rs` mounts the subcommand.
+    fn compare_args(argv: &[&str]) -> Result<CompareArgs, clap::Error> {
+        let cli = Cli::try_parse_from(["stats", "compare"].into_iter().chain(argv.iter().copied()))?;
+        match cli.args.command {
+            Some(Command::Compare(compared)) => Ok(compared),
+            _ => panic!("`stats compare` parsed as something else"),
+        }
+    }
+
+    #[test]
+    fn r1284000_compare_reads_its_options() {
+        assert_eq!(
+            compare_args(&[
+                "--before", "a.jsonl", "b.jsonl", "--after", "c.jsonl", "--card", "core-090"
+            ])
+            .unwrap(),
+            CompareArgs {
+                before: vec![PathBuf::from("a.jsonl"), PathBuf::from("b.jsonl")],
+                after: vec![PathBuf::from("c.jsonl")],
+                card: "core-090".to_string(),
+            }
+        );
+        assert!(compare_args(&["--before", "a.jsonl", "--card=core-090"]).is_err());
+        assert!(compare_args(&["--before=a.jsonl", "--after=c.jsonl"]).is_err());
+        assert!(compare_args(&["--after=c.jsonl", "--card=core-090"]).is_err());
+        assert!(
+            compare_args(&[
+                "--before=a.jsonl",
+                "--after=c.jsonl",
+                "--card=core-090",
+                "--games=3"
+            ])
+            .is_err()
+        );
+    }
+
+    /// A forced run's record as a line of JSON, `record_line_piloted`'s shape: game `n` of `patch`'s run, the
+    /// card "test-card" in the deck of `holder` ("p1", "p2", "none" or "both") and `winner` the winner.
+    fn forced_line(patch: &str, n: i32, holder: &str, winner: &str) -> String {
+        let deck = |seat: &str| {
+            let mut deck = vec!["core-001", "core-002"];
+            if holder == seat || holder == "both" {
+                deck.push("test-card");
+            }
+            deck
+        };
+        serde_json::json!({
+            "id": format!("dev:{patch}:t:{n}"),
+            "source": "dev",
+            "mode": "random",
+            "patch": patch,
+            "pilots": { "p1": "ai", "p2": "ai" },
+            "game": {
+                "first": "p1",
+                "winner": winner,
+                "reason": "hero-death",
+                "turns": 9,
+                "seats": {
+                    "p1": { "deck": deck("p1"), "opening": [], "drawn": [], "played": [] },
+                    "p2": { "deck": deck("p2"), "opening": [], "drawn": [], "played": [] }
+                }
+            }
+        })
+        .to_string()
+    }
+
+    /// Game `n` of a forced run, the holder (p1 when n is odd) winning or losing.
+    fn forced_game(patch: &str, n: i32, holder_wins: bool) -> String {
+        let (holder, other) = if n % 2 == 1 { ("p1", "p2") } else { ("p2", "p1") };
+        forced_line(patch, n, holder, if holder_wins { holder } else { other })
+    }
+
+    /// Before (v0.2.5): the holder wins games 1 to 5 and loses 6 to 10; game 11 has no holder. After
+    /// (v0.2.6): it wins 1 to 7, loses 8 and 9 and draws 10; wins 12, which only this side played; and
+    /// game 13 has two holders.
+    fn forced_runs() -> (Vec<GameRecord>, Vec<GameRecord>) {
+        let mut before: Vec<String> = (1..=10).map(|n| forced_game("v0.2.5", n, n <= 5)).collect();
+        before.push(forced_line("v0.2.5", 11, "none", "p1"));
+        let mut after: Vec<String> = (1..=9).map(|n| forced_game("v0.2.6", n, n <= 7)).collect();
+        after.push(forced_line("v0.2.6", 10, "p2", "draw"));
+        after.push(forced_game("v0.2.6", 12, true));
+        after.push(forced_line("v0.2.6", 13, "both", "p1"));
+        let parse = |lines: Vec<String>| parse_game_record_lines(&lines.join("\n")).unwrap();
+        (parse(before), parse(after))
+    }
+
+    #[test]
+    fn r1284000_compare_prints_each_sides_rate_the_paired_difference_and_what_it_left_out() {
+        let (before, after) = forced_runs();
+        let compared = compare(&before, &after, "test-card");
+        assert_eq!(
+            (
+                compared.before.games,
+                compared.before.wins,
+                compared.before.left_out
+            ),
+            (10, 5, 1)
+        );
+        assert_eq!(
+            (compared.after.games, compared.after.wins, compared.after.left_out),
+            (11, 8, 1)
+        );
+        assert_eq!(compared.paired.map(|paired| paired.games), Some(10));
+        assert_eq!(compared.shadow, None);
+        assert_eq!(
+            render_compare(&compared, Some("Alpha")),
+            "test-card Alpha: the win rate of the seat whose deck alone holds it (R1284000)\n\
+             \x20 before  50.0% of 10 games, 95% interval 23.7% to 76.3%\n\
+             \x20 after   72.7% of 11 games, 95% interval 43.4% to 90.3%\n\
+             \x20 paired  +20.0 points over the 10 games on both sides, 95% interval -6.1 to +46.1\n\
+             \x20 left out: 1 game(s) before and 1 after, where no seat or both seats hold test-card"
+        );
+        // A card the catalog does not name is printed by its id alone.
+        assert!(render_compare(&compared, None).starts_with("test-card: the win rate"));
+    }
+
+    #[test]
+    fn r1284000_compare_pairs_a_game_by_its_seed_once_and_only_where_both_sides_have_a_holder() {
+        let line = |patch: &str, n: i32, holder: &str, winner: &str| forced_line(patch, n, holder, winner);
+        // Game 1 is twice on the before side: its first record is the one paired. Game 2 has no holder
+        // before, and game 3 none after.
+        let before = parse_game_record_lines(
+            &[
+                line("v0.2.5", 1, "p1", "p1"),
+                line("v0.2.5", 1, "p1", "p2"),
+                line("v0.2.5", 2, "none", "p1"),
+                line("v0.2.5", 3, "p1", "p1"),
+            ]
+            .join("\n"),
+        )
+        .unwrap();
+        let after = parse_game_record_lines(
+            &[
+                line("v0.2.6", 1, "p1", "p2"),
+                line("v0.2.6", 2, "p2", "p2"),
+                line("v0.2.6", 3, "none", "p2"),
+            ]
+            .join("\n"),
+        )
+        .unwrap();
+        let paired = compare(&before, &after, "test-card").paired.unwrap();
+        // Game 1: won before, lost after, so −1; the one game has no spread, so the interval is all of it.
+        assert_eq!(
+            (paired.games, paired.mean, paired.low, paired.high),
+            (1, -1.0, -1.0, 1.0)
+        );
+        // No game is on both sides at all.
+        let apart = compare(&before[..1], &after[1..2], "test-card");
+        assert_eq!(apart.paired, None);
+        assert!(render_compare(&apart, None).contains("\n  paired  no game is on both sides"));
+    }
+
+    #[test]
+    fn r1284000_compare_adds_the_shadow_ban_or_watch_line() {
+        // The ids come from the tables, which every sweep rewrites.
+        let (banned, why_banned) = SHADOW_BAN[0];
+        let compared = compare(&[], &[], banned);
+        assert_eq!(compared.shadow, Some(("SHADOW_BAN", why_banned)));
+        let text = render_compare(&compared, None);
+        assert!(text.contains(&format!("{banned} is in SHADOW_BAN (")), "{text}");
+        assert!(
+            text.ends_with("its figures measure the AI as much as the card"),
+            "{text}"
+        );
+
+        let (watched, why_watched) = SHADOW_WATCH[0];
+        let forced = |patch: &str, win: bool| {
+            let lines: Vec<String> = (1..=2)
+                .map(|n| {
+                    forced_line(patch, n, "p1", if win { "p1" } else { "p2" }).replace("test-card", watched)
+                })
+                .collect();
+            lines.join("\n") + "\n"
+        };
+        let (dir, paths) = scratch(&[
+            ("before.jsonl", forced("v0.2.5", false)),
+            ("after.jsonl", forced("v0.2.6", true)),
+        ]);
+        let args = compare_args(&[
+            "--before",
+            paths[0].to_str().unwrap(),
+            "--after",
+            paths[1].to_str().unwrap(),
+            "--card",
+            watched,
+        ])
+        .unwrap();
+        let compared = comparison(&args).unwrap();
+        assert_eq!(compared.shadow, Some(("SHADOW_WATCH", why_watched)));
+        assert_eq!(
+            compared.paired.map(|paired| (paired.games, paired.mean)),
+            Some((2, 1.0))
+        );
+        let text = render_compare(&compared, None);
+        assert!(
+            text.contains(&format!("{watched} is in SHADOW_WATCH (")),
+            "{text}"
+        );
+        assert!(
+            text.ends_with("its figures measure the AI as much as the card"),
+            "{text}"
+        );
+        assert!(!text.contains("left out"), "{text}");
+
+        // A file that is not records is an error naming it, as `report`'s is.
+        let missing = dir.join("missing.jsonl");
+        let refused = comparison(&CompareArgs {
+            before: vec![missing.clone()],
+            ..args
+        })
+        .unwrap_err();
+        assert!(format!("{refused:#}").contains(&format!("reading {}", missing.display())));
         std::fs::remove_dir_all(dir).unwrap();
     }
 
