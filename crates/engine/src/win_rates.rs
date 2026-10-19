@@ -8,7 +8,8 @@
 //! itself ([[R387]]), Glitch, a token or an id the catalog no longer holds. With none qualifying,
 //! CN Tech's script falls back to a random non-token card (that fallback lives in the card file,
 //! not here). The table changes only with a card patch, so a game's seed and log replay on the
-//! build that played it (MD-D1, MD-D2). Meditative+ #2 NA Tech also reads the other end, the
+//! build that played it (MD-D1, MD-D2). A replay folding under an earlier shipped catalog reads the
+//! table that version shipped with (R1266000). Meditative+ #2 NA Tech also reads the other end, the
 //! trailer (R1183000), with the same eligibility and tie-breaks.
 
 use serde::{Deserialize, Serialize};
