@@ -5452,6 +5452,10 @@
       "run_id": "39285405222",
       "started_at": "2026-10-19T16:29:34Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-7` (claude, opus) rejected it: `crates/server/src/config.rs:2091`: PITY_MYTHIC_PACKS = 40 is an invented value, and it conflicts with the issue's own starting rates: those rates were evidently"
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 1
     },
