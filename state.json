@@ -568,6 +568,12 @@
       "lines": [
         "/harness fullsend --force"
       ]
+    },
+    "c:6261247479": {
+      "at": "2026-10-19T06:40:29Z",
+      "lines": [
+        "/harness stop"
+      ]
     }
   },
   "items": {
