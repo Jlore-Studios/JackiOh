@@ -943,9 +943,14 @@ mod r1370_a_deck_that_leans_on_a_set {
             .collect();
         of_newest.sort();
         // Ban all but six of the set's cards, short of the ten a 20-card deck owes. A player's deck, so
-        // the AI's soft gate (R1390) neither empties the set nor moves the lean elsewhere.
-        let kept: Vec<String> = of_newest[..6].to_vec();
-        let banned: Vec<String> = of_newest[6..].to_vec();
+        // the AI's soft gate (R1390) neither empties the set nor moves the lean elsewhere. Re-pinned for
+        // v0.3.15 (Meditative+ ships, #1187): the newest set is Meditative+, whose first six ids are all
+        // Spells, so beside a rolled theme of Spells the three floors owed more than 20 cards and R1370
+        // gave the units' up (seed 7). Its last six hold two Units (M+ #21, #24), as Meditative's first
+        // six did (M #2, #3), so every floor stays in reach and the units' is still held.
+        let short = of_newest.len() - 6;
+        let kept: Vec<String> = of_newest[short..].to_vec();
+        let banned: Vec<String> = of_newest[..short].to_vec();
         for n in 1..=SEEDS {
             let deck = build_ai_deck(
                 &mut create_rng(&format!("r1370:short:{n}"), 0),
@@ -1132,11 +1137,7 @@ mod r1390_the_ai_decks_soft_gate {
         assert_eq!(
             ungated_lean(
                 Some(SetName::Meditative),
-                &[
-                    SetName::ClassicPlus,
-                    SetName::Meditative,
-                    SetName::MeditativePlus
-                ]
+                &[SetName::ClassicPlus, SetName::Meditative, SetName::MeditativePlus]
             ),
             Some(SetName::Classic)
         );
