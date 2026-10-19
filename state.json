@@ -5311,13 +5311,19 @@
       "taken_asks": [],
       "verdict_rounds": 2,
       "votes": {
-        "approvals": [],
-        "builder": "claude",
-        "rejections": [
+        "approvals": [
           "claude"
         ],
-        "reviews": [],
-        "sha": "89fb7fe8d97d72ef8d980be4a5d9cd1b7f5d34a3",
+        "builder": "claude",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "39278029312",
+            "tier": "strong"
+          }
+        ],
+        "sha": "aad03ca5450266976d77652248a3bc3876367ca8",
         "tiers": {
           "claude": "strong"
         }
