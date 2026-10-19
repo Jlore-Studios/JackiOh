@@ -5359,6 +5359,13 @@
     "1254": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-19T02:19:38Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule line 1: one crate and two files, but about 400 lines with tests plus a sweep to set the bounds, so not small with room to spare; line 8 also fails, since seed 6540 already fails on main"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
