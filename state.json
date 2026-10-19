@@ -6139,7 +6139,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-19T16:29:34Z",
+      "feedback_since": "2026-10-19T18:09:07Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-19T17:40:56Z",
@@ -6153,20 +6153,23 @@
       "interruptions": 0,
       "issue": 1298,
       "kind": "revise",
+      "last_findings": [],
       "pending_at": "2026-10-19T17:36:08Z",
       "pending_by": "MaxGoetzmann",
       "pending_request": false,
       "provider": "muse",
-      "question": "No question \u2014 interim note: conflict markers resolved, awaiting background spec-index result before running proof suite.",
+      "question": "",
       "queued_at": "2026-10-19T17:45:37Z",
+      "round_tier": "medium",
       "run_id": "39296216201",
       "self_check_findings": [],
-      "source": "request",
+      "source": "",
       "started_at": "2026-10-19T18:09:07Z",
       "stop_requested": false,
       "taken_asks": [
         "c:6273319171"
       ],
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "muse"
