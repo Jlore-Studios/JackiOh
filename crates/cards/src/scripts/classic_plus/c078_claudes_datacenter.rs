@@ -61,8 +61,13 @@ mod tests {
 
     use crate::js;
 
+    /// The AI generated cards of the sets that ship, sorted (§7, R1421): T-AI-1 to T-AI-10 and M+ #1.1
+    /// Base Camp and #1.2 Spa Day. Re-pinned for v0.3.15 (Meditative+ ships, #1187): Bob's Plan's two
+    /// AI tokens join the pool, which is now twelve.
     fn ai_ids() -> Vec<String> {
-        (1..=10).map(|at| format!("classicplus-t-ai-{at:02}")).collect()
+        let mut ids: Vec<String> = (1..=10).map(|at| format!("classicplus-t-ai-{at:02}")).collect();
+        ids.extend(["meditativeplus-001-1", "meditativeplus-001-2"].map(String::from));
+        ids
     }
 
     fn setup(radiant_face: bool, hand: usize, seed: Option<&str>) -> Scenario {
@@ -101,7 +106,7 @@ mod tests {
         }
 
         #[test]
-        fn s7_the_pool_its_text_names_is_the_ten_ai_generated_cards_tokens_all() {
+        fn s7_the_pool_its_text_names_is_the_twelve_ai_generated_cards_tokens_all() {
             crate::register_all();
             let mut pool: Vec<String> = crate::query::query(&json_as(json!({ "tags": ["AI"], "token": true })))
                 .iter()
@@ -133,7 +138,7 @@ mod tests {
             }
 
             #[test]
-            fn r60_every_seed_draws_from_the_ten_ai_cards_and_nothing_else_and_more_than_one_of_them_turns_up() {
+            fn r60_every_seed_draws_from_the_twelve_ai_cards_and_nothing_else_and_more_than_one_of_them_turns_up() {
                 let mut seen: IndexSet<String> = IndexSet::new();
                 for seed in 0..24 {
                     let seed = format!("datacenter-{seed}");

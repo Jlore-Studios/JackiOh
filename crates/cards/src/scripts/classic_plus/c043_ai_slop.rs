@@ -53,8 +53,13 @@ mod tests {
     const SLOP: &str = "classicplus-043";
     const FILLER: &str = "core-005";
 
+    /// The AI generated cards of the sets that ship (§7, R1421): T-AI-1 to T-AI-10 and M+ #1.1 Base
+    /// Camp and #1.2 Spa Day. Re-pinned for v0.3.15 (Meditative+ ships, #1187): Bob's Plan's two AI
+    /// tokens join the pool.
     fn ai_ids() -> Vec<String> {
-        (1..=10).map(|n| format!("classicplus-t-ai-{n:02}")).collect()
+        let mut ids: Vec<String> = (1..=10).map(|n| format!("classicplus-t-ai-{n:02}")).collect();
+        ids.extend(["meditativeplus-001-1", "meditativeplus-001-2"].map(String::from));
+        ids
     }
 
     use crate::scenario;

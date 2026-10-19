@@ -72,6 +72,15 @@ mod tests {
 
     const FILLER: &str = "core-005";
 
+    /// The AI generated cards of the sets that ship (§7, R1421): T-AI-1 to T-AI-10 and M+ #1.1 Base
+    /// Camp and #1.2 Spa Day. Re-pinned for v0.3.15 (Meditative+ ships, #1187): Bob's Plan's two AI
+    /// tokens join the AI shelf's pool.
+    fn ai_ids() -> Vec<String> {
+        let mut ids: Vec<String> = (1..=10).map(|n| format!("classicplus-t-ai-{n:02}")).collect();
+        ids.extend(["meditativeplus-001-1", "meditativeplus-001-2"].map(String::from));
+        ids
+    }
+
     /// The market cast from p1's hand, its prompt open.
     fn opened(seed: &str, radiant: bool, hand: &[Value]) -> Scenario {
         crate::register_all();
@@ -136,7 +145,7 @@ mod tests {
                 }
                 assert!(stall[0] != stall[1] && stall[1] != stall[2] && stall[0] != stall[2]);
                 assert_eq!(stall[3..5], [ROCK.to_string(), ROCK.to_string()]);
-                assert!(stall[5].starts_with("classicplus-t-ai-"), "{stall:?}");
+                assert!(ai_ids().contains(&stall[5]), "{stall:?}");
             }
         }
 
