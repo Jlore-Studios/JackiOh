@@ -106,7 +106,7 @@ adversarial session, never an approval from its own context, fixing what that fi
 rounds (10 for a hard item). Then the lane's final audit approves it: a strong model for a medium
 or hard item, a medium one for an easy item. The pull request merges itself once CI passes on the
 commit the audit approved. When nothing is queued, the bot suggests improvements as issues, at
-most four at a time. `/harness status`, `/harness halt` and `/harness start` work in any comment,
+most ten at a time. `/harness status`, `/harness halt` and `/harness start` work in any comment,
 and the pinned **Night bot status** issue shows what it is doing.
 
 ```mermaid
@@ -121,7 +121,7 @@ flowchart LR
   G --> H{"CI"}
   H -- "green" --> I["merged into main"]
   H -- "red" --> F
-  P -- "queue empty" --> J["up to 4<br/>suggestion issues"]
+  P -- "queue empty" --> J["up to 10<br/>suggestion issues"]
 ```
 
 [`bot/README.md`](bot/README.md) has the full picture: commands, labels, subscriptions, safety,
