@@ -5284,9 +5284,11 @@
         "1ec6052b7f0f37ea10e8647b7eab2be9e056a085": 1
       },
       "cleared": {
-        "at": "2026-10-19T17:40:51Z",
+        "at": "2026-10-19T19:15:00Z",
         "by": "`claude` (strong)",
-        "sha": "aad03ca5450266976d77652248a3bc3876367ca8"
+        "carried_from": "aad03ca5450266976d77652248a3bc3876367ca8",
+        "resolved_by": "`claude` (strong)",
+        "sha": "9429d2dcab99af4fd7a0a6137ce4b95cd4e90ba7"
       },
       "cross_rounds": 2,
       "died": 0,
