@@ -5,7 +5,7 @@
 # it; whoever proposes a change to the features or the model measures it with this same script.
 #
 #   training/ml/retrain.sh --out <dir> (--logs <dir> | --games <n> --seed <base>) [--parent-bin <path>]
-#                          [--screen-games 800] [--every reply|turn|decision] [--seeds "1 2 3"]
+#                          [--screen-games 800] [--every reply|turn|decision] [--seeds "1 2 3 4 5 6"]
 #                          [--width 32] [--head "32"] [--positions-bin <path>]
 #
 #   1. the logs: `--logs` reuses an export (selfplay.yml's artifacts, or a local run), else `jackioh
@@ -26,7 +26,8 @@
 #      crates/ai/src/config.rs. The screen and the gate play the integer network, as players would.
 #      Each seed's network is tried, best validation first, and the first one whose integer network
 #      passes `cargo test -p jackioh-ai` with the switch on ships (<out>/ai-tests-seed<N>.txt): a
-#      promotion must pass those tests in CI, and each seed misjudges a puzzle or two of its own (#466).
+#      promotion must pass those tests in CI, and each seed misjudges a puzzle or two of its own (#466;
+#      six seeds, since run 8's three all failed).
 #      It stops here when none passes;
 #   5. the parent: `--parent-bin <path>`; `--parent-bin tree`, the exporter of step 1, built from this
 #      tree before the weights changed (when the tree is main, as in learn.yml); else `jackioh` built from
@@ -42,7 +43,7 @@
 # (R850001), by a candidate a screen has already passed.
 set -euo pipefail
 
-out="" logs="" games="" seed="" parent="" screen_games=800 every=reply seeds="1 2 3" width=32 head=32
+out="" logs="" games="" seed="" parent="" screen_games=800 every=reply seeds="1 2 3 4 5 6" width=32 head=32
 positions_bin=""
 while [ $# -gt 0 ]; do
   case "$1" in

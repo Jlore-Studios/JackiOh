@@ -85,3 +85,49 @@ fn r1006000_the_features_see_the_board_and_the_own_hand_and_count_the_hidden_car
     assert!(keys.contains(&"backrow:own:core-041"), "{keys:?}");
     assert!(keys.contains(&"hand:own:core-002"), "{keys:?}");
 }
+
+/// R1012004: a Radiant card in the seat's own hand is an input of its own, a count and a second key
+/// beside the card's own, and nothing else it reads moves; the other seat, which cannot see that
+/// hand, reads the same features either way.
+#[test]
+fn r1012004_a_radiant_card_in_the_seats_own_hand_is_an_input_of_its_own() {
+    let plain = build("features-radiant", p2_a(), p1_side());
+    let mut radiant = clone(&plain);
+    let at = radiant.players[AI]
+        .hand
+        .iter()
+        .position(|card| card.def_id == "core-008")
+        .expect("core-008 is in hand");
+    radiant.players[AI].hand[at].radiant = true;
+
+    let names = dense_names();
+    let count = names
+        .iter()
+        .position(|name| name == "own.hand_radiant")
+        .expect("a dense name");
+    let (before, after) = (features_of(&plain, AI), features_of(&radiant, AI));
+    assert_eq!((before.dense[count], after.dense[count]), (0, 1));
+    let mut rest = after.dense.clone();
+    rest[count] = 0;
+    assert_eq!(rest, before.dense);
+
+    let key = ("hand_radiant:own:core-008".to_string(), 1);
+    assert!(after.sparse.contains(&key), "{:?}", after.sparse);
+    assert!(
+        after.sparse.contains(&("hand:own:core-008".to_string(), 1)),
+        "{:?}",
+        after.sparse
+    );
+    let others: Vec<_> = after
+        .sparse
+        .iter()
+        .filter(|pair| **pair != key)
+        .cloned()
+        .collect();
+    assert_eq!(others, before.sparse);
+
+    assert_eq!(
+        features_of(&plain, PlayerId::P2),
+        features_of(&radiant, PlayerId::P2)
+    );
+}
