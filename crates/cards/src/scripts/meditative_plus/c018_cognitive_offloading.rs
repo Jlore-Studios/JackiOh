@@ -59,7 +59,7 @@ mod tests {
     const TIMMY: &str = "core-011";
     /// Mr. Vanilla, (1) 4/4.
     const VANILLA: &str = "core-008";
-    /// Pickle, (1): the opponent answers its choices.
+    /// Pickle, (1): the opponent answers its deferred choices (R1279000).
     const PICKLE: &str = "classic-008";
     const FILLER: &str = "core-005";
 
@@ -149,23 +149,28 @@ mod tests {
         fn r1183002_the_seats_own_actions_are_refused_while_the_opponent_answers() {
             let mut s = on_top("offload-pickle", false, json!([PICKLE]), json!([]));
             s.end_turn();
-            // The autopilot cast Pickle: p2 chooses, in p1's turn, which waits.
+            // The autopilot cast Pickle on p1's turn: R1279000 defers p2's choice, so no
+            // prompt paused the AI turn — it finished the turn, and the choice opens on
+            // p2's turn instead.
+            assert_eq!(s.state().active, P2);
+            assert_eq!(s.state().players.p1.autopilot, None);
             let pending = s.state().pending.clone().expect("Pickle's choice is open");
             assert_eq!(pending.player_id, P2);
-            assert_eq!(s.state().active, P1);
+            // p1 may not act while the opponent answers: only concede is legal, and the
+            // turn cannot pass under the open prompt either.
             s.expect_refused_with(|s| s.end_turn(), "prompt");
             let own: Vec<ActionBody> = legal_actions(s.state(), P1)
                 .into_iter()
                 .filter(|action| action.action_type() != ActionType::Concede)
                 .collect();
             assert!(own.is_empty(), "p1 may only concede: {own:?}");
-            // p2 answers every choice; then the autopilot finishes p1's turn.
+            // p2 answers every choice; the chain resolves on p2's turn.
             while s.state().pending.as_ref().is_some_and(|open| open.player_id == P2) {
                 let first = s.state().pending.as_ref().expect("open").options[0].key.clone();
                 s.answer(json!(first));
             }
+            assert!(s.state().pending.is_none());
             assert_eq!(s.state().active, P2);
-            assert_eq!(s.state().players.p1.autopilot, None);
         }
 
         #[test]

@@ -471,7 +471,8 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
     #[test]
     fn e18_the_ais_own_play_opens_mode_prompts_the_opponent_holds_the_search_answers_them_in_simulation_and_the_turn_completes()
      {
-        // Pickle is the AI's only card: the opponent chooses three times, discarding from their own hand.
+        // Pickle is the AI's only card: the opponent chooses three times, on their own turn
+        // (R1279000), discarding from their own hand.
         install();
         let mut state = scenario(json!({
             "seed": "e18-pickle",
@@ -492,7 +493,7 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
         let mut decisions: Vec<Decision> = Vec::new();
         let mut human_answers = 0;
         let mut step = 0;
-        while step < 40 && state.result.is_none() && state.turn == start {
+        while step < 40 && state.result.is_none() {
             let human_kind = state
                 .pending
                 .as_ref()
@@ -508,6 +509,11 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
                 human_answers += 1;
                 step += 1;
                 continue;
+            }
+            // The deferred questions open on the opponent's turn, so the AI's own turn
+            // holds no prompt for them: once it is over, only answers are left.
+            if state.turn != start {
+                break;
             }
             let turn = play_ai_turn(&state, AI, &mut ai_options(&format!("e18-pickle-{step}")));
             let none_played = turn.actions.is_empty();
@@ -529,18 +535,19 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
 mod e18_a_whole_game_with_the_new_prompts {
     use super::*;
 
-    /// The most games E18 plays for both kinds of prompt to open.
-    const E18_GAMES: usize = 6;
+    /// The most games E18 plays for both kinds of prompt to open. R1279000 delays Pickle's
+    /// questions a turn, so short games never ask them: more games are needed.
+    const E18_GAMES: usize = 20;
 
     /// E18: playMatch finishes a short AI-vs-greedy game in which E18 prompts open, with no refusal, throw or fallback
     #[test]
     fn e18_play_match_finishes_a_short_ai_vs_greedy_game_in_which_e18_prompts_open_with_no_refusal_throw_or_fallback()
      {
-        // Pickle (mode prompts the opponent holds), Back from the GY (a budgeted pick), Mind Melt (a pick
-        // of the opponent's hand) and Ancient Acquisition (no prompt since R684: its returns are random),
-        // beside cheap Units: eight cards and a hero of 20, so that the game is short and the prompt cards
-        // are drawn. On these seeds greedy's Pickle hands the AI mode prompts on greedy's turn, and the
-        // AI's Back from the GY asks a pick.
+        // Pickle (mode prompts the opponent holds, on their own turn since R1279000), Back from
+        // the GY (a budgeted pick), Mind Melt (a pick of the opponent's hand) and Ancient Acquisition
+        // (no prompt since R684: its returns are random), beside cheap Units: eight cards and a hero
+        // of 20, so that the game is short and the prompt cards are drawn. On these seeds greedy's
+        // Pickle hands the AI mode prompts on the AI's turn, and the AI's Back from the GY asks a pick.
         install();
         let deck: Vec<String> = [
             PICKLE,
@@ -557,7 +564,9 @@ mod e18_a_whole_game_with_the_new_prompts {
         .collect();
         let handicap = Handicap {
             deck_size: deck.len() as i32,
-            hero_health: AI_TUTORIAL.hero_health,
+            // R1279000: the deferred questions open a turn after the cast, so these
+            // games need full-size heroes to live long enough to ask them.
+            hero_health: Some(30),
             ..HUMAN_HANDICAP
         };
         // Which prompts a game opens hangs on how the AI plays it, which a retrained network moves
@@ -592,8 +601,9 @@ mod e18_a_whole_game_with_the_new_prompts {
                             let Some(pending) = after.pending.as_ref() else {
                                 return;
                             };
-                            let theirs =
-                                pending.kind == PromptKind::Mode && pending.player_id != after.active;
+                            // R1279000: no prompt opens for a player who is not active, so a
+                            // mode prompt is held by whoever's turn it is.
+                            let mode = pending.kind == PromptKind::Mode;
                             let new_kind = [
                                 PromptKind::Number,
                                 PromptKind::Answer,
@@ -602,7 +612,7 @@ mod e18_a_whole_game_with_the_new_prompts {
                                 PromptKind::Pick,
                             ]
                             .contains(&pending.kind);
-                            if theirs || new_kind {
+                            if mode || new_kind {
                                 opened.push(pending.kind.as_str().to_string());
                             }
                         },
@@ -715,10 +725,10 @@ mod auto_answers_the_answerers_best {
         state
     }
 
-    /// Pickle's questions list "discard" first, which costs the opponent a card in hand, as "you draw"
-    /// hands the AI one; exiling the bottom of their library costs them nothing they hold.
+    /// Pickle's questions wait for the opponent's turn (R1279000): simulating the play
+    /// schedules them and answers nothing mid-line, so every pile stays whole.
     #[test]
-    fn simulate_answers_each_question_of_pickle_with_the_opponents_best_choice_not_its_first() {
+    fn simulate_schedules_pickle_s_deferred_questions_answering_nothing_mid_line() {
         let (state, play) = pickle_turn();
         let counter = create_node_counter(AI_BUDGET.nodes, None);
         let after = match simulate(&state, AI, &play, &counter) {
@@ -728,12 +738,10 @@ mod auto_answers_the_answerers_best {
         assert!(after.pending.is_none());
         assert!(in_graveyard(&after, AI, PICKLE));
         assert_eq!(after.players[HUMAN].hand.len(), 3);
-        assert!(after.players[HUMAN].library.is_empty());
+        assert_eq!(after.players[HUMAN].library.len(), 3);
         assert!(after.players[AI].hand.is_empty());
-        // One node for the play, then each of the three questions tries its three answers (or as
-        // many as AI_SEARCH.max_auto_answer_options lets it).
-        let tried = (AI_SEARCH.max_auto_answer_options as usize).min(3);
-        assert_eq!(counter.used(), 1 + 3 * tried);
+        // One node for the play alone: no question opens mid-line to auto-answer.
+        assert_eq!(counter.used(), 1);
         assert_eq!(counter.sim_errors(), 0);
 
         let again = simulate(&state, AI, &play, &create_node_counter(AI_BUDGET.nodes, None));
@@ -744,17 +752,17 @@ mod auto_answers_the_answerers_best {
     }
 
     #[test]
-    fn the_greedy_baselines_simulation_still_takes_the_first_answer_to_each_question_of_pickle() {
+    fn the_greedy_baselines_simulation_also_answers_nothing_mid_line_for_pickle() {
         let (state, play) = pickle_turn();
         let counter = create_node_counter(AI_BUDGET.nodes, None);
         let after = match simulate_first_answers(&state, AI, &play, &counter) {
             Some(Ok(next)) => next,
             other => panic!("Pickle's play was refused: {other:?}"),
         };
-        // "discard" three times: the hand is gone and the library whole.
-        assert!(after.players[HUMAN].hand.is_empty());
+        // Nothing opened to take a first answer to: every pile stays whole.
+        assert_eq!(after.players[HUMAN].hand.len(), 3);
         assert_eq!(after.players[HUMAN].library.len(), 3);
-        assert_eq!(counter.used(), 1 + 3);
+        assert_eq!(counter.used(), 1);
         assert_eq!(counter.sim_errors(), 0);
     }
 

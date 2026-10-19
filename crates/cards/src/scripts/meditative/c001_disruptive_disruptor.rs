@@ -65,7 +65,7 @@ mod tests {
     const VANILLA: &str = "core-008";
     const FILLER: &str = "core-005"; // (1) Spell.
     const FORTIFY_MIND: &str = "meditative-022-1"; // (0) Temporary Spell.
-    const PICKLE: &str = "classic-008"; // (1) Spell: three questions, "they discard" among them.
+    const PICKLE: &str = "classic-008"; // (1) Spell: three deferred questions, "they discard" among them (R1279000).
     const JAMMED: &str = "core-036"; // (1) Spell: destroy a backrow card.
     const P2: PlayerId = PlayerId::P2;
 
@@ -347,7 +347,7 @@ mod tests {
         }
 
         #[test]
-        fn r800_pickle_offers_no_discard_option_against_you() {
+        fn r800_pickle_s_deferred_question_opens_on_your_turn_where_the_guard_sleeps() {
             crate::register_all();
             let mut s = scenario(json!({
                 "active": "p2",
@@ -360,8 +360,14 @@ mod tests {
             }));
 
             s.play(PICKLE, json!({}));
+            // R1279000: no prompt opens for a player who is not active.
+            assert!(s.state().pending.is_none());
+            s.end_turn();
 
             let pending = s.state().pending.clone().expect("Pickle's question is open");
+            assert_eq!(pending.player_id, P1);
+            // The guard stops only discards off the holder's turn: on p1's own turn it
+            // sleeps, so "discard" is offered.
             let offered: Vec<String> = pending
                 .options
                 .iter()
@@ -370,7 +376,7 @@ mod tests {
                     _ => "?".to_string(),
                 })
                 .collect();
-            assert_eq!(offered, vec!["exile", "draw"]);
+            assert_eq!(offered, vec!["discard", "exile", "draw"]);
         }
 
         #[test]

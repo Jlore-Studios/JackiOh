@@ -4070,11 +4070,11 @@
     "loc": 84,
     "base": {
       "keywords": [],
-      "text": "Your opponent chooses {choices|time|times}: they discard {discard|random card|random cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw}."
+      "text": "At the start of your opponent's next turn, they choose {choices|time|times}: they discard {discard|random card|random cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your opponent chooses {choices|time|times}: they discard {discard|random card|random cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw}."
+      "text": "At the start of your opponent's next turn, they choose {choices|time|times}: they discard {discard|random card|random cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw}."
     }
   },
   "classic-009": {
@@ -4109,11 +4109,11 @@
     "loc": 42,
     "base": {
       "keywords": [],
-      "text": "Reveals when the cards your opponent has drawn in a turn reach {draws}: They keep one card of their choice and give you the rest of their hand."
+      "text": "Reveals when the cards your opponent has drawn in a turn reach {draws}: They keep one card of their choice and give you the rest of their hand. If it is not their turn, they keep at the start of their next turn."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when the cards your opponent has drawn in a turn reach {draws}: They keep one card of their choice and give you the rest of their hand. The cards you get cost ({discount}) less."
+      "text": "Reveals when the cards your opponent has drawn in a turn reach {draws}: They keep one card of their choice and give you the rest of their hand. The cards you get cost ({discount}) less. If it is not their turn, they keep at the start of their next turn."
     }
   },
   "classic-010": {
