@@ -780,6 +780,112 @@ mod the_deck_s_portrait_r641_d5 {
     }
 }
 
+/// R1297000's `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` fields: a saved deck may name
+/// one id of each of the registry's deck kinds, or none, and nothing else.
+mod the_deck_s_cosmetics_r1297000 {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r1297000_saves_lists_and_clears_a_deck_s_table_field_and_card_back() {
+        let ctx = setup().await;
+        let body = deck_body(json!({
+            "tableCosmetic": "table-felt",
+            "fieldCosmetic": "field-rain",
+            "cardBackCosmetic": "card-back-blueprint",
+        }));
+        let (status, saved) = ctx.put_deck(body, &uuid(1), &ctx.token).await;
+        assert_eq!(status, 200, "{saved}");
+        for (key, id) in [
+            ("tableCosmetic", "table-felt"),
+            ("fieldCosmetic", "field-rain"),
+            ("cardBackCosmetic", "card-back-blueprint"),
+        ] {
+            assert_eq!(saved["deck"][key], json!(id), "the PUT echoes {key}");
+        }
+        let listed = ctx.get_decks(&ctx.token).await;
+        assert_eq!(listed["decks"][0]["tableCosmetic"], json!("table-felt"));
+        assert_eq!(listed["decks"][0]["fieldCosmetic"], json!("field-rain"));
+        assert_eq!(
+            listed["decks"][0]["cardBackCosmetic"],
+            json!("card-back-blueprint")
+        );
+        let row = ctx.decks_table().await.remove(0);
+        assert_eq!(row["tableCosmetic"], json!("table-felt"));
+
+        // A re-save without them stores none and leaves the keys out of the answer and the list.
+        let (status, again) = ctx.put_deck(deck_body(json!({})), &uuid(1), &ctx.token).await;
+        assert_eq!(status, 200, "{again}");
+        for key in ["tableCosmetic", "fieldCosmetic", "cardBackCosmetic"] {
+            assert!(again["deck"].get(key).is_none(), "{key} is left out: {again}");
+        }
+        let listed = ctx.get_decks(&ctx.token).await;
+        assert!(listed["decks"][0].get("tableCosmetic").is_none());
+        let row = ctx.decks_table().await.remove(0);
+        assert!(row.get("tableCosmetic").is_none() && row.get("cardBackCosmetic").is_none());
+
+        // `null` and absent mean the same: no pick.
+        let body = deck_body(json!({ "tableCosmetic": null, "fieldCosmetic": null }));
+        let (status, nulls) = ctx.put_deck(body, &uuid(1), &ctx.token).await;
+        assert_eq!(status, 200, "{nulls}");
+        assert!(nulls["deck"].get("fieldCosmetic").is_none());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1297000_refuses_an_id_of_another_kind_an_unknown_id_and_a_non_string() {
+        let ctx = setup().await;
+        for (key, value, message) in [
+            // An id of another kind, an id nothing lists, and an id that is no slug at all.
+            (
+                "tableCosmetic",
+                json!("field-rain"),
+                "\"tableCosmetic\" is not a cosmetic id of its kind",
+            ),
+            (
+                "cardBackCosmetic",
+                json!("card-back-gold"),
+                "\"cardBackCosmetic\" is not a cosmetic id of its kind",
+            ),
+            (
+                "fieldCosmetic",
+                json!("Field Rain"),
+                "\"fieldCosmetic\" is not a cosmetic id of its kind",
+            ),
+            (
+                "fieldCosmetic",
+                json!(""),
+                "\"fieldCosmetic\" is not a cosmetic id of its kind",
+            ),
+            ("fieldCosmetic", json!(7), "\"fieldCosmetic\" must be a string"),
+        ] {
+            let (status, body) = ctx
+                .put_deck(deck_body(json!({ key: value })), &uuid(1), &ctx.token)
+                .await;
+            assert_eq!(status, 400, "{key}: {body}");
+            assert_eq!(*error_code(&body), json!("bad_request"));
+            assert_eq!(body["error"]["message"], json!(message));
+            assert!(ctx.decks_table().await.is_empty(), "{key} wrote a deck");
+        }
+
+        // One bad pick refuses the whole save, even beside good ones.
+        let body = deck_body(json!({ "tableCosmetic": "table-wood", "fieldCosmetic": "table-wood" }));
+        let (status, _) = ctx.put_deck(body, &uuid(1), &ctx.token).await;
+        assert_eq!(status, 400);
+        assert!(ctx.decks_table().await.is_empty());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1297000_a_trio_import_carries_no_picks() {
+        let ctx = setup().await;
+        let (status, imported) = ctx.post_import(import_body(1, json!({})), &ctx.token).await;
+        assert_eq!(status, 200, "{imported}");
+        for row in ctx.decks_table().await {
+            for key in ["tableCosmetic", "fieldCosmetic", "cardBackCosmetic"] {
+                assert!(row.get(key).is_none(), "an imported deck has no {key}: {row}");
+            }
+        }
+    }
+}
+
 // Trios
 
 mod saved_trios_9_4_r252 {

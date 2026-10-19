@@ -79,7 +79,7 @@ import ActivateControls from "./ActivateControl.tsx";
 import { useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
 import { isSpent, useActingSeat } from "./spent.ts";
-import { useWearerSeat } from "./wearer.ts";
+import { useWearerSeat, useWornDeckCosmetics } from "./wearer.ts";
 import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
 import { COUNTERED_NOTE, conditionAttr, conditionTargetAttr, counteredAttr, countedAttr, glowAttr } from "./glow.ts";
 import { useSetting } from "../settings/store.ts";
@@ -204,6 +204,11 @@ export type CardProps = {
   controller?: PlayerId;
   /** R1295000: a card in the viewer's own hand, which wears the device's cosmetics: `CardView` names no owner. */
   inOwnHand?: boolean;
+  /**
+   * R1297000: a back on the viewer's own side, which wears the card back the viewer picked. The
+   * look depends on the seat alone, so every back of a seat is the same (a back names no card).
+   */
+  ownBack?: boolean;
   /** `gradeLetter` is the letter the view names #93's grade by (R372); the badge prints it. */
   counters?: { plague?: number; grade?: number; gradeLetter?: string };
   /**
@@ -268,6 +273,7 @@ export default function Card(props: CardProps): ReactElement {
   const form = formOf(card, unit, props.type);
   const acting = useActingSeat();
   const wearer = useWearerSeat();
+  const { cardBack } = useWornDeckCosmetics(props.ownBack === true);
 
   // The card in play: the unit's view when it is one, else the card's own (a hand card's stats and
   // power, a face-up backrow card's power off the hero's list). A back has no face at all.
@@ -382,7 +388,7 @@ export default function Card(props: CardProps): ReactElement {
           role={clickable ? "button" : "img"}
           aria-label={t("Face-down card")}
         >
-          <CardBack />
+          <CardBack back={cardBack} />
         </div>
       );
     }
@@ -407,7 +413,7 @@ export default function Card(props: CardProps): ReactElement {
           aria-label={label}
           title={settings.hoverPreviews && panelHover ? undefined : label}
         >
-          <CardBack />
+          <CardBack back={cardBack} />
           {faceDown.cost === undefined ? null : (
             <span className="facedown-cost" data-cost={faceDown.cost} aria-hidden="true">
               {faceDown.cost}
