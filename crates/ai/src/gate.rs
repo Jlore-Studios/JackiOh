@@ -114,10 +114,11 @@ pub struct AiGate {
     /// The yardstick's time on the development machine, alone (the median of 25 runs, 2026-09-23).
     pub calibration_ref_ms: f64,
     /// #1240: the most one decision at AI_BUDGET on each pinned position
-    /// (`tests/fixtures/pinned-improve-dev-*.json`) may take on the development machine, as the perf
-    /// gate times it; kept under `max_decision_ms`. Before #1240 charged the work they do
-    /// (`surcharge_nodes`), improve-dev:154's took about 1.1 s and improve-dev:200's about 20 s; after
-    /// it, the gate timed them at 276 and 570 ms.
+    /// (`tests/fixtures/pinned-*.json`) may take on the development machine, as the perf gate times
+    /// it; kept under `max_decision_ms`. Before #1240 charged the work they do (`surcharge_nodes`),
+    /// improve-dev:154's took about 1.1 s and improve-dev:200's about 20 s; after it, the gate timed
+    /// them at 276 and 570 ms. autopilot-draw's took 2.9 s on a 2.1 GHz Xeon while a search's step
+    /// played the autopilot's turn, and 0.16 s once it left that turn owed (#1337).
     pub pinned_decision_ms: f64,
 }
 

@@ -61,4 +61,19 @@ describe("the saved decks practice offers", () => {
       `Half Built (12 of ${String(DECK_SIZE)} cards, not complete)`,
     );
   });
+
+  it("R1297000 a saved deck's choice carries its picks, and none when it has none", () => {
+    const picks = { table: "table-felt", field: null, cardBack: "card-back-lacquer" } as const;
+    expect(deckChoiceFromValue("saved:1", [{ ...VALID, cosmetics: picks }])).toEqual({
+      kind: "saved",
+      index: 1,
+      cards: CORE,
+      portrait: null,
+      cosmetics: picks,
+    });
+    // No picks, no key: the choice is the one it always was.
+    const bare = deckChoiceFromValue("saved:1", [VALID]);
+    expect(bare).toEqual({ kind: "saved", index: 1, cards: CORE, portrait: null });
+    expect(bare !== null && "cosmetics" in bare).toBe(false);
+  });
 });

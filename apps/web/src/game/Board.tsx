@@ -60,10 +60,14 @@ import { getAudioEngine } from "../audio/engine.ts";
 import LanguageButton from "../i18n/LanguageButton.tsx";
 import { formatSeconds, t } from "../i18n/i18n.ts";
 import { ActingProvider } from "./spent.ts";
-import { WearerProvider } from "./wearer.ts";
+import { WearerProvider, useWornDeckCosmetics } from "./wearer.ts";
+import Backdrop from "./Backdrop.tsx";
+import { DEFAULT_CARD_COSMETICS, useCosmetics, wornDeckCosmetics } from "../cards/cosmetics.ts";
 
-// Order matters: highlights.css paints the glow over board.css's borders (S7).
+// Order matters: highlights.css paints the glow over board.css's borders (S7); table.css restyles
+// the viewer's half of board.css's field and so comes after it (R1297000).
 import "./board.css";
+import "./table.css";
 import "./highlights.css";
 import "./inspectable.css";
 
@@ -245,7 +249,7 @@ function ManaTray({
  */
 type PileBrowse =
   | { kind: "pile"; title: string; cards: readonly CardView[]; view: PlayerView }
-  | { kind: "library"; title: string; library: LibraryView; view: PlayerView };
+  | { kind: "library"; title: string; library: LibraryView; view: PlayerView; back?: string };
 
 /** R313: what the library's list says of its order. */
 const LIBRARY_ORDER = "Order hidden";
@@ -296,7 +300,9 @@ function browseEntries(
         entries.push({ key: `${entry.defId}:${entry.radiant ? "radiant" : "base"}${created}`, face, count: entry.count });
       }
     }
-    if (browse.library.unknown > 0) entries.push({ key: "unknown", face: null, count: browse.library.unknown });
+    if (browse.library.unknown > 0) {
+      entries.push({ key: "unknown", face: null, count: browse.library.unknown, ...(browse.back === undefined ? {} : { back: browse.back }) });
+    }
     return { entries, order: t(LIBRARY_ORDER) };
   }
   // Newest first: a pile grows at its end (the engine appends each card that lands in it).
@@ -320,6 +326,7 @@ function Pile({
   browse,
   plays,
   touchHold,
+  back,
   children,
 }: {
   label: string;
@@ -333,6 +340,8 @@ function Pile({
   plays?: PilePlays;
   /** #165: what a touch hold on the pile opens (contract.ts's `touchHoldMode`). */
   touchHold?: "sheet" | "preview";
+  /** R1297000: the viewer's card back on their own deck pile; absent where it wears the default. */
+  back?: string;
   /** R318: the pile's overflow notice (OverflowNotices.tsx), drawn inside it. */
   children?: ReactNode;
 }): ReactElement {
@@ -366,6 +375,7 @@ function Pile({
       <span
         {...(browsable ? inspect.handlers : {})}
         className={cx("pile", browsable && "pile--browsable")}
+        data-card-back={back}
         // The preview replaces the native tooltip; with previews off, the label comes back.
         title={browsable && hoverPreviews ? undefined : label}
         data-testid={regionId}
@@ -425,6 +435,10 @@ function Seat({
   const seat = sideView(view, side);
   // #165: on the opponent's turn a touch hold is the mouse-over the screen lacks.
   const touchHold = touchHoldMode(view);
+  // R1297000: the viewer's deck wears their card back; the opponent's draws the default. A default
+  // back adds no attribute, so a board wearing nothing is the board it was before.
+  const { cardBack } = useWornDeckCosmetics(side === "you");
+  const back = cardBack === DEFAULT_CARD_COSMETICS.cardBack ? undefined : cardBack;
   return (
     <div className={cx("seat", `seat-${side}`)} data-side={side} data-player={seat.player}>
       <Hero
@@ -449,9 +463,10 @@ function Seat({
           animating={animating}
           // R310, R313: only the viewer's own side carries the list; the opponent's is a count.
           {...(side === "you" && seat.ownLibrary !== undefined
-            ? { browse: { kind: "library" as const, title: t("Your deck"), library: seat.ownLibrary, view } }
+            ? { browse: { kind: "library" as const, title: t("Your deck"), library: seat.ownLibrary, view, ...(back === undefined ? {} : { back }) } }
             : {})}
           touchHold={touchHold}
+          back={back}
         >
           <PileNotice key={notices.pile.get(side)?.entry} notice={notices.pile.get(side)} side={side} view={view} />
         </Pile>
@@ -566,6 +581,7 @@ export default function Board({
   onControl,
   emotes,
   wearCosmetics = false,
+  deckCosmetics = null,
 }: BoardProps): ReactElement {
   const pops = popsFrom(view, animating, animated);
   // R318: fatigue and a full library on a library pile, a full hand over a hand, as the pops are.
@@ -599,6 +615,10 @@ export default function Board({
   const ownTurn = view.result === null && view.active === view.viewer;
   const endTurnState = !ownTurn ? "enemy" : !endTurnLegal ? "locked" : actionsRemain ? "ready" : "waiting";
   const offerDrawText = offerDrawControlText(view);
+  // R1297000: the playmat and backdrop the viewer's half wears; a default adds no attribute and no element.
+  const slots = wornDeckCosmetics(wearCosmetics, deckCosmetics, useCosmetics());
+  const backdrop = slots.field === DEFAULT_CARD_COSMETICS.field ? undefined : slots.field;
+  const table = slots.table === DEFAULT_CARD_COSMETICS.table ? undefined : slots.table;
 
   function pressEndTurn(): void {
     if (needsConfirm && !armed) {
@@ -613,11 +633,11 @@ export default function Board({
 
   // R243: the match-made definitions and field powers this view names, for every card drawn below;
   // #258: and who is acting now, for the units that have no action left (spent.ts); R1295000: and
-  // whose cards wear the device's cosmetics (wearer.ts).
+  // whose cards wear the device's cosmetics (wearer.ts); R1297000: and the deck's picks.
   return (
     <MatchCardsProvider view={view}>
       <ActingProvider view={view}>
-      <WearerProvider seat={wearCosmetics ? view.viewer : null}>
+      <WearerProvider seat={wearCosmetics ? view.viewer : null} deck={deckCosmetics}>
       <div
         className="board"
         data-testid={testid.board}
@@ -625,10 +645,12 @@ export default function Board({
         data-turn={view.turn}
         data-active={sideOf(view, view.active)}
         data-viewer={view.viewer}
+        data-backdrop={backdrop}
         data-drag={dragToPlay ? "on" : "off"}
         data-log={logOpen ? "open" : undefined}
         data-random-targets={view.randomTargets === true ? "" : undefined}
       >
+        {backdrop === undefined ? null : <Backdrop field={backdrop} />}
         <Seat
           view={view}
           side="opponent"
@@ -643,7 +665,7 @@ export default function Board({
         {/* R434: at the game's end the view shows the opponent's hand, and the row turns it face up. */}
         <Hand side="opponent" hand={revealedOpponentHand(view) ?? view.opponent.hand} cap={view.opponent.handCap} marked={view.opponent.handMarked} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
 
-        <div className="field" aria-label={t("Field")} ref={field}>
+        <div className="field" aria-label={t("Field")} data-table={table} ref={field}>
           <SandSurface field={field} disabled={sandDisabled} />
           {LANES.map((lane) => (
             <div className="lane" key={lane} data-lane={lane}>

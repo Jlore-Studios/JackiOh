@@ -13,6 +13,10 @@
  * only on a face that holds one of COSMETIC_FOIL_ANIMATED_MAX slots (`data-cosmetic-motion`), by
  * transform or opacity alone. Under reduced motion (the media query, or the settings' Reduce
  * motion on <html>) every foil holds its still version.
+ *
+ * R1297000: the card backs, at the end. A back is one `data-card-back` look on the viewer's own
+ * face-down cards and deck pile, the same for every card of the seat; the default adds no attribute.
+ * No look has text, and the emblem and cost gem stay.
  */
 
 /* ---------------------------------------------------------------------------- borders --- */
@@ -156,4 +160,45 @@
   to {
     opacity: 1;
   }
+}
+
+/* -------------------------------------------------------------------------- card backs --- */
+
+/* R1297000: each look is a custom property, so the deck pile (a pill with its count in text) can
+   darken it under the words while a card's back shows it plain. */
+.cf-back[data-card-back="card-back-lacquer"],
+.pile[data-card-back="card-back-lacquer"] {
+  --card-back-look:
+    radial-gradient(circle at 30% 20%, rgb(255 255 255 / 0.22), transparent 42%),
+    repeating-linear-gradient(45deg, #7a1420 0 4px, #5e0f19 4px 8px), #5e0f19;
+}
+
+.cf-back[data-card-back="card-back-starfield"],
+.pile[data-card-back="card-back-starfield"] {
+  --card-back-look:
+    radial-gradient(2px 2px at 20% 28%, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 72% 18%, #cfe3ff, transparent),
+    radial-gradient(2px 2px at 38% 72%, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 84% 64%, #cfe3ff, transparent),
+    radial-gradient(1.5px 1.5px at 12% 82%, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 60% 44%, #ffffff, transparent),
+    radial-gradient(2px 2px at 90% 90%, #cfe3ff, transparent),
+    radial-gradient(circle at 50% 50%, #2a3f94, #060a20);
+}
+
+.cf-back[data-card-back="card-back-blueprint"],
+.pile[data-card-back="card-back-blueprint"] {
+  --card-back-look:
+    linear-gradient(rgb(255 255 255 / 0.18) 1px, transparent 1px) 0 0 / 10px 10px,
+    linear-gradient(90deg, rgb(255 255 255 / 0.18) 1px, transparent 1px) 0 0 / 10px 10px, #1f5fa8;
+}
+
+.cf-back:is([data-card-back="card-back-lacquer"], [data-card-back="card-back-starfield"], [data-card-back="card-back-blueprint"]) {
+  background: var(--card-back-look);
+}
+
+.pile:is([data-card-back="card-back-lacquer"], [data-card-back="card-back-starfield"], [data-card-back="card-back-blueprint"]) {
+  background:
+    linear-gradient(rgb(0 0 0 / 0.5), rgb(0 0 0 / 0.5)),
+    var(--card-back-look);
 }

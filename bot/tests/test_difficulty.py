@@ -129,9 +129,11 @@ class BuilderTests(unittest.TestCase):
         """For easy items the lanes fill in tier order (#695): the weak models first while they
         have a lane, Codex before Devin; then the medium models, Muse on its two lanes (#1273)
         and agy on its one;
-        then the Sonnet seats in usage order, claude-3 twice (two lanes, uncapped), claude-7,
-        claude-1, claude-4, claude-6 and claude-5 once each; and claude-2 builds only after all
-        of them (`build_last`). Past that every lane is held, and the rest wait."""
+        then the Sonnet seats in usage order, claude-3, claude-7, claude-1, claude-4, claude-6
+        and claude-5 once each, and only then claude-3's second lane (two lanes, uncapped): with
+        every account's room level, the load balancer gives the next run to one holding none
+        (`plan.balance`); and claude-2 builds only after all of them (`build_last`). Past that
+        every lane is held, and the rest wait."""
         gh = FakeGitHub()
         ctx = ctx_for(gh, machine=ALL_MACHINE)
         for number in range(3, 19):
@@ -156,11 +158,11 @@ class BuilderTests(unittest.TestCase):
                                  ("muse", "muse-spark-1.3-contributor"),
                                  ("muse", "muse-spark-1.3-contributor"),
                                  ("agy", "gemini-3.8-flash-high"),
-                                 ("claude-3", "sonnet"), ("claude-3", "sonnet"),
-                                 ("claude-7", "sonnet"),
+                                 ("claude-3", "sonnet"), ("claude-7", "sonnet"),
                                  ("claude-1", "sonnet"),
                                  ("claude-4", "sonnet"), ("claude-6", "sonnet"),
-                                 ("claude-5", "sonnet"), ("claude-2", "sonnet")])
+                                 ("claude-5", "sonnet"), ("claude-3", "sonnet"),
+                                 ("claude-2", "sonnet")])
 
     def test_a_sonnet_stand_in_builds_only_easy_items_devin_cannot_take(self):
         """A seat marked `takes_over` stands in for another subscription: with Devin free it

@@ -1000,10 +1000,11 @@ fn wide_state(name: &str, setup: &Value) -> GameState {
     jackioh_engine::testkit::scenario(options).state().clone()
 }
 
-/// #1240: the pinned positions, by name: two decisions the improve screen of 2026-10-16
-/// (`training/history/improve-cycle-2026-10-16.md`) found slow, captured as the true state, the
-/// deciding seat and its stream (`crates/ai/tests/ai/pinned.rs` says how).
-const PINNED: [(&str, &str); 2] = [
+/// #1240: the pinned positions, by name: decisions found slow, two by the improve screen of
+/// 2026-10-16 (`training/history/improve-cycle-2026-10-16.md`) and one whose search ended the turn
+/// into the other side's Cognitive Offloading (#1337), captured as the true state, the deciding seat
+/// and its stream (`crates/ai/tests/ai/pinned.rs` says how).
+const PINNED: [(&str, &str); 3] = [
     (
         "improve-dev-154",
         include_str!("../../ai/tests/fixtures/pinned-improve-dev-154.json"),
@@ -1011,6 +1012,10 @@ const PINNED: [(&str, &str); 2] = [
     (
         "improve-dev-200",
         include_str!("../../ai/tests/fixtures/pinned-improve-dev-200.json"),
+    ),
+    (
+        "autopilot-draw",
+        include_str!("../../ai/tests/fixtures/pinned-autopilot-draw.json"),
     ),
 ];
 

@@ -37,8 +37,9 @@
 //! After the action the resolution loop of §10.3 runs (`triggers.settle`): it dispatches the events
 //! the action emitted, drains whatever a prompt left owed in `state.work`, runs the state check and
 //! pops the trigger queue until nothing is left or a prompt stops it. Then a turn the autopilot owes
-//! is played by it (R1183002, `subsystems::autopilot`), a turn an effect has cut short ends (B5 E10,
-//! R456), and a turn with nothing left to do ends by itself (R82).
+//! is played by it (R1183002, `subsystems::autopilot`; `reduce_unpiloted`, a search's step, leaves it
+//! owed), a turn an effect has cut short ends (B5 E10, R456), and a turn with nothing left to do ends
+//! by itself (R82).
 //!
 //! Port of `packages/engine/src/reduce.ts` (SURFACE §4.1, §6.1). Two departures, both SURFACE's:
 //! `reduce` and `begin_game` take no `rng` (the match rng is always rebuilt from `(state.seed,
@@ -592,7 +593,7 @@ fn turn_cut_due(state: &GameState) -> Option<TurnEndsRider> {
 ///
 /// R1183002: first of all, a turn the autopilot owes is played (`run_autopilot`), which ends it or
 /// leaves it waiting on the other player's answer. `drive_autopilot` is off inside the autopilot's
-/// own steps, so it never plays one turn twice over.
+/// own steps, so it never plays one turn twice over, and in a search's world (`reduce_unpiloted`).
 fn end_due_turns(sink: &mut EngineSink<'_>, drive_autopilot: bool) {
     for _guard in 0..=TURN_CAP_PLAYER_TURNS {
         if drive_autopilot && let Some(player) = crate::subsystems::autopilot::due(sink.state) {
@@ -709,6 +710,21 @@ fn remember_nonce(state: &mut GameState, nonce: &str, events: &[GameEvent]) {
 /// §9.3, §10.2: apply one action. A refused action comes back with the input state, no events and
 /// TS's message; a replayed nonce comes back with the events it produced the first time.
 pub fn reduce(state: &GameState, action: &Action) -> ReduceResult {
+    reduce_driving(state, action, true)
+}
+
+/// `reduce` for a search's own world (§9, `crates/ai`'s simulated steps): the same step, except that
+/// a turn the autopilot owes (R1183002) is left owed, not played. A search scores a line where the
+/// turn it hands over begins and never plays that turn for anybody; driven here, one simulated End
+/// turn whose next draw casts Cognitive Offloading would play that whole turn by §10.7's scorer, the
+/// work of hundreds of ordinary steps, inside one node (#1337). A game never goes through this: its
+/// turns, and every replay of them, are `reduce`'s.
+pub fn reduce_unpiloted(state: &GameState, action: &Action) -> ReduceResult {
+    reduce_driving(state, action, false)
+}
+
+/// `reduce` and `reduce_unpiloted`: `drive_autopilot` is whether a turn the autopilot owes is played.
+fn reduce_driving(state: &GameState, action: &Action, drive_autopilot: bool) -> ReduceResult {
     if let Some(previous) = state.applied.iter().find(|entry| entry.nonce == action.nonce) {
         return ReduceResult {
             state: state.clone(),
@@ -772,7 +788,7 @@ pub fn reduce(state: &GameState, action: &Action) -> ReduceResult {
         // owed, the state check and the trigger queue — and stops where a prompt is waiting.
         settle(&mut sink, SettleOptions::default());
         answer_for_locked_out(&mut sink);
-        end_due_turns(&mut sink, true);
+        end_due_turns(&mut sink, drive_autopilot);
         // R676: a Glitch's reset goes once the action that drew it has settled.
         if sink.state.reset_owed == Some(true) {
             reset_match(&mut sink);

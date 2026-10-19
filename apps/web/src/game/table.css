@@ -1,0 +1,221 @@
+/*
+ * R1297000: the deck slots the viewer's own side wears (cards/cosmetics.ts): a table (the playmat)
+ * and a field (the ambient backdrop). A board wearing the defaults carries neither `data-table` on
+ * its `.field` nor `data-backdrop` on its `.board`, so nothing here reaches it and it is the board
+ * it was before. This sheet loads after board.css and covers the viewer's half only: the
+ * opponent's zones and the top of the mat keep their own look.
+ *
+ * A table is a surface under the viewer's half of the field (`.field::before`, behind the lanes
+ * and the sand) and a set of custom properties the viewer's zones read: the lane line, the unit
+ * pads and the backrow slots. A zone that is locked, reserved or glowing keeps the mark its state
+ * gave it. A backdrop is a layer behind the whole board (Backdrop.tsx): a tint with
+ * BACKDROP_PARTICLE_MAX particles, input-transparent and `z-index: -1`. The board makes no
+ * stacking context of its own (no `isolation`, no z-index), so the cards mid-animation (z-index 40
+ * to 50) stay above the effects layer (38), as fx/fx.css has it (R200). A negative layer of a board
+ * that is no stacking context paints before the board's own background, which is opaque, so a
+ * board wearing a backdrop hands its surface (`--board-surface`, board.css) to its `::before`, a
+ * `z-index: -1` layer that comes first in tree order: the surface, then the backdrop over it, then
+ * everything the board holds.
+ * Each field's still version comes first, particles at their places; it moves only inside the
+ * motion gate below, by transform and opacity alone. Under reduced motion (the media query, or
+ * the settings' Reduce motion on <html>) every field holds its still version.
+ */
+
+/* --------------------------------------------------------------------------- backdrops --- */
+
+.board[data-backdrop] {
+  position: relative;
+  background: none;
+}
+
+.board[data-backdrop]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--board-surface);
+  pointer-events: none;
+}
+
+.board-backdrop {
+  position: absolute;
+  inset: 50% 0 0;
+  z-index: -1;
+  overflow: hidden;
+  border-radius: 0 0 16px 16px;
+  pointer-events: none;
+}
+
+.board-backdrop-particle {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  display: block;
+}
+
+.board-backdrop[data-backdrop="field-embers"] {
+  background: radial-gradient(120% 90% at 50% 100%, rgb(255 110 30 / 24%), transparent 70%);
+}
+
+.board-backdrop[data-backdrop="field-embers"] .board-backdrop-particle {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ff8a3d;
+  box-shadow: 0 0 6px 2px rgb(255 138 61 / 60%);
+}
+
+.board-backdrop[data-backdrop="field-rain"] {
+  background: linear-gradient(180deg, rgb(90 112 148 / 20%), rgb(34 52 82 / 34%));
+}
+
+.board-backdrop[data-backdrop="field-rain"] .board-backdrop-particle {
+  width: 1px;
+  height: 16px;
+  background: linear-gradient(180deg, transparent, #a9bfdf);
+  opacity: 0.7;
+}
+
+.board-backdrop[data-backdrop="field-fireflies"] {
+  background: radial-gradient(100% 80% at 50% 100%, rgb(72 128 40 / 26%), transparent 72%);
+}
+
+.board-backdrop[data-backdrop="field-fireflies"] .board-backdrop-particle {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #d8ff52;
+  box-shadow: 0 0 8px 3px rgb(216 255 82 / 50%);
+  opacity: 0.85;
+}
+
+/* Embers rise and burn out, rain falls past the lanes, fireflies drift and blink. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-embers"] .board-backdrop-particle {
+    will-change: transform, opacity;
+    animation: backdrop-rise 7s ease-in infinite;
+    animation-delay: var(--delay);
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-rain"] .board-backdrop-particle {
+    will-change: transform, opacity;
+    animation: backdrop-fall 1.8s linear infinite;
+    animation-delay: var(--delay);
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-fireflies"] .board-backdrop-particle {
+    will-change: transform, opacity;
+    animation: backdrop-drift 6s ease-in-out infinite alternate;
+    animation-delay: var(--delay);
+  }
+}
+
+@keyframes backdrop-rise {
+  from {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+  to {
+    transform: translateY(-90px);
+    opacity: 0;
+  }
+}
+
+@keyframes backdrop-fall {
+  from {
+    transform: translateY(-24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(72px);
+    opacity: 0.7;
+  }
+}
+
+@keyframes backdrop-drift {
+  from {
+    transform: translate(0, 0);
+    opacity: 0.15;
+  }
+  to {
+    transform: translate(18px, -14px);
+    opacity: 1;
+  }
+}
+
+/* ------------------------------------------------------------------------------ tables --- */
+
+/* The surface sits in the field's lower half, behind the lanes (a positioned, later sibling
+   paints over it) and is never a hit target. */
+.field[data-table]::before {
+  content: "";
+  position: absolute;
+  inset: 50% 0 0;
+  z-index: 0;
+  border-radius: 0 0 15px 15px;
+  pointer-events: none;
+}
+
+.field[data-table="table-wood"] {
+  --table-line: rgb(66 38 16 / 45%);
+  --table-lane: rgb(255 214 150 / 55%);
+  --table-zone: rgb(255 226 178 / 12%);
+  --table-slot: rgb(40 22 8 / 38%);
+  --table-mark: rgb(255 226 178 / 24%);
+}
+
+.field[data-table="table-wood"]::before {
+  background:
+    linear-gradient(180deg, transparent 40%, rgb(0 0 0 / 28%)),
+    repeating-linear-gradient(90deg, #a47142 0 46px, #7d5328 46px 48px, #9a672f 48px 94px, #774e24 94px 96px);
+}
+
+.field[data-table="table-felt"] {
+  --table-line: rgb(214 238 220 / 22%);
+  --table-lane: rgb(244 238 214 / 60%);
+  --table-zone: rgb(10 50 28 / 38%);
+  --table-slot: rgb(6 32 18 / 55%);
+  --table-mark: rgb(214 238 220 / 28%);
+}
+
+.field[data-table="table-felt"]::before {
+  background: radial-gradient(90% 75% at 50% 35%, #2f8a55, #1c5a37 68%, #123d26);
+}
+
+.field[data-table="table-neon-grid"] {
+  --table-line: rgb(0 229 255 / 35%);
+  --table-lane: rgb(255 61 200 / 75%);
+  --table-zone: rgb(0 229 255 / 7%);
+  --table-slot: rgb(2 6 24 / 60%);
+  --table-mark: rgb(0 229 255 / 45%);
+}
+
+.field[data-table="table-neon-grid"]::before {
+  background:
+    linear-gradient(rgb(0 229 255 / 30%) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, rgb(0 229 255 / 30%) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(180deg, #0b1230, #050920);
+}
+
+/* The viewer's zones: the line between the sides, the unit pads and the backrow slots. */
+.field[data-table] .zone[data-side="you"]:not(.zone-locked, .zone-reserved, [data-glow]) {
+  border-color: var(--table-line);
+  background: var(--table-zone);
+}
+
+.field[data-table] .zone[data-side="you"][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow]) {
+  border-top: 2px solid var(--table-lane);
+}
+
+.field[data-table] .zone[data-side="you"][data-row="backrow"]:not(.zone-locked, .zone-reserved, [data-glow]) {
+  background: var(--table-slot);
+}
+
+.field[data-table] .zone[data-side="you"]:not(.zone-locked, .zone-reserved, [data-glow])::before {
+  border-color: var(--table-mark);
+}
+
+.field[data-table] .zone[data-side="you"][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow])::before {
+  background: radial-gradient(closest-side, var(--table-mark), transparent);
+}
