@@ -574,6 +574,12 @@
       "lines": [
         "/harness stop"
       ]
+    },
+    "c:6266984362": {
+      "at": "2026-10-19T12:16:26Z",
+      "lines": [
+        "approve"
+      ]
     }
   },
   "items": {
