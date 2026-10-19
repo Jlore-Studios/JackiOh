@@ -104,10 +104,12 @@ reads `shaped_weight` (`mulligan_keep_shaped`).
 never copied in by hand either: `cargo jackioh sweep --write <report>…` rewrites the file's header block
 and both tables from the reports of record (`training/history/sweep-<date>.md`, the output of `--report`,
 oldest first), and `cargo jackioh sweep --check` and a `jackioh-tools` test fail on any difference.
-`SHADOW_WATCH` is every report's rows, the later verdict winning; `SHADOW_BAN` is the newest report's
-rows less `SHADOW_UNBANNED`, the unban lane's removals (`--write` takes none out but those). The ban governs AI deck
+A card takes the row of the latest report that lists it, in either table (R1186000); `SHADOW_BAN`
+keeps the Meditative and Meditative+ rows, less `SHADOW_UNBANNED`, the unban lane's removals (`--write`
+takes none out but those). The ban governs AI deck
 building and nothing else: a banned card stays legal for every player. Since #732 the ban holds
-Meditative cards only, at most half of the set (R732000): no sweep, lane or person adds a card of an
+Meditative cards only, at most half of the set (R732000), and since #1186 Meditative+ cards too, each
+set held to its own half (R1186000): no sweep, lane or person adds a card of an
 earlier set, and the unban lane (`training/unban.md`) only removes entries.
 
 `FIXTURE_BANNED_IDS` (issue #1113) is the frozen fixture pool: a copy of the table as it stood

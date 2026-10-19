@@ -21,8 +21,9 @@ Generation 8 (`training/history/unban.jsonl`, 2026-10-10) removed the last ban o
 Core, Classic and Classic+. Generation 9 (#732, `training/history/meditative.jsonl`) brought the
 Meditative set into the AI's decks: it lifted R1390's gate after a sweep of record over the set's 102
 cards, which shadow-banned the ones the AI misplays (at most half the set). Those bans are the unban
-lane's work now. The shadow ban holds Meditative cards only (R732000): no lane, sweep or person adds
-a card of an earlier set to it, and the lanes only ever remove entries.
+lane's work now. The shadow ban holds Meditative cards only (R732000), and since #1186's sweep, which banned none,
+Meditative+ cards on the same terms (R1186000): no lane, sweep or person adds a card of an earlier set to
+it, and the lanes only ever remove entries.
 
 While the table is empty the unban lane idles: no AI can keep strictly fewer cards out of its decks
 than none, so `promote --lane unban` refuses to play its games (The gate), and `loop.sh` starts no
