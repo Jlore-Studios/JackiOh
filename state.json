@@ -10977,9 +10977,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-19T20:27:47Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39319243237",
-    "what": "revise #1344 on claude-3"
+    "at": "2026-10-19T20:54:15Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39322309246",
+    "what": "suggestions on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-19T20:46:59Z",
@@ -20758,13 +20758,25 @@
         "number": 1288,
         "title": "Patch v0.3.Y: a player with no decks can start one from a practice starter deck",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-19T18:00:21Z",
+        "number": 1286,
+        "title": "Patch v0.3.Y: the AI prices a curse in a deck as harm to whoever draws it",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-19T18:00:17Z",
+        "number": 1265,
+        "title": "Patch v0.3.Y: the AI prices a hand card at the cost it was set to, so an \"It costs (0)\" card counts",
+        "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": "2026-10-19T20:16:13Z",
-    "last_run": "2026-10-19T07:16:34Z",
-    "provider": null,
+    "idle_since": "2026-10-19T20:54:15Z",
+    "last_run": "2026-10-19T20:54:15Z",
+    "provider": "claude-7",
     "requested": false,
-    "run_id": null,
+    "run_id": "39322309246",
     "taken_asks": []
   },
   "usage": {
