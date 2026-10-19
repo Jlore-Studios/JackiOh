@@ -103,14 +103,20 @@ pub fn roll_pack(counters: PityCounters, draws: PackDraws) -> (PackOutcome, Pity
     )
 }
 
+/// The level curve's exact total in `i128`: `total_xp_for_level` below saturates to
+/// `i64::MAX` past level 429,496,730, and the correction loops in `level_for_xp` compare
+/// against this, never the saturated total, so they cannot walk that plateau one level at
+/// a time (at `i64::MAX` that walk would run from the ~429M guess to `u32::MAX`).
+fn exact_total_xp_for_level(level: u32) -> i128 {
+    let step = i128::from(SET_TRACK_XP_PER_LEVEL);
+    step * i128::from(level.saturating_sub(1)) * i128::from(level) / 2
+}
+
 /// The total XP a set track holds at `level` (SPEC §14.7): going from level n to the next costs
 /// `SET_TRACK_XP_PER_LEVEL` × n, so level 1 is 0 XP and the totals are the triangular numbers.
 /// `i64` throughout so the uncapped curve cannot overflow on any level a track reaches.
 pub fn total_xp_for_level(level: u32) -> i64 {
-    let step = i64::from(SET_TRACK_XP_PER_LEVEL);
-    let below = i128::from(level.saturating_sub(1));
-    let at = i128::from(level);
-    i64::try_from(step as i128 * below * at / 2).unwrap_or(i64::MAX)
+    i64::try_from(exact_total_xp_for_level(level)).unwrap_or(i64::MAX)
 }
 
 /// The level a set track with `total_xp` XP stands on (SPEC §14.7): the highest level whose
@@ -123,10 +129,11 @@ pub fn level_for_xp(total_xp: i64) -> u32 {
     let step = f64::from(SET_TRACK_XP_PER_LEVEL);
     let guess = ((1.0 + (1.0 + 8.0 * total_xp as f64 / step).sqrt()) / 2.0).floor();
     let mut level = guess.clamp(1.0, f64::from(u32::MAX)) as u32;
-    while level > 1 && total_xp_for_level(level) > total_xp {
+    let target = i128::from(total_xp);
+    while level > 1 && exact_total_xp_for_level(level) > target {
         level -= 1;
     }
-    while level < u32::MAX && total_xp_for_level(level.saturating_add(1)) <= total_xp {
+    while level < u32::MAX && exact_total_xp_for_level(level.saturating_add(1)) <= target {
         level += 1;
     }
     level
@@ -158,6 +165,17 @@ mod tests {
         assert_eq!(level_for_xp(495_000), 100);
         assert_eq!(xp_to_next_level(0), 100);
         assert_eq!(xp_to_next_level(4_500), 1_000);
+    }
+
+    #[test]
+    fn level_for_xp_huge_xp_ends() {
+        // `total_xp_for_level` saturates to `i64::MAX` past level 429,496,730; comparing the
+        // correction loops against it walked that plateau to `u32::MAX` at `i64::MAX`.
+        assert_eq!(total_xp_for_level(429_496_730), 9_223_372_032_559_808_500);
+        assert_eq!(total_xp_for_level(429_496_731), i64::MAX);
+        assert_eq!(level_for_xp(i64::MAX), 429_496_730);
+        assert_eq!(level_for_xp(9_223_372_032_559_808_500), 429_496_730);
+        assert_eq!(level_for_xp(9_223_372_032_559_808_499), 429_496_729);
     }
 
     #[test]
