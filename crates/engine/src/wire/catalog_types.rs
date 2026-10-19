@@ -227,9 +227,8 @@ string_union! {
 }
 
 string_union! {
-    /// §5: Core, Classic, Classic+ (R380) and Meditative (v0.3.5, R1420) ship; Meditative+ is in the
-    /// catalog and ships with the last part of its patch (issue #1173, R1420, R1178000); Boss and
-    /// Boss-X are reserved. Custom is a custom card's (§12.1, R915000): never in the catalog and never
+    /// §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15,
+    /// issue #1173, R1178000) ship; Boss and Boss-X are reserved. Custom is a custom card's (§12.1, R915000): never in the catalog and never
     /// shipped, so no pool or random deck finds one.
     pub enum SetName {
         Core = "Core",
@@ -246,16 +245,17 @@ string_union! {
 /// The sets that ship, in catalog order. A pool that names no set draws from all of them (R380),
 /// and only from them: a set the catalog holds that is not listed here is in no such pool, in no
 /// deck and on no list a player reads until it is (R1420).
-pub const SHIPPED_SETS: [SetName; 4] = [
+pub const SHIPPED_SETS: [SetName; 5] = [
     SetName::Core,
     SetName::Classic,
     SetName::ClassicPlus,
     SetName::Meditative,
+    SetName::MeditativePlus,
 ];
 
 /// Every set the catalog orders, shipped or not, in catalog order (B2.2): a set keeps its place
 /// when it ships, so a seeded pick over a pool replays the same before and after (R1420).
-/// Meditative+ follows Meditative, held until its release (issue #1173, R1178000).
+/// Meditative+ follows Meditative (issue #1173, R1178000).
 pub const CATALOG_SETS: [SetName; 5] = [
     SetName::Core,
     SetName::Classic,
@@ -270,7 +270,8 @@ pub fn set_ships(set: SetName) -> bool {
 }
 
 /// R1371: the newest set that ships, the last entry of `SHIPPED_SETS` (catalog order): Classic+
-/// until the Meditative set ships, then whichever set ships after it. "More cards from the newest
+/// until the Meditative set shipped, Meditative until Meditative+ did, then whichever set ships
+/// after it. "More cards from the newest
 /// set" (R1372, R1373) leans a random deck on it, and every caller asks this function at deal time
 /// rather than naming a set. A set previewed under the testkit (R1420) is not shipped, so it is
 /// never the newest: a test that leans on one names it.

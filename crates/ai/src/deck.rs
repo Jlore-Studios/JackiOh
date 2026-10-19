@@ -248,16 +248,17 @@ pub const AI_DECK: AiDeck = AiDeck {
     // R1370 (#549): "at least half the deck", 10 of 20 and 15 of a Hard deck's 30.
     lean_min_share: 0.5,
     // R1370, chosen by measurement (`r1370_the_lean_boost_seldom_leaves_the_floor_to_force_a_card`
-    // holds it). Classic+ is 78 of the 268 cards (29%), so with no boost a deck that leans on it would
-    // hold about 6 of 20 by the draw's own weights, and the floor forces the rest in at the end, into
-    // nine decks in ten. Over 1,000 seeds per weight and size (a human's 20 cards, Easy's 20, Medium's
-    // 25 at cap 5 and Hard's 30 at cap 7), the floor had to force a card into a sixth of the decks or
-    // more at 4 and below, 10–14% at 5, 7–10% at 6 and 6–8% at 8. 6 is the smallest of those weights at
-    // which it forces a card into fewer than one deck in ten at every size (under a third of a card per
-    // deck); 8 forces little less and deals more of the set past the floor (11.9 of 20, 15.1 of 25 and
-    // 17.6 of 30, against 11.5, 14.8 and 17.2 at 6). The boost stops once the floor is met, so the rest
-    // is dealt as without it.
-    lean_boost: 6.0,
+    // holds it). It was 6 while the pool was 268 cards and Classic+, 78 of them, the newest set. The
+    // pool is 396 since Meditative+ shipped (#1187), the newest set is its 26 cards, and 6 left the
+    // floor to force a card into 83-86% of the decks that lean on it, and into 17-25% of Classic+'s.
+    // Over 1,000 seeds per weight, set and size (a human's 20 cards, Easy's 20, Medium's 25 at cap 5
+    // and Hard's 30 at cap 7), Meditative+'s 20-card decks were forced at 46-49% at 20, 19-22% at 32
+    // and 6-7% at 48, every other set's at 3% or less from 20 up. 48 is the smallest of those weights
+    // at which every set that ships is forced into fewer than one deck in ten wherever the floor owes
+    // at most two of its cards in five; Meditative+'s 25 and 30 owe 13 and 15 of its 26, and the floor
+    // forces a card into 18% and 32% of those, as it is there to. The boost stops once the floor is
+    // met, so the rest is dealt as without it.
+    lean_boost: 48.0,
     // R817000 (#817): "less Quickdraw bloat".
     max_quickdraw: 2,
 };

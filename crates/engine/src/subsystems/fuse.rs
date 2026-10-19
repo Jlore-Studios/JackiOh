@@ -1006,6 +1006,12 @@ fn max_number(values: impl IntoIterator<Item = Option<i32>>) -> Option<i32> {
     values.into_iter().flatten().max()
 }
 
+/// R1181002: a number of the combined static flags where the least is the one that acts — two
+/// Mountaintop Gardens' premiums, of which the cheaper applies.
+fn least_number(values: impl IntoIterator<Item = Option<i32>>) -> Option<i32> {
+    values.into_iter().flatten().min()
+}
+
 /// The static flags that are an amount of what the text does, not a quality the card has: #79's
 /// "the next Spell you play gains Echo +1", #38's granted Combo and #84's hero Armor (TS
 /// `SUMMED_FLAGS`: `echoGrant`, `quickstriker`, `heroArmor`). R102: a card fused from two such texts
@@ -1137,6 +1143,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 spell_damage_aura: summed_spell_damage_aura(defined.iter().map(|f| f.spell_damage_aura)),
                 doubles_healing: flags(|f| f.doubles_healing),
                 answers_targeted_spells: flags(|f| f.answers_targeted_spells),
+                embiggen_garden: least_number(defined.iter().map(|f| f.embiggen_garden)),
             })
         }
     }

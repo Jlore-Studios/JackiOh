@@ -41,8 +41,8 @@ Everything below is for a table that still has entries.
 3. Only remove entries from `SHADOW_BAN`, never add one: add the card's id to `SHADOW_UNBANNED` (sorted
    by id) and run `cargo jackioh sweep --write`, which drops its row; never edit the table's rows by
    hand (`cargo jackioh sweep --check` fails on it). Above all never add a card of an earlier set
-   (Core, Classic, Classic+): the table holds Meditative cards only (R732000), and a test fails on
-   any other. When you remove one, say in the comment above the table which generation removed it and why the AI now
+   (Core, Classic, Classic+): the table holds Meditative and Meditative+ cards only (R732000, R1186000), and a
+   test fails on any other. When you remove one, say in the comment above the table which generation removed it and why the AI now
    plays it. `SHADOW_WATCH` is the sweep's (R390): leave it. Do not raise `AI_BUDGET` or
    `AI_GATE_BUDGET`: the browser runs the AI at that budget under a time limit (SPEC §9.9). Leave
    `AI_DECK_GATED_SETS` in `crates/ai/src/config.rs` as it is: which sets the AI's decks are gated

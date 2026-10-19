@@ -19,7 +19,7 @@ described in `training/README.md`; read it first, and its section The improve st
    re-runs the gate itself.
 3. Leave `crates/ai/src/shadow_ban.rs` alone: the shadow ban is the unban lane's. Never add a card
    to `SHADOW_BAN`, and above all never one of an earlier set (Core, Classic, Classic+): the table
-   holds Meditative cards only (R732000), and a test fails on any other. A change that plays a card
+   holds Meditative and Meditative+ cards only (R732000, R1186000), and a test fails on any other. A change that plays a card
    badly is fixed in how the AI plays it, never by banning it. Leave
    `AI_DECK_GATED_SETS` in `crates/ai/src/config.rs` alone too: which sets the AI's decks are gated
    from is a person's call (R1390). Do not raise `AI_BUDGET` or `AI_GATE_BUDGET`: the browser runs

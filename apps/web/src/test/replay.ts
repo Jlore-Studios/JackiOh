@@ -13,7 +13,10 @@ import { beginGame, catalogVersion, createGame, reduce } from "../wasm/index.ts"
 
 // Re-picked for patch v0.3.12 (#1149): Zephyrs and CN in a Bottle left the (0) Cost cards, so `cheap20`
 // changed, and "replay-player" now ends with the viewer's hand empty.
-const SEED = "replay-player-5";
+// Re-pinned for v0.3.15 (Meditative+ ships, #1187): the shipped pools grew by Meditative+, so
+// "replay-player-5" now ends with the opponent's hand empty, in under three pages; "replay-player-6"
+// ends with both hands holding cards and spans a third page.
+const SEED = "replay-player-6";
 /** Two pages' worth of actions and a few over, then a concede: the game ends, in a few turns. */
 const GAME_ACTIONS = 2 * REPLAY_PAGE_STEPS + 8;
 /** The turns the folded game must span for turn moves to have somewhere to go. */

@@ -132,10 +132,17 @@ mod tests {
                 .into_iter()
                 .collect();
             sets.sort();
-            // Re-pinned for v0.3.5: the Meditative set joins the pool.
+            // Re-pinned for v0.3.5: the Meditative set joins the pool; and for v0.3.15 (Meditative+ ships,
+            // #1187): the Meditative+ set joins it (M+ #1 Bob's Plan, #24 Bob, #26 Scratch Pad).
             assert_eq!(
                 sets,
-                vec!["Classic".to_string(), "Classic+".to_string(), "Core".to_string(), "Meditative".to_string()]
+                vec![
+                    "Classic".to_string(),
+                    "Classic+".to_string(),
+                    "Core".to_string(),
+                    "Meditative".to_string(),
+                    "Meditative+".to_string(),
+                ]
             );
         }
 

@@ -5,6 +5,10 @@
 // filter; a card opens its full history. Fixtures through the context, the empty and failed states,
 // then the real history through the default source.
 
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -19,6 +23,18 @@ import { patchTestid } from "./testids.ts";
 
 /** The real history's first read runs the JSON chunks through the transform. */
 const SLOW = { timeout: 10_000 } as const;
+
+/**
+ * R646: the versions of the pending fragments, which `patches ship` promotes after their merge (none
+ * once every fragment has shipped and git keeps no empty directory).
+ */
+const PENDING_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../crates/cards/patches/pending");
+const PENDING_VERSIONS: readonly string[] = (existsSync(PENDING_DIR) ? readdirSync(PENDING_DIR) : [])
+  .filter((file) => file.endsWith(".json"))
+  .map((file) => (JSON.parse(readFileSync(join(PENDING_DIR, file), "utf8")) as { version: string }).version);
+
+/** Meditative+'s line opens at the patch that ships the set (issue #1187). */
+const MEDITATIVE_PLUS_FIRST = "v0.3.15";
 
 afterEach(() => {
   act(() => {
@@ -329,16 +345,27 @@ describe("R724000 the Patch notes page by release line", () => {
     expect(second).not.toHaveTextContent("Old Relic leaves.");
   });
 
-  it("R724000 the real history opens on Meditative and every patch has its note", async () => {
+  it("R724000 the real history opens on its newest line, Meditative+ once v0.3.15 ships, and every patch has its note", async () => {
     renderPage();
     const shipped = await realPatchSource.patches();
     await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
-    expect(screen.getAllByTestId(patchTestid.set).map((element) => element.dataset.set)).toEqual(["meditative", "classic", "core"]);
-    expect(screen.getAllByTestId(patchTestid.setToggle).map((toggle) => toggle.getAttribute("aria-expanded"))).toEqual(["true", "false", "false"]);
-    // Every line starts at a shipped patch, in the lines' order.
     const versions = shipped.map((patch) => patch.version);
-    const firsts = RELEASES.map((release) => versions.indexOf(release.first));
-    expect(firsts.every((at) => at >= 0)).toBe(true);
+    // Meditative+'s first patch is a pending fragment until `patches ship` promotes it (R646), and a
+    // line with no patch to open it is not on the page: the newest line is Meditative's until then.
+    const plusShipped = versions.includes(MEDITATIVE_PLUS_FIRST);
+    if (!plusShipped) expect(PENDING_VERSIONS).toContain(MEDITATIVE_PLUS_FIRST);
+    const ids = [...(plusShipped ? ["meditativeplus"] : []), "meditative", "classic", "core"];
+    expect(screen.getAllByTestId(patchTestid.set).map((element) => element.dataset.set)).toEqual(ids);
+    expect(screen.getAllByTestId(patchTestid.setToggle).map((toggle) => toggle.getAttribute("aria-expanded"))).toEqual(
+      ids.map((_id, at) => (at === 0 ? "true" : "false")),
+    );
+    // Every line starts at a shipped patch, in the lines' order; a line still waiting on its pending
+    // fragment is newer than all of them.
+    const live = RELEASES.filter((release) => versions.includes(release.first));
+    expect(live.map((release) => release.id).reverse()).toEqual(ids);
+    expect(RELEASES.slice(0, live.length)).toEqual(live);
+    for (const release of RELEASES.slice(live.length)) expect(PENDING_VERSIONS, release.id).toContain(release.first);
+    const firsts = live.map((release) => versions.indexOf(release.first));
     expect([...firsts].sort((a, b) => a - b)).toEqual(firsts);
     expect(firsts[0]).toBe(0);
     openEverySet();
@@ -352,6 +379,6 @@ describe("R724000 the Patch notes page by release line", () => {
       expect(entry).not.toHaveTextContent(patch?.source ?? "");
     }
     // Every line that has technical changes shows them once it is opened.
-    expect(screen.getAllByTestId(patchTestid.technical)).toHaveLength(RELEASES.filter((release) => release.technical.length > 0).length);
+    expect(screen.getAllByTestId(patchTestid.technical)).toHaveLength(live.filter((release) => release.technical.length > 0).length);
   }, 30_000);
 });

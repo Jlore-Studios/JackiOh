@@ -226,6 +226,8 @@ pub fn schedule_delayed(
         resume,
         watch,
         hand_watch: None,
+        due_own_turn: None,
+        label: None,
     };
     sink.state.next_seq += 1;
     sink.state.delayed.push(effect.clone());
@@ -234,6 +236,7 @@ pub fn schedule_delayed(
 
 /// R68: delayed effects due now, in the order they were created. R458: one made for "your *next*
 /// turn" waits until that turn (`notBefore`), so the boundary of the turn it was made on passes it by.
+/// R1181000: one made "in N turns" waits until its player has started that many more (`dueOwnTurn`).
 ///
 /// `phase` is `Phase::Start` or `Phase::End` (TS `"start" | "end"`).
 pub fn due_delayed(state: &GameState, phase: Phase, player: PlayerId) -> Vec<DelayedEffect> {
@@ -246,11 +249,26 @@ pub fn due_delayed(state: &GameState, phase: Phase, player: PlayerId) -> Vec<Del
                 && effect
                     .not_before
                     .is_none_or(|not_before| state.turn >= not_before)
+                && own_turn_reached(state, effect)
         })
         .cloned()
         .collect();
     due.sort_by_key(|a| a.seq);
     due
+}
+
+/// R1181000: an entry made "in N turns" has reached its turn once its player has started the turn it
+/// counts to (`DelayedEffect.dueOwnTurn`); every other entry has.
+pub fn own_turn_reached(state: &GameState, effect: &DelayedEffect) -> bool {
+    effect
+        .due_own_turn
+        .is_none_or(|due| state.players[effect.at.player].turns_started >= due)
+}
+
+/// R1181000, R169: whether an entry shows its owner's side a countdown badge while it waits — one made
+/// "in N turns" with a caption.
+pub fn has_countdown(effect: &DelayedEffect) -> bool {
+    effect.due_own_turn.is_some() && effect.label.is_some()
 }
 
 pub fn drop_delayed(state: &mut GameState, id: &str) {

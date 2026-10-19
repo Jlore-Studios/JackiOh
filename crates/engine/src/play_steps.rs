@@ -501,6 +501,12 @@ pub struct PlayRun {
     /// queued with its own at step 4. Absent otherwise.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub health_echo: Option<i32>,
+    // ---- Meditative+ (issue #1181) ----
+    /// R1181002 (Meditative+ #22 Mountaintop Garden): a Garden reached this play as step 1 checked it,
+    /// so step 3 plays the card's Embiggened version whatever price it paid. Fixed at step 1 as
+    /// `gifted` is (R214); absent for every play no Garden reaches, a cast (R545) and a replaced card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub garden: Option<bool>,
 }
 
 /// A run with every cursor at rest and every optional field absent, for `validate_play` and
@@ -556,6 +562,7 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         equip_host: None,
         health_price: None,
         health_echo: None,
+        garden: None,
     }
 }
 
@@ -790,6 +797,8 @@ pub fn validate_play(
     run.tributes = tributes;
     run.at = 1;
     run.gifted = Some(play_made_radiant(state, player, &card, cost));
+    // R1181002: whether a Garden plays the card Embiggened, fixed here as `gifted` is (R214).
+    run.garden = crate::mana::garden_reaches(state, &card).then_some(true);
     // R983: the Feng Shui verdicts, fixed here as `gifted` is (R214).
     let fixed = crate::subsystems::feng_shui::verdicts(state, player, &card);
     run.feng_shui = (!fixed.is_empty()).then_some(fixed);
@@ -1058,6 +1067,7 @@ fn gifted_hook_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         // R983: Feng Shui judges the card that is played, before it is made Radiant.
         feng_shui_step(sink, run);
         gifted_program_step(sink, run);
+        garden_step(sink, run);
         run.hook_ids = Some(
             trigger_holders_with_hook(sink.state, HookName::OnPlayHook, None)
                 .into_iter()
@@ -1295,6 +1305,29 @@ fn replace_played_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         run.gifted = None;
         // R983: and so are the Feng Shui verdicts.
         run.feng_shui = None;
+        // R1181002: a Garden reached the card that was paid for, not this one, which no step 1 checked.
+        run.garden = None;
+    }
+}
+
+/// R1181002 (Meditative+ #22 Mountaintop Garden): a play a Garden reached at step 1 is the card's
+/// Embiggened version, whichever price it paid — stamped on the card at §10.5 step 3, before the
+/// `onPlayHook`s and the announce, so `cardPlayed` and every hook read it. A card already taken from
+/// where it is played from is not played (R226), and is left as it is.
+fn garden_step(sink: &mut EngineSink<'_>, run: &PlayRun) {
+    if run.garden != Some(true) {
+        return;
+    }
+    let Some(card) = snapshot(sink.state, &run.instance_id) else {
+        return;
+    };
+    let playing = if run.source == Some(PlaySource::Graveyard) {
+        in_own_graveyard(sink.state, run.player, &card)
+    } else {
+        card.zone == (Zone::Hand { player: run.player })
+    };
+    if playing && let Some(live) = find_instance_mut(sink.state, &card.id) {
+        live.embiggened = Some(true);
     }
 }
 

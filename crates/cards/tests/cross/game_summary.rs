@@ -3,13 +3,14 @@
 //! gate plays them, and checked against oracles it does not use:
 //!
 //!  - the opening hands are the hands the state holds once the mulligans resolve (p1's less its
-//!    first turn's draw, and with any card that turn's start discarded), and The Coin is in the
-//!    second seat's;
+//!    first turn's draw and any card that turn's start added to a hand with no draw, and with any card
+//!    that turn's start discarded), and The Coin is in the second seat's;
 //!  - the plays are the hand cards the logged `play` actions named, less those countered in their
 //!    announce window (§10.5 step 3a, R448), each as the card it resolves as after step 3's
 //!    replacement (C #23 Devil's Pact, R449), with the face it was played on (R1147000); #96 My Pawn
-//!    plays out a turn inside an attack's action with no `play` logged, so such a game may hold more
-//!    plays than the log names, never fewer;
+//!    plays out a turn inside an attack's action, and M+ #18 Cognitive Offloading's autopilot the rest
+//!    of its caster's turn inside the action that cast it (R1183002), with no `play` logged, so such a
+//!    game may hold more plays than the log names, never fewer;
 //!  - a cast on its draw (#21 Hinder, #90.1 CN-Virus, §2.4) is no play, and the draws are every card
 //!    drawn from the first turn on, less those burned on a full hand (R4) or cast on their draw.
 
@@ -299,10 +300,14 @@ mod summarize_game_over_real_cards_s9_11 {
                         play.open = play.open && resolving.contains(play.id.as_str());
                     }
                 }
-                if events
-                    .iter()
-                    .any(|event| matches!(event, GameEvent::TrapFired { def_id, .. } if def_id == MY_PAWN))
-                {
+                // Re-pinned for v0.3.15 (Meditative+ ships, #1187): M+ #18 Cognitive Offloading joins
+                // the decks, and its autopilot (R1183002) plays the rest of a turn with no `play` logged,
+                // as My Pawn's random turn does (summary-cards-26 plays M+ #10 Medina Grifter, the card it
+                // steals and C #78 so), so a game it engages in is held to My Pawn's check.
+                if events.iter().any(|event| {
+                    matches!(event, GameEvent::TrapFired { def_id, .. } if def_id == MY_PAWN)
+                        || matches!(event, GameEvent::AutopilotEngaged { .. })
+                }) {
                     pawn = true;
                 }
                 // A cast on its draw is a `cardPlayed` naming a drawn card before any hand took it: its announce
@@ -374,6 +379,31 @@ mod summarize_game_over_real_cards_s9_11 {
                                 match owner {
                                     PlayerId::P1 => p1.push(def_id.clone()),
                                     PlayerId::P2 => p2.push(def_id.clone()),
+                                }
+                            }
+                        }
+                        // Re-pinned for v0.3.15 (Meditative+ ships, #1187): a card turn 1 added to a hand
+                        // with no draw, and that the hand still holds, was in no opening hand either: the
+                        // bigger pool deals summary-cards-36's p1 M #37 CN in a Bottle as turn 1's draw,
+                        // which, cast on its draw (§2.4), adds a random card.
+                        for event in &events[from..] {
+                            if let GameEvent::AddedToHand {
+                                player,
+                                instance_id,
+                                def_id,
+                            } = event
+                                && !drawn_here.contains(&instance_id)
+                                && result.state.players[*player]
+                                    .hand
+                                    .iter()
+                                    .any(|card| card.id == *instance_id)
+                            {
+                                let held = match player {
+                                    PlayerId::P1 => &mut p1,
+                                    PlayerId::P2 => &mut p2,
+                                };
+                                if let Some(at) = held.iter().rposition(|id| id == def_id) {
+                                    held.remove(at);
                                 }
                             }
                         }
