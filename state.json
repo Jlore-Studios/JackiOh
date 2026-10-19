@@ -4986,6 +4986,13 @@
     "1266": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-19T12:50:04Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "engine change in crates/engine/src/catalog.rs plus design across engine, cards, spec and ai/server fixtures, and a ~2 CPU-hour development run; hard by the rule's engine line"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
