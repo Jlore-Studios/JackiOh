@@ -663,6 +663,8 @@ mod r1370_a_deck_that_leans_on_a_set {
         // set was in any pool, so the literals gate it (R1390: a gate deals what the draw dealt before).
         // Re-dealt for patch v0.3.10 (#831), again for patch v0.3.12 (#1149) and again for patch v0.3.13
         // (#1194), whose costs move the builder's curve: the same seeds stop at the same cursors.
+        // The themed pin was re-dealt for patch v0.3.16 (#1151), whose Human tag on MC Tech joins the
+        // Human theme's pool: its seed stops at the same cursor.
         // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the decks were dealt before the Meditative+
         // set was in any pool too, so the literals gate it beside Meditative and deal them unchanged.
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
@@ -766,24 +768,24 @@ mod r1370_a_deck_that_leans_on_a_set {
                 json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+"], "theme": "Human" }),
                 20,
                 &[
-                    "classic-006",
+                    "classic-008",
                     "core-092",
                     "core-004",
                     "classicplus-028",
-                    "classic-066",
-                    "core-066",
-                    "core-089",
-                    "classic-002",
-                    "classic-022",
-                    "classic-086",
-                    "classic-069",
-                    "classicplus-044",
-                    "core-001",
-                    "core-071",
+                    "classic-064",
                     "core-067",
-                    "core-074",
-                    "classicplus-046",
                     "core-091",
+                    "classic-006",
+                    "classic-026",
+                    "classic-077",
+                    "classic-066",
+                    "classicplus-037",
+                    "core-001",
+                    "core-081",
+                    "core-061",
+                    "core-066",
+                    "classicplus-063",
+                    "core-088",
                     "classic-083",
                     "classicplus-026",
                 ],
