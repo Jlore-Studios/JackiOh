@@ -33,6 +33,12 @@
 //! R377's card win rates over them with no database, with `stats-cards`' flags: the figures a
 //! notebook computes over the same files (`analysis/`) are checked against these.
 //!
+//! `cargo jackioh stats report --games <file>…` prints the game figures over the same files instead,
+//! per patch, mode and source: how often the first seat won (with its 95% Wilson interval), how the
+//! games ended, how long they lasted, and what R1256000's counts say of fatigue and Traps. A record
+//! written before those counts is unknown for them, not zero. The training lanes keep these figures
+//! beside the card figures (`training/README.md`).
+//!
 //! A forced run files under a series of its own (`dev-force-<id>`) and is for `stats compare` and
 //! `stats report`, never for `stats-import` (R1284000).
 //!
@@ -47,16 +53,18 @@ use std::time::Instant;
 
 use anyhow::{Context, Result, anyhow};
 use indexmap::{IndexMap, IndexSet};
+use serde::Serialize;
 use serde_json::Value;
 
 use jackioh_ai::{AI_DEV_RUN, DevRunOptions, SHADOW_BAN, SHADOW_WATCH, dev_game_record};
 use jackioh_engine::{
-    CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, DEV_RECORD_ID_PREFIX, GAME_MODES, GameMode,
-    GameRecord, PILOT_FILTERS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, Winner, card_stats,
-    format_card_stats, parse_game_record_lines,
+    CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, DEV_RECORD_ID_PREFIX, GAME_MODES,
+    GAME_OVER_REASONS, GameMode, GameOverReason, GameRecord, GameSource, GameSummary, PILOT_FILTERS,
+    PLAYER_IDS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, Winner, card_stats, describe_filter,
+    format_card_stats, parse_game_record_lines, record_matches, seats_counted, sources_of,
 };
 
-use crate::arena::{paired_interval, wilson_interval};
+use crate::arena::{self, paired_interval, wilson_interval};
 use crate::{dealt_fit, golden};
 
 /// Seconds print with this many decimals.
@@ -65,8 +73,14 @@ const SECONDS_DECIMALS: usize = 1;
 /// Percentages print with this many decimals.
 const PERCENT_DECIMALS: usize = 1;
 
+/// A mean or a per-set figure prints with this many decimals.
+const MEAN_DECIMALS: usize = 2;
+
 /// A share as a percentage.
 const PERCENT: f64 = 100.0;
+
+/// The turns are cut into this many parts by their quartiles.
+const QUARTERS: usize = 4;
 
 /// `crates/cards/patches/patches.json`, the card patch history (R388), where this checkout keeps it.
 const PATCHES_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../cards/patches/patches.json");
@@ -132,7 +146,7 @@ pub struct Args {
 
 #[derive(clap::Subcommand, Debug, Clone, PartialEq)]
 pub enum Command {
-    /// R377's card win rates over record files, with no database.
+    /// R377's card win rates over record files, with no database, or with --games the game figures.
     Report(ReportArgs),
     /// DEALT_Q's refit over arena record files, printed to paste into crates/ai/src/shadow_ban.rs.
     FitDealt(dealt_fit::Args),
@@ -155,7 +169,7 @@ pub struct CompareArgs {
     pub card: String,
 }
 
-/// `cargo jackioh stats report <file>… [--source] [--mode] [--patch] [--pilot] [--card] [--json]`:
+/// `cargo jackioh stats report <file>… [--source] [--mode] [--patch] [--pilot] [--card] [--games] [--json]`:
 /// `jackioh-server stats-cards`' flags and defaults (R378: live games unless `--source` says
 /// otherwise; R807000: every counted seat merged unless `--pilot` names a side), over record
 /// files instead of the database.
@@ -180,6 +194,9 @@ pub struct ReportArgs {
     /// One card's row only.
     #[arg(long, value_name = "ID")]
     pub card: Option<String>,
+    /// The game figures instead of the card win rates (per patch, mode and source). Not with --card.
+    #[arg(long, conflicts_with = "card")]
+    pub games: bool,
     /// The report as JSON, as `stats-cards --json` prints it.
     #[arg(long)]
     pub json: bool,
@@ -225,18 +242,20 @@ pub fn default_pilot(_source: SourceFilter) -> PilotFilter {
     PilotFilter::Unified
 }
 
+/// The filter a report's flags name, with R378's and R807000's defaults.
+fn filter_of(args: &ReportArgs) -> CardStatsFilter {
+    CardStatsFilter {
+        source: args.source,
+        mode: args.mode,
+        patch: args.patch.clone(),
+        pilot: args.pilot.unwrap_or_else(|| default_pilot(args.source)),
+    }
+}
+
 /// R377: the report the arguments ask for, over the records of the files they name.
 pub fn report(args: &ReportArgs) -> Result<CardStatsReport> {
     let records = read_records(&args.files)?;
-    let mut report = card_stats(
-        &records,
-        &CardStatsFilter {
-            source: args.source,
-            mode: args.mode,
-            patch: args.patch.clone(),
-            pilot: args.pilot.unwrap_or_else(|| default_pilot(args.source)),
-        },
-    );
+    let mut report = card_stats(&records, &filter_of(args));
     if let Some(only) = &args.card {
         report.cards.retain(|stats| &stats.card == only);
     }
@@ -259,8 +278,251 @@ pub fn render(
     }
 }
 
+/// `stats report --games`: one patch's figures in one mode from one source. A game is read whole,
+/// whichever of its seats `--pilot` counts.
+#[derive(Serialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct GameGroup {
+    /// The patch the games were played with.
+    pub patch: String,
+    /// The match type.
+    pub mode: GameMode,
+    /// Where the games were played: live matches or an AI development run's.
+    pub source: GameSource,
+    /// How many games.
+    pub games: usize,
+    /// How many of them nobody won.
+    pub draws: usize,
+    /// How many the seat that took the first turn won.
+    pub first_wins: usize,
+    /// `first_wins` over `games`, to three places.
+    pub first_share: f64,
+    /// The low end of the 95% Wilson interval of `first_share`.
+    pub first_low: f64,
+    /// The high end of the 95% Wilson interval of `first_share`.
+    pub first_high: f64,
+    /// Games per ending, every `GameOverReason` in its declared order, the ones no game had at 0.
+    pub reasons: IndexMap<GameOverReason, usize>,
+    /// The turn counter at the end: the first, second and third quartiles, nearest rank.
+    pub turn_quartiles: [i32; QUARTERS - 1],
+    /// How many of the games have R1256000's counts: the figures below are over these only.
+    pub counted: usize,
+    /// How many of the counted games had a draw from an empty library, or null when none is counted.
+    pub fatigue_games: Option<usize>,
+    /// `fatigue_games` over `counted`, to three places.
+    pub fatigue_share: Option<f64>,
+    /// The mean of the nominal fatigue damage a counted game dealt, both seats added, to three places.
+    pub fatigue_damage_mean: Option<f64>,
+    /// Traps set from a hand over the counted games, both seats.
+    pub traps_set: Option<i32>,
+    /// Traps that fired over the counted games, both seats.
+    pub traps_fired: Option<i32>,
+    /// `traps_fired` over `traps_set` to three places, or null when no Trap was set.
+    pub traps_fired_per_set: Option<f64>,
+}
+
+/// `stats report --games`: the groups a filter reads and the records it left to another source.
+#[derive(Serialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct GameReport {
+    /// What the report read.
+    pub filter: CardStatsFilter,
+    /// How many records came from a source the filter does not read (R378).
+    pub other_sources: usize,
+    /// One group per patch, mode and source, in the order a record of it was first read.
+    pub groups: Vec<GameGroup>,
+}
+
+/// R1256000's counts of one game, both seats added.
+#[derive(Clone, Copy, Default)]
+struct Counts {
+    fatigue_draws: i32,
+    fatigue_damage: i32,
+    traps_set: i32,
+    traps_fired: i32,
+}
+
+/// R1256000: a game's counts, or `None` when either seat's record lacks one (written before them).
+fn counts(game: &GameSummary) -> Option<Counts> {
+    let mut sum = Counts::default();
+    for seat in PLAYER_IDS {
+        let seat = &game.seats[seat];
+        sum.fatigue_draws += seat.fatigue_draws?;
+        sum.fatigue_damage += seat.fatigue_damage?;
+        sum.traps_set += seat.traps_set?;
+        sum.traps_fired += seat.traps_fired?;
+    }
+    Some(sum)
+}
+
+/// One group's figures over its records, which are never none.
+fn game_group(key: (String, GameMode, GameSource), records: &[&GameRecord]) -> GameGroup {
+    let (patch, mode, source) = key;
+    let n = records.len();
+    let draws = records
+        .iter()
+        .filter(|record| record.game.winner == Winner::Draw)
+        .count();
+    let first_wins = records
+        .iter()
+        .filter(|record| record.game.winner.player() == Some(record.game.first))
+        .count();
+    let (low, high) = wilson_interval(first_wins, n);
+
+    let mut reasons: IndexMap<GameOverReason, usize> =
+        GAME_OVER_REASONS.iter().map(|reason| (*reason, 0)).collect();
+    for record in records {
+        *reasons.entry(record.game.reason).or_default() += 1;
+    }
+
+    let mut turns: Vec<i32> = records.iter().map(|record| record.game.turns).collect();
+    turns.sort_unstable();
+    let turn_quartiles = std::array::from_fn(|cut| turns[((cut + 1) * n).div_ceil(QUARTERS) - 1]);
+
+    let known: Vec<Counts> = records.iter().filter_map(|record| counts(&record.game)).collect();
+    let counted = known.len();
+    let any = counted > 0;
+    let fatigue_games = known.iter().filter(|counts| counts.fatigue_draws > 0).count();
+    let damage: i32 = known.iter().map(|counts| counts.fatigue_damage).sum();
+    let traps_set: i32 = known.iter().map(|counts| counts.traps_set).sum();
+    let traps_fired: i32 = known.iter().map(|counts| counts.traps_fired).sum();
+    GameGroup {
+        patch,
+        mode,
+        source,
+        games: n,
+        draws,
+        first_wins,
+        first_share: arena::round_share(first_wins as f64 / n as f64),
+        first_low: arena::round_share(low),
+        first_high: arena::round_share(high),
+        reasons,
+        turn_quartiles,
+        counted,
+        fatigue_games: any.then_some(fatigue_games),
+        fatigue_share: any.then(|| arena::round_share(fatigue_games as f64 / counted as f64)),
+        fatigue_damage_mean: any.then(|| arena::round_share(f64::from(damage) / counted as f64)),
+        traps_set: any.then_some(traps_set),
+        traps_fired: any.then_some(traps_fired),
+        traps_fired_per_set: (any && traps_set > 0)
+            .then(|| arena::round_share(f64::from(traps_fired) / f64::from(traps_set))),
+    }
+}
+
+/// The game figures over the records the filter reads: a game counts as `CardStatsReport.games`
+/// counts it (the filter's source, mode and patch, and a seat its pilot reads), and a record of a
+/// source the filter does not read is only tallied (R378).
+pub fn game_report(records: &[GameRecord], filter: &CardStatsFilter) -> GameReport {
+    let sources = sources_of(filter.source);
+    let mut other_sources = 0;
+    let mut grouped: IndexMap<(String, GameMode, GameSource), Vec<&GameRecord>> = IndexMap::new();
+    for record in records {
+        if !sources.contains(&record.source) {
+            other_sources += 1;
+        } else if record_matches(record, filter) && !seats_counted(record, filter.pilot).is_empty() {
+            grouped
+                .entry((record.patch.clone(), record.mode, record.source))
+                .or_default()
+                .push(record);
+        }
+    }
+    GameReport {
+        filter: filter.clone(),
+        other_sources,
+        groups: grouped
+            .into_iter()
+            .map(|(key, records)| game_group(key, &records))
+            .collect(),
+    }
+}
+
+/// The game report as `stats report --games` prints it: lines of text, or JSON.
+pub fn render_games(report: &GameReport, json: bool) -> String {
+    if json {
+        return serde_json::to_string_pretty(report).unwrap_or_default();
+    }
+    let mut lines = vec![format!("Games: {}.", describe_filter(&report.filter))];
+    if report.groups.is_empty() {
+        lines.push("No game the filter reads.".to_string());
+    }
+    for group in &report.groups {
+        let GameGroup {
+            patch,
+            mode,
+            source,
+            games,
+            ..
+        } = group;
+        lines.push(String::new());
+        lines.push(format!(
+            "{patch} {mode} {source}: {games} games, {} drawn",
+            group.draws
+        ));
+        lines.push(format!(
+            "  first seat won {} of {games}: {}, 95% interval {} to {}",
+            group.first_wins,
+            percent(group.first_share),
+            percent(group.first_low),
+            percent(group.first_high)
+        ));
+        let endings: Vec<String> = group
+            .reasons
+            .iter()
+            .filter(|(_, count)| **count > 0)
+            .map(|(reason, count)| format!("{reason} {count}"))
+            .collect();
+        lines.push(format!("  endings: {}", endings.join(", ")));
+        let [first, second, third] = group.turn_quartiles;
+        lines.push(format!("  turns, quartiles: {first}, {second}, {third}"));
+        if group.counted == 0 {
+            lines.push(
+                "  fatigue and traps: unknown, no record of these games carries R1256000's counts"
+                    .to_string(),
+            );
+            continue;
+        }
+        lines.push(format!(
+            "  fatigue: a draw from an empty library in {} of {} games ({}), {:.*} damage a game",
+            group.fatigue_games.unwrap_or_default(),
+            group.counted,
+            percent(group.fatigue_share.unwrap_or_default()),
+            MEAN_DECIMALS,
+            group.fatigue_damage_mean.unwrap_or_default()
+        ));
+        lines.push(match group.traps_fired_per_set {
+            Some(per_set) => format!(
+                "  traps: {} fired of {} set, {:.*} a set",
+                group.traps_fired.unwrap_or_default(),
+                group.traps_set.unwrap_or_default(),
+                MEAN_DECIMALS,
+                per_set
+            ),
+            None => "  traps: none set".to_string(),
+        });
+        if group.counted < *games {
+            lines.push(format!(
+                "  (fatigue and traps over the {} of {games} games whose records carry R1256000's counts)",
+                group.counted
+            ));
+        }
+    }
+    if report.other_sources > 0 {
+        lines.push(String::new());
+        lines.push(format!(
+            "Left out: {} records of a source --source={} does not read (R378).",
+            report.other_sources, report.filter.source
+        ));
+    }
+    lines.join("\n")
+}
+
 /// `cargo jackioh stats report`.
 fn run_report(args: &ReportArgs) -> Result<()> {
+    if args.games {
+        let report = game_report(&read_records(&args.files)?, &filter_of(args));
+        println!("{}", render_games(&report, args.json));
+        return Ok(());
+    }
     jackioh_cards::register_all();
     let report = report(args)?;
     println!(
@@ -674,6 +936,7 @@ mod tests {
                 patch: None,
                 pilot: None,
                 card: None,
+                games: false,
                 json: false,
             }
         );
@@ -699,6 +962,10 @@ mod tests {
             (Some("v0.2.5"), Some("core-001"), true)
         );
 
+        // --games asks for the game figures and does not go with one card's row.
+        assert!(report_args(&["a.jsonl", "--games"]).unwrap().games);
+        assert!(report_args(&["a.jsonl", "--games", "--card=core-001"]).is_err());
+
         // A report names files, and a run's options are not a report's.
         assert!(report_args(&[]).is_err());
         assert!(report_args(&["a.jsonl", "--games=3"]).is_err());
@@ -710,6 +977,185 @@ mod tests {
         assert!(report_args(&["a.jsonl", "--pilot=robot"]).is_err());
         assert!(parse(&["--games=3", "report", "a.jsonl"]).is_err());
         assert_eq!(parse(&["--games=3"]).unwrap().command, None);
+    }
+
+    /// A development game of random mode played by two AIs, first seat p1, as a line of JSON.
+    /// `counts` is each seat's `[fatigueDraws, fatigueDamage, trapsSet, trapsFired]` (R1256000), or
+    /// none for a record written before them.
+    fn game_line(
+        id: &str,
+        patch: &str,
+        winner: &str,
+        reason: &str,
+        turns: i32,
+        counts: Option<[[i32; 4]; 2]>,
+    ) -> String {
+        let seat = |n: usize| {
+            let mut seat =
+                serde_json::json!({ "deck": ["core-001"], "opening": [], "drawn": [], "played": [] });
+            if let Some(counts) = counts {
+                let [fatigue_draws, fatigue_damage, traps_set, traps_fired] = counts[n];
+                seat["fatigueDraws"] = fatigue_draws.into();
+                seat["fatigueDamage"] = fatigue_damage.into();
+                seat["trapsSet"] = traps_set.into();
+                seat["trapsFired"] = traps_fired.into();
+                seat["positionSwitches"] = 0.into();
+                seat["radiantUpgrades"] = 0.into();
+            }
+            seat
+        };
+        serde_json::json!({
+            "id": id,
+            "source": "dev",
+            "mode": "random",
+            "patch": patch,
+            "pilots": { "p1": "ai", "p2": "ai" },
+            "game": {
+                "first": "p1",
+                "winner": winner,
+                "reason": reason,
+                "turns": turns,
+                "seats": { "p1": seat(0), "p2": seat(1) }
+            }
+        })
+        .to_string()
+    }
+
+    /// Four development games of two patches, one drawn, one at the turn cap, two without
+    /// R1256000's counts, and one live game.
+    fn game_lines() -> Vec<String> {
+        vec![
+            game_line(
+                "dev:v0.2.5:dev:1",
+                "v0.2.5",
+                "p1",
+                "hero-death",
+                9,
+                Some([[0, 0, 2, 1], [2, 3, 1, 0]]),
+            ),
+            game_line(
+                "dev:v0.2.5:dev:2",
+                "v0.2.5",
+                "draw",
+                "turn-cap",
+                40,
+                Some([[0; 4]; 2]),
+            ),
+            game_line("dev:v0.2.5:dev:3", "v0.2.5", "p2", "hero-death", 12, None),
+            game_line("dev:v0.2.4:dev:1", "v0.2.4", "p1", "alt-win", 15, None),
+            record_line("m1", "live", "bo1", "p1", &["core-002"]),
+        ]
+    }
+
+    /// The game report of `game_lines` under `stats report --games` and these flags.
+    fn games_of(flags: &[&str]) -> GameReport {
+        let args = report_args(&[&["a.jsonl", "--games"], flags].concat()).unwrap();
+        game_report(
+            &parse_game_record_lines(&game_lines().join("\n")).unwrap(),
+            &filter_of(&args),
+        )
+    }
+
+    #[test]
+    fn games_report_json_counts_a_draw_a_turn_cap_and_a_record_written_before_the_counts() {
+        let report = games_of(&["--source=dev"]);
+        assert_eq!(
+            render_games(&report, true),
+            serde_json::to_string_pretty(&report).unwrap()
+        );
+        let reasons = |counts: &[(&str, i32)]| {
+            let mut all = serde_json::json!({
+                "hero-death": 0, "both-heroes-dead": 0, "concede": 0, "draw-accepted": 0, "turn-cap": 0,
+                "disconnect": 0, "match-ceiling": 0, "voided": 0, "alt-win": 0, "won-by-effect": 0
+            });
+            for (reason, count) in counts {
+                all[reason] = (*count).into();
+            }
+            all
+        };
+        // Compared as values: serde_json reads a float back to within an ulp of the one written.
+        assert_eq!(
+            serde_json::to_value(&report).unwrap(),
+            serde_json::json!({
+                "filter": { "source": "dev", "mode": null, "patch": null, "pilot": "unified" },
+                "otherSources": 1,
+                "groups": [
+                    {
+                        "patch": "v0.2.5", "mode": "random", "source": "dev",
+                        "games": 3, "draws": 1, "firstWins": 1,
+                        "firstShare": 0.333, "firstLow": 0.061, "firstHigh": 0.792,
+                        "reasons": reasons(&[("hero-death", 2), ("turn-cap", 1)]),
+                        "turnQuartiles": [9, 12, 40],
+                        "counted": 2, "fatigueGames": 1, "fatigueShare": 0.5, "fatigueDamageMean": 1.5,
+                        "trapsSet": 3, "trapsFired": 1, "trapsFiredPerSet": 0.333
+                    },
+                    {
+                        "patch": "v0.2.4", "mode": "random", "source": "dev",
+                        "games": 1, "draws": 0, "firstWins": 1,
+                        "firstShare": 1.0, "firstLow": 0.207, "firstHigh": 1.0,
+                        "reasons": reasons(&[("alt-win", 1)]),
+                        "turnQuartiles": [15, 15, 15],
+                        "counted": 0, "fatigueGames": null, "fatigueShare": null, "fatigueDamageMean": null,
+                        "trapsSet": null, "trapsFired": null, "trapsFiredPerSet": null
+                    }
+                ]
+            })
+        );
+    }
+
+    #[test]
+    fn games_report_text_names_the_filter_each_group_and_what_it_left_out() {
+        let text = render_games(&games_of(&["--source=dev"]), false);
+        let expected = [
+            "Games: AI development runs, every mode, every patch, human and AI pilots (unified).",
+            "",
+            "v0.2.5 random dev: 3 games, 1 drawn",
+            "  first seat won 1 of 3: 33.3%, 95% interval 6.1% to 79.2%",
+            "  endings: hero-death 2, turn-cap 1",
+            "  turns, quartiles: 9, 12, 40",
+            "  fatigue: a draw from an empty library in 1 of 2 games (50.0%), 1.50 damage a game",
+            "  traps: 1 fired of 3 set, 0.33 a set",
+            "  (fatigue and traps over the 2 of 3 games whose records carry R1256000's counts)",
+            "",
+            "v0.2.4 random dev: 1 games, 0 drawn",
+            "  first seat won 1 of 1: 100.0%, 95% interval 20.7% to 100.0%",
+            "  endings: alt-win 1",
+            "  turns, quartiles: 15, 15, 15",
+            "  fatigue and traps: unknown, no record of these games carries R1256000's counts",
+            "",
+            "Left out: 1 records of a source --source=dev does not read (R378).",
+        ];
+        assert_eq!(text, expected.join("\n"));
+    }
+
+    #[test]
+    fn games_report_reads_the_records_the_card_report_reads() {
+        let groups = |flags: &[&str]| -> Vec<String> {
+            games_of(flags)
+                .groups
+                .iter()
+                .map(|group| format!("{} {} {}", group.patch, group.mode, group.source))
+                .collect()
+        };
+        let both_dev = ["v0.2.5 random dev", "v0.2.4 random dev"];
+
+        // R378: live games unless a development run is named.
+        assert_eq!(groups(&[]), ["v0.2.5 bo1 live"]);
+        assert_eq!(games_of(&[]).other_sources, 4);
+        assert_eq!(
+            groups(&["--source=all"]),
+            ["v0.2.5 random dev", "v0.2.4 random dev", "v0.2.5 bo1 live"]
+        );
+        assert_eq!(groups(&["--source=all", "--patch=v0.2.4"]), ["v0.2.4 random dev"]);
+        assert_eq!(games_of(&["--source=all", "--patch=v0.2.4"]).other_sources, 0);
+        assert_eq!(groups(&["--source=all", "--mode=bo1"]), ["v0.2.5 bo1 live"]);
+        // A game counts when a seat its pilot reads is in it.
+        assert_eq!(groups(&["--source=all", "--pilot=human"]), ["v0.2.5 bo1 live"]);
+        assert_eq!(groups(&["--source=all", "--pilot=ai"]), both_dev);
+
+        let none = games_of(&["--patch=v0.0.1"]);
+        assert!(none.groups.is_empty());
+        assert!(render_games(&none, false).contains("No game the filter reads."));
     }
 
     #[test]

@@ -282,8 +282,8 @@ login and opens no pull request. Each cycle:
    every game's detail.
 4. Append the batch to `~/training-out/gather/<date>.jsonl`, advancing the cursor first, so a batch
    the loop never finished is played again and none is appended twice (`stats-import` skips the ids it
-   holds, too), and rewrite the patch's card figures, `cards-<patch>.txt` and `.json`, from every game
-   the lane's files hold.
+   holds, too), and rewrite the patch's card figures, `cards-<patch>.txt` and `.json`, and its game
+   figures, `games-<patch>.txt` and `.json`, from every game the lane's files hold.
 5. Sleep `TRAIN_PAUSE_SECONDS` (60) and repeat.
 
 The records are `source: "dev"`, mode `random`, both pilots `ai`, with the id
@@ -310,7 +310,9 @@ does this once:
 ```sh
 tail -f ~agent-train-gather/logs/gather.log
 cat ~agent-train-gather/training-out/gather/cards-<patch>.txt     # the patch's card figures, a row per card
+cat ~agent-train-gather/training-out/gather/games-<patch>.txt     # the first seat's wins, the endings, the turns
 cargo jackioh stats report --source=dev --patch <patch> ~agent-train-gather/training-out/gather/*.jsonl
+cargo jackioh stats report --games --source=dev --patch <patch> ~agent-train-gather/training-out/gather/*.jsonl
 jackioh-server stats-cards --source=dev --patch=<patch>           # the same, from Postgres, once loaded
 jackioh-server stats-cards --source=dev --patch=<patch> --card=<id> --json
 jackioh-server stats-cards --patch=<patch>                        # that patch's live games, human seats
@@ -323,6 +325,12 @@ played it, and its played delta (the played win rate less the drawn-but-not-play
 card's play rate is its played games over its in-deck games, both printed in the row. `--json` has the
 same figures as numbers, and `stats-cards --source=all` reads both sources at once. Development and
 live games are never added together unless asked (R378, R1451).
+
+The game figures say how often the first seat won (with the 95% interval of that share), how the games
+ended and how many turns they took, and, for the games whose records carry R1256000's counts, how many games had a
+draw from an empty library and how many Traps fired of those set; an older record is unknown for those, not
+zero. They are AI-against-AI figures: the first seat's edge between two AIs is not the people's, so a seat
+decision rests on them only with that in view.
 
 ### Live games
 
@@ -377,7 +385,7 @@ never edits `crates/server`, and a promotion does not wait for it.
 | Every game the arena plays (a promotion run or an experiment): one `GameRecord` (R376) per line, `source: "dev"`, `mode: "random"` | `~/training-out/<lane>/<date>.jsonl` (`$JACKIOH_TRAINING_OUT`; `arena` without it prints to stdout) |
 | The same records in Postgres, loaded once per finished day when the box has `DATABASE_URL`: folded into the card statistics' totals as they load, each record's detail kept a week (R1044000, R1044001) | `jackioh-server stats-import`, read back with `jackioh-server stats-cards --source=dev` (the totals) or `stats-export --source=dev` (the last week's records) |
 | The gather lane's records: one `GameRecord` per line, a file a day | `~/training-out/gather/<date>.jsonl` |
-| The gather lane's next game number for a patch, and that patch's card figures, rewritten each cycle | `~/training-out/gather/cursor-<patch>`, `cards-<patch>.txt` and `cards-<patch>.json` |
+| The gather lane's next game number for a patch, and that patch's card figures and game figures, rewritten each cycle | `~/training-out/gather/cursor-<patch>`, `cards-<patch>.txt` and `.json`, `games-<patch>.txt` and `.json` |
 | The days already loaded into Postgres (each lane's `~/training-out/<lane>/`) | `imported.txt` |
 | A promotion's gate numbers | `training/history/<lane>.jsonl` and `crates/ai/generation.json`, committed with it |
 | The latest pass of the gate (any mode, failed ones included), in Markdown: the top of the lane's draft pull request | `~/training-out/<lane>/last-pass.md`, rewritten by every run of `promote` |
