@@ -10278,8 +10278,10 @@
     "what": "plan #1296 on claude-5"
   },
   "last_sweep": {
-    "at": "2026-10-19T13:28:52Z",
-    "notes": [],
+    "at": "2026-10-19T13:41:39Z",
+    "notes": [
+      "started a night run, as a lane was free: #1314 conflicts with main"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
