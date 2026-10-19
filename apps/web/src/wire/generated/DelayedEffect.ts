@@ -32,4 +32,15 @@ watch?: string,
  * reads the ones still watched (`effects::delay::HAND_WATCH_KEY`). Absent on every other entry,
  * so a game that never watches a hand hashes as it did before this field existed (D14).
  */
-handWatch?: Array<string>, };
+handWatch?: Array<string>, 
+/**
+ * R1181000 (Meditative+ #4 Supply Drop's "in 3 turns"): the `turns_started` count of `at.player`
+ * at which the entry comes due, so it waits through that player's turns before then. Absent on
+ * every other entry (D14).
+ */
+dueOwnTurn?: number, 
+/**
+ * R1181000: the caption of the countdown badge an entry with `due_own_turn` shows its owner's side
+ * in both views while it waits (R169). Absent: no badge.
+ */
+label?: string, };

@@ -61,7 +61,7 @@ played-and-won 9.9% of the time over 111 games, med-003 39.8%.
 **What a network can add that the lane could not:**
 
 1. **A worth per card, learned from games.** A feature per card id and zone (on the board, in the own
-   hand, in the own readable backrow) lets the network learn what each of the 370 cards and 80
+   hand, in the own readable backrow) lets the network learn what each of the 396 cards and 84
    tokens is worth beyond its stats, in context, from outcomes. The lane has tried writing such
    terms by hand three times, and each read zero. A learned per-card worth needs nobody to write the
    right formula for each card. It also retrains when a patch changes a card.
@@ -159,7 +159,7 @@ decisions per seat, so about 70 decision positions a game. Fitting a small netwo
 any CPU.
 
 A useful first dataset is about **100,000 games**. Each card then appears in about 10,000 of them
-(40 of 370 cards dealt a game), enough for D5's per-card worth.
+(40 of 396 cards dealt a game), enough for D5's per-card worth.
 
 | Option | Games an hour | 100,000 games take | Cost | Fits because | Against |
 |---|---|---|---|---|---|

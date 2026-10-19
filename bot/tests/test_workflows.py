@@ -177,6 +177,96 @@ class NightWorkflowTests(unittest.TestCase):
         self.assertLessEqual(timeout, 360)
 
 
+def step(text: str, head: str) -> str:
+    """The block of the one step that starts `- <head>`, to the next step at the same indent."""
+    match = re.search(rf"^      - {re.escape(head)}\n(.*?)(?=^      - |\Z)", text, re.M | re.S)
+    if not match:
+        raise AssertionError(f"no step {head}")
+    return match.group(1)
+
+
+def script(text: str, name: str) -> str:
+    """The `run: |` script of the step named `name`, its comments after it left out."""
+    lines = step(text, f"name: {name}").split("\n")
+    start = next(i for i, line in enumerate(lines) if line.strip() == "run: |") + 1
+    body = []
+    for line in lines[start:]:
+        if line.strip() and not line.startswith(" " * 10):
+            break
+        body.append(line)
+    return "\n".join(body).rstrip()
+
+
+def inputs(text: str, action: str) -> dict[str, str]:
+    """The `with:` inputs of the one step that uses `action`."""
+    block = re.search(r"^        with:\n((?:^          .*\n)+)", step(text, f"uses: {action}"), re.M)
+    return dict(re.findall(r"^          ([\w-]+): (.*)$", block.group(1), re.M))
+
+
+class BuildCacheWorkflowTests(unittest.TestCase):
+    """bot-cache.yml saves the Rust cache the model job restores on GitHub's runners (#1263): only
+    from main, with no model and no secret, keyed as the model job keys it, and holding what the
+    gates compile."""
+
+    cache = read("bot-cache.yml")
+    work = job(read("bot-night.yml"), "work")
+    RUST_CACHE = "Swatinem/rust-cache@v2"
+
+    def test_main_alone_saves_it_with_no_secret_and_no_pull_request_code(self):
+        self.assertNotIn("secrets", self.cache)
+        self.assertNotRegex(self.cache, r"(?m)^  pull_request", "a pull request's code must not write it")
+        self.assertIn("branches: [main]", self.cache)
+        self.assertRegex(self.cache, r"(?m)^permissions:\n  contents: read\n")
+        self.assertEqual(inputs(self.cache, self.RUST_CACHE)["save-if"],
+                         "${{ github.ref == 'refs/heads/main' }}")
+        self.assertEqual(self.cache.count("persist-credentials: false"),
+                         self.cache.count("uses: actions/checkout@"))
+
+    def test_the_model_job_restores_and_never_saves(self):
+        """A model ran in that job: what it left must not reach a later job, on another
+        subscription, through the cache."""
+        self.assertEqual(inputs(self.work, self.RUST_CACHE)["save-if"], "false")
+        self.assertIn("uses: actions/cache/restore@", self.work)
+        self.assertNotRegex(self.work, r"uses: actions/cache(/save)?@")
+        for head in (f"uses: {self.RUST_CACHE}", "uses: actions/cache/restore@v4",
+                     "name: The night bot's build directories", "name: Only the pinned toolchain"):
+            self.assertIn("if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')",
+                          step(self.work, head).split("\n", 1)[0], head)
+
+    def test_both_key_the_entry_alike(self):
+        """rust-cache keys its entry on the environment, every toolchain rustup has and its own
+        inputs, so a difference in any of them is a cache the model job never hits."""
+        for name in ("The night bot's build directories", "Only the pinned toolchain"):
+            self.assertEqual(script(self.work, name), script(self.cache, name), name)
+            for text in (self.work, self.cache):
+                self.assertLess(text.index(f"- name: {name}"), text.index(self.RUST_CACHE), name)
+        ours, theirs = inputs(self.work, self.RUST_CACHE), inputs(self.cache, self.RUST_CACHE)
+        ours.pop("save-if")
+        theirs.pop("save-if")
+        self.assertEqual(ours, theirs)
+        setup = (config.REPO_ROOT / ".github" / "actions" / "setup" / "action.yml").read_text(
+            encoding="utf-8")
+        self.assertIn("for toolchain in $(rustup toolchain list --quiet); do", setup)
+
+    def test_it_builds_what_the_gates_compile(self):
+        gates = {gate.name: gate.run for gate in config.load(env={}).gates}
+        # A gate that compiles something new needs a step here too.
+        used = {sub for run in gates.values() for sub in re.findall(r"\bcargo (\w+)", run)}
+        self.assertEqual(used, {"fmt", "jackioh", "clippy", "test"})
+        aliases = (config.REPO_ROOT / ".cargo" / "config.toml").read_text(encoding="utf-8")
+        self.assertIn('jackioh = "run --release -p jackioh-tools --"', aliases)
+        self.assertIn("run: cargo build --release -p jackioh-tools\n", self.cache)
+        self.assertEqual(gates["clippy"], "cargo clippy --workspace --all-targets -- -D warnings")
+        self.assertIn("run: cargo clippy --workspace --all-targets\n", self.cache)
+        tests = gates["cargo tests"].split(" && ")[0]
+        self.assertIn(f"run: {tests} --no-run\n", self.cache)
+        self.assertTrue(gates["web tests"].startswith("sh scripts/build-wasm.sh && "))
+        self.assertIn("run: sh scripts/build-wasm.sh\n", self.cache)
+
+    def test_actionlint_reads_it(self):
+        self.assertIn(".github/workflows/bot-cache.yml", read("bot-selftest.yml"))
+
+
 class CommandsWorkflowTests(unittest.TestCase):
     text = read("bot-commands.yml")
 

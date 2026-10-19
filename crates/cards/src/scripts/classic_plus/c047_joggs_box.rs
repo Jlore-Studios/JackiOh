@@ -252,10 +252,17 @@ mod tests {
             assert!(!seen.contains(BOX));
             assert!(defs.iter().all(|entry| entry.type_ == CardType::Spell && !entry.token));
             let sets: IndexSet<SetName> = defs.iter().map(|entry| entry.set).collect();
-            // Re-pinned for v0.3.5: the Meditative set joins the pool.
+            // Re-pinned for v0.3.5: the Meditative set joins the pool; and for v0.3.15 (Meditative+ ships,
+            // #1187): the Meditative+ set joins it.
             assert_eq!(
                 sets,
-                IndexSet::from([SetName::Core, SetName::Classic, SetName::ClassicPlus, SetName::Meditative])
+                IndexSet::from([
+                    SetName::Core,
+                    SetName::Classic,
+                    SetName::ClassicPlus,
+                    SetName::Meditative,
+                    SetName::MeditativePlus,
+                ])
             );
         }
 

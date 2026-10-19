@@ -15,8 +15,8 @@
 //! 2X/2X; none at X = 0. Both faces run the same script: the steps read the face that cast it.
 //! Declares no numbers.
 //!
-//! Voice audio is owed until the set ships (R1420): the `card-audio.json5` entry is written, and the
-//! release renders it (`[gen:voice]`, R1448).
+//! Voice audio is owed with the patch that ships the set (R1420): the `card-audio.json5` entry is
+//! written, and the release renders it (`[gen:voice]`, R1448).
 
 use jackioh_engine::prelude::*;
 

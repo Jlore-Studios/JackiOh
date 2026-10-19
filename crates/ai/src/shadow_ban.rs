@@ -49,6 +49,17 @@
 //! ones. It filled `SHADOW_BAN` (31 of the 102, every one for `timeout`) and lifted the gate.
 //! training/history/sweep-2026-10-12.md has the report and what the timeouts measured.
 //!
+//! Sweep of record for the Meditative+ set (#1186, part of #1173): 2026-10-18 (UTC), `cargo jackioh
+//! sweep` on `e1f7728` (`main` at `13e527a` with Meditative+ batches 01 and 03 merged), every set
+//! previewed (R1420), pass 1 over the 26 Meditative+ card(s) at easy and hard, 8 seeds each
+//! (`sweep:<tier>:<id>:<n>`), pass 2 over 11 at-risk card(s), 24 seeds each
+//! (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET as above, in three lanes. It
+//! swept the Meditative+ set alone (R1186000): a card takes the row of the latest report that lists
+//! it, so the Meditative bans stand and `SHADOW_WATCH` gains this sweep's 11 Meditative+ rows. It banned
+//! none of the 26 (no game had an error or a timeout, and every pass-1 `neverPlayed` cleared in pass
+//! 2), so the AI deals itself the whole set, generation 12 unchanged. training/history/sweep-2026-10-18.md
+//! has the report.
+//!
 //! Port of `packages/ai/src/shadowBan.ts` (SURFACE §9): TS's `Record<string, string>` is a slice of
 //! `(defId, reason)` pairs sorted by id, the order `Object.keys` gave it.
 
@@ -57,6 +68,8 @@
 // Sweep of record: 2026-10-07 (UTC), `cargo jackioh sweep`, pass 1 over 268 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 91 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // Report of record: training/history/sweep-2026-10-12.md
 // Sweep of record: 2026-10-12 (UTC), `cargo jackioh sweep`, pass 1 over 102 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 22 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
+// Report of record: training/history/sweep-2026-10-18.md
+// Sweep of record: 2026-10-18 (UTC), `cargo jackioh sweep`, pass 1 over 26 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 11 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // END `cargo jackioh sweep --write`
 
 /// R186: defId → why the AI never deals it to itself. Each reason starts "<SweepFlag>: <tier>: ".
@@ -237,6 +250,10 @@
 /// Dealt at stock weight and not in `UNBANNED_PREFER`, on the generations
 /// 4–7 precedent: none of the four shows the kind of sweep numbers a tripled
 /// deal is justified by.
+///
+/// #1186's sweep of the Meditative+ set (R1186000) banned none of its 26
+/// cards, so the seventeen stand as generation 12 left them, and the set's
+/// 11 at-risk cards are watched.
 pub const SHADOW_BAN: &[(&str, &str)] = &[
     (
         "meditative-011",
@@ -319,11 +336,12 @@ pub const SHADOW_BAN_IDS: &[&str] = &{
     ids
 };
 
-/// R732000: the ids the unban lane has removed from the newest report of record's `SHADOW_BAN`
+/// R732000, R1186000: the ids the unban lane has removed from the reports of record's `SHADOW_BAN`
 /// entries, sorted by id (generation 10: 021, 033, 047, 051, 063, 073, 092; 11: 041, 067, 080; 12:
 /// 006, 016, 045, 068; the notes above `SHADOW_BAN`). `cargo jackioh sweep --write` leaves their rows
-/// out of `SHADOW_BAN`. The lane unbans a card by adding its id here and running
-/// `cargo jackioh sweep --write`; a new sweep of record starts with this list empty.
+/// out of `SHADOW_BAN`, and refuses an id no report of record bans. The lane unbans a card by adding
+/// its id here and running `cargo jackioh sweep --write`; a new sweep of a set drops its own ids from
+/// this list.
 pub const SHADOW_UNBANNED: &[&str] = &[
     "meditative-006",
     "meditative-016",
@@ -678,6 +696,50 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
     (
         "meditative-098",
         "at risk: easy: pass 1 affordable on 19 turns over 8 games, played 1 time(s), mean evaluate change -1.6",
+    ),
+    (
+        "meditativeplus-002",
+        "at risk: hard: pass 1 affordable on 8 turns over 8 games, never played",
+    ),
+    (
+        "meditativeplus-003",
+        "at risk: hard: pass 1 affordable on 16 turns over 8 games, played 1 time(s), mean evaluate change 1.3",
+    ),
+    (
+        "meditativeplus-004",
+        "at risk: easy: pass 1 affordable on 13 turns over 8 games, played 1 time(s), mean evaluate change -1.6; hard: pass 1 affordable on 21 turns over 8 games, never played",
+    ),
+    (
+        "meditativeplus-005",
+        "at risk: hard: pass 1 affordable on 12 turns over 8 games, played 1 time(s), mean evaluate change 3.1",
+    ),
+    (
+        "meditativeplus-006",
+        "at risk: easy: pass 1 affordable on 7 turns over 8 games, never played",
+    ),
+    (
+        "meditativeplus-013",
+        "at risk: hard: pass 1 affordable on 3 turns over 8 games, played 1 time(s), mean evaluate change 6.8",
+    ),
+    (
+        "meditativeplus-014",
+        "at risk: hard: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 1.3",
+    ),
+    (
+        "meditativeplus-020",
+        "at risk: easy: pass 1 affordable on 16 turns over 8 games, played 1 time(s), mean evaluate change -1.6",
+    ),
+    (
+        "meditativeplus-022",
+        "at risk: hard: pass 1 affordable on 4 turns over 8 games, never played",
+    ),
+    (
+        "meditativeplus-023",
+        "at risk: hard: pass 1 affordable on 14 turns over 8 games, never played",
+    ),
+    (
+        "meditativeplus-025",
+        "at risk: hard: pass 1 affordable on 5 turns over 8 games, played 1 time(s), mean evaluate change -1.3",
     ),
 ];
 

@@ -40,6 +40,15 @@ struct Reading {
     played: PerPlayer<Vec<String>>,
     played_turns: PerPlayer<Vec<i32>>,
     played_radiant: PerPlayer<Vec<bool>>,
+    /// R1256000: the per-seat counts, read off the events both seats see.
+    fatigue_draws: PerPlayer<i32>,
+    fatigue_damage: PerPlayer<i32>,
+    traps_set: PerPlayer<i32>,
+    traps_fired: PerPlayer<i32>,
+    position_switches: PerPlayer<i32>,
+    radiant_upgrades: PerPlayer<i32>,
+    /// R1256000: every instance id whose `radiantSet` already counted an upgrade.
+    radiant_seen: IndexSet<String>,
     current_turn: i32,
 }
 
@@ -101,7 +110,7 @@ fn leave(hands: &mut Hands, instance_id: &str) {
 }
 
 /// One step's events, in the order they happened.
-fn read(reading: &mut Reading, events: &[GameEvent], after: &GameState) {
+fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: &GameState) {
     // The cards this step countered into a hand: a `cardPlayed` naming one in the same step is the
     // countering player's cast (R831001), never a play from hand.
     let mut stolen: Vec<&str> = Vec::new();
@@ -150,8 +159,33 @@ fn read(reading: &mut Reading, events: &[GameEvent], after: &GameState) {
                 reading.hands[*player].insert(instance_id.clone(), def_id.clone());
                 mark_radiant(reading, after, instance_id);
             }
+            GameEvent::Fatigue { player, amount, .. } => {
+                // R1256000: one draw for the seat that took it, and the nominal pre-Armor hit.
+                reading.fatigue_draws[*player] += 1;
+                reading.fatigue_damage[*player] += *amount;
+            }
+            GameEvent::TrapFired { controller, .. } => {
+                // R1256000: the trap's controller, whoever's effect fired it.
+                reading.traps_fired[*controller] += 1;
+            }
+            GameEvent::PositionSwitched { instance_id, .. } => {
+                // R1256000: the unit's controller; unresolvable (the unit ceased) is skipped.
+                if let Some(card) = find_instance(after, instance_id) {
+                    reading.position_switches[card.controller] += 1;
+                }
+            }
             GameEvent::RadiantSet { instance_id, .. } => {
                 reading.radiant.insert(instance_id.clone());
+                // R1256000: an instance's first cue counts for its controller when the step turned it
+                // Radiant: not Radiant before the step, Radiant after. The engine also cues a card that
+                // was Radiant already (R177), and a hidden card's re-cues dedupe to one.
+                if reading.radiant_seen.insert(instance_id.clone())
+                    && find_instance(before, instance_id).is_none_or(|card| !card.radiant)
+                    && let Some(card) = find_instance(after, instance_id)
+                    && card.radiant
+                {
+                    reading.radiant_upgrades[card.controller] += 1;
+                }
             }
             GameEvent::Deradianted { instance_id, .. } => {
                 reading.radiant.shift_remove(instance_id);
@@ -176,6 +210,10 @@ fn read(reading: &mut Reading, events: &[GameEvent], after: &GameState) {
                 let turn = reading.current_turn;
                 reading.played_turns[*player].push(turn);
                 reading.played_radiant[*player].push(reading.radiant.contains(id));
+                // R1256000, R227: a play that put the card face-down set a Trap.
+                if former_id.is_some() {
+                    reading.traps_set[*player] += 1;
+                }
                 reading.hands[*player].shift_remove(id);
             }
             GameEvent::Transformed {
@@ -243,6 +281,14 @@ fn seat_summary(
         } else {
             Some(played_radiant.clone())
         },
+        // R1256000: a fresh summary always knows the counts; `None` stays reserved for
+        // records written before the change.
+        fatigue_draws: Some(reading.fatigue_draws[player]),
+        fatigue_damage: Some(reading.fatigue_damage[player]),
+        traps_set: Some(reading.traps_set[player]),
+        traps_fired: Some(reading.traps_fired[player]),
+        position_switches: Some(reading.position_switches[player]),
+        radiant_upgrades: Some(reading.radiant_upgrades[player]),
     }
 }
 
@@ -265,6 +311,10 @@ pub fn summarize_game(input: &FoldArgs) -> Option<GameSummary> {
     });
     let hands = hands_of(&start, None);
     let radiant = radiant_of(&start, &hands);
+    fn zero() -> PerPlayer<i32> {
+        PerPlayer::new(0, 0)
+    }
+
     let mut reading = Reading {
         hands,
         radiant,
@@ -274,11 +324,18 @@ pub fn summarize_game(input: &FoldArgs) -> Option<GameSummary> {
         played: per_seat(),
         played_turns: per_seat(),
         played_radiant: per_seat(),
+        fatigue_draws: zero(),
+        fatigue_damage: zero(),
+        traps_set: zero(),
+        traps_fired: zero(),
+        position_switches: zero(),
+        radiant_upgrades: zero(),
+        radiant_seen: IndexSet::new(),
         current_turn: 1,
     };
 
     let begun = begin_game(&start);
-    read(&mut reading, &begun.events, &begun.state);
+    read(&mut reading, &begun.events, &start, &begun.state);
     let mut state = begun.state;
 
     for action in &input.log {
@@ -290,7 +347,7 @@ pub fn summarize_game(input: &FoldArgs) -> Option<GameSummary> {
         if result.error.is_some() {
             continue;
         }
-        read(&mut reading, &result.events, &result.state);
+        read(&mut reading, &result.events, &state, &result.state);
         state = result.state;
     }
 
@@ -306,4 +363,78 @@ pub fn summarize_game(input: &FoldArgs) -> Option<GameSummary> {
             seat_summary(&reading, &input.decks, PlayerId::P2, 1),
         ),
     })
+}
+
+#[cfg(all(test, feature = "testkit"))]
+mod tests {
+    use super::*;
+    use crate::testkit::{register_catalog, scenario};
+    use serde_json::json;
+
+    fn reading() -> Reading {
+        let zero = || PerPlayer::new(0, 0);
+        Reading {
+            hands: PerPlayer::new(IndexMap::new(), IndexMap::new()),
+            radiant: IndexSet::new(),
+            first: None,
+            opening: None,
+            drawn: per_seat(),
+            played: per_seat(),
+            played_turns: per_seat(),
+            played_radiant: per_seat(),
+            fatigue_draws: zero(),
+            fatigue_damage: zero(),
+            traps_set: zero(),
+            traps_fired: zero(),
+            position_switches: zero(),
+            radiant_upgrades: zero(),
+            radiant_seen: IndexSet::new(),
+            current_turn: 1,
+        }
+    }
+
+    /// core-008 "Vanilla": a hand card in a game whose catalog the engine's own tests install.
+    fn hand_card(radiant: bool) -> GameState {
+        if crate::testkit::catalog_override().is_none() {
+            let defs = serde_json::from_str(include_str!("../../cards/catalog.json"))
+                .expect("crates/cards/catalog.json parses as CardDefs");
+            register_catalog(defs);
+        }
+        scenario(json!({ "p1": { "hand": [{ "def": "core-008", "radiant": radiant }] } }))
+            .state()
+            .clone()
+    }
+
+    fn cue(state: &GameState) -> Vec<GameEvent> {
+        let card = &state.players[PlayerId::P1].hand[0];
+        vec![GameEvent::RadiantSet {
+            instance_id: card.id.clone(),
+            def_id: card.def_id.clone(),
+            zone: card.zone.clone(),
+        }]
+    }
+
+    #[test]
+    fn r1256000_a_cue_for_a_card_radiant_before_the_step_is_no_upgrade() {
+        let already = hand_card(true);
+        let mut reading = reading();
+        read(&mut reading, &cue(&already), &already, &already);
+        assert_eq!(reading.radiant_upgrades.p1, 0);
+    }
+
+    #[test]
+    fn r1256000_a_cue_for_a_card_the_step_made_radiant_is_one_upgrade() {
+        let before = hand_card(false);
+        let after = hand_card(true);
+        let mut reading = reading();
+        // The id is the scenario's first instance in both; the cue is cued twice, as a hidden card's is.
+        let events = cue(&after);
+        assert_eq!(
+            before.players[PlayerId::P1].hand[0].id,
+            after.players[PlayerId::P1].hand[0].id
+        );
+        read(&mut reading, &events, &before, &after);
+        read(&mut reading, &events, &before, &after);
+        assert_eq!(reading.radiant_upgrades.p1, 1);
+    }
 }

@@ -305,6 +305,50 @@ jobs:
         with:
           python-version: "3.13"
 
+      # On GitHub's runners only (#1263): every worktree of the job builds into the checkout's
+      # target/, which starts from bot-cache.yml's entry, and scripts/build-wasm.sh keeps
+      # wasm-bindgen and the emsdk in the checkout's .cache/, which starts from CI's emsdk entry.
+      # Both are restored and never saved: only bot-cache.yml, on main, writes the Rust entry, so
+      # nothing a model ran here reaches a later job through the cache. No debug info, as on the
+      # machine and in CI's test profile, which keeps the entry small. These lines are the same as
+      # bot-cache.yml's step of this name, since the entry's key hashes them.
+      - name: The night bot's build directories
+        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
+        run: |
+          {
+            echo "CARGO_TARGET_DIR=$GITHUB_WORKSPACE/target"
+            echo "JACKIOH_CACHE_DIR=$GITHUB_WORKSPACE/.cache"
+            echo "CARGO_PROFILE_DEV_DEBUG=0"
+            echo "CARGO_PROFILE_TEST_DEBUG=0"
+          } >> "$GITHUB_ENV"
+
+      # As .github/actions/setup does: rust-cache keys on every toolchain rustup has.
+      - name: Only the pinned toolchain
+        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
+        run: |
+          pinned=$(rustup show active-toolchain | cut -d ' ' -f 1)
+          for toolchain in $(rustup toolchain list --quiet); do
+            if [ "$toolchain" != "$pinned" ]; then rustup toolchain uninstall "$toolchain"; fi
+          done
+          rustup toolchain list
+
+      - uses: Swatinem/rust-cache@v2
+        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
+        with:
+          shared-key: night-bot-checks
+          cache-directories: .cache/bin
+          save-if: false
+
+      - name: The emsdk scripts/build-wasm.sh pins
+        id: emsdk
+        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
+        run: echo "version=$(sed -n 's/^EMSDK_VERSION="\([^"]*\)"$/\1/p' scripts/build-wasm.sh)" | tee -a "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@v4
+        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-') && steps.emsdk.outputs.version != ''
+        with:
+          path: .cache/emsdk
+          key: emsdk-${{ runner.os }}-${{ runner.arch }}-${{ steps.emsdk.outputs.version }}
+
       # Only the CLI of the subscription plan chose, and only on GitHub's runners. The provider
       # and CLI come from plan's outputs, which providers.json decides; the model never sets them.
       - name: Install the claude CLI

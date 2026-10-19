@@ -87,13 +87,12 @@ describe("R374 the landing fan is dealt at random", () => {
 });
 
 describe("R639 the rotation's pool", () => {
-  it("R639 is every non-token card of the shipped sets, Meditative included since v0.3.5, as the catalog holds it", () => {
-    const expected = Object.values(CATALOG).filter(
-      (def) => !def.token && (def.set === "Core" || def.set === "Classic" || def.set === "Classic+" || def.set === "Meditative"),
-    );
+  it("R639 is every non-token card of the shipped sets, Meditative included since v0.3.5 and Meditative+ since v0.3.15, as the catalog holds it", () => {
+    const SETS: readonly string[] = ["Core", "Classic", "Classic+", "Meditative", "Meditative+"];
+    const expected = Object.values(CATALOG).filter((def) => !def.token && SETS.includes(def.set));
     expect(ROTATION_POOL).toEqual(expected);
     expect(ROTATION_POOL.length).toBeGreaterThan(FAN_POOL.length);
-    expect(new Set(ROTATION_POOL.map((def) => def.set))).toEqual(new Set(["Core", "Classic", "Classic+", "Meditative"]));
+    expect(new Set(ROTATION_POOL.map((def) => def.set))).toEqual(new Set(SETS));
   });
 });
 
@@ -200,7 +199,7 @@ describe("R639 one rotation step", () => {
       hand = rotateFan(hand, step, random);
       for (const { def } of hand) sets.add(def.set);
     }
-    expect(sets).toEqual(new Set(["Core", "Classic", "Classic+", "Meditative"]));
+    expect(sets).toEqual(new Set(["Core", "Classic", "Classic+", "Meditative", "Meditative+"]));
   });
 });
 

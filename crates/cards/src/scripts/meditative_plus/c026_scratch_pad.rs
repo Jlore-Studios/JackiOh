@@ -14,7 +14,8 @@
 //!
 //! EXILE THIS (R178): after the mint, Scratch Pad goes to its owner's exile, not the graveyard.
 //!
-//! Voice audio is owed until the set ships (R1420, R1448): the `card-audio.json5` entry is written.
+//! Voice audio is owed with the patch that ships the set (R1420): the `card-audio.json5` entry is
+//! written, and the release renders it (`[gen:voice]`, R1448).
 
 use jackioh_engine::effects::{choose_craft, choose_number, chosen_number, chosen_recipe, craft_card, exile};
 use jackioh_engine::prelude::*;

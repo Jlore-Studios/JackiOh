@@ -68,10 +68,12 @@ mod tests {
         g.hand(P1).iter().map(|card| card.def_id.clone()).collect()
     }
 
-    /// R380: the KY tag of every set — Core #31, #51, #82, Classic+ #41, #42, #62 and Meditative #34
+    /// R380: the KY tag of every set — Core #31, #51, #82, Classic+ #41, #42, #62, Meditative #34
     /// 高考, #38 H1B Printer, #45 Knowledge Breaker, #79 Touched by KY and #87 Tatches the Totem (all
-    /// tribes) — no token, never #57. Re-pinned for v0.3.5: the Meditative set joins the pool.
-    const KY_POOL: [&str; 11] = [
+    /// tribes) and Meditative+ #20 KY's Competition and #25 KY's Intuition — no token, never #57.
+    /// Re-pinned for v0.3.5: the Meditative set joins the pool; and for v0.3.15 (Meditative+ ships,
+    /// #1187): M+ #20 and #25 join it (§8.1 #57).
+    const KY_POOL: [&str; 13] = [
         "core-031",
         "core-051",
         "core-082",
@@ -83,6 +85,8 @@ mod tests {
         "meditative-045",
         "meditative-079",
         "meditative-087",
+        "meditativeplus-020",
+        "meditativeplus-025",
     ];
 
     /// The def ids `crate::query::pool` returns (SPEC §5.1).
@@ -102,7 +106,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r380_s5_1_the_ky_pool_is_exactly_core_n31_n51_n82_classic_n41_n42_n62_and_meditative_n34_n38_n45_n79_n87() {
+        fn r380_s5_1_the_ky_pool_is_exactly_core_n31_n51_n82_classic_n41_n42_n62_meditative_n34_n38_n45_n79_n87_and_meditative_plus_n20_n25() {
             crate::register_all();
             assert_eq!(pool_ids("core-057", json!({ "tags": ["KY"] })), KY_POOL);
         }
@@ -115,13 +119,15 @@ mod tests {
             assert!(!ids.iter().any(|id| id == "core-051-1"));
             assert!(!ids.iter().any(|id| id == "classicplus-042-1"));
             assert!(!ids.iter().any(|id| id == "meditative-045-1"));
+            assert!(!ids.iter().any(|id| id == "meditativeplus-020-1"));
             assert!(!ids.iter().any(|id| id == "core-057"));
             // The KY tokens (Core #51.1, Classic+ #42.1 KY's Gift, Meditative #45.1 Knowledge Breaker
-            // Prime) are only reachable by naming the token pool, which this card never does. Re-pinned
-            // for v0.3.5: the Meditative set joins the pool.
+            // Prime, Meditative+ #20.1 Lil' Kenny) are only reachable by naming the token pool, which
+            // this card never does. Re-pinned for v0.3.5: the Meditative set joins the pool; and for
+            // v0.3.15 (Meditative+ ships, #1187): M+ #20.1 joins the token pool.
             assert_eq!(
                 query_ids(json!({ "tags": ["KY", "Token"] })),
-                ["core-051-1", "classicplus-042-1", "meditative-045-1"]
+                ["core-051-1", "classicplus-042-1", "meditative-045-1", "meditativeplus-020-1"]
             );
         }
     }

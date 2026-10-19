@@ -150,6 +150,9 @@ attribution is required when they play in the game.
 | `intro-meditative-097` | `apps/web/public/audio/music/intro-meditative-097.m4a` | Intro of Meditative #97 Jlockeed's Evil Blueprints (Mythic): synth brass, strings, contrabass, C minor, 4/4 at 112 | 5.3 s |
 | `intro-meditative-097-8` | `apps/web/public/audio/music/intro-meditative-097-8.m4a` | Intro of Meditative #97.8 Prison (token printed Legendary): trombone, string tremolo, contrabass, B-flat harmonic minor, 4/4 at 105 | 5.6 s |
 | `intro-meditative-097-9` | `apps/web/public/audio/music/intro-meditative-097-9.m4a` | Intro of Meditative #97.9 Jlockeed's Headquarters (token printed Mythic): synth brass, strings, contrabass, A-flat dorian, 4/4 at 109 | 5.4 s |
+| `intro-meditativeplus-001` | `apps/web/public/audio/music/intro-meditativeplus-001.m4a` | Intro of Meditative+ #1 Bob's Plan (Mythic): pan flute, harp, double bass, D major, 4/4 at 120 | 5.0 s |
+| `intro-meditativeplus-024` | `apps/web/public/audio/music/intro-meditativeplus-024.m4a` | Intro of Meditative+ #24 Bob, Wisconsin's Strongest Soldier (Legendary): trumpet, brass, tuba, B-flat major, 4/4 at 112 | 5.3 s |
+| `intro-meditativeplus-026` | `apps/web/public/audio/music/intro-meditativeplus-026.m4a` | Intro of Meditative+ #26 Scratch Pad (Mythic): electric piano, marimba, fingered bass, E major, 4/4 at 112 | 5.3 s |
 
 ## Third-party material
 

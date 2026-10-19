@@ -22,6 +22,7 @@ pub mod learned;
 pub mod library_cards;
 pub mod lost_mana;
 pub mod match_refusal;
+pub mod meditative_plus;
 pub mod observe;
 pub mod observe_instance_data;
 pub mod outside_data;

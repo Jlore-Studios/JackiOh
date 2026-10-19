@@ -16,9 +16,9 @@
 #
 #   bash setup.sh --training
 #
-# Two users, agent-train-improve and agent-train-unban, each with its own checkout, Rust, Devin
+# Two users, agent-train-improve and agent-train-unban, each with its own checkout, Rust, Muse
 # and gh, and the systemd service jackioh-train@<lane> that runs training/loop.sh <lane> forever.
-# The box is always on: no idle stop, no runner, no starter. Each user's Devin login and GitHub
+# The box is always on: no idle stop, no runner, no starter. Each user's Muse login and GitHub
 # token are a person's to put in once (README.md, The training box). TRAIN_REPO (OWNER/REPO) is the
 # repository the lanes clone, push to and open pull requests on.
 set -euo pipefail
@@ -119,8 +119,18 @@ install_devin() {
   chmod -R a+rX /usr/local/lib/devin
 }
 
+# Meta's Muse Code CLI, into a shared directory, never updating itself: a run of this updates it.
+# Each user's own login (`muse login`) stays in that user's home.
+install_muse() {
+  mkdir -p /usr/local/lib/muse
+  curl -fsSL https://dev.meta.ai/install.sh -o "$work/muse-install.sh"
+  MUSE_INSTALL_DIR=/usr/local/lib/muse MUSE_NO_AUTO_UPDATE=1 bash "$work/muse-install.sh" >/dev/null 2>&1
+  ln -sf /usr/local/lib/muse/muse /usr/local/bin/muse
+  chmod -R a+rX /usr/local/lib/muse
+}
+
 # Node 24 (the repo's .nvmrc), and pnpm through corepack (package.json pins the version). On the
-# training box, loop.sh and Devin run the web's tests that play the AI with them before a promotion
+# training box, loop.sh and Muse run the web's tests that play the AI with them before a promotion
 # goes up (training/README.md).
 if ! node --version 2>/dev/null | grep -q '^v24\.'; then
   curl -fsSL https://deb.nodesource.com/setup_24.x | bash - >/dev/null
@@ -141,7 +151,7 @@ if [ -n "$training" ]; then
     apt-get update -qq
   fi
   apt-get install -y -qq gh >/dev/null
-  install_devin
+  install_muse
 
   # The box is always on. A box set up before as a night box (or by the old `setup.sh
   # devin-train`) has the idle stop: it goes.
@@ -160,7 +170,7 @@ if [ -n "$training" ]; then
       (cd "$home" && sudo -u "$user" -H git clone --quiet "https://github.com/$TRAIN_REPO.git" JackiOh)
     fi
     # git pushes through gh's login (what `gh auth setup-git` writes), and commits under a name of
-    # the lane's own unless a person set one: Devin commits its promotion and loop.sh rebases it.
+    # the lane's own unless a person set one: Muse commits its promotion and loop.sh rebases it.
     (cd "$home" && sudo -u "$user" -H git config --global --replace-all \
       credential.https://github.com.helper '!/usr/bin/gh auth git-credential')
     if ! (cd "$home" && sudo -u "$user" -H git config --global user.email >/dev/null); then
@@ -173,7 +183,7 @@ if [ -n "$training" ]; then
   # One lane, forever: training/loop.sh <lane> as the lane's user, from its checkout. A system
   # unit's %h is root's home whatever User= says, so the paths name the lane's home in full; the
   # loop sets JACKIOH_TRAINING_OUT to the same directory itself. RAYON_NUM_THREADS=2: three lanes'
-  # games share the box's vCPUs. DEVIN_MODEL is the knob for Devin's model.
+  # games share the box's vCPUs. MUSE_MODEL is the knob for Muse's model.
   cat > /etc/systemd/system/jackioh-train@.service <<'EOF'
 [Unit]
 Description=JackiOh AI training lane %i (training/README.md)
@@ -186,7 +196,8 @@ WorkingDirectory=/home/agent-train-%i/JackiOh
 ExecStart=/bin/sh /home/agent-train-%i/JackiOh/training/loop.sh %i
 Restart=always
 RestartSec=60
-Environment=DEVIN_MODEL=swe-2-max
+Environment=MUSE_MODEL=muse-spark-1.3-contributor
+Environment=MUSE_NO_AUTO_UPDATE=1
 Environment=RAYON_NUM_THREADS=2
 Environment=JACKIOH_TRAINING_OUT=/home/agent-train-%i/training-out/%i
 Environment=COREPACK_ENABLE_DOWNLOAD_PROMPT=0
@@ -197,7 +208,7 @@ Environment=PATH=/home/agent-train-%i/.cargo/bin:/usr/local/bin:/usr/bin:/bin
 WantedBy=multi-user.target
 EOF
   systemctl daemon-reload
-  # A lane already running keeps its Devin session; it reads a changed unit at its next restart
+  # A lane already running keeps its Muse session; it reads a changed unit at its next restart
   # (`systemctl restart jackioh-train@<lane>`).
   systemctl enable --now jackioh-train@improve jackioh-train@unban jackioh-train@gather
   apt-get clean
@@ -209,7 +220,7 @@ EOF
       "$(cd "/home/$user" && sudo -u "$user" -H "/home/$user/.cargo/bin/rustc" --version 2>&1 | awk '{print $2}')" \
       "$(cd "/home/$user" && sudo -u "$user" -H gh auth status >/dev/null 2>&1 && echo "gh logged in" || echo "gh not logged in")"
   done
-  printf '%-7s %s\n' devin "$(devin --version 2>&1 | head -1)" gh "$(gh --version 2>&1 | head -1)" \
+  printf '%-7s %s\n' muse "$(muse --version 2>&1 | head -1)" gh "$(gh --version 2>&1 | head -1)" \
     node "$(node --version 2>&1)"
   df -h / | awk 'NR==2 {print "disk: " $4 " free of " $2}'
   exit 0
@@ -237,11 +248,7 @@ npm install -g --loglevel=error @anthropic-ai/claude-code@latest @openai/codex@l
 curl -fsSL https://antigravity.google/cli/install.sh -o "$work/agy-install.sh"
 bash "$work/agy-install.sh" >/dev/null 2>&1
 install -m 755 /root/.local/bin/agy /usr/local/bin/agy
-mkdir -p /usr/local/lib/muse
-curl -fsSL https://dev.meta.ai/install.sh -o "$work/muse-install.sh"
-MUSE_INSTALL_DIR=/usr/local/lib/muse MUSE_NO_AUTO_UPDATE=1 bash "$work/muse-install.sh" >/dev/null 2>&1
-ln -sf /usr/local/lib/muse/muse /usr/local/bin/muse
-chmod -R a+rX /usr/local/lib/muse
+install_muse
 install_devin
 
 # The disk's clean-up (clean.sh, beside this script: on-machine.sh ships the folder), run as each

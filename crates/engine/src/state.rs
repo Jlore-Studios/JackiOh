@@ -165,6 +165,12 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub embiggened: Option<bool>,
+    /// R1181003 (Meditative+ #23 Enormous Elderberry's "its Embiggened version costs (0)"): the price of
+    /// the Embiggened version alone, in place of its printed dearer price and of `costOverride` for it,
+    /// before every modifier (R65); the normal version keeps its price. A price, so R766 takes it off.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub embiggen_cost_override: Option<i32>,
     pub counters: Counters,
     #[cfg_attr(feature = "ts", ts(type = "Record<string, unknown>"))]
     pub memory: IndexMap<String, Value>,
@@ -626,6 +632,17 @@ pub struct DelayedEffect {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub hand_watch: Option<Vec<String>>,
+    /// R1181000 (Meditative+ #4 Supply Drop's "in 3 turns"): the `turns_started` count of `at.player`
+    /// at which the entry comes due, so it waits through that player's turns before then. Absent on
+    /// every other entry (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub due_own_turn: Option<i32>,
+    /// R1181000: the caption of the countdown badge an entry with `due_own_turn` shows its owner's side
+    /// in both views while it waits (R169). Absent: no badge.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub label: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -1922,6 +1939,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         cost_override: None,
         x: None,
         embiggened: None,
+        embiggen_cost_override: None,
         counters: Counters::default(),
         memory: IndexMap::new(),
         exertion: Exertion {

@@ -1,0 +1,108 @@
+# The night bot's build cache (#1263): the Rust its checks compile, built from main and saved as the
+# one cache entry its model job on GitHub's runners restores (bot-night.yml, `work`). Without it every
+# such job compiled every dependency from nothing, four times over (the release `jackioh` behind
+# `cargo jackioh`, clippy's check build, the test build and the two WebAssembly modules), and the
+# checks took 12 to 34 minutes where the machine's took 4 to 6.
+#
+# Only this workflow saves the entry, and only from main: a model job restores it and never saves,
+# so nothing a model ran in one job reaches the next job, on another subscription, through the
+# cache. It runs no model and holds no secret. It builds what the harness's gates build
+# (.harness/config.json, `gates`) and runs none of them; bot/tests/test_workflows.py holds the two
+# lists, and the directories, profile and cache inputs both jobs key the entry on, together.
+#
+# A push to main that changes what the entry is keyed on (the manifests, the lockfile, .cargo/ and
+# the toolchain pin) or this file builds a new one; the weekly run puts back an entry the
+# repository's cache budget evicted. One that finds its entry already saved stops after the restore.
+# Until a new entry is saved, the model job restores the newest older one, and cargo builds what
+# changed. Like rust-cache in CI, the entry holds the dependencies only: the workspace's own crates
+# build afresh in every worktree.
+name: bot-cache
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - "crates/**/Cargo.toml"
+      - rust-toolchain.toml
+      - ".cargo/**"
+      - .github/workflows/bot-cache.yml
+  schedule:
+    - cron: "41 5 * * 0"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bot-cache
+  cancel-in-progress: true
+
+jobs:
+  warm:
+    name: warm the night bot's build cache
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout the default branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@1.97.0
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+
+      # The same lines as bot-night.yml's step of this name: the entry's key hashes them.
+      - name: The night bot's build directories
+        run: |
+          {
+            echo "CARGO_TARGET_DIR=$GITHUB_WORKSPACE/target"
+            echo "JACKIOH_CACHE_DIR=$GITHUB_WORKSPACE/.cache"
+            echo "CARGO_PROFILE_DEV_DEBUG=0"
+            echo "CARGO_PROFILE_TEST_DEBUG=0"
+          } >> "$GITHUB_ENV"
+
+      # As .github/actions/setup does: rust-cache keys on every toolchain rustup has.
+      - name: Only the pinned toolchain
+        run: |
+          pinned=$(rustup show active-toolchain | cut -d ' ' -f 1)
+          for toolchain in $(rustup toolchain list --quiet); do
+            if [ "$toolchain" != "$pinned" ]; then rustup toolchain uninstall "$toolchain"; fi
+          done
+          rustup toolchain list
+
+      - uses: Swatinem/rust-cache@v2
+        id: cache
+        with:
+          shared-key: night-bot-checks
+          cache-directories: .cache/bin
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      # CI's emsdk entry, which the setup action keys on the pin.
+      - name: The emsdk scripts/build-wasm.sh pins
+        id: emsdk
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: echo "version=$(sed -n 's/^EMSDK_VERSION="\([^"]*\)"$/\1/p' scripts/build-wasm.sh)" | tee -a "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        if: steps.cache.outputs.cache-hit != 'true' && steps.emsdk.outputs.version != ''
+        with:
+          path: .cache/emsdk
+          key: emsdk-${{ runner.os }}-${{ runner.arch }}-${{ steps.emsdk.outputs.version }}
+
+      # What the gates compile, with nothing run: `cargo jackioh` is `run --release -p jackioh-tools`
+      # (.cargo/config.toml); clippy's dependencies are the same with or without `-D warnings`.
+      - name: The release jackioh, for cargo jackioh
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cargo build --release -p jackioh-tools
+      - name: clippy's check build
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cargo clippy --workspace --all-targets
+      - name: The test build
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts --no-run
+      - name: The WebAssembly modules
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: sh scripts/build-wasm.sh

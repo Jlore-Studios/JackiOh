@@ -221,8 +221,12 @@ mod tests {
                     sets.insert(def_of(Some(s.state()), &text(&event, "defId")).set.to_string());
                 }
             }
-            // Re-pinned for v0.3.5: the Meditative set joins the pool.
-            assert_eq!(sets.into_iter().collect::<Vec<_>>(), vec!["Classic", "Classic+", "Core", "Meditative"]);
+            // Re-pinned for v0.3.5: the Meditative set joins the pool; and for v0.3.15 (Meditative+ ships,
+            // #1187): the Meditative+ set joins it.
+            assert_eq!(
+                sets.into_iter().collect::<Vec<_>>(),
+                vec!["Classic", "Classic+", "Core", "Meditative", "Meditative+"]
+            );
         }
 
         #[test]

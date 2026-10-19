@@ -168,7 +168,8 @@ fn plus_token() -> CardDef {
 }
 
 /// R1446: one body of each set that ships, a 0/1 whose Radiant face is a 25/25, so a perfect Radiant
-/// hand of five holds a card of every set and a base one none of them.
+/// hand one card longer than `SHIPPED_SETS` (the sleeper's 30/30 ranks first) holds a card of every
+/// set and a base one none of them.
 fn one_of_each_shipped_set() -> Vec<CardDef> {
     SHIPPED_SETS
         .iter()
@@ -678,7 +679,8 @@ mod r1446_the_perfect_pool_is_every_set_that_ships {
 
     #[test]
     fn r1446_the_radiant_face_hands_over_radiant_faces_from_every_set() {
-        let held = vec![quiet_spell().id; 5];
+        // The sleeper first, then a body of every set that ships.
+        let held = vec![quiet_spell().id; SHIPPED_SETS.len() + 1];
         let Holding { state, zealot_id, .. } = holding("ph-radiant-sets", &held, true, None);
         let expected: Vec<String> = rank_ids(&state, true).into_iter().take(held.len()).collect();
         let after = cast(&state, &zealot_id).state;
@@ -694,7 +696,7 @@ mod r1446_the_perfect_pool_is_every_set_that_ships {
         for set in SHIPPED_SETS {
             assert!(sets.contains(&set), "the perfect Radiant hand holds a {set} card");
         }
-        // On the base face the same bodies are 0/1s, and none of them is in the top five.
+        // On the base face the same bodies are 0/1s, and none of them is in the top hand.
         let base: Vec<String> = rank_ids(&state, false).into_iter().take(held.len()).collect();
         let shipped: Vec<String> = one_of_each_shipped_set()
             .into_iter()

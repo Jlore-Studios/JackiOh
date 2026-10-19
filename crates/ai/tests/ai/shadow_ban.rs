@@ -1690,30 +1690,39 @@ mod r732000_the_shadow_ban_holds_meditative_cards_only {
 
     /// The Meditative set's non-token cards.
     const MEDITATIVE_CARDS: usize = 102;
-    /// R732000: the most of them the table may hold, so that the AI deals itself at least half the set.
-    const MEDITATIVE_BAN_CAP: usize = MEDITATIVE_CARDS / 2;
+
+    /// The Meditative+ set's non-token cards (R1186000).
+    const MEDITATIVE_PLUS_CARDS: usize = 26;
 
     #[test]
-    fn r732000_no_card_of_an_earlier_set_is_banned_and_at_most_half_the_meditative_set_is() {
+    fn r732000_r1186000_no_card_of_an_earlier_set_is_banned_and_at_most_half_of_each_set_is() {
         jackioh_cards::register_all();
-        let meditative: Vec<String> = ai_pool()
-            .into_iter()
-            .filter(|id| def_of(None, id).set == SetName::Meditative)
-            .collect();
-        assert_eq!(meditative.len(), MEDITATIVE_CARDS);
+        let pool = ai_pool();
+        let in_set = |set: SetName| pool.iter().filter(|id| def_of(None, id).set == set).count();
+        assert_eq!(in_set(SetName::Meditative), MEDITATIVE_CARDS);
+        assert_eq!(in_set(SetName::MeditativePlus), MEDITATIVE_PLUS_CARDS);
         for &(def_id, _) in SHADOW_BAN {
-            assert_eq!(
-                def_of(None, def_id).set,
-                SetName::Meditative,
-                "{def_id}: the shadow ban takes no card of an earlier set (R732000)"
+            assert!(
+                matches!(
+                    def_of(None, def_id).set,
+                    SetName::Meditative | SetName::MeditativePlus
+                ),
+                "{def_id}: the shadow ban takes no card of an earlier set (R732000, R1186000)"
             );
         }
-        assert!(
-            SHADOW_BAN.len() <= MEDITATIVE_BAN_CAP,
-            "{} of the {MEDITATIVE_CARDS} Meditative cards banned, more than half",
-            SHADOW_BAN.len()
-        );
-        assert!(MEDITATIVE_CARDS - SHADOW_BAN.len() >= MEDITATIVE_CARDS.div_ceil(2));
+        for (set, cards) in [
+            (SetName::Meditative, MEDITATIVE_CARDS),
+            (SetName::MeditativePlus, MEDITATIVE_PLUS_CARDS),
+        ] {
+            let banned = SHADOW_BAN
+                .iter()
+                .filter(|(def_id, _)| def_of(None, def_id).set == set)
+                .count();
+            assert!(
+                banned <= cards / 2,
+                "{banned} of the {cards} {set:?} cards banned, more than half"
+            );
+        }
     }
 
     #[test]
