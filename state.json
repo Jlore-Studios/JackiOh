@@ -6082,6 +6082,7 @@
       "planned_by_id": "claude-1",
       "planned_tier": "strong",
       "provider": "claude-1",
+      "question": "a person has to replace `.github/workflows/bot-selftest.yml` with the file in Step 1 and open the pull request. A one-sentence update to `bot/README.md` is optional. Neither bot may change `.github/` or `bot/`, and nothing outside those two paths affects how long `bot selftest` takes.",
       "run_id": "39283776136",
       "started_at": "2026-10-19T16:14:17Z",
       "stop_requested": false,
