@@ -133,7 +133,9 @@ class SetupTests(unittest.TestCase):
         unit = self.training.split("jackioh-train@.service <<'EOF'\n", 1)[1].split("\nEOF\n", 1)[0]
         for line in ("User=agent-train-%i",
                      "ExecStart=/bin/sh /home/agent-train-%i/JackiOh/training/loop.sh %i",
-                     "Restart=always", "RestartSec=60", "Environment=DEVIN_MODEL=swe-2-max",
+                     "Restart=always", "RestartSec=60",
+                     "Environment=MUSE_MODEL=muse-spark-1.3-contributor",
+                     "Environment=MUSE_NO_AUTO_UPDATE=1",
                      "Environment=RAYON_NUM_THREADS=2",
                      "Environment=JACKIOH_TRAINING_OUT=/home/agent-train-%i/training-out/%i",
                      "WantedBy=multi-user.target"):
@@ -145,6 +147,18 @@ class SetupTests(unittest.TestCase):
             self.assertNotIn(night_only, self.training, night_only)
             self.assertIn(night_only, self.night, night_only)
         self.assertIn("systemctl disable --now night-vm-idle-stop.timer", self.training)
+
+    def test_the_training_lanes_run_muse_and_devin_stays_on_the_night_box(self):
+        """#1272: the improve and unban lanes run Muse; Devin is the night bot's weak builder
+        alone, so only the night box installs it."""
+        self.assertIn("\n  install_muse\n", self.training)
+        for devin in ("install_devin", "DEVIN_MODEL", "devin --version"):
+            self.assertNotIn(devin, self.training, devin)
+        self.assertIn("\ninstall_muse\ninstall_devin\n", self.night)
+        loop = (REPO_ROOT / "training" / "loop.sh").read_text(encoding="utf-8")
+        self.assertIn('muse exec --yolo --disable-web-tools --workspace "$repo"', loop)
+        self.assertIn('--model "$MUSE_MODEL"', loop)
+        self.assertNotIn("devin", loop.lower())
 
     def test_the_night_box_has_a_chrome_for_the_ui_walkthroughs(self):
         """#816: scripts/browse.sh finds google-chrome-stable on PATH; the training box needs none."""

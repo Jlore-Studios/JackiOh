@@ -175,7 +175,7 @@ describe("scripts/ci-scope.sh", () => {
     ).toEqual([]);
     // Squishy (#60): its switches and its two workflows, which only the bot's harness reads.
     expect(onFor(".squishy/config.json", ".github/workflows/squishy-run.yml", ".github/workflows/squishy-commands.yml")).toEqual([]);
-    // The training lanes' standing prompts and loop: Devin and the training box read them, no job does.
+    // The training lanes' standing prompts and loop: Muse and the training box read them, no job does.
     expect(onFor("training/README.md", "training/improve.md", "training/unban.md", "training/loop.sh")).toEqual([]);
     // The notebooks' project (#445): only super.yml's daily `notebooks` job reads it.
     expect(onFor("analysis/notebooks/01-card-win-rates.ipynb", "analysis/jackioh_records/load.py", "analysis/uv.lock")).toEqual([]);

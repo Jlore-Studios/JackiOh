@@ -5,7 +5,7 @@ evaluation (`crates/ai/src/learned.rs`) trained on the AI's own games and promot
 `main` through the same kind of gate every generation passes. Its decisions are a script's, not an
 LLM's (D2), so this file is its contract rather than a prompt, as `gather.md` is the gather lane's.
 
-It is the other half of the AI. The `improve` and `unban` lanes are **supervised**: a Devin session
+It is the other half of the AI. The `improve` and `unban` lanes are **supervised**: a Muse session
 reads the AI, changes the hand-written evaluation or the search, and measures each change
 (`improve.md`, `unban.md`). The `learn` lane is **learned**: a network fitted to the outcomes of
 games corrects the hand eval where the search finally scores a line. The hand eval stays the

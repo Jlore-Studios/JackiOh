@@ -1,6 +1,6 @@
 # Standing prompt: the gather lane
 
-No model runs this lane. `training/loop.sh gather` does every step itself, with no Devin session and no
+No model runs this lane. `training/loop.sh gather` does every step itself, with no model session and no
 pull request, so this file is the lane's contract, not a prompt anyone reads: a change to the lane
 updates this file, `loop.sh` and `training/README.md` (The gather lane) together.
 
