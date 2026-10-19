@@ -5358,6 +5358,13 @@
     "1255": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-19T02:02:55Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "an eval change in crates/ai/src moves every AI decision and needs gates, a 400-game screen and a sweep: the rule's 'the AI's search (crates/ai/src/)' line makes it hard, as the issue itself says"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
