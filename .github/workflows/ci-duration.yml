@@ -20,6 +20,10 @@
 # outside text, and the bot would read them as its task. The bot cannot change .github/, so the
 # issue tells it what it can do when the split itself needs ci.yml.
 #
+# A job is timed by its steps, the first one's start to the last one's end, not by the job's own
+# completed_at, which GitHub can stamp minutes after the runner finished: on 2026-10-19 seven jobs
+# were reported at 7–10 minutes whose steps had all run in 2–4 (#1325).
+#
 # The alert sits above the target on purpose. A job that drifts between the two is left alone, so a
 # few seconds of runner noise never costs a re-split; a job that does trip the alert is split back
 # under the target, not just under the alert, so the fix has headroom and the alert stays quiet.
@@ -76,7 +80,9 @@ jobs:
             | select(.name != "rust (training gate)" and .name != "e2e component (chrome)")
             | select(.name | startswith("e2e all (") | not)
             | select(.conclusion == "success" or .conclusion == "failure" or .conclusion == "timed_out")
-            | ((.completed_at | fromdateiso8601) - (.started_at | fromdateiso8601)) as $s
+            | (([.steps[]?.started_at | values] | min) // .started_at | fromdateiso8601) as $from
+            | (([.steps[]?.completed_at | values] | max) // .completed_at | fromdateiso8601) as $to
+            | ($to - $from) as $s
             | select($s > (env.LIMIT_SECONDS | tonumber))
             | "| [\(.name | gsub("\\|"; "\\|"))](\(.html_url)) | \($s / 60 | floor)m \($s % 60)s | \(.conclusion) |"')
           if [ -z "$slow" ]; then
