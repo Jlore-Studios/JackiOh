@@ -6522,6 +6522,14 @@
         "start": "56a38abb20ed9a49bc6a1633ce7fcf5e7f89270f"
       }
     },
+    "1361": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-19T22:32:20Z",
+      "issue": 1313,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "148": {
       "asks": [
         "c:5974504575"
