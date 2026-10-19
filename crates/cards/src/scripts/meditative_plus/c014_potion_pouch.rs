@@ -125,6 +125,30 @@ mod tests {
     }
 
     #[test]
+    fn r1179003_never_a_crafted_potion() {
+        crate::register_all();
+        // A crafted potion (M+ #16's, R1182000) is a transient definition tagged Potion, in no pool:
+        // over the seeds the Pouch adds only M+ #11 to #13, never the one crafted beside it.
+        for k in 0..20 {
+            let mut s = scenario(json!({
+                "seed": format!("m+014-crafted:{k}"),
+                "p1": { "hand": [POUCH, FILLER] },
+                "p2": { "hand": [FILLER] },
+            }));
+            let mut crafted = crate::card_def(POTIONS[0]);
+            crafted.id = "fx-crafted-potion".to_string();
+            crafted.index = crafted.id.clone();
+            s.state_mut().transient_defs.insert(crafted.id.clone(), crafted);
+            s.play(POUCH, json!({}));
+            let added = added(&s);
+            assert_eq!(added.len(), 2);
+            for def in &added {
+                assert!(POTIONS.contains(&def.as_str()), "seed {k}: {def} is no printed Potion card");
+            }
+        }
+    }
+
+    #[test]
     fn s2_4_a_full_hand_burns_the_second() {
         crate::register_all();
         // The Pouch and nine more: after the Pouch is played the hand holds nine, so the first

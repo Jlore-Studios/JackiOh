@@ -86,19 +86,11 @@ mod tests {
     const X: &str = "core-020";
 
     fn game(seed: &str, p1: Value, p2: Value) -> Scenario {
-        let mut sides = json!({
+        crate::scenario(json!({
             "seed": seed,
-            "p1": { "library": [X, X, X] },
-            "p2": { "hand": [FILLER], "library": [X, X, X] },
-        });
-        for (seat, extra) in [("p1", p1), ("p2", p2)] {
-            if let Value::Object(entries) = extra {
-                for (key, value) in entries {
-                    sides[seat][key.as_str()] = value;
-                }
-            }
-        }
-        crate::scenario(sides)
+            "p1": crate::merged(json!({ "library": [X, X, X] }), p1),
+            "p2": crate::merged(json!({ "hand": [FILLER], "library": [X, X, X] }), p2),
+        }))
     }
 
     fn activate(id: &str, s: &mut Scenario) {

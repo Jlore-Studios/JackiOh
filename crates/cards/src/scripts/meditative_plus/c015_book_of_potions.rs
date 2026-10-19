@@ -30,7 +30,7 @@ pub fn script() -> CardScripts {
 }
 
 // M+ #15 Book of Potions — SPEC §8.9 row 15, BUILD M11 row M+ 15: "adds 1 random Radiant Potion
-// card (M+ 11 to 13, previewed); cards reads through `param()`; radiant 2".
+// card (M+ 11 to 13); cards reads through `param()`; radiant 2".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -38,7 +38,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const BOOK: &str = "meditativeplus-015";
-    /// The Potion pool under a preview of the set (R1179003): M+ #11 to #13, nothing else.
+    /// The Potion pool of the sets that ship (R1179003): M+ #11 to #13, nothing else.
     const POTIONS: [&str; 3] = ["meditativeplus-011", "meditativeplus-012", "meditativeplus-013"];
     const FILLER: &str = "core-005"; // (1) Spell
 

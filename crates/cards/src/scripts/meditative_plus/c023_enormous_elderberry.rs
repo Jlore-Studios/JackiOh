@@ -42,7 +42,7 @@ pub fn script() -> CardScripts {
 }
 
 // Meditative+ #23 Enormous Elderberry — SPEC §8.9 row 23, BUILD M11 row M+ 23: "adds one card of the
-// embiggen pool (the shipped eight, never itself) whose Embiggened version costs (0) and whose normal
+// embiggen pool (the twelve other embiggen cards, never itself) whose Embiggened version costs (0) and whose normal
 // version keeps its price, both offered; Embiggened at (4) 3 of them; a full hand burns the rest; both
 // counts read through `param()`; radiant the cards are Radiant".
 #[cfg(test)]

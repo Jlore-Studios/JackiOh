@@ -7,7 +7,8 @@
 //! `instance.embiggened`, R81), then each noted card now in the hand gets a `costOverride` of 0
 //! (C #79's "they": a card cast on draw never gets there, R58; a burned one isn't there,
 //! §2.4; a card created meanwhile was never in the library; cards already in the hand are
-//! untouched). The override is the card's cost in every zone until it leaves the hand (R766).
+//! untouched). The override is the card's cost in every zone until it reaches a graveyard or an
+//! exile pile (R766).
 //! Both counts are declared and read through `param` (R386).
 
 use jackioh_engine::effects::{ForEachCardArgs, draw, for_each_card, remember, set_cost_override};
