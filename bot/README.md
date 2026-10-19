@@ -11,7 +11,7 @@ lanes run on a box of their own, outside the harness: [`machine/`](machine/READM
 Every model has a tier (weak,
 medium or strong) and every item a difficulty (easy, medium or hard), which decides who may plan,
 build and review it ([Difficulty and tiers](#difficulty-and-tiers)). A medium or strong model plans
-each item first (a strong one for medium and hard items) and rates an item nobody rated, under a
+each item first (a strong one for hard items) and rates an item nobody rated, under a
 strict [easy rule](#the-easy-rule); one subscription owns the item end to end (a medium or
 hard item stays with its planner), builds it,
 runs the repository's checks, and reviews itself in a fresh adversarial session, going round
@@ -44,7 +44,7 @@ flowchart TD
     GA["gate (no write token)<br/>work a free subscription can take?"]
     GA -- "the partner bot, or another subscription" --> PL
     PL["plan (bot token, no model)<br/>HALT? halted? a free lane?<br/>claim one item and one subscription: bot:working"]
-    PL --> PN["planner (medium or strong; strong for medium and hard)<br/>rates an unrated item, writes the plan"]
+    PL --> PN["planner (medium or strong; strong for hard)<br/>rates an unrated item, writes the plan"]
     PN --> B["work, on that subscription's own runner<br/>(its login only) builder: the lane's owner"]
     B --> G["the repository's checks<br/>cargo fmt, clippy, catalog, patches,<br/>spec, cargo tests, web unit tests"]
     G -- "a weak builder (Codex, Devin)" --> SC["self check: the builder's own model,<br/>a fresh session, until clean (up to 3)"]
@@ -361,7 +361,7 @@ in place of the `bot:*` ones.
 | Label | Meaning |
 |---|---|
 | `bot:build` | an issue waiting for a free subscription |
-| `bot:needs-plan` | the Needs plan stage, beside `bot:build`: it waits for a plan its difficulty may build from (a medium or strong model's for an easy or unrated item, a strong one's for the rest), which goes into its description; the planner rates an unrated item |
+| `bot:needs-plan` | the Needs plan stage, beside `bot:build`: it waits for a plan its difficulty may build from (a medium or strong model's for an easy, medium or unrated item, a strong one's for a hard item), which goes into its description; the planner rates an unrated item |
 | `bot:planned` | it has a plan, in its description (the builder starts from it); it stays after the item leaves the queue |
 | `bot:fullsend` | beside `bot:build`: build it as [fullsend](#fullsend), in parts that land on its own branch, then one reconcile and one pull request; it counts as `difficulty:hard` |
 | `bot:tree` | a fullsend parent whose parts the bot opened and watches; once they have all closed, the sweep queues its reconcile |
@@ -599,7 +599,7 @@ services on the training box, [`machine/`](machine/README.md#the-training-box).)
 
 - **Planning: the Needs plan stage.** Every build starts from a plan its difficulty may build
   from. A queued item without one carries `bot:needs-plan`: one with no plan, and one whose plan
-  came from a model under its plan floor (a medium model's plan of a medium or hard item). A
+  came from a model under its plan floor (a medium model's plan of a hard item). A
   planner on the **planning lane** plans those first, so a subscription never plans and builds
   the same item: `plan_lanes` runs on top of
   `max_parallel`, which take no build lane, so a subscription plans while it builds, up to as
