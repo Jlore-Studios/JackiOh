@@ -30,6 +30,15 @@
 //! I8 (no unlisted attack or switch `reduce` accepts, §4.1, §4.2) runs on every state under `cargo test`,
 //! every I8_GATE_STRIDE-th under the gate and `--handicap`.
 //!
+//! And after every action, GROWTH (#1254): the gate weighs each action it applies by the events `reduce`
+//! returned, the largest number on any card instance and the number of instances in play, prints each
+//! measure's heaviest actions (one per game) in the summary and in `--json`, and fails a seed in the
+//! "growth" stage when one action passes GROWTH_EVENTS_BOUND, GROWTH_NUMBER_BOUND or
+//! GROWTH_INSTANCES_BOUND. That catches runaway growth inside one action (R874000's fusion, R884000's
+//! University) at the step that grew, well before the engine's settle cap (§10.3) panics or a process
+//! runs out of memory. The weighing reads the returned events and state only, never the clock, so it
+//! is as deterministic as the game; `--handicap` and `--duos` are not weighed.
+//!
 //! Determinism (SPEC §9.3, §10.7, CLAUDE.md rule 4): nothing here reads OS randomness or the clock
 //! for a game (the clock only times the wave). The deck draw, the game and the policy each come from
 //! `Rng::new` over a seed string derived from the seed number, so a reported seed reproduces its game
@@ -49,6 +58,7 @@
 //!   cargo jackioh fuzz --handicap                   the handicapped wave: seeds 1–1000
 //!   cargo jackioh fuzz --duos                       Duos co-op games: seeds 1–200 (`duos_fuzz.rs`)
 //!   cargo test -p jackioh-tools fuzz                seeds 1–20 of each (see SWEEP_SEEDS)
+//!   cargo jackioh fuzz --seeds 200 --json           the wave as one JSON object
 //!   cargo jackioh fuzz --from <seed> --seeds 1      one seed a report named
 //!   cargo jackioh fuzz --regress                    the regression corpus
 //!
@@ -84,12 +94,14 @@ use jackioh_engine::testkit::{
     I6_GATE_STRIDE, I8_GATE_STRIDE, create_invariant_monitor, preview_every_set, set_ships,
 };
 use jackioh_engine::{
-    AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, CreateGameOptions, DECK_SIZE, Difficulty,
-    FoldArgs, GameState, Handicap, PerPlayerOpt, Phase, PlayerId, Rng, TURN_CAP_PLAYER_TURNS, begin_game,
-    create_game, fold, hash_state, mulligan_owed, reduce, seat_to_act, subsystems, validate_deck,
+    AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, CardInstance, CreateGameOptions, DECK_SIZE,
+    Difficulty, FoldArgs, GameEvent, GameState, Handicap, PLAYER_IDS, PerPlayerOpt, Phase, PlayerId, Rng,
+    TURN_CAP_PLAYER_TURNS, begin_game, create_game, find_instance, fold, hash_state, mulligan_owed, reduce,
+    seat_to_act, subsystems, validate_deck,
 };
 use rayon::prelude::*;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 
 use crate::agent::panic_message;
 use crate::gate::MS_PER_SECOND;
@@ -117,6 +129,10 @@ pub struct Args {
     /// failure's pinned decks, never a deal from the live pool.
     #[arg(long, conflicts_with_all = ["from", "seeds", "handicap", "duos"])]
     pub regress: bool,
+    /// Print the gate's wave as one JSON object instead of text (#1254): its failures, each
+    /// measure's heaviest actions and the growth bounds.
+    #[arg(long, conflicts_with_all = ["handicap", "duos", "regress"])]
+    pub json: bool,
 }
 
 /// Runs the gate, or with `--handicap` the handicapped wave, or with `--duos` the Duos wave, or with
@@ -142,9 +158,15 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         return Ok(());
     }
     let wave = play_wave(from, ran);
-    print!("{}", wave.summary());
+    if args.json {
+        println!("{}", serde_json::to_string_pretty(&wave.json())?);
+    } else {
+        print!("{}", wave.summary());
+    }
     if !wave.failures.is_empty() {
-        println!("{}", report(&wave.failures, ran, wave.elapsed_ms));
+        if !args.json {
+            println!("{}", report(&wave.failures, ran, wave.elapsed_ms));
+        }
         bail!("M4 fuzz gate: {} of {} seeds failed", wave.failures.len(), ran);
     }
     Ok(())
@@ -321,6 +343,7 @@ enum FailureStage {
     Termination,
     Replay,
     Invariant,
+    Growth,
 }
 
 impl FailureStage {
@@ -330,6 +353,7 @@ impl FailureStage {
             FailureStage::Termination => "termination",
             FailureStage::Replay => "replay",
             FailureStage::Invariant => "invariant",
+            FailureStage::Growth => "growth",
         }
     }
 }
@@ -361,6 +385,8 @@ struct GameRun {
     state: GameState,
     log: Vec<Action>,
     decks: (Vec<String>, Vec<String>),
+    /// This game's heaviest action by each measure (#1254).
+    heaviest: Heaviest,
 }
 
 /// `pending ${state.pending === null ? "none" : `"${state.pending.kind}"`}`.
@@ -404,6 +430,7 @@ fn play_game(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<GameRun, Fu
     let stride = hidden_stride();
     let unlisted_stride = unlisted_stride();
     let max_actions = max_actions_per_game();
+    let mut heaviest = Heaviest::default();
     // Setup's own events: a Unit cast on draw in the opening deal (C+ #26 Tommy Tempo) enters there.
     let mut setup = monitor.after(&begun.events, &state);
     setup.extend(monitor.hidden(&state));
@@ -481,6 +508,8 @@ fn play_game(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<GameRun, Fu
             ));
         }
 
+        let action_type = action.action_type().as_str().to_string();
+        let card = acting_card(&state, &action.body);
         log.push(action);
         state = result.state;
 
@@ -501,9 +530,40 @@ fn play_game(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<GameRun, Fu
                 },
             ));
         }
+
+        // #1254: weigh the action; one past a growth bound fails the seed here.
+        let step = log.len();
+        let weights = weigh(&result.events, &state);
+        for (measure, value) in MEASURES.into_iter().zip(weights) {
+            if heaviest.list(measure).first().is_none_or(|top| value > top.value) {
+                let heavy = Heavy {
+                    seed,
+                    step,
+                    action: action_type.clone(),
+                    card: card.clone(),
+                    value,
+                };
+                heaviest.keep(measure, heavy, 1);
+            }
+        }
+        if let Some(message) = growth_breach(&weights, &state, step, &action_type, card.as_deref()) {
+            return Err(FuzzFailure::new(
+                FailureStage::Growth,
+                message,
+                At {
+                    turn: state.turn,
+                    actions: step,
+                },
+            ));
+        }
     }
 
-    Ok(GameRun { state, log, decks })
+    Ok(GameRun {
+        state,
+        log,
+        decks,
+        heaviest,
+    })
 }
 
 /// Assertion 2: the game ended the way §2.5 says a policy game can end, inside the R2 cap.
@@ -605,6 +665,256 @@ fn check_replay(seed: u32, run: &GameRun) -> Result<(), FuzzFailure> {
         ));
     }
     Ok(())
+}
+
+// ---------------------------------------------------------------------------------------------
+// Growth inside one action (#1254)
+// ---------------------------------------------------------------------------------------------
+
+/// The most events one action may emit. Set from a 10,000-seed sweep of `main` at d981885 (seeds
+/// 1–10,000, 2026-10-19, four quarters of 2,500): the most one passing game's action emitted was 843
+/// (seed 7590, step 119), so this keeps a margin of about 12×, which clears R58's "draw your whole
+/// library" chain of about 1,100 triggers. Runaway growth passes it far sooner than the settle cap
+/// (§10.3) panics: seed 6540's resolution loop emitted 1,859 events at step 98, 7,628 at step 104 and
+/// 30,361 at step 105, and panicked at the cap some steps later.
+pub const GROWTH_EVENTS_BOUND: i64 = 10_000;
+
+/// The largest number any card instance may carry after one action (an attack, a health, a cost, a
+/// tuned number, a counter, a use count, a number in a card's memory). Set from the same sweep: the
+/// largest was 132 (seed 5275, step 124, an attack by core-061), so this keeps a margin of about 15×.
+/// Seed 6540's Joint Filing (meditative-009) `extra` reached 1,534 at step 98 and 6,142 at step 104,
+/// and R884000's University an Activate N of 33,724.
+pub const GROWTH_NUMBER_BOUND: i64 = 2_000;
+
+/// The most card instances both sides may hold after one action, in every zone. Set from the same
+/// sweep: the most was 334 (seed 3320, step 311), so this keeps a margin of about 6×. A fusion counts
+/// as one instance whatever it was made from (R874000 bounds its size with `FUSED_CARDS_CAP`), so this
+/// measure catches a chain that adds cards without end, not one card that grows.
+pub const GROWTH_INSTANCES_BOUND: i64 = 2_000;
+
+/// How many of a measure's heaviest actions the summary and `--json` list.
+pub const HEAVIEST_SHOWN: usize = 5;
+
+/// What one action is weighed by.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Measure {
+    /// The events `reduce` returned.
+    Events,
+    /// The largest number on any card instance afterwards.
+    Largest,
+    /// The card instances afterwards, both sides, every zone.
+    Instances,
+}
+
+/// Every measure, in the order `weigh` returns them.
+const MEASURES: [Measure; 3] = [Measure::Events, Measure::Largest, Measure::Instances];
+
+impl Measure {
+    fn as_str(self) -> &'static str {
+        match self {
+            Measure::Events => "events",
+            Measure::Largest => "largest",
+            Measure::Instances => "instances",
+        }
+    }
+
+    fn bound(self) -> i64 {
+        match self {
+            Measure::Events => GROWTH_EVENTS_BOUND,
+            Measure::Largest => GROWTH_NUMBER_BOUND,
+            Measure::Instances => GROWTH_INSTANCES_BOUND,
+        }
+    }
+
+    fn bound_name(self) -> &'static str {
+        match self {
+            Measure::Events => "GROWTH_EVENTS_BOUND",
+            Measure::Largest => "GROWTH_NUMBER_BOUND",
+            Measure::Instances => "GROWTH_INSTANCES_BOUND",
+        }
+    }
+}
+
+/// One action's weight by one measure.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Heavy {
+    seed: u32,
+    /// The action's 1-based place in the game's log.
+    step: usize,
+    /// The action's wire name (`ActionType`).
+    action: String,
+    /// The def id of the card that acted, for an action with one.
+    card: Option<String>,
+    value: i64,
+}
+
+/// The heaviest actions by each measure, heaviest first, ties to the lower seed and then the lower step.
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
+struct Heaviest {
+    events: Vec<Heavy>,
+    largest: Vec<Heavy>,
+    instances: Vec<Heavy>,
+}
+
+impl Heaviest {
+    fn list(&self, measure: Measure) -> &[Heavy] {
+        match measure {
+            Measure::Events => &self.events,
+            Measure::Largest => &self.largest,
+            Measure::Instances => &self.instances,
+        }
+    }
+
+    /// Adds `heavy` and keeps the `limit` heaviest.
+    fn keep(&mut self, measure: Measure, heavy: Heavy, limit: usize) {
+        let list = match measure {
+            Measure::Events => &mut self.events,
+            Measure::Largest => &mut self.largest,
+            Measure::Instances => &mut self.instances,
+        };
+        list.push(heavy);
+        list.sort_by(|a, b| {
+            b.value
+                .cmp(&a.value)
+                .then(a.seed.cmp(&b.seed))
+                .then(a.step.cmp(&b.step))
+        });
+        list.truncate(limit);
+    }
+
+    /// Folds one game's heaviest actions in, keeping HEAVIEST_SHOWN of each measure.
+    fn merge(&mut self, game: &Heaviest) {
+        for measure in MEASURES {
+            for heavy in game.list(measure) {
+                self.keep(measure, heavy.clone(), HEAVIEST_SHOWN);
+            }
+        }
+    }
+}
+
+/// Every card instance both sides hold, in every zone: a copy of `side_cards`'s list in
+/// `crates/engine/src/state.rs` (private there), in its order.
+fn instances_of(state: &GameState) -> impl Iterator<Item = &CardInstance> {
+    PLAYER_IDS.into_iter().flat_map(move |player| {
+        let side = &state.players[player];
+        side.hand
+            .iter()
+            .chain(side.library.iter())
+            .chain(side.graveyard.iter())
+            .chain(side.exile.iter())
+            .chain(side.units.iter().flatten().flatten())
+            .chain(side.backrow.iter().flatten())
+            .chain(side.backrow_piles.iter().flatten().flatten())
+            .chain(side.carried.iter().flatten().flatten())
+            .chain(side.resolving.iter())
+    })
+}
+
+/// The largest absolute number a card instance carries: its damage, buffs, cost changes, X, exertion
+/// count, overridden stats, counters, Brittle count, play count, tuned numbers and every number in its
+/// memory. Turn stamps (`summoned_turn`, `frozen`, Brittle's `since`) are left out: they count turns,
+/// which the game's own cap bounds.
+fn largest_number(card: &CardInstance) -> i64 {
+    let mut most = 0_i64;
+    let mut see = |n: i32| most = most.max(i64::from(n).abs());
+    see(card.damage);
+    see(card.buffs.attack);
+    see(card.buffs.health);
+    see(card.cost_mod);
+    card.cost_override.into_iter().for_each(&mut see);
+    card.x.into_iter().for_each(&mut see);
+    card.exertion.attacks.into_iter().for_each(&mut see);
+    if let Some(stats) = &card.stats_override {
+        see(stats.attack);
+        see(stats.health);
+    }
+    card.armor_override.into_iter().for_each(&mut see);
+    card.counters.plague.into_iter().for_each(&mut see);
+    card.counters.grade.into_iter().for_each(&mut see);
+    card.brittle.iter().for_each(|brittle| see(brittle.count));
+    card.times_played.into_iter().for_each(&mut see);
+    if let Some(tuning) = &card.tuning {
+        tuning.attack.into_iter().for_each(&mut see);
+        tuning.health.into_iter().for_each(&mut see);
+        for numbers in [&tuning.x, &tuning.numbers, &tuning.set].into_iter().flatten() {
+            numbers.values().for_each(|n| see(*n));
+        }
+    }
+    card.memory.values().map(largest_in_json).fold(most, i64::max)
+}
+
+/// The largest absolute number anywhere in a memory value.
+fn largest_in_json(value: &Value) -> i64 {
+    match value {
+        Value::Number(number) => number
+            .as_i64()
+            .map(i64::saturating_abs)
+            .or_else(|| number.as_f64().map(|f| f.abs() as i64))
+            .unwrap_or(0),
+        Value::Array(items) => items.iter().map(largest_in_json).max().unwrap_or(0),
+        Value::Object(fields) => fields.values().map(largest_in_json).max().unwrap_or(0),
+        _ => 0,
+    }
+}
+
+/// One action's weights, in `MEASURES`' order: the events `reduce` returned, the largest number on
+/// any instance of `state` (the state it produced) and the instances in it.
+fn weigh(events: &[GameEvent], state: &GameState) -> [i64; 3] {
+    let (largest, instances) = instances_of(state).fold((0_i64, 0_i64), |(largest, count), card| {
+        (largest.max(largest_number(card)), count + 1)
+    });
+    [
+        i64::try_from(events.len()).unwrap_or(i64::MAX),
+        largest,
+        instances,
+    ]
+}
+
+/// The def id of the card an action is by, read in the state it was chosen in: the instance a
+/// play, switch or activation names, or the attacker. Any other action has none.
+fn acting_card(state: &GameState, body: &ActionBody) -> Option<String> {
+    let id = match body {
+        ActionBody::Play { instance_id, .. }
+        | ActionBody::SwitchPosition { instance_id }
+        | ActionBody::Activate { instance_id, .. }
+        | ActionBody::ActivatePower { instance_id, .. } => instance_id,
+        ActionBody::Attack { attacker_id, .. } => attacker_id,
+        _ => return None,
+    };
+    find_instance(state, id).map(|card| card.def_id.clone())
+}
+
+/// The def id of the first instance carrying `value` as its largest number.
+fn holder_of_largest(state: &GameState, value: i64) -> String {
+    instances_of(state)
+        .find(|card| largest_number(card) == value)
+        .map_or_else(|| "no card".to_string(), |card| card.def_id.clone())
+}
+
+/// The failure message of the first measure past its bound, when one is: a value at the bound passes.
+fn growth_breach(
+    weights: &[i64; 3],
+    state: &GameState,
+    step: usize,
+    action: &str,
+    card: Option<&str>,
+) -> Option<String> {
+    let (measure, value) = MEASURES
+        .into_iter()
+        .zip(weights.iter().copied())
+        .find(|(measure, value)| *value > measure.bound())?;
+    let by = card.map_or_else(String::new, |id| format!(" by {id}"));
+    let what = match measure {
+        Measure::Events => format!("emitted {value} events"),
+        Measure::Largest => format!("left a number of {value} on {}", holder_of_largest(state, value)),
+        Measure::Instances => format!("left {value} card instances in play"),
+    };
+    Some(format!(
+        "step {step} (\"{action}\"{by}) {what}, past {} ({}): runaway growth inside one action",
+        measure.bound_name(),
+        measure.bound()
+    ))
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -970,6 +1280,8 @@ struct Passed {
     reason: String,
     actions: usize,
     turn: i32,
+    /// The game's heaviest action by each measure (#1254).
+    heaviest: Heaviest,
 }
 
 /// One seed through the four assertions: never panic, always terminate by hero death or the R2 cap,
@@ -1004,6 +1316,7 @@ fn fuzz_deal(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<Passed, Fai
                 .map_or_else(|| "none".to_string(), |result| result.reason.as_str().to_string()),
             actions: run.log.len(),
             turn: run.state.turn,
+            heaviest: run.heaviest,
         })
     }));
     let (stage, message, turn, actions) = match caught {
@@ -1053,6 +1366,8 @@ struct Wave {
     actions_total: usize,
     actions_max: usize,
     turn_max: i32,
+    /// The heaviest actions of the games that passed, one per game (#1254): a failed seed adds nothing.
+    heaviest: Heaviest,
     elapsed_ms: f64,
 }
 
@@ -1072,6 +1387,7 @@ fn play_wave(from: u32, ran: u32) -> Wave {
         actions_total: 0,
         actions_max: 0,
         turn_max: 0,
+        heaviest: Heaviest::default(),
         elapsed_ms,
     };
     for result in results {
@@ -1081,6 +1397,7 @@ fn play_wave(from: u32, ran: u32) -> Wave {
                 wave.actions_total += passed.actions;
                 wave.actions_max = wave.actions_max.max(passed.actions);
                 wave.turn_max = wave.turn_max.max(passed.turn);
+                wave.heaviest.merge(&passed.heaviest);
             }
             Err(failure) => wave.failures.push(failure),
         }
@@ -1106,8 +1423,8 @@ impl Wave {
         } else {
             0
         };
-        format!(
-            "[M4 fuzz] {}\n  seeds {}..{}: {passed} passed, {} failed\n  {} panic(s), {} over the {}-action bound or stalled, {} replay mismatch(es), {} invariant violation(s)\n  endings: {}\n  {average} actions/game on average, {} at most; longest game ended on turn {} of {TURN_CAP_PLAYER_TURNS}\n  pool: {} deck-legal cards, {} excluded; I6 every {} state(s), I8 every {} state(s); {}s\n",
+        let mut text = format!(
+            "[M4 fuzz] {}\n  seeds {}..{}: {passed} passed, {} failed\n  {} panic(s), {} over the {}-action bound or stalled, {} replay mismatch(es), {} invariant violation(s), {} past a growth bound\n  endings: {}\n  {average} actions/game on average, {} at most; longest game ended on turn {} of {TURN_CAP_PLAYER_TURNS}\n  pool: {} deck-legal cards, {} excluded; I6 every {} state(s), I8 every {} state(s); {}s\n",
             if self.ran >= WAVE_SEEDS {
                 "FULL GATE".to_string()
             } else {
@@ -1121,6 +1438,7 @@ impl Wave {
             max_actions_per_game(),
             stage("replay"),
             stage("invariant"),
+            stage("growth"),
             if endings.is_empty() {
                 "none".to_string()
             } else {
@@ -1133,8 +1451,60 @@ impl Wave {
             hidden_stride(),
             unlisted_stride(),
             round(self.elapsed_ms / MS_PER_SECOND),
-        )
+        );
+        text.push_str(&heaviest_lines(&self.heaviest));
+        text
     }
+
+    /// `--json`: the wave's failures, each measure's heaviest actions and the growth bounds (#1254).
+    fn json(&self) -> Value {
+        json!({
+            "from": self.from,
+            "ran": self.ran,
+            "passed": self.ran as usize - self.failures.len(),
+            "failures": self.failures.iter().map(|failure| json!({
+                "seed": failure.seed,
+                "stage": failure.stage.as_str(),
+                "turn": failure.turn,
+                "step": failure.actions,
+                "message": failure.message,
+            })).collect::<Vec<_>>(),
+            "heaviest": self.heaviest,
+            "bounds": MEASURES
+                .into_iter()
+                .map(|measure| (measure.as_str(), measure.bound()))
+                .collect::<IndexMap<_, _>>(),
+        })
+    }
+}
+
+/// The summary's lines for each measure's heaviest actions (#1254).
+fn heaviest_lines(heaviest: &Heaviest) -> String {
+    let mut text = "  heaviest actions, one per game (seed/step action card: weight):\n".to_string();
+    for measure in MEASURES {
+        let entries = heaviest
+            .list(measure)
+            .iter()
+            .map(|heavy| {
+                format!(
+                    "{}/{} {} {}: {}",
+                    heavy.seed,
+                    heavy.step,
+                    heavy.action,
+                    heavy.card.as_deref().unwrap_or("-"),
+                    heavy.value
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("; ");
+        text.push_str(&format!(
+            "    {} (bound {}): {}\n",
+            measure.as_str(),
+            measure.bound(),
+            if entries.is_empty() { "none" } else { &entries }
+        ));
+    }
+    text
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1648,6 +2018,7 @@ mod tests {
                 actions_total: 0,
                 actions_max: 0,
                 turn_max: 0,
+                heaviest: Heaviest::default(),
                 elapsed_ms: 0.0,
             };
             assert!(wave(2500).summary().starts_with("[M4 fuzz] FULL GATE\n"));
@@ -1666,6 +2037,23 @@ mod tests {
                 report(&wave.failures, ran, wave.elapsed_ms)
             };
             assert_eq!(wave.failures.len(), 0, "{detail}");
+            // #1254: each measure lists the wave's heaviest actions, one per game.
+            for measure in MEASURES {
+                let list = wave.heaviest.list(measure);
+                assert_eq!(
+                    list.len(),
+                    HEAVIEST_SHOWN.min(ran as usize),
+                    "{}",
+                    measure.as_str()
+                );
+                let seeds: IndexSet<u32> = list.iter().map(|heavy| heavy.seed).collect();
+                assert_eq!(
+                    seeds.len(),
+                    list.len(),
+                    "{}: a game listed twice",
+                    measure.as_str()
+                );
+            }
         }
 
         #[test]
@@ -1710,8 +2098,215 @@ mod tests {
                 state,
                 log: Vec::new(),
                 decks,
+                heaviest: Heaviest::default(),
             };
             assert_eq!(check_termination(&run).err().map(|failure| failure.message), None);
+        }
+    }
+
+    mod fuzz_growth_stage {
+        use super::*;
+        use jackioh_engine::testkit::{
+            CardScripts, GameEventType, Script, TriggerDef, clear_overrides, effects, json_as,
+            register_catalog_as, register_scripts,
+        };
+        use jackioh_engine::{CardDef, Tuning};
+
+        /// A fixture Unit that Buffs itself at the start of every turn, University's mistake before
+        /// R884000.
+        const GROWER: &str = "fuzz-grower";
+        /// Each trigger adds this many times the Buffs it already holds, so they run 9, 90, 900, 9,000.
+        const GROWER_FACTOR: i32 = 9;
+        /// Seeds the planted test tries; the grower is dealt into both decks of each.
+        const PLANTED_SEEDS: u32 = 20;
+
+        /// Puts the grower in this thread's catalog and scripts; `clear_overrides` takes it out.
+        fn install_grower() {
+            register_all();
+            let face = json!({ "attack": 1, "health": 1, "keywords": [{ "kind": "Can't attack" }],
+                "text": "Can't attack\nAt the start of each turn: this gains nine times its Buffs (at least +9/+9)." });
+            let def: CardDef = json_as(
+                json!({ "id": GROWER, "index": GROWER, "name": "Grower (fuzz fixture)",
+                "set": "Core", "type": "Unit", "tags": [], "rarity": "Common", "token": false, "cost": 1,
+                "base": face, "radiant": face }),
+            );
+            let mut catalog = (*CATALOG).clone();
+            catalog.insert(GROWER.to_string(), def);
+            register_catalog_as(catalog, jackioh_cards::catalog_version());
+            let grow = TriggerDef::new(
+                "fuzz-grower-grow",
+                &[GameEventType::TurnStarted],
+                |ctx, _event| {
+                    let Some(gain) = ctx.live_self().map(|me| GROWER_FACTOR * me.buffs.attack.max(1)) else {
+                        return vec![];
+                    };
+                    vec![effects::buff(json_as(
+                        json!({ "target": { "of": "self" }, "attack": gain, "health": gain }),
+                    ))]
+                },
+            );
+            let script = Script {
+                triggers: vec![grow],
+                ..Script::default()
+            };
+            let mut scripts = jackioh_cards::scripts_of();
+            scripts.insert(
+                GROWER.to_string(),
+                CardScripts {
+                    base: script.clone(),
+                    radiant: script,
+                },
+            );
+            register_scripts(scripts);
+        }
+
+        /// `seed`'s deal with the grower first in both decks.
+        fn planted_decks(seed: u32) -> (Vec<String>, Vec<String>) {
+            let (mut p1, mut p2) = decks_for_seed(seed);
+            p1[0] = GROWER.to_string();
+            p2[0] = GROWER.to_string();
+            (p1, p2)
+        }
+
+        #[test]
+        fn a_planted_card_that_buffs_itself_each_turn_fails_in_the_growth_stage_naming_seed_and_step() {
+            install_grower();
+            // The overrides are this thread's, so the seeds run here and not under rayon.
+            let failure = (1..=PLANTED_SEEDS)
+                .find_map(|seed| fuzz_deal(seed, planted_decks(seed)).err())
+                .expect("a card that grows without end must fail one of the planted seeds");
+            clear_overrides();
+            // The growth stage, so no settle cap or arithmetic overflow panicked first.
+            assert_eq!(failure.stage, FailureStage::Growth, "{}", failure.message);
+            assert!(
+                failure.message.contains(&format!("step {}", failure.actions)),
+                "{}",
+                failure.message
+            );
+            assert!(failure.message.contains(GROWER), "{}", failure.message);
+            assert!(
+                failure.message.contains("GROWTH_NUMBER_BOUND"),
+                "{}",
+                failure.message
+            );
+            let text = report(std::slice::from_ref(&failure), 1, 0.0);
+            assert!(
+                text.contains(&format!(
+                    "example: seed {} (turn {}, {} actions)",
+                    failure.seed, failure.turn, failure.actions
+                )),
+                "{text}"
+            );
+            assert!(text.contains("[growth]"), "{text}");
+        }
+
+        #[test]
+        fn weighs_an_action_by_its_events_the_largest_number_on_a_card_and_the_cards_in_play() {
+            register_all();
+            let _preview = preview_every_set();
+            let begun = begin_game(&create_game(&CreateGameOptions {
+                seed: "jackioh-fuzz-1".to_string(),
+                decks: decks_for_seed(1),
+                ..CreateGameOptions::default()
+            }));
+            let weights = weigh(&begun.events, &begun.state);
+            assert_eq!(weights[0], i64::try_from(begun.events.len()).unwrap());
+            assert!(weights[2] >= 2 * i64::from(DECK_SIZE), "{weights:?}");
+
+            let mut state = begun.state.clone();
+            let card = &mut state.players[PlayerId::P1].library[0];
+            card.buffs.health = -700;
+            assert_eq!(largest_number(card), 700);
+            card.buffs.health = 0;
+            card.memory
+                .insert("activations".to_string(), json!({ "turn": 3, "count": 4100 }));
+            assert_eq!(largest_number(card), 4100);
+            card.memory.clear();
+            card.tuning = Some(Tuning {
+                numbers: Some(IndexMap::from([("times".to_string(), 33_724)])),
+                ..Tuning::default()
+            });
+            assert_eq!(largest_number(card), 33_724);
+            assert_eq!(weigh(&[], &state)[1], 33_724);
+        }
+
+        #[test]
+        fn the_growth_stage_names_the_first_measure_past_its_bound_and_passes_one_at_it() {
+            register_all();
+            let _preview = preview_every_set();
+            let state = create_game(&CreateGameOptions {
+                seed: "jackioh-fuzz-1".to_string(),
+                decks: decks_for_seed(1),
+                ..CreateGameOptions::default()
+            });
+            assert_eq!(
+                growth_breach(&MEASURES.map(Measure::bound), &state, 5, "play", Some("core-001")),
+                None
+            );
+            let events = growth_breach(
+                &[GROWTH_EVENTS_BOUND + 1, GROWTH_NUMBER_BOUND + 1, 0],
+                &state,
+                7,
+                "play",
+                Some("core-001"),
+            )
+            .expect("events past their bound");
+            assert!(
+                events.starts_with("step 7 (\"play\" by core-001) emitted"),
+                "{events}"
+            );
+            assert!(events.contains("GROWTH_EVENTS_BOUND"), "{events}");
+            let instances = growth_breach(&[0, 0, GROWTH_INSTANCES_BOUND + 1], &state, 9, "endTurn", None)
+                .expect("instances past their bound");
+            assert!(instances.starts_with("step 9 (\"endTurn\") left"), "{instances}");
+            assert!(instances.contains("GROWTH_INSTANCES_BOUND"), "{instances}");
+        }
+
+        #[test]
+        fn the_summary_and_json_list_each_measure_s_heaviest_actions_heaviest_first() {
+            let heavy = |seed: u32, value: i64| Heavy {
+                seed,
+                step: 3,
+                action: "play".to_string(),
+                card: Some("core-001".to_string()),
+                value,
+            };
+            let mut heaviest = Heaviest::default();
+            for (seed, value) in [(1, 10), (2, 50), (3, 30), (4, 50), (5, 20), (6, 40), (7, 5)] {
+                heaviest.keep(Measure::Events, heavy(seed, value), HEAVIEST_SHOWN);
+            }
+            let seeds: Vec<u32> = heaviest.list(Measure::Events).iter().map(|h| h.seed).collect();
+            assert_eq!(seeds, vec![2, 4, 6, 3, 5]);
+
+            let wave = Wave {
+                from: 1,
+                ran: 7,
+                failures: Vec::new(),
+                reasons: IndexMap::new(),
+                actions_total: 0,
+                actions_max: 0,
+                turn_max: 0,
+                heaviest,
+                elapsed_ms: 0.0,
+            };
+            let summary = wave.summary();
+            assert!(
+                summary.contains(&format!(
+                    "    events (bound {GROWTH_EVENTS_BOUND}): 2/3 play core-001: 50; 4/3 play core-001: 50; 6/3"
+                )),
+                "{summary}"
+            );
+            assert!(
+                summary.contains(&format!("    largest (bound {GROWTH_NUMBER_BOUND}): none")),
+                "{summary}"
+            );
+            let json = wave.json();
+            assert_eq!(
+                json["heaviest"]["events"][0],
+                json!({ "seed": 2, "step": 3, "action": "play", "card": "core-001", "value": 50 })
+            );
+            assert_eq!(json["bounds"]["largest"], json!(GROWTH_NUMBER_BOUND));
+            assert_eq!(json["passed"], json!(7));
         }
     }
 
