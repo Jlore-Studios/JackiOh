@@ -15,7 +15,9 @@
 //!     player's turn, as Pareto Optimality's attack animates The Cane, R1126, enters), or a
 //!     `transformed` whose new instance differs from the old. `fused` keeps the target's entry (R77), and a move along one
 //!     side or a Stack card resuming emits nothing and changes nothing;
-//!   - `lastAttack`, the turn and stint of each instance's latest declared (not forced) attack;
+//!   - `lastAttack`, the turn and stint of each instance's latest declared (not forced) attack,
+//!     pre-recorded with no attacks counted when its attack action is chosen, so a substitute
+//!     barred from the target reads as this stint's spend (R1202);
 //!   - `readied`, the Transform results R424 lets attack on the turn they entered: an attacker that
 //!     destroyed the Unit its declared attack targeted (`destroyed` naming it the killer, R42) and is
 //!     then `transformed` (Classic+ #73.1 Classic Golem) passes "may attack again this turn" to the new
@@ -640,6 +642,12 @@ fn hidden_from(state: &GameState, viewer: PlayerId) -> HiddenSet {
             Selection::Mode { option: mode } => {
                 defs.shift_remove(mode);
             }
+            Selection::Craft { recipe } => {
+                // R880: a `craft` prompt's option key names the recipe's definition, which the
+                // holder reads with the offered recipe (§10.8) — even when the rival's hand
+                // holds a card crafted from the same recipe (fuzz seed 1708, #1216).
+                defs.shift_remove(&crate::subsystems::craft::craft_id(recipe));
+            }
             Selection::Instance { instance_id } => {
                 // R177: a face-down trap is offered by its id alone: its id stays hidden everywhere but that
                 // option's `instanceId`, and its definition stays hidden everywhere.
@@ -1155,6 +1163,30 @@ impl InvariantMonitor {
     pub fn before(&mut self, state: &GameState, player: PlayerId, action: &ActionBody) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
         self.note_windfury(state);
+
+        // R1202: declaring spends the declarer's exertion before its substitute is even summoned,
+        // so a substitute barred from the target spends with no declaration following (fuzz seed
+        // 2550, #1216). Pre-record the declaration with no attacks counted yet, so I4 reads the
+        // spend as this stint's; I2 still counts only the declarations the events carry, since a
+        // first real declaration counts one from zero as from none, and a stint that already
+        // declared keeps its count.
+        if let ActionBody::Attack { attacker_id, .. } = action {
+            let current = self.stint_of(attacker_id);
+            let fresh = match self.last_attack.get(attacker_id) {
+                Some(previous) => previous.turn != state.turn || previous.stint != current,
+                None => true,
+            };
+            if fresh {
+                self.last_attack.insert(
+                    attacker_id.clone(),
+                    AttackMark {
+                        turn: state.turn,
+                        stint: current,
+                        count: 0,
+                    },
+                );
+            }
+        }
 
         // I3: nothing is on the field that no event put there.
         for card in field_cards(state) {

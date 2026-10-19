@@ -476,6 +476,48 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
         );
     }
 
+    /// p1's own craft prompt offering one recipe (R880): the option key names the recipe's
+    /// definition, which p1 reads with the offered recipe (§10.8).
+    fn offer_craft(g: &mut Scenario, recipe: &CraftRecipe) {
+        let prompt: PendingChoice = json_as(json!({
+            "id": "i6-craft-prompt",
+            "playerId": "p1",
+            "kind": "craft",
+            "prompt": "Choose a recipe",
+            "options": [{
+                "key": option_key(&Selection::Craft { recipe: recipe.clone() }),
+                "label": recipe.name(),
+                "selection": { "pick": "craft", "recipe": recipe },
+            }],
+            "min": 1,
+            "max": 1,
+            "resume": { "defId": "", "hook": "resume", "step": "none", "radiant": false, "data": {} },
+        }));
+        g.state_mut().pending = Some(prompt);
+    }
+
+    #[test]
+    fn r880_i6_lets_p1_s_own_craft_prompt_name_the_definition_of_p2_s_hidden_hand_card() {
+        // Fuzz seed 1708 (#1216): p2's hand holds a card crafted from the same recipe p1's
+        // prompt offers, so the option key and the hidden card share one `craft:` definition.
+        let Board { mut g, secret, .. } = board();
+        let recipe: CraftRecipe = json_as(json!({
+            "cost": 1, "type": "Unit", "adjective": "Pure", "noun": "Closure",
+            "attack": 2, "health": 3, "keywords": [], "echo": 0, "hats": [],
+        }));
+        let def = jackioh_engine::subsystems::craft::craft_id(&recipe);
+        assert!(def.starts_with("craft:"), "{def}");
+        g.state_mut().players.p2.hand[0].def_id = def.clone();
+        offer_craft(&mut g, &recipe);
+        assert_eq!(violations(&g, PlayerId::P1, &[]), no_violations());
+        // The hidden card anywhere else is still a leak the prompt does not excuse.
+        let found = violations(&g, PlayerId::P1, &[drawn("p2", &secret.id, &secret.def_id)]);
+        assert!(
+            found.iter().any(|message| message.contains(&quoted(&secret.id))),
+            "{found:?}"
+        );
+    }
+
     #[test]
     fn r97_i6_fires_on_an_event_naming_a_face_down_trap_dormant_under_a_backrow_top() {
         // B5 E21
