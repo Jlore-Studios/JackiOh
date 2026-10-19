@@ -892,7 +892,12 @@ pub struct CatalogReport {
 
 /// `validate-catalog.ts`'s top level over a parsed catalog (an object keyed by card id).
 pub fn check_catalog(catalog: &Object) -> CatalogReport {
-    let sets = sets();
+    check_catalog_against(catalog, sets())
+}
+
+/// `check_catalog` against these set expectations: `sets()`, or in a test those and a stand-in set
+/// that does not ship, while the catalog holds none (R1420).
+fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> CatalogReport {
     // R1420: the totals are the shipped catalog's.
     let expected_non_token: usize = sets.iter().filter(|set| set.ships()).map(|set| set.cards).sum();
     let expected_token: usize = sets
@@ -1928,8 +1933,8 @@ mod tests {
         );
     }
 
-    /// A Meditative+ entry made from Core #2's (a Common Unit): its id, index, name and set its own.
-    fn meditative_plus_entry(index: &str, id: &str) -> Json {
+    /// An entry of `set` made from Core #2's (a Common Unit): its id, index, name and set its own.
+    fn fixture_entry(set: &str, index: &str, id: &str) -> Json {
         let Json::Object(mut entry) = shipped_catalog()["core-002"].clone() else {
             panic!("core-002 is an object");
         };
@@ -1937,63 +1942,75 @@ mod tests {
         entry.insert("index".to_string(), Json::from(index));
         entry.insert(
             "name".to_string(),
-            Json::from(format!("Meditative+ fixture {index}")),
+            Json::from(format!("{set} fixture {index}")),
         );
-        entry.insert("set".to_string(), Json::from("Meditative+"));
+        entry.insert("set".to_string(), Json::from(set));
         Json::Object(entry)
     }
 
-    /// The real catalog without the Meditative+ entries the card parts have added so far, so a test
-    /// counts its own fixture alone.
-    fn without_meditative_plus() -> Object {
+    /// The shipped catalog with one field of one entry written over.
+    fn with_field(id: &str, field: &str, value: Json) -> Object {
         let mut catalog = shipped_catalog();
-        catalog.retain(|_, entry| {
-            entry
-                .as_object()
-                .and_then(|entry| entry.get("set"))
-                .and_then(Json::as_str)
-                != Some("Meditative+")
-        });
+        let Some(Json::Object(entry)) = catalog.get_mut(id) else {
+            panic!("{id} is an object");
+        };
+        entry.insert(field.to_string(), value);
         catalog
     }
 
     #[test]
-    fn r1178000_holds_the_meditative_plus_set_to_its_shape_alone_until_it_ships() {
-        // Its brief's indices, ids `meditativeplus-NNN` and `meditativeplus-NNN-k`, outside the totals.
-        let mut catalog = without_meditative_plus();
-        let shipped = check_catalog(&catalog);
-        catalog.insert(
-            "meditativeplus-002".to_string(),
-            meditative_plus_entry("2", "meditativeplus-002"),
-        );
-        let report = check_catalog(&catalog);
-        assert_eq!(report.failures, Vec::<String>::new());
-        if !set_ships(SetName::MeditativePlus) {
-            assert_eq!(
-                (
-                    report.entries,
-                    report.non_token_count,
-                    report.token_count,
-                    report.unshipped_count
-                ),
-                (
-                    shipped.entries,
-                    shipped.non_token_count,
-                    shipped.token_count,
-                    shipped.unshipped_count + 1
-                )
-            );
+    fn r1178000_holds_the_meditative_plus_set_to_every_count_since_it_shipped() {
+        // Since its release (#1187) its 30 entries count toward the totals, and none is held apart.
+        let shipped = check_catalog(&shipped_catalog());
+        assert_eq!(shipped.failures, Vec::<String>::new());
+        assert_eq!(shipped.unshipped_count, 0);
+
+        // So a card it lacks fails, as any shipped set's would: the totals and the index.
+        let mut missing = shipped_catalog();
+        missing.shift_remove("meditativeplus-002");
+        let failures = check_catalog(&missing).failures;
+        for expected in [
+            format!(
+                "catalog: expected {} entries, found {}",
+                shipped.entries,
+                shipped.entries - 1
+            ),
+            "Meditative+: index \"2\" is missing".to_string(),
+            "Meditative+: expected 9 Epic non-token cards, found 8".to_string(),
+        ] {
+            assert!(failures.contains(&expected), "{expected} in {failures:#?}");
         }
 
+        // Its rarities are held to their counts both ways: M+ #2, an Epic, made a sixth Common.
+        assert_eq!(
+            check_catalog(&with_field("meditativeplus-002", "rarity", Json::from("Common")))
+                .failures,
+            [
+                "Meditative+: expected 5 Common non-token cards, found 6",
+                "Meditative+: expected 9 Epic non-token cards, found 8"
+            ]
+        );
+
+        // Its tags are in the census: M+ #11 Living Mana Potion without its Potion tag.
+        assert_eq!(
+            check_catalog(&with_field(
+                "meditativeplus-011",
+                "tags",
+                Json::Array(Vec::new())
+            ))
+            .failures,
+            ["catalog: expected 3 entries tagged \"Potion\", found 2"]
+        );
+
         // An index the brief does not list (#27, a third helper #1.3), or an id that does not follow
-        // its index, fails.
-        let mut wrong = without_meditative_plus();
+        // its index, still fails.
+        let mut wrong = shipped_catalog();
         for (index, id) in [
             ("27", "meditativeplus-027"),
             ("1.3", "meditativeplus-001-3"),
             ("3", "meditativeplus-x"),
         ] {
-            wrong.insert(id.to_string(), meditative_plus_entry(index, id));
+            wrong.insert(id.to_string(), fixture_entry("Meditative+", index, id));
         }
         let failures = check_catalog(&wrong).failures.join("\n");
         assert!(failures.contains("unexpected index \"27\""), "{failures}");
@@ -2002,73 +2019,37 @@ mod tests {
             failures.contains("implies id \"meditativeplus-003\""),
             "{failures}"
         );
-
-        // No rarity passes its count: a sixth Common is refused while the set is built.
-        if !set_ships(SetName::MeditativePlus) {
-            let mut commons = without_meditative_plus();
-            for n in 2..=7 {
-                let id = format!("meditativeplus-{n:03}");
-                commons.insert(id.clone(), meditative_plus_entry(&n.to_string(), &id));
-            }
-            let failures = check_catalog(&commons).failures;
-            assert_eq!(
-                failures,
-                ["Meditative+: expected 5 Common non-token cards, found 6"]
-            );
-        }
     }
 
-    /// A Meditative entry made from Core #2's: its id, index, name and set its own.
-    fn meditative_entry(index: &str, id: &str) -> Json {
-        let Json::Object(mut entry) = shipped_catalog()["core-002"].clone() else {
-            panic!("core-002 is an object");
-        };
-        entry.insert("id".to_string(), Json::from(id));
-        entry.insert("index".to_string(), Json::from(index));
-        entry.insert(
-            "name".to_string(),
-            Json::from(format!("Meditative fixture {index}")),
-        );
-        entry.insert("set".to_string(), Json::from("Meditative"));
-        Json::Object(entry)
+    /// R1420's stand-in for a set being built, since the catalog holds none once Meditative+ ships
+    /// (R1178000): `sets()` and the reserved Boss set, which `SHIPPED_SETS` does not list, with a
+    /// brief of three cards (one Common, two Rare) and the token #1.1.
+    fn with_a_held_set() -> Vec<SetExpectation> {
+        let mut sets = sets();
+        sets.push(SetExpectation {
+            set: "Boss",
+            segment: "boss",
+            cards: 3,
+            card_defined_tokens: texts(&["1.1"]),
+            shared_tokens: Vec::new(),
+            rarities: &[("Common", 1), ("Rare", 2)],
+        });
+        sets
     }
 
     #[test]
     fn r1420_holds_a_set_being_built_to_its_shape_alone_outside_the_totals() {
-        // Once the Meditative set ships it counts toward every total like the others, and no set
-        // the catalog orders is being built; the shape checks below still hold it.
-        if !set_ships(SetName::Meditative) {
-            r1420_a_set_being_built_counts_toward_no_total();
-        }
+        assert!(!set_ships(SetName::Boss));
+        let shipped = check_catalog_against(&shipped_catalog(), with_a_held_set());
+        assert_eq!(shipped.failures, Vec::<String>::new());
 
-        // An index the brief does not list, or an id that does not follow it, still fails.
-        let mut wrong = shipped_catalog();
-        wrong.insert(
-            "meditative-150".to_string(),
-            meditative_entry("150", "meditative-150"),
+        // Its brief's entries need not all be there, and those that are count toward no total.
+        let mut held = shipped_catalog();
+        held.insert(
+            "boss-002".to_string(),
+            fixture_entry("Boss", "2", "boss-002"),
         );
-        wrong.insert("meditative-x".to_string(), meditative_entry("3", "meditative-x"));
-        let failures = check_catalog(&wrong).failures.join("\n");
-        assert!(failures.contains("unexpected index \"150\""), "{failures}");
-        assert!(failures.contains("implies id \"meditative-003\""), "{failures}");
-    }
-
-    fn r1420_a_set_being_built_counts_toward_no_total() {
-        // The real catalog with the Meditative entries the card parts have added so far taken out,
-        // so this test counts its own fixture alone.
-        let mut catalog = shipped_catalog();
-        catalog.retain(|_, entry| {
-            entry
-                .as_object()
-                .and_then(|entry| entry.get("set"))
-                .and_then(Json::as_str)
-                != Some("Meditative")
-        });
-        catalog.insert(
-            "meditative-002".to_string(),
-            meditative_entry("2", "meditative-002"),
-        );
-        let report = check_catalog(&catalog);
+        let report = check_catalog_against(&held, with_a_held_set());
         assert_eq!(report.failures, Vec::<String>::new());
         assert_eq!(
             (
@@ -2077,8 +2058,48 @@ mod tests {
                 report.token_count,
                 report.unshipped_count
             ),
-            (318, 268, 50, 1)
+            (
+                shipped.entries,
+                shipped.non_token_count,
+                shipped.token_count,
+                shipped.unshipped_count + 1
+            )
         );
+
+        // No rarity passes its count: a second Common is refused while the set is built.
+        let mut commons = held.clone();
+        commons.insert(
+            "boss-001".to_string(),
+            fixture_entry("Boss", "1", "boss-001"),
+        );
+        assert_eq!(
+            check_catalog_against(&commons, with_a_held_set()).failures,
+            ["Boss: expected 1 Common non-token cards, found 2"]
+        );
+
+        // An index its brief does not list, or an id that does not follow it, fails, as it does for
+        // a set that ships (the Meditative set's, from v0.3.5).
+        let mut wrong = held;
+        wrong.insert(
+            "boss-004".to_string(),
+            fixture_entry("Boss", "4", "boss-004"),
+        );
+        wrong.insert("boss-x".to_string(), fixture_entry("Boss", "3", "boss-x"));
+        wrong.insert(
+            "meditative-150".to_string(),
+            fixture_entry("Meditative", "150", "meditative-150"),
+        );
+        wrong.insert(
+            "meditative-x".to_string(),
+            fixture_entry("Meditative", "3", "meditative-x"),
+        );
+        let failures = check_catalog_against(&wrong, with_a_held_set())
+            .failures
+            .join("\n");
+        assert!(failures.contains("Boss: unexpected index \"4\""), "{failures}");
+        assert!(failures.contains("implies id \"boss-003\""), "{failures}");
+        assert!(failures.contains("unexpected index \"150\""), "{failures}");
+        assert!(failures.contains("implies id \"meditative-003\""), "{failures}");
     }
 
     #[test]

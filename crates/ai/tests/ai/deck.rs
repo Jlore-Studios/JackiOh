@@ -143,7 +143,9 @@ mod build_ai_deck_b22 {
     }
 
     #[test]
-    fn r380_b22_the_decks_reach_every_set_core_classic_classic_plus_and_meditative_alike() {
+    fn r380_b22_the_decks_reach_every_set_core_classic_classic_plus_meditative_and_meditative_plus_alike() {
+        // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the AI's soft gate is empty and #1186's
+        // sweep banned none of the set, so its cards are dealt beside the four sets before it.
         let dealt: IndexSet<String> = decks(30, &options(json!({})), "sets")
             .iter()
             .flatten()
@@ -151,7 +153,10 @@ mod build_ai_deck_b22 {
             .collect();
         let mut sets: Vec<String> = dealt.into_iter().collect();
         sets.sort();
-        assert_eq!(sets, vec!["Classic", "Classic+", "Core", "Meditative"]);
+        assert_eq!(
+            sets,
+            vec!["Classic", "Classic+", "Core", "Meditative", "Meditative+"]
+        );
     }
 
     #[test]
@@ -658,11 +663,13 @@ mod r1370_a_deck_that_leans_on_a_set {
         // set was in any pool, so the literals gate it (R1390: a gate deals what the draw dealt before).
         // Re-dealt for patch v0.3.10 (#831), again for patch v0.3.12 (#1149) and again for patch v0.3.13
         // (#1194), whose costs move the builder's curve: the same seeds stop at the same cursors.
+        // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the decks were dealt before the Meditative+
+        // set was in any pool too, so the literals gate it beside Meditative and deal them unchanged.
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
                 20,
-                json!({ "banned": [], "gatedSets": ["Meditative"] }),
+                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+"] }),
                 21,
                 &[
                     "classicplus-006",
@@ -690,7 +697,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:easy",
                 20,
-                json!({ "manaCap": 4, "gatedSets": ["Meditative"] }),
+                json!({ "manaCap": 4, "gatedSets": ["Meditative", "Meditative+"] }),
                 21,
                 &[
                     "core-089",
@@ -718,7 +725,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:hard",
                 30,
-                json!({ "manaCap": 7, "gatedSets": ["Meditative"] }),
+                json!({ "manaCap": 7, "gatedSets": ["Meditative", "Meditative+"] }),
                 31,
                 &[
                     "classicplus-006",
@@ -756,7 +763,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:themed",
                 20,
-                json!({ "banned": [], "gatedSets": ["Meditative"], "theme": "Human" }),
+                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+"], "theme": "Human" }),
                 20,
                 &[
                     "classic-006",
@@ -1101,9 +1108,11 @@ mod r1390_the_ai_decks_soft_gate {
     fn r1390_a_lean_on_meditative_leans_on_the_newest_shipped_set_that_is_not_gated() {
         register_cards();
         let gate = GATE;
+        // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the newest set that ships is Meditative+,
+        // which this gate leaves, so a lean on gated Meditative lands on it and no longer on Classic+.
         assert_eq!(
             ungated_lean(Some(SetName::Meditative), gate),
-            Some(SetName::ClassicPlus)
+            Some(SetName::MeditativePlus)
         );
         assert_eq!(
             ungated_lean(Some(SetName::ClassicPlus), gate),
@@ -1111,12 +1120,23 @@ mod r1390_the_ai_decks_soft_gate {
         );
         assert_eq!(ungated_lean(Some(SetName::Core), gate), Some(SetName::Core));
         assert_eq!(ungated_lean(None, gate), None);
-        // Once Meditative ships it is the newest set that ships and still gated: the walk back from the
-        // newest skips every gated set, as it skips Classic+ here.
+        // The walk back starts from the newest set that ships, not from the set the lean names, and
+        // skips every gated set: past Meditative+ and Meditative, as it skips Classic+ here.
         assert_eq!(
             ungated_lean(
                 Some(SetName::Meditative),
                 &[SetName::ClassicPlus, SetName::Meditative]
+            ),
+            Some(SetName::MeditativePlus)
+        );
+        assert_eq!(
+            ungated_lean(
+                Some(SetName::Meditative),
+                &[
+                    SetName::ClassicPlus,
+                    SetName::Meditative,
+                    SetName::MeditativePlus
+                ]
             ),
             Some(SetName::Classic)
         );
@@ -1140,15 +1160,15 @@ mod r1390_the_ai_decks_soft_gate {
                 DECK_SIZE,
                 &options(json!({ "leanSet": "Meditative", "gatedSets": GATE })),
             );
-            let on_classic_plus = build_ai_deck(
+            let on_meditative_plus = build_ai_deck(
                 &mut create_rng(&seed, 0),
                 DECK_SIZE,
-                &options(json!({ "leanSet": "Classic+", "gatedSets": GATE })),
+                &options(json!({ "leanSet": "Meditative+", "gatedSets": GATE })),
             );
-            assert_eq!(on_meditative, on_classic_plus, "{seed}");
+            assert_eq!(on_meditative, on_meditative_plus, "{seed}");
             assert!(gated_in(&on_meditative).is_empty(), "{seed}: {on_meditative:?}");
             assert!(
-                of_set(&on_meditative, SetName::ClassicPlus) >= lean_floor(DECK_SIZE),
+                of_set(&on_meditative, SetName::MeditativePlus) >= lean_floor(DECK_SIZE),
                 "{seed}: {on_meditative:?}"
             );
         }

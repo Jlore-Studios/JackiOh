@@ -462,8 +462,9 @@ mod r1371_the_newest_shipped_set {
             .position(|set| *set == newest)
             .expect("the newest set is in the catalog order");
         assert!(CATALOG_SETS[at + 1..].iter().all(|set| !set_ships(*set)));
-        // Classic+ until the release; the Meditative set from v0.3.5.
-        assert_eq!(newest, SetName::Meditative);
+        // Classic+ until the Meditative set's release, Meditative from v0.3.5, and the Meditative+
+        // set from v0.3.15 (R1178000).
+        assert_eq!(newest, SetName::MeditativePlus);
         // A preview opens a set's pools on this thread; it ships nothing, so the newest set stays.
         let _preview = preview_sets(&[SetName::Boss]);
         assert_eq!(newest_shipped_set(), newest);
@@ -477,17 +478,38 @@ mod r1421_a_prime_or_ai_pool_holds_its_tokens {
     #[test]
     fn r1421_a_prime_pool_is_the_prime_tokens_of_the_sets_that_ship() {
         setup();
+        // Meditative+ #16.1 Jazakus Prime among them since the set shipped (R1178000).
         assert_eq!(
             pool(json!({ "tags": ["Prime"] })),
-            vec!["classicplus-038-1", "classicplus-046-1", "meditative-045-1"]
+            vec![
+                "classicplus-038-1",
+                "classicplus-046-1",
+                "meditative-045-1",
+                "meditativeplus-016-1"
+            ]
         );
-        // No other pool reaches them: a Felinor pool is cards only.
+        // No other pool reaches them: a Felinor pool is cards only, and a Human pool leaves out the
+        // Human Jazakus Prime.
         assert_eq!(pool(json!({ "tags": ["Felinor"] })), Vec::<String>::new());
-        // An AI pool is the AI generated cards, every one a token, alone or beside other tags.
-        assert_eq!(pool(json!({ "tags": ["AI"] })), vec!["classicplus-t-ai-01"]);
+        assert_eq!(pool(json!({ "tags": ["Human"] })), vec!["core-022"]);
+        // An AI pool is the AI generated cards, every one a token, alone or beside other tags: the
+        // ten of Classic+ and, since Meditative+ shipped, M+ #1.1 Base Camp and #1.2 Spa Day.
+        assert_eq!(
+            pool(json!({ "tags": ["AI"] })),
+            vec![
+                "classicplus-t-ai-01",
+                "meditativeplus-001-1",
+                "meditativeplus-001-2"
+            ]
+        );
         assert_eq!(
             pool(json!({ "anyTags": ["Human", "AI"] })),
-            vec!["core-022", "classicplus-t-ai-01"]
+            vec![
+                "core-022",
+                "classicplus-t-ai-01",
+                "meditativeplus-001-1",
+                "meditativeplus-001-2"
+            ]
         );
         // A set that has not shipped adds its Prime tokens only when previewed (R1420).
         let _preview = preview_sets(&[SetName::Boss]);
@@ -497,6 +519,7 @@ mod r1421_a_prime_or_ai_pool_holds_its_tokens {
                 "classicplus-038-1",
                 "classicplus-046-1",
                 "meditative-045-1",
+                "meditativeplus-016-1",
                 "boss-002-1"
             ]
         );
@@ -516,7 +539,12 @@ mod r1422_any_tags_asks_for_at_least_one_of_its_tags {
         assert_eq!(pool(json!({ "tags": ["KY", "Book"] })), Vec::<String>::new());
         assert_eq!(
             pool(json!({ "anyTags": ["KY", "CN"] })),
-            vec!["core-031", "meditative-033", "meditative-034"]
+            vec![
+                "core-031",
+                "meditative-033",
+                "meditative-034",
+                "meditativeplus-021"
+            ]
         );
         // A Prime tag among them takes its tokens, as `tags` does (R1421).
         assert_eq!(
@@ -525,7 +553,8 @@ mod r1422_any_tags_asks_for_at_least_one_of_its_tags {
                 "classic-003",
                 "classicplus-038-1",
                 "classicplus-046-1",
-                "meditative-045-1"
+                "meditative-045-1",
+                "meditativeplus-016-1"
             ]
         );
         // A set that has not shipped joins the union only when previewed (R1420).
@@ -536,6 +565,7 @@ mod r1422_any_tags_asks_for_at_least_one_of_its_tags {
                 "core-031",
                 "meditative-033",
                 "meditative-034",
+                "meditativeplus-021",
                 "boss-001",
                 "boss-002"
             ]

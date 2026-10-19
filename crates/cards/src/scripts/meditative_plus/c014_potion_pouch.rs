@@ -44,7 +44,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const POUCH: &str = "meditativeplus-014";
-    /// The Potion pool under a preview of the set (R1179003): M+ #11 to #13, nothing else.
+    /// The Potion pool of the sets that ship (R1179003): M+ #11 to #13, nothing else.
     const POTIONS: [&str; 3] = ["meditativeplus-011", "meditativeplus-012", "meditativeplus-013"];
     const FILLER: &str = "core-005"; // (1) Spell
 
@@ -103,16 +103,25 @@ mod tests {
     }
 
     #[test]
-    fn r1179003_nothing_while_the_set_is_held() {
+    fn r1179003_once_the_set_ships_the_pool_is_the_three_living_potions() {
         crate::register_all();
-        // No preview: the Potion pool is empty (R1179003), so the Pouch fizzles.
+        // Re-pinned for v0.3.15 (Meditative+ ships, #1187): with no preview the Potion pool is the
+        // non-token Potion cards of the sets that ship (R1179003), M+ #11 to #13, so the Pouch adds
+        // two of them rather than fizzling.
+        let pool: Vec<String> =
+            crate::query::query(&json_as(json!({ "tags": ["Potion"] }))).iter().map(|def| def.id.clone()).collect();
+        assert_eq!(pool, POTIONS.map(String::from).to_vec());
         let mut s = scenario(json!({
-            "seed": "m+014-held",
+            "seed": "m+014-shipped",
             "p1": { "hand": [POUCH, FILLER] },
             "p2": { "hand": [FILLER] },
         }));
         s.play(POUCH, json!({}));
-        assert_eq!(added(&s), Vec::<String>::new());
+        let added = added(&s);
+        assert_eq!(added.len(), 2);
+        for def in &added {
+            assert!(POTIONS.contains(&def.as_str()), "{def} is no Potion card");
+        }
     }
 
     #[test]
