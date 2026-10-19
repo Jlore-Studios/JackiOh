@@ -1379,7 +1379,7 @@ mod tests {
         jackioh_cards::register_all();
         let meditative = block_of(&meditative_ids(11, 13), &["meditative-022"]);
         let plus = meditative_plus_ids()[0].clone();
-        let newest = block_of(&[plus.clone()], &["meditative-012"]);
+        let newest = block_of(std::slice::from_ref(&plus), &["meditative-012"]);
         let reports = [("a.md".to_string(), meditative), ("b.md".to_string(), newest)];
         let record = compose(&reports, &["meditative-013"]).unwrap();
         assert_eq!(
