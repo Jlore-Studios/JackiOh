@@ -32,6 +32,7 @@ mod tests {
     const TRUE_STRIKE: &str = "core-044"; // (1) Spell, Pierce: 4 damage to a declared Unit or hero.
     const ECHOES: &str = "core-040"; // Field Spell: start of turn, damage to the enemy hero = your exile count.
     const FILLER: &str = "core-005";
+    const TRAP: &str = "classic-052"; // (2) Trap: a lethal hit is redirected to the enemy hero, then heal and draw.
 
     use crate::scenario;
 
@@ -56,6 +57,59 @@ mod tests {
         }));
         s.end_turn();
         s.end_turn(); // p1's start of turn: Echoes deals 2.
+        s.expect_health(P2, HERO_HEALTH - 2);
+    }
+
+    /// `amount` damage to p2's hero with p1's face-up Trap in backrow zone 1 as the running card, then
+    /// the state check.
+    fn trap_hits_enemy_hero(s: &mut Scenario, amount: i32) {
+        let trap = s.backrow(P1, 1).expect("the trap");
+        let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
+        let mut events: Vec<GameEvent> = Vec::new();
+        {
+            let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+            {
+                let mut ctx = make_context(
+                    &mut sink,
+                    Some(&trap),
+                    HookOptions {
+                        controller: Some(P1),
+                        ..HookOptions::default()
+                    },
+                );
+                apply_effects(
+                    &[jackioh_engine::effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": amount })))],
+                    &mut ctx,
+                );
+            }
+            settle(&mut sink, SettleOptions::default());
+        }
+        s.state_mut().rng_cursor = rng.cursor();
+    }
+
+    #[test]
+    fn r1180000_never_a_traps_hit() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "hand": [FILLER], "field": [MAGE], "backrow": [{ "def": TRAP, "faceUp": true }] },
+            "p2": { "hand": [FILLER] },
+        }));
+        trap_hits_enemy_hero(&mut s, 2);
+        s.expect_health(P2, HERO_HEALTH - 2);
+    }
+
+    #[test]
+    fn r1180000_radiant_never_a_traps_hit() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": [FILLER],
+                "field": [{ "def": MAGE, "radiant": true }],
+                "backrow": [{ "def": TRAP, "faceUp": true }],
+            },
+            "p2": { "hand": [FILLER] },
+        }));
+        trap_hits_enemy_hero(&mut s, 2);
         s.expect_health(P2, HERO_HEALTH - 2);
     }
 

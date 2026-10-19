@@ -12,8 +12,8 @@
 //! same thresholds on X; a Vanilla takes them and keeps X/X (R781003, X being no buff). Both faces run
 //! the same script. Declares no numbers: the thresholds are the frame.
 //!
-//! Voice audio is owed until the set ships (R1420): the `card-audio.json5` entry is written, and the
-//! release renders it (`[gen:voice]`, R1448).
+//! Voice audio is owed with the patch that ships the set (R1420): the `card-audio.json5` entry is
+//! written, and the release renders it (`[gen:voice]`, R1448).
 
 use jackioh_engine::prelude::*;
 

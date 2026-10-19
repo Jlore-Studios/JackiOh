@@ -133,6 +133,24 @@ mod tests {
     }
 
     #[test]
+    fn s6_3_heals_your_hero_5_with_no_cap() {
+        let mut s = game("m+013-no-cap", json!({ "health": 28, "field": [ID], "hand": [FILLER] }), json!({}));
+        activate(ID, &mut s);
+        s.expect_health(P1, 33);
+    }
+
+    #[test]
+    fn s6_3_radiant_heals_your_hero_5_with_no_cap() {
+        let mut s = game(
+            "m+013-radiant-no-cap",
+            json!({ "health": 30, "field": [{ "def": ID, "radiant": true }], "hand": [FILLER] }),
+            json!({}),
+        );
+        activate(ID, &mut s);
+        s.expect_health(P1, 35);
+    }
+
+    #[test]
     fn enemy_characters_are_untouched() {
         let mut s = game(
             "m+013-theirs",

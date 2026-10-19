@@ -5,7 +5,7 @@
 //! C #79 Risky Die's pattern: the caster's library is noted on the resolving card as the Spell
 //! begins (`remember`, so a pause cannot lose it), the draws run (the count read off
 //! `instance.embiggened`, R81), then each noted card now in the hand gets a `costOverride` of 0
-//! (R1179000's "they": a card cast on draw never gets there, R58; a burned one isn't there,
+//! (C #79's "they": a card cast on draw never gets there, R58; a burned one isn't there,
 //! §2.4; a card created meanwhile was never in the library; cards already in the hand are
 //! untouched). The override is the card's cost in every zone until it leaves the hand (R766).
 //! Both counts are declared and read through `param` (R386).
