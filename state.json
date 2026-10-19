@@ -20104,9 +20104,9 @@
     ],
     "idle_since": "2026-10-19T04:41:43Z",
     "last_run": "2026-10-19T04:41:43Z",
-    "provider": "claude-6",
+    "provider": null,
     "requested": false,
-    "run_id": "39200700479",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
