@@ -3737,6 +3737,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               </span>
               <span
                 class="card-text"
+                title=""
               >
                 <span
                   class="cf-text-base"
@@ -3807,6 +3808,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               </span>
               <span
                 class="card-text"
+                title=""
               >
                 <span
                   class="cf-text-base"
@@ -3875,6 +3877,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               </span>
               <span
                 class="card-text"
+                title=""
               >
                 <span
                   class="cf-text-base"
@@ -3943,6 +3946,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
               </span>
               <span
                 class="card-text"
+                title=""
               >
                 <span
                   class="cf-text-base"
