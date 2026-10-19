@@ -3333,6 +3333,126 @@
     "meditative-102-play": {
       "hash": "a2e0544bd4bd343e",
       "bytes": 10510
+    },
+    "meditativeplus-001-1-cast": {
+      "hash": "b967b7be91c38d1b",
+      "bytes": 14949
+    },
+    "meditativeplus-002-cast": {
+      "hash": "8f26e201a83875f8",
+      "bytes": 15651
+    },
+    "meditativeplus-005-cast": {
+      "hash": "e38e0b406d75c2d6",
+      "bytes": 14227
+    },
+    "meditativeplus-006-cast": {
+      "hash": "e4890a7e8fe52798",
+      "bytes": 14476
+    },
+    "meditativeplus-008-attack": {
+      "hash": "cc717fa4c0609321",
+      "bytes": 8040
+    },
+    "meditativeplus-008-death": {
+      "hash": "a4697baaa10ead4a",
+      "bytes": 12046
+    },
+    "meditativeplus-008-play": {
+      "hash": "a9dc18d3002acdd7",
+      "bytes": 14485
+    },
+    "meditativeplus-009-cast": {
+      "hash": "54ce2fe0f6c67ceb",
+      "bytes": 16123
+    },
+    "meditativeplus-010-attack": {
+      "hash": "3a3f2195d39e7b33",
+      "bytes": 6023
+    },
+    "meditativeplus-010-death": {
+      "hash": "c58e28608afd6f2b",
+      "bytes": 8017
+    },
+    "meditativeplus-010-play": {
+      "hash": "71f983ce4f269e08",
+      "bytes": 9238
+    },
+    "meditativeplus-011-attack": {
+      "hash": "5ec2d558d73b6965",
+      "bytes": 9471
+    },
+    "meditativeplus-011-death": {
+      "hash": "53167732823b627e",
+      "bytes": 7656
+    },
+    "meditativeplus-011-play": {
+      "hash": "4043a2ed6fcb9e4c",
+      "bytes": 13926
+    },
+    "meditativeplus-012-attack": {
+      "hash": "b45f1e4a527a304d",
+      "bytes": 7073
+    },
+    "meditativeplus-012-death": {
+      "hash": "f18617d09fbeb6f5",
+      "bytes": 9339
+    },
+    "meditativeplus-012-play": {
+      "hash": "21bf1d471e98fd16",
+      "bytes": 14765
+    },
+    "meditativeplus-014-cast": {
+      "hash": "92ff9ed1df3fe37f",
+      "bytes": 12555
+    },
+    "meditativeplus-017-cast": {
+      "hash": "a8d0a4edbf6a436e",
+      "bytes": 7538
+    },
+    "meditativeplus-018-cast": {
+      "hash": "9b5ba813b0f976e6",
+      "bytes": 18489
+    },
+    "meditativeplus-019-cast": {
+      "hash": "91f3897d8d63d161",
+      "bytes": 13341
+    },
+    "meditativeplus-020-1-attack": {
+      "hash": "553c284b70b0b693",
+      "bytes": 7113
+    },
+    "meditativeplus-020-1-death": {
+      "hash": "289f3e934ce133ac",
+      "bytes": 8576
+    },
+    "meditativeplus-020-1-play": {
+      "hash": "f0adea61c51bd56a",
+      "bytes": 9974
+    },
+    "meditativeplus-022-cast": {
+      "hash": "ea60892bb3b50018",
+      "bytes": 14597
+    },
+    "meditativeplus-023-cast": {
+      "hash": "252bbdc231e643bb",
+      "bytes": 11268
+    },
+    "meditativeplus-024-attack": {
+      "hash": "466748065b6c5563",
+      "bytes": 9674
+    },
+    "meditativeplus-024-death": {
+      "hash": "ed6ec62e6454b533",
+      "bytes": 12985
+    },
+    "meditativeplus-024-play": {
+      "hash": "9218d022514af2fc",
+      "bytes": 17457
+    },
+    "meditativeplus-025-cast": {
+      "hash": "534fde91d42bbb50",
+      "bytes": 13014
     }
   }
 }
