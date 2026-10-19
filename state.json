@@ -5320,6 +5320,13 @@
     "1253": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-19T02:05:58Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Adds ruling R1253000 and edits spec notes (hot spot 3) across about 15 files, so it is not easy; it stays below hard because it is server-only, with no engine, AI or migration change"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
