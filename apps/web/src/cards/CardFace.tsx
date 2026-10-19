@@ -209,7 +209,7 @@ export type RulesBox = {
  * line; a face printing its catalog text takes its short form (shortText.ts SHORT_FORMS); a face in
  * play past the hover preview's limit (a fused card, a heavily Buffed one) clamps. Each of these
  * prints less than its whole text, which the hover preview prints on the face's left.
- * `fullArtOn` is the caller's `useFullArt()` (R1108000); without it, the setting decides.
+ * `fullArtOn` is the caller's `useFullArt(defId)` (R1108000, R1313000); without it, the setting decides.
  */
 export function faceText(face: FaceModel, ascentLevel?: number | null, fullArtOn?: boolean): RulesBox {
   const full = face.text.full;
@@ -303,7 +303,8 @@ export function hasCrest(face: FaceModel): boolean {
 export function CardFace({ face, layout = "full", className, lazyArt = false, ascentLevel, worn = false }: CardFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
-  const fullArtOn = useFullArt();
+  // R1313000: a full art prints on the viewer's own copy (`worn`) once they own it, where ownership decides.
+  const fullArtOn = useFullArt(face.defId, worn);
   const nameRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
 
