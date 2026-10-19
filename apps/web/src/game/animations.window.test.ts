@@ -126,7 +126,8 @@ type OverflowGame = { label: string; game: () => RealGame; seed: number; prefer:
  * cheaper Meditative cards let p1 empty its hand in seeds 1 and 2, so seed 3 joins them for the burn.
  */
 function overflowGames(): OverflowGame[] {
-  const burner: Handicap = { ...HUMAN_HANDICAP, deckSize: 30, extraOpeningCards: 6, extraDrawsPerTurn: 2 };
+  // Nine opening cards: the four every seat draws (R1156000) and five extra.
+  const burner: Handicap = { ...HUMAN_HANDICAP, deckSize: 30, extraOpeningCards: 5, extraDrawsPerTurn: 2 };
   const short: Handicap = { ...HUMAN_HANDICAP, deckSize: 6 };
   const capped: Handicap = { ...HUMAN_HANDICAP, deckSize: LIBRARY_CAP };
   const games: OverflowGame[] = [];

@@ -3,7 +3,7 @@
 // a built client so a bad fixture is caught before the suite ever starts.
 //
 // A fixture may carry a `handicap` (R180), the seat's resources when a scenario needs other than
-// SPEC's own (spec 25: a 4-card library, a 9-card opening hand, a 60-card library). It is checked as
+// SPEC's own (spec 25: a 5-card library, a 9-card opening hand, a 60-card library). It is checked as
 // the engine's `validateHandicap` checks one — five non-negative integers, 1 <= deckSize <=
 // LIBRARY_CAP (R184) and an optional positive heroHealth (R290) — and L2 is then its deckSize.
 //

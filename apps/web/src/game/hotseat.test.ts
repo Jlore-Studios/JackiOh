@@ -175,7 +175,7 @@ describe("createHotseat", () => {
   });
 
   it("R180 passes a seat's handicap to createGame untouched, and omits the key when there is none", () => {
-    // The E2E build of /dev/hotseat injects one from a fixture deck (spec 25): a 4-card library that
+    // The E2E build of /dev/hotseat injects one from a fixture deck (spec 25): a 5-card library that
     // fatigues on turn 3, a 60-card one that fills. The session carries it and decides nothing.
     const handicaps = { p1: { deckSize: 2, manaBonus: 3, manaCap: 4, extraOpeningCards: 0, extraDrawsPerTurn: 0 } };
     const withHandicap = makeEngine();
@@ -600,16 +600,16 @@ describe("with the real engine", () => {
   });
 
   it("R180 a handicapped game starts from its handicap, fatigues on it (R315), and folds with it", () => {
-    // Spec 25's first scenario, headless: seat 1 plays a 4-card library (its handicap's deckSize,
-    // R184), holds all four cards after its turn-1 draw, and its turn-3 draw is fatigue 1.
+    // Spec 25's first scenario, headless: seat 1 plays a 5-card library (its handicap's deckSize,
+    // R184), holds all five cards after its turn-1 draw, and its turn-3 draw is fatigue 1.
     const seed = "hotseat-handicap-fatigue";
-    const handicaps = { p1: { deckSize: 4, manaBonus: 0, manaCap: 4, extraOpeningCards: 0, extraDrawsPerTurn: 0 } };
-    const short = decks[0].slice(0, 4);
+    const handicaps = { p1: { deckSize: 5, manaBonus: 0, manaCap: 4, extraOpeningCards: 0, extraDrawsPerTurn: 0 } };
+    const short = decks[0].slice(0, 5);
     const live = createHotseat({ seed, decks: [short, decks[1]], engine: port, catalog, handicaps });
     live.dispatch(keepAll(live.view()));
     live.dispatch(keepAll(live.view()));
     live.setSeat("p1");
-    expect(live.view().you.libraryCount, "3 opening cards and the turn-1 draw empty a 4-card library").toBe(0);
+    expect(live.view().you.libraryCount, "4 opening cards (R1156000) and the turn-1 draw empty a 5-card library").toBe(0);
     live.dispatch({ type: "endTurn" });
     live.setSeat("p2");
     live.dispatch({ type: "endTurn" });

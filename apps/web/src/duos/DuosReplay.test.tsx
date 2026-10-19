@@ -4,7 +4,7 @@
 // The views are fixtures: the screen computes nothing from them (CLAUDE.md rule 7).
 
 import { CATALOG } from "@jackioh/cards";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { closeInspect } from "../cards/index.ts";
@@ -20,6 +20,7 @@ import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView } from "../test/fixtures.ts";
 import type { DuosTeamView } from "../wire/generated/DuosTeamView.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
+import { duosReplayJson } from "./download.ts";
 import DuosReplay, { nextRound, openDuosReplay, previousRound, type DuosReplaySteps } from "./DuosReplay.tsx";
 import { duosTestid } from "./testids.ts";
 
@@ -142,8 +143,8 @@ describe("the co-op replay screen", () => {
     expect(screen.getByTestId(replayTestid.readout)).toHaveTextContent(`Step 1 of ${String(ROUNDS.length)} · Round 0`);
     const toolbar = screen.getByTestId(replayTestid.controls);
     expect(toolbar).toHaveAttribute("role", "toolbar");
-    const labels = [...toolbar.querySelectorAll("button")].map((control) => control.getAttribute("aria-label"));
-    expect(labels).toEqual(["To the start", "Back a turn", "Back a step", "Play", "Forward a step", "Forward a turn", "To the end"]);
+    const labels = [...toolbar.querySelectorAll("button")].map((control) => control.getAttribute("aria-label") ?? control.textContent);
+    expect(labels).toEqual(["To the start", "Back a turn", "Back a step", "Play", "Forward a step", "Forward a turn", "To the end", "Download JSON"]);
     expect(getDuosReplay).toHaveBeenCalledTimes(1);
     expect(getDuosReplay).toHaveBeenCalledWith(MATCH);
 
@@ -361,5 +362,88 @@ describe("a round standing for a turn", () => {
 
   it("B41 previousRound is the first step of the round the step is in, or of the one before it", () => {
     expect(ROUNDS.map((_, at) => previousRound(steps, at))).toEqual([0, 0, 1, 1, 1, 4, 4]);
+  });
+});
+
+describe("R1242000 Download JSON", () => {
+  /** The files handed to the browser's downloads, by the name each was saved under. */
+  let saved: File[];
+
+  beforeEach(() => {
+    saved = [];
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: vi.fn((file: File) => {
+        saved.push(file);
+        return "blob:jackioh-duos-replay";
+      }),
+    });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("R1242000 a finished replay offers Download JSON in its controls, which saves the seat's views and nothing of the match", async () => {
+    vi.mocked(getDuosReplay).mockResolvedValue({
+      seat: "a1",
+      steps: [...STEPS],
+      seed: "duos-seed",
+      log: [],
+      decks: {},
+    } as Awaited<ReturnType<typeof getDuosReplay>>);
+    await open();
+    const toolbar = screen.getByTestId(replayTestid.controls);
+    const button = within(toolbar).getByTestId(duosTestid.replayDownload);
+    expect(button).toHaveTextContent("Download JSON");
+    fireEvent.click(button);
+    expect(saved).toHaveLength(1);
+    const file = saved[0];
+    if (file === undefined) throw new Error("nothing was saved");
+    expect(file.name).toBe("jackioh-duos-replay.json");
+    // This file uses fake timers, so the clock goes back to real ones before the file is read.
+    vi.useRealTimers();
+    const text = await file.text();
+    expect(JSON.parse(text)).toEqual(duosReplayJson(STEPS as unknown as DuosReplaySteps));
+    expect(text).not.toContain(MATCH);
+    expect(text).not.toContain("duos-seed");
+    expect(text).not.toMatch(/"(seed|log|decks|handicaps|state|pings|profileId|username|accountId|matchId)":/u);
+  });
+
+  it("R1242000 a replay loading, refused or expired offers no Download JSON", async () => {
+    vi.mocked(getDuosReplay).mockReturnValue(new Promise<Awaited<ReturnType<typeof getDuosReplay>>>(() => {}));
+    render(
+      <CatalogContext.Provider value={lookup}>
+        <DuosReplay matchId={MATCH} onLeave={vi.fn()} />
+      </CatalogContext.Provider>,
+    );
+    expect(screen.getByTestId(replayTestid.loading)).toBeInTheDocument();
+    expect(screen.queryByTestId(duosTestid.replayDownload)).toBeNull();
+    cleanup();
+
+    const refusals: ApiRequestError[] = [
+      new ApiRequestError(410, { code: "gone", message: "expired" }),
+      new ApiRequestError(422, {
+        code: "replay_unavailable",
+        message: "this replay cannot be shown: earlier_patch",
+        details: { reason: "earlier_patch" },
+      }),
+      new ApiRequestError(404, { code: "not_found", message: "no such co-op match" }),
+    ];
+    for (const error of refusals) {
+      vi.mocked(getDuosReplay).mockReset().mockRejectedValue(error);
+      const onLeave = vi.fn();
+      const { unmount } = render(
+        <CatalogContext.Provider value={lookup}>
+          <DuosReplay matchId={MATCH} onLeave={onLeave} />
+        </CatalogContext.Provider>,
+      );
+      await flush();
+      expect(screen.getByTestId(replayTestid.failure), error.code).toBeInTheDocument();
+      expect(screen.queryByTestId(duosTestid.replayDownload)).toBeNull();
+      unmount();
+    }
   });
 });

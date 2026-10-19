@@ -126,7 +126,7 @@
       {
         "key": "coins",
         "base": 5,
-        "radiant": 7,
+        "radiant": 10,
         "better": "up",
         "step": 1,
         "min": 1
@@ -134,7 +134,7 @@
       {
         "key": "perHeads",
         "base": 1,
-        "radiant": 2,
+        "radiant": 1,
         "better": "up",
         "step": 1,
         "min": 1
@@ -142,7 +142,7 @@
       {
         "key": "perTails",
         "base": 1,
-        "radiant": 2,
+        "radiant": 1,
         "better": "up",
         "step": 1,
         "min": 1
@@ -176,7 +176,7 @@
       {
         "key": "draw",
         "base": 2,
-        "radiant": 5,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -184,7 +184,7 @@
       {
         "key": "heal",
         "base": 2,
-        "radiant": 5,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -818,11 +818,11 @@
     "loc": 46,
     "base": {
       "keywords": [],
-      "text": "Choose one: Deal X+1 damage, heal a target {heal}X, or gain X mana next turn.\nEnd of turn: Return this to hand."
+      "text": "Choose one: Deal X damage, heal a target {heal}X, or gain X mana next turn.\nEnd of turn: Return this to hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: Deal {damage}X+1 damage, heal a target {heal}X, or gain X+1 mana next turn.\nEnd of turn: Return this to hand."
+      "text": "Choose one: Deal {damage}X damage, heal a target {heal}X, or gain X+1 mana next turn.\nEnd of turn: Return this to hand."
     }
   },
   "core-025": {
@@ -935,7 +935,7 @@
       {
         "key": "cards",
         "base": 2,
-        "radiant": 5,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -1373,7 +1373,7 @@
       {
         "key": "damage",
         "base": 4,
-        "radiant": 9,
+        "radiant": 8,
         "better": "up",
         "step": 1,
         "min": 1
@@ -1498,7 +1498,7 @@
       {
         "key": "heal",
         "base": 20,
-        "radiant": 50,
+        "radiant": 40,
         "better": "up",
         "step": 5,
         "min": 1
@@ -4882,7 +4882,7 @@
       {
         "key": "units",
         "base": 1,
-        "radiant": 3,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -5893,7 +5893,7 @@
       {
         "key": "draw",
         "base": 1,
-        "radiant": 3,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -5965,7 +5965,7 @@
       {
         "key": "tokens",
         "base": 1,
-        "radiant": 3,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -5973,7 +5973,7 @@
       {
         "key": "draw",
         "base": 1,
-        "radiant": 3,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -8378,7 +8378,7 @@
       {
         "key": "heal",
         "base": 3,
-        "radiant": 8,
+        "radiant": 6,
         "better": "up",
         "step": 1,
         "min": 1
@@ -8825,10 +8825,10 @@
       "keywords": [
         {
           "kind": "Spell Damage",
-          "n": 5
+          "n": 4
         }
       ],
-      "text": "Spell Damage +5\nDeath: Shuffle a Radiant Solarius Prime into your deck."
+      "text": "Spell Damage +4\nDeath: Shuffle a Radiant Solarius Prime into your deck."
     }
   },
   "classicplus-038-1": {
@@ -8873,10 +8873,10 @@
       "keywords": [
         {
           "kind": "Spell Damage",
-          "n": 7
+          "n": 6
         }
       ],
-      "text": "Spell Damage +7\nCry: Cast {casts|random Radiant Spell|random Radiant Spells}. Each aims at enemies when it harms and at your side when it helps."
+      "text": "Spell Damage +6\nCry: Cast {casts|random Radiant Spell|random Radiant Spells}. Each aims at enemies when it harms and at your side when it helps."
     }
   },
   "classicplus-039": {
@@ -9939,7 +9939,7 @@
       {
         "key": "draw",
         "base": 1,
-        "radiant": 4,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -11157,7 +11157,7 @@
       {
         "key": "heal",
         "base": 3,
-        "radiant": 8,
+        "radiant": 6,
         "better": "up",
         "step": 2,
         "min": 1
@@ -12421,7 +12421,7 @@
       {
         "key": "stats",
         "base": 2,
-        "radiant": 5,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -12660,7 +12660,7 @@
       {
         "key": "damage",
         "base": 2,
-        "radiant": 5,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -14895,10 +14895,10 @@
       "keywords": [
         {
           "kind": "Armor",
-          "n": 7
+          "n": 6
         }
       ],
-      "text": "Armor 7\nLethal damage your hero or your other Units would take is redirected to this."
+      "text": "Armor 6\nLethal damage your hero or your other Units would take is redirected to this."
     }
   },
   "meditative-093": {
@@ -15216,7 +15216,7 @@
       {
         "key": "cards",
         "base": 2,
-        "radiant": 5,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -15371,7 +15371,7 @@
       {
         "key": "chance",
         "base": 10,
-        "radiant": 12,
+        "radiant": 10,
         "better": "up",
         "step": 2,
         "min": 1,
@@ -15573,7 +15573,7 @@
       {
         "key": "times",
         "base": 2,
-        "radiant": 5,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1,
@@ -16311,7 +16311,7 @@
       {
         "key": "spellDamage",
         "base": 2,
-        "radiant": 5,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -16607,7 +16607,7 @@
       {
         "key": "damage",
         "base": 2,
-        "radiant": 5,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1

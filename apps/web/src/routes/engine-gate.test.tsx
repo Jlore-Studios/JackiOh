@@ -226,6 +226,11 @@ describe("#778 a screen that calls the engine", () => {
     at("/decks");
     render(<App />);
     expect(await screen.findByTestId(shellTestid.engineLoading, undefined, SLOW)).toBeTruthy();
+    // The panel can paint before the gate's effect asks `loadWasm()`: a download failed before it
+    // asks would hand the gate the next, held one, and the panel would wait forever.
+    await waitFor(() => {
+      expect(downloads).toBeGreaterThan(0);
+    });
 
     await fail();
 

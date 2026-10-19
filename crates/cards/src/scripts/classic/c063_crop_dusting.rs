@@ -1,11 +1,11 @@
 //! C #63 Crop Dusting (SPEC §8.6 row 63). (1) Trap, Common.
 //!   Base:    "Start of turn: Reveal. Place {tokens|Plague Counter|Plague Counters} on each
 //!            permanent. Draw {draw}." — 1 counter, draw 1
-//!   Radiant: the same text — 3 counters, draw 3
+//!   Radiant: the same text — 2 counters, draw 2
 //!   Engine:  "A Trap whose condition is its controller's start of turn, fired with the start-of-turn
 //!            triggers (§2.2, R62); it fires once and goes to the graveyard. Each permanent on the field,
 //!            both sides, face-down ones included, gets one placement (Plague Counters, §6.3) of 1
-//!            (Radiant 3). Tunes: tokens 1 ↑; draw 1 ↑."
+//!            (Radiant 2). Tunes: tokens 1 ↑; draw 1 ↑."
 //!
 //! A Trap is set face-down (R33) and answers its controller's `turnStarted` (§5.1, R99) before the turn's draw (R62).
 //! Placements go in R68's order to every permanent (the firing trap included, R550, R78), unrevealed to
@@ -40,7 +40,7 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The same script: the Radiant face's 3 counters and draw 3 are its declared numbers, which `param` reads
+    // The same script: the Radiant face's 2 counters and draw 2 are its declared numbers, which `param` reads
     // off the running face.
     let radiant = base.clone();
 
@@ -49,7 +49,7 @@ pub fn script() -> CardScripts {
 
 // C #63 Crop Dusting — SPEC §8.6 row 63, BUILD M9 Classic row C 63: face-down (R33), fires at start of
 // your next turn with start-of-turn triggers (R62) and goes to graveyard. Places 1 Plague Counter on each
-// permanent, face-down included (R97; C #27 doubles), then draws 1; radiant: 3 counters each and draw 3;
+// permanent, face-down included (R97; C #27 doubles), then draws 1; radiant: 2 counters each and draw 2;
 // tuned numbers (tokens, draw) read through `param()` (R386).
 //
 // The C #27 Pestilent Slime case needs C #27's script (cards-classic-a) registered.
@@ -336,7 +336,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn the_designers_radiant_face_places_3_plague_counters_on_each_permanent_one_placement_each_and_draws_3() {
+            fn the_radiant_face_places_2_plague_counters_on_each_permanent_one_placement_each_and_draws_2() {
                 crate::register_all();
                 let mut s = set_up(true);
                 let cards: Vec<CardInstance> =
@@ -346,11 +346,11 @@ mod tests {
                 s.end_turn();
 
                 for card in &cards {
-                    assert_eq!(s.card(card).counters.plague, Some(3), "{}", card.def_id);
+                    assert_eq!(s.card(card).counters.plague, Some(2), "{}", card.def_id);
                 }
-                assert_eq!(placed_on(&s).values().cloned().collect::<Vec<Vec<Value>>>(), vec![vec![json!(3)]; 5]);
-                // Its three draws, then the turn's.
-                assert_eq!(draws_by(s.last_events(), P1).len(), 4);
+                assert_eq!(placed_on(&s).values().cloned().collect::<Vec<Vec<Value>>>(), vec![vec![json!(2)]; 5]);
+                // Its two draws, then the turn's.
+                assert_eq!(draws_by(s.last_events(), P1).len(), 3);
                 s.expect_in_zone(DUSTING, "graveyard");
             }
 
@@ -364,7 +364,7 @@ mod tests {
             }
 
             #[test]
-            fn r386_a_degrade_places_2_on_each_and_draws_2() {
+            fn r386_a_degrade_places_1_on_each_and_draws_1() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": DUSTING, "radiant": true }, FILLER], "field": [VANILLA], "library": lib(5, X) },
@@ -377,8 +377,8 @@ mod tests {
 
                 s.end_turn();
 
-                assert_eq!(s.card(VANILLA).counters.plague, Some(2));
-                assert_eq!(draws_by(s.last_events(), P1).len(), 3);
+                assert_eq!(s.card(VANILLA).counters.plague, Some(1));
+                assert_eq!(draws_by(s.last_events(), P1).len(), 2);
             }
         }
     }

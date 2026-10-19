@@ -4,9 +4,9 @@
 //!   Engine:  "Activate (R384): separate Buffs (Upgrade, R386) on each other permanent acting on your side
 //!            (unit tops, backrow cards, face-down ones; itself left out since patch v0.3.10, #831), each application its own draw; an
 //!            Immutable card is left alone (R23); a face-down card's applications are reported as R440
-//!            reports hidden ones. Tunes: times 2 ↑ (Radiant 5; never above 5, R884000)."
+//!            reports hidden ones. Tunes: times 2 ↑ (Radiant 4; never above 5, R884000)."
 //!
-//! One script serves both faces: only the declared `times` (2, Radiant 5) and the health differ.
+//! One script serves both faces: only the declared `times` (2, Radiant 4) and the health differ.
 
 use jackioh_engine::prelude::*;
 
@@ -48,7 +48,7 @@ pub fn script() -> CardScripts {
 
 // M 97.6 University — SPEC §8.8 row 97.6, BUILD M10 row M 97.6: "Can't attack; Activate, once a turn: two
 // Buffs on each other permanent on your side (itself left out since patch v0.3.10), face-down cards included (the latter cued per R440), an
-// Immutable one unchanged; enemy cards untouched; times reads through `param()`; radiant 0/24 and five
+// Immutable one unchanged; enemy cards untouched; times reads through `param()`; radiant 0/24 and four
 // Buffs each".
 //
 // A Buff is counted by the `upgraded` events naming each card. Every scenario keeps a 0-cost Spell in each
@@ -129,7 +129,7 @@ mod tests {
         assert_eq!(js(&def.radiant.keywords), json!([{ "kind": "Can't attack" }]));
         assert_eq!(
             js(&def.params),
-            json!([{ "key": "times", "base": 2, "radiant": 5, "better": "up", "step": 1, "min": 1, "max": 5 }])
+            json!([{ "key": "times", "base": 2, "radiant": 4, "better": "up", "step": 1, "min": 1, "max": 5 }])
         );
         let scripts = script();
         let uses = |script: &Script| {
@@ -150,8 +150,10 @@ mod tests {
             assert_eq!(crate::upgrade_number(&mut s, ID, "times"), want);
         }
         assert!(!crate::can_upgrade_number(&s, ID, "times"));
-        // The Radiant face prints the ceiling, so nothing steps it up.
-        assert!(!crate::can_upgrade_number(&setup(true), ID, "times"));
+        // The Radiant face's 4 steps up once, to the ceiling.
+        let mut radiant = setup(true);
+        assert_eq!(crate::upgrade_number(&mut radiant, ID, "times"), 5);
+        assert!(!crate::can_upgrade_number(&radiant, ID, "times"));
     }
 
     /// The loop #884 found: each use's own Buffs could step its Activate N and its `times`, each use
@@ -232,11 +234,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn five_buffs_each_and_0_24() {
+        fn four_buffs_each_and_0_24() {
             let mut s = setup(true);
             s.expect_stats(ID, json!({ "attack": 0, "maxHealth": 24 }));
             s.activate(ID, json!({}));
-            assert_eq!(tally(&s), [0, 5, 0, 5, 0]);
+            assert_eq!(tally(&s), [0, 4, 0, 4, 0]);
         }
     }
 }

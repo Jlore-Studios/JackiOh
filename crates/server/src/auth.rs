@@ -108,12 +108,9 @@ pub enum AuthError {
 
 // Tunables SPEC does not pin down
 
-// NOT IN SPEC, no R-row: PROPOSED RULING for §11. §9.4 step 1's "verified email" is read from the
-// auth provider and only the positive answer is remembered, for 30 seconds per user id. Confirmation
-// does not go backwards in normal use, and not caching the negative lets an account that just clicked
-// its link unlock at once. Asking on every request would put a round trip in front of every call. An
-// unreachable provider still fails closed (`AdminLookup::Unavailable`): the email counts as unverified.
-// Affects §9.4 (redemption step 1), §9.2.
+// R159: §9.4 step 1's "verified email" is read from the auth provider and only the positive answer
+// is remembered, briefly and per user id. An unreachable provider still fails closed
+// (`AdminLookup::Unavailable`): the email counts as unverified. Not in SPEC: how brief, 30 seconds.
 const EMAIL_CONFIRMED_CACHE_TTL_MS: i64 = 30_000;
 
 /// Supabase issues project JWTs with this audience for a signed-in user.
@@ -531,7 +528,7 @@ impl std::fmt::Display for JwksFetchError {
     }
 }
 
-/// The caches are behaviour (R194, R665, the proposed ruling above), not optimisations.
+/// The caches are behaviour (R194, R665, R159), not optimisations.
 pub struct SupabaseAuth {
     auth_base: String,
     jwks_url: String,

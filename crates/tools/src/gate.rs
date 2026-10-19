@@ -16,7 +16,8 @@
 //! AI_GATE.fullSeeds[matchup]. A failure names the seeds not won. Every game must be clean (B31):
 //! nothing rejected, thrown or fallen back, a real result, a log that folds to the live hash.
 //! The perf gate (B42) then checks that a decision at the browser's budget stays under
-//! AI_GATE.maxDecisionMs (`perf_gate`).
+//! AI_GATE.maxDecisionMs, and one on each pinned position under AI_GATE.pinnedDecisionMs
+//! (`perf_gate`, #1240).
 //!
 //! CI plays the full gates in shards (.github/workflows/ci.yml). `--shard k/K` (or
 //! `JACKIOH_AI_GATE_SHARD`) plays a share of the games (`gateShardGames`). A win-rate threshold
@@ -906,7 +907,9 @@ fn gate_matchup(matchup: Matchup, full: bool, shard: Option<GateShard>, out: &Pa
 // The states are every decision the Easy AI faced in real ai-vs-greedy gate games
 // (AI_GATE.perfSmokeGames of them, AI_GATE.perfFullGames with `--full`). Two hand-built wide boards
 // are timed too, the worst case: five units a side and a hand of X-cost and targeted spells beside
-// a Lava Golem, at Hard's seven crystals and Easy's four.
+// a Lava Golem, at Hard's seven crystals and Easy's four. So are the two pinned positions (#1240),
+// decisions the improve screen of 2026-10-16 found slow, each under the tighter
+// AI_GATE.pinnedDecisionMs.
 //
 // The shadow-ban sweep times a decision its own clock found slow again with this yardstick and this
 // timer, at its own budget and limit (R977000, `sweep.rs`'s `still_slow`).
@@ -997,6 +1000,33 @@ fn wide_state(name: &str, setup: &Value) -> GameState {
     jackioh_engine::testkit::scenario(options).state().clone()
 }
 
+/// #1240: the pinned positions, by name: two decisions the improve screen of 2026-10-16
+/// (`training/history/improve-cycle-2026-10-16.md`) found slow, captured as the true state, the
+/// deciding seat and its stream (`crates/ai/tests/ai/pinned.rs` says how).
+const PINNED: [(&str, &str); 2] = [
+    (
+        "improve-dev-154",
+        include_str!("../../ai/tests/fixtures/pinned-improve-dev-154.json"),
+    ),
+    (
+        "improve-dev-200",
+        include_str!("../../ai/tests/fixtures/pinned-improve-dev-200.json"),
+    ),
+];
+
+/// A pinned position's state, seat and stream.
+fn pinned_position(text: &str) -> Result<(GameState, PlayerId, Rng)> {
+    let fixture: Value = serde_json::from_str(text)?;
+    let state: GameState = serde_json::from_value(fixture["state"].clone())?;
+    let seat: PlayerId = serde_json::from_value(fixture["seat"].clone())?;
+    let seed = fixture["rngSeed"].as_str().context("no rngSeed")?;
+    let cursor = fixture["rngCursor"]
+        .as_u64()
+        .and_then(|cursor| u32::try_from(cursor).ok())
+        .context("no rngCursor")?;
+    Ok((state, seat, Rng::new(seed, cursor)))
+}
+
 /// The yardstick: a fixed piece of engine work, random-policy games played through `reduce`.
 pub(crate) fn yardstick_ms() -> Result<f64> {
     let random = parse_matchup("ai-vs-random")?;
@@ -1063,8 +1093,9 @@ pub(crate) fn time_decision(
 
 /// B42: every decision of the perf games this process times (all, or its shard's) stays within the
 /// node budget and under AI_GATE.maxDecisionMs, and so does a decision on each wide board (timed in
-/// every shard). `judge_time` false skips the clock (the unit tests' unoptimised build). Answers the
-/// problems found.
+/// every shard); one on each pinned position (#1240, in every shard too) stays within the node budget
+/// and under AI_GATE.pinnedDecisionMs. `judge_time` false skips the clock (the unit tests'
+/// unoptimised build). Answers the problems found.
 fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<String> {
     let games = if full {
         AI_GATE.perf_full_games
@@ -1156,6 +1187,29 @@ fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<Stri
                 }
             }
             Err(error) => problems.push(format!("perf: {name}: {error:#}")),
+        }
+    }
+
+    // Printed apart from `[gate perf]`, which `luau.rs`'s `slowest_decision` reads against a parent
+    // build that has no pinned positions.
+    let pinned_limit = AI_GATE.pinned_decision_ms;
+    for (name, text) in PINNED {
+        let timed = pinned_position(text)
+            .and_then(|(state, seat, rng)| time_decision(&state, seat, &rng, AI_BUDGET, pinned_limit));
+        match timed {
+            Ok(timing) => {
+                let line = serde_json::to_string(&timing).unwrap_or_default();
+                println!("[gate pinned] {name}: {line}");
+                if timing.nodes > budget_nodes {
+                    problems.push(format!("perf: pinned {name}: over the node budget: {line}"));
+                }
+                if judge_time && timing.ms >= pinned_limit {
+                    problems.push(format!(
+                        "perf: pinned {name}: not under AI_GATE.pinned_decision_ms ({pinned_limit} ms): {line}"
+                    ));
+                }
+            }
+            Err(error) => problems.push(format!("perf: pinned {name}: {error:#}")),
         }
     }
     problems

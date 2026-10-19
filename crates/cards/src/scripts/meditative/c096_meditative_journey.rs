@@ -84,7 +84,7 @@ pub fn script() -> CardScripts {
 // as it resolves; the picks are exiled and one Journey Complete remembering their ids in the order picked
 // (`shuffle_into { memory }`) is shuffled into your deck, publicly (R1246); picking none exiles nothing and
 // shuffles nothing; a full deck refuses the token and the cards stay in exile; the memory survives a JSON
-// round trip and a replay; cards reads through `param()`; radiant up to 5, a Radiant Journey Complete
+// round trip and a replay; cards reads through `param()`; radiant up to 4, a Radiant Journey Complete
 // (R1247), then draw 1, a draw even when none is picked".
 #[cfg(test)]
 mod tests {
@@ -358,15 +358,16 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r1247_up_to_five_then_a_radiant_journey_complete_then_draw_one() {
-                let picked = [POINTMASTER, MENACE, HIT_JOB, SEVEN, BIG_FELINOR];
+            fn r1247_up_to_four_then_a_radiant_journey_complete_then_draw_one() {
+                let picked = [POINTMASTER, MENACE, HIT_JOB, SEVEN];
                 let mut hand = picked.to_vec();
+                hand.push(BIG_FELINOR);
                 hand.push(FILLER);
                 let mut s = holding("journey-radiant", true, &hand, json!([]));
                 let picks: Vec<String> = picked.iter().map(|def| id_of(&s, def)).collect();
                 s.play(ID, json!({}));
                 let pending = open(&s);
-                assert_eq!((pending.min, pending.max), (0, 5));
+                assert_eq!((pending.min, pending.max), (0, 4));
                 assert_eq!(pending.options.len(), 6);
                 s.answer(json!(picks));
 

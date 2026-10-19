@@ -75,8 +75,11 @@ which is `decide_styled` at `AI_STYLE_EXACT`, draws only for its determinization
 ## Budgets
 
 A decision's cost is counted in nodes: one node is one `reduce` call the AI makes, the reply's
-included. `AI_BUDGET` is what the browser plays with; `AI_GATE_BUDGET`, the gates' and the sweep's,
-is the same budget, so both measure the AI that ships. The same state, seed and budget always give the
+included. A step whose `reduce` does far more work than most is charged extra nodes up front
+(`surcharge_nodes`: a play that ranks every shipped card, an attack into an armed My Pawn, a fused
+card holding either, and a play the other side's Pareto Optimality judges, per card held; #1240).
+`AI_BUDGET` is what the browser plays with; `AI_GATE_BUDGET`, the gates' and the sweep's, is the
+same budget, so both measure the AI that ships. The same state, seed and budget always give the
 same `Decision`. The browser's wall-clock cap arrives as `should_stop` (the WASM binding's deadline),
 which ends the search early with the best line found.
 
@@ -134,10 +137,11 @@ needs `gate_needed(matchup, n)` wins (the rule spec §9.9 proposes); only wins c
 | `hard-vs-easy` | the AI on Hard | the AI on Easy | 40 of 50 | 16 of 20 |
 
 The perf gate holds each decision of the first ai-vs-greedy game, and two hand-built wide boards,
-within the node budget and under `AI_GATE.max_decision_ms`. Tuning changes the weights in
-`src/config.rs`, never the floors, the seed counts or the brief's rates. The gates see only a broken
-AI; whether a change made it stronger is the training lanes' question (`training/README.md`,
-`cargo jackioh promote`).
+within the node budget and under `AI_GATE.max_decision_ms`, and the two pinned positions
+(`tests/fixtures/pinned-improve-dev-*.json`, #1240) under `AI_GATE.pinned_decision_ms`. Tuning
+changes the weights in `src/config.rs`, never the floors, the seed counts or the brief's rates. The
+gates see only a broken AI; whether a change made it stronger is the training lanes' question
+(`training/README.md`, `cargo jackioh promote`).
 
 A seat the AI plays has a skill (R747000): `SeatController::Ai { budget, skill }`, the chance in
 `[0, 1]` that each decision follows the AI, the rest being a random legal action (`random_action`,
@@ -178,9 +182,11 @@ pub struct Features { pub dense: Vec<i32>, pub sparse: Vec<(String, i32)> }
   side, the seat's own first, its life (`effective_life`) and armor, mana, crystals and debt, its
   hand, library, graveyard and backrow (and how much of the backrow the seat can read), its units in
   aggregate (count, positions, attack, health, armor, damaged, Radiant), one count per keyword kind,
-  the face damage its board threatens and its Jade and extra turns; then the seat's hand by cost.
+  the face damage its board threatens and its Jade and extra turns; then the seat's hand by cost,
+  and how many of its cards are Radiant (R1012004).
 - **sparse**: `(key, count)`, sorted, the key `<zone>:<side>:<card id>` for each card the seat can
-  name: `board` (both sides), `hand` (its own) and `backrow` (its own, and the enemy's face-up ones).
+  name: `board` (both sides), `hand` (its own) and `backrow` (its own, and the enemy's face-up ones),
+  and `hand_radiant` (its own) beside `hand` for a Radiant card in its hand (R1012004).
   Ids stay strings, so a patch or a new card never moves an index; an id a network's weights do not
   know is no input at all.
 - `FEATURES_VERSION` names the layout; any change bumps it, and a network's weights record the

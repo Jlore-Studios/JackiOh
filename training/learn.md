@@ -26,7 +26,7 @@ runner). Each run:
    since the export drops none of its games (run 5 lost 10,707 of 100,000 to #1199 and #1200), the fit
    and its report (`training/ml/README.md`), the integer network that ships (D7, R1011000) into
    `crates/ai/src/learned/weights.json` and the switch, `AI_EVAL_KIND`, on. It stops when the network does not beat the calibrated hand eval
-   on held-out turns 4 to 10. The fit trains three seeds; the best by validation whose integer network
+   on held-out turns 4 to 10. The fit trains six seeds; the best by validation whose integer network
    passes the AI's tests with the switch on ships (`cargo test -p jackioh-ai`, as the promotion's CI
    will run them), and it stops when none does.
 4. **Screens** the candidate against the AI on `main` on the improve lane's dev set: 800 paired games

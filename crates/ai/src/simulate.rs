@@ -15,7 +15,8 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
     Action, ActionBody, CardInstance, GameState, PLAYER_IDS, Phase, PlayerId, TurnLog, active_units_of,
-    effective_life, find_instance, legal_actions, max_mana_for, opponent_of, owed_mana_of, reduce, unit_view,
+    effective_life, find_instance, legal_actions, max_mana_for, opponent_of, owed_mana_of, reduce,
+    self_def_ids, subsystems, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -242,12 +243,23 @@ pub type SimStep = Result<GameState, String>;
 /// the state (the §10.7 scorer) or an Attack that could set off a trap which hands the attacker a
 /// whole random turn (§8.5 core-096). One reduce of either costs the wall clock a hundred cheap
 /// sims do, so the step is budgeted its share up front — otherwise a hand or backrow holding one
-/// burns a decision's 2 s on a few sims (R186's sweep flag) as easily as on a few cheap ones.
+/// burns a decision's 2 s on a few sims (R186's sweep flag) as easily as on a few cheap ones. A Play
+/// that the other side's Pareto Optimality judges (`subsystems::watching`) pays `judged_card_nodes`
+/// for each card its player holds, and a fused card is charged as its ingredients are: uncharged,
+/// improve-dev:200's pinned decision took 20 s (#1240).
 pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) -> usize {
     match action {
-        ActionBody::Play { instance_id, .. } => find_instance(state, instance_id)
-            .filter(|card| AI_SEARCH.expensive_def_ids.contains(&card.def_id.as_str()))
-            .map_or(0, |_| AI_SEARCH.expensive_def_nodes.max(0) as usize),
+        ActionBody::Play { instance_id, .. } => {
+            let expensive = find_instance(state, instance_id)
+                .filter(|card| stands_for_any(state, &card.def_id, AI_SEARCH.expensive_def_ids))
+                .map_or(0, |_| AI_SEARCH.expensive_def_nodes.max(0) as usize);
+            let judged = if subsystems::watching(state, actor) {
+                AI_SEARCH.judged_card_nodes.max(0) as usize * state.players[actor].hand.len()
+            } else {
+                0
+            };
+            expensive + judged
+        }
         ActionBody::Attack { attacker_id, .. } => {
             let defender = opponent_of(actor);
             // The trap's `when` asks a would-be-lethal declaration at its controller's hero; the
@@ -260,7 +272,7 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
                 .backrow
                 .iter()
                 .flatten()
-                .any(|card| AI_SEARCH.ai_turn_trap_ids.contains(&card.def_id.as_str()));
+                .any(|card| stands_for_any(state, &card.def_id, AI_SEARCH.ai_turn_trap_ids));
             if lethalish && trapped {
                 AI_SEARCH.ai_turn_trap_nodes.max(0) as usize
             } else {
@@ -269,6 +281,14 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
         }
         _ => 0,
     }
+}
+
+/// #1240: whether `def_id` is one of `ids`, or a fused definition (R77) one of whose ingredients is
+/// (`self_def_ids`, fused ingredients included), since a fused card runs every ingredient's script.
+fn stands_for_any(state: &GameState, def_id: &str, ids: &[&str]) -> bool {
+    self_def_ids(Some(state), def_id)
+        .iter()
+        .any(|id| ids.contains(&id.as_str()))
 }
 
 /// One auto-answer (#891): of the first `options` answers `answerer`'s prompt lists (legal_actions

@@ -539,8 +539,8 @@ mod e18_a_whole_game_with_the_new_prompts {
         // Pickle (mode prompts the opponent holds), Back from the GY (a budgeted pick), Mind Melt (a pick
         // of the opponent's hand) and Ancient Acquisition (no prompt since R684: its returns are random),
         // beside cheap Units: eight cards and a hero of 20, so that the game is short and the prompt cards
-        // are drawn. On the first seed, with the hand eval, greedy's Pickle hands the AI three mode prompts
-        // on greedy's turn, and the AI's Back from the GY asks a pick.
+        // are drawn. On these seeds greedy's Pickle hands the AI mode prompts on greedy's turn, and the
+        // AI's Back from the GY asks a pick.
         install();
         let deck: Vec<String> = [
             PICKLE,
