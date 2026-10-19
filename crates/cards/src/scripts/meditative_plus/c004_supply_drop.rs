@@ -395,6 +395,49 @@ mod tests {
             pass_own_turns(&mut s, 1);
             assert_eq!(health(&s, P2), 25);
         }
+
+        #[test]
+        fn r386_supplies_cards_and_cost_read_through_param() {
+            let _preview = preview_sets(&[SetName::MeditativePlus]);
+            let mut s = game("m+004-tuned-supplies", false, json!({}), json!({}));
+            let drop = s.hand(P1)[0].id.clone();
+            assert_eq!(crate::upgrade_number(&mut s, &drop, "cards"), 2);
+            assert_eq!(crate::upgrade_number(&mut s, &drop, "suppliesCost"), 1);
+            cast(&mut s, SUPPLIES, false);
+            pass_own_turns(&mut s, 3);
+            let added = supplies(&s);
+            assert_eq!(added.len(), 2);
+            assert_supplies(&added, 1);
+        }
+
+        #[test]
+        fn r386_the_embiggened_combat_numbers_read_through_param() {
+            let mut s = game("m+004-tuned-embiggened-combat", false, json!({}), json!({ "field": [] }));
+            let drop = s.hand(P1)[0].id.clone();
+            assert_eq!(crate::upgrade_number(&mut s, &drop, "embiggenedDamage"), 10);
+            assert_eq!(crate::degrade_number(&mut s, &drop, "embiggenedTurns"), 6);
+            cast(&mut s, COMBAT, true);
+            pass_own_turns(&mut s, 5);
+            assert_eq!(health(&s, P2), 30, "six turns now");
+            pass_own_turns(&mut s, 1);
+            assert_eq!(health(&s, P2), 20);
+        }
+
+        #[test]
+        fn r386_the_embiggened_supplies_count_reads_through_param() {
+            let _preview = preview_sets(&[SetName::MeditativePlus]);
+            let mut s = game("m+004-tuned-embiggened-supplies", false, json!({}), json!({}));
+            let drop = s.hand(P1)[0].id.clone();
+            assert_eq!(crate::degrade_number(&mut s, &drop, "embiggenedCards"), 4);
+            assert_eq!(crate::upgrade_number(&mut s, &drop, "embiggenedTurns"), 4);
+            cast(&mut s, SUPPLIES, true);
+            pass_own_turns(&mut s, 3);
+            assert!(supplies(&s).is_empty(), "four turns now");
+            pass_own_turns(&mut s, 1);
+            let added = supplies(&s);
+            assert_eq!(added.len(), 4);
+            assert_supplies(&added, 2);
+        }
     }
 
     mod radiant {

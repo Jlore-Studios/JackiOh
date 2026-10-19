@@ -219,6 +219,33 @@ mod tests {
         }
 
         #[test]
+        fn r77_the_fused_card_runs_both_scripts() {
+            // Me and Mr Token (Cry: summon a Rush Token) trails, Jlockeed Shredder-10 (End of turn: 2
+            // to each enemy unit and the enemy hero) leads: played, the one card does both.
+            const CRY: &str = "core-015";
+            const END_OF_TURN: &str = "core-013";
+            register_win_rates(table(vec![(END_OF_TURN, 30, 40), (CRY, 10, 40)]));
+            let mut s = casting("na-tech-scripts", false, 1);
+            let card = fused(&mut s);
+            assert_eq!(
+                ingredients(&s, &card),
+                vec![(CRY.to_string(), false), (END_OF_TURN.to_string(), false)]
+            );
+            let enemy_health = s.state().players.p2.hero.health;
+            s.play(&card, json!({}));
+            let row: Vec<String> = (1..=5)
+                .filter_map(|lane| s.unit(P1, lane).map(|unit| unit.def_id))
+                .collect();
+            assert_eq!(row, vec![card.def_id.clone(), "core-t-rush".to_string()], "the trailer's Cry");
+            s.end_turn();
+            assert_eq!(
+                s.state().players.p2.hero.health,
+                enemy_health - 2,
+                "the leader's end of turn"
+            );
+        }
+
+        #[test]
         fn the_fused_card_is_hidden_from_the_opponent() {
             register_win_rates(the_table());
             let mut s = casting("na-tech-hidden", false, 1);

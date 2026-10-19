@@ -377,8 +377,8 @@ from an entry, the decision wins.
 - **Radiant:** Aura: Both players have Spell Damage +{spellDamage}.
 - **Engine:** NEW: Spell Damage beyond Units (B02): `damage::spell_damage_of` sums its Units' keyword, Field Spell auras that give a player Spell Damage (this one gives both), and the player modifier of M+ #11, in that one place ([[§4.4]] step 0).
 - **Rulings:** MP-B02-3 ([[R1180000]]): a player's Spell Damage is one sum, whatever gives it; it is read as each hit of a Spell lands.
-- **Numbers:** spellDamage 2 ↑ (Radiant 5).
-- **Check:** R275: +5 against +2, for both players as the designer wrote (a symmetric card, as written).
+- **Numbers:** spellDamage 2 ↑ (Radiant 4; the designer's 5 until #1220 set Radiant numbers at double).
+- **Check:** R275: +4 against +2, for both players as the designer wrote (a symmetric card, as written).
 - **Class:** C (Spell Damage from an aura).
 
 #### Meditative+ #10 · Medina Grifter
@@ -494,8 +494,8 @@ from an entry, the decision wins.
 - **Radiant:** Deal {damage} damage to an enemy. / In your hand or deck: After another Spell of yours that targeted an enemy resolves, cast this at it.
 - **Engine:** A targeted Spell (an enemy Unit or the enemy hero, [[R81]]). NEW (B02): the targets a Spell declared or chose in a prompt, kept with the resolving card, and a hand-and-deck trigger (`TriggerZone::Hand`, `Library`, [[R464]]) on that Spell's resolution that casts this card ([[§6.3]] Cast: free, a play, [[R70]]) at the first such enemy still there. One Dogpile answers each Spell, the one in hand first (leftmost), else the topmost in the deck; its own cast is a Spell that targeted an enemy, so it can call the next.
 - **Rulings:** MP-B02-5 ([[R1180005]]): "a spell" is a Spell of yours, other than this card; "them" is the enemy it targeted, a Unit or the hero; a target gone or no longer an enemy casts nothing; a Spell that targeted several enemies calls it at the first, in the order it targeted them, still an enemy on the field; an aim that is no longer a legal pick casts nothing.
-- **Numbers:** damage 2 ↑ (Radiant 5).
-- **Check:** Classic #60 is Pile On, so this is Dogpile (R381, [[R1178002]], ⚠ designer). R275: 5 against 2.
+- **Numbers:** damage 2 ↑ (Radiant 4; the designer's 5 until #1220 set Radiant numbers at double).
+- **Check:** Classic #60 is Pile On, so this is Dogpile (R381, [[R1178002]], ⚠ designer). R275: 4 against 2.
 - **Class:** C (the targets kept, the hand-and-deck cast).
 
 #### Meditative+ #18 · Cognitive Offloading
@@ -657,8 +657,8 @@ that the set has shipped (before it, a change was a correction to the rows).
 ## MP8. Sound, visuals, the AI and the release
 
 - **Sound.** Each card's `card-audio.json5` entry came with it ([[§10.11]]'s lines); no voice file was
-  rendered or expected before the set shipped ([[R1420]]): the release rendered them through the `voice`
-  workflow (`[gen:voice]`, R1448). The intro snippets ([[R1352]], `gen:music`) for the Legendary and the
+  rendered or expected before the set shipped ([[R1420]]), and the files are owed with the release, rendered
+  through the `voice` workflow (`[gen:voice]`, R1448). The intro snippets ([[R1352]], `gen:music`) for the Legendary and the
   Mythics, #1 Bob's Plan, #24 Bob and #26 Scratch Pad, were the release's.
 - **Visuals.** The set mark (R503) showed the plain diamond of a set the client did not know until the
   release drew Meditative+ a glyph of its own; the client's new screens (the potion and from-scratch

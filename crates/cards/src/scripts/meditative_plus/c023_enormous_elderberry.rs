@@ -193,6 +193,17 @@ mod tests {
             cast(&mut s, false);
             assert_eq!(added(&s).len(), 2);
         }
+
+        #[test]
+        fn r386_played_embiggened_an_upgrade_adds_one_more() {
+            let mut s = game("m+023-tuned-embiggened", false, 1);
+            let berry = s.hand(P1)[0].id.clone();
+            assert_eq!(crate::upgrade_number(&mut s, &berry, "embiggenedCards"), 4);
+            cast(&mut s, true);
+            let got = added(&s);
+            assert_eq!(got.len(), 4);
+            assert_priced(&s, &got);
+        }
     }
 
     mod radiant {
