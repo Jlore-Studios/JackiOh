@@ -6203,6 +6203,9 @@
       "stop_requested": false
     },
     "1338": {
+      "asks": [
+        "c:6277163180"
+      ],
       "cleared": {
         "at": "2026-10-19T18:33:54Z",
         "by": "`claude` (strong)",
@@ -6211,9 +6214,16 @@
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-19T16:46:29Z",
+      "forced": true,
+      "interruptions": 0,
       "issue": 1299,
       "kind": "revise",
+      "pending_request": false,
+      "queued_at": "2026-10-19T20:59:19Z",
+      "requested_by": "jgoetzmann",
       "self_check_findings": [],
+      "source": "request",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
