@@ -456,7 +456,7 @@ function Hotseat({
       </button>
     </>
   );
-  const game = <Game view={view} legal={legal} onAction={dispatch} error={error} resultActions={resultActions} emotes={emotes} />;
+  const game = <Game view={view} legal={legal} onAction={dispatch} error={error} resultActions={resultActions} emotes={emotes} wearCosmetics />;
 
   return (
     <div className="app-shell app-shell--wide">

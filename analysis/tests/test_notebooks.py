@@ -4,7 +4,9 @@ A notebook is never the source of a number (R377's arithmetic is the Rust's, and
 loader to it), so what is held here is that each one still runs to the end when the data changes shape: it reads
 the fixtures its first cell defaults to, draws its figures, and raises nothing. Each runs again with the minimum
 sample lowered, because the fixtures are 80 games and the server's minimum is 20 games per card, which leaves the
-comparisons nothing to compare; and the sweep's with a sweep that has flags, which the committed one does not.
+comparisons nothing to compare; and the sweep's with a sweep that has flags, which the committed one does not. The one
+number notebook 02 does compute that the Rust computes too, a group's first-seat wins and endings, is held to
+`cargo jackioh stats report --games` over the same files (`fixtures/games.report.json`).
 """
 
 import json
@@ -66,13 +68,16 @@ def outputs_of(notebook):
     return [output for cell in notebook.cells if cell.cell_type == "code" for output in cell.outputs]
 
 
-def run(path, monkeypatch, env=None):
-    """Execute a notebook where it lives, with `env` in the kernel's environment; returns the executed notebook."""
+def run(path, monkeypatch, env=None, then=None):
+    """Execute a notebook where it lives, with `env` in the kernel's environment, and `then` as one more cell after
+    its last; returns the executed notebook."""
     for name in INPUTS:  # whatever the developer has set for a real run is not what a test reads
         monkeypatch.delenv(name, raising=False)
     for name, value in (env or {}).items():
         monkeypatch.setenv(name, str(value))
     notebook = nbformat.read(path, as_version=4)
+    if then is not None:
+        notebook.cells.append(nbformat.v4.new_code_cell(then))
     executor = ExecutePreprocessor(timeout=TIMEOUT_SECONDS, kernel_name="python3")
     executor.preprocess(notebook, {"metadata": {"path": str(path.parent)}})
     return notebook
@@ -270,3 +275,40 @@ def test_a_relative_path_is_read_from_the_repository_root(path, monkeypatch):
     assert all((root / value).is_file() or (root / value).is_dir() for value in env.values() if "," not in value)
     executed = run(path, monkeypatch, env)
     assert not [output for output in outputs_of(executed) if output.output_type == "error"]
+
+
+GAMES_REPORT = ANALYSIS / "fixtures" / "games.report.json"
+SHARE_TOLERANCE = 5e-4  # the report rounds a share to three places
+
+# Run after notebook 02's last cell: its per-group first-seat and ending figures, as one line of JSON.
+GROUP_FIGURES = """
+import json
+print("GROUP FIGURES " + json.dumps([
+    {
+        "patch": patch, "mode": mode, "source": source,
+        "games": int(row["games"]), "draws": int(row["drawn"]), "firstWins": int(row["first_won"]),
+        "firstShare": float(row["first_win_rate"]),
+        "reasons": {reason: int(count) for reason, count in endings.loc[(patch, mode, source)].items() if count},
+    }
+    for (patch, mode, source), row in by_group.iterrows()
+]))
+"""
+
+
+def test_the_decks_notebooks_first_seat_and_ending_figures_equal_stats_report_games(monkeypatch):
+    """The Rust's `stats report --games --source=all --json` over the fixtures' files is what notebook 02 computes."""
+    report = json.loads(GAMES_REPORT.read_text(encoding="utf-8"))
+    assert report["filter"]["source"] == "all"
+    assert len(report["groups"]) == 5
+    rust = {(group["patch"], group["mode"], group["source"]): group for group in report["groups"]}
+    dev = rust[("v0.3.1", "random", "dev")]
+    assert (dev["games"], dev["draws"], dev["firstWins"], dev["reasons"]["hero-death"]) == (40, 0, 13, 40)
+
+    line = next(line for line in streams(run(NOTEBOOKS[1], monkeypatch, then=GROUP_FIGURES)).splitlines() if line.startswith("GROUP FIGURES "))
+    notebook = {(group["patch"], group["mode"], group["source"]): group for group in json.loads(line.removeprefix("GROUP FIGURES "))}
+    assert notebook.keys() == rust.keys()
+    for key, figures in notebook.items():
+        group = rust[key]
+        assert (figures["games"], figures["draws"], figures["firstWins"]) == (group["games"], group["draws"], group["firstWins"]), key
+        assert figures["firstShare"] == pytest.approx(group["firstShare"], abs=SHARE_TOLERANCE), key
+        assert figures["reasons"] == {reason: count for reason, count in group["reasons"].items() if count}, key

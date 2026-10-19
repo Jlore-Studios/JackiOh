@@ -255,4 +255,9 @@ export type BoardProps = {
   onControl?: (control: BoardControl) => void;
   /** One hero's emote surface per side, or undefined where a route does not run emotes. */
   emotes?: (side: Side) => HeroEmotes | undefined;
+  /**
+   * R1295000: the viewer's own cards wear the device's card cosmetics (game/wearer.ts). A board
+   * the viewer plays sets it; absent, every card draws the defaults.
+   */
+  wearCosmetics?: boolean;
 };

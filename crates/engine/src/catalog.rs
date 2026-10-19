@@ -173,9 +173,13 @@ fn find_code_block(blocks: CodeBlocks, def_id: &str) -> Option<&'static str> {
         .map(|at| blocks[at].1)
 }
 
-/// ME-STATS: the win-rate table CN Tech reads — the testkit's override first, then the registered
-/// table, then an empty table held in a `OnceLock` (nothing registered yet).
+/// ME-STATS: the win-rate table CN Tech reads — while a replay folds under a shipped catalog, the
+/// one that version shipped with (R1266000), else the testkit's override, else the registered table,
+/// else an empty table held in a `OnceLock` (nothing registered yet).
 pub fn registered_win_rates() -> &'static crate::win_rates::WinRateTable {
+    if let Some(shipped) = folding() {
+        return &shipped.win_rates;
+    }
     #[cfg(feature = "testkit")]
     if let Some(table) = crate::testkit::scenario::win_rates_override() {
         return table;
@@ -244,16 +248,19 @@ pub fn find_def<'a>(state: Option<&'a GameState>, def_id: &str) -> Option<&'a Ca
 
 /// R767000: a shipped catalog version this build carries: its definitions, in order, where each id
 /// sits in them, and the scripts kept for it (`<id>@<version>`, R388). A card with no script kept
-/// runs the build's own.
+/// runs the build's own. It also holds the win-rate table the version shipped with (R1266000).
 pub struct ShippedCatalog {
     version: String,
     defs: CardDefs,
     index: IndexMap<String, usize, IdHash>,
     scripts: IndexMap<String, CardScripts, IdHash>,
+    /// R1266000: the win-rate table this version shipped with, which its folds read.
+    win_rates: crate::win_rates::WinRateTable,
 }
 
 impl ShippedCatalog {
-    /// R767000: `version`'s catalog, indexed as `register_catalog` indexes the build's.
+    /// R767000: `version`'s catalog, indexed as `register_catalog` indexes the build's, with the empty
+    /// win-rate table (R1266000; `with_win_rates` gives it another).
     pub fn new(version: &str, defs: CardDefs, scripts: IndexMap<String, CardScripts>) -> ShippedCatalog {
         let index = defs.keys().enumerate().map(|(at, id)| (id.clone(), at)).collect();
         ShippedCatalog {
@@ -261,6 +268,7 @@ impl ShippedCatalog {
             defs,
             index,
             scripts: scripts.into_iter().collect(),
+            win_rates: crate::win_rates::WinRateTable::default(),
         }
     }
 
@@ -272,6 +280,19 @@ impl ShippedCatalog {
     /// Its definitions, in catalog order.
     pub fn defs(&self) -> &CardDefs {
         &self.defs
+    }
+
+    /// R1266000: this catalog with `table` as the win-rate table its version shipped with.
+    pub fn with_win_rates(self, table: crate::win_rates::WinRateTable) -> ShippedCatalog {
+        ShippedCatalog {
+            win_rates: table,
+            ..self
+        }
+    }
+
+    /// R1266000: the win-rate table its version shipped with.
+    pub fn win_rates(&self) -> &crate::win_rates::WinRateTable {
+        &self.win_rates
     }
 
     fn find(&self, def_id: &str) -> Option<&CardDef> {

@@ -9,7 +9,8 @@ use jackioh_engine::config::REPLAY_PAGE_STEPS;
 use jackioh_engine::testkit::{
     AI_DIFFICULTY, CardDefs, DECK_SIZE, IndexMap, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerView,
     ReplayInput, ReplayOpen, ReplayRecord, ReplayRefusal, ShippedCatalog, clear_overrides, fold, hash_state,
-    register_catalog_as, register_shipped, registered_catalog, replay_open, replay_page, view_for,
+    register_catalog_as, register_shipped, registered_catalog, registered_win_rates, replay_open,
+    replay_page, view_for,
 };
 
 use super::support::{random_decks_sized, register_cards};
@@ -78,11 +79,11 @@ fn r767000_a_practice_game_on_version_n_replays_step_for_step_after_a_patch_to_n
             continue;
         };
 
-        register_shipped(vec![ShippedCatalog::new(
-            PLAYED_ON,
-            on_n.clone(),
-            IndexMap::new(),
-        )]);
+        // N shipped with the table the game was played with (R1266000).
+        register_shipped(vec![
+            ShippedCatalog::new(PLAYED_ON, on_n.clone(), IndexMap::new())
+                .with_win_rates(registered_win_rates().clone()),
+        ]);
         register_catalog_as(patched(&on_n, unit), BUILD);
         let game = input(record.log.clone());
         if hash_state(&fold(&game).state) == record.hash {

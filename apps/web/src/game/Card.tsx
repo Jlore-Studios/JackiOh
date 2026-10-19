@@ -41,6 +41,10 @@
 // (cards/CardMarks.tsx), and `data-marks` naming them on the root. A face-down backrow card's back
 // carries the marks its view entry lists (R33: the player who cannot read the card still sees it is
 // marked); the opponent's hand of backs carries none.
+//
+// R1295000: on a board that wears cosmetics (game/wearer.ts) the viewer's own card, by its owner,
+// wears the device's card cosmetics: its face is `worn`. A stolen unit keeps its owner's look; a
+// card in the resolving strip, which names no owner, wears the defaults.
 
 import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement } from "react";
 
@@ -75,6 +79,7 @@ import ActivateControls from "./ActivateControl.tsx";
 import { useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
 import { isSpent, useActingSeat } from "./spent.ts";
+import { useWearerSeat } from "./wearer.ts";
 import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
 import { COUNTERED_NOTE, conditionAttr, conditionTargetAttr, counteredAttr, countedAttr, glowAttr } from "./glow.ts";
 import { useSetting } from "../settings/store.ts";
@@ -197,6 +202,8 @@ export type CardProps = {
   /** R33: a public card names its owner and its controller; they differ after a steal or a swap. */
   owner?: PlayerId;
   controller?: PlayerId;
+  /** R1295000: a card in the viewer's own hand, which wears the device's cosmetics: `CardView` names no owner. */
+  inOwnHand?: boolean;
   /** `gradeLetter` is the letter the view names #93's grade by (R372); the badge prints it. */
   counters?: { plague?: number; grade?: number; gradeLetter?: string };
   /**
@@ -260,6 +267,7 @@ export default function Card(props: CardProps): ReactElement {
   const panelHover = useSetting("hoverPreviews");
   const form = formOf(card, unit, props.type);
   const acting = useActingSeat();
+  const wearer = useWearerSeat();
 
   // The card in play: the unit's view when it is one, else the card's own (a hand card's stats and
   // power, a face-up backrow card's power off the hero's list). A back has no face at all.
@@ -424,6 +432,8 @@ export default function Card(props: CardProps): ReactElement {
   const buried = unit?.buried ?? 0;
   const cardType = face.type;
   const spent = unit !== undefined && unit !== null && isSpent(unit, acting);
+  // R1295000: the viewer's own card wears the device's cosmetics, on a board that wears them.
+  const worn = wearer !== null && (props.inOwnHand === true || (props.owner ?? unit?.owner) === wearer);
 
   const root = (
     <div
@@ -470,11 +480,11 @@ export default function Card(props: CardProps): ReactElement {
       title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit, card)}
     >
       {unit !== undefined && unit !== null ? (
-        <MinionFace face={face} unit={unit} />
+        <MinionFace face={face} unit={unit} worn={worn} />
       ) : (
         // Issue #814: a Summit in play shortens to its header and next Ascent line; the inspect
         // overlays (which render their own CardFace from `face`) keep the whole text.
-        <CardFace face={face} layout={form === "compact" ? "compact" : "full"} ascentLevel={ascentLevelOf(face.values)} />
+        <CardFace face={face} layout={form === "compact" ? "compact" : "full"} ascentLevel={ascentLevelOf(face.values)} worn={worn} />
       )}
 
       {/* Everything below is a sibling of `.cf`, not inside it, so it stays clickable while the

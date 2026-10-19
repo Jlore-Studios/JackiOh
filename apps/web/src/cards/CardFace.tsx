@@ -54,6 +54,10 @@
 // R1017001: a hero portrait's card (fullArt.ts) prints its art across the whole full face and no
 // words (`data-full-art`, the art's "full" shape): no rules box, tags or type line, its whole text in
 // the hover preview and the detail view. The Full-art cards setting turns it off, and so does a tutorial lesson's board (R1108000).
+//
+// R1295000: the viewer's own card in a game (`worn`) wears the device's card cosmetics, a foil over
+// its art, a finish and a border, each on its own attribute apart from the rarity foil
+// (cosmetics.ts, cosmetics.css). Every other face, and a face wearing the defaults, carries none.
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -63,6 +67,7 @@ import { CardArt, type ArtShape } from "./art/index.ts";
 import { CardStates } from "./CardStates.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { CHINESE_COMMA, CHINESE_TERMS, chineseKeyword } from "./chinese.ts";
+import { useCosmeticAttributes } from "./cosmetics.ts";
 import { FIT_FLOOR_PX, PREVIEW_TEXT_LIMIT, TIER_SCALE } from "./constants.ts";
 import { nameTier, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
@@ -78,6 +83,7 @@ import { MINUS } from "./tuning.ts";
 
 import "./cards.css";
 import "./setmark.css";
+import "./cosmetics.css";
 
 export type CardFaceProps = {
   face: FaceModel;
@@ -92,6 +98,8 @@ export type CardFaceProps = {
    * text.
    */
   ascentLevel?: number | null;
+  /** R1295000: the viewer's own card in a game wears the device's cosmetics (cosmetics.ts). */
+  worn?: boolean;
 };
 
 /** The art window's shape follows the card type, as Hearthstone's minion oval and spell frame do. */
@@ -292,7 +300,7 @@ export function hasCrest(face: FaceModel): boolean {
   return crested(frameRarity(face));
 }
 
-export function CardFace({ face, layout = "full", className, lazyArt = false, ascentLevel }: CardFaceProps): ReactElement {
+export function CardFace({ face, layout = "full", className, lazyArt = false, ascentLevel, worn = false }: CardFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
   const fullArtOn = useFullArt();
@@ -320,6 +328,8 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const scales = { "--cf-name-scale": String(TIER_SCALE[names]), "--cf-text-scale": String(TIER_SCALE[texts]) } as CSSProperties;
   // R503: the frame's rarity, a token's printed one included.
   const rarity = frameRarity(face);
+  // R1295000: what the face wears, judged by the rarity its frame shows as its rarity foil is.
+  const cosmetics = useCosmeticAttributes({ ...face, rarity }, worn, settings.animatedFoil);
   // Glitch is a blank card (glitch.ts): no picture, set mark or tags, its words corrupted, and its
   // blob spilling out over the frame, outside the clipped `.cf-scale`.
   const glitch = isGlitch(face.defId);
@@ -342,6 +352,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
       data-tuned={face.tuning?.verdict}
       data-glitch={glitch ? "true" : undefined}
       data-full-art={fullArt ? "true" : undefined}
+      {...cosmetics}
       style={scales}
     >
       <span className="cf-scale">

@@ -138,6 +138,13 @@ export type GameProps = {
    */
   trackStats?: boolean;
   /**
+   * R1295000: the viewer's own cards wear the device's card cosmetics (game/wearer.ts). The routes
+   * that play the player's own game (an online match, a practice game, a hotseat game, a co-op
+   * seat's own duel) set it; a replay never wears them, and a watched game, a teammate's duel and
+   * a test fixture leave it off.
+   */
+  wearCosmetics?: boolean;
+  /**
    * R738: the opponent's aim. `emit` sends this seat's own as it changes; `opponent` is the
    * opponent's as last relayed, drawn as its arrow. Online play sets it; hotseat and tests do not.
    */
@@ -185,6 +192,7 @@ export default function Game({
   boardNotice,
   emotes,
   trackStats = false,
+  wearCosmetics = false,
   aim,
   replay = false,
 }: GameProps): ReactElement {
@@ -629,6 +637,7 @@ export default function Game({
 
       <Board
         view={shown}
+        wearCosmetics={wearCosmetics && !replay}
         highlight={highlight}
         animating={animating}
         animated={animated}

@@ -6,6 +6,7 @@ import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readAudioSettings, resetAudioSettingsForTests, writeAudioSettings } from "../audio/settings.ts";
+import { DEFAULT_CARD_COSMETICS, readCosmetics, resetCosmeticsForTests, resolveCosmetic, writeCosmetics } from "../cards/cosmetics.ts";
 import { readCardSettings, writeCardSettings } from "../cards/settings.ts";
 import { getFxSettings, resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import type { PlayerSettingsAccountCopy, PlayerSettingsGroup } from "../net/api.ts";
@@ -104,6 +105,7 @@ beforeEach(() => {
   __resetSettingsForTests();
   resetAudioSettingsForTests();
   resetFxSettingsForTests();
+  resetCosmeticsForTests();
   __resetSettingsSyncForTests();
 });
 
@@ -116,6 +118,7 @@ afterEach(() => {
   __resetSettingsForTests();
   resetAudioSettingsForTests();
   resetFxSettingsForTests();
+  resetCosmeticsForTests();
 });
 
 describe("R634 loading: group by group, the newer side wins", () => {
@@ -247,6 +250,42 @@ describe("R634 after the load, each change is sent as it happens", () => {
     const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
     expect(Object.keys(sent).sort()).toEqual(["cards", "fx"]);
     expect(sent["fx"]?.at).toBeLessThan(sent["cards"]?.at ?? 0);
+  });
+
+  it("R1295000 the card cosmetics go up as their own group and come back on a new device", async () => {
+    const api = fakeApi();
+    start(api);
+    await settle();
+
+    await pass(1_000);
+    writeCosmetics({ foil: "foil-rainbow", border: "border-bone" });
+    await pass(SETTINGS_SYNC_DEBOUNCE_MS);
+
+    const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
+    expect(Object.keys(sent)).toEqual(["cosmetics"]);
+    expect(sent["cosmetics"]?.values).toEqual({ foil: "foil-rainbow", finish: DEFAULT_CARD_COSMETICS.finish, border: "border-bone" });
+
+    // A new device: nothing of this one's, and the account's copy to load.
+    for (const sync of started.splice(0)) sync.stop();
+    __resetSettingsSyncForTests();
+    localStorage.clear();
+    resetCosmeticsForTests();
+    expect(readCosmetics()).toEqual(DEFAULT_CARD_COSMETICS);
+    start(fakeApi(api.account));
+    await settle();
+    expect(readCosmetics()).toEqual({ foil: "foil-rainbow", finish: DEFAULT_CARD_COSMETICS.finish, border: "border-bone" });
+  });
+
+  it("R1295000 an id this client does not know comes in, is kept and draws as its kind's default", async () => {
+    const api = fakeApi({ cosmetics: { at: T0 - 1_000, values: { foil: "foil-aurora", border: "border-wood" } } });
+    start(api);
+    await settle();
+
+    expect(readCosmetics()).toEqual({ foil: "foil-aurora", finish: DEFAULT_CARD_COSMETICS.finish, border: "border-wood" });
+    expect(resolveCosmetic("foil", readCosmetics().foil)).toBe(DEFAULT_CARD_COSMETICS.foil);
+    // Adopted, not changed: nothing goes back up to overwrite the newer client's pick.
+    await pass(SETTINGS_SYNC_DEBOUNCE_MS * 3);
+    expect(api.save).not.toHaveBeenCalled();
   });
 
   it("R634 takes the account's values in without sending them back: adopting is not a change", async () => {
