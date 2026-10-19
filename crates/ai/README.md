@@ -180,9 +180,11 @@ pub struct Features { pub dense: Vec<i32>, pub sparse: Vec<(String, i32)> }
   side, the seat's own first, its life (`effective_life`) and armor, mana, crystals and debt, its
   hand, library, graveyard and backrow (and how much of the backrow the seat can read), its units in
   aggregate (count, positions, attack, health, armor, damaged, Radiant), one count per keyword kind,
-  the face damage its board threatens and its Jade and extra turns; then the seat's hand by cost.
+  the face damage its board threatens and its Jade and extra turns; then the seat's hand by cost,
+  and how many of its cards are Radiant (R1012004).
 - **sparse**: `(key, count)`, sorted, the key `<zone>:<side>:<card id>` for each card the seat can
-  name: `board` (both sides), `hand` (its own) and `backrow` (its own, and the enemy's face-up ones).
+  name: `board` (both sides), `hand` (its own) and `backrow` (its own, and the enemy's face-up ones),
+  and `hand_radiant` (its own) beside `hand` for a Radiant card in its hand (R1012004).
   Ids stay strings, so a patch or a new card never moves an index; an id a network's weights do not
   know is no input at all.
 - `FEATURES_VERSION` names the layout; any change bumps it, and a network's weights record the

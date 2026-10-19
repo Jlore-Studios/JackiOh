@@ -2,9 +2,10 @@
 
 It holds 10% of the games out whole (`data.split_by_game`), fits the three models of `models.py` on
 the rest, and writes `<out>/report.md` and `<out>/report.json`. (c) learns from offline TD(lambda)
-targets (D4's follow-up, `td_targets`): fitted on the outcomes, then once more from the same start on
-targets that blend each row's outcome with its own next prediction, so the luck of the turns after
-a position weighs less on it. Every model is still judged on the held-out outcomes.
+targets (D4's follow-up, `td_targets`): fitted on the outcomes, then `TD_RELABELS` times more from the
+same start, each on targets that blend each row's outcome with the fit before it's next prediction,
+so the luck of the turns after a position weighs less on it. Every model is still judged on the
+held-out outcomes.
 
 - held-out log loss, AUC and a calibration table, overall and by turn band (1-3, 4-10, 11 on);
 - the learning curve: model (c) fitted on 10,000, 30,000 and 100,000 games (as many as there are);
@@ -55,8 +56,12 @@ TURN_BANDS = ((1, 3), (4, 10), (11, 10_000))
 CALIBRATION_BINS = 10
 #: (c)'s TD(lambda): a row's target is (1 - lambda) of the seat's next row's prediction and lambda of
 #: that row's own target, the last row's being the outcome; 1 fits the outcome alone. On the
-#: 36,000-game export, 0.7 took held-out turns 4-10 from 0.6092 to 0.6059 (#466, 2026-10-18).
-TD_LAMBDA = 0.7
+#: 36,000-game export, 0.7 took held-out turns 4-10 from 0.6092 to 0.6059 (#466, 2026-10-18). On
+#: the 100,000-game export, 0.3 relabelled twice won more in play than 0.7 relabelled once
+#: (docs/learned-eval.md D4, D6).
+TD_LAMBDA = 0.3
+#: How many times (c) is refitted on TD targets, each from the predictions of the fit before it.
+TD_RELABELS = 2
 MISJUDGED = 20
 MISJUDGED_MIN_ROWS = 100
 
@@ -236,19 +241,22 @@ def td_targets(game: np.ndarray, seat: np.ndarray, step: np.ndarray, outcome: np
 
 
 def fit_network(make: Callable[[], nn.Module], data: Prepared, positions: D.Positions, rows: np.ndarray,
-                valid_rows: np.ndarray, seed: int, lam: float, log: Callable[[str], None] = print) -> tuple[nn.Module, dict]:
-    """(c) on `rows`: fitted on the outcomes, then, when `lam` is below 1, once more from the same start
-    (`make`) on the TD targets the first fit gives. Early stopping reads the validation rows' outcomes."""
+                valid_rows: np.ndarray, seed: int, lam: float, relabels: int = TD_RELABELS,
+                log: Callable[[str], None] = print) -> tuple[nn.Module, dict]:
+    """(c) on `rows`: fitted on the outcomes, then, when `lam` is below 1, `relabels` times more from the
+    same start (`make`), each on the TD targets the fit before it gives. Early stopping reads the
+    validation rows' outcomes."""
     net = make()
     fitted = train(net, data, rows, valid_rows, seed=seed, log=log)
     if lam >= 1.0:
         return net, fitted
-    target = td_targets(positions.game, positions.seat, positions.step, positions.outcome, predict(net, data), lam)
-    outcome = data.outcome.clone()
     rows_t = torch.as_tensor(rows, dtype=torch.int64)
-    outcome[rows_t] = torch.as_tensor(target, dtype=torch.float32)[rows_t]
-    net = make()
-    fitted = train(net, replace(data, outcome=outcome), rows, valid_rows, seed=seed, log=log)
+    for _ in range(relabels):
+        target = td_targets(positions.game, positions.seat, positions.step, positions.outcome, predict(net, data), lam)
+        outcome = data.outcome.clone()
+        outcome[rows_t] = torch.as_tensor(target, dtype=torch.float32)[rows_t]
+        net = make()
+        fitted = train(net, replace(data, outcome=outcome), rows, valid_rows, seed=seed, log=log)
     return net, fitted
 
 
@@ -354,7 +362,7 @@ def decide(report: dict) -> dict:
 
 
 def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS, curve: tuple[int, ...] = CURVE_GAMES,
-        width: int = 16, head: tuple[int, ...] = (16,), td_lambda: float = TD_LAMBDA,
+        width: int = 16, head: tuple[int, ...] = (16,), td_lambda: float = TD_LAMBDA, td_relabels: int = TD_RELABELS,
         log: Callable[[str], None] = print) -> dict:
     started = time.time()
     # #1012: the same positions and seeds give the same weights. Only deterministic kernels, and one
@@ -379,7 +387,7 @@ def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS,
     report: dict = {"featuresVersion": positions.features_version, "catalogs": sorted(positions.catalogs),
                     "positions": len(positions), "games": len(positions.games), "heldOutGames": len(D.games_of(positions, held)),
                     "vocabulary": len(vocab.keys), "denseFeatures": len(positions.dense_names), "tdLambda": td_lambda,
-                    "models": {}}
+                    "tdRelabels": td_relabels, "models": {}}
 
     hand = HandModel()
     fit_convex(hand, data, fit_rows, log=log)
@@ -414,7 +422,7 @@ def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS,
         return make
 
     for seed in seeds:
-        net, fitted = fit_network(network(seed, linear), data, positions, fit_rows, valid_rows, seed, td_lambda, log=log)
+        net, fitted = fit_network(network(seed, linear), data, positions, fit_rows, valid_rows, seed, td_lambda, td_relabels, log=log)
         p_net = predict(net, data, held)
         entry = {"seed": seed, "epochs": fitted["epochs"], "validation": fitted["validation"],
                  "heldOut": metrics(p_net, y_held, positions.turn[held])}
@@ -422,7 +430,7 @@ def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS,
         seed_nets.append((seed, net))
         if fitted["validation"] < best_loss:
             best_model, best_loss, best_p = net, fitted["validation"], p_net
-    targets = "the outcomes" if td_lambda >= 1.0 else f"TD({td_lambda:g}) targets"
+    targets = "the outcomes" if td_lambda >= 1.0 else f"TD({td_lambda:g}) targets, relabelled {td_relabels} times"
     report["models"]["c"] = {"name": f"the network: {width} wide, head {list(head)}, skip connection to the hand eval, on {targets}",
                              "weights": best_model.weight_count(), "heldOut": metrics(best_p, y_held, positions.turn[held]),
                              "calibration": calibration(best_p, y_held)}
@@ -440,7 +448,7 @@ def run(paths: list[str], out: Path, root: Path, seeds: tuple[int, ...] = SEEDS,
         linear_sub = LinearModel(len(positions.dense_names))
         start_from(linear_sub, hand)
         fit_convex(linear_sub, data, rows, l2=linear_l2, log=log)
-        net, _ = fit_network(network(seeds[0], linear_sub), data, positions, rows, valid_rows, seeds[0], td_lambda, log=log)
+        net, _ = fit_network(network(seeds[0], linear_sub), data, positions, rows, valid_rows, seeds[0], td_lambda, td_relabels, log=log)
         report["curve"].append({"games": games, "heldOut": metrics(predict(net, data, held), y_held, positions.turn[held])})
         if games == fit_games:
             break
@@ -528,8 +536,9 @@ def main() -> None:
     parser.add_argument("--width", type=int, default=16)
     parser.add_argument("--head", type=int, nargs="*", default=[16])
     parser.add_argument("--td-lambda", type=float, default=TD_LAMBDA, help="(c)'s TD(lambda); 1 fits the outcomes alone")
+    parser.add_argument("--td-relabels", type=int, default=TD_RELABELS, help="how many times (c) is refitted on TD targets")
     args = parser.parse_args()
-    run(args.positions, args.out, args.root, tuple(args.seeds), tuple(args.curve), args.width, tuple(args.head), args.td_lambda)
+    run(args.positions, args.out, args.root, tuple(args.seeds), tuple(args.curve), args.width, tuple(args.head), args.td_lambda, args.td_relabels)
 
 
 if __name__ == "__main__":

@@ -11,13 +11,17 @@
 //!   each side (the seat's own first, the enemy's second) its hero's `effective_life` and armor, its
 //!   mana, its hand, library and backrow, its units through §10.4's layers (`unit_view`) in
 //!   aggregate, one count per keyword kind, the face damage its board threatens (`face_threat`) and
-//!   what it has banked; then the seat's own hand cards by cost.
+//!   what it has banked; then the seat's own hand cards by cost, and how many of them are Radiant
+//!   (R1012004).
 //! - **sparse**: `(key, count)` pairs, the key `<zone>:<side>:<card id>` for a card on the board
 //!   (`board`), in the seat's own hand (`hand`, own only: the enemy's is hidden) or readable in a
 //!   backrow (`backrow`: the seat's own and the enemy's face-up cards, as `evaluate` reads them). Ids
 //!   stay strings so a patch or a new card never shifts an index; the weights carry the id-to-row
 //!   table (D10), and an id they do not know is no input at all, so a new or custom card is valued
-//!   by its dense stats alone. The pairs are sorted by key and each key appears once.
+//!   by its dense stats alone. A Radiant card in the seat's own hand also has a second key,
+//!   `hand_radiant:own:<card id>` (R1012004): the hand eval prices a hand card by the face it will
+//!   enter with (#1143), and before version 2 a card made Radiant in hand looked to the network as it
+//!   did before. The pairs are sorted by key and each key appears once.
 //!
 //! `FEATURES_VERSION` names this layout. Any change to what is computed or its order bumps it, and
 //! the weights record the version they were fitted on: a mismatch fails a test, never a game (D10).
@@ -34,7 +38,8 @@ use crate::evaluate::face_threat;
 use crate::observe::redact;
 
 /// The layout `features` writes. Bump it with any change to what a feature means or where it sits.
-pub const FEATURES_VERSION: u32 = 1;
+/// 2: a Radiant card in the seat's own hand (R1012004).
+pub const FEATURES_VERSION: u32 = 2;
 
 /// The highest own-hand cost bin: a card costing this or more counts in the last bin.
 pub const HAND_COST_BINS: i32 = 8;
@@ -98,12 +103,16 @@ pub fn dense_names() -> Vec<String> {
         let plus = if cost == HAND_COST_BINS - 1 { "+" } else { "" };
         names.push(format!("own.hand_cost.{cost}{plus}"));
     }
+    names.push("own.hand_radiant".to_string());
     names
 }
 
 /// How many dense features there are (`dense_names().len()`), without building the names.
 pub fn dense_len() -> usize {
-    GLOBAL_FIELDS.len() + SIDES.len() * (SIDE_FIELDS.len() + KeywordKind::ALL.len()) + HAND_COST_BINS as usize
+    GLOBAL_FIELDS.len()
+        + SIDES.len() * (SIDE_FIELDS.len() + KeywordKind::ALL.len())
+        + HAND_COST_BINS as usize
+        + 1
 }
 
 /// R185, R1006000: `state`'s features for `seat`, read from `redact(state, seat)` alone.
@@ -123,6 +132,7 @@ pub fn features(view: &GameState, seat: PlayerId) -> Features {
         side_fields(view, &public, player, seat, &mut dense);
     }
     hand_costs(view, seat, &mut dense);
+    dense.push(len_i32(radiant_in_hand(view, seat).count()));
 
     let mut sparse: Vec<(String, i32)> = Vec::new();
     sparse_cards(view, &public, seat, &mut sparse);
@@ -280,6 +290,17 @@ fn sparse_cards(view: &GameState, public: &GameState, seat: PlayerId, out: &mut 
             out.push((format!("hand:{}:{}", SIDES[0], card.def_id), 1));
         }
     }
+    for card in radiant_in_hand(view, seat) {
+        out.push((format!("hand_radiant:{}:{}", SIDES[0], card.def_id), 1));
+    }
+}
+
+/// R1012004: the Radiant cards in the seat's own hand that it can name (each with a definition).
+fn radiant_in_hand(view: &GameState, seat: PlayerId) -> impl Iterator<Item = &jackioh_engine::CardInstance> {
+    view.players[seat]
+        .hand
+        .iter()
+        .filter(move |card| card.radiant && find_def(Some(view), &card.def_id).is_some())
 }
 
 /// `pairs` sorted by key with each key's counts added: one entry per key.

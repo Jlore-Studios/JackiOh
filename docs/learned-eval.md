@@ -233,6 +233,12 @@ prototype's network (two relabels) won +0.065 [+0.024, +0.106] over 1,600 paired
 the outcomes-only one won +0.010 on the same deals. `fit.py` fits (c) that way by default
 (`TD_LAMBDA`).
 
+**Measured (2026-10-18): λ = 0.3, relabelled twice.** On the learn lane's 100,000-game export
+(run 5), λ from 0.9 to 0.3 and one to three relabels all leave held-out turns 4-10 between 0.6080
+and 0.6117 (seed 1; seeds 2 and 3 at 0.7 and 0.3 alike), so the choice is made in play (D6's last
+table). `fit.py` fits (c) on the outcomes, then twice more from the same start (`TD_RELABELS`), each
+on TD(0.3) targets from the fit before it.
+
 ### D5. The network's shape
 
 The search calls the evaluation about once per node, a few hundred to a thousand times a decision,
@@ -307,6 +313,26 @@ puzzles are such positions, and a network retrained on all of run 5's games miss
 `Lines` and none at `Finalists`. Neither reach clears the gate's bar (R1012000: 220 of 400, a share
 of 0.55) with this network, whose share on fresh deals is 0.536. What is left to improve is the
 network.
+
+**Measured (2026-10-18): TD(0.3), relabelled twice, at half.** Each row below is 1,600 paired games
+against `main`'s hand eval (83102dd94) at `Finalists`, with seed 1's network of the learn lane's
+100,000-game export, integer, as the lane ships it. `explore3-466` is where the variants were chosen;
+`confirm3-466` holds 800 deals none of them was chosen on.
+
+| targets (D4) | share | finalists | `explore3-466` | `confirm3-466` |
+|---|---|---|---|---|
+| TD(0.7), one relabel | 0.5 | 3 | +0.051 [+0.012, +0.091] | +0.088 [+0.047, +0.128] |
+| TD(0.7), one relabel | 0.5 | 5 | +0.032 [−0.009, +0.073] | |
+| TD(0.7), one relabel | 0.65 | 3 | +0.096 [+0.055, +0.137] | |
+| **TD(0.3), two relabels** | **0.5** | **3** | **+0.090 [+0.051, +0.129]** | **+0.113 [+0.072, +0.155]** |
+| TD(0.3), two relabels | 0.65 | 3 | | +0.107 [+0.064, +0.150] |
+
+TD(0.3) relabelled twice won more than TD(0.7) relabelled once on both deal sets, by +0.039 and
+0.025. At a share of 0.556 against the hand eval on fresh deals, it is the first network measured
+above the gate's bar (0.55). The share stays at half. With the switch on, each of the three seeds'
+TD(0.3) networks failed one of the AI's tests at 0.65 (the Coin's P17, or #1143's Glowy Jelly Bean),
+where at half two of the three pass them all, and 0.65 won no more on fresh deals. Five finalists
+won less than three.
 
 ### D7. Arithmetic, determinism and size
 
