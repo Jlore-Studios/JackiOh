@@ -13695,10 +13695,6 @@
       "refused_until": "2026-10-19T17:10:00Z",
       "spent": [
         {
-          "at": "2026-10-11T20:36:33Z",
-          "minutes": 16.3
-        },
-        {
           "at": "2026-10-11T20:45:09Z",
           "minutes": 48.6
         },
@@ -14493,6 +14489,10 @@
         {
           "at": "2026-10-19T19:14:44Z",
           "minutes": 28.0
+        },
+        {
+          "at": "2026-10-19T20:04:44Z",
+          "minutes": 3.8
         }
       ],
       "tokens_spent": [
@@ -15692,14 +15692,21 @@
           "cost": 2.2019,
           "input": 92,
           "output": 21052
+        },
+        {
+          "at": "2026-10-19T20:04:44Z",
+          "cache": 2012033,
+          "cost": 1.5431,
+          "input": 46,
+          "output": 18036
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-19T23:10:00Z",
-          "utilization": 0.33
+          "utilization": 0.4
         },
-        "observed_at": "2026-10-19T19:14:44Z",
+        "observed_at": "2026-10-19T20:04:44Z",
         "status": "allowed"
       }
     },
