@@ -12,6 +12,10 @@
 //! that names another version is reported and ignored, as the server ignores it, so a card patch
 //! is seeded without a hand edit anywhere. With a path, it seeds that file instead (a fixture
 //! catalog), at `CATALOG_VERSION`, which is then required.
+//!
+//! In the same transaction it copies the cosmetics registry compiled in (`crate::cosmetics`,
+//! R1295000) into `public.cosmetics` (migration 0045, SPEC §14.2), which the owned cosmetics
+//! reference as `collection` references `public.cards`.
 //! Surface contract: docs/v0.3.0/SURFACE.md §11.3.
 
 use anyhow::{Result, anyhow};
@@ -224,6 +228,24 @@ async fn write_catalog(
         .execute(&mut *tx)
         .await?;
     }
+    // SPEC §14.2: the cosmetics registry (`cosmetics.json`, R1295000) beside the catalog, in
+    // migration 0045's `public.cosmetics`, so an owned cosmetic has a real foreign key. Upserted and
+    // never deleted, as a card is. The registry marks no chase yet, so `chase` keeps its default.
+    let cosmetics = crate::cosmetics::shipped().map_err(|error| anyhow!("cosmetics.json: {error}"))?;
+    sqlx::query(
+        r#"insert into public.cosmetics (id, kind, name, rarity, is_default)
+         select c.id, c.kind, c.name, c.rarity, c."default"
+           from jsonb_to_recordset($1::jsonb)
+             as c(id text, kind text, name text, rarity text, "default" boolean)
+         on conflict (id) do update set
+           kind = excluded.kind,
+           name = excluded.name,
+           rarity = excluded.rarity,
+           is_default = excluded.is_default"#,
+    )
+    .bind(serde_json::to_string(&cosmetics)?)
+    .execute(&mut *tx)
+    .await?;
     // The version the server and the client compare against (`app.assert_catalog_version`).
     sqlx::query(
         "insert into app.settings (key, value) values ('catalog_version', $1::jsonb)

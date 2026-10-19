@@ -2000,3 +2000,7 @@ pub const PING_RATE_WINDOW_MS: i64 = 3_000;
 /// S6, B64: how long the board marks a pinged card.
 pub const PING_SHOW_MS: i64 = 2_500;
 // ---- end Duos co-op (#946) ----
+// ---- Economy (SPEC §14, #1299) ----
+
+/// §14.7: the level a set track starts at, with no XP (migration 0045's `set_tracks.level` default).
+pub const SET_TRACK_FIRST_LEVEL: i64 = 1;
