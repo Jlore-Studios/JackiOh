@@ -5300,7 +5300,7 @@
         "by": "`claude` (strong)",
         "sha": "89fb7fe8d97d72ef8d980be4a5d9cd1b7f5d34a3"
       },
-      "cross_rounds": 1,
+      "cross_rounds": 2,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -5308,18 +5308,25 @@
       "forced": false,
       "interruptions": 0,
       "issue": 1279,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The deferred reward-G step opens quest 8 on whatever In Too Deep stands under the old instance id when the opponent's turn starts, so a copy that left the field and was replayed in between gets quest 8 added to its fresh quest line, breaking R78 (leaving the field resets the quest line) and R174 (an effect is aimed at its card's stay).",
+          "evidence": "`delayed_resume` (crates/engine/src/effects/delay.rs:256) strips RUN_MARKS_KEY, so the delayed run's `exits_from` is a fresh mark taken in `make_context` (resolve.rs:55). `open_quest` then finds the card through `quest_card_of`, and `self_on_its_stay` only checks for departures since that fresh mark. A card that leaves the field keeps its id (R78), and `open_on` (subsystems/quests.rs:250) only refuses a quest already active or done, so the replayed copy ends up with quests [1, 8]. The old code put path_of(\"G\") behind the prompt with the prompt's run marks, so it respected the stay. One way to reach it: choose G when quest 5 completes mid-turn, then bounce In Too Deep (for example with the rotate Cry at catalog.json:1668, whose bounced cards cost (0)) and replay it. No test covers this.",
+          "severity": "blocking",
+          "where": "crates/cards/src/scripts/classic/c090_in_too_deep.rs:321"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
-      "queued_at": "2026-10-19T15:06:13Z",
+      "queued_at": "2026-10-19T15:20:01Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "",
       "run_id": "39275023266",
       "self_check_findings": [],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-10-19T15:08:58Z",
       "stop_requested": false,
       "taken_asks": [],
