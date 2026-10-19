@@ -159,6 +159,9 @@ the same way, and the skill-to-Elo curve is measured with the arena.
 deals a live game (R258), both seats AI on the spec's resources at `AI_BUDGET`, filed as a game
 record of source `dev` under the patch the run tests, id `dev:<patch>:<seed>` (`dev_record_id`).
 `cargo jackioh stats --out <file>` writes a run; `jackioh-server stats-import <file>` loads it.
+`forced_dev_game_config`, which `DevRunOptions.force` selects, deals the same game with one card in one
+seat's deck, p1's in odd games and p2's in even ones (R1284000). Both decks are dealt with the card
+banned, and the holder's card at the slot `${seed}:force` picks is replaced by it.
 
 ## The learned evaluation's features (#466, #1006)
 
