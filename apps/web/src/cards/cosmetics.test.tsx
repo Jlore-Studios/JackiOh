@@ -522,6 +522,14 @@ describe("R1297000 the deck slots", () => {
     // The board makes no stacking context for it: that would put the cards mid-animation (z-index
     // 40 to 50) under the effects layer (38), which fx/fx.css documents above them (R200).
     expect(ruleBody(tableCss, /\.board\[data-backdrop\]\s*\{/)).not.toMatch(/isolation|z-index/);
+    // So the board's opaque surface would paint over a negative layer: the board hands it to its
+    // own `::before`, a negative layer ahead of the backdrop in tree order (the pixels are
+    // e2e/cypress/component/deck-cosmetics.cy.tsx's).
+    expect(ruleBody(tableCss, /\.board\[data-backdrop\]\s*\{/)).toMatch(/background:\s*none/);
+    const surface = ruleBody(tableCss, /\.board\[data-backdrop\]::before\s*\{/);
+    expect(surface).toMatch(/z-index:\s*-1\b/);
+    expect(surface).toMatch(/background:\s*var\(--board-surface\)/);
+    expect(surface).toMatch(/pointer-events:\s*none/);
     // The mat's surface is no hit target either, and each look names every table the registry lists.
     expect(ruleBody(tableCss, /\.field\[data-table\]::before\s*\{/)).toMatch(/pointer-events:\s*none/);
     for (const table of cosmeticsOf("table").filter((cosmetic) => !cosmetic.default)) {
