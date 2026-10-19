@@ -988,23 +988,54 @@ mod r1370_a_deck_that_leans_on_a_set {
     #[test]
     fn r1370_the_lean_boost_seldom_leaves_the_floor_to_force_a_card() {
         register_cards();
-        let newest = newest_shipped_set();
+        // `AI_DECK.leanBoost`'s measurement, at every tier's size: a human's 20 cards, Easy's 20 (the
+        // shadow ban kept out), Medium's 25 at cap 5 and Hard's 30 at cap 7. Re-measured for v0.3.15
+        // (Meditative+ ships, #1187): every set that ships, not the newest alone, since a small newest
+        // set and a big pool moved the boost the newest set had needed.
+        let sizes: [(i32, Option<i32>, bool); 4] = [
+            (20, None, true),
+            (20, None, false),
+            (25, Some(5), false),
+            (30, Some(7), false),
+        ];
         let seeds = 500;
-        let forced = (1..=seeds)
-            .filter(|n| {
-                build_ai_deck_traced(
-                    &mut create_rng(&format!("r1370:forced:{n}"), 0),
-                    DECK_SIZE,
-                    &options(json!({ "banned": [], "gatedSets": [], "leanSet": newest })),
-                )
-                .lean_forced
-                    > 0
-            })
-            .count();
-        // `AI_DECK.leanBoost`'s measurement: fewer than one deck in ten needs the floor to force a card.
-        assert!(forced * 10 < seeds, "{forced} of {seeds} decks were forced");
+        let mut measured_somewhere = false;
+        for set in SHIPPED_SETS {
+            let cards = ai_pool().iter().filter(|id| def_of(None, id).set == set).count();
+            for (size, cap, human) in sizes {
+                let owed = (f64::from(size) * AI_DECK.lean_min_share).ceil() as usize;
+                let mut literal = json!({ "gatedSets": [], "leanSet": set });
+                if human {
+                    literal["banned"] = json!([]);
+                }
+                if let Some(cap) = cap {
+                    literal["manaCap"] = json!(cap);
+                }
+                let leaning = options(literal);
+                let forced = (1..=seeds)
+                    .filter(|n| {
+                        build_ai_deck_traced(&mut create_rng(&format!("r1370:forced:{n}"), 0), size, &leaning)
+                            .lean_forced
+                            > 0
+                    })
+                    .count();
+                measured_somewhere |= forced > 0;
+                // Fewer than one deck in ten needs the floor to force a card, wherever the floor owes
+                // at most two of the set's cards in five. Where it owes more (Meditative+'s 26 cards
+                // owe 13 of a Medium deck's 25 and 15 of a Hard deck's 30), forcing is the floor's job.
+                if owed * 5 <= cards * 2 {
+                    assert!(
+                        forced * 10 < seeds,
+                        "{set:?} at {size} (cap {cap:?}, human {human}): {forced} of {seeds} decks were forced"
+                    );
+                }
+            }
+        }
         // And it is a floor, not a weight: some deck the weights left short was forced to it.
-        assert!(forced > 0, "no deck needed the floor, so this measured nothing");
+        assert!(
+            measured_somewhere,
+            "no deck needed the floor, so this measured nothing"
+        );
     }
 }
 
