@@ -6068,6 +6068,13 @@
     "1325": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-19T16:29:28Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "rule line 6 fails outright: the whole fix is in .github/workflows/ (and optionally bot/), which no bot may change, so it cannot be easy"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-1",
