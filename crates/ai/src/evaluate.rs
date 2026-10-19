@@ -10,11 +10,8 @@
 //! an own Temporary hand card at a discount (R637). #1143 prices an own hand Unit by the face it will
 //! enter with (its Radiant face, buffs and tuning) over its printed base face. #1224 prices what a
 //! side's coming refreshes will or will not give: the refreshes it still has to lose (R844) and its
-//! next-turn rider (§2.3). #1255 prices the library cards the seat can name (R185, R311) at a share of
-//! their hand worth, a dealt one only by what it gained since the deal (a Radiant flag), a Journey
-//! Complete with the cards its journey returns (R1246), a curse against the side whose deck holds it.
-//! It reads only what the seat may know or what a determinization sampled, and nothing here reads a
-//! handicap or a difficulty (R180).
+//! next-turn rider (§2.3). It reads only what the seat may know or what a determinization sampled, and
+//! nothing here reads a handicap or a difficulty (R180).
 //!
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
 //! are passed explicitly.
@@ -25,17 +22,16 @@ use jackioh_engine::config::{
 use jackioh_engine::effects::DELAYED_DESTROY_HOOK;
 use jackioh_engine::{
     AttackTarget, CardDef, CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, PlayerState,
-    Position, UnitView, ZoneName, active_brittle_count, active_units_of, animated_kind_of, armor_of,
+    Position, UnitView, active_brittle_count, active_units_of, animated_kind_of, armor_of,
     attack_restriction, attacks_per_turn, backrow_is_public, cannot_attack, card_keywords, card_type_of_face,
-    credit_lapsing, effective_life, find_def, find_instance, frozen_next_turn, has_keyword, hero_armor_of,
+    credit_lapsing, effective_life, find_def, frozen_next_turn, has_keyword, hero_armor_of,
     is_temporary_card, lost_refreshes_left, owed_mana_of, own_cost, pierces, query_cost, reset_instance,
     stats_with_buffs, subsystems, takes_strike_back, unit_has, unit_view,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 use crate::candidates::{Side, blow, cleaved_neighbours, side_of};
-use crate::config::{AI_EVAL, AI_LIBRARY_CURSES, EvalWeights};
+use crate::config::{AI_EVAL, EvalWeights};
 
 /// The life `player` started the game with, where the hero value and `closing` are anchored (R964000):
 /// HERO_HEALTH in a 1v1 game; in a Duos duel the seat's own HP and its team's pool at its cap (§13.4;
@@ -221,76 +217,6 @@ fn hand_card_value(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f
         * temporary
 }
 
-/// R1246: the key Meditative #96 writes on the Journey Complete it shuffles in, the ids of the hand
-/// cards it exiled.
-const JOURNEY_MEMORY_KEY: &str = "journey";
-
-/// R185, R311, R312, R943: whether the seat can name a library card. In its own library (`own`), one it
-/// was shown going in (`known_as`: `redact` makes every other a placeholder, which a determinization
-/// fills with no record); in the enemy's, only one minted after the deal and shuffled in openly
-/// (`created` and `known_as`), as the cards a line puts there are. A dealt card's record is its
-/// owner's, never the seat's.
-fn nameable(card: &CardInstance, own: bool) -> bool {
-    card.known_as.is_some() && (own || card.created == Some(true))
-}
-
-/// R1246, R1248: what a Journey Complete returns when drawn: each card of its journey still in an exile
-/// pile (as the card itself asks), at the hand worth it will have back in hand, Radiant. 0 for any
-/// other card.
-fn journey_worth(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f64 {
-    let Some(ids) = card.memory.get(JOURNEY_MEMORY_KEY).and_then(Value::as_array) else {
-        return 0.0;
-    };
-    ids.iter()
-        .filter_map(Value::as_str)
-        .filter_map(|id| find_instance(state, id))
-        .filter(|went| went.zone.z() == ZoneName::Exile)
-        .map(|went| {
-            let mut back = went.clone();
-            back.radiant = true;
-            hand_card_value(state, &back, w)
-        })
-        .sum()
-}
-
-/// #1255: what a dealt card is worth in hand as it was dealt, by its printed cost alone (no Radiant flag,
-/// face uplift or cost shift): `library_card` already counts it, so only what it gained since counts.
-fn printed_hand_worth(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f64 {
-    find_def(Some(state), &card.def_id).map_or(0.0, |def| {
-        w.hand_card + w.hand_per_cost * f64::from(query_cost(def)).min(w.hand_cost_cap)
-    })
-}
-
-/// #1255: the cards to come that `seat` can name in `player`'s library (`nameable`): one shuffled in
-/// since the deal at its `hand_card_value` and what its journey returns, a dealt one at what it gained
-/// since (its hand worth over `printed_hand_worth`: a Radiant flag, its face, a cost change), a curse
-/// (`AI_LIBRARY_CURSES`) against the side whose deck holds it, all at `library_known_share` times the
-/// share of the library its next `library_comfort` draws reach. No order is known (R185), so each card
-/// is as likely as any to come among them. One walk of a library of at most LIBRARY_CAP cards (R80).
-fn library_known_worth(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights) -> f64 {
-    let library = &state.players[player].library;
-    if library.is_empty() {
-        return 0.0;
-    }
-    let mut worth = 0.0;
-    for card in library {
-        if !nameable(card, player == seat) {
-            continue;
-        }
-        let mut value = hand_card_value(state, card, w) + journey_worth(state, card, w);
-        if card.created != Some(true) {
-            value -= printed_hand_worth(state, card, w);
-        }
-        if AI_LIBRARY_CURSES.contains(&card.def_id.as_str()) {
-            worth -= value;
-        } else {
-            worth += value;
-        }
-    }
-    let size = library.len() as f64;
-    w.library_known_share * size.min(w.library_comfort) / size * worth
-}
-
 /// R962: the steps a Jade Counter at `jade` has climbed toward the next threshold it has not crossed.
 /// It only rises (R961): toward JADE_BEAUTY_AT, then toward JADE_ASCEND_AT, then none.
 fn jade_steps(jade: i32) -> i32 {
@@ -445,10 +371,6 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     }
 
     value += w.library_card * (side.library.len() as f64).min(w.library_comfort);
-    // #1255: the library cards the seat can name (no reading at a zero share, the frozen baseline's).
-    if w.library_known_share != 0.0 {
-        value += library_known_worth(state, player, seat, w);
-    }
     value
 }
 
