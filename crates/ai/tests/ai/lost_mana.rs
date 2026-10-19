@@ -2,8 +2,12 @@
 //! Expedition12 with one spare crystal and two K-Pop Fanatics (core-050, Radiant 2/2 Divine Shield)
 //! that next turn's four crystals would cast, it keeps the Expedition. With Silly Silas (core-052,
 //! (4) 4/4, Radiant 8/8) it still casts it, so the price does not stop it casting the card at all.
+//!
+//! R1012005: both are the hand eval's decisions. With the learned evaluation on, the search takes the
+//! network's correction too (R1012001), and they check nothing; `evaluate.rs` holds the price itself
+//! whichever evaluation is on.
 
-use jackioh_ai::{AI_BUDGET, AiOptions, decide};
+use jackioh_ai::{AI_BUDGET, AI_EVAL_KIND, AiOptions, EvalKind, decide};
 use jackioh_engine::testkit::{ActionBody, GameState, active_units_of, create_rng, find_instance_mut, json};
 
 use super::support::{AI, register_cards, scenario};
@@ -41,8 +45,16 @@ fn casts_expedition(state: &GameState, seed: &str) -> bool {
     matches!(&decision.action, ActionBody::Play { instance_id, .. } if *instance_id == expedition)
 }
 
+/// R1012005: whether the hand eval decides, the evaluation these two decisions are held to.
+fn the_hand_eval_decides() -> bool {
+    AI_EVAL_KIND == EvalKind::Hand
+}
+
 #[test]
-fn r844_with_one_spare_crystal_the_ai_keeps_expedition12_rather_than_lose_next_turns_mana() {
+fn r844_r1012005_with_one_spare_crystal_the_ai_keeps_expedition12_rather_than_lose_next_turns_mana() {
+    if !the_hand_eval_decides() {
+        return;
+    }
     let state = position(&[EXPEDITION, FANATIC, FANATIC]);
     for seed in ["r844-keep-a", "r844-keep-b", "r844-keep-c"] {
         assert!(!casts_expedition(&state, seed), "it cast the card on {seed}");
@@ -50,7 +62,10 @@ fn r844_with_one_spare_crystal_the_ai_keeps_expedition12_rather_than_lose_next_t
 }
 
 #[test]
-fn r844_when_its_radiant_face_doubles_a_four_drop_the_ai_still_casts_expedition12() {
+fn r844_r1012005_when_its_radiant_face_doubles_a_four_drop_the_ai_still_casts_expedition12() {
+    if !the_hand_eval_decides() {
+        return;
+    }
     let state = position(&[EXPEDITION, SILAS]);
     for seed in ["r844-cast-a", "r844-cast-b", "r844-cast-c"] {
         assert!(casts_expedition(&state, seed), "it kept the card on {seed}");
