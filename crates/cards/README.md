@@ -270,8 +270,8 @@ Every change to card data is a patch, and every patch is kept.
 - `patches/patches.json` lists every shipped patch in ship order (`{ version, date, title, source,
   notes, player }`, `player` the note players read on the Patch notes page, R724001);
   `patches/<version>.json` is the whole catalog as that patch left it; `patches/win_rates/<version>.json`
-  the win-rate table it shipped with (R1329000; none for a patch shipped before the tables were kept,
-  which shipped with the empty one); `shipped.json` records each patch's commit, snapshot blob and
+  the win-rate table it shipped with (R1329000; none for a patch before v0.3.15, which shipped with
+  the empty one); `shipped.json` records each patch's commit, snapshot blob and
   table blob (`winRatesBlob`); `index.json` maps each card to the versions it changed in. Shipped
   snapshots and tables are never amended.
 - A branch that changes card data claims it with a pending fragment:

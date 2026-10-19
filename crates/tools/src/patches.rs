@@ -1129,8 +1129,8 @@ pub mod patches_io {
         pub commit: String,
         /// The git blob hash (`git hash-object`) of its snapshot file's bytes.
         pub blob: String,
-        /// R1329000: the git blob of `win_rates/<version>.json`; none on a patch shipped before the
-        /// tables were kept, which has no table file.
+        /// R1329000: the git blob of `win_rates/<version>.json`; none on a patch with no table file,
+        /// as every one before v0.3.15.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub win_rates_blob: Option<String>,
     }
@@ -4102,7 +4102,7 @@ mod tests {
                         fs::read_to_string(snapshot_path(&entry.version, &patches_dir()).unwrap()).unwrap();
                     assert_eq!(entry.blob, git_blob_hash(&bytes), "{}.json", entry.version);
                     // R1329000: and its win-rate table's, so a rewritten table fails too; a patch
-                    // shipped before the tables were kept has neither a blob nor a file.
+                    // with no table file, as every one before v0.3.15, has no blob.
                     let table = win_rates_path(&entry.version, &patches_dir()).unwrap();
                     match &entry.win_rates_blob {
                         Some(blob) => assert_eq!(

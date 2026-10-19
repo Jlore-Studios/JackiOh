@@ -248,8 +248,8 @@ fn covering<'a, T>(order: &[String], kept: &'a [(&str, &str, T)], version: &str,
 }
 
 /// R1266000, R1329000: the win-rate table `delta`'s version shipped with: the one its
-/// `win_rates/<version>.json` holds, or the empty table every version shipped with before
-/// `patches ship` kept one (a version with no file).
+/// `win_rates/<version>.json` holds, or, with no file, the empty table every version before v0.3.15
+/// shipped with.
 fn table_of(history: &History, delta: &VersionDelta) -> WinRateTable {
     delta
         .win_rates
