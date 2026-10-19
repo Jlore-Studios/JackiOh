@@ -819,8 +819,9 @@ step that is not yet implemented says which BUILD task delivers it.
    `/api/collection`, `/api/decks` and `/api/queue`.
 10. **Redeem a code on each** (BUILD M6-T1). `status` flips to `active`, the activation trigger fires
     the launch grant, and `select count(*) from public.collection;` shows every non-token card for
-    both profiles (R111; §9.1: every account owns every card until the economy goes live, §14.12).
-    Confirm the three failure kinds — missing, expired, exhausted — return the identical message.
+    both profiles (R111; §9.1: every person's active account owns every card until the economy goes
+    live, §14.12). Confirm the three failure kinds — missing, expired, exhausted — return the
+    identical message.
 11. **Build a deck on each** in `/decks` (R250). It saves as you go, whether or not it is finished;
     `/play` shows whether it can be queued and, if not, the validator's reason, naming the deck and
     the card. `jackioh-server seed-accounts` gives its accounts three starter decks and a trio instead.
