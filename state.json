@@ -5765,6 +5765,14 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "1292": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-19T07:55:11Z",
+      "issue": 1255,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "148": {
       "asks": [
         "c:5974504575"
