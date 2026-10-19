@@ -20091,11 +20091,11 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": "2026-10-19T04:29:19Z",
-    "last_run": "2026-10-19T04:29:19Z",
-    "provider": "claude-4",
+    "idle_since": "2026-10-19T01:46:28Z",
+    "last_run": "2026-10-18T22:47:16Z",
+    "provider": null,
     "requested": false,
-    "run_id": "39199650943",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
