@@ -10777,12 +10777,9 @@
     "what": "review #1261 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-19T05:07:17Z",
+    "at": "2026-10-19T05:13:24Z",
     "notes": [
-      "#1268: typed it Task",
-      "#1267: typed it Task",
-      "#1266: typed it Task",
-      "#1265: typed it Task"
+      "#1173: its parts have all closed; queued its reconcile"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
