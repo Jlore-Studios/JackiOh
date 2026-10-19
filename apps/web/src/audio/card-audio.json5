@@ -1919,7 +1919,7 @@
       death: { voice: "sapi-mystic", text: "My finest brew awaits..." },
     },
     "meditativeplus-016-1": { // Jazakus Prime
-      play: { voice: "sapi-giant", text: "Bigger cauldron. Bigger bottles. Bigger trouble." },
+      play: { voice: "sapi-giant", text: "Bigger cauldron. Bigger trouble." },
       attack: { voice: "sapi-giant", text: "Drink THIS!" },
       death: { voice: "sapi-giant", text: "The cauldron boils over..." },
     },
@@ -1927,7 +1927,7 @@
       cast: { voice: "zoomer", text: "Everybody jump on!" },
     },
     "meditativeplus-018": { // Cognitive Offloading
-      cast: { voice: "robot", text: "Autopilot engaged. Hands off the controls, please." },
+      cast: { voice: "robot", text: "Autopilot engaged. Hands off." },
     },
     "meditativeplus-019": { // Grubby Gloves
       cast: { voice: "crone", text: "Sticky fingers find the top cards." },
@@ -1941,7 +1941,7 @@
       death: { voice: "kid", text: "I demand a regrade!" },
     },
     "meditativeplus-021": { // Harmony Spirit
-      play: { voice: "sapi-mystic", text: "Be still. Be equal. Be three by three." },
+      play: { voice: "sapi-mystic", text: "Be still. Three by three." },
       attack: { voice: "sapi-mystic", text: "Balance, restored." },
       death: { voice: "sapi-mystic", text: "The note fades..." },
     },
