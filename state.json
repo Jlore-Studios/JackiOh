@@ -5826,6 +5826,13 @@
     "1318": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-19T14:59:18Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "easy line 9 (stands alone) cannot be confirmed: no GitHub access to rule out an open PR touching stats.tsx, and R377/R654-titled tests need exact rewrites"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
