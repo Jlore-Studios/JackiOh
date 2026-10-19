@@ -5377,6 +5377,13 @@
     "1256": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-19T01:52:20Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "easy line 3 fails: this needs a new ruling note R1256000 plus edits to the spec sections it changes, so it cannot be easy"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
