@@ -1131,6 +1131,7 @@ function PracticeScreen({
         // R923000: nor is a sandbox game, which counts for nothing, and R915009: nor is a game with
         // custom cards (§12.10).
         trackStats={config.lesson === undefined && config.sandbox !== true && (config.customCards?.length ?? 0) === 0}
+        wearCosmetics
         {...(config.lesson === undefined ? {} : { autoEndTurn: true })}
       />
     </FullArtAllowed>

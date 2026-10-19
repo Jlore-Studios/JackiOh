@@ -1,15 +1,17 @@
 // The stores that make up a player's settings, as the account sync sees them (issue #129, R633).
 //
-// The settings live in four stores, each in its own module and its own `localStorage` key: the
-// gameplay switches (`store.ts`), the audio mixer (`audio/settings.ts`), the effects (`fx/settings.ts`)
-// and the card display (`cards/settings.ts`). A group is one of them, read as a flat object of
-// booleans, numbers and short texts, applied back through the store's own writer (which drops
-// anything it does not know and clamps anything out of range), and watched through the store's own
-// subscription. The sync never reads a store's storage key, so a store stays free to change how it
-// saves; a store added later joins the account by being listed here.
+// The settings live in five stores, each in its own module and its own `localStorage` key: the
+// gameplay switches (`store.ts`), the audio mixer (`audio/settings.ts`), the effects (`fx/settings.ts`),
+// the card display (`cards/settings.ts`) and the card cosmetics (`cards/cosmetics.ts`, R1295000). A
+// group is one of them, read as a flat object of booleans, numbers and short texts, applied back
+// through the store's own writer (which drops anything it does not know and clamps anything out of
+// range), and watched through the store's own subscription. The sync never reads a store's storage
+// key, so a store stays free to change how it saves; a store added later joins the account by being
+// listed here.
 
 import { readAudioSettings, subscribeAudioSettings, writeAudioSettings } from "../audio/settings.ts";
 import type { AudioSettings } from "../audio/types.ts";
+import { readCosmetics, subscribeCosmetics, writeCosmetics } from "../cards/cosmetics.ts";
 import { readCardSettings, subscribeCardSettings, writeCardSettings, type CardSettings } from "../cards/settings.ts";
 import { getFxSettings, setFxSettings, subscribeFxSettings, type FxSettings } from "../fx/settings.ts";
 import type { PlayerSettingValue } from "../net/api.ts";
@@ -72,5 +74,14 @@ export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
       writeCardSettings(values as Partial<CardSettings>);
     },
     subscribe: subscribeCardSettings,
+  },
+  {
+    // R1295000: the store keeps an id it does not know, so a newer client's pick comes back intact.
+    id: "cosmetics",
+    read: () => flat(readCosmetics()),
+    apply: (values) => {
+      writeCosmetics(values);
+    },
+    subscribe: subscribeCosmetics,
   },
 ];
