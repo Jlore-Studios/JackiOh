@@ -115,25 +115,7 @@
   left: auto;
 }
 
-/* R1081000: a Flying minion's face hovers 6% higher (keywords.css), its name plate with it, so its
-   counters rise as far and still clear the plate (B21). With motion reduced the face stays down, and
-   the counters with it. */
-.card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter,
-.zone .card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter {
-  bottom: 45%;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter,
-  .zone .card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter {
-    bottom: 39%;
-  }
-}
-
-:root[data-reduce-motion="true"] .card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter,
-:root[data-reduce-motion="true"] .zone .card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter {
-  bottom: 39%;
-}
+/* A Flying minion's counters rise with its face, in the motion gate at the end of this file. */
 
 .card.cf-host--compact > .counter {
   top: auto;
@@ -1734,6 +1716,14 @@
   /* R849000's zzz drifts a little; Reduce motion (this gate, or the switch on <html>) leaves it still. */
   :root:not([data-reduce-motion="true"]) .cf .cf-sick {
     animation: cf-sick-drift calc(2.4s * var(--anim-scale, 1)) ease-in-out infinite alternate;
+  }
+
+  /* R1081000: a Flying minion's face hovers 6% higher here (keywords.css), its name plate with it,
+     so its counters rise as far and still clear the plate (B21). With motion reduced the face stays
+     down, and the counters at 39% with it. */
+  :root:not([data-reduce-motion="true"]) .card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter,
+  :root:not([data-reduce-motion="true"]) .zone .card.cf-host--minion:has(.cf--minion[data-flying="true"]) > .counter {
+    bottom: 45%;
   }
 }
 
