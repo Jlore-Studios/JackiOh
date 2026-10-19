@@ -1,8 +1,8 @@
 //! C+ #78 Claude's Datacenter (SPEC §8.7 row 78, B7). (3) Field Spell, Legendary.
 //!   Base:    "End of Turn: Add a random AI generated card to your hand. It costs (0)."
 //!   Radiant: "… random Radiant AI generated card …"
-//!   Engine:  "Its controller's end of turn (R62). The pool is the ten AI generated cards (T-AI-1 to
-//!            T-AI-10, §7), named by the text, so tokens reach it; `costOverride` 0; the hand cap burns
+//!   Engine:  "Its controller's end of turn (R62). The pool is the AI generated cards (T-AI-1 to
+//!            T-AI-10, and M+ #1.1 and #1.2 since Meditative+ shipped, §7), named by the text, so tokens reach it; `costOverride` 0; the hand cap burns
 //!            it (§2.4). Tunes: none (balance patch 1: the count is fixed at one)."
 //!
 //! An `endOfTurn` hook runs on its controller's turn only (§6.2). Each card is its own pick (R60) through
@@ -13,7 +13,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-078";
 
-/// §8.7: "a random AI generated card" — the AI tag's ten tokens, which a pool names by asking for tokens.
+/// §8.7: "a random AI generated card" — the AI tag's tokens (twelve), which a pool names by asking for tokens.
 fn ai_pool() -> Value {
     json!({ "tags": ["AI"], "token": true })
 }
@@ -45,7 +45,7 @@ pub fn script() -> CardScripts {
 }
 
 // C+ #78 Claude's Datacenter — SPEC §8.7 row 78, BUILD M9 Classic+ row C+ 78: "Field Spell: at each end
-// of your turn adds a random AI generated card (T-AI-1 to T-AI-10, the pool its text names) that costs
+// of your turn adds a random AI generated card (T-AI-1 to T-AI-10 and M+ #1.1 and #1.2, the pool its text names) that costs
 // (0) to your hand; nothing at the opponent's end; a full hand burns it; hidden from the opponent (R97);
 // the count is fixed at 1 with no tunable (balance patch 1); radiant the card is Radiant".
 #[cfg(test)]

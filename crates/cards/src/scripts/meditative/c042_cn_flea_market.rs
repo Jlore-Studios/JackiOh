@@ -9,7 +9,7 @@
 //! as the Spell resolves, the yuan prices, the `market` prompt that reopens after each deal until the
 //! caster leaves, and the barter the Radiant face opens (it reads the face that cast it). This file
 //! hands it the shelves: three different random CN cards (never this one, R387), two Auspicious Rocks
-//! (M #39.1) and one random AI generated card (the ten C+ #78 names, read off their AI tag). Each lot
+//! (M #39.1) and one random AI generated card (the twelve C+ #78 names, read off their AI tag). Each lot
 //! is sold on its base face or, at its Radiant price, its Radiant face (patch v0.3.10, R831002). The
 //! yuan is the declared `yuan` (50, Radiant 80), so a Nerf or Buff moves it (R386).
 //!

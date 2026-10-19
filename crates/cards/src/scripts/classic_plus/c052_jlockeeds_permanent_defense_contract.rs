@@ -6,7 +6,7 @@
 //!   Engine:  "A player effect for the rest of the game (§10.1): a `never`-expiry player modifier on the
 //!            caster that acts at their start of turn, among the start-of-turn triggers (R62). The pool
 //!            is the non-token `Jlockeed` cards but this one (R387): #13, #14, C #4, C+ #48, C+ #51, M #87,
-//!            M #97."
+//!            M #97, M+ #4."
 //!
 //! `forRestOfGame` (B5 E28, R458) re-enters `delayed` at each of the caster's turn starts with no `self`
 //! (R127), so the numbers are read through `param` as the Spell resolves and carried in the entry's

@@ -2,7 +2,7 @@
 //!   Fuse {cards} random AI generated cards and add the result to your hand. It costs (0).
 //!   Radiant: the AI generated cards are Radiant.
 //!
-//! `fuseGenerated` is the whole fusion: independent picks from the ten AI generated cards (a pool the
+//! `fuseGenerated` is the whole fusion: independent picks from the AI generated cards (twelve since Meditative+ shipped) (a pool the
 //! text names, so tokens reach it; repeats allowed, R60), fused with no target (R77, R102: the shared
 //! type, else the first's; a Token with the AI tag; its id names them, R179), into your hand at
 //! `costOverride` 0 (the hand cap burns it). Radiant picks go in on their Radiant face (R469).

@@ -2,7 +2,8 @@
 //!   Base:    "Can't be in Defense Position. Death: Add a random Jlockeed card to your hand. It costs (0)."
 //!   Radiant: "Death: Add a random Radiant Jlockeed card to your hand. It costs (0)."
 //!   Engine:  "The pool is the non-token cards with the `Jlockeed` tag (#13, #14, C #4, C+ #48, C+ #51,
-//!            C+ #52, M #87, M #97) but this one (R387): #13, #14, C #4, C+ #51, C+ #52, M #87 and M #97;
+//!            C+ #52, M #87, M #97, M+ #4) but this one (R387): #13, #14, C #4, C+ #51, C+ #52, M #87, M #97
+//!            and M+ #4;
 //!            `costOverride` 0; the hand
 //!            cap burns it (§2.4). The Defense restriction is a position validator flag (as #65.1's),
 //!            which the Radiant face drops. With 0 attack it never attacks. Tunes: none."
