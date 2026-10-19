@@ -10728,8 +10728,11 @@
     "what": "build #1298 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-19T16:28:03Z",
-    "notes": [],
+    "at": "2026-10-19T16:40:23Z",
+    "notes": [
+      "#1297 needs a plan",
+      "started a night run, as a lane was free: #1297 (medium) is queued to build, for `claude-1`: plan on `claude-1` (claude, `opus`, strong)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
