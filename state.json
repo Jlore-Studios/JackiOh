@@ -5265,10 +5265,10 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "39316792412",
+      "run_id": "39325111098",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-19T20:11:55Z",
+      "started_at": "2026-10-19T21:13:35Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -10975,9 +10975,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-19T21:05:52Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39324423934",
-    "what": "revise #1338 on claude-4"
+    "at": "2026-10-19T21:13:35Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39325111098",
+    "what": "revise #1293 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-19T21:07:35Z",
