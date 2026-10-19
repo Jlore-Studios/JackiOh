@@ -10622,8 +10622,13 @@
     "what": "review #1322 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-19T15:52:46Z",
-    "notes": [],
+    "at": "2026-10-19T16:04:59Z",
+    "notes": [
+      "#1298 needs a plan",
+      "#1299 needs a plan",
+      "#1325 needs a plan",
+      "#1325: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
