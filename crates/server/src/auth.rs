@@ -34,8 +34,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::config::{
-    AUTH_PROVIDER_TIMEOUT_SECONDS, AUTH_SESSION_LIVE_CACHE_SECONDS, JWKS_CACHE_MAX_AGE_MS, JWKS_COOLDOWN_MS,
-    JWKS_FETCH_TIMEOUT_MS, JWKS_STALE_MAX_MS,
+    AUTH_PROVIDER_TIMEOUT_SECONDS, AUTH_SESSION_LIVE_CACHE_SECONDS, EMAIL_CONFIRMED_CACHE_TTL_MS,
+    JWKS_CACHE_MAX_AGE_MS, JWKS_COOLDOWN_MS, JWKS_FETCH_TIMEOUT_MS, JWKS_STALE_MAX_MS,
 };
 
 // The identity a verified token names
@@ -107,11 +107,6 @@ pub enum AuthError {
 }
 
 // Tunables SPEC does not pin down
-
-// R159: §9.4 step 1's "verified email" is read from the auth provider and only the positive answer
-// is remembered, briefly and per user id. An unreachable provider still fails closed
-// (`AdminLookup::Unavailable`): the email counts as unverified. Not in SPEC: how brief, 30 seconds.
-const EMAIL_CONFIRMED_CACHE_TTL_MS: i64 = 30_000;
 
 /// Supabase issues project JWTs with this audience for a signed-in user.
 const AUTHENTICATED_AUDIENCE: &str = "authenticated";
@@ -543,7 +538,8 @@ pub struct SupabaseAuth {
     // The shared secret is discouraged: a leaked one lets an attacker mint any `sub`. It is only
     // tried when the JWKS path has already failed, and only if configured.
     hs_key: Option<Vec<u8>>,
-    /// userId -> when its *confirmed* email was last read from the auth server.
+    /// userId -> when its *confirmed* email was last read from the auth server. Each insert first drops
+    /// the entries past `EMAIL_CONFIRMED_CACHE_TTL_MS`, as `check_session` prunes `live_sessions`.
     confirmed: Mutex<IndexMap<String, Confirmed>>,
     /// R665: the users the provider last said have a verified authenticator app. Kept for as long as
     /// that stays the latest answer (positives only; a later answer without one removes the entry), so
@@ -634,7 +630,16 @@ impl SupabaseAuth {
             .confirmed
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
+        confirmed.retain(|_, held| at - held.at < EMAIL_CONFIRMED_CACHE_TTL_MS);
         confirmed.insert(user_id.to_string(), Confirmed { at, email });
+    }
+
+    /// For the tests; nothing in `src/` calls it.
+    pub fn confirmed_count(&self) -> usize {
+        self.confirmed
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .len()
     }
 
     /// Verification options: issuer `${SUPABASE_URL}/auth/v1`, audience `authenticated`, both required;

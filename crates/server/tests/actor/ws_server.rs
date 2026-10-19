@@ -507,11 +507,13 @@ mod a_finished_matchs_seats_may_reopen_its_socket {
     //! §9.5: every ending clears both seats' in-match state, but the rematch window keeps a
     //! finished match's seats coming back — presence is the opponent's socket being open, so a
     //! seat that left may reopen its socket and read as here again. Anyone else is still
-    //! refused (§9.1).
+    //! refused (§9.1). R1285000: only for `REMATCH_OFFER_TTL_MS` after the match ended, and
+    //! never onto a log the retention purge has taken.
     use super::*;
 
     use jackioh_server::app::now_ms;
-    use jackioh_server::db::store::MatchRow;
+    use jackioh_server::config::REMATCH_OFFER_TTL_MS;
+    use jackioh_server::db::store::{MatchActionRow, MatchRow};
 
     /// The finished match's clocks, as `tests/api/rematch.rs` seeds them.
     fn clocks(now: i64) -> Value {
@@ -524,8 +526,9 @@ mod a_finished_matchs_seats_may_reopen_its_socket {
     }
 
     /// Two profiles with tokens and no in-match state, and the finished match between them:
-    /// exactly what a recorded result leaves behind. Returns the app and both seats' tokens.
-    async fn seed_finished_seats() -> (Arc<App>, String, String) {
+    /// exactly what a recorded result leaves behind: the match ended `ended_ago_ms` ago on p1's
+    /// concession. Returns the app and both seats' tokens.
+    async fn seed_finished_seats(ended_ago_ms: i64) -> (Arc<App>, String, String) {
         let app = test_app().await;
         let pool = playable();
         let size = deck_size();
@@ -541,6 +544,7 @@ mod a_finished_matchs_seats_may_reopen_its_socket {
             }));
         }
         let now = now_ms();
+        let ended = now - ended_ago_ms;
         let row: MatchRow = from(json!({
             "id": "match-reopened",
             "seed": "seed-reopened",
@@ -549,13 +553,23 @@ mod a_finished_matchs_seats_may_reopen_its_socket {
             "catalogVersion": jackioh_cards::catalog_version(),
             "ranked": false,
             "status": "finished",
-            "createdAt": now,
-            "finishedAt": now,
+            "createdAt": ended,
+            "finishedAt": ended,
             "clocks": clocks(now),
             "portraits": ["vanilla", "vanilla"],
         }));
+        // A result's log: R1285000 rebuilds nothing from an empty one.
+        let conceded: MatchActionRow = from(json!({
+            "matchId": "match-reopened",
+            "seq": 1,
+            "action": { "type": "concede", "playerId": "p1", "nonce": "reopen-concede" },
+            "at": ended,
+        }));
         let mut tx = app.db.begin(None).await.expect("begin");
         tx.matches_create(&row).await.expect("matches_create");
+        tx.matches_append_actions(&[conceded])
+            .await
+            .expect("matches_append_actions");
         tx.commit().await.expect("commit");
         let mut tokens = tokens.into_iter();
         (
@@ -579,7 +593,7 @@ mod a_finished_matchs_seats_may_reopen_its_socket {
     #[tokio::test]
     async fn a_seat_reopens_its_socket_on_its_finished_match() {
         let _serial = SERIAL.lock().await;
-        let (app, _p1, p2) = seed_finished_seats().await;
+        let (app, _p1, p2) = seed_finished_seats(0).await;
         let listening = serve_finished(app).await;
         let mut client = open(listening.port, &query("match-reopened", &p2), &[WS_SUBPROTOCOL])
             .await
@@ -590,7 +604,7 @@ mod a_finished_matchs_seats_may_reopen_its_socket {
     #[tokio::test]
     async fn another_profiles_finished_match_is_still_refused() {
         let _serial = SERIAL.lock().await;
-        let (app, _p1, _p2) = seed_finished_seats().await;
+        let (app, _p1, _p2) = seed_finished_seats(0).await;
         let user_id = "reopen-user-3";
         let token = add_user(&app, user_id, &format!("{user_id}@example.test"), true);
         fake(&app).lock().await.seed_profile(json!({
@@ -612,6 +626,44 @@ mod a_finished_matchs_seats_may_reopen_its_socket {
             .expect("an error frame before the close");
         assert_eq!(refusal["type"], "error");
         assert_eq!(client.close_code().await, 4403);
+    }
+
+    #[tokio::test]
+    async fn r1285000_a_seat_is_refused_its_finished_matchs_socket_once_the_rematch_window_has_passed() {
+        let _serial = SERIAL.lock().await;
+        let (app, _p1, p2) = seed_finished_seats(REMATCH_OFFER_TTL_MS + 1).await;
+        let listening = serve_finished(Arc::clone(&app)).await;
+        let mut client = open(listening.port, &query("match-reopened", &p2), &[WS_SUBPROTOCOL])
+            .await
+            .open();
+        let refusal = client
+            .next_message(READ_TIMEOUT)
+            .await
+            .expect("an error frame before the close");
+        assert_eq!(refusal["type"], "error");
+        assert_eq!(refusal["message"], "you are not in that match");
+        assert_eq!(client.close_code().await, 4403);
+        assert!(!app.matches.has("match-reopened"));
+        assert!(app.bug_reports.recorded().is_empty());
+    }
+
+    #[tokio::test]
+    async fn r1285000_a_finished_match_whose_log_was_purged_is_not_found_inside_its_window() {
+        let _serial = SERIAL.lock().await;
+        let (app, _p1, p2) = seed_finished_seats(0).await;
+        fake(&app).lock().await.tables.match_actions.clear();
+        let listening = serve_finished(Arc::clone(&app)).await;
+        let mut client = open(listening.port, &query("match-reopened", &p2), &[WS_SUBPROTOCOL])
+            .await
+            .open();
+        let refusal = client
+            .next_message(READ_TIMEOUT)
+            .await
+            .expect("an error frame before the close");
+        assert_eq!(refusal["type"], "error");
+        assert_eq!(client.close_code().await, 4404);
+        assert!(!app.matches.has("match-reopened"));
+        assert!(app.bug_reports.recorded().is_empty());
     }
 }
 

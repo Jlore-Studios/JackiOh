@@ -157,6 +157,11 @@ pub const AUTH_SIGN_OUT_WAIT_SECONDS: i64 = 5;
 /// password reset that signed other devices out) stops being honoured here within this many seconds,
 /// not when its access token expires.
 pub const AUTH_SESSION_LIVE_CACHE_SECONDS: i64 = 30;
+/// SPEC §11 R159: §9.4 step 1's "verified email" is read from the auth provider and only the
+/// positive answer is remembered, briefly and per user id (`auth.rs`'s `confirmed`, pruned on each
+/// insert). An unreachable provider still fails closed: the email counts as unverified. Not in
+/// SPEC: how brief, 30 seconds.
+pub const EMAIL_CONFIRMED_CACHE_TTL_MS: i64 = 30_000;
 /// A request to the auth provider that has not answered in this long is a network failure.
 pub const AUTH_PROVIDER_TIMEOUT_SECONDS: i64 = 30;
 // ---------------------------------------------------------------------------------------------
