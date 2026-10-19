@@ -3353,9 +3353,7 @@
       "run_id": "39264391339",
       "started_at": "2026-10-19T14:02:34Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6268683516"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1152": {
