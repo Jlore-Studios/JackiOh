@@ -270,9 +270,8 @@ fn quest_completed(radiant: bool, defer_g: bool) -> TriggerDef {
                 let mut effects: Vec<Effect> =
                     quest.rewards.iter().flat_map(|id| reward_effects(ctx, id, defer_g)).collect();
                 effects.extend(quest.rewards.iter().flat_map(|id| {
-                    // R1279000: G's path rides the deferred answer while the opponent is not
-                    // active; `open_quest` passes over a quest ever opened, so the paths opened
-                    // beside an immediate prompt open once.
+                    // R1279000: while the opponent is not active, G's path waits with its prompt
+                    // for the deferred step.
                     if defer_g && id.as_str() == "G" && reward_g_defers(ctx) {
                         vec![]
                     } else {
@@ -306,8 +305,8 @@ fn in_too_deep(radiant: bool, defer_g: bool) -> Script {
                     None => vec![],
                     Some(id) => {
                         let mut effects = reward_effects(ctx, &id, defer_g);
-                        // R1279000: while the opponent is not active, G's path waits for the
-                        // deferred answer with its prompt.
+                        // R1279000: while the opponent is not active, G's path waits with its
+                        // prompt for the deferred step.
                         if !(defer_g && id == "G" && reward_g_defers(ctx)) {
                             effects.extend(path_of(&id));
                         }
@@ -315,8 +314,17 @@ fn in_too_deep(radiant: bool, defer_g: bool) -> Script {
                     }
                 }),
             ),
-            // R1279000: the wait is over; G's prompt opens, and its answer opens G's path.
-            (REWARD_G_DEFERRED_STEP, hook(|_ctx| vec![reward_g_prompt()])),
+            // R1279000: the wait is over; G's prompt opens with its path behind it, as on the
+            // opponent's turn, so the path opens after the answer, or at once when their hand is
+            // empty and nothing asks.
+            (
+                REWARD_G_DEFERRED_STEP,
+                hook(|_ctx| {
+                    let mut effects = vec![reward_g_prompt()];
+                    effects.extend(path_of("G"));
+                    effects
+                }),
+            ),
             (
                 TARGET_DAMAGE_STEP,
                 hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": REWARD_DAMAGE })))]),
@@ -327,16 +335,10 @@ fn in_too_deep(radiant: bool, defer_g: bool) -> Script {
             ),
             (
                 DISCARD_STEP,
-                hook(move |ctx| {
-                    let mut effects: Vec<Effect> = (0..ctx.targets.len())
+                hook(|ctx| {
+                    (0..ctx.targets.len())
                         .map(|index| discard(json_as(json!({ "target": { "of": "chosen", "index": index } }))))
-                        .collect();
-                    // R1279000: G's path opens with the deferred answer; `open_quest` passes over
-                    // a quest ever opened, so beside an immediate prompt it opens once.
-                    if defer_g {
-                        effects.extend(path_of("G"));
-                    }
-                    effects
+                        .collect()
                 }),
             ),
         ]),
@@ -1158,7 +1160,7 @@ mod tests {
                 let first = must(hand.first().cloned(), "a card");
                 let second = must(hand.get(1).cloned(), "a card");
                 s.answer(json!([first.id, second.id]));
-                // Their turn's opening draw joined their hand before the discard.
+                // The prompt opens in their turn's delayed stage; its draw comes after the discard (§2.2).
                 let left: Vec<String> = s.hand(P2).iter().map(|card| card.def_id.clone()).collect();
                 assert_eq!(left, vec![MENACE, VANILLA]);
                 expect_line_matches(&s, json!({ "active": ["8"], "done": ["4"] }));
@@ -1188,6 +1190,26 @@ mod tests {
                 let menace = must(s.hand(P2).first().cloned(), "Menace");
                 s.answer(json!(menace.id));
                 assert!(s.hand(P2).is_empty());
+            }
+
+            #[test]
+            fn r1279000_r16_reward_g_deferred_to_an_empty_hand_asks_nothing_and_still_opens_quest_8() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": spare(json!({ "backrow": [ITD] })),
+                    "p2": { "hand": [], "library": SPARE_LIBRARY },
+                }));
+                on_quest(&mut s, "4", 1, json!({}));
+                any_action(&mut s);
+                s.answer(json!("G"));
+                assert!(s.state().pending.is_none());
+                s.end_turn();
+                // Their hand is empty when the delayed stage runs, before their turn's draw: nothing
+                // to discard and nothing asked, and G's path opens all the same.
+                assert!(s.state().pending.is_none());
+                let left: Vec<String> = s.hand(P2).iter().map(|card| card.def_id.clone()).collect();
+                assert_eq!(left, vec![VANILLA]);
+                expect_line_matches(&s, json!({ "active": ["8"], "done": ["4"] }));
             }
 
             #[test]
@@ -1241,7 +1263,7 @@ mod tests {
                 let first = must(hand.first().cloned(), "a card");
                 let second = must(hand.get(1).cloned(), "a card");
                 s.answer(json!([first.id, second.id]));
-                // Their turn's opening draw joined their hand before the discard.
+                // The prompt opens in their turn's delayed stage; its draw comes after the discard (§2.2).
                 let left: Vec<String> = s.hand(P2).iter().map(|card| card.def_id.clone()).collect();
                 assert_eq!(left, vec![MENACE, VANILLA]);
                 // G's path opened with the answer, exactly once; H's path was never chosen.
@@ -1931,10 +1953,10 @@ mod tests {
                 let a = must(hand.first().cloned(), "a");
                 let b = must(hand.get(1).cloned(), "b");
                 s.answer(json!([a.id, b.id]));
-                // Their turn's opening draw joined their hand before the discard.
+                // The prompt opens in their turn's delayed stage; its draw comes after the discard (§2.2).
                 let left: Vec<String> = s.hand(P2).iter().map(|card| card.def_id.clone()).collect();
                 assert_eq!(left, vec![MENACE, VANILLA]);
-                // H's path opened at the trigger, G's with the deferred answer.
+                // H's path opened at the trigger, G's behind the deferred prompt.
                 expect_line_matches(
                     &s,
                     json!({ "active": ["9", "8"], "done": ["1", "2", "5"], "progress": { "9": 0 } }),

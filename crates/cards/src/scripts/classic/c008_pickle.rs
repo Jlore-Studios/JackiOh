@@ -417,10 +417,8 @@ mod tests {
                 assert_eq!(defs(&s, P2, "exile"), vec![THEIR_DECK[3]]);
                 let grave = defs(&s, P2, "graveyard");
                 assert_eq!(grave.len(), 1);
-                // Their turn's opening draw joined their hand before the discard.
-                let mut possible = THEIR_HAND.to_vec();
-                possible.push(THEIR_DECK[0]);
-                assert!(possible.contains(&grave[0].as_str()));
+                // The questions open in their turn's delayed stage, before its draw (§2.2).
+                assert!(THEIR_HAND.contains(&grave[0].as_str()));
                 assert_eq!(defs(&s, P1, "hand"), vec![FILLER, MY_DECK[0]]);
             }
 
@@ -517,10 +515,8 @@ mod tests {
                 assert_eq!(open(&s).kind, PromptKind::Mode);
                 let grave = defs(&s, P2, "graveyard");
                 assert_eq!(grave.len(), 1);
-                // Their turn's opening draw joined their hand before the discard.
-                let mut possible = THEIR_HAND.to_vec();
-                possible.push(THEIR_DECK[0]);
-                assert!(possible.contains(&grave[0].as_str()));
+                // The questions open in their turn's delayed stage, before its draw (§2.2).
+                assert!(THEIR_HAND.contains(&grave[0].as_str()));
                 s.expect_events(json!(["discarded"]));
             }
 
