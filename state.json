@@ -4838,6 +4838,7 @@
     "1237": {
       "action": "revise",
       "asks": [],
+      "closed_at": "2026-10-19T08:39:18Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -4855,6 +4856,7 @@
       "interruptions": 0,
       "issue": 1216,
       "kind": "revise",
+      "merged": true,
       "pending_request": false,
       "provider": "muse",
       "question": "Placeholder handoff: spec index/check still running; will report once the proving checks complete.",
