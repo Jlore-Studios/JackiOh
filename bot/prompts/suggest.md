@@ -1,4 +1,4 @@
-<!-- version: 2 -->
+<!-- version: 3 -->
 # Suggest improvements to JackiOh
 
 A lane of the night bot of `$repo` has had nothing it could start for a while. Your job is to propose up to $count
@@ -51,6 +51,16 @@ change to the game starts as `.github/ISSUE_TEMPLATE/micro-patch.yml`'s title do
 today), a bigger one as `patch.yml`'s (`Patch v0.3.X: `), tooling or CI `Architecture: ` or `CI: `,
 and the bots themselves `Night bot: `, each followed by what it does.
 
-Each body has these sections: `## Why`, `## Proposal`, `## Where it lands` (files and SPEC
-sections), `## Acceptance criteria` (a checklist a reviewer can verify), and `## Size and risks`.
+Each body has these sections, in this order:
+
+- `## What it actually means`: a few plain sentences for someone who has not read the code: what
+  changes once it is built and who notices (a player at the table, the maintainer, the bot), with
+  a concrete example where one helps. No file names, ruling ids, module names or jargon here: the
+  sections below hold those.
+- `## Why`
+- `## Proposal`
+- `## Where it lands` (files and SPEC sections)
+- `## Acceptance criteria` (a checklist a reviewer can verify)
+- `## Size and risks`
+
 At most $count suggestions. After the first line you may explain your choices in prose.

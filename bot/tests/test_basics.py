@@ -40,7 +40,7 @@ class ConfigTests(unittest.TestCase):
         self.assertIn(".github/", cfg.forbidden_paths)
         self.assertIn("bot/", cfg.forbidden_paths)
         self.assertIn(".harness/", cfg.forbidden_paths)
-        self.assertEqual(cfg.suggestions_max_open, 4)
+        self.assertEqual(cfg.suggestions_max_open, 10)
         self.assertIn("bot selftest", cfg.required_checks)
 
     def test_unknown_and_missing_keys_are_errors(self):
