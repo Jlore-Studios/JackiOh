@@ -6265,9 +6265,7 @@
       "source": "request",
       "started_at": "2026-10-19T21:05:52Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6277163180"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
         "approvals": [
