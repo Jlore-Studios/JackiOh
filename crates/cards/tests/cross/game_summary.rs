@@ -3,8 +3,8 @@
 //! gate plays them, and checked against oracles it does not use:
 //!
 //!  - the opening hands are the hands the state holds once the mulligans resolve (p1's less its
-//!    first turn's draw, and with any card that turn's start discarded), and The Coin is in the
-//!    second seat's;
+//!    first turn's draw and any card that turn's start added to a hand with no draw, and with any card
+//!    that turn's start discarded), and The Coin is in the second seat's;
 //!  - the plays are the hand cards the logged `play` actions named, less those countered in their
 //!    announce window (§10.5 step 3a, R448), each as the card it resolves as after step 3's
 //!    replacement (C #23 Devil's Pact, R449), with the face it was played on (R1147000); #96 My Pawn
@@ -163,7 +163,7 @@ mod summarize_game_over_real_cards_s9_11 {
         let mut replaced_plays = 0;
         let mut radiant_plays = 0;
 
-        for n in 36..=36 {
+        for n in 1..=GAMES {
             let seed = format!("summary-cards-{n}");
             let shuffled = create_rng(&format!("summary-cards-decks-{n}"), 0).shuffle(&pool);
             let decks: (Vec<String>, Vec<String>) =
@@ -212,11 +212,6 @@ mod summarize_game_over_real_cards_s9_11 {
                     panic!("{seed}: {} refused: {error}", action.action_type());
                 }
                 let events: &[GameEvent] = &result.events;
-                if log.len() < 12 {
-                    eprintln!("DBG action {} phase {:?}->{:?} turn {} {}", log.len(), state.phase, result.state.phase, result.state.turn, serde_json::to_string(&action.body).unwrap_or_default());
-                    for e in events { eprintln!("DBG   {}", serde_json::to_string(e).unwrap_or_default()); }
-                    eprintln!("DBG   hand p1 {:?}", hand(&result.state, PlayerId::P1));
-                }
                 for event in events {
                     match event {
                         GameEvent::CardAnnounced { instance_id, .. } => {
@@ -384,6 +379,31 @@ mod summarize_game_over_real_cards_s9_11 {
                                 match owner {
                                     PlayerId::P1 => p1.push(def_id.clone()),
                                     PlayerId::P2 => p2.push(def_id.clone()),
+                                }
+                            }
+                        }
+                        // Re-pinned for v0.3.15 (Meditative+ ships, #1187): a card turn 1 added to a hand
+                        // with no draw, and that the hand still holds, was in no opening hand either: the
+                        // bigger pool deals summary-cards-36's p1 M #37 CN in a Bottle as turn 1's draw,
+                        // which, cast on its draw (§2.4), adds a random card.
+                        for event in &events[from..] {
+                            if let GameEvent::AddedToHand {
+                                player,
+                                instance_id,
+                                def_id,
+                            } = event
+                                && !drawn_here.contains(&instance_id)
+                                && result.state.players[*player]
+                                    .hand
+                                    .iter()
+                                    .any(|card| card.id == *instance_id)
+                            {
+                                let held = match player {
+                                    PlayerId::P1 => &mut p1,
+                                    PlayerId::P2 => &mut p2,
+                                };
+                                if let Some(at) = held.iter().rposition(|id| id == def_id) {
+                                    held.remove(at);
                                 }
                             }
                         }
