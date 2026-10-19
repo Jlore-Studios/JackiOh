@@ -4,8 +4,8 @@
 //! the actor talks to. This file adds `socket_from_ws` (an axum WebSocket as a `Socket`; text frames
 //! only, a binary frame is answered with `error` and dropped) and `handle_match_socket` (the upgrade:
 //! authenticate through `app.auth`, apply §9.4's gate (`assert_active`), refuse unless the profile is
-//! in the match it asked for or holds a seat in it finished (§9.5's rematch window), §9.1). `handle`
-//! also bounds what an unauthenticated client costs: a
+//! in the match it asked for or held a seat in it finished while its rematch window is open (§9.5,
+//! R1285000), §9.1). `handle` also bounds what an unauthenticated client costs: a
 //! frame over `MAX_FRAME_BYTES` closes the socket with 1009, and one client address holds at most
 //! `WS_MAX_CONNECTIONS_PER_ADDRESS` sockets. A socket that stops answering is found and dropped: the
 //! pump pings every `WS_PING_INTERVAL_SECONDS` and drops a connection that has sent nothing for
@@ -33,9 +33,9 @@ use crate::actor::contracts::SocketHandlers;
 use crate::actor::protocol::{MAX_FRAME_BYTES, SocketErrorCode, encode, error_message};
 use crate::actor::registry::AttachError;
 use crate::api::http::{ApiError, ApiErrorCode, assert_active, client_address, lock, rate_limit_address};
-use crate::app::{App, browser_origins};
+use crate::app::{App, browser_origins, now_ms};
 use crate::config::{
-    DEFAULT_TRUSTED_PROXY_HOPS, SHUTDOWN_SOCKETS_POLL_MS, WS_IDLE_TIMEOUT_SECONDS,
+    DEFAULT_TRUSTED_PROXY_HOPS, REMATCH_OFFER_TTL_MS, SHUTDOWN_SOCKETS_POLL_MS, WS_IDLE_TIMEOUT_SECONDS,
     WS_MAX_CONNECTIONS_PER_ADDRESS, WS_OUTBOX_MAX_FRAMES, WS_PING_INTERVAL_SECONDS,
 };
 use crate::db::store::MatchStatus;
@@ -415,9 +415,10 @@ fn token_from(query: &[(String, String)]) -> Option<String> {
     query_param(query, "token").filter(|token| !token.is_empty())
 }
 
-/// Whether `profile_id` holds a seat in the finished match `match_id` (§9.5's rematch window).
-/// Anything else — no such match, a live one, or another profile's — reads as false, so the
-/// caller refuses exactly as before (§9.1).
+/// Whether `profile_id` holds a seat in the finished match `match_id` and its rematch window is
+/// still open: no more than `REMATCH_OFFER_TTL_MS` since the row's `finished_at` (§9.5, R1285000).
+/// Anything else — no such match, a live one, another profile's, or one whose window has passed —
+/// reads as false, so the caller refuses exactly as before (§9.1) and no actor is rebuilt.
 async fn seats_finished_match(
     app: &Arc<App>,
     match_id: &str,
@@ -432,7 +433,12 @@ async fn seats_finished_match(
     if match_row.status != MatchStatus::Finished {
         return Ok(false);
     }
-    Ok(match_row.players.0 == profile_id || match_row.players.1 == profile_id)
+    // R1285000: the rematch window, counted as the reaper counts it (`Registry::reap_finished`) and
+    // a rematch offer lives (`api/rematch.rs`); a finished row with no end reads as outside it.
+    let in_window = match_row
+        .finished_at
+        .is_some_and(|finished_at| now_ms() - finished_at <= REMATCH_OFFER_TTL_MS);
+    Ok(in_window && (match_row.players.0 == profile_id || match_row.players.1 == profile_id))
 }
 
 /// The authentication and the attach; any failure is reported to `refuse`.
@@ -468,8 +474,9 @@ async fn upgrade_socket(
     };
     // §9.1: a socket is only ever opened onto a match this profile is playing — or one it
     // played: §9.5 clears both seats' in-match state at every ending, but the rematch window
-    // keeps a finished match's seats coming back (presence is the opponent's socket being open,
-    // and a socket that comes back folds the actor again).
+    // keeps a finished match's seats coming back for `REMATCH_OFFER_TTL_MS` after its end
+    // (R1285000; presence is the opponent's socket being open, and a socket that comes back folds
+    // the actor again).
     if profile.in_match_id.as_deref() != Some(match_id.as_str())
         && !seats_finished_match(app, &match_id, &profile.id).await?
     {
