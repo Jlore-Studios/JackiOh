@@ -178,11 +178,17 @@ Running the lanes:
   `muse` seat, which its usage readings show (the status issue).
 - **Updating** the CLIs or Rust: run `setup.sh --training` again; it changes nothing else and never
   restarts a lane.
-- **Disk**: each lane's `target/` (a few GB), its records and logs grow on the 100 GB disk; the
-  night box's clean-up does not run here. Muse keeps every session in
-  `~/.local/share/muse/sessions/` (a few hundred MB a day); the loop deletes one 8 hours after it
-  ended, as `clean.sh` does on the night box. A box set up before #1272 also holds Devin's session
-  database in `~/.local/share/devin/cli/`; delete it as that user.
+- **Disk**: the box cleans itself (`training/loop.sh`'s `free_disk`), since the night box's
+  clean-up does not run here. Each cycle starts, with no session of its lane going, by reading the
+  disk; under 20 GB free (`TRAIN_DISK_FLOOR_GB`) the lane deletes its own builds but the release
+  one (the parent and the gate's), its download caches (cargo's, pnpm's, npm's) and its `/tmp`
+  leftovers older than 6 hours, all of which come back by themselves, and says so in its log. The
+  lanes' test builds carry no debug info, as on the night box: with it, Muse's `cargo test` runs
+  had built 20 GB of `target/debug` a lane in two weeks and left the disk 6 GB free (2026-10-19).
+  Muse keeps every session in `~/.local/share/muse/sessions/` (a few hundred MB a day); the loop
+  deletes one 8 hours after it ended, as `clean.sh` does on the night box. The records
+  (`training-out/`) and logs stay. A box set up before #1272 also holds Devin's session database
+  in `~/.local/share/devin/cli/`; delete it as that user.
 - **Cost**: the box is always on: about $70 a month for the instance (on-demand `m7i-flex.large` in
   `us-east-2`; an `m7i.xlarge` would be about $150) plus about $8 for its disk.
 
