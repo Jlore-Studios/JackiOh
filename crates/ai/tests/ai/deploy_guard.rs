@@ -42,17 +42,18 @@ fn a_plain_play_passes() {
 }
 
 #[test]
-fn aluneth_is_kept_only_for_a_starving_hand_or_a_radiant_face() {
+fn aluneth_casts_at_any_hand_since_the_draws_came_priced() {
     register_cards();
+    // #1194 priced Aluneth's draws ("They cost (1) less"), and the lane's records swung to the cast:
+    // no hand is too full for the guard to keep it out.
     let full = scenario(json!({
         "turn": 6,
         "p1": { "hand": ["meditative-080", "core-008", "core-011", "core-013"] },
         "p2": { "field": ["core-008"] },
     }));
     let state = full.state();
-    assert!(!deploy_guard(state, AI, &play_of(state, "meditative-080")));
+    assert!(deploy_guard(state, AI, &play_of(state, "meditative-080")));
 
-    // The card itself counts toward the hand: Aluneth plus one other is the most the guard allows.
     let starving = scenario(json!({
         "turn": 6,
         "p1": { "hand": ["meditative-080", "core-008"] },
@@ -201,7 +202,7 @@ fn back_breaker_is_kept_while_its_death_cannot_take_our_backrow() {
 }
 
 #[test]
-fn the_ivory_tower_and_every_play_onto_it_are_refused() {
+fn the_ivory_tower_casts_but_every_play_onto_it_is_refused() {
     register_cards();
     let s = scenario(json!({
         "turn": 8,
@@ -209,7 +210,8 @@ fn the_ivory_tower_and_every_play_onto_it_are_refused() {
         "p2": { "field": ["core-008"] },
     }));
     let state = s.state();
-    assert!(!deploy_guard(state, AI, &play_of(state, "classicplus-033")));
+    // R1194000's aura ("Your Units have Flying and Stack") made the cast a real card: unguarded.
+    assert!(deploy_guard(state, AI, &play_of(state, "classicplus-033")));
 
     // A unit play that names the tower's backrow zone fuses into it (R446, R653).
     let mut fused = play_of(state, "core-008");

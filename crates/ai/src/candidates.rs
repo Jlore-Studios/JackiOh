@@ -603,9 +603,9 @@ pub fn candidate_actions_in(state: &GameState, seat: PlayerId, legal: Vec<Action
     out
 }
 
-// The bounds `deploy_guard` refuses a play at, each tied to the turn or the hand the card's own
-// downside is armed past (the lane's records: every card below is cast into a losing game far more
-// often than it is held in a winning one).
+// The bounds `deploy_guard` refuses a play at, each tied to the turn the card's own downside is
+// armed past (the lane's records: every card below is cast into a losing game far more often than
+// it is held in a winning one).
 
 /// M #3 Jlockwork Machine: the last turn its Rush body still ends the game before the three cards
 /// every enemy play exiles reach the deck's bottom.
@@ -613,9 +613,6 @@ const AI_DEPLOY_JLOCKWORK_LAST_TURN: i32 = 11;
 /// M #68 Catnip: the first turn a set copy could meet an enemy Spell — an earlier set is a card and
 /// a backrow zone spent on nothing.
 const AI_DEPLOY_CATNIP_EARLIEST_TURN: i32 = 4;
-/// M #80 Aluneth: a base-face cast is kept only for a hand with nothing else in it — the card
-/// itself counts, so this is Aluneth plus at most one other.
-const AI_DEPLOY_ALUNETH_MAX_HAND: usize = 2;
 
 /// What a −p/−p aura costs the units of one side: a unit it leaves at or under 0 max health dies
 /// (R69) and is worth its whole body; a survivor loses the attack it can and the health.
@@ -635,15 +632,17 @@ fn suppressed_loss(state: &GameState, player: PlayerId, penalty: i32) -> i32 {
 
 /// The deploy guard (AI_DEPLOY_GUARD): whether a `Play` is a move the deciding seat's beam may
 /// take. The records show a handful of cards cast into their own funeral far more often than held
-/// in a winning hand — an Indestructible draw-3 engine that cannot be turned off, a body that
-/// hands the enemy a Poisonous token, a field spell that eats the unit played onto it — so the
-/// beam refuses them, exactly where their printed downside is armed. Every check reads what the
-/// seat can see — hand size, the turn, zone occupancy, the layers' unit views (R185) — and keeps a
-/// cast whose downside is not armed, so the change is to a refusal the state, not the card, asks
-/// for: Aluneth under a Radiant face's own exile or an empty hand, DOOM when its gift has no open
-/// zone to land in (a summon with none fizzles, §6.1), Jlockwork and Catnip inside their windows,
-/// Suppressive Aura where its debuff costs the enemy board more, Back Breaker with nothing of ours
-/// in the backrow its Death takes.
+/// in a winning hand — a body that hands the enemy a Poisonous token, a field spell that eats the
+/// unit played onto it — so the beam refuses them, exactly where their printed downside is armed.
+/// Every check reads what the seat can see — hand size, the turn, zone occupancy, the layers' unit
+/// views (R185) — and keeps a cast whose downside is not armed, so the change is to a refusal the
+/// state, not the card, asks for: DOOM when its gift has no open zone to land in (a summon with
+/// none fizzles, §6.1), Jlockwork and Catnip inside their windows, Suppressive Aura where its
+/// debuff costs the enemy board more, Back Breaker with nothing of ours in the backrow its Death
+/// takes, and any Unit play that names the Ivory Tower's zone. Aluneth and the Tower's own cast are
+/// unguarded since patch v0.3.13 (#1194): the draw's discount and the Tower's Flying-and-Stack aura
+/// made the cast the records' better half — the plays onto the Tower still fuse the unit away
+/// (R446, R653).
 pub fn deploy_guard(state: &GameState, seat: PlayerId, action: &ActionBody) -> bool {
     if !AI_DEPLOY_GUARD {
         return true;
@@ -678,9 +677,6 @@ pub fn deploy_guard(state: &GameState, seat: PlayerId, action: &ActionBody) -> b
         return true;
     };
     match card.def_id.as_str() {
-        // The Tower's own cast is the same deal: a field spell whose only text eats a unit.
-        "classicplus-033" => false,
-        "meditative-080" => card.radiant || state.players[seat].hand.len() <= AI_DEPLOY_ALUNETH_MAX_HAND,
         "meditative-070" => !slots_of(seat.opponent(), Row::Units)
             .iter()
             .any(|slot| is_open(state, *slot)),
