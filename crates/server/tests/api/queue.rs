@@ -796,6 +796,45 @@ mod r897000_an_abandoned_ticket_expires_before_it_seats_anyone {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn r897000_the_sweep_forgets_a_profile_with_no_ticket_unheard_for_a_window() {
+        let app = test_app().await;
+        // No ticket at all: the sweep still tidies before its empty-queue return.
+        app.queue_presence.touch("browsed", now_ms());
+        tokio::time::advance(Duration::from_millis((QUEUE_TICKET_STALE_MS + 1) as u64)).await;
+        app.queue_presence.touch("fresh", now_ms());
+
+        try_pair(&app).await.expect("a sweep");
+
+        assert_eq!(app.queue_presence.last_heard("browsed"), None);
+        assert!(app.queue_presence.last_heard("fresh").is_some());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r897000_the_sweep_judges_a_ticket_on_its_owners_entry_before_forgetting_it() {
+        let app = test_app().await;
+        tokio::time::advance(Duration::from_millis((QUEUE_TICKET_STALE_MS + 1) as u64)).await;
+        // PREMISE: `enqueued_at` is now, so only the owner's entry, heard a window ago, makes it stale.
+        seed_ticket(
+            &app,
+            SeedTicket {
+                id: "t-unheard",
+                profile_id: "unheard",
+                rating: 1000,
+                waited_ms: 0,
+                mode: "bo1",
+            },
+        )
+        .await;
+        app.queue_presence
+            .touch("unheard", now_ms() - QUEUE_TICKET_STALE_MS - 1);
+
+        try_pair(&app).await.expect("a sweep");
+
+        assert_eq!(ticket(&app, "t-unheard").await["status"], "cancelled");
+        assert_eq!(app.queue_presence.last_heard("unheard"), None);
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn r897000_get_me_answers_queued_while_a_ticket_is_open() {
         let app = test_app().await;
         let token = active_profile(&app, "queuer", 1000.0).await;
