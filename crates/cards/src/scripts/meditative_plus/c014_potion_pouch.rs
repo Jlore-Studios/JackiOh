@@ -34,7 +34,7 @@ pub fn script() -> CardScripts {
 }
 
 // M+ #14 Potion Pouch — SPEC §8.9 row 14, BUILD M11 row M+ 14: "adds 2 random Potion cards (M+
-// 11, 12 or 13, previewed, R1178000), repeats seen over the seeds; a full hand burns the second;
+// 11, 12 or 13, R1178000), repeats seen over the seeds; a full hand burns the second;
 // never a crafted potion or a non-Potion card; cards reads through `param()`; radiant both
 // Radiant".
 #[cfg(test)]
