@@ -228,7 +228,7 @@ fn expected_indices(set: &SetExpectation) -> Vec<String> {
 fn expected_tag_count(tag: Tag) -> usize {
     match tag {
         // Meditative+ #7 Life Mage, #8 Arch Mage, #10 Medina Grifter, #16 Jazakus and #16.1 Jazakus Prime.
-        Tag::Human => 38 + meditative(12) + meditative_plus(5),
+        Tag::Human => 39 + meditative(16) + meditative_plus(5),
         Tag::Felinor => 11 + meditative(11),
         // Meditative+ #20 KY's Competition, #20.1 Lil' Kenny and #25 KY's Intuition.
         Tag::Ky => 9 + meditative(6) + meditative_plus(3),

@@ -87,6 +87,14 @@ describe("R388 a card's changes, from two snapshots", () => {
     expect(changes.some((change) => change.field === "base.keywords")).toBe(false);
   });
 
+  it("R388 lists a face's granted ability (ME-GRANT) that changes, its {key} numbers filled in", () => {
+    const before = fixtureDef(V3, "core-002");
+    const grant = (text: string): CardDef["base"] => ({ ...before.base, grants: { dealt: text } });
+    const changes = changed(diffCard({ ...before, base: grant("Death: Deal {damage} damage.") }, { ...before, base: grant("Death: Deal {damage} damage twice.") }));
+    expect(changes).toEqual([{ kind: "value", field: "base.grants", label: "Granted ability", before: "Death: Deal 4 damage.", after: "Death: Deal 4 damage twice." }]);
+    expect(diffCard(before, { ...before, base: grant("Death: Deal {damage} damage.") })).toMatchObject({ kind: "changed", changes: [{ field: "base.grants", before: "none" }] });
+  });
+
   it("R388 says added, removed or nothing when a snapshot lacks the card or both hold it alike", () => {
     expect(diffCard(undefined, fixtureDef(V3, "classic-001"))).toMatchObject({ kind: "added", id: "classic-001" });
     expect(diffCard(fixtureDef(V1, "core-003"), undefined)).toMatchObject({ kind: "removed", id: "core-003" });
@@ -208,8 +216,8 @@ describe("R388 the real history's changes", () => {
   it("R388 every card every patch records diffs to what the record says: its kind and exactly its fields", async () => {
     const patches = await realPatchSource.patches();
     expect(patches.length).toBeGreaterThan(0);
-    // patches.json names the raw fields; the diff reads a face's attack and health as its stats.
-    const asDiffField = (name: string): string => name.replace(/^(base|radiant)\.(attack|health)$/, "$1.stats");
+    // patches.json names the raw fields; the diff reads a face's attack, health and X stats as its stats.
+    const asDiffField = (name: string): string => name.replace(/^(base|radiant)\.(attack|health|xStats)$/, "$1.stats");
     for (const patch of patches) {
       const after = await real(patch.version);
       const previous = versionBefore(patches, patch.version);
