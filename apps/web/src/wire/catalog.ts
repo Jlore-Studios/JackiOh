@@ -235,6 +235,11 @@ export type CardFace = {
    * A tunable number (`CardDef.params`, B3.4) is written `{key}`, filled in by `fillParams`.
    */
   text: string;
+  /**
+   * ME-GRANT (MD-D13): the Death abilities this face grants, by key, holding the quoted ability of
+   * the face — `meditative-058`'s faces carry `bookDeath`, `meditative-059`'s `fusedBookDeath`.
+   */
+  grants?: Record<string, string>;
 };
 
 /**

@@ -58,6 +58,8 @@ export const FIELD_LABEL = {
   "radiant.keywords": "Radiant keywords",
   "base.text": "Text",
   "radiant.text": "Radiant text",
+  "base.grants": "Granted ability",
+  "radiant.grants": "Radiant granted ability",
   params: "Tunable numbers",
   refs: "Cards it names",
   loc: "Lines of code",
@@ -117,6 +119,13 @@ function paramText(param: Param): string {
   if (param.power !== undefined) parts.push(`tuned only while the card has ${powerTitle({ name: param.power }, false)}`);
   parts.push(param.better === "up" ? "more is better" : "less is better");
   return parts.join(", ");
+}
+
+/** ME-GRANT: the abilities a face grants, their numbers filled in as its text's are. */
+function grantsText(def: CardDef, face: FaceKey): string {
+  const grants = Object.values(def[face].grants ?? {});
+  if (grants.length === 0) return NONE;
+  return grants.map((text) => fillParams({ ...def, base: { ...def.base, text }, radiant: { ...def.radiant, text } }, face)).join(" ");
 }
 
 function paramsText(params: readonly Param[] | undefined): string {
@@ -181,6 +190,9 @@ function fieldChanges(before: CardDef, after: CardDef, names: DiffNames): FieldC
         removed: diff.removed,
       });
     }
+  }
+  for (const face of ["base", "radiant"] as const) {
+    value(`${face}.grants`, grantsText(before, face), grantsText(after, face));
   }
   const paramsBefore = paramsText(before.params);
   const paramsAfter = paramsText(after.params);
