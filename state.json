@@ -3736,9 +3736,7 @@
       "stop_requested": true,
       "stopped_at": "2026-10-19T06:40:33Z",
       "stopped_by": "jgoetzmann",
-      "taken_asks": [
-        "c:6261157907"
-      ],
+      "taken_asks": [],
       "tree": {
         "adopted": true,
         "at": "2026-10-18T16:40:07Z",
