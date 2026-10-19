@@ -26,8 +26,9 @@
 //! ONLY CHOICES THAT WOULD DO SOMETHING are offered, read as each question is asked: "discard" while
 //! their hand holds a card, "exile" while their deck does, and "you draw" always — a draw from an
 //! empty deck is fatigue (§2.4), which still does something. The options name no card. R800's guard
-//! stops a forced discard only while its holder is not active, so with every question opening on
-//! their turn (R1279000) the guard sleeps and "discard" stands as long as their hand holds a card.
+//! stops a forced discard only while its holder is not active: every new question opens on their
+//! turn (R1279000), where the guard sleeps and "discard" stands as long as their hand holds a
+//! card, while the kept v0.3.7b questions answering off their turn still filter it.
 //!
 //! "DISCARD" is random from their hand (R682: no "of your choice"), so no prompt opens and the next
 //! question follows at once. You read only the discard events, never the cards (R177).
@@ -142,9 +143,12 @@ fn ask(ctx: &EffectContext<'_>, chain: &ChainData, pending: Pending) -> Vec<Effe
     let enemy = opponent_of(ctx.controller);
     let state: &GameState = &*ctx.state;
     let mut options: Vec<&str> = Vec::new();
-    // R800's guard stops a forced discard only while its holder is not active; every question
-    // opens on the holder's turn (R1279000), where the guard sleeps, so no read is needed here.
-    if zone_count(state, enemy, OffFieldZone::Hand) - pending.hand_loss.unwrap_or(0) > 0 {
+    // R800's guard stops a forced discard only while its holder is not active, so the read stays:
+    // it filters "discard" for a guarded holder answering off their turn (the kept v0.3.7b
+    // questions) and sleeps on the holder's own turn (R1279000), where every new question opens.
+    if zone_count(state, enemy, OffFieldZone::Hand) - pending.hand_loss.unwrap_or(0) > 0
+        && !jackioh_engine::draw::discard_guarded(state, enemy)
+    {
         options.push(DISCARD);
     }
     if zone_count(state, enemy, OffFieldZone::Library) - pending.deck_loss.unwrap_or(0) > 0 {
@@ -461,6 +465,27 @@ mod tests {
                     assert_eq!(pending.player_id, P2);
                     assert_eq!(pending.kind, PromptKind::Mode);
                     assert_eq!(modes(&s), vec!["discard", "exile", "draw"]);
+                });
+            }
+
+            #[test]
+            fn r800_r767000_a_game_on_v0_3_7_filters_discard_for_a_guarded_hand_answering_off_turn() {
+                crate::register_all();
+                let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+                jackioh_engine::with_shipped(Some(shipped), || {
+                    // The old script asked during your turn, where R800's guard is awake: a
+                    // guarded holder is not offered "discard".
+                    let mut s = scenario(json!({
+                        "p1": { "hand": [PICKLE, FILLER], "library": MY_DECK.to_vec() },
+                        "p2": {
+                            "hand": THEIR_HAND.to_vec(),
+                            "library": THEIR_DECK.to_vec(),
+                            "backrow": [{ "def": "meditative-001", "faceUp": true, "lane": 1 }],
+                        },
+                    }));
+                    s.play(PICKLE, json!({}));
+                    assert_eq!(s.state().active, P1);
+                    assert_eq!(modes(&s), vec!["exile", "draw"]);
                 });
             }
 
