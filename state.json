@@ -6217,10 +6217,12 @@
       "interruptions": 0,
       "issue": 1299,
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-1",
       "queued_at": "2026-10-19T20:59:19Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "",
       "run_id": "39323864230",
       "self_check_findings": [],
       "source": "request",
@@ -6229,6 +6231,7 @@
       "taken_asks": [
         "c:6277163180"
       ],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "claude"
