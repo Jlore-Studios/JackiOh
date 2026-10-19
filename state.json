@@ -6137,14 +6137,17 @@
       "asks": [
         "c:6273319171"
       ],
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-19T16:29:34Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1298,
       "kind": "revise",
       "pending_at": "2026-10-19T17:36:08Z",
       "pending_by": "MaxGoetzmann",
-      "pending_request": true,
+      "pending_request": false,
       "provider": "muse",
       "question": "No question \u2014 interim note: conflict markers resolved, awaiting background spec-index result before running proof suite.",
       "queued_at": "2026-10-19T17:23:11Z",
