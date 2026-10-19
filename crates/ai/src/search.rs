@@ -11,7 +11,7 @@ use std::cmp::Ordering;
 use indexmap::IndexSet;
 use jackioh_engine::{ActionBody, GameState, Phase, PlayerId};
 
-use crate::candidates::{candidate_actions, candidate_set, deploy_guard};
+use crate::candidates::{candidate_actions, candidate_set};
 use crate::config::{AI_MOVE_ORDER, MoveOrder};
 use crate::evaluate::NextSwing;
 use crate::learned::{finalist_score, line_score, open_score};
@@ -55,8 +55,7 @@ fn best_first_lines(mut lines: Vec<Line>) -> Vec<Line> {
     lines
 }
 
-/// The first `width` candidates that are not endTurn and pass the deploy guard (candidates.rs),
-/// plus endTurn when it is legal. A refused play's slot is the next candidate's. With
+/// The first `width` candidates that are not endTurn, plus endTurn when it is legal. With
 /// `MoveOrder::Learned` the candidates are sorted by `prior` before the first `width` are taken
 /// (`prior_order`, R1171001); with `MoveOrder::Heuristic` they keep `candidate_actions`' order.
 pub fn expansion(
@@ -74,7 +73,6 @@ pub fn expansion(
     let mut moves: Vec<ActionBody> = candidates
         .into_iter()
         .filter(|action| !matches!(action, ActionBody::EndTurn))
-        .filter(|action| deploy_guard(state, seat, action))
         .collect();
     if order == MoveOrder::Learned {
         moves = prior_order(state, seat, moves, prior);

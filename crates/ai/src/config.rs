@@ -144,12 +144,6 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     judged_card_nodes: 3,
 };
 
-/// The deploy guard's switch (candidates.rs `deploy_guard`): on, the deciding seat's beam refuses a
-/// play whose own text the lane's records show losing the game it was cast in — a gift like DOOM's
-/// Poisonous token, the Ivory Tower's fuse, a debuff that hits our own board. Off puts every play
-/// back, exactly as before.
-pub const AI_DEPLOY_GUARD: bool = true;
-
 /// `AI_EVAL.keyword`: the worth of each keyword in `unitView.keywords` (spent Divine Shield and Reborn
 /// are already gone). A keyword kind with no entry here (Armor, Windfury, …) is worth nothing of its
 /// own; `of` answers `None` for it, as TS's `weights[keyword.kind]` was `undefined`.
