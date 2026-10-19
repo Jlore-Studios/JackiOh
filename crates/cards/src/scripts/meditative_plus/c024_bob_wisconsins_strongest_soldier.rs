@@ -327,16 +327,22 @@ mod tests {
 
         #[test]
         fn r1185004_with_no_enemy_unit_the_take_does_nothing_and_no_coins_are_given() {
-            let mut s = bob("bob-radiant-empty", true, json!([VANILLA, FILLER]), json!([]));
+            // The full hand at the end needs the Discover's pick to stay in it. Re-pinned for v0.3.15
+            // (Meditative+ ships, #1187): its Units join the Discover's pool, so "bob-radiant-empty"
+            // now offers C #66 EU Striker first, which summons itself from the hand once Bob resolves
+            // (R401, R548); the seed is the first whose Radiant pick is still in the hand.
+            let seed = seed_where("bob-radiant-empty", |seed| {
+                let mut s = bob(seed, true, json!([VANILLA, FILLER]), json!([]));
+                s.play(ID, json!({ "zone": 1 }));
+                let pick = first_option(&s);
+                s.answer(json!(pick.clone()));
+                s.hand(P1).iter().any(|card| card.def_id == pick && card.radiant)
+            });
+            let mut s = bob(&seed, true, json!([VANILLA, FILLER]), json!([]));
             s.play(ID, json!({ "zone": 1 }));
             assert_eq!(coins_of(&s, P2), 0);
             let pick = first_option(&s);
-            eprintln!("DEBUG options {:?}", options(&s));
-            let from = s.events().len();
             s.answer(json!(pick));
-            eprintln!("DEBUG hand {:?}", s.hand(P1).iter().map(|c| (c.def_id.clone(), c.radiant)).collect::<Vec<_>>());
-            for e in &s.events()[from..] { eprintln!("DEBUG ev {}", serde_json::to_string(e).unwrap()); }
-            eprintln!("DEBUG library {:?} pending {:?}", s.pile(P1, "library").iter().map(|c| c.def_id.clone()).collect::<Vec<_>>(), s.state().pending.is_some());
             assert_eq!(s.hand(P1).len() as i32, hand_cap_of(s.state(), P1));
         }
     }
