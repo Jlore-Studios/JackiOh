@@ -5136,6 +5136,13 @@
     "1285": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-19T12:40:30Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "rule line 3 fails: it adds ruling R1285000 and edits spec/09-architecture.md, spec/11-rulings.md and spec/INDEX.md; everything else is one crate"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
