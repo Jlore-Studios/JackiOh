@@ -5046,6 +5046,9 @@
       "action": "review",
       "asks": [],
       "audit_tier": "strong",
+      "ci_reruns": {
+        "1ec6052b7f0f37ea10e8647b7eab2be9e056a085": 1
+      },
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
