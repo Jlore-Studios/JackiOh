@@ -5514,6 +5514,8 @@
       "provider": "claude-6",
       "question": "",
       "queued_at": "2026-10-19T05:03:46Z",
+      "review_floor": "",
+      "review_notes": "",
       "round_tier": "medium",
       "run_id": "39202609413",
       "self_check_findings": [],
