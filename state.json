@@ -6456,6 +6456,14 @@
         }
       }
     },
+    "1356": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-19T21:58:00Z",
+      "issue": 1302,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "148": {
       "asks": [
         "c:5974504575"
