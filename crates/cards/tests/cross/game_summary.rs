@@ -8,8 +8,9 @@
 //!  - the plays are the hand cards the logged `play` actions named, less those countered in their
 //!    announce window (§10.5 step 3a, R448), each as the card it resolves as after step 3's
 //!    replacement (C #23 Devil's Pact, R449), with the face it was played on (R1147000); #96 My Pawn
-//!    plays out a turn inside an attack's action with no `play` logged, so such a game may hold more
-//!    plays than the log names, never fewer;
+//!    plays out a turn inside an attack's action, and M+ #18 Cognitive Offloading's autopilot the rest
+//!    of its caster's turn inside the action that cast it (R1183002), with no `play` logged, so such a
+//!    game may hold more plays than the log names, never fewer;
 //!  - a cast on its draw (#21 Hinder, #90.1 CN-Virus, §2.4) is no play, and the draws are every card
 //!    drawn from the first turn on, less those burned on a full hand (R4) or cast on their draw.
 
@@ -162,7 +163,7 @@ mod summarize_game_over_real_cards_s9_11 {
         let mut replaced_plays = 0;
         let mut radiant_plays = 0;
 
-        for n in 26..=26 {
+        for n in 1..=GAMES {
             let seed = format!("summary-cards-{n}");
             let shuffled = create_rng(&format!("summary-cards-decks-{n}"), 0).shuffle(&pool);
             let decks: (Vec<String>, Vec<String>) =
@@ -211,18 +212,6 @@ mod summarize_game_over_real_cards_s9_11 {
                     panic!("{seed}: {} refused: {error}", action.action_type());
                 }
                 let events: &[GameEvent] = &result.events;
-                {
-                    let interesting = events.iter().any(|e| matches!(e, GameEvent::CardPlayed { .. } | GameEvent::Countered { .. } | GameEvent::AddedToHand { .. }));
-                    if interesting {
-                        eprintln!("DBG action {} {:?}", log.len(), serde_json::to_string(&action.body).unwrap_or_default());
-                        for e in events {
-                            let j = serde_json::to_string(e).unwrap_or_default();
-                            if j.contains("cardPlayed") || j.contains("ountered") || j.contains("addedToHand") || j.contains("stol") || j.contains("Stol") || j.contains("discarded") || j.contains("announced") || j.contains("transformed") || j.contains("controlChanged") {
-                                eprintln!("DBG   {j}");
-                            }
-                        }
-                    }
-                }
                 for event in events {
                     match event {
                         GameEvent::CardAnnounced { instance_id, .. } => {
@@ -311,10 +300,14 @@ mod summarize_game_over_real_cards_s9_11 {
                         play.open = play.open && resolving.contains(play.id.as_str());
                     }
                 }
-                if events
-                    .iter()
-                    .any(|event| matches!(event, GameEvent::TrapFired { def_id, .. } if def_id == MY_PAWN))
-                {
+                // Re-pinned for v0.3.15 (Meditative+ ships, #1187): M+ #18 Cognitive Offloading joins
+                // the decks, and its autopilot (R1183002) plays the rest of a turn with no `play` logged,
+                // as My Pawn's random turn does (summary-cards-26 plays M+ #10 Medina Grifter, the card it
+                // steals and C #78 so), so a game it engages in is held to My Pawn's check.
+                if events.iter().any(|event| {
+                    matches!(event, GameEvent::TrapFired { def_id, .. } if def_id == MY_PAWN)
+                        || matches!(event, GameEvent::AutopilotEngaged { .. })
+                }) {
                     pawn = true;
                 }
                 // A cast on its draw is a `cardPlayed` naming a drawn card before any hand took it: its announce
