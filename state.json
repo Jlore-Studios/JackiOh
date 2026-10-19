@@ -580,6 +580,12 @@
       "lines": [
         "@jgoetzmann-bot revise close out merge conflict then force push it --force"
       ]
+    },
+    "c:6278053541": {
+      "at": "2026-10-19T21:43:35Z",
+      "lines": [
+        "@jgoetzmann-bot Here is #1294's Numbers table, from the owner. Set these values and drop the invented ones."
+      ]
     }
   },
   "items": {
