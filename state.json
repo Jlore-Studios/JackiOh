@@ -5872,7 +5872,10 @@
       "feedback_since": "2026-10-19T13:58:17Z",
       "issue": 1295,
       "kind": "revise",
+      "queued_at": "2026-10-19T15:26:24Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
