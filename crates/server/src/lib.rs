@@ -20,6 +20,7 @@
 //!   the pity roll (#1298).
 //! - `bug_reports`: a match its own log does not reproduce, logged and filed as a GitHub issue for
 //!   the night bot while the match goes on.
+//! - `cosmetics`: the cosmetics registry, `cosmetics.json`, and its check (#1295, R1295000).
 
 pub mod actor;
 pub mod api;
@@ -29,6 +30,7 @@ pub mod bots;
 pub mod bug_reports;
 pub mod cli;
 pub mod config;
+pub mod cosmetics;
 pub mod db;
 // ---- Duos co-op (#946) ----
 // Fullsend SPEC S6: the Duos co-op rooms, their socket and their four-seat match actor.

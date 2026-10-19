@@ -5,11 +5,12 @@ import { createElement, type ReactNode } from "react";
 
 import AudioControls from "../audio/AudioControls.tsx";
 import { DEFAULT_AUDIO_SETTINGS, writeAudioSettings } from "../audio/settings.ts";
+import { DEFAULT_CARD_COSMETICS, writeCosmetics } from "../cards/cosmetics.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../cards/settings.ts";
 import { DEFAULT_FX_SETTINGS, setFxSettings } from "../fx/settings.ts";
 import { DEFAULT_HAPTICS_SETTINGS, writeHapticsSettings } from "../haptics/settings.ts";
 import { resetLocale } from "../i18n/i18n.ts";
-import { AnimatedFoilSwitch, FullArtSwitch, FxControls, LanguageSelect, VibrationSwitch } from "./controls.tsx";
+import { AnimatedFoilSwitch, CardCosmeticsControls, FullArtSwitch, FxControls, LanguageSelect, VibrationSwitch } from "./controls.tsx";
 
 export type SettingsSectionId = "gameplay" | "visuals" | "audio";
 
@@ -53,6 +54,15 @@ export const SETTINGS_SLOTS: readonly SettingsSlot[] = [
     render: () => createElement(FullArtSwitch),
     reset: () => {
       writeCardSettings({ fullArt: CARD_SETTINGS_DEFAULTS.fullArt });
+    },
+  },
+  {
+    // R1295000: the foil, finish and border your own cards wear.
+    section: "visuals",
+    id: "card-cosmetics",
+    render: () => createElement(CardCosmeticsControls),
+    reset: () => {
+      writeCosmetics({ ...DEFAULT_CARD_COSMETICS });
     },
   },
   {

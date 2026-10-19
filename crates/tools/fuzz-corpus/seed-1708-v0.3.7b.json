@@ -1,0 +1,9 @@
+{
+  "seed": 1708,
+  "catalogVersion": "v0.3.7b",
+  "decks": [
+    ["meditative-004", "meditative-059", "classic-066", "meditativeplus-016", "meditativeplus-022", "meditativeplus-017", "meditative-047", "meditativeplus-026", "meditative-007", "classic-059", "classicplus-022", "classicplus-053", "core-028", "meditative-045", "meditativeplus-009", "classic-021", "meditative-005", "classicplus-069", "core-086", "core-012"],
+    ["meditativeplus-019", "classicplus-021", "core-027", "meditative-027", "core-049", "meditative-015", "classicplus-003", "classic-086", "classic-023", "meditative-016", "classicplus-059", "core-015", "classicplus-010", "classicplus-047", "core-073", "meditativeplus-020", "meditative-009", "meditative-098", "classic-089", "classicplus-013"]
+  ],
+  "found": "The plain fuzz wave's first quarter (seeds 1-2500, the daily run's fuzz 1/4) at d81d56fc2 (#1216): I6 fired on turn 20, 85 actions in: p2 is sent \"craft:#82d8a0af8fe3cc41\" at view.pending.options[3].key, a card in p1's hand. The key names the recipe p2's own craft prompt offers (R880), a definition p1's card crafted from the same recipe shares (R882). Fixed by #1316, proven by invariants.rs's r880_i6_lets_p1_s_own_craft_prompt_name_the_definition_of_p2_s_hidden_hand_card. The decks are decks_for_seed(1708) over the 396-card pool of catalog.json at d81d56fc2 (v0.3.7b)."
+}
