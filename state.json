@@ -5555,7 +5555,25 @@
       "feedback_since": "2026-10-19T12:45:39Z",
       "issue": 1282,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "claude"
+        ],
+        "builder": "claude",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "39254480377",
+            "tier": "strong"
+          }
+        ],
+        "sha": "d6b76ff1e423d3d8f5a57a91331fd80c9e7031ba",
+        "tiers": {
+          "claude": "strong"
+        }
+      }
     },
     "148": {
       "asks": [
