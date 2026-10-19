@@ -6464,6 +6464,8 @@
       "pending_request": false,
       "provider": "claude-2",
       "queued_at": "2026-10-19T22:44:47Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "39337104464",
       "self_check_findings": [],
       "started_at": "2026-10-19T22:46:59Z",
