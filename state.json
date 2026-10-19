@@ -5054,6 +5054,9 @@
       "taken_asks": [],
       "verdict_rounds": 3
     },
+    "1282": {
+      "suggestion": true
+    },
     "1292": {
       "cleared": {
         "at": "2026-10-19T10:31:21Z",
