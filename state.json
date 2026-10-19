@@ -4181,8 +4181,10 @@
       "run_id": "39244197560",
       "started_at": "2026-10-19T11:23:21Z",
       "stop_requested": false,
-      "strike_log": [],
-      "strikes": 0,
+      "strike_log": [
+        "`claude-6` (claude, opus) rejected it: `crates/tools/fuzz-corpus/`: The change fixes two fuzz failures (seed 1708, an I6 false positive, and seed 2550, an I4 false positive) but adds no regression-cor"
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 3
     },
