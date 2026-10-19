@@ -4113,8 +4113,8 @@
       "queued_at": "2026-10-19T11:22:27Z",
       "requested_by": "an assignment",
       "round_tier": "medium",
-      "run_id": "39127392457",
-      "started_at": "2026-10-18T12:28:40Z",
+      "run_id": "39244197560",
+      "started_at": "2026-10-19T11:23:21Z",
       "stop_requested": false,
       "strike_log": [],
       "strikes": 0,
@@ -9696,9 +9696,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-19T11:06:02Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39241842972",
-    "what": "revise #1293 on muse"
+    "at": "2026-10-19T11:23:21Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39244197560",
+    "what": "build #1216 on muse"
   },
   "last_sweep": {
     "at": "2026-10-19T11:21:52Z",
