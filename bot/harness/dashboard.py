@@ -293,6 +293,49 @@ def _box(ctx: Context, state: dict[str, Any], provider: Any, now: waiting_mod.No
     return f'        {name}["{text}"]:::{style}'
 
 
+#: The AI's training lanes on the training box that keep a pull request open from `ai/<lane>`
+#: (training/README.md, #1272). The third, `gather`, runs no model and opens none.
+TRAINING_LANES = ("improve", "unban")
+#: A training lane's draft unchanged for longer than a session (`training/loop.sh`'s
+#: TRAIN_SESSION_SECONDS, five hours; each session pushes to it as it starts) says the lane stopped.
+TRAINING_STALE = timedelta(hours=6)
+
+
+def training_boxes(ctx: Context) -> list[str]:
+    """The training box's lanes as a subgraph, read from their pull requests: a draft is a Muse
+    session at work (or an idle unban lane, which its title says), one ready for review is a
+    promotion waiting on CI, and none is a lane between sessions or stopped. `gather` shows
+    nothing on GitHub. [] when the pull requests cannot be read."""
+    try:
+        pulls = {str(p["head"]["ref"]): p for p in ctx.gh.list_pulls(state="open")}
+    except GitHubError:
+        return []
+    boxes, working = [], 0
+    for i, lane in enumerate(TRAINING_LANES):
+        pull = pulls.get(f"ai/{lane}")
+        if pull is None:
+            text, style = "no pull request open<br/>between sessions, or stopped", "closed"
+        else:
+            number, updated = pull["number"], parse_iso(str(pull.get("updated_at") or ""))
+            since = f"<br/>updated {_clock(ctx, updated)}" if updated else ""
+            if not pull.get("draft"):
+                text, style = f"▶️ promotion #{number}<br/>waiting on CI{since}", "next"
+            elif "): idle," in str(pull.get("title") or ""):
+                text, style = f"⏸️ idle on #{number}<br/>the AI on main bans no card", "paused"
+            elif updated and ctx.now() - updated > TRAINING_STALE:
+                text, style = f"⛔ #{number} unchanged{since}<br/>is the lane running?", "broken"
+            else:
+                text, style = f"🟢 a Muse session on #{number}{since}", "busy"
+                working += 1
+        boxes.append(f'        t{i}["<b>{lane}</b><br/>{text}"]:::{style}')
+    boxes.append(f'        t{len(TRAINING_LANES)}["<b>gather</b><br/>no model, no pull request'
+                 '<br/>its log is on the box"]:::closed')
+    nodes = range(len(TRAINING_LANES) + 1)
+    return [f'    subgraph training["The training box, on Muse: {working} of '
+            f'{len(TRAINING_LANES)} lanes working"]', "        direction LR", *boxes,
+            "        " + " ~~~ ".join(f"t{i}" for i in nodes), "    end"]
+
+
 def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str],
                 now: dict[str, waiting_mod.Now] | None = None) -> list[str]:
     """Every subscription as a box: GitHub's runners (the Claude accounts), then the night box's
@@ -323,8 +366,9 @@ def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str],
                     for i, p in enumerate(hosted)),
                   *(["        " + " ~~~ ".join(f"h{i}" for i in range(len(hosted)))]
                     if len(hosted) > 1 else []), "    end"]
-    # A pool that never runs on the machine (Squishy's, #60) draws no machine box. (The AI's
-    # training lanes run outside the harness, on a box of their own, so they have none here.)
+    # A pool that never runs on the machine (Squishy's, #60) draws no machine box, and no
+    # training box: the AI's training lanes run outside the harness, on a box of their own, so
+    # their boxes come from their pull requests (`training_boxes`).
     if machine and pool.machine_parallel:
         lines += [f'    subgraph machine["The night box: {on_machine} of {pool.machine_parallel} '
                   'slots in use"]', "        direction LR",
@@ -334,6 +378,8 @@ def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str],
                     if len(machine) > 1 else []), "    end"]
         if hosted:
             lines.append("    hosted ~~~ machine")
+        training = training_boxes(ctx)
+        lines += training + (["    machine ~~~ training"] if training else [])
     lines += [*BOX_STYLES, "```"]
     planning_runs = {n for n in live
                      if n and status_mod.record_of(state, n).get("action") == "plan"}
