@@ -659,6 +659,9 @@ describe("the Jlockeed tag (R278)", () => {
     // and once the Meditative set ships (R1420), its #87 Tatches the Totem and #97 Jlockeed's Evil Blueprints
     // (#97.9 Jlockeed's Headquarters is a token, which the pool never offers).
     const meditative = setShips("Meditative") ? ["meditative-087", "meditative-097"] : [];
+    // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the pool gains Meditative+ #4 Supply Drop, the
+    // set's one Jlockeed card.
+    const meditativePlus = setShips("Meditative+") ? ["meditativeplus-004"] : [];
     expect([...kept].sort()).toEqual([
       "classic-004",
       "classicplus-048",
@@ -667,6 +670,7 @@ describe("the Jlockeed tag (R278)", () => {
       "core-013",
       "core-014",
       ...meditative,
+      ...meditativePlus,
     ]);
   });
 });
