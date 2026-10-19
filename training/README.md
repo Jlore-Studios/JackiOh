@@ -1,6 +1,6 @@
 # The AI training lanes
 
-Two lanes that keep improving JackiOh's AI (`crates/ai/`, SPEC §9.9), each a Devin session after
+Two lanes that keep improving JackiOh's AI (`crates/ai/`, SPEC §9.9), each a Muse session after
 another on the training box, each gated by a fixed number of games against the AI on `main`, and
 nothing else: since generation 9 they play no games against random (R732001). They
 succeed #55's ladder (the Python `ladder/` that v0.3.0 replaced and deleted). The design is docs/v0.3.0/README.md §8; the interfaces are
@@ -13,8 +13,8 @@ docs/v0.3.0/SURFACE.md §14.
 | `gather` | no change to the AI: development records for the card win rates (R378), without end | [`gather.md`](gather.md) |
 | `learn` | a stronger learned evaluation, retrained on fresh self-play by a script with no LLM in it: improve's bar, 220 of 400 paired games, on deals of its own (R1012000) | [`learn.md`](learn.md) |
 
-The `gather` lane runs no Devin session and opens no pull request (The gather lane, below). The
-`learn` lane runs no Devin session either and needs no box: it is a GitHub workflow,
+The `gather` lane runs no model session and opens no pull request (The gather lane, below). The
+`learn` lane runs no model session either and needs no box: it is a GitHub workflow,
 `.github/workflows/learn.yml`, and its contract is [`learn.md`](learn.md).
 
 Generation 8 (`training/history/unban.jsonl`, 2026-10-10) removed the last ban on the earlier sets,
@@ -41,13 +41,13 @@ run.
 The training box (an always-on EC2 `m7i-flex.large`, set up by #306's part 39) runs three systemd services,
 `jackioh-train@improve`, `jackioh-train@unban` and `jackioh-train@gather`, each as its own Linux user
 (`agent-train-improve`, `agent-train-unban`, `agent-train-gather`) with its own checkout (the two
-training lanes also hold a Devin login and GitHub token, which the gather lane needs neither of). Each runs
+training lanes also hold a Muse login and GitHub token, which the gather lane needs neither of). Each runs
 [`loop.sh`](loop.sh) `<lane>` forever (`Restart=always`).
 
 The steps below are the `improve` and `unban` lanes'. The `gather` lane's cycle is its own (The
 gather lane).
 
-Each lane keeps one pull request open from `ai/<lane>`: a draft while Devin works, and ready for
+Each lane keeps one pull request open from `ai/<lane>`: a draft while Muse works, and ready for
 review, with auto-merge on, once a promotion is in it. Each cycle:
 
 1. If the pull request holds a promotion waiting on CI, look after it and do nothing else. When
@@ -71,9 +71,10 @@ review, with auto-merge on, once a promotion is in it. Each cycle:
      draft, titled
      `AI gen <N> (<lane>): in training, nothing promoted yet` (opening one if none is open). Its
      description opens with the gate's latest pass (Watching a lane on GitHub).
-3. Run one Devin session on the lane's standing prompt
-   (`devin -p --prompt-file training/<lane>.md --model "$DEVIN_MODEL" --permission-mode dangerous
-   --respect-workspace-trust false --export ~/logs/<lane>-<t>.json`). Devin changes the AI and
+3. Run one Muse session on the lane's standing prompt
+   (`muse exec --yolo --disable-web-tools --workspace <checkout> --model "$MUSE_MODEL"
+   --reasoning-effort xhigh --prompt-file training/<lane>.md --max-model-steps 1000`, its transcript
+   in `~/logs/<lane>-<t>.log`). Muse changes the AI and
    measures it: the `unban` lane with dry runs of the gate, committing only once a real run has
    passed; the `improve` lane with paired screens on its dev set, committing each change it keeps to
    its stack and going to the gate only with a stack that screened above its parent
@@ -261,7 +262,7 @@ thread count.
 `loop.sh gather` is the third lane, and it gathers data instead of improving the AI (#749, part of
 #636): it plays AI-against-AI All Random games without end and keeps their card figures, so the card
 win rates (SPEC §9.11, R376–R378) of every patch have a development source beside the live games. No
-model runs it, so [`gather.md`](gather.md) is its contract rather than a prompt, and it needs no Devin
+model runs it, so [`gather.md`](gather.md) is its contract rather than a prompt, and it needs no Muse
 login and opens no pull request. Each cycle:
 
 1. Fetch `main`, check out `origin/main` (a new `loop.sh` there restarts the lane, as for the others)
@@ -300,7 +301,7 @@ does this once:
   checkout and the service `jackioh-train@gather`.
 - To load its records into Postgres, run `sudo systemctl edit jackioh-train@gather` and add
   `Environment=DATABASE_URL=…`. Without it the lane keeps only the files.
-- It needs no Devin login. A `gh` login is needed only if the repository is private, so the lane can
+- It needs no Muse login. A `gh` login is needed only if the repository is private, so the lane can
   read it.
 
 ### Reading the figures
@@ -379,15 +380,15 @@ never edits `crates/server`, and a promotion does not wait for it.
 | The days already loaded into Postgres (each lane's `~/training-out/<lane>/`) | `imported.txt` |
 | A promotion's gate numbers | `training/history/<lane>.jsonl` and `crates/ai/generation.json`, committed with it |
 | The latest pass of the gate (any mode, failed ones included), in Markdown: the top of the lane's draft pull request | `~/training-out/<lane>/last-pass.md`, rewritten by every run of `promote` |
-| What each Devin session tried, with each screen's numbers and interval, why the loop set a promotion back, and what it did with the improve stack (a rebase conflict, a re-measure) | `~/training-out/<lane>/attempts.md`, quoted in each session's comment on the lane's pull request |
+| What each Muse session tried, with each screen's numbers and interval, why the loop set a promotion back, and what it did with the improve stack (a rebase conflict, a re-measure) | `~/training-out/<lane>/attempts.md`, quoted in each session's comment on the lane's pull request |
 | The improve lane's kept changes between sessions, one commit each | the branch `ai/improve-stack` on GitHub (The improve stack) |
 | The gate's report for each pull request | `~/training-out/<lane>/promote-<t>.md` |
-| The loop's log, each Devin session's export, and each run of the web's tests | `~/logs/<lane>.log`, `~/logs/<lane>-<t>.json`, `~/logs/<lane>-web-<t>.log` |
+| The loop's log, each Muse session's transcript, and each run of the web's tests | `~/logs/<lane>.log`, `~/logs/<lane>-<t>.log`, `~/logs/<lane>-web-<t>.log` |
 
 ## Stopping, starting and watching a lane
 
 ```sh
-sudo systemctl stop jackioh-train@improve      # stop the lane now (its Devin session ends with it)
+sudo systemctl stop jackioh-train@improve      # stop the lane now (its Muse session ends with it)
 sudo systemctl disable jackioh-train@improve   # and keep it stopped across reboots
 sudo systemctl enable --now jackioh-train@improve
 systemctl status jackioh-train@unban
