@@ -103,7 +103,8 @@ pub struct AiSearch {
     /// `surcharge_nodes`): resolving one ranks every shipped card for the state (the §10.7 scorer,
     /// R29's Zephyrs faces), about a hundred ordinary reduces, so a hand that holds one is budgeted
     /// for what the step really costs. A fused card holding one is charged the same (`stands_for_any`,
-    /// #1240).
+    /// #1240). One a step casts without playing it, from a graveyard or at random, is charged the
+    /// same once the step has run (`announced_surcharge_nodes`, #1347).
     pub expensive_def_ids: &'static [&'static str],
     /// Nodes a Play of an `expensive_def_ids` card pays beyond the one every `simulate` takes.
     pub expensive_def_nodes: i32,

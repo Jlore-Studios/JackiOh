@@ -14,9 +14,9 @@ use std::cell::Cell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
-    Action, ActionBody, CardInstance, GameState, PLAYER_IDS, Phase, PlayerId, TurnLog, active_units_of,
-    effective_life, find_instance, legal_actions, max_mana_for, opponent_of, owed_mana_of, reduce_unpiloted,
-    self_def_ids, subsystems, unit_view,
+    Action, ActionBody, CardInstance, GameEvent, GameState, PLAYER_IDS, Phase, PlayerId, ReduceResult,
+    TurnLog, active_units_of, effective_life, find_instance, legal_actions, max_mana_for, opponent_of,
+    owed_mana_of, reduce_unpiloted, self_def_ids, subsystems, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -283,6 +283,47 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
     }
 }
 
+/// The nodes a step pays once it has run, for the `expensive_def_ids` cards it announced that no Play
+/// paid for up front (`surcharge_nodes`): a Zephyrs that a random cast turned up (Call to Chaos,
+/// Jogg's Box) or a cast from the graveyard put on the stack (Spell Tyrant) ranks every shipped card
+/// as a played one does, and nothing in the action says so before it runs. A determinization rolls
+/// its own random casts, so one world can turn one up on every line that casts the same chain;
+/// uncharged, a decision ran the ranking eleven times in 2.3 s (#1347). Read off the step's
+/// `cardAnnounced` events, each card looked up on the state the step left, where a card fused in the
+/// step is known; the Play's own card is the one its up-front charge paid for.
+pub fn announced_surcharge_nodes(state: &GameState, action: &ActionBody, stepped: &ReduceResult) -> usize {
+    let ids = AI_SEARCH.expensive_def_ids;
+    let announced = stepped
+        .events
+        .iter()
+        .filter(|event| {
+            matches!(event, GameEvent::CardAnnounced { def_id, .. } if stands_for_any(&stepped.state, def_id, ids))
+        })
+        .count();
+    let prepaid = match action {
+        ActionBody::Play { instance_id, .. } => usize::from(
+            find_instance(state, instance_id).is_some_and(|card| stands_for_any(state, &card.def_id, ids)),
+        ),
+        _ => 0,
+    };
+    announced.saturating_sub(prepaid) * AI_SEARCH.expensive_def_nodes.max(0) as usize
+}
+
+/// Takes a step's `announced_surcharge_nodes` from `counter`, as many as it still gives: the step's
+/// work is done and kept, and a spent counter stops the search at its next node.
+pub(crate) fn charge_announced(
+    counter: &dyn NodeCounter,
+    state: &GameState,
+    action: &ActionBody,
+    stepped: &ReduceResult,
+) {
+    for _ in 0..announced_surcharge_nodes(state, action, stepped) {
+        if !counter.take() {
+            return;
+        }
+    }
+}
+
 /// #1240: whether `def_id` is one of `ids`, or a fused definition (R77) one of whose ingredients is
 /// (`self_def_ids`, fused ingredients included), since a fused card runs every ingredient's script.
 fn stands_for_any(state: &GameState, def_id: &str, ids: &[&str]) -> bool {
@@ -335,6 +376,7 @@ pub(crate) fn best_auto_answer(
             failure = error;
             continue;
         }
+        charge_announced(counter, state, &action.body, &next);
         let score = if scored {
             let swing = if next.state.active == answerer {
                 NextSwing::Seat
@@ -456,6 +498,7 @@ fn simulate_answering(
             note_sim_error(counter);
             return Some(Err(error));
         }
+        charge_announced(counter, state, action, &first);
         let mut current = first.state;
         let mut answered: usize = 0;
         loop {

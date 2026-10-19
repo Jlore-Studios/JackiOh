@@ -44,6 +44,7 @@ pub mod redact_revealed_backrow;
 pub mod redact_twice;
 pub mod replay_versions;
 pub mod reply;
+pub mod scorer_casts;
 pub mod search;
 pub mod secrets;
 pub mod skill;
