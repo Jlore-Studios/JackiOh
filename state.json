@@ -10808,11 +10808,8 @@
     "what": "plan #1267 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-19T05:34:35Z",
-    "notes": [
-      "#1267 needs a plan",
-      "started a night run, as a lane was free: #1267 (medium) is queued to build, for `muse`: plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
-    ],
+    "at": "2026-10-19T05:40:49Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
