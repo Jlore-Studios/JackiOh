@@ -122,7 +122,7 @@ mod tests {
     const NOSE_HUNTER: &str = "classic-015"; // Activate: Discard a random card. Exile the bottom card of their deck.
     const RAPID_DRAW: &str = "classic-026"; // (0) Spell: Draw 4. Then discard 4 random cards.
     const LAST_HURRAH: &str = "classic-037"; // (0) Spell: Draw your deck. At the end of this turn, discard your hand.
-    const PICKLE: &str = "classic-008"; // (1) Spell: your opponent chooses 3 times: discard 1, exile 1, or you draw 1.
+    const PICKLE: &str = "classic-008"; // (1) Spell: at the start of your opponent's next turn, they choose 3 times: discard 1, exile 1, or you draw 1.
     const INCOME_TAX: &str = "classic-009"; // Trap: when the cards your opponent has drawn in a turn reach 2 …
 
     use crate::js;
@@ -374,7 +374,7 @@ mod tests {
             }
 
             #[test]
-            fn c_8_pickle_played_against_you_the_random_discard_is_yours_and_draws_1() {
+            fn c_8_pickle_played_against_you_the_random_discard_is_yours_and_draws_2_behind_the_questions() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [MENACE, FILLER], "backrow": [RECYCLER], "library": [VANILLA, VANILLA, VANILLA, VANILLA] },
@@ -382,6 +382,9 @@ mod tests {
                     "active": "p2",
                 }));
                 s.play(PICKLE, json!({}));
+                // R1279000: p1 is not active, so no prompt opens until p1's next turn.
+                assert!(s.state().pending.is_none());
+                s.end_turn();
                 assert_eq!(s.state().pending.as_ref().map(|pending| pending.player_id), Some(P1));
                 s.answer(json!("discard"));
                 // R682: the discard lands at once, at random — no second answer.
@@ -389,8 +392,9 @@ mod tests {
                 // The answer is a queued trigger (§10.3): it draws once Pickle has finished asking.
                 s.answer(json!("exile")).answer(json!("exile"));
                 assert!(s.state().pending.is_none());
-                assert_eq!(drawn_by(s.events(), P1).len(), 1);
-                assert_eq!(s.hand(P1).len(), 2);
+                // The owed start-of-turn draw landed behind the questions, then the Recycler's.
+                assert_eq!(drawn_by(s.events(), P1).len(), 2);
+                assert_eq!(s.hand(P1).len(), 3);
                 assert!(s.hand(P1).iter().any(|card| card.def_id == VANILLA));
             }
 

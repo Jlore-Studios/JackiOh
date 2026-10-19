@@ -58,7 +58,7 @@ Each slot rolls a rarity, one of [[§5]]'s from Common to Mythic, through the pi
 
 ### 14.4 Pity
 
-Pity keeps a counter for each of Epic, Legendary and Mythic; whether an account keeps one set of counters for all its card packs or one per kind of pack is the pity math's sub-issue's to rule. A counter counts card packs, not slots: a pack with a slot that rolls the counter's rarity resets it, whatever that slot then grants, and a pack with none adds to it. A counter resets only when its own rarity drops: a Mythic leaves the Epic and Legendary counters running, and a Legendary the Epic one. The counters are the account's to see, with each rarity's odds.
+Pity keeps a counter for each of Epic, Legendary and Mythic; whether an account keeps one set of counters for all its card packs or one per kind of pack is the pity math's sub-issue's to rule ([[R1298000]]). A counter counts card packs, not slots: a pack with a slot that rolls the counter's rarity resets it, whatever that slot then grants, and a pack with none adds to it. A counter resets only when its own rarity drops: a Mythic leaves the Epic and Legendary counters running, and a Legendary the Epic one. The counters are the account's to see, with each rarity's odds.
 
 A rarity's threshold (`PITY_EPIC_PACKS`, `PITY_LEGENDARY_PACKS`, `PITY_MYTHIC_PACKS`) is the longest an account waits for it: of any `PITY_EPIC_PACKS` card packs in a row that one Epic counter counts, at least one holds an Epic, the last of them when none before it did, and likewise for Legendary and Mythic. No counter ever passes its threshold, and `PITY_MYTHIC_PACKS` is the longest wait of all.
 

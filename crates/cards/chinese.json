@@ -619,8 +619,8 @@
   },
   "classic-008": {
     "name": "左右为难",
-    "base": "你的对手选择{choices}次：随机弃掉{discard}张牌，放逐其牌库底部的{exile}张牌，或者由你抽{draw}张牌。",
-    "radiant": "你的对手选择{choices}次：随机弃掉{discard}张牌，放逐其牌库底部的{exile}张牌，或者由你抽{draw}张牌。"
+    "base": "在你的对手的下个回合开始时，他们选择{choices}次：随机弃掉{discard}张牌，放逐其牌库底部的{exile}张牌，或者由你抽{draw}张牌。",
+    "radiant": "在你的对手的下个回合开始时，他们选择{choices}次：随机弃掉{discard}张牌，放逐其牌库底部的{exile}张牌，或者由你抽{draw}张牌。"
   },
   "classic-009": {
     "name": "所得税",

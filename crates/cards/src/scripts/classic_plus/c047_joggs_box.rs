@@ -537,6 +537,18 @@ mod tests {
                 let id = s.card(BOX).id.clone();
                 let from = s.events().len();
                 s.play(BOX, json!({}));
+                if s.state().result.is_some() {
+                    continue;
+                }
+                // R1279000: even a cast Pickle asks nothing at once, so the box casts all ten
+                // without pausing on the other player's prompt.
+                if s.state().pending.is_some() {
+                    continue;
+                }
+                assert_eq!(casts(s.last_events(), &id).len(), 10);
+                s.end_turn();
+                // ...unless the box cast no Pickle: the deferred question opens on p2's turn,
+                // pausing the rest of the turn-start order behind it.
                 let Some(pending) = s.state().pending.clone() else {
                     continue;
                 };
@@ -544,7 +556,7 @@ mod tests {
                     continue;
                 }
                 assert_eq!(pending.player_id, P2);
-                assert!(casts(s.last_events(), &id).len() < 10);
+                assert_eq!(pending.kind, PromptKind::Mode);
 
                 let revived: GameState =
                     serde_json::from_str(&serde_json::to_string(s.state()).expect("serialises")).expect("parses");
@@ -570,7 +582,15 @@ mod tests {
                     guard += 1;
                 }
                 if s.state().result.is_none() {
-                    assert_eq!(casts(&s.events()[from..], &id).len(), 10);
+                    // The paused rest followed the answers: the owed start-of-turn draw landed.
+                    assert!(s.state().pending.is_none());
+                    assert_eq!(
+                        s.events()[from..]
+                            .iter()
+                            .filter(|event| matches!(event, GameEvent::Drawn { player: P2, .. }))
+                            .count(),
+                        1
+                    );
                 }
                 return;
             }

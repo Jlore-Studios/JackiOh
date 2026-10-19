@@ -1,0 +1,21 @@
+{
+  "version": "v0.3.17",
+  "title": "Patch v0.3.17: no opponent decisions off their turn",
+  "sources": "#1279",
+  "notes": "Issue #1279: no card asks a player to decide while they are not the active player (R1279000). The three cards that held a prompt for the opponent defer it to the start of the opponent's next turn with the engine's delay, and ask at once when the opponent is already active. Pickle (classic-008): its opponent answers its questions at the start of their next turn instead of during yours, and at once when it is cast on their turn, and its text says so. Income Tax (classic-009): when it reveals while its drawer is not active, the keep-one prompt waits for the start of their next turn with the Radiant discount it would have carried. Its text is unchanged: the sentence saying so would put both its faces over the face's text limit (R1017000). In Too Deep (classic-090): its reward G's discard, the opponent's own choice, waits for the start of their next turn while they are not active, and the quest G leads to opens once it resolves. Only Pickle's card data changed, so this fragment claims it alone; the other two changed only their scripts, and their player lines are here. All three keep the scripts v0.3.16 and every version before it ran, for their replays (KEPT_SCRIPTS, R767000).",
+  "player": {
+    "title": "Your opponent decides on their own turn",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Your opponent makes Pickle's three choices at the start of their next turn, or at once if you cast it on their turn.",
+      "When Income Tax reveals on your turn, your opponent chooses the card they keep at the start of their next turn.",
+      "In Too Deep's reward G makes your opponent discard 2 cards of their choice at the start of their next turn, or at once if the quest completes on their turn."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [
+    "classic-008"
+  ]
+}
