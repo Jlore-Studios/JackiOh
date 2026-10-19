@@ -5613,6 +5613,17 @@
       }
     },
     "1267": {
+      "asks": [
+        "c:6260403326"
+      ],
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-10-19T05:31:46Z",
+      "requested_by": "jgoetzmann",
+      "stop_requested": false,
       "suggestion": true
     },
     "148": {
