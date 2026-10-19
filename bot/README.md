@@ -20,7 +20,7 @@ until its lane's verdict rounds run out or its reviewer approves. Then the lane'
 pushes. Three failures of an item's own raise its difficulty a step and rebuild it from
 `main` ([Rating, strikes and the step up](#rating-strikes-and-the-step-up)). A change merges itself into `main` once CI passes and its lane's final audit approved the
 same commit: one strong model for a medium or hard item, one medium model for an easy item. When it has nothing to do, it proposes
-improvements to the game as issues, at most four open at a time.
+improvements to the game as issues, at most ten open at a time.
 
 It runs on GitHub Actions. The model sessions run on the bot's own machine on AWS, where each
 subscription is a Linux user of its own with its own runner ([`machine/`](machine/README.md));
@@ -55,7 +55,7 @@ flowchart TD
     R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push, open the PR;<br/>auto-merge on the lane's final audit"]
     D -- "not enough approvals yet" --> X["review run = the final audit (bot:cross-review)<br/>strong for medium/hard, medium first for easy"]
     X -- "approved" --> CI
-    PL -- "a lane idle 30 minutes" --> S["suggestion survey<br/>up to 4 open bot:suggestion issues;<br/>a person's approve comment or bot:build approves one,<br/>reject closes it"]
+    PL -- "a lane idle 30 minutes" --> S["suggestion survey<br/>up to 10 open bot:suggestion issues;<br/>a person's approve comment or bot:build approves one,<br/>reject closes it"]
   end
   D --> CI["CI on the PR: rust (fmt, clippy, tests, checks, fuzz),<br/>web, e2e smoke, db, bot selftest"]
   CI -- "green" --> M["squash-merged into main;<br/>the issue closes"]
@@ -920,7 +920,7 @@ account.
    one waiting, so runs started together would be cancelled; each claim starts the next, and six
    lanes fill in a few minutes.) Once a lane has been free for 30 minutes with nothing in the
    queue it can start (`suggestions.idle_minutes`; work held back behind a dependency or waiting
-   for another subscription does not count), it runs a suggestion survey, while fewer than four
+   for another subscription does not count), it runs a suggestion survey, while fewer than ten
    are open (#797). The sweep keeps that clock (`suggest.idle_since`), and each survey starts it
    again. Every survey also reads the log of suggestions that came to nothing (`suggest.declined`:
    rejected by a vote, closed unbuilt, or approved and then handed to people or failed for good,

@@ -38,18 +38,18 @@ class IdleTests(unittest.TestCase):
         idle_for(h.ctx, 30)
         planned = plan_mod.make(h.ctx)
         self.assertEqual((planned["action"], planned["provider"], planned["count"]),
-                         ("suggest", "muse", 4))
+                         ("suggest", "muse", 10))
 
     def test_no_second_survey_while_one_runs(self):
         h = Harness(self)
         idle_for(h.ctx, 45)
         h.ctx.store.update(lambda s: s["suggest"].update(provider="claude-3", run_id="9"))
         self.assertEqual(plan_mod.suggestions_due(h.ctx, h.ctx.store.load()), 0)
-        self.assertEqual(plan_mod.suggestions_due(h.ctx, h.ctx.store.load(), force=True), 4)
+        self.assertEqual(plan_mod.suggestions_due(h.ctx, h.ctx.store.load(), force=True), 10)
 
     def test_the_cap_still_holds(self):
         h = Harness(self)
-        for n in (20, 21, 22, 23):
+        for n in range(20, 30):
             h.gh.add_issue(n, labels=(LABEL_SUGGESTION,))
         idle_for(h.ctx, 120)
         self.assertEqual(plan_mod.make(h.ctx)["action"], "none")

@@ -7419,11 +7419,13 @@ fn from_ticket_status(status: &TicketStatus) -> Result<&'static str, StoreError>
 use crate::db::store::{ReplayShare, SharedReplayRow};
 
 /// B52: what a share `s`, joined to its match `m`, is read through on: the match is over, the
-/// sharer held a seat in it, and the two are still friends (`a < b`) with neither blocking the other.
+/// sharer held a seat in it, the retention purge has not taken its action log (as `replays_list`
+/// does), and the two are still friends (`a < b`) with neither blocking the other.
 macro_rules! readable_share {
     () => {
         "m.status = 'over'
             and s.sharer in (m.p1_profile_id, m.p2_profile_id)
+            and exists (select 1 from public.match_actions a where a.match_id = m.id)
             and exists (select 1 from public.friendships f
                          where f.a = least(s.sharer, s.friend) and f.b = greatest(s.sharer, s.friend))
             and not exists (select 1 from public.blocks k

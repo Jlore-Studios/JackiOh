@@ -21,7 +21,7 @@ use serde_json::{Value, json};
 
 use crate::api::consent::{age_check_owed, terms_owed};
 use crate::api::http::{
-    ApiError, ApiErrorCode, ApiResult, Caller, Req, address_key, json, now_ms, rate_limited,
+    ApiError, ApiErrorCode, ApiResult, Caller, Req, address_key, json, log_info, now_ms, rate_limited,
 };
 use crate::api::username::own_username;
 use crate::app::App;
@@ -284,6 +284,12 @@ pub(crate) async fn remove_account(app: &App, caller: &Caller) -> Result<(), Api
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     tx.profiles_remove(&profile.id).await?;
     tx.commit().await?;
+    // The friendships went with the profile by cascade, so a watch of a friend by this account
+    // ends at once, as an unfriend or a block ends one (`social::watch::revoke_between`).
+    let watchers = app
+        .matches
+        .revoke_watchers(|watcher, _| watcher == profile.id.as_str());
+    log_info("account.watchers_revoked", json!({ "watchersRevoked": watchers }));
     match app.auth.delete_user(&caller.user.user_id).await {
         Ok(()) => Ok(()),
         Err(AuthError::Unavailable(message)) => Err(ApiError::new(ApiErrorCode::Unavailable, message)),
