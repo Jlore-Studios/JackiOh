@@ -371,7 +371,8 @@ pub struct CollectionGrant {
     /// `quantity` on purpose: `CollectionEntry.quantity` next door is an absolute total, and one
     /// adapter reading the ledger as a total would double every grant.
     pub delta: i64,
-    /// Constrained to a closed set in the schema: pack, craft, reward, refund, admin, launch.
+    /// Constrained to a closed set in the schema: pack, craft, reward, refund, admin, launch, and
+    /// dev (migration 0046, R1300000), which is written only with `dev` set.
     pub reason: String,
     /// §14.10: a row a dev tool wrote for a dev account itself (migration 0045's
     /// `collection_grants.dev`). Written only when true, and absent reads as false, as every row

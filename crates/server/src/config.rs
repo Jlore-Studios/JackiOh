@@ -2191,3 +2191,10 @@ pub const QUEST_XP_PER_JLORE: i32 = 1;
 
 /// §14.7: the level a set track starts at, with no XP (migration 0045's `set_tracks.level` default).
 pub const SET_TRACK_FIRST_LEVEL: i64 = 1;
+
+// ---- Dev accounts (SPEC §14.10, #1300) ----
+
+/// §14.10, R1300000: the environment variable that lists the dev accounts, comma-separated profile
+/// ids (`env.rs` reads it at boot, `seed-catalog` for R1300001's exemption). A name, not a number,
+/// and never exported: the client learns only whether its own caller is one (`isDev`).
+pub const DEV_PROFILE_IDS: &str = "DEV_PROFILE_IDS";
