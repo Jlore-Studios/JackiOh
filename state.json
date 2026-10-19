@@ -13326,10 +13326,10 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-19T19:00:00Z",
-          "utilization": 0.4
+          "resets_at": "2026-10-20T00:00:00Z",
+          "utilization": 0.45
         },
-        "observed_at": "2026-10-19T16:49:05Z",
+        "observed_at": "2026-10-19T21:03:02Z",
         "status": "allowed"
       }
     },
