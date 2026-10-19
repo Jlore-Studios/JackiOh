@@ -6122,6 +6122,14 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "1327": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-19T16:29:34Z",
+      "issue": 1298,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "148": {
       "asks": [
         "c:5974504575"
