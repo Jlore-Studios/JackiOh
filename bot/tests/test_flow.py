@@ -178,7 +178,7 @@ class PlanTests(unittest.TestCase):
         self.assertEqual((planned["action"], planned["number"]), ("revise", 9))
 
     def test_suggestions_when_idle_up_to_the_cap(self):
-        for n in (20, 21, 22):
+        for n in range(20, 29):
             self.gh.add_issue(n, labels=(LABEL_SUGGESTION,))
         self.assertEqual(plan_mod.make(self.ctx)["action"], "none")  # not idle for 30 minutes
         idle_for(self.ctx)
@@ -187,7 +187,7 @@ class PlanTests(unittest.TestCase):
         # Claimed: the clock starts again, so not due until another 30 idle minutes (#797).
         self.assertEqual(self.ctx.store.load()["suggest"]["idle_since"], iso(self.ctx.now()))
         self.assertEqual(plan_mod.make(self.ctx)["action"], "none")
-        self.gh.add_issue(23, labels=(LABEL_SUGGESTION,))
+        self.gh.add_issue(29, labels=(LABEL_SUGGESTION,))
         self.assertIsNone(plan_mod.suggestion_plan(self.ctx, plan_mod.Lanes(3), force=True))
 
 
@@ -513,14 +513,14 @@ class FlowTests(unittest.TestCase):
         h = Harness(self)
         h.gh.add_issue(20, labels=(LABEL_SUGGESTION,))
         text = ('<!-- suggestions: [' + ",".join(
-            json.dumps({"title": f"Idea {i}", "body": "## Why\nx"}) for i in range(5)) + '] -->')
+            json.dumps({"title": f"Idea {i}", "body": "## Why\nx"}) for i in range(11)) + '] -->')
         idle_for(h.ctx)
         planned, result = h.night(FakeRunner({"suggest": reviewer(text)}))
-        self.assertEqual(planned["count"], 3)
-        self.assertEqual(len(result["suggestions"]), 3)
+        self.assertEqual(planned["count"], 9)
+        self.assertEqual(len(result["suggestions"]), 9)
         made = [t for t in h.gh.threads.values()
                 if LABEL_SUGGESTION in {l["name"] for l in t["labels"]} and t["user"] == BOT]
-        self.assertEqual(len(made), 3)
+        self.assertEqual(len(made), 9)
         self.assertIn("Comment `approve` to have it built", made[0]["body"])
         self.assertIn("Comment `reject` to close it", made[0]["body"])
 

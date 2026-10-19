@@ -62,6 +62,11 @@ pub async fn share_replay(app: &Arc<App>, req: Req) -> ApiResult {
     if !seated || !are_friends(&mut tx, &profile.id, &friend_id).await? {
         return Err(no_such_share());
     }
+    // The retention purge took the log: there is nothing to share, so the match is as
+    // unshareable as one the caller held no seat in, with the same answer.
+    if tx.matches_actions(&match_id).await?.is_empty() {
+        return Err(no_such_share());
+    }
     tx.shares_put(&ReplayShare {
         match_id: match_id.clone(),
         sharer: profile.id.clone(),
