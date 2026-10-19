@@ -698,6 +698,10 @@ mod db_seed_catalog_writes_the_cosmetics_registry {
             .map(|cosmetic| {
                 let mut row = serde_json::to_value(cosmetic).expect("a cosmetic serialises");
                 row["chase"] = json!(false);
+                // `starter` is the registry's, not a column (R1301002).
+                if let Some(fields) = row.as_object_mut() {
+                    fields.remove("starter");
+                }
                 row
             })
             .collect();

@@ -8052,7 +8052,7 @@ mod economy {
     use super::*;
     use jackioh_server::config::SET_TRACK_FIRST_LEVEL;
     use jackioh_server::economy::store::{
-        CosmeticGrant, CounterGrant, InventoryGrant, JloreGrant, QuestGrant, TrackGrant,
+        CosmeticGrant, CounterGrant, EconomyLedger, InventoryGrant, JloreGrant, QuestGrant, TrackGrant,
     };
 
     fn jlore(profile_id: &str, delta: i64, reason: &str, dev: bool, at: i64) -> JloreGrant {
@@ -8560,7 +8560,47 @@ mod economy {
         assert_eq!(economy_of(harness, &kept.id).await, before);
     }
 
+    /// R1301003: a pack opening takes the account's economy lock for its transaction. Taken in
+    /// turn, each transaction gets it, a rolled-back one lets it go, and the lock writes no row.
+    async fn r1301003_the_economy_lock_is_taken_per_transaction(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let now = harness.now();
+        let rolled_back: Result<(), String> = async {
+            let mut t = harness.db.begin(None).await.map_err(|error| error.to_string())?;
+            t.economy_lock_account(&profile.id)
+                .await
+                .map_err(|error| error.to_string())?;
+            t.economy_jlore_grant(&jlore(&profile.id, 100, "game", false, now))
+                .await
+                .map_err(|error| error.to_string())?;
+            // `t` is dropped here without a commit: the rollback, which releases the lock.
+            Err::<(), String>("the opening failed".to_string())
+        }
+        .await;
+        assert!(must(rolled_back.err(), "the failure").contains("the opening failed"));
+        for (delta, at) in [(30, now + 1), (20, now + 2)] {
+            let mut t = harness.db.begin(None).await.expect("begin");
+            t.economy_lock_account(&profile.id)
+                .await
+                .unwrap_or_else(|error| panic!("{}: the lock: {error}", harness.name));
+            t.economy_jlore_grant(&jlore(&profile.id, delta, "game", false, at))
+                .await
+                .unwrap_or_else(|error| panic!("{}: the grant: {error}", harness.name));
+            t.commit().await.expect("commit");
+        }
+        assert_eq!(q!(harness, t => t.economy_jlore_get(&profile.id)), 50);
+        let ledger = q!(harness, t => t.economy_ledger_get(&profile.id));
+        assert_eq!(
+            ledger.jlore.iter().map(|grant| grant.delta).collect::<Vec<_>>(),
+            vec![30, 20]
+        );
+        let mut rest = ledger;
+        rest.jlore.clear();
+        assert_eq!(rest, EconomyLedger::default());
+    }
+
     both_stores!(
+        r1301003_the_economy_lock_is_taken_per_transaction,
         jlore_adds_spends_and_refuses_what_the_wallet_cannot_cover,
         a_dev_reason_needs_the_dev_mark_and_a_zero_delta_is_refused,
         inventory_counts_packs_and_tokens_by_kind,

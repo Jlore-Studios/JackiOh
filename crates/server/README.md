@@ -40,7 +40,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
 | Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings) and `live_match_of` (§13) |
-| Economy | `economy/store.rs` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store; nothing calls them yet |
+| Economy | `economy/store.rs`, `math.rs`, `roll.rs`, `packs.rs` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store, and `economy_lock_account`, an opening's lock on its account (R1301003); the pure math, the level curve and the pity roll (R1298000); the pure pack roll, its slots' rarities, the card draw and the dupe chain (R1301000–R1301002); buying and opening a pack, each in one transaction, the opening's seed and draws logged in its rows' `ref` (R1301003) |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
 There are no traits: `Db`, `Tx` and `Auth` are enums with one variant per implementation (`Pg` and
@@ -173,6 +173,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `POST` | `/api/codes/redeem` | user | §9.4's six-step redemption; first 403 `consent_owed` for an account owing the age check or the terms, costing no attempt (R757000, R757001) |
 | `GET` | `/api/codes/status` | user | whether redemption is paused, and the caller's attempts left (R192) |
 | `GET` | `/api/collection` | active | the ledger; there is no write route |
+| `GET`, `POST` | `/api/packs`, `/api/packs/buy`, `/api/packs/open` | active | the caller's pity counters and the odds; buy `{ pack }` (a shipped set's name or `global`) for `PACK_PRICE_JLORE`, 409 when the wallet cannot cover it; open one, 409 when none of that kind is held: its slots, the pity counters after it and the packs left (R1301000–R1301003) |
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641) and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000) |
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |

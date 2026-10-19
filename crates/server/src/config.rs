@@ -2191,3 +2191,36 @@ pub const QUEST_XP_PER_JLORE: i32 = 1;
 
 /// §14.7: the level a set track starts at, with no XP (migration 0045's `set_tracks.level` default).
 pub const SET_TRACK_FIRST_LEVEL: i64 = 1;
+
+// ---- The pack roll (SPEC §14.3, #1301) ----
+// PUBLIC, like the collection economy's above: the pack screen shows these odds, so each is
+// exported to `apps/web/src/wire/serverConfig.ts` by `tests/export_config.rs`.
+
+/// The shape of `COSMETIC_DUPLICATE_RATES`: the chance a duplicate's cosmetic rolls each
+/// rarity. The five shares sum to 1.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CosmeticDuplicateRates {
+    pub common: f64,
+    pub rare: f64,
+    pub epic: f64,
+    pub legendary: f64,
+    pub mythic: f64,
+}
+
+/// #1301: the odds of the cosmetic rarity a duplicate rolls (R1301002). Its own scale, not tied
+/// to the card's rarity: #1301's owner's decision over §14.3's "of the same rarity", which #1333
+/// brings §14 in line with.
+pub const COSMETIC_DUPLICATE_RATES: CosmeticDuplicateRates = CosmeticDuplicateRates {
+    common: 0.55,
+    rare: 0.25,
+    epic: 0.15,
+    legendary: 0.045,
+    mythic: 0.005,
+};
+/// R1301000: the chance a slot that holds none of the pack's Epic, Legendary or Mythic rolls Rare
+/// rather than Common. #1294's table gives no value; 0.25, about the share of Rares among
+/// Hearthstone's non-guaranteed slots.
+pub const PACK_FILLER_RARE_RATE: f64 = 0.25;
+/// SPEC §14.3: the name a request gives the global card pack; a set's pack goes by its set's name.
+pub const GLOBAL_PACK_NAME: &str = "global";
