@@ -1,11 +1,15 @@
-//! C+ #33 Ivory Tower (SPEC §8.7 row 33, R418, R653): (2) Field Spell, Rare.
-//!   Base:    "The first Unit you stack onto this is fused into it."
-//!   Radiant: "The first Unit you stack onto this becomes Radiant and is fused into it."
+//! C+ #33 Ivory Tower (SPEC §8.7 row 33, R418, R653, R1194000): (2) Field Spell, Rare.
+//!   Base:    "The first Unit you stack onto this is fused into it.\nAura: Your Units have Flying and Stack."
+//!   Radiant: "The first Unit you stack onto this becomes Radiant and is fused into it.\nAura: Your Units
+//!            have Flying and Stack."
 //! The engine owns the stacking (`fusesCarried`, R446, R653): a Unit you play may name this zone while
 //! no Unit has stood on it this stay, and stands on it while its play resolves, its Cry included. Once
 //! that play has resolved, the Unit on it is fused into this per R77, this the kept card: a Field Spell
 //! still, with the Unit's text and keywords, and the Unit ceases to exist. The Radiant face makes the
 //! Unit Radiant as it lands, so its Cry runs on that face, and fuses it in on its Radiant face (R469).
+//! The Aura (patch v0.3.13, #1194) lends Flying and Stack to its controller's Units on the field and to
+//! the Unit cards in their hand and resolving zone, where a play's placement reads them (R1194000);
+//! `script_v0_3_7b` keeps the Tower without it for the replays of v0.3.7b and before (R767000).
 
 use jackioh_engine::effects::{fuse_cards, set_radiant};
 use jackioh_engine::prelude::*;
@@ -63,13 +67,36 @@ fn radiant_on_landing() -> TriggerDef {
     })
 }
 
-pub fn script() -> CardScripts {
+/// R1194000: "Aura: Your Units have Flying and Stack." — its controller's Units on the field (R1081000),
+/// and the Unit cards in their hand and resolving zone, where a play's placement reads them (§10.5
+/// steps 1 and 4, R783007).
+fn flying_and_stack() -> AuraHook {
+    aura_hook(|args: HookArgs<'_>| {
+        let controller = args.self_.controller;
+        let state = args.state;
+        vec![AuraEntry {
+            applies: Box::new(move |card: &CardInstance| match card.zone {
+                Zone::Hand { player } | Zone::Resolving { player } => {
+                    player == controller && card_type_of_face(state, &card.def_id, card.radiant) == CardType::Unit
+                }
+                _ => card.controller == controller && in_units_row_or_standing(state, card),
+            }),
+            mod_: StatMod {
+                keywords: Some(vec![Keyword::Flying, Keyword::Stack]),
+                ..StatMod::default()
+            },
+        }]
+    })
+}
+
+fn tower(aura: Option<AuraHook>) -> CardScripts {
     let base = Script {
         static_flags: Some(StaticFlags {
             fuses_carried: Some(true),
             ..StaticFlags::default()
         }),
         triggers: vec![fuse_in(false)],
+        aura,
         ..Script::default()
     };
     let radiant = Script {
@@ -79,19 +106,33 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
+pub fn script() -> CardScripts {
+    tower(Some(flying_and_stack()))
+}
+
+/// R767000: the scripts v0.3.7b and every version before it ran, with no Aura (patch v0.3.13, #1194);
+/// `KEPT_SCRIPTS` folds those versions' replays under them.
+pub fn script_v0_3_7b() -> CardScripts {
+    tower(None)
+}
+
 // C+ #33 Ivory Tower (SPEC §8.7, R418, R653): the first Unit played onto its zone stands on it
 // while play resolves, then fuses in per R77 (kept card). If Tower leaves early, Unit steps down
-// (R446). Radiant makes the Unit Radiant as it lands and fuses on Radiant face (R469).
+// (R446). Radiant makes the Unit Radiant as it lands and fuses on Radiant face (R469). Both faces'
+// Aura gives your Units in hand and on the field Flying and Stack, the opponent's neither, so a Unit
+// in hand is offered occupied zones and empty backrow zones; it ends with the Tower (R1194000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
 
     const TOWER: &str = "classicplus-033";
     const TOKENS: &str = "core-015"; // (1) 1/1, Cry: summon a Rush Token (Radiant: 3).
     const RUSH: &str = "core-t-rush";
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
+    const VANILLA: &str = "core-008"; // (1) 4/4.
     const TOE_CRACKER: &str = "classic-006"; // (2) 3/4, Aura: your Traps cost (0).
     const JAY: &str = "classicplus-049"; // (2) 3/6 Taunt, End of turn: a random card in your hand costs (2) less.
     const SHEEPLE: &str = "classic-082"; // (1) 1/1, Death: draw 2.
@@ -157,6 +198,57 @@ mod tests {
 
     fn costs_of_hand(s: &Scenario) -> Vec<i32> {
         s.hand(P1).iter().map(|card| effective_cost(s.state(), card, Default::default())).collect()
+    }
+
+    /// R1194000: whether this card reads as having Flying and Stack where it is, through the layers.
+    fn winged(s: &Scenario, card: &CardInstance) -> (bool, bool) {
+        (unit_has(s.state(), card, KeywordKind::Flying), unit_has(s.state(), card, KeywordKind::Stack))
+    }
+
+    /// The first card of this def in `player`'s hand.
+    fn held(s: &Scenario, player: PlayerId, def_id: &str) -> CardInstance {
+        s.hand(player)
+            .into_iter()
+            .find(|card| card.def_id == def_id)
+            .unwrap_or_else(|| panic!("no {def_id} in hand"))
+    }
+
+    /// The zones `legal_actions` lists for a play of this card, in its order.
+    fn zones_listed(s: &Scenario, card: &CardInstance) -> Vec<(Row, i32)> {
+        legal_actions(s.state(), P1)
+            .into_iter()
+            .filter_map(|action| match action {
+                ActionBody::Play { instance_id, zone: Some(zone), .. } if instance_id == card.id => {
+                    Some((zone.row, zone.lane))
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// R1194000: p1 holds a Menace, the opponent a Menace in hand and one on the field, and p1 a
+    /// Vanilla on the field and the Tower (Radiant on `radiant`) in backrow lane 2.
+    fn aura_board(radiant: bool) -> Scenario {
+        crate::register_all();
+        scenario(json!({
+            "p1": {
+                "hand": [MENACE, BIG_SPELL],
+                "field": [{ "def": VANILLA, "lane": 1 }],
+                "backrow": [{ "def": TOWER, "lane": 2, "radiant": radiant }],
+                "library": DECK,
+                "mana": 8,
+            },
+            "p2": { "hand": [MENACE], "field": [{ "def": MENACE, "lane": 1 }], "library": DECK },
+        }))
+    }
+
+    /// R1194000: the Aura reaches p1's Units in hand and on the field and no Spell, and none of p2's.
+    fn the_aura_reaches_your_units_alone(s: &Scenario) {
+        assert_eq!(winged(s, &held(s, P1, MENACE)), (true, true));
+        assert_eq!(winged(s, &s.unit(P1, 1).expect("p1's Vanilla")), (true, true));
+        assert_eq!(winged(s, &held(s, P1, BIG_SPELL)), (false, false));
+        assert_eq!(winged(s, &held(s, P2, MENACE)), (false, false));
+        assert_eq!(winged(s, &s.unit(P2, 1).expect("p2's Menace")), (false, false));
     }
 
     mod c_n33_ivory_tower {
@@ -240,9 +332,10 @@ mod tests {
                     .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == menace))
                     .collect();
                 assert!(!plays.is_empty());
+                // R1194000: the Aura's Flying offers the other backrow zones, never the Tower's own.
                 assert!(!plays.iter().any(|action| matches!(
                     action,
-                    ActionBody::Play { zone: Some(zone), .. } if zone.row == Row::Backrow
+                    ActionBody::Play { zone: Some(zone), .. } if zone.row == Row::Backrow && zone.lane == 2
                 )));
             }
 
@@ -275,19 +368,67 @@ mod tests {
             }
 
             #[test]
-            fn the_old_aura_is_gone_your_cards_gain_no_stack_and_an_occupied_unit_zone_takes_no_unit() {
+            fn r1194000_your_units_in_hand_and_on_the_field_have_flying_and_stack_and_the_opponent_s_do_not() {
+                let s = aura_board(false);
+                the_aura_reaches_your_units_alone(&s);
+            }
+
+            #[test]
+            fn r1194000_a_unit_in_hand_is_listed_an_occupied_zone_and_an_empty_backrow_zone_and_lands_in_each() {
                 crate::register_all();
                 let mut s = scenario(json!({
-                    "p1": { "hand": [MENACE, FILLER], "field": [{ "def": MENACE, "lane": 1 }], "backrow": [TOWER], "mana": 8 },
-                    "p2": { "hand": [FILLER] },
+                    "p1": {
+                        "hand": [MENACE, VANILLA, FILLER],
+                        "field": [{ "def": VANILLA, "lane": 1 }],
+                        "backrow": [{ "def": TOWER, "lane": 2 }, { "def": SHEEPISH, "lane": 3, "faceUp": false }],
+                        "library": DECK,
+                        "mana": 8,
+                    },
+                    "p2": { "hand": [FILLER], "library": DECK },
                 }));
-                let held = s
-                    .hand(P1)
-                    .into_iter()
-                    .find(|card| card.def_id == MENACE)
-                    .expect("Menace in hand");
-                assert!(!s.stats(&held).keywords.iter().any(|keyword| js(keyword) == json!({ "kind": "Stack" })));
-                s.expect_refused(|s| s.play(&held, json!({ "zone": 1 })));
+                let menace = held(&s, P1, MENACE);
+                let listed = zones_listed(&s, &menace);
+                // Stack: the occupied unit zone; Flying: the empty backrow zone; the Tower's zone as its one
+                // Unit; Flying and Stack: the backrow zone a face-down Trap holds.
+                for zone in [(Row::Units, 1), (Row::Backrow, 1), (Row::Backrow, 2), (Row::Backrow, 3)] {
+                    assert!(listed.contains(&zone), "{zone:?} not in {listed:?}");
+                }
+                let beneath = s.unit(P1, 1).expect("the Vanilla").id;
+                s.play(&menace.id, json!({ "zone": 1 }));
+                assert_eq!(s.unit(P1, 1).map(|unit| unit.id), Some(menace.id.clone()));
+                let pile = pile_at(s.state(), ZoneSlot { player: P1, row: Row::Units, lane: 1 }).expect("a pile");
+                assert_eq!(pile.len(), 2);
+                assert_eq!(pile[1].id, beneath);
+                let vanilla = held(&s, P1, VANILLA);
+                s.play(&vanilla.id, json!({ "zone": 3, "row": "backrow" }));
+                assert_eq!(s.backrow(P1, 3).map(|card| card.id), Some(vanilla.id.clone()));
+                assert!(is_standing_unit(s.state(), &s.backrow(P1, 3).expect("the Vanilla stands")));
+            }
+
+            #[test]
+            fn r1194000_flying_plays_a_unit_into_an_empty_backrow_zone_and_the_aura_ends_with_the_tower() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": {
+                        "hand": [VANILLA, MAGIC_JAMMED, MENACE],
+                        "backrow": [{ "def": TOWER, "lane": 2 }],
+                        "library": DECK,
+                        "mana": 8,
+                    },
+                    "p2": { "hand": [FILLER], "library": DECK },
+                }));
+                let tower = s.card(TOWER).id.clone();
+                let vanilla = held(&s, P1, VANILLA);
+                s.play(&vanilla.id, json!({ "zone": 4, "row": "backrow" }));
+                assert_eq!(s.backrow(P1, 4).map(|card| card.id), Some(vanilla.id.clone()));
+                s.play(MAGIC_JAMMED, json!({ "targets": [{ "pick": "instance", "instanceId": tower }] }));
+                s.expect_in_zone(&tower, "graveyard");
+                // A Unit placed stays where it stands (R1081000); the Units in hand lose both keywords.
+                assert_eq!(s.backrow(P1, 4).map(|card| card.id), Some(vanilla.id.clone()));
+                let menace = held(&s, P1, MENACE);
+                assert_eq!(winged(&s, &menace), (false, false));
+                assert!(!zones_listed(&s, &menace).iter().any(|(row, _)| *row == Row::Backrow));
+                s.expect_refused(|s| s.play(&menace.id, json!({ "zone": 5, "row": "backrow" })));
             }
 
             #[test]
@@ -329,6 +470,17 @@ mod tests {
                 // Cloaked Toe Cracker's Radiant face adds "After you play a Trap, gain 1 mana", on both fused faces.
                 assert!(text_of(&s, &tower).contains("After you play a Trap"));
                 assert!(def_of(Some(s.state()), &s.card(&tower).def_id).base.text.contains("After you play a Trap"));
+            }
+
+            #[test]
+            fn r1194000_the_radiant_face_s_aura_is_the_same() {
+                let mut s = aura_board(true);
+                the_aura_reaches_your_units_alone(&s);
+                // Flying: into an empty backrow zone, standing there, and not made Radiant (it is not on the Tower).
+                let menace = held(&s, P1, MENACE);
+                s.play(&menace.id, json!({ "zone": 4, "row": "backrow" }));
+                assert_eq!(s.backrow(P1, 4).map(|card| card.id), Some(menace.id.clone()));
+                assert!(!s.card(&menace.id).radiant);
             }
 
             #[test]

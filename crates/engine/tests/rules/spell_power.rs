@@ -14,7 +14,9 @@
 //! - R1180004: health as the next Spell's price.
 //! - R1180005: the targets a Spell declared or chose kept, and the one card in its player's hand or deck
 //!   that answers it.
+//! - R1180006: one chain of answers names at most SPELL_ANSWER_CHAIN_CAP of them.
 
+use jackioh_engine::config::SPELL_ANSWER_CHAIN_CAP;
 use jackioh_engine::damage::spell_damage_of;
 use jackioh_engine::effects::{self, damage, heal};
 use jackioh_engine::testkit::*;
@@ -834,5 +836,60 @@ mod r1180005_after_a_spell_targeting_an_enemy {
         );
         assert!(s.hand(P1).is_empty());
         assert_eq!(health(&s, P2), 28);
+    }
+}
+
+mod r1180006_the_answer_chain_is_bounded {
+    use super::*;
+
+    /// How many of these resolutions named an answer.
+    fn named(events: &[GameEvent]) -> usize {
+        events
+            .iter()
+            .filter(|event| matches!(event, GameEvent::CardResolved { answer: Some(_), .. }))
+            .count()
+    }
+
+    fn library_pilers(s: &Scenario) -> usize {
+        s.pile(P1, "library")
+            .into_iter()
+            .filter(|card| card.def_id == PILER)
+            .count()
+    }
+
+    /// A deck with more answering cards than the chain may name, aimed at a Unit no hit can fell.
+    fn deep_deck(seed: &str) -> Scenario {
+        let pilers = vec![json!(PILER); 25];
+        game(
+            seed,
+            json!({ "hand": [BOLT, BOLT], "library": pilers }),
+            json!({ "field": [{ "def": BODY, "statsOverride": { "attack": 1, "health": 200 } }] }),
+        )
+    }
+
+    #[test]
+    fn r1180006_a_chain_names_at_most_the_cap_and_then_ends() {
+        let mut s = deep_deck("sp-pile-cap");
+        let body = unit_at(&s, P2, 1);
+        s.play(BOLT, json!({ "targets": instance(&body) }));
+        let cap = usize::try_from(SPELL_ANSWER_CHAIN_CAP).unwrap_or(0);
+        assert_eq!(named(s.events()), cap);
+        // The Bolt's hit, then one hit for each answer the chain named.
+        assert_eq!(hits_on(&s, &body.id).len(), 1 + cap);
+        assert_eq!(library_pilers(&s), 25 - cap);
+        // The chain has ended: nothing is left under way.
+        assert_eq!(s.state().players[P1].answer_chain, None);
+    }
+
+    #[test]
+    fn r1180006_the_next_spell_starts_a_new_chain() {
+        let mut s = deep_deck("sp-pile-cap-again");
+        let body = unit_at(&s, P2, 1);
+        s.play(BOLT, json!({ "targets": instance(&body) }));
+        s.play(BOLT, json!({ "targets": instance(&body) }));
+        // The rest of the deck answers the second Bolt: its chain counts from the first again.
+        let cap = usize::try_from(SPELL_ANSWER_CHAIN_CAP).unwrap_or(0);
+        assert_eq!(named(s.last_events()), 25 - cap);
+        assert_eq!(library_pilers(&s), 0);
     }
 }

@@ -68,18 +68,22 @@ pub async fn purge_expired_logs(app: &Arc<App>) -> Result<u64, StoreError> {
     Ok(purged)
 }
 
+/// R1047000's `ceiling` draw, as R1047001's sweep and R1253000 write it without the engine.
+pub fn ceiling_draw() -> DuosResult {
+    DuosResult {
+        outcome: DuosOutcome::Draw,
+        winner: None,
+        reason: DUOS_REASON_CEILING.to_string(),
+    }
+}
+
 /// R1047001: a live match no actor can be folded back for, once it is past its ceiling (R1047000), ends
 /// as the ceiling's draw with the result the actor would have written, which frees both people as the
 /// 1v1 reaper frees a stuck match's (§9.5). `duos_matches_finish` writes once and the first writer
 /// stands, so an actor racing this sweep to the same result leaves one. Before the ceiling nothing
 /// is written and the next sweep folds the match back again.
 async fn end_abandoned(app: &Arc<App>, match_id: &str, now: i64) {
-    let result = DuosResult {
-        outcome: DuosOutcome::Draw,
-        winner: None,
-        reason: DUOS_REASON_CEILING.to_string(),
-    };
-    let result = match serde_json::to_value(result) {
+    let result = match serde_json::to_value(ceiling_draw()) {
         Ok(result) => result,
         Err(error) => {
             tracing::error!(event = "duos.result.unencodable", matchId = %match_id, message = %error);

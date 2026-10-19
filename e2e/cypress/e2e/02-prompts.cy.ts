@@ -4,7 +4,7 @@
 // Fixtures: #7 Jewelosco Scarab, #15 Me and Mr Token, #17 Flood, #24 Efficiency Dividend, and
 // #30 Archivist cover choices; #46 Suppressive Aura, #55 Lava Golem, and #67 Zoomerbin Oomen cover zones.
 
-import { seedFor } from "../../support/config.ts";
+import { constants, seedFor } from "../../support/config.ts";
 import {
   GAME,
   MULLIGAN_OPPONENT_READY,
@@ -119,7 +119,9 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
       expect(state.mulligan?.p1.prompt?.kind, "player 1's is a mulligan PendingChoice").to.eq("mulligan");
       expect(state.mulligan?.p2.prompt?.kind, "and so is player 2's").to.eq("mulligan");
       const hand = handOf(state, "p1");
-      expect(hand, "player 1's opening hand is three cards (§2.1)").to.have.length(3);
+      expect(hand, "player 1's opening hand is OPENING_DRAW[0] cards (§2.1, R1156000)").to.have.length(
+        constants.OPENING_DRAW[0],
+      );
       const kept = hand.slice(0, 1);
       const returned = hand.slice(1);
 
@@ -156,7 +158,9 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
       cy.gameState().should((after) => {
         const now = handOf(after, "p1");
         // R10 adds turn one's draw to R9's replacements.
-        expect(now, "R9's three replacements, plus R10's turn-1 draw").to.have.length(4);
+        expect(now, "the kept card and R9's replacements, plus R10's turn-1 draw").to.have.length(
+          constants.OPENING_DRAW[0] + 1,
+        );
         expect(now, "the kept card stayed in hand").to.include(kept[0]);
         for (const id of returned) {
           expect(now, "a returned card left the hand").to.not.include(id);
@@ -381,7 +385,7 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     });
   });
 
-  it("R81 x — Efficiency Dividend asks for X, a mode and a target, and deals exactly X+1", () => {
+  it("R81 x — Efficiency Dividend asks for X, a mode and a target, and deals exactly X", () => {
     openGame(SEEDS.x);
     // X is bounded by current mana (§2.3).
     toP1Turn(2);
@@ -400,8 +404,8 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     pickerOpensOnce("target");
     cy.answerPrompt("target", { hero: "opponent" });
 
-    // §4.4 applies X + 1 = 3 without Armor (§8 #24, patch v0.3.10: "Deal X+1 damage").
-    cy.get(ts(heroId("opponent"))).find(healthIs(27)).should("exist");
+    // §4.4 applies X = 2 without Armor (§8 #24: "Deal X damage").
+    cy.get(ts(heroId("opponent"))).find(healthIs(28)).should("exist");
   });
 
   it("R81 embiggen — Suppressive Aura asks for its normal or its Embiggened version and the aura matches the version played", () => {

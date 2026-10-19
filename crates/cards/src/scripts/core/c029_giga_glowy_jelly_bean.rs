@@ -217,9 +217,9 @@ mod tests {
 
             s.play("core-029", json!({}));
 
-            // #13 Jlockeed Shredder-10 is 6/10 → 8/20; the 2 damage stays, so health is 18 and no Cry
+            // #13 Jlockeed Shredder-10 is 6/10 → 12/20; the 2 damage stays, so health is 18 and no Cry
             // re-fires, because setting a flag is not an entry to the field.
-            s.expect_stats(&unit_id, json!({ "attack": 8, "maxHealth": 20, "health": 18 }));
+            s.expect_stats(&unit_id, json!({ "attack": 12, "maxHealth": 20, "health": 18 }));
             assert_eq!(
                 s.last_events()
                     .iter()

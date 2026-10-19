@@ -97,7 +97,7 @@ measured list.
 | Hand-tuned weights and terms | mined out (s35, s41, s51, s60, s63a) | the lane's default activity for 63 sessions |
 | Deeper search (ISMCTS) | failed at the browser's budget (s53, s55) | |
 | A learned leaf evaluation | this note | needs the data pipeline first |
-| A learned move ordering (a policy prior over the root's candidates) | not tried | a follow-up once positions exist: the same data, labelled with the action the search chose |
+| A learned move ordering (a policy prior over the root's candidates) | built behind a switch, off (#1171) | `positions --policy` labels each decision with the AI's candidates and the move played; `policy_fit.py` fits a table that re-sorts each line's moves before the beam's prefix (`crates/ai/src/policy.rs`, R1171000, R1171001); `retrain_policy.sh` screens it |
 | A bigger `AI_BUDGET` | a person's call; no lane may raise it | duel `msP95` reads about 690 ms on the loaded box (s63a) against `AI_GATE.max_decision_ms` 1500, but generation 9's bans are all `timeout` |
 
 ## How much data and compute
@@ -233,6 +233,12 @@ prototype's network (two relabels) won +0.065 [+0.024, +0.106] over 1,600 paired
 the outcomes-only one won +0.010 on the same deals. `fit.py` fits (c) that way by default
 (`TD_LAMBDA`).
 
+**Measured (2026-10-18): λ = 0.3, relabelled twice.** On the learn lane's 100,000-game export
+(run 5), λ from 0.9 to 0.3 and one to three relabels all leave held-out turns 4-10 between 0.6080
+and 0.6117 (seed 1; seeds 2 and 3 at 0.7 and 0.3 alike), so the choice is made in play (D6's last
+table). `fit.py` fits (c) on the outcomes, then twice more from the same start (`TD_RELABELS`), each
+on TD(0.3) targets from the fit before it.
+
 ### D5. The network's shape
 
 The search calls the evaluation about once per node, a few hundred to a thousand times a decision,
@@ -283,6 +289,50 @@ quantized as the lane quantizes it.
 | TD(0.7) | 0.25 | | +0.049 [+0.012, +0.087] |
 
 Each game's p95 decision time is about 200 ms in every row.
+
+**Measured (2026-10-18): B stays.** `LEARNED_REACH` (R1012002) can take the network past the
+finalists. At `Lines` it also scores every complete line, so it chooses which lines become the
+finalists. At `Beam` it also ranks the open lines at each depth, so it prunes the beam too. Each row
+below is 1,600 paired games against the hand eval on `explore-466`, with the learn lane's
+100,000-game TD network (run 5), integer, as it ships.
+
+| reach | share | finalists | `explore-466` | p95 decision time, median game | `confirm-466` |
+|---|---|---|---|---|---|
+| **`Finalists` (B)** | **0.5** | **3** | **+0.073 [+0.030, +0.115]** | 220 ms | **+0.071 [+0.030, +0.112]** |
+| `Lines` | 0.5 | 3 | +0.102 [+0.059, +0.145] | 214 ms | +0.076 [+0.035, +0.116] |
+| `Lines` | 0.75 | 3 | +0.041 [−0.002, +0.084] | 234 ms | |
+| `Lines` | 0.5 | 5 | +0.104 [+0.062, +0.146] | 229 ms | |
+| `Beam` (A) | 0.5 | 3 | +0.054 [+0.011, +0.097] | 234 ms | |
+
+The beam's widths were tuned on the hand eval's scale. Pruning on the network's scale loses lines
+the hand eval would have kept; choosing among the lines it kept does not. On fresh deals `Lines`
+and `Finalists` tie, so most of `Lines`' lead came from its being chosen on `explore-466`. At
+`Finalists` the beam and the shortlist that is replied to keep the hand eval. A network's errors on
+positions unlike its games then reach only the choice among lines the hand eval found. The AI's
+puzzles are such positions, and a network retrained on all of run 5's games missed two of them at
+`Lines` and none at `Finalists`. Neither reach clears the gate's bar (R1012000: 220 of 400, a share
+of 0.55) with this network, whose share on fresh deals is 0.536. What is left to improve is the
+network.
+
+**Measured (2026-10-18): TD(0.3), relabelled twice, at half.** Each row below is 1,600 paired games
+against `main`'s hand eval (83102dd94) at `Finalists`, with seed 1's network of the learn lane's
+100,000-game export, integer, as the lane ships it. `explore3-466` is where the variants were chosen;
+`confirm3-466` holds 800 deals none of them was chosen on.
+
+| targets (D4) | share | finalists | `explore3-466` | `confirm3-466` |
+|---|---|---|---|---|
+| TD(0.7), one relabel | 0.5 | 3 | +0.051 [+0.012, +0.091] | +0.088 [+0.047, +0.128] |
+| TD(0.7), one relabel | 0.5 | 5 | +0.032 [−0.009, +0.073] | |
+| TD(0.7), one relabel | 0.65 | 3 | +0.096 [+0.055, +0.137] | |
+| **TD(0.3), two relabels** | **0.5** | **3** | **+0.090 [+0.051, +0.129]** | **+0.113 [+0.072, +0.155]** |
+| TD(0.3), two relabels | 0.65 | 3 | | +0.107 [+0.064, +0.150] |
+
+TD(0.3) relabelled twice won more than TD(0.7) relabelled once on both deal sets, by +0.039 and
+0.025. At a share of 0.556 against the hand eval on fresh deals, it is the first network measured
+above the gate's bar (0.55). The share stays at half. With the switch on, each of the three seeds'
+TD(0.3) networks failed one of the AI's tests at 0.65 (the Coin's P17, or #1143's Glowy Jelly Bean),
+where at half two of the three pass them all, and 0.65 won no more on fresh deals. Five finalists
+won less than three.
 
 ### D7. Arithmetic, determinism and size
 

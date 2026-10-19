@@ -385,6 +385,14 @@ pub async fn record_result(app: &Arc<App>, input: RecordResultInput) -> Result<R
     Ok(written.row)
 }
 
+/// R1253000: `ceiling_draw_input`'s draw, written as the reaper writes it (both ratings unchanged,
+/// no game record), then the series' next game (R332, R334).
+pub async fn record_ceiling_draw(app: &Arc<App>, input: RecordResultInput) -> Result<ResultRow, ApiError> {
+    let written = write_result(app, &input, RatingPolicy::Unchanged).await?;
+    resume_series(app, written.series.as_ref()).await;
+    Ok(written.row)
+}
+
 /// R679: the `VoidMatch` port the actor holds (TS `ActorDeps.voidMatch`, made by
 /// `createVoidMatch(deps)`) — what a Glitch's void outcome does instead of `record_result`. The match
 /// never happened: no `results` row, no rating move, no last board, no game record. The store
@@ -414,6 +422,23 @@ pub async fn void_match(app: &Arc<App>, input: VoidMatchInput) -> Result<(), Api
 
 /// R112: the reaper's ceiling draw records no turn count (R833000: a log that ends records its own).
 const REAPER_TURNS: i32 = 0;
+
+/// R112: the ceiling's draw the reaper writes; R1253000: and a live actor whose clock's action
+/// panicked.
+pub fn ceiling_draw_input(match_row: &MatchRow, at: i64) -> RecordResultInput {
+    RecordResultInput {
+        match_id: match_row.id.clone(),
+        seats: seats_of(match_row),
+        outcome: TerminalOutcome {
+            winner: Winner::Draw,
+            reason: GameOverReason::MatchCeiling,
+        },
+        turns: REAPER_TURNS,
+        at,
+        last_boards: None,
+        final_hash: None,
+    }
+}
 
 /// §9.5's reaper: "a reaper resolves anything past the ceiling". Every `live` match whose
 /// `clocks.ceiling_at` has passed is ended with both players' in-match state cleared, and its
@@ -463,18 +488,7 @@ pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError>
                 }
             }
         }
-        let input = RecordResultInput {
-            match_id: match_row.id.clone(),
-            seats: seats_of(&match_row),
-            outcome: TerminalOutcome {
-                winner: Winner::Draw,
-                reason: GameOverReason::MatchCeiling,
-            },
-            turns: REAPER_TURNS,
-            at: now,
-            last_boards: None,
-            final_hash: None,
-        };
+        let input = ceiling_draw_input(&match_row, now);
         let advanced = match write_result(app, &input, RatingPolicy::Unchanged).await {
             Ok(written) => written.series,
             Err(error) => {

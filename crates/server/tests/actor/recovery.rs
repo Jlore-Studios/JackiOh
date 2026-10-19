@@ -32,7 +32,10 @@ use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, MatchActionRow, StoreError};
 
 use crate::support::deps::empty_test_app;
-use crate::support::engine::{fake_deck, install_test_cards};
+use crate::support::engine::{
+    PANIC_TEXT, TEST_PANICS, TEST_PANICS_AT_TURN_END, fake_deck, install_panicking_test_cards,
+    install_test_cards,
+};
 use crate::support::socket::{FakeSocket, create_fake_socket};
 
 const MATCH_ID: &str = "match-recovery";
@@ -271,6 +274,9 @@ struct Harness {
 struct StartOptions {
     /// Real decks (the real catalog, nothing installed).
     real: Option<(Vec<String>, Vec<String>)>,
+    /// R1253000: the test cards plus the two that panic (`install_panicking_test_cards`), each run
+    /// counted here. p1 holds both, rated 1200 in a ranked match, so an unchanged rating shows.
+    panics: Option<Arc<AtomicUsize>>,
 }
 
 fn hand_holds(view: &Value, def_id: &str) -> bool {
@@ -317,33 +323,39 @@ async fn open_turn_one(actor: &MatchActor) -> usize {
 
 async fn start_match(options: StartOptions) -> Harness {
     let scripted = options.real.is_none();
-    if scripted {
-        install_test_cards();
+    match &options.panics {
+        Some(runs) => install_panicking_test_cards(Arc::clone(runs)),
+        None if scripted => install_test_cards(),
+        None => {}
     }
     let engine: Box<dyn Any> = Box::new(());
     let app = empty_test_app().await;
     {
         let data = fake(&app);
         let mut data = data.lock().await;
-        data.seed_profile(json!({ "id": "profile-1", "rating": 1000 }));
+        let first = if options.panics.is_some() { 1200 } else { 1000 };
+        data.seed_profile(json!({ "id": "profile-1", "rating": first }));
         data.seed_profile(json!({ "id": "profile-2", "rating": 1000 }));
     }
 
     let decks = options.real.unwrap_or_else(|| {
-        (
-            fake_deck(&["test-prompt-self"]),
-            fake_deck(&["test-prompt-enemy"]),
-        )
+        let first = if options.panics.is_some() {
+            fake_deck(&["test-prompt-self", TEST_PANICS, TEST_PANICS_AT_TURN_END])
+        } else {
+            fake_deck(&["test-prompt-self"])
+        };
+        (first, fake_deck(&["test-prompt-enemy"]))
     });
     let seed = if scripted {
-        seed_dealing(
-            "seed-recovery",
-            &decks,
-            &[
-                (PlayerId::P1, "test-prompt-self"),
-                (PlayerId::P2, "test-prompt-enemy"),
-            ],
-        )
+        let mut wanted = vec![
+            (PlayerId::P1, "test-prompt-self"),
+            (PlayerId::P2, "test-prompt-enemy"),
+        ];
+        if options.panics.is_some() {
+            wanted.push((PlayerId::P1, TEST_PANICS));
+            wanted.push((PlayerId::P1, TEST_PANICS_AT_TURN_END));
+        }
+        seed_dealing("seed-recovery", &decks, &wanted)
     } else {
         "seed-recovery".to_string()
     };
@@ -355,7 +367,7 @@ async fn start_match(options: StartOptions) -> Harness {
                 "matchId": MATCH_ID,
                 "seed": seed,
                 "catalogVersion": jackioh_cards::catalog_version(),
-                "ranked": false,
+                "ranked": options.panics.is_some(),
                 "seats": [
                     { "profileId": "profile-1", "player": "p1", "deck": decks.0 },
                     { "profileId": "profile-2", "player": "p2", "deck": decks.1 },
@@ -692,7 +704,11 @@ mod m6_t4_crash_recovery_with_the_real_engine {
             .map(|(id, _)| id.clone())
             .collect();
         let decks = decks_the_engine_accepts(&pool);
-        let h = start_match(StartOptions { real: Some(decks) }).await;
+        let h = start_match(StartOptions {
+            real: Some(decks),
+            ..StartOptions::default()
+        })
+        .await;
 
         let actor = actor_of(&h).await;
         let p1 = create_fake_socket();
@@ -1470,5 +1486,177 @@ mod r776000_a_server_action_the_store_fails_to_take {
         );
         assert_eq!(reply["type"], "ack", "{reply}");
         assert_eq!(reply["seq"], json!(seq + 1));
+    }
+}
+
+/// R1253000: a live `reduce` that panics (a settle cap's `panic!`) changes nothing, is answered
+/// `internal` once and kept under its nonce, and is filed for the night bot; a clock's action that
+/// panics ends the match at once as the reaper's ceiling draw (R112), never retried (R776000).
+mod r1253000_a_live_action_the_engine_panics_on {
+    use super::*;
+
+    /// Both seats attached on the panicking cards, and how often their scripts ran.
+    async fn attached() -> (Harness, MatchActor, FakeSocket, FakeSocket, Arc<AtomicUsize>) {
+        let runs = Arc::new(AtomicUsize::new(0));
+        let h = start_match(StartOptions {
+            panics: Some(Arc::clone(&runs)),
+            ..StartOptions::default()
+        })
+        .await;
+        let actor = actor_of(&h).await;
+        let p1 = create_fake_socket();
+        let p2 = create_fake_socket();
+        actor.attach(PlayerId::P1, p1.socket());
+        actor.attach(PlayerId::P2, p2.socket());
+        actor.idle().await;
+        (h, actor, p1, p2, runs)
+    }
+
+    /// The `error` frames the socket was sent for `nonce`.
+    fn errors_for(socket: &FakeSocket, nonce: &str) -> Vec<Value> {
+        socket
+            .of_type("error")
+            .into_iter()
+            .filter(|frame| frame["nonce"] == nonce)
+            .collect()
+    }
+
+    async fn logged(h: &Harness) -> Vec<Value> {
+        table(&h.app, |data| json!(data.tables.match_actions)).await
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1253000_a_client_action_whose_reduce_panics_is_answered_once_changes_nothing_and_is_filed() {
+        let (logs, _recording) = Logs::record();
+        let (h, actor, p1, p2, runs) = attached().await;
+        let seq = i64::try_from(h.opening).expect("a count") + 1;
+        let before_hash = jackioh_engine::hash_state(&actor.engine_state());
+        let before_rows = logged(&h).await;
+        let play = json!({ "type": "play", "instanceId": in_hand(&p1, TEST_PANICS) });
+
+        send(&actor, &p1, "boom", play.clone()).await;
+        let answers = errors_for(&p1, "boom");
+        assert_eq!(answers.len(), 1, "{answers:?}");
+        assert_eq!(answers[0]["code"], "internal", "{answers:?}");
+        assert_eq!(runs.load(Ordering::SeqCst), 1);
+        assert_eq!(jackioh_engine::hash_state(&actor.engine_state()), before_hash);
+        assert_eq!(logged(&h).await, before_rows);
+        assert!(logs.has("match.action.panicked"));
+        assert!(!logs.has("match.task.threw"));
+
+        // `reduce` is pure, so a resend gets the same answer without a second run.
+        send(&actor, &p1, "boom", play.clone()).await;
+        let answers = errors_for(&p1, "boom");
+        assert_eq!(answers.len(), 2, "{answers:?}");
+        assert_eq!(answers[0], answers[1]);
+        assert_eq!(runs.load(Ordering::SeqCst), 1);
+
+        // A new nonce is a new action: it runs, and panics, but the match has one report.
+        send(&actor, &p1, "boom-2", play).await;
+        assert_eq!(errors_for(&p1, "boom-2").len(), 1);
+        assert_eq!(runs.load(Ordering::SeqCst), 2);
+        assert_eq!(logged(&h).await, before_rows);
+
+        let reports = h.app.bug_reports.recorded();
+        assert_eq!(reports.len(), 1, "{reports:?}");
+        assert_eq!(
+            reports[0].title,
+            format!("Patch v0.3.Y: match {MATCH_ID} panicked on a live action")
+        );
+        let body = &reports[0].body;
+        assert!(body.contains(&format!("| {seq} | p1 | `play` |")), "{body}");
+        assert!(!body.contains(PANIC_TEXT), "{body}");
+        assert!(!body.contains(&in_hand(&p1, TEST_PANICS)), "{body}");
+        assert!(
+            logs.entries()
+                .iter()
+                .any(|entry| entry.to_string().contains(PANIC_TEXT)),
+            "the private log line holds the panic's text"
+        );
+
+        // Nothing was half-applied: both seats play on, the next rows take the seqs the panic left.
+        send(&actor, &p1, "after", json!({ "type": "endTurn" })).await;
+        assert!(
+            acks(&p1).contains(&json!({ "type": "ack", "nonce": "after", "seq": seq })),
+            "{:?}",
+            acks(&p1)
+        );
+        send(&actor, &p2, "after-2", json!({ "type": "endTurn" })).await;
+        assert!(
+            acks(&p2).contains(&json!({ "type": "ack", "nonce": "after-2", "seq": seq + 1 })),
+            "{:?}",
+            acks(&p2)
+        );
+        assert_eq!(logged(&h).await.len(), before_rows.len() + 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1253000_r112_a_turn_timeout_whose_reduce_panics_ends_the_match_at_once_as_the_reapers_ceiling_draw()
+     {
+        let (logs, _recording) = Logs::record();
+        let (h, actor, p1, p2, runs) = attached().await;
+        let seq = i64::try_from(h.opening).expect("a count") + 1;
+        send(
+            &actor,
+            &p1,
+            "field",
+            json!({ "type": "play", "instanceId": in_hand(&p1, TEST_PANICS_AT_TURN_END) }),
+        )
+        .await;
+        assert!(
+            acks(&p1).contains(&json!({ "type": "ack", "nonce": "field", "seq": seq })),
+            "{:?}",
+            acks(&p1)
+        );
+        assert_eq!(runs.load(Ordering::SeqCst), 0);
+
+        advance(TURN_CLOCK_SECONDS * 1000).await;
+        actor.idle().await;
+        assert_eq!(runs.load(Ordering::SeqCst), 1);
+        let rows = results(&h).await;
+        assert_eq!(rows.len(), 1, "{rows:?}");
+        assert_eq!(rows[0]["matchId"], MATCH_ID);
+        assert_eq!(rows[0]["reason"], "match-ceiling");
+        assert_eq!(rows[0]["winnerProfileId"], Value::Null);
+        assert_eq!(rows[0]["turns"], json!(0));
+        for key in ["ratingBefore", "ratingAfter"] {
+            let rating: Vec<f64> = rows[0][key]
+                .as_array()
+                .expect("a rating pair")
+                .iter()
+                .filter_map(Value::as_f64)
+                .collect();
+            assert_eq!(rating, vec![1200.0, 1000.0], "{key}: {rows:?}");
+        }
+        let row = match_row(&h.app).await;
+        assert_eq!(row["status"], "finished", "{row}");
+        assert!(
+            logged(&h)
+                .await
+                .iter()
+                .all(|logged| logged["action"]["type"] != "timeout"),
+            "the panicked timeout was never logged"
+        );
+        assert!(logs.has("match.panicked.drawn"));
+        assert!(!h.app.matches.has(MATCH_ID));
+        assert_eq!(p1.close_code(), Some(1001));
+        assert_eq!(p2.close_code(), Some(1001));
+
+        // Not retried: the same action on the same state would panic again.
+        advance(MATCH_SERVER_ACTION_RETRY_MS * 3).await;
+        assert_eq!(runs.load(Ordering::SeqCst), 1);
+        assert!(!logs.has("match.clock.retrying"));
+        assert_eq!(results(&h).await.len(), 1);
+
+        let reports = h.app.bug_reports.recorded();
+        assert_eq!(reports.len(), 1, "{reports:?}");
+        assert!(
+            reports[0]
+                .body
+                .contains(&format!("| {} | p1 | `timeout` |", seq + 1)),
+            "{}",
+            reports[0].body
+        );
+        assert!(!reports[0].body.contains(PANIC_TEXT), "{}", reports[0].body);
     }
 }

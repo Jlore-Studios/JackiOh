@@ -20,6 +20,7 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result, bail};
 use serde::Serialize;
+use serde_json::Value;
 
 use jackioh_ai::{
     AI_BUDGET, AI_EVAL, AI_GATE_BUDGET, AiOptions, DecisionReason, NextSwing, SearchStats, decide, evaluate,
@@ -27,7 +28,7 @@ use jackioh_ai::{
 };
 use jackioh_engine::replay::{ReplayInput, fold, hash_state};
 use jackioh_engine::{
-    ActionBody, GameResult, GameState, PLAYER_IDS, PlayerId, Rng, legal_actions, seat_to_act,
+    ActionBody, GameResult, GameState, PLAYER_IDS, PlayerId, Rng, legal_actions, seat_to_act, with_shipped,
 };
 
 use crate::board::{EVAL_DECIMALS, board, describe, hand_names};
@@ -164,6 +165,20 @@ fn inspect(
     })
 }
 
+/// R767000: `inspect` of a game's JSON under the catalog its `catalogVersion` names, as `replay`
+/// folds it; a version this build neither is nor carries is refused before anything is folded.
+fn inspect_game(
+    game: Value,
+    at: Option<usize>,
+    seat: Option<PlayerId>,
+    full_budget: bool,
+) -> Result<Inspection> {
+    let shipped = crate::replay::pinned_catalog(&game)?;
+    let input: ReplayInput =
+        serde_json::from_value(game).context("the input is not {seed, decks, log, …}")?;
+    with_shipped(shipped, || inspect(&input, at, seat, full_budget))
+}
+
 /// The inspection as text, one block.
 fn render(found: &Inspection) -> String {
     let mut out = format!(
@@ -235,7 +250,7 @@ pub fn run(args: Args) -> Result<()> {
             text
         }
     };
-    let input: ReplayInput = serde_json::from_str(&text).context("the input is not {seed, decks, log, …}")?;
+    let game: Value = serde_json::from_str(&text).context("the input is not JSON")?;
     let seat = match args.seat.as_deref() {
         Some(seat) => Some(
             serde_json::from_value::<PlayerId>(serde_json::Value::String(seat.to_string()))
@@ -243,7 +258,7 @@ pub fn run(args: Args) -> Result<()> {
         ),
         None => None,
     };
-    let found = inspect(&input, args.at, seat, args.budget == "full")?;
+    let found = inspect_game(game, args.at, seat, args.budget == "full")?;
     if args.json {
         println!("{}", serde_json::to_string(&found)?);
     } else {
@@ -256,15 +271,16 @@ pub fn run(args: Args) -> Result<()> {
 mod tests {
     use super::*;
     use jackioh_ai::{HIDDEN_DEF_ID, StoppedBy};
+    use jackioh_engine::testkit::{clear_overrides, preview_every_set};
     use jackioh_engine::zones::active_units_of;
     use serde_json::{Value, json};
 
-    /// The hotseat game e2e spec 01 recorded (SURFACE §13): 37 log entries, 9 turns.
+    /// The hotseat game e2e spec 01 recorded (SURFACE §13): 41 log entries, 9 turns.
     const HOTSEAT: &str = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../engine/tests/golden/01-hotseat-full-game.json"
     );
-    /// A mid-game position in it: turn 4, p2 to act with four cards in hand, a search of 327 nodes.
+    /// A mid-game position in it: turn 4, p2 to act with four cards in hand, a search of 307 nodes.
     const MID_GAME: usize = 13;
 
     fn hotseat() -> ReplayInput {
@@ -381,7 +397,7 @@ mod tests {
 
         let whole = inspect(&input, None, None, false).unwrap();
         assert_eq!(whole.at, input.log.len());
-        assert_eq!(whole.hash, "5c3d578c");
+        assert_eq!(whole.hash, "8784adae");
         assert!(whole.result.is_some());
         assert_eq!(whole.reason, None);
         assert!(render(&whole).contains("decision none"));
@@ -395,7 +411,7 @@ mod tests {
         let found = inspect(&hotseat(), Some(MID_GAME), None, false).unwrap();
         let text = render(&found);
         for needle in [
-            "at 13/37 turn 4 active p2 seat p2",
+            "at 13/41 turn 4 active p2 seat p2",
             "hand(p2): ",
             "seatToAct p2 legal ",
             " eval ",
@@ -424,7 +440,7 @@ mod tests {
         let input: ReplayInput = serde_json::from_value(value).unwrap();
         let found = inspect(&input, None, None, false).unwrap();
         assert_eq!(found.fold_errors, vec!["refused-1".to_string()]);
-        assert_eq!(found.hash, "5c3d578c");
+        assert_eq!(found.hash, "8784adae");
         assert!(render(&found).contains("foldErrors 1: refused-1"));
     }
 
@@ -439,5 +455,34 @@ mod tests {
         };
         run(args(Some("p1"))).unwrap();
         assert!(run(args(Some("p3"))).is_err());
+    }
+
+    /// R767000: a game that names its `catalogVersion` is inspected under that catalog, from the file
+    /// `run` reads as from a value; one this build neither is nor carries is refused as `earlier_patch`.
+    #[test]
+    fn r767000_think_folds_a_game_under_the_catalog_it_names() {
+        let _preview = preview_every_set();
+        let (game, live) = crate::replay::game_on_a_shipped_catalog();
+        let found = inspect_game(game.clone(), None, Some(PlayerId::P1), false).unwrap();
+        assert_eq!(found.hash, live);
+        assert!(found.fold_errors.is_empty(), "{:?}", found.fold_errors);
+
+        let mut gone = game.clone();
+        gone["catalogVersion"] = json!("v-gone");
+        let error = inspect_game(gone, None, Some(PlayerId::P1), false).unwrap_err();
+        assert!(format!("{error:#}").contains("earlier_patch"), "{error:#}");
+
+        let path = std::env::temp_dir().join(format!("jackioh-think-r767000-{}.json", std::process::id()));
+        std::fs::write(&path, game.to_string()).unwrap();
+        let ran = run(Args {
+            file: Some(path.clone()),
+            at: None,
+            seat: Some("p1".to_string()),
+            budget: "gate".to_string(),
+            json: true,
+        });
+        std::fs::remove_file(&path).unwrap();
+        ran.unwrap();
+        clear_overrides();
     }
 }

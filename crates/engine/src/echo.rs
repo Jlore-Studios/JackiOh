@@ -21,7 +21,7 @@
 use indexmap::IndexSet;
 use serde_json::Value;
 
-use crate::config::{SPELL_ANSWER_CAP, TUNE_MIN_AMOUNT};
+use crate::config::TUNE_MIN_AMOUNT;
 use crate::faces::card_type_of;
 use crate::mana::modifier_is_live;
 use crate::modifiers::{install_lasting_modifiers, remove_modifier};
@@ -391,24 +391,14 @@ pub fn land_after_resolution(sink: &mut EngineSink<'_>, resolved: &ResolvedCard)
     // R174, R212: the stays step 7 read `permanent` on. A cast's event waits for the loop of the
     // effect that cast it (R70), so a response judges the card's stay from here, not the dispatch.
     let exits_from = exit_mark(sink.state);
-    // R1180005: the card that answers a Spell that targeted an enemy, named once the Spell has landed.
-    // R1216000: a game names at most SPELL_ANSWER_CAP answers; past it the resolution answers
-    // nothing, so a chain the game's own plays keep feeding (Unstable Clone Machine shuffling each
-    // answered Dogpile back into the library) ends instead of settling forever.
-    let named = sink.state.answers_named.unwrap_or(0);
-    let answer = if resolved.targeted.is_empty() || named >= SPELL_ANSWER_CAP {
-        None
-    } else {
-        crate::targeted::spell_answer_for(
-            sink.state,
-            resolved.player,
-            &resolved.instance_id,
-            &resolved.targeted,
-        )
-    };
-    if answer.is_some() {
-        sink.state.answers_named = Some(named + 1);
-    }
+    // R1180005: the card that answers a Spell that targeted an enemy, named once the Spell has landed;
+    // R1180006 bounds the chain of answers.
+    let answer = crate::targeted::name_spell_answer(
+        sink.state,
+        resolved.player,
+        &resolved.instance_id,
+        &resolved.targeted,
+    );
     sink.events.push(GameEvent::CardResolved {
         player: resolved.player,
         instance_id: resolved.instance_id.clone(),

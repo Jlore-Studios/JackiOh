@@ -103,7 +103,7 @@ export const constants = {
   HAND_CAP: 10,
   UNIT_ZONES: 5,
   BACKROW_ZONES: 5,
-  OPENING_DRAW: [3, 4] as const,
+  OPENING_DRAW: [4, 4] as const,
   ROOM_CODE_LENGTH: 6,
   DECKS_PER_LOADOUT: 3,
   /** R80: a library holds at most this many cards (`LIBRARY_CAP`), so no handicap deck is larger. */

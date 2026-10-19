@@ -409,14 +409,14 @@ const RECORDED: &str = concat!(
 /// release (R1420, v0.3.5) began to record: the same log, both stripped, still folds to the old
 /// `a798906b`. A change to the game itself re-records the log (R244, R275, R276, R360–R366).
 /// Practice saves on players' devices and e2e specs 01, 13 and 22 rely on the hash holding (§5.2).
-const EXPECTED_HASH: &str = "5c3d578c";
+const EXPECTED_HASH: &str = "8784adae";
 
 /// What the recorded game ends in — a second anchor, so the hash is not the only witness.
 const EXPECTED_RESULT: GameResult = GameResult {
     winner: Winner::P1,
     reason: GameOverReason::HeroDeath,
 };
-const EXPECTED_ACTIONS: usize = 37;
+const EXPECTED_ACTIONS: usize = 41;
 
 fn read(path: &str, text: &str) -> Recording {
     let parsed: Value =
@@ -556,8 +556,9 @@ mod the_recorded_hotseat_game_replays_in_vitest_build_m5_t3 {
 }
 
 // R781000: Magnetic is now Equip. A log recorded before the rename spells the play's flag `magnetic`
-// (golden seed 43 as it was recorded, its Sentient Cat Ears played onto a Unit at step 7), and it reads
-// as `equip`: the old log and the same log renamed fold to one state, the old-name play accepted.
+// (golden seed 43's log as re-blessed for R1156000, its Equip flag spelled `magnetic` as logs before the
+// rename spell it, its Sentient Cat Ears played onto a Unit at step 7), and it reads as `equip`: the old
+// log and the same log renamed fold to one state, the old-name play accepted.
 const PRE_EQUIP_LOG: &str = include_str!("golden/pre-equip-log.json");
 
 mod r781000_a_log_recorded_before_the_equip_rename_still_folds {

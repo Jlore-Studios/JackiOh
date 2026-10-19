@@ -23,7 +23,7 @@ use super::support::{AI, HUMAN, clone, register_cards, scenario};
 const TESLA: &str = "classic-005"; // Field Trap (2), Animated, its unit face 1/4 Lifesteal
 const FROSTSPATULA: &str = "classicplus-012-8"; // Field Spell token (2), Animated on your turn, 10/3 Rush
 const SAME_COST_TRAP: &str = "core-085"; // Unlicensed Experimentation: a Trap (2) with no unit face
-const SOLARIUS: &str = "classicplus-038"; // Unit 3/2, Spell Damage +2 (Radiant +5)
+const SOLARIUS: &str = "classicplus-038"; // Unit 3/2, Spell Damage +2 (Radiant +4)
 const TOP_LOSER: &str = "classicplus-019-1"; // Unit token; only its Radiant face prints Immune to Spells
 const VANILLA: &str = "core-008"; // Mr. Vanilla, 4/4, no keywords
 
@@ -256,7 +256,7 @@ mod evaluate_patch_v0_2_0s_mechanics {
     }
 
     #[test]
-    fn e6_spell_damage_is_worth_ai_eval_spell_damage_per_point_radiants_5_too() {
+    fn e6_spell_damage_is_worth_ai_eval_spell_damage_per_point_radiants_4_too() {
         let state = board(json!({ "p1": { "field": [SOLARIUS, { "def": SOLARIUS, "radiant": true }] } }));
         let units = units_of(&state, AI);
         let (Some(base), Some(radiant)) = (units.first(), units.get(1)) else {
@@ -273,7 +273,7 @@ mod evaluate_patch_v0_2_0s_mechanics {
         );
         assert_close(
             worth(&state, radiant) - unit_worth(&state, radiant, &none),
-            5.0 * AI_EVAL.spell_damage,
+            4.0 * AI_EVAL.spell_damage,
             10,
             "radiant",
         );

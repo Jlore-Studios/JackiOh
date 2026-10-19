@@ -8,9 +8,10 @@
 //! card's `costMod` (B3.4, R65) moves its worth. #1086 prices what a side has banked in public state:
 //! Jade steps (R962), the enemy units its delayed effects have marked (R437), extra turns (R846), and
 //! an own Temporary hand card at a discount (R637). #1143 prices an own hand Unit by the face it will
-//! enter with (its Radiant face, buffs and tuning) over its printed base face. It reads only what the
-//! seat may know or what a determinization sampled, and nothing here reads a handicap or a difficulty
-//! (R180).
+//! enter with (its Radiant face, buffs and tuning) over its printed base face. #1224 prices what a
+//! side's coming refreshes will or will not give: the refreshes it still has to lose (R844) and its
+//! next-turn rider (§2.3). It reads only what the seat may know or what a determinization sampled, and
+//! nothing here reads a handicap or a difficulty (R180).
 //!
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
 //! are passed explicitly.
@@ -20,12 +21,12 @@ use jackioh_engine::config::{
 };
 use jackioh_engine::effects::DELAYED_DESTROY_HOOK;
 use jackioh_engine::{
-    AttackTarget, CardDef, CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, Position,
-    UnitView, active_brittle_count, active_units_of, animated_kind_of, armor_of, attack_restriction,
-    attacks_per_turn, backrow_is_public, cannot_attack, card_keywords, card_type_of_face, credit_lapsing,
-    effective_life, find_def, frozen_next_turn, has_keyword, hero_armor_of, is_temporary_card, owed_mana_of,
-    own_cost, pierces, query_cost, reset_instance, stats_with_buffs, subsystems, takes_strike_back, unit_has,
-    unit_view,
+    AttackTarget, CardDef, CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, PlayerState,
+    Position, UnitView, active_brittle_count, active_units_of, animated_kind_of, armor_of,
+    attack_restriction, attacks_per_turn, backrow_is_public, cannot_attack, card_keywords, card_type_of_face,
+    credit_lapsing, effective_life, find_def, frozen_next_turn, has_keyword, hero_armor_of,
+    is_temporary_card, lost_refreshes_left, owed_mana_of, own_cost, pierces, query_cost, reset_instance,
+    stats_with_buffs, subsystems, takes_strike_back, unit_has, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -228,6 +229,39 @@ fn jade_steps(jade: i32) -> i32 {
     }
 }
 
+/// R844: the crystals `side` will not get from the refreshes it still has to lose past this turn's
+/// (one lost this turn is already in its current mana). Each is priced at `mana.max`, not the coming
+/// turn's maximum, which reads the handicap (`max_mana_for`; R180); the first also loses the rider
+/// it spends, floored at 0 as a refresh is.
+fn lost_crystals(side: &PlayerState) -> i32 {
+    let left = lost_refreshes_left(side);
+    if left == 0 {
+        return 0;
+    }
+    (side.mana.max + side.mana.next_turn_mod).max(0) + (left - 1) * side.mana.max
+}
+
+/// §2.3: the crystals `side`'s next-turn rider moves its coming refresh by, no lower than a refresh
+/// of 0, and none while that refresh is lost, which spends it (R844; `lost_crystals` counts it).
+fn rider_crystals(side: &PlayerState) -> i32 {
+    if lost_refreshes_left(side) > 0 {
+        return 0;
+    }
+    side.mana.next_turn_mod.max(-side.mana.max)
+}
+
+/// R844, §2.3: what `side`'s coming refreshes will or will not give, both public badges (R169,
+/// R185): its rider for or against it, the refreshes it still has to lose against it.
+fn coming_refreshes(side: &PlayerState, w: &EvalWeights) -> f64 {
+    w.next_turn_mana * f64::from(rider_crystals(side)) - w.lost_refresh * f64::from(lost_crystals(side))
+}
+
+/// R844, §2.3: `coming_refreshes` for `seat` less its enemy's, the share of `evaluate` the coming
+/// refreshes make up and spend as they run; `reply_score` takes it from the line's end.
+pub fn coming_mana(state: &GameState, seat: PlayerId, w: &EvalWeights) -> f64 {
+    coming_refreshes(&state.players[seat], w) - coming_refreshes(&state.players[seat.opponent()], w)
+}
+
 /// R437: the `unit_worth` of the enemy units a delayed effect `player` owns has marked, each once (a
 /// mark names its entry by `delayed_id`; an entry `redact` dropped, R185, counts nothing). A mark on a
 /// hand card (R1141), a backrow card or an own unit counts nothing, nor does an unmarked delayed
@@ -270,7 +304,8 @@ fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
 }
 
 /// Everything on one side but the hero: the board, what it has banked (a debt, Jade steps, extra
-/// turns, the enemy units it has marked), the backrow, the hand and the library.
+/// turns, the enemy units it has marked), what its coming refreshes will or will not give, the backrow,
+/// the hand and the library.
 fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights) -> f64 {
     let side = &state.players[player];
     let mut value = 0.0;
@@ -280,6 +315,8 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
 
     // R1224: a debt is coming turns' mana spent early, so it counts against the side that owes it.
     value -= w.owed_mana * f64::from(owed_mana_of(state, player));
+    // R844, §2.3: what the side's coming refreshes will or will not give.
+    value += coming_refreshes(side, w);
     // #1086: what the side has banked in state both seats see (R185): Jade steps (R962), extra
     // turns (R846) and the enemy units it has marked (R437; no `unit_worth` call at a zero share).
     value += w.jade_step * f64::from(jade_steps(side.jade.unwrap_or(0)));

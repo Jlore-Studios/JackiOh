@@ -70,12 +70,10 @@ impl Catalog {
 
     // §9.4 L6: "every card exists in the current catalog version and is not banned".
     //
-    // Proposed ruling for §11: a ban is server state, not catalog data (nothing in §8 is banned at
-    // launch). A flag on the card would make
-    // banning one card a new R105 version, and §9.4's stale-version rejection would then invalidate
-    // every saved loadout at once. The shared validator reads bannedness through `Catalog`, never off a
-    // `CardDef`; the list is empty until there is something to ban.
-    //   Affects: §9.4 (L6), R105.
+    // R164: a ban is server state, not catalog data (nothing in §8 is banned at launch). A flag on
+    // the card would make banning one card a new R105 version, and §9.4's stale-version rejection
+    // would then invalidate every saved loadout at once. The shared validator reads bannedness
+    // through `Catalog`, never off a `CardDef`; the list is empty until there is something to ban.
     pub fn is_banned(&self, card_id: &str) -> bool {
         self.banned.iter().any(|banned| banned == card_id)
     }
@@ -201,13 +199,12 @@ pub const DEPLOYED_COMMIT_HEADER: &str = "x-deployed-commit";
 
 /// `GET /api/catalog`.
 ///
-/// Proposed ruling for §11: until the client ships a catalog, the server serves the same bytes here,
+/// R163: until the client ships a catalog, the server serves the same bytes here,
 /// whole and unprojected. Whole, because §9.4 requires "one validator module shared by client and
 /// server" and a trimmed card would be a second, weaker copy of the catalog. Unauthenticated: it is
 /// the same bytes for everybody and names no profile, and §9.4's gate is about "no collection,
 /// loadout, queue or match". It carries R105's version, so a stale client learns it is stale before
 /// it builds a deck. The endpoint is the transport, never a second source of truth.
-///   Affects: §9.1, §9.4, R105.
 ///
 /// `apps/web/src/net/api.ts` already calls exactly this shape:
 ///

@@ -36,6 +36,8 @@
 //!  - Each person's seat keeps the 1v1 seat's guards (`actor::guard::SeatGuard`; R137, R835000,
 //!    R835002): the action flood window, the malformed-frame budget and the count of refusals that
 //!    raises `match.rejections.unusual`. Only a person's own refusals count; the AI's never do.
+//!  - A live `reduce` that panics changes nothing and is answered `internal` and filed; a server
+//!    action that panics ends the match as the ceiling's draw (R1253000).
 //!  - Pings are relayed to the teammate's socket only, rate-limited, and never logged, folded or
 //!    viewed (B39).
 //!
@@ -48,7 +50,7 @@ use std::panic::AssertUnwindSafe;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 use std::time::Duration;
 
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use serde_json::Value;
 use tokio::sync::{mpsc, oneshot};
 
@@ -65,13 +67,13 @@ use crate::actor::registry::panic_text;
 use crate::actor::ws_server::Socket;
 use crate::app::{App, now_ms};
 use crate::bots::seat::r188_forbidden;
+use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::config::{
     BOT_DECISION_DEADLINE_MS, BOT_WRITE_RETRY_MS, DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS,
     DUOS_MULLIGAN_CLOCK_MS, DUOS_PROMPT_CLOCK_MS, DUOS_ROUND_CLOCK_MS, MATCH_RECORD_RESULT_ATTEMPTS,
     MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_SERVER_ACTION_RETRY_MS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS,
 };
 use crate::db::store::StoreError;
-use crate::duos::ceiling_at;
 use crate::duos::engine::{self, Pinned};
 use crate::duos::protocol::{
     DuosClientMessage, DuosServerMessage, GraceDeadlines, PingAt, PingKind, PingTarget, ack_message, encode,
@@ -79,6 +81,7 @@ use crate::duos::protocol::{
 };
 use crate::duos::registry::registry;
 use crate::duos::store::{DuosActionRow, DuosMatch, action_json, seat_of_logged};
+use crate::duos::{ceiling_at, ceiling_draw};
 
 /// The people's seats: the room's host and guest (S6). Their sockets, graces and AI takeovers are
 /// indexed in this order.
@@ -399,6 +402,15 @@ struct Countdown {
     timer: Timer,
 }
 
+/// R1253000: the answer a panicked action gets, first and on every resend of its nonce.
+fn panicked_answer(nonce: &str) -> DuosServerMessage {
+    error_message(
+        SocketErrorCode::Internal,
+        "the server could not apply this action; it has been reported",
+        Some(nonce),
+    )
+}
+
 fn armed_by(countdown: Option<&Countdown>, timer: u64) -> bool {
     countdown.is_some_and(|countdown| countdown.timer.id() == timer)
 }
@@ -408,6 +420,10 @@ struct Core {
     next_seq: i64,
     /// §9.3: nonce -> the seat that sent it and the seq it was logged at, rebuilt from the log.
     acks: IndexMap<String, (DuosSeat, i64)>,
+    /// R1253000: the nonces of actions whose `reduce` panicked: never logged, so a rebuild starts empty;
+    /// a resend gets `panicked_answer` again with no second reduce. Not `acks`, which holds only what
+    /// the log holds.
+    panicked: IndexSet<String>,
     /// By `HUMAN_SEATS`.
     sockets: [Option<Socket>; 2],
     /// B37: the AI plays this person's seat until they are back.
@@ -511,6 +527,7 @@ pub fn create_duos_actor(app: Arc<App>, input: DuosActorInput) -> DuosActor {
         state,
         next_seq,
         acks,
+        panicked: IndexSet::new(),
         sockets: [None, None],
         ai_playing: [false, false],
         grace: [None, None],
@@ -1097,7 +1114,7 @@ impl DuosActor {
     /// The one path every action takes, a person's and the AI's alike (B35, B40): reduce, append
     /// exactly one row at the next gapless seq, then push. Answers the ack or the error.
     async fn apply(&self, seat: DuosSeat, nonce: String, body: DuosActionBody) -> DuosServerMessage {
-        let (action, result, seq) = {
+        let reduced = {
             let core = self.lock();
             if let Some((owner, seq)) = core.acks.get(&nonce) {
                 // §9.3: a reused nonce answers its original ack, with no second reduce or row.
@@ -1110,6 +1127,9 @@ impl DuosActor {
                         Some(&nonce),
                     )
                 };
+            }
+            if core.panicked.contains(&nonce) {
+                return panicked_answer(&nonce);
             }
             if core.finished || core.state.result.is_some() {
                 return error_message(
@@ -1124,8 +1144,21 @@ impl DuosActor {
                 nonce: nonce.clone(),
                 body,
             };
-            let result = engine::reduce(self.shared.pinned, &core.state, &action);
-            (action, result, core.next_seq)
+            // R1253000: `reduce` takes `&state` and returns a new one, so a panic leaves nothing
+            // half-applied, as the rebuild's fold relies on.
+            let reduced = std::panic::catch_unwind(AssertUnwindSafe(|| {
+                engine::reduce(self.shared.pinned, &core.state, &action)
+            }));
+            let seq = core.next_seq;
+            match reduced {
+                Ok(result) => Ok((action, result, seq)),
+                Err(payload) => Err((action, seq, panic_text(payload))),
+            }
+        };
+        // After the lock: `on_reduce_panicked` takes it again and awaits.
+        let (action, result, seq) = match reduced {
+            Ok(applied) => applied,
+            Err((action, seq, message)) => return self.on_reduce_panicked(&action, seq, &message).await,
         };
 
         if let Some(reason) = &result.error {
@@ -1178,6 +1211,67 @@ impl DuosActor {
         }
         self.after_change().await;
         ack_message(&nonce, seq)
+    }
+
+    /// R1253000: a live `reduce` panicked. Nothing was logged or kept, so the state, the log and
+    /// `next_seq` stand. The nonce keeps its answer, since `reduce` is pure and the same action on the
+    /// same state panics again, and the finding is filed for the night bot (`bug_reports.rs`): the seq
+    /// the action would have taken, its seat and its type, never the panic's message, which only the
+    /// private log line holds. A server action (the AI's move, shared by every AI seat at a seq, or the
+    /// ceiling's) would be made again and panic again, so it ends the match as the ceiling's draw.
+    async fn on_reduce_panicked(&self, action: &DuosAction, seq: i64, message: &str) -> DuosServerMessage {
+        let kind = match &action.body {
+            DuosActionBody::Duel { body } => body.action_type().to_string(),
+            DuosActionBody::Pass { .. } => "pass".to_string(),
+            DuosActionBody::Concede => "concede".to_string(),
+        };
+        tracing::error!(event = "duos.action.panicked", matchId = %self.match_id_str(), seq = seq, seat = %action.seat, "type" = %kind, message = %message);
+        self.lock().panicked.insert(action.nonce.clone());
+        self.shared.app.bug_reports.file(
+            self.shared.app.env.deployed_commit.as_deref(),
+            Finding {
+                match_id: self.match_id_str().to_string(),
+                found_in: FoundIn::DuosLive,
+                catalog_version: self.shared.row.options.catalog_version.clone(),
+                actions: usize::try_from(seq - 1).unwrap_or(0),
+                refused: vec![RefusedRow {
+                    seq,
+                    seat: action.seat.to_string(),
+                    action: kind,
+                }],
+            },
+        );
+        if action.nonce.starts_with(SERVER_NONCE_PREFIX) {
+            self.end_as_ceiling_draw().await;
+        }
+        panicked_answer(&action.nonce)
+    }
+
+    /// R1253000, R1047001: the match ends at once as the ceiling's draw (`ceiling_draw`), written as B40
+    /// writes any ending. The actor lets go as the sweep's `end_abandoned` does for a match it cannot
+    /// fold back; the clocks `halt` clears, and the AI's retries find the match finished or stopped.
+    async fn end_as_ceiling_draw(&self) {
+        let result = match serde_json::to_value(ceiling_draw()) {
+            Ok(result) => result,
+            Err(error) => {
+                tracing::error!(event = "duos.result.unencodable", matchId = %self.match_id_str(), message = %error);
+                return;
+            }
+        };
+        let at = now_ms();
+        {
+            let mut core = self.lock();
+            if core.finished || core.stopped {
+                return;
+            }
+            core.finished = true;
+            core.finished_at = Some(at);
+        }
+        if !self.record_result(&result, at).await {
+            self.let_go("duos.result.unrecorded");
+            return;
+        }
+        self.let_go("duos.panicked.drawn");
     }
 
     /// B35: after every applied action, both people get fresh views and clocks; then the result is

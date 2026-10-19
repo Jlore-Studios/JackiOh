@@ -385,7 +385,7 @@ mod tests {
             assert_eq!(grave.iter().filter(|def_id| *def_id == HINDER).count(), 1);
             assert_eq!(grave.len(), 2);
             // The draw repeated past the cast: the hand is full again.
-            assert_eq!(state.players.p1.hand.len(), 3);
+            assert_eq!(state.players.p1.hand.len() as i32, OPENING_DRAW[0]);
             assert_eq!(state.turn, 1);
 
             let replayed = fold(&json_as::<FoldArgs>(json!({

@@ -925,7 +925,7 @@ mod r182_the_opening_hand_under_a_handicap {
     }
 
     #[test]
-    fn r182_b4_the_mulligan_offers_5_cards_to_a_medium_or_hard_p2_and_3_to_the_human_p1() {
+    fn r182_b4_the_mulligan_offers_5_cards_to_a_medium_or_hard_p2_and_4_to_the_human_p1() {
         for difficulty in [Difficulty::Medium, Difficulty::Hard] {
             let h = AI_DIFFICULTY[difficulty];
             let mut state = begin_game(&game(&format!("r182-p2-{difficulty}"), Some(on_p2(h)), None)).state;
@@ -948,14 +948,14 @@ mod r182_the_opening_hand_under_a_handicap {
     }
 
     #[test]
-    fn r182_b4_the_mulligan_offers_4_cards_to_a_medium_or_hard_p1_and_4_to_the_human_p2() {
+    fn r182_r1156000_b4_the_mulligan_offers_5_cards_to_a_medium_or_hard_p1_and_4_to_the_human_p2() {
         for difficulty in [Difficulty::Medium, Difficulty::Hard] {
             let h = AI_DIFFICULTY[difficulty];
             let mut state = begin_game(&game(&format!("r182-p1-{difficulty}"), Some(on_p1(h)), None)).state;
 
-            assert_eq!(prompt_options(&state, PlayerId::P1), Some(4), "{difficulty}");
-            assert_eq!(state.players.p1.hand.len(), 4);
-            assert_eq!(state.players.p1.library.len(), (h.deck_size - 4) as usize);
+            assert_eq!(prompt_options(&state, PlayerId::P1), Some(5), "{difficulty}");
+            assert_eq!(state.players.p1.hand.len(), 5);
+            assert_eq!(state.players.p1.library.len(), (h.deck_size - 5) as usize);
 
             let keep = ids(&state.players.p1.hand);
             state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }));

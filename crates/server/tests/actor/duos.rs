@@ -32,12 +32,14 @@ use jackioh_engine::config::{
 };
 use jackioh_engine::wire::DuosSeat;
 use jackioh_server::actor::guard::FLOOD_WINDOW_MS;
+use jackioh_server::actor::protocol::SERVER_NONCE_PREFIX;
 use jackioh_server::actor::ws_server::{Socket, SocketFrame};
 use jackioh_server::app::{App, now_ms, router};
 use jackioh_server::config::{
     DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_ROUND_CLOCK_MS,
-    MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MS, MAX_SAVED_DECKS,
-    PING_RATE_LIMIT, PING_RATE_WINDOW_MS, REJECTION_ALERT_THRESHOLD, REJECTION_ALERT_WINDOW_MS,
+    MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MS, MATCH_SERVER_ACTION_RETRY_MS,
+    MAX_SAVED_DECKS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS, REJECTION_ALERT_THRESHOLD,
+    REJECTION_ALERT_WINDOW_MS,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{CollectionEntry, Db};
@@ -46,6 +48,7 @@ use jackioh_server::duos::store::DuosActionRow;
 
 use super::ws_server::encode_query;
 use crate::support::deps::{add_user, call, empty_test_app, record_logs};
+use crate::support::engine::{PANIC_TEXT, install_panicking_plays};
 
 /// S6's socket.
 const DUOS_PATH: &str = "/ws/duos";
@@ -1901,6 +1904,134 @@ mod r1047000_the_ceiling {
         assert_eq!(view["view"]["result"], draw, "{view}");
         assert_eq!(h.live(&h.host).await, Value::Null);
         assert_eq!(h.live(&h.guest).await, Value::Null);
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1253000 — a live action the engine panics on
+// ---------------------------------------------------------------------------------------------
+
+/// R1253000: a live co-op `reduce` that panics changes nothing, is answered `internal` once and kept
+/// under its nonce, and is filed for the night bot; a server action (the AI's move or the ceiling's)
+/// that panics ends the match at once as the ceiling's draw (R1047001), since the AI would make the
+/// same move again on the same state.
+mod r1253000_a_live_coop_action_the_engine_panics_on {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    /// Round 1 open with both people seated, and the first `play` A1 may make. Every play of a card of
+    /// the cheap deck by team A panics (`install_panicking_plays`), counted in `runs`.
+    async fn opened() -> (Duos, WsClient, WsClient, Arc<AtomicUsize>, Value) {
+        let cheap =
+            deck_where(|def| def["type"] == "Unit" && def["cost"].as_i64().is_some_and(|cost| cost <= 1));
+        let runs = Arc::new(AtomicUsize::new(0));
+        install_panicking_plays(&cheap, Arc::clone(&runs));
+        let h = duos_with("easy", Some(cheap)).await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        h.ai_mulligans_answered(&a1).await;
+        h.keep(&a1, "a1-keep").await;
+        h.keep(&a2, "a2-keep").await;
+        a1.wait_for(0, PROMPTLY, |frame| round_of(frame) >= 1)
+            .await
+            .expect("round 1 opens once all four mulligans are in");
+        let play = legal(&last_view(&a1))
+            .into_iter()
+            .find(|entry| is_duel(entry, "play"))
+            .expect("A1 may play a card");
+        (h, a1, a2, runs, play)
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1253000_a_persons_action_whose_reduce_panics_is_answered_once_changes_nothing_and_is_filed() {
+        let (h, a1, a2, runs, play) = opened().await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let (seq, hash, rows) = (actor.next_seq(), actor.hash(), h.logged().await.len());
+
+        let answer = act(&a1, "a1-boom", play.clone()).await;
+        assert_eq!(answer["type"], "error", "{answer}");
+        assert_eq!(answer["code"], "internal", "{answer}");
+        assert_eq!(runs.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            (actor.next_seq(), actor.hash(), h.logged().await.len()),
+            (seq, hash, rows)
+        );
+
+        // `reduce` is pure, so a resend gets the same answer without a second run.
+        let again = act(&a1, "a1-boom", play).await;
+        assert_eq!(again, answer);
+        assert_eq!(runs.load(Ordering::SeqCst), 1);
+
+        let reports = h.app.bug_reports.recorded();
+        assert_eq!(reports.len(), 1, "{reports:?}");
+        assert_eq!(
+            reports[0].title,
+            format!(
+                "Patch v0.3.Y: match {} (co-op) panicked on a live action",
+                h.match_id
+            )
+        );
+        assert!(
+            reports[0].body.contains(&format!("| {seq} | a1 | `play` |")),
+            "{}",
+            reports[0].body
+        );
+        assert!(!reports[0].body.contains(PANIC_TEXT), "{}", reports[0].body);
+
+        // Nothing was half-applied: both people play on, and the log's seqs have no gap.
+        let first = act(&a1, "a1-end", duel(json!({ "type": "endTurn" }))).await;
+        assert_eq!(first["type"], "ack", "{first}");
+        assert_eq!(first["seq"], json!(seq));
+        let second = act(&a2, "a2-end", duel(json!({ "type": "endTurn" }))).await;
+        assert_eq!(second["type"], "ack", "{second}");
+        assert!(second["seq"].as_i64() > first["seq"].as_i64(), "{second}");
+        let seqs: Vec<i64> = h.logged().await.iter().map(|row| row.seq).collect();
+        assert_eq!(seqs, (1..=count(seqs.len())).map(int).collect::<Vec<i64>>());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1253000_r1047001_a_server_action_whose_reduce_panics_ends_the_match_at_once_as_the_ceiling_draw()
+     {
+        let logs = record_logs();
+        let (h, _a1, _a2, runs, play) = opened().await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let (seq, rows) = (actor.next_seq(), h.logged().await.len());
+
+        // The AI's move as `on_ai_move` makes it: a server nonce, shared by every AI seat at a seq.
+        let answer = actor
+            .submit(
+                DuosSeat::A1,
+                format!("{SERVER_NONCE_PREFIX}ai-{seq}"),
+                serde_json::from_value(play).expect("a legal action is an action"),
+            )
+            .await;
+        let answer = serde_json::to_value(&answer).expect("an answer serialises");
+        assert_eq!(answer["type"], "error", "{answer}");
+        assert_eq!(answer["code"], "internal", "{answer}");
+
+        assert!(actor.is_finished(), "the match ended at once");
+        let mut t = h.app.db.begin(None).await.expect("a transaction");
+        let row = t
+            .duos_matches_get(&h.match_id)
+            .await
+            .expect("the row")
+            .expect("the match's row");
+        t.commit().await.expect("the commit");
+        assert_eq!(
+            row.result,
+            Some(json!({ "outcome": "draw", "winner": null, "reason": "ceiling" }))
+        );
+        assert!(row.ended_at.is_some(), "{row:?}");
+        assert_eq!(h.logged().await.len(), rows);
+        assert!(!registry(&h.app).has(&h.match_id));
+
+        // Not tried again: the same action on the same state would panic again.
+        tokio::time::sleep(ms(MATCH_SERVER_ACTION_RETRY_MS) * 3).await;
+        settle().await;
+        assert!(logs.named("duos.ceiling.retrying").is_empty());
+        assert_eq!(logs.named("duos.panicked.drawn").len(), 1);
+        assert_eq!(runs.load(Ordering::SeqCst), 1);
+        assert_eq!(h.app.bug_reports.recorded().len(), 1);
     }
 }
 

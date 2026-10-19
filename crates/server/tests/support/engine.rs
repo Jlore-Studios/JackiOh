@@ -40,13 +40,13 @@
 //! `target`. The filler `test-card-<n>` cards are 0-cost Spells that do nothing.
 //!
 //! Not ported: `createFakeEngine` itself (the real engine stands where it stood), `FAKE_HAND_SIZE`
-//! (the real opening hands are `OPENING_DRAW`'s, three for p1 and four for p2), the fake's
+//! (the real opening hands are `OPENING_DRAW`'s, four for each seat), the fake's
 //! `dealRandomDeck` (`actor::engine::deal_random_deck` is the real R258 deal). The two Glitch cards
 //! force one outcome each where the engine's own Glitch (`subsystems::glitch`) draws it from the
 //! match rng: each is a test-made `Effect` that writes exactly what that outcome writes (TS's fake
 //! wrote the same two fields and events).
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::Duration;
 
@@ -60,7 +60,7 @@ use jackioh_engine::state::validate_deck;
 use jackioh_engine::testkit::{register_catalog, register_scripts};
 use jackioh_engine::wire::{GameEvent, GameOverReason, GlitchOutcome, Winner};
 use jackioh_engine::{
-    Action, ActionBody, CardDef, CardDefs, CardScripts, CreateGameOptions, GameState, Phase, PlayerId,
+    Action, ActionBody, CardDef, CardDefs, CardScripts, CreateGameOptions, GameState, Hook, Phase, PlayerId,
     Script, StaticFlags, begin_game, create_game, hook, mulligan_owed, reduce,
 };
 use serde_json::json;
@@ -80,6 +80,16 @@ pub const TEST_MUTUAL_LETHAL: &str = "test-mutual-lethal";
 pub const TEST_GLITCH_SWAP: &str = "test-glitch-swap";
 /// A Glitch's void (R679): the game ends with no winner, reason `voided`.
 pub const TEST_GLITCH_VOID: &str = "test-glitch-void";
+
+/// R1253000: a 0-cost Quickdraw Spell whose play panics, as a settle cap's `panic!` does. It is not in
+/// `install_test_cards`'s catalog: `install_panicking_test_cards` adds it.
+pub const TEST_PANICS: &str = "test-panics";
+/// R1253000: a 0-cost Quickdraw Field Spell that panics when its controller's turn ends, so the
+/// clock's `timeout` (which ends that turn) panics. Added by `install_panicking_test_cards`.
+pub const TEST_PANICS_AT_TURN_END: &str = "test-panics-at-turn-end";
+/// R1253000: what the panicking scripts panic with. A report must never hold it: a real panic's text
+/// can name a card.
+pub const PANIC_TEXT: &str = "test-panics: the settle loop reached its cap";
 
 /// The filler cards' id prefix: `test-card-0`, `test-card-1`, …
 pub const FILLER_PREFIX: &str = "test-card-";
@@ -417,6 +427,97 @@ pub fn install_gated_test_cards(gate: Arc<FoldGate>) {
             radiant: script,
         },
     );
+    register_scripts(scripts);
+}
+
+/// R1253000: a hook that counts its run in `runs` and panics.
+fn panicking(runs: Arc<AtomicUsize>) -> Hook {
+    hook(move |_ctx| {
+        runs.fetch_add(1, Ordering::SeqCst);
+        panic!("{PANIC_TEXT}")
+    })
+}
+
+/// R1253000: `install_test_cards`' cards plus `TEST_PANICS` (its play panics) and
+/// `TEST_PANICS_AT_TURN_END` (the end of its controller's turn panics), each run counted in `runs`.
+pub fn install_panicking_test_cards(runs: Arc<AtomicUsize>) {
+    jackioh_cards::register_all();
+    let mut defs = test_catalog();
+    // Past `TEST_FOLD_GATE`'s index, so the two never meet.
+    let index = FIRST_TEST_INDEX + test_card_defs().len() as i32 + 1;
+    defs.insert(
+        TEST_PANICS.to_string(),
+        test_def(TEST_PANICS, index, "Quickdraw. Panics."),
+    );
+    defs.insert(
+        TEST_PANICS_AT_TURN_END.to_string(),
+        json_as(json!({
+            "id": TEST_PANICS_AT_TURN_END,
+            "index": (index + 1).to_string(),
+            "name": format!("{TEST_PANICS_AT_TURN_END} (server tests)"),
+            "set": "Core",
+            "type": "Field Spell",
+            "tags": [],
+            "rarity": "Common",
+            "token": false,
+            "cost": 0,
+            "base": { "keywords": [], "text": "Quickdraw. End of turn: panics." },
+            "radiant": { "keywords": [], "text": "Quickdraw. End of turn: panics." },
+        })),
+    );
+    register_catalog(defs);
+    let mut scripts = test_scripts();
+    for (id, script) in [
+        (
+            TEST_PANICS,
+            Script {
+                static_flags: quickdraw(),
+                cry: Some(panicking(Arc::clone(&runs))),
+                ..Script::default()
+            },
+        ),
+        (
+            TEST_PANICS_AT_TURN_END,
+            Script {
+                static_flags: quickdraw(),
+                end_of_turn: Some(panicking(runs)),
+                ..Script::default()
+            },
+        ),
+    ] {
+        scripts.insert(
+            id.to_string(),
+            CardScripts {
+                base: script.clone(),
+                radiant: script,
+            },
+        );
+    }
+    register_scripts(scripts);
+}
+
+/// R1253000: the Cry of each of `cards` panics, counted in `runs`, when `p1` (team A, the people, in
+/// a co-op match) plays it; anyone else's play gets the card's printed Cry. It installs scripts only,
+/// for the calling thread: the AI decides on the blocking pool, where cards read as printed.
+pub fn install_panicking_plays(cards: &[String], runs: Arc<AtomicUsize>) {
+    jackioh_cards::register_all();
+    let mut scripts = jackioh_cards::scripts_of();
+    for id in cards {
+        let Some(card) = scripts.get_mut(id) else {
+            continue;
+        };
+        for face in [&mut card.base, &mut card.radiant] {
+            let printed = face.cry.clone();
+            let runs = Arc::clone(&runs);
+            face.cry = Some(hook(move |ctx| {
+                if ctx.controller != PlayerId::P1 {
+                    return printed.as_ref().map_or_else(Vec::new, |cry| cry(ctx));
+                }
+                runs.fetch_add(1, Ordering::SeqCst);
+                panic!("{PANIC_TEXT}")
+            }));
+        }
+    }
     register_scripts(scripts);
 }
 

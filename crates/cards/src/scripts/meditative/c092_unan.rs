@@ -1,7 +1,7 @@
-//! M #92 Unan (SPEC §8.8 row 92): (3) Unit, Rare, 3/13 with Armor 3 → 6/26 with Armor 7.
+//! M #92 Unan (SPEC §8.8 row 92): (3) Unit, Rare, 3/13 with Armor 3 → 6/26 with Armor 6.
 //!
 //! Base:    "Armor 3\nLethal damage your hero or your other Units would take is redirected to this."
-//! Radiant: "Armor 7\nLethal damage your hero or your other Units would take is redirected to this."
+//! Radiant: "Armor 6\nLethal damage your hero or your other Units would take is redirected to this."
 //! Engine: `ReplacementDef { id: "92-lethal-guard", on: LethalHit, instead: redirect SelfCard }`
 //! (ME-LETHALGUARD, R1204): §4.4 step 4a opens for Units too, so a fatal hit on a friendly ally
 //! goes to Unan through Unan's own Armor, each Unan catching a given hit once. Armor is catalog
@@ -34,7 +34,7 @@ pub fn script() -> CardScripts {
 
 // M #92 Unan — SPEC §8.8 row 92, BUILD M10 row M 92: "§4.4 step 4a opens for Units as well as heroes,
 // so a fatal hit on a friendly ally goes to Unan through Unan's own Armor, each Unan catching a
-// given hit once (Covers R1204); the Radiant face is 6/26 with Armor 7".
+// given hit once (Covers R1204); the Radiant face is 6/26 with Armor 6".
 //
 // The guard is proved in `crates/engine/tests/rules/mb22.rs` (R1204); these tests prove the card's
 // own faces carry it.
@@ -292,13 +292,13 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r1204_radiant_is_6_26_with_armor_7_and_guards_through_it() {
+            fn r1204_radiant_is_6_26_with_armor_6_and_guards_through_it() {
                 crate::register_all();
                 let def = crate::card_def(ID);
-                assert_eq!(def.radiant.keywords, vec![Keyword::Armor { n: 7 }]);
+                assert_eq!(def.radiant.keywords, vec![Keyword::Armor { n: 6 }]);
                 assert_eq!(
                     def.radiant.text,
-                    "Armor 7\nLethal damage your hero or your other Units would take is redirected to this."
+                    "Armor 6\nLethal damage your hero or your other Units would take is redirected to this."
                 );
                 assert_eq!(
                     registered_scripts()[ID].radiant.replacements.len(),
@@ -312,7 +312,7 @@ mod tests {
                 s.end_turn();
                 s.attack(STRIKER, ALLY);
                 assert_eq!(s.stats(ALLY).health, 3, "the ally is untouched");
-                assert_eq!(s.stats(UNAN).health, 26 - (9 - 7));
+                assert_eq!(s.stats(UNAN).health, 26 - (9 - 6));
             }
         }
     }

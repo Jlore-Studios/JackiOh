@@ -246,8 +246,3 @@ fn r389_doubles_the_turn_cap_and_the_match_ceiling_with_it() {
     // own clock tests (spec/rulings/R0389.md).
     assert_eq!(config::TURN_CAP_PLAYER_TURNS, 60);
 }
-
-#[test]
-fn r1216000_names_at_most_spell_answer_cap_spell_answers_per_game() {
-    assert_eq!(config::SPELL_ANSWER_CAP, 200);
-}

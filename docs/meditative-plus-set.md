@@ -246,7 +246,7 @@ from an entry, the decision wins.
 - **Text:** Add a random Wincon card to your hand, and its plan: a Base Camp for Reach the Summit, a Spa Day for Aestheticize the Game.
 - **Radiant:** Add a random Radiant Wincon card to your hand, and its Radiant plan: a Radiant Base Camp for Reach the Summit, a Radiant Spa Day for Aestheticize the Game.
 - **Engine:** One pick, by the match rng, from the Wincon pool (`{ tags: [Wincon] }`, the shipped sets', [[R380]]; today M #8 Reach the Summit and M #20 Aestheticize the Game), added to your hand (`add_to_hand { defId }`), then the helper token its plan names, from a table in the script keyed by catalog id (`WINCON_PLANS`: `meditative-008` → M+ #1.1 Base Camp, `meditative-020` → M+ #1.2 Spa Day), added after it. A Wincon card with no plan (a later set's) is added alone. The Radiant face adds both Radiant (`radiant: true`). A full hand burns what does not fit, in that order ([[§2.4]]). Quickdraw ([[R640]]).
-- **Rulings:** MP-B07-1: the plan is the helper the brief defines for the card drawn, never a random one; a Wincon card with no plan is added alone. The pick is one `rng.pick` over the pool in catalog order, so it replays ([[R60]]).
+- **Rulings:** MP-B07-1, built as [[R1185000]]: the plan is the helper the brief defines for the card drawn, never a random one; a Wincon card with no plan (or a Glitch, [[R673]]'s odds applying to the pick) is added alone. The pick is one draw over the pool in catalog order, so it replays ([[R60]]).
 - **Numbers:** none (the pool and the plans are the frame).
 - **Check:** The designer's "{for AI creating this: …}" is answered by MP5's D3: the easiest way to each Wincon, and two AI cards (M+ #1.1, #1.2) as the help. R275: Radiant Wincon card and Radiant helpers, both stronger. Quickdraw as written.
 - **Class:** C (the plan table; Ascent levels as a verb for #1.1).
@@ -256,10 +256,10 @@ from an entry, the decision wins.
 
 > **Designer:** (the designer: "you may make some AI cards to help"; defined by this brief, MP5 D3)
 
-- **Text:** Every Reach the Summit you own goes up {levels} Ascent levels. Add {coins|Coin|Coins} to your hand.
-- **Radiant:** Every Reach the Summit you own goes up {levels} Ascent levels. Add {coins|Radiant Coin|Radiant Coins} to your hand.
+- **Text:** Every Reach the Summit you own goes up {levels|Ascent level|Ascent levels}. Add {coins|Coin|Coins} to your hand.
+- **Radiant:** Every Reach the Summit you own goes up {levels|Ascent level|Ascent levels}. Add {coins|Radiant Coin|Radiant Coins} to your hand.
 - **Engine:** NEW: Ascent levels as a verb (B07): raise M #8 Reach the Summit's play count ([[R429]], `counts_plays`) by N on every instance its caster owns, in every zone (hand, deck, graveyard, exile, the field's stack while it resolves), each a public `numberChanged` on a revealed card and hidden in a hand or deck ([[R97]]). Then `add_to_hand { defId: core-t-coin, count }` (Radiant: `radiant: true`). An instance at level 10 or above wins when it is next played (ME-WIN, [[R850]]); raising the count never wins by itself.
-- **Rulings:** MP-B07-2: "you own" is the owner ([[§3.2]]), wherever the card is; a copy made later starts at 0 ([[R57]]); a Reach the Summit you do not own is untouched.
+- **Rulings:** MP-B07-2, built as [[R1185001]]: "you own" is the owner ([[§3.2]]), wherever the card is; a copy made later starts at 0 ([[R57]]); a Reach the Summit you do not own is untouched. The verb is `raise_times_played`, and each card raised reports `numberChanged` "timesPlayed".
 - **Numbers:** levels 2 ↑ (Radiant 3); coins 2 ↑ (the Radiant face's Coins are Radiant: 2 mana each).
 - **Check:** Defined by this brief (⚠ designer, MP7). R275: 3 levels and Radiant Coins against 2 and Coins.
 - **Class:** C (Ascent levels).
@@ -285,7 +285,7 @@ from an entry, the decision wins.
 - **Text:** Fuse the card with the lowest win rate and the card with the highest win rate, and add it to your hand. It costs ({setCost}).
 - **Radiant:** Fuse a Radiant card with the lowest win rate and a Radiant card with the highest win rate, and add it to your hand. It costs ({setCost}).
 - **Engine:** NEW: the lowest win rate (B05), `win_rates::win_rate_trailer` beside M #50 CN Tech's `win_rate_leader` ([[R1100]]): the same compiled table (`crates/cards/data/win_rates.json`, which ships empty), the same eligibility (`CN_TECH_MIN_GAMES` games, non-token cards of the sets that ship) and ties broken the same way read from the other end. NEW: a two-ingredient fuse from two picks (`fuse_generated`'s shape, one ingredient per pick, [[R1108]]), added with `costOverride` ([[R77]], [[R102]]); the Radiant face makes both ingredients Radiant first. With no eligible card a random non-token card stands in for each missing ingredient, as M #50's fallback, and two different cards are fused (the trailer skips the leader).
-- **Rulings:** MP-B05-1: the lowest is the leader's mirror over the same table and floor; with one eligible card it is the leader and a random card the other; the fused card is a transient definition ([[R77]]), never in a pool.
+- **Rulings:** MP-B05-1, built as [[R1183000]] and [[R1183001]]: the lowest is the leader's mirror over the same table and floor, the same tie-breaks (more games, then the id) with only the rate ranked the other way; with one eligible card it is the leader and a random card the other; the two picks are `distinct`; the fused card is a transient definition ([[R77]]), never in a pool, at a `costOverride` of setCost once it stands in the hand.
 - **Numbers:** setCost 2 ↓ (Radiant 0).
 - **Check:** "winrate" is R1100's win rate. The table ships empty, so until a stats run fills it the card fuses two random cards (⚠ designer). R275: Radiant ingredients and (0) against (2).
 - **Class:** C (the trailer, the two-pick fuse).
@@ -506,7 +506,7 @@ from an entry, the decision wins.
 - **Text:** Cast on draw: Gain {mana} mana and draw {draw|card|cards}. The AI plays the rest of your turn.
 - **Radiant:** Cast on draw: Gain {mana} mana and draw {draw|card|cards}. The AI plays the rest of your turn.
 - **Engine:** Cast on draw (`StaticFlags.cast_on_draw`, [[§6.2]], [[R635]]): `gain_mana` (temporary), `draw`, then NEW: the autopilot (B05), a status on the caster for the rest of the turn under which the engine plays for them, one greedy legal action at a time by the §10.7 scorer (`subsystems/scorer.rs`, as M #71's judge, never `crates/ai`), up to `AUTOPILOT_MAX_ACTIONS`, then ends the turn; Core #96 My Pawn's `ai_plays_out_turn` is its random cousin. Played from the hand (past [[R58]]'s cap), it does the same.
-- **Rulings:** MP-B05-2: only on its caster's own turn; drawn on the opponent's turn it gains and draws and the autopilot does nothing; a prompt the autopilot meets is answered by the same scorer; the client shows the turn played for you and takes no input but a concession.
+- **Rulings:** MP-B05-2, built as [[R1183002]] and [[R1183003]]: only on its caster's own turn; drawn on the opponent's turn it gains and draws and the autopilot does nothing; the engine plays the turn once the action that engaged it has settled, each action through the reducer's own step; each choice is the scorer's, tried on the player's concealed board (a prompt's best answer, else the first harmless play in the scorer's order, else a worthwhile attack, else the end of the turn); a question for the opponent pauses it; the client shows the turn played for you (`autopilotEngaged`'s banner) and takes no input but a concession.
 - **Numbers:** mana 1 ↑ (Radiant 3); draw 1 ↑ (Radiant 2).
 - **Check:** "the AI" is the engine's scorer, deterministic and seeded ([[§9.3]]). R275: 3 mana and 2 cards against 1 and 1.
 - **Class:** D (the autopilot).
@@ -531,8 +531,8 @@ from an entry, the decision wins.
 
 - **Text:** Answer three-digit sums one after another until you stop or miss one. Then summon a Lil' Kenny with X/X, X your correct answers.
 - **Radiant:** Answer one- and two-digit sums one after another until you stop or miss one. Then summon a Radiant Lil' Kenny with 2X/2X, X your correct answers.
-- **Engine:** NEW: a question sequence (B06): C+ #42 KY's Test's `answer` prompt ([[R420]], `subsystems/ky_test.rs`) asked again after each right answer, with a Stop option, the streak in a plain-data `Resume` record (`work.rs`), each problem rolled from the match rng (three-digit addition or subtraction; the Radiant face one- or two-digit), the key never leaving the engine; at most `KY_COMPETITION_MAX` (30) questions. Then a summon of M+ #20.1 with `stats_override` X/X (Radiant face: Radiant, its own face doubling to 2X/2X, [[R349]]'s rule as written on its face), with X = 0 summoning nothing.
-- **Rulings:** MP-B06-1: a wrong answer ends it and X counts the right ones before it; Stop ends it with X so far; a timeout ends it as a Stop; the AI, the random policy and a timeout answer it ([[R79]]).
+- **Engine:** NEW: a question sequence (B06): C+ #42 KY's Test's `answer` prompt ([[R420]], `subsystems/ky_test.rs`) asked again after each right answer, with a Stop option, the streak in a plain-data `Resume` record (`work.rs`), each problem rolled from the match rng (three-digit addition or subtraction; the Radiant face one- or two-digit), the key never leaving the engine; at most `KY_COMPETITION_MAX` (30) questions. Then a summon of M+ #20.1 with its X (`summon`'s `x`, [[R1184003]]; built so by B06 rather than with a `stats_override`, which a Radiant Kenny would wear as X/X, [[R349]]), Radiant on the Radiant face, its own face's `xStats` making it 2X/2X, with X = 0 summoning nothing.
+- **Rulings:** MP-B06-1, built as [[R1184000]] and [[R1184001]]: a wrong answer ends it and X counts the right ones before it; Stop ends it with X so far; a timeout ends it as a Stop; the AI, the random policy and a timeout answer it ([[R79]]). B06 also decided the questions (a subtraction's larger operand first; misses ±1, ±10, ±100 on the base face, C+ #42's on the Radiant face, none below 0) and the AI's answer: it works each question out from its statement, at once, with no search, and never stops ([[R1184002]]).
 - **Numbers:** none (the cap is `KY_COMPETITION_MAX`; the digits are the frame).
 - **Check:** "in a row": the sequence stops at the first miss, so every answer counted was in a row. The Radiant face's easier questions are R275's effect half; 2X/2X is its Kenny's Radiant face.
 - **Class:** D (the question sequence).
@@ -544,8 +544,8 @@ from an entry, the decision wins.
 
 - **Text:** With X at least 4, it has Rush; 8, Divine Shield; 12, First Strike; 16, Cleave; 20, Lifesteal; 30, Indestructible.
 - **Radiant:** With X at least 4, it has Rush; 8, Divine Shield; 12, First Strike; 16, Cleave; 20, Lifesteal; 30, Indestructible.
-- **Engine:** Printed 0/0 with `xStats` 1/1 (Radiant 2/2), always summoned as X/X (`stats_override`, as the Bread and Ghoul Tokens, [[§7]]). Keywords by X: `Script.conditional_keywords` reading the instance's X (C #69's shape, `layers::conditional_keywords_of`), cumulative.
-- **Rulings:** MP-B06-2: the thresholds read X, not the current stats (a buff gives no keyword; the Radiant face's 2X/2X reads X too); a Vanilla removes them ([[R781003]]) and keeps X/X.
+- **Engine:** Printed 0/0 with `xStats` 1/1 (Radiant 2/2), always summoned with its X (`summon`'s `x`, [[R1184003]]), so X/X. Keywords by X: `Script.conditional_keywords` reading the instance's X (C #69's shape, `layers::conditional_keywords_of`), cumulative.
+- **Rulings:** MP-B06-2, built as [[R1184003]]: the thresholds read X, not the current stats (a buff gives no keyword; the Radiant face's 2X/2X reads X too); a Vanilla removes them ([[R781003]]) and keeps X/X; a copy has no X (B2.7), as a copy of C+ #69 has none.
 - **Numbers:** none (the thresholds are the frame, named constants).
 - **Check:** A token (printed Rare, [[R1178002]]): only M+ #20 makes one. R275: 2X/2X, the same keywords.
 - **Class:** B.
@@ -558,7 +558,7 @@ from an entry, the decision wins.
 - **Text:** Taunt / Cry: Set every other Unit's Attack and Health to 3/3.
 - **Radiant:** Taunt / Cry: Set every other Unit's Attack and Health to 3/3. Fill your board with Rush Tokens in Chinese.
 - **Engine:** NEW: set stats (B07), a `stats_override` of 3/3 on every other Unit of both sides with its damage and stat buffs cleared (Hearthstone's "set"), an Immutable one untouched ([[R23]]). The Radiant face then fills its controller's board with Rush Tokens (`fill_board`, M #56, [[R942]], Locked zones included, [[R1136000]]) with the `chinese` rider, so each is CN (#1176).
-- **Rulings:** MP-B07-3: "set" replaces the attack and the max health and heals to it: a 10/10 with 5 damage becomes 3/3 undamaged; auras still apply on top ([[§10.4]]); the Rush Tokens arrive after the set, at their printed 3/3.
+- **Rulings:** MP-B07-3, built as [[R1185002]]: "set" replaces the attack and the max health and heals to it: a 10/10 with 5 damage becomes 3/3 undamaged, its buffs and the stat half of its tuning gone; auras (and a card's own layer-2 count) still apply on top ([[§10.4]]); the Rush Tokens arrive after the set, at their printed 3/3. The verb is `set_stats_all`, and `fill_board` gains the `chinese` rider.
 - **Numbers:** none: the set's 3/3 is the frame (it is good for one side and bad for the other, so no `better` direction fits it).
 - **Check:** "CN keyword" is the CN tag (#1176). R275: 6/14 and a full board of Rush Tokens.
 - **Class:** C (set stats).
@@ -594,10 +594,10 @@ from an entry, the decision wins.
 
 > **Designer:** (3) Bob, Wisconsin's Strongest Soldier, Unit, Spell, Legendary · [5/5] · Cry: Choose one · Freeze all enemy units · Add an enemy unit to your hand and give your opponent 3 coins · Discover a random unit, make it radiant · Draw 1, fill your hand with copies of it ~~~ [10/10] · Cry: Do all of the following in order · Freeze all enemy units · Add an enemy unit to your hand and give your opponent 3 coins · Discover a random unit, make it radiant · Draw 1, fill your hand with copies of it
 
-- **Text:** Cry: Choose one: / Freeze all enemy Units. / Put an enemy Unit into your hand. Your opponent gets {coins|Coin|Coins}. / Discover a Unit. Make it Radiant. / Draw 1. Fill your hand with copies of it.
-- **Radiant:** Cry: Do all of these, in order: / Freeze all enemy Units. / Put an enemy Unit into your hand. Your opponent gets {coins|Coin|Coins}. / Discover a Unit. Make it Radiant. / Draw 1. Fill your hand with copies of it.
+- **Text:** Cry: Choose one: Freeze all enemy Units; put an enemy Unit into your hand, and your opponent gets {coins|Coin|Coins}; Discover a Unit and make it Radiant; or draw 1 and fill your hand with copies of it.
+- **Radiant:** Cry: Do all of these, in order: Freeze all enemy Units; put an enemy Unit into your hand, and your opponent gets {coins|Coin|Coins}; Discover a Unit and make it Radiant; then draw 1 and fill your hand with copies of it.
 - **Engine:** Four declared modes ([[R81]]; M #49.1's every-effect list on the Radiant face). 1: Freeze (#1174) on every enemy Unit. 2: NEW: an enemy Unit into your hand (B07), a declared enemy Unit, the top of its pile ([[R13]]), leaving the field to your hand as yours (`ownership::take_into_hand` extended to the field, [[R747]]'s ownership move; a token ceases to exist, [[R11]]), then `add_to_hand { defId: core-t-coin, count: 3, player: enemy }`. 3: `discover_from_catalog { type: Unit }` with the pick added Radiant (M #88). 4: `draw` 1 then `add_to_hand { copyOf }` until the hand is full ([[R596]], [[R1242]]).
-- **Rulings:** MP-B07-4: mode 2 targets at play time and fizzles with no enemy Unit; a token taken ceases to exist and the Coins are still given; the Radiant face declares mode 2's target with the play and resolves the four in order, each its own step; with no draw (an empty deck: fatigue) mode 4 copies nothing.
+- **Rulings:** MP-B07-4, built as [[R1185003]] (the take) and [[R1185004]] (the modes): mode 2 targets at play time; on the base face the target is needed, so with no enemy Unit mode 2 is not offered ([[R703]]); a token taken ceases to exist and the Coins are still given, as they are whenever a Unit was declared; the Radiant face declares mode 2's target with the play and resolves the four in order, each its own step, giving no Coins when no Unit was declared; with no draw (an empty deck: fatigue) mode 4 copies nothing. The text is one line, as Classic #20's Choose one is (R366's full stops). The verbs are `freeze_all`, `take_to_hand`, `discover_from_catalog` and `draw_priced`'s `fillWithCopies`.
 - **Numbers:** coins 3 ↓.
 - **Check:** The designer's "Unit, Spell" is a Unit ([[R1178002]]). "coins" are The Coin. R275: 10/10 and all four modes.
 - **Class:** C (an enemy Unit into your hand; Freeze from #1174).
@@ -610,7 +610,7 @@ from an entry, the decision wins.
 - **Text:** Discover one of 3 blocks of card code. Add the Radiant card with that code to your hand.
 - **Radiant:** Discover one of 3 blocks of card code. Add the Radiant card with that code to your hand. It costs (0).
 - **Engine:** NEW: code blocks (B05): each card's excerpt compiled in from its own script by `crates/cards/build.rs` (the lines above `#[cfg(test)]`, header comments and `use` lines dropped, at most `CODE_BLOCK_MAX_LINES`), held beside the catalog, and a Discover over 3 random non-token cards of the shipped sets ([[R380]]) whose options the view shows as code alone, never the card's id, name or face, until one is picked ([[§10.8]], CLAUDE.md rule 7); the pick is added Radiant (M #88), the Radiant face with `costOverride` 0. The WASM size cap (#442 L12) is checked.
-- **Rulings:** MP-B05-3: the three are distinct cards; a card's code block is its own script's, the same on both faces; the AI chooses by the scorer over the hidden cards it would get (the engine knows them), as any Discover.
+- **Rulings:** MP-B05-3, built as [[R1183004]] and [[R1183005]]: the three are distinct cards; a card's code block is its own script's lines of code less its `ID` line, its own id written `ID` and its name `???`, the same on both faces; the cards behind the options ride the prompt's resume data; the AI chooses as in any Discover, its search trying each answer.
 - **Numbers:** setCost 0, on the Radiant face only (`tunedOn: radiant`, [[R824000]]).
 - **Check:** "should come from an actual coded card": the excerpt is the card's real script. R275: the card at (0).
 - **Class:** D (code blocks).

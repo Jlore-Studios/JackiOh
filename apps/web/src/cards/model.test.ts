@@ -220,11 +220,11 @@ function marksOf(id: string): string[] {
 
 describe("R277: a Radiant face prints its whole text and marks what differs from the base", () => {
   it("R277 a changed number is the only mark (core-044, core-053, core-013, core-047)", () => {
-    expect(face("core-044", true).text.full).toBe("Pierce\nDeal 9 damage. Exile this.");
-    expect(marksOf("core-044")).toEqual(["9"]);
+    expect(face("core-044", true).text.full).toBe("Pierce\nDeal 8 damage. Exile this.");
+    expect(marksOf("core-044")).toEqual(["8"]);
     expect(marksOf("core-053")).toEqual(["60"]);
     expect(marksOf("core-013")).toEqual(["4"]);
-    expect(marksOf("core-047")).toEqual(["50"]);
+    expect(marksOf("core-047")).toEqual(["40"]);
   });
 
   it("R277 a keyword line prints the radiant form's whole list and marks what it adds (core-056, core-025, core-019)", () => {
@@ -379,7 +379,7 @@ describe("B8: faceModel cost", () => {
 /* ------------------------------------------------------------------------------------------ B9 */
 
 describe("B9: faceModel stat tones", () => {
-  // core-013 Jlockeed Shredder-10 prints 6/10 on its base face and 8/20 on its radiant one.
+  // core-013 Jlockeed Shredder-10 prints 6/10 on its base face and 12/20 on its radiant one.
   const ID = "core-013";
 
   it("B9 attack above the printed face is buffed, below is reduced, equal is base", () => {
@@ -413,10 +413,10 @@ describe("B9: faceModel stat tones", () => {
   });
 
   it("B9 a radiant card's tones compare with the radiant face", () => {
-    // 8/20 is the radiant face exactly, and would be buffed against the base 6/10.
-    expect(face(ID, true, { live: live(8, 20, 20) }).stats).toMatchObject({ attackTone: "base", healthTone: "base" });
-    expect(face(ID, false, { live: live(8, 20, 20) }).stats).toMatchObject({ attackTone: "buffed", healthTone: "buffed" });
-    // 6/10 is the base face exactly, and is reduced against the radiant 8/20.
+    // 12/20 is the radiant face exactly, and would be buffed against the base 6/10.
+    expect(face(ID, true, { live: live(12, 20, 20) }).stats).toMatchObject({ attackTone: "base", healthTone: "base" });
+    expect(face(ID, false, { live: live(12, 20, 20) }).stats).toMatchObject({ attackTone: "buffed", healthTone: "buffed" });
+    // 6/10 is the base face exactly, and is reduced against the radiant 12/20.
     expect(face(ID, true, { live: live(6, 10, 10) }).stats).toMatchObject({ attackTone: "reduced", healthTone: "reduced" });
   });
 

@@ -202,6 +202,44 @@ fn r1012001_a_finalist_takes_the_correction_at_its_share() {
     });
 }
 
+/// R1012002: the learned evaluation reaches as far into the search as `LearnedReach` says, each step
+/// taking in the one before it: a complete line takes a finalist's score from `Lines` on, an open
+/// line from `Beam` on, and with the switch off every one keeps the hand eval.
+#[test]
+fn r1012002_the_reach_says_which_of_the_beam_s_scores_the_network_gives() {
+    let solo = state();
+    with_tiny(|network, _| {
+        let network = Learned::Float(*network);
+        let next = NextSwing::Enemy;
+        let hand = evaluate(&solo, PlayerId::P1, next, &AI_EVAL);
+        let learned = finalist_score_with(&solo, PlayerId::P1, next, EvalKind::Learned, &network);
+        assert_ne!(learned, hand, "the network moves this position");
+        for (reach, line, open) in [
+            (LearnedReach::Finalists, hand, hand),
+            (LearnedReach::Lines, learned, hand),
+            (LearnedReach::Beam, learned, learned),
+        ] {
+            let kind = EvalKind::Learned;
+            assert_eq!(
+                line_score_with(&solo, PlayerId::P1, next, reach, kind, &network),
+                line,
+                "{reach:?}: a complete line"
+            );
+            assert_eq!(
+                open_score_with(&solo, PlayerId::P1, next, reach, kind, &network),
+                open,
+                "{reach:?}: an open line"
+            );
+            for score in [line_score_with, open_score_with] {
+                assert_eq!(
+                    score(&solo, PlayerId::P1, next, reach, EvalKind::Hand, &network),
+                    hand
+                );
+            }
+        }
+    });
+}
+
 /// R1010002: with the switch on, a 1v1 finalist takes the network's score (at its share, R1012001)
 /// and a Duos duel's keeps the hand eval's (D9, R964000).
 #[test]
@@ -240,6 +278,45 @@ fn r1010002_a_duos_duel_keeps_the_hand_eval() {
             ),
             duos_hand
         );
+    });
+}
+
+/// R1012003: with the switch on, the tutorial's opponent (`AI_TUTORIAL`, R290) keeps the hand eval;
+/// the other seat, and a seat at any practice tier, still take the network's correction.
+#[test]
+fn r1012003_the_tutorials_opponent_keeps_the_hand_eval_and_every_tier_takes_the_network() {
+    let solo = state();
+    let mut tutorial = solo.clone();
+    tutorial.players[PlayerId::P1].handicap = Some(AI_TUTORIAL);
+    with_tiny(|network, _| {
+        let network = Learned::Float(*network);
+        for next in [NextSwing::Enemy, NextSwing::Seat] {
+            let hand = evaluate(&tutorial, PlayerId::P1, next, &AI_EVAL);
+            assert_eq!(
+                finalist_score_with(&tutorial, PlayerId::P1, next, EvalKind::Learned, &network),
+                hand
+            );
+            let other = finalist_score_with(&tutorial, PlayerId::P2, next, EvalKind::Learned, &network);
+            assert_eq!(
+                other,
+                finalist_score_with(&solo, PlayerId::P2, next, EvalKind::Learned, &network)
+            );
+        }
+        for tier in [AI_DIFFICULTY.medium, AI_DIFFICULTY.hard] {
+            let mut practice = solo.clone();
+            practice.players[PlayerId::P1].handicap = Some(tier);
+            assert_ne!(
+                finalist_score_with(
+                    &practice,
+                    PlayerId::P1,
+                    NextSwing::Seat,
+                    EvalKind::Learned,
+                    &network
+                ),
+                evaluate(&practice, PlayerId::P1, NextSwing::Seat, &AI_EVAL),
+                "a tier's handicap takes the network's correction"
+            );
+        }
     });
 }
 

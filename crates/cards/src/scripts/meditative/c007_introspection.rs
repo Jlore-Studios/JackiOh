@@ -1,7 +1,7 @@
 //! M #7 Introspection (SPEC §8.8 row 7, BUILD M10 row M 7). (4) Field Spell, Legendary.
 //!   Base and Radiant: "End of turn: Heal your hero and each of your Units {heal}. Draw
 //!   {draw|card|cards}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each
-//!   enemy." (3/8 step 2; 1; 1/2; 2/4)
+//!   enemy." (3/6 step 2; 1; 1/2; 2/4)
 //!
 //! An `end_of_turn` hook, which runs only on its controller's turn (`turn.rs`), returning in the
 //! written order: `heal` on `selfHero`, then each of the controller's Units (C+ #19.4 Support Loser's
@@ -71,7 +71,7 @@ pub fn script() -> CardScripts {
 // M #7 Introspection — SPEC §8.8 row 7, BUILD M10 row M 7: "At your end of turn: heal your hero and
 // each of your Units, draw, discount the whole hand (the drawn card included), then hit every enemy
 // (R59); an X card keeps its cost (R65); nothing fires at the opponent's end of turn; radiant heals
-// 8, discounts 2, hits 4 and still draws 1; its tuned numbers read through `param()` (R386)".
+// 6, discounts 2, hits 4 and still draws 1; its tuned numbers read through `param()` (R386)".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -194,13 +194,13 @@ mod tests {
         }
 
         #[test]
-        fn radiant_heals_8_discounts_2_hits_4_draws_1() {
+        fn radiant_heals_6_discounts_2_hits_4_draws_1() {
             crate::register_all();
             let mut s = setup(true);
 
             s.end_turn();
 
-            s.expect_health(P1, 28);
+            s.expect_health(P1, 26);
             // Genn's 4 damage is healed past full, capped at 14.
             s.expect_stats(GENN, json!({ "health": 14 }));
             assert_eq!(s.hand(P1).len(), 3);

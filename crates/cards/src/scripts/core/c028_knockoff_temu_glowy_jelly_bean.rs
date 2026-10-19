@@ -1,5 +1,5 @@
 //! #28 Knockoff Temu Glowy Jelly Bean (SPEC §8.2): "2 random cards among your library, hand and
-//! field become Radiant", radiant "5" — a Radiant cell that changes only a number changes only that
+//! field become Radiant", radiant "4" — a Radiant cell that changes only a number changes only that
 //! number (§8 Conventions).
 //!
 //! ONE `setRadiantRandom` call, not N calls and not one call per zone: the pick has to be uniform
@@ -20,7 +20,7 @@ pub const ID: &str = "core-028";
 /// then lane order) so the draw depends only on (seed, cursor) and replays exactly (§9.3).
 const ZONES: [&str; 3] = ["hand", "library", "field"];
 
-/// The count is the declared number `cards` (R386): 2, 5 on the Radiant face.
+/// The count is the declared number `cards` (R386): 2, 4 on the Radiant face.
 fn knockoff_temu() -> Script {
     Script {
         cry: Some(hook(|ctx| {
@@ -38,7 +38,7 @@ pub fn script() -> CardScripts {
 
 // #28 Knockoff Temu Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 28): "2 different non-Radiant
 // cards across library+hand+field (R60); a field unit swaps base stats in place keeping damage
-// (R22); radiant 5".
+// (R22); radiant 4".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -138,10 +138,10 @@ mod tests {
 
             s.play("core-028", json!({}));
 
-            // #13 Jlockeed Shredder-10 is 6/10 → 8/20. R22: the base layer swaps, the 2 damage stays (so
+            // #13 Jlockeed Shredder-10 is 6/10 → 12/20. R22: the base layer swaps, the 2 damage stays (so
             // health is 18, not a fresh 20), and setting a flag is no entry to the field, so no Cry re-fires.
             assert!(s.card(&unit_id).radiant);
-            s.expect_stats(&unit_id, json!({ "attack": 8, "maxHealth": 20, "health": 18 }));
+            s.expect_stats(&unit_id, json!({ "attack": 12, "maxHealth": 20, "health": 18 }));
             assert_eq!(s.card(&unit_id).damage, 2);
             assert_eq!(
                 s.last_events()
@@ -213,7 +213,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn flags_5_different_cards_across_the_same_three_zones() {
+        fn flags_4_different_cards_across_the_same_three_zones() {
             crate::register_all();
             let mut s = knockoff(json!({
                 "hand": [{ "def": "core-028", "radiant": true }, "core-005", "core-016", "core-010"],
@@ -224,12 +224,12 @@ mod tests {
             s.play("core-028", json!({}));
 
             let flagged = radiant_in_pool(s.state());
-            assert_eq!(flagged.len(), 5);
-            assert_eq!(flagged.iter().collect::<IndexSet<_>>().len(), 5);
+            assert_eq!(flagged.len(), 4);
+            assert_eq!(flagged.iter().collect::<IndexSet<_>>().len(), 4);
         }
 
         #[test]
-        fn r60_takes_all_of_them_when_the_union_holds_fewer_than_5_non_radiant_cards() {
+        fn r60_takes_all_of_them_when_the_union_holds_fewer_than_4_non_radiant_cards() {
             crate::register_all();
             let mut s = knockoff(json!({
                 "hand": [{ "def": "core-028", "radiant": true }, "core-005"],

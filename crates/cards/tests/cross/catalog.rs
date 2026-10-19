@@ -32,7 +32,10 @@
 //!                    the old spelling as the record).
 //!   patch v0.3.10   — issue #831's costs, stats, types and tags, in every set's rows: the briefs'
 //!                    lines are what the designer first wrote, the patch what the cards are now.
-//!   patch v0.3.12   — issue #1149's costs, stats and the CN in a Bottle rename.
+//!   patch v0.3.12   — issue #1149's costs, stats and the CN in a Bottle rename, and issue #1219's
+//!                    12 Attack for the Radiant Jlockeed Shredder-10.
+//!   patch v0.3.13   — issue #1194's costs: #76 Field of Dreams (2), C+ #64 Mulch Muncher (5) and
+//!                    Meditative #19.1 Temporal Rift (0).
 //!   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
 //!                    being R349's fallback.
 //!   rarity         — SPEC §8's rarity paragraph for Core (32/40/16/7/5) and B2.5's table for
@@ -252,7 +255,7 @@ const CORE: &[SpecRow] = &[
         &[G::Jlockeed],
         R::Common,
         st(6, 10),
-        st(8, 20),
+        st(12, 20),
     ),
     row(
         "14",
@@ -861,7 +864,7 @@ const CORE: &[SpecRow] = &[
     row(
         "76",
         "Field of Dreams",
-        c(3),
+        c(2),
         T::Spell,
         &[],
         R::Rare,
@@ -2267,7 +2270,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         &[G::Token],
         R::Token,
         st(4, 4),
-        st(10, 10),
+        st(8, 8),
     ),
     row(
         "19.2",
@@ -2277,7 +2280,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         &[G::Token],
         R::Token,
         st(4, 4),
-        st(10, 10),
+        st(8, 8),
     ),
     row(
         "19.3",
@@ -2287,7 +2290,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         &[G::Token],
         R::Token,
         st(4, 4),
-        st(10, 10),
+        st(8, 8),
     ),
     row(
         "19.4",
@@ -2297,7 +2300,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         &[G::Token],
         R::Token,
         st(0, 4),
-        st(0, 10),
+        st(0, 8),
     ),
     row(
         "19.5",
@@ -2307,7 +2310,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         &[G::Token],
         R::Token,
         st(4, 4),
-        st(10, 10),
+        st(8, 8),
     ),
     row(
         "20",
@@ -2822,7 +2825,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "64",
         "Mulch Muncher",
-        c(10),
+        c(5),
         T::Unit,
         &[],
         R::Rare,
@@ -3349,7 +3352,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "19.1",
         "Temporal Rift",
-        c(2),
+        c(0),
         T::Spell,
         &[G::Token],
         R::Token,
@@ -5784,13 +5787,16 @@ mod faces_that_change_more_than_text_b2_7_e40 {
     }
 
     #[test]
-    fn prints_buff_billy_s_3x_3x_and_6x_6x_as_x_multiples_on_a_0_0_face_and_no_other_face_has_them() {
+    fn prints_buff_billy_s_3x_3x_and_6x_6x_and_lil_kenny_s_x_x_and_2x_2x_as_x_multiples_and_no_other_face_has_them()
+     {
+        // Buff Billy's X is the one it is played for; Meditative+ #20.1 Lil' Kenny's the one M+ #20
+        // summons it with (R1184003).
         let with_x: Vec<String> = entries()
             .into_iter()
             .filter(|entry| entry.base.x_stats.is_some() || entry.radiant.x_stats.is_some())
             .map(|entry| entry.id.clone())
             .collect();
-        assert_eq!(with_x, strings(&["classicplus-069"]));
+        assert_eq!(with_x, strings(&["classicplus-069", "meditativeplus-020-1"]));
         let billy = CATALOG.get("classicplus-069");
         assert_eq!(billy.map(|entry| entry.cost), Some(CardCost::X));
         assert_eq!(
@@ -5800,6 +5806,15 @@ mod faces_that_change_more_than_text_b2_7_e40 {
         assert_eq!(
             billy.and_then(|entry| entry.radiant.x_stats).map(json),
             Some(serde_json::json!({ "attack": 6, "health": 6 }))
+        );
+        let kenny = CATALOG.get("meditativeplus-020-1");
+        assert_eq!(
+            kenny.and_then(|entry| entry.base.x_stats).map(json),
+            Some(serde_json::json!({ "attack": 1, "health": 1 }))
+        );
+        assert_eq!(
+            kenny.and_then(|entry| entry.radiant.x_stats).map(json),
+            Some(serde_json::json!({ "attack": 2, "health": 2 }))
         );
     }
 }

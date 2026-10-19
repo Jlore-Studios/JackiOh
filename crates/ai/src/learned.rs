@@ -5,7 +5,10 @@
 //! - **Where.** `AI_EVAL_KIND` (`config.rs`) chooses. With `EvalKind::Hand`, the default, nothing
 //!   changes. With `EvalKind::Learned`, `finalist_score` scores the finalists after the opponent's
 //!   reply (`reply_score`, the lines `score_line` re-scores on every determinization): D6's option B.
-//!   The beam's pruning keeps the hand eval, so the network picks among the lines the hand eval found.
+//!   `LEARNED_REACH` takes it further (R1012002): at `Lines`, every complete line where the beam
+//!   closes it (`line_score`, in `static_score`), so the network also picks the finalists; at `Beam`,
+//!   every open line the beam ranks too (`open_score`). Short of `Beam`, the beam's pruning keeps the
+//!   hand eval, so the network picks among the lines the hand eval found.
 //! - **What.** The network learned the seat's chance to win as `a·hand/U + b + net(x)` (D4's skip
 //!   connection, `training/ml/jackioh_ml/models.py`). Mapped back onto the hand eval's points, that is
 //!   `hand + (b + net(x))·U/a` (`Network::points`). So `unspent_mana`, the lethal constants and a
@@ -14,7 +17,8 @@
 //!   (points − hand)` (R1012001): fitted to outcomes, the whole correction judges positions a game
 //!   apart better than lines a move apart.
 //! - **Which games.** 1v1 only. A Duos duel keeps the hand eval (D9, R964000): the network never saw
-//!   a team's pool. A finished game keeps its won or lost score.
+//!   a team's pool. Nor does the tutorial's opponent (R1012003): its lessons are scripts written for
+//!   it. A finished game keeps its won or lost score.
 //! - **Arithmetic.** `f64`, every loop in one fixed order, ReLU written as comparisons (never
 //!   `f64::max`, so a signed zero cannot differ), and no libm function. That is the determinism the
 //!   hand eval's own `f64` rests on (D7). Part 6 (#1011) swaps it for integers before it ships.
@@ -24,9 +28,9 @@
 //!   new or custom card (#915) is valued by its dense stats alone (D5). The checked-in network may be
 //!   the null one, whose correction is zero everywhere, until a fit replaces it.
 
-use jackioh_engine::{GameState, PlayerId};
+use jackioh_engine::{AI_TUTORIAL, GameState, PlayerId};
 
-use crate::config::{AI_EVAL, AI_EVAL_KIND, EvalKind, LEARNED_CORRECTION_SHARE};
+use crate::config::{AI_EVAL, AI_EVAL_KIND, EvalKind, LEARNED_CORRECTION_SHARE, LEARNED_REACH, LearnedReach};
 use crate::evaluate::{NextSwing, evaluate};
 use crate::features::{Features, features_of};
 
@@ -196,6 +200,51 @@ pub fn finalist_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64
     finalist_score_with(state, seat, next, AI_EVAL_KIND, &LEARNED)
 }
 
+/// R1012002: the score a complete line gets where the beam closes it (`static_score`): a finalist's
+/// with `LEARNED_REACH` at `Lines` or past it, so the network also picks the finalists; the hand eval
+/// otherwise.
+pub fn line_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64 {
+    line_score_with(state, seat, next, LEARNED_REACH, AI_EVAL_KIND, &LEARNED)
+}
+
+/// R1012002: the score an open line gets where the beam ranks it at each depth: a finalist's with
+/// `LEARNED_REACH` at `Beam`, the hand eval otherwise.
+pub fn open_score(state: &GameState, seat: PlayerId, next: NextSwing) -> f64 {
+    open_score_with(state, seat, next, LEARNED_REACH, AI_EVAL_KIND, &LEARNED)
+}
+
+/// `line_score` under a given reach, switch and network, for tests and screens.
+pub fn line_score_with(
+    state: &GameState,
+    seat: PlayerId,
+    next: NextSwing,
+    reach: LearnedReach,
+    kind: EvalKind,
+    network: &Learned<'_>,
+) -> f64 {
+    if reach >= LearnedReach::Lines {
+        finalist_score_with(state, seat, next, kind, network)
+    } else {
+        evaluate(state, seat, next, &AI_EVAL)
+    }
+}
+
+/// `open_score` under a given reach, switch and network, for tests and screens.
+pub fn open_score_with(
+    state: &GameState,
+    seat: PlayerId,
+    next: NextSwing,
+    reach: LearnedReach,
+    kind: EvalKind,
+    network: &Learned<'_>,
+) -> f64 {
+    if reach >= LearnedReach::Beam {
+        finalist_score_with(state, seat, next, kind, network)
+    } else {
+        evaluate(state, seat, next, &AI_EVAL)
+    }
+}
+
 /// `finalist_score` under a given switch and network, for tests and screens.
 pub fn finalist_score_with(
     state: &GameState,
@@ -208,7 +257,12 @@ pub fn finalist_score_with(
     match kind {
         EvalKind::Hand => hand,
         EvalKind::Learned => {
-            if state.result.is_some() || state.players[seat].duos.is_some() {
+            // R1012003: the tutorial's opponent (R290) plays a game the network never saw, at 3 mana
+            // with a 12-card deck, as a Duos duel is one (D9).
+            if state.result.is_some()
+                || state.players[seat].duos.is_some()
+                || state.players[seat].handicap == Some(AI_TUTORIAL)
+            {
                 return hand;
             }
             // R1012001: the search takes the correction at its share.

@@ -288,9 +288,13 @@ mod b3_4_params_the_numbers_a_card_declares {
 
     #[test]
     fn r482_declares_no_params_on_the_ten_ai_generated_cards_b8_gives_them_no_numbers_line() {
+        // The ten are T-AI-1 to T-AI-10. Meditative+ #1.1 Base Camp and #1.2 Spa Day, the AI cards the
+        // Meditative+ brief defines for Bob's Plan, tune their numbers as their §8.9 rows say (R1185000).
         let with_params: Vec<String> = entries()
             .into_iter()
-            .filter(|card| card.tags.contains(&Tag::Ai) && card.params.is_some())
+            .filter(|card| {
+                card.tags.contains(&Tag::Ai) && card.index.starts_with("T-AI-") && card.params.is_some()
+            })
             .map(|card| card.id.clone())
             .collect();
         assert_eq!(with_params, Vec::<String>::new());
@@ -457,8 +461,14 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             .iter()
             .filter(|entry| entry.starts_with("meditative-"))
             .count();
+        // The Meditative+ set, held until it ships (R1178000), joins the count batch by batch; each
+        // of its numbers is held to the rule above, and the pinned counts are the shipped sets'.
+        let held = radiant_only
+            .iter()
+            .filter(|entry| entry.starts_with("meditativeplus-"))
+            .count();
         assert_eq!(
-            (radiant_only.len() - meditative, meditative),
+            (radiant_only.len() - meditative - held, meditative),
             (43, 22),
             "{radiant_only:#?}"
         );
