@@ -6162,6 +6162,8 @@
       "provider": "claude-7",
       "question": "",
       "queued_at": "2026-10-19T18:54:12Z",
+      "review_floor": "",
+      "review_notes": "",
       "round_tier": "medium",
       "run_id": "39306462415",
       "self_check_findings": [],
