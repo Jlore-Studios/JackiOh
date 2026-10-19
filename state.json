@@ -5706,7 +5706,15 @@
       "feedback_since": "2026-10-19T11:23:21Z",
       "issue": 1216,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "2716caf80c2491e3a4a0f0cafbeb708c46a3fb8e",
+        "tiers": {}
+      }
     },
     "148": {
       "asks": [
