@@ -6153,6 +6153,8 @@
     "1327": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -6160,20 +6162,39 @@
       "forced": false,
       "interruptions": 0,
       "issue": 1298,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "PITY_MYTHIC_PACKS = 40 is an invented value, and it conflicts with the issue's own starting rates: those rates were evidently worked out for thresholds of 10/20/30, so the builder moved the Mythic base rate off the designer's 3.0% to make up for its own threshold.",
+          "evidence": "The expected-cycle formula, rate = b / (1 \u2212 (1\u2212b)^T), gives these effective rates for the issue's starting bases 0.290, 0.082 and 0.030: at T=10, 0.2998 Epic; at T=20, 0.1001 Legendary; at T=30, 0.0501 Mythic. All three land on the 30/10/5 targets. At the builder's T=40, Mythic comes out at 0.0426, which matches the 4.26% the PR says it measured, so it retuned the base to 0.037 (0.0475). The doc comment on PITY_EPIC_PACKS, 'with PACK_BASE_RATES, 10/20/40 lands the effective rates on PACK_TARGET_RATES', is true only after that retune.",
+          "severity": "blocking",
+          "where": "crates/server/src/config.rs:2091"
+        },
+        {
+          "claim": "Most constants carry a comment saying '#1294's table gives no value', and the section header says 'the values are #1294's Numbers table'. The builder could not read #1294, so both statements are made up, and the issue text contradicts them.",
+          "evidence": "Issue #1298 says there is 'one for every number in #1294's Numbers table' and names pack price, pity thresholds, Jlore per game, XP per action, win bonus, practice scale, per-game cap, track levels, the unlock level and the quest numbers. The diff says '#1294's table gives no value' on PACK_PRICE_JLORE, PITY_EPIC_PACKS, SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL, JLORE_LADDER_WIN, XP_PER_ACTION, QUEST_MAX_HELD, QUEST_JLORE_MIN, QUEST_XP_PER_JLORE and others. No #1294 table exists in the tree: a grep for PACK_PRICE, PITY_ and '#1294' outside the changed files finds none.",
+          "severity": "blocking",
+          "where": "crates/server/src/config.rs:2006"
+        },
+        {
+          "claim": "The acceptance item 'every number above is a named constant' means #1294's numbers. Apart from the issue's 30/10/5 targets, the 29/8.2/3 starting rates, the ~30-pack bar targets and XP step 100, every value is a placeholder. Spec \u00a714 says a constant whose value #1294 does not give goes in with the sub-issue that first needs it, not with an invented value.",
+          "evidence": "spec/14-economy.md, intro: '#1294's numbers go into config.rs \u2026 together \u2026 a constant whose value #1294 does not give goes in with the sub-issue that first needs it'. The PR body admits: 'The invented values (pack price 100, Jlore/XP/quest numbers, cosmetic odds, chase numbers, unlock level 20) are placeholders for #1294's table'. The PR auto-merges, so nobody reconciles them before they ship.",
+          "severity": "blocking",
+          "where": "task"
+        }
+      ],
       "pending_at": "2026-10-19T17:36:08Z",
       "pending_by": "MaxGoetzmann",
       "pending_request": false,
       "provider": "claude-7",
       "question": "",
-      "queued_at": "2026-10-19T18:54:12Z",
+      "queued_at": "2026-10-19T19:15:10Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
       "run_id": "39306462415",
       "self_check_findings": [],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-10-19T19:03:55Z",
       "stop_requested": false,
       "taken_asks": [],
