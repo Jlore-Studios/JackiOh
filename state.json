@@ -10990,8 +10990,10 @@
     "what": "plan #1313 on claude-5"
   },
   "last_sweep": {
-    "at": "2026-10-19T21:14:21Z",
-    "notes": [],
+    "at": "2026-10-19T21:25:08Z",
+    "notes": [
+      "started a night run, as a lane was free: a suggestion survey is due, for `muse`"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
