@@ -443,6 +443,11 @@ match exists already. The repository is public and the match may still be live, 
 the match, the build, the catalog and each refused row's seq, seat and action type, and never a
 refusal's text, a card or an instance id.
 
+A live action whose `reduce` panics (R1253000) is filed the same way, as `FoundIn::Live`
+(`FoundIn::DuosLive` in co-op): the issue names the match, the seq the action would have taken, its
+seat and its type, never the panic's message, which only the server's log line `match.action.panicked`
+(`duos.action.panicked`) holds.
+
 The night bot takes `bot:build` only from an account at level 2 or more in `.harness/trust.txt` or
 a collaborator (bot/README.md, Who may do what), so the token is made on such an account: a
 fine-grained personal access token for this repository with Issues read and write, set on Render
