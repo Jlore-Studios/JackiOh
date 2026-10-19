@@ -122,9 +122,28 @@ function rowOf(def: CardDef): "units" | "backrow" {
   return def.type === "Unit" ? "units" : "backrow";
 }
 
-/** Finishes a play whose price is picked: a permanent still takes its zone, clicked on the board. */
+/** The open picker's kind, if one is open. */
+function promptKind(): string | null | undefined {
+  return screen.queryByTestId("prompt-modal")?.getAttribute("data-prompt-kind");
+}
+
+/**
+ * A card that chooses one (Meditative+ #4 Supply Drop, R81) is asked its mode after its price: the
+ * first option it is offered answers, `press`ed, a short menu being a Discover pop-up.
+ */
+function chooseFirstMode(press: (target: Element) => void): void {
+  const kind = promptKind();
+  if (kind !== "discover" && kind !== "mode") return;
+  const first = el("prompt-modal").querySelector('[data-testid^="prompt-option-"]');
+  if (first !== null) press(first);
+}
+
+/** Finishes a play whose price is picked: its mode, if it asks one, and a permanent still takes its zone, clicked on the board. */
 function placeIfAsked(def: CardDef): void {
-  if (screen.queryByTestId("prompt-modal")?.getAttribute("data-prompt-kind") === "zone") {
+  chooseFirstMode((target) => {
+    fireEvent.click(target);
+  });
+  if (promptKind() === "zone") {
     fireEvent.click(el(testid.zone("you", rowOf(def), 1)));
   }
 }
@@ -318,6 +337,7 @@ describe("#492 R81 dragging an Embiggen card asks for its price too", () => {
       expect(onAction).not.toHaveBeenCalled();
       expect(el("prompt-modal")).toHaveAttribute("data-prompt-kind", "embiggen");
       tap(el("prompt-option-true"));
+      chooseFirstMode(tap);
       const { body, paid } = sent(state, legal, onAction);
       expect(body).toEqual(
         expect.objectContaining({
@@ -336,6 +356,8 @@ describe("#492 R81 dragging an Embiggen card asks for its price too", () => {
       const zoned = plays(legal, cardId).some((play) => play.zone !== undefined);
       drag(el(testid.handCard(cardId)), el(zoned ? testid.zone("you", rowOf(def), 2) : "board"));
 
+      expect(promptKind()).not.toBe("embiggen");
+      chooseFirstMode(tap);
       expect(screen.queryByTestId("prompt-modal")).toBeNull();
       const { body, paid } = sent(state, legal, onAction);
       expect(body).toEqual(expect.objectContaining({ type: "play", instanceId: cardId, embiggen: false }));

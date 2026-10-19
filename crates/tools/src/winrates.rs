@@ -269,6 +269,12 @@ mod tests {
             played: Vec::new(),
             played_turns: None,
             played_radiant: None,
+            fatigue_draws: None,
+            fatigue_damage: None,
+            traps_set: None,
+            traps_fired: None,
+            position_switches: None,
+            radiant_upgrades: None,
         };
         let line = |id: &str, source: GameSource, pilots: PerPlayer<Pilot>| {
             let record = GameRecord {

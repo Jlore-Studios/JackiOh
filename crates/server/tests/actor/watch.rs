@@ -633,6 +633,31 @@ mod b50_b46_a_watch_ends_when_its_leave_does {
             }
         }
     }
+
+    #[tokio::test(start_paused = true)]
+    async fn b50_a_watcher_who_deletes_its_account_is_let_go_at_once_and_the_players_hear_the_count() {
+        let w = world(false).await;
+        let watcher = w.watch(&w.watcher).await;
+        assert!(watcher.of_type("error").is_empty(), "{:?}", watcher.frames());
+        assert_eq!(watcher_counts(&w.p1).last(), Some(&json!(1)));
+        w.p1.clear();
+        w.p2.clear();
+
+        let (status, body) = api(&w.app, "DELETE", "/api/account", &w.watcher.token, Value::Null).await;
+        assert_eq!(status, 204, "{body}");
+        settle().await;
+
+        assert_let_go(&watcher).await;
+        for socket in [&w.p1, &w.p2] {
+            assert_eq!(
+                watcher_counts(socket).last(),
+                Some(&json!(0)),
+                "{:?}",
+                socket.messages()
+            );
+        }
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 0);
+    }
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -29,12 +29,14 @@
 //!   check`.
 //! - `ship` promotes every fragment on main, oldest first-parent commit that added one first: it
 //!   appends the patch (its version, a micro named after the then-newest patch (R650), or
-//!   `<version>b`, `c`, … when that name already shipped) with the fragment's player note, snapshots
-//!   `catalog.json` as that commit left it, records `{ version, commit, blob }` in `shipped.json`,
-//!   deletes the fragment, regenerates the derived files and bumps `CATALOG_VERSION`. Running it
-//!   twice is running it once.
-//!   It needs full history (`fetch-depth: 0`) and writes nothing unless each adding commit's catalog
-//!   changed exactly the cards its fragment claims and the last one is `catalog.json` as it stands.
+//!   `<version>b`, `c`, … when that name already shipped) with the fragment's player note, dated by
+//!   that commit, snapshots the patch before it with the fragment's cards as `catalog.json` holds
+//!   them (the newest snapshot is `catalog.json`), records `{ version, commit, blob }` in
+//!   `shipped.json`, deletes the fragment, regenerates the derived files and bumps
+//!   `CATALOG_VERSION`. Running it twice is running it once.
+//!   It needs full history (`fetch-depth: 0`) for the commits' order and dates, and it ships whenever
+//!   `check` passes: what a fragment claims is what its patch ships, so a fragment edited after its
+//!   commit, or a card changed again under its claim, never wedges the queue (R646).
 //!   `.github/workflows/patches-ship.yml` runs it after every merge that touches `pending/`.
 //!
 //! There is no clock here (CLAUDE.md rule 4): dates come from the git history, and the UTC
@@ -1795,21 +1797,61 @@ struct Planned {
     version: String,
 }
 
-/// A planned fragment with its commit's catalog, proved to change exactly the cards it claims.
+/// A planned fragment with its snapshot's text, proved to change exactly the cards it claims.
 struct Proved {
     plan: Planned,
     raw: String,
 }
 
+/// R646: `previous` with each of `claims` as `current` holds it (dropped where `current` has none)
+/// and every other card as `previous` holds it (absent where `previous` has none), in `current`'s
+/// order, a card only `previous` holds kept after the card it followed there.
+fn with_claims(previous: &Catalog, current: &Catalog, claims: &[String]) -> Catalog {
+    let claimed: IndexSet<&str> = claims.iter().map(String::as_str).collect();
+    let mut snapshot = Catalog::new();
+    let mut put = |id: &String| {
+        let entry = if claimed.contains(id.as_str()) {
+            current.get(id)
+        } else {
+            previous.get(id)
+        };
+        if let Some(entry) = entry {
+            snapshot.insert(id.clone(), entry.clone());
+        }
+    };
+    let mut before = previous.keys().peekable();
+    for id in current.keys() {
+        if previous.contains_key(id) {
+            for earlier in before.by_ref() {
+                if earlier == id {
+                    break;
+                }
+                if !current.contains_key(earlier) {
+                    put(earlier);
+                }
+            }
+        }
+        put(id);
+    }
+    for left in before {
+        if !current.contains_key(left) {
+            put(left);
+        }
+    }
+    snapshot
+}
+
 /// Promotes every pending fragment to a shipped patch, in the order of the first-parent commit that
-/// added it (ship order, R646). The snapshot is `catalog.json` as that commit left it: the squash
-/// commit, or the merge commit, a pull request lands on main as. Idempotent: with no fragments it
-/// changes nothing.
+/// added it (ship order, R646), dated by that commit: the squash commit, or the merge commit, a pull
+/// request lands on main as. Its snapshot is the patch before it with the cards the fragment claims
+/// as `catalog.json` holds them now (`with_claims`), so the newest is `catalog.json`. Idempotent:
+/// with no fragments it changes nothing.
 ///
-/// Nothing is written until every fragment has been named and proved: each adding commit's catalog
-/// must differ from the patch before it on exactly the cards its fragment claims, and the last one
-/// must be the catalog as it stands. A claimed card changed again after its fragment merged, or a
-/// fragment edited to claim more, fails here with the files untouched.
+/// Nothing is written until every fragment has been named and proved: `check` passes, so the claims
+/// cover every change once, and each snapshot then differs from the one before on exactly its
+/// fragment's cards. A claimed card changed again after its fragment merged, a fragment edited to
+/// claim more, or two fragments one commit added all ship: what a fragment claims is what its patch
+/// ships, whenever the change came.
 pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     let paths = patch_paths(repo_root);
     let files = read_fragments(&paths.pending_dir)?;
@@ -1848,20 +1890,8 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             at,
         });
     }
-    queued.sort_by_key(|entry| std::cmp::Reverse(entry.at));
-    // A commit's catalog is one snapshot, so it can ship one patch: two fragments added together
-    // would have to split one diff between them.
-    for pair in queued.windows(2) {
-        let (before, after) = (&pair[0], &pair[1]);
-        if before.commit == after.commit {
-            bail!(
-                "pending/{} and pending/{} were added by one commit, {}, which can ship one patch",
-                before.name,
-                after.name,
-                after.commit
-            );
-        }
-    }
+    // Oldest adding commit first; fragments one commit added ship in the order of their files.
+    queued.sort_by(|a, b| b.at.cmp(&a.at).then_with(|| a.name.cmp(&b.name)));
 
     let mut patches = read_patches(&paths.patches_json)?;
     let mut taken: IndexSet<String> = patches.iter().map(|patch| patch.version.clone()).collect();
@@ -1891,46 +1921,52 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     let Some(newest) = patches.last() else {
         bail!("patches.json holds no shipped patch");
     };
+    // R646, R1280000: each snapshot is the patch before it with the cards its fragment claims as
+    // `catalog.json` holds them now, so the claims, which `check` proves cover every change once,
+    // build the history whatever happened to a fragment after its commit: a card changed again
+    // under its claim, a fragment that grew, two fragments one commit added. The last is
+    // `catalog.json` itself.
+    let file = fs::read_to_string(&paths.catalog)
+        .with_context(|| format!("{} cannot be read", paths.catalog.display()))?;
+    let current_text =
+        shipped_text(&file).with_context(|| format!("{} is not a catalog", paths.catalog.display()))?;
+    let current: Catalog = serde_json::from_str(&current_text)
+        .with_context(|| format!("{} is not a catalog", paths.catalog.display()))?;
     let mut previous = read_snapshot(&newest.version, &paths.dir)?;
     let mut proved = Vec::with_capacity(planned.len());
-    for plan in planned {
-        let full = git(
-            repo_root,
-            &["show", &format!("{}:{CATALOG_REL}", plan.commit)],
-            &[],
-        )?;
-        let raw = shipped_text(&full)
-            .with_context(|| format!("{CATALOG_REL} at {} is not a catalog", plan.commit))?;
-        let snapshot: Catalog = serde_json::from_str(&raw)
-            .with_context(|| format!("{CATALOG_REL} at {} is not a catalog", plan.commit))?;
-        let changed = differing_ids(&previous, &snapshot);
-        let claimed: IndexSet<&String> = plan.fragment.cards.iter().collect();
-        if changed.len() != claimed.len() || !changed.iter().all(|id| claimed.contains(id)) {
+    let count = planned.len();
+    for (at, plan) in planned.into_iter().enumerate() {
+        let snapshot = with_claims(&previous, &current, &plan.fragment.cards);
+        let changed: IndexSet<String> = differing_ids(&previous, &snapshot).into_iter().collect();
+        let claimed: IndexSet<String> = plan.fragment.cards.iter().cloned().collect();
+        if changed != claimed {
             bail!(
-                "pending/{}: the catalog {} left changes {} but the fragment claims {}; nothing was shipped",
+                "pending/{}: its claims {} change {} from the patch before it; nothing was shipped",
                 plan.name,
-                plan.commit,
-                js::stringify(&changed),
-                js::stringify(&plan.fragment.cards)
+                js::stringify(&plan.fragment.cards),
+                js::stringify(&changed.iter().collect::<Vec<_>>())
             );
         }
+        let raw = if at + 1 == count {
+            if snapshot != current {
+                bail!(
+                    "the pending fragments' claims do not make catalog.json, so the newest snapshot would not be it; nothing was shipped"
+                );
+            }
+            current_text.clone()
+        } else {
+            let mut text = js::stringify_pretty(&snapshot);
+            if current_text.ends_with('\n') {
+                text.push('\n');
+            }
+            text
+        };
         previous = snapshot;
         proved.push(Proved { plan, raw });
     }
     let Some(last) = proved.last() else {
         bail!("no pending fragment to ship");
     };
-    let current = fs::read_to_string(&paths.catalog)
-        .with_context(|| format!("{} cannot be read", paths.catalog.display()))?;
-    let current =
-        shipped_text(&current).with_context(|| format!("{} is not a catalog", paths.catalog.display()))?;
-    if last.raw != current {
-        bail!(
-            "catalog.json changed after {} added pending/{}, so the newest snapshot would not be catalog.json; nothing was shipped",
-            last.plan.commit,
-            last.plan.name
-        );
-    }
 
     // The last patch shipped is the newest one, so the version moves first: a version site that is
     // missing stops the promotion before any history is written.
@@ -2937,7 +2973,7 @@ mod tests {
                     (Some(vec![c1.clone()]), Some(false))
                 );
                 assert_eq!(v20.date, "2026-10-02");
-                // Each snapshot is the catalog as its merge left it: v0.2.0 carries v0.2.5's change.
+                // Each snapshot is the patch before it with its own claims: v0.2.0 carries v0.2.5's change.
                 assert_eq!(cost_of(&read_snapshot("v0.2.5", &dir).unwrap(), "aaa"), Some(2.0));
                 assert_eq!(cost_of(&read_snapshot("v0.2.5", &dir).unwrap(), "bbb"), Some(1.0));
                 assert_eq!(cost_of(&read_snapshot("v0.2.0", &dir).unwrap(), "aaa"), Some(2.0));
@@ -3251,68 +3287,126 @@ mod tests {
                 assert_eq!(cost_of(&read_snapshot("v0.2.5", &dir).unwrap(), "aaa"), Some(2.0));
             }
 
-            #[test]
-            fn r646_writes_nothing_when_a_claimed_card_changed_again_after_its_fragment_merged() {
-                let base = catalog_of(vec![card("aaa", 1), card("bbb", 1)]);
-                let temp = shipped_repo("jackioh-ship-late-", &base);
-                let root = temp.path();
-                let with = |cards: Vec<Object>| {
-                    let mut catalog = base.clone();
-                    for card in cards {
-                        catalog.insert(card["id"].as_str().expect("an id").to_string(), card);
-                    }
-                    catalog
-                };
-                write_files(
-                    root,
-                    &[("crates/cards/catalog.json", json(&with(vec![card("aaa", 2)])))],
-                );
-                write_fragment(root, &fragment_args("v0.2.5", "t", "s", "n", None)).unwrap();
-                git(root, &["add", "-A"], None);
-                git(
-                    root,
-                    &["commit", "-q", "-m", "fragment v0.2.5"],
-                    Some("2026-10-01T12:00:00+00:00"),
-                );
-                // A later merge moves the claimed card again without touching the fragment: check
-                // passes, but no snapshot of the fragment's commit is today's catalog.
-                write_files(
-                    root,
-                    &[("crates/cards/catalog.json", json(&with(vec![card("aaa", 3)])))],
-                );
-                git(root, &["add", "-A"], None);
-                git(
-                    root,
-                    &["commit", "-q", "-m", "aaa again"],
-                    Some("2026-10-02T12:00:00+00:00"),
-                );
-                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
-                let refused = format!("{:#}", ship_patches(root).expect_err("refused"));
-                assert!(refused.contains("catalog.json changed after"), "{refused}");
-                assert_eq!(git(root, &["status", "--porcelain"], None), "");
+            /// A fixture catalog: `base` with each of `cards` put in by its id.
+            fn base_with(base: &Catalog, cards: Vec<Object>) -> Catalog {
+                let mut catalog = base.clone();
+                for card in cards {
+                    catalog.insert(card["id"].as_str().expect("an id").to_string(), card);
+                }
+                catalog
+            }
 
-                // A fragment edited to claim a card its commit did not change is refused the same way.
+            fn commit_at(root: &Path, message: &str, when: &str) -> String {
+                git(root, &["add", "-A"], None);
+                git(root, &["commit", "-q", "-m", message], Some(when));
+                git(root, &["rev-parse", "HEAD"], None).trim().to_string()
+            }
+
+            // The queue that froze patch v0.3.8 to v0.3.15 (#1173): a later merge changes a card an
+            // earlier pending fragment claims while another fragment lands between them, and a
+            // claimed card is removed. Each patch ships the cards it claims as the catalog holds them
+            // now, dated by its own commit, and the newest snapshot is catalog.json.
+            #[test]
+            fn r646_r1280000_ships_each_fragment_s_claims_as_the_catalog_holds_them_now() {
+                let base = catalog_of(vec![card("aaa", 1), card("bbb", 1), card("ccc", 1)]);
+                let temp = shipped_repo("jackioh-ship-claims-", &base);
+                let root = temp.path();
+                let dir = root.join("crates/cards/patches");
+                let mut first = base_with(&base, vec![card("aaa", 2)]);
+                first.shift_remove("ccc");
+                write_files(root, &[("crates/cards/catalog.json", json(&first))]);
+                write_fragment(root, &fragment_args("v0.2.5", "t", "s", "n", None)).unwrap();
+                let c1 = commit_at(root, "fragment v0.2.5", "2026-10-01T12:00:00+00:00");
+                let mut second = base_with(&first, vec![card("bbb", 2)]);
+                second.insert("ddd".to_string(), card("ddd", 1));
+                write_files(root, &[("crates/cards/catalog.json", json(&second))]);
+                write_fragment(
+                    root,
+                    &fragment_args("v0.2.6", "t2", "s2", "n2", Some(&["bbb", "ddd"][..])),
+                )
+                .unwrap();
+                let c2 = commit_at(root, "fragment v0.2.6", "2026-10-02T12:00:00+00:00");
+                // aaa changes again: v0.2.5 claims it, so no fragment of its own claims it.
+                let third = base_with(&second, vec![card("aaa", 3)]);
+                write_files(root, &[("crates/cards/catalog.json", json(&third))]);
+                commit_at(root, "aaa again", "2026-10-03T12:00:00+00:00");
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.2.5", "v0.2.6"]));
+                let v25 = read_snapshot("v0.2.5", &dir).unwrap();
+                assert_eq!(
+                    cost_of(&v25, "aaa"),
+                    Some(3.0),
+                    "the claim as the catalog holds it now"
+                );
+                assert_eq!(cost_of(&v25, "bbb"), Some(1.0), "v0.2.6's change is not v0.2.5's");
+                assert!(!v25.contains_key("ccc") && !v25.contains_key("ddd"));
+                let v26 = read_snapshot("v0.2.6", &dir).unwrap();
+                assert_eq!(v26, third, "the newest snapshot is catalog.json");
+                assert_eq!(
+                    read(&dir.join("v0.2.6.json")),
+                    read(&root.join("crates/cards/catalog.json"))
+                );
+                let patches = read_patches(&dir.join("patches.json")).unwrap();
+                let dated: Vec<(&str, &str, Option<Vec<String>>)> = patches
+                    .iter()
+                    .skip(1)
+                    .map(|patch| (patch.version.as_str(), patch.date.as_str(), patch.commits.clone()))
+                    .collect();
+                assert_eq!(
+                    dated,
+                    [
+                        ("v0.2.5", "2026-10-01", Some(vec![c1])),
+                        ("v0.2.6", "2026-10-02", Some(vec![c2])),
+                    ]
+                );
+                let shipped = read_shipped(&dir.join("shipped.json")).unwrap();
+                assert_eq!(shipped[1].blob, git_blob_hash(&read(&dir.join("v0.2.5.json"))));
+                assert!(read(&root.join("render.yaml")).contains("value: v0.2.6"));
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+            }
+
+            // A fragment edited after its commit to claim one more card, and two fragments one commit
+            // added: each ships what it claims, the two in the order of their files.
+            #[test]
+            fn r646_r1280000_ships_a_fragment_that_grew_and_two_fragments_one_commit_added() {
+                let base = catalog_of(vec![card("aaa", 1), card("bbb", 1), card("ccc", 1)]);
+                let temp = shipped_repo("jackioh-ship-grew-", &base);
+                let root = temp.path();
+                let dir = root.join("crates/cards/patches");
                 write_files(
                     root,
                     &[(
                         "crates/cards/catalog.json",
-                        json(&with(vec![card("aaa", 3), card("bbb", 2)])),
+                        json(&base_with(&base, vec![card("aaa", 2)])),
                     )],
                 );
                 write_fragment(root, &fragment_args("v0.2.5", "t", "s", "n", None)).unwrap();
-                git(root, &["add", "-A"], None);
-                git(
+                commit_at(root, "fragment v0.2.5", "2026-10-01T12:00:00+00:00");
+                let grown = base_with(&base, vec![card("aaa", 2), card("bbb", 2)]);
+                write_files(root, &[("crates/cards/catalog.json", json(&grown))]);
+                write_fragment(root, &fragment_args("v0.2.5", "t", "s", "n", None)).unwrap();
+                commit_at(
                     root,
-                    &["commit", "-q", "-m", "fragment v0.2.5 claims bbb too"],
-                    Some("2026-10-03T12:00:00+00:00"),
+                    "fragment v0.2.5 claims bbb too",
+                    "2026-10-02T12:00:00+00:00",
                 );
+                let with_ccc = base_with(&grown, vec![card("ccc", 2)]);
+                let mut both = with_ccc.clone();
+                both.insert("ddd".to_string(), card("ddd", 1));
+                write_files(root, &[("crates/cards/catalog.json", json(&both))]);
+                // Written in the other order: the files' order, not the writing, ships them.
+                write_fragment(root, &fragment_args("v0.2.7", "t", "s", "n", Some(&["ddd"][..]))).unwrap();
+                write_fragment(root, &fragment_args("v0.2.6", "t", "s", "n", Some(&["ccc"][..]))).unwrap();
+                commit_at(root, "fragments v0.2.6 and v0.2.7", "2026-10-03T12:00:00+00:00");
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
-                let refused = format!("{:#}", ship_patches(root).expect_err("refused"));
-                assert!(
-                    refused.contains("but the fragment claims [\"aaa\",\"bbb\"]"),
-                    "{refused}"
+                assert_eq!(
+                    ship_patches(root).unwrap(),
+                    shipped_of(&["v0.2.5", "v0.2.6", "v0.2.7"])
                 );
-                assert_eq!(git(root, &["status", "--porcelain"], None), "");
+                assert_eq!(read_snapshot("v0.2.5", &dir).unwrap(), grown);
+                assert_eq!(read_snapshot("v0.2.6", &dir).unwrap(), with_ccc);
+                assert_eq!(read_snapshot("v0.2.7", &dir).unwrap(), both);
             }
 
             #[test]

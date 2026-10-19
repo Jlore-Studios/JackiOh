@@ -260,6 +260,8 @@ fn to_placeholder(card: &mut CardInstance) {
     card.buffs = AttackHealth { attack: 0, health: 0 };
     card.damage = 0;
     card.cost_override = None;
+    // R1181003: the price of the Embiggened version alone (Enormous Elderberry's (0)) goes with its face.
+    card.embiggen_cost_override = None;
     card.x = None;
     card.embiggened = None;
     card.return_to_hand_at_end_of_turn = None;
@@ -291,6 +293,8 @@ fn to_placeholder_json(card: &mut Value) {
     object.insert("damage".to_string(), Value::from(0));
     for key in [
         "costOverride",
+        // R1181003: the Embiggened version's own price.
+        "embiggenCostOverride",
         "x",
         "embiggened",
         "returnToHandAtEndOfTurn",

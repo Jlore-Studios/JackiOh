@@ -31,6 +31,8 @@ struct HandRiders {
     player: Option<PlayerSpec>,
     radiant: Option<bool>,
     cost_override: Option<i32>,
+    /// R1181003: the Embiggened version's own price (Meditative+ #23's "its Embiggened version costs (0)").
+    embiggen_cost_override: Option<i32>,
     cost_mod: Option<i32>,
     /// R637: the card is Temporary (a granted keyword) while it is in a hand.
     temporary: Option<bool>,
@@ -70,6 +72,9 @@ fn apply_radiant_rider(card: &mut CardInstance, riders: &HandRiders) {
 fn apply_cost_riders(card: &mut CardInstance, riders: &HandRiders) {
     if let Some(cost_override) = riders.cost_override {
         card.cost_override = Some(cost_override);
+    }
+    if let Some(cost) = riders.embiggen_cost_override {
+        card.embiggen_cost_override = Some(cost);
     }
     if let Some(cost_mod) = riders.cost_mod {
         card.cost_mod += cost_mod;
@@ -148,6 +153,10 @@ pub struct AddToHandArgs {
     pub radiant: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_override: Option<i32>,
+    /// R1181003: the Embiggened version's own price, once the card is in the hand; the normal version
+    /// keeps its price.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub embiggen_cost_override: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_mod: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -175,6 +184,7 @@ impl AddToHandArgs {
             player: self.player,
             radiant: self.radiant,
             cost_override: self.cost_override,
+            embiggen_cost_override: self.embiggen_cost_override,
             cost_mod: self.cost_mod,
             temporary: self.temporary,
             chinese: self.chinese,
@@ -259,6 +269,10 @@ pub struct AddRandomFromCatalogArgs {
     pub radiant: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_override: Option<i32>,
+    /// R1181003: the Embiggened version's own price, once the card is in the hand; the normal version
+    /// keeps its price.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub embiggen_cost_override: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_mod: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -277,6 +291,7 @@ impl AddRandomFromCatalogArgs {
             player: self.player,
             radiant: self.radiant,
             cost_override: self.cost_override,
+            embiggen_cost_override: self.embiggen_cost_override,
             cost_mod: self.cost_mod,
             temporary: self.temporary,
             chinese: self.chinese,

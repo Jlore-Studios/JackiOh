@@ -258,7 +258,8 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     // Radiant face is its base text less the end-of-turn Tribute (R1225); #22.1 Fortify Mind's is its
     // base text less the discard penalty (R862), and #48 Tranquility's less "End the turn." (R1021),
     // as is Classic #29 Book of Vital Kill's since patch v0.3.10, and Meditative+ #11 Living Mana
-    // Potion's less its Tribute (radiantDiff.test.ts names all ten).
+    // Potion's less its Tribute, with #12 Living Armor Potion's and #13 Living Health Potion's
+    // (radiantDiff.test.ts names all twelve).
     const pureDeletions = new Set([
       "core-055",
       "classic-028",
@@ -270,6 +271,8 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
       "meditative-048",
       "meditative-089",
       "meditativeplus-011",
+      "meditativeplus-012",
+      "meditativeplus-013",
     ]);
     for (const card of DEFS) {
       const f = face(card.id, true);
@@ -325,6 +328,14 @@ describe("B8: faceModel cost", () => {
     expect(face("core-046", false).cost).toEqual({ text: "2", value: "2", tone: "base", alt: "4" });
     expect(face("core-046", false, { liveCost: 2 }).cost).toEqual({ text: "2", value: "2", tone: "base", alt: "4" });
     expect(face("core-084", true).cost.alt).toBe("4");
+  });
+
+  it("R1181003 the second badge shows the view's embiggenCost", () => {
+    // Meditative+ #23 Enormous Elderberry's "its Embiggened version costs (0)", and Mountaintop Garden's
+    // dearer price: the view prices the Embiggened version, and the badge beside the gem says so.
+    expect(face("core-084", false, { liveCost: 2, liveEmbiggenCost: 0 }).cost).toEqual({ text: "2", value: "2", tone: "base", alt: "0" });
+    expect(face("core-046", false, { liveCost: 2, liveEmbiggenCost: 4 }).cost.alt).toBe("4");
+    expect(face("core-046", false, { liveEmbiggenCost: 6 }).cost.alt).toBe("6");
   });
 
   it("B8 an embiggen card's gem shows the view's live number, toned against its base price, and drops the embiggen price", () => {

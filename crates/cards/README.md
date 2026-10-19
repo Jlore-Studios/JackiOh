@@ -1,11 +1,11 @@
 # `jackioh-cards`
 
-450 catalog entries in the four shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
-Glitch, a hidden token), Classic+ (78 cards and 38 tokens) and Meditative (102 cards and 30 tokens,
-spec §8.8), 370 cards and 80 tokens in all, and the Meditative+ set (26 cards and 4 tokens, spec §8.9), held
-until its release (#1187). A set the catalog holds before it ships, as Meditative was while issue #496 built it and
-Meditative+ is now (R1178000), is in no pool that names no set, no deck and no random deck until the
-patch that lists it in `SHIPPED_SETS` (R1420), and a test opens it with the testkit's
+480 catalog entries in the five shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
+Glitch, a hidden token), Classic+ (78 cards and 38 tokens), Meditative (102 cards and 30 tokens,
+spec §8.8) and Meditative+ (26 cards and 4 tokens, spec §8.9, shipped in v0.3.15 by #1187), 396 cards
+and 84 tokens in all. A set the catalog holds before it ships, as Meditative was while issue #496 built
+it and Meditative+ while issue #1173 did (R1178000), is in no pool that names no set, no deck and no
+random deck until the patch that lists it in `SHIPPED_SETS` (R1420), and a test opens it with the testkit's
 `preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
 catalog's patch history. This file is the contract between the card files. The spec (`spec/08-catalog.md`
 for every card, `spec/07-tokens.md` for the tokens) is the only source of card text; when it and this
@@ -31,7 +31,7 @@ crates/cards
 │   ├── classic/        one Classic card per file
 │   ├── classic_plus/   one Classic+ card or token per file
 │   ├── meditative/     one Meditative card or token per file (shipped in v0.3.5, R1420)
-│   └── meditative_plus/ one Meditative+ card or token per file (held until #1187, R1178000)
+│   └── meditative_plus/ one Meditative+ card or token per file (shipped in v0.3.15, R1178000)
 └── tests/cards.rs      the cross-card tests: tests/cross/<x>.rs (catalog, query, references, radiant
                         standard, flavour, condition_active, preview, invariants, …)
 ```
@@ -282,7 +282,8 @@ Every change to card data is a patch, and every patch is kept.
   empty, and when a fragment's or a shipped patch's player note is missing, empty or names a ruling,
   an issue or a § (R724001).
 - After the merge, `.github/workflows/patches-ship.yml` runs `cargo jackioh patches ship`: it
-  appends each fragment in first-parent order with its player note, snapshots the catalog, records `shipped.json`, deletes
+  appends each fragment in first-parent order with its player note, snapshots the patch before it
+  with the cards the fragment claims as the catalog holds them (R1280000), records `shipped.json`, deletes
   the fragment and bumps the catalog version at every site that carries it (`render.yaml`,
   `crates/server/.env.example`, and `apps/web/.env.production` when it names one). The binaries take
   the version from `patches.json` at compile time; `cargo jackioh catalog-version` prints it.

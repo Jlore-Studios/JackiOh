@@ -4,14 +4,15 @@
 //!   Radiant: "… It costs ({setCost})."
 //!
 //! "It" is the card the Discover adds, not this spell (§8 Conventions; JackiOh_Core_Cards.md #82).
-//! Patch v0.3.10 (#831, R831004): the first Discover is a `mode` prompt of three of the four sets that
-//! ship, drawn from the match rng; the second offers three numbers of the chosen set (the Core set alone
-//! before). The pool is the engine's (§5.1, R54): `query` drops tokens and, by R387, never offers #82.
-//! Three options are drawn without replacement (§6.3, R60). The options are the numbers (R247):
-//! `offer: "index"` labels each with its §5 index and names no card. Each pick returns as a mode (§10.6,
-//! R81), and the set rides the second prompt's resume data, since an index is unique only within its
-//! set (B2.2). R74/§5.2: Radiant is a flag on a fresh instance. R65: `costOverride` 0 costs 0 in every
-//! zone (R78). R4: a full hand burns the card that arrives.
+//! Patch v0.3.10 (#831, R831004): the first Discover is a `mode` prompt of three of the sets that ship
+//! (`SHIPPED_SETS`, five since Meditative+ shipped in v0.3.15), drawn from the match rng; the second
+//! offers three numbers of the chosen set (the Core set alone before). The pool is the engine's (§5.1,
+//! R54): `query` drops tokens and, by R387, never offers #82. Three options are drawn without
+//! replacement (§6.3, R60). The options are the numbers (R247): `offer: "index"` labels each with its
+//! §5 index and names no card. Each pick returns as a mode (§10.6, R81), and the set rides the second
+//! prompt's resume data, since an index is unique only within its set (B2.2). R74/§5.2: Radiant is a
+//! flag on a fresh instance. R65: `costOverride` 0 costs 0 in every zone (R78). R4: a full hand burns
+//! the card that arrives.
 
 use jackioh_engine::prelude::*;
 
@@ -19,10 +20,6 @@ pub const ID: &str = "core-082";
 
 /// §6.3 Discover offers three, of sets and then of numbers.
 const OPTIONS: usize = 3;
-
-/// Patch v0.3.10 (#831, R831004): KY's Trial works across every set that ships; it named the Core set's
-/// numbers alone before.
-const TRIAL_SETS: [SetName; 4] = [SetName::Core, SetName::Classic, SetName::ClassicPlus, SetName::Meditative];
 
 /// The `resume` steps the two Discovers' answers re-enter (§10.6).
 const SET: &str = "set";
@@ -35,7 +32,8 @@ fn set_named(name: &str) -> Option<SetName> {
 
 /// The first Discover: three of the sets, drawn from the match rng.
 fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    let offered: Vec<SetName> = ctx.rng.shuffle(&TRIAL_SETS).into_iter().take(OPTIONS).collect();
+    // Patch v0.3.10 (#831, R831004): every set that ships; it named the Core set's numbers alone before.
+    let offered: Vec<SetName> = ctx.rng.shuffle(&SHIPPED_SETS).into_iter().take(OPTIONS).collect();
     vec![choose_mode(json_as(json!({
         "step": SET,
         "options": offered,
@@ -112,8 +110,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TRIAL: &str = "core-082";
-    /// The four sets that ship, which the first Discover draws from (R831004).
-    const SETS: [&str; 4] = ["Core", "Classic", "Classic+", "Meditative"];
+    /// The five sets that ship, which the first Discover draws from (R831004).
+    const SETS: [&str; 5] = ["Core", "Classic", "Classic+", "Meditative", "Meditative+"];
 
     use crate::js;
 

@@ -4645,13 +4645,19 @@ fn friends_unblocked_in(tables: &FakeTables, a: &str, b: &str) -> bool {
             .any(|row| (row.blocker == a && row.blocked == b) || (row.blocker == b && row.blocked == a))
 }
 
-/// A share its friend may read now: the finished match holds the sharer in a seat, and the two are
-/// still friends with neither blocking the other.
+/// A share its friend may read now: the finished match holds the sharer in a seat, keeps its
+/// action log (the retention purge has not taken it), and the two are still friends with neither
+/// blocking the other.
 fn share_readable(tables: &FakeTables, share: &ReplayShare) -> Option<Option<i64>> {
     let row = tables.matches.iter().find(|row| row.id == share.match_id)?;
     let seated = row.players.0 == share.sharer || row.players.1 == share.sharer;
+    let log_kept = tables
+        .match_actions
+        .iter()
+        .any(|logged| logged.match_id == share.match_id);
     (row.status == MatchStatus::Finished
         && seated
+        && log_kept
         && friends_unblocked_in(tables, &share.sharer, &share.friend))
     .then_some(row.finished_at)
 }

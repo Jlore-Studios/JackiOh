@@ -49,6 +49,7 @@ count: number?,
 player: PlayerSpec?,
 radiant: boolean?,
 costOverride: number?,
+embiggenCostOverride: number?,
 costMod: number?,
 temporary: boolean?,
 chinese: boolean?,
@@ -87,6 +88,7 @@ instance: TargetSpec?,
 player: PlayerSpec?,
 radiant: boolean?,
 costOverride: number?,
+embiggenCostOverride: number?,
 costMod: number?,
 temporary: boolean?,
 chinese: boolean?,
@@ -552,6 +554,8 @@ watch: string?,
 next: boolean?,
 mark: CardMark?,
 handWatch: {string}?,
+turns: number?,
+label: string?,
 }
 
 export type DelayAt = {
@@ -2203,6 +2207,7 @@ luck: number?,
 spellDamageAura: SpellDamageAura?,
 doublesHealing: boolean?,
 answersTargetedSpells: boolean?,
+embiggenGarden: number?,
 }
 
 export type StealAllArgs = {

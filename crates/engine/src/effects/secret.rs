@@ -93,6 +93,8 @@ pub fn keep_secret(args: KeepSecretArgs) -> Effect {
             watch: None,
             mark: None,
             hand_watch: None,
+            turns: None,
+            label: None,
         })
         .apply)(ctx);
         // R862: the linked card rides the secret's id in its memory, so the guess it declares is
@@ -106,6 +108,7 @@ pub fn keep_secret(args: KeepSecretArgs) -> Effect {
                 player: Some(link.player.unwrap_or(PlayerSpec::Enemy)),
                 radiant: None,
                 cost_override: link.cost_override,
+                embiggen_cost_override: None,
                 cost_mod: None,
                 temporary: None,
                 chinese: None,

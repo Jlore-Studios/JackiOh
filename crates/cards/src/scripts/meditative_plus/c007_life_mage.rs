@@ -47,7 +47,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// (1) Spell, Pierce: 4 damage to a declared Unit or hero (9 Radiant).
+    /// (1) Spell, Pierce: 4 damage to a declared Unit or hero (8 Radiant).
     const TRUE_STRIKE: &str = "core-044";
     /// (2) Field Spell: your next Spell gains Echo +1.
     const TWINSPELL: &str = "core-079";
@@ -63,6 +63,8 @@ mod tests {
     const BIG: &str = "core-025";
     /// A (1) 4/4 with no text.
     const FILLER: &str = "core-008";
+    /// (2) Trap: a lethal hit is redirected to the enemy hero, then heal and draw.
+    const TRAP: &str = "classic-052";
 
     fn game(seed: &str, p1: Value, p2: Value) -> Scenario {
         let mut sides = json!({
@@ -90,6 +92,33 @@ mod tests {
 
     fn instance(card: &CardInstance) -> Value {
         json!([{ "pick": "instance", "instanceId": card.id }])
+    }
+
+    /// `amount` damage to p2's hero with p1's face-up Trap in backrow zone 1 as the running card, then
+    /// the state check.
+    fn trap_hits_enemy_hero(s: &mut Scenario, amount: i32) {
+        let trap = s.backrow(P1, 1).expect("the trap");
+        let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
+        let mut events: Vec<GameEvent> = Vec::new();
+        {
+            let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+            {
+                let mut ctx = make_context(
+                    &mut sink,
+                    Some(&trap),
+                    HookOptions {
+                        controller: Some(P1),
+                        ..HookOptions::default()
+                    },
+                );
+                apply_effects(
+                    &[jackioh_engine::effects::damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": amount })))],
+                    &mut ctx,
+                );
+            }
+            settle(&mut sink, SettleOptions::default());
+        }
+        s.state_mut().rng_cursor = rng.cursor();
     }
 
     fn heals_on(s: &Scenario, target_id: &str) -> Vec<i32> {
@@ -152,6 +181,34 @@ mod tests {
         s.start_turn();
         assert_eq!(health(&s, P2), 28);
         assert_eq!(health(&s, P1), 20);
+    }
+
+    #[test]
+    fn r1180002_a_traps_hit_heals_nothing() {
+        let mut s = game(
+            "m+007-trap",
+            json!({ "field": [ID], "backrow": [{ "def": TRAP, "faceUp": true }], "health": 20 }),
+            json!({}),
+        );
+        trap_hits_enemy_hero(&mut s, 3);
+        assert_eq!(health(&s, P2), 27);
+        assert_eq!(health(&s, P1), 20, "a Trap has no Lifesteal from the aura");
+    }
+
+    #[test]
+    fn r1180002_radiant_a_traps_hit_heals_nothing() {
+        let mut s = game(
+            "m+007-radiant-trap",
+            json!({
+                "field": [{ "def": ID, "radiant": true }],
+                "backrow": [{ "def": TRAP, "faceUp": true }],
+                "health": 20,
+            }),
+            json!({}),
+        );
+        trap_hits_enemy_hero(&mut s, 3);
+        assert_eq!(health(&s, P2), 27);
+        assert_eq!(health(&s, P1), 20, "no Lifesteal heal to double");
     }
 
     #[test]

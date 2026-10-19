@@ -127,7 +127,8 @@ class BuilderTests(unittest.TestCase):
 
     def test_the_usage_order(self):
         """For easy items the lanes fill in tier order (#695): the weak models first while they
-        have a lane, Codex before Devin; then the medium models, Muse then agy, one lane each;
+        have a lane, Codex before Devin; then the medium models, Muse on its two lanes (#1273)
+        and agy on its one;
         then the Sonnet seats in usage order, claude-3 twice (two lanes, uncapped), claude-7,
         claude-1, claude-4, claude-6 and claude-5 once each; and claude-2 builds only after all
         of them (`build_last`). Past that every lane is held, and the rest wait."""
@@ -152,6 +153,7 @@ class BuilderTests(unittest.TestCase):
                 run_id=str(n)))
             order.append((planned["provider"], seats(planned)["build"][1]))
         self.assertEqual(order, [("gpt", "gpt-5.6-terra"), ("devin", "swe-2-max"),
+                                 ("muse", "muse-spark-1.3-contributor"),
                                  ("muse", "muse-spark-1.3-contributor"),
                                  ("agy", "gemini-3.8-flash-high"),
                                  ("claude-3", "sonnet"), ("claude-3", "sonnet"),

@@ -17,7 +17,8 @@
 //! THE DEATH (Catalyst, C+ #38's shape, R1421): a Jazakus Prime (M+ #16.1) shuffled into its owner's
 //! deck, Radiant on the Radiant face.
 //!
-//! Voice audio is owed until the set ships (R1420, R1448): the `card-audio.json5` entry is written.
+//! Voice audio is owed with the patch that ships the set (R1420): the `card-audio.json5` entry is
+//! written, and the release renders it (`[gen:voice]`, R1448).
 
 use jackioh_engine::effects::{choose_craft, chosen_recipe, craft_card, shuffle_into};
 use jackioh_engine::prelude::*;

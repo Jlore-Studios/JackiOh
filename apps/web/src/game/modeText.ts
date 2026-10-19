@@ -75,6 +75,13 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
   // M #98 Showdown: "Choose a lane. Lock every other lane until the start of your next turn." The
   // board draws lane 1 on the left for both seats (Board.tsx), so each option says where it is.
   "meditative-098": lanes("Lock the other four lanes until the start of your next turn."),
+  // M+ #4 Supply Drop: "Choose one: In 3 turns, deal 4 damage to each enemy, with Pierce and Lifesteal;
+  // or in 3 turns, add 1 random Radiant Jlockeed card to your hand, and each costs (2)." The wait and
+  // the numbers are the card's and its Embiggened version's, so the detail names none.
+  "meditativeplus-004": {
+    combat: { label: "Combat", detail: "In a few turns, deal damage to each enemy, with Pierce and Lifesteal." },
+    supplies: { label: "Supplies", detail: "In a few turns, add Radiant Jlockeed cards to your hand." },
+  },
   // M+ #24 Bob, Wisconsin's Strongest Soldier: "Cry: Choose one: Freeze all enemy Units; put an enemy
   // Unit into your hand, and your opponent gets 3 Coins; Discover a Unit and make it Radiant; or draw 1
   // and fill your hand with copies of it." The Coins' count is the card's, so the detail names none.

@@ -9,10 +9,32 @@ def write_records(path: Path, records: list[dict]) -> Path:
     return path
 
 
-def seat(deck, opening=(), drawn=(), played=(), played_turns=None):
+def seat(
+    deck,
+    opening=(),
+    drawn=(),
+    played=(),
+    played_turns=None,
+    fatigue_draws=None,
+    fatigue_damage=None,
+    traps_set=None,
+    traps_fired=None,
+    position_switches=None,
+    radiant_upgrades=None,
+):
     summary = {"deck": list(deck), "opening": list(opening), "drawn": list(drawn), "played": list(played)}
     if played_turns is not None:
         summary["playedTurns"] = list(played_turns)
+    for _snake, camel, value in (
+        ("fatigue_draws", "fatigueDraws", fatigue_draws),
+        ("fatigue_damage", "fatigueDamage", fatigue_damage),
+        ("traps_set", "trapsSet", traps_set),
+        ("traps_fired", "trapsFired", traps_fired),
+        ("position_switches", "positionSwitches", position_switches),
+        ("radiant_upgrades", "radiantUpgrades", radiant_upgrades),
+    ):
+        if value is not None:
+            summary[camel] = value
     return summary
 
 
