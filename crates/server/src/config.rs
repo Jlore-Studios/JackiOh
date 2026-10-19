@@ -2000,3 +2000,194 @@ pub const PING_RATE_WINDOW_MS: i64 = 3_000;
 /// S6, B64: how long the board marks a pinged card.
 pub const PING_SHOW_MS: i64 = 2_500;
 // ---- end Duos co-op (#946) ----
+
+// ---------------------------------------------------------------------------------------------
+// The collection economy (SPEC §14, #1294; built by #1298). PUBLIC: the client reads prices,
+// pity counters, bars, tracks and quests from these, so every one is exported to
+// `apps/web/src/wire/serverConfig.ts` by `tests/export_config.rs` (CLAUDE.md rules 7, 9).
+// The table in SPEC §14 lists every constant; the values are #1294's Numbers table, and where
+// that table gives no value this issue chose one (noted below), since the checkout cannot read
+// it. `PACK_BASE_RATES` is tuned by the seeded simulation in `economy/math.rs`, which also derives
+// both bars' points-per-duplicate from their target packs.
+// ---------------------------------------------------------------------------------------------
+
+/// The shape of `PACK_BASE_RATES` and `PACK_TARGET_RATES` (cf. `AiEmoteConfig`): the chance a
+/// card pack holds an Epic, a Legendary or a Mythic. Per pack, not per slot (SPEC §14.4).
+#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PackRarityRates {
+    pub epic: f64,
+    pub legendary: f64,
+    pub mythic: f64,
+}
+
+/// The shape of `PACK_UNOWNED_WEIGHTS`: how a slot's card draw weighs the cards the account
+/// owns against the ones it does not (SPEC §14.3). A card's weight is its side's number, so an
+/// unowned card is drawn `unowned / owned` times as often as an owned one of the same rarity.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PackUnownedWeights {
+    pub owned: f64,
+    pub unowned: f64,
+}
+
+/// One step of `COSMETIC_TOKEN_CYCLE` (SPEC §14.5): a cosmetic token of that rarity, or a
+/// cosmetic pack. Serialised lower-camel for the client (`cosmeticPack`).
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum CosmeticTokenStep {
+    Rare,
+    Epic,
+    CosmeticPack,
+}
+
+/// The shape of `COSMETIC_PACK_RATES`: the odds of one cosmetic pack slot (SPEC §14.6). The
+/// four shares sum to 1, so every slot of a cosmetic pack is Rare or better.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CosmeticPackRates {
+    pub rare: f64,
+    pub epic: f64,
+    pub legendary: f64,
+    pub mythic: f64,
+}
+
+/// SPEC §14.3: the Jlore a card pack costs. #1294's table gives no value; 100 prices a pack at
+/// two ladder wins, so a night's games buy a pack.
+pub const PACK_PRICE_JLORE: i32 = 100;
+/// SPEC §14.3: the slots of a card pack. #1294's table gives no value; 5, with the Rare-or-better
+/// slot one of them, so a pack reads like the packs Hearthstone semantics follow.
+pub const PACK_SLOTS: usize = 5;
+/// SPEC §14.3: how a slot's card draw leans toward the cards the account does not own. #1294's
+/// table gives no value; an unowned card weighs four times an owned one of the same rarity, so
+/// early packs complete a collection and late packs feed the token bars.
+pub const PACK_UNOWNED_WEIGHTS: PackUnownedWeights = PackUnownedWeights {
+    owned: 1.0,
+    unowned: 4.0,
+};
+/// SPEC §14.4: the chance a card pack holds each rarity before pity. Tuned by the seeded
+/// simulation in `economy/math.rs` from #1298's starting points (Epic 29.0%, Legendary 8.2%,
+/// Mythic 3.0%): Epic and Legendary already center on their targets, and Mythic is tuned to
+/// 3.7% so its effective rate centers on 5% instead of sitting low at ~4.3%.
+pub const PACK_BASE_RATES: PackRarityRates = PackRarityRates {
+    epic: 0.290,
+    legendary: 0.082,
+    mythic: 0.037,
+};
+/// SPEC §14.4: the chance a card pack holds an Epic, a Legendary or a Mythic once pity is
+/// counted in (#1298: ~30%, ~10%, ~5%).
+pub const PACK_TARGET_RATES: PackRarityRates = PackRarityRates {
+    epic: 0.30,
+    legendary: 0.10,
+    mythic: 0.05,
+};
+/// SPEC §14.4: how far the seeded simulation's rates may land from `PACK_TARGET_RATES`, in
+/// fraction points. #1294's table gives no value; two points hold the tuned bases honestly
+/// without fitting the seed's noise.
+pub const PACK_RATE_TOLERANCE: f64 = 0.02;
+/// SPEC §14.4: the longest an account waits for an Epic: of any 10 card packs in a row, at
+/// least one holds an Epic. #1294's table gives no value; with `PACK_BASE_RATES`, 10/20/40
+/// lands the effective rates on `PACK_TARGET_RATES` (see the simulation in `economy/math.rs`).
+pub const PITY_EPIC_PACKS: usize = 10;
+/// SPEC §14.4: the longest an account waits for a Legendary: of any 20 card packs in a row, at
+/// least one holds one.
+pub const PITY_LEGENDARY_PACKS: usize = 20;
+/// SPEC §14.4: the longest an account waits for a Mythic: of any 40 card packs in a row, at
+/// least one holds one. The longest wait of all, as SPEC §14.4 requires.
+pub const PITY_MYTHIC_PACKS: usize = 40;
+/// SPEC §14.5: the points that fill the card token bar. #1294's table gives no value; 150 is
+/// `CARD_TOKEN_BAR_POINTS_PER_DUPLICATE * PACK_SLOTS * CARD_TOKEN_BAR_TARGET_PACKS`, so the
+/// bar fills exactly at its target on a complete collection.
+pub const CARD_TOKEN_BAR_SIZE: i64 = 150;
+/// SPEC §14.5: the points that fill the cosmetic token bar, likewise exactly at its target.
+pub const COSMETIC_TOKEN_BAR_SIZE: i64 = 150;
+/// SPEC §14.5: the points a spent duplicate adds to the card token bar. Derived by the
+/// simulation in `economy/math.rs`: one point per duplicate fills `CARD_TOKEN_BAR_SIZE` in
+/// `CARD_TOKEN_BAR_TARGET_PACKS` packs of `PACK_SLOTS` duplicates each.
+pub const CARD_TOKEN_BAR_POINTS_PER_DUPLICATE: i64 = 1;
+/// SPEC §14.5: the points a spent duplicate adds to the cosmetic token bar, likewise.
+pub const COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE: i64 = 1;
+/// SPEC §14.5: the card packs the card token bar takes to fill, on average (#1298: ~30).
+pub const CARD_TOKEN_BAR_TARGET_PACKS: usize = 30;
+/// SPEC §14.5: the card packs the cosmetic token bar takes to fill, on average (#1298: ~30).
+pub const COSMETIC_TOKEN_BAR_TARGET_PACKS: usize = 30;
+/// SPEC §14.5: the steps the cosmetic token bar pays, in order, verbatim.
+pub const COSMETIC_TOKEN_CYCLE: [CosmeticTokenStep; 6] = [
+    CosmeticTokenStep::Rare,
+    CosmeticTokenStep::Epic,
+    CosmeticTokenStep::Rare,
+    CosmeticTokenStep::Epic,
+    CosmeticTokenStep::Rare,
+    CosmeticTokenStep::CosmeticPack,
+];
+/// SPEC §14.6: a cosmetic pack's slots. #1294's table gives no value; 3, so a cycle's
+/// Cosmetic Pack step reads as a small bonus beside a 5-slot card pack.
+pub const COSMETIC_PACK_SLOTS: usize = 3;
+/// SPEC §14.6: a cosmetic pack slot's odds. #1294's table gives no value; Rare 55%, Epic 28%,
+/// Legendary 12%, Mythic 5%, so most slots are Rare and a Mythic cosmetic stays rare.
+pub const COSMETIC_PACK_RATES: CosmeticPackRates = CosmeticPackRates {
+    rare: 0.55,
+    epic: 0.28,
+    legendary: 0.12,
+    mythic: 0.05,
+};
+/// SPEC §14.6: the cosmetic packs that fill the Chase Shard bar. #1294's table gives no value;
+/// 20 keeps a chosen chase a long chase without outliving a set.
+pub const CHASE_SHARD_PACKS: i64 = 20;
+/// SPEC §14.6: the chance a card pack's cosmetic is a chase. #1294's table gives no value; 2%,
+/// so luck finds one sometimes and the Shard stays the way to choose one.
+pub const CHASE_DROP_RATE: f64 = 0.02;
+/// SPEC §14.7: the levels of a set track. #1294's table gives no value; 100 levels, whose whole
+/// curve costs 495,000 XP (`total_xp_for_level` in `economy/math.rs`), a set's lifetime of play.
+pub const SET_TRACK_LEVELS: u32 = 100;
+/// SPEC §14.7: the XP step of the level curve: going from level n to the next costs this times
+/// n. Forced to 100: only then is level 10 at 4,500 XP and level 100 at 495,000 XP (#1298).
+pub const SET_TRACK_XP_PER_LEVEL: i32 = 100;
+/// SPEC §14.7: the newest track's level that unlocks the older ones. #1294's table gives no
+/// value; 20, an early taste of the newest set before its backlog opens.
+pub const SET_TRACK_UNLOCK_LEVEL: u32 = 20;
+/// SPEC §14.8: the Jlore a ladder game pays its winner. #1294's table gives no value; with
+/// `PACK_PRICE_JLORE` at 100, two wins buy a pack.
+pub const JLORE_LADDER_WIN: i32 = 50;
+/// SPEC §14.8: the Jlore a ladder game pays its loser: half a win's fifth, so losing still moves
+/// the wallet.
+pub const JLORE_LADDER_LOSS: i32 = 20;
+/// SPEC §14.8: the Jlore a practice game pays for a win: a fifth of the ladder's, since the
+/// browser runs it and the server only checks the log.
+pub const JLORE_PRACTICE_WIN: i32 = 10;
+/// SPEC §14.8: the Jlore a practice game pays for a loss.
+pub const JLORE_PRACTICE_LOSS: i32 = 5;
+/// SPEC §14.8: the XP of a game per action the player took. #1294's table gives no value; with
+/// `XP_WIN_BONUS`, a 40-action win is exactly `XP_LADDER_TARGET_MEAN`.
+pub const XP_PER_ACTION: i32 = 2;
+/// SPEC §14.8: the XP more a win pays.
+pub const XP_WIN_BONUS: i32 = 20;
+/// SPEC §14.8: the most XP a game pays, so a loop of empty actions cannot farm it.
+pub const XP_GAME_CAP: i32 = 150;
+/// SPEC §14.8: a practice game's share of the XP the same game earns on the ladder.
+pub const XP_PRACTICE_SCALE: f64 = 0.5;
+/// SPEC §14.8: the XP a ladder game averages. #1294's table gives no value; 100, the 40-action
+/// win `XP_PER_ACTION` and `XP_WIN_BONUS` price.
+pub const XP_LADDER_TARGET_MEAN: i32 = 100;
+/// SPEC §14.8: how long a practice seed waits to be claimed, in seconds. #1294's table gives no
+/// value; an hour outlasts any game without holding seeds.
+pub const PRACTICE_SEED_TTL_SECONDS: i64 = 3600;
+/// SPEC §14.9: how often a quest arrives while fewer than `QUEST_MAX_HELD` are held, in hours.
+/// Daily quests: one a day.
+pub const QUEST_INTERVAL_HOURS: i64 = 24;
+/// SPEC §14.9: how many quests an account holds at most. #1294's table gives no value; 3, so a
+/// player away for days comes back to three waiting, never more.
+pub const QUEST_MAX_HELD: usize = 3;
+/// SPEC §14.9: the least Jlore a quest pays. #1294's table gives no value; 40 to 100 pays about
+/// half a pack to a pack for a day's goals.
+pub const QUEST_JLORE_MIN: i32 = 40;
+/// SPEC §14.9: the most Jlore a quest pays, for the hardest goals.
+pub const QUEST_JLORE_MAX: i32 = 100;
+/// SPEC §14.9: the XP of each Jlore a quest pays. #1294's table gives no value; 1-for-1 keeps
+/// quests' two payouts in step.
+pub const QUEST_XP_PER_JLORE: i32 = 1;
+
+// ---- Economy (SPEC §14, #1299) ----
+
+/// §14.7: the level a set track starts at, with no XP (migration 0045's `set_tracks.level` default).
+pub const SET_TRACK_FIRST_LEVEL: i64 = 1;

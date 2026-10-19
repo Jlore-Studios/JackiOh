@@ -32,7 +32,7 @@ use indexmap::IndexMap;
 use jackioh_engine::subsystems::ky_competition::worked_answer;
 use jackioh_engine::{
     Action, ActionBody, CardInstance, GameState, PLAYER_IDS, PlayerId, PromptKind, Rng, active_units_of,
-    mulligan_prompt_for, reduce,
+    mulligan_prompt_for, reduce_unpiloted,
 };
 
 use crate::candidates::candidate_actions;
@@ -529,7 +529,7 @@ fn submitted(state: &GameState, seat: PlayerId, decision: Decision) -> Decision 
     }
     let trial = |action: &ActionBody| {
         catch_unwind(AssertUnwindSafe(|| {
-            reduce(state, &Action::new(action.clone(), seat, "submitted".to_string()))
+            reduce_unpiloted(state, &Action::new(action.clone(), seat, "submitted".to_string()))
                 .error
                 .is_none()
         }))

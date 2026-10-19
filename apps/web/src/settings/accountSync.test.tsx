@@ -263,7 +263,7 @@ describe("R634 after the load, each change is sent as it happens", () => {
 
     const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
     expect(Object.keys(sent)).toEqual(["cosmetics"]);
-    expect(sent["cosmetics"]?.values).toEqual({ foil: "foil-rainbow", finish: DEFAULT_CARD_COSMETICS.finish, border: "border-bone" });
+    expect(sent["cosmetics"]?.values).toEqual({ ...DEFAULT_CARD_COSMETICS, foil: "foil-rainbow", border: "border-bone" });
 
     // A new device: nothing of this one's, and the account's copy to load.
     for (const sync of started.splice(0)) sync.stop();
@@ -273,7 +273,31 @@ describe("R634 after the load, each change is sent as it happens", () => {
     expect(readCosmetics()).toEqual(DEFAULT_CARD_COSMETICS);
     start(fakeApi(api.account));
     await settle();
-    expect(readCosmetics()).toEqual({ foil: "foil-rainbow", finish: DEFAULT_CARD_COSMETICS.finish, border: "border-bone" });
+    expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, foil: "foil-rainbow", border: "border-bone" });
+  });
+
+  it("R1297000 the deck slots ride the cosmetics group", async () => {
+    const api = fakeApi();
+    start(api);
+    await settle();
+
+    await pass(1_000);
+    writeCosmetics({ table: "table-felt", cardBack: "card-back-blueprint" });
+    await pass(SETTINGS_SYNC_DEBOUNCE_MS);
+
+    // One group, the same one the card slots are in, holding all six kinds.
+    const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
+    expect(Object.keys(sent)).toEqual(["cosmetics"]);
+    expect(sent["cosmetics"]?.values).toEqual({ ...DEFAULT_CARD_COSMETICS, table: "table-felt", cardBack: "card-back-blueprint" });
+
+    // A new device loads them back.
+    for (const sync of started.splice(0)) sync.stop();
+    __resetSettingsSyncForTests();
+    localStorage.clear();
+    resetCosmeticsForTests();
+    start(fakeApi(api.account));
+    await settle();
+    expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, table: "table-felt", cardBack: "card-back-blueprint" });
   });
 
   it("R1295000 an id this client does not know comes in, is kept and draws as its kind's default", async () => {
@@ -281,7 +305,7 @@ describe("R634 after the load, each change is sent as it happens", () => {
     start(api);
     await settle();
 
-    expect(readCosmetics()).toEqual({ foil: "foil-aurora", finish: DEFAULT_CARD_COSMETICS.finish, border: "border-wood" });
+    expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, foil: "foil-aurora", border: "border-wood" });
     expect(resolveCosmetic("foil", readCosmetics().foil)).toBe(DEFAULT_CARD_COSMETICS.foil);
     // Adopted, not changed: nothing goes back up to overwrite the newer client's pick.
     await pass(SETTINGS_SYNC_DEBOUNCE_MS * 3);

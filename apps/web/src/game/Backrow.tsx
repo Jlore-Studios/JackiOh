@@ -71,6 +71,7 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
           card={null}
           className="card-backrow"
           touchHold={props.touchHold}
+          ownBack={props.side === "you"}
           faceDown={{
             at: `${props.side}-${String(props.lane)}`,
             ...(cost === undefined ? {} : { cost }),

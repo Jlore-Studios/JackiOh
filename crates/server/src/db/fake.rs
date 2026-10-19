@@ -274,6 +274,11 @@ pub struct FakeTables {
     /// are `crate::duos::store`'s.
     pub duos: crate::duos::store::DuosTables,
     // ---- end Duos co-op (#946) ----
+    // ---- Economy (SPEC §14, #1299) ----
+    /// §14.11: migration 0045's holdings and their ledgers. Their store methods are
+    /// `crate::economy::store`'s.
+    pub economy: crate::economy::store::EconomyTables,
+    // ---- end Economy ----
 }
 
 /// TS `emptyTables()` (with `emptyDeckTables`, `emptyTutorialTables`, `emptyPlayerSettingsTables`,
@@ -848,6 +853,7 @@ fn apply_launch_grant(f: &mut FakeTx<'_>, profile_id: &str) {
             card_id: card_id.clone(),
             delta,
             reason: LAUNCH_GRANT_REASON.to_string(),
+            dev: false,
             at,
         });
     }
@@ -1949,8 +1955,9 @@ pub fn decks_get(f: &mut FakeTx<'_>, deck_id: &str) -> Result<Option<SavedDeck>,
     Ok(f.tables().decks.iter().find(|deck| deck.id == deck_id).cloned())
 }
 
-/// Inserts a deck whose id is new, or replaces `name`, `cards`, `portrait`, `catalog_version` and
-/// `updated_at` of the profile's own deck (its `created_at` is kept).
+/// Inserts a deck whose id is new, or replaces `name`, `cards`, `portrait`, the three cosmetic
+/// picks (R1297000), `catalog_version` and `updated_at` of the profile's own deck (its
+/// `created_at` is kept).
 pub fn decks_upsert(
     f: &mut FakeTx<'_>,
     deck: &SavedDeck,
@@ -1966,6 +1973,9 @@ pub fn decks_upsert(
         existing.name = deck.name.clone();
         existing.cards = deck.cards.clone();
         existing.portrait = deck.portrait.clone();
+        existing.table_cosmetic = deck.table_cosmetic.clone();
+        existing.field_cosmetic = deck.field_cosmetic.clone();
+        existing.card_back_cosmetic = deck.card_back_cosmetic.clone();
         existing.catalog_version = deck.catalog_version.clone();
         existing.updated_at = deck.updated_at;
         return Ok(UpsertOutcome::Updated);
@@ -3243,6 +3253,8 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     remove_watch_rows(tables, profile_id);
     // Duos co-op (#946): 0039's rooms, matches and their logs cascade with either person.
     crate::duos::store::remove_duos_rows(&mut tables.duos, profile_id);
+    // Economy (#1299): 0045's holdings and ledgers cascade with the profile.
+    crate::economy::store::remove_economy_rows(&mut tables.economy, profile_id);
     true
 }
 

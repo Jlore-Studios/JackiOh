@@ -3,6 +3,7 @@
 
 import { DECK_SIZE } from "@jackioh/engine/config";
 
+import type { DeckCosmetics } from "../cards/cosmetics.ts";
 import { practiceDeckIssues } from "../wire/validator.ts";
 import type { PracticeDeckChoice } from "./protocol.ts";
 
@@ -106,7 +107,13 @@ export const RANDOM_DECK_IDENTITY =
   "A fresh twenty-card deck every game, dealt with a sensible mana curve. You meet it in your opening hand.";
 
 /** Oldest-first, named `GET /api/decks` result; it may be an incomplete draft (R250). */
-export type PracticeSavedDeck = { name: string; cards: readonly string[]; portrait?: string | null };
+export type PracticeSavedDeck = {
+  name: string;
+  cards: readonly string[];
+  portrait?: string | null;
+  /** R1297000: the deck's own playmat, backdrop and card back, drawn on your side while you play it. */
+  cosmetics?: DeckCosmetics;
+};
 
 /** Each saved deck's `savedDeckRefusal`, worked out once: a deck from `GET /api/decks` is never changed in place. */
 const refusals = new WeakMap<PracticeSavedDeck, string | null>();
@@ -167,7 +174,13 @@ export function deckChoiceFromValue(
     const index = Number(digits);
     const deck = saved[index - 1];
     if (index < 1 || deck === undefined || !isPlayableSavedDeck(deck)) return null;
-    return { kind: "saved", index, cards: [...deck.cards], portrait: deck.portrait ?? null };
+    return {
+      kind: "saved",
+      index,
+      cards: [...deck.cards],
+      portrait: deck.portrait ?? null,
+      ...(deck.cosmetics === undefined ? {} : { cosmetics: deck.cosmetics }),
+    };
   }
 
   return null;

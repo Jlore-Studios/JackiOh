@@ -55,6 +55,7 @@ import { CUSTOM_ID_PREFIX, DIFFICULTIES, type Difficulty } from "@jackioh/engine
 import { LEAN_NEWEST, isLeanPick } from "@jackioh/shared";
 import type { ActionBody, CardDefs, LeanPick, PlayerId, PlayerView, SandboxOp } from "@jackioh/shared";
 
+import { deckCosmeticsOf } from "../cards/cosmetics.ts";
 import { FullArtAllowed } from "../cards/fullArt.ts";
 import { customDefsOf, gameCustomCards, useCustomCards } from "../creator/useCustomCards.ts";
 import Game from "../game/Game.tsx";
@@ -319,7 +320,19 @@ function useSavedDecks(account: Account, loadDecks: (token: string) => Promise<D
         const decks = response.decks;
         const saved: SavedDecks =
           Array.isArray(decks) && decks.length > 0
-            ? { kind: "ready", decks: decks.map((deck) => ({ name: deck.name, cards: [...deck.cards], portrait: deck.portrait ?? null })) }
+            ? {
+                kind: "ready",
+                // R1297000: a deck's own playmat, backdrop and card back ride with it.
+                decks: decks.map((deck) => {
+                  const cosmetics = deckCosmeticsOf(deck);
+                  return {
+                    name: deck.name,
+                    cards: [...deck.cards],
+                    portrait: deck.portrait ?? null,
+                    ...(cosmetics === null ? {} : { cosmetics }),
+                  };
+                }),
+              }
             : { kind: "none" };
         setLoaded({ token, saved });
       },
@@ -1132,6 +1145,8 @@ function PracticeScreen({
         // custom cards (§12.10).
         trackStats={config.lesson === undefined && config.sandbox !== true && (config.customCards?.length ?? 0) === 0}
         wearCosmetics
+        // R1297000: the saved deck being played brings its own playmat, backdrop and card back.
+        deckCosmetics={config.deck.kind === "saved" ? (config.deck.cosmetics ?? null) : null}
         {...(config.lesson === undefined ? {} : { autoEndTurn: true })}
       />
     </FullArtAllowed>

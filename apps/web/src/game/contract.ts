@@ -18,6 +18,7 @@ import type {
   Row,
 } from "@jackioh/shared";
 
+import type { DeckCosmetics } from "../cards/cosmetics.ts";
 import type { EmoteShow } from "../emotes/session.ts";
 
 /** Viewer-relative sides. `viewFor` already orients the view, so the DOM says "you"/"opponent". */
@@ -260,4 +261,9 @@ export type BoardProps = {
    * the viewer plays sets it; absent, every card draws the defaults.
    */
   wearCosmetics?: boolean;
+  /**
+   * R1297000: the picks of the deck the viewer plays (playmat, backdrop, card back), which beat the
+   * account's on the viewer's own side. Null or absent: the account's choice applies.
+   */
+  deckCosmetics?: DeckCosmetics | null;
 };

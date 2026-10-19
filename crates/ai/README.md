@@ -77,7 +77,12 @@ which is `decide_styled` at `AI_STYLE_EXACT`, draws only for its determinization
 A decision's cost is counted in nodes: one node is one `reduce` call the AI makes, the reply's
 included. A step whose `reduce` does far more work than most is charged extra nodes up front
 (`surcharge_nodes`: a play that ranks every shipped card, an attack into an armed My Pawn, a fused
-card holding either, and a play the other side's Pareto Optimality judges, per card held; #1240).
+card holding either, and a play the other side's Pareto Optimality judges, per card held; #1240),
+and once a step has run, for each such card it cast without playing it, from a graveyard or at random
+(`announced_surcharge_nodes`, read off its `cardAnnounced` events; #1347).
+Every simulated step goes through `reduce_unpiloted`, which leaves a turn the autopilot owes
+(Cognitive Offloading, R1183002) owed instead of playing it by §10.7's scorer inside the step: a line
+that hands a turn over is scored where that turn begins (#1337).
 `AI_BUDGET` is what the browser plays with; `AI_GATE_BUDGET`, the gates' and the sweep's, is the
 same budget, so both measure the AI that ships. The same state, seed and budget always give the
 same `Decision`. The browser's wall-clock cap arrives as `should_stop` (the WASM binding's deadline),

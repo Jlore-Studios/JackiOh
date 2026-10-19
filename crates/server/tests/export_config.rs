@@ -217,6 +217,89 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("PING_RATE_WINDOW_MS", json!(c::PING_RATE_WINDOW_MS)),
         ("PING_SHOW_MS", json!(c::PING_SHOW_MS)),
         // ---- end Duos co-op (#946) ----
+        // ---- The collection economy (SPEC §14, #1294; built by #1298) ----
+        // Every number of §14's constant table but the environment's DEV_PROFILE_IDS and the
+        // going-live sub-issue's ECONOMY_LIVE, so the client reads the same balances as the
+        // server (CLAUDE.md rule 9).
+        ("PACK_PRICE_JLORE", json!(c::PACK_PRICE_JLORE)),
+        ("PACK_SLOTS", json!(c::PACK_SLOTS)),
+        (
+            "PACK_UNOWNED_WEIGHTS",
+            json!({
+                "owned": c::PACK_UNOWNED_WEIGHTS.owned,
+                "unowned": c::PACK_UNOWNED_WEIGHTS.unowned,
+            }),
+        ),
+        (
+            "PACK_BASE_RATES",
+            json!({
+                "epic": c::PACK_BASE_RATES.epic,
+                "legendary": c::PACK_BASE_RATES.legendary,
+                "mythic": c::PACK_BASE_RATES.mythic,
+            }),
+        ),
+        (
+            "PACK_TARGET_RATES",
+            json!({
+                "epic": c::PACK_TARGET_RATES.epic,
+                "legendary": c::PACK_TARGET_RATES.legendary,
+                "mythic": c::PACK_TARGET_RATES.mythic,
+            }),
+        ),
+        ("PACK_RATE_TOLERANCE", json!(c::PACK_RATE_TOLERANCE)),
+        ("PITY_EPIC_PACKS", json!(c::PITY_EPIC_PACKS)),
+        ("PITY_LEGENDARY_PACKS", json!(c::PITY_LEGENDARY_PACKS)),
+        ("PITY_MYTHIC_PACKS", json!(c::PITY_MYTHIC_PACKS)),
+        ("CARD_TOKEN_BAR_SIZE", json!(c::CARD_TOKEN_BAR_SIZE)),
+        ("COSMETIC_TOKEN_BAR_SIZE", json!(c::COSMETIC_TOKEN_BAR_SIZE)),
+        (
+            "CARD_TOKEN_BAR_POINTS_PER_DUPLICATE",
+            json!(c::CARD_TOKEN_BAR_POINTS_PER_DUPLICATE),
+        ),
+        (
+            "COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE",
+            json!(c::COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE),
+        ),
+        (
+            "CARD_TOKEN_BAR_TARGET_PACKS",
+            json!(c::CARD_TOKEN_BAR_TARGET_PACKS),
+        ),
+        (
+            "COSMETIC_TOKEN_BAR_TARGET_PACKS",
+            json!(c::COSMETIC_TOKEN_BAR_TARGET_PACKS),
+        ),
+        ("COSMETIC_TOKEN_CYCLE", json!(c::COSMETIC_TOKEN_CYCLE)),
+        ("COSMETIC_PACK_SLOTS", json!(c::COSMETIC_PACK_SLOTS)),
+        (
+            "COSMETIC_PACK_RATES",
+            json!({
+                "rare": c::COSMETIC_PACK_RATES.rare,
+                "epic": c::COSMETIC_PACK_RATES.epic,
+                "legendary": c::COSMETIC_PACK_RATES.legendary,
+                "mythic": c::COSMETIC_PACK_RATES.mythic,
+            }),
+        ),
+        ("CHASE_SHARD_PACKS", json!(c::CHASE_SHARD_PACKS)),
+        ("CHASE_DROP_RATE", json!(c::CHASE_DROP_RATE)),
+        ("SET_TRACK_LEVELS", json!(c::SET_TRACK_LEVELS)),
+        ("SET_TRACK_XP_PER_LEVEL", json!(c::SET_TRACK_XP_PER_LEVEL)),
+        ("SET_TRACK_UNLOCK_LEVEL", json!(c::SET_TRACK_UNLOCK_LEVEL)),
+        ("JLORE_LADDER_WIN", json!(c::JLORE_LADDER_WIN)),
+        ("JLORE_LADDER_LOSS", json!(c::JLORE_LADDER_LOSS)),
+        ("JLORE_PRACTICE_WIN", json!(c::JLORE_PRACTICE_WIN)),
+        ("JLORE_PRACTICE_LOSS", json!(c::JLORE_PRACTICE_LOSS)),
+        ("XP_PER_ACTION", json!(c::XP_PER_ACTION)),
+        ("XP_WIN_BONUS", json!(c::XP_WIN_BONUS)),
+        ("XP_GAME_CAP", json!(c::XP_GAME_CAP)),
+        ("XP_PRACTICE_SCALE", json!(c::XP_PRACTICE_SCALE)),
+        ("XP_LADDER_TARGET_MEAN", json!(c::XP_LADDER_TARGET_MEAN)),
+        ("PRACTICE_SEED_TTL_SECONDS", json!(c::PRACTICE_SEED_TTL_SECONDS)),
+        ("QUEST_INTERVAL_HOURS", json!(c::QUEST_INTERVAL_HOURS)),
+        ("QUEST_MAX_HELD", json!(c::QUEST_MAX_HELD)),
+        ("QUEST_JLORE_MIN", json!(c::QUEST_JLORE_MIN)),
+        ("QUEST_JLORE_MAX", json!(c::QUEST_JLORE_MAX)),
+        ("QUEST_XP_PER_JLORE", json!(c::QUEST_XP_PER_JLORE)),
+        // ---- end the collection economy ----
     ]
 }
 
@@ -240,9 +323,10 @@ fn every_name_is_listed_once() {
     // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- 64 + S7's twelve.
     assert_eq!(
         // 64 before #936 and v0.5.0, main's two (CUSTOM_CARDS_PER_ACCOUNT, QUEUE_ENDED_AFTER_READS),
-        // SPEC S7's twelve, the social poll and Duos co-op's eight.
+        // SPEC S7's twelve, the social poll and Duos co-op's eight, and SPEC §14's thirty-eight
+        // economy numbers (#1298).
         listed,
-        88,
+        88 + 38,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -251,7 +335,8 @@ fn every_name_is_listed_once() {
          RATING_WINDOW_FULL_AFTER_SECONDS in place of the uncapped window's \
          RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001), QUEUE_ENDED_AFTER_READS (R897000), SPEC S7's \
          twelve (#936) with the social poll (SOCIAL_POLL_MS), Duos co-op's eight clocks and ping \
-         limits (#946), and PLAYER_STATS_BYTES_MAX (R1142000)"
+         limits (#946), PLAYER_STATS_BYTES_MAX (R1142000), and SPEC §14's thirty-eight economy \
+         numbers (#1298)"
     );
 }
 

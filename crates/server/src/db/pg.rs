@@ -946,6 +946,9 @@ struct DeckRow {
     name: String,
     cards: Value,
     portrait: Option<String>,
+    table_cosmetic: Option<String>,
+    field_cosmetic: Option<String>,
+    card_back_cosmetic: Option<String>,
     catalog_version: String,
     created_at: OffsetDateTime,
     updated_at: OffsetDateTime,
@@ -959,6 +962,9 @@ impl DeckRow {
             name: get(row, "name")?,
             cards: get(row, "cards")?,
             portrait: get(row, "portrait")?,
+            table_cosmetic: get(row, "table_cosmetic")?,
+            field_cosmetic: get(row, "field_cosmetic")?,
+            card_back_cosmetic: get(row, "card_back_cosmetic")?,
             catalog_version: get(row, "catalog_version")?,
             created_at: get(row, "created_at")?,
             updated_at: get(row, "updated_at")?,
@@ -969,7 +975,8 @@ impl DeckRow {
 /// TS's `DECK_COLUMNS`.
 macro_rules! deck_columns {
     () => {
-        "id, profile_id, name, cards, portrait, catalog_version, created_at, updated_at"
+        "id, profile_id, name, cards, portrait, table_cosmetic, field_cosmetic, card_back_cosmetic,
+        catalog_version, created_at, updated_at"
     };
 }
 
@@ -982,6 +989,11 @@ fn to_deck(row: DeckRow) -> Result<SavedDeck, StoreError> {
         cards: card_list_of(&row.cards)?,
         // R641: `null` is the default — `vanilla` — which a deck saved before 0019 also reads back as.
         portrait: row.portrait,
+        // R1297000: `null` is "the account's choice, then the default", which a deck saved before
+        // 0044 also reads back as.
+        table_cosmetic: row.table_cosmetic,
+        field_cosmetic: row.field_cosmetic,
+        card_back_cosmetic: row.card_back_cosmetic,
         catalog_version: row.catalog_version,
         created_at: ms_of(row.created_at),
         updated_at: ms_of(row.updated_at),
@@ -2525,18 +2537,19 @@ pub async fn collection_append_grants(
                 "card_id": grant.card_id,
                 "delta": grant.delta,
                 "reason": grant.reason,
+                "dev": grant.dev,
                 "at": grant.at,
             })
         })
         .collect();
     run_as(t, Some(first.profile_id.as_str())).await?;
     sqlx::query(concat!(
-        "insert into public.collection_grants (profile_id, card_id, delta, reason, at)
-         select g.profile_id::uuid, g.card_id, g.delta, g.reason, ",
+        "insert into public.collection_grants (profile_id, card_id, delta, reason, dev, at)
+         select g.profile_id::uuid, g.card_id, g.delta, g.reason, g.dev, ",
         ts!("g.at"),
         "
            from jsonb_to_recordset($1::jsonb)
-             as g(profile_id text, card_id text, delta int, reason text, at double precision)"
+             as g(profile_id text, card_id text, delta int, reason text, dev boolean, at double precision)"
     ))
     .bind(json(&rows)?)
     .execute(&mut **t)
@@ -2605,7 +2618,7 @@ pub async fn decks_upsert(
         "select app.upsert_deck($1::uuid, $2::uuid, $3::text, $4::jsonb, $5::text, ",
         ts!("$6"),
         ", $7::int,
-           $8::text)
+           $8::text, $9::text, $10::text, $11::text)
            as outcome"
     ))
     .bind(deck.profile_id.as_str())
@@ -2616,6 +2629,9 @@ pub async fn decks_upsert(
     .bind(deck.updated_at)
     .bind(max_decks)
     .bind(deck.portrait.as_deref())
+    .bind(deck.table_cosmetic.as_deref())
+    .bind(deck.field_cosmetic.as_deref())
+    .bind(deck.card_back_cosmetic.as_deref())
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
