@@ -290,10 +290,12 @@ Every change to card data is a patch, and every patch is kept.
 - A version is opaque (R105): nothing parses or orders one, and the order of patches is
   `patches.json`'s. A snapshot keeps a card's data, not its script.
 - Every shipped version but the newest is carried for replays (R767000): its definitions rebuilt
-  from its snapshot, its scripts the build's own. A patch that changes what a card's script does,
-  not only a number its definition holds, keeps the script it replaces in `src/history.rs`'s
-  `KEPT_SCRIPTS` as `(ID, the newest shipped version that ran it, a fn building that card's
-  scripts)`; without one, a replay that script changes is refused by its final hash.
+  from its snapshot, its scripts the build's own, and the win-rate table it shipped with (R1266000:
+  `data/win_rates.json` from the version its `patch` names on, the empty table before it). A patch
+  that changes what a card's script does, not only a number its definition holds, keeps the script
+  it replaces in `src/history.rs`'s `KEPT_SCRIPTS` as `(ID, the newest shipped version that ran it,
+  a fn building that card's scripts)`; without one, a replay that script changes is refused by its
+  final hash.
   `cargo jackioh patches check` proves every carried version holds its snapshot's cards, in order,
   each with a script.
 

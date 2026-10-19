@@ -617,14 +617,7 @@ describe("R654 public statistics route", () => {
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
 
-    // Played Δ column header is initially hidden
-    expect(screen.queryByRole("columnheader", { name: /Played Δ/i })).not.toBeInTheDocument();
-
-    // Toggle column visibility
-    const toggle = screen.getByLabelText(/Played Δ/i);
-    await user.click(toggle);
-
-    // Column header is now visible
+    // Played Δ column header is shown by default
     expect(screen.getByRole("columnheader", { name: /Played Δ/i })).toBeInTheDocument();
 
     // Spark Pup (eligible, delta = +0.20): renders +20% and (30 / 10)
@@ -637,15 +630,21 @@ describe("R654 public statistics route", () => {
 
     // Lava Hound (below sample floor: 10 games < 20): its When drawn renders "—"
     const houndRow = screen.getByText("Lava Hound").closest("tr")!;
-    expect(within(houndRow).getAllByText("—")).toHaveLength(4);
+    expect(within(houndRow).getAllByText("—")).toHaveLength(3);
+
+    // Toggle Played Δ off: the column header leaves
+    await user.click(screen.getByLabelText(/Played Δ/i));
+    expect(screen.queryByRole("columnheader", { name: /Played Δ/i })).not.toBeInTheDocument();
+
+    // Toggle it back on: the column header returns
+    await user.click(screen.getByLabelText(/Played Δ/i));
+    expect(screen.getByRole("columnheader", { name: /Played Δ/i })).toBeInTheDocument();
   });
 
   it("R654 renders not enough data for a Played Δ the server withholds or a card below the floor", async () => {
-    const user = userEvent.setup();
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
-    await user.click(screen.getByLabelText(/Played Δ/i));
 
     // Lava Hound is below the floor (10 games < 20): no delta and no cohort sizes.
     const houndRow = screen.getByText("Lava Hound").closest("tr")!;
@@ -664,10 +663,6 @@ describe("R654 public statistics route", () => {
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
-
-    // Reveal Played Δ column
-    const toggle = screen.getByLabelText(/Played Δ/i);
-    await user.click(toggle);
 
     const deltaHeader = screen.getByRole("columnheader", { name: /Played Δ/i });
     expect(deltaHeader).toHaveAttribute("aria-sort", "none");
@@ -714,7 +709,7 @@ describe("R654 public statistics route", () => {
 
     // Lava Hound (<20 games total => — for both)
     const houndRow = screen.getByText("Lava Hound").closest("tr")!;
-    expect(within(houndRow).getAllByText("—")).toHaveLength(4);
+    expect(within(houndRow).getAllByText("—")).toHaveLength(3);
 
     // Sort by Radiant descending: Spark Pup (70%) > Aqua Warden (40%) > Lava Hound (—)
     await user.click(radiantHeader);
@@ -758,6 +753,9 @@ describe("R654 public statistics route", () => {
     render(<StatsRoute />);
 
     expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+
+    // Keywords column is hidden by default; show it first
+    await user.click(screen.getByLabelText("Keywords"));
 
     // Keyword column header is present
     const keywordHeader = screen.getByRole("columnheader", { name: /Keywords/i });
@@ -831,7 +829,8 @@ describe("R654 public statistics route", () => {
     expect(sortDirBtn).toHaveTextContent("↓");
     expect(nameHeader).toHaveAttribute("aria-sort", "descending");
 
-    // Clicking table header updates select control
+    // Clicking table header updates select control (Cost is hidden by default; show it first)
+    await user.click(screen.getByLabelText("Cost"));
     const costHeader = screen.getByRole("columnheader", { name: /Cost/i });
     await user.click(costHeader);
     expect(sortSelect).toHaveValue("cost");
@@ -874,5 +873,26 @@ describe("R654 public statistics route", () => {
     expect(screen.getByTestId(statsTestid.cardsTable)).toBeInTheDocument();
     expect(screen.queryByTestId(statsTestid.cardsGrid)).not.toBeInTheDocument();
     expect(screen.getByText("Columns:")).toBeInTheDocument();
+  });
+
+  it("shows Played Δ and hides cost, rarity and keywords by default", async () => {
+    render(<StatsRoute />);
+
+    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+
+    expect(screen.getByLabelText("Cost")).not.toBeChecked();
+    expect(screen.getByLabelText("Rarity")).not.toBeChecked();
+    expect(screen.getByLabelText("Keywords")).not.toBeChecked();
+    expect(screen.queryByRole("columnheader", { name: "Cost" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Rarity" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Keywords" })).not.toBeInTheDocument();
+
+    expect(screen.getByLabelText("Played Δ")).toBeChecked();
+    expect(screen.getByLabelText("Games")).toBeChecked();
+    expect(screen.getByLabelText("When drawn")).toBeChecked();
+    expect(screen.getByLabelText("Radiant")).toBeChecked();
+    expect(screen.getByLabelText("Normal")).toBeChecked();
+    expect(screen.getByLabelText("Play rate")).toBeChecked();
+    expect(screen.getByRole("columnheader", { name: /Played Δ/i })).toBeInTheDocument();
   });
 });

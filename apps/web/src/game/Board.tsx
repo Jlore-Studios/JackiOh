@@ -60,6 +60,7 @@ import { getAudioEngine } from "../audio/engine.ts";
 import LanguageButton from "../i18n/LanguageButton.tsx";
 import { formatSeconds, t } from "../i18n/i18n.ts";
 import { ActingProvider } from "./spent.ts";
+import { WearerProvider } from "./wearer.ts";
 
 // Order matters: highlights.css paints the glow over board.css's borders (S7).
 import "./board.css";
@@ -564,6 +565,7 @@ export default function Board({
   onClick,
   onControl,
   emotes,
+  wearCosmetics = false,
 }: BoardProps): ReactElement {
   const pops = popsFrom(view, animating, animated);
   // R318: fatigue and a full library on a library pile, a full hand over a hand, as the pops are.
@@ -610,10 +612,12 @@ export default function Board({
   }
 
   // R243: the match-made definitions and field powers this view names, for every card drawn below;
-  // #258: and who is acting now, for the units that have no action left (spent.ts).
+  // #258: and who is acting now, for the units that have no action left (spent.ts); R1295000: and
+  // whose cards wear the device's cosmetics (wearer.ts).
   return (
     <MatchCardsProvider view={view}>
       <ActingProvider view={view}>
+      <WearerProvider seat={wearCosmetics ? view.viewer : null}>
       <div
         className="board"
         data-testid={testid.board}
@@ -748,6 +752,7 @@ export default function Board({
 
         <Log view={view} revealed={logOpen} />
       </div>
+      </WearerProvider>
       </ActingProvider>
     </MatchCardsProvider>
   );

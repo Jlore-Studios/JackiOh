@@ -46,6 +46,10 @@
 // R1177001: a token unit wears the token mark (CardFace.tsx's TokenMark, `.cf-token`) in its stats
 // row, in the room between attack and health, as its full face says "Token Unit": the board is where
 // a token is met most. The row's tests read its stats by their own classes, never its whole text.
+//
+// R1295000: the viewer's own unit in a game (`worn`) wears the device's card cosmetics as its full
+// face does (CardFace.tsx, cosmetics.ts): the border as a rim inside its panel, the finish and the
+// foil over its portrait's art.
 
 import { useRef, type ReactElement } from "react";
 
@@ -57,6 +61,7 @@ import { CardStates } from "./CardStates.tsx";
 import { TokenMark, costDigits, hasCrest } from "./CardFace.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { CHINESE_COMMA, chineseKeyword } from "./chinese.ts";
+import { useCosmeticAttributes } from "./cosmetics.ts";
 import { useFitText } from "./fit.ts";
 import { KEYWORD_MARK } from "./glossary.ts";
 import { Icon } from "./icons.tsx";
@@ -67,8 +72,15 @@ import { useCardSettings } from "./settings.ts";
 
 import "./cards.css";
 import "./keywords.css";
+import "./cosmetics.css";
 
-export type MinionFaceProps = { face: FaceModel; unit: UnitView; className?: string };
+export type MinionFaceProps = {
+  face: FaceModel;
+  unit: UnitView;
+  className?: string;
+  /** R1295000: the viewer's own unit in a game wears the device's cosmetics (cosmetics.ts). */
+  worn?: boolean;
+};
 
 /** The states the minion's keyword treatments already draw (Brittle's cracks, the Animated cog). */
 const DRAWN_BY_TREATMENTS: readonly StateBadgeKind[] = ["brittle", "animated"];
@@ -127,9 +139,10 @@ function fxAttributesOf(plan: readonly KeywordFxPlan[], kind: Keyword["kind"]): 
   return entry === undefined ? {} : keywordFxAttributes(entry);
 }
 
-export function MinionFace({ face, unit, className }: MinionFaceProps): ReactElement {
+export function MinionFace({ face, unit, className, worn = false }: MinionFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
+  const cosmetics = useCosmeticAttributes(face, worn, settings.animatedFoil);
   const plan = keywordFxPlan(unit);
   const nameRef = useRef<HTMLSpanElement>(null);
   useFitText(nameRef, face.name);
@@ -149,6 +162,7 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
       data-flying={hasKeyword(unit.keywords, "Flying") && unit.position !== "DEF" ? "true" : undefined}
       data-vanilla={unit.vanilla === true ? "true" : undefined}
       data-tuned={face.tuning?.verdict}
+      {...cosmetics}
     >
       <span className="cf-scale">
         <span className="cf-portrait">

@@ -35,6 +35,53 @@ def offline(gh: FakeGitHub | None = None):
     return mock.patch.object(main_mod, "_ctx", lambda cfg, **_: make_ctx(gh, at=NIGHT, cfg=cfg))
 
 
+class TrainingBoxTests(unittest.TestCase):
+    """The training box's lanes in the status diagram, from their pull requests (#1272)."""
+
+    def boxes(self, gh: FakeGitHub) -> str:
+        return "\n".join(dashboard.training_boxes(make_ctx(gh, at=NIGHT, cfg=make_config())))
+
+    def lane(self, gh: FakeGitHub, number: int, lane: str, title: str, *, draft: bool,
+             updated: timedelta) -> None:
+        pull = gh.add_pull(number, f"ai/{lane}", title)
+        pull.update(draft=draft, updated_at=iso(NIGHT - updated))
+
+    def test_a_draft_is_a_session_at_work_and_an_idle_title_says_so(self):
+        gh = FakeGitHub()
+        self.lane(gh, 70, "improve", "AI gen 3 (improve): in training, nothing promoted yet",
+                  draft=True, updated=timedelta(minutes=20))
+        self.lane(gh, 71, "unban", "AI gen 9 (unban): idle, the AI on main bans no card",
+                  draft=True, updated=timedelta(days=3))
+        body = self.boxes(gh)
+        self.assertIn('subgraph training["The training box, on Muse: 1 of 2 lanes working"]', body)
+        self.assertIn('t0["<b>improve</b><br/>🟢 a Muse session on #70<br/>updated', body)
+        self.assertIn(":::busy", body)
+        # An idle unban lane's draft goes days unchanged, and that is not a stopped lane.
+        self.assertIn('t1["<b>unban</b><br/>⏸️ idle on #71<br/>the AI on main bans no card"]'
+                      ':::paused', body)
+        self.assertIn('t2["<b>gather</b><br/>no model, no pull request<br/>its log is on the box"]'
+                      ':::closed', body)
+
+    def test_a_promotion_waits_on_ci_and_a_draft_left_unchanged_is_a_stopped_lane(self):
+        gh = FakeGitHub()
+        self.lane(gh, 72, "improve", "AI gen 4 (improve): the opening plays its two-drops first",
+                  draft=False, updated=timedelta(minutes=5))
+        self.lane(gh, 73, "unban", "AI gen 9 (unban): in training, nothing promoted yet",
+                  draft=True, updated=dashboard.TRAINING_STALE + timedelta(hours=1))
+        body = self.boxes(gh)
+        self.assertIn("0 of 2 lanes working", body)
+        self.assertIn('t0["<b>improve</b><br/>▶️ promotion #72<br/>waiting on CI<br/>updated',
+                      body)
+        self.assertIn(":::next", body)
+        self.assertIn('t1["<b>unban</b><br/>⛔ #73 unchanged<br/>updated', body)
+        self.assertIn("is the lane running?\"]:::broken", body)
+
+    def test_unreadable_pull_requests_draw_no_training_box(self):
+        gh = FakeGitHub()
+        with mock.patch.object(gh, "list_pulls", side_effect=GitHubError("boom")):
+            self.assertEqual(self.boxes(gh), "")
+
+
 class DashboardTests(unittest.TestCase):
     def setUp(self):
         self.gh = FakeGitHub()
@@ -104,7 +151,8 @@ class DashboardTests(unittest.TestCase):
         self.assertIn(muse_row, body)
         self.assertIn(claude_row, body)
         self.assertLess(body.index(muse_row), body.index(claude_row))
-        self.assertIn("by `bot-status`, which rewrites this issue every 5 minutes", body)
+        self.assertTrue(body.startswith("**Last updated at 2026-09-29 22:00 CDT**\n\n# 🤖 "))
+        self.assertIn("`bot-status` rewrites this issue every 5 minutes", body)
         # A timeline of the runs going now: GitHub's runners, then the machine.
         self.assertIn("```mermaid\ngantt\n    title Runs going now, as of 22:00 (Central time)",
                       body)
@@ -128,8 +176,13 @@ class DashboardTests(unittest.TestCase):
                       '<br/>7d not read yet"]:::busy', body)
         self.assertIn("m0 ~~~ m1 ~~~ m2 ~~~ m3", body)
         self.assertNotIn(":::free", body)  # no empty slot is drawn as a free subscription
-        # The AI's training lanes run outside the harness: no box of theirs here.
-        self.assertNotIn("training", body)
+        # The AI's training lanes run outside the harness: their boxes come from their pull
+        # requests, and with none open each says so (#1272).
+        self.assertIn('subgraph training["The training box, on Muse: 0 of 2 lanes working"]', body)
+        self.assertIn('t0["<b>improve</b><br/>no pull request open<br/>between sessions, '
+                      'or stopped"]:::closed', body)
+        self.assertIn("t0 ~~~ t1 ~~~ t2", body)
+        self.assertIn("machine ~~~ training", body)
         # GitHub's lanes count claude-1's run; Muse's is in the night box's slots.
         self.assertIn("Lanes on GitHub's runners: 1 of 11 in use", body)
         self.assertNotIn("pie", body)
@@ -345,7 +398,7 @@ class StatisticsTests(unittest.TestCase):
         with mock.patch.object(stats, "collect", side_effect=AssertionError("counted")):
             self.assertEqual(dashboard.update(soon, stats=True), f"rewrote #{number}")
         self.assertEqual(stats.kept(gh.threads[number]["body"]), block)
-        self.assertIn("Updated 2026-09-29 12:20 CDT", gh.threads[number]["body"])
+        self.assertIn("Last updated at 2026-09-29 12:20 CDT", gh.threads[number]["body"])
         # Forced, or once 30 minutes have passed, they are counted afresh.
         self.assertTrue(dashboard.update(soon, stats=True, force_stats=True).endswith("afresh"))
         later = make_ctx(gh, at=DAY + timedelta(minutes=51))

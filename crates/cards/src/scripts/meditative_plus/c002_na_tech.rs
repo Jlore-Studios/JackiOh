@@ -308,11 +308,12 @@ mod tests {
         }
 
         #[test]
-        fn r1101_the_compiled_table_ships_empty_so_the_card_fuses_two_random_cards() {
+        fn r1101_the_compiled_table_names_both_ends() {
             crate::register_all();
             clear_overrides();
-            assert_eq!(win_rate_trailer(&[ID]), None);
-            assert_eq!(win_rate_leader(ID), None);
+            let leader = win_rate_leader(ID).expect("the compiled table names a leader");
+            let trailer = win_rate_trailer(&[ID, leader.as_str()]).expect("and a lowest");
+            assert_ne!(leader, trailer);
         }
     }
 }

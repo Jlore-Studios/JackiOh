@@ -529,6 +529,64 @@ fn r1202_windfury_summons_twice_and_the_invariant_monitor_is_clean() {
     assert!(state.players[P1].hand.iter().any(|card| card.id == offered.id));
 }
 
+#[test]
+fn r1202_a_substitute_barred_from_its_lane_spends_with_no_declaration_and_the_monitor_is_clean() {
+    // Fuzz seed 2550 (#1216): the substitute could not reach its Flying target, so the spend
+    // never declared. Here the lane-locked target is out of the substitute's lane instead: the
+    // declarer attacks from the target's lane, the leftmost open zone lands the substitute
+    // elsewhere, and the exertion stays spent with no declaration (R44, R220).
+    let mut state = playing("mb22-fizzle");
+    let windfast = in_hand(&mut state, &fx::windfast.id, P1, 1).remove(0);
+    let offered = in_hand(&mut state, &fx::ally.id, P1, 1).remove(0);
+    let target = in_hand(&mut state, &fx::lane_locked.id, P2, 1).remove(0);
+    let mut monitor = create_invariant_monitor(&state);
+    let drive = |monitor: &mut InvariantMonitor, state: &GameState, player: PlayerId, body: Value| {
+        let action: ActionBody = json_as(body.clone());
+        assert_eq!(monitor.before(state, player, &action), Vec::<String>::new());
+        let result = act_result(state, body);
+        assert!(result.error.is_none(), "{:?}", result.error);
+        assert_eq!(monitor.after(&result.events, &result.state), Vec::<String>::new());
+        result.state
+    };
+    let play = |player: PlayerId, id: &str, lane: i32| json!({ "type": "play", "playerId": player, "instanceId": id, "zone": { "row": "units", "lane": lane } });
+    state = drive(&mut monitor, &state, P1, play(P1, &windfast.id, 2));
+    state = drive(
+        &mut monitor,
+        &state,
+        P1,
+        json!({ "type": "endTurn", "playerId": "p1" }),
+    );
+    state = drive(&mut monitor, &state, P2, play(P2, &target.id, 2));
+    state = drive(
+        &mut monitor,
+        &state,
+        P2,
+        json!({ "type": "endTurn", "playerId": "p2" }),
+    );
+    // The attack spends with no declaration: the substitute cannot reach the target's lane.
+    let action: ActionBody = json_as(attack_action(P1, &windfast.id, &target.id));
+    assert_eq!(monitor.before(&state, P1, &action), Vec::<String>::new());
+    let result = act_result(&state, attack_action(P1, &windfast.id, &target.id));
+    assert!(result.error.is_none(), "{:?}", result.error);
+    assert_eq!(
+        declared_attacks(&result.events).len(),
+        0,
+        "no declaration follows the spend"
+    );
+    let spent = find_instance(&result.state, &windfast.id).expect("Windfast still on the field");
+    assert!(spent.exertion.attacked, "the declarer's exertion stays spent");
+    assert_eq!(
+        result.state.players[P1]
+            .hand
+            .iter()
+            .filter(|card| card.id == offered.id)
+            .count(),
+        1,
+        "the substitute went home"
+    );
+    assert_eq!(monitor.after(&result.events, &result.state), Vec::<String>::new());
+}
+
 // ---------------------------------------------------------------------------
 // R1203: joiners attack first
 // ---------------------------------------------------------------------------

@@ -179,6 +179,90 @@ mod i2_a_windfury_granted_inside_one_action_s_events {
     }
 }
 
+/// I2 and a unit that enters inside one action already holding Windfury: the autopilot (R1183002)
+/// plays a whole turn in one action, so a Windfury unit it plays and attacks with twice is on the field
+/// in no state between actions. Fuzz seeds 5325 (Windfast), 6431 (a Felinor Flagbearer Prime Buffed
+/// into Windfury in the hand) and 9388 (Windfurious Prime), and 6732 and 7295 of the handicapped wave
+/// (Rampaging Rhino), #1216.
+mod i2_a_windfury_unit_that_enters_inside_one_action {
+    use super::*;
+
+    const RHINO: &str = "meditative-002";
+
+    /// The events of `unit` entering p1's unit zone 1 and declaring twice at p2's hero.
+    fn entered_and_declared_twice(unit: &CardInstance) -> Vec<GameEvent> {
+        let declared = json!({ "type": "attackDeclared", "attackerId": unit.id, "targetId": "hero-p2", "forced": false });
+        vec![
+            event(json!({
+                "type": "cardPlayed", "player": "p1", "instanceId": unit.id, "defId": unit.def_id, "costPaid": 0,
+            })),
+            event(json!({
+                "type": "summoned", "player": "p1", "instanceId": unit.id, "defId": unit.def_id,
+                "row": "units", "lane": 1,
+            })),
+            event(declared.clone()),
+            event(declared),
+        ]
+    }
+
+    /// p1's hand holds a Vanilla, Buffed into `gained` there when given (R386).
+    fn hand_card(gained: Option<&str>) -> (Scenario, CardInstance) {
+        let mut g = scenario(json!({ "p1": { "hand": [VANILLA] } }));
+        let card = g.state().players.p1.hand[0].clone();
+        if let Some(kind) = gained {
+            find_instance_mut(g.state_mut(), &card.id)
+                .expect("the hand card")
+                .tuning = Some(json_as(json!({ "addKeywords": [{ "kind": kind }] })));
+        }
+        (g, card)
+    }
+
+    #[test]
+    fn r636_r1183002_a_windfury_card_from_the_hand_that_enters_and_declares_twice_in_one_action_is_one_legal_windfury_turn()
+     {
+        // 6431's shape: the card carries Windfury in the hand, and is a token that has ceased to exist
+        // by the end of the action, so only the state before the action shows its keywords.
+        let (mut g, card) = hand_card(Some("Windfury"));
+        let mut monitor = create_invariant_monitor(g.state());
+        assert_eq!(
+            monitor.before(g.state(), PlayerId::P1, &ActionBody::EndTurn),
+            no_violations()
+        );
+        g.state_mut().players.p1.hand.clear();
+        let events = entered_and_declared_twice(&card);
+        assert_eq!(monitor.after(&events, g.state()), no_violations());
+    }
+
+    #[test]
+    fn r636_a_windfury_unit_made_inside_the_action_is_read_where_the_action_left_it() {
+        // No state before the action holds it (a copy a Cry made, or a card no `before` saw): the
+        // action leaves it on the field with its printed Windfury.
+        let _open = preview_sets(&[SetName::Meditative]);
+        let mut g = scenario(json!({ "p1": { "field": [{ "def": RHINO, "lane": 1 }] } }));
+        let rhino = unit_at(&g, PlayerId::P1, 1, "p1 should hold the Rhino in lane 1");
+        let turn = g.state().turn;
+        find_instance_mut(g.state_mut(), &rhino.id)
+            .expect("the Rhino")
+            .summoned_turn = Some(turn);
+        let mut monitor = create_invariant_monitor(g.state());
+        let events = entered_and_declared_twice(&rhino);
+        assert_eq!(monitor.after(&events, g.state()), no_violations());
+    }
+
+    #[test]
+    fn r636_a_unit_with_no_windfury_that_enters_and_declares_twice_in_one_action_is_still_an_extra_attack() {
+        let (g, card) = hand_card(None);
+        let mut monitor = create_invariant_monitor(g.state());
+        assert_eq!(
+            monitor.before(g.state(), PlayerId::P1, &ActionBody::EndTurn),
+            no_violations()
+        );
+        let found = monitor.after(&entered_and_declared_twice(&card), g.state());
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+}
+
 mod i6_hidden_information_in_what_each_seat_is_sent {
     use super::*;
 
@@ -476,6 +560,48 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
         );
     }
 
+    /// p1's own craft prompt offering one recipe (R880): the option key names the recipe's
+    /// definition, which p1 reads with the offered recipe (§10.8).
+    fn offer_craft(g: &mut Scenario, recipe: &CraftRecipe) {
+        let prompt: PendingChoice = json_as(json!({
+            "id": "i6-craft-prompt",
+            "playerId": "p1",
+            "kind": "craft",
+            "prompt": "Choose a recipe",
+            "options": [{
+                "key": option_key(&Selection::Craft { recipe: recipe.clone() }),
+                "label": recipe.name(),
+                "selection": { "pick": "craft", "recipe": recipe },
+            }],
+            "min": 1,
+            "max": 1,
+            "resume": { "defId": "", "hook": "resume", "step": "none", "radiant": false, "data": {} },
+        }));
+        g.state_mut().pending = Some(prompt);
+    }
+
+    #[test]
+    fn r880_i6_lets_p1_s_own_craft_prompt_name_the_definition_of_p2_s_hidden_hand_card() {
+        // Fuzz seed 1708 (#1216): p2's hand holds a card crafted from the same recipe p1's
+        // prompt offers, so the option key and the hidden card share one `craft:` definition.
+        let Board { mut g, secret, .. } = board();
+        let recipe: CraftRecipe = json_as(json!({
+            "cost": 1, "type": "Unit", "adjective": "Pure", "noun": "Closure",
+            "attack": 2, "health": 3, "keywords": [], "echo": 0, "hats": [],
+        }));
+        let def = jackioh_engine::subsystems::craft::craft_id(&recipe);
+        assert!(def.starts_with("craft:"), "{def}");
+        g.state_mut().players.p2.hand[0].def_id = def.clone();
+        offer_craft(&mut g, &recipe);
+        assert_eq!(violations(&g, PlayerId::P1, &[]), no_violations());
+        // The hidden card anywhere else is still a leak the prompt does not excuse.
+        let found = violations(&g, PlayerId::P1, &[drawn("p2", &secret.id, &secret.def_id)]);
+        assert!(
+            found.iter().any(|message| message.contains(&quoted(&secret.id))),
+            "{found:?}"
+        );
+    }
+
     #[test]
     fn r97_i6_fires_on_an_event_naming_a_face_down_trap_dormant_under_a_backrow_top() {
         // B5 E21
@@ -747,6 +873,46 @@ mod r1062_fiery_waraxe_reanimated {
         assert_eq!(monitor.before(g.state(), PlayerId::P1, &attack), no_violations());
         g.attack(&waraxe, "hero");
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+    }
+
+    /// Fuzz seed 5644 (#1216): a face-down Field Trap fused with Fiery Waraxe, set on an earlier turn,
+    /// fires on its controller's turn and animates as its firing's last step, face-up for the first
+    /// time: an entry (R383), as the engine's `summonedTurn` says, not the start-of-turn animation
+    /// R1062 makes none.
+    #[test]
+    fn r1062_r383_a_card_that_fires_as_a_trap_on_its_controllers_turn_enters_as_it_animates() {
+        let _open = preview_sets(&[SetName::Meditative]);
+        let mut g = scenario(json!({ "p1": { "backrow": [{ "def": "meditative-066", "lane": 1 }] } }));
+        let card = backrow_at(&g, PlayerId::P1, 1, "p1 should hold the card in backrow zone 1");
+        let set_on = g.state().turn;
+        find_instance_mut(g.state_mut(), &card.id)
+            .expect("the card")
+            .summoned_turn = Some(set_on);
+        let mut monitor = create_invariant_monitor(g.state());
+        let set = event(json!({
+            "type": "summoned", "player": "p1", "instanceId": card.id, "defId": card.def_id,
+            "row": "backrow", "lane": 1,
+        }));
+        assert_eq!(monitor.after(&[set], g.state()), no_violations());
+
+        // p1's turn after next: the trap fires and the card animates into unit zone 1.
+        let now = set_on + 2;
+        g.state_mut().turn = now;
+        find_instance_mut(g.state_mut(), &card.id)
+            .expect("the card")
+            .summoned_turn = Some(now);
+        let events = vec![
+            event(json!({ "type": "turnStarted", "player": "p1", "turn": now })),
+            event(json!({
+                "type": "trapFired", "instanceId": card.id, "defId": card.def_id, "controller": "p1",
+                "row": "backrow", "lane": 1,
+            })),
+            event(json!({
+                "type": "animated", "player": "p1", "instanceId": card.id, "defId": card.def_id,
+                "backrowLane": 1, "unitLane": 1,
+            })),
+        ];
+        assert_eq!(monitor.after(&events, g.state()), no_violations());
     }
 }
 

@@ -189,6 +189,8 @@ pub static guard2: LazyLock<CardDef> = LazyLock::new(|| {
 pub static ally: LazyLock<CardDef> = LazyLock::new(|| plain_unit("ally", 9210, 1, 4));
 /// A plain 1/20 ally no 10-damage hit kills.
 pub static wall: LazyLock<CardDef> = LazyLock::new(|| plain_unit("wall", 9211, 1, 20));
+/// A 1/4 only a Unit in its lane may attack (E35): a substitute landing in another lane is barred.
+pub static lane_locked: LazyLock<CardDef> = LazyLock::new(|| plain_unit("lane_locked", 9217, 1, 4));
 /// A 2/2 Divine Shield: the shield takes the hit first, so no window opens.
 pub static screen: LazyLock<CardDef> = LazyLock::new(|| {
     unit(
@@ -255,6 +257,7 @@ pub static MB22_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         skirmisher.clone(),
         palisade.clone(),
         ram.clone(),
+        lane_locked.clone(),
     ]
 });
 
@@ -357,6 +360,16 @@ pub static MB22_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new
             both(Script {
                 static_flags: Some(StaticFlags {
                     attack_joiners: Some(true),
+                    ..Default::default()
+                }),
+                ..Script::default()
+            }),
+        ),
+        (
+            lane_locked.id.clone(),
+            both(Script {
+                static_flags: Some(StaticFlags {
+                    attacked_only_from_lane: Some(true),
                     ..Default::default()
                 }),
                 ..Script::default()

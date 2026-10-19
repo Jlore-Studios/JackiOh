@@ -409,6 +409,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       emotes={emotes}
       aim={aim}
       trackStats
+      wearCosmetics
       // A refused socket's reason is the console's (above); the board says it in a player's words.
       error={
         refusedWith === null

@@ -2,6 +2,7 @@
 //! MP5): the lowest win rate (R1183000), the two-pick fuse (R1183001), the autopilot (R1183002,
 //! R1183003) and the code-block Discover (R1183005), each through `fixtures::outside_data`. The real
 //! cards (M+ #2 NA Tech, #18 Cognitive Offloading, #25 KY's Intuition) cover the same cases again.
+//! Beside them, the win-rate table a fold under a shipped catalog reads (R1266000, issue #1266).
 
 use jackioh_engine::config::AUTOPILOT_MAX_ACTIONS;
 use jackioh_engine::effects::{CODE_OFFERS_KEY, autopilot};
@@ -83,6 +84,39 @@ mod r1183000_the_lowest_win_rate {
         assert_eq!(win_rate_trailer(&[]), Some("fx-1".to_string()));
         register_win_rates(table(vec![]));
         assert_eq!(win_rate_trailer(&[]), None);
+    }
+}
+
+mod r1266000_a_fold_reads_its_versions_table {
+    use super::*;
+
+    #[test]
+    fn r1266000_a_fold_reads_the_table_its_shipped_catalog_carries_never_the_builds() {
+        register_outside_data();
+        register_win_rates(table(vec![("fx-1", 30, 40), ("fx-2", 10, 40)]));
+        let empty: &'static ShippedCatalog = Box::leak(Box::new(ShippedCatalog::new(
+            "v-empty",
+            registered_catalog().clone(),
+            IndexMap::new(),
+        )));
+        let kept: &'static ShippedCatalog = Box::leak(Box::new(
+            ShippedCatalog::new("v-kept", registered_catalog().clone(), IndexMap::new())
+                .with_win_rates(table(vec![("fx-2", 30, 40), ("fx-1", 10, 40)])),
+        ));
+        assert_eq!(win_rate_leader(""), Some("fx-1".to_string()));
+        // A version that shipped with the empty table names no card, whatever the build's holds.
+        assert_eq!(with_shipped(Some(empty), || win_rate_leader("")), None);
+        // One that shipped with its own reads both ends off it.
+        assert_eq!(
+            with_shipped(Some(kept), || (win_rate_leader(""), win_rate_trailer(&[]))),
+            (Some("fx-2".to_string()), Some("fx-1".to_string()))
+        );
+        assert_eq!(
+            win_rate_leader(""),
+            Some("fx-1".to_string()),
+            "the build's again once the fold returns"
+        );
+        clear_overrides();
     }
 }
 

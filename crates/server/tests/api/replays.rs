@@ -921,7 +921,7 @@ mod r767000_the_versions {
 
     use indexmap::IndexMap;
     use jackioh_engine::testkit::{
-        clear_overrides, register_catalog_as, register_shipped, registered_catalog,
+        clear_overrides, register_catalog_as, register_shipped, registered_catalog, registered_win_rates,
     };
     use jackioh_engine::{CardDefs, ShippedCatalog, find_instance};
 
@@ -989,7 +989,11 @@ mod r767000_the_versions {
                     .map(|k| step_of(&played, k, seat))
                     .collect::<Vec<_>>()
             });
-            register_shipped(vec![ShippedCatalog::new(PLAYED_ON, original, IndexMap::new())]);
+            // It shipped with the table the game was played with (R1266000).
+            register_shipped(vec![
+                ShippedCatalog::new(PLAYED_ON, original, IndexMap::new())
+                    .with_win_rates(registered_win_rates().clone()),
+            ]);
             register_catalog_as(patched, "test");
             let refolded = fold(
                 Pinned::default(),
