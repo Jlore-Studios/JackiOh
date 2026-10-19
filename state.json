@@ -5505,6 +5505,8 @@
     "1261": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -5512,18 +5514,25 @@
       "forced": false,
       "interruptions": 0,
       "issue": 1256,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The new cell's markdown says only records that carry the counts are counted, but the code never drops count-less records: `games = groups[\"game\"].nunique()` counts every game in the (patch, mode) group, so in any group that mixes old and new records the fatigue-hit share, fatigue-kill share, switches per game and upgrades per game are understated by the share of pre-change games.",
+          "evidence": "`counted = records.seats.merge(read[...])` is unfiltered. The only NA handling is the all-NA early exit and `fillna(0)`, which turns a missing count into 'no fatigue hit'. The PR doesn't bump the patch (no catalog change), so live records of the current patch will straddle the deploy for the week the database keeps their detail (R1044001). The new notebook test gives counts to every record, so it can't catch this. A fix is to keep only rows where the counts are present (e.g. `counted[counted[COUNT_COLUMNS].notna().all(axis=1)]`) before grouping.",
+          "severity": "blocking",
+          "where": "analysis/notebooks/02-decks-and-play.ipynb"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-6",
       "question": "",
-      "queued_at": "2026-10-19T05:03:46Z",
+      "queued_at": "2026-10-19T05:13:30Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
       "run_id": "39202609413",
       "self_check_findings": [],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-10-19T05:05:58Z",
       "stop_requested": false,
       "taken_asks": [],
