@@ -16,6 +16,8 @@
 //! - `loops`: the background loops' supervisor, which logs a loop that panics (#842) or returns
 //!   (#1093) and starts it again.
 //! - `username`: a username's checks, stored form and key (SPEC §9.4, R1432–R1434; #579).
+//! - `economy`: the collection economy's pure math (SPEC §14): the set-track level curve and
+//!   the pity roll (#1298).
 //! - `bug_reports`: a match its own log does not reproduce, logged and filed as a GitHub issue for
 //!   the night bot while the match goes on.
 
@@ -32,6 +34,7 @@ pub mod db;
 // Fullsend SPEC S6: the Duos co-op rooms, their socket and their four-seat match actor.
 pub mod duos;
 // ---- end Duos co-op (#946) ----
+pub mod economy;
 pub mod env;
 pub mod loops;
 pub mod ranked;
