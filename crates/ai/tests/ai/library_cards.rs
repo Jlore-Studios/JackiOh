@@ -1,7 +1,7 @@
 //! #1255: the AI prices the library cards it can name (SPEC §9.9 "Evaluation"; R185, R311). Its own
-//! deck's cards it was shown going in count at `library_known_share` of their hand worth, Radiant
-//! flags and faces included, so Core #42 Eugenics' flags and a shuffled-in Journey Complete (with the
-//! cards its journey returns, R1246) are cards to come. A curse counts against the side whose deck
+//! deck's cards it was shown going in count at `library_known_share` of their hand worth, a dealt one
+//! only by what it gained since the deal (a Radiant flag and its face), so Core #42 Eugenics' flags and
+//! a shuffled-in Journey Complete (with the cards its journey returns, R1246) are cards to come. A curse counts against the side whose deck
 //! holds it, so one the seat shuffled into the enemy's deck counts for it. A card the seat cannot name
 //! (an enemy's dealt card, an own card it was never shown, R312) counts only by number, as before.
 //!
@@ -80,31 +80,45 @@ fn enemy_library(library: Vec<Value>) -> GameState {
     }))
 }
 
-/// A 7/7 is worth `3 × hand_per_cost` more in hand than a Vanilla: it costs 3 more, below the cap.
-fn big_over_vanilla() -> f64 {
-    3.0 * AI_EVAL.hand_per_cost
+/// What a 7/7 is worth in hand: it costs 4, below the cap.
+fn big_in_hand() -> f64 {
+    AI_EVAL.hand_card + 4.0 * AI_EVAL.hand_per_cost
+}
+
+/// `n − 1` Vanillas and a 7/7 shuffled in since the deal.
+fn vanillas_and_a_shuffled_in_big(n: usize) -> Vec<Value> {
+    let mut library = copies(n - 1, VANILLA);
+    library.push(json!({ "def": BIG, "created": true }));
+    library
 }
 
 #[test]
-fn a_named_own_library_card_counts_at_the_share_of_its_hand_worth() {
+fn a_dealt_own_library_card_counts_by_number_whatever_it_is() {
     let bigs = own_library(copies(4, BIG));
     let vanillas = own_library(copies(4, VANILLA));
-    assert_close(
-        eval(&bigs, &AI_EVAL) - eval(&vanillas, &AI_EVAL),
-        AI_EVAL.library_known_share * 4.0 * big_over_vanilla(),
-        9,
-    );
-    assert_close(eval(&bigs, &zero()), eval(&vanillas, &zero()), 9);
+    assert_close(eval(&bigs, &AI_EVAL), eval(&vanillas, &AI_EVAL), 9);
 }
 
 #[test]
-fn past_library_comfort_cards_the_named_cards_count_as_library_comfort_of_them() {
+fn a_card_shuffled_into_the_own_library_counts_at_the_share_of_its_hand_worth() {
+    let shuffled = own_library(vanillas_and_a_shuffled_in_big(4));
+    let vanillas = own_library(copies(4, VANILLA));
+    assert_close(
+        eval(&shuffled, &AI_EVAL) - eval(&vanillas, &AI_EVAL),
+        AI_EVAL.library_known_share * big_in_hand(),
+        9,
+    );
+    assert_close(eval(&shuffled, &zero()), eval(&vanillas, &zero()), 9);
+}
+
+#[test]
+fn past_library_comfort_a_shuffled_in_card_counts_at_the_share_its_draws_reach() {
     for size in [12, 16] {
-        let bigs = own_library(copies(size, BIG));
+        let shuffled = own_library(vanillas_and_a_shuffled_in_big(size));
         let vanillas = own_library(copies(size, VANILLA));
         assert_close(
-            eval(&bigs, &AI_EVAL) - eval(&vanillas, &AI_EVAL),
-            AI_EVAL.library_known_share * AI_EVAL.library_comfort * big_over_vanilla(),
+            eval(&shuffled, &AI_EVAL) - eval(&vanillas, &AI_EVAL),
+            AI_EVAL.library_known_share * AI_EVAL.library_comfort / size as f64 * big_in_hand(),
             9,
         );
     }
@@ -250,9 +264,9 @@ fn eugenics_pays_off_through_the_share_and_never_at_a_zero_share() {
 
 #[test]
 fn greedy_eval_prices_no_library_card_by_what_it_is() {
-    let bigs = own_library(copies(4, BIG));
+    let shuffled = own_library(vanillas_and_a_shuffled_in_big(4));
     let vanillas = own_library(copies(4, VANILLA));
-    assert_close(eval(&bigs, &GREEDY_EVAL), eval(&vanillas, &GREEDY_EVAL), 9);
+    assert_close(eval(&shuffled, &GREEDY_EVAL), eval(&vanillas, &GREEDY_EVAL), 9);
 
     let before = enemy_library(copies(3, VANILLA));
     let mut library = copies(3, VANILLA);

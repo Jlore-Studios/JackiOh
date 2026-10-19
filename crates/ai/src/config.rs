@@ -320,8 +320,9 @@ pub struct EvalWeights {
     /// #1255: the share of `hand_card_value` a library card the seat can name counts at (its own deck's
     /// cards it was shown going in, R185, R311; in the enemy's, a card a line shuffled in openly), with
     /// what a Journey Complete's journey returns (R1246), times the share of the library its next
-    /// `library_comfort` draws reach. A curse (`AI_LIBRARY_CURSES`) counts against the side whose deck
-    /// holds it. On top of `library_card`'s count.
+    /// `library_comfort` draws reach. A dealt card counts only what it gained since the deal (a Radiant
+    /// flag, its face, a cost change), as `library_card` counts it already. A curse
+    /// (`AI_LIBRARY_CURSES`) counts against the side whose deck holds it.
     pub library_known_share: f64,
     /// Per crystal left at the end of the seat's own turn (terminal only).
     pub unspent_mana: f64,
@@ -420,9 +421,9 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     enemy_face_down: 2.0,
     library_card: 0.1,
     library_comfort: 10.0,
-    // #1255: screened at 400 games on improve-dev, 204-195, edge +0.023 (-0.028 to +0.073) vs control
-    // 7c60d988a; 0.5 first read 193-206, edge -0.033 (-0.091 to +0.026).
-    library_known_share: 0.25,
+    // #1255: screened at 400 games on improve-dev, 197-202, edge -0.013 (-0.058 to +0.033) vs control
+    // 7c60d988a: 65 of the 200 deals played differently, 10 went to it and 12 to the control.
+    library_known_share: 0.5,
     unspent_mana: 0.8,
     // R1224: a debt counts the way unspent mana does — coming turns' mana, spent early.
     owed_mana: 0.8,

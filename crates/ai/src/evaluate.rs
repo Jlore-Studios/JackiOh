@@ -10,9 +10,9 @@
 //! an own Temporary hand card at a discount (R637). #1143 prices an own hand Unit by the face it will
 //! enter with (its Radiant face, buffs and tuning) over its printed base face. #1224 prices what a
 //! side's coming refreshes will or will not give: the refreshes it still has to lose (R844) and its
-//! next-turn rider (§2.3). #1255 prices the library cards the seat can name (R185, R311), its own
-//! deck's at a share of their hand worth, a Journey Complete with the cards its journey returns
-//! (R1246), a curse against the side whose deck holds it. It reads only what the seat may know or what
+//! next-turn rider (§2.3). #1255 prices the library cards the seat can name (R185, R311) at a share of
+//! their hand worth, a dealt one only by what it gained since the deal (a Radiant flag), a Journey
+//! Complete with the cards its journey returns (R1246), a curse against the side whose deck holds it. It reads only what the seat may know or what
 //! a determinization sampled, and nothing here reads a handicap or a difficulty (R180).
 //!
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
@@ -252,11 +252,20 @@ fn journey_worth(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f64
         .sum()
 }
 
-/// #1255: the cards to come that `seat` can name in `player`'s library (`nameable`): each at its
-/// `hand_card_value` and what its journey returns, a curse (`AI_LIBRARY_CURSES`) against the side whose
-/// deck holds it, all at `library_known_share` times the share of the library its next
-/// `library_comfort` draws reach. No order is known (R185), so each card is as likely as any to come
-/// among them. One walk of a library of at most LIBRARY_CAP cards (R80).
+/// #1255: what a dealt card is worth in hand as it was dealt, by its printed cost alone (no Radiant flag,
+/// face uplift or cost shift): `library_card` already counts it, so only what it gained since counts.
+fn printed_hand_worth(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f64 {
+    find_def(Some(state), &card.def_id).map_or(0.0, |def| {
+        w.hand_card + w.hand_per_cost * f64::from(query_cost(def)).min(w.hand_cost_cap)
+    })
+}
+
+/// #1255: the cards to come that `seat` can name in `player`'s library (`nameable`): one shuffled in
+/// since the deal at its `hand_card_value` and what its journey returns, a dealt one at what it gained
+/// since (its hand worth over `printed_hand_worth`: a Radiant flag, its face, a cost change), a curse
+/// (`AI_LIBRARY_CURSES`) against the side whose deck holds it, all at `library_known_share` times the
+/// share of the library its next `library_comfort` draws reach. No order is known (R185), so each card
+/// is as likely as any to come among them. One walk of a library of at most LIBRARY_CAP cards (R80).
 fn library_known_worth(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights) -> f64 {
     let library = &state.players[player].library;
     if library.is_empty() {
@@ -267,7 +276,10 @@ fn library_known_worth(state: &GameState, player: PlayerId, seat: PlayerId, w: &
         if !nameable(card, player == seat) {
             continue;
         }
-        let value = hand_card_value(state, card, w) + journey_worth(state, card, w);
+        let mut value = hand_card_value(state, card, w) + journey_worth(state, card, w);
+        if card.created != Some(true) {
+            value -= printed_hand_worth(state, card, w);
+        }
         if AI_LIBRARY_CURSES.contains(&card.def_id.as_str()) {
             worth -= value;
         } else {
