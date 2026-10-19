@@ -20,8 +20,8 @@
 //! created rematch is asserted off the store and off `Registry::has`. Presence and call order are
 //! reached for real (sockets on a live actor; the order of the store's calls).
 //!
-//! The offers are module state shared by every test of this binary, so each test names its own
-//! profiles and matches instead of clearing the map, which would wipe a test running beside it.
+//! The offers are held per app (`App::rematch_offers`), so a test's sweep reaches only its own
+//! offers; each test still names its own profiles and matches.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
@@ -36,7 +36,7 @@ use jackioh_engine::{ActionBody, PlayerId, newest_shipped_set};
 use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::actor::ws_server::Socket;
 use jackioh_server::api::ranked::rate_ranked_game;
-use jackioh_server::api::rematch::{STAKE_DOUBLE, STAKE_NORMAL};
+use jackioh_server::api::rematch::{STAKE_DOUBLE, STAKE_NORMAL, rematch_offer_count, sweep_rematch_offers};
 use jackioh_server::api::results::record_result;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::REMATCH_OFFER_TTL_MS;
@@ -488,6 +488,51 @@ mod rematch_offers {
             status(&app, &token_a, &finished_id).await.1["matchId"],
             json!(rematch_id)
         );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn the_reaper_sweeps_an_offer_that_made_a_game_once_its_window_has_passed() {
+        let app = test_app().await;
+        let (a, b, finished) = names("swept-made");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished, &a, &b, json!({})).await;
+        paired_tickets(&app, &finished, [&a, &b], "bo1").await;
+        offer(&app, &token_a, &finished, STAKE_NORMAL).await;
+        let (_, created) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
+        let rematch = created["matchId"].clone();
+        assert_ne!(rematch, Value::Null);
+
+        // Inside the window a poll finds the game, and the sweep leaves the entry.
+        assert_eq!(sweep_rematch_offers(&app, now_ms()), 0);
+        assert_eq!(rematch_offer_count(&app), 1);
+        assert_eq!(status(&app, &token_a, &finished).await.1["matchId"], rematch);
+
+        // Past it, with no actor holding the finished match, the entry goes.
+        assert!(!app.matches.has(&finished));
+        assert_eq!(sweep_rematch_offers(&app, now_ms() + REMATCH_OFFER_TTL_MS + 1), 1);
+        assert_eq!(rematch_offer_count(&app), 0);
+
+        // The game is still found: both seats are in it, and the poll no longer needs the entry.
+        assert_eq!(status(&app, &token_a, &finished).await.1["matchId"], Value::Null);
+        assert_eq!(in_match_of(&app, &a).await, rematch);
+        assert_eq!(in_match_of(&app, &b).await, rematch);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn the_reaper_sweeps_an_unanswered_offer_nobody_looks_up_again() {
+        let app = test_app().await;
+        let (a, b, finished) = names("swept-unanswered");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished, &a, &b, json!({})).await;
+        offer(&app, &token_a, &finished, STAKE_NORMAL).await;
+        assert_eq!(rematch_offer_count(&app), 1);
+
+        assert_eq!(sweep_rematch_offers(&app, now_ms()), 0);
+        assert_eq!(rematch_offer_count(&app), 1);
+        assert_eq!(sweep_rematch_offers(&app, now_ms() + REMATCH_OFFER_TTL_MS + 1), 1);
+        assert_eq!(rematch_offer_count(&app), 0);
     }
 
     #[tokio::test(start_paused = true)]
@@ -1092,6 +1137,63 @@ mod rematch_presence {
         // The offers outlive the actor: B's matching offer still creates the rematch.
         let (_, created) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
         assert_ne!(created["matchId"], Value::Null);
+    }
+
+    /// The offers' sweep follows the actor's: an offer past its window stays while an open socket
+    /// holds the finished match, and goes with the actor once the sockets close.
+    #[tokio::test(start_paused = true)]
+    async fn an_offer_outlives_its_window_while_the_finished_match_is_held() {
+        let app = test_app().await;
+        let (a, b, finished) = names("swept-held");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        active_profile(&app, &b, 1000.0).await;
+        start_live(&app, &finished, &a, &b).await;
+        let (p1, _p1_frames) = Socket::channel();
+        let (p2, _p2_frames) = Socket::channel();
+        app.matches
+            .attach(&app, &finished, &a, p1.clone())
+            .await
+            .expect("A attaches");
+        app.matches
+            .attach(&app, &finished, &b, p2.clone())
+            .await
+            .expect("B attaches");
+        settle().await;
+
+        let actor = app
+            .matches
+            .actor_for(&app, &finished)
+            .await
+            .expect("the live actor");
+        let reply = actor
+            .submit(
+                PlayerId::P1,
+                "swept-held-concede".to_string(),
+                ActionBody::Concede,
+            )
+            .await;
+        assert_eq!(to_json(&reply)["type"], "ack");
+        actor.idle().await;
+        let window_end = actor.finished_at().expect("the concede finished the match") + REMATCH_OFFER_TTL_MS;
+        drop(actor);
+        offer(&app, &token_a, &finished, STAKE_NORMAL).await;
+        let late = window_end + REMATCH_OFFER_TTL_MS;
+
+        // Both sockets open: the actor stays, and so does the offer past its window.
+        assert!(app.matches.reap_finished(late).await.is_empty());
+        assert_eq!(sweep_rematch_offers(&app, late), 0);
+        assert_eq!(
+            status(&app, &token_a, &finished).await.1["youOffered"],
+            json!(STAKE_NORMAL)
+        );
+
+        // The sockets close, the reaper drops the actor, and the offer goes with it.
+        p1.transport_closed();
+        p2.transport_closed();
+        settle().await;
+        assert_eq!(app.matches.reap_finished(late).await, vec![finished.clone()]);
+        assert_eq!(sweep_rematch_offers(&app, late), 1);
+        assert_eq!(rematch_offer_count(&app), 0);
     }
 }
 
