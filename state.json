@@ -5,18 +5,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:6172009112": {
-      "at": "2026-10-14T15:33:14Z",
-      "lines": [
-        "/harness build"
-      ]
-    },
-    "c:6173560852": {
-      "at": "2026-10-14T16:50:29Z",
-      "lines": [
-        "/harness stop"
-      ]
-    },
     "c:6176698155": {
       "at": "2026-10-14T22:14:03Z",
       "lines": [
@@ -627,6 +615,12 @@
       "at": "2026-10-19T13:47:39Z",
       "lines": [
         "/harness build SHIP ITTTTTTTTTTT \ud83d\udea2 I"
+      ]
+    },
+    "c:6273319171": {
+      "at": "2026-10-19T17:36:05Z",
+      "lines": [
+        "@jgoetzmann-bot Revise this with the owner's numbers. #1294's table wasn't readable from the build, so most values here are placeholders that don't match the design. Auto-merge is off until this is fixed."
       ]
     }
   },
