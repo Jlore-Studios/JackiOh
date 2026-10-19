@@ -5055,6 +5055,17 @@
       "verdict_rounds": 3
     },
     "1282": {
+      "asks": [
+        "c:6267001854"
+      ],
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-10-19T12:17:29Z",
+      "requested_by": "MaxGoetzmann",
+      "stop_requested": false,
       "suggestion": true
     },
     "1292": {
