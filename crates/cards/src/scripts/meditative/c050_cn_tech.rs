@@ -5,8 +5,8 @@
 //! Engine: ME-STATS (docs/meditative-set.md M5, MD-D1, MD-D2) — the compiled table
 //! `crates/cards/data/win_rates.json` (R377's in-deck wins and games per card id) read through
 //! `win_rate_leader`, never CN Tech itself (R387); a random non-token card when no row qualifies
-//! (R142). The table ships empty (provisional, no live figures offline), so the fallback is what a
-//! fresh patch plays until someone runs `cargo jackioh winrates`.
+//! (R142). The table is a development run's (provisional, R1101), and a replay folds against the
+//! table its version shipped with (R1266000).
 
 use jackioh_engine::prelude::*;
 
@@ -79,6 +79,108 @@ mod tests {
 
     mod m50_cn_tech {
         use super::*;
+
+        const NA_TECH: &str = "meditativeplus-002";
+        /// R1266000: the earlier version a game is played on, and the build that folds it.
+        const PLAYED_ON: &str = "v-r1266000-before";
+        const BUILD: &str = "v-r1266000-build";
+        /// The actions a game runs to, if it has not ended first.
+        const STEPS: usize = 120;
+        /// The dearest card `tech_deck` fills with, so CN Tech and NA Tech are cast early.
+        const FILL_COST: i32 = 1;
+
+        /// CN Tech and NA Tech beside the first deckable cards of at most `FILL_COST`, each once
+        /// (§2.6 L3).
+        fn tech_deck() -> Vec<String> {
+            let mut deck = vec![TECH.to_string(), NA_TECH.to_string()];
+            deck.extend(
+                crate::CATALOG
+                    .values()
+                    .filter(|def| deckable(def) && query_cost(def) <= FILL_COST)
+                    .filter(|def| def.id != TECH && def.id != NA_TECH)
+                    .take(DECK_SIZE as usize - deck.len())
+                    .map(|def| def.id.clone()),
+            );
+            deck
+        }
+
+        /// R1266000: a game of two `tech_deck`s played on `PLAYED_ON`, casting CN Tech or NA Tech
+        /// whenever either can be and any other legal action at random otherwise: its input and its
+        /// final hash.
+        fn played_on_before(seed: &str) -> (ReplayInput, String) {
+            let shipped = shipped_catalog(PLAYED_ON).expect("the test carries PLAYED_ON");
+            with_shipped(Some(shipped), || {
+                let mut game = ReplayInput {
+                    seed: seed.to_string(),
+                    decks: (tech_deck(), tech_deck()),
+                    ..ReplayInput::default()
+                };
+                let mut state = fold(&game).state;
+                let mut policy = Rng::new(&format!("policy-{seed}"), 0);
+                while state.result.is_none() && game.log.len() < STEPS {
+                    let player = seat_to_act(&state).unwrap_or(state.active);
+                    let actions: Vec<ActionBody> = legal_actions(&state, player)
+                        .into_iter()
+                        .filter(|action| {
+                            !matches!(
+                                action.action_type(),
+                                ActionType::Concede | ActionType::OfferDraw | ActionType::AnswerDraw
+                            )
+                        })
+                        .collect();
+                    let tech = actions.iter().find(|action| {
+                        matches!(action, ActionBody::Play { instance_id, .. }
+                            if find_instance(&state, instance_id)
+                                .is_some_and(|card| card.def_id == TECH || card.def_id == NA_TECH))
+                    });
+                    let chosen = match tech {
+                        Some(action) => action.clone(),
+                        None => actions[policy.int(actions.len() as i32) as usize].clone(),
+                    };
+                    let action = Action::new(chosen, player, format!("a{}", game.log.len()));
+                    let result = reduce(&state, &action);
+                    assert_eq!(result.error, None, "{seed}");
+                    game.log.push(action);
+                    state = result.state;
+                }
+                (game, hash_state(&state))
+            })
+        }
+
+        #[test]
+        fn r1266000_a_game_on_an_earlier_version_folds_against_the_table_it_was_played_with() {
+            crate::register_all();
+            register_shipped(vec![ShippedCatalog::new(
+                PLAYED_ON,
+                crate::CATALOG.clone(),
+                IndexMap::new(),
+            )]);
+            // Played on a version that shipped with the empty table, as every one through v0.3.7b did.
+            register_win_rates(table(vec![]));
+            let (game, hash) = played_on_before("r1266000-fold");
+            assert_eq!(
+                hash_state(&fold(&game).state),
+                hash,
+                "the build folds it alike while its table is empty too"
+            );
+            // The build's table is filled since.
+            register_win_rates(table(vec![(LEADER, 30, 40), ("core-008", 10, 40)]));
+            assert_ne!(
+                hash_state(&fold(&game).state),
+                hash,
+                "the build's table plays the game another way, or this proves nothing"
+            );
+            let opened = replay_open(
+                &game,
+                &ReplayRecord {
+                    catalog_version: PLAYED_ON.to_string(),
+                    final_hash: hash,
+                },
+                BUILD,
+            );
+            assert!(matches!(opened, ReplayOpen::Ready { .. }), "{opened:?}");
+            clear_overrides();
+        }
 
         #[test]
         fn adds_the_highest_win_rate_card_never_itself() {
@@ -241,11 +343,42 @@ mod tests {
         #[test]
         fn r1101_engine_reads_compiled_table() {
             crate::register_all();
-            // The compiled table ships empty (provisional): the engine reads no leader off it.
             clear_overrides();
-            assert_eq!(win_rate_leader(TECH), None);
+            // A development run's table (issue #1266): provisional, never live figures.
             assert_eq!(crate::WIN_RATES.source, WinRateSource::Provisional);
-            assert!(crate::WIN_RATES.cards.is_empty());
+            let qualifying: Vec<&WinRateRow> = crate::WIN_RATES
+                .cards
+                .iter()
+                .filter(|row| row.games >= CN_TECH_MIN_GAMES && row.id != TECH)
+                .filter(|row| crate::CATALOG.get(&row.id).is_some_and(deckable))
+                .collect();
+            assert!(!qualifying.is_empty(), "the compiled table names a leader");
+            // R1100's comparison written out: the exact rate, then more games, then the smaller id.
+            let beats = |a: &WinRateRow, b: &WinRateRow| {
+                let left = i64::from(a.wins) * i64::from(b.games);
+                let right = i64::from(b.wins) * i64::from(a.games);
+                left > right || left == right && (a.games > b.games || a.games == b.games && a.id < b.id)
+            };
+            let leader = qualifying
+                .iter()
+                .copied()
+                .reduce(|best, row| if beats(row, best) { row } else { best })
+                .expect("a qualifying row");
+            assert!(
+                qualifying
+                    .iter()
+                    .all(|row| row.id == leader.id || beats(leader, row)),
+                "{} leads every other qualifying row",
+                leader.id
+            );
+            assert_eq!(win_rate_leader(TECH).as_deref(), Some(leader.id.as_str()));
+            // And the card adds it.
+            let mut s = casting("cn-tech-compiled", false);
+            let before = s.hand(PlayerId::P1).len();
+            s.play(TECH, json!({}));
+            let added: Vec<CardInstance> = s.hand(PlayerId::P1).into_iter().skip(before - 1).collect();
+            assert_eq!(added.len(), 1);
+            assert_eq!(added[0].def_id, leader.id);
         }
     }
 }
