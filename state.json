@@ -5922,9 +5922,12 @@
         "sha": "321f8d413c31195853db8dd36bfe07f28066f431"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-19T15:03:08Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1318,
       "kind": "review",
       "pending_request": false,
