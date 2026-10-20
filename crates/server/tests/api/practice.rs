@@ -5,7 +5,8 @@
 //! forged result, a forged AI move, another seed's log, an unfinished log, a sandbox tool, a seed
 //! claimed before, a lapsed seed and a pruned one pay nothing and say why (R1303000–R1303003, whose
 //! proving tests live here). A claim past `PRACTICE_VERIFY_CONCURRENCY` waits and still pays, and
-//! so does one whose caller stops waiting.
+//! so does one whose caller stops waiting. A paid game moves the account's quests by what it did,
+//! as a ladder game does (R1304001).
 //!
 //! The games are played for real, on the shipped catalog (no `install_test_cards`), through
 //! `economy::practice`'s own `opening` and `ai_action`, so each AI move in a log is the one the
@@ -27,8 +28,12 @@ use jackioh_server::config::{
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, LastBoardKind};
 use jackioh_server::economy::practice::{self, ClaimedResult};
+use jackioh_server::economy::quests::{QuestDef, QuestGoal, pool, quest_interval_ms};
 use jackioh_server::economy::rewards::{GameMode, game_xp, is_player_action};
-use jackioh_server::economy::store::{EconomyLedger, JloreReason, PracticeDeck, PracticeSeed, PracticeSetup};
+use jackioh_server::economy::store::{
+    EconomyLedger, EconomyReason, JloreReason, PracticeDeck, PracticeSeed, PracticeSetup, QuestChange,
+    QuestGrant,
+};
 
 use crate::support::deps::{add_user, call, test_app as built_app};
 
@@ -341,6 +346,71 @@ async fn a_game_on_a_list_of_cards_pays_too() {
     assert_eq!(
         claim(&app, &token, &seed, "loss", &log).await,
         json!({ "paid": true, "jlore": JLORE_PRACTICE_LOSS, "xp": xp })
+    );
+}
+
+/// The pool's entry of `goal` with the largest target.
+fn hardest(goal: &QuestGoal) -> &'static QuestDef {
+    pool()
+        .iter()
+        .filter(|quest| quest.goal == *goal)
+        .max_by_key(|quest| quest.target)
+        .unwrap_or_else(|| panic!("the pool has a {goal:?} quest"))
+}
+
+#[tokio::test]
+async fn r1304001_a_paid_practice_game_moves_the_quests_by_what_it_did() {
+    let (app, token) = authed().await;
+    let (seed, setup, log, _) = honest_win();
+    insert(&app, seed, setup, now_ms()).await;
+    // No quest falls due during the claim, and A holds a quest of cards played and one of attacks,
+    // which only what the game did moves: a summary with no plays and no attacks moves neither.
+    store!(app, |t| t.economy_quests_set_next_due(
+        A,
+        Some(now_ms() + 10 * quest_interval_ms())
+    ));
+    let (cards, attack) = (
+        hardest(&QuestGoal::PlayCards),
+        hardest(&QuestGoal::AttackWithUnits),
+    );
+    for def in [cards, attack] {
+        assert!(store!(app, |t| t.economy_quests_change(&QuestGrant {
+            profile_id: A.to_owned(),
+            quest_id: def.id.clone(),
+            change: QuestChange::Arrived,
+            progress: 0,
+            reason: EconomyReason::Dev,
+            reference: None,
+            dev: true,
+            at: now_ms(),
+        })));
+    }
+    let attacks = log
+        .iter()
+        .filter(|action| action.nonce.starts_with('h') && matches!(action.body, ActionBody::Attack { .. }))
+        .count() as i64;
+    assert!(attacks > 0, "the human attacks on its way to the win");
+    assert_eq!(claim(&app, &token, seed, "win", log).await["paid"], json!(true));
+
+    let reference = format!("practice:{seed}");
+    let moved = |id: &str, quests: &[QuestGrant]| {
+        quests
+            .iter()
+            .filter(|row| row.quest_id == id && row.change == QuestChange::Progressed)
+            .map(|row| (row.progress, row.reference.clone()))
+            .collect::<Vec<_>>()
+    };
+    let quests = ledger(&app).await.quests;
+    assert_eq!(
+        moved(&attack.id, &quests),
+        vec![(attacks.min(attack.target), Some(reference.clone()))],
+        "each of the human's attacks counts"
+    );
+    let played = moved(&cards.id, &quests);
+    assert_eq!(played.len(), 1, "{quests:?}");
+    assert!(
+        (1..=cards.target).contains(&played[0].0) && played[0].1 == Some(reference),
+        "the cards the human played count: {played:?}"
     );
 }
 

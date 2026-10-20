@@ -1133,6 +1133,7 @@ mod app_append_match_action {
 
 mod concurrency {
     use super::*;
+    use jackioh_server::economy::quests::{quest_interval_ms, top_up_quests};
 
     async fn claim_room(db: &Db, code: &str, guest: &str, match_id: String, at: i64) -> bool {
         once!(db, Some(guest), |tx| tx.rooms_claim(code, guest, &match_id, at))
@@ -1146,6 +1147,50 @@ mod concurrency {
 
     async fn claim_code(db: &Db, code_id: &str) -> bool {
         once!(db, None, |tx| tx.codes_claim(code_id, now_ms())).expect("codes.claim")
+    }
+
+    async fn top_up(db: &Db, profile_id: &str, now: i64) -> usize {
+        once!(db, Some(profile_id), |tx| top_up_quests(&mut tx, profile_id, now))
+            .expect("quests.topUp")
+            .held
+            .len()
+    }
+
+    /// R1304000: two top-ups of one account at once (its quests read in two tabs, or read as a game
+    /// it played is recorded) bring the quest that fell due once. The store's read locks the
+    /// account's schedule, so the second waits for the first and reads what it wrote.
+    #[tokio::test]
+    async fn r1304000_two_simultaneous_top_ups_bring_a_quest_that_fell_due_once() {
+        let Some(ctx) = setup().await else { return };
+        let profile_id = ctx.active_profile().await;
+        let now = now_ms();
+        let due = now - 1;
+        once!(ctx.db, Some(profile_id.as_str()), |tx| tx
+            .economy_quests_set_next_due(&profile_id, Some(due)))
+        .expect("economy.quests.setNextDue");
+
+        let racing_pool = ctx.racing(2).await;
+        // Both connections open before the race: a top-up that waited on a connect would start
+        // after the other had committed, and prove nothing.
+        let warm = (
+            racing_pool.acquire().await.expect("a racing connection"),
+            racing_pool.acquire().await.expect("a second racing connection"),
+        );
+        drop(warm);
+        let racing = Db::Pg(racing_pool.clone());
+        let held = join_all(vec![
+            top_up(&racing, &profile_id, now),
+            top_up(&racing, &profile_id, now),
+        ])
+        .await;
+        racing_pool.close().await;
+        assert_eq!(held, vec![1, 1]);
+        let book = once!(ctx.db, Some(profile_id.as_str()), |tx| tx
+            .economy_quests_get(&profile_id))
+        .expect("economy.quests.get");
+        assert_eq!(book.held.len(), 1);
+        assert_eq!(book.next_due_at, Some(due + quest_interval_ms()));
+        ctx.finish().await;
     }
 
     #[tokio::test]

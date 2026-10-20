@@ -75,9 +75,13 @@ def closed_by(body: str) -> list[int]:
 
 
 def shipped(before: list[dict[str, Any]], after: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """The patches `after` lists and `before` does not, in ship order."""
-    known = {str(entry.get("version")) for entry in before}
-    return [entry for entry in after if str(entry.get("version")) not in known]
+    """The patches `after` appends to `before`, in ship order. A push that renames or drops a
+    version `before` lists (the version retcon, #1371) shipped nothing: its threads are the title
+    retcon's (#1372), paced and reviewed, never a comment on each."""
+    names = [str(entry.get("version")) for entry in before]
+    if [str(entry.get("version")) for entry in after[:len(before)]] != names:
+        return []
+    return after[len(before):]
 
 
 def _git(*args: str) -> str:

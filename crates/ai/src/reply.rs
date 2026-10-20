@@ -38,12 +38,13 @@ use jackioh_engine::{
 };
 
 use crate::candidates::{blow, candidate_actions_in, cleaved_neighbours, exchange, side_of};
-use crate::config::{AI_EVAL, AI_REPLY, AI_SEARCH};
+use crate::config::{AI_EVAL, AI_REPLY};
 use crate::evaluate::{NextSwing, coming_mana, evaluate, unit_worth};
 use crate::learned::finalist_score;
 use crate::lethal::deft_ready_switch;
 use crate::simulate::{
-    LineStatus, best_auto_answer, charge_announced, line_status, simulate, static_score, surcharge_nodes,
+    AnswersTried, LineStatus, best_auto_answer, charge_announced, line_status, simulate, static_score,
+    surcharge_nodes,
 };
 use crate::types::NodeCounter;
 
@@ -344,12 +345,12 @@ pub fn hidden_card_ids(state: &GameState, seat: PlayerId) -> IndexSet<String> {
 
 /// The opponent's reply to a line that handed it the turn: from `state` (the opponent's main phase,
 /// or a prompt on the way there) it plays by the rule in this file's header and ends its turn.
-/// Prompts on either side get their answerer's best of its first AI_SEARCH.max_auto_answer_options
-/// answers (`best_auto_answer`), the seat's own off-turn prompts too. `hidden` holds the ids of the
-/// cards the opponent held unseen when the decision began (`hidden_card_ids` of the decision's
-/// determinization, TS's default); any other card in its hand is one it may play. Returns the state
-/// at the seat's next main phase or prompt, or where the game ended; `None` when the counter refused
-/// a node.
+/// Prompts on either side get their answerer's best of AI_SEARCH.max_auto_answer_options answers
+/// drawn from all of them (`best_auto_answer`), the seat's own off-turn prompts too. `hidden` holds
+/// the ids of the cards the opponent held unseen when the decision began (`hidden_card_ids` of the
+/// decision's determinization, TS's default); any other card in its hand is one it may play. Returns
+/// the state at the seat's next main phase or prompt, or where the game ended; `None` when the
+/// counter refused a node.
 pub fn simulate_reply(
     state: &GameState,
     seat: PlayerId,
@@ -368,8 +369,8 @@ pub fn simulate_reply(
                 return Some(current);
             }
             let answerer = pending.player_id;
-            let options = AI_SEARCH.max_auto_answer_options.max(1) as usize;
-            let Ok(next) = best_auto_answer(&current, answerer, options, counter, "reply")? else {
+            let Ok(next) = best_auto_answer(&current, answerer, AnswersTried::Drawn, counter, "reply")?
+            else {
                 return Some(current);
             };
             current = next;
