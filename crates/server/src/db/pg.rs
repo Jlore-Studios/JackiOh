@@ -6438,7 +6438,7 @@ pub async fn player_stats_list_public(
 // and reporter). An id that is not a UUID names no row, as everywhere in this file.
 
 use crate::db::store::{
-    BlockRow, ChallengeRow, ChallengeState, ChatMessageRow, ChatReportListing, ChatReportRow,
+    BlockRow, ChallengeRow, ChallengeState, ChatCursor, ChatMessageRow, ChatReportListing, ChatReportRow,
     FriendRequestRow, FriendshipRow,
 };
 
@@ -7262,12 +7262,13 @@ pub async fn chat_get(t: &mut PgTx<'_>, message_id: &str) -> Result<Option<ChatM
     row.as_ref().map(chat_message_of).transpose()
 }
 
-/// Read newest first for the page, then turned round: the port answers newest last.
+/// Read newest first for the page, then turned round: the port answers newest last. R1384000: the
+/// messages before the cursor by a row comparison on `(created_at, id)`, the fake's tuple order.
 pub async fn chat_page(
     t: &mut PgTx<'_>,
     x: &str,
     y: &str,
-    before: Option<i64>,
+    before: Option<&ChatCursor>,
     limit: i64,
 ) -> Result<Vec<ChatMessageRow>, StoreError> {
     if !is_uuid(x) || !is_uuid(y) {
@@ -7280,15 +7281,16 @@ pub async fn chat_page(
         " from public.chat_messages
           where ((from_profile = $1::uuid and to_profile = $2::uuid)
               or (from_profile = $2::uuid and to_profile = $1::uuid))
-            and ($3::double precision is null or created_at < ",
+            and ($3::double precision is null or (created_at, id) < (",
         ts!("$3"),
-        ")
+        ", $4::uuid))
           order by created_at desc, id desc
-          limit $4::bigint"
+          limit $5::bigint"
     ))
     .bind(x)
     .bind(y)
-    .bind(before)
+    .bind(before.map(|cursor| cursor.created_at))
+    .bind(before.map(|cursor| cursor.id.as_str()))
     .bind(limit)
     .fetch_all(&mut **t)
     .await
