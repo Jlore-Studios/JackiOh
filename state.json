@@ -7496,6 +7496,13 @@
     "1418": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T14:35:34Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rules 3 and 5 fail: a catalog name change with a pending patch fragment, edits to spec notes and rulings, and a golden-trace bless; no engine or AI code changes, so not hard"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-3",
