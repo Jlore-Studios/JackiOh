@@ -1245,7 +1245,8 @@ function PracticeScreen({
 
   const board = (
     // The result panel is practice's own dialog (PracticeResult), so the board keeps to its chip.
-    // R345: a lesson keeps R82's automatic turn end on, since its coach is written around it.
+    // R345: a lesson keeps R82's automatic turn end on, since its coach is written around it, and its
+    // mulligan picker the engine's instruction, which the lesson teaches.
     // R1108000: and no card on a lesson's board prints full art, whatever the Full-art cards setting.
     <FullArtAllowed allowed={config.lesson === undefined}>
       <Game
@@ -1262,7 +1263,7 @@ function PracticeScreen({
         wearCosmetics
         // R1297000: the saved deck being played brings its own playmat, backdrop and card back.
         deckCosmetics={config.deck.kind === "saved" ? (config.deck.cosmetics ?? null) : null}
-        {...(config.lesson === undefined ? {} : { autoEndTurn: true })}
+        {...(config.lesson === undefined ? {} : { autoEndTurn: true, lesson: true })}
       />
     </FullArtAllowed>
   );
