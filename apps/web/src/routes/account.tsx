@@ -32,14 +32,28 @@
 // hidden until asked for, with a copy button. A listed account (`me.isDev`, the server's word) also
 // gets the Dev tools panel (`DevTools.tsx`) behind a toggle of its own.
 //
+// CARD PACKS (#1308, SPEC §14.3, §14.4): an active account gets "Card packs" behind a toggle too: the
+// odds and pity counters the server states, the packs held, and the scene that opens one
+// (`packs/PackOpening.tsx`). The economy is not live (`ECONOMY_LIVE`, §14.12), so until it is only a
+// dev account is offered it (`packsShown`).
+//
 // DELETING THE ACCOUNT. "Delete my account" asks first: the player types DELETE, then confirms.
 // `DELETE /api/account` does the deleting, at the server, which decides what goes and answers 204.
 // Only then does this device forget the session, the way signing out does, and load the landing
 // page. A refusal leaves everything as it was and says why.
 
-import { useEffect, useId, useState, useSyncExternalStore, type FormEvent, type ReactElement } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useId,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+  type ReactElement,
+} from "react";
 
-import { AUTH_SIGN_OUT_WAIT_SECONDS } from "@jackioh/server-config";
+import { AUTH_SIGN_OUT_WAIT_SECONDS, ECONOMY_LIVE } from "@jackioh/server-config";
 import {
   deleteAccount,
   getOwnRank,
@@ -66,6 +80,10 @@ import UsernameField, { nextChangeSentence } from "../auth/UsernameField.tsx";
 import "../auth/tavern.css";
 import "./account.css";
 
+// This file is in the entry chunk, so the pack scene, its fx director and its card faces load only
+// once the panel is opened.
+const PackOpening = lazy(() => import("../packs/PackOpening.tsx"));
+
 export const accountTestid = {
   screen: "account-screen",
   email: "account-email",
@@ -78,6 +96,7 @@ export const accountTestid = {
   leaderboard: "account-leaderboard",
   manage: "account-manage",
   manageToggle: "account-manage-toggle",
+  packsToggle: "account-packs-toggle",
   record: "account-record",
   winRate: "account-win-rate",
   signOut: "account-sign-out",
@@ -228,6 +247,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
   const [error, setError] = useState<string | null>(null);
   const [manageOpen, setManageOpen] = useState(false);
   const [devOpen, setDevOpen] = useState(false);
+  const [packsOpen, setPacksOpen] = useState(false);
 
   useEffect(() => {
     if (pending) return;
@@ -343,6 +363,16 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
             </div>
             {played === 0 ? <p>{t("No finished matches yet.")}</p> : null}
           </>
+        ) : null}
+
+        {packsShown(me) ? (
+          <AccountPacks
+            open={packsOpen}
+            onToggle={() => {
+              setPacksOpen(!packsOpen);
+            }}
+            token={token}
+          />
         ) : null}
 
         <AccountManage
@@ -519,6 +549,50 @@ function AccountDevTools({
       {open ? (
         <div className="account-manage__body" id={bodyId}>
           <DevTools token={token} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Whether the account is offered card packs: an active account once the economy is live
+ * (`ECONOMY_LIVE`, §14.12), and before then a dev account alone (the server's word, `me.isDev`), so
+ * the opening can be tried on staging and production before players see it. The routes check the
+ * account again.
+ */
+export function packsShown(me: MeResponse | undefined, live: boolean = ECONOMY_LIVE): boolean {
+  return me?.profile.status === "active" && (live || me.isDev === true);
+}
+
+/** "Card packs": the odds, the pity counters, the packs held and the opening scene, behind a toggle. */
+function AccountPacks({ open, onToggle, token }: { open: boolean; onToggle: () => void; token: string }): ReactElement {
+  const bodyId = useId();
+  return (
+    <div className="account-manage">
+      <div className="account-actions">
+        <button
+          type="button"
+          className="account-manage__toggle"
+          data-testid={accountTestid.packsToggle}
+          aria-expanded={open}
+          aria-controls={bodyId}
+          onClick={onToggle}
+        >
+          {t("Card packs")}
+        </button>
+      </div>
+      {open ? (
+        <div className="account-manage__body" id={bodyId}>
+          <Suspense
+            fallback={
+              <p className="notice" role="status">
+                {t("Loading your packs…")}
+              </p>
+            }
+          >
+            <PackOpening token={token} />
+          </Suspense>
         </div>
       ) : null}
     </div>
