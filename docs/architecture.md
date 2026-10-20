@@ -706,8 +706,9 @@ step that is not yet implemented says which BUILD task delivers it.
    `0035_replay_final_hash.sql` → `0036_lean_set.sql` → `0037_custom_cards.sql` → `0038_social.sql` →
    `0039_duos.sql` → `0040_moderation_switch_grant.sql` → `0041_card_totals.sql` →
    `0042_match_checkpoints.sql` → `0043_meditative_plus_set.sql` → `0044_deck_cosmetics.sql` →
-   `0045_economy.sql` → `0046_dev_accounts.sql` — and records them in `app.migrations`. Expected result: 62 tables
-   in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
+   `0045_economy.sql` → `0046_dev_accounts.sql` → `0047_practice_seeds.sql` — and records them in
+   `app.migrations`. Expected result: 63 tables in `public`, all with RLS enabled, plus the private
+   `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can
    write #13 and #14's Jlockeed tag (R278). 0011 adds `tutorial_progress` and its one write path,
@@ -779,7 +780,9 @@ step that is not yet implemented says which BUILD task delivers it.
    adds the economy's fifteen tables (SPEC §14.11): each holding (Jlore, packs and tokens, pity and
    the bars, set tracks, quests, owned cosmetics) beside its append-only ledger, which its own
    account reads and no client role writes, and `cosmetics`, which step 6 fills; `collection_grants`
-   gains its `dev` mark (§14.10). Nothing reads or writes them yet.
+   gains its `dev` mark (§14.10). Nothing reads or writes them yet. 0047 adds the server-only
+   `practice_seeds` (SPEC §14.8, #1303): the seeds a practice game's claim is checked and paid on,
+   each once; a seed goes with an account that is deleted, and needs nothing else from the bring-up.
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL

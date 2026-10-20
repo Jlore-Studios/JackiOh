@@ -4,7 +4,7 @@
 // own screen: `Game.tsx`'s `result-overlay` still renders underneath, unchanged, for every other
 // consumer of the board. "View the board" closes the dialog so the final position can be read; the
 // HUD's outcome chip opens it again. R768000: a game the worker kept also offers its replay, and its
-// last turn as a GIF.
+// last turn as a GIF. R1303000: a game on a server seed says what the server made of its claim.
 
 import { useEffect, useId, useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -13,6 +13,7 @@ import type { GameOverReason, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { t } from "../i18n/i18n.ts";
 import { PRACTICE_RESULT_PARTICLES } from "./config.ts";
+import { earningText, type PracticeEarning } from "./earning.ts";
 import { practiceTestid } from "./testids.ts";
 import { DIFFICULTY_LABEL, TierCrest } from "./Tier.tsx";
 import "./practice.css";
@@ -74,6 +75,8 @@ type PracticeResultProps = {
   onWatchReplay?: () => void;
   /** R768000: the kept game's replay at its last step, making its last turn's GIF. */
   onShareLastTurn?: () => void;
+  /** R1303000: what a game on a server seed earned, or why not; absent for any other game. */
+  earning?: PracticeEarning;
 };
 
 export function PracticeResult({
@@ -85,6 +88,7 @@ export function PracticeResult({
   onViewBoard,
   onWatchReplay,
   onShareLastTurn,
+  earning,
 }: PracticeResultProps): ReactElement {
   const outcome = outcomeOf(result, viewer);
   const titleId = useId();
@@ -132,6 +136,17 @@ export function PracticeResult({
         </h2>
         <p className="practice-result__reason">{t(reasonText(outcome, result.reason))}</p>
         <p className="practice-result__meta">{t("Practice")} · {t(DIFFICULTY_LABEL[difficulty])}</p>
+        {earning === undefined ? null : (
+          <p
+            className="practice-result__meta"
+            data-testid={practiceTestid.resultEarning}
+            data-earning={earning.kind}
+            {...(earning.kind === "refused" ? { "data-reason": earning.reason } : {})}
+            role="status"
+          >
+            {earningText(earning)}
+          </p>
+        )}
         <div className="practice-result__actions">
           <button
             ref={playAgain}

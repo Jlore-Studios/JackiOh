@@ -81,6 +81,15 @@ describe("R668 the practice game to resume, on the device", () => {
     expect(readPracticeResume()).toBeNull();
   });
 
+  it("R1303001 a game on a server seed is kept as one, so its end is claimed after a reload, and a flag that is not true is malformed", () => {
+    writePracticeResume({ ...CONFIG, earning: true, lastBoard: [{ defId: "core-008", radiant: false }] });
+    expect(readPracticeResume()).toEqual({ ...CONFIG, earning: true });
+    writePracticeResume(CONFIG);
+    expect(readPracticeResume(), "a game on no server seed keeps no flag").toEqual(CONFIG);
+    window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify({ ...CONFIG, earning: false }));
+    expect(readPracticeResume()).toBeNull();
+  });
+
   it("R765 keeps where the player left the game: in it, or with Save and leave", () => {
     writePracticeResume(CONFIG);
     expect(readPracticeResumeState()).toEqual({ config: CONFIG, saved: false });

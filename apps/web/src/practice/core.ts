@@ -35,6 +35,13 @@
 // fold the worker holds for the last PRACTICE_REPLAYS_CACHED games opened. Both are refused while a
 // game is in progress. Like the save, a kept game never crosses to the page: a response holds
 // summaries and views, never the log, the seed, the decks or a state.
+//
+// Claims (R1303000). A free game on a server seed (`earning: true`) answers `claim` once it is over:
+// its seed, the result for the human and the whole log, which the page sends to the server to be
+// folded and checked (R1303002) before it pays. The log crosses only after the end, so it can no
+// longer help the human play, and the page already holds the seed, since it asked the server for it
+// (rule 7). Any other game, and a game still running, is refused. A game resumed after a reload
+// (R668) claims on the seed it began on, which its saved config carries (R1303001).
 
 import { CATALOG_VERSION, currentVersionName } from "@jackioh/cards";
 import {
@@ -69,6 +76,7 @@ import { randomDeckLean } from "./protocol.ts";
 import type {
   LastBoardCard,
   PracticeDebug,
+  PracticeClaim,
   PracticeDeckChoice,
   PracticeReplayListing,
   PracticeReplaySummary,
@@ -595,6 +603,20 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
     };
   }
 
+  /** R1303000: a finished game on a server seed, as the server checks it; JSON copies, as `debugOf`'s. */
+  function claimOf(active: PracticeGame): PracticeClaim {
+    const result = active.state.result;
+    if (active.config.earning !== true) throw new Error("this practice game is not on a server seed, so it earns nothing");
+    if (result === null) throw new Error("a practice game is claimed only once it is over");
+    const endSeat = humanSeatNow(active);
+    return {
+      seed: active.config.seed,
+      // R677: read from the seat the human ended in, as `keepFinished` reads it.
+      result: result.winner === "draw" ? "draw" : result.winner === endSeat ? "win" : "loss",
+      log: JSON.parse(JSON.stringify(active.log)) as Action[],
+    };
+  }
+
   function started(id: number, active: PracticeGame): PracticeResponse {
     env.saves?.write(saveOf(active));
     return { id, type: "started", snapshot: snapshotOf(active), defs: registeredCatalog(), aiSeat: active.aiSeat };
@@ -648,6 +670,8 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
         if (!env.dev) return { id: request.id, type: "failed", message: "debug is available only in a development build" };
         return { id: request.id, type: "debug", debug: debugOf(current()) };
       }
+      case "claim":
+        return { id: request.id, type: "claim", claim: claimOf(current()) };
     }
   }
 
