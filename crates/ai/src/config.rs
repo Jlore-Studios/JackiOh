@@ -72,9 +72,14 @@ pub struct AiSearch {
     pub zone_variants: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
-    /// Answers tried for each auto-answered prompt, in `legal_actions` order, before the answerer's
-    /// best is committed (`simulate`'s and the opponent's reply's auto-answers, #891): each one node.
+    /// Answers tried for each auto-answered prompt before the answerer's best is committed
+    /// (`simulate`'s, the opponent's reply's and `own_prompt_score`'s auto-answers, #891): each one
+    /// node. A prompt with more answers tries this many drawn from all of them (#1382,
+    /// `auto_answer_seed`), never the first ones it lists.
     pub max_auto_answer_options: i32,
+    /// #1382: the stream the answers an auto-answered prompt tries are drawn on, beside the world's
+    /// own seed and the prompt's id, when it has more than `max_auto_answer_options`.
+    pub auto_answer_seed: &'static str,
     /// Deepest line the lethal solver explores.
     pub lethal_max_depth: i32,
     /// Nodes of the lethal allowance its depth-first walk in move order gets before the best-first walk
@@ -129,6 +134,7 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     zone_variants: 2,
     max_auto_answers: 8,
     max_auto_answer_options: 4,
+    auto_answer_seed: "ai:answers",
     lethal_max_depth: 10,
     lethal_quick_nodes: 40,
     lethal_width: 60,

@@ -14,12 +14,13 @@ use std::cell::Cell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
-    Action, ActionBody, CardInstance, GameEvent, GameState, PLAYER_IDS, Phase, PlayerId, ReduceResult,
+    Action, ActionBody, CardInstance, GameEvent, GameState, PLAYER_IDS, Phase, PlayerId, ReduceResult, Rng,
     TurnLog, active_units_of, effective_life, find_instance, legal_actions, max_mana_for, opponent_of,
     owed_mana_of, reduce_unpiloted, self_def_ids, subsystems, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
+use crate::candidates::action_key;
 use crate::config::{AI_EVAL, AI_SEARCH};
 use crate::evaluate::{NextSwing, evaluate};
 use crate::learned::{line_score, open_score};
@@ -332,25 +333,58 @@ fn stands_for_any(state: &GameState, def_id: &str, ids: &[&str]) -> bool {
         .any(|id| ids.contains(&id.as_str()))
 }
 
-/// One auto-answer (#891): of the first `options` answers `answerer`'s prompt lists (legal_actions
-/// less Concede, which ends the game rather than answering), the one whose result `evaluate` likes
-/// best from the answerer's own seat, so a world does not assume the answerer takes option zero. The
-/// score reads the determinization only, as everything here does (R185). Each answer tried is one
-/// node (nonce `${prefix}:${counter.used}`); strictly greater wins, so ties keep legal_actions order,
-/// and a lone answer is committed unscored. A throw or a refusal is a failed simulation and the next
-/// answer is tried; `Some(Err)` when none is left. `None` when the counter refuses a node.
+/// Which answers of a prompt `best_auto_answer` tries.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum AnswersTried {
+    /// The first one legal_actions lists: the greedy baseline's (`simulate_first_answers`).
+    First,
+    /// AI_SEARCH.max_auto_answer_options of the whole answer set (`auto_answers`).
+    Drawn,
+}
+
+/// The answers `best_auto_answer` tries of `answerer`'s prompt: legal_actions less Concede, which
+/// ends the game rather than answering. `Drawn` (#1382) puts them in `action_key` order, so the order
+/// the prompt lists them in changes nothing, and of a prompt with more than
+/// AI_SEARCH.max_auto_answer_options answers keeps that many drawn from all of them, on the stream
+/// `${AI_SEARCH.auto_answer_seed}:${state.seed}:${pending.id}`: a late answer is as likely to be tried
+/// as an early one, each determinization (its own `ai:` seed, R185) draws its own, and the same
+/// prompt in the same world always draws the same answers.
+fn auto_answers(state: &GameState, answerer: PlayerId, tried: AnswersTried) -> Vec<ActionBody> {
+    let answers = legal_actions(state, answerer)
+        .into_iter()
+        .filter(|answer| !matches!(answer, ActionBody::Concede));
+    if tried == AnswersTried::First {
+        return answers.take(1).collect();
+    }
+    let mut keyed: Vec<(String, ActionBody)> = answers.map(|answer| (action_key(&answer), answer)).collect();
+    keyed.sort_by(|a, b| a.0.cmp(&b.0));
+    let ordered: Vec<ActionBody> = keyed.into_iter().map(|(_, answer)| answer).collect();
+    let cap = AI_SEARCH.max_auto_answer_options.max(1) as usize;
+    if ordered.len() <= cap {
+        return ordered;
+    }
+    let prompt = state.pending.as_ref().map_or("", |pending| pending.id.as_str());
+    let stream = format!("{}:{}:{prompt}", AI_SEARCH.auto_answer_seed, state.seed);
+    let mut drawn = Rng::new(&stream, 0).shuffle(&ordered);
+    drawn.truncate(cap);
+    drawn
+}
+
+/// One auto-answer (#891): of the answers `auto_answers` picks of `answerer`'s prompt, the one whose
+/// result `evaluate` likes best from the answerer's own seat, so a world does not assume the answerer
+/// takes option zero. The score reads the determinization only, as everything here does (R185). Each
+/// answer tried is one node (nonce `${prefix}:${counter.used}`); strictly greater wins, so ties keep
+/// `auto_answers`' order, and a lone answer is committed unscored. A throw or a refusal is a failed
+/// simulation and the next answer is tried; `Some(Err)` when none is left. `None` when the counter
+/// refuses a node.
 pub(crate) fn best_auto_answer(
     state: &GameState,
     answerer: PlayerId,
-    options: usize,
+    tried: AnswersTried,
     counter: &dyn NodeCounter,
     prefix: &str,
 ) -> Option<SimStep> {
-    let answers: Vec<ActionBody> = legal_actions(state, answerer)
-        .into_iter()
-        .filter(|answer| !matches!(answer, ActionBody::Concede))
-        .take(options)
-        .collect();
+    let answers = auto_answers(state, answerer, tried);
     if answers.is_empty() {
         note_sim_error(counter);
         return Some(Err("the prompt has no answer".to_string()));
@@ -396,9 +430,9 @@ pub(crate) fn best_auto_answer(
 
 /// #1112: what a state waiting on `seat`'s own prompt is worth once its prompts are answered, which is
 /// how the beam ranks a child that waits there (search.rs): every prompt open on the way, the seat's
-/// and any the other seat holds, gets its holder's best of its first AI_SEARCH.max_auto_answer_options
-/// answers (`best_auto_answer`, nonce `ahead:${counter.used}`, each answer tried one node of
-/// `counter`), at most AI_SEARCH.max_auto_answers prompts, and the state reached is scored by
+/// and any the other seat holds, gets its holder's best of AI_SEARCH.max_auto_answer_options answers
+/// drawn from all of them (`best_auto_answer`, nonce `ahead:${counter.used}`, each answer tried one
+/// node of `counter`), at most AI_SEARCH.max_auto_answers prompts, and the state reached is scored by
 /// `open_score` as the beam scores a child. Only a score: the child stays at its prompt, so the beam
 /// still picks its real answers. `None` when no prompt of the seat's is open, when the counter
 /// refuses a node, and when no answer is accepted, the prompts outrun the cap or the engine panics
@@ -411,7 +445,6 @@ pub fn own_prompt_score(state: &GameState, seat: PlayerId, counter: &dyn NodeCou
     if holder(state) != Some(seat) {
         return None;
     }
-    let options = AI_SEARCH.max_auto_answer_options.max(1) as usize;
     let run = catch_unwind(AssertUnwindSafe(|| -> Option<f64> {
         let mut current = state.clone();
         let mut answered: usize = 0;
@@ -419,7 +452,7 @@ pub fn own_prompt_score(state: &GameState, seat: PlayerId, counter: &dyn NodeCou
             if answered >= AI_SEARCH.max_auto_answers as usize {
                 return None;
             }
-            current = best_auto_answer(&current, answerer, options, counter, "ahead")?.ok()?;
+            current = best_auto_answer(&current, answerer, AnswersTried::Drawn, counter, "ahead")?.ok()?;
             answered += 1;
         }
         Some(open_score(&current, seat, NextSwing::Enemy))
@@ -431,9 +464,9 @@ pub fn own_prompt_score(state: &GameState, seat: PlayerId, counter: &dyn NodeCou
 }
 
 /// One AI action on a determinized state: reduce (nonce `sim:${counter.used}`), then, while a prompt
-/// of the other seat is open, answer it with the answerer's best of its first
-/// AI_SEARCH.max_auto_answer_options answers (`best_auto_answer`: each answer tried one more node, at
-/// most AI_SEARCH.maxAutoAnswers prompts). A throw or a refusal is `{ ok: false }`. Returns null
+/// of the other seat is open, answer it with the answerer's best of AI_SEARCH.max_auto_answer_options
+/// answers drawn from all of them (`best_auto_answer`: each answer tried one more node, at most
+/// AI_SEARCH.maxAutoAnswers prompts). A throw or a refusal is `{ ok: false }`. Returns null
 /// without touching anything when the counter refuses a node.
 pub fn simulate(
     state: &GameState,
@@ -441,13 +474,7 @@ pub fn simulate(
     action: &ActionBody,
     counter: &dyn NodeCounter,
 ) -> Option<SimStep> {
-    simulate_answering(
-        state,
-        seat,
-        action,
-        counter,
-        AI_SEARCH.max_auto_answer_options.max(1) as usize,
-    )
+    simulate_answering(state, seat, action, counter, AnswersTried::Drawn)
 }
 
 /// `simulate` as it stood before #891, for the greedy baseline: every prompt of the other seat gets
@@ -460,7 +487,7 @@ pub fn simulate_first_answers(
     action: &ActionBody,
     counter: &dyn NodeCounter,
 ) -> Option<SimStep> {
-    simulate_answering(state, seat, action, counter, 1)
+    simulate_answering(state, seat, action, counter, AnswersTried::First)
 }
 
 fn simulate_answering(
@@ -468,7 +495,7 @@ fn simulate_answering(
     seat: PlayerId,
     action: &ActionBody,
     counter: &dyn NodeCounter,
-    options: usize,
+    tried: AnswersTried,
 ) -> Option<SimStep> {
     if !counter.take() {
         return None;
@@ -510,7 +537,7 @@ fn simulate_answering(
                 note_sim_error(counter);
                 return Some(Err("too many opponent prompts in one step".to_string()));
             }
-            current = match best_auto_answer(&current, other, options, counter, "sim")? {
+            current = match best_auto_answer(&current, other, tried, counter, "sim")? {
                 Ok(next) => next,
                 Err(error) => return Some(Err(error)),
             };
