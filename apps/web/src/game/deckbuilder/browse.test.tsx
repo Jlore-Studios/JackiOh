@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 
 import type { CardCost, CardDef, CardFace, CardType, Rarity, Tag } from "@jackioh/shared";
 import { validateDeck, type CatalogSnapshot, type Collection } from "@jackioh/validator";
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { DECK_AUTOSAVE_DEBOUNCE_MS } from "@jackioh/server-config";
@@ -60,6 +60,8 @@ import {
   DB_SIDEBAR,
   DB_SORT,
   DB_SORT_DIR,
+  DB_WINRATE_NOTICE,
+  DB_WINRATE_RETRY,
   DECK_CARDS,
   DECK_COMPARE_SELECT,
   DECK_COUNT,
@@ -783,6 +785,92 @@ describe("sorting (B34)", () => {
     fireEvent.click(screen.getByTestId(filterCostId("4")));
     sortBy("name", "desc");
     expect(poolOrder()).toEqual(["x-11", "x-10", "x-08", "x-07"]);
+  });
+});
+
+describe("sorting by win rate (B34)", () => {
+  /** The rates the stats endpoint answers with, each card with enough games. */
+  const RATES: Readonly<Record<string, number>> = { "x-04": 0.7, "x-02": 0.6, "x-08": 0.5 };
+  /** By win rate, descending: the rated cards, then the rest in tie-break (cost) order. */
+  const BY_RATE_DESC = ["x-04", "x-02", "x-08", ...DEFAULT_ORDER.filter((id) => !Object.hasOwn(RATES, id))];
+
+  const OK = (): Promise<Response> =>
+    Promise.resolve(
+      new Response(
+        JSON.stringify({ cards: Object.entries(RATES).map(([id, winRate]) => ({ id, winRate, hasEnoughGames: true })) }),
+        { status: 200 },
+      ),
+    );
+  const FAIL = (): Promise<Response> => Promise.reject(new TypeError("Failed to fetch"));
+
+  /** Stubs `fetch`: the nth `/api/stats/cards` call gets the nth answer (the last from then on), and
+   *  nothing else ever answers. Returns how many times the stats were asked for. */
+  function stubStats(...answers: (() => Promise<Response>)[]): () => number {
+    let asked = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        if (!String(input).includes("/api/stats/cards")) return new Promise<Response>(() => {});
+        const answer = answers[Math.min(asked, answers.length - 1)];
+        asked += 1;
+        return answer === undefined ? new Promise<Response>(() => {}) : answer();
+      }),
+    );
+    return () => asked;
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("B34 a failed win-rate fetch says so over the pool, offers a retry, and keeps cost order", async () => {
+    const asked = stubStats(FAIL);
+    mount();
+    sortBy("winRate", "desc");
+    await screen.findByTestId(DB_WINRATE_RETRY);
+    expect(screen.getByTestId(DB_WINRATE_NOTICE)).toHaveAttribute("data-state", "failed");
+    expect(screen.getByTestId(DB_WINRATE_NOTICE)).toHaveTextContent("Win rates couldn’t be loaded");
+    expect(poolOrder()).toEqual(DEFAULT_ORDER);
+    expect(asked()).toBe(1);
+  });
+
+  it("B34 Retry asks again, and the pool sorts by win rate once it answers", async () => {
+    const asked = stubStats(FAIL, OK);
+    mount();
+    sortBy("winRate", "desc");
+    fireEvent.click(await screen.findByTestId(DB_WINRATE_RETRY));
+    await waitFor(() => {
+      expect(poolOrder()).toEqual(BY_RATE_DESC);
+    });
+    expect(screen.queryByTestId(DB_WINRATE_NOTICE)).toBeNull();
+    expect(asked()).toBe(2);
+  });
+
+  it("B34 sorting by win rate says the rates are loading, then sorts by them with no notice", async () => {
+    const asked = stubStats(OK);
+    mount();
+    sortBy("winRate", "desc");
+    expect(screen.getByTestId(DB_WINRATE_NOTICE)).toHaveAttribute("data-state", "loading");
+    expect(screen.queryByTestId(DB_WINRATE_RETRY)).toBeNull();
+    await waitFor(() => {
+      expect(poolOrder()).toEqual(BY_RATE_DESC);
+    });
+    expect(screen.queryByTestId(DB_WINRATE_NOTICE)).toBeNull();
+    expect(asked()).toBe(1);
+  });
+
+  it("B34 after a failure, leaving the win-rate sort and coming back asks again", async () => {
+    const asked = stubStats(FAIL, OK);
+    mount();
+    sortBy("winRate", "desc");
+    await screen.findByTestId(DB_WINRATE_RETRY);
+    fireEvent.change(screen.getByTestId(DB_SORT), { target: { value: "name" } });
+    expect(screen.queryByTestId(DB_WINRATE_NOTICE)).toBeNull();
+    fireEvent.change(screen.getByTestId(DB_SORT), { target: { value: "winRate" } });
+    await waitFor(() => {
+      expect(poolOrder()).toEqual(BY_RATE_DESC);
+    });
+    expect(asked()).toBe(2);
   });
 });
 

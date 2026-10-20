@@ -278,6 +278,12 @@ export const DB_RESULT_COUNT = "db-result-count";
 
 export const DB_EMPTY = "db-empty";
 
+/** The win-rate sort's notice over the pool, `data-state="loading|failed"` (useCardWinRates.ts). */
+export const DB_WINRATE_NOTICE = "db-winrate-notice";
+
+/** The notice's retry, shown after a failed fetch. */
+export const DB_WINRATE_RETRY = "db-winrate-retry";
+
 /** The card pool, and one entry per card in it: `card-pool-<id>` carries `data-legal`,
  *  `data-in-deck="true"` when the open deck holds it, and `data-unavailable="true"` with
  *  `data-held-by="<deck name>"` when a compared deck does (R251). */

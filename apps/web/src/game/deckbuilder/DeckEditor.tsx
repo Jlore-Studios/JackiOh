@@ -188,8 +188,8 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
   const winRates = useCardWinRates(sort.key);
 
   const pool = useMemo(
-    () => visiblePool(catalog, collection, filter, sort, winRates ?? undefined),
-    [catalog, collection, filter, sort, winRates],
+    () => visiblePool(catalog, collection, filter, sort, winRates.rates ?? undefined),
+    [catalog, collection, filter, sort, winRates.rates],
   );
   const verdict = useMemo(
     () => deckVerdict(deck, catalog, collection, limits.nameLength),
@@ -592,6 +592,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           onFilter={onFilter}
           sort={sort}
           onSort={onSort}
+          winRates={winRates}
           ownedUnavailable={collection === null}
           sets={sets}
           setsAfter={
