@@ -67,11 +67,18 @@ pub enum CosmeticRarity {
     Rare,
     Epic,
     Legendary,
+    Mythic,
 }
 
 impl CosmeticRarity {
     /// Every rarity, commonest first.
-    pub const ALL: [Self; 4] = [Self::Common, Self::Rare, Self::Epic, Self::Legendary];
+    pub const ALL: [Self; 5] = [
+        Self::Common,
+        Self::Rare,
+        Self::Epic,
+        Self::Legendary,
+        Self::Mythic,
+    ];
 
     /// The same rarity on §5's scale, which a duplicate's cosmetic roll draws on (R1301002).
     pub fn printed(self) -> PrintedRarity {
@@ -80,6 +87,19 @@ impl CosmeticRarity {
             Self::Rare => PrintedRarity::Rare,
             Self::Epic => PrintedRarity::Epic,
             Self::Legendary => PrintedRarity::Legendary,
+            Self::Mythic => PrintedRarity::Mythic,
+        }
+    }
+
+    /// The rarity's place on §5's scale, commonest first (R1305003): a cosmetic token buys a
+    /// cosmetic at its tier or below.
+    pub fn tier(self) -> u8 {
+        match self {
+            Self::Common => 0,
+            Self::Rare => 1,
+            Self::Epic => 2,
+            Self::Legendary => 3,
+            Self::Mythic => 4,
         }
     }
 }
@@ -102,6 +122,11 @@ pub struct Cosmetic {
     /// false and must be owned (§14.12).
     #[serde(default)]
     pub starter: bool,
+    /// §14.2: a chase cosmetic, marked in the registry. No token pays for one; the Chase Shard
+    /// bar buys one, and one can drop by luck (§14.6). Nothing shipped marks one yet
+    /// (`seed-catalog` marks no chase yet), so everything shipped reads false (R1305003).
+    #[serde(default)]
+    pub chase: bool,
     /// The card a full art belongs to, by catalog id; no other kind names one (R1313000).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub card: Option<String>,
@@ -218,6 +243,7 @@ mod tests {
             rarity: CosmeticRarity::Common,
             default,
             starter: true,
+            chase: false,
             card: None,
         }
     }
@@ -494,7 +520,8 @@ mod tests {
                 PrintedRarity::Common,
                 PrintedRarity::Rare,
                 PrintedRarity::Epic,
-                PrintedRarity::Legendary
+                PrintedRarity::Legendary,
+                PrintedRarity::Mythic
             ]
         );
     }
