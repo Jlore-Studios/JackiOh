@@ -12,10 +12,16 @@
 //! - `roll`: the card pack roll, pure from a pool, the holdings and a seed: the slots' rarities,
 //!   the card draw and the dupe chain (§14.3, #1301).
 //! - `packs`: buying and opening card packs, each in one transaction, and their routes (#1301).
+//! - `tokens`: the token bars and their tokens: what a full bar pays, what a token buys and what
+//!   both read back (§14.5, #1305).
+//! - `cosmetic_packs`: opening a cosmetic pack the cosmetic cycle paid, its roll pure from the
+//!   holdings and a seed, the Chase Shard bar it fills and what the bar buys (§14.6, #1306).
 
+pub mod cosmetic_packs;
 pub mod math;
 pub mod packs;
 pub mod rewards;
 pub mod roll;
 pub mod store;
+pub mod tokens;
 pub mod track_rewards;
