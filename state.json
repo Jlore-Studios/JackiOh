@@ -7797,6 +7797,14 @@
       "requested_by": "MaxGoetzmann",
       "stop_requested": false
     },
+    "1449": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-20T14:43:18Z",
+      "issue": 1418,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "148": {
       "asks": [
         "c:5974504575"
