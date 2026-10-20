@@ -1,6 +1,6 @@
 //! The Zephyrs scorer (SPEC §10.7's scorer bullet, R29, §8 #97): rank every non-token definition of
 //! every set that ships except Zephyrs itself (R1446) for the current state, so the Discover can offer
-//! the top 3.
+//! the top `DISCOVER_OPTIONS` (3).
 //!
 //! §10.7's priorities, in order: lethal available → max; can clear the enemy board → high; hero
 //! below 10 and the card heals → high; otherwise stats per mana plus draw value.
@@ -33,7 +33,7 @@ use std::cmp::Ordering;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
-use crate::config::{SCORER_DRY_RUN_PLAYS, SCORER_LOW_HEALTH, SCORER_WEIGHTS};
+use crate::config::{DISCOVER_OPTIONS, SCORER_DRY_RUN_PLAYS, SCORER_LOW_HEALTH, SCORER_WEIGHTS};
 use crate::damage::DamageTarget;
 use crate::layers::AuraTable;
 use crate::play_choices::{PlayAction, graveyard_play_actions_for};
@@ -864,7 +864,10 @@ pub fn rank(state: &GameState, viewer: PlayerId, options: &ScorerOptions) -> Vec
     scored
 }
 
-/// R29, §8 #97: the Discover offers the top 3.
+/// R29, §8 #97: the Discover offers the top `DISCOVER_OPTIONS`.
 pub fn top_three(state: &GameState, viewer: PlayerId, options: &ScorerOptions) -> Vec<Scored> {
-    rank(state, viewer, options).into_iter().take(3).collect()
+    rank(state, viewer, options)
+        .into_iter()
+        .take(DISCOVER_OPTIONS as usize)
+        .collect()
 }

@@ -11,6 +11,7 @@ use serde_json::Value;
 
 use super::targets::{PlayerSpec, player_of};
 use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, query};
+use crate::config::DISCOVER_OPTIONS;
 use crate::faces::card_type_of;
 use crate::mana::effective_cost;
 use crate::prompts::{
@@ -1204,7 +1205,7 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
         }
 
         let shuffled = ctx.rng.shuffle(&pool);
-        let end = slice_end(shuffled.len(), args.count.unwrap_or(3));
+        let end = slice_end(shuffled.len(), args.count.unwrap_or(DISCOVER_OPTIONS));
         let by_index = args.offer == Some(DiscoverOffer::Index);
         let mut data = args.data.clone().unwrap_or_default();
         if by_code {
@@ -1339,6 +1340,46 @@ pub fn matches_library_filter(state: &GameState, card: &CardInstance, filter: &L
     true
 }
 
+/// The Discovers over real instances (`discover_from_library`, `discover_from_graveyard`): `count`
+/// (`DISCOVER_OPTIONS` when absent) of `pool`, drawn without replacement with `ctx.rng.shuffle`, are the
+/// options of a prompt that `ctx.controller` answers, and `step` resumes it (R50, R60, §10.8).
+fn offer_instances(
+    ctx: &mut EffectContext<'_>,
+    pool: &[CardInstance],
+    count: Option<i32>,
+    prompt: Option<&str>,
+    default_prompt: &str,
+    step: &str,
+    data: StepData,
+) {
+    let shuffled = ctx.rng.shuffle(pool);
+    let end = slice_end(shuffled.len(), count.unwrap_or(DISCOVER_OPTIONS));
+    let options: Vec<PromptOption> = shuffled[..end]
+        .iter()
+        .map(|card| PromptOption {
+            key: format!("instance:{}", card.id),
+            label: def_of(Some(&*ctx.state), &card.def_id).name.clone(),
+            selection: Selection::Instance {
+                instance_id: card.id.clone(),
+            },
+            cost: None,
+            radiant: None,
+        })
+        .collect();
+    let chooser = ctx.controller;
+    let resume = resume_self(ctx, step, data.unwrap_or_default());
+    open_prompt(
+        ctx,
+        ask(
+            chooser,
+            PromptKind::Discover,
+            prompt.unwrap_or(default_prompt).to_string(),
+            options,
+            resume,
+        ),
+    );
+}
+
 /// `discover_from_library`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -1390,33 +1431,14 @@ pub fn discover_from_library(args: DiscoverFromLibraryArgs) -> Effect {
             return;
         }
 
-        let shuffled = ctx.rng.shuffle(&pool);
-        let end = slice_end(shuffled.len(), args.count.unwrap_or(3));
-        let options: Vec<PromptOption> = shuffled[..end]
-            .iter()
-            .map(|card| PromptOption {
-                key: format!("instance:{}", card.id),
-                label: def_of(Some(&*ctx.state), &card.def_id).name.clone(),
-                selection: Selection::Instance {
-                    instance_id: card.id.clone(),
-                },
-                cost: None,
-                radiant: None,
-            })
-            .collect();
-        let chooser = ctx.controller;
-        let resume = resume_self(ctx, &args.step, args.data.clone().unwrap_or_default());
-        open_prompt(
+        offer_instances(
             ctx,
-            ask(
-                chooser,
-                PromptKind::Discover,
-                args.prompt
-                    .clone()
-                    .unwrap_or_else(|| "Choose one of the revealed cards".to_string()),
-                options,
-                resume,
-            ),
+            &pool,
+            args.count,
+            args.prompt.as_deref(),
+            "Choose one of the revealed cards",
+            &args.step,
+            args.data.clone(),
         );
     })
 }
@@ -1444,32 +1466,14 @@ pub fn discover_from_graveyard(args: DiscoverFromGraveyardArgs) -> Effect {
             return;
         }
 
-        let shuffled = ctx.rng.shuffle(&graveyard);
-        let end = slice_end(shuffled.len(), args.count.unwrap_or(3));
-        let options: Vec<PromptOption> = shuffled[..end]
-            .iter()
-            .map(|card| PromptOption {
-                key: format!("instance:{}", card.id),
-                label: def_of(Some(&*ctx.state), &card.def_id).name.clone(),
-                selection: Selection::Instance {
-                    instance_id: card.id.clone(),
-                },
-                cost: None,
-                radiant: None,
-            })
-            .collect();
-        let resume = resume_self(ctx, &args.step, args.data.clone().unwrap_or_default());
-        open_prompt(
+        offer_instances(
             ctx,
-            ask(
-                controller,
-                PromptKind::Discover,
-                args.prompt
-                    .clone()
-                    .unwrap_or_else(|| "Discover a card from your graveyard".to_string()),
-                options,
-                resume,
-            ),
+            &graveyard,
+            args.count,
+            args.prompt.as_deref(),
+            "Discover a card from your graveyard",
+            &args.step,
+            args.data.clone(),
         );
     })
 }
