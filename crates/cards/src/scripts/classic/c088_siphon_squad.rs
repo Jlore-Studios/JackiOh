@@ -233,7 +233,7 @@ mod tests {
         #[test]
         fn r1149000_r767000_a_game_on_v0_3_7_folds_under_the_kept_script_live_while_set_and_unrevealed() {
             crate::register_all();
-            let shipped = crate::shipped_catalog("v0.3.0c").expect("v0.3.0c is carried");
+            let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
             jackioh_engine::with_shipped(Some(shipped), || {
                 let s = set_against(&[VANILLA, MENACE], false, &[]);
                 assert_ne!(s.card(SIPHON).revealed, Some(true));

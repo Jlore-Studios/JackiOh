@@ -20,7 +20,7 @@ use jackioh_server::cli::export_records::render_records;
 use jackioh_server::config::{CARD_STATS_MIN_SAMPLE, PUBLIC_STATS_MIN_LIVE_GAMES};
 use jackioh_server::db::store::Db;
 
-const PATCH: &str = "v0.3.0b";
+const PATCH: &str = "v0.3.6";
 
 /// `{ ...base, ...partial }` on two JSON objects.
 fn spread(mut base: Value, partial: Value) -> Value {
@@ -131,28 +131,28 @@ mod parse_balance_watch_args_cases {
             .to_string();
         assert!(error.contains("--patch"), "{error}");
         assert!(error.contains("Usage:"), "{error}");
-        let parsed = options(&["--patch=v0.3.0b"]);
-        assert_eq!(parsed.patch, "v0.3.0b");
+        let parsed = options(&["--patch=v0.3.6"]);
+        assert_eq!(parsed.patch, "v0.3.6");
         assert_eq!(parsed.source, SourceFilter::All);
-        let live = options(&["--patch=v0.3.0b", "--source=live"]);
+        let live = options(&["--patch=v0.3.6", "--source=live"]);
         assert_eq!(live.source, SourceFilter::Live);
     }
 
     #[test]
     fn parse_reads_each_file_flag_in_order() {
-        let parsed = options(&["--patch=v0.3.0b", "--file=a.jsonl", "--file=b.jsonl"]);
+        let parsed = options(&["--patch=v0.3.6", "--file=a.jsonl", "--file=b.jsonl"]);
         assert_eq!(parsed.files, ["a.jsonl", "b.jsonl"]);
-        assert!(options(&["--patch=v0.3.0b"]).files.is_empty());
+        assert!(options(&["--patch=v0.3.6"]).files.is_empty());
     }
 
     #[test]
     fn parse_refuses_dev_source_and_unknown_flags() {
-        let error = parse_balance_watch_args(&args(&["--patch=v0.3.0b", "--source=dev"]))
+        let error = parse_balance_watch_args(&args(&["--patch=v0.3.6", "--source=dev"]))
             .expect_err("--source=dev is refused")
             .to_string();
         assert!(error.contains("--source must be one of live, all"), "{error}");
         assert!(error.contains("Usage:"), "{error}");
-        let error = parse_balance_watch_args(&args(&["--patch=v0.3.0b", "--bogus=1"]))
+        let error = parse_balance_watch_args(&args(&["--patch=v0.3.6", "--bogus=1"]))
             .expect_err("an unknown flag is refused")
             .to_string();
         assert!(error.contains("Unrecognised option --bogus"), "{error}");
@@ -210,7 +210,7 @@ mod balance_watch_report_cases {
     #[tokio::test]
     async fn flags_a_planted_80_percent_card_and_leaves_a_50_percent_card_silent() {
         let db = planted().await;
-        let report = balance_watch_report(&db, &options(&["--patch=v0.3.0b"]))
+        let report = balance_watch_report(&db, &options(&["--patch=v0.3.6"]))
             .await
             .expect("a report");
         assert!(report.provisional, "no live games: provisional");
@@ -239,7 +239,7 @@ mod balance_watch_report_cases {
             records.push(dev_game(&format!("dev:weak:{n}"), "bw-weak", &filler, n < 8));
         }
         let db = seed(&records).await;
-        let report = balance_watch_report(&db, &options(&["--patch=v0.3.0b"]))
+        let report = balance_watch_report(&db, &options(&["--patch=v0.3.6"]))
             .await
             .expect("a report");
         assert_eq!(cards(&report.low), vec!["bw-weak"]);
@@ -262,7 +262,7 @@ mod balance_watch_report_cases {
             ));
         }
         let db = seed(&records).await;
-        let report = balance_watch_report(&db, &options(&["--patch=v0.3.0b"]))
+        let report = balance_watch_report(&db, &options(&["--patch=v0.3.6"]))
             .await
             .expect("a report");
         assert!(report.high.is_empty(), "{:?}", report.high);
@@ -280,7 +280,7 @@ mod balance_watch_report_cases {
             records.push(dev_game(&format!("dev:rare:{n}"), "bw-rare", &filler, true));
         }
         let db = seed(&records).await;
-        let report = balance_watch_report(&db, &options(&["--patch=v0.3.0b"]))
+        let report = balance_watch_report(&db, &options(&["--patch=v0.3.6"]))
             .await
             .expect("a report");
         assert!(report.not_enough.contains(&"bw-rare".to_owned()));
@@ -315,13 +315,13 @@ mod balance_watch_report_cases {
             dev_game("dev:one:1", "bw-dev-card", "bw-dev-filler", false),
         ];
         let db = seed(&records).await;
-        let blended = balance_watch_report(&db, &options(&["--patch=v0.3.0b"]))
+        let blended = balance_watch_report(&db, &options(&["--patch=v0.3.6"]))
             .await
             .expect("a report");
         assert!(blended.provisional);
         assert_eq!(blended.live_games, 2);
         assert_eq!(blended.games, 4);
-        let live_only = balance_watch_report(&db, &options(&["--patch=v0.3.0b", "--source=live"]))
+        let live_only = balance_watch_report(&db, &options(&["--patch=v0.3.6", "--source=live"]))
             .await
             .expect("a report");
         assert!(live_only.provisional, "two live games are still provisional");
@@ -349,7 +349,7 @@ mod balance_watch_report_cases {
             records.push(dev_game(&format!("dev:both:{n}"), "bw-dev", "bw-dev", true));
         }
         let db = seed(&records).await;
-        let report = balance_watch_report(&db, &options(&["--patch=v0.3.0b"]))
+        let report = balance_watch_report(&db, &options(&["--patch=v0.3.6"]))
             .await
             .expect("a report");
         // Twenty human seats at 100%: watched (20–39 games), never flagged — both seats would be
@@ -402,7 +402,7 @@ mod balance_watch_file_cases {
             true,
         ));
         let mut old = dev_game("dev:old:0", "bw-strong", "bw-old-filler", false);
-        old.patch = "v0.3.0".to_owned();
+        old.patch = "v0.3.5".to_owned();
         records.push(old);
         records
     }
@@ -428,10 +428,7 @@ mod balance_watch_file_cases {
         .expect("the second file");
         let paths = [first, second];
 
-        for argv in [
-            &["--patch=v0.3.0b"][..],
-            &["--patch=v0.3.0b", "--source=live"][..],
-        ] {
+        for argv in [&["--patch=v0.3.6"][..], &["--patch=v0.3.6", "--source=live"][..]] {
             let opts = options(argv);
             let from_store = balance_watch_report(&db, &opts)
                 .await
@@ -447,7 +444,7 @@ mod balance_watch_file_cases {
             );
         }
 
-        let report = balance_watch_report_from_files(&paths, &options(&["--patch=v0.3.0b"]))
+        let report = balance_watch_report_from_files(&paths, &options(&["--patch=v0.3.6"]))
             .await
             .expect("the files' report");
         assert_eq!(cards(&report.high), vec!["bw-strong"]);
@@ -467,7 +464,7 @@ mod balance_watch_file_cases {
         let good = render_records(&[dev_game("dev:good:0", "bw-card", "bw-other", true)]).unwrap();
         let bad = dir.join("bad.jsonl");
         std::fs::write(&bad, format!("{good}{{\"id\":\"x\"}}\n")).expect("the bad file");
-        let opts = options(&["--patch=v0.3.0b"]);
+        let opts = options(&["--patch=v0.3.6"]);
         let error = balance_watch_report_from_files(std::slice::from_ref(&bad), &opts)
             .await
             .expect_err("a line that is not a record is refused")

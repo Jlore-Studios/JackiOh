@@ -126,7 +126,7 @@
       {
         "key": "coins",
         "base": 5,
-        "radiant": 10,
+        "radiant": 7,
         "better": "up",
         "step": 1,
         "min": 1
@@ -134,7 +134,7 @@
       {
         "key": "perHeads",
         "base": 1,
-        "radiant": 1,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -142,7 +142,7 @@
       {
         "key": "perTails",
         "base": 1,
-        "radiant": 1,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -153,13 +153,13 @@
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
+      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} attack per heads and +{perTails} health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
+      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} attack per heads and +{perTails} health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
     }
   },
   "core-005": {
@@ -247,8 +247,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 29,
@@ -440,7 +439,7 @@
       {
         "key": "damage",
         "base": 2,
-        "radiant": 4,
+        "radiant": 5,
         "better": "up",
         "step": 1,
         "min": 1
@@ -448,16 +447,16 @@
     ],
     "loc": 10,
     "base": {
-      "attack": 6,
+      "attack": 8,
       "health": 10,
       "keywords": [],
-      "text": "End of turn: Deal {damage} damage to each enemy."
+      "text": "End of turn: Deal {damage} damage to each enemy Unit and the enemy hero."
     },
     "radiant": {
-      "attack": 12,
+      "attack": 16,
       "health": 20,
       "keywords": [],
-      "text": "End of turn: Deal {damage} damage to each enemy."
+      "text": "End of turn: Deal {damage} damage to each enemy Unit and the enemy hero."
     }
   },
   "core-014": {
@@ -475,8 +474,8 @@
     "params": [
       {
         "key": "attack",
-        "base": 3,
-        "radiant": 6,
+        "base": 4,
+        "radiant": 10,
         "better": "up",
         "step": 1,
         "min": 1
@@ -485,11 +484,11 @@
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Units have +{attack} Attack, Rush and First Strike."
+      "text": "Aura: Your Units have +{attack} attack, Rush and First Strike."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Units have +{attack} Attack, Rush and First Strike."
+      "text": "Aura: Your Units have +{attack} attack, Rush and First Strike."
     }
   },
   "core-015": {
@@ -569,8 +568,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 24,
@@ -712,7 +710,7 @@
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Your opponent has {mana} less mana next turn. Discard 1 random card."
+      "text": "Cast on draw: Your opponent has {mana} less mana next turn. Discard 1."
     },
     "radiant": {
       "keywords": [],
@@ -736,8 +734,7 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       }
     ],
     "loc": 85,
@@ -1182,8 +1179,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 15,
@@ -1191,7 +1187,7 @@
       "attack": 4,
       "health": 5,
       "keywords": [],
-      "text": "Start of turn: Return a random card from your graveyard to hand."
+      "text": "Start of turn: Add a random card from your graveyard to your hand."
     },
     "radiant": {
       "attack": 8,
@@ -1237,8 +1233,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 50,
@@ -1292,8 +1287,7 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0,
-        "tunedOn": "radiant"
+        "min": 0
       }
     ],
     "loc": 29,
@@ -1545,11 +1539,11 @@
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Steal an enemy Unit."
+      "text": "Steal an enemy permanent."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal an enemy Unit. Make it Radiant."
+      "text": "Steal an enemy permanent. It becomes Radiant."
     }
   },
   "core-050": {
@@ -1563,13 +1557,13 @@
     ],
     "rarity": "Epic",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "loc": 65,
     "base": {
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "Cry: Allure an enemy permanent."
+      "text": "Cry: Choose an enemy permanent. At the start of your next turn, steal it."
     },
     "radiant": {
       "attack": 2,
@@ -1579,7 +1573,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Divine Shield\nCry: Allure an enemy permanent. Make it Radiant when you steal it."
+      "text": "Divine Shield\nCry: Choose an enemy permanent. At the start of your next turn, steal it. It becomes Radiant."
     }
   },
   "core-051": {
@@ -1600,11 +1594,11 @@
     "loc": 105,
     "base": {
       "keywords": [],
-      "text": "Choose a type and a cost: (0–1), (2), (3) or (4)+. Discover a match from your deck. If empty, add a KY's Empty Notebook to your hand."
+      "text": "Choose a type, then a cost: (0–1), (2), (3) or (4)+. Discover a matching card from your deck. If your deck is empty, add a KY's Empty Notebook to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Echo 1\nChoose a type and a cost: (0–1), (2), (3) or (4)+. Discover a match from your deck. If empty, add a KY's Empty Notebook to your hand."
+      "text": "Echo 1\nChoose a type, then a cost: (0–1), (2), (3) or (4)+. Discover a matching card from your deck. If your deck is empty, add a KY's Empty Notebook to your hand."
     }
   },
   "core-051-1": {
@@ -1848,8 +1842,7 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 11,
@@ -1882,8 +1875,7 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 11,
@@ -1949,8 +1941,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       }
     ],
     "loc": 39,
@@ -2011,8 +2002,7 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 11,
@@ -2056,11 +2046,11 @@
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Give a Unit +{buff}/+{buff} and {keywords|random combat keyword|random combat keywords}."
+      "text": "Give a Unit +{buff}/+{buff} and {keywords|random keyword|random keywords}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Give a Unit +{buff}/+{buff} and {keywords|random combat keyword|random combat keywords}."
+      "text": "Give a Unit +{buff}/+{buff} and {keywords|random keyword|random keywords}."
     }
   },
   "core-064": {
@@ -2158,13 +2148,13 @@
       "attack": 0,
       "health": 2,
       "keywords": [],
-      "text": "Can't be in Defense Position.\nAura: Your Units have −{drain} Attack."
+      "text": "Can't be in Defense Position.\nAura: Your Units have −{drain} attack."
     },
     "radiant": {
       "attack": 0,
       "health": 4,
       "keywords": [],
-      "text": "Can't be in Defense Position.\nAura: Your Units other than Spikey Pillows have −{drain} Attack."
+      "text": "Can't be in Defense Position.\nAura: Your Units other than Spikey Pillows have −{drain} attack."
     }
   },
   "core-066": {
@@ -2303,11 +2293,11 @@
     "loc": 13,
     "base": {
       "keywords": [],
-      "text": "Recruit 3 Units of ({costLimit}) Cost or less."
+      "text": "Recruit 3 ({costLimit}) Cost or less Units."
     },
     "radiant": {
       "keywords": [],
-      "text": "Recruit 3 Units of ({costLimit}) Cost or less."
+      "text": "Recruit 3 ({costLimit}) Cost or less Units."
     }
   },
   "core-070": {
@@ -2403,8 +2393,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       },
       {
         "key": "setCost",
@@ -2412,8 +2401,7 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0,
-        "tunedOn": "radiant"
+        "min": 0
       }
     ],
     "loc": 17,
@@ -2457,11 +2445,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Your hero can't take more than {cap} damage at a time.\nCry: Draw {draw}."
+      "text": "Your hero can't take more than {cap} damage at once.\nCry: Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero can't take more than {cap} damage at a time.\nCry: Draw {draw}."
+      "text": "Your hero can't take more than {cap} damage at once.\nCry: Draw {draw}."
     }
   },
   "core-074": {
@@ -2545,8 +2533,7 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 9,
@@ -2651,8 +2638,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 32,
@@ -2731,11 +2717,11 @@
     "loc": 20,
     "base": {
       "keywords": [],
-      "text": "Discard {discard|random card|random cards}. Summon 2 Rush Tokens, each with {keywords|random combat keyword|random combat keywords}."
+      "text": "Discard {discard|random card|random cards}. Summon 2 Rush Tokens, each with {keywords|random keyword|random keywords}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discard {discard|random card|random cards}. Summon 2 Radiant Rush Tokens, each with {keywords|random combat keyword|random combat keywords}."
+      "text": "Discard {discard|random card|random cards}. Summon 2 Radiant Rush Tokens, each with {keywords|random keyword|random keywords}."
     }
   },
   "core-081": {
@@ -2783,8 +2769,7 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0,
-        "tunedOn": "radiant"
+        "min": 0
       }
     ],
     "loc": 29,
@@ -2930,11 +2915,11 @@
     "loc": 24,
     "base": {
       "keywords": [],
-      "text": "Choose one: Swap hero health, boards or decks. Add a Pocket Chaos with (1) less base cost to your opponent's hand, unless that's (0). Exile this."
+      "text": "Choose one: Swap hero health, boards or decks with your opponent. Then add a Pocket Chaos with a base cost (1) less than this one's to your opponent's hand, unless its base cost would be (0). Exile this."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: Swap hero health, boards or decks. You may add a Pocket Chaos with (1) less base cost to your opponent's hand, unless that's (0). Exile this."
+      "text": "Choose one: Swap hero health, boards or decks with your opponent. Then you may add a Pocket Chaos with a base cost (1) less than this one's to your opponent's hand, unless its base cost would be (0). Exile this."
     }
   },
   "core-088": {
@@ -3090,7 +3075,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhenever this takes damage, place a Plague Counter on this.\nStart of turn: +{mana} mana per Plague Counter."
+      "text": "Rush\nWhenever this takes damage, it gets a Plague Counter.\nStart of turn: +{mana} mana per Plague Counter."
     },
     "radiant": {
       "attack": 2,
@@ -3100,7 +3085,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhenever this takes damage, place a Plague Counter on this.\nStart of turn: +{mana} mana per Plague Counter."
+      "text": "Rush\nWhenever this takes damage, it gets a Plague Counter.\nStart of turn: +{mana} mana per Plague Counter."
     }
   },
   "core-092": {
@@ -3146,18 +3131,18 @@
     "tags": [],
     "rarity": "Legendary",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "refs": [
       "core-093-1"
     ],
     "loc": 23,
     "base": {
       "keywords": [],
-      "text": "Grade (starts at E).\nEnd of turn: If you played N+ cards this turn, go up a grade and trigger E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Opponent exiles a random hand card.\nB: Make a random card in hand Radiant.\nA: 8 Lifesteal damage to the enemy hero.\nS: Trigger E–A again."
+      "text": "Grade (starts at E).\nEnd of turn: If you played N+ cards this turn, go up a grade and trigger every step from E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Opponent exiles a random hand card.\nB: Make a random card in hand Radiant.\nA: 8 Lifesteal damage to the enemy hero.\nS: Trigger E–A again."
     },
     "radiant": {
       "keywords": [],
-      "text": "Grade (starts at E).\nStart of turn: Add a Combo-Fodder to your hand.\nEnd of turn: If you played N+ cards this turn, go up a grade and trigger E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Opponent exiles a random hand card.\nB: Make a random card in hand Radiant.\nA: 8 Lifesteal damage to the enemy hero.\nS: Trigger E–A again."
+      "text": "Grade (starts at E).\nStart of turn: Add a Combo-Fodder to your hand.\nEnd of turn: If you played N+ cards this turn, go up a grade and trigger every step from E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Opponent exiles a random hand card.\nB: Make a random card in hand Radiant.\nA: 8 Lifesteal damage to the enemy hero.\nS: Trigger E–A again."
     }
   },
   "core-093-1": {
@@ -3246,8 +3231,7 @@
       "core-095",
       "core-t-rush",
       "core-095-1",
-      "classicplus-073",
-      "meditative-095"
+      "classicplus-073"
     ],
     "loc": 3,
     "base": {
@@ -3324,11 +3308,11 @@
     "loc": 28,
     "base": {
       "keywords": [],
-      "text": "Reveals when your opponent declares a lethal attack on your hero: Cancel it. The rest of their turn is played at random."
+      "text": "Reveals when your opponent declares an attack that would be lethal to your hero: Cancel it. The rest of their turn is played at random."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when your opponent declares a lethal attack on your hero: Cancel it and destroy the attacker. The rest of their turn is played at random."
+      "text": "Reveals when your opponent declares an attack that would be lethal to your hero: Cancel it and destroy the attacker. The rest of their turn is played at random."
     }
   },
   "core-097": {
@@ -3344,11 +3328,11 @@
     "loc": 27,
     "base": {
       "keywords": [],
-      "text": "Discover the \"perfect\" card. Exile this."
+      "text": "Discover the \"perfect\" card from the Core set. Exile this."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover the \"perfect\" Radiant card. Exile this."
+      "text": "Discover the \"perfect\" Radiant card from the Core set. Exile this."
     }
   },
   "core-098": {
@@ -3375,8 +3359,7 @@
         "radiant": 4,
         "better": "up",
         "step": 2,
-        "min": 1,
-        "power": "burn"
+        "min": 1
       },
       {
         "key": "tapDraw",
@@ -3384,8 +3367,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "power": "draw"
+        "min": 1
       },
       {
         "key": "tapDamage",
@@ -3393,9 +3375,7 @@
         "radiant": 2,
         "better": "down",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base",
-        "power": "draw"
+        "min": 1
       },
       {
         "key": "ping",
@@ -3403,8 +3383,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "power": "ping"
+        "min": 1
       },
       {
         "key": "stitchCost",
@@ -3412,8 +3391,7 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "power": "stitching"
+        "min": 1
       },
       {
         "key": "armor",
@@ -3421,8 +3399,7 @@
         "radiant": 4,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "power": "armor"
+        "min": 1
       },
       {
         "key": "insect",
@@ -3430,8 +3407,7 @@
         "radiant": 8,
         "better": "up",
         "step": 2,
-        "min": 1,
-        "power": "insect"
+        "min": 1
       },
       {
         "key": "discount",
@@ -3439,8 +3415,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "power": "brainstorm"
+        "min": 1
       },
       {
         "key": "fruitCost",
@@ -3448,8 +3423,7 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0,
-        "power": "pluck"
+        "min": 0
       }
     ],
     "loc": 11,
@@ -3467,7 +3441,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nStart of game: Gain one of 13 random powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent. Make it Radiant.\n(1) Life Tap: Draw {tapDraw} from each player's deck.\n(1) Steady Shot: Deal {shot} damage to the enemy hero. This permanently deals 2 more damage.\n(2) Ranching: Summon a Radiant Rush Token.\n(1) Cat Cafe: Summon a random Felinor.\n(1) Ping: Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(2) Witness Value: Discover a Radiant Unit.\n(2) Stitching: Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.\n(1) Tank Up: Your hero gains {armor} Armor, then this power refreshes.\n(2) Die Insect: Lucky 1. Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Radiant Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Radiant Trap to summon."
+      "text": "Indestructible\nStart of game: Gain one of 13 random powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent. Make it Radiant.\n(1) Life Tap: Draw {tapDraw} from each player's deck.\n(1) Steady Shot: Deal {shot} damage to the enemy hero. Upgrade this permanently by +2 damage.\n(2) Ranching: Summon a Radiant Rush Token.\n(1) Cat Cafe: Summon a random Felinor.\n(1) Ping: Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(2) Witness Value: Discover a Radiant Unit.\n(2) Stitching: Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.\n(1) Tank Up: Your hero gains {armor} Armor, then this power refreshes.\n(2) Die Insect: Lucky 1. Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Radiant Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Radiant Trap to summon."
     }
   },
   "core-099": {
@@ -3787,8 +3761,7 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       },
       {
         "key": "setCost",
@@ -3796,8 +3769,7 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0,
-        "tunedOn": "radiant"
+        "min": 0
       }
     ],
     "loc": 8,
@@ -3873,8 +3845,7 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 43,
@@ -3954,30 +3925,21 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 15,
     "base": {
       "attack": 3,
       "health": 4,
-      "keywords": [
-        {
-          "kind": "Cloaked"
-        }
-      ],
-      "text": "Cloaked\nAura: Your Traps cost (0)."
+      "keywords": [],
+      "text": "Aura: Your Traps cost (0)."
     },
     "radiant": {
       "attack": 6,
       "health": 8,
-      "keywords": [
-        {
-          "kind": "Cloaked"
-        }
-      ],
-      "text": "Cloaked\nAura: Your Traps cost (0).\nAfter you play a Trap, gain {mana} mana."
+      "keywords": [],
+      "text": "Aura: Your Traps cost (0).\nAfter you play a Trap, gain {mana} mana."
     }
   },
   "classic-007": {
@@ -4057,11 +4019,11 @@
     "loc": 84,
     "base": {
       "keywords": [],
-      "text": "Your opponent chooses {choices|time|times}: they discard {discard|random card|random cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw}."
+      "text": "Your opponent chooses {choices|time|times}: they discard {discard|card|cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw|card|cards}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your opponent chooses {choices|time|times}: they discard {discard|random card|random cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw}."
+      "text": "Your opponent chooses {choices|time|times}: they discard {discard|card|cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw|card|cards}."
     }
   },
   "classic-009": {
@@ -4089,8 +4051,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 42,
@@ -4150,8 +4111,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       }
     ],
     "loc": 23,
@@ -4223,8 +4183,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       },
       {
         "key": "recruits",
@@ -4232,8 +4191,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 7,
@@ -4373,8 +4331,7 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0,
-        "tunedOn": "radiant"
+        "min": 0
       }
     ],
     "loc": 30,
@@ -4454,11 +4411,11 @@
     "loc": 34,
     "base": {
       "keywords": [],
-      "text": "Deal {damage} damage. Your largest pile adds: Deck, draw {draw}; Graveyard, gain {mana} mana; Exile, deal {extraDamage} more damage. Ties go to the first listed."
+      "text": "Deal {damage} damage. Your largest pile adds its effect: Deck, draw {draw}; Graveyard, gain {mana} mana; Exile, deal {extraDamage} more damage. Ties go to the pile listed first."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal {damage} damage. Your two largest piles add: Deck, draw {draw}; Graveyard, gain {mana} mana; Exile, deal {extraDamage} more damage. Ties go to the first listed."
+      "text": "Deal {damage} damage. Your two largest piles add their effects: Deck, draw {draw}; Graveyard, gain {mana} mana; Exile, deal {extraDamage} more damage. Ties go to the pile listed first."
     }
   },
   "classic-020": {
@@ -4492,11 +4449,11 @@
     "loc": 40,
     "base": {
       "keywords": [],
-      "text": "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|random card|random cards}; or choose a Unit, which is destroyed at the start of your next turn."
+      "text": "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|card|cards}; or choose a Unit, which is destroyed at the start of your next turn."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|random card|random cards}; or all enemy Units are destroyed at the start of your next turn."
+      "text": "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|card|cards}; or all enemy Units are destroyed at the start of your next turn."
     }
   },
   "classic-021": {
@@ -4603,11 +4560,11 @@
     "loc": 30,
     "base": {
       "keywords": [],
-      "text": "Cry: Discard {discards|random card|random cards}.\nActivate: This turn, each card you play is replaced by a Book of Flame."
+      "text": "Cry: Discard {discards|card|cards}.\nActivate: This turn, each card you play is replaced by a Book of Flame."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cry: Discard {discards|random card|random cards}.\nActivate: This turn, each card you play is replaced by a Radiant Book of Flame."
+      "text": "Cry: Discard {discards|card|cards}.\nActivate: This turn, each card you play is replaced by a Radiant Book of Flame."
     }
   },
   "classic-024": {
@@ -4703,11 +4660,11 @@
     "loc": 13,
     "base": {
       "keywords": [],
-      "text": "Draw {draw}. Then discard {discard|random card|random cards}."
+      "text": "Draw {draw}. Then discard {discard|card|cards}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw {draw}. Then discard {discard|random card|random cards}."
+      "text": "Draw {draw}. Then discard {discard|card|cards}."
     }
   },
   "classic-027": {
@@ -4769,11 +4726,11 @@
     "loc": 24,
     "base": {
       "keywords": [],
-      "text": "Cry: Exile your deck and discard your hand.\nAura: You may play ({minCost})+ Cost cards from your graveyard. Cards that would go there are exiled instead."
+      "text": "Cry: Exile your deck. Discard your hand.\nAura: You may play cards from your graveyard that cost ({minCost}) or more. Cards that would go to your graveyard are exiled instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cry: Exile your deck and discard your hand.\nAura: You may play ({minCost})+ Cost cards from your graveyard."
+      "text": "Cry: Exile your deck. Discard your hand.\nAura: You may play cards from your graveyard that cost ({minCost}) or more."
     }
   },
   "classic-029": {
@@ -4826,8 +4783,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 26,
@@ -5148,11 +5104,11 @@
     "loc": 33,
     "base": {
       "keywords": [],
-      "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy's with at least its cost in Plague Counters, steal it. Otherwise, draw 1 per Plague Counter on it."
+      "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy permanent with at least as many Plague Counters as its cost, steal it. Otherwise, draw a card for each Plague Counter on it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy's with at least its cost in Plague Counters, steal it. Otherwise, draw 1 per Plague Counter on it."
+      "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy permanent with at least as many Plague Counters as its cost, steal it. Otherwise, draw a card for each Plague Counter on it."
     }
   },
   "classic-040": {
@@ -5257,11 +5213,11 @@
     "loc": 25,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Units have +{stats}/+{stats}, enemy Units −{stats}/−{stats}, per Plague Counter on them.\nActivate: Place a Plague Counter on each of {tokens|random Unit|random Units}."
+      "text": "Aura: Your Units have +{stats}/+{stats} for each Plague Counter on them. Enemy Units have −{stats}/−{stats} for each Plague Counter on them.\nActivate: Place a Plague Counter on each of {tokens|random Unit|random Units}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Units have +{stats}/+{stats}, enemy Units −{stats}/−{stats}, per Plague Counter on them.\nActivate: Place a Plague Counter on each of {tokens|random Unit|random Units}."
+      "text": "Aura: Your Units have +{stats}/+{stats} for each Plague Counter on them. Enemy Units have −{stats}/−{stats} for each Plague Counter on them.\nActivate: Place a Plague Counter on each of {tokens|random Unit|random Units}."
     }
   },
   "classic-043": {
@@ -5293,7 +5249,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Destroy all Units. Gain {mana} mana for each Plague Counter that was on them. Then summon each that had one from its owner's graveyard, under your control."
+      "text": "Destroy all Units. Gain {mana} mana for each Plague Counter that was on them. Then summon, under your control, each of those Units that had a Plague Counter from its owner's graveyard."
     }
   },
   "classic-044": {
@@ -5313,8 +5269,7 @@
         "radiant": 5,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       }
     ],
     "loc": 29,
@@ -5422,8 +5377,7 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0,
-        "tunedOn": "radiant"
+        "min": 0
       }
     ],
     "loc": 16,
@@ -5481,8 +5435,7 @@
         "radiant": 1,
         "better": "down",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 6,
@@ -5588,8 +5541,7 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       }
     ],
     "loc": 16,
@@ -5726,8 +5678,7 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       }
     ],
     "loc": 26,
@@ -5814,8 +5765,7 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 25,
@@ -5981,15 +5931,15 @@
     "tags": [],
     "rarity": "Rare",
     "token": false,
-    "cost": 1,
+    "cost": 2,
     "loc": 24,
     "base": {
       "keywords": [],
-      "text": "Activate: Discard 2 random cards.\nWhenever you discard cards, draw that many."
+      "text": "End of turn: Discard 2 cards.\nWhenever you discard cards, draw that many."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activate: Discard 2 random cards.\nWhenever you discard cards, draw your deck."
+      "text": "End of turn: Discard 2 cards.\nWhenever you discard cards, draw your deck."
     }
   },
   "classic-065": {
@@ -6106,8 +6056,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       },
       {
         "key": "threshold",
@@ -6756,8 +6705,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 7,
@@ -6829,7 +6777,7 @@
     "tags": [],
     "rarity": "Rare",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "params": [
       {
         "key": "multiplier",
@@ -6837,18 +6785,17 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       }
     ],
-    "loc": 31,
+    "loc": 17,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Reveal.\nAura: Enemy Units have −X Attack, where X is {multiplier}× their number.\nWhen your opponent has no Units, Tribute this."
+      "text": "Start of turn: Reveal.\nAura: Enemy Units have −X Attack, where X is {multiplier}× the number of Units your opponent controls.\nWhen your opponent controls no Units, Tribute this."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Reveal.\nAura: Enemy Units have 0 Attack.\nWhen your opponent has no Units, Tribute this."
+      "text": "Start of turn: Reveal.\nAura: Enemy Units have 0 Attack.\nWhen your opponent controls no Units, Tribute this."
     }
   },
   "classic-089": {
@@ -6880,7 +6827,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Divine Shield\nTo target this with anything but an attack, a player must also discard {discard|random card|random cards}."
+      "text": "Divine Shield\nTo target this with anything but an attack, a player must also discard {discard|card|cards}."
     },
     "radiant": {
       "attack": 10,
@@ -6893,7 +6840,7 @@
           "kind": "Reborn"
         }
       ],
-      "text": "Divine Shield, Reborn\nTo target this with anything but an attack, a player must also discard {discard|random card|random cards}."
+      "text": "Divine Shield, Reborn\nTo target this with anything but an attack, a player must also discard {discard|card|cards}."
     }
   },
   "classic-090": {
@@ -6960,20 +6907,12 @@
     "cost": 3,
     "loc": 11,
     "base": {
-      "keywords": [
-        {
-          "kind": "Crater"
-        }
-      ],
-      "text": "Crater\nReveals when an enemy Unit attacks your hero: Exile all Units."
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks your hero: Exile all Units. Lock this zone."
     },
     "radiant": {
-      "keywords": [
-        {
-          "kind": "Crater"
-        }
-      ],
-      "text": "Crater\nReveals when an enemy Unit attacks your hero: Exile all enemy Units."
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks your hero: Exile all enemy Units. Lock this zone."
     }
   },
   "classicplus-002": {
@@ -7195,8 +7134,7 @@
         "radiant": 4,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       },
       {
         "key": "draw",
@@ -7210,11 +7148,11 @@
     "loc": 18,
     "base": {
       "keywords": [],
-      "text": "Nerf {cards|random card|random cards} in your opponent's deck. Draw {draw}."
+      "text": "Degrade {cards|random card|random cards} in your opponent's deck. Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Nerf every card in your opponent's deck. Draw {draw}."
+      "text": "Degrade every card in your opponent's deck. Draw {draw}."
     }
   },
   "classicplus-009": {
@@ -7356,11 +7294,11 @@
     "loc": 17,
     "base": {
       "keywords": [],
-      "text": "Destroy a Unit. Your hero takes damage equal to its Health."
+      "text": "Destroy a Unit. Your hero takes damage equal to its health."
     },
     "radiant": {
       "keywords": [],
-      "text": "Destroy a Unit. Heal your hero by its Health."
+      "text": "Destroy a Unit. Heal your hero by its health."
     }
   },
   "classicplus-012-2": {
@@ -7390,11 +7328,11 @@
     "loc": 17,
     "base": {
       "keywords": [],
-      "text": "Deal {amount} damage to an enemy or heal an ally {amount}."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it. If it's yours, heal it {amount}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal {amount} damage to an enemy or heal an ally {amount}."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it. If it's yours, heal it {amount}."
     }
   },
   "classicplus-012-3": {
@@ -7705,11 +7643,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Summon a Rush Token. It gains {keywords|random combat keyword|random combat keywords}."
+      "text": "Summon a Rush Token. It gains {keywords|random keyword|random keywords}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random combat keyword|random combat keywords}."
+      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random keyword|random keywords}."
     }
   },
   "classicplus-016": {
@@ -7747,11 +7685,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Summon a Rush Token. It gains {keywords|random combat keyword|random combat keywords}."
+      "text": "Summon a Rush Token. It gains {keywords|random keyword|random keywords}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random combat keyword|random combat keywords}."
+      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random keyword|random keywords}."
     }
   },
   "classicplus-017": {
@@ -7789,11 +7727,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Summon a Rush Token. It gains {keywords|random combat keyword|random combat keywords}."
+      "text": "Summon a Rush Token. It gains {keywords|random keyword|random keywords}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random combat keyword|random combat keywords}."
+      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random keyword|random keywords}."
     }
   },
   "classicplus-018": {
@@ -7842,11 +7780,11 @@
     "loc": 31,
     "base": {
       "keywords": [],
-      "text": "Summon Top Loser, Jungle Loser, Mid Loser, Support Loser and Bot Loser in zones 1 to 5, skipping full or Locked ones. Trigger Mid Loser's Cry."
+      "text": "Summon the five-stack: Top Loser, Jungle Loser, Mid Loser, Support Loser and Bot Loser, into your unit zones 1 to 5 in that order, skipping any occupied or Locked zone. Trigger Mid Loser's Cry."
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon Radiant Top Loser, Jungle Loser, Mid Loser, Support Loser and Bot Loser in zones 1 to 5, skipping full or Locked ones. Trigger Mid Loser's Cry."
+      "text": "Summon the Radiant five-stack: Radiant Top Loser, Radiant Jungle Loser, Radiant Mid Loser, Radiant Support Loser and Radiant Bot Loser, into your unit zones 1 to 5 in that order, skipping any occupied or Locked zone. Trigger Mid Loser's Cry."
     }
   },
   "classicplus-019-1": {
@@ -7918,16 +7856,16 @@
     ],
     "loc": 37,
     "base": {
-      "attack": 4,
-      "health": 4,
+      "attack": 5,
+      "health": 5,
       "keywords": [],
       "text": "End of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk."
     },
     "radiant": {
-      "attack": 8,
-      "health": 8,
+      "attack": 10,
+      "health": 10,
       "keywords": [],
-      "text": "End of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."
+      "text": "End of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead (its \"Whenever this destroys a Unit\" triggers)."
     }
   },
   "classicplus-019-3": {
@@ -7946,7 +7884,7 @@
     "params": [
       {
         "key": "heads",
-        "base": 4,
+        "base": 5,
         "radiant": 10,
         "better": "up",
         "step": 1,
@@ -7954,8 +7892,8 @@
       },
       {
         "key": "tails",
-        "base": 2,
-        "radiant": 2,
+        "base": 3,
+        "radiant": 3,
         "better": "down",
         "step": 1,
         "min": 1
@@ -7971,21 +7909,21 @@
     ],
     "loc": 18,
     "base": {
-      "attack": 4,
-      "health": 4,
+      "attack": 5,
+      "health": 5,
       "keywords": [],
-      "text": "Cry: Flip a coin. Heads (Fed): This gains +{heads}/+{heads}. Tails (Int): This gains −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
+      "text": "Cry: Flip a coin. Heads (Fed): This gets +{heads}/+{heads}. Tails (Int): This gets −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
     },
     "radiant": {
-      "attack": 8,
-      "health": 8,
+      "attack": 10,
+      "health": 10,
       "keywords": [
         {
           "kind": "Lucky",
           "n": 1
         }
       ],
-      "text": "Lucky 1\nCry: Flip a coin. Heads (Fed): This gains +{heads}/+{heads}. Tails (Int): This gains −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
+      "text": "Lucky 1\nCry: Flip a coin. Heads (Fed): This gets +{heads}/+{heads}. Tails (Int): This gets −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
     }
   },
   "classicplus-019-4": {
@@ -8052,8 +7990,8 @@
     "params": [
       {
         "key": "attackGain",
-        "base": 4,
-        "radiant": 8,
+        "base": 5,
+        "radiant": 10,
         "better": "up",
         "step": 1,
         "min": 1
@@ -8061,8 +7999,8 @@
     ],
     "loc": 23,
     "base": {
-      "attack": 4,
-      "health": 4,
+      "attack": 5,
+      "health": 5,
       "keywords": [
         {
           "kind": "Rush"
@@ -8071,11 +8009,11 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Rush, First Strike\nWhenever this destroys a Unit, it gains +{attackGain} Attack.\nWhile Berserk: Start of turn and end of turn: this attacks your hero."
+      "text": "Rush, First Strike\nWhenever this destroys a Unit, it gets +{attackGain} Attack.\nWhile Berserk: Start of turn and end of turn: this attacks your hero."
     },
     "radiant": {
-      "attack": 8,
-      "health": 8,
+      "attack": 10,
+      "health": 10,
       "keywords": [
         {
           "kind": "Charge"
@@ -8084,7 +8022,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Charge, First Strike\nWhenever this destroys a Unit, it gains +{attackGain} Attack.\nThis can't go Berserk."
+      "text": "Charge, First Strike\nWhenever this destroys a Unit, it gets +{attackGain} Attack.\nThis can't go Berserk."
     }
   },
   "classicplus-020": {
@@ -8112,13 +8050,13 @@
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Give the Units adjacent to this +{buff}/+{buff}."
+      "text": "Cry: Give the Units next to this +{buff}/+{buff}."
     },
     "radiant": {
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "Cry: Give the Units adjacent to this +{buff}/+{buff}."
+      "text": "Cry: Give the Units next to this +{buff}/+{buff}."
     }
   },
   "classicplus-021": {
@@ -8215,8 +8153,7 @@
         "radiant": 1,
         "better": "down",
         "step": 1,
-        "min": 0,
-        "tunedOn": "radiant"
+        "min": 0
       }
     ],
     "loc": 24,
@@ -8293,8 +8230,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 12,
@@ -8332,11 +8268,11 @@
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "Replace your hand with the perfect hand. Refresh your mana."
+      "text": "Replace your hand with the perfect hand of Classic and Classic+ cards. Refresh your mana."
     },
     "radiant": {
       "keywords": [],
-      "text": "Replace your hand with the perfect Radiant hand. Refresh your mana."
+      "text": "Replace your hand with the perfect Radiant hand of Classic and Classic+ cards. Refresh your mana."
     }
   },
   "classicplus-028": {
@@ -8407,8 +8343,7 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       },
       {
         "key": "setCost",
@@ -8569,8 +8504,7 @@
         "radiant": 30,
         "better": "up",
         "step": 8,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       },
       {
         "key": "damage",
@@ -8578,8 +8512,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 9,
@@ -8625,11 +8558,11 @@
     "loc": 32,
     "base": {
       "keywords": [],
-      "text": "Choose one.\nEnd of turn: Lock a random enemy zone.\nAfter your opponent plays a Unit or Field Spell, Lock its zone."
+      "text": "Choose one.\nEnd of turn: Lock a random zone on your opponent's side.\nAfter your opponent plays a Unit or Field Spell, Lock its zone."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Lock a random enemy zone.\nAfter your opponent plays a Unit or Field Spell, Lock its zone."
+      "text": "End of turn: Lock a random zone on your opponent's side.\nAfter your opponent plays a Unit or Field Spell, Lock its zone."
     }
   },
   "classicplus-035": {
@@ -8757,13 +8690,13 @@
       "attack": 5,
       "health": 5,
       "keywords": [],
-      "text": "While in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of a random non-Unit you played this turn."
+      "text": "While this is in your hand or deck: After the Spells, Field Spells and Traps you play in a turn reach {threshold}, summon this.\nEnd of turn: Cast a copy of a random Spell, Field Spell or Trap you played this turn."
     },
     "radiant": {
       "attack": 10,
       "health": 10,
       "keywords": [],
-      "text": "While in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of each non-Unit you played this turn."
+      "text": "While this is in your hand or deck: After the Spells, Field Spells and Traps you play in a turn reach {threshold}, summon this.\nEnd of turn: Cast a copy of each Spell, Field Spell and Trap you played this turn."
     }
   },
   "classicplus-038": {
@@ -8993,11 +8926,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Activate: Gain {mana} mana. Your opponent discards {discards|random card|random cards}. Heal your hero {heal}. Add a random Book, KY card, Legendary and (4) Cost card to your hand. They cost ({setCost})."
+      "text": "Start of turn: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Book, a random KY card, a random Legendary card and a random (4) Cost card to your hand. They cost ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activate: Gain {mana} mana. Your opponent discards {discards|random card|random cards}. Heal your hero {heal}. Add a random Radiant Book, KY card, Legendary and (4) Cost card to your hand. They cost ({setCost})."
+      "text": "Start of turn: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Radiant Book, a random Radiant KY card, a random Radiant Legendary card and a random Radiant (4) Cost card to your hand. They cost ({setCost})."
     }
   },
   "classicplus-043": {
@@ -9382,8 +9315,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 23,
@@ -9523,11 +9455,11 @@
     "loc": 5,
     "base": {
       "keywords": [],
-      "text": "Your opponent discards {discards|random card|random cards}."
+      "text": "Your opponent discards {discards|card|cards}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your opponent discards {discards|random card|random cards}."
+      "text": "Your opponent discards {discards|card|cards}."
     }
   },
   "classicplus-057": {
@@ -9883,11 +9815,11 @@
     "loc": 5,
     "base": {
       "keywords": [],
-      "text": "Lose {loss} health."
+      "text": "Your hero loses {loss} health."
     },
     "radiant": {
       "keywords": [],
-      "text": "Lose {loss} health."
+      "text": "Your hero loses {loss} health."
     }
   },
   "classicplus-065-2": {
@@ -9916,7 +9848,7 @@
       {
         "key": "draw",
         "base": 1,
-        "radiant": 2,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -9933,11 +9865,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Deal {amount} damage to an enemy or heal an ally {amount}.\nDraw {draw}. It costs ({discount}) less."
+      "text": "Deal {amount} damage to an enemy or heal an ally {amount}.\nDraw {draw}. Reduce its cost by ({discount})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal {amount} damage to an enemy or heal an ally {amount}.\nDraw {draw}. They cost ({discount}) less."
+      "text": "Deal {amount} damage to an enemy or heal an ally {amount}.\nDraw {draw}. Reduce their cost by ({discount})."
     }
   },
   "classicplus-065-3": {
@@ -9983,11 +9915,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Deal {amount} damage to an enemy or heal an ally {amount}. Draw {draw}. Each costs ({setCost})."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal {amount} damage to an enemy or heal an ally {amount}. Draw {draw}. Each costs ({setCost})."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs ({setCost})."
     }
   },
   "classicplus-065-4": {
@@ -10144,8 +10076,7 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0,
-        "tunedOn": "radiant"
+        "min": 0
       }
     ],
     "loc": 11,
@@ -10179,7 +10110,7 @@
         "health": 3
       },
       "keywords": [],
-      "text": "This is a 3X/3X.\nCry: Buff this X times."
+      "text": "This is a 3X/3X.\nCry: Upgrade this X times."
     },
     "radiant": {
       "attack": 0,
@@ -10189,7 +10120,7 @@
         "health": 7
       },
       "keywords": [],
-      "text": "This is a 7X/7X.\nCry: Buff this 2X times."
+      "text": "This is a 7X/7X.\nCry: Upgrade this 2X times."
     }
   },
   "classicplus-070": {
@@ -10215,11 +10146,11 @@
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "Start of turn and end of turn: Buff {cards|random other card|random other cards} in your hand or field. Nerf {cards|random card|random cards} in your opponent's hand or field."
+      "text": "Start of turn and end of turn: Upgrade {cards|random other card|random other cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn and end of turn: Buff {cards|random other card|random other cards} in your hand or field. Nerf {cards|random card|random cards} in your opponent's hand or field."
+      "text": "Start of turn and end of turn: Upgrade {cards|random other card|random other cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
     }
   },
   "classicplus-071": {
@@ -10247,11 +10178,11 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Buff a card {times|time|times}. It may be a card in your hand."
+      "text": "Upgrade a card {times|time|times}. It may be a card in your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Buff a card {times|time|times}. It may be a card in your hand."
+      "text": "Upgrade a card {times|time|times}. It may be a card in your hand."
     }
   },
   "classicplus-072": {
@@ -10279,11 +10210,11 @@
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "Nerf a permanent {times|time|times}."
+      "text": "Degrade a permanent {times|time|times}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Nerf a card {times|time|times}. It may be a card in your hand."
+      "text": "Degrade a card {times|time|times}. It may be a card in your hand."
     }
   },
   "classicplus-073": {
@@ -10301,17 +10232,16 @@
     "refs": [
       "classicplus-073-1",
       "core-095",
-      "classicplus-073",
-      "meditative-095"
+      "classicplus-073"
     ],
     "loc": 3,
     "base": {
       "keywords": [],
-      "text": "One random effect: Add 5 random Fruits to your hand, which cost (0); add 3 random Books to your hand, which cost (0); destroy all enemy permanents; add 3 random Classic cards to your hand, which cost (0); Buff every card in your hand and deck twice; fuse a random card into each card in your deck, each keeping its cost; Nerf every card on your opponent's field and in their hand three times; summon a Classic Golem; replace your deck with random Call to Chaos cards, which cost (0); cast a random Call to Chaos."
+      "text": "One random effect: Add 5 random Fruits to your hand, which cost (0); add 3 random Books to your hand, which cost (0); destroy all enemy permanents; add 3 random Classic cards to your hand, which cost (0); Upgrade every card in your hand and deck twice; fuse a random card into each card in your deck, each keeping its cost; Degrade every card on your opponent's field and in their hand three times; summon a Classic Golem; replace your deck with random Call to Chaos cards, which cost (0); cast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Three different random effects, resolved in the order listed: Add 5 random Fruits to your hand, which cost (0); add 3 random Books to your hand, which cost (0); destroy all enemy permanents; add 3 random Classic cards to your hand, which cost (0); Buff every card in your hand and deck twice; fuse a random card into each card in your deck, each keeping its cost; Nerf every card on your opponent's field and in their hand three times; summon a Classic Golem; replace your deck with random Call to Chaos cards, which cost (0); cast a random Call to Chaos."
+      "text": "Three different random effects, resolved in the order listed: Add 5 random Fruits to your hand, which cost (0); add 3 random Books to your hand, which cost (0); destroy all enemy permanents; add 3 random Classic cards to your hand, which cost (0); Upgrade every card in your hand and deck twice; fuse a random card into each card in your deck, each keeping its cost; Degrade every card on your opponent's field and in their hand three times; summon a Classic Golem; replace your deck with random Call to Chaos cards, which cost (0); cast a random Call to Chaos."
     }
   },
   "classicplus-073-1": {
@@ -10342,7 +10272,7 @@
           "kind": "Trample"
         }
       ],
-      "text": "Rush, First Strike, Trample\nAfter attacking a Unit, this transforms into a random Classic or Classic+ Unit. If the Unit died, the new one may attack again."
+      "text": "Rush, First Strike, Trample\nAfter this attacks a Unit, it transforms into a random Classic or Classic+ Unit. If this destroyed that Unit, the new Unit may attack again this turn."
     },
     "radiant": {
       "attack": 20,
@@ -10358,7 +10288,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Rush, Trample, Divine Shield\nAfter attacking a Unit, this transforms into a random Radiant Classic or Classic+ Unit. If the Unit died, the new one may attack again."
+      "text": "Rush, Trample, Divine Shield\nAfter this attacks a Unit, it transforms into a random Radiant Classic or Classic+ Unit. If this destroyed that Unit, the new Unit may attack again this turn."
     }
   },
   "classicplus-074": {
@@ -10475,8 +10405,7 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0,
-        "tunedOn": "radiant"
+        "min": 0
       }
     ],
     "loc": 17,
@@ -10605,15 +10534,15 @@
     "tags": [],
     "rarity": "Legendary",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "loc": 13,
     "base": {
       "keywords": [],
-      "text": "End of turn: Add a random AI generated card to your hand. It costs (0)."
+      "text": "End of turn: Add a random AI Generated card to your hand. It costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Add a random Radiant AI generated card to your hand. It costs (0)."
+      "text": "End of turn: Add a random Radiant AI Generated card to your hand. It costs (0)."
     }
   },
   "classicplus-t-ai-01": {
@@ -10858,4989 +10787,11 @@
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "End of turn: Buff a random card in your hand."
+      "text": "End of turn: Upgrade a random card in your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Buff 2 random cards in your hand."
-    }
-  },
-  "meditative-001": {
-    "id": "meditative-001",
-    "index": "1",
-    "name": "Disruptive Disruptor",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "draw",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "mana",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 21,
-    "base": {
-      "keywords": [],
-      "text": "Aura: You can't be forced to discard cards during your opponent's turn.\nCry: Draw {draw|card|cards}."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Aura: You can't be forced to discard cards during your opponent's turn.\nCry: Draw {draw} and gain {mana} mana."
-    }
-  },
-  "meditative-002": {
-    "id": "meditative-002",
-    "index": "2",
-    "name": "Rampaging Rhino",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "discards",
-        "base": 1,
-        "radiant": 1,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 32,
-    "base": {
-      "attack": 5,
-      "health": 9,
-      "keywords": [
-        {
-          "kind": "Rush"
-        },
-        {
-          "kind": "Windfury"
-        }
-      ],
-      "text": "Rush, Windfury\nWhenever this takes damage, discard {discards|random card|random cards}."
-    },
-    "radiant": {
-      "attack": 10,
-      "health": 18,
-      "keywords": [
-        {
-          "kind": "First Strike"
-        },
-        {
-          "kind": "Rush"
-        },
-        {
-          "kind": "Windfury"
-        }
-      ],
-      "text": "First Strike, Rush, Windfury\nWhenever this takes damage, discard {discards|random card|random cards}."
-    }
-  },
-  "meditative-003": {
-    "id": "meditative-003",
-    "index": "3",
-    "name": "Jlockwork Machine",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 3,
-    "params": [
-      {
-        "key": "exiles",
-        "base": 3,
-        "radiant": 3,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 37,
-    "base": {
-      "attack": 10,
-      "health": 10,
-      "keywords": [],
-      "text": "Whenever your opponent plays a card, exile the top {exiles|card|cards} of your deck."
-    },
-    "radiant": {
-      "attack": 20,
-      "health": 20,
-      "keywords": [
-        {
-          "kind": "Rush"
-        }
-      ],
-      "text": "Rush\nWhenever your opponent plays a card, exile the top {exiles|card|cards} of your deck."
-    }
-  },
-  "meditative-004": {
-    "id": "meditative-004",
-    "index": "4",
-    "name": "Juicy Kumquat Melon",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 4,
-    "params": [
-      {
-        "key": "discount",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 69,
-    "base": {
-      "keywords": [],
-      "text": "Draw a (0), (1), (2), (3), (4) and (5) Cost Meditative card."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Draw a (0), (1), (2), (3), (4) and (5) Cost Meditative card. They cost ({discount}) less."
-    }
-  },
-  "meditative-005": {
-    "id": "meditative-005",
-    "index": "5",
-    "name": "Death by 1000 cuts",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 1,
-    "params": [
-      {
-        "key": "damage",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "echo",
-        "base": 2,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 21,
-    "base": {
-      "keywords": [],
-      "text": "Echo X\nDeal {damage} damage to a Unit. X is {echo|time|times} your max mana."
-    },
-    "radiant": {
-      "keywords": [
-        {
-          "kind": "Lifesteal"
-        }
-      ],
-      "text": "Echo X, Lifesteal\nDeal {damage} damage to a Unit. X is {echo|time|times} your max mana."
-    }
-  },
-  "meditative-006": {
-    "id": "meditative-006",
-    "index": "6",
-    "name": "Me no Likey",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 0,
-    "params": [
-      {
-        "key": "multiple",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 39,
-    "base": {
-      "keywords": [],
-      "text": "Give one of your Units to your opponent. If you do, gain mana equal to its cost."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Give one of your Units to your opponent. If you do, gain mana equal to {multiple|time|times} its cost."
-    }
-  },
-  "meditative-007": {
-    "id": "meditative-007",
-    "index": "7",
-    "name": "Introspection",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [],
-    "rarity": "Legendary",
-    "token": false,
-    "cost": 4,
-    "params": [
-      {
-        "key": "heal",
-        "base": 3,
-        "radiant": 6,
-        "better": "up",
-        "step": 2,
-        "min": 1
-      },
-      {
-        "key": "draw",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "damage",
-        "base": 2,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 49,
-    "base": {
-      "keywords": [],
-      "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
-    }
-  },
-  "meditative-008": {
-    "id": "meditative-008",
-    "index": "8",
-    "name": "Reach the Summit",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "Quickdraw",
-      "Wincon"
-    ],
-    "rarity": "Mythic",
-    "token": false,
-    "cost": 0,
-    "params": [
-      {
-        "key": "heal",
-        "base": 2,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "damage",
-        "base": 2,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "draw",
-        "base": 2,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "discards",
-        "base": 2,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "exiles",
-        "base": 2,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "adds",
-        "base": 2,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 114,
-    "base": {
-      "keywords": [],
-      "text": "Costs (Ascent level). Gain that level's effect, then it goes up by 1.\nEnd of turn: Return this to hand.\nAscent 0: Heal your hero {heal}.\nAscent 1: Deal {damage} damage.\nAscent 2: Draw {draw}.\nAscent 3: Your opponent discards {discards|random card|random cards}.\nAscent 4: Exile {exiles|random enemy permanent|random enemy permanents}.\nAscent 5: Add {adds|random Radiant card|random Radiant cards} to your hand. They cost (0).\nAscent 6: Reach for the stars.\nAscent 7: And when they're near...\nAscent 8: Push even harder.\nAscent 9: And you might just...\nAscent 10: Win the game."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Costs (Ascent level - 1), never less than (0). Gain that level's effect, then it goes up by 1.\nEnd of turn: Return this to hand.\nAscent 0: Heal your hero {heal}.\nAscent 1: Deal {damage} damage.\nAscent 2: Draw {draw}.\nAscent 3: Your opponent discards {discards|random card|random cards}.\nAscent 4: Exile {exiles|random enemy permanent|random enemy permanents}.\nAscent 5: Add {adds|random Radiant card|random Radiant cards} to your hand. They cost (0).\nAscent 6: Reach for the stars.\nAscent 7: And when they're near...\nAscent 8: Push even harder.\nAscent 9: And you might just...\nAscent 10: Win the game."
-    }
-  },
-  "meditative-009": {
-    "id": "meditative-009",
-    "index": "9",
-    "name": "Joint Filing",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "extra",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 11,
-    "base": {
-      "keywords": [],
-      "text": "Aura: Your Start of turn and End of turn effects trigger {extra|additional time|additional times}."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Aura: Your Start of turn and End of turn effects trigger {extra|additional time|additional times}."
-    }
-  },
-  "meditative-010": {
-    "id": "meditative-010",
-    "index": "10",
-    "name": "Double Counting",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "extra",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 11,
-    "base": {
-      "keywords": [],
-      "text": "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}."
-    }
-  },
-  "meditative-011": {
-    "id": "meditative-011",
-    "index": "11",
-    "name": "Double Header",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [],
-    "rarity": "Legendary",
-    "token": false,
-    "cost": 4,
-    "params": [
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
-      }
-    ],
-    "loc": 53,
-    "base": {
-      "keywords": [],
-      "text": "The first card you play each turn adds a copy of it to your hand. The copy isn't Radiant and costs ({setCost})."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "The first card you play each turn adds a Radiant copy of it to your hand. It costs ({setCost})."
-    }
-  },
-  "meditative-012": {
-    "id": "meditative-012",
-    "index": "12",
-    "name": "Fear Mongerer",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Human"
-    ],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "times",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 15,
-    "base": {
-      "attack": 6,
-      "health": 8,
-      "keywords": [],
-      "text": "Cry: Trigger your End of turn effects."
-    },
-    "radiant": {
-      "attack": 12,
-      "health": 16,
-      "keywords": [],
-      "text": "Cry: Trigger your End of turn effects {times|time|times}."
-    }
-  },
-  "meditative-013": {
-    "id": "meditative-013",
-    "index": "13",
-    "name": "Gatling Pea",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "damage",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "growth",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 22,
-    "base": {
-      "attack": 2,
-      "health": 6,
-      "keywords": [
-        {
-          "kind": "Armor",
-          "n": 2
-        }
-      ],
-      "text": "Armor 2\nEnd of turn: Deal {damage} damage to the enemy hero. Then this damage permanently goes up by {growth}."
-    },
-    "radiant": {
-      "attack": 4,
-      "health": 12,
-      "keywords": [
-        {
-          "kind": "Armor",
-          "n": 4
-        }
-      ],
-      "text": "Armor 4\nEnd of turn: Deal {damage} damage to the enemy hero. Then this damage permanently goes up by {growth}."
-    }
-  },
-  "meditative-014": {
-    "id": "meditative-014",
-    "index": "14",
-    "name": "Prime Time",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "draws",
-        "base": 3,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "base"
-      }
-    ],
-    "loc": 52,
-    "base": {
-      "keywords": [],
-      "text": "Draw {draws|card|cards} with a prime index from your deck."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Draw every card with a prime index from your deck."
-    }
-  },
-  "meditative-015": {
-    "id": "meditative-015",
-    "index": "15",
-    "name": "Smelly Steven",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Human"
-    ],
-    "rarity": "Common",
-    "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "surcharge",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 19,
-    "base": {
-      "attack": 5,
-      "health": 5,
-      "keywords": [],
-      "text": "Cry: Your opponent's Spells cost ({surcharge}) more during their next turn."
-    },
-    "radiant": {
-      "attack": 10,
-      "health": 10,
-      "keywords": [],
-      "text": "Cry: Your opponent's Spells cost ({surcharge}) more during their next turn."
-    }
-  },
-  "meditative-016": {
-    "id": "meditative-016",
-    "index": "16",
-    "name": "Trenful Trickster",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "traps",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 17,
-    "base": {
-      "attack": 1,
-      "health": 5,
-      "keywords": [],
-      "text": "End of turn: Summon {traps|random Trap|random Traps}."
-    },
-    "radiant": {
-      "attack": 2,
-      "health": 10,
-      "keywords": [],
-      "text": "End of turn: Summon {traps|random Trap|random Traps}."
-    }
-  },
-  "meditative-017": {
-    "id": "meditative-017",
-    "index": "17",
-    "name": "True Craft a Card",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Mythic",
-    "token": false,
-    "cost": 0,
-    "loc": 38,
-    "base": {
-      "keywords": [],
-      "text": "Craft a card and add it to your hand."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Craft a Radiant card and add it to your hand."
-    }
-  },
-  "meditative-018": {
-    "id": "meditative-018",
-    "index": "18",
-    "name": "Expedition12",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "Quickdraw"
-    ],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 1,
-    "loc": 39,
-    "base": {
-      "keywords": [],
-      "text": "Lose all mana next turn. Make a card in your hand Radiant."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Echo 1\nLose all mana next turn. Make a card in your hand Radiant."
-    }
-  },
-  "meditative-019": {
-    "id": "meditative-019",
-    "index": "19",
-    "name": "Expedition1234",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "Quickdraw"
-    ],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 1,
-    "refs": [
-      "meditative-019-1"
-    ],
-    "params": [
-      {
-        "key": "turns",
-        "base": 3,
-        "radiant": 3,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 20,
-    "base": {
-      "keywords": [],
-      "text": "Lose all mana for your next {turns|turn|turns}. Add a Temporal Rift to your hand."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Lose all mana for your next {turns|turn|turns}. Add a Radiant Temporal Rift to your hand."
-    }
-  },
-  "meditative-019-1": {
-    "id": "meditative-019-1",
-    "index": "19.1",
-    "name": "Temporal Rift",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Epic",
-    "token": true,
-    "cost": 0,
-    "refs": [
-      "meditative-019-1"
-    ],
-    "params": [
-      {
-        "key": "mana",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      },
-      {
-        "key": "nextMana",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      },
-      {
-        "key": "draw",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 18,
-    "base": {
-      "keywords": [],
-      "text": "Take an extra turn after this one.\nYou can take only one extra turn from Temporal Rift each game."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Take an extra turn after this one. Gain {mana} mana and {nextMana} mana next turn. Draw {draw}.\nYou can take only one extra turn from Temporal Rift each game."
-    }
-  },
-  "meditative-020": {
-    "id": "meditative-020",
-    "index": "20",
-    "name": "Aestheticize the Game",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "Quickdraw",
-      "Wincon"
-    ],
-    "rarity": "Mythic",
-    "token": false,
-    "cost": 1,
-    "params": [
-      {
-        "key": "health",
-        "base": 100,
-        "radiant": 90,
-        "better": "down",
-        "step": 10,
-        "min": 10
-      },
-      {
-        "key": "graveyard",
-        "base": 100,
-        "radiant": 90,
-        "better": "down",
-        "step": 10,
-        "min": 10
-      },
-      {
-        "key": "board",
-        "base": 100,
-        "radiant": 90,
-        "better": "down",
-        "step": 10,
-        "min": 10
-      },
-      {
-        "key": "draw",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 38,
-    "base": {
-      "keywords": [],
-      "text": "Choose one. You also win while it's true: your hero has {health}+ Health; your graveyard has {graveyard}+ cards; or your Units total {board}+ Attack and {board}+ Health."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Choose one. You also win while it's true: your hero has {health}+ Health; your graveyard has {graveyard}+ cards; or your Units total {board}+ Attack and {board}+ Health. Draw {draw}."
-    }
-  },
-  "meditative-021": {
-    "id": "meditative-021",
-    "index": "21",
-    "name": "API Key Fishing",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Rare",
-    "token": false,
-    "cost": {
-      "base": 0,
-      "embiggen": 1
-    },
-    "refs": [
-      "meditative-021"
-    ],
-    "params": [
-      {
-        "key": "chance",
-        "base": 2,
-        "radiant": 5,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "max": 100
-      },
-      {
-        "key": "paidChance",
-        "base": 5,
-        "radiant": 12,
-        "better": "up",
-        "step": 2,
-        "min": 1,
-        "max": 100
-      }
-    ],
-    "loc": 37,
-    "base": {
-      "keywords": [],
-      "text": "{chance}% chance: Steal your opponent's hand.\nPaid (1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "{chance}% chance: Steal your opponent's hand.\nPaid (1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
-    }
-  },
-  "meditative-022": {
-    "id": "meditative-022",
-    "index": "22",
-    "name": "Mind Games",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 2,
-    "refs": [
-      "meditative-022-1"
-    ],
-    "params": [
-      {
-        "key": "mana",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "draw",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "damage",
-        "base": 8,
-        "radiant": 8,
-        "better": "up",
-        "step": 2,
-        "min": 1
-      },
-      {
-        "key": "heal",
-        "base": 8,
-        "radiant": 8,
-        "better": "up",
-        "step": 2,
-        "min": 1
-      },
-      {
-        "key": "armor",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "fortifyCost",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 0,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 0,
-    "base": {
-      "keywords": [],
-      "text": "Choose Greed, Attack or Defend in secret. Gain its reward at your next turn's start. Add a Fortify Mind to your opponent's hand.\nGreed: Gain {mana} mana and draw {draw}.\nAttack: Deal {damage} damage to each enemy.\nDefend: Heal your hero and each of your Units {heal}. They gain +{armor} Armor."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Choose Greed, Attack or Defend in secret. Gain its reward at your next turn's start. Add a Fortify Mind to your opponent's hand. It costs ({fortifyCost}).\nGreed: Gain {mana} mana and draw {draw}.\nAttack: Deal {damage} damage to each enemy.\nDefend: Heal your hero and each of your Units {heal}. They gain +{armor} Armor."
-    }
-  },
-  "meditative-022-1": {
-    "id": "meditative-022-1",
-    "index": "22.1",
-    "name": "Fortify Mind",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Epic",
-    "token": true,
-    "cost": 0,
-    "refs": [
-      "meditative-022"
-    ],
-    "params": [
-      {
-        "key": "mana",
-        "base": 2,
-        "radiant": 2,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "discards",
-        "base": 2,
-        "radiant": 2,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "damage",
-        "base": 8,
-        "radiant": 8,
-        "better": "down",
-        "step": 2,
-        "min": 1
-      },
-      {
-        "key": "heal",
-        "base": 8,
-        "radiant": 8,
-        "better": "down",
-        "step": 2,
-        "min": 1
-      },
-      {
-        "key": "armor",
-        "base": 2,
-        "radiant": 2,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 0,
-    "base": {
-      "keywords": [
-        {
-          "kind": "Temporary"
-        }
-      ],
-      "text": "Temporary\nGuess their Mind Games. Win: cancel their reward. Lose: take your penalty.\nWhen you discard this, take all three penalties.\nAttack beats Greed, Greed beats Defend, Defend beats Attack. A tie does nothing.\nGreed: You have {mana} less mana next turn. Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor."
-    },
-    "radiant": {
-      "keywords": [
-        {
-          "kind": "Temporary"
-        }
-      ],
-      "text": "Temporary\nGuess their Mind Games. Win: cancel their reward. Lose: take your penalty.\nAttack beats Greed, Greed beats Defend, Defend beats Attack. A tie does nothing.\nGreed: You have {mana} less mana next turn. Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor."
-    }
-  },
-  "meditative-023": {
-    "id": "meditative-023",
-    "index": "23",
-    "name": "Golly Bob Howdy",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Human"
-    ],
-    "rarity": "Common",
-    "token": false,
-    "cost": 1,
-    "refs": [
-      "core-t-sheep"
-    ],
-    "loc": 26,
-    "base": {
-      "attack": 3,
-      "health": 5,
-      "keywords": [],
-      "text": "Cry: Transform the Units adjacent to this into Sheep Tokens."
-    },
-    "radiant": {
-      "attack": 6,
-      "health": 10,
-      "keywords": [],
-      "text": "Cry: Transform the Units adjacent to this into Radiant Sheep Tokens."
-    }
-  },
-  "meditative-024": {
-    "id": "meditative-024",
-    "index": "24",
-    "name": "Polymorph",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 3,
-    "refs": [
-      "core-t-sheep"
-    ],
-    "loc": 35,
-    "base": {
-      "keywords": [],
-      "text": "Transform a Unit into a Sheep Token."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Transform a Unit and the Units adjacent to it into Sheep Tokens."
-    }
-  },
-  "meditative-025": {
-    "id": "meditative-025",
-    "index": "25",
-    "name": "Blue-Eyes White Felinor",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Felinor"
-    ],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 1,
-    "loc": 26,
-    "base": {
-      "attack": 12,
-      "health": 9,
-      "keywords": [
-        {
-          "kind": "Immune to tribal tag based hate"
-        }
-      ],
-      "text": "Tribute 2, Immune to tribal tag based hate"
-    },
-    "radiant": {
-      "attack": 24,
-      "health": 18,
-      "keywords": [
-        {
-          "kind": "Immutable"
-        },
-        {
-          "kind": "Immune to tribal tag based hate"
-        }
-      ],
-      "text": "Tribute 2, Immutable, Immune to tribal tag based hate"
-    }
-  },
-  "meditative-026": {
-    "id": "meditative-026",
-    "index": "26",
-    "name": "Alternate Fate",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [],
-    "rarity": "Legendary",
-    "token": false,
-    "cost": 4,
-    "refs": [
-      "core-006"
-    ],
-    "loc": 40,
-    "base": {
-      "keywords": [],
-      "text": "Aura: Players don't generate mana naturally.\nEnd of turn: Summon a Mana Well into every empty backrow, for its owner."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Aura: Players don't generate mana naturally.\nEnd of turn: Summon a Mana Well into every empty backrow, for its owner. Yours are Radiant."
-    }
-  },
-  "meditative-027": {
-    "id": "meditative-027",
-    "index": "27",
-    "name": "Clip-Farming Lawyer",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Human"
-    ],
-    "rarity": "Common",
-    "token": false,
-    "cost": 2,
-    "refs": [
-      "core-t-coin"
-    ],
-    "params": [
-      {
-        "key": "coins",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 33,
-    "base": {
-      "attack": 6,
-      "health": 5,
-      "keywords": [],
-      "text": "End of turn: Unlock a random zone. If you do, add {coins|Coin|Coins} to your hand."
-    },
-    "radiant": {
-      "attack": 12,
-      "health": 10,
-      "keywords": [],
-      "text": "End of turn: Unlock a random zone. If you do, add {coins|Coin|Coins} to your hand. If no zone is Locked, Lock a random enemy zone."
-    }
-  },
-  "meditative-028": {
-    "id": "meditative-028",
-    "index": "28",
-    "name": "Shade-iris",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 2,
-    "refs": [
-      "meditative-028-1"
-    ],
-    "params": [
-      {
-        "key": "curses",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 19,
-    "base": {
-      "attack": 7,
-      "health": 4,
-      "keywords": [],
-      "text": "Cry: Shuffle {curses|Ancient Curse|Ancient Curses} into your opponent's deck."
-    },
-    "radiant": {
-      "attack": 14,
-      "health": 8,
-      "keywords": [],
-      "text": "Cry: Shuffle {curses|Ancient Curse|Ancient Curses} into your opponent's deck."
-    }
-  },
-  "meditative-028-1": {
-    "id": "meditative-028-1",
-    "index": "28.1",
-    "name": "Ancient Curse",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Common",
-    "token": true,
-    "cost": 2,
-    "params": [
-      {
-        "key": "damage",
-        "base": 7,
-        "radiant": 7,
-        "better": "down",
-        "step": 2,
-        "min": 1
-      }
-    ],
-    "loc": 21,
-    "base": {
-      "keywords": [],
-      "text": "Cast on draw: Take {damage} damage."
-    },
-    "radiant": {
-      "keywords": [
-        {
-          "kind": "Pierce"
-        }
-      ],
-      "text": "Pierce\nCast on draw: Take {damage} damage."
-    }
-  },
-  "meditative-029": {
-    "id": "meditative-029",
-    "index": "29",
-    "name": "Forbiddenous Factory",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [
-      "Plague"
-    ],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 3,
-    "refs": [
-      "meditative-028-1"
-    ],
-    "params": [
-      {
-        "key": "counters",
-        "base": 3,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "curses",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 29,
-    "base": {
-      "keywords": [],
-      "text": "Cry: Place {counters|Plague Counter|Plague Counters} on this.\nEnd of turn: Spend a Plague Counter from this to shuffle {curses|Ancient Curse|Ancient Curses} into your opponent's deck."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Cry: Place {counters|Plague Counter|Plague Counters} on this.\nEnd of turn: Spend a Plague Counter from this to shuffle {curses|Ancient Curse|Ancient Curses} into your opponent's deck."
-    }
-  },
-  "meditative-030": {
-    "id": "meditative-030",
-    "index": "30",
-    "name": "Fickle E-Kitten",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Felinor"
-    ],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 1,
-    "refs": [
-      "meditative-030-1"
-    ],
-    "loc": 46,
-    "base": {
-      "attack": 3,
-      "health": 4,
-      "keywords": [],
-      "text": "Start of turn: If your opponent has a pricier permanent, they gain control of this. Otherwise, shuffle a Love Bomb into your deck."
-    },
-    "radiant": {
-      "attack": 6,
-      "health": 8,
-      "keywords": [],
-      "text": "Start of turn: If your opponent has a pricier permanent and a bigger deck, they gain control of this. Otherwise, shuffle a Radiant Love Bomb into your deck."
-    }
-  },
-  "meditative-030-1": {
-    "id": "meditative-030-1",
-    "index": "30.1",
-    "name": "Love Bomb",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Epic",
-    "token": true,
-    "cost": 1,
-    "params": [
-      {
-        "key": "heal",
-        "base": 7,
-        "radiant": 14,
-        "better": "up",
-        "step": 2,
-        "min": 1
-      }
-    ],
-    "loc": 21,
-    "base": {
-      "keywords": [],
-      "text": "Cast on draw: Heal your hero {heal}."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Cast on draw: Heal your hero {heal}."
-    }
-  },
-  "meditative-031": {
-    "id": "meditative-031",
-    "index": "31",
-    "name": "The Conductor",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Human"
-    ],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 3,
-    "loc": 62,
-    "base": {
-      "attack": 7,
-      "health": 9,
-      "keywords": [
-        {
-          "kind": "Deft"
-        }
-      ],
-      "text": "Deft\nCry: Draw every Created card in your deck."
-    },
-    "radiant": {
-      "attack": 14,
-      "health": 18,
-      "keywords": [
-        {
-          "kind": "Deft"
-        }
-      ],
-      "text": "Deft\nCry: Shuffle a random Prime card into your deck. Then draw every Created card in your deck."
-    }
-  },
-  "meditative-032": {
-    "id": "meditative-032",
-    "index": "32",
-    "name": "Spiritually 中国",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "CN"
-    ],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "units",
-        "base": 5,
-        "radiant": 5,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 43,
-    "base": {
-      "keywords": [],
-      "text": "One random effect: Get ready to learn Chinese; transform every card in your hand into the same random CN card, which cost (0); summon {units} random CN Units."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "随机一项效果：准备好学中文；将你手牌中的每张牌变形为同一张随机的光辉中国牌，它们的法力值消耗为(0)；召唤{units}个随机的光辉中国单位。"
-    }
-  },
-  "meditative-033": {
-    "id": "meditative-033",
-    "index": "33",
-    "name": "First Day of 学校",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "CN"
-    ],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 0,
-    "params": [
-      {
-        "key": "cards",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 25,
-    "base": {
-      "keywords": [],
-      "text": "Add {cards|random CN card|random CN cards} to your hand. Each costs ({discount}) less."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Add {cards|random Radiant CN card|random Radiant CN cards} to your hand. Each costs ({discount}) less."
-    }
-  },
-  "meditative-034": {
-    "id": "meditative-034",
-    "index": "34",
-    "name": "高考",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "CN",
-      "KY"
-    ],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 4,
-    "params": [
-      {
-        "key": "times",
-        "base": 2,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 26,
-    "base": {
-      "keywords": [],
-      "text": "Destroy every permanent that is neither CN nor KY. Buff each CN or KY permanent {times|time|times}."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Destroy every enemy permanent that is neither CN nor KY. Buff each of your CN or KY permanents {times|time|times}."
-    }
-  },
-  "meditative-035": {
-    "id": "meditative-035",
-    "index": "35",
-    "name": "RCTA (CN)",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "CN"
-    ],
-    "rarity": "Common",
-    "token": false,
-    "cost": 1,
-    "params": [
-      {
-        "key": "stats",
-        "base": 2,
-        "radiant": 5,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "times",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 44,
-    "base": {
-      "keywords": [],
-      "text": "Give a non-CN permanent the CN tag and +{stats}/+{stats}. Buff it {times|time|times}."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Give a non-CN permanent the CN tag and +{stats}/+{stats}. Buff it {times|time|times}."
-    }
-  },
-  "meditative-036": {
-    "id": "meditative-036",
-    "index": "36",
-    "name": "CN Peptides",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "CN"
-    ],
-    "rarity": "Common",
-    "token": false,
-    "cost": 1,
-    "params": [
-      {
-        "key": "times",
-        "base": 7,
-        "radiant": 10,
-        "better": "up",
-        "step": 2,
-        "min": 1
-      }
-    ],
-    "loc": 45,
-    "base": {
-      "keywords": [],
-      "text": "Choose a Unit. 50% chance: Buff it {times|time|times}. Otherwise, destroy it."
-    },
-    "radiant": {
-      "keywords": [
-        {
-          "kind": "Lucky",
-          "n": 1
-        }
-      ],
-      "text": "Lucky 1\nChoose a Unit. 50% chance: Buff it {times|time|times}. Otherwise, destroy it."
-    }
-  },
-  "meditative-037": {
-    "id": "meditative-037",
-    "index": "37",
-    "name": "CN in a bottle",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "CN"
-    ],
-    "rarity": "Epic",
-    "token": false,
-    "cost": "X",
-    "loc": 23,
-    "base": {
-      "keywords": [],
-      "text": "When this enters your hand: Replace it with a random Radiant card."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "When this enters your hand: Replace it with a random Radiant card. It costs (0)."
-    }
-  },
-  "meditative-038": {
-    "id": "meditative-038",
-    "index": "38",
-    "name": "H1B Printer",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [
-      "CN",
-      "KY"
-    ],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 2,
-    "loc": 18,
-    "base": {
-      "keywords": [],
-      "text": "Start of turn: Add a random Radiant KY or CN card to your hand."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Start of turn: Add a random Radiant KY or CN card to your hand. It costs (0)."
-    }
-  },
-  "meditative-039": {
-    "id": "meditative-039",
-    "index": "39",
-    "name": "赌石 Addict",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "CN"
-    ],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 2,
-    "refs": [
-      "meditative-039-1"
-    ],
-    "loc": 18,
-    "base": {
-      "attack": 4,
-      "health": 4,
-      "keywords": [],
-      "text": "Cry: Add an Auspicious Rock to your hand."
-    },
-    "radiant": {
-      "attack": 8,
-      "health": 8,
-      "keywords": [],
-      "text": "Cry: Add a Radiant Auspicious Rock to your hand."
-    }
-  },
-  "meditative-039-1": {
-    "id": "meditative-039-1",
-    "index": "39.1",
-    "name": "Auspicious Rock",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "CN",
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Rare",
-    "token": true,
-    "cost": 0,
-    "refs": [
-      "meditative-039-2",
-      "meditative-039-3",
-      "meditative-039-4"
-    ],
-    "params": [
-      {
-        "key": "life",
-        "base": 2,
-        "radiant": 2,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 18,
-    "base": {
-      "keywords": [],
-      "text": "Lose {life} health. Add one of these to your hand at random: Dud (20%), Jade (70%) or Red Jade (10%)."
-    },
-    "radiant": {
-      "keywords": [
-        {
-          "kind": "Lucky",
-          "n": 2
-        }
-      ],
-      "text": "Lucky 2\nLose {life} health. Add one of these to your hand at random: Dud (20%), Jade (70%) or Red Jade (10%)."
-    }
-  },
-  "meditative-039-2": {
-    "id": "meditative-039-2",
-    "index": "39.2",
-    "name": "Jade",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "CN",
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Rare",
-    "token": true,
-    "cost": 0,
-    "params": [
-      {
-        "key": "jade",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "mana",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 17,
-    "base": {
-      "keywords": [],
-      "text": "Add {jade} to your Jade Counter. Gain {mana} mana."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Add {jade} to your Jade Counter. Gain {mana} mana."
-    }
-  },
-  "meditative-039-3": {
-    "id": "meditative-039-3",
-    "index": "39.3",
-    "name": "Dud",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "CN",
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Common",
-    "token": true,
-    "cost": 0,
-    "params": [
-      {
-        "key": "damage",
-        "base": 2,
-        "radiant": 5,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 15,
-    "base": {
-      "keywords": [],
-      "text": "Deal {damage} damage."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Deal {damage} damage."
-    }
-  },
-  "meditative-039-4": {
-    "id": "meditative-039-4",
-    "index": "39.4",
-    "name": "Red Jade",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "CN",
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Mythic",
-    "token": true,
-    "cost": 0,
-    "params": [
-      {
-        "key": "jade",
-        "base": 5,
-        "radiant": 10,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 12,
-    "base": {
-      "keywords": [],
-      "text": "Add {jade} to your Jade Counter."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Add {jade} to your Jade Counter."
-    }
-  },
-  "meditative-039-5": {
-    "id": "meditative-039-5",
-    "index": "39.5",
-    "name": "Jade Beauty",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "CN",
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Mythic",
-    "token": true,
-    "cost": 10,
-    "refs": [
-      "meditative-039-2"
-    ],
-    "loc": 12,
-    "base": {
-      "attack": 20,
-      "health": 20,
-      "keywords": [
-        {
-          "kind": "Can't attack"
-        },
-        {
-          "kind": "Indestructible"
-        },
-        {
-          "kind": "Immutable"
-        }
-      ],
-      "text": "Can't attack, Indestructible, Immutable\nEnd of turn: Allure every enemy Unit.\nYou summon this when your Jade Counter reaches 5.\nAt the start of your next turn, steal the Units this charmed, or they die of heartbreak if you have no room."
-    },
-    "radiant": {
-      "attack": 40,
-      "health": 40,
-      "keywords": [
-        {
-          "kind": "Indestructible"
-        },
-        {
-          "kind": "Immutable"
-        }
-      ],
-      "text": "Indestructible, Immutable\nEnd of turn: Allure every enemy Unit.\nYour Jade Beauties become Radiant when your Jade Counter reaches 10.\nAt the start of your next turn, steal the Units this charmed, or they die of heartbreak if you have no room."
-    }
-  },
-  "meditative-040": {
-    "id": "meditative-040",
-    "index": "40",
-    "name": "Feng Shui",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [
-      "CN"
-    ],
-    "rarity": "Legendary",
-    "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "luck",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 35,
-    "base": {
-      "keywords": [],
-      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui is rewarded, bad punished. You have Luck {luck}.\nYour last element, your opponent's last element."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui rewards you, bad hurts your opponent heavily. You have Luck {luck}.\nYour last element, your opponent's last element."
-    }
-  },
-  "meditative-041": {
-    "id": "meditative-041",
-    "index": "41",
-    "name": "CN Smuggler",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "CN"
-    ],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 2,
-    "refs": [
-      "meditative-039-1"
-    ],
-    "loc": 24,
-    "base": {
-      "attack": 4,
-      "health": 5,
-      "keywords": [],
-      "text": "Start of turn: Add an Auspicious Rock and a random CN card to your hand."
-    },
-    "radiant": {
-      "attack": 8,
-      "health": 10,
-      "keywords": [],
-      "text": "Start of turn: Add a Radiant Auspicious Rock and a random Radiant CN card to your hand."
-    }
-  },
-  "meditative-042": {
-    "id": "meditative-042",
-    "index": "42",
-    "name": "CN Flea Market",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "CN"
-    ],
-    "rarity": "Legendary",
-    "token": false,
-    "cost": 0,
-    "params": [
-      {
-        "key": "yuan",
-        "base": 50,
-        "radiant": 80,
-        "better": "up",
-        "step": 10,
-        "min": 10
-      }
-    ],
-    "loc": 29,
-    "base": {
-      "keywords": [],
-      "text": "Open a night market. You have {yuan} yuan to buy its cards."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Open a night market. You have {yuan} yuan to buy its cards, and you may barter cards from your hand."
-    }
-  },
-  "meditative-043": {
-    "id": "meditative-043",
-    "index": "43",
-    "name": "CN Jade Market",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "CN"
-    ],
-    "rarity": "Rare",
-    "token": false,
-    "cost": "X",
-    "refs": [
-      "meditative-039-1"
-    ],
-    "loc": 19,
-    "base": {
-      "keywords": [],
-      "text": "Add X Auspicious Rocks to your hand."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Add X Radiant Auspicious Rocks to your hand."
-    }
-  },
-  "meditative-044": {
-    "id": "meditative-044",
-    "index": "44",
-    "name": "CN Jade Well",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [
-      "CN"
-    ],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 3,
-    "refs": [
-      "meditative-039-1"
-    ],
-    "loc": 16,
-    "base": {
-      "keywords": [],
-      "text": "Start of turn: Add an Auspicious Rock to your hand."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Start of turn: Add a Radiant Auspicious Rock to your hand."
-    }
-  },
-  "meditative-045": {
-    "id": "meditative-045",
-    "index": "45",
-    "name": "Knowledge Breaker",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "CN",
-      "KY",
-      "Catalyst"
-    ],
-    "rarity": "Legendary",
-    "token": false,
-    "cost": 1,
-    "refs": [
-      "meditative-045-1",
-      "meditative-045"
-    ],
-    "params": [
-      {
-        "key": "times",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 41,
-    "base": {
-      "attack": 1,
-      "health": 3,
-      "keywords": [],
-      "text": "Cry: Nerf all other CN and KY cards on the field, in hands and decks.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Knowledge Breaker Prime into your deck."
-    },
-    "radiant": {
-      "attack": 2,
-      "health": 6,
-      "keywords": [
-        {
-          "kind": "Divine Shield"
-        }
-      ],
-      "text": "Divine Shield\nCry: Nerf all other CN and KY cards on the field, in hands and decks {times|time|times}.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Radiant Knowledge Breaker Prime into your deck."
-    }
-  },
-  "meditative-045-1": {
-    "id": "meditative-045-1",
-    "index": "45.1",
-    "name": "Knowledge Breaker Prime",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "CN",
-      "KY",
-      "Prime",
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Legendary",
-    "token": true,
-    "cost": 4,
-    "params": [
-      {
-        "key": "traps",
-        "base": 5,
-        "radiant": 5,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "max": 5
-      }
-    ],
-    "loc": 48,
-    "base": {
-      "attack": 6,
-      "health": 18,
-      "keywords": [
-        {
-          "kind": "Rush"
-        }
-      ],
-      "text": "Rush\nCry: Summon {traps|random Trap|random Traps}. Destroy every other CN or KY permanent.\nAura: Your Units have Cloaked."
-    },
-    "radiant": {
-      "attack": 12,
-      "health": 36,
-      "keywords": [
-        {
-          "kind": "Rush"
-        },
-        {
-          "kind": "Poisonous"
-        }
-      ],
-      "text": "Rush, Poisonous\nCry: Summon {traps|random Radiant Trap|random Radiant Traps}. Exile every other CN or KY permanent.\nAura: Your Units have Cloaked."
-    }
-  },
-  "meditative-046": {
-    "id": "meditative-046",
-    "index": "46",
-    "name": "Conjure Intellect",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Epic",
-    "token": false,
-    "cost": {
-      "base": 2,
-      "embiggen": 4
-    },
-    "params": [
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
-      }
-    ],
-    "loc": 31,
-    "base": {
-      "keywords": [],
-      "text": "Add a random KY card, a random CN card and a random Book to your hand.\nPaid (4): They cost ({setCost})."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Add a random Radiant KY card, a random Radiant CN card and a random Radiant Book to your hand.\nPaid (4): They cost ({setCost})."
-    }
-  },
-  "meditative-047": {
-    "id": "meditative-047",
-    "index": "47",
-    "name": "饕餮",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "CN"
-    ],
-    "rarity": "Legendary",
-    "token": false,
-    "cost": 4,
-    "loc": 29,
-    "base": {
-      "attack": 8,
-      "health": 8,
-      "keywords": [],
-      "text": "End of turn: Fuse a random enemy permanent into this."
-    },
-    "radiant": {
-      "attack": 16,
-      "health": 16,
-      "keywords": [],
-      "text": "End of turn: Fuse a random enemy permanent and a random card from your opponent's deck into this."
-    }
-  },
-  "meditative-048": {
-    "id": "meditative-048",
-    "index": "48",
-    "name": "Tranquility",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 2,
-    "loc": 18,
-    "base": {
-      "keywords": [],
-      "text": "End the turn. Your hero is immune to damage until your next turn begins."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Your hero is immune to damage until your next turn begins."
-    }
-  },
-  "meditative-049": {
-    "id": "meditative-049",
-    "index": "49",
-    "name": "YileGPT Tamed",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "CN",
-      "Acclaimed"
-    ],
-    "rarity": "Mythic",
-    "token": false,
-    "cost": 2,
-    "refs": [
-      "meditative-049-1",
-      "meditative-049-2"
-    ],
-    "loc": 40,
-    "base": {
-      "attack": 2,
-      "health": 6,
-      "keywords": [],
-      "text": "Cry: Summon a Yile's Virus for your opponent across from this.\nDeath: Put a YileGPT Unleashed on the bottom of your deck."
-    },
-    "radiant": {
-      "attack": 4,
-      "health": 12,
-      "keywords": [],
-      "text": "Cry: Summon a Radiant Yile's Virus for your opponent across from this.\nDeath: Put a Radiant YileGPT Unleashed on the bottom of your deck."
-    }
-  },
-  "meditative-049-1": {
-    "id": "meditative-049-1",
-    "index": "49.1",
-    "name": "YileGPT Unleashed",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "CN",
-      "Acclaimed",
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Mythic",
-    "token": true,
-    "cost": 10,
-    "refs": [
-      "classic-018",
-      "classic-t-glitch",
-      "classicplus-078",
-      "meditative-049-2",
-      "meditative-049-3"
-    ],
-    "params": [
-      {
-        "key": "picks",
-        "base": 2,
-        "radiant": 5,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "max": 5,
-        "tunedOn": "base"
-      },
-      {
-        "key": "datacenters",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "glitches",
-        "base": 3,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
-      },
-      {
-        "key": "nerfs",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "viruses",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      },
-      {
-        "key": "radiants",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 149,
-    "base": {
-      "attack": 8,
-      "health": 20,
-      "keywords": [
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Can't attack\nCry: Do {picks} of these at random: summon {datacenters|Claude's Datacenter|Claude's Datacenters}; add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand, which cost ({setCost}); summon an AI Girlfriend; fill your opponent's board with Yile's Viruses; Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}.\nStart of turn: Make a random permanent of yours Radiant.\nWhenever your turn ends with unspent mana, this costs that much less."
-    },
-    "radiant": {
-      "attack": 16,
-      "health": 40,
-      "keywords": [
-        {
-          "kind": "Can't attack"
-        },
-        {
-          "kind": "Armor",
-          "n": 5
-        }
-      ],
-      "text": "Can't attack, Armor 5\nCry: Summon {datacenters|Claude's Datacenter|Claude's Datacenters}. Add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand; they cost ({setCost}). Summon an AI Girlfriend. Summon {viruses|Radiant Yile's Virus|Radiant Yile's Viruses} for your opponent. Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}.\nStart of turn: Make {radiants|random permanent|random permanents} of yours Radiant.\nWhenever your turn ends with unspent mana, this costs that much less."
-    }
-  },
-  "meditative-049-2": {
-    "id": "meditative-049-2",
-    "index": "49.2",
-    "name": "Yile's Virus",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "CN",
-      "Acclaimed",
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Mythic",
-    "token": true,
-    "cost": 2,
-    "refs": [
-      "meditative-049-2"
-    ],
-    "params": [
-      {
-        "key": "discards",
-        "base": 1,
-        "radiant": 2,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "damage",
-        "base": 2,
-        "radiant": 4,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 57,
-    "base": {
-      "attack": 0,
-      "health": 8,
-      "keywords": [
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Can't attack\nCan't be in Defense Position.\nActivate: Destroy this.\nDeath: Discard {discards|random card|random cards}.\nStart of turn: Deal {damage} damage to each adjacent Unit that isn't a Yile's Virus, and to your hero."
-    },
-    "radiant": {
-      "attack": 0,
-      "health": 16,
-      "keywords": [
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Can't attack\nCan't be in Defense Position.\nActivate: Destroy this.\nDeath: Discard {discards|random card|random cards}.\nStart of turn: Deal {damage} damage to each adjacent Unit that isn't a Yile's Virus, and to your hero."
-    }
-  },
-  "meditative-049-3": {
-    "id": "meditative-049-3",
-    "index": "49.3",
-    "name": "AI Girlfriend",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [
-      "CN",
-      "Acclaimed",
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Mythic",
-    "token": true,
-    "cost": 4,
-    "params": [
-      {
-        "key": "times",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 43,
-    "base": {
-      "attack": 2,
-      "health": 30,
-      "keywords": [
-        {
-          "kind": "Animated"
-        },
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Animated, Can't attack\nStart of turn: Every enemy Unit attacks this.\nAfter this is attacked: Nerf the attacker."
-    },
-    "radiant": {
-      "attack": 4,
-      "health": 60,
-      "keywords": [
-        {
-          "kind": "Animated"
-        },
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Animated, Can't attack\nStart of turn: Every enemy Unit attacks this.\nAfter this is attacked: Nerf the attacker {times|time|times}."
-    }
-  },
-  "meditative-050": {
-    "id": "meditative-050",
-    "index": "50",
-    "name": "CN Tech",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "CN"
-    ],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 0,
-    "loc": 18,
-    "base": {
-      "keywords": [],
-      "text": "Add the highest win rate card to your hand."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Add the highest win rate card to your hand. It is Radiant."
-    }
-  },
-  "meditative-051": {
-    "id": "meditative-051",
-    "index": "51",
-    "name": "Devin Bot",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Legendary",
-    "token": false,
-    "cost": 2,
-    "loc": 40,
-    "base": {
-      "attack": 1,
-      "health": 1,
-      "keywords": [
-        {
-          "kind": "Reborn"
-        }
-      ],
-      "text": "Reborn\nCry: Fill your board with random 1/1 Units."
-    },
-    "radiant": {
-      "attack": 2,
-      "health": 2,
-      "keywords": [
-        {
-          "kind": "Reborn"
-        }
-      ],
-      "text": "Reborn\nCry: Fill your board with random Radiant 1/1 Units."
-    }
-  },
-  "meditative-052": {
-    "id": "meditative-052",
-    "index": "52",
-    "name": "Economic Anxiety",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 1,
-    "params": [
-      {
-        "key": "bonus",
-        "base": 3,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 60,
-    "base": {
-      "keywords": [],
-      "text": "Aura: Units have +{bonus} Attack while attacking a Unit that shares none of their tags."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Aura: Your Units have +{bonus} Attack and Poisonous while attacking a Unit that shares none of their tags."
-    }
-  },
-  "meditative-053": {
-    "id": "meditative-053",
-    "index": "53",
-    "name": "Prestige",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 1,
-    "params": [
-      {
-        "key": "cards",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 83,
-    "base": {
-      "keywords": [],
-      "text": "De-Radiant a Radiant Unit or face-up backrow card on either side, or a Radiant card in your hand. Add {cards|AI generated card|AI generated cards} to your hand."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "De-Radiant every enemy card: every Radiant card of the opponent's field, hand and deck. Add {cards|AI generated card|AI generated cards} to your hand."
-    }
-  },
-  "meditative-054": {
-    "id": "meditative-054",
-    "index": "54",
-    "name": "Money Machine",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 1,
-    "refs": [
-      "core-t-coin"
-    ],
-    "loc": 52,
-    "base": {
-      "keywords": [],
-      "text": "End of turn: Shuffle a The Coin into your opponent's deck.\nActivate: Shuffle a The Coin into your deck."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "End of turn: Shuffle a The Coin into your opponent's deck.\nActivate: Shuffle a Radiant The Coin into your deck."
-    }
-  },
-  "meditative-055": {
-    "id": "meditative-055",
-    "index": "55",
-    "name": "Dragon Fruit",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "CN",
-      "Fruit"
-    ],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "cards",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 19,
-    "base": {
-      "keywords": [],
-      "text": "Add {cards|random Prime card|random Prime cards} to your hand."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Add {cards|random Radiant Prime card|random Radiant Prime cards} to your hand."
-    }
-  },
-  "meditative-056": {
-    "id": "meditative-056",
-    "index": "56",
-    "name": "House Party",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 3,
-    "refs": [
-      "core-003"
-    ],
-    "loc": 17,
-    "base": {
-      "keywords": [],
-      "text": "Fill your board with Right-house defenders."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Fill your board with Radiant Right-house defenders."
-    }
-  },
-  "meditative-057": {
-    "id": "meditative-057",
-    "index": "57",
-    "name": "Clip-Farming Critikal",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 1,
-    "loc": 60,
-    "base": {
-      "attack": 5,
-      "health": 1,
-      "keywords": [],
-      "text": "Combo: Return the card you played before this to hand."
-    },
-    "radiant": {
-      "attack": 10,
-      "health": 2,
-      "keywords": [],
-      "text": "Combo: Return the card you played before this to hand. Make it Radiant."
-    }
-  },
-  "meditative-058": {
-    "id": "meditative-058",
-    "index": "58",
-    "name": "Permanent Underclassman",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Human"
-    ],
-    "rarity": "Common",
-    "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "books",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 43,
-    "base": {
-      "attack": 3,
-      "health": 3,
-      "keywords": [],
-      "text": "Cry: Summon a random (1) Cost Unit. It gains \"Death: Add {books|random Book|random Books} to your hand.\"",
-      "grants": {
-        "bookDeath": "Death: Add {books|random Book|random Books} to your hand."
-      }
-    },
-    "radiant": {
-      "attack": 6,
-      "health": 6,
-      "keywords": [],
-      "text": "Cry: Summon a random Radiant (1) Cost Unit. It gains \"Death: Add {books|random Radiant Book|random Radiant Books} to your hand.\"",
-      "grants": {
-        "bookDeath": "Death: Add {books|random Radiant Book|random Radiant Books} to your hand."
-      }
-    }
-  },
-  "meditative-059": {
-    "id": "meditative-059",
-    "index": "59",
-    "name": "Permanent Upperclassman",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Human"
-    ],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 4,
-    "loc": 42,
-    "base": {
-      "attack": 3,
-      "health": 3,
-      "keywords": [],
-      "text": "Cry: Summon a random (4) Cost Unit. It gains \"Death: Fuse a random Book and a random AI generated card into your hand.\"",
-      "grants": {
-        "fusedBookDeath": "Death: Fuse a random Book and a random AI generated card and add the result to your hand."
-      }
-    },
-    "radiant": {
-      "attack": 6,
-      "health": 6,
-      "keywords": [],
-      "text": "Cry: Summon a random Radiant (4) Cost Unit. It gains \"Death: Fuse a random Radiant Book and a random Radiant AI generated card into your hand.\"",
-      "grants": {
-        "fusedBookDeath": "Death: Fuse a random Radiant Book and a random Radiant AI generated card and add the result to your hand."
-      }
-    }
-  },
-  "meditative-060": {
-    "id": "meditative-060",
-    "index": "60",
-    "name": "Eschews",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 3,
-    "params": [
-      {
-        "key": "casts",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "deaths",
-        "base": 5,
-        "radiant": 50,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 70,
-    "base": {
-      "keywords": [],
-      "text": "End of turn: Cast {casts|random Human, Book, CN or AI generated card|random Human, Book, CN or AI generated cards}.\nOnce {deaths} of your Units have died, Tribute this."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "End of turn: Cast {casts|random Radiant Human, Book, CN or AI generated card|random Radiant Human, Book, CN or AI generated cards}.\nOnce {deaths} of your Units have died, Tribute this."
-    }
-  },
-  "meditative-061": {
-    "id": "meditative-061",
-    "index": "61",
-    "name": "Joon Jorker",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Human"
-    ],
-    "rarity": "Common",
-    "token": false,
-    "cost": 3,
-    "params": [
-      {
-        "key": "times",
-        "base": 5,
-        "radiant": 10,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 27,
-    "base": {
-      "attack": 7,
-      "health": 5,
-      "keywords": [],
-      "text": "End of turn: Buff the Unit to the right of this {times|time|times}."
-    },
-    "radiant": {
-      "attack": 14,
-      "health": 10,
-      "keywords": [],
-      "text": "End of turn: Buff the Unit to the right of this {times|time|times}."
-    }
-  },
-  "meditative-062": {
-    "id": "meditative-062",
-    "index": "62",
-    "name": "Small Time Recruits",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 0,
-    "params": [
-      {
-        "key": "cards",
-        "base": 3,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 36,
-    "base": {
-      "keywords": [],
-      "text": "Draw {cards|(1) Cost Unit|(1) Cost Units} from your deck."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Draw {cards|(1) Cost Unit|(1) Cost Units} from your deck. Make them Radiant."
-    }
-  },
-  "meditative-063": {
-    "id": "meditative-063",
-    "index": "63",
-    "name": "Skull of J'Nari",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [],
-    "rarity": "Legendary",
-    "token": false,
-    "cost": 3,
-    "params": [
-      {
-        "key": "units",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 40,
-    "base": {
-      "keywords": [],
-      "text": "Start of turn: Summon {units|random Unit|random Units} from your hand."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Start of turn: Summon {units|random Unit|random Units} from your hand. Make it Radiant."
-    }
-  },
-  "meditative-064": {
-    "id": "meditative-064",
-    "index": "64",
-    "name": "Traitorous Blood",
-    "set": "Meditative",
-    "type": "Trap",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 1,
-    "loc": 60,
-    "base": {
-      "keywords": [],
-      "text": "Reveals when an enemy Unit with an adjacent Unit attacks: Redirect the attack to that adjacent Unit."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Reveals when an enemy Unit with an adjacent Unit attacks: Redirect the attack to that adjacent Unit. Then summon a copy of each Unit that combat destroyed."
-    }
-  },
-  "meditative-065": {
-    "id": "meditative-065",
-    "index": "65",
-    "name": "Keymaster Keenus",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Legendary",
-    "token": false,
-    "cost": 4,
-    "params": [
-      {
-        "key": "keywords",
-        "base": 5,
-        "radiant": 10,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 50,
-    "base": {
-      "attack": 1,
-      "health": 1,
-      "keywords": [
-        {
-          "kind": "Equip"
-        }
-      ],
-      "text": "Equip\nAura: Has {keywords|random combat keyword|random combat keywords}."
-    },
-    "radiant": {
-      "attack": 2,
-      "health": 2,
-      "keywords": [
-        {
-          "kind": "Equip"
-        }
-      ],
-      "text": "Equip\nAura: Has {keywords|random combat keyword|random combat keywords}."
-    }
-  },
-  "meditative-066": {
-    "id": "meditative-066",
-    "index": "66",
-    "name": "Fiery Waraxe",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 2,
-    "loc": 6,
-    "base": {
-      "attack": 3,
-      "health": 2,
-      "keywords": [
-        {
-          "kind": "Animated on your turn"
-        }
-      ],
-      "text": "Animated on your turn"
-    },
-    "radiant": {
-      "attack": 6,
-      "health": 4,
-      "keywords": [
-        {
-          "kind": "Animated on your turn"
-        },
-        {
-          "kind": "Pierce"
-        }
-      ],
-      "text": "Animated on your turn, Pierce"
-    }
-  },
-  "meditative-067": {
-    "id": "meditative-067",
-    "index": "67",
-    "name": "Sentient Cat Ears",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Felinor"
-    ],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 1,
-    "refs": [
-      "meditative-030-1"
-    ],
-    "params": [
-      {
-        "key": "bombs",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 40,
-    "base": {
-      "attack": 1,
-      "health": 1,
-      "keywords": [
-        {
-          "kind": "Equip"
-        }
-      ],
-      "text": "Equip\nEnd of turn: Shuffle {bombs|Love Bomb|Love Bombs} into your deck."
-    },
-    "radiant": {
-      "attack": 2,
-      "health": 2,
-      "keywords": [
-        {
-          "kind": "Equip"
-        }
-      ],
-      "text": "Equip\nEnd of turn: Shuffle {bombs|Love Bomb|Love Bombs} into your deck."
-    }
-  },
-  "meditative-068": {
-    "id": "meditative-068",
-    "index": "68",
-    "name": "Catnip",
-    "set": "Meditative",
-    "type": "Field Trap",
-    "tags": [
-      "Felinor"
-    ],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 1,
-    "loc": 28,
-    "base": {
-      "attack": 5,
-      "health": 5,
-      "keywords": [
-        {
-          "kind": "Animated"
-        }
-      ],
-      "text": "Animated\nReveals after your opponent plays a Spell."
-    },
-    "radiant": {
-      "attack": 10,
-      "health": 10,
-      "keywords": [
-        {
-          "kind": "Animated"
-        },
-        {
-          "kind": "Taunt"
-        }
-      ],
-      "text": "Animated, Taunt\nReveals after your opponent plays a Spell."
-    }
-  },
-  "meditative-069": {
-    "id": "meditative-069",
-    "index": "69",
-    "name": "The Maestro",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Human",
-      "Plague"
-    ],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 4,
-    "params": [
-      {
-        "key": "price",
-        "base": 4,
-        "radiant": 4,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "exiles",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 55,
-    "base": {
-      "attack": 4,
-      "health": 4,
-      "keywords": [],
-      "text": "When you spend mana, place 1 Plague Counter on this.\nActivate: Spend ({price}) Plague Counters: Exile {exiles|random card|random cards} each from their field, hand, deck and graveyard."
-    },
-    "radiant": {
-      "attack": 8,
-      "health": 8,
-      "keywords": [],
-      "text": "When you spend mana, place 1 Plague Counter on this.\nActivate: Spend ({price}) Plague Counters: Exile {exiles|random card|random cards} each from their field, hand, deck and graveyard."
-    }
-  },
-  "meditative-070": {
-    "id": "meditative-070",
-    "index": "70",
-    "name": "I'M WILL BE YOUR DOOM",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 1,
-    "refs": [
-      "meditative-070-1"
-    ],
-    "loc": 21,
-    "base": {
-      "attack": 5,
-      "health": 8,
-      "keywords": [],
-      "text": "Cry: Summon a Ready… I'm for your opponent."
-    },
-    "radiant": {
-      "attack": 10,
-      "health": 16,
-      "keywords": [],
-      "text": "Cry: Summon a Ready… I'm for your opponent and a Radiant Ready… I'm for yourself."
-    }
-  },
-  "meditative-070-1": {
-    "id": "meditative-070-1",
-    "index": "70.1",
-    "name": "Ready… I'm",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Common",
-    "token": true,
-    "cost": 1,
-    "loc": 6,
-    "base": {
-      "attack": 2,
-      "health": 1,
-      "keywords": [
-        {
-          "kind": "Poisonous"
-        }
-      ],
-      "text": "Poisonous"
-    },
-    "radiant": {
-      "attack": 4,
-      "health": 2,
-      "keywords": [
-        {
-          "kind": "Poisonous"
-        },
-        {
-          "kind": "Divine Shield"
-        }
-      ],
-      "text": "Poisonous, Divine Shield"
-    }
-  },
-  "meditative-071": {
-    "id": "meditative-071",
-    "index": "71",
-    "name": "Pareto Optimality",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [],
-    "rarity": "Mythic",
-    "token": false,
-    "cost": 2,
-    "refs": [
-      "meditative-071-1"
-    ],
-    "loc": 100,
-    "base": {
-      "keywords": [],
-      "text": "Cry: Summon The Cane.\nWhenever your opponent plays a card that isn't the AI's optimal move, The Cane attacks a random enemy."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Cry: Summon a Radiant The Cane.\nWhenever your opponent emotes or plays a card that isn't the AI's optimal move, The Cane attacks a random enemy."
-    }
-  },
-  "meditative-071-1": {
-    "id": "meditative-071-1",
-    "index": "71.1",
-    "name": "The Cane",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [
-      "CN",
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Mythic",
-    "token": true,
-    "cost": 2,
-    "loc": 30,
-    "base": {
-      "attack": 3,
-      "health": 1,
-      "keywords": [
-        {
-          "kind": "Animated on your turn"
-        },
-        {
-          "kind": "Indestructible"
-        },
-        {
-          "kind": "Pierce"
-        }
-      ],
-      "text": "Animated on your turn, Indestructible, Pierce\nAlso Animated when Pareto Optimal."
-    },
-    "radiant": {
-      "attack": 6,
-      "health": 2,
-      "keywords": [
-        {
-          "kind": "Animated on your turn"
-        },
-        {
-          "kind": "Indestructible"
-        },
-        {
-          "kind": "Pierce"
-        },
-        {
-          "kind": "Trample"
-        }
-      ],
-      "text": "Animated on your turn, Indestructible, Pierce, Trample\nAlso Animated when Pareto Optimal."
-    }
-  },
-  "meditative-072": {
-    "id": "meditative-072",
-    "index": "72",
-    "name": "The Banisher",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 1,
-    "loc": 40,
-    "base": {
-      "attack": 2,
-      "health": 1,
-      "keywords": [],
-      "text": "Whenever this damages a Unit, exile that Unit."
-    },
-    "radiant": {
-      "attack": 4,
-      "health": 2,
-      "keywords": [
-        {
-          "kind": "Cleave"
-        }
-      ],
-      "text": "Cleave\nWhenever this damages a Unit, exile that Unit."
-    }
-  },
-  "meditative-073": {
-    "id": "meditative-073",
-    "index": "73",
-    "name": "Plate Packer",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Human"
-    ],
-    "rarity": "Common",
-    "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "per",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 14,
-    "base": {
-      "attack": 6,
-      "health": 6,
-      "keywords": [],
-      "text": "Cry: Gain +{per}/+{per} for each Armor on the field, heroes' included."
-    },
-    "radiant": {
-      "attack": 12,
-      "health": 12,
-      "keywords": [],
-      "text": "Cry: Gain +{per}/+{per} for each Armor on the field, heroes' included."
-    }
-  },
-  "meditative-074": {
-    "id": "meditative-074",
-    "index": "74",
-    "name": "Montaña Giant",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 8,
-    "params": [
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "buff",
-        "base": 8,
-        "radiant": 8,
-        "better": "up",
-        "step": 2,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 44,
-    "base": {
-      "attack": 8,
-      "health": 8,
-      "keywords": [],
-      "text": "Costs ({discount}) less for each card in your hand.\nEnd of turn: If your hand is full, make this Radiant."
-    },
-    "radiant": {
-      "attack": 16,
-      "health": 16,
-      "keywords": [],
-      "text": "Costs ({discount}) less for each card in your hand.\nEnd of turn: If your hand is full, this gains +{buff}/+{buff}."
-    }
-  },
-  "meditative-075": {
-    "id": "meditative-075",
-    "index": "75",
-    "name": "Ever Growing Tree",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [],
-    "rarity": "Legendary",
-    "token": false,
-    "cost": 4,
-    "loc": 40,
-    "base": {
-      "keywords": [],
-      "text": "Activate: Fuse a random Field Spell into this."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Activate: Fuse a random Radiant Field Spell into this."
-    }
-  },
-  "meditative-076": {
-    "id": "meditative-076",
-    "index": "76",
-    "name": "Do or Die",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 1,
-    "params": [
-      {
-        "key": "marks",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "base"
-      }
-    ],
-    "loc": 53,
-    "base": {
-      "keywords": [],
-      "text": "Mark {marks|random card|random cards} in your opponent's hand. At the start of your next turn, steal each marked card still in their hand."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Mark every card in your opponent's hand. At the start of your next turn, steal each marked card still in their hand."
-    }
-  },
-  "meditative-077": {
-    "id": "meditative-077",
-    "index": "77",
-    "name": "Bulk Booster",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 3,
-    "loc": 23,
-    "base": {
-      "keywords": [],
-      "text": "Fill your hand with random Common cards."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Fill your hand with random Radiant Common cards."
-    }
-  },
-  "meditative-078": {
-    "id": "meditative-078",
-    "index": "78",
-    "name": "Occidentless Mandate",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "CN"
-    ],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 4,
-    "params": [
-      {
-        "key": "discount",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 32,
-    "base": {
-      "keywords": [],
-      "text": "Exile every non-CN permanent. Add a random CN card to your hand for each of yours exiled this way."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Exile every non-CN permanent. Add a random Radiant CN card to your hand for each of yours exiled this way. Each costs ({discount}) less."
-    }
-  },
-  "meditative-079": {
-    "id": "meditative-079",
-    "index": "79",
-    "name": "Touched by KY",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "KY"
-    ],
-    "rarity": "Legendary",
-    "token": false,
-    "cost": 3,
-    "params": [
-      {
-        "key": "handSize",
-        "base": 12,
-        "radiant": 12,
-        "better": "up",
-        "step": 1,
-        "min": 11,
-        "max": 14
-      },
-      {
-        "key": "draw",
-        "base": 4,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 22,
-    "base": {
-      "attack": 4,
-      "health": 4,
-      "keywords": [],
-      "text": "Cry: For the rest of the game, your hand size is {handSize}. Draw {draw}."
-    },
-    "radiant": {
-      "attack": 8,
-      "health": 8,
-      "keywords": [],
-      "text": "Cry: For the rest of the game, your hand size is {handSize}. Draw {draw}. Each becomes Radiant."
-    }
-  },
-  "meditative-080": {
-    "id": "meditative-080",
-    "index": "80",
-    "name": "Aluneth",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [
-      "Quickdraw"
-    ],
-    "rarity": "Legendary",
-    "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 32,
-    "base": {
-      "keywords": [
-        {
-          "kind": "Indestructible"
-        },
-        {
-          "kind": "Untributable"
-        },
-        {
-          "kind": "Immutable"
-        }
-      ],
-      "text": "Indestructible, Untributable, Immutable\nEnd of turn: Draw 3. They cost ({discount}) less."
-    },
-    "radiant": {
-      "keywords": [
-        {
-          "kind": "Indestructible"
-        },
-        {
-          "kind": "Immutable"
-        }
-      ],
-      "text": "Indestructible, Immutable\nActivate: Exile this.\nEnd of turn: Draw 3. They cost ({discount}) less."
-    }
-  },
-  "meditative-081": {
-    "id": "meditative-081",
-    "index": "81",
-    "name": "Deadman's Hand",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Rare",
-    "token": false,
-    "cost": {
-      "base": 0,
-      "embiggen": 2
-    },
-    "params": [
-      {
-        "key": "chance",
-        "base": 25,
-        "radiant": 100,
-        "better": "up",
-        "step": 6,
-        "min": 1,
-        "max": 100
-      },
-      {
-        "key": "draw",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 38,
-    "base": {
-      "keywords": [],
-      "text": "Shuffle a copy of each card in your hand, and of this, into your deck.\nEmbiggened (2): Each copy has a {chance}% chance to become Radiant."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw}.\nEmbiggened (2): Each copy has a {chance}% chance to become Radiant."
-    }
-  },
-  "meditative-082": {
-    "id": "meditative-082",
-    "index": "82",
-    "name": "Medina Outfitter",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 1,
-    "params": [
-      {
-        "key": "times",
-        "base": 1,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 17,
-    "base": {
-      "attack": 1,
-      "health": 1,
-      "keywords": [],
-      "text": "Cry: Buff every card in your hand."
-    },
-    "radiant": {
-      "attack": 2,
-      "health": 2,
-      "keywords": [],
-      "text": "Cry: Buff every card in your hand {times|time|times}."
-    }
-  },
-  "meditative-083": {
-    "id": "meditative-083",
-    "index": "83",
-    "name": "Medina Enforcer",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "times",
-        "base": 1,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 17,
-    "base": {
-      "attack": 4,
-      "health": 4,
-      "keywords": [],
-      "text": "End of turn: Buff every card in your hand."
-    },
-    "radiant": {
-      "attack": 8,
-      "health": 8,
-      "keywords": [],
-      "text": "End of turn: Buff every card in your hand {times|time|times}."
-    }
-  },
-  "meditative-084": {
-    "id": "meditative-084",
-    "index": "84",
-    "name": "Volatility",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 1,
-    "loc": 25,
-    "base": {
-      "attack": 3,
-      "health": 3,
-      "keywords": [],
-      "text": "Buffs and Nerfs are twice as effective on this."
-    },
-    "radiant": {
-      "attack": 6,
-      "health": 6,
-      "keywords": [],
-      "text": "Buffs are three times as effective on this."
-    }
-  },
-  "meditative-085": {
-    "id": "meditative-085",
-    "index": "85",
-    "name": "Playtester",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 2,
-    "refs": [
-      "classicplus-071",
-      "classicplus-072"
-    ],
-    "params": [
-      {
-        "key": "books",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 35,
-    "base": {
-      "attack": 4,
-      "health": 5,
-      "keywords": [],
-      "text": "Start of turn: Choose one: add {books|Book of Buff|Books of Buff} or {books|Book of Nerf|Books of Nerf} to your hand."
-    },
-    "radiant": {
-      "attack": 8,
-      "health": 10,
-      "keywords": [],
-      "text": "Start of turn: Choose one: add {books|Radiant Book of Buff|Radiant Books of Buff} or {books|Radiant Book of Nerf|Radiant Books of Nerf} to your hand."
-    }
-  },
-  "meditative-086": {
-    "id": "meditative-086",
-    "index": "86",
-    "name": "Mayor Medinamogger",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Legendary",
-    "token": false,
-    "cost": 2,
-    "loc": 12,
-    "base": {
-      "attack": 5,
-      "health": 4,
-      "keywords": [],
-      "text": "Aura: All targets are chosen at random."
-    },
-    "radiant": {
-      "attack": 10,
-      "health": 8,
-      "keywords": [
-        {
-          "kind": "Lucky",
-          "n": 1
-        }
-      ],
-      "text": "Lucky 1\nAura: All targets are chosen at random."
-    }
-  },
-  "meditative-087": {
-    "id": "meditative-087",
-    "index": "87",
-    "name": "Tatches the Totem",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Human",
-      "Felinor",
-      "KY",
-      "CN",
-      "Jlockeed"
-    ],
-    "rarity": "Legendary",
-    "token": false,
-    "cost": 1,
-    "params": [
-      {
-        "key": "cards",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 58,
-    "base": {
-      "attack": 0,
-      "health": 3,
-      "keywords": [],
-      "text": "While in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand or deck."
-    },
-    "radiant": {
-      "attack": 0,
-      "health": 6,
-      "keywords": [],
-      "text": "While in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand or deck and each adjacent Unit."
-    }
-  },
-  "meditative-088": {
-    "id": "meditative-088",
-    "index": "88",
-    "name": "The True Sheep",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 4,
-    "params": [
-      {
-        "key": "worth",
-        "base": 5,
-        "radiant": 500,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 51,
-    "base": {
-      "attack": 1,
-      "health": 1,
-      "keywords": [],
-      "text": "Worth {worth|Tribute|Tributes}.\nCry: Discover a card with Tribute to replace this with."
-    },
-    "radiant": {
-      "attack": 2,
-      "health": 2,
-      "keywords": [],
-      "text": "Worth {worth|Tribute|Tributes}.\nCry: Discover a Radiant card with Tribute to replace this with."
-    }
-  },
-  "meditative-089": {
-    "id": "meditative-089",
-    "index": "89",
-    "name": "Jlarna",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "tags": [],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 3,
-    "params": [
-      {
-        "key": "credit",
-        "base": 4,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "instalments",
-        "base": 4,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 46,
-    "base": {
-      "keywords": [],
-      "text": "Aura: Credit line {credit}: you can spend mana you don't have, owing up to {credit} at once. Pay it back in {instalments|instalment|instalments}, one at the start of each of your next turns.\nEnd of turn: If you didn't use your credit line this turn, Tribute this."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Aura: Credit line {credit}: you can spend mana you don't have, owing up to {credit} at once. Pay it back in {instalments|instalment|instalments}, one at the start of each of your next turns."
-    }
-  },
-  "meditative-090": {
-    "id": "meditative-090",
-    "index": "90",
-    "name": "Spell Basket",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 1,
-    "params": [
-      {
-        "key": "cards",
-        "base": 3,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 19,
-    "base": {
-      "keywords": [],
-      "text": "Add {cards|random Spell|random Spells} to your hand."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Add {cards|random Radiant Spell|random Radiant Spells} to your hand."
-    }
-  },
-  "meditative-091": {
-    "id": "meditative-091",
-    "index": "91",
-    "name": "Windfast",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Catalyst"
-    ],
-    "rarity": "Epic",
-    "token": false,
-    "cost": 1,
-    "refs": [
-      "meditative-091-1"
-    ],
-    "loc": 26,
-    "base": {
-      "attack": 1,
-      "health": 1,
-      "keywords": [
-        {
-          "kind": "Windfury"
-        }
-      ],
-      "text": "Tribute 1, Windfury\nWhen this would attack, summon a Unit of your choice from your hand to make that attack instead. Bounce it afterwards if it survives.\nDeath: Shuffle a Windfurious Prime into your deck."
-    },
-    "radiant": {
-      "attack": 2,
-      "health": 2,
-      "keywords": [
-        {
-          "kind": "Windfury"
-        }
-      ],
-      "text": "Tribute 1, Windfury\nWhen this would attack, summon a Unit of your choice from your hand to make that attack instead.\nDeath: Shuffle a Radiant Windfurious Prime into your deck."
-    }
-  },
-  "meditative-091-1": {
-    "id": "meditative-091-1",
-    "index": "91.1",
-    "name": "Windfurious Prime",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Prime",
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Epic",
-    "token": true,
-    "cost": 3,
-    "params": [
-      {
-        "key": "joiners",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 12,
-    "base": {
-      "attack": 5,
-      "health": 10,
-      "keywords": [
-        {
-          "kind": "Rush"
-        },
-        {
-          "kind": "Windfury"
-        }
-      ],
-      "text": "Rush, Windfury\nWhenever this attacks: Summon {joiners|random Unit|random Units} from your hand or deck. They attack its target first."
-    },
-    "radiant": {
-      "attack": 10,
-      "health": 20,
-      "keywords": [
-        {
-          "kind": "Rush"
-        },
-        {
-          "kind": "Windfury"
-        },
-        {
-          "kind": "First Strike"
-        }
-      ],
-      "text": "Rush, Windfury, First Strike\nWhenever this attacks: Summon {joiners|random Unit|random Units} from your hand or deck. They attack its target first."
-    }
-  },
-  "meditative-092": {
-    "id": "meditative-092",
-    "index": "92",
-    "name": "Unan",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 3,
-    "loc": 20,
-    "base": {
-      "attack": 3,
-      "health": 13,
-      "keywords": [
-        {
-          "kind": "Armor",
-          "n": 3
-        }
-      ],
-      "text": "Armor 3\nLethal damage your hero or your other Units would take is redirected to this."
-    },
-    "radiant": {
-      "attack": 6,
-      "health": 26,
-      "keywords": [
-        {
-          "kind": "Armor",
-          "n": 7
-        }
-      ],
-      "text": "Armor 7\nLethal damage your hero or your other Units would take is redirected to this."
-    }
-  },
-  "meditative-093": {
-    "id": "meditative-093",
-    "index": "93",
-    "name": "Growing Felinor",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Felinor"
-    ],
-    "rarity": "Common",
-    "token": false,
-    "cost": 1,
-    "refs": [
-      "meditative-093",
-      "meditative-093-1"
-    ],
-    "loc": 22,
-    "base": {
-      "attack": 1,
-      "health": 1,
-      "keywords": [],
-      "text": "Can't be in Defense Position.\nDeath: Summon a Growing Felinor Sr."
-    },
-    "radiant": {
-      "attack": 2,
-      "health": 2,
-      "keywords": [
-        {
-          "kind": "Divine Shield"
-        },
-        {
-          "kind": "Rush"
-        }
-      ],
-      "text": "Divine Shield, Rush\nCan't be in Defense Position.\nDeath: Summon a Radiant Growing Felinor Sr."
-    }
-  },
-  "meditative-093-1": {
-    "id": "meditative-093-1",
-    "index": "93.1",
-    "name": "Growing Felinor Sr",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Felinor",
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Common",
-    "token": true,
-    "cost": 1,
-    "refs": [
-      "meditative-093",
-      "meditative-093-1",
-      "meditative-093-2"
-    ],
-    "loc": 22,
-    "base": {
-      "attack": 2,
-      "health": 2,
-      "keywords": [],
-      "text": "Can't be in Defense Position.\nDeath: Summon a Growing Felinor Sr Sr."
-    },
-    "radiant": {
-      "attack": 4,
-      "health": 4,
-      "keywords": [
-        {
-          "kind": "Divine Shield"
-        },
-        {
-          "kind": "Rush"
-        }
-      ],
-      "text": "Divine Shield, Rush\nCan't be in Defense Position.\nDeath: Summon a Radiant Growing Felinor Sr Sr."
-    }
-  },
-  "meditative-093-2": {
-    "id": "meditative-093-2",
-    "index": "93.2",
-    "name": "Growing Felinor Sr Sr",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Felinor",
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Common",
-    "token": true,
-    "cost": 1,
-    "refs": [
-      "meditative-093",
-      "meditative-093-3"
-    ],
-    "loc": 22,
-    "base": {
-      "attack": 3,
-      "health": 3,
-      "keywords": [],
-      "text": "Can't be in Defense Position.\nDeath: Summon a Growing Felinor Super Senior."
-    },
-    "radiant": {
-      "attack": 6,
-      "health": 6,
-      "keywords": [
-        {
-          "kind": "Divine Shield"
-        },
-        {
-          "kind": "Rush"
-        }
-      ],
-      "text": "Divine Shield, Rush\nCan't be in Defense Position.\nDeath: Summon a Radiant Growing Felinor Super Senior."
-    }
-  },
-  "meditative-093-3": {
-    "id": "meditative-093-3",
-    "index": "93.3",
-    "name": "Growing Felinor Super Senior",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Felinor",
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Common",
-    "token": true,
-    "cost": 1,
-    "loc": 12,
-    "base": {
-      "attack": 4,
-      "health": 4,
-      "keywords": [],
-      "text": "Can't be in Defense Position."
-    },
-    "radiant": {
-      "attack": 8,
-      "health": 8,
-      "keywords": [
-        {
-          "kind": "Divine Shield"
-        },
-        {
-          "kind": "Rush"
-        }
-      ],
-      "text": "Divine Shield, Rush\nCan't be in Defense Position."
-    }
-  },
-  "meditative-094": {
-    "id": "meditative-094",
-    "index": "94",
-    "name": "Shrinking Felinor",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Felinor"
-    ],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 4,
-    "refs": [
-      "meditative-094"
-    ],
-    "params": [
-      {
-        "key": "shrinkAttack",
-        "base": 3,
-        "radiant": 2,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "shrinkHealth",
-        "base": 3,
-        "radiant": 3,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 29,
-    "base": {
-      "attack": 9,
-      "health": 11,
-      "keywords": [],
-      "text": "Death: Summon a Shrinking Felinor whose base stats are this one's −{shrinkAttack}/−{shrinkHealth}."
-    },
-    "radiant": {
-      "attack": 18,
-      "health": 22,
-      "keywords": [],
-      "text": "Death: Summon a Radiant Shrinking Felinor whose base stats are this one's −{shrinkAttack}/−{shrinkHealth}."
-    }
-  },
-  "meditative-095": {
-    "id": "meditative-095",
-    "index": "95",
-    "name": "Call to Chaos (Meditative Edition)",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "Call to Chaos"
-    ],
-    "rarity": "Legendary",
-    "token": false,
-    "cost": 4,
-    "refs": [
-      "meditative-095",
-      "meditative-039-2",
-      "meditative-039-5",
-      "meditative-095-1",
-      "core-095",
-      "classicplus-073"
-    ],
-    "loc": 22,
-    "base": {
-      "keywords": [],
-      "text": "One random effect: Fuse your hand into one card and add 2 copies of it to your hand, all three of which cost (0); add 3 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 8 Armor and you heal it 8; summon a Jade Beauty; summon 3 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Three different random effects, resolved in the order listed: Fuse your hand into one card and add 2 copies of it to your hand, all three of which cost (0); add 3 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 8 Armor and you heal it 8; summon a Jade Beauty; summon 3 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
-    }
-  },
-  "meditative-095-1": {
-    "id": "meditative-095-1",
-    "index": "95.1",
-    "name": "CN Golem",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "CN",
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Legendary",
-    "token": true,
-    "cost": 4,
-    "refs": [
-      "core-090-1"
-    ],
-    "params": [
-      {
-        "key": "viruses",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 37,
-    "base": {
-      "attack": 10,
-      "health": 10,
-      "keywords": [
-        {
-          "kind": "Rush"
-        },
-        {
-          "kind": "Poisonous"
-        },
-        {
-          "kind": "Cleave"
-        },
-        {
-          "kind": "Pierce"
-        }
-      ],
-      "text": "Rush, Poisonous, Cleave, Pierce\nWhenever this destroys a Unit, shuffle {viruses|CN-Virus|CN-Viruses} into your opponent's deck."
-    },
-    "radiant": {
-      "attack": 20,
-      "health": 20,
-      "keywords": [
-        {
-          "kind": "Rush"
-        },
-        {
-          "kind": "Poisonous"
-        },
-        {
-          "kind": "Cleave"
-        },
-        {
-          "kind": "Pierce"
-        },
-        {
-          "kind": "Windfury"
-        }
-      ],
-      "text": "Rush, Poisonous, Cleave, Pierce, Windfury\nWhenever this destroys a Unit, shuffle {viruses|Radiant CN-Virus|Radiant CN-Viruses} into your opponent's deck."
-    }
-  },
-  "meditative-096": {
-    "id": "meditative-096",
-    "index": "96",
-    "name": "Meditative Journey",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 2,
-    "refs": [
-      "meditative-096-1"
-    ],
-    "params": [
-      {
-        "key": "cards",
-        "base": 2,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "draw",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 58,
-    "base": {
-      "keywords": [],
-      "text": "Choose up to {cards|card|cards} in your hand to go on a journey: exile them and shuffle a Journey Complete into your deck."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Choose up to {cards|card|cards} in your hand to go on a journey: exile them and shuffle a Radiant Journey Complete into your deck. Draw {draw}."
-    }
-  },
-  "meditative-096-1": {
-    "id": "meditative-096-1",
-    "index": "96.1",
-    "name": "Journey Complete",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Rare",
-    "token": true,
-    "cost": 2,
-    "params": [
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 41,
-    "base": {
-      "keywords": [],
-      "text": "Cast on draw: Return the cards that went on this journey from exile to hand. They become Radiant."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Cast on draw: Return the cards that went on this journey from exile to hand. They become Radiant and cost ({discount}) less."
-    }
-  },
-  "meditative-097": {
-    "id": "meditative-097",
-    "index": "97",
-    "name": "Jlockeed's Evil Blueprints",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [
-      "Jlockeed"
-    ],
-    "rarity": "Mythic",
-    "token": false,
-    "cost": 0,
-    "refs": [
-      "meditative-097-1",
-      "meditative-097-2",
-      "meditative-097-3",
-      "meditative-097-4",
-      "meditative-097-5",
-      "meditative-097-6",
-      "meditative-097-7",
-      "meditative-097-8",
-      "meditative-097-9"
-    ],
-    "loc": 42,
-    "base": {
-      "keywords": [],
-      "text": "Discover a building: Empty Plot, Wishing Well, School, Mega Church, Bunker, University, The Great Wall, Prison or Jlockeed's Headquarters.\nPiece together the blueprint."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Discover a Radiant building: Empty Plot, Wishing Well, School, Mega Church, Bunker, University, The Great Wall, Prison or Jlockeed's Headquarters.\nPiece together the Radiant blueprint."
-    }
-  },
-  "meditative-097-1": {
-    "id": "meditative-097-1",
-    "index": "97.1",
-    "name": "Empty Plot",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Common",
-    "token": true,
-    "cost": 0,
-    "params": [
-      {
-        "key": "buffs",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 20,
-    "base": {
-      "attack": 0,
-      "health": 3,
-      "keywords": [
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Can't attack\nYou may play a Unit on top of this, as if it had Stack."
-    },
-    "radiant": {
-      "attack": 0,
-      "health": 8,
-      "keywords": [
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Can't attack\nYou may play a Unit on top of this, as if it had Stack. When you do, Buff that Unit {buffs|time|times}."
-    }
-  },
-  "meditative-097-2": {
-    "id": "meditative-097-2",
-    "index": "97.2",
-    "name": "Wishing Well",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Common",
-    "token": true,
-    "cost": 1,
-    "params": [
-      {
-        "key": "chance",
-        "base": 10,
-        "radiant": 12,
-        "better": "up",
-        "step": 2,
-        "min": 1,
-        "max": 100
-      }
-    ],
-    "loc": 42,
-    "base": {
-      "attack": 0,
-      "health": 6,
-      "keywords": [
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Can't attack\nActivate: {chance}% chance to add a random Radiant card to your hand."
-    },
-    "radiant": {
-      "attack": 0,
-      "health": 12,
-      "keywords": [
-        {
-          "kind": "Can't attack"
-        },
-        {
-          "kind": "Lucky",
-          "n": 1
-        }
-      ],
-      "text": "Can't attack, Lucky 1\nActivate: {chance}% chance to add a random Radiant card to your hand."
-    }
-  },
-  "meditative-097-3": {
-    "id": "meditative-097-3",
-    "index": "97.3",
-    "name": "School",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Rare",
-    "token": true,
-    "cost": 2,
-    "params": [
-      {
-        "key": "cost",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 32,
-    "base": {
-      "attack": 0,
-      "health": 8,
-      "keywords": [
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Can't attack\nActivate: Summon a random ({cost}) Cost Unit."
-    },
-    "radiant": {
-      "attack": 0,
-      "health": 16,
-      "keywords": [
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Can't attack\nActivate: Summon a random Radiant ({cost}) Cost Unit."
-    }
-  },
-  "meditative-097-4": {
-    "id": "meditative-097-4",
-    "index": "97.4",
-    "name": "Mega Church",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Rare",
-    "token": true,
-    "cost": 3,
-    "params": [
-      {
-        "key": "cheap",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 0
-      }
-    ],
-    "loc": 45,
-    "base": {
-      "attack": 0,
-      "health": 5,
-      "keywords": [
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Tribute 5, Can't attack\nThis may Tribute any side's ({cheap}) Cost or less permanent.\nActivate: Steal an enemy permanent."
-    },
-    "radiant": {
-      "attack": 0,
-      "health": 10,
-      "keywords": [
-        {
-          "kind": "Can't attack"
-        },
-        {
-          "kind": "Divine Shield"
-        }
-      ],
-      "text": "Tribute 5, Can't attack, Divine Shield\nThis may Tribute any side's ({cheap}) Cost or less permanent.\nActivate: Steal an enemy permanent. Make it Radiant."
-    }
-  },
-  "meditative-097-5": {
-    "id": "meditative-097-5",
-    "index": "97.5",
-    "name": "Bunker",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Epic",
-    "token": true,
-    "cost": 2,
-    "params": [
-      {
-        "key": "multiplier",
-        "base": 3,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 15,
-    "base": {
-      "attack": 5,
-      "health": 10,
-      "keywords": [
-        {
-          "kind": "Armor",
-          "n": 3
-        },
-        {
-          "kind": "Can't attack"
-        },
-        {
-          "kind": "First Strike"
-        }
-      ],
-      "text": "Tribute 2, Armor 3, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier}× its Attack."
-    },
-    "radiant": {
-      "attack": 10,
-      "health": 30,
-      "keywords": [
-        {
-          "kind": "Armor",
-          "n": 5
-        },
-        {
-          "kind": "Can't attack"
-        },
-        {
-          "kind": "First Strike"
-        }
-      ],
-      "text": "Tribute 2, Armor 5, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier}× its Attack."
-    }
-  },
-  "meditative-097-6": {
-    "id": "meditative-097-6",
-    "index": "97.6",
-    "name": "University",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Epic",
-    "token": true,
-    "cost": 4,
-    "params": [
-      {
-        "key": "times",
-        "base": 2,
-        "radiant": 5,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 28,
-    "base": {
-      "attack": 0,
-      "health": 12,
-      "keywords": [
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Can't attack\nActivate: Buff each of your permanents {times|time|times}."
-    },
-    "radiant": {
-      "attack": 0,
-      "health": 24,
-      "keywords": [
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Can't attack\nActivate: Buff each of your permanents {times|time|times}."
-    }
-  },
-  "meditative-097-7": {
-    "id": "meditative-097-7",
-    "index": "97.7",
-    "name": "The Great Wall",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Epic",
-    "token": true,
-    "cost": 2,
-    "loc": 25,
-    "base": {
-      "attack": 0,
-      "health": 50,
-      "keywords": [
-        {
-          "kind": "Immutable"
-        },
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Tribute 3, Immutable, Can't attack\nCry: Lock every unit zone on your side."
-    },
-    "radiant": {
-      "attack": 0,
-      "health": 100,
-      "keywords": [
-        {
-          "kind": "Immutable"
-        },
-        {
-          "kind": "Armor",
-          "n": 2
-        },
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Tribute 3, Immutable, Armor 2, Can't attack\nCry: Lock every unit zone on your side."
-    }
-  },
-  "meditative-097-8": {
-    "id": "meditative-097-8",
-    "index": "97.8",
-    "name": "Prison",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Legendary",
-    "token": true,
-    "cost": 4,
-    "params": [
-      {
-        "key": "chance",
-        "base": 50,
-        "radiant": 50,
-        "better": "up",
-        "step": 10,
-        "min": 1,
-        "max": 100
-      }
-    ],
-    "loc": 71,
-    "base": {
-      "attack": 0,
-      "health": 16,
-      "keywords": [],
-      "text": "Tribute 2\nAfter your opponent plays a Unit: {chance}% chance to stack it under this. You control it."
-    },
-    "radiant": {
-      "attack": 0,
-      "health": 32,
-      "keywords": [
-        {
-          "kind": "Lucky",
-          "n": 1
-        }
-      ],
-      "text": "Tribute 2, Lucky 1\nAfter your opponent plays a Unit: {chance}% chance to stack it under this. You control it."
-    }
-  },
-  "meditative-097-9": {
-    "id": "meditative-097-9",
-    "index": "97.9",
-    "name": "Jlockheed's Headquarters",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "Jlockeed",
-      "Token"
-    ],
-    "rarity": "Token",
-    "printedRarity": "Mythic",
-    "token": true,
-    "cost": 4,
-    "loc": 47,
-    "base": {
-      "attack": 0,
-      "health": 20,
-      "keywords": [
-        {
-          "kind": "Indestructible"
-        },
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Tribute 5, Indestructible, Can't attack\nActivate: Fill your board with random Jlockheed Units."
-    },
-    "radiant": {
-      "attack": 0,
-      "health": 50,
-      "keywords": [
-        {
-          "kind": "Indestructible"
-        },
-        {
-          "kind": "Can't attack"
-        }
-      ],
-      "text": "Tribute 5, Indestructible, Can't attack\nActivate 2: Fill your board with random Radiant Jlockheed Units."
-    }
-  },
-  "meditative-098": {
-    "id": "meditative-098",
-    "index": "98",
-    "name": "Showdown",
-    "set": "Meditative",
-    "type": "Spell",
-    "tags": [],
-    "rarity": "Rare",
-    "token": false,
-    "cost": 2,
-    "refs": [
-      "classicplus-071"
-    ],
-    "loc": 154,
-    "base": {
-      "keywords": [],
-      "text": "Choose a lane. Lock every other lane until the start of your next turn."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Choose a lane. Lock every other lane until the start of your next turn. This turn, after you put a card into that lane, cast Book of Buff on it."
-    }
-  },
-  "meditative-099": {
-    "id": "meditative-099",
-    "index": "99",
-    "name": "Paranoia",
-    "set": "Meditative",
-    "type": "Field Spell",
-    "rarity": "Epic",
-    "token": false,
-    "cost": 2,
-    "params": [
-      {
-        "key": "draw",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "echo",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
-    "loc": 29,
-    "base": {
-      "keywords": [],
-      "text": "Aura: Your Spells have Cloaked.\nCry: Draw {draw}."
-    },
-    "radiant": {
-      "keywords": [],
-      "text": "Aura: Your Spells have Cloaked. Spells you reveal have Echo +{echo}.\nCry: Draw {draw}."
-    },
-    "tags": []
-  },
-  "meditative-100": {
-    "id": "meditative-100",
-    "index": "100",
-    "name": "Greaser",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [],
-    "rarity": "Common",
-    "token": false,
-    "cost": 2,
-    "loc": 6,
-    "base": {
-      "attack": 7,
-      "health": 7,
-      "keywords": [],
-      "text": ""
-    },
-    "radiant": {
-      "attack": 21,
-      "health": 21,
-      "keywords": [],
-      "text": ""
-    }
-  },
-  "meditative-101": {
-    "id": "meditative-101",
-    "index": "101",
-    "name": "Gachaholic",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "CN",
-      "Human"
-    ],
-    "rarity": "Common",
-    "token": false,
-    "cost": 1,
-    "params": [
-      {
-        "key": "lucky",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 29,
-    "base": {
-      "attack": 1,
-      "health": 1,
-      "keywords": [],
-      "text": "Cry: Add a random Luck-based card to your hand. Give it Lucky {lucky}."
-    },
-    "radiant": {
-      "attack": 2,
-      "health": 2,
-      "keywords": [],
-      "text": "Activate: Add a random Luck-based card to your hand. Give it Lucky {lucky}."
-    }
-  },
-  "meditative-102": {
-    "id": "meditative-102",
-    "index": "102",
-    "name": "Catboy Maid SSR+",
-    "set": "Meditative",
-    "type": "Unit",
-    "tags": [
-      "CN",
-      "Felinor"
-    ],
-    "rarity": "Common",
-    "token": false,
-    "cost": 1,
-    "loc": 38,
-    "base": {
-      "attack": 1,
-      "health": 1,
-      "keywords": [
-        {
-          "kind": "Lucky",
-          "n": 1
-        }
-      ],
-      "text": "Lucky 1\nCry: Draw 1-2. Add 1-4 to your Jade Counter."
-    },
-    "radiant": {
-      "attack": 2,
-      "health": 2,
-      "keywords": [
-        {
-          "kind": "Lucky",
-          "n": 2
-        }
-      ],
-      "text": "Lucky 2\nCry: Draw 1-2. Add 1-10 to your Jade Counter."
+      "text": "End of turn: Upgrade 2 random cards in your hand."
     }
   }
 }

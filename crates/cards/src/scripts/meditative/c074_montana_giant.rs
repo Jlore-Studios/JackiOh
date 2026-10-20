@@ -204,7 +204,7 @@ mod tests {
     #[test]
     fn r1143_r767000_a_game_on_v0_3_7_folds_under_the_kept_script_whose_full_hand_is_10() {
         crate::register_all();
-        let shipped = crate::shipped_catalog("v0.3.0c").expect("v0.3.0c is carried");
+        let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
         jackioh_engine::with_shipped(Some(shipped), || {
             assert!(end_turn_at_cap_12(false, 10).card(GIANT).radiant);
         });

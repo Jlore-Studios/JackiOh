@@ -69,9 +69,9 @@ export const RELEASES: readonly Release[] = [
   {
     id: "meditative",
     name: "Meditative",
-    first: "v0.2.5f",
+    first: "v0.3.1",
     summary:
-      "The Meditative set, 102 cards and 30 tokens, shipped in v0.3.0. Before it, v0.2.5f to v0.2.7b reworded cards of the earlier sets and changed what Nerf and Buff can tune.",
+      "The Meditative set, 102 cards and 30 tokens, shipped in v0.3.5. Before it, v0.3.1 to v0.3.4 reworded cards of the earlier sets and changed what Nerf and Buff can tune.",
     technical: [
       "The Rust rewrite (v0.3.0): the rules engine, the cards, the AI and the server were rewritten in Rust, and your browser runs the same engine as WebAssembly. Games play as they did before.",
       "The practice AI kept training: no Core, Classic or Classic+ card is barred from its decks any more, and it plays most Meditative cards too.",
@@ -88,8 +88,8 @@ export const RELEASES: readonly Release[] = [
   {
     id: "meditativeplus",
     name: "Meditative+",
-    first: "v0.4.0",
-    summary: "The Meditative+ set, 26 cards and 4 tokens, shipped in v0.4.0, with a new tag, Potion.",
+    first: "v0.3.15",
+    summary: "The Meditative+ set, 26 cards and 4 tokens, shipped in v0.3.15, with a new tag, Potion.",
     technical: [],
   },
 ];
