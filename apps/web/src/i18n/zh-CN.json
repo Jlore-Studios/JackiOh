@@ -959,6 +959,8 @@
   "Details unavailable.": "详细数据暂不可用。",
   "Loading stats…": "正在加载统计数据…",
   "Statistics unavailable": "统计数据暂不可用",
+  "Loading win rates… Until they arrive, the cards are in cost order.": "正在加载胜率…加载完成前，卡牌按费用排序。",
+  "Win rates couldn’t be loaded, so the cards are in cost order.": "胜率加载失败，卡牌暂按费用排序。",
   "Your record:": "你的战绩：",
   "played {n}×, overall win rate {rate}%": "打出 {n} 次，总胜率 {rate}%",
   "played {n}×": "打出 {n} 次",
