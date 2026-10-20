@@ -6450,7 +6450,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-19T21:58:00Z",
+      "feedback_since": "2026-10-19T23:08:33Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-19T23:00:53Z",
@@ -6467,17 +6467,18 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "claude-2",
+      "question": "",
       "queued_at": "2026-10-19T22:52:56Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
       "run_id": "39339220446",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-19T23:08:33Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "muse"
