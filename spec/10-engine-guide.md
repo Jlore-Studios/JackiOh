@@ -233,6 +233,8 @@ Your own cards wear the card cosmetics you pick, a foil over the art, a finish a
 
 Your own side wears three more cosmetics a deck can pick, every one unlocked, on a board you play: a playmat under the lanes, a backdrop behind the board and the back of your face-down cards and your deck ([[R1297000]]). The deck's pick wins over the account's and the account's over the default, while the opponent's side draws as it always did. A back depends on the seat alone, so every back of a seat looks alike and says nothing of its card. The backdrop is a capped set of particles that holds still under Reduce Motion, sits behind everything and takes no input.
 
+The full art of each hero portrait's card ([[R1017001]]) is an Epic cosmetic of its own kind, one per card, that its card's owner must own ([[R1313000]]). Once the economy is live, your own copies (your cards in hand and in play on a board you play, their hover preview and touch sheet, and every face of the deck builder) print a full art only when you own it, read from `GET /api/cosmetics` once per session, and every other copy, the opponent's among them, prints its normal face, since the client never infers another player's ownership. The landing page's fan, the Almanac, practice, hotseat and the development and end-to-end builds print every full art; until the economy is live, so does everything.
+
 ### 10.11 Audio
 
 The client plays sound from the same event stream it animates ([[§10.10]]), and none of it is a rule.
