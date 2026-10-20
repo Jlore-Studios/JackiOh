@@ -10,6 +10,7 @@ mod agent;
 mod arena;
 mod board;
 mod catalog;
+mod classify;
 mod dealt_fit;
 mod duos_fuzz;
 mod duos_gate;
@@ -52,6 +53,8 @@ enum Command {
     Think(think::Args),
     /// `catalog check` (the catalog's data checks) and `catalog loc <path>` (part 22).
     Catalog(catalog::Args),
+    /// What a change between two commits does: its kind, and for cards its tier (#1365, R1365000).
+    Classify(classify::Args),
     /// Print the newest version in `patches.json` (part 22).
     CatalogVersion(catalog::VersionArgs),
     /// The card patch history: `patches <version> <date> "<title>"`, `patches check`, `patches ship` (part 22).
@@ -90,6 +93,7 @@ fn main() -> ExitCode {
         Command::Trace(args) => trace::run(args),
         Command::Think(args) => think::run(args),
         Command::Catalog(args) => catalog::run(args),
+        Command::Classify(args) => classify::run(args),
         Command::CatalogVersion(args) => catalog::run_version(args),
         Command::Patches(args) => patches::run(args),
         Command::Gate(args) => gate::run(args),
