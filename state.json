@@ -12604,8 +12604,13 @@
     "what": "revise #1406 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-20T11:30:58Z",
-    "notes": [],
+    "at": "2026-10-20T11:38:13Z",
+    "notes": [
+      "#1384 needs a plan",
+      "#1398 needs a plan",
+      "#1399 needs a plan",
+      "started a night run, as a lane was free: #1399 (medium) is queued to build, for `muse`: plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
