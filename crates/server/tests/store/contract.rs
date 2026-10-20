@@ -7704,6 +7704,70 @@ mod social {
         assert!(q!(harness, t => t.presence_in_duos(&[])).is_empty());
     }
 
+    /// R1435000: the friends a sharer shared a finished match with, read as the friend's own read
+    /// judges each share (a seat in the finished match, friends, neither blocking), first shared
+    /// first, and only that sharer's.
+    async fn r1435000_a_sharers_shares_are_read_while_each_friend_may_read_them(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let d = active_profile(harness, None).await;
+        let now = harness.now();
+        for (x, y) in [(&a, &b), (&a, &d), (&c, &b)] {
+            q!(harness, t => t.friends_make(&x.id, &y.id, now - 10_000));
+        }
+        let over = id();
+        q!(harness, t => t.matches_create(&match_row(&over, &a.id, &c.id, harness, now - 9_000)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&over, 1, "p1", "n1", now - 8_000)]));
+        q!(harness, t => t.matches_finish(&over, now - 5_000));
+        let live = id();
+        q!(harness, t => t.matches_create(&match_row(&live, &a.id, &c.id, harness, now - 9_000)));
+        let elsewhere = id();
+        q!(harness, t => t.matches_create(&match_row(&elsewhere, &b.id, &c.id, harness, now - 9_000)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&elsewhere, 1, "p1", "n1", now - 8_000)]));
+        q!(harness, t => t.matches_finish(&elsewhere, now - 5_000));
+
+        let share = |match_id: &str, sharer: &str, friend: &str, at: i64| -> ReplayShare {
+            from(json!({ "matchId": match_id, "sharer": sharer, "friend": friend, "createdAt": at }))
+        };
+        q!(harness, t => t.shares_put(&share(&over, &a.id, &d.id, now - 2_000)));
+        q!(harness, t => t.shares_put(&share(&over, &a.id, &b.id, now - 3_000)));
+        q!(harness, t => t.shares_put(&share(&over, &c.id, &b.id, now - 1_000)));
+        q!(harness, t => t.shares_put(&share(&live, &a.id, &b.id, now - 1_000)));
+        // a held no seat in `elsewhere`; the row is kept and never read.
+        q!(harness, t => t.shares_put(&share(&elsewhere, &a.id, &b.id, now - 1_000)));
+
+        assert_eq!(
+            q!(harness, t => t.shares_by(&over, &a.id)),
+            vec![b.id.clone(), d.id.clone()]
+        );
+        assert_eq!(q!(harness, t => t.shares_by(&over, &c.id)), vec![b.id.clone()]);
+        assert!(
+            q!(harness, t => t.shares_by(&over, &b.id)).is_empty(),
+            "b shared nothing"
+        );
+        assert!(
+            q!(harness, t => t.shares_by(&live, &a.id)).is_empty(),
+            "a live match"
+        );
+        assert!(
+            q!(harness, t => t.shares_by(&elsewhere, &a.id)).is_empty(),
+            "not a seat"
+        );
+
+        // Unfriended, d's share is not read; blocked, b's is not; unblocked, it is again.
+        assert!(q!(harness, t => t.friends_remove(&a.id, &d.id)));
+        assert_eq!(q!(harness, t => t.shares_by(&over, &a.id)), vec![b.id.clone()]);
+        q!(harness, t => t.blocks_add(&b.id, &a.id, now));
+        assert!(q!(harness, t => t.shares_by(&over, &a.id)).is_empty());
+        assert!(q!(harness, t => t.blocks_remove(&b.id, &a.id)));
+        assert_eq!(q!(harness, t => t.shares_by(&over, &a.id)), vec![b.id.clone()]);
+
+        q!(harness, t => t.shares_remove(&over, &a.id, &b.id));
+        assert!(q!(harness, t => t.shares_by(&over, &a.id)).is_empty());
+        assert!(q!(harness, t => t.shares_by("not-a-uuid", &a.id)).is_empty());
+    }
+
     /// B46, B52 (#936 review): an unfriend or a block deletes every share between the two, either
     /// way, and no other.
     async fn s7_shares_between_a_pair_go_together(harness: &StoreHarness) {
@@ -7831,6 +7895,7 @@ mod social {
         r1384000_chat_pages_run_in_time_then_id_order_across_a_tie,
         s7_replay_shares_are_read_while_friends_and_unblocked,
         s7_replay_shares_hide_a_match_whose_log_the_purge_took,
+        r1435000_a_sharers_shares_are_read_while_each_friend_may_read_them,
         s7_a_deleted_profile_takes_its_social_rows,
         s7_presence_reads_many_profiles_at_once,
         s7_shares_between_a_pair_go_together,

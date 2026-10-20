@@ -24,13 +24,15 @@ const BOB: Friend = { profileId: "f-bob", username: "Bob#3", status: "offline", 
 
 const SHARES = "/api/replays/m-done/shares";
 
-function serve(friends: Friend[], special?: (call: Call) => Reply | undefined): StubServer {
+/** `friends`, and `sharedWith` the ids `GET /api/replays/m-done/shares` answers (R1435000). */
+function serve(friends: Friend[], special?: (call: Call) => Reply | undefined, sharedWith: string[] = []): StubServer {
   return stubServer((call) => {
     const answer = special?.(call);
     if (answer !== undefined) return answer;
     if (call.method === "GET" && call.path === "/api/friends") {
       return { status: 200, body: { friends, incoming: [], outgoing: [], blocked: [] } };
     }
+    if (call.method === "GET" && call.path === SHARES) return { status: 200, body: { friendIds: sharedWith } };
     if (call.method === "POST" && call.path === SHARES) return { status: 204 };
     if (call.method === "DELETE" && call.path.startsWith(`${SHARES}/`)) return { status: 204 };
     return undefined;
@@ -69,6 +71,7 @@ describe("B52 sharing a replay with a friend", () => {
     expect(screen.getByTestId("share-friend-open").getAttribute("aria-expanded")).toBe("false");
     expect(screen.queryAllByTestId("share-friend-option")).toHaveLength(0);
     expect(server.to("GET", "/api/friends")).toHaveLength(0);
+    expect(server.to("GET", SHARES)).toHaveLength(0);
   });
 
   it("B52 lists one Share per friend once opened", async () => {
@@ -116,5 +119,34 @@ describe("B52 sharing a replay with a friend", () => {
     expect(await screen.findByTestId("share-friend-error", undefined, SLOW)).toHaveTextContent(words);
     expect(screen.queryByTestId("share-friend-unshare")).toBeNull();
     expect(must(screen.getAllByTestId("share-friend-option")[0], "Ann's Share").getAttribute("data-shared")).toBe("false");
+  });
+});
+
+describe("R1435000 the panel reads who the replay is already shared with", () => {
+  it("R1435000 a friend it was shared with on an earlier visit is shown shared, and Stop sharing takes it back", async () => {
+    const server = serve([ANN, BOB], undefined, ["f-bob"]);
+    await opened();
+    expect(server.to("GET", SHARES)).toHaveLength(1);
+    expect(screen.getAllByTestId("share-friend-option").map((option) => option.getAttribute("data-profile-id"))).toEqual(["f-ann"]);
+    const unshare = screen.getByTestId("share-friend-unshare");
+    expect(unshare.getAttribute("data-profile-id")).toBe("f-bob");
+    expect(unshare.getAttribute("data-shared")).toBe("true");
+
+    fireEvent.click(unshare);
+    await waitFor(() => {
+      expect(screen.queryByTestId("share-friend-unshare")).toBeNull();
+    }, SLOW);
+    expect(server.to("DELETE", `${SHARES}/f-bob`)).toHaveLength(1);
+    expect(server.to("POST", SHARES)).toHaveLength(0);
+  });
+
+  it("R1435000 a refused read of the shares shows the server's words and offers no Share", async () => {
+    const words = "no such replay or friend";
+    serve([ANN], (call) => (call.method === "GET" && call.path === SHARES ? refusal(404, "not_found", words) : undefined));
+    render(<ShareWithFriend matchId="m-done" />);
+    fireEvent.click(screen.getByTestId("share-friend-open"));
+    expect(await screen.findByTestId("share-friend-error", undefined, SLOW)).toHaveTextContent(words);
+    expect(screen.queryAllByTestId("share-friend-option")).toHaveLength(0);
+    expect(screen.queryByTestId("share-friend-unshare")).toBeNull();
   });
 });

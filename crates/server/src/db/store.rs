@@ -2992,5 +2992,11 @@ impl Tx<'_> {
     pub async fn shares_for(&mut self, friend: &str) -> StoreResult<Vec<SharedReplayRow>> {
         dispatch!(self, shares_for(friend))
     }
+
+    /// R1435000: the friends `sharer` shared the finished match `match_id` with who may still read
+    /// it (as `shares_sharers` judges each), first shared first.
+    pub async fn shares_by(&mut self, match_id: &str, sharer: &str) -> StoreResult<Vec<String>> {
+        dispatch!(self, shares_by(match_id, sharer))
+    }
 }
 // ---- end Social: watching and shared replays ----
