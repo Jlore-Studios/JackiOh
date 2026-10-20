@@ -7076,7 +7076,9 @@
     },
     "1381": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6283166731"
+      ],
       "difficulty_by": {
         "at": "2026-10-20T04:38:47Z",
         "difficulty": "medium",
@@ -7109,9 +7111,7 @@
       "started_at": "2026-10-20T04:16:16Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6283166731"
-      ]
+      "taken_asks": []
     },
     "1383": {
       "action": "review",
