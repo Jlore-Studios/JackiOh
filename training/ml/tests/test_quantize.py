@@ -73,3 +73,11 @@ def test_a_rare_features_weight_past_every_shift_is_clipped_not_refused():
     assert all(-32768 <= w <= 32767 for w in net["denseIn"] + net["sparseIn"])
     assert 32767 in net["denseIn"]
     assert Q.clipped(E.random_network(FIXTURE, 7)) == 0
+
+
+def test_a_won_or_lost_positions_logit_in_the_tens_of_thousands_has_the_clipped_loss():
+    # The hand eval's lethal constants put such a logit far past what math.exp takes (#466).
+    assert Q.log_loss(-5000.0, 0.0) == Q.log_loss(-20.0, 0.0)
+    assert Q.log_loss(-5000.0, 1.0) == -math.log(1e-7)
+    assert Q.log_loss(5000.0, 1.0) == Q.log_loss(20.0, 1.0)
+    assert abs(Q.log_loss(0.0, 1.0) - math.log(2)) < 1e-12
