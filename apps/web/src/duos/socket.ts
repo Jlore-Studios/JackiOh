@@ -2,11 +2,11 @@
 // 1v1 match. CLAUDE.md rule 7: it sends intent (a `DuosActionBody`, a ping) and keeps what the server
 // pushed — the seat's `DuosView` and its `legal` list, never computed here — for the board to render.
 //
-// The handshake is `/ws/match`'s (auth as `/ws/match`, S6): the token and the match id ride in the
-// query string, since a browser cannot set a socket's headers, and `hello` asks for a fresh view. The
-// token is the gate's, given through `setToken` as `game/net.ts` takes it (the tab's session until one
-// is given, `net/session.ts`), so a reconnect after a renewal carries the new one, and a 4401 is final
-// only for the token it refused (R1115000).
+// The handshake is `/ws/match`'s (auth as `/ws/match`, S6): the match id rides in the query string
+// and the token is offered as a subprotocol (R1379000), never in the address, and `hello` asks for a
+// fresh view. The token is the gate's, given through `setToken` as `game/net.ts` takes it (the tab's
+// session until one is given, `net/session.ts`), so a reconnect after a renewal carries the new one,
+// and a 4401 is final only for the token it refused (R1115000).
 //
 // A drop reconnects with `game/net.ts`'s backoff and jitter (R1441); a refusal (4401/4403/4404) and
 // a voided match (4410) do not. A woken page (the tab turned visible, the network came back) asks a
@@ -42,6 +42,7 @@ import {
 import { matchSocketUrl, serverSocketUrl } from "../net/api.ts";
 import type { PingKind, PingTarget, ReceivedPing } from "../net/duos.ts";
 import { readSession } from "../net/session.ts";
+import { socketProtocols } from "../net/socketProtocols.ts";
 import { DUOS_PINGS_KEPT } from "./config.ts";
 import { isDuosSeat, isPingKind, parsePingTarget } from "./pings.ts";
 
@@ -206,8 +207,8 @@ const INITIAL: DuosSnapshot = {
   pings: [],
 };
 
-function browserSocket(url: string): SocketLike {
-  return new WebSocket(url) as unknown as SocketLike;
+function browserSocket(url: string, protocols: string[]): SocketLike {
+  return new WebSocket(url, protocols) as unknown as SocketLike;
 }
 
 function defaultMonotonic(): number {
@@ -258,10 +259,6 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
   function patch(next: Partial<DuosSnapshot>): void {
     snapshot = { ...snapshot, ...next };
     for (const listener of [...listeners]) listener();
-  }
-
-  function urlWith(token: string): string {
-    return socketUrlFor(base, token, options.matchId);
   }
 
   /** The pings still worth marking, plus `ping`, at most DUOS_PINGS_KEPT. */
@@ -351,7 +348,7 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
     }
     let created: SocketLike;
     try {
-      created = factory(urlWith(token));
+      created = factory(socketUrlFor(base, options.matchId), socketProtocols(token));
     } catch (cause) {
       patch({
         connection: "reconnecting",

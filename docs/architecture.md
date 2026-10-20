@@ -67,7 +67,7 @@ SPEC §9.1, restated as channels rather than domains:
 | Browser → Data API | publishable key + the user's JWT | **reads only**: own profile row, own collection, own decks and trios, own custom cards, own tickets, own results, own tutorial progress, the `cards` projection |
 | Browser → server HTTP | the user's JWT as `Authorization: Bearer` | intent: "redeem this code", "save this deck", "enqueue Conquest with this trio", "pick this deck for game 2", "import this trio", "create a room", "join ABC234", "merge this device's tutorial progress" |
 | Browser → server HTTP, no token | none | a sign-in by username: the server passes the password to Supabase Auth with the account's address, which never comes back (R1443) |
-| Browser → server WebSocket | the user's JWT in the `hello` frame | intent: one `Action` at a time; receives `viewFor` and nothing else |
+| Browser → server WebSocket | the user's JWT, offered as the `jackioh.bearer.` subprotocol (R1379000) | intent: one `Action` at a time; receives `viewFor` and nothing else |
 | Browser → server WebSocket `/ws/duos` | the user's JWT, as `/ws/match` | intent: one `DuosActionBody` at a time, and team pings; receives its seat's Duos view with its legal actions, and its teammate's pings (SPEC §13.6, §13.10) |
 | Browser → server WebSocket `/ws/watch` | the user's JWT, as `/ws/match` | a `hello` naming a friend's match; receives the friend's seat's `viewFor`, `SPECTATE_DELAY_MS` late, and nothing it sends after `hello` is read (SPEC §9.5) |
 

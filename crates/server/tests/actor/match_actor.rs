@@ -54,7 +54,7 @@ use jackioh_engine::{
     Phase, PlayerId, Winner, deal_emote_hand, emote_gate, opponent_of,
 };
 use jackioh_server::actor::match_actor::MatchActor;
-use jackioh_server::actor::ws_server::{Socket, WS_CLOSE, WS_PATH};
+use jackioh_server::actor::ws_server::{Socket, WS_CLOSE, WS_PATH, WS_SUBPROTOCOL, bearer_protocol};
 use jackioh_server::app::{App, router};
 use jackioh_server::config::{
     DISCONNECT_GRACE_SECONDS, MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MINUTES,
@@ -4140,18 +4140,25 @@ struct WsClient {
 const WS_WAIT: Duration = Duration::from_secs(10);
 
 impl WsClient {
-    /// Opens `path_and_query` with the upgrade a browser sends. `Err` carries a refused handshake's
-    /// HTTP status.
-    async fn connect(addr: SocketAddr, path_and_query: &str) -> Result<WsClient, u16> {
+    /// Opens `path_and_query` with the upgrade a browser sends, `token` offered as a subprotocol
+    /// beside `jackioh.v1` (R1379000). `Err` carries a refused handshake's HTTP status.
+    async fn connect(addr: SocketAddr, path_and_query: &str, token: Option<&str>) -> Result<WsClient, u16> {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
         let mut stream = tokio::net::TcpStream::connect(addr)
             .await
             .expect("the test server listens");
-        let request = format!(
+        let mut request = format!(
             "GET {path_and_query} HTTP/1.1\r\nHost: {addr}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\
-             Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n"
+             Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n"
         );
+        if let Some(token) = token {
+            request.push_str(&format!(
+                "Sec-WebSocket-Protocol: {WS_SUBPROTOCOL}, {}\r\n",
+                bearer_protocol(token)
+            ));
+        }
+        request.push_str("\r\n");
         stream
             .write_all(request.as_bytes())
             .await
@@ -4500,7 +4507,8 @@ mod the_ws_adapter {
         live_fixture_match(&server.app, MATCH_ID).await;
         let mut ws = WsClient::connect(
             server.addr,
-            &format!("{WS_PATH}?token=e2e-token-p1&matchId={MATCH_ID}"),
+            &format!("{WS_PATH}?matchId={MATCH_ID}"),
+            Some("e2e-token-p1"),
         )
         .await
         .expect("the upgrade is accepted");
@@ -4543,7 +4551,8 @@ mod the_ws_adapter {
 
         let mut refused = WsClient::connect(
             server.addr,
-            &format!("{WS_PATH}?token=e2e-token-p1&matchId={MATCH_ID}"),
+            &format!("{WS_PATH}?matchId={MATCH_ID}"),
+            Some("e2e-token-p1"),
         )
         .await
         .expect("the upgrade happens before the checks");
@@ -4551,7 +4560,7 @@ mod the_ws_adapter {
         assert_eq!(refused_code.map(i64::from), Some(code(WS_CLOSE.forbidden)));
         assert!(!server.app.matches.has(MATCH_ID));
 
-        let mut anonymous = WsClient::connect(server.addr, WS_PATH)
+        let mut anonymous = WsClient::connect(server.addr, WS_PATH, None)
             .await
             .expect("the upgrade happens");
         let (anonymous_texts, anonymous_code) = anonymous.until_close().await;
@@ -4575,7 +4584,8 @@ mod the_ws_adapter {
         assert_eq!(first, profile);
         let mut accepted = WsClient::connect(
             server.addr,
-            &format!("{WS_PATH}?matchId={MATCH_ID}&token=e2e-token-p1"),
+            &format!("{WS_PATH}?matchId={MATCH_ID}"),
+            Some("e2e-token-p1"),
         )
         .await
         .expect("the upgrade is accepted");
@@ -4598,7 +4608,8 @@ mod the_ws_adapter {
 
         let mut ws = WsClient::connect(
             server.addr,
-            &format!("{WS_PATH}?token=e2e-token-pending&matchId={MATCH_ID}"),
+            &format!("{WS_PATH}?matchId={MATCH_ID}"),
+            Some("e2e-token-pending"),
         )
         .await
         .expect("the upgrade happens before the checks");
