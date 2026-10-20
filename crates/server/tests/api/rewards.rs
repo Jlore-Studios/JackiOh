@@ -29,13 +29,13 @@ use jackioh_server::config::{
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, MatchActionRow, MatchRow, MatchSeat, ResultRow, StoreError};
 use jackioh_server::economy::math::total_xp_for_level;
-use jackioh_server::economy::rewards::{game_xp, track_level};
+use jackioh_server::economy::rewards::{GameMode, track_level};
 use jackioh_server::economy::store::{
     EconomyLedger, EconomyReason, InventoryEntry, InventoryItem, JloreReason, SetTrack, TrackGrant,
 };
 use jackioh_server::economy::track_rewards::reward_for_level;
 
-use crate::support::deps::{add_user, call, test_app};
+use crate::support::deps::{add_user, call, test_app as built_app};
 use crate::support::engine::{fake_deck, install_test_cards};
 
 const MINUTE: i64 = 60 * 1000;
@@ -46,6 +46,21 @@ const MATCH_2: &str = "match-2";
 const MATCH_3: &str = "match-3";
 const A: &str = "profile-a";
 const B: &str = "profile-b";
+
+/// A ladder game's XP, the hook's own math.
+fn game_xp(actions: i64, won: bool) -> i64 {
+    jackioh_server::economy::rewards::game_xp(GameMode::Ladder, actions, won)
+}
+
+/// The test app with the economy on (§14.12): `ECONOMY_LIVE` is off in the build, so every test
+/// of a payout turns it on for its own app.
+async fn test_app() -> Arc<App> {
+    let mut app = built_app().await;
+    Arc::get_mut(&mut app)
+        .expect("the test app has no second handle yet")
+        .economy_live = true;
+    app
+}
 
 /// Every store call in this file: one transaction, committed when the call answers.
 macro_rules! store {
@@ -927,6 +942,30 @@ mod no_payout {
         .expect("the match is voided");
         assert_paid_nothing(&app).await;
         assert_eq!(table(&app, |data| j(&data.tables.results)).await, json!([]));
+    }
+
+    #[tokio::test]
+    async fn r1302006_nothing_is_paid_while_the_economy_is_off() {
+        install_test_cards();
+        // The build's own app: `ECONOMY_LIVE` is off (§14.12), as in production until launch.
+        let app = built_app().await;
+        assert!(!app.economy_live);
+        fresh_store(&app).await;
+        seed_profile(&app, json!({ "id": A, "rating": 1000.0, "inMatchId": MATCH_ID })).await;
+        seed_profile(&app, json!({ "id": B, "rating": 1000.0, "inMatchId": MATCH_ID })).await;
+        create_match(&app, MATCH_ID, true, false).await;
+        append_log_to(&app, MATCH_ID, &actions_of("p1", 30)).await;
+        let outcome = play(&[json!({ "type": "play", "card": "test-lethal", "playerId": "p1" })]);
+        record_on(&app, MATCH_ID, outcome).await;
+
+        assert_paid_nothing(&app).await;
+        assert_eq!(
+            table(&app, |data| j(&data.tables.results))
+                .await
+                .as_array()
+                .map(Vec::len),
+            Some(1)
+        );
     }
 
     #[tokio::test]

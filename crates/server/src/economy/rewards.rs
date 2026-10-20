@@ -10,14 +10,20 @@
 //!   and pays in the transaction that records the result; the client reports nothing. The caller
 //!   is `api::results`'s write, gated on a ranked non-series match there. An action counts when
 //!   [`is_player_action`] says the player took it ([[R1302004]]): every caller counts with it.
-//! - Jlore is [`game_jlore`]: `JLORE_LADDER_WIN` for a win, `JLORE_LADDER_LOSS` otherwise.
+//! - The summary names its [`GameMode`]. Jlore is [`game_jlore`]: on the ladder `JLORE_LADDER_WIN`
+//!   for a win and `JLORE_LADDER_LOSS` otherwise, in practice `JLORE_PRACTICE_WIN` and
+//!   `JLORE_PRACTICE_LOSS`.
 //! - XP is [`game_xp`]: `XP_PER_ACTION` for each counted action, `XP_WIN_BONUS` more for a win,
-//!   never above `XP_GAME_CAP`, so a loop of empty actions cannot farm it. It goes to every
+//!   never above `XP_GAME_CAP`, so a loop of empty actions cannot farm it; a practice game earns
+//!   that times `XP_PRACTICE_SCALE`, rounded down. It goes to every
 //!   active track, each gaining all of it; the newest set's track is active from the start, and
 //!   an older set's once it unlocks, one at a time, once the newest reaches
 //!   `SET_TRACK_UNLOCK_LEVEL` ([[R1302003]]). A level pays its [`reward_for_level`](super::track_rewards::reward_for_level)
 //!   once, as ledger rows, when its track reaches it; a track's last level is
 //!   `SET_TRACK_LEVELS`, and XP past it lands but reaches no level ([`track_level`], [[R1302005]]).
+//!
+//! Nothing here checks `ECONOMY_LIVE` (§14.12): a caller pays only while it is on, so a build
+//! behind the switch changes nothing a player owns. `api::results` is that caller on the ladder.
 //!
 //! Every number is read through its [`crate::config`] constant (CLAUDE.md rule 9).
 
@@ -28,13 +34,24 @@ use super::math::level_for_xp;
 use super::store::{EconomyReason, InventoryGrant, InventoryItem, JloreGrant, JloreReason, TrackGrant};
 use super::track_rewards::reward_for_level;
 use crate::config::{
-    JLORE_LADDER_LOSS, JLORE_LADDER_WIN, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL,
-    XP_GAME_CAP, XP_PER_ACTION, XP_WIN_BONUS,
+    JLORE_LADDER_LOSS, JLORE_LADDER_WIN, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, SET_TRACK_FIRST_LEVEL,
+    SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL, XP_GAME_CAP, XP_PER_ACTION, XP_PRACTICE_SCALE, XP_WIN_BONUS,
 };
 use crate::db::store::{StoreResult, Tx};
 
+/// Which kind of game finished, so the hook pays its rates (SPEC §14.8).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GameMode {
+    /// A ranked match that is not a game of a Conquest series.
+    Ladder,
+    /// A game against the AI in the browser, its log checked by the server (§9.9).
+    Practice,
+}
+
 /// A finished game's summary, as the reward hook takes it (SPEC §14.8).
 pub struct GameSummary {
+    /// The kind of game, which sets the rates.
+    pub mode: GameMode,
     /// Whose account is paid.
     pub profile_id: String,
     /// Which seat they played.
@@ -86,22 +103,28 @@ pub fn track_level(total_xp: i64) -> i64 {
 }
 
 /// A game's XP (SPEC §14.8): `XP_PER_ACTION` for each action taken, `XP_WIN_BONUS` more for a
-/// win, the total never above `XP_GAME_CAP`.
-pub fn game_xp(actions: i64, won: bool) -> i64 {
+/// win, the total never above `XP_GAME_CAP`; a practice game earns that times `XP_PRACTICE_SCALE`,
+/// rounded down.
+pub fn game_xp(mode: GameMode, actions: i64, won: bool) -> i64 {
     let bonus = if won { i64::from(XP_WIN_BONUS) } else { 0 };
-    i64::from(XP_PER_ACTION)
+    let ladder = i64::from(XP_PER_ACTION)
         .saturating_mul(actions)
         .saturating_add(bonus)
-        .min(i64::from(XP_GAME_CAP))
+        .min(i64::from(XP_GAME_CAP));
+    match mode {
+        GameMode::Ladder => ladder,
+        GameMode::Practice => (ladder as f64 * XP_PRACTICE_SCALE).floor() as i64,
+    }
 }
 
-/// A ladder game's Jlore (SPEC §14.8): `JLORE_LADDER_WIN` for a win, `JLORE_LADDER_LOSS` for a
-/// loss and for a draw ([[R1302000]]).
-pub fn game_jlore(won: Option<bool>) -> i32 {
-    if won == Some(true) {
-        JLORE_LADDER_WIN
-    } else {
-        JLORE_LADDER_LOSS
+/// A game's Jlore (SPEC §14.8): the mode's win rate for a win, its loss rate for a loss and for
+/// a draw ([[R1302000]]).
+pub fn game_jlore(mode: GameMode, won: Option<bool>) -> i32 {
+    match (mode, won == Some(true)) {
+        (GameMode::Ladder, true) => JLORE_LADDER_WIN,
+        (GameMode::Ladder, false) => JLORE_LADDER_LOSS,
+        (GameMode::Practice, true) => JLORE_PRACTICE_WIN,
+        (GameMode::Practice, false) => JLORE_PRACTICE_LOSS,
     }
 }
 
@@ -112,7 +135,7 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
     if summary.bot {
         return Ok(());
     }
-    let jlore = i64::from(game_jlore(summary.won));
+    let jlore = i64::from(game_jlore(summary.mode, summary.won));
     if jlore != 0 {
         tx.economy_jlore_grant(&JloreGrant {
             profile_id: summary.profile_id.clone(),
@@ -124,7 +147,7 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
         })
         .await?;
     }
-    let xp = game_xp(summary.actions, summary.won == Some(true));
+    let xp = game_xp(summary.mode, summary.actions, summary.won == Some(true));
     if xp <= 0 {
         return Ok(());
     }
@@ -299,31 +322,53 @@ mod tests {
 
     #[test]
     fn xp_counts_actions_and_stops_at_the_cap() {
-        assert_eq!(game_xp(10, false), 10 * i64::from(XP_PER_ACTION));
         assert_eq!(
-            game_xp(10, true),
+            game_xp(GameMode::Ladder, 10, false),
+            10 * i64::from(XP_PER_ACTION)
+        );
+        assert_eq!(
+            game_xp(GameMode::Ladder, 10, true),
             10 * i64::from(XP_PER_ACTION) + i64::from(XP_WIN_BONUS)
         );
-        assert_eq!(game_xp(i64::from(XP_GAME_CAP), true), i64::from(XP_GAME_CAP));
-        assert_eq!(game_xp(i64::MAX / 2, true), i64::from(XP_GAME_CAP));
+        assert_eq!(
+            game_xp(GameMode::Ladder, i64::from(XP_GAME_CAP), true),
+            i64::from(XP_GAME_CAP)
+        );
+        assert_eq!(
+            game_xp(GameMode::Ladder, i64::MAX / 2, true),
+            i64::from(XP_GAME_CAP)
+        );
+    }
+
+    #[test]
+    fn r1302007_practice_xp_is_the_ladders_times_the_scale_rounded_down() {
+        assert_eq!(game_jlore(GameMode::Practice, Some(true)), JLORE_PRACTICE_WIN);
+        assert_eq!(game_jlore(GameMode::Practice, Some(false)), JLORE_PRACTICE_LOSS);
+        assert_eq!(game_jlore(GameMode::Practice, None), JLORE_PRACTICE_LOSS);
+        for (actions, won) in [(0, true), (3, false), (7, true), (i64::MAX, true)] {
+            let ladder = game_xp(GameMode::Ladder, actions, won);
+            let practice = game_xp(GameMode::Practice, actions, won);
+            assert_eq!(practice, (ladder as f64 * XP_PRACTICE_SCALE).floor() as i64);
+            assert!(practice <= ladder);
+        }
     }
 
     #[test]
     fn jlore_pays_the_win_rate_only_for_a_win() {
-        assert_eq!(game_jlore(Some(true)), JLORE_LADDER_WIN);
-        assert_eq!(game_jlore(Some(false)), JLORE_LADDER_LOSS);
-        assert_eq!(game_jlore(None), JLORE_LADDER_LOSS);
+        assert_eq!(game_jlore(GameMode::Ladder, Some(true)), JLORE_LADDER_WIN);
+        assert_eq!(game_jlore(GameMode::Ladder, Some(false)), JLORE_LADDER_LOSS);
+        assert_eq!(game_jlore(GameMode::Ladder, None), JLORE_LADDER_LOSS);
     }
 
     #[test]
     fn the_win_bonus_and_the_cap_shape_the_payout() {
         // #1333 sets every value at the end; this only pins the shape the description states, as
         // behaviour: a win pays more than a loss even with no actions, and the cap binds.
-        assert_eq!(game_xp(0, true), i64::from(XP_WIN_BONUS));
-        assert_eq!(game_xp(0, false), 0);
-        assert!(game_xp(0, true) > game_xp(0, false));
-        assert_eq!(game_xp(i64::MAX, false), i64::from(XP_GAME_CAP));
-        assert_eq!(game_xp(i64::MAX, true), i64::from(XP_GAME_CAP));
+        assert_eq!(game_xp(GameMode::Ladder, 0, true), i64::from(XP_WIN_BONUS));
+        assert_eq!(game_xp(GameMode::Ladder, 0, false), 0);
+        assert!(game_xp(GameMode::Ladder, 0, true) > game_xp(GameMode::Ladder, 0, false));
+        assert_eq!(game_xp(GameMode::Ladder, i64::MAX, false), i64::from(XP_GAME_CAP));
+        assert_eq!(game_xp(GameMode::Ladder, i64::MAX, true), i64::from(XP_GAME_CAP));
     }
 
     #[test]
@@ -331,6 +376,7 @@ mod tests {
         // The hook's input shape, as the parallel practice and quest callers construct it: whose
         // account, which seat's actions were counted, the result, and what to stamp the rows with.
         let summary = GameSummary {
+            mode: GameMode::Ladder,
             profile_id: "profile-a".to_string(),
             player: PlayerId::P1,
             won: Some(true),
@@ -341,9 +387,9 @@ mod tests {
         };
         assert_eq!(summary.player, PlayerId::P1);
         assert_eq!(summary.won, Some(true));
-        assert_eq!(game_jlore(summary.won), JLORE_LADDER_WIN);
+        assert_eq!(game_jlore(summary.mode, summary.won), JLORE_LADDER_WIN);
         assert_eq!(
-            game_xp(summary.actions, summary.won == Some(true)),
+            game_xp(summary.mode, summary.actions, summary.won == Some(true)),
             10 * i64::from(XP_PER_ACTION) + i64::from(XP_WIN_BONUS)
         );
     }

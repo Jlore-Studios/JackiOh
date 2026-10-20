@@ -54,7 +54,7 @@ use crate::db::store::{
     LastBoardKind, MatchRow, MatchSeat, Profile, ProfileKind, RatedGameKind, RatedReason, ResultRow,
     SeriesRow, SeriesStatus, StoreError, Tx,
 };
-use crate::economy::rewards::{GameSummary, is_player_action, pay_game_rewards};
+use crate::economy::rewards::{GameMode, GameSummary, is_player_action, pay_game_rewards};
 
 /// A failure this file reports to its caller (the actor, the reaper): TS rethrew the error itself,
 /// so the sentence is the error's own.
@@ -297,8 +297,9 @@ async fn write_once(
     // paid for series games, room challenges, voided matches (that path never reaches here), or
     // bot sides ([[R1454]]). The server ran the match, so it counts each seat's actions from its
     // own log, the moves that seat took and not the server's own rows ([[R1302004]]); the client
-    // reports nothing.
-    if series.is_none() && ranked_match {
+    // reports nothing. Nothing is paid while `ECONOMY_LIVE` is off (§14.12, [[R1302006]]): the
+    // economy is built behind it, and a ledger row is never deleted.
+    if app.economy_live && series.is_none() && ranked_match {
         let log = tx.matches_actions(&input.match_id).await.map_err(failed)?;
         let winner_side = winner_side_of(&input.outcome, &input.seats);
         for (index, seat) in [seat_a, seat_b].into_iter().enumerate() {
@@ -315,6 +316,7 @@ async fn write_once(
             pay_game_rewards(
                 tx,
                 &GameSummary {
+                    mode: GameMode::Ladder,
                     profile_id: seat.profile_id.clone(),
                     player: seat.player,
                     won: winner_side.map(|side| side == index),

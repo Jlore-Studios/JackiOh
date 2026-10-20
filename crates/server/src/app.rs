@@ -81,6 +81,9 @@ pub struct App {
     /// A match its own log does not reproduce, logged and filed for the night bot
     /// (`bug_reports.rs`): GitHub with `CREATE_ISSUES_TOKEN`, a record in a test's app.
     pub bug_reports: crate::bug_reports::BugReports,
+    /// §14.12: whether the economy pays out, `config::ECONOMY_LIVE` at boot. A field so a test can
+    /// turn it on; nothing else sets it.
+    pub economy_live: bool,
 }
 
 // ---------------------------------------------------------------------------
@@ -798,6 +801,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         social: crate::social::Social::default(),
         engine_thread: actor::engine::registered_thread,
         bug_reports,
+        economy_live: crate::config::ECONOMY_LIVE,
     });
 
     if app.env.e2e {

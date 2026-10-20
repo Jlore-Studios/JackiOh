@@ -2191,3 +2191,6 @@ pub const QUEST_XP_PER_JLORE: i32 = 1;
 
 /// §14.7: the level a set track starts at, with no XP (migration 0045's `set_tracks.level` default).
 pub const SET_TRACK_FIRST_LEVEL: i64 = 1;
+/// §14.12: the server's switch for the economy, off until the going-live sub-issue (#1310) turns it
+/// on; until then no finished game pays (R1302006).
+pub const ECONOMY_LIVE: bool = false;
