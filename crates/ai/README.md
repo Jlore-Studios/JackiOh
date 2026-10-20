@@ -80,6 +80,12 @@ included. A step whose `reduce` does far more work than most is charged extra no
 card holding either, and a play the other side's Pareto Optimality judges, per card held; #1240),
 and once a step has run, for each such card it cast without playing it, from a graveyard or at random
 (`announced_surcharge_nodes`, read off its `cardAnnounced` events; #1347).
+A prompt answered ahead inside a simulation (`best_auto_answer`: the other seat's in a step, the
+reply's, and the beam's look past the seat's own; #891, #1112) tries at most
+`AI_SEARCH.max_auto_answer_options` answers, one node each: all of them, in `action_key` order, when
+there are no more, and otherwise that many drawn from the whole set on a stream of the world's seed
+and the prompt's id (`AI_SEARCH.auto_answer_seed`; #1382), so neither a late place in the list nor
+its order keeps an answer from being tried.
 Every simulated step goes through `reduce_unpiloted`, which leaves a turn the autopilot owes
 (Cognitive Offloading, R1183002) owed instead of playing it by §10.7's scorer inside the step: a line
 that hands a turn over is scored where that turn begins (#1337).
@@ -267,14 +273,18 @@ and any human seat the server hands it after a disconnect (§13.8).
 
 ```rust
 pub fn duos_decide(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosActionBody>;
+pub fn duos_decision(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosDecision>;   // { body, fallback }
 pub fn duos_passes(state: &DuosState, seat: DuosSeat) -> Vec<String>;
-pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins, draws, rejected }
+pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins, draws, rejected, fallbacks }
 ```
 
 - `duos_decide` is `decide` on the seat's own duel: its mulligan and its prompts as a 1v1 seat answers
   them, and its own turn by the same search. When `decide` would end the turn, it first sends the
   passes `duos_passes` names, one action at a time, then the `endTurn`. `None` when the seat owes
   nothing. The same state and options give the same action.
+- `duos_decision` is `duos_decide` with where its action came from: `fallback` is true when the
+  wrapper's own fallback picked it (`decide` answered nothing the seat may send) or `decide` itself
+  fell back (`DecisionReason::Fallback`).
 - `duos_passes` names the hand cards to pass now, best first: a card the seat cannot play this turn
   and its teammate can (a round seat that has not ended, can afford it and has a zone for it), when
   the seat can pay the pass; with `pass_cost` 0 also a card the teammate can afford next turn and the
@@ -294,7 +304,8 @@ pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins
   never concedes (R188), so it neither offers nor confirms a team's concede.
 - `duos_gate` plays the Easy AI team against a team on §10.7's random policy; it passes at
   `DUOS_GATE_WIN_FLOOR` (0.8) of `DUOS_GATE_GAMES_SMOKE` (20) games with no action of either team
-  refused (`cargo jackioh gate --duos`).
+  refused and no AI action off a fallback path (`cargo jackioh gate --duos`); `duos_gate_game_at`
+  plays a game at another budget.
 
 ## Commands
 

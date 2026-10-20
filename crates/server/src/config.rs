@@ -647,8 +647,9 @@ pub const BUG_REPORT_API_URL: &str = "https://api.github.com";
 /// bot/README.md), the strong tier (CLAUDE.md rule 11: the server and the engine are hard) and the
 /// front of the queue, since a match that does not rebuild is a broken game.
 pub const BUG_REPORT_LABELS: &[&str] = &["patch", "bot:build", "difficulty:hard", "priority:high"];
-/// How many reports one process files in `BUG_REPORT_WINDOW_MS`. A determinism break shows on every
-/// match a deploy rebuilds, so the first few say it and the rest are only logged.
+/// How many issues one process opens in `BUG_REPORT_WINDOW_MS`, one per failure signature
+/// (`bug_reports::Signature`). A determinism break shows on every match a deploy rebuilds, and
+/// those matches share a signature and so an issue; a signature beyond this is only logged.
 pub const BUG_REPORTS_PER_WINDOW: usize = 5;
 /// The window `BUG_REPORTS_PER_WINDOW` counts in: an hour.
 pub const BUG_REPORT_WINDOW_MS: i64 = 60 * 60 * 1000;
@@ -656,6 +657,9 @@ pub const BUG_REPORT_WINDOW_MS: i64 = 60 * 60 * 1000;
 pub const BUG_REPORT_TIMEOUT_MS: u64 = 10_000;
 /// How many refused actions a report lists one by one; the rest are counted.
 pub const BUG_REPORT_LISTED_ACTIONS: usize = 10;
+/// How many matches one signature's issue lists. Each one edits the issue's body, so this bounds the
+/// edits as `BUG_REPORTS_PER_WINDOW` bounds the issues; a later match is only logged (`bug.found`).
+pub const BUG_REPORT_LISTED_MATCHES: usize = 20;
 
 // ---------------------------------------------------------------------------------------------
 // Glitch (issue #170; SPEC §7, R678, R679).
@@ -2021,9 +2025,11 @@ pub struct PackRarityRates {
     pub mythic: f64,
 }
 
-/// The shape of `PACK_UNOWNED_WEIGHTS`: how a slot's card draw weighs the cards the account
-/// owns against the ones it does not (SPEC §14.3). A card's weight is its side's number, so an
-/// unowned card is drawn `unowned / owned` times as often as an owned one of the same rarity.
+/// The shape of `PACK_UNOWNED_WEIGHTS` and `COSMETIC_PACK_CARD_WEIGHTS`: how a draw weighs the
+/// cards the account owns against the ones it does not (SPEC §14.3, §14.6). A card's weight is
+/// its side's number, so an unowned card is drawn `unowned / owned` times as often as an owned
+/// one of the same rarity in a card pack, and an owned one `owned / unowned` times as often as an
+/// unowned one in a cosmetic pack.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PackUnownedWeights {
@@ -2041,11 +2047,13 @@ pub enum CosmeticTokenStep {
     CosmeticPack,
 }
 
-/// The shape of `COSMETIC_PACK_RATES`: the odds of one cosmetic pack slot (SPEC §14.6). The
-/// four shares sum to 1, so every slot of a cosmetic pack is Rare or better.
+/// The shape of `COSMETIC_PACK_RATES` and `COSMETIC_PACK_GUARANTEED_RATES`: the chance one
+/// cosmetic pack slot rolls each rarity on the cosmetics' own scale (SPEC §14.6); the five shares
+/// sum to 1.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CosmeticPackRates {
+    pub common: f64,
     pub rare: f64,
     pub epic: f64,
     pub legendary: f64,
@@ -2123,13 +2131,28 @@ pub const COSMETIC_TOKEN_CYCLE: [CosmeticTokenStep; 6] = [
 /// SPEC §14.6: a cosmetic pack's slots. #1294's table gives no value; 3, so a cycle's
 /// Cosmetic Pack step reads as a small bonus beside a 5-slot card pack.
 pub const COSMETIC_PACK_SLOTS: usize = 3;
-/// SPEC §14.6: a cosmetic pack slot's odds. #1294's table gives no value; Rare 55%, Epic 28%,
-/// Legendary 12%, Mythic 5%, so most slots are Rare and a Mythic cosmetic stays rare.
+/// #1306: a cosmetic pack slot's odds: the same as a duplicate's cosmetic
+/// (`COSMETIC_DUPLICATE_RATES`), R1306000; #1333 brings §14 in line.
 pub const COSMETIC_PACK_RATES: CosmeticPackRates = CosmeticPackRates {
-    rare: 0.55,
-    epic: 0.28,
-    legendary: 0.12,
-    mythic: 0.05,
+    common: 0.55,
+    rare: 0.25,
+    epic: 0.15,
+    legendary: 0.045,
+    mythic: 0.005,
+};
+/// #1306: the first slot's odds, so every cosmetic pack holds an Epic or better.
+pub const COSMETIC_PACK_GUARANTEED_RATES: CosmeticPackRates = CosmeticPackRates {
+    common: 0.0,
+    rare: 0.0,
+    epic: 0.75,
+    legendary: 0.225,
+    mythic: 0.025,
+};
+/// #1306 gives no value; four to one, `PACK_UNOWNED_WEIGHTS` turned around, toward the cards the
+/// account owns.
+pub const COSMETIC_PACK_CARD_WEIGHTS: PackUnownedWeights = PackUnownedWeights {
+    owned: 4.0,
+    unowned: 1.0,
 };
 /// SPEC §14.6: the cosmetic packs that fill the Chase Shard bar. #1294's table gives no value;
 /// 20 keeps a chosen chase a long chase without outliving a set.
@@ -2172,6 +2195,11 @@ pub const XP_LADDER_TARGET_MEAN: i32 = 100;
 /// SPEC §14.8: how long a practice seed waits to be claimed, in seconds. #1294's table gives no
 /// value; an hour outlasts any game without holding seeds.
 pub const PRACTICE_SEED_TTL_SECONDS: i64 = 3600;
+/// SPEC §14.8, #1303: how many practice claims the server verifies at once, each a fold of the
+/// game's log and a re-run of every AI move off the runtime (`economy::practice`). A claim past it
+/// waits for a verification to finish, and none is dropped. #1294's table gives no value; two keep
+/// the blocking pool free for the live matches' folds.
+pub const PRACTICE_VERIFY_CONCURRENCY: usize = 2;
 /// SPEC §14.9: how often a quest arrives while fewer than `QUEST_MAX_HELD` are held, in hours.
 /// Daily quests: one a day.
 pub const QUEST_INTERVAL_HOURS: i64 = 24;
@@ -2191,3 +2219,47 @@ pub const QUEST_XP_PER_JLORE: i32 = 1;
 
 /// §14.7: the level a set track starts at, with no XP (migration 0045's `set_tracks.level` default).
 pub const SET_TRACK_FIRST_LEVEL: i64 = 1;
+/// §14.12: the server's switch for the economy, off until the going-live sub-issue (#1310) turns it
+/// on; until then no finished game pays (R1302006) and the client prints every full art as before
+/// (R1313000). Exported to `serverConfig.ts`.
+pub const ECONOMY_LIVE: bool = false;
+
+// ---- The pack roll (SPEC §14.3, #1301) ----
+// PUBLIC, like the collection economy's above: the pack screen shows these odds, so each is
+// exported to `apps/web/src/wire/serverConfig.ts` by `tests/export_config.rs`.
+
+/// The shape of `COSMETIC_DUPLICATE_RATES`: the chance a duplicate's cosmetic rolls each
+/// rarity. The five shares sum to 1.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CosmeticDuplicateRates {
+    pub common: f64,
+    pub rare: f64,
+    pub epic: f64,
+    pub legendary: f64,
+    pub mythic: f64,
+}
+
+/// #1301: the odds of the cosmetic rarity a duplicate rolls (R1301002). Its own scale, not tied
+/// to the card's rarity: #1301's owner's decision over §14.3's "of the same rarity", which #1333
+/// brings §14 in line with.
+pub const COSMETIC_DUPLICATE_RATES: CosmeticDuplicateRates = CosmeticDuplicateRates {
+    common: 0.55,
+    rare: 0.25,
+    epic: 0.15,
+    legendary: 0.045,
+    mythic: 0.005,
+};
+/// R1301000: the chance a slot that holds none of the pack's Epic, Legendary or Mythic rolls Rare
+/// rather than Common. #1294's table gives no value; 0.25, about the share of Rares among
+/// Hearthstone's non-guaranteed slots.
+pub const PACK_FILLER_RARE_RATE: f64 = 0.25;
+/// SPEC §14.3: the name a request gives the global card pack; a set's pack goes by its set's name.
+pub const GLOBAL_PACK_NAME: &str = "global";
+
+// ---- Dev accounts (SPEC §14.10, #1300) ----
+
+/// §14.10, R1300000: the environment variable that lists the dev accounts, comma-separated profile
+/// ids (`env.rs` reads it at boot, `seed-catalog` for R1300001's exemption). A name, not a number,
+/// and never exported: the client learns only whether its own caller is one (`isDev`).
+pub const DEV_PROFILE_IDS: &str = "DEV_PROFILE_IDS";

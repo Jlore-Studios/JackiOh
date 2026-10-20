@@ -415,6 +415,25 @@ mod stats_import {
         assert!(stored_ids(&db).await.is_empty());
     }
 
+    #[tokio::test]
+    async fn r1284000_refuses_a_file_with_a_forced_run_record_in_it_and_writes_none_of_it() {
+        let db = Db::fake();
+        let mixed = lines(&[
+            dev("dev:run:1", json!({})),
+            dev("dev:v0.2.5:dev-force-core-090:1", json!({})),
+        ]);
+        let refused = refusal(&db, &mixed).await;
+        assert!(refused.contains("dev:v0.2.5:dev-force-core-090:1"), "{refused}");
+        assert!(refused.contains("dev-force-core-090"), "{refused}");
+        assert!(refused.contains("R1284000"), "{refused}");
+        assert!(stored_ids(&db).await.is_empty());
+        // A mistyped patch cannot hide a forced series: the id alone decides.
+        let spoofed = lines(&[dev("dev:v0.2.5:dev-force-core-090:2", json!({"patch": "v9.9.9"}))]);
+        let refused = refusal(&db, &spoofed).await;
+        assert!(refused.contains("dev-force-core-090"), "{refused}");
+        assert!(stored_ids(&db).await.is_empty());
+    }
+
     #[test]
     fn reads_a_relative_path_from_the_directory_the_command_was_started_in_where_ai_stats_out_wrote_it() {
         // pnpm ran the TS script in apps/server and passed the caller's directory as INIT_CWD.

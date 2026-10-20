@@ -12,7 +12,7 @@
 // is `{ error: { code, message, details? } }` from `crates/server/src/api/http.rs`.
 
 import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
-import type { CardDefs, GameOverReason, LeanPick, PlayerId, PortraitId } from "@jackioh/shared";
+import type { GameOverReason, LeanPick, PlayerId, PortraitId, PrintedRarity, SetName } from "@jackioh/shared";
 
 import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
@@ -224,6 +224,11 @@ export type MeResponse = {
    * before R897000 (or a test stub) omits it; missing never ends a wait.
    */
   queued?: boolean;
+  /**
+   * R1300000: whether the server's `DEV_PROFILE_IDS` lists this account, so `/account` shows the
+   * Dev tools panel. The server checks the list again on every dev route. Missing: not a dev account.
+   */
+  isDev?: boolean;
 };
 
 /** The caller's own username, as `/api/auth/me` and every username route answer with it (R1435). */
@@ -340,6 +345,52 @@ export async function deleteAccount(token: string): Promise<void> {
   await apiRequest<null>("/api/account", { method: "DELETE", token });
 }
 
+// ---------------------------------------------------------------------------------------------
+// The dev tools (SPEC §14.10, R1300000): a dev account's own economy, which the server alone
+// changes. Each answers 403 `forbidden` to an account `DEV_PROFILE_IDS` does not list, and 400 to
+// an amount that is not a positive whole number; the client sends what was typed and shows that.
+// ---------------------------------------------------------------------------------------------
+
+/** What `POST /api/dev/clear/:part` clears: one holding, or all five. */
+export type DevClearPart = "cards" | "cosmetics" | "jlore" | "counters" | "tracks" | "everything";
+
+/** A set track as the server holds it (SPEC §14.7). */
+export type DevSetTrack = { setId: string; xp: number; level: number; rewardsClaimed: number };
+
+/** `POST /api/dev/xp`: XP to a shipped set's track, through the level curve. */
+export function devGiveXp(token: string, setId: SetName, xp: number): Promise<{ track: DevSetTrack }> {
+  return apiRequest<{ track: DevSetTrack }>("/api/dev/xp", { method: "POST", token, body: { setId, xp } });
+}
+
+/** `POST /api/dev/jlore`: Jlore, answering the new balance. */
+export function devGiveJlore(token: string, jlore: number): Promise<{ jlore: number }> {
+  return apiRequest<{ jlore: number }>("/api/dev/jlore", { method: "POST", token, body: { jlore } });
+}
+
+/** `POST /api/dev/fill`: every card and cosmetic, answering the ledger rows written. */
+export function devFill(token: string): Promise<{ cards: number; cosmetics: number }> {
+  return apiRequest<{ cards: number; cosmetics: number }>("/api/dev/fill", { method: "POST", token, body: {} });
+}
+
+/** `POST /api/dev/clear/:part`, answering the ledger rows written. */
+export function devClear(token: string, part: DevClearPart): Promise<{ written: number }> {
+  return apiRequest<{ written: number }>(`/api/dev/clear/${part}`, { method: "POST", token, body: {} });
+}
+
+/** `POST /api/dev/quests`: a quest at once (§14.9), answering it; 409 while the most are held. */
+export function devGiveQuest(token: string): Promise<{ quest: QuestView }> {
+  return apiRequest<{ quest: QuestView }>("/api/dev/quests", { method: "POST", token, body: {} });
+}
+
+/** `POST /api/dev/quests/:questId/complete`: completes a held quest, answering what it paid; 404 for one not held. */
+export function devCompleteQuest(token: string, questId: string): Promise<{ completed: string; jlore: number; xp: number }> {
+  return apiRequest<{ completed: string; jlore: number; xp: number }>(`/api/dev/quests/${encodeURIComponent(questId)}/complete`, {
+    method: "POST",
+    token,
+    body: {},
+  });
+}
+
 // Sign-in and sign-up are NOT here. SPEC §9.2 draws the browser's arrow to the auth provider
 // separately from its arrow to these API functions, so they live in `net/auth.ts` and go straight
 // to the provider. `/api/auth/signin` does exist on the server, but it is BUILD M8's fixture-account
@@ -397,6 +448,187 @@ export type CollectionResponse = { catalogVersion: string; entries: CollectionEn
 
 export function getCollection(token: string): Promise<CollectionResponse> {
   return apiRequest<CollectionResponse>("/api/collection", { token });
+}
+
+/** R1313000: `GET /api/cosmetics`, the caller's own cosmetics, per card and on the account. */
+export type OwnedCosmeticsResponse = { cards: { cardId: string; cosmeticId: string }[]; account: string[] };
+
+export function getOwnedCosmetics(token: string): Promise<OwnedCosmeticsResponse> {
+  return apiRequest<OwnedCosmeticsResponse>("/api/cosmetics", { token });
+}
+
+/** §14.9: one quest the caller holds, its progress toward `target`, and what it pays. */
+export type QuestView = {
+  questId: string;
+  title: string;
+  progress: number;
+  target: number;
+  jlore: number;
+  xp: number;
+  arrivedAt: number;
+};
+
+/**
+ * R1304000: `GET /api/quests`, the caller's held quests, oldest first, and when the next arrives
+ * (epoch ms); `null` while it holds the most it may, or while the economy is off (R1304002).
+ */
+export type QuestsResponse = { quests: QuestView[]; nextDueAt: number | null };
+
+export function getQuests(token: string): Promise<QuestsResponse> {
+  return apiRequest<QuestsResponse>("/api/quests", { token });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Card packs (SPEC §14.3, §14.4; #1301, #1308): the odds and the counters the server holds, and an
+// opening it has already decided slot by slot.
+// ---------------------------------------------------------------------------------------------
+
+/** The three rarities a pity counter tracks. */
+export type PackCounters = { epic: number; legendary: number; mythic: number };
+
+/** `GET /api/packs`: the pity counters, their thresholds, the odds and the unopened packs held. */
+export type PacksResponse = {
+  price: number;
+  slots: number;
+  pity: PackCounters;
+  thresholds: PackCounters;
+  odds: {
+    base: PackCounters;
+    target: PackCounters;
+    fillerRare: number;
+    duplicateCosmetic: Record<"common" | "rare" | "epic" | "legendary" | "mythic", number>;
+  };
+  /** One entry per kind of pack held (a shipped set's name, or `global`), the global pack first. */
+  unopened: { pack: string; count: number }[];
+};
+
+/** What a slot became (R1301002): a new card, a cosmetic for an owned card, or bar points. */
+export type PackSlotGrant =
+  | { kind: "card" }
+  | { kind: "cosmetic"; cosmeticId: string; cosmeticRarity: PrintedRarity }
+  | { kind: "bars"; cosmeticRarity: PrintedRarity };
+
+export type PackSlot = { rarity: PrintedRarity; cardId: string; grant: PackSlotGrant };
+
+/** `POST /api/packs/open`: the slots in order, the pity counters after them and the packs of that kind left. */
+export type OpenedPackResponse = { pack: string; slots: PackSlot[]; pity: PackCounters; unopened: number };
+
+export function getPacks(token: string): Promise<PacksResponse> {
+  return apiRequest<PacksResponse>("/api/packs", { token });
+}
+
+export function openPack(token: string, pack: string): Promise<OpenedPackResponse> {
+  return apiRequest<OpenedPackResponse>("/api/packs/open", { method: "POST", token, body: { pack } });
+}
+
+// ---------------------------------------------------------------------------------------------
+// The Jlore shop and the token picker (SPEC §14.1, §14.5, §14.6; #1309): spending what the
+// economy pays. Every number shown comes from these answers, never a client constant
+// (CLAUDE.md rule 7): the wallet, the pack price, both bars and their sizes, the cycle's next
+// step and the Chase Shard bar. A refusal rejects with `ApiRequestError` and changes nothing.
+// ---------------------------------------------------------------------------------------------
+
+/** `GET /api/wallet`: the caller's Jlore balance. */
+export type WalletResponse = { jlore: number };
+
+export function getWallet(token: string): Promise<WalletResponse> {
+  return apiRequest<WalletResponse>("/api/wallet", { token });
+}
+
+/** `POST /api/packs/buy` with `{ pack }`: the pack, the wallet after it and the packs of its kind held. */
+export type BoughtPackResponse = { pack: string; jlore: number; unopened: number };
+
+export function buyPack(token: string, pack: string): Promise<BoughtPackResponse> {
+  return apiRequest<BoughtPackResponse>("/api/packs/buy", { method: "POST", token, body: { pack } });
+}
+
+/** One token bar's points and size, as `GET /api/tokens` states them. */
+export type TokenBarState = { points: number; size: number };
+
+/** The cosmetic cycle's next step, as `nextStep` spells it: a tier token, or a cosmetic pack. */
+export type CosmeticTokenStep = "rare" | "epic" | "cosmeticPack";
+
+/**
+ * `GET /api/tokens`: both bars' points and sizes, the cycle's next step and the tokens held
+ * (R1305004). `POST /api/tokens/redeem-card` and `POST /api/tokens/redeem-cosmetic` answer the
+ * same after they spend.
+ */
+export type TokenBarsResponse = {
+  cardBar: TokenBarState;
+  cosmeticBar: TokenBarState;
+  nextStep: CosmeticTokenStep;
+  tokens: { card: number; cosmeticRare: number; cosmeticEpic: number; cosmeticPack: number };
+};
+
+export function getTokens(token: string): Promise<TokenBarsResponse> {
+  return apiRequest<TokenBarsResponse>("/api/tokens", { token });
+}
+
+/** `POST /api/tokens/redeem-card` with `{ cardId }`, answering the bars and tokens after it. */
+export function redeemCardToken(token: string, cardId: string): Promise<TokenBarsResponse> {
+  return apiRequest<TokenBarsResponse>("/api/tokens/redeem-card", { method: "POST", token, body: { cardId } });
+}
+
+/** A cosmetic token's tier, as `POST /api/tokens/redeem-cosmetic` parses `token` (R1305003). */
+export type CosmeticTokenTier = "Rare" | "Epic";
+
+/**
+ * `POST /api/tokens/redeem-cosmetic` with `{ token, cosmeticId, cardId? }`, answering the bars
+ * and tokens after it. A per-card cosmetic names its card; an account one sends none.
+ */
+export function redeemCosmeticToken(
+  token: string,
+  cosmeticToken: CosmeticTokenTier,
+  cosmeticId: string,
+  cardId?: string,
+): Promise<TokenBarsResponse> {
+  return apiRequest<TokenBarsResponse>("/api/tokens/redeem-cosmetic", {
+    method: "POST",
+    token,
+    body: cardId === undefined ? { token: cosmeticToken, cosmeticId } : { token: cosmeticToken, cosmeticId, cardId },
+  });
+}
+
+/** `GET /api/cosmetic-packs`: the Chase Shard bar and the cosmetic packs unopened (R1306002). */
+export type CosmeticPacksResponse = { shardBar: TokenBarState; unopened: number };
+
+export function getCosmeticPacks(token: string): Promise<CosmeticPacksResponse> {
+  return apiRequest<CosmeticPacksResponse>("/api/cosmetic-packs", { token });
+}
+
+/** What one cosmetic pack slot granted (R1306000, R1306001): an unowned cosmetic, or bar points. */
+export type CosmeticSlotGrant =
+  | {
+      kind: "cosmetic";
+      cosmeticId: string;
+      cosmeticRarity: PrintedRarity;
+      /** The card a per-card cosmetic goes on, null for an account cosmetic. */
+      cardId: string | null;
+      /** Whether the account lacked that card, so the slot grants it too. */
+      cardGranted: boolean;
+    }
+  | { kind: "bars" };
+
+/** One slot of an opened cosmetic pack: the rarity it rolled and what that granted. */
+export type CosmeticSlot = { rarity: PrintedRarity; grant: CosmeticSlotGrant };
+
+/** `POST /api/cosmetic-packs/open`: its slots in order, the shard bar after it and the packs left. */
+export type OpenedCosmeticPackResponse = { slots: CosmeticSlot[]; shardBar: TokenBarState; unopened: number };
+
+export function openCosmeticPack(token: string): Promise<OpenedCosmeticPackResponse> {
+  return apiRequest<OpenedCosmeticPackResponse>("/api/cosmetic-packs/open", { method: "POST", token, body: {} });
+}
+
+/**
+ * `POST /api/cosmetic-packs/chase` with `{ cosmeticId, cardId? }`, answering the bar and packs
+ * after it emptied the full bar. A per-card cosmetic names its card; an account one sends none.
+ */
+export function buyChase(token: string, cosmeticId: string, cardId?: string): Promise<CosmeticPacksResponse> {
+  return apiRequest<CosmeticPacksResponse>("/api/cosmetic-packs/chase", {
+    method: "POST",
+    token,
+    body: cardId === undefined ? { cosmeticId } : { cosmeticId, cardId },
+  });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -643,24 +875,6 @@ export type PopulationResponse = {
 
 export function getPopulation(token: string): Promise<PopulationResponse> {
   return apiRequest<PopulationResponse>("/api/queue/population", { token });
-}
-
-/**
- * `GET /api/catalog`: card data for a screen that has no game running.
- *
- * R163: §9.4 calls the catalog "static, versioned, shipped with the client", but the deckbuilder
- * needs names and costs before any engine is loaded and the client has no catalog of its own to
- * ship yet, so the server serves the one it already holds (`get_catalog` in
- * `crates/server/src/api/catalog.rs`); this is the caller, not a second statement of the rule.
- */
-// It returns the whole `CardDefs` record and not a projection, because `@jackioh/validator`'s
-// `CatalogSnapshot.cards` is a `CardDefs` — the deckbuilder's client-side verdict (§9.4: "the
-// client's verdict is UX while the server's is law") runs the same module the server runs, and a
-// trimmed-down card would mean a second, weaker copy of the catalog.
-export type CatalogResponse = { version: string; defs: CardDefs };
-
-export function getCatalog(): Promise<CatalogResponse> {
-  return apiRequest<CatalogResponse>("/api/catalog");
 }
 
 /** `POST /api/rooms` / `POST /api/rooms/:code/join` (§9.5, R264). */
@@ -996,6 +1210,8 @@ export type PublicStatsCardsResponse = {
   sourceLabel: string;
   pilot: "merged" | "human" | "ai";
   pilotLabel: string;
+  mode: "all" | "bo1" | "bo3" | "random";
+  modeLabel: string;
   minSample: number;
   totalGames: number;
   cards: PublicCardStat[];
@@ -1005,6 +1221,7 @@ export type PublicStatsCardsResponse = {
     activePatch: string;
     source: "provisional" | "live" | "dev";
     pilot: "merged" | "human" | "ai";
+    mode: "all" | "bo1" | "bo3" | "random";
     bestCard: { id: string; name: string; winRate: number; games: number } | null;
     worstCard: { id: string; name: string; winRate: number; games: number } | null;
   };
@@ -1030,6 +1247,7 @@ export type CardStatsOptions = {
   rarity?: string;
   cost?: number;
   card?: string;
+  mode?: string;
   signal?: AbortSignal;
 };
 
@@ -1042,14 +1260,20 @@ export function getCardStats(options: CardStatsOptions = {}): Promise<PublicStat
   if (options.rarity) params.set("rarity", options.rarity);
   if (options.cost !== undefined) params.set("cost", String(options.cost));
   if (options.card) params.set("card", options.card);
+  if (options.mode) params.set("mode", options.mode);
   const query = params.toString();
   return apiRequest<PublicStatsCardsResponse>(`/api/stats/cards${query ? `?${query}` : ""}`, {
     signal: options.signal,
   });
 }
 
-export function getCardDrillDown(cardId: string, signal?: AbortSignal): Promise<CardDrillDownResponse> {
-  return apiRequest<CardDrillDownResponse>(`/api/stats/cards/${encodeURIComponent(cardId)}`, {
+export function getCardDrillDown(
+  cardId: string,
+  mode?: string,
+  signal?: AbortSignal,
+): Promise<CardDrillDownResponse> {
+  const query = mode ? `?mode=${encodeURIComponent(mode)}` : "";
+  return apiRequest<CardDrillDownResponse>(`/api/stats/cards/${encodeURIComponent(cardId)}${query}`, {
     signal,
   });
 }

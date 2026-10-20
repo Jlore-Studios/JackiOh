@@ -19,11 +19,16 @@
 // its byte and step caps and this build's catalog version, and mounted through an in-memory source. A
 // file it refuses says why and mounts nothing; it is never uploaded or kept. A co-op file (R1242000)
 // mounts on the co-op replay player.
+//
+// FULL ART (R1313000). Once ownership decides full art, a replay's viewer owns no copy on its
+// board: an online match's, a co-op one's and a file's (which may be either) print every full-art
+// card's normal face. A practice game's, like practice itself, prints every full art.
 
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, ReactElement } from "react";
 
 import ConsentPrompt from "../auth/ConsentPrompt.tsx";
+import { FULL_ART_GATED, FullArtOwned, NO_FULL_ART } from "../cards/fullArt.ts";
 import { DuosReplayBack, DuosReplayPlayer } from "../duos/DuosReplay.tsx";
 import type { DuosReplaySteps } from "../duos/DuosReplay.tsx";
 import { DUOS_REPLAY_JSON_FORMAT, parseDuosReplayJson } from "../duos/download.ts";
@@ -74,8 +79,11 @@ type Listed<Row> =
   | { kind: "failed"; message: string }
   | { kind: "ready"; rows: Row[]; next: number | null; loadingMore: boolean };
 
-/** The replay on screen; `matchId` for an online match's, which can be shared with a friend (#936 B59). */
-type Open = { key: string; source: ReplaySource; matchId?: string } | { key: string; duos: DuosReplaySteps };
+/**
+ * The replay on screen; `matchId` for an online match's, which can be shared with a friend (#936 B59),
+ * and `practice` for a practice game's (R1313000).
+ */
+type Open = { key: string; source: ReplaySource; matchId?: string; practice?: true } | { key: string; duos: DuosReplaySteps };
 
 const RESULT_WORDS: Readonly<Record<PracticeReplayListing["result"], string>> = {
   win: "Win",
@@ -267,7 +275,7 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
   };
 
   const openPractice = (row: PracticeReplayListing): void => {
-    if (host.current !== null) setOpen({ key: `practice-${String(row.game)}`, source: practiceReplaySource(host.current, row) });
+    if (host.current !== null) setOpen({ key: `practice-${String(row.game)}`, source: practiceReplaySource(host.current, row), practice: true });
   };
   const openOnline = (row: OnlineReplayListing): void => {
     if (token !== null) setOpen({ key: `online-${row.matchId}`, source: onlineReplaySource(token, row), matchId: row.matchId });
@@ -287,18 +295,21 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
   }
 
   if (open !== null) {
+    const practice = "source" in open && open.practice === true;
     return (
       <CatalogContext.Provider value={lookup}>
-        {"duos" in open ? (
-          <DuosReplayPlayer key={open.key} steps={open.duos} back={<DuosReplayBack onLeave={() => setOpen(null)} />} />
-        ) : (
-          <ReplayPlayer
-            key={open.key}
-            source={open.source}
-            onLeave={() => setOpen(null)}
-            {...(open.matchId === undefined ? {} : { actions: <ShareWithFriend matchId={open.matchId} /> })}
-          />
-        )}
+        <FullArtOwned owned={FULL_ART_GATED && !practice ? NO_FULL_ART : "every"}>
+          {"duos" in open ? (
+            <DuosReplayPlayer key={open.key} steps={open.duos} back={<DuosReplayBack onLeave={() => setOpen(null)} />} />
+          ) : (
+            <ReplayPlayer
+              key={open.key}
+              source={open.source}
+              onLeave={() => setOpen(null)}
+              {...(open.matchId === undefined ? {} : { actions: <ShareWithFriend matchId={open.matchId} /> })}
+            />
+          )}
+        </FullArtOwned>
       </CatalogContext.Provider>
     );
   }

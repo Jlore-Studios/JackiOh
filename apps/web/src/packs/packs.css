@@ -1,0 +1,257 @@
+/* The pack-opening scene's look (#1308). `PackScene` draws a sealed pack, then five cards face down
+   that turn over one at a time. Every @keyframes moves only transform and opacity (fx/css.test.ts
+   holds the sheets to that), each taking its duration from the constants in packs.ts through
+   `--pack-tear-ms`, `--pack-hold-ms` and `--pack-flip-ms`. z-index 39 sits with the showcase, above
+   the effects layer's 38 outside the scene; inside it the scene's own `.pack-fx` rides on top. */
+
+.pack-scene {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* A short screen scrolls from the top rather than clipping it. */
+  justify-content: safe center;
+  gap: 1rem;
+  padding: 1rem;
+  overflow-y: auto;
+  background: rgb(8 10 16 / 0.92);
+  color: var(--text, #e8eaf2);
+}
+
+.pack-scene__title {
+  margin: 0;
+  text-align: center;
+}
+
+.pack-scene .notice {
+  max-width: 32rem;
+  margin: 0;
+}
+
+.pack-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* ------------------------------------------------------------------------------ the pack --- */
+
+.pack {
+  --pack-glow: var(--line-bright);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  width: min(40vw, 12rem);
+  aspect-ratio: 5 / 7;
+  padding: 0.75rem;
+  border: 2px solid var(--pack-glow);
+  border-radius: 0.6rem;
+  background: linear-gradient(160deg, #2a2f4a, #141726);
+  box-shadow: 0 0 1.5rem var(--pack-glow);
+  color: inherit;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.pack[data-best="Rare"] {
+  --pack-glow: var(--rarity-rare);
+}
+
+.pack[data-best="Epic"] {
+  --pack-glow: var(--rarity-epic);
+}
+
+.pack[data-best="Legendary"] {
+  --pack-glow: var(--rarity-legendary);
+}
+
+.pack[data-best="Mythic"] {
+  --pack-glow: var(--rarity-mythic);
+}
+
+.pack__top {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 14%;
+  border-radius: 0.5rem 0.5rem 0 0;
+  background: repeating-linear-gradient(90deg, #d4af37 0 6px, #8c7220 6px 12px);
+}
+
+.pack__name {
+  font-weight: 700;
+  text-align: center;
+}
+
+.pack__hint {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  text-align: center;
+}
+
+.pack[data-state="tearing"] .pack__top {
+  animation: pack-tear calc(var(--pack-tear-ms) * 1ms) ease-in both;
+}
+
+.pack[data-state="tearing"] {
+  animation: pack-glow calc(var(--pack-tear-ms) * 1ms) ease-in-out both;
+}
+
+/* ------------------------------------------------------------------------------ the cards --- */
+
+.pack-slots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.pack-slot {
+  --slot-glow: var(--rarity-common);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: clamp(7rem, 17vw, 11rem);
+}
+
+.pack-slot[data-rarity="Rare"] {
+  --slot-glow: var(--rarity-rare);
+}
+
+.pack-slot[data-rarity="Epic"] {
+  --slot-glow: var(--rarity-epic);
+}
+
+.pack-slot[data-rarity="Legendary"] {
+  --slot-glow: var(--rarity-legendary);
+}
+
+.pack-slot[data-rarity="Mythic"] {
+  --slot-glow: var(--rarity-mythic);
+}
+
+.pack-slot__back,
+.pack-slot__face {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+}
+
+.pack-slot__back {
+  padding: 0;
+  border: 0;
+  border-radius: 7% / 5%;
+  background: transparent;
+  box-shadow: 0 0 1rem var(--slot-glow);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.pack-slot__face .cf {
+  width: 100%;
+  height: auto;
+}
+
+.pack-slot[data-holding="true"] .pack-slot__back {
+  animation: pack-hold calc(var(--pack-hold-ms) * 1ms) ease-in both;
+}
+
+.pack-slot[data-revealed="true"] .pack-slot__face {
+  animation: pack-flip calc(var(--pack-flip-ms) * 1ms) ease-out both;
+}
+
+.pack-slot__outcome {
+  margin: 0;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------------------- the panel --- */
+
+.packs-odds {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.packs-odds th,
+.packs-odds td {
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+}
+
+.packs-held {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* ---------------------------------------------------------------------------------- motion --- */
+
+@keyframes pack-tear {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(-140%);
+    opacity: 0;
+  }
+}
+
+@keyframes pack-glow {
+  from {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.06);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes pack-hold {
+  from {
+    transform: scale(1);
+  }
+
+  to {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes pack-flip {
+  from {
+    transform: rotateY(90deg);
+    opacity: 0.4;
+  }
+
+  to {
+    transform: rotateY(0);
+    opacity: 1;
+  }
+}
+
+.pack-scene[data-motion="reduce"],
+.pack-scene[data-motion="reduce"] *,
+.pack-scene[data-motion="reduce"] *::before,
+.pack-scene[data-motion="reduce"] *::after {
+  animation: none !important;
+  transition: none !important;
+}

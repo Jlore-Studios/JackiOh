@@ -7,6 +7,13 @@
 //!      bounded number of actions. The policy never concedes (R84), so `concede` and the server's
 //!      `ceiling` cannot occur.
 //!   3. REPLAY EQUALITY: `duos_fold` of `(options, log)` refuses nothing and reaches the live hash.
+//!   4. PROBES (#1386): every `probe_stride()`-th state, two forged actions that are never logged, each
+//!      owed a refusal with no events and the state exactly as it was. A reused-nonce probe sends the
+//!      action under a nonce of the round's own (`DUOS_NONCE_PREFIX`) that a duel has applied (§13.3),
+//!      so it can only come once a round has closed; a wrong-seat probe sends the body from a seat the
+//!      game is not waiting on. A seat's own nonces are the server's to dedupe in Duos (§9.3, §13.9), so
+//!      no probe reuses one. A failure is an error beginning `wrong-seat probe` or `reused-nonce probe`
+//!      and names the step.
 //!
 //! A seed fixes the game: the four decks are one seeded shuffle of the gate's pool (`FUZZ_POOL`, so
 //! 80 distinct cards), and the policy's picks come from streams of the seed's own, outside the state
@@ -25,15 +32,20 @@ use jackioh_engine::testkit::{
     DuosInvariantMonitor, I6_GATE_STRIDE, create_duos_invariant_monitor, preview_every_set,
 };
 use jackioh_engine::{
-    AI_END_TURN_PROBABILITY, AI_PLAYOUT_STEP_CAP, ActionBody, DECK_SIZE, DUOS_DUELS, DUOS_REASON_DUEL_RESULT,
-    DUOS_REASON_POOL_EMPTIED, DUOS_REASON_TURN_CAP, DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks,
-    DuosReplayInput, DuosSeat, DuosState, Rng, TURN_CAP_PLAYER_TURNS, duos_begin, duos_create, duos_fold,
-    duos_hash, duos_legal_actions, duos_reduce, duos_seats_to_act,
+    AI_END_TURN_PROBABILITY, AI_PLAYOUT_STEP_CAP, ActionBody, DECK_SIZE, DUOS_DUELS, DUOS_NONCE_PREFIX,
+    DUOS_REASON_DUEL_RESULT, DUOS_REASON_POOL_EMPTIED, DUOS_REASON_TURN_CAP, DUOS_SEATS, DuosAction,
+    DuosActionBody, DuosCreateOptions, DuosDecks, DuosReduceResult, DuosReplayInput, DuosSeat, DuosState,
+    Rng, TURN_CAP_PLAYER_TURNS, duos_begin, duos_create, duos_fold, duos_hash, duos_legal_actions,
+    duos_reduce, duos_seats_to_act,
 };
 use rayon::prelude::*;
 
 use crate::agent::panic_message;
-use crate::fuzz::FUZZ_POOL;
+use crate::fuzz::{
+    DUOS_GROWTH_EVENTS_BOUND, DUOS_GROWTH_INSTANCES_BOUND, DUOS_GROWTH_NUMBER_BOUND, FUZZ_POOL, Heaviest,
+    Heavy, MEASURES, REUSED_NONCE_PROBE, WRONG_SEAT_PROBE, duos_acting_card, duos_growth_breach,
+    duos_heaviest_lines, probe_stride, weigh_duos,
+};
 
 /// B25: the seeds `cargo jackioh fuzz --duos` plays when `--seeds` is not given.
 pub const DUOS_WAVE_SEEDS: u32 = 200;
@@ -49,13 +61,23 @@ const DUOS_TERMINAL_REASONS: &[&str] = &[
 ];
 
 /// Plays the Duos wave from seed `from` and prints its numbers; fails (exit 1) when a seed failed.
-pub fn run(from: u32, seeds: Option<u32>) -> anyhow::Result<()> {
+/// With `json`, prints the wave as one JSON object instead of the text summary.
+pub fn run(from: u32, seeds: Option<u32>, json: bool) -> anyhow::Result<()> {
     let ran = duos_wave_size(seeds);
     let outcomes = play_duos_wave(from, ran);
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&wave_json(from, ran, &outcomes))?
+        );
+    } else {
+        println!("{}", summary(from, ran, &outcomes));
+    }
     let failures = failure_lines(&outcomes);
-    println!("{}", summary(from, ran, &outcomes));
     if !failures.is_empty() {
-        println!("{}", failures.join("\n"));
+        if !json {
+            println!("{}", failures.join("\n"));
+        }
         bail!("fuzz-duos: {} of {ran} seed(s) failed", failures.len());
     }
     Ok(())
@@ -101,6 +123,17 @@ struct DuosRun {
     options: DuosCreateOptions,
     log: Vec<DuosAction>,
     state: DuosState,
+    /// This game's heaviest action by each measure (#1364).
+    heaviest: Heaviest,
+}
+
+/// A `DuosActionBody`'s wire name: a `Duel` action's inner `ActionType`, or the pass/concede itself.
+fn duos_action_name(body: &DuosActionBody) -> String {
+    match body {
+        DuosActionBody::Duel { body } => body.action_type().as_str().to_string(),
+        DuosActionBody::Pass { .. } => "pass".to_string(),
+        DuosActionBody::Concede => "concede".to_string(),
+    }
 }
 
 /// §10.7's policy over one seat's Duos actions: never a concede or an emote; End turn when nothing
@@ -133,12 +166,81 @@ fn choose(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> Option<DuosAction
     rng.pick(&others).cloned()
 }
 
-/// Assertion 1: one game played out, every offered action accepted.
-fn play_duos_game(seed: u32) -> Result<DuosRun, String> {
-    play_duos_game_inner(seed, |_, _, _, _| {})
+/// What a probe's forged action goes through: `duos_reduce`, or in a test a broken one (#1386).
+type DuosReducer = fn(&DuosState, &DuosAction) -> DuosReduceResult;
+
+/// What a probe's `result` did wrong: it owed a refusal with no events and `state` exactly.
+fn judge_duos_refusal(state: &DuosState, result: &DuosReduceResult) -> Option<String> {
+    let mut wrong: Vec<String> = Vec::new();
+    if result.error.is_none() {
+        wrong.push("was accepted".to_string());
+    }
+    if !result.events.is_empty() {
+        wrong.push(format!("emitted {} event(s)", result.events.len()));
+    }
+    if result.state != *state {
+        wrong.push(format!(
+            "moved the state (hash {} became {})",
+            duos_hash(state),
+            duos_hash(&result.state)
+        ));
+    }
+    (!wrong.is_empty()).then(|| wrong.join(" and "))
 }
 
-fn play_duos_game_inner<F>(seed: u32, mut tamper: F) -> Result<DuosRun, String>
+/// The probes on one Duos state (#1386), never logged: `action` under a nonce of the round's own that
+/// a duel has applied (§13.3), then its body sent by a seat not in `seats` (who the game waits on),
+/// rotating by probe. Both are owed a refusal.
+fn probe_duos_state(
+    state: &DuosState,
+    action: &DuosAction,
+    seats: &[DuosSeat],
+    step: usize,
+    probe: DuosReducer,
+) -> Option<String> {
+    let used = state
+        .duels
+        .iter()
+        .flat_map(|game| game.applied.iter())
+        .find(|entry| entry.nonce.starts_with(DUOS_NONCE_PREFIX));
+    if let Some(entry) = used {
+        let forged = DuosAction {
+            nonce: entry.nonce.clone(),
+            ..action.clone()
+        };
+        if let Some(wrong) = judge_duos_refusal(state, &probe(state, &forged)) {
+            return Some(format!(
+                "{REUSED_NONCE_PROBE} probe after step {step}: {} sent {} under the round's nonce \"{}\", and it {wrong}",
+                action.seat,
+                duos_action_name(&action.body),
+                entry.nonce
+            ));
+        }
+    }
+    let idle: Vec<DuosSeat> = DUOS_SEATS
+        .into_iter()
+        .filter(|seat| !seats.contains(seat))
+        .collect();
+    let other = *idle.get((step / probe_stride()) % idle.len().max(1))?;
+    let forged = DuosAction {
+        seat: other,
+        nonce: format!("duos-fuzz-probe-{step}"),
+        body: action.body.clone(),
+    };
+    judge_duos_refusal(state, &probe(state, &forged)).map(|wrong| {
+        format!(
+            "{WRONG_SEAT_PROBE} probe after step {step}: {other} sent {} while it may not act, and it {wrong}",
+            duos_action_name(&action.body)
+        )
+    })
+}
+
+/// Assertion 1: one game played out, every offered action accepted.
+fn play_duos_game(seed: u32) -> Result<DuosRun, String> {
+    play_duos_game_inner(seed, duos_reduce, |_, _, _, _| {})
+}
+
+fn play_duos_game_inner<F>(seed: u32, probe: DuosReducer, mut tamper: F) -> Result<DuosRun, String>
 where
     F: FnMut(usize, &mut DuosState, &mut DuosAction, &mut DuosInvariantMonitor),
 {
@@ -152,6 +254,7 @@ where
     let mut state = begun.state;
     let mut monitor = create_duos_invariant_monitor(&state);
     let stride = if cfg!(test) { 1 } else { I6_GATE_STRIDE };
+    let probe_stride = probe_stride();
     let mut setup = monitor.after(&begun.events, &state);
     setup.extend(monitor.hidden(&state));
     if let Some(first) = setup.first() {
@@ -161,6 +264,7 @@ where
     let mut policy = Rng::new(&format!("jackioh-duos-fuzz-policy-{seed}"), 0);
     let mut order = Rng::new(&format!("jackioh-duos-fuzz-order-{seed}"), 0);
     let mut log: Vec<DuosAction> = Vec::new();
+    let mut heaviest = Heaviest::default();
     let max_actions = max_duos_actions();
 
     while state.result.is_none() {
@@ -196,6 +300,13 @@ where
             return Err(format!("at step {}: {first}", log.len()));
         }
 
+        // #1386: forged actions against this state, never logged.
+        if log.len().is_multiple_of(probe_stride)
+            && let Some(message) = probe_duos_state(&state, &action, &seats, log.len(), probe)
+        {
+            return Err(message);
+        }
+
         let result = duos_reduce(&state, &action);
         if let Some(error) = result.error {
             return Err(format!(
@@ -203,6 +314,8 @@ where
                 seat, action.body
             ));
         }
+        let action_type = duos_action_name(&action.body);
+        let card = duos_acting_card(&state, action.seat, &action.body);
         log.push(action);
         state = result.state;
 
@@ -213,8 +326,32 @@ where
         if let Some(first) = broken.first() {
             return Err(format!("at step {}: {first}", log.len()));
         }
+
+        // #1364: weigh the action; one past a growth bound fails the seed here.
+        let step = log.len();
+        let weights = weigh_duos(&result.events, &state);
+        for (measure, value) in MEASURES.into_iter().zip(weights) {
+            if heaviest.list(measure).first().is_none_or(|top| value > top.value) {
+                let heavy = Heavy {
+                    seed,
+                    step,
+                    action: action_type.clone(),
+                    card: card.clone(),
+                    value,
+                };
+                heaviest.keep(measure, heavy, 1);
+            }
+        }
+        if let Some(message) = duos_growth_breach(&weights, &state, step, &action_type, card.as_deref()) {
+            return Err(format!("growth: {message}"));
+        }
     }
-    Ok(DuosRun { options, log, state })
+    Ok(DuosRun {
+        options,
+        log,
+        state,
+        heaviest,
+    })
 }
 
 /// Assertions 2 and 3: a real ending, and a fold that refuses nothing and reaches the live hash.
@@ -271,59 +408,69 @@ struct DuosSeedOutcome {
     seed: u32,
     reason: Option<String>,
     error: Option<String>,
+    /// The passing game's heaviest action by each measure (#1364); a failed seed keeps none.
+    heaviest: Heaviest,
 }
 
 fn fuzz_duos_seed(seed: u32) -> DuosSeedOutcome {
     // R1420: the pool is the whole catalog, so this worker thread previews every set for the game.
     let _preview = preview_every_set();
-    let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<String, String> {
+    let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<(String, Heaviest), String> {
         let run = play_duos_game(seed)?;
-        check_duos_run(&run)
+        let reason = check_duos_run(&run)?;
+        Ok((reason, run.heaviest))
     }));
     match caught {
-        Ok(Ok(reason)) => DuosSeedOutcome {
+        Ok(Ok((reason, heaviest))) => DuosSeedOutcome {
             seed,
             reason: Some(reason),
             error: None,
+            heaviest,
         },
         Ok(Err(error)) => DuosSeedOutcome {
             seed,
             reason: None,
             error: Some(error),
+            heaviest: Heaviest::default(),
         },
         Err(payload) => DuosSeedOutcome {
             seed,
             reason: None,
             error: Some(format!("panic: {}", panic_message(&*payload))),
+            heaviest: Heaviest::default(),
         },
     }
 }
 
 #[cfg(test)]
-fn fuzz_duos_seed_with<F>(seed: u32, tamper: F) -> DuosSeedOutcome
+fn fuzz_duos_seed_with<F>(seed: u32, probe: DuosReducer, tamper: F) -> DuosSeedOutcome
 where
     F: FnMut(usize, &mut DuosState, &mut DuosAction, &mut DuosInvariantMonitor),
 {
     let _preview = preview_every_set();
-    let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<String, String> {
-        let run = play_duos_game_inner(seed, tamper)?;
-        check_duos_run(&run)
+    let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<(String, Heaviest), String> {
+        let run = play_duos_game_inner(seed, probe, tamper)?;
+        let reason = check_duos_run(&run)?;
+        Ok((reason, run.heaviest))
     }));
     match caught {
-        Ok(Ok(reason)) => DuosSeedOutcome {
+        Ok(Ok((reason, heaviest))) => DuosSeedOutcome {
             seed,
             reason: Some(reason),
             error: None,
+            heaviest,
         },
         Ok(Err(error)) => DuosSeedOutcome {
             seed,
             reason: None,
             error: Some(error),
+            heaviest: Heaviest::default(),
         },
         Err(payload) => DuosSeedOutcome {
             seed,
             reason: None,
             error: Some(format!("panic: {}", panic_message(&*payload))),
+            heaviest: Heaviest::default(),
         },
     }
 }
@@ -346,6 +493,16 @@ fn failure_lines(outcomes: &[DuosSeedOutcome]) -> Vec<String> {
         .collect()
 }
 
+/// The heaviest actions of the games that passed, one per game (#1364): a failed seed adds
+/// nothing, as the gate's wave does.
+fn passed_heaviest(outcomes: &[DuosSeedOutcome]) -> Heaviest {
+    let mut heaviest = Heaviest::default();
+    for outcome in outcomes.iter().filter(|outcome| outcome.error.is_none()) {
+        heaviest.merge(&outcome.heaviest);
+    }
+    heaviest
+}
+
 fn summary(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> String {
     let failed = outcomes.iter().filter(|outcome| outcome.error.is_some()).count();
     let mut endings: IndexMap<String, usize> = IndexMap::new();
@@ -355,15 +512,36 @@ fn summary(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> String {
         }
     }
     format!(
-        "[fuzz-duos] {ran} seed(s) from {from}: {failed} failed; endings {}",
-        serde_json::to_string(&endings).unwrap_or_default()
+        "[fuzz-duos] {ran} seed(s) from {from}: {failed} failed; endings {}\n{}",
+        serde_json::to_string(&endings).unwrap_or_default(),
+        duos_heaviest_lines(&passed_heaviest(outcomes)),
     )
+}
+
+/// `--duos --json`: the wave's failures, each measure's heaviest actions and the growth bounds
+/// (#1364). Failures carry only seed and message: Duos has no stage taxonomy, so the `growth:`
+/// prefix in the message is the stage name.
+fn wave_json(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> serde_json::Value {
+    let passed = outcomes.iter().filter(|outcome| outcome.error.is_none()).count();
+    serde_json::json!({
+        "from": from,
+        "ran": ran,
+        "passed": passed,
+        "failures": outcomes.iter().filter_map(|outcome| outcome.error.as_ref().map(|error| serde_json::json!({
+            "seed": outcome.seed,
+            "message": error,
+        }))).collect::<Vec<_>>(),
+        "heaviest": passed_heaviest(outcomes),
+        "bounds": {
+            "events": DUOS_GROWTH_EVENTS_BOUND,
+            "largest": DUOS_GROWTH_NUMBER_BOUND,
+            "instances": DUOS_GROWTH_INSTANCES_BOUND,
+        },
+    })
 }
 
 #[cfg(test)]
 mod tests {
-    use jackioh_engine::DUOS_SEATS;
-
     use super::*;
 
     #[test]
@@ -390,7 +568,7 @@ mod tests {
     #[test]
     fn a_planted_sick_attack_fails_duos_fuzz_naming_seed_duel_and_step() {
         use jackioh_engine::{Phase, PlayerId, Row, Zone};
-        let outcome = fuzz_duos_seed_with(7, |step, state, action, monitor| {
+        let outcome = fuzz_duos_seed_with(7, duos_reduce, |step, state, action, monitor| {
             if state.round >= 1 && state.duels[0].phase == Phase::Main && step == 4 {
                 // Moved, not copied: a copy left in hand shares the id, and both the monitor and
                 // the reducer would find that copy (whatever the seed's deck put there) first.
@@ -426,9 +604,78 @@ mod tests {
         );
     }
 
+    mod duos_growth_stage {
+        use std::cell::RefCell;
+        use std::rc::Rc;
+
+        use jackioh_engine::PlayerId;
+
+        use super::*;
+        use crate::fuzz::DUOS_GROWTH_NUMBER_BOUND;
+
+        #[test]
+        fn a_planted_growing_number_fails_duos_fuzz_in_the_growth_stage() {
+            let seen: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
+            let seen_in = Rc::clone(&seen);
+            let outcome = fuzz_duos_seed_with(1, duos_reduce, move |step, state, action, _monitor| {
+                if step == 0 {
+                    // Library, never hand: legal actions and monitors are undisturbed, but every
+                    // weighed action afterwards sees the planted number.
+                    state.duels[0].players[PlayerId::P1].library[0].buffs.attack =
+                        i32::try_from(DUOS_GROWTH_NUMBER_BOUND + 1).unwrap_or(i32::MAX);
+                    *seen_in.borrow_mut() = Some(duos_action_name(&action.body));
+                }
+            });
+            let error = outcome.error.expect("the planted growth must fail the seed");
+            let action = seen.borrow().clone().expect("step 0 must record its action");
+            assert!(error.contains("growth"), "{error}");
+            assert!(error.contains(&action), "{error}");
+            assert!(error.contains("largest"), "{error}");
+            assert!(error.contains("DUOS_GROWTH_NUMBER_BOUND"), "{error}");
+        }
+
+        #[test]
+        fn the_same_seed_passes_once_the_growth_is_removed() {
+            let outcome = fuzz_duos_seed_with(1, duos_reduce, |_, _, _, _| {});
+            assert_eq!(outcome.error, None);
+        }
+
+        #[test]
+        fn the_summary_and_json_list_each_measure_s_heaviest_actions() {
+            let heavy = |seed: u32, value: i64| Heavy {
+                seed,
+                step: 3,
+                action: "pass".to_string(),
+                card: None,
+                value,
+            };
+            let mut game = Heaviest::default();
+            for (measure, value) in MEASURES.into_iter().zip([10, 20, 30]) {
+                game.keep(measure, heavy(1, value), 1);
+            }
+            let outcomes = vec![DuosSeedOutcome {
+                seed: 1,
+                reason: Some(DUOS_REASON_POOL_EMPTIED.to_string()),
+                error: None,
+                heaviest: game,
+            }];
+            let summary = summary(1, 1, &outcomes);
+            assert!(summary.contains("1/3 pass -: 10"), "{summary}");
+            assert!(summary.contains("1/3 pass -: 20"), "{summary}");
+            assert!(summary.contains("1/3 pass -: 30"), "{summary}");
+            let json = wave_json(1, 1, &outcomes);
+            assert_eq!(json["heaviest"]["events"][0]["value"], serde_json::json!(10));
+            assert_eq!(
+                json["bounds"]["largest"],
+                serde_json::json!(DUOS_GROWTH_NUMBER_BOUND)
+            );
+            assert_eq!(json["passed"], serde_json::json!(1));
+        }
+    }
+
     #[test]
     fn a_planted_view_leak_fails_duos_fuzz_naming_seed_duel_and_step() {
-        let outcome = fuzz_duos_seed_with(7, |step, _state, _action, monitor| {
+        let outcome = fuzz_duos_seed_with(7, duos_reduce, |step, _state, _action, monitor| {
             if step == 1 {
                 monitor.view_tamper = Some(std::sync::Arc::new(|view| {
                     if view.seat == DuosSeat::A1 {
@@ -443,5 +690,61 @@ mod tests {
         assert!(line.contains("duel 0"), "should name duel 0: {line}");
         assert!(line.contains("step 2"), "should name step 2: {line}");
         assert!(line.contains("I6 duos leak"), "should cite I6 duos leak: {line}");
+    }
+
+    mod duos_probe_stage {
+        use super::*;
+
+        /// A reducer that takes the action from whichever seat the game waits on, whoever sent it.
+        fn any_seat(state: &DuosState, action: &DuosAction) -> DuosReduceResult {
+            for seat in duos_seats_to_act(state) {
+                let result = duos_reduce(
+                    state,
+                    &DuosAction {
+                        seat,
+                        ..action.clone()
+                    },
+                );
+                if result.error.is_none() {
+                    return result;
+                }
+            }
+            duos_reduce(state, action)
+        }
+
+        /// A reducer that lets the round's own nonces through as a seat's.
+        fn unguarded(state: &DuosState, action: &DuosAction) -> DuosReduceResult {
+            let nonce = action.nonce.replacen(DUOS_NONCE_PREFIX, "seat:", 1);
+            duos_reduce(
+                state,
+                &DuosAction {
+                    nonce,
+                    ..action.clone()
+                },
+            )
+        }
+
+        /// `probe` fails seed 7 naming the probe called `name`, the seed and a step.
+        fn assert_caught(probe: DuosReducer, name: &str) {
+            let outcome = fuzz_duos_seed_with(7, probe, |_, _, _, _| {});
+            let lines = failure_lines(&[outcome]);
+            assert_eq!(lines.len(), 1, "{lines:?}");
+            assert!(
+                lines[0].starts_with(&format!("seed 7: {name} probe after step ")),
+                "{}",
+                lines[0]
+            );
+        }
+
+        #[test]
+        fn a_reducer_that_takes_any_seat_s_action_fails_the_wrong_seat_probe_naming_seed_and_step() {
+            assert_caught(any_seat, WRONG_SEAT_PROBE);
+        }
+
+        #[test]
+        fn a_reducer_that_lets_the_round_s_nonces_through_fails_the_reused_nonce_probe_naming_seed_and_step()
+        {
+            assert_caught(unguarded, REUSED_NONCE_PROBE);
+        }
     }
 }

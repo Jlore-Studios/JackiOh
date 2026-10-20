@@ -307,6 +307,10 @@ struct Core {
     /// client runs the same gate against its own copy, so the two can never disagree about the
     /// limit, and a dropped emote is simply never relayed — not an error, not a rejected action.
     emote_history: PerPlayer<Vec<i64>>,
+    /// R1351000: whether either account blocks the other, which mutes each one's emotes toward the
+    /// other. Read as the actor arms, set by a block made while it lives (`mute_emotes_between`),
+    /// and never cleared: an unblock mid-match lifts nothing until the next match.
+    emotes_blocked: bool,
     /// R738: each seat's aim relay.
     aims: PerPlayer<AimSlot>,
     /// R679: set once a Glitch voided the match; nothing more is sent, written or attached.
@@ -553,6 +557,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         hello_pending: PerPlayer::new(None, None),
         socket_generation: PerPlayer::new(0, 0),
         emote_history: PerPlayer::new(Vec::new(), Vec::new()),
+        emotes_blocked: false,
         aims: PerPlayer::new(empty_aim_slot(), empty_aim_slot()),
         voided: false,
         finished: matches!(match_row.status, MatchStatus::Finished),
@@ -646,6 +651,15 @@ impl MatchActor {
                     self.start_absent_grace(&mut core);
                 }
                 self.persist_clocks().await;
+                // R1351000: a block either way between the two accounts mutes their emotes; one made after
+                // this read reaches the actor through `mute_emotes_between`, and `|=` never undoes it.
+                let (first, second) = &self.shared.match_row.players;
+                match one_tx!(self.shared.deps.db, |t| t.blocks_between(first, second).await?) {
+                    Ok(blocked) => self.lock().emotes_blocked |= blocked,
+                    Err(error) => {
+                        tracing::warn!(event = "match.emote.blocks_failed", matchId = %self.match_id_str(), message = %error);
+                    }
+                }
                 // R1442: the rank bucket is the tier each player holds as the match arms.
                 if !self.lock().finished {
                     let tiers =
@@ -1777,7 +1791,8 @@ impl MatchActor {
     /// error, no rejected-action log); a pass relays to the opponent only (the sender already showed
     /// it locally), then runs as an `Emote` action while a card hears it (R1127). R645: a person's
     /// emote that goes out is offered to the opposing bot's persona, which may answer it; a bot never
-    /// answers a bot.
+    /// answers a bot. R1351000: while either account blocks the other, a pass is relayed to no one
+    /// and only runs as the `Emote` task.
     fn relay_emote(&self, core: &mut Core, home: PlayerId, emote: EmoteId) {
         let player = playing(core, home);
         if !hand_holds(&self.shared.emote_hands[home], emote) {
@@ -1792,6 +1807,13 @@ impl MatchActor {
         let mut sent_at = gate.sent_at;
         sent_at.push(now);
         core.emote_history[home] = sent_at;
+        // R1351000: between two accounts either of which blocks the other, the emote is relayed to no
+        // one, as silently as the gate's drop, recorded nowhere and answered by no persona; a card that
+        // hears emotes still hears it.
+        if core.emotes_blocked {
+            self.enqueue(Task::Emote { home, emote });
+            return;
+        }
         self.send(core, player.opponent(), &emote_relay_message(player, emote));
         // R1442: recorded until the result, which the telemetry is written with.
         if !core.finished {
@@ -2036,6 +2058,18 @@ impl MatchActor {
             .into_iter()
             .find(|seat| seat.profile_id == profile_id)
             .map(|seat| seat.player)
+    }
+
+    /// R1351000: `x` and `y` were just blocked one way or the other. When they are this match's two
+    /// accounts, their emotes are muted toward each other from now until the actor goes. Answers
+    /// whether they were.
+    pub fn mute_emotes_between(&self, x: &str, y: &str) -> bool {
+        let (first, second) = &self.shared.match_row.players;
+        let seated = (first == x && second == y) || (first == y && second == x);
+        if seated {
+            self.lock().emotes_blocked = true;
+        }
+        seated
     }
 
     /// Hands a connection to the account that began in `home` (`seat_of`). Replaces (and closes) a

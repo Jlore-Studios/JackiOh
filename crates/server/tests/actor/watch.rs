@@ -6,7 +6,8 @@
 //! hear `watchers {count}` when the count changes. A watcher already in is let go the same way
 //! (`forbidden`, then closed) once the friend turns watching off, or the two unfriend or either
 //! blocks the other. Once the match is over, a watcher that has had the view with the result is
-//! closed with 1000 (R1107000).
+//! closed with 1000 (R1107000). A block made mid-match also mutes the two players' emotes toward
+//! each other (R1351000).
 //!
 //! The match is a real one on the registry, played with the server tests' cards
 //! (`support::engine`); its players are attached with in-memory sockets (`support::socket`), as the
@@ -19,11 +20,16 @@ use std::time::Duration;
 use serde_json::{Value, json};
 use tokio::time::Instant;
 
+use jackioh_engine::EMOTE_WINDOW_MS;
+use jackioh_server::actor::ws_server::{WS_SUBPROTOCOL, bearer_protocol};
 use jackioh_server::app::App;
 use jackioh_server::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH, WS_IDLE_TIMEOUT_SECONDS};
 use jackioh_server::db::store::StartMatchInput;
 
-use super::duos::{Account, PROMPTLY, Served, WsClient, account, api, ms, serve, settle, uuid};
+use super::duos::{
+    Account, PROMPTLY, Served, WsClient, account, api, assert_refused_for_its_sign_in, ms,
+    offers_without_a_credential, serve, settle, uuid,
+};
 use crate::support::deps::{TEST_CATALOG_VERSION, empty_test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
@@ -868,5 +874,112 @@ mod r1103000_a_watchers_later_hello {
             .await;
         settle().await;
         assert_eq!(watcher.received(), received, "{:?}", watcher.frames());
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1351000 — a block mutes the players' emotes
+// ---------------------------------------------------------------------------------------------
+
+mod r1351000_a_block_mutes_the_players_emotes {
+    use super::*;
+
+    /// The `n`th emote of the hand `socket` was dealt (R1342).
+    fn dealt(socket: &FakeSocket, n: usize) -> Value {
+        socket.of_type("portraits").last().expect("a portraits frame")["emotes"][n].clone()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1351000_a_block_made_mid_match_through_the_api_mutes_both_players_emotes() {
+        let w = world(false).await;
+
+        // PREMISE: before the block the friend's emote reaches the rival.
+        w.p1.receive_json(json!({ "type": "emote", "emote": dealt(&w.p1, 0) }));
+        settle().await;
+        assert_eq!(w.p2.of_type("emote").len(), 1);
+
+        // The friend blocks the rival (uuid 12), through the API, while the match is live.
+        let (status, body) = api(
+            &w.app,
+            "POST",
+            "/api/blocks",
+            &w.friend.token,
+            json!({ "profileId": uuid(12) }),
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        settle().await;
+
+        // Past the rate window, so only the block can be why nothing relays.
+        tokio::time::sleep(ms(EMOTE_WINDOW_MS)).await;
+        w.p1.receive_json(json!({ "type": "emote", "emote": dealt(&w.p1, 1) }));
+        w.p2.receive_json(json!({ "type": "emote", "emote": dealt(&w.p2, 0) }));
+        settle().await;
+
+        assert_eq!(w.p2.of_type("emote").len(), 1);
+        assert_eq!(w.p1.of_type("emote"), Vec::<Value>::new());
+        for socket in [&w.p1, &w.p2] {
+            assert_eq!(socket.of_type("error"), Vec::<Value>::new());
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1379000 — the credential on the handshake
+// ---------------------------------------------------------------------------------------------
+
+mod r1379000_the_credential_on_the_handshake {
+    //! R1379000: a watcher offers its token as a `jackioh.bearer.` subprotocol beside `jackioh.v1`,
+    //! and `jackioh.v1` is all the server answers with. No usable credential is R148's 4401 and
+    //! lets no one in, and a renewed token lets in what the refused one could not (R1115000).
+    use super::*;
+
+    impl World {
+        /// The hello that names the friend in this match.
+        fn hello(&self) -> Value {
+            json!({ "type": "hello", "matchId": self.match_id, "friendId": self.friend.id })
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1379000_a_watcher_offering_its_token_is_answered_jackioh_v1_and_let_in() {
+        let w = world(false).await;
+        let offered = bearer_protocol(&w.watcher.token);
+        let (client, protocol) = w
+            .served
+            .connect_offering(WATCH_PATH, &[WS_SUBPROTOCOL, &offered])
+            .await;
+        assert_eq!(protocol.as_deref(), Some(WS_SUBPROTOCOL));
+        client.send_json(w.hello()).await;
+        settle().await;
+        assert!(client.of_type("error").is_empty(), "{:?}", client.frames());
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1379000_a_missing_malformed_or_refused_credential_is_refused_with_4401() {
+        let w = world(false).await;
+        for offered in offers_without_a_credential() {
+            let offer: Vec<&str> = offered.iter().map(String::as_str).collect();
+            let (client, protocol) = w.served.connect_offering(WATCH_PATH, &offer).await;
+            let echoed = (!offer.is_empty()).then_some(WS_SUBPROTOCOL);
+            assert_eq!(protocol.as_deref(), echoed, "{offer:?}");
+            client.send_json(w.hello()).await;
+            assert_refused_for_its_sign_in(&client, &w.watcher.token).await;
+            assert_eq!(w.app.matches.watcher_count(&w.match_id), 0);
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1379000_a_renewed_token_lets_in_the_watcher_its_refused_one_could_not() {
+        let w = world(false).await;
+        let refused = w.served.connect(WATCH_PATH, "token-expired").await;
+        refused.send_json(w.hello()).await;
+        assert_refused_for_its_sign_in(&refused, "token-expired").await;
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 0);
+
+        let renewed = w.watch(&w.watcher).await;
+        assert!(renewed.of_type("error").is_empty(), "{:?}", renewed.frames());
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 1);
     }
 }

@@ -9,8 +9,9 @@
 //!
 //! The file is what `cargo jackioh stats` writes: one GameRecord per line, at a path read from the
 //! directory the command was started in, as `--out`'s is. Every line is read and checked before
-//! anything is written, and a file holding a record that is not a development record, or one whose
-//! id does not begin `dev:`, is refused whole: a live record is the server's alone to write, at the
+//! anything is written, and a file holding a record that is not a development record, one whose
+//! id does not begin `dev:`, or a forced-run record, is refused whole (R1284000 refuses the forced
+//! file): a live record is the server's alone to write, at the
 //! end of a match, so nothing typed into a file can ever count as live play or stand in a live
 //! game's place. A record already in the table (the same run imported twice) is skipped, never
 //! doubled.
@@ -21,7 +22,7 @@ use anyhow::{anyhow, bail};
 use indexmap::IndexMap;
 use serde::Serialize;
 
-use jackioh_engine::wire::{DEV_RECORD_ID_PREFIX, GameSource, parse_game_record_lines};
+use jackioh_engine::wire::{DEV_RECORD_ID_PREFIX, GameSource, forced_series, parse_game_record_lines};
 
 use crate::cli::card_stats::literal;
 use crate::cli::{connect_one, database_url};
@@ -84,6 +85,18 @@ pub async fn import_dev_records(db: &Db, contents: &str) -> anyhow::Result<Impor
         bail!(
             "record {} is a development record whose id does not begin \"{DEV_RECORD_ID_PREFIX}\" (R378)",
             misnamed.id
+        );
+    }
+
+    // R1284000: a forced run's records are for `stats compare` and `stats report`, never for
+    // `stats-import`: a file holding one is refused whole, so rigged games can never count as a
+    // sample of All Random.
+    if let Some(forced) = records.iter().find(|record| forced_series(record).is_some()) {
+        // `forced_series` is `Some` here, so the series exists.
+        let series = forced_series(forced).unwrap_or_default();
+        bail!(
+            "record {} is a forced-run record (series \"{series}\"); a forced run is for stats compare and stats report, never for stats-import (R1284000)",
+            forced.id
         );
     }
 

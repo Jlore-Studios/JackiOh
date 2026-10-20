@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 
 import { AI_GATE_BUDGET, FIXTURE_BANNED_IDS } from "@jackioh/ai";
+import { CATALOG_VERSION } from "@jackioh/cards";
 import { dealEmoteHand } from "@jackioh/engine";
 import { newestShippedSet, opponentOf } from "@jackioh/shared";
 import type { ActionBody, CardDefs, GameEvent, PlayerId } from "@jackioh/shared";
@@ -19,6 +20,7 @@ import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 
 import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import type { DecksResponse, TutorialAccountProgress } from "../net/api.ts";
+import type { PracticeClaimAnswer, PracticeEarningApi, PracticeSeedIssued } from "../net/practice.ts";
 import type { Account } from "../net/gate.ts";
 import {
   PRACTICE_PACING,
@@ -55,6 +57,7 @@ import { tutorialTestid } from "../tutorial/testids.ts";
 import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { gifTestid } from "../replay/ShareGif.tsx";
 import { practiceDeckIssues } from "../wire/validator.ts";
+import { navTestid } from "./nav.tsx";
 import PracticeRoute, { readPracticeParams, useBoardAnimating } from "./practice.tsx";
 import type { PracticeRouteProps } from "./practice.tsx";
 
@@ -228,6 +231,8 @@ function routeHost(options: HostOptions = {}): RouteHost {
   const requests: PracticeRequestBody[] = [];
   let id = 0;
   let human: PlayerId = "p1";
+  /** The seed the game in the worker began on, which its claim names (R1303000). */
+  let seed = "fake-seed";
   let disposals = 0;
   let heldStart: (() => void) | null = null;
   const heldSteps: ((aiToAct: boolean) => void)[] = [];
@@ -249,6 +254,7 @@ function routeHost(options: HostOptions = {}): RouteHost {
       const mine = id;
       if (body.type === "start") {
         human = body.config.humanSeat;
+        seed = body.config.seed;
         if (options.start === "failed") {
           return Promise.resolve({ id: mine, type: "failed", message: options.failure ?? "the core refused" });
         }
@@ -268,6 +274,7 @@ function routeHost(options: HostOptions = {}): RouteHost {
       }
       if (body.type === "resume") {
         human = body.config.humanSeat;
+        seed = body.config.seed;
         if (options.resume === "failed") {
           return Promise.resolve({ id: mine, type: "failed", message: "the saved game does not fold" });
         }
@@ -285,6 +292,10 @@ function routeHost(options: HostOptions = {}): RouteHost {
         });
       }
       if (body.type === "debug") return Promise.resolve({ id: mine, type: "debug", debug });
+      if (body.type === "claim") {
+        // R1303000: the conceded game's claim, as the worker answers it once the game is over.
+        return Promise.resolve({ id: mine, type: "claim", claim: { seed, result: "loss", log: [] } });
+      }
       if (body.type === "catalog") {
         return Promise.resolve(
           options.catalog === "fail"
@@ -1880,6 +1891,199 @@ describe("the result dialog", () => {
     expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
     expect(screen.queryByTestId(T.result)).toBeNull();
     expect(screen.queryByTestId(T.hud)).toBeNull();
+  });
+});
+
+describe("R1303000 earning: an active account's free game on a server seed, claimed at its end", () => {
+  const ISSUED: PracticeSeedIssued = { seed: "server-seed-1", lastBoard: [{ defId: "core-001", radiant: false }], expiresAt: 1 };
+
+  type FakeEarning = {
+    api: PracticeEarningApi;
+    requestSeed: Mock<PracticeEarningApi["requestSeed"]>;
+    claim: Mock<PracticeEarningApi["claim"]>;
+  };
+
+  function fakeEarning(answers: { claim?: () => Promise<PracticeClaimAnswer>; seed?: () => Promise<PracticeSeedIssued> } = {}): FakeEarning {
+    let issued = 0;
+    const requestSeed = vi.fn<PracticeEarningApi["requestSeed"]>(() => {
+      issued += 1;
+      return answers.seed?.() ?? Promise.resolve({ ...ISSUED, seed: `server-seed-${String(issued)}` });
+    });
+    const claim = vi.fn<PracticeEarningApi["claim"]>(() => answers.claim?.() ?? Promise.resolve({ paid: true, jlore: 5, xp: 7 }));
+    return { api: { requestSeed, claim }, requestSeed, claim };
+  }
+
+  function renderEarning(host: RouteHost, earning: FakeEarning, account: Account = signedIn("active")): void {
+    renderRoute(host, {
+      account,
+      loadDecks: vi.fn(() => Promise.resolve(decksResponse(null))),
+      practiceEarning: earning.api,
+    });
+  }
+
+  /** The requests that went out on the page's own `fetch` to the practice routes. */
+  function practiceFetches(): unknown[] {
+    return (fetchSpy.mock.calls as unknown[][]).filter((call) => String(call[0]).includes("/api/practice/"));
+  }
+
+  async function startFromSetup(): Promise<void> {
+    await settle();
+    fireEvent.change(screen.getByTestId(T.deck), { target: { value: "random" } });
+    fireEvent.click(screen.getByTestId(T.start));
+    await screen.findByTestId(T.hud);
+  }
+
+  it("R1303000 Start asks for a seed, the game plays on it with the server's last board, and its end is claimed and shown", async () => {
+    const host = routeHost();
+    const earning = fakeEarning();
+    renderEarning(host, earning);
+    await startFromSetup();
+
+    expect(earning.requestSeed).toHaveBeenCalledTimes(1);
+    const [token, request] = earning.requestSeed.mock.calls[0] ?? [];
+    expect(token).toBe("tok-1");
+    expect(request).toEqual({
+      difficulty: "easy",
+      humanSeat: host.starts()[0]?.humanSeat,
+      deck: { kind: "random", lean: null },
+      catalog: CATALOG_VERSION,
+    });
+    // R1303003: the board the server kept, not the device's.
+    expect(host.starts()).toHaveLength(1);
+    expect(host.starts()[0]).toMatchObject({ seed: "server-seed-1", earning: true, lastBoard: ISSUED.lastBoard });
+    expect(earning.claim).not.toHaveBeenCalled();
+
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    await waitFor(() => {
+      expect(screen.getByTestId(practiceTestid.resultEarning)).toHaveAttribute("data-earning", "paid");
+    });
+    expect(earning.claim).toHaveBeenCalledTimes(1);
+    expect(earning.claim).toHaveBeenCalledWith("tok-1", { seed: "server-seed-1", result: "loss", log: [] });
+    expect(screen.getByTestId(practiceTestid.resultEarning)).toHaveTextContent("+5 Jlore, +7 XP");
+    expect(practiceFetches(), "every call went through the injected API").toEqual([]);
+  });
+
+  it("R1303001 a game on a server seed picked up after a reload is still claimed at its end, on its own seed", async () => {
+    const left: PracticeStartConfig = { seed: "server-seed-left", difficulty: "easy", humanSeat: "p2", deck: { kind: "random" }, earning: true };
+    window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify(left));
+    const host = routeHost();
+    const earning = fakeEarning();
+    renderEarning(host, earning);
+    await screen.findByTestId(T.hud);
+    expect(host.requests.filter((body) => body.type === "resume")).toEqual([{ type: "resume", config: left }]);
+    expect(earning.requestSeed, "a resumed game keeps its seed").not.toHaveBeenCalled();
+
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    await waitFor(() => {
+      expect(screen.getByTestId(practiceTestid.resultEarning)).toHaveAttribute("data-earning", "paid");
+    });
+    expect(earning.claim).toHaveBeenCalledWith("tok-1", { seed: "server-seed-left", result: "loss", log: [] });
+  });
+
+  it("R1303000 a refused claim says why, and Play again still starts and asks for a fresh seed", async () => {
+    const host = routeHost();
+    const earning = fakeEarning({ claim: () => Promise.resolve({ paid: false, reason: "ai_mismatch" }) });
+    renderEarning(host, earning);
+    await startFromSetup();
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    const line = await screen.findByTestId(practiceTestid.resultEarning);
+    await waitFor(() => {
+      expect(line).toHaveAttribute("data-earning", "refused");
+    });
+    expect(line).toHaveAttribute("data-reason", "ai_mismatch");
+    expect(line).toHaveTextContent("This game earned nothing (the AI chose another move on the server).");
+
+    fireEvent.click(screen.getByTestId(T.playAgain));
+    await waitFor(() => {
+      expect(host.starts()).toHaveLength(2);
+    });
+    expect(earning.requestSeed).toHaveBeenCalledTimes(2);
+    expect(host.starts()[1]).toMatchObject({ seed: "server-seed-2", earning: true });
+    await waitFor(() => {
+      expect(screen.queryByTestId(T.result)).toBeNull();
+    });
+  });
+
+  it("R1303000 a claim that fails shows that the server could not check it, and the dialog stays whole", async () => {
+    const host = routeHost();
+    const earning = fakeEarning({ claim: () => Promise.reject(new Error("offline")) });
+    renderEarning(host, earning);
+    await startFromSetup();
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    await waitFor(() => {
+      expect(screen.getByTestId(practiceTestid.resultEarning)).toHaveAttribute("data-earning", "unreachable");
+    });
+    expect(screen.getByTestId(T.result)).toHaveTextContent("Defeat");
+    expect(screen.getByTestId(T.playAgain)).toBeInTheDocument();
+  });
+
+  it("R1303000 a seed the server will not issue leaves the game to play as before, and the wait has a way back", async () => {
+    const refusing = routeHost();
+    renderEarning(refusing, fakeEarning({ seed: () => Promise.reject(new Error("the economy is off")) }));
+    await startFromSetup();
+    const [unpaid] = refusing.starts();
+    expect(unpaid?.earning).toBeUndefined();
+    expect(unpaid?.seed).toMatch(/^[0-9a-fA-F]{8}$/);
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    expect(screen.queryByTestId(practiceTestid.resultEarning)).toBeNull();
+    cleanup();
+
+    const waiting = routeHost();
+    const never = fakeEarning({ seed: () => new Promise<PracticeSeedIssued>(() => undefined) });
+    renderEarning(waiting, never);
+    await settle();
+    fireEvent.click(screen.getByTestId(T.start));
+    expect(await screen.findByTestId(T.loading)).toBeInTheDocument();
+    expect(waiting.starts()).toEqual([]);
+    fireEvent.click(screen.getByTestId(navTestid.back));
+    expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
+    expect(waiting.starts()).toEqual([]);
+  });
+
+  it("R1303000 an anonymous player, a URL seed and a lesson ask for nothing", async () => {
+    const anonymous = routeHost();
+    const unasked = fakeEarning();
+    renderEarning(anonymous, unasked, ANONYMOUS);
+    await startFromSetup();
+    expect(anonymous.starts()[0]?.earning).toBeUndefined();
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    cleanup();
+
+    visit("?seed=fixed1");
+    const seeded = routeHost();
+    renderEarning(seeded, unasked);
+    await startFromSetup();
+    expect(seeded.starts()[0]).toMatchObject({ seed: "fixed1" });
+    expect(seeded.starts()[0]?.earning).toBeUndefined();
+    cleanup();
+
+    visit(`?lesson=${TUTORIAL_LESSONS[0]?.id ?? ""}`);
+    const lesson = routeHost();
+    renderEarning(lesson, unasked);
+    await waitFor(() => {
+      expect(lesson.starts()).toHaveLength(1);
+    });
+    expect(lesson.starts()[0]?.earning).toBeUndefined();
+
+    expect(unasked.requestSeed).not.toHaveBeenCalled();
+    expect(unasked.claim).not.toHaveBeenCalled();
+  });
+
+  it("R1303000 with the economy off (the build's default) an active account's game asks the server nothing", async () => {
+    const host = routeHost();
+    renderRoute(host, { account: signedIn("active"), loadDecks: vi.fn(() => Promise.resolve(decksResponse(null))) });
+    await startFromSetup();
+    expect(host.starts()[0]?.earning).toBeUndefined();
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    expect(screen.queryByTestId(practiceTestid.resultEarning)).toBeNull();
+    expect(practiceFetches()).toEqual([]);
   });
 });
 

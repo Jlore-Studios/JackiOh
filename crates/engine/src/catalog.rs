@@ -21,7 +21,9 @@
 //! where its shipped catalogs are found (`register_shipped`, a `OnceLock` like the registry), and
 //! `with_shipped` sets the one a fold runs under on the calling thread for that call alone, putting
 //! the previous one back after it; while one is set, every reader here and `scripts::registered_entry`
-//! answer from it first.
+//! answer from it first. R1329000: so does every compiled table the engine reads while it folds, the
+//! win-rate table among them, or a ruling says why it does not. The code blocks (`code_block_of`)
+//! stay the build's: no final hash holds them.
 
 use std::cell::Cell;
 use std::cmp::Ordering;
@@ -156,8 +158,9 @@ pub fn register_catalog(
     });
 }
 
-/// R1183004: a card's code block — the testkit's override first, then the compiled table — or
-/// `None` for a card with none (a token, a fused or crafted definition, a fixture).
+/// R1183004: a card's code block — the testkit's override first, then the compiled table, never a
+/// shipped catalog's (R1329000) — or `None` for a card with none (a token, a fused or crafted
+/// definition, a fixture).
 pub fn code_block_of(def_id: &str) -> Option<&'static str> {
     #[cfg(feature = "testkit")]
     if let Some(blocks) = crate::testkit::scenario::code_blocks_override() {

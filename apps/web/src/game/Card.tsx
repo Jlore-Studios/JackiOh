@@ -74,6 +74,7 @@ import {
   type InspectSubject,
 } from "../cards/index.ts";
 import CardMarks from "../cards/CardMarks.tsx";
+import { OwnCopy } from "../cards/fullArt.ts";
 import { marksOf } from "../cards/marks.ts";
 import ActivateControls from "./ActivateControl.tsx";
 import { useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
@@ -576,13 +577,14 @@ export default function Card(props: CardProps): ReactElement {
   // handlers never see an event from inside a preview or a sheet.
   // #258: the switch (⟳) is a sibling of the root too, outside the card, so its zone can give it a
   // full 44 px target at its corner (board.css) and a DEF card's rotation never turns it.
+  // R1313000: the viewer's own card's overlay prints the full art the card does.
   return (
     <>
       {root}
       {props.switchTarget === true && unit !== undefined && unit !== null && (
         <SwitchButton instanceId={unit.instanceId} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />
       )}
-      {inspect.overlay}
+      <OwnCopy own={worn}>{inspect.overlay}</OwnCopy>
     </>
   );
 }

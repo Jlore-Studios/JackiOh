@@ -11,12 +11,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
+import { registeredCatalog } from "@jackioh/engine";
 import type { ActionBody } from "@jackioh/shared";
 
 import { MULLIGAN_CLOCK_MS, SERIES_MAX_GAMES, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
 
 import type { SocketLike } from "../game/net.ts";
-import { baseView } from "../test/fixtures.ts";
+import { baseView, card, emptySide } from "../test/fixtures.ts";
 import { formatClock } from "../game/Clock.tsx";
 import { TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "../game/clockConstants.ts";
 import MatchRoute, { connectionWords, matchTestid, promptHolderOf, withoutToken } from "./match.tsx";
@@ -150,56 +151,29 @@ describe("the networked board", () => {
   });
 
   /**
-   * R7 of this route's own making: `GET /api/catalog` resolves whenever it resolves, and the board
-   * must not be rebuilt when it does.
-   *
-   * The route used to render `lookup === null ? board : <CatalogContext.Provider>{board}</…>`.
-   * That changes the ELEMENT TYPE at that position the moment the catalog lands, so React unmounts
-   * the whole board and mounts a new one: every DOM node is replaced. It cost spec 05 a mulligan —
-   * `cy.click()` had already resolved a prompt option and reported it "disappeared from the page"
-   * — and a real player would lose a half-finished play the same way. Node identity is the
-   * assertion, because that is exactly what a remount does not preserve.
+   * #1378: the board's names are the catalog the client ships, in hand before the first view, so no
+   * request is made for them and a failed network never leaves the board naming def ids. The route
+   * still renders its provider unconditionally (it once wrapped the board only once a fetched
+   * catalog landed, which remounted it and cost spec 05 a mulligan).
    */
-  it("does not rebuild the board when the catalog arrives", async () => {
-    let resolveCatalog = (): void => {};
-    const catalog = new Promise<Response>((resolve) => {
-      resolveCatalog = () =>
-        resolve({
-          ok: true,
-          status: 200,
-          text: () =>
-            Promise.resolve(
-              JSON.stringify({
-                version: "v1",
-                defs: {
-                  "core-001": {
-                    name: "Big D-fender",
-                    type: "Unit",
-                    tags: [],
-                    base: { text: "", attack: 1, health: 1 },
-                    radiant: { text: "", attack: 1, health: 1 },
-                  },
-                },
-              }),
-            ),
-        } as unknown as Response);
-    });
-    vi.stubGlobal("fetch", vi.fn(() => catalog));
+  it("#1378 names the board's cards from the shipped catalog on the first view, asking for no catalog, while every request fails", () => {
+    const requests = vi.fn((input: unknown) => Promise.reject(new TypeError(`Failed to fetch ${String(input)}`)));
+    vi.stubGlobal("fetch", requests);
 
     render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
-    attach({ legal: [{ type: "endTurn" }] });
-
-    const heroBefore = screen.getByTestId("hero-you");
-    const endTurnBefore = screen.getByTestId("end-turn");
-
-    await act(async () => {
-      resolveCatalog();
-      await catalog;
+    attach({
+      view: baseView({
+        viewer: "p1",
+        active: "p1",
+        you: emptySide("p1", { hand: [card({ instanceId: "h-1378", defId: "core-001" })] }),
+      }),
+      legal: [{ type: "endTurn" }],
     });
 
-    expect(screen.getByTestId("hero-you")).toBe(heroBefore);
-    expect(screen.getByTestId("end-turn")).toBe(endTurnBefore);
-    expect(heroBefore.isConnected).toBe(true);
+    expect(screen.getByTestId("hand-card-h-1378").querySelector(".card-name")?.textContent).toBe(
+      registeredCatalog()["core-001"]?.name,
+    );
+    expect(requests.mock.calls.map(([url]) => String(url)).filter((url) => /\/api\/catalog$/u.test(url))).toEqual([]);
   });
 
   it("shows a holding panel until the first view lands", () => {

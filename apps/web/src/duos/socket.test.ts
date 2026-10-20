@@ -13,6 +13,7 @@ import {
   type SocketLike,
   type Timers,
 } from "../game/net.ts";
+import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
 import { createDuosClient, type DuosClient } from "./socket.ts";
 
 // Fakes
@@ -27,7 +28,10 @@ class FakeSocket implements SocketLike {
   readonly sent: string[] = [];
   closedWith: { code?: number; reason?: string } | null = null;
 
-  constructor(readonly url: string) {}
+  constructor(
+    readonly url: string,
+    readonly protocols: readonly string[] = [],
+  ) {}
 
   send(data: string): void {
     this.sent.push(data);
@@ -124,8 +128,8 @@ function harness(options: HarnessOptions = {}): Harness {
     matchId: MATCH_ID,
     token: () => "tok",
     baseUrl: "ws://server.test/ws/duos",
-    socketFactory: (url) => {
-      const socket = new FakeSocket(url);
+    socketFactory: (url, protocols) => {
+      const socket = new FakeSocket(url, protocols);
       sockets.push(socket);
       return socket;
     },
@@ -389,11 +393,35 @@ describe("the co-op socket's reconnect", () => {
   });
 });
 
+// the handshake (R1379000)
+
+describe("the co-op handshake", () => {
+  it("R1379000 the co-op address names the match and never the token, which is offered as a subprotocol", () => {
+    const h = connected();
+    const url = new URL(h.socket().url);
+    expect(url.pathname).toBe("/ws/duos");
+    expect(url.searchParams.get("matchId")).toBe(MATCH_ID);
+    expect(url.searchParams.has("token")).toBe(false);
+    expect(h.socket().url).not.toContain("tok");
+    expect(h.socket().protocols).toEqual(socketProtocols("tok"));
+  });
+
+  it("R1379000 a co-op reconnect after a renewal offers the renewed token, never in the address", () => {
+    const h = connected();
+    h.client.setToken("new");
+    h.socket().drop(1006);
+    h.runTimers();
+    expect(h.sockets).toHaveLength(2);
+    expect(handshakeToken(h.socket())).toBe("new");
+    expect(h.socket().url).not.toContain("new");
+  });
+});
+
 // a refusal for the sign-in (R1115000)
 
-/** The token a socket's handshake carried. */
+/** The token a socket's handshake offered (R1379000). */
 function handshakeToken(socket: FakeSocket): string | null {
-  return new URL(socket.url).searchParams.get("token");
+  return tokenFromProtocols(socket.protocols);
 }
 
 describe("a co-op socket refused for its sign-in", () => {

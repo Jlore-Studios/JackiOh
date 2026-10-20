@@ -1858,11 +1858,33 @@ mod collection {
         assert_eq!(harness.collection_dev_marks(&profile.id).await, vec![false, true]);
     }
 
+    /// R1300000: the reason `dev` (migration 0046) is a dev tool's own, written only marked `dev`
+    /// (`collection_grants_dev_check`); unmarked, both stores refuse it and write nothing.
+    async fn r1300000_a_dev_reason_is_written_only_with_the_dev_mark(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let card_id = must(harness.playable_ids.first().cloned(), "a card");
+        let dev = |dev: bool| CollectionGrant {
+            reason: "dev".to_string(),
+            dev,
+            ..grant(&profile.id, &card_id, 1, harness.now())
+        };
+        q!(harness, t => t.collection_append_grants(&[dev(true)]));
+        assert_eq!(harness.collection_dev_marks(&profile.id).await, vec![true]);
+        let refused = call!(harness, t => t.collection_append_grants(&[dev(false)]));
+        assert!(
+            refused.is_err(),
+            "{}: an unmarked dev reason was written",
+            harness.name
+        );
+        assert_eq!(harness.collection_dev_marks(&profile.id).await, vec![true]);
+    }
+
     both_stores!(
         sets_absolute_quantities_and_appends_grants,
         rolls_both_ledger_writes_back_when_the_transaction_throws,
         commits_what_a_transaction_that_returns_wrote,
         a_collection_grant_keeps_its_dev_mark,
+        r1300000_a_dev_reason_is_written_only_with_the_dev_mark,
     );
 }
 
@@ -8052,7 +8074,8 @@ mod economy {
     use super::*;
     use jackioh_server::config::SET_TRACK_FIRST_LEVEL;
     use jackioh_server::economy::store::{
-        CosmeticGrant, CounterGrant, InventoryGrant, JloreGrant, QuestGrant, TrackGrant,
+        CosmeticGrant, CounterGrant, EconomyLedger, InventoryGrant, JloreGrant, PracticeSeed, QuestGrant,
+        TrackGrant,
     };
 
     fn jlore(profile_id: &str, delta: i64, reason: &str, dev: bool, at: i64) -> JloreGrant {
@@ -8560,7 +8583,101 @@ mod economy {
         assert_eq!(economy_of(harness, &kept.id).await, before);
     }
 
+    /// §14.8, R1303001: a practice seed reads back for its own profile alone, with its setup; a
+    /// claim burns it once, and no other profile's claim does; a prune deletes the profile's seeds
+    /// issued before its time, claimed or not, and no other profile's.
+    async fn practice_seeds_issue_claim_once_and_prune(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let card_id = must(harness.playable_ids.first().cloned(), "a card");
+        let now = harness.now();
+        let seed = |name: &str, issued_at: i64| -> PracticeSeed {
+            from(json!({
+                "seed": name, "profileId": owner.id, "issuedAt": issued_at, "claimedAt": null,
+                "setup": {
+                    "difficulty": "hard", "humanSeat": "p2", "deck": { "kind": "random", "lean": "newest" },
+                    "lastBoard": [{ "defId": card_id, "radiant": true }], "catalogVersion": "v-contract",
+                },
+            }))
+        };
+        let (old, new) = (seed("seed-old", now - 10), seed("seed-new", now));
+        q!(harness, t => t.economy_practice_seed_insert(&old));
+        q!(harness, t => t.economy_practice_seed_insert(&new));
+        assert_eq!(
+            q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-new")),
+            Some(new.clone())
+        );
+        assert_eq!(
+            q!(harness, t => t.economy_practice_seed_get(&other.id, "seed-new")),
+            None
+        );
+
+        assert!(!q!(harness, t => t.economy_practice_seed_claim(&other.id, "seed-new", now + 1)));
+        assert!(q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-new", now + 1)));
+        assert!(!q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-new", now + 2)));
+        assert_eq!(
+            q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-new")),
+            Some(PracticeSeed {
+                claimed_at: Some(now + 1),
+                ..new.clone()
+            })
+        );
+
+        q!(harness, t => t.economy_practice_seeds_prune(&other.id, now + 100));
+        q!(harness, t => t.economy_practice_seeds_prune(&owner.id, now));
+        assert_eq!(
+            q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-old")),
+            None
+        );
+        assert!(q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-new")).is_some());
+        q!(harness, t => t.economy_practice_seeds_prune(&owner.id, now + 1));
+        assert_eq!(
+            q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-new")),
+            None
+        );
+    }
+
+    /// R1301003: a pack opening takes the account's economy lock for its transaction. Taken in
+    /// turn, each transaction gets it, a rolled-back one lets it go, and the lock writes no row.
+    async fn r1301003_the_economy_lock_is_taken_per_transaction(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let now = harness.now();
+        let rolled_back: Result<(), String> = async {
+            let mut t = harness.db.begin(None).await.map_err(|error| error.to_string())?;
+            t.economy_lock_account(&profile.id)
+                .await
+                .map_err(|error| error.to_string())?;
+            t.economy_jlore_grant(&jlore(&profile.id, 100, "game", false, now))
+                .await
+                .map_err(|error| error.to_string())?;
+            // `t` is dropped here without a commit: the rollback, which releases the lock.
+            Err::<(), String>("the opening failed".to_string())
+        }
+        .await;
+        assert!(must(rolled_back.err(), "the failure").contains("the opening failed"));
+        for (delta, at) in [(30, now + 1), (20, now + 2)] {
+            let mut t = harness.db.begin(None).await.expect("begin");
+            t.economy_lock_account(&profile.id)
+                .await
+                .unwrap_or_else(|error| panic!("{}: the lock: {error}", harness.name));
+            t.economy_jlore_grant(&jlore(&profile.id, delta, "game", false, at))
+                .await
+                .unwrap_or_else(|error| panic!("{}: the grant: {error}", harness.name));
+            t.commit().await.expect("commit");
+        }
+        assert_eq!(q!(harness, t => t.economy_jlore_get(&profile.id)), 50);
+        let ledger = q!(harness, t => t.economy_ledger_get(&profile.id));
+        assert_eq!(
+            ledger.jlore.iter().map(|grant| grant.delta).collect::<Vec<_>>(),
+            vec![30, 20]
+        );
+        let mut rest = ledger;
+        rest.jlore.clear();
+        assert_eq!(rest, EconomyLedger::default());
+    }
+
     both_stores!(
+        r1301003_the_economy_lock_is_taken_per_transaction,
         jlore_adds_spends_and_refuses_what_the_wallet_cannot_cover,
         a_dev_reason_needs_the_dev_mark_and_a_zero_delta_is_refused,
         inventory_counts_packs_and_tokens_by_kind,
@@ -8570,6 +8687,7 @@ mod economy {
         a_cosmetic_is_owned_once_per_card_and_per_account,
         every_economy_write_rolls_back_with_its_transaction,
         a_deleted_account_takes_its_economy_with_it,
+        practice_seeds_issue_claim_once_and_prune,
     );
 }
 

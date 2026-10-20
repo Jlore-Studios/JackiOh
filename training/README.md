@@ -292,7 +292,7 @@ login and opens no pull request. Each cycle:
 5. Sleep `TRAIN_PAUSE_SECONDS` (60) and repeat.
 
 The records are `source: "dev"`, mode `random`, both pilots `ai`, with the id
-`dev:<patch>:gather:<n>`. The games run under `nice -n 19`, so the other two lanes' gates keep the CPU.
+`dev:<patch>:gather:<n>`. The games run under `nice -n 19` with `RAYON_NUM_THREADS=1`, so the lane stays on one core, as it does today, and the other two lanes' gates keep the CPU.
 A record is about 1.8 KB and a game takes about 4 seconds on one core. If the AI is promoted in the
 middle of a patch, that patch's games come from more than one generation of it. Nothing feeds the
 records back to the AI, the gate or the shadow ban (`gather.md`, What it never does).
@@ -333,7 +333,7 @@ live games are never added together unless asked (R378, R1451).
 
 The game figures say how often the first seat won (with the 95% interval of that share), how the games
 ended and how many turns they took, and, for the games whose records carry R1256000's counts, how many games had a
-draw from an empty library and how many Traps fired of those set; an older record is unknown for those, not
+draw from an empty library and how many Traps fired of those set, and the position switches and Radiant upgrades in all and a game; an older record is unknown for those, not
 zero. They are AI-against-AI figures: the first seat's edge between two AIs is not the people's, so a seat
 decision rests on them only with that in view.
 

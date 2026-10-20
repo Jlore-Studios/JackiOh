@@ -68,8 +68,8 @@ export default function AlmanacRoute(): ReactElement {
   const winRates = useCardWinRates(sort.key);
 
   const pool = useMemo(
-    () => almanacPool(ALMANAC_CATALOG, filter, sort, winRates ?? undefined),
-    [filter, sort, winRates],
+    () => almanacPool(ALMANAC_CATALOG, filter, sort, winRates.rates ?? undefined),
+    [filter, sort, winRates.rates],
   );
   const detailDef = detailCardId === null ? undefined : ALMANAC_CATALOG.cards[detailCardId];
 
@@ -97,6 +97,7 @@ export default function AlmanacRoute(): ReactElement {
             onFilter={setFilter}
             sort={sort}
             onSort={setSort}
+            winRates={winRates}
             ownedControl={false}
             tags={ALMANAC_CHIP_TAGS}
             onInspect={openDetail}

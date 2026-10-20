@@ -27,14 +27,37 @@
 // (`auth/UsernameField.tsx`), or is told when it may during the cooldown. Every name on the screen,
 // the rank line's included, is drawn through `auth/Username.tsx`.
 //
+// THE ACCOUNT SECRET ID (R1300000) is the profile id, which a developer needs before the server's
+// `DEV_PROFILE_IDS` can list them: "Manage sign-in & account" offers it to every signed-in account,
+// hidden until asked for, with a copy button. A listed account (`me.isDev`, the server's word) also
+// gets the Dev tools panel (`DevTools.tsx`) behind a toggle of its own.
+//
+// CARD PACKS (#1308, SPEC §14.3, §14.4): an active account gets "Card packs" behind a toggle too: the
+// odds and pity counters the server states, the packs held, and the scene that opens one
+// (`packs/PackOpening.tsx`). The economy is not live (`ECONOMY_LIVE`, §14.12), so until it is only a
+// dev account is offered it (`packsShown`). The same toggle mounts what the economy pays for
+// them (#1309, `shop/`): the Jlore shop, the token picker and the cosmetic packs with the Chase
+// Shard bar. Each panel holds its own reads, so when one changes the account the others read it
+// again (`readAgain`): a pack bought in the shop can be opened at once, and an opening's bars,
+// cards and cosmetics show in the picker.
+//
 // DELETING THE ACCOUNT. "Delete my account" asks first: the player types DELETE, then confirms.
 // `DELETE /api/account` does the deleting, at the server, which decides what goes and answers 204.
 // Only then does this device forget the session, the way signing out does, and load the landing
 // page. A refusal leaves everything as it was and says why.
 
-import { useEffect, useId, useState, useSyncExternalStore, type FormEvent, type ReactElement } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useId,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+  type ReactElement,
+} from "react";
 
-import { AUTH_SIGN_OUT_WAIT_SECONDS } from "@jackioh/server-config";
+import { AUTH_SIGN_OUT_WAIT_SECONDS, ECONOMY_LIVE } from "@jackioh/server-config";
 import {
   deleteAccount,
   getOwnRank,
@@ -51,7 +74,9 @@ import { badgeWords, rankWords } from "../rank/rank.ts";
 import { paths } from "../net/navigate.ts";
 import { clearSession, forgetPendingAddresses, readSession } from "../net/session.ts";
 import ChangeEmail from "../settings/ChangeEmail.tsx";
+import DevTools from "./DevTools.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import QuestsPanel from "./QuestsPanel.tsx";
 import TwoStepSettings from "../auth/TwoStepSettings.tsx";
 import { useSecondsUntil } from "../auth/cooldown.ts";
 import Username from "../auth/Username.tsx";
@@ -59,6 +84,14 @@ import UsernameField, { nextChangeSentence } from "../auth/UsernameField.tsx";
 
 import "../auth/tavern.css";
 import "./account.css";
+
+// This file is in the entry chunk, so the pack scene, its fx director and its card faces load only
+// once the panel is opened. The shop, the token picker and the cosmetic packs ride the same
+// chunk: they mount beside the opening, behind the same toggle.
+const PackOpening = lazy(() => import("../packs/PackOpening.tsx"));
+const Shop = lazy(() => import("../shop/Shop.tsx"));
+const TokenPicker = lazy(() => import("../shop/TokenPicker.tsx"));
+const CosmeticPacks = lazy(() => import("../shop/CosmeticPacks.tsx"));
 
 export const accountTestid = {
   screen: "account-screen",
@@ -72,6 +105,7 @@ export const accountTestid = {
   leaderboard: "account-leaderboard",
   manage: "account-manage",
   manageToggle: "account-manage-toggle",
+  packsToggle: "account-packs-toggle",
   record: "account-record",
   winRate: "account-win-rate",
   signOut: "account-sign-out",
@@ -83,6 +117,12 @@ export const accountTestid = {
   deleteConfirm: "account-delete-confirm",
   deleteCancel: "account-delete-cancel",
   deleteError: "account-delete-error",
+  /** R1300000: the account secret ID, hidden until "Show account secret ID", and its copy button. */
+  secretIdShow: "account-secret-id-show",
+  secretId: "account-secret-id",
+  secretIdCopy: "account-secret-id-copy",
+  /** R1300000: the Dev tools toggle, shown only when the server says `isDev`. */
+  devToggle: "account-dev-toggle",
 } as const;
 
 /** What a player types before an account is deleted. Case and spaces around it don't matter. */
@@ -215,6 +255,8 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
   const [rank, setRank] = useState<OwnRankResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [manageOpen, setManageOpen] = useState(false);
+  const [devOpen, setDevOpen] = useState(false);
+  const [packsOpen, setPacksOpen] = useState(false);
 
   useEffect(() => {
     if (pending) return;
@@ -329,7 +371,19 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
               </div>
             </div>
             {played === 0 ? <p>{t("No finished matches yet.")}</p> : null}
+            {/* §14.9: the quests the account holds; the collection screen (#1307) moves them. */}
+            <QuestsPanel token={token} />
           </>
+        ) : null}
+
+        {packsShown(me) ? (
+          <AccountPacks
+            open={packsOpen}
+            onToggle={() => {
+              setPacksOpen(!packsOpen);
+            }}
+            token={token}
+          />
         ) : null}
 
         <AccountManage
@@ -340,7 +394,19 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
           token={token}
           own={username}
           canChange={me?.profile.status === "active"}
+          profileId={me?.profile.id}
         />
+
+        {/* R1300000: the server's word decides whether the panel shows; each tool asks it again. */}
+        {me?.isDev === true ? (
+          <AccountDevTools
+            open={devOpen}
+            onToggle={() => {
+              setDevOpen(!devOpen);
+            }}
+            token={token}
+          />
+        ) : null}
 
         <div className="account-session">
           <p>
@@ -375,12 +441,14 @@ function AccountManage({
   token,
   own,
   canChange,
+  profileId,
 }: {
   open: boolean;
   onToggle: () => void;
   token: string;
   own: OwnUsername | undefined;
   canChange: boolean;
+  profileId: string | undefined;
 }): ReactElement {
   const bodyId = useId();
   return (
@@ -402,11 +470,167 @@ function AccountManage({
           {own !== undefined ? (
             <AccountUsername token={token} own={own} canChange={canChange} />
           ) : null}
+          {profileId !== undefined ? <AccountSecretId id={profileId} /> : null}
           {/* R663: the email change, through the auth provider (it renders nothing signed out). */}
           <ChangeEmail />
           {/* R665: an authenticator app for this account. */}
           <TwoStepSettings token={token} />
           <DeleteAccount token={token} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * R1300000: the account secret ID, the profile id a developer sends to be listed in
+ * `DEV_PROFILE_IDS`. Hidden until asked for; then shown with a copy button. A copy that fails
+ * stays silent, as the room code's does (`play.tsx`): the ID is on screen to copy by hand.
+ */
+function AccountSecretId({ id }: { id: string }): ReactElement {
+  const [shown, setShown] = useState(false);
+  const [copied, setCopied] = useState(false);
+  if (!shown) {
+    return (
+      <div className="account-actions">
+        <button
+          type="button"
+          className="link-button"
+          data-testid={accountTestid.secretIdShow}
+          onClick={() => {
+            setShown(true);
+          }}
+        >
+          {t("Show account secret ID")}
+        </button>
+      </div>
+    );
+  }
+  const copy = (): void => {
+    Promise.resolve()
+      .then(() => navigator.clipboard.writeText(id))
+      .then(
+        () => {
+          setCopied(true);
+        },
+        () => undefined,
+      );
+  };
+  return (
+    <div className="account-username">
+      <p className="account-label">{t("Account secret ID")}</p>
+      <code data-testid={accountTestid.secretId}>{id}</code>
+      <div className="account-actions">
+        <button type="button" data-testid={accountTestid.secretIdCopy} onClick={copy}>
+          {copied ? t("Copied") : t("Copy")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * R1300000: the Dev tools behind a toggle of their own, in "Manage sign-in & account"'s markup, so
+ * the panel mounts only once opened. Rendered only when `/api/auth/me` says `isDev`.
+ */
+function AccountDevTools({
+  open,
+  onToggle,
+  token,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  token: string;
+}): ReactElement {
+  const bodyId = useId();
+  return (
+    <div className="account-manage">
+      <div className="account-actions">
+        <button
+          type="button"
+          className="account-manage__toggle"
+          data-testid={accountTestid.devToggle}
+          aria-expanded={open}
+          aria-controls={bodyId}
+          onClick={onToggle}
+        >
+          {t("Dev tools")}
+        </button>
+      </div>
+      {open ? (
+        <div className="account-manage__body" id={bodyId}>
+          <DevTools token={token} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Whether the account is offered card packs: an active account once the economy is live
+ * (`ECONOMY_LIVE`, §14.12), and before then a dev account alone (the server's word, `me.isDev`), so
+ * the opening can be tried on staging and production before players see it. The routes check the
+ * account again.
+ */
+export function packsShown(me: MeResponse | undefined, live: boolean = ECONOMY_LIVE): boolean {
+  return me?.profile.status === "active" && (live || me.isDev === true);
+}
+
+/** The panels behind the Card-packs toggle, each reading its own part of the account. */
+type PacksPanel = "opening" | "shop" | "tokens" | "cosmetics";
+
+/** How many times each panel has been told to read again. */
+type PanelReads = Record<PacksPanel, number>;
+
+/**
+ * The reads after `by` changed the account (a pack bought or opened, a token redeemed, a chase
+ * bought): every other panel reads again, since a buy fills the opening's packs and an opening
+ * fills the bars, the collection and the cosmetics. `by` already holds its answer.
+ */
+function readAgain(reads: PanelReads, by: PacksPanel): PanelReads {
+  return {
+    opening: reads.opening + (by === "opening" ? 0 : 1),
+    shop: reads.shop + (by === "shop" ? 0 : 1),
+    tokens: reads.tokens + (by === "tokens" ? 0 : 1),
+    cosmetics: reads.cosmetics + (by === "cosmetics" ? 0 : 1),
+  };
+}
+
+/** "Card packs": the odds, the pity counters, the packs held and the opening scene, behind a toggle. */
+function AccountPacks({ open, onToggle, token }: { open: boolean; onToggle: () => void; token: string }): ReactElement {
+  const bodyId = useId();
+  const [reads, setReads] = useState<PanelReads>({ opening: 0, shop: 0, tokens: 0, cosmetics: 0 });
+  const changedBy = (by: PacksPanel) => (): void => {
+    setReads((before) => readAgain(before, by));
+  };
+  return (
+    <div className="account-manage">
+      <div className="account-actions">
+        <button
+          type="button"
+          className="account-manage__toggle"
+          data-testid={accountTestid.packsToggle}
+          aria-expanded={open}
+          aria-controls={bodyId}
+          onClick={onToggle}
+        >
+          {t("Card packs")}
+        </button>
+      </div>
+      {open ? (
+        <div className="account-manage__body" id={bodyId}>
+          <Suspense
+            fallback={
+              <p className="notice" role="status">
+                {t("Loading your packs…")}
+              </p>
+            }
+          >
+            <PackOpening token={token} revision={reads.opening} onChanged={changedBy("opening")} />
+            <Shop token={token} revision={reads.shop} onChanged={changedBy("shop")} />
+            <TokenPicker token={token} revision={reads.tokens} onChanged={changedBy("tokens")} />
+            <CosmeticPacks token={token} revision={reads.cosmetics} onChanged={changedBy("cosmetics")} />
+          </Suspense>
         </div>
       ) : null}
     </div>

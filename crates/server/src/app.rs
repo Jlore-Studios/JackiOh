@@ -81,6 +81,12 @@ pub struct App {
     /// A match its own log does not reproduce, logged and filed for the night bot
     /// (`bug_reports.rs`): GitHub with `CREATE_ISSUES_TOKEN`, a record in a test's app.
     pub bug_reports: crate::bug_reports::BugReports,
+    /// §14.12: whether the economy pays out, `config::ECONOMY_LIVE` at boot. A field so a test can
+    /// turn it on; nothing else sets it.
+    pub economy_live: bool,
+    /// §14.8, #1303: the permits of the practice claims being verified at once,
+    /// `PRACTICE_VERIFY_CONCURRENCY` of them (`api::practice`). One per app, for the limiter's reason.
+    pub practice_verifications: tokio::sync::Semaphore,
 }
 
 // ---------------------------------------------------------------------------
@@ -294,6 +300,115 @@ pub static ROUTES: &[Route] = &[
         "/api/collection",
         AuthLevel::Active,
         h!(api::collection::get_collection),
+    ),
+    // economy/packs.rs (SPEC §14.3, §14.4; #1301)
+    (
+        "GET",
+        "/api/packs",
+        AuthLevel::Active,
+        h!(crate::economy::packs::get_packs),
+    ),
+    (
+        "POST",
+        "/api/packs/buy",
+        AuthLevel::Active,
+        h!(crate::economy::packs::post_buy),
+    ),
+    (
+        "POST",
+        "/api/packs/open",
+        AuthLevel::Active,
+        h!(crate::economy::packs::post_open),
+    ),
+    // economy/tokens.rs (SPEC §14.5; #1305)
+    (
+        "GET",
+        "/api/tokens",
+        AuthLevel::Active,
+        h!(crate::economy::tokens::get_tokens),
+    ),
+    (
+        "POST",
+        "/api/tokens/redeem-card",
+        AuthLevel::Active,
+        h!(crate::economy::tokens::post_redeem_card),
+    ),
+    (
+        "POST",
+        "/api/tokens/redeem-cosmetic",
+        AuthLevel::Active,
+        h!(crate::economy::tokens::post_redeem_cosmetic),
+    ),
+    // economy/cosmetic_packs.rs (SPEC §14.6; #1306)
+    (
+        "GET",
+        "/api/cosmetic-packs",
+        AuthLevel::Active,
+        h!(crate::economy::cosmetic_packs::get_cosmetic_packs),
+    ),
+    (
+        "POST",
+        "/api/cosmetic-packs/open",
+        AuthLevel::Active,
+        h!(crate::economy::cosmetic_packs::post_open),
+    ),
+    (
+        "POST",
+        "/api/cosmetic-packs/chase",
+        AuthLevel::Active,
+        h!(crate::economy::cosmetic_packs::post_chase),
+    ),
+    // api/economy.rs (#1302)
+    (
+        "GET",
+        "/api/wallet",
+        AuthLevel::Active,
+        h!(api::economy::get_wallet),
+    ),
+    (
+        "GET",
+        "/api/tracks",
+        AuthLevel::Active,
+        h!(api::economy::get_tracks),
+    ),
+    // api/quests.rs (#1304)
+    (
+        "GET",
+        "/api/quests",
+        AuthLevel::Active,
+        h!(api::quests::get_quests),
+    ),
+    (
+        "POST",
+        "/api/dev/quests",
+        AuthLevel::Active,
+        h!(api::quests::dev_give_quest),
+    ),
+    (
+        "POST",
+        "/api/dev/quests/:questId/complete",
+        AuthLevel::Active,
+        h!(api::quests::dev_complete_quest),
+    ),
+    // api/practice.rs (#1303)
+    (
+        "POST",
+        "/api/practice/seeds",
+        AuthLevel::Active,
+        h!(api::practice::post_seed),
+    ),
+    (
+        "POST",
+        "/api/practice/claims",
+        AuthLevel::Active,
+        h!(api::practice::post_claim),
+    ),
+    // api/cosmetics.rs (R1313000)
+    (
+        "GET",
+        "/api/cosmetics",
+        AuthLevel::Active,
+        h!(api::cosmetics::get_owned_cosmetics),
     ),
     // api/decks.rs
     ("GET", "/api/decks", AuthLevel::Active, h!(api::decks::list_decks)),
@@ -514,6 +629,21 @@ pub static ROUTES: &[Route] = &[
         "/api/username/skip",
         AuthLevel::Active,
         h!(api::username::post_skip),
+    ),
+    // api/dev.rs (R1300000): a dev account's own tools; each answers anyone else 403 itself.
+    ("POST", "/api/dev/xp", AuthLevel::Active, h!(api::dev::give_xp)),
+    (
+        "POST",
+        "/api/dev/jlore",
+        AuthLevel::Active,
+        h!(api::dev::give_jlore),
+    ),
+    ("POST", "/api/dev/fill", AuthLevel::Active, h!(api::dev::fill)),
+    (
+        "POST",
+        "/api/dev/clear/:part",
+        AuthLevel::Active,
+        h!(api::dev::clear),
     ),
     // ---- Social: watching and shared replays (#939, #940) ----
     // social/shares.rs (B52). Ahead of `GET /api/replays/:matchId`, which would read `shared` as a
@@ -785,6 +915,8 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         social: crate::social::Social::default(),
         engine_thread: actor::engine::registered_thread,
         bug_reports,
+        economy_live: crate::config::ECONOMY_LIVE,
+        practice_verifications: tokio::sync::Semaphore::new(crate::config::PRACTICE_VERIFY_CONCURRENCY),
     });
 
     if app.env.e2e {
@@ -1123,6 +1255,8 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
         e2e = app.env.e2e,
         "trustedProxyHops" = %app.env.trusted_proxy_hops,
         "ladderBots" = app.env.ladder_bots,
+        // R1300000: how many, never which: a dev account's id is its account secret ID.
+        "devAccounts" = app.env.dev_profile_ids.len(),
     );
 
     serve_until(

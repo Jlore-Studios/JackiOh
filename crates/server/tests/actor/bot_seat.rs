@@ -937,6 +937,85 @@ async fn r1452_r1127_a_card_that_hears_emotes_hears_the_bots() {
 }
 
 #[tokio::test(start_paused = true)]
+async fn r1351000_a_blocked_bots_emote_reaches_no_one_and_a_card_still_hears_it() {
+    // The person holds the testkit's Field Spell that hears emotes. Its card is the only test card
+    // in the match, and the person plays it on their own turn, which they never end, so the bot
+    // never decides while it is in play (the blocking pool's threads do not see the testkit).
+    install_test_cards();
+    let balanced = AI_PERSONAS
+        .iter()
+        .find(|(name, _)| *name == PersonaName::Balanced)
+        .map(|(_, spec)| spec)
+        .expect("the balanced persona");
+    let greeting = balanced
+        .triggers
+        .iter()
+        .find(|(trigger, _)| *trigger == EmoteTrigger::MulliganEnd)
+        .map(|(_, row)| row)
+        .expect("a mulligan-end row");
+    let seed = (0..200)
+        .map(|k| format!("seed-bot-muted-{k}"))
+        .find(|seed| {
+            let hand = deal_emote_hand(seed, PlayerId::P2);
+            greeting.pool.iter().any(|emote| hand.contains(emote))
+        })
+        .expect("a seed whose bot holds a greeting");
+
+    let m = bot_match_with(
+        &seed,
+        PlayerId::P1,
+        PersonaName::Balanced,
+        false,
+        &[TEST_HEARS_EMOTES],
+    )
+    .await;
+    // R1351000: the person and the bot are blocked one way or the other, as the block API says.
+    assert!(m.actor.mute_emotes_between(PERSON, BOT));
+    to_the_persons_turn(&m).await;
+    // The bot's greeting is still on its delay (R645) when the card goes down.
+    assert!(
+        m.socket.of_type("emote").is_empty(),
+        "PREMISE: the bot greeted already"
+    );
+    submit(
+        &m,
+        "person-stay",
+        json!({ "type": "setAutoEndTurn", "enabled": false }),
+    )
+    .await;
+    let card = to_json(&m.actor.view_for(m.person))["you"]["hand"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .find(|card| card["defId"] == TEST_HEARS_EMOTES)
+        .map(|card| card["instanceId"].clone())
+        .expect("the hearing card is in the person's hand");
+    submit(&m, "person-hear", json!({ "type": "play", "instanceId": card })).await;
+
+    let bot = m.bot().as_str().to_string();
+    let minted = |log: &[(String, String, String)]| {
+        log.iter()
+            .filter(|(seat, nonce, kind)| {
+                *seat == bot && nonce.starts_with(&format!("{SERVER_NONCE_PREFIX}emote-")) && kind == "emote"
+            })
+            .count()
+    };
+    for _ in 0..WAIT_STEPS {
+        m.actor.idle().await;
+        if minted(&log_of(&m.app).await) > 0 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(WAIT_STEP_MS)).await;
+    }
+    // The greeting went to no one, yet ran as the bot's `Emote` action.
+    let relayed = m.socket.of_type("emote");
+    assert_eq!(relayed, Vec::<Value>::new());
+    let log = log_of(&m.app).await;
+    assert_eq!(minted(&log), 1, "{log:?}");
+}
+
+#[tokio::test(start_paused = true)]
 async fn r1452_bot_telemetry_is_ai() {
     let m = bot_match("seed-bot-telemetry", PlayerId::P2, PersonaName::Silent, false).await;
     to_the_persons_turn(&m).await;

@@ -4,15 +4,18 @@
 // The collection is optional: without L5 quantities, ownership is unknown.
 // R915005: the account's custom cards join the catalog the workshop reads (set `Custom`, drawn from
 // their frames by `customDef`) and are owned once each; the validator's L7 marks a deck naming one.
+// The catalog is the one the client ships (game/currentCatalog.ts, §9.4); only the decks and the collection are read.
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import type { CardDefs, CustomCard } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
+import { OwnCopy } from "../cards/fullArt.ts";
 import { CardDefsProvider } from "../cards/index.ts";
 import { customDefsOf, useCustomCards } from "../creator/useCustomCards.ts";
 import { t } from "../i18n/i18n.ts";
+import { currentCatalog } from "../game/currentCatalog.ts";
 import DeckWorkshop from "../game/deckbuilder/DeckWorkshop.tsx";
 import { collectionFrom } from "../game/deckbuilder/loadout.ts";
 import type { DeckSyncApi } from "../game/deckbuilder/sync.ts";
@@ -21,7 +24,6 @@ import {
   ApiUnreachableError,
   deleteDeck,
   deleteTrio,
-  getCatalog,
   getCollection,
   getDecks,
   importTrio,
@@ -119,19 +121,18 @@ export default function DecksRoute() {
 
     Promise.all([
       getDecks(readToken),
-      getCatalog(),
       getCollection(readToken).then(
         (response) => response,
         () => null,
       ),
     ])
-      .then(([decks, catalog, collection]) => {
+      .then(([decks, collection]) => {
         if (cancelled) return;
         setScreen({
           kind: "ready",
           profileId,
           data: {
-            catalog: { version: catalog.version, cards: catalog.defs },
+            catalog: currentCatalog(),
             collection: collection === null ? null : collectionFrom(collection.entries),
             decks,
           },
@@ -201,15 +202,18 @@ export default function DecksRoute() {
   const { catalog, collection } = shelf ?? { catalog: screen.data.catalog, collection: screen.data.collection };
   return (
     <CardDefsProvider defs={catalog.cards}>
-      <DeckWorkshop
-        // One store per profile keeps another account's mirror separate.
-        key={screen.profileId}
-        catalog={catalog}
-        collection={collection}
-        data={screen.data.decks}
-        profileId={screen.profileId}
-        api={api}
-      />
+      {/* R1313000: every face here is the viewer's own, and prints the full arts they own. */}
+      <OwnCopy own>
+        <DeckWorkshop
+          // One store per profile keeps another account's mirror separate.
+          key={screen.profileId}
+          catalog={catalog}
+          collection={collection}
+          data={screen.data.decks}
+          profileId={screen.profileId}
+          api={api}
+        />
+      </OwnCopy>
     </CardDefsProvider>
   );
 }

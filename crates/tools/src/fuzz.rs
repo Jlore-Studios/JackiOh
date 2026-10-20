@@ -37,7 +37,17 @@
 //! GROWTH_INSTANCES_BOUND. That catches runaway growth inside one action (R874000's fusion, R884000's
 //! University) at the step that grew, well before the engine's settle cap (§10.3) panics or a process
 //! runs out of memory. The weighing reads the returned events and state only, never the clock, so it
-//! is as deterministic as the game; `--handicap` and `--duos` are not weighed.
+//! is as deterministic as the game; `--handicap` is not weighed, and `--duos` is weighed by
+//! `duos_fuzz.rs` through the shared helpers below.
+//!
+//! And on the states the gate reaches, PROBES (#1386): every `probe_stride()`-th state, two forged
+//! actions that are never logged. A wrong-seat probe sends the action the policy chose from the seat
+//! that may not take it, and must be refused with no events (§9.3); a reused-nonce probe sends a
+//! concede under the nonce of the last logged action, and must neither apply nor replace anything but
+//! answer that action's own events (§10.1, §10.2). Either way the state must be kept exactly, the
+//! nonce memory `hash_state` leaves out included. A failure is the "probe" stage and names the step
+//! and the probe. `--handicap` probes the same way and `--duos` as `duos_fuzz.rs` says. The probes
+//! draw from no random stream, so every game plays as it did before them.
 //!
 //! Determinism (SPEC §9.3, §10.7, CLAUDE.md rule 4): nothing here reads OS randomness or the clock
 //! for a game (the clock only times the wave). The deck draw, the game and the policy each come from
@@ -95,9 +105,10 @@ use jackioh_engine::testkit::{
 };
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, CardInstance, CreateGameOptions, DECK_SIZE,
-    Difficulty, FoldArgs, GameEvent, GameState, Handicap, PLAYER_IDS, PerPlayerOpt, Phase, PlayerId, Rng,
-    TURN_CAP_PLAYER_TURNS, begin_game, create_game, find_instance, fold, hash_state, mulligan_owed, reduce,
-    seat_to_act, subsystems, validate_deck,
+    Difficulty, DuosActionBody, DuosEvent, DuosSeat, DuosState, FoldArgs, GameEvent, GameState, Handicap,
+    PLAYER_IDS, PerPlayerOpt, Phase, PlayerId, ReduceResult, Rng, TURN_CAP_PLAYER_TURNS, begin_game,
+    create_game, find_instance, fold, hash_state, mulligan_owed, opponent_of, reduce, seat_to_act,
+    subsystems, validate_deck,
 };
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -131,7 +142,7 @@ pub struct Args {
     pub regress: bool,
     /// Print the gate's wave as one JSON object instead of text (#1254): its failures, each
     /// measure's heaviest actions and the growth bounds.
-    #[arg(long, conflicts_with_all = ["handicap", "duos", "regress"])]
+    #[arg(long, conflicts_with_all = ["handicap", "regress"])]
     pub json: bool,
 }
 
@@ -144,7 +155,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     }
     let from = first_seed(args.from);
     if args.duos {
-        return crate::duos_fuzz::run(from, args.seeds);
+        return crate::duos_fuzz::run(from, args.seeds, args.json);
     }
     let ran = wave_size(args.seeds);
     if args.handicap {
@@ -344,6 +355,7 @@ enum FailureStage {
     Replay,
     Invariant,
     Growth,
+    Probe,
 }
 
 impl FailureStage {
@@ -354,6 +366,7 @@ impl FailureStage {
             FailureStage::Replay => "replay",
             FailureStage::Invariant => "invariant",
             FailureStage::Growth => "growth",
+            FailureStage::Probe => "probe",
         }
     }
 }
@@ -410,8 +423,9 @@ pub(crate) fn actor_of(state: &GameState, order: &mut Rng) -> PlayerId {
 /// One full game played by SPEC §10.7's policy. `subsystems::choose_action` IS that policy — uniform
 /// over `legal_actions` minus `AI_SKIPPED_ACTIONS` (R84), ending the turn when nothing else is on
 /// offer or with `AI_END_TURN_PROBABILITY`, and answering an open prompt uniformly (R44) — so this
-/// drives the shipped machinery rather than a second copy of the rule.
-fn play_game(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<GameRun, FuzzFailure> {
+/// drives the shipped machinery rather than a second copy of the rule. The probes' forged actions go
+/// through `probe` (#1386).
+fn play_game(seed: u32, decks: (Vec<String>, Vec<String>), probe: Reducer) -> Result<GameRun, FuzzFailure> {
     let game_seed = format!("jackioh-fuzz-{seed}");
     register_all();
 
@@ -429,8 +443,11 @@ fn play_game(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<GameRun, Fu
     let mut monitor = create_invariant_monitor(&state);
     let stride = hidden_stride();
     let unlisted_stride = unlisted_stride();
+    let probe_stride = probe_stride();
     let max_actions = max_actions_per_game();
     let mut heaviest = Heaviest::default();
+    // The events the last logged action returned, which a probe of its nonce is owed (#1386).
+    let mut last_events: Vec<GameEvent> = Vec::new();
     // Setup's own events: a Unit cast on draw in the opening deal (C+ #26 Tommy Tempo) enters there.
     let mut setup = monitor.after(&begun.events, &state);
     setup.extend(monitor.hidden(&state));
@@ -485,6 +502,27 @@ fn play_game(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<GameRun, Fu
             return Err(FuzzFailure::new(
                 FailureStage::Invariant,
                 first.clone(),
+                At {
+                    turn: state.turn,
+                    actions: log.len(),
+                },
+            ));
+        }
+
+        // #1386: forged actions against this state, never logged.
+        if log.len().is_multiple_of(probe_stride)
+            && let Some(message) = probe_state(
+                &state,
+                player,
+                &chosen,
+                log.last().map(|logged| (logged, last_events.as_slice())),
+                log.len(),
+                probe,
+            )
+        {
+            return Err(FuzzFailure::new(
+                FailureStage::Probe,
+                message,
                 At {
                     turn: state.turn,
                     actions: log.len(),
@@ -556,6 +594,7 @@ fn play_game(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<GameRun, Fu
                 },
             ));
         }
+        last_events = result.events;
     }
 
     Ok(GameRun {
@@ -692,12 +731,28 @@ pub const GROWTH_NUMBER_BOUND: i64 = 2_000;
 /// measure catches a chain that adds cards without end, not one card that grows.
 pub const GROWTH_INSTANCES_BOUND: i64 = 2_000;
 
+/// The most events one Duos action may emit. Measured 2026-10-20 over the release Duos wave
+/// (seeds 1–200): the most one passing game's action emitted was 157 (seed 63, step 263), so this
+/// keeps a margin of about 63×. A round-close legitimately settles two duels, so expect about twice
+/// the solo traffic here; no bound/6 breach, so the solo-matching starting value stands.
+pub const DUOS_GROWTH_EVENTS_BOUND: i64 = 10_000;
+
+/// The largest number any card instance may carry after one Duos action, in either duel. Measured
+/// 2026-10-20 over the same wave: the largest was 54 (seed 29, step 305), so this keeps a margin of
+/// about 37×; no bound/6 breach, so the solo-matching starting value stands.
+pub const DUOS_GROWTH_NUMBER_BOUND: i64 = 2_000;
+
+/// The most card instances both duels may hold after one Duos action, in every zone. Measured
+/// 2026-10-20 over the same wave: the most was 275 (seed 63, step 271), so this keeps a margin of
+/// about 7×; no bound/6 breach, so the solo-matching starting value stands.
+pub const DUOS_GROWTH_INSTANCES_BOUND: i64 = 2_000;
+
 /// How many of a measure's heaviest actions the summary and `--json` list.
 pub const HEAVIEST_SHOWN: usize = 5;
 
 /// What one action is weighed by.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Measure {
+pub(crate) enum Measure {
     /// The events `reduce` returned.
     Events,
     /// The largest number on any card instance afterwards.
@@ -707,10 +762,10 @@ enum Measure {
 }
 
 /// Every measure, in the order `weigh` returns them.
-const MEASURES: [Measure; 3] = [Measure::Events, Measure::Largest, Measure::Instances];
+pub(crate) const MEASURES: [Measure; 3] = [Measure::Events, Measure::Largest, Measure::Instances];
 
 impl Measure {
-    fn as_str(self) -> &'static str {
+    pub(crate) fn as_str(self) -> &'static str {
         match self {
             Measure::Events => "events",
             Measure::Largest => "largest",
@@ -733,32 +788,41 @@ impl Measure {
             Measure::Instances => "GROWTH_INSTANCES_BOUND",
         }
     }
+
+    /// The Duos wave's bound for this measure (`DUOS_GROWTH_*_BOUND`).
+    fn duos_bound(self) -> i64 {
+        match self {
+            Measure::Events => DUOS_GROWTH_EVENTS_BOUND,
+            Measure::Largest => DUOS_GROWTH_NUMBER_BOUND,
+            Measure::Instances => DUOS_GROWTH_INSTANCES_BOUND,
+        }
+    }
 }
 
 /// One action's weight by one measure.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct Heavy {
-    seed: u32,
+pub(crate) struct Heavy {
+    pub(crate) seed: u32,
     /// The action's 1-based place in the game's log.
-    step: usize,
+    pub(crate) step: usize,
     /// The action's wire name (`ActionType`).
-    action: String,
+    pub(crate) action: String,
     /// The def id of the card that acted, for an action with one.
-    card: Option<String>,
-    value: i64,
+    pub(crate) card: Option<String>,
+    pub(crate) value: i64,
 }
 
 /// The heaviest actions by each measure, heaviest first, ties to the lower seed and then the lower step.
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
-struct Heaviest {
+pub(crate) struct Heaviest {
     events: Vec<Heavy>,
     largest: Vec<Heavy>,
     instances: Vec<Heavy>,
 }
 
 impl Heaviest {
-    fn list(&self, measure: Measure) -> &[Heavy] {
+    pub(crate) fn list(&self, measure: Measure) -> &[Heavy] {
         match measure {
             Measure::Events => &self.events,
             Measure::Largest => &self.largest,
@@ -767,7 +831,7 @@ impl Heaviest {
     }
 
     /// Adds `heavy` and keeps the `limit` heaviest.
-    fn keep(&mut self, measure: Measure, heavy: Heavy, limit: usize) {
+    pub(crate) fn keep(&mut self, measure: Measure, heavy: Heavy, limit: usize) {
         let list = match measure {
             Measure::Events => &mut self.events,
             Measure::Largest => &mut self.largest,
@@ -784,7 +848,7 @@ impl Heaviest {
     }
 
     /// Folds one game's heaviest actions in, keeping HEAVIEST_SHOWN of each measure.
-    fn merge(&mut self, game: &Heaviest) {
+    pub(crate) fn merge(&mut self, game: &Heaviest) {
         for measure in MEASURES {
             for heavy in game.list(measure) {
                 self.keep(measure, heavy.clone(), HEAVIEST_SHOWN);
@@ -795,7 +859,7 @@ impl Heaviest {
 
 /// Every card instance both sides hold, in every zone: a copy of `side_cards`'s list in
 /// `crates/engine/src/state.rs` (private there), in its order.
-fn instances_of(state: &GameState) -> impl Iterator<Item = &CardInstance> {
+pub(crate) fn instances_of(state: &GameState) -> impl Iterator<Item = &CardInstance> {
     PLAYER_IDS.into_iter().flat_map(move |player| {
         let side = &state.players[player];
         side.hand
@@ -815,7 +879,7 @@ fn instances_of(state: &GameState) -> impl Iterator<Item = &CardInstance> {
 /// count, overridden stats, counters, Brittle count, play count, tuned numbers and every number in its
 /// memory. Turn stamps (`summoned_turn`, `frozen`, Brittle's `since`) are left out: they count turns,
 /// which the game's own cap bounds.
-fn largest_number(card: &CardInstance) -> i64 {
+pub(crate) fn largest_number(card: &CardInstance) -> i64 {
     let mut most = 0_i64;
     let mut see = |n: i32| most = most.max(i64::from(n).abs());
     see(card.damage);
@@ -845,7 +909,7 @@ fn largest_number(card: &CardInstance) -> i64 {
 }
 
 /// The largest absolute number anywhere in a memory value.
-fn largest_in_json(value: &Value) -> i64 {
+pub(crate) fn largest_in_json(value: &Value) -> i64 {
     match value {
         Value::Number(number) => number
             .as_i64()
@@ -873,7 +937,7 @@ fn weigh(events: &[GameEvent], state: &GameState) -> [i64; 3] {
 
 /// The def id of the card an action is by, read in the state it was chosen in: the instance a
 /// play, switch or activation names, or the attacker. Any other action has none.
-fn acting_card(state: &GameState, body: &ActionBody) -> Option<String> {
+pub(crate) fn acting_card(state: &GameState, body: &ActionBody) -> Option<String> {
     let id = match body {
         ActionBody::Play { instance_id, .. }
         | ActionBody::SwitchPosition { instance_id }
@@ -892,6 +956,30 @@ fn holder_of_largest(state: &GameState, value: i64) -> String {
         .map_or_else(|| "no card".to_string(), |card| card.def_id.clone())
 }
 
+/// The shared wording of a growth failure: the step, the action and the card that grew, what
+/// one measure reached and whose bound it passed. Every arm names its measure (`events`,
+/// `largest`, `instances`), so the report says what grew, not just how much.
+fn growth_message(
+    measure: Measure,
+    value: i64,
+    bound: (i64, &'static str),
+    step: usize,
+    action: &str,
+    card: Option<&str>,
+    holder: &str,
+) -> String {
+    let by = card.map_or_else(String::new, |id| format!(" by {id}"));
+    let what = match measure {
+        Measure::Events => format!("emitted {value} events"),
+        Measure::Largest => format!("left a largest number of {value} on {holder}"),
+        Measure::Instances => format!("left {value} card instances in play"),
+    };
+    format!(
+        "step {step} (\"{action}\"{by}) {what}, past {} ({}): runaway growth inside one action",
+        bound.1, bound.0,
+    )
+}
+
 /// The failure message of the first measure past its bound, when one is: a value at the bound passes.
 fn growth_breach(
     weights: &[i64; 3],
@@ -904,17 +992,189 @@ fn growth_breach(
         .into_iter()
         .zip(weights.iter().copied())
         .find(|(measure, value)| *value > measure.bound())?;
-    let by = card.map_or_else(String::new, |id| format!(" by {id}"));
-    let what = match measure {
-        Measure::Events => format!("emitted {value} events"),
-        Measure::Largest => format!("left a number of {value} on {}", holder_of_largest(state, value)),
-        Measure::Instances => format!("left {value} card instances in play"),
+    let holder;
+    let holder = match measure {
+        Measure::Largest => {
+            holder = holder_of_largest(state, value);
+            holder.as_str()
+        }
+        _ => "no card",
     };
-    Some(format!(
-        "step {step} (\"{action}\"{by}) {what}, past {} ({}): runaway growth inside one action",
-        measure.bound_name(),
-        measure.bound()
+    Some(growth_message(
+        measure,
+        value,
+        (measure.bound(), measure.bound_name()),
+        step,
+        action,
+        card,
+        holder,
     ))
+}
+
+/// One Duos action's weights, in `MEASURES`' order: the `duos_reduce` events, the largest number on
+/// any instance of either duel afterwards and the instances in both.
+pub(crate) fn weigh_duos(events: &[DuosEvent], state: &DuosState) -> [i64; 3] {
+    let (largest, instances) = state
+        .duels
+        .iter()
+        .flat_map(instances_of)
+        .fold((0_i64, 0_i64), |(largest, count), card| {
+            (largest.max(largest_number(card)), count + 1)
+        });
+    [
+        i64::try_from(events.len()).unwrap_or(i64::MAX),
+        largest,
+        instances,
+    ]
+}
+
+/// The def id of the card a Duos action is by, read in the state it was chosen in: a `Duel` action
+/// delegates to `acting_card` in the seat's own duel; a pass or a concede names none.
+pub(crate) fn duos_acting_card(state: &DuosState, seat: DuosSeat, body: &DuosActionBody) -> Option<String> {
+    match body {
+        DuosActionBody::Duel { body } => acting_card(&state.duels[seat.duel()], body),
+        DuosActionBody::Pass { .. } | DuosActionBody::Concede => None,
+    }
+}
+
+/// The def id of the first instance carrying `value` as its largest number, across both duels.
+fn duos_holder_of_largest(state: &DuosState, value: i64) -> String {
+    state
+        .duels
+        .iter()
+        .flat_map(instances_of)
+        .find(|card| largest_number(card) == value)
+        .map_or_else(|| "no card".to_string(), |card| card.def_id.clone())
+}
+
+/// The Duos failure message of the first measure past its `DUOS_GROWTH_*_BOUND`, when one is: a
+/// value at the bound passes. Same wording as the gate's, with the Duos bounds.
+pub(crate) fn duos_growth_breach(
+    weights: &[i64; 3],
+    state: &DuosState,
+    step: usize,
+    action: &str,
+    card: Option<&str>,
+) -> Option<String> {
+    let (measure, value) = MEASURES
+        .into_iter()
+        .zip(weights.iter().copied())
+        .find(|(measure, value)| *value > measure.duos_bound())?;
+    let holder;
+    let holder = match measure {
+        Measure::Largest => {
+            holder = duos_holder_of_largest(state, value);
+            holder.as_str()
+        }
+        _ => "no card",
+    };
+    Some(growth_message(
+        measure,
+        value,
+        (
+            measure.duos_bound(),
+            match measure {
+                Measure::Events => "DUOS_GROWTH_EVENTS_BOUND",
+                Measure::Largest => "DUOS_GROWTH_NUMBER_BOUND",
+                Measure::Instances => "DUOS_GROWTH_INSTANCES_BOUND",
+            },
+        ),
+        step,
+        action,
+        card,
+        holder,
+    ))
+}
+
+// ---------------------------------------------------------------------------------------------
+// Forged-action probes (#1386)
+// ---------------------------------------------------------------------------------------------
+
+/// The probes under the gate, the handicapped wave and `--duos`: every this-many-th state (#1386);
+/// the test sweep probes every state. Measured 2026-10-20 (4 cores, release) over seeds 1–200, in wall
+/// seconds before the probes and with this stride: `cargo jackioh fuzz` 14.8 and 14.4–14.9, `--handicap`
+/// 15.2 and 15.4, `--duos` 43.6 and 44.5, so the gate's time is kept.
+pub const PROBE_GATE_STRIDE: usize = 10;
+
+/// A probe failure's name: the policy's action sent by a seat that may not take it.
+pub(crate) const WRONG_SEAT_PROBE: &str = "wrong-seat";
+
+/// A probe failure's name: another action under a nonce already applied.
+pub(crate) const REUSED_NONCE_PROBE: &str = "reused-nonce";
+
+/// The probes' stride: every state in the test sweep, every PROBE_GATE_STRIDE-th otherwise.
+pub fn probe_stride() -> usize {
+    if is_whole_suite_sweep() {
+        1
+    } else {
+        PROBE_GATE_STRIDE
+    }
+}
+
+/// What a probe's forged action goes through: `reduce`, or in a test a broken one it must catch.
+type Reducer = fn(&GameState, &Action) -> ReduceResult;
+
+/// What a probe's `result` did wrong (§9.3, §10.2): with `owed` `None` it owed a refusal with no
+/// events, with `Some` its nonce's first answer; either way `state` exactly, the nonce memory that
+/// `hash_state` leaves out included. `None` when it held.
+fn judge_probe(state: &GameState, result: &ReduceResult, owed: Option<&[GameEvent]>) -> Option<String> {
+    let mut wrong: Vec<String> = Vec::new();
+    match (owed, &result.error) {
+        (None, None) => wrong.push("was accepted".to_string()),
+        (Some(_), Some(error)) => wrong.push(format!("was refused ({error})")),
+        _ => {}
+    }
+    if result.events.as_slice() != owed.unwrap_or_default() {
+        wrong.push(match owed {
+            None => format!("emitted {} event(s)", result.events.len()),
+            Some(first) => format!(
+                "answered {} event(s), not the {} the nonce first returned",
+                result.events.len(),
+                first.len()
+            ),
+        });
+    }
+    if result.state != *state {
+        wrong.push(format!(
+            "moved the state (hash {} became {})",
+            hash_state(state),
+            hash_state(&result.state)
+        ));
+    }
+    (!wrong.is_empty()).then(|| wrong.join(" and "))
+}
+
+/// The probes on one state (#1386), never logged. First a concede by `player` under the last logged
+/// action's nonce, owed that action's own events (`last`); then `chosen` sent by the other seat, owed
+/// a refusal, unless that seat still owes its own mulligan, which it may answer (R265).
+fn probe_state(
+    state: &GameState,
+    player: PlayerId,
+    chosen: &ActionBody,
+    last: Option<(&Action, &[GameEvent])>,
+    step: usize,
+    probe: Reducer,
+) -> Option<String> {
+    if let Some((logged, first)) = last {
+        let forged = Action::new(ActionBody::Concede, player, logged.nonce.clone());
+        if let Some(wrong) = judge_probe(state, &probe(state, &forged), Some(first)) {
+            return Some(format!(
+                "{REUSED_NONCE_PROBE} probe after step {step}: {player} sent \"concede\" under step {step}'s nonce \"{}\", and it {wrong}",
+                logged.nonce
+            ));
+        }
+    }
+    let other = opponent_of(player);
+    if mulligan_owed(state).contains(&other) {
+        return None;
+    }
+    let forged = Action::new(chosen.clone(), other, format!("fuzz-probe-{step}"));
+    judge_probe(state, &probe(state, &forged), None).map(|wrong| {
+        format!(
+            "{WRONG_SEAT_PROBE} probe after step {step}: {other} sent \"{}\" while {player} was to act, and it {wrong}",
+            chosen.action_type().as_str()
+        )
+    })
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1293,13 +1553,18 @@ fn fuzz_seed(seed: u32) -> Result<Passed, Failure> {
 /// One game through the four assertions: `seed` names the game's and the policy's streams, `decks` the
 /// deal.
 fn fuzz_deal(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<Passed, Failure> {
+    fuzz_deal_probed(seed, decks, reduce)
+}
+
+/// `fuzz_deal` with the probes' forged actions going through `probe` (#1386).
+fn fuzz_deal_probed(seed: u32, decks: (Vec<String>, Vec<String>), probe: Reducer) -> Result<Passed, Failure> {
     // R1420: the fuzz pool is the whole catalog, every set shipped or not, so this worker thread
     // previews every set for the game, its checks and its replay.
     let _preview = preview_every_set();
     let mut reached: Option<At> = None;
     let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<Passed, FuzzFailure> {
         // 1. never panic
-        let run = play_game(seed, decks.clone())?;
+        let run = play_game(seed, decks.clone(), probe)?;
         reached = Some(At {
             turn: run.state.turn,
             actions: run.log.len(),
@@ -1424,7 +1689,7 @@ impl Wave {
             0
         };
         let mut text = format!(
-            "[M4 fuzz] {}\n  seeds {}..{}: {passed} passed, {} failed\n  {} panic(s), {} over the {}-action bound or stalled, {} replay mismatch(es), {} invariant violation(s), {} past a growth bound\n  endings: {}\n  {average} actions/game on average, {} at most; longest game ended on turn {} of {TURN_CAP_PLAYER_TURNS}\n  pool: {} deck-legal cards, {} excluded; I6 every {} state(s), I8 every {} state(s); {}s\n",
+            "[M4 fuzz] {}\n  seeds {}..{}: {passed} passed, {} failed\n  {} panic(s), {} over the {}-action bound or stalled, {} replay mismatch(es), {} invariant violation(s), {} past a growth bound, {} failed a probe\n  endings: {}\n  {average} actions/game on average, {} at most; longest game ended on turn {} of {TURN_CAP_PLAYER_TURNS}\n  pool: {} deck-legal cards, {} excluded; I6 every {} state(s), I8 every {} state(s), probes every {} state(s); {}s\n",
             if self.ran >= WAVE_SEEDS {
                 "FULL GATE".to_string()
             } else {
@@ -1439,6 +1704,7 @@ impl Wave {
             stage("replay"),
             stage("invariant"),
             stage("growth"),
+            stage("probe"),
             if endings.is_empty() {
                 "none".to_string()
             } else {
@@ -1450,6 +1716,7 @@ impl Wave {
             POOL_EXCLUSIONS.len(),
             hidden_stride(),
             unlisted_stride(),
+            probe_stride(),
             round(self.elapsed_ms / MS_PER_SECOND),
         );
         text.push_str(&heaviest_lines(&self.heaviest));
@@ -1478,8 +1745,9 @@ impl Wave {
     }
 }
 
-/// The summary's lines for each measure's heaviest actions (#1254).
-fn heaviest_lines(heaviest: &Heaviest) -> String {
+/// The summary's lines for each measure's heaviest actions (#1254), with each bound read off
+/// `bound_of`: the gate's below, the Duos wave's in `duos_heaviest_lines`.
+fn heaviest_lines_with(heaviest: &Heaviest, bound_of: impl Fn(Measure) -> i64) -> String {
     let mut text = "  heaviest actions, one per game (seed/step action card: weight):\n".to_string();
     for measure in MEASURES {
         let entries = heaviest
@@ -1500,11 +1768,22 @@ fn heaviest_lines(heaviest: &Heaviest) -> String {
         text.push_str(&format!(
             "    {} (bound {}): {}\n",
             measure.as_str(),
-            measure.bound(),
+            bound_of(measure),
             if entries.is_empty() { "none" } else { &entries }
         ));
     }
     text
+}
+
+/// The summary's lines for each measure's heaviest actions (#1254).
+fn heaviest_lines(heaviest: &Heaviest) -> String {
+    heaviest_lines_with(heaviest, Measure::bound)
+}
+
+/// The Duos summary's lines for each measure's heaviest actions (#1364): the same shape as the
+/// gate's, with the `DUOS_GROWTH_*_BOUND` values.
+pub(crate) fn duos_heaviest_lines(heaviest: &Heaviest) -> String {
+    heaviest_lines_with(heaviest, Measure::duos_bound)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1819,7 +2098,10 @@ fn play_seed(seed: u32) -> Outcome {
         let mut monitor = create_invariant_monitor(&state);
         let stride = if is_whole_suite_sweep() { 1 } else { I6_GATE_STRIDE };
         let unlisted_stride = unlisted_stride();
+        let probe_stride = probe_stride();
         let max_actions = max_actions_per_game();
+        // The events the last logged action returned, which a probe of its nonce is owed (#1386).
+        let mut last_events: Vec<GameEvent> = Vec::new();
         let mut setup = monitor.after(&begun.events, &state);
         setup.extend(monitor.hidden(&state));
         if let Some(first) = setup.first() {
@@ -1838,6 +2120,19 @@ fn play_seed(seed: u32) -> Outcome {
             let action = Action::new(chosen, player, format!("fuzz-{}", log.len()));
             if let Some(first) = unsound.first() {
                 return Err(format!("invariant on turn {}: {first}", state.turn));
+            }
+            // #1386: forged actions against this state, never logged.
+            if log.len().is_multiple_of(probe_stride)
+                && let Some(message) = probe_state(
+                    &state,
+                    player,
+                    &action.body,
+                    log.last().map(|logged| (logged, last_events.as_slice())),
+                    log.len(),
+                    reduce,
+                )
+            {
+                return Err(message);
             }
             let result = reduce(&state, &action);
             if let Some(error) = &result.error {
@@ -1858,6 +2153,7 @@ fn play_seed(seed: u32) -> Outcome {
             if let Some(first) = broken.first() {
                 return Err(format!("invariant after action {}: {first}", log.len()));
             }
+            last_events = result.events;
         }
 
         let Some(ending) = state.result else {
@@ -2307,6 +2603,102 @@ mod tests {
             );
             assert_eq!(json["bounds"]["largest"], json!(GROWTH_NUMBER_BOUND));
             assert_eq!(json["passed"], json!(7));
+        }
+    }
+
+    mod fuzz_probe_stage {
+        use super::*;
+
+        /// A reducer that ignores who sent an action and answers for the seat the game waits on.
+        fn seatless(state: &GameState, action: &Action) -> ReduceResult {
+            let seat = seat_to_act(state).unwrap_or(state.active);
+            reduce(
+                state,
+                &Action::new(action.body.clone(), seat, action.nonce.clone()),
+            )
+        }
+
+        /// A reducer that forgets every nonce it has applied.
+        fn forgetful(state: &GameState, action: &Action) -> ReduceResult {
+            let mut fresh = state.clone();
+            fresh.applied.clear();
+            reduce(&fresh, action)
+        }
+
+        /// `probe` fails seed 1 in the probe stage, naming the probe called `name` and its step.
+        fn assert_caught(probe: Reducer, name: &str) {
+            register_all();
+            let failure = fuzz_deal_probed(1, decks_for_seed(1), probe)
+                .err()
+                .expect("a reducer that breaks the probe must fail the seed");
+            assert_eq!(failure.stage, FailureStage::Probe, "{}", failure.message);
+            assert!(
+                failure
+                    .message
+                    .starts_with(&format!("{name} probe after step {}:", failure.actions)),
+                "{}",
+                failure.message
+            );
+            let text = report(std::slice::from_ref(&failure), 1, 0.0);
+            assert!(text.contains("example: seed 1 ("), "{text}");
+            assert!(text.contains("[probe]"), "{text}");
+        }
+
+        #[test]
+        fn a_reducer_that_takes_the_wrong_seat_s_action_fails_the_wrong_seat_probe() {
+            assert_caught(seatless, WRONG_SEAT_PROBE);
+        }
+
+        #[test]
+        fn a_reducer_that_forgets_its_nonces_fails_the_reused_nonce_probe() {
+            assert_caught(forgetful, REUSED_NONCE_PROBE);
+        }
+
+        #[test]
+        fn the_judge_passes_a_refusal_and_a_nonce_s_first_answer_and_names_a_moved_nonce_memory() {
+            register_all();
+            let _preview = preview_every_set();
+            let state = begin_game(&create_game(&CreateGameOptions {
+                seed: "jackioh-fuzz-1".to_string(),
+                decks: decks_for_seed(1),
+                ..CreateGameOptions::default()
+            }))
+            .state;
+            let act = |state: &GameState, body: ActionBody, player: PlayerId, nonce: &str| {
+                reduce(state, &Action::new(body, player, nonce.to_string()))
+            };
+
+            // 1. The mulligans are open, so End turn is refused with the state kept.
+            let refused = act(&state, ActionBody::EndTurn, PlayerId::P1, "probe-test-1");
+            assert!(refused.error.is_some());
+            assert_eq!(judge_probe(&state, &refused, None), None);
+
+            // 2. A nonce answers with its first action's events whatever came under it the second time.
+            let kept = act(
+                &state,
+                ActionBody::Mulligan { keep: Vec::new() },
+                PlayerId::P1,
+                "probe-test-2",
+            );
+            assert_eq!(kept.error, None);
+            let again = act(&kept.state, ActionBody::Concede, PlayerId::P2, "probe-test-2");
+            assert_eq!(
+                judge_probe(&kept.state, &again, Some(kept.events.as_slice())),
+                None
+            );
+
+            // 3. An action that is accepted where a refusal was owed moves the state.
+            let accepted = act(&state, ActionBody::Concede, PlayerId::P1, "probe-test-3");
+            let wrong = judge_probe(&state, &accepted, None).expect("an accepted concede is no refusal");
+            assert!(wrong.contains("was accepted"), "{wrong}");
+            assert!(wrong.contains("moved the state"), "{wrong}");
+
+            // 4. A refusal that remembered its nonce hashes as the state it refused, yet is not it.
+            let mut remembered = refused.clone();
+            remembered.state.applied = kept.state.applied.clone();
+            assert_eq!(hash_state(&remembered.state), hash_state(&state));
+            let wrong = judge_probe(&state, &remembered, None).expect("a moved nonce memory is no refusal");
+            assert!(wrong.contains("moved the state"), "{wrong}");
         }
     }
 

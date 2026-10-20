@@ -164,6 +164,8 @@ def review(text: str) -> Review:
 class Suggestion:
     title: str
     body: str
+    #: Its class id (`prompts/suggest.md`, #1409), or "" when the survey named none.
+    kind: str = ""
 
 
 def suggestions(text: str, limit: int) -> list[Suggestion]:
@@ -176,8 +178,9 @@ def suggestions(text: str, limit: int) -> list[Suggestion]:
             continue
         title = " ".join(str(entry.get("title", "")).split())[:200]
         body = str(entry.get("body", "")).strip()
+        kind = entry.get("class")
         if title and body:
-            found.append(Suggestion(title, body))
+            found.append(Suggestion(title, body, kind.strip() if isinstance(kind, str) else ""))
         if len(found) >= limit:
             break
     return found

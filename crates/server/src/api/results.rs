@@ -35,11 +35,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use indexmap::IndexMap;
-use jackioh_engine::{GameOverReason, PlayerId, Winner};
+use jackioh_engine::{ActionBody, GameOverReason, PlayerId, Winner};
 
 use crate::actor::contracts::{RecordResultInput, TerminalOutcome, VoidMatchInput};
 use crate::actor::{engine, match_actor, registry};
-use crate::api::game_records::record_live_game;
+use crate::api::game_records::{fold_args_of, record_live_game};
 use crate::api::http::{ApiError, ApiErrorCode};
 use crate::api::queue::json_list;
 use crate::api::ranked::{RankedGameInput, RankedSideInput, rate_ranked_game};
@@ -51,9 +51,11 @@ use crate::config::{
     MATCH_REAPER_INTERVAL_SECONDS, OPEN_MATCH_REAP_GRACE_MS, RATING_START, RESULT_WRITE_ATTEMPTS,
 };
 use crate::db::store::{
-    LastBoardKind, MatchRow, MatchSeat, Profile, ProfileKind, RatedGameKind, RatedReason, ResultRow,
-    SeriesRow, SeriesStatus, StoreError, Tx,
+    LastBoardKind, MatchActionRow, MatchRow, MatchSeat, Profile, ProfileKind, RatedGameKind, RatedReason,
+    ResultRow, SeriesRow, SeriesStatus, StoreError, Tx,
 };
+use crate::economy::quests::tally_seat;
+use crate::economy::rewards::{GameMode, GameSummary, is_player_action, pay_game_rewards};
 
 /// A failure this file reports to its caller (the actor, the reaper): TS rethrew the error itself,
 /// so the sentence is the error's own.
@@ -289,6 +291,61 @@ async fn write_once(
     };
     tx.results_insert(&row).await.map_err(insert_error)?;
 
+    // §14.8: a finished ladder game — a ranked match that is not a game of a Conquest series —
+    // pays Jlore and XP through the one reward hook, in this same transaction, so a payout
+    // failure rolls the row back with it. Deliberately gated on `ranked_match` rather than
+    // `rating_policy`: a reaper ceiling draw is unrated yet still pays ([[R1302002]]). Nothing is
+    // paid for series games, room challenges, voided matches (that path never reaches here), or
+    // bot sides ([[R1454]]). The server ran the match, so it counts each seat's actions from its
+    // own log, the moves that seat took and not the server's own rows ([[R1302004]]); the client
+    // reports nothing. Nothing is paid while `ECONOMY_LIVE` is off (§14.12, [[R1302006]]): the
+    // economy is built behind it, and a ledger row is never deleted. The same hook moves each
+    // seat's quests (§14.9, [[R1304001]]) by what the game did: its plays and fired Traps, read off
+    // the log by the engine's fold (`quests_game`), and its attacks, counted from the log.
+    if app.economy_live && series.is_none() && ranked_match {
+        let log = tx.matches_actions(&input.match_id).await.map_err(failed)?;
+        let winner_side = winner_side_of(&input.outcome, &input.seats);
+        let game = match &match_row {
+            Some(row) => quests_game(app, row, &log).await,
+            None => None,
+        };
+        for (index, seat) in [seat_a, seat_b].into_iter().enumerate() {
+            let taken = |keep: fn(&ActionBody) -> bool| {
+                let count = log
+                    .iter()
+                    .filter(|logged| logged.action.player_id == seat.player && keep(&logged.action.body))
+                    .count();
+                i64::try_from(count).unwrap_or(i64::MAX)
+            };
+            let actions = taken(is_player_action);
+            let attacks = taken(|body| matches!(body, ActionBody::Attack { .. }));
+            let bot = matches!(
+                by_id.get(&seat.profile_id).map(|profile| profile.kind),
+                Some(ProfileKind::Bot)
+            );
+            pay_game_rewards(
+                tx,
+                &GameSummary {
+                    mode: GameMode::Ladder,
+                    profile_id: seat.profile_id.clone(),
+                    player: seat.player,
+                    won: winner_side.map(|side| side == index),
+                    actions,
+                    match_id: input.match_id.clone(),
+                    at: input.at,
+                    bot,
+                    tally: tally_seat(
+                        game.as_ref().map(|game| &game.seats[seat.player]),
+                        attacks,
+                        &app.catalog.defs,
+                    ),
+                },
+            )
+            .await
+            .map_err(failed)?;
+        }
+    }
+
     // R417, R565: each seat's board as this game ended, read from its own side, becomes its last
     // server board, with the result or not at all. The reaper's ceiling draw reads no state, so it writes none.
     if let Some(last_boards) = &input.last_boards {
@@ -369,6 +426,41 @@ async fn write_once(
         row,
         series: advanced,
     })
+}
+
+/// §14.9: the finished game a ladder result's quests read (`economy::quests::tally_seat`): the
+/// match's `(seed, decks, log)` folded by the engine's `summarize_game`, as the game record's fold
+/// reads it (`game_records.rs`), off the runtime under the catalog the match started on (#1035,
+/// R767000). `None`, logged, when the log cannot be read or reaches no result: the quests then
+/// count the log's attacks alone, and the result is written all the same.
+async fn quests_game(
+    app: &App,
+    row: &MatchRow,
+    log: &[MatchActionRow],
+) -> Option<jackioh_engine::GameSummary> {
+    let entries: Result<Vec<_>, _> = log
+        .iter()
+        .map(|entry| serde_json::to_value(&entry.action))
+        .collect();
+    let args = match entries.and_then(|entries| fold_args_of(row, entries)) {
+        Ok(args) => args,
+        Err(error) => {
+            tracing::warn!(event = "quests.game.unread", matchId = %row.id, message = %error);
+            return None;
+        }
+    };
+    let pinned = registry::pinned_for(row);
+    match engine::off_runtime(app.engine_thread, move || engine::summarize_game(pinned, &args)).await {
+        Ok(Some(game)) => Some(game),
+        Ok(None) => {
+            tracing::warn!(event = "quests.game.unread", matchId = %row.id, message = "the log reaches no result");
+            None
+        }
+        Err(message) => {
+            tracing::warn!(event = "quests.game.unread", matchId = %row.id, message = %message);
+            None
+        }
+    }
 }
 
 /// The `RecordResult` port the actor holds (TS `ActorDeps.recordResult`, made by

@@ -36,11 +36,12 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Persistence | `db/store.rs` (`Db`, `Tx`), `db/pg.rs`, `db/fake.rs`, `db/migrate.rs` | one method per store operation, over Postgres or the in-memory fake |
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
 | Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs`, `calibrate.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, the pool, and the strengths' measured seed ratings (R1453, R641000, R1454, R1452, R748000) |
-| Cosmetics | `cosmetics.rs`, `cosmetics.json` | the cosmetics registry (the card slots and the deck slots: playmat, backdrop, card back) and its check: no id twice, ids a settings text can carry, one default per kind (R1295000, R1297000); `is_id_of` checks a deck's pick |
+| Cosmetics | `cosmetics.rs`, `cosmetics.json` | the cosmetics registry (the card slots, the deck slots: playmat, backdrop, card back, and the hero cards' full arts, one per card) and its check: no id twice, ids a settings text can carry, one default per kind a player picks, a full art naming its own card and no default (R1295000, R1297000, R1313000); `is_id_of` checks a deck's pick |
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
 | Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings) and `live_match_of` (§13) |
-| Economy | `economy/store.rs` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store; nothing calls them yet |
+| Economy | `economy/store.rs`, `math.rs`, `rewards.rs`, `roll.rs`, `packs.rs`, `cosmetic_packs.rs`, `practice.rs`, `quests.rs`, `quests.json` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store, `economy_lock_account`, an opening's lock on its account (R1301003), and 0047's practice seeds; the pure math, the level curve and the pity roll (R1298000); the reward hook a finished game pays through (§14.8); the pure pack roll, its slots' rarities, the card draw and the dupe chain (R1301000–R1301002); buying and opening a pack, each in one transaction, the opening's catalog version, cosmetics, seed and result logged in its rows' `ref` (R1301003); opening a cosmetic pack, its slots rolled by cosmetic rarity from a seed and logged the same way, and the Chase Shard bar it fills and what the bar buys (R1306000–R1306003); a practice claim's check, its log folded from the seed's setup and every AI move re-run (§14.8, R1303000–R1303003); and the daily quests (§14.9): their pool and its check (every payout from `QUEST_JLORE_MIN` to `QUEST_JLORE_MAX`, a harder entry paying more), their rhythm and top-up, the store's read locking the account's schedule so two top-ups at once bring a quest once (R1304000), what a finished game moves through the reward hook and the payout of one that completes (R1304001) |
+| Dev tools | `api/dev.rs` | a dev account's own grants and clears (§14.10, R1300000): XP, Jlore, the fill and the clears, each one transaction of ledger rows marked `dev`; 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
 There are no traits: `Db`, `Tx` and `Auth` are enums with one variant per implementation (`Pg` and
@@ -143,6 +144,7 @@ placeholders (`app::load_server_env`).
 | `LADDER_BOTS` | no | `on` seats a ladder bot against a ranked ticket of any mode left alone past its fallback time (a Conquest ticket's in a series, R641000), and keeps the bot pool (R1453, R1454, R1452); off unless `on` (unset or `off`), and any other value refuses the boot. The bots decide in this process, so turning it on wants a host with room for the AI's search, such as a paid Render instance |
 | `CREATE_ISSUES_TOKEN` | no | a token that may open issues in `GITHUB_ISSUES_REPO`, with which the server files a match its own log does not reproduce ([below](#a-match-its-log-does-not-reproduce)); unset, such a match is only logged. Secret |
 | `GITHUB_ISSUES_REPO` | no | the `owner/name` those issues go to; default `Jlore-Studios/JackiOh` (`BUG_REPORT_REPO_DEFAULT`) |
+| `DEV_PROFILE_IDS` | no | the dev accounts (§14.10, R1300000): comma-separated profile ids, each the account secret ID `/account` shows; unset, none. A malformed id refuses the boot, naming it. `seed-catalog` reads it too, so a new catalog's grant passes over them (R1300001). The boot logs how many, never which |
 
 `mint-code`, `moderate` and `seed-accounts` read the same environment (`seed-accounts` also
 `SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import`, `stats-fold`,
@@ -162,7 +164,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `POST` | `/api/auth/signin` | none | E2E mode only: a fixture account's session |
 | `POST` | `/api/e2e/reseed` | none | E2E mode only, elsewhere a path nobody serves (404): R144's reseed on demand, which spec 10 calls first; answers `{ profiles, grantedCards, codes }` |
 | `POST` | `/api/auth/username-signin` | none | a username and password: the session, never the address; limited per address and per username (R1443) |
-| `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series, the caller's `username: { name, nextChangeAt, promptOwed }` (R1435), `ageCheckOwed` and `termsOwed` (R757000, R757001), and `queued` (R897000) |
+| `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series, the caller's `username: { name, nextChangeAt, promptOwed }` (R1435), `ageCheckOwed` and `termsOwed` (R757000, R757001), `queued` (R897000), and `isDev`, whether `DEV_PROFILE_IDS` lists the caller (R1300000) |
 | `GET` | `/api/profile` | active | the account screen: who the caller is and their record |
 | `GET` | `/api/username/preview?name=…` | active | the exact username a save would give, tag included, or why it is refused (R1432–R1435) |
 | `PUT` | `/api/username` | active | save the previewed username; 409 with a fresh preview when the outcome changed (R1434, R1435) |
@@ -172,7 +174,23 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET` | `/api/catalog` | none | `{ version, defs }`, the bytes the client ships (R163); `x-deployed-commit` |
 | `POST` | `/api/codes/redeem` | user | §9.4's six-step redemption; first 403 `consent_owed` for an account owing the age check or the terms, costing no attempt (R757000, R757001) |
 | `GET` | `/api/codes/status` | user | whether redemption is paused, and the caller's attempts left (R192) |
-| `GET` | `/api/collection` | active | the ledger; there is no write route |
+| `GET` | `/api/collection` | active | the cards owned (a card cleared to 0 is not sent); there is no write route but the dev tools' |
+| `GET`, `POST` | `/api/packs`, `/api/packs/buy`, `/api/packs/open` | active | the caller's pity counters, the odds and the unopened packs held; buy `{ pack }` (a shipped set's name or `global`) for `PACK_PRICE_JLORE`, 409 when the wallet cannot cover it; open one, 409 when none of that kind is held: its slots, the pity counters after it and the packs left (R1301000–R1301003) |
+| `GET` | `/api/tokens` | active | both token bars' points and sizes, the cosmetic cycle's next step and the tokens held (§14.5; R1305000, R1305001, R1305004) |
+| `POST` | `/api/tokens/redeem-card` | active | `{ cardId }`: a card token unlocks one chosen unowned card of a set that ships, 409 for a choice it cannot pay for, answering the tokens after it (R1305002) |
+| `POST` | `/api/tokens/redeem-cosmetic` | active | `{ token, cosmeticId, cardId? }`: a Rare or Epic token buys one cosmetic at its tier or below, 409 for a choice it cannot pay for, answering the tokens after it (R1305003) |
+| `GET` | `/api/cosmetic-packs` | active | the Chase Shard bar's points and size and the cosmetic packs unopened (§14.6; R1306002) |
+| `POST` | `/api/cosmetic-packs/open` | active | open one cosmetic pack, 409 when none is held: its slots, each an unowned cosmetic (and its card, when the account lacked it) or bar points, the Chase Shard bar after it and the packs left (R1306000, R1306001, R1306003) |
+| `POST` | `/api/cosmetic-packs/chase` | active | `{ cosmeticId, cardId? }`: a full Chase Shard bar buys one unowned Legendary or Mythic cosmetic and empties, 409 for a choice it cannot pay for, answering the bar and packs after it (R1306002) |
+| `GET` | `/api/wallet` | active | the caller's Jlore balance (§14.1); read-only, like the collection |
+| `GET` | `/api/tracks` | active | the caller's set tracks in catalog order — level, XP, the XP to the next level, the next rewards (both `null` on the last level, R1302005) and how many levels have paid (§14.7); read-only, like the collection |
+| `GET` | `/api/quests` | active | the caller's held quests, `{ quests: [{ questId, title, progress, target, jlore, xp, arrivedAt }], nextDueAt }`, topped up first while the economy is live (R1304000); `nextDueAt` is `null` at `QUEST_MAX_HELD` and while the economy is off, when none arrives (R1304002) |
+| `POST` | `/api/dev/quests` | active | a dev tool: a quest at once, drawn as an arrival is and marked `dev`, `{ quest }`; 409 at `QUEST_MAX_HELD`. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list (R1300000) |
+| `POST` | `/api/dev/quests/:questId/complete` | active | a dev tool: completes a held quest and pays it, every row marked `dev`, `{ completed, jlore, xp }`; 404 for a quest not held. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list (R1300000) |
+| `POST` | `/api/practice/seeds` | active | `{ difficulty, humanSeat, deck, catalog }`: a practice game's seed, kept with that setup and the last board the server holds for the caller (R1303003), 201 `{ seed, lastBoard, expiresAt }`; prunes the caller's seeds older than `PRACTICE_SEED_TTL_SECONDS` (R1303001); 409 while the economy is off or for a catalog it cannot fold |
+| `POST` | `/api/practice/claims` | active | `{ seed, result, log }`: a finished practice game, folded and its AI moves re-run (R1303002), at most `PRACTICE_VERIFY_CONCURRENCY` at once, the rest waiting; 200 `{ paid: true, jlore, xp }`, or `{ paid: false, reason }` for every refusal; the seed is burned first, so it pays once (R1303001) |
+| `GET` | `/api/cosmetics` | active | the cosmetics the caller owns, `{ cards: [{ cardId, cosmeticId }], account }`, never another's; the starter cosmetics have no row (R1313000) |
+| `POST` | `/api/dev/xp`, `/api/dev/jlore`, `/api/dev/fill`, `/api/dev/clear/:part` | active | a dev account's own tools (§14.10, R1300000): `{ setId, xp }` to a shipped set's track, its level stopping at `SET_TRACK_LEVELS`; `{ jlore }`; every collectable card and every cosmetic but the defaults; a clear of `cards`, `cosmetics`, `jlore`, `counters`, `tracks` or `everything`; every row reason `dev`, marked `dev`. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list |
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641) and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000) |
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
@@ -191,7 +209,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5) |
 | `GET` | `/api/friends` | active | the caller's friends with their status (`offline`, `online`, `inMatch`) and whether they may be watched, the requests in and out, and the players the caller blocks (§9.4), read in one transaction by a fixed number of set-based queries whatever the number of friends |
 | `POST`, `DELETE` | `/api/friends/requests`, `/:id/accept`, `/:id/decline`, `/api/friends/requests/:id`, `/api/friends/:profileId` | active | a request by exact `name#tag` (an unknown name and a blocked pair answer the same 404; `self`, `already_friends`, `already_requested`, `friend_cap` are 409; past `FRIEND_REQUESTS_PER_HOUR` is 429; a mutual request is accepted at once), its answer or its cancel, and removing a friend (which deletes the replay shares between the two, either way, and lets go a watch of either by the other) |
-| `POST`, `DELETE` | `/api/blocks`, `/api/blocks/:profileId` | active | block (removing the friendship, every request and every replay share either way, and letting go a watch of either by the other) and unblock |
+| `POST`, `DELETE` | `/api/blocks`, `/api/blocks/:profileId` | active | block (removing the friendship, every request and every replay share either way, letting go a watch of either by the other, and muting the two's emotes in a live match between them, R1351000) and unblock |
 | `POST` | `/api/presence` | active | the heartbeat, every `PRESENCE_HEARTBEAT_MS`; a friend reads as online for `PRESENCE_TTL_MS` after it; records nothing while the account owes the terms (R970002) |
 | `GET`, `POST`, `DELETE` | `/api/challenges`, `/:id/decline`, `/api/challenges/:id` | active | challenge an online, idle friend with `POST /api/rooms`'s body plus `friendId`, making the room and the challenge (409 `busy`, `offline`, `already_challenged`); the open challenges in and out; decline, cancel; `CHALLENGE_TTL_MS` frees an unanswered one's room, and the sweeper then deletes every challenge row that old; past `CHALLENGES_PER_HOUR` an hour a challenger gets 429 |
 | `GET`, `POST` | `/api/chat/:friendId`, `/api/chat/unread`, `/api/chat/messages/:id/report` | active | a page of a conversation (`CHAT_PAGE`, newest last, marked read), a message to a friend (1 to `CHAT_MAX_CHARS` once trimmed, 422 `empty` or `too_long`, masked, `CHAT_MESSAGES_PER_MINUTE` a sender), unread counts, a report |
@@ -226,13 +244,15 @@ rooms through `freeze_choice`, and a Best-of-1 rematch, which replays frozen dec
 
 ## WebSocket surface
 
-One socket per player per match, at `/ws/match` on the same port. The token comes from `?token=`; the
-server echoes the `jackioh.v1` subprotocol when offered. The message union is `actor/protocol.rs`:
+One socket per player per match, at `/ws/match` on the same port. The token comes from an offered
+`jackioh.bearer.` subprotocol, its UTF-8 in base64url without padding (R1379000; `?token=` only when
+none is offered, for the previous day's client); only `jackioh.v1` is echoed, and `/ws/duos` and
+`/ws/watch` read the token the same way. The message union is `actor/protocol.rs`:
 the client sends `hello` and `action`, the server sends `hello`, `view`, `ack`, `error`, `prompt` and
 `clock`, and the cosmetic `portraits` (R642), `emote` (R643) and `aim` (R738) frames ride beside them,
 never part of an action or a view. The `portraits` frame also carries the receiving account's own emote
 hand, eight of the pool dealt from the match seed (R1341, R1342), and the actor drops an emote outside
-the sender's hand as silently as a rate-limited one. A frame over `MAX_FRAME_BYTES` closes the socket with 1009.
+the sender's hand as silently as a rate-limited one, and relays nothing between two accounts either of which blocks the other (R1351000). A frame over `MAX_FRAME_BYTES` closes the socket with 1009.
 A profile opens it onto the match it is in, or onto a finished match it held a seat in until
 `REMATCH_OFFER_TTL_MS` after that match ended; past that it is refused as a stranger is (4403), and a
 finished match whose log the retention purge took is not found (4404, R1285000).
@@ -300,9 +320,11 @@ holds, with four seats:
   one;
 - every applied action goes to `duos_match_actions` and pushes fresh views to both human seats; an
   illegal action answers `illegal_action` with its nonce and changes nothing; a rebuilt actor folds the
-  log with `duos_fold` on the blocking pool, only for a profile that holds a seat, and the end writes
-  the result and `ended_at` once, unranked, for both humans; every engine call runs under the catalog
-  version the match was dealt from (`DuosMatchOptions::catalog_version`, R767000);
+  log with `duos_fold` on the blocking pool, only for a profile that holds a seat and, once the match
+  has ended, only within `REMATCH_OFFER_TTL_MS` of its `ended_at` (past that the seat is not found,
+  4404, and nothing is folded: R1398000), and the end writes the result and `ended_at` once, unranked,
+  for both humans; every engine call runs under the catalog version the match was dealt from
+  (`DuosMatchOptions::catalog_version`, R767000);
 - a nonce starting `srv-` or `duos:` (the engine's round's own) is `malformed`, and a `hello` repeated
   while one from the same socket is still queued is absorbed (R835001's rule);
 - each human seat keeps the same `actor::guard::SeatGuard` as a 1v1 seat: `MATCH_ACTIONS_PER_SECOND`
@@ -440,13 +462,16 @@ A match is its `(seed, decks, boards, log)` (§9.3), and the server checks that 
 (`api::results`) and the fold of a finished match for its game record (`api::game_records`). When a
 fold refuses an action the log holds, the match goes on as before (a rebuild keeps the state it
 folded to, a finished match keeps the result it recorded), and `bug_reports.rs` logs it as the
-alert `bug.found` and, with `CREATE_ISSUES_TOKEN` set, files one GitHub issue for the night bot:
-titled `Patch v0.3.Y: match <id> …`, labelled `BUG_REPORT_LABELS` (`patch`, `bot:build`,
-`difficulty:hard`, `priority:high`). It files once per match per process, at most
-`BUG_REPORTS_PER_WINDOW` in `BUG_REPORT_WINDOW_MS`, and nothing when an issue whose title names the
-match exists already. The repository is public and the match may still be live, so the issue names
-the match, the build, the catalog and each refused row's seq, seat and action type, and never a
-refusal's text, a card or an instance id.
+alert `bug.found` and, with `CREATE_ISSUES_TOKEN` set, files one GitHub issue for the night bot
+per failure signature (`bug_reports::Signature`: where it was found, the build, the catalog and
+the first refused action's type), titled `Patch v0.3.Y: match <first id> … (<signature>)` and
+labelled `BUG_REPORT_LABELS` (`patch`, `bot:build`, `difficulty:hard`, `priority:high`). A later
+match with the signature is added to that issue's body, once per match per process, up to
+`BUG_REPORT_LISTED_MATCHES`; a process opens at most `BUG_REPORTS_PER_WINDOW` issues in
+`BUG_REPORT_WINDOW_MS`, and none when an issue whose title holds the signature exists already
+(its later matches are only logged). The repository is public and the match may still be live,
+so the issue names each match, the build, the catalog and each refused row's seq, seat and action
+type, and never a refusal's text, a card or an instance id.
 
 A live action whose `reduce` panics (R1253000) is filed the same way, as `FoundIn::Live`
 (`FoundIn::DuosLive` in co-op): the issue names the match, the seq the action would have taken, its
@@ -715,6 +740,25 @@ authenticated account the cosmetics; no client role writes any, and a ledger row
 goes only with its account (`app.deny_row_mutation('profile_id')`). Every ledger row has a reason and
 a `dev` mark (§14.10), which `collection_grants` gains too, false for every existing row.
 
+Migration 0046 adds the dev accounts' two rules (§14.10). `collection_grants` takes the reason `dev`,
+a dev tool's own, written only marked `dev` (`collection_grants_dev_check`, R1300000). And
+`app.grant_launch_collection_all`, which a catalog stamp runs (R481), passes over the profiles the
+transaction's `jackioh.dev_profile_ids` setting names, which `seed-catalog` sets from
+`DEV_PROFILE_IDS` before its stamp, so a dev account's clear stays cleared (R1300001); a stamp
+without the setting grants every person's active account as before.
+
+Migration 0047 adds `practice_seeds` (#1303): one row per seed `POST /api/practice/seeds` issued an
+account, with the game's setup (the AI tier, the human's seat, the deck, the last board it brought
+and the catalog version), when it was issued and when it was claimed. It is server-only like
+`match_checkpoints` (RLS on, no policy, no grant), since a seed is what lets a claim pay, and it goes
+with its account (on delete cascade). A claim burns its seed in one transaction, then
+`economy::practice::verify` folds the log and re-runs every AI move off the runtime, at most
+`PRACTICE_VERIFY_CONCURRENCY` at once, in a task that outlives the request, and a second
+transaction pays and keeps the board. Measured in release (`cargo test --release -p jackioh-server
+--test server r1303002_the_ai_rerun -- --nocapture`, 2026-10-20, the night bot's 4-core runner):
+the recorded game, 46 actions of which 29 the AI's, verifies in 680–700 ms; twelve AI-against-AI
+games, four per tier, in 392–1,980 ms (32–76 actions, 18–46 AI moves), about 20–45 ms per AI move.
+
 ## Tests
 
 ```
@@ -738,7 +782,7 @@ real Postgres, so only the three Docker suites check them (CI's `db` job).
 `tests/export_config.rs` writes `apps/web/src/wire/serverConfig.ts`, the constants the client and e2e
 read; CI fails when a run changes it.
 `tests/export_cosmetics.rs` writes `apps/web/src/wire/generated/cosmetics.ts` from `cosmetics.json`,
-the card and deck slot cosmetics registry `src/cosmetics.rs` checks (R1295000, R1297000); CI fails when a run changes it too.
+the card and deck slot cosmetics and the full arts, the registry `src/cosmetics.rs` checks (R1295000, R1297000, R1313000); CI fails when a run changes it too.
 
 ## Conventions
 

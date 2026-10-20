@@ -12,7 +12,7 @@
 //! ```text
 //! cargo jackioh stats                               AI_DEV_RUN.games games of the "dev" series,
 //!                                                   tagged with the newest patch in patches.json
-//! cargo jackioh stats --games 50 --from 51          games 51-100, so slices run in parallel
+//! cargo jackioh stats --games 50 --from 51          games 51-100, a shard to run on another machine
 //! cargo jackioh stats --patch v0.2.5 --out v0.2.5.jsonl
 //!                                                   a pre-release run of v0.2.5, kept in a file
 //! cargo jackioh stats --series tuning-a             another seed series: other games
@@ -28,6 +28,10 @@
 //! stderr. `--out` is resolved against the directory the command was started in, and the file is
 //! written a line per game as the run goes, so a run that is stopped keeps the games it finished.
 //!
+//! The games play on rayon's pool in chunks of one game per thread (RAYON_NUM_THREADS sets the
+//! width). Each chunk's records are written in game order and flushed before the next chunk starts,
+//! so --out is byte-identical to a serial run's file and a stopped run keeps every whole chunk.
+//!
 //! `cargo jackioh stats report <file>…` reads record files instead (what `--out` writes, what
 //! `jackioh-server stats-export` writes of the live games, what the training lanes keep) and prints
 //! R377's card win rates over them with no database, with `stats-cards`' flags: the figures a
@@ -35,8 +39,9 @@
 //!
 //! `cargo jackioh stats report --games <file>…` prints the game figures over the same files instead,
 //! per patch, mode and source: how often the first seat won (with its 95% Wilson interval), how the
-//! games ended, how long they lasted, and what R1256000's counts say of fatigue and Traps. A record
-//! written before those counts is unknown for them, not zero. The training lanes keep these figures
+//! games ended, how long they lasted, and what R1256000's counts say of fatigue, Traps, position
+//! switches and Radiant upgrades. A record written before those counts is unknown for them, not
+//! zero. The training lanes keep these figures
 //! beside the card figures (`training/README.md`).
 //!
 //! A forced run files under a series of its own (`dev-force-<id>`) and is for `stats compare` and
@@ -53,15 +58,16 @@ use std::time::Instant;
 
 use anyhow::{Context, Result, anyhow};
 use indexmap::{IndexMap, IndexSet};
+use rayon::prelude::*;
 use serde::Serialize;
 use serde_json::Value;
 
 use jackioh_ai::{AI_DEV_RUN, DevRunOptions, SHADOW_BAN, SHADOW_WATCH, dev_game_record};
 use jackioh_engine::{
-    CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, DEV_RECORD_ID_PREFIX, GAME_MODES,
-    GAME_OVER_REASONS, GameMode, GameOverReason, GameRecord, GameSource, GameSummary, PILOT_FILTERS,
-    PLAYER_IDS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, Winner, card_stats, describe_filter,
-    format_card_stats, parse_game_record_lines, record_matches, seats_counted, sources_of,
+    CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, DEV_RECORD_ID_PREFIX, FORCED_SERIES_PREFIX,
+    GAME_MODES, GAME_OVER_REASONS, GameMode, GameOverReason, GameRecord, GameSource, GameSummary,
+    PILOT_FILTERS, PLAYER_IDS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, Winner, card_stats,
+    describe_filter, format_card_stats, parse_game_record_lines, record_matches, seats_counted, sources_of,
 };
 
 use crate::arena::{self, paired_interval, wilson_interval};
@@ -125,13 +131,13 @@ pub struct Args {
     /// How many games. Default AI_DEV_RUN.games.
     #[arg(long, value_parser = games_count)]
     pub games: Option<i32>,
-    /// The first game's number, so slices of a run can go in parallel. Default 1.
+    /// The first game's number, so shards of a run on other machines never overlap. Default 1.
     #[arg(long, value_parser = from_count, default_value_t = 1)]
     pub from: i32,
     /// The patch the run tests. Default: the newest in patches.json.
     #[arg(long, value_name = "VERSION")]
     pub patch: Option<String>,
-    /// The seed series. Default AI_DEV_RUN.series ("dev").
+    /// The seed series. Default AI_DEV_RUN.series ("dev"). Refused with --force (R1284000).
     #[arg(long, value_name = "NAME")]
     pub series: Option<String>,
     /// R1284000: deal this card to p1 in odd games and p2 in even ones; a token goes in through its card (R279).
@@ -319,6 +325,14 @@ pub struct GameGroup {
     pub traps_fired: Option<i32>,
     /// `traps_fired` over `traps_set` to three places, or null when no Trap was set.
     pub traps_fired_per_set: Option<f64>,
+    /// Position switches by units over the counted games, both seats.
+    pub position_switches: Option<i32>,
+    /// The mean of `position_switches` over the counted games, to three places.
+    pub position_switches_mean: Option<f64>,
+    /// Cards an effect made Radiant over the counted games, both seats.
+    pub radiant_upgrades: Option<i32>,
+    /// The mean of `radiant_upgrades` over the counted games, to three places.
+    pub radiant_upgrades_mean: Option<f64>,
 }
 
 /// `stats report --games`: the groups a filter reads and the records it left to another source.
@@ -340,6 +354,8 @@ struct Counts {
     fatigue_damage: i32,
     traps_set: i32,
     traps_fired: i32,
+    position_switches: i32,
+    radiant_upgrades: i32,
 }
 
 /// R1256000: a game's counts, or `None` when either seat's record lacks one (written before them).
@@ -351,6 +367,8 @@ fn counts(game: &GameSummary) -> Option<Counts> {
         sum.fatigue_damage += seat.fatigue_damage?;
         sum.traps_set += seat.traps_set?;
         sum.traps_fired += seat.traps_fired?;
+        sum.position_switches += seat.position_switches?;
+        sum.radiant_upgrades += seat.radiant_upgrades?;
     }
     Some(sum)
 }
@@ -386,6 +404,8 @@ fn game_group(key: (String, GameMode, GameSource), records: &[&GameRecord]) -> G
     let damage: i32 = known.iter().map(|counts| counts.fatigue_damage).sum();
     let traps_set: i32 = known.iter().map(|counts| counts.traps_set).sum();
     let traps_fired: i32 = known.iter().map(|counts| counts.traps_fired).sum();
+    let switches: i32 = known.iter().map(|counts| counts.position_switches).sum();
+    let upgrades: i32 = known.iter().map(|counts| counts.radiant_upgrades).sum();
     GameGroup {
         patch,
         mode,
@@ -406,6 +426,10 @@ fn game_group(key: (String, GameMode, GameSource), records: &[&GameRecord]) -> G
         traps_fired: any.then_some(traps_fired),
         traps_fired_per_set: (any && traps_set > 0)
             .then(|| arena::round_share(f64::from(traps_fired) / f64::from(traps_set))),
+        position_switches: any.then_some(switches),
+        position_switches_mean: any.then(|| arena::round_share(f64::from(switches) / counted as f64)),
+        radiant_upgrades: any.then_some(upgrades),
+        radiant_upgrades_mean: any.then(|| arena::round_share(f64::from(upgrades) / counted as f64)),
     }
 }
 
@@ -476,7 +500,7 @@ pub fn render_games(report: &GameReport, json: bool) -> String {
         lines.push(format!("  turns, quartiles: {first}, {second}, {third}"));
         if group.counted == 0 {
             lines.push(
-                "  fatigue and traps: unknown, no record of these games carries R1256000's counts"
+                "  fatigue, traps, switches and upgrades: unknown, no record of these games carries R1256000's counts"
                     .to_string(),
             );
             continue;
@@ -499,9 +523,21 @@ pub fn render_games(report: &GameReport, json: bool) -> String {
             ),
             None => "  traps: none set".to_string(),
         });
+        lines.push(format!(
+            "  position switches: {}, {:.*} a game",
+            group.position_switches.unwrap_or_default(),
+            MEAN_DECIMALS,
+            group.position_switches_mean.unwrap_or_default()
+        ));
+        lines.push(format!(
+            "  Radiant upgrades: {}, {:.*} a game",
+            group.radiant_upgrades.unwrap_or_default(),
+            MEAN_DECIMALS,
+            group.radiant_upgrades_mean.unwrap_or_default()
+        ));
         if group.counted < *games {
             lines.push(format!(
-                "  (fatigue and traps over the {} of {games} games whose records carry R1256000's counts)",
+                "  (fatigue, traps, switches and upgrades over the {} of {games} games whose records carry R1256000's counts)",
                 group.counted
             ));
         }
@@ -742,14 +778,21 @@ fn run_compare(args: &CompareArgs) -> Result<()> {
 
 /// R1284000: the options of the run `args` ask for, `patch` being the version it tests. `--force`'s id is
 /// resolved as `golden record --force` resolves it, so a token goes in through its card and an unknown id or
-/// an unshipped set's card is refused. A forced run's default series holds the card's id, so its records'
-/// ids never collide with a plain run's in `stats-import`.
+/// an unshipped set's card is refused. A forced run files under its default series, so its records'
+/// ids never collide with a plain run's in `stats-import`; an explicit `--series` with `--force` is refused.
 fn run_options(args: &Args, patch: String) -> Result<DevRunOptions> {
     let force = args.force.as_deref().map(golden::resolve_forced).transpose()?;
-    let series = match (&args.series, &force) {
-        (Some(series), _) => series.clone(),
-        (None, Some(card)) => format!("{}-force-{card}", AI_DEV_RUN.series),
-        (None, None) => AI_DEV_RUN.series.to_string(),
+    if let (Some(series), Some(card)) = (&args.series, &force) {
+        return Err(anyhow!(
+            "--series {series} cannot go with --force: a forced run files under {FORCED_SERIES_PREFIX}{card}, for stats compare and stats report, never for stats-import (R1284000)"
+        ));
+    }
+    let series = match &force {
+        Some(card) => format!("{FORCED_SERIES_PREFIX}{card}"),
+        None => args
+            .series
+            .clone()
+            .unwrap_or_else(|| AI_DEV_RUN.series.to_string()),
     };
     Ok(DevRunOptions {
         series,
@@ -757,6 +800,53 @@ fn run_options(args: &Args, patch: String) -> Result<DevRunOptions> {
         budget: None,
         force,
     })
+}
+
+/// Games played and written at a time: a chunk's records reach the file in game order before
+/// the next chunk starts, so a stopped run keeps every whole chunk, like `selfplay`'s chunks.
+const MIN_CHUNK_GAMES: i32 = 1;
+
+/// One game per rayon thread, so every core has work and a stopped run loses at most one chunk.
+fn chunk_games() -> i32 {
+    rayon::current_num_threads().max(MIN_CHUNK_GAMES as usize) as i32
+}
+
+/// One played game: its number, its record when it finished, and the task's wall seconds for
+/// stderr only (scheduling contention included, never `--out`).
+struct PlayedGame {
+    n: i32,
+    record: Option<GameRecord>,
+    seconds: f64,
+}
+
+/// Plays games `from..from + games` in chunks of `chunk_games`, handing each chunk's games, in
+/// game order, to `sink` before the next chunk starts. A record is a pure function of its number
+/// and options (`dev_game_record`), so the chunks read the same games whatever the thread count.
+fn play_chunks(
+    from: i32,
+    games: i32,
+    options: &DevRunOptions,
+    mut sink: impl FnMut(Vec<PlayedGame>) -> Result<()>,
+) -> Result<()> {
+    let end = from + games;
+    let mut start = from;
+    while start < end {
+        let count = chunk_games().min(end - start);
+        let chunk: Vec<PlayedGame> = (start..start + count)
+            .into_par_iter()
+            .map(|n| {
+                let game_started = Instant::now();
+                PlayedGame {
+                    n,
+                    record: dev_game_record(n, options),
+                    seconds: game_started.elapsed().as_secs_f64(),
+                }
+            })
+            .collect();
+        sink(chunk)?;
+        start += count;
+    }
+    Ok(())
 }
 
 /// `cargo jackioh stats`.
@@ -798,28 +888,34 @@ pub fn run(args: Args) -> Result<()> {
 
     let mut records: Vec<GameRecord> = Vec::new();
     let started = Instant::now();
-    for n in args.from..args.from + games {
-        let game_started = Instant::now();
-        let record = dev_game_record(n, &options);
-        let seconds = format!("{:.*}", SECONDS_DECIMALS, game_started.elapsed().as_secs_f64());
-        let Some(record) = record else {
-            eprintln!("[ai:stats] {series}:{n} did not finish; no record ({seconds}s)");
-            continue;
-        };
+    play_chunks(args.from, games, &options, |chunk| {
+        for played in chunk {
+            let seconds = format!("{:.*}", SECONDS_DECIMALS, played.seconds);
+            let Some(record) = played.record else {
+                eprintln!(
+                    "[ai:stats] {series}:{} did not finish; no record ({seconds}s)",
+                    played.n
+                );
+                continue;
+            };
+            if let Some(file) = file.as_mut() {
+                writeln!(file, "{}", serde_json::to_string(&record)?)?;
+            }
+            let outcome = match record.game.winner {
+                Winner::Draw => "draw".to_string(),
+                winner => format!("{winner} won"),
+            };
+            eprintln!(
+                "[ai:stats] {series}:{} {outcome} by {} in {} turns ({seconds}s)",
+                played.n, record.game.reason, record.game.turns
+            );
+            records.push(record);
+        }
         if let Some(file) = file.as_mut() {
-            writeln!(file, "{}", serde_json::to_string(&record)?)?;
             file.flush()?;
         }
-        let outcome = match record.game.winner {
-            Winner::Draw => "draw".to_string(),
-            winner => format!("{winner} won"),
-        };
-        eprintln!(
-            "[ai:stats] {series}:{n} {outcome} by {} in {} turns ({seconds}s)",
-            record.game.reason, record.game.turns
-        );
-        records.push(record);
-    }
+        Ok(())
+    })?;
 
     let elapsed = format!("{:.*}", SECONDS_DECIMALS, started.elapsed().as_secs_f64());
     let written = match &out {
@@ -980,27 +1076,34 @@ mod tests {
     }
 
     /// A development game of random mode played by two AIs, first seat p1, as a line of JSON.
-    /// `counts` is each seat's `[fatigueDraws, fatigueDamage, trapsSet, trapsFired]` (R1256000), or
-    /// none for a record written before them.
+    /// `counts` is each seat's `[fatigueDraws, fatigueDamage, trapsSet, trapsFired, positionSwitches, radiantUpgrades]`
+    /// (R1256000), or none for a record written before them.
     fn game_line(
         id: &str,
         patch: &str,
         winner: &str,
         reason: &str,
         turns: i32,
-        counts: Option<[[i32; 4]; 2]>,
+        counts: Option<[[i32; 6]; 2]>,
     ) -> String {
         let seat = |n: usize| {
             let mut seat =
                 serde_json::json!({ "deck": ["core-001"], "opening": [], "drawn": [], "played": [] });
             if let Some(counts) = counts {
-                let [fatigue_draws, fatigue_damage, traps_set, traps_fired] = counts[n];
+                let [
+                    fatigue_draws,
+                    fatigue_damage,
+                    traps_set,
+                    traps_fired,
+                    switches,
+                    upgrades,
+                ] = counts[n];
                 seat["fatigueDraws"] = fatigue_draws.into();
                 seat["fatigueDamage"] = fatigue_damage.into();
                 seat["trapsSet"] = traps_set.into();
                 seat["trapsFired"] = traps_fired.into();
-                seat["positionSwitches"] = 0.into();
-                seat["radiantUpgrades"] = 0.into();
+                seat["positionSwitches"] = switches.into();
+                seat["radiantUpgrades"] = upgrades.into();
             }
             seat
         };
@@ -1031,7 +1134,7 @@ mod tests {
                 "p1",
                 "hero-death",
                 9,
-                Some([[0, 0, 2, 1], [2, 3, 1, 0]]),
+                Some([[0, 0, 2, 1, 3, 1], [2, 3, 1, 0, 1, 2]]),
             ),
             game_line(
                 "dev:v0.2.5:dev:2",
@@ -1039,7 +1142,7 @@ mod tests {
                 "draw",
                 "turn-cap",
                 40,
-                Some([[0; 4]; 2]),
+                Some([[0; 6]; 2]),
             ),
             game_line("dev:v0.2.5:dev:3", "v0.2.5", "p2", "hero-death", 12, None),
             game_line("dev:v0.2.4:dev:1", "v0.2.4", "p1", "alt-win", 15, None),
@@ -1087,7 +1190,8 @@ mod tests {
                         "reasons": reasons(&[("hero-death", 2), ("turn-cap", 1)]),
                         "turnQuartiles": [9, 12, 40],
                         "counted": 2, "fatigueGames": 1, "fatigueShare": 0.5, "fatigueDamageMean": 1.5,
-                        "trapsSet": 3, "trapsFired": 1, "trapsFiredPerSet": 0.333
+                        "trapsSet": 3, "trapsFired": 1, "trapsFiredPerSet": 0.333,
+                        "positionSwitches": 4, "positionSwitchesMean": 2.0, "radiantUpgrades": 3, "radiantUpgradesMean": 1.5
                     },
                     {
                         "patch": "v0.2.4", "mode": "random", "source": "dev",
@@ -1096,7 +1200,8 @@ mod tests {
                         "reasons": reasons(&[("alt-win", 1)]),
                         "turnQuartiles": [15, 15, 15],
                         "counted": 0, "fatigueGames": null, "fatigueShare": null, "fatigueDamageMean": null,
-                        "trapsSet": null, "trapsFired": null, "trapsFiredPerSet": null
+                        "trapsSet": null, "trapsFired": null, "trapsFiredPerSet": null,
+                        "positionSwitches": null, "positionSwitchesMean": null, "radiantUpgrades": null, "radiantUpgradesMean": null
                     }
                 ]
             })
@@ -1115,17 +1220,70 @@ mod tests {
             "  turns, quartiles: 9, 12, 40",
             "  fatigue: a draw from an empty library in 1 of 2 games (50.0%), 1.50 damage a game",
             "  traps: 1 fired of 3 set, 0.33 a set",
-            "  (fatigue and traps over the 2 of 3 games whose records carry R1256000's counts)",
+            "  position switches: 4, 2.00 a game",
+            "  Radiant upgrades: 3, 1.50 a game",
+            "  (fatigue, traps, switches and upgrades over the 2 of 3 games whose records carry R1256000's counts)",
             "",
             "v0.2.4 random dev: 1 games, 0 drawn",
             "  first seat won 1 of 1: 100.0%, 95% interval 20.7% to 100.0%",
             "  endings: alt-win 1",
             "  turns, quartiles: 15, 15, 15",
-            "  fatigue and traps: unknown, no record of these games carries R1256000's counts",
+            "  fatigue, traps, switches and upgrades: unknown, no record of these games carries R1256000's counts",
             "",
             "Left out: 1 records of a source --source=dev does not read (R378).",
         ];
         assert_eq!(text, expected.join("\n"));
+    }
+
+    #[test]
+    fn games_report_adds_both_seats_switches_and_upgrades_whichever_seat_holds_them() {
+        let totals = |counts: [[i32; 6]; 2]| {
+            let line = game_line("dev:v0.2.5:dev:1", "v0.2.5", "p1", "hero-death", 9, Some(counts));
+            let report = game_report(
+                &parse_game_record_lines(&line).unwrap(),
+                &filter_of(&report_args(&["a.jsonl", "--games", "--source=dev"]).unwrap()),
+            );
+            let group = &report.groups[0];
+            (group.position_switches, group.radiant_upgrades)
+        };
+        let (p1, p2) = ([0, 0, 0, 0, 3, 1], [0, 0, 0, 0, 1, 2]);
+        assert_eq!(totals([p1, p2]), (Some(4), Some(3)));
+        assert_eq!(totals([p2, p1]), (Some(4), Some(3)));
+    }
+
+    #[test]
+    fn games_report_counts_a_game_only_when_both_seats_carry_all_six_counts() {
+        // A seat that carries the fatigue and trap counts but not the switches: unknown, not zero.
+        let mut partial: Value = serde_json::from_str(&game_line(
+            "dev:v0.2.5:dev:4",
+            "v0.2.5",
+            "p1",
+            "hero-death",
+            10,
+            Some([[1; 6]; 2]),
+        ))
+        .unwrap();
+        partial["game"]["seats"]["p2"]
+            .as_object_mut()
+            .unwrap()
+            .remove("positionSwitches");
+        let mut lines = game_lines();
+        lines.push(partial.to_string());
+        let args = report_args(&["a.jsonl", "--games", "--source=dev"]).unwrap();
+        let report = game_report(
+            &parse_game_record_lines(&lines.join("\n")).unwrap(),
+            &filter_of(&args),
+        );
+        let group = &report.groups[0];
+        assert_eq!((group.games, group.counted), (4, 2));
+        assert_eq!(group.fatigue_games, Some(1));
+        assert_eq!(
+            (group.position_switches, group.radiant_upgrades),
+            (Some(4), Some(3))
+        );
+        assert!(render_games(&report, false).contains(
+            "  (fatigue, traps, switches and upgrades over the 2 of 4 games whose records carry R1256000's counts)"
+        ));
     }
 
     #[test]
@@ -1414,7 +1572,7 @@ mod tests {
         assert_eq!((plain.series.as_str(), plain.force), ("dev", None));
         assert_eq!(plain.patch, "v0.2.5");
 
-        // A forced run files under a series of its own, unless it is told one.
+        // A forced run files under a series of its own; an explicit series with --force is refused.
         let forced = options_of(&["--force=core-090"]).unwrap();
         assert_eq!(
             (forced.series.as_str(), forced.force.as_deref()),
@@ -1426,10 +1584,14 @@ mod tests {
             (token.series.as_str(), token.force.as_deref()),
             ("dev-force-classic-032", Some("classic-032"))
         );
-        assert_eq!(
-            options_of(&["--force=core-090", "--series=a"]).unwrap().series,
-            "a"
-        );
+        let refused = options_of(&["--force=core-090", "--series=a"])
+            .unwrap_err()
+            .to_string();
+        assert!(refused.contains("--series"), "{refused}");
+        assert!(refused.contains("--force"), "{refused}");
+        assert!(refused.contains("R1284000"), "{refused}");
+        assert!(refused.contains("dev-force-core-090"), "{refused}");
+        assert_eq!(options_of(&["--series=a"]).unwrap().series, "a");
 
         let unknown = options_of(&["--force=no-such-card"]).unwrap_err().to_string();
         assert!(unknown.contains("not in the catalog"), "{unknown}");
@@ -1660,6 +1822,121 @@ mod tests {
         .unwrap_err();
         assert!(format!("{refused:#}").contains(&format!("reading {}", missing.display())));
         std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    use jackioh_ai::SearchBudget;
+
+    /// The small budget the tests play at: `QUICK`'s fields (`crates/ai/tests/ai/dev_run.rs`).
+    const FEW: SearchBudget = SearchBudget {
+        nodes: 30,
+        lethal_nodes: 10,
+        determinizations: 1,
+        beam_width: 1,
+        root_branching: 6,
+        branching: 2,
+        max_depth: 2,
+        finalists: 1,
+    };
+
+    /// The finished records of `from..from + games` in game order, played in chunks.
+    fn chunk_records(from: i32, games: i32, options: &DevRunOptions) -> Vec<GameRecord> {
+        let mut all = Vec::new();
+        play_chunks(from, games, options, |chunk| {
+            all.extend(chunk.into_iter().filter_map(|played| played.record));
+            Ok(())
+        })
+        .unwrap();
+        all
+    }
+
+    /// The same games played one at a time, as `run` played them before chunks, each as the line
+    /// `--out` would hold.
+    fn serial_lines(from: i32, games: i32, options: &DevRunOptions) -> Vec<String> {
+        (from..from + games)
+            .filter_map(|n| dev_game_record(n, options))
+            .map(|record| serde_json::to_string(&record).unwrap())
+            .collect()
+    }
+
+    /// Like `selfplay`'s R1006001 test: the same games on one thread and on four give byte-identical
+    /// record lines, plain and forced, and the card figures over them are unchanged.
+    #[test]
+    fn stats_chunks_match_a_serial_run_on_one_or_four_threads_plain_and_forced() {
+        jackioh_cards::register_all();
+        let one = rayon::ThreadPoolBuilder::new().num_threads(1).build().unwrap();
+        let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
+        // Six games cover odd and even forced holders and, on four threads, two chunks of 4+2.
+        for options in [
+            DevRunOptions {
+                series: "dev".to_string(),
+                patch: "v0.9.9-test".to_string(),
+                budget: Some(FEW),
+                force: None,
+            },
+            DevRunOptions {
+                series: "dev-force-core-090".to_string(),
+                patch: "v0.9.9-test".to_string(),
+                budget: Some(FEW),
+                force: Some("core-090".to_string()),
+            },
+        ] {
+            let expected = serial_lines(1, 6, &options);
+            assert!(!expected.is_empty(), "the serial run finished no game");
+            let lines_of = |records: &[GameRecord]| -> Vec<String> {
+                records
+                    .iter()
+                    .map(|record| serde_json::to_string(record).unwrap())
+                    .collect()
+            };
+            assert_eq!(lines_of(&one.install(|| chunk_records(1, 6, &options))), expected);
+            let on_four = four.install(|| chunk_records(1, 6, &options));
+            assert_eq!(lines_of(&on_four), expected);
+            let filter = CardStatsFilter {
+                source: SourceFilter::Dev,
+                mode: Some(GameMode::Random),
+                patch: Some(options.patch.clone()),
+                pilot: PilotFilter::Ai,
+            };
+            assert_eq!(
+                card_stats(&one.install(|| chunk_records(1, 6, &options)), &filter),
+                card_stats(&on_four, &filter)
+            );
+        }
+    }
+
+    /// A stopped run keeps whole records in game order: the sink bails after the first chunk, and
+    /// what it kept parses and matches the serial run's first chunk.
+    #[test]
+    fn stats_a_stopped_run_keeps_whole_chunks_in_game_order() {
+        jackioh_cards::register_all();
+        let options = DevRunOptions {
+            series: "dev".to_string(),
+            patch: "v0.9.9-test".to_string(),
+            budget: Some(FEW),
+            force: None,
+        };
+        let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
+        let mut kept = String::new();
+        let stopped = four.install(|| {
+            play_chunks(1, 6, &options, |chunk| {
+                for played in &chunk {
+                    if let Some(record) = &played.record {
+                        kept.push_str(&serde_json::to_string(record).unwrap());
+                        kept.push('\n');
+                    }
+                }
+                anyhow::bail!("stopped after one chunk");
+            })
+        });
+        assert!(stopped.is_err(), "the bailed sink ends the run");
+        // The kept bytes parse as records: no torn line.
+        parse_game_record_lines(&kept).unwrap();
+        let kept_lines: Vec<&str> = kept.lines().collect();
+        let first_chunk = serial_lines(1, 4, &options);
+        assert_eq!(
+            kept_lines,
+            first_chunk.iter().map(String::as_str).collect::<Vec<_>>()
+        );
     }
 
     #[test]
