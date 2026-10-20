@@ -40,7 +40,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
 | Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings) and `live_match_of` (§13) |
-| Economy | `economy/store.rs` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store; nothing calls them yet |
+| Economy | `economy/store.rs`, `economy/quests.rs`, `quests.json` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store; the daily quests (§14.9): their pool and its check (every payout from `QUEST_JLORE_MIN` to `QUEST_JLORE_MAX`, a harder entry paying more), their rhythm and top-up (R1304000), what a finished game moves through the reward hook and the payout of one that completes (R1304001) |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
 There are no traits: `Db`, `Tx` and `Auth` are enums with one variant per implementation (`Pg` and
@@ -175,6 +175,9 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET` | `/api/collection` | active | the ledger; there is no write route |
 | `GET` | `/api/wallet` | active | the caller's Jlore balance (§14.1); read-only, like the collection |
 | `GET` | `/api/tracks` | active | the caller's set tracks in catalog order — level, XP, the XP to the next level, the next rewards (both `null` on the last level, R1302005) and how many levels have paid (§14.7); read-only, like the collection |
+| `GET` | `/api/quests` | active | the caller's held quests, `{ quests: [{ questId, title, progress, target, jlore, xp, arrivedAt }], nextDueAt }`, topped up first while the economy is live (R1304000); `nextDueAt` is `null` at `QUEST_MAX_HELD` and while the economy is off, when none arrives (R1304002) |
+| `POST` | `/api/dev/quests` | active | a dev tool: a quest at once, drawn as an arrival is and marked `dev`, `{ quest }`; 409 at `QUEST_MAX_HELD`. E2E builds only until #1300's dev check |
+| `POST` | `/api/dev/quests/:questId/complete` | active | a dev tool: completes a held quest and pays it, every row marked `dev`, `{ completed, jlore, xp }`; 404 for a quest not held. E2E builds only until #1300's dev check |
 | `GET` | `/api/cosmetics` | active | the cosmetics the caller owns, `{ cards: [{ cardId, cosmeticId }], account }`, never another's; the starter cosmetics have no row (R1313000) |
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641) and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000) |
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |

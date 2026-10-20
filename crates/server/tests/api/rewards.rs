@@ -1198,3 +1198,53 @@ mod reads {
         );
     }
 }
+
+// R1304001: the same hook moves the quests each side holds, by what the ladder game did.
+
+mod quests {
+    use super::*;
+    use jackioh_server::economy::quests::{QuestGoal, pool, quest_interval_ms};
+    use jackioh_server::economy::store::{QuestChange, QuestGrant};
+
+    #[tokio::test]
+    async fn r1304001_a_ladder_game_moves_its_players_quests() {
+        install_test_cards();
+        let app = scenario().await;
+        // No quest falls due during the game, and A holds the pool's easiest attack quest.
+        store!(app, |t| t.economy_quests_set_next_due(
+            A,
+            Some(now_ms() + 10 * quest_interval_ms())
+        ));
+        let attack = pool()
+            .iter()
+            .filter(|quest| quest.goal == QuestGoal::AttackWithUnits)
+            .min_by_key(|quest| quest.target)
+            .expect("the pool has an attack quest");
+        assert!(attack.target > 3, "three attacks leave it held");
+        let arrived = QuestGrant {
+            profile_id: A.to_owned(),
+            quest_id: attack.id.clone(),
+            change: QuestChange::Arrived,
+            progress: 0,
+            reason: EconomyReason::Dev,
+            reference: None,
+            dev: true,
+            at: now_ms(),
+        };
+        assert!(store!(app, |t| t.economy_quests_change(&arrived)));
+        let attack_row = json!({ "type": "attack", "attackerId": "c1", "targetId": "c2", "playerId": "p1" });
+        append_log_to(&app, MATCH_ID, &[attack_row.clone(), attack_row.clone(), attack_row]).await;
+        let outcome = play(&[json!({ "type": "play", "card": "test-lethal", "playerId": "p1" })]);
+        record_on(&app, MATCH_ID, outcome).await;
+
+        let book = store!(app, |t| t.economy_quests_get(A));
+        assert_eq!(book.held.len(), 1);
+        assert_eq!(book.held[0].quest_id, attack.id);
+        assert_eq!(book.held[0].progress, 3, "each logged attack of A's seat counts");
+        let moved = ledger_of(&app, A).await.quests;
+        assert_eq!(
+            moved.last().map(|row| (row.change, row.reference.as_deref())),
+            Some((QuestChange::Progressed, Some(MATCH_ID)))
+        );
+    }
+}

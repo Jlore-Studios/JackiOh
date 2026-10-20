@@ -406,6 +406,27 @@ export function getOwnedCosmetics(token: string): Promise<OwnedCosmeticsResponse
   return apiRequest<OwnedCosmeticsResponse>("/api/cosmetics", { token });
 }
 
+/** §14.9: one quest the caller holds, its progress toward `target`, and what it pays. */
+export type QuestView = {
+  questId: string;
+  title: string;
+  progress: number;
+  target: number;
+  jlore: number;
+  xp: number;
+  arrivedAt: number;
+};
+
+/**
+ * R1304000: `GET /api/quests`, the caller's held quests, oldest first, and when the next arrives
+ * (epoch ms); `null` while it holds the most it may, or while the economy is off (R1304002).
+ */
+export type QuestsResponse = { quests: QuestView[]; nextDueAt: number | null };
+
+export function getQuests(token: string): Promise<QuestsResponse> {
+  return apiRequest<QuestsResponse>("/api/quests", { token });
+}
+
 // ---------------------------------------------------------------------------------------------
 // Saved decks and trios (SPEC §9.4, R250–R256). Ids are minted HERE, by the client
 // (`crypto.randomUUID()`), so every save is an idempotent `PUT` that can be retried after a dropped
