@@ -390,7 +390,7 @@ mod tests {
         #[test]
         fn r1279000_r767000_a_game_on_v0_3_15_folds_under_the_kept_script_the_keep_opening_at_once_off_turn() {
             crate::register_all();
-            let shipped = crate::shipped_catalog("v0.3.15").expect("v0.3.15 is carried");
+            let shipped = crate::shipped_catalog("v0.4.0").expect("v0.4.0 is carried");
             jackioh_engine::with_shipped(Some(shipped), || {
                 // p1's Palantir steals p2's Stockpile and casts it (R831001), so p1 draws 2 on
                 // p2's turn; the old script asked at once.

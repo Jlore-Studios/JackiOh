@@ -1,0 +1,9 @@
+{
+  "seed": 6431,
+  "catalogVersion": "v0.3.1",
+  "decks": [
+    ["classic-078", "core-002", "meditative-066", "classicplus-073", "meditative-006", "meditativeplus-021", "classicplus-005", "classic-049", "meditative-010", "classic-014", "classic-075", "meditative-059", "core-019", "classic-040", "classicplus-066", "classic-030", "meditative-019", "classicplus-007", "core-072", "meditativeplus-014"],
+    ["meditative-102", "classic-038", "meditativeplus-017", "core-063", "meditative-033", "meditative-008", "meditative-007", "meditativeplus-018", "meditative-041", "core-050", "classic-011", "meditativeplus-004", "classicplus-003", "classic-085", "classicplus-041", "core-042", "meditative-083", "classicplus-015", "core-088", "classic-033"]
+  ],
+  "found": "The plain fuzz wave's third quarter (seeds 5001-7500, the daily run's fuzz 3/4) at d81d56fc2 (#1216): I2 fired 75 actions in: c48 (classicplus-046-1, p2's) declared attack number 2 on turn 15. The autopilot (R1183002) played a Felinor Flagbearer Prime Buffed into Windfury in the hand (its tuning, R386), and the copies its Cry made; each attacked twice inside the one action, where no state between actions held them on the field (R636). Fixed by #1316, proven by invariants.rs's r636_r1183002_a_windfury_card_from_the_hand_that_enters_and_declares_twice_in_one_action_is_one_legal_windfury_turn. The decks are decks_for_seed(6431) over the 396-card pool of catalog.json at d81d56fc2 (v0.3.1)."
+}

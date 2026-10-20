@@ -142,7 +142,7 @@ def test_the_win_rates_notebook_says_what_it_cannot_compare_with_one_patch_and_n
     only_dev = ANALYSIS / "fixtures" / "dev-40.jsonl"
     executed = run(NOTEBOOKS[0], monkeypatch, {"JACKIOH_RECORDS": only_dev, "JACKIOH_SOURCE": "dev"})
     text = "".join(output.text for output in outputs_of(executed) if output.output_type == "stream")
-    assert "The records hold no patch before v0.3.1" in text
+    assert "The records hold no patch before v0.2.5f" in text
     assert "0 live games" in text
 
 
@@ -192,9 +192,9 @@ def streams(executed):
 @pytest.mark.parametrize("path", NOTEBOOKS[:2], ids=lambda path: path.stem)
 def test_the_record_notebooks_read_live_games_unless_asked_for_more(path, monkeypatch):
     """R378: live data is the default and development data is never mixed in unless asked for."""
-    assert "live games of patch v0.3.1" in streams(run(path, monkeypatch))
-    assert "all games of patch v0.3.1" in streams(run(path, monkeypatch, {"JACKIOH_SOURCE": "all"}))
-    assert "dev games of patch v0.3.1" in streams(run(path, monkeypatch, {"JACKIOH_SOURCE": "dev"}))
+    assert "live games of patch v0.2.5f" in streams(run(path, monkeypatch))
+    assert "all games of patch v0.2.5f" in streams(run(path, monkeypatch, {"JACKIOH_SOURCE": "all"}))
+    assert "dev games of patch v0.2.5f" in streams(run(path, monkeypatch, {"JACKIOH_SOURCE": "dev"}))
 
 
 @pytest.mark.parametrize("path", NOTEBOOKS[:2], ids=lambda path: path.stem)
@@ -204,15 +204,15 @@ def test_the_record_notebooks_say_when_there_is_no_live_game_to_read(path, monke
 
 
 def test_the_newest_patch_follows_the_revision_letters(monkeypatch, tmp_path):
-    """v0.2.10 < v0.2.10b < v0.2.10d, whatever order the records name them in."""
+    """v0.2.5 < v0.2.5b < v0.2.5d, whatever order the records name them in."""
     games = [
         record("g1", seat(["a"], ["a"], [], ["a"]), seat(["b"], ["b"], [], ["b"]), patch=patch)
-        for patch in ("v0.2.10d", "v0.2.10", "v0.2.9", "v0.2.10b")
+        for patch in ("v0.2.5d", "v0.2.5", "v0.2.4", "v0.2.5b")
     ]
     games = [{**game, "id": f"live:{n}"} for n, game in enumerate(games)]
     path = write_records(tmp_path / "patches.jsonl", games)
     text = streams(run(NOTEBOOKS[0], monkeypatch, {"JACKIOH_RECORDS": path}))
-    assert "reading live games of patch v0.2.10d (the one before it: v0.2.10b)" in text
+    assert "reading live games of patch v0.2.5d (the one before it: v0.2.5b)" in text
 
 
 def test_the_decks_notebook_reports_fatigue_traps_switches_and_upgrades(monkeypatch, tmp_path):
@@ -304,7 +304,7 @@ def test_the_decks_notebooks_first_seat_and_ending_figures_equal_stats_report_ga
     assert report["filter"]["source"] == "all"
     assert len(report["groups"]) == 5
     rust = {(group["patch"], group["mode"], group["source"]): group for group in report["groups"]}
-    dev = rust[("v0.3.1", "random", "dev")]
+    dev = rust[("v0.2.5f", "random", "dev")]
     assert (dev["games"], dev["draws"], dev["firstWins"], dev["reasons"]["hero-death"]) == (40, 0, 13, 40)
 
     line = next(line for line in streams(run(NOTEBOOKS[1], monkeypatch, then=GROUP_FIGURES)).splitlines() if line.startswith("GROUP FIGURES "))
@@ -342,8 +342,8 @@ def test_the_decks_notebooks_switch_and_upgrade_figures_equal_stats_report_games
     rust = {(group["patch"], group["mode"]): group for group in report["groups"]}
     # Two of three bo1 games and one of two bo3 games carry the counts.
     assert {key: (group["games"], group["counted"]) for key, group in rust.items()} == {
-        ("v0.3.1", "bo1"): (3, 2),
-        ("v0.3.1", "bo3"): (2, 1),
+        ("v0.2.5f", "bo1"): (3, 2),
+        ("v0.2.5f", "bo3"): (2, 1),
     }
 
     executed = run(NOTEBOOKS[1], monkeypatch, {"JACKIOH_RECORDS": COUNTS}, then=COUNT_FIGURES)
