@@ -6643,6 +6643,7 @@
     "1351": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-20T01:25:57Z",
         "difficulty": "medium",
