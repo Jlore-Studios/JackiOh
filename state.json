@@ -6539,6 +6539,13 @@
     "1349": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T01:27:54Z",
+        "difficulty": "medium",
+        "provider": "claude-2",
+        "tier": "strong",
+        "why": "one crate and 5 files, but near 400 changed lines and an async per-signature GitHub state machine (open, then ordered body edits) that no unit test drives end to end, so lines 1 and 8 do not hold cleanly"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
