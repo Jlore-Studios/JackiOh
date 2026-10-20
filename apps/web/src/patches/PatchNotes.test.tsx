@@ -278,8 +278,16 @@ describe("R724000 the Patch notes page by release line", () => {
     { id: "newer", name: "Newer line", summary: "The newer line's summary.", technical: [] },
   ];
 
-  it("R724000 groups patches by release line, newest first, only the newest open", async () => {
-    renderPage(fixtureSource(), LINES);
+  /** The fixtures as shipped before tiers were recorded: V1 and V3 are majors by the sets they add. */
+  const untiered = (): PatchSource =>
+    sourceFromData({
+      patches: FIXTURE_PATCHES.map(({ tier: _tier, ...patch }): Patch => patch),
+      index: FIXTURE_INDEX,
+      snapshots: FIXTURE_SNAPSHOTS,
+    });
+
+  it("R724000 R1369000 groups patches by release line, each opened by its major, newest first, only the newest open", async () => {
+    renderPage(untiered(), LINES);
     await screen.findAllByTestId(patchTestid.patch);
     const sets = screen.getAllByTestId(patchTestid.set);
     expect(sets.map((element) => element.dataset.set)).toEqual(["newer", "older"]);
@@ -307,9 +315,8 @@ describe("R724000 the Patch notes page by release line", () => {
   });
 
   it("R724000 R1369000 a patch before every major sits under Earlier patches", async () => {
-    // A recorded tier wins over the fallback: none of these is a major.
-    const patches: Patch[] = FIXTURE_PATCHES.map((patch) => ({ ...patch, tier: "micro" }));
-    renderPage(sourceFromData({ patches, index: FIXTURE_INDEX, snapshots: FIXTURE_SNAPSHOTS }));
+    // A recorded tier wins over the fallback: the fixtures' say micro, so none of them is a major.
+    renderPage(fixtureSource());
     await screen.findAllByTestId(patchTestid.patch);
     const sets = screen.getAllByTestId(patchTestid.set);
     expect(sets.map((element) => element.dataset.set)).toEqual(["earlier"]);
