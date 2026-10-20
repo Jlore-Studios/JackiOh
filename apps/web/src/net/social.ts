@@ -38,6 +38,9 @@ export type Challenge = {
 /** `from` and `to` are profile ids. */
 export type ChatMessage = { id: string; from: string; to: string; body: string; createdAt: string; read: boolean };
 
+/** A page of a conversation, newest last; `nextCursor` asks for the page before it, null when nothing older is left (R1384000). */
+export type ChatPage = { messages: ChatMessage[]; nextCursor: string | null };
+
 export type SharedReplay = { matchId: string; sharer: PlayerRef; createdAt: string; endedAt: string | null };
 
 /** One social request as the signed-in account, renewed once on a 401 (`withSession`). */
@@ -125,10 +128,10 @@ export async function cancelChallenge(challengeId: string): Promise<void> {
 
 // Chat (B53)
 
-/** A page of the conversation, newest last, before `before` (an ISO time) when given; it marks them read. */
-export function getChat(friendId: string, before?: string): Promise<{ messages: ChatMessage[] }> {
-  const query = before === undefined ? "" : `?${new URLSearchParams({ before }).toString()}`;
-  return social<{ messages: ChatMessage[] }>(`/api/chat/${part(friendId)}${query}`);
+/** The newest page of the conversation, or the page before `cursor` (a `nextCursor` as answered, never built here); it marks them read. */
+export function getChat(friendId: string, cursor?: string): Promise<ChatPage> {
+  const query = cursor === undefined ? "" : `?${new URLSearchParams({ before: cursor }).toString()}`;
+  return social<ChatPage>(`/api/chat/${part(friendId)}${query}`);
 }
 
 export function sendChat(friendId: string, body: string): Promise<{ message: ChatMessage }> {
@@ -152,6 +155,11 @@ export async function shareReplay(matchId: string, friendId: string): Promise<vo
 
 export async function unshareReplay(matchId: string, friendId: string): Promise<void> {
   await social<null>(`/api/replays/${part(matchId)}/shares/${part(friendId)}`, { method: "DELETE" });
+}
+
+/** R1435000: the friends the caller has shared this replay with, who may still read it. */
+export function getReplayShares(matchId: string): Promise<{ friendIds: string[] }> {
+  return social<{ friendIds: string[] }>(`/api/replays/${part(matchId)}/shares`);
 }
 
 /** The replays friends have shared with the caller. */

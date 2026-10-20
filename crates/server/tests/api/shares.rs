@@ -605,3 +605,86 @@ mod b52_sharing_a_replay {
         assert_eq!(status, 410, "{body}");
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// R1435000: the sharer reads back who it shared a replay with
+// ---------------------------------------------------------------------------------------------
+
+mod r1435000_the_sharer_reads_its_shares {
+    use super::*;
+
+    /// `who`'s `GET /api/replays/:matchId/shares`.
+    async fn shares_of(w: &World, match_id: &str, who: &Account) -> (u16, Value) {
+        api(
+            &w.app,
+            "GET",
+            &format!("/api/replays/{match_id}/shares"),
+            &who.token,
+            Value::Null,
+        )
+        .await
+    }
+
+    async fn friend_ids(w: &World, who: &Account) -> Value {
+        let (status, body) = shares_of(w, &w.match_id, who).await;
+        assert_eq!(status, 200, "{body}");
+        body["friendIds"].clone()
+    }
+
+    #[tokio::test]
+    async fn r1435000_the_sharer_reads_the_friends_it_shared_with_until_it_takes_one_back() {
+        let w = world("share-mine-1").await;
+        assert_eq!(friend_ids(&w, &w.a).await, json!([]));
+
+        assert_eq!(w.share(&w.a, &w.c).await.0, 204);
+        // The other seat's share with the same friend is that seat's, not this one's.
+        assert_eq!(w.share(&w.b, &w.c).await.0, 204);
+
+        assert_eq!(friend_ids(&w, &w.a).await, json!([w.c.id]));
+        assert_eq!(friend_ids(&w, &w.b).await, json!([w.c.id]));
+
+        let (status, body) = api(
+            &w.app,
+            "DELETE",
+            &format!("/api/replays/{}/shares/{}", w.match_id, w.c.id),
+            &w.a.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        assert_eq!(friend_ids(&w, &w.a).await, json!([]));
+        assert_eq!(friend_ids(&w, &w.b).await, json!([w.c.id]));
+    }
+
+    #[tokio::test]
+    async fn r1435000_a_share_the_friend_can_no_longer_read_is_not_listed() {
+        let w = world("share-mine-2").await;
+        assert_eq!(w.share(&w.a, &w.c).await.0, 204);
+
+        let (status, body) = api(
+            &w.app,
+            "DELETE",
+            &format!("/api/friends/{}", w.c.id),
+            &w.a.token,
+            Value::Null,
+        )
+        .await;
+
+        assert_eq!(status, 204, "{body}");
+        assert_eq!(friend_ids(&w, &w.a).await, json!([]));
+    }
+
+    #[tokio::test]
+    async fn r1435000_anyone_who_held_no_seat_gets_what_an_unknown_match_gets() {
+        let w = world("share-mine-3").await;
+        assert_eq!(w.share(&w.a, &w.c).await.0, 204);
+
+        let unknown = shares_of(&w, &uuid(797), &w.a).await;
+        assert_eq!(unknown.0, 404, "{}", unknown.1);
+        // The friend it was shared with and a stranger held no seat: neither learns anything.
+        assert_eq!(shares_of(&w, &w.match_id, &w.c).await, unknown);
+        assert_eq!(shares_of(&w, &w.match_id, &w.d).await, unknown);
+        // And a seat holder's answer for a match id that is no UUID is the same.
+        assert_eq!(shares_of(&w, "not-a-match", &w.a).await, unknown);
+    }
+}

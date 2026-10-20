@@ -1221,7 +1221,7 @@ const INTRO_CARDS = [
     },
   },
   {
-    card: "core-097", name: "Zephyrs", set: "Core", type: "Spell", tags: [], rarity: "Mythic",
+    card: "core-097", name: "Zephrys", set: "Core", type: "Spell", tags: [], rarity: "Mythic",
     // Its theme's west wind: flute over string tremolo, the harp's glissando, the lydian fourth on top.
     tune: {
       palette: { lead: GM.flute, second: GM.tremolo, bass: GM.fretless, color: GM.harp, style: "swell", center: 79 },

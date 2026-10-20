@@ -1,0 +1,92 @@
+/* The collection screen (#1307): the account page's tavern frame, widened for a card grid and
+   narrowed to the phone's width. `collection-screen` is on the same element as
+   `.tavern.app-shell`, so it joins the compound. The grid's card sizing copies the deck
+   builder's `.db-card`, whose face the `CardFace` fills. */
+
+.tavern.app-shell.collection-screen .panel--auth {
+  max-width: 960px;
+}
+
+@media (max-width: 600px) {
+  .tavern.app-shell.collection-screen .panel--auth {
+    padding: 22px 14px 24px;
+  }
+}
+
+.tavern.app-shell .collection-section,
+.tavern.app-shell .collection-set {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tavern.app-shell .collection-set__toggle {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.tavern.app-shell .collection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(132px, calc(50% - 4px)), 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tavern.app-shell .collection-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+}
+
+.tavern.app-shell .collection-card__face {
+  position: absolute;
+  inset: 0;
+}
+
+/* A card not owned: the face as a dark silhouette, its name still readable in the inspect view. */
+.tavern.app-shell .collection-card[data-owned="false"] .collection-card__face {
+  filter: grayscale(1) brightness(0.2);
+}
+
+.tavern.app-shell .collection-card__lock {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 700;
+  color: var(--tavern-parchment);
+  text-shadow: 0 1px 2px #000;
+  pointer-events: none;
+}
+
+.tavern.app-shell .collection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tavern.app-shell .collection-track {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tavern.app-shell .collection-track progress {
+  width: 100%;
+}
+
+.tavern.app-shell .collection-track[data-unlocked="false"] {
+  opacity: 0.75;
+}

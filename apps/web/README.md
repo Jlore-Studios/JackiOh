@@ -224,8 +224,12 @@ routes/SeriesBanner.tsx the board's banner for a series game, each side's won de
 routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — Jlorious #1–#100, the
                         Grape tiers, the Raisins — and the caller's own standing; rank/rank.ts says
                         a visible rank in a player's words for this screen, the account and the board
-routes/QuestsPanel.tsx  /account's quests (§14.9) from GET /api/quests: each held quest's progress and
-                        reward, and the countdown to the next; #1307 moves it
+routes/collection.tsx   /collection (#1307): the account's cards per shipped set, wallet, set tracks and
+                        quests, each panel reading for itself and saying why when its read fails;
+                        collection/ holds the panels (OwnedCards, WalletPanel, TracksPanel) and their
+                        model; every one renders the server's answers and decides nothing (rule 7)
+routes/QuestsPanel.tsx  /collection's quests (§14.9) from GET /api/quests: each held quest's progress and
+                        reward, and the countdown to the next; moved from /account (#1307)
 routes/lobby.css        the lobby's, the series screen's and its picker's tavern look, and the banner's pips
 routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlore, fill, the clears, give or
                         complete a quest, §14.9), shown

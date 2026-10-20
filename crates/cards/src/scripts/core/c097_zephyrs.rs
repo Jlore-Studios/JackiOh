@@ -1,4 +1,4 @@
-//! #97 Zephyrs (SPEC §8.5, §10.7's scorer bullet, §6.3 Discover and Exile, R29, R1446). Spell, cost 1.
+//! #97 Zephrys (SPEC §8.5, §10.7's scorer bullet, §6.3 Discover and Exile, R29, R1446). Spell, cost 1.
 //!   Base:    "Discover the 'perfect' card; exile this"
 //!   Radiant: "A perfect Radiant card" — the cell restates only which card the Discover hands over,
 //!            so "exile this" is kept and the pick arrives Radiant (§8 Conventions).
@@ -437,7 +437,7 @@ mod tests {
         #[test]
         fn s10_7_lethal_available_max_with_the_enemy_hero_at_3_the_three_best_core_cards_deal_the_last_3() {
             crate::register_all();
-            // p1 has 3 mana once Zephyrs' 1 is paid and p2 has no board, so any card that puts 3 damage on
+            // p1 has 3 mana once Zephrys' 1 is paid and p2 has no board, so any card that puts 3 damage on
             // the enemy hero this turn is lethal: a burn spell as much as a Charge unit.
             let setup = json!({
                 "seed": "r5-zephyrs-lethal",

@@ -412,7 +412,7 @@ class StatusTests(unittest.TestCase):
         self.assertIn("  - `claude-1` (claude: `opus` strong, `sonnet` medium; 21:00–07:00 "
                       "America/Chicago): "
                       "**working on #37**.", text)
-        self.assertNotIn("`gpt` (codex, `gpt-5.6-terra`, any time): **working", text)
+        self.assertNotIn("`gpt` (codex, `gpt-5.6-sol`, any time): **working", text)
         self.assertIn("- Working on: #37, #49, #50 (no run is going for #50 any more; the next "
                       "plan requeues it).", text)
 

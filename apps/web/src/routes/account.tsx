@@ -76,7 +76,6 @@ import { clearSession, forgetPendingAddresses, readSession } from "../net/sessio
 import ChangeEmail from "../settings/ChangeEmail.tsx";
 import DevTools from "./DevTools.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
-import QuestsPanel from "./QuestsPanel.tsx";
 import TwoStepSettings from "../auth/TwoStepSettings.tsx";
 import { useSecondsUntil } from "../auth/cooldown.ts";
 import Username from "../auth/Username.tsx";
@@ -103,6 +102,7 @@ export const accountTestid = {
   rank: "account-rank",
   badges: "account-badges",
   leaderboard: "account-leaderboard",
+  collection: "account-collection",
   manage: "account-manage",
   manageToggle: "account-manage-toggle",
   packsToggle: "account-packs-toggle",
@@ -371,8 +371,17 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
               </div>
             </div>
             {played === 0 ? <p>{t("No finished matches yet.")}</p> : null}
-            {/* §14.9: the quests the account holds; the collection screen (#1307) moves them. */}
-            <QuestsPanel token={token} />
+            {/* §14.9's quests moved to /collection (#1307). */}
+            <div className="account-actions">
+              <a
+                className="button-secondary"
+                href={paths.collection}
+                data-testid={accountTestid.collection}
+                onClick={followInApp(paths.collection)}
+              >
+                {t("Collection")}
+              </a>
+            </div>
           </>
         ) : null}
 

@@ -46,7 +46,9 @@
 // is sealed until the other is in. So the mulligan picker says whether the opponent has answered
 // yet (`mulligan-opponent-status`, from `view.mulligan`), its confirm reads "Ready", and once the
 // viewer has answered the picker gives way to `mulligan-waiting`: the hand, with the cards going
-// back marked from the view's own `kept`, until the opponent is ready too and the game begins.
+// back marked from the view's own `kept`, until the opponent is ready too and the game begins. Its
+// heading says whether the viewer goes first or second, with no count under it; a tutorial lesson's
+// (`lesson`) keeps the engine's instruction and the count, which the lesson teaches.
 //
 // No rule is applied here either. `min` and `max` gate the confirm button, and both came from the
 // engine — from `PendingView` on route 1 and from the candidate `play`s on route 2. The options
@@ -119,6 +121,8 @@ export type PromptProps = {
   onCancel?: () => void;
   /** The event type animating the open modal (`promptAnswered` fades it out), for `data-animating`. */
   animating?: string;
+  /** A tutorial lesson's board: the mulligan picker keeps the engine's instruction and its count. */
+  lesson?: boolean;
 };
 
 /**
@@ -226,6 +230,8 @@ type Picker = {
   boardKeys?: ReadonlyMap<string, string>;
   /** R1184000: a sequence question's right answers so far, as the view carries them. */
   streak?: number;
+  /** No "Choose N: M chosen" line under the title: the mulligan outside a lesson. */
+  uncounted?: boolean;
 };
 
 /** The pickers whose options are cards by nature. */
@@ -348,6 +354,7 @@ function pickerForPending(
   pending: Extract<PendingView, { forYou: true }>,
   view: PlayerView,
   legal: readonly ActionBody[],
+  lesson: boolean,
 ): Picker {
   const items = pending.options.map((option): PickerItem => {
     // The engine's words for the option, in the reader's language where the dictionary has them.
@@ -396,11 +403,19 @@ function pickerForPending(
   const chrome = pending.kind === "mode" && pending.options.length <= DISCOVER_OPTION_LIMIT ? "discover" : pending.kind;
   // #492: an embiggen price and a short X are cards here too, as on a play (`pickerForNeed`).
   const cards = pending.kind === "embiggen" || (pending.kind === "x" && pending.options.length <= X_CARD_LIMIT);
+  // Outside a lesson the mulligan's heading says who goes first, which bears on what to keep, rather
+  // than how to answer it. §2.1: Player 1 takes the first turn, and is `active` until then.
+  const turnOrder = pending.kind === "mulligan" && !lesson;
   const picker: Picker = {
     chrome,
     ...(cards ? { cards } : {}),
+    ...(turnOrder ? { uncounted: true } : {}),
     // The engine's prompt, in the reader's language where the dictionary has it.
-    title: t(pending.kind === "reward" ? pending.prompt.replace(QUEST_COMPLETE_PREFIX, "") : pending.prompt),
+    title: turnOrder
+      ? view.active === view.viewer
+        ? t("You are going first")
+        : t("You are going second")
+      : t(pending.kind === "reward" ? pending.prompt.replace(QUEST_COMPLETE_PREFIX, "") : pending.prompt),
     items,
     min: pending.min,
     max: pending.max,
@@ -1342,9 +1357,11 @@ function PromptModal(props: {
         <PickerTitle title={picker.title} sourceDefId={picker.sourceDefId} sourceCard={picker.sourceCard} />
         {folded ? null : (
           <>
-            <p className="prompt-count">
-              {t("Choose {range}: {count} chosen", { range, count: selected.length })}
-            </p>
+            {picker.uncounted === true ? null : (
+              <p className="prompt-count">
+                {t("Choose {range}: {count} chosen", { range, count: selected.length })}
+              </p>
+            )}
             {props.status}
             {body()}
             {(picker.chrome === "target" || picker.chrome === "cell") && props.boardTestids.length > 0 ? (
@@ -1557,7 +1574,7 @@ export default function Prompt(props: PromptProps) {
         <PromptModal
           key={pending.choiceId}
           source="engine"
-          picker={pickerForPending(pending, props.view, props.legal ?? [])}
+          picker={pickerForPending(pending, props.view, props.legal ?? [], props.lesson === true)}
           {...(pending.kind === "mulligan" && mulligan !== undefined
             ? { status: <OpponentMulliganStatus mulligan={mulligan} /> }
             : {})}
