@@ -87,6 +87,7 @@ fn table_from_records(texts: &[String], patch: &str) -> Result<WinRateTable> {
             history: &history,
             at: patch,
             live_pilot: PilotFilter::Unified,
+            mode: None,
             request: WindowRequest::Gated,
         },
     );

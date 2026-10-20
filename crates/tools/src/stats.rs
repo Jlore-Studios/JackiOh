@@ -568,6 +568,7 @@ pub fn window_report(args: &ReportArgs, at: &str) -> Result<WindowedReport> {
             history: &history,
             at,
             live_pilot: args.pilot.unwrap_or_else(|| default_pilot(args.source)),
+            mode: None,
             request: WindowRequest::Gated,
         },
     );

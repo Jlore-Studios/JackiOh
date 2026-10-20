@@ -21,7 +21,8 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    CardStats, CardStatsFilter, GameSource, PilotFilter, SourceFilter, StatsTotals, add_stats, card_stats_of,
+    CardStats, CardStatsFilter, GameMode, GameSource, PilotFilter, SourceFilter, StatsTotals, add_stats,
+    card_stats_of,
 };
 use crate::config::PUBLIC_STATS_MIN_LIVE_GAMES;
 
@@ -213,6 +214,9 @@ pub struct WindowQuery<'a> {
     /// The seats of a live record counted (R807000: `unified` is every seat, human and bot). A
     /// development record always counts both seats (R378, R1451).
     pub live_pilot: PilotFilter,
+    /// R377: one match type the figures count, or every mode. R654's gate counts every mode's live
+    /// games whatever it names.
+    pub mode: Option<GameMode>,
     pub request: WindowRequest,
 }
 
@@ -293,7 +297,7 @@ pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> Windowe
             by_version.get(version).unwrap_or(&empty),
             &CardStatsFilter {
                 source: filter_source,
-                mode: None,
+                mode: query.mode,
                 patch: Some(version.to_string()),
                 pilot,
             },
@@ -382,7 +386,7 @@ mod tests {
     use super::*;
     use crate::wire::catalog_types::{PerPlayer, PlayerId};
     use crate::wire::events::{GameOverReason, Winner};
-    use crate::wire::stats::{GameMode, GameRecord, GameSummary, Pilot, RecordsKey, SeatSummary};
+    use crate::wire::stats::{GameRecord, GameSummary, Pilot, RecordsKey, SeatSummary};
 
     const A: &str = "core-001";
     const B: &str = "core-002";
@@ -451,6 +455,7 @@ mod tests {
             history,
             at,
             live_pilot: PilotFilter::Unified,
+            mode: None,
             request: WindowRequest::Gated,
         }
     }
