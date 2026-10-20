@@ -73,7 +73,7 @@ struct CardFile {
 /// is carried as well so that the browser carries a version from its first build and its tests fold
 /// through one. Carrying every version would add about 30 KB to the gzipped module, against #442
 /// L12's cap (`apps/web/src/wasm/size.test.ts`).
-const BROWSER_CARRIED_FROM: &str = "v0.3.7";
+const BROWSER_CARRIED_FROM: &str = "v0.3.0c";
 
 fn main() {
     let manifest = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));

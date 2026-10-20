@@ -86,7 +86,7 @@ mod the_ais_development_run_9_11 {
         register_cards();
         let options = DevRunOptions {
             series: "dev-test".to_string(),
-            patch: "v0.2.5".to_string(),
+            patch: "v0.2.3".to_string(),
             budget: Some(QUICK),
             force: None,
             commit: Some("0123abc".to_string()),
@@ -117,7 +117,7 @@ mod the_ais_development_run_9_11 {
         register_cards();
         let options = DevRunOptions {
             series: "dev-test".to_string(),
-            patch: "v0.2.5".to_string(),
+            patch: "v0.2.3".to_string(),
             budget: Some(QUICK),
             force: None,
             commit: None,
@@ -134,10 +134,10 @@ mod the_ais_development_run_9_11 {
             assert_matches_object(
                 record,
                 json!({
-                    "id": format!("dev:v0.2.5:dev-test:{n}"),
+                    "id": format!("dev:v0.2.3:dev-test:{n}"),
                     "source": "dev",
                     "mode": "random",
-                    "patch": "v0.2.5",
+                    "patch": "v0.2.3",
                     "pilots": { "p1": "ai", "p2": "ai" },
                 }),
             );
@@ -162,18 +162,21 @@ mod the_ais_development_run_9_11 {
         let next_patch = dev_game_record(
             1,
             &DevRunOptions {
-                patch: "v0.2.6".to_string(),
+                patch: "v0.2.3b".to_string(),
                 ..options.clone()
             },
         );
         let next = next_patch.as_ref().expect("the game finished");
-        assert_matches_object(next, json!({ "id": "dev:v0.2.6:dev-test:1", "patch": "v0.2.6" }));
+        assert_matches_object(
+            next,
+            json!({ "id": "dev:v0.2.3b:dev-test:1", "patch": "v0.2.3b" }),
+        );
         assert_ne!(
             next_patch.as_ref().map(|record| record.id.clone()),
             records[0].as_ref().map(|record| record.id.clone())
         );
         assert_eq!(
-            Some(dev_record_id("v0.2.5", "dev-test:1")),
+            Some(dev_record_id("v0.2.3", "dev-test:1")),
             records[0].as_ref().map(|record| record.id.clone())
         );
 
@@ -251,7 +254,7 @@ mod the_ais_development_run_9_11 {
         register_cards();
         let options = DevRunOptions {
             series: "dev-test".to_string(),
-            patch: "v0.2.5".to_string(),
+            patch: "v0.2.3".to_string(),
             budget: Some(QUICK),
             force: Some(FORCED.to_string()),
             commit: None,
@@ -268,7 +271,7 @@ mod the_ais_development_run_9_11 {
                 config.decks,
                 "game {n}"
             );
-            assert_eq!(record.id, format!("dev:v0.2.5:dev-test:{n}"));
+            assert_eq!(record.id, format!("dev:v0.2.3:dev-test:{n}"));
             let again = dev_game_record(n, &options).expect("the same game finishes again");
             assert_eq!(
                 serde_json::to_string(&record).expect("a record serialises"),

@@ -1,0 +1,9 @@
+{
+  "seed": 2550,
+  "catalogVersion": "v0.3.1",
+  "decks": [
+    ["meditative-074", "meditative-070", "classic-068", "meditative-022", "classicplus-069", "meditative-094", "classicplus-047", "meditative-065", "classicplus-012", "classicplus-052", "classicplus-056", "core-035", "core-017", "classicplus-040", "classic-036", "core-057", "core-009", "meditative-095", "classicplus-071", "core-093"],
+    ["core-039", "meditative-087", "meditative-092", "core-005", "meditative-038", "classic-073", "core-021", "meditative-081", "core-014", "meditative-059", "meditative-046", "meditativeplus-016", "meditative-037", "classic-082", "core-052", "classic-035", "meditativeplus-024", "meditativeplus-022", "core-037", "meditative-093"]
+  ],
+  "found": "The plain fuzz wave's second quarter (seeds 2501-5000, the daily run's fuzz 2/4) at d81d56fc2 (#1216): I4 stale exertion on turn 17, 72 actions in: c69 (t-5:meditative-065+(t-2:meditative-049+meditative-091), p1's), a fusion wearing Windfast (M #91), had a spent attack it did not declare. Windfast's attack is spent before its substitute is summoned, and a substitute that may not attack the target makes no declaration (R1202), so the monitor saw a spend with none. Fixed by #1316, proven by mb22.rs's r1202_a_substitute_barred_from_its_lane_spends_with_no_declaration_and_the_monitor_is_clean. The decks are decks_for_seed(2550) over the 396-card pool of catalog.json at d81d56fc2 (v0.3.1)."
+}
