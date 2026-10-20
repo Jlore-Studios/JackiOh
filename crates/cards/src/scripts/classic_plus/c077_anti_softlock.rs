@@ -56,6 +56,7 @@ pub fn script() -> CardScripts {
 // C+ #77 Anti-Softlock — SPEC §8.7 row 77, E20, E21, E38, R81, R97, R346, R386, R440, BUILD M9 row C+ 77.
 #[cfg(test)]
 mod tests {
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const SOFTLOCK: &str = "classicplus-077";
@@ -74,17 +75,6 @@ mod tests {
 
     use crate::js;
 
-    /// TS's `{ ...base, ...extra }` on a side setup.
-    fn spread(base: Value, extra: &Value) -> Value {
-        let mut out = base;
-        if let (Some(into), Some(from)) = (out.as_object_mut(), extra.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        out
-    }
-
     fn zone(player: &str, row: &str, lane: i32) -> ZoneRef {
         json_as(json!({ "player": player, "row": row, "lane": lane }))
     }
@@ -92,11 +82,11 @@ mod tests {
     fn softlock(radiant: bool, p1: Value, p2: Value) -> Scenario {
         crate::register_all();
         scenario(json!({
-            "p1": spread(
+            "p1": merged(
                 json!({ "hand": [{ "def": SOFTLOCK, "radiant": radiant }, VANILLA], "library": [TIMMY, FILLER, FILLER] }),
-                &p1,
+                p1,
             ),
-            "p2": spread(json!({ "hand": [VANILLA], "field": [TIMMY], "library": [FILLER] }), &p2),
+            "p2": merged(json!({ "hand": [VANILLA], "field": [TIMMY], "library": [FILLER] }), p2),
         }))
     }
 

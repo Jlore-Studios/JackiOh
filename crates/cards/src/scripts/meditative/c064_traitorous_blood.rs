@@ -79,6 +79,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -281,7 +282,7 @@ mod tests {
         s.end_turn();
         s.attack(&foe, "hero");
         for viewer in [P1, P2] {
-            let events = serde_json::to_value(s.view(viewer).events).expect("events");
+            let events = js(&s.view(viewer).events);
             let redirected: Vec<&Value> = events
                 .as_array()
                 .into_iter()

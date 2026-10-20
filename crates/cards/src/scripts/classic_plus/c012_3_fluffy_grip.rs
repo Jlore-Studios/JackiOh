@@ -45,6 +45,7 @@ pub fn script() -> CardScripts {
 // Radiant".
 #[cfg(test)]
 mod tests {
+    use crate::def_ids;
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -71,10 +72,6 @@ mod tests {
         let mut s = scenario(options);
         s.play(GRIP, json!({}));
         s
-    }
-
-    fn def_ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
     #[test]

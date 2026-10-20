@@ -48,6 +48,7 @@ pub fn script() -> CardScripts {
 // cards, both Brittle 2.
 #[cfg(test)]
 mod tests {
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const HALLUCINATION: &str = "classicplus-t-ai-03";
@@ -60,17 +61,6 @@ mod tests {
 
     use crate::js;
 
-    /// TS's `{ ...base, ...extra }` on a side setup.
-    fn spread(base: Value, extra: &Value) -> Value {
-        let mut out = base;
-        if let (Some(into), Some(from)) = (out.as_object_mut(), extra.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        out
-    }
-
     fn ids(cards: &[CardInstance]) -> Vec<String> {
         cards.iter().map(|card| card.id.clone()).collect()
     }
@@ -79,7 +69,7 @@ mod tests {
         crate::register_all();
         let mut opts = json!({
             "p1": { "hand": [{ "def": HALLUCINATION, "radiant": radiant }, FILLER] },
-            "p2": spread(json!({ "hand": [FILLER] }), &p2),
+            "p2": merged(json!({ "hand": [FILLER] }), p2),
         });
         if let Some(seed) = seed {
             opts["seed"] = json!(seed);

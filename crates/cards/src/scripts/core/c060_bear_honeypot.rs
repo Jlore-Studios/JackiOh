@@ -135,6 +135,8 @@ pub fn script() -> CardScripts {
 // at the end of this file).
 #[cfg(test)]
 mod tests {
+    use crate::js;
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -169,15 +171,6 @@ mod tests {
         json!({ "hand": ["core-005"], "library": ["core-011", "core-016"] })
     }
 
-    /// Merges two JSON objects: the later keys win.
-    fn spread(base: Value, extra: Value) -> Value {
-        let mut all = base.as_object().cloned().unwrap_or_default();
-        for (key, value) in extra.as_object().cloned().unwrap_or_default() {
-            all.insert(key, value);
-        }
-        Value::Object(all)
-    }
-
     fn face_up_at(g: &Scenario, player: PlayerId, lane: i32) -> Option<bool> {
         g.backrow(player, lane).and_then(|card| card.face_up)
     }
@@ -192,7 +185,7 @@ mod tests {
         let mut g = scenario(json!({
             "active": "p2",
             "p1": { "backrow": [armed(false)] },
-            "p2": spread(spare(), json!({ "hand": ["core-020", "core-005"] })),
+            "p2": merged(spare(), json!({ "hand": ["core-020", "core-005"] })),
         }));
         assert!(!crate::can_degrade_number(&g, "core-060", "costLimit"));
         assert_eq!(crate::upgrade_number(&mut g, "core-060", "costLimit"), 2);
@@ -212,7 +205,7 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
-                "p2": spread(spare(), json!({ "hand": ["core-015", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-015", "core-005"] })),
             }));
 
             g.play("core-015", json!({ "zone": 1 }));
@@ -227,7 +220,7 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
-                "p2": spread(spare(), json!({ "hand": ["core-020", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-020", "core-005"] })),
             }));
 
             g.play("core-020", json!({ "zone": 1 }));
@@ -259,7 +252,7 @@ mod tests {
         fn the_opponent_plays_the_trap_s_own_controller_never_sets_it_off() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(spare(), json!({ "backrow": [armed(false)], "hand": ["core-011", "core-005"] })),
+                "p1": merged(spare(), json!({ "backrow": [armed(false)], "hand": ["core-011", "core-005"] })),
                 "p2": spare(),
             }));
 
@@ -275,7 +268,7 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
-                "p2": spread(spare(), json!({ "hand": ["core-005", "core-011"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-005", "core-011"] })),
             }));
 
             g.play("core-005", json!({}));
@@ -305,7 +298,7 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": row(&[]) },
-                "p2": spread(spare(), json!({ "hand": ["core-015", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-015", "core-005"] })),
             }));
 
             g.play("core-015", json!({ "zone": 1 }));
@@ -323,7 +316,7 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": row(&[5]) },
-                "p2": spread(spare(), json!({ "hand": ["core-015", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-015", "core-005"] })),
             }));
             g.state_mut().players.p1.locks.units[4] = true;
 
@@ -339,7 +332,7 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": row(&[5]) },
-                "p2": spread(spare(), json!({ "hand": ["core-015", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-015", "core-005"] })),
             }));
             g.state_mut().reserved.push(ZoneRef {
                 player: P1,
@@ -359,7 +352,7 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": row(&[4]) },
-                "p2": spread(spare(), json!({ "hand": ["core-015", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-015", "core-005"] })),
             }));
 
             g.play("core-015", json!({ "zone": 1 }));
@@ -378,7 +371,7 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)], "field": row(&[]) },
-                "p2": spread(spare(), json!({ "hand": ["core-015", "core-016", "core-005", "core-011"], "mana": 10 })),
+                "p2": merged(spare(), json!({ "hand": ["core-015", "core-016", "core-005", "core-011"], "mana": 10 })),
             }));
             g.play("core-015", json!({ "zone": 1 }));
             assert_eq!(count_of(&g, "trapFired"), 0);
@@ -405,7 +398,7 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(true)], "field": row(&[]) },
-                "p2": spread(spare(), json!({ "hand": ["core-020", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-020", "core-005"] })),
             }));
 
             g.play("core-020", json!({ "zone": 1 }));
@@ -426,7 +419,7 @@ mod tests {
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
                 // #15 Me and Mr Token is a 1-cost Unit whose Cry summons a Rush Token for ITS controller.
-                "p2": spread(spare(), json!({ "hand": ["core-015", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-015", "core-005"] })),
             }));
 
             g.play("core-015", json!({ "zone": 1 }));
@@ -443,7 +436,7 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
-                "p2": spread(spare(), json!({ "hand": ["core-015", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-015", "core-005"] })),
             }));
 
             g.play("core-015", json!({ "zone": 1 }));
@@ -463,7 +456,7 @@ mod tests {
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
                 // Me and Mr Token is 1/1: one 3-damage hit kills it, and it strikes back for 1.
-                "p2": spread(spare(), json!({ "hand": ["core-015", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-015", "core-005"] })),
             }));
 
             g.play("core-015", json!({ "zone": 1 }));
@@ -479,7 +472,7 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
-                "p2": spread(spare(), json!({ "hand": ["core-015", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-015", "core-005"] })),
             }));
 
             g.play("core-015", json!({ "zone": 1 }));
@@ -503,7 +496,7 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
-                "p2": spread(spare(), json!({ "hand": ["core-015", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-015", "core-005"] })),
             }));
 
             g.play("core-015", json!({ "zone": 1 }));
@@ -512,7 +505,7 @@ mod tests {
             // attack cost them no exertion (§4.1), so their own turn is still ahead of them.
             let first = g.unit(P1, 1);
             assert_eq!(
-                first.map(|unit| serde_json::to_value(unit.exertion).expect("exertion serialises")),
+                first.map(|unit| js(&unit.exertion)),
                 Some(json!({ "attacked": false, "switched": false }))
             );
         }
@@ -526,7 +519,7 @@ mod tests {
                 // Pointmaster is 7/2 with First Strike, so it kills the first token outright — but it is a
                 // 2-cost card, so only the radiant face reaches it. Tempo Timmy is the 1-cost First Strike
                 // unit: 3/3, it strikes first for 3 and the token deals nothing back (§4.3).
-                "p2": spread(spare(), json!({ "hand": ["core-011", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-011", "core-005"] })),
             }));
 
             g.play("core-011", json!({ "zone": 1 }));
@@ -545,7 +538,7 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(false)] },
-                "p2": spread(spare(), json!({ "hand": ["core-005", "core-011"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-005", "core-011"] })),
             }));
 
             g.play("core-005", json!({}));
@@ -565,7 +558,7 @@ mod tests {
                 "active": "p2",
                 "p1": { "backrow": [armed(true)] },
                 // Mana Well is a 3-cost Field Spell: no cost threshold left, and not a Unit, so no attacks.
-                "p2": spread(spare(), json!({ "hand": ["core-006", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-006", "core-005"] })),
             }));
 
             g.play("core-006", json!({ "zone": 1 }));
@@ -580,7 +573,7 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(true)] },
-                "p2": spread(spare(), json!({ "hand": ["core-006", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-006", "core-005"] })),
             }));
 
             g.play("core-006", json!({ "zone": 1 }));
@@ -597,7 +590,7 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(true)], "field": [{ "def": "core-008", "lane": 1 }] },
-                "p2": spread(spare(), json!({ "hand": ["core-006", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-006", "core-005"] })),
             }));
 
             g.play("core-006", json!({ "zone": 1 }));
@@ -614,7 +607,7 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(true)] },
-                "p2": spread(spare(), json!({ "hand": ["core-006", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-006", "core-005"] })),
             }));
             let unit_zone = |lane| ZoneSlot { player: P1, row: Row::Units, lane };
             for lane in 2..=5 {
@@ -638,7 +631,7 @@ mod tests {
                 "p1": { "backrow": [armed(true)] },
                 // Big D-fender is a 2-cost 0/8: three 3-damage combats kill it, and R63 makes its 0-attack
                 // strike-back no damage instance at all, so every token survives to take its turn in the run.
-                "p2": spread(spare(), json!({ "hand": ["core-001", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-001", "core-005"] })),
             }));
 
             g.play("core-001", json!({ "zone": 1 }));
@@ -658,7 +651,7 @@ mod tests {
                 "p1": { "backrow": [armed(true)] },
                 // Pointmaster is a 2-cost 7/1 with First Strike: 7 into a 3-health token, and "if D is
                 // destroyed here it deals nothing", so all five tokens die and Pointmaster stands at 1.
-                "p2": spread(spare(), json!({ "hand": ["core-020", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-020", "core-005"] })),
             }));
 
             g.play("core-020", json!({ "zone": 1 }));
@@ -673,7 +666,7 @@ mod tests {
         fn r56_the_radiant_face_keeps_no_threshold_but_still_only_answers_the_opponent() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(spare(), json!({ "backrow": [armed(true)], "hand": ["core-006", "core-005"] })),
+                "p1": merged(spare(), json!({ "backrow": [armed(true)], "hand": ["core-006", "core-005"] })),
                 "p2": spare(),
             }));
 
@@ -689,7 +682,7 @@ mod tests {
             let mut g = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [armed(true)] },
-                "p2": spread(spare(), json!({ "hand": ["core-006", "core-005"] })),
+                "p2": merged(spare(), json!({ "hand": ["core-006", "core-005"] })),
             }));
 
             g.play("core-006", json!({ "zone": 1 }));

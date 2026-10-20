@@ -59,6 +59,7 @@ pub fn script() -> CardScripts {
 // Every case sets the trap face-down in p1's backrow and makes p2 the active player.
 #[cfg(test)]
 mod tests {
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const RATE_LIMIT: &str = "classicplus-t-ai-08";
@@ -76,16 +77,6 @@ mod tests {
 
     use crate::js;
 
-    fn spread(base: Value, extra: &Value) -> Value {
-        let mut out = base;
-        if let (Some(into), Some(from)) = (out.as_object_mut(), extra.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        out
-    }
-
     fn trap(radiant_face: bool, lane: i32) -> Value {
         json!({ "def": RATE_LIMIT, "radiant": radiant_face, "faceUp": false, "lane": lane })
     }
@@ -94,17 +85,17 @@ mod tests {
         crate::register_all();
         scenario(json!({
             "active": "p2",
-            "p1": spread(
+            "p1": merged(
                 json!({ "hand": [VANILLA], "backrow": [trap(radiant_face, 2)], "library": [VANILLA, VANILLA, VANILLA] }),
-                &p1,
+                p1,
             ),
-            "p2": spread(
+            "p2": merged(
                 json!({
                     "hand": [VANILLA, REPLENISH, STOCKPILE, VANILLA],
                     "library": [VANILLA, VANILLA, VANILLA, VANILLA],
                     "mana": 8,
                 }),
-                &p2,
+                p2,
             ),
         }))
     }

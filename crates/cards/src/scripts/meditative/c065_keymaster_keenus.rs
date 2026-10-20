@@ -63,6 +63,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -75,10 +77,6 @@ mod tests {
     /// (4) Field Spell: Aura: your Units have +4 attack, Rush and First Strike.
     const WEAPONS: &str = "core-014";
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     fn played(seed: &str, radiant: bool, p1: Value) -> Scenario {
         crate::register_all();
@@ -130,7 +128,7 @@ mod tests {
                 );
             }
             assert_eq!(
-                serde_json::to_value(&def.params).expect("params serialise"),
+                js(&def.params),
                 json!([{ "key": "keywords", "base": 5, "radiant": 10, "better": "up", "step": 1, "min": 1 }])
             );
             assert_eq!((def.base.attack, def.base.health), (Some(1), Some(1)));

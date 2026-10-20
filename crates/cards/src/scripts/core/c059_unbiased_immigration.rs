@@ -64,6 +64,7 @@ pub fn script() -> CardScripts {
 // the draw), R60 and §5.1 (the pool: no tokens, never #59), R74 (the added card is Radiant by flag).
 #[cfg(test)]
 mod tests {
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -105,15 +106,6 @@ mod tests {
         json!({ "field": [{ "def": "core-008", "lane": 1 }], "library": ["core-011", "core-016"] })
     }
 
-    /// Merges two JSON objects: the later keys win.
-    fn spread(base: Value, extra: Value) -> Value {
-        let mut all = base.as_object().cloned().unwrap_or_default();
-        for (key, value) in extra.as_object().cloned().unwrap_or_default() {
-            all.insert(key, value);
-        }
-        Value::Object(all)
-    }
-
     /// R380: "a random card" names no set, so the pool is every set's non-token cards but #59 itself.
     fn card_pool() -> Vec<String> {
         crate::query::pool("core-059", &json_as(json!({})))
@@ -153,7 +145,7 @@ mod tests {
         fn s6_2_adds_a_random_card_to_your_hand_at_your_start_of_turn() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(busy(), json!({ "backrow": [{ "def": "core-059", "lane": 1 }] })),
+                "p1": merged(busy(), json!({ "backrow": [{ "def": "core-059", "lane": 1 }] })),
                 "p2": busy(),
             }));
 
@@ -168,8 +160,8 @@ mod tests {
         fn r62_and_s6_2_nothing_is_added_on_the_opponent_s_turn() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(busy(), json!({ "backrow": [{ "def": "core-059", "lane": 1 }], "hand": ["core-005"] })),
-                "p2": spread(busy(), json!({ "hand": ["core-005"] })),
+                "p1": merged(busy(), json!({ "backrow": [{ "def": "core-059", "lane": 1 }], "hand": ["core-005"] })),
+                "p2": merged(busy(), json!({ "hand": ["core-005"] })),
             }));
 
             g.start_turn();
@@ -187,7 +179,7 @@ mod tests {
         fn r65_paid_2_the_added_card_keeps_its_own_cost() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(busy(), json!({ "hand": ["core-059", "core-005"] })),
+                "p1": merged(busy(), json!({ "hand": ["core-059", "core-005"] })),
                 "p2": busy(),
             }));
 
@@ -202,7 +194,7 @@ mod tests {
         fn r65_paid_4_the_added_card_costs_0() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(busy(), json!({ "hand": ["core-059", "core-005"] })),
+                "p1": merged(busy(), json!({ "hand": ["core-059", "core-005"] })),
                 "p2": busy(),
             }));
 
@@ -218,7 +210,7 @@ mod tests {
         fn r386_a_degrade_makes_the_paid_card_cost_1_and_an_upgrade_finds_the_cost_at_its_floor_of_0() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(busy(), json!({ "hand": ["core-059", "core-005"] })),
+                "p1": merged(busy(), json!({ "hand": ["core-059", "core-005"] })),
                 "p2": busy(),
             }));
             assert!(!crate::can_upgrade_number(&g, "core-059", "setCost"));
@@ -234,7 +226,7 @@ mod tests {
         fn r65_the_0_is_the_cost_the_view_shows_whatever_the_card_was_printed_at() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(busy(), json!({ "hand": ["core-059", "core-005"] })),
+                "p1": merged(busy(), json!({ "hand": ["core-059", "core-005"] })),
                 "p2": busy(),
             }));
 
@@ -254,8 +246,8 @@ mod tests {
         fn r65_the_embiggen_price_is_remembered_turns_later_not_just_on_the_play() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(busy(), json!({ "hand": ["core-059", "core-005"] })),
-                "p2": spread(busy(), json!({ "hand": ["core-005"] })),
+                "p1": merged(busy(), json!({ "hand": ["core-059", "core-005"] })),
+                "p2": merged(busy(), json!({ "hand": ["core-005"] })),
             }));
 
             g.play("core-059", json!({ "zone": 1, "embiggen": true }));
@@ -274,7 +266,7 @@ mod tests {
             let build = |seed: &str| -> String {
                 let mut g = scenario(json!({
                     "seed": seed,
-                    "p1": spread(busy(), json!({ "backrow": [{ "def": "core-059", "lane": 1 }] })),
+                    "p1": merged(busy(), json!({ "backrow": [{ "def": "core-059", "lane": 1 }] })),
                     "p2": busy(),
                 }));
                 g.start_turn();
@@ -292,7 +284,7 @@ mod tests {
             for seed in seeds {
                 let mut g = scenario(json!({
                     "seed": seed,
-                    "p1": spread(busy(), json!({ "backrow": [{ "def": "core-059", "lane": 1 }] })),
+                    "p1": merged(busy(), json!({ "backrow": [{ "def": "core-059", "lane": 1 }] })),
                     "p2": busy(),
                 }));
                 g.start_turn();
@@ -308,7 +300,7 @@ mod tests {
         fn r74_adds_a_random_radiant_card() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(busy(), json!({ "backrow": [{ "def": "core-059", "radiant": true, "lane": 1 }] })),
+                "p1": merged(busy(), json!({ "backrow": [{ "def": "core-059", "radiant": true, "lane": 1 }] })),
                 "p2": busy(),
             }));
 
@@ -323,7 +315,7 @@ mod tests {
         fn s8_conventions_the_restated_clause_replaces_the_base_one_one_card_not_two() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(busy(), json!({ "backrow": [{ "def": "core-059", "radiant": true, "lane": 1 }] })),
+                "p1": merged(busy(), json!({ "backrow": [{ "def": "core-059", "radiant": true, "lane": 1 }] })),
                 "p2": busy(),
             }));
 
@@ -336,7 +328,7 @@ mod tests {
         fn r65_paid_4_on_the_radiant_face_radiant_and_costing_0() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(busy(), json!({ "hand": ["core-059", "core-005"] })),
+                "p1": merged(busy(), json!({ "hand": ["core-059", "core-005"] })),
                 "p2": busy(),
             }));
 
@@ -355,8 +347,8 @@ mod tests {
         fn r62_the_radiant_face_is_just_as_silent_on_the_opponent_s_turn() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(busy(), json!({ "backrow": [{ "def": "core-059", "radiant": true, "lane": 1 }], "hand": ["core-005"] })),
-                "p2": spread(busy(), json!({ "hand": ["core-005"] })),
+                "p1": merged(busy(), json!({ "backrow": [{ "def": "core-059", "radiant": true, "lane": 1 }], "hand": ["core-005"] })),
+                "p2": merged(busy(), json!({ "hand": ["core-005"] })),
             }));
 
             g.start_turn();

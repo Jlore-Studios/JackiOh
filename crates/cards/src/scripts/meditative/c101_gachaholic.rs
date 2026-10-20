@@ -57,6 +57,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -127,7 +128,7 @@ mod tests {
                         .expect("its owner sees it");
                     assert_eq!(shown.cost, query_cost(&def));
                     // R97: the opponent learns that a card reached the hand, never which.
-                    let theirs = serde_json::to_value(s.view(P2)).expect("a view serialises");
+                    let theirs = js(&s.view(P2));
                     assert_eq!(theirs["opponent"]["hand"], json!({ "count": 2 }));
                     assert!(!theirs.to_string().contains(&card.def_id), "{}", card.def_id);
                     if !seen.contains(&card.def_id) {

@@ -66,6 +66,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use std::sync::Arc;
 
+    use crate::events_json;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -114,7 +116,7 @@ mod tests {
     }
 
     fn view(s: &Scenario, seat: PlayerId) -> Value {
-        serde_json::to_value(s.view(seat)).expect("a view is JSON")
+        js(&s.view(seat))
     }
 
     fn view_events(s: &Scenario, seat: PlayerId) -> Vec<Value> {
@@ -128,10 +130,6 @@ mod tests {
 
     fn mana(s: &Scenario) -> i32 {
         s.state().players.p1.mana.current
-    }
-
-    fn events_json(s: &Scenario) -> Vec<Value> {
-        s.events().iter().map(|event| serde_json::to_value(event).expect("an event is JSON")).collect()
     }
 
     #[test]

@@ -45,6 +45,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -52,12 +53,6 @@ mod tests {
     const CURSE: &str = "meditative-028-1";
     const RESOURCES: &str = "classic-058"; // (2) Field Spell: start of turn, draw from the bottom of the opponent's deck.
     const FILLER: &str = "core-005";
-
-    /// One `shuffledIn`-style helper is not needed here; the curse is dealt by setup, not shuffled.
-    /// A pile of harmless ordinary cards, for a library whose length is the point.
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// The `damage` events on `target` ("hero-p1"), as amounts.
     fn damage_to(s: &Scenario, target: &str) -> Vec<i32> {

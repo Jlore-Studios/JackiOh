@@ -89,6 +89,7 @@ pub fn script() -> CardScripts {
 // §8.3's Engine cell: "`missing = max(0, 30 − health)`, floor division; your own exile (R72)".
 #[cfg(test)]
 mod tests {
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -310,7 +311,7 @@ mod tests {
         fn dealt(s: &Scenario) -> Vec<i64> {
             s.events()
                 .iter()
-                .map(|event| serde_json::to_value(event).expect("an event serialises"))
+                .map(js)
                 .filter(|event| event["type"] == "damage" && event["targetId"] == "hero-p2")
                 .filter_map(|event| event["amount"].as_i64())
                 .collect()

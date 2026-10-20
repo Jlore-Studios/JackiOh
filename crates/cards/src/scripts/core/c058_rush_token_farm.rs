@@ -62,6 +62,8 @@ pub fn script() -> CardScripts {
 // layer 5 (the aura is a computed layer, not a buff), §7, §8 Conventions ("same": the face summons AND pumps).
 #[cfg(test)]
 mod tests {
+    use crate::js;
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -79,15 +81,6 @@ mod tests {
         json!({ "hand": ["core-005"], "library": ["core-008", "core-011"] })
     }
 
-    /// Merges two JSON objects: the later keys win.
-    fn spread(base: Value, extra: Value) -> Value {
-        let mut all = base.as_object().cloned().unwrap_or_default();
-        for (key, value) in extra.as_object().cloned().unwrap_or_default() {
-            all.insert(key, value);
-        }
-        Value::Object(all)
-    }
-
     /// A unit that must be there.
     fn present(unit: Option<CardInstance>) -> CardInstance {
         match unit {
@@ -103,7 +96,7 @@ mod tests {
         fn s6_2_summons_a_rush_token_at_its_controller_s_start_of_turn() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(busy(), json!({ "backrow": [{ "def": "core-058", "lane": 1 }] })),
+                "p1": merged(busy(), json!({ "backrow": [{ "def": "core-058", "lane": 1 }] })),
                 "p2": busy(),
             }));
 
@@ -118,7 +111,7 @@ mod tests {
         fn r62_and_s6_2_it_fires_on_the_controller_s_turns_only_never_on_the_opponent_s() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(busy(), json!({ "backrow": [{ "def": "core-058", "lane": 1 }] })),
+                "p1": merged(busy(), json!({ "backrow": [{ "def": "core-058", "lane": 1 }] })),
                 "p2": busy(),
             }));
 
@@ -139,7 +132,7 @@ mod tests {
         fn r64_takes_the_leftmost_empty_unit_zone() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(busy(), json!({
+                "p1": merged(busy(), json!({
                     "backrow": [{ "def": "core-058", "lane": 1 }],
                     "field": [{ "def": "core-008", "lane": 1 }],
                 })),
@@ -156,7 +149,7 @@ mod tests {
         fn s3_2_a_full_row_summons_nothing_and_the_trigger_still_resolves() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(busy(), json!({
+                "p1": merged(busy(), json!({
                     "backrow": [{ "def": "core-058", "lane": 1 }],
                     "field": [
                         { "def": "core-008", "lane": 1 },
@@ -237,10 +230,7 @@ mod tests {
             }));
 
             let token = present(g.unit(P1, 1));
-            assert_eq!(
-                serde_json::to_value(token.buffs).expect("buffs serialise"),
-                json!({ "attack": 0, "health": 0 })
-            );
+            assert_eq!(js(&token.buffs), json!({ "attack": 0, "health": 0 }));
             g.expect_stats("core-t-rush", json!({ "attack": 6, "maxHealth": 6 }));
         }
 
@@ -248,7 +238,7 @@ mod tests {
         fn s8_conventions_same_the_radiant_face_still_summons_a_token_and_pumps_that_one_too() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": spread(busy(), json!({ "backrow": [{ "def": "core-058", "radiant": true, "lane": 1 }] })),
+                "p1": merged(busy(), json!({ "backrow": [{ "def": "core-058", "radiant": true, "lane": 1 }] })),
                 "p2": busy(),
             }));
 

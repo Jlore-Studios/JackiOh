@@ -84,6 +84,8 @@ pub fn script_v0_3_7b() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -92,10 +94,6 @@ mod tests {
     const BOTTLE: &str = "meditative-037";
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2.
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// `effects` applied for p1 on a sink over the scenario's state, then settled; the rng cursor
     /// written back; their events.
@@ -204,7 +202,7 @@ mod tests {
                 assert_eq!(new_card.chinese, Some(true));
                 assert_eq!(new_card.cost_override, None);
                 // The opponent sees a count, never the card (R97).
-                let view: Value = serde_json::to_value(view_for(s.state(), P2)).expect("the view serialises");
+                let view: Value = js(&view_for(s.state(), P2));
                 assert_eq!(view["opponent"]["hand"], json!({ "count": 4 }));
             }
 

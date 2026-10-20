@@ -58,6 +58,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::ID;
+    use crate::js;
     use jackioh_engine::effects::{CODE_OFFERS_KEY, CODE_OPTION_PREFIX};
     use jackioh_engine::testkit::*;
 
@@ -129,7 +130,7 @@ mod tests {
         fn r1183005_the_choosers_view_names_no_card_and_the_opponents_holds_nothing() {
             let s = casting("intuition-view", false, 1);
             let behind = offered(&s);
-            let mine = serde_json::to_value(view_for(s.state(), P1).pending).expect("serialises");
+            let mine = js(&view_for(s.state(), P1).pending);
             let options = mine["options"].as_array().expect("the options").clone();
             assert_eq!(options.len(), 3);
             for option in &options {
@@ -146,7 +147,7 @@ mod tests {
                     "no face of {id}"
                 );
             }
-            let theirs = serde_json::to_value(view_for(s.state(), P2).pending).expect("serialises");
+            let theirs = js(&view_for(s.state(), P2).pending);
             assert_eq!(theirs, json!({ "forYou": false, "pendingFor": "p1" }));
         }
 

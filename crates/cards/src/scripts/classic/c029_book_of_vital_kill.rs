@@ -47,6 +47,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -205,7 +206,7 @@ mod tests {
                         .iter()
                         .filter(|event| event.event_type() == GameEventType::HealthSet)
                         .collect();
-                    assert_eq!(serde_json::to_value(&seen).expect("events serialise"), expected);
+                    assert_eq!(js(&seen), expected);
                 }
             }
 

@@ -96,6 +96,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -123,10 +124,6 @@ mod tests {
 
     fn ids(cards: &[CardInstance]) -> Vec<String> {
         cards.iter().map(|card| card.id.clone()).collect()
-    }
-
-    fn def_ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
     fn lag_board(radiant_face: bool) -> Scenario {

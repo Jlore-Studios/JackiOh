@@ -46,6 +46,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -257,10 +258,10 @@ mod tests {
             }
             let events = serde_json::to_string(s.events()).expect("the events are JSON");
             assert!(!events.contains(ANSWER_KEY));
-            let mine = serde_json::to_value(s.view(P1)).expect("a view is JSON");
+            let mine = js(&s.view(P1));
             assert_eq!(mine["pending"]["streak"], json!(1));
             assert_eq!(mine["pending"]["prompt"], json!(statement(&s)));
-            let theirs = serde_json::to_value(s.view(P2)).expect("a view is JSON");
+            let theirs = js(&s.view(P2));
             assert_eq!(theirs["pending"], json!({ "forYou": false, "pendingFor": "p1" }));
         }
 

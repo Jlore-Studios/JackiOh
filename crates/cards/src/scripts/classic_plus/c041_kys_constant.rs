@@ -78,6 +78,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use std::collections::{BTreeMap, BTreeSet};
 
+    use crate::events_json;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -143,11 +145,7 @@ mod tests {
     }
 
     fn view(s: &Scenario, seat: PlayerId) -> Value {
-        serde_json::to_value(s.view(seat)).expect("a view is JSON")
-    }
-
-    fn events_json(s: &Scenario) -> Vec<Value> {
-        s.events().iter().map(|event| serde_json::to_value(event).expect("an event is JSON")).collect()
+        js(&s.view(seat))
     }
 
     #[test]
@@ -156,7 +154,7 @@ mod tests {
         let scripts = super::script();
         assert_eq!(scripts.base.targets, scripts.radiant.targets);
         assert_eq!(
-            serde_json::to_value(&scripts.base.targets).expect("declarations are JSON"),
+            js(&scripts.base.targets),
             json!([{ "kind": "hand", "min": 1, "max": 1, "filter": { "of": ["hand"], "excludeSelf": true, "check": "number" } }])
         );
     }

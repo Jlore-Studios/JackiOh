@@ -110,15 +110,13 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const PRESTIGE: &str = "meditative-053";
     const FILLER: &str = "core-005";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4, no text.
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// p1 holds Prestige (base unless `radiant_face`) with a Radiant vanilla Unit on each side's
     /// field; both sides keep cards in hand so no turn auto-ends.
@@ -442,7 +440,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "library": filler(4) },
             }));
             let deradianted = |s: &Scenario| -> Vec<Value> {
-                let events = serde_json::to_value(s.view(PlayerId::P2).events).expect("events");
+                let events = js(&s.view(PlayerId::P2).events);
                 events
                     .as_array()
                     .cloned()

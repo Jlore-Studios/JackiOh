@@ -86,6 +86,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::js;
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -101,23 +103,12 @@ mod tests {
     const SILAS: &str = "core-052"; // Silly Silas, (3) 4/4
     const FILLER: &str = "core-005";
 
-    /// TS `{ hand: [FILLER], ...p2 }`.
-    fn spread(defaults: Value, overrides: &Value) -> Value {
-        let mut out = defaults;
-        if let (Some(into), Some(from)) = (out.as_object_mut(), overrides.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        out
-    }
-
     fn shot(p2: Value, radiant_face: bool, seed: &str) -> Scenario {
         crate::register_all();
         scenario(json!({
             "seed": seed,
             "p1": { "hand": [{ "def": SHOT, "radiant": radiant_face }, FILLER], "field": [{ "def": BIG, "lane": 3 }] },
-            "p2": spread(json!({ "hand": [FILLER] }), &p2),
+            "p2": merged(json!({ "hand": [FILLER] }), p2),
         }))
     }
 
@@ -385,8 +376,7 @@ mod tests {
                     "playerId": "p1",
                     "nonce": "shot-replay",
                 }));
-                let thawed: GameState =
-                    serde_json::from_value(serde_json::to_value(s.state()).expect("JSON")).expect("a state");
+                let thawed: GameState = serde_json::from_value(js(s.state())).expect("a state");
                 let live = reduce(s.state(), &action);
                 assert!(live.error.is_none());
                 assert_eq!(

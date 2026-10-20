@@ -91,6 +91,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::js;
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -106,20 +108,11 @@ mod tests {
     const TOKEN: &str = "core-t-felinor";
     const FILLER: &str = "core-010";
 
-    fn spread(mut base: Value, over: Value) -> Value {
-        if let (Some(into), Some(more)) = (base.as_object_mut(), over.as_object()) {
-            for (key, value) in more {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        base
-    }
-
     /// Each `SideSetup` spread over the hand Feelings needs.
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
         scenario(json!({
-            "p1": spread(json!({ "hand": [{ "def": FEELINGS, "radiant": radiant_face }, FILLER] }), p1),
-            "p2": spread(json!({ "hand": [FILLER] }), p2),
+            "p1": merged(json!({ "hand": [{ "def": FEELINGS, "radiant": radiant_face }, FILLER] }), p1),
+            "p2": merged(json!({ "hand": [FILLER] }), p2),
         }))
     }
 
@@ -416,9 +409,7 @@ mod tests {
                 let menace = must_unit(&s, P2, 1);
                 s.play(FEELINGS, json!({}));
                 let paused = s.state().clone();
-                let revived: GameState =
-                    serde_json::from_value(serde_json::to_value(&paused).expect("the state serialises"))
-                        .expect("the state parses back");
+                let revived: GameState = serde_json::from_value(js(&paused)).expect("the state parses back");
                 assert_eq!(revived, paused);
 
                 let choice_id = revived.pending.as_ref().map(|pending| pending.id.clone()).unwrap_or_default();

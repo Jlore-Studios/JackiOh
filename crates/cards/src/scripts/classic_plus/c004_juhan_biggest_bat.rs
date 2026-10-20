@@ -25,6 +25,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
+    use crate::def_ids;
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
     use std::sync::Arc;
@@ -66,10 +67,6 @@ mod tests {
 
     fn kinds(keywords: &[Keyword]) -> Vec<KeywordKind> {
         keywords.iter().map(|k| k.kind()).collect()
-    }
-
-    fn def_ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
     #[test]

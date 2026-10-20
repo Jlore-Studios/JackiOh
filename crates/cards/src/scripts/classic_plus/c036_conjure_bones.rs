@@ -40,6 +40,7 @@ pub fn script() -> CardScripts {
 // Radiant".
 #[cfg(test)]
 mod tests {
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -58,13 +59,13 @@ mod tests {
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {
         s.events()
             .iter()
-            .map(|event| serde_json::to_value(event).expect("an event is JSON"))
+            .map(js)
             .filter(|event| event["type"] == kind)
             .collect()
     }
 
     fn view(s: &Scenario, seat: PlayerId) -> Value {
-        serde_json::to_value(s.view(seat)).expect("a view is JSON")
+        js(&s.view(seat))
     }
 
     fn cast(radiant: bool, embiggen: bool, library: Option<i32>) -> Scenario {

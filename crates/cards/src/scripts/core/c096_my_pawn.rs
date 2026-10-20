@@ -183,6 +183,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::events_json;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -197,10 +198,6 @@ mod tests {
     const SMALL: &str = "core-t-felinor";
 
     use crate::js;
-
-    fn events_json(s: &Scenario) -> Vec<Value> {
-        s.events().iter().map(js).collect()
-    }
 
     /// The only trigger the card registers; `when` is where every arming condition lives (R61).
     fn trigger(face: &str) -> TriggerDef {

@@ -212,6 +212,7 @@ pub fn script_v0_3_7b() -> CardScripts {
 // entry before any start-of-turn trigger fires (R62).
 #[cfg(test)]
 mod tests {
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -302,7 +303,7 @@ mod tests {
     /// The marks a card's view carries, wherever the viewer sees it on the field: the marks JSON, `Null`
     /// for a card on the field with none, or `"not on the field"`.
     fn marks_in(view: &PlayerView, instance_id: &str) -> Value {
-        let view = serde_json::to_value(view).expect("a view serialises");
+        let view = js(view);
         for side in ["you", "opponent"] {
             for unit in view[side]["units"].as_array().into_iter().flatten() {
                 if unit.get("instanceId").and_then(Value::as_str) == Some(instance_id) {
@@ -323,7 +324,7 @@ mod tests {
         events
             .iter()
             .filter(|event| event.event_type() == GameEventType::Marked)
-            .map(|event| serde_json::to_value(event).expect("an event serialises"))
+            .map(js)
             .collect()
     }
 
@@ -981,7 +982,7 @@ mod tests {
             g.play(KPOP, target(&trap.id));
 
             let p1_view = g.view(P1);
-            let back = serde_json::to_value(&p1_view.opponent.backrow[2]).expect("a backrow view serialises");
+            let back = js(&p1_view.opponent.backrow[2]);
             assert_eq!(back["faceDown"], json!(true));
             assert_eq!(back["marks"], json!([allure_mark()]));
             assert!(back.get("defId").is_none());

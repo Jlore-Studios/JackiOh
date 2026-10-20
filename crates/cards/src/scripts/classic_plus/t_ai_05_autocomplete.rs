@@ -58,6 +58,7 @@ pub fn script() -> CardScripts {
 // p2 plays first on its own turn, then ends it, and p1 plays Autocomplete on the next.
 #[cfg(test)]
 mod tests {
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const AUTOCOMPLETE: &str = "classicplus-t-ai-05";
@@ -77,37 +78,26 @@ mod tests {
 
     use crate::js;
 
-    /// TS's `{ ...base, ...extra }` on a side setup.
-    fn spread(base: Value, extra: &Value) -> Value {
-        let mut out = base;
-        if let (Some(into), Some(from)) = (out.as_object_mut(), extra.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        out
-    }
-
     /// p2 makes `plays` on its turn (each a hand card, played in order, with its zone when it takes one),
     /// then p1's turn begins.
     fn after_their_turn(plays: &[(&str, Option<i32>)], p1: Value, p2: Value, radiant_face: bool) -> Scenario {
         crate::register_all();
         let mut s = scenario(json!({
             "active": "p2",
-            "p1": spread(
+            "p1": merged(
                 json!({
                     "hand": [{ "def": AUTOCOMPLETE, "radiant": radiant_face }, VANILLA],
                     "library": [TIMMY, TIMMY, TIMMY],
                 }),
-                &p1,
+                p1,
             ),
-            "p2": spread(
+            "p2": merged(
                 json!({
                     "hand": [VANILLA, STOCKPILE, TWINSPELL, BEAR, TAX, MENACE],
                     "library": [VANILLA, VANILLA, VANILLA],
                     "mana": 9,
                 }),
-                &p2,
+                p2,
             ),
         }));
         for (card, zone) in plays {

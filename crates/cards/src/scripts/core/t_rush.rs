@@ -31,6 +31,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -196,7 +197,7 @@ mod tests {
                 s.expect_stats(&token, json!({ "attack": 5, "health": 5, "maxHealth": 5 }));
                 // §10.4 layer 1 reads the override ahead of the printed face; the def is untouched.
                 assert_eq!(
-                    serde_json::to_value(face_of(s.state(), &token)).expect("faceOf serialises"),
+                    js(&face_of(s.state(), &token)),
                     json!({ "attack": 5, "health": 5, "keywords": [{ "kind": "Rush" }] })
                 );
                 assert_eq!(crate::card_def(ID).base.attack, Some(3));
@@ -314,10 +315,7 @@ mod tests {
                 s.expect_stats(&token, json!({ "attack": 6, "health": 6, "maxHealth": 6 }));
                 let mut flat = token.clone();
                 flat.radiant = false;
-                assert_ne!(
-                    serde_json::to_value(face_of(s.state(), &token)).expect("faceOf serialises"),
-                    serde_json::to_value(face_of(s.state(), &flat)).expect("faceOf serialises")
-                );
+                assert_ne!(js(&face_of(s.state(), &token)), js(&face_of(s.state(), &flat)));
                 assert!(unit_view(s.state(), &token).keywords.contains(&Keyword::Rush));
                 assert_eq!(keywords_of(s.state(), &token), vec![Keyword::Rush, Keyword::Cleave]);
             }
