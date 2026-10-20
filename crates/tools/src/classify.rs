@@ -48,7 +48,8 @@ use crate::patches::{git, repo_root};
 pub(crate) use jackioh_engine::config::PATCH_MIN_CARDS;
 
 /// R1365000: the catalog fields a player reads and no game does. Every other field plays. The cards
-/// crate's, since a card's stats window reads it too (R1367000).
+/// crate's, since a card's stats window reads it too (R1367000). A `flavor` (R1437000) never
+/// reaches this list, since `changed_fields` leaves it out.
 pub(crate) use jackioh_cards::WORDING_FIELDS;
 
 /// The AI crate's own tooling, which plays no decision (gates, the sweep, development runs).
@@ -966,6 +967,39 @@ mod tests {
             &[],
         );
         assert_eq!(classify(&many, None).tier, Some(Tier::Patch));
+    }
+
+    // R1437000: a flavor is display only, so a change to it alone is no card change.
+    #[test]
+    fn r1437000_a_flavor_alone_is_no_card_change() {
+        let flavored = |flavor: &str| -> Vec<(String, crate::patches::js::Object)> {
+            let mut cards = cards(3, 1, "T.");
+            for (_, entry) in &mut cards {
+                entry.insert("flavor".to_string(), crate::patches::js::Json::from(flavor));
+            }
+            cards
+        };
+        for (before, after) in [
+            (cards(3, 1, "T."), flavored("Fire")),
+            (flavored("Fire"), flavored("Dark")),
+        ] {
+            let classified = classify(
+                &read_diff(&side(before, SHIPPED), &side(after, SHIPPED), &[]),
+                None,
+            );
+            assert_eq!((classified.kind, classified.tier), (Kind::Internal, None));
+            assert!(classified.cards.is_empty(), "{:?}", classified.cards);
+            assert!(classified.wording.is_empty(), "{:?}", classified.wording);
+        }
+        let mut costed = flavored("Fire");
+        costed[0]
+            .1
+            .insert("cost".to_string(), crate::patches::js::Json::from(2));
+        let classified = classify(
+            &read_diff(&side(cards(3, 1, "T."), SHIPPED), &side(costed, SHIPPED), &[]),
+            None,
+        );
+        assert_eq!(classified.cards, vec!["core-001".to_string()]);
     }
 
     fn file(path: &str, before: &str, after: &str) -> FileChange {

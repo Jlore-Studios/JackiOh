@@ -1018,14 +1018,21 @@ pub mod patches_io {
         out
     }
 
+    /// R1437000: the catalog field a patch leaves out: a card's flavor, display only, so a change to
+    /// it alone claims no card, is in no snapshot and ships no version.
+    pub const FLAVOR_FIELD: &str = "flavor";
+
     /// The fields of one entry that differ, one level into its faces ("base.text", "cost"). A face's
     /// text is compared as it prints, its `{key}` numbers filled in (`fillParams`, as the
     /// patch-notes diff does): a patch that moves only a param's value still rewords the faces that
-    /// print it, so the face counts as changed.
+    /// print it, so the face counts as changed. A `flavor` is left out (R1437000).
     pub fn changed_fields(before: &Object, after: &Object) -> Vec<String> {
         let mut fields = Vec::new();
         let keys: IndexSet<&String> = before.keys().chain(after.keys()).collect();
         for key in keys {
+            if key.as_str() == FLAVOR_FIELD {
+                continue;
+            }
             let face = matches!(key.as_str(), "base" | "radiant");
             let face_a = before.get(key).and_then(Json::as_object);
             let face_b = after.get(key).and_then(Json::as_object);
@@ -1609,7 +1616,7 @@ fn win_rates_changed(paths: &PatchPaths, newest: &str) -> anyhow::Result<bool> {
     Ok(!same_win_rates(&shipped, &working))
 }
 
-/// `catalog.json` as a patch sees it: its shipped view (R1420).
+/// `catalog.json` as a patch sees it: its shipped view (R1420), without its flavors (R1437000).
 fn read_catalog(path: &Path) -> anyhow::Result<Catalog> {
     let text = fs::read_to_string(path).with_context(|| format!("{} cannot be read", path.display()))?;
     let catalog: Catalog =
@@ -1631,20 +1638,29 @@ fn entry_ships(entry: &js::Object) -> bool {
 
 /// R1420: the catalog a patch ships, every entry of a set that ships, in the file's order. A set the
 /// catalog holds before it ships is in no snapshot and no fragment claims its cards; the patch that
-/// adds it to `SHIPPED_SETS` claims every one of them at once.
+/// adds it to `SHIPPED_SETS` claims every one of them at once. Every entry is read without its
+/// `flavor` (R1437000).
 pub fn shipped_view(catalog: Catalog) -> Catalog {
     catalog
         .into_iter()
         .filter(|(_, entry)| entry_ships(entry))
+        .map(|(id, mut entry)| {
+            entry.shift_remove(patches_io::FLAVOR_FIELD);
+            (id, entry)
+        })
         .collect()
 }
 
-/// R1420: `catalog.json`'s text as a snapshot holds it. The text itself when every entry ships, so a
-/// history of shipped sets alone is the file byte for byte; otherwise the shipped view written as
-/// the catalog is (two-space JSON and the file's closing newline).
+/// R1420: `catalog.json`'s text as a snapshot holds it. The text itself when every entry ships and
+/// none carries a `flavor` (R1437000), so a history of shipped sets alone is the file byte for byte;
+/// otherwise the shipped view written as the catalog is (two-space JSON and the file's closing
+/// newline).
 pub fn shipped_text(raw: &str) -> anyhow::Result<String> {
     let catalog: Catalog = serde_json::from_str(raw).context("the catalog is not a catalog")?;
-    if catalog.values().all(entry_ships) {
+    if catalog
+        .values()
+        .all(|entry| entry_ships(entry) && !entry.contains_key(patches_io::FLAVOR_FIELD))
+    {
         return Ok(raw.to_string());
     }
     let mut text = js::stringify_pretty(&shipped_view(catalog));
@@ -3156,6 +3172,51 @@ mod tests {
                     catalog.contains_key("boss"),
                     "catalog.json keeps the card being built"
                 );
+            }
+
+            // R1437000: a patch reads the catalog without its flavors, as without a held set's cards
+            // (R1420).
+            #[test]
+            fn r1437000_a_patch_reads_the_catalog_without_its_flavors() {
+                let base = cards(2);
+                let temp = shipped_repo("jackioh-ship-flavor-", &base);
+                let root = temp.path();
+                let dir = root.join("crates/cards/patches");
+                // Every card takes a flavor: nothing to claim, and the check passes.
+                let mut flavored = base.clone();
+                for entry in flavored.values_mut() {
+                    entry.insert("flavor".to_string(), Json::from("Fire"));
+                }
+                write_files(root, &[("crates/cards/catalog.json", json(&flavored))]);
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+                commit_at(root, "flavors", "2026-10-01T12:00:00+00:00");
+                // A cost changes beside them: the fragment claims that card alone.
+                let mut changed = flavored.clone();
+                changed
+                    .get_mut("c00")
+                    .expect("c00")
+                    .insert("cost".to_string(), Json::from(2));
+                write_files(root, &[("crates/cards/catalog.json", json(&changed))]);
+                let written = write_fragment(root, &fragment_args("t", "s", "n", None)).unwrap();
+                assert_eq!(written.fragment.cards, ids(0, 1));
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+                commit_at(root, "fragment", "2026-10-02T12:00:00+00:00");
+                // It ships as a micro recording that card alone, its snapshot without flavors.
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1b"]));
+                let changes: Vec<String> = shipped_patch(&dir, "v0.1.1b")
+                    .changes
+                    .into_iter()
+                    .map(|change| change.id)
+                    .collect();
+                assert_eq!(changes, ids(0, 1));
+                assert_eq!(
+                    read_snapshot("v0.1.1b", &dir).unwrap(),
+                    costing(&base, &ids(0, 1), 2)
+                );
+                assert!(!read(&dir.join("v0.1.1b.json")).contains("flavor"));
+                let catalog: Catalog =
+                    serde_json::from_str(&read(&root.join("crates/cards/catalog.json"))).unwrap();
+                assert_eq!(catalog["c01"].get("flavor"), Some(&Json::from("Fire")));
             }
 
             #[test]
@@ -5028,6 +5089,30 @@ mod tests {
                     strings(&["base.text"])
                 );
                 assert_eq!(changed_fields(&face(1, ""), &face(1, "")), Vec::<String>::new());
+            }
+
+            // R1437000: a flavor is display only, so a change to it alone changes no field.
+            #[test]
+            fn r1437000_changed_fields_leaves_out_a_flavor() {
+                let card = |flavor: Option<&str>, cost: i32| -> Object {
+                    let mut pairs = vec![("id", Json::from("c")), ("cost", Json::from(cost))];
+                    if let Some(flavor) = flavor {
+                        pairs.push(("flavor", Json::from(flavor)));
+                    }
+                    object(pairs)
+                };
+                assert_eq!(
+                    changed_fields(&card(None, 1), &card(Some("Fire"), 1)),
+                    Vec::<String>::new()
+                );
+                assert_eq!(
+                    changed_fields(&card(Some("Fire"), 1), &card(Some("Dark"), 1)),
+                    Vec::<String>::new()
+                );
+                assert_eq!(
+                    changed_fields(&card(Some("Fire"), 1), &card(None, 2)),
+                    strings(&["cost"])
+                );
             }
 
             #[test]

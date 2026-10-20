@@ -376,6 +376,7 @@ pub fn custom_def(card: &CustomCard) -> CardDef {
         tags: Vec::new(),
         rarity: rarity_of(frame.rarity),
         printed_rarity: None,
+        flavor: None,
         token: false,
         cost: CardCost::Fixed(frame.cost),
         refs: None,

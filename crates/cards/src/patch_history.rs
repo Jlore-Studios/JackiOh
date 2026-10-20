@@ -21,6 +21,7 @@ pub const WORDING_FIELDS: &[&str] = &[
     "refs",
     "printedRarity",
     "index",
+    "flavor",
 ];
 
 /// R1367000: the first version of each release line shipped before tiers were recorded, as the
