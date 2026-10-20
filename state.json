@@ -7876,6 +7876,13 @@
     "1431": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T18:31:34Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 5 fails: every edit is in crates/engine/src, which is engine work and therefore never easy"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
