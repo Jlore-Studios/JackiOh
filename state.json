@@ -6881,6 +6881,13 @@
     "1399": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T11:49:00Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 2 (one place) fails: the change spans crates/tools plus training/loop.sh and two training docs, so it is not inside one crate or app"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
