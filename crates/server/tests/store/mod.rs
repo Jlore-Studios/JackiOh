@@ -8,6 +8,7 @@ pub mod invite_clusters;
 pub mod migrations_pinned;
 pub mod mint_code;
 pub mod moderate;
+pub mod payout_race;
 pub mod postgres;
 pub mod redeem_race;
 pub mod season_start;
