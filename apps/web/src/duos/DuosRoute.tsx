@@ -5,8 +5,8 @@
 // for the own duel — and send what the board reports straight back. CLAUDE.md rule 7: nothing on
 // screen comes from anywhere but the view, and no move is offered that `legal` does not list.
 //
-// The catalog comes from `GET /api/catalog`, as on the match screen, so cards wear their names; the
-// provider is always rendered, `null` included, so its arrival never remounts the board.
+// The catalog is the one the client ships (together/catalog.ts), as on the match screen, so cards wear
+// their names from the first render; the provider is always rendered, so the board never remounts.
 //
 // A finished game's result panel offers "Watch the replay" (#965, §13.9): the route then swaps the
 // board for `DuosReplay.tsx`, which reads the server's replay once, and "back" returns to the result.
@@ -113,7 +113,7 @@ function RoundClock({ clock }: { clock: DuosClockReading | null }): ReactElement
 export function DuosRoute({ matchId, token }: { matchId: string; token: string }): ReactElement {
   const locale = useLocale();
   const match = useDuosMatch({ matchId, token });
-  // `GET /api/catalog`, once; with none the board shows def ids, never a guessed name.
+  // The shipped catalog's names (§9.4); a card it lacks shows its def id, never a guessed name.
   const lookup = useCatalogLookup();
   // #965: the result panel's replay is open. Held above the early returns, which a hook may not follow.
   const [watching, setWatching] = useState(false);
