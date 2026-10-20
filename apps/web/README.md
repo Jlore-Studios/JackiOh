@@ -237,6 +237,21 @@ packs/                  #1308: the card packs on /account (SPEC §14.3, §14.4; 
                         stinger and fx per rarity, skip-all, batch opening, Reduce motion showing the results
                         at once; the server decided every slot before anything animates (`packs.ts` holds the
                         pure model and the test ids, `fixtures.ts` the fixture responses, `packs.css` the look)
+shop/                   #1309: spending what the economy pays, on /account behind the same packs toggle
+                        (`Shop.tsx`, `TokenPicker.tsx`, `CosmeticPacks.tsx`, lazy-loaded from
+                        routes/account.tsx beside the opening): the Jlore shop buys set and global packs at
+                        `GET /api/packs`' price (`POST /api/packs/buy`), the button disabled with the
+                        shortfall shown when the wallet (`GET /api/wallet`) is short; the token picker shows
+                        both token bars and the cycle's next step (`GET /api/tokens`), a card token browsing
+                        unowned cards (`POST /api/tokens/redeem-card`) and a Rare/Epic token browsing unowned
+                        cosmetics at its tier or below with a preview on the card (`POST
+                        /api/tokens/redeem-cosmetic`); the cosmetic packs open through a simple reveal (`POST
+                        /api/cosmetic-packs/open`) with the Chase Shard bar (`GET /api/cosmetic-packs`) and its
+                        Legendary-or-Mythic choice only when full (`POST /api/cosmetic-packs/chase`); every
+                        refusal shows the server's reason verbatim and changes nothing; a buy, an opening,
+                        a redemption or a chase that lands makes the other panels, the opening's included,
+                        read the account again (`onChanged`, `revision`) (`shop.ts` holds the
+                        pure model and the test ids, `fixtures.ts` the fixture responses, `shop.css` the look)
 ```
 
 A practice game offers the account's complete saved decks by name, read from `GET /api/decks`.

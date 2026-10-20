@@ -1,11 +1,12 @@
 // The pack-opening scene and the card packs panel (#1308, SPEC §14.3, §14.4), from fixture responses:
 // each slot's outcome, the server's odds and pity on the panel before and after an opening, skip-all,
-// reduced motion, batch opening and a refused open. Nothing here rolls a pack: the fixtures are what
+// reduced motion, batch opening, a refused open, and the page told of an opening and asking for a
+// fresh read (#1309). Nothing here rolls a pack: the fixtures are what
 // `GET /api/packs` and `POST /api/packs/open` answer, and the audio engine is the recording fake the
 // audio suite's own wiring test uses.
 
 import { CATALOG } from "@jackioh/cards";
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import {
@@ -575,5 +576,32 @@ describe("#1308 the card packs panel", () => {
     expect(screen.getByTestId(T.loading)).toHaveTextContent("Loading your packs…");
     await screen.findByTestId(T.odds);
     expect(screen.queryByTestId(T.loading)).toBeNull();
+  });
+
+  it("#1309 an opening tells the page, a refused one does not, and the page's next revision reads the packs again", async () => {
+    const onChanged = vi.fn<() => void>();
+    const server = packsServer({
+      open: (call) => (call === 1 ? refusal(409, "conflict", NO_PACK) : { status: 200, body: openedPack() }),
+    });
+    const { rerender } = render(<PackOpening token={TOKEN} onChanged={onChanged} />);
+    await screen.findByTestId(T.odds);
+
+    fireEvent.click(screen.getByTestId(T.open("Core")));
+    fireEvent.click(screen.getByTestId(T.pack));
+    expect(await screen.findByTestId(T.error)).toHaveTextContent(NO_PACK);
+    expect(onChanged, "a refusal changed nothing to tell the page").not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId(T.close));
+    fireEvent.click(screen.getByTestId(T.open("Core")));
+    fireEvent.click(screen.getByTestId(T.skipAll));
+    expect(await screen.findByTestId(T.outcome(0))).toHaveTextContent("New card");
+    expect(onChanged).toHaveBeenCalledTimes(1);
+
+    // Another panel bought a pack: the page asks this one to read again.
+    expect(server.to("GET", "/api/packs")).toHaveLength(1);
+    rerender(<PackOpening token={TOKEN} revision={1} onChanged={onChanged} />);
+    await waitFor(() => {
+      expect(server.to("GET", "/api/packs")).toHaveLength(2);
+    });
   });
 });
