@@ -11350,9 +11350,9 @@
     "what": "build #1418 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-20T14:37:51Z",
+    "at": "2026-10-20T14:45:18Z",
     "notes": [
-      "#1307 needs a plan"
+      "#1415: approved and green, so its strikes are cleared"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
