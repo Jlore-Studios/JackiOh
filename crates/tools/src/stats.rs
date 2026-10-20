@@ -35,8 +35,9 @@
 //!
 //! `cargo jackioh stats report --games <file>…` prints the game figures over the same files instead,
 //! per patch, mode and source: how often the first seat won (with its 95% Wilson interval), how the
-//! games ended, how long they lasted, and what R1256000's counts say of fatigue and Traps. A record
-//! written before those counts is unknown for them, not zero. The training lanes keep these figures
+//! games ended, how long they lasted, and what R1256000's counts say of fatigue, Traps, position
+//! switches and Radiant upgrades. A record written before those counts is unknown for them, not
+//! zero. The training lanes keep these figures
 //! beside the card figures (`training/README.md`).
 //!
 //! A forced run files under a series of its own (`dev-force-<id>`) and is for `stats compare` and
@@ -319,6 +320,14 @@ pub struct GameGroup {
     pub traps_fired: Option<i32>,
     /// `traps_fired` over `traps_set` to three places, or null when no Trap was set.
     pub traps_fired_per_set: Option<f64>,
+    /// Position switches by units over the counted games, both seats.
+    pub position_switches: Option<i32>,
+    /// The mean of `position_switches` over the counted games, to three places.
+    pub position_switches_mean: Option<f64>,
+    /// Cards an effect made Radiant over the counted games, both seats.
+    pub radiant_upgrades: Option<i32>,
+    /// The mean of `radiant_upgrades` over the counted games, to three places.
+    pub radiant_upgrades_mean: Option<f64>,
 }
 
 /// `stats report --games`: the groups a filter reads and the records it left to another source.
@@ -340,6 +349,8 @@ struct Counts {
     fatigue_damage: i32,
     traps_set: i32,
     traps_fired: i32,
+    position_switches: i32,
+    radiant_upgrades: i32,
 }
 
 /// R1256000: a game's counts, or `None` when either seat's record lacks one (written before them).
@@ -351,6 +362,8 @@ fn counts(game: &GameSummary) -> Option<Counts> {
         sum.fatigue_damage += seat.fatigue_damage?;
         sum.traps_set += seat.traps_set?;
         sum.traps_fired += seat.traps_fired?;
+        sum.position_switches += seat.position_switches?;
+        sum.radiant_upgrades += seat.radiant_upgrades?;
     }
     Some(sum)
 }
@@ -386,6 +399,8 @@ fn game_group(key: (String, GameMode, GameSource), records: &[&GameRecord]) -> G
     let damage: i32 = known.iter().map(|counts| counts.fatigue_damage).sum();
     let traps_set: i32 = known.iter().map(|counts| counts.traps_set).sum();
     let traps_fired: i32 = known.iter().map(|counts| counts.traps_fired).sum();
+    let switches: i32 = known.iter().map(|counts| counts.position_switches).sum();
+    let upgrades: i32 = known.iter().map(|counts| counts.radiant_upgrades).sum();
     GameGroup {
         patch,
         mode,
@@ -406,6 +421,10 @@ fn game_group(key: (String, GameMode, GameSource), records: &[&GameRecord]) -> G
         traps_fired: any.then_some(traps_fired),
         traps_fired_per_set: (any && traps_set > 0)
             .then(|| arena::round_share(f64::from(traps_fired) / f64::from(traps_set))),
+        position_switches: any.then_some(switches),
+        position_switches_mean: any.then(|| arena::round_share(f64::from(switches) / counted as f64)),
+        radiant_upgrades: any.then_some(upgrades),
+        radiant_upgrades_mean: any.then(|| arena::round_share(f64::from(upgrades) / counted as f64)),
     }
 }
 
@@ -476,7 +495,7 @@ pub fn render_games(report: &GameReport, json: bool) -> String {
         lines.push(format!("  turns, quartiles: {first}, {second}, {third}"));
         if group.counted == 0 {
             lines.push(
-                "  fatigue and traps: unknown, no record of these games carries R1256000's counts"
+                "  fatigue, traps, switches and upgrades: unknown, no record of these games carries R1256000's counts"
                     .to_string(),
             );
             continue;
@@ -499,9 +518,21 @@ pub fn render_games(report: &GameReport, json: bool) -> String {
             ),
             None => "  traps: none set".to_string(),
         });
+        lines.push(format!(
+            "  position switches: {}, {:.*} a game",
+            group.position_switches.unwrap_or_default(),
+            MEAN_DECIMALS,
+            group.position_switches_mean.unwrap_or_default()
+        ));
+        lines.push(format!(
+            "  Radiant upgrades: {}, {:.*} a game",
+            group.radiant_upgrades.unwrap_or_default(),
+            MEAN_DECIMALS,
+            group.radiant_upgrades_mean.unwrap_or_default()
+        ));
         if group.counted < *games {
             lines.push(format!(
-                "  (fatigue and traps over the {} of {games} games whose records carry R1256000's counts)",
+                "  (fatigue, traps, switches and upgrades over the {} of {games} games whose records carry R1256000's counts)",
                 group.counted
             ));
         }
@@ -987,27 +1018,34 @@ mod tests {
     }
 
     /// A development game of random mode played by two AIs, first seat p1, as a line of JSON.
-    /// `counts` is each seat's `[fatigueDraws, fatigueDamage, trapsSet, trapsFired]` (R1256000), or
-    /// none for a record written before them.
+    /// `counts` is each seat's `[fatigueDraws, fatigueDamage, trapsSet, trapsFired, positionSwitches, radiantUpgrades]`
+    /// (R1256000), or none for a record written before them.
     fn game_line(
         id: &str,
         patch: &str,
         winner: &str,
         reason: &str,
         turns: i32,
-        counts: Option<[[i32; 4]; 2]>,
+        counts: Option<[[i32; 6]; 2]>,
     ) -> String {
         let seat = |n: usize| {
             let mut seat =
                 serde_json::json!({ "deck": ["core-001"], "opening": [], "drawn": [], "played": [] });
             if let Some(counts) = counts {
-                let [fatigue_draws, fatigue_damage, traps_set, traps_fired] = counts[n];
+                let [
+                    fatigue_draws,
+                    fatigue_damage,
+                    traps_set,
+                    traps_fired,
+                    switches,
+                    upgrades,
+                ] = counts[n];
                 seat["fatigueDraws"] = fatigue_draws.into();
                 seat["fatigueDamage"] = fatigue_damage.into();
                 seat["trapsSet"] = traps_set.into();
                 seat["trapsFired"] = traps_fired.into();
-                seat["positionSwitches"] = 0.into();
-                seat["radiantUpgrades"] = 0.into();
+                seat["positionSwitches"] = switches.into();
+                seat["radiantUpgrades"] = upgrades.into();
             }
             seat
         };
@@ -1038,7 +1076,7 @@ mod tests {
                 "p1",
                 "hero-death",
                 9,
-                Some([[0, 0, 2, 1], [2, 3, 1, 0]]),
+                Some([[0, 0, 2, 1, 3, 1], [2, 3, 1, 0, 1, 2]]),
             ),
             game_line(
                 "dev:v0.2.5:dev:2",
@@ -1046,7 +1084,7 @@ mod tests {
                 "draw",
                 "turn-cap",
                 40,
-                Some([[0; 4]; 2]),
+                Some([[0; 6]; 2]),
             ),
             game_line("dev:v0.2.5:dev:3", "v0.2.5", "p2", "hero-death", 12, None),
             game_line("dev:v0.2.4:dev:1", "v0.2.4", "p1", "alt-win", 15, None),
@@ -1094,7 +1132,8 @@ mod tests {
                         "reasons": reasons(&[("hero-death", 2), ("turn-cap", 1)]),
                         "turnQuartiles": [9, 12, 40],
                         "counted": 2, "fatigueGames": 1, "fatigueShare": 0.5, "fatigueDamageMean": 1.5,
-                        "trapsSet": 3, "trapsFired": 1, "trapsFiredPerSet": 0.333
+                        "trapsSet": 3, "trapsFired": 1, "trapsFiredPerSet": 0.333,
+                        "positionSwitches": 4, "positionSwitchesMean": 2.0, "radiantUpgrades": 3, "radiantUpgradesMean": 1.5
                     },
                     {
                         "patch": "v0.2.4", "mode": "random", "source": "dev",
@@ -1103,7 +1142,8 @@ mod tests {
                         "reasons": reasons(&[("alt-win", 1)]),
                         "turnQuartiles": [15, 15, 15],
                         "counted": 0, "fatigueGames": null, "fatigueShare": null, "fatigueDamageMean": null,
-                        "trapsSet": null, "trapsFired": null, "trapsFiredPerSet": null
+                        "trapsSet": null, "trapsFired": null, "trapsFiredPerSet": null,
+                        "positionSwitches": null, "positionSwitchesMean": null, "radiantUpgrades": null, "radiantUpgradesMean": null
                     }
                 ]
             })
@@ -1122,17 +1162,70 @@ mod tests {
             "  turns, quartiles: 9, 12, 40",
             "  fatigue: a draw from an empty library in 1 of 2 games (50.0%), 1.50 damage a game",
             "  traps: 1 fired of 3 set, 0.33 a set",
-            "  (fatigue and traps over the 2 of 3 games whose records carry R1256000's counts)",
+            "  position switches: 4, 2.00 a game",
+            "  Radiant upgrades: 3, 1.50 a game",
+            "  (fatigue, traps, switches and upgrades over the 2 of 3 games whose records carry R1256000's counts)",
             "",
             "v0.2.4 random dev: 1 games, 0 drawn",
             "  first seat won 1 of 1: 100.0%, 95% interval 20.7% to 100.0%",
             "  endings: alt-win 1",
             "  turns, quartiles: 15, 15, 15",
-            "  fatigue and traps: unknown, no record of these games carries R1256000's counts",
+            "  fatigue, traps, switches and upgrades: unknown, no record of these games carries R1256000's counts",
             "",
             "Left out: 1 records of a source --source=dev does not read (R378).",
         ];
         assert_eq!(text, expected.join("\n"));
+    }
+
+    #[test]
+    fn games_report_adds_both_seats_switches_and_upgrades_whichever_seat_holds_them() {
+        let totals = |counts: [[i32; 6]; 2]| {
+            let line = game_line("dev:v0.2.5:dev:1", "v0.2.5", "p1", "hero-death", 9, Some(counts));
+            let report = game_report(
+                &parse_game_record_lines(&line).unwrap(),
+                &filter_of(&report_args(&["a.jsonl", "--games", "--source=dev"]).unwrap()),
+            );
+            let group = &report.groups[0];
+            (group.position_switches, group.radiant_upgrades)
+        };
+        let (p1, p2) = ([0, 0, 0, 0, 3, 1], [0, 0, 0, 0, 1, 2]);
+        assert_eq!(totals([p1, p2]), (Some(4), Some(3)));
+        assert_eq!(totals([p2, p1]), (Some(4), Some(3)));
+    }
+
+    #[test]
+    fn games_report_counts_a_game_only_when_both_seats_carry_all_six_counts() {
+        // A seat that carries the fatigue and trap counts but not the switches: unknown, not zero.
+        let mut partial: Value = serde_json::from_str(&game_line(
+            "dev:v0.2.5:dev:4",
+            "v0.2.5",
+            "p1",
+            "hero-death",
+            10,
+            Some([[1; 6]; 2]),
+        ))
+        .unwrap();
+        partial["game"]["seats"]["p2"]
+            .as_object_mut()
+            .unwrap()
+            .remove("positionSwitches");
+        let mut lines = game_lines();
+        lines.push(partial.to_string());
+        let args = report_args(&["a.jsonl", "--games", "--source=dev"]).unwrap();
+        let report = game_report(
+            &parse_game_record_lines(&lines.join("\n")).unwrap(),
+            &filter_of(&args),
+        );
+        let group = &report.groups[0];
+        assert_eq!((group.games, group.counted), (4, 2));
+        assert_eq!(group.fatigue_games, Some(1));
+        assert_eq!(
+            (group.position_switches, group.radiant_upgrades),
+            (Some(4), Some(3))
+        );
+        assert!(render_games(&report, false).contains(
+            "  (fatigue, traps, switches and upgrades over the 2 of 4 games whose records carry R1256000's counts)"
+        ));
     }
 
     #[test]

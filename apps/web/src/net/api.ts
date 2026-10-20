@@ -1040,6 +1040,8 @@ export type PublicStatsCardsResponse = {
   sourceLabel: string;
   pilot: "merged" | "human" | "ai";
   pilotLabel: string;
+  mode: "all" | "bo1" | "bo3" | "random";
+  modeLabel: string;
   minSample: number;
   totalGames: number;
   cards: PublicCardStat[];
@@ -1049,6 +1051,7 @@ export type PublicStatsCardsResponse = {
     activePatch: string;
     source: "provisional" | "live" | "dev";
     pilot: "merged" | "human" | "ai";
+    mode: "all" | "bo1" | "bo3" | "random";
     bestCard: { id: string; name: string; winRate: number; games: number } | null;
     worstCard: { id: string; name: string; winRate: number; games: number } | null;
   };
@@ -1074,6 +1077,7 @@ export type CardStatsOptions = {
   rarity?: string;
   cost?: number;
   card?: string;
+  mode?: string;
   signal?: AbortSignal;
 };
 
@@ -1086,14 +1090,20 @@ export function getCardStats(options: CardStatsOptions = {}): Promise<PublicStat
   if (options.rarity) params.set("rarity", options.rarity);
   if (options.cost !== undefined) params.set("cost", String(options.cost));
   if (options.card) params.set("card", options.card);
+  if (options.mode) params.set("mode", options.mode);
   const query = params.toString();
   return apiRequest<PublicStatsCardsResponse>(`/api/stats/cards${query ? `?${query}` : ""}`, {
     signal: options.signal,
   });
 }
 
-export function getCardDrillDown(cardId: string, signal?: AbortSignal): Promise<CardDrillDownResponse> {
-  return apiRequest<CardDrillDownResponse>(`/api/stats/cards/${encodeURIComponent(cardId)}`, {
+export function getCardDrillDown(
+  cardId: string,
+  mode?: string,
+  signal?: AbortSignal,
+): Promise<CardDrillDownResponse> {
+  const query = mode ? `?mode=${encodeURIComponent(mode)}` : "";
+  return apiRequest<CardDrillDownResponse>(`/api/stats/cards/${encodeURIComponent(cardId)}${query}`, {
     signal,
   });
 }

@@ -4,9 +4,10 @@ A notebook is never the source of a number (R377's arithmetic is the Rust's, and
 loader to it), so what is held here is that each one still runs to the end when the data changes shape: it reads
 the fixtures its first cell defaults to, draws its figures, and raises nothing. Each runs again with the minimum
 sample lowered, because the fixtures are 80 games and the server's minimum is 20 games per card, which leaves the
-comparisons nothing to compare; and the sweep's with a sweep that has flags, which the committed one does not. The one
-number notebook 02 does compute that the Rust computes too, a group's first-seat wins and endings, is held to
-`cargo jackioh stats report --games` over the same files (`fixtures/games.report.json`).
+comparisons nothing to compare; and the sweep's with a sweep that has flags, which the committed one does not. The
+numbers notebook 02 computes that the Rust computes too, a group's first-seat wins and endings and its counted
+games, position switches and Radiant upgrades, are held to `cargo jackioh stats report --games` over the same
+files (`fixtures/games.report.json`, `fixtures/counts.report.json`).
 """
 
 import json
@@ -246,17 +247,19 @@ def test_the_decks_notebook_reports_fatigue_traps_switches_and_upgrades(monkeypa
         "fatigue_hit_share",
         "fatigue_kill_share",
         "traps_fired_per_set",
+        "position_switches",
         "switches_per_game",
+        "radiant_upgrades",
         "upgrades_per_game",
     ]
     rows = {
-        line.split()[-7]: [math.nan if value == "<NA>" else float(value) for value in line.split()[-6:]]
+        line.split()[-9]: [math.nan if value == "<NA>" else float(value) for value in line.split()[-8:]]
         for line in table.splitlines()[2:]
     }
-    assert rows["bo1"] == [4, 0.25, 0.25, 1.0, 0.25, 0.25]
+    assert rows["bo1"] == [4, 0.25, 0.25, 1.0, 1, 0.25, 1, 0.25]
     assert rows["bo3"][:3] == [1, 0.0, 0.0]
     assert math.isnan(rows["bo3"][3])
-    assert rows["bo3"][4:] == [0.0, 0.0]
+    assert rows["bo3"][4:] == [0, 0.0, 0, 0.0]
     # The earlier sections still ran, and the new section drew its figure.
     assert "live games of patch v0.1.1" in text
     assert any(output.output_type == "display_data" and "image/png" in output.data for output in outputs)
@@ -312,3 +315,47 @@ def test_the_decks_notebooks_first_seat_and_ending_figures_equal_stats_report_ga
         assert (figures["games"], figures["draws"], figures["firstWins"]) == (group["games"], group["draws"], group["firstWins"]), key
         assert figures["firstShare"] == pytest.approx(group["firstShare"], abs=SHARE_TOLERANCE), key
         assert figures["reasons"] == {reason: count for reason, count in group["reasons"].items() if count}, key
+
+
+COUNTS = ANALYSIS / "fixtures" / "counts.jsonl"
+COUNTS_REPORT = ANALYSIS / "fixtures" / "counts.report.json"
+
+# Run after notebook 02's last cell: its per-group switch and upgrade figures, as one line of JSON.
+COUNT_FIGURES = """
+import json
+print("COUNT FIGURES " + json.dumps([
+    {
+        "patch": patch, "mode": mode, "counted": int(row["games"]),
+        "positionSwitches": int(row["position_switches"]), "positionSwitchesMean": float(row["switches_per_game"]),
+        "radiantUpgrades": int(row["radiant_upgrades"]), "radiantUpgradesMean": float(row["upgrades_per_game"]),
+    }
+    for (patch, mode), row in table.iterrows()
+]))
+"""
+
+
+def test_the_decks_notebooks_switch_and_upgrade_figures_equal_stats_report_games(monkeypatch):
+    """R1256000: over live games of which some records carry the counts and some do not, notebook 02 counts the
+    games, switches and upgrades `cargo jackioh stats report --games --source=all --json` does."""
+    report = json.loads(COUNTS_REPORT.read_text(encoding="utf-8"))
+    assert {group["source"] for group in report["groups"]} == {"live"}
+    rust = {(group["patch"], group["mode"]): group for group in report["groups"]}
+    # Two of three bo1 games and one of two bo3 games carry the counts.
+    assert {key: (group["games"], group["counted"]) for key, group in rust.items()} == {
+        ("v0.3.1", "bo1"): (3, 2),
+        ("v0.3.1", "bo3"): (2, 1),
+    }
+
+    executed = run(NOTEBOOKS[1], monkeypatch, {"JACKIOH_RECORDS": COUNTS}, then=COUNT_FIGURES)
+    line = next(line for line in streams(executed).splitlines() if line.startswith("COUNT FIGURES "))
+    notebook = {(group["patch"], group["mode"]): group for group in json.loads(line.removeprefix("COUNT FIGURES "))}
+    assert notebook.keys() == rust.keys()
+    for key, figures in notebook.items():
+        group = rust[key]
+        assert (figures["counted"], figures["positionSwitches"], figures["radiantUpgrades"]) == (
+            group["counted"],
+            group["positionSwitches"],
+            group["radiantUpgrades"],
+        ), key
+        for mean in ("positionSwitchesMean", "radiantUpgradesMean"):
+            assert figures[mean] == pytest.approx(group[mean], abs=SHARE_TOLERANCE), key

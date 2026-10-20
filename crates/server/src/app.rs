@@ -301,6 +301,25 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::collection::get_collection),
     ),
+    // economy/packs.rs (SPEC §14.3, §14.4; #1301)
+    (
+        "GET",
+        "/api/packs",
+        AuthLevel::Active,
+        h!(crate::economy::packs::get_packs),
+    ),
+    (
+        "POST",
+        "/api/packs/buy",
+        AuthLevel::Active,
+        h!(crate::economy::packs::post_buy),
+    ),
+    (
+        "POST",
+        "/api/packs/open",
+        AuthLevel::Active,
+        h!(crate::economy::packs::post_open),
+    ),
     // api/economy.rs (#1302)
     (
         "GET",
