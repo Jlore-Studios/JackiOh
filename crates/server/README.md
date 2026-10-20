@@ -241,8 +241,10 @@ rooms through `freeze_choice`, and a Best-of-1 rematch, which replays frozen dec
 
 ## WebSocket surface
 
-One socket per player per match, at `/ws/match` on the same port. The token comes from `?token=`; the
-server echoes the `jackioh.v1` subprotocol when offered. The message union is `actor/protocol.rs`:
+One socket per player per match, at `/ws/match` on the same port. The token comes from an offered
+`jackioh.bearer.` subprotocol, its UTF-8 in base64url without padding (R1379000; `?token=` only when
+none is offered, for the previous day's client); only `jackioh.v1` is echoed, and `/ws/duos` and
+`/ws/watch` read the token the same way. The message union is `actor/protocol.rs`:
 the client sends `hello` and `action`, the server sends `hello`, `view`, `ack`, `error`, `prompt` and
 `clock`, and the cosmetic `portraits` (R642), `emote` (R643) and `aim` (R738) frames ride beside them,
 never part of an action or a view. The `portraits` frame also carries the receiving account's own emote
@@ -315,9 +317,11 @@ holds, with four seats:
   one;
 - every applied action goes to `duos_match_actions` and pushes fresh views to both human seats; an
   illegal action answers `illegal_action` with its nonce and changes nothing; a rebuilt actor folds the
-  log with `duos_fold` on the blocking pool, only for a profile that holds a seat, and the end writes
-  the result and `ended_at` once, unranked, for both humans; every engine call runs under the catalog
-  version the match was dealt from (`DuosMatchOptions::catalog_version`, R767000);
+  log with `duos_fold` on the blocking pool, only for a profile that holds a seat and, once the match
+  has ended, only within `REMATCH_OFFER_TTL_MS` of its `ended_at` (past that the seat is not found,
+  4404, and nothing is folded: R1398000), and the end writes the result and `ended_at` once, unranked,
+  for both humans; every engine call runs under the catalog version the match was dealt from
+  (`DuosMatchOptions::catalog_version`, R767000);
 - a nonce starting `srv-` or `duos:` (the engine's round's own) is `malformed`, and a `hello` repeated
   while one from the same socket is still queued is absorbed (R835001's rule);
 - each human seat keeps the same `actor::guard::SeatGuard` as a 1v1 seat: `MATCH_ACTIONS_PER_SECOND`

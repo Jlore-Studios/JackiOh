@@ -189,7 +189,7 @@ decides a rule: every verdict they show comes from `@jackioh/validator` (the Rus
 WASM), the module the server runs at queue, and the server's refusal, when it comes, is shown in its own words (rule 7).
 
 ```
-routes/decks.tsx        /decks: loads GET /api/decks, the catalog and the collection, hands them to the workshop
+routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop
 game/deckbuilder/       the deck workshop: up to ten named decks and five trios (R250, R252), the pool
                         browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630),
                         the trio editor that marks every card two of its decks share (R251),
@@ -237,6 +237,21 @@ packs/                  #1308: the card packs on /account (SPEC §14.3, §14.4; 
                         stinger and fx per rarity, skip-all, batch opening, Reduce motion showing the results
                         at once; the server decided every slot before anything animates (`packs.ts` holds the
                         pure model and the test ids, `fixtures.ts` the fixture responses, `packs.css` the look)
+shop/                   #1309: spending what the economy pays, on /account behind the same packs toggle
+                        (`Shop.tsx`, `TokenPicker.tsx`, `CosmeticPacks.tsx`, lazy-loaded from
+                        routes/account.tsx beside the opening): the Jlore shop buys set and global packs at
+                        `GET /api/packs`' price (`POST /api/packs/buy`), the button disabled with the
+                        shortfall shown when the wallet (`GET /api/wallet`) is short; the token picker shows
+                        both token bars and the cycle's next step (`GET /api/tokens`), a card token browsing
+                        unowned cards (`POST /api/tokens/redeem-card`) and a Rare/Epic token browsing unowned
+                        cosmetics at its tier or below with a preview on the card (`POST
+                        /api/tokens/redeem-cosmetic`); the cosmetic packs open through a simple reveal (`POST
+                        /api/cosmetic-packs/open`) with the Chase Shard bar (`GET /api/cosmetic-packs`) and its
+                        Legendary-or-Mythic choice only when full (`POST /api/cosmetic-packs/chase`); every
+                        refusal shows the server's reason verbatim and changes nothing; a buy, an opening,
+                        a redemption or a chase that lands makes the other panels, the opening's included,
+                        read the account again (`onChanged`, `revision`) (`shop.ts` holds the
+                        pure model and the test ids, `fixtures.ts` the fixture responses, `shop.css` the look)
 ```
 
 A practice game offers the account's complete saved decks by name, read from `GET /api/decks`.
@@ -535,6 +550,10 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `EngineGate` holds every screen that calls the engine until it resolves (#778; the deck builder
   calls the validator synchronously), the practice worker awaits it before its first message, and
   `test/setup.ts` loads it synchronously for jsdom.
+- `src/game/currentCatalog.ts` is the current catalog every screen with no game of its own reads (SPEC
+  §9.4, R163, #1378): `currentCatalog()`, the module's registered definitions and compiled-in version,
+  and `currentCatalogLookup()`, the board's names over them, each built once. No screen asks
+  `GET /api/catalog`; `game/currentCatalog.test.ts` fails a client file that names it.
 - `src/wire/` keeps every import the client had when these packages were TypeScript working
   unchanged: `@jackioh/shared` is the generated wire types plus hand-kept helpers, `@jackioh/engine`
   and `@jackioh/ai` are typed functions over the module, `@jackioh/engine/config` and

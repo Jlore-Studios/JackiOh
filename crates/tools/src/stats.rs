@@ -12,7 +12,7 @@
 //! ```text
 //! cargo jackioh stats                               AI_DEV_RUN.games games of the "dev" series,
 //!                                                   tagged with the newest patch in patches.json
-//! cargo jackioh stats --games 50 --from 51          games 51-100, so slices run in parallel
+//! cargo jackioh stats --games 50 --from 51          games 51-100, a shard to run on another machine
 //! cargo jackioh stats --patch v0.2.5 --out v0.2.5.jsonl
 //!                                                   a pre-release run of v0.2.5, kept in a file
 //! cargo jackioh stats --series tuning-a             another seed series: other games
@@ -27,6 +27,10 @@
 //! A game takes seconds at the browser's budget, so a full run takes a while; progress goes to
 //! stderr. `--out` is resolved against the directory the command was started in, and the file is
 //! written a line per game as the run goes, so a run that is stopped keeps the games it finished.
+//!
+//! The games play on rayon's pool in chunks of one game per thread (RAYON_NUM_THREADS sets the
+//! width). Each chunk's records are written in game order and flushed before the next chunk starts,
+//! so --out is byte-identical to a serial run's file and a stopped run keeps every whole chunk.
 //!
 //! `cargo jackioh stats report <file>…` reads record files instead (what `--out` writes, what
 //! `jackioh-server stats-export` writes of the live games, what the training lanes keep) and prints
@@ -54,6 +58,7 @@ use std::time::Instant;
 
 use anyhow::{Context, Result, anyhow};
 use indexmap::{IndexMap, IndexSet};
+use rayon::prelude::*;
 use serde::Serialize;
 use serde_json::Value;
 
@@ -126,7 +131,7 @@ pub struct Args {
     /// How many games. Default AI_DEV_RUN.games.
     #[arg(long, value_parser = games_count)]
     pub games: Option<i32>,
-    /// The first game's number, so slices of a run can go in parallel. Default 1.
+    /// The first game's number, so shards of a run on other machines never overlap. Default 1.
     #[arg(long, value_parser = from_count, default_value_t = 1)]
     pub from: i32,
     /// The patch the run tests. Default: the newest in patches.json.
@@ -798,6 +803,53 @@ fn run_options(args: &Args, patch: String) -> Result<DevRunOptions> {
     })
 }
 
+/// Games played and written at a time: a chunk's records reach the file in game order before
+/// the next chunk starts, so a stopped run keeps every whole chunk, like `selfplay`'s chunks.
+const MIN_CHUNK_GAMES: i32 = 1;
+
+/// One game per rayon thread, so every core has work and a stopped run loses at most one chunk.
+fn chunk_games() -> i32 {
+    rayon::current_num_threads().max(MIN_CHUNK_GAMES as usize) as i32
+}
+
+/// One played game: its number, its record when it finished, and the task's wall seconds for
+/// stderr only (scheduling contention included, never `--out`).
+struct PlayedGame {
+    n: i32,
+    record: Option<GameRecord>,
+    seconds: f64,
+}
+
+/// Plays games `from..from + games` in chunks of `chunk_games`, handing each chunk's games, in
+/// game order, to `sink` before the next chunk starts. A record is a pure function of its number
+/// and options (`dev_game_record`), so the chunks read the same games whatever the thread count.
+fn play_chunks(
+    from: i32,
+    games: i32,
+    options: &DevRunOptions,
+    mut sink: impl FnMut(Vec<PlayedGame>) -> Result<()>,
+) -> Result<()> {
+    let end = from + games;
+    let mut start = from;
+    while start < end {
+        let count = chunk_games().min(end - start);
+        let chunk: Vec<PlayedGame> = (start..start + count)
+            .into_par_iter()
+            .map(|n| {
+                let game_started = Instant::now();
+                PlayedGame {
+                    n,
+                    record: dev_game_record(n, options),
+                    seconds: game_started.elapsed().as_secs_f64(),
+                }
+            })
+            .collect();
+        sink(chunk)?;
+        start += count;
+    }
+    Ok(())
+}
+
 /// `cargo jackioh stats`.
 pub fn run(args: Args) -> Result<()> {
     match &args.command {
@@ -837,28 +889,34 @@ pub fn run(args: Args) -> Result<()> {
 
     let mut records: Vec<GameRecord> = Vec::new();
     let started = Instant::now();
-    for n in args.from..args.from + games {
-        let game_started = Instant::now();
-        let record = dev_game_record(n, &options);
-        let seconds = format!("{:.*}", SECONDS_DECIMALS, game_started.elapsed().as_secs_f64());
-        let Some(record) = record else {
-            eprintln!("[ai:stats] {series}:{n} did not finish; no record ({seconds}s)");
-            continue;
-        };
+    play_chunks(args.from, games, &options, |chunk| {
+        for played in chunk {
+            let seconds = format!("{:.*}", SECONDS_DECIMALS, played.seconds);
+            let Some(record) = played.record else {
+                eprintln!(
+                    "[ai:stats] {series}:{} did not finish; no record ({seconds}s)",
+                    played.n
+                );
+                continue;
+            };
+            if let Some(file) = file.as_mut() {
+                writeln!(file, "{}", jackioh_cards::versions::game_record_line(&record))?;
+            }
+            let outcome = match record.game.winner {
+                Winner::Draw => "draw".to_string(),
+                winner => format!("{winner} won"),
+            };
+            eprintln!(
+                "[ai:stats] {series}:{} {outcome} by {} in {} turns ({seconds}s)",
+                played.n, record.game.reason, record.game.turns
+            );
+            records.push(record);
+        }
         if let Some(file) = file.as_mut() {
-            writeln!(file, "{}", jackioh_cards::versions::game_record_line(&record))?;
             file.flush()?;
         }
-        let outcome = match record.game.winner {
-            Winner::Draw => "draw".to_string(),
-            winner => format!("{winner} won"),
-        };
-        eprintln!(
-            "[ai:stats] {series}:{n} {outcome} by {} in {} turns ({seconds}s)",
-            record.game.reason, record.game.turns
-        );
-        records.push(record);
-    }
+        Ok(())
+    })?;
 
     let elapsed = format!("{:.*}", SECONDS_DECIMALS, started.elapsed().as_secs_f64());
     let written = match &out {
@@ -1766,6 +1824,121 @@ mod tests {
         .unwrap_err();
         assert!(format!("{refused:#}").contains(&format!("reading {}", missing.display())));
         std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    use jackioh_ai::SearchBudget;
+
+    /// The small budget the tests play at: `QUICK`'s fields (`crates/ai/tests/ai/dev_run.rs`).
+    const FEW: SearchBudget = SearchBudget {
+        nodes: 30,
+        lethal_nodes: 10,
+        determinizations: 1,
+        beam_width: 1,
+        root_branching: 6,
+        branching: 2,
+        max_depth: 2,
+        finalists: 1,
+    };
+
+    /// The finished records of `from..from + games` in game order, played in chunks.
+    fn chunk_records(from: i32, games: i32, options: &DevRunOptions) -> Vec<GameRecord> {
+        let mut all = Vec::new();
+        play_chunks(from, games, options, |chunk| {
+            all.extend(chunk.into_iter().filter_map(|played| played.record));
+            Ok(())
+        })
+        .unwrap();
+        all
+    }
+
+    /// The same games played one at a time, as `run` played them before chunks, each as the line
+    /// `--out` would hold.
+    fn serial_lines(from: i32, games: i32, options: &DevRunOptions) -> Vec<String> {
+        (from..from + games)
+            .filter_map(|n| dev_game_record(n, options))
+            .map(|record| serde_json::to_string(&record).unwrap())
+            .collect()
+    }
+
+    /// Like `selfplay`'s R1006001 test: the same games on one thread and on four give byte-identical
+    /// record lines, plain and forced, and the card figures over them are unchanged.
+    #[test]
+    fn stats_chunks_match_a_serial_run_on_one_or_four_threads_plain_and_forced() {
+        jackioh_cards::register_all();
+        let one = rayon::ThreadPoolBuilder::new().num_threads(1).build().unwrap();
+        let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
+        // Six games cover odd and even forced holders and, on four threads, two chunks of 4+2.
+        for options in [
+            DevRunOptions {
+                series: "dev".to_string(),
+                patch: "v0.9.9-test".to_string(),
+                budget: Some(FEW),
+                force: None,
+            },
+            DevRunOptions {
+                series: "dev-force-core-090".to_string(),
+                patch: "v0.9.9-test".to_string(),
+                budget: Some(FEW),
+                force: Some("core-090".to_string()),
+            },
+        ] {
+            let expected = serial_lines(1, 6, &options);
+            assert!(!expected.is_empty(), "the serial run finished no game");
+            let lines_of = |records: &[GameRecord]| -> Vec<String> {
+                records
+                    .iter()
+                    .map(|record| serde_json::to_string(record).unwrap())
+                    .collect()
+            };
+            assert_eq!(lines_of(&one.install(|| chunk_records(1, 6, &options))), expected);
+            let on_four = four.install(|| chunk_records(1, 6, &options));
+            assert_eq!(lines_of(&on_four), expected);
+            let filter = CardStatsFilter {
+                source: SourceFilter::Dev,
+                mode: Some(GameMode::Random),
+                patch: Some(options.patch.clone()),
+                pilot: PilotFilter::Ai,
+            };
+            assert_eq!(
+                card_stats(&one.install(|| chunk_records(1, 6, &options)), &filter),
+                card_stats(&on_four, &filter)
+            );
+        }
+    }
+
+    /// A stopped run keeps whole records in game order: the sink bails after the first chunk, and
+    /// what it kept parses and matches the serial run's first chunk.
+    #[test]
+    fn stats_a_stopped_run_keeps_whole_chunks_in_game_order() {
+        jackioh_cards::register_all();
+        let options = DevRunOptions {
+            series: "dev".to_string(),
+            patch: "v0.9.9-test".to_string(),
+            budget: Some(FEW),
+            force: None,
+        };
+        let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
+        let mut kept = String::new();
+        let stopped = four.install(|| {
+            play_chunks(1, 6, &options, |chunk| {
+                for played in &chunk {
+                    if let Some(record) = &played.record {
+                        kept.push_str(&serde_json::to_string(record).unwrap());
+                        kept.push('\n');
+                    }
+                }
+                anyhow::bail!("stopped after one chunk");
+            })
+        });
+        assert!(stopped.is_err(), "the bailed sink ends the run");
+        // The kept bytes parse as records: no torn line.
+        parse_game_record_lines(&kept).unwrap();
+        let kept_lines: Vec<&str> = kept.lines().collect();
+        let first_chunk = serial_lines(1, 4, &options);
+        assert_eq!(
+            kept_lines,
+            first_chunk.iter().map(String::as_str).collect::<Vec<_>>()
+        );
     }
 
     #[test]

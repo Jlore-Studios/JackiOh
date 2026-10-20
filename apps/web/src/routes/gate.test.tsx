@@ -12,6 +12,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { announceAccountChange } from "../net/gate.ts";
 import { readQueued, rememberQueued } from "../net/liveGame.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
+import { tokenFromProtocols } from "../net/socketProtocols.ts";
 
 // `main.tsx` is the app's entry point and mounts itself, except under vitest — see the guard at the
 // foot of that file. This assertion is what makes the guard's condition explicit: if vitest ever
@@ -420,13 +421,15 @@ describe("/match/<id>", () => {
   /** The match route opens a real `WebSocket`; jsdom has one and nothing to connect it to. */
   class StubSocket {
     static opened: string[] = [];
+    static offered: (readonly string[])[] = [];
     readyState = 0;
     onopen: ((event: unknown) => void) | null = null;
     onmessage: ((event: { data: unknown }) => void) | null = null;
     onclose: ((event: { code: number; reason: string; wasClean: boolean }) => void) | null = null;
     onerror: ((event: unknown) => void) | null = null;
-    constructor(url: string) {
+    constructor(url: string, protocols: readonly string[] = []) {
       StubSocket.opened.push(url);
+      StubSocket.offered.push(protocols);
     }
     send(): void {}
     close(): void {}
@@ -434,6 +437,7 @@ describe("/match/<id>", () => {
 
   beforeEach(() => {
     StubSocket.opened = [];
+    StubSocket.offered = [];
     vi.stubGlobal("WebSocket", StubSocket);
   });
 
@@ -448,11 +452,12 @@ describe("/match/<id>", () => {
     await waitFor(() => {
       expect(StubSocket.opened.length).toBeGreaterThan(0);
     }, SLOW);
-    // `wsServer.ts` `tokenFrom` reads `?token=`, and the match from `?matchId=`: a browser cannot
-    // put either on a handshake header.
+    // `ws_server.rs` reads the match from `?matchId=` and the token from the offered subprotocols
+    // (R1379000): a browser cannot put it on a handshake header, and an address is kept by logs.
     const url = StubSocket.opened[0] ?? "";
-    expect(url).toContain("token=tok-1");
     expect(url).toContain("matchId=m-42");
+    expect(url).not.toContain("token=");
+    expect(tokenFromProtocols(StubSocket.offered[0] ?? [])).toBe("tok-1");
   });
 
   it("R765 a tab queued on /play is taken from any other screen to its game once the queue pairs it", async () => {
