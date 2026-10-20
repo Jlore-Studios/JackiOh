@@ -21614,10 +21614,6 @@
     "muse": {
       "spent": [
         {
-          "at": "2026-10-09T09:36:51Z",
-          "minutes": 150.1
-        },
-        {
           "at": "2026-10-09T10:14:54Z",
           "minutes": 150.1
         },
@@ -22412,17 +22408,21 @@
         {
           "at": "2026-10-20T18:31:25Z",
           "minutes": 2.0
+        },
+        {
+          "at": "2026-10-20T18:44:52Z",
+          "minutes": 3.7
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-20T18:47:00Z",
-          "utilization": 0.18
+          "utilization": 0.24
         },
-        "observed_at": "2026-10-20T18:31:25Z",
+        "observed_at": "2026-10-20T18:44:52Z",
         "seven_day": {
           "resets_at": "2026-10-26T00:00:00Z",
-          "utilization": 0.44
+          "utilization": 0.46
         },
         "status": "allowed"
       }
