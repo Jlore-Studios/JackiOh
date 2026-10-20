@@ -56,7 +56,22 @@
     "bot selftest"
   ],
   "ci_reruns": 1,
-  "suggestions": { "enabled": true, "max_open": 10, "idle_minutes": 30 },
+  "suggestions": {
+    "enabled": true,
+    "max_open": 10,
+    "idle_minutes": 30,
+    "priorities": {
+      "fuzz": "low",
+      "checks": "low",
+      "telemetry": "low",
+      "refactor": "low",
+      "ai": "low",
+      "fairness": "low",
+      "security": "medium",
+      "polish": "medium",
+      "data": "high"
+    }
+  },
   "quiet": {
     "enabled": true,
     "interval_minutes": 10,

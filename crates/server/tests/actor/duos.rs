@@ -40,7 +40,7 @@ use jackioh_server::config::{
     DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_ROUND_CLOCK_MS,
     MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MS, MATCH_SERVER_ACTION_RETRY_MS,
     MAX_SAVED_DECKS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS, REJECTION_ALERT_THRESHOLD,
-    REJECTION_ALERT_WINDOW_MS,
+    REJECTION_ALERT_WINDOW_MS, REMATCH_OFFER_TTL_MS,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{CollectionEntry, Db};
@@ -1900,6 +1900,123 @@ mod b40_the_rebuild {
         assert_eq!(rebuilt.hash(), hash);
         assert_eq!(rebuilt.next_seq(), next_seq);
         assert_eq!(first_view(&back)["view"]["seat"], "a1");
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1398000 — a finished co-op match's socket reopens only inside the rematch window
+// ---------------------------------------------------------------------------------------------
+
+/// With no actor in memory, a seat's hello reopens a finished match only within
+/// `REMATCH_OFFER_TTL_MS` of its `ended_at` (R1285000's window): past it the seat is not found
+/// and nothing is folded, so no report is filed for an old log; inside it the match folds back.
+mod r1398000_the_end_screen_window {
+    use super::*;
+
+    /// A game both people conceded, its actor dropped as a restart drops it.
+    async fn finished() -> Duos {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        h.concede_both(&a1, &a2).await;
+        let held = registry(&h.app);
+        held.stop(&h.match_id).await;
+        assert!(!held.has(&h.match_id));
+        h
+    }
+
+    /// Moves the row's `ended_at` to `ago_ms` before now.
+    async fn ended_ago(h: &Duos, ago_ms: i64) {
+        let store = fake(&h.app);
+        let mut data = store.lock().await;
+        let row = data
+            .tables
+            .duos
+            .matches
+            .iter_mut()
+            .find(|row| row.id == h.match_id)
+            .expect("the match's row");
+        assert!(row.ended_at.is_some(), "the concedes ended the game: {row:?}");
+        row.ended_at = Some(now_ms() - ago_ms);
+    }
+
+    /// Logs an action after the end, which the engine refuses ("the game is over"): the log no
+    /// longer folds.
+    async fn log_after_the_end(h: &Duos) {
+        let last = h
+            .logged()
+            .await
+            .last()
+            .cloned()
+            .expect("the log holds the concedes");
+        let nonce = "a1-after-the-end";
+        let row = DuosActionRow {
+            match_id: h.match_id.clone(),
+            seq: last.seq + 1,
+            nonce: nonce.to_string(),
+            action: json!({ "seat": "a1", "nonce": nonce, "body": concede() }),
+            at: last.at,
+        };
+        let mut t = h.app.db.begin(None).await.expect("a transaction");
+        t.duos_actions_append(&row).await.expect("the row is logged");
+        t.commit().await.expect("the commit");
+    }
+
+    /// The host's hello is closed not found with no view, and nothing is folded.
+    async fn refused(h: &Duos) {
+        let late = h.served.connect(DUOS_PATH, &h.host.token).await;
+        late.send_json(hello(&h.match_id)).await;
+        assert_eq!(late.wait_closed(PROMPTLY).await, Some(CLOSE_NOT_FOUND));
+        assert!(late.of_type("view").is_empty(), "{:?}", late.frames());
+        assert!(
+            !registry(&h.app).has(&h.match_id),
+            "nothing was folded past the window"
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1398000_past_the_window_a_seats_hello_is_not_found_folds_nothing_and_the_replay_still_opens() {
+        let h = finished().await;
+        ended_ago(&h, REMATCH_OFFER_TTL_MS + 1).await;
+
+        refused(&h).await;
+
+        assert!(h.app.bug_reports.recorded().is_empty());
+        let steps = h.steps(&h.host).await;
+        let last = steps.last().expect("the replay holds the end");
+        assert_eq!(last["result"]["reason"], "concede", "{last}");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1398000_past_the_window_a_log_that_no_longer_folds_files_no_report() {
+        let h = finished().await;
+        log_after_the_end(&h).await;
+        ended_ago(&h, REMATCH_OFFER_TTL_MS + 1).await;
+
+        refused(&h).await;
+
+        assert!(h.app.bug_reports.recorded().is_empty());
+
+        // Inside the window the same log is folded back, and its refusal filed.
+        ended_ago(&h, 0).await;
+        h.seat(&h.host).await;
+        assert!(registry(&h.app).has(&h.match_id));
+        assert_eq!(h.app.bug_reports.recorded().len(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1398000_inside_the_window_a_seats_hello_folds_the_finished_match_back_to_its_end() {
+        let h = finished().await;
+        // Not the exact boundary: the paused clock can move while the fold runs.
+        ended_ago(&h, 0).await;
+
+        let back = h.seat(&h.host).await;
+
+        assert!(registry(&h.app).has(&h.match_id));
+        let seen = first_view(&back);
+        assert_eq!(seen["view"]["seat"], "a1");
+        assert_eq!(seen["view"]["result"]["reason"], "concede", "{seen}");
+        assert!(h.app.bug_reports.recorded().is_empty());
     }
 }
 

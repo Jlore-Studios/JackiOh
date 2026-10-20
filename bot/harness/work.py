@@ -29,7 +29,7 @@ import threading
 from string import Template as string_template
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 from harness import disk as disk_mod
 from harness import memory as memory_mod
@@ -41,11 +41,12 @@ from harness import prompts, review_rule, verdicts
 from harness import split as split_mod
 from harness import providers as providers_mod
 from harness.clock import iso, now as clock_now
-from harness.config import (BRANCH_PREFIX, COMMIT_PREFIX, MIN_TIER, NAME, PLAN_FLOOR, SLASH, Config,
-                            child_env)
+from harness.config import (BRANCH_PREFIX, COMMIT_PREFIX, MIN_TIER, NAME, PLAN_FLOOR, SLASH,
+                            SUGGESTION_CLASSES, Config, child_env)
 from harness.git import MARKER_LINE, Git, Identity, worktree_add
 from harness.issueplan import PLAN_CHARS, PLAN_WORDS
 from harness.prompts import data
+from harness.queue import NO_PRIORITY, PRIORITY_TIERS
 from harness.providers import hosted
 from harness.redact import redact, redact_json
 from harness.runner import RunRequest, RunResult
@@ -1959,15 +1960,25 @@ class Worker:
         prompt = self.render("suggest", repo=self.cfg.repo, count=count,
                              existing=self.plan.get("existing") or data("(none)", "Issues"),
                              declined=self.plan.get("declined") or data(
-                                 "(none)", "Suggestions that came to nothing"))
+                                 "(none)", "Suggestions that came to nothing"),
+                             priorities=class_priorities(self.cfg.suggestion_priorities))
         result = self.call("suggest", prompt, wt.cwd, reader=True,
                            why="propose improvements while a lane has nothing to start")
         found = verdicts.suggestions(result.text, count)
         self.result.update(
             status="suggested",
             reason=f"{len(found)} suggestion(s)",
-            suggestions=[{"title": s.title, "body": s.body} for s in found],
+            suggestions=[{"title": s.title, "body": s.body, "class": s.kind} for s in found],
         )
+
+
+def class_priorities(priorities: Mapping[str, str]) -> str:
+    """Every suggestion class and the priority it opens with, in pickup order (`PRIORITY_TIERS`:
+    a class with no priority comes before one with `low`), for `suggest.md`."""
+    ordered = sorted(SUGGESTION_CLASSES, key=lambda k: PRIORITY_TIERS.get(
+        f"priority:{priorities.get(k)}", NO_PRIORITY))
+    return "\n".join(f"- `{k}`: " + (f"`priority:{priorities[k]}`" if k in priorities
+                                       else "no priority (the owner's call)") for k in ordered)
 
 
 def _finding(raw: Any) -> Finding:
