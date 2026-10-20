@@ -123,7 +123,7 @@ The difficulty sets the AI team's rules ([[§13.4]]) and each AI seat's handicap
 | Passes per seat per turn | 10 | 10 | 10 |
 | Each AI seat's handicap (`AI_DIFFICULTY`, [[§9.9]]) | Easy's | Medium's | Hard's |
 
-The humans play `DUOS_HUMAN_TEAM` at every tier. A quality gate (`cargo jackioh gate --duos`) holds the AI team to a floor: the Easy AI team must beat a team playing [[§10.7]]'s random policy in at least `DUOS_GATE_WIN_FLOOR` (80%) of `DUOS_GATE_GAMES_SMOKE` (20) games. Every action of an AI seat in those games must be the decision this section describes: one that comes off a fallback path instead (the seat's own fallback when the 1v1 decision answers nothing the seat may send, or the 1v1 decision's own fallback when its search scores nothing) is counted for its game and for the run, and any one fails the gate, which names each such game's seed and its count and no card.
+The humans play `DUOS_HUMAN_TEAM` at every tier. A quality gate (`cargo jackioh gate --duos`) holds the AI team to a floor: the Easy AI team must beat a team playing [[§10.7]]'s random policy in at least `DUOS_GATE_WIN_FLOOR` (80%) of `DUOS_GATE_GAMES_SMOKE` (20) games. Every action of an AI seat in those games must be the decision this section describes: one that comes off a fallback path instead (the seat's own fallback when the 1v1 decision answers nothing the seat may send, or the 1v1 decision's own fallback, as when its search scores nothing) is counted for its game and for the run, and any one fails the gate, which names each such game's seed and its count and no card.
 
 ### 13.8 Leaving
 
