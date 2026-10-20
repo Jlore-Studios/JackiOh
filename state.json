@@ -21140,11 +21140,11 @@
         "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": "2026-10-20T00:15:46Z",
-    "last_run": "2026-10-20T00:15:46Z",
-    "provider": "claude-4",
+    "idle_since": "2026-10-19T23:12:59Z",
+    "last_run": "2026-10-19T21:29:39Z",
+    "provider": null,
     "requested": false,
-    "run_id": "39346518195",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
