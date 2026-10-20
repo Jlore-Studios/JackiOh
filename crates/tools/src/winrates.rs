@@ -25,7 +25,7 @@ use anyhow::{Context, Result, bail};
 use jackioh_engine::config::PUBLIC_STATS_MIN_LIVE_GAMES;
 use jackioh_engine::{
     GameSource, PilotFilter, SourceFilter, StatsTotals, WinRateRow, WinRateSource, WinRateTable, WindowQuery,
-    WindowRequest, WindowedReport, parse_game_record_lines, windowed_card_stats,
+    WindowRequest, WindowedReport, windowed_card_stats,
 };
 
 use crate::patches::patches_io::{

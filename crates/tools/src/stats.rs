@@ -68,7 +68,7 @@ use jackioh_engine::{
     FORCED_SERIES_PREFIX, GAME_MODES, GAME_OVER_REASONS, GameMode, GameOverReason, GameRecord, GameSource,
     GameSummary, PILOT_FILTERS, PLAYER_IDS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, StatsTotals,
     WindowQuery, WindowRequest, WindowedReport, Winner, card_stats, describe_filter, format_card_stats,
-    parse_game_record_lines, record_matches, seats_counted, sources_of, windowed_card_stats,
+    record_matches, seats_counted, sources_of, windowed_card_stats,
 };
 
 use crate::arena::{self, paired_interval, wilson_interval};
