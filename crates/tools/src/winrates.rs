@@ -10,6 +10,14 @@
 //! `/api/stats/cards` calls (R1367000): each card over its own window at `--patch`, under R654's gate
 //! as amended. A report export is taken as the server counted it. The table is live when no counted
 //! record is a development game, provisional otherwise.
+//!
+//! R1368000: `cargo jackioh winrates --refresh <input>…` refreshes the table once per patch (once
+//! per X, #1360). Its input is record files or a `stats report --window <v> --json` export.
+//! - It is due when the newest patch's window has `PUBLIC_STATS_MIN_LIVE_GAMES` live games and the
+//!   table is filed under a version outside that window.
+//! - When due, it writes the table and a pending fragment that claims it, CN Tech and NA Tech
+//!   (`TABLE_READERS`) through `plays`, so `patches ship` ships it as a micro.
+//! - Otherwise it says why and writes nothing. It exits 0 either way, for a workflow to run.
 
 use std::path::{Path, PathBuf};
 
@@ -68,12 +76,7 @@ pub fn refresh_due(
     current: &WinRateTable,
     dev_on: impl Fn(&str) -> bool,
 ) -> Refresh {
-    if report
-        .patch
-        .versions
-        .iter()
-        .any(|version| *version == current.patch)
-    {
+    if report.patch.versions.contains(&current.patch) {
         return Refresh::Current {
             table: current.patch.clone(),
         };
@@ -733,6 +736,7 @@ mod tests {
         // The micro it ships as (v2c, say) is still the patch's; the next patch makes one due again.
         let history_on: Vec<_> = history
             .iter()
+            .filter(|step| step.version != "v3")
             .cloned()
             .chain(std::iter::once(jackioh_engine::PatchStep {
                 version: "v2c".to_string(),
