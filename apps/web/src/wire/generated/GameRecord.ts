@@ -4,6 +4,7 @@ import type { GameSource } from "./GameSource";
 import type { GameSummary } from "./GameSummary";
 import type { PerPlayer } from "./PerPlayer";
 import type { Pilot } from "./Pilot";
+import type { RecordBuild } from "./RecordBuild";
 
 /**
  * R376: one game, filed by where, how and by whom it was played.
@@ -16,4 +17,8 @@ id: string, source: GameSource, mode: GameMode,
 /**
  * R388's version of the cards the game was played with: the newest patch of the build that played it.
  */
-patch: string, pilots: PerPlayer<Pilot>, game: GameSummary, };
+patch: string, pilots: PerPlayer<Pilot>, game: GameSummary, 
+/**
+ * R1367000: the build that played the game. Absent from a record written before it.
+ */
+build?: RecordBuild, };

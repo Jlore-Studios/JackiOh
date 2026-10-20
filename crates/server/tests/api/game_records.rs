@@ -26,7 +26,7 @@ use jackioh_server::app::App;
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, MatchSeat, StartMatchInput, StoreError};
 
-use crate::support::deps::test_app;
+use crate::support::deps::{TestAppOptions, test_app, test_app_with};
 
 const MATCH_ID: &str = "match-records";
 const P1: &str = "profile-1";
@@ -236,7 +236,11 @@ async fn live_match(mode: Option<&str>) -> Harness {
 
 /// The match `live_match` starts, on `catalog_version` (`None`: the build's own).
 async fn live_match_on(mode: Option<&str>, catalog_version: Option<&str>) -> Harness {
-    let app = test_app().await;
+    live_match_in(test_app().await, mode, catalog_version).await
+}
+
+/// The match `live_match_on` starts, on `app`.
+async fn live_match_in(app: Arc<App>, mode: Option<&str>, catalog_version: Option<&str>) -> Harness {
     {
         let mut data = fake(&app).await;
         data.seed_profile(json!({ "id": P1, "inMatchId": MATCH_ID }));
@@ -357,6 +361,23 @@ mod live_game_records {
         assert_eq!(game["seats"]["p1"]["played"], json!([]));
         assert_eq!(game["seats"]["p2"]["played"], json!([]));
         assert_eq!(logs.count("game.recorded"), 1);
+        // R1367000: a server that knows no deployed commit files no build.
+        assert!(record.get("build").is_none(), "build: {}", record["build"]);
+    }
+
+    /// R1367000: a deploy files its commit as the build of every game it records; two people played
+    /// this one, so the build names no AI generation.
+    #[tokio::test(start_paused = true)]
+    async fn r1367000_files_the_deployed_commit_as_the_records_build() {
+        let app = test_app_with(TestAppOptions {
+            env: vec![("RENDER_GIT_COMMIT".to_string(), "0123abcdef".to_string())],
+            ..TestAppOptions::default()
+        })
+        .await;
+        let mut h = live_match_in(app, Some("random"), None).await;
+        play_to_concession(&mut h).await;
+        let records = game_records(&h.app).await;
+        assert_eq!(records[0]["build"], json!({ "commit": "0123abcdef" }));
     }
 
     #[tokio::test(start_paused = true)]
