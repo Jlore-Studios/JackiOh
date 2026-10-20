@@ -17,7 +17,8 @@
 //! - `POST /api/blocks` `{profileId}` blocks a player: the friendship, every request and every
 //!   replay share between the two go, either way, and so does every open challenge, its room freed,
 //!   and a watch of either by the other; from then on requests, challenges, chat and shares are
-//!   refused either way (B46). `DELETE /api/blocks/:profileId` lifts it and restores nothing.
+//!   refused either way (B46), and a live match between the two relays neither one's emotes
+//!   (R1351000). `DELETE /api/blocks/:profileId` lifts it and restores nothing.
 //!
 //! `GET /api/friends` is read every `PRESENCE_HEARTBEAT_MS` by each signed-in client, so it reads
 //! everything in one transaction by a fixed number of set-based reads, whatever the number of
@@ -351,6 +352,8 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
     tx.commit().await?;
     // B46, B50: and a watch either way ends at once.
     let watchers = revoke_between(app, &me, &target);
+    // R1351000: and a match in memory between the two relays neither one's emotes from now on.
+    let matches_muted = app.matches.mute_emotes_between(&me, &target);
     log_info(
         "blocks.added",
         json!({
@@ -359,6 +362,7 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
             "challengesClosed": closed.len(),
             "sharesRemoved": shares,
             "watchersRevoked": watchers,
+            "matchesMuted": matches_muted,
         }),
     );
     Ok(no_content())
