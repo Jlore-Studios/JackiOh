@@ -25,7 +25,7 @@ vi.mock("@jackioh/ai", async (importOriginal) => {
     action,
     reason: "search",
     line: [action],
-    stats: { nodes: 0, determinizations: 0, lines: 0, simErrors: 0, stoppedBy: "exhausted", score: 0 },
+    stats: { nodes: 0, determinizations: 0, lines: 0, simErrors: 0, simPanics: 0, stoppedBy: "exhausted", score: 0 },
   });
   return {
     ...real,

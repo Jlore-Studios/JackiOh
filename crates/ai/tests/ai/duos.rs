@@ -937,6 +937,19 @@ fn duos_decision_marks_a_starved_search_as_a_fallback_and_its_own_moves_as_none(
     }
 }
 
+#[test]
+fn duos_decision_counts_the_panics_its_1v1_search_caught() {
+    // #1429: A1 holds The Coin and a one-drop it can pay for, and The Coin's play panics.
+    let (state, _) = passing("duos-ai-sim-panics", None, &[COIN_DEF_ID, ONE_DROP], 1, 1);
+    super::sim_panics::install_panicking_coin();
+    let got = duos_decision(&state, A1, &mut opts("duos-ai-sim-panics")).expect("A1 owes an action");
+    assert!(got.sim_panics >= 1, "{got:?}");
+    assert_eq!(
+        got.first_sim_panic.as_deref(),
+        Some(super::sim_panics::COIN_PANIC)
+    );
+}
+
 // ---------------------------------------------------------------------------------------------
 // R964000: a seat's life is its own HP and its team's pool
 // ---------------------------------------------------------------------------------------------

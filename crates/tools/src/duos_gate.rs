@@ -7,9 +7,11 @@
 //! function of its number, so the games run in parallel (rayon) and the report is the one
 //! `duos_gate(games, DUOS_GATE_SERIES)` gives. Without `--games` it plays DUOS_GATE_GAMES_SMOKE. The
 //! gate passes when the AI team wins at least DUOS_GATE_WIN_FLOOR of the games and no game had an
-//! action refused, on either team, nor an AI action off a fallback path (`DuosGateReport::passes`); a
-//! draw counts for nothing. Output goes to stdout; a failed gate returns `Err` naming the games not
-//! won, the games with a refusal and the games with a fallback (seed and count only) (exit 1).
+//! action refused, on either team, nor an AI action off a fallback path, nor a panic an AI seat's
+//! search caught (#1429, `DuosGateReport::passes`); a draw counts for nothing. Output goes to stdout;
+//! a failed gate returns `Err` naming the games not won, the games with a refusal, the games with a
+//! fallback (seed and count only) and the games with a search panic (seed, count, and the first
+//! one's seat and message) (exit 1).
 
 use anyhow::{Result, anyhow};
 use rayon::prelude::*;
@@ -43,8 +45,9 @@ pub fn run(games: Option<usize>) -> Result<()> {
 }
 
 /// Pass, or an `Err` naming the floor, the counts, every game the AI team did not win, every game
-/// with a refused action (its seed, the AI's team and how many of its refusals the AI team sent) and
-/// every game with a fallback (its seed and count, nothing else).
+/// with a refused action (its seed, the AI's team and how many of its refusals the AI team sent),
+/// every game with a fallback (its seed and count, nothing else) and every game whose AI searches
+/// caught a panic (its seed, the count, and the first one's seat and message, #1429).
 fn verdict(report: &DuosGateReport, played: &[DuosGateGame]) -> Result<()> {
     if report.passes() {
         return Ok(());
@@ -76,19 +79,32 @@ fn verdict(report: &DuosGateReport, played: &[DuosGateGame]) -> Result<()> {
         .filter(|game| game.fallbacks > 0)
         .map(|game| format!("{} ({} fallbacks)", game.seed, game.fallbacks))
         .collect();
+    let panicked: Vec<String> = played
+        .iter()
+        .filter(|game| game.sim_panics > 0)
+        .map(|game| match &game.first_sim_panic {
+            Some(first) => format!(
+                "{} ({} search panics, the first in {}'s search: {})",
+                game.seed, game.sim_panics, first.seat, first.message
+            ),
+            None => format!("{} ({} search panics)", game.seed, game.sim_panics),
+        })
+        .collect();
     Err(anyhow!(
         "the Duos gate failed: {} wins and {} draws in {} games ({:.3}), {DUOS_GATE_WIN_FLOOR} needed; \
-         {} actions refused, none allowed; {} fallback actions, none allowed; not won: {}; refused: {}; \
-         fell back: {}",
+         {} actions refused, none allowed; {} fallback actions, none allowed; {} search panics, none \
+         allowed; not won: {}; refused: {}; fell back: {}; panicked: {}",
         report.wins,
         report.draws,
         report.games,
         report.rate(),
         report.rejected,
         report.fallbacks,
+        report.sim_panics,
         listed(&not_won),
         listed(&refused),
-        listed(&fell_back)
+        listed(&fell_back),
+        listed(&panicked)
     ))
 }
 
@@ -106,7 +122,8 @@ mod tests {
     //! The verdict alone: playing the games is the AI crate's test (B32).
 
     use super::*;
-    use jackioh_engine::wire::Team;
+    use jackioh_ai::DuosSimPanic;
+    use jackioh_engine::wire::{DuosSeat, Team};
 
     fn game(n: usize, won: bool) -> DuosGateGame {
         DuosGateGame {
@@ -119,6 +136,8 @@ mod tests {
             rejected: 0,
             ai_rejected: 0,
             fallbacks: 0,
+            sim_panics: 0,
+            first_sim_panic: None,
         }
     }
 
@@ -187,6 +206,30 @@ mod tests {
         );
         assert!(error.contains("3 fallback actions, none allowed"), "{error}");
         assert!(error.contains("refused: none"), "{error}");
+    }
+
+    #[test]
+    fn b32_a_search_panic_fails_the_duos_gate_with_every_game_won_and_names_its_seed_seat_and_message() {
+        let mut played: Vec<DuosGateGame> = (1..=DUOS_GATE_GAMES_SMOKE).map(|n| game(n, true)).collect();
+        assert!(verdict(&duos_gate_report(&played), &played).is_ok());
+
+        played[2].sim_panics = 2;
+        played[2].first_sim_panic = Some(DuosSimPanic {
+            seat: DuosSeat::A2,
+            message: "a guessed world broke".into(),
+        });
+        let error = verdict(&duos_gate_report(&played), &played)
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error.contains(&format!(
+                "panicked: {DUOS_GATE_SERIES}:3 (2 search panics, the first in a2's search: a guessed world \
+                 broke)"
+            )),
+            "{error}"
+        );
+        assert!(error.contains("2 search panics, none allowed"), "{error}");
+        assert!(error.contains("fell back: none"), "{error}");
     }
 
     #[test]

@@ -116,6 +116,15 @@ pub struct ThrownError {
     pub message: String,
 }
 
+/// The first panic an AI's search caught in a match (`MatchRecord.first_sim_panic`, #1429): the seat
+/// whose decision caught it and its message.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SimPanic {
+    pub seat: PlayerId,
+    pub message: String,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct MatchRecord {
@@ -131,6 +140,11 @@ pub struct MatchRecord {
     pub fallbacks: i32,
     pub decisions: i32,
     pub nodes: usize,
+    /// The AI decisions' `stats.sim_panics`, summed (#1429): panics their searches caught, each a
+    /// trap that loses the decision in the browser; the gates fail on any (B31).
+    pub sim_panics: usize,
+    /// The first of them, by the seat that caught it; None when there is none.
+    pub first_sim_panic: Option<SimPanic>,
     /// defIds each seat played, in order.
     pub played: PerPlayer<Vec<String>>,
 }
@@ -262,6 +276,8 @@ pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord {
     let mut fallbacks: i32 = 0;
     let mut decisions: i32 = 0;
     let mut nodes: usize = 0;
+    let mut sim_panics: usize = 0;
+    let mut first_sim_panic: Option<SimPanic> = None;
 
     while state.result.is_none() && log.len() < max_actions {
         let seat: PlayerId = seat_to_act(&state).unwrap_or(state.active);
@@ -308,6 +324,15 @@ pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord {
         if let Some(decision) = &choice.decision {
             decisions += 1;
             nodes += decision.stats.nodes;
+            sim_panics += decision.stats.sim_panics;
+            if first_sim_panic.is_none()
+                && let Some(message) = &decision.first_sim_panic
+            {
+                first_sim_panic = Some(SimPanic {
+                    seat,
+                    message: message.clone(),
+                });
+            }
             if decision.reason == DecisionReason::Fallback {
                 fallbacks += 1;
             }
@@ -413,6 +438,8 @@ pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord {
         fallbacks,
         decisions,
         nodes,
+        sim_panics,
+        first_sim_panic,
         played,
     }
 }

@@ -17,7 +17,8 @@
 //!
 //! Only the first action of the chosen line is played; the caller asks again after it, so the AI
 //! re-plans after every action and a plan that only one sampled world liked never gets past step one.
-//! `decide` never panics out: every internal failure becomes a fallback and is counted in simErrors.
+//! `decide` never panics out: every internal failure becomes a fallback and is counted in simErrors,
+//! a panic in simPanics too (#1429), since in WebAssembly it would have lost the whole decision.
 //! `decide_styled` is the same with an `AiStyle` (R1452): `decide` is it at `AI_STYLE_EXACT`, which
 //! takes no draw of its own, so `decide`'s decisions and cursor are what they were before styles.
 //!
@@ -44,7 +45,7 @@ use crate::mulligan::mulligan_keep_curved;
 use crate::observe::{HIDDEN_DEF_ID, ai_to_act, redact, unanswered_draw_offer};
 use crate::reply::{hidden_card_ids, reply_score};
 use crate::search::{Line, beam_search, score_line};
-use crate::simulate::{CountingNodeCounter, create_node_counter, create_sub_counter};
+use crate::simulate::{CountingNodeCounter, create_node_counter, create_sub_counter, note_sim_panic};
 use crate::types::{
     AiOptions, AiStyle, Decision, DecisionReason, NodeCounter, SearchBudget, SearchStats, StoppedBy,
 };
@@ -55,6 +56,7 @@ fn quiet_stats() -> SearchStats {
         determinizations: 0,
         lines: 0,
         sim_errors: 0,
+        sim_panics: 0,
         stopped_by: StoppedBy::Exhausted,
         score: 0.0,
     }
@@ -66,6 +68,7 @@ fn immediate(action: ActionBody, reason: DecisionReason) -> Decision {
         action,
         reason,
         stats: quiet_stats(),
+        first_sim_panic: None,
     }
 }
 
@@ -616,15 +619,14 @@ pub fn decide_styled(
         plan(state, seat, budget, style, rng, &counter, &mut scratch)
     }));
 
-    let stats = |counter: &CountingNodeCounter, thrown: usize, score: f64, stopped_by: Option<StoppedBy>| {
-        SearchStats {
-            nodes: counter.used(),
-            determinizations: scratch.determinizations,
-            lines: scratch.lines,
-            sim_errors: counter.sim_errors() + thrown,
-            stopped_by: stopped_by.unwrap_or_else(|| counter.stopped_by()),
-            score,
-        }
+    let stats = |counter: &CountingNodeCounter, score: f64, stopped_by: Option<StoppedBy>| SearchStats {
+        nodes: counter.used(),
+        determinizations: scratch.determinizations,
+        lines: scratch.lines,
+        sim_errors: counter.sim_errors(),
+        sim_panics: counter.sim_panics(),
+        stopped_by: stopped_by.unwrap_or_else(|| counter.stopped_by()),
+        score,
     };
 
     match outcome {
@@ -642,10 +644,14 @@ pub fn decide_styled(
                 action,
                 reason,
                 line,
-                stats: stats(&counter, 0, score, stopped_by),
+                stats: stats(&counter, score, stopped_by),
+                first_sim_panic: counter.first_sim_panic(),
             },
         )),
-        Err(_) => {
+        Err(payload) => {
+            // The plan's own panic: a failed simulation like the others (once in `sim_errors`, as
+            // before #1429), and a panic.
+            note_sim_panic(&counter, payload.as_ref());
             let action = fallback_action(&scratch.candidates);
             Some(submitted(
                 state,
@@ -654,7 +660,8 @@ pub fn decide_styled(
                     line: vec![action.clone()],
                     action,
                     reason: DecisionReason::Fallback,
-                    stats: stats(&counter, 1, 0.0, None),
+                    stats: stats(&counter, 0.0, None),
+                    first_sim_panic: counter.first_sim_panic(),
                 },
             ))
         }

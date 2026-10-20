@@ -5,7 +5,7 @@
 //! the beam, the replies and `decide` itself, a sub-counter holding its parent, so the counters keep
 //! their tallies in `Cell`s (`simulate.rs`) and every function that spends nodes takes
 //! `&dyn NodeCounter`. A counter that tallies failed simulations answers `Some` to
-//! `sim_error_tally`, any other `None`.
+//! `sim_error_tally` and `sim_panic_tally`, any other `None`.
 
 use jackioh_engine::{ActionBody, Rng};
 use serde::{Deserialize, Serialize};
@@ -148,6 +148,9 @@ pub struct SearchStats {
     pub lines: usize,
     /// Simulated reduce calls that threw or were refused; never escape `decide`.
     pub sim_errors: usize,
+    /// Of `sim_errors`, those that panicked (#1429): caught natively, but a trap in WebAssembly that
+    /// loses the whole decision, so the gates fail on any.
+    pub sim_panics: usize,
     pub stopped_by: StoppedBy,
     /// Mean score of the chosen line across determinizations (0 for forced/mulligan/draw-offer).
     pub score: f64,
@@ -161,6 +164,9 @@ pub struct Decision {
     /// The planned line this action starts. Only line[0] is ever played; the AI re-plans after it.
     pub line: Vec<ActionBody>,
     pub stats: SearchStats,
+    /// The first caught panic's message (#1429), for the native gates; never sent to the client.
+    #[serde(skip)]
+    pub first_sim_panic: Option<String>,
 }
 
 /// Shared node accounting for one decision.
@@ -177,4 +183,16 @@ pub trait NodeCounter {
     }
     /// Sets that tally; a counter that tallies none ignores it.
     fn set_sim_error_tally(&self, _value: usize) {}
+    /// Of those failed simulations, the ones that panicked (`SearchStats.simPanics`, #1429), or
+    /// `None` for a counter that tallies none.
+    fn sim_panic_tally(&self) -> Option<usize> {
+        None
+    }
+    /// The first panic's message that tally kept.
+    fn first_sim_panic(&self) -> Option<String> {
+        None
+    }
+    /// Counts one panic, keeping its message when it is the first; a counter that tallies none
+    /// ignores it.
+    fn record_sim_panic(&self, _message: &str) {}
 }

@@ -208,11 +208,13 @@ fn render(found: &Inspection) -> String {
             out.push_str(&format!("decision {}: {action}\n", reason_text(*reason)));
             out.push_str(&format!("   line: {}\n", found.line_described.join(" | ")));
             out.push_str(&format!(
-                "   stats nodes {} determinizations {} lines {} simErrors {} stoppedBy {} score {}\n",
+                "   stats nodes {} determinizations {} lines {} simErrors {} simPanics {} stoppedBy {} \
+                 score {}\n",
                 stats.nodes,
                 stats.determinizations,
                 stats.lines,
                 stats.sim_errors,
+                stats.sim_panics,
                 stats.stopped_by.as_str(),
                 to_fixed(stats.score, EVAL_DECIMALS)
             ));
@@ -418,6 +420,7 @@ mod tests {
             "decision search: ",
             "   line: ",
             "stats nodes ",
+            " simPanics ",
             "stoppedBy ",
         ] {
             assert!(text.contains(needle), "{needle:?} missing from:\n{text}");
