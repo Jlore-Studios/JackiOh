@@ -7284,6 +7284,13 @@
         }
       }
     },
+    "1414": {
+      "failures": 0,
+      "kind": "revise",
+      "queued_at": "2026-10-20T12:59:58Z",
+      "source": "conflict",
+      "stop_requested": false
+    },
     "1415": {
       "difficulty": "medium",
       "failures": 0,
