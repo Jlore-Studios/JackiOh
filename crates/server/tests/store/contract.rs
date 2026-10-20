@@ -7052,8 +7052,8 @@ mod social {
     use super::*;
     use jackioh_engine::config::DUOS_HUMAN_TEAM;
     use jackioh_server::db::store::{
-        ChallengeRow, ChallengeState, ChatMessageRow, ChatReportListing, ChatReportRow, FriendRequestRow,
-        ReplayShare,
+        ChallengeRow, ChallengeState, ChatCursor, ChatMessageRow, ChatReportListing, ChatReportRow,
+        FriendRequestRow, ReplayShare,
     };
     use jackioh_server::duos::store::DuosMatch;
 
@@ -7381,7 +7381,7 @@ mod social {
             vec![m2.id.clone(), m3.id.clone()]
         );
         assert_eq!(
-            ids_of(&q!(harness, t => t.chat_page(&a.id, &b.id, Some(m3.created_at), 10))),
+            ids_of(&q!(harness, t => t.chat_page(&a.id, &b.id, Some(&ChatCursor::of(&m3)), 10))),
             vec![m1.id.clone(), m2.id.clone()]
         );
 
@@ -7786,6 +7786,40 @@ mod social {
         assert_eq!(q!(harness, t => t.chat_page(&b.id, &c.id, None, 10)).len(), 1);
     }
 
+    /// R1384000: pages run in `(created_at, id)` order, so a burst sharing one instant is read once
+    /// each, in order, whichever edge a page ends on, and a page between two reads either way.
+    async fn r1384000_chat_pages_run_in_time_then_id_order_across_a_tie(harness: &StoreHarness) {
+        const PAGE: i64 = 2;
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let mut rows = vec![message(&a.id, &b.id, "before the tie", now - 2_000)];
+        for n in 0..5 {
+            let (from, to) = if n % 2 == 0 { (&a, &b) } else { (&b, &a) };
+            rows.push(message(&from.id, &to.id, &format!("tied {n}"), now - 1_000));
+        }
+        rows.push(message(&a.id, &b.id, "after the tie", now));
+        for row in &rows {
+            q!(harness, t => t.chat_insert(row));
+        }
+        rows.sort_by(|x, y| (x.created_at, &x.id).cmp(&(y.created_at, &y.id)));
+
+        let mut read_back: Vec<String> = Vec::new();
+        let mut before: Option<ChatCursor> = None;
+        for _ in 0..=rows.len() {
+            let page = q!(harness, t => t.chat_page(&a.id, &b.id, before.as_ref(), PAGE));
+            let Some(oldest) = page.first() else { break };
+            before = Some(ChatCursor::of(oldest));
+            read_back.splice(0..0, ids_of(&page));
+        }
+        assert_eq!(read_back, ids_of(&rows));
+
+        assert_eq!(
+            ids_of(&q!(harness, t => t.chat_page(&b.id, &a.id, Some(&ChatCursor::of(&rows[3])), 10))),
+            ids_of(&rows[..3])
+        );
+    }
+
     both_stores!(
         s7_friend_requests_are_one_per_direction_and_go_between_a_pair,
         s7_friendships_are_one_per_pair_and_take_the_requests_with_them,
@@ -7794,6 +7828,7 @@ mod social {
         s7_challenges_open_close_accept_and_lapse,
         s7_a_freed_room_goes_only_while_unjoined,
         s7_chat_pages_reads_reports_and_purges,
+        r1384000_chat_pages_run_in_time_then_id_order_across_a_tie,
         s7_replay_shares_are_read_while_friends_and_unblocked,
         s7_replay_shares_hide_a_match_whose_log_the_purge_took,
         s7_a_deleted_profile_takes_its_social_rows,

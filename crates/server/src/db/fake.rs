@@ -3946,7 +3946,7 @@ pub fn ranked_bot_games_since(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<Rate
 
 use crate::config::CHAT_MAX_CHARS;
 use crate::db::store::{
-    BlockRow, ChallengeRow, ChallengeState, ChatMessageRow, ChatReportListing, ChatReportRow,
+    BlockRow, ChallengeRow, ChallengeState, ChatCursor, ChatMessageRow, ChatReportListing, ChatReportRow,
     FriendRequestRow, FriendshipRow,
 };
 
@@ -4533,7 +4533,7 @@ pub fn chat_page(
     f: &mut FakeTx<'_>,
     x: &str,
     y: &str,
-    before: Option<i64>,
+    before: Option<&ChatCursor>,
     limit: i64,
 ) -> Result<Vec<ChatMessageRow>, StoreError> {
     call(f, "chat.page")?;
@@ -4543,7 +4543,11 @@ pub fn chat_page(
         .chat_messages
         .iter()
         .filter(|row| joins(&row.from_profile, &row.to_profile, x, y))
-        .filter(|row| before.is_none_or(|before| row.created_at < before))
+        .filter(|row| {
+            before.is_none_or(|before| {
+                (row.created_at, row.id.as_str()) < (before.created_at, before.id.as_str())
+            })
+        })
         .cloned()
         .collect();
     // Newest first to take the page, then newest last as the port answers.

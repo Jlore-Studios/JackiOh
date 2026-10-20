@@ -1,8 +1,10 @@
 //! Chat between friends (SPEC S7, B53).
 //!
-//! - `GET /api/chat/:friendId?before=<iso>`: the newest `CHAT_PAGE` messages of the conversation
-//!   sent before `before` (every one without it), newest last; the ones sent to the caller are read
-//!   from then on, and the page says so.
+//! - `GET /api/chat/:friendId?before=<cursor>`: `200 {messages, nextCursor}`, the newest `CHAT_PAGE`
+//!   messages of the conversation that come before `before` in `(sent at, id)` order (every one
+//!   without it), newest last; the ones sent to the caller are read from then on, and the page says
+//!   so. `nextCursor` is the cursor of the page's oldest message when the page holds `CHAT_PAGE`,
+//!   else `null` (R1384000); a `before` this server did not write is 400 before anything is read.
 //! - `POST /api/chat/:friendId` `{body}`: `201 {message}`. Only between friends neither side
 //!   blocked (else 404, the one answer for both). The body is trimmed; empty is 422 `empty`, more
 //!   than `CHAT_MAX_CHARS` characters 422 `too_long`; then each word the username filter would
@@ -33,9 +35,9 @@ use crate::api::http::{
 use crate::api::queue::new_uuid;
 use crate::app::App;
 use crate::config::{CHAT_MAX_CHARS, CHAT_PAGE, CHAT_RETENTION_DAYS};
-use crate::db::store::{ChatMessageRow, ChatReportRow, StoreError};
+use crate::db::store::{ChatCursor, ChatMessageRow, ChatReportRow, StoreError};
 use crate::social::friends::are_friends;
-use crate::social::{MS_PER_DAY, created, iso, no_content, not_found, param, parse_iso, refused};
+use crate::social::{MS_PER_DAY, created, iso, no_content, not_found, param, refused};
 
 /// S7's `ChatMessage`: `from` and `to` are profile ids; `read` is whether its recipient has read it.
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -67,15 +69,38 @@ fn not_a_friend() -> crate::api::http::ApiError {
     not_found("that player is not your friend")
 }
 
-/// `GET /api/chat/:friendId?before=<iso>` (B53, B58): `200 {messages}`, newest last.
+/// R1384000: what joins a cursor's time to its id.
+const CURSOR_SEPARATOR: char = '_';
+
+/// R1384000: the cursor a page answers, `<created_at ms>_<id>`. Opaque to the client, which only
+/// sends it back.
+fn cursor_text(cursor: &ChatCursor) -> String {
+    format!("{}{CURSOR_SEPARATOR}{}", cursor.created_at, cursor.id)
+}
+
+/// R1384000: a cursor exactly as `cursor_text` writes one (a time of at least 0, a lowercase
+/// hyphenated uuid), or `None`.
+fn parse_cursor(text: &str) -> Option<ChatCursor> {
+    let (time, id) = text.split_once(CURSOR_SEPARATOR)?;
+    let cursor = ChatCursor {
+        created_at: time.parse::<i64>().ok().filter(|at| *at >= 0)?,
+        id: uuid::Uuid::parse_str(id).ok()?.to_string(),
+    };
+    (cursor_text(&cursor) == text).then_some(cursor)
+}
+
+/// `GET /api/chat/:friendId?before=<cursor>` (B53, B58, R1384000): `200 {messages, nextCursor}`,
+/// newest last. `nextCursor` is the cursor of the page's oldest message when the page holds
+/// `CHAT_PAGE`, else `null`; a `before` this server did not write is 400, before anything is read.
 pub async fn get_messages(app: &Arc<App>, req: Req) -> ApiResult {
     let me = caller_profile(&req)?.id;
     let friend_id = param(&req, "friendId");
     let before = match req.query.get("before").map(|text| text.trim()) {
         None | Some("") => None,
-        Some(text) => {
-            Some(parse_iso(text).ok_or_else(|| bad_request("\"before\" must be an ISO-8601 time"))?)
-        }
+        Some(text) => Some(
+            parse_cursor(text)
+                .ok_or_else(|| bad_request("\"before\" must be the nextCursor a page answered"))?,
+        ),
     };
     let now = now_ms();
 
@@ -83,7 +108,7 @@ pub async fn get_messages(app: &Arc<App>, req: Req) -> ApiResult {
     if !are_friends(&mut tx, &me, &friend_id).await? {
         return Err(not_a_friend());
     }
-    let mut page = tx.chat_page(&me, &friend_id, before, CHAT_PAGE).await?;
+    let mut page = tx.chat_page(&me, &friend_id, before.as_ref(), CHAT_PAGE).await?;
     let unread: Vec<String> = page
         .iter()
         .filter(|row| row.to_profile == me && row.read_at.is_none())
@@ -96,8 +121,15 @@ pub async fn get_messages(app: &Arc<App>, req: Req) -> ApiResult {
         }
     }
     tx.commit().await?;
+    let full = i64::try_from(page.len()).is_ok_and(|held| held >= CHAT_PAGE);
+    let next_cursor = page
+        .first()
+        .filter(|_| full)
+        .map(|row| cursor_text(&ChatCursor::of(row)));
     let messages: Vec<ChatMessage> = page.iter().map(ChatMessage::of).collect();
-    Ok(ok(json!({ "messages": to_json(&messages)? })))
+    Ok(ok(
+        json!({ "messages": to_json(&messages)?, "nextCursor": next_cursor }),
+    ))
 }
 
 /// `POST /api/chat/:friendId` `{body}` (B53): `201 {message}`.
@@ -374,6 +406,33 @@ mod tests {
         );
         assert_eq!(mask_blocked_words("gg 455 0 1 3"), "gg 455 0 1 3");
         assert_eq!(mask_blocked_words(""), "");
+    }
+
+    #[test]
+    fn r1384000_a_cursor_reads_back_only_as_it_is_written() {
+        let id = "0f1e2d3c-4b5a-4968-8776-655443322110";
+        let cursor = ChatCursor {
+            created_at: 1_760_445_296_789,
+            id: id.into(),
+        };
+        let text = "1760445296789_0f1e2d3c-4b5a-4968-8776-655443322110";
+        assert_eq!(cursor_text(&cursor), text);
+        assert_eq!(parse_cursor(text), Some(cursor));
+        for refused in [
+            "",
+            "garbage",
+            "2026-10-14T09:00:00.000Z",
+            "1760445296789",
+            "1760445296789_not-a-uuid",
+            "_0f1e2d3c-4b5a-4968-8776-655443322110",
+            "-1_0f1e2d3c-4b5a-4968-8776-655443322110",
+            "+1_0f1e2d3c-4b5a-4968-8776-655443322110",
+            "01_0f1e2d3c-4b5a-4968-8776-655443322110",
+            "1_0F1E2D3C-4B5A-4968-8776-655443322110",
+            "1_{0f1e2d3c-4b5a-4968-8776-655443322110}",
+        ] {
+            assert_eq!(parse_cursor(refused), None, "{refused:?}");
+        }
     }
 
     #[test]

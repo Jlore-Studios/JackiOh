@@ -1,7 +1,7 @@
 //! B53 (#936, `.fullsend/SPEC.md` S7): chat between friends. Only friends; a body of 1 to
 //! `CHAT_MAX_CHARS` after trimming, filtered by the username word filter (blocked words masked with
 //! `*`); at most `CHAT_MESSAGES_PER_MINUTE` per sender; pages of at most `CHAT_PAGE`, newest last,
-//! paged back by `?before=`; reading a page marks it read; messages older than
+//! paged back by `?before=` and the page's `nextCursor` (R1384000); reading a page marks it read; messages older than
 //! `CHAT_RETENTION_DAYS` are purged by the retention loop; a report is stored once per reporter.
 //!
 //! The whole router over the fake store. Time is tokio's paused clock wherever an order, a window
@@ -14,10 +14,10 @@ use std::time::Duration;
 use serde_json::{Value, json};
 
 use jackioh_server::api::retention::run_purge;
-use jackioh_server::app::App;
+use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{CHAT_MAX_CHARS, CHAT_MESSAGES_PER_MINUTE, CHAT_PAGE, CHAT_RETENTION_DAYS};
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::Db;
+use jackioh_server::db::store::{ChatMessageRow, Db, StoreError};
 
 use crate::support::deps::{add_user, call, empty_test_app};
 
@@ -157,15 +157,33 @@ async fn sent(app: &Arc<App>, from: &Account, to: &Account, body: &str) -> Value
     answer["message"].clone()
 }
 
-/// `GET /api/chat/:friendId` for `who`, optionally before an instant.
-async fn page(app: &Arc<App>, who: &Account, friend: &Account, before: Option<&str>) -> Vec<Value> {
+/// `GET /api/chat/:friendId` for `who`, optionally before a cursor: the whole answer.
+async fn read(app: &Arc<App>, who: &Account, friend: &Account, before: Option<&str>) -> Value {
     let path = match before {
-        Some(at) => format!("/api/chat/{}?before={}", friend.id, encode_query(at)),
+        Some(cursor) => format!("/api/chat/{}?before={}", friend.id, encode_query(cursor)),
         None => format!("/api/chat/{}", friend.id),
     };
     let (status, body) = api(app, "GET", &path, &who.token, Value::Null).await;
     assert_eq!(status, 200, "{body}");
-    body["messages"].as_array().expect("messages").clone()
+    body
+}
+
+/// `read`'s messages.
+async fn page(app: &Arc<App>, who: &Account, friend: &Account, before: Option<&str>) -> Vec<Value> {
+    read(app, who, friend, before).await["messages"]
+        .as_array()
+        .expect("messages")
+        .clone()
+}
+
+/// An answer's message ids, in the order it holds them.
+fn ids_in(answer: &Value) -> Vec<String> {
+    answer["messages"]
+        .as_array()
+        .expect("messages")
+        .iter()
+        .map(|message| message["id"].as_str().expect("an id").to_string())
+        .collect()
 }
 
 fn bodies(messages: &[Value]) -> Vec<String> {
@@ -362,12 +380,21 @@ mod b53_reading {
         }
         let all: Vec<String> = (0..total).map(|n| format!("m{n}")).collect();
 
-        let newest = page(&app, &bea, &ada, None).await;
-        assert_eq!(bodies(&newest), all[PAST_THE_PAGE..].to_vec());
+        let newest = read(&app, &bea, &ada, None).await;
+        assert_eq!(
+            bodies(newest["messages"].as_array().expect("messages")),
+            all[PAST_THE_PAGE..].to_vec()
+        );
 
-        let oldest_shown = newest[0]["createdAt"].as_str().expect("a createdAt").to_string();
-        let older = page(&app, &bea, &ada, Some(&oldest_shown)).await;
-        assert_eq!(bodies(&older), all[..PAST_THE_PAGE].to_vec());
+        let cursor = newest["nextCursor"]
+            .as_str()
+            .expect("a full page answers a nextCursor");
+        let older = read(&app, &bea, &ada, Some(cursor)).await;
+        assert_eq!(
+            bodies(older["messages"].as_array().expect("messages")),
+            all[..PAST_THE_PAGE].to_vec()
+        );
+        assert_eq!(older["nextCursor"], Value::Null);
     }
 
     #[tokio::test]
@@ -387,6 +414,76 @@ mod b53_reading {
 
         page(&app, &bea, &cy, None).await;
         assert_eq!(unread_from(&app, &bea, &cy).await, 0);
+        assert_eq!(unread_from(&app, &bea, &ada).await, 1);
+    }
+}
+
+mod r1384000_paging {
+    use super::*;
+
+    #[tokio::test]
+    async fn r1384000_more_than_a_page_sent_at_one_instant_reads_every_message_once_in_order() {
+        let (app, ada, bea) = friends().await;
+        let at = now_ms();
+        let mut tx = app.db.begin(None).await.expect("a transaction");
+        let mut expected = Vec::new();
+        for n in 0..count(CHAT_PAGE) + PAST_THE_PAGE {
+            let (from, to) = if n % 2 == 0 { (&ada, &bea) } else { (&bea, &ada) };
+            let row = ChatMessageRow {
+                id: uuid::Uuid::new_v4().to_string(),
+                from_profile: from.id.clone(),
+                to_profile: to.id.clone(),
+                body: format!("m{n}"),
+                created_at: at,
+                read_at: None,
+            };
+            tx.chat_insert(&row).await.expect("a message");
+            expected.push(row.id);
+        }
+        tx.commit().await.expect("a commit");
+        expected.sort();
+
+        let newest = read(&app, &bea, &ada, None).await;
+        let cursor = newest["nextCursor"]
+            .as_str()
+            .expect("a full page answers a nextCursor");
+        let older = read(&app, &bea, &ada, Some(cursor)).await;
+
+        assert_eq!(older["nextCursor"], Value::Null);
+        let mut read_back = ids_in(&older);
+        read_back.extend(ids_in(&newest));
+        assert_eq!(read_back, expected);
+    }
+
+    #[tokio::test]
+    async fn r1384000_a_malformed_cursor_is_400_and_reads_no_message() {
+        let (app, ada, bea) = friends().await;
+        sent(&app, &ada, &bea, "hello").await;
+        let methods = Arc::new(std::sync::Mutex::new(Vec::<String>::new()));
+        let seen = Arc::clone(&methods);
+        fake(&app).lock().await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
+            seen.lock().expect("the call log").push(method.to_string());
+            Ok(())
+        }));
+
+        for malformed in [
+            "2026-10-14T09:00:00.000Z",
+            "garbage",
+            "1760445296789",
+            "_0f1e2d3c-4b5a-4968-8776-655443322110",
+            "1760445296789_0F1E2D3C-4B5A-4968-8776-655443322110",
+        ] {
+            let path = format!("/api/chat/{}?before={}", ada.id, encode_query(malformed));
+            let (status, body) = api(&app, "GET", &path, &bea.token, Value::Null).await;
+            assert_eq!(status, 400, "{malformed}: {body}");
+        }
+
+        let calls = methods.lock().expect("the call log").clone();
+        assert!(
+            calls.iter().all(|method| !method.starts_with("chat.")),
+            "{calls:?}"
+        );
+        fake(&app).lock().await.on_call = None;
         assert_eq!(unread_from(&app, &bea, &ada).await, 1);
     }
 }
