@@ -6498,12 +6498,6 @@
           "claude": "strong",
           "muse": "medium"
         }
-      },
-      "wip": {
-        "at": "2026-10-19T23:03:51Z",
-        "provider": "claude-3",
-        "sha": "943b28ab6f5ef7fae12ab670a34773932bc5095d",
-        "start": "56a38abb20ed9a49bc6a1633ce7fcf5e7f89270f"
       }
     },
     "1361": {
