@@ -11699,9 +11699,16 @@
     "what": "plan #1426 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-20T17:12:41Z",
+    "at": "2026-10-20T17:19:32Z",
     "notes": [
-      "#1426 needs a plan"
+      "answered a comment on #1431 that was never answered",
+      "answered a comment on #1430 that was never answered",
+      "answered a comment on #1428 that was never answered",
+      "answered a comment on #1427 that was never answered",
+      "#1427 needs a plan",
+      "#1428 needs a plan",
+      "#1430 needs a plan",
+      "#1431 needs a plan"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
