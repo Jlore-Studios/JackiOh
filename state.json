@@ -7864,11 +7864,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-20T19:04:43Z",
+        "at": "2026-10-20T19:59:25Z",
         "difficulty": "hard",
-        "provider": "gpt",
-        "tier": "medium",
-        "why": "The change modifies the AI's search panic paths and carries diagnostics across the AI, tools and web contracts, which the rule classifies as hard."
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "the change is in the AI's search (crates/ai/src simulate, reply, decide) plus tools, web and spec, so the rule's 'hard: the AI's search' line holds plainly"
       },
       "failures": 0,
       "forced": false,
