@@ -6447,9 +6447,11 @@
       "asks": [],
       "audit_tier": "strong",
       "cleared": {
-        "at": "2026-10-20T00:22:08Z",
+        "at": "2026-10-20T00:53:16Z",
         "by": "`claude` (strong)",
-        "sha": "25ae928f50032fed1f09fba59275bdbc8649fa30"
+        "carried_from": "25ae928f50032fed1f09fba59275bdbc8649fa30",
+        "resolved_by": "`claude` (strong)",
+        "sha": "d38e54b638eb9c6753d45dfe67e87aef811531a2"
       },
       "cross_rounds": 1,
       "died": 0,
