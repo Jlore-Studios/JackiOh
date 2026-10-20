@@ -274,6 +274,12 @@ Every change to card data is a patch, and every patch is kept.
   the empty one); `shipped.json` records each patch's commit, snapshot blob and
   table blob (`winRatesBlob`); `index.json` maps each card to the versions it changed in. Shipped
   snapshots and tables are never amended.
+- `patches/technical.json` is the technical log (R1369000): the changes that shipped no card data, a
+  list in logged order of `{ version, commit, pr?, title, kind, player? }`, `version` the newest
+  shipped X when it was logged, `commit` its key, `kind` `app`, `ai` or `internal`, and `player` the
+  line the Patch notes page shows under that X (App and AI only). `cargo jackioh patches log
+  <base>..<head> [--bodies <path>]` appends to it (`crates/tools/src/technical.rs`'s header has the
+  rest); nothing else writes it.
 - A branch that changes card data claims it with a pending fragment:
   `cargo jackioh patches <version> <date> "<title>" --source "<issue or PR>" --notes "<what changed>"`
   writes `patches/pending/<version>.json` (`--cards` names the ids; otherwise they are diffed from
