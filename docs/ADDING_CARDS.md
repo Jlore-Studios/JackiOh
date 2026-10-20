@@ -132,6 +132,14 @@ mod tests {
 }
 ```
 
+**Shared test helpers.** `crates/cards/src/lib.rs` holds the helpers the card tests share, each `#[cfg(test)]` and taken
+with `use crate::<name>;`; use them rather than a copy: `scenario` (the shipped cards registered, then the testkit's),
+`js` (an engine value as JSON, never `serde_json::to_value(…).expect(…)`), `merged` (TS `{ ...base, ...over }`: a
+side's setup over its defaults), `matches_object` (TS `toMatchObject`), `filler(count)` (`count` Stockpiles, Core #5,
+for a library), `def_ids` (the cards' def ids), `events_json` (the events so far, as JSON), `unit_or_blank`,
+`stand_in_backrow`, `give_flying`, `give_lucky`, and `upgrade_number`, `degrade_number`, `can_upgrade_number` and
+`can_degrade_number`. Keep a local helper only when its body differs.
+
 ## 3. The patch, and its order
 
 A change to card data is a patch (R388, R646). A normal patch (`Patch v0.2.X: …`) takes the next number

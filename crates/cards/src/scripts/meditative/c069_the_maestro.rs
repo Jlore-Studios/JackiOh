@@ -81,14 +81,12 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const MAESTRO: &str = "meditative-069";
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// p1 holds the Maestro (base unless `radiant_face`); both sides keep cards in hand so no turn
     /// auto-ends.
@@ -261,7 +259,7 @@ mod tests {
             let mut s = full_enemy("maestro-public", false, 4);
             activate_exile(&mut s);
             // p1 reads each exiled card, the hand and deck ones included.
-            let events = serde_json::to_value(s.view(PlayerId::P1).events).expect("events");
+            let events = js(&s.view(PlayerId::P1).events);
             let exiled: Vec<&Value> = events
                 .as_array()
                 .into_iter()

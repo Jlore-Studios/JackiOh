@@ -94,6 +94,9 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::events_json;
+    use crate::filler;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -106,10 +109,6 @@ mod tests {
     const FILL_BOARD: &str = "core-062"; // (3) Felinor Spell: fills your board.
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt Unit.
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// p1's deck holds Tatches between fillers; both sides hold fillers and p1 has mana to play.
     fn decked(seed: &str, hand: Value) -> Scenario {
@@ -134,10 +133,6 @@ mod tests {
 
     fn in_deck(s: &Scenario) -> bool {
         s.pile(P1, "library").iter().any(|card| card.def_id == TATCHES)
-    }
-
-    fn events_json(s: &Scenario) -> Vec<Value> {
-        s.events().iter().map(|event| serde_json::to_value(event).expect("an event is JSON")).collect()
     }
 
     mod m87_tatches_the_totem {
@@ -235,7 +230,7 @@ mod tests {
                 assert!(!view_text(&s).contains(TATCHES));
                 s.play(VANILLA, json!({}));
                 let theirs = s.view(P2);
-                let theirs_json = serde_json::to_value(&theirs).expect("a view is JSON");
+                let theirs_json = js(&theirs);
                 // The Vanilla takes lane 1 and Tatches the leftmost open zone after it (R64).
                 assert_eq!(theirs_json["opponent"]["units"][0]["defId"], VANILLA);
                 assert_eq!(theirs_json["opponent"]["units"][1]["defId"], TATCHES);

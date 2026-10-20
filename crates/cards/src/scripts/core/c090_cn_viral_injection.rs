@@ -61,6 +61,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
+    use crate::filler;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -109,15 +111,6 @@ mod tests {
                 _ => None,
             })
             .collect()
-    }
-
-    fn def_ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
-    }
-
-    /// A pile of harmless ordinary cards, for a library whose length is the point.
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
     }
 
     fn type_of(event: &GameEvent) -> String {

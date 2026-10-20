@@ -81,6 +81,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -93,10 +94,6 @@ mod tests {
     const MOON: &str = "classicplus-022"; // (1) Trap, set face-down.
     const CHALICE: &str = "classic-087"; // (X) Field Spell.
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// p1 holds the Kitten (base unless `radiant_face`); `p1_field`, `p2_field` and `p2_backrow`
     /// are the setup's other permanents. Both libraries hold four filler.

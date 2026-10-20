@@ -94,6 +94,7 @@ pub fn script() -> CardScripts {
 // play, never below 2; draw; damage) read through `param()` (R386).
 #[cfg(test)]
 mod tests {
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const AUCTION: &str = "classic-038";
@@ -113,16 +114,6 @@ mod tests {
 
     use crate::matches_object;
 
-    /// The override's keys win over the base's.
-    fn spread(mut base: Value, over: Value) -> Value {
-        if let (Some(into), Some(from)) = (base.as_object_mut(), over.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        base
-    }
-
     fn set_auction(radiant_face: bool, lane: i32) -> Value {
         json!({ "def": AUCTION, "radiant": radiant_face, "faceUp": false, "lane": lane })
     }
@@ -132,7 +123,7 @@ mod tests {
     fn setup(mine: Value, theirs: Value, radiant_face: bool) -> Scenario {
         scenario(json!({
             "active": "p1",
-            "p1": spread(
+            "p1": merged(
                 json!({
                     "hand": [FILLER, FILLER, FILLER, FILLER, VANILLA],
                     "backrow": [set_auction(radiant_face, 2)],
@@ -140,7 +131,7 @@ mod tests {
                 }),
                 mine,
             ),
-            "p2": spread(json!({ "hand": [VANILLA], "library": [VANILLA, VANILLA] }), theirs),
+            "p2": merged(json!({ "hand": [VANILLA], "library": [VANILLA, VANILLA] }), theirs),
         }))
     }
 

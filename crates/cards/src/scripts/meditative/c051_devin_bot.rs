@@ -41,6 +41,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
     use jackioh_engine::effects::cast_new;
     use jackioh_engine::testkit::*;
     use jackioh_engine::zones::{ZoneSlot, lock_zone};
@@ -49,10 +50,6 @@ mod tests {
 
     const BOT: &str = "meditative-051";
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// p1 plays Devin Bot (`radiant_face`) with an otherwise empty board.
     fn played(seed: &str, radiant_face: bool) -> Scenario {

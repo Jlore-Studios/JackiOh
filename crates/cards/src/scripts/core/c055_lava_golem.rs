@@ -57,6 +57,7 @@ pub fn script() -> CardScripts {
 // Tribute summons the base face for the opponent (R360); Sheepish's free copy still needs tributes.
 #[cfg(test)]
 mod tests {
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -307,7 +308,7 @@ mod tests {
                 .events()
                 .iter()
                 .find(|event| event.event_type() == GameEventType::CardPlayed)
-                .map(|event| serde_json::to_value(event).expect("an event serialises"));
+                .map(js);
             assert!(played.is_some_and(|event| matches_object(&event, &json!({ "player": "p1", "instanceId": golem.id }))));
             // It entered p2's side this turn, sick and with its exertion fresh like any arrival (R171).
             assert_eq!(golem.summoned_turn, Some(turn));

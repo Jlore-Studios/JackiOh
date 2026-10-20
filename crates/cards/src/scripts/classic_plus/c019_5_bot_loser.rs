@@ -62,6 +62,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -103,23 +104,13 @@ mod tests {
         );
     }
 
-    fn spread(defaults: Value, overrides: &Value) -> Value {
-        let mut out = defaults;
-        if let (Some(into), Some(from)) = (out.as_object_mut(), overrides.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        out
-    }
-
     fn with_bot(p1: Value, radiant_face: bool, p2: Value) -> Scenario {
         crate::register_all();
-        let mut side1 = spread(json!({ "hand": [FILLER], "library": DECK }), &p1);
+        let mut side1 = merged(json!({ "hand": [FILLER], "library": DECK }), p1.clone());
         let mut field = vec![json!({ "def": BOT, "lane": 3, "radiant": radiant_face })];
         field.extend(p1.get("field").and_then(Value::as_array).cloned().unwrap_or_default());
         side1["field"] = Value::Array(field);
-        let side2 = spread(json!({ "hand": [FILLER], "library": DECK }), &p2);
+        let side2 = merged(json!({ "hand": [FILLER], "library": DECK }), p2);
         scenario(json!({ "p1": side1, "p2": side2 }))
     }
 

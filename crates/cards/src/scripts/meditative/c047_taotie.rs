@@ -53,6 +53,7 @@ pub fn script() -> CardScripts {
 // card of the opponent's deck".
 #[cfg(test)]
 mod tests {
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -261,7 +262,7 @@ mod tests {
                 // Keywords, tags and text joined; the cost 饕餮's (4).
                 let keywords = serde_json::to_string(&s.stats(&after).keywords).expect("JSON");
                 assert!(keywords.contains("Can't attack"), "{keywords}");
-                let tags = serde_json::to_value(&def.tags).expect("JSON");
+                let tags = js(&def.tags);
                 assert!(tags.as_array().expect("tags").contains(&json!("CN")), "{tags}");
                 assert!(
                     tags.as_array().expect("tags").contains(&json!("Felinor")),
@@ -364,8 +365,7 @@ mod tests {
 
                 let after = s.unit(P1, 1).expect("taotie");
                 let round_tripped: GameState =
-                    serde_json::from_value(serde_json::to_value(s.state()).expect("state is JSON"))
-                        .expect("JSON is a state");
+                    serde_json::from_value(js(s.state())).expect("JSON is a state");
                 let same = find_instance(&round_tripped, &after.id).expect("the fused card");
                 // The fusion's transient definition travelled with it: still one fused card with
                 // the summed stats, not two cards and not the printed one.

@@ -40,6 +40,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -210,9 +211,7 @@ mod tests {
 
                 s.play(GUILD, json!({}));
 
-                assert!(!s.last_events().iter().any(|event| {
-                    serde_json::to_value(event).expect("events serialise").get("position").is_some()
-                }));
+                assert!(!s.last_events().iter().any(|event| js(event).get("position").is_some()));
                 let theirs = serde_json::to_string(&s.view(P2)).expect("views serialise");
                 assert!(theirs.contains(TEMPO));
                 assert!(!theirs.contains(MENACE));

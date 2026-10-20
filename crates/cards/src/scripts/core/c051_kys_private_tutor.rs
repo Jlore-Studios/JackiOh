@@ -323,6 +323,7 @@ pub fn script() -> CardScripts {
 // dropped, and §9.3's pause that survives a JSON round trip.
 #[cfg(test)]
 mod tests {
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -511,9 +512,7 @@ mod tests {
 
             // §9.3: a mid-action choice is state, not a callback. Nothing in the pause is a closure, so a
             // round trip through JSON is the same game — the prompt, its options and its `resume` included.
-            let revived: GameState =
-                serde_json::from_value(serde_json::to_value(&paused).expect("the state serialises"))
-                    .expect("the state deserialises");
+            let revived: GameState = serde_json::from_value(js(&paused)).expect("the state deserialises");
             assert_eq!(revived, paused);
             assert_eq!(
                 revived.pending.as_ref().map(|pending| &pending.resume),

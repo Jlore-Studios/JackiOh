@@ -69,6 +69,7 @@ pub fn script() -> CardScripts {
 mod tests {
     use std::collections::BTreeSet;
 
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -107,7 +108,7 @@ mod tests {
     }
 
     fn view(s: &Scenario, seat: PlayerId) -> Value {
-        serde_json::to_value(s.view(seat)).expect("a view is JSON")
+        js(&s.view(seat))
     }
 
     mod base {
@@ -187,7 +188,7 @@ mod tests {
             let burned = s
                 .events()
                 .iter()
-                .map(|event| serde_json::to_value(event).expect("an event is JSON"))
+                .map(js)
                 .filter(|event| event["type"] == "burned")
                 .count();
             assert_eq!(burned, 1);

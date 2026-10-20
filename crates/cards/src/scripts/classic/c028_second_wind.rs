@@ -90,6 +90,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -204,7 +205,7 @@ mod tests {
             crate::register_all();
             let def = crate::card_def(WIND);
             assert_eq!(
-                serde_json::to_value(&def.params).expect("params serialise"),
+                js(&def.params),
                 json!([{ "key": "minCost", "base": 1, "radiant": 1, "better": "down", "step": 1, "min": 1 }])
             );
             let scripts = script();
@@ -293,7 +294,7 @@ mod tests {
                     .iter()
                     .find(|event| matches!(event, GameEvent::CardPlayed { instance_id, .. } if *instance_id == unit.id))
                     .expect("the play is announced");
-                let played = serde_json::to_value(played).expect("events serialise");
+                let played = js(played);
                 assert_eq!(played["from"], json!("graveyard"));
                 assert_eq!(played["costPaid"], json!(1));
             }
@@ -360,14 +361,14 @@ mod tests {
                     .collect();
                 assert_eq!(exiled.len(), 3);
                 for event in exiled {
-                    let json = serde_json::to_value(event).expect("events serialise");
+                    let json = js(event);
                     let mut keys: Vec<String> = json.as_object().expect("an object").keys().cloned().collect();
                     keys.sort();
                     assert_eq!(keys, vec!["defId", "instanceId", "owner", "type"]);
                 }
                 for viewer in [P1, P2] {
                     for event in &s.view(viewer).events {
-                        let json = serde_json::to_value(event).expect("events serialise");
+                        let json = js(event);
                         assert!(json.get("position").is_none());
                     }
                 }

@@ -69,16 +69,14 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const UNDERCLASSMAN: &str = "meditative-058";
     const FILLER: &str = "core-005";
     /// (1) 4/4 Unit with no text: what fills the board.
     const VANILLA: &str = "core-008";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// p1 holds the Underclassman (base unless `radiant_face`); both sides keep cards in hand so no
     /// turn auto-ends.
@@ -153,8 +151,7 @@ mod tests {
 
     /// The granted lines on p1's Unit in `lane`, as the client reads them.
     fn granted_lines(s: &Scenario, lane: usize) -> Vec<String> {
-        let view: Value =
-            serde_json::to_value(view_for(s.state(), PlayerId::P1)).expect("the view serialises");
+        let view: Value = js(&view_for(s.state(), PlayerId::P1));
         view["you"]["units"][lane - 1]["grants"]
             .as_array()
             .cloned()
@@ -293,9 +290,7 @@ mod tests {
         #[test]
         fn r1107_the_grant_survives_a_json_round_trip() {
             let (mut s, unit) = summoned("underclassman-json");
-            let round: GameState =
-                serde_json::from_value(serde_json::to_value(s.state()).expect("serialises"))
-                    .expect("deserialises");
+            let round: GameState = serde_json::from_value(js(s.state())).expect("deserialises");
             assert_eq!(
                 find_instance(&round, &unit.id).and_then(|card| card.grants.clone()),
                 unit.grants
@@ -396,8 +391,7 @@ mod tests {
                 standing,
                 [VANILLA, VANILLA, VANILLA, VANILLA, UNDERCLASSMAN].map(str::to_string)
             );
-            let view: Value =
-                serde_json::to_value(view_for(s.state(), PlayerId::P1)).expect("the view serialises");
+            let view: Value = js(&view_for(s.state(), PlayerId::P1));
             let units = view["you"]["units"].as_array().cloned().unwrap_or_default();
             let grants: Vec<&Value> = units.iter().filter_map(|unit| unit.get("grants")).collect();
             assert!(grants.is_empty(), "{grants:?}");

@@ -52,6 +52,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -115,21 +116,14 @@ mod tests {
         chain: Option<i32>,
     }
 
-    fn spread(target: &mut Value, extra: Option<Value>) {
-        if let Some(Value::Object(extra)) = extra {
-            for (key, value) in extra {
-                target[key.as_str()] = value;
-            }
-        }
-    }
-
     /// p1 plays C+ #73 with its roll pinned; a spare card in hand keeps §2.5's auto-end away.
     fn chaos(entry: Option<&str>, opts: Opts) -> Scenario {
         let radiant_face = opts.radiant_cursor.is_some();
-        let mut p1 = json!({ "hand": [{ "def": CHAOS, "radiant": radiant_face }, VANILLA], "mana": 8 });
-        spread(&mut p1, opts.p1);
-        let mut p2 = json!({ "hand": [VANILLA] });
-        spread(&mut p2, opts.p2);
+        let p1 = merged(
+            json!({ "hand": [{ "def": CHAOS, "radiant": radiant_face }, VANILLA], "mana": 8 }),
+            opts.p1.unwrap_or_default(),
+        );
+        let p2 = merged(json!({ "hand": [VANILLA] }), opts.p2.unwrap_or_default());
         let mut s = scenario(json!({ "seed": SEED, "p1": p1, "p2": p2 }));
         if let Some(chain) = opts.chain {
             set_chain(&mut s, chain);

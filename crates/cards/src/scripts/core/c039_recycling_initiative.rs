@@ -188,6 +188,7 @@ pub fn script() -> CardScripts {
 //        reports to the client in `viewFor` and what the player actually pays.
 #[cfg(test)]
 mod tests {
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const RECYCLING: &str = "core-039"; // Spell, 0
@@ -246,7 +247,7 @@ mod tests {
 
     /// What the client is told a hand card costs (§10.8): `effectiveCost`, so R65's `costMod` is in it.
     fn view_cost(s: &Scenario, player: &str, instance_id: &str) -> i64 {
-        let view = serde_json::to_value(s.view(player)).expect("a view is JSON");
+        let view = js(&s.view(player));
         let hand = view["you"]["hand"]
             .as_array()
             .expect("viewCost: the viewer's own hand should be cards, not a count");
@@ -612,10 +613,7 @@ mod tests {
             let copy = copy_in_hand(&s, BIG_D);
             assert!(copy.radiant);
             assert_eq!(copy.damage, 0);
-            assert_eq!(
-                serde_json::to_value(copy.buffs).expect("buffs are JSON"),
-                json!({ "attack": 0, "health": 0 })
-            );
+            assert_eq!(js(&copy.buffs), json!({ "attack": 0, "health": 0 }));
         }
     }
 }

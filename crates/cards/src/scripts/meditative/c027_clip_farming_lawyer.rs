@@ -63,6 +63,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -71,10 +72,6 @@ mod tests {
     const LAWYER: &str = "meditative-027";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4, no text: the R129 comparison.
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// p1 plays the Lawyer (base unless `radiant_face`).
     fn lawyered(seed: &str, radiant_face: bool) -> Scenario {

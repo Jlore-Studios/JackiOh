@@ -121,6 +121,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -201,10 +202,6 @@ mod tests {
 
     fn numbers_as_modes() -> Vec<Vec<String>> {
         NUMBERS.iter().map(|number| vec![number.to_string()]).collect()
-    }
-
-    fn def_ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
     fn exiled_events(events: &[GameEvent]) -> Vec<GameEvent> {

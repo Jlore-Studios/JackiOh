@@ -62,6 +62,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -82,20 +83,10 @@ mod tests {
         json!([{ "pick": "hero", "player": "p2" }])
     }
 
-    /// The side's own keys over the defaults.
-    fn spread(mut defaults: Value, side: Value) -> Value {
-        if let (Some(into), Some(from)) = (defaults.as_object_mut(), side.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        defaults
-    }
-
     fn setup(p1: Value, p2: Value) -> Scenario {
         scenario(json!({
-            "p1": spread(json!({ "hand": [FILLER], "library": [FILLER] }), p1),
-            "p2": spread(json!({ "hand": [FILLER], "library": [FILLER] }), p2),
+            "p1": merged(json!({ "hand": [FILLER], "library": [FILLER] }), p1),
+            "p2": merged(json!({ "hand": [FILLER], "library": [FILLER] }), p2),
         }))
     }
 

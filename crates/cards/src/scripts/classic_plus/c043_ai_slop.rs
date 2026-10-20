@@ -45,6 +45,7 @@ pub fn script() -> CardScripts {
 mod tests {
     use std::collections::BTreeSet;
 
+    use crate::events_json;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -86,10 +87,6 @@ mod tests {
 
     fn specs(s: &Scenario) -> Vec<FusedIngredient> {
         subsystems::fused_ingredient_specs(s.state(), &made(s).def_id).unwrap_or_default()
-    }
-
-    fn events_json(s: &Scenario) -> Vec<Value> {
-        s.events().iter().map(|event| serde_json::to_value(event).expect("an event is JSON")).collect()
     }
 
     mod base {

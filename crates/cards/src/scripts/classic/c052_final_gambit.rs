@@ -84,6 +84,7 @@ pub fn script() -> CardScripts {
 // whose second then lands on you.
 #[cfg(test)]
 mod tests {
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const GAMBIT: &str = "classic-052";
@@ -127,30 +128,19 @@ mod tests {
         if opts[key].is_null() { fallback } else { opts[key].clone() }
     }
 
-    /// `base` with every key of `extra` laid over it.
-    fn spread(base: Value, extra: &Value) -> Value {
-        let mut out = base;
-        if let (Some(fields), Some(over)) = (out.as_object_mut(), extra.as_object()) {
-            for (key, value) in over {
-                fields.insert(key.clone(), value.clone());
-            }
-        }
-        out
-    }
-
     /// p2 attacks p1's hero with `attacker`. p1 has `health`, a Final Gambit set face-down beside the rest
     /// of its backrow, a card in hand and a deck to draw from; p2 has whatever `p2` adds.
     /// `opts`: `attacker`, `health`, `gambit`, `p1Backrow`, `p1`, `p2` (a `Gambit` is a bare id or a
     /// `{ def, radiant? }` object).
     fn lethal_attack(opts: Value) -> Scenario {
         let attacker = opts["attacker"].as_str().expect("an attacker").to_string();
-        let mut backrow = vec![spread(as_entry(&or(&opts, "gambit", json!(GAMBIT))), &json!({ "faceUp": false }))];
+        let mut backrow = vec![merged(as_entry(&or(&opts, "gambit", json!(GAMBIT))), json!({ "faceUp": false }))];
         backrow.extend(opts["p1Backrow"].as_array().cloned().unwrap_or_default());
-        let p1 = spread(
+        let p1 = merged(
             json!({ "hand": [FILLER], "backrow": backrow, "library": DECK, "health": opts["health"] }),
-            &opts["p1"],
+            opts["p1"].clone(),
         );
-        let p2 = spread(json!({ "hand": [FILLER], "field": [attacker], "library": DECK }), &opts["p2"]);
+        let p2 = merged(json!({ "hand": [FILLER], "field": [attacker], "library": DECK }), opts["p2"].clone());
         let mut s = scenario(json!({ "p1": p1, "p2": p2, "active": "p2" }));
         s.attack(&attacker, "hero");
         s

@@ -53,15 +53,12 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
     use jackioh_engine::testkit::*;
 
     const VOLATILITY: &str = "meditative-084";
     const OUTFITTER: &str = "meditative-082";
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     fn upgrades(events: &[GameEvent]) -> Vec<GameEvent> {
         events

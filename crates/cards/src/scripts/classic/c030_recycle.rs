@@ -76,6 +76,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -214,7 +215,7 @@ mod tests {
                     .filter(|event| matches!(event, GameEvent::LibraryOverflow { .. }))
                     .collect();
                 assert_eq!(
-                    serde_json::to_value(&overflow).expect("events serialise"),
+                    js(&overflow),
                     json!([{ "type": "libraryOverflow", "player": "p1", "instanceId": turned_away.id, "defId": B, "outcome": "graveyard" }])
                 );
                 assert_eq!(

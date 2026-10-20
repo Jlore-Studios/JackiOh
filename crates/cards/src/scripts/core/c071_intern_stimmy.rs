@@ -62,6 +62,7 @@ pub fn script() -> CardScripts {
 // Cry (R1). Both sides keep a playable card in hand, since §2.5/R82 auto-ends a turn with none.
 #[cfg(test)]
 mod tests {
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -76,7 +77,7 @@ mod tests {
     fn trap_firings(s: &Scenario) -> usize {
         s.events()
             .iter()
-            .filter(|event| serde_json::to_value(event).expect("an event serialises")["type"] == "trapFired")
+            .filter(|event| js(event)["type"] == "trapFired")
             .count()
     }
 

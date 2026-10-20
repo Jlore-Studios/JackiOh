@@ -87,6 +87,7 @@ pub fn script() -> CardScripts {
 // holding a Unit (R418) is swept: both are proved with fixtures in the engine's tests.
 #[cfg(test)]
 mod tests {
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const FIRE: &str = "classicplus-t-ai-06";
@@ -106,21 +107,11 @@ mod tests {
 
     use crate::js;
 
-    fn spread(base: Value, extra: &Value) -> Value {
-        let mut out = base;
-        if let (Some(into), Some(from)) = (out.as_object_mut(), extra.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        out
-    }
-
     fn fire(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
         crate::register_all();
         let mut s = scenario(json!({
-            "p1": spread(json!({ "hand": [{ "def": FIRE, "radiant": radiant_face }, VANILLA], "library": [VANILLA] }), &p1),
-            "p2": spread(json!({ "hand": [VANILLA], "library": [VANILLA] }), &p2),
+            "p1": merged(json!({ "hand": [{ "def": FIRE, "radiant": radiant_face }, VANILLA], "library": [VANILLA] }), p1),
+            "p2": merged(json!({ "hand": [VANILLA], "library": [VANILLA] }), p2),
         }));
         s.play(FIRE, json!({}));
         s

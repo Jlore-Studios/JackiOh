@@ -89,16 +89,13 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
 
     const TREE: &str = "meditative-075";
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// TS `JSON.parse(JSON.stringify(state))`.
     fn round_trip(state: &GameState) -> GameState {

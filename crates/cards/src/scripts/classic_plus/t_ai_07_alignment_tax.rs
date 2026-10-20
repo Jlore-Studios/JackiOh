@@ -51,6 +51,7 @@ pub fn script() -> CardScripts {
 // `legalActions`; radiant (2) more".
 #[cfg(test)]
 mod tests {
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const TAX: &str = "classicplus-t-ai-07";
@@ -65,17 +66,6 @@ mod tests {
 
     use crate::js;
 
-    /// TS's `{ ...base, ...extra }` on a side setup.
-    fn spread(base: Value, extra: &Value) -> Value {
-        let mut out = base;
-        if let (Some(into), Some(from)) = (out.as_object_mut(), extra.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        out
-    }
-
     /// p2's hand holds one card of each price; both decks are deep enough to cross several turns.
     fn setup(taxes: Vec<Value>, p2: Value) -> Scenario {
         crate::register_all();
@@ -83,9 +73,9 @@ mod tests {
         hand.push(json!(STOCKPILE));
         scenario(json!({
             "p1": { "hand": hand, "library": [VANILLA, VANILLA, VANILLA, VANILLA], "mana": 8 },
-            "p2": spread(
+            "p2": merged(
                 json!({ "hand": [VANILLA, MENACE, FELINOR, ADAPTIVE_UI], "library": [VANILLA, VANILLA, VANILLA, VANILLA] }),
-                &p2,
+                p2,
             ),
         }))
     }
