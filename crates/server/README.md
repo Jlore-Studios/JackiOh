@@ -176,6 +176,9 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET` | `/api/codes/status` | user | whether redemption is paused, and the caller's attempts left (R192) |
 | `GET` | `/api/collection` | active | the cards owned (a card cleared to 0 is not sent); there is no write route but the dev tools' |
 | `GET`, `POST` | `/api/packs`, `/api/packs/buy`, `/api/packs/open` | active | the caller's pity counters, the odds and the unopened packs held; buy `{ pack }` (a shipped set's name or `global`) for `PACK_PRICE_JLORE`, 409 when the wallet cannot cover it; open one, 409 when none of that kind is held: its slots, the pity counters after it and the packs left (R1301000–R1301003) |
+| `GET` | `/api/tokens` | active | both token bars' points and sizes, the cosmetic cycle's next step and the tokens held (§14.5; R1305000, R1305001, R1305004) |
+| `POST` | `/api/tokens/redeem-card` | active | `{ cardId }`: a card token unlocks one chosen unowned card of a set that ships, 409 for a choice it cannot pay for, answering the tokens after it (R1305002) |
+| `POST` | `/api/tokens/redeem-cosmetic` | active | `{ token, cosmeticId, cardId? }`: a Rare or Epic token buys one cosmetic at its tier or below, 409 for a choice it cannot pay for, answering the tokens after it (R1305003) |
 | `GET` | `/api/wallet` | active | the caller's Jlore balance (§14.1); read-only, like the collection |
 | `GET` | `/api/tracks` | active | the caller's set tracks in catalog order — level, XP, the XP to the next level, the next rewards (both `null` on the last level, R1302005) and how many levels have paid (§14.7); read-only, like the collection |
 | `GET` | `/api/cosmetics` | active | the cosmetics the caller owns, `{ cards: [{ cardId, cosmeticId }], account }`, never another's; the starter cosmetics have no row (R1313000) |
