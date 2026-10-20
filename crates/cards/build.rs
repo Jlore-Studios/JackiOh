@@ -29,12 +29,14 @@
 //! (`apps/web/src/wasm/size.test.ts`).
 //!
 //! R767000, R388: and every shipped version, for the replays of games played on it and for `GET
-//! /api/catalog/:version`. `$OUT_DIR/history.json` holds `{ order, patches, versions }`: `order` is
-//! every shipped version, oldest first; each of `versions` is one shipped version, with the catalog
-//! ids its snapshot (`patches/<version>.json`) lacks (`absent`) and, for each id whose entry differs
-//! from `catalog.json`'s, an index into `patches` (`changed`). Each patch is `{ set, unset }`: the
-//! snapshot's top-level keys whose value differs, with that value, and the keys only `catalog.json`'s
-//! entry has. An id the catalog no longer has is not carried. `src/history.rs` reads it.
+//! /api/catalog/:version`. `$OUT_DIR/history.json` holds `{ order, patches, winRates, versions }`:
+//! `order` is every shipped version, oldest first; each of `versions` is one shipped version, with
+//! the catalog ids its snapshot (`patches/<version>.json`) lacks (`absent`), for each id whose entry
+//! differs from `catalog.json`'s, an index into `patches` (`changed`), and, when it has a win-rate
+//! table file (`patches/win_rates/<version>.json`, R1329000), an index into `winRates`, which holds
+//! each table once. Each patch is `{ set, unset }`: the snapshot's top-level keys whose value
+//! differs, with that value, and the keys only `catalog.json`'s entry has. An id the catalog no longer
+//! has is not carried. `src/history.rs` reads it.
 //!
 //! The browser's module (a `wasm32` target) carries only the versions from `BROWSER_CARRIED_FROM` on:
 //! it folds only practice games, and a practice game folds on a carried version only with the setup
@@ -431,6 +433,8 @@ fn history_json(
         .collect();
     let mut patches: Vec<serde_json::Value> = Vec::new();
     let mut seen: BTreeMap<String, usize> = BTreeMap::new();
+    let mut tables: Vec<serde_json::Value> = Vec::new();
+    let mut seen_tables: BTreeMap<String, usize> = BTreeMap::new();
     let mut carried: Vec<serde_json::Value> = Vec::new();
     let first = from.map_or(0, |from| {
         versions
@@ -461,9 +465,20 @@ fn history_json(
             }
             changed.insert(id.clone(), serde_json::Value::from(at));
         }
-        carried.push(serde_json::json!({ "version": version, "absent": absent, "changed": changed }));
+        let mut entry = serde_json::json!({ "version": version, "absent": absent, "changed": changed });
+        let table_path = patches_dir.join("win_rates").join(format!("{version}.json"));
+        if table_path.exists() {
+            let table = read_json(&table_path);
+            let at = *seen_tables.entry(table.to_string()).or_insert(tables.len());
+            if at == tables.len() {
+                tables.push(table);
+            }
+            entry["winRates"] = serde_json::Value::from(at);
+        }
+        carried.push(entry);
     }
-    serde_json::json!({ "order": versions, "patches": patches, "versions": carried }).to_string()
+    serde_json::json!({ "order": versions, "patches": patches, "winRates": tables, "versions": carried })
+        .to_string()
 }
 
 /// R767000: what turns `now`'s entry back into `old`'s: `old`'s top-level keys whose value differs

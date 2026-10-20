@@ -192,16 +192,19 @@
   {
     "version": "v0.3.15",
     "commit": "6c9bcfee3d649d2c6b9b90a83d0042dde3f3b9c5",
-    "blob": "fe8ab96361f5e167c564502dc3b004b9b3d06911"
+    "blob": "fe8ab96361f5e167c564502dc3b004b9b3d06911",
+    "winRatesBlob": "79a6d3bc8a9ff9b93b5acf7921d4fb0c6f8925a3"
   },
   {
     "version": "v0.3.16",
     "commit": "1fe9a19b9398c062eba7b2e4afd5f7101feaf6fd",
-    "blob": "6a9fd0a7a2f0c4093abfd514fb34b868757d9dfb"
+    "blob": "6a9fd0a7a2f0c4093abfd514fb34b868757d9dfb",
+    "winRatesBlob": "79a6d3bc8a9ff9b93b5acf7921d4fb0c6f8925a3"
   },
   {
     "version": "v0.3.17",
     "commit": "402651365937a39f14d215df30ef85409b24db0a",
-    "blob": "45f0a992aa02229bbd1ca2bff01b089c38b4b872"
+    "blob": "45f0a992aa02229bbd1ca2bff01b089c38b4b872",
+    "winRatesBlob": "79a6d3bc8a9ff9b93b5acf7921d4fb0c6f8925a3"
   }
 ]

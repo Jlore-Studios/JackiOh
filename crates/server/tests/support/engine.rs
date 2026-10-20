@@ -52,12 +52,13 @@ use std::time::Duration;
 
 use indexmap::IndexMap;
 use jackioh_engine::config::{DECK_SIZE, HERO_HEALTH};
-use jackioh_engine::effects::{choose_mode, lose_health};
+use jackioh_engine::effects::{add_to_hand, choose_mode, lose_health};
 use jackioh_engine::game_over::end_game;
 use jackioh_engine::prelude::json_as;
 use jackioh_engine::script::Effect;
 use jackioh_engine::state::validate_deck;
 use jackioh_engine::testkit::{register_catalog, register_scripts};
+use jackioh_engine::win_rates::win_rate_leader;
 use jackioh_engine::wire::{GameEvent, GameOverReason, GlitchOutcome, Winner};
 use jackioh_engine::{
     Action, ActionBody, CardDef, CardDefs, CardScripts, CreateGameOptions, GameState, Hook, Phase, PlayerId,
@@ -493,6 +494,50 @@ pub fn install_panicking_test_cards(runs: Arc<AtomicUsize>) {
             },
         );
     }
+    register_scripts(scripts);
+}
+
+/// R1266000, R1329000: a 0-cost Quickdraw Spell whose Cry adds the card with the highest win rate to
+/// its player's hand, as Meditative #50 CN Tech's does, and nothing when no row qualifies. It is not in
+/// `install_test_cards`'s catalog: `tech_test_catalog` adds it, and `install_tech_test_cards` scripts it.
+pub const TEST_TECH: &str = "test-tech";
+
+/// `test_catalog` plus `TEST_TECH`, past `TEST_PANICS_AT_TURN_END`'s index.
+pub fn tech_test_catalog() -> CardDefs {
+    let mut defs = test_catalog();
+    let index = FIRST_TEST_INDEX + test_card_defs().len() as i32 + 3;
+    defs.insert(
+        TEST_TECH.to_string(),
+        test_def(
+            TEST_TECH,
+            index,
+            "Quickdraw. Add the card with the highest win rate to your hand.",
+        ),
+    );
+    defs
+}
+
+/// R1266000, R1329000: `install_test_cards`' cards plus `TEST_TECH`, which reads the win-rate table
+/// the fold it runs in reads (`win_rate_leader`).
+pub fn install_tech_test_cards() {
+    jackioh_cards::register_all();
+    register_catalog(tech_test_catalog());
+    let script = Script {
+        static_flags: quickdraw(),
+        cry: Some(hook(|_ctx| {
+            win_rate_leader(TEST_TECH)
+                .map_or_else(Vec::new, |id| vec![add_to_hand(json_as(json!({ "defId": id })))])
+        })),
+        ..Script::default()
+    };
+    let mut scripts = test_scripts();
+    scripts.insert(
+        TEST_TECH.to_string(),
+        CardScripts {
+            base: script.clone(),
+            radiant: script,
+        },
+    );
     register_scripts(scripts);
 }
 
