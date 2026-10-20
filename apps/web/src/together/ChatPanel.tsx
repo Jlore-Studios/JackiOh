@@ -1,6 +1,6 @@
 // A conversation with one friend (#936, B53, B58): the newest page of it, read again every
-// `CHAT_POLL_MS` while the panel is open (a read marks it read), earlier pages on request, a reply
-// box, and a report on each of the friend's messages.
+// `CHAT_POLL_MS` while the panel is open (a read marks it read), earlier pages on request, each by the
+// cursor the page after it answered (R1384000), a reply box, and a report on each of the friend's messages.
 //
 // CLAUDE.md rule 7: the box keeps a draft to `CHAT_MAX_CHARS` and will not send an empty one, as
 // UX; what a message may say, how many may be sent, and the word filter are the server's, and its
@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type ReactElement } from "react";
 
-import { CHAT_MAX_CHARS, CHAT_PAGE, CHAT_POLL_MS } from "@jackioh/server-config";
+import { CHAT_MAX_CHARS, CHAT_POLL_MS } from "@jackioh/server-config";
 
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
 import { getChat, reportMessage, sendChat, type ChatMessage, type PlayerRef } from "../net/social.ts";
@@ -54,8 +54,8 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
   const titleId = useId();
   const [messages, setMessages] = useState<readonly ChatMessage[]>([]);
   const [loaded, setLoaded] = useState(false);
-  /** Whether a page before the oldest held may exist: the last page read before it was a full one. */
-  const [earlier, setEarlier] = useState(false);
+  /** The cursor of the page before the oldest held (R1384000); null when nothing older is left. */
+  const [earlier, setEarlier] = useState<string | null>(null);
   const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -76,7 +76,7 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
         (page) => {
           if (cancelled) return;
           setMessages((held) => mergeMessages(held, page.messages));
-          if (first) setEarlier(page.messages.length >= CHAT_PAGE);
+          if (first) setEarlier(page.nextCursor);
           first = false;
           setLoaded(true);
         },
@@ -107,14 +107,13 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
   }, []);
 
   const loadEarlier = useCallback((): void => {
-    const oldest = messages[0];
-    if (oldest === undefined || loadingEarlier) return;
+    if (earlier === null || loadingEarlier) return;
     setLoadingEarlier(true);
-    attempt(() => getChat(friendId, oldest.createdAt))
+    attempt(() => getChat(friendId, earlier))
       .then(
         (page) => {
           setMessages((held) => mergeMessages(held, page.messages));
-          setEarlier(page.messages.length >= CHAT_PAGE);
+          setEarlier(page.nextCursor);
         },
         (cause: unknown) => {
           setError(messageOf(cause));
@@ -123,7 +122,7 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
       .finally(() => {
         setLoadingEarlier(false);
       });
-  }, [friendId, messages, loadingEarlier]);
+  }, [friendId, earlier, loadingEarlier]);
 
   const send = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -183,7 +182,7 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
       </header>
 
       <ol className="chat-panel__messages" ref={list} aria-live="polite">
-        {earlier ? (
+        {earlier !== null ? (
           <li className="chat-panel__earlier">
             <button type="button" className="link-button" data-testid={chatTestid.earlier} disabled={loadingEarlier} onClick={loadEarlier}>
               {loadingEarlier ? t("Loading…") : t("Show earlier messages")}
