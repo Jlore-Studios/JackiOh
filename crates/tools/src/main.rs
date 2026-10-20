@@ -26,6 +26,7 @@ mod selfplay;
 mod spec;
 mod stats;
 mod sweep;
+mod technical;
 mod think;
 mod trace;
 mod winrates;
@@ -57,7 +58,7 @@ enum Command {
     Classify(classify::Args),
     /// Print the newest version in `patches.json` (part 22).
     CatalogVersion(catalog::VersionArgs),
-    /// The card patch history: `patches <version> <date> "<title>"`, `patches check`, `patches ship` (part 22).
+    /// The card patch history: `patches <version> <date> "<title>"`, `patches check`, `patches ship` (part 22), `patches log <base>..<head>` (R1369000).
     Patches(patches::Args),
     /// The AI's quality gates and `gate merge <dir>` (part 22).
     Gate(gate::Args),
