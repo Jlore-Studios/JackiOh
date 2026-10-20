@@ -6457,6 +6457,13 @@
     "1379": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T11:59:57Z",
+        "difficulty": "hard",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "'design across crates': one handshake contract changes in the server, the web client and the e2e clients together, under the deploy rule that the server must keep serving the previous day's client"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
