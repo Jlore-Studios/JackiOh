@@ -7313,24 +7313,20 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "crates/server/README.md",
-            "crates/server/src/economy/mod.rs",
-            "crates/server/src/economy/store.rs",
-            "crates/server/tests/api/mod.rs",
-            "crates/server/tests/store/contract.rs"
+            "spec/INDEX.md"
           ],
-          "from": "6bd93319bfa43e352a2262f1ec831bf030a35e11",
-          "main": "1ac1896f9e0d58f942a1f66a447a63b9d9d0968e"
+          "from": "7e76d922abdd14223f6ebb9cd565294a691f3273",
+          "main": "ac3e7916135bff200839c25cc3152da60bc5ab1d"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39382125765",
+            "run": "39394636430",
             "tier": "strong"
           }
         ],
-        "sha": "7e76d922abdd14223f6ebb9cd565294a691f3273",
+        "sha": "69992c79b2637858884f8fa5511a84093d8b2fd6",
         "tiers": {
           "claude": "strong"
         }
