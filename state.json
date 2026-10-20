@@ -8018,6 +8018,8 @@
       "run_id": "39489571789",
       "started_at": "2026-10-20T20:12:24Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
