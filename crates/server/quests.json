@@ -1,0 +1,23 @@
+{
+  "quests": [
+    { "id": "win-1", "title": "Win a game", "goal": { "kind": "winGames" }, "target": 1, "jlore": 50 },
+    { "id": "win-3", "title": "Win 3 games", "goal": { "kind": "winGames" }, "target": 3, "jlore": 80 },
+    { "id": "win-5", "title": "Win 5 games", "goal": { "kind": "winGames" }, "target": 5, "jlore": 100 },
+    { "id": "play-3", "title": "Play 3 games", "goal": { "kind": "playGames" }, "target": 3, "jlore": 50 },
+    { "id": "play-5", "title": "Play 5 games", "goal": { "kind": "playGames" }, "target": 5, "jlore": 70 },
+    { "id": "cards-20", "title": "Play 20 cards", "goal": { "kind": "playCards" }, "target": 20, "jlore": 60 },
+    { "id": "units-10", "title": "Play 10 Units", "goal": { "kind": "playUnits" }, "target": 10, "jlore": 60 },
+    { "id": "spells-5", "title": "Play 5 Spells", "goal": { "kind": "playSpells" }, "target": 5, "jlore": 60 },
+    { "id": "spells-12", "title": "Play 12 Spells", "goal": { "kind": "playSpells" }, "target": 12, "jlore": 90 },
+    { "id": "traps-3", "title": "Play 3 Traps", "goal": { "kind": "playTraps" }, "target": 3, "jlore": 60 },
+    { "id": "traps-fire-2", "title": "Have 2 of your Traps fire", "goal": { "kind": "fireTraps" }, "target": 2, "jlore": 70 },
+    { "id": "radiant-2", "title": "Play 2 Radiant cards", "goal": { "kind": "playRadiant" }, "target": 2, "jlore": 80 },
+    { "id": "attack-10", "title": "Attack 10 times with Units", "goal": { "kind": "attackWithUnits" }, "target": 10, "jlore": 60 },
+    { "id": "attack-25", "title": "Attack 25 times with Units", "goal": { "kind": "attackWithUnits" }, "target": 25, "jlore": 90 },
+    { "id": "core-8", "title": "Play 8 Core cards", "goal": { "kind": "playSetCards", "set": "Core" }, "target": 8, "jlore": 60 },
+    { "id": "classic-8", "title": "Play 8 Classic cards", "goal": { "kind": "playSetCards", "set": "Classic" }, "target": 8, "jlore": 60 },
+    { "id": "classic-plus-8", "title": "Play 8 Classic+ cards", "goal": { "kind": "playSetCards", "set": "Classic+" }, "target": 8, "jlore": 60 },
+    { "id": "meditative-8", "title": "Play 8 Meditative cards", "goal": { "kind": "playSetCards", "set": "Meditative" }, "target": 8, "jlore": 60 },
+    { "id": "meditative-plus-8", "title": "Play 8 Meditative+ cards", "goal": { "kind": "playSetCards", "set": "Meditative+" }, "target": 8, "jlore": 60 }
+  ]
+}

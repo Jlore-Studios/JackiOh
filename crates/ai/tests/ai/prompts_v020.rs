@@ -674,9 +674,9 @@ mod me_market_the_ai_answers_a_night_market {
 }
 
 /// #891: a prompt the other seat holds inside a simulation (`simulate`'s auto-answers, the opponent's
-/// reply) gets its answerer's best of its first AI_SEARCH.max_auto_answer_options answers, scored
-/// from the answerer's own seat, not the first one legal_actions lists. The greedy baseline keeps
-/// the first (`simulate_first_answers`), so the gates' yardstick stays put.
+/// reply) gets its answerer's best of AI_SEARCH.max_auto_answer_options answers drawn from all of
+/// them (#1382), scored from the answerer's own seat, not the first one legal_actions lists. The
+/// greedy baseline keeps the first (`simulate_first_answers`), so the gates' yardstick stays put.
 mod auto_answers_the_answerers_best {
     use super::*;
 
@@ -780,21 +780,111 @@ mod auto_answers_the_answerers_best {
         assert_eq!(counter.used(), options.len());
     }
 
-    /// "owner-hurt" comes after AI_SEARCH.max_auto_answer_options other answers, so it is never
-    /// tried: the opponent takes the first answer that spares it, one node per answer tried.
-    #[test]
-    fn only_the_first_max_auto_answer_options_answers_of_a_prompt_are_tried() {
+    /// #1382: the worlds (scenario seeds) a test of the drawn answers runs in, so that an answer one
+    /// world's draw leaves out is tried in another.
+    const WORLDS: usize = 8;
+
+    /// "chooser-hurt", AI_SEARCH.max_auto_answer_options - 1 answers that do nothing, then
+    /// "owner-hurt": one answer more than a prompt tries, the one that hurts the AI listed last.
+    fn past_the_cap() -> Vec<String> {
         let tried = AI_SEARCH.max_auto_answer_options as usize;
         let mut options = vec!["chooser-hurt".to_string()];
         options.extend((1..tried).map(|n| format!("nothing-{n}")));
         options.push("owner-hurt".to_string());
-        let state = their_mode("auto-answer-cap", &options);
+        options
+    }
+
+    /// The opponent's reply to `state` and the nodes it spent.
+    fn replied(state: &GameState) -> (GameState, usize) {
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        let after = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI))
+        let after = simulate_reply(state, AI, &counter, &hidden_card_ids(state, AI))
             .unwrap_or_else(|| panic!("the reply ran out of nodes"));
-        assert!(after.pending.is_none());
-        assert_eq!(after.players[AI].hero.health, state.players[AI].hero.health);
-        assert_eq!(after.players[HUMAN].hero.health, state.players[HUMAN].hero.health);
-        assert_eq!(counter.used(), tried);
+        (after, counter.used())
+    }
+
+    /// #1382: "owner-hurt" comes after AI_SEARCH.max_auto_answer_options other answers, and the
+    /// answers a prompt tries are drawn from all of them, so some world tries it and takes it. Each
+    /// prompt still costs exactly AI_SEARCH.max_auto_answer_options nodes, and the chooser never
+    /// takes the answer that hurts it.
+    #[test]
+    fn an_answer_listed_after_the_first_max_auto_answer_options_is_tried_in_some_world() {
+        let options = past_the_cap();
+        let mut taken = 0;
+        for world in 0..WORLDS {
+            let state = their_mode(&format!("auto-answer-late-{world}"), &options);
+            let (after, used) = replied(&state);
+            assert!(after.pending.is_none());
+            assert_eq!(used, AI_SEARCH.max_auto_answer_options as usize);
+            assert_eq!(after.players[HUMAN].hero.health, state.players[HUMAN].hero.health);
+            if after.players[AI].hero.health < state.players[AI].hero.health {
+                taken += 1;
+            }
+        }
+        assert!(taken > 0, "\"owner-hurt\" was taken in none of {WORLDS} worlds");
+    }
+
+    /// #1382: the same answers listed in another order are tried and taken alike: every rotation of
+    /// the list reaches the same state for the same nodes.
+    #[test]
+    fn the_answers_a_prompt_tries_do_not_depend_on_the_order_it_lists_them_in() {
+        let options = past_the_cap();
+        let reached = |options: &[String]| {
+            let (after, used) = replied(&their_mode("auto-answer-order", options));
+            (hash_state(&after), used)
+        };
+        let listed = reached(&options);
+        for shift in 1..options.len() {
+            let mut rotated = options.clone();
+            rotated.rotate_left(shift);
+            assert_eq!(reached(&rotated), listed, "{rotated:?}");
+        }
+    }
+
+    /// The AI's own reward prompt over `rewards` (each its own label), on its turn, waiting.
+    fn own_rewards(seed: &str, rewards: &[String]) -> GameState {
+        let rewards: Vec<Value> = rewards
+            .iter()
+            .map(|id| json!({ "id": id, "label": id }))
+            .collect();
+        let effect = effects::choose_reward(json_as(json!({ "step": "reward", "rewards": rewards })));
+        let state = waiting(&asked(seed, effect, json!({}), AI));
+        assert_eq!(state.pending.as_ref().map(|pending| pending.player_id), Some(AI));
+        state
+    }
+
+    /// `own_prompt_score` of `state`, which spends AI_SEARCH.max_auto_answer_options nodes.
+    fn looked_past(state: &GameState) -> f64 {
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        let score = own_prompt_score(state, AI, &counter).unwrap_or_else(|| panic!("no lookahead score"));
+        assert_eq!(counter.used(), AI_SEARCH.max_auto_answer_options as usize);
+        score
+    }
+
+    /// #1382: the beam's look past the seat's own prompt (`own_prompt_score`, #1112) draws its
+    /// answers the same way: "hurt-enemy", listed after AI_SEARCH.max_auto_answer_options rewards
+    /// that do nothing, raises the score in some world, and every rotation of the list scores alike.
+    #[test]
+    fn the_look_past_the_seats_own_prompt_draws_from_every_answer_in_any_order() {
+        let tried = AI_SEARCH.max_auto_answer_options as usize;
+        let nothing: Vec<String> = (1..=tried).map(|n| format!("nothing-{n}")).collect();
+        let mut late = nothing.clone();
+        late.push("hurt-enemy".to_string());
+        let mut raised = 0;
+        for world in 0..WORLDS {
+            let seed = format!("own-answer-late-{world}");
+            let score = looked_past(&own_rewards(&seed, &late));
+            for shift in 1..late.len() {
+                let mut rotated = late.clone();
+                rotated.rotate_left(shift);
+                assert_eq!(looked_past(&own_rewards(&seed, &rotated)), score, "{rotated:?}");
+            }
+            if score > looked_past(&own_rewards(&seed, &nothing)) {
+                raised += 1;
+            }
+        }
+        assert!(
+            raised > 0,
+            "\"hurt-enemy\" raised the score in none of {WORLDS} worlds"
+        );
     }
 }

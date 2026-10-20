@@ -18,6 +18,7 @@ pub mod game_records;
 pub mod health;
 pub mod http;
 pub mod practice;
+pub mod quests;
 pub mod queue;
 pub mod ranked;
 pub mod rematch;

@@ -61,6 +61,13 @@ class TitleTests(unittest.TestCase):
         self.assertIn("Shipped as **v0.3.17b**", gh.list_comments(5)[-1]["body"])
         self.assertEqual(titles.shipped(after, after), [])
 
+    def test_a_push_that_renames_shipped_versions_ships_nothing(self):
+        before = [{"version": "v0.3.16"}, {"version": "v0.3.17"}]
+        retcon = [{"version": "v0.4.0b"}, {"version": "v0.4.0c"}]
+        self.assertEqual(titles.shipped(before, retcon), [])
+        self.assertEqual(titles.shipped(before, [*retcon, {"version": "v0.4.0d"}]), [])
+        self.assertEqual(titles.shipped(before, before[:1]), [])
+
 
 
 class RetconTests(unittest.TestCase):
