@@ -12,8 +12,10 @@
 #   rust       fmt and clippy, and, once the card scripts are Luau, luau-analyze --mode=strict; cargo
 #              test with the generated-types diff (V20), and the same diff for the scripts' typed
 #              module (#442 L10); the release build of jackioh and jackioh-server, made once for the
-#              run; the catalog, patches and spec checks and 200 fuzz seeds on that build; and, on a
-#              pull request from a training lane's ai/* branch, the training gate (README §8).
+#              run; the catalog, patches and spec checks and 200 fuzz seeds on that build; on a pull
+#              request, the classifier (#1360, R1365000, R1370000): its kind and tier as labels, and
+#              its pending fragments held to what it does to the cards; and, on a pull request from a
+#              training lane's ai/* branch, the training gate (README §8).
 #   web        the two WASM modules, side by side, and the e2e client on them, each built once for
 #              the run; typecheck and eslint; the web's unit tests in thirds, without the audio, fx
 #              and asset tests.
@@ -303,6 +305,17 @@ jobs:
           path: ${{ runner.temp }}/rust-release.tgz
           if-no-files-found: error
           retention-days: 1
+      # main's jackioh, one cache entry per commit (about 12 MB packed), for `rust (classify)`: a
+      # pull request's stage 2 runs against the build of its base, so it builds only its own head.
+      # Saved from main alone; a pull request only restores it.
+      - name: keep main's jackioh for the classifier
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        run: mkdir -p "$RUNNER_TEMP/main-jackioh" && cp target/release/jackioh "$RUNNER_TEMP/main-jackioh/jackioh"
+      - if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/main-jackioh
+          key: jackioh-main-${{ github.sha }}
 
   # `cargo jackioh <command>` (SURFACE §12) without the cargo: the binary rust-build made.
   rust-checks:
@@ -329,6 +342,164 @@ jobs:
         run: target/release/jackioh spec check
       - name: fuzz, seeds 1-200
         run: target/release/jackioh fuzz --seeds 200
+
+  # The base's jackioh, for the classifier's stage 2 (below), beside rust-build so the two builds run
+  # at once: main's own run cached it per commit (`rust-build`), or, when that run has not finished
+  # or never ran (main's runs queue behind each other), it is built here. Only a pull request that
+  # touches what stage 2 checks needs it: a card script, the engine, the cards crate's shared code or
+  # data, or the AI. The paths here are a superset of the classifier's own (`classify::area`), so a
+  # pull request stage 1 sends to stage 2 always has the base's build.
+  rust-base-build:
+    name: rust (base build)
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: need
+        name: whether stage 2 may need the base
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if git diff --no-renames --name-only "$BASE" HEAD | grep -Eq '^crates/(engine/src/|cards/src/|cards/data/|cards/build\.rs$|ai/)'; then
+            echo "base=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "base=false" >> "$GITHUB_OUTPUT"
+            echo "nothing stage 2 checks changed"
+          fi
+      - id: cached
+        if: ${{ steps.need.outputs.base == 'true' }}
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/main-jackioh
+          key: jackioh-main-${{ github.event.pull_request.base.sha }}
+      - if: ${{ steps.need.outputs.base == 'true' && steps.cached.outputs.cache-hit != 'true' }}
+        uses: ./.github/actions/setup
+        with:
+          node: "false"
+      # As the training gate builds main: a worktree beside this one, into a target directory of its
+      # own, so the head's build units are never reused for the base (#585).
+      - name: the base built here, since main's run has not cached it
+        if: ${{ steps.need.outputs.base == 'true' && steps.cached.outputs.cache-hit != 'true' }}
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          CARGO_PROFILE_RELEASE_LTO: "false"
+        run: |
+          git worktree add --detach "$RUNNER_TEMP/base" "$BASE"
+          cargo build --release -p jackioh-tools --manifest-path "$RUNNER_TEMP/base/Cargo.toml" --target-dir "$RUNNER_TEMP/base-target"
+          mkdir -p "$RUNNER_TEMP/main-jackioh"
+          cp "$RUNNER_TEMP/base-target/release/jackioh" "$RUNNER_TEMP/main-jackioh/jackioh"
+      - name: pack it
+        if: ${{ steps.need.outputs.base == 'true' }}
+        run: tar -czf "$RUNNER_TEMP/rust-base.tgz" -C "$RUNNER_TEMP/main-jackioh" jackioh
+      - if: ${{ steps.need.outputs.base == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-base
+          path: ${{ runner.temp }}/rust-base.tgz
+          if-no-files-found: error
+          retention-days: 1
+
+  # The classifier (#1360; R1365000, R1370000) on a pull request: what the change does to the game,
+  # its kind and tier as the pull request's labels (`kind:cards`, `tier:micro`, …), and its pending
+  # fragments held to it: a card that plays differently with no fragment claiming it fails, and so
+  # does a fragment claiming a play or a rule the base build does not show. Stage 1 reads the diff
+  # alone; only when it leaves something unchecked (a card script, the engine, the AI) does stage 2
+  # run, against rust-base-build's jackioh of the base commit. The checkout is the merge commit, the
+  # build the one rust-build made of it. `pull-requests: write` and `issues: write` for its labels
+  # alone; the job runs no code but this repository's own build.
+  rust-classify:
+    name: rust (classify)
+    needs: [changes, rust-build, rust-base-build]
+    if: ${{ needs.changes.outputs.full == 'true' && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: rust-release
+          path: ${{ runner.temp }}
+      - name: unpack the binaries
+        run: tar -xzf "$RUNNER_TEMP/rust-release.tgz"
+      - id: stage1
+        name: stage 1, from the diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          target/release/jackioh classify --base "$BASE" --json | tee "$RUNNER_TEMP/stage1.json"
+          if jq -e '.unchecked | length > 0' "$RUNNER_TEMP/stage1.json" > /dev/null; then
+            echo "parent=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "parent=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: ${{ steps.stage1.outputs.parent == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-base
+          path: ${{ runner.temp }}
+      - id: classify
+        name: the kind, the tier, and the fragments' claims
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          PARENT: ${{ steps.stage1.outputs.parent }}
+        run: |
+          set -uo pipefail
+          parent=()
+          if [ "$PARENT" = true ]; then
+            mkdir -p "$RUNNER_TEMP/base-jackioh"
+            tar -xzf "$RUNNER_TEMP/rust-base.tgz" -C "$RUNNER_TEMP/base-jackioh"
+            parent=(--parent-bin "$RUNNER_TEMP/base-jackioh/jackioh")
+          fi
+          target/release/jackioh classify --base "$BASE" "${parent[@]}" --claims --json > "$RUNNER_TEMP/classify.json"
+          status=$?
+          cat "$RUNNER_TEMP/classify.json"
+          echo "labels=$(jq -c '.labels // []' "$RUNNER_TEMP/classify.json" 2>/dev/null || echo '[]')" >> "$GITHUB_OUTPUT"
+          jq -r '.problems // [] | .[] | "::error title=classify::" + .' "$RUNNER_TEMP/classify.json" 2>/dev/null || true
+          exit "$status"
+      # The labels, as bot/harness/config.py's LABELS writes them (`--force` keeps the colour and
+      # description that list gives), any other kind and tier label off first.
+      # A label is the classifier's word, not a gate: a token that may not write labels (a fork's
+      # pull request) warns here and leaves the check to the step above.
+      - name: label the pull request
+        if: ${{ !cancelled() && steps.classify.outputs.labels != '' && steps.classify.outputs.labels != '[]' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          LABELS: ${{ steps.classify.outputs.labels }}
+        run: |
+          set -euo pipefail
+          declare -A colour=([kind:cards]=d93f0b [kind:ai]=5319e7 [kind:app]=1d76db [kind:internal]=c5def5 [tier:major]=b60205 [tier:patch]=fbca04 [tier:micro]=fef2c0)
+          declare -A said=(
+            [kind:cards]="It changes how a card plays, or its words: a patch version (#1360)"
+            [kind:ai]="It changes the practice and ladder AI's decisions; no version (#1360)"
+            [kind:app]="It changes the client or the server, what players see and use; no version (#1360)"
+            [kind:internal]="CI, bots, tooling, docs, tests or a refactor; no version (#1360)"
+            [tier:major]="A set ships: the next v0.Z.0 (#1360)"
+            [tier:patch]="10 or more cards play differently, or a rule every game meets: the next v0.Z.X (#1360)"
+            [tier:micro]="Fewer cards, or their words alone: the next letter (#1360)")
+          wanted=$(jq -r '.[]' <<< "$LABELS")
+          gh api "repos/$GITHUB_REPOSITORY/issues/$NUMBER/labels" --jq '.[].name' | while IFS= read -r old; do
+            case "$old" in
+              kind:* | tier:*) grep -qxF "$old" <<< "$wanted" || gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$NUMBER/labels/$old" > /dev/null ;;
+            esac
+          done
+          while IFS= read -r label; do
+            gh label create "$label" --color "${colour[$label]}" --description "${said[$label]}" --force > /dev/null
+            gh api "repos/$GITHUB_REPOSITORY/issues/$NUMBER/labels" -f "labels[]=$label" > /dev/null
+          done <<< "$wanted"
+          echo "labelled #$NUMBER: $wanted"
 
   # README §8: a pull request from a training lane's branch (ai/improve, ai/unban) may change only
   # crates/ai/** and training/history/**, must be exactly one generation on from main, and must pass
@@ -411,7 +582,7 @@ jobs:
 
   rust:
     name: rust
-    needs: [changes, rust-lint, rust-test, rust-build, rust-checks, training-gate]
+    needs: [changes, rust-lint, rust-test, rust-build, rust-checks, rust-classify, training-gate]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -423,10 +594,12 @@ jobs:
           TEST: ${{ needs.rust-test.result }}
           BUILD: ${{ needs.rust-build.result }}
           CHECKS: ${{ needs.rust-checks.result }}
+          CLASSIFY: ${{ needs.rust-classify.result }}
+          PULL: ${{ github.event_name == 'pull_request' }}
           TRAINING: ${{ needs.training-gate.result }}
           AI_BRANCH: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'ai/') }}
         run: |
-          echo "full=$FULL lint=$LINT test=$TEST build=$BUILD checks=$CHECKS training-gate=$TRAINING (ai/* branch: $AI_BRANCH)"
+          echo "full=$FULL lint=$LINT test=$TEST build=$BUILD checks=$CHECKS classify=$CLASSIFY training-gate=$TRAINING (ai/* branch: $AI_BRANCH)"
           if [ "$FULL" = false ]; then
             echo "only files no job reads changed (scripts/ci-scope.sh)"
             exit 0
@@ -435,6 +608,9 @@ jobs:
           test "$TEST" = success
           test "$BUILD" = success
           test "$CHECKS" = success
+          if [ "$PULL" = true ]; then
+            test "$CLASSIFY" = success
+          fi
           if [ "$AI_BRANCH" = true ]; then
             test "$TRAINING" = success
           fi

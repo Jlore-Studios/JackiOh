@@ -46,8 +46,9 @@ secret or a token, a dashboard setting such as Vercel's or Render's, an account)
 the thread to the people (`human required`, the bot's labels off) and names them.
 
 The title becomes the squash commit's subject, and a check holds it to the convention: usually
-the issue's own title (`Patch v0.3.X: …`, `CI: …`, `Architecture: …`), with its version number
-kept. A title that breaks the convention is replaced by the issue's.
+the issue's own title (`Patch: …`, or an older `Patch v0.3.X: …`, `CI: …` or `Architecture: …`
+it was opened with). Never put a version in it: `patches ship` names a card change's version when it
+ships and retitles the issue and the pull request. A title that breaks the convention is replaced by the issue's.
 
 After the first line, write the full pull request description in Markdown for the whole change on this
 branch (not only this pass): what changed and why, how it was tested, the decisions made, and for

@@ -25,7 +25,7 @@ index in three digits after a `c`, then its slug with every `-` and `.` an `_` (
 | 8 | `apps/web/src/audio/card-audio.json5` | the card's entry in catalog order, its name in a comment beside its id: a Unit's play and death lines, anything else's cast line, and any effects or attack hook (R655; the file's header says how) | `voice-lines.test.ts`, `voiceData.test.ts` |
 | 9 | `crates/cards/flavour.json` | the card's flavour line, `"<id>": { "flavour": "…" }`: one short line in the source notes' voice, no rules words, at most 120 characters (R660); it is not card data, so no fragment claims it | `tests/cross/flavour.rs`, `apps/web/src/cards/flavour.test.tsx` |
 | 10 | a pinned pool, when the card joins one | `tests/cross/query.rs` names the pools the spec pins down card by card (the KY pool, the (1) Cost Traps, R35's Legendaries, …) | `tests/cross/query.rs` |
-| 11 | `crates/cards/patches/pending/<version>.json` | the fragment, `cargo jackioh patches …` ([§3](#3-the-patch-and-its-order)), which also claims the win-rate table (`"winRates": true`) when the patch refreshes `crates/cards/data/win_rates.json` (R1329000); the shipped history, the tables under `patches/win_rates/` and the version sites move at promotion, not here | `patches check` |
+| 11 | `crates/cards/patches/pending/<slug>.json` | the fragment, `cargo jackioh patches …` ([§3](#3-the-patch-and-its-order)), which also claims the win-rate table (`"winRates": true`) when the patch refreshes `crates/cards/data/win_rates.json` (R1329000); the shipped history, the tables under `patches/win_rates/` and the version sites move at promotion, not here | `patches check` |
 | 12 | a Legendary or Mythic, or a token printed so: `apps/web/scripts/music/tracks.mjs`, `apps/web/src/audio/music-cards.json`, `assets/music/LICENSES.md` | its intro (R1352): an `INTRO_CARDS` row (its facts, and a `tune` if it is hand-tuned), its `"intro": "intro-<id>"` entry, `pnpm --filter @jackioh/web gen:music` (FluidSynth and ffmpeg, Linux included) with the rendered file and manifest row committed, and its licence row | `music-assets.test.ts` (the daily audio run) |
 | 13 | `crates/cards/chinese.json` | the card's Chinese entry (R1303): `{ name, base, radiant }` in Simplified Chinese, each face keeping exactly its English face's `{key}`s, plus `previews` exactly where the script declares `preview`; it is not card data, so no fragment claims it | `tests/cross/chinese.rs` |
 
@@ -134,16 +134,21 @@ mod tests {
 
 ## 3. The patch, and its order
 
-A change to card data is a patch (R388, R646). A normal patch (`Patch v0.2.X: …`) takes the next number
-after the newest card patch on `main`, shipped or pending (R743); a micro patch (`Patch v0.2.Y: …`)
-keeps its `Y` until promotion names it with the next letter (R650); never reopen a shipped one. A branch claims its card changes with a pending fragment:
+A change to a card is a patch (R388, R646). No one names its version: `patches ship` names it when it
+ships, from what it does to the cards (R1366000): a major when a set ships, a patch (the next X) when
+10 or more card families play differently, a micro (the next letter) for fewer or for wording alone;
+never reopen a shipped one. A branch claims its card changes with a pending fragment:
 
 ```
-cargo jackioh patches <version> <date> "<title>" --source "<issue or PR>" --notes "<what changed>"
+cargo jackioh patches "<title>" --source "<issue or PR>" --notes "<what changed>" [--plays <ids>] [--rule]
 ```
 
-It writes or updates `crates/cards/patches/pending/<version>.json`, containing the version, title,
-sources, notes, the player note and every catalog id the patch changes. It never changes the shipped
+It writes or updates `crates/cards/patches/pending/<slug>.json`, named after the title, containing the
+title, sources, notes, the player note and every catalog id the patch changes. A card whose script (or
+an engine rule) changed how it plays with no catalog change is claimed with `--plays`, and a rule every
+game meets with `--rule`: `cargo jackioh classify --base origin/main --parent-bin <main's jackioh>`
+names them, and CI's `rust (classify)` fails a pull request whose fragments claim less or more than it
+finds (R1370000). It never changes the shipped
 history, its snapshots or the catalog version. The player note, `player` (R724001), is what the Patch
 notes page shows of the patch: no flag sets it, so write it into the fragment by hand, a short title
 and one fact per line under `new`, `balance`, `changes`, `text` and `fixes`

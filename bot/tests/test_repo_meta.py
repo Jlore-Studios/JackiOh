@@ -36,6 +36,14 @@ class PullTitleTests(unittest.TestCase):
         "AI gen 14 (learn): the learned evaluation, retrained on 100,000 games",  # learn.yml
     )
     CONVENTIONAL = (
+        # #1360: every thread's form, a shipped card change's, and a part's.
+        "Patch: Activate abilities work again",
+        "Patch v0.3.18: Activate abilities work again",
+        "Patch v0.4.0c: one more fix",
+        "Patch (part 2 of 8): fragments without a version",
+        "Patch: patch numbers (part 2 of 8): fragments without a version",
+        'Revert "Patch: Activate abilities work again"',
+        # The older prefixes, until the title retcon (#1372).
         "Patch v0.3.X: Activate abilities work again",
         "Patch v0.3.Y: fix the UI of the rematch button",
         "Patch v0.3.1: card text pass",
@@ -56,6 +64,10 @@ class PullTitleTests(unittest.TestCase):
         "bot: build pass 1 for #85",  # a bot commit's subject, #169
         "Patch v0.2.X Classic & Classic+ balance",
         "patch v0.3.X: lower case",
+        "Patch:",
+        "Patch : a space",
+        "Patch v0.3.Z: no such guess",
+        "Patch (part two of 8): words",
         "Architecture:",
         "patches ship: ",
         "patches ship: v0.3.Y",  # ship names a micro patch's version
@@ -130,8 +142,14 @@ class IssueFormTests(unittest.TestCase):
              if path.name != "config.yml"}
 
     def test_one_form_per_kind(self):
-        self.assertEqual(sorted(self.forms), ["architecture.yml", "bug.yml", "micro-patch.yml",
-                                              "night-bot.yml", "patch.yml"])
+        # #1370: the Patch and Micro patch forms are one, since no form guesses a version.
+        self.assertEqual(sorted(self.forms), ["architecture.yml", "bug.yml", "night-bot.yml",
+                                              "patch.yml"])
+
+    def test_every_form_titles_its_issue_patch_with_no_version(self):
+        for name, text in self.forms.items():
+            self.assertEqual(re.search(r'^title: "(.*)"$', text, re.M).group(1), "Patch: ", name)
+            self.assertNotRegex(text, r"v0\.\d+\.[XY]\b", name)
 
     def test_each_form_titles_and_labels_its_issue_and_leaves_its_type_to_triage(self):
         for name, text in self.forms.items():
@@ -240,6 +258,16 @@ class LabelListTests(unittest.TestCase):
         self.assertIn(': "${RELEASE_LABEL:=production merge}"', script)
         self.assertIn(f'gh label create "$RELEASE_LABEL" --color {color} --force', script)
         self.assertIn(f'--description "{description}"', script)
+
+    def test_the_kind_and_tier_labels_are_as_ci_writes_them(self):
+        """ci.yml's `rust (classify)` creates its labels with `--force`, which would undo any other
+        colour or description (#1370)."""
+        text = read("ci.yml")
+        block = job(text, "rust-classify")
+        for name in (*config.KIND_LABELS, *config.TIER_LABELS):
+            color, description = config.LABELS[name]
+            self.assertIn(f"[{name}]={color}", block, name)
+            self.assertIn(f'[{name}]="{description}"', block, name)
 
     def test_setup_creates_the_missing_and_brings_back_the_hand_changed(self):
         gh = FakeGitHub()

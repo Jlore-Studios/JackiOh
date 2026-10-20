@@ -1,6 +1,6 @@
 name: Architecture or CI
 description: The repository, tooling, CI, deploys and agent setup.
-title: "Architecture: "
+title: "Patch: "
 labels: ["architecture"]
 body:
   - type: markdown
@@ -8,13 +8,13 @@ body:
       value: |
         Titles and labels follow [docs/issues-and-patches.md](https://github.com/Jlore-Studios/JackiOh/blob/main/docs/issues-and-patches.md).
 
-        - **Title:** `Architecture: <…>`, or `CI: <…>` for CI's jobs and checks. Keep the alerts' own titles (`ci-duration.yml` finds its issue by its exact title).
+        - **Title:** `Patch: <what it does>`, as every issue is titled (#1360): the change's kind (Cards, AI, App or Internal) is the classifier's, on its pull request. Keep the alerts' own titles (`ci-duration.yml` finds its issue by its exact title).
         - **Who does it:** a change to `.github/`, `bot/`, `.harness/` or `.squishy/` is people's work: the night bot may not change those paths, so choose People for it. Choose below, or later label it `human` (people) or `bot:build` (the night bot). Your choice, difficulty and priority become labels, and triage adds the type label and the issue type (Task, Bug or Feature); with no difficulty, the bot's planner rates it.
   - type: dropdown
     id: kind
     attributes:
       label: Kind
-      description: "For CI, retitle it `CI: …`."
+      description: "Which part of the repository it is about."
       options:
         - Architecture
         - CI
