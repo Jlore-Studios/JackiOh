@@ -540,33 +540,44 @@ fn families_named(strings: &BTreeSet<String>, head: &Side, state: &GameState) ->
         .collect()
 }
 
-/// The families one divergence touches: those its texts differ on, else its action's cards. Empty
-/// when it names none (a deal, a turn's end, a rule every game meets).
+/// The instances an action or a legal action acts with: the card played, activated or switched,
+/// and the attacker, never the targets it names.
+fn actors(action: &Value) -> BTreeSet<String> {
+    ["instanceId", "attackerId"]
+        .iter()
+        .filter_map(|key| action.get(*key).and_then(Value::as_str))
+        .map(str::to_string)
+        .collect()
+}
+
+/// The families one divergence touches, most direct first: the cards whose own legal actions differ,
+/// else the card the diverging action acts with, else the cards whose instances differ between the
+/// two builds' texts. Empty when it names none (a deal, a turn's end, a rule every game meets).
 fn touched_by(divergence: &Divergence, game: &Value, head: &Side) -> Result<BTreeSet<String>> {
     let step_before = || match divergence.step.parse::<usize>() {
         Ok(0) => Some("begin".to_string()),
         Ok(n) => Some((n - 1).to_string()),
         Err(_) => None,
     };
-    let mut strings = BTreeSet::new();
+    let parent = divergence
+        .text
+        .as_ref()
+        .and_then(|path| fs::read_to_string(path).ok());
+    let (mut options, mut differing) = (BTreeSet::new(), BTreeSet::new());
     let mut state = None;
     if let Some((text, at)) = text_at(game, &divergence.step, &divergence.which)? {
-        if let Some(parent) = divergence
-            .text
-            .as_ref()
-            .and_then(|path| fs::read_to_string(path).ok())
-        {
+        if let Some(parent) = &parent {
             if divergence.which == "l" {
                 let (ours, theirs): (BTreeSet<&str>, BTreeSet<&str>) =
                     (text.lines().collect(), parent.trim_end().lines().collect());
                 for line in ours.symmetric_difference(&theirs) {
-                    strings_in(&serde_json::from_str(line).unwrap_or(Value::Null), &mut strings);
+                    options.extend(actors(&serde_json::from_str(line).unwrap_or(Value::Null)));
                 }
             } else if let (Ok(ours), Ok(theirs)) = (
                 serde_json::from_str::<Value>(&text),
                 serde_json::from_str::<Value>(parent.trim_end()),
             ) {
-                differing_strings(&ours, &theirs, &mut strings);
+                differing_strings(&ours, &theirs, &mut differing);
             }
         }
         state = Some(at);
@@ -579,28 +590,54 @@ fn touched_by(divergence: &Divergence, game: &Value, head: &Side) -> Result<BTre
     let Some(state) = state else {
         return Ok(BTreeSet::new());
     };
-    let mut touched = families_named(&strings, head, &state);
-    if touched.is_empty()
-        && let Some(action) = divergence
-            .action
-            .as_deref()
-            .and_then(|action| serde_json::from_str::<Value>(action).ok())
-    {
-        let mut named = BTreeSet::new();
-        strings_in(&action, &mut named);
-        touched = families_named(&named, head, &state);
+    let acting = divergence
+        .action
+        .as_deref()
+        .and_then(|action| serde_json::from_str::<Value>(action).ok())
+        .map(|action| actors(&action))
+        .unwrap_or_default();
+    for named in [options, acting, differing] {
+        let touched = families_named(&named, head, &state);
+        if !touched.is_empty() {
+            return Ok(touched);
+        }
     }
-    Ok(touched)
+    Ok(BTreeSet::new())
 }
 
-/// Whether `id` forced into `FORCED_GAMES` games diverge on the parent.
-fn forced_diverge(id: &str, parent: &Path) -> Result<bool> {
+/// A recorded traces file's games, by seed.
+fn games_in(traces: &Path) -> Result<HashMap<String, Value>> {
+    Ok(fs::read_to_string(traces)
+        .with_context(|| format!("reading {}", traces.display()))?
+        .lines()
+        .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+        .filter_map(|game| Some((game["seed"].as_str()?.to_string(), game)))
+        .collect())
+}
+
+/// Whether `id`'s own play diverges from the parent's in `FORCED_GAMES` games with it forced in: a
+/// divergence that touches its family, or one that touches no card at all. The other cards of those
+/// games are random, so a divergence one of them explains says nothing of `id`.
+fn forced_diverge(id: &str, head: &Side, parent: &Path) -> Result<bool> {
     let traces = temp_traces();
     let seeds: Vec<u32> = (1..=FORCED_GAMES).collect();
     record_seeds(&seeds, &[id.to_string()], &traces)?;
-    let (diverged, _) = parent_check(parent, &traces)?;
+    let (_, report) = parent_check(parent, &traces)?;
+    let games = games_in(&traces)?;
+    let own = family(id);
+    let mut diverged = false;
+    for divergence in divergences(&report) {
+        let Some(game) = games.get(&divergence.seed) else {
+            continue;
+        };
+        let touched = touched_by(&divergence, game, head)?;
+        if touched.is_empty() || touched.contains(&own) {
+            diverged = true;
+            break;
+        }
+    }
     let _ = fs::remove_file(&traces);
-    Ok(diverged > 0)
+    Ok(diverged)
 }
 
 /// A self-play run's games as the comparison reads them: seed, log, final hash and result (not the
@@ -649,7 +686,7 @@ fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
         if diff.play.contains(&family) || checked.scripts.contains(&family) {
             continue;
         }
-        let diverged = match forced_diverge(id, parent) {
+        let diverged = match forced_diverge(id, head, parent) {
             Ok(diverged) => diverged,
             Err(error) => {
                 // A card the recorder cannot force counts as changed, never as a refactor.
@@ -666,11 +703,7 @@ fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
         let seeds: Vec<u32> = (1..=UNFORCED_GAMES).collect();
         record_seeds(&seeds, &[], &traces)?;
         let (_, report) = parent_check(parent, &traces)?;
-        let games: HashMap<String, Value> = fs::read_to_string(&traces)?
-            .lines()
-            .filter_map(|line| serde_json::from_str::<Value>(line).ok())
-            .filter_map(|game| Some((game["seed"].as_str()?.to_string(), game)))
-            .collect();
+        let games = games_in(&traces)?;
         for divergence in divergences(&report) {
             let Some(game) = games.get(&divergence.seed) else {
                 continue;
