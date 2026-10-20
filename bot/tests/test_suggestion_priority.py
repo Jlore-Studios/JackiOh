@@ -66,7 +66,9 @@ class DeliveryTests(unittest.TestCase):
         # The survey was told every class and the priority it sets, highest first.
         prompt = runner.calls[0].prompt
         self.assertIn("- `data`: `priority:high`\n- `security`: `priority:medium`", prompt)
-        self.assertIn("- `feature`: no priority", prompt)
+        # In pickup order: no priority comes before low, so `feature` wins a tie with `fuzz`.
+        self.assertIn("- `polish`: `priority:medium`\n- `feature`: no priority (the owner's call)\n"
+                      "- `fuzz`: `priority:low`", prompt)
 
     def test_the_config_alone_sets_the_priority(self):
         h = Harness(self, suggestions=with_priorities({"fuzz": "high"}))

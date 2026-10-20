@@ -945,11 +945,11 @@ account.
    [`harness/declined.py`](harness/declined.py)) and never offers one again; one it offers anyway,
    by the same title, is not opened. The survey files each suggestion under one class
    (`prompts/suggest.md`: `fuzz`, `checks`, `telemetry`, `refactor`, `ai`, `fairness`,
-   `security`, `data`, `polish`, `feature`, the higher-priority one when two fit), and
+   `security`, `data`, `polish`, `feature`, the one picked up first when two fit), and
    `suggestions.priorities` in `.harness/config.json` maps a class to the `priority:*` label it
    opens with (#1409): `data` high, `security` and `polish` medium, the internal work (`fuzz`,
-   `checks`, `telemetry`, `refactor`, `ai`, `fairness`) low, so an approved one waits behind the
-   work you labelled. A `feature`, an unknown class or none opens with no priority, and the
+   `checks`, `telemetry`, `refactor`, `ai`, `fairness`) low, so an approved one waits behind
+   everything not labelled low. A `feature`, an unknown class or none opens with no priority, and the
    footer names the class and the label it set; relabel it to change it. Once a day it prunes the
    state file: an item's record goes 7 days after its thread closed, and a closed thread's bulky
    parts at once (`plan.prune`; GitHub's Contents API stops returning a file past 1 MB).

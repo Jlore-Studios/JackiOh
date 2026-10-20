@@ -41,11 +41,12 @@ from harness import prompts, review_rule, verdicts
 from harness import split as split_mod
 from harness import providers as providers_mod
 from harness.clock import iso, now as clock_now
-from harness.config import (BRANCH_PREFIX, COMMIT_PREFIX, MIN_TIER, NAME, PLAN_FLOOR,
-                            PRIORITY_LEVELS, SLASH, SUGGESTION_CLASSES, Config, child_env)
+from harness.config import (BRANCH_PREFIX, COMMIT_PREFIX, MIN_TIER, NAME, PLAN_FLOOR, SLASH,
+                            SUGGESTION_CLASSES, Config, child_env)
 from harness.git import MARKER_LINE, Git, Identity, worktree_add
 from harness.issueplan import PLAN_CHARS, PLAN_WORDS
 from harness.prompts import data
+from harness.queue import NO_PRIORITY, PRIORITY_TIERS
 from harness.providers import hosted
 from harness.redact import redact, redact_json
 from harness.runner import RunRequest, RunResult
@@ -1972,9 +1973,10 @@ class Worker:
 
 
 def class_priorities(priorities: Mapping[str, str]) -> str:
-    """Every suggestion class and the priority it opens with, highest first, for `suggest.md`."""
-    rank = {level: i for i, level in enumerate(PRIORITY_LEVELS)}
-    ordered = sorted(SUGGESTION_CLASSES, key=lambda k: rank.get(priorities.get(k, ""), len(rank)))
+    """Every suggestion class and the priority it opens with, in pickup order (`PRIORITY_TIERS`:
+    a class with no priority comes before one with `low`), for `suggest.md`."""
+    ordered = sorted(SUGGESTION_CLASSES, key=lambda k: PRIORITY_TIERS.get(
+        f"priority:{priorities.get(k)}", NO_PRIORITY))
     return "\n".join(f"- `{k}`: " + (f"`priority:{priorities[k]}`" if k in priorities
                                        else "no priority (the owner's call)") for k in ordered)
 

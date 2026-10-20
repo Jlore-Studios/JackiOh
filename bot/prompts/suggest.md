@@ -62,12 +62,14 @@ it opens with. Leave `class` out when none fits.
 - `polish`: client polish: small UX fixes a player notices.
 - `feature`: new features or modes.
 
-Each class opens with this priority today, highest first:
+Each class opens with this priority today, in the order the bot picks work up (no priority
+comes before `priority:low`):
 
 $priorities
 
 When two classes fit, take the one higher in that list: today a hidden-information leak that
-also bypasses an access rule is `security`, say.
+also bypasses an access rule is `security`, say, and a new mode with its fuzz coverage is
+`feature`.
 
 Each title follows `docs/issues-and-patches.md`, Titles, since nothing retitles it later: a small
 change to the game starts as `.github/ISSUE_TEMPLATE/micro-patch.yml`'s title does (`Patch v0.3.Y: `
