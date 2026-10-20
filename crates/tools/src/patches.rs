@@ -2366,6 +2366,9 @@ fn main(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
         );
         return Ok(());
     }
+    if command == Some("log") {
+        return crate::technical::main(repo_root, &argv[1..]);
+    }
     if command == Some("ship") {
         let result = ship_patches(repo_root)?;
         if result.shipped.is_empty() {
