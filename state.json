@@ -7869,6 +7869,13 @@
     "1430": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T18:45:01Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 1 fails: deleting the ~240-line handicap loop plus setup plumbing, report/JSON changes and new tests lands near the 400-line ceiling with no room to spare"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
