@@ -1,0 +1,79 @@
+# The version retcon (#1371, part 7 of #1360): `cargo jackioh patches retcon` renames every shipped
+# version to what the classifier names it (R1365000, R1366000, R1371000) and writes the one
+# migration that renames every stored name, as one catalog bump. A person runs it, by hand only,
+# once; a tree that holds crates/cards/patches/aliases.json was retconned, so a second run changes
+# nothing and opens nothing.
+#
+# It runs in patches-ship.yml's concurrency group, so a retcon and a promotion never interleave:
+# the retcon reads the patch history a promotion writes. The dry run's map goes into the job summary
+# first. The result goes up from `patches/retcon-<short sha>` and auto-merges by squash like a
+# promotion, pushed and opened with BOT_GITHUB_TOKEN so the required checks run on it.
+#
+# Afterwards each training box runs `cargo jackioh patches retcon --records ~/training-out` once,
+# for the record files outside the repository (training/README.md).
+name: patches retcon
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: patches-ship
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  retcon:
+    name: the version retcon
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+
+      - name: the map (dry run)
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo jackioh patches retcon --dry-run | tee "$RUNNER_TEMP/map.txt"
+          { echo "### patches retcon: the map"; echo; echo '```'; cat "$RUNNER_TEMP/map.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: the retcon
+        run: |
+          cargo jackioh patches retcon
+          cargo jackioh spec index
+
+      - name: open the retcon pull request
+        env:
+          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Retconned already; nothing to open."
+            exit 0
+          fi
+          version=$(cargo jackioh catalog-version)
+          head=$(git rev-parse HEAD)
+          branch="patches/retcon-$(git rev-parse --short HEAD)"
+          login=$(gh api user --jq .login)
+          id=$(gh api user --jq .id)
+          git checkout -b "$branch"
+          git add -A
+          git -c user.name="$login" -c user.email="$id+$login@users.noreply.github.com" \
+            commit -q -m "patches retcon: $version" \
+            -m "Renames every shipped version to its classified name on main at $head (R1371000): snapshots, patches.json, shipped.json, index.json, the win-rate tables, CATALOG_VERSION, the fixtures and the migration."
+          git push -u origin "$branch"
+          body=$(printf '%s\n' \
+            "The version retcon (#1371) on main at $head: every shipped version renamed to what the classifier names it, the newest now $version. The map is in this run's summary." \
+            "" \
+            "Opened by \`.github/workflows/patches-retcon.yml\`; it merges itself once CI passes.")
+          url=$(gh pr create --base main --head "$branch" --title "patches retcon: $version" --body "$body")
+          gh pr merge "$url" --auto --squash
+          echo "$url" >> "$GITHUB_STEP_SUMMARY"

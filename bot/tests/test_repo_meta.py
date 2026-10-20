@@ -29,6 +29,8 @@ class PullTitleTests(unittest.TestCase):
     AUTOMATED = (
         "patches ship: v0.3.1",  # patches-ship.yml
         "patches ship: v0.2.16b, v0.2.17",
+        "patches log: 6d44be2..c9ca419",  # promote-production.yml's technical log
+        "patches retcon: v0.4.0c",  # patches-retcon.yml
         "Promote main to production: 28 commit(s) up to 6d44be2",  # scripts/promote-production.sh
         "Promote main to production: 1 commit(s) up to c9ca419",
         "AI gen 8 (improve): the opening plays its two-drops first",  # training/improve.md
@@ -71,6 +73,8 @@ class PullTitleTests(unittest.TestCase):
         "Architecture:",
         "patches ship: ",
         "patches ship: v0.3.Y",  # ship names a micro patch's version
+        "patches log: soon",
+        "patches retcon: v0.3.X",
         "Promote main to production: soon",
         "AI gen 3 (sideways): a lane that does not exist",
         'Revert "Share a room"',
@@ -89,6 +93,9 @@ class PullTitleTests(unittest.TestCase):
         """Each tool's title, as its source writes it, so a change to one fails here first."""
         self.assertIn('--title "patches ship: $versions"', read("patches-ship.yml"))
         self.assertIn('versions=$(sed -n \'s/^patches ship: shipped //p\'', read("patches-ship.yml"))
+        self.assertIn('--title "patches log: $range"', read("promote-production.yml"))
+        self.assertIn('range="${OLD:0:7}..${NEW:0:7}"', read("promote-production.yml"))
+        self.assertIn('--title "patches retcon: $version"', read("patches-retcon.yml"))
         promote = (ROOT / "scripts" / "promote-production.sh").read_text(encoding="utf-8")
         self.assertIn('--title "Promote main to production: $COUNT commit(s) up to ${cand:0:7}"',
                       promote)

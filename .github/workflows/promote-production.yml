@@ -35,6 +35,14 @@
 # to main does), and no workflow runs on a push to a promote branch or to production. The countdown
 # issue stays on the Actions token, whose writes start no workflow.
 #
+# Once production has moved, `technical-log` logs what went live (#1360, part 5's `cargo jackioh
+# patches log`, R1369000): each App, AI and Internal commit between the main commit production
+# held before and the one it holds now goes into crates/cards/patches/technical.json under the
+# newest shipped patch, with the player note its pull request's "## Player note" carries. It lands
+# on main through the same auto-merged pull request path patches-ship.yml uses, in that workflow's
+# concurrency group, so it never interleaves with a ship. Technical changes never bump the catalog
+# version, which would force a production merge that can't be held (R105).
+#
 # The `deploy` job then builds production and deploys it to the Cloudflare Worker itself, with
 # `wrangler deploy` and the CLOUDFLARE_API_TOKEN secret: the same install CI runs (where the build is
 # known to pass), the public VITE_ settings from apps/web/.env.production, and
@@ -121,6 +129,90 @@ jobs:
           RUN_SHA: ${{ github.event.workflow_run.head_sha }}
           INPUT_SHA: ${{ inputs.sha }}
         run: bash scripts/promote-production.sh
+
+  # What went live, onto the technical log (R1369000). Production's tip is the promotion's merge
+  # commit: its second parent the main commit it brought in, its first the production before. The
+  # range starts at the newest main commit production already held.
+  technical-log:
+    name: log what went live
+    needs: promote
+    if: ${{ needs.promote.outputs.promoted == 'true' }}
+    concurrency:
+      group: patches-ship
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+      - id: range
+        name: the commits that went live
+        run: |
+          set -euo pipefail
+          git fetch -q origin production
+          tip=$(git rev-parse FETCH_HEAD)
+          new=$(git rev-parse --verify -q "$tip^2" || git rev-parse "$tip")
+          old=$(git merge-base "$tip^1" "$new" || true)
+          if [ -z "$old" ] || [ "$old" = "$new" ]; then
+            echo "nothing new went live"
+            exit 0
+          fi
+          echo "old=$old" >> "$GITHUB_OUTPUT"
+          echo "new=$new" >> "$GITHUB_OUTPUT"
+          echo "promoted ${old:0:7}..${new:0:7}"
+      - if: ${{ steps.range.outputs.new != '' }}
+        uses: ./.github/actions/setup
+        with:
+          node: "false"
+      # A squash commit on main carries its pull request's number, not its body; the player notes
+      # are in the bodies.
+      - name: the pull requests' bodies, for their player notes
+        if: ${{ steps.range.outputs.new != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OLD: ${{ steps.range.outputs.old }}
+          NEW: ${{ steps.range.outputs.new }}
+        run: |
+          set -euo pipefail
+          git log --first-parent --format=%s "$OLD..$NEW" | sed -n 's/.*(#\([0-9][0-9]*\))$/\1/p' | sort -u |
+            while read -r number; do
+              gh pr view "$number" --json number,body || true
+            done | jq -s 'map({(.number | tostring): (.body // "")}) | add // {}' > "$RUNNER_TEMP/bodies.json"
+      - name: patches log
+        if: ${{ steps.range.outputs.new != '' }}
+        env:
+          OLD: ${{ steps.range.outputs.old }}
+          NEW: ${{ steps.range.outputs.new }}
+        run: cargo jackioh patches log "$OLD..$NEW" --bodies "$RUNNER_TEMP/bodies.json"
+      - name: land it on main
+        if: ${{ steps.range.outputs.new != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN || github.token }}
+          OLD: ${{ steps.range.outputs.old }}
+          NEW: ${{ steps.range.outputs.new }}
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain crates/cards/patches/technical.json)" ]; then
+            echo "nothing to log"
+            exit 0
+          fi
+          range="${OLD:0:7}..${NEW:0:7}"
+          branch="patches/log-${NEW:0:7}"
+          login=$(gh api user --jq .login)
+          id=$(gh api user --jq .id)
+          git checkout -b "$branch"
+          git add crates/cards/patches/technical.json
+          git -c user.name="$login" -c user.email="$id+$login@users.noreply.github.com" \
+            commit -q -m "patches log: $range" -m "The App, AI and Internal commits that went live with production's merge of $range (R1369000)."
+          git push -u origin "$branch"
+          url=$(gh pr create --base main --head "$branch" --title "patches log: $range" \
+            --body "Logs the commits that went live in $range onto the newest patch's technical log (\`crates/cards/patches/technical.json\`, R1369000). Opened by \`.github/workflows/promote-production.yml\`; it merges itself once CI passes.")
+          gh pr merge "$url" --auto --squash
+          echo "### patches log: $range" >> "$GITHUB_STEP_SUMMARY"
+          echo "$url" >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
     name: build and deploy to Cloudflare
