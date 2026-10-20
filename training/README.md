@@ -292,7 +292,7 @@ login and opens no pull request. Each cycle:
 5. Sleep `TRAIN_PAUSE_SECONDS` (60) and repeat.
 
 The records are `source: "dev"`, mode `random`, both pilots `ai`, with the id
-`dev:<patch>:gather:<n>`. The games run under `nice -n 19`, so the other two lanes' gates keep the CPU.
+`dev:<patch>:gather:<n>`. The games run under `nice -n 19` with `RAYON_NUM_THREADS=1`, so the lane stays on one core, as it does today, and the other two lanes' gates keep the CPU.
 A record is about 1.8 KB and a game takes about 4 seconds on one core. If the AI is promoted in the
 middle of a patch, that patch's games come from more than one generation of it. Nothing feeds the
 records back to the AI, the gate or the shadow ban (`gather.md`, What it never does).
