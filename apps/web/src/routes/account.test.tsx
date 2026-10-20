@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { usernameTestid } from "../auth/testids.ts";
 import {
   getOwnRank,
+  getPacks,
   getProfile,
   previewUsername,
   saveUsername,
@@ -20,12 +21,14 @@ import {
 } from "../net/api.ts";
 import { announceAccountChange } from "../net/gate.ts";
 import { SESSION_STORAGE_KEY, readSession } from "../net/session.ts";
-import AccountRoute, { accountTestid, formatWinRate, resetSigningOutForTests, statusWords } from "./account.tsx";
+import AccountRoute, { accountTestid, formatWinRate, packsShown, resetSigningOutForTests, statusWords } from "./account.tsx";
+import { packsInfo } from "../packs/fixtures.ts";
+import { packTestid } from "../packs/packs.ts";
 import { devToolsTestid } from "./DevTools.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
-  return { ...actual, getProfile: vi.fn(), getOwnRank: vi.fn(), previewUsername: vi.fn(), saveUsername: vi.fn() };
+  return { ...actual, getProfile: vi.fn(), getOwnRank: vi.fn(), getPacks: vi.fn(), previewUsername: vi.fn(), saveUsername: vi.fn() };
 });
 
 vi.mock("../net/gate.ts", async (importOriginal) => {
@@ -551,5 +554,50 @@ describe("deleting the account", () => {
     await userEvent.click(screen.getByTestId("account-delete-cancel"));
     expect(screen.queryByTestId("account-delete-input")).toBeNull();
     expect(screen.getByTestId("account-delete")).toBeInTheDocument();
+  });
+});
+
+// #1308: the card packs behind a toggle of their own. The economy is not live (§14.12), so only a dev
+// account is offered them until it is, and the panel mounts, and asks the server, only once opened.
+describe("#1308 the card packs on the account page", () => {
+  function me(over: { isDev?: boolean; status?: MeResponse["profile"]["status"] } = {}): MeResponse {
+    return {
+      profile: { id: "p1", status: over.status ?? "active" },
+      needsInviteCode: false,
+      emailVerified: true,
+      currentMatchId: null,
+      email: "player1@example.com",
+      username: { name: "Max#3", nextChangeAt: null, promptOwed: false },
+      ...(over.isDev === undefined ? {} : { isDev: over.isDev }),
+    };
+  }
+
+  it("offers Card packs to a dev account and opens the panel on the server's numbers", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getPacks).mockResolvedValue(packsInfo());
+    const { unmount } = render(<AccountRoute token={TOKEN} me={me({ isDev: true })} />);
+    const toggle = screen.getByTestId(accountTestid.packsToggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId(packTestid.panel), "closed, the panel is not mounted").toBeNull();
+    expect(getPacks).not.toHaveBeenCalled();
+
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(await screen.findByTestId(packTestid.panel)).toBeInTheDocument();
+    expect(await screen.findByTestId(packTestid.pity("epic"))).toHaveTextContent("7 / 10 packs");
+    expect(getPacks).toHaveBeenCalledWith(TOKEN);
+    unmount();
+
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    render(<AccountRoute token={TOKEN} me={me({ isDev: false })} />);
+    expect(screen.queryByTestId(accountTestid.packsToggle)).toBeNull();
+  });
+
+  it("packsShown: an active account once the economy is live, before it a dev account alone", () => {
+    expect(packsShown(me(), true)).toBe(true);
+    expect(packsShown(me(), false)).toBe(false);
+    expect(packsShown(me({ isDev: true }), false)).toBe(true);
+    expect(packsShown(me({ isDev: true, status: "pending" }), true)).toBe(false);
+    expect(packsShown(undefined, true)).toBe(false);
   });
 });
