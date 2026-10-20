@@ -7048,6 +7048,8 @@
       "run_id": "39417779183",
       "started_at": "2026-10-20T11:51:07Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
