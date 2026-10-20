@@ -6871,6 +6871,7 @@
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-19T22:14:10Z",
+      "interruptions": 1,
       "issue": 1301,
       "kind": "revise",
       "pending_request": false,
