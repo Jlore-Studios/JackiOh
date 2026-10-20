@@ -1,9 +1,0 @@
-{
-  "seed": 5325,
-  "catalogVersion": "v0.3.1",
-  "decks": [
-    ["core-047", "classicplus-046", "core-094", "meditativeplus-013", "meditative-005", "classic-057", "core-046", "meditativeplus-002", "core-057", "meditative-075", "core-003", "core-064", "meditative-021", "meditative-037", "meditative-043", "classic-003", "core-059", "classic-021", "core-081", "classic-077"],
-    ["meditative-024", "meditative-042", "core-067", "core-010", "classic-070", "core-012", "classicplus-025", "core-022", "classicplus-044", "classic-013", "classic-009", "core-055", "meditative-091", "meditativeplus-018", "classicplus-043", "classicplus-031", "classicplus-048", "core-033", "core-072", "classicplus-045"]
-  ],
-  "found": "The plain fuzz wave's third quarter (seeds 5001-7500, the daily run's fuzz 3/4) at d81d56fc2 (#1216): I2 fired 72 actions in: c22 (meditative-091, p2's) declared attack number 2 on turn 18. Cognitive Offloading's autopilot (M+ #18, R1183002) played Windfast, which prints Windfury, and attacked with it twice inside the one action, so no state between actions held it on the field and the monitor never saw its Windfury (R636). Fixed by #1316, proven by invariants.rs's r636_r1183002_a_windfury_card_from_the_hand_that_enters_and_declares_twice_in_one_action_is_one_legal_windfury_turn. The decks are decks_for_seed(5325) over the 396-card pool of catalog.json at d81d56fc2 (v0.3.1)."
-}

@@ -1757,14 +1757,14 @@ mod tests {
                 GameRecord {
                     id: "3".to_string(),
                     mode: GameMode::Bo3,
-                    patch: "v0.2.3".to_string(),
+                    patch: "v0.2.5".to_string(),
                     ..record()
                 },
                 // A practice-shaped record: one human seat, one AI seat. The AI's deck holds only z.
                 GameRecord {
                     id: "4".to_string(),
                     mode: GameMode::Random,
-                    patch: "v0.2.3".to_string(),
+                    patch: "v0.2.5".to_string(),
                     pilots: PerPlayer::new(Pilot::Human, Pilot::Ai),
                     game: game(
                         Winner::P2,
@@ -1787,9 +1787,9 @@ mod tests {
 
             assert_eq!(games(None, None), 4);
             assert_eq!(games(Some(GameMode::Random), None), 2);
-            assert_eq!(games(None, Some("v0.2.3")), 2);
-            assert_eq!(games(Some(GameMode::Random), Some("v0.2.3")), 1);
-            assert_eq!(games(Some(GameMode::Bo1), Some("v0.2.3")), 0);
+            assert_eq!(games(None, Some("v0.2.5")), 2);
+            assert_eq!(games(Some(GameMode::Random), Some("v0.2.5")), 1);
+            assert_eq!(games(Some(GameMode::Bo1), Some("v0.2.5")), 0);
 
             // Pilots count seats: record 4's human seat holds a, its AI seat z.
             let by_pilot = |pilot: PilotFilter| card_stats(&records, &CardStatsFilter { pilot, ..live() });
@@ -1884,10 +1884,10 @@ mod tests {
                 describe_filter(&CardStatsFilter {
                     source: SourceFilter::Dev,
                     mode: Some(GameMode::Random),
-                    patch: Some("v0.2.3".to_string()),
+                    patch: Some("v0.2.5".to_string()),
                     pilot: PilotFilter::Ai
                 }),
-                "AI development runs, All Random, patch v0.2.3, AI pilots"
+                "AI development runs, All Random, patch v0.2.5, AI pilots"
             );
         }
 
@@ -2595,27 +2595,27 @@ mod tests {
     #[test]
     fn r1284000_forced_series_is_some_only_for_a_record_filed_under_a_forced_series() {
         let forced = GameRecord {
-            id: "dev:v0.2.3:dev-force-core-090:1".to_string(),
-            patch: "v0.2.3".to_string(),
+            id: "dev:v0.2.5:dev-force-core-090:1".to_string(),
+            patch: "v0.2.5".to_string(),
             ..record()
         };
         assert_eq!(forced_series(&forced), Some("dev-force-core-090"));
         let plain = GameRecord {
-            id: "dev:v0.2.3:dev:1".to_string(),
-            patch: "v0.2.3".to_string(),
+            id: "dev:v0.2.5:dev:1".to_string(),
+            patch: "v0.2.5".to_string(),
             ..record()
         };
         assert_eq!(forced_series(&plain), None);
         assert_eq!(forced_series(&record()), None);
         let mismatched = GameRecord {
             id: "dev:run:1".to_string(),
-            patch: "v0.2.3".to_string(),
+            patch: "v0.2.5".to_string(),
             ..record()
         };
         assert_eq!(forced_series(&mismatched), None);
         // A mistyped patch cannot hide a forced series: the id alone decides.
         let spoofed = GameRecord {
-            id: "dev:v0.2.3:dev-force-core-090:1".to_string(),
+            id: "dev:v0.2.5:dev-force-core-090:1".to_string(),
             patch: "v9.9.9".to_string(),
             ..record()
         };

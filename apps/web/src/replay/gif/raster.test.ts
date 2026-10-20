@@ -42,7 +42,7 @@ function recorder(): { ctx: Ctx2D; calls: Call[] } {
 const lookup = lookupFromDefs(CATALOG);
 const view = fullBoardView();
 const clip = [{ step: 0, turn: view.turn, view }];
-const SQUARE = { ...REPLAY_GIF_SIZES.square, fps: REPLAY_GIF_FPS, catalogVersion: "v0.3.0b", portraits: { p1: "vanilla", p2: "shredder" } } as const;
+const SQUARE = { ...REPLAY_GIF_SIZES.square, fps: REPLAY_GIF_FPS, catalogVersion: "v0.3.6", portraits: { p1: "vanilla", p2: "shredder" } } as const;
 
 beforeEach(() => {
   vi.stubGlobal("Path2D", class Path2DStub {});

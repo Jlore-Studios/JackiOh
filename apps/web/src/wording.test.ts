@@ -135,7 +135,7 @@ const RETIRED_VOCABULARY: readonly { name: string; pattern: RegExp }[] = [
   { name: "Cannot be in Defense Position", pattern: /\bCannot be in Defense Position\b/i },
 ];
 
-describe("patch v0.2.0b vocabulary table (SPEC §11 R366)", () => {
+describe("patch v0.2.1 vocabulary table (SPEC §11 R366)", () => {
   it("no tutorial script line uses a word the vocabulary table retired", () => {
     const tutorialFiles = sources(join(SRC, "tutorial/scripts"));
     expect(tutorialFiles.length).toBeGreaterThan(0);

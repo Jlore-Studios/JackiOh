@@ -44,10 +44,10 @@ mod r609_a_season_per_minor_version {
     fn r609_names_the_season_by_the_patch_versions_major_and_minor() {
         assert_eq!(season_id_of("v0.1.1"), "v0.1");
         assert_eq!(season_id_of("v0.1.0-r3"), "v0.1");
-        assert_eq!(season_id_of("v0.2.3b"), "v0.2");
+        assert_eq!(season_id_of("v0.2.6"), "v0.2");
         assert_eq!(season_id_of("v0.2"), "v0.2");
         assert_eq!(season_id_of("v1.10.0"), "v1.10");
-        assert_ne!(season_id_of("v0.3.0"), season_id_of("v0.2.4"));
+        assert_ne!(season_id_of("v0.3.0"), season_id_of("v0.2.9"));
     }
 
     #[test]
