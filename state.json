@@ -7348,8 +7348,11 @@
     "1414": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "failures": 0,
       "feedback_since": "2026-10-20T13:05:03Z",
+      "forced": false,
+      "interruptions": 0,
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
