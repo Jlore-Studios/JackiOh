@@ -153,6 +153,10 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
     if summary.bot {
         return Ok(());
     }
+    // [[R1301003]]: one account's payouts run one after the other, as its openings do: the
+    // account's economy lock, taken before any track or quest is read. A completed quest paying
+    // through `pay_xp` in this same transaction is unaffected: the advisory lock is re-entrant.
+    tx.economy_lock_account(&summary.profile_id).await?;
     let jlore = i64::from(game_jlore(summary.mode, summary.won));
     if jlore != 0 {
         tx.economy_jlore_grant(&JloreGrant {

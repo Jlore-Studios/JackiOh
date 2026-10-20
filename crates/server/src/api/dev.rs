@@ -117,6 +117,9 @@ pub async fn give_xp(app: &Arc<App>, req: Req) -> ApiResult {
     }
     let xp = amount_of(&req.body, "xp")?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
+    // [[R1301003]]: the account's economy lock, as every pack opening takes, so a dev grant never
+    // reads a track a payout is moving.
+    tx.economy_lock_account(&profile.id).await?;
     let (held_xp, held_level) = tx
         .economy_tracks_get(&profile.id)
         .await?
