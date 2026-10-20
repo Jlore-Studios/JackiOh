@@ -193,6 +193,9 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
         engine_thread: test_engine_thread,
         bug_reports: jackioh_server::bug_reports::BugReports::recording(),
         economy_live: jackioh_server::config::ECONOMY_LIVE,
+        practice_verifications: tokio::sync::Semaphore::new(
+            jackioh_server::config::PRACTICE_VERIFY_CONCURRENCY,
+        ),
     });
     if options.e2e && !options.skip_fixtures && !restarted {
         jackioh_server::api::e2e::seed_e2e_fixtures(&app)

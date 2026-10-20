@@ -678,4 +678,19 @@ describe("R508 the controller carries the human's last practice board", () => {
     await flush();
     expect(readLastBoard()).toEqual([{ defId: "core-008", radiant: false }]);
   });
+
+  it("R1303003 a game on a server seed starts with the server's board, or none, never the device's", async () => {
+    writeLastBoard([{ defId: "core-008", radiant: false }]);
+    const server = [{ defId: "classic-090", radiant: true }];
+    for (const config of [
+      { ...CONFIG, earning: true as const, lastBoard: server },
+      { ...CONFIG, earning: true as const },
+    ]) {
+      const fake = fakeHost();
+      const controller = controllerFor(fake);
+      void controller.start(config);
+      await flush();
+      expect(fake.requests.at(-1)?.body).toEqual({ type: "start", config });
+    }
+  });
 });

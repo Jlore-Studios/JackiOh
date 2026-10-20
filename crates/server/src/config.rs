@@ -2195,6 +2195,11 @@ pub const XP_LADDER_TARGET_MEAN: i32 = 100;
 /// SPEC §14.8: how long a practice seed waits to be claimed, in seconds. #1294's table gives no
 /// value; an hour outlasts any game without holding seeds.
 pub const PRACTICE_SEED_TTL_SECONDS: i64 = 3600;
+/// SPEC §14.8, #1303: how many practice claims the server verifies at once, each a fold of the
+/// game's log and a re-run of every AI move off the runtime (`economy::practice`). A claim past it
+/// waits for a verification to finish, and none is dropped. #1294's table gives no value; two keep
+/// the blocking pool free for the live matches' folds.
+pub const PRACTICE_VERIFY_CONCURRENCY: usize = 2;
 /// SPEC §14.9: how often a quest arrives while fewer than `QUEST_MAX_HELD` are held, in hours.
 /// Daily quests: one a day.
 pub const QUEST_INTERVAL_HOURS: i64 = 24;
