@@ -10,6 +10,7 @@ import type { CardDef, CardType } from "@jackioh/shared";
 import { CardFace, faceText } from "../CardFace.tsx";
 import { readerTerms } from "../chinese.ts";
 import { textTier } from "../fit.ts";
+import { useFullArt } from "../fullArt.ts";
 import { faceModel, locWords, type FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
 import { RulesText } from "../RulesText.tsx";
@@ -73,13 +74,15 @@ const LONG_TEXT_TIERS: ReadonlySet<string> = new Set(["xl", "xxl"]);
  * lacks marked (R277); a Radiant text equal to the base one is not printed twice.
  */
 function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel }): ReactElement | null {
+  // R1313000: whether the faces beside it print full art, as they do.
+  const fullArtOn = useFullArt(base.defId);
   const radiantLine = radiant.text.full === base.text.full ? null : radiant.text;
   if (base.text.full === "" && radiantLine === null) return null;
   const long =
     LONG_TEXT_TIERS.has(textTier(base.text.full)) ||
     LONG_TEXT_TIERS.has(textTier(radiant.text.full)) ||
-    faceText(base).less ||
-    faceText(radiant).less;
+    faceText(base, undefined, fullArtOn).less ||
+    faceText(radiant, undefined, fullArtOn).less;
   return (
     <div className="inspect-rules" data-long={long ? "true" : "false"}>
       {base.text.full === "" ? null : (

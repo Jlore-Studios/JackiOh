@@ -311,6 +311,13 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::economy::get_tracks),
     ),
+    // api/cosmetics.rs (R1313000)
+    (
+        "GET",
+        "/api/cosmetics",
+        AuthLevel::Active,
+        h!(api::cosmetics::get_owned_cosmetics),
+    ),
     // api/decks.rs
     ("GET", "/api/decks", AuthLevel::Active, h!(api::decks::list_decks)),
     (

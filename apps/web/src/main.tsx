@@ -77,6 +77,7 @@ import { dropStaleSignUpConsent } from "./auth/consent.ts";
 import ConsentPrompt from "./auth/ConsentPrompt.tsx";
 import { shellTestid } from "./auth/testids.ts";
 import UsernamePrompt from "./auth/UsernamePrompt.tsx";
+import { ViewerFullArt } from "./cards/ownedFullArt.ts";
 import { initLocale, t, useLocale } from "./i18n/i18n.ts";
 import { useAccount, type Account } from "./net/gate.ts";
 import { canonicalUrlFor, documentTitleFor } from "./net/head.ts";
@@ -575,7 +576,11 @@ export function Gated({ allowPending = false, consentExempt = false, children }:
     screenShown.add(profileId);
   }
 
-  return children({ token: account.token, me: account.me });
+  // R1313000: the screen's own copies print the full arts the account owns, once ownership decides;
+  // a pending account owns none and reads nothing.
+  return (
+    <ViewerFullArt token={status === "active" ? account.token : null}>{children({ token: account.token, me: account.me })}</ViewerFullArt>
+  );
 }
 
 // ---------------------------------------------------------------------------------------------

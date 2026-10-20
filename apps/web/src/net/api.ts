@@ -399,6 +399,13 @@ export function getCollection(token: string): Promise<CollectionResponse> {
   return apiRequest<CollectionResponse>("/api/collection", { token });
 }
 
+/** R1313000: `GET /api/cosmetics`, the caller's own cosmetics, per card and on the account. */
+export type OwnedCosmeticsResponse = { cards: { cardId: string; cosmeticId: string }[]; account: string[] };
+
+export function getOwnedCosmetics(token: string): Promise<OwnedCosmeticsResponse> {
+  return apiRequest<OwnedCosmeticsResponse>("/api/cosmetics", { token });
+}
+
 // ---------------------------------------------------------------------------------------------
 // Saved decks and trios (SPEC §9.4, R250–R256). Ids are minted HERE, by the client
 // (`crypto.randomUUID()`), so every save is an idempotent `PUT` that can be retried after a dropped

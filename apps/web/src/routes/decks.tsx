@@ -10,6 +10,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode }
 import type { CardDefs, CustomCard } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
+import { OwnCopy } from "../cards/fullArt.ts";
 import { CardDefsProvider } from "../cards/index.ts";
 import { customDefsOf, useCustomCards } from "../creator/useCustomCards.ts";
 import { t } from "../i18n/i18n.ts";
@@ -201,15 +202,18 @@ export default function DecksRoute() {
   const { catalog, collection } = shelf ?? { catalog: screen.data.catalog, collection: screen.data.collection };
   return (
     <CardDefsProvider defs={catalog.cards}>
-      <DeckWorkshop
-        // One store per profile keeps another account's mirror separate.
-        key={screen.profileId}
-        catalog={catalog}
-        collection={collection}
-        data={screen.data.decks}
-        profileId={screen.profileId}
-        api={api}
-      />
+      {/* R1313000: every face here is the viewer's own, and prints the full arts they own. */}
+      <OwnCopy own>
+        <DeckWorkshop
+          // One store per profile keeps another account's mirror separate.
+          key={screen.profileId}
+          catalog={catalog}
+          collection={collection}
+          data={screen.data.decks}
+          profileId={screen.profileId}
+          api={api}
+        />
+      </OwnCopy>
     </CardDefsProvider>
   );
 }

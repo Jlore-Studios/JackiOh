@@ -35,6 +35,7 @@ import type { CardDef, SetName } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { CardFace, faceModel, faceText, useInspectTrigger } from "../../cards/index.ts";
+import { useFullArt } from "../../cards/fullArt.ts";
 import { CARD_TABLES, readerName } from "../../cards/chinese.ts";
 import { costText } from "../../patches/diff.ts";
 import { NEW_RIBBON_SET } from "../../patches/ribbon.ts";
@@ -135,10 +136,12 @@ function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): React
   const badge = placeWords(place);
 
   const face = useMemo(() => faceModel({ defId: cardId, def, radiant: false }), [cardId, def, locale]);
+  // R1313000: a full art the viewer does not own prints its words, and opens a preview as they do.
+  const fullArtOn = useFullArt(cardId);
   const inspect = useInspectTrigger(
     { key: poolCardId(cardId), face },
     {
-      hover: faceText(face).less,
+      hover: faceText(face, undefined, fullArtOn).less,
       onLongPress: () => {
         onInspect(cardId);
       },
