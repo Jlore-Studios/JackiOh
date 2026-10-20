@@ -21137,11 +21137,11 @@
         "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": "2026-10-20T00:00:43Z",
-    "last_run": "2026-10-20T00:00:43Z",
-    "provider": "claude-1",
+    "idle_since": "2026-10-19T23:12:59Z",
+    "last_run": "2026-10-19T21:29:39Z",
+    "provider": null,
     "requested": false,
-    "run_id": "39344975035",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
