@@ -19,10 +19,11 @@
 
 use std::sync::Arc;
 
+use indexmap::IndexMap;
 use jackioh_engine::config::MAX_COPIES;
 use jackioh_engine::set_ships;
 use jackioh_engine::wire::PrintedRarity;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::api::collection::{caller_profile, owned_in};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, ok_of, optional_str, str};
@@ -32,6 +33,7 @@ use crate::cosmetics::Cosmetic;
 use crate::db::store::{CollectionEntry, CollectionGrant};
 use crate::economy::store::{
     CosmeticGrant, Counter, CounterEntry, EconomyReason, InventoryEntry, InventoryGrant, InventoryItem,
+    OwnedCosmetics,
 };
 
 /// The collection ledger's reason for a card a card token unlocks: migration 0002's `craft`, one
@@ -42,7 +44,7 @@ pub const CARD_TOKEN_GRANT_REASON: &str = "craft";
 
 /// A token redemption's refusal: the choice the token cannot pay for. Always 409, and always
 /// before the commit, so it spends nothing (§14.5).
-fn conflict(message: impl Into<String>) -> ApiError {
+pub(crate) fn conflict(message: impl Into<String>) -> ApiError {
     ApiError::new(ApiErrorCode::Conflict, message)
 }
 
@@ -82,7 +84,7 @@ fn counter_value(counters: &[CounterEntry], counter: Counter) -> i64 {
 }
 
 /// How many of `item` under `key` the inventory rows hold.
-fn held(inventory: &[InventoryEntry], item: InventoryItem, key: &str) -> i64 {
+pub(crate) fn held(inventory: &[InventoryEntry], item: InventoryItem, key: &str) -> i64 {
     inventory
         .iter()
         .find(|entry| entry.item == item && entry.key == key)
@@ -153,6 +155,48 @@ pub async fn redeem_card_token(app: &App, profile_id: &str, card_id: &str) -> Re
     Ok(())
 }
 
+/// What a player's choice of one cosmetic, on one card or the account, comes to (R1305003,
+/// R1306002).
+pub(crate) struct Choice {
+    /// The choice names a card the account owns (a full art, its own card alone, R1313000) for a
+    /// per-card cosmetic, and no card for an account cosmetic.
+    pub fits: bool,
+    /// The account already owns the cosmetic there: a default or a starter, which §14.2 gives
+    /// every account, or a ledger row.
+    pub owned: bool,
+}
+
+/// [`Choice`] of `cosmetic` on `card_id`, over the copies `owned` and the account's `cosmetics`.
+pub(crate) fn choice_of(
+    cosmetic: &Cosmetic,
+    card_id: Option<&str>,
+    owned: &IndexMap<String, i64>,
+    cosmetics: &OwnedCosmetics,
+) -> Choice {
+    let card_owns = |card_id: &str| owned.get(card_id).copied().unwrap_or(0) >= i64::from(MAX_COPIES);
+    let already_owned = cosmetic.default
+        || cosmetic.starter
+        || match card_id {
+            Some(card_id) => cosmetics
+                .cards
+                .iter()
+                .any(|held| held.card_id == card_id && held.cosmetic_id == cosmetic.id),
+            None => cosmetics.account.contains(&cosmetic.id),
+        };
+    let card_fits = match (cosmetic.kind.is_per_card(), card_id, cosmetic.card.as_deref()) {
+        // A full art is owned on the one card it names (R1313000): only that card, owned, takes it.
+        (true, Some(card_id), Some(names)) => card_id == names && card_owns(card_id),
+        (true, Some(card_id), None) => card_owns(card_id),
+        (true, _, _) => false,
+        (false, None, _) => true,
+        (false, Some(_), _) => false,
+    };
+    Choice {
+        fits: card_fits,
+        owned: already_owned,
+    }
+}
+
 /// §14.5: a cosmetic token buys any cosmetic at its tier or below (§14.2's scale, Common to
 /// Mythic, read by [`CosmeticRarity::tier`]): a per-card cosmetic for a card the account owns, or
 /// an account cosmetic, never a chase, in one transaction: the cosmetics grant, then one
@@ -187,24 +231,7 @@ pub async fn redeem_cosmetic_token(
         InventoryItem::CosmeticToken,
         &token_key(token),
     );
-    let card_owns = |card_id: &str| owned.get(card_id).copied().unwrap_or(0) >= i64::from(MAX_COPIES);
-    let already_owned = cosmetic.default
-        || cosmetic.starter
-        || match card_id {
-            Some(card_id) => cosmetics
-                .cards
-                .iter()
-                .any(|held| held.card_id == card_id && held.cosmetic_id == cosmetic_id),
-            None => cosmetics.account.iter().any(|held| held == cosmetic_id),
-        };
-    let card_fits = match (cosmetic.kind.is_per_card(), card_id, cosmetic.card.as_deref()) {
-        // A full art is owned on the one card it names (R1313000): only that card, owned, takes it.
-        (true, Some(card_id), Some(names)) => card_id == names && card_owns(card_id),
-        (true, Some(card_id), None) => card_owns(card_id),
-        (true, _, _) => false,
-        (false, None, _) => true,
-        (false, Some(_), _) => false,
-    };
+    let choice = choice_of(cosmetic, card_id, &owned, &cosmetics);
     if token_held < 1 {
         return Err(conflict("no cosmetic token of that tier is held"));
     }
@@ -214,10 +241,10 @@ pub async fn redeem_cosmetic_token(
     if cosmetic.rarity.tier() > token_tier(token) {
         return Err(conflict("that cosmetic sits above the token's tier"));
     }
-    if !card_fits {
+    if !choice.fits {
         return Err(conflict("that cosmetic fits no card held for it"));
     }
-    if already_owned {
+    if choice.owned {
         return Err(conflict("that cosmetic is already owned"));
     }
     let at = crate::app::now_ms();
@@ -254,7 +281,7 @@ pub async fn redeem_cosmetic_token(
 }
 
 /// One token bar's points and size.
-#[derive(Serialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct BarState {
     pub points: i64,

@@ -221,6 +221,17 @@ pub fn pack_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
         .collect()
 }
 
+/// The cosmetics a cosmetic pack may drop (R1306000): every entry, per-card or account, that is
+/// not a default, a starter or a chase, in the registry's order. A chase comes from the Chase
+/// Shard bar (§14.2), and one that names a card, a full art, drops on that card alone (R1313000).
+pub fn cosmetic_pack_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
+    cosmetics
+        .iter()
+        .filter(|cosmetic| !cosmetic.default && !cosmetic.starter && !cosmetic.chase)
+        .cloned()
+        .collect()
+}
+
 /// Whether the shipped registry lists `id` under `kind`: a deck's pick is kept only when it is
 /// (R1297000).
 pub fn is_id_of(kind: CosmeticKind, id: &str) -> bool {
