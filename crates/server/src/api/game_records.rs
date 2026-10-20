@@ -61,7 +61,7 @@ fn game_mode_of(mode: QueueMode) -> GameMode {
 
 /// The fold's input for a finished match: its seed, decks and log, and (R417, R678) the frozen
 /// boards it was created with, so the fold reads them as the live game did.
-fn fold_args_of(row: &MatchRow, log: Vec<Value>) -> Result<FoldArgs, serde_json::Error> {
+pub(crate) fn fold_args_of(row: &MatchRow, log: Vec<Value>) -> Result<FoldArgs, serde_json::Error> {
     let mut args = Map::new();
     args.insert("seed".into(), json!(row.seed));
     args.insert("decks".into(), serde_json::to_value(&row.decks)?);

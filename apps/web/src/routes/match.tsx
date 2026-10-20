@@ -19,21 +19,22 @@
 //
 // THE CATALOG. `CardView` is `{ instanceId, defId, radiant, cost }` (§10.8), so a view alone cannot
 // put a card's NAME on its face — and `cy.playByName` / `cy.handCardByName` find cards by name. The
-// hotseat route gets its defs from the engine it is running; a networked client has no engine, so
-// this route reads `GET /api/catalog` (the endpoint `apps/web/src/net/api.ts` documents as its own
-// finding against §9.4's "static, versioned, shipped with the client") and feeds `CatalogContext`.
-// With no catalog the board still renders — every card shows its `defId`, never a guessed name.
+// hotseat route gets its defs from the engine it is running; this route runs none, so it feeds
+// `CatalogContext` the catalog the client ships (`game/currentCatalog.ts`, §9.4, #1378), which is in
+// hand before the board's first render and asks the server nothing. A card the catalog lacks still
+// shows its `defId`, never a guessed name.
 
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
-import type { ActionBody, CardDefs, PlayerId, PlayerView } from "@jackioh/shared";
+import type { ActionBody, PlayerId, PlayerView } from "@jackioh/shared";
 
 import Clock, { turnKeyOf, useFrameFor } from "../game/Clock.tsx";
 import Game from "../game/Game.tsx";
 import { getAudioEngine } from "../audio/index.ts";
 import { useEmotes } from "../emotes/useEmotes.ts";
 import { useSetting } from "../settings/index.ts";
-import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
+import { CatalogContext } from "../game/catalog.ts";
+import { currentCatalogLookup } from "../game/currentCatalog.ts";
 import {
   installDevHandle,
   remainingMs,
@@ -45,7 +46,7 @@ import {
 import { Loading, SITE_NAME, ShellPanel, documentTitleFor } from "../main.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import Username from "../auth/Username.tsx";
-import { getCatalog, getMatchRanks, type MatchRanksResponse } from "../net/api.ts";
+import { getMatchRanks, type MatchRanksResponse } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import OpenedReplay from "../replay/OpenedReplay.tsx";
 import { openOnlineMatchReplay } from "../replay/sources.ts";
@@ -133,36 +134,14 @@ export type MatchRouteProps = {
 };
 
 /**
- * `GET /api/catalog`, once. It is public, versioned data (§5.1) and carries no match state, so a
- * failure is not fatal: the board renders `defId`s instead of names.
- */
-function useCatalog(): CardDefs | null {
-  const [defs, setDefs] = useState<CardDefs | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    getCatalog()
-      .then((response) => {
-        if (!cancelled) setDefs(response.defs);
-      })
-      .catch(() => {
-        // No catalog: `catalog.ts` falls back to the def id, which keeps the board honest about
-        // what a `PlayerView` does and does not contain.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  return defs;
-}
-
-/**
  * The socket URL with its credentials stripped, for display only.
  *
- * `net.ts`'s `socketUrlFor` puts the access token in the query string (`url.searchParams.set(
- * "token", token)`), so rendering the URL raw printed a live bearer token on screen and into the
- * DOM on every connect — visible in a screenshot, a screen share, over a shoulder, and to any
- * extension that can read the page. The host and path are the useful part of the diagnostic; the
- * query never was.
+ * `net.ts`'s `socketUrlFor` once put the access token in the query string, so rendering the URL raw
+ * printed a live bearer token on screen and into the DOM on every connect — visible in a
+ * screenshot, a screen share, over a shoulder, and to any extension that can read the page. Since
+ * R1379000 the address names the match only and the token is offered as a subprotocol; the query is
+ * still stripped, so no credential a future address carries reaches the screen. The host and path
+ * are the useful part of the diagnostic; the query never was.
  *
  * Returns the input unchanged if it will not parse, since this is a status line and must not be
  * the thing that throws.
@@ -223,11 +202,10 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     token,
     ...(socketFactory === undefined ? {} : { socketFactory }),
   });
-  const defs = useCatalog();
   const ranks = useMatchRanks(token, matchId);
   // R336: a Conquest game shows its series' score and won decks, and once it is over the way to the next game.
   const series = useMatchSeries(token, matchId, match.view?.result != null);
-  const lookup = useMemo(() => (defs === null ? null : lookupFromDefs(defs)), [defs]);
+  const lookup = currentCatalogLookup();
   /**
    * R768000: the finished match's replay, opened from its result panel at step 0, or at its last
    * step making the last turn's GIF; null shows the board. Leaving goes back to the board and its
@@ -517,14 +495,10 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   return (
     <div className="app-shell app-shell--wide">
       {/*
-        The provider is ALWAYS rendered, `value={null}` included. `GET /api/catalog` resolves
-        asynchronously, and conditionally wrapping the board changes the element type at this
-        position the moment it lands — which makes React unmount the whole board and mount a fresh
-        one. Every DOM node is replaced, so a click Cypress had already resolved to a prompt option
-        (or a player's half-finished play) is thrown away mid-gesture: `cy.click()` reports the
-        element "disappeared from the page". `CatalogContext`'s default is `null` and `useCardInfo`
-        falls back to `unknownCard(defId)` for it, so a null value renders exactly what the
-        unwrapped board rendered — def ids, never a guessed name.
+        The provider is ALWAYS rendered: wrapping the board conditionally would change the element type
+        here and remount the whole board, losing a resolved click or a half-finished play (spec 05 lost
+        a mulligan to it). The lookup is the shipped catalog's (`game/currentCatalog.ts`), the same
+        function from the first render on.
       */}
       <CatalogContext.Provider value={lookup}>{board}</CatalogContext.Provider>
     </div>

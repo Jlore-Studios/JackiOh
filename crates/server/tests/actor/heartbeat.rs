@@ -22,13 +22,13 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt, DuplexStream};
 use tokio::sync::mpsc;
 
 use jackioh_server::actor::contracts::SocketHandlers;
-use jackioh_server::actor::ws_server::{Socket, SocketFrame, WS_PATH};
+use jackioh_server::actor::ws_server::{Socket, SocketFrame, WS_PATH, WS_SUBPROTOCOL, bearer_protocol};
 use jackioh_server::app::{App, now_ms, router};
 use jackioh_server::config::{
     DISCONNECT_GRACE_MS, WS_IDLE_TIMEOUT_SECONDS, WS_OUTBOX_MAX_FRAMES, WS_PING_INTERVAL_SECONDS,
 };
 
-use super::ws_server::{encode_query, seed_matches};
+use super::ws_server::seed_matches;
 use crate::support::socket::{FakeSocket, create_fake_socket, settle};
 
 /// The pipe's buffer each way: far more than a match's first frames, so a write never waits on the
@@ -112,10 +112,10 @@ impl Served {
         self.streams.send(server_end).expect("the listener is serving");
         let mut client = Client { stream };
         let request = format!(
-            "GET {WS_PATH}?matchId=match-1&token={} HTTP/1.1\r\nHost: test\r\nUpgrade: websocket\r\n\
+            "GET {WS_PATH}?matchId=match-1 HTTP/1.1\r\nHost: test\r\nUpgrade: websocket\r\n\
              Connection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\
-             Sec-WebSocket-Version: 13\r\n\r\n",
-            encode_query(&self.tokens[0])
+             Sec-WebSocket-Version: 13\r\nSec-WebSocket-Protocol: {WS_SUBPROTOCOL}, {}\r\n\r\n",
+            bearer_protocol(&self.tokens[0])
         );
         client
             .stream

@@ -5,9 +5,10 @@
 //! what was logged while the game is live, it reads the store's log.
 //!
 //! The real router is served over in-memory pipes (`MemoryListener`, as `actor/heartbeat.rs` does,
-//! since real TCP races a paused clock), so the upgrade, the auth (`?token=`) and the frames are the
-//! wire's. Each client is a small RFC 6455 client whose reader task answers the server's pings and
-//! stamps every text frame with the paused clock's instant. A match is made the way players make one:
+//! since real TCP races a paused clock), so the upgrade, the auth (an offered subprotocol, R1379000)
+//! and the frames are the wire's. Each client is a small RFC 6455 client whose reader task answers
+//! the server's pings and stamps every text frame with the paused clock's instant. A match is made
+//! the way players make one:
 //! `POST /api/duos/rooms`, then the join; its seats' decks are dealt at random (`random: true`) over
 //! the real catalog, and the AI plays B1 and B2.
 //!
@@ -33,7 +34,7 @@ use jackioh_engine::config::{
 use jackioh_engine::wire::DuosSeat;
 use jackioh_server::actor::guard::FLOOD_WINDOW_MS;
 use jackioh_server::actor::protocol::SERVER_NONCE_PREFIX;
-use jackioh_server::actor::ws_server::{Socket, SocketFrame};
+use jackioh_server::actor::ws_server::{Socket, SocketFrame, WS_CLOSE, WS_SUBPROTOCOL, bearer_protocol};
 use jackioh_server::app::{App, now_ms, router};
 use jackioh_server::config::{
     DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_ROUND_CLOCK_MS,
@@ -173,15 +174,31 @@ pub(super) fn serve(app: &Arc<App>) -> Served {
 }
 
 impl Served {
-    /// The upgrade of `path?token=…` over a new pipe; panics unless the server answers 101.
+    /// The upgrade of `path` over a new pipe, `token` offered as a subprotocol beside `jackioh.v1`
+    /// (R1379000); panics unless the server answers 101.
     pub(super) async fn connect(&self, path: &str, token: &str) -> WsClient {
+        self.connect_offering(path, &[WS_SUBPROTOCOL, &bearer_protocol(token)])
+            .await
+            .0
+    }
+
+    /// The upgrade of `path_and_query` over a new pipe, offering `protocols` (none when empty);
+    /// panics unless the server answers 101. Answers the client and the protocol the server echoed.
+    pub(super) async fn connect_offering(
+        &self,
+        path_and_query: &str,
+        protocols: &[&str],
+    ) -> (WsClient, Option<String>) {
         let (mut stream, server_end) = tokio::io::duplex(PIPE_BYTES);
         self.streams.send(server_end).expect("the listener is serving");
-        let request = format!(
-            "GET {path}?token={} HTTP/1.1\r\nHost: test\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\
-             Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n",
-            encode_query(token)
+        let mut request = format!(
+            "GET {path_and_query} HTTP/1.1\r\nHost: test\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\
+             Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n"
         );
+        if !protocols.is_empty() {
+            request.push_str(&format!("Sec-WebSocket-Protocol: {}\r\n", protocols.join(", ")));
+        }
+        request.push_str("\r\n");
         stream
             .write_all(request.as_bytes())
             .await
@@ -199,9 +216,15 @@ impl Served {
         let head = String::from_utf8_lossy(&head);
         assert!(
             head.starts_with("HTTP/1.1 101"),
-            "the upgrade of {path} was not accepted: {head}"
+            "the upgrade of {path_and_query} was not accepted: {head}"
         );
-        WsClient::start(stream)
+        let protocol = head.lines().find_map(|line| {
+            let (name, value) = line.split_once(':')?;
+            name.trim()
+                .eq_ignore_ascii_case("sec-websocket-protocol")
+                .then(|| value.trim().to_string())
+        });
+        (WsClient::start(stream), protocol)
     }
 }
 
@@ -470,6 +493,37 @@ pub(super) async fn api(app: &Arc<App>, method: &str, path: &str, token: &str, b
 
 fn hello(match_id: &str) -> Value {
     json!({ "type": "hello", "matchId": match_id })
+}
+
+/// R1379000: offers that carry no usable credential: none at all, the name alone, one that does not
+/// decode, an empty one, and one the auth refuses.
+pub(super) fn offers_without_a_credential() -> Vec<Vec<String>> {
+    vec![
+        vec![],
+        vec![WS_SUBPROTOCOL.to_string()],
+        vec![WS_SUBPROTOCOL.to_string(), "jackioh.bearer.!!!".to_string()],
+        vec![WS_SUBPROTOCOL.to_string(), "jackioh.bearer.".to_string()],
+        vec![WS_SUBPROTOCOL.to_string(), bearer_protocol("token-expired")],
+    ]
+}
+
+/// R1379000, R148: what a socket with no usable credential gets: the one `forbidden` frame, "sign
+/// in first", then 4401, no view, and `token` in no frame.
+pub(super) async fn assert_refused_for_its_sign_in(client: &WsClient, token: &str) {
+    let (_, _, refusal) = client
+        .wait_for(0, PROMPTLY, |frame| {
+            frame["type"] == "error" && frame["code"] == "forbidden"
+        })
+        .await
+        .unwrap_or_else(|| panic!("no forbidden: {:?}", client.frames()));
+    assert_eq!(refusal["message"], "sign in first", "{refusal}");
+    assert_eq!(client.wait_closed(PROMPTLY).await, Some(WS_CLOSE.unauthorized));
+    assert!(client.of_type("view").is_empty(), "{:?}", client.frames());
+    let offered = bearer_protocol(token);
+    for frame in client.frames() {
+        let text = frame.to_string();
+        assert!(!text.contains(token) && !text.contains(&offered), "{text}");
+    }
 }
 
 fn action(nonce: &str, body: Value) -> Value {
@@ -2325,5 +2379,70 @@ mod r835000_r835002_the_abuse_guards {
         // The teammate's seat is untouched.
         settle().await;
         assert!(a2.close_code().is_none());
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1379000 — the credential on the handshake
+// ---------------------------------------------------------------------------------------------
+
+mod r1379000_the_credential_on_the_handshake {
+    //! R1379000: a co-op seat offers its token as a `jackioh.bearer.` subprotocol beside
+    //! `jackioh.v1`, and `jackioh.v1` is all the server answers with. No usable credential is R148's
+    //! 4401, a renewed token seats what the refused one could not (R1115000), and the previous day's
+    //! client's `?token=` is read only when no credential is offered.
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r1379000_a_seat_offering_its_token_is_answered_jackioh_v1_and_seated() {
+        let h = duos("easy").await;
+        let offered = bearer_protocol(&h.host.token);
+        let (client, protocol) = h
+            .served
+            .connect_offering(DUOS_PATH, &[WS_SUBPROTOCOL, &offered])
+            .await;
+        assert_eq!(protocol.as_deref(), Some(WS_SUBPROTOCOL));
+        client.send_json(hello(&h.match_id)).await;
+        let view = client
+            .wait_for(0, PROMPTLY, |frame| frame["type"] == "view")
+            .await;
+        assert!(view.is_some(), "{:?}", client.frames());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1379000_a_missing_malformed_or_refused_credential_is_refused_with_4401() {
+        let h = duos("easy").await;
+        for offered in offers_without_a_credential() {
+            let offer: Vec<&str> = offered.iter().map(String::as_str).collect();
+            let (client, protocol) = h.served.connect_offering(DUOS_PATH, &offer).await;
+            let echoed = (!offer.is_empty()).then_some(WS_SUBPROTOCOL);
+            assert_eq!(protocol.as_deref(), echoed, "{offer:?}");
+            client.send_json(hello(&h.match_id)).await;
+            assert_refused_for_its_sign_in(&client, &h.host.token).await;
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1379000_a_renewed_token_seats_the_socket_its_refused_one_could_not() {
+        let h = duos("easy").await;
+        let refused = h.served.connect(DUOS_PATH, "token-expired").await;
+        refused.send_json(hello(&h.match_id)).await;
+        assert_refused_for_its_sign_in(&refused, "token-expired").await;
+
+        // `seat` offers the host's own token and waits for its view.
+        h.seat(&h.host).await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1379000_the_previous_clients_query_token_still_seats_a_socket_that_offers_no_credential() {
+        let h = duos("easy").await;
+        let address = format!("{DUOS_PATH}?token={}", encode_query(&h.host.token));
+        let (client, protocol) = h.served.connect_offering(&address, &[]).await;
+        assert_eq!(protocol, None);
+        client.send_json(hello(&h.match_id)).await;
+        let view = client
+            .wait_for(0, PROMPTLY, |frame| frame["type"] == "view")
+            .await;
+        assert!(view.is_some(), "{:?}", client.frames());
     }
 }

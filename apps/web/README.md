@@ -189,7 +189,7 @@ decides a rule: every verdict they show comes from `@jackioh/validator` (the Rus
 WASM), the module the server runs at queue, and the server's refusal, when it comes, is shown in its own words (rule 7).
 
 ```
-routes/decks.tsx        /decks: loads GET /api/decks, the catalog and the collection, hands them to the workshop
+routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop
 game/deckbuilder/       the deck workshop: up to ten named decks and five trios (R250, R252), the pool
                         browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630),
                         the trio editor that marks every card two of its decks share (R251),
@@ -224,8 +224,11 @@ routes/SeriesBanner.tsx the board's banner for a series game, each side's won de
 routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — Jlorious #1–#100, the
                         Grape tiers, the Raisins — and the caller's own standing; rank/rank.ts says
                         a visible rank in a player's words for this screen, the account and the board
+routes/QuestsPanel.tsx  /account's quests (§14.9) from GET /api/quests: each held quest's progress and
+                        reward, and the countdown to the next; #1307 moves it
 routes/lobby.css        the lobby's, the series screen's and its picker's tavern look, and the banner's pips
-routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlore, fill, the clears), shown
+routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlore, fill, the clears, give or
+                        complete a quest, §14.9), shown
                         when /api/auth/me says isDev; the server decides every grant, and the panel shows
                         its answer or refusal; /account's "Manage sign-in & account" shows every account
                         its account secret ID, hidden until asked for, with a copy button
@@ -550,6 +553,10 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `EngineGate` holds every screen that calls the engine until it resolves (#778; the deck builder
   calls the validator synchronously), the practice worker awaits it before its first message, and
   `test/setup.ts` loads it synchronously for jsdom.
+- `src/game/currentCatalog.ts` is the current catalog every screen with no game of its own reads (SPEC
+  §9.4, R163, #1378): `currentCatalog()`, the module's registered definitions and compiled-in version,
+  and `currentCatalogLookup()`, the board's names over them, each built once. No screen asks
+  `GET /api/catalog`; `game/currentCatalog.test.ts` fails a client file that names it.
 - `src/wire/` keeps every import the client had when these packages were TypeScript working
   unchanged: `@jackioh/shared` is the generated wire types plus hand-kept helpers, `@jackioh/engine`
   and `@jackioh/ai` are typed functions over the module, `@jackioh/engine/config` and

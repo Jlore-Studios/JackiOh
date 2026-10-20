@@ -13,8 +13,9 @@
 //! frames (SPEC §9.5, §9.8, R1441), so a dead or unread peer starts its seat's grace and cannot grow
 //! the server's memory without limit.
 //!
-//! Surface contract: docs/v0.3.0/SURFACE.md §4.1, §4.2, §11.2, §11.3. The token comes from `?token=`
-//! only, and `jackioh.v1` is echoed when offered.
+//! Surface contract: docs/v0.3.0/SURFACE.md §4.1, §4.2, §11.2, §11.3. The token comes from the
+//! offered `jackioh.bearer.` subprotocol (R1379000), or, when none is offered, from the previous
+//! day's client's `?token=`; only `jackioh.v1` is echoed.
 
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -24,8 +25,11 @@ use std::time::Duration;
 use axum::body::Bytes;
 use axum::extract::ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{ConnectInfo, FromRequestParts, Query, Request};
+use axum::http::header::SEC_WEBSOCKET_PROTOCOL;
 use axum::http::{HeaderMap, HeaderValue, StatusCode, Uri};
 use axum::response::{IntoResponse, Response};
+use base64::Engine as _;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use indexmap::IndexMap;
 use tokio::sync::mpsc;
 
@@ -46,6 +50,15 @@ pub const WS_PATH: &str = "/ws/match";
 /// The subprotocol a client may name on the handshake. Only this name is echoed back, never
 /// anything offered beside it.
 pub const WS_SUBPROTOCOL: &str = "jackioh.v1";
+
+/// R1379000: the offered subprotocol that carries a socket's bearer token, base64url without
+/// padding after this prefix. It is read, never echoed: only `WS_SUBPROTOCOL` is.
+pub const WS_BEARER_PROTOCOL_PREFIX: &str = "jackioh.bearer.";
+
+/// R1379000: what a client offers for `token` (the web's `socketProtocols`).
+pub fn bearer_protocol(token: &str) -> String {
+    format!("{WS_BEARER_PROTOCOL_PREFIX}{}", URL_SAFE_NO_PAD.encode(token))
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct WsClose {
@@ -410,9 +423,25 @@ fn query_pairs(uri: &Uri) -> Vec<(String, String)> {
     }
 }
 
-/// The token comes from `?token=` only. An empty value is no token.
-fn token_from(query: &[(String, String)]) -> Option<String> {
-    query_param(query, "token").filter(|token| !token.is_empty())
+/// R1379000: an upgrade's token. The first offered subprotocol starting with
+/// `WS_BEARER_PROTOCOL_PREFIX` is the credential; one that does not decode to non-empty UTF-8 is no
+/// token. Only with no credential offered is `?token=` read, the previous day's client's address
+/// (docs/deploy-cloudflare.md §7).
+fn upgrade_token(headers: &HeaderMap, uri: &Uri) -> Option<String> {
+    let offered = headers
+        .get_all(SEC_WEBSOCKET_PROTOCOL)
+        .iter()
+        .filter_map(|value| value.to_str().ok())
+        .flat_map(|value| value.split(','))
+        .find_map(|protocol| protocol.trim().strip_prefix(WS_BEARER_PROTOCOL_PREFIX));
+    match offered {
+        Some(encoded) => URL_SAFE_NO_PAD
+            .decode(encoded)
+            .ok()
+            .and_then(|bytes| String::from_utf8(bytes).ok())
+            .filter(|token| !token.is_empty()),
+        None => query_param(&query_pairs(uri), "token").filter(|token| !token.is_empty()),
+    }
 }
 
 /// Whether `profile_id` holds a seat in the finished match `match_id` and its rematch window is
@@ -446,8 +475,9 @@ async fn upgrade_socket(
     app: &Arc<App>,
     socket: &Socket,
     query: &[(String, String)],
+    token: Option<String>,
 ) -> Result<(), UpgradeFailure> {
-    let Some(token) = token_from(query) else {
+    let Some(token) = token else {
         return Err(UpgradeFailure::refused(WS_CLOSE.unauthorized, "sign in first"));
     };
 
@@ -498,8 +528,9 @@ async fn upgrade_socket(
 }
 
 /// Authenticate an upgraded socket and hand it to the registry, or refuse it with the one error
-/// frame and a close code.
-pub async fn handle_match_socket(app: &Arc<App>, socket: &Socket, uri: &Uri) {
+/// frame and a close code. `token` is the upgrade's (`upgrade_token`, R1379000); `uri` names the
+/// match.
+pub async fn handle_match_socket(app: &Arc<App>, socket: &Socket, uri: &Uri, token: Option<String>) {
     let refuse = |code: u16, message: &str| {
         // One protocol code for every refusal: a socket learns that it may not have this match,
         // never which of the checks said so. A peer already gone drops the frame; the close below
@@ -509,7 +540,7 @@ pub async fn handle_match_socket(app: &Arc<App>, socket: &Socket, uri: &Uri) {
     };
 
     let query = query_pairs(uri);
-    match upgrade_socket(app, socket, &query).await {
+    match upgrade_socket(app, socket, &query, token).await {
         Ok(()) => {}
         Err(UpgradeFailure::Refused { code, message }) => refuse(code, &message),
         Err(UpgradeFailure::Threw(message)) => {
@@ -738,6 +769,7 @@ pub async fn handle_with(app: Arc<App>, req: Request, options: &AttachOptions) -
         Err(rejection) => return rejection.into_response(),
     };
     let uri = parts.uri.clone();
+    let token = upgrade_token(&parts.headers, &parts.uri);
 
     upgrade
         // §9.8: every client message is a small JSON frame. Without a cap a frame is buffered
@@ -752,7 +784,7 @@ pub async fn handle_with(app: Arc<App>, req: Request, options: &AttachOptions) -
             let _slot = slot;
             let (socket, pump) = socket_from_ws(ws);
             register_client(key, &socket);
-            handle_match_socket(&app, &socket, &uri).await;
+            handle_match_socket(&app, &socket, &uri, token).await;
             let _ = pump.await;
             unregister_client(key, &socket);
         })
@@ -763,14 +795,10 @@ pub async fn handle_with(app: Arc<App>, req: Request, options: &AttachOptions) -
 /// S7: the socket a friend's live game is watched on (`social::watch`).
 pub const WATCH_PATH: &str = "/ws/watch";
 
-/// The `?token=` of an upgrade, read exactly as `/ws/match` reads it.
-pub(crate) fn upgrade_token(uri: &Uri) -> Option<String> {
-    token_from(&query_pairs(uri))
-}
-
 /// The `/ws/watch` upgrade, held to all `/ws/match`'s is (`handle_with`): the origin check, the
-/// per-address count, the frame cap and the one subprotocol. The watch's frame handlers go in before
-/// the pump starts, so a hello sent the moment the socket opens is never dropped.
+/// per-address count, the frame cap, the one subprotocol and the token read as `upgrade_token` reads
+/// it (R1379000). The watch's frame handlers go in before the pump starts, so a hello sent the
+/// moment the socket opens is never dropped.
 pub async fn handle_watch(app: Arc<App>, req: Request) -> Response {
     let options = AttachOptions::for_app(&app);
     let allowed = options.allowed_origins.clone().unwrap_or_default();
@@ -805,7 +833,7 @@ pub async fn handle_watch(app: Arc<App>, req: Request) -> Response {
         Ok(upgrade) => upgrade,
         Err(rejection) => return rejection.into_response(),
     };
-    let uri = parts.uri.clone();
+    let token = upgrade_token(&parts.headers, &parts.uri);
 
     upgrade
         .max_message_size(MAX_FRAME_BYTES)
@@ -817,7 +845,7 @@ pub async fn handle_watch(app: Arc<App>, req: Request) -> Response {
             let listener = crate::social::watch::listen(&socket);
             let pumping = tokio::spawn(pump(ws, socket.clone(), frames));
             register_client(key, &socket);
-            crate::social::watch::serve(&app, &socket, &uri, listener).await;
+            crate::social::watch::serve(&app, &socket, token, listener).await;
             let _ = pumping.await;
             unregister_client(key, &socket);
         })
@@ -862,9 +890,8 @@ pub async fn handle_duos(app: Arc<App>, req: Request) -> Response {
         Ok(upgrade) => upgrade,
         Err(rejection) => return rejection.into_response(),
     };
-    let query = query_pairs(&parts.uri);
-    let token = token_from(&query);
-    let match_id = query_param(&query, "matchId");
+    let token = upgrade_token(&parts.headers, &parts.uri);
+    let match_id = query_param(&query_pairs(&parts.uri), "matchId");
 
     upgrade
         .max_message_size(MAX_FRAME_BYTES)

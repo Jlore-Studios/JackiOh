@@ -12,7 +12,7 @@
 // is `{ error: { code, message, details? } }` from `crates/server/src/api/http.rs`.
 
 import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
-import type { CardDefs, GameOverReason, LeanPick, PlayerId, PortraitId, PrintedRarity, SetName } from "@jackioh/shared";
+import type { GameOverReason, LeanPick, PlayerId, PortraitId, PrintedRarity, SetName } from "@jackioh/shared";
 
 import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
@@ -377,6 +377,20 @@ export function devClear(token: string, part: DevClearPart): Promise<{ written: 
   return apiRequest<{ written: number }>(`/api/dev/clear/${part}`, { method: "POST", token, body: {} });
 }
 
+/** `POST /api/dev/quests`: a quest at once (§14.9), answering it; 409 while the most are held. */
+export function devGiveQuest(token: string): Promise<{ quest: QuestView }> {
+  return apiRequest<{ quest: QuestView }>("/api/dev/quests", { method: "POST", token, body: {} });
+}
+
+/** `POST /api/dev/quests/:questId/complete`: completes a held quest, answering what it paid; 404 for one not held. */
+export function devCompleteQuest(token: string, questId: string): Promise<{ completed: string; jlore: number; xp: number }> {
+  return apiRequest<{ completed: string; jlore: number; xp: number }>(`/api/dev/quests/${encodeURIComponent(questId)}/complete`, {
+    method: "POST",
+    token,
+    body: {},
+  });
+}
+
 // Sign-in and sign-up are NOT here. SPEC §9.2 draws the browser's arrow to the auth provider
 // separately from its arrow to these API functions, so they live in `net/auth.ts` and go straight
 // to the provider. `/api/auth/signin` does exist on the server, but it is BUILD M8's fixture-account
@@ -441,6 +455,27 @@ export type OwnedCosmeticsResponse = { cards: { cardId: string; cosmeticId: stri
 
 export function getOwnedCosmetics(token: string): Promise<OwnedCosmeticsResponse> {
   return apiRequest<OwnedCosmeticsResponse>("/api/cosmetics", { token });
+}
+
+/** §14.9: one quest the caller holds, its progress toward `target`, and what it pays. */
+export type QuestView = {
+  questId: string;
+  title: string;
+  progress: number;
+  target: number;
+  jlore: number;
+  xp: number;
+  arrivedAt: number;
+};
+
+/**
+ * R1304000: `GET /api/quests`, the caller's held quests, oldest first, and when the next arrives
+ * (epoch ms); `null` while it holds the most it may, or while the economy is off (R1304002).
+ */
+export type QuestsResponse = { quests: QuestView[]; nextDueAt: number | null };
+
+export function getQuests(token: string): Promise<QuestsResponse> {
+  return apiRequest<QuestsResponse>("/api/quests", { token });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -840,24 +875,6 @@ export type PopulationResponse = {
 
 export function getPopulation(token: string): Promise<PopulationResponse> {
   return apiRequest<PopulationResponse>("/api/queue/population", { token });
-}
-
-/**
- * `GET /api/catalog`: card data for a screen that has no game running.
- *
- * R163: §9.4 calls the catalog "static, versioned, shipped with the client", but the deckbuilder
- * needs names and costs before any engine is loaded and the client has no catalog of its own to
- * ship yet, so the server serves the one it already holds (`get_catalog` in
- * `crates/server/src/api/catalog.rs`); this is the caller, not a second statement of the rule.
- */
-// It returns the whole `CardDefs` record and not a projection, because `@jackioh/validator`'s
-// `CatalogSnapshot.cards` is a `CardDefs` — the deckbuilder's client-side verdict (§9.4: "the
-// client's verdict is UX while the server's is law") runs the same module the server runs, and a
-// trimmed-down card would mean a second, weaker copy of the catalog.
-export type CatalogResponse = { version: string; defs: CardDefs };
-
-export function getCatalog(): Promise<CatalogResponse> {
-  return apiRequest<CatalogResponse>("/api/catalog");
 }
 
 /** `POST /api/rooms` / `POST /api/rooms/:code/join` (§9.5, R264). */

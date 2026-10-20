@@ -7,6 +7,13 @@
 //!      bounded number of actions. The policy never concedes (R84), so `concede` and the server's
 //!      `ceiling` cannot occur.
 //!   3. REPLAY EQUALITY: `duos_fold` of `(options, log)` refuses nothing and reaches the live hash.
+//!   4. PROBES (#1386): every `probe_stride()`-th state, two forged actions that are never logged, each
+//!      owed a refusal with no events and the state exactly as it was. A reused-nonce probe sends the
+//!      action under a nonce of the round's own (`DUOS_NONCE_PREFIX`) that a duel has applied (§13.3),
+//!      so it can only come once a round has closed; a wrong-seat probe sends the body from a seat the
+//!      game is not waiting on. A seat's own nonces are the server's to dedupe in Duos (§9.3, §13.9), so
+//!      no probe reuses one. A failure is an error beginning `wrong-seat probe` or `reused-nonce probe`
+//!      and names the step.
 //!
 //! A seed fixes the game: the four decks are one seeded shuffle of the gate's pool (`FUZZ_POOL`, so
 //! 80 distinct cards), and the policy's picks come from streams of the seed's own, outside the state
@@ -25,17 +32,19 @@ use jackioh_engine::testkit::{
     DuosInvariantMonitor, I6_GATE_STRIDE, create_duos_invariant_monitor, preview_every_set,
 };
 use jackioh_engine::{
-    AI_END_TURN_PROBABILITY, AI_PLAYOUT_STEP_CAP, ActionBody, DECK_SIZE, DUOS_DUELS, DUOS_REASON_DUEL_RESULT,
-    DUOS_REASON_POOL_EMPTIED, DUOS_REASON_TURN_CAP, DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks,
-    DuosReplayInput, DuosSeat, DuosState, Rng, TURN_CAP_PLAYER_TURNS, duos_begin, duos_create, duos_fold,
-    duos_hash, duos_legal_actions, duos_reduce, duos_seats_to_act,
+    AI_END_TURN_PROBABILITY, AI_PLAYOUT_STEP_CAP, ActionBody, DECK_SIZE, DUOS_DUELS, DUOS_NONCE_PREFIX,
+    DUOS_REASON_DUEL_RESULT, DUOS_REASON_POOL_EMPTIED, DUOS_REASON_TURN_CAP, DUOS_SEATS, DuosAction,
+    DuosActionBody, DuosCreateOptions, DuosDecks, DuosReduceResult, DuosReplayInput, DuosSeat, DuosState,
+    Rng, TURN_CAP_PLAYER_TURNS, duos_begin, duos_create, duos_fold, duos_hash, duos_legal_actions,
+    duos_reduce, duos_seats_to_act,
 };
 use rayon::prelude::*;
 
 use crate::agent::panic_message;
 use crate::fuzz::{
     DUOS_GROWTH_EVENTS_BOUND, DUOS_GROWTH_INSTANCES_BOUND, DUOS_GROWTH_NUMBER_BOUND, FUZZ_POOL, Heaviest,
-    Heavy, MEASURES, duos_acting_card, duos_growth_breach, duos_heaviest_lines, weigh_duos,
+    Heavy, MEASURES, REUSED_NONCE_PROBE, WRONG_SEAT_PROBE, duos_acting_card, duos_growth_breach,
+    duos_heaviest_lines, probe_stride, weigh_duos,
 };
 
 /// B25: the seeds `cargo jackioh fuzz --duos` plays when `--seeds` is not given.
@@ -157,12 +166,81 @@ fn choose(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> Option<DuosAction
     rng.pick(&others).cloned()
 }
 
-/// Assertion 1: one game played out, every offered action accepted.
-fn play_duos_game(seed: u32) -> Result<DuosRun, String> {
-    play_duos_game_inner(seed, |_, _, _, _| {})
+/// What a probe's forged action goes through: `duos_reduce`, or in a test a broken one (#1386).
+type DuosReducer = fn(&DuosState, &DuosAction) -> DuosReduceResult;
+
+/// What a probe's `result` did wrong: it owed a refusal with no events and `state` exactly.
+fn judge_duos_refusal(state: &DuosState, result: &DuosReduceResult) -> Option<String> {
+    let mut wrong: Vec<String> = Vec::new();
+    if result.error.is_none() {
+        wrong.push("was accepted".to_string());
+    }
+    if !result.events.is_empty() {
+        wrong.push(format!("emitted {} event(s)", result.events.len()));
+    }
+    if result.state != *state {
+        wrong.push(format!(
+            "moved the state (hash {} became {})",
+            duos_hash(state),
+            duos_hash(&result.state)
+        ));
+    }
+    (!wrong.is_empty()).then(|| wrong.join(" and "))
 }
 
-fn play_duos_game_inner<F>(seed: u32, mut tamper: F) -> Result<DuosRun, String>
+/// The probes on one Duos state (#1386), never logged: `action` under a nonce of the round's own that
+/// a duel has applied (§13.3), then its body sent by a seat not in `seats` (who the game waits on),
+/// rotating by probe. Both are owed a refusal.
+fn probe_duos_state(
+    state: &DuosState,
+    action: &DuosAction,
+    seats: &[DuosSeat],
+    step: usize,
+    probe: DuosReducer,
+) -> Option<String> {
+    let used = state
+        .duels
+        .iter()
+        .flat_map(|game| game.applied.iter())
+        .find(|entry| entry.nonce.starts_with(DUOS_NONCE_PREFIX));
+    if let Some(entry) = used {
+        let forged = DuosAction {
+            nonce: entry.nonce.clone(),
+            ..action.clone()
+        };
+        if let Some(wrong) = judge_duos_refusal(state, &probe(state, &forged)) {
+            return Some(format!(
+                "{REUSED_NONCE_PROBE} probe after step {step}: {} sent {} under the round's nonce \"{}\", and it {wrong}",
+                action.seat,
+                duos_action_name(&action.body),
+                entry.nonce
+            ));
+        }
+    }
+    let idle: Vec<DuosSeat> = DUOS_SEATS
+        .into_iter()
+        .filter(|seat| !seats.contains(seat))
+        .collect();
+    let other = *idle.get((step / probe_stride()) % idle.len().max(1))?;
+    let forged = DuosAction {
+        seat: other,
+        nonce: format!("duos-fuzz-probe-{step}"),
+        body: action.body.clone(),
+    };
+    judge_duos_refusal(state, &probe(state, &forged)).map(|wrong| {
+        format!(
+            "{WRONG_SEAT_PROBE} probe after step {step}: {other} sent {} while it may not act, and it {wrong}",
+            duos_action_name(&action.body)
+        )
+    })
+}
+
+/// Assertion 1: one game played out, every offered action accepted.
+fn play_duos_game(seed: u32) -> Result<DuosRun, String> {
+    play_duos_game_inner(seed, duos_reduce, |_, _, _, _| {})
+}
+
+fn play_duos_game_inner<F>(seed: u32, probe: DuosReducer, mut tamper: F) -> Result<DuosRun, String>
 where
     F: FnMut(usize, &mut DuosState, &mut DuosAction, &mut DuosInvariantMonitor),
 {
@@ -176,6 +254,7 @@ where
     let mut state = begun.state;
     let mut monitor = create_duos_invariant_monitor(&state);
     let stride = if cfg!(test) { 1 } else { I6_GATE_STRIDE };
+    let probe_stride = probe_stride();
     let mut setup = monitor.after(&begun.events, &state);
     setup.extend(monitor.hidden(&state));
     if let Some(first) = setup.first() {
@@ -219,6 +298,13 @@ where
         let unsound = monitor.before(&state, action.seat, &action.body);
         if let Some(first) = unsound.first() {
             return Err(format!("at step {}: {first}", log.len()));
+        }
+
+        // #1386: forged actions against this state, never logged.
+        if log.len().is_multiple_of(probe_stride)
+            && let Some(message) = probe_duos_state(&state, &action, &seats, log.len(), probe)
+        {
+            return Err(message);
         }
 
         let result = duos_reduce(&state, &action);
@@ -357,13 +443,13 @@ fn fuzz_duos_seed(seed: u32) -> DuosSeedOutcome {
 }
 
 #[cfg(test)]
-fn fuzz_duos_seed_with<F>(seed: u32, tamper: F) -> DuosSeedOutcome
+fn fuzz_duos_seed_with<F>(seed: u32, probe: DuosReducer, tamper: F) -> DuosSeedOutcome
 where
     F: FnMut(usize, &mut DuosState, &mut DuosAction, &mut DuosInvariantMonitor),
 {
     let _preview = preview_every_set();
     let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<(String, Heaviest), String> {
-        let run = play_duos_game_inner(seed, tamper)?;
+        let run = play_duos_game_inner(seed, probe, tamper)?;
         let reason = check_duos_run(&run)?;
         Ok((reason, run.heaviest))
     }));
@@ -456,8 +542,6 @@ fn wave_json(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> serde_json::V
 
 #[cfg(test)]
 mod tests {
-    use jackioh_engine::DUOS_SEATS;
-
     use super::*;
 
     #[test]
@@ -484,7 +568,7 @@ mod tests {
     #[test]
     fn a_planted_sick_attack_fails_duos_fuzz_naming_seed_duel_and_step() {
         use jackioh_engine::{Phase, PlayerId, Row, Zone};
-        let outcome = fuzz_duos_seed_with(7, |step, state, action, monitor| {
+        let outcome = fuzz_duos_seed_with(7, duos_reduce, |step, state, action, monitor| {
             if state.round >= 1 && state.duels[0].phase == Phase::Main && step == 4 {
                 // Moved, not copied: a copy left in hand shares the id, and both the monitor and
                 // the reducer would find that copy (whatever the seed's deck put there) first.
@@ -533,7 +617,7 @@ mod tests {
         fn a_planted_growing_number_fails_duos_fuzz_in_the_growth_stage() {
             let seen: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
             let seen_in = Rc::clone(&seen);
-            let outcome = fuzz_duos_seed_with(1, move |step, state, action, _monitor| {
+            let outcome = fuzz_duos_seed_with(1, duos_reduce, move |step, state, action, _monitor| {
                 if step == 0 {
                     // Library, never hand: legal actions and monitors are undisturbed, but every
                     // weighed action afterwards sees the planted number.
@@ -552,7 +636,7 @@ mod tests {
 
         #[test]
         fn the_same_seed_passes_once_the_growth_is_removed() {
-            let outcome = fuzz_duos_seed_with(1, |_, _, _, _| {});
+            let outcome = fuzz_duos_seed_with(1, duos_reduce, |_, _, _, _| {});
             assert_eq!(outcome.error, None);
         }
 
@@ -591,7 +675,7 @@ mod tests {
 
     #[test]
     fn a_planted_view_leak_fails_duos_fuzz_naming_seed_duel_and_step() {
-        let outcome = fuzz_duos_seed_with(7, |step, _state, _action, monitor| {
+        let outcome = fuzz_duos_seed_with(7, duos_reduce, |step, _state, _action, monitor| {
             if step == 1 {
                 monitor.view_tamper = Some(std::sync::Arc::new(|view| {
                     if view.seat == DuosSeat::A1 {
@@ -606,5 +690,61 @@ mod tests {
         assert!(line.contains("duel 0"), "should name duel 0: {line}");
         assert!(line.contains("step 2"), "should name step 2: {line}");
         assert!(line.contains("I6 duos leak"), "should cite I6 duos leak: {line}");
+    }
+
+    mod duos_probe_stage {
+        use super::*;
+
+        /// A reducer that takes the action from whichever seat the game waits on, whoever sent it.
+        fn any_seat(state: &DuosState, action: &DuosAction) -> DuosReduceResult {
+            for seat in duos_seats_to_act(state) {
+                let result = duos_reduce(
+                    state,
+                    &DuosAction {
+                        seat,
+                        ..action.clone()
+                    },
+                );
+                if result.error.is_none() {
+                    return result;
+                }
+            }
+            duos_reduce(state, action)
+        }
+
+        /// A reducer that lets the round's own nonces through as a seat's.
+        fn unguarded(state: &DuosState, action: &DuosAction) -> DuosReduceResult {
+            let nonce = action.nonce.replacen(DUOS_NONCE_PREFIX, "seat:", 1);
+            duos_reduce(
+                state,
+                &DuosAction {
+                    nonce,
+                    ..action.clone()
+                },
+            )
+        }
+
+        /// `probe` fails seed 7 naming the probe called `name`, the seed and a step.
+        fn assert_caught(probe: DuosReducer, name: &str) {
+            let outcome = fuzz_duos_seed_with(7, probe, |_, _, _, _| {});
+            let lines = failure_lines(&[outcome]);
+            assert_eq!(lines.len(), 1, "{lines:?}");
+            assert!(
+                lines[0].starts_with(&format!("seed 7: {name} probe after step ")),
+                "{}",
+                lines[0]
+            );
+        }
+
+        #[test]
+        fn a_reducer_that_takes_any_seat_s_action_fails_the_wrong_seat_probe_naming_seed_and_step() {
+            assert_caught(any_seat, WRONG_SEAT_PROBE);
+        }
+
+        #[test]
+        fn a_reducer_that_lets_the_round_s_nonces_through_fails_the_reused_nonce_probe_naming_seed_and_step()
+        {
+            assert_caught(unguarded, REUSED_NONCE_PROBE);
+        }
     }
 }
