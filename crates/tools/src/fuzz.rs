@@ -703,35 +703,38 @@ pub(crate) fn checkpoint_step(stream: &str, paused: &[usize], actions: usize) ->
     (rng.pick(paused).copied().unwrap_or(actions / 2), true)
 }
 
-/// The state through JSON and back, with its hash: what SPEC §9.3's checkpoint stores after the
-/// log's newest row and §10.1 requires paused work to survive.
-fn round_trip(state: &GameState) -> Result<(String, GameState), String> {
+/// The state through JSON text and back: what SPEC §9.3's checkpoint stores after the log's
+/// newest row and §10.1 requires paused work to survive. A 1v1 game's or a Duos game's.
+pub(crate) fn round_trip<S: Serialize + for<'de> Deserialize<'de>>(state: &S) -> Result<S, String> {
     let text = serde_json::to_string(state)
-        .map_err(|error| format!("checkpoint round trip could not serialise the state: {error}"))?;
-    let restored: GameState = serde_json::from_str(&text)
-        .map_err(|error| format!("checkpoint round trip could not parse the state back: {error}"))?;
-    let hash = hash_state(&restored);
-    Ok((hash, restored))
+        .map_err(|error| format!("the round trip could not serialise the state: {error}"))?;
+    serde_json::from_str(&text)
+        .map_err(|error| format!("the round trip could not parse the state back: {error}"))
 }
 
-/// `round_trip`'s hash, requiring it to match the live one.
-fn verify_round_trip(state: &GameState) -> Result<String, String> {
-    let (hash, _) = round_trip(state)?;
-    let live = hash_state(state);
-    if hash != live {
+/// `state` restored by `restore`, required to hash as `state` does under `hash`: the restored
+/// state, or the mismatch. Every wave restores with `round_trip`; a test plants a lossy one.
+pub(crate) fn verify_round_trip<S>(
+    state: &S,
+    hash: impl Fn(&S) -> String,
+    restore: impl FnOnce(&S) -> Result<S, String>,
+) -> Result<S, String> {
+    let restored = restore(state)?;
+    let (live, again) = (hash(state), hash(&restored));
+    if again != live {
         return Err(format!(
-            "checkpoint round trip changed the state: hash {hash} != {live}"
+            "the round trip changed the state: hash {again} != {live}"
         ));
     }
-    Ok(hash)
+    Ok(restored)
 }
 
 /// What one game's checkpoint crossed and what it cost: whether it restarted from paused work
-/// and the cost in microseconds. (The step itself stays inside `check_serial_restart`: it picks
+/// and the cost in milliseconds. (The step itself stays inside `check_serial_restart`: it picks
 /// the prefix, so carrying it out would be a field nobody reads.)
 struct CheckpointReport {
     paused: bool,
-    micros: u128,
+    ms: u128,
 }
 
 /// Assertion 4 (#1387): the game survives a serialized restart. Folds the log's prefix to the
@@ -778,11 +781,8 @@ fn check_serial_restart(
             at,
         ));
     }
-    let checkpoint_hash = verify_round_trip(&prefix.state)
+    let mut state = verify_round_trip(&prefix.state, hash_state, round_trip)
         .map_err(|message| FuzzFailure::new(FailureStage::Checkpoint, message, at))?;
-    let (_, mut state) = round_trip(&prefix.state)
-        .map_err(|message| FuzzFailure::new(FailureStage::Checkpoint, message, at))?;
-    debug_assert_eq!(checkpoint_hash, hash_state(&state));
     for action in &log[step..] {
         let result = reduce(&state, action);
         if let Some(error) = &result.error {
@@ -819,20 +819,17 @@ fn check_serial_restart(
             at,
         ));
     }
-    let micros = started_at.elapsed().as_micros();
-    if micros > CHECKPOINT_TIME_BOUND_MS * 1000 {
+    let ms = started_at.elapsed().as_millis();
+    if ms > CHECKPOINT_TIME_BOUND_MS {
         return Err(FuzzFailure::new(
             FailureStage::Checkpoint,
-            format!(
-                "checkpoint took {}ms, past CHECKPOINT_TIME_BOUND_MS ({CHECKPOINT_TIME_BOUND_MS}ms)",
-                micros / 1000
-            ),
+            format!("checkpoint took {ms}ms, past CHECKPOINT_TIME_BOUND_MS ({CHECKPOINT_TIME_BOUND_MS}ms)"),
             at,
         ));
     }
     Ok(CheckpointReport {
         paused: was_paused,
-        micros,
+        ms,
     })
 }
 
@@ -1588,8 +1585,8 @@ struct Passed {
     heaviest: Heaviest,
     /// Whether the game's checkpoint restarted from paused work (#1387).
     checkpoint_paused: bool,
-    /// What the game's checkpoint cost, in microseconds (#1387).
-    checkpoint_micros: u128,
+    /// What the game's checkpoint cost, in milliseconds (#1387).
+    checkpoint_ms: u128,
 }
 
 /// One seed through the four assertions: never panic, always terminate by hero death or the R2 cap,
@@ -1636,7 +1633,7 @@ fn fuzz_deal(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<Passed, Fai
             turn: run.state.turn,
             heaviest: run.heaviest,
             checkpoint_paused: checkpoint.paused,
-            checkpoint_micros: checkpoint.micros,
+            checkpoint_ms: checkpoint.ms,
         })
     }));
     let (stage, message, turn, actions) = match caught {
@@ -1732,7 +1729,7 @@ fn play_wave(from: u32, ran: u32) -> Wave {
                 } else {
                     wave.checkpoint_mid += 1;
                 }
-                wave.checkpoint_max_ms = wave.checkpoint_max_ms.max(passed.checkpoint_micros / 1000);
+                wave.checkpoint_max_ms = wave.checkpoint_max_ms.max(passed.checkpoint_ms);
             }
             Err(failure) => wave.failures.push(failure),
         }
@@ -2143,8 +2140,8 @@ struct Outcome {
     reason: Option<String>,
     /// Whether the game's checkpoint restarted from paused work (#1387); false when it failed.
     checkpoint_paused: bool,
-    /// What the game's checkpoint cost, in microseconds (#1387); zero when it failed.
-    checkpoint_micros: u128,
+    /// What the game's checkpoint cost, in milliseconds (#1387); zero when it failed.
+    checkpoint_ms: u128,
 }
 
 fn play_seed(seed: u32) -> Outcome {
@@ -2162,7 +2159,7 @@ fn play_seed(seed: u32) -> Outcome {
         seat,
         reason: None,
         checkpoint_paused: false,
-        checkpoint_micros: 0,
+        checkpoint_ms: 0,
     };
 
     let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<(String, bool, u128), String> {
@@ -2287,18 +2284,18 @@ fn play_seed(seed: u32) -> Outcome {
         Ok((
             ending.reason.as_str().to_string(),
             checkpoint.paused,
-            checkpoint.micros,
+            checkpoint.ms,
         ))
     }));
     match caught {
-        Ok(Ok((reason, checkpoint_paused, checkpoint_micros))) => Outcome {
+        Ok(Ok((reason, checkpoint_paused, checkpoint_ms))) => Outcome {
             seed,
             error: None,
             tier,
             seat,
             reason: Some(reason),
             checkpoint_paused,
-            checkpoint_micros,
+            checkpoint_ms,
         },
         Ok(Err(error)) => fail(error),
         Err(payload) => fail(format!("threw: {}", panic_message(&*payload))),
@@ -2348,10 +2345,7 @@ impl HandicapWave {
         }
         let passed = self.outcomes.iter().filter(|outcome| outcome.error.is_none());
         let paused = passed.clone().filter(|outcome| outcome.checkpoint_paused).count();
-        let slowest_ms = passed
-            .map(|outcome| outcome.checkpoint_micros / 1000)
-            .max()
-            .unwrap_or(0);
+        let slowest_ms = passed.map(|outcome| outcome.checkpoint_ms).max().unwrap_or(0);
         format!(
             "[fuzz-handicap] {} seed(s) from {}: {failed} failed; endings {}\n  checkpoints: {paused} paused, {} mid-game fallback; slowest {slowest_ms}ms of {CHECKPOINT_TIME_BOUND_MS}ms",
             self.size,
@@ -2523,8 +2517,37 @@ mod tests {
             assert_eq!(checkpoint_step(stream, &[], 0), (0, false));
         }
 
+        /// A planted lossy restore: the JSON round trip, then one hero health point added.
+        fn lossy(state: &GameState) -> Result<GameState, String> {
+            let mut restored = round_trip(state)?;
+            restored.players[PlayerId::P1].hero.health += 1;
+            Ok(restored)
+        }
+
+        /// Seed 1's game, played and checked as the gate plays it (under the caller's preview).
+        fn seed_one() -> GameRun {
+            play_game(1, decks_for_seed(1)).unwrap_or_else(|failure| panic!("{}", failure.message))
+        }
+
+        /// Seed 1's checkpoint over `log` against `live`, as `fuzz_deal` checks it.
+        fn seed_one_checkpoint(
+            run: &GameRun,
+            log: &[Action],
+            live: &GameState,
+        ) -> Result<CheckpointReport, FuzzFailure> {
+            check_serial_restart(
+                "jackioh-fuzz-1",
+                &run.decks,
+                None,
+                log,
+                live,
+                "jackioh-fuzz-checkpoint-1",
+                &run.paused,
+            )
+        }
+
         #[test]
-        fn a_tampered_round_trip_fails_verification() {
+        fn a_planted_lossy_round_trip_fails_verification() {
             register_all();
             let _preview = preview_every_set();
             let begun = begin_game(&create_game(&CreateGameOptions {
@@ -2532,26 +2555,53 @@ mod tests {
                 decks: decks_for_seed(1),
                 ..CreateGameOptions::default()
             }));
-            let live = hash_state(&begun.state);
-            assert_eq!(
-                verify_round_trip(&begun.state).expect("the honest state round-trips"),
-                live
-            );
-            let mut value = serde_json::to_value(&begun.state).expect("the state serialises");
-            let health = value
-                .get_mut("players")
-                .and_then(|players| players.get_mut("p1"))
-                .and_then(|p1| p1.get_mut("hero"))
-                .and_then(|hero| hero.get_mut("health"));
-            let Some(health) = health.and_then(|health| health.as_i64()) else {
-                panic!("players.p1.hero.health is a number");
+            let restored = verify_round_trip(&begun.state, hash_state, round_trip)
+                .expect("the honest state round-trips");
+            assert_eq!(hash_state(&restored), hash_state(&begun.state));
+            let error = verify_round_trip(&begun.state, hash_state, lossy)
+                .expect_err("one health point lost in the round trip must fail it");
+            assert!(error.contains("the round trip changed the state"), "{error}");
+        }
+
+        #[test]
+        fn a_restored_game_that_misses_the_live_hash_fails_in_the_checkpoint_stage() {
+            let _preview = preview_every_set();
+            let run = seed_one();
+            let mut live = run.state.clone();
+            live.players[PlayerId::P1].hero.health += 1;
+            let Err(failure) = seed_one_checkpoint(&run, &run.log, &live) else {
+                panic!("a live state the restored game never reaches must fail the checkpoint");
             };
-            value["players"]["p1"]["hero"]["health"] = serde_json::json!(health + 1);
-            let tampered: GameState = serde_json::from_value(value).expect("the tampered state parses back");
-            assert_ne!(
-                hash_state(&tampered),
-                live,
-                "adding one health must move the hash, or the comparison proves nothing"
+            assert_eq!(failure.stage, FailureStage::Checkpoint, "{}", failure.message);
+            assert!(
+                failure.message.contains("the restored game diverged"),
+                "{}",
+                failure.message
+            );
+        }
+
+        #[test]
+        fn a_continuation_the_restored_game_refuses_fails_in_the_checkpoint_stage() {
+            let _preview = preview_every_set();
+            let run = seed_one();
+            let mut log = run.log.clone();
+            // A fresh nonce: a repeated one is answered as before, never refused (§9.3).
+            let mut after = log.last().cloned().expect("seed 1 played an action");
+            after.nonce = "planted-after-the-ending".to_string();
+            log.push(after);
+            let Err(failure) = seed_one_checkpoint(&run, &log, &run.state) else {
+                panic!("an action after the ending must fail the checkpoint");
+            };
+            assert_eq!(failure.stage, FailureStage::Checkpoint, "{}", failure.message);
+            assert!(
+                failure.message.contains("continuation refused"),
+                "{}",
+                failure.message
+            );
+            assert!(
+                failure.message.contains("the game is over"),
+                "{}",
+                failure.message
             );
         }
 
@@ -2559,33 +2609,17 @@ mod tests {
         fn one_seed_crosses_its_checkpoint_and_reports_cost() {
             let passed =
                 fuzz_deal(1, decks_for_seed(1)).unwrap_or_else(|failure| panic!("{}", failure.message));
-            assert!(passed.checkpoint_micros <= CHECKPOINT_TIME_BOUND_MS * 1000);
+            assert!(passed.checkpoint_ms <= CHECKPOINT_TIME_BOUND_MS);
             // The direct check crosses the same checkpoint deterministically.
             let _preview = preview_every_set();
-            let run = play_game(1, decks_for_seed(1)).unwrap_or_else(|failure| panic!("{}", failure.message));
-            let report = check_serial_restart(
-                "jackioh-fuzz-1",
-                &run.decks,
-                None,
-                &run.log,
-                &run.state,
-                "jackioh-fuzz-checkpoint-1",
-                &run.paused,
-            )
-            .unwrap_or_else(|failure| panic!("{}", failure.message));
+            let run = seed_one();
+            let report = seed_one_checkpoint(&run, &run.log, &run.state)
+                .unwrap_or_else(|failure| panic!("{}", failure.message));
             assert_eq!(report.paused, !run.paused.is_empty());
-            assert!(report.micros <= CHECKPOINT_TIME_BOUND_MS * 1000);
+            assert!(report.ms <= CHECKPOINT_TIME_BOUND_MS);
             // The same seed crosses the same checkpoint again.
-            let again = check_serial_restart(
-                "jackioh-fuzz-1",
-                &run.decks,
-                None,
-                &run.log,
-                &run.state,
-                "jackioh-fuzz-checkpoint-1",
-                &run.paused,
-            )
-            .unwrap_or_else(|failure| panic!("{}", failure.message));
+            let again = seed_one_checkpoint(&run, &run.log, &run.state)
+                .unwrap_or_else(|failure| panic!("{}", failure.message));
             assert_eq!(again.paused, report.paused);
         }
     }
