@@ -8458,11 +8458,13 @@
         "by": "`claude` (strong)",
         "sha": "eeec8af0381b16e9de13292d7c9642eb0f2f04b3"
       },
+      "closed_at": "2026-10-20T22:58:50Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-20T20:12:24Z",
       "issue": 1433,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
