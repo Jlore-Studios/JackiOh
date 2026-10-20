@@ -377,6 +377,20 @@ export function devClear(token: string, part: DevClearPart): Promise<{ written: 
   return apiRequest<{ written: number }>(`/api/dev/clear/${part}`, { method: "POST", token, body: {} });
 }
 
+/** `POST /api/dev/quests`: a quest at once (§14.9), answering it; 409 while the most are held. */
+export function devGiveQuest(token: string): Promise<{ quest: QuestView }> {
+  return apiRequest<{ quest: QuestView }>("/api/dev/quests", { method: "POST", token, body: {} });
+}
+
+/** `POST /api/dev/quests/:questId/complete`: completes a held quest, answering what it paid; 404 for one not held. */
+export function devCompleteQuest(token: string, questId: string): Promise<{ completed: string; jlore: number; xp: number }> {
+  return apiRequest<{ completed: string; jlore: number; xp: number }>(`/api/dev/quests/${encodeURIComponent(questId)}/complete`, {
+    method: "POST",
+    token,
+    body: {},
+  });
+}
+
 // Sign-in and sign-up are NOT here. SPEC §9.2 draws the browser's arrow to the auth provider
 // separately from its arrow to these API functions, so they live in `net/auth.ts` and go straight
 // to the provider. `/api/auth/signin` does exist on the server, but it is BUILD M8's fixture-account

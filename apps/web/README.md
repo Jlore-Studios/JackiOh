@@ -227,7 +227,8 @@ routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — 
 routes/QuestsPanel.tsx  /account's quests (§14.9) from GET /api/quests: each held quest's progress and
                         reward, and the countdown to the next; #1307 moves it
 routes/lobby.css        the lobby's, the series screen's and its picker's tavern look, and the banner's pips
-routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlore, fill, the clears), shown
+routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlore, fill, the clears, give or
+                        complete a quest, §14.9), shown
                         when /api/auth/me says isDev; the server decides every grant, and the panel shows
                         its answer or refusal; /account's "Manage sign-in & account" shows every account
                         its account secret ID, hidden until asked for, with a copy button
