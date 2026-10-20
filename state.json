@@ -5514,10 +5514,8 @@
       "run_id": "39331453750",
       "started_at": "2026-10-19T21:58:00Z",
       "stop_requested": false,
-      "strike_log": [
-        "`claude-2` (claude, opus) rejected it: `crates/server/src/api/results.rs:302`: The hook counts every log row whose `player_id` is the seat's engine seat as an action the player took. That includes row"
-      ],
-      "strikes": 1,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 1
     },
