@@ -21803,9 +21803,9 @@
     ],
     "idle_since": "2026-10-20T03:17:51Z",
     "last_run": "2026-10-20T03:17:51Z",
-    "provider": "gpt",
+    "provider": null,
     "requested": false,
-    "run_id": "39363471955",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
