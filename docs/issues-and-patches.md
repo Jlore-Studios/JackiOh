@@ -234,13 +234,19 @@ part that narrows the task shows the gap instead of hiding it.
 - **Today's words.** Deck and Tribute, "(N) Cost" and "costs (N)", Nerf and Buff (R373, R432,
   R1320): `apps/web/src/wording.test.ts` checks every note in `patches.json`.
 - **A set is a release line.** A major version that brings a set adds its line to `RELEASES`
-  (`apps/web/src/patches/releases.ts`), with `first` set to its first card patch, a summary and
-  its technical changes. The page shows one bubble per line, newest open.
+  (`apps/web/src/patches/releases.ts`), with a summary and its technical changes. The line opens at
+  its major, the n-th major the n-th line (R1369000), so no version is written there. The page shows
+  one bubble per line, newest open.
 - **Technical changes.** A change players notice that ships no card data (a mode, a screen, the AI,
   the engine, sound) adds one line to the `technical` of its major version's line, the newest, in its
   own pull request, in the style of the lines there ("Background music and a main menu theme."). A
   major version's changes before its first card patch are its line's too: v0.3.0, the Rust rewrite,
   is Meditative's.
+- **The technical log.** A pull request that ships no card data can carry one player line in its
+  body, under a `## Player note` heading (or as `Player note: …`), written by these rules.
+  `cargo jackioh patches log <base>..<head>` logs each App, AI and Internal commit of the range on the
+  newest shipped X in `crates/cards/patches/technical.json`, with that line (R1369000); the page shows
+  the App and AI lines under their X, and Internal ones stay in the record.
 
 ## Win rates in a balance patch
 

@@ -1,0 +1,118 @@
+# Refreshes the win-rate table M #50 CN Tech and M+ #2 NA Tech read, once per patch (#1360, #1370;
+# part 4's `cargo jackioh winrates --refresh`, R1368000). Each day it reads production's windowed
+# card figures, each card over its own window as /api/stats/cards counts them, from the totals
+# (`jackioh-server stats-cards --window --json`, R1367000; the records' detail is purged after a
+# week, so an export of the records would undercount). It then runs the refresh over them.
+#
+# The refresh writes only when it is due: the newest patch's window has PUBLIC_STATS_MIN_LIVE_GAMES
+# live games and crates/cards/data/win_rates.json is still filed under a version outside it. It then
+# writes the table and a pending fragment claiming it (`winRates`) and CN Tech and NA Tech
+# (`plays`), which this opens as a pull request that merges itself once CI passes. patches-ship.yml
+# then ships it as a micro, so the table is never due twice in one patch. When no refresh is due,
+# the refresh says why and this opens nothing. One refresh is open at a time.
+#
+# It reads production through STATS_DATABASE_URL, a read-only connection string a person adds under
+# Settings -> Secrets and variables -> Actions. With no secret set it says so and stops, green. The
+# pull request is pushed and opened with BOT_GITHUB_TOKEN, as patches-ship.yml's are, because one
+# opened with GITHUB_TOKEN starts no workflow and the required checks would never report.
+name: winrates refresh
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: winrates-refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    name: refresh the win-rate table when it is due
+    runs-on: ubuntu-latest
+    # Two release builds (the server's and the CLI's) on a warm dependency cache, then one read.
+    timeout-minutes: 30
+    steps:
+      - id: db
+        name: the stats database
+        env:
+          STATS_DATABASE_URL: ${{ secrets.STATS_DATABASE_URL }}
+        run: |
+          if [ -z "$STATS_DATABASE_URL" ]; then
+            echo "::notice::STATS_DATABASE_URL is not set, so no refresh: a person adds a read-only connection string under Settings -> Secrets and variables -> Actions."
+            echo "set=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "set=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: ${{ steps.db.outputs.set == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+      - if: ${{ steps.db.outputs.set == 'true' }}
+        uses: ./.github/actions/setup
+        with:
+          node: "false"
+
+      - id: open
+        name: a refresh already open
+        if: ${{ steps.db.outputs.set == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          open=$(gh pr list --state open --base main --json url,headRefName \
+            --jq '[.[] | select(.headRefName | startswith("winrates/refresh-")) | .url][0] // empty')
+          if [ -n "$open" ]; then
+            echo "A refresh is already open: $open"
+          fi
+          echo "url=$open" >> "$GITHUB_OUTPUT"
+
+      - name: the windowed card figures
+        if: ${{ steps.db.outputs.set == 'true' && steps.open.outputs.url == '' }}
+        env:
+          DATABASE_URL: ${{ secrets.STATS_DATABASE_URL }}
+        run: cargo run --release -q -p jackioh-server -- stats-cards --window --json > "$RUNNER_TEMP/window.json"
+
+      - name: refresh, when it is due
+        if: ${{ steps.db.outputs.set == 'true' && steps.open.outputs.url == '' }}
+        shell: bash
+        run: cargo jackioh winrates --refresh "$RUNNER_TEMP/window.json" | tee "$RUNNER_TEMP/refresh.log"
+
+      - name: open the refresh pull request
+        if: ${{ steps.db.outputs.set == 'true' && steps.open.outputs.url == '' }}
+        env:
+          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No refresh is due; nothing to open."
+            exit 0
+          fi
+          head=$(git rev-parse HEAD)
+          branch="winrates/refresh-$(git rev-parse --short HEAD)"
+          login=$(gh api user --jq .login)
+          id=$(gh api user --jq .id)
+          title="Patch: CN Tech's and NA Tech's win-rate table refreshes"
+
+          git checkout -b "$branch"
+          git add -A
+          git -c user.name="$login" -c user.email="$id+$login@users.noreply.github.com" \
+            commit -q -m "$title" -m "The win-rate table from the newest patch's window, due once per patch (R1368000)."
+          git push -u origin "$branch"
+
+          body=$(printf '%s\n' \
+            "Refreshes \`crates/cards/data/win_rates.json\` from production's figures on main at $head (R1368000). The newest patch's window has reached its live games and the table was filed under a version outside it." \
+            "" \
+            '```' \
+            "$(cat "$RUNNER_TEMP/refresh.log")" \
+            '```' \
+            "" \
+            "Its fragment claims the table and CN Tech and NA Tech, so it ships as a micro. Opened by \`.github/workflows/winrates-refresh.yml\`; it merges itself once CI passes.")
+          url=$(gh pr create --base main --head "$branch" --title "$title" --body "$body")
+          gh pr merge "$url" --auto --squash
+          echo "### $title" >> "$GITHUB_STEP_SUMMARY"
+          echo "$url" >> "$GITHUB_STEP_SUMMARY"
