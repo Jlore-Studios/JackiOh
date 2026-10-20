@@ -6916,23 +6916,15 @@
           "claude"
         ],
         "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/server/README.md"
-          ],
-          "from": "648efb982cb0a8c6aaa1a01ac0af245b4c38191c",
-          "main": "17fa91517d2420631bd2af1466256bbc0b541262"
-        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39408883288",
+            "run": "39417696099",
             "tier": "strong"
           }
         ],
-        "sha": "ae538b774dba7de545b9bf79915b061f527581e9",
+        "sha": "9d550a3cbcf5a4be44a22587b1f36a1b8c3d83f4",
         "tiers": {
           "claude": "strong"
         }
