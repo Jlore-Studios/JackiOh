@@ -1199,8 +1199,8 @@ pub enum PlayerSettingsMergeOutcome {
 // Last boards (R417, R565, R678)
 
 store_union! {
-    /// R417: "your last game" is your last finished game of the same kind; only `server` is
-    /// written today.
+    /// R417: "your last game" is your last finished game of the same kind: `server` a match's,
+    /// `practice` a paid practice game's (R1303003).
     pub enum LastBoardKind {
         Server = "server",
         Practice = "practice",

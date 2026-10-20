@@ -5,9 +5,10 @@
 //! what was logged while the game is live, it reads the store's log.
 //!
 //! The real router is served over in-memory pipes (`MemoryListener`, as `actor/heartbeat.rs` does,
-//! since real TCP races a paused clock), so the upgrade, the auth (`?token=`) and the frames are the
-//! wire's. Each client is a small RFC 6455 client whose reader task answers the server's pings and
-//! stamps every text frame with the paused clock's instant. A match is made the way players make one:
+//! since real TCP races a paused clock), so the upgrade, the auth (an offered subprotocol, R1379000)
+//! and the frames are the wire's. Each client is a small RFC 6455 client whose reader task answers
+//! the server's pings and stamps every text frame with the paused clock's instant. A match is made
+//! the way players make one:
 //! `POST /api/duos/rooms`, then the join; its seats' decks are dealt at random (`random: true`) over
 //! the real catalog, and the AI plays B1 and B2.
 //!
@@ -33,13 +34,13 @@ use jackioh_engine::config::{
 use jackioh_engine::wire::DuosSeat;
 use jackioh_server::actor::guard::FLOOD_WINDOW_MS;
 use jackioh_server::actor::protocol::SERVER_NONCE_PREFIX;
-use jackioh_server::actor::ws_server::{Socket, SocketFrame};
+use jackioh_server::actor::ws_server::{Socket, SocketFrame, WS_CLOSE, WS_SUBPROTOCOL, bearer_protocol};
 use jackioh_server::app::{App, now_ms, router};
 use jackioh_server::config::{
     DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_ROUND_CLOCK_MS,
     MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MS, MATCH_SERVER_ACTION_RETRY_MS,
     MAX_SAVED_DECKS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS, REJECTION_ALERT_THRESHOLD,
-    REJECTION_ALERT_WINDOW_MS,
+    REJECTION_ALERT_WINDOW_MS, REMATCH_OFFER_TTL_MS,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{CollectionEntry, Db};
@@ -173,15 +174,31 @@ pub(super) fn serve(app: &Arc<App>) -> Served {
 }
 
 impl Served {
-    /// The upgrade of `path?token=…` over a new pipe; panics unless the server answers 101.
+    /// The upgrade of `path` over a new pipe, `token` offered as a subprotocol beside `jackioh.v1`
+    /// (R1379000); panics unless the server answers 101.
     pub(super) async fn connect(&self, path: &str, token: &str) -> WsClient {
+        self.connect_offering(path, &[WS_SUBPROTOCOL, &bearer_protocol(token)])
+            .await
+            .0
+    }
+
+    /// The upgrade of `path_and_query` over a new pipe, offering `protocols` (none when empty);
+    /// panics unless the server answers 101. Answers the client and the protocol the server echoed.
+    pub(super) async fn connect_offering(
+        &self,
+        path_and_query: &str,
+        protocols: &[&str],
+    ) -> (WsClient, Option<String>) {
         let (mut stream, server_end) = tokio::io::duplex(PIPE_BYTES);
         self.streams.send(server_end).expect("the listener is serving");
-        let request = format!(
-            "GET {path}?token={} HTTP/1.1\r\nHost: test\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\
-             Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n",
-            encode_query(token)
+        let mut request = format!(
+            "GET {path_and_query} HTTP/1.1\r\nHost: test\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\
+             Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n"
         );
+        if !protocols.is_empty() {
+            request.push_str(&format!("Sec-WebSocket-Protocol: {}\r\n", protocols.join(", ")));
+        }
+        request.push_str("\r\n");
         stream
             .write_all(request.as_bytes())
             .await
@@ -199,9 +216,15 @@ impl Served {
         let head = String::from_utf8_lossy(&head);
         assert!(
             head.starts_with("HTTP/1.1 101"),
-            "the upgrade of {path} was not accepted: {head}"
+            "the upgrade of {path_and_query} was not accepted: {head}"
         );
-        WsClient::start(stream)
+        let protocol = head.lines().find_map(|line| {
+            let (name, value) = line.split_once(':')?;
+            name.trim()
+                .eq_ignore_ascii_case("sec-websocket-protocol")
+                .then(|| value.trim().to_string())
+        });
+        (WsClient::start(stream), protocol)
     }
 }
 
@@ -470,6 +493,37 @@ pub(super) async fn api(app: &Arc<App>, method: &str, path: &str, token: &str, b
 
 fn hello(match_id: &str) -> Value {
     json!({ "type": "hello", "matchId": match_id })
+}
+
+/// R1379000: offers that carry no usable credential: none at all, the name alone, one that does not
+/// decode, an empty one, and one the auth refuses.
+pub(super) fn offers_without_a_credential() -> Vec<Vec<String>> {
+    vec![
+        vec![],
+        vec![WS_SUBPROTOCOL.to_string()],
+        vec![WS_SUBPROTOCOL.to_string(), "jackioh.bearer.!!!".to_string()],
+        vec![WS_SUBPROTOCOL.to_string(), "jackioh.bearer.".to_string()],
+        vec![WS_SUBPROTOCOL.to_string(), bearer_protocol("token-expired")],
+    ]
+}
+
+/// R1379000, R148: what a socket with no usable credential gets: the one `forbidden` frame, "sign
+/// in first", then 4401, no view, and `token` in no frame.
+pub(super) async fn assert_refused_for_its_sign_in(client: &WsClient, token: &str) {
+    let (_, _, refusal) = client
+        .wait_for(0, PROMPTLY, |frame| {
+            frame["type"] == "error" && frame["code"] == "forbidden"
+        })
+        .await
+        .unwrap_or_else(|| panic!("no forbidden: {:?}", client.frames()));
+    assert_eq!(refusal["message"], "sign in first", "{refusal}");
+    assert_eq!(client.wait_closed(PROMPTLY).await, Some(WS_CLOSE.unauthorized));
+    assert!(client.of_type("view").is_empty(), "{:?}", client.frames());
+    let offered = bearer_protocol(token);
+    for frame in client.frames() {
+        let text = frame.to_string();
+        assert!(!text.contains(token) && !text.contains(&offered), "{text}");
+    }
 }
 
 fn action(nonce: &str, body: Value) -> Value {
@@ -1850,6 +1904,123 @@ mod b40_the_rebuild {
 }
 
 // ---------------------------------------------------------------------------------------------
+// R1398000 — a finished co-op match's socket reopens only inside the rematch window
+// ---------------------------------------------------------------------------------------------
+
+/// With no actor in memory, a seat's hello reopens a finished match only within
+/// `REMATCH_OFFER_TTL_MS` of its `ended_at` (R1285000's window): past it the seat is not found
+/// and nothing is folded, so no report is filed for an old log; inside it the match folds back.
+mod r1398000_the_end_screen_window {
+    use super::*;
+
+    /// A game both people conceded, its actor dropped as a restart drops it.
+    async fn finished() -> Duos {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        h.concede_both(&a1, &a2).await;
+        let held = registry(&h.app);
+        held.stop(&h.match_id).await;
+        assert!(!held.has(&h.match_id));
+        h
+    }
+
+    /// Moves the row's `ended_at` to `ago_ms` before now.
+    async fn ended_ago(h: &Duos, ago_ms: i64) {
+        let store = fake(&h.app);
+        let mut data = store.lock().await;
+        let row = data
+            .tables
+            .duos
+            .matches
+            .iter_mut()
+            .find(|row| row.id == h.match_id)
+            .expect("the match's row");
+        assert!(row.ended_at.is_some(), "the concedes ended the game: {row:?}");
+        row.ended_at = Some(now_ms() - ago_ms);
+    }
+
+    /// Logs an action after the end, which the engine refuses ("the game is over"): the log no
+    /// longer folds.
+    async fn log_after_the_end(h: &Duos) {
+        let last = h
+            .logged()
+            .await
+            .last()
+            .cloned()
+            .expect("the log holds the concedes");
+        let nonce = "a1-after-the-end";
+        let row = DuosActionRow {
+            match_id: h.match_id.clone(),
+            seq: last.seq + 1,
+            nonce: nonce.to_string(),
+            action: json!({ "seat": "a1", "nonce": nonce, "body": concede() }),
+            at: last.at,
+        };
+        let mut t = h.app.db.begin(None).await.expect("a transaction");
+        t.duos_actions_append(&row).await.expect("the row is logged");
+        t.commit().await.expect("the commit");
+    }
+
+    /// The host's hello is closed not found with no view, and nothing is folded.
+    async fn refused(h: &Duos) {
+        let late = h.served.connect(DUOS_PATH, &h.host.token).await;
+        late.send_json(hello(&h.match_id)).await;
+        assert_eq!(late.wait_closed(PROMPTLY).await, Some(CLOSE_NOT_FOUND));
+        assert!(late.of_type("view").is_empty(), "{:?}", late.frames());
+        assert!(
+            !registry(&h.app).has(&h.match_id),
+            "nothing was folded past the window"
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1398000_past_the_window_a_seats_hello_is_not_found_folds_nothing_and_the_replay_still_opens() {
+        let h = finished().await;
+        ended_ago(&h, REMATCH_OFFER_TTL_MS + 1).await;
+
+        refused(&h).await;
+
+        assert!(h.app.bug_reports.recorded().is_empty());
+        let steps = h.steps(&h.host).await;
+        let last = steps.last().expect("the replay holds the end");
+        assert_eq!(last["result"]["reason"], "concede", "{last}");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1398000_past_the_window_a_log_that_no_longer_folds_files_no_report() {
+        let h = finished().await;
+        log_after_the_end(&h).await;
+        ended_ago(&h, REMATCH_OFFER_TTL_MS + 1).await;
+
+        refused(&h).await;
+
+        assert!(h.app.bug_reports.recorded().is_empty());
+
+        // Inside the window the same log is folded back, and its refusal filed.
+        ended_ago(&h, 0).await;
+        h.seat(&h.host).await;
+        assert!(registry(&h.app).has(&h.match_id));
+        assert_eq!(h.app.bug_reports.recorded().len(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1398000_inside_the_window_a_seats_hello_folds_the_finished_match_back_to_its_end() {
+        let h = finished().await;
+        // Not the exact boundary: the paused clock can move while the fold runs.
+        ended_ago(&h, 0).await;
+
+        let back = h.seat(&h.host).await;
+
+        assert!(registry(&h.app).has(&h.match_id));
+        let seen = first_view(&back);
+        assert_eq!(seen["view"]["seat"], "a1");
+        assert_eq!(seen["view"]["result"]["reason"], "concede", "{seen}");
+        assert!(h.app.bug_reports.recorded().is_empty());
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // R1047000 — the hard ceiling (§9.5)
 // ---------------------------------------------------------------------------------------------
 
@@ -2208,5 +2379,70 @@ mod r835000_r835002_the_abuse_guards {
         // The teammate's seat is untouched.
         settle().await;
         assert!(a2.close_code().is_none());
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1379000 — the credential on the handshake
+// ---------------------------------------------------------------------------------------------
+
+mod r1379000_the_credential_on_the_handshake {
+    //! R1379000: a co-op seat offers its token as a `jackioh.bearer.` subprotocol beside
+    //! `jackioh.v1`, and `jackioh.v1` is all the server answers with. No usable credential is R148's
+    //! 4401, a renewed token seats what the refused one could not (R1115000), and the previous day's
+    //! client's `?token=` is read only when no credential is offered.
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r1379000_a_seat_offering_its_token_is_answered_jackioh_v1_and_seated() {
+        let h = duos("easy").await;
+        let offered = bearer_protocol(&h.host.token);
+        let (client, protocol) = h
+            .served
+            .connect_offering(DUOS_PATH, &[WS_SUBPROTOCOL, &offered])
+            .await;
+        assert_eq!(protocol.as_deref(), Some(WS_SUBPROTOCOL));
+        client.send_json(hello(&h.match_id)).await;
+        let view = client
+            .wait_for(0, PROMPTLY, |frame| frame["type"] == "view")
+            .await;
+        assert!(view.is_some(), "{:?}", client.frames());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1379000_a_missing_malformed_or_refused_credential_is_refused_with_4401() {
+        let h = duos("easy").await;
+        for offered in offers_without_a_credential() {
+            let offer: Vec<&str> = offered.iter().map(String::as_str).collect();
+            let (client, protocol) = h.served.connect_offering(DUOS_PATH, &offer).await;
+            let echoed = (!offer.is_empty()).then_some(WS_SUBPROTOCOL);
+            assert_eq!(protocol.as_deref(), echoed, "{offer:?}");
+            client.send_json(hello(&h.match_id)).await;
+            assert_refused_for_its_sign_in(&client, &h.host.token).await;
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1379000_a_renewed_token_seats_the_socket_its_refused_one_could_not() {
+        let h = duos("easy").await;
+        let refused = h.served.connect(DUOS_PATH, "token-expired").await;
+        refused.send_json(hello(&h.match_id)).await;
+        assert_refused_for_its_sign_in(&refused, "token-expired").await;
+
+        // `seat` offers the host's own token and waits for its view.
+        h.seat(&h.host).await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1379000_the_previous_clients_query_token_still_seats_a_socket_that_offers_no_credential() {
+        let h = duos("easy").await;
+        let address = format!("{DUOS_PATH}?token={}", encode_query(&h.host.token));
+        let (client, protocol) = h.served.connect_offering(&address, &[]).await;
+        assert_eq!(protocol, None);
+        client.send_json(hello(&h.match_id)).await;
+        let view = client
+            .wait_for(0, PROMPTLY, |frame| frame["type"] == "view")
+            .await;
+        assert!(view.is_some(), "{:?}", client.frames());
     }
 }

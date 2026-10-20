@@ -203,8 +203,12 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0046_dev_accounts.sql"),
     ),
     (
-        "0047_game_record_builds.sql",
-        include_str!("../../migrations/0047_game_record_builds.sql"),
+        "0047_practice_seeds.sql",
+        include_str!("../../migrations/0047_practice_seeds.sql"),
+    ),
+    (
+        "0048_game_record_builds.sql",
+        include_str!("../../migrations/0048_game_record_builds.sql"),
     ),
 ];
 

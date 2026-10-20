@@ -1,22 +1,22 @@
--- Game records carry their build (migration 0047, R1367000). Runs after 26_dev_accounts.sql.
+-- Game records carry their build (migration 0048, R1367000). Runs after 26_dev_accounts.sql.
 \set ON_ERROR_STOP on
 
 -- Same rules as 01-26: every check raises on failure (`raise exception 'FAIL (…): …'`), every
 -- expected refusal is matched on its sqlstate, and every block runs inside a transaction that is
 -- rolled back.
 
-\echo '### 0047: the migration re-applies over itself ###'
+\echo '### 0048: the migration re-applies over itself ###'
 begin;
 set local client_min_messages = warning;
-\i /tmp/0047_game_record_builds.sql
-\i /tmp/0047_game_record_builds.sql
+\i /tmp/0048_game_record_builds.sql
+\i /tmp/0048_game_record_builds.sql
 set local client_min_messages = notice;
 do $$
 begin
   if not exists (select 1 from pg_constraint where conname = 'game_records_build_check') then
-    raise exception 'FAIL (0047): game_records_build_check is gone after a re-apply';
+    raise exception 'FAIL (0048): game_records_build_check is gone after a re-apply';
   end if;
-  raise notice 'OK (0047): the migration re-applies over itself';
+  raise notice 'OK (0048): the migration re-applies over itself';
 end $$;
 rollback;
 
@@ -45,7 +45,7 @@ begin
   values ('dev:build:3', 'dev', 'random', 'v0.2.5', rec || '{"id":"dev:build:3","build":{"commit":"0123abc"}}');
   select count(*) into n from public.game_records where id like 'dev:build:%';
   if n <> 3 then
-    raise exception 'FAIL (0047): % of the 3 well-formed records were written', n;
+    raise exception 'FAIL (0048): % of the 3 well-formed records were written', n;
   end if;
 
   foreach bad in array array[
@@ -63,7 +63,7 @@ begin
       insert into public.game_records (id, source, mode, patch, record)
       values ('dev:bad:' || i, 'dev', 'random', 'v0.2.5',
               rec || jsonb_build_object('id', 'dev:bad:' || i, 'build', bad));
-      raise exception 'FAIL (0047): a record with the build % was written', bad;
+      raise exception 'FAIL (0048): a record with the build % was written', bad;
     exception
       when check_violation then null;
     end;

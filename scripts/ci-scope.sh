@@ -80,7 +80,8 @@
 #    `read_to_string(`) or `CARGO_MANIFEST_DIR` runs tools, wasm.
 #  - web runs for everything but what no web test, build or typecheck reads: the server's, the
 #    tools' and luau's crates (except each manifest, which every cargo command loads, and the files
-#    the web's tests read there: env.rs, the Dockerfile and tests/deploy/), every crate's README, the
+#    the web's tests read there: env.rs, the Dockerfile, tests/deploy/ and the practice claim fixture,
+#    tests/fixtures/practice-claim.json, which the worker's claim test plays), every crate's README, the
 #    engine's, the cards', the AI's and the WASM crate's tests (except the engine's tests/fixtures/,
 #    which two web tests read), docs/, training/, reviews/, analysis/ and the top-level Markdown.
 #  - e2e runs for everything but what neither the client, the server, the `jackioh` binary (whose
@@ -221,7 +222,7 @@ for file in $files; do
   case "$file" in
     crates/server/Cargo.toml | crates/tools/Cargo.toml | crates/luau/Cargo.toml) on web ;;
     crates/server/src/env.rs | crates/server/Dockerfile | crates/server/tests/deploy/* | crates/engine/tests/fixtures/*) on web ;;
-    crates/ai/tests/fixtures/learned-parity.json) on web ;;
+    crates/ai/tests/fixtures/learned-parity.json | crates/server/tests/fixtures/practice-claim.json) on web ;;
     crates/server/* | crates/tools/* | crates/luau/* | crates/*/README.md) ;;
     crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/*) ;;
     docs/* | training/* | reviews/* | analysis/*) ;;

@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0047: game records carry their build (R1367000; issue #1367)
+-- Migration 0048: game records carry their build (R1367000; issue #1367)
 -- ============================================================================
 -- Serves R1367000 (amends R654): a game record names the build that played it,
 -- `record.build`: the git commit the server (`RENDER_GIT_COMMIT`) or tool was
@@ -19,7 +19,7 @@
 -- (R1044001, `record` null) passes as one without a build.
 --
 -- Apply order: 0001 -> ... -> 0014 (`public.game_records`) -> ... -> 0041
--- (the totals) -> ... -> 0046 -> 0047 (this file).
+-- (the totals) -> ... -> 0046 -> 0047 -> 0048 (this file).
 -- Safe to re-apply: drop-constraint-if-exists before the add, and comment-on.
 -- ============================================================================
 

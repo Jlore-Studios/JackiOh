@@ -3,6 +3,8 @@
 //! folding `(seed, options, log)` (`duos_fold`) on the blocking pool, under the catalog the match was
 //! played on (R767000), and `stop` drops one and leaves its log alone, which is what a crash looks
 //! like from outside. A socket is told it holds no seat before anything is folded for it (§9.1).
+//! A finished match is folded back for a seat only within `REMATCH_OFFER_TTL_MS` of its `ended_at`;
+//! past that the seat is told the match is not found (R1398000).
 //! The registry also keeps the co-op replays opened lately (`duos::replay`).
 //!
 //! One registry per running `App`, reached through `registry(app)`. It is not a field of `App`, so
@@ -26,8 +28,9 @@ use crate::actor::contracts::one_tx;
 use crate::actor::registry::panic_text;
 use crate::actor::ws_server::Socket;
 use crate::api::http::lock;
-use crate::app::App;
+use crate::app::{App, now_ms};
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
+use crate::config::REMATCH_OFFER_TTL_MS;
 use crate::duos::actor::{DuosActor, DuosActorInput, create_duos_actor};
 use crate::duos::engine::{self, Pinned};
 use crate::duos::replay::DuosReplayCache;
@@ -229,7 +232,9 @@ impl DuosRegistry {
     /// B35: hands a socket to the seat `profile_id` holds, rebuilding the actor first when needed.
     /// The seat's view and legal actions follow on the actor's queue. A profile that holds no seat
     /// in the match is refused from the match's row before anything is folded (§9.1): a match id is
-    /// no key to the server's work.
+    /// no key to the server's work. A finished match whose `ended_at` is more than
+    /// `REMATCH_OFFER_TTL_MS` ago, and that has no actor in memory, is refused the same way
+    /// (R1398000).
     pub async fn attach(
         &self,
         app: &Arc<App>,
@@ -246,6 +251,17 @@ impl DuosRegistry {
                     .as_ref()
                     .is_some_and(|row| row.a1 == profile_id || row.a2 == profile_id);
                 if !seated {
+                    return Err(DuosAttachError::NotFound);
+                }
+                // R1398000: a finished match is folded back only inside the window a finished 1v1
+                // match's socket reopens in (R1285000), counted from the row's `ended_at` as
+                // `ws_server::seats_finished_match` counts `finished_at`; past it the seat is answered
+                // as a stranger is and nothing is folded, so no report is filed for an old game.
+                let past_window = row
+                    .as_ref()
+                    .and_then(|row| row.ended_at)
+                    .is_some_and(|ended_at| now_ms() - ended_at > REMATCH_OFFER_TTL_MS);
+                if past_window {
                     return Err(DuosAttachError::NotFound);
                 }
                 self.actor_for(app, match_id).await?
@@ -287,7 +303,8 @@ impl DuosRegistry {
     }
 
     /// Drops every finished actor no person holds a socket on, as the 1v1 reaper drops one: a
-    /// socket that comes back folds it again. Answers the ids it dropped.
+    /// socket that comes back within `REMATCH_OFFER_TTL_MS` of the end folds it again (R1398000).
+    /// Answers the ids it dropped.
     pub async fn reap_finished(&self) -> Vec<String> {
         let reaped: Vec<(String, DuosActor)> = {
             let mut actors = lock(&self.actors);
