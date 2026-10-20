@@ -11451,8 +11451,18 @@
     "what": "suggestions on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-20T16:05:18Z",
-    "notes": [],
+    "at": "2026-10-20T16:16:17Z",
+    "notes": [
+      "started a night run, as a lane was free: a suggestion survey is due, for `claude-7`",
+      "#1433: typed it Task",
+      "#1432: typed it Task",
+      "#1431: typed it Task",
+      "#1430: typed it Task",
+      "#1429: typed it Bug",
+      "#1428: typed it Bug",
+      "#1427: typed it Bug",
+      "#1426: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
