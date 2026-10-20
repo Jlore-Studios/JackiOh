@@ -7966,6 +7966,13 @@
     "1433": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T18:53:00Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 9 (stands alone): this worktree has no GitHub access, so the absence of an open pull request touching results.rs cannot be verified"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
