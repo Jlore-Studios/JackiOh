@@ -7486,6 +7486,9 @@
     "1393": {
       "action": "revise",
       "asks": [],
+      "ci_reruns": {
+        "ae538b774dba7de545b9bf79915b061f527581e9": 1
+      },
       "cleared": {
         "at": "2026-10-20T11:21:06Z",
         "by": "`claude` (strong)",
