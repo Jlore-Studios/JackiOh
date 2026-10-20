@@ -1,9 +1,0 @@
-{
-  "seed": 5644,
-  "catalogVersion": "v0.3.1",
-  "decks": [
-    ["meditative-044", "core-057", "meditativeplus-013", "core-096", "classic-051", "core-036", "meditative-086", "core-074", "meditativeplus-006", "meditative-003", "core-011", "classicplus-050", "meditative-096", "meditative-075", "classicplus-031", "core-027", "core-075", "meditative-069", "classicplus-008", "classic-021"],
-    ["meditativeplus-016", "classicplus-072", "core-055", "meditative-070", "classic-045", "classic-007", "meditative-091", "core-097", "meditative-018", "meditativeplus-002", "core-019", "classicplus-016", "classicplus-043", "classicplus-018", "classic-006", "core-078", "meditative-072", "meditative-063", "core-064", "classicplus-005"]
-  ],
-  "found": "The plain fuzz wave's third quarter (seeds 5001-7500, the daily run's fuzz 3/4) at d81d56fc2 (#1216): I4 fired 33 actions in: c52 (t-1:classic-038*+meditative-066*, p2's) has summonedTurn 8 on turn 8, but its latest entry event was on turn 6. A face-down Field Trap fused with Fiery Waraxe (\"Animated on your turn\"), set on turn 6, fired on its controller's turn 8 and animated as its firing's last step, an entry (R383); the monitor read it as the start-of-turn animation, which enters nothing (R1062). Fixed by #1316, proven by invariants.rs's r1062_r383_a_card_that_fires_as_a_trap_on_its_controllers_turn_enters_as_it_animates. The decks are decks_for_seed(5644) over the 396-card pool of catalog.json at d81d56fc2 (v0.3.1)."
-}

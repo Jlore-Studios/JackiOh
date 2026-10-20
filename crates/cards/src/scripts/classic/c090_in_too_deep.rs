@@ -1224,7 +1224,7 @@ mod tests {
             #[test]
             fn r1279000_r767000_a_game_on_v0_3_15_folds_under_the_kept_script_reward_g_asking_at_once_with_its_quest() {
                 crate::register_all();
-                let shipped = crate::shipped_catalog("v0.4.0").expect("v0.4.0 is carried");
+                let shipped = crate::shipped_catalog("v0.3.15").expect("v0.3.15 is carried");
                 jackioh_engine::with_shipped(Some(shipped), || {
                     let mut s = scenario(json!({
                         "p1": spare(json!({ "backrow": [ITD] })),
