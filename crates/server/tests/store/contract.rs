@@ -4785,10 +4785,10 @@ mod game_records {
     ) {
         let records = [
             game_record("a-live", json!({ "mode": "bo1", "patch": "v0.1.1" })),
-            game_record("b-live", json!({ "mode": "random", "patch": "v0.2.5" })),
+            game_record("b-live", json!({ "mode": "random", "patch": "v0.2.3" })),
             game_record(
                 "dev:c",
-                json!({ "source": "dev", "mode": "random", "patch": "v0.2.5", "pilots": { "p1": "ai", "p2": "ai" } }),
+                json!({ "source": "dev", "mode": "random", "patch": "v0.2.3", "pilots": { "p1": "ai", "p2": "ai" } }),
             ),
             game_record(
                 "dev:d",
@@ -4827,7 +4827,7 @@ mod game_records {
         assert_eq!(
             ids(
                 harness,
-                json!({ "source": "all", "mode": null, "patch": "v0.2.5" })
+                json!({ "source": "all", "mode": null, "patch": "v0.2.3" })
             )
             .await,
             ["b-live", "dev:c"]
@@ -4846,7 +4846,7 @@ mod game_records {
                 .is_empty()
         );
         assert_eq!(
-            q!(harness, t => t.game_records_list(&query(json!({ "source": "dev", "mode": null, "patch": "v0.2.5" })))),
+            q!(harness, t => t.game_records_list(&query(json!({ "source": "dev", "mode": null, "patch": "v0.2.3" })))),
             vec![records[2].clone()]
         );
     }
@@ -5264,7 +5264,7 @@ mod ranked {
         assert!(q!(harness, t => t.ranked_create_season(&newer)));
         assert!(q!(harness, t => t.ranked_create_season(&older)));
         // A second opener of the same id writes nothing and answers false.
-        let reopened: Season = from(spread(j(&newer), json!({ "patchVersion": "v0.2.9" })));
+        let reopened: Season = from(spread(j(&newer), json!({ "patchVersion": "v0.2.4" })));
         assert!(!q!(harness, t => t.ranked_create_season(&reopened)));
         assert_eq!(q!(harness, t => t.ranked_seasons()), vec![older, newer]);
     }

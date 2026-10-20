@@ -566,7 +566,7 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       expect(entry.section, id).toBe("§6.1");
       expect(entry.rule.trim(), id).not.toBe("");
     }
-    // The catalog writes "Can't"; aliases are empty (patch v0.2.1, issue #45).
+    // The catalog writes "Can't"; aliases are empty (patch v0.2.0b, issue #45).
     expect(GLOSSARY["Can't be in Defense Position"].aliases).toEqual([]);
   });
 

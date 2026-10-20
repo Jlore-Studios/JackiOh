@@ -786,7 +786,7 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     expect(filterSetId("Meditative")).toBe("db-filter-set-meditative");
   });
 
-  it("R1178000 the Meditative+ set has a chip and lends its tags, Potion included, once it ships (v0.3.15)", () => {
+  it("R1178000 the Meditative+ set has a chip and lends its tags, Potion included, once it ships (v0.4.0)", () => {
     expect(FILTER_SETS.includes("Meditative+")).toBe(setShips("Meditative+"));
     expect(setShips("Meditative+")).toBe(true);
     expect(filterSetId("Meditative+")).toBe("db-filter-set-meditative-plus");
