@@ -6455,7 +6455,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-19T23:08:33Z",
+      "feedback_since": "2026-10-20T00:24:50Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1302,
@@ -6470,11 +6470,11 @@
       "round_tier": "strong",
       "run_id": "39347415887",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-20T00:24:50Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "claude"
