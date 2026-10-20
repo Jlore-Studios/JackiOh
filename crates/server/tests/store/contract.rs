@@ -8584,7 +8584,10 @@ mod economy {
             q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-new")),
             Some(new.clone())
         );
-        assert_eq!(q!(harness, t => t.economy_practice_seed_get(&other.id, "seed-new")), None);
+        assert_eq!(
+            q!(harness, t => t.economy_practice_seed_get(&other.id, "seed-new")),
+            None
+        );
 
         assert!(!q!(harness, t => t.economy_practice_seed_claim(&other.id, "seed-new", now + 1)));
         assert!(q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-new", now + 1)));
@@ -8599,10 +8602,16 @@ mod economy {
 
         q!(harness, t => t.economy_practice_seeds_prune(&other.id, now + 100));
         q!(harness, t => t.economy_practice_seeds_prune(&owner.id, now));
-        assert_eq!(q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-old")), None);
+        assert_eq!(
+            q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-old")),
+            None
+        );
         assert!(q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-new")).is_some());
         q!(harness, t => t.economy_practice_seeds_prune(&owner.id, now + 1));
-        assert_eq!(q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-new")), None);
+        assert_eq!(
+            q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-new")),
+            None
+        );
     }
 
     both_stores!(

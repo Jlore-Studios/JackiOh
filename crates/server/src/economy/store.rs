@@ -648,8 +648,8 @@ mod pg {
 
     use super::{
         CardCosmetic, CosmeticGrant, CounterEntry, CounterGrant, EconomyLedger, HeldQuest, InventoryEntry,
-        InventoryGrant, JloreGrant, OwnedCosmetics, PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack,
-        TrackGrant, count_after, from_literal, literal, track_after,
+        InventoryGrant, JloreGrant, OwnedCosmetics, PracticeSeed, QuestBook, QuestChange, QuestGrant,
+        SetTrack, TrackGrant, count_after, from_literal, literal, track_after,
     };
     use crate::config::SET_TRACK_FIRST_LEVEL;
     use crate::db::pg::PgTx;
@@ -1721,7 +1721,10 @@ mod fake {
     pub fn practice_seed_insert(f: &mut FakeTx<'_>, seed: &PracticeSeed) -> Result<(), StoreError> {
         let tables = call(f, "economy.practiceSeeds.insert")?;
         if tables.practice_seeds.iter().any(|held| held.seed == seed.seed) {
-            return Err(StoreError::Other(format!("duplicate practice seed {}", seed.seed)));
+            return Err(StoreError::Other(format!(
+                "duplicate practice seed {}",
+                seed.seed
+            )));
         }
         tables.practice_seeds.push(seed.clone());
         Ok(())
@@ -1747,9 +1750,11 @@ mod fake {
         at: i64,
     ) -> Result<bool, StoreError> {
         let tables = call(f, "economy.practiceSeeds.claim")?;
-        match tables.practice_seeds.iter_mut().find(|held| {
-            held.seed == seed && held.profile_id == profile_id && held.claimed_at.is_none()
-        }) {
+        match tables
+            .practice_seeds
+            .iter_mut()
+            .find(|held| held.seed == seed && held.profile_id == profile_id && held.claimed_at.is_none())
+        {
             Some(held) => {
                 held.claimed_at = Some(at);
                 Ok(true)

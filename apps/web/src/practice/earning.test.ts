@@ -65,7 +65,29 @@ describe("what the result dialog says of a claim", () => {
   it("earningText words each answer", () => {
     expect(earningText({ kind: "pending" })).toBe("Checking this game on the server…");
     expect(earningText({ kind: "paid", jlore: 10, xp: 42 })).toBe("+10 Jlore, +42 XP");
-    expect(earningText({ kind: "refused", reason: "ai_mismatch" })).toBe("This game earned nothing (ai_mismatch).");
+    expect(earningText({ kind: "refused", reason: "ai_mismatch" })).toBe(
+      "This game earned nothing (the AI chose another move on the server).",
+    );
+    expect(earningText({ kind: "refused", reason: "a_reason_from_a_newer_server" })).toBe(
+      "This game earned nothing (a_reason_from_a_newer_server).",
+    );
     expect(earningText({ kind: "unreachable" })).toBe("The server could not check this game.");
+  });
+
+  it("every refusal the server names (`economy::practice::ClaimRefusal`) is worded", () => {
+    const reasons = [
+      "economy_off",
+      "unknown_seed",
+      "already_claimed",
+      "expired",
+      "does_not_fold",
+      "ai_mismatch",
+      "not_finished",
+      "voided",
+      "result_mismatch",
+    ];
+    for (const reason of reasons) {
+      expect(earningText({ kind: "refused", reason }), reason).not.toBe(`This game earned nothing (${reason}).`);
+    }
   });
 });

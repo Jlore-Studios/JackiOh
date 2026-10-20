@@ -43,6 +43,35 @@ export type PracticeEarning =
   | { kind: "refused"; reason: string }
   | { kind: "unreachable" };
 
+/**
+ * Why the server paid nothing, in words: `economy::practice`'s `ClaimRefusal` by its wire name,
+ * and a name this build does not know as it came.
+ */
+function refusalText(reason: string): string {
+  switch (reason) {
+    case "economy_off":
+      return t("earning is off");
+    case "unknown_seed":
+      return t("the server has no seed for it");
+    case "already_claimed":
+      return t("it was claimed already");
+    case "expired":
+      return t("its seed expired");
+    case "does_not_fold":
+      return t("the server could not replay it");
+    case "ai_mismatch":
+      return t("the AI chose another move on the server");
+    case "not_finished":
+      return t("it did not finish");
+    case "voided":
+      return t("a Glitch voided it");
+    case "result_mismatch":
+      return t("its result was not the server's");
+    default:
+      return reason;
+  }
+}
+
 export function earningText(earning: PracticeEarning): string {
   switch (earning.kind) {
     case "pending":
@@ -50,7 +79,7 @@ export function earningText(earning: PracticeEarning): string {
     case "paid":
       return t("+{jlore} Jlore, +{xp} XP", { jlore: earning.jlore, xp: earning.xp });
     case "refused":
-      return t("This game earned nothing ({reason}).", { reason: earning.reason });
+      return t("This game earned nothing ({reason}).", { reason: refusalText(earning.reason) });
     case "unreachable":
       return t("The server could not check this game.");
   }

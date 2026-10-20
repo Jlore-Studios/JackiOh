@@ -274,6 +274,7 @@ function routeHost(options: HostOptions = {}): RouteHost {
       }
       if (body.type === "resume") {
         human = body.config.humanSeat;
+        seed = body.config.seed;
         if (options.resume === "failed") {
           return Promise.resolve({ id: mine, type: "failed", message: "the saved game does not fold" });
         }
@@ -1963,6 +1964,24 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     expect(practiceFetches(), "every call went through the injected API").toEqual([]);
   });
 
+  it("R1303001 a game on a server seed picked up after a reload is still claimed at its end, on its own seed", async () => {
+    const left: PracticeStartConfig = { seed: "server-seed-left", difficulty: "easy", humanSeat: "p2", deck: { kind: "random" }, earning: true };
+    window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify(left));
+    const host = routeHost();
+    const earning = fakeEarning();
+    renderEarning(host, earning);
+    await screen.findByTestId(T.hud);
+    expect(host.requests.filter((body) => body.type === "resume")).toEqual([{ type: "resume", config: left }]);
+    expect(earning.requestSeed, "a resumed game keeps its seed").not.toHaveBeenCalled();
+
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    await waitFor(() => {
+      expect(screen.getByTestId(practiceTestid.resultEarning)).toHaveAttribute("data-earning", "paid");
+    });
+    expect(earning.claim).toHaveBeenCalledWith("tok-1", { seed: "server-seed-left", result: "loss", log: [] });
+  });
+
   it("R1303000 a refused claim says why, and Play again still starts and asks for a fresh seed", async () => {
     const host = routeHost();
     const earning = fakeEarning({ claim: () => Promise.resolve({ paid: false, reason: "ai_mismatch" }) });
@@ -1975,7 +1994,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
       expect(line).toHaveAttribute("data-earning", "refused");
     });
     expect(line).toHaveAttribute("data-reason", "ai_mismatch");
-    expect(line).toHaveTextContent("This game earned nothing (ai_mismatch).");
+    expect(line).toHaveTextContent("This game earned nothing (the AI chose another move on the server).");
 
     fireEvent.click(screen.getByTestId(T.playAgain));
     await waitFor(() => {

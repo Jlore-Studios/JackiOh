@@ -11,7 +11,8 @@
 //!   the check answers ([[R1303001]]); then `economy::practice::verify` folds the log and re-runs
 //!   the AI off the runtime, at most `PRACTICE_VERIFY_CONCURRENCY` claims at once (the rest wait
 //!   for a permit, and none is dropped); then a claim that passed pays through the reward hook at
-//!   practice rates and keeps the board it ended on. No transaction stays open across a check.
+//!   practice rates and keeps the board it ended on, in a task of its own that finishes even when
+//!   the caller stops waiting. No transaction stays open across a check.
 //!   Every refusal answers 200 with `paid: false` and why, so the result screen can say it.
 //!
 //! Both answer only while the economy is on ([[R1302006]]): an issue is a 409, a claim
@@ -27,7 +28,9 @@ use jackioh_engine::{Action, Difficulty, PlayerId};
 
 use crate::actor::engine::{self, Pinned};
 use crate::api::collection::caller_profile;
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json as json_response, log_info, log_warn};
+use crate::api::http::{
+    ApiError, ApiErrorCode, ApiResult, Req, bad_request, json as json_response, log_info, log_warn,
+};
 use crate::app::{App, now_ms};
 use crate::config::PRACTICE_SEED_TTL_SECONDS;
 use crate::db::store::LastBoardKind;
@@ -149,29 +152,54 @@ pub async fn post_claim(app: &Arc<App>, req: Req) -> ApiResult {
     }
     tx.commit().await?;
 
-    let checked = check(app, held, claim.result, claim.log).await?;
-    let verified = match checked {
+    // The check and the pay run as a task of their own, so a caller that stops waiting (the page's
+    // request timeout behind a long queue, a closed tab) leaves its burned seed to be checked and
+    // paid all the same: nothing past the burn is dropped.
+    let settled = tokio::spawn(settle(
+        app.clone(),
+        profile.id.clone(),
+        held,
+        claim.result,
+        claim.log,
+        now,
+    ));
+    settled
+        .await
+        .map_err(|error| ApiError::internal(format!("the practice claim's check failed: {error}")))?
+}
+
+/// A burned seed's claim checked, then, when it passed, paid and its board kept.
+async fn settle(
+    app: Arc<App>,
+    profile_id: String,
+    held: PracticeSeed,
+    claimed: ClaimedResult,
+    log: Vec<Action>,
+    now: i64,
+) -> ApiResult {
+    let match_id = format!("practice:{}", held.seed);
+    let verified = match check(&app, held, claimed, log).await? {
         Ok(verified) => verified,
         Err(reason) => return refused(reason),
     };
 
     let won = verified.won;
-    let mut tx = app.db.begin(Some(&profile.id)).await?;
+    let mut tx = app.db.begin(Some(&profile_id)).await?;
     pay_game_rewards(
         &mut tx,
         &GameSummary {
             mode: GameMode::Practice,
-            profile_id: profile.id.clone(),
+            profile_id: profile_id.clone(),
             player: verified.player,
             won,
             actions: verified.actions,
-            match_id: format!("practice:{}", claim.seed),
+            match_id,
             at: now,
             bot: false,
         },
     )
     .await?;
-    tx.last_boards_put(&profile.id, LastBoardKind::Practice, &verified.last_board, now)
+    tx.last_boards_put(&profile_id, LastBoardKind::Practice, &verified.last_board, now)
         .await?;
     tx.commit().await?;
     Ok(json_response(
@@ -206,10 +234,7 @@ async fn check(
     .await;
     let ms = started.elapsed().as_millis();
     let checked = ran.unwrap_or_else(|panic| {
-        log_warn(
-            "practice.claim.panicked",
-            json!({ "seed": seed, "panic": panic }),
-        );
+        log_warn("practice.claim.panicked", json!({ "seed": seed, "panic": panic }));
         Err(ClaimRefusal::DoesNotFold)
     });
     log_info(

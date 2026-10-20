@@ -27,8 +27,8 @@ use serde::{Deserialize, Serialize};
 
 use jackioh_ai::{AiOptions, ai_to_act, decide};
 use jackioh_engine::{
-    AI_DIFFICULTY, Action, ActionBody, GameOverReason, GameState, LastBoardEntry, PerPlayerOpt, PlayerId, Rng,
-    Winner,
+    AI_DIFFICULTY, Action, ActionBody, GameOverReason, GameState, LastBoardEntry, PerPlayerOpt, PlayerId,
+    Rng, Winner,
 };
 
 use crate::actor::engine::{self, Pinned};
@@ -142,7 +142,13 @@ pub fn opening(pinned: Pinned, seed: &str, setup: &PracticeSetup) -> Result<Game
 /// takes it: `decide`'s choice, unless R188 forbids it or the engine refuses it, else the first
 /// legal action the engine accepts, `endTurn` first; `None` when the AI owes nothing. `rng` is the
 /// AI's stream, left where the decision left it.
-pub fn ai_action(pinned: Pinned, state: &GameState, seat: PlayerId, nonce: &str, rng: &mut Rng) -> Option<ActionBody> {
+pub fn ai_action(
+    pinned: Pinned,
+    state: &GameState,
+    seat: PlayerId,
+    nonce: &str,
+    rng: &mut Rng,
+) -> Option<ActionBody> {
     let accepted = |body: &ActionBody| {
         !forbidden(body)
             && engine::reduce(pinned, state, &Action::new(body.clone(), seat, nonce))

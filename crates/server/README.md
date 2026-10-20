@@ -40,7 +40,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
 | Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings) and `live_match_of` (§13) |
-| Economy | `economy/store.rs` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store; nothing calls them yet |
+| Economy | `economy/store.rs`, `economy/rewards.rs`, `economy/practice.rs` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store, and 0046's practice seeds; the reward hook a finished game pays through (§14.8); and a practice claim's check, its log folded from the seed's setup and every AI move re-run (§14.8, R1303000–R1303003) |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
 There are no traits: `Db`, `Tx` and `Auth` are enums with one variant per implementation (`Pg` and
@@ -175,6 +175,8 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET` | `/api/collection` | active | the ledger; there is no write route |
 | `GET` | `/api/wallet` | active | the caller's Jlore balance (§14.1); read-only, like the collection |
 | `GET` | `/api/tracks` | active | the caller's set tracks in catalog order — level, XP, the XP to the next level, the next rewards (both `null` on the last level, R1302005) and how many levels have paid (§14.7); read-only, like the collection |
+| `POST` | `/api/practice/seeds` | active | `{ difficulty, humanSeat, deck, catalog }`: a practice game's seed, kept with that setup and the last board the server holds for the caller (R1303003), 201 `{ seed, lastBoard, expiresAt }`; prunes the caller's seeds older than `PRACTICE_SEED_TTL_SECONDS` (R1303001); 409 while the economy is off or for a catalog it cannot fold |
+| `POST` | `/api/practice/claims` | active | `{ seed, result, log }`: a finished practice game, folded and its AI moves re-run (R1303002), at most `PRACTICE_VERIFY_CONCURRENCY` at once, the rest waiting; 200 `{ paid: true, jlore, xp }`, or `{ paid: false, reason }` for every refusal; the seed is burned first, so it pays once (R1303001) |
 | `GET` | `/api/cosmetics` | active | the cosmetics the caller owns, `{ cards: [{ cardId, cosmeticId }], account }`, never another's; the starter cosmetics have no row (R1313000) |
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641) and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000) |
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
@@ -717,6 +719,18 @@ the token bars, the cosmetic token cycle, the Chase Shard bar), `set_tracks` and
 authenticated account the cosmetics; no client role writes any, and a ledger row is never edited and
 goes only with its account (`app.deny_row_mutation('profile_id')`). Every ledger row has a reason and
 a `dev` mark (§14.10), which `collection_grants` gains too, false for every existing row.
+
+Migration 0046 adds `practice_seeds` (#1303): one row per seed `POST /api/practice/seeds` issued an
+account, with the game's setup (the AI tier, the human's seat, the deck, the last board it brought
+and the catalog version), when it was issued and when it was claimed. It is server-only like
+`match_checkpoints` (RLS on, no policy, no grant), since a seed is what lets a claim pay, and it goes
+with its account (on delete cascade). A claim burns its seed in one transaction, then
+`economy::practice::verify` folds the log and re-runs every AI move off the runtime, at most
+`PRACTICE_VERIFY_CONCURRENCY` at once, in a task that outlives the request, and a second
+transaction pays and keeps the board. Measured in release (`cargo test --release -p jackioh-server
+--test server r1303002_the_ai_rerun -- --nocapture`, 2026-10-20, the night bot's 4-core runner):
+the recorded game, 46 actions of which 29 the AI's, verifies in 680–700 ms; twelve AI-against-AI
+games, four per tier, in 392–1,980 ms (32–76 actions, 18–46 AI moves), about 20–45 ms per AI move.
 
 ## Tests
 
