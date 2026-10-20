@@ -34,7 +34,7 @@ use anyhow::{Context, Result, bail};
 use jackioh_cards::register_all;
 use jackioh_engine::wire::SetName;
 use jackioh_engine::{GameState, find_instance};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::catalog::code_lines;
@@ -93,7 +93,9 @@ pub(crate) enum Kind {
     Cards,
 }
 
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+/// A card change's tier, lowest first. `patches ship` names a version from it and records it on the
+/// patch (R1366000), so it reads back too.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum Tier {
     Micro,
