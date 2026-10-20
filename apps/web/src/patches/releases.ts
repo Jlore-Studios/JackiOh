@@ -90,7 +90,9 @@ export const RELEASES: readonly Release[] = [
     name: "Meditative+",
     first: "v0.3.15",
     summary: "The Meditative+ set, 26 cards and 4 tokens, shipped in v0.3.15, with a new tag, Potion.",
-    technical: [],
+    technical: [
+      "The economy is live: a new account starts with the 39 cards of the three practice decks and earns the rest from games, quests, set tracks, packs and tokens. Every card you own stays yours; the six full-art faces are earned like any Epic cosmetic.",
+    ],
   },
 ];
 

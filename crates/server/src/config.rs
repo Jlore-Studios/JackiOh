@@ -2217,10 +2217,22 @@ pub const QUEST_XP_PER_JLORE: i32 = 50;
 
 /// §14.7: the level a set track starts at, with no XP (migration 0045's `set_tracks.level` default).
 pub const SET_TRACK_FIRST_LEVEL: i64 = 1;
-/// §14.12: the server's switch for the economy, off until the going-live sub-issue (#1310) turns it
-/// on; until then no finished game pays (R1302006) and the client prints every full art as before
-/// (R1313000). Exported to `serverConfig.ts`.
-pub const ECONOMY_LIVE: bool = false;
+/// §14.12: the server's switch for the economy, on since the going-live sub-issue (#1310,
+/// R1310000): finished games pay (R1302006), quests arrive (R1304002) and the client prints a full
+/// art only on its owner's own copies (R1313000). Exported to `serverConfig.ts`.
+pub const ECONOMY_LIVE: bool = true;
+/// §14.12, R1310000: the starter cards, what a new account owns on becoming active (R111): the
+/// cards of the three practice presets (`apps/web/src/practice/decks.ts`), so a new account can
+/// queue any of them. `seed-catalog` writes them to `app.settings.starter_cards`, which migration
+/// 0048's launch grant reads, and the in-memory store reads them here. Exported to
+/// `serverConfig.ts`.
+pub const STARTER_CARDS: &[&str] = &[
+    "core-001", "core-004", "core-005", "core-008", "core-009", "core-011", "core-012", "core-013",
+    "core-014", "core-015", "core-016", "core-019", "core-020", "core-025", "core-030", "core-032",
+    "core-035", "core-036", "core-037", "core-041", "core-044", "core-045", "core-049", "core-053",
+    "core-054", "core-056", "core-058", "core-061", "core-063", "core-066", "core-067", "core-068",
+    "core-069", "core-070", "core-073", "core-074", "core-077", "core-081", "core-088",
+];
 
 // ---- The pack roll (SPEC §14.3, #1301) ----
 // PUBLIC, like the collection economy's above: the pack screen shows these odds, so each is

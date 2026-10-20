@@ -1,6 +1,7 @@
 // The Dev tools panel (SPEC §14.10, R1300000): each tool is a request to its dev route, sent as
 // typed, and the line under the buttons says what the server answered, a refusal in its own words.
-// The quest tools (§14.9, #1304) complete a quest picked from what `GET /api/quests` lists.
+// The quest tools (§14.9, #1304) complete a quest picked from what `GET /api/quests` lists. The bar
+// tools (§14.5, R1310003) fill the card or the cosmetic token bar.
 
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -95,6 +96,39 @@ describe("R1300000 the Dev tools panel", () => {
     for (const part of ["cards", "cosmetics", "jlore", "counters", "tracks"]) {
       expect(screen.getByTestId(`dev-tools-clear-${part}`)).toBeInTheDocument();
     }
+  });
+
+  it("R1310003 the bar buttons fill the card and cosmetic token bars through the server", async () => {
+    const fetchMock = answer(200, { written: 2 });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<DevTools token={TOKEN} />);
+    const status = screen.getByTestId(devToolsTestid.status);
+    expect(screen.getByTestId(devToolsTestid.fillCardBar)).toHaveTextContent("Fill the card token bar");
+    expect(screen.getByTestId(devToolsTestid.fillCosmeticBar)).toHaveTextContent("Fill the cosmetic token bar");
+
+    await userEvent.click(screen.getByTestId(devToolsTestid.fillCardBar));
+    await waitFor(() => {
+      expect(status).toHaveTextContent("Done.");
+    });
+    expect(sent(fetchMock, 0)).toEqual({ path: "/api/dev/bar/card", method: "POST", body: {} });
+    const [, init] = devCalls(fetchMock)[0] ?? [];
+    expect((init?.headers as Record<string, string>).authorization).toBe(`Bearer ${TOKEN}`);
+
+    await userEvent.click(screen.getByTestId(devToolsTestid.fillCosmeticBar));
+    await waitFor(() => {
+      expect(devCalls(fetchMock)).toHaveLength(2);
+    });
+    expect(sent(fetchMock, 1)).toEqual({ path: "/api/dev/bar/cosmetic", method: "POST", body: {} });
+    await waitFor(() => {
+      expect(status).toHaveTextContent("Done.");
+    });
+    cleanup();
+
+    // A refusal reads in the server's own words, as every tool's does.
+    vi.stubGlobal("fetch", answer(403, { error: { code: "forbidden", message: "Only a dev account may use the dev tools." } }));
+    render(<DevTools token={TOKEN} />);
+    await userEvent.click(screen.getByTestId(devToolsTestid.fillCosmeticBar));
+    expect(await screen.findByText("Only a dev account may use the dev tools.")).toBe(screen.getByTestId(devToolsTestid.status));
   });
 
   it("R1300000 gives a quest and completes the one picked from those held", async () => {
