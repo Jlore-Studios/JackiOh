@@ -6557,7 +6557,9 @@
     },
     "1382": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6289991418"
+      ],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -6580,9 +6582,7 @@
       "started_at": "2026-10-20T11:49:04Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6289991418"
-      ]
+      "taken_asks": []
     },
     "1383": {
       "action": "review",
