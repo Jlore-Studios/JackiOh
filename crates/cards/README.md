@@ -273,7 +273,10 @@ Every change to card data is a patch, and every patch is kept.
   the win-rate table it shipped with (R1329000; none for a patch before v0.3.15, which shipped with
   the empty one); `shipped.json` records each patch's commit, snapshot blob and
   table blob (`winRatesBlob`); `index.json` maps each card to the versions it changed in. Shipped
-  snapshots and tables are never amended.
+  snapshots and tables are never amended. `aliases.json` is the version retcon's map (#1371,
+  R1371000), each old name to its new one: only a reader of a file without the `versions` marker
+  consults it (`src/versions.rs`, `current_version_name`), and the history's names are the new
+  ones. Older docs name versions the old way (`docs/issues-and-patches.md`, Version retcon).
 - A branch that changes card data claims it with a pending fragment:
   `cargo jackioh patches <version> <date> "<title>" --source "<issue or PR>" --notes "<what changed>"`
   writes `patches/pending/<version>.json` (`--cards` names the ids; otherwise they are diffed from

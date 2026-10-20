@@ -62,7 +62,7 @@ use jackioh_engine::{
     CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, DEV_RECORD_ID_PREFIX, FORCED_SERIES_PREFIX,
     GAME_MODES, GAME_OVER_REASONS, GameMode, GameOverReason, GameRecord, GameSource, GameSummary,
     PILOT_FILTERS, PLAYER_IDS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, Winner, card_stats,
-    describe_filter, format_card_stats, parse_game_record_lines, record_matches, seats_counted, sources_of,
+    describe_filter, format_card_stats, record_matches, seats_counted, sources_of,
 };
 
 use crate::arena::{self, paired_interval, wilson_interval};
@@ -230,7 +230,8 @@ pub fn read_records(files: &[PathBuf]) -> Result<Vec<GameRecord>> {
     let mut records = Vec::new();
     for file in files {
         let text = std::fs::read_to_string(file).with_context(|| format!("reading {}", file.display()))?;
-        let read = parse_game_record_lines(&text)
+        // R1371000: a file written before the version retcon names its versions the old way.
+        let read = jackioh_cards::versions::read_game_record_lines(&text)
             .map_err(|error| anyhow!("{}: {}", file.display(), error.message))?;
         records.extend(read);
     }
@@ -845,7 +846,7 @@ pub fn run(args: Args) -> Result<()> {
             continue;
         };
         if let Some(file) = file.as_mut() {
-            writeln!(file, "{}", serde_json::to_string(&record)?)?;
+            writeln!(file, "{}", jackioh_cards::versions::game_record_line(&record))?;
             file.flush()?;
         }
         let outcome = match record.game.winner {
@@ -890,6 +891,7 @@ pub fn run(args: Args) -> Result<()> {
 mod tests {
     use super::*;
     use clap::Parser;
+    use jackioh_engine::wire::parse_game_record_lines;
     use serde_json::Value;
 
     /// `Args` under a parser of its own, as `main.rs` mounts it.

@@ -84,7 +84,7 @@ pub async fn read_records(db: &Db, query: &GameRecordQuery) -> Result<Vec<GameRe
 pub fn render_records(records: &[GameRecord]) -> anyhow::Result<String> {
     let mut text = String::new();
     for record in records {
-        text.push_str(&serde_json::to_string(record)?);
+        text.push_str(&jackioh_cards::versions::game_record_line(record));
         text.push('\n');
     }
     Ok(text)

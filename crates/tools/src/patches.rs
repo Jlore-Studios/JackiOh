@@ -8,6 +8,7 @@
 //!   [--source "<issue, PR, commits>"] [--notes "<what changed>"] [--cards <id,...>] [--plays <id,...>] [--rule]
 //! cargo jackioh patches check
 //! cargo jackioh patches ship
+//! cargo jackioh patches retcon [--dry-run] [--records <dir>...]   # the version retcon: retcon.rs (R1371000)
 //! ```
 //!
 //! - A branch changes `catalog.json` (or a card's play some other way) and adds one fragment,
@@ -1960,7 +1961,7 @@ struct Proved {
 }
 
 /// R1366000: the sets a snapshot's cards belong to, the sets that ship as of it.
-fn sets_of(catalog: &Catalog) -> Vec<SetName> {
+pub(crate) fn sets_of(catalog: &Catalog) -> Vec<SetName> {
     let mut sets = Vec::new();
     for entry in catalog.values() {
         let named = entry.get("set").and_then(js::Json::as_str);
@@ -2365,6 +2366,9 @@ fn main(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
             "patches check: every catalog change is claimed by exactly one pending fragment, and every older shipped version is carried for replays (R767000)"
         );
         return Ok(());
+    }
+    if command == Some("retcon") {
+        return crate::retcon::run(repo_root, &argv[1..]);
     }
     if command == Some("ship") {
         let result = ship_patches(repo_root)?;

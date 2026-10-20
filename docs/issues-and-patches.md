@@ -119,6 +119,62 @@ suggestions (`bot:suggestion`) are asked for conventional titles; retitle one th
   `v0.2.Y` when the newest version is not a v0.2 one. A micro patch with no card data change bumps
   nothing and keeps its `Y` title.
 
+## Version retcon
+
+#1371 (part 7 of #1360, R1371000) renamed every shipped version to what the classifier (R1365000)
+would have called it: a major where a set first ships, a patch where `PATCH_MIN_CARDS` or more card
+families play differently, a micro for anything smaller or for wording alone. `cargo jackioh patches
+retcon` computed the map from the snapshots and, from the Rust scripts on, the scripts each patch's own
+commits changed, and renamed every name the repository and the database hold. Docs, commit messages,
+code comments and the older issue and pull request titles keep the old names; translate them with this
+table. Old and new names overlap (the old v0.3.4 is the new v0.2.7b, while the new v0.3.4 is the old
+v0.3.12), so read a bare version in an old text as old. A file without the `versions` marker
+(`crates/cards/patches/aliases.json` holds the map its readers use) names the old way too.
+
+| Old | New | Tier | Families |
+|---|---|---|---:|
+| v0.1.0 | v0.1.0 | major | 101 |
+| v0.1.0b | v0.1.0b | micro | 3 |
+| v0.1.0c | v0.1.0c | micro | 1 |
+| v0.1.0d | v0.1.0d | micro | 9 |
+| v0.1.1 | v0.1.1 | patch | 19 |
+| v0.2.0 | v0.2.0 | major | 270 |
+| v0.2.1 | v0.2.0b | micro | 0 |
+| v0.2.2 | v0.2.1 | patch | 20 |
+| v0.2.3 | v0.2.2 | patch | 19 |
+| v0.2.4 | v0.2.2b | micro | 3 |
+| v0.2.5 | v0.2.3 | patch | 17 |
+| v0.2.6 | v0.2.3b | micro | 1 |
+| v0.2.7 | v0.2.3c | micro | 2 |
+| v0.2.7b | v0.2.3d | micro | 6 |
+| v0.2.8 | v0.2.3e | micro | 1 |
+| v0.2.8b | v0.2.3f | micro | 1 |
+| v0.2.9 | v0.2.4 | patch | 17 |
+| v0.2.10 | v0.2.5 | patch | 37 |
+| v0.2.10b | v0.2.5b | micro | 4 |
+| v0.2.10c | v0.2.5c | micro | 0 |
+| v0.2.10d | v0.2.5d | micro | 2 |
+| v0.2.11 | v0.2.5e | micro | 1 |
+| v0.3.1 | v0.2.5f | micro | 1 |
+| v0.3.2 | v0.2.6 | patch | 75 |
+| v0.3.3 | v0.2.7 | patch | 13 |
+| v0.3.4 | v0.2.7b | micro | 0 |
+| v0.3.5 | v0.3.0 | major | 102 |
+| v0.3.6 | v0.3.0b | micro | 0 |
+| v0.3.7 | v0.3.0c | micro | 7 |
+| v0.3.7b | v0.3.1 | patch | 30 |
+| v0.3.8 | v0.3.2 | patch | 19 |
+| v0.3.9 | v0.3.2b | micro | 1 |
+| v0.3.10 | v0.3.3 | patch | 60 |
+| v0.3.10b | v0.3.3b | micro | 4 |
+| v0.3.11 | v0.3.3c | micro | 0 |
+| v0.3.12 | v0.3.4 | patch | 12 |
+| v0.3.13 | v0.3.4b | micro | 7 |
+| v0.3.14 | v0.3.5 | patch | 13 |
+| v0.3.15 | v0.4.0 | major | 27 |
+| v0.3.16 | v0.4.0b | micro | 4 |
+| v0.3.17 | v0.4.0c | micro | 3 |
+
 ## A patch that takes several pull requests
 
 - **Tracker.** One issue, `Patch vX.Y.Z: <…>` (or `vX.Y.0: <…>`), holds the scope and a checklist

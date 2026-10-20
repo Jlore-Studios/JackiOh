@@ -49,6 +49,9 @@ pub use history::{
 
 pub use query::*;
 
+/// R1371000: the two schemes a catalog version is named by, and reading an unmarked file.
+pub mod versions;
+
 /// `packages/cards/catalog.json` as compiled in: the card data proved against SPEC §8. `build.rs`'s
 /// copy without the whitespace between tokens (#442 L12), the same JSON with its keys in the same order.
 pub fn catalog_json() -> &'static str {

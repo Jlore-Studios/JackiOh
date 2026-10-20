@@ -11,7 +11,7 @@ import { REPLAY_JSON_FORMAT, parseReplayJsonFile, readReplayJsonFile } from "../
 import { ReplayFailure } from "../replay/source.ts";
 import { duosView } from "../test/fixtures.ts";
 import type { DuosReplaySteps } from "./DuosReplay.tsx";
-import { DUOS_REPLAY_JSON_FORMAT, duosReplayJson, duosReplayJsonFile, parseDuosReplayJson } from "./download.ts";
+import { DUOS_REPLAY_JSON_FORMAT, DUOS_REPLAY_JSON_VERSION, duosReplayJson, duosReplayJsonFile, parseDuosReplayJson } from "./download.ts";
 
 const STEPS: DuosReplaySteps = [duosView(0), duosView(1), duosView(1), duosView(2), duosView(3, { outcome: "win", winner: "b", reason: "concede" })];
 
@@ -43,7 +43,7 @@ describe("R1242000 downloading a co-op replay", () => {
   it("R1242000 the file holds the format, version, catalog version, seat and each step's index, round and view, and nothing else", () => {
     const json = duosReplayJson(STEPS);
     expect(Object.keys(json).sort()).toEqual(["catalogVersion", "format", "seat", "steps", "version"]);
-    expect(json).toMatchObject({ format: DUOS_REPLAY_JSON_FORMAT, version: 1, catalogVersion: CATALOG_VERSION, seat: "a1" });
+    expect(json).toMatchObject({ format: DUOS_REPLAY_JSON_FORMAT, version: DUOS_REPLAY_JSON_VERSION, catalogVersion: CATALOG_VERSION, seat: "a1" });
     expect(json.steps.map((step) => step.step)).toEqual(json.steps.map((_, index) => index));
     for (const step of json.steps) {
       expect(Object.keys(step).sort()).toEqual(["round", "step", "view"]);
@@ -92,7 +92,7 @@ describe("R1242000 downloading a co-op replay", () => {
   it("R1242000 refuses another format, version or catalog version", async () => {
     const unsupported = "This replay file uses an unsupported format.";
     expect(refusal(fileJson({ format: REPLAY_JSON_FORMAT }))).toBe(unsupported);
-    expect(refusal(fileJson({ version: 2 }))).toBe(unsupported);
+    expect(refusal(fileJson({ version: 999 }))).toBe(unsupported);
     const otherPatch = "This replay file is from another patch and cannot be opened here.";
     expect(refusal(fileJson({ catalogVersion: "v0.0.0" }))).toBe(otherPatch);
     expect(refusal(fileJson({ catalogVersion: undefined }))).toBe(otherPatch);

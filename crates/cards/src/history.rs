@@ -124,6 +124,9 @@ struct History {
     win_rates: Vec<WinRateTable>,
     #[serde(default)]
     versions: Vec<VersionDelta>,
+    /// R1371000: `patches/aliases.json`'s map, each old name to its new one; empty before the retcon.
+    #[serde(default)]
+    aliases: IndexMap<String, String>,
 }
 
 /// What turns a catalog entry back into a snapshot's: top-level keys set to the snapshot's values,
@@ -180,6 +183,19 @@ pub fn shipped_catalog(version: &str) -> Option<&'static ShippedCatalog> {
         .iter()
         .position(|delta| delta.version == version)?;
     Some(BUILT[at].get_or_init(|| build(&HISTORY.versions[at])))
+}
+
+/// R1371000: the name a version read from an unmarked file goes by now: its new name when the
+/// version retcon renamed it (`patches/aliases.json`), else the name itself. Only a reader of an
+/// unmarked file asks: a marked file, and everything the build writes, names versions the new way,
+/// and an old name the retcon reused names another catalog there.
+pub fn current_version_name(unmarked: &str) -> &str {
+    version_alias(unmarked).unwrap_or(unmarked)
+}
+
+/// R1371000: the new name of a version the retcon renamed, `None` for any other name.
+pub fn version_alias(old: &str) -> Option<&'static str> {
+    HISTORY.aliases.get(old).map(String::as_str)
 }
 
 /// R388: every shipped catalog version from `patches.json`, in release order.

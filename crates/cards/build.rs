@@ -477,7 +477,14 @@ fn history_json(
         }
         carried.push(entry);
     }
-    serde_json::json!({ "order": versions, "patches": patches, "winRates": tables, "versions": carried })
+    // R1371000: the old names the version retcon renamed, which a reader of an unmarked file maps.
+    let aliases_path = patches_dir.join("aliases.json");
+    let aliases = if aliases_path.exists() {
+        read_json(&aliases_path)["aliases"].clone()
+    } else {
+        serde_json::json!({})
+    };
+    serde_json::json!({ "order": versions, "patches": patches, "winRates": tables, "versions": carried, "aliases": aliases })
         .to_string()
 }
 

@@ -36,7 +36,7 @@
 // game is in progress. Like the save, a kept game never crosses to the page: a response holds
 // summaries and views, never the log, the seed, the decks or a state.
 
-import { CATALOG_VERSION } from "@jackioh/cards";
+import { CATALOG_VERSION, currentVersionName } from "@jackioh/cards";
 import {
   beginGame,
   carriedVersions,
@@ -57,7 +57,7 @@ import {
   type ReplayRefusal,
   type Rng,
 } from "@jackioh/engine";
-import { AI_DIFFICULTY, AI_TUTORIAL, DECK_SIZE, type Handicap } from "@jackioh/engine/config";
+import { AI_DIFFICULTY, AI_TUTORIAL, DECK_SIZE, type Handicap, VERSIONS_SCHEME } from "@jackioh/engine/config";
 import { AI_BUDGET, aiToAct, buildAiDeck, decide, type SearchBudget } from "@jackioh/ai";
 import { DEFAULT_PORTRAIT, leanSetOf, opponentOf, type Action, type ActionBody, type CustomCard, type PlayerId } from "@jackioh/shared";
 
@@ -338,6 +338,7 @@ function saveOf(game: PracticeGame): PracticeSave | null {
   if (game.config.lesson !== undefined || game.state.result !== null) return null;
   return {
     catalog: CATALOG_VERSION,
+    versions: VERSIONS_SCHEME,
     config: JSON.parse(JSON.stringify(game.config)) as PracticeStartConfig,
     log: JSON.parse(JSON.stringify(game.log)) as Action[],
     aiCursor: game.rng.cursor,
@@ -358,8 +359,8 @@ function resumeGame(save: PracticeSave | null, asked: PracticeStartConfig): Prac
   if (seed !== asked.seed || humanSeat !== asked.humanSeat || difficulty !== asked.difficulty || sandbox !== asked.sandbox) {
     throw new Error("the saved practice game is not the one the page remembers");
   }
-  if (save.catalog !== CATALOG_VERSION) {
-    throw new Error(`the saved game was played on catalog ${save.catalog}, not ${CATALOG_VERSION}`);
+  if (catalogOf(save) !== CATALOG_VERSION) {
+    throw new Error(`the saved game was played on catalog ${catalogOf(save)}, not ${CATALOG_VERSION}`);
   }
   const game = startGame(save.config);
   for (const action of save.log) {
@@ -398,7 +399,16 @@ function foldInputOf(replay: PracticeReplay): FoldInput {
  * version it carries when the game kept its setup (dealing it again would read this build's catalog).
  */
 function foldable(replay: PracticeReplay): boolean {
-  return replay.catalog === CATALOG_VERSION || (replay.setup !== undefined && carriedVersions().includes(replay.catalog));
+  const catalog = catalogOf(replay);
+  return catalog === CATALOG_VERSION || (replay.setup !== undefined && carriedVersions().includes(catalog));
+}
+
+/**
+ * R1371000: the catalog a kept game or save was played on, as it is named now: one kept before the
+ * version retcon carries no `versions` marker and names it the old way.
+ */
+export function catalogOf(kept: Pick<PracticeReplay, "catalog" | "versions">): string {
+  return kept.versions === undefined ? currentVersionName(kept.catalog) : kept.catalog;
 }
 
 /**
@@ -475,6 +485,7 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
     const endSeat = humanSeatNow(active);
     const replay: PracticeReplay = {
       catalog: CATALOG_VERSION,
+      versions: VERSIONS_SCHEME,
       config: JSON.parse(JSON.stringify(active.config)) as PracticeStartConfig,
       setup: JSON.parse(
         JSON.stringify({
@@ -516,7 +527,7 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       open = { kind: "refused", reason: "earlier_patch" };
     } else {
       try {
-        open = replayOpen(foldInputOf(replay), { catalogVersion: replay.catalog, finalHash: replay.hash });
+        open = replayOpen(foldInputOf(replay), { catalogVersion: catalogOf(replay), finalHash: replay.hash });
       } catch {
         // A setup that no longer deals no longer folds.
         open = { kind: "refused", reason: "rules_changed" };

@@ -15,7 +15,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result, bail};
 use jackioh_engine::{
     CardStatsFilter, GameSource, PilotFilter, SourceFilter, WinRateRow, WinRateSource, WinRateTable,
-    card_stats, parse_game_record_lines,
+    card_stats,
 };
 
 /// `cargo jackioh winrates`.
@@ -74,7 +74,10 @@ fn table_from_report(text: &str, patch: &str) -> Result<WinRateTable> {
 fn table_from_records(texts: &[String], patch: &str) -> Result<WinRateTable> {
     let mut records = Vec::new();
     for text in texts {
-        records.extend(parse_game_record_lines(text).context("parsing the game records")?);
+        // R1371000: a file written before the version retcon names its versions the old way.
+        records.extend(
+            jackioh_cards::versions::read_game_record_lines(text).context("parsing the game records")?,
+        );
     }
     let filters = [
         (SourceFilter::Live, PilotFilter::Unified),
