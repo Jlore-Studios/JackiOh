@@ -7710,6 +7710,7 @@
         "by": "`muse` (medium), `claude` (strong)",
         "sha": "36355888152669b2a238e5bc816ad2fd95f66d4c"
       },
+      "closed_at": "2026-10-20T09:27:04Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
@@ -7720,6 +7721,7 @@
       "issue": 1308,
       "kind": "review",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
