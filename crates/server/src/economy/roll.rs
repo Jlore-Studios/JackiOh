@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::{
     COSMETIC_DUPLICATE_RATES, GLOBAL_PACK_NAME, PACK_FILLER_RARE_RATE, PACK_SLOTS, PACK_UNOWNED_WEIGHTS,
 };
-use crate::cosmetics::{Cosmetic, pack_cosmetics};
+use crate::cosmetics::{Cosmetic, CosmeticRarity, pack_cosmetics};
 use crate::economy::math::{PackDraws, PackOutcome, PityCounters, roll_pack};
 use crate::economy::store::CardCosmetic;
 
@@ -103,11 +103,11 @@ pub enum SlotGrant {
     /// A duplicate: a per-card cosmetic of the rarity it rolled, for its card.
     Cosmetic {
         cosmetic_id: String,
-        cosmetic_rarity: PrintedRarity,
+        cosmetic_rarity: CosmeticRarity,
     },
     /// A spent duplicate: nothing of the rarity it rolled was left to own, so its points go to
     /// both token bars (§14.5).
-    Bars { cosmetic_rarity: PrintedRarity },
+    Bars { cosmetic_rarity: CosmeticRarity },
 }
 
 /// One slot of an opened pack: the rarity it rolled, which the pity counters read (§14.4), the
@@ -257,22 +257,22 @@ pub fn draw_card<'p>(
     candidates.last().copied()
 }
 
-/// `COSMETIC_DUPLICATE_RATES` by rarity, commonest first.
-pub fn duplicate_rates() -> [(PrintedRarity, f64); 5] {
+/// `COSMETIC_DUPLICATE_RATES` by cosmetic rarity, commonest first.
+pub fn duplicate_rates() -> [(CosmeticRarity, f64); 5] {
     let rates = COSMETIC_DUPLICATE_RATES;
     [
-        (PrintedRarity::Common, rates.common),
-        (PrintedRarity::Rare, rates.rare),
-        (PrintedRarity::Epic, rates.epic),
-        (PrintedRarity::Legendary, rates.legendary),
-        (PrintedRarity::Mythic, rates.mythic),
+        (CosmeticRarity::Common, rates.common),
+        (CosmeticRarity::Rare, rates.rare),
+        (CosmeticRarity::Epic, rates.epic),
+        (CosmeticRarity::Legendary, rates.legendary),
+        (CosmeticRarity::Mythic, rates.mythic),
     ]
 }
 
 /// The cosmetic rarity a duplicate's draw lands on (R1301002): the first whose running sum of
 /// [`duplicate_rates`] passes the draw, and Mythic past the last edge. Its own scale: the card's
-/// rarity plays no part.
-pub fn cosmetic_rarity_at(draw: f64) -> PrintedRarity {
+/// rarity plays no part, and its type cannot (R1333000).
+pub fn cosmetic_rarity_at(draw: f64) -> CosmeticRarity {
     let mut edge = 0.0;
     for (rarity, rate) in duplicate_rates() {
         edge += rate;
@@ -280,23 +280,24 @@ pub fn cosmetic_rarity_at(draw: f64) -> PrintedRarity {
             return rarity;
         }
     }
-    PrintedRarity::Mythic
+    CosmeticRarity::Mythic
 }
 
 /// What a duplicate of `card_id` grants once its cosmetic rarity is rolled (R1301002): one of
 /// `droppable` of that rarity the account does not own on that card, picked uniformly (one draw),
 /// or, with none, points to the bars (no draw). `droppable` is `cosmetics::pack_cosmetics`'s; one
-/// that names a card, a full art, is of that card alone (R1313000).
+/// that names a card, a full art, is of that card alone (R1313000), and a Legendary or Mythic one
+/// is a chase that drops like any other (R1333000).
 pub fn duplicate_grant(
     card_id: &str,
-    cosmetic_rarity: PrintedRarity,
+    cosmetic_rarity: CosmeticRarity,
     droppable: &[Cosmetic],
     owned: &[CardCosmetic],
     rng: &mut Rng,
 ) -> SlotGrant {
     let unowned: Vec<&Cosmetic> = droppable
         .iter()
-        .filter(|cosmetic| cosmetic.rarity.printed() == cosmetic_rarity)
+        .filter(|cosmetic| cosmetic.rarity == cosmetic_rarity)
         .filter(|cosmetic| cosmetic.card.as_deref().is_none_or(|card| card == card_id))
         .filter(|cosmetic| {
             !owned
@@ -371,7 +372,7 @@ pub fn roll_opening(
 mod tests {
     use super::*;
     use crate::config::{PACK_RATE_TOLERANCE, PITY_MYTHIC_PACKS};
-    use crate::cosmetics::{CosmeticKind, CosmeticRarity};
+    use crate::cosmetics::CosmeticKind;
     use jackioh_engine::wire::PrintedRarity::{Common, Epic, Legendary, Mythic, Rare};
 
     /// Draws enough for a rate to settle inside `PACK_RATE_TOLERANCE`.
@@ -393,7 +394,7 @@ mod tests {
             rarity,
             default: false,
             starter: false,
-            chase: false,
+            chase: rarity.is_chase(),
             card: None,
         }
     }
@@ -534,12 +535,12 @@ mod tests {
         // Every foil drops at its own rarity (no foil is Mythic, so a Mythic roll is always
         // spent: `r1301002_a_rolled_rarity_with_nothing_unowned_goes_to_the_bars`).
         for foil in &foils {
-            let grant = duplicate_grant("m", foil.rarity.printed(), &foils, &[], &mut rng);
+            let grant = duplicate_grant("m", foil.rarity, &foils, &[], &mut rng);
             assert_eq!(
                 grant,
                 SlotGrant::Cosmetic {
                     cosmetic_id: foil.id.clone(),
-                    cosmetic_rarity: foil.rarity.printed(),
+                    cosmetic_rarity: foil.rarity,
                 }
             );
         }
@@ -565,13 +566,13 @@ mod tests {
                         .iter()
                         .find(|cosmetic| cosmetic.id == cosmetic_id)
                         .unwrap_or_else(|| panic!("{cosmetic_id} is a fixture foil"));
-                    assert_eq!(cosmetic.rarity.printed(), cosmetic_rarity);
+                    assert_eq!(cosmetic.rarity, cosmetic_rarity);
                     granted.push(cosmetic_rarity);
                 }
             }
         }
-        assert!(granted.contains(&Common), "{granted:?}");
-        assert!(granted.contains(&Rare), "{granted:?}");
+        assert!(granted.contains(&CosmeticRarity::Common), "{granted:?}");
+        assert!(granted.contains(&CosmeticRarity::Rare), "{granted:?}");
     }
 
     #[test]
@@ -581,25 +582,25 @@ mod tests {
         // The card's Legendary foil is owned: Bars, with no draw.
         let owned = [held("m", "foil-legendary")];
         assert_eq!(
-            duplicate_grant("m", Legendary, &foils, &owned, &mut rng),
+            duplicate_grant("m", CosmeticRarity::Legendary, &foils, &owned, &mut rng),
             SlotGrant::Bars {
-                cosmetic_rarity: Legendary
+                cosmetic_rarity: CosmeticRarity::Legendary
             }
         );
         assert_eq!(rng.cursor(), 0);
         // Owned on another card is not owned on this one.
         assert_eq!(
-            duplicate_grant("c", Legendary, &foils, &owned, &mut rng),
+            duplicate_grant("c", CosmeticRarity::Legendary, &foils, &owned, &mut rng),
             SlotGrant::Cosmetic {
                 cosmetic_id: "foil-legendary".to_owned(),
-                cosmetic_rarity: Legendary,
+                cosmetic_rarity: CosmeticRarity::Legendary,
             }
         );
         // No cosmetic is Mythic.
         assert_eq!(
-            duplicate_grant("m", Mythic, &foils, &[], &mut rng),
+            duplicate_grant("m", CosmeticRarity::Mythic, &foils, &[], &mut rng),
             SlotGrant::Bars {
-                cosmetic_rarity: Mythic
+                cosmetic_rarity: CosmeticRarity::Mythic
             }
         );
         // A starter is owned by everyone already, so the pack leaves it out.
@@ -608,9 +609,15 @@ mod tests {
             ..foil("foil-starter", CosmeticRarity::Legendary)
         };
         assert_eq!(
-            duplicate_grant("m", Legendary, &pack_cosmetics(&[starter]), &[], &mut rng),
+            duplicate_grant(
+                "m",
+                CosmeticRarity::Legendary,
+                &pack_cosmetics(&[starter]),
+                &[],
+                &mut rng
+            ),
             SlotGrant::Bars {
-                cosmetic_rarity: Legendary
+                cosmetic_rarity: CosmeticRarity::Legendary
             }
         );
     }
@@ -626,24 +633,30 @@ mod tests {
         let mut rng = Rng::new("r1301002-full-art", 0);
         // A duplicate of its card that rolls Epic drops it.
         assert_eq!(
-            duplicate_grant("m", Epic, &droppable, &[], &mut rng),
+            duplicate_grant("m", CosmeticRarity::Epic, &droppable, &[], &mut rng),
             SlotGrant::Cosmetic {
                 cosmetic_id: "full-art-m".to_owned(),
-                cosmetic_rarity: Epic,
+                cosmetic_rarity: CosmeticRarity::Epic,
             }
         );
         // Any other card's Epic duplicate has nothing to drop, and neither has its card once it
         // owns it.
         assert_eq!(
-            duplicate_grant("c", Epic, &droppable, &[], &mut rng),
+            duplicate_grant("c", CosmeticRarity::Epic, &droppable, &[], &mut rng),
             SlotGrant::Bars {
-                cosmetic_rarity: Epic
+                cosmetic_rarity: CosmeticRarity::Epic
             }
         );
         assert_eq!(
-            duplicate_grant("m", Epic, &droppable, &[held("m", "full-art-m")], &mut rng),
+            duplicate_grant(
+                "m",
+                CosmeticRarity::Epic,
+                &droppable,
+                &[held("m", "full-art-m")],
+                &mut rng
+            ),
             SlotGrant::Bars {
-                cosmetic_rarity: Epic
+                cosmetic_rarity: CosmeticRarity::Epic
             }
         );
     }
@@ -653,10 +666,7 @@ mod tests {
         let rates = duplicate_rates();
         let total: f64 = rates.iter().map(|(_, rate)| rate).sum();
         assert!((total - 1.0).abs() < 1e-9, "the duplicate rates sum to {total}");
-        assert_eq!(
-            rates.map(|(rarity, _)| rarity),
-            [Common, Rare, Epic, Legendary, Mythic]
-        );
+        assert_eq!(rates.map(|(rarity, _)| rarity), CosmeticRarity::ALL);
         let mut floor = 0.0;
         for (rarity, rate) in rates {
             let edge = floor + rate;
@@ -668,7 +678,81 @@ mod tests {
             );
             floor = edge;
         }
-        assert_eq!(cosmetic_rarity_at(1.0 - f64::EPSILON), Mythic);
+        assert_eq!(cosmetic_rarity_at(1.0 - f64::EPSILON), CosmeticRarity::Mythic);
+    }
+
+    #[test]
+    fn duplicate_cosmetic_rarities_land_on_their_odds() {
+        let mut rng = Rng::new("r1301002-odds", 0);
+        let mut counts = [0_usize; 5];
+        for _ in 0..DRAWS {
+            counts[usize::from(cosmetic_rarity_at(rng.next()).tier())] += 1;
+        }
+        for ((rarity, rate), count) in duplicate_rates().into_iter().zip(counts) {
+            let share = count as f64 / DRAWS as f64;
+            assert!(
+                (share - rate).abs() <= PACK_RATE_TOLERANCE,
+                "{rarity} share {share} outside tolerance of {rate}"
+            );
+        }
+    }
+
+    #[test]
+    fn r1333000_a_duplicate_s_cosmetic_roll_leaves_the_pity_counters_alone() {
+        let pool: Vec<PoolCard> = (0..40)
+            .map(|at| {
+                card(
+                    &format!("card-{at}"),
+                    *PrintedRarity::ALL.get(at % 5).unwrap_or(&Common),
+                )
+            })
+            .collect();
+        let ids: Vec<&str> = pool.iter().map(|card| card.id.as_str()).collect();
+        let pity = PityCounters {
+            epic: 3,
+            legendary: 7,
+            mythic: 11,
+        };
+        // Every slot a duplicate, rolling its cosmetic: with cosmetics to drop or none.
+        let owned = Holdings {
+            owned: owning(&ids),
+            pity,
+            ..Holdings::default()
+        };
+        // No slot a duplicate, so nothing rolls a cosmetic.
+        let unowned = Holdings {
+            pity,
+            ..Holdings::default()
+        };
+        let foils = four_foils();
+        let mut cosmetics = 0;
+        for seed in 0..50 {
+            let seed = format!("r1333000-{seed}");
+            let rolled = |holdings: &Holdings, registry: &[Cosmetic]| {
+                roll_opening(&pool, holdings, registry, &seed).expect("the pool holds cards")
+            };
+            let dropping = rolled(&owned, &foils);
+            let rarities =
+                |opening: &Opening| opening.slots.iter().map(|slot| slot.rarity).collect::<Vec<_>>();
+            for other in [rolled(&owned, &[]), rolled(&unowned, &foils)] {
+                assert_eq!(other.pity, dropping.pity, "{seed}");
+                assert_eq!(rarities(&other), rarities(&dropping), "{seed}");
+            }
+            // The pity math's own three draws, the opening's first, set the counters alone.
+            let mut rng = Rng::new(&seed, 0);
+            let draws = PackDraws {
+                epic: rng.next(),
+                legendary: rng.next(),
+                mythic: rng.next(),
+            };
+            assert_eq!(dropping.pity, roll_pack(pity, draws).1, "{seed}");
+            cosmetics += dropping
+                .slots
+                .iter()
+                .filter(|slot| matches!(slot.grant, SlotGrant::Cosmetic { .. }))
+                .count();
+        }
+        assert!(cosmetics > 0, "no duplicate dropped a cosmetic");
     }
 
     #[test]

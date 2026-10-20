@@ -205,7 +205,7 @@ fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
         rarity,
         default: false,
         starter: false,
-        chase: false,
+        chase: rarity.is_chase(),
         card: None,
     }
 }
@@ -510,7 +510,7 @@ async fn r1301002_an_opening_on_a_full_collection_grants_cosmetics_or_bar_points
                     .find(|cosmetic| &cosmetic.id == cosmetic_id)
                     .expect("a registry entry");
                 assert!(!entry.starter);
-                assert_eq!(entry.rarity.printed(), *cosmetic_rarity);
+                assert_eq!(entry.rarity, *cosmetic_rarity);
                 assert!(
                     owned
                         .iter()
@@ -519,7 +519,7 @@ async fn r1301002_an_opening_on_a_full_collection_grants_cosmetics_or_bar_points
                 );
             }
             SlotGrant::Bars { cosmetic_rarity } => {
-                assert!(*cosmetic_rarity >= PrintedRarity::Epic, "{slot:?}");
+                assert!(*cosmetic_rarity >= CosmeticRarity::Epic, "{slot:?}");
             }
         }
     }

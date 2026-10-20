@@ -281,7 +281,6 @@ fn constants() -> Vec<(&'static str, Value)> {
             }),
         ),
         ("CHASE_SHARD_PACKS", json!(c::CHASE_SHARD_PACKS)),
-        ("CHASE_DROP_RATE", json!(c::CHASE_DROP_RATE)),
         ("SET_TRACK_LEVELS", json!(c::SET_TRACK_LEVELS)),
         ("SET_TRACK_XP_PER_LEVEL", json!(c::SET_TRACK_XP_PER_LEVEL)),
         ("SET_TRACK_UNLOCK_LEVEL", json!(c::SET_TRACK_UNLOCK_LEVEL)),
@@ -357,11 +356,11 @@ fn every_name_is_listed_once() {
     // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- 64 + S7's twelve.
     assert_eq!(
         // 64 before #936 and v0.5.0, main's two (CUSTOM_CARDS_PER_ACCOUNT, QUEUE_ENDED_AFTER_READS),
-        // SPEC S7's twelve, the social poll and Duos co-op's eight, SPEC §14's thirty-eight
-        // economy numbers (#1298), its ECONOMY_LIVE switch (R1313000) and the pack roll's three
-        // (#1301) and the cosmetic pack's two (#1306).
+        // SPEC S7's twelve, the social poll and Duos co-op's eight, SPEC §14's thirty-seven
+        // economy numbers (#1298's thirty-eight, less #1333's CHASE_DROP_RATE), its ECONOMY_LIVE
+        // switch (R1313000) and the pack roll's three (#1301) and the cosmetic pack's two (#1306).
         listed,
-        88 + 38 + 1 + 3 + 2,
+        88 + 37 + 1 + 3 + 2,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -370,8 +369,8 @@ fn every_name_is_listed_once() {
          RATING_WINDOW_FULL_AFTER_SECONDS in place of the uncapped window's \
          RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001), QUEUE_ENDED_AFTER_READS (R897000), SPEC S7's \
          twelve (#936) with the social poll (SOCIAL_POLL_MS), Duos co-op's eight clocks and ping \
-         limits (#946), PLAYER_STATS_BYTES_MAX (R1142000), SPEC §14's thirty-eight economy \
-         numbers (#1298), ECONOMY_LIVE (R1313000), and the pack roll's COSMETIC_DUPLICATE_RATES, \
+         limits (#946), PLAYER_STATS_BYTES_MAX (R1142000), SPEC §14's thirty-seven economy \
+         numbers (#1298's, less #1333's CHASE_DROP_RATE), ECONOMY_LIVE (R1313000), and the pack roll's COSMETIC_DUPLICATE_RATES, \
          PACK_FILLER_RARE_RATE and GLOBAL_PACK_NAME (#1301), and the cosmetic pack's two (#1306)"
     );
 }

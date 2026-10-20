@@ -15,6 +15,10 @@ use crate::config::{
     PACK_BASE_RATES, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, SET_TRACK_XP_PER_LEVEL,
 };
 
+// SPEC §14.4: each rarity's threshold is a longer wait than the commoner one's, and Mythic's the
+// longest of all.
+const _: () = assert!(PITY_EPIC_PACKS < PITY_LEGENDARY_PACKS && PITY_LEGENDARY_PACKS < PITY_MYTHIC_PACKS);
+
 /// One pity counter set per account (R1298000, SPEC §14.4): each counter is the card packs
 /// since a pack held its rarity, whatever that slot then granted. All three count every card
 /// pack the account opens, global and per-set alike.
@@ -192,6 +196,14 @@ mod tests {
         assert_eq!(level_for_xp(i64::MAX), 429_496_730);
         assert_eq!(level_for_xp(9_223_372_032_559_808_500), 429_496_730);
         assert_eq!(level_for_xp(9_223_372_032_559_808_499), 429_496_729);
+    }
+
+    #[test]
+    fn pity_thresholds_are_10_20_and_30_packs() {
+        // #1333's table: pity never exceeds 30 packs.
+        assert_eq!(PITY_EPIC_PACKS, 10);
+        assert_eq!(PITY_LEGENDARY_PACKS, 20);
+        assert_eq!(PITY_MYTHIC_PACKS, 30);
     }
 
     #[test]
