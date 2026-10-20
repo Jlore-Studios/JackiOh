@@ -11769,15 +11769,8 @@
     "what": "plan #1427 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-20T17:27:08Z",
-    "notes": [
-      "answered a comment on #1429 that was never answered",
-      "answered a comment on #1433 that was never answered",
-      "answered a comment on #1432 that was never answered",
-      "#1429 needs a plan",
-      "#1432 needs a plan",
-      "#1433 needs a plan"
-    ],
+    "at": "2026-10-20T17:34:39Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
