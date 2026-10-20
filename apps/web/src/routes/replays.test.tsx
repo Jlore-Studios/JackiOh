@@ -22,7 +22,8 @@ import { consentTestid } from "../auth/testids.ts";
 import type { DuosReplaySteps } from "../duos/DuosReplay.tsx";
 import { duosReplayJson, duosReplayJsonFile } from "../duos/download.ts";
 import { duosTestid } from "../duos/testids.ts";
-import { ApiRequestError, getMe, getReplaySteps, getReplays, postConsent } from "../net/api.ts";
+import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
+import { API_UNREACHABLE_MESSAGE, ApiRequestError, ApiUnreachableError, getMe, getReplaySteps, getReplays, postConsent } from "../net/api.ts";
 import type { OnlineReplayListing } from "../net/api.ts";
 import { documentTitleFor, screenNameFor } from "../net/head.ts";
 import { paths } from "../net/navigate.ts";
@@ -113,6 +114,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  resetLocaleForTests();
   for (const host of hosts.splice(0)) host.dispose();
   vi.clearAllMocks();
   window.localStorage.clear();
@@ -174,6 +176,59 @@ describe("R768000 /replays", () => {
     expect(getReplays).toHaveBeenLastCalledWith(TOKEN, 1);
     expect(screen.getByTestId(replaysTestid.online("m-1"))).toBeInTheDocument();
     expect(screen.queryByTestId(replaysTestid.more)).toBeNull();
+  });
+
+  it("R768000 a page of older games that fails keeps the list and its button, says why, and the button tries again", async () => {
+    signIn();
+    vi.mocked(getReplays)
+      .mockResolvedValueOnce({ replays: [listing()], nextOffset: 1 })
+      .mockRejectedValueOnce(new ApiUnreachableError(new TypeError("Failed to fetch")))
+      .mockResolvedValueOnce({ replays: [listing({ matchId: "m-older" })], nextOffset: null });
+    renderRoute(memorySaveStore());
+    await screen.findByTestId(replaysTestid.online("m-1"));
+    fireEvent.click(screen.getByTestId(replaysTestid.more));
+
+    const failed = await screen.findByTestId(replaysTestid.moreFailed);
+    expect(failed).toHaveTextContent(API_UNREACHABLE_MESSAGE);
+    expect(failed).toBe(screen.getByRole("alert"));
+    expect(screen.getByTestId(replaysTestid.online("m-1"))).toBeInTheDocument();
+    expect(screen.getByTestId(replaysTestid.more)).toBeEnabled();
+    expect(screen.getByTestId(replaysTestid.more)).toHaveTextContent("Show older games");
+
+    fireEvent.click(screen.getByTestId(replaysTestid.more));
+    expect(await screen.findByTestId(replaysTestid.online("m-older"))).toBeInTheDocument();
+    expect(screen.getByTestId(replaysTestid.online("m-1"))).toBeInTheDocument();
+    expect(getReplays).toHaveBeenCalledTimes(3);
+    expect(getReplays).toHaveBeenLastCalledWith(TOKEN, 1);
+    expect(screen.queryByTestId(replaysTestid.moreFailed)).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByTestId(replaysTestid.more)).toBeNull();
+  });
+
+  it("R768000 a failed page of older games says why in the reader's language", async () => {
+    await setLocale("zh-CN");
+    signIn();
+    vi.mocked(getReplays)
+      .mockResolvedValueOnce({ replays: [listing()], nextOffset: 1 })
+      .mockRejectedValueOnce(new ApiUnreachableError(new TypeError("Failed to fetch")));
+    renderRoute(memorySaveStore());
+    await screen.findByTestId(replaysTestid.online("m-1"));
+    fireEvent.click(screen.getByTestId(replaysTestid.more));
+
+    expect(await screen.findByTestId(replaysTestid.moreFailed)).toHaveTextContent(
+      "无法连接 JackiOh。请检查网络连接后重试。",
+    );
+    expect(screen.getByTestId(replaysTestid.online("m-1"))).toBeInTheDocument();
+  });
+
+  it("R768000 a list that could not be read says why in the reader's language", async () => {
+    await setLocale("zh-CN");
+    signIn();
+    vi.mocked(getReplays).mockRejectedValue(new ApiUnreachableError(new TypeError("Failed to fetch")));
+    renderRoute(memorySaveStore());
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("无法连接 JackiOh。请检查网络连接后重试。");
+    });
   });
 
   it("R768000 says why a game cannot be shown and keeps its Watch button off", async () => {
