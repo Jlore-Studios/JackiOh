@@ -165,6 +165,11 @@ export default function StatsRoute(): ReactElement {
   const [keywordFilter, setKeywordFilter] = useState<string>(initialParams.get("keyword") ?? "");
   const [view, setView] = useState<ViewKey>(initialParams.get("view") === "grid" ? "grid" : "table");
   const [cardDrillDownId, setCardDrillDownId] = useState<string | null>(initialParams.get("card"));
+  const [mode, setMode] = useState<string>(
+    ["bo1", "bo3", "random"].includes(initialParams.get("mode") ?? "")
+      ? (initialParams.get("mode") as string)
+      : "",
+  );
 
   // Column visibility
   const [visibleCols, setVisibleCols] = useState({
@@ -218,11 +223,12 @@ export default function StatsRoute(): ReactElement {
     if (keywordFilter) params.set("keyword", keywordFilter);
     if (view !== "table") params.set("view", view);
     if (cardDrillDownId) params.set("card", cardDrillDownId);
+    if (mode) params.set("mode", mode);
 
     const query = params.toString();
     const target = query ? `${paths.stats}?${query}` : paths.stats;
     navigate(target, { replace: true });
-  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId]);
+  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId, mode]);
 
   useEffect(() => {
     updateUrl();
@@ -240,6 +246,7 @@ export default function StatsRoute(): ReactElement {
         set: setFilter ? setFilter : undefined,
         rarity: rarityFilter ? rarityFilter : undefined,
         cost: costFilter ? Number(costFilter) : undefined,
+        mode: mode ? mode : undefined,
         signal: controller.signal,
       })
         .then((res) => {
@@ -253,7 +260,7 @@ export default function StatsRoute(): ReactElement {
 
       return () => controller.abort();
     },
-    [patch, setFilter, rarityFilter, costFilter],
+    [patch, setFilter, rarityFilter, costFilter, mode],
   );
 
   useEffect(() => {
@@ -307,7 +314,7 @@ export default function StatsRoute(): ReactElement {
     }
     setDrillDownLoading(true);
     const controller = new AbortController();
-    getCardDrillDown(cardDrillDownId, controller.signal)
+    getCardDrillDown(cardDrillDownId, mode ? mode : undefined, controller.signal)
       .then((data) => {
         setDrillDownData(data);
         setDrillDownLoading(false);
@@ -317,7 +324,7 @@ export default function StatsRoute(): ReactElement {
       });
 
     return () => controller.abort();
-  }, [cardDrillDownId]);
+  }, [cardDrillDownId, mode]);
 
   const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
 
@@ -635,6 +642,19 @@ export default function StatsRoute(): ReactElement {
                       {keywordName(kind)}
                     </option>
                   ))}
+                </select>
+
+                <select
+                  className="stats-select"
+                  data-testid={statsTestid.modeSelect}
+                  value={mode}
+                  onChange={(e) => setMode(e.target.value)}
+                  aria-label={t("Filter by match type")}
+                >
+                  <option value="">{t("All modes")}</option>
+                  <option value="bo1">{t("Best of 1")}</option>
+                  <option value="bo3">{t("Conquest")}</option>
+                  <option value="random">{t("All Random")}</option>
                 </select>
               </div>
 
