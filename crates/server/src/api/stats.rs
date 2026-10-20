@@ -1,5 +1,9 @@
 //! Public card and player statistics page API (SPEC §9.11, R654).
 //!
+//! R1367000 (amends R654): `GET /api/stats/cards` reads each card over its own window, through the
+//! engine's `windowed_card_stats`, the function `cargo jackioh stats report --window` and `winrates`
+//! call too; the drill-down's per-patch rates stay per patch.
+//!
 //! R978000: the card figures are read off a patch's totals once and kept for
 //! `CARD_STATS_CACHE_TTL_SECONDS`, one report per patch, `?source=` and `?pilot=` (`KeptReports`), and
 //! both card routes read the kept reports. R1044000: the totals are the records folded as they were
@@ -16,10 +20,12 @@ use serde::Serialize;
 use serde_json::{Map, Value, json};
 use tokio::sync::OnceCell;
 
+use jackioh_cards::patch_history;
 use jackioh_engine::wire::stats::{
-    CardDrill, CardStats, CardStatsFilter, CardStatsReport, GameSource, PilotFilter, SourceFilter,
-    StatsTotals, Tally, TotalsKey, add_stats, card_drills_of, card_stats_of, played_delta, sources_of,
-    win_rate,
+    CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardWindow, GameSource, PatchStep, PilotFilter,
+    SourceFilter, StatsTotals, Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedReport,
+    add_stats, card_drills_of, card_family, card_stats_of, card_window, played_delta, sources_of, win_rate,
+    windowed_card_stats,
 };
 use jackioh_engine::{CardCost, CardDef, Pilot};
 
@@ -61,6 +67,32 @@ pub struct PublicCardStat {
     pub played_delta: Option<f64>,
     pub play_rate: f64,
     pub has_enough_games: bool,
+    /// R1367000: the card's window and the records its figures count.
+    pub window: PublicCardWindow,
+}
+
+/// R1367000: a card's statistics window at the patch asked about.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicCardWindow {
+    /// The version that opened the window: its X's start, or the last micro that played the card.
+    pub from: String,
+    /// The live games played on the window's versions, which R654's gate counts.
+    pub live_games: i64,
+    pub source: PublicStatsSource,
+    /// The versions whose games the figures count, oldest first.
+    pub counted: Vec<String>,
+}
+
+impl PublicCardWindow {
+    fn of(window: &CardWindow) -> PublicCardWindow {
+        PublicCardWindow {
+            from: window.versions.first().cloned().unwrap_or_default(),
+            live_games: window.live_games,
+            source: PublicStatsSource::of(window.source),
+            counted: window.counted.clone(),
+        }
+    }
 }
 
 /// Which records the public figures were counted from.
@@ -69,6 +101,8 @@ pub struct PublicCardStat {
 pub enum PublicStatsSource {
     Provisional,
     Live,
+    /// R1367000: the live games of the previous window, the window's own being short.
+    Previous,
     Dev,
 }
 
@@ -78,7 +112,18 @@ impl PublicStatsSource {
         match self {
             PublicStatsSource::Provisional => "AI games + live games (provisional)",
             PublicStatsSource::Live => "Live games",
+            PublicStatsSource::Previous => "Live games (previous patch)",
             PublicStatsSource::Dev => "AI development games",
+        }
+    }
+
+    /// R1367000: the source a window's figures were counted from.
+    fn of(source: WindowSource) -> PublicStatsSource {
+        match source {
+            WindowSource::Live => PublicStatsSource::Live,
+            WindowSource::Previous => PublicStatsSource::Previous,
+            WindowSource::Provisional => PublicStatsSource::Provisional,
+            WindowSource::Dev => PublicStatsSource::Dev,
         }
     }
 }
@@ -93,6 +138,15 @@ enum SourceParam {
 }
 
 impl SourceParam {
+    /// R1367000: what the query asks of a window's gate.
+    fn request(self) -> WindowRequest {
+        match self {
+            SourceParam::Default => WindowRequest::Gated,
+            SourceParam::Live => WindowRequest::Live,
+            SourceParam::Dev => WindowRequest::Dev,
+        }
+    }
+
     fn parse(raw: Option<&str>) -> SourceParam {
         match raw.map(|value| value.trim().to_lowercase()).as_deref() {
             Some("live") => SourceParam::Live,
@@ -367,8 +421,6 @@ fn public_report(
 struct PatchReport {
     /// The patch's live games, tutorials aside: R654's gate counts them.
     live_games: i64,
-    /// Which records the figures count, as the gate and `?source=` chose them.
-    source: PublicStatsSource,
     report: CardStatsReport,
     /// Each card's drill-down over the same records, by card id, at most `CARD_STATS_CO_PLAYED_TOP`
     /// co-played cards each. Only the current patch's report for the default source has them: it is
@@ -392,25 +444,115 @@ type KeptCell = Arc<OnceCell<Arc<PatchReport>>>;
 /// across a computation.
 #[derive(Default)]
 pub struct KeptReports {
-    entries: Mutex<IndexMap<ReportKey, (i64, KeptCell)>>,
+    entries: Kept<Arc<PatchReport>>,
+    /// R1367000: the windowed reports `GET /api/stats/cards` reads, kept as the per-patch ones are.
+    windows: Kept<Arc<KeptWindow>>,
+}
+
+/// Kept cells by what they were computed from, each with when it was first asked for.
+type Kept<T> = Mutex<IndexMap<ReportKey, (i64, Arc<OnceCell<T>>)>>;
+
+/// The cell for `key` in `entries`: the one made less than `CARD_STATS_CACHE_TTL_SECONDS` before
+/// `now`, or a new empty one, dropping the oldest to stay within `CARD_STATS_KEPT_REPORTS`.
+fn kept_cell<T>(entries: &Kept<T>, key: ReportKey, now: i64) -> Arc<OnceCell<T>> {
+    let mut entries = lock(entries);
+    entries.retain(|_, (made_at, _)| now - *made_at < CARD_STATS_CACHE_TTL_SECONDS * MS_PER_SECOND);
+    if let Some((_, cell)) = entries.get(&key) {
+        return Arc::clone(cell);
+    }
+    while entries.len() >= CARD_STATS_KEPT_REPORTS {
+        entries.shift_remove_index(0);
+    }
+    let cell = Arc::new(OnceCell::new());
+    entries.insert(key, (now, Arc::clone(&cell)));
+    cell
 }
 
 impl KeptReports {
-    /// The cell for `key`: the one made less than `CARD_STATS_CACHE_TTL_SECONDS` before `now`, or a
-    /// new empty one, dropping the oldest to stay within `CARD_STATS_KEPT_REPORTS`.
     fn cell(&self, key: ReportKey, now: i64) -> KeptCell {
-        let mut entries = lock(&self.entries);
-        entries.retain(|_, (made_at, _)| now - *made_at < CARD_STATS_CACHE_TTL_SECONDS * MS_PER_SECOND);
-        if let Some((_, cell)) = entries.get(&key) {
-            return Arc::clone(cell);
-        }
-        while entries.len() >= CARD_STATS_KEPT_REPORTS {
-            entries.shift_remove_index(0);
-        }
-        let cell: KeptCell = Arc::new(OnceCell::new());
-        entries.insert(key, (now, Arc::clone(&cell)));
-        cell
+        kept_cell(&self.entries, key, now)
     }
+
+    fn window_cell(&self, key: ReportKey, now: i64) -> KeptWindowCell {
+        kept_cell(&self.windows, key, now)
+    }
+}
+
+/// R1367000: one patch's windowed figures for one `?source=` and `?pilot=`, and each version's live
+/// games, which the window of a card no counted deck held is read from.
+struct KeptWindow {
+    report: WindowedReport,
+    live_games: IndexMap<String, i64>,
+}
+
+impl KeptWindow {
+    /// The window of a card, held or not.
+    fn window_of(&self, history: &[PatchStep], id: &str, request: WindowRequest) -> CardWindow {
+        match self.report.card(id) {
+            Some(card) => card.window.clone(),
+            None => card_window(
+                history,
+                &self.report.at,
+                Some(card_family(id)),
+                request,
+                |version| self.live_games.get(version).copied().unwrap_or(0),
+            ),
+        }
+    }
+}
+
+type KeptWindowCell = Arc<OnceCell<Arc<KeptWindow>>>;
+
+/// R1367000: `at`'s windowed report for `source` and `pilot`, kept as `kept_report` keeps a patch's:
+/// read off every patch's totals once per `CARD_STATS_CACHE_TTL_SECONDS`, and never kept for a patch
+/// the server does not know.
+async fn kept_window(
+    app: &App,
+    history: &[PatchStep],
+    at: &str,
+    source: SourceParam,
+    pilot: PublicStatsPilot,
+) -> Result<Arc<KeptWindow>, ApiError> {
+    let compute = || async move {
+        let mut tx = app.db.begin(None).await?;
+        let totals = tx
+            .stats_totals_load(&StatsTotalsQuery {
+                source: SourceFilter::All,
+                mode: None,
+                patch: None,
+                drills: false,
+            })
+            .await?;
+        tx.commit().await?;
+        let report = windowed_card_stats(
+            &totals,
+            &WindowQuery {
+                history,
+                at,
+                live_pilot: pilot.filter(),
+                request: source.request(),
+            },
+        );
+        let mut live_games: IndexMap<String, i64> = IndexMap::new();
+        for key in totals.records.keys() {
+            live_games
+                .entry(key.patch.clone())
+                .or_insert_with(|| totals.live_games(&key.patch));
+        }
+        Ok::<_, ApiError>(Arc::new(KeptWindow { report, live_games }))
+    };
+    let known = at == app.catalog.version || history.iter().any(|step| step.version == at);
+    if !known {
+        return compute().await;
+    }
+    let key = ReportKey {
+        patch: at.to_string(),
+        source,
+        pilot,
+    };
+    let cell = app.card_stats.window_cell(key, now_ms());
+    let kept = cell.get_or_try_init(compute).await?;
+    Ok(Arc::clone(kept))
 }
 
 /// R978000: `patch`'s figures for `source_param` and `live_pilot`, read off the patch's totals (R654's
@@ -438,7 +580,7 @@ fn patch_report(
         PublicStatsSource::Provisional
     };
     let counted = match source {
-        PublicStatsSource::Live => SourceFilter::Live,
+        PublicStatsSource::Live | PublicStatsSource::Previous => SourceFilter::Live,
         PublicStatsSource::Dev => SourceFilter::Dev,
         PublicStatsSource::Provisional => SourceFilter::All,
     };
@@ -460,7 +602,6 @@ fn patch_report(
     };
     PatchReport {
         live_games,
-        source,
         report,
         drills,
     }
@@ -502,8 +643,11 @@ async fn kept_report(
     Ok(Arc::clone(kept))
 }
 
-/// GET /api/stats/cards: public card win rates. R654's gate: AI games pad the stats until the
-/// patch has logged 1000 live games, then live games only. Below 20 games `hasEnoughGames` is false.
+/// GET /api/stats/cards: public card win rates. R654's gate, amended by R1367000: each card's figures
+/// are read over its own window (`windowed_card_stats`), live games only once the window has logged
+/// 1000 live games, else its previous window's live games when that one has, else AI games pad the
+/// window. `gate` and `source` are the window every card shares (its X's). Below 20 games
+/// `hasEnoughGames` is false.
 /// R1451, amended by R807000: a ladder bot's game counts toward the gate like any live game, and
 /// the figures count every counted seat, human and bot alike (`?pilot=human` reads the people's
 /// sides only, `?pilot=ai` the bots'). A bot game adds two decks like any game, so the per-game
@@ -520,19 +664,14 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         _ => None,
     };
 
-    // R978000: the patch's figures as kept.
-    let kept = kept_report(app, &versions, &requested_patch, source_param, pilot).await?;
-    let live_games_count = kept.live_games;
-    let cleared = live_games_count >= PUBLIC_STATS_MIN_LIVE_GAMES;
-    let source = kept.source;
+    // R978000, R1367000: every card's figures over its own window at the patch, as kept.
+    let history = patch_history();
+    let request = source_param.request();
+    let kept = kept_window(app, &history, &requested_patch, source_param, pilot).await?;
     let report = &kept.report;
-
-    let stats_map: IndexMap<&str, _> = report
-        .cards
-        .iter()
-        .map(|stat| (stat.card.as_str(), stat))
-        .collect();
-    let total_decks = report.decks as i64;
+    let live_games_count = report.patch.live_games;
+    let cleared = report.patch.cleared();
+    let source = PublicStatsSource::of(report.patch.source);
 
     let set_param = req
         .query
@@ -580,7 +719,10 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             }
         }
 
-        let stat = stats_map.get(id.as_str()).copied();
+        let held = report.card(id);
+        let stat = held.map(|card| &card.stats);
+        let total_decks = held.map(|card| card.decks).unwrap_or(0);
+        let window = kept.window_of(&history, id, request);
         let (in_deck_games, _) = stat.map(|stat| tally_of(&stat.in_deck)).unwrap_or((0, 0));
         let rate = stat.and_then(|stat| win_rate(&stat.in_deck));
         let (played_games, played_wins) = stat.map(|stat| tally_of(&stat.played)).unwrap_or((0, 0));
@@ -632,6 +774,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             played_delta: delta,
             play_rate,
             has_enough_games,
+            window: PublicCardWindow::of(&window),
         });
     }
 
@@ -678,10 +821,10 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         pilot,
         pilot_label: pilot.label().to_string(),
         min_sample: CARD_STATS_MIN_SAMPLE,
-        total_games: report.games as i64,
+        total_games: report.games,
         cards,
         summary: PublicStatsSummary {
-            total_games: report.games as i64,
+            total_games: report.games,
             live_games: live_games_count,
             active_patch: requested_patch,
             source,

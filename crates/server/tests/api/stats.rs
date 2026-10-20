@@ -1223,3 +1223,113 @@ mod r1044000_condensed_card_stats {
         assert_eq!(figures(&app).await, before);
     }
 }
+
+// R1367000: `GET /api/stats/cards` reads each card over its own window, the build's real patch
+// history deciding the windows: the newest micro that plays a card opens that card's window, while
+// every other card keeps its X's.
+mod r1367000_card_stats_by_window {
+    use super::*;
+    use jackioh_engine::wire::stats::{PatchTier, WindowRequest, card_window};
+
+    /// The newest X's first version, and the newest micro in it that plays a card: its version and
+    /// the card, which the micro's window holds alone.
+    fn x_and_micro() -> (String, String, &'static str) {
+        let history = jackioh_cards::patch_history();
+        let at = history.len() - 1;
+        assert_eq!(history[at].version, current_patch());
+        let x = history
+            .iter()
+            .rposition(|step| step.tier != PatchTier::Micro)
+            .expect("a major opens the history");
+        let micro = (x + 1..=at)
+            .rev()
+            .find(|&index| !history[index].plays.is_empty())
+            .expect(
+                "the newest X holds a micro that plays a card; pick another history shape when it does not",
+            );
+        let card: &'static str = history[micro].plays[0].clone().leak();
+        // The card's previous window holds the X's first version.
+        let previous = card_window(
+            &history,
+            &history[micro - 1].version,
+            Some(card),
+            WindowRequest::Gated,
+            |_| 0,
+        );
+        assert_eq!(previous.versions.first(), Some(&history[x].version));
+        (history[x].version.clone(), history[micro].version.clone(), card)
+    }
+
+    fn live(id: String, patch: &str, card: &'static str) -> Value {
+        make_game_record(
+            &id,
+            RecordOptions {
+                source: Some("live"),
+                patch: Some(patch.to_string()),
+                p1_deck: Some(vec![card, "core-001"]),
+                ..RecordOptions::default()
+            },
+        )
+    }
+
+    fn dev(id: String, card: &'static str) -> Value {
+        make_game_record(
+            &id,
+            RecordOptions {
+                source: Some("dev"),
+                p1_deck: Some(vec![card, "core-001"]),
+                ..RecordOptions::default()
+            },
+        )
+    }
+
+    /// `x_games` live games on the X's first version, `micro_games` on the micro's, and ten
+    /// development games on the current one, each holding the card and core-001.
+    async fn cards(x_games: i64, micro_games: i64) -> (Value, &'static str, String, String) {
+        let (x, micro, card) = x_and_micro();
+        let app = test_app().await;
+        let mut records: Vec<Value> = (0..x_games).map(|n| live(format!("x-{n}"), &x, card)).collect();
+        records.extend((0..micro_games).map(|n| live(format!("micro-{n}"), &micro, card)));
+        records.extend((0..10).map(|n| dev(format!("pad-{n}"), card)));
+        insert_records(&app, records).await;
+        let (status, _, data) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(status, 200);
+        (data, card, x, micro)
+    }
+
+    #[tokio::test]
+    async fn r1367000_the_provisional_label_follows_the_card_window_not_the_patch() {
+        let short = PUBLIC_STATS_MIN_LIVE_GAMES - 300;
+        let (data, card, x, micro) = cards(300, short).await;
+        // The window every card shares holds both versions' live games, and clears.
+        assert_eq!(data["gate"]["liveGames"], json!(PUBLIC_STATS_MIN_LIVE_GAMES));
+        assert_eq!(data["gate"]["cleared"], json!(true));
+        assert_eq!(data["source"], "live");
+        let core = find(&data["cards"], "id", &json!("core-001")).expect("core-001 is listed");
+        assert_eq!(core["window"]["from"], json!(x));
+        assert_eq!(core["window"]["source"], "live");
+        assert_eq!(core["games"], json!(PUBLIC_STATS_MIN_LIVE_GAMES));
+        // The micro reopened the card's window: its 700 live games are short, and so is the previous
+        // window's 300, so AI games pad it.
+        let stat = find(&data["cards"], "id", &json!(card)).expect("the card is listed");
+        assert_eq!(stat["window"]["from"], json!(micro));
+        assert_eq!(stat["window"]["liveGames"], json!(short));
+        assert_eq!(stat["window"]["source"], "provisional");
+        assert_eq!(stat["games"], json!(short + 10));
+    }
+
+    #[tokio::test]
+    async fn r1367000_a_short_card_window_shows_its_previous_window_once_that_one_clears() {
+        let (data, card, x, _) = cards(PUBLIC_STATS_MIN_LIVE_GAMES, PUBLIC_STATS_MIN_LIVE_GAMES - 1).await;
+        let stat = find(&data["cards"], "id", &json!(card)).expect("the card is listed");
+        assert_eq!(stat["window"]["source"], "previous");
+        assert_eq!(stat["window"]["counted"][0], json!(x));
+        assert_eq!(stat["games"], json!(PUBLIC_STATS_MIN_LIVE_GAMES));
+        // At 1,000 the card's own window clears and counts its own live games alone.
+        let (data, card, _, micro) = cards(0, PUBLIC_STATS_MIN_LIVE_GAMES).await;
+        let stat = find(&data["cards"], "id", &json!(card)).expect("the card is listed");
+        assert_eq!(stat["window"]["source"], "live");
+        assert_eq!(stat["window"]["counted"][0], json!(micro));
+        assert_eq!(stat["games"], json!(PUBLIC_STATS_MIN_LIVE_GAMES));
+    }
+}

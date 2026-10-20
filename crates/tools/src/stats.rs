@@ -59,10 +59,11 @@ use serde_json::Value;
 
 use jackioh_ai::{AI_DEV_RUN, DevRunOptions, SHADOW_BAN, SHADOW_WATCH, dev_game_record};
 use jackioh_engine::{
-    CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, DEV_RECORD_ID_PREFIX, FORCED_SERIES_PREFIX,
-    GAME_MODES, GAME_OVER_REASONS, GameMode, GameOverReason, GameRecord, GameSource, GameSummary,
-    PILOT_FILTERS, PLAYER_IDS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, Winner, card_stats,
-    describe_filter, format_card_stats, parse_game_record_lines, record_matches, seats_counted, sources_of,
+    CardStatsFilter, CardStatsReport, CardWindow, DEFAULT_CARD_STATS_FILTER, DEV_RECORD_ID_PREFIX,
+    FORCED_SERIES_PREFIX, GAME_MODES, GAME_OVER_REASONS, GameMode, GameOverReason, GameRecord, GameSource,
+    GameSummary, PILOT_FILTERS, PLAYER_IDS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, StatsTotals,
+    WindowQuery, WindowRequest, WindowedReport, Winner, card_stats, describe_filter, format_card_stats,
+    parse_game_record_lines, record_matches, seats_counted, sources_of, windowed_card_stats,
 };
 
 use crate::arena::{self, paired_interval, wilson_interval};
@@ -198,6 +199,12 @@ pub struct ReportArgs {
     /// The game figures instead of the card win rates (per patch, mode and source). Not with --card.
     #[arg(long, conflicts_with = "card")]
     pub games: bool,
+    /// R1367000: each card over its own window at this version, as `/api/stats/cards` reads it
+    /// (`windowed_card_stats`): live games once the window, or else its previous one, has
+    /// `PUBLIC_STATS_MIN_LIVE_GAMES`, development games padding it otherwise. `--pilot` names a
+    /// live game's seats counted. Not with --source, --mode, --patch or --games.
+    #[arg(long, value_name = "VERSION", conflicts_with_all = ["source", "mode", "patch", "games"])]
+    pub window: Option<String>,
     /// The report as JSON, as `stats-cards --json` prints it.
     #[arg(long)]
     pub json: bool,
@@ -547,8 +554,87 @@ pub fn render_games(report: &GameReport, json: bool) -> String {
     lines.join("\n")
 }
 
+/// R1367000: `stats report --window <version>`: every card over its own window at `at`, through the
+/// function `/api/stats/cards` calls, over the records of the files named.
+pub fn window_report(args: &ReportArgs, at: &str) -> Result<WindowedReport> {
+    let mut totals = StatsTotals::default();
+    for record in read_records(&args.files)? {
+        totals.fold(&record, false);
+    }
+    let history = jackioh_cards::patch_history();
+    let mut report = windowed_card_stats(
+        &totals,
+        &WindowQuery {
+            history: &history,
+            at,
+            live_pilot: args.pilot.unwrap_or_else(|| default_pilot(args.source)),
+            request: WindowRequest::Gated,
+        },
+    );
+    if let Some(only) = &args.card {
+        report.cards.retain(|card| &card.stats.card == only);
+    }
+    Ok(report)
+}
+
+/// The windowed report as JSON, or as the table `stats report` prints with each card's window beside it.
+pub fn render_window(
+    report: &WindowedReport,
+    args: &ReportArgs,
+    name_of: impl Fn(&str) -> Option<String>,
+) -> String {
+    if args.json {
+        return serde_json::to_string_pretty(report).unwrap_or_default();
+    }
+    let window = |window: &CardWindow| {
+        format!(
+            "from {} ({} live games), {} over {}",
+            window.versions.first().map(String::as_str).unwrap_or_default(),
+            window.live_games,
+            serde_json::to_value(window.source)
+                .ok()
+                .and_then(|source| source.as_str().map(str::to_string))
+                .unwrap_or_default(),
+            window.counted.join(", ")
+        )
+    };
+    let table = format_card_stats(
+        &CardStatsReport {
+            filter: CardStatsFilter {
+                source: SourceFilter::All,
+                mode: None,
+                patch: Some(report.at.clone()),
+                pilot: args.pilot.unwrap_or_else(|| default_pilot(args.source)),
+            },
+            games: i32::try_from(report.games).unwrap_or(i32::MAX),
+            decks: i32::try_from(report.decks).unwrap_or(i32::MAX),
+            cards: report.cards.iter().map(|card| card.stats.clone()).collect(),
+        },
+        name_of,
+    );
+    let mut lines = vec![
+        format!("Window at {}: {}", report.at, window(&report.patch)),
+        table,
+    ];
+    for card in report.cards.iter().filter(|card| card.window != report.patch) {
+        lines.push(format!("{}: {}", card.stats.card, window(&card.window)));
+    }
+    lines.join("\n")
+}
+
 /// `cargo jackioh stats report`.
 fn run_report(args: &ReportArgs) -> Result<()> {
+    if let Some(at) = &args.window {
+        jackioh_cards::register_all();
+        let report = window_report(args, at)?;
+        println!(
+            "{}",
+            render_window(&report, args, |card| jackioh_cards::CATALOG
+                .get(card)
+                .map(|def| def.name.clone()))
+        );
+        return Ok(());
+    }
     if args.games {
         let report = game_report(&read_records(&args.files)?, &filter_of(args));
         println!("{}", render_games(&report, args.json));
@@ -794,6 +880,7 @@ fn run_options(args: &Args, patch: String) -> Result<DevRunOptions> {
         patch,
         budget: None,
         force,
+        commit: None,
     })
 }
 
@@ -817,7 +904,11 @@ pub fn run(args: Args) -> Result<()> {
         }
     };
     // Before `--out` is created, so a refused id writes no file.
-    let options = run_options(&args, patch)?;
+    let options = DevRunOptions {
+        // R1367000: each record files the build that played it.
+        commit: crate::selfplay::build_commit(),
+        ..run_options(&args, patch)?
+    };
     let series = &options.series;
     if let Some(card) = &options.force {
         eprintln!("[ai:stats] {card} forced: p1's deck in odd games, p2's in even ({series})");
@@ -975,6 +1066,7 @@ mod tests {
                 pilot: None,
                 card: None,
                 games: false,
+                window: None,
                 json: false,
             }
         );
@@ -1464,6 +1556,34 @@ mod tests {
             (dev_default.filter.pilot, dev_default.decks),
             (PilotFilter::Unified, 2)
         );
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn r1367000_report_window_reads_each_card_over_its_own_window() {
+        // v0.2.6, a micro after v0.2.5's patch, plays Classic #55 alone (patches.json's changes).
+        let on = |id: &str, patch: &str| {
+            record_line(id, "live", "bo1", "p1", &["classic-055"])
+                .replace("\"v0.2.5\"", &format!("\"{patch}\""))
+        };
+        let (dir, paths) = scratch(&[(
+            "a.jsonl",
+            format!("{}\n{}\n", on("m1", "v0.2.5"), on("m2", "v0.2.6")),
+        )]);
+        let named: Vec<&str> = paths.iter().map(|path| path.to_str().unwrap()).collect();
+        let args = report_args(&[named, vec!["--window", "v0.2.6"]].concat()).unwrap();
+        let report = window_report(&args, "v0.2.6").unwrap();
+        assert_eq!(report.patch.versions, ["v0.2.5", "v0.2.6"]);
+        let games = |card: &str| report.card(card).map(|card| card.stats.in_deck.games);
+        assert_eq!(games("core-001"), Some(2));
+        assert_eq!(games("classic-055"), Some(1));
+        let micro = report.card("classic-055").unwrap();
+        assert_eq!(micro.window.versions, ["v0.2.6"]);
+        assert_eq!(micro.window.source, jackioh_engine::WindowSource::Provisional);
+        assert!(render_window(&report, &args, |_| None).contains("classic-055: from v0.2.6"));
+        // --window takes the place of the filter flags.
+        assert!(report_args(&["a.jsonl", "--window=v0.2.6", "--patch=v0.2.5"]).is_err());
+        assert!(report_args(&["a.jsonl", "--window=v0.2.6", "--games"]).is_err());
         std::fs::remove_dir_all(dir).unwrap();
     }
 
