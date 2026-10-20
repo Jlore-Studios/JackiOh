@@ -205,4 +205,67 @@ mod play_pipeline_b_folds_exactly_s9_2_s9_3 {
         assert!(returns > 0);
         assert!(x_asked > 0);
     }
+
+    /// "#1387: a tampered round trip is detected by a hash mismatch" — the step-10 state
+    /// round-trips to the live hash, and adding one health moves it.
+    #[test]
+    fn an_invalid_round_trip_is_detected_by_a_hash_mismatch() {
+        let seed = "pb-replay-1";
+        let live = play(seed);
+        assert!(live.log.len() > 20, "{seed} played {}", live.log.len());
+        let mut state = begin_game(&create(seed)).state;
+        for action in live.log.iter().take(10) {
+            state = reduce(&state, action).state;
+        }
+        assert_eq!(hash_state(&state), live.hashes[9]);
+        let restored: GameState =
+            serde_json::from_value(serde_json::to_value(&state).expect("the state serialises"))
+                .expect("the state parses back");
+        assert_eq!(hash_state(&restored), live.hashes[9]);
+        let mut tampered_value = serde_json::to_value(&state).expect("the state serialises");
+        let health = tampered_value
+            .get_mut("players")
+            .and_then(|players| players.get_mut("p1"))
+            .and_then(|p1| p1.get_mut("hero"))
+            .and_then(|hero| hero.get_mut("health"));
+        let Some(health) = health.and_then(|health| health.as_i64()) else {
+            panic!("players.p1.hero.health is a number");
+        };
+        tampered_value["players"]["p1"]["hero"]["health"] = serde_json::json!(health + 1);
+        let tampered: GameState =
+            serde_json::from_value(tampered_value).expect("the tampered state parses back");
+        assert_ne!(
+            hash_state(&tampered),
+            live.hashes[9],
+            "adding one health must move the hash, or the comparison proves nothing"
+        );
+    }
+
+    /// "#1387: a mid-game state survives a serialized restart and continues" — the round-tripped
+    /// step-10 state replays the next ten actions onto the live hashes with no refusal.
+    #[test]
+    fn a_mid_game_state_survives_a_serialized_restart_and_continues() {
+        let seed = "pb-replay-1";
+        let live = play(seed);
+        assert!(live.log.len() > 20, "{seed} played {}", live.log.len());
+        let mut state = begin_game(&create(seed)).state;
+        for action in live.log.iter().take(10) {
+            state = reduce(&state, action).state;
+        }
+        let mut continued: GameState =
+            serde_json::from_value(serde_json::to_value(&state).expect("the state serialises"))
+                .expect("the state parses back");
+        assert_eq!(hash_state(&continued), live.hashes[9]);
+        for (offset, action) in live.log.iter().skip(10).take(10).enumerate() {
+            let result = reduce(&continued, action);
+            assert!(
+                result.error.is_none(),
+                "{seed} step {} refused after the restart: {:?}",
+                10 + offset,
+                result.error
+            );
+            continued = result.state;
+            assert_eq!(hash_state(&continued), live.hashes[10 + offset]);
+        }
+    }
 }
