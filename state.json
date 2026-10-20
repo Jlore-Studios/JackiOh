@@ -11509,16 +11509,13 @@
     "what": "suggestions on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-20T16:26:53Z",
+    "at": "2026-10-20T16:33:53Z",
     "notes": [
-      "#1437 needs a plan",
-      "started a night run, as a lane was free: #1437 (hard) is queued to build, for `claude-6`: plan on `claude-6` (claude, `opus`, strong)",
-      "#1441: typed it Task",
-      "#1440: typed it Task",
-      "#1439: typed it Task",
-      "#1438: typed it Task",
-      "#1437: typed it Task",
-      "#1436: typed it Task"
+      "#1447: typed it Task",
+      "#1446: typed it Task",
+      "#1445: typed it Task",
+      "#1444: typed it Task",
+      "#1443: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
