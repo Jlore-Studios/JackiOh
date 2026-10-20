@@ -7633,18 +7633,29 @@
     "1422": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-20T13:10:51Z",
       "issue": 1416,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The new sparkle button is 34\u00d730 px on phones. That breaks the deck builder's own rule that every control a finger hits is at least 44 px, and the settings gear it says it copies does get 44 px there.",
+          "evidence": "`.ws-cosmetics-button` copies `.settings-gear`'s base `min-width: 34px; min-height: 30px` (settings.css:14-23). It leaves out the gear's touch rule (settings.css:77-83, `@media (max-width: 1024px), (pointer: coarse)` \u2192 44\u00d744). The button is also missing from the touch-sizing blocks in workshop.css:926-935 and deckbuilder.css:1275-1287, both headed 'every control a finger hits is at least 44 px' (docs/polish/7-mobile-ux.md, B29). At 390\u00d7844 it sits in a header row whose Back, language and gear controls are all 44 px. No deckbuilder component spec measures it, so CI would not catch this.",
+          "severity": "blocking",
+          "where": "apps/web/src/game/deckbuilder/workshop.css:411"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-4",
-      "queued_at": "2026-10-20T15:16:49Z",
+      "queued_at": "2026-10-20T15:33:09Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "39446992817",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-10-20T15:19:58Z",
       "stop_requested": false,
       "taken_asks": [],
