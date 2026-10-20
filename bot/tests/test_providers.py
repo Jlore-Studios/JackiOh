@@ -63,11 +63,11 @@ class ParseTests(unittest.TestCase):
             "claude-7": [("opus", "strong", False), ("sonnet", "medium", False)],
             "agy": [("gemini-3.8-flash-high", "medium", False)],
             "muse": [("muse-spark-1.3-contributor", "medium", False)],
-            "gpt": [("gpt-5.6-terra", "weak", True)],
+            "gpt": [("gpt-5.6-sol", "weak", True)],
             "claude-2": [("opus", "strong", False), ("sonnet", "medium", False)],
             "devin": [("swe-2-max", "weak", True)],
         })
-        self.assertEqual([e.model for e in pool.tiers["weak"]], ["gpt-5.6-terra", "swe-2-max"])
+        self.assertEqual([e.model for e in pool.tiers["weak"]], ["gpt-5.6-sol", "swe-2-max"])
         self.assertEqual([e.model for e in pool.tiers["medium"]],
                          ["muse-spark-1.3-contributor", "gemini-3.8-flash-high", "sonnet"])
         # Every Claude account switches between its Opus and its Sonnet as the work needs: no

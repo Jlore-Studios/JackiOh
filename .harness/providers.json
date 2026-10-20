@@ -7,7 +7,7 @@
   "priority": ["claude-3", "claude-7", "claude-1", "claude-4", "claude-6", "claude-5", "muse", "agy", "gpt", "claude-2", "devin"],
   "tiers": {
     "weak": [
-      { "model": "gpt-5.6-terra", "note": "ChatGPT through Codex: weak since 2026-10-11, so it builds easy items only and its review counts as a weak one. First among the weak models (#695)." },
+      { "model": "gpt-5.6-sol", "note": "ChatGPT through Codex: weak since 2026-10-11, so it builds easy items only and its review counts as a weak one. First among the weak models (#695)." },
       { "model": "swe-2-max", "note": "Devin (SWE-2): easy items only, under the easy rule. Its builds check themselves before any review." }
     ],
     "medium": [
@@ -149,11 +149,11 @@
       "quiet_check": false
     },
     "gpt": {
-      "note": "ChatGPT through the Codex CLI, logged in on the machine as agent-gpt (`codex login`). Weak since 2026-10-11: easy items only, which it takes ahead of the stronger models while it is free (easy_first), before Devin, so a week shows what it can do (#682).",
+      "note": "ChatGPT through the Codex CLI, logged in on the machine as agent-gpt (`codex login`). GPT-5.6 Sol, its top tier, since 2026-10-20 (Terra before). Weak since 2026-10-11: easy items only, which it takes ahead of the stronger models while it is free (easy_first), before Devin, so a week shows what it can do (#682).",
       "enabled": true,
       "cli": "codex",
       "family": "gpt",
-      "model": "gpt-5.6-terra",
+      "model": "gpt-5.6-sol",
       "effort": "xhigh",
       "tier": "weak",
       "self_check": true,
