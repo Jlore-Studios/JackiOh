@@ -11195,8 +11195,11 @@
     "what": "suggestions on muse"
   },
   "last_sweep": {
-    "at": "2026-10-20T00:34:52Z",
-    "notes": [],
+    "at": "2026-10-20T00:45:13Z",
+    "notes": [
+      "#1364: typed it Bug",
+      "#1363: typed it Bug"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
