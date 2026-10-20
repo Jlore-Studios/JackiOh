@@ -7770,6 +7770,13 @@
     "1427": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T17:59:54Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "Line 7 holds (two files in apps/web, checked by vitest). It's medium anyway: the tests race promises held under act(), with abort timing and an aria-hidden modal, which is subtle for a weak builder. The issue is already labelled medium."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
