@@ -6776,6 +6776,10 @@
       "run_id": "39418136562",
       "started_at": "2026-10-20T11:53:54Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-7` (claude, opus) rejected it: `crates/tools/src/fuzz.rs:2527`: No test exercises the new checkpoint stage's detection path. The 'tamper' tests (here, duos_fuzz.rs:771, play_pipeline_b_replay."
+      ],
+      "strikes": 1,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
