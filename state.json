@@ -21312,6 +21312,12 @@
         "number": 1265,
         "title": "Patch v0.3.Y: the AI prices a hand card at the cost it was set to, so an \"It costs (0)\" card counts",
         "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-20T01:10:15Z",
+        "number": 1363,
+        "title": "Architecture: pin past Duos fuzz failures in a checked-in regression corpus",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
