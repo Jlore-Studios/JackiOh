@@ -1076,7 +1076,7 @@ mod joint_commit {
 
 mod reads {
     use super::*;
-    use jackioh_server::economy::math::xp_to_next_level;
+    use jackioh_server::economy::math::{level_span_xp, xp_to_next_level};
 
     /// The scenario's profiles as signed-in accounts, with their tokens.
     async fn authed() -> (Arc<App>, String) {
@@ -1132,6 +1132,7 @@ mod reads {
                     "level": SET_TRACK_FIRST_LEVEL,
                     "xp": 0,
                     "xpToNext": xp_to_next_level(0),
+                    "levelXp": level_span_xp(0),
                     "nextRewards": j(&reward_for_level(1)),
                     "rewardsClaimed": 0,
                     "unlocked": *set == newest(),
@@ -1161,6 +1162,7 @@ mod reads {
                 "level": level,
                 "xp": one_game,
                 "xpToNext": xp_to_next_level(one_game),
+                "levelXp": level_span_xp(one_game),
                 "nextRewards": j(&reward_for_level(level + 1)),
                 "rewardsClaimed": level,
                 "unlocked": true,
@@ -1191,6 +1193,7 @@ mod reads {
                 "level": last,
                 "xp": xp,
                 "xpToNext": null,
+                "levelXp": null,
                 "nextRewards": null,
                 "rewardsClaimed": last,
                 "unlocked": true,

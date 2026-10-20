@@ -193,18 +193,14 @@ describe("the account screen", () => {
     expect(screen.getByText(/no finished matches yet/i)).toBeInTheDocument();
   });
 
-  it("mounts the quests panel for an active account", async () => {
+  it("links the collection screen, where the quests moved", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
-    vi.mocked(getQuests).mockResolvedValue({
-      quests: [
-        { questId: "win-3", title: "Win 3 games", progress: 1, target: 3, jlore: 80, xp: 4000, arrivedAt: 1 },
-      ],
-      nextDueAt: null,
-    });
     render(<AccountRoute token={TOKEN} />);
 
-    expect(await screen.findByTestId("quests-panel")).toHaveTextContent("Win 3 games");
-    expect(getQuests).toHaveBeenCalledWith(TOKEN);
+    const link = await screen.findByTestId(accountTestid.collection);
+    expect(link).toHaveAttribute("href", "/collection");
+    expect(screen.queryByTestId("quests-panel")).toBeNull();
+    expect(getQuests).not.toHaveBeenCalled();
   });
 
   it("relays a failed read instead of rendering an empty account", async () => {

@@ -353,6 +353,14 @@ function Actions(): ReactElement {
         >
           {t("Make cards")}
         </a>
+        <a
+          className="landing-cta landing-cta--secondary"
+          href={paths.collection}
+          data-testid={landingTestid.collection}
+          onClick={followInApp(paths.collection)}
+        >
+          {t("Collection")}
+        </a>
       </div>
       {/* Said where the player decides, not after they have signed up and confirmed an email. */}
       <p className="landing-cta-note" data-testid={landingTestid.inviteOnly}>

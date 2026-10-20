@@ -49,6 +49,8 @@ export function screenNameFor(path: string): string | null {
       return "Replays";
     case paths.together:
       return "Play together";
+    case paths.collection:
+      return "Collection";
     case paths.hotseat:
       // Read here, not at load: Vite's config loader runs this file with no `import.meta.env`.
       return import.meta.env.MODE !== "production" ? "Hotseat" : null;

@@ -15,7 +15,7 @@ use crate::api::collection::caller_profile;
 use crate::api::http::{ApiResult, Req, json};
 use crate::app::App;
 use crate::config::{SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
-use crate::economy::math::xp_to_next_level;
+use crate::economy::math::{level_span_xp, xp_to_next_level};
 use crate::economy::track_rewards::reward_for_level;
 
 /// `GET /api/wallet` (`AuthLevel::Active`): the caller's Jlore balance.
@@ -29,8 +29,9 @@ pub async fn get_wallet(app: &Arc<App>, req: Req) -> ApiResult {
 
 /// `GET /api/tracks` (`AuthLevel::Active`): one entry per shipped set in catalog order. A locked
 /// older set reports the first level with no XP, its first rewards next, and `unlocked: false`.
-/// A track on its last level, `SET_TRACK_LEVELS`, has no next level: its `xpToNext` and
-/// `nextRewards` are `null` ([[R1302005]]).
+/// `levelXp` is the XP the track's current level spans, so a client sizes the level's XP bar
+/// without knowing the curve. A track on its last level, `SET_TRACK_LEVELS`, has no next level:
+/// its `xpToNext`, `levelXp` and `nextRewards` are `null` ([[R1302005]]).
 pub async fn get_tracks(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
@@ -51,6 +52,7 @@ pub async fn get_tracks(app: &Arc<App>, req: Req) -> ApiResult {
                 "level": level,
                 "xp": xp,
                 "xpToNext": (level < last).then(|| xp_to_next_level(xp)),
+                "levelXp": (level < last).then(|| level_span_xp(xp)),
                 "nextRewards": (claimed < last).then(|| reward_for_level(claimed + 1)),
                 "rewardsClaimed": claimed,
                 "unlocked": unlocked,

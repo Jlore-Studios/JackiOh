@@ -535,6 +535,28 @@ export function getWallet(token: string): Promise<WalletResponse> {
   return apiRequest<WalletResponse>("/api/wallet", { token });
 }
 
+/** What reaching a set-track level pays (`LevelReward`, `crates/server/src/economy/track_rewards.rs`). */
+export type TrackRewards = { jlore: number; setPacks: number; cardTokens: number };
+
+/** One shipped set's track (§14.7): `xp` is its total; `levelXp`, `xpToNext` and `nextRewards` are null on the last level (R1302005). */
+export type TrackView = {
+  setId: SetName;
+  level: number;
+  xp: number;
+  levelXp: number | null;
+  xpToNext: number | null;
+  nextRewards: TrackRewards | null;
+  rewardsClaimed: number;
+  unlocked: boolean;
+};
+
+/** `GET /api/tracks`: one track per shipped set, in catalog order (R1302003 unlocks them). */
+export type TracksResponse = { tracks: TrackView[] };
+
+export function getTracks(token: string): Promise<TracksResponse> {
+  return apiRequest<TracksResponse>("/api/tracks", { token });
+}
+
 /** `POST /api/packs/buy` with `{ pack }`: the pack, the wallet after it and the packs of its kind held. */
 export type BoughtPackResponse = { pack: string; jlore: number; unopened: number };
 
