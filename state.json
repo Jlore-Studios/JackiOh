@@ -8444,11 +8444,13 @@
         "by": "`claude` (strong)",
         "sha": "895ef9ead140508b1c0c5ae820c30fa003571d69"
       },
+      "closed_at": "2026-10-20T23:02:43Z",
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-20T19:58:24Z",
       "issue": 1432,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
