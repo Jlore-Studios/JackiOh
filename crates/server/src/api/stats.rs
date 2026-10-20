@@ -1,9 +1,10 @@
 //! Public card and player statistics page API (SPEC §9.11, R654).
 //!
 //! R978000: the card figures are read off a patch's totals once and kept for
-//! `CARD_STATS_CACHE_TTL_SECONDS`, one report per patch, `?source=` and `?pilot=` (`KeptReports`), and
-//! both card routes read the kept reports. R1044000: the totals are the records folded as they were
-//! written (`db::store::Tx::stats_totals_load`), and read the same figures the records did.
+//! `CARD_STATS_CACHE_TTL_SECONDS`, one report per patch, `?source=`, `?pilot=` and `?mode=`
+//! (`KeptReports`), and both card routes read the kept reports. R1044000: the totals are the records
+//! folded as they were written (`db::store::Tx::stats_totals_load`), and read the same figures the
+//! records did.
 
 use std::cmp::Ordering;
 use std::sync::{Arc, Mutex};
@@ -17,7 +18,7 @@ use serde_json::{Map, Value, json};
 use tokio::sync::OnceCell;
 
 use jackioh_engine::wire::stats::{
-    CardDrill, CardStats, CardStatsFilter, CardStatsReport, GameSource, PilotFilter, SourceFilter,
+    CardDrill, CardStats, CardStatsFilter, CardStatsReport, GameMode, GameSource, PilotFilter, SourceFilter,
     StatsTotals, Tally, TotalsKey, add_stats, card_drills_of, card_stats_of, played_delta, sources_of,
     win_rate,
 };
@@ -139,6 +140,47 @@ impl PublicStatsPilot {
     }
 }
 
+/// Which match type the public figures count (SPEC §9.11 Queries, R377): every mode, or one of
+/// R257's three modes. `All` counts what the endpoint always counted.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub enum PublicStatsMode {
+    All,
+    Bo1,
+    Bo3,
+    Random,
+}
+
+impl PublicStatsMode {
+    /// `?mode=`: one match type, or every mode when missing, `all`, or unrecognised.
+    pub fn parse(raw: Option<&str>) -> PublicStatsMode {
+        match raw.map(|value| value.trim().to_lowercase()).as_deref() {
+            Some("bo1") => PublicStatsMode::Bo1,
+            Some("bo3") => PublicStatsMode::Bo3,
+            Some("random") => PublicStatsMode::Random,
+            _ => PublicStatsMode::All,
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            PublicStatsMode::All => "All modes",
+            PublicStatsMode::Bo1 => "Best of 1",
+            PublicStatsMode::Bo3 => "Conquest",
+            PublicStatsMode::Random => "All Random",
+        }
+    }
+
+    pub fn filter(self) -> Option<GameMode> {
+        match self {
+            PublicStatsMode::All => None,
+            PublicStatsMode::Bo1 => Some(GameMode::Bo1),
+            PublicStatsMode::Bo3 => Some(GameMode::Bo3),
+            PublicStatsMode::Random => Some(GameMode::Random),
+        }
+    }
+}
+
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicStatsGate {
@@ -165,6 +207,7 @@ pub struct PublicStatsSummary {
     pub active_patch: String,
     pub source: PublicStatsSource,
     pub pilot: PublicStatsPilot,
+    pub mode: PublicStatsMode,
     pub best_card: Option<PublicStatsExtreme>,
     pub worst_card: Option<PublicStatsExtreme>,
 }
@@ -179,6 +222,8 @@ pub struct PublicStatsCardsResponse {
     pub source_label: String,
     pub pilot: PublicStatsPilot,
     pub pilot_label: String,
+    pub mode: PublicStatsMode,
+    pub mode_label: String,
     pub min_sample: i64,
     pub total_games: i64,
     pub cards: Vec<PublicCardStat>,
@@ -307,15 +352,17 @@ fn seat_counted(source: GameSource, seat_pilot: Pilot, live_pilot: PilotFilter) 
 /// R1451, amended by R807000: the public report over `totals` for `source`: the live records'
 /// report counting the requested pilot's seats (`counted_pilot`) and the development records'
 /// counting both seats, summed card by card, in catalog-id order as `card_stats` lists them.
+/// R377: `mode` scopes both parts to one match type, or every mode when `None`.
 fn public_report(
     totals: &StatsTotals,
     source: SourceFilter,
     patch: &str,
     live_pilot: PilotFilter,
+    mode: Option<GameMode>,
 ) -> CardStatsReport {
     let filter = |source: SourceFilter, pilot: PilotFilter| CardStatsFilter {
         source,
-        mode: None,
+        mode,
         patch: Some(patch.to_string()),
         pilot,
     };
@@ -376,12 +423,13 @@ struct PatchReport {
     drills: IndexMap<String, CardDrill>,
 }
 
-/// What a kept report was computed from: the patch, `?source=` and `?pilot=`.
+/// What a kept report was computed from: the patch, `?source=`, `?pilot=` and `?mode=`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct ReportKey {
     patch: String,
     source: SourceParam,
     pilot: PublicStatsPilot,
+    mode: PublicStatsMode,
 }
 
 /// A kept report, filled by the first request that asks for it; the others wait on it.
@@ -413,15 +461,17 @@ impl KeptReports {
     }
 }
 
-/// R978000: `patch`'s figures for `source_param` and `live_pilot`, read off the patch's totals (R654's
-/// gate and `?source=` choose which source's count). With `with_drills`, each card's drill-down too,
-/// over the seats `public_report` counts (`seat_counted`). R654: a tutorial game is never counted;
-/// no game mode is `tutorial` and the server records no tutorial game, so the totals hold none.
+/// R978000: `patch`'s figures for `source_param`, `live_pilot` and `mode`, read off the patch's
+/// totals (R654's gate and `?source=` choose which source's count). With `with_drills`, each card's
+/// drill-down too, over the seats `public_report` counts (`seat_counted`). R654: a tutorial game is
+/// never counted; no game mode is `tutorial` and the server records no tutorial game, so the totals
+/// hold none.
 fn patch_report(
     totals: &StatsTotals,
     patch: &str,
     source_param: SourceParam,
     live_pilot: PilotFilter,
+    mode: Option<GameMode>,
     with_drills: bool,
 ) -> PatchReport {
     let live_games = totals.live_games(patch);
@@ -443,7 +493,7 @@ fn patch_report(
         PublicStatsSource::Provisional => SourceFilter::All,
     };
 
-    let report = public_report(totals, counted, patch, live_pilot);
+    let report = public_report(totals, counted, patch, live_pilot, mode);
     let drills = if with_drills {
         let sources = sources_of(counted);
         card_drills_of(
@@ -451,6 +501,7 @@ fn patch_report(
             |key: &TotalsKey| {
                 key.patch == patch
                     && sources.contains(&key.source)
+                    && mode.is_none_or(|mode| key.mode == mode)
                     && seat_counted(key.source, key.pilot, live_pilot)
             },
             CARD_STATS_CO_PLAYED_TOP,
@@ -466,16 +517,18 @@ fn patch_report(
     }
 }
 
-/// R978000: `patch`'s report for `source` and `pilot`, as kept: computed from the patch's totals
-/// when none was made in the last `CARD_STATS_CACHE_TTL_SECONDS`, once however many requests miss
-/// it together. A patch the server does not know (neither in `versions` nor the current one) is
-/// computed on every request and never kept, so made-up `?patch=` values push no kept report out.
+/// R978000: `patch`'s report for `source`, `pilot` and `mode`, as kept: computed from the
+/// patch's totals when none was made in the last `CARD_STATS_CACHE_TTL_SECONDS`, once however many
+/// requests miss it together. A patch the server does not know (neither in `versions` nor the
+/// current one) is computed on every request and never kept, so made-up `?patch=` values push no
+/// kept report out.
 async fn kept_report(
     app: &App,
     versions: &[String],
     patch: &str,
     source: SourceParam,
     pilot: PublicStatsPilot,
+    mode: PublicStatsMode,
 ) -> Result<Arc<PatchReport>, ApiError> {
     let current = patch == app.catalog.version;
     let compute = || async move {
@@ -486,6 +539,7 @@ async fn kept_report(
             patch,
             source,
             pilot.filter(),
+            mode.filter(),
             with_drills,
         )))
     };
@@ -496,6 +550,7 @@ async fn kept_report(
         patch: patch.to_string(),
         source,
         pilot,
+        mode,
     };
     let cell = app.card_stats.cell(key, now_ms());
     let kept = cell.get_or_try_init(compute).await?;
@@ -506,14 +561,16 @@ async fn kept_report(
 /// patch has logged 1000 live games, then live games only. Below 20 games `hasEnoughGames` is false.
 /// R1451, amended by R807000: a ladder bot's game counts toward the gate like any live game, and
 /// the figures count every counted seat, human and bot alike (`?pilot=human` reads the people's
-/// sides only, `?pilot=ai` the bots'). A bot game adds two decks like any game, so the per-game
-/// deck tell R1452 recorded is gone.
+/// sides only, `?pilot=ai` the bots'). R377: `?mode=` scopes the figures to one match type
+/// (`bo1`, `bo3`, `random`), or every mode when missing, `all`, or unrecognised. A bot game adds
+/// two decks like any game, so the per-game deck tell R1452 recorded is gone.
 pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let versions = load_patch_versions().await;
     let current_patch = app.catalog.version.clone();
     let requested_patch = query_trimmed(&req, "patch").unwrap_or(current_patch);
     let source_param = SourceParam::parse(req.query.get("source").map(String::as_str));
     let pilot = PublicStatsPilot::parse(req.query.get("pilot").map(String::as_str));
+    let mode = PublicStatsMode::parse(req.query.get("mode").map(String::as_str));
     let patch_index = versions.iter().position(|version| *version == requested_patch);
     let previous_patch = match patch_index {
         Some(index) if index > 0 => versions.get(index - 1).cloned(),
@@ -521,7 +578,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     };
 
     // R978000: the patch's figures as kept.
-    let kept = kept_report(app, &versions, &requested_patch, source_param, pilot).await?;
+    let kept = kept_report(app, &versions, &requested_patch, source_param, pilot, mode).await?;
     let live_games_count = kept.live_games;
     let cleared = live_games_count >= PUBLIC_STATS_MIN_LIVE_GAMES;
     let source = kept.source;
@@ -677,6 +734,8 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         source_label: source.label().to_string(),
         pilot,
         pilot_label: pilot.label().to_string(),
+        mode,
+        mode_label: mode.label().to_string(),
         min_sample: CARD_STATS_MIN_SAMPLE,
         total_games: report.games as i64,
         cards,
@@ -686,6 +745,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             active_patch: requested_patch,
             source,
             pilot,
+            mode,
             best_card,
             worst_card,
         },
@@ -710,13 +770,14 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     };
 
     let pilot = PublicStatsPilot::parse(req.query.get("pilot").map(String::as_str));
+    let mode = PublicStatsMode::parse(req.query.get("mode").map(String::as_str));
 
     // R978000: each patch's history and the current patch's drill-down read the kept reports.
     let versions = load_patch_versions().await;
     let mut patch_history: Vec<PatchRate> = Vec::new();
 
     for version in &versions {
-        let kept = kept_report(app, &versions, version, SourceParam::Default, pilot).await?;
+        let kept = kept_report(app, &versions, version, SourceParam::Default, pilot, mode).await?;
         if kept.live_games >= PUBLIC_STATS_MIN_LIVE_GAMES {
             let stat = kept.report.cards.iter().find(|stat| stat.card == card_id);
             patch_history.push(PatchRate {
@@ -727,7 +788,15 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         }
     }
 
-    let current = kept_report(app, &versions, &app.catalog.version, SourceParam::Default, pilot).await?;
+    let current = kept_report(
+        app,
+        &versions,
+        &app.catalog.version,
+        SourceParam::Default,
+        pilot,
+        mode,
+    )
+    .await?;
     let drill = current.drills.get(&card_id);
 
     let by_turn: Vec<TurnRate> = drill

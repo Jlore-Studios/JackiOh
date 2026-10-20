@@ -40,7 +40,11 @@
       "fatigueDamageMean": null,
       "trapsSet": null,
       "trapsFired": null,
-      "trapsFiredPerSet": null
+      "trapsFiredPerSet": null,
+      "positionSwitches": null,
+      "positionSwitchesMean": null,
+      "radiantUpgrades": null,
+      "radiantUpgradesMean": null
     },
     {
       "patch": "v0.3.0",
@@ -75,7 +79,11 @@
       "fatigueDamageMean": null,
       "trapsSet": null,
       "trapsFired": null,
-      "trapsFiredPerSet": null
+      "trapsFiredPerSet": null,
+      "positionSwitches": null,
+      "positionSwitchesMean": null,
+      "radiantUpgrades": null,
+      "radiantUpgradesMean": null
     },
     {
       "patch": "v0.3.0",
@@ -110,7 +118,11 @@
       "fatigueDamageMean": null,
       "trapsSet": null,
       "trapsFired": null,
-      "trapsFiredPerSet": null
+      "trapsFiredPerSet": null,
+      "positionSwitches": null,
+      "positionSwitchesMean": null,
+      "radiantUpgrades": null,
+      "radiantUpgradesMean": null
     },
     {
       "patch": "v0.3.1",
@@ -145,7 +157,11 @@
       "fatigueDamageMean": null,
       "trapsSet": null,
       "trapsFired": null,
-      "trapsFiredPerSet": null
+      "trapsFiredPerSet": null,
+      "positionSwitches": null,
+      "positionSwitchesMean": null,
+      "radiantUpgrades": null,
+      "radiantUpgradesMean": null
     },
     {
       "patch": "v0.3.1",
@@ -180,7 +196,11 @@
       "fatigueDamageMean": null,
       "trapsSet": null,
       "trapsFired": null,
-      "trapsFiredPerSet": null
+      "trapsFiredPerSet": null,
+      "positionSwitches": null,
+      "positionSwitchesMean": null,
+      "radiantUpgrades": null,
+      "radiantUpgradesMean": null
     }
   ]
 }

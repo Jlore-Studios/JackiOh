@@ -1,6 +1,7 @@
 //! The cosmetics registry (#1295, SPEC §11 R1295000): every cosmetic a player can pick, in
-//! `crates/server/cosmetics.json`, with its id, kind, name, rarity and whether it is its kind's
-//! default. The server reads it here, so later pack rolls and ownership name the same ids, and
+//! `crates/server/cosmetics.json`, with its id, kind, name, rarity, whether it is its kind's
+//! default and whether it is a starter (§14.2). The server reads it here, so the pack roll
+//! ([`pack_cosmetics`], R1301002) and ownership name the same ids, and
 //! `tests/export_cosmetics.rs` writes it into `apps/web/src/wire/generated/cosmetics.ts` for the
 //! client, which draws them. No I/O: the file is compiled in.
 //!
@@ -16,6 +17,7 @@
 
 use std::collections::BTreeSet;
 
+use jackioh_engine::wire::PrintedRarity;
 use serde::{Deserialize, Serialize};
 
 use crate::config::PLAYER_SETTINGS_TEXT_MAX_LENGTH;
@@ -50,6 +52,12 @@ impl CosmeticKind {
         Self::Field,
         Self::CardBack,
     ];
+
+    /// A per-card kind, owned for one card (§14.2): a foil, a finish, a border or a full art
+    /// (R1313000). The deck slots' kinds are account cosmetics.
+    pub fn is_per_card(self) -> bool {
+        matches!(self, Self::Foil | Self::Finish | Self::Border | Self::FullArt)
+    }
 }
 
 /// How rare a cosmetic is, so a pack can later roll per-card cosmetics by rarity (R1295000).
@@ -64,6 +72,16 @@ pub enum CosmeticRarity {
 impl CosmeticRarity {
     /// Every rarity, commonest first.
     pub const ALL: [Self; 4] = [Self::Common, Self::Rare, Self::Epic, Self::Legendary];
+
+    /// The same rarity on §5's scale, which a duplicate's cosmetic roll draws on (R1301002).
+    pub fn printed(self) -> PrintedRarity {
+        match self {
+            Self::Common => PrintedRarity::Common,
+            Self::Rare => PrintedRarity::Rare,
+            Self::Epic => PrintedRarity::Epic,
+            Self::Legendary => PrintedRarity::Legendary,
+        }
+    }
 }
 
 /// One entry of the registry.
@@ -79,6 +97,11 @@ pub struct Cosmetic {
     /// The kind's default: what a card wears when nothing else is picked, and what an id a client
     /// does not know draws as. Exactly one per kind a player picks, and never a full art.
     pub default: bool,
+    /// §14.2: owned by every account on every card without a ledger row, so no pack drops it
+    /// (R1301002). Every entry #1295 and #1297 shipped is one; a cosmetic added later leaves it
+    /// false and must be owned (§14.12).
+    #[serde(default)]
+    pub starter: bool,
     /// The card a full art belongs to, by catalog id; no other kind names one (R1313000).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub card: Option<String>,
@@ -162,6 +185,17 @@ pub fn shipped() -> Result<Vec<Cosmetic>, String> {
     parse(COSMETICS_JSON)
 }
 
+/// The cosmetics a duplicate may drop (R1301002): the per-card ones that are neither a default
+/// nor a starter, in the registry's order. One that names a card, a full art, drops on that card
+/// alone (`economy::roll::duplicate_grant`, R1313000).
+pub fn pack_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
+    cosmetics
+        .iter()
+        .filter(|cosmetic| cosmetic.kind.is_per_card() && !cosmetic.default && !cosmetic.starter)
+        .cloned()
+        .collect()
+}
+
 /// Whether the shipped registry lists `id` under `kind`: a deck's pick is kept only when it is
 /// (R1297000).
 pub fn is_id_of(kind: CosmeticKind, id: &str) -> bool {
@@ -183,6 +217,7 @@ mod tests {
             name: id.to_owned(),
             rarity: CosmeticRarity::Common,
             default,
+            starter: true,
             card: None,
         }
     }
@@ -424,5 +459,67 @@ mod tests {
         // A field the registry does not have is refused rather than dropped.
         let extra = r#"{"cosmetics":[{"id":"foil-none","kind":"foil","name":"No foil","rarity":"Common","default":true,"owned":true}]}"#;
         assert!(parse(extra).is_err_and(|error| error.contains("unknown field")));
+    }
+
+    #[test]
+    fn r1301002_pack_cosmetics_are_per_card_and_neither_default_nor_starter() {
+        let dropping = |id: &str, kind: CosmeticKind| Cosmetic {
+            starter: false,
+            ..entry(id, kind, false)
+        };
+        let mut cosmetics = defaults();
+        cosmetics.extend([
+            entry("foil-starter", CosmeticKind::Foil, false),
+            dropping("foil-new", CosmeticKind::Foil),
+            dropping("finish-new", CosmeticKind::Finish),
+            dropping("border-new", CosmeticKind::Border),
+            dropping("table-new", CosmeticKind::Table),
+            dropping("field-new", CosmeticKind::Field),
+            dropping("card-back-new", CosmeticKind::CardBack),
+            Cosmetic {
+                card: Some("core-001".to_owned()),
+                ..dropping("full-art-new", CosmeticKind::FullArt)
+            },
+        ]);
+        // A default that is not marked a starter is still a default.
+        cosmetics[0].starter = false;
+        let ids: Vec<String> = pack_cosmetics(&cosmetics)
+            .into_iter()
+            .map(|cosmetic| cosmetic.id)
+            .collect();
+        assert_eq!(ids, vec!["foil-new", "finish-new", "border-new", "full-art-new"]);
+        assert_eq!(
+            CosmeticRarity::ALL.map(CosmeticRarity::printed),
+            [
+                PrintedRarity::Common,
+                PrintedRarity::Rare,
+                PrintedRarity::Epic,
+                PrintedRarity::Legendary
+            ]
+        );
+    }
+
+    #[test]
+    fn r1301002_every_shipped_cosmetic_but_the_full_arts_is_a_starter() {
+        // R1295000 and R1297000 unlock every item they shipped for every account (§14.2), so no
+        // pack drops one; the six full arts are owned (R1313000), so they are all a pack drops.
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        assert!(
+            cosmetics
+                .iter()
+                .all(|cosmetic| cosmetic.starter == (cosmetic.kind != CosmeticKind::FullArt)),
+            "{cosmetics:?}"
+        );
+        let full_arts: Vec<Cosmetic> = cosmetics
+            .iter()
+            .filter(|cosmetic| cosmetic.kind == CosmeticKind::FullArt)
+            .cloned()
+            .collect();
+        assert_eq!(full_arts.len(), 6);
+        assert_eq!(pack_cosmetics(&cosmetics), full_arts);
+        // An entry that leaves the mark out is no starter.
+        let unmarked = r#"{"cosmetics":[{"id":"foil-none","kind":"foil","name":"No foil","rarity":"Common","default":true}]}"#;
+        let file: RegistryFile = serde_json::from_str(unmarked).unwrap_or_else(|error| panic!("{error}"));
+        assert!(!file.cosmetics[0].starter);
     }
 }

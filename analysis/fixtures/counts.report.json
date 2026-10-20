@@ -1,0 +1,89 @@
+{
+  "filter": {
+    "source": "all",
+    "mode": null,
+    "patch": null,
+    "pilot": "unified"
+  },
+  "otherSources": 0,
+  "groups": [
+    {
+      "patch": "v0.3.1",
+      "mode": "bo1",
+      "source": "live",
+      "games": 3,
+      "draws": 0,
+      "firstWins": 1,
+      "firstShare": 0.333,
+      "firstLow": 0.061,
+      "firstHigh": 0.792,
+      "reasons": {
+        "hero-death": 3,
+        "both-heroes-dead": 0,
+        "concede": 0,
+        "draw-accepted": 0,
+        "turn-cap": 0,
+        "disconnect": 0,
+        "match-ceiling": 0,
+        "voided": 0,
+        "alt-win": 0,
+        "won-by-effect": 0
+      },
+      "turnQuartiles": [
+        11,
+        14,
+        18
+      ],
+      "counted": 2,
+      "fatigueGames": 1,
+      "fatigueShare": 0.5,
+      "fatigueDamageMean": 0.5,
+      "trapsSet": 3,
+      "trapsFired": 2,
+      "trapsFiredPerSet": 0.667,
+      "positionSwitches": 6,
+      "positionSwitchesMean": 3.0,
+      "radiantUpgrades": 3,
+      "radiantUpgradesMean": 1.5
+    },
+    {
+      "patch": "v0.3.1",
+      "mode": "bo3",
+      "source": "live",
+      "games": 2,
+      "draws": 1,
+      "firstWins": 1,
+      "firstShare": 0.5,
+      "firstLow": 0.095,
+      "firstHigh": 0.905,
+      "reasons": {
+        "hero-death": 1,
+        "both-heroes-dead": 0,
+        "concede": 0,
+        "draw-accepted": 0,
+        "turn-cap": 1,
+        "disconnect": 0,
+        "match-ceiling": 0,
+        "voided": 0,
+        "alt-win": 0,
+        "won-by-effect": 0
+      },
+      "turnQuartiles": [
+        16,
+        16,
+        40
+      ],
+      "counted": 1,
+      "fatigueGames": 0,
+      "fatigueShare": 0.0,
+      "fatigueDamageMean": 0.0,
+      "trapsSet": 0,
+      "trapsFired": 0,
+      "trapsFiredPerSet": null,
+      "positionSwitches": 1,
+      "positionSwitchesMean": 1.0,
+      "radiantUpgrades": 1,
+      "radiantUpgradesMean": 1.0
+    }
+  ]
+}
