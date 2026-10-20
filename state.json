@@ -6867,6 +6867,14 @@
         "c:6280940971"
       ]
     },
+    "1374": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-19T22:14:10Z",
+      "issue": 1301,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "148": {
       "asks": [
         "c:5974504575"
