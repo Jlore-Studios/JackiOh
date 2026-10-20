@@ -333,7 +333,7 @@ live games are never added together unless asked (R378, R1451).
 
 The game figures say how often the first seat won (with the 95% interval of that share), how the games
 ended and how many turns they took, and, for the games whose records carry R1256000's counts, how many games had a
-draw from an empty library and how many Traps fired of those set; an older record is unknown for those, not
+draw from an empty library and how many Traps fired of those set, and the position switches and Radiant upgrades in all and a game; an older record is unknown for those, not
 zero. They are AI-against-AI figures: the first seat's edge between two AIs is not the people's, so a seat
 decision rests on them only with that in view.
 
