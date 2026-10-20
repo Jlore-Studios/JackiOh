@@ -102,6 +102,30 @@ describe("R265 the mulligan picker, while the viewer still owes its answer", () 
   });
 });
 
+describe("the mulligan picker's heading", () => {
+  it("says the viewer goes first or second, with no instruction or count under it", () => {
+    for (const [active, words] of [
+      ["p1", "You are going first"],
+      ["p2", "You are going second"],
+    ] as const) {
+      render(<Prompt view={mulliganView({ youReady: false, opponentReady: false }, { active })} onAction={vi.fn()} />);
+      const modal = screen.getByTestId("prompt-modal");
+      expect(modal.querySelector(".prompt-title")).toHaveTextContent(words);
+      expect(modal).not.toHaveTextContent("Choose the cards to keep");
+      expect(modal.querySelector(".prompt-count")).toBeNull();
+      cleanup();
+    }
+  });
+
+  it("keeps the engine's instruction and the count in a tutorial lesson", () => {
+    render(<Prompt view={mulliganView({ youReady: false, opponentReady: false })} onAction={vi.fn()} lesson />);
+    const modal = screen.getByTestId("prompt-modal");
+    expect(modal.querySelector(".prompt-title")).toHaveTextContent("Choose the cards to keep; the rest are returned and redrawn");
+    expect(modal.querySelector(".prompt-count")).toHaveTextContent("Choose 0–3: 3 chosen");
+    expect(modal).not.toHaveTextContent("You are going");
+  });
+});
+
 describe("R266 after the viewer's answer, until the game begins", () => {
   it("R266 shows mulligan-waiting, not the generic waiting notice, with each card marked Keep or Redraw from kept", () => {
     render(<Prompt view={mulliganView({ youReady: true, opponentReady: false, kept: ["h1", "h3"] })} onAction={vi.fn()} />);
