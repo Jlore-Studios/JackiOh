@@ -372,7 +372,7 @@ in place of the `bot:*` ones.
 | `bot:stuck` | beside `bot:blocked`: a hard build or revision used every review round (`max_review_cycles`, 10 for hard) without an approval. Its comment says why, round by round (`harness/failures.py`): the builder's sessions, the checks that were red, the reviewer's verdicts and the findings that kept coming back. A person reads it before anyone tries again; an approval takes the label off |
 | `bot:pr-open` | the issue has an open bot pull request |
 | `bot:pr` | a pull request the bot opened |
-| `bot:suggestion` | an improvement the bot proposes; comment `approve` (or add `bot:build`, assign the bot, or `/harness build`) to have it built, which takes this label off; comment `reject` (or close it) to say no |
+| `bot:suggestion` | an improvement the bot proposes; comment `approve` (or add `bot:build`, assign the bot, or `/harness build`) to have it built, which takes this label off and leaves its `priority:*` label on; comment `reject` (or close it) to say no. It opens with the priority its class sets ([One night](#one-night-step-by-step), step 1) |
 | `ready for merge` | the reviews approved the pull request's head, but auto-merge could not turn on (a review-only path, `main`'s protection, GitHub refusing it, or `auto_merge` off), so the bot @-mentions the operator to merge it. It comes off when the pull request goes back into the queue (a revision, a review run, a run that holds it, `bot:blocked`); triage never adds it |
 | `difficulty:easy`, `difficulty:medium`, `difficulty:hard` | the weakest tier that may build it: weak, medium, strong. A person may set one; otherwise the planner rates the item, under [the easy rule](#the-easy-rule), and the bot labels it; three failures of its own raise it a step ([below](#rating-strikes-and-the-step-up)). With none it counts as medium, and with several the hardest counts |
 | `priority:high`, `priority:medium`, `priority:low` | the pickup order: high, medium, none, low ([above](#priority-and-human)) |
@@ -946,7 +946,14 @@ account.
    again. Every survey also reads the log of suggestions that came to nothing (`suggest.declined`:
    rejected by a vote, closed unbuilt, or approved and then handed to people or failed for good,
    [`harness/declined.py`](harness/declined.py)) and never offers one again; one it offers anyway,
-   by the same title, is not opened. Once a day it prunes the
+   by the same title, is not opened. The survey files each suggestion under one class
+   (`prompts/suggest.md`: `fuzz`, `checks`, `telemetry`, `refactor`, `ai`, `fairness`,
+   `security`, `data`, `polish`, `feature`, the one picked up first when two fit), and
+   `suggestions.priorities` in `.harness/config.json` maps a class to the `priority:*` label it
+   opens with (#1409): `data` high, `security` and `polish` medium, the internal work (`fuzz`,
+   `checks`, `telemetry`, `refactor`, `ai`, `fairness`) low, so an approved one waits behind
+   everything not labelled low. A `feature`, an unknown class or none opens with no priority, and the
+   footer names the class and the label it set; relabel it to change it. Once a day it prunes the
    state file: an item's record goes 7 days after its thread closed, and a closed thread's bulky
    parts at once (`plan.prune`; GitHub's Contents API stops returning a file past 1 MB).
 2. **work** (up to about five and a half hours, holding only the chosen subscription's secret).

@@ -17,6 +17,7 @@ import { ApiRequestError } from "./api.ts";
 import { callWithRenewal, renewAfterUnauthorized } from "./gate.ts";
 import { paths } from "./navigate.ts";
 import { SESSION_STORAGE_KEY, clearSession, readSession } from "./session.ts";
+import { tokenFromProtocols } from "./socketProtocols.ts";
 
 const { App } = await import("../main.tsx");
 
@@ -350,8 +351,11 @@ function otherTabWrote(): void {
   window.dispatchEvent(new StorageEvent("storage", { key: SESSION_STORAGE_KEY }));
 }
 
-/** One socket opened; `drop` ends it the way a network blip does (not a close this side asked for). */
-type FakeSocket = { url: string; closed: boolean; drop: () => void };
+/**
+ * One socket opened, with the token its handshake offered (R1379000); `drop` ends it the way a
+ * network blip does (not a close this side asked for).
+ */
+type FakeSocket = { url: string; token: string | null; closed: boolean; drop: () => void };
 
 /** A WebSocket that records each one opened and whether it was closed. */
 function fakeSockets(): FakeSocket[] {
@@ -363,9 +367,10 @@ function fakeSockets(): FakeSocket[] {
     onclose: ((event: { code: number; reason: string; wasClean: boolean }) => void) | null = null;
     onerror: ((event: unknown) => void) | null = null;
     private readonly record: FakeSocket;
-    constructor(url: string) {
+    constructor(url: string, protocols: readonly string[] = []) {
       this.record = {
         url,
+        token: tokenFromProtocols(protocols),
         closed: false,
         drop: () => {
           this.readyState = 3;
@@ -413,7 +418,7 @@ describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, ()
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
 
-    expect(sockets.map((socket) => ({ first: socket.url.includes(first), closed: socket.closed }))).toEqual([
+    expect(sockets.map((socket) => ({ first: socket.token === first, closed: socket.closed }))).toEqual([
       { first: true, closed: false },
     ]);
   });
@@ -451,7 +456,7 @@ describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, ()
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
     // The socket that was up stays up: the opponent sees no disconnect.
-    expect(sockets.map((socket) => ({ first: socket.url.includes(first), closed: socket.closed }))).toEqual([
+    expect(sockets.map((socket) => ({ first: socket.token === first, closed: socket.closed }))).toEqual([
       { first: true, closed: false },
     ]);
 
@@ -462,7 +467,7 @@ describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, ()
     await waitFor(() => {
       expect(sockets).toHaveLength(2);
     }, SLOW);
-    expect(sockets[1]?.url.includes(renewed)).toBe(true);
+    expect(sockets[1]?.token).toBe(renewed);
   });
 
   it("R194 a NEW session of the same account (a sign-in elsewhere revoked this one) is handed down", async () => {
@@ -488,7 +493,7 @@ describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, ()
     });
 
     await waitFor(() => {
-      expect(sockets.at(-1)?.url.includes(next)).toBe(true);
+      expect(sockets.at(-1)?.token).toBe(next);
     }, SLOW);
   });
 

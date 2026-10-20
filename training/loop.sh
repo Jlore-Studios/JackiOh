@@ -354,7 +354,7 @@ gather() {
   batch="$work/batch.jsonl"
   rm -f "$batch"
   log "games $from to $((from + games - 1)) of $patch: the AI on main at $at against itself"
-  nice -n 19 "$jackioh" stats --series gather --patch "$patch" --from "$from" --games "$games" \
+  RAYON_NUM_THREADS=1 nice -n 19 "$jackioh" stats --series gather --patch "$patch" --from "$from" --games "$games" \
     --out "$batch" >/dev/null 2>"$work/batch.log"
   status=$?
   if [ "$status" -ne 0 ]; then

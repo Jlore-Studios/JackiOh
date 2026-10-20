@@ -1,5 +1,5 @@
 #!/bin/sh
-# Apply every migration (0001-0046) to a throwaway Postgres and assert the
+# Apply every migration (0001-0047) to a throwaway Postgres and assert the
 # invariants of SPEC §9.1, §9.4 and §9.5 against a real database.
 #
 #   sh crates/server/tests/sql/run.sh        # as CI's db job runs it
@@ -122,11 +122,11 @@ if ! $PSQL -d jackioh -f /tmp/14b_profiles_before_usernames.sql; then
   failed=1
 fi
 
-echo "--- migrations 0028-0046 ---"
+echo "--- migrations 0028-0047 ---"
 for f in 0028_usernames 0029_play_telemetry 0030_meditative_set 0031_meditative_endings 0032_ladder_bots 0033_bot_trios \
          0034_account_consent 0035_replay_final_hash 0036_lean_set 0037_custom_cards 0038_social 0039_duos 0040_moderation_switch_grant \
          0041_card_totals 0042_match_checkpoints 0043_meditative_plus_set 0044_deck_cosmetics 0045_economy \
-         0046_dev_accounts; do
+         0046_dev_accounts 0047_practice_seeds; do
   apply_migration "$f"
 done
 
@@ -134,7 +134,7 @@ done
 # check ever ran against. Refuse it rather than pass without it.
 for f in "$MIGRATIONS"/*.sql; do
   name=$(basename "$f" .sql)
-  case " 0001_profiles_and_invites 0002_collection 0003_loadouts 0004_matches 0005_service_role_reads_auth_users 0006_redeem_ip_lock 0007_decks_and_trios 0008_queue_modes 0009_series 0010_jlockeed_tag 0011_tutorial_progress 0012_account_deletion 0013_retention_purge 0014_game_records 0015_classic_sets_tags 0016_catalog_growth_grants 0017_last_boards 0018_player_settings 0019_hero_portraits 0020_plague_tag 0021_player_stats 0022_ranked_ladder 0023_rematch 0024_glitch_boards 0025_patch_retcon 0026_catalyst_prime_acclaimed_tags 0027_lean_newest 0028_usernames 0029_play_telemetry 0030_meditative_set 0031_meditative_endings 0032_ladder_bots 0033_bot_trios 0034_account_consent 0035_replay_final_hash 0036_lean_set 0037_custom_cards 0038_social 0039_duos 0040_moderation_switch_grant 0041_card_totals 0042_match_checkpoints 0043_meditative_plus_set 0044_deck_cosmetics 0045_economy 0046_dev_accounts " in
+  case " 0001_profiles_and_invites 0002_collection 0003_loadouts 0004_matches 0005_service_role_reads_auth_users 0006_redeem_ip_lock 0007_decks_and_trios 0008_queue_modes 0009_series 0010_jlockeed_tag 0011_tutorial_progress 0012_account_deletion 0013_retention_purge 0014_game_records 0015_classic_sets_tags 0016_catalog_growth_grants 0017_last_boards 0018_player_settings 0019_hero_portraits 0020_plague_tag 0021_player_stats 0022_ranked_ladder 0023_rematch 0024_glitch_boards 0025_patch_retcon 0026_catalyst_prime_acclaimed_tags 0027_lean_newest 0028_usernames 0029_play_telemetry 0030_meditative_set 0031_meditative_endings 0032_ladder_bots 0033_bot_trios 0034_account_consent 0035_replay_final_hash 0036_lean_set 0037_custom_cards 0038_social 0039_duos 0040_moderation_switch_grant 0041_card_totals 0042_match_checkpoints 0043_meditative_plus_set 0044_deck_cosmetics 0045_economy 0046_dev_accounts 0047_practice_seeds " in
     *" $name "*) ;;
     *) echo "!!! migration $name is not applied by this script; add it above"; failed=1 ;;
   esac

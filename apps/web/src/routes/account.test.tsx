@@ -10,22 +10,56 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { usernameTestid } from "../auth/testids.ts";
 import {
+  buyPack,
+  getCollection,
+  getCosmeticPacks,
+  getOwnedCosmetics,
   getOwnRank,
+  getPacks,
   getProfile,
+  getTokens,
+  getWallet,
+  openCosmeticPack,
   previewUsername,
   saveUsername,
   type MeResponse,
+  type PacksResponse,
   type OwnRankResponse,
   type OwnUsername,
 } from "../net/api.ts";
 import { announceAccountChange } from "../net/gate.ts";
 import { SESSION_STORAGE_KEY, readSession } from "../net/session.ts";
-import AccountRoute, { accountTestid, formatWinRate, resetSigningOutForTests, statusWords } from "./account.tsx";
+import AccountRoute, { accountTestid, formatWinRate, packsShown, resetSigningOutForTests, statusWords } from "./account.tsx";
+import { packsInfo } from "../packs/fixtures.ts";
+import { packTestid } from "../packs/packs.ts";
+import {
+  collectionOf,
+  cosmeticPacksInfo,
+  openedCosmeticPack,
+  ownedCosmeticsOf,
+  tokenBars,
+  walletInfo,
+} from "../shop/fixtures.ts";
+import { shopTestid } from "../shop/shop.ts";
 import { devToolsTestid } from "./DevTools.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
-  return { ...actual, getProfile: vi.fn(), getOwnRank: vi.fn(), previewUsername: vi.fn(), saveUsername: vi.fn() };
+  return {
+    ...actual,
+    getProfile: vi.fn(),
+    getOwnRank: vi.fn(),
+    getPacks: vi.fn(),
+    getWallet: vi.fn(),
+    getTokens: vi.fn(),
+    getCollection: vi.fn(),
+    getOwnedCosmetics: vi.fn(),
+    getCosmeticPacks: vi.fn(),
+    buyPack: vi.fn(),
+    openCosmeticPack: vi.fn(),
+    previewUsername: vi.fn(),
+    saveUsername: vi.fn(),
+  };
 });
 
 vi.mock("../net/gate.ts", async (importOriginal) => {
@@ -551,5 +585,125 @@ describe("deleting the account", () => {
     await userEvent.click(screen.getByTestId("account-delete-cancel"));
     expect(screen.queryByTestId("account-delete-input")).toBeNull();
     expect(screen.getByTestId("account-delete")).toBeInTheDocument();
+  });
+});
+
+// #1308: the card packs behind a toggle of their own. The economy is not live (§14.12), so only a dev
+// account is offered them until it is, and the panel mounts, and asks the server, only once opened.
+describe("#1308 the card packs on the account page", () => {
+  function me(over: { isDev?: boolean; status?: MeResponse["profile"]["status"] } = {}): MeResponse {
+    return {
+      profile: { id: "p1", status: over.status ?? "active" },
+      needsInviteCode: false,
+      emailVerified: true,
+      currentMatchId: null,
+      email: "player1@example.com",
+      username: { name: "Max#3", nextChangeAt: null, promptOwed: false },
+      ...(over.isDev === undefined ? {} : { isDev: over.isDev }),
+    };
+  }
+
+  it("offers Card packs to a dev account and opens the panel on the server's numbers", async () => {
+    // The panel is a lazy chunk: warm it so the toggle-to-panel wait measures the mount, not the transform.
+    await import("../packs/PackOpening.tsx");
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getPacks).mockResolvedValue(packsInfo());
+    // #1309 mounts beside the opening: the shop, the picker and the cosmetic packs read too.
+    vi.mocked(getWallet).mockResolvedValue(walletInfo());
+    vi.mocked(getTokens).mockResolvedValue(tokenBars());
+    vi.mocked(getCollection).mockResolvedValue(collectionOf());
+    vi.mocked(getOwnedCosmetics).mockResolvedValue(ownedCosmeticsOf());
+    vi.mocked(getCosmeticPacks).mockResolvedValue(cosmeticPacksInfo());
+    const { unmount } = render(<AccountRoute token={TOKEN} me={me({ isDev: true })} />);
+    const toggle = screen.getByTestId(accountTestid.packsToggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId(packTestid.panel), "closed, the panel is not mounted").toBeNull();
+    expect(getPacks).not.toHaveBeenCalled();
+
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(await screen.findByTestId(packTestid.panel)).toBeInTheDocument();
+    expect(await screen.findByTestId(packTestid.pity("epic"))).toHaveTextContent("7 / 10 packs");
+    expect(getPacks).toHaveBeenCalledWith(TOKEN);
+    unmount();
+
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    render(<AccountRoute token={TOKEN} me={me({ isDev: false })} />);
+    expect(screen.queryByTestId(accountTestid.packsToggle)).toBeNull();
+  });
+
+  it("#1309 opening the toggle mounts the shop, the token picker and the cosmetic packs", async () => {
+    // The panels are lazy chunks: warm them so the toggle-to-panel wait measures the mount, not the transform.
+    await import("../packs/PackOpening.tsx");
+    await import("../shop/Shop.tsx");
+    await import("../shop/TokenPicker.tsx");
+    await import("../shop/CosmeticPacks.tsx");
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getPacks).mockResolvedValue(packsInfo());
+    vi.mocked(getWallet).mockResolvedValue(walletInfo());
+    vi.mocked(getTokens).mockResolvedValue(tokenBars());
+    vi.mocked(getCollection).mockResolvedValue(collectionOf());
+    vi.mocked(getOwnedCosmetics).mockResolvedValue(ownedCosmeticsOf());
+    vi.mocked(getCosmeticPacks).mockResolvedValue(cosmeticPacksInfo());
+    render(<AccountRoute token={TOKEN} me={me({ isDev: true })} />);
+
+    await userEvent.click(screen.getByTestId(accountTestid.packsToggle));
+    expect(await screen.findByTestId(shopTestid.panel)).toBeInTheDocument();
+    expect(await screen.findByTestId(shopTestid.tokenPanel)).toBeInTheDocument();
+    expect(await screen.findByTestId(shopTestid.packsPanel)).toBeInTheDocument();
+    expect(getWallet).toHaveBeenCalledWith(TOKEN);
+    expect(getTokens).toHaveBeenCalledWith(TOKEN);
+    expect(getCosmeticPacks).toHaveBeenCalledWith(TOKEN);
+  });
+
+  it("#1309 a change in one panel reads the others again: a bought pack opens at once, an opening moves the bars", async () => {
+    await import("../packs/PackOpening.tsx");
+    await import("../shop/Shop.tsx");
+    await import("../shop/TokenPicker.tsx");
+    await import("../shop/CosmeticPacks.tsx");
+    // The server's side: what each read answers moves with what was bought or opened.
+    let held: PacksResponse["unopened"] = [];
+    let jlore = packsInfo().price;
+    let bars = tokenBars();
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getPacks).mockImplementation(() => Promise.resolve({ ...packsInfo(), unopened: held }));
+    vi.mocked(getWallet).mockImplementation(() => Promise.resolve({ jlore }));
+    vi.mocked(getTokens).mockImplementation(() => Promise.resolve(bars));
+    vi.mocked(getCollection).mockResolvedValue(collectionOf());
+    vi.mocked(getOwnedCosmetics).mockResolvedValue(ownedCosmeticsOf());
+    vi.mocked(getCosmeticPacks).mockResolvedValue(cosmeticPacksInfo());
+    vi.mocked(buyPack).mockImplementation((_token, pack) => {
+      held = [{ pack, count: 1 }];
+      jlore = 0;
+      return Promise.resolve({ pack, jlore, unopened: 1 });
+    });
+    vi.mocked(openCosmeticPack).mockImplementation(() => {
+      bars = { ...bars, cardBar: { ...bars.cardBar, points: 3 } };
+      return Promise.resolve(openedCosmeticPack());
+    });
+    render(<AccountRoute token={TOKEN} me={me({ isDev: true })} />);
+    await userEvent.click(screen.getByTestId(accountTestid.packsToggle));
+    expect(await screen.findByTestId(packTestid.none)).toHaveTextContent("No unopened packs.");
+    await screen.findByTestId(shopTestid.wallet);
+
+    await userEvent.click(screen.getByTestId(shopTestid.buy("Core")));
+    expect(await screen.findByTestId(packTestid.open("Core")), "the opening holds the bought pack").toBeInTheDocument();
+    expect(screen.queryByTestId(packTestid.none)).toBeNull();
+    expect(getPacks).toHaveBeenCalledTimes(3);
+
+    expect(await screen.findByTestId(shopTestid.cardBar)).toHaveTextContent("149 / 150");
+    await userEvent.click(await screen.findByTestId(shopTestid.open));
+    await waitFor(() => {
+      expect(screen.getByTestId(shopTestid.cardBar), "the picker reads the bars the opening filled").toHaveTextContent("3 / 150");
+    });
+    expect(screen.getByTestId(shopTestid.wallet)).toHaveTextContent("0 Jlore");
+  });
+
+  it("packsShown: an active account once the economy is live, before it a dev account alone", () => {
+    expect(packsShown(me(), true)).toBe(true);
+    expect(packsShown(me(), false)).toBe(false);
+    expect(packsShown(me({ isDev: true }), false)).toBe(true);
+    expect(packsShown(me({ isDev: true, status: "pending" }), true)).toBe(false);
+    expect(packsShown(undefined, true)).toBe(false);
   });
 });

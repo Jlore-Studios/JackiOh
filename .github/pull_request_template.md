@@ -19,6 +19,10 @@ Closes #
 
 <!-- What could break, for players or for the bots, and what you did about it. "None" is an answer. -->
 
+## Player note
+
+<!-- One line players read on the Patch notes page, for a change they notice that ships no card data (a mode, a screen, the AI, sound): `cargo jackioh patches log` takes the first line under this heading into the technical log (R1369000), held to docs/issues-and-patches.md's note rules. Leave it empty for a change players don't see, or one whose fragment already carries its `player` note. -->
+
 ## Rulings and patch version
 
 - R-rows added or changed: <!-- `spec/rulings/R<nnnn>.md` (the next free number, CLAUDE.md rule 3), or "none" -->

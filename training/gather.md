@@ -21,6 +21,7 @@ AI-against-AI figures for every card beside its live games, whether or not anyon
 - Each finished game is filed as a record with `source: "dev"`, `mode: "random"`, both pilots `ai`, the
   id `dev:<patch>:gather:<n>` and the patch `cargo jackioh catalog-version` names for the checkout. A game
   that does not finish (the action limit, a panic) files nothing.
+- The games play one at a time (`RAYON_NUM_THREADS=1`), under `nice -n 19`, so the lane keeps the CPU for the other lanes' gates.
 
 The lane keeps `~/training-out/gather/cursor-<patch>`, the number of the next game of that patch, so a
 patch's games are played once each and a new patch starts again at 1. It plays a patch without end,

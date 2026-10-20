@@ -40,7 +40,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
 | Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings) and `live_match_of` (§13) |
-| Economy | `economy/store.rs`, `math.rs`, `roll.rs`, `packs.rs` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store, and `economy_lock_account`, an opening's lock on its account (R1301003); the pure math, the level curve and the pity roll (R1298000); the pure pack roll, its slots' rarities, the card draw and the dupe chain (R1301000–R1301002); buying and opening a pack, each in one transaction, the opening's catalog version, cosmetics, seed and result logged in its rows' `ref` (R1301003) |
+| Economy | `economy/store.rs`, `math.rs`, `rewards.rs`, `roll.rs`, `packs.rs`, `cosmetic_packs.rs`, `practice.rs` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store, `economy_lock_account`, an opening's lock on its account (R1301003), and 0047's practice seeds; the pure math, the level curve and the pity roll (R1298000); the reward hook a finished game pays through (§14.8); the pure pack roll, its slots' rarities, the card draw and the dupe chain (R1301000–R1301002); buying and opening a pack, each in one transaction, the opening's catalog version, cosmetics, seed and result logged in its rows' `ref` (R1301003); opening a cosmetic pack, its slots rolled by cosmetic rarity from a seed and logged the same way, and the Chase Shard bar it fills and what the bar buys (R1306000–R1306003); and a practice claim's check, its log folded from the seed's setup and every AI move re-run (§14.8, R1303000–R1303003) |
 | Dev tools | `api/dev.rs` | a dev account's own grants and clears (§14.10, R1300000): XP, Jlore, the fill and the clears, each one transaction of ledger rows marked `dev`; 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
@@ -175,9 +175,17 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `POST` | `/api/codes/redeem` | user | §9.4's six-step redemption; first 403 `consent_owed` for an account owing the age check or the terms, costing no attempt (R757000, R757001) |
 | `GET` | `/api/codes/status` | user | whether redemption is paused, and the caller's attempts left (R192) |
 | `GET` | `/api/collection` | active | the cards owned (a card cleared to 0 is not sent); there is no write route but the dev tools' |
-| `GET`, `POST` | `/api/packs`, `/api/packs/buy`, `/api/packs/open` | active | the caller's pity counters and the odds; buy `{ pack }` (a shipped set's name or `global`) for `PACK_PRICE_JLORE`, 409 when the wallet cannot cover it; open one, 409 when none of that kind is held: its slots, the pity counters after it and the packs left (R1301000–R1301003) |
+| `GET`, `POST` | `/api/packs`, `/api/packs/buy`, `/api/packs/open` | active | the caller's pity counters, the odds and the unopened packs held; buy `{ pack }` (a shipped set's name or `global`) for `PACK_PRICE_JLORE`, 409 when the wallet cannot cover it; open one, 409 when none of that kind is held: its slots, the pity counters after it and the packs left (R1301000–R1301003) |
+| `GET` | `/api/tokens` | active | both token bars' points and sizes, the cosmetic cycle's next step and the tokens held (§14.5; R1305000, R1305001, R1305004) |
+| `POST` | `/api/tokens/redeem-card` | active | `{ cardId }`: a card token unlocks one chosen unowned card of a set that ships, 409 for a choice it cannot pay for, answering the tokens after it (R1305002) |
+| `POST` | `/api/tokens/redeem-cosmetic` | active | `{ token, cosmeticId, cardId? }`: a Rare or Epic token buys one cosmetic at its tier or below, 409 for a choice it cannot pay for, answering the tokens after it (R1305003) |
+| `GET` | `/api/cosmetic-packs` | active | the Chase Shard bar's points and size and the cosmetic packs unopened (§14.6; R1306002) |
+| `POST` | `/api/cosmetic-packs/open` | active | open one cosmetic pack, 409 when none is held: its slots, each an unowned cosmetic (and its card, when the account lacked it) or bar points, the Chase Shard bar after it and the packs left (R1306000, R1306001, R1306003) |
+| `POST` | `/api/cosmetic-packs/chase` | active | `{ cosmeticId, cardId? }`: a full Chase Shard bar buys one unowned Legendary or Mythic cosmetic and empties, 409 for a choice it cannot pay for, answering the bar and packs after it (R1306002) |
 | `GET` | `/api/wallet` | active | the caller's Jlore balance (§14.1); read-only, like the collection |
 | `GET` | `/api/tracks` | active | the caller's set tracks in catalog order — level, XP, the XP to the next level, the next rewards (both `null` on the last level, R1302005) and how many levels have paid (§14.7); read-only, like the collection |
+| `POST` | `/api/practice/seeds` | active | `{ difficulty, humanSeat, deck, catalog }`: a practice game's seed, kept with that setup and the last board the server holds for the caller (R1303003), 201 `{ seed, lastBoard, expiresAt }`; prunes the caller's seeds older than `PRACTICE_SEED_TTL_SECONDS` (R1303001); 409 while the economy is off or for a catalog it cannot fold |
+| `POST` | `/api/practice/claims` | active | `{ seed, result, log }`: a finished practice game, folded and its AI moves re-run (R1303002), at most `PRACTICE_VERIFY_CONCURRENCY` at once, the rest waiting; 200 `{ paid: true, jlore, xp }`, or `{ paid: false, reason }` for every refusal; the seed is burned first, so it pays once (R1303001) |
 | `GET` | `/api/cosmetics` | active | the cosmetics the caller owns, `{ cards: [{ cardId, cosmeticId }], account }`, never another's; the starter cosmetics have no row (R1313000) |
 | `POST` | `/api/dev/xp`, `/api/dev/jlore`, `/api/dev/fill`, `/api/dev/clear/:part` | active | a dev account's own tools (§14.10, R1300000): `{ setId, xp }` to a shipped set's track, its level stopping at `SET_TRACK_LEVELS`; `{ jlore }`; every collectable card and every cosmetic but the defaults; a clear of `cards`, `cosmetics`, `jlore`, `counters`, `tracks` or `everything`; every row reason `dev`, marked `dev`. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list |
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641) and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000) |
@@ -233,8 +241,10 @@ rooms through `freeze_choice`, and a Best-of-1 rematch, which replays frozen dec
 
 ## WebSocket surface
 
-One socket per player per match, at `/ws/match` on the same port. The token comes from `?token=`; the
-server echoes the `jackioh.v1` subprotocol when offered. The message union is `actor/protocol.rs`:
+One socket per player per match, at `/ws/match` on the same port. The token comes from an offered
+`jackioh.bearer.` subprotocol, its UTF-8 in base64url without padding (R1379000; `?token=` only when
+none is offered, for the previous day's client); only `jackioh.v1` is echoed, and `/ws/duos` and
+`/ws/watch` read the token the same way. The message union is `actor/protocol.rs`:
 the client sends `hello` and `action`, the server sends `hello`, `view`, `ack`, `error`, `prompt` and
 `clock`, and the cosmetic `portraits` (R642), `emote` (R643) and `aim` (R738) frames ride beside them,
 never part of an action or a view. The `portraits` frame also carries the receiving account's own emote
@@ -307,9 +317,11 @@ holds, with four seats:
   one;
 - every applied action goes to `duos_match_actions` and pushes fresh views to both human seats; an
   illegal action answers `illegal_action` with its nonce and changes nothing; a rebuilt actor folds the
-  log with `duos_fold` on the blocking pool, only for a profile that holds a seat, and the end writes
-  the result and `ended_at` once, unranked, for both humans; every engine call runs under the catalog
-  version the match was dealt from (`DuosMatchOptions::catalog_version`, R767000);
+  log with `duos_fold` on the blocking pool, only for a profile that holds a seat and, once the match
+  has ended, only within `REMATCH_OFFER_TTL_MS` of its `ended_at` (past that the seat is not found,
+  4404, and nothing is folded: R1398000), and the end writes the result and `ended_at` once, unranked,
+  for both humans; every engine call runs under the catalog version the match was dealt from
+  (`DuosMatchOptions::catalog_version`, R767000);
 - a nonce starting `srv-` or `duos:` (the engine's round's own) is `malformed`, and a `hello` repeated
   while one from the same socket is still queued is absorbed (R835001's rule);
 - each human seat keeps the same `actor::guard::SeatGuard` as a 1v1 seat: `MATCH_ACTIONS_PER_SECOND`
@@ -731,6 +743,18 @@ a dev tool's own, written only marked `dev` (`collection_grants_dev_check`, R130
 transaction's `jackioh.dev_profile_ids` setting names, which `seed-catalog` sets from
 `DEV_PROFILE_IDS` before its stamp, so a dev account's clear stays cleared (R1300001); a stamp
 without the setting grants every person's active account as before.
+
+Migration 0047 adds `practice_seeds` (#1303): one row per seed `POST /api/practice/seeds` issued an
+account, with the game's setup (the AI tier, the human's seat, the deck, the last board it brought
+and the catalog version), when it was issued and when it was claimed. It is server-only like
+`match_checkpoints` (RLS on, no policy, no grant), since a seed is what lets a claim pay, and it goes
+with its account (on delete cascade). A claim burns its seed in one transaction, then
+`economy::practice::verify` folds the log and re-runs every AI move off the runtime, at most
+`PRACTICE_VERIFY_CONCURRENCY` at once, in a task that outlives the request, and a second
+transaction pays and keeps the board. Measured in release (`cargo test --release -p jackioh-server
+--test server r1303002_the_ai_rerun -- --nocapture`, 2026-10-20, the night bot's 4-core runner):
+the recorded game, 46 actions of which 29 the AI's, verifies in 680–700 ms; twelve AI-against-AI
+games, four per tier, in 392–1,980 ms (32–76 actions, 18–46 AI moves), about 20–45 ms per AI move.
 
 ## Tests
 
