@@ -377,6 +377,8 @@ target/release/jackioh-server stats-cards --source=dev --patch=v0.2.5       # re
 target/release/jackioh-server stats-export --out=live.jsonl                 # the records still held in full, a line each, in id order
 cargo jackioh stats report live.jsonl --json                                # the same figures with no database
 target/release/jackioh-server stats-fold                                    # fold the records written before migration 0041; the retention loop does it too
+target/release/jackioh-server stats-cards --window > window.json            # every card over its own window, off the totals (R1367000)
+cargo jackioh winrates --refresh window.json                                # CN Tech's and NA Tech's table, once per patch (R1368000)
 ```
 
 Every figure, `stats-cards`, `balance-watch`, the public routes and the ladder bots' decks, reads the
