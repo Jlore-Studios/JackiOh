@@ -6741,6 +6741,13 @@
     "1364": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T01:14:59Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 9 (stands alone): with no GitHub access I cannot verify that no open PR touches fuzz.rs/duos_fuzz.rs, so medium at least"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
