@@ -12,13 +12,14 @@
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { registeredCatalog } from "@jackioh/engine";
 import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
 
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import { SILENT_SOCKET_MS, WAKE_PROBE_MS } from "../game/net.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import type { Friend } from "../net/social.ts";
-import { baseView } from "../test/fixtures.ts";
+import { baseView, card, emptySide } from "../test/fixtures.ts";
 import { must, stubServer } from "../test/stubServer.ts";
 import { WATCH_RECONNECT_ATTEMPTS, WATCH_RECONNECT_MS } from "./config.ts";
 import { WatchRoute } from "./WatchRoute.tsx";
@@ -170,6 +171,25 @@ describe("B50 the watch screen", () => {
     }, SLOW);
     // The screen sends nothing after its hello (CLAUDE.md rule 7).
     expect(socket.sent).toHaveLength(1);
+  });
+
+  it("#1378 names the friend's cards from the catalog the client ships and asks the server for none", () => {
+    const server = stubServer((call) => {
+      if (call.method === "GET" && call.path === "/api/friends") {
+        return { status: 200, body: { friends: [ANN], incoming: [], outgoing: [], blocked: [] } };
+      }
+      return { status: 503, body: { error: { code: "unavailable", message: "down" } } };
+    });
+    watch();
+    latest().emit("open");
+    latest().frame({
+      type: "view",
+      view: baseView({ viewer: "p1", you: emptySide("p1", { hand: [card({ instanceId: "h-1378", defId: "core-001" })] }) }),
+      legal: [],
+    });
+
+    expect(screen.getByTestId("hand-card-h-1378").querySelector(".card-name")?.textContent).toBe(registeredCatalog()["core-001"]?.name);
+    expect(server.to("GET", "/api/catalog")).toEqual([]);
   });
 
   it("B50 a forbidden frame is the refused screen with the way back, never reopened", async () => {
