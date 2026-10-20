@@ -10,8 +10,9 @@
 //
 // The route is NOT gated. It asks for the account only to offer an active player's saved decks and
 // to keep an active player's tutorial progress on the account as well as the device (R320, R321,
-// `tutorial/accountSync.ts`), and an anonymous visitor makes no request at all: no session means no
-// `/api/auth/me`, and no account means no `/api/decks` and no `/api/tutorial`.
+// `tutorial/accountSync.ts`), and to earn with a free game (Earning, below); an anonymous visitor
+// makes no request at all: no session means no `/api/auth/me`, and no account means no `/api/decks`,
+// no `/api/tutorial` and no `/api/practice/*`.
 //
 // URL params, all optional and dropped when invalid:
 //   ?seed=<string>        the practice seed; otherwise 8 random hex characters per game
@@ -38,6 +39,13 @@
 // Custom cards (SPEC §12): an active account's are read too (`useCustomCards`), for the saved decks
 // that name them and for `?try=`. A game with any carries them (R915006), runs on the Luau module
 // (R915009, the worker's choice) and records no card statistics (§12.10).
+//
+// Earning (SPEC §14.8, R1303000): while the economy is live, an active account's free game started
+// from the setup or Play again is played on a seed the server issues (`net/practice.ts`), with the
+// last board the server kept (R1303003); the loading screen shows while it is asked for, and a game
+// the server will not seed is played as before, earning nothing. Once such a game is over its claim
+// goes to the server, and the result dialog says what it earned or why not; a claim that fails in
+// any way leaves the dialog as it was. Lessons, `?try=`, `?seed=` and the other URL games never ask.
 
 import {
   useCallback,
@@ -52,6 +60,7 @@ import {
 
 import { FIXTURE_BANNED_IDS } from "@jackioh/ai";
 import { CUSTOM_ID_PREFIX, DIFFICULTIES, type Difficulty } from "@jackioh/engine/config";
+import { ECONOMY_LIVE } from "@jackioh/server-config";
 import { LEAN_NEWEST, isLeanPick } from "@jackioh/shared";
 import type { ActionBody, CardDefs, LeanPick, PlayerId, PlayerView, SandboxOp } from "@jackioh/shared";
 
@@ -65,6 +74,7 @@ import { t } from "../i18n/i18n.ts";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { getDecks, getMe, type DecksResponse, type MeResponse } from "../net/api.ts";
 import { getCustomCards, type CustomCardsResponse } from "../net/customCards.ts";
+import { PRACTICE_EARNING_API, type PracticeEarningApi } from "../net/practice.ts";
 import { useAccount, type Account } from "../net/gate.ts";
 import { useLiveGame } from "../net/liveGame.ts";
 import { navigate, paths } from "../net/navigate.ts";
@@ -89,6 +99,7 @@ import {
   type PracticeControllerState,
 } from "../practice/controller.ts";
 import { deckChoiceFromValue, deckChoiceValue, isAutostartDeckValue, isDeckValue } from "../practice/decks.ts";
+import { seedRequestOf, type PracticeEarning } from "../practice/earning.ts";
 import { createPracticeHost, type PracticeHost } from "../practice/host.ts";
 import { usePracticeEmotes } from "../practice/emotes.ts";
 import type { PracticeDebug, PracticeDeckChoice, PracticeStartConfig } from "../practice/protocol.ts";
@@ -544,6 +555,8 @@ export type PracticeRouteProps = {
   loadMe?: (token: string) => Promise<MeResponse>;
   /** default `GET /api/custom-cards` (§12.9): the custom cards a saved deck or `?try=` names */
   loadCustomCards?: (token: string) => Promise<CustomCardsResponse>;
+  /** R1303000: the seed and claim calls; default `PRACTICE_EARNING_API` while `ECONOMY_LIVE`, else none (null) */
+  practiceEarning?: PracticeEarningApi | null;
 };
 
 type ScreenProps = Omit<PracticeRouteProps, "account"> & { account: Account };
@@ -562,6 +575,27 @@ function Shell({ variant, children }: { variant: "lobby" | "game"; children: Rea
   return <div className={`${shell} practice practice--${variant}`}>{children}</div>;
 }
 
+/** The deal on its way: a game starting in the worker, or (R1303000) its seed being asked for. */
+function LoadingScreen({ onBack }: { onBack: () => void }): ReactElement {
+  return (
+    <Shell variant="lobby">
+      {/* A worker that never answers must not trap the page: back to the setup, which has its own
+          way out (integration: every screen has a way back). */}
+      <BackLink onPress={onBack} />
+      <div className="practice-stage">
+        <div className="practice-shuffle" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+        <p className="practice-stage__status" data-testid={practiceTestid.loading} role="status">
+          {t("Shuffling the decks…")}
+        </p>
+      </div>
+    </Shell>
+  );
+}
+
 function PracticeScreen({
   account,
   hostFactory,
@@ -571,12 +605,18 @@ function PracticeScreen({
   coachScript,
   loadMe,
   loadCustomCards,
+  practiceEarning,
 }: ScreenProps): ReactElement {
   const params = useMemo(() => readPracticeParams(window.location.search), []);
   const saved = useSavedDecks(account, loadDecks ?? getDecks);
   // §12.9: an active account's custom cards, which its saved decks and `?try=` name.
   const customToken = account.kind === "ready" && account.me.profile.status === "active" ? account.token : null;
   const custom = useCustomCards(customToken, loadCustomCards ?? getCustomCards);
+  // R1303000: the seed and claim calls, read when they are made, so a prop change mid-game changes nothing.
+  const earningApi = useRef<PracticeEarningApi | null>(null);
+  earningApi.current = practiceEarning === undefined ? (ECONOMY_LIVE ? PRACTICE_EARNING_API : null) : practiceEarning;
+  const earningToken = useRef(customToken);
+  earningToken.current = customToken;
   // R321: an active account's tutorial progress is merged with this device's and kept level with it.
   useTutorialAccountSync(account, tutorialAccount);
   // R634: and so are its game settings.
@@ -718,14 +758,68 @@ function PracticeScreen({
     setResumeLost(false);
   }, []);
 
+  /**
+   * R1303000: the setup a game is asking the server to seed, shown as the loading screen; null when
+   * none is. Each ask is numbered, so one given up (Back) or asked again never starts its game.
+   */
+  const [seeding, setSeeding] = useState<PracticeStartConfig | null>(null);
+  const seedAsks = useRef(0);
+  /**
+   * A free game from the setup or Play again: on a server seed when the account may earn with it
+   * (`seedRequestOf`) and the URL fixes no seed, else as it is. A seed the server will not issue, or
+   * that never comes, leaves the game to play as before, earning nothing.
+   */
+  const launch = useCallback(
+    (config: PracticeStartConfig) => {
+      seedAsks.current += 1;
+      const api = earningApi.current;
+      const token = earningToken.current;
+      const request = params.seed === undefined ? seedRequestOf(config) : null;
+      if (api === null || token === null || request === null) {
+        setSeeding(null);
+        setGame(config);
+        return;
+      }
+      const ask = seedAsks.current;
+      setSeeding(config);
+      Promise.resolve()
+        .then(() => api.requestSeed(token, request))
+        .then(
+          (issued) => {
+            if (seedAsks.current !== ask) return;
+            setSeeding(null);
+            setGame({
+              ...config,
+              seed: issued.seed,
+              earning: true,
+              // R1303003: the board the server kept from the last paid game, which the claim folds with.
+              ...(issued.lastBoard.length === 0 ? {} : { lastBoard: issued.lastBoard }),
+            });
+          },
+          () => {
+            if (seedAsks.current !== ask) return;
+            setSeeding(null);
+            setGame(config);
+          },
+        );
+    },
+    [params],
+  );
+  /** The loading screen's way back while a seed is asked for: the ask is given up, and the setup shows. */
+  const onBackFromSeeding = useCallback(() => {
+    seedAsks.current += 1;
+    setSeeding(null);
+    setGame(null);
+  }, []);
+
   const onStart = useCallback(
     (choice: PracticeSetupChoice) => {
       writeStoredSetup(choice.difficulty, choice.deck, choice.leanSet ?? null);
       dropSavedGame();
       setTryState(null);
-      setGame(configFor(choice, params));
+      launch(configFor(choice, params));
     },
-    [params, dropSavedGame],
+    [params, dropSavedGame, launch],
   );
 
   /** A lesson always plays on its own seed and seat, from the path, the URL or its result dialog. */
@@ -872,7 +966,7 @@ function PracticeScreen({
   /** The same difficulty and deck again, with a fresh seed and seat (unless the URL fixes them). */
   const onPlayAgain = useCallback(() => {
     if (game === null) return;
-    setGame(
+    launch(
       configFor(
         {
           difficulty: game.difficulty,
@@ -884,7 +978,7 @@ function PracticeScreen({
         params,
       ),
     );
-  }, [game, params]);
+  }, [game, params, launch]);
 
   /** The game whose result dialog the player closed to read the final board; null shows it. */
   const [resultClosedFor, setResultClosedFor] = useState<PracticeStartConfig | null>(null);
@@ -915,6 +1009,41 @@ function PracticeScreen({
       clearTimeout(timer);
     };
   }, [finished, game, boardAnimating, boardRoot]);
+  /**
+   * R1303000: what the claim of a game on a server seed earned, held by its game, so a Play again
+   * shows nothing of the last one's; null before any claim.
+   */
+  const [earning, setEarning] = useState<{ game: PracticeStartConfig; earning: PracticeEarning } | null>(null);
+  /** The game whose end was claimed, so each game is claimed once. */
+  const claimedFor = useRef<PracticeStartConfig | null>(null);
+  useEffect(() => {
+    if (!finished || game === null || game.earning !== true || controller === null || claimedFor.current === game) return;
+    claimedFor.current = game;
+    const claimed = game;
+    const settleTo = (next: PracticeEarning): void => {
+      setEarning((current) => (current?.game === claimed ? { game: claimed, earning: next } : current));
+    };
+    setEarning({ game: claimed, earning: { kind: "pending" } });
+    const api = earningApi.current;
+    const token = earningToken.current;
+    if (api === null || token === null) {
+      settleTo({ kind: "unreachable" });
+      return;
+    }
+    // Any failure (the worker's refusal, no answer, a malformed one) is "unreachable": the dialog
+    // stays whole either way.
+    controller
+      .claim()
+      .then((claim) => api.claim(token, claim))
+      .then(
+        (answer) => {
+          settleTo(answer.paid ? { kind: "paid", jlore: answer.jlore, xp: answer.xp } : { kind: "refused", reason: answer.reason });
+        },
+        () => {
+          settleTo({ kind: "unreachable" });
+        },
+      );
+  }, [finished, game, controller]);
   const onViewBoard = useCallback(() => {
     setResultClosedFor(game);
   }, [game]);
@@ -999,6 +1128,8 @@ function PracticeScreen({
   }, [wonLesson]);
   /** The path as it stood when this game started, so the result can say what the win opened. */
   const progressAtStart = useMemo(() => (game === null ? null : readTutorialProgress()), [game]);
+
+  if (seeding !== null) return <LoadingScreen onBack={onBackFromSeeding} />;
 
   if (game === null && tryState === "pending") {
     return (
@@ -1092,23 +1223,7 @@ function PracticeScreen({
   const snapshot = state.snapshot;
   const config = state.config;
   if (controller === null || snapshot === null || config === null || state.phase === "idle" || state.phase === "starting") {
-    return (
-      <Shell variant="lobby">
-        {/* A worker that never answers must not trap the page: back to the setup, which has its own
-            way out (integration: every screen has a way back). */}
-        <BackLink onPress={onBackFromLoading} />
-        <div className="practice-stage">
-          <div className="practice-shuffle" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
-          <p className="practice-stage__status" data-testid={practiceTestid.loading} role="status">
-            {t("Shuffling the decks…")}
-          </p>
-        </div>
-      </Shell>
-    );
+    return <LoadingScreen onBack={onBackFromLoading} />;
   }
 
   if (watching !== null && watching.game === game && replaySource !== null) {
@@ -1291,6 +1406,7 @@ function PracticeScreen({
           onChangeSetup={onNewGame}
           onViewBoard={onViewBoard}
           {...(replaySource === null ? {} : { onWatchReplay, onShareLastTurn })}
+          {...(earning === null || earning.game !== game ? {} : { earning: earning.earning })}
         />
       )}
     </Shell>

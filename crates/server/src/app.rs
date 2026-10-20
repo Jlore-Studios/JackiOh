@@ -84,6 +84,9 @@ pub struct App {
     /// §14.12: whether the economy pays out, `config::ECONOMY_LIVE` at boot. A field so a test can
     /// turn it on; nothing else sets it.
     pub economy_live: bool,
+    /// §14.8, #1303: the permits of the practice claims being verified at once,
+    /// `PRACTICE_VERIFY_CONCURRENCY` of them (`api::practice`). One per app, for the limiter's reason.
+    pub practice_verifications: tokio::sync::Semaphore,
 }
 
 // ---------------------------------------------------------------------------
@@ -317,6 +320,44 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(crate::economy::packs::post_open),
     ),
+    // economy/tokens.rs (SPEC §14.5; #1305)
+    (
+        "GET",
+        "/api/tokens",
+        AuthLevel::Active,
+        h!(crate::economy::tokens::get_tokens),
+    ),
+    (
+        "POST",
+        "/api/tokens/redeem-card",
+        AuthLevel::Active,
+        h!(crate::economy::tokens::post_redeem_card),
+    ),
+    (
+        "POST",
+        "/api/tokens/redeem-cosmetic",
+        AuthLevel::Active,
+        h!(crate::economy::tokens::post_redeem_cosmetic),
+    ),
+    // economy/cosmetic_packs.rs (SPEC §14.6; #1306)
+    (
+        "GET",
+        "/api/cosmetic-packs",
+        AuthLevel::Active,
+        h!(crate::economy::cosmetic_packs::get_cosmetic_packs),
+    ),
+    (
+        "POST",
+        "/api/cosmetic-packs/open",
+        AuthLevel::Active,
+        h!(crate::economy::cosmetic_packs::post_open),
+    ),
+    (
+        "POST",
+        "/api/cosmetic-packs/chase",
+        AuthLevel::Active,
+        h!(crate::economy::cosmetic_packs::post_chase),
+    ),
     // api/economy.rs (#1302)
     (
         "GET",
@@ -329,6 +370,19 @@ pub static ROUTES: &[Route] = &[
         "/api/tracks",
         AuthLevel::Active,
         h!(api::economy::get_tracks),
+    ),
+    // api/practice.rs (#1303)
+    (
+        "POST",
+        "/api/practice/seeds",
+        AuthLevel::Active,
+        h!(api::practice::post_seed),
+    ),
+    (
+        "POST",
+        "/api/practice/claims",
+        AuthLevel::Active,
+        h!(api::practice::post_claim),
     ),
     // api/cosmetics.rs (R1313000)
     (
@@ -843,6 +897,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         engine_thread: actor::engine::registered_thread,
         bug_reports,
         economy_live: crate::config::ECONOMY_LIVE,
+        practice_verifications: tokio::sync::Semaphore::new(crate::config::PRACTICE_VERIFY_CONCURRENCY),
     });
 
     if app.env.e2e {

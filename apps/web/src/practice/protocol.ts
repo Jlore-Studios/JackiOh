@@ -7,7 +7,8 @@
 // engine's refusal of the human's last action. `PracticeDebug` is the one exception, and the core
 // answers it only in a non-production build, for the e2e replay check. Besides the snapshot, the
 // page may read the summaries of the finished games the worker kept and, for one of them, the
-// human's `viewFor` at each step (R768): never its log, seed or decks.
+// human's `viewFor` at each step (R768): never its log, seed or decks. The one log that crosses is a
+// finished game's on a server seed, as its claim (R1303000), once the game it could help with is over.
 
 import { LEAN_NEWEST } from "@jackioh/shared";
 import type {
@@ -86,7 +87,19 @@ export type PracticeStartConfig = {
    * production route never sets it.
    */
   aiBanned?: readonly string[];
+  /**
+   * R1303000: the game is on a seed the server issued for this setup, so its end may be claimed
+   * (`claim`) and paid. Set by the page only for a free game an active account started from the
+   * setup or Play again; never a lesson's, a sandbox's, one with custom cards, a Try it or a URL seed.
+   */
+  earning?: true;
 };
+
+/**
+ * R1303000: a finished game on a server seed, as the server checks it: the seed, the result for the
+ * human (from the seat it ended in, R677) and the whole log, both seats' actions under their nonces.
+ */
+export type PracticeClaim = { seed: string; result: "win" | "loss" | "draw"; log: Action[] };
 
 /** R417: one card of a last board, its card and face only (the engine's `LastBoardEntry`). */
 export type LastBoardCard = { defId: string; radiant: boolean };
@@ -181,7 +194,13 @@ export type PracticeRequest =
    * the next page starts at `from + steps.length`.
    */
   | { id: number; type: "replay"; game: number; from: number; count: number }
-  | { id: number; type: "debug" };
+  | { id: number; type: "debug" }
+  /**
+   * R1303000: the finished game's claim, for the server to check. Refused before the end (CLAUDE.md
+   * rule 7: the log names the AI's hidden cards while the game runs) and for a game not on a server
+   * seed.
+   */
+  | { id: number; type: "claim" };
 
 export type PracticeResponse =
   | { id: number; type: "started"; snapshot: PracticeSnapshot; defs: CardDefs; aiSeat: PlayerId }
@@ -190,6 +209,7 @@ export type PracticeResponse =
   | { id: number; type: "replays"; replays: PracticeReplayListing[] }
   | { id: number; type: "replay"; game: number; from: number; steps: ReplayStep[]; total: number }
   | { id: number; type: "debug"; debug: PracticeDebug }
+  | { id: number; type: "claim"; claim: PracticeClaim }
   | { id: number; type: "failed"; message: string };
 
 export type PracticeRequestBody = DistributiveOmit<PracticeRequest, "id">;

@@ -5,7 +5,8 @@
 //!    library's default ceiling is far larger);
 //!  - one client address holds at most `WS_MAX_CONNECTIONS_PER_ADDRESS` sockets, handshakes
 //!    included;
-//!  - the token travels as `?token=`, and `WS_SUBPROTOCOL` is still echoed when it is offered.
+//!  - the token travels as an offered `jackioh.bearer.` subprotocol (R1379000), and only
+//!    `WS_SUBPROTOCOL` is echoed.
 //!
 //! The whole app is served (`app::router`, which mounts `/ws/match`) and the registry is the real
 //! one, so the actor's first `view` frame names the seat (`viewer: "p1"`). The client is a small
@@ -23,7 +24,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
 use jackioh_server::actor::protocol::MAX_FRAME_BYTES;
-use jackioh_server::actor::ws_server::{WS_PATH, WS_SUBPROTOCOL};
+use jackioh_server::actor::ws_server::{WS_PATH, WS_SUBPROTOCOL, bearer_protocol};
 use jackioh_server::app::{App, router};
 use jackioh_server::config::WS_MAX_CONNECTIONS_PER_ADDRESS;
 use jackioh_server::db::fake::FakeData;
@@ -231,8 +232,13 @@ async fn open(port: u16, query: &str, protocols: &[&str]) -> Opened {
     Opened::Open(Client { stream, protocol })
 }
 
-fn query(match_id: &str, token: &str) -> String {
-    format!("matchId={}&token={}", encode_query(match_id), encode_query(token))
+fn query(match_id: &str) -> String {
+    format!("matchId={}", encode_query(match_id))
+}
+
+/// R1379000: a client's upgrade: the match in the query, the token offered beside the name.
+async fn open_as(port: u16, match_id: &str, token: &str) -> Opened {
+    open(port, &query(match_id), &[WS_SUBPROTOCOL, &bearer_protocol(token)]).await
 }
 
 impl Client {
@@ -385,9 +391,7 @@ mod a_frame_is_capped_before_it_is_buffered {
     async fn closes_with_1009_on_a_65_kib_text_frame() {
         let _serial = SERIAL.lock().await;
         let (listening, token) = listen().await;
-        let mut client = open(listening.port, &query("match-1", &token), &[WS_SUBPROTOCOL])
-            .await
-            .open();
+        let mut client = open_as(listening.port, "match-1", &token).await.open();
         // The registry attached the socket: its seat's first view arrives.
         assert_eq!(client.first_view().await["viewer"], "p1");
 
@@ -401,9 +405,7 @@ mod a_frame_is_capped_before_it_is_buffered {
     async fn still_takes_a_frame_at_the_cap() {
         let _serial = SERIAL.lock().await;
         let (listening, token) = listen().await;
-        let mut client = open(listening.port, &query("match-1", &token), &[WS_SUBPROTOCOL])
-            .await
-            .open();
+        let mut client = open_as(listening.port, "match-1", &token).await.open();
         assert_eq!(client.first_view().await["viewer"], "p1");
 
         client.send_text(&"x".repeat(MAX_FRAME_BYTES)).await;
@@ -425,20 +427,22 @@ mod sockets_per_client_address {
         let mut held = Vec::new();
         for (k, token) in tokens.iter().enumerate().take(cap) {
             let match_id = format!("match-{}", k / 2 + 1);
-            let mut client = open(listening.port, &query(&match_id, token), &[WS_SUBPROTOCOL])
-                .await
-                .open();
+            let mut client = open_as(listening.port, &match_id, token).await.open();
             client.first_view().await;
             held.push(client);
         }
 
-        let third = open(listening.port, &query("match-1", &tokens[0]), &[WS_SUBPROTOCOL]).await;
+        let third = open_as(listening.port, "match-1", &tokens[0]).await;
         assert_eq!(third.refused_status(), 429);
 
         let mut first = held.remove(0);
         first.close().await;
-        let mut fourth =
-            open_when_free(listening.port, &query("match-1", &tokens[0]), &[WS_SUBPROTOCOL]).await;
+        let mut fourth = open_when_free(
+            listening.port,
+            &query("match-1"),
+            &[WS_SUBPROTOCOL, &bearer_protocol(&tokens[0])],
+        )
+        .await;
         assert_eq!(fourth.first_view().await["viewer"], "p1");
     }
 
@@ -452,8 +456,8 @@ mod sockets_per_client_address {
         for _ in 0..=cap {
             let mut refused = open_when_free(
                 listening.port,
-                &query("match-1", "not-a-token"),
-                &[WS_SUBPROTOCOL],
+                &query("match-1"),
+                &[WS_SUBPROTOCOL, &bearer_protocol("not-a-token")],
             )
             .await;
             assert_eq!(refused.close_code().await, 4401);
@@ -461,45 +465,100 @@ mod sockets_per_client_address {
     }
 }
 
-mod the_token_on_the_handshake {
-    //! SURFACE §11.3: one token path, `?token=` (what the browser and the e2e Node player send), and
-    //! `jackioh.v1` is still echoed when it is offered; these hold the server to exactly that.
+mod r1379000_the_credential_on_the_handshake {
+    //! R1379000, SURFACE §11.3: the token is offered as a `jackioh.bearer.` subprotocol beside
+    //! `jackioh.v1`, never put in the address, and only `jackioh.v1` is echoed. A missing,
+    //! undecodable or refused credential is R148's one 4401, and a renewed token opens what the
+    //! refused one could not (R1115000). The previous day's client's `?token=` is read only when no
+    //! credential is offered.
     use super::*;
 
-    #[tokio::test]
-    async fn authenticates_the_socket_and_echoes_only_the_protocol_name() {
-        let _serial = SERIAL.lock().await;
-        let (listening, token) = listen().await;
-        let mut client = open(listening.port, &query("match-1", &token), &[WS_SUBPROTOCOL])
-            .await
-            .open();
-        assert_eq!(client.protocol.as_deref(), Some(WS_SUBPROTOCOL));
-        // profile-1 holds seat p1 of match-1.
-        let view = client.first_view().await;
-        assert_eq!(view["viewer"], "p1");
-    }
-
-    #[tokio::test]
-    async fn reads_the_token_from_the_query_and_never_from_the_protocol_header() {
-        let _serial = SERIAL.lock().await;
-        let (listening, token) = listen().await;
-        // A token offered beside the protocol name is not a credential: the socket is
-        // refused as one with no token at all, and the token is never echoed.
-        let mut client = open(listening.port, "matchId=match-1", &[WS_SUBPROTOCOL, &token])
-            .await
-            .open();
-        assert_eq!(client.protocol.as_deref(), Some(WS_SUBPROTOCOL));
+    /// The refusal a socket with no usable credential gets: the one `forbidden` frame, "sign in
+    /// first", with the token nowhere in it, then 4401.
+    async fn assert_refused_for_its_sign_in(client: &mut Client, token: &str) {
         let refusal = client
             .next_message(READ_TIMEOUT)
             .await
             .expect("an error frame before the close");
         assert_eq!(refusal["type"], "error");
+        assert_eq!(refusal["code"], "forbidden");
+        assert_eq!(refusal["message"], "sign in first");
+        let text = refusal.to_string();
+        assert!(!text.contains(token), "{text}");
+        assert!(!text.contains(&bearer_protocol(token)), "{text}");
         assert_eq!(client.close_code().await, 4401);
+    }
 
-        // Without the protocol name nothing is echoed, and the query's token still authenticates.
-        let mut plain = open(listening.port, &query("match-1", &token), &[]).await.open();
-        assert_eq!(plain.protocol, None);
-        assert_eq!(plain.first_view().await["viewer"], "p1");
+    #[test]
+    fn r1379000_a_credential_is_the_tokens_utf_8_in_base64url_without_padding() {
+        // The web's `socketProtocols` pins the same vectors (`apps/web/src/net/socketProtocols.test.ts`).
+        assert_eq!(bearer_protocol("tök?>"), "jackioh.bearer.dMO2az8-");
+        assert_eq!(bearer_protocol("tök?"), "jackioh.bearer.dMO2az8");
+    }
+
+    #[tokio::test]
+    async fn r1379000_authenticates_the_offered_credential_and_echoes_only_the_protocol_name() {
+        let _serial = SERIAL.lock().await;
+        let (listening, token) = listen().await;
+        let mut client = open_as(listening.port, "match-1", &token).await.open();
+        assert_eq!(client.protocol.as_deref(), Some(WS_SUBPROTOCOL));
+        // profile-1 holds seat p1 of match-1.
+        assert_eq!(client.first_view().await["viewer"], "p1");
+    }
+
+    #[tokio::test]
+    async fn r1379000_a_missing_malformed_or_refused_credential_is_refused_with_4401_and_never_reflected() {
+        let _serial = SERIAL.lock().await;
+        let (listening, token) = listen().await;
+        let expired = bearer_protocol("token-expired");
+        let offers: [&[&str]; 6] = [
+            &[],
+            &[WS_SUBPROTOCOL],
+            &[WS_SUBPROTOCOL, "jackioh.bearer.!!!"],
+            &[WS_SUBPROTOCOL, "jackioh.bearer."],
+            &[WS_SUBPROTOCOL, &expired],
+            // A raw token beside the name is no credential.
+            &[WS_SUBPROTOCOL, &token],
+        ];
+        for offered in offers {
+            let mut client = open(listening.port, &query("match-1"), offered).await.open();
+            let echoed = (!offered.is_empty()).then_some(WS_SUBPROTOCOL);
+            assert_eq!(client.protocol.as_deref(), echoed, "{offered:?}");
+            assert_refused_for_its_sign_in(&mut client, &token).await;
+        }
+    }
+
+    #[tokio::test]
+    async fn r1379000_a_malformed_credential_never_falls_back_to_the_query() {
+        let _serial = SERIAL.lock().await;
+        let (listening, token) = listen().await;
+        let address = format!("{}&token={}", query("match-1"), encode_query(&token));
+        let mut client = open(listening.port, &address, &[WS_SUBPROTOCOL, "jackioh.bearer.!!!"])
+            .await
+            .open();
+        assert_refused_for_its_sign_in(&mut client, &token).await;
+    }
+
+    #[tokio::test]
+    async fn r1379000_a_renewed_token_opens_the_socket_its_refused_one_could_not() {
+        let _serial = SERIAL.lock().await;
+        let (listening, token) = listen().await;
+        let mut refused = open_as(listening.port, "match-1", "token-expired").await.open();
+        assert_refused_for_its_sign_in(&mut refused, "token-expired").await;
+
+        let mut renewed = open_as(listening.port, "match-1", &token).await.open();
+        assert_eq!(renewed.protocol.as_deref(), Some(WS_SUBPROTOCOL));
+        assert_eq!(renewed.first_view().await["viewer"], "p1");
+    }
+
+    #[tokio::test]
+    async fn r1379000_the_previous_clients_query_token_still_opens_a_socket_that_offers_no_credential() {
+        let _serial = SERIAL.lock().await;
+        let (listening, token) = listen().await;
+        let address = format!("{}&token={}", query("match-1"), encode_query(&token));
+        let mut client = open(listening.port, &address, &[]).await.open();
+        assert_eq!(client.protocol, None);
+        assert_eq!(client.first_view().await["viewer"], "p1");
     }
 }
 
@@ -595,9 +654,7 @@ mod a_finished_matchs_seats_may_reopen_its_socket {
         let _serial = SERIAL.lock().await;
         let (app, _p1, p2) = seed_finished_seats(0).await;
         let listening = serve_finished(app).await;
-        let mut client = open(listening.port, &query("match-reopened", &p2), &[WS_SUBPROTOCOL])
-            .await
-            .open();
+        let mut client = open_as(listening.port, "match-reopened", &p2).await.open();
         assert_eq!(client.first_view().await["viewer"], "p2");
     }
 
@@ -613,13 +670,7 @@ mod a_finished_matchs_seats_may_reopen_its_socket {
             "status": "active",
         }));
         let listening = serve_finished(app).await;
-        let mut client = open(
-            listening.port,
-            &query("match-reopened", &token),
-            &[WS_SUBPROTOCOL],
-        )
-        .await
-        .open();
+        let mut client = open_as(listening.port, "match-reopened", &token).await.open();
         let refusal = client
             .next_message(READ_TIMEOUT)
             .await
@@ -633,9 +684,7 @@ mod a_finished_matchs_seats_may_reopen_its_socket {
         let _serial = SERIAL.lock().await;
         let (app, _p1, p2) = seed_finished_seats(REMATCH_OFFER_TTL_MS + 1).await;
         let listening = serve_finished(Arc::clone(&app)).await;
-        let mut client = open(listening.port, &query("match-reopened", &p2), &[WS_SUBPROTOCOL])
-            .await
-            .open();
+        let mut client = open_as(listening.port, "match-reopened", &p2).await.open();
         let refusal = client
             .next_message(READ_TIMEOUT)
             .await
@@ -653,9 +702,7 @@ mod a_finished_matchs_seats_may_reopen_its_socket {
         let (app, _p1, p2) = seed_finished_seats(0).await;
         fake(&app).lock().await.tables.match_actions.clear();
         let listening = serve_finished(Arc::clone(&app)).await;
-        let mut client = open(listening.port, &query("match-reopened", &p2), &[WS_SUBPROTOCOL])
-            .await
-            .open();
+        let mut client = open_as(listening.port, "match-reopened", &p2).await.open();
         let refusal = client
             .next_message(READ_TIMEOUT)
             .await
@@ -737,9 +784,7 @@ mod banned_profiles_are_refused_the_match_socket {
         // error frame and the forbidden close — `assert_active` runs after the upgrade
         // (`upgrade_socket`), so there is no HTTP status to read here, only no socket and no view.
         set_status(&app, "profile-1", ProfileStatus::Banned).await;
-        let mut refused = open(listening.port, &query("match-1", &token), &[WS_SUBPROTOCOL])
-            .await
-            .open();
+        let mut refused = open_as(listening.port, "match-1", &token).await.open();
         let refusal = refused
             .next_message(READ_TIMEOUT)
             .await
@@ -749,9 +794,7 @@ mod banned_profiles_are_refused_the_match_socket {
 
         // Unbanned: the same handshake opens onto the seat's first view.
         set_status(&app, "profile-1", ProfileStatus::Active).await;
-        let mut client = open(listening.port, &query("match-1", &token), &[WS_SUBPROTOCOL])
-            .await
-            .open();
+        let mut client = open_as(listening.port, "match-1", &token).await.open();
         assert_eq!(client.first_view().await["viewer"], "p1");
     }
 }
@@ -808,9 +851,7 @@ mod the_graceful_shutdown {
         let listener = TcpListener::bind("127.0.0.1:0").await.expect("a free port");
         let port = listener.local_addr().expect("a bound address").port();
         let server = tokio::spawn(serve_until(Arc::clone(&app), listener, shutdown, drain));
-        let mut client = open(port, &query("match-1", &tokens[0]), &[WS_SUBPROTOCOL])
-            .await
-            .open();
+        let mut client = open_as(port, "match-1", &tokens[0]).await.open();
         assert_eq!(client.first_view().await["viewer"], "p1");
 
         // Hold the fake store's lock so the readiness probe's `ping` cannot answer: the request
@@ -881,9 +922,7 @@ mod the_graceful_shutdown {
             },
             drain,
         ));
-        let mut client = open(port, &query("match-1", &tokens[0]), &[WS_SUBPROTOCOL])
-            .await
-            .open();
+        let mut client = open_as(port, "match-1", &tokens[0]).await.open();
         assert_eq!(client.first_view().await["viewer"], "p1");
 
         let started = std::time::Instant::now();
