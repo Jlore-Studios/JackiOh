@@ -54,6 +54,11 @@ export const practiceTestid = {
   resumeLost: "practice-resume-lost",
   /** The end-of-game dialog; data-outcome="win|loss|draw". */
   result: "practice-result",
+  /**
+   * R1303000: in the result dialog of a game on a server seed, what its claim earned:
+   * data-earning="pending|paid|refused|unreachable", and data-reason when refused. role="status".
+   */
+  resultEarning: "practice-result-earning",
   /** In the result dialog: the same difficulty and deck again, with a fresh seed and seat. */
   playAgain: "practice-play-again",
   /** In the result dialog: back to the setup screen. */

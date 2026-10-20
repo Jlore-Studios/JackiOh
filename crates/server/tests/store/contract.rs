@@ -8052,7 +8052,7 @@ mod economy {
     use super::*;
     use jackioh_server::config::SET_TRACK_FIRST_LEVEL;
     use jackioh_server::economy::store::{
-        CosmeticGrant, CounterGrant, InventoryGrant, JloreGrant, QuestGrant, TrackGrant,
+        CosmeticGrant, CounterGrant, InventoryGrant, JloreGrant, PracticeSeed, QuestGrant, TrackGrant,
     };
 
     fn jlore(profile_id: &str, delta: i64, reason: &str, dev: bool, at: i64) -> JloreGrant {
@@ -8560,6 +8560,51 @@ mod economy {
         assert_eq!(economy_of(harness, &kept.id).await, before);
     }
 
+    /// §14.8, R1303001: a practice seed reads back for its own profile alone, with its setup; a
+    /// claim burns it once, and no other profile's claim does; a prune deletes the profile's seeds
+    /// issued before its time, claimed or not, and no other profile's.
+    async fn practice_seeds_issue_claim_once_and_prune(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let card_id = must(harness.playable_ids.first().cloned(), "a card");
+        let now = harness.now();
+        let seed = |name: &str, issued_at: i64| -> PracticeSeed {
+            from(json!({
+                "seed": name, "profileId": owner.id, "issuedAt": issued_at, "claimedAt": null,
+                "setup": {
+                    "difficulty": "hard", "humanSeat": "p2", "deck": { "kind": "random", "lean": "newest" },
+                    "lastBoard": [{ "defId": card_id, "radiant": true }], "catalogVersion": "v-contract",
+                },
+            }))
+        };
+        let (old, new) = (seed("seed-old", now - 10), seed("seed-new", now));
+        q!(harness, t => t.economy_practice_seed_insert(&old));
+        q!(harness, t => t.economy_practice_seed_insert(&new));
+        assert_eq!(
+            q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-new")),
+            Some(new.clone())
+        );
+        assert_eq!(q!(harness, t => t.economy_practice_seed_get(&other.id, "seed-new")), None);
+
+        assert!(!q!(harness, t => t.economy_practice_seed_claim(&other.id, "seed-new", now + 1)));
+        assert!(q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-new", now + 1)));
+        assert!(!q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-new", now + 2)));
+        assert_eq!(
+            q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-new")),
+            Some(PracticeSeed {
+                claimed_at: Some(now + 1),
+                ..new.clone()
+            })
+        );
+
+        q!(harness, t => t.economy_practice_seeds_prune(&other.id, now + 100));
+        q!(harness, t => t.economy_practice_seeds_prune(&owner.id, now));
+        assert_eq!(q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-old")), None);
+        assert!(q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-new")).is_some());
+        q!(harness, t => t.economy_practice_seeds_prune(&owner.id, now + 1));
+        assert_eq!(q!(harness, t => t.economy_practice_seed_get(&owner.id, "seed-new")), None);
+    }
+
     both_stores!(
         jlore_adds_spends_and_refuses_what_the_wallet_cannot_cover,
         a_dev_reason_needs_the_dev_mark_and_a_zero_delta_is_refused,
@@ -8570,6 +8615,7 @@ mod economy {
         a_cosmetic_is_owned_once_per_card_and_per_account,
         every_economy_write_rolls_back_with_its_transaction,
         a_deleted_account_takes_its_economy_with_it,
+        practice_seeds_issue_claim_once_and_prune,
     );
 }
 

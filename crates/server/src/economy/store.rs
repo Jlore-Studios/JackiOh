@@ -1,6 +1,7 @@
 //! The economy's store (SPEC §14.11; migration 0045): every holding of §14 beside its append-only
 //! ledger, over Postgres (`pg` below) or the in-memory fake (`fake` below, whose tables are
-//! `FakeTables::economy`).
+//! `FakeTables::economy`). Migration 0046's practice seeds (§14.8, #1303) live here too: a seed is
+//! no holding and has no ledger, and a claim burns it in place (`economy_practice_seed_claim`).
 //!
 //! Same shape as `duos::store`: every store method is one method on `Tx`, named
 //! `economy_<table>_<verb>`, whose body dispatches to this file's `pg::<name>` or `fake::<name>`.
@@ -18,7 +19,9 @@
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
+use jackioh_engine::config::Difficulty;
 use jackioh_engine::wire::PrintedRarity;
+use jackioh_engine::{LastBoardEntry, LeanPick, PlayerId};
 
 use crate::config::SET_TRACK_FIRST_LEVEL;
 use crate::db::store::{StoreError, StoreResult, Tx};
@@ -186,6 +189,44 @@ pub struct OwnedCosmetics {
     pub account: Vec<String>,
 }
 
+/// The human's deck of a practice game (§9.9), as its seed was issued for it: a list of card ids
+/// (a preset's or a saved deck's), or the random deck the game deals from its seed, leaning on
+/// `lean` (R1372).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum PracticeDeck {
+    Cards { cards: Vec<String> },
+    Random { lean: Option<LeanPick> },
+}
+
+/// A practice game's setup, as the seed was issued for it (#1303): what a claim's log is folded
+/// from, with the seed.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PracticeSetup {
+    /// The AI's tier, whose handicap the AI's seat plays under (R180).
+    pub difficulty: Difficulty,
+    /// The seat the human began in; the AI began in the other (R677).
+    pub human_seat: PlayerId,
+    pub deck: PracticeDeck,
+    /// The human's last board, the server's (R1303003); empty for none.
+    pub last_board: Vec<LastBoardEntry>,
+    /// The catalog the game is played on (R767000).
+    pub catalog_version: String,
+}
+
+/// One row of `public.practice_seeds` (migration 0046): a seed issued for a practice game, and
+/// when it was claimed (R1303001).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PracticeSeed {
+    pub seed: String,
+    pub profile_id: String,
+    pub setup: PracticeSetup,
+    pub issued_at: i64,
+    pub claimed_at: Option<i64>,
+}
+
 // ---------------------------------------------------------------------------
 // The ledgers' rows. Each says why (`reason`), what it was for (`reference`, the `ref` column), and
 // whether a dev tool wrote it (`dev`, §14.10).
@@ -307,6 +348,8 @@ pub struct EconomyTables {
     pub track_grants: Vec<TrackGrant>,
     pub quest_grants: Vec<QuestGrant>,
     pub cosmetic_grants: Vec<CosmeticGrant>,
+    /// Migration 0046's seeds, in the order they were issued.
+    pub practice_seeds: Vec<PracticeSeed>,
 }
 
 // ---------------------------------------------------------------------------
@@ -531,6 +574,41 @@ impl Tx<'_> {
     pub async fn economy_ledger_get(&mut self, profile_id: &str) -> StoreResult<EconomyLedger> {
         economy_dispatch!(self, ledger_get(profile_id))
     }
+
+    /// §14.8, #1303: writes a seed just issued for a practice game.
+    pub async fn economy_practice_seed_insert(&mut self, seed: &PracticeSeed) -> StoreResult<()> {
+        economy_dispatch!(self, practice_seed_insert(seed))
+    }
+
+    /// The profile's seed `seed`, or `None` when it has none by that name (another profile's
+    /// included).
+    pub async fn economy_practice_seed_get(
+        &mut self,
+        profile_id: &str,
+        seed: &str,
+    ) -> StoreResult<Option<PracticeSeed>> {
+        economy_dispatch!(self, practice_seed_get(profile_id, seed))
+    }
+
+    /// R1303001: marks the profile's seed claimed at `at`. False, writing nothing, when it has no
+    /// such seed or it was claimed already, so two claims racing for one seed burn it once.
+    pub async fn economy_practice_seed_claim(
+        &mut self,
+        profile_id: &str,
+        seed: &str,
+        at: i64,
+    ) -> StoreResult<bool> {
+        economy_dispatch!(self, practice_seed_claim(profile_id, seed, at))
+    }
+
+    /// R1303001: deletes the profile's seeds issued before `issued_before`, claimed or not.
+    pub async fn economy_practice_seeds_prune(
+        &mut self,
+        profile_id: &str,
+        issued_before: i64,
+    ) -> StoreResult<()> {
+        economy_dispatch!(self, practice_seeds_prune(profile_id, issued_before))
+    }
 }
 
 /// Migration 0045's `on delete cascade`, in the fake (`db::fake::remove_profile_rows`): every row of
@@ -556,6 +634,7 @@ pub fn remove_economy_rows(tables: &mut EconomyTables, profile_id: &str) {
     tables
         .cosmetic_grants
         .retain(|grant| grant.profile_id != profile_id);
+    tables.practice_seeds.retain(|seed| seed.profile_id != profile_id);
 }
 
 // ---------------------------------------------------------------------------
@@ -569,8 +648,8 @@ mod pg {
 
     use super::{
         CardCosmetic, CosmeticGrant, CounterEntry, CounterGrant, EconomyLedger, HeldQuest, InventoryEntry,
-        InventoryGrant, JloreGrant, OwnedCosmetics, QuestBook, QuestChange, QuestGrant, SetTrack, TrackGrant,
-        count_after, from_literal, literal, track_after,
+        InventoryGrant, JloreGrant, OwnedCosmetics, PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack,
+        TrackGrant, count_after, from_literal, literal, track_after,
     };
     use crate::config::SET_TRACK_FIRST_LEVEL;
     use crate::db::pg::PgTx;
@@ -1228,6 +1307,90 @@ mod pg {
             cosmetics,
         })
     }
+
+    /// Migration 0046. `setup` crosses as text cast to `jsonb`, and reads back as text.
+    pub async fn practice_seed_insert(t: &mut PgTx<'_>, seed: &PracticeSeed) -> Result<(), StoreError> {
+        run_as(t, Some(seed.profile_id.as_str())).await?;
+        sqlx::query(
+            "insert into public.practice_seeds (seed, profile_id, setup, issued_at, claimed_at)
+             values ($1::text, $2::uuid, $3::jsonb, to_timestamp($4::double precision / 1000.0),
+                     case when $5::double precision is null then null
+                          else to_timestamp($5::double precision / 1000.0) end)",
+        )
+        .bind(seed.seed.as_str())
+        .bind(seed.profile_id.as_str())
+        .bind(serde_json::to_string(&seed.setup)?)
+        .bind(seed.issued_at)
+        .bind(seed.claimed_at)
+        .execute(&mut **t)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn practice_seed_get(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        seed: &str,
+    ) -> Result<Option<PracticeSeed>, StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        let row = sqlx::query(
+            "select setup::text as setup, issued_at, claimed_at from public.practice_seeds
+              where seed = $1::text and profile_id = $2::uuid",
+        )
+        .bind(seed)
+        .bind(profile_id)
+        .fetch_optional(&mut **t)
+        .await?;
+        row.map(|row| -> Result<PracticeSeed, StoreError> {
+            let setup: String = row.try_get("setup")?;
+            let claimed_at: Option<OffsetDateTime> = row.try_get("claimed_at")?;
+            Ok(PracticeSeed {
+                seed: seed.to_string(),
+                profile_id: profile_id.to_string(),
+                setup: serde_json::from_str(&setup)?,
+                issued_at: ms_of(row.try_get("issued_at")?),
+                claimed_at: claimed_at.map(ms_of),
+            })
+        })
+        .transpose()
+    }
+
+    /// One statement: the row changes only while it is unclaimed.
+    pub async fn practice_seed_claim(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        seed: &str,
+        at: i64,
+    ) -> Result<bool, StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        let done = sqlx::query(
+            "update public.practice_seeds set claimed_at = to_timestamp($3::double precision / 1000.0)
+              where seed = $1::text and profile_id = $2::uuid and claimed_at is null",
+        )
+        .bind(seed)
+        .bind(profile_id)
+        .bind(at)
+        .execute(&mut **t)
+        .await?;
+        Ok(done.rows_affected() == 1)
+    }
+
+    pub async fn practice_seeds_prune(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        issued_before: i64,
+    ) -> Result<(), StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        sqlx::query(
+            "delete from public.practice_seeds
+              where profile_id = $1::uuid and issued_at < to_timestamp($2::double precision / 1000.0)",
+        )
+        .bind(profile_id)
+        .bind(issued_before)
+        .execute(&mut **t)
+        .await?;
+        Ok(())
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1237,8 +1400,8 @@ mod pg {
 mod fake {
     use super::{
         CardCosmetic, CosmeticGrant, CounterEntry, CounterGrant, EconomyLedger, EconomyTables, HeldQuest,
-        InventoryEntry, InventoryGrant, JloreGrant, OwnedCosmetics, QuestBook, QuestChange, QuestGrant,
-        SetTrack, TrackGrant, count_after, literal, track_after,
+        InventoryEntry, InventoryGrant, JloreGrant, OwnedCosmetics, PracticeSeed, QuestBook, QuestChange,
+        QuestGrant, SetTrack, TrackGrant, count_after, literal, track_after,
     };
     use crate::db::fake::FakeTx;
     use crate::db::store::StoreError;
@@ -1552,5 +1715,58 @@ mod fake {
             quests: mine(&tables.quest_grants, |row| &row.profile_id, profile_id),
             cosmetics: mine(&tables.cosmetic_grants, |row| &row.profile_id, profile_id),
         })
+    }
+
+    /// A seed already held is refused, as Postgres's primary key refuses it.
+    pub fn practice_seed_insert(f: &mut FakeTx<'_>, seed: &PracticeSeed) -> Result<(), StoreError> {
+        let tables = call(f, "economy.practiceSeeds.insert")?;
+        if tables.practice_seeds.iter().any(|held| held.seed == seed.seed) {
+            return Err(StoreError::Other(format!("duplicate practice seed {}", seed.seed)));
+        }
+        tables.practice_seeds.push(seed.clone());
+        Ok(())
+    }
+
+    pub fn practice_seed_get(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        seed: &str,
+    ) -> Result<Option<PracticeSeed>, StoreError> {
+        let tables = call(f, "economy.practiceSeeds.get")?;
+        Ok(tables
+            .practice_seeds
+            .iter()
+            .find(|held| held.seed == seed && held.profile_id == profile_id)
+            .cloned())
+    }
+
+    pub fn practice_seed_claim(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        seed: &str,
+        at: i64,
+    ) -> Result<bool, StoreError> {
+        let tables = call(f, "economy.practiceSeeds.claim")?;
+        match tables.practice_seeds.iter_mut().find(|held| {
+            held.seed == seed && held.profile_id == profile_id && held.claimed_at.is_none()
+        }) {
+            Some(held) => {
+                held.claimed_at = Some(at);
+                Ok(true)
+            }
+            None => Ok(false),
+        }
+    }
+
+    pub fn practice_seeds_prune(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        issued_before: i64,
+    ) -> Result<(), StoreError> {
+        let tables = call(f, "economy.practiceSeeds.prune")?;
+        tables
+            .practice_seeds
+            .retain(|held| held.profile_id != profile_id || held.issued_at >= issued_before);
+        Ok(())
     }
 }

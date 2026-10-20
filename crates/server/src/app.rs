@@ -84,6 +84,9 @@ pub struct App {
     /// §14.12: whether the economy pays out, `config::ECONOMY_LIVE` at boot. A field so a test can
     /// turn it on; nothing else sets it.
     pub economy_live: bool,
+    /// §14.8, #1303: the permits of the practice claims being verified at once,
+    /// `PRACTICE_VERIFY_CONCURRENCY` of them (`api::practice`). One per app, for the limiter's reason.
+    pub practice_verifications: tokio::sync::Semaphore,
 }
 
 // ---------------------------------------------------------------------------
@@ -310,6 +313,19 @@ pub static ROUTES: &[Route] = &[
         "/api/tracks",
         AuthLevel::Active,
         h!(api::economy::get_tracks),
+    ),
+    // api/practice.rs (#1303)
+    (
+        "POST",
+        "/api/practice/seeds",
+        AuthLevel::Active,
+        h!(api::practice::post_seed),
+    ),
+    (
+        "POST",
+        "/api/practice/claims",
+        AuthLevel::Active,
+        h!(api::practice::post_claim),
     ),
     // api/cosmetics.rs (R1313000)
     (
@@ -809,6 +825,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         engine_thread: actor::engine::registered_thread,
         bug_reports,
         economy_live: crate::config::ECONOMY_LIVE,
+        practice_verifications: tokio::sync::Semaphore::new(crate::config::PRACTICE_VERIFY_CONCURRENCY),
     });
 
     if app.env.e2e {

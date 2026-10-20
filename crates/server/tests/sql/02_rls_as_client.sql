@@ -393,7 +393,7 @@ begin
                            'seasons', 'season_ranks', 'bot_ratings', 'rated_games',
                            'action_timings', 'emote_events', 'match_signals', 'bots',
                            'age_checks', 'terms_acceptances',
-                           'record_totals', 'card_totals', 'decklist_totals'] loop
+                           'record_totals', 'card_totals', 'decklist_totals', 'practice_seeds'] loop
     if to_regclass('public.' || t) is null then
       missing := missing || t || ' ';
     end if;
@@ -417,12 +417,13 @@ declare
   -- which the server alone records. The three totals tables (0041, R1044000): the game records
   -- folded, which the server alone reads and serves as the public figures. `match_checkpoints`
   -- (0042, #1169): a live match's whole state, both hands and both libraries, as `matches`.
+  -- `practice_seeds` (0046, #1303): the seeds a practice claim pays on, and each game's setup.
   forbidden constant text[] := array['invite_codes', 'code_attempts', 'matches', 'match_actions', 'match_checkpoints',
                                      'series', 'game_records', 'player_stats',
                                      'seasons', 'season_ranks', 'bot_ratings', 'rated_games',
                                      'action_timings', 'emote_events', 'match_signals', 'bots',
                                      'age_checks', 'terms_acceptances',
-                                     'record_totals', 'card_totals', 'decklist_totals'];
+                                     'record_totals', 'card_totals', 'decklist_totals', 'practice_seeds'];
   missing   text := coalesce(current_setting('rls3.missing', true), 'unknown');
   t         text;
   n         bigint;

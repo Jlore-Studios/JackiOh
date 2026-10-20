@@ -33,7 +33,8 @@
 //! draw `apps/web/src/practice/core.ts` deals a human who asks for a random deck, with nothing
 //! banned, leaning on the newest set for a seat whose player asked for that (R1372). It reads the
 //! registered catalog, so it belongs behind the same `register_all()` as the match itself, and the ai
-//! crate is pure and seeded like the engine: one seed, one deck, in any process.
+//! crate is pure and seeded like the engine: one seed, one deck, in any process. So is the deck the
+//! practice AI plays, which a practice claim's fold deals again (`economy::practice`, #1303).
 //!
 //! Every catalog-reading function here runs under the match's `Pinned` catalog (R388, R767000),
 //! as `duos::engine` does, so a patch deployed under a live match never changes what its log
@@ -45,9 +46,9 @@ use serde::{Deserialize, Serialize};
 
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::{
-    Action, ActionBody, CreateGameOptions, DECK_SIZE, GameResult, GameState, GameSummary, LastBoardEntry,
-    LeanPick, Phase, PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord,
-    ReplayRefusal, Rng, SetName, ShippedCatalog,
+    Action, ActionBody, CreateGameOptions, DECK_SIZE, GameResult, GameState, GameSummary, Handicap,
+    LastBoardEntry, LeanPick, Phase, PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage,
+    ReplayRecord, ReplayRefusal, Rng, SetName, ShippedCatalog,
 };
 
 pub use jackioh_engine::{FoldArgs, FoldResult, ReduceResult};
@@ -309,6 +310,22 @@ pub fn deal_random_deck_with_strength(seed: &str, lean: Option<SetName>, strengt
             lean_set: lean,
             gated_sets: Some(vec![]),
             strength: Some(strength),
+            ..AiDeckOptions::default()
+        },
+    )
+}
+
+/// §9.9, #1303: the deck the practice AI plays in a free game on `seed`, as the browser's worker
+/// deals it (`apps/web/src/practice/core.ts`, `decksAndHandicap`): the AI's own weighted draw, under
+/// its shadow ban (R186) and soft gate (R1390), at the tier's deck size and curved to its mana cap,
+/// on the stream `"{seed}:ai-deck"`. It reads the catalog the caller's `Pinned` runs it under.
+pub fn deal_practice_ai_deck(seed: &str, handicap: &Handicap) -> Vec<String> {
+    registered();
+    build_ai_deck(
+        &mut Rng::new(&format!("{seed}:ai-deck"), 0),
+        handicap.deck_size,
+        &AiDeckOptions {
+            mana_cap: Some(handicap.mana_cap),
             ..AiDeckOptions::default()
         },
     )
