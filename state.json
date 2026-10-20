@@ -5643,6 +5643,8 @@
       "run_id": "39383019024",
       "started_at": "2026-10-20T07:01:57Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 1
     },
