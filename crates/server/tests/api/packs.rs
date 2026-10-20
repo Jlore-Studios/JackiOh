@@ -205,6 +205,7 @@ fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
         rarity,
         default: false,
         starter: false,
+        chase: false,
         card: None,
     }
 }
