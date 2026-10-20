@@ -7332,20 +7332,20 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "spec/INDEX.md"
+            "crates/server/README.md"
           ],
-          "from": "7e76d922abdd14223f6ebb9cd565294a691f3273",
-          "main": "ac3e7916135bff200839c25cc3152da60bc5ab1d"
+          "from": "69992c79b2637858884f8fa5511a84093d8b2fd6",
+          "main": "17fa91517d2420631bd2af1466256bbc0b541262"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39394636430",
+            "run": "39407481910",
             "tier": "strong"
           }
         ],
-        "sha": "69992c79b2637858884f8fa5511a84093d8b2fd6",
+        "sha": "197b398d2c97182d78fa487842c470f0e6c12aa9",
         "tiers": {
           "claude": "strong"
         }
