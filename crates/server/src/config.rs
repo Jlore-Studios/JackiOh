@@ -647,8 +647,9 @@ pub const BUG_REPORT_API_URL: &str = "https://api.github.com";
 /// bot/README.md), the strong tier (CLAUDE.md rule 11: the server and the engine are hard) and the
 /// front of the queue, since a match that does not rebuild is a broken game.
 pub const BUG_REPORT_LABELS: &[&str] = &["patch", "bot:build", "difficulty:hard", "priority:high"];
-/// How many reports one process files in `BUG_REPORT_WINDOW_MS`. A determinism break shows on every
-/// match a deploy rebuilds, so the first few say it and the rest are only logged.
+/// How many issues one process opens in `BUG_REPORT_WINDOW_MS`, one per failure signature
+/// (`bug_reports::Signature`). A determinism break shows on every match a deploy rebuilds, and
+/// those matches share a signature and so an issue; a signature beyond this is only logged.
 pub const BUG_REPORTS_PER_WINDOW: usize = 5;
 /// The window `BUG_REPORTS_PER_WINDOW` counts in: an hour.
 pub const BUG_REPORT_WINDOW_MS: i64 = 60 * 60 * 1000;
@@ -656,6 +657,9 @@ pub const BUG_REPORT_WINDOW_MS: i64 = 60 * 60 * 1000;
 pub const BUG_REPORT_TIMEOUT_MS: u64 = 10_000;
 /// How many refused actions a report lists one by one; the rest are counted.
 pub const BUG_REPORT_LISTED_ACTIONS: usize = 10;
+/// How many matches one signature's issue lists. Each one edits the issue's body, so this bounds the
+/// edits as `BUG_REPORTS_PER_WINDOW` bounds the issues; a later match is only logged (`bug.found`).
+pub const BUG_REPORT_LISTED_MATCHES: usize = 20;
 
 // ---------------------------------------------------------------------------------------------
 // Glitch (issue #170; SPEC §7, R678, R679).
@@ -2228,3 +2232,10 @@ pub const COSMETIC_DUPLICATE_RATES: CosmeticDuplicateRates = CosmeticDuplicateRa
 pub const PACK_FILLER_RARE_RATE: f64 = 0.25;
 /// SPEC §14.3: the name a request gives the global card pack; a set's pack goes by its set's name.
 pub const GLOBAL_PACK_NAME: &str = "global";
+
+// ---- Dev accounts (SPEC §14.10, #1300) ----
+
+/// §14.10, R1300000: the environment variable that lists the dev accounts, comma-separated profile
+/// ids (`env.rs` reads it at boot, `seed-catalog` for R1300001's exemption). A name, not a number,
+/// and never exported: the client learns only whether its own caller is one (`isDev`).
+pub const DEV_PROFILE_IDS: &str = "DEV_PROFILE_IDS";

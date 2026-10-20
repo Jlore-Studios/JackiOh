@@ -541,6 +541,8 @@ struct Options {
     /// (its stub writer needed none); the Rust actor always writes through the real `api::results`,
     /// so both profiles are always seeded, at 1000 unless a test says otherwise.
     ratings: [f64; 2],
+    /// R1351000: (blocker, blocked) profile pairs standing before the match starts.
+    blocks: Vec<(&'static str, &'static str)>,
 }
 
 impl Default for Options {
@@ -554,6 +556,7 @@ impl Default for Options {
             attach: true,
             walk: Walk::ToTurnOne,
             ratings: [1000.0, 1000.0],
+            blocks: Vec::new(),
         }
     }
 }
@@ -698,6 +701,12 @@ async fn harness(options: Options) -> Harness {
         json!({ "id": "profile-2", "rating": second, "inMatchId": MATCH_ID }),
     )
     .await;
+    // R1351000: the blocks standing as the match begins, which the actor reads as it arms.
+    for (blocker, blocked) in &options.blocks {
+        let mut tx = app.db.begin(None).await.expect("a store transaction");
+        tx.blocks_add(blocker, blocked, now()).await.expect("blocks.add");
+        tx.commit().await.expect("commit");
+    }
 
     let mut seats = json!([
         { "profileId": "profile-1", "player": "p1", "deck": decks.0 },
@@ -2640,6 +2649,190 @@ mod r1127_emotes_become_actions_while_heard {
         assert_eq!(errors(&h.p1), Vec::<Value>::new());
         assert_eq!(relays(&h.p1), Vec::<Value>::new());
         assert_eq!(emote_rows(&h).await, Vec::<Value>::new());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// R1351000 — a block mutes the two seats' emotes (§9.4)
+// ---------------------------------------------------------------------------
+
+mod r1351000_a_block_mutes_emotes_between_the_seats {
+    use super::*;
+    use crate::support::engine::TEST_HEARS_EMOTES;
+
+    fn relays(socket: &Client) -> Vec<Value> {
+        socket.of_type("emote")
+    }
+
+    /// R1342: the hand the account's last portraits frame dealt it — the only emotes it may send.
+    fn emote_hand(socket: &Client) -> Vec<String> {
+        let frame = socket
+            .of_type("portraits")
+            .last()
+            .cloned()
+            .expect("a portraits frame");
+        frame["emotes"]
+            .as_array()
+            .expect("the frame's emote hand")
+            .iter()
+            .map(|id| id.as_str().expect("an emote id").to_string())
+            .collect()
+    }
+
+    /// The `n`th emote of the hand `socket` was dealt.
+    fn dealt(socket: &Client, n: usize) -> String {
+        emote_hand(socket)
+            .get(n)
+            .cloned()
+            .expect("a hand of EMOTE_HAND_SIZE")
+    }
+
+    /// The rows the actor minted for emotes: `srv-emote-*` nonces (R270).
+    async fn emote_rows(h: &Harness) -> Vec<Value> {
+        h.rows()
+            .await
+            .into_iter()
+            .filter(|row| {
+                row["action"]["nonce"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .starts_with("srv-emote-")
+            })
+            .collect()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1351000_a_block_either_way_relays_neither_seats_emote_and_tells_the_sender_nothing() {
+        for pair in [("profile-1", "profile-2"), ("profile-2", "profile-1")] {
+            let h = harness(Options {
+                blocks: vec![pair],
+                ..Options::default()
+            })
+            .await;
+            let (p1_emote, p2_emote) = (dealt(&h.p1, 0), dealt(&h.p2, 0));
+            h.p1.clear();
+            h.p2.clear();
+
+            h.p1.receive_json(json!({ "type": "emote", "emote": p1_emote }));
+            h.p2.receive_json(json!({ "type": "emote", "emote": p2_emote }));
+            h.idle().await;
+
+            for socket in [&h.p1, &h.p2] {
+                assert_eq!(relays(socket), Vec::<Value>::new(), "{pair:?}");
+                assert_eq!(errors(socket), Vec::<Value>::new(), "{pair:?}");
+                assert_eq!(acks(socket), Vec::<Value>::new(), "{pair:?}");
+            }
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1351000_a_block_of_a_third_player_mutes_nothing() {
+        let h = harness(Options {
+            blocks: vec![("profile-1", "profile-3")],
+            ..Options::default()
+        })
+        .await;
+        let emote = dealt(&h.p1, 0);
+        h.p1.clear();
+        h.p2.clear();
+
+        h.p1.receive_json(json!({ "type": "emote", "emote": emote }));
+        h.idle().await;
+
+        assert_eq!(
+            relays(&h.p2),
+            vec![json!({ "type": "emote", "from": "p1", "emote": emote })]
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1351000_a_card_that_hears_emotes_still_hears_a_muted_one_after_the_hand_check_and_the_rate_gate()
+     {
+        let h = harness(Options {
+            decks: Decks::Scripted {
+                p1: vec![TEST_HEARS_EMOTES],
+                p2: vec![],
+            },
+            blocks: vec![("profile-2", "profile-1")],
+            ..Options::default()
+        })
+        .await;
+        // p1 plays the hearing Field Spell, so either seat's emote is an action from here on.
+        send(
+            &h,
+            &h.p1,
+            "n1",
+            json!({ "type": "play", "instanceId": in_hand(&h.p1, TEST_HEARS_EMOTES) }),
+        )
+        .await;
+        assert!(acks(&h.p1).iter().any(|ack| ack["nonce"] == "n1"));
+        let held = emote_hand(&h.p2);
+        let outside = EMOTE_IDS
+            .iter()
+            .map(|id| id.as_str())
+            .find(|id| !held.iter().any(|kept| kept == id))
+            .expect("PREMISE: the pool is bigger than the hand");
+        let (first, second) = (dealt(&h.p2, 0), dealt(&h.p2, 1));
+        h.p1.clear();
+        h.p2.clear();
+
+        // The hand check runs first: an emote outside p2's hand mints nothing, muted or not.
+        h.p2.receive_json(json!({ "type": "emote", "emote": outside }));
+        h.idle().await;
+        assert_eq!(emote_rows(&h).await, Vec::<Value>::new());
+        assert!(
+            h.log
+                .events()
+                .iter()
+                .any(|event| event == "match.emote.outside_hand")
+        );
+
+        // A dealt one passes both gates: relayed to no one, yet the card hears it.
+        h.p2.receive_json(json!({ "type": "emote", "emote": first }));
+        h.idle().await;
+        assert_eq!(relays(&h.p1), Vec::<Value>::new());
+        let rows = emote_rows(&h).await;
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["action"]["emote"], json!(first));
+
+        // The rate gate still spends: a second one inside the cooldown is dropped, so no new row.
+        h.p2.receive_json(json!({ "type": "emote", "emote": second }));
+        h.idle().await;
+        assert_eq!(emote_rows(&h).await.len(), 1);
+        assert_eq!(relays(&h.p1), Vec::<Value>::new());
+        assert_eq!(errors(&h.p2), Vec::<Value>::new());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1351000_a_block_made_mid_match_mutes_the_match_from_then_on() {
+        let h = harness(Options::default()).await;
+        let (first, second, third) = (dealt(&h.p1, 0), dealt(&h.p1, 1), dealt(&h.p1, 2));
+        let reply = dealt(&h.p2, 0);
+        h.p1.clear();
+        h.p2.clear();
+
+        // PREMISE: unblocked, p1's emote relays.
+        h.p1.receive_json(json!({ "type": "emote", "emote": first }));
+        h.idle().await;
+        assert_eq!(relays(&h.p2).len(), 1);
+
+        // A block between two other accounts touches no match here.
+        assert_eq!(h.app.matches.mute_emotes_between("profile-1", "profile-3"), 0);
+        advance(EMOTE_COOLDOWN_MS + 1).await;
+        h.p1.receive_json(json!({ "type": "emote", "emote": second }));
+        h.idle().await;
+        assert_eq!(relays(&h.p2).len(), 2);
+
+        // The block between this match's two accounts mutes it, whichever of them made it.
+        assert_eq!(h.app.matches.mute_emotes_between("profile-2", "profile-1"), 1);
+        advance(EMOTE_WINDOW_MS).await;
+        h.p1.receive_json(json!({ "type": "emote", "emote": third }));
+        h.p2.receive_json(json!({ "type": "emote", "emote": reply }));
+        h.idle().await;
+        assert_eq!(relays(&h.p2).len(), 2);
+        assert_eq!(relays(&h.p1), Vec::<Value>::new());
+        assert_eq!(errors(&h.p1), Vec::<Value>::new());
+        assert_eq!(errors(&h.p2), Vec::<Value>::new());
     }
 }
 

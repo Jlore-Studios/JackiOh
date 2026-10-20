@@ -11,7 +11,9 @@
 
 use indexmap::IndexMap;
 
-use crate::config::{BUG_REPORT_REPO_DEFAULT, DEFAULT_TRUSTED_PROXY_HOPS, MAX_TRUSTED_PROXY_HOPS};
+use crate::config::{
+    BUG_REPORT_REPO_DEFAULT, DEFAULT_TRUSTED_PROXY_HOPS, DEV_PROFILE_IDS, MAX_TRUSTED_PROXY_HOPS,
+};
 
 /// The deployment environment (TS `"development" | "test" | "production"`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -91,6 +93,9 @@ pub struct Env {
     pub github_issues_token: Option<String>,
     /// `GITHUB_ISSUES_REPO`: the `owner/name` a report is filed in; `BUG_REPORT_REPO_DEFAULT` unset.
     pub github_issues_repo: String,
+    /// R1300000: `DEV_PROFILE_IDS`, the profile ids of the dev accounts (SPEC §14.10), each a UUID
+    /// in its canonical lower-case hyphenated form. Empty when unset: no dev accounts.
+    pub dev_profile_ids: Vec<String>,
 }
 
 impl std::fmt::Debug for Env {
@@ -119,6 +124,8 @@ impl std::fmt::Debug for Env {
                 &self.github_issues_token.as_ref().map(|_| REDACTED),
             )
             .field("github_issues_repo", &self.github_issues_repo)
+            // A dev account's id is its account secret ID (R1300000): only how many are listed.
+            .field("dev_profile_ids", &self.dev_profile_ids.len())
             .finish()
     }
 }
@@ -183,6 +190,7 @@ pub const SERVER_ONLY_ENV_VARS: &[&str] = &[
     "LADDER_BOTS",
     "CREATE_ISSUES_TOKEN",
     "GITHUB_ISSUES_REPO",
+    DEV_PROFILE_IDS,
 ];
 
 const MIN_CODE_PEPPER_LENGTH: usize = 32;
@@ -369,6 +377,31 @@ fn parse_github_issues_repo(value: Option<&str>, problems: &mut Vec<String>) -> 
     BUG_REPORT_REPO_DEFAULT.to_string()
 }
 
+/// R1300000: `DEV_PROFILE_IDS`, comma-separated profile ids, each kept in its canonical form (a UUID
+/// in lower case with hyphens, whatever case or form it was written in); blank entries are skipped.
+/// Unset or blank lists none. One problem names every entry that is no UUID. `seed-catalog` reads
+/// the same variable through here (R1300001).
+pub fn parse_dev_profile_ids(value: Option<&str>) -> Result<Vec<String>, String> {
+    let Some(raw) = value.filter(|text| is_non_empty(Some(text))) else {
+        return Ok(Vec::new());
+    };
+    let mut ids = Vec::new();
+    let mut malformed = Vec::new();
+    for entry in raw.split(',').map(js_trim).filter(|entry| !entry.is_empty()) {
+        match uuid::Uuid::parse_str(entry) {
+            Ok(id) => ids.push(id.hyphenated().to_string()),
+            Err(_) => malformed.push(quoted(entry)),
+        }
+    }
+    if !malformed.is_empty() {
+        return Err(format!(
+            "{DEV_PROFILE_IDS}: the comma-separated profile ids of the dev accounts (SPEC §14.10), each a profile id (a UUID, as the account page's \"Show account secret ID\" shows it) (got {}). Optional; unset means no dev accounts.",
+            malformed.join(", ")
+        ));
+    }
+    Ok(ids)
+}
+
 /// Optional, and never a problem: anything that is not a git SHA is simply not reported.
 fn parse_deployed_commit(value: Option<&str>) -> Option<String> {
     let trimmed = js_trim(value?).to_lowercase();
@@ -494,6 +527,10 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
     let ladder_bots = parse_ladder_bots(read("LADDER_BOTS"), &mut problems);
     let github_issues_token = parse_github_issues_token(read("CREATE_ISSUES_TOKEN"));
     let github_issues_repo = parse_github_issues_repo(read("GITHUB_ISSUES_REPO"), &mut problems);
+    let dev_profile_ids = parse_dev_profile_ids(read(DEV_PROFILE_IDS)).unwrap_or_else(|problem| {
+        problems.push(problem);
+        Vec::new()
+    });
 
     if e2e && node_env == NodeEnv::Production {
         problems.push(
@@ -534,6 +571,7 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
         ladder_bots,
         github_issues_token,
         github_issues_repo,
+        dev_profile_ids,
     })
 }
 

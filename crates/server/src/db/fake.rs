@@ -1295,6 +1295,12 @@ pub fn collection_append_grants(f: &mut FakeTx<'_>, grants: &[CollectionGrant]) 
                 "collection_grants.delta must not be 0".to_string(),
             ));
         }
+        // `collection_grants_dev_check` in migration 0046 (R1300000).
+        if grant.reason == crate::api::dev::DEV_GRANT_REASON && !grant.dev {
+            return Err(StoreError::from(
+                "collection_grants_dev_check: a dev reason needs the dev mark".to_string(),
+            ));
+        }
     }
     f.tables().grants.extend(grants.iter().cloned());
     Ok(())

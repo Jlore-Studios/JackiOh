@@ -27,6 +27,11 @@
 // (`auth/UsernameField.tsx`), or is told when it may during the cooldown. Every name on the screen,
 // the rank line's included, is drawn through `auth/Username.tsx`.
 //
+// THE ACCOUNT SECRET ID (R1300000) is the profile id, which a developer needs before the server's
+// `DEV_PROFILE_IDS` can list them: "Manage sign-in & account" offers it to every signed-in account,
+// hidden until asked for, with a copy button. A listed account (`me.isDev`, the server's word) also
+// gets the Dev tools panel (`DevTools.tsx`) behind a toggle of its own.
+//
 // DELETING THE ACCOUNT. "Delete my account" asks first: the player types DELETE, then confirms.
 // `DELETE /api/account` does the deleting, at the server, which decides what goes and answers 204.
 // Only then does this device forget the session, the way signing out does, and load the landing
@@ -51,6 +56,7 @@ import { badgeWords, rankWords } from "../rank/rank.ts";
 import { paths } from "../net/navigate.ts";
 import { clearSession, forgetPendingAddresses, readSession } from "../net/session.ts";
 import ChangeEmail from "../settings/ChangeEmail.tsx";
+import DevTools from "./DevTools.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import TwoStepSettings from "../auth/TwoStepSettings.tsx";
 import { useSecondsUntil } from "../auth/cooldown.ts";
@@ -83,6 +89,12 @@ export const accountTestid = {
   deleteConfirm: "account-delete-confirm",
   deleteCancel: "account-delete-cancel",
   deleteError: "account-delete-error",
+  /** R1300000: the account secret ID, hidden until "Show account secret ID", and its copy button. */
+  secretIdShow: "account-secret-id-show",
+  secretId: "account-secret-id",
+  secretIdCopy: "account-secret-id-copy",
+  /** R1300000: the Dev tools toggle, shown only when the server says `isDev`. */
+  devToggle: "account-dev-toggle",
 } as const;
 
 /** What a player types before an account is deleted. Case and spaces around it don't matter. */
@@ -215,6 +227,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
   const [rank, setRank] = useState<OwnRankResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [manageOpen, setManageOpen] = useState(false);
+  const [devOpen, setDevOpen] = useState(false);
 
   useEffect(() => {
     if (pending) return;
@@ -340,7 +353,19 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
           token={token}
           own={username}
           canChange={me?.profile.status === "active"}
+          profileId={me?.profile.id}
         />
+
+        {/* R1300000: the server's word decides whether the panel shows; each tool asks it again. */}
+        {me?.isDev === true ? (
+          <AccountDevTools
+            open={devOpen}
+            onToggle={() => {
+              setDevOpen(!devOpen);
+            }}
+            token={token}
+          />
+        ) : null}
 
         <div className="account-session">
           <p>
@@ -375,12 +400,14 @@ function AccountManage({
   token,
   own,
   canChange,
+  profileId,
 }: {
   open: boolean;
   onToggle: () => void;
   token: string;
   own: OwnUsername | undefined;
   canChange: boolean;
+  profileId: string | undefined;
 }): ReactElement {
   const bodyId = useId();
   return (
@@ -402,11 +429,96 @@ function AccountManage({
           {own !== undefined ? (
             <AccountUsername token={token} own={own} canChange={canChange} />
           ) : null}
+          {profileId !== undefined ? <AccountSecretId id={profileId} /> : null}
           {/* R663: the email change, through the auth provider (it renders nothing signed out). */}
           <ChangeEmail />
           {/* R665: an authenticator app for this account. */}
           <TwoStepSettings token={token} />
           <DeleteAccount token={token} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * R1300000: the account secret ID, the profile id a developer sends to be listed in
+ * `DEV_PROFILE_IDS`. Hidden until asked for; then shown with a copy button. A copy that fails
+ * stays silent, as the room code's does (`play.tsx`): the ID is on screen to copy by hand.
+ */
+function AccountSecretId({ id }: { id: string }): ReactElement {
+  const [shown, setShown] = useState(false);
+  const [copied, setCopied] = useState(false);
+  if (!shown) {
+    return (
+      <div className="account-actions">
+        <button
+          type="button"
+          className="link-button"
+          data-testid={accountTestid.secretIdShow}
+          onClick={() => {
+            setShown(true);
+          }}
+        >
+          {t("Show account secret ID")}
+        </button>
+      </div>
+    );
+  }
+  const copy = (): void => {
+    Promise.resolve()
+      .then(() => navigator.clipboard.writeText(id))
+      .then(
+        () => {
+          setCopied(true);
+        },
+        () => undefined,
+      );
+  };
+  return (
+    <div className="account-username">
+      <p className="account-label">{t("Account secret ID")}</p>
+      <code data-testid={accountTestid.secretId}>{id}</code>
+      <div className="account-actions">
+        <button type="button" data-testid={accountTestid.secretIdCopy} onClick={copy}>
+          {copied ? t("Copied") : t("Copy")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * R1300000: the Dev tools behind a toggle of their own, in "Manage sign-in & account"'s markup, so
+ * the panel mounts only once opened. Rendered only when `/api/auth/me` says `isDev`.
+ */
+function AccountDevTools({
+  open,
+  onToggle,
+  token,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  token: string;
+}): ReactElement {
+  const bodyId = useId();
+  return (
+    <div className="account-manage">
+      <div className="account-actions">
+        <button
+          type="button"
+          className="account-manage__toggle"
+          data-testid={accountTestid.devToggle}
+          aria-expanded={open}
+          aria-controls={bodyId}
+          onClick={onToggle}
+        >
+          {t("Dev tools")}
+        </button>
+      </div>
+      {open ? (
+        <div className="account-manage__body" id={bodyId}>
+          <DevTools token={token} />
         </div>
       ) : null}
     </div>

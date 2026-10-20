@@ -11,6 +11,7 @@ pub mod cosmetics;
 pub mod crypto;
 pub mod custom_cards;
 pub mod decks;
+pub mod dev;
 pub mod e2e;
 pub mod economy;
 pub mod game_records;

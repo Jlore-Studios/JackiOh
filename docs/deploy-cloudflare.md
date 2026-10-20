@@ -355,6 +355,11 @@ What is left is the dashboards' half (#256): set the Supabase Site URL to `https
 - **The deploy job fails:** the commit is on `production` but not live. The run's log names the
   step: the build, the bundle check (a missing `VITE_` setting), the deploy (the token), or the live
   check. Fix it on `main`, then Actions -> promote production -> Run workflow with **redeploy**.
+- **A dev account (SPEC §14.10):** Render -> jackioh-server -> Environment -> `DEV_PROFILE_IDS`,
+  each developer's profile id comma-separated. They find theirs on `/account`: "Manage sign-in &
+  account", then "Show account secret ID". Save, and the service redeploys; the listed accounts then
+  see the Dev tools panel on `/account`. A malformed id refuses the boot, and the deploy's log names
+  it. Locally, the same line in `crates/server/.env`.
 - **Scheduled runs stop, or never start:** GitHub disables scheduled workflows in a repository with
   no activity for 60 days, and may start a schedule late or not at all. Re-enable it in the Actions
   tab. Nothing depends on it: every green push to `main`, a comment on the countdown issue and a

@@ -107,3 +107,9 @@ services:
       # (crates/server/README.md, "A match its log does not reproduce"); without it, only logs it.
       - key: CREATE_ISSUES_TOKEN
         sync: false
+      # Optional: SPEC §14.10 R1300000's dev accounts, comma-separated profile ids (each the account
+      # secret ID /account shows). A listed account gets the Dev tools for its own economy, and
+      # `release`'s seed-catalog passes it over in a new catalog's grant (R1300001). A malformed id
+      # refuses the boot; unset, there are none.
+      - key: DEV_PROFILE_IDS
+        sync: false

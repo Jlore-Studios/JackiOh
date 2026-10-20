@@ -1858,11 +1858,33 @@ mod collection {
         assert_eq!(harness.collection_dev_marks(&profile.id).await, vec![false, true]);
     }
 
+    /// R1300000: the reason `dev` (migration 0046) is a dev tool's own, written only marked `dev`
+    /// (`collection_grants_dev_check`); unmarked, both stores refuse it and write nothing.
+    async fn r1300000_a_dev_reason_is_written_only_with_the_dev_mark(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let card_id = must(harness.playable_ids.first().cloned(), "a card");
+        let dev = |dev: bool| CollectionGrant {
+            reason: "dev".to_string(),
+            dev,
+            ..grant(&profile.id, &card_id, 1, harness.now())
+        };
+        q!(harness, t => t.collection_append_grants(&[dev(true)]));
+        assert_eq!(harness.collection_dev_marks(&profile.id).await, vec![true]);
+        let refused = call!(harness, t => t.collection_append_grants(&[dev(false)]));
+        assert!(
+            refused.is_err(),
+            "{}: an unmarked dev reason was written",
+            harness.name
+        );
+        assert_eq!(harness.collection_dev_marks(&profile.id).await, vec![true]);
+    }
+
     both_stores!(
         sets_absolute_quantities_and_appends_grants,
         rolls_both_ledger_writes_back_when_the_transaction_throws,
         commits_what_a_transaction_that_returns_wrote,
         a_collection_grant_keeps_its_dev_mark,
+        r1300000_a_dev_reason_is_written_only_with_the_dev_mark,
     );
 }
 

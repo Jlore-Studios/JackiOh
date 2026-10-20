@@ -111,13 +111,13 @@ A dev account can, for itself alone:
 - clear its cards, its cosmetics, its Jlore, its bars and pity counters, or its track progress, each apart, or all of them;
 - be given a quest at once, or complete one ([[§14.9]]).
 
-Every dev grant and clear is written as ledger rows marked `dev`, so a dev grant can always be told apart ([[§14.11]]). Once the dev accounts' sub-issue writes its ruling, [[R481]]'s grant of each new catalog version skips a dev account, so a clear stays cleared. Otherwise a dev account counts as any other does: its games go into the card statistics ([[§9.11]]) and the ladder ([[§9.12]]).
+Every dev grant and clear is written as ledger rows marked `dev` ([[R1300000]]), so a dev grant can always be told apart ([[§14.11]]). [[R481]]'s grant of each new catalog version skips a dev account, so a clear stays cleared ([[R1300001]]). Otherwise a dev account counts as any other does: its games go into the card statistics ([[§9.11]]) and the ladder ([[§9.12]]).
 
 ### 14.11 The ledger
 
 The ledger today is `collection` plus the append-only `collection_grants` (`crates/server/migrations/0002_collection.sql`): every change writes both in one transaction, and no client path writes either ([[§9.4]]). Every holding of the economy follows that pattern, a current-state table beside an append-only one, readable by its own account alone. Every grant of anything (cards, Jlore, packs, tokens, cosmetics, XP) is one append-only row, written server-side in the transaction that changes the state; so is every spend, such as a pack bought or a token redeemed. A row is never edited, and is deleted only with its account ("Delete my account", [[§9.4]]): a mistaken grant is corrected by an offsetting row.
 
-Every row says why. The collection's reasons are `pack`, `craft`, `reward`, `refund`, `admin` and `launch`; a new kind of grant gets its reason from the sub-issue that adds it. A row a dev tool wrote is marked `dev` ([[§14.10]]).
+Every row says why. The collection's reasons are `pack`, `craft`, `reward`, `refund`, `admin`, `launch` and `dev`, a dev tool's own ([[R1300000]]); a new kind of grant gets its reason from the sub-issue that adds it. A row a dev tool wrote is marked `dev` ([[§14.10]]).
 
 Every roll is seeded on the server, and its seed and result are logged with the grant it makes, so any opening replays exactly and can be audited. Each opening's seed is drawn afresh, so no seed an account can read foretells a later roll.
 
