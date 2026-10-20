@@ -78,7 +78,9 @@
 }
 
 .board-backdrop[data-backdrop="field-fireflies"] {
-  background: radial-gradient(100% 80% at 50% 100%, rgb(72 128 40 / 26%), transparent 72%);
+  /* R1297000's painted-share gate samples the board on a 6 px grid: the wash must read past the
+     particles' glow, so it holds its alpha before fading out. */
+  background: radial-gradient(100% 80% at 50% 100%, rgb(72 128 40 / 26%) 45%, transparent 80%);
 }
 
 .board-backdrop[data-backdrop="field-fireflies"] .board-backdrop-particle {

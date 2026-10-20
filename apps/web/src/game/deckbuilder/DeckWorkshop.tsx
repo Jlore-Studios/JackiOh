@@ -14,6 +14,7 @@ import { deckCosmeticPatch } from "../../cards/cosmetics.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import type { DecksResponse } from "../../net/api.ts";
 import { BackLink } from "../../routes/nav.tsx";
+import DeckCosmeticsPicker from "./DeckCosmeticsPicker.tsx";
 import DeckEditor from "./DeckEditor.tsx";
 import { DECK_SIZE } from "./deckSize.ts";
 import type { PoolFilter, PoolSort } from "./filters.ts";
@@ -484,9 +485,6 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         onPortrait={(portrait) => {
           store.updateDeck(openDeck.id, { portrait });
         }}
-        onCosmetic={(kind, id) => {
-          store.updateDeck(openDeck.id, deckCosmeticPatch(kind, id));
-        }}
         onCards={(cards) => {
           store.updateDeck(openDeck.id, { cards });
         }}
@@ -582,6 +580,14 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
       <header className="db-header">
         <BackLink />
         <h1 className="db-title">{t("Decks")}</h1>
+        {openDeck === null ? null : (
+          <DeckCosmeticsPicker
+            deck={openDeck}
+            onCosmetic={(kind, id) => {
+              store.updateDeck(openDeck.id, deckCosmeticPatch(kind, id));
+            }}
+          />
+        )}
         <SyncStatusLine status={snapshot.status} />
       </header>
 

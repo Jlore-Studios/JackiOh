@@ -396,6 +396,59 @@
   font: inherit;
 }
 
+/* --- the deck's cosmetics popover (R1297000) ----------------------------------------------------- */
+/*
+ * The open deck's playmat, backdrop and card back live behind a top-bar button: three inline
+ * selects in the sidebar push the verdict and the pool's first row off the first screen
+ * (BUILD M5-T1). The button matches the settings gear's size so the header keeps its rows.
+ */
+
+.ws-cosmetics {
+  position: relative;
+  display: inline-flex;
+}
+
+.ws-cosmetics-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  min-height: 30px;
+  padding: 4px 9px;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.ws-cosmetics-button__icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.ws-cosmetics-button__icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ws-cosmetics-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: max-content;
+  max-width: min(92vw, 300px);
+  min-width: 220px;
+  padding: 12px;
+  border: 1px solid var(--line-bright);
+  border-radius: 14px;
+  background: var(--bg-raised);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 60%);
+}
+
 /* --- the deck editor's comparison, verdict, code and confirm ------------------------------------- */
 
 .ws-compare {
