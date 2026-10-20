@@ -11689,8 +11689,14 @@
     "what": "build #1350 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-20T03:23:03Z",
-    "notes": [],
+    "at": "2026-10-20T03:29:57Z",
+    "notes": [
+      "started a night run, as a lane was free: #1383 (medium) is queued to review, for `claude-7`: review on `claude-7` (claude, `opus`, strong)",
+      "#1387: typed it Task",
+      "#1386: typed it Task",
+      "#1385: typed it Bug",
+      "#1384: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
