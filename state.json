@@ -11216,8 +11216,12 @@
     "what": "suggestions on muse"
   },
   "last_sweep": {
-    "at": "2026-10-20T00:58:32Z",
-    "notes": [],
+    "at": "2026-10-20T01:05:10Z",
+    "notes": [
+      "#1303 needs a plan",
+      "#1304 needs a plan",
+      "started a night run, as a lane was free: #1303 (hard) is queued to build, for `claude-3`: plan on `claude-3` (claude, `opus`, strong)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
