@@ -12,7 +12,9 @@
 //! not played — each with the games behind it. With nothing named
 //! it reads every counted seat of live games of every mode and patch (R807000's merged display):
 //! a development run's records are read only with `--source=dev` or `--source=all` (R378), and
-//! `--pilot=human` reads the people's sides only, `--pilot=ai` the bots'. `--json` prints the
+//! `--pilot=human` reads the people's sides only, `--pilot=ai` the bots'. Forced runs never reach
+//! the table because `stats-import` refuses their records whole, so no `--source=dev` figure counts
+//! rigged games (R1284000). `--json` prints the
 //! report as data instead.
 //!
 //! The arithmetic is `card_stats_of` in `jackioh_engine::wire::stats` (TS
