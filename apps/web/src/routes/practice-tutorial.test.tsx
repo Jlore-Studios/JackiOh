@@ -126,6 +126,10 @@ function routeHost(options: HostOptions = {}): RouteHost {
           // R768: nothing on screen asks yet.
           response = { id: mine, type: "failed", message: "this route keeps no replays" };
           break;
+        case "claim":
+          // R1303000: a lesson is never on a server seed, so it never claims.
+          response = { id: mine, type: "failed", message: "a lesson earns nothing" };
+          break;
         case "debug":
           response = {
             id: mine,

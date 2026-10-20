@@ -43,7 +43,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 62 tables of migrations 0001-0045 ==='
+\echo '=== CHECK 2: the 63 tables of migrations 0001-0047 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -67,7 +67,7 @@ declare
   -- (0042, #1169), and the economy's wallets, jlore_grants, inventory, inventory_grants,
   -- economy_counters, economy_counter_grants, set_tracks, set_track_grants, held_quests,
   -- quest_schedules, quest_grants, cosmetics, card_cosmetics, account_cosmetics and cosmetic_grants
-  -- (0045, SPEC §14.11, #1299).
+  -- (0045, SPEC §14.11, #1299), and practice earning's practice_seeds (0047, #1303).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033, 0035, 0036, 0040 and 0043 add no table. The three loadout tables stay after
   -- 0007, unread and unwritten (R254), so they are still expected here.
@@ -82,7 +82,7 @@ declare
     'invite_codes', 'jlore_grants', 'last_boards', 'loadout_deck_cards',
     'loadout_decks', 'loadouts', 'match_actions', 'match_checkpoints', 'match_signals', 'matches',
     'player_settings',
-    'player_stats', 'presence', 'profiles', 'quest_grants', 'quest_schedules', 'rated_games', 'record_totals',
+    'player_stats', 'practice_seeds', 'presence', 'profiles', 'quest_grants', 'quest_schedules', 'rated_games', 'record_totals',
     'replay_shares', 'results',
     'season_ranks', 'seasons', 'series', 'set_track_grants', 'set_tracks', 'terms_acceptances', 'tickets',
     'trios', 'tutorial_progress', 'wallets'];
