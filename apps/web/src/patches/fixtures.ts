@@ -1,5 +1,7 @@
 // Fixture versions sort out of patch order: consumers must use patches.json order (R105 as B4.2 rewrites it).
 // V1 and V3 carry a player note (R724001); V2 has none, so the page falls back to its record's title.
+// Each records the tier micro, so all three sit in one line, Earlier patches; untiered, V1 and V3 are
+// majors by the sets they add (R1369000).
 
 import type { CardDef } from "@jackioh/shared";
 
@@ -76,6 +78,7 @@ export const FIXTURE_SNAPSHOTS: Readonly<Record<string, Snapshot>> = {
 export const FIXTURE_PATCHES: readonly Patch[] = [
   {
     version: V1,
+    tier: "micro",
     date: "2026-01-02",
     title: "The first cards",
     source: "Fixture commit 1",
@@ -90,6 +93,7 @@ export const FIXTURE_PATCHES: readonly Patch[] = [
   },
   {
     version: V2,
+    tier: "micro",
     date: "2026-02-03",
     title: "The knight grows",
     source: "Fixture commit 2",
@@ -101,6 +105,7 @@ export const FIXTURE_PATCHES: readonly Patch[] = [
   },
   {
     version: V3,
+    tier: "micro",
     date: "2026-03-04",
     title: "Two new sets",
     source: "Fixture commit 3",

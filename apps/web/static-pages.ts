@@ -13,8 +13,8 @@ import type { Plugin } from "vite";
 import { almanacShelf } from "./src/game/deckbuilder/shelf.ts";
 import { SITE_NAME, canonicalUrlFor, documentTitleFor, screenNameFor } from "./src/net/head.ts";
 import { SITE_ORIGIN, originOf, paths } from "./src/net/navigate.ts";
-import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups } from "./src/patches/releases.ts";
-import type { Patch } from "./src/patches/source.ts";
+import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups, technicalLines } from "./src/patches/releases.ts";
+import type { Patch, TechnicalEntry } from "./src/patches/source.ts";
 import { SHIPPED_SETS, fillParams } from "./src/wire/catalog.ts";
 import { DECK_SIZE, HERO_HEALTH, MAX_MANA } from "./src/wire/engineConfig.ts";
 import { AUTH_PENDING_ADDRESS_TTL_SECONDS, MIN_ACCOUNT_AGE_YEARS } from "./src/wire/serverConfig.ts";
@@ -320,8 +320,12 @@ function almanacList(cards: CardDefs): string {
 
 const items = (lines: readonly string[]): string => `<ul>${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`;
 
-/** R724000: every patch by release line, newest first, each with its player note (R724001), never its record's notes. */
-function patchList(patches: readonly Patch[]): string {
+/**
+ * R724000: every patch by release line, newest first, each with its player note (R724001) and its
+ * technical log's player lines (R1369000), never its record's notes.
+ */
+function patchList(patches: readonly Patch[], log: readonly TechnicalEntry[]): string {
+  const technical = technicalLines(log);
   return releaseGroups(patches, RELEASES)
     .map(({ release, patches: group }) => {
       const entries = group.map((patch) => {
@@ -332,10 +336,12 @@ function patchList(patches: readonly Patch[]): string {
             : NOTE_SECTIONS.filter(({ key }) => note[key].length > 0)
                 .map(({ key, heading }) => `<h4>${escapeHtml(heading)}</h4>${items(note[key])}`)
                 .join("");
+        const lines = technical.get(patch.version) ?? [];
         return (
           `<article><h3>${escapeHtml(`${patch.version} ${playerTitle(patch)}`)}</h3>` +
           `<p><time datetime="${escapeHtml(patch.date)}">${escapeHtml(patch.date)}</time></p>` +
           sections +
+          (lines.length === 0 ? "" : `<h4>Technical changes</h4>${items(lines)}`) +
           "</article>"
         );
       });
@@ -393,17 +399,19 @@ export type StaticPagesInput = {
   pages: readonly PublicPage[];
   cards: CardDefs;
   patches: readonly Patch[];
+  /** R1369000: the technical log, `technical.json`. */
+  technical?: readonly TechnicalEntry[];
   outDir: string;
   origin: string;
 };
 
-export function writeStaticPages({ template, pages, cards, patches, outDir, origin }: StaticPagesInput): void {
+export function writeStaticPages({ template, pages, cards, patches, technical = [], outDir, origin }: StaticPagesInput): void {
   for (const page of pages) {
     const extra =
       page.path === paths.almanac
         ? almanacList(cards)
         : page.path === paths.patchNotes
-          ? patchList(patches)
+          ? patchList(patches, technical)
           : (PAGE_TEXT[page.path] ?? "");
     const file = join(outDir, page.path, "index.html");
     mkdirSync(dirname(file), { recursive: true });
@@ -441,6 +449,7 @@ export function staticPages(): Plugin {
         pages: PUBLIC_PAGES,
         cards: data("catalog.json") as CardDefs,
         patches: data("patches/patches.json") as Patch[],
+        technical: data("patches/technical.json") as TechnicalEntry[],
         outDir,
         origin,
       });

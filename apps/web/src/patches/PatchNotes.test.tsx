@@ -5,36 +5,28 @@
 // filter; a card opens its full history. Fixtures through the context, the empty and failed states,
 // then the real history through the default source.
 
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { INSPECT_CLOSE, INSPECT_DETAIL } from "../cards/inspect/testids.ts";
 import { closeInspect } from "../cards/inspect/store.ts";
 import { PatchSourceProvider } from "./context.tsx";
-import { FIXTURE_PATCHES, V1, V2, V3, fixtureSource } from "./fixtures.ts";
+import { FIXTURE_INDEX, FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, V1, V2, V3, fixtureSource } from "./fixtures.ts";
 import { PatchNotes, countsLine } from "./PatchNotes.tsx";
-import { RELEASES, type Release } from "./releases.ts";
-import { EMPTY_PATCH_SOURCE, realPatchSource, type PatchSource } from "./source.ts";
+import { RELEASES, majors, releaseGroups, type Release } from "./releases.ts";
+import { EMPTY_PATCH_SOURCE, realPatchSource, sourceFromData, type Patch, type PatchSource, type TechnicalEntry } from "./source.ts";
 import { patchTestid } from "./testids.ts";
 
 /** The real history's first read runs the JSON chunks through the transform. */
 const SLOW = { timeout: 10_000 } as const;
 
-/**
- * R646: the versions of the pending fragments, which `patches ship` promotes after their merge (none
- * once every fragment has shipped and git keeps no empty directory).
- */
-const PENDING_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../crates/cards/patches/pending");
-const PENDING_VERSIONS: readonly string[] = (existsSync(PENDING_DIR) ? readdirSync(PENDING_DIR) : [])
-  .filter((file) => file.endsWith(".json"))
-  .map((file) => (JSON.parse(readFileSync(join(PENDING_DIR, file), "utf8")) as { version: string }).version);
-
-/** Meditative+'s line opens at the patch that ships the set (issue #1187). */
-const MEDITATIVE_PLUS_FIRST = "v0.3.15";
+/** R1369000: each line's first version in the real history, its Z's major, shipped before tiers were recorded. */
+const REAL_FIRSTS: readonly (readonly [string, string])[] = [
+  ["core", "v0.1.0"],
+  ["classic", "v0.2.0"],
+  ["meditative", "v0.3.5"],
+  ["meditativeplus", "v0.3.15"],
+];
 
 afterEach(() => {
   act(() => {
@@ -282,12 +274,20 @@ describe("R388 the Patch notes page over the real history", () => {
 
 describe("R724000 the Patch notes page by release line", () => {
   const LINES: readonly Release[] = [
-    { id: "older", name: "Older line", first: V1, summary: "The older line's summary.", technical: ["An older technical change."] },
-    { id: "newer", name: "Newer line", first: V3, summary: "The newer line's summary.", technical: [] },
+    { id: "older", name: "Older line", summary: "The older line's summary.", technical: ["An older technical change."] },
+    { id: "newer", name: "Newer line", summary: "The newer line's summary.", technical: [] },
   ];
 
-  it("R724000 groups patches by release line, newest first, only the newest open", async () => {
-    renderPage(fixtureSource(), LINES);
+  /** The fixtures as shipped before tiers were recorded: V1 and V3 are majors by the sets they add. */
+  const untiered = (): PatchSource =>
+    sourceFromData({
+      patches: FIXTURE_PATCHES.map(({ tier: _tier, ...patch }): Patch => patch),
+      index: FIXTURE_INDEX,
+      snapshots: FIXTURE_SNAPSHOTS,
+    });
+
+  it("R724000 R1369000 groups patches by release line, each opened by its major, newest first, only the newest open", async () => {
+    renderPage(untiered(), LINES);
     await screen.findAllByTestId(patchTestid.patch);
     const sets = screen.getAllByTestId(patchTestid.set);
     expect(sets.map((element) => element.dataset.set)).toEqual(["newer", "older"]);
@@ -314,7 +314,8 @@ describe("R724000 the Patch notes page by release line", () => {
     expect(within(releaseSet("newer")).queryAllByTestId(patchTestid.patch)).toEqual([]);
   });
 
-  it("R724000 a patch before every release line's first sits under Earlier patches", async () => {
+  it("R724000 R1369000 a patch before every major sits under Earlier patches", async () => {
+    // A recorded tier wins over the fallback: the fixtures' say micro, so none of them is a major.
     renderPage(fixtureSource());
     await screen.findAllByTestId(patchTestid.patch);
     const sets = screen.getAllByTestId(patchTestid.set);
@@ -345,29 +346,22 @@ describe("R724000 the Patch notes page by release line", () => {
     expect(second).not.toHaveTextContent("Old Relic leaves.");
   });
 
-  it("R724000 the real history opens on its newest line, Meditative+ once v0.3.15 ships, and every patch has its note", async () => {
+  it("R724000 R1369000 the real history opens on its newest line, each line at its Z's first version, and every patch has its note", async () => {
     renderPage();
     const shipped = await realPatchSource.patches();
     await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
     const versions = shipped.map((patch) => patch.version);
-    // Meditative+'s first patch is a pending fragment until `patches ship` promotes it (R646), and a
-    // line with no patch to open it is not on the page: the newest line is Meditative's until then.
-    const plusShipped = versions.includes(MEDITATIVE_PLUS_FIRST);
-    if (!plusShipped) expect(PENDING_VERSIONS).toContain(MEDITATIVE_PLUS_FIRST);
-    const ids = [...(plusShipped ? ["meditativeplus"] : []), "meditative", "classic", "core"];
+    const ids = RELEASES.slice(0, majors(shipped).filter(Boolean).length)
+      .map((release) => release.id)
+      .reverse();
     expect(screen.getAllByTestId(patchTestid.set).map((element) => element.dataset.set)).toEqual(ids);
     expect(screen.getAllByTestId(patchTestid.setToggle).map((toggle) => toggle.getAttribute("aria-expanded"))).toEqual(
       ids.map((_id, at) => (at === 0 ? "true" : "false")),
     );
-    // Every line starts at a shipped patch, in the lines' order; a line still waiting on its pending
-    // fragment is newer than all of them.
-    const live = RELEASES.filter((release) => versions.includes(release.first));
-    expect(live.map((release) => release.id).reverse()).toEqual(ids);
-    expect(RELEASES.slice(0, live.length)).toEqual(live);
-    for (const release of RELEASES.slice(live.length)) expect(PENDING_VERSIONS, release.id).toContain(release.first);
-    const firsts = live.map((release) => versions.indexOf(release.first));
-    expect([...firsts].sort((a, b) => a - b)).toEqual(firsts);
-    expect(firsts[0]).toBe(0);
+    // Every line opens at its Z's first version, the first patch of the history opening the first.
+    const firsts = releaseGroups(shipped, RELEASES).map(({ release, patches }) => [release.id, patches.at(-1)?.version]);
+    expect([...firsts].reverse().slice(0, REAL_FIRSTS.length)).toEqual(REAL_FIRSTS);
+    expect(versions[0]).toBe(REAL_FIRSTS[0]?.[1]);
     openEverySet();
     const entries = screen.getAllByTestId(patchTestid.patch);
     expect(entries.map((element) => element.dataset.version)).toEqual([...versions].reverse());
@@ -379,6 +373,48 @@ describe("R724000 the Patch notes page by release line", () => {
       expect(entry).not.toHaveTextContent(patch?.source ?? "");
     }
     // Every line that has technical changes shows them once it is opened.
-    expect(screen.getAllByTestId(patchTestid.technical)).toHaveLength(live.filter((release) => release.technical.length > 0).length);
+    expect(screen.getAllByTestId(patchTestid.technical)).toHaveLength(RELEASES.slice(0, ids.length).filter((release) => release.technical.length > 0).length);
+  }, 30_000);
+});
+
+describe("R1369000 the technical log on the Patch notes page", () => {
+  const entry = (fields: Partial<TechnicalEntry> & Pick<TechnicalEntry, "version" | "kind">): TechnicalEntry => ({
+    commit: `${fields.version}-${fields.kind}-${fields.player ?? "none"}`,
+    title: "a change",
+    ...fields,
+  });
+  const LOG: readonly TechnicalEntry[] = [
+    entry({ version: V3, kind: "app", pr: 21, player: "The main menu remembers its tab." }),
+    entry({ version: V3, kind: "ai", pr: 22, player: "The practice AI guards its Taunts." }),
+    entry({ version: V3, kind: "internal", pr: 23, player: "A faster build." }),
+    entry({ version: V3, kind: "app", pr: 24 }),
+    entry({ version: V1, kind: "ai", player: "The practice AI plays faster." }),
+  ];
+
+  it("R1369000 a patch shows the App and AI entries logged on it that have a player line, and no Internal one", async () => {
+    renderPage(sourceFromData({ patches: FIXTURE_PATCHES, index: FIXTURE_INDEX, snapshots: FIXTURE_SNAPSHOTS, technical: LOG }));
+    await screen.findAllByTestId(patchTestid.patch);
+    openEverySet();
+    await screen.findAllByTestId(patchTestid.technicalLog);
+    const lines = (version: string): (string | null)[] =>
+      within(patchEntry(version))
+        .queryAllByTestId(patchTestid.technicalLog)
+        .flatMap((log) => within(log).getAllByRole("listitem").map((item) => item.textContent));
+    expect(lines(V3)).toEqual(["The main menu remembers its tab.", "The practice AI guards its Taunts."]);
+    expect(lines(V1)).toEqual(["The practice AI plays faster."]);
+    expect(lines(V2)).toEqual([]);
+    expect(within(patchEntry(V3)).getByTestId(patchTestid.technicalLog)).toHaveTextContent(/^Technical changes/);
+    expect(document.body).not.toHaveTextContent("A faster build.");
+  });
+
+  it("R1369000 the real log's player lines are on the page under their X", async () => {
+    renderPage();
+    const log = await realPatchSource.technical();
+    await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
+    openEverySet();
+    for (const { version, kind, player } of log) {
+      if (kind === "internal" || player === undefined) continue;
+      expect(patchEntry(version)).toHaveTextContent(player);
+    }
   }, 30_000);
 });

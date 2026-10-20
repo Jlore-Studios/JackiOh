@@ -49,7 +49,7 @@ pub(crate) use jackioh_engine::config::PATCH_MIN_CARDS;
 
 /// R1365000: the catalog fields a player reads and no game does. Every other field plays. The cards
 /// crate's, since a card's stats window reads it too (R1367000).
-use jackioh_cards::WORDING_FIELDS;
+pub(crate) use jackioh_cards::WORDING_FIELDS;
 
 /// The AI crate's own tooling, which plays no decision (gates, the sweep, development runs).
 const AI_TOOLING: &[&str] = &["gate.rs", "sweep.rs", "dev_run.rs", "baselines.rs"];
@@ -84,7 +84,7 @@ pub struct Args {
 }
 
 /// What a change reaches, lowest first, so the highest of several is their `max`.
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum Kind {
     Internal,
@@ -735,11 +735,11 @@ fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
 // ---------------------------------------------------------------------------------------------
 
 /// `rev:path`'s text, or `None` where the commit has no such file.
-fn show(root: &Path, rev: &str, path: &str) -> Option<String> {
+pub(crate) fn show(root: &Path, rev: &str, path: &str) -> Option<String> {
     git(root, &["cat-file", "-p", &format!("{rev}:{path}")], &[]).ok()
 }
 
-fn side_at(root: &Path, rev: &str) -> Result<Side> {
+pub(crate) fn side_at(root: &Path, rev: &str) -> Result<Side> {
     let catalog = show(root, rev, CATALOG_PATH).with_context(|| format!("{rev} has no {CATALOG_PATH}"))?;
     let sets = show(root, rev, SETS_PATH).with_context(|| format!("{rev} has no {SETS_PATH}"))?;
     Ok(Side {
