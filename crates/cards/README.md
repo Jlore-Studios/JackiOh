@@ -182,6 +182,11 @@ every Radiant face meets R275's standard (`tests/cross/radiant_standard.rs` agai
   `cargo jackioh catalog loc <script path>`.
 - A face's own `type` (C+ #22 Blood Moon's Radiant face is a Field Trap) and `xStats` (C+ #69).
 
+`flavor` (R1437000) is what kind of thing the card is, one of the engine's fifteen `Flavor` names,
+chosen by `docs/polish/8-flavor.md`. It picks the card's animations and nothing else: no rule, pool or
+AI reads it, `catalog check` holds it to the fifteen, and a patch reads the catalog without it, so a
+flavor-only change needs no fragment.
+
 Tags are the designer's as written (`Jlockeed` is a pool as well as a filter, R278). No two cards
 share a name (R381). Texts follow the house style (R432, R373): "Nerf" and "Buff", never "Degrade" or
 "Upgrade" (R1320).

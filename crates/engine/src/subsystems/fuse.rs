@@ -531,6 +531,7 @@ fn build_def(
         tags: union_tags(defs, token),
         rarity: rarest_of(defs),
         printed_rarity: None,
+        flavor: None,
         token,
         // R470: a kept X-cost or embiggen card that keeps its cost keeps that printed form.
         cost: kept_cost

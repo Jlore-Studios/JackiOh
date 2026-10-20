@@ -703,6 +703,7 @@ pub fn compile_crafted_def(recipe: &CraftRecipe) -> CardDef {
         tags,
         rarity: Rarity::Mythic,
         printed_rarity: None,
+        flavor: None,
         token: false,
         cost: CardCost::Fixed(recipe.cost),
         refs: if refs.is_empty() { None } else { Some(refs) },
