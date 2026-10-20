@@ -12178,8 +12178,12 @@
     "what": "review #1395 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-20T06:15:49Z",
-    "notes": [],
+    "at": "2026-10-20T06:27:56Z",
+    "notes": [
+      "#1305 needs a plan",
+      "#1308 needs a plan",
+      "started a night run, as a lane was free: #1305 (medium) is queued to build, for `muse`: plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
