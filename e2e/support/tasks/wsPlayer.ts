@@ -124,11 +124,13 @@ async function connect(command: Extract<WsPlayerCommand, { action: "connect" }>)
   // `WS_PATH`: an off-path handshake never reaches the upgrade.
   const base = command.url ?? "ws://localhost:8787/ws/match";
   const url = new URL(base);
-  // The upgrade reads only `?token=` and `?matchId=`.
-  if (command.token !== undefined) url.searchParams.set("token", command.token);
+  // R1379000: the token is an offered subprotocol beside `jackioh.v1`, as the web's
+  // `socketProtocols` offers it (support type-checks without `apps/*`); the match is `?matchId=`.
   if (command.matchId !== undefined) url.searchParams.set("matchId", command.matchId);
+  const protocols =
+    command.token === undefined ? [] : ["jackioh.v1", `jackioh.bearer.${Buffer.from(command.token, "utf8").toString("base64url")}`];
 
-  const socket = new WebSocket(url.toString());
+  const socket = new WebSocket(url.toString(), protocols);
   const record: Client = {
     name: command.name,
     socket,

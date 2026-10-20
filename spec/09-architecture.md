@@ -15,6 +15,8 @@ The match runs on the server as a pure, seeded reducer inside one actor per matc
 
 One rule: the client sends intent ("play instance 7 in zone 3 with target 12"), never state.
 
+A credential never travels in an address: a socket offers its sign-in as a subprotocol beside `jackioh.v1`, the only name the server answers with ([[R1379000]]).
+
 ### 9.2 Topology
 
 ```mermaid
@@ -28,7 +30,7 @@ flowchart TD
   E --> C[Card catalog + scripts]
 ```
 
-The match actor (Durable Object or equivalent) is the only stateful component: it holds the state in memory, one WebSocket per player, an alarm for the turn clock, and it appends every resolved action to the log. Idle actors hibernate.
+The match actor (Durable Object or equivalent) is the only stateful component: it holds the state in memory, one WebSocket per player, an alarm for the turn clock, and it appends every resolved action to the log. Idle actors hibernate. Every socket, a player's, a co-op seat's and a watcher's, is signed in by its handshake's offered credential, never its address ([[R1379000]]).
 
 ### 9.3 Engine requirements (binding on section 10)
 

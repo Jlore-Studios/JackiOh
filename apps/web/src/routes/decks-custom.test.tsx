@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DECK_AUTOSAVE_DEBOUNCE_MS } from "@jackioh/server-config";
 import type { CustomCard } from "@jackioh/shared";
 
+import { currentCatalog } from "../game/currentCatalog.ts";
 import { fixtureCatalog, fixtureCollection, legalDecks } from "../game/deckbuilder/fixtures.ts";
 import {
   CARD_POOL,
@@ -20,7 +21,7 @@ import {
   poolCardId,
 } from "../game/deckbuilder/testids.ts";
 import { decksResponse, savedDeck } from "../game/deckbuilder/testkit.ts";
-import { getCatalog, getCollection, getDecks, getMe, putDeck } from "../net/api.ts";
+import { getCollection, getDecks, getMe, putDeck } from "../net/api.ts";
 import { getCustomCards } from "../net/customCards.ts";
 import { paths } from "../net/navigate.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
@@ -32,13 +33,16 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     ...actual,
     getMe: vi.fn(),
     getDecks: vi.fn(),
-    getCatalog: vi.fn(),
     getCollection: vi.fn(),
     putDeck: vi.fn(),
     deleteDeck: vi.fn(),
     putTrio: vi.fn(),
     deleteTrio: vi.fn(),
   };
+});
+vi.mock("../game/currentCatalog.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../game/currentCatalog.ts")>();
+  return { ...actual, currentCatalog: vi.fn() };
 });
 vi.mock("../net/customCards.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/customCards.ts")>();
@@ -70,7 +74,7 @@ beforeEach(() => {
     currentMatchId: null,
     email: "player@example.test",
   });
-  vi.mocked(getCatalog).mockResolvedValue({ version: catalog.version, defs: catalog.cards });
+  vi.mocked(currentCatalog).mockReturnValue(catalog);
   vi.mocked(getCollection).mockResolvedValue({
     catalogVersion: catalog.version,
     entries: Object.entries(collection).map(([cardId, quantity]) => ({ cardId, quantity })),
