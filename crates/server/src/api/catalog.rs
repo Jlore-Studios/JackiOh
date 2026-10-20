@@ -199,18 +199,16 @@ pub const DEPLOYED_COMMIT_HEADER: &str = "x-deployed-commit";
 
 /// `GET /api/catalog`.
 ///
-/// R163: until the client ships a catalog, the server serves the same bytes here,
-/// whole and unprojected. Whole, because §9.4 requires "one validator module shared by client and
-/// server" and a trimmed card would be a second, weaker copy of the catalog. Unauthenticated: it is
-/// the same bytes for everybody and names no profile, and §9.4's gate is about "no collection,
-/// loadout, queue or match". It carries R105's version, so a stale client learns it is stale before
-/// it builds a deck. The endpoint is the transport, never a second source of truth.
+/// R163: the catalog the client ships, served whole and unprojected. Whole, because §9.4 requires
+/// "one validator module shared by client and server" and a trimmed card would be a second, weaker
+/// copy of the catalog. Unauthenticated: it is the same bytes for everybody and names no profile,
+/// and §9.4's gate is about "no collection, loadout, queue or match". It carries R105's version,
+/// which a caller can set against its own. The endpoint is the transport, never a second source of truth.
 ///
-/// `apps/web/src/net/api.ts` already calls exactly this shape:
-///
-/// ```text
-/// export type CatalogResponse = { version: string; defs: CardDefs };
-/// ```
+/// Since #1378 no screen of the client reads it: they read the catalog the engine's module registers
+/// (`apps/web/src/game/currentCatalog.ts`). It stays for what calls it from outside (CLAUDE.md
+/// rule 13): the deploy check and Render's health check below, and the e2e runs, which wait for it
+/// before they start.
 ///
 /// `commit` is the git commit this deploy runs (`env.rs` deployed_commit), sent as a header so the
 /// body stays the same bytes for everybody (R163). `deploy-watch.yml` reads it, and Render's health

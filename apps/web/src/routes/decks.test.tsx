@@ -4,10 +4,18 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DECK_AUTOSAVE_DEBOUNCE_MS } from "@jackioh/server-config";
-import { fixtureCatalog, fixtureCollection, legalDecks } from "../game/deckbuilder/fixtures.ts";
+import { currentCatalog } from "../game/currentCatalog.ts";
+import {
+  fixtureCardId,
+  fixtureCardName,
+  fixtureCatalog,
+  fixtureCollection,
+  legalDecks,
+} from "../game/deckbuilder/fixtures.ts";
 import { mirrorKey } from "../game/deckbuilder/sync.ts";
+import { poolCardId } from "../game/deckbuilder/testids.ts";
 import { decksResponse, savedDeck, savedTrio } from "../game/deckbuilder/testkit.ts";
-import { ApiRequestError, getCatalog, getCollection, getDecks, getMe, putDeck } from "../net/api.ts";
+import { ApiRequestError, getCollection, getDecks, getMe, putDeck } from "../net/api.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import DecksRoute from "./decks.tsx";
 
@@ -17,13 +25,17 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     ...actual,
     getMe: vi.fn(),
     getDecks: vi.fn(),
-    getCatalog: vi.fn(),
     getCollection: vi.fn(),
     putDeck: vi.fn(),
     deleteDeck: vi.fn(),
     putTrio: vi.fn(),
     deleteTrio: vi.fn(),
   };
+});
+
+vi.mock("../game/currentCatalog.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../game/currentCatalog.ts")>();
+  return { ...actual, currentCatalog: vi.fn() };
 });
 
 const TOKEN = "e2e-token-p1";
@@ -54,7 +66,7 @@ beforeEach(() => {
   window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: TOKEN }));
   window.history.replaceState(null, "", "/decks");
   vi.mocked(getMe).mockResolvedValue(meBody("active", false));
-  vi.mocked(getCatalog).mockResolvedValue({ version: catalog.version, defs: catalog.cards });
+  vi.mocked(currentCatalog).mockReturnValue(catalog);
   vi.mocked(getCollection).mockResolvedValue(collectionBody());
   vi.mocked(getDecks).mockResolvedValue(
     decksResponse(
@@ -156,11 +168,18 @@ describe("what the screen opens with", () => {
     expect(screen.getByTestId("deck-row-d-aggro")).toHaveAttribute("data-status", "complete");
   });
 
-  it("shows the reason when the decks or the catalog cannot be read", async () => {
-    vi.mocked(getCatalog).mockRejectedValue(new Error("catalog unavailable"));
+  it("#1378 opens on the catalog the client ships, naming its cards, while the collection read fails", async () => {
+    vi.mocked(getCollection).mockRejectedValue(new TypeError("Failed to fetch"));
+    await mount();
+    expect(currentCatalog).toHaveBeenCalled();
+    expect(screen.getByTestId(poolCardId(fixtureCardId(1)))).toHaveAccessibleName(new RegExp(fixtureCardName(1), "u"));
+  });
+
+  it("shows the reason when the decks cannot be read", async () => {
+    vi.mocked(getDecks).mockRejectedValue(new Error("decks unavailable"));
     render(<DecksRoute />);
     await waitFor(() => {
-      expect(screen.getByTestId("deckbuilder-error")).toHaveTextContent("catalog unavailable");
+      expect(screen.getByTestId("deckbuilder-error")).toHaveTextContent("decks unavailable");
     });
   });
 });

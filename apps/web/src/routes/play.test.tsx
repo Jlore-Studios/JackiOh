@@ -28,7 +28,6 @@ import {
   createRoom,
   dequeue,
   enqueue,
-  getCatalog,
   getCollection,
   getDecks,
   getMe,
@@ -45,6 +44,7 @@ import {
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { ROOM_LINK_SHARE_TITLE, ROOM_LINK_STORAGE_KEY } from "../net/roomLink.ts";
+import { currentCatalog } from "../game/currentCatalog.ts";
 import { PLAY_LEAN_NEWEST_KEY, PLAY_LEAN_SET_KEY, leanLabel } from "../game/LeanNewest.tsx";
 import PlayRoute, {
   MATCH_FOUND_STATUS,
@@ -72,11 +72,14 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     getOpenRooms: vi.fn(),
     joinRoom: vi.fn(),
     getDecks: vi.fn(),
-    getCatalog: vi.fn(),
     getCollection: vi.fn(),
     getPopulation: vi.fn(),
     getOwnRank: vi.fn(),
   };
+});
+vi.mock("../game/currentCatalog.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../game/currentCatalog.ts")>();
+  return { ...actual, currentCatalog: vi.fn() };
 });
 vi.mock("../net/navigate.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/navigate.ts")>();
@@ -178,7 +181,7 @@ beforeEach(() => {
   }
   vi.mocked(getMe).mockResolvedValue(me(null));
   vi.mocked(getDecks).mockResolvedValue(decksAnswer([AGGRO, HALF, CONTROL, RAMP], [MAIN, LOOSE]));
-  vi.mocked(getCatalog).mockResolvedValue({ version: "v1", defs: DEFS });
+  vi.mocked(currentCatalog).mockReturnValue({ version: "v1", cards: DEFS });
   vi.mocked(getCollection).mockResolvedValue({
     catalogVersion: "v1",
     entries: ALL_IDS.map((id) => ({ cardId: id, quantity: 1 })),
@@ -482,6 +485,16 @@ describe("the lobby's modes", () => {
     );
     expect(looseIssues.length).toBeGreaterThan(0);
     expect(screen.getByTestId(playTestid.verdict)).toHaveTextContent(looseIssues[0] ?? "");
+  });
+
+  it("#1378 judges the deck by the catalog the client ships while the queue readout and the rank cannot be read", async () => {
+    vi.mocked(getPopulation).mockRejectedValue(new TypeError("Failed to fetch"));
+    vi.mocked(getOwnRank).mockRejectedValue(new TypeError("Failed to fetch"));
+    await renderLobby();
+    await waitFor(() => {
+      expect(screen.getByTestId(playTestid.verdict)).toHaveAttribute("data-ready", "true");
+    });
+    expect(currentCatalog).toHaveBeenCalled();
   });
 
   it("a player with no decks is sent to /decks, and has nothing to queue a Best of 1 with", async () => {

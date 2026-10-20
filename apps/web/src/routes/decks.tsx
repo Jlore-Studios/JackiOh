@@ -4,6 +4,7 @@
 // The collection is optional: without L5 quantities, ownership is unknown.
 // R915005: the account's custom cards join the catalog the workshop reads (set `Custom`, drawn from
 // their frames by `customDef`) and are owned once each; the validator's L7 marks a deck naming one.
+// The catalog is the one the client ships (game/currentCatalog.ts, §9.4); only the decks and the collection are read.
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
@@ -14,6 +15,7 @@ import { OwnCopy } from "../cards/fullArt.ts";
 import { CardDefsProvider } from "../cards/index.ts";
 import { customDefsOf, useCustomCards } from "../creator/useCustomCards.ts";
 import { t } from "../i18n/i18n.ts";
+import { currentCatalog } from "../game/currentCatalog.ts";
 import DeckWorkshop from "../game/deckbuilder/DeckWorkshop.tsx";
 import { collectionFrom } from "../game/deckbuilder/loadout.ts";
 import type { DeckSyncApi } from "../game/deckbuilder/sync.ts";
@@ -22,7 +24,6 @@ import {
   ApiUnreachableError,
   deleteDeck,
   deleteTrio,
-  getCatalog,
   getCollection,
   getDecks,
   importTrio,
@@ -120,19 +121,18 @@ export default function DecksRoute() {
 
     Promise.all([
       getDecks(readToken),
-      getCatalog(),
       getCollection(readToken).then(
         (response) => response,
         () => null,
       ),
     ])
-      .then(([decks, catalog, collection]) => {
+      .then(([decks, collection]) => {
         if (cancelled) return;
         setScreen({
           kind: "ready",
           profileId,
           data: {
-            catalog: { version: catalog.version, cards: catalog.defs },
+            catalog: currentCatalog(),
             collection: collection === null ? null : collectionFrom(collection.entries),
             decks,
           },
