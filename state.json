@@ -7455,15 +7455,24 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/tools/src/duos_fuzz.rs",
+            "crates/tools/src/fuzz.rs"
+          ],
+          "from": "515770ead1084ca330c3897c62e145128efb5c41",
+          "main": "80d65632f222e4e66b08ea59b427bbd5c973bafc"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39428097368",
+            "run": "39447434068",
             "tier": "strong"
           }
         ],
-        "sha": "515770ead1084ca330c3897c62e145128efb5c41",
+        "sha": "47b319d1c3400aa39874b7635678193d40dd0dd1",
         "tiers": {
           "claude": "strong"
         }
