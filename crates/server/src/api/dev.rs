@@ -18,7 +18,8 @@
 //! - `POST /api/dev/jlore` `{ jlore }`: Jlore (§14.1).
 //! - `POST /api/dev/fill`: every collectable card (non-token, unbanned, of a set that ships) up to
 //!   `MAX_COPIES`, and every cosmetic of the registry but each kind's default, which every account
-//!   owns with no row (§14.2): a per-card kind on each of those cards, an account kind once.
+//!   owns with no row (§14.2): a per-card kind on each of those cards, a full art on the card it
+//!   names (R1313000), an account kind once.
 //! - `POST /api/dev/clear/:part`: `cards`, `cosmetics`, `jlore`, `counters` (the bars and pity
 //!   counters), `tracks`, or `everything`, all five in one transaction. Packs, tokens and quests are
 //!   no part of any.
@@ -197,6 +198,9 @@ pub async fn fill(app: &Arc<App>, req: Req) -> ApiResult {
     for cosmetic in cosmetics.iter().filter(|cosmetic| !cosmetic.default) {
         let targets: Vec<Option<&str>> = if per_card(cosmetic.kind) {
             cards.iter().copied().map(Some).collect()
+        } else if cosmetic.kind == CosmeticKind::FullArt {
+            // R1313000: a full art is owned on the one card it names.
+            vec![cosmetic.card.as_deref()]
         } else {
             vec![None]
         };

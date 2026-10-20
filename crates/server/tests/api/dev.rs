@@ -459,20 +459,34 @@ async fn r1300000_fill_grants_every_card_and_every_cosmetic_marked_dev() {
         .filter(|cosmetic| !cosmetic.default && per_card(cosmetic.kind))
         .map(|cosmetic| cosmetic.id.as_str())
         .collect();
+    // R1313000: a full art is owned on the one card it names.
+    let full_arts: Vec<(&str, &str)> = registry
+        .iter()
+        .filter(|cosmetic| cosmetic.kind == CosmeticKind::FullArt)
+        .filter_map(|cosmetic| Some((cosmetic.card.as_deref()?, cosmetic.id.as_str())))
+        .collect();
     let mut account_cosmetics: Vec<String> = registry
         .iter()
-        .filter(|cosmetic| !cosmetic.default && !per_card(cosmetic.kind))
+        .filter(|cosmetic| {
+            !cosmetic.default && !per_card(cosmetic.kind) && cosmetic.kind != CosmeticKind::FullArt
+        })
         .map(|cosmetic| cosmetic.id.clone())
         .collect();
     account_cosmetics.sort();
-    assert!(!cards.is_empty() && !card_cosmetics.is_empty() && !account_cosmetics.is_empty());
+    assert!(
+        !cards.is_empty()
+            && !card_cosmetics.is_empty()
+            && !full_arts.is_empty()
+            && !account_cosmetics.is_empty()
+    );
+    let on_cards = cards.len() * card_cosmetics.len() + full_arts.len();
 
     let answer = ok(&app, "/api/dev/fill", &dev, json!({})).await;
     assert_eq!(
         answer,
         json!({
             "cards": cards.len(),
-            "cosmetics": cards.len() * card_cosmetics.len() + account_cosmetics.len(),
+            "cosmetics": on_cards + account_cosmetics.len(),
         })
     );
 
@@ -491,16 +505,22 @@ async fn r1300000_fill_grants_every_card_and_every_cosmetic_marked_dev() {
             .iter()
             .all(|entry| entry.quantity == i64::from(MAX_COPIES))
     );
-    assert_eq!(held.cosmetics.cards.len(), cards.len() * card_cosmetics.len());
+    assert_eq!(held.cosmetics.cards.len(), on_cards);
     assert_eq!(held.cosmetics.account, account_cosmetics);
     // No default: every account owns those with no row (§14.2).
     assert!(
+        held.cosmetics.cards.iter().all(|owned| {
+            card_cosmetics.contains(&owned.cosmetic_id.as_str())
+                || full_arts.contains(&(owned.card_id.as_str(), owned.cosmetic_id.as_str()))
+        }),
+        "a default or unknown cosmetic was granted, or a full art on another card"
+    );
+    assert!(full_arts.iter().all(|(card, full_art)| {
         held.cosmetics
             .cards
             .iter()
-            .all(|owned| card_cosmetics.contains(&owned.cosmetic_id.as_str())),
-        "a default or unknown cosmetic was granted"
-    );
+            .any(|owned| owned.card_id == *card && owned.cosmetic_id == *full_art)
+    }));
 
     let grants = card_grants(&app, DEV).await;
     assert_eq!(grants.len(), cards.len());
@@ -511,10 +531,7 @@ async fn r1300000_fill_grants_every_card_and_every_cosmetic_marked_dev() {
     );
     let after = ledger(&app, DEV).await;
     let marks = new_marks(&EconomyLedger::default(), &after);
-    assert_eq!(
-        marks.len(),
-        cards.len() * card_cosmetics.len() + account_cosmetics.len()
-    );
+    assert_eq!(marks.len(), on_cards + account_cosmetics.len());
     assert!(
         marks
             .iter()

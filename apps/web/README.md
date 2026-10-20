@@ -535,7 +535,7 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `@jackioh/cards/catalog.json`, `flavour.json`, `chinese.json` and `chinese-terms.json` the files in
   `crates/cards`.
 - The generated files (`src/wire/generated/`, `engineConfig.ts`, `serverConfig.ts`; among the first,
-  `generated/cosmetics.ts` is the server's cosmetics registry, the card slots and the deck slots, R1295000, R1297000) are written by
+  `generated/cosmetics.ts` is the server's cosmetics registry, the card slots, the deck slots and the full arts, R1295000, R1297000, R1313000) are written by
   `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`; CI fails when they
   differ from what is committed, so a Rust change that moves the wire commits them in the same change.
 - Three files hold a game's state, and nothing else imports the engine's game functions: `game/engine.ts`
