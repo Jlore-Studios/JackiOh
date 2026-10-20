@@ -12,7 +12,7 @@
 // is `{ error: { code, message, details? } }` from `crates/server/src/api/http.rs`.
 
 import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
-import type { CardDefs, GameOverReason, LeanPick, PlayerId, PortraitId, SetName } from "@jackioh/shared";
+import type { CardDefs, GameOverReason, LeanPick, PlayerId, PortraitId, PrintedRarity, SetName } from "@jackioh/shared";
 
 import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
@@ -441,6 +441,49 @@ export type OwnedCosmeticsResponse = { cards: { cardId: string; cosmeticId: stri
 
 export function getOwnedCosmetics(token: string): Promise<OwnedCosmeticsResponse> {
   return apiRequest<OwnedCosmeticsResponse>("/api/cosmetics", { token });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Card packs (SPEC §14.3, §14.4; #1301, #1308): the odds and the counters the server holds, and an
+// opening it has already decided slot by slot.
+// ---------------------------------------------------------------------------------------------
+
+/** The three rarities a pity counter tracks. */
+export type PackCounters = { epic: number; legendary: number; mythic: number };
+
+/** `GET /api/packs`: the pity counters, their thresholds, the odds and the unopened packs held. */
+export type PacksResponse = {
+  price: number;
+  slots: number;
+  pity: PackCounters;
+  thresholds: PackCounters;
+  odds: {
+    base: PackCounters;
+    target: PackCounters;
+    fillerRare: number;
+    duplicateCosmetic: Record<"common" | "rare" | "epic" | "legendary" | "mythic", number>;
+  };
+  /** One entry per kind of pack held (a shipped set's name, or `global`), the global pack first. */
+  unopened: { pack: string; count: number }[];
+};
+
+/** What a slot became (R1301002): a new card, a cosmetic for an owned card, or bar points. */
+export type PackSlotGrant =
+  | { kind: "card" }
+  | { kind: "cosmetic"; cosmeticId: string; cosmeticRarity: PrintedRarity }
+  | { kind: "bars"; cosmeticRarity: PrintedRarity };
+
+export type PackSlot = { rarity: PrintedRarity; cardId: string; grant: PackSlotGrant };
+
+/** `POST /api/packs/open`: the slots in order, the pity counters after them and the packs of that kind left. */
+export type OpenedPackResponse = { pack: string; slots: PackSlot[]; pity: PackCounters; unopened: number };
+
+export function getPacks(token: string): Promise<PacksResponse> {
+  return apiRequest<PacksResponse>("/api/packs", { token });
+}
+
+export function openPack(token: string, pack: string): Promise<OpenedPackResponse> {
+  return apiRequest<OpenedPackResponse>("/api/packs/open", { method: "POST", token, body: { pack } });
 }
 
 // ---------------------------------------------------------------------------------------------

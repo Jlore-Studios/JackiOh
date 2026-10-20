@@ -2026,9 +2026,11 @@ pub struct PackRarityRates {
     pub mythic: f64,
 }
 
-/// The shape of `PACK_UNOWNED_WEIGHTS`: how a slot's card draw weighs the cards the account
-/// owns against the ones it does not (SPEC §14.3). A card's weight is its side's number, so an
-/// unowned card is drawn `unowned / owned` times as often as an owned one of the same rarity.
+/// The shape of `PACK_UNOWNED_WEIGHTS` and `COSMETIC_PACK_CARD_WEIGHTS`: how a draw weighs the
+/// cards the account owns against the ones it does not (SPEC §14.3, §14.6). A card's weight is
+/// its side's number, so an unowned card is drawn `unowned / owned` times as often as an owned
+/// one of the same rarity in a card pack, and an owned one `owned / unowned` times as often as an
+/// unowned one in a cosmetic pack.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PackUnownedWeights {
@@ -2046,11 +2048,13 @@ pub enum CosmeticTokenStep {
     CosmeticPack,
 }
 
-/// The shape of `COSMETIC_PACK_RATES`: the odds of one cosmetic pack slot (SPEC §14.6). The
-/// four shares sum to 1, so every slot of a cosmetic pack is Rare or better.
+/// The shape of `COSMETIC_PACK_RATES` and `COSMETIC_PACK_GUARANTEED_RATES`: the chance one
+/// cosmetic pack slot rolls each rarity on the cosmetics' own scale (SPEC §14.6); the five shares
+/// sum to 1.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CosmeticPackRates {
+    pub common: f64,
     pub rare: f64,
     pub epic: f64,
     pub legendary: f64,
@@ -2128,13 +2132,28 @@ pub const COSMETIC_TOKEN_CYCLE: [CosmeticTokenStep; 6] = [
 /// SPEC §14.6: a cosmetic pack's slots. #1294's table gives no value; 3, so a cycle's
 /// Cosmetic Pack step reads as a small bonus beside a 5-slot card pack.
 pub const COSMETIC_PACK_SLOTS: usize = 3;
-/// SPEC §14.6: a cosmetic pack slot's odds. #1294's table gives no value; Rare 55%, Epic 28%,
-/// Legendary 12%, Mythic 5%, so most slots are Rare and a Mythic cosmetic stays rare.
+/// #1306: a cosmetic pack slot's odds: the same as a duplicate's cosmetic
+/// (`COSMETIC_DUPLICATE_RATES`), R1306000; #1333 brings §14 in line.
 pub const COSMETIC_PACK_RATES: CosmeticPackRates = CosmeticPackRates {
-    rare: 0.55,
-    epic: 0.28,
-    legendary: 0.12,
-    mythic: 0.05,
+    common: 0.55,
+    rare: 0.25,
+    epic: 0.15,
+    legendary: 0.045,
+    mythic: 0.005,
+};
+/// #1306: the first slot's odds, so every cosmetic pack holds an Epic or better.
+pub const COSMETIC_PACK_GUARANTEED_RATES: CosmeticPackRates = CosmeticPackRates {
+    common: 0.0,
+    rare: 0.0,
+    epic: 0.75,
+    legendary: 0.225,
+    mythic: 0.025,
+};
+/// #1306 gives no value; four to one, `PACK_UNOWNED_WEIGHTS` turned around, toward the cards the
+/// account owns.
+pub const COSMETIC_PACK_CARD_WEIGHTS: PackUnownedWeights = PackUnownedWeights {
+    owned: 4.0,
+    unowned: 1.0,
 };
 /// SPEC §14.6: the cosmetic packs that fill the Chase Shard bar. #1294's table gives no value;
 /// 20 keeps a chosen chase a long chase without outliving a set.
