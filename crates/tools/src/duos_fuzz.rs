@@ -33,7 +33,10 @@ use jackioh_engine::{
 use rayon::prelude::*;
 
 use crate::agent::panic_message;
-use crate::fuzz::FUZZ_POOL;
+use crate::fuzz::{
+    DUOS_GROWTH_EVENTS_BOUND, DUOS_GROWTH_INSTANCES_BOUND, DUOS_GROWTH_NUMBER_BOUND, FUZZ_POOL, Heaviest,
+    Heavy, MEASURES, duos_acting_card, duos_growth_breach, duos_heaviest_lines, weigh_duos,
+};
 
 /// B25: the seeds `cargo jackioh fuzz --duos` plays when `--seeds` is not given.
 pub const DUOS_WAVE_SEEDS: u32 = 200;
@@ -49,13 +52,23 @@ const DUOS_TERMINAL_REASONS: &[&str] = &[
 ];
 
 /// Plays the Duos wave from seed `from` and prints its numbers; fails (exit 1) when a seed failed.
-pub fn run(from: u32, seeds: Option<u32>) -> anyhow::Result<()> {
+/// With `json`, prints the wave as one JSON object instead of the text summary.
+pub fn run(from: u32, seeds: Option<u32>, json: bool) -> anyhow::Result<()> {
     let ran = duos_wave_size(seeds);
     let outcomes = play_duos_wave(from, ran);
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&wave_json(from, ran, &outcomes))?
+        );
+    } else {
+        println!("{}", summary(from, ran, &outcomes));
+    }
     let failures = failure_lines(&outcomes);
-    println!("{}", summary(from, ran, &outcomes));
     if !failures.is_empty() {
-        println!("{}", failures.join("\n"));
+        if !json {
+            println!("{}", failures.join("\n"));
+        }
         bail!("fuzz-duos: {} of {ran} seed(s) failed", failures.len());
     }
     Ok(())
@@ -101,6 +114,17 @@ struct DuosRun {
     options: DuosCreateOptions,
     log: Vec<DuosAction>,
     state: DuosState,
+    /// This game's heaviest action by each measure (#1364).
+    heaviest: Heaviest,
+}
+
+/// A `DuosActionBody`'s wire name: a `Duel` action's inner `ActionType`, or the pass/concede itself.
+fn duos_action_name(body: &DuosActionBody) -> String {
+    match body {
+        DuosActionBody::Duel { body } => body.action_type().as_str().to_string(),
+        DuosActionBody::Pass { .. } => "pass".to_string(),
+        DuosActionBody::Concede => "concede".to_string(),
+    }
 }
 
 /// §10.7's policy over one seat's Duos actions: never a concede or an emote; End turn when nothing
@@ -161,6 +185,7 @@ where
     let mut policy = Rng::new(&format!("jackioh-duos-fuzz-policy-{seed}"), 0);
     let mut order = Rng::new(&format!("jackioh-duos-fuzz-order-{seed}"), 0);
     let mut log: Vec<DuosAction> = Vec::new();
+    let mut heaviest = Heaviest::default();
     let max_actions = max_duos_actions();
 
     while state.result.is_none() {
@@ -203,6 +228,8 @@ where
                 seat, action.body
             ));
         }
+        let action_type = duos_action_name(&action.body);
+        let card = duos_acting_card(&state, action.seat, &action.body);
         log.push(action);
         state = result.state;
 
@@ -213,8 +240,32 @@ where
         if let Some(first) = broken.first() {
             return Err(format!("at step {}: {first}", log.len()));
         }
+
+        // #1364: weigh the action; one past a growth bound fails the seed here.
+        let step = log.len();
+        let weights = weigh_duos(&result.events, &state);
+        for (measure, value) in MEASURES.into_iter().zip(weights) {
+            if heaviest.list(measure).first().is_none_or(|top| value > top.value) {
+                let heavy = Heavy {
+                    seed,
+                    step,
+                    action: action_type.clone(),
+                    card: card.clone(),
+                    value,
+                };
+                heaviest.keep(measure, heavy, 1);
+            }
+        }
+        if let Some(message) = duos_growth_breach(&weights, &state, step, &action_type, card.as_deref()) {
+            return Err(format!("growth: {message}"));
+        }
     }
-    Ok(DuosRun { options, log, state })
+    Ok(DuosRun {
+        options,
+        log,
+        state,
+        heaviest,
+    })
 }
 
 /// Assertions 2 and 3: a real ending, and a fold that refuses nothing and reaches the live hash.
@@ -271,30 +322,36 @@ struct DuosSeedOutcome {
     seed: u32,
     reason: Option<String>,
     error: Option<String>,
+    /// The passing game's heaviest action by each measure (#1364); a failed seed keeps none.
+    heaviest: Heaviest,
 }
 
 fn fuzz_duos_seed(seed: u32) -> DuosSeedOutcome {
     // R1420: the pool is the whole catalog, so this worker thread previews every set for the game.
     let _preview = preview_every_set();
-    let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<String, String> {
+    let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<(String, Heaviest), String> {
         let run = play_duos_game(seed)?;
-        check_duos_run(&run)
+        let reason = check_duos_run(&run)?;
+        Ok((reason, run.heaviest))
     }));
     match caught {
-        Ok(Ok(reason)) => DuosSeedOutcome {
+        Ok(Ok((reason, heaviest))) => DuosSeedOutcome {
             seed,
             reason: Some(reason),
             error: None,
+            heaviest,
         },
         Ok(Err(error)) => DuosSeedOutcome {
             seed,
             reason: None,
             error: Some(error),
+            heaviest: Heaviest::default(),
         },
         Err(payload) => DuosSeedOutcome {
             seed,
             reason: None,
             error: Some(format!("panic: {}", panic_message(&*payload))),
+            heaviest: Heaviest::default(),
         },
     }
 }
@@ -305,25 +362,29 @@ where
     F: FnMut(usize, &mut DuosState, &mut DuosAction, &mut DuosInvariantMonitor),
 {
     let _preview = preview_every_set();
-    let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<String, String> {
+    let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<(String, Heaviest), String> {
         let run = play_duos_game_inner(seed, tamper)?;
-        check_duos_run(&run)
+        let reason = check_duos_run(&run)?;
+        Ok((reason, run.heaviest))
     }));
     match caught {
-        Ok(Ok(reason)) => DuosSeedOutcome {
+        Ok(Ok((reason, heaviest))) => DuosSeedOutcome {
             seed,
             reason: Some(reason),
             error: None,
+            heaviest,
         },
         Ok(Err(error)) => DuosSeedOutcome {
             seed,
             reason: None,
             error: Some(error),
+            heaviest: Heaviest::default(),
         },
         Err(payload) => DuosSeedOutcome {
             seed,
             reason: None,
             error: Some(format!("panic: {}", panic_message(&*payload))),
+            heaviest: Heaviest::default(),
         },
     }
 }
@@ -346,6 +407,16 @@ fn failure_lines(outcomes: &[DuosSeedOutcome]) -> Vec<String> {
         .collect()
 }
 
+/// The heaviest actions of the games that passed, one per game (#1364): a failed seed adds
+/// nothing, as the gate's wave does.
+fn passed_heaviest(outcomes: &[DuosSeedOutcome]) -> Heaviest {
+    let mut heaviest = Heaviest::default();
+    for outcome in outcomes.iter().filter(|outcome| outcome.error.is_none()) {
+        heaviest.merge(&outcome.heaviest);
+    }
+    heaviest
+}
+
 fn summary(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> String {
     let failed = outcomes.iter().filter(|outcome| outcome.error.is_some()).count();
     let mut endings: IndexMap<String, usize> = IndexMap::new();
@@ -355,9 +426,32 @@ fn summary(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> String {
         }
     }
     format!(
-        "[fuzz-duos] {ran} seed(s) from {from}: {failed} failed; endings {}",
-        serde_json::to_string(&endings).unwrap_or_default()
+        "[fuzz-duos] {ran} seed(s) from {from}: {failed} failed; endings {}\n{}",
+        serde_json::to_string(&endings).unwrap_or_default(),
+        duos_heaviest_lines(&passed_heaviest(outcomes)),
     )
+}
+
+/// `--duos --json`: the wave's failures, each measure's heaviest actions and the growth bounds
+/// (#1364). Failures carry only seed and message: Duos has no stage taxonomy, so the `growth:`
+/// prefix in the message is the stage name.
+fn wave_json(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> serde_json::Value {
+    let passed = outcomes.iter().filter(|outcome| outcome.error.is_none()).count();
+    serde_json::json!({
+        "from": from,
+        "ran": ran,
+        "passed": passed,
+        "failures": outcomes.iter().filter_map(|outcome| outcome.error.as_ref().map(|error| serde_json::json!({
+            "seed": outcome.seed,
+            "message": error,
+        }))).collect::<Vec<_>>(),
+        "heaviest": passed_heaviest(outcomes),
+        "bounds": {
+            "events": DUOS_GROWTH_EVENTS_BOUND,
+            "largest": DUOS_GROWTH_NUMBER_BOUND,
+            "instances": DUOS_GROWTH_INSTANCES_BOUND,
+        },
+    })
 }
 
 #[cfg(test)]
@@ -424,6 +518,75 @@ mod tests {
             line.contains("I1 sick attack"),
             "should cite I1 sick attack: {line}"
         );
+    }
+
+    mod duos_growth_stage {
+        use std::cell::RefCell;
+        use std::rc::Rc;
+
+        use jackioh_engine::PlayerId;
+
+        use super::*;
+        use crate::fuzz::DUOS_GROWTH_NUMBER_BOUND;
+
+        #[test]
+        fn a_planted_growing_number_fails_duos_fuzz_in_the_growth_stage() {
+            let seen: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
+            let seen_in = Rc::clone(&seen);
+            let outcome = fuzz_duos_seed_with(1, move |step, state, action, _monitor| {
+                if step == 0 {
+                    // Library, never hand: legal actions and monitors are undisturbed, but every
+                    // weighed action afterwards sees the planted number.
+                    state.duels[0].players[PlayerId::P1].library[0].buffs.attack =
+                        i32::try_from(DUOS_GROWTH_NUMBER_BOUND + 1).unwrap_or(i32::MAX);
+                    *seen_in.borrow_mut() = Some(duos_action_name(&action.body));
+                }
+            });
+            let error = outcome.error.expect("the planted growth must fail the seed");
+            let action = seen.borrow().clone().expect("step 0 must record its action");
+            assert!(error.contains("growth"), "{error}");
+            assert!(error.contains(&action), "{error}");
+            assert!(error.contains("largest"), "{error}");
+            assert!(error.contains("DUOS_GROWTH_NUMBER_BOUND"), "{error}");
+        }
+
+        #[test]
+        fn the_same_seed_passes_once_the_growth_is_removed() {
+            let outcome = fuzz_duos_seed_with(1, |_, _, _, _| {});
+            assert_eq!(outcome.error, None);
+        }
+
+        #[test]
+        fn the_summary_and_json_list_each_measure_s_heaviest_actions() {
+            let heavy = |seed: u32, value: i64| Heavy {
+                seed,
+                step: 3,
+                action: "pass".to_string(),
+                card: None,
+                value,
+            };
+            let mut game = Heaviest::default();
+            for (measure, value) in MEASURES.into_iter().zip([10, 20, 30]) {
+                game.keep(measure, heavy(1, value), 1);
+            }
+            let outcomes = vec![DuosSeedOutcome {
+                seed: 1,
+                reason: Some(DUOS_REASON_POOL_EMPTIED.to_string()),
+                error: None,
+                heaviest: game,
+            }];
+            let summary = summary(1, 1, &outcomes);
+            assert!(summary.contains("1/3 pass -: 10"), "{summary}");
+            assert!(summary.contains("1/3 pass -: 20"), "{summary}");
+            assert!(summary.contains("1/3 pass -: 30"), "{summary}");
+            let json = wave_json(1, 1, &outcomes);
+            assert_eq!(json["heaviest"]["events"][0]["value"], serde_json::json!(10));
+            assert_eq!(
+                json["bounds"]["largest"],
+                serde_json::json!(DUOS_GROWTH_NUMBER_BOUND)
+            );
+            assert_eq!(json["passed"], serde_json::json!(1));
+        }
     }
 
     #[test]

@@ -128,8 +128,8 @@ pub fn run(args: Args) -> Result<()> {
 // diff
 // ---------------------------------------------------------------------------------------------
 
-/// A path in the temporary directory for this run's traces.
-fn temp_traces() -> PathBuf {
+/// A path in the temporary directory for this run's traces (`classify` records into one too).
+pub(crate) fn temp_traces() -> PathBuf {
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|elapsed| elapsed.as_nanos())
@@ -165,15 +165,9 @@ fn run_diff(args: &DiffArgs) -> Result<()> {
         }
     };
 
-    let output = Process::new(&args.parent_bin)
-        .args(["golden", "check", "--file"])
-        .arg(&traces)
-        .output()
-        .with_context(|| format!("running {parent} golden check"))?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let (diverged, stdout) = parent_check(&args.parent_bin, &traces)?;
     print!("{stdout}");
-
-    if output.status.success() {
+    if diverged == 0 {
         if recorded {
             // A leftover temporary file is no harm, so a failed removal is not an error.
             let _ = fs::remove_file(&traces);
@@ -181,13 +175,27 @@ fn run_diff(args: &DiffArgs) -> Result<()> {
         println!("luau diff: 0 mismatches against {parent}");
         return Ok(());
     }
+    bail!(
+        "luau diff: {diverged} mismatch(es) against {parent}; the traces are kept at {}",
+        traces.display()
+    )
+}
+
+/// The parent build's `golden check --file` over `traces`: how many games diverged, and its report
+/// (each divergence's seed, step, which hash, the action and where the parent left its side's text).
+/// An error when the parent could not check the file at all. `classify` reads it too (R1365000).
+pub(crate) fn parent_check(parent_bin: &Path, traces: &Path) -> Result<(u64, String)> {
+    let parent = parent_bin.display();
+    let output = Process::new(parent_bin)
+        .args(["golden", "check", "--file"])
+        .arg(traces)
+        .output()
+        .with_context(|| format!("running {parent} golden check"))?;
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
     match summary_counts(&stdout) {
-        Some((_, diverged)) if diverged > 0 => bail!(
-            "luau diff: {diverged} mismatch(es) against {parent}; the traces are kept at {}",
-            traces.display()
-        ),
+        Some((_, diverged)) if output.status.success() || diverged > 0 => Ok((diverged, stdout)),
         _ => bail!(
-            "luau diff: {parent} could not check {}: {}",
+            "{parent} could not check {}: {}",
             traces.display(),
             String::from_utf8_lossy(&output.stderr).trim()
         ),

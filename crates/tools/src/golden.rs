@@ -189,6 +189,49 @@ fn legal_text(state: &GameState, actor: PlayerId) -> String {
     lines.join("\n")
 }
 
+/// R1365000: this build's canonical text for one comparison `check` makes in a recorded game, with
+/// the state the text was read from: `s`, `v-p1`, `v-p2` and `e` after `step` (a step number, or
+/// `begin`), `l` before it. `None` for a comparison with no text (`refused`, `line`, `end`).
+/// `classify` holds it against the parent's side of a divergence to name the cards it touches.
+pub(crate) fn text_at(game: &Value, step: &str, which: &str) -> Result<Option<(String, GameState)>> {
+    let args: CreateGameArgs =
+        serde_json::from_value(game["args"].clone()).context("a recorded game's createGame options")?;
+    let begun = begin_game(&create_game(&args));
+    if let Some(error) = begun.error {
+        bail!("the recorded game does not begin: {error}");
+    }
+    let (mut state, mut events) = (begun.state, begun.events);
+    if step != "begin" {
+        let n: usize = step
+            .parse()
+            .with_context(|| format!("step {step} is not a step number"))?;
+        let steps = game["steps"]
+            .as_array()
+            .context("a recorded game with no steps")?;
+        for (k, line) in steps.iter().enumerate().take(n + 1) {
+            let action: Action = serde_json::from_value(line["a"].clone()).context("a recorded action")?;
+            if k == n && which == "l" {
+                return Ok(Some((legal_text(&state, action.player_id), state)));
+            }
+            let result = reduce(&state, &action);
+            if let Some(error) = result.error {
+                bail!("step {k} of the recorded game is refused: {error}");
+            }
+            (state, events) = (result.state, result.events);
+        }
+    }
+    let text = match which {
+        "s" => hashed_state_text(&state),
+        "v-p1" | "v-p2" => {
+            let [p1, p2] = view_texts(&state);
+            if which == "v-p1" { p1 } else { p2 }
+        }
+        "e" => events_text(&events),
+        _ => return Ok(None),
+    };
+    Ok(Some((text, state)))
+}
+
 // ---------------------------------------------------------------------------------------------
 // check
 // ---------------------------------------------------------------------------------------------

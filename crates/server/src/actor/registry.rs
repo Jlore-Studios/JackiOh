@@ -651,5 +651,16 @@ impl Registry {
         let actors: Vec<MatchActor> = lock(&self.actors).values().cloned().collect();
         actors.iter().map(|actor| actor.revoke_watchers(&revoked)).sum()
     }
+
+    /// R1351000: `x` and `y` were just blocked one way or the other: every match in memory between
+    /// the two mutes their emotes (`MatchActor::mute_emotes_between`). A match not in memory reads
+    /// the block as its rebuilt actor arms. Answers how many matches that was.
+    pub fn mute_emotes_between(&self, x: &str, y: &str) -> usize {
+        let actors: Vec<MatchActor> = lock(&self.actors).values().cloned().collect();
+        actors
+            .iter()
+            .filter(|actor| actor.mute_emotes_between(x, y))
+            .count()
+    }
 }
 // ---- end Social: watching and shared replays ----
