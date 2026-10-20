@@ -315,11 +315,16 @@ async fn r1300000_a_non_dev_gets_403_on_every_dev_route_and_nothing_is_written()
     let routes: Vec<(&str, String)> = app::ROUTES
         .iter()
         .filter(|(_, path, _, _)| path.starts_with("/api/dev/"))
-        .map(|(method, path, _, _)| (*method, path.replace(":part", "everything")))
+        .map(|(method, path, _, _)| {
+            let path = path.replace(":part", "everything");
+            (*method, path.replace(":questId", "win-1"))
+        })
         .collect();
     assert_eq!(
         routes,
         vec![
+            ("POST", "/api/dev/quests".to_string()),
+            ("POST", "/api/dev/quests/win-1/complete".to_string()),
             ("POST", "/api/dev/xp".to_string()),
             ("POST", "/api/dev/jlore".to_string()),
             ("POST", "/api/dev/fill".to_string()),

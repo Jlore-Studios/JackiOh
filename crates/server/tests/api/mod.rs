@@ -31,6 +31,7 @@ pub mod health;
 pub mod ladder;
 pub mod packs;
 pub mod practice;
+pub mod quests;
 pub mod queue;
 pub mod ranked;
 pub mod rate_limit;

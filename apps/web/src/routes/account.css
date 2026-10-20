@@ -79,3 +79,25 @@
   flex-direction: column;
   gap: 8px;
 }
+
+/* §14.9: the quests the account holds (routes/QuestsPanel.tsx), one under another, each with its
+   progress bar across the panel. */
+
+.tavern.app-shell .account-quests__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tavern.app-shell .account-quests__quest {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tavern.app-shell .account-quests__quest progress {
+  width: 100%;
+}

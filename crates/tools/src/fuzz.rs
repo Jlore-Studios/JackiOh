@@ -40,6 +40,15 @@
 //! is as deterministic as the game; `--handicap` is not weighed, and `--duos` is weighed by
 //! `duos_fuzz.rs` through the shared helpers below.
 //!
+//! And on the states the gate reaches, PROBES (#1386): every `probe_stride()`-th state, two forged
+//! actions that are never logged. A wrong-seat probe sends the action the policy chose from the seat
+//! that may not take it, and must be refused with no events (§9.3); a reused-nonce probe sends a
+//! concede under the nonce of the last logged action, and must neither apply nor replace anything but
+//! answer that action's own events (§10.1, §10.2). Either way the state must be kept exactly, the
+//! nonce memory `hash_state` leaves out included. A failure is the "probe" stage and names the step
+//! and the probe. `--handicap` probes the same way and `--duos` as `duos_fuzz.rs` says. The probes
+//! draw from no random stream, so every game plays as it did before them.
+//!
 //! Determinism (SPEC §9.3, §10.7, CLAUDE.md rule 4): nothing here reads OS randomness or the clock
 //! for a game (the clock only times the wave). The deck draw, the game and the policy each come from
 //! `Rng::new` over a seed string derived from the seed number, so a reported seed reproduces its game
@@ -97,8 +106,9 @@ use jackioh_engine::testkit::{
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, CardInstance, CreateGameOptions, DECK_SIZE,
     Difficulty, DuosActionBody, DuosEvent, DuosSeat, DuosState, FoldArgs, GameEvent, GameState, Handicap,
-    PLAYER_IDS, PerPlayerOpt, Phase, PlayerId, Rng, TURN_CAP_PLAYER_TURNS, begin_game, create_game,
-    find_instance, fold, hash_state, mulligan_owed, reduce, seat_to_act, subsystems, validate_deck,
+    PLAYER_IDS, PerPlayerOpt, Phase, PlayerId, ReduceResult, Rng, TURN_CAP_PLAYER_TURNS, begin_game,
+    create_game, find_instance, fold, hash_state, mulligan_owed, opponent_of, reduce, seat_to_act,
+    subsystems, validate_deck,
 };
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -345,6 +355,7 @@ enum FailureStage {
     Replay,
     Invariant,
     Growth,
+    Probe,
     Checkpoint,
 }
 
@@ -356,6 +367,7 @@ impl FailureStage {
             FailureStage::Replay => "replay",
             FailureStage::Invariant => "invariant",
             FailureStage::Growth => "growth",
+            FailureStage::Probe => "probe",
             FailureStage::Checkpoint => "checkpoint",
         }
     }
@@ -416,8 +428,9 @@ pub(crate) fn actor_of(state: &GameState, order: &mut Rng) -> PlayerId {
 /// One full game played by SPEC §10.7's policy. `subsystems::choose_action` IS that policy — uniform
 /// over `legal_actions` minus `AI_SKIPPED_ACTIONS` (R84), ending the turn when nothing else is on
 /// offer or with `AI_END_TURN_PROBABILITY`, and answering an open prompt uniformly (R44) — so this
-/// drives the shipped machinery rather than a second copy of the rule.
-fn play_game(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<GameRun, FuzzFailure> {
+/// drives the shipped machinery rather than a second copy of the rule. The probes' forged actions go
+/// through `probe` (#1386).
+fn play_game(seed: u32, decks: (Vec<String>, Vec<String>), probe: Reducer) -> Result<GameRun, FuzzFailure> {
     let game_seed = format!("jackioh-fuzz-{seed}");
     register_all();
 
@@ -435,8 +448,11 @@ fn play_game(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<GameRun, Fu
     let mut monitor = create_invariant_monitor(&state);
     let stride = hidden_stride();
     let unlisted_stride = unlisted_stride();
+    let probe_stride = probe_stride();
     let max_actions = max_actions_per_game();
     let mut heaviest = Heaviest::default();
+    // The events the last logged action returned, which a probe of its nonce is owed (#1386).
+    let mut last_events: Vec<GameEvent> = Vec::new();
     // Setup's own events: a Unit cast on draw in the opening deal (C+ #26 Tommy Tempo) enters there.
     let mut setup = monitor.after(&begun.events, &state);
     setup.extend(monitor.hidden(&state));
@@ -496,6 +512,27 @@ fn play_game(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<GameRun, Fu
             return Err(FuzzFailure::new(
                 FailureStage::Invariant,
                 first.clone(),
+                At {
+                    turn: state.turn,
+                    actions: log.len(),
+                },
+            ));
+        }
+
+        // #1386: forged actions against this state, never logged.
+        if log.len().is_multiple_of(probe_stride)
+            && let Some(message) = probe_state(
+                &state,
+                player,
+                &chosen,
+                log.last().map(|logged| (logged, last_events.as_slice())),
+                log.len(),
+                probe,
+            )
+        {
+            return Err(FuzzFailure::new(
+                FailureStage::Probe,
+                message,
                 At {
                     turn: state.turn,
                     actions: log.len(),
@@ -570,6 +607,7 @@ fn play_game(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<GameRun, Fu
                 },
             ));
         }
+        last_events = result.events;
     }
 
     Ok(GameRun {
@@ -1219,6 +1257,97 @@ pub(crate) fn duos_growth_breach(
 }
 
 // ---------------------------------------------------------------------------------------------
+// Forged-action probes (#1386)
+// ---------------------------------------------------------------------------------------------
+
+/// The probes under the gate, the handicapped wave and `--duos`: every this-many-th state (#1386);
+/// the test sweep probes every state. Measured 2026-10-20 (4 cores, release) over seeds 1–200, in wall
+/// seconds before the probes and with this stride: `cargo jackioh fuzz` 14.8 and 14.4–14.9, `--handicap`
+/// 15.2 and 15.4, `--duos` 43.6 and 44.5, so the gate's time is kept.
+pub const PROBE_GATE_STRIDE: usize = 10;
+
+/// A probe failure's name: the policy's action sent by a seat that may not take it.
+pub(crate) const WRONG_SEAT_PROBE: &str = "wrong-seat";
+
+/// A probe failure's name: another action under a nonce already applied.
+pub(crate) const REUSED_NONCE_PROBE: &str = "reused-nonce";
+
+/// The probes' stride: every state in the test sweep, every PROBE_GATE_STRIDE-th otherwise.
+pub fn probe_stride() -> usize {
+    if is_whole_suite_sweep() {
+        1
+    } else {
+        PROBE_GATE_STRIDE
+    }
+}
+
+/// What a probe's forged action goes through: `reduce`, or in a test a broken one it must catch.
+type Reducer = fn(&GameState, &Action) -> ReduceResult;
+
+/// What a probe's `result` did wrong (§9.3, §10.2): with `owed` `None` it owed a refusal with no
+/// events, with `Some` its nonce's first answer; either way `state` exactly, the nonce memory that
+/// `hash_state` leaves out included. `None` when it held.
+fn judge_probe(state: &GameState, result: &ReduceResult, owed: Option<&[GameEvent]>) -> Option<String> {
+    let mut wrong: Vec<String> = Vec::new();
+    match (owed, &result.error) {
+        (None, None) => wrong.push("was accepted".to_string()),
+        (Some(_), Some(error)) => wrong.push(format!("was refused ({error})")),
+        _ => {}
+    }
+    if result.events.as_slice() != owed.unwrap_or_default() {
+        wrong.push(match owed {
+            None => format!("emitted {} event(s)", result.events.len()),
+            Some(first) => format!(
+                "answered {} event(s), not the {} the nonce first returned",
+                result.events.len(),
+                first.len()
+            ),
+        });
+    }
+    if result.state != *state {
+        wrong.push(format!(
+            "moved the state (hash {} became {})",
+            hash_state(state),
+            hash_state(&result.state)
+        ));
+    }
+    (!wrong.is_empty()).then(|| wrong.join(" and "))
+}
+
+/// The probes on one state (#1386), never logged. First a concede by `player` under the last logged
+/// action's nonce, owed that action's own events (`last`); then `chosen` sent by the other seat, owed
+/// a refusal, unless that seat still owes its own mulligan, which it may answer (R265).
+fn probe_state(
+    state: &GameState,
+    player: PlayerId,
+    chosen: &ActionBody,
+    last: Option<(&Action, &[GameEvent])>,
+    step: usize,
+    probe: Reducer,
+) -> Option<String> {
+    if let Some((logged, first)) = last {
+        let forged = Action::new(ActionBody::Concede, player, logged.nonce.clone());
+        if let Some(wrong) = judge_probe(state, &probe(state, &forged), Some(first)) {
+            return Some(format!(
+                "{REUSED_NONCE_PROBE} probe after step {step}: {player} sent \"concede\" under step {step}'s nonce \"{}\", and it {wrong}",
+                logged.nonce
+            ));
+        }
+    }
+    let other = opponent_of(player);
+    if mulligan_owed(state).contains(&other) {
+        return None;
+    }
+    let forged = Action::new(chosen.clone(), other, format!("fuzz-probe-{step}"));
+    judge_probe(state, &probe(state, &forged), None).map(|wrong| {
+        format!(
+            "{WRONG_SEAT_PROBE} probe after step {step}: {other} sent \"{}\" while {player} was to act, and it {wrong}",
+            chosen.action_type().as_str()
+        )
+    })
+}
+
+// ---------------------------------------------------------------------------------------------
 // Failure collection and the grouped report
 // ---------------------------------------------------------------------------------------------
 
@@ -1598,13 +1727,18 @@ fn fuzz_seed(seed: u32) -> Result<Passed, Failure> {
 /// One game through the four assertions: `seed` names the game's and the policy's streams, `decks` the
 /// deal.
 fn fuzz_deal(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<Passed, Failure> {
+    fuzz_deal_probed(seed, decks, reduce)
+}
+
+/// `fuzz_deal` with the probes' forged actions going through `probe` (#1386).
+fn fuzz_deal_probed(seed: u32, decks: (Vec<String>, Vec<String>), probe: Reducer) -> Result<Passed, Failure> {
     // R1420: the fuzz pool is the whole catalog, every set shipped or not, so this worker thread
     // previews every set for the game, its checks and its replay.
     let _preview = preview_every_set();
     let mut reached: Option<At> = None;
     let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<Passed, FuzzFailure> {
         // 1. never panic
-        let run = play_game(seed, decks.clone())?;
+        let run = play_game(seed, decks.clone(), probe)?;
         reached = Some(At {
             turn: run.state.turn,
             actions: run.log.len(),
@@ -1756,7 +1890,7 @@ impl Wave {
             0
         };
         let mut text = format!(
-            "[M4 fuzz] {}\n  seeds {}..{}: {passed} passed, {} failed\n  {} panic(s), {} over the {}-action bound or stalled, {} replay mismatch(es), {} invariant violation(s), {} past a growth bound, {} checkpoint mismatch(es)\n  endings: {}\n  {average} actions/game on average, {} at most; longest game ended on turn {} of {TURN_CAP_PLAYER_TURNS}\n  checkpoints: {} paused, {} mid-game fallback; slowest {}ms of {CHECKPOINT_TIME_BOUND_MS}ms\n  pool: {} deck-legal cards, {} excluded; I6 every {} state(s), I8 every {} state(s); {}s\n",
+            "[M4 fuzz] {}\n  seeds {}..{}: {passed} passed, {} failed\n  {} panic(s), {} over the {}-action bound or stalled, {} replay mismatch(es), {} invariant violation(s), {} past a growth bound, {} failed a probe, {} checkpoint mismatch(es)\n  endings: {}\n  {average} actions/game on average, {} at most; longest game ended on turn {} of {TURN_CAP_PLAYER_TURNS}\n  checkpoints: {} paused, {} mid-game fallback; slowest {}ms of {CHECKPOINT_TIME_BOUND_MS}ms\n  pool: {} deck-legal cards, {} excluded; I6 every {} state(s), I8 every {} state(s), probes every {} state(s); {}s\n",
             if self.ran >= WAVE_SEEDS {
                 "FULL GATE".to_string()
             } else {
@@ -1771,6 +1905,7 @@ impl Wave {
             stage("replay"),
             stage("invariant"),
             stage("growth"),
+            stage("probe"),
             stage("checkpoint"),
             if endings.is_empty() {
                 "none".to_string()
@@ -1786,6 +1921,7 @@ impl Wave {
             POOL_EXCLUSIONS.len(),
             hidden_stride(),
             unlisted_stride(),
+            probe_stride(),
             round(self.elapsed_ms / MS_PER_SECOND),
         );
         text.push_str(&heaviest_lines(&self.heaviest));
@@ -2179,7 +2315,10 @@ fn play_seed(seed: u32) -> Outcome {
         let mut monitor = create_invariant_monitor(&state);
         let stride = if is_whole_suite_sweep() { 1 } else { I6_GATE_STRIDE };
         let unlisted_stride = unlisted_stride();
+        let probe_stride = probe_stride();
         let max_actions = max_actions_per_game();
+        // The events the last logged action returned, which a probe of its nonce is owed (#1386).
+        let mut last_events: Vec<GameEvent> = Vec::new();
         let mut setup = monitor.after(&begun.events, &state);
         setup.extend(monitor.hidden(&state));
         if let Some(first) = setup.first() {
@@ -2204,6 +2343,19 @@ fn play_seed(seed: u32) -> Outcome {
             if let Some(first) = unsound.first() {
                 return Err(format!("invariant on turn {}: {first}", state.turn));
             }
+            // #1386: forged actions against this state, never logged.
+            if log.len().is_multiple_of(probe_stride)
+                && let Some(message) = probe_state(
+                    &state,
+                    player,
+                    &action.body,
+                    log.last().map(|logged| (logged, last_events.as_slice())),
+                    log.len(),
+                    reduce,
+                )
+            {
+                return Err(message);
+            }
             let result = reduce(&state, &action);
             if let Some(error) = &result.error {
                 return Err(format!(
@@ -2226,6 +2378,7 @@ fn play_seed(seed: u32) -> Outcome {
             if let Some(first) = broken.first() {
                 return Err(format!("invariant after action {}: {first}", log.len()));
             }
+            last_events = result.events;
         }
 
         let Some(ending) = &state.result else {
@@ -2526,7 +2679,7 @@ mod tests {
 
         /// Seed 1's game, played and checked as the gate plays it (under the caller's preview).
         fn seed_one() -> GameRun {
-            play_game(1, decks_for_seed(1)).unwrap_or_else(|failure| panic!("{}", failure.message))
+            play_game(1, decks_for_seed(1), reduce).unwrap_or_else(|failure| panic!("{}", failure.message))
         }
 
         /// Seed 1's checkpoint over `log` against `live`, as `fuzz_deal` checks it.
@@ -2837,6 +2990,102 @@ mod tests {
                 json["checkpoint"]["boundMs"],
                 json!(u64::try_from(CHECKPOINT_TIME_BOUND_MS).unwrap_or(u64::MAX))
             );
+        }
+    }
+
+    mod fuzz_probe_stage {
+        use super::*;
+
+        /// A reducer that ignores who sent an action and answers for the seat the game waits on.
+        fn seatless(state: &GameState, action: &Action) -> ReduceResult {
+            let seat = seat_to_act(state).unwrap_or(state.active);
+            reduce(
+                state,
+                &Action::new(action.body.clone(), seat, action.nonce.clone()),
+            )
+        }
+
+        /// A reducer that forgets every nonce it has applied.
+        fn forgetful(state: &GameState, action: &Action) -> ReduceResult {
+            let mut fresh = state.clone();
+            fresh.applied.clear();
+            reduce(&fresh, action)
+        }
+
+        /// `probe` fails seed 1 in the probe stage, naming the probe called `name` and its step.
+        fn assert_caught(probe: Reducer, name: &str) {
+            register_all();
+            let failure = fuzz_deal_probed(1, decks_for_seed(1), probe)
+                .err()
+                .expect("a reducer that breaks the probe must fail the seed");
+            assert_eq!(failure.stage, FailureStage::Probe, "{}", failure.message);
+            assert!(
+                failure
+                    .message
+                    .starts_with(&format!("{name} probe after step {}:", failure.actions)),
+                "{}",
+                failure.message
+            );
+            let text = report(std::slice::from_ref(&failure), 1, 0.0);
+            assert!(text.contains("example: seed 1 ("), "{text}");
+            assert!(text.contains("[probe]"), "{text}");
+        }
+
+        #[test]
+        fn a_reducer_that_takes_the_wrong_seat_s_action_fails_the_wrong_seat_probe() {
+            assert_caught(seatless, WRONG_SEAT_PROBE);
+        }
+
+        #[test]
+        fn a_reducer_that_forgets_its_nonces_fails_the_reused_nonce_probe() {
+            assert_caught(forgetful, REUSED_NONCE_PROBE);
+        }
+
+        #[test]
+        fn the_judge_passes_a_refusal_and_a_nonce_s_first_answer_and_names_a_moved_nonce_memory() {
+            register_all();
+            let _preview = preview_every_set();
+            let state = begin_game(&create_game(&CreateGameOptions {
+                seed: "jackioh-fuzz-1".to_string(),
+                decks: decks_for_seed(1),
+                ..CreateGameOptions::default()
+            }))
+            .state;
+            let act = |state: &GameState, body: ActionBody, player: PlayerId, nonce: &str| {
+                reduce(state, &Action::new(body, player, nonce.to_string()))
+            };
+
+            // 1. The mulligans are open, so End turn is refused with the state kept.
+            let refused = act(&state, ActionBody::EndTurn, PlayerId::P1, "probe-test-1");
+            assert!(refused.error.is_some());
+            assert_eq!(judge_probe(&state, &refused, None), None);
+
+            // 2. A nonce answers with its first action's events whatever came under it the second time.
+            let kept = act(
+                &state,
+                ActionBody::Mulligan { keep: Vec::new() },
+                PlayerId::P1,
+                "probe-test-2",
+            );
+            assert_eq!(kept.error, None);
+            let again = act(&kept.state, ActionBody::Concede, PlayerId::P2, "probe-test-2");
+            assert_eq!(
+                judge_probe(&kept.state, &again, Some(kept.events.as_slice())),
+                None
+            );
+
+            // 3. An action that is accepted where a refusal was owed moves the state.
+            let accepted = act(&state, ActionBody::Concede, PlayerId::P1, "probe-test-3");
+            let wrong = judge_probe(&state, &accepted, None).expect("an accepted concede is no refusal");
+            assert!(wrong.contains("was accepted"), "{wrong}");
+            assert!(wrong.contains("moved the state"), "{wrong}");
+
+            // 4. A refusal that remembered its nonce hashes as the state it refused, yet is not it.
+            let mut remembered = refused.clone();
+            remembered.state.applied = kept.state.applied.clone();
+            assert_eq!(hash_state(&remembered.state), hash_state(&state));
+            let wrong = judge_probe(&state, &remembered, None).expect("a moved nonce memory is no refusal");
+            assert!(wrong.contains("moved the state"), "{wrong}");
         }
     }
 
