@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
+import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
 import { baseView } from "../test/fixtures.ts";
 import {
   createMatchClient,
@@ -30,7 +31,10 @@ class FakeSocket implements SocketLike {
   readonly sent: string[] = [];
   closedWith: { code?: number; reason?: string } | null = null;
 
-  constructor(readonly url: string) {}
+  constructor(
+    readonly url: string,
+    readonly protocols: readonly string[] = [],
+  ) {}
 
   send(data: string): void {
     this.sent.push(data);
@@ -114,8 +118,8 @@ function harness(options: HarnessOptions = {}): Harness {
     matchId: options.matchId ?? "m-1",
     token: options.token ?? "tok",
     baseUrl: "ws://server.test/ws/match",
-    socketFactory: (url) => {
-      const socket = new FakeSocket(url);
+    socketFactory: (url, protocols) => {
+      const socket = new FakeSocket(url, protocols);
       sockets.push(socket);
       return socket;
     },
@@ -168,18 +172,31 @@ function connected(options: HarnessOptions = {}): Harness {
 // The handshake
 
 describe("the handshake", () => {
-  it("carries the token and the match in the query string, because a browser cannot set headers", () => {
-    // `ws_server.rs` reads `?token=` and `?matchId=` (SURFACE §11.3).
-    const url = socketUrlFor("ws://server.test/ws/match", "tok en", "m-1");
-    expect(url).toContain("token=tok+en");
-    expect(url).toContain("matchId=m-1");
+  it("R1379000 the address names the match and never the token, which is offered as a subprotocol", () => {
+    // `ws_server.rs` reads the match from `?matchId=` and the token from the offered protocols (SURFACE §11.3).
+    const url = new URL(socketUrlFor("ws://server.test/ws/match", "m-1"));
+    expect(url.searchParams.get("matchId")).toBe("m-1");
+    expect(url.searchParams.has("token")).toBe(false);
+
+    const traced = new URL(socketUrlFor("ws://server.test/ws/match?trace=1", "m"));
+    expect(traced.searchParams.get("trace")).toBe("1");
+    expect(traced.searchParams.get("matchId")).toBe("m");
+    expect(traced.searchParams.has("token")).toBe(false);
+
+    const h = connected();
+    expect(h.socket().protocols).toEqual(socketProtocols("tok"));
+    expect(h.socket().url).not.toContain("tok");
+    expect(h.client.url()).not.toContain("tok");
   });
 
-  it("appends to a base that already carries a query", () => {
-    const url = socketUrlFor("ws://server.test/ws/match?trace=1", "t", "m");
-    expect(url).toContain("trace=1");
-    expect(url).toContain("token=t");
-    expect(url).toContain("matchId=m");
+  it("R1379000 a reconnect after a renewal offers the renewed token, never in the address", () => {
+    const h = connected();
+    h.client.setToken("new");
+    h.socket().drop();
+    h.runTimers();
+    expect(h.sockets).toHaveLength(2);
+    expect(handshakeToken(h.socket())).toBe("new");
+    expect(h.socket().url).not.toContain("new");
   });
 
   it("sends `hello` on open: §9.5's 'push me a fresh full view'", () => {
@@ -702,9 +719,9 @@ describe("a silent socket", () => {
   });
 });
 
-/** The token a socket's handshake carried. */
+/** The token a socket's handshake offered (R1379000). */
 function handshakeToken(socket: FakeSocket): string | null {
-  return new URL(socket.url).searchParams.get("token");
+  return tokenFromProtocols(socket.protocols);
 }
 
 describe("a socket refused for its sign-in", () => {

@@ -136,11 +136,12 @@ export type MatchRouteProps = {
 /**
  * The socket URL with its credentials stripped, for display only.
  *
- * `net.ts`'s `socketUrlFor` puts the access token in the query string (`url.searchParams.set(
- * "token", token)`), so rendering the URL raw printed a live bearer token on screen and into the
- * DOM on every connect — visible in a screenshot, a screen share, over a shoulder, and to any
- * extension that can read the page. The host and path are the useful part of the diagnostic; the
- * query never was.
+ * `net.ts`'s `socketUrlFor` once put the access token in the query string, so rendering the URL raw
+ * printed a live bearer token on screen and into the DOM on every connect — visible in a
+ * screenshot, a screen share, over a shoulder, and to any extension that can read the page. Since
+ * R1379000 the address names the match only and the token is offered as a subprotocol; the query is
+ * still stripped, so no credential a future address carries reaches the screen. The host and path
+ * are the useful part of the diagnostic; the query never was.
  *
  * Returns the input unchanged if it will not parse, since this is a status line and must not be
  * the thing that throws.

@@ -22,6 +22,7 @@
 // ends a seat that has nothing but End turn to do, the guest ends too and the spec waits for the
 // team's next round, until the host has a round with moves in it.
 
+import { socketProtocols } from "../../../apps/web/src/net/socketProtocols.ts";
 import { ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serverConfig.ts";
 import { accounts, server, timeouts, type E2EAccount } from "../../support/config.ts";
 import {
@@ -153,12 +154,11 @@ class DuosSocket {
     });
   }
 
-  /** Opens the socket (auth as `/ws/match`: the token and the match in the query) and says hello. */
+  /** Opens the socket (auth as `/ws/match`: the match in the query, the token offered as a subprotocol, R1379000) and says hello. */
   open(token: string, matchId: string): Promise<Frame> {
     const url = new URL(duosSocketUrl());
-    url.searchParams.set("token", token);
     url.searchParams.set("matchId", matchId);
-    const socket = new WebSocket(url.toString());
+    const socket = new WebSocket(url.toString(), socketProtocols(token));
     this.socket = socket;
     socket.addEventListener("message", (event: MessageEvent) => {
       if (typeof event.data !== "string") return;
