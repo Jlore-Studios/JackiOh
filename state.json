@@ -7038,9 +7038,12 @@
         "sha": "22122e1528ef099535db2465761528f3d8e565ab"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-20T02:24:09Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1349,
       "kind": "review",
       "pending_request": false,
