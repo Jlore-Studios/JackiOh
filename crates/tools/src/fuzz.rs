@@ -37,7 +37,8 @@
 //! GROWTH_INSTANCES_BOUND. That catches runaway growth inside one action (R874000's fusion, R884000's
 //! University) at the step that grew, well before the engine's settle cap (§10.3) panics or a process
 //! runs out of memory. The weighing reads the returned events and state only, never the clock, so it
-//! is as deterministic as the game; `--handicap` and `--duos` are not weighed.
+//! is as deterministic as the game; `--handicap` is not weighed, and `--duos` is weighed by
+//! `duos_fuzz.rs` through the shared helpers below.
 //!
 //! Determinism (SPEC §9.3, §10.7, CLAUDE.md rule 4): nothing here reads OS randomness or the clock
 //! for a game (the clock only times the wave). The deck draw, the game and the policy each come from
@@ -95,9 +96,9 @@ use jackioh_engine::testkit::{
 };
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, CardInstance, CreateGameOptions, DECK_SIZE,
-    Difficulty, FoldArgs, GameEvent, GameState, Handicap, PLAYER_IDS, PerPlayerOpt, Phase, PlayerId, Rng,
-    TURN_CAP_PLAYER_TURNS, begin_game, create_game, find_instance, fold, hash_state, mulligan_owed, reduce,
-    seat_to_act, subsystems, validate_deck,
+    Difficulty, DuosActionBody, DuosEvent, DuosSeat, DuosState, FoldArgs, GameEvent, GameState, Handicap,
+    PLAYER_IDS, PerPlayerOpt, Phase, PlayerId, Rng, TURN_CAP_PLAYER_TURNS, begin_game, create_game,
+    find_instance, fold, hash_state, mulligan_owed, reduce, seat_to_act, subsystems, validate_deck,
 };
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -131,7 +132,7 @@ pub struct Args {
     pub regress: bool,
     /// Print the gate's wave as one JSON object instead of text (#1254): its failures, each
     /// measure's heaviest actions and the growth bounds.
-    #[arg(long, conflicts_with_all = ["handicap", "duos", "regress"])]
+    #[arg(long, conflicts_with_all = ["handicap", "regress"])]
     pub json: bool,
 }
 
@@ -144,7 +145,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     }
     let from = first_seed(args.from);
     if args.duos {
-        return crate::duos_fuzz::run(from, args.seeds);
+        return crate::duos_fuzz::run(from, args.seeds, args.json);
     }
     let ran = wave_size(args.seeds);
     if args.handicap {
@@ -692,12 +693,28 @@ pub const GROWTH_NUMBER_BOUND: i64 = 2_000;
 /// measure catches a chain that adds cards without end, not one card that grows.
 pub const GROWTH_INSTANCES_BOUND: i64 = 2_000;
 
+/// The most events one Duos action may emit. Measured 2026-10-20 over the release Duos wave
+/// (seeds 1–200): the most one passing game's action emitted was 157 (seed 63, step 263), so this
+/// keeps a margin of about 63×. A round-close legitimately settles two duels, so expect about twice
+/// the solo traffic here; no bound/6 breach, so the solo-matching starting value stands.
+pub const DUOS_GROWTH_EVENTS_BOUND: i64 = 10_000;
+
+/// The largest number any card instance may carry after one Duos action, in either duel. Measured
+/// 2026-10-20 over the same wave: the largest was 54 (seed 29, step 305), so this keeps a margin of
+/// about 37×; no bound/6 breach, so the solo-matching starting value stands.
+pub const DUOS_GROWTH_NUMBER_BOUND: i64 = 2_000;
+
+/// The most card instances both duels may hold after one Duos action, in every zone. Measured
+/// 2026-10-20 over the same wave: the most was 275 (seed 63, step 271), so this keeps a margin of
+/// about 7×; no bound/6 breach, so the solo-matching starting value stands.
+pub const DUOS_GROWTH_INSTANCES_BOUND: i64 = 2_000;
+
 /// How many of a measure's heaviest actions the summary and `--json` list.
 pub const HEAVIEST_SHOWN: usize = 5;
 
 /// What one action is weighed by.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Measure {
+pub(crate) enum Measure {
     /// The events `reduce` returned.
     Events,
     /// The largest number on any card instance afterwards.
@@ -707,10 +724,10 @@ enum Measure {
 }
 
 /// Every measure, in the order `weigh` returns them.
-const MEASURES: [Measure; 3] = [Measure::Events, Measure::Largest, Measure::Instances];
+pub(crate) const MEASURES: [Measure; 3] = [Measure::Events, Measure::Largest, Measure::Instances];
 
 impl Measure {
-    fn as_str(self) -> &'static str {
+    pub(crate) fn as_str(self) -> &'static str {
         match self {
             Measure::Events => "events",
             Measure::Largest => "largest",
@@ -733,32 +750,41 @@ impl Measure {
             Measure::Instances => "GROWTH_INSTANCES_BOUND",
         }
     }
+
+    /// The Duos wave's bound for this measure (`DUOS_GROWTH_*_BOUND`).
+    fn duos_bound(self) -> i64 {
+        match self {
+            Measure::Events => DUOS_GROWTH_EVENTS_BOUND,
+            Measure::Largest => DUOS_GROWTH_NUMBER_BOUND,
+            Measure::Instances => DUOS_GROWTH_INSTANCES_BOUND,
+        }
+    }
 }
 
 /// One action's weight by one measure.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct Heavy {
-    seed: u32,
+pub(crate) struct Heavy {
+    pub(crate) seed: u32,
     /// The action's 1-based place in the game's log.
-    step: usize,
+    pub(crate) step: usize,
     /// The action's wire name (`ActionType`).
-    action: String,
+    pub(crate) action: String,
     /// The def id of the card that acted, for an action with one.
-    card: Option<String>,
-    value: i64,
+    pub(crate) card: Option<String>,
+    pub(crate) value: i64,
 }
 
 /// The heaviest actions by each measure, heaviest first, ties to the lower seed and then the lower step.
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
-struct Heaviest {
+pub(crate) struct Heaviest {
     events: Vec<Heavy>,
     largest: Vec<Heavy>,
     instances: Vec<Heavy>,
 }
 
 impl Heaviest {
-    fn list(&self, measure: Measure) -> &[Heavy] {
+    pub(crate) fn list(&self, measure: Measure) -> &[Heavy] {
         match measure {
             Measure::Events => &self.events,
             Measure::Largest => &self.largest,
@@ -767,7 +793,7 @@ impl Heaviest {
     }
 
     /// Adds `heavy` and keeps the `limit` heaviest.
-    fn keep(&mut self, measure: Measure, heavy: Heavy, limit: usize) {
+    pub(crate) fn keep(&mut self, measure: Measure, heavy: Heavy, limit: usize) {
         let list = match measure {
             Measure::Events => &mut self.events,
             Measure::Largest => &mut self.largest,
@@ -784,7 +810,7 @@ impl Heaviest {
     }
 
     /// Folds one game's heaviest actions in, keeping HEAVIEST_SHOWN of each measure.
-    fn merge(&mut self, game: &Heaviest) {
+    pub(crate) fn merge(&mut self, game: &Heaviest) {
         for measure in MEASURES {
             for heavy in game.list(measure) {
                 self.keep(measure, heavy.clone(), HEAVIEST_SHOWN);
@@ -795,7 +821,7 @@ impl Heaviest {
 
 /// Every card instance both sides hold, in every zone: a copy of `side_cards`'s list in
 /// `crates/engine/src/state.rs` (private there), in its order.
-fn instances_of(state: &GameState) -> impl Iterator<Item = &CardInstance> {
+pub(crate) fn instances_of(state: &GameState) -> impl Iterator<Item = &CardInstance> {
     PLAYER_IDS.into_iter().flat_map(move |player| {
         let side = &state.players[player];
         side.hand
@@ -815,7 +841,7 @@ fn instances_of(state: &GameState) -> impl Iterator<Item = &CardInstance> {
 /// count, overridden stats, counters, Brittle count, play count, tuned numbers and every number in its
 /// memory. Turn stamps (`summoned_turn`, `frozen`, Brittle's `since`) are left out: they count turns,
 /// which the game's own cap bounds.
-fn largest_number(card: &CardInstance) -> i64 {
+pub(crate) fn largest_number(card: &CardInstance) -> i64 {
     let mut most = 0_i64;
     let mut see = |n: i32| most = most.max(i64::from(n).abs());
     see(card.damage);
@@ -845,7 +871,7 @@ fn largest_number(card: &CardInstance) -> i64 {
 }
 
 /// The largest absolute number anywhere in a memory value.
-fn largest_in_json(value: &Value) -> i64 {
+pub(crate) fn largest_in_json(value: &Value) -> i64 {
     match value {
         Value::Number(number) => number
             .as_i64()
@@ -873,7 +899,7 @@ fn weigh(events: &[GameEvent], state: &GameState) -> [i64; 3] {
 
 /// The def id of the card an action is by, read in the state it was chosen in: the instance a
 /// play, switch or activation names, or the attacker. Any other action has none.
-fn acting_card(state: &GameState, body: &ActionBody) -> Option<String> {
+pub(crate) fn acting_card(state: &GameState, body: &ActionBody) -> Option<String> {
     let id = match body {
         ActionBody::Play { instance_id, .. }
         | ActionBody::SwitchPosition { instance_id }
@@ -892,6 +918,30 @@ fn holder_of_largest(state: &GameState, value: i64) -> String {
         .map_or_else(|| "no card".to_string(), |card| card.def_id.clone())
 }
 
+/// The shared wording of a growth failure: the step, the action and the card that grew, what
+/// one measure reached and whose bound it passed. Every arm names its measure (`events`,
+/// `largest`, `instances`), so the report says what grew, not just how much.
+fn growth_message(
+    measure: Measure,
+    value: i64,
+    bound: (i64, &'static str),
+    step: usize,
+    action: &str,
+    card: Option<&str>,
+    holder: &str,
+) -> String {
+    let by = card.map_or_else(String::new, |id| format!(" by {id}"));
+    let what = match measure {
+        Measure::Events => format!("emitted {value} events"),
+        Measure::Largest => format!("left a largest number of {value} on {holder}"),
+        Measure::Instances => format!("left {value} card instances in play"),
+    };
+    format!(
+        "step {step} (\"{action}\"{by}) {what}, past {} ({}): runaway growth inside one action",
+        bound.1, bound.0,
+    )
+}
+
 /// The failure message of the first measure past its bound, when one is: a value at the bound passes.
 fn growth_breach(
     weights: &[i64; 3],
@@ -904,16 +954,97 @@ fn growth_breach(
         .into_iter()
         .zip(weights.iter().copied())
         .find(|(measure, value)| *value > measure.bound())?;
-    let by = card.map_or_else(String::new, |id| format!(" by {id}"));
-    let what = match measure {
-        Measure::Events => format!("emitted {value} events"),
-        Measure::Largest => format!("left a number of {value} on {}", holder_of_largest(state, value)),
-        Measure::Instances => format!("left {value} card instances in play"),
+    let holder;
+    let holder = match measure {
+        Measure::Largest => {
+            holder = holder_of_largest(state, value);
+            holder.as_str()
+        }
+        _ => "no card",
     };
-    Some(format!(
-        "step {step} (\"{action}\"{by}) {what}, past {} ({}): runaway growth inside one action",
-        measure.bound_name(),
-        measure.bound()
+    Some(growth_message(
+        measure,
+        value,
+        (measure.bound(), measure.bound_name()),
+        step,
+        action,
+        card,
+        holder,
+    ))
+}
+
+/// One Duos action's weights, in `MEASURES`' order: the `duos_reduce` events, the largest number on
+/// any instance of either duel afterwards and the instances in both.
+pub(crate) fn weigh_duos(events: &[DuosEvent], state: &DuosState) -> [i64; 3] {
+    let (largest, instances) = state
+        .duels
+        .iter()
+        .flat_map(instances_of)
+        .fold((0_i64, 0_i64), |(largest, count), card| {
+            (largest.max(largest_number(card)), count + 1)
+        });
+    [
+        i64::try_from(events.len()).unwrap_or(i64::MAX),
+        largest,
+        instances,
+    ]
+}
+
+/// The def id of the card a Duos action is by, read in the state it was chosen in: a `Duel` action
+/// delegates to `acting_card` in the seat's own duel; a pass or a concede names none.
+pub(crate) fn duos_acting_card(state: &DuosState, seat: DuosSeat, body: &DuosActionBody) -> Option<String> {
+    match body {
+        DuosActionBody::Duel { body } => acting_card(&state.duels[seat.duel()], body),
+        DuosActionBody::Pass { .. } | DuosActionBody::Concede => None,
+    }
+}
+
+/// The def id of the first instance carrying `value` as its largest number, across both duels.
+fn duos_holder_of_largest(state: &DuosState, value: i64) -> String {
+    state
+        .duels
+        .iter()
+        .flat_map(instances_of)
+        .find(|card| largest_number(card) == value)
+        .map_or_else(|| "no card".to_string(), |card| card.def_id.clone())
+}
+
+/// The Duos failure message of the first measure past its `DUOS_GROWTH_*_BOUND`, when one is: a
+/// value at the bound passes. Same wording as the gate's, with the Duos bounds.
+pub(crate) fn duos_growth_breach(
+    weights: &[i64; 3],
+    state: &DuosState,
+    step: usize,
+    action: &str,
+    card: Option<&str>,
+) -> Option<String> {
+    let (measure, value) = MEASURES
+        .into_iter()
+        .zip(weights.iter().copied())
+        .find(|(measure, value)| *value > measure.duos_bound())?;
+    let holder;
+    let holder = match measure {
+        Measure::Largest => {
+            holder = duos_holder_of_largest(state, value);
+            holder.as_str()
+        }
+        _ => "no card",
+    };
+    Some(growth_message(
+        measure,
+        value,
+        (
+            measure.duos_bound(),
+            match measure {
+                Measure::Events => "DUOS_GROWTH_EVENTS_BOUND",
+                Measure::Largest => "DUOS_GROWTH_NUMBER_BOUND",
+                Measure::Instances => "DUOS_GROWTH_INSTANCES_BOUND",
+            },
+        ),
+        step,
+        action,
+        card,
+        holder,
     ))
 }
 
@@ -1478,8 +1609,9 @@ impl Wave {
     }
 }
 
-/// The summary's lines for each measure's heaviest actions (#1254).
-fn heaviest_lines(heaviest: &Heaviest) -> String {
+/// The summary's lines for each measure's heaviest actions (#1254), with each bound read off
+/// `bound_of`: the gate's below, the Duos wave's in `duos_heaviest_lines`.
+fn heaviest_lines_with(heaviest: &Heaviest, bound_of: impl Fn(Measure) -> i64) -> String {
     let mut text = "  heaviest actions, one per game (seed/step action card: weight):\n".to_string();
     for measure in MEASURES {
         let entries = heaviest
@@ -1500,11 +1632,22 @@ fn heaviest_lines(heaviest: &Heaviest) -> String {
         text.push_str(&format!(
             "    {} (bound {}): {}\n",
             measure.as_str(),
-            measure.bound(),
+            bound_of(measure),
             if entries.is_empty() { "none" } else { &entries }
         ));
     }
     text
+}
+
+/// The summary's lines for each measure's heaviest actions (#1254).
+fn heaviest_lines(heaviest: &Heaviest) -> String {
+    heaviest_lines_with(heaviest, Measure::bound)
+}
+
+/// The Duos summary's lines for each measure's heaviest actions (#1364): the same shape as the
+/// gate's, with the `DUOS_GROWTH_*_BOUND` values.
+pub(crate) fn duos_heaviest_lines(heaviest: &Heaviest) -> String {
+    heaviest_lines_with(heaviest, Measure::duos_bound)
 }
 
 // ---------------------------------------------------------------------------------------------
