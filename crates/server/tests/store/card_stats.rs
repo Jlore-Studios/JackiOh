@@ -72,10 +72,11 @@ fn dev(id: &str, partial: Value) -> GameRecord {
     ))
 }
 
+/// A record file as the build writes one, each line marked (R1371000).
 fn lines(records: &[GameRecord]) -> String {
     records
         .iter()
-        .map(|record| serde_json::to_string(record).expect("a record serialises"))
+        .map(jackioh_cards::versions::game_record_line)
         .collect::<Vec<_>>()
         .join("\n")
 }
