@@ -7166,11 +7166,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-20T04:23:51Z",
+        "at": "2026-10-20T04:41:40Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "least sure whether a wrapper-only flag counts as the AI's search, but the hard rule names crates/ai/src/ outright and the issue itself estimates Hard, so hard holds"
+        "provider": "claude-5",
+        "tier": "strong",
+        "why": "It changes the AI's decision wrapper and gate in crates/ai/src/duos.rs, which the rule names hard ('the AI's search (crates/ai/src/)'), and also touches crates/tools and spec \u00a713.7. It was rated hard already and cannot go lower."
       },
       "failures": 0,
       "forced": false,
