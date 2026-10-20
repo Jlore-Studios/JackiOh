@@ -11641,14 +11641,8 @@
     "what": "review #1377 on claude-2"
   },
   "last_sweep": {
-    "at": "2026-10-20T02:52:03Z",
-    "notes": [
-      "#1382: typed it Task",
-      "#1381: typed it Task",
-      "#1380: typed it Task",
-      "#1379: typed it Task",
-      "#1378: typed it Task"
-    ],
+    "at": "2026-10-20T02:58:58Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
