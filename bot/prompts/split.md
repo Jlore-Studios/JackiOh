@@ -60,7 +60,7 @@ End your message with one fenced `json` block holding the tree, and nothing afte
   "issues": [
     {
       "key": "engine",
-      "title": "Patch v0.3.X (part 1 of 2): …",
+      "title": "Patch (part 1 of 2): …",
       "body": "What to do, where, and how to check it, in Markdown.",
       "plan": "1. … 2. …",
       "difficulty": "medium",
@@ -69,7 +69,7 @@ End your message with one fenced `json` block holding the tree, and nothing afte
     },
     {
       "key": "client",
-      "title": "Patch v0.3.X (part 2 of 2): …",
+      "title": "Patch (part 2 of 2): …",
       "body": "…",
       "plan": "…",
       "difficulty": "easy",

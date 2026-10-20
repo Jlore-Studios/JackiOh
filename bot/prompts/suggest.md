@@ -44,7 +44,7 @@ $declined
 The very first line must be a single HTML comment carrying JSON on one line, with nothing before
 it:
 
-    <!-- suggestions: [{"title": "Patch v0.3.Y: what it does", "class": "polish", "body": "Markdown body"}] -->
+    <!-- suggestions: [{"title": "Patch: what it does", "class": "polish", "body": "Markdown body"}] -->
 
 Each suggestion's `class` is the id of the one class below it belongs to, which sets the priority
 it opens with. Leave `class` out when none fits.
@@ -71,10 +71,8 @@ When two classes fit, take the one higher in that list: today a hidden-informati
 also bypasses an access rule is `security`, say, and a new mode with its fuzz coverage is
 `feature`.
 
-Each title follows `docs/issues-and-patches.md`, Titles, since nothing retitles it later: a small
-change to the game starts as `.github/ISSUE_TEMPLATE/micro-patch.yml`'s title does (`Patch v0.3.Y: `
-today), a bigger one as `patch.yml`'s (`Patch v0.3.X: `), tooling or CI `Architecture: ` or `CI: `,
-and the bots themselves `Night bot: `, each followed by what it does.
+Each title follows `docs/issues-and-patches.md`, Titles: every one starts `Patch: `, as the issue
+forms' titles do, followed by what it does, with no version (one is named when a card change ships).
 
 Each body has these sections, in this order:
 

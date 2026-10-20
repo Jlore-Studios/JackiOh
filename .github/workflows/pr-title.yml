@@ -1,6 +1,8 @@
 # The pull request title check (#187): a pull request's title becomes its squash commit's subject,
-# so it must follow docs/issues-and-patches.md (Titles): `Patch v0.3.X: …`, `Patch v0.3.Y: …`,
-# `vX.Y.0: …`, `Night bot: …`, `CI: …` or `Architecture: …`. The pattern is triage's
+# so it must follow docs/issues-and-patches.md (Titles): `Patch: <what it does>`, a shipped card
+# change's `Patch vX.Y.Z: …` and a part's `Patch (part n of m): …` (#1360); the older `Patch
+# v0.3.X: …`, `Patch v0.3.Y: …`, `vX.Y.0: …`, `Night bot: …`, `CI: …` and `Architecture: …` pass
+# until the title retcon (#1372) has run. The pattern is triage's
 # (`bot/harness/triage.py`'s `CONVENTION`), with the titles tools give their own pull requests
 # (`AUTOMATED_PULL`: `patches ship: v0.3.1`, `Promote main to production: N commit(s) up to abc1234`,
 # a training lane's `AI gen N (lane): …`) and GitHub's `Revert "…"` of a title that passes. The
@@ -64,13 +66,13 @@ jobs:
               print(f"The title follows the convention: {title}")
               sys.exit(0)
           print(f"::error title=Pull request title::{title!r} breaks docs/issues-and-patches.md (Titles). "
-                "Retitle it, usually as its issue is: Patch v0.3.X: <what it does> (Y for a micro patch), "
-                "vX.Y.0: <...>, Night bot: <...>, CI: <...> or Architecture: <...>.")
+                "Retitle it, usually as its issue is: Patch: <what it does>, or Patch (part n of m): <...> "
+                "for a part. No title names a version before it ships.")
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
               summary.write(f"### The title breaks the convention\n\n`{title}`\n\n"
                             f"Titles follow [docs/issues-and-patches.md]({os.environ['GITHUB_SERVER_URL']}/"
                             f"{os.environ['GITHUB_REPOSITORY']}/blob/HEAD/docs/issues-and-patches.md#titles): "
-                            "`Patch v0.3.X: …`, `Patch v0.3.Y: …`, `Patch vX.Y.Z (part n of m): …`, `vX.Y.0: …`, "
-                            "`Night bot: …`, `CI: …` or `Architecture: …`. Edit the title and this check runs again.\n")
+                            "`Patch: <what it does>`, or `Patch (part n of m): …` for a part; `patches ship` "
+                            "names the version of a card change when it ships. Edit the title and this check runs again.\n")
           sys.exit(1)
           PY

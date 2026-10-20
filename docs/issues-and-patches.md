@@ -7,8 +7,8 @@ parent, `bot:tree`, among them ([Fullsend](../bot/README.md#fullsend)), and Squi
 ones (the same, plus its modes `squishy:oneshot`, `squishy:split`, `squishy:split-bot` and
 `squishy:fullsend`, and a split's parent, `squishy:tree`) in [its section](../bot/README.md#squishy).
 
-Open an issue through one of the forms **New issue** lists (`.github/ISSUE_TEMPLATE/`: Patch, Micro
-patch, Bug, Architecture or CI, Night bot): each starts the title, puts on the type labels and asks
+Open an issue through one of the forms **New issue** lists (`.github/ISSUE_TEMPLATE/`: Patch, Bug,
+Architecture or CI, Night bot): each starts the title (`Patch: `), puts on the type labels and asks
 for what a builder needs. Its Difficulty, Priority and Who does it dropdowns become the
 `difficulty:*` and `priority:*` labels and `bot:build` (the night bot) or `human` (people), as a
 person would set them by hand, and triage gives the issue its type (Task, Bug or Feature) as it
@@ -27,6 +27,23 @@ Every issue carries at least one type label:
 | `architecture` | The repository, tooling, CI, deploys and agent setup |
 | `night bot` | The night bot and Squishy themselves: `bot/`, `.harness/`, `.squishy/` and their workflows |
 | `production merge` | The countdown issue `promote-production.yml` keeps open (`Merging to production in N hours`) and the pull requests that merge main into production. The workflow opens, retitles and closes them and finds the open one by this label, so leave it on, and leave its titles to the workflow. It also labels them `human` and assigns both people. Comments `/hold`, `/resume`, `/delay 3h` and `/fast-forward` steer it (`docs/deploy-cloudflare.md`, section 2.3) |
+
+A pull request also gets its **kind** and, for a card change, its **tier** from the classifier
+(`cargo jackioh classify`, R1365000), which CI's `rust (classify)` puts on and keeps up to date with
+every push (#1370). Nothing else sets them, and no label overrides the classifier:
+
+| Label | For |
+|---|---|
+| `kind:cards` | It changes how a card plays (its data, its script, or an engine rule its games meet) or its words |
+| `kind:ai` | It changes the practice and ladder AI's decisions |
+| `kind:app` | It changes the client or the server, what players see and use |
+| `kind:internal` | CI, the bots, tooling, docs, tests or a refactor |
+| `tier:major` | A set ships: the next `v0.Z.0` |
+| `tier:patch` | 10 or more cards play differently, or a rule every game meets: the next `v0.Z.X` |
+| `tier:micro` | Fewer cards, or their words alone: the next letter |
+
+The type labels stay for routing (the night bot's sweeps and the forms read them), though a `Patch:`
+title names none.
 
 The types can combine. A major version that changes the game is `major version` and `patch`, and a
 patch whose work is all tooling (the codebase pass) is `patch` and `architecture`. The
@@ -75,49 +92,58 @@ A pull request has no type.
 
 | Kind | Title |
 |---|---|
-| Patch | `Patch vX.Y.Z: <what it does>` |
-| Normal patch not shipped yet | `Patch v0.3.X: <what it does>`, the X replaced by the next number once its fragment is made (see Version numbers) |
-| Micro patch | `Patch v0.3.Y: <what it does>`, named when it ships (see Version numbers) |
-| Revision of a shipped patch | `Patch vX.Y.Zb: <what it does>` |
-| Major version | `vX.Y.0: <what it does>` |
-| Part of a multi-part patch | `Patch vX.Y.Z (part n of m): <what it does>`, or `vX.Y.0 (part n of m): …` |
-| Night bot | `Night bot: <…>` |
-| Tooling | `CI: <…>` or `Architecture: <…>` |
+| Any change | `Patch: <what it does>` |
+| A shipped card change | `Patch v<version>: <what it does>`, which `patches-ship.yml` gives its issue and its pull request once the version ships |
+| Part of a change split over several issues | `Patch (part n of m): <what it does>`, a sub-issue of its tracker |
+| A tool's own pull request | `patches ship: v0.3.18`, `Promote main to production: …`, `AI gen N (lane): …`, `Revert "…"` |
 
-"What it does" is a short phrase, such as `Patch v0.2.4: aimed random casts and the Deft keyword`.
-A pull request takes the same titles ([Pull requests](#pull-requests)).
-Keep a version number as it was given; #290's renames (R743) were not carried into older titles.
-`ci-duration.yml` finds its open issue by its exact title, so leave that title alone. Night bot
-suggestions (`bot:suggestion`) are asked for conventional titles; retitle one that arrives without.
+"What it does" is a short phrase, such as `Patch: aimed random casts and the Deft keyword`. No title
+names a version before it ships: the version follows from what the change does to the cards
+([Version numbers](#version-numbers)), and the issue and the pull request are retitled
+`Patch v0.3.18: aimed random casts and the Deft keyword` when it ships. A change that ships no card
+data never takes a version and keeps its `Patch:` title. Its kind (Cards, AI, App, Internal) is the
+classifier's label on its pull request, never its title's.
+
+A pull request takes the same titles ([Pull requests](#pull-requests)). The older prefixes
+(`Patch v0.3.X: …`, `Patch v0.3.Y: …`, `vX.Y.0: …`, `Night bot: …`, `CI: …`, `Architecture: …`) still
+pass the title check until the title retcon (#1372) has retitled every thread; open new threads with
+`Patch: `. `ci-duration.yml` finds its open issue by its exact title, so leave that title alone, and
+leave the `production merge` threads' titles to their workflow. Night bot suggestions
+(`bot:suggestion`) are asked for conventional titles; retitle one that arrives without.
 
 ## Version numbers
 
-- **Numbers run in order (R743).** A card patch takes the next number after the newest card patch on
-  `main`, shipped (`crates/cards/patches/patches.json`) or still pending (`pending/`): after v0.2.9
-  with nothing pending, a normal patch (`Patch v0.2.X: …`) is v0.2.10, and a micro patch
-  (`Patch v0.2.Y: …`) becomes v0.2.9b when it ships (below). Name the pending fragment that number
-  when the branch makes it. Two normal patches in flight at once cannot both take it: the one that
-  merges second renames its fragment to the number after, or `patches ship` would ship it as a
-  revision letter of the first. A patch that changes no card data ships no version and takes no
-  number, so it keeps its `X` or `Y` title and leaves no gap. The order is still `patches.json`'s,
-  and nothing compares version strings (R105, R388). #290 renamed the history this way: v0.2.4,
-  v0.2.5, v0.2.10, v0.2.11, v0.2.12, v0.2.13, v0.2.14, v0.2.14b, v0.2.16, v0.2.16b and v0.2.17 are
-  now v0.2.1 to v0.2.7, v0.2.7b, v0.2.8, v0.2.8b and v0.2.9, and #88's pending v0.2.15 is v0.2.10;
-  commit messages and older titles keep the old names.
-- **A shipped version never reopens.** A follow-up to it takes the same number plus a letter:
-  `vX.Y.Zb`, then `c`, then `d`. This replaces the old `-rN` suffix: #85 renamed the patch history's
-  v0.1.0-r1, -r2 and -r3 to v0.1.0b, v0.1.0c and v0.1.0d.
-- **Micro or normal.** A patch is a micro patch, `Patch v0.3.Y: …`, when it is small: one fix, one
-  card's numbers or text, one cosmetic or client tweak, with no new mechanic, keyword, ruling set or
-  feature. Anything larger is a normal patch, `Patch v0.3.X: …`, which takes the next number (above).
-  When a micro patch grows past that, retitle it `X`; when a normal one shrinks to one tweak,
-  retitle it `Y`.
-- **A micro patch is named when it ships (R650).** `Y` becomes the newest version in `patches.json`
-  plus the next letter: a micro patch that ships after v0.2.5 is v0.2.5b, and one after v0.2.7c is
-  v0.2.7d. Going live through a pending fragment it keeps its `Y` (`pending/v0.2.Y.json`) until
-  `patches ship` promotes it, which names it (`crates/tools/src/patches.rs`'s `versions`). It refuses a
-  `v0.2.Y` when the newest version is not a v0.2 one. A micro patch with no card data change bumps
-  nothing and keeps its `Y` title.
+A version is `v0.Z.X` plus a letter, and it moves exactly when the cards a player compares across it
+do (#1360, R1365000, R1366000). Nothing guesses it: when a patch ships, `patches ship` reads what it
+does to the cards through the classifier and names it:
+
+- **Major, `v0.(Z+1).0`**: a set reaches `SHIPPED_SETS` (R1420). Nothing else makes one: no title,
+  flag or label. v1.0.0 waits until the owner asks for it.
+- **Patch, `v0.Z.(X+1)`**: 10 or more card families play differently (`PATCH_MIN_CARDS`), or a rule
+  every game meets changed.
+- **Micro, the newest version with the next letter** (after v0.3.18, v0.3.18b, then v0.3.18c):
+  anything smaller, and any change to wording alone however many cards it touches.
+
+A family is a card with its tokens. A card plays differently when its catalog entry changes a field
+other than its wording (`name`, a face's `text`, `refs`, `printedRarity`, `index`), when it is added
+or removed, or when its script or an engine rule changes how its games go, which the classifier's
+second stage confirms against the base build. The patch records its `tier` and `plays` (the families)
+in `patches.json`, so readers never parse a version, and the order of patches is still
+`patches.json`'s, never a comparison of version strings (R105, R388).
+
+- **A pull request's claims are checked.** A card change goes live through a pending fragment
+  ([A patch that takes several pull requests](#a-patch-that-takes-several-pull-requests), Going
+  live). CI's `rust (classify)` fails a pull request when a card plays differently and no fragment
+  claims it, or when a fragment claims a play or a rule the base build does not show (R1370000), and
+  `patches check` holds every catalog change to exactly one claim (R646).
+- **A shipped version never reopens.** Every later change takes a later name.
+- **Codebase projects take no version.** `docs/v0.3.0/` (the Rust rewrite) and `docs/v0.4.0/` (the
+  Luau scripts) keep their folder names, which code comments cite, but they name codebase projects,
+  not catalog versions.
+- **Older names.** #290 renamed the history once (R743): v0.2.4, v0.2.5, v0.2.10, v0.2.11, v0.2.12,
+  v0.2.13, v0.2.14, v0.2.14b, v0.2.16, v0.2.16b and v0.2.17 are v0.2.1 to v0.2.7, v0.2.7b, v0.2.8,
+  v0.2.8b and v0.2.9, and #88's v0.2.15 is v0.2.10; #85 renamed v0.1.0-r1, -r2 and -r3 to v0.1.0b,
+  v0.1.0c and v0.1.0d. Commit messages and older titles keep the names they were written with.
 
 ## Version retcon
 
@@ -177,9 +203,9 @@ v0.3.12), so read a bare version in an old text as old. A file without the `vers
 
 ## A patch that takes several pull requests
 
-- **Tracker.** One issue, `Patch vX.Y.Z: <…>` (or `vX.Y.0: <…>`), holds the scope and a checklist
-  of the parts, one line per part issue.
-- **Parts.** Each part is its own issue, `Patch vX.Y.Z (part n of m): <…>`, labelled like its
+- **Tracker.** One issue, `Patch: <…>`, holds the scope and a checklist of the parts, one line per
+  part issue.
+- **Parts.** Each part is its own issue, `Patch (part n of m): <…>`, labelled like its
   tracker: `patch`, or `major version` with `patch` if the part changes the game. Add
   `architecture` to a part that is all tooling. Link each part as a sub-issue of the tracker:
 
@@ -189,15 +215,18 @@ v0.3.12), so read a bare version in an old text as old. A file without the `vers
   ```
 
   n is the order the parts are meant to merge in. When a part is added or moved, update m on the
-  rest.
+  rest. The night bot holds a part until the parts before it, the same parent's sub-issues, have
+  closed (`bot/harness/queue.py`, `waits_for`), so a part that is not linked waits for nothing.
 - **Pull requests.** A part's PR says `Closes #<part>` and `Part of #<tracker>`, never
   `Closes #<tracker>`. Close the tracker by hand once its last sub-issue is closed.
-- **Going live.** A change to card data goes live through a pending fragment:
-  `cargo jackioh patches <version> <date> "<title>"` writes
-  `crates/cards/patches/pending/<version>.json` claiming the cards the branch changed, and after
-  the branch merges `patches ship` promotes it — appending the version to `patches.json` and
-  bumping the catalog version everywhere it lives (`crates/cards/README.md` §6) — and the next
-  deploy reseeds the database. The PR that adds the fragment is the last part, and the patch is
+- **Going live.** A change to a card goes live through a pending fragment:
+  `cargo jackioh patches "<title>"` writes `crates/cards/patches/pending/<slug>.json`, named after
+  the title, claiming the catalog cards the branch changed. A card whose script or engine rule
+  changed how it plays, with no catalog change, is claimed with `--plays <ids>`, and a rule every
+  game meets with `--rule`, as `cargo jackioh classify --base origin/main --parent-bin <main's
+  jackioh>` names them (R1366000). After the branch merges `patches ship` promotes it, naming the
+  version from its tier, appending it to `patches.json` and bumping the catalog version everywhere
+  it lives (`crates/cards/README.md` §6), and the next deploy reseeds the database. The PR that adds the fragment is the last part, and the patch is
   live when the promotion PR merges. A patch with no card data change is live when its last part
   merges.
 - **Until then, players see nothing new.** Every earlier part leaves main playable and unchanged
@@ -212,7 +241,7 @@ v0.3.12), so read a bare version in an old text as old. A file without the `vers
   it lands is a patch of its own, titled without `(part n of m)`, and goes live when it merges.
 - **After it.** Work that shouldn't hold the patch back, such as an e2e spec, an audit or a deploy
   check, can be split off as a part that merges after the version is live, provided it changes
-  nothing for players. A change for players after that is a revision (`vX.Y.Zb`).
+  nothing for players. A change for players after that is a patch of its own.
 - **Moving a part.** A part deferred to another version moves under that version's tracker. Unlink
   it and link it to the new tracker, retitle it, and leave a comment saying why.
 
@@ -242,12 +271,12 @@ part that narrows the task shows the gap instead of hiding it.
   `notes` are the history's: they may name issues, rulings and commits. The Patch notes page shows
   its `player` note instead: `{ title, new, balance, changes, text, fixes }`.
 - **Write it by hand in the fragment.** `cargo jackioh patches …` has no flag for it: open
-  `pending/<version>.json` and fill in `player`. Running the command again (when the cards change)
+  `pending/<slug>.json` and fill in `player`. Running the command again (when the cards change)
   keeps the note, `patches ship` carries it onto the shipped patch, and `patches check` fails until
   it has a title and at least one line, and on a blank line, a line over 200 characters, or a
   ruling (`R656`), an issue or card number (`#88`) or a `§`.
 - **The title** is a short phrase with no version, which the page shows beside it: "Gary the Gambler
-  buffed", not "Patch v0.2.Y: Buff Gary the Gambler".
+  buffed", not "Patch: Buff Gary the Gambler".
 - **One fact per line, under its heading.**
   - `new`: the cards, tokens, keywords and tags the patch brings.
   - `balance`: a cost, stat, number or rarity, written from and to ("Hit Job costs (3), up from
@@ -300,7 +329,8 @@ sample of All Random. The base build needs the flag, so the first such compariso
   commits' subjects (`bot: build pass 1 for #85`) never become one on `main`.
 - **Body.** The template asks for `Closes #n` (a part says `Closes #<part>` and
   `Part of #<tracker>`), what changed, the tests run, the risks, the rulings added or changed and
-  the patch version, and the gates (CLAUDE.md, Commands).
+  what the fragment claims (no version: it is named when it ships), and the gates (CLAUDE.md,
+  Commands).
 - **Review.** `.github/CODEOWNERS` asks MaxGoetzmann and jgoetzmann to review any change to
   `.github/`, `bot/`, `.harness/` or `.squishy/`, the paths the bots may not change.
 

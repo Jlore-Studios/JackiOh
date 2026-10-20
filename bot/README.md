@@ -394,7 +394,9 @@ triage.yml -f number=<n>` (or **Run workflow** on the triage workflow's Actions 
     on start no workflow, but the queue reads `bot:build` by label, so the next run sees it;
   - **its type label** from its title's prefix (`triage.type_label`), when it has none: `Patch v…`
     is `patch`, `vX.Y.0` `major version`, `Night bot:` `night bot`, `Architecture:` and `CI:`
-    `architecture`;
+    `architecture`. A `Patch:` title, every form's since #1360, names none: its form's own label
+    types it, and its pull request's kind and tier are the classifier's (`kind:*`, `tier:*`, put on
+    by CI's `rust (classify)`);
   - **an issue type**, Task, Bug or Feature, when it has none (`triage.fallback_type`, read from
     the title and labels: a failure is a Bug; tooling, CI, the bot and trackers a Task; something
     new a Feature). GitHub drops a type it won't take without an error, so triage reads it back.
@@ -409,7 +411,8 @@ triage.yml -f number=<n>` (or **Run workflow** on the triage workflow's Actions 
   their issue's (`pull_title`).
 - **It adds, and moves only what `human` moves.** A person's labels, assignees and type stay. It
   links nothing: the queue holds a build that waits for another issue by itself, from a "Blocked
-  by #n" line, GitHub's own blocked-by links and the earlier parts of a patch
+  by #n" line, GitHub's own blocked-by links and the earlier parts of a patch, the sub-issues of
+  the same parent with a lower `(part n of m)` (`queue.patch_of`, #1370)
   ([Dependencies](#priority-and-human)). It retitles nothing either, so the bot's suggestions are
   asked for titles that follow the conventions (`prompts/suggest.md`).
 - **Issues triage never types.** The sweep (every ten minutes, in the status loop) types every

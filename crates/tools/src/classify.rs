@@ -81,6 +81,40 @@ pub struct Args {
     /// Print the classification as one JSON object.
     #[arg(long)]
     json: bool,
+    /// Hold the head's pending fragments to what the change does (R1370000): fail when a card plays
+    /// differently and no fragment claims it, or a fragment claims a play or a rule the base build
+    /// does not show. Needs `--parent-bin` whenever stage 1 leaves something unchecked.
+    #[arg(long)]
+    claims: bool,
+}
+
+/// `--json --claims`: the classification, the labels CI puts on the pull request, and what the
+/// fragments' claims get wrong.
+#[derive(Serialize)]
+struct Report<'a> {
+    #[serde(flatten)]
+    classification: &'a Classification,
+    labels: Vec<String>,
+    problems: Vec<String>,
+}
+
+/// R1370000: the labels a pull request carries for its kind and its tier (`kind:cards`,
+/// `tier:micro`), as `bot/harness/config.py`'s `LABELS` lists them.
+pub(crate) fn labels(classification: &Classification) -> Vec<String> {
+    let mut labels = vec![format!("kind:{}", kind_name(classification.kind))];
+    if let Some(tier) = classification.tier {
+        labels.push(format!("tier:{}", format!("{tier:?}").to_lowercase()));
+    }
+    labels
+}
+
+fn kind_name(kind: Kind) -> &'static str {
+    match kind {
+        Kind::Internal => "internal",
+        Kind::App => "app",
+        Kind::Ai => "ai",
+        Kind::Cards => "cards",
+    }
 }
 
 /// What a change reaches, lowest first, so the highest of several is their `max`.
@@ -784,10 +818,44 @@ pub fn run(args: Args) -> Result<()> {
         None => None,
     };
     let classification = classify(&diff, checked.as_ref());
+    let problems = if args.claims {
+        if checked.is_none() && !classification.unchecked.is_empty() {
+            bail!(
+                "--claims needs --parent-bin: stage 1 left {} unchecked",
+                classification.unchecked.join(", ")
+            );
+        }
+        crate::claims::problems(
+            &classification,
+            &crate::claims::fragments_at(&root, &head)?,
+            &crate::claims::fragments_at(&root, &base)?,
+        )
+    } else {
+        Vec::new()
+    };
     if args.json {
-        println!("{}", serde_json::to_string(&classification)?);
-        return Ok(());
+        let report = Report {
+            classification: &classification,
+            labels: labels(&classification),
+            problems: problems.clone(),
+        };
+        println!("{}", serde_json::to_string(&report)?);
+    } else {
+        print_classification(&classification);
+        for problem in &problems {
+            println!("classify: {problem}");
+        }
     }
+    if !problems.is_empty() {
+        bail!(
+            "the pending fragments' claims do not match the change ({} problem(s))",
+            problems.len()
+        );
+    }
+    Ok(())
+}
+
+fn print_classification(classification: &Classification) {
     let tier = classification
         .tier
         .map_or(String::new(), |tier| format!(", {tier:?}").to_lowercase());
@@ -805,7 +873,6 @@ pub fn run(args: Args) -> Result<()> {
     if classification.rule {
         println!("  a divergence no card explains: a rule every game meets");
     }
-    Ok(())
 }
 
 #[cfg(test)]

@@ -10,6 +10,7 @@ mod agent;
 mod arena;
 mod board;
 mod catalog;
+mod claims;
 mod classify;
 mod dealt_fit;
 mod duos_fuzz;

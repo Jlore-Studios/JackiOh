@@ -1,6 +1,6 @@
 name: Patch
-description: A numbered release of the game (cards, rules, the client, the server's features) that is more than one fix or tweak.
-title: "Patch v0.3.X: "
+description: A change to the game, however small (cards, rules, the client, the server's features). Its version is named when it ships.
+title: "Patch: "
 labels: ["patch"]
 body:
   - type: markdown
@@ -8,8 +8,7 @@ body:
       value: |
         Titles, labels and version numbers follow [docs/issues-and-patches.md](https://github.com/Jlore-Studios/JackiOh/blob/main/docs/issues-and-patches.md).
 
-        - **Title:** `Patch v0.3.X: <what it does>`, a short phrase. Keep the `X`: the branch that makes the patch's pending fragment names the number (Version numbers). A part of a multi-part patch is `Patch v0.3.X (part n of m): …`, a sub-issue of its tracker.
-        - **Small?** One fix, one card's numbers or text, or one cosmetic or client tweak, with no new mechanic, keyword, ruling set or feature, is a micro patch: use the Micro patch form instead.
+        - **Title:** `Patch: <what it does>`, a short phrase with no version. The version is never guessed: the classifier reads what the change does to the cards, and `patches ship` names it from that when it ships (a patch for 10 or more cards that play differently, a micro for fewer or for wording alone, a major when a set ships; Version numbers), then retitles this issue `Patch v<version>: …`. A change that ships no card data takes no version and keeps its title. A part of a change split over several issues is `Patch (part n of m): …`, a sub-issue of its tracker.
         - **Who does it:** choose below, or later label it `human` (people) or `bot:build` (the night bot). Your choice, difficulty and priority become labels, and triage adds the type label and the issue type (Task, Bug or Feature); with no difficulty, the bot's planner rates it.
   - type: textarea
     id: what

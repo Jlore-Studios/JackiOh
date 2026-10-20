@@ -13,7 +13,7 @@ use serde_json::{Value, json};
 
 use jackioh_engine::wire::{GameRecord, GameSource, SourceFilter, parse_game_record_lines};
 use jackioh_server::cli::card_stats::{
-    CardStatsOptions, card_stats_report, parse_card_stats_args, render_card_stats,
+    CardStatsOptions, card_stats_report, card_stats_window, parse_card_stats_args, render_card_stats,
 };
 use jackioh_server::cli::export_records::{
     ExportOptions, export_records, parse_export_args, read_records, render_records,
@@ -248,6 +248,35 @@ mod stats_cards_report {
             first_in_deck(&prerelease),
             json!({ "games": 2, "wins": 1, "draws": 0 })
         );
+    }
+
+    /// R1367000, R1368000: `--window` reads every patch's totals into each card's window, the JSON
+    /// `cargo jackioh winrates --refresh` takes, and refuses the filter flags it replaces.
+    #[tokio::test]
+    async fn r1368000_window_reads_every_card_over_its_window_off_the_totals() {
+        let db = seeded().await;
+        let newest = options(&["--window"]);
+        assert_eq!(newest.window.as_deref(), Some(jackioh_cards::catalog_version()));
+        let at = options(&["--window=v0.2.5", "--card=core-001"]);
+        let report = card_stats_window(&db, &at, "v0.2.5").await.expect("a report");
+        assert_eq!(report.at, "v0.2.5");
+        assert_eq!(report.patch.versions, ["v0.2.5"]);
+        // The live game is short of the gate and v0.2.5 opens its window, so the development games pad it.
+        assert_eq!(report.patch.live_games, 1);
+        assert_eq!(report.cards.len(), 1);
+        assert_eq!(report.cards[0].stats.card, "core-001");
+        assert_eq!(report.cards[0].stats.in_deck.games, 3);
+        let json = serde_json::to_string(&report).expect("serialises");
+        assert_eq!(
+            serde_json::from_str::<jackioh_engine::wire::WindowedReport>(&json).expect("reads back"),
+            report
+        );
+        for refused in ["--patch=v0.2.5", "--source=dev", "--mode=bo1"] {
+            assert!(
+                parse_card_stats_args(&args(&["--window", refused])).is_err(),
+                "{refused}"
+            );
+        }
     }
 
     /// The cards a report has rows for, by id.
