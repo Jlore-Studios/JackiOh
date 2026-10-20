@@ -1,0 +1,19 @@
+{
+  "version": "v0.3.Y",
+  "title": "Rename Zephyrs to Zephrys",
+  "sources": "#1418",
+  "notes": "Patch v0.3.Y (#1418): Core #97 Zephyrs is renamed Zephrys, the spelling Classic+ #27 Zephrys Zealotism prints; the designer's list spelled it Zephyrs by a typo. The name only: no text, number, tag, pool or behavior changes.",
+  "player": {
+    "title": "Zephyrs is spelled Zephrys",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [
+      "Zephyrs is renamed Zephrys, spelled like Zephrys Zealotism. Nothing plays differently."
+    ],
+    "fixes": []
+  },
+  "cards": [
+    "core-097"
+  ]
+}

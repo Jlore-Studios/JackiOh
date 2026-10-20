@@ -68,7 +68,7 @@ attribution is required when they play in the game.
 | `intro-core-093` | `apps/web/public/audio/music/intro-core-093.m4a` | Intro of #93 Combo-Index (Legendary): vibraphone, choir, cello, E major, 4/4 at 112 | 5.3 s |
 | `intro-core-095` | `apps/web/public/audio/music/intro-core-095.m4a` | Intro of #95 Call to Chaos (Core Edition) (Legendary): calliope, xylophone, tuba, C mixolydian, 4/4 at 138 | 4.5 s |
 | `intro-core-096` | `apps/web/public/audio/music/intro-core-096.m4a` | Intro of #96 My Pawn (Mythic): pizzicato, harpsichord, bassoon, E harmonic minor, 4/4 at 104 | 5.6 s |
-| `intro-core-097` | `apps/web/public/audio/music/intro-core-097.m4a` | Intro of #97 Zephyrs (Mythic): flute, string tremolo, fretless bass, F lydian, 4/4 at 96 | 6.0 s |
+| `intro-core-097` | `apps/web/public/audio/music/intro-core-097.m4a` | Intro of #97 Zephrys (Mythic): flute, string tremolo, fretless bass, F lydian, 4/4 at 96 | 6.0 s |
 | `intro-core-098` | `apps/web/public/audio/music/intro-core-098.m4a` | Intro of #98 Heroic Power (Mythic): trumpet, horn, contrabass, C major, 4/4 at 96 | 6.0 s |
 | `intro-core-099` | `apps/web/public/audio/music/intro-core-099.m4a` | Intro of #99 Craft a Card (Mythic): kalimba, marimba, pizzicato, G major, 4/4 at 108 | 5.4 s |
 | `intro-core-100` | `apps/web/public/audio/music/intro-core-100.m4a` | Intro of #100 Ceaseless Void (Mythic): celesta, choir, contrabass, C phrygian, 4/4 at 112 | 5.3 s |
