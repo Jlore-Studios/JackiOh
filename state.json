@@ -6554,6 +6554,13 @@
     "1350": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T01:17:20Z",
+        "difficulty": "medium",
+        "provider": "claude-2",
+        "tier": "strong",
+        "why": "Lines 1-7 hold (7 files, about 170 lines, all in apps/web, unit-tested). Line 9 can't be checked without GitHub access, and the fetch-stubbed async component tests are where a weak builder stalls, so this borderline case is rated medium."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
