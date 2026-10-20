@@ -6430,25 +6430,15 @@
           "claude"
         ],
         "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/11-rulings.md",
-            "spec/INDEX.md",
-            "spec/rulings/R767000.md"
-          ],
-          "from": "80d4b194bafefa81022e5a58f9e1551f9377ca6e",
-          "main": "402651365937a39f14d215df30ef85409b24db0a"
-        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39336299155",
+            "run": "39341524518",
             "tier": "strong"
           }
         ],
-        "sha": "3cf5e7135c5a9643436be910d41098e43dc011eb",
+        "sha": "b07e30405744e643102e45de3480c4c8e6e463cf",
         "tiers": {
           "claude": "strong"
         }
