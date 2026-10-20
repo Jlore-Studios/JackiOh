@@ -48,8 +48,8 @@ use jackioh_ai::{
 };
 use jackioh_engine::{
     AI_DIFFICULTY, Action, ActionBody, CreateGameOptions, DEV_RECORD_ID_PREFIX, FoldArgs, GameRecord,
-    GameResult, GameState, PerPlayer, PlayerId, Rng, Winner, begin_game, create_game, fold, hash_state,
-    legal_actions, reduce, seat_to_act, subsystems, summarize_game,
+    GameResult, GameState, PerPlayer, PlayerId, RecordBuild, Rng, Winner, begin_game, create_game, fold,
+    hash_state, legal_actions, reduce, seat_to_act, subsystems, summarize_game,
 };
 use rayon::prelude::*;
 use serde::Serialize;
@@ -909,9 +909,15 @@ pub(crate) fn game_record(outcome: &ArenaOutcome) -> anyhow::Result<Option<GameR
         "pilots": { "p1": "ai", "p2": "ai" },
         "game": game,
     });
-    Ok(Some(serde_json::from_value(record).context(
-        "arena: a game record does not parse as a GameRecord",
-    )?))
+    let mut record: GameRecord =
+        serde_json::from_value(record).context("arena: a game record does not parse as a GameRecord")?;
+    // R1367000: the build that played it.
+    record.build = RecordBuild::of(
+        crate::selfplay::build_commit().as_deref(),
+        jackioh_ai::ai_generation(),
+        &record.pilots,
+    );
+    Ok(Some(record))
 }
 
 /// The directory a run's output goes to: `out`, else `$JACKIOH_TRAINING_OUT`, else `None`.

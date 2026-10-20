@@ -47,6 +47,11 @@ pub use history::{
     shipped_versions,
 };
 
+/// R1367000: the card patch history as a card's stats window reads it.
+mod patch_history;
+
+pub use patch_history::{PRE_TIER_MAJORS, WORDING_FIELDS, patch_history, patch_history_of};
+
 pub use query::*;
 
 /// `packages/cards/catalog.json` as compiled in: the card data proved against SPEC §8. `build.rs`'s

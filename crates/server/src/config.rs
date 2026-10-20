@@ -843,9 +843,10 @@ pub const PLAYER_SETTINGS_BYTES_MAX: usize = 4096;
 // Public card and player statistics (SPEC §9.11, R654).
 // ---------------------------------------------------------------------------------------------
 
-/// SPEC §11 R654: live ranked and unranked games (tutorial excluded) logged per patch before public
-/// stats flip from provisional (padded with AI development runs) to live-only figures.
-pub const PUBLIC_STATS_MIN_LIVE_GAMES: i64 = 1000;
+/// SPEC §11 R654, amended by R1367000: the live games a card's stats window logs before its public
+/// figures are live-only. The engine holds it, since the window function that applies it is the
+/// engine's (`jackioh_engine::wire::stats::window`), shared with `cargo jackioh stats` and `winrates`.
+pub use jackioh_engine::config::PUBLIC_STATS_MIN_LIVE_GAMES;
 
 /// SPEC §11 R654: minimum sample of games for a card row to display a win-rate percentage. Below it,
 /// the row displays "not enough games". Its played delta needs this many on each side, played and
