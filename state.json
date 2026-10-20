@@ -7349,15 +7349,21 @@
       "action": "revise",
       "asks": [],
       "failures": 0,
+      "feedback_since": "2026-10-20T13:05:03Z",
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-10-20T12:59:58Z",
+      "round_tier": "medium",
       "run_id": "39427235695",
-      "source": "conflict",
+      "self_check_findings": [],
+      "source": "",
       "started_at": "2026-10-20T13:05:03Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 1
     },
     "1415": {
       "action": "revise",
