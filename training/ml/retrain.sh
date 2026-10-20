@@ -90,7 +90,12 @@ if [ -n "$positions_bin" ]; then
   : > "$out/empty-log.jsonl"
   "$bin" positions "$out/empty-log.jsonl" --out "$out/header-tree.jsonl" --every "$every" > /dev/null
   "$positions_bin" positions "$out/empty-log.jsonl" --out "$out/header-export.jsonl" --every "$every" > /dev/null
-  if cmp -s "$out/header-tree.jsonl" "$out/header-export.jsonl"; then
+  # The headers less `buildCatalog`: a patch shipped since the export changes it and not the
+  # features (runs 12 and 13 lost 99.8% of their games so, #466). Each row names its own catalog.
+  if python3 -c "import json,sys
+tree, export = (json.loads(open(p).readline()) for p in sys.argv[1:])
+for header in (tree, export): header.pop('buildCatalog', None)
+sys.exit(0 if tree == export else 1)" "$out/header-tree.jsonl" "$out/header-export.jsonl"; then
     fold="$positions_bin"
     say "the logs are folded by the build that played them ($positions_bin)"
   else

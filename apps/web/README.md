@@ -225,6 +225,10 @@ routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — 
                         Grape tiers, the Raisins — and the caller's own standing; rank/rank.ts says
                         a visible rank in a player's words for this screen, the account and the board
 routes/lobby.css        the lobby's, the series screen's and its picker's tavern look, and the banner's pips
+routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlore, fill, the clears), shown
+                        when /api/auth/me says isDev; the server decides every grant, and the panel shows
+                        its answer or refusal; /account's "Manage sign-in & account" shows every account
+                        its account secret ID, hidden until asked for, with a copy button
 ```
 
 A practice game offers the account's complete saved decks by name, read from `GET /api/decks`.

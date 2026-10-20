@@ -1,6 +1,6 @@
 //! The economy's store (SPEC §14.11; migration 0045): every holding of §14 beside its append-only
 //! ledger, over Postgres (`pg` below) or the in-memory fake (`fake` below, whose tables are
-//! `FakeTables::economy`). Migration 0046's practice seeds (§14.8, #1303) live here too: a seed is
+//! `FakeTables::economy`). Migration 0047's practice seeds (§14.8, #1303) live here too: a seed is
 //! no holding and has no ledger, and a claim burns it in place (`economy_practice_seed_claim`).
 //!
 //! Same shape as `duos::store`: every store method is one method on `Tx`, named
@@ -215,7 +215,7 @@ pub struct PracticeSetup {
     pub catalog_version: String,
 }
 
-/// One row of `public.practice_seeds` (migration 0046): a seed issued for a practice game, and
+/// One row of `public.practice_seeds` (migration 0047): a seed issued for a practice game, and
 /// when it was claimed (R1303001).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -348,7 +348,7 @@ pub struct EconomyTables {
     pub track_grants: Vec<TrackGrant>,
     pub quest_grants: Vec<QuestGrant>,
     pub cosmetic_grants: Vec<CosmeticGrant>,
-    /// Migration 0046's seeds, in the order they were issued.
+    /// Migration 0047's seeds, in the order they were issued.
     pub practice_seeds: Vec<PracticeSeed>,
 }
 
@@ -1308,7 +1308,7 @@ mod pg {
         })
     }
 
-    /// Migration 0046. `setup` crosses as text cast to `jsonb`, and reads back as text.
+    /// Migration 0047. `setup` crosses as text cast to `jsonb`, and reads back as text.
     pub async fn practice_seed_insert(t: &mut PgTx<'_>, seed: &PracticeSeed) -> Result<(), StoreError> {
         run_as(t, Some(seed.profile_id.as_str())).await?;
         sqlx::query(

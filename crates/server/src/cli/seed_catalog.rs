@@ -16,6 +16,10 @@
 //! In the same transaction it copies the cosmetics registry compiled in (`crate::cosmetics`,
 //! R1295000) into `public.cosmetics` (migration 0045, SPEC §14.2), which the owned cosmetics
 //! reference as `collection` references `public.cards`.
+//!
+//! R1300001: before the stamp it hands the transaction the dev accounts `DEV_PROFILE_IDS` lists, as
+//! the setting `jackioh.dev_profile_ids`, so the stamp's grant of the new version's cards (R481,
+//! migration 0046) passes over them and a dev account's clear stays cleared.
 //! Surface contract: docs/v0.3.0/SURFACE.md §11.3.
 
 use anyhow::{Result, anyhow};
@@ -181,9 +185,10 @@ pub async fn seed_catalog(
     connection_string: &str,
     catalog_version: &str,
     entries: &[CatalogEntry],
+    dev_profile_ids: &[String],
 ) -> Result<usize> {
     let mut client = PgConnection::connect(connection_string).await?;
-    let written = write_catalog(&mut client, catalog_version, entries).await;
+    let written = write_catalog(&mut client, catalog_version, entries, dev_profile_ids).await;
     let closed = client.close().await;
     let written = written?;
     closed?;
@@ -194,6 +199,7 @@ async fn write_catalog(
     client: &mut PgConnection,
     catalog_version: &str,
     entries: &[CatalogEntry],
+    dev_profile_ids: &[String],
 ) -> Result<usize> {
     // One transaction: either the whole catalog version is present or none of it is, so a queue or
     // save request can never see half a catalog (§9.4, "stale catalog version is rejected"). An
@@ -246,6 +252,12 @@ async fn write_catalog(
     .bind(serde_json::to_string(&cosmetics)?)
     .execute(&mut *tx)
     .await?;
+    // R1300001: the dev accounts, for this transaction only, so the stamp's grant below (R481,
+    // `app.grant_launch_collection_all` as migration 0046 left it) passes over them.
+    sqlx::query("select set_config('jackioh.dev_profile_ids', $1, true)")
+        .bind(dev_profile_ids.join(","))
+        .execute(&mut *tx)
+        .await?;
     // The version the server and the client compare against (`app.assert_catalog_version`).
     sqlx::query(
         "insert into app.settings (key, value) values ('catalog_version', $1::jsonb)
@@ -285,7 +297,12 @@ pub async fn run(args: Vec<String>) -> Result<()> {
         }
     };
 
-    let count = seed_catalog(&connection_string, &catalog_version, &entries).await?;
+    // R1300001: the list the server boots with, refused as the boot refuses it.
+    let dev_profile_ids =
+        crate::env::parse_dev_profile_ids(std::env::var(crate::config::DEV_PROFILE_IDS).ok().as_deref())
+            .map_err(|problem| anyhow!(problem))?;
+
+    let count = seed_catalog(&connection_string, &catalog_version, &entries, &dev_profile_ids).await?;
     println!("seed-catalog: wrote {count} cards at catalog version {catalog_version}");
     Ok(())
 }

@@ -6,6 +6,8 @@
 //! one transaction (the store exposes them separately; the fault-injection test asserts "both
 //! tables or neither", BUILD M6-T2), and the route table holds a single `GET`: §9.8's first row
 //! and M6-T2's "no endpoint" are satisfied by an absence, which a test asserts over `app::ROUTES`.
+//! The one other writer is a dev account's own fill and clear (`api/dev.rs`, R1300000), the server's
+//! grant of what the dev tools name, both writes in one transaction as here.
 //!
 //! `collection_upsert_quantities` takes the new *absolute* quantity; a `CollectionGrant`'s `delta`
 //! is the change applied (`collection_grants.delta` has `check (delta <> 0)`), so a no-op grant
@@ -176,7 +178,7 @@ pub async fn owned_map(app: &App, profile_id: &str) -> Result<IndexMap<String, i
 /// `GET /api/collection` (`AuthLevel::Active`).
 ///
 /// §9.4: read-only, and deliberately the whole route table: the ledger moves only through
-/// `grant_cards`.
+/// `grant_cards` and a dev account's own tools (`api/dev.rs`).
 ///
 /// Carries the catalog version the server holds, because the client's catalog is "static,
 /// versioned, shipped with the client" (§9.4) and a client one release behind must learn that
@@ -186,6 +188,8 @@ pub async fn get_collection(app: &Arc<App>, req: Req) -> ApiResult {
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let mut entries = tx.collection_get(&profile.id).await?;
     tx.commit().await?;
+    // R1300000: a dev account's clear leaves its rows at 0, owned zero times like an absent id.
+    entries.retain(|entry| entry.quantity > 0);
     entries.sort_by(|a, b| a.card_id.cmp(&b.card_id));
     let entries: Vec<serde_json::Value> = entries
         .iter()

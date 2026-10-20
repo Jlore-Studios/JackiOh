@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0046: practice seeds (issue #1303) -- a practice game earns once
+-- Migration 0047: practice seeds (issue #1303) -- a practice game earns once
 -- the server has checked it
 -- ============================================================================
 -- Serves SPEC §14.8 ("Practice pays half rates ... the server checks the
@@ -23,7 +23,7 @@
 -- Account deletion (0012's rule): every row goes with its profile
 -- (`on delete cascade`).
 --
--- Apply order: ... -> 0045 -> 0046 (this file).
+-- Apply order: ... -> 0046 -> 0047 (this file).
 -- Safe to re-apply: create-if-not-exists, comment-on, revoke.
 -- ============================================================================
 
