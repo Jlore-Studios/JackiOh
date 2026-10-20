@@ -12104,8 +12104,13 @@
     "what": "review #1394 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-20T05:46:28Z",
-    "notes": [],
+    "at": "2026-10-20T05:53:43Z",
+    "notes": [
+      "#1399: typed it Task",
+      "#1398: typed it Task",
+      "#1397: typed it Task",
+      "#1396: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
