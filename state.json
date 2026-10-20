@@ -7967,6 +7967,13 @@
     "1432": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T19:22:24Z",
+        "difficulty": "hard",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "about 40 files or more: 113 files (111 card test modules, lib.rs, ADDING_CARDS.md), though every edit is mechanical test code"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
