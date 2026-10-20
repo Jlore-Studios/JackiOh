@@ -137,6 +137,7 @@ const CopyrightRoute = lazy(() => import("./routes/copyright.tsx"));
 const PatchNotesRoute = lazy(() => import("./routes/patch-notes.tsx"));
 const AlmanacRoute = lazy(() => import("./routes/almanac.tsx"));
 const LeaderboardRoute = lazy(() => import("./routes/leaderboard.tsx"));
+const CollectionRoute = lazy(() => import("./routes/collection.tsx"));
 const StatsRoute = lazy(() => import("./routes/stats.tsx"));
 const CreatorRoute = lazy(() => import("./routes/creator.tsx"));
 // #936: Play together and a friend's game watched.
@@ -713,6 +714,17 @@ export function App(): ReactElement {
           {(account) => (
             <EngineGate>
               <LeaderboardRoute token={account.token} />
+            </EngineGate>
+          )}
+        </Gated>
+      );
+    }
+    if (path === paths.collection) {
+      return (
+        <Gated key={path}>
+          {(account) => (
+            <EngineGate>
+              <CollectionRoute token={account.token} />
             </EngineGate>
           )}
         </Gated>
