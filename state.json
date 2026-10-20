@@ -7229,7 +7229,8 @@
       "taken_asks": [],
       "votes": {
         "approvals": [
-          "muse"
+          "muse",
+          "claude"
         ],
         "builder": "muse",
         "rejections": [],
@@ -7238,10 +7239,16 @@
             "family": "muse",
             "run": "39352074260",
             "tier": "medium"
+          },
+          {
+            "family": "claude",
+            "run": "39367894004",
+            "tier": "strong"
           }
         ],
         "sha": "394b15688a0f6d2e00ff151e26e854cd43932e4c",
         "tiers": {
+          "claude": "strong",
           "muse": "medium"
         }
       }
