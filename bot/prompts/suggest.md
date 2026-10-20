@@ -1,4 +1,4 @@
-<!-- version: 3 -->
+<!-- version: 4 -->
 # Suggest improvements to JackiOh
 
 A lane of the night bot of `$repo` has had nothing it could start for a while. Your job is to propose up to $count
@@ -44,7 +44,32 @@ $declined
 The very first line must be a single HTML comment carrying JSON on one line, with nothing before
 it:
 
-    <!-- suggestions: [{"title": "Patch v0.3.Y: what it does", "body": "Markdown body"}] -->
+    <!-- suggestions: [{"title": "Patch v0.3.Y: what it does", "class": "polish", "body": "Markdown body"}] -->
+
+Each suggestion's `class` is the id of the one class below it belongs to, which sets the priority
+it opens with. Leave `class` out when none fits.
+
+- `fuzz`: fuzz and invariants: fuzz coverage, fuzz monitor checks, regression corpora.
+- `checks`: internal check tooling: `spec check`, `catalog check`, lints and meta-tests that only
+  guard the repository.
+- `telemetry`: dev telemetry: recording AI decisions, stats pipelines, analysis data no player
+  sees.
+- `refactor`: behaviour-neutral refactors: less code for the same behaviour, renames, moves.
+- `ai`: AI play quality: smarter pricing, lethal checks, decision tuning.
+- `fairness`: hidden information reaching a player or the AI that should not have it.
+- `security`: a block, permission or access rule that can be bypassed.
+- `data`: data loss: saved player data overwritten or dropped.
+- `polish`: client polish: small UX fixes a player notices.
+- `feature`: new features or modes.
+
+Each class opens with this priority today, in the order the bot picks work up (no priority
+comes before `priority:low`):
+
+$priorities
+
+When two classes fit, take the one higher in that list: today a hidden-information leak that
+also bypasses an access rule is `security`, say, and a new mode with its fuzz coverage is
+`feature`.
 
 Each title follows `docs/issues-and-patches.md`, Titles, since nothing retitles it later: a small
 change to the game starts as `.github/ISSUE_TEMPLATE/micro-patch.yml`'s title does (`Patch v0.3.Y: `

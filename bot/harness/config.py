@@ -242,6 +242,12 @@ STEP_UP_AFTER = 3
 LABEL_PRIORITY_HIGH = "priority:high"
 LABEL_PRIORITY_MEDIUM = "priority:medium"
 LABEL_PRIORITY_LOW = "priority:low"
+#: The classes a suggestion survey files each suggestion under (`prompts/suggest.md`, #1409).
+#: `suggestions.priorities` maps a class to the `priority:*` level its suggestions open with; a
+#: class it leaves out (`feature`, the owner's call) opens with none.
+SUGGESTION_CLASSES = ("fuzz", "checks", "telemetry", "refactor", "ai", "fairness", "security",
+                      "data", "polish", "feature")
+PRIORITY_LEVELS = ("high", "medium", "low")
 
 
 @dataclass(frozen=True)
@@ -313,6 +319,8 @@ class Config:
     suggestions_max_open: int
     #: A survey is due once a free lane has had nothing to start for this long (#797).
     suggestions_idle_minutes: int
+    #: Suggestion class -> the priority level it opens with (#1409).
+    suggestion_priorities: Mapping[str, str]
     quiet: Quiet
     forbidden_paths: tuple[str, ...]
     review_paths: tuple[str, ...]
@@ -423,6 +431,21 @@ def _gate(raw: Any, where: str) -> Gate:
         raise ConfigError(f"{where}: needs name, run and timeout_minutes ({exc})") from exc
 
 
+def _priorities(raw: Any) -> dict[str, str]:
+    """`suggestions.priorities`: each key a known class, each value a priority level."""
+    if not isinstance(raw, Mapping):
+        raise ConfigError("suggestions.priorities: expected an object")
+    unknown = sorted(str(k) for k in raw if k not in SUGGESTION_CLASSES)
+    if unknown:
+        raise ConfigError(f"suggestions.priorities: unknown classes {', '.join(unknown)} "
+                          f"(known: {', '.join(SUGGESTION_CLASSES)})")
+    bad = sorted(f"{k}: {v!r}" for k, v in raw.items() if v not in PRIORITY_LEVELS)
+    if bad:
+        raise ConfigError(f"suggestions.priorities: {'; '.join(bad)} is not one of "
+                          f"{', '.join(PRIORITY_LEVELS)}")
+    return {str(k): str(v) for k, v in raw.items()}
+
+
 def _quiet(raw: Any) -> Quiet:
     if not isinstance(raw, Mapping):
         raise ConfigError("quiet: expected an object")
@@ -515,6 +538,7 @@ def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str],
         suggestions_enabled=bool(suggestions.get("enabled", True)),
         suggestions_max_open=int(suggestions.get("max_open", 4)),
         suggestions_idle_minutes=int(suggestions.get("idle_minutes", 30)),
+        suggestion_priorities=_priorities(suggestions.get("priorities", {})),
         quiet=_quiet(raw["quiet"]),
         forbidden_paths=tuple(str(p) for p in raw["forbidden_paths"]),
         review_paths=tuple(str(p) for p in raw["review_paths"]),
