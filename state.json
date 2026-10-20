@@ -7493,6 +7493,10 @@
       "run_id": "39428089120",
       "started_at": "2026-10-20T13:10:51Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-4` (claude, opus) rejected it: `apps/web/src/game/deckbuilder/workshop.css:411`: The new sparkle button is 34\u00d730 px on phones. That breaks the deck builder's own rule that every control a fing"
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 1
     },
