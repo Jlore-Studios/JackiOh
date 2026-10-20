@@ -7077,6 +7077,13 @@
     "1381": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T04:38:47Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "fails 'one place': crates/tools plus analysis/ (notebook, fixtures, tests) and training docs, 10 files; no engine, spec or shared surface"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
