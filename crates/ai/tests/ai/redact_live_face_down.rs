@@ -114,7 +114,7 @@ mod r602_the_ais_view_keeps_what_a_live_face_down_card_visibly_does {
     /// Attack" leaves the AI's units nothing to swing with, and the redaction keeps that and hides the card
     #[test]
     fn r602_r767000_on_v0_3_7_the_live_face_down_0_attack_survives_the_redaction() {
-        let shipped = jackioh_cards::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+        let shipped = jackioh_cards::shipped_catalog("v0.3.0c").expect("v0.3.0c is carried");
         jackioh_engine::with_shipped(Some(shipped), || {
             let state = siphoned(true);
             let trap = state.players[HUMAN]
