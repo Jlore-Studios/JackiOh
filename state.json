@@ -7769,6 +7769,13 @@
     "1428": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T17:49:25Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "Lines 1-8 hold (4 files in apps/web, under 150 lines, unit tests, every decision settled). Line 9 cannot be checked without GitHub access, and the zh-CN test relies on module-level locale state that must be reset, so the rating is medium, not easy."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
