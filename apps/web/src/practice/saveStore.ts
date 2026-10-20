@@ -9,6 +9,8 @@ import type { LastBoardCard, PracticeReplaySummary, PracticeStartConfig } from "
 /** R668: worker-only start state, action log, AI cursor, catalog version and state hash for resuming. */
 export type PracticeSave = {
   catalog: string;
+  /** R1371000: the scheme `catalog` is named by; a save kept before the version retcon has none. */
+  versions?: number;
   config: PracticeStartConfig;
   log: Action[];
   aiCursor: number;
@@ -29,6 +31,8 @@ export type PracticeReplaySetup = {
 
 export type PracticeReplay = {
   catalog: string;
+  /** R1371000: the scheme `catalog` is named by; a game kept before the version retcon has none. */
+  versions?: number;
   config: PracticeStartConfig;
   /** R767000: absent on a game kept before setups were (it folds only on its own catalog version). */
   setup?: PracticeReplaySetup;

@@ -1112,6 +1112,11 @@ pub const REPLAY_CHECKPOINT_EVERY: usize = 16;
 /// R768: the most steps one page of a replay gives.
 pub const REPLAY_PAGE_STEPS: usize = 16;
 
+/// R1371000: the scheme a file's catalog versions are named by, its `versions` marker. A replay,
+/// game-record or self-play file that carries no marker names them as they were before the version
+/// retcon (#1371), and its reader maps each through `patches/aliases.json`.
+pub const VERSIONS_SCHEME: u32 = 2;
+
 // ---------------------------------------------------------------------------------------------
 // The testkit's seed search (issue #848).
 // ---------------------------------------------------------------------------------------------

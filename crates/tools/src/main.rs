@@ -23,6 +23,7 @@ mod patches;
 mod positions;
 mod promote;
 mod replay;
+mod retcon;
 mod selfplay;
 mod spec;
 mod stats;

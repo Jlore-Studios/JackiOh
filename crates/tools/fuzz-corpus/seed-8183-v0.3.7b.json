@@ -1,9 +1,0 @@
-{
-  "seed": 8183,
-  "catalogVersion": "v0.3.7b",
-  "decks": [
-    ["meditative-070", "classic-044", "core-027", "meditative-023", "meditative-095", "classicplus-009", "core-070", "core-041", "classic-024", "meditative-008", "classicplus-016", "core-090", "core-082", "meditative-018", "core-050", "core-034", "classic-055", "core-077", "meditative-068", "core-022"],
-    ["core-007", "core-051", "meditative-102", "classicplus-002", "core-086", "classicplus-054", "classic-064", "core-017", "meditative-101", "meditative-073", "core-009", "classicplus-032", "classic-073", "classicplus-031", "meditative-028", "classic-054", "classic-072", "core-049", "core-025", "classic-001"]
-  ],
-  "found": "The daily run's plain fuzz, shard 4 (#1216): I6's oracle threw on turn 1, 125 actions in: unknown defId \"t-1:classic-005+meditative-073\". A Glitch's reset (R676) dealt the game again without its transient_defs, and the oracle read the token flag of a fusion a card wore before the reset off the new state. Fixed by #1237, proven by glitch.rs's r676_a_reset_drops_the_games_fusions_and_the_i6_oracle_still_reads_the_log_that_names_one: the catalog changed before the fix (v0.3.Y's opening hand, the balance passes), so these decks no longer play that game. The decks are decks_for_seed(8183) over the 377-card pool of catalog.json at 487ea0d (v0.3.7b)."
-}

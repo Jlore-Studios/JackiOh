@@ -274,7 +274,10 @@ Every change to card data is a patch, and every patch is kept.
   the win-rate table it shipped with (R1329000; none for a patch before v0.3.15, which shipped with
   the empty one); `shipped.json` records each patch's commit, snapshot blob and
   table blob (`winRatesBlob`); `index.json` maps each card to the versions it changed in. Shipped
-  snapshots and tables are never amended.
+  snapshots and tables are never amended. `aliases.json` is the version retcon's map (#1371,
+  R1371000), each old name to its new one: only a reader of a file without the `versions` marker
+  consults it (`src/versions.rs`, `current_version_name`), and the history's names are the new
+  ones. Older docs name versions the old way (`docs/issues-and-patches.md`, Version retcon).
 - `patches/technical.json` is the technical log (R1369000): the changes that shipped no card data, a
   list in logged order of `{ version, commit, pr?, title, kind, player? }`, `version` the newest
   shipped X when it was logged, `commit` its key, `kind` `app`, `ai` or `internal`, and `player` the

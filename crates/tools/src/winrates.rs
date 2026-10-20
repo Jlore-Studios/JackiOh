@@ -25,7 +25,7 @@ use anyhow::{Context, Result, bail};
 use jackioh_engine::config::PUBLIC_STATS_MIN_LIVE_GAMES;
 use jackioh_engine::{
     GameSource, PilotFilter, SourceFilter, StatsTotals, WinRateRow, WinRateSource, WinRateTable, WindowQuery,
-    WindowRequest, WindowedReport, parse_game_record_lines, windowed_card_stats,
+    WindowRequest, WindowedReport, windowed_card_stats,
 };
 
 use crate::patches::patches_io::{
@@ -202,7 +202,9 @@ fn table_from_report(text: &str, patch: &str) -> Result<WinRateTable> {
 fn windowed_records(texts: &[String], patch: &str) -> Result<(WindowedReport, StatsTotals)> {
     let mut totals = StatsTotals::default();
     for text in texts {
-        for record in parse_game_record_lines(text).context("parsing the game records")? {
+        for record in
+            jackioh_cards::versions::read_game_record_lines(text).context("parsing the game records")?
+        {
             totals.fold(&record, false);
         }
     }
@@ -430,8 +432,8 @@ mod tests {
             SourceFilter::Live,
             vec![stats("core-001", 3, 5), stats("core-002", 0, 0)],
         );
-        let table = table_from_report(&text, "v0.3.3").unwrap_or_else(|error| panic!("{error:?}"));
-        assert_eq!(table.patch, "v0.3.3");
+        let table = table_from_report(&text, "v0.2.7").unwrap_or_else(|error| panic!("{error:?}"));
+        assert_eq!(table.patch, "v0.2.7");
         assert_eq!(table.source, WinRateSource::Live);
         assert_eq!(
             table.cards,
@@ -442,7 +444,7 @@ mod tests {
             }]
         );
         let text = report(SourceFilter::Dev, vec![stats("core-001", 3, 5)]);
-        let table = table_from_report(&text, "v0.3.3").unwrap_or_else(|error| panic!("{error:?}"));
+        let table = table_from_report(&text, "v0.2.7").unwrap_or_else(|error| panic!("{error:?}"));
         assert_eq!(table.source, WinRateSource::Provisional);
     }
 
@@ -472,7 +474,7 @@ mod tests {
                 id: id.to_string(),
                 source,
                 mode: GameMode::Bo1,
-                patch: "v0.3.3".to_string(),
+                patch: "v0.2.7".to_string(),
                 pilots,
                 game: GameSummary {
                     first: PlayerId::P1,
@@ -483,10 +485,10 @@ mod tests {
                 },
                 build: None,
             };
-            serde_json::to_string(&record).unwrap_or_default()
+            jackioh_cards::versions::game_record_line(&record)
         };
         let people = PerPlayer::new(Pilot::Human, Pilot::Human);
-        let table = table_from_records(&[line("m1", GameSource::Live, people)], "v0.3.3")
+        let table = table_from_records(&[line("m1", GameSource::Live, people)], "v0.2.7")
             .unwrap_or_else(|error| panic!("{error:?}"));
         assert_eq!(table.source, WinRateSource::Live);
         let hit: Vec<(&str, i32, i32)> = table
@@ -498,7 +500,7 @@ mod tests {
         assert!(hit.contains(&("core-001", 1, 2)), "{hit:?}");
         assert!(hit.contains(&("core-003", 0, 1)), "{hit:?}");
         let ais = PerPlayer::new(Pilot::Ai, Pilot::Ai);
-        let table = table_from_records(&[line("dev:v0.3.3:s:1", GameSource::Dev, ais.clone())], "v0.3.3")
+        let table = table_from_records(&[line("dev:v0.2.7:s:1", GameSource::Dev, ais.clone())], "v0.2.7")
             .unwrap_or_else(|error| panic!("{error:?}"));
         assert_eq!(table.source, WinRateSource::Provisional);
         let hit: Vec<(&str, i32, i32)> = table
@@ -511,7 +513,7 @@ mod tests {
         // R807000: p2 a ladder bot (`ai` on a live record): both sides count, as on /stats.
         // p1's core-001 won, p2's core-001 and core-003 lost.
         let bot_game = PerPlayer::new(Pilot::Human, Pilot::Ai);
-        let table = table_from_records(&[line("m2", GameSource::Live, bot_game)], "v0.3.3")
+        let table = table_from_records(&[line("m2", GameSource::Live, bot_game)], "v0.2.7")
             .unwrap_or_else(|error| panic!("{error:?}"));
         assert_eq!(table.source, WinRateSource::Live);
         let hit: Vec<(&str, i32, i32)> = table
@@ -523,9 +525,9 @@ mod tests {
         // Summed with a development game: the dev game's two seats and the live game's two.
         let both = [
             line("m2", GameSource::Live, PerPlayer::new(Pilot::Human, Pilot::Ai)),
-            line("dev:v0.3.3:s:1", GameSource::Dev, ais),
+            line("dev:v0.2.7:s:1", GameSource::Dev, ais),
         ];
-        let table = table_from_records(&both, "v0.3.3").unwrap_or_else(|error| panic!("{error:?}"));
+        let table = table_from_records(&both, "v0.2.7").unwrap_or_else(|error| panic!("{error:?}"));
         assert_eq!(table.source, WinRateSource::Provisional);
         let hit: Vec<(&str, i32, i32)> = table
             .cards
@@ -546,9 +548,10 @@ mod tests {
             deck: deck.iter().map(|card| card.to_string()).collect(),
             ..SeatSummary::default()
         };
-        // v0.2.6, a micro after v0.2.5's patch, plays Classic #55 alone.
+        // The second version, a micro after the patch before it, plays Classic #55 alone. Each line
+        // is marked, as the build writes a record file (R1371000).
         let line = |id: &str, patch: &str| {
-            serde_json::to_string(&GameRecord {
+            jackioh_cards::versions::game_record_line(&GameRecord {
                 id: id.to_string(),
                 source: GameSource::Live,
                 mode: GameMode::Bo1,
@@ -563,9 +566,8 @@ mod tests {
                 },
                 build: None,
             })
-            .unwrap_or_default()
         };
-        let table = table_from_records(&[line("m1", "v0.2.5"), line("m2", "v0.2.6")], "v0.2.6")
+        let table = table_from_records(&[line("m1", "v0.2.3"), line("m2", "v0.2.3b")], "v0.2.3b")
             .unwrap_or_else(|error| panic!("{error:?}"));
         let hit: Vec<(&str, i32, i32)> = table
             .cards
@@ -848,7 +850,7 @@ mod tests {
                 stats("core-002", 2, 4),
             ],
         );
-        let table = table_from_report(&text, "v0.3.3").unwrap_or_else(|error| panic!("{error:?}"));
+        let table = table_from_report(&text, "v0.2.7").unwrap_or_else(|error| panic!("{error:?}"));
         let ids: Vec<&str> = table.cards.iter().map(|row| row.id.as_str()).collect();
         assert_eq!(ids, vec!["core-002", "core-003"]);
     }

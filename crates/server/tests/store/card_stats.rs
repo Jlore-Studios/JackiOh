@@ -37,7 +37,7 @@ fn game_record_json(id: &str, partial: Value) -> Value {
             "id": id,
             "source": "live",
             "mode": "bo1",
-            "patch": "v0.2.5",
+            "patch": "v0.2.3",
             "pilots": { "p1": "human", "p2": "human" },
             "game": {
                 "first": "p1",
@@ -72,10 +72,11 @@ fn dev(id: &str, partial: Value) -> GameRecord {
     ))
 }
 
+/// A record file as the build writes one, each line marked (R1371000).
 fn lines(records: &[GameRecord]) -> String {
     records
         .iter()
-        .map(|record| serde_json::to_string(record).expect("a record serialises"))
+        .map(jackioh_cards::versions::game_record_line)
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -121,7 +122,7 @@ mod stats_cards_options {
         let options = parse_card_stats_args(&args(&[
             "--source=all",
             "--mode=random",
-            "--patch=v0.2.5",
+            "--patch=v0.2.3",
             "--pilot=ai",
             "--card=core-001",
             "--json",
@@ -129,7 +130,7 @@ mod stats_cards_options {
         .expect("every option parses");
         assert_eq!(
             filter_json(&options),
-            json!({ "source": "all", "mode": "random", "patch": "v0.2.5", "pilot": "ai" })
+            json!({ "source": "all", "mode": "random", "patch": "v0.2.3", "pilot": "ai" })
         );
         assert_eq!(options.card.as_deref(), Some("core-001"));
         assert!(options.json);
@@ -164,7 +165,7 @@ mod stats_cards_options {
         assert!(refusal(&["--pilot=robot"]).contains("--pilot"));
         assert!(refusal(&["--deck=1"]).contains("Unrecognised option --deck"));
         assert!(refusal(&["--patch"]).contains("Unrecognised argument"));
-        assert!(refusal(&["v0.2.5"]).contains("Unrecognised argument"));
+        assert!(refusal(&["v0.2.3"]).contains("Unrecognised argument"));
     }
 }
 
@@ -234,10 +235,10 @@ mod stats_cards_report {
     #[tokio::test]
     async fn r378_compares_a_pre_release_run_with_the_live_games_of_the_same_patch_one_query_each() {
         let db = seeded().await;
-        let live = card_stats_report(&db, &options(&["--patch=v0.2.5"]))
+        let live = card_stats_report(&db, &options(&["--patch=v0.2.3"]))
             .await
             .expect("a report");
-        let prerelease = card_stats_report(&db, &options(&["--patch=v0.2.5", "--source=dev"]))
+        let prerelease = card_stats_report(&db, &options(&["--patch=v0.2.3", "--source=dev"]))
             .await
             .expect("a report");
         assert_eq!(live.games, 1);
@@ -256,10 +257,10 @@ mod stats_cards_report {
         let db = seeded().await;
         let newest = options(&["--window"]);
         assert_eq!(newest.window.as_deref(), Some(jackioh_cards::catalog_version()));
-        let at = options(&["--window=v0.2.5", "--card=core-001"]);
-        let report = card_stats_window(&db, &at, "v0.2.5").await.expect("a report");
-        assert_eq!(report.at, "v0.2.5");
-        assert_eq!(report.patch.versions, ["v0.2.5"]);
+        let at = options(&["--window=v0.2.3", "--card=core-001"]);
+        let report = card_stats_window(&db, &at, "v0.2.3").await.expect("a report");
+        assert_eq!(report.at, "v0.2.3");
+        assert_eq!(report.patch.versions, ["v0.2.3"]);
         // The live game is short of the gate and v0.2.5 opens its window, so the development games pad it.
         assert_eq!(report.patch.live_games, 1);
         assert_eq!(report.cards.len(), 1);
@@ -270,7 +271,7 @@ mod stats_cards_report {
             serde_json::from_str::<jackioh_engine::wire::WindowedReport>(&json).expect("reads back"),
             report
         );
-        for refused in ["--patch=v0.2.5", "--source=dev", "--mode=bo1"] {
+        for refused in ["--patch=v0.2.3", "--source=dev", "--mode=bo1"] {
             assert!(
                 parse_card_stats_args(&args(&["--window", refused])).is_err(),
                 "{refused}"
@@ -346,7 +347,7 @@ mod stats_cards_report {
     #[tokio::test]
     async fn r377_prints_every_breakdown_of_one_card_named_with_its_games_beside_each_rate() {
         let db = seeded().await;
-        let one = options(&["--card=core-001", "--patch=v0.2.5"]);
+        let one = options(&["--card=core-001", "--patch=v0.2.3"]);
         let report = card_stats_report(&db, &one).await.expect("a report");
         assert_eq!(
             report
@@ -360,7 +361,7 @@ mod stats_cards_report {
         let names = |card: &str| (card == "core-001").then(|| "Big D Fender".to_owned());
         let text = render_card_stats(&report, &one, &names);
         assert!(text.contains(
-            "Card win rates: live games, every mode, patch v0.2.5, human and AI pilots (unified)."
+            "Card win rates: live games, every mode, patch v0.2.3, human and AI pilots (unified)."
         ));
         let row = text
             .split('\n')
@@ -449,15 +450,15 @@ mod stats_import {
         let db = Db::fake();
         let mixed = lines(&[
             dev("dev:run:1", json!({})),
-            dev("dev:v0.2.5:dev-force-core-090:1", json!({})),
+            dev("dev:v0.2.3:dev-force-core-090:1", json!({})),
         ]);
         let refused = refusal(&db, &mixed).await;
-        assert!(refused.contains("dev:v0.2.5:dev-force-core-090:1"), "{refused}");
+        assert!(refused.contains("dev:v0.2.3:dev-force-core-090:1"), "{refused}");
         assert!(refused.contains("dev-force-core-090"), "{refused}");
         assert!(refused.contains("R1284000"), "{refused}");
         assert!(stored_ids(&db).await.is_empty());
         // A mistyped patch cannot hide a forced series: the id alone decides.
-        let spoofed = lines(&[dev("dev:v0.2.5:dev-force-core-090:2", json!({"patch": "v9.9.9"}))]);
+        let spoofed = lines(&[dev("dev:v0.2.3:dev-force-core-090:2", json!({"patch": "v9.9.9"}))]);
         let refused = refusal(&db, &spoofed).await;
         assert!(refused.contains("dev-force-core-090"), "{refused}");
         assert!(stored_ids(&db).await.is_empty());
@@ -471,8 +472,8 @@ mod stats_import {
             .collect();
         let none: IndexMap<String, String> = IndexMap::new();
         assert_eq!(
-            run_file_path("v0.2.5-dev.jsonl", &init_cwd, "/repo/apps/server"),
-            PathBuf::from("/repo/v0.2.5-dev.jsonl")
+            run_file_path("v0.2.3-dev.jsonl", &init_cwd, "/repo/apps/server"),
+            PathBuf::from("/repo/v0.2.3-dev.jsonl")
         );
         assert_eq!(
             run_file_path("runs/a.jsonl", &none, "/repo/apps/server"),
@@ -504,9 +505,9 @@ mod stats_export {
         let records = [
             game_record("live-b", json!({})),
             game_record("live-a", json!({ "patch": "v0.1.1", "mode": "random" })),
-            dev("dev:v0.2.5:dev:1", json!({})),
+            dev("dev:v0.2.3:dev:1", json!({})),
             dev(
-                "dev:v0.2.5:dev:2",
+                "dev:v0.2.3:dev:2",
                 json!({ "pilots": { "p1": "human", "p2": "ai" } }),
             ),
         ];
@@ -541,12 +542,12 @@ mod stats_export {
         let named = options(&[
             "--source=all",
             "--mode=random",
-            "--patch=v0.2.5",
+            "--patch=v0.2.3",
             "--out=/runs/all.jsonl",
         ]);
         assert_eq!(
             serde_json::to_value(&named.query).expect("a query serialises"),
-            json!({ "source": "all", "mode": "random", "patch": "v0.2.5" })
+            json!({ "source": "all", "mode": "random", "patch": "v0.2.3" })
         );
         assert_eq!(named.out, PathBuf::from("/runs/all.jsonl"));
     }
@@ -574,11 +575,11 @@ mod stats_export {
         assert_eq!(ids_read(&db, &[]).await, vec!["live-a", "live-b"]);
         assert_eq!(
             ids_read(&db, &["--source=dev"]).await,
-            vec!["dev:v0.2.5:dev:1", "dev:v0.2.5:dev:2"]
+            vec!["dev:v0.2.3:dev:1", "dev:v0.2.3:dev:2"]
         );
         assert_eq!(
             ids_read(&db, &["--source=all"]).await,
-            vec!["dev:v0.2.5:dev:1", "dev:v0.2.5:dev:2", "live-a", "live-b"]
+            vec!["dev:v0.2.3:dev:1", "dev:v0.2.3:dev:2", "live-a", "live-b"]
         );
     }
 
@@ -586,10 +587,10 @@ mod stats_export {
     async fn r377_writes_the_records_stats_cards_reads_for_the_same_filters() {
         let db = seeded().await;
         assert_eq!(ids_read(&db, &["--mode=random"]).await, vec!["live-a"]);
-        assert_eq!(ids_read(&db, &["--patch=v0.2.5"]).await, vec!["live-b"]);
+        assert_eq!(ids_read(&db, &["--patch=v0.2.3"]).await, vec!["live-b"]);
         assert_eq!(
-            ids_read(&db, &["--source=all", "--mode=random", "--patch=v0.2.5"]).await,
-            vec!["dev:v0.2.5:dev:1", "dev:v0.2.5:dev:2"]
+            ids_read(&db, &["--source=all", "--mode=random", "--patch=v0.2.3"]).await,
+            vec!["dev:v0.2.3:dev:1", "dev:v0.2.3:dev:2"]
         );
         assert!(ids_read(&db, &["--mode=bo3"]).await.is_empty());
         // The records themselves are the store's, whole: a report over the file counts what the
@@ -640,7 +641,7 @@ mod stats_export {
         assert_eq!((imported.read, imported.written, imported.skipped), (2, 2, 0));
         assert_eq!(
             stored_ids(&fresh).await,
-            vec!["dev:v0.2.5:dev:1", "dev:v0.2.5:dev:2"]
+            vec!["dev:v0.2.3:dev:1", "dev:v0.2.3:dev:2"]
         );
         assert_eq!(render_records(&read).expect("records render"), text);
 

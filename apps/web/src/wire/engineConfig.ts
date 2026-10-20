@@ -61,3 +61,4 @@ export const SANDBOX_HERO_HEALTH_MAX = 99;
 export const SANDBOX_MANA_MAX = 10;
 export const TRIBAL_TAGS: readonly Tag[] = ["Human","Felinor","KY","CN","Jlockeed"];
 export const TURN_CAP_PLAYER_TURNS = 60;
+export const VERSIONS_SCHEME = 2;

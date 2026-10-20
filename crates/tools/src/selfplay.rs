@@ -68,6 +68,20 @@ pub struct SelfplayGame {
     /// seats. Absent from a game written before it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ai_generation: Option<i32>,
+    /// R1371000: the scheme `catalog` is named by (`VERSIONS_SCHEME`); a game written before the
+    /// version retcon has none, and its catalog is read through `patches/aliases.json`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub versions: Option<u32>,
+}
+
+impl SelfplayGame {
+    /// R1371000: the catalog the game was played on, as it is named now.
+    pub fn catalog_now(&self) -> &str {
+        match self.versions {
+            Some(_) => &self.catalog,
+            None => jackioh_cards::versions::current_version_name(&self.catalog),
+        }
+    }
 }
 
 /// R1006005: the most actions one turn of a self-play game may take. A whole game takes about 60
@@ -158,6 +172,7 @@ fn game_of(outcome: ArenaOutcome, catalog: &str, commit: &str) -> SelfplayGame {
         turns: outcome.turns,
         catalog: catalog.to_string(),
         commit: commit.to_string(),
+        versions: Some(jackioh_engine::config::VERSIONS_SCHEME),
         ai_generation: ai_generation(),
     }
 }

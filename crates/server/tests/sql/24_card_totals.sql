@@ -13,34 +13,34 @@ declare
   n bigint;
 begin
   insert into public.record_totals (patch, source, mode, p1_pilot, p2_pilot, records)
-  values ('v0.2.5', 'dev', 'random', 'ai', 'ai', 2);
+  values ('v0.2.3', 'dev', 'random', 'ai', 'ai', 2);
   -- The store's fold: a count already held is added to, never written over.
   insert into public.record_totals (patch, source, mode, p1_pilot, p2_pilot, records)
-  values ('v0.2.5', 'dev', 'random', 'ai', 'ai', 3)
+  values ('v0.2.3', 'dev', 'random', 'ai', 'ai', 3)
   on conflict (patch, source, mode, p1_pilot, p2_pilot)
   do update set records = public.record_totals.records + excluded.records;
-  select records into n from public.record_totals where patch = 'v0.2.5' and source = 'dev';
+  select records into n from public.record_totals where patch = 'v0.2.3' and source = 'dev';
   if n <> 5 then
     raise exception 'FAIL (R1044000): the record count reads %, expected 2 + 3', n;
   end if;
 
   begin
     insert into public.card_totals (patch, source, mode, pilot, card, stats)
-    values ('v0.2.5', 'practice', 'random', 'ai', 'core-001', '{}'::jsonb);
+    values ('v0.2.3', 'practice', 'random', 'ai', 'core-001', '{}'::jsonb);
     raise exception 'FAIL (R1044000): a card total was filed under the source practice';
   exception
     when check_violation then null;
   end;
   begin
     insert into public.card_totals (patch, source, mode, pilot, card, stats)
-    values ('v0.2.5', 'dev', 'random', 'bot', 'core-001', '{}'::jsonb);
+    values ('v0.2.3', 'dev', 'random', 'bot', 'core-001', '{}'::jsonb);
     raise exception 'FAIL (R1044000): a card total was filed under the pilot bot';
   exception
     when check_violation then null;
   end;
   begin
     insert into public.decklist_totals (patch, list, deck, games, wins, first_record, first_seat)
-    values ('v0.2.5', 'core-001', '["core-001"]'::jsonb, 1, 0, 'm-1', 2);
+    values ('v0.2.3', 'core-001', '["core-001"]'::jsonb, 1, 0, 'm-1', 2);
     raise exception 'FAIL (R1044000): a decklist was first seen in a third seat';
   exception
     when check_violation then null;
@@ -55,7 +55,7 @@ begin;
 do $$
 declare
   rec jsonb := jsonb_build_object(
-    'id', 'dev:totals:0', 'source', 'dev', 'mode', 'random', 'patch', 'v0.2.5',
+    'id', 'dev:totals:0', 'source', 'dev', 'mode', 'random', 'patch', 'v0.2.3',
     'pilots', jsonb_build_object('p1', 'ai', 'p2', 'ai'),
     'game', jsonb_build_object('first', 'p1', 'winner', 'p2', 'reason', 'hero-death', 'turns', 9,
       'seats', jsonb_build_object(
@@ -66,11 +66,11 @@ declare
 begin
   -- A folded record eight days old, a folded one six days old, and one eight days old not folded.
   insert into public.game_records (id, source, mode, patch, record, folded, recorded_at)
-  values ('dev:totals:old', 'dev', 'random', 'v0.2.5', rec || '{"id":"dev:totals:old"}', true,
+  values ('dev:totals:old', 'dev', 'random', 'v0.2.3', rec || '{"id":"dev:totals:old"}', true,
           now() - interval '8 days'),
-         ('dev:totals:new', 'dev', 'random', 'v0.2.5', rec || '{"id":"dev:totals:new"}', true,
+         ('dev:totals:new', 'dev', 'random', 'v0.2.3', rec || '{"id":"dev:totals:new"}', true,
           now() - interval '6 days'),
-         ('dev:totals:unfolded', 'dev', 'random', 'v0.2.5', rec || '{"id":"dev:totals:unfolded"}', false,
+         ('dev:totals:unfolded', 'dev', 'random', 'v0.2.3', rec || '{"id":"dev:totals:unfolded"}', false,
           now() - interval '8 days');
 
   -- As the server calls it: 0029's three cutoffs and the game records' detail at seven days.
@@ -90,7 +90,7 @@ begin
 
   -- The emptied row still holds the id: the same game written again writes nothing.
   insert into public.game_records (id, source, mode, patch, record, folded)
-  values ('dev:totals:old', 'dev', 'random', 'v0.2.5', rec || '{"id":"dev:totals:old"}', true)
+  values ('dev:totals:old', 'dev', 'random', 'v0.2.3', rec || '{"id":"dev:totals:old"}', true)
   on conflict (id) do nothing;
   get diagnostics n = row_count;
   if n <> 0 then

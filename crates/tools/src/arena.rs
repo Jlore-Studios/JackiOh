@@ -947,7 +947,7 @@ pub(crate) fn append_records(path: &Path, records: &[GameRecord]) -> anyhow::Res
         .with_context(|| format!("arena: cannot open {}", path.display()))?;
     let mut text = String::new();
     for record in records {
-        text.push_str(&serde_json::to_string(record)?);
+        text.push_str(&jackioh_cards::versions::game_record_line(record));
         text.push('\n');
     }
     file.write_all(text.as_bytes())
@@ -1193,7 +1193,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         None => {
             let mut stdout = std::io::stdout().lock();
             for record in &records {
-                writeln!(stdout, "{}", serde_json::to_string(record)?)?;
+                writeln!(stdout, "{}", jackioh_cards::versions::game_record_line(record))?;
             }
             for line in &lines {
                 eprintln!("{line}");

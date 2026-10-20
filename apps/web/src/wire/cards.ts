@@ -2,6 +2,7 @@
 // Read their sources relatively for component tests; saves must use Rust's compiled version.
 
 import catalogJson from "../../../../crates/cards/catalog.json";
+import aliasesJson from "../../../../crates/cards/patches/aliases.json";
 import patchesJson from "../../../../crates/cards/patches/patches.json";
 
 import type { CardDefs } from "./index.ts";
@@ -21,3 +22,15 @@ function newestVersion(patches: unknown): string {
 
 /** Catalog version from the newest card-data patch (§9.4; R388). */
 export const CATALOG_VERSION: string = newestVersion(patchesJson);
+
+const VERSION_ALIASES: Readonly<Record<string, string>> = aliasesJson.aliases;
+
+/**
+ * R1371000: the name a version read from an unmarked file goes by now: its new name when the version
+ * retcon (#1371) renamed it (`crates/cards/patches/aliases.json`), else the name itself. Only a reader
+ * of a file or a stored record without the `versions` marker asks; old and new names overlap, so a
+ * marked one is never mapped.
+ */
+export function currentVersionName(unmarked: string): string {
+  return Object.hasOwn(VERSION_ALIASES, unmarked) ? (VERSION_ALIASES[unmarked] ?? unmarked) : unmarked;
+}

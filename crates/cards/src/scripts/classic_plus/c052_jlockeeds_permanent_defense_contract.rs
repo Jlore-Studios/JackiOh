@@ -173,7 +173,7 @@ mod tests {
         fn r767000_a_game_on_an_older_version_badges_it_in_that_version_s_words() {
             crate::register_all();
             // v0.3.7 printed the face with the faction spelled the designer's way (patch v0.3.Y, #1067).
-            let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+            let shipped = crate::shipped_catalog("v0.3.0c").expect("v0.3.0c is carried");
             let one = IndexMap::from([("cards".to_string(), 1)]);
             let printed = fill_params(&shipped.defs()[CONTRACT], FaceKind::Base, Some(&one));
             assert_ne!(printed, fill_params(&crate::card_def(CONTRACT), FaceKind::Base, Some(&one)));
