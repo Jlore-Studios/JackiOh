@@ -6982,6 +6982,7 @@
     "1377": {
       "action": "review",
       "asks": [],
+      "cross_rounds": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-20T01:16:10Z",
