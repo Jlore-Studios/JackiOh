@@ -157,11 +157,12 @@ pub const FORCED_SERIES_PREFIX: &str = "dev-force-";
 
 /// R1284000: the forced series a development record was filed under, or `None` when it is
 /// not a forced run's. A development id is `dev:<patch>:<series>:<n>`, so the series is the
-/// middle; a record whose id is not shaped like one is not forced.
+/// middle; a record whose id is not shaped like one is not forced. The patch segment is not
+/// compared to the record's patch, so a mistyped patch cannot hide a forced series.
 pub fn forced_series(record: &GameRecord) -> Option<&str> {
-    let seed = record.id.strip_prefix(DEV_RECORD_ID_PREFIX)?;
-    let seed = seed.strip_prefix(record.patch.as_str())?.strip_prefix(':')?;
-    let (series, _) = seed.rsplit_once(':')?;
+    let rest = record.id.strip_prefix(DEV_RECORD_ID_PREFIX)?;
+    let (_, after_patch) = rest.split_once(':')?;
+    let (series, _) = after_patch.rsplit_once(':')?;
     series.starts_with(FORCED_SERIES_PREFIX).then_some(series)
 }
 
@@ -2612,6 +2613,13 @@ mod tests {
             ..record()
         };
         assert_eq!(forced_series(&mismatched), None);
+        // A mistyped patch cannot hide a forced series: the id alone decides.
+        let spoofed = GameRecord {
+            id: "dev:v0.2.5:dev-force-core-090:1".to_string(),
+            patch: "v9.9.9".to_string(),
+            ..record()
+        };
+        assert_eq!(forced_series(&spoofed), Some("dev-force-core-090"));
     }
 
     #[test]

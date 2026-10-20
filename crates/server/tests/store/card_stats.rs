@@ -427,6 +427,11 @@ mod stats_import {
         assert!(refused.contains("dev-force-core-090"), "{refused}");
         assert!(refused.contains("R1284000"), "{refused}");
         assert!(stored_ids(&db).await.is_empty());
+        // A mistyped patch cannot hide a forced series: the id alone decides.
+        let spoofed = lines(&[dev("dev:v0.2.5:dev-force-core-090:2", json!({"patch": "v9.9.9"}))]);
+        let refused = refusal(&db, &spoofed).await;
+        assert!(refused.contains("dev-force-core-090"), "{refused}");
+        assert!(stored_ids(&db).await.is_empty());
     }
 
     #[test]
