@@ -13,7 +13,7 @@ import { RulesText } from "../RulesText.tsx";
 import { INSPECT_EXTENDED } from "./testids.ts";
 
 export function Extended({ face, ascentLevel }: { face: FaceModel; ascentLevel?: number | null }): ReactElement | null {
-  const fullArtOn = useFullArt();
+  const fullArtOn = useFullArt(face.defId);
   if (!faceText(face, ascentLevel, fullArtOn).less) return null;
   const gained = gainedLine(face);
   return (

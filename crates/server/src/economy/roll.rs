@@ -285,7 +285,8 @@ pub fn cosmetic_rarity_at(draw: f64) -> PrintedRarity {
 
 /// What a duplicate of `card_id` grants once its cosmetic rarity is rolled (R1301002): one of
 /// `droppable` of that rarity the account does not own on that card, picked uniformly (one draw),
-/// or, with none, points to the bars (no draw). `droppable` is `cosmetics::pack_cosmetics`'s.
+/// or, with none, points to the bars (no draw). `droppable` is `cosmetics::pack_cosmetics`'s; one
+/// that names a card, a full art, is of that card alone (R1313000).
 pub fn duplicate_grant(
     card_id: &str,
     cosmetic_rarity: PrintedRarity,
@@ -296,6 +297,7 @@ pub fn duplicate_grant(
     let unowned: Vec<&Cosmetic> = droppable
         .iter()
         .filter(|cosmetic| cosmetic.rarity.printed() == cosmetic_rarity)
+        .filter(|cosmetic| cosmetic.card.as_deref().is_none_or(|card| card == card_id))
         .filter(|cosmetic| {
             !owned
                 .iter()
@@ -391,6 +393,7 @@ mod tests {
             rarity,
             default: false,
             starter: false,
+            card: None,
         }
     }
 
@@ -610,6 +613,39 @@ mod tests {
             duplicate_grant("m", Legendary, &pack_cosmetics(&[starter]), &[], &mut rng),
             SlotGrant::Bars {
                 cosmetic_rarity: Legendary
+            }
+        );
+    }
+
+    #[test]
+    fn r1301002_a_full_art_drops_on_its_own_card_alone() {
+        let full_art = Cosmetic {
+            kind: CosmeticKind::FullArt,
+            card: Some("m".to_owned()),
+            ..foil("full-art-m", CosmeticRarity::Epic)
+        };
+        let droppable = pack_cosmetics(&[full_art]);
+        let mut rng = Rng::new("r1301002-full-art", 0);
+        // A duplicate of its card that rolls Epic drops it.
+        assert_eq!(
+            duplicate_grant("m", Epic, &droppable, &[], &mut rng),
+            SlotGrant::Cosmetic {
+                cosmetic_id: "full-art-m".to_owned(),
+                cosmetic_rarity: Epic,
+            }
+        );
+        // Any other card's Epic duplicate has nothing to drop, and neither has its card once it
+        // owns it.
+        assert_eq!(
+            duplicate_grant("c", Epic, &droppable, &[], &mut rng),
+            SlotGrant::Bars {
+                cosmetic_rarity: Epic
+            }
+        );
+        assert_eq!(
+            duplicate_grant("m", Epic, &droppable, &[held("m", "full-art-m")], &mut rng),
+            SlotGrant::Bars {
+                cosmetic_rarity: Epic
             }
         );
     }

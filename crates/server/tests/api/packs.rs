@@ -5,7 +5,7 @@
 //! Every request goes through the whole app over an empty fake store (`deps::empty_test_app`), as
 //! the active account `p1`. An opening the test must steer (a registry with cosmetics a pack may
 //! drop, R1301002) calls `open_pack` with that registry; the route opens over the shipped one,
-//! whose every entry is a starter.
+//! whose every entry but the six full arts is a starter (R1313000).
 
 use std::sync::Arc;
 
@@ -205,6 +205,7 @@ fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
         rarity,
         default: false,
         starter: false,
+        card: None,
     }
 }
 
@@ -394,7 +395,7 @@ async fn an_opening_grants_exactly_its_slots_one_rare_or_better() {
     );
 
     // The collection gained exactly the unlocked cards, each a `pack` row; the rest went to the
-    // bars (every shipped cosmetic is a starter, R1301002).
+    // bars or, a full art's card rolling Epic, to its full art (R1301002, R1313000).
     let mut unlocked: IndexMap<String, i64> = IndexMap::new();
     for slot in &opened.slots {
         if slot.grant == SlotGrant::Card {

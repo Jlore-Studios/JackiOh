@@ -29,4 +29,10 @@ export const COSMETICS = [
   {"id":"card-back-lacquer","kind":"cardBack","name":"Lacquer","rarity":"Common","default":false,"starter":true},
   {"id":"card-back-starfield","kind":"cardBack","name":"Starfield","rarity":"Rare","default":false,"starter":true},
   {"id":"card-back-blueprint","kind":"cardBack","name":"Blueprint","rarity":"Epic","default":false,"starter":true},
+  {"id":"full-art-big-d-fender","kind":"fullArt","name":"Big D-fender full art","rarity":"Epic","default":false,"starter":false,"card":"core-001"},
+  {"id":"full-art-gary-the-gambler","kind":"fullArt","name":"Gary the Gambler full art","rarity":"Epic","default":false,"starter":false,"card":"core-004"},
+  {"id":"full-art-mr-vanilla","kind":"fullArt","name":"Mr. Vanilla full art","rarity":"Epic","default":false,"starter":false,"card":"core-008"},
+  {"id":"full-art-tempo-timmy","kind":"fullArt","name":"Tempo Timmy full art","rarity":"Epic","default":false,"starter":false,"card":"core-011"},
+  {"id":"full-art-duplicating-felinors","kind":"fullArt","name":"Duplicating Felinors full art","rarity":"Epic","default":false,"starter":false,"card":"core-012"},
+  {"id":"full-art-jlockeed-shredder-10","kind":"fullArt","name":"Jlockeed Shredder-10 full art","rarity":"Epic","default":false,"starter":false,"card":"core-013"},
 ] as const;

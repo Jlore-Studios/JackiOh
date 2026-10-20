@@ -2191,6 +2191,10 @@ pub const QUEST_XP_PER_JLORE: i32 = 1;
 
 /// §14.7: the level a set track starts at, with no XP (migration 0045's `set_tracks.level` default).
 pub const SET_TRACK_FIRST_LEVEL: i64 = 1;
+/// §14.12: the server's switch for the economy, off until the going-live sub-issue (#1310) turns it
+/// on; until then no finished game pays (R1302006) and the client prints every full art as before
+/// (R1313000). Exported to `serverConfig.ts`.
+pub const ECONOMY_LIVE: bool = false;
 
 // ---- The pack roll (SPEC §14.3, #1301) ----
 // PUBLIC, like the collection economy's above: the pack screen shows these odds, so each is
