@@ -12,7 +12,7 @@
 // is `{ error: { code, message, details? } }` from `crates/server/src/api/http.rs`.
 
 import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
-import type { CardDefs, GameOverReason, LeanPick, PlayerId, PortraitId, PrintedRarity, SetName } from "@jackioh/shared";
+import type { GameOverReason, LeanPick, PlayerId, PortraitId, PrintedRarity, SetName } from "@jackioh/shared";
 
 import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
@@ -730,24 +730,6 @@ export type PopulationResponse = {
 
 export function getPopulation(token: string): Promise<PopulationResponse> {
   return apiRequest<PopulationResponse>("/api/queue/population", { token });
-}
-
-/**
- * `GET /api/catalog`: card data for a screen that has no game running.
- *
- * R163: §9.4 calls the catalog "static, versioned, shipped with the client", but the deckbuilder
- * needs names and costs before any engine is loaded and the client has no catalog of its own to
- * ship yet, so the server serves the one it already holds (`get_catalog` in
- * `crates/server/src/api/catalog.rs`); this is the caller, not a second statement of the rule.
- */
-// It returns the whole `CardDefs` record and not a projection, because `@jackioh/validator`'s
-// `CatalogSnapshot.cards` is a `CardDefs` — the deckbuilder's client-side verdict (§9.4: "the
-// client's verdict is UX while the server's is law") runs the same module the server runs, and a
-// trimmed-down card would mean a second, weaker copy of the catalog.
-export type CatalogResponse = { version: string; defs: CardDefs };
-
-export function getCatalog(): Promise<CatalogResponse> {
-  return apiRequest<CatalogResponse>("/api/catalog");
 }
 
 /** `POST /api/rooms` / `POST /api/rooms/:code/join` (§9.5, R264). */
