@@ -220,6 +220,36 @@ const MOCK_KEYWORD_CARDS = {
   ],
 };
 
+const MOCK_CARD_STATS_EMPTY = {
+  ...MOCK_CARD_STATS_PROVISIONAL,
+  patch: "0.2.0",
+  totalGames: 0,
+  cards: MOCK_CARD_STATS_PROVISIONAL.cards.map((card) => ({
+    ...card,
+    games: 0,
+    winRate: null,
+    drawnGames: 0,
+    drawnWinRate: null,
+    playedGames: 0,
+    playedWinRate: null,
+    drawnNotPlayedGames: 0,
+    drawnNotPlayedWinRate: null,
+    playedDelta: null,
+    playRate: 0,
+    hasEnoughGames: false,
+    playedRadiantGames: 0,
+    playedRadiantWinRate: null,
+    playedNormalGames: 0,
+    playedNormalWinRate: null,
+  })),
+  summary: {
+    ...MOCK_CARD_STATS_PROVISIONAL.summary,
+    totalGames: 0,
+    bestCard: null,
+    worstCard: null,
+  },
+};
+
 const MOCK_PLAYERS = {
   players: [
     {
@@ -272,6 +302,11 @@ beforeEach(() => {
       if (url.includes("/api/stats/cards?patch=0.1.0")) {
         return Promise.resolve(
           new Response(JSON.stringify(MOCK_CARD_STATS_CLEARED), { status: 200 }),
+        );
+      }
+      if (url.includes("/api/stats/cards") && url.includes("mode=random")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(MOCK_CARD_STATS_EMPTY), { status: 200 }),
         );
       }
       if (url.includes("/api/stats/cards")) {
@@ -894,5 +929,102 @@ describe("R654 public statistics route", () => {
     expect(screen.getByLabelText("Normal")).toBeChecked();
     expect(screen.getByLabelText("Play rate")).toBeChecked();
     expect(screen.getByRole("columnheader", { name: /Played Δ/i })).toBeInTheDocument();
+  });
+});
+
+describe("R377 public statistics match type", () => {
+  function cardsCalls(): URL[] {
+    return vi
+      .mocked(fetch)
+      .mock.calls.map(([input]) => new URL(String(input), window.location.origin))
+      .filter((url) => url.pathname === "/api/stats/cards");
+  }
+
+  it("R377 mode picker asks the server for each match type and keeps it in the URL", async () => {
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+
+    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+    const select = screen.getByTestId(statsTestid.modeSelect) as HTMLSelectElement;
+    expect(select).toHaveValue("");
+
+    await user.selectOptions(select, "bo1");
+    await waitFor(() => expect(cardsCalls().some((url) => url.searchParams.get("mode") === "bo1")).toBe(true));
+    expect(window.location.search).toContain("mode=bo1");
+
+    await user.selectOptions(select, "random");
+    await waitFor(() =>
+      expect(cardsCalls().some((url) => url.searchParams.get("mode") === "random")).toBe(true),
+    );
+    expect(window.location.search).toContain("mode=random");
+
+    vi.mocked(fetch).mockClear();
+    await user.selectOptions(select, "");
+    await waitFor(() => expect(cardsCalls().length).toBeGreaterThan(0));
+    expect(cardsCalls().every((url) => !url.searchParams.has("mode"))).toBe(true);
+    expect(window.location.search).not.toContain("mode=");
+  });
+
+  it("R377 stats page starts with the mode the URL names", async () => {
+    at("/stats?mode=bo3");
+    render(<StatsRoute />);
+
+    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+    expect(screen.getByTestId(statsTestid.modeSelect)).toHaveValue("bo3");
+    await waitFor(() => expect(cardsCalls().some((url) => url.searchParams.get("mode") === "bo3")).toBe(true));
+  });
+
+  it("R377 previous-patch fallback keeps the selected mode", async () => {
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+
+    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+    await user.selectOptions(screen.getByTestId(statsTestid.modeSelect), "bo1");
+    await waitFor(() => expect(cardsCalls().some((url) => url.searchParams.get("mode") === "bo1")).toBe(true));
+
+    await user.click(await screen.findByTestId(statsTestid.fallbackToggle, undefined, SLOW));
+    await waitFor(() =>
+      expect(
+        cardsCalls().some(
+          (url) => url.searchParams.get("patch") === "0.1.0" && url.searchParams.get("mode") === "bo1",
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it("R377 drill-down carries the selected mode", async () => {
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+
+    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+    await user.selectOptions(screen.getByTestId(statsTestid.modeSelect), "bo1");
+    await waitFor(() => expect(cardsCalls().some((url) => url.searchParams.get("mode") === "bo1")).toBe(true));
+
+    await user.click(screen.getByText("Spark Pup"));
+    await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    await waitFor(() =>
+      expect(
+        vi
+          .mocked(fetch)
+          .mock.calls.map(([input]) => new URL(String(input), window.location.origin))
+          .some(
+            (url) =>
+              url.pathname === "/api/stats/cards/core-001" && url.searchParams.get("mode") === "bo1",
+          ),
+      ).toBe(true),
+    );
+  });
+
+  it("R377 a mode with no games shows not enough games instead of a percentage", async () => {
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+
+    expect(await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW)).toBeInTheDocument();
+    expect(screen.getByText("60%")).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByTestId(statsTestid.modeSelect), "random");
+    await waitFor(() => expect(screen.getAllByText("not enough games").length).toBeGreaterThan(0));
+    expect(screen.queryByText("60%")).not.toBeInTheDocument();
+    expect(screen.queryByText("50%")).not.toBeInTheDocument();
   });
 });

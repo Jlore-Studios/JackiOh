@@ -17,6 +17,7 @@ export const statsTestid = {
   viewGrid: "stats-view-grid",
   sortSelect: "stats-sort-select",
   sortDir: "stats-sort-dir",
+  modeSelect: "stats-mode-select",
   playersTable: "stats-players-table",
   playersPager: "stats-players-pager",
   playersPrev: "stats-players-prev",

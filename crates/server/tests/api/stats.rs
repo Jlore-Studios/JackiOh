@@ -1223,3 +1223,155 @@ mod r1044000_condensed_card_stats {
         assert_eq!(figures(&app).await, before);
     }
 }
+
+mod r377_public_stats_match_type {
+    use super::*;
+
+    /// 25 live games of `mode` with p1 on `core-001`/`core-002`, won by `winner`.
+    fn mode_games(mode: &'static str, winner: &'static str, from: usize, count: usize) -> Vec<Value> {
+        (from..from + count)
+            .map(|i| {
+                make_game_record(
+                    &format!("mode-{mode}-{i}"),
+                    RecordOptions {
+                        source: Some("live"),
+                        mode: Some(mode),
+                        p1_deck: Some(vec!["core-001", "core-002"]),
+                        winner: Some(winner),
+                        ..RecordOptions::default()
+                    },
+                )
+            })
+            .collect()
+    }
+
+    /// 25 live games of each of R257's three modes: `bo1` won by p1, `bo3` by p2, `random` by p1.
+    async fn seed_three_modes(app: &App) {
+        let mut records = Vec::new();
+        records.extend(mode_games("bo1", "p1", 1, 25));
+        records.extend(mode_games("bo3", "p2", 101, 25));
+        records.extend(mode_games("random", "p1", 201, 25));
+        insert_records(app, records).await;
+    }
+
+    #[tokio::test]
+    async fn r377_get_api_stats_cards_filters_cards_by_match_type() {
+        let app = test_app().await;
+        seed_three_modes(&app).await;
+
+        let (_, _, bo1) = get_public(&app, "/api/stats/cards?source=live&mode=bo1").await;
+        assert_eq!(bo1["totalGames"], json!(25));
+        assert_eq!(bo1["mode"], json!("bo1"));
+        assert_eq!(bo1["modeLabel"], json!("Best of 1"));
+        assert_eq!(bo1["summary"]["mode"], json!("bo1"));
+        let bo1_card = find(&bo1["cards"], "id", &json!("core-001")).expect("core-001 is listed");
+        assert_eq!(bo1_card["games"], json!(25));
+        assert_eq!(bo1_card["winRate"].as_f64(), Some(1.0));
+
+        let (_, _, bo3) = get_public(&app, "/api/stats/cards?source=live&mode=bo3").await;
+        assert_eq!(bo3["totalGames"], json!(25));
+        assert_eq!(bo3["mode"], json!("bo3"));
+        assert_eq!(bo3["modeLabel"], json!("Conquest"));
+        let bo3_card = find(&bo3["cards"], "id", &json!("core-001")).expect("core-001 is listed");
+        assert_eq!(bo3_card["games"], json!(25));
+        assert_eq!(bo3_card["winRate"].as_f64(), Some(0.0));
+
+        let (_, _, random) = get_public(&app, "/api/stats/cards?source=live&mode=random").await;
+        assert_eq!(random["totalGames"], json!(25));
+        assert_eq!(random["mode"], json!("random"));
+        assert_eq!(random["modeLabel"], json!("All Random"));
+        let random_card = find(&random["cards"], "id", &json!("core-001")).expect("core-001 is listed");
+        assert_eq!(random_card["games"], json!(25));
+    }
+
+    #[tokio::test]
+    async fn r377_get_api_stats_cards_defaults_to_every_mode() {
+        let app = test_app().await;
+        seed_three_modes(&app).await;
+
+        let (_, _, missing) = get_public(&app, "/api/stats/cards?source=live").await;
+        let (_, _, all) = get_public(&app, "/api/stats/cards?source=live&mode=all").await;
+        let (_, _, bogus) = get_public(&app, "/api/stats/cards?source=live&mode=bogus").await;
+        assert_eq!(missing, all);
+        assert_eq!(bogus, all);
+        assert_eq!(all["totalGames"], json!(75));
+        assert_eq!(all["mode"], json!("all"));
+        assert_eq!(all["modeLabel"], json!("All modes"));
+        assert_eq!(all["summary"]["mode"], json!("all"));
+    }
+
+    #[tokio::test]
+    async fn r978000_kept_reports_are_keyed_by_match_type() {
+        let app = test_app().await;
+        seed_three_modes(&app).await;
+
+        let (_, _, bo1_first) = get_public(&app, "/api/stats/cards?source=live&mode=bo1").await;
+        let (_, _, bo3) = get_public(&app, "/api/stats/cards?source=live&mode=bo3").await;
+        assert_ne!(bo1_first, bo3);
+        let (_, _, bo1_again) = get_public(&app, "/api/stats/cards?source=live&mode=bo1").await;
+        assert_eq!(bo1_again, bo1_first);
+    }
+
+    #[tokio::test]
+    async fn r377_get_api_stats_cards_answers_empty_figures_when_a_mode_has_no_games() {
+        let app = test_app().await;
+        insert_records(&app, mode_games("bo1", "p1", 1, 25)).await;
+
+        let (status, _, random) = get_public(&app, "/api/stats/cards?source=live&mode=random").await;
+        assert_eq!(status, 200);
+        assert_eq!(random["totalGames"], json!(0));
+        assert_eq!(random["mode"], json!("random"));
+        for card in random["cards"].as_array().expect("cards is a list") {
+            assert_eq!(card["games"], json!(0));
+            assert_eq!(card["hasEnoughGames"], json!(false));
+        }
+        assert_eq!(random["summary"]["bestCard"], Value::Null);
+        assert_eq!(random["summary"]["worstCard"], Value::Null);
+    }
+
+    #[tokio::test]
+    async fn r377_get_api_stats_cards_id_scopes_the_drill_down_by_match_type() {
+        let app = test_app().await;
+        let mut records = Vec::new();
+        for i in 1..=5 {
+            records.push(make_game_record(
+                &format!("drill-bo1-{i}"),
+                RecordOptions {
+                    source: Some("live"),
+                    mode: Some("bo1"),
+                    p1_deck: Some(vec!["core-001", "core-002"]),
+                    p1_played: Some(vec!["core-001"]),
+                    p1_played_turns: Some(vec![1]),
+                    winner: Some("p1"),
+                    ..RecordOptions::default()
+                },
+            ));
+        }
+        for i in 1..=5 {
+            records.push(make_game_record(
+                &format!("drill-bo3-{i}"),
+                RecordOptions {
+                    source: Some("live"),
+                    mode: Some("bo3"),
+                    p1_deck: Some(vec!["core-001", "core-002"]),
+                    p1_played: Some(vec!["core-001"]),
+                    p1_played_turns: Some(vec![3]),
+                    winner: Some("p1"),
+                    ..RecordOptions::default()
+                },
+            ));
+        }
+        insert_records(&app, records).await;
+
+        let (status, _, bo1) = get_public(&app, "/api/stats/cards/core-001?mode=bo1").await;
+        assert_eq!(status, 200);
+        let bo1_turn1 = find(&bo1["byTurn"], "turn", &json!(1)).expect("turn 1 is tallied");
+        assert_eq!(bo1_turn1["games"], json!(5));
+        assert!(find(&bo1["byTurn"], "turn", &json!(3)).is_none());
+
+        let (_, _, bo3) = get_public(&app, "/api/stats/cards/core-001?mode=bo3").await;
+        let bo3_turn3 = find(&bo3["byTurn"], "turn", &json!(3)).expect("turn 3 is tallied");
+        assert_eq!(bo3_turn3["games"], json!(5));
+        assert!(find(&bo3["byTurn"], "turn", &json!(1)).is_none());
+    }
+}
