@@ -606,6 +606,7 @@ fn stand_in(id: &str, type_: CardType) -> CardDef {
         tags: vec![],
         rarity: Rarity::Common,
         printed_rarity: None,
+        flavor: None,
         token: false,
         cost: CardCost::Fixed(0),
         refs: None,

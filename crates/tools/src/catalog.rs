@@ -30,7 +30,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, bail};
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::wire::{
-    CardType, KEYWORD_KINDS, PrintedRarity, Rarity, SetName, Tag, param_placeholders, set_ships,
+    CardType, Flavor, KEYWORD_KINDS, PrintedRarity, Rarity, SetName, Tag, param_placeholders, set_ships,
 };
 
 use crate::patches::js::{self, Json, Object};
@@ -290,6 +290,11 @@ fn expected_tag_counts() -> Vec<(&'static str, usize)> {
 /// B2.5: a token's printed rarity is one a card could carry.
 fn printed_rarities() -> Vec<&'static str> {
     PrintedRarity::ALL.iter().map(|each| each.as_str()).collect()
+}
+
+/// R1437000: the names a flavor may take.
+fn flavors() -> Vec<&'static str> {
+    Flavor::ALL.iter().map(|each| each.as_str()).collect()
 }
 
 /// B3.1: a backrow card that becomes a Unit prints the Unit's attack and health.
@@ -908,6 +913,7 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
     let expected_total = expected_non_token + expected_token;
     let (type_union, set_union, tag_union, rarity_union) = (card_types(), set_names(), tags(), rarities());
     let printed_union = printed_rarities();
+    let flavor_union = flavors();
     let mut failures: Vec<String> = Vec::new();
     let entries = catalog.len();
 
@@ -1102,6 +1108,19 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
             );
         }
 
+        // R1437000: a flavor is one of the fifteen; an entry may carry none until #1436's part 5.
+        if let Some(flavor) = value.get("flavor")
+            && !flavor
+                .as_str()
+                .is_some_and(|flavor| flavor_union.contains(&flavor))
+        {
+            fail(
+                &mut failures,
+                &at,
+                &format!("`flavor` is not a Flavor (got {})", describe(Some(flavor))),
+            );
+        }
+
         // 8. token === (rarity === "Token"); 2. the token/non-token split.
         match value.get("token") {
             Some(Json::Bool(token)) => {
@@ -1274,6 +1293,7 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
             "tags",
             "rarity",
             "printedRarity",
+            "flavor",
             "token",
             "cost",
             "refs",
@@ -2126,6 +2146,25 @@ mod tests {
             assert!(failures.contains(&expected), "{expected} in {failures:#?}");
         }
         assert_eq!(failures.len(), 3, "{failures:#?}");
+    }
+
+    // R1437000: a flavor is one of the fifteen names, and an entry may carry none until #1436's part 5.
+    #[test]
+    fn r1437000_a_flavor_is_one_of_the_fifteen_and_an_entry_may_carry_none_yet() {
+        assert_eq!(check_catalog(&shipped_catalog()).failures, Vec::<String>::new());
+        for flavor in Flavor::ALL {
+            let catalog = with_field("core-002", "flavor", Json::from(flavor.as_str()));
+            assert_eq!(check_catalog(&catalog).failures, Vec::<String>::new(), "{flavor}");
+        }
+        for name in ["Water", "fire"] {
+            let catalog = with_field("core-002", "flavor", Json::from(name));
+            assert_eq!(
+                check_catalog(&catalog).failures,
+                vec![format!(
+                    "catalog[\"core-002\"]: `flavor` is not a Flavor (got \"{name}\")"
+                )]
+            );
+        }
     }
 
     #[test]
