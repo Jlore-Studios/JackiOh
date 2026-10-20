@@ -80,6 +80,12 @@ included. A step whose `reduce` does far more work than most is charged extra no
 card holding either, and a play the other side's Pareto Optimality judges, per card held; #1240),
 and once a step has run, for each such card it cast without playing it, from a graveyard or at random
 (`announced_surcharge_nodes`, read off its `cardAnnounced` events; #1347).
+A prompt answered ahead inside a simulation (`best_auto_answer`: the other seat's in a step, the
+reply's, and the beam's look past the seat's own; #891, #1112) tries at most
+`AI_SEARCH.max_auto_answer_options` answers, one node each: all of them, in `action_key` order, when
+there are no more, and otherwise that many drawn from the whole set on a stream of the world's seed
+and the prompt's id (`AI_SEARCH.auto_answer_seed`; #1382), so neither a late place in the list nor
+its order keeps an answer from being tried.
 Every simulated step goes through `reduce_unpiloted`, which leaves a turn the autopilot owes
 (Cognitive Offloading, R1183002) owed instead of playing it by §10.7's scorer inside the step: a line
 that hands a turn over is scored where that turn begins (#1337).

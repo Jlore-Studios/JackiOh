@@ -1,10 +1,11 @@
 // `/watch/:matchId?friend=<id>` — a friend's live game, watched from the friend's seat (#936, B50).
 //
-// The watch socket (`/ws/watch`, authenticated as `/ws/match` is: `?token=`) is told whom to watch
-// in its hello, and answers the friend's `PlayerView` frames, each `SPECTATE_DELAY_MS` after the
-// state it shows, with `legal: []`. The board is `Game.tsx` as a replay draws it: nothing legal, a
-// no-op `onAction`, no prompt, drag or glow. Nothing a watcher sends after the hello reaches the
-// game, and this screen sends nothing but the hello (CLAUDE.md rule 7).
+// The watch socket (`/ws/watch`, authenticated as `/ws/match` is: the token offered as a subprotocol,
+// R1379000) is told whom to watch in its hello, and answers the friend's `PlayerView` frames, each
+// `SPECTATE_DELAY_MS` after the state it shows, with `legal: []`. The board is `Game.tsx` as a
+// replay draws it: nothing legal, a no-op `onAction`, no prompt, drag or glow. Nothing a watcher
+// sends after the hello reaches the game, and this screen sends nothing but the hello (CLAUDE.md
+// rule 7).
 //
 // Whether the friend may be watched (a live game, ranked or unranked; the friend allows it, room for one more) is
 // the server's: a refusal is a `forbidden` frame and a closed socket, and this screen says so with
@@ -27,6 +28,7 @@ import { Loading, ShellPanel } from "../main.tsx";
 import { matchSocketUrl, serverSocketUrl } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
+import { socketProtocols } from "../net/socketProtocols.ts";
 import { getFriends } from "../net/social.ts";
 import { BackLink, followInApp } from "../routes/nav.tsx";
 import { useCatalogLookup } from "./catalog.ts";
@@ -46,9 +48,9 @@ export type WatchConnection = "connecting" | "open" | "closed" | "refused";
 const NOTHING_LEGAL: readonly ActionBody[] = [];
 const IGNORE = (): void => undefined;
 
-/** The watch socket's address beside the match socket's, its credentials in the query as `/ws/match` takes them. */
-export function watchSocketUrl(token: string, matchId: string, friendId: string, base: string = matchSocketUrl()): string {
-  const query = new URLSearchParams({ token, matchId, friendId }).toString();
+/** The watch socket's address beside the match socket's, with no token: it is offered as a subprotocol (R1379000). */
+export function watchSocketUrl(matchId: string, friendId: string, base: string = matchSocketUrl()): string {
+  const query = new URLSearchParams({ matchId, friendId }).toString();
   return `${serverSocketUrl(WATCH_PATH, base).replace(/\?.*$/u, "")}?${query}`;
 }
 
@@ -104,7 +106,7 @@ function useWatch(matchId: string, friendId: string): { view: PlayerView | null;
       }
       let live: WebSocket;
       try {
-        live = new WebSocket(watchSocketUrl(token, matchId, friendId));
+        live = new WebSocket(watchSocketUrl(matchId, friendId), socketProtocols(token));
       } catch {
         setConnection("closed");
         return;

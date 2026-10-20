@@ -389,6 +389,8 @@ describe("scripts/ci-scope.sh", () => {
         "crates/server/tests/deploy/rehearse.sh",
         "crates/engine/tests/fixtures/code-input-cases.json",
         "crates/ai/tests/fixtures/learned-parity.json",
+        "crates/server/tests/fixtures/practice-claim.json",
+        "crates/server/quests.json",
         "spec/05-card-types.md",
         "package.json",
         "render.yaml",

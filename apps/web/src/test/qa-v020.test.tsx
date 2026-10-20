@@ -43,7 +43,6 @@ import { CAST_ON_DRAW_TEXT, CHAOS_TEXT, showcaseHoldMs, showcaseTestid } from ".
 import {
   dequeue,
   enqueue,
-  getCatalog,
   getCollection,
   getDecks,
   getMe,
@@ -68,7 +67,6 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     enqueue: vi.fn(),
     dequeue: vi.fn(),
     getDecks: vi.fn(),
-    getCatalog: vi.fn(),
     getCollection: vi.fn(),
     getPopulation: vi.fn(),
     getOwnRank: vi.fn(),
@@ -355,7 +353,6 @@ describe("QA v0.2.0, Global Cosmetic", () => {
       email: "player1@example.com",
     });
     vi.mocked(getDecks).mockResolvedValue(decks);
-    vi.mocked(getCatalog).mockResolvedValue({ version: "v1", defs: CATALOG });
     vi.mocked(getCollection).mockResolvedValue({ catalogVersion: "v1", entries: ids.map((cardId) => ({ cardId, quantity: 1 })) });
     vi.mocked(getPopulation).mockResolvedValue({ gamesLastHour: 97, expectedWaitSeconds: { bo1: 50, bo3: null, random: null } });
     vi.mocked(getOwnRank).mockRejectedValue(new Error("the rank is not this spec's subject"));

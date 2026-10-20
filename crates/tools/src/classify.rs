@@ -98,7 +98,9 @@ pub(crate) enum Kind {
     Cards,
 }
 
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+/// A card change's tier, lowest first. `patches ship` names a version from it and records it on the
+/// patch (R1366000), so it reads back too.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum Tier {
     Micro,

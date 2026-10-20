@@ -40,6 +40,7 @@ function isConfig(value: unknown): value is PracticeStartConfig {
     (config.humanSeat === "p1" || config.humanSeat === "p2") &&
     isDeck(config.deck) &&
     (config.sandbox === undefined || config.sandbox === true) &&
+    (config.earning === undefined || config.earning === true) &&
     (config.customCards === undefined || isCustomCards(config.customCards)) &&
     config.lesson === undefined
   );
@@ -85,15 +86,17 @@ export function writePracticeResume(config: PracticeStartConfig, options: { save
     clearPracticeResume();
     return;
   }
-  const { seed, difficulty, humanSeat, deck, sandbox, customCards } = config;
+  const { seed, difficulty, humanSeat, deck, sandbox, customCards, earning } = config;
   // R923000: a sandbox game is picked up as a sandbox. R915006: a game with custom cards keeps them,
   // so the page picks it up as what it is (no card statistics, R915009) and Play again deals them again.
+  // R1303001: a game on a server seed is picked up as one, so its end is still claimed.
   const setup = {
     seed,
     difficulty,
     humanSeat,
     deck,
     ...(sandbox === true ? { sandbox } : {}),
+    ...(earning === true ? { earning } : {}),
     ...(customCards === undefined || customCards.length === 0 ? {} : { customCards }),
   };
   const kept = options.saved === true ? { ...setup, saved: true } : setup;

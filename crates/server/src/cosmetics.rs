@@ -138,8 +138,8 @@ struct RegistryFile {
     cosmetics: Vec<Cosmetic>,
 }
 
-/// An id is a lower-case letter, then lower-case letters, digits and hyphens.
-fn is_slug(id: &str) -> bool {
+/// An id is a lower-case letter, then lower-case letters, digits and hyphens (the quest pool's too).
+pub(crate) fn is_slug(id: &str) -> bool {
     let mut chars = id.chars();
     chars.next().is_some_and(|first| first.is_ascii_lowercase())
         && chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
@@ -217,6 +217,17 @@ pub fn pack_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
     cosmetics
         .iter()
         .filter(|cosmetic| cosmetic.kind.is_per_card() && !cosmetic.default && !cosmetic.starter)
+        .cloned()
+        .collect()
+}
+
+/// The cosmetics a cosmetic pack may drop (R1306000): every entry, per-card or account, that is
+/// not a default, a starter or a chase, in the registry's order. A chase comes from the Chase
+/// Shard bar (§14.2), and one that names a card, a full art, drops on that card alone (R1313000).
+pub fn cosmetic_pack_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
+    cosmetics
+        .iter()
+        .filter(|cosmetic| !cosmetic.default && !cosmetic.starter && !cosmetic.chase)
         .cloned()
         .collect()
 }

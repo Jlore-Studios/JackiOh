@@ -938,9 +938,10 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
 - **Router**: TS's matcher, in TS's order; a wrong method on a known path answers **404**
   `not_found` "method not allowed for this path"; preflight `OPTIONS` answered by the CORS layer
   first (`api/cors.rs`); bodies over 65,536 bytes are 400; a body that is not a JSON object is 400.
-- **WebSocket** at `/ws/match` on the same port. The token comes from `?token=` only (what the browser
-  and the e2e Node player send); the unused `Authorization` and `Sec-WebSocket-Protocol` token paths
-  are dropped, and `jackioh.v1` is still echoed when offered. A frame over 65,536 bytes closes with
+- **WebSocket** at `/ws/match` on the same port. The token comes from an offered `jackioh.bearer.`
+  subprotocol, its UTF-8 in base64url without padding (R1379000; `?token=` only when none is offered,
+  for the previous day's client); the unused `Authorization` path is dropped, and only `jackioh.v1`
+  is echoed. A frame over 65,536 bytes closes with
   1009 (one check). `joinRoom` frames are answered `malformed`. The action nonce is read only inside
   `action` (the client's form). The client's handler for a `legal` frame the server never sends is
   deleted (part 21).
@@ -1004,7 +1005,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
 | `catalog check` | `catalog.rs` | 22 | `validate-catalog.ts`, the catalog/registry/references/params/radiant-standard tests | data checks |
 | `catalog loc <path>` | `catalog.rs` | 22 | `gen-loc.ts` | §7.5 |
 | `catalog-version` | `catalog.rs` | 22 | `scripts/catalog-version.mjs` | prints the newest version in `patches.json` |
-| `patches <version> <date> "<title>"`, `patches check`, `patches ship` | `patches.rs` | 22 | `packages/cards/scripts/{patches,patch,patches-io,versions,naming}.ts` | same files, same formats; since R1329000 a fragment may claim the win-rate table (`winRates`), `ship` writes each version's table to `patches/win_rates/<version>.json` and `shipped.json` records its blob (`winRatesBlob`) |
+| `patches <version> <date> "<title>"`, `patches check`, `patches ship` | `patches.rs` | 22 | `packages/cards/scripts/{patches,patch,patches-io,versions,naming}.ts` | same files, same formats; since R1329000 a fragment may claim the win-rate table (`winRates`), `ship` writes each version's table to `patches/win_rates/<version>.json` and `shipped.json` records its blob (`winRatesBlob`); since R1366000 a fragment is `pending/<slug>.json` with no version, `plays` and `rule`, and `ship` names each version from its tier and records `tier` and `plays` |
 | `gate [--full] [--shard k/K] [--out dir]`, `gate merge <dir>` | `gate.rs` | 22 | `pnpm ai:gate`, `gate-*.test.ts`, `gate-merge.ts` | the three matchups against `gateNeeded`, plus the perf gate |
 | `sweep [ids…] [--pass2 …] [--report …]` | `sweep.rs` | 22 | `pnpm ai:sweep` | R186's two-pass sweep; prints `SHADOW_BAN` rows |
 | `stats [--games N] [--patch v] [--out file]` | `stats.rs` | 22 | `pnpm ai:stats` | R378's development run |

@@ -41,6 +41,7 @@ import type { PracticeHost } from "./host.ts";
 import { readLastBoard, writeLastBoard } from "./lastBoard.ts";
 import { clearPracticeResume, writePracticeResume } from "./resume.ts";
 import type {
+  PracticeClaim,
   PracticeDebug,
   PracticeReplaySummary,
   PracticeRequestBody,
@@ -88,6 +89,11 @@ export type PracticeController = {
    */
   setHold(reason: string, held: boolean): void;
   debug(): Promise<PracticeDebug>;
+  /**
+   * R1303000: the finished game's claim, for the server to check; rejected while the game runs and
+   * for a game not on a server seed, as the worker refuses them.
+   */
+  claim(): Promise<PracticeClaim>;
   /**
    * R768000: the replay of a game the worker kept (the finished game's snapshot names it, `replay`),
    * its pages asked behind any request already queued, as every request to the worker is.
@@ -317,8 +323,10 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
 
     start(config: PracticeStartConfig): Promise<void> {
       // R508: the human brings their last practice board (the worker ignores it for a lesson).
+      // R1303003: a game on a server seed brings the one the server kept, already in its config.
       const board = readLastBoard();
-      return begin(config, { type: "start", config: board.length === 0 ? config : { ...config, lastBoard: board } });
+      const keep = config.earning === true || board.length === 0;
+      return begin(config, { type: "start", config: keep ? config : { ...config, lastBoard: board } });
     },
 
     resume(config: PracticeStartConfig): Promise<void> {
@@ -349,6 +357,19 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
         }
         send({ type: "debug" }, (response) => {
           if (response.type === "debug") resolve(response.debug);
+          else reject(new Error(unexpected(response)));
+        });
+      });
+    },
+
+    claim(): Promise<PracticeClaim> {
+      return new Promise<PracticeClaim>((resolve, reject) => {
+        if (disposed) {
+          reject(new Error(CLOSED_MESSAGE));
+          return;
+        }
+        send({ type: "claim" }, (response) => {
+          if (response.type === "claim") resolve(response.claim);
           else reject(new Error(unexpected(response)));
         });
       });

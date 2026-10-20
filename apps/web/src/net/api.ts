@@ -12,7 +12,7 @@
 // is `{ error: { code, message, details? } }` from `crates/server/src/api/http.rs`.
 
 import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
-import type { CardDefs, GameOverReason, LeanPick, PlayerId, PortraitId, PrintedRarity, SetName } from "@jackioh/shared";
+import type { GameOverReason, LeanPick, PlayerId, PortraitId, PrintedRarity, SetName } from "@jackioh/shared";
 
 import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
@@ -377,6 +377,20 @@ export function devClear(token: string, part: DevClearPart): Promise<{ written: 
   return apiRequest<{ written: number }>(`/api/dev/clear/${part}`, { method: "POST", token, body: {} });
 }
 
+/** `POST /api/dev/quests`: a quest at once (§14.9), answering it; 409 while the most are held. */
+export function devGiveQuest(token: string): Promise<{ quest: QuestView }> {
+  return apiRequest<{ quest: QuestView }>("/api/dev/quests", { method: "POST", token, body: {} });
+}
+
+/** `POST /api/dev/quests/:questId/complete`: completes a held quest, answering what it paid; 404 for one not held. */
+export function devCompleteQuest(token: string, questId: string): Promise<{ completed: string; jlore: number; xp: number }> {
+  return apiRequest<{ completed: string; jlore: number; xp: number }>(`/api/dev/quests/${encodeURIComponent(questId)}/complete`, {
+    method: "POST",
+    token,
+    body: {},
+  });
+}
+
 // Sign-in and sign-up are NOT here. SPEC §9.2 draws the browser's arrow to the auth provider
 // separately from its arrow to these API functions, so they live in `net/auth.ts` and go straight
 // to the provider. `/api/auth/signin` does exist on the server, but it is BUILD M8's fixture-account
@@ -443,6 +457,27 @@ export function getOwnedCosmetics(token: string): Promise<OwnedCosmeticsResponse
   return apiRequest<OwnedCosmeticsResponse>("/api/cosmetics", { token });
 }
 
+/** §14.9: one quest the caller holds, its progress toward `target`, and what it pays. */
+export type QuestView = {
+  questId: string;
+  title: string;
+  progress: number;
+  target: number;
+  jlore: number;
+  xp: number;
+  arrivedAt: number;
+};
+
+/**
+ * R1304000: `GET /api/quests`, the caller's held quests, oldest first, and when the next arrives
+ * (epoch ms); `null` while it holds the most it may, or while the economy is off (R1304002).
+ */
+export type QuestsResponse = { quests: QuestView[]; nextDueAt: number | null };
+
+export function getQuests(token: string): Promise<QuestsResponse> {
+  return apiRequest<QuestsResponse>("/api/quests", { token });
+}
+
 // ---------------------------------------------------------------------------------------------
 // Card packs (SPEC §14.3, §14.4; #1301, #1308): the odds and the counters the server holds, and an
 // opening it has already decided slot by slot.
@@ -484,6 +519,116 @@ export function getPacks(token: string): Promise<PacksResponse> {
 
 export function openPack(token: string, pack: string): Promise<OpenedPackResponse> {
   return apiRequest<OpenedPackResponse>("/api/packs/open", { method: "POST", token, body: { pack } });
+}
+
+// ---------------------------------------------------------------------------------------------
+// The Jlore shop and the token picker (SPEC §14.1, §14.5, §14.6; #1309): spending what the
+// economy pays. Every number shown comes from these answers, never a client constant
+// (CLAUDE.md rule 7): the wallet, the pack price, both bars and their sizes, the cycle's next
+// step and the Chase Shard bar. A refusal rejects with `ApiRequestError` and changes nothing.
+// ---------------------------------------------------------------------------------------------
+
+/** `GET /api/wallet`: the caller's Jlore balance. */
+export type WalletResponse = { jlore: number };
+
+export function getWallet(token: string): Promise<WalletResponse> {
+  return apiRequest<WalletResponse>("/api/wallet", { token });
+}
+
+/** `POST /api/packs/buy` with `{ pack }`: the pack, the wallet after it and the packs of its kind held. */
+export type BoughtPackResponse = { pack: string; jlore: number; unopened: number };
+
+export function buyPack(token: string, pack: string): Promise<BoughtPackResponse> {
+  return apiRequest<BoughtPackResponse>("/api/packs/buy", { method: "POST", token, body: { pack } });
+}
+
+/** One token bar's points and size, as `GET /api/tokens` states them. */
+export type TokenBarState = { points: number; size: number };
+
+/** The cosmetic cycle's next step, as `nextStep` spells it: a tier token, or a cosmetic pack. */
+export type CosmeticTokenStep = "rare" | "epic" | "cosmeticPack";
+
+/**
+ * `GET /api/tokens`: both bars' points and sizes, the cycle's next step and the tokens held
+ * (R1305004). `POST /api/tokens/redeem-card` and `POST /api/tokens/redeem-cosmetic` answer the
+ * same after they spend.
+ */
+export type TokenBarsResponse = {
+  cardBar: TokenBarState;
+  cosmeticBar: TokenBarState;
+  nextStep: CosmeticTokenStep;
+  tokens: { card: number; cosmeticRare: number; cosmeticEpic: number; cosmeticPack: number };
+};
+
+export function getTokens(token: string): Promise<TokenBarsResponse> {
+  return apiRequest<TokenBarsResponse>("/api/tokens", { token });
+}
+
+/** `POST /api/tokens/redeem-card` with `{ cardId }`, answering the bars and tokens after it. */
+export function redeemCardToken(token: string, cardId: string): Promise<TokenBarsResponse> {
+  return apiRequest<TokenBarsResponse>("/api/tokens/redeem-card", { method: "POST", token, body: { cardId } });
+}
+
+/** A cosmetic token's tier, as `POST /api/tokens/redeem-cosmetic` parses `token` (R1305003). */
+export type CosmeticTokenTier = "Rare" | "Epic";
+
+/**
+ * `POST /api/tokens/redeem-cosmetic` with `{ token, cosmeticId, cardId? }`, answering the bars
+ * and tokens after it. A per-card cosmetic names its card; an account one sends none.
+ */
+export function redeemCosmeticToken(
+  token: string,
+  cosmeticToken: CosmeticTokenTier,
+  cosmeticId: string,
+  cardId?: string,
+): Promise<TokenBarsResponse> {
+  return apiRequest<TokenBarsResponse>("/api/tokens/redeem-cosmetic", {
+    method: "POST",
+    token,
+    body: cardId === undefined ? { token: cosmeticToken, cosmeticId } : { token: cosmeticToken, cosmeticId, cardId },
+  });
+}
+
+/** `GET /api/cosmetic-packs`: the Chase Shard bar and the cosmetic packs unopened (R1306002). */
+export type CosmeticPacksResponse = { shardBar: TokenBarState; unopened: number };
+
+export function getCosmeticPacks(token: string): Promise<CosmeticPacksResponse> {
+  return apiRequest<CosmeticPacksResponse>("/api/cosmetic-packs", { token });
+}
+
+/** What one cosmetic pack slot granted (R1306000, R1306001): an unowned cosmetic, or bar points. */
+export type CosmeticSlotGrant =
+  | {
+      kind: "cosmetic";
+      cosmeticId: string;
+      cosmeticRarity: PrintedRarity;
+      /** The card a per-card cosmetic goes on, null for an account cosmetic. */
+      cardId: string | null;
+      /** Whether the account lacked that card, so the slot grants it too. */
+      cardGranted: boolean;
+    }
+  | { kind: "bars" };
+
+/** One slot of an opened cosmetic pack: the rarity it rolled and what that granted. */
+export type CosmeticSlot = { rarity: PrintedRarity; grant: CosmeticSlotGrant };
+
+/** `POST /api/cosmetic-packs/open`: its slots in order, the shard bar after it and the packs left. */
+export type OpenedCosmeticPackResponse = { slots: CosmeticSlot[]; shardBar: TokenBarState; unopened: number };
+
+export function openCosmeticPack(token: string): Promise<OpenedCosmeticPackResponse> {
+  return apiRequest<OpenedCosmeticPackResponse>("/api/cosmetic-packs/open", { method: "POST", token, body: {} });
+}
+
+/**
+ * `POST /api/cosmetic-packs/chase` with `{ cosmeticId, cardId? }`, answering the bar and packs
+ * after it emptied the full bar. A per-card cosmetic names its card; an account one sends none.
+ */
+export function buyChase(token: string, cosmeticId: string, cardId?: string): Promise<CosmeticPacksResponse> {
+  return apiRequest<CosmeticPacksResponse>("/api/cosmetic-packs/chase", {
+    method: "POST",
+    token,
+    body: cardId === undefined ? { cosmeticId } : { cosmeticId, cardId },
+  });
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -730,24 +875,6 @@ export type PopulationResponse = {
 
 export function getPopulation(token: string): Promise<PopulationResponse> {
   return apiRequest<PopulationResponse>("/api/queue/population", { token });
-}
-
-/**
- * `GET /api/catalog`: card data for a screen that has no game running.
- *
- * R163: §9.4 calls the catalog "static, versioned, shipped with the client", but the deckbuilder
- * needs names and costs before any engine is loaded and the client has no catalog of its own to
- * ship yet, so the server serves the one it already holds (`get_catalog` in
- * `crates/server/src/api/catalog.rs`); this is the caller, not a second statement of the rule.
- */
-// It returns the whole `CardDefs` record and not a projection, because `@jackioh/validator`'s
-// `CatalogSnapshot.cards` is a `CardDefs` — the deckbuilder's client-side verdict (§9.4: "the
-// client's verdict is UX while the server's is law") runs the same module the server runs, and a
-// trimmed-down card would mean a second, weaker copy of the catalog.
-export type CatalogResponse = { version: string; defs: CardDefs };
-
-export function getCatalog(): Promise<CatalogResponse> {
-  return apiRequest<CatalogResponse>("/api/catalog");
 }
 
 /** `POST /api/rooms` / `POST /api/rooms/:code/join` (§9.5, R264). */
