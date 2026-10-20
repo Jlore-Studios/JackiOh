@@ -1993,12 +1993,14 @@ mod tests {
                 patch: "v0.9.9-test".to_string(),
                 budget: Some(FEW),
                 force: None,
+                commit: None,
             },
             DevRunOptions {
                 series: "dev-force-core-090".to_string(),
                 patch: "v0.9.9-test".to_string(),
                 budget: Some(FEW),
                 force: Some("core-090".to_string()),
+                commit: None,
             },
         ] {
             let expected = serial_lines(1, 6, &options);
@@ -2035,6 +2037,7 @@ mod tests {
             patch: "v0.9.9-test".to_string(),
             budget: Some(FEW),
             force: None,
+            commit: None,
         };
         let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
         let mut kept = String::new();

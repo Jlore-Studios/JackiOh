@@ -138,8 +138,8 @@ struct RegistryFile {
     cosmetics: Vec<Cosmetic>,
 }
 
-/// An id is a lower-case letter, then lower-case letters, digits and hyphens.
-fn is_slug(id: &str) -> bool {
+/// An id is a lower-case letter, then lower-case letters, digits and hyphens (the quest pool's too).
+pub(crate) fn is_slug(id: &str) -> bool {
     let mut chars = id.chars();
     chars.next().is_some_and(|first| first.is_ascii_lowercase())
         && chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
