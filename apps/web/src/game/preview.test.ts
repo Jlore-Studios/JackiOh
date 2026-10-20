@@ -38,7 +38,7 @@ const BOSS_CATALOG: CardDefs = {
 const BOSS = CORE.map((_, at) => `boss-${String(at + 1).padStart(3, "0")}`);
 
 describe("R1400 R1420's preview in the browser's development module", () => {
-  it("R1400 the premise: the Meditative set ships since v0.3.0, so its deck needs no preview", () => {
+  it("R1400 the premise: the Meditative set ships since v0.3.5, so its deck needs no preview", () => {
     expect(MEDITATIVE).toHaveLength(DECK_SIZE);
     expect(CORE).toHaveLength(DECK_SIZE);
     expect(resolveDecks("a", "b", CATALOG, { a: MEDITATIVE, b: CORE })).toEqual({ decks: [MEDITATIVE, CORE] });
