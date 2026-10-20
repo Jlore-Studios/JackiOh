@@ -7040,6 +7040,8 @@
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-10-20T03:19:45Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "39364685810",
       "self_check_findings": [],
       "started_at": "2026-10-20T03:31:34Z",
