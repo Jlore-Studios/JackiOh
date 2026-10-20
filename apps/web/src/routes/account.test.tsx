@@ -573,6 +573,8 @@ describe("#1308 the card packs on the account page", () => {
   }
 
   it("offers Card packs to a dev account and opens the panel on the server's numbers", async () => {
+    // The panel is a lazy chunk: warm it so the toggle-to-panel wait measures the mount, not the transform.
+    await import("../packs/PackOpening.tsx");
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     vi.mocked(getPacks).mockResolvedValue(packsInfo());
     const { unmount } = render(<AccountRoute token={TOKEN} me={me({ isDev: true })} />);
