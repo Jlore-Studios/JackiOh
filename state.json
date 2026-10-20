@@ -7381,36 +7381,26 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-20T11:53:54Z",
+      "feedback_since": "2026-10-20T13:11:23Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1387,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "No test exercises the new checkpoint stage's detection path. The 'tamper' tests (here, duos_fuzz.rs:771, play_pipeline_b_replay.rs) only assert that hash_state/duos_hash changes when health is edited, so they would still pass if the comparisons in verify_round_trip, check_serial_restart or check_duos_serial_restart were deleted. That misses the plan's done-when ('The tamper tests fail without the comparison logic (they assert inequality produced by the check, not a constant)') and the repo's practice of a planted failure for each fuzz stage.",
-          "evidence": "a_tampered_round_trip_fails_verification calls verify_round_trip only on the honest state, then edits a serde Value and runs assert_ne!(hash_state(&tampered), live). It never reaches verify_round_trip or check_serial_restart with bad input. a_tampered_duos_round_trip_is_detected never calls check_duos_serial_restart. No test asserts a FailureStage::Checkpoint failure or a 'checkpoint:' error string. The earlier review flagged the same gap ('Tamper tests prove hash sensitivity, not the checkpoint's rejection path') and approved anyway.",
-          "severity": "blocking",
-          "where": "crates/tools/src/fuzz.rs:2527"
-        },
-        {
-          "claim": "The microsecond-to-millisecond conversion is a bare 1000 in eleven places, against CLAUDE.md rule 9 ('Every number is a named constant'). The same code already imports the named MS_PER_SECOND for its seconds conversion.",
-          "evidence": "`CHECKPOINT_TIME_BOUND_MS * 1000` and `micros / 1000` at fuzz.rs:823, 828, 1735, 2352, 2562, 2577 and duos_fuzz.rs:403, 406, 561, 583, 762, 767. fuzz.rs imports crate::gate::MS_PER_SECOND for the same kind of conversion. Measuring with Duration::as_millis(), or naming the constant, removes the bare numbers.",
-          "severity": "blocking",
-          "where": "crates/tools/src/fuzz.rs:823"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-7",
+      "question": "",
       "queued_at": "2026-10-20T13:09:47Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "39428097368",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-20T13:11:23Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "muse"
