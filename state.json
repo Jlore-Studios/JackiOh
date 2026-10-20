@@ -7362,7 +7362,7 @@
       "asks": [],
       "died": 0,
       "failures": 0,
-      "feedback_since": "2026-10-20T13:05:03Z",
+      "feedback_since": "2026-10-20T14:01:17Z",
       "forced": false,
       "interruptions": 0,
       "kind": "revise",
@@ -7374,11 +7374,11 @@
       "round_tier": "medium",
       "run_id": "39435266071",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-20T14:01:17Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "muse"
