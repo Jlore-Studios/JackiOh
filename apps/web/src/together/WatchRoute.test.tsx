@@ -17,6 +17,7 @@ import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import { SILENT_SOCKET_MS, WAKE_PROBE_MS } from "../game/net.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
+import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
 import type { Friend } from "../net/social.ts";
 import { baseView } from "../test/fixtures.ts";
 import { must, stubServer } from "../test/stubServer.ts";
@@ -63,7 +64,10 @@ class FakeWatchSocket {
   readyState = 0;
   private readonly listeners = new Map<string, Listener[]>();
 
-  constructor(readonly url: string) {
+  constructor(
+    readonly url: string,
+    readonly protocols: readonly string[] = [],
+  ) {
     sockets.push(this);
   }
 
@@ -143,7 +147,9 @@ describe("B50 the watch screen", () => {
     const socket = latest();
     const url = new URL(socket.url);
     expect(url.pathname).toBe("/ws/watch");
-    expect(url.searchParams.get("token")).toBe("tok-watch");
+    // R1379000: the token is offered as a subprotocol, never in the address.
+    expect(url.searchParams.has("token")).toBe(false);
+    expect(tokenFromProtocols(socket.protocols)).toBe("tok-watch");
     expect(url.searchParams.get("matchId")).toBe("m-watch");
     expect(url.searchParams.get("friendId")).toBe("f-ann");
     expect(connection("watch-screen")).toBe("connecting");
@@ -185,6 +191,43 @@ describe("B50 the watch screen", () => {
     expect(screen.getByTestId("watch-back").getAttribute("href")).toBe("/together");
     await advance(WATCH_RECONNECT_MS * (WATCH_RECONNECT_ATTEMPTS + 1));
     expect(sockets).toHaveLength(1);
+  });
+
+  it("R1379000 the watch socket offers jackioh.v1 and the token as a subprotocol", () => {
+    watch();
+    expect(latest().protocols).toEqual(socketProtocols("tok-watch"));
+    expect(latest().url).not.toContain("tok-watch");
+  });
+
+  it("R1379000 a watch socket refused for its sign-in is the refused screen and never reopened", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "error", code: "forbidden", message: "sign in first" });
+    socket.emit("close");
+
+    expect(screen.getByTestId("watch-refused")).toBeInTheDocument();
+    expect(connection("watch-screen")).toBe("refused");
+    await advance(WATCH_RECONNECT_MS * (WATCH_RECONNECT_ATTEMPTS + 1));
+    expect(sockets).toHaveLength(1);
+  });
+
+  it("R1379000 a reconnect after the session was renewed offers the renewed token", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    watch();
+    const first = latest();
+    first.emit("open");
+    window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok-renewed" }));
+    first.emit("close");
+    await advance(WATCH_RECONNECT_MS);
+    expect(sockets).toHaveLength(2);
+
+    const second = latest();
+    expect(tokenFromProtocols(second.protocols)).toBe("tok-renewed");
+    expect(second.url).not.toContain("tok-");
+    second.emit("open");
+    expect(connection("watch-screen")).toBe("open");
   });
 
   it("B50 with no session it is refused and opens no socket", () => {

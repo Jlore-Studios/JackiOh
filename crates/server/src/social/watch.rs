@@ -1,10 +1,11 @@
 //! Watching a friend's live game (SPEC S7, B50, B51; #939).
 //!
-//! `/ws/watch` is authenticated as `/ws/match` is (the token from `?token=`, §9.4's gate) and then
-//! takes one frame, the hello: `{"type":"hello","matchId":"…","friendId":"…"}`. It is let in when
-//! the two accounts are friends with neither blocking the other, the friend holds a seat in the live
-//! match it names, a 1v1, ranked or unranked, in which the watcher holds no seat (a player never
-//! sees the other seat), and the friend allows spectators (`allowSpectators`, `api/settings.rs`).
+//! `/ws/watch` is authenticated as `/ws/match` is (the token offered as a subprotocol, R1379000;
+//! §9.4's gate) and then takes one frame, the hello:
+//! `{"type":"hello","matchId":"…","friendId":"…"}`. It is let in when the two accounts are friends
+//! with neither blocking the other, the friend holds a seat in the live match it names, a 1v1, ranked
+//! or unranked, in which the watcher holds no seat (a player never sees the other seat), and the
+//! friend allows spectators (`allowSpectators`, `api/settings.rs`).
 //! The actor then judges room (SPECTATORS_PER_MATCH) and from there sends the friend's seat's views,
 //! each SPECTATE_DELAY_MS after the state it shows, with `legal: []` (`MatchActor::attach_watcher`).
 //!
@@ -31,14 +32,13 @@
 use std::future::Future;
 use std::sync::Arc;
 
-use axum::http::Uri;
 use serde_json::Value;
 
 use crate::actor::guard::HelloGate;
 use crate::actor::match_actor::WATCH_NOT_ALLOWED as NOT_ALLOWED;
 use crate::actor::protocol::{SocketErrorCode, encode, error_message};
 use crate::actor::registry::AttachError;
-use crate::actor::ws_server::{Socket, WS_CLOSE, upgrade_token};
+use crate::actor::ws_server::{Socket, WS_CLOSE};
 use crate::api::http::assert_active;
 use crate::app::App;
 use crate::db::store::{MatchPhase, MatchStatus, Profile, StoreError, Tx};
@@ -89,14 +89,15 @@ pub fn listen(socket: &Socket) -> WatchListener {
 }
 
 /// `listen`, then `serve`. The handlers go on when this is called, before the future it answers
-/// first runs, so a hello sent straight after the call is heard.
+/// first runs, so a hello sent straight after the call is heard. `token` is the upgrade's
+/// (R1379000).
 pub fn handle_watch_socket<'a>(
     app: &'a Arc<App>,
     socket: &'a Socket,
-    uri: &'a Uri,
+    token: Option<String>,
 ) -> impl Future<Output = ()> + Send + 'a {
     let listener = listen(socket);
-    serve(app, socket, uri, listener)
+    serve(app, socket, token, listener)
 }
 
 /// Why a watch socket was not handed to the actor.
@@ -125,7 +126,7 @@ impl From<StoreError> for WatchFailure {
 
 /// A watch socket's life after `listen`: who it is, its hello, B50's checks, and the actor; or the
 /// one refusal.
-pub async fn serve(app: &Arc<App>, socket: &Socket, uri: &Uri, listener: WatchListener) {
+pub async fn serve(app: &Arc<App>, socket: &Socket, token: Option<String>, listener: WatchListener) {
     // A socket that went before its handlers were in has no close left to tell them.
     if !socket.is_open() {
         return;
@@ -134,7 +135,7 @@ pub async fn serve(app: &Arc<App>, socket: &Socket, uri: &Uri, listener: WatchLi
         socket.send(encode(&error_message(SocketErrorCode::Forbidden, message, None)));
         socket.close(Some(code), Some(message));
     };
-    match admit(app, socket, uri, listener).await {
+    match admit(app, socket, token, listener).await {
         Ok(()) | Err(WatchFailure::Gone) => {}
         Err(WatchFailure::Refused { code, message }) => refuse(code, &message),
         Err(WatchFailure::Threw(message)) => {
@@ -147,10 +148,10 @@ pub async fn serve(app: &Arc<App>, socket: &Socket, uri: &Uri, listener: WatchLi
 async fn admit(
     app: &Arc<App>,
     socket: &Socket,
-    uri: &Uri,
+    token: Option<String>,
     listener: WatchListener,
 ) -> Result<(), WatchFailure> {
-    let watcher = authenticate(app, uri).await?;
+    let watcher = authenticate(app, token).await?;
     let Some(hello) = listener.wait().await else {
         // R835002: still open means no hello came in `WS_IDLE_TIMEOUT_SECONDS`; gone, or closed for
         // its malformed frames, has no one to answer.
@@ -195,10 +196,10 @@ async fn admit(
     }
 }
 
-/// The account behind the upgrade, read as `/ws/match` reads it: the token, its profile, §9.4's
-/// gate.
-async fn authenticate(app: &Arc<App>, uri: &Uri) -> Result<Profile, WatchFailure> {
-    let Some(token) = upgrade_token(uri) else {
+/// The account behind the upgrade, read as `/ws/match` reads it: the token (R1379000), its profile,
+/// §9.4's gate.
+async fn authenticate(app: &Arc<App>, token: Option<String>) -> Result<Profile, WatchFailure> {
+    let Some(token) = token else {
         return Err(refused(WS_CLOSE.unauthorized, "sign in first"));
     };
     let Ok(user) = app.auth.verify(&token).await else {

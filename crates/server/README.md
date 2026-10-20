@@ -241,8 +241,10 @@ rooms through `freeze_choice`, and a Best-of-1 rematch, which replays frozen dec
 
 ## WebSocket surface
 
-One socket per player per match, at `/ws/match` on the same port. The token comes from `?token=`; the
-server echoes the `jackioh.v1` subprotocol when offered. The message union is `actor/protocol.rs`:
+One socket per player per match, at `/ws/match` on the same port. The token comes from an offered
+`jackioh.bearer.` subprotocol, its UTF-8 in base64url without padding (R1379000; `?token=` only when
+none is offered, for the previous day's client); only `jackioh.v1` is echoed, and `/ws/duos` and
+`/ws/watch` read the token the same way. The message union is `actor/protocol.rs`:
 the client sends `hello` and `action`, the server sends `hello`, `view`, `ack`, `error`, `prompt` and
 `clock`, and the cosmetic `portraits` (R642), `emote` (R643) and `aim` (R738) frames ride beside them,
 never part of an action or a view. The `portraits` frame also carries the receiving account's own emote

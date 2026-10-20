@@ -1,5 +1,5 @@
 // CLAUDE.md rule 7 / SPEC §9.1: this client sends intent and renders server views; it never computes legality (BUILD M5-T2).
-// The handshake uses query parameters (SURFACE §11.3) and `hello` refreshes the view (§9.5).
+// The handshake names the match in its query and offers the token as a subprotocol (SURFACE §11.3, R1379000); `hello` refreshes the view (§9.5).
 // `MatchClocks` is structural across the deployable boundary (§9.2); view frames carry legal actions (BUILD §1, M6-T4).
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
@@ -10,6 +10,7 @@ import { WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import { isEmoteHand } from "../emotes/hand.ts";
 import { matchSocketUrl } from "../net/api.ts";
+import { socketProtocols } from "../net/socketProtocols.ts";
 import { isRecord } from "../wire/json.ts";
 
 /** BUILD M5-T3: the dev handle exists only outside a production build. */
@@ -75,13 +76,13 @@ export type SocketLike = {
   onerror: ((event: unknown) => void) | null;
 };
 
-export type SocketFactory = (url: string) => SocketLike;
+export type SocketFactory = (url: string, protocols: string[]) => SocketLike;
 
 /** `WebSocket.OPEN`, spelled out so this module needs no DOM constant at runtime. */
 const OPEN = 1;
 
-function browserSocket(url: string): SocketLike {
-  return new WebSocket(url) as unknown as SocketLike;
+function browserSocket(url: string, protocols: string[]): SocketLike {
+  return new WebSocket(url, protocols) as unknown as SocketLike;
 }
 
 /**
@@ -511,18 +512,18 @@ const INITIAL: MatchSnapshot = {
 };
 
 /**
- * Browsers cannot set a WebSocket authorization header, so the handshake uses query parameters.
+ * The address names the match only; the token is offered as a subprotocol (R1379000), since a
+ * browser cannot set a WebSocket's authorization header and an address is kept by logs.
  */
-export function socketUrlFor(baseUrl: string, token: string, matchId: string): string {
+export function socketUrlFor(baseUrl: string, matchId: string): string {
   try {
     const url = new URL(baseUrl);
-    url.searchParams.set("token", token);
     url.searchParams.set("matchId", matchId);
     return url.toString();
   } catch {
     // Relative test URLs still need their query string.
     const separator = baseUrl.includes("?") ? "&" : "?";
-    return `${baseUrl}${separator}token=${encodeURIComponent(token)}&matchId=${encodeURIComponent(matchId)}`;
+    return `${baseUrl}${separator}matchId=${encodeURIComponent(matchId)}`;
   }
 }
 
@@ -636,7 +637,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     const handshake = token;
     let created: SocketLike;
     try {
-      created = factory(socketUrlFor(base, handshake, options.matchId));
+      created = factory(socketUrlFor(base, options.matchId), socketProtocols(handshake));
     } catch (cause) {
       patch({
         connection: "reconnecting",
@@ -802,7 +803,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       }
       patch({ connection: "closed" });
     },
-    url: () => socketUrlFor(base, token, options.matchId),
+    url: () => socketUrlFor(base, options.matchId),
     setToken: (next) => {
       token = next;
       // R1115000: after a 4401, a token other than the one it refused opens one more socket.

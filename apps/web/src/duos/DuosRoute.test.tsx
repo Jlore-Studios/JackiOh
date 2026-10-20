@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SocketLike } from "../game/net.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
+import { tokenFromProtocols } from "../net/socketProtocols.ts";
 import { must, stubServer } from "../test/stubServer.ts";
 import { DuosRoute } from "./DuosRoute.tsx";
 import { duosTestid } from "./testids.ts";
@@ -21,7 +22,10 @@ class FakeDuosSocket implements SocketLike {
   onclose: ((event: { code: number; reason: string; wasClean: boolean }) => void) | null = null;
   onerror: ((event: unknown) => void) | null = null;
 
-  constructor(readonly url: string) {
+  constructor(
+    readonly url: string,
+    readonly protocols: readonly string[] = [],
+  ) {
     sockets.push(this);
   }
 
@@ -86,13 +90,15 @@ describe("the co-op route's token", () => {
   it("R1115000 the socket carries the gate's token, and a renewed one reopens a socket refused with 4401", () => {
     const { rerender } = render(<DuosRoute matchId="dm-1" token="tok-old" />);
     expect(sockets).toHaveLength(1);
-    expect(latest().url).toContain("token=tok-old");
+    expect(tokenFromProtocols(latest().protocols)).toBe("tok-old");
+    expect(latest().url).not.toContain("tok-");
     act(() => {
       latest().onclose?.({ code: 4401, reason: "sign in first", wasClean: false });
     });
     expect(screen.getByTestId(duosTestid.refused)).toBeInTheDocument();
     rerender(<DuosRoute matchId="dm-1" token="tok-new" />);
     expect(sockets).toHaveLength(2);
-    expect(latest().url).toContain("token=tok-new");
+    expect(tokenFromProtocols(latest().protocols)).toBe("tok-new");
+    expect(latest().url).not.toContain("tok-");
   });
 });
