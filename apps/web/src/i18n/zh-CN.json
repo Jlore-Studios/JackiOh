@@ -3038,5 +3038,22 @@
   "Standard back": "标准卡背",
   "Lacquer": "漆面",
   "Starfield": "星空",
-  "Blueprint": "蓝图"
+  "Blueprint": "蓝图",
+  "Show account secret ID": "显示账号密钥 ID",
+  "Account secret ID": "账号密钥 ID",
+  "These change this account’s own cards, cosmetics, Jlore and tracks.": "这些工具只会改动此账号自己的卡牌、外观、Jlore 和进度轨道。",
+  "Set track": "系列进度轨道",
+  "XP": "经验值",
+  "Jlore": "Jlore",
+  "Give XP": "给予经验值",
+  "Give Jlore": "给予 Jlore",
+  "Fill collection": "填满收藏",
+  "Clear cards": "清空卡牌",
+  "Clear cosmetics": "清空外观",
+  "Clear Jlore": "清空 Jlore",
+  "Clear bars and pity": "清空进度条和保底计数",
+  "Clear track progress": "清空轨道进度",
+  "Clear everything": "全部清空",
+  "Working…": "处理中…",
+  "Done.": "完成。"
 }

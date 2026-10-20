@@ -348,6 +348,9 @@ pub async fn get_me(app: &Arc<App>, req: Req) -> ApiResult {
             // either, and redemption refuses until both are false.
             "ageCheckOwed": age_check_owed(profile, &consent),
             "termsOwed": terms_owed(&consent),
+            // R1300000: whether `DEV_PROFILE_IDS` lists this account, so the client knows to show
+            // the Dev tools panel. Every dev route checks the list again itself.
+            "isDev": crate::api::dev::is_dev(app, &profile.id),
         }),
     ))
 }

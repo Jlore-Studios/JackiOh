@@ -4,7 +4,7 @@
 // their record, and — the one that actually trapped people — could not sign out at all:
 // `net/session.ts` wrote the token and nothing ever cleared it.
 
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -20,7 +20,8 @@ import {
 } from "../net/api.ts";
 import { announceAccountChange } from "../net/gate.ts";
 import { SESSION_STORAGE_KEY, readSession } from "../net/session.ts";
-import AccountRoute, { formatWinRate, resetSigningOutForTests, statusWords } from "./account.tsx";
+import AccountRoute, { accountTestid, formatWinRate, resetSigningOutForTests, statusWords } from "./account.tsx";
+import { devToolsTestid } from "./DevTools.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -379,6 +380,85 @@ describe("R1435 the username on the account page", () => {
 
     expect(screen.getByTestId("account-username").textContent).toBe("Player#7");
     expect(screen.queryByTestId(usernameTestid.input)).toBeNull();
+  });
+});
+
+// R1300000: every signed-in account can reveal its own account secret ID (its profile id), hidden
+// until asked for, and a dev account, by the server's word alone, gets the Dev tools.
+describe("R1300000 the account secret ID and the Dev tools", () => {
+  const ID = "d0000000-0000-4000-8000-000000001300";
+
+  function me(isDev?: boolean): MeResponse {
+    return {
+      profile: { id: ID, status: "active" },
+      needsInviteCode: false,
+      emailVerified: true,
+      currentMatchId: null,
+      email: "dev@example.com",
+      username: { name: "Dev#1", nextChangeAt: null, promptOwed: false },
+      ...(isDev === undefined ? {} : { isDev }),
+    };
+  }
+
+  function stubClipboard(writeText: (text: string) => Promise<void>): void {
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+  }
+
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, "clipboard");
+  });
+
+  it("R1300000 shows Dev tools only when the server says isDev", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody({ id: ID }));
+    const { unmount } = render(<AccountRoute token={TOKEN} me={me(true)} />);
+    const toggle = screen.getByTestId(accountTestid.devToggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId(devToolsTestid.panel), "closed, the panel is not mounted").toBeNull();
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByTestId(devToolsTestid.panel)).toBeInTheDocument();
+    unmount();
+
+    for (const isDev of [false, undefined]) {
+      const view = render(<AccountRoute token={TOKEN} me={me(isDev)} />);
+      await userEvent.click(screen.getByTestId("account-manage-toggle"));
+      expect(screen.queryByTestId(accountTestid.devToggle), `isDev ${String(isDev)}`).toBeNull();
+      expect(screen.queryByTestId(devToolsTestid.panel)).toBeNull();
+      view.unmount();
+    }
+  });
+
+  it("keeps the account secret ID hidden until asked", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody({ id: ID }));
+    render(<AccountRoute token={TOKEN} me={me()} />);
+    await userEvent.click(screen.getByTestId("account-manage-toggle"));
+
+    expect(screen.queryByTestId(accountTestid.secretId)).toBeNull();
+    expect(screen.getByTestId(accountTestid.screen).textContent).not.toContain(ID);
+    await userEvent.click(screen.getByTestId(accountTestid.secretIdShow));
+    expect(screen.getByTestId(accountTestid.secretId).textContent).toBe(ID);
+    expect(screen.queryByTestId(accountTestid.secretIdShow)).toBeNull();
+  });
+
+  it("copies the account secret ID", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody({ id: ID }));
+    render(<AccountRoute token={TOKEN} me={me()} />);
+    await userEvent.click(screen.getByTestId("account-manage-toggle"));
+    await userEvent.click(screen.getByTestId(accountTestid.secretIdShow));
+
+    // Stubbed after user-event's clicks, which install a clipboard of their own.
+    const writeText = vi.fn(async () => {});
+    stubClipboard(writeText);
+    const copy = screen.getByTestId(accountTestid.secretIdCopy);
+    expect(copy).toHaveTextContent("Copy");
+    await act(async () => {
+      fireEvent.click(copy);
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(copy).toHaveTextContent("Copied");
+    });
+    expect(writeText).toHaveBeenCalledWith(ID);
   });
 });
 

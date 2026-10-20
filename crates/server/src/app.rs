@@ -538,6 +538,21 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::username::post_skip),
     ),
+    // api/dev.rs (R1300000): a dev account's own tools; each answers anyone else 403 itself.
+    ("POST", "/api/dev/xp", AuthLevel::Active, h!(api::dev::give_xp)),
+    (
+        "POST",
+        "/api/dev/jlore",
+        AuthLevel::Active,
+        h!(api::dev::give_jlore),
+    ),
+    ("POST", "/api/dev/fill", AuthLevel::Active, h!(api::dev::fill)),
+    (
+        "POST",
+        "/api/dev/clear/:part",
+        AuthLevel::Active,
+        h!(api::dev::clear),
+    ),
     // ---- Social: watching and shared replays (#939, #940) ----
     // social/shares.rs (B52). Ahead of `GET /api/replays/:matchId`, which would read `shared` as a
     // match id.
@@ -1147,6 +1162,8 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
         e2e = app.env.e2e,
         "trustedProxyHops" = %app.env.trusted_proxy_hops,
         "ladderBots" = app.env.ladder_bots,
+        // R1300000: how many, never which: a dev account's id is its account secret ID.
+        "devAccounts" = app.env.dev_profile_ids.len(),
     );
 
     serve_until(

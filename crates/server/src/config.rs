@@ -2199,3 +2199,10 @@ pub const SET_TRACK_FIRST_LEVEL: i64 = 1;
 /// on; until then no finished game pays (R1302006) and the client prints every full art as before
 /// (R1313000). Exported to `serverConfig.ts`.
 pub const ECONOMY_LIVE: bool = false;
+
+// ---- Dev accounts (SPEC §14.10, #1300) ----
+
+/// §14.10, R1300000: the environment variable that lists the dev accounts, comma-separated profile
+/// ids (`env.rs` reads it at boot, `seed-catalog` for R1300001's exemption). A name, not a number,
+/// and never exported: the client learns only whether its own caller is one (`isDev`).
+pub const DEV_PROFILE_IDS: &str = "DEV_PROFILE_IDS";
