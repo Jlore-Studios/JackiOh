@@ -20,7 +20,7 @@ def two_games():
             seat(["a", "z"], ["core-t-coin", "z"], [], []),
             pilots=("human", "ai"),
         ),
-        record("g2", seat(["a"]), seat(["a"]), winner="draw", source="dev", mode="random", patch="v0.2.3"),
+        record("g2", seat(["a"]), seat(["a"]), winner="draw", source="dev", mode="random", patch="v0.2.5"),
     ]
 
 
@@ -31,7 +31,7 @@ def test_one_row_per_game_seat_and_distinct_card_in_each_deck(tmp_path):
     assert records.games.set_index("id").loc["g2"].to_dict() == {
         "source": "dev",
         "mode": "random",
-        "patch": "v0.2.3",
+        "patch": "v0.2.5",
         "first": "p1",
         "winner": "draw",
         "reason": "turn-cap",

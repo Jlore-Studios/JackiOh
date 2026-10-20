@@ -1073,7 +1073,7 @@ mod tests {
             parse(&[
                 "--games=50",
                 "--from=51",
-                "--patch=v0.2.3",
+                "--patch=v0.2.5",
                 "--series=a",
                 "--force=core-090",
                 "--out=run.jsonl"
@@ -1082,7 +1082,7 @@ mod tests {
             Args {
                 games: Some(50),
                 from: 51,
-                patch: Some("v0.2.3".to_string()),
+                patch: Some("v0.2.5".to_string()),
                 series: Some("a".to_string()),
                 force: Some("core-090".to_string()),
                 out: Some(PathBuf::from("run.jsonl")),
@@ -1136,7 +1136,7 @@ mod tests {
             "b.jsonl",
             "--source=all",
             "--mode=random",
-            "--patch=v0.2.3",
+            "--patch=v0.2.5",
             "--pilot",
             "ai",
             "--card=core-001",
@@ -1150,7 +1150,7 @@ mod tests {
         );
         assert_eq!(
             (all.patch.as_deref(), all.card.as_deref(), all.json),
-            (Some("v0.2.3"), Some("core-001"), true)
+            (Some("v0.2.5"), Some("core-001"), true)
         );
 
         // --games asks for the game figures and does not go with one card's row.
@@ -1224,23 +1224,23 @@ mod tests {
     fn game_lines() -> Vec<String> {
         vec![
             game_line(
-                "dev:v0.2.3:dev:1",
-                "v0.2.3",
+                "dev:v0.2.5:dev:1",
+                "v0.2.5",
                 "p1",
                 "hero-death",
                 9,
                 Some([[0, 0, 2, 1, 3, 1], [2, 3, 1, 0, 1, 2]]),
             ),
             game_line(
-                "dev:v0.2.3:dev:2",
-                "v0.2.3",
+                "dev:v0.2.5:dev:2",
+                "v0.2.5",
                 "draw",
                 "turn-cap",
                 40,
                 Some([[0; 6]; 2]),
             ),
-            game_line("dev:v0.2.3:dev:3", "v0.2.3", "p2", "hero-death", 12, None),
-            game_line("dev:v0.2.2b:dev:1", "v0.2.2b", "p1", "alt-win", 15, None),
+            game_line("dev:v0.2.5:dev:3", "v0.2.5", "p2", "hero-death", 12, None),
+            game_line("dev:v0.2.4:dev:1", "v0.2.4", "p1", "alt-win", 15, None),
             record_line("m1", "live", "bo1", "p1", &["core-002"]),
         ]
     }
@@ -1279,7 +1279,7 @@ mod tests {
                 "otherSources": 1,
                 "groups": [
                     {
-                        "patch": "v0.2.3", "mode": "random", "source": "dev",
+                        "patch": "v0.2.5", "mode": "random", "source": "dev",
                         "games": 3, "draws": 1, "firstWins": 1,
                         "firstShare": 0.333, "firstLow": 0.061, "firstHigh": 0.792,
                         "reasons": reasons(&[("hero-death", 2), ("turn-cap", 1)]),
@@ -1289,7 +1289,7 @@ mod tests {
                         "positionSwitches": 4, "positionSwitchesMean": 2.0, "radiantUpgrades": 3, "radiantUpgradesMean": 1.5
                     },
                     {
-                        "patch": "v0.2.2b", "mode": "random", "source": "dev",
+                        "patch": "v0.2.4", "mode": "random", "source": "dev",
                         "games": 1, "draws": 0, "firstWins": 1,
                         "firstShare": 1.0, "firstLow": 0.207, "firstHigh": 1.0,
                         "reasons": reasons(&[("alt-win", 1)]),
@@ -1309,7 +1309,7 @@ mod tests {
         let expected = [
             "Games: AI development runs, every mode, every patch, human and AI pilots (unified).",
             "",
-            "v0.2.3 random dev: 3 games, 1 drawn",
+            "v0.2.5 random dev: 3 games, 1 drawn",
             "  first seat won 1 of 3: 33.3%, 95% interval 6.1% to 79.2%",
             "  endings: hero-death 2, turn-cap 1",
             "  turns, quartiles: 9, 12, 40",
@@ -1319,7 +1319,7 @@ mod tests {
             "  Radiant upgrades: 3, 1.50 a game",
             "  (fatigue, traps, switches and upgrades over the 2 of 3 games whose records carry R1256000's counts)",
             "",
-            "v0.2.2b random dev: 1 games, 0 drawn",
+            "v0.2.4 random dev: 1 games, 0 drawn",
             "  first seat won 1 of 1: 100.0%, 95% interval 20.7% to 100.0%",
             "  endings: alt-win 1",
             "  turns, quartiles: 15, 15, 15",
@@ -1333,7 +1333,7 @@ mod tests {
     #[test]
     fn games_report_adds_both_seats_switches_and_upgrades_whichever_seat_holds_them() {
         let totals = |counts: [[i32; 6]; 2]| {
-            let line = game_line("dev:v0.2.3:dev:1", "v0.2.3", "p1", "hero-death", 9, Some(counts));
+            let line = game_line("dev:v0.2.5:dev:1", "v0.2.5", "p1", "hero-death", 9, Some(counts));
             let report = game_report(
                 &parse_game_record_lines(&line).unwrap(),
                 &filter_of(&report_args(&["a.jsonl", "--games", "--source=dev"]).unwrap()),
@@ -1350,8 +1350,8 @@ mod tests {
     fn games_report_counts_a_game_only_when_both_seats_carry_all_six_counts() {
         // A seat that carries the fatigue and trap counts but not the switches: unknown, not zero.
         let mut partial: Value = serde_json::from_str(&game_line(
-            "dev:v0.2.3:dev:4",
-            "v0.2.3",
+            "dev:v0.2.5:dev:4",
+            "v0.2.5",
             "p1",
             "hero-death",
             10,
@@ -1390,23 +1390,20 @@ mod tests {
                 .map(|group| format!("{} {} {}", group.patch, group.mode, group.source))
                 .collect()
         };
-        let both_dev = ["v0.2.3 random dev", "v0.2.2b random dev"];
+        let both_dev = ["v0.2.5 random dev", "v0.2.4 random dev"];
 
         // R378: live games unless a development run is named.
-        assert_eq!(groups(&[]), ["v0.2.3 bo1 live"]);
+        assert_eq!(groups(&[]), ["v0.2.5 bo1 live"]);
         assert_eq!(games_of(&[]).other_sources, 4);
         assert_eq!(
             groups(&["--source=all"]),
-            ["v0.2.3 random dev", "v0.2.2b random dev", "v0.2.3 bo1 live"]
+            ["v0.2.5 random dev", "v0.2.4 random dev", "v0.2.5 bo1 live"]
         );
-        assert_eq!(
-            groups(&["--source=all", "--patch=v0.2.2b"]),
-            ["v0.2.2b random dev"]
-        );
-        assert_eq!(games_of(&["--source=all", "--patch=v0.2.2b"]).other_sources, 0);
-        assert_eq!(groups(&["--source=all", "--mode=bo1"]), ["v0.2.3 bo1 live"]);
+        assert_eq!(groups(&["--source=all", "--patch=v0.2.4"]), ["v0.2.4 random dev"]);
+        assert_eq!(games_of(&["--source=all", "--patch=v0.2.4"]).other_sources, 0);
+        assert_eq!(groups(&["--source=all", "--mode=bo1"]), ["v0.2.5 bo1 live"]);
         // A game counts when a seat its pilot reads is in it.
-        assert_eq!(groups(&["--source=all", "--pilot=human"]), ["v0.2.3 bo1 live"]);
+        assert_eq!(groups(&["--source=all", "--pilot=human"]), ["v0.2.5 bo1 live"]);
         assert_eq!(groups(&["--source=all", "--pilot=ai"]), both_dev);
 
         let none = games_of(&["--patch=v0.0.1"]);
@@ -1445,9 +1442,7 @@ mod tests {
             "id": id,
             "source": source,
             "mode": mode,
-            "patch": "v0.2.3",
-            // R1371000: marked, as the build writes a record file.
-            "versions": 2,
+            "patch": "v0.2.5",
             "pilots": { "p1": pilots[0], "p2": pilots[1] },
             "game": {
                 "first": "p1",
@@ -1491,8 +1486,8 @@ mod tests {
     #[test]
     fn report_over_files_is_card_stats_over_their_records_in_the_order_named() {
         let live = record_line("m1", "live", "bo1", "p1", &["core-002", "core-003"]);
-        let dev_a = record_line("dev:v0.2.3:dev:1", "dev", "random", "p2", &["core-002"]);
-        let dev_b = record_line("dev:v0.2.3:dev:2", "dev", "random", "p1", &["core-003"]);
+        let dev_a = record_line("dev:v0.2.5:dev:1", "dev", "random", "p2", &["core-002"]);
+        let dev_b = record_line("dev:v0.2.5:dev:2", "dev", "random", "p1", &["core-003"]);
         let (dir, paths) = scratch(&[
             ("live.jsonl", format!("{live}\n")),
             // A blank line is skipped, as `stats-import` skips it.
@@ -1522,12 +1517,12 @@ mod tests {
 
         let (_, narrowed) = report_of(
             &paths,
-            &["--source=dev", "--mode=random", "--patch=v0.2.3", "--pilot=ai"],
+            &["--source=dev", "--mode=random", "--patch=v0.2.5", "--pilot=ai"],
         );
         let filter = CardStatsFilter {
             source: SourceFilter::Dev,
             mode: Some(GameMode::Random),
-            patch: Some("v0.2.3".to_string()),
+            patch: Some("v0.2.5".to_string()),
             pilot: PilotFilter::Ai,
         };
         assert_eq!(narrowed, card_stats(&records, &filter));
@@ -1591,7 +1586,7 @@ mod tests {
         // p1 a person, p2 a ladder bot holding core-003; and a development game, both seats AIs.
         // p1's deck holds core-001 and core-002, and p2 (the winner) holds core-003.
         let bot_game = record_line_piloted("m1", "live", "bo1", "p2", &["core-003"], ["human", "ai"]);
-        let dev = record_line("dev:v0.2.3:dev:1", "dev", "random", "p1", &["core-003"]);
+        let dev = record_line("dev:v0.2.5:dev:1", "dev", "random", "p1", &["core-003"]);
         let (dir, paths) = scratch(&[("a.jsonl", format!("{bot_game}\n{dev}\n"))]);
         let held = |report: &CardStatsReport, card: &str| {
             report
@@ -1630,26 +1625,26 @@ mod tests {
         // v0.2.6, a micro after v0.2.5's patch, plays Classic #55 alone (patches.json's changes).
         let on = |id: &str, patch: &str| {
             record_line(id, "live", "bo1", "p1", &["classic-055"])
-                .replace("\"v0.2.3\"", &format!("\"{patch}\""))
+                .replace("\"v0.2.5\"", &format!("\"{patch}\""))
         };
         let (dir, paths) = scratch(&[(
             "a.jsonl",
-            format!("{}\n{}\n", on("m1", "v0.2.3"), on("m2", "v0.2.3b")),
+            format!("{}\n{}\n", on("m1", "v0.2.5"), on("m2", "v0.2.6")),
         )]);
         let named: Vec<&str> = paths.iter().map(|path| path.to_str().unwrap()).collect();
-        let args = report_args(&[named, vec!["--window", "v0.2.3b"]].concat()).unwrap();
-        let report = window_report(&args, "v0.2.3b").unwrap();
-        assert_eq!(report.patch.versions, ["v0.2.3", "v0.2.3b"]);
+        let args = report_args(&[named, vec!["--window", "v0.2.6"]].concat()).unwrap();
+        let report = window_report(&args, "v0.2.6").unwrap();
+        assert_eq!(report.patch.versions, ["v0.2.5", "v0.2.6"]);
         let games = |card: &str| report.card(card).map(|card| card.stats.in_deck.games);
         assert_eq!(games("core-001"), Some(2));
         assert_eq!(games("classic-055"), Some(1));
         let micro = report.card("classic-055").unwrap();
-        assert_eq!(micro.window.versions, ["v0.2.3b"]);
+        assert_eq!(micro.window.versions, ["v0.2.6"]);
         assert_eq!(micro.window.source, jackioh_engine::WindowSource::Provisional);
-        assert!(render_window(&report, &args, |_| None).contains("classic-055: from v0.2.3b"));
+        assert!(render_window(&report, &args, |_| None).contains("classic-055: from v0.2.6"));
         // --window takes the place of the filter flags.
-        assert!(report_args(&["a.jsonl", "--window=v0.2.3b", "--patch=v0.2.3"]).is_err());
-        assert!(report_args(&["a.jsonl", "--window=v0.2.3b", "--games"]).is_err());
+        assert!(report_args(&["a.jsonl", "--window=v0.2.6", "--patch=v0.2.5"]).is_err());
+        assert!(report_args(&["a.jsonl", "--window=v0.2.6", "--games"]).is_err());
         std::fs::remove_dir_all(dir).unwrap();
     }
 
@@ -1691,14 +1686,14 @@ mod tests {
     /// The options a run of `argv` plays, as `run` reads them under the patch "v0.2.5".
     fn options_of(argv: &[&str]) -> Result<DevRunOptions> {
         jackioh_cards::register_all();
-        run_options(&parse(argv).unwrap(), "v0.2.3".to_string())
+        run_options(&parse(argv).unwrap(), "v0.2.5".to_string())
     }
 
     #[test]
     fn r1284000_force_takes_a_tokens_card_and_refuses_an_unknown_id_or_an_unshipped_sets_card() {
         let plain = options_of(&[]).unwrap();
         assert_eq!((plain.series.as_str(), plain.force), ("dev", None));
-        assert_eq!(plain.patch, "v0.2.3");
+        assert_eq!(plain.patch, "v0.2.5");
 
         // A forced run files under a series of its own; an explicit series with --force is refused.
         let forced = options_of(&["--force=core-090"]).unwrap();
@@ -1813,12 +1808,12 @@ mod tests {
     /// (v0.2.6): it wins 1 to 7, loses 8 and 9 and draws 10; wins 12, which only this side played; and
     /// game 13 has two holders.
     fn forced_runs() -> (Vec<GameRecord>, Vec<GameRecord>) {
-        let mut before: Vec<String> = (1..=10).map(|n| forced_game("v0.2.3", n, n <= 5)).collect();
-        before.push(forced_line("v0.2.3", 11, "none", "p1"));
-        let mut after: Vec<String> = (1..=9).map(|n| forced_game("v0.2.3b", n, n <= 7)).collect();
-        after.push(forced_line("v0.2.3b", 10, "p2", "draw"));
-        after.push(forced_game("v0.2.3b", 12, true));
-        after.push(forced_line("v0.2.3b", 13, "both", "p1"));
+        let mut before: Vec<String> = (1..=10).map(|n| forced_game("v0.2.5", n, n <= 5)).collect();
+        before.push(forced_line("v0.2.5", 11, "none", "p1"));
+        let mut after: Vec<String> = (1..=9).map(|n| forced_game("v0.2.6", n, n <= 7)).collect();
+        after.push(forced_line("v0.2.6", 10, "p2", "draw"));
+        after.push(forced_game("v0.2.6", 12, true));
+        after.push(forced_line("v0.2.6", 13, "both", "p1"));
         let parse = |lines: Vec<String>| parse_game_record_lines(&lines.join("\n")).unwrap();
         (parse(before), parse(after))
     }
@@ -1860,19 +1855,19 @@ mod tests {
         // before, and game 3 none after.
         let before = parse_game_record_lines(
             &[
-                line("v0.2.3", 1, "p1", "p1"),
-                line("v0.2.3", 1, "p1", "p2"),
-                line("v0.2.3", 2, "none", "p1"),
-                line("v0.2.3", 3, "p1", "p1"),
+                line("v0.2.5", 1, "p1", "p1"),
+                line("v0.2.5", 1, "p1", "p2"),
+                line("v0.2.5", 2, "none", "p1"),
+                line("v0.2.5", 3, "p1", "p1"),
             ]
             .join("\n"),
         )
         .unwrap();
         let after = parse_game_record_lines(
             &[
-                line("v0.2.3b", 1, "p1", "p2"),
-                line("v0.2.3b", 2, "p2", "p2"),
-                line("v0.2.3b", 3, "none", "p2"),
+                line("v0.2.6", 1, "p1", "p2"),
+                line("v0.2.6", 2, "p2", "p2"),
+                line("v0.2.6", 3, "none", "p2"),
             ]
             .join("\n"),
         )
@@ -1912,8 +1907,8 @@ mod tests {
             lines.join("\n") + "\n"
         };
         let (dir, paths) = scratch(&[
-            ("before.jsonl", forced("v0.2.3", false)),
-            ("after.jsonl", forced("v0.2.3b", true)),
+            ("before.jsonl", forced("v0.2.5", false)),
+            ("after.jsonl", forced("v0.2.6", true)),
         ]);
         let args = compare_args(&[
             "--before",

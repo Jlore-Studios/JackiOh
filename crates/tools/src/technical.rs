@@ -574,7 +574,7 @@ mod tests {
             .filter(|(_, tier)| **tier == Tier::Major)
             .filter_map(|(entry, _)| entry["version"].as_str())
             .collect();
-        assert_eq!(majors[..4], ["v0.1.0", "v0.2.0", "v0.3.0", "v0.4.0"]);
+        assert_eq!(majors[..4], ["v0.1.0", "v0.2.0", "v0.3.5", "v0.3.15"]);
         read_technical(&crate::patches::repo_root().join(TECHNICAL_PATH)).unwrap();
     }
 

@@ -25,7 +25,7 @@ begin;
 do $$
 declare
   rec jsonb := jsonb_build_object(
-    'id', 'dev:build:1', 'source', 'dev', 'mode', 'random', 'patch', 'v0.2.3',
+    'id', 'dev:build:1', 'source', 'dev', 'mode', 'random', 'patch', 'v0.2.5',
     'pilots', jsonb_build_object('p1', 'ai', 'p2', 'ai'),
     'game', jsonb_build_object('first', 'p1', 'winner', 'p2', 'reason', 'hero-death', 'turns', 9,
       'seats', jsonb_build_object(
@@ -37,12 +37,12 @@ declare
 begin
   -- A record written before builds were recorded, and one with each form of a build.
   insert into public.game_records (id, source, mode, patch, record)
-  values ('dev:build:1', 'dev', 'random', 'v0.2.3', rec);
+  values ('dev:build:1', 'dev', 'random', 'v0.2.5', rec);
   insert into public.game_records (id, source, mode, patch, record)
-  values ('dev:build:2', 'dev', 'random', 'v0.2.3',
+  values ('dev:build:2', 'dev', 'random', 'v0.2.5',
           rec || '{"id":"dev:build:2","build":{"commit":"0123abc","aiGeneration":12}}');
   insert into public.game_records (id, source, mode, patch, record)
-  values ('dev:build:3', 'dev', 'random', 'v0.2.3', rec || '{"id":"dev:build:3","build":{"commit":"0123abc"}}');
+  values ('dev:build:3', 'dev', 'random', 'v0.2.5', rec || '{"id":"dev:build:3","build":{"commit":"0123abc"}}');
   select count(*) into n from public.game_records where id like 'dev:build:%';
   if n <> 3 then
     raise exception 'FAIL (0048): % of the 3 well-formed records were written', n;
@@ -61,7 +61,7 @@ begin
     i := i + 1;
     begin
       insert into public.game_records (id, source, mode, patch, record)
-      values ('dev:bad:' || i, 'dev', 'random', 'v0.2.3',
+      values ('dev:bad:' || i, 'dev', 'random', 'v0.2.5',
               rec || jsonb_build_object('id', 'dev:bad:' || i, 'build', bad));
       raise exception 'FAIL (0048): a record with the build % was written', bad;
     exception

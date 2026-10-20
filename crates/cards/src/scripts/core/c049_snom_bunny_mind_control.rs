@@ -211,7 +211,7 @@ mod tests {
         #[test]
         fn r767000_a_game_on_v0_3_7_folds_under_the_kept_script_a_face_down_enemy_trap_is_on_offer() {
             crate::register_all();
-            let shipped = crate::shipped_catalog("v0.3.0c").expect("v0.3.0c is carried");
+            let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
             jackioh_engine::with_shipped(Some(shipped), || {
                 let mut g = scenario(json!({
                     "p1": { "hand": [MIND_CONTROL] },

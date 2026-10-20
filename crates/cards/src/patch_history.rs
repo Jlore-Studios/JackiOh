@@ -26,7 +26,7 @@ pub const WORDING_FIELDS: &[&str] = &[
 /// R1367000: the first version of each release line shipped before tiers were recorded, as the
 /// Patch notes page's release lines name them (`apps/web/src/patches/releases.ts`'s `first`). Read
 /// only for a version that records no tier.
-pub const PRE_TIER_MAJORS: &[&str] = &["v0.1.0", "v0.2.0", "v0.2.5f", "v0.4.0"];
+pub const PRE_TIER_MAJORS: &[&str] = &["v0.1.0", "v0.2.0", "v0.3.1", "v0.3.15"];
 
 /// The fields of a `patches.json` entry the window reads.
 #[derive(Deserialize)]

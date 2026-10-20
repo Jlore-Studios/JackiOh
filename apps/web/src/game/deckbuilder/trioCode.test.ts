@@ -367,7 +367,7 @@ describe("R1410 a trio's decks carry the Meditative set's numbers, 3000 + n (the
   });
 });
 
-describe("R1410 a trio's decks carry the Meditative+ set's numbers, 4000 + n (the release, v0.4.0, issue #1187)", () => {
+describe("R1410 a trio's decks carry the Meditative+ set's numbers, 4000 + n (the release, v0.3.15, issue #1187)", () => {
   const base = catalog.cards[fixtureCardId(1)] as CardDef;
   const inSet = (id: string, set: CardDef["set"], index: string): CardDef => ({ ...base, id, index, name: id, set });
   const fiveSets: CatalogSnapshot = {

@@ -534,7 +534,7 @@ describe("R1410 the Meditative set's numbers: 3000 + n (the release, issue #553)
   });
 });
 
-describe("R1410 the Meditative+ set's numbers: 4000 + n (the release, v0.4.0, issue #1187)", () => {
+describe("R1410 the Meditative+ set's numbers: 4000 + n (the release, v0.3.15, issue #1187)", () => {
   function setDef(id: string, set: CardDef["set"], index: string): CardDef {
     return { ...unitDef(id, index, false), set };
   }
