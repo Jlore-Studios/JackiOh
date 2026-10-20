@@ -1516,6 +1516,12 @@ fn starts_use(code: &str) -> bool {
 /// (plain, raw, byte) and character literals are read as such, so a `//` inside a string is code,
 /// not a comment; block comments nest, as Rust's do. `gen-loc.ts`'s `countLoc`, for Rust.
 pub fn count_loc(source: &str) -> usize {
+    code_lines(source).len()
+}
+
+/// The lines `count_loc` counts, each trimmed: what `classify` compares to tell a change to a file's
+/// code from one to its comments, tests, imports or layout (R1365000).
+pub fn code_lines(source: &str) -> Vec<String> {
     let mut code_lines: Vec<String> = Vec::new();
     let mut block_depth = 0usize;
     let mut quote: Option<Quote> = None;
@@ -1602,28 +1608,28 @@ pub fn count_loc(source: &str) -> usize {
         code_lines.push(code.trim().to_string());
     }
 
-    let mut count = 0;
+    let mut code = Vec::new();
     let mut in_use = false;
-    for code in &code_lines {
+    for line in code_lines {
         // A card's tests sit below its script (SURFACE §7.3) and are not its lines of code.
-        if code.starts_with("#[cfg(test)]") {
+        if line.starts_with("#[cfg(test)]") {
             break;
         }
-        if code.is_empty() {
+        if line.is_empty() {
             continue;
         }
-        if !in_use && starts_use(code) {
+        if !in_use && starts_use(&line) {
             in_use = true;
         }
         if in_use {
-            if code.ends_with(';') {
+            if line.ends_with(';') {
                 in_use = false;
             }
             continue;
         }
-        count += 1;
+        code.push(line);
     }
-    count
+    code
 }
 
 /// A Luau long bracket's opening at `i` (`[[`, `[=[`, …): its length and its level, the `=`s.
