@@ -14,7 +14,7 @@ import sys
 
 LIVE_OLD_GAMES = 16
 OLD_PATCH = "v0.3.0"
-NEW_PATCH = "v0.3.1"
+NEW_PATCH = "v0.2.5f"
 
 
 def relabel(number: int, record: dict) -> dict:

@@ -316,7 +316,7 @@ mod tests {
         }
         // The id's patch is the record's own.
         let other = arena::record_id(
-            "v0.3.9",
+            "v0.3.2b",
             &arena_game(("self", "bin-gen11"), "t:1", PlayerId::P1, false),
         );
         assert_eq!(candidate_seat(&record(&other, "p1", &[], &[])), None, "{other}");

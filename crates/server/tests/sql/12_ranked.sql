@@ -486,7 +486,7 @@ begin
       p1_profile_id, p1_bot_id, p1_pilot, p1_before, p1_after, p1_rank_before, p1_rank_after,
       p2_profile_id, p2_bot_id, p2_pilot, p2_before, p2_after, p2_rank_before, p2_rank_after,
       winner_side, reason, ended_at)
-      values (gen_random_uuid(), 'match', 'v0.1', 'v0.3.5', 'v0.3.5',
+      values (gen_random_uuid(), 'match', 'v0.1', 'v0.3.0', 'v0.3.0',
         '11111111-1111-1111-1111-111111111111', null, 'human',
         '{}'::jsonb, '{}'::jsonb, null, null,
         '22222222-2222-2222-2222-222222222222', null, 'human',
