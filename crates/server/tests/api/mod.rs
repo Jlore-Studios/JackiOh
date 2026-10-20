@@ -36,6 +36,7 @@ pub mod rematch;
 pub mod replays;
 pub mod results;
 pub mod retention;
+pub mod rewards;
 pub mod season;
 pub mod series;
 pub mod series_rules;
