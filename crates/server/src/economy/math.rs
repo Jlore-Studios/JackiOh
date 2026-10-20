@@ -9,6 +9,7 @@
 //!   next counters.
 
 use jackioh_engine::wire::PrintedRarity;
+use serde::{Deserialize, Serialize};
 
 use crate::config::{
     PACK_BASE_RATES, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, SET_TRACK_XP_PER_LEVEL,
@@ -17,7 +18,7 @@ use crate::config::{
 /// One pity counter set per account (R1298000, SPEC §14.4): each counter is the card packs
 /// since a pack held its rarity, whatever that slot then granted. All three count every card
 /// pack the account opens, global and per-set alike.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct PityCounters {
     pub epic: usize,
     pub legendary: usize,

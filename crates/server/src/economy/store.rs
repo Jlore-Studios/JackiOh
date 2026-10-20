@@ -531,6 +531,13 @@ impl Tx<'_> {
     pub async fn economy_ledger_get(&mut self, profile_id: &str) -> StoreResult<EconomyLedger> {
         economy_dispatch!(self, ledger_get(profile_id))
     }
+
+    /// R1301003: a lock on the account's economy until the transaction ends, so two pack openings
+    /// at once run one after the other and neither rolls on counters the other is moving. A lock,
+    /// not a holding: no ledger row.
+    pub async fn economy_lock_account(&mut self, profile_id: &str) -> StoreResult<()> {
+        economy_dispatch!(self, lock_account(profile_id))
+    }
 }
 
 /// Migration 0045's `on delete cascade`, in the fake (`db::fake::remove_profile_rows`): every row of
@@ -1097,6 +1104,17 @@ mod pg {
         Ok(true)
     }
 
+    /// A transaction-scoped advisory lock on the account's id, as `db::pg::USERNAME_LOCK_SQL` takes
+    /// one on a username: released by the commit or the rollback.
+    pub async fn lock_account(t: &mut PgTx<'_>, profile_id: &str) -> Result<(), StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        sqlx::query("select pg_advisory_xact_lock(hashtextextended('jackioh.economy:' || $1::text, 0))")
+            .bind(profile_id)
+            .execute(&mut **t)
+            .await?;
+        Ok(())
+    }
+
     pub async fn ledger_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<EconomyLedger, StoreError> {
         run_as(t, Some(profile_id)).await?;
         let rows = |sql: &'static str| sqlx::query(sql).bind(profile_id.to_string());
@@ -1534,6 +1552,13 @@ mod fake {
             tables.cosmetic_grants.push(grant.clone());
         }
         Ok(changed)
+    }
+
+    /// The fake's transactions already run one at a time (`db::fake::FakeTx`), so its lock is
+    /// only the seams.
+    pub fn lock_account(f: &mut FakeTx<'_>, _profile_id: &str) -> Result<(), StoreError> {
+        call(f, "economy.lock")?;
+        Ok(())
     }
 
     pub fn ledger_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<EconomyLedger, StoreError> {
