@@ -11749,5 +11749,38 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.3.17b",
+    "date": "2026-10-20",
+    "title": "Rename Zephyrs to Zephrys",
+    "source": "#1418",
+    "notes": "Patch v0.3.Y (#1418): Core #97 Zephyrs is renamed Zephrys, the spelling Classic+ #27 Zephrys Zealotism prints; the designer's list spelled it Zephyrs by a typo. The name only: no text, number, tag, pool or behavior changes.",
+    "player": {
+      "title": "Zephyrs is spelled Zephrys",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "Zephyrs is renamed Zephrys, spelled like Zephrys Zealotism. Nothing plays differently."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "6107dda0fbb6e8793e7aa078ffddf5574b9581b0"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": [
+      {
+        "id": "core-097",
+        "name": "Zephrys",
+        "kind": "changed",
+        "fields": [
+          "name"
+        ]
+      }
+    ]
   }
 ]
