@@ -199,6 +199,20 @@ def points(weights: dict, net: dict, hand: float, dense: list[int], sparse: list
     return hand + (weights["handB"] + correction(net, dense, sparse)) * weights["handUnit"] / weights["handA"]
 
 
+#: A logit past this is a probability `log_loss` clips anyway (1e-7 from 0 or 1), and well short of the
+#: 709 past which `math.exp` overflows.
+LOGIT_BOUND = 40.0
+
+
+def log_loss(logit: float, outcome: float) -> float:
+    """One row's log loss, its probability clipped to [1e-7, 1 - 1e-7]. The logit is bounded first: the
+    hand eval scores a won or lost position with its lethal constants (about ±1,000,000), a logit in the
+    tens of thousands through the skip connection, which `math.exp` cannot take (#466)."""
+    z = min(max(logit, -LOGIT_BOUND), LOGIT_BOUND)
+    p = min(max(1 / (1 + math.exp(-z)), 1e-7), 1 - 1e-7)
+    return -(outcome * math.log(p) + (1 - outcome) * math.log(1 - p))
+
+
 def report(float_weights: dict, int_weights: dict, positions: Path) -> dict:
     """The integer network against the float one, held-out log loss on `positions` (its held-out
     games, as the fit split them) and the largest difference in their logits."""
@@ -218,11 +232,7 @@ def report(float_weights: dict, int_weights: dict, positions: Path) -> dict:
         rows.append((base + E.correction(float_weights, dense, sparse), base + correction(net, dense, sparse), float(loaded.outcome[r])))
 
     def loss(index: int) -> float:
-        total = 0.0
-        for row in rows:
-            p = min(max(1 / (1 + math.exp(-row[index])), 1e-7), 1 - 1e-7)
-            total += -(row[2] * math.log(p) + (1 - row[2]) * math.log(1 - p))
-        return total / max(len(rows), 1)
+        return sum(log_loss(row[index], row[2]) for row in rows) / max(len(rows), 1)
 
     return {"rows": len(rows), "floatLogLoss": loss(0), "intLogLoss": loss(1),
             "maxLogitDifference": max((abs(x - y) for x, y, _ in rows), default=0.0),
