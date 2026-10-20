@@ -1559,9 +1559,12 @@ mod r1253000_a_live_action_the_engine_panics_on {
 
         let reports = h.app.bug_reports.recorded();
         assert_eq!(reports.len(), 1, "{reports:?}");
-        assert_eq!(
-            reports[0].title,
-            format!("Patch v0.3.Y: match {MATCH_ID} panicked on a live action")
+        assert!(
+            reports[0].title.starts_with(&format!(
+                "Patch v0.3.Y: match {MATCH_ID} panicked on a live action (Live/"
+            )) && reports[0].title.ends_with("/play)"),
+            "{}",
+            reports[0].title
         );
         let body = &reports[0].body;
         assert!(body.contains(&format!("| {seq} | p1 | `play` |")), "{body}");

@@ -1964,12 +1964,13 @@ mod r1253000_a_live_coop_action_the_engine_panics_on {
 
         let reports = h.app.bug_reports.recorded();
         assert_eq!(reports.len(), 1, "{reports:?}");
-        assert_eq!(
-            reports[0].title,
-            format!(
-                "Patch v0.3.Y: match {} (co-op) panicked on a live action",
+        assert!(
+            reports[0].title.starts_with(&format!(
+                "Patch v0.3.Y: match {} (co-op) panicked on a live action (DuosLive/",
                 h.match_id
-            )
+            )) && reports[0].title.ends_with("/play)"),
+            "{}",
+            reports[0].title
         );
         assert!(
             reports[0].body.contains(&format!("| {seq} | a1 | `play` |")),
