@@ -7034,6 +7034,13 @@
     "1380": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T04:16:29Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 1 is the closest call: six files and roughly 350 added lines sit near the easy ceiling, and the cross-crate scope fails line 2 outright"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
