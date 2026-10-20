@@ -7286,9 +7286,11 @@
       "action": "revise",
       "asks": [],
       "cleared": {
-        "at": "2026-10-20T12:53:26Z",
+        "at": "2026-10-20T13:43:36Z",
         "by": "`claude` (strong)",
-        "sha": "875be4d787d41dfa7cac2e1cd4c443d79f0a1a03"
+        "carried_from": "875be4d787d41dfa7cac2e1cd4c443d79f0a1a03",
+        "resolved_by": "`claude` (strong)",
+        "sha": "d1bf149b794c6472544081d9f613a06d9446e3b9"
       },
       "difficulty": "hard",
       "failures": 0,
