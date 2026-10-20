@@ -6570,6 +6570,8 @@
       "run_id": "39352074260",
       "started_at": "2026-10-20T01:15:37Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 2
