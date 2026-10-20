@@ -7731,6 +7731,13 @@
     "1426": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T17:55:14Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 7: the fake's lock is a no-op and it serializes transactions, so only the Docker Postgres suite can exhibit the double-pay \u2014 a plain unit run proves nothing"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
