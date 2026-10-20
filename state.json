@@ -11872,8 +11872,11 @@
     "what": "plan #1380 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-20T04:08:09Z",
-    "notes": [],
+    "at": "2026-10-20T04:14:59Z",
+    "notes": [
+      "#1381 needs a plan",
+      "#1385 needs a plan"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
