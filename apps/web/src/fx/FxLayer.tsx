@@ -76,12 +76,12 @@ export type FxLayerProps = {
 const SQUEEZE = "--anim-squeeze";
 const SCALE = "--anim-scale";
 
-function defaultNow(): number {
+export function defaultNow(): number {
   return performance.now();
 }
 
 /** `requestAnimationFrame`, or a source that never fires where there is none (no timers: R200). */
-function defaultFrames(): FxFrameSource {
+export function defaultFrames(): FxFrameSource {
   if (typeof window.requestAnimationFrame !== "function") {
     return { request: () => 0, cancel: () => undefined };
   }
@@ -91,7 +91,7 @@ function defaultFrames(): FxFrameSource {
   };
 }
 
-function defaultVisibility(): FxVisibility {
+export function defaultVisibility(): FxVisibility {
   return {
     hidden: () => document.hidden === true,
     subscribe: (listener) => {

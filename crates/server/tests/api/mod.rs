@@ -44,5 +44,6 @@ pub mod series_rules;
 pub mod settings;
 pub mod shares;
 pub mod stats;
+pub mod tokens;
 pub mod tutorial;
 pub mod username;
