@@ -6438,6 +6438,13 @@
     "1378": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T12:13:44Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "fails easy on several lines at once: it edits a ruling note (spec/rulings/R0163.md), spans apps/web, crates/server and spec/, and changes 17 files"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
