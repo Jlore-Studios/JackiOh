@@ -7,7 +7,7 @@
 //! is rebuilt from its id into this match the first time it is offered or made
 //! (`subsystems::fuse::rebuild_fused_def`, R179). An empty board opens no prompt and draws nothing (R129).
 //!
-//! Its two numbers, `LAST_BOARD_DISCOVER_OPTIONS` (§6.3 Discover) and `LAST_BOARD_CARD_COST` (C+ #29,
+//! Its two numbers, `DISCOVER_OPTIONS` (§6.3 Discover) and `LAST_BOARD_CARD_COST` (C+ #29,
 //! a `costOverride`, R65), live in `crate::config` (CLAUDE.md rule 9).
 
 use indexmap::IndexMap;
@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
 use crate::catalog::self_def_ids;
-use crate::config::LAST_BOARD_DISCOVER_OPTIONS;
+use crate::config::DISCOVER_OPTIONS;
 use crate::prelude::json_as;
 use crate::prompts::{OpenPromptArgs, open_prompt, resume_self};
 use crate::script::{Effect, EffectContext};
@@ -76,7 +76,7 @@ pub fn discover_from_last_board(args: DiscoverFromLastBoardArgs) -> Effect {
         if pool.is_empty() {
             return;
         }
-        let count = args.count.unwrap_or(LAST_BOARD_DISCOVER_OPTIONS).max(0) as usize;
+        let count = args.count.unwrap_or(DISCOVER_OPTIONS).max(0) as usize;
         let shuffled: Vec<LastBoardEntry> = ctx.rng.shuffle(&pool);
         let controller = ctx.controller;
         let mut options: Vec<PromptOption> = Vec::new();

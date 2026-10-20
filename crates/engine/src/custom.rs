@@ -31,8 +31,8 @@ use indexmap::IndexSet;
 use crate::config::{
     CUSTOM_ATTACK_MAX, CUSTOM_BUILDER_MAX_BYTES, CUSTOM_COST_MAX, CUSTOM_HEALTH_MAX, CUSTOM_ID_MAX_LENGTH,
     CUSTOM_ID_PREFIX, CUSTOM_KEYWORDS, CUSTOM_KEYWORDS_MAX, CUSTOM_NAME_MAX_LENGTH,
-    CUSTOM_PARAM_KEY_MAX_LENGTH, CUSTOM_PARAM_MAX, CUSTOM_PARAMS_MAX, CUSTOM_RADIANT_STAT_MAX,
-    CUSTOM_SOURCE_MAX_BYTES, CUSTOM_TEXT_MAX_LENGTH,
+    CUSTOM_PARAM_KEY_MAX_LENGTH, CUSTOM_PARAM_MAX, CUSTOM_PARAMS_MAX, CUSTOM_RADIANT_STAT_FACTOR,
+    CUSTOM_RADIANT_STAT_MAX, CUSTOM_SOURCE_MAX_BYTES, CUSTOM_TEXT_MAX_LENGTH,
 };
 use crate::script::CardScripts;
 use crate::state::GameState;
@@ -311,7 +311,7 @@ fn rarity_of(printed: PrintedRarity) -> Rarity {
 
 /// R915001: a Radiant stat: the frame's, or twice the base one when the frame gives none.
 fn radiant_stat(radiant: Option<i32>, base: Option<i32>) -> Option<i32> {
-    radiant.or_else(|| base.map(|value| value.saturating_mul(2)))
+    radiant.or_else(|| base.map(|value| value.saturating_mul(CUSTOM_RADIANT_STAT_FACTOR)))
 }
 
 /// R915000: the definition a custom card's frame builds. Total: it never panics, so a frame the
