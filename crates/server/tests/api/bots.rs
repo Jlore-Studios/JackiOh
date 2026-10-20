@@ -1204,8 +1204,11 @@ async fn r640000_a_bot_in_mythic_shows_mythic_grape_while_jlorious_has_room() {
             .await
             .seed_profile(json!({ "id": id, "status": "active", "rating": 1000 }));
         q!(app, ranked_put_rank(&mythic_row(&id)));
-        people.push(json!(id));
+        people.push(id);
     }
+    // Tied on rating, Jlorious lists them by profile id as text (`ladder.rs`), so `mythic-100`
+    // comes before `mythic-98`: the ids come from a counter every test in the binary shares.
+    people.sort();
     let (person, token) = new_person(&app, 1000.0).await;
     let bot = new_bot(&app, BotSpec::rated(3000.0)).await;
     q!(app, ranked_put_rank(&mythic_row(&bot)));
@@ -1232,7 +1235,11 @@ async fn r640000_a_bot_in_mythic_shows_mythic_grape_while_jlorious_has_room() {
         .iter()
         .map(|place| place["profileId"].clone())
         .collect();
-    assert_eq!(jlorious, people, "{listed}");
+    assert_eq!(
+        jlorious,
+        people.iter().map(|id| json!(id)).collect::<Vec<_>>(),
+        "{listed}"
+    );
 }
 
 #[tokio::test(start_paused = true)]
