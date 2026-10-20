@@ -98,7 +98,7 @@ class BuilderTests(unittest.TestCase):
                                           "review": ("claude-3", "opus", "strong")})
         self.assertEqual(planned["routing"], [
             "#3: stepped up from weak to medium to build it: no weak-tier model "
-            "(gpt-5.6-terra, swe-2-max) is free now"])
+            "(gpt-5.6-sol, swe-2-max) is free now"])
 
     def test_a_medium_item_on_a_claude_account_is_built_with_sonnet(self):
         """Sonnet at xhigh is medium (#317 part 5), so claude-3 builds a medium item with it and
@@ -154,7 +154,7 @@ class BuilderTests(unittest.TestCase):
             ctx.store.update(lambda s, n=planned["number"]: state_item(s, n).update(
                 run_id=str(n)))
             order.append((planned["provider"], seats(planned)["build"][1]))
-        self.assertEqual(order, [("gpt", "gpt-5.6-terra"), ("devin", "swe-2-max"),
+        self.assertEqual(order, [("gpt", "gpt-5.6-sol"), ("devin", "swe-2-max"),
                                  ("muse", "muse-spark-1.3-contributor"),
                                  ("muse", "muse-spark-1.3-contributor"),
                                  ("agy", "gemini-3.8-flash-high"),
@@ -277,7 +277,7 @@ class BuilderTests(unittest.TestCase):
         self.assertEqual(seats(planned)["build"], ("agy", "gemini-3.8-flash-high", "medium"))
         self.assertEqual(planned["routing"], [
             "#3: stepped up from weak to medium to build it: no weak-tier model "
-            "(gpt-5.6-terra, swe-2-max) is free now"])
+            "(gpt-5.6-sol, swe-2-max) is free now"])
         self.assertIn("stepped up from weak to medium", planned["assignment"] + " ".join(
             planned["routing"]))
         # Medium with only a strong model free steps up to strong: claude-2 by day, whose Sonnet
@@ -307,7 +307,7 @@ class BuilderTests(unittest.TestCase):
     def test_revisions_follow_the_building_rule(self):
         # Codex, weak and `easy_first`, revises an easy pull request first; without it,
         # the lane's weakest medium seat does: Muse (#695).
-        for machine, seat in ((MACHINE, ("gpt", "gpt-5.6-terra", "weak")),
+        for machine, seat in ((MACHINE, ("gpt", "gpt-5.6-sol", "weak")),
                               (("agy", "muse"), ("muse", "muse-spark-1.3-contributor",
                                                   "medium"))):
             gh = FakeGitHub()
