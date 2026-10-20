@@ -20,7 +20,7 @@ const OPTS: GifPlanOptions = {
   width: 800,
   height: 450,
   fps: REPLAY_GIF_FPS,
-  catalogVersion: "v0.3.0b",
+  catalogVersion: "v0.3.6",
   portraits: { p1: "vanilla", p2: "gary" },
 };
 
@@ -128,7 +128,7 @@ describe("R513000 what a shared GIF holds", () => {
     expect(texts.length).toBeGreaterThan(0);
     for (const text of texts) expect(text).toMatch(allowed);
     expect(texts).toContain(GIF_MARK);
-    expect(texts).toContain("v0.3.0b");
+    expect(texts).toContain("v0.3.6");
     expect(texts).toContain("You");
     expect(texts).toContain("Opponent");
 

@@ -374,7 +374,7 @@ mod tests {
         #[test]
         fn r987_r767000_a_game_on_v0_3_7_folds_under_the_kept_script_without_its_controller_s_luck() {
             crate::register_all();
-            let shipped = crate::shipped_catalog("v0.3.0c").expect("v0.3.0c is carried");
+            let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
             jackioh_engine::with_shipped(Some(shipped), || {
                 assert_eq!(rolls(false, Some(P1), 0), 1);
                 assert_eq!(rolls(true, Some(P1), 0), 2);

@@ -51,56 +51,60 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
         c097_2_wishing_well::ID,
-        "v0.3.1",
+        "v0.3.7b",
         c097_2_wishing_well::script_v0_3_7b,
     ),
-    (c097_8_prison::ID, "v0.3.1", c097_8_prison::script_v0_3_7b),
+    (c097_8_prison::ID, "v0.3.7b", c097_8_prison::script_v0_3_7b),
     (
         c074_montana_giant::ID,
-        "v0.3.1",
+        "v0.3.7b",
         c074_montana_giant::script_v0_3_7b,
     ),
     (
         c050_k_pop_fanatic::ID,
-        "v0.3.1",
+        "v0.3.7b",
         c050_k_pop_fanatic::script_v0_3_7b,
     ),
     (
         c049_snom_bunny_mind_control::ID,
-        "v0.3.1",
+        "v0.3.7b",
         c049_snom_bunny_mind_control::script_v0_3_7b,
     ),
-    (c088_siphon_squad::ID, "v0.3.1", c088_siphon_squad::script_v0_3_7b),
+    (
+        c088_siphon_squad::ID,
+        "v0.3.7b",
+        c088_siphon_squad::script_v0_3_7b,
+    ),
     (
         c017_true_craft_a_card::ID,
-        "v0.3.1",
+        "v0.3.7b",
         c017_true_craft_a_card::script_v0_3_7b,
     ),
     (
         c037_cn_in_a_bottle::ID,
-        "v0.3.1",
+        "v0.3.7b",
         c037_cn_in_a_bottle::script_v0_3_7b,
     ),
     (
         c040_appropriations::ID,
-        "v0.3.1",
+        "v0.3.7b",
         c040_appropriations::script_v0_3_7b,
     ),
     (
         c064_malzahars_recycler::ID,
-        "v0.3.1",
+        "v0.3.7b",
         c064_malzahars_recycler::script_v0_3_7b,
     ),
-    (c033_ivory_tower::ID, "v0.3.1", c033_ivory_tower::script_v0_3_7b),
+    (c033_ivory_tower::ID, "v0.3.7b", c033_ivory_tower::script_v0_3_7b),
     (
         c054_money_machine::ID,
-        "v0.3.1",
+        "v0.3.7b",
         c054_money_machine::script_v0_3_7b,
     ),
-    (c080_aluneth::ID, "v0.3.1", c080_aluneth::script_v0_3_7b),
-    (c008_pickle::ID, "v0.4.0b", c008_pickle::script_v0_3_16),
-    (c009_income_tax::ID, "v0.4.0b", c009_income_tax::script_v0_3_16),
-    (c090_in_too_deep::ID, "v0.4.0b", c090_in_too_deep::script_v0_3_16),
+    (c080_aluneth::ID, "v0.3.7b", c080_aluneth::script_v0_3_7b),
+    (c008_pickle::ID, "v0.3.16", c008_pickle::script_v0_3_16),
+    (c009_income_tax::ID, "v0.3.16", c009_income_tax::script_v0_3_16),
+    (c090_in_too_deep::ID, "v0.3.16", c090_in_too_deep::script_v0_3_16),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -328,7 +332,7 @@ mod tests {
 
         crate::register_all();
         // Every version through v0.3.7b shipped before `patches ship` kept a table: no rows.
-        for version in ["v0.1.0", "v0.3.1"] {
+        for version in ["v0.1.0", "v0.3.7b"] {
             let carried = catalog_at(version).expect("in patches.json").win_rates();
             assert!(carried.cards.is_empty(), "{version}: {carried:?}");
         }
@@ -399,7 +403,7 @@ mod tests {
         use jackioh_engine::testkit::*;
 
         crate::register_all();
-        let v0_3_7b = catalog_at("v0.3.1").expect("v0.3.1 is carried");
+        let v0_3_7b = catalog_at("v0.3.7b").expect("v0.3.7b is carried");
         let menace = "core-019"; // (3) Unit
         let filler = "core-005";
         let board = || {
@@ -504,9 +508,9 @@ mod tests {
             catalog_defs_at(crate::CATALOG_VERSION).is_some(),
             "the newest is carried"
         );
-        let v0_3_7b = catalog_defs_at("v0.3.1").expect("v0.3.1 is carried");
+        let v0_3_7b = catalog_defs_at("v0.3.7b").expect("v0.3.7b is carried");
         let snapshot_v0_3_7b: CardDefs =
-            serde_json::from_str(include_str!("../patches/v0.3.1.json")).expect("v0.3.1 reads as cards");
+            serde_json::from_str(include_str!("../patches/v0.3.7b.json")).expect("v0.3.7b reads as cards");
         assert_eq!(
             serde_json::to_value(v0_3_7b).expect("serialises"),
             serde_json::to_value(&snapshot_v0_3_7b).expect("serialises")

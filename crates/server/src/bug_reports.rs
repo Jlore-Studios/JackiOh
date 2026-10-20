@@ -692,7 +692,7 @@ mod tests {
         Finding {
             match_id: match_id.to_string(),
             found_in: FoundIn::Rebuild,
-            catalog_version: "v0.3.1".to_string(),
+            catalog_version: "v0.3.7b".to_string(),
             actions: 29,
             refused: vec![RefusedRow::of(
                 10,
@@ -773,7 +773,7 @@ mod tests {
         assert_eq!(
             recorded[0].title,
             "Patch v0.3.Y: match m-0 does not rebuild from its log \
-             (Rebuild/325bb54/v0.3.1/endTurn)"
+             (Rebuild/325bb54/v0.3.7b/endTurn)"
         );
         for needle in ["### Match `m-0`", "### Match `m-1`", "- Matches: 2"] {
             assert!(
@@ -798,7 +798,7 @@ mod tests {
         reports.file(
             None,
             Finding {
-                catalog_version: "v0.3.2".to_string(),
+                catalog_version: "v0.3.8".to_string(),
                 ..finding("m-2")
             },
         );
@@ -889,7 +889,7 @@ mod tests {
         };
         assert_eq!(
             Signature::of(None, &found).text(),
-            "FinishedLog/unknown/v0.3.1/none"
+            "FinishedLog/unknown/v0.3.7b/none"
         );
     }
 
@@ -900,11 +900,11 @@ mod tests {
         assert_eq!(
             report.title,
             "Patch v0.3.Y: match 561d159d-a78c-495c-83e2-95357c18b850 does not rebuild from its log \
-             (Rebuild/325bb54/v0.3.1/endTurn)"
+             (Rebuild/325bb54/v0.3.7b/endTurn)"
         );
         assert!(report.body.contains("| 10 | p1 | `endTurn` |"), "{}", report.body);
         assert!(
-            report.body.contains("`325bb54`, catalog `v0.3.1`"),
+            report.body.contains("`325bb54`, catalog `v0.3.7b`"),
             "{}",
             report.body
         );
@@ -931,7 +931,7 @@ mod tests {
         let live_report = report(None, &live);
         assert_eq!(
             live_report.title,
-            "Patch v0.3.Y: match m-0 panicked on a live action (Live/unknown/v0.3.1/endTurn)"
+            "Patch v0.3.Y: match m-0 panicked on a live action (Live/unknown/v0.3.7b/endTurn)"
         );
         for needle in ["The engine panicked on a live action", "| 10 | p1 | `endTurn` |"] {
             assert!(

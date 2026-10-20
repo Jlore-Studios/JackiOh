@@ -248,7 +248,7 @@ mod r1420_a_set_the_catalog_holds_before_it_ships {
         let catalog = defs();
         assert!(!deckable(&catalog["boss-001"]));
         assert!(deckable(&catalog["core-001"]));
-        assert!(deckable(&catalog["meditative-033"]), "shipped since v0.3.0");
+        assert!(deckable(&catalog["meditative-033"]), "shipped since v0.3.5");
         assert!(!deckable(&catalog["classicplus-038-1"]), "a Token never is");
         assert!(!deckable(&catalog["meditative-045-1"]), "a Token never is");
 

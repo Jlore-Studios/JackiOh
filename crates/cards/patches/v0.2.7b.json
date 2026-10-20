@@ -11,28 +11,18 @@
     "rarity": "Common",
     "token": false,
     "cost": 2,
-    "params": [
-      {
-        "key": "armor",
-        "base": 2,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 15,
     "base": {
       "attack": 0,
       "health": 7,
       "keywords": [],
-      "text": "Aura: Your Units in Defense Position have +{armor} Armor."
+      "text": "Aura: Your Units in Defense Position have +2 Armor."
     },
     "radiant": {
       "attack": 0,
       "health": 14,
       "keywords": [],
-      "text": "Aura: Your Units in Defense Position have +{armor} Armor."
+      "text": "Aura: Your Units in Defense Position have +4 Armor."
     }
   },
   "core-002": {
@@ -52,7 +42,7 @@
       "attack": 6,
       "health": 1,
       "keywords": [],
-      "text": "Cry: Destroy an enemy non-Human Unit."
+      "text": "Cry: Destroy target enemy non-Human Unit."
     },
     "radiant": {
       "attack": 12,
@@ -122,44 +112,18 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
-    "params": [
-      {
-        "key": "coins",
-        "base": 5,
-        "radiant": 7,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "perHeads",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "perTails",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 13,
+    "loc": 11,
     "base": {
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} attack per heads and +{perTails} health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
+      "text": "Cry: Flip 5 coins. Gain +1 attack per heads and +1 health per tails."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} attack per heads and +{perTails} health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
+      "text": "Cry: Flip 7 coins. Gain +2 attack per heads and +2 health per tails."
     }
   },
   "core-005": {
@@ -172,32 +136,14 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
-    "params": [
-      {
-        "key": "draw",
-        "base": 2,
-        "radiant": 5,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "heal",
-        "base": 2,
-        "radiant": 5,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 7,
     "base": {
       "keywords": [],
-      "text": "Draw {draw}. Heal your hero {heal}."
+      "text": "Draw 2. Heal your hero 2."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw {draw}. Heal your hero {heal}."
+      "text": "Draw 5. Heal your hero 5."
     }
   },
   "core-006": {
@@ -210,24 +156,14 @@
     "rarity": "Common",
     "token": false,
     "cost": 3,
-    "params": [
-      {
-        "key": "mana",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Gain {mana} mana."
+      "text": "Start of turn: Gain 1 mana."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Gain {mana} mana."
+      "text": "Start of turn: Gain 2 mana."
     }
   },
   "core-007": {
@@ -240,16 +176,6 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
-    "params": [
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 29,
     "base": {
       "attack": 1,
@@ -261,7 +187,7 @@
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Discover a (3) Cost card. It costs ({discount}) less."
+      "text": "Cry: Discover a (3) Cost card. It costs (1) less."
     }
   },
   "core-008": {
@@ -329,32 +255,14 @@
     "rarity": "Common",
     "token": false,
     "cost": 0,
-    "params": [
-      {
-        "key": "combo",
-        "base": 3,
-        "radiant": 3,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "draw",
-        "base": 3,
-        "radiant": 6,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Combo {combo}: Draw {draw}."
+      "text": "Combo 3: Draw 3."
     },
     "radiant": {
       "keywords": [],
-      "text": "Combo {combo}: Draw {draw}."
+      "text": "Combo 3: Draw 6."
     }
   },
   "core-011": {
@@ -435,28 +343,18 @@
     "rarity": "Common",
     "token": false,
     "cost": 3,
-    "params": [
-      {
-        "key": "damage",
-        "base": 2,
-        "radiant": 5,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 10,
     "base": {
       "attack": 8,
       "health": 10,
       "keywords": [],
-      "text": "End of turn: Deal {damage} damage to each enemy Unit and the enemy hero."
+      "text": "End of turn: Deal 2 damage to each enemy Unit and the enemy hero."
     },
     "radiant": {
       "attack": 16,
       "health": 20,
       "keywords": [],
-      "text": "End of turn: Deal {damage} damage to each enemy Unit and the enemy hero."
+      "text": "End of turn: Deal 5 damage to each enemy Unit and the enemy hero."
     }
   },
   "core-014": {
@@ -471,24 +369,14 @@
     "rarity": "Common",
     "token": false,
     "cost": 4,
-    "params": [
-      {
-        "key": "attack",
-        "base": 4,
-        "radiant": 10,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Units have +{attack} attack, Rush and First Strike."
+      "text": "Aura: Your Units have +4 attack, Rush and First Strike."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Units have +{attack} attack, Rush and First Strike."
+      "text": "Aura: Your Units have +10 attack, Rush and First Strike."
     }
   },
   "core-015": {
@@ -506,17 +394,6 @@
     "refs": [
       "core-t-rush"
     ],
-    "params": [
-      {
-        "key": "tokens",
-        "base": 1,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
     "loc": 11,
     "base": {
       "attack": 1,
@@ -528,7 +405,7 @@
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Summon {tokens|Rush Token|Rush Tokens}."
+      "text": "Cry: Summon 3 Rush Tokens."
     }
   },
   "core-016": {
@@ -544,11 +421,11 @@
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Destroy a Unit."
+      "text": "Destroy target Unit."
     },
     "radiant": {
       "keywords": [],
-      "text": "Destroy a Unit and the Units adjacent to it."
+      "text": "Destroy target Unit and the Units adjacent to it."
     }
   },
   "core-017": {
@@ -561,24 +438,14 @@
     "rarity": "Rare",
     "token": false,
     "cost": 4,
-    "params": [
-      {
-        "key": "draw",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 24,
     "base": {
       "keywords": [],
-      "text": "Bounce all Units."
+      "text": "Return all Units to hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: Bounce all Units, Bounce all enemy Units, or destroy all enemy Units. Then draw {draw}."
+      "text": "Choose one: Return all Units to hand, return all enemy Units to hand, or destroy all enemy Units. Then draw 1."
     }
   },
   "core-018": {
@@ -594,25 +461,14 @@
     "refs": [
       "core-t-bread"
     ],
-    "params": [
-      {
-        "key": "multiplier",
-        "base": 1,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
     "loc": 46,
     "base": {
       "keywords": [],
-      "text": "Reveals when any player ends a turn with unspent mana: Summon an X/X Bread Token for you. X = that player's unspent mana."
+      "text": "When any player ends a turn with unspent mana: Summon an X/X Bread Token for you. X = that player's unspent mana."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when any player ends a turn with unspent mana: Summon an X/X Bread Token for you. X = {multiplier} × that player's unspent mana."
+      "text": "When any player ends a turn with unspent mana: Summon an X/X Bread Token for you. X = 3 × that player's unspent mana."
     }
   },
   "core-019": {
@@ -697,24 +553,14 @@
     "rarity": "Common",
     "token": false,
     "cost": 0,
-    "params": [
-      {
-        "key": "mana",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
-    "loc": 15,
+    "loc": 16,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Your opponent has {mana} less mana next turn. Discard 1."
+      "text": "Cast on draw: Your opponent has 1 less mana next turn. Discard 1."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cast on draw: Your opponent has {mana} less mana next turn."
+      "text": "Cast on draw: Your opponent has 2 less mana next turn."
     }
   },
   "core-022": {
@@ -727,23 +573,12 @@
     "rarity": "Epic",
     "token": false,
     "cost": 3,
-    "params": [
-      {
-        "key": "copies",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "base"
-      }
-    ],
     "loc": 85,
     "base": {
       "attack": 4,
       "health": 6,
       "keywords": [],
-      "text": "Cry: Tribute one of your other Units and remember it.\nDeath: Summon {copies|copy|copies} of it."
+      "text": "Cry: Tribute one of your other Units and remember it.\nDeath: Summon 2 copies of it."
     },
     "radiant": {
       "attack": 8,
@@ -787,33 +622,14 @@
     "rarity": "Epic",
     "token": false,
     "cost": "X",
-    "params": [
-      {
-        "key": "damage",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      },
-      {
-        "key": "heal",
-        "base": 2,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 46,
     "base": {
       "keywords": [],
-      "text": "Choose one: Deal X damage, heal a target {heal}X, or gain floor(X/2) mana next turn.\nEnd of turn: Return this to hand."
+      "text": "Choose one: Deal X damage to a target, heal a target 2X, or gain floor(X/2) mana next turn.\nEnd of turn: Return this to hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: Deal {damage}X damage, heal a target {heal}X, or gain X mana next turn.\nEnd of turn: Return this to hand."
+      "text": "Choose one: Deal 2X damage to a target, heal a target 4X, or gain X mana next turn.\nEnd of turn: Return this to hand."
     }
   },
   "core-025": {
@@ -880,36 +696,17 @@
     "set": "Core",
     "type": "Spell",
     "tags": [],
-    "rarity": "Rare",
+    "rarity": "Common",
     "token": false,
     "cost": 1,
-    "params": [
-      {
-        "key": "cards",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      },
-      {
-        "key": "loss",
-        "base": 5,
-        "radiant": 5,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 13,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Make a random card in your hand Radiant. Lose {loss} health."
+      "text": "Cast on draw: Make a random card in your hand Radiant. Lose 5 health."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cast on draw: Make {cards|random card|random cards} in your hand Radiant. Lose {loss} health."
+      "text": "Cast on draw: Make 2 random cards in your hand Radiant. Lose 5 health."
     }
   },
   "core-028": {
@@ -919,27 +716,17 @@
     "set": "Core",
     "type": "Spell",
     "tags": [],
-    "rarity": "Rare",
+    "rarity": "Common",
     "token": false,
     "cost": 2,
-    "params": [
-      {
-        "key": "cards",
-        "base": 2,
-        "radiant": 5,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "Make {cards|random card|random cards} among your deck, hand and board Radiant."
+      "text": "Make 2 random cards among your deck, hand and board Radiant."
     },
     "radiant": {
       "keywords": [],
-      "text": "Make {cards|random card|random cards} among your deck, hand and board Radiant."
+      "text": "Make 5 random cards among your deck, hand and board Radiant."
     }
   },
   "core-029": {
@@ -1003,11 +790,11 @@
     "loc": 56,
     "base": {
       "keywords": [],
-      "text": "Deal Fib(times played + 1) damage.\nEnd of turn: Return this to hand. It costs (1) more, to a maximum of (4)."
+      "text": "Deal Fib(times played + 1) damage to a target.\nEnd of turn: Return this to hand. It costs (1) more, to a maximum of (4)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal Fib(times played + 3) damage.\nEnd of turn: Return this to hand. It costs (1) more, to a maximum of (4)."
+      "text": "Deal Fib(times played + 3) damage to a target.\nEnd of turn: Return this to hand. It costs (1) more, to a maximum of (4)."
     }
   },
   "core-032": {
@@ -1020,16 +807,6 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "params": [
-      {
-        "key": "draw",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 9,
     "base": {
       "attack": 5,
@@ -1039,7 +816,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nAfter this attacks, draw {draw} for each Unit that attack destroyed."
+      "text": "Rush\nAfter this attacks and survives, draw 2 for each Unit that attack destroyed."
     },
     "radiant": {
       "attack": 10,
@@ -1052,7 +829,7 @@
           "kind": "Cleave"
         }
       ],
-      "text": "Rush, Cleave\nAfter this attacks, draw {draw} for each Unit that attack destroyed."
+      "text": "Rush, Cleave\nAfter this attacks and survives, draw 2 for each Unit that attack destroyed."
     }
   },
   "core-033": {
@@ -1065,24 +842,14 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "params": [
-      {
-        "key": "copies",
-        "base": 3,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "After you play a card, shuffle {copies|copy|copies} of it into your deck."
+      "text": "After you play a card, shuffle 3 copies of it into your deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "After you play a card, shuffle {copies|Radiant copy|Radiant copies} of it into your deck."
+      "text": "After you play a card, shuffle 3 Radiant copies of it into your deck."
     }
   },
   "core-034": {
@@ -1098,11 +865,11 @@
     "loc": 19,
     "base": {
       "keywords": [],
-      "text": "Exile a permanent and a random card from your opponent's deck."
+      "text": "Exile target permanent and a random card from your opponent's deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "Exile a permanent, the permanents adjacent to it, and a random card from your opponent's deck."
+      "text": "Exile target permanent, the permanents adjacent to it, and a random card from your opponent's deck."
     }
   },
   "core-035": {
@@ -1115,32 +882,14 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
-    "params": [
-      {
-        "key": "damage",
-        "base": 3,
-        "radiant": 6,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 21,
     "base": {
       "keywords": [],
-      "text": "Deal {damage} damage. Your next Spell this turn costs ({discount}) less."
+      "text": "Deal 3 damage to a target. Your next Spell this turn costs (1) less."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal {damage} damage. Your next Spell this turn costs ({discount}) less."
+      "text": "Deal 6 damage to a target. Your next Spell this turn costs (2) less."
     }
   },
   "core-036": {
@@ -1156,11 +905,11 @@
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Destroy a backrow card. Lock its zone."
+      "text": "Destroy target backrow card. Lock its zone."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal a backrow card. Lock the zone it was in."
+      "text": "Steal target backrow card. Lock the zone it was in."
     }
   },
   "core-037": {
@@ -1173,28 +922,18 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "params": [
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 15,
     "base": {
       "attack": 4,
       "health": 5,
       "keywords": [],
-      "text": "Start of turn: Add a random card from your graveyard to your hand."
+      "text": "Start of turn: Add a random card from your GY to your hand."
     },
     "radiant": {
       "attack": 8,
       "health": 10,
       "keywords": [],
-      "text": "Start of turn: Discover a card from your graveyard. It costs ({discount}) less."
+      "text": "Start of turn: Discover a card from your GY. It costs (1) less."
     }
   },
   "core-038": {
@@ -1227,16 +966,6 @@
     "rarity": "Epic",
     "token": false,
     "cost": 0,
-    "params": [
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 50,
     "base": {
       "keywords": [],
@@ -1244,7 +973,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Exile this.\nEnd of turn: Add a Radiant copy of each other card you played this turn to your hand. They cost ({discount}) less."
+      "text": "Exile this.\nEnd of turn: Add a Radiant copy of each other card you played this turn to your hand. They cost (1) less."
     }
   },
   "core-040": {
@@ -1254,7 +983,7 @@
     "set": "Core",
     "type": "Field Spell",
     "tags": [],
-    "rarity": "Rare",
+    "rarity": "Common",
     "token": false,
     "cost": 2,
     "loc": 18,
@@ -1281,24 +1010,14 @@
       "core-t-sheep",
       "core-055"
     ],
-    "params": [
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
-      }
-    ],
     "loc": 29,
     "base": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a Unit: After it resolves, transform it into a Sheep Token."
+      "text": "When your opponent plays a Unit and its Cry resolves: Transform it into a Sheep Token."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a Unit: After it resolves, transform it into a Sheep Token. Add a Lava Golem to your hand. It costs ({setCost})."
+      "text": "When your opponent plays a Unit and its Cry resolves: Transform it into a Sheep Token. Add a Lava Golem to your hand. It costs (0)."
     }
   },
   "core-042": {
@@ -1362,16 +1081,6 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
-    "params": [
-      {
-        "key": "damage",
-        "base": 4,
-        "radiant": 9,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 12,
     "base": {
       "keywords": [
@@ -1379,7 +1088,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Pierce\nDeal {damage} damage. Exile this."
+      "text": "Pierce\nDeal 4 damage. Exile this."
     },
     "radiant": {
       "keywords": [
@@ -1387,7 +1096,7 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Pierce\nDeal {damage} damage. Exile this."
+      "text": "Pierce\nDeal 9 damage. Exile this."
     }
   },
   "core-045": {
@@ -1447,32 +1156,14 @@
       "base": 2,
       "embiggen": 4
     },
-    "params": [
-      {
-        "key": "debuff",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "paidDebuff",
-        "base": 2,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 18,
     "base": {
       "keywords": [],
-      "text": "Aura: All Units have −{debuff}/−{debuff}.\nPaid (4): −{paidDebuff}/−{paidDebuff} instead."
+      "text": "Aura: All Units have −1/−1.\nPaid (4): −2/−2 instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Enemy Units have −{debuff}/−{debuff}.\nPaid (4): −{paidDebuff}/−{paidDebuff} instead."
+      "text": "Aura: Enemy Units have −2/−2.\nPaid (4): −4/−4 instead."
     }
   },
   "core-047": {
@@ -1487,24 +1178,14 @@
     "rarity": "Common",
     "token": false,
     "cost": 3,
-    "params": [
-      {
-        "key": "heal",
-        "base": 20,
-        "radiant": 50,
-        "better": "up",
-        "step": 5,
-        "min": 1
-      }
-    ],
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "Heal a target {heal}."
+      "text": "Heal a target 20."
     },
     "radiant": {
       "keywords": [],
-      "text": "Heal a target {heal}."
+      "text": "Heal a target 50."
     }
   },
   "core-048": {
@@ -1540,11 +1221,11 @@
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Steal an enemy permanent."
+      "text": "Steal target enemy permanent."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal an enemy permanent. It becomes Radiant."
+      "text": "Steal target enemy permanent. It becomes Radiant."
     }
   },
   "core-050": {
@@ -1615,24 +1296,14 @@
     "rarity": "Token",
     "token": true,
     "cost": 1,
-    "params": [
-      {
-        "key": "draw",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "Draw {draw}."
+      "text": "Draw 1."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw {draw}."
+      "text": "Draw 2."
     }
   },
   "core-052": {
@@ -1658,7 +1329,7 @@
       "attack": 8,
       "health": 8,
       "keywords": [],
-      "text": "Cry: Choose left or right. Rotate every card on the field one step that way. Cards that cross to your side change control. Cards that would cross to your opponent's side are Bounced instead. They cost (0)."
+      "text": "Cry: Choose left or right. Rotate every card on the field one step that way. Cards that cross to your side change control. Cards that would cross to your opponent's return to their owner's hand instead, where they cost (0)."
     }
   },
   "core-053": {
@@ -1673,28 +1344,18 @@
     "rarity": "Common",
     "token": false,
     "cost": 3,
-    "params": [
-      {
-        "key": "health",
-        "base": 30,
-        "radiant": 60,
-        "better": "up",
-        "step": 8,
-        "min": 1
-      }
-    ],
     "loc": 15,
     "base": {
       "attack": 4,
       "health": 6,
       "keywords": [],
-      "text": "Cry: Heal your hero up to {health} health."
+      "text": "Cry: Heal your hero up to 30 health."
     },
     "radiant": {
       "attack": 8,
       "health": 12,
       "keywords": [],
-      "text": "Cry: Heal your hero up to {health} health."
+      "text": "Cry: Heal your hero up to 60 health."
     }
   },
   "core-054": {
@@ -1707,28 +1368,18 @@
     "rarity": "Common",
     "token": false,
     "cost": 4,
-    "params": [
-      {
-        "key": "setCost",
-        "base": 1,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
-      }
-    ],
     "loc": 16,
     "base": {
       "attack": 8,
       "health": 8,
       "keywords": [],
-      "text": "Cry: Add 2 random (3) or (4) Cost Units to your hand. They cost ({setCost})."
+      "text": "Cry: Add 2 random (3) or (4) Cost Units to your hand. They cost (1)."
     },
     "radiant": {
       "attack": 16,
       "health": 16,
       "keywords": [],
-      "text": "Cry: Add 2 random Radiant (3) or (4) Cost Units to your hand. They cost ({setCost})."
+      "text": "Cry: Add 2 random Radiant (3) or (4) Cost Units to your hand. They cost (0)."
     }
   },
   "core-055": {
@@ -1750,7 +1401,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt, Tribute 3\nCan use enemy Units as Tributes. If any are used, summon this for your opponent."
+      "text": "Taunt, Tribute 3\nCan use opposing Units as Tributes. If opposing Units are used, summon for your opponent."
     },
     "radiant": {
       "attack": 20,
@@ -1760,7 +1411,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt, Tribute 3\nCan use enemy Units as Tributes."
+      "text": "Taunt, Tribute 3\nCan use opposing Units as Tributes."
     }
   },
   "core-056": {
@@ -1828,32 +1479,14 @@
     "rarity": "Common",
     "token": false,
     "cost": 2,
-    "params": [
-      {
-        "key": "cards",
-        "base": 3,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "radiantCards",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Add {cards|random KY card|random KY cards} to your hand."
+      "text": "Add 3 random KY cards to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {cards|random KY card|random KY cards} and {radiantCards|random Radiant KY card|random Radiant KY cards} to your hand."
+      "text": "Add 2 random KY cards and 2 random Radiant KY cards to your hand."
     }
   },
   "core-058": {
@@ -1869,16 +1502,6 @@
     "refs": [
       "core-t-rush"
     ],
-    "params": [
-      {
-        "key": "buff",
-        "base": 3,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 11,
     "base": {
       "keywords": [],
@@ -1886,7 +1509,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Summon a Rush Token.\nAura: Your Rush Tokens have +{buff}/+{buff}."
+      "text": "Start of turn: Summon a Rush Token.\nAura: Your Rush Tokens have +3/+3."
     }
   },
   "core-059": {
@@ -1902,24 +1525,14 @@
       "base": 2,
       "embiggen": 4
     },
-    "params": [
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
-      }
-    ],
     "loc": 14,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Add a random card to your hand.\nPaid (4): It costs ({setCost})."
+      "text": "Start of turn: Add a random card to your hand.\nPaid (4): It costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Add a random Radiant card to your hand.\nPaid (4): It costs ({setCost})."
+      "text": "Start of turn: Add a random Radiant card to your hand.\nPaid (4): It costs (0)."
     }
   },
   "core-060": {
@@ -1935,25 +1548,14 @@
     "refs": [
       "core-t-rush"
     ],
-    "params": [
-      {
-        "key": "costLimit",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "base"
-      }
-    ],
     "loc": 39,
     "base": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a ({costLimit}) Cost or less card, if you have an empty unit zone: Summon 2 Rush Tokens. If it's a Unit, they attack it."
+      "text": "When your opponent plays a (1) Cost or less card, if you have an empty unit zone: Summon 2 Rush Tokens. If it's a Unit, they attack it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a card, if you have an empty unit zone: Fill your board with Rush Tokens. If it's a Unit, they attack it."
+      "text": "When your opponent plays a card, if you have an empty unit zone: Fill your board with Rush Tokens. If it's a Unit, they attack it."
     }
   },
   "core-061": {
@@ -1997,16 +1599,6 @@
     "refs": [
       "core-t-felinor"
     ],
-    "params": [
-      {
-        "key": "buff",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 11,
     "base": {
       "keywords": [],
@@ -2014,7 +1606,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Fill your board with Felinor Tokens. Give your Units +{buff}/+{buff}."
+      "text": "Fill your board with Felinor Tokens. Give your Units +2/+2."
     }
   },
   "core-063": {
@@ -2027,32 +1619,14 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
-    "params": [
-      {
-        "key": "buff",
-        "base": 3,
-        "radiant": 6,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "keywords",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Give a Unit +{buff}/+{buff} and {keywords|random keyword|random keywords}."
+      "text": "Give target Unit +3/+3 and 1 random keyword."
     },
     "radiant": {
       "keywords": [],
-      "text": "Give a Unit +{buff}/+{buff} and {keywords|random keyword|random keywords}."
+      "text": "Give target Unit +6/+6 and 2 random keywords."
     }
   },
   "core-064": {
@@ -2065,24 +1639,14 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "params": [
-      {
-        "key": "giftLimit",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 5,
     "base": {
       "keywords": [],
-      "text": "The first ({giftLimit}) Cost or less card you play each turn becomes Radiant as it's played."
+      "text": "The first (1) Cost or less card you play each turn becomes Radiant as it's played."
     },
     "radiant": {
       "keywords": [],
-      "text": "The first ({giftLimit}) Cost or less card you play each turn becomes Radiant as it's played."
+      "text": "The first (2) Cost or less card you play each turn becomes Radiant as it's played."
     }
   },
   "core-065": {
@@ -2100,24 +1664,14 @@
     "refs": [
       "core-065-1"
     ],
-    "params": [
-      {
-        "key": "loss",
-        "base": 3,
-        "radiant": 3,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 49,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Choose one: Exile the bottom card of your deck, lose {loss} health, or summon a Spikey Pillow."
+      "text": "Start of turn: Choose one: Exile the bottom card of your deck, lose 3 health, or summon a Spikey Pillow."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Choose twice: Nothing, exile the bottom card of your deck, lose {loss} health, or summon a Spikey Pillow."
+      "text": "Start of turn: Choose twice: Nothing, exile the bottom card of your deck, lose 3 health, or summon a Spikey Pillow."
     }
   },
   "core-065-1": {
@@ -2135,28 +1689,18 @@
     "refs": [
       "core-065-1"
     ],
-    "params": [
-      {
-        "key": "drain",
-        "base": 2,
-        "radiant": 2,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 21,
     "base": {
       "attack": 0,
       "health": 2,
       "keywords": [],
-      "text": "Can't be in Defense Position.\nAura: Your Units have −{drain} attack."
+      "text": "Can't be in Defense Position.\nAura: Your Units have −2 attack."
     },
     "radiant": {
       "attack": 0,
       "health": 4,
       "keywords": [],
-      "text": "Can't be in Defense Position.\nAura: Your Units other than Spikey Pillows have −{drain} attack."
+      "text": "Can't be in Defense Position.\nAura: Your Units other than Spikey Pillows have −2 attack."
     }
   },
   "core-066": {
@@ -2232,44 +1776,18 @@
     "rarity": "Common",
     "token": false,
     "cost": 2,
-    "params": [
-      {
-        "key": "damage",
-        "base": 4,
-        "radiant": 8,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "lowDamage",
-        "base": 8,
-        "radiant": 16,
-        "better": "up",
-        "step": 2,
-        "min": 1
-      },
-      {
-        "key": "threshold",
-        "base": 10,
-        "radiant": 10,
-        "better": "up",
-        "step": 2,
-        "min": 1
-      }
-    ],
     "loc": 24,
     "base": {
       "attack": 5,
       "health": 5,
       "keywords": [],
-      "text": "Cry: Deal {damage} damage, or {lowDamage} if your hero has less than {threshold} health."
+      "text": "Cry: Deal 4 damage to a target, or 8 if your hero has less than 10 health."
     },
     "radiant": {
       "attack": 10,
       "health": 10,
       "keywords": [],
-      "text": "Cry: Deal {damage} damage, or {lowDamage} if your hero has less than {threshold} health."
+      "text": "Cry: Deal 8 damage to a target, or 16 if your hero has less than 10 health."
     }
   },
   "core-069": {
@@ -2282,24 +1800,14 @@
     "rarity": "Common",
     "token": false,
     "cost": 2,
-    "params": [
-      {
-        "key": "costLimit",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 13,
     "base": {
       "keywords": [],
-      "text": "Recruit 3 ({costLimit}) Cost or less Units."
+      "text": "Recruit 3 (1) Cost or less Units."
     },
     "radiant": {
       "keywords": [],
-      "text": "Recruit 3 ({costLimit}) Cost or less Units."
+      "text": "Recruit 3 (2) Cost or less Units."
     }
   },
   "core-070": {
@@ -2312,40 +1820,14 @@
     "rarity": "Common",
     "token": false,
     "cost": 3,
-    "params": [
-      {
-        "key": "damage",
-        "base": 2,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "healthStep",
-        "base": 5,
-        "radiant": 3,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "perExile",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 24,
     "base": {
       "keywords": [],
-      "text": "Deal {damage} damage, +1 per full {healthStep} health your hero is below 30, +{perExile} per card in your exile."
+      "text": "Deal 2 damage to a target, +1 per full 5 health your hero is below 30, +1 per card in your exile."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal {damage} damage, +1 per full {healthStep} health your hero is below 30, +{perExile} per card in your exile."
+      "text": "Deal 4 damage to a target, +1 per full 3 health your hero is below 30, +2 per card in your exile."
     }
   },
   "core-071": {
@@ -2358,24 +1840,14 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
-    "params": [
-      {
-        "key": "costLimit",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 21,
     "base": {
       "keywords": [],
-      "text": "Reveals when any turn ends, if your deck has more cards than your opponent's: Recruit a ({costLimit}) Cost or less Unit."
+      "text": "At the end of any turn, if your deck has more cards than your opponent's: Recruit a (1) Cost or less Unit."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when any turn ends, if your deck has more cards than your opponent's: Recruit a ({costLimit}) Cost or less Unit."
+      "text": "At the end of any turn, if your deck has more cards than your opponent's: Recruit a (2) Cost or less Unit."
     }
   },
   "core-072": {
@@ -2388,33 +1860,14 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
-    "params": [
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "base"
-      },
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
-      }
-    ],
     "loc": 17,
     "base": {
       "keywords": [],
-      "text": "Discover a card from your graveyard. It costs ({discount}) less. Exile this."
+      "text": "Discover a card from your GY. It costs (1) less. Exile this."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover a card from your graveyard. It costs ({setCost}). Exile this."
+      "text": "Discover a card from your GY. It costs (0). Exile this."
     }
   },
   "core-073": {
@@ -2427,32 +1880,14 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "params": [
-      {
-        "key": "draw",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "cap",
-        "base": 5,
-        "radiant": 3,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Your hero can't take more than {cap} damage at once.\nCry: Draw {draw}."
+      "text": "Your hero can't take more than 5 damage at once.\nCry: Draw 1."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero can't take more than {cap} damage at once.\nCry: Draw {draw}."
+      "text": "Your hero can't take more than 3 damage at once.\nCry: Draw 2."
     }
   },
   "core-074": {
@@ -2468,52 +1903,14 @@
     "refs": [
       "core-t-ghoul"
     ],
-    "params": [
-      {
-        "key": "damage",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      },
-      {
-        "key": "heal",
-        "base": 1,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      },
-      {
-        "key": "draw",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      },
-      {
-        "key": "ghoul",
-        "base": 1,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
-      }
-    ],
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Deal X damage. Heal your hero X. Draw X. Summon an X/X Ghoul Token."
+      "text": "Deal X damage to a target. Heal your hero X. Draw X. Summon an X/X Ghoul Token."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal {damage}X damage. Heal your hero {heal}X. Draw {draw}X. Summon a {ghoul}X/{ghoul}X Ghoul Token."
+      "text": "Deal 2X damage to a target. Heal your hero 3X. Draw 2X. Summon a 3X/3X Ghoul Token."
     }
   },
   "core-075": {
@@ -2529,16 +1926,6 @@
     "refs": [
       "core-t-rush"
     ],
-    "params": [
-      {
-        "key": "draw",
-        "base": 3,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 9,
     "base": {
       "keywords": [],
@@ -2546,7 +1933,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."
+      "text": "Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw 3."
     }
   },
   "core-076": {
@@ -2584,28 +1971,18 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "params": [
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 19,
     "base": {
       "attack": 3,
       "health": 3,
       "keywords": [],
-      "text": "Cry: (4)+ Cost cards cost ({discount}) less on your next turn."
+      "text": "Cry: (4)+ Cost cards cost (1) less on your next turn."
     },
     "radiant": {
       "attack": 6,
       "health": 6,
       "keywords": [],
-      "text": "Cry: (4)+ Cost cards cost ({discount}) less on your next turn."
+      "text": "Cry: (4)+ Cost cards cost (2) less on your next turn."
     }
   },
   "core-078": {
@@ -2618,40 +1995,14 @@
     "rarity": "Epic",
     "token": false,
     "cost": 4,
-    "params": [
-      {
-        "key": "refresh",
-        "base": 3,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "comboDraw",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 32,
     "base": {
       "keywords": [],
-      "text": "Refresh {refresh} mana. Your cards cost ({discount}) less this turn.\nEnd of turn: Exile your hand."
+      "text": "Refresh 3 mana. Your cards cost (1) less this turn.\nEnd of turn: Exile your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Refresh {refresh} mana. Your cards cost ({discount}) less and gain \"Combo: Draw {comboDraw}\" this turn.\nEnd of turn: Exile your hand."
+      "text": "Refresh 3 mana. Your cards cost (1) less and gain \"Combo: Draw 1\" this turn.\nEnd of turn: Exile your hand."
     }
   },
   "core-079": {
@@ -2664,24 +2015,14 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "params": [
-      {
-        "key": "echoGain",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Your next Spell gains Echo +{echoGain}. Then this goes to the graveyard."
+      "text": "Your next Spell gains Echo +1."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your next Spell gains Echo +{echoGain}. Then this goes to the graveyard."
+      "text": "Your next Spell gains Echo +2."
     }
   },
   "core-080": {
@@ -2699,32 +2040,14 @@
     "refs": [
       "core-t-rush"
     ],
-    "params": [
-      {
-        "key": "discard",
-        "base": 2,
-        "radiant": 2,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "keywords",
-        "base": 2,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 20,
     "base": {
       "keywords": [],
-      "text": "Discard {discard|random card|random cards}. Summon 2 Rush Tokens, each with {keywords|random keyword|random keywords}."
+      "text": "Discard 2 random cards. Summon 2 Rush Tokens, each with 2 random keywords."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discard {discard|random card|random cards}. Summon 2 Radiant Rush Tokens, each with {keywords|random keyword|random keywords}."
+      "text": "Discard 2 random cards. Summon 2 Radiant Rush Tokens, each with 3 random keywords."
     }
   },
   "core-081": {
@@ -2765,16 +2088,6 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
-    "params": [
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
-      }
-    ],
     "loc": 29,
     "base": {
       "keywords": [],
@@ -2782,7 +2095,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover among 3 different random numbers from 1–100. Add the Radiant Core card with that number to your hand. It costs ({setCost})."
+      "text": "Discover among 3 different random numbers from 1–100. Add the Radiant Core card with that number to your hand. It costs (0)."
     }
   },
   "core-083": {
@@ -2798,11 +2111,11 @@
     "loc": 47,
     "base": {
       "keywords": [],
-      "text": "Replace every card in your hand, deck, board, graveyard and exile with a random Legendary."
+      "text": "Replace every card in your hand, deck, board, GY and exile with a random Legendary."
     },
     "radiant": {
       "keywords": [],
-      "text": "Replace every card in your hand, deck, board, graveyard and exile with a random Radiant Legendary."
+      "text": "Replace every card in your hand, deck, board, GY and exile with a random Radiant Legendary."
     }
   },
   "core-084": {
@@ -2820,32 +2133,14 @@
       "base": 2,
       "embiggen": 4
     },
-    "params": [
-      {
-        "key": "armor",
-        "base": 2,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "paidArmor",
-        "base": 4,
-        "radiant": 8,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Your hero has Armor {armor}.\nPaid (4): Armor {paidArmor} instead."
+      "text": "Your hero has Armor 2.\nPaid (4): Armor 4 instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero has Armor {armor}.\nPaid (4): Armor {paidArmor} instead."
+      "text": "Your hero has Armor 4.\nPaid (4): Armor 8 instead."
     }
   },
   "core-085": {
@@ -2861,11 +2156,11 @@
     "loc": 58,
     "base": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a permanent of a type you control: Fuse it onto a random permanent of yours of that type."
+      "text": "When your opponent plays a permanent of a type you control: Fuse it onto a random permanent of yours of that type."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a permanent of a type you control: Fuse it onto every permanent of yours of that type."
+      "text": "When your opponent plays a permanent of a type you control: Fuse it onto every permanent of yours of that type."
     }
   },
   "core-086": {
@@ -2889,7 +2184,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Can't attack\nDeath: Steal the Unit that destroyed this."
+      "text": "Can't attack\nDeath: Take control of the Unit that destroyed this."
     },
     "radiant": {
       "attack": 2,
@@ -2899,7 +2194,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nDeath: Steal the Unit that destroyed this."
+      "text": "Rush\nDeath: Take control of the Unit that destroyed this."
     }
   },
   "core-087": {
@@ -2911,18 +2206,18 @@
     "tags": [],
     "rarity": "Legendary",
     "token": false,
-    "cost": 4,
+    "cost": 2,
     "refs": [
       "core-087"
     ],
-    "loc": 24,
+    "loc": 20,
     "base": {
       "keywords": [],
-      "text": "Choose one: Swap hero health, boards or decks with your opponent. Then add a Pocket Chaos with a base cost (1) less than this one's to your opponent's hand, unless its base cost would be (0). Exile this."
+      "text": "Choose one: Swap hero health, boards or decks with your opponent. Then add a Pocket Chaos to your opponent's hand. Exile this."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: Swap hero health, boards or decks with your opponent. Then you may add a Pocket Chaos with a base cost (1) less than this one's to your opponent's hand, unless its base cost would be (0). Exile this."
+      "text": "Choose one: Swap hero health, boards or decks with your opponent. Then you may add a Pocket Chaos to your opponent's hand. Exile this."
     }
   },
   "core-088": {
@@ -3018,32 +2313,14 @@
     "rarity": "Token",
     "token": true,
     "cost": 1,
-    "params": [
-      {
-        "key": "damage",
-        "base": 1,
-        "radiant": 2,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "copies",
-        "base": 2,
-        "radiant": 3,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Take {damage} damage. At the end of this turn, shuffle {copies|copy|copies} of this into your deck."
+      "text": "Cast on draw: Take 1 damage. At the end of this turn, shuffle 2 copies of this into your deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cast on draw: Take {damage} damage. At the end of this turn, shuffle {copies|copy|copies} of this into your deck."
+      "text": "Cast on draw: Take 2 damage. At the end of this turn, shuffle 3 copies of this into your deck."
     }
   },
   "core-091": {
@@ -3059,16 +2336,6 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "params": [
-      {
-        "key": "mana",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 34,
     "base": {
       "attack": 1,
@@ -3078,7 +2345,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhenever this takes damage, it gets a Plague Counter.\nStart of turn: +{mana} mana per Plague Counter."
+      "text": "Rush\nWhenever this takes damage, it gets a Plague Token.\nStart of turn: +1 mana per Plague Token."
     },
     "radiant": {
       "attack": 2,
@@ -3088,7 +2355,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhenever this takes damage, it gets a Plague Counter.\nStart of turn: +{mana} mana per Plague Counter."
+      "text": "Rush\nWhenever this takes damage, it gets a Plague Token.\nStart of turn: +2 mana per Plague Token."
     }
   },
   "core-092": {
@@ -3112,7 +2379,7 @@
           "kind": "Stack"
         }
       ],
-      "text": "Stack\nAlso has the stats of all your Felinors, including those under Stack."
+      "text": "Stack\nHas the stats of all your Felinors, including those under Stack."
     },
     "radiant": {
       "attack": 10,
@@ -3122,7 +2389,7 @@
           "kind": "Stack"
         }
       ],
-      "text": "Stack\nAlso has twice the stats of all your Felinors, including those under Stack."
+      "text": "Stack\nHas twice the stats of all your Felinors, including those under Stack."
     }
   },
   "core-093": {
@@ -3141,11 +2408,11 @@
     "loc": 23,
     "base": {
       "keywords": [],
-      "text": "Grade (starts at E).\nEnd of turn: If you played N+ cards this turn, go up a grade and trigger every step from E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Opponent exiles a random hand card.\nB: Make a random card in hand Radiant.\nA: 8 Lifesteal damage to the enemy hero.\nS: Trigger E–A again."
+      "text": "Grade (starts at E).\nEnd of turn: if you played N+ cards this turn, go up a grade and trigger every step from E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Opponent exiles a random hand card.\nB: Make a random card in hand Radiant.\nA: 8 Lifesteal damage to the enemy hero.\nS: Trigger E–A again."
     },
     "radiant": {
       "keywords": [],
-      "text": "Grade (starts at E).\nStart of turn: Add a Combo-Fodder to your hand.\nEnd of turn: If you played N+ cards this turn, go up a grade and trigger every step from E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Opponent exiles a random hand card.\nB: Make a random card in hand Radiant.\nA: 8 Lifesteal damage to the enemy hero.\nS: Trigger E–A again."
+      "text": "Grade (starts at E).\nStart of turn: Add a Combo-Fodder to your hand.\nEnd of turn: if you played N+ cards this turn, go up a grade and trigger every step from E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Opponent exiles a random hand card.\nB: Make a random card in hand Radiant.\nA: 8 Lifesteal damage to the enemy hero.\nS: Trigger E–A again."
     }
   },
   "core-093-1": {
@@ -3160,16 +2427,6 @@
     "rarity": "Token",
     "token": true,
     "cost": 0,
-    "params": [
-      {
-        "key": "damage",
-        "base": 2,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 14,
     "base": {
       "keywords": [
@@ -3177,7 +2434,7 @@
           "kind": "Lifesteal"
         }
       ],
-      "text": "Lifesteal\nDeal {damage} damage."
+      "text": "Lifesteal\nDeal 2 damage."
     },
     "radiant": {
       "keywords": [
@@ -3185,7 +2442,7 @@
           "kind": "Lifesteal"
         }
       ],
-      "text": "Lifesteal\nDeal {damage} damage."
+      "text": "Lifesteal\nDeal 4 damage."
     }
   },
   "core-094": {
@@ -3198,24 +2455,14 @@
     "rarity": "Epic",
     "token": false,
     "cost": 4,
-    "params": [
-      {
-        "key": "mana",
-        "base": 2,
-        "radiant": 6,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 17,
     "base": {
       "keywords": [],
-      "text": "Draw every (2) Cost card from your deck. Exile every odd Cost card in your deck, hand and graveyard, except X Cost cards. Gain {mana} mana."
+      "text": "Draw every (2) Cost card from your deck. Exile every odd Cost card in your deck, hand and graveyard, except X Cost cards. Gain 2 mana."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw every (2) Cost card from your deck. Exile every odd Cost card in your deck, hand and graveyard, except X Cost cards. Gain {mana} mana."
+      "text": "Draw every (2) Cost card from your deck. Exile every odd Cost card in your deck, hand and graveyard, except X Cost cards. Gain 6 mana."
     }
   },
   "core-095": {
@@ -3311,11 +2558,11 @@
     "loc": 28,
     "base": {
       "keywords": [],
-      "text": "Reveals when your opponent declares an attack that would be lethal to your hero: Cancel it. The rest of their turn is played at random."
+      "text": "When your opponent declares an attack that would be lethal to your hero: Cancel it. The rest of their turn is played at random."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when your opponent declares an attack that would be lethal to your hero: Cancel it and destroy the attacker. The rest of their turn is played at random."
+      "text": "When your opponent declares an attack that would be lethal to your hero: Cancel it and destroy the attacker. The rest of their turn is played at random."
     }
   },
   "core-097": {
@@ -3349,104 +2596,19 @@
     ],
     "rarity": "Mythic",
     "token": false,
-    "cost": 0,
+    "cost": "X",
     "refs": [
       "core-t-rush",
-      "core-t-felinor",
-      "core-t-ghoul"
+      "core-t-felinor"
     ],
-    "params": [
-      {
-        "key": "shot",
-        "base": 2,
-        "radiant": 4,
-        "better": "up",
-        "step": 2,
-        "min": 1,
-        "power": "burn"
-      },
-      {
-        "key": "tapDraw",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "power": "draw"
-      },
-      {
-        "key": "tapDamage",
-        "base": 2,
-        "radiant": 2,
-        "better": "down",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "base",
-        "power": "draw"
-      },
-      {
-        "key": "ping",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "power": "ping"
-      },
-      {
-        "key": "stitchCost",
-        "base": 2,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "power": "stitching"
-      },
-      {
-        "key": "armor",
-        "base": 2,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "power": "armor"
-      },
-      {
-        "key": "insect",
-        "base": 8,
-        "radiant": 8,
-        "better": "up",
-        "step": 2,
-        "min": 1,
-        "power": "insect"
-      },
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "power": "brainstorm"
-      },
-      {
-        "key": "fruitCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0,
-        "power": "pluck"
-      }
-    ],
-    "loc": 11,
+    "loc": 13,
     "base": {
       "keywords": [
         {
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nStart of game: Gain one of 13 random powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent.\n(1) Life Tap: Draw {tapDraw}. Take {tapDamage} damage.\n(1) Steady Shot: Deal {shot} damage to the enemy hero.\n(2) Ranching: Summon a Rush Token.\n(1) Cat Cafe: Summon a Felinor Token.\n(1) Ping: Pierce. Deal {ping} damage.\n(2) Witness Value: Discover a Unit.\n(2) Stitching: Discover two ({stitchCost}) Cost or less Units. Fuse them.\n(1) Armor Up: Your hero gains {armor} Armor until your next turn.\n(2) Die Insect: Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a random KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Trap to summon."
+      "text": "Indestructible\nStart of game: Gain one of 8 random powers, each \"Once per turn, spend X\": (3) Recruit a permanent; (1) lose 2 health, draw 1; (1) deal 1 damage to a target; (1) deal 2 damage to each opposing hero; (2) summon a Rush Token; (1) summon a Felinor Token; (2) Discover a Unit; (2) Stitching — Discover 2 (2) Cost or less Units, Fuse them and add the result to your hand.\nPlaying it costs the power's X and activates it once."
     },
     "radiant": {
       "keywords": [
@@ -3454,7 +2616,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nStart of game: Gain one of 13 random powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent. Make it Radiant.\n(1) Life Tap: Draw {tapDraw} from each player's deck.\n(1) Steady Shot: Deal {shot} damage to the enemy hero. This permanently deals 2 more damage.\n(2) Ranching: Summon a Radiant Rush Token.\n(1) Cat Cafe: Summon a random Felinor.\n(1) Ping: Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(2) Witness Value: Discover a Radiant Unit.\n(2) Stitching: Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.\n(1) Tank Up: Your hero gains {armor} Armor, then this power refreshes.\n(2) Die Insect: Lucky 1. Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Radiant Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Radiant Trap to summon."
+      "text": "Indestructible\nStart of game: Gain one of 8 random powers, each \"Once per turn, spend X\": (3) Recruit a permanent and make it Radiant; (1) lose 2 health, draw 2; (1) deal 2 damage to a target; (1) deal 4 damage to each opposing hero; (2) summon two Rush Tokens; (1) summon two Felinor Tokens; (2) Discover a Radiant Unit; (2) Stitching — Discover 2 Radiant (2) Cost or less Units, Fuse them and add the result to your hand.\nPlaying it costs the power's X and activates it once."
     }
   },
   "core-099": {
@@ -3487,22 +2649,12 @@
     "rarity": "Mythic",
     "token": false,
     "cost": 100,
-    "params": [
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 18,
     "base": {
       "attack": 10,
       "health": 10,
       "keywords": [],
-      "text": "Cry: Exile all other permanents.\nCosts ({discount}) less for each card drawn, played, destroyed or exiled this game."
+      "text": "Cry: Exile all other permanents.\nCosts (1) less for each card drawn, played, destroyed or exiled this game."
     },
     "radiant": {
       "attack": 20,
@@ -3512,7 +2664,7 @@
           "kind": "Charge"
         }
       ],
-      "text": "Charge\nCry: Exile all other permanents.\nCosts ({discount}) less for each card drawn, played, destroyed or exiled this game."
+      "text": "Charge\nCry: Exile all other permanents.\nCosts (1) less for each card drawn, played, destroyed or exiled this game."
     }
   },
   "core-t-rush": {
@@ -3564,28 +2716,18 @@
     "rarity": "Token",
     "token": true,
     "cost": 1,
-    "params": [
-      {
-        "key": "worth",
-        "base": 2,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 3,
     "base": {
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "Worth {worth|Tribute|Tributes}."
+      "text": "Worth 2 Tributes."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Worth {worth|Tribute|Tributes}."
+      "text": "Worth 3 Tributes."
     }
   },
   "core-t-felinor": {
@@ -3662,24 +2804,14 @@
     "rarity": "Token",
     "token": true,
     "cost": 0,
-    "params": [
-      {
-        "key": "mana",
-        "base": 1,
-        "radiant": 2,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "Gain {mana} mana this turn."
+      "text": "Gain 1 mana this turn."
     },
     "radiant": {
       "keywords": [],
-      "text": "Gain {mana} mana this turn."
+      "text": "Gain 2 mana this turn."
     }
   },
   "core-t-ghoul": {
@@ -3774,16 +2906,7 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
-      },
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
+        "min": 1
       }
     ],
     "loc": 8,
@@ -3797,7 +2920,7 @@
       "attack": 4,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Your next Trap or Field Spell costs ({setCost})."
+      "text": "Cry: Your next Trap or Field Spell costs (0)."
     }
   },
   "classic-003": {
@@ -3809,7 +2932,7 @@
     "tags": [
       "Book"
     ],
-    "rarity": "Epic",
+    "rarity": "Common",
     "token": false,
     "cost": 1,
     "params": [
@@ -3838,9 +2961,7 @@
     "name": "Palantir",
     "set": "Classic",
     "type": "Field Spell",
-    "tags": [
-      "Jlockeed"
-    ],
+    "tags": [],
     "rarity": "Legendary",
     "token": false,
     "cost": 1,
@@ -3862,10 +2983,10 @@
         "min": 1
       }
     ],
-    "loc": 43,
+    "loc": 57,
     "base": {
       "keywords": [],
-      "text": "Aura: Your opponent can't draw more than {drawLimit|card|cards} each turn.\nWhen your opponent plays a Book, Tribute this to steal it."
+      "text": "Aura: Your opponent can't draw more than {drawLimit|card|cards} each turn.\nWhen your opponent plays a Book, you may Tribute this to steal it."
     },
     "radiant": {
       "keywords": [],
@@ -3904,7 +3025,7 @@
           "kind": "Lifesteal"
         }
       ],
-      "text": "Animated, Lifesteal\nReveals when your opponent summons a Unit: Deal {damage} damage to it. Then summon this as a Unit in Defense Position."
+      "text": "Animated, Lifesteal\nActivates when your opponent summons a Unit: Deal {damage} damage to it. Then summon this as a Unit in Defense Position."
     },
     "radiant": {
       "attack": 2,
@@ -3917,7 +3038,7 @@
           "kind": "Lifesteal"
         }
       ],
-      "text": "Animated, Lifesteal\nReveals when your opponent summons a Unit: Deal {damage} damage to it. Then summon this as a Unit in Defense Position."
+      "text": "Animated, Lifesteal\nActivates when your opponent summons a Unit: Deal {damage} damage to it. Then summon this as a Unit in Defense Position."
     }
   },
   "classic-006": {
@@ -4030,7 +3151,7 @@
         "min": 1
       }
     ],
-    "loc": 84,
+    "loc": 97,
     "base": {
       "keywords": [],
       "text": "Your opponent chooses {choices|time|times}: they discard {discard|card|cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw|card|cards}."
@@ -4047,7 +3168,7 @@
     "set": "Classic",
     "type": "Trap",
     "tags": [],
-    "rarity": "Legendary",
+    "rarity": "Common",
     "token": false,
     "cost": 2,
     "params": [
@@ -4071,11 +3192,11 @@
     "loc": 42,
     "base": {
       "keywords": [],
-      "text": "Reveals when the cards your opponent has drawn in a turn reach {draws}: They keep one card of their choice and give you the rest of their hand."
+      "text": "Activates when the cards your opponent has drawn in a turn reach {draws}: They keep one card of their choice and give you the rest of their hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when the cards your opponent has drawn in a turn reach {draws}: They keep one card of their choice and give you the rest of their hand. The cards you get cost ({discount}) less."
+      "text": "Activates when the cards your opponent has drawn in a turn reach {draws}: They keep one card of their choice and give you the rest of their hand. The cards you get cost ({discount}) less."
     }
   },
   "classic-010": {
@@ -4087,7 +3208,7 @@
     "tags": [],
     "rarity": "Common",
     "token": false,
-    "cost": 1,
+    "cost": 2,
     "params": [
       {
         "key": "threshold",
@@ -4101,11 +3222,11 @@
     "loc": 45,
     "base": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a ({threshold}) Cost or less card: Counter and exile it."
+      "text": "Activates when your opponent plays a ({threshold}) Cost or less card: Counter and exile it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a ({threshold}) Cost or less card: Counter and exile it. Then exile random enemy permanents that together cost up to ({threshold}) minus its cost."
+      "text": "Activates when your opponent plays a ({threshold}) Cost or less card: Counter and exile it. Then exile random enemy permanents that together cost up to ({threshold}) minus its cost."
     }
   },
   "classic-011": {
@@ -4125,8 +3246,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       }
     ],
     "loc": 23,
@@ -4148,7 +3268,7 @@
     "tags": [
       "Book"
     ],
-    "rarity": "Epic",
+    "rarity": "Common",
     "token": false,
     "cost": 1,
     "params": [
@@ -4198,8 +3318,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       },
       {
         "key": "recruits",
@@ -4255,11 +3374,11 @@
     "loc": 49,
     "base": {
       "keywords": [],
-      "text": "Reveals when any of your Units die: Bounce them. They cost ({setCost})."
+      "text": "Activates when any of your Units die: Return them to hand. They cost ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when any of your Units would die: Flicker them instead, so they survive. Add a copy of each to your hand. The copies cost ({setCost})."
+      "text": "Activates when any of your Units would die: Flicker them instead, so they survive. Add a copy of each to your hand. The copies cost ({setCost})."
     }
   },
   "classic-015": {
@@ -4289,13 +3408,13 @@
       "attack": 3,
       "health": 1,
       "keywords": [],
-      "text": "Activate ♾️: Discard a random card. Exile the bottom {exile|card|cards} of your opponent's deck."
+      "text": "Activate: Discard a random card. Exile the bottom {exile|card|cards} of your opponent's deck."
     },
     "radiant": {
       "attack": 6,
       "health": 2,
       "keywords": [],
-      "text": "Activate ♾️: Discard a random card. Exile the bottom {exile|card|cards} of your opponent's deck and a random card from their hand."
+      "text": "Activate: Discard a random card. Exile the bottom {exile|card|cards} of your opponent's deck and a random card from their hand."
     }
   },
   "classic-016": {
@@ -4307,7 +3426,7 @@
     "tags": [
       "Book"
     ],
-    "rarity": "Epic",
+    "rarity": "Common",
     "token": false,
     "cost": 1,
     "params": [
@@ -4353,11 +3472,11 @@
     "loc": 30,
     "base": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a Spell: Counter it."
+      "text": "Activates when your opponent plays a Spell: Counter it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a Spell: Counter it. Add a copy of it to your hand. The copy costs ({setCost})."
+      "text": "Activates when your opponent plays a Spell: Counter it. Add a copy of it to your hand. The copy costs ({setCost})."
     }
   },
   "classic-018": {
@@ -4367,13 +3486,13 @@
     "set": "Classic",
     "type": "Spell",
     "tags": [],
-    "rarity": "Epic",
+    "rarity": "Common",
     "token": false,
     "cost": 3,
-    "loc": 33,
+    "loc": 32,
     "base": {
       "keywords": [],
-      "text": "Choose a number. Exile every card on the field that costs that much."
+      "text": "Choose a number. Exile every card on the field, in hands and in decks that costs that much."
     },
     "radiant": {
       "keywords": [],
@@ -4462,7 +3581,7 @@
         "min": 1
       }
     ],
-    "loc": 40,
+    "loc": 44,
     "base": {
       "keywords": [],
       "text": "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|card|cards}; or choose a Unit, which is destroyed at the start of your next turn."
@@ -4497,13 +3616,13 @@
       "attack": 5,
       "health": 4,
       "keywords": [],
-      "text": "Activate ♾️: Tribute another Unit. Deal damage equal to {multiplier}× its Attack."
+      "text": "Activate ♾️: Tribute a Unit. Deal damage equal to {multiplier}× its Attack to any target."
     },
     "radiant": {
       "attack": 10,
       "health": 8,
       "keywords": [],
-      "text": "Activate ♾️: Tribute another Unit. Deal damage equal to {multiplier}× its Attack."
+      "text": "Activate ♾️: Tribute a Unit. Deal damage equal to {multiplier}× its Attack to any target."
     }
   },
   "classic-022": {
@@ -4530,24 +3649,24 @@
       {
         "key": "bounces",
         "base": 2,
-        "radiant": 3,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
       }
     ],
-    "loc": 32,
+    "loc": 29,
     "base": {
       "attack": 2,
       "health": 1,
       "keywords": [],
-      "text": "Cry: If this is in midlane, Tribute it. If you had {threshold} or more mana when you played this, Bounce {bounces|random enemy permanent|random enemy permanents}."
+      "text": "Cry: If this is in lane 3, Tribute it. If you had {threshold} or more mana when you played this, return {bounces|random enemy permanent|random enemy permanents} to hand."
     },
     "radiant": {
       "attack": 4,
       "health": 2,
       "keywords": [],
-      "text": "Cry: If this is in midlane, Tribute it. If you had {threshold} or more mana when you played this, Bounce {bounces|random enemy permanent|random enemy permanents}."
+      "text": "Cry: If this is in lane 3, Tribute it. If you had {threshold} or more mana when you played this, return {bounces|random enemy permanent|random enemy permanents} to hand."
     }
   },
   "classic-023": {
@@ -4573,7 +3692,7 @@
         "min": 1
       }
     ],
-    "loc": 30,
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Cry: Discard {discards|card|cards}.\nActivate: This turn, each card you play is replaced by a Book of Flame."
@@ -4622,7 +3741,7 @@
     "set": "Classic",
     "type": "Spell",
     "tags": [],
-    "rarity": "Epic",
+    "rarity": "Common",
     "token": false,
     "cost": 0,
     "params": [
@@ -4635,10 +3754,10 @@
         "min": 1
       }
     ],
-    "loc": 24,
+    "loc": 23,
     "base": {
       "keywords": [],
-      "text": "Exile every ({threshold}) Cost or less card on the field."
+      "text": "Exile every ({threshold}) Cost or less card on the field, in hands and in decks."
     },
     "radiant": {
       "keywords": [],
@@ -4673,7 +3792,7 @@
         "min": 1
       }
     ],
-    "loc": 13,
+    "loc": 17,
     "base": {
       "keywords": [],
       "text": "Draw {draw}. Then discard {discard|card|cards}."
@@ -4710,13 +3829,13 @@
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "Plague Counters placed on this are multiplied by {multiplier}."
+      "text": "Plague Tokens placed on this are multiplied by {multiplier}."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Plague Counters placed on this are multiplied by {multiplier}."
+      "text": "Plague Tokens placed on this are multiplied by {multiplier}."
     }
   },
   "classic-028": {
@@ -4726,7 +3845,7 @@
     "set": "Classic",
     "type": "Field Spell",
     "tags": [],
-    "rarity": "Legendary",
+    "rarity": "Epic",
     "token": false,
     "cost": 0,
     "params": [
@@ -4742,7 +3861,7 @@
     "loc": 24,
     "base": {
       "keywords": [],
-      "text": "Cry: Exile your deck. Discard your hand.\nAura: You may play cards from your graveyard that cost ({minCost}) or more. Cards that would go to your graveyard are exiled instead."
+      "text": "Cry: Exile your deck. Discard your hand.\nAura: You may play cards from your graveyard. Cards that would go to your graveyard are exiled instead."
     },
     "radiant": {
       "keywords": [],
@@ -4899,8 +4018,8 @@
       "text": "While this is in your hand: When your opponent targets one of your Units with a Spell, summon this and make it the new target."
     },
     "radiant": {
-      "attack": 2,
-      "health": 2,
+      "attack": 1,
+      "health": 1,
       "keywords": [
         {
           "kind": "Indestructible"
@@ -4929,14 +4048,14 @@
         "min": 1
       }
     ],
-    "loc": 8,
+    "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Return {cards|random card|random cards} from your graveyard to hand."
+      "text": "Return {cards|card|cards} from your graveyard to hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Return {cards|random card|random cards} from your graveyard or exile to hand."
+      "text": "Return {cards|card|cards} from your graveyard or exile to hand."
     }
   },
   "classic-035": {
@@ -5024,7 +4143,7 @@
     "tags": [],
     "rarity": "Epic",
     "token": false,
-    "cost": 1,
+    "cost": 0,
     "loc": 11,
     "base": {
       "keywords": [],
@@ -5082,7 +4201,7 @@
           "kind": "Animated"
         }
       ],
-      "text": "Animated\nReveals when the cards a player has played in a turn reach {plays}.\nOnce this has revealed: Whenever a player plays a card, draw {draw} and deal {damage} damage to the enemy hero."
+      "text": "Animated\nActivates when the cards a player has played in a turn reach {plays}: Summon this as a Unit.\nOnce this has activated: Whenever a player plays a card, draw {draw} and deal {damage} damage to the enemy hero."
     },
     "radiant": {
       "attack": 8,
@@ -5092,7 +4211,7 @@
           "kind": "Animated"
         }
       ],
-      "text": "Animated\nReveals when the cards a player has played in a turn reach {plays}.\nOnce this has revealed: Whenever a player plays a card, draw {draw} and deal {damage} damage to the enemy hero."
+      "text": "Animated\nActivates when the cards a player has played in a turn reach {plays}: Summon this as a Unit.\nOnce this has activated: Whenever a player plays a card, draw {draw} and deal {damage} damage to the enemy hero."
     }
   },
   "classic-039": {
@@ -5120,11 +4239,11 @@
     "loc": 33,
     "base": {
       "keywords": [],
-      "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy permanent with at least as many Plague Counters as its cost, steal it. Otherwise, draw a card for each Plague Counter on it."
+      "text": "Place {tokens|Plague Token|Plague Tokens} on a permanent. If it's an enemy permanent with at least as many Plague Tokens as its cost, steal it. Otherwise, draw a card for each Plague Token on it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy permanent with at least as many Plague Counters as its cost, steal it. Otherwise, draw a card for each Plague Counter on it."
+      "text": "Place {tokens|Plague Token|Plague Tokens} on a permanent. If it's an enemy permanent with at least as many Plague Tokens as its cost, steal it. Otherwise, draw a card for each Plague Token on it."
     }
   },
   "classic-040": {
@@ -5229,11 +4348,11 @@
     "loc": 25,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Units have +{stats}/+{stats} for each Plague Counter on them. Enemy Units have −{stats}/−{stats} for each Plague Counter on them.\nActivate: Place a Plague Counter on each of {tokens|random Unit|random Units}."
+      "text": "Aura: Your Units have +{stats}/+{stats} for each Plague Token on them. Enemy Units have −{stats}/−{stats} for each Plague Token on them.\nActivate: Place a Plague Token on each of {tokens|random Unit|random Units}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Units have +{stats}/+{stats} for each Plague Counter on them. Enemy Units have −{stats}/−{stats} for each Plague Counter on them.\nActivate: Place a Plague Counter on each of {tokens|random Unit|random Units}."
+      "text": "Aura: Your Units have +{stats}/+{stats} for each Plague Token on them. Enemy Units have −{stats}/−{stats} for each Plague Token on them.\nActivate: Place a Plague Token on each of {tokens|random Unit|random Units}."
     }
   },
   "classic-043": {
@@ -5247,7 +4366,7 @@
     ],
     "rarity": "Epic",
     "token": false,
-    "cost": 4,
+    "cost": 3,
     "params": [
       {
         "key": "mana",
@@ -5261,11 +4380,11 @@
     "loc": 35,
     "base": {
       "keywords": [],
-      "text": "Destroy all Units. Gain {mana} mana for each Plague Counter that was on them."
+      "text": "Destroy all Units. Gain {mana} mana for each Plague Token that was on them."
     },
     "radiant": {
       "keywords": [],
-      "text": "Destroy all Units. Gain {mana} mana for each Plague Counter that was on them. Then summon, under your control, each of those Units that had a Plague Counter from its owner's graveyard."
+      "text": "Destroy all Units. Gain {mana} mana for each Plague Token that was on them. Then summon, under your control, each of those Units that had a Plague Token from its owner's graveyard."
     }
   },
   "classic-044": {
@@ -5285,8 +4404,7 @@
         "radiant": 5,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       }
     ],
     "loc": 29,
@@ -5358,14 +4476,13 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 17,
     "base": {
       "keywords": [],
-      "text": "Draw until you have as many cards in hand as your opponent."
+      "text": "Draw until you have {multiplier}× as many cards in hand as your opponent."
     },
     "radiant": {
       "keywords": [],
@@ -5402,13 +4519,13 @@
       "attack": 3,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps reveals, return this to hand."
+      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps activates, return this to hand."
     },
     "radiant": {
       "attack": 6,
       "health": 4,
       "keywords": [],
-      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps reveals, return this to hand. It costs ({returnCost})."
+      "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps activates, return this to hand. It costs ({returnCost})."
     }
   },
   "classic-048": {
@@ -5426,13 +4543,13 @@
       "attack": 4,
       "health": 3,
       "keywords": [],
-      "text": "Cry: Choose a permanent. If its card takes more lines of code to implement than this one, destroy it."
+      "text": "Cry: Destroy a permanent whose card takes more lines of code to implement than this one."
     },
     "radiant": {
       "attack": 8,
       "health": 6,
       "keywords": [],
-      "text": "Cry: Destroy a permanent whose card takes more lines of code to implement than this one."
+      "text": "Cry: Destroy a permanent whose card takes more lines of code to implement than this one. Valid targets are highlighted."
     }
   },
   "classic-049": {
@@ -5558,18 +4675,17 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       }
     ],
     "loc": 16,
     "base": {
       "keywords": [],
-      "text": "Reveals when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw {draw}."
+      "text": "Activates when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw your deck."
+      "text": "Activates when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw your deck."
     }
   },
   "classic-053": {
@@ -5607,13 +4723,13 @@
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on another permanent.\nWhenever Plague Counters are placed on this, draw {draw}."
+      "text": "Cry: Place {tokens|Plague Token|Plague Tokens} on another permanent.\nWhenever Plague Tokens are placed on this, draw {draw}."
     },
     "radiant": {
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on another permanent.\nWhenever Plague Counters are placed on this, draw {draw}."
+      "text": "Cry: Place {tokens|Plague Token|Plague Tokens} on another permanent.\nWhenever Plague Tokens are placed on this, draw {draw}."
     }
   },
   "classic-054": {
@@ -5633,14 +4749,13 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ],
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "Trigger a Cry of one of your Units on the field or in your graveyard."
+      "text": "Trigger a Cry of one of your Units on the field or in your graveyard, {repeats|time|times}."
     },
     "radiant": {
       "keywords": [],
@@ -5672,11 +4787,11 @@
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Deal {damage} damage.\nEnd of turn: Become a random other Book."
+      "text": "Deal {damage} damage.\nEnd of turn: Become a different Book."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal {damage} damage.\nEnd of turn: Become a random other Radiant Book."
+      "text": "Deal {damage} damage.\nEnd of turn: Become a different Radiant Book."
     }
   },
   "classic-056": {
@@ -5696,8 +4811,7 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       }
     ],
     "loc": 26,
@@ -5792,13 +4906,13 @@
       "attack": 2,
       "health": 3,
       "keywords": [],
-      "text": "Cry: Deal damage equal to the number of Plague Counters on the field."
+      "text": "Cry: Deal damage equal to the number of Plague Tokens on the field."
     },
     "radiant": {
       "attack": 4,
       "health": 6,
       "keywords": [],
-      "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on this. Then deal damage equal to the number of Plague Counters on the field."
+      "text": "Cry: Place {tokens|Plague Token|Plague Tokens} on this. Then deal damage equal to the number of Plague Tokens on the field."
     }
   },
   "classic-060": {
@@ -5808,7 +4922,7 @@
     "set": "Classic",
     "type": "Spell",
     "tags": [],
-    "rarity": "Epic",
+    "rarity": "Rare",
     "token": false,
     "cost": 5,
     "loc": 6,
@@ -5830,7 +4944,7 @@
     "tags": [
       "Plague"
     ],
-    "rarity": "Rare",
+    "rarity": "Legendary",
     "token": false,
     "cost": 3,
     "params": [
@@ -5863,7 +4977,7 @@
           "kind": "Trample"
         }
       ],
-      "text": "Tribute 1, Rush, Trample\nCry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}."
+      "text": "Tribute 1, Rush, Trample\nCry: Place {tokens|Plague Token|Plague Tokens}. Draw {draw}."
     },
     "radiant": {
       "attack": 14,
@@ -5876,7 +4990,7 @@
           "kind": "Trample"
         }
       ],
-      "text": "Tribute 1, Rush, Trample\nCry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}."
+      "text": "Tribute 1, Rush, Trample\nCry: Place {tokens|Plague Token|Plague Tokens}. Draw {draw}."
     }
   },
   "classic-062": {
@@ -5894,11 +5008,11 @@
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "At the start of each player's turn: Destroy every permanent that player controls with a Plague Counter on it."
+      "text": "At the start of each player's turn: Destroy every permanent that player controls with a Plague Token on it."
     },
     "radiant": {
       "keywords": [],
-      "text": "At the start of your opponent's turn: Destroy every permanent they control with a Plague Counter on it."
+      "text": "At the start of your opponent's turn: Destroy every permanent they control with a Plague Token on it."
     }
   },
   "classic-063": {
@@ -5917,7 +5031,7 @@
       {
         "key": "tokens",
         "base": 1,
-        "radiant": 3,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -5925,7 +5039,7 @@
       {
         "key": "draw",
         "base": 1,
-        "radiant": 3,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -5934,11 +5048,11 @@
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Reveal. Place {tokens|Plague Counter|Plague Counters} on each permanent. Draw {draw}."
+      "text": "Start of turn: Place {tokens|Plague Token|Plague Tokens} on each permanent. Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Reveal. Place {tokens|Plague Counter|Plague Counters} on each permanent. Draw {draw}."
+      "text": "Start of turn: Place {tokens|Plague Token|Plague Tokens} on each permanent. Draw {draw}."
     }
   },
   "classic-064": {
@@ -5951,7 +5065,7 @@
     "rarity": "Rare",
     "token": false,
     "cost": 2,
-    "loc": 24,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "End of turn: Discard 2 cards.\nWhenever you discard cards, draw that many."
@@ -5981,14 +5095,14 @@
         "min": 1
       }
     ],
-    "loc": 22,
+    "loc": 16,
     "base": {
       "keywords": [],
-      "text": "End of turn: Flip a coin. On heads, this reveals: Recruit {recruits|card|cards}."
+      "text": "End of turn: Flip a coin. On heads, this activates: Recruit {recruits|card|cards}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Revealed.\nEnd of turn: Flip a coin. On tails, Recruit a card. On heads, this reveals: Recruit {recruits|card|cards}."
+      "text": "End of turn: Flip a coin. On tails, Recruit a card. On heads, this activates: Recruit {recruits|card|cards}."
     }
   },
   "classic-066": {
@@ -6008,7 +5122,7 @@
       "attack": 5,
       "health": 4,
       "keywords": [],
-      "text": "While this is in your hand: After you play a Unit, summon this.\nAfter you play a card, Bounce this."
+      "text": "While this is in your hand: After you play a Unit, summon this.\nAfter you play a card, return this to hand."
     },
     "radiant": {
       "attack": 10,
@@ -6018,7 +5132,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhile this is in your hand: After you play a Unit, summon this.\nAfter you play a card, Bounce this."
+      "text": "Rush\nWhile this is in your hand: After you play a Unit, summon this.\nAfter you play a card, return this to hand."
     }
   },
   "classic-067": {
@@ -6075,8 +5189,7 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       },
       {
         "key": "threshold",
@@ -6132,7 +5245,7 @@
           "kind": "Charge"
         }
       ],
-      "text": "Charge\nHas First Strike while it has a Plague Counter.\nHas +{attack} Attack for each Plague Counter on it."
+      "text": "Charge\nHas First Strike while it has a Plague Token.\nHas +{attack} Attack for each Plague Token on it."
     },
     "radiant": {
       "attack": 8,
@@ -6142,7 +5255,7 @@
           "kind": "Charge"
         }
       ],
-      "text": "Charge\nHas First Strike while it has a Plague Counter.\nHas +{attack} Attack for each Plague Counter on it."
+      "text": "Charge\nHas First Strike while it has a Plague Token.\nHas +{attack} Attack for each Plague Token on it."
     }
   },
   "classic-070": {
@@ -6171,11 +5284,11 @@
     "loc": 3,
     "base": {
       "keywords": [],
-      "text": "Place {tokens|Plague Counter|Plague Counters}."
+      "text": "Place {tokens|Plague Token|Plague Tokens}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Place {tokens|Plague Counter|Plague Counters}."
+      "text": "Place {tokens|Plague Token|Plague Tokens}."
     }
   },
   "classic-071": {
@@ -6215,11 +5328,11 @@
     "loc": 19,
     "base": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a Spell, Field Spell, Trap or Field Trap: Counter it."
+      "text": "Activates when your opponent plays a Spell, Field Spell, Trap or Field Trap: Counter it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a Spell, Field Spell, Trap or Field Trap: Steal it."
+      "text": "Activates when your opponent plays a Spell, Field Spell, Trap or Field Trap: Steal it."
     }
   },
   "classic-073": {
@@ -6288,14 +5401,14 @@
         "min": 1
       }
     ],
-    "loc": 12,
+    "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Activate: Place {tokens|Plague Counter|Plague Counters} on this.\nYou may play Units from your graveyard, paying with Plague Counters from this: each counter pays (1), and each such play spends at least 1 counter."
+      "text": "Cry: Place {tokens|Plague Token|Plague Tokens} on this.\nYou may play Units from your graveyard, paying with Plague Tokens from this: each token pays (1), and each such play spends at least 1 token."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activate: Place {tokens|Plague Counter|Plague Counters} on this.\nYou may play Units from your graveyard, paying with Plague Counters from this: each counter pays (1), and each such play spends at least 1 counter."
+      "text": "Cry: Place {tokens|Plague Token|Plague Tokens} on this.\nYou may play Units from your graveyard, paying with Plague Tokens from this: each token pays (1), and each such play spends at least 1 token."
     }
   },
   "classic-075": {
@@ -6307,7 +5420,7 @@
     "tags": [],
     "rarity": "Rare",
     "token": false,
-    "cost": 3,
+    "cost": 1,
     "params": [
       {
         "key": "divisor",
@@ -6337,7 +5450,7 @@
     "tags": [
       "Plague"
     ],
-    "rarity": "Rare",
+    "rarity": "Common",
     "token": false,
     "cost": 2,
     "params": [
@@ -6367,7 +5480,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nCry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}."
+      "text": "Rush\nCry: Place {tokens|Plague Token|Plague Tokens}. Draw {draw}."
     },
     "radiant": {
       "attack": 8,
@@ -6377,7 +5490,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nCry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}."
+      "text": "Rush\nCry: Place {tokens|Plague Token|Plague Tokens}. Draw {draw}."
     }
   },
   "classic-077": {
@@ -6455,11 +5568,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "Activate ♾️: Remove a Plague Counter from a permanent. If it's an enemy permanent, exile it. If it's your backrow card, draw {draw}. If it's your Unit, it attacks a random enemy {attacks|time|times}."
+      "text": "Activate ♾️: Remove a Plague Token from a permanent. If it's an enemy permanent, exile it. If it's your backrow card, draw {draw}. If it's your Unit, it attacks a random enemy {attacks|time|times}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activate ♾️: Remove a Plague Counter from a permanent. If it's an enemy permanent, fuse it onto a card of yours of its type on your field, in your hand or in your deck, or exile it if you have none. If it's your backrow card, draw {draw}. If it's your Unit, it attacks a random enemy {attacks|time|times}."
+      "text": "Activate ♾️: Remove a Plague Token from a permanent. If it's an enemy permanent, fuse it onto a card of yours of its type on your field, in your hand or in your deck, or exile it if you have none. If it's your backrow card, draw {draw}. If it's your Unit, it attacks a random enemy {attacks|time|times}."
     }
   },
   "classic-079": {
@@ -6488,24 +5601,16 @@
         "better": "up",
         "step": 1,
         "min": 0
-      },
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
       }
     ],
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "Draw {draw}. They cost ({discount}) less. Then exile each of them that costs more than ({threshold})."
+      "text": "Draw {draw}. They cost (1) less. Then exile each of them that costs more than ({threshold})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw {draw}. They cost ({discount}) less. Then exile each of them that costs more than ({threshold})."
+      "text": "Draw {draw}. They cost (1) less. Then exile each of them that costs more than ({threshold})."
     }
   },
   "classic-080": {
@@ -6514,15 +5619,13 @@
     "name": "BOOM! Big Max",
     "set": "Classic",
     "type": "Unit",
-    "tags": [
-      "Acclaimed"
-    ],
+    "tags": [],
     "rarity": "Legendary",
     "token": false,
     "cost": 4,
     "loc": 4,
     "base": {
-      "attack": 13,
+      "attack": 26,
       "health": 8,
       "keywords": [
         {
@@ -6535,7 +5638,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Tribute 3, Rush, Trample, Indestructible"
+      "text": "Tribute 2, Rush, Trample, Indestructible"
     },
     "radiant": {
       "attack": 26,
@@ -6551,7 +5654,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Tribute 3, Charge, Trample, Indestructible"
+      "text": "Tribute 2, Charge, Trample, Indestructible"
     }
   },
   "classic-081": {
@@ -6655,8 +5758,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 10,
-        "radiant": 20,
+        "base": 11,
+        "radiant": 22,
         "better": "up",
         "step": 2,
         "min": 1
@@ -6781,11 +5884,11 @@
     "loc": 28,
     "base": {
       "keywords": [],
-      "text": "This enters with X Plague Counters on it.\nAura: Counter every card played whose cost equals the number of Plague Counters on this."
+      "text": "This enters with X Plague Tokens on it.\nAura: Counter every card played whose cost equals the number of Plague Tokens on this."
     },
     "radiant": {
       "keywords": [],
-      "text": "This enters with X Plague Counters on it.\nAura: Counter every card your opponent plays whose cost equals the number of Plague Counters on this."
+      "text": "This enters with X Plague Tokens on it.\nAura: Counter every card your opponent plays whose cost equals the number of Plague Tokens on this."
     }
   },
   "classic-088": {
@@ -6805,18 +5908,17 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       }
     ],
-    "loc": 17,
+    "loc": 16,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Reveal.\nAura: Enemy Units have −X Attack, where X is {multiplier}× the number of Units your opponent controls.\nWhen your opponent controls no Units, Tribute this."
+      "text": "Aura: Enemy Units have −X Attack, where X is {multiplier}× the number of Units your opponent controls.\nWhen your opponent controls no Units, Tribute this."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Reveal.\nAura: Enemy Units have 0 Attack.\nWhen your opponent controls no Units, Tribute this."
+      "text": "Aura: Enemy Units have 0 Attack.\nWhen your opponent controls no Units, Tribute this."
     }
   },
   "classic-089": {
@@ -6883,7 +5985,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nEach quest you complete offers rewards; the reward you choose sets your next quest."
+      "text": "Indestructible\nQuest: Draw 2 cards. Each quest you complete offers rewards; the reward you choose sets your next quest."
     },
     "radiant": {
       "keywords": [
@@ -6891,29 +5993,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nEach quest you complete gives every reward it offers, and you follow every path."
-    }
-  },
-  "classic-t-glitch": {
-    "id": "classic-t-glitch",
-    "index": "T-glitch",
-    "name": "Glitch",
-    "set": "Classic",
-    "type": "Spell",
-    "tags": [
-      "Token"
-    ],
-    "rarity": "Token",
-    "token": true,
-    "cost": 0,
-    "loc": 3,
-    "base": {
-      "keywords": [],
-      "text": ""
-    },
-    "radiant": {
-      "keywords": [],
-      "text": ""
+      "text": "Indestructible\nQuest: Draw 2 cards. Each quest you complete gives every reward it offers, and you follow every path."
     }
   },
   "classicplus-001": {
@@ -6929,11 +6009,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Reveals when an enemy Unit attacks your hero: Exile all Units. Lock this zone."
+      "text": "Activates when an enemy Unit attacks your hero: Exile all Units. Lock this zone."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when an enemy Unit attacks your hero: Exile all enemy Units. Lock this zone."
+      "text": "Activates when an enemy Unit attacks your hero: Exile all enemy Units. Lock this zone."
     }
   },
   "classicplus-002": {
@@ -6951,11 +6031,11 @@
     "loc": 30,
     "base": {
       "keywords": [],
-      "text": "Reveals when an enemy Unit attacks your hero: Fill your board with random Felinor Units. Give them Taunt."
+      "text": "Activates when an enemy Unit attacks your hero: Fill your board with random Felinor Units. Give them Taunt."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when an enemy Unit attacks your hero: Fill your board with random Radiant Felinor Units. Give them Taunt."
+      "text": "Activates when an enemy Unit attacks your hero: Fill your board with random Radiant Felinor Units. Give them Taunt."
     }
   },
   "classicplus-003": {
@@ -6993,13 +6073,13 @@
       "attack": 1,
       "health": 6,
       "keywords": [],
-      "text": "End of turn: Place {tokens|Plague Counter|Plague Counters} on this.\nDeath: Deal {damage} damage to a random enemy for each Plague Counter on this."
+      "text": "End of turn: Place {tokens|Plague Token|Plague Tokens} on this.\nDeath: Deal {damage} damage to a random enemy for each Plague Token on this."
     },
     "radiant": {
       "attack": 2,
       "health": 12,
       "keywords": [],
-      "text": "End of turn: Place {tokens|Plague Counter|Plague Counters} on this.\nDeath: Deal {damage} damage to a random enemy for each Plague Counter on this."
+      "text": "End of turn: Place {tokens|Plague Token|Plague Tokens} on this.\nDeath: Deal {damage} damage to a random enemy for each Plague Token on this."
     }
   },
   "classicplus-004": {
@@ -7131,7 +6211,7 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Cry and start of turn: Summon a Right-house defender or a Wrong-House Attacker at random."
+      "text": "Cry and start of turn: Summon a Right-house defender (2 in 3) or a Wrong-House Attacker (1 in 3)."
     },
     "radiant": {
       "keywords": [],
@@ -7155,8 +6235,7 @@
         "radiant": 4,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "base"
+        "min": 1
       },
       {
         "key": "draw",
@@ -7170,11 +6249,11 @@
     "loc": 18,
     "base": {
       "keywords": [],
-      "text": "Nerf {cards|random card|random cards} in your opponent's deck. Draw {draw}."
+      "text": "Degrade {cards|random card|random cards} in your opponent's deck. Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Nerf every card in your opponent's deck. Draw {draw}."
+      "text": "Degrade every card in your opponent's deck. Draw {draw}."
     }
   },
   "classicplus-009": {
@@ -7371,24 +6450,14 @@
     "printedRarity": "Legendary",
     "token": true,
     "cost": 1,
-    "params": [
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
-      }
-    ],
     "loc": 7,
     "base": {
       "keywords": [],
-      "text": "Steal a random Unit from your opponent's deck and put it in your hand. It costs ({setCost})."
+      "text": "Steal a random Unit from your opponent's deck and put it in your hand. It costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal a random Unit from your opponent's deck and put it in your hand. It costs ({setCost}) and becomes Radiant."
+      "text": "Steal a random Unit from your opponent's deck and put it in your hand. It costs (0) and becomes Radiant."
     }
   },
   "classicplus-012-4": {
@@ -7464,7 +6533,7 @@
     "index": "12.6",
     "name": "Frozen Wastes",
     "set": "Classic+",
-    "type": "Spell",
+    "type": "Field Spell",
     "tags": [
       "Pancake",
       "Token"
@@ -7476,11 +6545,11 @@
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Destroy all Units. Exile the top card of your deck for each one destroyed."
+      "text": "Cry: Destroy all Units. Exile the top card of your deck for each one destroyed."
     },
     "radiant": {
       "keywords": [],
-      "text": "Destroy all Units. Exile the top card of your opponent's deck for each one destroyed."
+      "text": "Cry: Destroy all Units. Exile the top card of your opponent's deck for each one destroyed."
     }
   },
   "classicplus-012-7": {
@@ -7618,16 +6687,24 @@
         "better": "down",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
       }
     ],
-    "loc": 9,
+    "loc": 10,
     "base": {
       "keywords": [],
       "text": "The next Spell you play gains \"After this resolves, return it to hand. This can't cost less than ({floor}).\""
     },
     "radiant": {
       "keywords": [],
-      "text": "The next Spell you play gains \"After this resolves, return it to hand. This can't cost less than ({floor}).\""
+      "text": "The next Spell you play gains \"After this resolves, return it to hand. This can't cost less than ({floor}).\" Draw {draw}."
     }
   },
   "classicplus-015": {
@@ -7651,15 +6728,6 @@
         "better": "up",
         "step": 1,
         "min": 1
-      },
-      {
-        "key": "tokens",
-        "base": 1,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
       }
     ],
     "loc": 11,
@@ -7669,7 +6737,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random keyword|random keywords}."
+      "text": "Summon 3 Rush Tokens. Each gains {keywords|random keyword|random keywords}."
     }
   },
   "classicplus-016": {
@@ -7693,15 +6761,6 @@
         "better": "up",
         "step": 1,
         "min": 1
-      },
-      {
-        "key": "tokens",
-        "base": 1,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
       }
     ],
     "loc": 11,
@@ -7711,7 +6770,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random keyword|random keywords}."
+      "text": "Summon 3 Rush Tokens. Each gains {keywords|random keyword|random keywords}."
     }
   },
   "classicplus-017": {
@@ -7735,15 +6794,6 @@
         "better": "up",
         "step": 2,
         "min": 1
-      },
-      {
-        "key": "tokens",
-        "base": 1,
-        "radiant": 3,
-        "better": "up",
-        "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
       }
     ],
     "loc": 11,
@@ -7753,7 +6803,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon {tokens|Rush Token|Rush Tokens}. Each gains {keywords|random keyword|random keywords}."
+      "text": "Summon 3 Rush Tokens. Each gains {keywords|random keyword|random keywords}."
     }
   },
   "classicplus-018": {
@@ -7799,14 +6849,14 @@
       "classicplus-019-4",
       "classicplus-019-5"
     ],
-    "loc": 31,
+    "loc": 30,
     "base": {
       "keywords": [],
-      "text": "Summon the five-stack: Top Loser, Jungle Loser, Mid Loser, Support Loser and Bot Loser, into your unit zones 1 to 5 in that order, skipping any occupied or Locked zone. Trigger Mid Loser's Cry."
+      "text": "Summon the five-stack: Top Loser, Jungle Loser, Mid Loser, Support Loser and Bot Loser, into your unit zones 1 to 5 in that order. An occupied or Locked zone is skipped."
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon the Radiant five-stack: Radiant Top Loser, Radiant Jungle Loser, Radiant Mid Loser, Radiant Support Loser and Radiant Bot Loser, into your unit zones 1 to 5 in that order, skipping any occupied or Locked zone. Trigger Mid Loser's Cry."
+      "text": "Summon the Radiant five-stack: Radiant Top Loser, Radiant Jungle Loser, Radiant Mid Loser, Radiant Support Loser and Radiant Bot Loser, into your unit zones 1 to 5 in that order. An occupied or Locked zone is skipped."
     }
   },
   "classicplus-019-1": {
@@ -7919,14 +6969,6 @@
         "better": "down",
         "step": 1,
         "min": 1
-      },
-      {
-        "key": "oppMana",
-        "base": 1,
-        "radiant": 1,
-        "better": "down",
-        "step": 1,
-        "min": 1
       }
     ],
     "loc": 18,
@@ -7934,7 +6976,7 @@
       "attack": 5,
       "health": 5,
       "keywords": [],
-      "text": "Cry: Flip a coin. Heads (Fed): This gets +{heads}/+{heads}. Tails (Int): This gets −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
+      "text": "Cry: Flip a coin. Heads (Fed): This gets +{heads}/+{heads}. Tails (Int): This gets −{tails}/−{tails} and your opponent gains 1 mana next turn."
     },
     "radiant": {
       "attack": 10,
@@ -7945,7 +6987,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\nCry: Flip a coin. Heads (Fed): This gets +{heads}/+{heads}. Tails (Int): This gets −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
+      "text": "Lucky 1\nCry: Flip a coin. Heads (Fed): This gets +{heads}/+{heads}. Tails (Int): This gets −{tails}/−{tails} and your opponent gains 1 mana next turn."
     }
   },
   "classicplus-019-4": {
@@ -8132,12 +7174,12 @@
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Reveals when an enemy would be healed: For the rest of this turn, healing on enemies deals that much Pierce damage to them instead."
+      "text": "Activates when an enemy would be healed: For the rest of this turn, healing on enemies deals that much Pierce damage to them instead."
     },
     "radiant": {
       "type": "Field Trap",
       "keywords": [],
-      "text": "Reveals when an enemy would be healed: From now on, healing on enemies deals that much Pierce damage to them instead."
+      "text": "Activates when an enemy would be healed: From now on, healing on enemies deals that much Pierce damage to them instead."
     }
   },
   "classicplus-023": {
@@ -8168,14 +7210,6 @@
         "better": "up",
         "step": 1,
         "min": 1
-      },
-      {
-        "key": "setCost",
-        "base": 1,
-        "radiant": 1,
-        "better": "down",
-        "step": 1,
-        "min": 0
       }
     ],
     "loc": 24,
@@ -8185,7 +7219,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {cards|random card|random cards} to your hand. Each may be a token. Give each Brittle {brittle}. Each costs ({setCost})."
+      "text": "Add {cards|random card|random cards} to your hand. Each may be a token. Give each Brittle {brittle}. Each costs (1)."
     }
   },
   "classicplus-024": {
@@ -8355,7 +7389,7 @@
     "set": "Classic+",
     "type": "Spell",
     "tags": [],
-    "rarity": "Mythic",
+    "rarity": "Epic",
     "token": false,
     "cost": 3,
     "params": [
@@ -8366,24 +7400,16 @@
         "better": "up",
         "step": 1,
         "min": 1
-      },
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
       }
     ],
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "Discover a card from the board your last game ended with. It costs ({setCost})."
+      "text": "Discover a card from the board your last game ended with. It costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {cards|random card|random cards} from the board your last game ended with to your hand. Each costs ({setCost})."
+      "text": "Add {cards|random card|random cards} from the board your last game ended with to your hand. Each costs (0)."
     }
   },
   "classicplus-030": {
@@ -8397,7 +7423,7 @@
     ],
     "rarity": "Epic",
     "token": false,
-    "cost": 4,
+    "cost": 3,
     "loc": 33,
     "base": {
       "attack": 3,
@@ -8425,11 +7451,11 @@
     "loc": 21,
     "base": {
       "keywords": [],
-      "text": "Activate: Choose a card in your hand. Fuse a random card into it. Its cost doesn't change."
+      "text": "Cry and end of turn: Choose a card in your hand. Fuse a random card into it. Its cost doesn't change."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activate: Choose a card in your hand. Fuse a random Radiant card into it. Its cost doesn't change."
+      "text": "Cry and end of turn: Choose a card in your hand. Fuse a random Radiant card into it. Its cost doesn't change."
     }
   },
   "classicplus-032": {
@@ -8527,14 +7553,6 @@
         "better": "up",
         "step": 8,
         "min": 1
-      },
-      {
-        "key": "damage",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
       }
     ],
     "loc": 9,
@@ -8544,7 +7562,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal {damage} damage to all enemy Units. Repeat until a Unit dies, up to {rounds|time|times}."
+      "text": "Deal 1 damage to all enemy Units. Repeat until a Unit dies, up to {rounds|time|times}."
     }
   },
   "classicplus-033": {
@@ -8691,8 +7709,7 @@
     "set": "Classic+",
     "type": "Unit",
     "tags": [
-      "Quickdraw",
-      "Acclaimed"
+      "Quickdraw"
     ],
     "rarity": "Legendary",
     "token": false,
@@ -8727,17 +7744,24 @@
     "name": "Solarius",
     "set": "Classic+",
     "type": "Unit",
-    "tags": [
-      "Catalyst"
-    ],
+    "tags": [],
     "rarity": "Epic",
     "token": false,
     "cost": 2,
     "refs": [
-      "classicplus-038-1",
-      "classicplus-038"
+      "classicplus-038-1"
     ],
-    "loc": 9,
+    "params": [
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 10,
     "base": {
       "attack": 3,
       "health": 2,
@@ -8747,7 +7771,7 @@
           "n": 2
         }
       ],
-      "text": "Spell Damage +2\nDeath: Shuffle a Solarius Prime into your deck."
+      "text": "Spell Damage +2\nCry: Draw {draw}.\nDeath: Shuffle a Solarius-Prime into your deck."
     },
     "radiant": {
       "attack": 6,
@@ -8758,17 +7782,16 @@
           "n": 5
         }
       ],
-      "text": "Spell Damage +5\nDeath: Shuffle a Radiant Solarius Prime into your deck."
+      "text": "Spell Damage +5\nCry: Draw {draw}.\nDeath: Shuffle a Radiant Solarius-Prime into your deck."
     }
   },
   "classicplus-038-1": {
     "id": "classicplus-038-1",
     "index": "38.1",
-    "name": "Solarius Prime",
+    "name": "Solarius-Prime",
     "set": "Classic+",
     "type": "Unit",
     "tags": [
-      "Prime",
       "Token"
     ],
     "rarity": "Token",
@@ -8819,18 +7842,28 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
-    "loc": 16,
+    "params": [
+      {
+        "key": "growth",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 15,
     "base": {
       "attack": 1,
       "health": 4,
       "keywords": [],
-      "text": "Start of turn: Place a Plague Counter on this.\nDeath: Add a random Book to your hand for each Plague Counter on this."
+      "text": "Death: Add N random Books to your hand. N starts at 1.\nStart of turn: N increases by {growth}."
     },
     "radiant": {
       "attack": 2,
       "health": 8,
       "keywords": [],
-      "text": "Start of turn: Place a Plague Counter on this.\nDeath: Add a random Radiant Book to your hand for each Plague Counter on this."
+      "text": "Death: Add N random Radiant Books to your hand. N starts at 1.\nStart of turn: N increases by {growth}."
     }
   },
   "classicplus-040": {
@@ -8846,11 +7879,11 @@
     "loc": 39,
     "base": {
       "keywords": [],
-      "text": "Choose one: Military, Education, Culture, or Healthcare."
+      "text": "Choose one: Military, Education, Culture or Healthcare.\nMilitary: Your Units on the field, in your hand and in your deck get +2X Attack and Rush.\nEducation: Shuffle 2X random Radiant Books into your deck. They have Cast on draw and aim at enemies when they harm and at your side when they help.\nCulture: Each card on your field, in your hand and in your deck has a 10X% chance to become Radiant.\nHealthcare: Your Units on the field, in your hand and in your deck get +2X Health and Armor X."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: Military, Education, Culture, or Healthcare. Greater effects."
+      "text": "Choose one: Military, Education, Culture or Healthcare.\nMilitary: Your Units on the field, in your hand and in your deck get +5X Attack and Rush.\nEducation: Shuffle 5X random Radiant Books into your deck. They have Cast on draw and aim at enemies when they harm and at your side when they help.\nCulture: Each card on your field, in your hand and in your deck has a 25X% chance to become Radiant.\nHealthcare: Your Units on the field, in your hand and in your deck get +7X Health and Armor 2X."
     }
   },
   "classicplus-041": {
@@ -8887,14 +7920,18 @@
     "rarity": "Legendary",
     "token": false,
     "cost": 1,
+    "refs": [
+      "core-t-coin",
+      "classicplus-042-1"
+    ],
     "loc": 3,
     "base": {
       "keywords": [],
-      "text": "Offer an easy, a medium, and a hard problem, each with a random reward."
+      "text": "Offer an Easy, a Medium and a Hard problem, each showing a random reward from its list. Choose one and answer it. If you're right, gain its reward.\nEasy (addition): 3 The Coins; a random (2) Cost KY card; a random Legendary card, which costs (0); or 2 random Books.\nMedium (double integrals): 2 random (4) Cost cards, which cost (1); 5 random Books; 5 random KY cards; or fill your hand with random Books.\nHard (proofs, Markov chains, statistics, PDEs, linear algebra): KY's Gift, which costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Offer an easy, a medium, and a hard problem, each with a random Radiant reward."
+      "text": "Offer an Easy, a Medium and a Hard problem, each showing a random reward from its list. Choose one and answer it. If you're right, gain its reward.\nEasy (addition): 3 The Coins; a random (2) Cost KY card; a random Legendary card, which costs (0); or 2 random Books.\nMedium (double integrals): 2 random (4) Cost cards, which cost (1); 5 random Books; 5 random KY cards; or fill your hand with random Books.\nHard (proofs, Markov chains, statistics, PDEs, linear algebra): KY's Gift, which costs (0).\nThe rewards are Radiant."
     }
   },
   "classicplus-042-1": {
@@ -8935,24 +7972,16 @@
         "better": "up",
         "step": 1,
         "min": 1
-      },
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
       }
     ],
-    "loc": 11,
+    "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Book, a random KY card, a random Legendary card and a random (4) Cost card to your hand. They cost ({setCost})."
+      "text": "Start of turn: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Book, a random KY card, a random Legendary card and a random (4) Cost card to your hand. They cost (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Radiant Book, a random Radiant KY card, a random Radiant Legendary card and a random Radiant (4) Cost card to your hand. They cost ({setCost})."
+      "text": "Start of turn: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Radiant Book, a random Radiant KY card, a random Radiant Legendary card and a random Radiant (4) Cost card to your hand. They cost (0)."
     }
   },
   "classicplus-043": {
@@ -9032,8 +8061,7 @@
     "set": "Classic+",
     "type": "Unit",
     "tags": [
-      "Felinor",
-      "Catalyst"
+      "Felinor"
     ],
     "rarity": "Legendary",
     "token": false,
@@ -9044,6 +8072,14 @@
     ],
     "params": [
       {
+        "key": "armor",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
         "key": "aura",
         "base": 1,
         "radiant": 2,
@@ -9052,16 +8088,19 @@
         "min": 1
       }
     ],
-    "loc": 26,
+    "loc": 27,
     "base": {
       "attack": 4,
       "health": 4,
       "keywords": [
         {
           "kind": "Rush"
+        },
+        {
+          "kind": "Cleave"
         }
       ],
-      "text": "Rush\nAura: Your other Felinors have +{aura}/+{aura}.\nDeath: Shuffle a Felinor Flagbearer Prime into your deck."
+      "text": "Rush, Cleave\nCry: Your hero gains +{armor} Armor for the rest of the game.\nAura: Your other Felinors have +{aura}/+{aura}.\nDeath: Shuffle a Felinor Flagbearer Prime into your deck."
     },
     "radiant": {
       "attack": 8,
@@ -9069,9 +8108,12 @@
       "keywords": [
         {
           "kind": "Rush"
+        },
+        {
+          "kind": "Cleave"
         }
       ],
-      "text": "Rush\nAura: Your Felinors have +{aura}/+{aura}.\nDeath: Shuffle a Felinor Flagbearer Prime into your deck."
+      "text": "Rush, Cleave\nCry: Your hero gains +{armor} Armor for the rest of the game.\nAura: Your Felinors have +{aura}/+{aura}.\nDeath: Shuffle a Felinor Flagbearer Prime into your deck."
     }
   },
   "classicplus-046-1": {
@@ -9082,7 +8124,6 @@
     "type": "Unit",
     "tags": [
       "Felinor",
-      "Prime",
       "Token"
     ],
     "rarity": "Token",
@@ -9163,28 +8204,18 @@
     "rarity": "Legendary",
     "token": false,
     "cost": 1,
-    "params": [
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
-      }
-    ],
     "loc": 8,
     "base": {
       "attack": 0,
       "health": 3,
       "keywords": [],
-      "text": "Can't be in Defense Position.\nDeath: Add a random Jlockheed card to your hand. It costs ({setCost})."
+      "text": "Can't be in Defense Position.\nDeath: Add a random Jlockheed card to your hand. It costs (0)."
     },
     "radiant": {
       "attack": 0,
       "health": 6,
       "keywords": [],
-      "text": "Death: Add a random Radiant Jlockheed card to your hand. It costs ({setCost})."
+      "text": "Death: Add a random Radiant Jlockheed card to your hand. It costs (0)."
     }
   },
   "classicplus-049": {
@@ -9365,19 +8396,24 @@
     "refs": [
       "core-t-rush"
     ],
-    "loc": 20,
+    "params": [
+      {
+        "key": "tokens",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 7,
     "base": {
       "keywords": [],
-      "text": "Summon 1-2 Rush Tokens."
+      "text": "Summon {tokens|Rush Token|Rush Tokens}."
     },
     "radiant": {
-      "keywords": [
-        {
-          "kind": "Lucky",
-          "n": 1
-        }
-      ],
-      "text": "Lucky 1\nSummon 1-2 Radiant Rush Tokens."
+      "keywords": [],
+      "text": "Summon {tokens|Radiant Rush Token|Radiant Rush Tokens}."
     }
   },
   "classicplus-054": {
@@ -9400,24 +8436,16 @@
         "better": "up",
         "step": 1,
         "min": 1
-      },
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
       }
     ],
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Add {books|random Book|random Books} to your hand. Each costs ({setCost}) and is Temporary."
+      "text": "Add {books|random Book|random Books} to your hand. Each costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {books|random Radiant Book|random Radiant Books} to your hand. Each costs ({setCost}) and is Temporary."
+      "text": "Add {books|random Radiant Book|random Radiant Books} to your hand. Each costs (0)."
     }
   },
   "classicplus-055": {
@@ -9474,7 +8502,7 @@
         "min": 1
       }
     ],
-    "loc": 5,
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Your opponent discards {discards|card|cards}."
@@ -9614,14 +8642,14 @@
         "min": 1
       }
     ],
-    "loc": 13,
+    "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Activate: Add {apples|All Purpose Apple|All Purpose Apples} to your hand."
+      "text": "Cry and start of turn: Add {apples|All Purpose Apple|All Purpose Apples} to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activate: Add {apples|Radiant All Purpose Apple|Radiant All Purpose Apples} to your hand."
+      "text": "Cry and start of turn: Add {apples|Radiant All Purpose Apple|Radiant All Purpose Apples} to your hand."
     }
   },
   "classicplus-061": {
@@ -9647,24 +8675,16 @@
         "better": "up",
         "step": 1,
         "min": 1
-      },
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
       }
     ],
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "Death: Add {cards|Stockpile|Stockpiles} to your hand. Each costs ({setCost})."
+      "text": "Death: Add {cards|Stockpile|Stockpiles} to your hand. Each costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Death: Add {cards|Radiant Stockpile|Radiant Stockpiles} to your hand. Each costs ({setCost})."
+      "text": "Death: Add {cards|Radiant Stockpile|Radiant Stockpiles} to your hand. Each costs (0)."
     }
   },
   "classicplus-062": {
@@ -9704,22 +8724,22 @@
     "cost": 2,
     "params": [
       {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
+        "key": "fruits",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
         "step": 1,
-        "min": 0
+        "min": 1
       }
     ],
-    "loc": 16,
+    "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Add a random Fruit to your hand. It costs ({setCost})."
+      "text": "Start of turn: Add {fruits|random Fruit|random Fruits} to your hand. Each costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Add a random Radiant Fruit to your hand. It costs ({setCost})."
+      "text": "Start of turn: Add {fruits|random Radiant Fruit|random Radiant Fruits} to your hand. Each costs (0)."
     }
   },
   "classicplus-064": {
@@ -9785,11 +8805,18 @@
     "rarity": "Rare",
     "token": false,
     "cost": 1,
+    "refs": [
+      "classicplus-065-1",
+      "classicplus-065-2",
+      "classicplus-065-3",
+      "classicplus-065-4",
+      "classicplus-065-5"
+    ],
     "params": [
       {
         "key": "grapes",
-        "base": 2,
-        "radiant": 2,
+        "base": 3,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1
@@ -9798,7 +8825,7 @@
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Add {grapes|Grape|Grapes} to your hand."
+      "text": "Add {grapes|Grape|Grapes} to your hand, each rolled: Rotten Grape 12%, Normal Grape 60%, Large Grape 20%, Golden Grape 7%, Mythic Grape 1%."
     },
     "radiant": {
       "keywords": [
@@ -9807,7 +8834,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\nAdd {grapes|Radiant Grape|Radiant Grapes} to your hand."
+      "text": "Lucky 1\nAdd {grapes|Radiant Grape|Radiant Grapes} to your hand, each rolled: Rotten Grape 12%, Normal Grape 60%, Large Grape 20%, Golden Grape 7%, Mythic Grape 1%."
     }
   },
   "classicplus-065-1": {
@@ -9824,24 +8851,14 @@
     "printedRarity": "Common",
     "token": true,
     "cost": 1,
-    "params": [
-      {
-        "key": "loss",
-        "base": 5,
-        "radiant": 1,
-        "better": "down",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 5,
     "base": {
       "keywords": [],
-      "text": "Your hero loses {loss} health."
+      "text": "Your hero loses 5 health."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero loses {loss} health."
+      "text": "Your hero loses 1 health."
     }
   },
   "classicplus-065-2": {
@@ -9870,15 +8887,7 @@
       {
         "key": "draw",
         "base": 1,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      },
-      {
-        "key": "discount",
-        "base": 1,
-        "radiant": 1,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -9887,11 +8896,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Deal {amount} damage to an enemy or heal an ally {amount}.\nDraw {draw}. Reduce its cost by ({discount})."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs (1) less."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal {amount} damage to an enemy or heal an ally {amount}.\nDraw {draw}. Reduce their cost by ({discount})."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs (1) less."
     }
   },
   "classicplus-065-3": {
@@ -9924,24 +8933,16 @@
         "better": "up",
         "step": 1,
         "min": 1
-      },
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
       }
     ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs ({setCost})."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs ({setCost})."
+      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs (0)."
     }
   },
   "classicplus-065-4": {
@@ -9965,7 +8966,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Make a card on your side of the field or in your hand Radiant, and the cards next to it."
+      "text": "Make a card on your side of the field or in your hand Radiant, and the cards next to it (beside it in its row, or beside it in your hand)."
     }
   },
   "classicplus-065-5": {
@@ -9982,24 +8983,14 @@
     "printedRarity": "Mythic",
     "token": true,
     "cost": 0,
-    "params": [
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
-      }
-    ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Replace your hand with random Mythic cards. They cost ({setCost})."
+      "text": "Replace your hand with random Mythic cards. They cost (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Replace your hand with random Radiant Mythic cards. They cost ({setCost})."
+      "text": "Replace your hand with random Radiant Mythic cards. They cost (0)."
     }
   },
   "classicplus-066": {
@@ -10014,6 +9005,13 @@
     "rarity": "Rare",
     "token": false,
     "cost": 3,
+    "refs": [
+      "classicplus-065-1",
+      "classicplus-065-2",
+      "classicplus-065-3",
+      "classicplus-065-4",
+      "classicplus-065-5"
+    ],
     "params": [
       {
         "key": "grapes",
@@ -10027,7 +9025,7 @@
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Add {grapes|Grape|Grapes} to your hand."
+      "text": "Add {grapes|Grape|Grapes} to your hand, each rolled: Rotten Grape 12%, Normal Grape 60%, Large Grape 20%, Golden Grape 7%, Mythic Grape 1%."
     },
     "radiant": {
       "keywords": [
@@ -10036,7 +9034,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\nAdd {grapes|Radiant Grape|Radiant Grapes} to your hand."
+      "text": "Lucky 1\nAdd {grapes|Radiant Grape|Radiant Grapes} to your hand, each rolled: Rotten Grape 12%, Normal Grape 60%, Large Grape 20%, Golden Grape 7%, Mythic Grape 1%."
     }
   },
   "classicplus-067": {
@@ -10091,14 +9089,6 @@
         "better": "up",
         "step": 1,
         "min": 1
-      },
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
       }
     ],
     "loc": 11,
@@ -10108,7 +9098,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Cry: Add {fruits|random Fruit|random Fruits} to your hand. Each costs ({setCost}).\nAura: Fruits you play are Radiant."
+      "text": "Cry: Add {fruits|random Fruit|random Fruits} to your hand. Each costs (0).\nAura: Fruits you play are Radiant."
     }
   },
   "classicplus-069": {
@@ -10132,7 +9122,7 @@
         "health": 3
       },
       "keywords": [],
-      "text": "This is a 3X/3X.\nCry: Buff this X times."
+      "text": "This is a 3X/3X.\nCry: Upgrade this X times."
     },
     "radiant": {
       "attack": 0,
@@ -10142,7 +9132,7 @@
         "health": 7
       },
       "keywords": [],
-      "text": "This is a 7X/7X.\nCry: Buff this 2X times."
+      "text": "This is a 7X/7X.\nCry: Upgrade this 2X times."
     }
   },
   "classicplus-070": {
@@ -10168,11 +9158,11 @@
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "Start of turn and end of turn: Buff {cards|random other card|random other cards} in your hand or on your side of the field. Nerf {cards|random card|random cards} in your opponent's hand or on their side of the field."
+      "text": "Start of turn and end of turn: Upgrade {cards|random other card|random other cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn and end of turn: Buff {cards|random other card|random other cards} in your hand or on your side of the field. Nerf {cards|random card|random cards} in your opponent's hand or on their side of the field."
+      "text": "Start of turn and end of turn: Upgrade {cards|random other card|random other cards} in your hand or on your side of the field. Degrade {cards|random card|random cards} in your opponent's hand or on their side of the field."
     }
   },
   "classicplus-071": {
@@ -10200,11 +9190,11 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Buff a card {times|time|times}. It may be a card in your hand."
+      "text": "Upgrade a card {times|time|times}. It may be a card in your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Buff a card {times|time|times}. It may be a card in your hand."
+      "text": "Upgrade a card {times|time|times}. It may be a card in your hand."
     }
   },
   "classicplus-072": {
@@ -10232,11 +9222,11 @@
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "Nerf a permanent {times|time|times}."
+      "text": "Degrade a permanent {times|time|times}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Nerf a card {times|time|times}. It may be a card in your hand."
+      "text": "Degrade a card {times|time|times}. It may be a card in your hand."
     }
   },
   "classicplus-073": {
@@ -10259,11 +9249,11 @@
     "loc": 3,
     "base": {
       "keywords": [],
-      "text": "One random effect: Add 5 random Fruits to your hand, which cost (0); add 3 random Books to your hand, which cost (0); destroy all enemy permanents; add 3 random Classic cards to your hand, which cost (0); Buff every card in your hand and deck twice; fuse a random card into each card in your deck, each keeping its cost; Nerf every card on your opponent's field and in their hand three times; summon a Classic Golem; replace your deck with random Call to Chaos cards, which cost (0); cast a random Call to Chaos."
+      "text": "One random effect: Add 5 random Fruits to your hand, which cost (0); add 3 random Books to your hand, which cost (0); destroy all enemy permanents; add 3 random Classic cards to your hand, which cost (0); Upgrade every card in your hand and deck twice; fuse a random card into each card in your deck, each keeping its cost; Degrade every card on your opponent's field and in their hand three times; summon a Classic Golem; replace your deck with random Call to Chaos cards, which cost (0); cast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Three different random effects, resolved in the order listed: Add 5 random Fruits to your hand, which cost (0); add 3 random Books to your hand, which cost (0); destroy all enemy permanents; add 3 random Classic cards to your hand, which cost (0); Buff every card in your hand and deck twice; fuse a random card into each card in your deck, each keeping its cost; Nerf every card on your opponent's field and in their hand three times; summon a Classic Golem; replace your deck with random Call to Chaos cards, which cost (0); cast a random Call to Chaos."
+      "text": "Three different random effects, resolved in the order listed: Add 5 random Fruits to your hand, which cost (0); add 3 random Books to your hand, which cost (0); destroy all enemy permanents; add 3 random Classic cards to your hand, which cost (0); Upgrade every card in your hand and deck twice; fuse a random card into each card in your deck, each keeping its cost; Degrade every card on your opponent's field and in their hand three times; summon a Classic Golem; replace your deck with random Call to Chaos cards, which cost (0); cast a random Call to Chaos."
     }
   },
   "classicplus-073-1": {
@@ -10279,7 +9269,7 @@
     "printedRarity": "Legendary",
     "token": true,
     "cost": 4,
-    "loc": 20,
+    "loc": 11,
     "base": {
       "attack": 10,
       "health": 10,
@@ -10294,7 +9284,7 @@
           "kind": "Trample"
         }
       ],
-      "text": "Rush, First Strike, Trample\nAfter this attacks a Unit, it transforms into a random Classic or Classic+ Unit. If this destroyed that Unit, the new Unit may attack again this turn."
+      "text": "Rush, First Strike, Trample\nAfter this attacks a Unit, it transforms into a random Classic or Classic+ Unit. If it destroyed that Unit, the new Unit may attack again this turn."
     },
     "radiant": {
       "attack": 20,
@@ -10304,13 +9294,16 @@
           "kind": "Rush"
         },
         {
+          "kind": "First Strike"
+        },
+        {
           "kind": "Trample"
         },
         {
           "kind": "Divine Shield"
         }
       ],
-      "text": "Rush, Trample, Divine Shield\nAfter this attacks a Unit, it transforms into a random Radiant Classic or Classic+ Unit. If this destroyed that Unit, the new Unit may attack again this turn."
+      "text": "Rush, First Strike, Trample, Divine Shield\nAfter this attacks a Unit, it transforms into a random Classic or Classic+ Unit. If it destroyed that Unit, the new Unit may attack again this turn."
     }
   },
   "classicplus-074": {
@@ -10346,19 +9339,19 @@
       "keywords": [
         {
           "kind": "Brittle",
-          "n": 2
+          "n": 4
         }
       ],
-      "text": "Brittle 2\nEvery {plays|card|cards} your opponent plays, fuse the last into this and gain +{brittleGain} Brittle."
+      "text": "Brittle 4\nEvery {plays|card|cards} your opponent plays, the last one is fused into this after it resolves, and this gains +{brittleGain} Brittle."
     },
     "radiant": {
       "keywords": [
         {
           "kind": "Brittle",
-          "n": 4
+          "n": 10
         }
       ],
-      "text": "Brittle 4\nEvery {plays|card|cards} your opponent plays, fuse a Radiant copy of the last into this and gain +{brittleGain} Brittle."
+      "text": "Brittle 10\nEvery {plays|card|cards} your opponent plays, a Radiant copy of the last one is fused into this, and this gains +{brittleGain} Brittle."
     }
   },
   "classicplus-075": {
@@ -10420,14 +9413,6 @@
         "better": "up",
         "step": 1,
         "min": 1
-      },
-      {
-        "key": "setCost",
-        "base": 0,
-        "radiant": 0,
-        "better": "down",
-        "step": 1,
-        "min": 0
       }
     ],
     "loc": 17,
@@ -10437,7 +9422,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Cast on draw: Add {cards|random Radiant Classic or Classic+ card|random Radiant Classic or Classic+ cards} to your hand. Each costs ({setCost})."
+      "text": "Cast on draw: Add {cards|random Radiant Classic or Classic+ card|random Radiant Classic or Classic+ cards} to your hand. Each costs (0)."
     }
   },
   "classicplus-076": {
@@ -10524,7 +9509,7 @@
     "set": "Classic+",
     "type": "Spell",
     "tags": [],
-    "rarity": "Epic",
+    "rarity": "Rare",
     "token": false,
     "cost": 2,
     "params": [
@@ -10557,14 +9542,24 @@
     "rarity": "Legendary",
     "token": false,
     "cost": 2,
-    "loc": 13,
+    "params": [
+      {
+        "key": "cards",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 12,
     "base": {
       "keywords": [],
-      "text": "End of turn: Add a random AI Generated card to your hand. It costs (0)."
+      "text": "End of turn: Add {cards|random AI generated card|random AI generated cards} to your hand. Each costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Add a random Radiant AI Generated card to your hand. It costs (0)."
+      "text": "End of turn: Add {cards|random Radiant AI generated card|random Radiant AI generated cards} to your hand. Each costs (0)."
     }
   },
   "classicplus-t-ai-01": {
@@ -10763,11 +9758,11 @@
     "loc": 16,
     "base": {
       "keywords": [],
-      "text": "Reveals when your opponent plays their 3rd card in a turn: After it resolves, their turn ends."
+      "text": "Activates when your opponent plays their 3rd card in a turn: After it resolves, their turn ends."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when your opponent plays their 2nd card in a turn: After it resolves, their turn ends."
+      "text": "Activates when your opponent plays their 2nd card in a turn: After it resolves, their turn ends."
     }
   },
   "classicplus-t-ai-09": {
@@ -10786,11 +9781,11 @@
     "loc": 27,
     "base": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a Spell that targets one of your Units: Counter it."
+      "text": "Activates when your opponent plays a Spell that targets one of your Units: Counter it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when your opponent plays a Spell that targets you or one of your cards: Counter it. Draw 1."
+      "text": "Activates when your opponent plays a Spell that targets you or one of your cards: Counter it. Draw 1."
     }
   },
   "classicplus-t-ai-10": {
@@ -10809,11 +9804,11 @@
     "loc": 9,
     "base": {
       "keywords": [],
-      "text": "End of turn: Buff a random card in your hand."
+      "text": "End of turn: Upgrade a random card in your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Buff 2 random cards in your hand."
+      "text": "End of turn: Upgrade 2 random cards in your hand."
     }
   }
 }
