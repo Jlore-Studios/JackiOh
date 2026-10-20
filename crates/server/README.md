@@ -443,13 +443,16 @@ A match is its `(seed, decks, boards, log)` (§9.3), and the server checks that 
 (`api::results`) and the fold of a finished match for its game record (`api::game_records`). When a
 fold refuses an action the log holds, the match goes on as before (a rebuild keeps the state it
 folded to, a finished match keeps the result it recorded), and `bug_reports.rs` logs it as the
-alert `bug.found` and, with `CREATE_ISSUES_TOKEN` set, files one GitHub issue for the night bot:
-titled `Patch v0.3.Y: match <id> …`, labelled `BUG_REPORT_LABELS` (`patch`, `bot:build`,
-`difficulty:hard`, `priority:high`). It files once per match per process, at most
-`BUG_REPORTS_PER_WINDOW` in `BUG_REPORT_WINDOW_MS`, and nothing when an issue whose title names the
-match exists already. The repository is public and the match may still be live, so the issue names
-the match, the build, the catalog and each refused row's seq, seat and action type, and never a
-refusal's text, a card or an instance id.
+alert `bug.found` and, with `CREATE_ISSUES_TOKEN` set, files one GitHub issue for the night bot
+per failure signature (`bug_reports::Signature`: where it was found, the build, the catalog and
+the first refused action's type), titled `Patch v0.3.Y: match <first id> … (<signature>)` and
+labelled `BUG_REPORT_LABELS` (`patch`, `bot:build`, `difficulty:hard`, `priority:high`). A later
+match with the signature is added to that issue's body, once per match per process, up to
+`BUG_REPORT_LISTED_MATCHES`; a process opens at most `BUG_REPORTS_PER_WINDOW` issues in
+`BUG_REPORT_WINDOW_MS`, and none when an issue whose title holds the signature exists already
+(its later matches are only logged). The repository is public and the match may still be live,
+so the issue names each match, the build, the catalog and each refused row's seq, seat and action
+type, and never a refusal's text, a card or an instance id.
 
 A live action whose `reduce` panics (R1253000) is filed the same way, as `FoundIn::Live`
 (`FoundIn::DuosLive` in co-op): the issue names the match, the seq the action would have taken, its
