@@ -2125,7 +2125,14 @@ class Deliverer:
                       "Comment `approve` to have it built (the "
                       f"`{LABEL_BUILD}` label works too), and the bot rates its difficulty when "
                       "it plans it. Comment `reject` to close it without building it.")
-            issue = self.gh.create_issue(title, body + footer, [LABEL_SUGGESTION])
+            labels = [LABEL_SUGGESTION]
+            # Its class sets its priority (#1409); a class with none, or no class, sets nothing.
+            kind = str(entry.get("class") or "")
+            level = self.cfg.suggestion_priorities.get(kind)
+            if level:
+                labels.append(f"priority:{level}")
+                footer += f"\n\nClass: `{kind}` → `priority:{level}`; relabel to change it."
+            issue = self.gh.create_issue(title, body + footer, labels)
             made.append(issue.get("number"))
         self.log.append(f"opened suggestions: {made}")
 

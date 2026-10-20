@@ -522,6 +522,116 @@ export function openPack(token: string, pack: string): Promise<OpenedPackRespons
 }
 
 // ---------------------------------------------------------------------------------------------
+// The Jlore shop and the token picker (SPEC §14.1, §14.5, §14.6; #1309): spending what the
+// economy pays. Every number shown comes from these answers, never a client constant
+// (CLAUDE.md rule 7): the wallet, the pack price, both bars and their sizes, the cycle's next
+// step and the Chase Shard bar. A refusal rejects with `ApiRequestError` and changes nothing.
+// ---------------------------------------------------------------------------------------------
+
+/** `GET /api/wallet`: the caller's Jlore balance. */
+export type WalletResponse = { jlore: number };
+
+export function getWallet(token: string): Promise<WalletResponse> {
+  return apiRequest<WalletResponse>("/api/wallet", { token });
+}
+
+/** `POST /api/packs/buy` with `{ pack }`: the pack, the wallet after it and the packs of its kind held. */
+export type BoughtPackResponse = { pack: string; jlore: number; unopened: number };
+
+export function buyPack(token: string, pack: string): Promise<BoughtPackResponse> {
+  return apiRequest<BoughtPackResponse>("/api/packs/buy", { method: "POST", token, body: { pack } });
+}
+
+/** One token bar's points and size, as `GET /api/tokens` states them. */
+export type TokenBarState = { points: number; size: number };
+
+/** The cosmetic cycle's next step, as `nextStep` spells it: a tier token, or a cosmetic pack. */
+export type CosmeticTokenStep = "rare" | "epic" | "cosmeticPack";
+
+/**
+ * `GET /api/tokens`: both bars' points and sizes, the cycle's next step and the tokens held
+ * (R1305004). `POST /api/tokens/redeem-card` and `POST /api/tokens/redeem-cosmetic` answer the
+ * same after they spend.
+ */
+export type TokenBarsResponse = {
+  cardBar: TokenBarState;
+  cosmeticBar: TokenBarState;
+  nextStep: CosmeticTokenStep;
+  tokens: { card: number; cosmeticRare: number; cosmeticEpic: number; cosmeticPack: number };
+};
+
+export function getTokens(token: string): Promise<TokenBarsResponse> {
+  return apiRequest<TokenBarsResponse>("/api/tokens", { token });
+}
+
+/** `POST /api/tokens/redeem-card` with `{ cardId }`, answering the bars and tokens after it. */
+export function redeemCardToken(token: string, cardId: string): Promise<TokenBarsResponse> {
+  return apiRequest<TokenBarsResponse>("/api/tokens/redeem-card", { method: "POST", token, body: { cardId } });
+}
+
+/** A cosmetic token's tier, as `POST /api/tokens/redeem-cosmetic` parses `token` (R1305003). */
+export type CosmeticTokenTier = "Rare" | "Epic";
+
+/**
+ * `POST /api/tokens/redeem-cosmetic` with `{ token, cosmeticId, cardId? }`, answering the bars
+ * and tokens after it. A per-card cosmetic names its card; an account one sends none.
+ */
+export function redeemCosmeticToken(
+  token: string,
+  cosmeticToken: CosmeticTokenTier,
+  cosmeticId: string,
+  cardId?: string,
+): Promise<TokenBarsResponse> {
+  return apiRequest<TokenBarsResponse>("/api/tokens/redeem-cosmetic", {
+    method: "POST",
+    token,
+    body: cardId === undefined ? { token: cosmeticToken, cosmeticId } : { token: cosmeticToken, cosmeticId, cardId },
+  });
+}
+
+/** `GET /api/cosmetic-packs`: the Chase Shard bar and the cosmetic packs unopened (R1306002). */
+export type CosmeticPacksResponse = { shardBar: TokenBarState; unopened: number };
+
+export function getCosmeticPacks(token: string): Promise<CosmeticPacksResponse> {
+  return apiRequest<CosmeticPacksResponse>("/api/cosmetic-packs", { token });
+}
+
+/** What one cosmetic pack slot granted (R1306000, R1306001): an unowned cosmetic, or bar points. */
+export type CosmeticSlotGrant =
+  | {
+      kind: "cosmetic";
+      cosmeticId: string;
+      cosmeticRarity: PrintedRarity;
+      /** The card a per-card cosmetic goes on, null for an account cosmetic. */
+      cardId: string | null;
+      /** Whether the account lacked that card, so the slot grants it too. */
+      cardGranted: boolean;
+    }
+  | { kind: "bars" };
+
+/** One slot of an opened cosmetic pack: the rarity it rolled and what that granted. */
+export type CosmeticSlot = { rarity: PrintedRarity; grant: CosmeticSlotGrant };
+
+/** `POST /api/cosmetic-packs/open`: its slots in order, the shard bar after it and the packs left. */
+export type OpenedCosmeticPackResponse = { slots: CosmeticSlot[]; shardBar: TokenBarState; unopened: number };
+
+export function openCosmeticPack(token: string): Promise<OpenedCosmeticPackResponse> {
+  return apiRequest<OpenedCosmeticPackResponse>("/api/cosmetic-packs/open", { method: "POST", token, body: {} });
+}
+
+/**
+ * `POST /api/cosmetic-packs/chase` with `{ cosmeticId, cardId? }`, answering the bar and packs
+ * after it emptied the full bar. A per-card cosmetic names its card; an account one sends none.
+ */
+export function buyChase(token: string, cosmeticId: string, cardId?: string): Promise<CosmeticPacksResponse> {
+  return apiRequest<CosmeticPacksResponse>("/api/cosmetic-packs/chase", {
+    method: "POST",
+    token,
+    body: cardId === undefined ? { cosmeticId } : { cosmeticId, cardId },
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
 // Saved decks and trios (SPEC §9.4, R250–R256). Ids are minted HERE, by the client
 // (`crypto.randomUUID()`), so every save is an idempotent `PUT` that can be retried after a dropped
 // connection without making a second deck (R256).

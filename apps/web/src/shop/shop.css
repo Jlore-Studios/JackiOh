@@ -1,0 +1,79 @@
+/* The Jlore shop, the token picker and the cosmetic packs (#1309): three panels in the account
+   page's tavern frame, wearing its brass and parchment. The rows stack for a phone screen; the
+   reveal reuses the pack scene's slot hooks (`packs.css` draws the rarity glow), and the
+   cosmetic previews draw `CardFace` at a hand size. */
+
+.shop-panel,
+.token-panel,
+.cosmetic-packs-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.shop-heading {
+  margin: 0;
+}
+
+.shop-subheading {
+  margin: 8px 0 0;
+}
+
+.shop-wallet {
+  font-size: 19px;
+  color: var(--tavern-gold-pale);
+}
+
+.shop-row,
+.token-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(201, 149, 63, 0.3);
+  border-radius: 10px;
+  background: rgba(239, 224, 191, 0.05);
+}
+
+.shop-row > span:first-child,
+.token-row > span:first-child {
+  flex: 1 1 12rem;
+}
+
+.token-bar,
+.token-next,
+.token-held,
+.cosmetic-packs-held,
+.shard-bar {
+  margin: 0;
+}
+
+.token-bar,
+.shard-bar {
+  font-size: 17px;
+}
+
+.token-preview {
+  flex-basis: 100%;
+  max-width: 11rem;
+}
+
+.token-card-choice {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.cosmetic-packs-panel .pack-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pack-slot__card {
+  margin: 4px 0 0;
+}

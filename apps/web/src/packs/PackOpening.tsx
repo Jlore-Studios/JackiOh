@@ -315,7 +315,19 @@ function wordsOf(cause: unknown): string {
 
 type SceneState = { pack: string; left: number };
 
-export default function PackOpening({ token }: { token: string }): ReactElement {
+/**
+ * The panel. `revision` is how many times the page has asked it to read the packs again (another
+ * panel bought one, #1309); `onChanged` tells the page an opening changed the account.
+ */
+export default function PackOpening({
+  token,
+  revision = 0,
+  onChanged,
+}: {
+  token: string;
+  revision?: number;
+  onChanged?: () => void;
+}): ReactElement {
   const [info, setInfo] = useState<PacksResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [scene, setScene] = useState<SceneState | null>(null);
@@ -339,7 +351,7 @@ export default function PackOpening({ token }: { token: string }): ReactElement 
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, revision]);
 
   const begin = (next: SceneState | null): void => {
     setScene(next);
@@ -362,6 +374,7 @@ export default function PackOpening({ token }: { token: string }): ReactElement 
         (next) => {
           setOpened(next);
           setInfo((before) => (before === null ? before : withOpening(before, next)));
+          onChanged?.();
         },
         (cause: unknown) => {
           setOpenError(wordsOf(cause));
