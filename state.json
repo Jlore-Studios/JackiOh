@@ -6576,6 +6576,13 @@
     "1382": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T12:53:09Z",
+        "difficulty": "hard",
+        "provider": "claude-2",
+        "tier": "strong",
+        "why": "it changes the AI's search (crates/ai/src/simulate.rs, reply.rs), which the rule rates hard"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
