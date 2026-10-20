@@ -1,0 +1,78 @@
+# The title retcon (#1372, part 8 of #1360): every issue and pull request, closed ones included,
+# retitled once to the new form, `Patch: <what it does>`, or a shipped card change's `Patch
+# v<version>: …` (bot/harness/titles.py, `retcon`). A person runs it, by hand only:
+#
+#   1. a dry run (the default): it writes nothing and prints and uploads the CSV (number, kind,
+#      state, old title, new title, label), which a person reviews;
+#   2. `write` with `numbers` set to a few threads, to see that no one is emailed;
+#   3. `write` alone, with the bots halted (`/harness halt` on the status issue, and Squishy's),
+#      since their sweeps read titles.
+#
+# Titles a workflow or a bot finds by their text, the `production merge` threads, the status issue
+# and the tools' own titles are left alone (`titles.left_alone`). Nothing fires on a title edit,
+# and an edit made with this workflow's token starts no workflow. It paces its writes
+# (`--pause`) under GitHub's limits on writes, so the whole run takes a few hours; it is idempotent,
+# so a run that stops part way is run again.
+name: title retcon
+
+on:
+  workflow_dispatch:
+    inputs:
+      write:
+        description: "Write the titles (unchecked: a dry run that only prints the CSV)"
+        type: boolean
+        default: false
+      numbers:
+        description: "Only these threads, comma-separated (empty: every one)"
+        type: string
+        default: ""
+      limit:
+        description: "At most this many threads (0: no limit)"
+        type: string
+        default: "0"
+
+permissions: {}
+
+concurrency:
+  group: title-retcon
+  cancel-in-progress: false
+
+jobs:
+  retcon:
+    name: title retcon
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: the titles
+        working-directory: bot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WRITE: ${{ inputs.write }}
+          NUMBERS: ${{ inputs.numbers }}
+          LIMIT: ${{ inputs.limit }}
+        run: |
+          set -euo pipefail
+          write=()
+          if [ "$WRITE" = true ]; then
+            write=(--write)
+          fi
+          python3 -m harness.titles retcon "${write[@]}" --numbers "$NUMBERS" --limit "${LIMIT:-0}" --csv "$RUNNER_TEMP/title-retcon.csv"
+          echo "----- title-retcon.csv -----"
+          cat "$RUNNER_TEMP/title-retcon.csv"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: title-retcon
+          path: ${{ runner.temp }}/title-retcon.csv
+          retention-days: 30
