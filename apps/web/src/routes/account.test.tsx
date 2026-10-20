@@ -10,9 +10,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { usernameTestid } from "../auth/testids.ts";
 import {
+  getCollection,
+  getCosmeticPacks,
+  getOwnedCosmetics,
   getOwnRank,
   getPacks,
   getProfile,
+  getTokens,
+  getWallet,
   previewUsername,
   saveUsername,
   type MeResponse,
@@ -24,11 +29,25 @@ import { SESSION_STORAGE_KEY, readSession } from "../net/session.ts";
 import AccountRoute, { accountTestid, formatWinRate, packsShown, resetSigningOutForTests, statusWords } from "./account.tsx";
 import { packsInfo } from "../packs/fixtures.ts";
 import { packTestid } from "../packs/packs.ts";
+import { collectionOf, cosmeticPacksInfo, ownedCosmeticsOf, tokenBars, walletInfo } from "../shop/fixtures.ts";
+import { shopTestid } from "../shop/shop.ts";
 import { devToolsTestid } from "./DevTools.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
-  return { ...actual, getProfile: vi.fn(), getOwnRank: vi.fn(), getPacks: vi.fn(), previewUsername: vi.fn(), saveUsername: vi.fn() };
+  return {
+    ...actual,
+    getProfile: vi.fn(),
+    getOwnRank: vi.fn(),
+    getPacks: vi.fn(),
+    getWallet: vi.fn(),
+    getTokens: vi.fn(),
+    getCollection: vi.fn(),
+    getOwnedCosmetics: vi.fn(),
+    getCosmeticPacks: vi.fn(),
+    previewUsername: vi.fn(),
+    saveUsername: vi.fn(),
+  };
 });
 
 vi.mock("../net/gate.ts", async (importOriginal) => {
@@ -577,6 +596,12 @@ describe("#1308 the card packs on the account page", () => {
     await import("../packs/PackOpening.tsx");
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     vi.mocked(getPacks).mockResolvedValue(packsInfo());
+    // #1309 mounts beside the opening: the shop, the picker and the cosmetic packs read too.
+    vi.mocked(getWallet).mockResolvedValue(walletInfo());
+    vi.mocked(getTokens).mockResolvedValue(tokenBars());
+    vi.mocked(getCollection).mockResolvedValue(collectionOf());
+    vi.mocked(getOwnedCosmetics).mockResolvedValue(ownedCosmeticsOf());
+    vi.mocked(getCosmeticPacks).mockResolvedValue(cosmeticPacksInfo());
     const { unmount } = render(<AccountRoute token={TOKEN} me={me({ isDev: true })} />);
     const toggle = screen.getByTestId(accountTestid.packsToggle);
     expect(toggle).toHaveAttribute("aria-expanded", "false");
@@ -593,6 +618,30 @@ describe("#1308 the card packs on the account page", () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     render(<AccountRoute token={TOKEN} me={me({ isDev: false })} />);
     expect(screen.queryByTestId(accountTestid.packsToggle)).toBeNull();
+  });
+
+  it("#1309 opening the toggle mounts the shop, the token picker and the cosmetic packs", async () => {
+    // The panels are lazy chunks: warm them so the toggle-to-panel wait measures the mount, not the transform.
+    await import("../packs/PackOpening.tsx");
+    await import("../shop/Shop.tsx");
+    await import("../shop/TokenPicker.tsx");
+    await import("../shop/CosmeticPacks.tsx");
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getPacks).mockResolvedValue(packsInfo());
+    vi.mocked(getWallet).mockResolvedValue(walletInfo());
+    vi.mocked(getTokens).mockResolvedValue(tokenBars());
+    vi.mocked(getCollection).mockResolvedValue(collectionOf());
+    vi.mocked(getOwnedCosmetics).mockResolvedValue(ownedCosmeticsOf());
+    vi.mocked(getCosmeticPacks).mockResolvedValue(cosmeticPacksInfo());
+    render(<AccountRoute token={TOKEN} me={me({ isDev: true })} />);
+
+    await userEvent.click(screen.getByTestId(accountTestid.packsToggle));
+    expect(await screen.findByTestId(shopTestid.panel)).toBeInTheDocument();
+    expect(await screen.findByTestId(shopTestid.tokenPanel)).toBeInTheDocument();
+    expect(await screen.findByTestId(shopTestid.packsPanel)).toBeInTheDocument();
+    expect(getWallet).toHaveBeenCalledWith(TOKEN);
+    expect(getTokens).toHaveBeenCalledWith(TOKEN);
+    expect(getCosmeticPacks).toHaveBeenCalledWith(TOKEN);
   });
 
   it("packsShown: an active account once the economy is live, before it a dev account alone", () => {

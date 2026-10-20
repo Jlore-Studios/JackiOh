@@ -35,7 +35,9 @@
 // CARD PACKS (#1308, SPEC §14.3, §14.4): an active account gets "Card packs" behind a toggle too: the
 // odds and pity counters the server states, the packs held, and the scene that opens one
 // (`packs/PackOpening.tsx`). The economy is not live (`ECONOMY_LIVE`, §14.12), so until it is only a
-// dev account is offered it (`packsShown`).
+// dev account is offered it (`packsShown`). The same toggle mounts what the economy pays for
+// them (#1309, `shop/`): the Jlore shop, the token picker and the cosmetic packs with the Chase
+// Shard bar.
 //
 // DELETING THE ACCOUNT. "Delete my account" asks first: the player types DELETE, then confirms.
 // `DELETE /api/account` does the deleting, at the server, which decides what goes and answers 204.
@@ -81,8 +83,12 @@ import "../auth/tavern.css";
 import "./account.css";
 
 // This file is in the entry chunk, so the pack scene, its fx director and its card faces load only
-// once the panel is opened.
+// once the panel is opened. The shop, the token picker and the cosmetic packs ride the same
+// chunk: they mount beside the opening, behind the same toggle.
 const PackOpening = lazy(() => import("../packs/PackOpening.tsx"));
+const Shop = lazy(() => import("../shop/Shop.tsx"));
+const TokenPicker = lazy(() => import("../shop/TokenPicker.tsx"));
+const CosmeticPacks = lazy(() => import("../shop/CosmeticPacks.tsx"));
 
 export const accountTestid = {
   screen: "account-screen",
@@ -592,6 +598,9 @@ function AccountPacks({ open, onToggle, token }: { open: boolean; onToggle: () =
             }
           >
             <PackOpening token={token} />
+            <Shop token={token} />
+            <TokenPicker token={token} />
+            <CosmeticPacks token={token} />
           </Suspense>
         </div>
       ) : null}
