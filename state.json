@@ -21254,6 +21254,12 @@
         "number": 1397,
         "title": "Patch v0.3.Y: a 1v1 room code is no way past a block, as a co-op room's already is",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-20T11:50:02Z",
+        "number": 1396,
+        "title": "Patch v0.3.Y: the AI's hidden cards keep only where they sit, so a raised Ascent level no longer gives away a hidden Reach the Summit",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
