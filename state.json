@@ -7363,7 +7363,25 @@
       "started_at": "2026-10-20T13:05:03Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1
+      "verdict_rounds": 1,
+      "votes": {
+        "approvals": [
+          "muse"
+        ],
+        "builder": "muse",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "39427235695",
+            "tier": "medium"
+          }
+        ],
+        "sha": "23485dd047a5c06cf697eda0eedaeccc76d657e0",
+        "tiers": {
+          "muse": "medium"
+        }
+      }
     },
     "1415": {
       "action": "revise",
