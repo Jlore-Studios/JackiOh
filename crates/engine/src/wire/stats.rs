@@ -150,6 +150,21 @@ pub struct GameSummary {
 /// R378: how a development record's id begins, and a live one's (a match id) never does.
 pub const DEV_RECORD_ID_PREFIX: &str = "dev:";
 
+/// R1284000: the start of a forced run's seed series. `cargo jackioh stats --force <id>`
+/// files under `dev-force-<id>`, for `stats compare` and `stats report`, never for
+/// `stats-import`.
+pub const FORCED_SERIES_PREFIX: &str = "dev-force-";
+
+/// R1284000: the forced series a development record was filed under, or `None` when it is
+/// not a forced run's. A development id is `dev:<patch>:<series>:<n>`, so the series is the
+/// middle; a record whose id is not shaped like one is not forced.
+pub fn forced_series(record: &GameRecord) -> Option<&str> {
+    let seed = record.id.strip_prefix(DEV_RECORD_ID_PREFIX)?;
+    let seed = seed.strip_prefix(record.patch.as_str())?.strip_prefix(':')?;
+    let (series, _) = seed.rsplit_once(':')?;
+    series.starts_with(FORCED_SERIES_PREFIX).then_some(series)
+}
+
 /// R376: one game, filed by where, how and by whom it was played.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
@@ -2574,6 +2589,29 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn r1284000_forced_series_is_some_only_for_a_record_filed_under_a_forced_series() {
+        let forced = GameRecord {
+            id: "dev:v0.2.5:dev-force-core-090:1".to_string(),
+            patch: "v0.2.5".to_string(),
+            ..record()
+        };
+        assert_eq!(forced_series(&forced), Some("dev-force-core-090"));
+        let plain = GameRecord {
+            id: "dev:v0.2.5:dev:1".to_string(),
+            patch: "v0.2.5".to_string(),
+            ..record()
+        };
+        assert_eq!(forced_series(&plain), None);
+        assert_eq!(forced_series(&record()), None);
+        let mismatched = GameRecord {
+            id: "dev:run:1".to_string(),
+            patch: "v0.2.5".to_string(),
+            ..record()
+        };
+        assert_eq!(forced_series(&mismatched), None);
     }
 
     #[test]
