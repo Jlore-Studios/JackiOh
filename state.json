@@ -6607,6 +6607,13 @@
     "1351": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T01:25:57Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "fails easy at once: a new ruling (R1351000) and spec \u00a79.4/\u00a79.5 edits; the code itself stays in crates/server"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
