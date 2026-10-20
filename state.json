@@ -7146,7 +7146,9 @@
     },
     "1385": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6283176060"
+      ],
       "difficulty_by": {
         "at": "2026-10-20T04:23:51Z",
         "difficulty": "hard",
@@ -7179,9 +7181,7 @@
       "started_at": "2026-10-20T04:18:00Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6283176060"
-      ]
+      "taken_asks": []
     },
     "1388": {
       "action": "revise",
