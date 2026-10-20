@@ -232,6 +232,14 @@ routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlo
                         when /api/auth/me says isDev; the server decides every grant, and the panel shows
                         its answer or refusal; /account's "Manage sign-in & account" shows every account
                         its account secret ID, hidden until asked for, with a copy button
+packs/                  #1308: the card packs on /account (SPEC §14.3, §14.4; `PackOpening.tsx`, lazy-loaded from
+                        routes/account.tsx, shown to an active account once `ECONOMY_LIVE` and before it to a dev
+                        one): the odds and pity counters `GET /api/packs` states, the packs held, and the scene
+                        that opens one (`POST /api/packs/open`): a tear or swipe, the best rarity tinting the
+                        glow, cards turned one at a time (Epic and above on a hold), what each became, a
+                        stinger and fx per rarity, skip-all, batch opening, Reduce motion showing the results
+                        at once; the server decided every slot before anything animates (`packs.ts` holds the
+                        pure model and the test ids, `fixtures.ts` the fixture responses, `packs.css` the look)
 ```
 
 A practice game offers the account's complete saved decks by name, read from `GET /api/decks`.
