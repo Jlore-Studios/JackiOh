@@ -16,7 +16,7 @@ available (`providers.availability`: switched on, its secret set, inside its hou
 is forced, under its limits):
 
 - **build, revise, fix**: the first free seat in the lane's tier order (#695: Muse before
-  agy before Sonnet, GPT before Devin), on the weakest seat of a subscription that meets the
+  agy before GPT before Sonnet), on the weakest seat of a subscription that meets the
   tier; ties break by the load balancer (`balance`: the most room under its caps, then the
   fewest runs held) and then the usage order (`priority`), with `build_last` ones such as
   claude-2 after all of them. The subscription that planned the item builds only when no other
@@ -342,7 +342,7 @@ def builder_seat(pool: Pool, providers: list[Provider], difficulty: str, *,
                  part: bool = False, avoid: str = "", audit_tier: str = "",
                  spread: Balance | None = None) -> tuple[Seat | None, str]:
     """Who builds an item of `difficulty`: the first free seat in the lane's tier order
-    (#695: Muse before agy before Sonnet, GPT before Devin), on its weakest seat that meets
+    (#695: Muse before agy before GPT before Sonnet), on its weakest seat that meets
     the tier; with a note when that seat is above the tier, saying why (none of that tier is
     free, or the tier order puts this one first). Among subscriptions whose seat is the same
     model (the Claude accounts' Sonnet or Opus), the load balancer (`spread`) goes before the
