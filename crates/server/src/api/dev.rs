@@ -23,6 +23,9 @@
 //! - `POST /api/dev/clear/:part`: `cards`, `cosmetics`, `jlore`, `counters` (the bars and pity
 //!   counters), `tracks`, or `everything`, all five in one transaction. Packs, tokens and quests are
 //!   no part of any.
+//!
+//! The quest tools (`POST /api/dev/quests`, `POST /api/dev/quests/:questId/complete`, §14.9) are
+//! `api/quests.rs`'s, behind this same [`dev_caller`].
 
 use std::sync::Arc;
 
@@ -57,8 +60,9 @@ pub fn is_dev(app: &App, profile_id: &str) -> bool {
     app.env.dev_profile_ids.iter().any(|id| id == profile_id)
 }
 
-/// The caller, when it is a dev account; 403 `forbidden` otherwise. Every handler here asks first.
-fn dev_caller(app: &App, req: &Req) -> Result<Profile, ApiError> {
+/// The caller, when it is a dev account; 403 `forbidden` otherwise. Every handler here asks first,
+/// and so do `api/quests.rs`'s quest tools.
+pub(crate) fn dev_caller(app: &App, req: &Req) -> Result<Profile, ApiError> {
     let profile = caller_profile(req)?;
     if !is_dev(app, &profile.id) {
         return Err(ApiError::new(ApiErrorCode::Forbidden, DEV_ONLY_MESSAGE));

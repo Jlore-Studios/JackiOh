@@ -6,6 +6,8 @@
 //! routes, though served, change only what a dev account owns.
 //!
 //! - `math`: the pure math, the set-track level curve (§14.7) and the pity roll (§14.4) (#1298).
+//! - `quests`: the daily quests, their pool kept as data, their rhythm, progress and payout (§14.9,
+//!   #1304).
 //! - `store`: migration 0045's tables, each holding beside its append-only ledger (§14.11), and
 //!   0047's practice seeds (§14.8).
 //! - `rewards`: the one reward hook a finished game pays through (§14.8, #1302).
@@ -23,6 +25,7 @@ pub mod cosmetic_packs;
 pub mod math;
 pub mod packs;
 pub mod practice;
+pub mod quests;
 pub mod rewards;
 pub mod roll;
 pub mod store;
