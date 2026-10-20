@@ -22940,6 +22940,12 @@
         "number": 1363,
         "title": "Architecture: pin past Duos fuzz failures in a checked-in regression corpus",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-20T11:36:54Z",
+        "number": 1397,
+        "title": "Patch v0.3.Y: a 1v1 room code is no way past a block, as a co-op room's already is",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-10-20T10:33:31Z",
