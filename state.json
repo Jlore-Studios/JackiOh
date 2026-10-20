@@ -11764,16 +11764,14 @@
     "what": "plan #1428 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-20T17:19:32Z",
+    "at": "2026-10-20T17:27:08Z",
     "notes": [
-      "answered a comment on #1431 that was never answered",
-      "answered a comment on #1430 that was never answered",
-      "answered a comment on #1428 that was never answered",
-      "answered a comment on #1427 that was never answered",
-      "#1427 needs a plan",
-      "#1428 needs a plan",
-      "#1430 needs a plan",
-      "#1431 needs a plan"
+      "answered a comment on #1429 that was never answered",
+      "answered a comment on #1433 that was never answered",
+      "answered a comment on #1432 that was never answered",
+      "#1429 needs a plan",
+      "#1432 needs a plan",
+      "#1433 needs a plan"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
