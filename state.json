@@ -6874,15 +6874,18 @@
       "interruptions": 1,
       "issue": 1301,
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-20T01:45:16Z",
+      "round_tier": "strong",
       "run_id": "39355128335",
       "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-20T01:45:26Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "claude"
