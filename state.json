@@ -6584,6 +6584,13 @@
     "1384": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T11:59:47Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "fails easy on rule 3 (new ruling R1384000, spec \u00a79.5 edit) and rule 2 (server crate and web app); not hard: no migration, no engine/AI, ~16 files"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
