@@ -842,3 +842,25 @@ async fn get_reads_the_pity_counters_and_the_odds() {
         serde_json::to_value(opened.pity).expect("the counters")
     );
 }
+
+#[tokio::test]
+async fn get_lists_the_unopened_packs_held() {
+    let (app, token) = setup().await;
+    let (status, _, body) = call(&app, "GET", "/api/packs", Some(&token), Value::Null).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body["unopened"], json!([]));
+
+    for pack in ["Classic", "Classic", GLOBAL_PACK_NAME, "Core"] {
+        buy(&app, &token, pack).await;
+    }
+    open(&app, &token, "Core").await;
+    let (status, _, body) = call(&app, "GET", "/api/packs", Some(&token), Value::Null).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(
+        body["unopened"],
+        json!([
+            { "pack": GLOBAL_PACK_NAME, "count": 1 },
+            { "pack": "Classic", "count": 2 },
+        ])
+    );
+}

@@ -1,5 +1,6 @@
-//! Buying and opening card packs (SPEC §14.1, §14.3; #1301), on the server and behind no screen
-//! yet: the store's grants around `economy::roll`'s pure roll, each in one transaction.
+//! Buying and opening card packs (SPEC §14.1, §14.3; #1301), on the server, its one screen the
+//! account page's opening (#1308): the store's grants around `economy::roll`'s pure roll, each in
+//! one transaction.
 //!
 //! - [`buy_pack`]: `PACK_PRICE_JLORE` out of the wallet and an unopened pack into the inventory;
 //!   a wallet that cannot cover it is refused and changes nothing (§14.1).
@@ -9,13 +10,14 @@
 //!   with the opening's log (its catalog, cosmetics, seed and result) in the `ref` of every
 //!   economy row it writes (R1301003). The whole opening or nothing: every refusal returns before
 //!   the commit, and the dropped `Tx` rolls it all back.
-//! - The routes, all `AuthLevel::Active`: `GET /api/packs` (the pity counters and the odds),
-//!   `POST /api/packs/buy` and `POST /api/packs/open`, each with `{ pack }`, a shipped set's name
+//! - The routes, all `AuthLevel::Active`: `GET /api/packs` (the pity counters, the odds and the
+//!   unopened packs held), `POST /api/packs/buy` and `POST /api/packs/open`, each with `{ pack }`, a shipped set's name
 //!   or `GLOBAL_PACK_NAME`.
 
 use std::sync::Arc;
 
 use indexmap::IndexMap;
+use jackioh_engine::wire::SHIPPED_SETS;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -36,8 +38,8 @@ use crate::db::store::{CollectionEntry, CollectionGrant, Tx};
 use crate::economy::math::PityCounters;
 use crate::economy::roll::{Holdings, OpeningLog, PackKind, Slot, SlotGrant, pack_pool, roll_opening};
 use crate::economy::store::{
-    CosmeticGrant, Counter, CounterEntry, CounterGrant, EconomyReason, InventoryGrant, InventoryItem,
-    JloreGrant, JloreReason,
+    CosmeticGrant, Counter, CounterEntry, CounterGrant, EconomyReason, InventoryEntry, InventoryGrant,
+    InventoryItem, JloreGrant, JloreReason,
 };
 use crate::economy::tokens::settle_bar;
 
@@ -88,6 +90,22 @@ fn pity_from(counters: &[CounterEntry]) -> PityCounters {
         legendary: value(Counter::PityLegendary),
         mythic: value(Counter::PityMythic),
     }
+}
+
+/// The unopened card packs the account holds (§14.3), for the pack screen's batch opening: one
+/// `{ pack, count }` per kind it holds any of, the global pack first, then each shipped set's.
+fn unopened_from(inventory: &[InventoryEntry]) -> Vec<Value> {
+    std::iter::once(PackKind::Global)
+        .chain(SHIPPED_SETS.into_iter().map(PackKind::Set))
+        .filter_map(|pack| {
+            let (item, key) = inventory_of(pack);
+            let count = inventory
+                .iter()
+                .find(|entry| entry.item == item && entry.key == key)
+                .map_or(0, |entry| entry.count);
+            (count > 0).then(|| json!({ "pack": pack.name(), "count": count }))
+        })
+        .collect()
 }
 
 /// The pack a request body names (`{ pack }`).
@@ -494,11 +512,12 @@ pub async fn open_pack(
 /// `GET /api/packs` (`AuthLevel::Active`): the caller's pity counters and the odds, for the pack
 /// screen to show (§14.4): the price and slots, each counter's threshold, the per-pack rates before
 /// and after pity, the filler slots' Rare rate (R1301000) and a duplicate's cosmetic odds
-/// (R1301002).
+/// (R1301002). It also lists the unopened packs the caller holds (`unopened`, [`unopened_from`]).
 pub async fn get_packs(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let pity = pity_from(&tx.economy_counters_get(&profile.id).await?);
+    let inventory = tx.economy_inventory_get(&profile.id).await?;
     tx.commit().await?;
     Ok(ok(json!({
         "price": PACK_PRICE_JLORE,
@@ -515,6 +534,7 @@ pub async fn get_packs(app: &Arc<App>, req: Req) -> ApiResult {
             "fillerRare": PACK_FILLER_RARE_RATE,
             "duplicateCosmetic": COSMETIC_DUPLICATE_RATES,
         },
+        "unopened": unopened_from(&inventory),
     })))
 }
 
