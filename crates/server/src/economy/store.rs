@@ -24,6 +24,7 @@ use jackioh_engine::wire::PrintedRarity;
 use jackioh_engine::{LastBoardEntry, LeanPick, PlayerId};
 
 use crate::config::SET_TRACK_FIRST_LEVEL;
+use crate::cosmetics::CosmeticRarity;
 use crate::db::store::{StoreError, StoreResult, Tx};
 
 // ---------------------------------------------------------------------------
@@ -376,14 +377,14 @@ fn check_delta(delta: i64) -> Result<(), StoreError> {
     Ok(())
 }
 
-/// `inventory_key_check`: the key each item takes.
+/// `inventory_key_check`: the key each item takes. A card token's rarity key is a card's, a
+/// cosmetic token's a cosmetic's (R1333000); both scales spell their rarities alike.
 fn check_inventory_key(item: InventoryItem, key: &str) -> Result<(), StoreError> {
-    let rarity = key.parse::<PrintedRarity>().is_ok();
     let fits = match item {
         InventoryItem::SetPack => !key.is_empty(),
         InventoryItem::GlobalPack | InventoryItem::CosmeticPack => key.is_empty(),
-        InventoryItem::CardToken => key.is_empty() || rarity,
-        InventoryItem::CosmeticToken => rarity,
+        InventoryItem::CardToken => key.is_empty() || key.parse::<PrintedRarity>().is_ok(),
+        InventoryItem::CosmeticToken => CosmeticRarity::named(key).is_some(),
     };
     if !fits {
         return Err(refused(format!("{item:?} takes no key {key:?}")));
