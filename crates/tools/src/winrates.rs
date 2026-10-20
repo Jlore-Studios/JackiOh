@@ -363,9 +363,10 @@ mod tests {
             deck: deck.iter().map(|card| card.to_string()).collect(),
             ..SeatSummary::default()
         };
-        // v0.2.6, a micro after v0.2.5's patch, plays Classic #55 alone.
+        // The second version, a micro after the patch before it, plays Classic #55 alone. Each line
+        // is marked, as the build writes a record file (R1371000).
         let line = |id: &str, patch: &str| {
-            serde_json::to_string(&GameRecord {
+            jackioh_cards::versions::game_record_line(&GameRecord {
                 id: id.to_string(),
                 source: GameSource::Live,
                 mode: GameMode::Bo1,
@@ -380,7 +381,6 @@ mod tests {
                 },
                 build: None,
             })
-            .unwrap_or_default()
         };
         let table = table_from_records(&[line("m1", "v0.2.5"), line("m2", "v0.2.6")], "v0.2.6")
             .unwrap_or_else(|error| panic!("{error:?}"));
