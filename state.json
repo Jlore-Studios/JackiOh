@@ -7147,6 +7147,13 @@
     "1385": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T04:23:51Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "least sure whether a wrapper-only flag counts as the AI's search, but the hard rule names crates/ai/src/ outright and the issue itself estimates Hard, so hard holds"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
