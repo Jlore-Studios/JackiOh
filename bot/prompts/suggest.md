@@ -44,12 +44,10 @@ $declined
 The very first line must be a single HTML comment carrying JSON on one line, with nothing before
 it:
 
-    <!-- suggestions: [{"title": "Patch v0.3.Y: what it does", "body": "Markdown body"}] -->
+    <!-- suggestions: [{"title": "Patch: what it does", "body": "Markdown body"}] -->
 
-Each title follows `docs/issues-and-patches.md`, Titles, since nothing retitles it later: a small
-change to the game starts as `.github/ISSUE_TEMPLATE/micro-patch.yml`'s title does (`Patch v0.3.Y: `
-today), a bigger one as `patch.yml`'s (`Patch v0.3.X: `), tooling or CI `Architecture: ` or `CI: `,
-and the bots themselves `Night bot: `, each followed by what it does.
+Each title follows `docs/issues-and-patches.md`, Titles: every one starts `Patch: `, as the issue
+forms' titles do, followed by what it does, with no version (one is named when a card change ships).
 
 Each body has these sections, in this order:
 

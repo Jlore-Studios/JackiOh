@@ -37,7 +37,9 @@
 # them, no job does; training/history/ is not among them), and the notebooks' project, analysis/
 # (#445: no file in crates/, apps/, e2e/, spec/ or a per-pull-request job reads it; super.yml's
 # `notebooks` job runs its tests once a day).
-# Nothing a test, a build or a check reads is on the list. The other docs are
+# Nothing a test, a build or a check reads is on the list, and nothing under crates/: ci.yml's
+# `rust (classify)` (#1370) reads every change to the cards, the engine and the AI, and runs exactly
+# when `full` does. The other docs are
 # not: `spec check` reads spec/, the radiant-standard test reads docs/radiant-audit.md, the catalog
 # test reads spec/07-tokens.md's table of tokens, web tests
 # read two spec/ notes (06-keywords.md and 05-card-types.md), and the `training gate` job reads
