@@ -6655,9 +6655,7 @@
       "started_at": "2026-10-20T13:23:06Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6289983037"
-      ]
+      "taken_asks": []
     },
     "1385": {
       "action": "build",
