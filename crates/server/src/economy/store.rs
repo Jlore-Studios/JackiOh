@@ -492,7 +492,9 @@ impl Tx<'_> {
         economy_dispatch!(self, tracks_grant(grant))
     }
 
-    /// §14.9: the held quests, by when they arrived (then id), and when the next is due.
+    /// §14.9: the held quests, by when they arrived (then id), and when the next is due. The
+    /// schedule's row stays locked to the end of the transaction, so a second read of the same
+    /// account waits for it: a top-up reads, then writes what it read was due (R1304000).
     pub async fn economy_quests_get(&mut self, profile_id: &str) -> StoreResult<QuestBook> {
         economy_dispatch!(self, quests_get(profile_id))
     }
@@ -914,6 +916,14 @@ mod pg {
 
     pub async fn quests_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<QuestBook, StoreError> {
         run_as(t, Some(profile_id)).await?;
+        // The schedule first, locked, so the held quests read after it are the ones a top-up
+        // under way left when it committed (R1304000).
+        let due: Option<Option<OffsetDateTime>> = sqlx::query_scalar(
+            "select next_due_at from public.quest_schedules where profile_id = $1::uuid for update",
+        )
+        .bind(profile_id)
+        .fetch_optional(&mut **t)
+        .await?;
         let rows = sqlx::query(
             r#"select quest_id, progress, arrived_at from public.held_quests
                 where profile_id = $1::uuid
@@ -932,11 +942,6 @@ mod pg {
                 })
             })
             .collect::<Result<Vec<_>, StoreError>>()?;
-        let due: Option<Option<OffsetDateTime>> =
-            sqlx::query_scalar("select next_due_at from public.quest_schedules where profile_id = $1::uuid")
-                .bind(profile_id)
-                .fetch_optional(&mut **t)
-                .await?;
         Ok(QuestBook {
             held,
             next_due_at: due.flatten().map(ms_of),

@@ -1233,7 +1233,12 @@ mod quests {
         };
         assert!(store!(app, |t| t.economy_quests_change(&arrived)));
         let attack_row = json!({ "type": "attack", "attackerId": "c1", "targetId": "c2", "playerId": "p1" });
-        append_log_to(&app, MATCH_ID, &[attack_row.clone(), attack_row.clone(), attack_row]).await;
+        append_log_to(
+            &app,
+            MATCH_ID,
+            &[attack_row.clone(), attack_row.clone(), attack_row],
+        )
+        .await;
         let outcome = play(&[json!({ "type": "play", "card": "test-lethal", "playerId": "p1" })]);
         record_on(&app, MATCH_ID, outcome).await;
 

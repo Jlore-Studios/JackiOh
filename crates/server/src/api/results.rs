@@ -433,7 +433,11 @@ async fn write_once(
 /// reads it (`game_records.rs`), off the runtime under the catalog the match started on (#1035,
 /// R767000). `None`, logged, when the log cannot be read or reaches no result: the quests then
 /// count the log's attacks alone, and the result is written all the same.
-async fn quests_game(app: &App, row: &MatchRow, log: &[MatchActionRow]) -> Option<jackioh_engine::GameSummary> {
+async fn quests_game(
+    app: &App,
+    row: &MatchRow,
+    log: &[MatchActionRow],
+) -> Option<jackioh_engine::GameSummary> {
     let entries: Result<Vec<_>, _> = log
         .iter()
         .map(|entry| serde_json::to_value(&entry.action))

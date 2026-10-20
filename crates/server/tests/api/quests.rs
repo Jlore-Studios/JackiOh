@@ -105,7 +105,8 @@ async fn hold(app: &App, profile: &str, def: &QuestDef, progress: i64, at: i64) 
     };
     assert!(store!(app, |t| t.economy_quests_change(&grant(QuestChange::Arrived, 0))));
     if progress > 0 {
-        assert!(store!(app, |t| t.economy_quests_change(&grant(QuestChange::Progressed, progress))));
+        assert!(store!(app, |t| t
+            .economy_quests_change(&grant(QuestChange::Progressed, progress))));
     }
 }
 
@@ -181,7 +182,10 @@ async fn r1304000_quests_arrive_by_the_injected_clock() {
     assert_eq!(rows[0].reason, EconomyReason::Quest);
     assert!(!rows[0].dev);
     assert!(
-        rows[0].reference.as_deref().is_some_and(|reference| reference.starts_with("seed:")),
+        rows[0]
+            .reference
+            .as_deref()
+            .is_some_and(|reference| reference.starts_with("seed:")),
         "the draw's seed is logged: {rows:?}"
     );
     assert!(quest_def(&rows[0].quest_id).is_some());
@@ -350,7 +354,10 @@ async fn r1304001_progress_stops_at_the_target() {
         attacks: attack.target + 5,
         ..GameTally::default()
     };
-    store!(app, |t| pay_game_rewards(&mut t, &won_game(&p1, "match-1", tally, now)));
+    store!(app, |t| pay_game_rewards(
+        &mut t,
+        &won_game(&p1, "match-1", tally, now)
+    ));
     let rows: Vec<QuestGrant> = ledger_of(&app, &p1)
         .await
         .quests
@@ -358,7 +365,9 @@ async fn r1304001_progress_stops_at_the_target() {
         .filter(|row| row.quest_id == attack.id && row.reference.as_deref() == Some("match-1"))
         .collect();
     assert_eq!(
-        rows.iter().map(|row| (row.change, row.progress)).collect::<Vec<_>>(),
+        rows.iter()
+            .map(|row| (row.change, row.progress))
+            .collect::<Vec<_>>(),
         vec![
             (QuestChange::Progressed, attack.target),
             (QuestChange::Completed, 0)
@@ -407,7 +416,14 @@ async fn dev_quest_tools_give_and_complete_once() {
 
     let (status, _, _) = call(&app, "POST", &path, Some(TOKEN), Value::Null).await;
     assert_eq!(status, 404, "no longer held");
-    let (status, _, _) = call(&app, "POST", "/api/dev/quests/no-such-quest/complete", Some(TOKEN), Value::Null).await;
+    let (status, _, _) = call(
+        &app,
+        "POST",
+        "/api/dev/quests/no-such-quest/complete",
+        Some(TOKEN),
+        Value::Null,
+    )
+    .await;
     assert_eq!(status, 404);
     assert_eq!(
         ledger_of(&app, &p1)

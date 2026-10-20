@@ -28,7 +28,9 @@ use serde::{Deserialize, Serialize};
 
 use super::rewards::{GameSummary, XpPayout, pay_xp};
 use super::store::{EconomyReason, JloreGrant, JloreReason, QuestBook, QuestChange, QuestGrant};
-use crate::config::{QUEST_INTERVAL_HOURS, QUEST_JLORE_MAX, QUEST_JLORE_MIN, QUEST_MAX_HELD, QUEST_XP_PER_JLORE};
+use crate::config::{
+    QUEST_INTERVAL_HOURS, QUEST_JLORE_MAX, QUEST_JLORE_MIN, QUEST_MAX_HELD, QUEST_XP_PER_JLORE,
+};
 use crate::cosmetics::is_slug;
 use crate::db::store::{StoreResult, Tx};
 
@@ -240,7 +242,9 @@ pub fn progress_of(goal: &QuestGoal, won: Option<bool>, tally: &GameTally) -> i6
         QuestGoal::PlayGames => 1,
         QuestGoal::PlayCards => count(&|_| true),
         QuestGoal::PlayUnits => count(&|card| card.card_type == CardType::Unit),
-        QuestGoal::PlaySpells => count(&|card| matches!(card.card_type, CardType::Spell | CardType::FieldSpell)),
+        QuestGoal::PlaySpells => {
+            count(&|card| matches!(card.card_type, CardType::Spell | CardType::FieldSpell))
+        }
         QuestGoal::PlayTraps => count(&|card| matches!(card.card_type, CardType::Trap | CardType::FieldTrap)),
         QuestGoal::FireTraps => tally.traps_fired,
         QuestGoal::PlayRadiant => count(&|card| card.radiant),
@@ -296,10 +300,7 @@ pub fn top_up(held: usize, next_due_at: Option<i64>, now: i64) -> TopUp {
 /// [[R1304000]]: the `seed % n`-th of the `n` pool entries not in `held`, so a fresh seed draws
 /// uniformly among them; `None` when every entry is held.
 pub fn pick_quest(held: &[String], seed: u64) -> Option<&'static QuestDef> {
-    let open: Vec<&'static QuestDef> = pool()
-        .iter()
-        .filter(|quest| !held.contains(&quest.id))
-        .collect();
+    let open: Vec<&'static QuestDef> = pool().iter().filter(|quest| !held.contains(&quest.id)).collect();
     let count = u64::try_from(open.len()).ok().filter(|count| *count > 0)?;
     open.get(usize::try_from(seed % count).ok()?).copied()
 }
@@ -341,16 +342,10 @@ pub fn arrival(
 }
 
 /// [[R1304000]]: tops the account up at `now`, in the caller's transaction, and answers its
-/// quests after. With nothing due it writes nothing. Otherwise it writes the schedule as it read
-/// it before reading it again, so a second top-up of the same account waits for this one's
-/// transaction and then reads what it wrote: two at once never hold past `QUEST_MAX_HELD`.
+/// quests after. With nothing due it writes nothing. The store's read locks the account's
+/// schedule to the end of the transaction, so a second top-up of the same account waits for this
+/// one and then reads what it wrote: two at once bring each quest that fell due once.
 pub async fn top_up_quests(tx: &mut Tx<'_>, profile_id: &str, now: i64) -> StoreResult<QuestBook> {
-    let read = tx.economy_quests_get(profile_id).await?;
-    if Some(top_up(read.held.len(), read.next_due_at, now).next_due_at) == read.next_due_at {
-        return Ok(read);
-    }
-    tx.economy_quests_set_next_due(profile_id, read.next_due_at)
-        .await?;
     let book = tx.economy_quests_get(profile_id).await?;
     let due = top_up(book.held.len(), book.next_due_at, now);
     if Some(due.next_due_at) == book.next_due_at {
@@ -433,7 +428,8 @@ pub async fn move_quests(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreResult<
         let Some(def) = quest_def(&held.quest_id) else {
             continue;
         };
-        let step = progress_of(&def.goal, summary.won, &summary.tally).min((def.target - held.progress).max(0));
+        let step =
+            progress_of(&def.goal, summary.won, &summary.tally).min((def.target - held.progress).max(0));
         if step > 0
             && !tx
                 .economy_quests_change(&QuestGrant {
@@ -491,14 +487,26 @@ mod tests {
     fn r1304000_a_quest_arrives_one_interval_after_the_last() {
         let i = interval();
         let first = top_up(0, None, T);
-        assert_eq!(first, TopUp { arrivals: vec![], next_due_at: T + i });
+        assert_eq!(
+            first,
+            TopUp {
+                arrivals: vec![],
+                next_due_at: T + i
+            }
+        );
         assert_eq!(
             top_up(0, Some(T + i), T + i - 1),
-            TopUp { arrivals: vec![], next_due_at: T + i }
+            TopUp {
+                arrivals: vec![],
+                next_due_at: T + i
+            }
         );
         assert_eq!(
             top_up(0, Some(T + i), T + i),
-            TopUp { arrivals: vec![T + i], next_due_at: T + 2 * i }
+            TopUp {
+                arrivals: vec![T + i],
+                next_due_at: T + 2 * i
+            }
         );
     }
 
@@ -507,7 +515,10 @@ mod tests {
         let i = interval();
         assert_eq!(
             top_up(QUEST_MAX_HELD, Some(T), T + 10 * i),
-            TopUp { arrivals: vec![], next_due_at: T + 11 * i }
+            TopUp {
+                arrivals: vec![],
+                next_due_at: T + 11 * i
+            }
         );
     }
 
@@ -568,7 +579,12 @@ mod tests {
             1
         );
         assert_eq!(
-            one(entry("a", QuestGoal::PlaySetCards { set: SetName::Boss }, 1, QUEST_JLORE_MIN)),
+            one(entry(
+                "a",
+                QuestGoal::PlaySetCards { set: SetName::Boss },
+                1,
+                QUEST_JLORE_MIN
+            )),
             vec!["the quest \"a\" counts Boss cards, a set that does not ship (R1420)".to_owned()]
         );
         assert_eq!(
@@ -603,17 +619,31 @@ mod tests {
         // Entries of different goals, or of different sets, never compare.
         assert!(
             problems(&[
-                entry("a", QuestGoal::PlaySetCards { set: SetName::Core }, 8, QUEST_JLORE_MIN),
-                entry("b", QuestGoal::PlaySetCards { set: SetName::Classic }, 8, QUEST_JLORE_MIN),
+                entry(
+                    "a",
+                    QuestGoal::PlaySetCards { set: SetName::Core },
+                    8,
+                    QUEST_JLORE_MIN
+                ),
+                entry(
+                    "b",
+                    QuestGoal::PlaySetCards {
+                        set: SetName::Classic
+                    },
+                    8,
+                    QUEST_JLORE_MIN
+                ),
                 entry("c", QuestGoal::PlayCards, 8, QUEST_JLORE_MIN),
             ])
             .is_empty()
         );
 
         // Every goal kind is one `progress_of` knows: a kind it does not is refused, not dropped.
-        let unknown = r#"{"quests":[{"id":"a","title":"A","goal":{"kind":"dealDamage"},"target":1,"jlore":50}]}"#;
+        let unknown =
+            r#"{"quests":[{"id":"a","title":"A","goal":{"kind":"dealDamage"},"target":1,"jlore":50}]}"#;
         assert!(parse(unknown).is_err_and(|error| error.contains("dealDamage")));
-        let stray = r#"{"quests":[{"id":"a","title":"A","goal":{"kind":"winGames"},"target":1,"jlore":50,"xp":9}]}"#;
+        let stray =
+            r#"{"quests":[{"id":"a","title":"A","goal":{"kind":"winGames"},"target":1,"jlore":50,"xp":9}]}"#;
         assert!(parse(stray).is_err_and(|error| error.contains("unknown field")));
     }
 
@@ -648,7 +678,12 @@ mod tests {
             (QuestGoal::PlayRadiant, 2),
             (QuestGoal::AttackWithUnits, 7),
             (QuestGoal::PlaySetCards { set: SetName::Core }, 3),
-            (QuestGoal::PlaySetCards { set: SetName::MeditativePlus }, 0),
+            (
+                QuestGoal::PlaySetCards {
+                    set: SetName::MeditativePlus,
+                },
+                0,
+            ),
         ] {
             assert_eq!(progress_of(&goal, won, &tally), count, "{goal:?}");
         }

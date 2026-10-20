@@ -52,6 +52,7 @@ import { paths } from "../net/navigate.ts";
 import { clearSession, forgetPendingAddresses, readSession } from "../net/session.ts";
 import ChangeEmail from "../settings/ChangeEmail.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
+import QuestsPanel from "./QuestsPanel.tsx";
 import TwoStepSettings from "../auth/TwoStepSettings.tsx";
 import { useSecondsUntil } from "../auth/cooldown.ts";
 import Username from "../auth/Username.tsx";
@@ -329,6 +330,8 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
               </div>
             </div>
             {played === 0 ? <p>{t("No finished matches yet.")}</p> : null}
+            {/* §14.9: the quests the account holds; the collection screen (#1307) moves them. */}
+            <QuestsPanel token={token} />
           </>
         ) : null}
 

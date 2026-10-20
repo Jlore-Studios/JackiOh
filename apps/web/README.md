@@ -224,6 +224,8 @@ routes/SeriesBanner.tsx the board's banner for a series game, each side's won de
 routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — Jlorious #1–#100, the
                         Grape tiers, the Raisins — and the caller's own standing; rank/rank.ts says
                         a visible rank in a player's words for this screen, the account and the board
+routes/QuestsPanel.tsx  /account's quests (§14.9) from GET /api/quests: each held quest's progress and
+                        reward, and the countdown to the next; #1307 moves it
 routes/lobby.css        the lobby's, the series screen's and its picker's tavern look, and the banner's pips
 ```
 
