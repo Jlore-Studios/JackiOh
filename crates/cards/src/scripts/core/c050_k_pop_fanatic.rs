@@ -1214,7 +1214,7 @@ mod tests {
         #[test]
         fn r1045000_r767000_a_game_on_v0_3_7_folds_under_the_kept_plain_steal_its_mark_purple_and_a_full_row_leaving_the_target() {
             crate::register_all();
-            let shipped = crate::shipped_catalog("v0.3.0c").expect("v0.3.0c is carried");
+            let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
             jackioh_engine::with_shipped(Some(shipped), || {
                 let mut g = full_row(json!({ "def": VANILLA, "lane": 2 }));
                 let prey = unit_at(&g, P2, 2, "setup: p2 should hold Mr. Vanilla in lane 2");

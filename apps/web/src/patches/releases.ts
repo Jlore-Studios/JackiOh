@@ -55,7 +55,7 @@ export const RELEASES: readonly Release[] = [
     id: "classic",
     name: "Classic & Classic+",
     summary:
-      "Two new sets, Classic and Classic+, then their first balance patch and the Heroic Power rework. From v0.2.5f to v0.2.7b, cards of the earlier sets were reworded and Nerf and Buff could tune more.",
+      "Two new sets, Classic and Classic+, then their first balance patch and the Heroic Power rework. From v0.3.1 to v0.3.4, cards of the earlier sets were reworded and Nerf and Buff could tune more.",
     technical: [
       "A ranked ladder with Grape tiers and a global leaderboard.",
       "The Card Almanac: browse every card, tokens included, with no account.",
@@ -69,7 +69,7 @@ export const RELEASES: readonly Release[] = [
   {
     id: "meditative",
     name: "Meditative",
-    summary: "The Meditative set, 102 cards and 30 tokens, shipped in v0.3.0.",
+    summary: "The Meditative set, 102 cards and 30 tokens, shipped in v0.3.5.",
     technical: [
       "The Rust rewrite (v0.3.0): the rules engine, the cards, the AI and the server were rewritten in Rust, and your browser runs the same engine as WebAssembly. Games play as they did before.",
       "The practice AI kept training: no Core, Classic or Classic+ card is barred from its decks any more, and it plays most Meditative cards too.",
@@ -86,7 +86,7 @@ export const RELEASES: readonly Release[] = [
   {
     id: "meditativeplus",
     name: "Meditative+",
-    summary: "The Meditative+ set, 26 cards and 4 tokens, shipped in v0.4.0, with a new tag, Potion.",
+    summary: "The Meditative+ set, 26 cards and 4 tokens, shipped in v0.3.15, with a new tag, Potion.",
     technical: [],
   },
 ];

@@ -669,7 +669,7 @@ describe("gen-voice.mjs --check (B37)", () => {
   }
 
   it(
-    "R1420 R1178000 owes no file for a line of a set that has not shipped, and the same line on a shipped card, Meditative+'s since v0.4.0 included, is missing",
+    "R1420 R1178000 owes no file for a line of a set that has not shipped, and the same line on a shipped card, Meditative+'s since v0.3.15 included, is missing",
     () => {
       // The reserved Boss set, which ships no card.
       const unshipped = unrenderedTree("Boss");
