@@ -7144,30 +7144,26 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-20T10:26:59Z",
+      "feedback_since": "2026-10-20T11:04:00Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1309,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The shop, the opening scene, the token picker and the cosmetic packs each keep their own state and never refresh one another, so a pack bought in the shop can't be opened until the Card-packs toggle is closed and reopened, and the page shows two different counts for the same pack.",
-          "evidence": "AccountPacks renders `<PackOpening/><Shop/><TokenPicker/><CosmeticPacks/>` side by side with no shared state, no key and no callback. PackOpening calls `getPacks` once in a `[token]` effect (packs/PackOpening.tsx:329-342), and its list and open buttons come only from that `info` (lines 471-482). Shop.buy updates only Shop's own `info`/`wallet` (shop/Shop.tsx:67-80). Example: start with 0 packs and 250 Jlore, buy Core. The shop row reads 'Core pack: 1 unopened', but the opening panel above it still reads 'No unopened packs.' with no open button. It works the other way too: opening a card pack or a cosmetic pack fills the token bars and can grant cards, yet the shop's counts, the picker's bars and its collection all stay stale. A `key` that bumps on a buy or an open, or an `onChanged` callback lifted into AccountPacks, would fix this without touching PackOpening.tsx.",
-          "severity": "blocking",
-          "where": "apps/web/src/routes/account.tsx:600"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
+      "question": "",
       "queued_at": "2026-10-20T11:00:52Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "39411978149",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-20T11:04:00Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "muse"
