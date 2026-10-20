@@ -22,7 +22,7 @@ use jackioh_server::config::{
     GLOBAL_PACK_NAME, PACK_BASE_RATES, PACK_FILLER_RARE_RATE, PACK_PRICE_JLORE, PACK_SLOTS,
     PACK_TARGET_RATES, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS,
 };
-use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, shipped};
+use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, pack_cosmetics, shipped};
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{CollectionEntry, Db, StoreError};
 use jackioh_server::economy::math::PityCounters;
@@ -563,17 +563,17 @@ async fn r1301003_an_opening_replays_from_its_stored_seed() {
     let opened = open(&app, &token, "Core").await;
     let log = last_log(&app).await;
     assert_eq!(log.pack, "Core");
+    assert_eq!(log.catalog, app.catalog.version);
     assert_eq!(log.seed.len(), 32, "16 bytes as hex: {}", log.seed);
+    assert_eq!(log.cosmetics, pack_cosmetics(&shipped().expect("the registry")));
+    // The result is logged with the grants (§14.11).
+    assert_eq!(log.slots, opened.slots);
+    assert_eq!(log.pity, opened.pity);
     let pack = PackKind::parse(&log.pack).expect("the logged pack");
-    let replayed = roll_opening(
-        &pack_pool(defs(&app), pack),
-        &before,
-        &shipped().expect("the registry"),
-        &log.seed,
-    )
-    .expect("the replay");
-    assert_eq!(replayed.slots, opened.slots);
-    assert_eq!(replayed.pity, opened.pity);
+    let replayed =
+        roll_opening(&pack_pool(defs(&app), pack), &before, &log.cosmetics, &log.seed).expect("the replay");
+    assert_eq!(replayed.slots, log.slots);
+    assert_eq!(replayed.pity, log.pity);
     assert_eq!(replayed.draws, log.draws);
 
     // Every economy row of the opening carries its log: the pack spent, each pity counter that
@@ -631,8 +631,11 @@ async fn r1301003_an_opening_replays_from_its_stored_seed() {
     );
     let log = last_log(&app).await;
     assert_eq!(log.seed, "r1301003");
+    assert_eq!(log.cosmetics, registry);
+    assert_eq!(log.slots, opened.slots);
+    // The replay reads the cosmetics from the log, not the registry it was opened over.
     let replayed =
-        roll_opening(&pack_pool(defs(&app), pack), &before, &registry, &log.seed).expect("the replay");
+        roll_opening(&pack_pool(defs(&app), pack), &before, &log.cosmetics, &log.seed).expect("the replay");
     assert_eq!(replayed.slots, opened.slots);
     assert_eq!(replayed.draws, log.draws);
     let mut tx = app.db.begin(Some(PROFILE)).await.expect("a transaction");

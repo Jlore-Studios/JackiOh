@@ -5,8 +5,9 @@
 //!   a wallet that cannot cover it is refused and changes nothing (§14.1).
 //! - [`open_pack`]: under the account's lock, one unopened pack spent, its slots rolled from a
 //!   fresh seed and every grant written, its cards, cosmetics, pity counters and bars, with the
-//!   seed and draws in the `ref` of every economy row it writes (R1301003). The whole opening or
-//!   nothing: every refusal returns before the commit, and the dropped `Tx` rolls it all back.
+//!   opening's log (its catalog, cosmetics, seed and result) in the `ref` of every economy row it
+//!   writes (R1301003). The whole opening or nothing: every refusal returns before the commit,
+//!   and the dropped `Tx` rolls it all back.
 //! - The routes, all `AuthLevel::Active`: `GET /api/packs` (the pity counters and the odds),
 //!   `POST /api/packs/buy` and `POST /api/packs/open`, each with `{ pack }`, a shipped set's name
 //!   or `GLOBAL_PACK_NAME`.
@@ -201,11 +202,13 @@ pub async fn open_pack(
     };
     let opening = roll_opening(&pack_pool(&app.catalog.defs, pack), &holdings, registry, seed)
         .ok_or_else(|| ApiError::internal(format!("the {} pack's pool holds no card", pack.name())))?;
-    let reference = Some(serde_json::to_string(&OpeningLog {
-        pack: pack.name().to_string(),
-        seed: seed.to_string(),
-        draws: opening.draws,
-    })?);
+    let reference = Some(serde_json::to_string(&OpeningLog::of(
+        pack,
+        &app.catalog.version,
+        registry,
+        seed,
+        &opening,
+    ))?);
     let at = crate::app::now_ms();
 
     let unopened = tx

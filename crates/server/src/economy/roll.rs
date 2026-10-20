@@ -128,14 +128,47 @@ pub struct Opening {
     pub draws: u32,
 }
 
-/// What every economy row of an opening logs in its `ref` (R1301003, §14.11): the pack, the seed
-/// and the draws taken, from which [`roll_opening`] over the holdings before it replays it.
+/// What every economy row of an opening logs in its `ref` (R1301003, §14.11): everything the roll
+/// read but the holdings before it (the pack, the catalog version its pool came from, the cosmetics
+/// it could drop and the seed) and its result (the slots, the pity counters after it and the draws
+/// taken). [`roll_opening`] over that catalog's pool, the holdings before it and `cosmetics`, with
+/// `seed`, replays it however the live catalog or registry has moved since.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct OpeningLog {
     pub pack: String,
+    /// The catalog version the pool was built from (`jackioh_cards::catalog_version()` then;
+    /// `jackioh_cards::catalog_defs_at` holds every older one).
+    pub catalog: String,
     pub seed: String,
+    /// The registry's droppable entries the roll picked from ([`pack_cosmetics`]), whole, in
+    /// registry order.
+    pub cosmetics: Vec<Cosmetic>,
+    pub slots: Vec<Slot>,
+    pub pity: PityCounters,
     pub draws: u32,
+}
+
+impl OpeningLog {
+    /// The log of `opening`, rolled from `pack`'s pool in catalog `catalog`, over `registry`, with
+    /// `seed`.
+    pub fn of(
+        pack: PackKind,
+        catalog: &str,
+        registry: &[Cosmetic],
+        seed: &str,
+        opening: &Opening,
+    ) -> OpeningLog {
+        OpeningLog {
+            pack: pack.name().to_string(),
+            catalog: catalog.to_string(),
+            seed: seed.to_string(),
+            cosmetics: pack_cosmetics(registry),
+            slots: opening.slots.clone(),
+            pity: opening.pity,
+            draws: opening.draws,
+        }
+    }
 }
 
 /// A slot that holds none of the pack's tracked rarities (R1301000): Rare at
@@ -649,6 +682,61 @@ mod tests {
         assert_ne!(roll_opening(&pool, &holdings, &foils, "r1301003-other"), first);
         // An empty pool rolls nothing.
         assert_eq!(roll_opening(&[], &holdings, &foils, "r1301003"), None);
+    }
+
+    #[test]
+    fn r1301003_the_log_holds_the_result_and_replays_after_the_registry_moves() {
+        let pool = vec![card("owned", Common)];
+        let holdings = Holdings {
+            owned: owning(&["owned"]),
+            ..Holdings::default()
+        };
+        let mut registry = four_foils();
+        registry.push(Cosmetic {
+            starter: true,
+            ..foil("foil-starter", CosmeticRarity::Rare)
+        });
+        let opening = roll_opening(&pool, &holdings, &registry, "r1301003").expect("an opening");
+        assert!(
+            opening
+                .slots
+                .iter()
+                .any(|slot| matches!(slot.grant, SlotGrant::Cosmetic { .. }))
+        );
+        let log = OpeningLog::of(
+            PackKind::Set(SetName::Core),
+            "catalog-v1",
+            &registry,
+            "r1301003",
+            &opening,
+        );
+        let log: OpeningLog =
+            serde_json::from_str(&serde_json::to_string(&log).expect("a log")).expect("the log read back");
+        assert_eq!(log.pack, "Core");
+        assert_eq!(log.catalog, "catalog-v1");
+        assert_eq!(log.seed, "r1301003");
+        // The result itself is logged, and only the droppable entries are.
+        assert_eq!(log.slots, opening.slots);
+        assert_eq!(log.pity, opening.pity);
+        assert_eq!(log.draws, opening.draws);
+        assert_eq!(log.cosmetics, four_foils());
+        // The live registry moves on: its foils become starters, so a roll over it now drops
+        // nothing. The logged entries still replay the opening exactly.
+        let moved: Vec<Cosmetic> = registry
+            .iter()
+            .map(|cosmetic| Cosmetic {
+                starter: true,
+                ..cosmetic.clone()
+            })
+            .collect();
+        assert_ne!(
+            roll_opening(&pool, &holdings, &moved, &log.seed),
+            Some(opening.clone())
+        );
+        let replayed = roll_opening(&pool, &holdings, &log.cosmetics, &log.seed).expect("the replay");
+        assert_eq!(replayed.slots, log.slots);
+        assert_eq!(replayed.pity, log.pity);
+        assert_eq!(replayed.draws, log.draws);
     }
 
     #[test]
