@@ -11,7 +11,9 @@
 
 use std::cell::Cell;
 
-use jackioh_ai::{AiOptions, decide, duos_decide, duos_passes, starting_life};
+use jackioh_ai::{
+    AI_GATE_BUDGET, AiOptions, SearchBudget, decide, duos_decide, duos_decision, duos_passes, starting_life,
+};
 use jackioh_engine::config::{
     DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, DUOS_PASS_COST, DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, duos_ai_team,
 };
@@ -900,6 +902,38 @@ fn b31_the_same_state_and_options_give_the_same_action_twice() {
         assert_eq!(first.rng.cursor(), second.rng.cursor(), "case {at}: {seat}");
         let passes = duos_passes(state, seat);
         assert_eq!(passes, duos_passes(state, seat), "case {at}: {seat}");
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// #1385: where an action came from, for the gate (§13.7)
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn duos_decision_marks_a_starved_search_as_a_fallback_and_its_own_moves_as_none() {
+    let seed = "duos-ai-decision-starved";
+    let state = choice_state(seed);
+    let starved = SearchBudget {
+        nodes: 0,
+        lethal_nodes: 0,
+        ..AI_GATE_BUDGET
+    };
+    for (budget, expected) in [(starved, true), (AI_GATE_BUDGET, false)] {
+        let mut options = AiOptions::with_budget(create_rng(seed, 0), budget);
+        let got = duos_decision(&state, A1, &mut options).expect("A1 owes an action");
+        assert_eq!(got.fallback, expected, "{budget:?}");
+        let mut plain = AiOptions::with_budget(create_rng(seed, 0), budget);
+        let sent = duos_decide(&state, A1, &mut plain);
+        assert_eq!(json_of(&Some(got.body)), json_of(&sent), "{budget:?}");
+        assert_eq!(options.rng.cursor(), plain.rng.cursor(), "{budget:?}");
+    }
+
+    let mulligan = mulligans("duos-ai-decision-planned");
+    for seat in DUOS_SEATS {
+        let mut options = opts(&format!("duos-ai-decision-planned:{seat}"));
+        let got = duos_decision(&mulligan, seat, &mut options)
+            .unwrap_or_else(|| panic!("{seat} owes its mulligan"));
+        assert!(!got.fallback, "{seat}: {got:?}");
     }
 }
 

@@ -1,12 +1,12 @@
 //! B32 (#936): the Duos gate at smoke size. The Easy AI team (both seats on `duos_decide`) against a
 //! random-policy team has to win at least DUOS_GATE_WIN_FLOOR of DUOS_GATE_GAMES_SMOKE games. No action
-//! of either team may be refused; a failure names each refused game's seed, which
-//! `duos_gate_game(n, "gate")` replays. It plays whole Duos games, so it runs in `ai_slow_b.rs` rather
-//! than the `ai` binary.
+//! of either team may be refused and no AI action may come off a fallback path (#1385); a failure
+//! names each refused game's seed, which `duos_gate_game(n, "gate")` replays. It plays whole Duos
+//! games, so it runs in `ai_slow_b.rs` rather than the `ai` binary.
 
 use jackioh_ai::{
-    DUOS_GATE_GAMES_SMOKE, DUOS_GATE_WIN_FLOOR, DuosGateGame, duos_gate_game, duos_gate_report,
-    duos_gate_subject,
+    AI_GATE_BUDGET, DUOS_GATE_GAMES_SMOKE, DUOS_GATE_WIN_FLOOR, DuosGateGame, SearchBudget, duos_gate_game,
+    duos_gate_game_at, duos_gate_report, duos_gate_subject,
 };
 
 use super::support::register_cards;
@@ -43,12 +43,18 @@ fn b32_the_easy_ai_team_beats_a_random_policy_team_in_at_least_the_floor_of_the_
         })
         .collect();
     assert_eq!(report.rejected, 0, "refused: {}", refused.join(", "));
+    let fell_back: Vec<String> = played
+        .iter()
+        .filter(|game| game.fallbacks > 0)
+        .map(|game| format!("{} ({} fallbacks)", game.seed, game.fallbacks))
+        .collect();
+    assert_eq!(report.fallbacks, 0, "fell back: {}", fell_back.join(", "));
     assert!(report.passes());
 }
 
-#[test]
-fn b32_a_refused_action_fails_the_duos_gate_report_even_with_every_game_won() {
-    let clean: Vec<DuosGateGame> = (1..=DUOS_GATE_GAMES_SMOKE)
+/// A run of DUOS_GATE_GAMES_SMOKE games, every one won, with nothing refused and no fallback.
+fn every_game_won() -> Vec<DuosGateGame> {
+    (1..=DUOS_GATE_GAMES_SMOKE)
         .map(|n| DuosGateGame {
             seed: format!("gate:{n}"),
             subject: duos_gate_subject(n),
@@ -58,8 +64,14 @@ fn b32_a_refused_action_fails_the_duos_gate_report_even_with_every_game_won() {
             actions: 1,
             rejected: 0,
             ai_rejected: 0,
+            fallbacks: 0,
         })
-        .collect();
+        .collect()
+}
+
+#[test]
+fn b32_a_refused_action_fails_the_duos_gate_report_even_with_every_game_won() {
+    let clean = every_game_won();
     assert_eq!(duos_gate_report(&clean).rejected, 0);
     assert!(duos_gate_report(&clean).passes());
 
@@ -71,4 +83,36 @@ fn b32_a_refused_action_fails_the_duos_gate_report_even_with_every_game_won() {
     assert_eq!(report.wins, DUOS_GATE_GAMES_SMOKE);
     assert_eq!(report.rejected, 3);
     assert!(!report.passes());
+}
+
+#[test]
+fn b32_a_fallback_action_fails_the_duos_gate_report_even_with_every_game_won() {
+    let clean = every_game_won();
+    assert_eq!(duos_gate_report(&clean).fallbacks, 0);
+    assert!(duos_gate_report(&clean).passes());
+
+    let mut fell_back = clean.clone();
+    fell_back[0].fallbacks = 1;
+    fell_back[1].fallbacks = 2;
+    let report = duos_gate_report(&fell_back);
+    assert_eq!(report.wins, DUOS_GATE_GAMES_SMOKE);
+    assert_eq!(report.rejected, 0);
+    assert_eq!(report.fallbacks, 3);
+    assert!(!report.passes());
+}
+
+#[test]
+fn b32_a_starved_ai_team_counts_its_fallbacks_and_fails_the_duos_gate() {
+    register_cards();
+    // No node to search with: `decide`'s search scores nothing, so it falls back (decide.rs step 7).
+    let starved = SearchBudget {
+        nodes: 0,
+        lethal_nodes: 0,
+        ..AI_GATE_BUDGET
+    };
+    let game = duos_gate_game_at(1, "gate", starved);
+    assert!(game.fallbacks > 0, "{game:?}");
+    let report = duos_gate_report(std::slice::from_ref(&game));
+    assert_eq!(report.fallbacks, game.fallbacks);
+    assert!(!report.passes(), "{report:?}");
 }
