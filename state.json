@@ -7422,9 +7422,11 @@
       "asks": [],
       "audit_tier": "strong",
       "cleared": {
-        "at": "2026-10-20T14:19:38Z",
+        "at": "2026-10-20T16:03:01Z",
         "by": "`claude` (strong)",
-        "sha": "515770ead1084ca330c3897c62e145128efb5c41"
+        "carried_from": "515770ead1084ca330c3897c62e145128efb5c41",
+        "resolved_by": "`claude` (strong)",
+        "sha": "47b319d1c3400aa39874b7635678193d40dd0dd1"
       },
       "cross_rounds": 1,
       "died": 0,
