@@ -6877,7 +6877,7 @@
       },
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-10-19T22:14:10Z",
+      "feedback_since": "2026-10-20T03:03:13Z",
       "handoff": {
         "at": "2026-10-20T02:37:27Z",
         "family": "claude",
@@ -6893,15 +6893,16 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "claude-2",
+      "question": "",
       "queued_at": "2026-10-20T01:45:16Z",
       "round_tier": "strong",
       "run_id": "39362143251",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-20T03:03:13Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "claude"
