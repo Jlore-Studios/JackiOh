@@ -7360,6 +7360,11 @@
     "1414": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "at": "2026-10-20T15:19:54Z",
+        "by": "`muse` (medium), `claude` (strong)",
+        "sha": "27fe07f27bf164ed148cf8af76c97c4336bfdc97"
+      },
       "cross_rounds": 0,
       "died": 0,
       "failures": 0,
