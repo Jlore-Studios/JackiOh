@@ -242,8 +242,8 @@ mod tests {
             SourceFilter::Live,
             vec![stats("core-001", 3, 5), stats("core-002", 0, 0)],
         );
-        let table = table_from_report(&text, "v0.3.3").unwrap_or_else(|error| panic!("{error:?}"));
-        assert_eq!(table.patch, "v0.3.3");
+        let table = table_from_report(&text, "v0.2.7").unwrap_or_else(|error| panic!("{error:?}"));
+        assert_eq!(table.patch, "v0.2.7");
         assert_eq!(table.source, WinRateSource::Live);
         assert_eq!(
             table.cards,
@@ -254,7 +254,7 @@ mod tests {
             }]
         );
         let text = report(SourceFilter::Dev, vec![stats("core-001", 3, 5)]);
-        let table = table_from_report(&text, "v0.3.3").unwrap_or_else(|error| panic!("{error:?}"));
+        let table = table_from_report(&text, "v0.2.7").unwrap_or_else(|error| panic!("{error:?}"));
         assert_eq!(table.source, WinRateSource::Provisional);
     }
 
@@ -284,7 +284,7 @@ mod tests {
                 id: id.to_string(),
                 source,
                 mode: GameMode::Bo1,
-                patch: "v0.3.3".to_string(),
+                patch: "v0.2.7".to_string(),
                 pilots,
                 game: GameSummary {
                     first: PlayerId::P1,
@@ -297,7 +297,7 @@ mod tests {
             serde_json::to_string(&record).unwrap_or_default()
         };
         let people = PerPlayer::new(Pilot::Human, Pilot::Human);
-        let table = table_from_records(&[line("m1", GameSource::Live, people)], "v0.3.3")
+        let table = table_from_records(&[line("m1", GameSource::Live, people)], "v0.2.7")
             .unwrap_or_else(|error| panic!("{error:?}"));
         assert_eq!(table.source, WinRateSource::Live);
         let hit: Vec<(&str, i32, i32)> = table
@@ -309,7 +309,7 @@ mod tests {
         assert!(hit.contains(&("core-001", 1, 2)), "{hit:?}");
         assert!(hit.contains(&("core-003", 0, 1)), "{hit:?}");
         let ais = PerPlayer::new(Pilot::Ai, Pilot::Ai);
-        let table = table_from_records(&[line("dev:v0.3.3:s:1", GameSource::Dev, ais.clone())], "v0.3.3")
+        let table = table_from_records(&[line("dev:v0.2.7:s:1", GameSource::Dev, ais.clone())], "v0.2.7")
             .unwrap_or_else(|error| panic!("{error:?}"));
         assert_eq!(table.source, WinRateSource::Provisional);
         let hit: Vec<(&str, i32, i32)> = table
@@ -322,7 +322,7 @@ mod tests {
         // R807000: p2 a ladder bot (`ai` on a live record): both sides count, as on /stats.
         // p1's core-001 won, p2's core-001 and core-003 lost.
         let bot_game = PerPlayer::new(Pilot::Human, Pilot::Ai);
-        let table = table_from_records(&[line("m2", GameSource::Live, bot_game)], "v0.3.3")
+        let table = table_from_records(&[line("m2", GameSource::Live, bot_game)], "v0.2.7")
             .unwrap_or_else(|error| panic!("{error:?}"));
         assert_eq!(table.source, WinRateSource::Live);
         let hit: Vec<(&str, i32, i32)> = table
@@ -334,9 +334,9 @@ mod tests {
         // Summed with a development game: the dev game's two seats and the live game's two.
         let both = [
             line("m2", GameSource::Live, PerPlayer::new(Pilot::Human, Pilot::Ai)),
-            line("dev:v0.3.3:s:1", GameSource::Dev, ais),
+            line("dev:v0.2.7:s:1", GameSource::Dev, ais),
         ];
-        let table = table_from_records(&both, "v0.3.3").unwrap_or_else(|error| panic!("{error:?}"));
+        let table = table_from_records(&both, "v0.2.7").unwrap_or_else(|error| panic!("{error:?}"));
         assert_eq!(table.source, WinRateSource::Provisional);
         let hit: Vec<(&str, i32, i32)> = table
             .cards
@@ -356,7 +356,7 @@ mod tests {
                 stats("core-002", 2, 4),
             ],
         );
-        let table = table_from_report(&text, "v0.3.3").unwrap_or_else(|error| panic!("{error:?}"));
+        let table = table_from_report(&text, "v0.2.7").unwrap_or_else(|error| panic!("{error:?}"));
         let ids: Vec<&str> = table.cards.iter().map(|row| row.id.as_str()).collect();
         assert_eq!(ids, vec!["core-002", "core-003"]);
     }
