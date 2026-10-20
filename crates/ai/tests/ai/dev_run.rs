@@ -135,7 +135,10 @@ mod the_ais_development_run_9_11 {
             },
         );
         let next = next_patch.as_ref().expect("the game finished");
-        assert_matches_object(next, json!({ "id": "dev:v0.2.3b:dev-test:1", "patch": "v0.2.3b" }));
+        assert_matches_object(
+            next,
+            json!({ "id": "dev:v0.2.3b:dev-test:1", "patch": "v0.2.3b" }),
+        );
         assert_ne!(
             next_patch.as_ref().map(|record| record.id.clone()),
             records[0].as_ref().map(|record| record.id.clone())

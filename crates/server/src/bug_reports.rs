@@ -725,7 +725,7 @@ mod tests {
             reports.file(
                 None,
                 Finding {
-                    catalog_version: format!("v0.3.{n}"),
+                    catalog_version: format!("v9.0.{n}"),
                     ..finding(&format!("m-{n}"))
                 },
             );
@@ -746,7 +746,7 @@ mod tests {
         let mut filed = Filed::default();
         for n in 0..BUG_REPORTS_PER_WINDOW {
             let found = Finding {
-                catalog_version: format!("v0.3.{n}"),
+                catalog_version: format!("v9.0.{n}"),
                 ..finding(&format!("m-{n}"))
             };
             let signature = Signature::of(None, &found);

@@ -323,6 +323,21 @@ pub fn write_retcon(repo_root: &Path, map: &[Renamed]) -> anyhow::Result<Written
     for (path, text) in &registered {
         fs::write(path, text).with_context(|| format!("{} cannot be written", path.display()))?;
     }
+    // A literal the rewrite lengthened can push a line past rustfmt's width.
+    if tree
+        .iter()
+        .any(|file| file.text.is_some() && file.to.ends_with(".rs"))
+        && repo_root.join("Cargo.toml").exists()
+    {
+        let status = std::process::Command::new("cargo")
+            .args(["fmt", "--all"])
+            .current_dir(repo_root)
+            .status()
+            .context("cargo fmt could not run")?;
+        if !status.success() {
+            bail!("cargo fmt failed after the rewrite ({status})");
+        }
+    }
     // Last, the marker: a run that failed before here runs again over the same tree.
     write_json(&aliases_path(repo_root), &aliases_of(map))?;
     Ok(Written {

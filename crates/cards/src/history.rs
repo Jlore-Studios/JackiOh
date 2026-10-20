@@ -70,11 +70,7 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.3.1",
         c049_snom_bunny_mind_control::script_v0_3_7b,
     ),
-    (
-        c088_siphon_squad::ID,
-        "v0.3.1",
-        c088_siphon_squad::script_v0_3_7b,
-    ),
+    (c088_siphon_squad::ID, "v0.3.1", c088_siphon_squad::script_v0_3_7b),
     (
         c017_true_craft_a_card::ID,
         "v0.3.1",

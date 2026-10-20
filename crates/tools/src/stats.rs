@@ -1248,7 +1248,10 @@ mod tests {
             groups(&["--source=all"]),
             ["v0.2.3 random dev", "v0.2.2b random dev", "v0.2.3 bo1 live"]
         );
-        assert_eq!(groups(&["--source=all", "--patch=v0.2.2b"]), ["v0.2.2b random dev"]);
+        assert_eq!(
+            groups(&["--source=all", "--patch=v0.2.2b"]),
+            ["v0.2.2b random dev"]
+        );
         assert_eq!(games_of(&["--source=all", "--patch=v0.2.2b"]).other_sources, 0);
         assert_eq!(groups(&["--source=all", "--mode=bo1"]), ["v0.2.3 bo1 live"]);
         // A game counts when a seat its pilot reads is in it.

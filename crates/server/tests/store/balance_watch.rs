@@ -428,7 +428,10 @@ mod balance_watch_file_cases {
         .expect("the second file");
         let paths = [first, second];
 
-        for argv in [&["--patch=v0.3.0b"][..], &["--patch=v0.3.0b", "--source=live"][..]] {
+        for argv in [
+            &["--patch=v0.3.0b"][..],
+            &["--patch=v0.3.0b", "--source=live"][..],
+        ] {
             let opts = options(argv);
             let from_store = balance_watch_report(&db, &opts)
                 .await
