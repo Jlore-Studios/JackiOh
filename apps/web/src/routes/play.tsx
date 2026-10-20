@@ -25,7 +25,6 @@ import {
   createRoom,
   dequeue,
   enqueue,
-  getCatalog,
   getCollection,
   getDecks,
   getMe,
@@ -42,6 +41,7 @@ import {
   type SavedTrio,
 } from "../net/api.ts";
 import { namesCustomCard } from "../creator/useCustomCards.ts";
+import { currentCatalog } from "../game/currentCatalog.ts";
 import { pageWake } from "../game/net.ts";
 import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
 import { MATCH_FOUND_STATUS, forgetQueued, liveGameOf, readQueued, rememberQueued, useQueued } from "../net/liveGame.ts";
@@ -193,23 +193,20 @@ function attempt<T>(call: () => Promise<T>): Promise<T> {
   return Promise.resolve().then(call);
 }
 
-/** Catalog and collection failures skip only the client verdict. */
+/** A collection failure skips only the client verdict; the catalog is the one the client ships (game/currentCatalog.ts). */
 function useLobbyData(token: string): LobbyLoad {
   const [load, setLoad] = useState<LobbyLoad>({ kind: "loading" });
   useEffect(() => {
     let cancelled = false;
     Promise.all([
       attempt(() => getDecks(token)),
-      attempt(() => getCatalog())
-        .then((catalog): CatalogSnapshot | null => ({ version: catalog.version, cards: catalog.defs }))
-        .catch(() => null),
       attempt(() => getCollection(token))
         .then((collection): Collection | null => collectionOf(collection.entries))
         .catch(() => null),
     ]).then(
-      ([decks, catalog, collection]) => {
+      ([decks, collection]) => {
         if (cancelled) return;
-        setLoad({ kind: "ready", data: { decks: decks.decks, trios: decks.trios, catalog, collection } });
+        setLoad({ kind: "ready", data: { decks: decks.decks, trios: decks.trios, catalog: currentCatalog(), collection } });
       },
       (cause: unknown) => {
         if (!cancelled) setLoad({ kind: "failed", message: messageOf(cause) });
