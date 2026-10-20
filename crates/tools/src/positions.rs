@@ -414,6 +414,7 @@ mod tests {
             turns: record.turns,
             catalog: jackioh_cards::catalog_version().to_string(),
             commit: "test".to_string(),
+            ai_generation: None,
         };
         (game, live)
     }

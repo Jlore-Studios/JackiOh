@@ -304,6 +304,10 @@ Every change to card data is a patch, and every patch is kept.
   the version from `patches.json` at compile time; `cargo jackioh catalog-version` prints it.
 - A version is opaque (R105): nothing parses or orders one, and the order of patches is
   `patches.json`'s. A snapshot keeps a card's data, not its script.
+- `patch_history()` (`src/patch_history.rs`, R1367000) reads `patches.json` as a card's statistics
+  window does: each version's tier and the families that play in it, as recorded, or, for a version
+  shipped before tiers were recorded, from its `changes` (`WORDING_FIELDS`, `PATCH_MIN_CARDS`,
+  `PRE_TIER_MAJORS`). The server and the tools hand it to the engine's `windowed_card_stats`.
 - Every shipped version but the newest is carried for replays (R767000): its definitions rebuilt
   from its snapshot, its scripts the build's own, and the win-rate table it shipped with (R1266000:
   its `win_rates/<version>.json`, or the empty table with no file, R1329000). A patch

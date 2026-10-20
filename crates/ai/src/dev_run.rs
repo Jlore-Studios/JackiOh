@@ -22,8 +22,8 @@
 
 use jackioh_engine::config::DECK_SIZE;
 use jackioh_engine::{
-    DEV_RECORD_ID_PREFIX, FoldArgs, GameMode, GameRecord, GameSource, PerPlayer, Pilot, PlayerId, Rng,
-    summarize_game,
+    DEV_RECORD_ID_PREFIX, FoldArgs, GameMode, GameRecord, GameSource, PerPlayer, Pilot, PlayerId,
+    RecordBuild, Rng, summarize_game,
 };
 use serde::{Deserialize, Serialize};
 
@@ -60,6 +60,24 @@ pub struct DevRunOptions {
     /// R1284000: a card dealt to one seat in every game (`forced_dev_game_config`); `None` deals R258's decks.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub force: Option<String>,
+    /// R1367000: the git commit the running tool was built from, filed as each record's build with
+    /// this build's AI generation (`ai_generation`); `None` files no build.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub commit: Option<String>,
+}
+
+/// `crates/ai/generation.json`, compiled in (CLAUDE.md rule 4: data reaches a pure crate only at
+/// compile time).
+const GENERATION_JSON: &str = include_str!("../generation.json");
+
+/// R1367000: the AI generation this build holds (`crates/ai/generation.json`'s `generation`), which a
+/// game record the AI played a seat of files in its build.
+pub fn ai_generation() -> Option<i32> {
+    serde_json::from_str::<serde_json::Value>(GENERATION_JSON)
+        .ok()?
+        .get("generation")?
+        .as_i64()
+        .and_then(|generation| i32::try_from(generation).ok())
 }
 
 /// One seat's dealt deck of game `seed`. R258: All Random's deal, `build_ai_deck` with only `banned` banned,
@@ -159,5 +177,10 @@ pub fn dev_game_record(n: i32, options: &DevRunOptions) -> Option<GameRecord> {
             p2: Pilot::Ai,
         },
         game,
+        build: RecordBuild::of(
+            options.commit.as_deref(),
+            ai_generation(),
+            &PerPlayer::new(Pilot::Ai, Pilot::Ai),
+        ),
     })
 }

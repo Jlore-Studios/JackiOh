@@ -43,18 +43,13 @@ use crate::luau::{parent_check, temp_traces};
 use crate::patches::patches_io::{Catalog, ChangeKind, diff_catalogs};
 use crate::patches::{git, repo_root};
 
-/// R1365000: the card families that must play differently for a patch; fewer is a micro.
-pub(crate) const PATCH_MIN_CARDS: usize = 10;
+/// R1365000: the card families that must play differently for a patch; fewer is a micro. The
+/// engine's, since a card's stats window reads it too (R1367000).
+pub(crate) use jackioh_engine::config::PATCH_MIN_CARDS;
 
-/// R1365000: the catalog fields a player reads and no game does. Every other field plays.
-pub(crate) const WORDING_FIELDS: &[&str] = &[
-    "name",
-    "base.text",
-    "radiant.text",
-    "refs",
-    "printedRarity",
-    "index",
-];
+/// R1365000: the catalog fields a player reads and no game does. Every other field plays. The cards
+/// crate's, since a card's stats window reads it too (R1367000).
+pub(crate) use jackioh_cards::WORDING_FIELDS;
 
 /// The AI crate's own tooling, which plays no decision (gates, the sweep, development runs).
 const AI_TOOLING: &[&str] = &["gate.rs", "sweep.rs", "dev_run.rs", "baselines.rs"];
