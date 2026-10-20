@@ -7,6 +7,7 @@
 // through props: the "owned only" control, the grid's deck half (the "+", the drag, where each
 // card already is), a status line under the filters, and the detail view's meta and actions.
 // Without the grid's deck half the grid is read-only (PoolGrid.tsx).
+// The "Win %" sort's notice (loading, or failed with a retry) reads the screen's useCardWinRates.
 
 import type { ReactElement, ReactNode } from "react";
 
@@ -19,7 +20,8 @@ import FilterBar from "./FilterBar.tsx";
 import { CUSTOM_SET } from "./loadout.ts";
 import type { PoolFilter, PoolSort } from "./filters.ts";
 import PoolGrid, { type PoolGridDeckProps } from "./PoolGrid.tsx";
-import { DB_EMPTY } from "./testids.ts";
+import { DB_EMPTY, DB_WINRATE_NOTICE, DB_WINRATE_RETRY } from "./testids.ts";
+import type { CardWinRates } from "./useCardWinRates.ts";
 
 /** The card whose detail view is open, and what the screen puts in it. */
 export type BrowserDetail = {
@@ -56,11 +58,14 @@ export type CardBrowserProps = {
   onCloseDetail: () => void;
   /** SPEC §9.11, R654: render the compact card statistics block in the detail view (deckbuilder and almanac). */
   showStats?: boolean;
+  /** The screen's `useCardWinRates`: while the "Win %" sort's rates load, or after they failed, a
+   *  notice over the pool says the cards are in cost order (a retry after a failure). */
+  winRates?: CardWinRates;
 };
 
 export default function CardBrowser(props: CardBrowserProps): ReactElement {
   const { catalog, pool, filter, onFilter, sort, onSort, ownedControl, ownedUnavailable, tags, sets, setsAfter, showStats } = props;
-  const { deck, status, onInspect, detail, onCloseDetail } = props;
+  const { deck, status, onInspect, detail, onCloseDetail, winRates } = props;
   const detailDef = detail === null ? undefined : catalog.cards[detail.cardId];
 
   return (
@@ -78,6 +83,26 @@ export default function CardBrowser(props: CardBrowserProps): ReactElement {
         setsAfter={setsAfter}
       />
       {status}
+      {sort.key === "winRate" && winRates !== undefined && (winRates.status === "loading" || winRates.status === "failed") ? (
+        <div
+          className="notice"
+          data-testid={DB_WINRATE_NOTICE}
+          data-state={winRates.status}
+          role={winRates.status === "failed" ? "alert" : "status"}
+        >
+          {winRates.status === "failed"
+            ? t("Win rates couldn’t be loaded, so the cards are in cost order.")
+            : t("Loading win rates… Until they arrive, the cards are in cost order.")}
+          {winRates.status === "failed" ? (
+            <>
+              {" "}
+              <button type="button" className="link-button" data-testid={DB_WINRATE_RETRY} onClick={winRates.retry}>
+                {t("Retry")}
+              </button>
+            </>
+          ) : null}
+        </div>
+      ) : null}
       {/* The frame is what the pool's cards are sized against on a desktop (deckbuilder.css): its
           height is whatever the filters above leave, and two rows of cards fill it. */}
       <div className="db-pool-frame">

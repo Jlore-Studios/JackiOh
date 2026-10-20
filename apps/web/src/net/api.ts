@@ -12,7 +12,7 @@
 // is `{ error: { code, message, details? } }` from `crates/server/src/api/http.rs`.
 
 import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
-import type { CardDefs, GameOverReason, LeanPick, PlayerId, PortraitId } from "@jackioh/shared";
+import type { CardDefs, GameOverReason, LeanPick, PlayerId, PortraitId, SetName } from "@jackioh/shared";
 
 import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
@@ -224,6 +224,11 @@ export type MeResponse = {
    * before R897000 (or a test stub) omits it; missing never ends a wait.
    */
   queued?: boolean;
+  /**
+   * R1300000: whether the server's `DEV_PROFILE_IDS` lists this account, so `/account` shows the
+   * Dev tools panel. The server checks the list again on every dev route. Missing: not a dev account.
+   */
+  isDev?: boolean;
 };
 
 /** The caller's own username, as `/api/auth/me` and every username route answer with it (R1435). */
@@ -338,6 +343,38 @@ export function postConsent(
  */
 export async function deleteAccount(token: string): Promise<void> {
   await apiRequest<null>("/api/account", { method: "DELETE", token });
+}
+
+// ---------------------------------------------------------------------------------------------
+// The dev tools (SPEC §14.10, R1300000): a dev account's own economy, which the server alone
+// changes. Each answers 403 `forbidden` to an account `DEV_PROFILE_IDS` does not list, and 400 to
+// an amount that is not a positive whole number; the client sends what was typed and shows that.
+// ---------------------------------------------------------------------------------------------
+
+/** What `POST /api/dev/clear/:part` clears: one holding, or all five. */
+export type DevClearPart = "cards" | "cosmetics" | "jlore" | "counters" | "tracks" | "everything";
+
+/** A set track as the server holds it (SPEC §14.7). */
+export type DevSetTrack = { setId: string; xp: number; level: number; rewardsClaimed: number };
+
+/** `POST /api/dev/xp`: XP to a shipped set's track, through the level curve. */
+export function devGiveXp(token: string, setId: SetName, xp: number): Promise<{ track: DevSetTrack }> {
+  return apiRequest<{ track: DevSetTrack }>("/api/dev/xp", { method: "POST", token, body: { setId, xp } });
+}
+
+/** `POST /api/dev/jlore`: Jlore, answering the new balance. */
+export function devGiveJlore(token: string, jlore: number): Promise<{ jlore: number }> {
+  return apiRequest<{ jlore: number }>("/api/dev/jlore", { method: "POST", token, body: { jlore } });
+}
+
+/** `POST /api/dev/fill`: every card and cosmetic, answering the ledger rows written. */
+export function devFill(token: string): Promise<{ cards: number; cosmetics: number }> {
+  return apiRequest<{ cards: number; cosmetics: number }>("/api/dev/fill", { method: "POST", token, body: {} });
+}
+
+/** `POST /api/dev/clear/:part`, answering the ledger rows written. */
+export function devClear(token: string, part: DevClearPart): Promise<{ written: number }> {
+  return apiRequest<{ written: number }>(`/api/dev/clear/${part}`, { method: "POST", token, body: {} });
 }
 
 // Sign-in and sign-up are NOT here. SPEC §9.2 draws the browser's arrow to the auth provider

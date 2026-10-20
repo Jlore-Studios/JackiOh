@@ -9,34 +9,21 @@
 //!
 //! The dev tools (`POST /api/dev/quests`, `POST /api/dev/quests/:questId/complete`) give the caller
 //! a quest at once and complete one it holds, as rows marked `dev` (§14.10), so quests are tested
-//! without waiting. Until #1300's dev check lands they open in end-to-end builds alone
-//! ([`quest_dev_tools_open`]), and anywhere else answer what a path nobody serves answers.
+//! without waiting. Like every dev tool they answer a dev account alone (`api::dev::dev_caller`,
+//! R1300000), and anyone else 403 `forbidden`, writing nothing.
 
 use std::sync::Arc;
 
 use serde_json::{Value, json};
 
 use crate::api::collection::caller_profile;
+use crate::api::dev::dev_caller;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::app::{App, now_ms};
 use crate::config::QUEST_MAX_HELD;
-use crate::db::store::{Profile, Tx};
+use crate::db::store::Tx;
 use crate::economy::quests::{arrival, complete_quest, fresh_seed, quest_def, quest_xp, top_up_quests};
 use crate::economy::store::{EconomyReason, HeldQuest, QuestBook};
-
-/// Whether the quest dev tools answer: in end-to-end builds alone, until #1300's dev check
-/// (`DEV_PROFILE_IDS`, §14.10) replaces this and refuses any other account as forbidden.
-pub fn quest_dev_tools_open(app: &App) -> bool {
-    app.env.e2e
-}
-
-/// The caller of a dev tool, or, while the tools are closed, the answer a path nobody serves gets.
-fn dev_caller(app: &App, req: &Req) -> Result<Profile, ApiError> {
-    if !quest_dev_tools_open(app) {
-        return Err(ApiError::new(ApiErrorCode::NotFound, "no such endpoint"));
-    }
-    caller_profile(req)
-}
 
 /// A held quest as the client reads it; `None` for an id the pool no longer has.
 fn quest_view(held: &HeldQuest) -> Option<Value> {

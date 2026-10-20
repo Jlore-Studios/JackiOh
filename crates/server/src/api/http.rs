@@ -69,6 +69,8 @@ pub enum ApiErrorCode {
     RateLimited,
     Unavailable,
     Internal,
+    /// R1300000: a dev route asked by an account `DEV_PROFILE_IDS` does not list.
+    Forbidden,
 }
 
 impl ApiErrorCode {
@@ -97,6 +99,7 @@ impl ApiErrorCode {
             ApiErrorCode::RateLimited => 429,
             ApiErrorCode::Unavailable => 503,
             ApiErrorCode::Internal => 500,
+            ApiErrorCode::Forbidden => 403,
         }
     }
 
@@ -125,6 +128,7 @@ impl ApiErrorCode {
             ApiErrorCode::RateLimited => "rate_limited",
             ApiErrorCode::Unavailable => "unavailable",
             ApiErrorCode::Internal => "internal",
+            ApiErrorCode::Forbidden => "forbidden",
         }
     }
 }

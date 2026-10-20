@@ -558,6 +558,7 @@ whole of what it can reach. Legacy `anon` JWT keys still work and are compatibil
 | `TRUSTED_PROXY_HOPS` | no (`0`) | R190: how many `X-Forwarded-For` entries, counted from the right, this deployment's own proxies write. The per-IP limits (§9.4 step 3, R157) key on that entry and ignore everything the caller wrote to its left; `CF-Connecting-IP` and `X-Real-IP` are never read. `0` to `5`; `0` (the default) ignores the header and keys on the socket's peer address, which is right with no proxy in front | `render.yaml` starts it at `1`, which can only over-group; set it to the count your own request shows in the `api.forwarded_for` log (§10, step 8); leave unset for a local server |
 | `RENDER_GIT_COMMIT` | no | the git commit this deploy was built from; Render sets it on every deploy and it is unset anywhere else. `GET /api/catalog` reports it in the `x-deployed-commit` response header (the body is untouched, R163), and `deploy-watch.yml` compares it with each push to `main`, so a Render that stopped receiving pushes is seen even when the catalog version did not change. Only a hex SHA is kept | set by Render; leave unset for a local server |
 | `LADDER_BOTS` | no (`off`) | R1453, R1454, R1452, R641000: `on` seats a ladder bot, which this process plays itself, against a ranked ticket of any mode that waited past its fallback time with no person inside its window (a Conquest ticket's in a series), and sizes the bot pool at boot and hourly. Off unless `on`: unset or `off` seats no bot and keeps no pool, and any other value refuses the boot | the operator; turning it on wants a host with room for the AI's search beside the matches, such as a paid Render instance rather than the free tier |
+| `DEV_PROFILE_IDS` | no (none) | SPEC §14.10, R1300000: the dev accounts, comma-separated profile ids; `/api/auth/me` says `isDev` to a listed account, which may use the `/api/dev/*` tools on its own economy, and a new catalog version's grant passes over it (R1300001, `seed-catalog` reads it too). A malformed id refuses the boot, naming it; the boot logs only how many are listed | the operator: each developer's account secret ID, from `/account` → "Manage sign-in & account" → "Show account secret ID"; leave unset for a local server without dev tools |
 
 `crates/server/src/env.rs` loads these from the process environment (the binary reads no `.env`
 file), reports **every** missing or malformed variable in one error naming where to get each, and
@@ -705,7 +706,7 @@ step that is not yet implemented says which BUILD task delivers it.
    `0035_replay_final_hash.sql` → `0036_lean_set.sql` → `0037_custom_cards.sql` → `0038_social.sql` →
    `0039_duos.sql` → `0040_moderation_switch_grant.sql` → `0041_card_totals.sql` →
    `0042_match_checkpoints.sql` → `0043_meditative_plus_set.sql` → `0044_deck_cosmetics.sql` →
-   `0045_economy.sql` — and records them in `app.migrations`. Expected result: 62 tables
+   `0045_economy.sql` → `0046_dev_accounts.sql` — and records them in `app.migrations`. Expected result: 62 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can

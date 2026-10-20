@@ -3,7 +3,8 @@
 //! An account reads its own Jlore balance and its own tracks — level, XP, the XP to the next
 //! level, the next level's rewards and how many levels have paid — and nobody else's (§14). Like
 //! `GET /api/collection`, these are reads alone: the ledger moves only through the server-side
-//! payouts (`economy::rewards`), never through a client path.
+//! payouts (`economy::rewards`) and, for a dev account alone, its dev tools (`api/dev.rs`,
+//! [[R1300000]]), never through a player's client path.
 
 use std::sync::Arc;
 

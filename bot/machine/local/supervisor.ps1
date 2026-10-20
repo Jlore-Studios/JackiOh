@@ -51,11 +51,38 @@ function Log([string]$msg) {
   Add-Content -Path $logFile -Value $line -Encoding utf8
 }
 
-# A native command's output as text and its exit code, without PowerShell 5.1 turning stderr into
-# errors.
-function Run([string]$exe, [string[]]$argv) {
-  $out = & $exe @argv 2>&1 | ForEach-Object { "$_" }
-  [pscustomobject]@{ Code = $LASTEXITCODE; Out = ($out -join "`n") }
+# One argument as Windows' command line quotes it (CommandLineToArgvW's rules).
+function Quote-Arg([string]$a) {
+  if ($a -and $a -notmatch '[\s"]') { return $a }
+  '"' + (($a -replace '(\\*)"', '$1$1\"') -replace '(\\+)$', '$1$1') + '"'
+}
+
+# A native command's output as text (stdout, then stderr) and its exit code, without PowerShell 5.1
+# turning stderr into errors. One still running after $timeoutSeconds is killed and fails (code -1):
+# a `docker info` that a stuck Docker engine never answered once held the supervisor for 19 hours,
+# its runner offline the while (#466).
+function Run([string]$exe, [string[]]$argv, [int]$timeoutSeconds = 120) {
+  $path = (Get-Command $exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+  if (-not $path) { return [pscustomobject]@{ Code = -1; Out = "$exe is not on PATH" } }
+  $psi = New-Object System.Diagnostics.ProcessStartInfo
+  $psi.FileName = $path
+  $psi.Arguments = (@($argv) | ForEach-Object { Quote-Arg $_ }) -join ' '
+  $psi.UseShellExecute = $false
+  $psi.CreateNoWindow = $true
+  $psi.RedirectStandardOutput = $true
+  $psi.RedirectStandardError = $true
+  $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+  $psi.StandardErrorEncoding = [System.Text.Encoding]::UTF8
+  $p = [System.Diagnostics.Process]::Start($psi)
+  $stdout = $p.StandardOutput.ReadToEndAsync()
+  $stderr = $p.StandardError.ReadToEndAsync()
+  if (-not $p.WaitForExit($timeoutSeconds * 1000)) {
+    try { $p.Kill() } catch { }
+    return [pscustomobject]@{ Code = -1; Out = "$exe $($argv[0]) gave no answer in $timeoutSeconds s" }
+  }
+  $p.WaitForExit()
+  $lines = @(($stdout.Result.TrimEnd() -split "\r?\n") + ($stderr.Result.TrimEnd() -split "\r?\n") | Where-Object { $_ -ne '' })
+  [pscustomobject]@{ Code = $p.ExitCode; Out = ($lines -join "`n") }
 }
 
 # `gh api` as JSON. (Not named Gh: PowerShell's names are case-blind, so a function Gh would shadow
@@ -258,8 +285,12 @@ Log ("supervisor up on $repo, serving {0}; calm = CPU < {1}% and memory < {2} GB
   (@($cfg.serve | ForEach-Object { $_.label }) -join ', '), $cfg.cpuPercentBelow, $cfg.memoryGBBelow, $cfg.calmSeconds, $cfg.maxJobs)
 $wasCalm = $null
 while ($true) {
-  if ((Run 'docker' @('info', '--format', '{{.ServerVersion}}')).Code -ne 0) {
-    if ($wasCalm -ne 'nodocker') { Log 'Docker is not running; waiting'; $wasCalm = 'nodocker' }
+  $d = Run 'docker' @('info', '--format', '{{.ServerVersion}}') 30
+  if ($d.Code -ne 0) {
+    if ($wasCalm -ne 'nodocker') {
+      Log "Docker is not answering ($(@($d.Out -split "`n")[0])); waiting"
+      $wasCalm = 'nodocker'
+    }
     Start-Sleep -Seconds 30
     continue
   }

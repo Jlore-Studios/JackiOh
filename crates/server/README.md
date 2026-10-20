@@ -41,6 +41,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
 | Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings) and `live_match_of` (§13) |
 | Economy | `economy/store.rs`, `economy/quests.rs`, `quests.json` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store; the daily quests (§14.9): their pool and its check (every payout from `QUEST_JLORE_MIN` to `QUEST_JLORE_MAX`, a harder entry paying more), their rhythm and top-up, the store's read locking the account's schedule so two top-ups at once bring a quest once (R1304000), what a finished game moves through the reward hook and the payout of one that completes (R1304001) |
+| Dev tools | `api/dev.rs` | a dev account's own grants and clears (§14.10, R1300000): XP, Jlore, the fill and the clears, each one transaction of ledger rows marked `dev`; 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
 There are no traits: `Db`, `Tx` and `Auth` are enums with one variant per implementation (`Pg` and
@@ -143,6 +144,7 @@ placeholders (`app::load_server_env`).
 | `LADDER_BOTS` | no | `on` seats a ladder bot against a ranked ticket of any mode left alone past its fallback time (a Conquest ticket's in a series, R641000), and keeps the bot pool (R1453, R1454, R1452); off unless `on` (unset or `off`), and any other value refuses the boot. The bots decide in this process, so turning it on wants a host with room for the AI's search, such as a paid Render instance |
 | `CREATE_ISSUES_TOKEN` | no | a token that may open issues in `GITHUB_ISSUES_REPO`, with which the server files a match its own log does not reproduce ([below](#a-match-its-log-does-not-reproduce)); unset, such a match is only logged. Secret |
 | `GITHUB_ISSUES_REPO` | no | the `owner/name` those issues go to; default `Jlore-Studios/JackiOh` (`BUG_REPORT_REPO_DEFAULT`) |
+| `DEV_PROFILE_IDS` | no | the dev accounts (§14.10, R1300000): comma-separated profile ids, each the account secret ID `/account` shows; unset, none. A malformed id refuses the boot, naming it. `seed-catalog` reads it too, so a new catalog's grant passes over them (R1300001). The boot logs how many, never which |
 
 `mint-code`, `moderate` and `seed-accounts` read the same environment (`seed-accounts` also
 `SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import`, `stats-fold`,
@@ -162,7 +164,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `POST` | `/api/auth/signin` | none | E2E mode only: a fixture account's session |
 | `POST` | `/api/e2e/reseed` | none | E2E mode only, elsewhere a path nobody serves (404): R144's reseed on demand, which spec 10 calls first; answers `{ profiles, grantedCards, codes }` |
 | `POST` | `/api/auth/username-signin` | none | a username and password: the session, never the address; limited per address and per username (R1443) |
-| `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series, the caller's `username: { name, nextChangeAt, promptOwed }` (R1435), `ageCheckOwed` and `termsOwed` (R757000, R757001), and `queued` (R897000) |
+| `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series, the caller's `username: { name, nextChangeAt, promptOwed }` (R1435), `ageCheckOwed` and `termsOwed` (R757000, R757001), `queued` (R897000), and `isDev`, whether `DEV_PROFILE_IDS` lists the caller (R1300000) |
 | `GET` | `/api/profile` | active | the account screen: who the caller is and their record |
 | `GET` | `/api/username/preview?name=…` | active | the exact username a save would give, tag included, or why it is refused (R1432–R1435) |
 | `PUT` | `/api/username` | active | save the previewed username; 409 with a fresh preview when the outcome changed (R1434, R1435) |
@@ -172,13 +174,14 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET` | `/api/catalog` | none | `{ version, defs }`, the bytes the client ships (R163); `x-deployed-commit` |
 | `POST` | `/api/codes/redeem` | user | §9.4's six-step redemption; first 403 `consent_owed` for an account owing the age check or the terms, costing no attempt (R757000, R757001) |
 | `GET` | `/api/codes/status` | user | whether redemption is paused, and the caller's attempts left (R192) |
-| `GET` | `/api/collection` | active | the ledger; there is no write route |
+| `GET` | `/api/collection` | active | the cards owned (a card cleared to 0 is not sent); there is no write route but the dev tools' |
 | `GET` | `/api/wallet` | active | the caller's Jlore balance (§14.1); read-only, like the collection |
 | `GET` | `/api/tracks` | active | the caller's set tracks in catalog order — level, XP, the XP to the next level, the next rewards (both `null` on the last level, R1302005) and how many levels have paid (§14.7); read-only, like the collection |
 | `GET` | `/api/quests` | active | the caller's held quests, `{ quests: [{ questId, title, progress, target, jlore, xp, arrivedAt }], nextDueAt }`, topped up first while the economy is live (R1304000); `nextDueAt` is `null` at `QUEST_MAX_HELD` and while the economy is off, when none arrives (R1304002) |
-| `POST` | `/api/dev/quests` | active | a dev tool: a quest at once, drawn as an arrival is and marked `dev`, `{ quest }`; 409 at `QUEST_MAX_HELD`. E2E builds only until #1300's dev check |
-| `POST` | `/api/dev/quests/:questId/complete` | active | a dev tool: completes a held quest and pays it, every row marked `dev`, `{ completed, jlore, xp }`; 404 for a quest not held. E2E builds only until #1300's dev check |
+| `POST` | `/api/dev/quests` | active | a dev tool: a quest at once, drawn as an arrival is and marked `dev`, `{ quest }`; 409 at `QUEST_MAX_HELD`. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list (R1300000) |
+| `POST` | `/api/dev/quests/:questId/complete` | active | a dev tool: completes a held quest and pays it, every row marked `dev`, `{ completed, jlore, xp }`; 404 for a quest not held. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list (R1300000) |
 | `GET` | `/api/cosmetics` | active | the cosmetics the caller owns, `{ cards: [{ cardId, cosmeticId }], account }`, never another's; the starter cosmetics have no row (R1313000) |
+| `POST` | `/api/dev/xp`, `/api/dev/jlore`, `/api/dev/fill`, `/api/dev/clear/:part` | active | a dev account's own tools (§14.10, R1300000): `{ setId, xp }` to a shipped set's track, its level stopping at `SET_TRACK_LEVELS`; `{ jlore }`; every collectable card and every cosmetic but the defaults; a clear of `cards`, `cosmetics`, `jlore`, `counters`, `tracks` or `everything`; every row reason `dev`, marked `dev`. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list |
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641) and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000) |
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
@@ -446,13 +449,16 @@ A match is its `(seed, decks, boards, log)` (§9.3), and the server checks that 
 (`api::results`) and the fold of a finished match for its game record (`api::game_records`). When a
 fold refuses an action the log holds, the match goes on as before (a rebuild keeps the state it
 folded to, a finished match keeps the result it recorded), and `bug_reports.rs` logs it as the
-alert `bug.found` and, with `CREATE_ISSUES_TOKEN` set, files one GitHub issue for the night bot:
-titled `Patch v0.3.Y: match <id> …`, labelled `BUG_REPORT_LABELS` (`patch`, `bot:build`,
-`difficulty:hard`, `priority:high`). It files once per match per process, at most
-`BUG_REPORTS_PER_WINDOW` in `BUG_REPORT_WINDOW_MS`, and nothing when an issue whose title names the
-match exists already. The repository is public and the match may still be live, so the issue names
-the match, the build, the catalog and each refused row's seq, seat and action type, and never a
-refusal's text, a card or an instance id.
+alert `bug.found` and, with `CREATE_ISSUES_TOKEN` set, files one GitHub issue for the night bot
+per failure signature (`bug_reports::Signature`: where it was found, the build, the catalog and
+the first refused action's type), titled `Patch v0.3.Y: match <first id> … (<signature>)` and
+labelled `BUG_REPORT_LABELS` (`patch`, `bot:build`, `difficulty:hard`, `priority:high`). A later
+match with the signature is added to that issue's body, once per match per process, up to
+`BUG_REPORT_LISTED_MATCHES`; a process opens at most `BUG_REPORTS_PER_WINDOW` issues in
+`BUG_REPORT_WINDOW_MS`, and none when an issue whose title holds the signature exists already
+(its later matches are only logged). The repository is public and the match may still be live,
+so the issue names each match, the build, the catalog and each refused row's seq, seat and action
+type, and never a refusal's text, a card or an instance id.
 
 A live action whose `reduce` panics (R1253000) is filed the same way, as `FoundIn::Live`
 (`FoundIn::DuosLive` in co-op): the issue names the match, the seq the action would have taken, its
@@ -720,6 +726,13 @@ the token bars, the cosmetic token cycle, the Chase Shard bar), `set_tracks` and
 authenticated account the cosmetics; no client role writes any, and a ledger row is never edited and
 goes only with its account (`app.deny_row_mutation('profile_id')`). Every ledger row has a reason and
 a `dev` mark (§14.10), which `collection_grants` gains too, false for every existing row.
+
+Migration 0046 adds the dev accounts' two rules (§14.10). `collection_grants` takes the reason `dev`,
+a dev tool's own, written only marked `dev` (`collection_grants_dev_check`, R1300000). And
+`app.grant_launch_collection_all`, which a catalog stamp runs (R481), passes over the profiles the
+transaction's `jackioh.dev_profile_ids` setting names, which `seed-catalog` sets from
+`DEV_PROFILE_IDS` before its stamp, so a dev account's clear stays cleared (R1300001); a stamp
+without the setting grants every person's active account as before.
 
 ## Tests
 

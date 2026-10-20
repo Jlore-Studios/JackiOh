@@ -8,7 +8,7 @@
 //! `rewards.rs`'s ladder game.
 //!
 //! Requests go through the whole app (`support::deps::test_app`, the E2E fixtures): the caller is
-//! `e2e-p1`, the other account `e2e-p2`.
+//! `e2e-p1`, the other account `e2e-p2`. The dev tools' tests list `e2e-p1` as a dev account.
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -21,7 +21,6 @@ use jackioh_engine::{
 };
 use serde_json::{Value, json};
 
-use jackioh_server::api::quests::quest_dev_tools_open;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{QUEST_MAX_HELD, QUEST_XP_PER_JLORE};
 use jackioh_server::economy::quests::{
@@ -31,7 +30,7 @@ use jackioh_server::economy::quests::{
 use jackioh_server::economy::rewards::{GameMode, GameSummary, pay_game_rewards};
 use jackioh_server::economy::store::{EconomyLedger, EconomyReason, JloreReason, QuestChange, QuestGrant};
 
-use crate::support::deps::{TestAppOptions, call, test_app as built_app, test_app_with};
+use crate::support::deps::{call, test_app as built_app};
 
 /// The caller's bearer token and managed-auth user id (`e2e/support/config.ts`'s `e2e-p1`).
 const TOKEN: &str = "e2e-token-p1";
@@ -76,6 +75,18 @@ async fn profile_id_of(app: &App, user_id: &str) -> String {
         .unwrap_or_else(|| panic!("the fixture account {user_id} has a profile"));
     tx.commit().await.expect("commit");
     profile.id
+}
+
+/// The test app with `e2e-p1` listed in `DEV_PROFILE_IDS`, so the quest tools answer it as they
+/// answer a dev account (R1300000); and its profile id.
+async fn dev_app() -> (Arc<App>, String) {
+    let mut app = built_app().await;
+    let p1 = profile_id_of(&app, USER).await;
+    Arc::get_mut(&mut app)
+        .expect("the test app has no second handle yet")
+        .env
+        .dev_profile_ids = vec![p1.clone()];
+    (app, p1)
 }
 
 async fn ledger_of(app: &App, profile: &str) -> EconomyLedger {
@@ -377,8 +388,7 @@ async fn r1304001_progress_stops_at_the_target() {
 
 #[tokio::test]
 async fn dev_quest_tools_give_and_complete_once() {
-    let app = built_app().await;
-    let p1 = profile_id_of(&app, USER).await;
+    let (app, p1) = dev_app().await;
     for _ in 0..QUEST_MAX_HELD {
         let (status, _, body) = call(&app, "POST", "/api/dev/quests", Some(TOKEN), Value::Null).await;
         assert_eq!(status, 200, "{body}");
@@ -437,14 +447,19 @@ async fn dev_quest_tools_give_and_complete_once() {
 }
 
 #[tokio::test]
-async fn dev_quest_tools_are_closed_outside_end_to_end_builds() {
-    let closed = test_app_with(TestAppOptions {
-        e2e: false,
-        ..Default::default()
-    })
-    .await;
-    assert!(!quest_dev_tools_open(&closed));
-    assert!(quest_dev_tools_open(&*built_app().await));
+async fn dev_quest_tools_answer_an_account_the_dev_list_does_not_name_403() {
+    let (app, _) = dev_app().await;
+    let p2 = profile_id_of(&app, OTHER_USER).await;
+    let def = &pool()[0];
+    hold(&app, &p2, def, 0, now_ms()).await;
+    let before = ledger_of(&app, &p2).await;
+    let complete = format!("/api/dev/quests/{}/complete", def.id);
+    for path in ["/api/dev/quests", complete.as_str()] {
+        let (status, _, body) = call(&app, "POST", path, Some(OTHER_TOKEN), Value::Null).await;
+        assert_eq!(status, 403, "{path}: {body}");
+        assert_eq!(body["error"]["code"], json!("forbidden"), "{path}: {body}");
+    }
+    assert_eq!(ledger_of(&app, &p2).await, before, "nothing is written");
 }
 
 /// Real games, played by SPEC §10.7's policy over real decks as `crates/cards/tests/cross/
