@@ -7649,7 +7649,9 @@
           "muse"
         ],
         "builder": "muse",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [
           {
             "family": "muse",
@@ -7659,6 +7661,7 @@
         ],
         "sha": "ed3610ad9dc78c14fcd007b78b70ee0cf6877c76",
         "tiers": {
+          "claude": "strong",
           "muse": "medium"
         }
       }
