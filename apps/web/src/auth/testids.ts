@@ -15,6 +15,8 @@ export const landingTestid = {
   buildDecks: "landing-build-decks",
   /** #920: the card creator. */
   makeCards: "landing-make-cards",
+  /** #1307: the collection screen. */
+  collection: "landing-collection",
   fan: "landing-card-fan",
   fanLeaving: "landing-fan-leaving",
   hotseat: "landing-hotseat",

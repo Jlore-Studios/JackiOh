@@ -296,6 +296,9 @@ export const DECK_CONFLICTS = "deck-conflicts";
 
 export const DECK_VERDICT = "deck-verdict";
 
+/** R1297000: the header button that opens the deck's playmat, backdrop and card back picks. */
+export const DECK_COSMETICS_BUTTON = "deck-cosmetics-button";
+
 /** L1–L6 verdict sentences. */
 export const LOADOUT_ERRORS = "loadout-errors";
 

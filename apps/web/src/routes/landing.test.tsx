@@ -167,6 +167,7 @@ const CTAS = [
   ["Play vs AI", landingTestid.playAi, paths.practice],
   ["Play online", landingTestid.playOnline, paths.play],
   ["Build decks", landingTestid.buildDecks, paths.decks],
+  ["Collection", landingTestid.collection, paths.collection],
 ] as const;
 
 describe("B37 the landing route", () => {

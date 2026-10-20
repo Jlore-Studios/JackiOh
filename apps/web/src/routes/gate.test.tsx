@@ -182,6 +182,15 @@ describe("the gate, as specs 09 and 10 read it", () => {
     }, SLOW);
   });
 
+  it("anonymous: /collection sends the browser to /login", async () => {
+    serveAs("active"); // Never reached: there is no session to send.
+    at("/collection");
+    render(<App />);
+    await waitFor(() => {
+      expect(pathname()).toBe("/login");
+    }, SLOW);
+  });
+
   it("a token the server no longer accepts is the same as having none", async () => {
     signedIn("stale");
     serveAs("unauthorized");

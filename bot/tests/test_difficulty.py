@@ -98,7 +98,7 @@ class BuilderTests(unittest.TestCase):
                                           "review": ("claude-3", "opus", "strong")})
         self.assertEqual(planned["routing"], [
             "#3: stepped up from weak to medium to build it: no weak-tier model "
-            "(gpt-5.6-terra, swe-2-max) is free now"])
+            "(swe-2-max) is free now"])
 
     def test_a_medium_item_on_a_claude_account_is_built_with_sonnet(self):
         """Sonnet at xhigh is medium (#317 part 5), so claude-3 builds a medium item with it and
@@ -126,9 +126,9 @@ class BuilderTests(unittest.TestCase):
         self.assertIn("no subscription can take the queue now", planned["reason"])
 
     def test_the_usage_order(self):
-        """For easy items the lanes fill in tier order (#695): the weak models first while they
-        have a lane, Codex before Devin; then the medium models, Muse on its two lanes (#1273)
-        and agy on its one;
+        """For easy items the lanes fill in tier order (#695): the weak model first while it
+        has a lane, Devin; then the medium models, Muse on its two lanes (#1273), agy on its one
+        and Codex on its one;
         then the Sonnet seats in usage order, claude-3, claude-7, claude-1, claude-4, claude-6
         and claude-5 once each, and only then claude-3's second lane (two lanes, uncapped): with
         every account's room level, the load balancer gives the next run to one holding none
@@ -154,10 +154,10 @@ class BuilderTests(unittest.TestCase):
             ctx.store.update(lambda s, n=planned["number"]: state_item(s, n).update(
                 run_id=str(n)))
             order.append((planned["provider"], seats(planned)["build"][1]))
-        self.assertEqual(order, [("gpt", "gpt-5.6-terra"), ("devin", "swe-2-max"),
+        self.assertEqual(order, [("devin", "swe-2-max"),
                                  ("muse", "muse-spark-1.3-contributor"),
                                  ("muse", "muse-spark-1.3-contributor"),
-                                 ("agy", "gemini-3.8-flash-high"),
+                                 ("agy", "gemini-3.8-flash-high"), ("gpt", "gpt-5.6-sol"),
                                  ("claude-3", "sonnet"), ("claude-7", "sonnet"),
                                  ("claude-1", "sonnet"),
                                  ("claude-4", "sonnet"), ("claude-6", "sonnet"),
@@ -277,7 +277,7 @@ class BuilderTests(unittest.TestCase):
         self.assertEqual(seats(planned)["build"], ("agy", "gemini-3.8-flash-high", "medium"))
         self.assertEqual(planned["routing"], [
             "#3: stepped up from weak to medium to build it: no weak-tier model "
-            "(gpt-5.6-terra, swe-2-max) is free now"])
+            "(swe-2-max) is free now"])
         self.assertIn("stepped up from weak to medium", planned["assignment"] + " ".join(
             planned["routing"]))
         # Medium with only a strong model free steps up to strong: claude-2 by day, whose Sonnet
@@ -305,11 +305,10 @@ class BuilderTests(unittest.TestCase):
         self.assertEqual((planned["number"], planned["provider"]), (10, "devin"))
 
     def test_revisions_follow_the_building_rule(self):
-        # Codex, weak and `easy_first`, revises an easy pull request first; without it,
+        # Devin, weak and `easy_first`, revises an easy pull request first; without it,
         # the lane's weakest medium seat does: Muse (#695).
-        for machine, seat in ((MACHINE, ("gpt", "gpt-5.6-terra", "weak")),
-                              (("agy", "muse"), ("muse", "muse-spark-1.3-contributor",
-                                                  "medium"))):
+        for machine, seat in ((("devin", "muse"), ("devin", "swe-2-max", "weak")),
+                              (MACHINE, ("muse", "muse-spark-1.3-contributor", "medium"))):
             gh = FakeGitHub()
             ctx = ctx_for(gh, machine=machine)
             gh.add_pull(9, "bot/issue-1", labels=(LABEL_PR, "bot:revise", EASY))

@@ -161,6 +161,12 @@ export type GameProps = {
    * route passes no legal actions either, so no control is offered. Absent, off.
    */
   replay?: boolean;
+  /**
+   * The board is a tutorial lesson's: its mulligan picker keeps the engine's instruction and its
+   * count, which the lesson teaches, where every other game's says only who goes first (Prompt.tsx).
+   * Absent, off.
+   */
+  lesson?: boolean;
 };
 
 /** What Game needs of a route that shows aims both ways (R738). */
@@ -203,6 +209,7 @@ export default function Game({
   deckCosmetics = null,
   aim,
   replay = false,
+  lesson = false,
 }: GameProps): ReactElement {
   useLocale();
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
@@ -697,6 +704,7 @@ export default function Game({
           onAction={dispatch}
           onInteraction={setInteraction}
           animating={animating.get(animTestid.prompt)}
+          lesson={lesson}
           // Cancel backs out of a play still being built (R81). An engine prompt has paused the game
           // and must be answered, so it offers none: the button would do nothing (the mulligan, a
           // Discover, a trigger's choice).

@@ -145,6 +145,13 @@ pub fn xp_to_next_level(total_xp: i64) -> i64 {
     total_xp_for_level(level_for_xp(total_xp).saturating_add(1)) - total_xp
 }
 
+/// The XP the level `total_xp` stands on spans, from its start to the next level (SPEC §14.7):
+/// `SET_TRACK_XP_PER_LEVEL` × that level, so a track's XP bar is this long.
+pub fn level_span_xp(total_xp: i64) -> i64 {
+    let level = level_for_xp(total_xp);
+    total_xp_for_level(level.saturating_add(1)) - total_xp_for_level(level)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -166,6 +173,14 @@ mod tests {
         assert_eq!(level_for_xp(495_000), 100);
         assert_eq!(xp_to_next_level(0), 100);
         assert_eq!(xp_to_next_level(4_500), 1_000);
+    }
+
+    #[test]
+    fn level_span_reference_points() {
+        assert_eq!(level_span_xp(0), 100);
+        assert_eq!(level_span_xp(4_499), 900);
+        assert_eq!(level_span_xp(4_500), 1_000);
+        assert_eq!(level_span_xp(4_500), xp_to_next_level(4_500));
     }
 
     #[test]

@@ -63,13 +63,14 @@ class ParseTests(unittest.TestCase):
             "claude-7": [("opus", "strong", False), ("sonnet", "medium", False)],
             "agy": [("gemini-3.8-flash-high", "medium", False)],
             "muse": [("muse-spark-1.3-contributor", "medium", False)],
-            "gpt": [("gpt-5.6-terra", "weak", True)],
+            "gpt": [("gpt-5.6-sol", "medium", False)],
             "claude-2": [("opus", "strong", False), ("sonnet", "medium", False)],
             "devin": [("swe-2-max", "weak", True)],
         })
-        self.assertEqual([e.model for e in pool.tiers["weak"]], ["gpt-5.6-terra", "swe-2-max"])
+        self.assertEqual([e.model for e in pool.tiers["weak"]], ["swe-2-max"])
         self.assertEqual([e.model for e in pool.tiers["medium"]],
-                         ["muse-spark-1.3-contributor", "gemini-3.8-flash-high", "sonnet"])
+                         ["muse-spark-1.3-contributor", "gemini-3.8-flash-high", "gpt-5.6-sol",
+                          "sonnet"])
         # Every Claude account switches between its Opus and its Sonnet as the work needs: no
         # seat on them only stands in for another subscription.
         self.assertEqual({p.id: [s.takes_over for s in pool.seats(p)]
@@ -109,7 +110,7 @@ class ParseTests(unittest.TestCase):
                 providers.parse(raw)
         broken(lambda r: r["providers"]["gpt"].update(tier="genius"), "not one of weak")
         broken(lambda r: r["providers"]["gpt"].pop("tier"), "missing tier")
-        broken(lambda r: r["providers"]["gpt"].update(tier="strong"), "tiers lists it under weak")
+        broken(lambda r: r["providers"]["gpt"].update(tier="strong"), "tiers lists it under medium")
         broken(lambda r: r["providers"]["gpt"].update(model="gpt-9"), "does not list it")
         broken(lambda r: r["tiers"]["weak"].append({"model": "opus"}), "more than one place")
         broken(lambda r: r["tiers"].update(huge=[]), "unknown tiers")
@@ -601,7 +602,8 @@ class MatchingTests(unittest.TestCase):
         gh.runs["2"] = {"status": "in_progress"}
         ctx.store.update(lambda s: state_item(s, 3).update(run_id="2"))
         # The lanes fill in tier order (#695): Muse holds #3 on one of its two lanes (#1273),
-        # so it takes the next one too, then agy, then the Sonnet seats in usage order.
+        # so it takes the next one too, then agy, then Codex, then the Sonnet seats in usage
+        # order.
         gh.add_issue(6, labels=(LABEL_BUILD,))
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["number"], planned["provider"], planned["action"]),
@@ -615,6 +617,13 @@ class MatchingTests(unittest.TestCase):
                          (5, "agy", "build"))
         gh.runs["4"] = {"status": "in_progress"}
         ctx.store.update(lambda s: state_item(s, 5).update(run_id="4"))
+        # Then Codex, after agy in the tier order and before Sonnet.
+        gh.add_issue(13, labels=(LABEL_BUILD,))
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["number"], planned["provider"], planned["action"]),
+                         (13, "gpt", "build"))
+        gh.runs["13"] = {"status": "in_progress"}
+        ctx.store.update(lambda s: state_item(s, 13).update(run_id="13"))
         # Then the Sonnet seats: claude-3 holds #4 on one of its two lanes, so the load
         # balancer (`plan.balance`) gives each next one to an account holding none, in usage
         # order (claude-1 works by day too, after claude-7), and claude-3's second lane comes
@@ -699,12 +708,13 @@ class MatchingTests(unittest.TestCase):
                 s, n).update(run_id=r))
             taken.append((planned["number"], planned["provider"]))
         # Muse, first of the medium models, takes two items on its two lanes (#1273) before
-        # agy, next in the tier order; gpt, weak, takes none of these unrated (medium) items.
-        self.assertEqual(taken, [(3, "muse"), (4, "muse"), (5, "agy")])
+        # agy, next in the tier order, and then gpt.
+        self.assertEqual(taken, [(3, "muse"), (4, "muse"), (5, "agy"), (6, "gpt")])
         # By day the Claude accounts are closed, and each machine subscription holds its lane.
         self.assertIn("`muse` is busy", planned["reason"])
-        # Each claim with work and a lane left started the next run: Muse's first and second.
-        self.assertEqual(len(gh.dispatches), 2)
+        # Each claim with work and a lane left started the next run: Muse's first and second,
+        # and agy's.
+        self.assertEqual(len(gh.dispatches), 3)
 
     def test_with_the_machine_subscriptions_full_github_takes_the_claude_accounts(self):
         """Each machine subscription holds as many runs as its lanes (#695; Muse's are two,
@@ -840,7 +850,7 @@ class PeekTests(unittest.TestCase):
         look = plan_mod.peek(ctx_for(gh))
         # Unrated, so the lane's weakest seat that meets its floor takes it (#695): Muse.
         self.assertEqual((look.work, look.provider, look.quiet_provider), (True, "muse", ""))
-        look = plan_mod.peek(ctx_for(gh, env=secrets("CLAUDE_CODE_OAUTH_TOKEN"), machine=("gpt",)))
+        look = plan_mod.peek(ctx_for(gh, env=secrets("CLAUDE_CODE_OAUTH_TOKEN"), machine=()))
         self.assertEqual((look.work, look.provider, look.quiet_provider, look.quiet_secret,
                           look.fallback),
                          (True, "claude-1", "", "", False))

@@ -98,7 +98,7 @@ export const CARD_NAMES: Record<number, string> = {
   94: "Genn's Greed",
   95: "Call to Chaos (Core Edition)",
   96: "My Pawn",
-  97: "Zephyrs",
+  97: "Zephrys",
   98: "Heroic Power",
   99: "Craft a Card",
   100: "Ceaseless Void",

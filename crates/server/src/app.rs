@@ -660,6 +660,13 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(crate::social::shares::share_replay),
     ),
+    // R1435000: the friends the caller shared it with.
+    (
+        "GET",
+        "/api/replays/:matchId/shares",
+        AuthLevel::Active,
+        h!(crate::social::shares::list_shares),
+    ),
     (
         "DELETE",
         "/api/replays/:matchId/shares/:friendId",

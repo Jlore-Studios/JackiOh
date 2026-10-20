@@ -7,7 +7,8 @@ import DeckWorkshop, { type WorkshopOpen } from "../../../apps/web/src/game/deck
 import type { DecksResponse } from "../../../apps/web/src/net/api.ts";
 import { CATALOG, CATALOG_VERSION } from "@jackioh/cards";
 import { loadWasm } from "../../../apps/web/src/wasm/index.ts";
-import { FIT_FLOOR_PX, TEXT_TIER_MAX } from "../../../apps/web/src/cards/constants.ts";
+import { FIT_FLOOR_PX } from "../../../apps/web/src/cards/constants.ts";
+import { faceText } from "../../../apps/web/src/cards/CardFace.tsx";
 import { faceModel } from "../../../apps/web/src/cards/model.ts";
 import { showsFullArt } from "../../../apps/web/src/cards/fullArt.ts";
 import { setShips } from "../../../apps/web/src/wire/catalog.ts";
@@ -16,6 +17,7 @@ import {
   DB_DETAIL_ADD,
   DB_FILTERS,
   DB_SIDEBAR,
+  DECK_COSMETICS_BUTTON,
   DECK_EDITOR,
   DECK_VERDICT,
   INSPECT_CLOSE,
@@ -32,6 +34,9 @@ const VIEWPORTS = [
   { label: "phone", width: 390, height: 844 },
   { label: "desktop", width: 1280, height: 720 },
 ] as const;
+
+/** WCAG 2.5.5 / Apple HIG, the floor B29 sets for every touch target. */
+const TOUCH_PX = 44;
 
 /** Deckable cards follow validator L3: no token by flag or tag, and none of a set not shipped yet (R1420). */
 const DECKABLE = Object.values(CATALOG).filter((def) => !def.token && !def.tags.includes("Token") && setShips(def.set));
@@ -254,7 +259,8 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   });
 
-  // B15 permits clamping only beyond the text tier maximum.
+  // B15 with R1017000: only a face that prints less than its whole text (shortText.ts: a short form,
+  // or its text cut at the box's last line, like Meditative+ #4's) may clamp, as card-faces.cy.tsx holds.
   for (const viewport of VIEWPORTS) {
     const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
     it(`every pool card's rules text is at least ${String(FIT_FLOOR_PX)} px at ${where}`, () => {
@@ -268,9 +274,8 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
           if (px < FIT_FLOOR_PX - 0.05) small.push(`${id} at ${px.toFixed(2)}px`);
           if (text.getAttribute("data-clamped") === "true") {
             const def = CATALOG[id];
-            const face = def === undefined ? null : faceModel({ defId: id, def, radiant: false }).text;
-            const printed = face === null ? 0 : face.full.length;
-            expect(printed, `${id} clamps only past 260 characters`).to.be.greaterThan(TEXT_TIER_MAX.xl);
+            const less = def === undefined ? false : faceText(faceModel({ defId: id, def, radiant: false })).less;
+            expect(less, `${id} clamps only as a face that prints less than its text`).to.eq(true);
           }
         }
         expect(small, "rules text under the floor").to.deep.equal([]);
@@ -357,6 +362,16 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
       expect(first, "the first pool card").to.not.eq(null);
       if (first === null) return;
       expect(Math.ceil(first.getBoundingClientRect().bottom), "it ends on the first screen").to.be.at.most(844);
+    });
+  });
+
+  // B29: the header's deck cosmetics button takes a finger, as Back and the gear on its row do.
+  it(`B29 at 390x844 the deck cosmetics button is at least ${String(TOUCH_PX)} px square`, () => {
+    cy.viewport(390, 844);
+    cy.get(ts(DECK_COSMETICS_BUTTON)).should(($button) => {
+      const box = ($button[0] as HTMLElement).getBoundingClientRect();
+      expect(box.width, "its width").to.be.at.least(TOUCH_PX);
+      expect(box.height, "its height").to.be.at.least(TOUCH_PX);
     });
   });
 

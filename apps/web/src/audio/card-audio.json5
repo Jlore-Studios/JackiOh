@@ -526,7 +526,7 @@
     "core-096": { // My Pawn
       cast: { voice: "snob", text: "Checkmate, puppet.", effect: "gong" },
     },
-    "core-097": { // Zephyrs
+    "core-097": { // Zephrys
       cast: { voice: "whisper", text: "I know exactly what you need." },
     },
     "core-098": { // Heroic Power

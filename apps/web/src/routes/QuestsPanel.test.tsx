@@ -1,4 +1,4 @@
-// `/account`'s quests (§14.9, #1304): what the panel shows of `GET /api/quests`, and the countdown
+// `/collection`'s quests (§14.9, #1304; #1307): what the panel shows of `GET /api/quests`, and the countdown
 // to the next quest read from the clock.
 
 import { readFileSync } from "node:fs";
@@ -119,14 +119,12 @@ describe("QuestsPanel", () => {
     expect(getQuests).toHaveBeenCalledWith(TOKEN);
   });
 
-  it("shows nothing when the read fails", async () => {
+  it("says why when the read fails", async () => {
     vi.mocked(getQuests).mockRejectedValue(new Error("the server refused"));
     render(<QuestsPanel token={TOKEN} />);
 
-    await act(async () => {
-      await Promise.resolve();
-    });
-    expect(screen.queryByTestId(questsTestid.panel)).toBeNull();
+    expect(await screen.findByTestId(questsTestid.error)).toHaveTextContent("the server refused");
+    expect(screen.getByTestId(questsTestid.panel)).toHaveTextContent("Quests");
   });
 });
 

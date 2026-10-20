@@ -47,7 +47,7 @@ flowchart TD
     PL --> PN["planner (medium or strong; strong for hard)<br/>rates an unrated item, writes the plan"]
     PN --> B["work, on that subscription's own runner<br/>(its login only) builder: the lane's owner"]
     B --> G["the repository's checks<br/>cargo fmt, clippy, catalog, patches,<br/>spec, cargo tests, web unit tests"]
-    G -- "a weak builder (Codex, Devin)" --> SC["self check: the builder's own model,<br/>a fresh session, until clean (up to 3)"]
+    G -- "a weak builder (Devin)" --> SC["self check: the builder's own model,<br/>a fresh session, until clean (up to 3)"]
     SC --> R
     G --> R["adversarial reviewer<br/>the run's own lane reviewer, a fresh session"]
     R -- "blocking findings or red checks<br/>(3 verdict rounds, 10 for hard)" --> F["the same owner<br/>fixes the findings"]
@@ -434,7 +434,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-5` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week |
 | `claude-6` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_6` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-7` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_7` | any time: 01:00–10:00 up to its cap, and outside it (10:00–01:00) while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
-| `gpt` | Codex (`codex exec`), `gpt-5.6-terra` at `xhigh`; weak since 2026-10-11, so easy items only | on the machine, as `agent-gpt` | any time | all of 5 hours (100%), all of the week (Codex reports both; #798) |
+| `gpt` | Codex (`codex exec`), `gpt-5.6-sol` at `xhigh` (`gpt-5.6-terra` until 2026-10-20); medium, and weak only from 2026-10-11 to 2026-10-20, on Terra | on the machine, as `agent-gpt` | any time | all of 5 hours (100%), all of the week (Codex reports both; #798) |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | all of 5 hours (100%), all of the week (its own `agy -p /usage`, the Gemini pool's row; #798) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2), on the Devin plan that came with Windsurf, which is canceled; off from 2026-10-05 to 2026-10-06 (#311: every call failed in seconds), on again since a `devin -p` call answered on the machine (#318) | on the machine, as `agent-devin` | any time until 2026-11-02 (`off_from`), when the plan runs out | none: until it refuses |
 | `muse` | Muse Code (`muse exec`), `muse-spark-1.3-contributor` at `xhigh`, on two lanes; Meta's $50 plan since 2026-10-11, four times the usage of the one before | on the machine, as `agent-muse` | any time | all of 5 hours (100%), all of the week (its TUI's `/usage` panel; #798) |
@@ -460,7 +460,7 @@ prints each one and whether it could start now, and `/harness status` does the s
   full), and never plans or reviews. No committed seat uses it now.
 - `fix_effort`: the effort a fix pass runs at (`high` on the Claude accounts), which answers named
   findings and needs less thought than the build; empty runs it at the seat's own.
-- `self_check: true`: its builds check themselves before any review (the weak builders;
+- `self_check: true`: its builds check themselves before any review (the weak builder, Devin;
   [the self-check loop](#the-self-check-loop)).
 - `login`: `secret`, a GitHub secret named by `secret` and handed to that run's model job alone,
   or `machine`, a login made once on the machine in that subscription's own home, which never
@@ -563,8 +563,8 @@ nothing):
 | Tier | Models |
 |---|---|
 | strong | Claude Opus, on every Claude account |
-| medium | Muse, Gemini through agy, Claude Sonnet at `xhigh` (on every Claude account, beside its Opus) |
-| weak | Devin, Codex (`gpt`, since 2026-10-11) |
+| medium | Muse, Gemini through agy, Codex (`gpt`, on GPT-5.6 Sol; weak from 2026-10-11 to 2026-10-20, on Terra), Claude Sonnet at `xhigh` (on every Claude account, beside its Opus) |
+| weak | Devin |
 
 Every item has a difficulty, from its labels: `difficulty:easy`, `difficulty:medium` or
 `difficulty:hard`. A person may set one; otherwise the planner rates the item when it plans it
@@ -591,11 +591,11 @@ load balancer (below), the owner's order holds: spend claude-3 (any hour, no cap
 no weekly cap) and claude-1 first, up to their caps; then claude-4, claude-6 and
 then claude-5, last of the Claude accounts (claude-4 and claude-6 held to half their 5-hour session outside 03:00–15:00 and to 70% of it inside it, with
 no weekly cap, claude-5 to 40% of its 5-hour session and 60% of its week); then the medium models,
-Muse first (the most reliable builder, #305), then agy; then Codex, weak; then claude-2, kept back
+Muse first (the most reliable builder, #305), then agy and Codex; then claude-2, kept back
 mostly for planning and reviewing; then Devin, last. For building alone, claude-2 is `build_last`: it
-builds only when no other subscription that may is free, Devin included. Codex and Devin, the weak
-models, are `easy_first`: they may build only easy items, and Codex takes them before Devin
-(its place in the usage order). A fullsend part, once
+builds only when no other subscription that may is free, Devin included. Devin, the weak model,
+is `easy_first`: it may build only easy items, so it takes them ahead of everyone while it has a
+free lane, and the stronger models keep the medium and hard items only they may build. A fullsend part, once
 planned, goes first to the medium subscriptions (Muse first), which may build it whatever its
 difficulty ([Fullsend](#fullsend)). (There is no training
 lane in the harness any more, and no `training` label: the AI's two training lanes run as
@@ -613,8 +613,8 @@ reading all free, a refusal not yet over none (`providers.room`). Room goes in s
 (`providers.BALANCE_STEP`), since a reading is only as fresh as its subscription's last run; level
 ones go by the runs they hold now, the fewest first, and only then by the usage order. So with
 nothing read yet each account gets one run before claude-3 gets its second, and an account at
-80% of its week waits behind one at 10%. The tier order (Muse before agy before Sonnet, Codex
-before Devin), `easy_first`, `build_last` and one lane, one owner all come before it, and it
+80% of its week waits behind one at 10%. The tier order (Muse before agy before Codex before
+Sonnet), `easy_first`, `build_last` and one lane, one owner all come before it, and it
 starts nothing the caps would not: it only orders the subscriptions that may start now.
 `"balance": false` puts the usage order back on its own.
 
@@ -649,7 +649,7 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   revision is not planned again. The ten-minute sweep keeps `bot:needs-plan` in step, so an
   unrated issue is in the stage within one pass.
 - **Building, fixing, revising.** The lane's owner builds it end to end: an
-  easy item goes to a weak model (Codex, then Devin) while one has a free lane, else to a medium
+  easy item goes to the weak model (Devin) while it has a free lane, else to a medium
   one in the usage order; a medium item stays with its planner when that one can build it, else
   takes the first free medium seat; a hard item takes a strong seat only, planner and builder
   the same. Every Claude account builds an
@@ -804,7 +804,7 @@ review runs go out.
 
 ### The self-check loop
 
-A builder with `self_check` (the weak builders, Codex and Devin) checks its own change before any reviewer sees it: build,
+A builder with `self_check` (the weak builder, Devin) checks its own change before any reviewer sees it: build,
 the repository's checks, then a **self check**, a fresh session of the same model allowed to read
 and run things but not edit, told to find every reason its own change should not ship, in the
 review's prompt and verdict format. If it flags anything (or a check this change turned red), the
