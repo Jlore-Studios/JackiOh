@@ -104,6 +104,12 @@ export const DECK_DELETE_CANCEL = "deck-delete-cancel";
  */
 export const DECK_COMPARE_SELECT = "deck-compare-select";
 
+/**
+ * R1297000: the open deck's playmat, backdrop and card back live behind this top-bar button, so the
+ * sidebar keeps the verdict and the pool's first row on the first screen (BUILD M5-T1).
+ */
+export const DECK_COSMETICS_BUTTON = "deck-cosmetics-button";
+
 export function deckCompareChipId(deckId: string): string {
   return `deck-compare-${deckId}`;
 }
