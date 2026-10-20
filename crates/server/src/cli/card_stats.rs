@@ -17,6 +17,12 @@
 //! rigged games (R1284000). `--json` prints the
 //! report as data instead.
 //!
+//! R1367000, R1368000: `--window[=<version>]` prints, as JSON, every card over its own window at the
+//! version (the newest shipped by default), off every patch's totals, as `GET /api/stats/cards`
+//! reads them: the input `cargo jackioh winrates --refresh` takes. Only the totals hold every game
+//! a window spans (R1044001 purges a record's detail after `GAME_RECORD_RAW_RETENTION_DAYS`, so a
+//! `stats-export` file undercounts it).
+//!
 //! The arithmetic is `card_stats_of` in `jackioh_engine::wire::stats` (TS
 //! `packages/shared/src/stats.ts`), which `card_stats` reads record files with too, the same the AI's
 //! development run prints its own games with, so a pre-release run and the live games after it
@@ -27,7 +33,8 @@ use serde::Serialize;
 
 use jackioh_engine::wire::{
     CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, GAME_MODES, GameMode, PILOT_FILTERS,
-    PilotFilter, SOURCE_FILTERS, SourceFilter, card_stats_of, format_card_stats,
+    PilotFilter, SOURCE_FILTERS, SourceFilter, WindowQuery, WindowRequest, WindowedReport, card_stats_of,
+    format_card_stats, windowed_card_stats,
 };
 
 use crate::cli::{connect_one, database_url};
@@ -42,7 +49,11 @@ const USAGE: &str = "Usage: jackioh-server stats-cards [options]
   --pilot=human|ai|unified   The seats counted. Default: unified, every counted seat;
                              human reads the people's sides only, ai the bots'.
   --card=<id>                One card's row only.
-  --json                     The report as JSON.";
+  --json                     The report as JSON.
+  --window[=<version>]       R1367000: every card over its own window at the version (default the
+                             newest shipped), as GET /api/stats/cards reads it, printed as JSON:
+                             the input `cargo jackioh winrates --refresh` takes (R1368000). Not
+                             with --source, --mode or --patch.";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CardStatsOptions {
@@ -50,6 +61,8 @@ pub struct CardStatsOptions {
     /// One card's row, or `None` for every card.
     pub card: Option<String>,
     pub json: bool,
+    /// R1367000: the version to read every card's window at, instead of the filter's report.
+    pub window: Option<String>,
 }
 
 /// The literal a string-union value serialises as (`"live"`, `"bo1"`, …): what the flag's value is
@@ -105,28 +118,88 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
     let mut card: Option<String> = None;
     let mut json = false;
     let mut pilot: Option<PilotFilter> = None;
+    let mut window: Option<String> = None;
+    let mut filtered = false;
 
     for arg in argv {
         if arg == "--json" {
             json = true;
             continue;
         }
+        if arg == "--window" {
+            window = Some(jackioh_cards::catalog_version().to_owned());
+            continue;
+        }
         let Some((name, raw)) = flag(arg) else {
             bail!("Unrecognised argument {}.\n\n{USAGE}", quoted(arg));
         };
         match name {
-            "source" => filter.source = one_of::<SourceFilter>(name, raw, SOURCE_FILTERS, USAGE)?,
-            "mode" => filter.mode = Some(one_of::<GameMode>(name, raw, GAME_MODES, USAGE)?),
-            "patch" => filter.patch = Some(raw.to_owned()),
+            "source" => {
+                filter.source = one_of::<SourceFilter>(name, raw, SOURCE_FILTERS, USAGE)?;
+                filtered = true;
+            }
+            "mode" => {
+                filter.mode = Some(one_of::<GameMode>(name, raw, GAME_MODES, USAGE)?);
+                filtered = true;
+            }
+            "patch" => {
+                filter.patch = Some(raw.to_owned());
+                filtered = true;
+            }
+            "window" => window = Some(raw.to_owned()),
             "pilot" => pilot = Some(one_of::<PilotFilter>(name, raw, PILOT_FILTERS, USAGE)?),
             "card" => card = Some(raw.to_owned()),
             _ => bail!("Unrecognised option --{name}.\n\n{USAGE}"),
         }
     }
 
+    if window.is_some() && filtered {
+        bail!(
+            "--window reads every source, mode and patch its windows hold; drop --source, --mode and --patch.\n\n{USAGE}"
+        );
+    }
     // R807000: every counted seat merged unless the query names a side.
     filter.pilot = pilot.unwrap_or(PilotFilter::Unified);
-    Ok(CardStatsOptions { filter, card, json })
+    Ok(CardStatsOptions {
+        filter,
+        card,
+        json,
+        window,
+    })
+}
+
+/// R1367000: every card over its own window at `at`, off every patch's totals, as
+/// `GET /api/stats/cards` reads them (`windowed_card_stats`, the shipped history compiled in), the
+/// live seats `options`' pilot names. One card only with `--card`.
+pub async fn card_stats_window(
+    db: &Db,
+    options: &CardStatsOptions,
+    at: &str,
+) -> Result<WindowedReport, StoreError> {
+    let query = StatsTotalsQuery {
+        source: SourceFilter::All,
+        mode: None,
+        patch: None,
+        drills: false,
+    };
+    let mut tx = db.begin(None).await?;
+    let totals = tx.stats_totals_load(&query).await?;
+    tx.commit().await?;
+    let history = jackioh_cards::patch_history();
+    let mut report = windowed_card_stats(
+        &totals,
+        &WindowQuery {
+            history: &history,
+            at,
+            live_pilot: options.filter.pilot,
+            mode: None,
+            request: WindowRequest::Gated,
+        },
+    );
+    if let Some(only) = &options.card {
+        report.cards.retain(|card| &card.stats.card == only);
+    }
+    Ok(report)
 }
 
 /// R377: the report the options ask for, off the totals the store holds (R1044000), the records
@@ -175,6 +248,12 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     let catalog = &*jackioh_cards::CATALOG;
     // One connection: this process runs one read and exits.
     let db = connect_one(&connection_string).await?;
+    if let Some(at) = &options.window {
+        let outcome = card_stats_window(&db, &options, at).await;
+        db.close().await;
+        println!("{}", serde_json::to_string_pretty(&outcome?)?);
+        return Ok(());
+    }
     let outcome = card_stats_report(&db, &options).await;
     db.close().await;
     let report = outcome?;
