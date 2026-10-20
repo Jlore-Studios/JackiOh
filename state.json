@@ -7758,6 +7758,14 @@
         }
       }
     },
+    "1405": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-20T08:48:09Z",
+      "issue": 1306,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "148": {
       "asks": [
         "c:5974504575"
