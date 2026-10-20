@@ -1096,7 +1096,7 @@ const CORE: &[SpecRow] = &[
     row("96", "My Pawn", c(1), T::Trap, &[], R::Mythic, NO_STATS, NO_STATS),
     row(
         "97",
-        "Zephyrs",
+        "Zephrys",
         c(1),
         T::Spell,
         &[],
