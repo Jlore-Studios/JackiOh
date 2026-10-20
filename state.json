@@ -7850,6 +7850,13 @@
     "1429": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T19:04:43Z",
+        "difficulty": "hard",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "The change modifies the AI's search panic paths and carries diagnostics across the AI, tools and web contracts, which the rule classifies as hard."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
