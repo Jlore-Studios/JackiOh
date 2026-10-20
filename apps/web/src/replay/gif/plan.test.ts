@@ -122,7 +122,7 @@ describe("R513000 what a shared GIF holds", () => {
   });
 
   it("R513000 no frame plan holds an account name", () => {
-    const allowed = /^(You|Opponent|JackiOh|v\d+\.\d+\.\d+|Turn \d+|Hand \d+|Mana \d+\/\d+|\d+|Draw|You win|You lose)$/u;
+    const allowed = /^(You|Opponent|JackiOh|v\d+\.\d+\.\d+[a-z]?|Turn \d+|Hand \d+|Mana \d+\/\d+|\d+|Draw|You win|You lose)$/u;
     const plan = planFrames(clip, OPTS);
     const texts = plan.frames.flatMap((frame) => frame.items.flatMap((item) => (item.kind === "text" ? [item.text] : [])));
     expect(texts.length).toBeGreaterThan(0);

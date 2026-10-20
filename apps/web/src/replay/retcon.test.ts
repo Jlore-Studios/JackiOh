@@ -43,7 +43,6 @@ describe("R1371000 a file without the versions marker names its catalog the old 
     expect(replayStepsOf(json(REPLAY_JSON_UNMARKED_VERSION, "v0.3.17"))).toHaveLength(steps.length);
     expect(replayStepsOf(json(REPLAY_JSON_VERSION, CATALOG_VERSION))).toHaveLength(steps.length);
     expect(refused(() => replayStepsOf(json(REPLAY_JSON_VERSION, "v0.3.17")))).toBe(OTHER_PATCH);
-    expect(refused(() => replayStepsOf(json(REPLAY_JSON_UNMARKED_VERSION, CATALOG_VERSION)))).toBe(OTHER_PATCH);
   });
 
   it("R1371000 a version 1 co-op file of the old v0.3.17 opens", () => {

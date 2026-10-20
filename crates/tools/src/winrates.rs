@@ -294,7 +294,7 @@ mod tests {
                     seats: PerPlayer::new(seat(&["core-001"]), seat(&["core-001", "core-003"])),
                 },
             };
-            serde_json::to_string(&record).unwrap_or_default()
+            jackioh_cards::versions::game_record_line(&record)
         };
         let people = PerPlayer::new(Pilot::Human, Pilot::Human);
         let table = table_from_records(&[line("m1", GameSource::Live, people)], "v0.2.7")

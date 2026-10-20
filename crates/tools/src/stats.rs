@@ -1295,6 +1295,8 @@ mod tests {
             "source": source,
             "mode": mode,
             "patch": "v0.2.3",
+            // R1371000: marked, as the build writes a record file.
+            "versions": 2,
             "pilots": { "p1": pilots[0], "p2": pilots[1] },
             "game": {
                 "first": "p1",
