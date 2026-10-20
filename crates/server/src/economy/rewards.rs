@@ -1,10 +1,11 @@
 //! The one reward hook (SPEC §14.8, #1302): a finished game's summary in, ledger rows out.
 //!
 //! Every payout goes through [`pay_game_rewards`], which takes a finished game's summary (the
-//! account, the result and the actions taken), pays it, and moves the account's set tracks
-//! (§14.7). Practice earning and quests call into this same hook: it owns no transaction of its
-//! own, so each caller pays in the transaction that records its game, and a failure rolls the
-//! game back with it. It is never called for bots: a ladder bot earns nothing ([[R1454]]).
+//! account, the result, the actions taken and what the game did), pays it, and moves the account's
+//! set tracks (§14.7) and its quests (§14.9, `quests::move_quests`, [[R1304001]]). Practice
+//! earning calls into this same hook: it owns no transaction of its own, so each caller pays in
+//! the transaction that records its game, and a failure rolls the game back with it. A bot's side
+//! is paid nothing and moves no quest: a ladder bot earns nothing ([[R1454]]).
 //!
 //! - On the ladder the server ran the match, so the caller counts the actions from its own log
 //!   and pays in the transaction that records the result; the client reports nothing. The caller
@@ -21,6 +22,7 @@
 //!   `SET_TRACK_UNLOCK_LEVEL` ([[R1302003]]). A level pays its [`reward_for_level`](super::track_rewards::reward_for_level)
 //!   once, as ledger rows, when its track reaches it; a track's last level is
 //!   `SET_TRACK_LEVELS`, and XP past it lands but reaches no level ([`track_level`], [[R1302005]]).
+//!   [`pay_xp`] is that payout, and a completed quest's XP goes through it too.
 //!
 //! Nothing here checks `ECONOMY_LIVE` (§14.12): a caller pays only while it is on, so a build
 //! behind the switch changes nothing a player owns. `api::results` is that caller on the ladder.
@@ -31,6 +33,7 @@ use jackioh_engine::wire::{SHIPPED_SETS, SetName, newest_shipped_set};
 use jackioh_engine::{ActionBody, PlayerId};
 
 use super::math::level_for_xp;
+use super::quests::{GameTally, move_quests};
 use super::store::{EconomyReason, InventoryGrant, InventoryItem, JloreGrant, JloreReason, TrackGrant};
 use super::track_rewards::reward_for_level;
 use crate::config::{
@@ -67,6 +70,21 @@ pub struct GameSummary {
     pub at: i64,
     /// A bot's side: never paid ([[R1454]]).
     pub bot: bool,
+    /// What the seat did, as the quests count it (§14.9).
+    pub tally: GameTally,
+}
+
+/// One XP payout onto every active set track (§14.7): a game's or a completed quest's.
+pub struct XpPayout<'a> {
+    pub profile_id: &'a str,
+    pub xp: i64,
+    /// The track rows' reason; the level rewards it reaches are `Track`'s.
+    pub reason: EconomyReason,
+    /// What every row it writes names: the match, or the quest.
+    pub reference: &'a str,
+    /// A dev tool's payout (§14.10).
+    pub dev: bool,
+    pub at: i64,
 }
 
 /// Whether a logged action is one the player took, so earns `XP_PER_ACTION` (SPEC §14.8,
@@ -129,8 +147,8 @@ pub fn game_jlore(mode: GameMode, won: Option<bool>) -> i32 {
 }
 
 /// Pays one finished game's rewards in the caller's transaction: its Jlore, its XP on every
-/// active set track, each newly reached level's rewards, and at most one newly unlocked older
-/// track ([[R1302003]]). A bot's side, and a game with no XP, writes no track row.
+/// active set track ([`pay_xp`]), and then moves its quests, which may pay too ([[R1304001]]). A
+/// bot's side writes nothing.
 pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreResult<()> {
     if summary.bot {
         return Ok(());
@@ -147,11 +165,30 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
         })
         .await?;
     }
-    let xp = game_xp(summary.mode, summary.actions, summary.won == Some(true));
+    pay_xp(
+        tx,
+        &XpPayout {
+            profile_id: &summary.profile_id,
+            xp: game_xp(summary.mode, summary.actions, summary.won == Some(true)),
+            reason: EconomyReason::Track,
+            reference: &summary.match_id,
+            dev: false,
+            at: summary.at,
+        },
+    )
+    .await?;
+    move_quests(tx, summary).await
+}
+
+/// Pays `payout.xp` XP onto every active set track in the caller's transaction, each newly reached
+/// level's rewards, and at most one newly unlocked older track ([[R1302003]]). No XP writes no
+/// track row.
+pub async fn pay_xp(tx: &mut Tx<'_>, payout: &XpPayout<'_>) -> StoreResult<()> {
+    let xp = payout.xp;
     if xp <= 0 {
         return Ok(());
     }
-    let tracks = tx.economy_tracks_get(&summary.profile_id).await?;
+    let tracks = tx.economy_tracks_get(payout.profile_id).await?;
     let held = |set: SetName| {
         tracks
             .iter()
@@ -160,7 +197,7 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
             .unwrap_or((0, SET_TRACK_FIRST_LEVEL, 0))
     };
     let newest = newest_shipped_set();
-    // Every active track gains all of the game's XP: the newest set's, active from the start,
+    // Every active track gains all of the payout's XP: the newest set's, active from the start,
     // and every older shipped set that already has a row.
     let mut active: Vec<SetName> = vec![newest];
     active.extend(
@@ -172,22 +209,22 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
         let (old_xp, old_level, old_claimed) = held(*set);
         let new_level = track_level(old_xp + xp);
         tx.economy_tracks_grant(&TrackGrant {
-            profile_id: summary.profile_id.clone(),
+            profile_id: payout.profile_id.to_string(),
             set_id: set.as_str().to_string(),
             xp,
             levels: new_level - old_level,
             rewards: new_level - old_claimed,
-            reason: EconomyReason::Track,
-            reference: Some(summary.match_id.clone()),
-            dev: false,
-            at: summary.at,
+            reason: payout.reason,
+            reference: Some(payout.reference.to_string()),
+            dev: payout.dev,
+            at: payout.at,
         })
         .await?;
-        pay_level_rewards(tx, summary, set, old_claimed, new_level).await?;
+        pay_level_rewards(tx, payout, set, old_claimed, new_level).await?;
     }
     // One older track unlocks at a time, nearest-older first, once the newest track reaches
-    // `SET_TRACK_UNLOCK_LEVEL`; it counts as active from this payout, carrying this game's XP.
-    // The gate reads the newest track after this game's XP landed, so the payout that reaches
+    // `SET_TRACK_UNLOCK_LEVEL`; it counts as active from this payout, carrying this payout's XP.
+    // The gate reads the newest track after this payout's XP landed, so the payout that reaches
     // the unlock level is the one that unlocks.
     let newest_level = track_level(held(newest).0 + xp);
     if newest_level >= i64::from(SET_TRACK_UNLOCK_LEVEL)
@@ -200,18 +237,18 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
     {
         let new_level = track_level(xp);
         tx.economy_tracks_grant(&TrackGrant {
-            profile_id: summary.profile_id.clone(),
+            profile_id: payout.profile_id.to_string(),
             set_id: set.as_str().to_string(),
             xp,
             levels: new_level - SET_TRACK_FIRST_LEVEL,
             rewards: new_level,
-            reason: EconomyReason::Track,
-            reference: Some(summary.match_id.clone()),
-            dev: false,
-            at: summary.at,
+            reason: payout.reason,
+            reference: Some(payout.reference.to_string()),
+            dev: payout.dev,
+            at: payout.at,
         })
         .await?;
-        pay_level_rewards(tx, summary, set, 0, new_level).await?;
+        pay_level_rewards(tx, payout, set, 0, new_level).await?;
     }
     Ok(())
 }
@@ -219,7 +256,7 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
 /// Pays the levels `(claimed, level]` reached — each once, as ledger rows — of one track.
 async fn pay_level_rewards(
     tx: &mut Tx<'_>,
-    summary: &GameSummary,
+    payout: &XpPayout<'_>,
     set: &SetName,
     claimed: i64,
     level: i64,
@@ -228,38 +265,38 @@ async fn pay_level_rewards(
         let reward = reward_for_level(reached);
         if reward.jlore != 0 {
             tx.economy_jlore_grant(&JloreGrant {
-                profile_id: summary.profile_id.clone(),
+                profile_id: payout.profile_id.to_string(),
                 delta: reward.jlore,
                 reason: JloreReason::Track,
-                reference: Some(summary.match_id.clone()),
-                dev: false,
-                at: summary.at,
+                reference: Some(payout.reference.to_string()),
+                dev: payout.dev,
+                at: payout.at,
             })
             .await?;
         }
         if reward.set_packs != 0 {
             tx.economy_inventory_grant(&InventoryGrant {
-                profile_id: summary.profile_id.clone(),
+                profile_id: payout.profile_id.to_string(),
                 item: InventoryItem::SetPack,
                 key: set.as_str().to_string(),
                 delta: reward.set_packs,
                 reason: EconomyReason::Track,
-                reference: Some(summary.match_id.clone()),
-                dev: false,
-                at: summary.at,
+                reference: Some(payout.reference.to_string()),
+                dev: payout.dev,
+                at: payout.at,
             })
             .await?;
         }
         if reward.card_tokens != 0 {
             tx.economy_inventory_grant(&InventoryGrant {
-                profile_id: summary.profile_id.clone(),
+                profile_id: payout.profile_id.to_string(),
                 item: InventoryItem::CardToken,
                 key: String::new(),
                 delta: reward.card_tokens,
                 reason: EconomyReason::Track,
-                reference: Some(summary.match_id.clone()),
-                dev: false,
-                at: summary.at,
+                reference: Some(payout.reference.to_string()),
+                dev: payout.dev,
+                at: payout.at,
             })
             .await?;
         }
@@ -384,6 +421,7 @@ mod tests {
             match_id: "match-1".to_string(),
             at: 42,
             bot: false,
+            tally: GameTally::default(),
         };
         assert_eq!(summary.player, PlayerId::P1);
         assert_eq!(summary.won, Some(true));

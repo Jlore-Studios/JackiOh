@@ -17,7 +17,8 @@
 //!   the browser's wall-clock cap cut short to another one does not match.
 //! - [`verify`] is its `apply`, action by action, under the worker's nonces (`h<n>` the human's,
 //!   `a<n>` the AI's, each counting only accepted actions), each sent as the seat its player plays
-//!   then: a Glitch swap moves both (R677).
+//!   then: a Glitch swap moves both (R677). A game that passes is read once more by the engine's
+//!   `summarize_game`, for what the quests count ([[R1304001]]).
 //!
 //! Every engine call goes through `actor::engine` under the game's `Pinned` catalog (R767000), and
 //! the AI runs inside `Pinned::run`, so it reads the catalog the game was played on. Nothing here
@@ -28,10 +29,10 @@ use serde::{Deserialize, Serialize};
 use jackioh_ai::{AiOptions, ai_to_act, decide};
 use jackioh_engine::{
     AI_DIFFICULTY, Action, ActionBody, GameOverReason, GameState, LastBoardEntry, PerPlayerOpt, PlayerId,
-    Rng, Winner,
+    Rng, SeatSummary, Winner,
 };
 
-use crate::actor::engine::{self, Pinned};
+use crate::actor::engine::{self, CreateGameArgs, FoldArgs, Pinned};
 use crate::bots::seat::r188_forbidden;
 use crate::economy::rewards::is_player_action;
 use crate::economy::store::{PracticeDeck, PracticeSetup};
@@ -94,6 +95,11 @@ pub struct Verified {
     pub ai_moves: i64,
     /// R508: the board the human takes from the game, from the seat they ended in.
     pub last_board: Vec<LastBoardEntry>,
+    /// §14.9: what the seat they ended in did, as the engine's `summarize_game` reads it off the
+    /// log (R376), for the quests ([[R1304001]]); `None` when the fold reaches no result.
+    pub seat: Option<SeatSummary>,
+    /// §14.9: the attacks the human took, for the quests.
+    pub attacks: i64,
 }
 
 /// R188, R923000: what the practice AI never plays, not even as a fallback: `core.ts`'s
@@ -114,6 +120,11 @@ fn seat_ordered<T>(home: PlayerId, body: T, rest: T) -> (T, T) {
 /// when the engine refuses to begin it. Panics, as `create_game` does, on a deck the catalog
 /// refuses; the caller runs it off the runtime, where a panic is a refusal too.
 pub fn opening(pinned: Pinned, seed: &str, setup: &PracticeSetup) -> Result<GameState, ClaimRefusal> {
+    begin(pinned, &opening_args(pinned, seed, setup))
+}
+
+/// The setup [`opening`] creates its game with.
+fn opening_args(pinned: Pinned, seed: &str, setup: &PracticeSetup) -> CreateGameArgs {
     pinned.run(|| {
         let handicap = AI_DIFFICULTY[setup.difficulty];
         let human = setup.human_seat;
@@ -130,12 +141,17 @@ pub fn opening(pinned: Pinned, seed: &str, setup: &PracticeSetup) -> Result<Game
         let mut args = engine::create_game_args(seed, &decks, boards, None, dealt);
         let (p1, p2) = seat_ordered(human.opponent(), Some(handicap), None);
         args.handicaps = Some(PerPlayerOpt { p1, p2 });
-        let begun = engine::begin_game(pinned, &engine::create_game(pinned, &args));
-        match begun.error {
-            Some(_) => Err(ClaimRefusal::DoesNotFold),
-            None => Ok(begun.state),
-        }
+        args
     })
+}
+
+/// The game `args` creates, begun: `DoesNotFold` when the engine refuses to begin it.
+fn begin(pinned: Pinned, args: &CreateGameArgs) -> Result<GameState, ClaimRefusal> {
+    let begun = engine::begin_game(pinned, &engine::create_game(pinned, args));
+    match begun.error {
+        Some(_) => Err(ClaimRefusal::DoesNotFold),
+        None => Ok(begun.state),
+    }
 }
 
 /// The action the practice AI takes in `state` from `seat` under `nonce`, as the worker's `aiStep`
@@ -185,9 +201,10 @@ pub fn verify(
 ) -> Result<Verified, ClaimRefusal> {
     let human_home = setup.human_seat;
     let ai_home = human_home.opponent();
-    let mut state = opening(pinned, seed, setup)?;
+    let args = opening_args(pinned, seed, setup);
+    let mut state = begin(pinned, &args)?;
     let mut ai_rng = Rng::new(&format!("{seed}:ai"), 0);
-    let (mut humans, mut ais, mut actions) = (0_i64, 0_i64, 0_i64);
+    let (mut humans, mut ais, mut actions, mut attacks) = (0_i64, 0_i64, 0_i64, 0_i64);
     for action in log {
         if state.result.is_some() {
             return Err(ClaimRefusal::DoesNotFold);
@@ -207,6 +224,9 @@ pub fn verify(
             }
             if is_player_action(&action.body) {
                 actions += 1;
+            }
+            if matches!(action.body, ActionBody::Attack { .. }) {
+                attacks += 1;
             }
             humans += 1;
         } else {
@@ -233,6 +253,23 @@ pub fn verify(
         return Err(ClaimRefusal::ResultMismatch);
     }
     let (p1, p2) = engine::last_boards(&state);
+    // The quests read what the game did off the same setup and log, as a ladder result reads its
+    // match's (`api::results`).
+    let game = engine::summarize_game(
+        pinned,
+        &FoldArgs {
+            seed: args.seed,
+            decks: args.decks,
+            log: log.to_vec(),
+            catalog: args.catalog,
+            handicaps: args.handicaps,
+            dealt: args.dealt,
+            last_boards: args.last_boards,
+            glitch_boards: args.glitch_boards,
+            sandbox: args.sandbox,
+            custom_cards: args.custom_cards,
+        },
+    );
     Ok(Verified {
         player,
         won,
@@ -242,5 +279,7 @@ pub fn verify(
             PlayerId::P1 => p1,
             PlayerId::P2 => p2,
         },
+        seat: game.map(|game| game.seats[player].clone()),
+        attacks,
     })
 }

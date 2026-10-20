@@ -11,8 +11,9 @@
 //!   the check answers ([[R1303001]]); then `economy::practice::verify` folds the log and re-runs
 //!   the AI off the runtime, at most `PRACTICE_VERIFY_CONCURRENCY` claims at once (the rest wait
 //!   for a permit, and none is dropped); then a claim that passed pays through the reward hook at
-//!   practice rates and keeps the board it ended on, in a task of its own that finishes even when
-//!   the caller stops waiting. No transaction stays open across a check.
+//!   practice rates, moving the account's quests as a ladder game does ([[R1304001]]), and keeps
+//!   the board it ended on, in a task of its own that finishes even when the caller stops waiting.
+//!   No transaction stays open across a check.
 //!   Every refusal answers 200 with `paid: false` and why, so the result screen can say it.
 //!
 //! Both answer only while the economy is on ([[R1302006]]): an issue is a 409, a claim
@@ -35,6 +36,7 @@ use crate::app::{App, now_ms};
 use crate::config::PRACTICE_SEED_TTL_SECONDS;
 use crate::db::store::LastBoardKind;
 use crate::economy::practice::{ClaimRefusal, ClaimedResult, Verified, verify};
+use crate::economy::quests::tally_seat;
 use crate::economy::rewards::{GameMode, GameSummary, game_jlore, game_xp, pay_game_rewards};
 use crate::economy::store::{PracticeDeck, PracticeSeed, PracticeSetup};
 
@@ -196,6 +198,7 @@ async fn settle(
             match_id,
             at: now,
             bot: false,
+            tally: tally_seat(verified.seat.as_ref(), verified.attacks, &app.catalog.defs),
         },
     )
     .await?;

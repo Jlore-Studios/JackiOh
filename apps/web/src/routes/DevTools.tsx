@@ -1,16 +1,28 @@
 // The Dev tools panel (SPEC §14.10, R1300000): a dev account moves its own economy by hand, so each
-// part of the economy can be tried on staging and production.
+// part of the economy can be tried on staging and production. The quest tools (§14.9, #1304) give a
+// quest at once and complete one picked from the held quests, which `GET /api/quests` lists again
+// whenever a request ends.
 //
 // THE SERVER DECIDES (CLAUDE.md rule 7). `/account` mounts this only when `/api/auth/me` says
 // `isDev`, and that is all the client decides: every button sends its request as typed (an amount
 // goes as `Number(text)`, whatever it is), each dev route checks `DEV_PROFILE_IDS` itself, and the
 // line under the buttons shows the server's answer, its refusal's message included, word for word.
 
-import { useId, useState, type ReactElement } from "react";
+import { useEffect, useId, useState, type ReactElement } from "react";
 
 import { SHIPPED_SETS, type SetName } from "@jackioh/shared";
 import { t } from "../i18n/i18n.ts";
-import { devClear, devFill, devGiveJlore, devGiveXp, type DevClearPart } from "../net/api.ts";
+import {
+  devClear,
+  devCompleteQuest,
+  devFill,
+  devGiveJlore,
+  devGiveQuest,
+  devGiveXp,
+  getQuests,
+  type DevClearPart,
+  type QuestView,
+} from "../net/api.ts";
 
 export const devToolsTestid = {
   panel: "dev-tools",
@@ -20,6 +32,9 @@ export const devToolsTestid = {
   jlore: "dev-tools-jlore",
   giveJlore: "dev-tools-give-jlore",
   fill: "dev-tools-fill",
+  giveQuest: "dev-tools-give-quest",
+  quest: "dev-tools-quest",
+  completeQuest: "dev-tools-complete-quest",
   status: "dev-tools-status",
 } as const;
 
@@ -54,6 +69,23 @@ export default function DevTools({ token }: { token: string }): ReactElement {
   const [jlore, setJlore] = useState("");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const working = status.kind === "working";
+  const [held, setHeld] = useState<QuestView[]>([]);
+  const [questId, setQuestId] = useState("");
+  const chosen = held.some((quest) => quest.questId === questId) ? questId : (held[0]?.questId ?? "");
+
+  // The held quests, listed again each time a request ends, so the pick follows a give or a complete.
+  useEffect(() => {
+    if (working) return;
+    let cancelled = false;
+    getQuests(token)
+      .then((answer) => {
+        if (!cancelled) setHeld(answer.quests);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [token, working]);
 
   const run = (request: () => Promise<unknown>): void => {
     if (working) return;
@@ -72,7 +104,7 @@ export default function DevTools({ token }: { token: string }): ReactElement {
 
   return (
     <div className="form-card dev-tools" data-testid={devToolsTestid.panel}>
-      <p>{t("These change this account’s own cards, cosmetics, Jlore and tracks.")}</p>
+      <p>{t("These change this account’s own cards, cosmetics, Jlore, tracks and quests.")}</p>
 
       <label htmlFor={`${ids}-set`}>{t("Set track")}</label>
       <select
@@ -150,6 +182,47 @@ export default function DevTools({ token }: { token: string }): ReactElement {
           }}
         >
           {t("Fill collection")}
+        </button>
+      </div>
+
+      <div className="account-actions">
+        <button
+          type="button"
+          data-testid={devToolsTestid.giveQuest}
+          disabled={working}
+          onClick={() => {
+            run(() => devGiveQuest(token));
+          }}
+        >
+          {t("Give a quest")}
+        </button>
+      </div>
+      <label htmlFor={`${ids}-quest`}>{t("Held quest")}</label>
+      <select
+        id={`${ids}-quest`}
+        data-testid={devToolsTestid.quest}
+        value={chosen}
+        disabled={working || held.length === 0}
+        onChange={(event) => {
+          setQuestId(event.target.value);
+        }}
+      >
+        {held.map((quest) => (
+          <option key={quest.questId} value={quest.questId}>
+            {t(quest.title)}
+          </option>
+        ))}
+      </select>
+      <div className="account-actions">
+        <button
+          type="button"
+          data-testid={devToolsTestid.completeQuest}
+          disabled={working || chosen === ""}
+          onClick={() => {
+            run(() => devCompleteQuest(token, chosen));
+          }}
+        >
+          {t("Complete quest")}
         </button>
       </div>
 
