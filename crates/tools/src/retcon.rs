@@ -712,8 +712,9 @@ end $$;
 --
 -- What moves: the catalog version of `cards`, `tickets`, `matches`, `decks`,
 -- `series` (whose compare-and-set version steps, R263), `match_checkpoints`,
--- a bot's decks and trio, and a Duos match's options; the patch and catalog
--- version of `rated_games` and the patch version of `seasons`; a game record's
+-- a bot's decks and trio, a Duos match's options and a practice seed's setup
+-- (0047); the patch and catalog version of `rated_games` and the patch
+-- version of `seasons`; a game record's
 -- patch and id (`dev:<patch>:<series>:<n>`, its series' own versions too),
 -- with their copies in its record, which takes the scheme marker
 -- (`versions: 2`) so an export of it is never read through the map again; the
@@ -777,6 +778,9 @@ update public.bots t set trio_catalog_version = m.new
 update public.duos_matches t
    set options = jsonb_set(t.options, '{{catalogVersion}}', to_jsonb(m.new))
   from retcon_1371 m where t.options ->> 'catalogVersion' = m.old;
+update public.practice_seeds t
+   set setup = jsonb_set(t.setup, '{{catalogVersion}}', to_jsonb(m.new))
+  from retcon_1371 m where t.setup ->> 'catalogVersion' = m.old;
 update public.rated_games t set patch_version = m.new
   from retcon_1371 m where t.patch_version = m.old;
 update public.rated_games t set catalog_version = m.new

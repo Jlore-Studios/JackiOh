@@ -35,6 +35,8 @@ begin
   insert into public.series (id, p1_profile_id, p2_profile_id, status, next_match_id, version, catalog_version, state)
   values ('f1371000-0000-4000-8000-000000000001', p1, p2, 'playing', 'f1371000-0000-4000-8000-0000000000a1', 3,
           'v0.3.12', '{"sides": [], "games": [], "seedBase": "s"}');
+  insert into public.practice_seeds (seed, profile_id, setup, issued_at)
+  values ('r1371-seed', p1, '{"difficulty": "easy", "catalogVersion": "v0.3.17"}', now());
 
   -- Two development ids whose new names would meet the other's old one, a series that spells a
   -- version, a live record, and one whose detail the purge emptied.
@@ -116,6 +118,9 @@ begin
   end if;
   if (select catalog_version || '@' || version from public.series where id = 'f1371000-0000-4000-8000-000000000001') <> 'v0.3.4@4' then
     raise exception 'FAIL (R1371000): the series is not v0.3.4 at version 4';
+  end if;
+  if (select setup ->> 'catalogVersion' from public.practice_seeds where seed = 'r1371-seed') <> 'v0.4.0c' then
+    raise exception 'FAIL (R1371000): the practice seed issued under v0.3.17 was not renamed';
   end if;
 
   select string_agg(id || '=' || patch, ',' order by id) into v from public.game_records
