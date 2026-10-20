@@ -393,6 +393,7 @@ mod tests {
             rarity,
             default: false,
             starter: false,
+            chase: false,
             card: None,
         }
     }
@@ -530,18 +531,15 @@ mod tests {
     fn r1301002_a_duplicate_becomes_a_cosmetic_of_the_rolled_rarity_whatever_the_card_s() {
         let foils = four_foils();
         let mut rng = Rng::new("r1301002", 0);
-        for rarity in CosmeticRarity::ALL {
-            let grant = duplicate_grant("m", rarity.printed(), &foils, &[], &mut rng);
-            let expected = foils
-                .iter()
-                .find(|cosmetic| cosmetic.rarity == rarity)
-                .map(|cosmetic| cosmetic.id.clone())
-                .unwrap_or_else(|| panic!("a foil of {rarity:?}"));
+        // Every foil drops at its own rarity (no foil is Mythic, so a Mythic roll is always
+        // spent: `r1301002_a_rolled_rarity_with_nothing_unowned_goes_to_the_bars`).
+        for foil in &foils {
+            let grant = duplicate_grant("m", foil.rarity.printed(), &foils, &[], &mut rng);
             assert_eq!(
                 grant,
                 SlotGrant::Cosmetic {
-                    cosmetic_id: expected,
-                    cosmetic_rarity: rarity.printed(),
+                    cosmetic_id: foil.id.clone(),
+                    cosmetic_rarity: foil.rarity.printed(),
                 }
             );
         }

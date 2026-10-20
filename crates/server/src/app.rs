@@ -317,6 +317,25 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(crate::economy::packs::post_open),
     ),
+    // economy/tokens.rs (SPEC §14.5; #1305)
+    (
+        "GET",
+        "/api/tokens",
+        AuthLevel::Active,
+        h!(crate::economy::tokens::get_tokens),
+    ),
+    (
+        "POST",
+        "/api/tokens/redeem-card",
+        AuthLevel::Active,
+        h!(crate::economy::tokens::post_redeem_card),
+    ),
+    (
+        "POST",
+        "/api/tokens/redeem-cosmetic",
+        AuthLevel::Active,
+        h!(crate::economy::tokens::post_redeem_cosmetic),
+    ),
     // api/economy.rs (#1302)
     (
         "GET",
