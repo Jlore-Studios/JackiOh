@@ -58,10 +58,10 @@ use serde_json::Value;
 
 use jackioh_ai::{AI_DEV_RUN, DevRunOptions, SHADOW_BAN, SHADOW_WATCH, dev_game_record};
 use jackioh_engine::{
-    CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, DEV_RECORD_ID_PREFIX, GAME_MODES,
-    GAME_OVER_REASONS, GameMode, GameOverReason, GameRecord, GameSource, GameSummary, PILOT_FILTERS,
-    PLAYER_IDS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, Winner, card_stats, describe_filter,
-    format_card_stats, parse_game_record_lines, record_matches, seats_counted, sources_of,
+    CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, DEV_RECORD_ID_PREFIX, FORCED_SERIES_PREFIX,
+    GAME_MODES, GAME_OVER_REASONS, GameMode, GameOverReason, GameRecord, GameSource, GameSummary,
+    PILOT_FILTERS, PLAYER_IDS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, Winner, card_stats,
+    describe_filter, format_card_stats, parse_game_record_lines, record_matches, seats_counted, sources_of,
 };
 
 use crate::arena::{self, paired_interval, wilson_interval};
@@ -131,7 +131,7 @@ pub struct Args {
     /// The patch the run tests. Default: the newest in patches.json.
     #[arg(long, value_name = "VERSION")]
     pub patch: Option<String>,
-    /// The seed series. Default AI_DEV_RUN.series ("dev").
+    /// The seed series. Default AI_DEV_RUN.series ("dev"). Refused with --force (R1284000).
     #[arg(long, value_name = "NAME")]
     pub series: Option<String>,
     /// R1284000: deal this card to p1 in odd games and p2 in even ones; a token goes in through its card (R279).
@@ -742,14 +742,21 @@ fn run_compare(args: &CompareArgs) -> Result<()> {
 
 /// R1284000: the options of the run `args` ask for, `patch` being the version it tests. `--force`'s id is
 /// resolved as `golden record --force` resolves it, so a token goes in through its card and an unknown id or
-/// an unshipped set's card is refused. A forced run's default series holds the card's id, so its records'
-/// ids never collide with a plain run's in `stats-import`.
+/// an unshipped set's card is refused. A forced run files under its default series, so its records'
+/// ids never collide with a plain run's in `stats-import`; an explicit `--series` with `--force` is refused.
 fn run_options(args: &Args, patch: String) -> Result<DevRunOptions> {
     let force = args.force.as_deref().map(golden::resolve_forced).transpose()?;
-    let series = match (&args.series, &force) {
-        (Some(series), _) => series.clone(),
-        (None, Some(card)) => format!("{}-force-{card}", AI_DEV_RUN.series),
-        (None, None) => AI_DEV_RUN.series.to_string(),
+    if let (Some(series), Some(card)) = (&args.series, &force) {
+        return Err(anyhow!(
+            "--series {series} cannot go with --force: a forced run files under {FORCED_SERIES_PREFIX}{card}, for stats compare and stats report, never for stats-import (R1284000)"
+        ));
+    }
+    let series = match &force {
+        Some(card) => format!("{FORCED_SERIES_PREFIX}{card}"),
+        None => args
+            .series
+            .clone()
+            .unwrap_or_else(|| AI_DEV_RUN.series.to_string()),
     };
     Ok(DevRunOptions {
         series,
@@ -1414,7 +1421,7 @@ mod tests {
         assert_eq!((plain.series.as_str(), plain.force), ("dev", None));
         assert_eq!(plain.patch, "v0.2.5");
 
-        // A forced run files under a series of its own, unless it is told one.
+        // A forced run files under a series of its own; an explicit series with --force is refused.
         let forced = options_of(&["--force=core-090"]).unwrap();
         assert_eq!(
             (forced.series.as_str(), forced.force.as_deref()),
@@ -1426,10 +1433,14 @@ mod tests {
             (token.series.as_str(), token.force.as_deref()),
             ("dev-force-classic-032", Some("classic-032"))
         );
-        assert_eq!(
-            options_of(&["--force=core-090", "--series=a"]).unwrap().series,
-            "a"
-        );
+        let refused = options_of(&["--force=core-090", "--series=a"])
+            .unwrap_err()
+            .to_string();
+        assert!(refused.contains("--series"), "{refused}");
+        assert!(refused.contains("--force"), "{refused}");
+        assert!(refused.contains("R1284000"), "{refused}");
+        assert!(refused.contains("dev-force-core-090"), "{refused}");
+        assert_eq!(options_of(&["--series=a"]).unwrap().series, "a");
 
         let unknown = options_of(&["--force=no-such-card"]).unwrap_err().to_string();
         assert!(unknown.contains("not in the catalog"), "{unknown}");
