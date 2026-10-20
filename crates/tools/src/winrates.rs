@@ -6,16 +6,17 @@
 //! them: every counted seat of a live game, human and bot alike (R807000's merged display), and both
 //! seats of a development game (R378).
 //!
-//! The command does not apply R654's gate: the threshold lives in the server, and the exporter
-//! picks `--source` there. What reaches the table is what the input holds — live games when the
-//! input is all live, provisional otherwise.
+//! Record files are read through the engine's `windowed_card_stats`, the function the server's
+//! `/api/stats/cards` calls (R1367000): each card over its own window at `--patch`, under R654's gate
+//! as amended. A report export is taken as the server counted it. The table is live when no counted
+//! record is a development game, provisional otherwise.
 
 use std::path::PathBuf;
 
 use anyhow::{Context, Result, bail};
 use jackioh_engine::{
-    CardStatsFilter, GameSource, PilotFilter, SourceFilter, WinRateRow, WinRateSource, WinRateTable,
-    card_stats,
+    GameSource, PilotFilter, SourceFilter, StatsTotals, WinRateRow, WinRateSource, WinRateTable, WindowQuery,
+    WindowRequest, parse_game_record_lines, windowed_card_stats,
 };
 
 /// `cargo jackioh winrates`.
@@ -67,49 +68,52 @@ fn table_from_report(text: &str, patch: &str) -> Result<WinRateTable> {
     })
 }
 
-/// The table from JSONL game record files, counted on the patch as `/api/stats/cards` counts them
-/// (R807000): the live records under `{ source: Live, pilot: Unified }`, every counted seat, and
-/// the development records under `{ source: Dev, pilot: Unified }`, every mode, in-deck figures
-/// summed card by card; `live` only when every record counted is live.
+/// The table from JSONL game record files, counted as `/api/stats/cards` counts them, through the
+/// same function (R1367000, `windowed_card_stats`): each card over its own window at `patch`, every
+/// counted seat of a live game (R807000) and both seats of a development game, live games only once
+/// the window (or its previous one) has `PUBLIC_STATS_MIN_LIVE_GAMES`; `live` only when no counted
+/// record is a development game.
 fn table_from_records(texts: &[String], patch: &str) -> Result<WinRateTable> {
-    let mut records = Vec::new();
+    let mut totals = StatsTotals::default();
     for text in texts {
-        // R1371000: a file written before the version retcon names its versions the old way.
-        records.extend(
-            jackioh_cards::versions::read_game_record_lines(text).context("parsing the game records")?,
-        );
-    }
-    let filters = [
-        (SourceFilter::Live, PilotFilter::Unified),
-        (SourceFilter::Dev, PilotFilter::Unified),
-    ]
-    .map(|(source, pilot)| CardStatsFilter {
-        source,
-        mode: None,
-        patch: Some(patch.to_string()),
-        pilot,
-    });
-    let mut in_deck: std::collections::BTreeMap<String, (i32, i32)> = std::collections::BTreeMap::new();
-    for filter in &filters {
-        for stats in card_stats(&records, filter).cards {
-            let held = in_deck.entry(stats.card).or_default();
-            held.0 += stats.in_deck.wins;
-            held.1 += stats.in_deck.games;
+        for record in
+            jackioh_cards::versions::read_game_record_lines(text).context("parsing the game records")?
+        {
+            totals.fold(&record, false);
         }
     }
-    let counted: Vec<&jackioh_engine::GameRecord> = records
+    let history = jackioh_cards::patch_history();
+    let report = windowed_card_stats(
+        &totals,
+        &WindowQuery {
+            history: &history,
+            at: patch,
+            live_pilot: PilotFilter::Unified,
+            mode: None,
+            request: WindowRequest::Gated,
+        },
+    );
+    let dev_on = |version: &str| {
+        totals
+            .records
+            .keys()
+            .any(|key| key.source == GameSource::Dev && key.patch == version)
+    };
+    let live = !report.cards.is_empty()
+        && report.cards.iter().all(|card| {
+            !card.window.sources().contains(&GameSource::Dev)
+                || !card.window.counted.iter().any(|version| dev_on(version))
+        });
+    let mut cards: Vec<WinRateRow> = report
+        .cards
         .iter()
-        .filter(|record| {
-            filters.iter().any(|filter| {
-                jackioh_engine::record_matches(record, filter)
-                    && !jackioh_engine::seats_counted(record, filter.pilot).is_empty()
-            })
+        .filter_map(|card| {
+            row_of(
+                &card.stats.card,
+                card.stats.in_deck.wins,
+                card.stats.in_deck.games,
+            )
         })
-        .collect();
-    let live = !counted.is_empty() && counted.iter().all(|record| record.source == GameSource::Live);
-    let mut cards: Vec<WinRateRow> = in_deck
-        .iter()
-        .filter_map(|(card, (wins, games))| row_of(card, *wins, *games))
         .collect();
     cards.sort_by(|a, b| a.id.cmp(&b.id));
     Ok(WinRateTable {
@@ -174,6 +178,7 @@ pub fn run(args: Args) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jackioh_engine::CardStatsFilter;
 
     fn stats(card: &str, wins: i32, games: i32) -> jackioh_engine::CardStats {
         jackioh_engine::CardStats {
@@ -293,6 +298,7 @@ mod tests {
                     turns: 4,
                     seats: PerPlayer::new(seat(&["core-001"]), seat(&["core-001", "core-003"])),
                 },
+                build: None,
             };
             jackioh_cards::versions::game_record_line(&record)
         };
@@ -344,6 +350,50 @@ mod tests {
             .map(|row| (row.id.as_str(), row.wins, row.games))
             .collect();
         assert_eq!(hit, [("core-001", 2, 4), ("core-003", 0, 2)]);
+    }
+
+    #[test]
+    fn r1367000_table_from_records_reads_each_card_over_its_own_window() {
+        use jackioh_engine::{
+            GameMode, GameOverReason, GameRecord, GameSummary, PerPlayer, Pilot, PlayerId, SeatSummary,
+            Winner,
+        };
+        jackioh_cards::register_all();
+        let seat = |deck: &[&str]| SeatSummary {
+            deck: deck.iter().map(|card| card.to_string()).collect(),
+            ..SeatSummary::default()
+        };
+        // v0.2.6, a micro after v0.2.5's patch, plays Classic #55 alone.
+        let line = |id: &str, patch: &str| {
+            serde_json::to_string(&GameRecord {
+                id: id.to_string(),
+                source: GameSource::Live,
+                mode: GameMode::Bo1,
+                patch: patch.to_string(),
+                pilots: PerPlayer::new(Pilot::Human, Pilot::Human),
+                game: GameSummary {
+                    first: PlayerId::P1,
+                    winner: Winner::P1,
+                    reason: GameOverReason::Concede,
+                    turns: 4,
+                    seats: PerPlayer::new(seat(&["core-001", "classic-055"]), seat(&["core-003"])),
+                },
+                build: None,
+            })
+            .unwrap_or_default()
+        };
+        let table = table_from_records(&[line("m1", "v0.2.5"), line("m2", "v0.2.6")], "v0.2.6")
+            .unwrap_or_else(|error| panic!("{error:?}"));
+        let hit: Vec<(&str, i32, i32)> = table
+            .cards
+            .iter()
+            .map(|row| (row.id.as_str(), row.wins, row.games))
+            .collect();
+        assert_eq!(
+            hit,
+            [("classic-055", 1, 1), ("core-001", 2, 2), ("core-003", 0, 2)]
+        );
+        assert_eq!(table.source, WinRateSource::Live);
     }
 
     #[test]

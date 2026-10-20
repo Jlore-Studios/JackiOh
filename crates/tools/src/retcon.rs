@@ -447,7 +447,7 @@ const SKIP_FILES: &[&str] = &[
     "crates/tools/src/classify.rs",
     "crates/tools/src/retcon.rs",
     "crates/server/tests/sql/14_patch_retcon.sql",
-    "crates/server/tests/sql/27_version_retcon.sql",
+    "crates/server/tests/sql/28_version_retcon.sql",
 ];
 
 /// How a file's versions are found: everywhere in a data file, in a code file's string literals.

@@ -15,6 +15,8 @@ export const patchTestid = {
   setToggle: "patch-set-toggle",
   /** A release line's technical changes. */
   technical: "patch-technical",
+  /** A patch's lines from the technical log (R1369000). */
+  technicalLog: "patch-technical-log",
   /** One patch, `data-version` its version. */
   patch: "patch-entry",
   /** A patch's player note (R724001). */

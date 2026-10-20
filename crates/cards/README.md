@@ -277,6 +277,12 @@ Every change to card data is a patch, and every patch is kept.
   R1371000), each old name to its new one: only a reader of a file without the `versions` marker
   consults it (`src/versions.rs`, `current_version_name`), and the history's names are the new
   ones. Older docs name versions the old way (`docs/issues-and-patches.md`, Version retcon).
+- `patches/technical.json` is the technical log (R1369000): the changes that shipped no card data, a
+  list in logged order of `{ version, commit, pr?, title, kind, player? }`, `version` the newest
+  shipped X when it was logged, `commit` its key, `kind` `app`, `ai` or `internal`, and `player` the
+  line the Patch notes page shows under that X (App and AI only). `cargo jackioh patches log
+  <base>..<head> [--bodies <path>]` appends to it (`crates/tools/src/technical.rs`'s header has the
+  rest); nothing else writes it.
 - A branch that changes card data claims it with a pending fragment:
   `cargo jackioh patches <version> <date> "<title>" --source "<issue or PR>" --notes "<what changed>"`
   writes `patches/pending/<version>.json` (`--cards` names the ids; otherwise they are diffed from
@@ -301,6 +307,10 @@ Every change to card data is a patch, and every patch is kept.
   the version from `patches.json` at compile time; `cargo jackioh catalog-version` prints it.
 - A version is opaque (R105): nothing parses or orders one, and the order of patches is
   `patches.json`'s. A snapshot keeps a card's data, not its script.
+- `patch_history()` (`src/patch_history.rs`, R1367000) reads `patches.json` as a card's statistics
+  window does: each version's tier and the families that play in it, as recorded, or, for a version
+  shipped before tiers were recorded, from its `changes` (`WORDING_FIELDS`, `PATCH_MIN_CARDS`,
+  `PRE_TIER_MAJORS`). The server and the tools hand it to the engine's `windowed_card_stats`.
 - Every shipped version but the newest is carried for replays (R767000): its definitions rebuilt
   from its snapshot, its scripts the build's own, and the win-rate table it shipped with (R1266000:
   its `win_rates/<version>.json`, or the empty table with no file, R1329000). A patch

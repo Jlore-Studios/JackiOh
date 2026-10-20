@@ -415,6 +415,7 @@ mod tests {
             catalog: jackioh_cards::catalog_version().to_string(),
             commit: "test".to_string(),
             versions: Some(jackioh_engine::config::VERSIONS_SCHEME),
+            ai_generation: None,
         };
         (game, live)
     }
