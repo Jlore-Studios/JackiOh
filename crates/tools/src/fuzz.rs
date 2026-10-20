@@ -37,8 +37,8 @@
 //! GROWTH_INSTANCES_BOUND. That catches runaway growth inside one action (R874000's fusion, R884000's
 //! University) at the step that grew, well before the engine's settle cap (§10.3) panics or a process
 //! runs out of memory. The weighing reads the returned events and state only, never the clock, so it
-//! is as deterministic as the game; `--handicap` is not weighed, and `--duos` is weighed by
-//! `duos_fuzz.rs` through the shared helpers below.
+//! is as deterministic as the game; the handicapped wave is weighed the same way through the same
+//! loop, and `--duos` is weighed by `duos_fuzz.rs` through the shared helpers below.
 //!
 //! And on the states the gate reaches, PROBES (#1386): every `probe_stride()`-th state, two forged
 //! actions that are never logged. A wrong-seat probe sends the action the policy chose from the seat
@@ -46,8 +46,8 @@
 //! concede under the nonce of the last logged action, and must neither apply nor replace anything but
 //! answer that action's own events (§10.1, §10.2). Either way the state must be kept exactly, the
 //! nonce memory `hash_state` leaves out included. A failure is the "probe" stage and names the step
-//! and the probe. `--handicap` probes the same way and `--duos` as `duos_fuzz.rs` says. The probes
-//! draw from no random stream, so every game plays as it did before them.
+//! and the probe. The handicapped wave probes the same way and `--duos` as `duos_fuzz.rs` says. The
+//! probes draw from no random stream, so every game plays as it did before them.
 //!
 //! Determinism (SPEC §9.3, §10.7, CLAUDE.md rule 4): nothing here reads OS randomness or the clock
 //! for a game (the clock only times the wave). The deck draw, the game and the policy each come from
@@ -69,7 +69,8 @@
 //!   cargo jackioh fuzz --duos                       Duos co-op games: seeds 1–200 (`duos_fuzz.rs`)
 //!   cargo test -p jackioh-tools fuzz                seeds 1–20 of each (see SWEEP_SEEDS)
 //!   cargo jackioh fuzz --seeds 200 --json           the wave as one JSON object
-//!   cargo jackioh fuzz --from <seed> --seeds 1      one seed a report named
+//!   cargo jackioh fuzz --seeds 200 --handicap --json   the handicapped wave as one JSON object
+//!   cargo jackioh fuzz --from <seed> --seeds 1      one seed a report named (`--handicap` too, for a handicapped one)
 //!   cargo jackioh fuzz --regress                    the regression corpus
 //!
 //! # The regression corpus (#1197)
@@ -86,9 +87,13 @@
 //! through: a 25- or 30-card deck (R184), one more crystal up to a higher cap (R181), an extra opening
 //! card (R182), and at Hard a second start-of-turn draw with its own cast-on-draw chain, hand-cap
 //! check and fatigue step (R183). So this wave plays the same random-policy games with one seat
-//! handicapped, rotating by seed over Medium and Hard and over both seats, and holds them to the same
-//! three assertions: no throw, a real ending inside the cap, and a log that folds back, handicaps
-//! included, to the live hash. Each game also runs the gate's invariant monitor (I1–I8) the same way.
+//! handicapped, rotating by seed over Medium and Hard and over both seats, through the gate's own
+//! loop (`GameSetup` names the streams and the handicaps, `run_seed` plays and checks), and holds
+//! them to the same checks: no throw, a real ending inside the cap in `Phase::Over`, a log that folds
+//! back, handicaps included, to the live hash, the invariant monitor (I1–I8), growth weighing, the
+//! same probes and the serialization checkpoint. A failure goes through `Failure` and `report` with
+//! its tier and seat in the example line and both decks printed, and `--json` prints the wave as one
+//! JSON object.
 
 use std::cell::RefCell;
 use std::fs;
@@ -140,9 +145,9 @@ pub struct Args {
     /// failure's pinned decks, never a deal from the live pool.
     #[arg(long, conflicts_with_all = ["from", "seeds", "handicap", "duos"])]
     pub regress: bool,
-    /// Print the gate's wave as one JSON object instead of text (#1254): its failures, each
-    /// measure's heaviest actions and the growth bounds.
-    #[arg(long, conflicts_with_all = ["handicap", "regress"])]
+    /// Print the wave, the gate's or with `--handicap` the handicapped one, as one JSON object
+    /// instead of text (#1254): its failures, each measure's heaviest actions and the growth bounds.
+    #[arg(long, conflicts_with_all = ["regress"])]
     pub json: bool,
 }
 
@@ -158,17 +163,11 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         return crate::duos_fuzz::run(from, args.seeds, args.json);
     }
     let ran = wave_size(args.seeds);
-    if args.handicap {
-        let wave = play_handicap_wave(from, ran);
-        println!("{}", wave.summary());
-        let failures = wave.failure_lines();
-        if !failures.is_empty() {
-            println!("{}", failures.join("\n"));
-            bail!("fuzz-handicap: {} of {} seed(s) failed", failures.len(), ran);
-        }
-        return Ok(());
-    }
-    let wave = play_wave(from, ran);
+    let wave = if args.handicap {
+        play_handicap_wave(from, ran)
+    } else {
+        play_wave(from, ran)
+    };
     if args.json {
         println!("{}", serde_json::to_string_pretty(&wave.json())?);
     } else {
@@ -178,7 +177,12 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         if !args.json {
             println!("{}", report(&wave.failures, ran, wave.elapsed_ms));
         }
-        bail!("M4 fuzz gate: {} of {} seeds failed", wave.failures.len(), ran);
+        bail!(
+            "{}: {} of {} seeds failed",
+            wave_name(args.handicap),
+            wave.failures.len(),
+            ran
+        );
     }
     Ok(())
 }
@@ -425,25 +429,71 @@ pub(crate) fn actor_of(state: &GameState, order: &mut Rng) -> PlayerId {
     }
 }
 
+/// What one game is played as: the seed that names its streams and, for the handicapped wave, which
+/// seat is handicapped and how (`handicap_for_seed`). The gate's and the handicapped wave's games go
+/// through the same loop, told apart by this alone.
+#[derive(Clone, Copy, Debug)]
+struct GameSetup {
+    seed: u32,
+    /// The handicapped wave's rotation for `seed`; `None` for the gate's two plain seats.
+    rotation: Option<SeedHandicap>,
+}
+
+impl GameSetup {
+    /// The gate's game for `seed`.
+    fn gate(seed: u32) -> GameSetup {
+        GameSetup { seed, rotation: None }
+    }
+
+    /// The handicapped wave's game for `seed`, with its rotation.
+    fn handicapped(seed: u32) -> GameSetup {
+        GameSetup {
+            seed,
+            rotation: Some(handicap_for_seed(seed)),
+        }
+    }
+
+    /// The stream named `kind` (`""` for the game's own, `policy-`, `policy-order-`, `checkpoint-`):
+    /// `jackioh-fuzz-<kind><seed>` for the gate and `jackioh-fuzz-handicap-<kind><seed>` for the
+    /// handicapped wave, the names every seed was played under before the two shared a loop.
+    fn stream(&self, kind: &str) -> String {
+        let wave = if self.rotation.is_some() { "handicap-" } else { "" };
+        format!("jackioh-fuzz-{wave}{kind}{}", self.seed)
+    }
+
+    /// The handicap the game is created, replayed and checkpointed with (R180, R187): one seat's.
+    fn handicaps(&self) -> Option<PerPlayerOpt<Handicap>> {
+        self.rotation.map(|SeedHandicap { seat, handicap, .. }| {
+            let mut handicaps = PerPlayerOpt::default();
+            *handicaps.slot(seat) = Some(handicap);
+            handicaps
+        })
+    }
+}
+
 /// One full game played by SPEC §10.7's policy. `subsystems::choose_action` IS that policy — uniform
 /// over `legal_actions` minus `AI_SKIPPED_ACTIONS` (R84), ending the turn when nothing else is on
 /// offer or with `AI_END_TURN_PROBABILITY`, and answering an open prompt uniformly (R44) — so this
 /// drives the shipped machinery rather than a second copy of the rule. The probes' forged actions go
 /// through `probe` (#1386).
-fn play_game(seed: u32, decks: (Vec<String>, Vec<String>), probe: Reducer) -> Result<GameRun, FuzzFailure> {
-    let game_seed = format!("jackioh-fuzz-{seed}");
+fn play_game(
+    setup: &GameSetup,
+    decks: (Vec<String>, Vec<String>),
+    probe: Reducer,
+) -> Result<GameRun, FuzzFailure> {
     register_all();
 
     let begun = begin_game(&create_game(&CreateGameOptions {
-        seed: game_seed,
+        seed: setup.stream(""),
         decks: decks.clone(),
+        handicaps: setup.handicaps(),
         ..CreateGameOptions::default()
     }));
     let mut state = begun.state;
-    let mut policy = Rng::new(&format!("jackioh-fuzz-policy-{seed}"), 0);
+    let mut policy = Rng::new(&setup.stream("policy-"), 0);
     // R265: while both mulligans are open either seat may answer first; a stream of its own picks
     // which, so the fuzz plays both orders (the game is the same either way, R265).
-    let mut order = Rng::new(&format!("jackioh-fuzz-policy-order-{seed}"), 0);
+    let mut order = Rng::new(&setup.stream("policy-order-"), 0);
     let mut log: Vec<Action> = Vec::new();
     let mut monitor = create_invariant_monitor(&state);
     let stride = hidden_stride();
@@ -454,9 +504,9 @@ fn play_game(seed: u32, decks: (Vec<String>, Vec<String>), probe: Reducer) -> Re
     // The events the last logged action returned, which a probe of its nonce is owed (#1386).
     let mut last_events: Vec<GameEvent> = Vec::new();
     // Setup's own events: a Unit cast on draw in the opening deal (C+ #26 Tommy Tempo) enters there.
-    let mut setup = monitor.after(&begun.events, &state);
-    setup.extend(monitor.hidden(&state));
-    if let Some(first) = setup.first() {
+    let mut opening = monitor.after(&begun.events, &state);
+    opening.extend(monitor.hidden(&state));
+    if let Some(first) = opening.first() {
         return Err(FuzzFailure::new(
             FailureStage::Invariant,
             first.clone(),
@@ -588,7 +638,7 @@ fn play_game(seed: u32, decks: (Vec<String>, Vec<String>), probe: Reducer) -> Re
         for (measure, value) in MEASURES.into_iter().zip(weights) {
             if heaviest.list(measure).first().is_none_or(|top| value > top.value) {
                 let heavy = Heavy {
-                    seed,
+                    seed: setup.seed,
                     step,
                     action: action_type.clone(),
                     card: card.clone(),
@@ -664,18 +714,19 @@ fn check_termination(run: &GameRun) -> Result<(), FuzzFailure> {
 }
 
 /// Assertion 3: `(seed, log)` is the truth (§9.3). Fold from scratch and compare the hash.
-fn check_replay(seed: u32, run: &GameRun) -> Result<(), FuzzFailure> {
+fn check_replay(setup: &GameSetup, run: &GameRun) -> Result<(), FuzzFailure> {
     let at = At {
         turn: run.state.turn,
         actions: run.log.len(),
     };
     register_all();
+    // R180, R187: the handicaps are part of what a game replays from.
     let replayed = fold(&FoldArgs {
-        seed: format!("jackioh-fuzz-{seed}"),
+        seed: setup.stream(""),
         decks: run.decks.clone(),
         log: run.log.clone(),
         catalog: None,
-        handicaps: None,
+        handicaps: setup.handicaps(),
         dealt: None,
         last_boards: None,
         glitch_boards: None,
@@ -1354,12 +1405,33 @@ fn probe_state(
 #[derive(Clone, Debug)]
 struct Failure {
     seed: u32,
+    /// The handicapped wave's tier and seat for `seed`; `None` in the gate's. Kept out of
+    /// `signature`, so one bug stays one group across the rotation's four slots.
+    rotation: Option<(Difficulty, PlayerId)>,
     stage: FailureStage,
     signature: String,
     message: String,
-    cards: Vec<String>,
+    /// The two decks the seed was dealt, p1's then p2's: a handicapped seat's is longer than
+    /// `DECK_SIZE`, so the report cannot split one flat list.
+    decks: (Vec<String>, Vec<String>),
     turn: i64,
     actions: i64,
+}
+
+impl Failure {
+    /// Every card id in the two decks.
+    fn cards(&self) -> impl Iterator<Item = &String> {
+        self.decks.0.iter().chain(&self.decks.1)
+    }
+}
+
+/// The name of the gate's wave or of the handicapped one, in the report's heading and the exit message.
+fn wave_name(handicapped: bool) -> &'static str {
+    if handicapped {
+        "fuzz-handicap"
+    } else {
+        "M4 fuzz gate"
+    }
 }
 
 /// `\w` for `\b`.
@@ -1582,8 +1654,9 @@ fn round(x: f64) -> i64 {
 
 /// The failure message BUILD asks for: every card id in a failing seed's decks, grouped so one bug
 /// reads as one entry. Per group it prints the seeds, the cards present in EVERY failing seed of the
-/// group (the narrowest suspects), the most frequent cards, and the full 40-card deck pair of the
-/// first seed, which is the one a reader reproduces with.
+/// group (the narrowest suspects), the most frequent cards, and the full deck pair of the first seed,
+/// which is the one a reader reproduces with. A handicapped wave's example names the seed's tier and
+/// seat, and its reproduce line says `--handicap`.
 fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
     let mut groups: IndexMap<String, Vec<&Failure>> = IndexMap::new();
     for failure in failures {
@@ -1592,10 +1665,11 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
     let mut ordered: Vec<(String, Vec<&Failure>)> = groups.into_iter().collect();
     ordered.sort_by_key(|group| std::cmp::Reverse(group.1.len()));
 
-    let deck_size = usize::try_from(DECK_SIZE).unwrap_or(0);
+    let handicapped = failures.first().is_some_and(|failure| failure.rotation.is_some());
     let mut lines: Vec<String> = Vec::new();
     lines.push(format!(
-        "M4 fuzz gate: {} of {ran} seeds failed ({} distinct failure signature(s), {}s).",
+        "{}: {} of {ran} seeds failed ({} distinct failure signature(s), {}s).",
+        wave_name(handicapped),
         failures.len(),
         ordered.len(),
         round(elapsed_ms / MS_PER_SECOND)
@@ -1613,7 +1687,7 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
         let counts = count_by(
             bucket
                 .iter()
-                .flat_map(|failure| failure.cards.iter().map(String::as_str)),
+                .flat_map(|failure| failure.cards().map(String::as_str)),
         );
         let mut always: Vec<String> = counts
             .iter()
@@ -1632,8 +1706,11 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
             bucket.len()
         ));
         lines.push(format!("  {signature}"));
+        let who = first
+            .rotation
+            .map_or_else(String::new, |(tier, seat)| format!("{tier} {seat}, "));
         lines.push(format!(
-            "  example: seed {} (turn {}, {} actions)",
+            "  example: seed {} ({who}turn {}, {} actions)",
             first.seed, first.turn, first.actions
         ));
         lines.push(format!("  message: {}", first.message));
@@ -1668,23 +1745,22 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
                     .join(", ")
             ));
         }
-        let split = deck_size.min(first.cards.len());
         lines.push(format!(
             "  seed {} p1 deck: {}",
             first.seed,
-            first.cards[..split].join(", ")
+            first.decks.0.join(", ")
         ));
         lines.push(format!(
             "  seed {} p2 deck: {}",
             first.seed,
-            first.cards[split..].join(", ")
+            first.decks.1.join(", ")
         ));
         lines.push(String::new());
     }
 
     let mut all_cards: Vec<String> = failures
         .iter()
-        .flat_map(|failure| failure.cards.iter().cloned())
+        .flat_map(|failure| failure.cards().cloned())
         .collect::<IndexSet<String>>()
         .into_iter()
         .collect();
@@ -1695,7 +1771,10 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
     ));
     lines.push(format!("  {}", all_cards.join(", ")));
     lines.push(String::new());
-    lines.push("Reproduce one seed with: cargo jackioh fuzz --from <seed> --seeds 1".to_string());
+    lines.push(format!(
+        "Reproduce one seed with: cargo jackioh fuzz --from <seed> --seeds 1{}",
+        if handicapped { " --handicap" } else { "" }
+    ));
     lines.join("\n")
 }
 
@@ -1732,13 +1811,34 @@ fn fuzz_deal(seed: u32, decks: (Vec<String>, Vec<String>)) -> Result<Passed, Fai
 
 /// `fuzz_deal` with the probes' forged actions going through `probe` (#1386).
 fn fuzz_deal_probed(seed: u32, decks: (Vec<String>, Vec<String>), probe: Reducer) -> Result<Passed, Failure> {
+    run_seed(&GameSetup::gate(seed), decks, probe)
+}
+
+/// One seed of the handicapped wave through the same checks as the gate's: its rotation's tier and
+/// seat (`handicap_for_seed`), its decks (`handicap_decks_for_seed`), its own streams.
+fn fuzz_handicap_seed(seed: u32) -> Result<Passed, Failure> {
+    let SeedHandicap { seat, handicap, .. } = handicap_for_seed(seed);
+    fuzz_handicap_deal(seed, handicap_decks_for_seed(seed, seat, &handicap), reduce)
+}
+
+/// `decks` played as `seed`'s handicapped game, the probes' forged actions going through `probe`.
+fn fuzz_handicap_deal(
+    seed: u32,
+    decks: (Vec<String>, Vec<String>),
+    probe: Reducer,
+) -> Result<Passed, Failure> {
+    run_seed(&GameSetup::handicapped(seed), decks, probe)
+}
+
+/// One game through the four assertions, whichever wave `setup` is of.
+fn run_seed(setup: &GameSetup, decks: (Vec<String>, Vec<String>), probe: Reducer) -> Result<Passed, Failure> {
     // R1420: the fuzz pool is the whole catalog, every set shipped or not, so this worker thread
     // previews every set for the game, its checks and its replay.
     let _preview = preview_every_set();
     let mut reached: Option<At> = None;
     let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<Passed, FuzzFailure> {
         // 1. never panic
-        let run = play_game(seed, decks.clone(), probe)?;
+        let run = play_game(setup, decks.clone(), probe)?;
         reached = Some(At {
             turn: run.state.turn,
             actions: run.log.len(),
@@ -1746,15 +1846,15 @@ fn fuzz_deal_probed(seed: u32, decks: (Vec<String>, Vec<String>), probe: Reducer
         // 2. always terminate, by hero death or the R2 cap
         check_termination(&run)?;
         // 3. (seed, log) folds to the same hash
-        check_replay(seed, &run)?;
+        check_replay(setup, &run)?;
         // 4. the game survives a serialized restart (#1387)
         let checkpoint = check_serial_restart(
-            &format!("jackioh-fuzz-{seed}"),
+            &setup.stream(""),
             &run.decks,
-            None,
+            setup.handicaps(),
             &run.log,
             &run.state,
-            &format!("jackioh-fuzz-checkpoint-{seed}"),
+            &setup.stream("checkpoint-"),
             &run.paused,
         )?;
         Ok(Passed {
@@ -1795,14 +1895,13 @@ fn fuzz_deal_probed(seed: u32, decks: (Vec<String>, Vec<String>), probe: Reducer
         }
     };
     // 4. name every card in this seed's decks
-    let (mut cards, p2) = decks;
-    cards.extend(p2);
     Err(Failure {
-        seed,
+        seed: setup.seed,
+        rotation: setup.rotation.map(SeedHandicap::who),
         stage,
         signature: signature_of(stage, &message),
         message,
-        cards,
+        decks,
         turn,
         actions,
     })
@@ -1810,6 +1909,8 @@ fn fuzz_deal_probed(seed: u32, decks: (Vec<String>, Vec<String>), probe: Reducer
 
 /// A whole wave's results, in seed order.
 struct Wave {
+    /// Whether this is the handicapped wave (`--handicap`) and not the gate's.
+    handicapped: bool,
     from: u32,
     ran: u32,
     failures: Vec<Failure>,
@@ -1828,15 +1929,26 @@ struct Wave {
     checkpoint_max_ms: u128,
 }
 
-/// Plays seeds `from..from + ran`, in parallel, and gathers them back in seed order.
+/// Plays the gate's seeds `from..from + ran`, in parallel, and gathers them back in seed order.
 fn play_wave(from: u32, ran: u32) -> Wave {
+    play_seeds(false, from, ran, fuzz_seed)
+}
+
+/// Plays the handicapped wave's seeds `from..from + ran` the same way.
+fn play_handicap_wave(from: u32, ran: u32) -> Wave {
+    play_seeds(true, from, ran, fuzz_handicap_seed)
+}
+
+/// `seed` over `from..from + ran`, in parallel, gathered back in seed order into one wave's numbers.
+fn play_seeds(handicapped: bool, from: u32, ran: u32, seed: fn(u32) -> Result<Passed, Failure>) -> Wave {
     record_panic_locations();
     register_all();
     let started_at = Instant::now();
-    let results: Vec<Result<Passed, Failure>> = (from..from + ran).into_par_iter().map(fuzz_seed).collect();
+    let results: Vec<Result<Passed, Failure>> = (from..from + ran).into_par_iter().map(seed).collect();
     let elapsed_ms = started_at.elapsed().as_secs_f64() * MS_PER_SECOND;
 
     let mut wave = Wave {
+        handicapped,
         from,
         ran,
         failures: Vec::new(),
@@ -1889,12 +2001,22 @@ impl Wave {
         } else {
             0
         };
+        let (label, full, wave, command) = if self.handicapped {
+            (
+                "fuzz-handicap",
+                "FULL HANDICAP WAVE",
+                "the handicapped wave",
+                "cargo jackioh fuzz --handicap",
+            )
+        } else {
+            ("M4 fuzz", "FULL GATE", "the gate", "cargo jackioh fuzz")
+        };
         let mut text = format!(
-            "[M4 fuzz] {}\n  seeds {}..{}: {passed} passed, {} failed\n  {} panic(s), {} over the {}-action bound or stalled, {} replay mismatch(es), {} invariant violation(s), {} past a growth bound, {} failed a probe, {} checkpoint mismatch(es)\n  endings: {}\n  {average} actions/game on average, {} at most; longest game ended on turn {} of {TURN_CAP_PLAYER_TURNS}\n  checkpoints: {} paused, {} mid-game fallback; slowest {}ms of {CHECKPOINT_TIME_BOUND_MS}ms\n  pool: {} deck-legal cards, {} excluded; I6 every {} state(s), I8 every {} state(s), probes every {} state(s); {}s\n",
+            "[{label}] {}\n  seeds {}..{}: {passed} passed, {} failed\n  {} panic(s), {} over the {}-action bound or stalled, {} replay mismatch(es), {} invariant violation(s), {} past a growth bound, {} failed a probe, {} checkpoint mismatch(es)\n  endings: {}\n  {average} actions/game on average, {} at most; longest game ended on turn {} of {TURN_CAP_PLAYER_TURNS}\n  checkpoints: {} paused, {} mid-game fallback; slowest {}ms of {CHECKPOINT_TIME_BOUND_MS}ms\n  pool: {} deck-legal cards, {} excluded; I6 every {} state(s), I8 every {} state(s), probes every {} state(s); {}s\n",
             if self.ran >= WAVE_SEEDS {
-                "FULL GATE".to_string()
+                full.to_string()
             } else {
-                format!("SHORT WAVE (the gate is {WAVE_SEEDS} seeds: cargo jackioh fuzz)")
+                format!("SHORT WAVE ({wave} is {WAVE_SEEDS} seeds: {command})")
             },
             self.from,
             self.from + self.ran - 1,
@@ -1928,7 +2050,8 @@ impl Wave {
         text
     }
 
-    /// `--json`: the wave's failures, each measure's heaviest actions and the growth bounds (#1254).
+    /// `--json`: the wave's failures (the handicapped wave's with their tier and seat, `null` in the
+    /// gate's), each measure's heaviest actions and the growth bounds (#1254).
     fn json(&self) -> Value {
         json!({
             "from": self.from,
@@ -1936,6 +2059,8 @@ impl Wave {
             "passed": self.ran as usize - self.failures.len(),
             "failures": self.failures.iter().map(|failure| json!({
                 "seed": failure.seed,
+                "tier": failure.rotation.map(|(tier, _)| tier.to_string()),
+                "seat": failure.rotation.map(|(_, seat)| seat.to_string()),
                 "stage": failure.stage.as_str(),
                 "turn": failure.turn,
                 "step": failure.actions,
@@ -2220,6 +2345,13 @@ pub struct SeedHandicap {
     pub handicap: Handicap,
 }
 
+impl SeedHandicap {
+    /// The tier and seat, which a failure names.
+    fn who(self) -> (Difficulty, PlayerId) {
+        (self.tier, self.seat)
+    }
+}
+
 /// Which seat is handicapped, and how: seeds rotate over Medium and Hard and over p1 and p2.
 pub fn handicap_for_seed(seed: u32) -> SeedHandicap {
     let tier = if seed % 2 == 1 {
@@ -2264,248 +2396,6 @@ pub(crate) fn handicap_decks_for_seed_from(
     match seat {
         PlayerId::P1 => (big, small),
         PlayerId::P2 => (small, big),
-    }
-}
-
-#[derive(Clone, Debug)]
-struct Outcome {
-    seed: u32,
-    error: Option<String>,
-    tier: Difficulty,
-    seat: PlayerId,
-    reason: Option<String>,
-    /// Whether the game's checkpoint restarted from paused work (#1387); false when it failed.
-    checkpoint_paused: bool,
-    /// What the game's checkpoint cost, in milliseconds (#1387); zero when it failed.
-    checkpoint_ms: u128,
-}
-
-fn play_seed(seed: u32) -> Outcome {
-    // R1420: as `fuzz_seed`, every set is previewed for the game on this worker thread.
-    let _preview = preview_every_set();
-    let SeedHandicap { seat, tier, handicap } = handicap_for_seed(seed);
-    let game_seed = format!("jackioh-fuzz-handicap-{seed}");
-    let decks = handicap_decks_for_seed(seed, seat, &handicap);
-    let mut handicaps: PerPlayerOpt<Handicap> = PerPlayerOpt::default();
-    *handicaps.slot(seat) = Some(handicap);
-    let fail = |error: String| Outcome {
-        seed,
-        error: Some(error),
-        tier,
-        seat,
-        reason: None,
-        checkpoint_paused: false,
-        checkpoint_ms: 0,
-    };
-
-    let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<(String, bool, u128), String> {
-        register_all();
-        let begun = begin_game(&create_game(&CreateGameOptions {
-            seed: game_seed.clone(),
-            decks: decks.clone(),
-            handicaps: Some(handicaps.clone()),
-            ..CreateGameOptions::default()
-        }));
-        let mut state = begun.state;
-        let mut policy = Rng::new(&format!("jackioh-fuzz-handicap-policy-{seed}"), 0);
-        // R265: while both mulligans are open either seat may answer first; a stream of its own picks
-        // which, so the fuzz plays both orders (the game is the same either way, R265).
-        let mut order = Rng::new(&format!("jackioh-fuzz-handicap-policy-order-{seed}"), 0);
-        let mut log: Vec<Action> = Vec::new();
-        let mut monitor = create_invariant_monitor(&state);
-        let stride = if is_whole_suite_sweep() { 1 } else { I6_GATE_STRIDE };
-        let unlisted_stride = unlisted_stride();
-        let probe_stride = probe_stride();
-        let max_actions = max_actions_per_game();
-        // The events the last logged action returned, which a probe of its nonce is owed (#1386).
-        let mut last_events: Vec<GameEvent> = Vec::new();
-        let mut setup = monitor.after(&begun.events, &state);
-        setup.extend(monitor.hidden(&state));
-        if let Some(first) = setup.first() {
-            return Err(format!("invariant at setup: {first}"));
-        }
-        // #1387: the checkpoint prefers a state with paused work; step 0 is the setup state.
-        let mut paused_steps: Vec<usize> = Vec::new();
-        if state_paused(&state) {
-            paused_steps.push(0);
-        }
-
-        while state.result.is_none() {
-            if log.len() >= max_actions {
-                return Err(format!("no ending within {max_actions} actions"));
-            }
-            let player = actor_of(&state, &mut order);
-            let Some(chosen) = subsystems::choose_action(&state, player, &mut policy) else {
-                return Err(format!("no legal action for {player} on turn {}", state.turn));
-            };
-            let unsound = monitor.before(&state, player, &chosen);
-            let action = Action::new(chosen, player, format!("fuzz-{}", log.len()));
-            if let Some(first) = unsound.first() {
-                return Err(format!("invariant on turn {}: {first}", state.turn));
-            }
-            // #1386: forged actions against this state, never logged.
-            if log.len().is_multiple_of(probe_stride)
-                && let Some(message) = probe_state(
-                    &state,
-                    player,
-                    &action.body,
-                    log.last().map(|logged| (logged, last_events.as_slice())),
-                    log.len(),
-                    reduce,
-                )
-            {
-                return Err(message);
-            }
-            let result = reduce(&state, &action);
-            if let Some(error) = &result.error {
-                return Err(format!(
-                    "legalActions offered \"{}\" but reduce refused it: {error}",
-                    action.action_type().as_str()
-                ));
-            }
-            log.push(action);
-            state = result.state;
-            if state_paused(&state) {
-                paused_steps.push(log.len());
-            }
-            let mut broken = monitor.after(&result.events, &state);
-            if log.len().is_multiple_of(stride) || state.result.is_some() {
-                broken.extend(monitor.hidden(&state));
-            }
-            if log.len().is_multiple_of(unlisted_stride) {
-                broken.extend(monitor.unlisted(&state));
-            }
-            if let Some(first) = broken.first() {
-                return Err(format!("invariant after action {}: {first}", log.len()));
-            }
-            last_events = result.events;
-        }
-
-        let Some(ending) = &state.result else {
-            return Err("the game loop exited with no result".to_string());
-        };
-        if !TERMINAL_REASONS.contains(&ending.reason.as_str()) {
-            return Err(format!("ended with reason \"{}\"", ending.reason));
-        }
-        if state.turn > TURN_CAP_PLAYER_TURNS {
-            return Err(format!("reached turn {}, past the cap", state.turn));
-        }
-
-        // R180, R187: the handicaps are part of what a game replays from.
-        let replayed = fold(&FoldArgs {
-            seed: game_seed.clone(),
-            decks: decks.clone(),
-            log: log.clone(),
-            catalog: None,
-            handicaps: Some(handicaps.clone()),
-            dealt: None,
-            last_boards: None,
-            glitch_boards: None,
-            ..Default::default()
-        });
-        if !replayed.errors.is_empty() {
-            return Err(format!(
-                "replay rejected {} action(s): {}",
-                replayed.errors.len(),
-                replayed
-                    .errors
-                    .first()
-                    .map_or(String::new(), |first| first.error.clone())
-            ));
-        }
-        if hash_state(&replayed.state) != hash_state(&state) {
-            return Err("replay hash differs from the live hash".to_string());
-        }
-        if serde_json::to_string(&replayed.state.result).unwrap_or_default()
-            != serde_json::to_string(&Some(ending)).unwrap_or_default()
-        {
-            return Err("replay reached a different ending".to_string());
-        }
-
-        // #1387: the game survives a serialized restart, handicaps included.
-        let checkpoint = check_serial_restart(
-            &game_seed,
-            &decks,
-            Some(handicaps.clone()),
-            &log,
-            &state,
-            &format!("jackioh-fuzz-handicap-checkpoint-{seed}"),
-            &paused_steps,
-        )
-        .map_err(|failure| failure.message)?;
-
-        Ok((
-            ending.reason.as_str().to_string(),
-            checkpoint.paused,
-            checkpoint.ms,
-        ))
-    }));
-    match caught {
-        Ok(Ok((reason, checkpoint_paused, checkpoint_ms))) => Outcome {
-            seed,
-            error: None,
-            tier,
-            seat,
-            reason: Some(reason),
-            checkpoint_paused,
-            checkpoint_ms,
-        },
-        Ok(Err(error)) => fail(error),
-        Err(payload) => fail(format!("threw: {}", panic_message(&*payload))),
-    }
-}
-
-/// The handicapped wave's outcomes, in seed order.
-struct HandicapWave {
-    from: u32,
-    size: u32,
-    outcomes: Vec<Outcome>,
-}
-
-fn play_handicap_wave(from: u32, size: u32) -> HandicapWave {
-    record_panic_locations();
-    register_all();
-    let outcomes: Vec<Outcome> = (from..from + size).into_par_iter().map(play_seed).collect();
-    HandicapWave { from, size, outcomes }
-}
-
-impl HandicapWave {
-    fn failure_lines(&self) -> Vec<String> {
-        self.outcomes
-            .iter()
-            .filter_map(|outcome| {
-                outcome.error.as_ref().map(|error| {
-                    format!(
-                        "seed {} ({} {}): {error}",
-                        outcome.seed, outcome.tier, outcome.seat
-                    )
-                })
-            })
-            .collect()
-    }
-
-    fn summary(&self) -> String {
-        let failed = self
-            .outcomes
-            .iter()
-            .filter(|outcome| outcome.error.is_some())
-            .count();
-        let mut endings: IndexMap<String, usize> = IndexMap::new();
-        for outcome in &self.outcomes {
-            if let Some(reason) = &outcome.reason {
-                *endings.entry(reason.clone()).or_insert(0) += 1;
-            }
-        }
-        let passed = self.outcomes.iter().filter(|outcome| outcome.error.is_none());
-        let paused = passed.clone().filter(|outcome| outcome.checkpoint_paused).count();
-        let slowest_ms = passed.map(|outcome| outcome.checkpoint_ms).max().unwrap_or(0);
-        format!(
-            "[fuzz-handicap] {} seed(s) from {}: {failed} failed; endings {}\n  checkpoints: {paused} paused, {} mid-game fallback; slowest {slowest_ms}ms of {CHECKPOINT_TIME_BOUND_MS}ms",
-            self.size,
-            self.from,
-            serde_json::to_string(&endings).unwrap_or_default(),
-            self.outcomes.len() - failed - paused,
-        )
     }
 }
 
@@ -2554,6 +2444,7 @@ mod tests {
         #[test]
         fn a_wave_of_at_least_the_gates_seeds_reports_as_the_full_gate() {
             let wave = |ran| Wave {
+                handicapped: false,
                 from: 5001,
                 ran,
                 failures: Vec::new(),
@@ -2570,6 +2461,36 @@ mod tests {
             assert!(wave(2500).summary().starts_with("[M4 fuzz] FULL GATE\n"));
             assert!(wave(WAVE_SEEDS).summary().starts_with("[M4 fuzz] FULL GATE\n"));
             assert!(wave(200).summary().starts_with("[M4 fuzz] SHORT WAVE"));
+        }
+
+        #[test]
+        fn a_handicapped_wave_reports_under_its_own_name_and_command() {
+            let wave = |ran| Wave {
+                handicapped: true,
+                from: 1,
+                ran,
+                failures: Vec::new(),
+                reasons: IndexMap::new(),
+                actions_total: 0,
+                actions_max: 0,
+                turn_max: 0,
+                heaviest: Heaviest::default(),
+                elapsed_ms: 0.0,
+                checkpoint_paused: 0,
+                checkpoint_mid: 0,
+                checkpoint_max_ms: 0,
+            };
+            assert!(
+                wave(WAVE_SEEDS)
+                    .summary()
+                    .starts_with("[fuzz-handicap] FULL HANDICAP WAVE\n")
+            );
+            let short = wave(200).summary();
+            assert!(
+                short.starts_with("[fuzz-handicap] SHORT WAVE (the handicapped wave is"),
+                "{short}"
+            );
+            assert!(short.contains("cargo jackioh fuzz --handicap)"), "{short}");
         }
 
         #[test]
@@ -2679,7 +2600,8 @@ mod tests {
 
         /// Seed 1's game, played and checked as the gate plays it (under the caller's preview).
         fn seed_one() -> GameRun {
-            play_game(1, decks_for_seed(1), reduce).unwrap_or_else(|failure| panic!("{}", failure.message))
+            play_game(&GameSetup::gate(1), decks_for_seed(1), reduce)
+                .unwrap_or_else(|failure| panic!("{}", failure.message))
         }
 
         /// Seed 1's checkpoint over `log` against `live`, as `fuzz_deal` checks it.
@@ -2873,6 +2795,49 @@ mod tests {
             assert!(text.contains("[growth]"), "{text}");
         }
 
+        /// `seed`'s handicapped deal with the grower first in both decks.
+        fn planted_handicap_decks(seed: u32) -> (Vec<String>, Vec<String>) {
+            let SeedHandicap { seat, handicap, .. } = handicap_for_seed(seed);
+            let (mut p1, mut p2) = handicap_decks_for_seed(seed, seat, &handicap);
+            p1[0] = GROWER.to_string();
+            p2[0] = GROWER.to_string();
+            (p1, p2)
+        }
+
+        #[test]
+        fn a_planted_grower_in_handicapped_decks_fails_in_the_growth_stage() {
+            install_grower();
+            // The overrides are this thread's, so the seeds run here and not under rayon.
+            let failure = (1..=PLANTED_SEEDS)
+                .find_map(|seed| fuzz_handicap_deal(seed, planted_handicap_decks(seed), reduce).err())
+                .expect("a card that grows without end must fail one of the planted handicapped seeds");
+            clear_overrides();
+            assert_eq!(failure.stage, FailureStage::Growth, "{}", failure.message);
+            assert!(
+                failure.message.contains(&format!("step {}", failure.actions)),
+                "{}",
+                failure.message
+            );
+            assert!(failure.message.contains(GROWER), "{}", failure.message);
+            assert!(
+                failure.message.contains("GROWTH_NUMBER_BOUND"),
+                "{}",
+                failure.message
+            );
+            let decks = planted_handicap_decks(failure.seed);
+            assert_eq!(failure.decks, decks);
+            let text = report(std::slice::from_ref(&failure), 1, 0.0);
+            assert!(text.contains("[growth]"), "{text}");
+            assert!(
+                text.contains(&format!("seed {} p1 deck: {}", failure.seed, decks.0.join(", "))),
+                "{text}"
+            );
+            assert!(
+                text.contains(&format!("seed {} p2 deck: {}", failure.seed, decks.1.join(", "))),
+                "{text}"
+            );
+        }
+
         #[test]
         fn weighs_an_action_by_its_events_the_largest_number_on_a_card_and_the_cards_in_play() {
             register_all();
@@ -2952,6 +2917,7 @@ mod tests {
             assert_eq!(seeds, vec![2, 4, 6, 3, 5]);
 
             let wave = Wave {
+                handicapped: false,
                 from: 1,
                 ran: 7,
                 failures: Vec::new(),
@@ -3039,6 +3005,69 @@ mod tests {
         #[test]
         fn a_reducer_that_forgets_its_nonces_fails_the_reused_nonce_probe() {
             assert_caught(forgetful, REUSED_NONCE_PROBE);
+        }
+
+        #[test]
+        fn a_handicapped_probe_failure_reports_tier_seat_stage_signature_and_both_decks() {
+            register_all();
+            // Seed 1 is Hard on p1, whose deck is longer than the other seat's.
+            let SeedHandicap { seat, tier, handicap } = handicap_for_seed(1);
+            let decks = handicap_decks_for_seed(1, seat, &handicap);
+            let failure = fuzz_handicap_deal(1, decks.clone(), seatless)
+                .err()
+                .expect("a reducer that breaks the probe must fail the handicapped seed");
+            assert_eq!(failure.stage, FailureStage::Probe, "{}", failure.message);
+            assert_eq!((tier, seat), (Difficulty::Hard, PlayerId::P1));
+            assert_eq!(failure.rotation, Some((tier, seat)));
+            assert_eq!(failure.decks, decks);
+            assert!(failure.decks.0.len() > failure.decks.1.len());
+            assert_eq!(
+                failure.signature,
+                signature_of(FailureStage::Probe, &failure.message)
+            );
+
+            let text = report(std::slice::from_ref(&failure), 1, 0.0);
+            assert!(text.starts_with("fuzz-handicap: 1 of 1 seeds failed"), "{text}");
+            assert!(text.contains("[probe]"), "{text}");
+            assert!(
+                text.contains(&format!(
+                    "example: seed 1 (hard p1, turn {}, {} actions)",
+                    failure.turn, failure.actions
+                )),
+                "{text}"
+            );
+            assert!(
+                text.contains(&format!("seed 1 p1 deck: {}", decks.0.join(", "))),
+                "{text}"
+            );
+            assert!(
+                text.contains(&format!("seed 1 p2 deck: {}", decks.1.join(", "))),
+                "{text}"
+            );
+            assert!(
+                text.contains("cargo jackioh fuzz --from <seed> --seeds 1 --handicap"),
+                "{text}"
+            );
+
+            // The rotation is not in the signature: the same bug on another tier and seat is one group.
+            let other = Failure {
+                seed: 2,
+                rotation: Some(handicap_for_seed(2).who()),
+                ..failure.clone()
+            };
+            let both = report(&[failure, other], 2, 0.0);
+            assert!(both.contains("(1 distinct failure signature(s)"), "{both}");
+            assert!(both.contains("seeds: 1, 2"), "{both}");
+
+            // The gate's failure has no tier or seat to name.
+            let gate = fuzz_deal_probed(1, decks_for_seed(1), seatless)
+                .err()
+                .expect("the gate's seed 1 fails under the same reducer");
+            assert!(gate.rotation.is_none());
+            let text = report(std::slice::from_ref(&gate), 1, 0.0);
+            assert!(text.starts_with("M4 fuzz gate: 1 of 1 seeds failed"), "{text}");
+            assert!(text.contains("example: seed 1 (turn "), "{text}");
+            assert!(!text.contains("--handicap"), "{text}");
         }
 
         #[test]
@@ -3264,15 +3293,109 @@ mod tests {
             let from = first_seed(None);
             let size = wave_size(None);
             let wave = play_handicap_wave(from, size);
-            println!("{}", wave.summary());
-            assert_eq!(wave.failure_lines(), Vec::<String>::new());
+            print!("{}", wave.summary());
+            let detail = if wave.failures.is_empty() {
+                String::new()
+            } else {
+                report(&wave.failures, size, wave.elapsed_ms)
+            };
+            assert_eq!(wave.failures.len(), 0, "{detail}");
+        }
+
+        #[test]
+        fn a_game_setup_names_the_streams_and_handicaps_each_wave_has_always_played_under() {
+            let gate = GameSetup::gate(7);
+            assert_eq!(gate.stream(""), "jackioh-fuzz-7");
+            assert_eq!(gate.stream("policy-"), "jackioh-fuzz-policy-7");
+            assert_eq!(gate.stream("policy-order-"), "jackioh-fuzz-policy-order-7");
+            assert_eq!(gate.stream("checkpoint-"), "jackioh-fuzz-checkpoint-7");
+            assert_eq!(gate.handicaps(), None);
+
+            // Seed 7 is Hard (odd), on p2 (7 / 2 = 3 is odd).
+            let handicapped = GameSetup::handicapped(7);
+            assert_eq!(handicapped.stream(""), "jackioh-fuzz-handicap-7");
+            assert_eq!(handicapped.stream("policy-"), "jackioh-fuzz-handicap-policy-7");
+            assert_eq!(
+                handicapped.stream("policy-order-"),
+                "jackioh-fuzz-handicap-policy-order-7"
+            );
+            assert_eq!(
+                handicapped.stream("checkpoint-"),
+                "jackioh-fuzz-handicap-checkpoint-7"
+            );
+            let handicaps = handicapped.handicaps().expect("a handicapped game has handicaps");
+            assert_eq!(handicaps.p1, None);
+            assert_eq!(handicaps.p2, Some(AI_DIFFICULTY[Difficulty::Hard]));
+        }
+
+        #[test]
+        fn a_handicapped_game_that_ends_outside_over_fails_in_the_termination_stage() {
+            register_all();
+            let _preview = preview_every_set();
+            let setup = GameSetup::handicapped(2);
+            let SeedHandicap { seat, handicap, .. } = handicap_for_seed(2);
+            let decks = handicap_decks_for_seed(2, seat, &handicap);
+            let mut run = play_game(&setup, decks, reduce)
+                .unwrap_or_else(|failure| panic!("[{}] {}", failure.stage.as_str(), failure.message));
+            assert_eq!(run.state.phase, Phase::Over);
+            assert_eq!(check_termination(&run).err().map(|failure| failure.message), None);
+            run.state.phase = Phase::Main;
+            let failure =
+                check_termination(&run).expect_err("a finished game still in the main phase must fail");
+            assert_eq!(failure.stage, FailureStage::Termination, "{}", failure.message);
+            assert!(
+                failure
+                    .message
+                    .contains("finished in phase \"main\" rather than \"over\""),
+                "{}",
+                failure.message
+            );
+        }
+
+        #[test]
+        fn a_handicapped_wave_prints_as_one_json_object_with_each_failure_s_tier_and_seat() {
+            let wave = play_handicap_wave(1, 2);
+            let json = wave.json();
+            assert_eq!(json["from"], json!(1));
+            assert_eq!(json["ran"], json!(2));
+            assert_eq!(json["bounds"]["events"], json!(GROWTH_EVENTS_BOUND));
+            assert!(json["heaviest"]["events"].is_array(), "{json}");
+            assert_eq!(json["failures"], json!([]), "{json}");
+
+            let failure = Failure {
+                seed: 1,
+                rotation: Some(handicap_for_seed(1).who()),
+                stage: FailureStage::Growth,
+                signature: String::new(),
+                message: "step 3 grew".to_string(),
+                decks: (Vec::new(), Vec::new()),
+                turn: 4,
+                actions: 3,
+            };
+            let failed = Wave {
+                failures: vec![
+                    failure.clone(),
+                    Failure {
+                        rotation: None,
+                        ..failure
+                    },
+                ],
+                ..wave
+            };
+            let json = failed.json();
+            assert_eq!(json["failures"][0]["tier"], json!("hard"));
+            assert_eq!(json["failures"][0]["seat"], json!("p1"));
+            assert_eq!(json["failures"][0]["stage"], json!("growth"));
+            assert!(json["failures"][1]["tier"].is_null(), "{json}");
+            assert!(json["failures"][1]["seat"].is_null(), "{json}");
         }
 
         #[test]
         fn r679_seed_4679_whose_glitch_voids_the_match_passes() {
             // The daily run's handicapped seed that a Glitch voided at 96b68c9 (#1055).
-            let outcome = play_seed(4679);
-            assert_eq!(outcome.error, None);
+            if let Err(failure) = fuzz_handicap_seed(4679) {
+                panic!("[{}] {}", failure.stage.as_str(), failure.message);
+            }
         }
     }
 }
