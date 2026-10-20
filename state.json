@@ -6883,6 +6883,13 @@
     "1398": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T11:51:53Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "rule line 3 fails: it adds ruling R1398000 and edits spec/13-duos.md, spec/11-rulings.md and spec/INDEX.md; the code itself is one function in one crate"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
