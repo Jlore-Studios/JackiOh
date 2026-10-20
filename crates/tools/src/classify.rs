@@ -47,7 +47,7 @@ use crate::patches::{git, repo_root};
 pub(crate) const PATCH_MIN_CARDS: usize = 10;
 
 /// R1365000: the catalog fields a player reads and no game does. Every other field plays.
-const WORDING_FIELDS: &[&str] = &[
+pub(crate) const WORDING_FIELDS: &[&str] = &[
     "name",
     "base.text",
     "radiant.text",
@@ -89,7 +89,7 @@ pub struct Args {
 }
 
 /// What a change reaches, lowest first, so the highest of several is their `max`.
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum Kind {
     Internal,
@@ -740,11 +740,11 @@ fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
 // ---------------------------------------------------------------------------------------------
 
 /// `rev:path`'s text, or `None` where the commit has no such file.
-fn show(root: &Path, rev: &str, path: &str) -> Option<String> {
+pub(crate) fn show(root: &Path, rev: &str, path: &str) -> Option<String> {
     git(root, &["cat-file", "-p", &format!("{rev}:{path}")], &[]).ok()
 }
 
-fn side_at(root: &Path, rev: &str) -> Result<Side> {
+pub(crate) fn side_at(root: &Path, rev: &str) -> Result<Side> {
     let catalog = show(root, rev, CATALOG_PATH).with_context(|| format!("{rev} has no {CATALOG_PATH}"))?;
     let sets = show(root, rev, SETS_PATH).with_context(|| format!("{rev} has no {SETS_PATH}"))?;
     Ok(Side {
