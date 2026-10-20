@@ -6684,6 +6684,13 @@
     "1386": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T12:09:42Z",
+        "difficulty": "medium",
+        "provider": "claude-5",
+        "tier": "strong",
+        "why": "fails easy rules 2 (tools crate plus engine tests) and 8 (Duos has no engine-level seat-nonce dedupe, so its probe needed a design decision); no engine src change, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
