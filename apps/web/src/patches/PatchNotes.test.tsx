@@ -34,7 +34,7 @@ const PENDING_VERSIONS: readonly string[] = (existsSync(PENDING_DIR) ? readdirSy
   .map((file) => (JSON.parse(readFileSync(join(PENDING_DIR, file), "utf8")) as { version: string }).version);
 
 /** Meditative+'s line opens at the patch that ships the set (issue #1187). */
-const MEDITATIVE_PLUS_FIRST = "v0.3.15";
+const MEDITATIVE_PLUS_FIRST = "v0.4.0";
 
 afterEach(() => {
   act(() => {
@@ -240,7 +240,7 @@ describe("R388 the Patch notes page over the real history", () => {
     // every card it changed.
     const newest = shipped.at(-1)?.version ?? "";
     await within(patchEntry(newest)).findByTestId(patchTestid.cards, undefined, SLOW);
-    if (newest === "v0.2.3" || newest === "v0.2.4" || newest === "v0.2.5") {
+    if (newest === "v0.2.2" || newest === "v0.2.2b" || newest === "v0.2.3") {
       const record = shipped.find((patch) => patch.version === newest);
       const changedIds = (record?.changes ?? []).filter((change) => change.kind === "changed").map((change) => change.id);
       const shownNewest = [
@@ -345,7 +345,7 @@ describe("R724000 the Patch notes page by release line", () => {
     expect(second).not.toHaveTextContent("Old Relic leaves.");
   });
 
-  it("R724000 the real history opens on its newest line, Meditative+ once v0.3.15 ships, and every patch has its note", async () => {
+  it("R724000 the real history opens on its newest line, Meditative+ once v0.4.0 ships, and every patch has its note", async () => {
     renderPage();
     const shipped = await realPatchSource.patches();
     await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
