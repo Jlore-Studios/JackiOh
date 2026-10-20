@@ -38,7 +38,19 @@ function withBought(
     .map((pack) => ({ pack, count: counts.get(pack) ?? 0 }));
 }
 
-export default function Shop({ token }: { token: string }): ReactElement {
+/**
+ * The panel. `revision` is how many times the page has asked it to read again (another panel
+ * changed the account); `onChanged` tells the page a bought pack changed it.
+ */
+export default function Shop({
+  token,
+  revision = 0,
+  onChanged,
+}: {
+  token: string;
+  revision?: number;
+  onChanged?: () => void;
+}): ReactElement {
   const [info, setInfo] = useState<PacksResponse | null>(null);
   const [wallet, setWallet] = useState<WalletResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -61,7 +73,7 @@ export default function Shop({ token }: { token: string }): ReactElement {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, revision]);
 
   const buy = (pack: string): void => {
     if (busy !== null) return;
@@ -71,6 +83,7 @@ export default function Shop({ token }: { token: string }): ReactElement {
       (bought) => {
         setWallet({ jlore: bought.jlore });
         setInfo((before) => (before === null ? before : { ...before, unopened: withBought(before.unopened, bought) }));
+        onChanged?.();
       },
       (cause: unknown) => {
         setError(wordsOf(cause));

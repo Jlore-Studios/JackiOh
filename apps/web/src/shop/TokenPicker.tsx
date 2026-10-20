@@ -41,7 +41,19 @@ function wordsOf(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
 
-export default function TokenPicker({ token }: { token: string }): ReactElement {
+/**
+ * The panel. `revision` is how many times the page has asked it to read again (another panel
+ * changed the account); `onChanged` tells the page a redemption changed it.
+ */
+export default function TokenPicker({
+  token,
+  revision = 0,
+  onChanged,
+}: {
+  token: string;
+  revision?: number;
+  onChanged?: () => void;
+}): ReactElement {
   const [bars, setBars] = useState<TokenBarsResponse | null>(null);
   const [collection, setCollection] = useState<CollectionResponse | null>(null);
   const [owned, setOwned] = useState<OwnedCosmeticsResponse | null>(null);
@@ -68,7 +80,7 @@ export default function TokenPicker({ token }: { token: string }): ReactElement 
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, revision]);
 
   const pickCard = (cardId: string): void => {
     if (busy !== null) return;
@@ -77,6 +89,7 @@ export default function TokenPicker({ token }: { token: string }): ReactElement 
     redeemCardToken(token, cardId).then(
       (answered) => {
         setBars(answered);
+        onChanged?.();
         // The collection moved too: read it back, so the unlocked card leaves the list.
         getCollection(token).then(
           (next) => {
@@ -102,6 +115,7 @@ export default function TokenPicker({ token }: { token: string }): ReactElement 
     redeemCosmeticToken(token, tier, cosmetic.id, cardId).then(
       (answered) => {
         setBars(answered);
+        onChanged?.();
         // The owned cosmetics moved too: read them back, so a bought entry leaves the list.
         getOwnedCosmetics(token).then(
           (next) => {

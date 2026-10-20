@@ -248,7 +248,9 @@ shop/                   #1309: spending what the economy pays, on /account behin
                         /api/tokens/redeem-cosmetic`); the cosmetic packs open through a simple reveal (`POST
                         /api/cosmetic-packs/open`) with the Chase Shard bar (`GET /api/cosmetic-packs`) and its
                         Legendary-or-Mythic choice only when full (`POST /api/cosmetic-packs/chase`); every
-                        refusal shows the server's reason verbatim and changes nothing (`shop.ts` holds the
+                        refusal shows the server's reason verbatim and changes nothing; a buy, an opening,
+                        a redemption or a chase that lands makes the other panels, the opening's included,
+                        read the account again (`onChanged`, `revision`) (`shop.ts` holds the
                         pure model and the test ids, `fixtures.ts` the fixture responses, `shop.css` the look)
 ```
 

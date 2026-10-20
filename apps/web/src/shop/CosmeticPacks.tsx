@@ -42,7 +42,19 @@ function cardName(cardId: string): string {
   return CATALOG[cardId]?.name ?? cardId;
 }
 
-export default function CosmeticPacks({ token }: { token: string }): ReactElement {
+/**
+ * The panel. `revision` is how many times the page has asked it to read again (another panel
+ * changed the account); `onChanged` tells the page an opening or a chase changed it.
+ */
+export default function CosmeticPacks({
+  token,
+  revision = 0,
+  onChanged,
+}: {
+  token: string;
+  revision?: number;
+  onChanged?: () => void;
+}): ReactElement {
   const [info, setInfo] = useState<CosmeticPacksResponse | null>(null);
   const [collection, setCollection] = useState<CollectionResponse | null>(null);
   const [owned, setOwned] = useState<OwnedCosmeticsResponse | null>(null);
@@ -69,7 +81,7 @@ export default function CosmeticPacks({ token }: { token: string }): ReactElemen
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, revision]);
 
   const open = (): void => {
     if (busy !== null) return;
@@ -79,6 +91,7 @@ export default function CosmeticPacks({ token }: { token: string }): ReactElemen
       (next) => {
         setOpened(next);
         setInfo((before) => (before === null ? before : { ...before, unopened: next.unopened, shardBar: next.shardBar }));
+        onChanged?.();
         // The collection and the owned cosmetics moved too: read them back, so the chase
         // choice prices what the account holds now.
         Promise.all([getCollection(token), getOwnedCosmetics(token)]).then(
@@ -107,6 +120,7 @@ export default function CosmeticPacks({ token }: { token: string }): ReactElemen
       (next) => {
         // The bar emptied: the choice leaves with it.
         setInfo(next);
+        onChanged?.();
       },
       (cause: unknown) => {
         setError(wordsOf(cause));

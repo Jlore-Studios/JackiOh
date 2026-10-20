@@ -37,7 +37,9 @@
 // (`packs/PackOpening.tsx`). The economy is not live (`ECONOMY_LIVE`, §14.12), so until it is only a
 // dev account is offered it (`packsShown`). The same toggle mounts what the economy pays for
 // them (#1309, `shop/`): the Jlore shop, the token picker and the cosmetic packs with the Chase
-// Shard bar.
+// Shard bar. Each panel holds its own reads, so when one changes the account the others read it
+// again (`readAgain`): a pack bought in the shop can be opened at once, and an opening's bars,
+// cards and cosmetics show in the picker.
 //
 // DELETING THE ACCOUNT. "Delete my account" asks first: the player types DELETE, then confirms.
 // `DELETE /api/account` does the deleting, at the server, which decides what goes and answers 204.
@@ -571,9 +573,33 @@ export function packsShown(me: MeResponse | undefined, live: boolean = ECONOMY_L
   return me?.profile.status === "active" && (live || me.isDev === true);
 }
 
+/** The panels behind the Card-packs toggle, each reading its own part of the account. */
+type PacksPanel = "opening" | "shop" | "tokens" | "cosmetics";
+
+/** How many times each panel has been told to read again. */
+type PanelReads = Record<PacksPanel, number>;
+
+/**
+ * The reads after `by` changed the account (a pack bought or opened, a token redeemed, a chase
+ * bought): every other panel reads again, since a buy fills the opening's packs and an opening
+ * fills the bars, the collection and the cosmetics. `by` already holds its answer.
+ */
+function readAgain(reads: PanelReads, by: PacksPanel): PanelReads {
+  return {
+    opening: reads.opening + (by === "opening" ? 0 : 1),
+    shop: reads.shop + (by === "shop" ? 0 : 1),
+    tokens: reads.tokens + (by === "tokens" ? 0 : 1),
+    cosmetics: reads.cosmetics + (by === "cosmetics" ? 0 : 1),
+  };
+}
+
 /** "Card packs": the odds, the pity counters, the packs held and the opening scene, behind a toggle. */
 function AccountPacks({ open, onToggle, token }: { open: boolean; onToggle: () => void; token: string }): ReactElement {
   const bodyId = useId();
+  const [reads, setReads] = useState<PanelReads>({ opening: 0, shop: 0, tokens: 0, cosmetics: 0 });
+  const changedBy = (by: PacksPanel) => (): void => {
+    setReads((before) => readAgain(before, by));
+  };
   return (
     <div className="account-manage">
       <div className="account-actions">
@@ -597,10 +623,10 @@ function AccountPacks({ open, onToggle, token }: { open: boolean; onToggle: () =
               </p>
             }
           >
-            <PackOpening token={token} />
-            <Shop token={token} />
-            <TokenPicker token={token} />
-            <CosmeticPacks token={token} />
+            <PackOpening token={token} revision={reads.opening} onChanged={changedBy("opening")} />
+            <Shop token={token} revision={reads.shop} onChanged={changedBy("shop")} />
+            <TokenPicker token={token} revision={reads.tokens} onChanged={changedBy("tokens")} />
+            <CosmeticPacks token={token} revision={reads.cosmetics} onChanged={changedBy("cosmetics")} />
           </Suspense>
         </div>
       ) : null}

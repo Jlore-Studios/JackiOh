@@ -1,10 +1,10 @@
 // The Jlore shop and the cosmetic packs (#1309), from fixture responses: a short wallet
 // disabling every buy with its shortfall, a refused buy changing nothing, a bought pack moving
 // the wallet and the count, the shard choice only when full, and an opening's reveal naming
-// every slot. The tier filters live beside them as pure tests over crafted registries, since the
+// every slot, and each panel telling the page what it changed and reading again when told. The tier filters live beside them as pure tests over crafted registries, since the
 // shipped registry holds no Legendary or Mythic a token could reach.
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { GLOBAL_PACK_NAME } from "@jackioh/server-config";
@@ -144,7 +144,8 @@ describe("#1309 the Jlore shop", () => {
       wallet: { status: 200, body: { jlore: 250 } },
       buy: refusal(409, "conflict", "not enough Jlore for a card pack"),
     });
-    render(<Shop token={TOKEN} />);
+    const onChanged = vi.fn<() => void>();
+    render(<Shop token={TOKEN} onChanged={onChanged} />);
     await screen.findByTestId(T.wallet);
 
     fireEvent.click(screen.getByTestId(T.buy("Core")));
@@ -154,11 +155,13 @@ describe("#1309 the Jlore shop", () => {
     expect(text(T.held("Core"))).toContain("Core pack: 2 unopened");
     expect(server.to("POST", "/api/packs/buy")).toHaveLength(1);
     expect(server.to("POST", "/api/packs/buy")[0]?.body).toEqual({ pack: "Core" });
+    expect(onChanged, "a refusal changed nothing to tell the page").not.toHaveBeenCalled();
   });
 
-  it("a bought pack moves the wallet and the count from the answer", async () => {
+  it("a bought pack moves the wallet and the count from the answer, and tells the page", async () => {
     shopServer({ wallet: { status: 200, body: { jlore: 250 } } });
-    render(<Shop token={TOKEN} />);
+    const onChanged = vi.fn<() => void>();
+    render(<Shop token={TOKEN} onChanged={onChanged} />);
     await screen.findByTestId(T.wallet);
 
     fireEvent.click(screen.getByTestId(T.buy("Core")));
@@ -167,6 +170,28 @@ describe("#1309 the Jlore shop", () => {
     expect(text(T.held("Core"))).toContain("Core pack: 3 unopened");
     expect(screen.queryByTestId(T.shortfall("Core"))).toBeNull();
     expect(screen.queryByTestId(T.error)).toBeNull();
+    expect(onChanged).toHaveBeenCalledTimes(1);
+  });
+
+  it("the page's next revision reads the wallet and the packs again", async () => {
+    // The wallet moves at the server after the first read: the second read must show it.
+    let jlore = walletInfo().jlore;
+    const server = stubServer((call) => {
+      if (call.method === "GET" && call.path === "/api/packs") return { status: 200, body: packsInfo() };
+      if (call.method === "GET" && call.path === "/api/wallet") return { status: 200, body: { jlore } };
+      return undefined;
+    });
+    const { rerender } = render(<Shop token={TOKEN} />);
+    expect(await screen.findByTestId(T.wallet)).toHaveTextContent("37 Jlore");
+    expect(server.to("GET", "/api/wallet")).toHaveLength(1);
+
+    jlore = 88;
+    rerender(<Shop token={TOKEN} revision={1} />);
+
+    await waitFor(() => {
+      expect(text(T.wallet)).toBe("88 Jlore");
+    });
+    expect(server.to("GET", "/api/packs")).toHaveLength(2);
   });
 
   it("a failed read says why", async () => {
@@ -210,9 +235,10 @@ describe("#1309 the cosmetic packs", () => {
     expect(screen.getByTestId(T.shardEmpty)).toHaveTextContent("Nothing to buy yet");
   });
 
-  it("an opened cosmetic pack reveals each slot", async () => {
+  it("an opened cosmetic pack reveals each slot, and tells the page", async () => {
     cosmeticServer();
-    render(<CosmeticPacks token={TOKEN} />);
+    const onChanged = vi.fn<() => void>();
+    render(<CosmeticPacks token={TOKEN} onChanged={onChanged} />);
     expect(await screen.findByTestId(T.unopened)).toHaveTextContent("Cosmetic pack: 2 unopened");
 
     fireEvent.click(screen.getByTestId(T.open));
@@ -227,11 +253,13 @@ describe("#1309 the cosmetic packs", () => {
     expect(screen.getByTestId(T.slot(0))).toHaveAttribute("data-rarity", "Epic");
     expect(await screen.findByTestId(T.unopened)).toHaveTextContent("Cosmetic pack: 1 unopened");
     expect(screen.getByTestId(T.shardBar)).toHaveTextContent("20 / 20");
+    expect(onChanged).toHaveBeenCalledTimes(1);
   });
 
   it("a refused open shows its reason and changes nothing on screen", async () => {
     cosmeticServer({ open: refusal(409, "conflict", "no unopened cosmetic pack") });
-    render(<CosmeticPacks token={TOKEN} />);
+    const onChanged = vi.fn<() => void>();
+    render(<CosmeticPacks token={TOKEN} onChanged={onChanged} />);
     await screen.findByTestId(T.unopened);
 
     fireEvent.click(screen.getByTestId(T.open));
@@ -239,5 +267,6 @@ describe("#1309 the cosmetic packs", () => {
     expect(await screen.findByTestId(T.packsError)).toHaveTextContent("no unopened cosmetic pack");
     expect(screen.queryByTestId(T.reveal)).toBeNull();
     expect(text(T.unopened)).toContain("2 unopened");
+    expect(onChanged).not.toHaveBeenCalled();
   });
 });

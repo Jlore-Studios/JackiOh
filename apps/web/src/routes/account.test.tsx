@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { usernameTestid } from "../auth/testids.ts";
 import {
+  buyPack,
   getCollection,
   getCosmeticPacks,
   getOwnedCosmetics,
@@ -18,9 +19,11 @@ import {
   getProfile,
   getTokens,
   getWallet,
+  openCosmeticPack,
   previewUsername,
   saveUsername,
   type MeResponse,
+  type PacksResponse,
   type OwnRankResponse,
   type OwnUsername,
 } from "../net/api.ts";
@@ -29,7 +32,14 @@ import { SESSION_STORAGE_KEY, readSession } from "../net/session.ts";
 import AccountRoute, { accountTestid, formatWinRate, packsShown, resetSigningOutForTests, statusWords } from "./account.tsx";
 import { packsInfo } from "../packs/fixtures.ts";
 import { packTestid } from "../packs/packs.ts";
-import { collectionOf, cosmeticPacksInfo, ownedCosmeticsOf, tokenBars, walletInfo } from "../shop/fixtures.ts";
+import {
+  collectionOf,
+  cosmeticPacksInfo,
+  openedCosmeticPack,
+  ownedCosmeticsOf,
+  tokenBars,
+  walletInfo,
+} from "../shop/fixtures.ts";
 import { shopTestid } from "../shop/shop.ts";
 import { devToolsTestid } from "./DevTools.tsx";
 
@@ -45,6 +55,8 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     getCollection: vi.fn(),
     getOwnedCosmetics: vi.fn(),
     getCosmeticPacks: vi.fn(),
+    buyPack: vi.fn(),
+    openCosmeticPack: vi.fn(),
     previewUsername: vi.fn(),
     saveUsername: vi.fn(),
   };
@@ -642,6 +654,49 @@ describe("#1308 the card packs on the account page", () => {
     expect(getWallet).toHaveBeenCalledWith(TOKEN);
     expect(getTokens).toHaveBeenCalledWith(TOKEN);
     expect(getCosmeticPacks).toHaveBeenCalledWith(TOKEN);
+  });
+
+  it("#1309 a change in one panel reads the others again: a bought pack opens at once, an opening moves the bars", async () => {
+    await import("../packs/PackOpening.tsx");
+    await import("../shop/Shop.tsx");
+    await import("../shop/TokenPicker.tsx");
+    await import("../shop/CosmeticPacks.tsx");
+    // The server's side: what each read answers moves with what was bought or opened.
+    let held: PacksResponse["unopened"] = [];
+    let jlore = packsInfo().price;
+    let bars = tokenBars();
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getPacks).mockImplementation(() => Promise.resolve({ ...packsInfo(), unopened: held }));
+    vi.mocked(getWallet).mockImplementation(() => Promise.resolve({ jlore }));
+    vi.mocked(getTokens).mockImplementation(() => Promise.resolve(bars));
+    vi.mocked(getCollection).mockResolvedValue(collectionOf());
+    vi.mocked(getOwnedCosmetics).mockResolvedValue(ownedCosmeticsOf());
+    vi.mocked(getCosmeticPacks).mockResolvedValue(cosmeticPacksInfo());
+    vi.mocked(buyPack).mockImplementation((_token, pack) => {
+      held = [{ pack, count: 1 }];
+      jlore = 0;
+      return Promise.resolve({ pack, jlore, unopened: 1 });
+    });
+    vi.mocked(openCosmeticPack).mockImplementation(() => {
+      bars = { ...bars, cardBar: { ...bars.cardBar, points: 3 } };
+      return Promise.resolve(openedCosmeticPack());
+    });
+    render(<AccountRoute token={TOKEN} me={me({ isDev: true })} />);
+    await userEvent.click(screen.getByTestId(accountTestid.packsToggle));
+    expect(await screen.findByTestId(packTestid.none)).toHaveTextContent("No unopened packs.");
+    await screen.findByTestId(shopTestid.wallet);
+
+    await userEvent.click(screen.getByTestId(shopTestid.buy("Core")));
+    expect(await screen.findByTestId(packTestid.open("Core")), "the opening holds the bought pack").toBeInTheDocument();
+    expect(screen.queryByTestId(packTestid.none)).toBeNull();
+    expect(getPacks).toHaveBeenCalledTimes(3);
+
+    expect(await screen.findByTestId(shopTestid.cardBar)).toHaveTextContent("149 / 150");
+    await userEvent.click(await screen.findByTestId(shopTestid.open));
+    await waitFor(() => {
+      expect(screen.getByTestId(shopTestid.cardBar), "the picker reads the bars the opening filled").toHaveTextContent("3 / 150");
+    });
+    expect(screen.getByTestId(shopTestid.wallet)).toHaveTextContent("0 Jlore");
   });
 
   it("packsShown: an active account once the economy is live, before it a dev account alone", () => {

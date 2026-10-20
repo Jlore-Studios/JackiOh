@@ -1,9 +1,10 @@
 // The token picker (#1309), from fixture responses: the card picker listing only unowned cards,
 // both bars and the cycle's next step, the Rare and Epic filters over the shipped registry, and a
-// refused redemption changing nothing. The tier rules live beside them as pure tests over crafted
+// redemption telling the page while a refused one changes nothing, and the page's next revision
+// reading the bars again. The tier rules live beside them as pure tests over crafted
 // registries, where Legendary, Mythic, chase, starter and owned entries can all appear.
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
@@ -185,7 +186,8 @@ describe("#1309 the token picker", () => {
 
   it("a refused redemption shows its reason and changes nothing on screen", async () => {
     const server = tokenServer({ redeem: refusal(409, "conflict", "that card is already owned") });
-    render(<TokenPicker token={TOKEN} />);
+    const onChanged = vi.fn<() => void>();
+    render(<TokenPicker token={TOKEN} onChanged={onChanged} />);
     await screen.findByTestId(T.cardPick("core-002"));
 
     fireEvent.click(screen.getByTestId(T.cardPick("core-002")));
@@ -195,5 +197,43 @@ describe("#1309 the token picker", () => {
     expect(screen.getByTestId(T.heldCard)).toHaveTextContent("1");
     expect(server.to("POST", "/api/tokens/redeem-card")).toHaveLength(1);
     expect(server.to("POST", "/api/tokens/redeem-card")[0]?.body).toEqual({ cardId: "core-002" });
+    expect(onChanged, "a refusal changed nothing to tell the page").not.toHaveBeenCalled();
+  });
+
+  it("a redeemed card token moves the held count from the answer and tells the page", async () => {
+    const server = tokenServer();
+    const onChanged = vi.fn<() => void>();
+    render(<TokenPicker token={TOKEN} onChanged={onChanged} />);
+    await screen.findByTestId(T.cardPick("core-002"));
+
+    fireEvent.click(screen.getByTestId(T.cardPick("core-002")));
+
+    await waitFor(() => {
+      expect(screen.getByTestId(T.heldCard)).toHaveTextContent("Card tokens held: 0");
+    });
+    expect(onChanged).toHaveBeenCalledTimes(1);
+    expect(server.to("GET", "/api/collection"), "the collection is read back").toHaveLength(2);
+  });
+
+  it("the page's next revision reads the bars again", async () => {
+    // The bars move at the server after the first read (another panel opened a pack).
+    let bars = tokenBars();
+    const server = stubServer((call) => {
+      if (call.method === "GET" && call.path === "/api/tokens") return { status: 200, body: bars };
+      if (call.method === "GET" && call.path === "/api/collection") return { status: 200, body: collectionOf() };
+      if (call.method === "GET" && call.path === "/api/cosmetics") return { status: 200, body: ownedCosmeticsOf() };
+      return undefined;
+    });
+    const { rerender } = render(<TokenPicker token={TOKEN} />);
+    expect(await screen.findByTestId(T.cardBar)).toHaveTextContent("149 / 150");
+
+    bars = { ...bars, cardBar: { ...bars.cardBar, points: 3 } };
+    rerender(<TokenPicker token={TOKEN} revision={1} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId(T.cardBar)).toHaveTextContent("3 / 150");
+    });
+    expect(server.to("GET", "/api/collection")).toHaveLength(2);
+    expect(server.to("GET", "/api/cosmetics")).toHaveLength(2);
   });
 });
