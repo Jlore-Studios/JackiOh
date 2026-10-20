@@ -12002,10 +12002,8 @@
     "what": "build #1433 on claude-5"
   },
   "last_sweep": {
-    "at": "2026-10-20T20:49:51Z",
-    "notes": [
-      "started a night run, as a lane was free: a suggestion survey is due, for `claude-2`"
-    ],
+    "at": "2026-10-20T21:00:22Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
