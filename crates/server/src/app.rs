@@ -371,6 +371,25 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::economy::get_tracks),
     ),
+    // api/quests.rs (#1304)
+    (
+        "GET",
+        "/api/quests",
+        AuthLevel::Active,
+        h!(api::quests::get_quests),
+    ),
+    (
+        "POST",
+        "/api/dev/quests",
+        AuthLevel::Active,
+        h!(api::quests::dev_give_quest),
+    ),
+    (
+        "POST",
+        "/api/dev/quests/:questId/complete",
+        AuthLevel::Active,
+        h!(api::quests::dev_complete_quest),
+    ),
     // api/practice.rs (#1303)
     (
         "POST",

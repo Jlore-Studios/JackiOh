@@ -17,6 +17,7 @@ import {
   getOwnRank,
   getPacks,
   getProfile,
+  getQuests,
   getTokens,
   getWallet,
   openCosmeticPack,
@@ -50,6 +51,7 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     getProfile: vi.fn(),
     getOwnRank: vi.fn(),
     getPacks: vi.fn(),
+    getQuests: vi.fn(),
     getWallet: vi.fn(),
     getTokens: vi.fn(),
     getCollection: vi.fn(),
@@ -95,6 +97,7 @@ function rankBody(over: Partial<OwnRankResponse> = {}): OwnRankResponse {
 
 beforeEach(() => {
   vi.mocked(getOwnRank).mockResolvedValue(rankBody());
+  vi.mocked(getQuests).mockResolvedValue({ quests: [], nextDueAt: null });
 });
 
 afterEach(() => {
@@ -188,6 +191,20 @@ describe("the account screen", () => {
 
     expect(await screen.findByTestId("account-win-rate")).toHaveTextContent("—");
     expect(screen.getByText(/no finished matches yet/i)).toBeInTheDocument();
+  });
+
+  it("mounts the quests panel for an active account", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getQuests).mockResolvedValue({
+      quests: [
+        { questId: "win-3", title: "Win 3 games", progress: 1, target: 3, jlore: 80, xp: 4000, arrivedAt: 1 },
+      ],
+      nextDueAt: null,
+    });
+    render(<AccountRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId("quests-panel")).toHaveTextContent("Win 3 games");
+    expect(getQuests).toHaveBeenCalledWith(TOKEN);
   });
 
   it("relays a failed read instead of rendering an empty account", async () => {

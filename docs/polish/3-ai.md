@@ -299,8 +299,9 @@ export const AI_SEARCH = {
   zoneVariants: 2,
   /** Opponent prompts auto-answered inside one simulated step before it counts as an error. */
   maxAutoAnswers: 8,
-  /** Answers tried for each auto-answered prompt, in legalActions order, before the answerer's best
-   *  is committed (`simulate`'s and the opponent's reply's auto-answers, #891): each one node. */
+  /** Answers tried for each auto-answered prompt before the answerer's best is committed
+   *  (`simulate`'s, the opponent's reply's and `ownPromptScore`'s auto-answers, #891): each one node.
+   *  A prompt with more answers tries this many drawn from all of them, never its first ones (#1382). */
   maxAutoAnswerOptions: 4,
   /** Deepest line the lethal solver explores. */
   lethalMaxDepth: 10,
@@ -551,10 +552,11 @@ export type SimStep = { ok: true; state: GameState } | { ok: false; error: strin
 
 /**
  * One AI action on a determinized state: reduce (nonce `sim:${counter.used}`), then, while a prompt
- * of the other seat is open, answer it with the answerer's best of its first
- * AI_SEARCH.maxAutoAnswerOptions answers (legalActions less concede, each scored by `evaluate` from
- * the answerer's own seat on the determinization, R185; strictly greater wins, so ties keep legal
- * order; each answer tried one more node, at most AI_SEARCH.maxAutoAnswers prompts, #891). A throw
+ * of the other seat is open, answer it with the answerer's best of AI_SEARCH.maxAutoAnswerOptions
+ * answers (legalActions less concede, in canonical key order, and of a longer list that many drawn
+ * on the determinization's own stream, #1382; each scored by `evaluate` from the answerer's own
+ * seat on the determinization, R185; strictly greater wins, so ties keep that order; each answer
+ * tried one more node, at most AI_SEARCH.maxAutoAnswers prompts, #891). A throw
  * or a refusal is `{ ok: false }`. Returns null without touching anything when the counter refuses
  * a node.
  */
