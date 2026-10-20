@@ -21,8 +21,6 @@ use jackioh_engine::wire::SHIPPED_SETS;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use jackioh_engine::wire::PrintedRarity;
-
 use crate::api::collection::{caller_profile, owned_in};
 use crate::api::crypto::SystemIds;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, ok, ok_of, str};
@@ -33,7 +31,7 @@ use crate::config::{
     CosmeticTokenStep, PACK_BASE_RATES, PACK_FILLER_RARE_RATE, PACK_PRICE_JLORE, PACK_SLOTS,
     PACK_TARGET_RATES, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS,
 };
-use crate::cosmetics::Cosmetic;
+use crate::cosmetics::{Cosmetic, CosmeticRarity};
 use crate::db::store::{CollectionEntry, CollectionGrant, Tx};
 use crate::economy::math::PityCounters;
 use crate::economy::roll::{Holdings, OpeningLog, PackKind, Slot, SlotGrant, pack_pool, roll_opening};
@@ -324,11 +322,11 @@ pub(crate) async fn settle_bars(
             let (item, key) = match step {
                 CosmeticTokenStep::Rare => (
                     InventoryItem::CosmeticToken,
-                    PrintedRarity::Rare.as_str().to_string(),
+                    CosmeticRarity::Rare.as_str().to_string(),
                 ),
                 CosmeticTokenStep::Epic => (
                     InventoryItem::CosmeticToken,
-                    PrintedRarity::Epic.as_str().to_string(),
+                    CosmeticRarity::Epic.as_str().to_string(),
                 ),
                 CosmeticTokenStep::CosmeticPack => (InventoryItem::CosmeticPack, String::new()),
             };

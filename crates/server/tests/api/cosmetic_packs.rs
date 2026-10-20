@@ -12,7 +12,6 @@ use std::sync::Arc;
 
 use serde_json::{Value, json};
 
-use jackioh_engine::wire::PrintedRarity;
 use jackioh_server::api::collection::{GrantInput, grant_cards, owned_map};
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
@@ -250,7 +249,7 @@ fn cosmetic(id: &str, kind: CosmeticKind, rarity: CosmeticRarity) -> Cosmetic {
         rarity,
         default: false,
         starter: false,
-        chase: false,
+        chase: rarity.is_chase(),
         card: None,
     }
 }
@@ -334,13 +333,17 @@ async fn r1306000_a_cosmetic_pack_opens_its_slots_one_epic_or_better() {
     assert_eq!(status, 200, "{body}");
     let pack = opened(&body);
     assert_eq!(pack.slots.len(), COSMETIC_PACK_SLOTS);
-    assert!(pack.slots[0].rarity >= PrintedRarity::Epic, "{:?}", pack.slots[0]);
+    assert!(
+        pack.slots[0].rarity >= CosmeticRarity::Epic,
+        "{:?}",
+        pack.slots[0]
+    );
     assert_eq!(pack.unopened, 1);
     assert_eq!(held(&app, InventoryItem::CosmeticPack, "").await, 1);
     // The first slot's cosmetic is Epic or better, whatever the registry still held.
     match &pack.slots[0].grant {
         CosmeticSlotGrant::Cosmetic { cosmetic_rarity, .. } => {
-            assert!(*cosmetic_rarity >= PrintedRarity::Epic, "{:?}", pack.slots[0]);
+            assert!(*cosmetic_rarity >= CosmeticRarity::Epic, "{:?}", pack.slots[0]);
         }
         CosmeticSlotGrant::Bars => panic!("the shipped full arts are Epic and open: {:?}", pack.slots[0]),
     }
@@ -354,7 +357,7 @@ async fn r1306000_a_cosmetic_pack_opens_its_slots_one_epic_or_better() {
             ..
         } = &slot.grant
         {
-            assert_eq!(*cosmetic_rarity, PrintedRarity::Epic, "{slot:?}");
+            assert_eq!(*cosmetic_rarity, CosmeticRarity::Epic, "{slot:?}");
             assert!(card_id.is_some(), "{slot:?}");
             assert!(
                 owns_cosmetic(&app, card_id.as_deref(), cosmetic_id).await,
@@ -403,7 +406,7 @@ async fn r1306000_common_cosmetics_come_from_a_cosmetic_pack() {
         else {
             continue;
         };
-        assert_eq!(*cosmetic_rarity, PrintedRarity::Common, "{slot:?}");
+        assert_eq!(*cosmetic_rarity, CosmeticRarity::Common, "{slot:?}");
         assert!(
             owns_cosmetic(&app, card_id.as_deref(), cosmetic_id).await,
             "{slot:?}"
@@ -471,7 +474,7 @@ async fn r1306001_a_legendary_or_mythic_roll_falls_to_the_highest_tier_with_some
     // slot rolls Mythic, each find the Epic one.
     let registry = shipped().expect("the shipped registry");
     let pool = pack_pool(&app.catalog.defs, PackKind::Global);
-    for rolled in [PrintedRarity::Legendary, PrintedRarity::Mythic] {
+    for rolled in [CosmeticRarity::Legendary, CosmeticRarity::Mythic] {
         let seed = (0..)
             .map(|at| format!("r1306001-{rolled}-{at}"))
             .find(|seed| {
@@ -494,7 +497,7 @@ async fn r1306001_a_legendary_or_mythic_roll_falls_to_the_highest_tier_with_some
         else {
             panic!("an Epic full art was open: {:?}", pack.slots[0]);
         };
-        assert_eq!(*cosmetic_rarity, PrintedRarity::Epic);
+        assert_eq!(*cosmetic_rarity, CosmeticRarity::Epic);
         assert!(owns_cosmetic(&app, card_id.as_deref(), cosmetic_id).await);
     }
 }
@@ -536,6 +539,35 @@ async fn r1306001_nothing_unowned_pays_bar_points() {
         assert!(rows[0].reference.is_some());
     }
     assert!(holdings(&app).await.card_cosmetics.is_empty());
+}
+
+#[tokio::test]
+async fn r1333000_a_cosmetic_pack_leaves_the_card_pity_counters_alone() {
+    let (app, _) = setup().await;
+    // Card packs' pity, part-way to each threshold, as earlier card packs left it.
+    let pity = [
+        (Counter::PityEpic, 3),
+        (Counter::PityLegendary, 7),
+        (Counter::PityMythic, 11),
+    ];
+    for (counter, value) in pity {
+        set_counter(&app, counter, value).await;
+    }
+    grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
+    let registry = shipped().expect("the shipped registry");
+    let pack = open_cosmetic_pack(&app, PROFILE, &registry, "r1333000-pity")
+        .await
+        .expect("the opening");
+    assert!(
+        pack.slots
+            .iter()
+            .any(|slot| matches!(slot.grant, CosmeticSlotGrant::Cosmetic { .. })),
+        "{pack:?}"
+    );
+    // No cosmetic roll moves a card pack's counters (§14.6).
+    for (counter, value) in pity {
+        assert_eq!(counter_of(&app, counter).await, value, "{counter:?}");
+    }
 }
 
 // ---------------------------------------------------------------------------------------------

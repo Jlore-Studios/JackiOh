@@ -307,9 +307,25 @@ async fn pay_level_rewards(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{XP_GAME_CAP, XP_PER_ACTION, XP_WIN_BONUS};
+    use crate::config::{XP_GAME_CAP, XP_LADDER_TARGET_MEAN, XP_PER_ACTION, XP_WIN_BONUS};
     use crate::economy::math::total_xp_for_level;
+    use jackioh_engine::{Action, GameResult, Winner};
     use serde_json::json;
+
+    /// R1333001's measured games: 40 of this build's AI playing itself, one JSON line each
+    /// (`cargo jackioh selfplay --games 40 --seed xp-1333`).
+    const MEASURED_GAMES: &str = include_str!("../../tests/fixtures/xp-selfplay.jsonl");
+    /// How far a measured mean XP may land from its target, as a share of the target (R1333001).
+    const XP_MEAN_TOLERANCE: f64 = 0.05;
+    /// The seats of R1333001's games: two to each of the 40.
+    const MEASURED_SEATS: usize = 80;
+
+    /// A measured game, as far as its XP reads it.
+    #[derive(serde::Deserialize)]
+    struct MeasuredGame {
+        log: Vec<Action>,
+        result: Option<GameResult>,
+    }
 
     fn body(action: serde_json::Value) -> ActionBody {
         serde_json::from_value(action).expect("an ActionBody")
@@ -399,13 +415,50 @@ mod tests {
 
     #[test]
     fn the_win_bonus_and_the_cap_shape_the_payout() {
-        // #1333 sets every value at the end; this only pins the shape the description states, as
-        // behaviour: a win pays more than a loss even with no actions, and the cap binds.
+        // The shape #1333's table states, as behaviour: a win pays more than a loss even with no
+        // actions, and the cap binds.
         assert_eq!(game_xp(GameMode::Ladder, 0, true), i64::from(XP_WIN_BONUS));
         assert_eq!(game_xp(GameMode::Ladder, 0, false), 0);
         assert!(game_xp(GameMode::Ladder, 0, true) > game_xp(GameMode::Ladder, 0, false));
         assert_eq!(game_xp(GameMode::Ladder, i64::MAX, false), i64::from(XP_GAME_CAP));
         assert_eq!(game_xp(GameMode::Ladder, i64::MAX, true), i64::from(XP_GAME_CAP));
+    }
+
+    #[test]
+    fn r1333001_measured_games_average_the_ladder_target_and_practice_half_of_it() {
+        // Each seat's actions as the reward hook counts them, and whether it won.
+        let mut seats: Vec<(i64, bool)> = Vec::new();
+        for line in MEASURED_GAMES.lines() {
+            let game: MeasuredGame = serde_json::from_str(line).expect("a measured game");
+            let result = game.result.expect("every measured game finished");
+            for player in [PlayerId::P1, PlayerId::P2] {
+                let actions = game
+                    .log
+                    .iter()
+                    .filter(|action| action.player_id == player && is_player_action(&action.body))
+                    .count();
+                seats.push((
+                    i64::try_from(actions).expect("a game's actions fit"),
+                    result.winner == Winner::from(player),
+                ));
+            }
+        }
+        assert_eq!(seats.len(), MEASURED_SEATS);
+        let target = f64::from(XP_LADDER_TARGET_MEAN);
+        for (mode, target) in [
+            (GameMode::Ladder, target),
+            (GameMode::Practice, target * XP_PRACTICE_SCALE),
+        ] {
+            let total: i64 = seats
+                .iter()
+                .map(|(actions, won)| game_xp(mode, *actions, *won))
+                .sum();
+            let mean = total as f64 / seats.len() as f64;
+            assert!(
+                (mean - target).abs() <= target * XP_MEAN_TOLERANCE,
+                "{mode:?} games average {mean} XP, not about {target}"
+            );
+        }
     }
 
     #[test]
