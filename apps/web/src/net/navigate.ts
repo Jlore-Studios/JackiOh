@@ -101,6 +101,8 @@ export const paths = {
   replays: "/replays",
   /** #936 S8: Play together: friends, requests, challenges, chat and shared replays. */
   together: "/together",
+  /** #1307: the account's collection, wallet, tracks and quests. */
+  collection: "/collection",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,
   /** R338: a Conquest series between its games: the score, the sealed picks and the pick clock. */

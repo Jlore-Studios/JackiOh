@@ -23,6 +23,7 @@
 //! included, uniformly; it never emotes (`AI_SKIPPED_ACTIONS`).
 
 use std::panic::{self, AssertUnwindSafe};
+use std::time::Instant;
 
 use anyhow::bail;
 use indexmap::IndexMap;
@@ -42,9 +43,10 @@ use rayon::prelude::*;
 
 use crate::agent::panic_message;
 use crate::fuzz::{
-    DUOS_GROWTH_EVENTS_BOUND, DUOS_GROWTH_INSTANCES_BOUND, DUOS_GROWTH_NUMBER_BOUND, FUZZ_POOL, Heaviest,
-    Heavy, MEASURES, REUSED_NONCE_PROBE, WRONG_SEAT_PROBE, duos_acting_card, duos_growth_breach,
-    duos_heaviest_lines, probe_stride, weigh_duos,
+    CHECKPOINT_TIME_BOUND_MS, DUOS_GROWTH_EVENTS_BOUND, DUOS_GROWTH_INSTANCES_BOUND,
+    DUOS_GROWTH_NUMBER_BOUND, FUZZ_POOL, Heaviest, Heavy, MEASURES, REUSED_NONCE_PROBE, WRONG_SEAT_PROBE,
+    checkpoint_step, duos_acting_card, duos_growth_breach, duos_heaviest_lines, probe_stride, round_trip,
+    state_paused, verify_round_trip, weigh_duos,
 };
 
 /// B25: the seeds `cargo jackioh fuzz --duos` plays when `--seeds` is not given.
@@ -125,6 +127,14 @@ struct DuosRun {
     state: DuosState,
     /// This game's heaviest action by each measure (#1364).
     heaviest: Heaviest,
+    /// The prefix lengths whose end state held paused work in some duel (#1387): step 0 is the
+    /// setup state, otherwise the state after that many actions.
+    paused: Vec<usize>,
+}
+
+/// Whether some duel holds paused work (SPEC §10.1): the Duos form of the gate's `state_paused`.
+fn duos_paused(state: &DuosState) -> bool {
+    state.duels.iter().any(state_paused)
 }
 
 /// A `DuosActionBody`'s wire name: a `Duel` action's inner `ActionType`, or the pass/concede itself.
@@ -260,6 +270,11 @@ where
     if let Some(first) = setup.first() {
         return Err(format!("at step 0: {first}"));
     }
+    // #1387: the checkpoint prefers a state with paused work; step 0 is the setup state.
+    let mut paused_steps: Vec<usize> = Vec::new();
+    if duos_paused(&state) {
+        paused_steps.push(0);
+    }
 
     let mut policy = Rng::new(&format!("jackioh-duos-fuzz-policy-{seed}"), 0);
     let mut order = Rng::new(&format!("jackioh-duos-fuzz-order-{seed}"), 0);
@@ -318,6 +333,9 @@ where
         let card = duos_acting_card(&state, action.seat, &action.body);
         log.push(action);
         state = result.state;
+        if duos_paused(&state) {
+            paused_steps.push(log.len());
+        }
 
         let mut broken = monitor.after(&result.events, &state);
         if log.len().is_multiple_of(stride) || state.result.is_some() {
@@ -351,6 +369,7 @@ where
         log,
         state,
         heaviest,
+        paused: paused_steps,
     })
 }
 
@@ -402,6 +421,69 @@ fn check_duos_run(run: &DuosRun) -> Result<String, String> {
     Ok(result.reason.clone())
 }
 
+// ---------------------------------------------------------------------------------------------
+// The serialization checkpoint (#1387)
+// ---------------------------------------------------------------------------------------------
+
+/// The Duos game survives a serialized restart: folds the log's prefix to the seed-drawn
+/// checkpoint step (paused work preferred, the gate's `checkpoint_step`), round-trips that state
+/// through JSON requiring the identical hash, then applies the rest of the log from the restored
+/// state and requires the live hash and ending. Failures carry the `checkpoint:` prefix the way
+/// growth failures carry `growth:`. Returns the step, whether it held paused work, and the cost
+/// in milliseconds.
+fn check_duos_serial_restart(
+    options: &DuosCreateOptions,
+    log: &[DuosAction],
+    live: &DuosState,
+    stream: &str,
+    paused: &[usize],
+) -> Result<(usize, bool, u128), String> {
+    let started_at = Instant::now();
+    let (step, was_paused) = checkpoint_step(stream, paused, log.len());
+    let prefix = duos_fold(&DuosReplayInput {
+        options: options.clone(),
+        log: log[..step].to_vec(),
+    });
+    if let Some(at) = prefix.refused_at {
+        return Err(format!(
+            "checkpoint: the prefix fold refused action {at} of {} ({:?})",
+            log.len(),
+            log.get(at).map(|action| &action.body)
+        ));
+    }
+    let mut state = verify_round_trip(&prefix.state, duos_hash, round_trip)
+        .map_err(|error| format!("checkpoint: {error}"))?;
+    for action in &log[step..] {
+        let result = duos_reduce(&state, action);
+        if let Some(error) = result.error {
+            return Err(format!(
+                "checkpoint: the continuation refused action {:?} of {}: {error}",
+                action.body,
+                log.len()
+            ));
+        }
+        state = result.state;
+    }
+    let live_hash = duos_hash(live);
+    if duos_hash(&state) != live_hash {
+        return Err(format!(
+            "checkpoint: fold hash {} != live hash {live_hash} after {} actions",
+            duos_hash(&state),
+            log.len()
+        ));
+    }
+    if state.result != live.result {
+        return Err("checkpoint: the restored game reached a different ending".to_string());
+    }
+    let ms = started_at.elapsed().as_millis();
+    if ms > CHECKPOINT_TIME_BOUND_MS {
+        return Err(format!(
+            "checkpoint: the restart took {ms}ms, past CHECKPOINT_TIME_BOUND_MS ({CHECKPOINT_TIME_BOUND_MS}ms)"
+        ));
+    }
+    Ok((step, was_paused, ms))
+}
+
 /// One seed's verdict.
 #[derive(Clone, Debug)]
 struct DuosSeedOutcome {
@@ -410,34 +492,60 @@ struct DuosSeedOutcome {
     error: Option<String>,
     /// The passing game's heaviest action by each measure (#1364); a failed seed keeps none.
     heaviest: Heaviest,
+    /// Whether the game's checkpoint restarted from paused work (#1387); false when it failed.
+    checkpoint_paused: bool,
+    /// What the game's checkpoint cost, in milliseconds (#1387); zero when it failed.
+    checkpoint_ms: u128,
+}
+
+/// The checkpoint a seed crossed, after its run passed: the step is unused here, only whether it
+/// held paused work and what it cost.
+fn check_seed_checkpoint(seed: u32, run: &DuosRun) -> Result<(bool, u128), String> {
+    check_duos_serial_restart(
+        &run.options,
+        &run.log,
+        &run.state,
+        &format!("jackioh-duos-fuzz-checkpoint-{seed}"),
+        &run.paused,
+    )
+    .map(|(_, paused, ms)| (paused, ms))
 }
 
 fn fuzz_duos_seed(seed: u32) -> DuosSeedOutcome {
     // R1420: the pool is the whole catalog, so this worker thread previews every set for the game.
     let _preview = preview_every_set();
-    let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<(String, Heaviest), String> {
-        let run = play_duos_game(seed)?;
-        let reason = check_duos_run(&run)?;
-        Ok((reason, run.heaviest))
-    }));
+    let caught = panic::catch_unwind(AssertUnwindSafe(
+        || -> Result<(String, Heaviest, bool, u128), String> {
+            let run = play_duos_game(seed)?;
+            let reason = check_duos_run(&run)?;
+            let (paused, ms) = check_seed_checkpoint(seed, &run)?;
+            Ok((reason, run.heaviest, paused, ms))
+        },
+    ));
     match caught {
-        Ok(Ok((reason, heaviest))) => DuosSeedOutcome {
+        Ok(Ok((reason, heaviest, checkpoint_paused, checkpoint_ms))) => DuosSeedOutcome {
             seed,
             reason: Some(reason),
             error: None,
             heaviest,
+            checkpoint_paused,
+            checkpoint_ms,
         },
         Ok(Err(error)) => DuosSeedOutcome {
             seed,
             reason: None,
             error: Some(error),
             heaviest: Heaviest::default(),
+            checkpoint_paused: false,
+            checkpoint_ms: 0,
         },
         Err(payload) => DuosSeedOutcome {
             seed,
             reason: None,
             error: Some(format!("panic: {}", panic_message(&*payload))),
             heaviest: Heaviest::default(),
+            checkpoint_paused: false,
+            checkpoint_ms: 0,
         },
     }
 }
@@ -448,29 +556,38 @@ where
     F: FnMut(usize, &mut DuosState, &mut DuosAction, &mut DuosInvariantMonitor),
 {
     let _preview = preview_every_set();
-    let caught = panic::catch_unwind(AssertUnwindSafe(|| -> Result<(String, Heaviest), String> {
-        let run = play_duos_game_inner(seed, probe, tamper)?;
-        let reason = check_duos_run(&run)?;
-        Ok((reason, run.heaviest))
-    }));
+    let caught = panic::catch_unwind(AssertUnwindSafe(
+        || -> Result<(String, Heaviest, bool, u128), String> {
+            let run = play_duos_game_inner(seed, probe, tamper)?;
+            let reason = check_duos_run(&run)?;
+            let (paused, ms) = check_seed_checkpoint(seed, &run)?;
+            Ok((reason, run.heaviest, paused, ms))
+        },
+    ));
     match caught {
-        Ok(Ok((reason, heaviest))) => DuosSeedOutcome {
+        Ok(Ok((reason, heaviest, checkpoint_paused, checkpoint_ms))) => DuosSeedOutcome {
             seed,
             reason: Some(reason),
             error: None,
             heaviest,
+            checkpoint_paused,
+            checkpoint_ms,
         },
         Ok(Err(error)) => DuosSeedOutcome {
             seed,
             reason: None,
             error: Some(error),
             heaviest: Heaviest::default(),
+            checkpoint_paused: false,
+            checkpoint_ms: 0,
         },
         Err(payload) => DuosSeedOutcome {
             seed,
             reason: None,
             error: Some(format!("panic: {}", panic_message(&*payload))),
             heaviest: Heaviest::default(),
+            checkpoint_paused: false,
+            checkpoint_ms: 0,
         },
     }
 }
@@ -511,9 +628,18 @@ fn summary(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> String {
             *endings.entry(reason.clone()).or_insert(0) += 1;
         }
     }
+    let passed = outcomes.iter().filter(|outcome| outcome.error.is_none());
+    let paused = passed.clone().filter(|outcome| outcome.checkpoint_paused).count();
+    let slowest_ms = outcomes
+        .iter()
+        .filter(|outcome| outcome.error.is_none())
+        .map(|outcome| outcome.checkpoint_ms)
+        .max()
+        .unwrap_or(0);
     format!(
-        "[fuzz-duos] {ran} seed(s) from {from}: {failed} failed; endings {}\n{}",
+        "[fuzz-duos] {ran} seed(s) from {from}: {failed} failed; endings {}\n  checkpoints: {paused} paused, {} mid-game fallback; slowest {slowest_ms}ms of {CHECKPOINT_TIME_BOUND_MS}ms\n{}",
         serde_json::to_string(&endings).unwrap_or_default(),
+        outcomes.len() - failed - paused,
         duos_heaviest_lines(&passed_heaviest(outcomes)),
     )
 }
@@ -522,11 +648,20 @@ fn summary(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> String {
 /// (#1364). Failures carry only seed and message: Duos has no stage taxonomy, so the `growth:`
 /// prefix in the message is the stage name.
 fn wave_json(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> serde_json::Value {
-    let passed = outcomes.iter().filter(|outcome| outcome.error.is_none()).count();
+    let passed: Vec<&DuosSeedOutcome> = outcomes
+        .iter()
+        .filter(|outcome| outcome.error.is_none())
+        .collect();
+    let paused = passed.iter().filter(|outcome| outcome.checkpoint_paused).count();
+    let slowest_ms = passed
+        .iter()
+        .map(|outcome| outcome.checkpoint_ms)
+        .max()
+        .unwrap_or(0);
     serde_json::json!({
         "from": from,
         "ran": ran,
-        "passed": passed,
+        "passed": passed.len(),
         "failures": outcomes.iter().filter_map(|outcome| outcome.error.as_ref().map(|error| serde_json::json!({
             "seed": outcome.seed,
             "message": error,
@@ -536,6 +671,12 @@ fn wave_json(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> serde_json::V
             "events": DUOS_GROWTH_EVENTS_BOUND,
             "largest": DUOS_GROWTH_NUMBER_BOUND,
             "instances": DUOS_GROWTH_INSTANCES_BOUND,
+        },
+        "checkpoint": {
+            "paused": paused,
+            "midGame": passed.len() - paused,
+            "slowestMs": u64::try_from(slowest_ms).unwrap_or(u64::MAX),
+            "boundMs": u64::try_from(CHECKPOINT_TIME_BOUND_MS).unwrap_or(u64::MAX),
         },
     })
 }
@@ -658,18 +799,96 @@ mod tests {
                 reason: Some(DUOS_REASON_POOL_EMPTIED.to_string()),
                 error: None,
                 heaviest: game,
+                checkpoint_paused: true,
+                checkpoint_ms: 2,
             }];
             let summary = summary(1, 1, &outcomes);
             assert!(summary.contains("1/3 pass -: 10"), "{summary}");
             assert!(summary.contains("1/3 pass -: 20"), "{summary}");
             assert!(summary.contains("1/3 pass -: 30"), "{summary}");
+            assert!(summary.contains("1 paused, 0 mid-game fallback"), "{summary}");
             let json = wave_json(1, 1, &outcomes);
             assert_eq!(json["heaviest"]["events"][0]["value"], serde_json::json!(10));
+            assert_eq!(json["checkpoint"]["paused"], serde_json::json!(1));
+            assert_eq!(json["checkpoint"]["midGame"], serde_json::json!(0));
             assert_eq!(
                 json["bounds"]["largest"],
                 serde_json::json!(DUOS_GROWTH_NUMBER_BOUND)
             );
             assert_eq!(json["passed"], serde_json::json!(1));
+        }
+    }
+
+    mod duos_checkpoint_stage {
+        use jackioh_engine::PlayerId;
+
+        use super::*;
+
+        const STREAM: &str = "jackioh-duos-fuzz-checkpoint-1";
+
+        /// A planted lossy restore: the JSON round trip, then one hero health point added.
+        fn lossy(state: &DuosState) -> Result<DuosState, String> {
+            let mut restored = round_trip(state)?;
+            restored.duels[0].players[PlayerId::P1].hero.health += 1;
+            Ok(restored)
+        }
+
+        #[test]
+        fn a_mid_game_state_survives_a_serialized_restart() {
+            let _preview = preview_every_set();
+            let run = play_duos_game_inner(1, duos_reduce, |_, _, _, _| {}).expect("seed 1 plays out");
+            let (step, paused, ms) =
+                check_duos_serial_restart(&run.options, &run.log, &run.state, STREAM, &run.paused)
+                    .expect("seed 1 crosses its checkpoint");
+            assert!(step <= run.log.len(), "step {step}");
+            assert_eq!(paused, !run.paused.is_empty());
+            assert!(ms <= CHECKPOINT_TIME_BOUND_MS);
+            // The wave records the same checkpoint for the seed.
+            let outcome = fuzz_duos_seed(1);
+            assert_eq!(outcome.error, None);
+            assert_eq!(outcome.checkpoint_paused, paused);
+            assert!(outcome.checkpoint_ms <= CHECKPOINT_TIME_BOUND_MS);
+        }
+
+        #[test]
+        fn a_planted_lossy_round_trip_fails_its_verification() {
+            let _preview = preview_every_set();
+            let run = play_duos_game_inner(1, duos_reduce, |_, _, _, _| {}).expect("seed 1 plays out");
+            let restored =
+                verify_round_trip(&run.state, duos_hash, round_trip).expect("the honest round trip passes");
+            assert_eq!(duos_hash(&restored), duos_hash(&run.state));
+            let error = verify_round_trip(&run.state, duos_hash, lossy)
+                .expect_err("one health point lost in the round trip must fail it");
+            assert!(error.contains("the round trip changed the state"), "{error}");
+        }
+
+        #[test]
+        fn a_restored_game_that_misses_the_live_hash_fails_with_a_checkpoint_error() {
+            let _preview = preview_every_set();
+            let run = play_duos_game_inner(1, duos_reduce, |_, _, _, _| {}).expect("seed 1 plays out");
+            let mut live = run.state.clone();
+            live.duels[0].players[PlayerId::P1].hero.health += 1;
+            let error = check_duos_serial_restart(&run.options, &run.log, &live, STREAM, &run.paused)
+                .expect_err("a live state the restored game never reaches must fail the checkpoint");
+            assert!(error.starts_with("checkpoint: fold hash"), "{error}");
+        }
+
+        #[test]
+        fn a_continuation_the_restored_game_refuses_fails_with_a_checkpoint_error() {
+            let _preview = preview_every_set();
+            let run = play_duos_game_inner(1, duos_reduce, |_, _, _, _| {}).expect("seed 1 plays out");
+            let mut log = run.log.clone();
+            // A fresh nonce: a repeated one is answered as before, never refused (§9.3).
+            let mut after = log.last().cloned().expect("seed 1 played an action");
+            after.nonce = "planted-after-the-ending".to_string();
+            log.push(after);
+            let error = check_duos_serial_restart(&run.options, &log, &run.state, STREAM, &run.paused)
+                .expect_err("an action after the ending must fail the checkpoint");
+            assert!(
+                error.starts_with("checkpoint: the continuation refused"),
+                "{error}"
+            );
+            assert!(error.contains("the game is over"), "{error}");
         }
     }
 

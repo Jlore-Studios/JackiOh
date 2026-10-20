@@ -1,6 +1,5 @@
-// `/account`'s quests (SPEC §14.9, #1304): each quest the account holds, its progress toward its
-// target and what it pays, and how long until the next one arrives. The collection screen (#1307)
-// moves it.
+// `/collection`'s quests (SPEC §14.9, #1304; moved from `/account` by #1307): each quest the account
+// holds, its progress toward its target and what it pays, and how long until the next one arrives.
 //
 // The server decides all of it (CLAUDE.md rule 7): `GET /api/quests` tops the account up first
 // (R1304000) and answers the held quests and when the next falls due, `null` while the account holds
@@ -26,6 +25,7 @@ export const questsTestid = {
   quest: "quests-quest",
   progress: "quests-progress",
   next: "quests-next",
+  error: "quests-error",
 } as const;
 
 /** Whole seconds as a clock reads them, `H:MM:SS`, the hours running past a day: 3725 is "1:02:05". */
@@ -92,9 +92,13 @@ export function QuestsList({ quests }: { quests: QuestsResponse }): ReactElement
   );
 }
 
-/** The caller's quests, read once when it mounts; a failed read shows nothing, never the screen's error. */
+/**
+ * The caller's quests, read once when it mounts; a failed read says why in the panel's place, so
+ * the screen around it still shows.
+ */
 export default function QuestsPanel({ token }: { token: string }): ReactElement | null {
   const [quests, setQuests] = useState<QuestsResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,11 +106,23 @@ export default function QuestsPanel({ token }: { token: string }): ReactElement 
       .then((next) => {
         if (!cancelled) setQuests(next);
       })
-      .catch(() => undefined);
+      .catch((cause: unknown) => {
+        if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
+      });
     return () => {
       cancelled = true;
     };
   }, [token]);
 
+  if (error !== null) {
+    return (
+      <div className="account-quests" data-testid={questsTestid.panel}>
+        <h3 className="account-heading">{t("Quests")}</h3>
+        <p className="notice" role="alert" data-testid={questsTestid.error}>
+          {t(error)}
+        </p>
+      </div>
+    );
+  }
   return quests === null ? null : <QuestsList quests={quests} />;
 }

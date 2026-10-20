@@ -34,6 +34,7 @@ import {
   DECK_COMPARE_SELECT,
   DECK_CONFLICTS,
   DECK_COPY_CODE,
+  DECK_COSMETICS_BUTTON,
   DECK_COUNT,
   DECK_DELETE,
   DECK_DELETE_CANCEL,
@@ -777,6 +778,9 @@ describe("the deck's playmat, backdrop and card back (R1297000)", () => {
       decks: [{ ...savedDeck("a", "Aggro", ONE, 1), tableCosmetic: "table-felt", cardBackCosmetic: "card-back-gone" }],
       initialOpen: { kind: "deck", id: "a" },
     });
+    // The picks live behind the top-bar button, so the sidebar keeps its first screen.
+    expect(screen.queryByTestId("deck-cosmetic-table")).toBeNull();
+    fireEvent.click(screen.getByTestId(DECK_COSMETICS_BUTTON));
     const select = (kind: string): HTMLSelectElement => screen.getByTestId<HTMLSelectElement>(`deck-cosmetic-${kind}`);
 
     // The deck's own pick, "Your settings' choice" where it has none, and a pick no registry lists reads as the default.
@@ -804,5 +808,9 @@ describe("the deck's playmat, backdrop and card back (R1297000)", () => {
     await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
     expect(server.decks.get("a")?.tableCosmetic).toBeUndefined();
     expect(server.decks.get("a")).toMatchObject({ fieldCosmetic: "field-rain" });
+
+    // Escape closes the picker again.
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByTestId("deck-cosmetic-table")).toBeNull();
   });
 });

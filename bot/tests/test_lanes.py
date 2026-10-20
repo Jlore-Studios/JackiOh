@@ -73,11 +73,12 @@ class LaneTests(unittest.TestCase):
         seat, _note = plan_mod.builder_seat(pool, [muse, agy], "easy", audit_tier="medium")
         self.assertEqual(seat.tier, "medium")
 
-    def test_an_easy_build_tries_gpt_before_devin(self):
+    def test_an_easy_build_tries_devin_before_gpt(self):
+        # Devin is the one weak model; Codex has been medium since 2026-10-20.
         pool = make_config(machine=("muse", "devin")).pool
         gpt, devin = pool.get("gpt"), pool.get("devin")
-        seat, _note = plan_mod.builder_seat(pool, [devin, gpt], "easy")
-        self.assertEqual(seat.provider.id, "gpt")
+        seat, _note = plan_mod.builder_seat(pool, [gpt, devin], "easy")
+        self.assertEqual(seat.provider.id, "devin")
 
     def test_a_hard_build_takes_a_strong_seat(self):
         pool = make_config().pool
