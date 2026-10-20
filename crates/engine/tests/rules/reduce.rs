@@ -155,6 +155,39 @@ mod reduce_m1_t3 {
     }
 
     #[test]
+    fn a_reused_nonce_neither_applies_nor_replaces_a_different_action_from_either_seat() {
+        let state = playing("reused-nonce");
+        let id = nonce();
+        let first = reduce(&state, &Action::new(ActionBody::EndTurn, P1, id.clone()));
+        assert_eq!(first.error, None);
+
+        // A concede under the nonce of an applied End turn answers that End turn, whoever sends it.
+        for player in [P1, P2] {
+            let second = reduce(
+                &first.state,
+                &Action::new(ActionBody::Concede, player, id.clone()),
+            );
+            assert_eq!(second.error, None);
+            assert_eq!(second.events, first.events);
+            assert_eq!(second.state, first.state);
+            assert_eq!(second.state.result, None);
+        }
+    }
+
+    #[test]
+    fn a_refused_action_leaves_its_nonce_free_for_the_seat_that_may_act() {
+        let state = playing("refused-nonce");
+        let id = nonce();
+        let refused = reduce(&state, &Action::new(ActionBody::EndTurn, P2, id.clone()));
+        assert_error(&refused.error, "not your turn");
+        assert_eq!(refused.state, state);
+
+        let applied = reduce(&state, &Action::new(ActionBody::EndTurn, P1, id));
+        assert_eq!(applied.error, None);
+        assert!(applied.state.turn > state.turn);
+    }
+
+    #[test]
     fn refuses_an_action_once_the_game_is_over() {
         let over = reduce(&playing("over"), &Action::new(ActionBody::Concede, P1, nonce())).state;
         assert_error(
