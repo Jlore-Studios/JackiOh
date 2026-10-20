@@ -6653,6 +6653,13 @@
     "1387": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T11:52:30Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "easy rule 2 (one place) fails: the change spans crates/tools plus a test in crates/engine, so it cannot be easy"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
