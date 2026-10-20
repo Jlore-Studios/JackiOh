@@ -231,7 +231,7 @@ mod tests {
             };
             assert_eq!(prompt(), "Jlockeed's Evil Blueprints: Discover a building");
             // v0.3.7 printed the name with the faction spelled the designer's way (patch v0.3.Y, #1067).
-            let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+            let shipped = crate::shipped_catalog("v0.3.0c").expect("v0.3.0c is carried");
             let named = &shipped.defs()[ID].name;
             assert_ne!(*named, crate::card_def(ID).name);
             jackioh_engine::with_shipped(Some(shipped), || {

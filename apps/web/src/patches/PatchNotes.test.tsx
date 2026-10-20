@@ -24,8 +24,8 @@ const SLOW = { timeout: 10_000 } as const;
 const REAL_FIRSTS: readonly (readonly [string, string])[] = [
   ["core", "v0.1.0"],
   ["classic", "v0.2.0"],
-  ["meditative", "v0.3.5"],
-  ["meditativeplus", "v0.3.15"],
+  ["meditative", "v0.3.0"],
+  ["meditativeplus", "v0.4.0"],
 ];
 
 afterEach(() => {
@@ -232,7 +232,7 @@ describe("R388 the Patch notes page over the real history", () => {
     // every card it changed.
     const newest = shipped.at(-1)?.version ?? "";
     await within(patchEntry(newest)).findByTestId(patchTestid.cards, undefined, SLOW);
-    if (newest === "v0.2.3" || newest === "v0.2.4" || newest === "v0.2.5") {
+    if (newest === "v0.2.2" || newest === "v0.2.2b" || newest === "v0.2.3") {
       const record = shipped.find((patch) => patch.version === newest);
       const changedIds = (record?.changes ?? []).filter((change) => change.kind === "changed").map((change) => change.id);
       const shownNewest = [
