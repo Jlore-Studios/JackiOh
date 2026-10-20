@@ -6600,10 +6600,8 @@
       "verdict_rounds": 1
     },
     "1350": {
-      "action": "plan",
-      "asks": [
-        "c:6280930241"
-      ],
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-10-20T01:17:20Z",
         "difficulty": "medium",
@@ -6629,14 +6627,16 @@
       "planned_by": "`claude-2` (claude, `opus`, strong)",
       "planned_by_id": "claude-2",
       "planned_tier": "strong",
-      "provider": "claude-2",
+      "provider": "muse",
       "queued_at": "2026-10-20T01:08:46Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "39351829651",
-      "started_at": "2026-10-20T01:10:05Z",
+      "run_id": "39363732640",
+      "started_at": "2026-10-20T03:22:01Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6280930241"
+      ]
     },
     "1351": {
       "action": "build",
@@ -11684,9 +11684,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-20T03:17:51Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39363471955",
-    "what": "suggestions on gpt"
+    "at": "2026-10-20T03:22:01Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39363732640",
+    "what": "build #1350 on muse"
   },
   "last_sweep": {
     "at": "2026-10-20T03:16:16Z",
