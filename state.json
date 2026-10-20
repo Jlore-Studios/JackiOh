@@ -6636,7 +6636,9 @@
     },
     "1384": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6289983037"
+      ],
       "difficulty_by": {
         "at": "2026-10-20T11:59:47Z",
         "difficulty": "medium",
@@ -6669,9 +6671,7 @@
       "started_at": "2026-10-20T12:01:46Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6289983037"
-      ]
+      "taken_asks": []
     },
     "1385": {
       "action": "build",
