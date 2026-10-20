@@ -6706,6 +6706,7 @@
     "1386": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-20T12:09:42Z",
         "difficulty": "medium",
@@ -6724,7 +6725,7 @@
         "reason": "`claude-5` stops mid-call: 5-hour usage is 40%, at or over its 40% cap; it resets at 2026-10-20T16:50:00Z",
         "trail": "- said: I'll start by checking for notes from an earlier pass, then read the code the plan touches.\n- Bash: {\"command\": \"ls -la .bot-notes.md 2>&1 | head -2; git status --short | head; git log --oneline | head -3; wc -l crates/tools/src/fuzz.rs crates/tools/src/duos_fuzz.rs crates/engine/tests/rules/reduce\u2026\n- Bash: {\"command\": \"(cargo build --release -p jackioh-tools 2>&1 | tail -3) \", \"run_in_background\": true}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-1386/.bot-notes.md\"}\n- said: The notes hold only the plan, so no work has started. Next I'll read the code the plan touches.\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-1386/crates/tools/src/fuzz.rs\", \"limit\": 330}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-1386/crates/tools/src/fuzz.rs\", \"offset\": 330, \"limit\": 700}"
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
