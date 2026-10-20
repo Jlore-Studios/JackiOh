@@ -39,6 +39,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
+    use crate::filler;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -50,16 +52,8 @@ mod tests {
     /// R80's cap, restated from `engine/src/config.rs` so a change to it fails here by name.
     const LIBRARY_CAP: usize = 60;
 
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
-
     fn library_of(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
         s.state().players[player].library.clone()
-    }
-
-    fn def_ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
     /// p1 plays Shade-iris (base unless `radiant_face`) at `seed`.

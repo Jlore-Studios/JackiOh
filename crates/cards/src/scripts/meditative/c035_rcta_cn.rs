@@ -75,6 +75,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -87,10 +88,6 @@ mod tests {
     // Untagged Trap, set face-down; it answers a Unit play, so it stays set under this Spell (#60
     // Bear Honeypot answers any (1) Cost play and would leave the field before the Spell resolved).
     const SHEEPISH: &str = "core-041";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// p1 holds RCTA (base unless `radiant_face`) and a Vanilla stands in lane 1; both sides keep
     /// cards in hand so no turn auto-ends.

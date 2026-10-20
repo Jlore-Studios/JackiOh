@@ -7,8 +7,12 @@
 //!
 //! [`problems`] is the registry's check: no id twice, every id a lower-case slug short enough to
 //! travel as a settings text (R633, the client keeps a player's picks in a settings group), and
-//! exactly one default per kind a player picks. A cosmetic never enters `PlayerView`, an action,
-//! the log or a replay hash: none of it is a rule (CLAUDE.md rule 7).
+//! exactly one default per kind a player picks, and a chase exactly when Legendary or Mythic
+//! (R1333000). A cosmetic never enters `PlayerView`, an action, the log or a replay hash: none of
+//! it is a rule (CLAUDE.md rule 7).
+//!
+//! R1333000: a cosmetic's rarity is [`CosmeticRarity`], its own scale, never its card's: nothing
+//! here converts it to or from the catalog's `PrintedRarity`, so no code can tie one to the other.
 //!
 //! R1313000: the full-art faces of the hero portraits' cards (R1017001) are cosmetics too, one per
 //! card, each naming its card. A player owns one on its card and never picks one, so the kind has
@@ -16,8 +20,8 @@
 //! card named by any other kind.
 
 use std::collections::BTreeSet;
+use std::fmt;
 
-use jackioh_engine::wire::PrintedRarity;
 use serde::{Deserialize, Serialize};
 
 use crate::config::PLAYER_SETTINGS_TEXT_MAX_LENGTH;
@@ -60,8 +64,10 @@ impl CosmeticKind {
     }
 }
 
-/// How rare a cosmetic is, so a pack can later roll per-card cosmetics by rarity (R1295000).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+/// How rare a cosmetic is (R1295000): its own scale, commonest first, never tied to the rarity of
+/// the card it goes on. It names its rarities as the catalog's `PrintedRarity` does, so both travel
+/// as the same words, but nothing converts one into the other (§14.2, R1333000).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum CosmeticRarity {
     Common,
     Rare,
@@ -80,19 +86,38 @@ impl CosmeticRarity {
         Self::Mythic,
     ];
 
-    /// The same rarity on §5's scale, which a duplicate's cosmetic roll draws on (R1301002).
-    pub fn printed(self) -> PrintedRarity {
+    /// The rarity's name, as the registry, the wire and a token's inventory key spell it.
+    pub fn as_str(self) -> &'static str {
         match self {
-            Self::Common => PrintedRarity::Common,
-            Self::Rare => PrintedRarity::Rare,
-            Self::Epic => PrintedRarity::Epic,
-            Self::Legendary => PrintedRarity::Legendary,
-            Self::Mythic => PrintedRarity::Mythic,
+            Self::Common => "Common",
+            Self::Rare => "Rare",
+            Self::Epic => "Epic",
+            Self::Legendary => "Legendary",
+            Self::Mythic => "Mythic",
         }
     }
 
-    /// The rarity's place on §5's scale, commonest first (R1305003): a cosmetic token buys a
-    /// cosmetic at its tier or below.
+    /// The rarity `text` names, as [`Self::as_str`] spells it.
+    pub fn named(text: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|rarity| rarity.as_str() == text)
+    }
+
+    /// The chase tier, Legendary and Mythic (§14.2, R1333000).
+    pub fn is_chase(self) -> bool {
+        self >= Self::Legendary
+    }
+
+    /// The rarities a cosmetic pack slot that rolled `self` reads, in order (R1306001): its own,
+    /// then each lower one from the nearest down, then each higher one from the nearest up.
+    pub fn fallback_order(self) -> Vec<Self> {
+        let mut order = vec![self];
+        order.extend(Self::ALL.iter().rev().copied().filter(|rarity| *rarity < self));
+        order.extend(Self::ALL.iter().copied().filter(|rarity| *rarity > self));
+        order
+    }
+
+    /// The rarity's place on the cosmetics' scale, commonest first (R1305003): a cosmetic token
+    /// buys a cosmetic at its tier or below.
     pub fn tier(self) -> u8 {
         match self {
             Self::Common => 0,
@@ -101,6 +126,12 @@ impl CosmeticRarity {
             Self::Legendary => 3,
             Self::Mythic => 4,
         }
+    }
+}
+
+impl fmt::Display for CosmeticRarity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 
@@ -122,9 +153,10 @@ pub struct Cosmetic {
     /// false and must be owned (§14.12).
     #[serde(default)]
     pub starter: bool,
-    /// §14.2: a chase cosmetic, marked in the registry. No token pays for one; the Chase Shard
-    /// bar buys one, and one can drop by luck (§14.6). Nothing shipped marks one yet
-    /// (`seed-catalog` marks no chase yet), so everything shipped reads false (R1305003).
+    /// §14.2: a chase cosmetic. The mark agrees with the rarity, true exactly for a Legendary or
+    /// Mythic one, and [`problems`] refuses a registry where it does not (R1333000). No token pays
+    /// for one; the Chase Shard bar buys one, and one drops when a duplicate's roll or a cosmetic
+    /// pack slot lands on its tier (§14.6).
     #[serde(default)]
     pub chase: bool,
     /// The card a full art belongs to, by catalog id; no other kind names one (R1313000).
@@ -167,6 +199,13 @@ pub fn problems(cosmetics: &[Cosmetic]) -> Vec<String> {
                 "the {kind:?} {id:?} names the card {card:?}, which only a full art does"
             )),
             (_, None) => {}
+        }
+        // R1333000: a chase is exactly a Legendary or Mythic cosmetic.
+        if cosmetic.chase != cosmetic.rarity.is_chase() {
+            out.push(format!(
+                "the cosmetic {id:?} is {} and its chase mark is {}, but a cosmetic is a chase exactly when it is Legendary or Mythic",
+                cosmetic.rarity, cosmetic.chase
+            ));
         }
         if cosmetic.kind == CosmeticKind::FullArt && cosmetic.default {
             out.push(format!("the full art {id:?} is a default, which no full art is"));
@@ -222,12 +261,12 @@ pub fn pack_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
 }
 
 /// The cosmetics a cosmetic pack may drop (R1306000): every entry, per-card or account, that is
-/// not a default, a starter or a chase, in the registry's order. A chase comes from the Chase
-/// Shard bar (§14.2), and one that names a card, a full art, drops on that card alone (R1313000).
+/// not a default or a starter, in the registry's order. A chase drops when a slot lands on its
+/// tier (R1333000), and one that names a card, a full art, drops on that card alone (R1313000).
 pub fn cosmetic_pack_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
     cosmetics
         .iter()
-        .filter(|cosmetic| !cosmetic.default && !cosmetic.starter && !cosmetic.chase)
+        .filter(|cosmetic| !cosmetic.default && !cosmetic.starter)
         .cloned()
         .collect()
 }
@@ -525,14 +564,82 @@ mod tests {
             .map(|cosmetic| cosmetic.id)
             .collect();
         assert_eq!(ids, vec!["foil-new", "finish-new", "border-new", "full-art-new"]);
+    }
+
+    #[test]
+    fn r1333000_a_chase_is_a_legendary_or_mythic_cosmetic_and_nothing_else() {
         assert_eq!(
-            CosmeticRarity::ALL.map(CosmeticRarity::printed),
+            CosmeticRarity::ALL.map(CosmeticRarity::is_chase),
+            [false, false, false, true, true]
+        );
+        let marked = |id: &str, rarity: CosmeticRarity, chase: bool| Cosmetic {
+            rarity,
+            chase,
+            ..entry(id, CosmeticKind::Foil, false)
+        };
+        for (rarity, chase) in [
+            (CosmeticRarity::Common, true),
+            (CosmeticRarity::Epic, true),
+            (CosmeticRarity::Legendary, false),
+            (CosmeticRarity::Mythic, false),
+        ] {
+            let mut cosmetics = defaults();
+            cosmetics.push(marked("foil-wrong", rarity, chase));
+            assert_eq!(
+                problems(&cosmetics),
+                vec![format!(
+                    "the cosmetic \"foil-wrong\" is {rarity} and its chase mark is {chase}, but a cosmetic is a chase exactly when it is Legendary or Mythic"
+                )]
+            );
+        }
+        let mut fine = defaults();
+        fine.extend([
+            marked("foil-rare", CosmeticRarity::Rare, false),
+            marked("foil-legendary", CosmeticRarity::Legendary, true),
+            marked("foil-mythic", CosmeticRarity::Mythic, true),
+        ]);
+        assert!(problems(&fine).is_empty(), "{:?}", problems(&fine));
+
+        // The shipped chases are its two Legendary starters, which every account owns already.
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        let chases: Vec<&Cosmetic> = cosmetics.iter().filter(|cosmetic| cosmetic.chase).collect();
+        assert_eq!(
+            chases
+                .iter()
+                .map(|cosmetic| cosmetic.id.as_str())
+                .collect::<Vec<_>>(),
+            ["foil-cracked-ice", "finish-gilded-edge"]
+        );
+        assert!(chases.iter().all(|cosmetic| cosmetic.starter));
+    }
+
+    #[test]
+    fn r1333000_a_cosmetic_rarity_travels_as_its_own_name() {
+        for rarity in CosmeticRarity::ALL {
+            assert_eq!(CosmeticRarity::named(rarity.as_str()), Some(rarity));
+            assert_eq!(rarity.to_string(), rarity.as_str());
+            assert_eq!(
+                serde_json::to_string(&rarity).unwrap(),
+                format!("\"{}\"", rarity.as_str())
+            );
+        }
+        assert_eq!(CosmeticRarity::named("common"), None);
+        assert_eq!(CosmeticRarity::named(""), None);
+        // Commonest first, as the tiers count.
+        assert!(CosmeticRarity::ALL.windows(2).all(|pair| pair[0] < pair[1]));
+        assert!(
+            CosmeticRarity::ALL
+                .windows(2)
+                .all(|pair| pair[0].tier() < pair[1].tier())
+        );
+        assert_eq!(
+            CosmeticRarity::Epic.fallback_order(),
             [
-                PrintedRarity::Common,
-                PrintedRarity::Rare,
-                PrintedRarity::Epic,
-                PrintedRarity::Legendary,
-                PrintedRarity::Mythic
+                CosmeticRarity::Epic,
+                CosmeticRarity::Rare,
+                CosmeticRarity::Common,
+                CosmeticRarity::Legendary,
+                CosmeticRarity::Mythic
             ]
         );
     }

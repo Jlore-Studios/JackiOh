@@ -58,6 +58,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -299,8 +300,7 @@ mod tests {
                     "playerId": "p1",
                     "nonce": "mid-replay",
                 }));
-                let thawed: GameState =
-                    serde_json::from_value(serde_json::to_value(s.state()).expect("JSON")).expect("a state");
+                let thawed: GameState = serde_json::from_value(js(s.state())).expect("a state");
                 let live = reduce(s.state(), &action);
                 assert!(live.error.is_none());
                 assert_eq!(

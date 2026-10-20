@@ -111,6 +111,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -136,19 +138,9 @@ mod tests {
         json!([{ "pick": "hero", "player": "p2" }])
     }
 
-    /// The side's own keys over the defaults.
-    fn spread(mut defaults: Value, side: Value) -> Value {
-        if let (Some(into), Some(from)) = (defaults.as_object_mut(), side.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        defaults
-    }
-
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
         scenario(json!({
-            "p1": spread(
+            "p1": merged(
                 json!({
                     "hand": [FILLER, FILLER],
                     "library": [FILLER, FILLER, FILLER],
@@ -156,7 +148,7 @@ mod tests {
                 }),
                 p1,
             ),
-            "p2": spread(json!({ "hand": [FILLER, FILLER], "library": [FILLER, FILLER, FILLER] }), p2),
+            "p2": merged(json!({ "hand": [FILLER, FILLER], "library": [FILLER, FILLER, FILLER] }), p2),
         }))
     }
 
@@ -188,10 +180,6 @@ mod tests {
             .into_iter()
             .filter(|action| matches!(action, ActionBody::Activate { instance_id, .. } if *instance_id == card))
             .collect()
-    }
-
-    fn def_ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
     /// The marks a seat's view shows on the unit with this id, anywhere on the board, as JSON.

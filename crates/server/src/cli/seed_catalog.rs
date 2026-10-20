@@ -236,7 +236,8 @@ async fn write_catalog(
     }
     // SPEC §14.2: the cosmetics registry (`cosmetics.json`, R1295000) beside the catalog, in
     // migration 0045's `public.cosmetics`, so an owned cosmetic has a real foreign key. Upserted and
-    // never deleted, as a card is. The registry marks no chase yet, so `chase` keeps its default.
+    // never deleted, as a card is. `chase` keeps its default: nothing reads the column, and the
+    // registry's mark is its rarity's (R1333000).
     let cosmetics = crate::cosmetics::shipped().map_err(|error| anyhow!("cosmetics.json: {error}"))?;
     sqlx::query(
         r#"insert into public.cosmetics (id, kind, name, rarity, is_default)

@@ -53,6 +53,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::script;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const MAGIC_JAMMED: &str = "core-036";
@@ -76,7 +77,7 @@ mod tests {
     }
 
     fn view_json(s: &Scenario, seat: &str) -> Value {
-        serde_json::to_value(s.view(seat)).expect("a view is JSON")
+        js(&s.view(seat))
     }
 
     /// Every key of `expected` is in `actual` with that value.
@@ -96,7 +97,7 @@ mod tests {
             let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
                 assert_eq!(
-                    serde_json::to_value(&face.targets).expect("declarations are JSON"),
+                    js(&face.targets),
                     json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["backrow"] } }])
                 );
             }

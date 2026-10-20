@@ -57,6 +57,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::script;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -266,11 +267,11 @@ mod tests {
             crate::register_all();
             let faces = script();
             assert_eq!(
-                serde_json::to_value(&faces.base.targets).expect("declarations serialise"),
+                js(&faces.base.targets),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"], "tags": ["Human"] } }])
             );
             assert_eq!(
-                serde_json::to_value(&faces.radiant.targets).expect("declarations serialise"),
+                js(&faces.radiant.targets),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }])
             );
         }

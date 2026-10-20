@@ -63,6 +63,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::script;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -74,10 +75,6 @@ mod tests {
     const P1_FILLER: &str = "core-016"; // Hit Job, a spell with no hand trigger.
     const P1_SECOND: &str = "core-044"; // True Strike, the other card a choice would weigh.
     const P2_FILLER: &str = "core-005"; // Stockpile, likewise.
-
-    fn def_ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
-    }
 
     fn hinder_on_top(seed: &str, is_radiant: bool, turn: Option<i32>, hand: &[&str]) -> Scenario {
         let mut options = json!({

@@ -77,6 +77,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -98,10 +99,6 @@ mod tests {
 
     fn filler(count: usize) -> Value {
         json!(vec![FILLER; count])
-    }
-
-    fn def_ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
     mod m57_clip_farming_critikal {

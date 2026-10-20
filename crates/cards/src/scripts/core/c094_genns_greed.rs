@@ -74,6 +74,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -95,10 +96,6 @@ mod tests {
     /// an auto-end starts the opponent's turn — with their draw — inside the same `play` step, which
     /// would move cards these tests are watching. A unit that could still switch position prevents it.
     const KEEP_TURN: &str = "core-008"; // #8 Mr. Vanilla
-
-    fn def_ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
-    }
 
     /// p1's four off-field piles, by def id.
     struct Zones {

@@ -222,6 +222,25 @@ pub(crate) fn merged(mut base: serde_json::Value, over: serde_json::Value) -> se
     base
 }
 
+/// `count` copies of Core #5 (Stockpile, a Spell), as a side's `library` or `hand`: a pile that keeps a
+/// test's draws from running dry.
+#[cfg(test)]
+pub(crate) fn filler(count: usize) -> serde_json::Value {
+    serde_json::json!(vec!["core-005"; count])
+}
+
+/// The cards' def ids, in order.
+#[cfg(test)]
+pub(crate) fn def_ids(cards: &[jackioh_engine::CardInstance]) -> Vec<String> {
+    cards.iter().map(|card| card.def_id.clone()).collect()
+}
+
+/// Every event the scenario has logged so far, each as its JSON.
+#[cfg(test)]
+pub(crate) fn events_json(s: &jackioh_engine::testkit::Scenario) -> Vec<serde_json::Value> {
+    s.events().iter().map(js).collect()
+}
+
 /// R386, B3.4 rule 3's Number row: one Upgrade or Degrade of `card` that draws its declared number
 /// `key`, applied as `tune_once` applies that row — `step_param` by the step `steppable_params` offers
 /// that way. Panics unless a step that way can move the number; returns the value it moves to.

@@ -36,6 +36,9 @@ pub fn script() -> CardScripts {
 mod tests {
     use std::collections::BTreeSet;
 
+    use crate::def_ids;
+    use crate::events_json;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -57,17 +60,9 @@ mod tests {
 
     use crate::scenario;
 
-    fn events_json(s: &Scenario) -> Vec<Value> {
-        s.events().iter().map(|event| serde_json::to_value(event).expect("an event is JSON")).collect()
-    }
-
     fn own_library_cards(s: &Scenario) -> Vec<Value> {
-        let view = serde_json::to_value(s.view(P1)).expect("a view is JSON");
+        let view = js(&s.view(P1));
         view["you"]["ownLibrary"]["cards"].as_array().cloned().unwrap_or_default()
-    }
-
-    fn def_ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
     fn set_power(s: &mut Scenario, id: &str, power: &str) {

@@ -16,7 +16,7 @@ index in three digits after a `c`, then its slug with every `-` and `.` an `_` (
 | # | File | What changes | A gate fails without it |
 |---|---|---|---|
 | 1 | `spec/08-catalog.md` §8.7 (§8.1 Core, §8.6 Classic; `spec/07-tokens.md` for a token) | the card's row: the only source of card text (CLAUDE.md) | none |
-| 2 | `crates/cards/catalog.json` | the entry, after the set's highest card index and before its shared tokens (`T-AI-…`); a token follows its card | `catalog check`, `tests/cross/catalog.rs` |
+| 2 | `crates/cards/catalog.json` | the entry, after the set's highest card index and before its shared tokens (`T-AI-…`); a token follows its card; it carries a `flavor`, chosen by [docs/polish/8-flavor.md](polish/8-flavor.md) (a change to a flavor alone needs no fragment, R1437000) | `catalog check`, `tests/cross/catalog.rs` |
 | 3 | `crates/cards/src/scripts/classic_plus/cNNN_slug.rs` | the script and its tests in one file ([§2](#2-templates)) | the build: `build.rs` refuses a catalog id with no file |
 | 4 | `crates/cards/tests/cross/catalog.rs` | the card's fixture row in `CLASSIC_PLUS`; `RARITY_COUNTS` and `SET_SIZES` (the totals and row counts are their sums) | itself |
 | 5 | `crates/tools/src/catalog.rs` | the set's `cards` and `rarities` in `sets()`, `expected_tag_count` for each tag the card has, and the totals `the_shipped_catalog_passes_every_check` pins | `catalog check`, `cargo test -p jackioh-tools` |
@@ -58,7 +58,7 @@ Also grep the Markdown for the stated totals (`396 cards`, `84 tokens`, `480`) a
 
 **Catalog entry** (C+ #6). `loc` is the script's lines of code, from `cargo jackioh catalog loc <script path>` once the script is written
 ([§3](#3-the-patch-and-its-order)); text is the printed text, with `{key}` where a number is declared in `params`. A token has
-`"token": true`, `"rarity": "Token"` and the `Token` tag.
+`"token": true`, `"rarity": "Token"` and the `Token` tag. A new entry, a token's too, carries a `flavor` (§1 row 2).
 
 ```json
 "classicplus-006": {
@@ -131,6 +131,14 @@ mod tests {
     // …one case per behaviour in the spec row, base and radiant separately.
 }
 ```
+
+**Shared test helpers.** `crates/cards/src/lib.rs` holds the helpers the card tests share, each `#[cfg(test)]` and taken
+with `use crate::<name>;`; use them rather than a copy: `scenario` (the shipped cards registered, then the testkit's),
+`js` (an engine value as JSON, never `serde_json::to_value(…).expect(…)`), `merged` (TS `{ ...base, ...over }`: a
+side's setup over its defaults), `matches_object` (TS `toMatchObject`), `filler(count)` (`count` Stockpiles, Core #5,
+for a library), `def_ids` (the cards' def ids), `events_json` (the events so far, as JSON), `unit_or_blank`,
+`stand_in_backrow`, `give_flying`, `give_lucky`, and `upgrade_number`, `degrade_number`, `can_upgrade_number` and
+`can_degrade_number`. Keep a local helper only when its body differs.
 
 ## 3. The patch, and its order
 

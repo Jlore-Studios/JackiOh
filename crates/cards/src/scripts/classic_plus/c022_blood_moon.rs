@@ -50,6 +50,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -70,24 +71,14 @@ mod tests {
         json!([{ "pick": "hero", "player": "p2" }])
     }
 
-    fn spread(defaults: Value, overrides: &Value) -> Value {
-        let mut out = defaults;
-        if let (Some(into), Some(from)) = (out.as_object_mut(), overrides.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        out
-    }
-
     /// p1 holds Blood Moon face-down in backrow lane 1; p2 is the active enemy who heals.
     fn moon_up(radiant_face: bool, p2: Value, p1: Value) -> Scenario {
         crate::register_all();
-        let mut side1 = spread(json!({ "hand": [FILLER], "library": DECK }), &p1);
+        let mut side1 = merged(json!({ "hand": [FILLER], "library": DECK }), p1.clone());
         let mut backrow = vec![json!({ "def": MOON, "lane": 1, "faceUp": false, "radiant": radiant_face })];
         backrow.extend(p1.get("backrow").and_then(Value::as_array).cloned().unwrap_or_default());
         side1["backrow"] = Value::Array(backrow);
-        let side2 = spread(json!({ "hand": [FILLER], "library": DECK }), &p2);
+        let side2 = merged(json!({ "hand": [FILLER], "library": DECK }), p2);
         scenario(json!({ "active": "p2", "p1": side1, "p2": side2 }))
     }
 

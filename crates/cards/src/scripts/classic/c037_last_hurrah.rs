@@ -43,6 +43,7 @@ pub fn script() -> CardScripts {
 // case uses C #4 Palantir's aura, whose own test file proves the limit in full.
 #[cfg(test)]
 mod tests {
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const HURRAH: &str = "classic-037";
@@ -59,21 +60,11 @@ mod tests {
 
     use crate::js;
 
-    /// `over`'s keys win over `base`'s.
-    fn spread(mut base: Value, over: Value) -> Value {
-        if let (Some(into), Some(from)) = (base.as_object_mut(), over.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        base
-    }
-
     /// `p1`, `p2` override each side's setup (`json!({})` for none).
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
         scenario(json!({
-            "p1": spread(json!({ "hand": [{ "def": HURRAH, "radiant": radiant_face }, "core-010"], "library": DECK }), p1),
-            "p2": spread(json!({ "hand": [FILLER, FILLER], "library": [FILLER, FILLER, FILLER, FILLER] }), p2),
+            "p1": merged(json!({ "hand": [{ "def": HURRAH, "radiant": radiant_face }, "core-010"], "library": DECK }), p1),
+            "p2": merged(json!({ "hand": [FILLER, FILLER], "library": [FILLER, FILLER, FILLER, FILLER] }), p2),
         }))
     }
 

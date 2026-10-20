@@ -99,6 +99,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::script;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     /// Registers the catalog first: the engine's testkit cannot name the cards crate.
@@ -299,9 +300,7 @@ mod tests {
             assert_eq!(unit_def(&s, "p1", 1).as_deref(), Some("core-007"));
 
             // §9.3: the paused game is plain JSON.
-            let round_trip: GameState =
-                serde_json::from_value(serde_json::to_value(s.state()).expect("the state is JSON"))
-                    .expect("the state reads back");
+            let round_trip: GameState = serde_json::from_value(js(s.state())).expect("the state reads back");
             assert_eq!(&round_trip, s.state());
 
             let offered = s

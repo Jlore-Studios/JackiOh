@@ -47,6 +47,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -54,10 +56,6 @@ mod tests {
 
     const FIRST_DAY: &str = "meditative-033";
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// p1 holds First Day (base unless `radiant_face`); both sides keep cards in hand so no turn
     /// auto-ends.
@@ -101,8 +99,7 @@ mod tests {
                     assert!(!card.radiant);
                 }
                 // The opponent sees a count, never the cards (MD-B12).
-                let view: Value =
-                    serde_json::to_value(view_for(s.state(), P2)).expect("the view serialises");
+                let view: Value = js(&view_for(s.state(), P2));
                 assert_eq!(view["opponent"]["hand"], json!({ "count": 3 }));
             }
 

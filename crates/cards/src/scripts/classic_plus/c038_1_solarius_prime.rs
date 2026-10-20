@@ -44,6 +44,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use std::collections::BTreeSet;
 
+    use crate::events_json;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -59,12 +61,8 @@ mod tests {
 
     use crate::scenario;
 
-    fn events_json(s: &Scenario) -> Vec<Value> {
-        s.events().iter().map(|event| serde_json::to_value(event).expect("an event is JSON")).collect()
-    }
-
     fn view(s: &Scenario, seat: PlayerId) -> Value {
-        serde_json::to_value(s.view(seat)).expect("a view is JSON")
+        js(&s.view(seat))
     }
 
     fn text(value: &Value, key: &str) -> String {
@@ -323,7 +321,7 @@ mod tests {
                 };
                 ended += 1;
                 assert!(!events[over..].iter().any(|event| event["type"] == "cardAnnounced"), "{seed}");
-                assert_eq!(serde_json::to_value(s.state().result).expect("a result is JSON")["winner"], "p1");
+                assert_eq!(js(&s.state().result)["winner"], "p1");
             }
             assert!(ended > 0);
         }

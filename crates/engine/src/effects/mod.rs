@@ -149,9 +149,9 @@ pub use turn_hooks::*;
 pub use turns::*;
 pub use win::*;
 
-// C+ #29's two numbers, which TS's `effects/lastBoard.ts` stated and this barrel exported; they live
-// in `crate::config` now (CLAUDE.md rule 9, SURFACE §6.4).
-pub use crate::config::{LAST_BOARD_CARD_COST, LAST_BOARD_DISCOVER_OPTIONS};
+// §6.3 Discover's offer count and C+ #29's card cost, which TS's `effects/lastBoard.ts` stated and this
+// barrel exported; they live in `crate::config` now (CLAUDE.md rule 9, SURFACE §6.4).
+pub use crate::config::{DISCOVER_OPTIONS, LAST_BOARD_CARD_COST};
 
 // Verbs TS's barrel re-exported from `subsystems/` (`effects/index.ts`, its last lines).
 // B5 E34, R416: R29's scorer choosing a whole hand (C+ #27 Zephrys Zealotism).

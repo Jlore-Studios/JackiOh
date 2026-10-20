@@ -893,8 +893,8 @@ pub const VIEW_EVENT_LIMIT: usize = 32;
 pub const RADIANT_SHEEP_TRIBUTE_VALUE: i32 = 3;
 pub const SHEEP_TRIBUTE_VALUE: i32 = 2;
 
-/// §6.3 Discover: "choose 1 of 3" (`effects::last_board`).
-pub const LAST_BOARD_DISCOVER_OPTIONS: i32 = 3;
+/// §6.3 Discover: "choose 1 of 3" (`effects::choose`, `effects::last_board`, `subsystems::scorer`).
+pub const DISCOVER_OPTIONS: i32 = 3;
 /// C+ #29: "It costs (0)", "Each costs (0)" — a `costOverride` (R65) (`effects::last_board`).
 pub const LAST_BOARD_CARD_COST: i32 = 0;
 
@@ -1635,6 +1635,8 @@ pub const CUSTOM_ATTACK_MAX: i32 = 12;
 pub const CUSTOM_HEALTH_MAX: i32 = 12;
 /// R915001: the highest attack or health a custom Unit's Radiant face prints, twice the base caps.
 pub const CUSTOM_RADIANT_STAT_MAX: i32 = 24;
+/// R915001: a custom Unit's Radiant stat the frame leaves unprinted is twice the base one (`custom::radiant_stat`).
+pub const CUSTOM_RADIANT_STAT_FACTOR: i32 = 2;
 /// R915001: the most keywords a custom Unit prints.
 pub const CUSTOM_KEYWORDS_MAX: usize = 4;
 /// R915001: the keywords a custom Unit may print, and the card kit may give: the game's own simple

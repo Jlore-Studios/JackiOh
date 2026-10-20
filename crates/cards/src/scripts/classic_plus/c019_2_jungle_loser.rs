@@ -102,6 +102,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::js;
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -117,17 +119,6 @@ mod tests {
     const FILLER: &str = "core-005";
     const DECK: [&str; 6] = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
 
-    /// TS `{ ...defaults, ...overrides }` on a side setup: every key of `overrides` replaces the default's.
-    fn spread(defaults: Value, overrides: &Value) -> Value {
-        let mut out = defaults;
-        if let (Some(into), Some(from)) = (out.as_object_mut(), overrides.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        out
-    }
-
     /// p1's Jungle Loser in lane 2 (face as given), the rest of p1's field and p2's side.
     fn jungle(p1_field: Value, radiant_face: bool, p2: Value, seed: Option<&str>) -> Scenario {
         crate::register_all();
@@ -135,7 +126,7 @@ mod tests {
         field.extend(p1_field.as_array().cloned().unwrap_or_default());
         let mut opts = json!({
             "p1": { "hand": [FILLER], "library": DECK, "field": field },
-            "p2": spread(json!({ "hand": [FILLER], "library": DECK }), &p2),
+            "p2": merged(json!({ "hand": [FILLER], "library": DECK }), p2),
         });
         if let Some(seed) = seed {
             opts["seed"] = json!(seed);
@@ -409,14 +400,12 @@ mod tests {
                     Some("jungle-replay"),
                 ));
                 let action = Action::new(ActionBody::EndTurn, P1, "jungle-replay");
-                let thawed: GameState =
-                    serde_json::from_value(serde_json::to_value(s.state()).expect("JSON")).expect("a state");
+                let thawed: GameState = serde_json::from_value(js(s.state())).expect("a state");
                 let live = reduce(s.state(), &action);
                 assert!(live.error.is_none());
                 assert!(live.events.iter().any(|event| event.event_type() == GameEventType::AttackDeclared));
                 assert_eq!(hash_state(&reduce(&thawed, &action).state), hash_state(&live.state));
-                let round: GameState =
-                    serde_json::from_value(serde_json::to_value(&live.state).expect("JSON")).expect("a state");
+                let round: GameState = serde_json::from_value(js(&live.state)).expect("a state");
                 assert_eq!(round, live.state);
             }
         }

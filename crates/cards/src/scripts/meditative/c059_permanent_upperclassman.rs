@@ -69,14 +69,12 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const UPPERCLASSMAN: &str = "meditative-059";
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// p1 holds the Upperclassman (base unless `radiant_face`); both sides keep cards in hand, and p1
     /// the mana to play its spare one once the (4) is paid, so no turn auto-ends.
@@ -188,8 +186,7 @@ mod tests {
 
     /// The granted lines on p1's Unit in `lane`, as the client reads them.
     fn granted_lines(s: &Scenario, lane: usize) -> Vec<String> {
-        let view: Value =
-            serde_json::to_value(view_for(s.state(), PlayerId::P1)).expect("the view serialises");
+        let view: Value = js(&view_for(s.state(), PlayerId::P1));
         view["you"]["units"][lane - 1]["grants"]
             .as_array()
             .cloned()
@@ -350,9 +347,7 @@ mod tests {
             kill(&mut s, &unit);
             let made = fused(&s);
             let before = def_of(Some(s.state()), &made[0].def_id).clone();
-            let round: GameState =
-                serde_json::from_value(serde_json::to_value(s.state()).expect("serialises"))
-                    .expect("deserialises");
+            let round: GameState = serde_json::from_value(js(s.state())).expect("deserialises");
             let after = def_of(Some(&round), &made[0].def_id).clone();
             assert_eq!(after, before);
             assert_eq!(cost_now(&round, &made[0]), cost_now(s.state(), &made[0]));

@@ -119,6 +119,7 @@ pub fn script() -> CardScripts {
 // from the next play, as the played Clone Machine itself does.
 #[cfg(test)]
 mod tests {
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     /// The harness's import-time `registerAll()`: the engine's testkit cannot name the cards crate.
@@ -141,7 +142,7 @@ mod tests {
     }
 
     fn view_json(s: &Scenario, seat: &str) -> Value {
-        serde_json::to_value(s.view(seat)).expect("a view is JSON")
+        js(&s.view(seat))
     }
 
     fn view_events_of_type(view: &Value, event_type: &str) -> Vec<Value> {
@@ -399,7 +400,7 @@ mod tests {
                 .iter()
                 .filter(|event| matches!(event, GameEvent::LibraryOverflow { .. }))
                 .map(|event| {
-                    let event = serde_json::to_value(event).expect("an event is JSON");
+                    let event = js(event);
                     json!([event["player"], event["defId"], event["outcome"]])
                 })
                 .collect();

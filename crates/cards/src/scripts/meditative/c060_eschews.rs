@@ -89,6 +89,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -99,10 +100,6 @@ mod tests {
     const TIMMY: &str = "core-011";
     /// (1) Spell, deals 3 to a target; each cast makes the next Spell cost (1) less.
     const ECLIPSE: &str = "core-035";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     fn eclipse(target: &str) -> Value {
         json!({ "targets": [{ "pick": "instance", "instanceId": target }] })

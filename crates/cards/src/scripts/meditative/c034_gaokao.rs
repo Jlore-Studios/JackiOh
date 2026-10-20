@@ -60,6 +60,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -72,10 +73,6 @@ mod tests {
     const BROTHER: &str = "classicplus-076"; // CN Unit.
     const WALL: &str = "classic-041"; // Untagged Indestructible: survives, unbuffed.
     const HONEYPOT: &str = "core-060"; // Untagged Trap, set face-down.
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// Both sides hold a Vanilla and a Brother Lar; p1 also holds the Wall and a face-down
     /// Honeypot. p1 holds Gaokao (base unless `radiant_face`); both sides keep cards in hand so no

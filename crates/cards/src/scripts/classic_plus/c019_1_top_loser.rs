@@ -27,6 +27,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -47,21 +48,11 @@ mod tests {
     const FILLER: &str = "core-005";
     const DECK: [&str; 4] = [FILLER, FILLER, FILLER, FILLER];
 
-    fn spread(defaults: Value, overrides: &Value) -> Value {
-        let mut out = defaults;
-        if let (Some(into), Some(from)) = (out.as_object_mut(), overrides.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        out
-    }
-
     /// p2's Top Loser in lane 3; p1 is active with the given side.
     fn top_loser(p1: Value, radiant_face: bool, p2: Value) -> Scenario {
         crate::register_all();
-        let side1 = spread(json!({ "hand": [FILLER], "library": DECK }), &p1);
-        let mut side2 = spread(json!({ "hand": [FILLER], "library": DECK }), &p2);
+        let side1 = merged(json!({ "hand": [FILLER], "library": DECK }), p1);
+        let mut side2 = merged(json!({ "hand": [FILLER], "library": DECK }), p2.clone());
         let mut field = vec![json!({ "def": TOP, "lane": 3, "radiant": radiant_face })];
         field.extend(p2.get("field").and_then(Value::as_array).cloned().unwrap_or_default());
         side2["field"] = Value::Array(field);

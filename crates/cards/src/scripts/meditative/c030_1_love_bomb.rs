@@ -39,6 +39,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -47,10 +48,6 @@ mod tests {
     const BOMB: &str = "meditative-030-1";
     const MOON: &str = "classicplus-022"; // Trap: a heal on its controller's enemy becomes Pierce damage.
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// The `healed` events on `target` ("hero-p1"), as amounts.
     fn healed(s: &Scenario, target: &str) -> Vec<i32> {

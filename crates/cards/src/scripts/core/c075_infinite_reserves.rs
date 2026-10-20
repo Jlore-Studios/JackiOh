@@ -47,6 +47,7 @@ pub fn script() -> CardScripts {
 // card (§8.3 Engine cell), the catalog's own core-t-rush at 3/3 with no stat override, and playable.
 #[cfg(test)]
 mod tests {
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -157,8 +158,7 @@ mod tests {
             // One card played out of two and nothing drawn.
             assert_eq!(s.hand(P1).len(), 1);
             assert_eq!(s.pile(P1, "library").len(), 2);
-            let last: Vec<Value> =
-                s.last_events().iter().map(|event| serde_json::to_value(event).expect("an event")).collect();
+            let last: Vec<Value> = s.last_events().iter().map(js).collect();
             assert!(!last.iter().any(|event| event["type"] == "drawn"));
             // Cost 0, so the mana is untouched.
             s.expect_mana(P1, 4);

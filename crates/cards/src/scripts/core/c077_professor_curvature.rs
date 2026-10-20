@@ -56,6 +56,7 @@ pub fn script() -> CardScripts {
 // play validator charges, and confirmed by paying for the cost-4 card on the live turn.
 #[cfg(test)]
 mod tests {
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -103,7 +104,7 @@ mod tests {
 
     /// p1's first player modifier, as JSON.
     fn first_mod(s: &Scenario) -> Value {
-        serde_json::to_value(s.state().players.p1.mods.first()).expect("a modifier serialises")
+        js(&s.state().players.p1.mods.first())
     }
 
     /// The scenario every test plays on, with the shipped cards registered first.

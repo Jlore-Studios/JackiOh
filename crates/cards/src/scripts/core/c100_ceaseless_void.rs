@@ -67,6 +67,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
+    use crate::js;
     use jackioh_engine::mana::{effective_cost, printed_cost};
     use jackioh_engine::state::find_instance_mut;
     use jackioh_engine::testkit::*;
@@ -126,7 +128,7 @@ mod tests {
     /// the state check, `move.exile`). Writing them is writing exactly what those paths write, which is
     /// how a test reaches a game that has seen 97 cards without playing one.
     fn set_counters(s: &mut Scenario, counters: Value) -> Counters {
-        let mut merged = serde_json::to_value(s.state().counters).expect("the counters serialise");
+        let mut merged = js(&s.state().counters);
         for (key, value) in counters.as_object().expect("a partial of the four counters") {
             merged[key.as_str()] = value.clone();
         }
@@ -176,10 +178,6 @@ mod tests {
 
     fn kinds(keywords: &[Keyword]) -> Vec<KeywordKind> {
         keywords.iter().map(Keyword::kind).collect()
-    }
-
-    fn def_ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
     /// The names of the fields a script sets.

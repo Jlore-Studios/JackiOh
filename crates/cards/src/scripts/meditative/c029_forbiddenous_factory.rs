@@ -58,16 +58,13 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
     use jackioh_engine::testkit::*;
 
     const P2: PlayerId = PlayerId::P2;
 
     const FACTORY: &str = "meditative-029";
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// The `counterChanged` events, as JSON.
     fn changes(s: &Scenario) -> Vec<Value> {

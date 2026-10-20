@@ -38,15 +38,13 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const TECH: &str = "meditative-050";
     const LEADER: &str = "core-001"; // Big D-fender, a deckable non-token card.
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     fn table(cards: Vec<(&str, i32, i32)>) -> WinRateTable {
         WinRateTable {
@@ -273,8 +271,7 @@ mod tests {
             register_win_rates(table(vec![(LEADER, 30, 40)]));
             let mut s = casting("cn-tech-hidden", false);
             s.play(TECH, json!({}));
-            let view: Value =
-                serde_json::to_value(view_for(s.state(), PlayerId::P2)).expect("the view serialises");
+            let view: Value = js(&view_for(s.state(), PlayerId::P2));
             assert_eq!(view["opponent"]["hand"], json!({ "count": 2 }));
             let added = s
                 .hand(PlayerId::P1)
@@ -309,8 +306,7 @@ mod tests {
             let def = crate::card_def(&added[0].def_id);
             assert!(!def.token, "no token (R142)");
             // The opponent sees a count, never the card (R440).
-            let view: Value =
-                serde_json::to_value(view_for(s.state(), PlayerId::P2)).expect("the view serialises");
+            let view: Value = js(&view_for(s.state(), PlayerId::P2));
             assert_eq!(view["opponent"]["hand"], json!({ "count": 2 }));
         }
 

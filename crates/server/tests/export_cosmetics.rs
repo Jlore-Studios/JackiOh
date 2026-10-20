@@ -32,6 +32,9 @@ fn render() -> String {
         "export const COSMETIC_RARITIES = {} as const;\n",
         json(&CosmeticRarity::ALL)
     ));
+    // The cosmetics' own scale, a type of its own so the client cannot take it for a card's
+    // rarity (R1333000).
+    out.push_str("export type CosmeticRarity = (typeof COSMETIC_RARITIES)[number];\n");
     out.push_str(&format!(
         "export const COSMETIC_ID_MAX_LENGTH = {PLAYER_SETTINGS_TEXT_MAX_LENGTH};\n"
     ));

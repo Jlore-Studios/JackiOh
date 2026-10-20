@@ -15,7 +15,6 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
-use std::time::Duration;
 
 use jackioh_engine::config::TURN_CAP_PLAYER_TURNS;
 use jackioh_engine::{Action, GameOverReason, PlayerId, Winner};
@@ -26,7 +25,7 @@ use jackioh_server::api::series::{ensure_series_game, start_series};
 use jackioh_server::api::series_rules::{NewSeriesInput, pick_deck};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{MATCH_CEILING_MINUTES, RATING_DEVIATION_START, RATING_VOLATILITY_START};
-use jackioh_server::db::fake::FakeData;
+use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
 use jackioh_server::db::store::{
     Db, MatchActionRow, MatchClocks, MatchRow, MatchSeat, ResultRow, SeriesRow, StartMatchInput, StoreError,
     Ticket,
@@ -782,12 +781,11 @@ mod results_m7_t2 {
         // transaction. The first commits; the second's insert meets `results_pkey`, which the port
         // reports as `StoreError::Duplicate`. Simulate exactly that: this
         // store's first `results.insert` refuses as if the collision had happened, and the racing
-        // writer's row lands the moment the loser's transaction lets the store go, so the next
-        // `getByMatch` — run inside the retry's fresh transaction — sees the row the winner committed.
+        // writer's row lands before the loser's retry reads, so the next `getByMatch` — run inside
+        // the retry's fresh transaction — sees the row the winner committed.
         //
-        // The fake's one seam is `on_call`, called with the
-        // store held, so the racing writer is a thread queued on the store's lock instead: the lock
-        // is fair, so it writes after the loser rolls back and before the loser's retry reads.
+        // `on_call` injects the `Duplicate` on the first insert; `before_call` lands the winner's
+        // row inside the retry's own `getByMatch`, so no thread or wait stages the race.
         let winner_row: ResultRow = serde_json::from_value(json!({
             "matchId": MATCH_ID,
             "players": [A, B],
@@ -801,25 +799,24 @@ mod results_m7_t2 {
         .expect("a ResultRow");
         let collided = Arc::new(AtomicBool::new(false));
         {
-            let data = fake(&app).clone();
-            let collided = collided.clone();
-            let winner_row = winner_row.clone();
-            fake(&app).lock().await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
-                if method != "results.insert" || collided.swap(true, Ordering::SeqCst) {
+            let mut store = fake(&app).lock().await;
+            let first_insert = collided.clone();
+            store.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
+                if method != "results.insert" || first_insert.swap(true, Ordering::SeqCst) {
                     return Ok(());
                 }
-                // The racing writer's commit: visible once the loser's transaction rolls back.
-                let (queued, waiting) = std::sync::mpsc::channel::<()>();
-                let data = data.clone();
-                let row = winner_row.clone();
-                std::thread::spawn(move || {
-                    let _ = queued.send(());
-                    data.blocking_lock().tables.results.push(row);
-                });
-                let _ = waiting.recv();
-                // Long enough for the writer to be queued on the lock this transaction holds.
-                std::thread::sleep(Duration::from_millis(50));
                 Err(StoreError::Duplicate(MATCH_ID.to_owned()))
+            }));
+            let collided = collided.clone();
+            let winner_row = winner_row.clone();
+            store.before_call = Some(Arc::new(move |method: &str, tables: &mut FakeTables| {
+                if method == "results.getByMatch"
+                    && collided.load(Ordering::SeqCst)
+                    && !tables.results.iter().any(|row| row.match_id == MATCH_ID)
+                {
+                    tables.results.push(winner_row.clone());
+                }
+                CallOutcome::Proceed
             }));
         }
 

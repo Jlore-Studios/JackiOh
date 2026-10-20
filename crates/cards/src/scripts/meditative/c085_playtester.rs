@@ -64,6 +64,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -71,10 +73,6 @@ mod tests {
 
     const PLAYTESTER: &str = "meditative-085";
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// p1's Playtester stands on the field (base unless `radiant_face`); both sides hold and draw
     /// fillers, so turns pass normally.
@@ -142,8 +140,7 @@ mod tests {
                         made.into_iter().find(|card| card.def_id == id).expect("the Book");
                     assert!(!book.radiant);
                     // Hidden from the opponent: a count, never the card.
-                    let view: Value =
-                        serde_json::to_value(s.view(P2)).expect("the view serialises");
+                    let view: Value = js(&s.view(P2));
                     assert_eq!(view["opponent"]["hand"], json!({ "count": hand.len() }));
                     assert!(!serde_json::to_string(&view["events"]).expect("events").contains(id));
                 }

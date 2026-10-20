@@ -116,6 +116,8 @@ pub fn script() -> CardScripts {
 // script edit that moves one fails the guard that names it rather than a silent comparison.
 #[cfg(test)]
 mod tests {
+    use crate::events_json;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -193,16 +195,12 @@ mod tests {
     }
 
     fn preview(s: &Scenario) -> Option<Value> {
-        let view = serde_json::to_value(s.view(P1)).expect("a view is JSON");
+        let view = js(&s.view(P1));
         let audit_id = s.card(AUDIT).id.clone();
         view["you"]["hand"]
             .as_array()
             .and_then(|hand| hand.iter().find(|card| card["instanceId"] == audit_id.as_str()))
             .and_then(|card| card.get("preview").cloned())
-    }
-
-    fn events_json(s: &Scenario) -> Vec<Value> {
-        s.events().iter().map(|event| serde_json::to_value(event).expect("an event is JSON")).collect()
     }
 
     #[test]
@@ -297,7 +295,7 @@ mod tests {
         #[test]
         fn r81_chooses_with_the_play_all_permanents_or_only_the_opponents() {
             assert_eq!(
-                serde_json::to_value(&super::super::script().radiant.modes).expect("modes are JSON"),
+                js(&super::super::script().radiant.modes),
                 json!([{ "kind": "mode", "options": [ALL, THEIRS] }])
             );
             let mut all = audit(true, json!({ "field": [LOW] }), json!({ "field": [LOW, HIGH] }));

@@ -72,6 +72,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -92,20 +93,9 @@ mod tests {
     const FILLER: &str = "core-005";
     const DECK: [&str; 4] = [FILLER, FILLER, FILLER, FILLER];
 
-    /// TS `{ ...defaults, ...overrides }` on a side setup: every key of `overrides` replaces the default's.
-    fn spread(defaults: Value, overrides: &Value) -> Value {
-        let mut out = defaults;
-        if let (Some(into), Some(from)) = (out.as_object_mut(), overrides.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        out
-    }
-
     fn league(p1: Value, radiant_face: bool, seed: Option<&str>) -> Scenario {
         crate::register_all();
-        let mut side1 = spread(json!({ "library": DECK }), &p1);
+        let mut side1 = merged(json!({ "library": DECK }), p1.clone());
         let mut hand = vec![json!({ "def": LEAGUE, "radiant": radiant_face }), json!(FILLER)];
         hand.extend(p1.get("hand").and_then(Value::as_array).cloned().unwrap_or_default());
         side1["hand"] = Value::Array(hand);

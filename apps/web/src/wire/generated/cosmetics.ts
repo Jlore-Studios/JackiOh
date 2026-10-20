@@ -3,16 +3,17 @@
 
 export const COSMETIC_KINDS = ["foil","finish","border","table","field","cardBack"] as const;
 export const COSMETIC_RARITIES = ["Common","Rare","Epic","Legendary","Mythic"] as const;
+export type CosmeticRarity = (typeof COSMETIC_RARITIES)[number];
 export const COSMETIC_ID_MAX_LENGTH = 40;
 export const COSMETICS = [
   {"id":"foil-none","kind":"foil","name":"No foil","rarity":"Common","default":true,"starter":true,"chase":false},
   {"id":"foil-holo-sweep","kind":"foil","name":"Holo sweep","rarity":"Rare","default":false,"starter":true,"chase":false},
   {"id":"foil-rainbow","kind":"foil","name":"Rainbow","rarity":"Epic","default":false,"starter":true,"chase":false},
-  {"id":"foil-cracked-ice","kind":"foil","name":"Cracked ice","rarity":"Legendary","default":false,"starter":true,"chase":false},
+  {"id":"foil-cracked-ice","kind":"foil","name":"Cracked ice","rarity":"Legendary","default":false,"starter":true,"chase":true},
   {"id":"finish-plain","kind":"finish","name":"Plain finish","rarity":"Common","default":true,"starter":true,"chase":false},
   {"id":"finish-linen","kind":"finish","name":"Linen","rarity":"Rare","default":false,"starter":true,"chase":false},
   {"id":"finish-matte-black-ink","kind":"finish","name":"Matte-black ink","rarity":"Epic","default":false,"starter":true,"chase":false},
-  {"id":"finish-gilded-edge","kind":"finish","name":"Gilded edge","rarity":"Legendary","default":false,"starter":true,"chase":false},
+  {"id":"finish-gilded-edge","kind":"finish","name":"Gilded edge","rarity":"Legendary","default":false,"starter":true,"chase":true},
   {"id":"border-standard","kind":"border","name":"Standard trim","rarity":"Common","default":true,"starter":true,"chase":false},
   {"id":"border-wood","kind":"border","name":"Wood","rarity":"Common","default":false,"starter":true,"chase":false},
   {"id":"border-bone","kind":"border","name":"Bone","rarity":"Rare","default":false,"starter":true,"chase":false},
