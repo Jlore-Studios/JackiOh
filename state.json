@@ -6677,6 +6677,8 @@
       "run_id": "39429468630",
       "started_at": "2026-10-20T13:23:06Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": []
     },
