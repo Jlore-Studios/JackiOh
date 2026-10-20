@@ -6485,6 +6485,13 @@
     "1348": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-20T01:11:08Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 2 (one place) fails: engine wire plus tools plus server, and line 9 is unverifiable with no GitHub reach; either alone makes it medium"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
