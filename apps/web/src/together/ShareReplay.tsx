@@ -3,15 +3,16 @@
 // on `/replays`' online games and in the replay player of an online match.
 //
 // Who may share what is the server's (a seat holder, a finished match, a friend; CLAUDE.md rule 7),
-// and its refusal is shown as it says it. A share made here can be taken back here ("Stop sharing");
-// unfriending or blocking ends one too.
+// and its refusal is shown as it says it. Opened, it reads the friends and who the replay is already
+// shared with together (R1435000), so a share made on any visit shows as shared and can be taken back
+// here ("Stop sharing"); unfriending or blocking ends one too.
 
 import { useEffect, useState, type ReactElement } from "react";
 
 import Username from "../auth/Username.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { paths } from "../net/navigate.ts";
-import { getFriends, shareReplay, unshareReplay, type Friend } from "../net/social.ts";
+import { getFriends, getReplayShares, shareReplay, unshareReplay, type Friend } from "../net/social.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { attempt, messageOf } from "./session.ts";
 import { shareTestid } from "./testids.ts";
@@ -22,7 +23,7 @@ export function ShareWithFriend({ matchId }: { matchId: string }): ReactElement 
   useLocale();
   const [open, setOpen] = useState(false);
   const [friends, setFriends] = useState<readonly Friend[] | null>(null);
-  /** The friends this replay has been shared with from here. */
+  /** The friends this replay is shared with: as the server answered when opened (R1435000), then as changed here. */
   const [shared, setShared] = useState<ReadonlySet<string>>(() => new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,9 +31,11 @@ export function ShareWithFriend({ matchId }: { matchId: string }): ReactElement 
   useEffect(() => {
     if (!open || friends !== null) return;
     let cancelled = false;
-    attempt(getFriends).then(
-      (answer) => {
-        if (!cancelled) setFriends(answer.friends);
+    Promise.all([attempt(getFriends), attempt(() => getReplayShares(matchId))]).then(
+      ([answer, shares]) => {
+        if (cancelled) return;
+        setShared(new Set(shares.friendIds));
+        setFriends(answer.friends);
       },
       (cause: unknown) => {
         if (!cancelled) setError(messageOf(cause));
@@ -41,7 +44,7 @@ export function ShareWithFriend({ matchId }: { matchId: string }): ReactElement 
     return () => {
       cancelled = true;
     };
-  }, [open, friends]);
+  }, [open, friends, matchId]);
 
   const toggle = (friend: Friend): void => {
     if (busy !== null) return;

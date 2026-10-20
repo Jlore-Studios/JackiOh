@@ -7573,6 +7573,28 @@ pub async fn shares_for(t: &mut PgTx<'_>, friend: &str) -> Result<Vec<SharedRepl
         })
         .collect()
 }
+
+pub async fn shares_by(t: &mut PgTx<'_>, match_id: &str, sharer: &str) -> Result<Vec<String>, StoreError> {
+    if !is_uuid(match_id) || !is_uuid(sharer) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(sharer)).await?;
+    let rows = sqlx::query(concat!(
+        "select s.friend
+           from public.replay_shares s
+           join public.matches m on m.id = s.match_id
+          where s.match_id = $1::uuid and s.sharer = $2::uuid and ",
+        readable_share!(),
+        "
+          order by s.created_at, s.friend"
+    ))
+    .bind(match_id)
+    .bind(sharer)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(|row| uuid_text(row, "friend")).collect()
+}
 // ---- end Social: watching and shared replays ----
 
 // =============================================================================

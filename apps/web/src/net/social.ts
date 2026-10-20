@@ -157,6 +157,11 @@ export async function unshareReplay(matchId: string, friendId: string): Promise<
   await social<null>(`/api/replays/${part(matchId)}/shares/${part(friendId)}`, { method: "DELETE" });
 }
 
+/** R1435000: the friends the caller has shared this replay with, who may still read it. */
+export function getReplayShares(matchId: string): Promise<{ friendIds: string[] }> {
+  return social<{ friendIds: string[] }>(`/api/replays/${part(matchId)}/shares`);
+}
+
 /** The replays friends have shared with the caller. */
 export function getSharedReplays(): Promise<{ shared: SharedReplay[] }> {
   return social<{ shared: SharedReplay[] }>("/api/replays/shared");

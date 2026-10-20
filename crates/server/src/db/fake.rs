@@ -4766,4 +4766,17 @@ pub fn shares_for(f: &mut FakeTx<'_>, friend: &str) -> Result<Vec<SharedReplayRo
         .sort_by(|a, b| (b.created_at, &b.match_id, &b.sharer).cmp(&(a.created_at, &a.match_id, &a.sharer)));
     Ok(shared)
 }
+
+pub fn shares_by(f: &mut FakeTx<'_>, match_id: &str, sharer: &str) -> Result<Vec<String>, StoreError> {
+    call(f, "shares.by")?;
+    let tables: &FakeTables = f.tables();
+    let mut shares: Vec<&ReplayShare> = tables
+        .replay_shares
+        .iter()
+        .filter(|row| row.match_id == match_id && row.sharer == sharer)
+        .filter(|row| share_readable(tables, row).is_some())
+        .collect();
+    shares.sort_by(|a, b| (a.created_at, &a.friend).cmp(&(b.created_at, &b.friend)));
+    Ok(shares.into_iter().map(|row| row.friend.clone()).collect())
+}
 // ---- end Social: watching and shared replays ----
