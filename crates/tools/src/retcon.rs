@@ -1425,12 +1425,12 @@ mod tests {
     #[test]
     fn r1371000_an_old_bundle_misses_since_no_new_name_reuses_its_version() {
         let shipped = jackioh_cards::shipped_versions();
-        for old in ["v0.3.15", "v0.3.16", "v0.3.17"] {
+        for old in ["v0.3.15", "v0.3.16", "v0.3.17", "v0.3.17b"] {
             assert!(!shipped.contains(&old), "{old} names no new version");
             let now = jackioh_cards::versions::current_version_name(old);
             assert!(shipped.contains(&now), "{old} is {now} now");
         }
-        assert_eq!(jackioh_cards::catalog_version(), "v0.4.0c");
+        assert_eq!(jackioh_cards::catalog_version(), "v0.4.0d");
     }
 
     #[test]

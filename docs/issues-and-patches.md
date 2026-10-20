@@ -200,6 +200,7 @@ v0.3.12), so read a bare version in an old text as old. A file without the `vers
 | v0.3.15 | v0.4.0 | major | 27 |
 | v0.3.16 | v0.4.0b | micro | 4 |
 | v0.3.17 | v0.4.0c | micro | 3 |
+| v0.3.17b | v0.4.0d | micro | 0 |
 
 ## A patch that takes several pull requests
 

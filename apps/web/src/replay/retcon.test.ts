@@ -32,28 +32,29 @@ function refused(read: () => unknown): string {
 }
 
 describe("R1371000 a file without the versions marker names its catalog the old way", () => {
-  it("R1371000 the build is the old v0.3.17's catalog under its new name, v0.4.0c", () => {
-    expect(CATALOG_VERSION).toBe("v0.4.0c");
-    expect(currentVersionName("v0.3.17")).toBe(CATALOG_VERSION);
+  it("R1371000 the build is the old v0.3.17b's catalog under its new name, v0.4.0d", () => {
+    expect(CATALOG_VERSION).toBe("v0.4.0d");
+    expect(currentVersionName("v0.3.17b")).toBe(CATALOG_VERSION);
+    expect(currentVersionName("v0.3.17")).toBe("v0.4.0c");
     expect(currentVersionName("v0.3.4")).toBe("v0.2.7b");
     expect(currentVersionName("v0.1.0")).toBe("v0.1.0");
   });
 
-  it("R1371000 a version 1 file of the old v0.3.17 opens, and a version 2 file must name the new name", () => {
-    expect(replayStepsOf(json(REPLAY_JSON_UNMARKED_VERSION, "v0.3.17"))).toHaveLength(steps.length);
+  it("R1371000 a version 1 file of the old v0.3.17b opens, and a version 2 file must name the new name", () => {
+    expect(replayStepsOf(json(REPLAY_JSON_UNMARKED_VERSION, "v0.3.17b"))).toHaveLength(steps.length);
     expect(replayStepsOf(json(REPLAY_JSON_VERSION, CATALOG_VERSION))).toHaveLength(steps.length);
-    expect(refused(() => replayStepsOf(json(REPLAY_JSON_VERSION, "v0.3.17")))).toBe(OTHER_PATCH);
+    expect(refused(() => replayStepsOf(json(REPLAY_JSON_VERSION, "v0.3.17b")))).toBe(OTHER_PATCH);
   });
 
-  it("R1371000 a version 1 co-op file of the old v0.3.17 opens", () => {
+  it("R1371000 a version 1 co-op file of the old v0.3.17b opens", () => {
     const file = duosReplayJson([duosView(0), duosView(1)]);
-    const old = { ...file, version: DUOS_REPLAY_JSON_UNMARKED_VERSION, catalogVersion: "v0.3.17" };
+    const old = { ...file, version: DUOS_REPLAY_JSON_UNMARKED_VERSION, catalogVersion: "v0.3.17b" };
     expect(parseDuosReplayJson(old)).toHaveLength(2);
-    expect(refused(() => parseDuosReplayJson({ ...file, catalogVersion: "v0.3.17" }))).toBe(OTHER_PATCH);
+    expect(refused(() => parseDuosReplayJson({ ...file, catalogVersion: "v0.3.17b" }))).toBe(OTHER_PATCH);
   });
 
   it("R1371000 a practice save or kept game without the marker is read through the map", () => {
-    expect(catalogOf({ catalog: "v0.3.17" })).toBe(CATALOG_VERSION);
+    expect(catalogOf({ catalog: "v0.3.17b" })).toBe(CATALOG_VERSION);
     expect(catalogOf({ catalog: "v0.3.4" })).toBe("v0.2.7b");
     expect(catalogOf({ catalog: "v0.3.4", versions: 2 })).toBe("v0.3.4");
   });
