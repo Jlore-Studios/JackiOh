@@ -7290,15 +7290,27 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/server/README.md",
+            "crates/server/src/economy/mod.rs",
+            "crates/server/src/economy/store.rs",
+            "crates/server/tests/api/mod.rs",
+            "crates/server/tests/store/contract.rs"
+          ],
+          "from": "6bd93319bfa43e352a2262f1ec831bf030a35e11",
+          "main": "1ac1896f9e0d58f942a1f66a447a63b9d9d0968e"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39369835289",
+            "run": "39382125765",
             "tier": "strong"
           }
         ],
-        "sha": "6bd93319bfa43e352a2262f1ec831bf030a35e11",
+        "sha": "7e76d922abdd14223f6ebb9cd565294a691f3273",
         "tiers": {
           "claude": "strong"
         }
