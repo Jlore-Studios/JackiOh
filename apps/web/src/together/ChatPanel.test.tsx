@@ -42,7 +42,7 @@ function serve(messages: ChatMessage[], special?: (call: Call) => Reply | undefi
         body: { profile: { id: ME.profileId, status: "active" }, needsInviteCode: false, emailVerified: true, currentMatchId: null, email: null },
       };
     }
-    if (call.method === "GET" && call.path === `/api/chat/${ANN.profileId}`) return { status: 200, body: { messages } };
+    if (call.method === "GET" && call.path === `/api/chat/${ANN.profileId}`) return { status: 200, body: { messages, nextCursor: null } };
     if (call.method === "POST" && call.path === `/api/chat/${ANN.profileId}`) {
       next += 1;
       const text = (call.body as { body?: unknown } | undefined)?.body;
@@ -96,6 +96,54 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   window.localStorage.clear();
+});
+
+describe("R1384000 earlier pages", () => {
+  const FIRST = "1760432400000_00000000-0000-4000-8000-000000000001";
+  const SECOND = "1760432400000_00000000-0000-4000-8000-000000000002";
+
+  it("R1384000 Show earlier asks for each earlier page by the cursor the last page answered, and goes once one answers none", async () => {
+    const server = serve(conversation(), (call) => {
+      if (call.method !== "GET" || call.path !== `/api/chat/${ANN.profileId}`) return undefined;
+      switch (call.query.get("before")) {
+        case null:
+          return { status: 200, body: { messages: conversation(), nextCursor: FIRST } };
+        case FIRST:
+          return { status: 200, body: { messages: [message("msg-0c", ANN.profileId, "are you there", 0)], nextCursor: SECOND } };
+        case SECOND:
+          return {
+            status: 200,
+            body: { messages: [message("msg-0a", ANN.profileId, "hello", 0), message("msg-0b", ME.profileId, "hi", 0)], nextCursor: null },
+          };
+        default:
+          return refusal(400, "bad_request", "not a cursor");
+      }
+    });
+    render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
+    await waitFor(() => {
+      expect(shown()).toHaveLength(2);
+    }, SLOW);
+
+    fireEvent.click(await screen.findByTestId("chat-earlier"));
+    await waitFor(() => {
+      expect(shown()).toHaveLength(3);
+    }, SLOW);
+    await waitFor(() => {
+      expect(screen.getByTestId("chat-earlier")).toBeEnabled();
+    }, SLOW);
+    fireEvent.click(screen.getByTestId("chat-earlier"));
+    await waitFor(() => {
+      expect(shown()).toHaveLength(5);
+    }, SLOW);
+
+    expect(screen.queryByTestId("chat-earlier")).toBeNull();
+    expect(must(shown()[0], "the oldest")).toContain("hello");
+    const asked = server
+      .to("GET", `/api/chat/${ANN.profileId}`)
+      .map((call) => call.query.get("before"))
+      .filter((before) => before !== null);
+    expect(asked).toEqual([FIRST, SECOND]);
+  });
 });
 
 describe("B58 the conversation", () => {

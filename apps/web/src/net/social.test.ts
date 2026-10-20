@@ -307,18 +307,20 @@ describe("B48 B49 challenges", () => {
 
 describe("B53 chat", () => {
   it("B53 getChat reads GET /api/chat/:friendId with no query when no cursor is given", async () => {
-    const { call, result } = await sent(() => getChat("f-ann"), { status: 200, body: { messages: [MESSAGE] } });
+    const { call, result } = await sent(() => getChat("f-ann"), { status: 200, body: { messages: [MESSAGE], nextCursor: null } });
     expect(call.method).toBe("GET");
     expect(call.path).toBe("/api/chat/f-ann");
     expect(call.query.has("before")).toBe(false);
-    expect(result).toEqual({ messages: [MESSAGE] });
+    expect(result).toEqual({ messages: [MESSAGE], nextCursor: null });
   });
 
-  it("B53 getChat passes its cursor as ?before=<iso>", async () => {
-    const before = "2026-10-14T08:00:00.000Z";
-    const { call } = await sent(() => getChat("f-ann", before), { status: 200, body: { messages: [] } });
+  it("R1384000 getChat sends the cursor a page answered as ?before= unchanged and answers the next one", async () => {
+    const cursor = "1760432400000_00000000-0000-4000-8000-000000000001";
+    const reply = { messages: [MESSAGE], nextCursor: null };
+    const { call, result } = await sent(() => getChat("f-ann", cursor), { status: 200, body: reply });
     expect(call.path).toBe("/api/chat/f-ann");
-    expect(call.query.get("before")).toBe(before);
+    expect(call.query.get("before")).toBe(cursor);
+    expect(result).toEqual(reply);
   });
 
   it("B53 sendChat posts {body} to /api/chat/:friendId and resolves with the stored message", async () => {

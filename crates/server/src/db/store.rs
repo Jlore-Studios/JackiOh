@@ -2624,6 +2624,24 @@ pub struct ChatMessageRow {
     pub read_at: Option<i64>,
 }
 
+/// R1384000: a chat page's edge, the time and id of its oldest message; the page before it holds
+/// the messages that come before that one in `(created_at, id)` order.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ChatCursor {
+    pub created_at: i64,
+    pub id: String,
+}
+
+impl ChatCursor {
+    /// The cursor at `row`.
+    pub fn of(row: &ChatMessageRow) -> ChatCursor {
+        ChatCursor {
+            created_at: row.created_at,
+            id: row.id.clone(),
+        }
+    }
+}
+
 /// B53: one report of a chat message (`public.chat_reports`), one per message and reporter.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -2877,13 +2895,13 @@ impl Tx<'_> {
         dispatch!(self, chat_get(message_id))
     }
 
-    /// B53: the newest `limit` messages between the two (either way) sent before `before` (epoch
-    /// ms; every one when `None`), newest LAST, the id breaking a tie.
+    /// B53, R1384000: the newest `limit` messages between the two (either way) that come before
+    /// `before` in `(created_at, id)` order (every one when `None`), newest LAST.
     pub async fn chat_page(
         &mut self,
         x: &str,
         y: &str,
-        before: Option<i64>,
+        before: Option<&ChatCursor>,
         limit: i64,
     ) -> StoreResult<Vec<ChatMessageRow>> {
         dispatch!(self, chat_page(x, y, before, limit))

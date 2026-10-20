@@ -77,7 +77,7 @@ LIMIT_PULLS = 500
 LIMIT_RUNS = 1000
 
 RUN_LINK = re.compile(r"actions/runs/(\d+)")
-#: "`claude-1` (claude, `opus`, strong)", "`gpt` (codex, gpt-5.6-terra)": a subscription, its CLI
+#: "`claude-1` (claude, `opus`, strong)", "`gpt` (codex, gpt-5.6-sol)": a subscription, its CLI
 #: and the model; the first one a comment names is the run's builder (or planner, or reviewer).
 SEAT = re.compile(r"`([a-z][a-z0-9-]*)` \(([a-z]+), `?([A-Za-z0-9][A-Za-z0-9.\-]*)`?")
 #: A seat the comment says approved the change: "Its adversarial reviewer, `claude-2` (claude,
