@@ -6,7 +6,8 @@
 //! hear `watchers {count}` when the count changes. A watcher already in is let go the same way
 //! (`forbidden`, then closed) once the friend turns watching off, or the two unfriend or either
 //! blocks the other. Once the match is over, a watcher that has had the view with the result is
-//! closed with 1000 (R1107000).
+//! closed with 1000 (R1107000). A block made mid-match also mutes the two players' emotes toward
+//! each other (R1351000).
 //!
 //! The match is a real one on the registry, played with the server tests' cards
 //! (`support::engine`); its players are attached with in-memory sockets (`support::socket`), as the
@@ -19,6 +20,7 @@ use std::time::Duration;
 use serde_json::{Value, json};
 use tokio::time::Instant;
 
+use jackioh_engine::EMOTE_WINDOW_MS;
 use jackioh_server::app::App;
 use jackioh_server::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH, WS_IDLE_TIMEOUT_SECONDS};
 use jackioh_server::db::store::StartMatchInput;
@@ -868,5 +870,52 @@ mod r1103000_a_watchers_later_hello {
             .await;
         settle().await;
         assert_eq!(watcher.received(), received, "{:?}", watcher.frames());
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1351000 — a block mutes the players' emotes
+// ---------------------------------------------------------------------------------------------
+
+mod r1351000_a_block_mutes_the_players_emotes {
+    use super::*;
+
+    /// The `n`th emote of the hand `socket` was dealt (R1342).
+    fn dealt(socket: &FakeSocket, n: usize) -> Value {
+        socket.of_type("portraits").last().expect("a portraits frame")["emotes"][n].clone()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1351000_a_block_made_mid_match_through_the_api_mutes_both_players_emotes() {
+        let w = world(false).await;
+
+        // PREMISE: before the block the friend's emote reaches the rival.
+        w.p1.receive_json(json!({ "type": "emote", "emote": dealt(&w.p1, 0) }));
+        settle().await;
+        assert_eq!(w.p2.of_type("emote").len(), 1);
+
+        // The friend blocks the rival (uuid 12), through the API, while the match is live.
+        let (status, body) = api(
+            &w.app,
+            "POST",
+            "/api/blocks",
+            &w.friend.token,
+            json!({ "profileId": uuid(12) }),
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        settle().await;
+
+        // Past the rate window, so only the block can be why nothing relays.
+        tokio::time::sleep(ms(EMOTE_WINDOW_MS)).await;
+        w.p1.receive_json(json!({ "type": "emote", "emote": dealt(&w.p1, 1) }));
+        w.p2.receive_json(json!({ "type": "emote", "emote": dealt(&w.p2, 0) }));
+        settle().await;
+
+        assert_eq!(w.p2.of_type("emote").len(), 1);
+        assert_eq!(w.p1.of_type("emote"), Vec::<Value>::new());
+        for socket in [&w.p1, &w.p2] {
+            assert_eq!(socket.of_type("error"), Vec::<Value>::new());
+        }
     }
 }
