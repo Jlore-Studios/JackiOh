@@ -49,16 +49,16 @@ mod tests {
     fn r1563003_gives_your_units_5_5_and_the_opponents_nothing() {
         let mut s = leg_day(false);
         s.play(ID, json!({}));
-        s.expect_stats(&s.unit(P1, 1).expect("Vanilla"), json!({ "attack": 9, "maxHealth": 9 }));
-        s.expect_stats(&s.unit(P1, 2).expect("Timmy"), json!({ "attack": 8, "maxHealth": 8 }));
-        s.expect_stats(&s.unit(P2, 1).expect("theirs"), json!({ "attack": 4, "maxHealth": 4 }));
+        s.expect_stats(s.unit(P1, 1).expect("Vanilla"), json!({ "attack": 9, "maxHealth": 9 }));
+        s.expect_stats(s.unit(P1, 2).expect("Timmy"), json!({ "attack": 8, "maxHealth": 8 }));
+        s.expect_stats(s.unit(P2, 1).expect("theirs"), json!({ "attack": 4, "maxHealth": 4 }));
     }
 
     #[test]
     fn r1563003_radiant_gives_10_10() {
         let mut s = leg_day(true);
         s.play(ID, json!({}));
-        s.expect_stats(&s.unit(P1, 1).expect("Vanilla"), json!({ "attack": 14, "maxHealth": 14 }));
+        s.expect_stats(s.unit(P1, 1).expect("Vanilla"), json!({ "attack": 14, "maxHealth": 14 }));
     }
 
     #[test]
@@ -66,6 +66,6 @@ mod tests {
         let mut s = leg_day(false);
         step_param(s.card_mut(ID), "buff", 1);
         s.play(ID, json!({}));
-        s.expect_stats(&s.unit(P1, 2).expect("Timmy"), json!({ "attack": 9, "maxHealth": 9 }));
+        s.expect_stats(s.unit(P1, 2).expect("Timmy"), json!({ "attack": 9, "maxHealth": 9 }));
     }
 }

@@ -230,7 +230,7 @@ mod tests {
 
         #[test]
         fn r1563004_with_no_garden_a_card_of_one_price_has_one_price() {
-            let mut s = game("m+022-none", json!({ "hand": [FILLER, MAGIC_JAMMED] }), json!({}));
+            let s = game("m+022-none", json!({ "hand": [FILLER, MAGIC_JAMMED] }), json!({}));
             let vanilla = in_hand(&s, FILLER);
             assert_eq!(offered(&s, &vanilla), vec![None]);
             assert_eq!(jackioh_engine::play_choices::embiggen_play_cost(s.state(), s.card(vanilla.as_str())), None);
