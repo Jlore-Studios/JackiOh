@@ -12612,8 +12612,14 @@
     "what": "plan #1571 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-21T19:24:44Z",
-    "notes": [],
+    "at": "2026-10-21T19:31:18Z",
+    "notes": [
+      "#1569 needs a plan",
+      "#1570 needs a plan",
+      "#1572 needs a plan",
+      "#1573 needs a plan",
+      "#1574 needs a plan"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
