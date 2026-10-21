@@ -44,12 +44,14 @@ type Ctx = { entry: AnimationEntry; view: PlayerView; env: FxPlanEnv; D: number 
 /**
  * #1442: the look of the shot `attackerId` fires, when `view` shows it with Ranged, else `null`. The
  * view decides whether it is Ranged, a forced attack as much as a chosen one, and only its public
- * `defId` and `keywords` are read (R202; CLAUDE.md rule 7).
+ * `defId` and `keywords` are read (R202; CLAUDE.md rule 7). R1081000: a Unit standing in a backrow
+ * zone attacks as any Unit does, and the view carries it as its face-up slot's `unit`.
  */
 function rangedLook(attackerId: string, view: PlayerView): FlavorLook | null {
   for (const side of [view.you, view.opponent]) {
-    for (const unit of side.units) {
-      if (unit === null || unit.instanceId !== attackerId) continue;
+    const standing = side.backrow.map((slot) => (slot !== null && slot.faceDown === false ? slot.unit : undefined));
+    for (const unit of [...side.units, ...standing]) {
+      if (unit === null || unit === undefined || unit.instanceId !== attackerId) continue;
       return hasKeyword(unit.keywords, "Ranged") ? flavorLook(flavorOfId(unit.defId, view.defs), unit.instanceId) : null;
     }
   }

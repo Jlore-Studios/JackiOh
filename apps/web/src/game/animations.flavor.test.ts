@@ -10,7 +10,7 @@ vi.mock("../fx/constants.ts", async (importOriginal) => ({
   FX_FLAVOR_LIVE: true,
 }));
 
-import { fullBoardView, withEvents } from "../test/fixtures.ts";
+import { faceUpBackrow, fullBoardView, unit, withEvents } from "../test/fixtures.ts";
 import { FLAVOR_LOOKS, chaosFlavor, flavorLook } from "../fx/flavors.ts";
 import {
   FX_FLAVOR_LIVE,
@@ -198,6 +198,28 @@ describe("#1442 a Ranged attacker fires its flavor's shot", () => {
     const view = rangedBoard(MINE);
     expect(attack(view, MINE, ENEMY, { forced: true })).toEqual(attack(view, MINE, ENEMY, { forced: false }));
     expect(attack(view, MINE, ENEMY, { forced: true })[1]?.kind).toBe("shot");
+  });
+
+  it("#1442 … a Ranged Unit standing in a backrow zone (R1081000) fires the same way", () => {
+    /** `fullBoardView` with a Flying Unit (Brute's core-019) standing in your first backrow zone. */
+    const flyer = (keywords: UnitView["keywords"]): PlayerView => {
+      const view = fullBoardView();
+      const bird = unit("p1", { instanceId: "bird-1", defId: "core-019", keywords });
+      const slot = faceUpBackrow("p1", { instanceId: "bird-1", defId: "core-019", type: "Unit", unit: bird });
+      return { ...view, you: { ...view.you, backrow: [slot, ...view.you.backrow.slice(1)] } };
+    };
+    const D = 350;
+    const cues = attack(flyer([{ kind: "Flying" }, { kind: "Ranged" }]), "bird-1", ENEMY, { D });
+    expect(cues[0]).toEqual({ kind: "lunge", attacker: "card-bird-1", target: `card-${ENEMY}`, delayMs: 0, durationMs: D, still: true });
+    expect(cues[1]).toMatchObject({ kind: "shot", shot: FLAVOR_LOOKS.Brute.projectile, from: tid("card-bird-1"), to: tid(`card-${ENEMY}`) });
+    // Without Ranged it lunges as a unit-zone attacker does.
+    expect(attack(flyer([{ kind: "Flying" }]), "bird-1", ENEMY, { D })[0]).toEqual({
+      kind: "lunge",
+      attacker: "card-bird-1",
+      target: `card-${ENEMY}`,
+      delayMs: 0,
+      durationMs: D,
+    });
   });
 
   it("#1442 the density follows the intensity, and intensity off plans nothing", () => {
