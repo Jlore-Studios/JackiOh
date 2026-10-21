@@ -454,20 +454,22 @@ async function panel(): Promise<void> {
 const text = (id: string): string => screen.getByTestId(id).textContent ?? "";
 
 describe("#1308 the card packs panel", () => {
-  it("the odds and pity panel shows the server's values, before opening and after", async () => {
+  it("R1339000 the odds and pity panel shows the server's tables, the fallback included, before opening and after", async () => {
     const server = packsServer();
     await panel();
 
-    expect(text(T.oddsRow("epic"))).toContain("12.3%");
-    expect(text(T.oddsRow("epic"))).toContain("33.3%");
-    expect(text(T.oddsRow("legendary"))).toContain("4.5%");
-    expect(text(T.oddsRow("legendary"))).toContain("11.1%");
-    expect(text(T.oddsRow("mythic"))).toContain("0.6%");
-    expect(text(T.oddsRow("mythic"))).toContain("5.5%");
+    // Each row: the rarity, a slot's odds, the guaranteed slot's, and the counter for a tracked one.
+    expect(text(T.oddsRow("common"))).toBe("Common50%0%");
+    expect(text(T.oddsRow("rare"))).toBe("Rare32%82%");
+    expect(text(T.oddsRow("epic"))).toBe("Epic12.3%12.3%7 / 10 packs");
+    expect(text(T.oddsRow("legendary"))).toBe("Legendary4.5%4.5%13 / 20 packs");
+    expect(text(T.oddsRow("mythic"))).toBe("Mythic1.2%1.2%21 / 40 packs");
     expect(text(T.pity("epic"))).toBe("7 / 10 packs");
     expect(text(T.pity("legendary"))).toBe("13 / 20 packs");
     expect(text(T.pity("mythic"))).toBe("21 / 40 packs");
-    expect(text(T.filler)).toContain("20%");
+    expect(text(T.pityLine)).toBe(
+      "Pity guarantees an Epic within 10 packs, a Legendary within 20 packs and a Mythic within 40 packs.",
+    );
     expect(text(T.duplicate)).toContain("Common 50%, Rare 30%, Epic 15%, Legendary 4%, Mythic 1%");
     expect(text(T.heldRow("Core"))).toContain("Core pack: 2 unopened");
     expect(text(T.heldRow(GLOBAL_PACK_NAME))).toContain("Global pack: 1 unopened");
