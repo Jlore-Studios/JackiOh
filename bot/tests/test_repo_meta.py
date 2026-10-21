@@ -16,7 +16,7 @@ from harness import config, dashboard, disk, triage
 
 from tests.fakes import FakeGitHub
 from tests.support import make_config, make_ctx
-from tests.test_workflows import WORKFLOWS, job, read, selftest
+from tests.test_workflows import WORKFLOWS, job, linted, read
 
 ROOT = config.REPO_ROOT
 FORMS = ROOT / ".github" / "ISSUE_TEMPLATE"
@@ -153,7 +153,7 @@ class TitleWorkflowTests(unittest.TestCase):
         self.assertIn("TITLE: ${{ github.event.pull_request.title }}", self.text)
         self.assertEqual(self.text.count("github.event.pull_request.title"), 1)
         self.assertIn("from harness.triage import pull_title_ok", self.text)
-        self.assertIn(".github/workflows/pr-title.yml", selftest())
+        self.assertTrue(linted("pr-title.yml"))
 
 
 class IssueFormTests(unittest.TestCase):

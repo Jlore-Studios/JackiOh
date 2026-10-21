@@ -18,24 +18,27 @@
 #              training lane's ai/* branch, the training gate (README §8).
 #   web        the two WASM modules, side by side, and the e2e client on them, each built once for
 #              the run; typecheck and eslint; the web's unit tests in thirds, without the audio, fx
-#              and asset tests.
+#              and asset tests, and promote-production.test.ts only when what it tests changed.
 #   e2e smoke  Chrome only, specs 01, 06, 10, 13 and 19 (e2e/scripts/shard-specs.mjs SMOKE) against
 #              the release jackioh-server, in two shards that each boot their own server.
-#   db         sql, the store contract and the Render deploy rehearsal against a real Postgres, only
-#              when the pull request touches what they test (scripts/ci-scope.sh's `db`); a skip passes.
+#   db         sql, the store contract and the Render deploy rehearsal against a real Postgres, each
+#              only when the pull request touches what it tests (scripts/ci-scope.sh's `db_sql`,
+#              `db_store` and `db_deploy`); a skip passes.
 #   bot selftest  the night bot's own suite (bot/) on Python 3.12 and 3.13, its CLI's start under both
-#              bots' configs, and actionlint over the bot's workflows and this one, only when the pull
-#              request touches what those read (the `changes` job's `bot`); a skip passes. It had a
-#              workflow of its own, bot-selftest.yml, that ran on every pull request (#1455).
+#              bots' configs, and actionlint over every workflow, only when the pull request touches
+#              what those read (the `changes` job's `bot`); a skip passes. It had a workflow of its
+#              own, bot-selftest.yml, that ran on every pull request (#1455).
 #
 # The release build, the WASM modules and the built client travel between jobs as artifacts
 # (`rust-release`, `web-wasm` and `web-wasm-luau`, `web-build`), so each is compiled once per run,
 # not once per job that uses it.
 #
 # Not run per pull request (README §7): e2e on Electron (dropped), the AI gates, coverage, the
-# 10,000-seed fuzz runs, `golden check` (cargo test replays the same traces), every e2e spec beyond
-# the smoke list, the component specs and the web's audio, fx and asset tests. super.yml runs them
-# daily, and opens an issue when they fail.
+# 10,000-seed fuzz runs and the Duos wave, `golden check` (cargo test replays the same traces),
+# every e2e spec beyond the smoke list, the component specs, the web's audio, fx and asset tests,
+# the Rust tests marked `#[ignore = "daily: <why>"]` and the rest of each web sweep
+# apps/web/src/test/daily.ts holds back (many-game sweeps whose rule a cheaper test keeps here).
+# super.yml runs them daily, and opens an issue when they fail.
 #
 # A pull request that changes only files no job here reads (`scripts/ci-scope.sh` lists them: the
 # night bot's code and switches, the workflows that run the bot, the agent instruction files, the
@@ -45,6 +48,17 @@
 # required check (a workflow-level `paths:` filter would leave the check pending forever), and the
 # summary jobs accept "skipped" only on `full == 'false'`. A push to main, a dispatch, and any doubt
 # run everything.
+#
+# Past `full`, each piece runs only when the pull request touches what that piece reads (#751):
+# scripts/ci-scope.sh prints one line per piece (its header says what turns each on) and the
+# `changes` job exports them all. fmt and clippy run on `clippy`; each `rust (test …)` group on its
+# own `rust_<scope>` line, which follows the crate graph (a server-only change runs `rust (test
+# server)` alone); the WASM modules and the client build on `web` or `e2e`; the web's typecheck,
+# lint and unit tests on `web`; e2e smoke on `e2e`; each db suite on its own `db_<suite>` line. The
+# release build, the checks, fuzz 200 and the classifier run on `full`, whatever changed. A summary
+# accepts a skip only where the skipped piece's own line is exactly `false`, and the lines are held
+# by apps/web/src/net/ci-scope.test.ts and crates/tools/tests/acceptance.rs. A scoping mistake
+# still meets the push to main, which runs everything, and the next morning's super run.
 #
 # `workflow_dispatch` lets a person run all of it on any branch (`gh workflow run ci.yml --ref
 # staging`); the v0.3.0 rewrite's first full run is its cutover pull request (part 38). Its `e2e`
@@ -88,9 +102,12 @@ env:
 
 jobs:
   # `full` is `false` only for a pull request whose every changed file is on scripts/ci-scope.sh's
-  # skip list, and `db` is `true` only when the db job's own paths changed. A failed `changes` job
-  # leaves both empty and skips every job below it, which fails each summary job (it accepts a skip
-  # only on `full == 'false'`, or for db on `db == 'false'`).
+  # skip list. Every other line is one job's or one matrix entry's (the script's header names each),
+  # `true` only when something that job reads changed: `clippy`, each `rust_<scope>` of
+  # `rust-test`, `web`, `e2e`, and `db` with its three suites. A push to main and a dispatch run the
+  # script with no arguments, which prints every line `true`. A failed `changes` job leaves every
+  # line empty and skips every job below it, which fails each summary job (it accepts a skip only
+  # where the skipped piece's own line is exactly `false`).
   #
   # `bot` is `false` only for a pull request that changes none of the paths bot selftest's tests and
   # lints read. Those are the bot's code and switches, all of .github/ and .claude/ (the tests read
@@ -106,6 +123,22 @@ jobs:
     outputs:
       full: ${{ steps.scope.outputs.full }}
       db: ${{ steps.scope.outputs.db }}
+      db_sql: ${{ steps.scope.outputs.db_sql }}
+      db_store: ${{ steps.scope.outputs.db_store }}
+      db_deploy: ${{ steps.scope.outputs.db_deploy }}
+      clippy: ${{ steps.scope.outputs.clippy }}
+      rust_engine_rules: ${{ steps.scope.outputs.rust_engine_rules }}
+      rust_engine: ${{ steps.scope.outputs.rust_engine }}
+      rust_cards_lib: ${{ steps.scope.outputs.rust_cards_lib }}
+      rust_cards: ${{ steps.scope.outputs.rust_cards }}
+      rust_server: ${{ steps.scope.outputs.rust_server }}
+      rust_ai: ${{ steps.scope.outputs.rust_ai }}
+      rust_ai_slow: ${{ steps.scope.outputs.rust_ai_slow }}
+      rust_luau: ${{ steps.scope.outputs.rust_luau }}
+      rust_tools_wasm: ${{ steps.scope.outputs.rust_tools_wasm }}
+      web: ${{ steps.scope.outputs.web }}
+      web_promote: ${{ steps.scope.outputs.web_promote }}
+      e2e: ${{ steps.scope.outputs.e2e }}
       bot: ${{ steps.scope.outputs.bot }}
     steps:
       - uses: actions/checkout@v4
@@ -133,7 +166,8 @@ jobs:
             done
             echo "bot=$bot" | tee -a "$GITHUB_OUTPUT"
           else
-            printf 'full=true\ndb=true\nbot=true\n' | tee -a "$GITHUB_OUTPUT"
+            sh scripts/ci-scope.sh | tee -a "$GITHUB_OUTPUT"
+            echo "bot=true" | tee -a "$GITHUB_OUTPUT"
           fi
 
   # ------------------------------------------------------------------------------------------------
@@ -144,7 +178,7 @@ jobs:
   rust-lint:
     name: rust (fmt, clippy)
     needs: changes
-    if: ${{ needs.changes.outputs.full == 'true' }}
+    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.clippy == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -188,6 +222,10 @@ jobs:
   # group wrote must be what is committed (V20), so every group checks. The same holds for the card
   # scripts' typed module (#442 L10), which the group with `luau` (the one that runs crates/luau's
   # tests) checks once it exists.
+  # Each group runs only when scripts/ci-scope.sh's `rust_<scope>` line says a crate it tests, a
+  # crate those build on, or a file its tests read changed (the crate graph, which acceptance.rs
+  # holds the script's map to). A job-level `if:` cannot see `matrix`, so the job's first step reads
+  # the line and every other step runs on it: a skipped group is a green job that compiled nothing.
   rust-test:
     name: rust (test ${{ matrix.group }})
     needs: changes
@@ -200,59 +238,80 @@ jobs:
         include:
           # Without ts, which nothing in `rules` reads: ts-rs's derives only add to the compile.
           - group: engine rules
+            scope: engine_rules
             cache: engine-rules
             test: -p jackioh-engine --features jackioh-engine/testkit --test rules
           - group: engine
+            scope: engine
             cache: engine
             test: -p jackioh-engine --features jackioh-engine/testkit,jackioh-engine/ts --lib --test golden --test export_config
             doc: -p jackioh-engine --features jackioh-engine/testkit,jackioh-engine/ts
             binaries: jackioh-engine export_config golden rules
           # Every card's tests, ported from TypeScript (V5), and the cross-card tests.
           - group: cards lib
+            scope: cards_lib
             cache: cards-lib
             test: -p jackioh-cards --lib
           - group: cards
+            scope: cards
             cache: cards
             test: -p jackioh-cards --test cards
             doc: -p jackioh-cards
             binaries: jackioh-cards cards
           - group: server
+            scope: server
             cache: server
             test: -p jackioh-server
-          # The AI's integration tests in three binaries (#873): `ai`, and the four modules that play
-          # the most games at AI_GATE_BUDGET, in `ai_slow_a` and `ai_slow_b`. One cache: the three
-          # compile the same crates.
+          # The AI's integration tests in two binaries (#873): `ai`, and the modules that play the
+          # most games at AI_GATE_BUDGET, in `ai_slow`, whose many-game sweeps run daily (`#[ignore]`,
+          # super.yml's `daily tests`). One cache: the two compile the same crates.
           - group: ai
+            scope: ai
             cache: ai
             test: -p jackioh-ai --lib --test ai
             doc: -p jackioh-ai
-            binaries: jackioh-ai ai ai_slow_a ai_slow_b
-          - group: ai slow a
+            binaries: jackioh-ai ai ai_slow
+          - group: ai slow
+            scope: ai_slow
             cache: ai
-            test: -p jackioh-ai --test ai_slow_a
-          - group: ai slow b
-            cache: ai
-            test: -p jackioh-ai --test ai_slow_b
+            test: -p jackioh-ai --test ai_slow
           # The Luau host's tests, with its `ts` feature on so that `export_api` writes the card
           # scripts' typed module, which the group's last step holds to what is committed. In
           # `tools, wasm` that second compile of the engine and the cards, with `ts`, ran after the
           # group's own and took the job past seven minutes (#959).
           - group: luau
+            scope: luau
             cache: luau
             test: -p jackioh-luau --features ts
             luau: true
           - group: tools, wasm
+            scope: tools_wasm
             cache: tools-wasm
             test: --workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai --exclude jackioh-luau
     steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
+      # Anything but an exact `false` runs the group, so an empty line (a doubt) never skips it.
+      - id: scope
+        name: whether anything this group tests changed (scripts/ci-scope.sh)
+        env:
+          LINE: rust_${{ matrix.scope }}
+          VALUE: ${{ needs.changes.outputs[format('rust_{0}', matrix.scope)] }}
+        run: |
+          if [ "$VALUE" = false ]; then
+            echo "$LINE=false: nothing this group's tests read changed, so it is skipped"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: ${{ steps.scope.outputs.run == 'true' }}
+        uses: actions/checkout@v4
+      - if: ${{ steps.scope.outputs.run == 'true' }}
+        uses: ./.github/actions/setup
         with:
           node: "false"
           # A cache key may not hold a comma.
           cache-key: test-${{ matrix.cache }}
       - name: the crate's test binaries are the ones its groups run
-        if: ${{ matrix.binaries }}
+        if: ${{ steps.scope.outputs.run == 'true' && matrix.binaries }}
         env:
           BINARIES: ${{ matrix.binaries }}
         run: |
@@ -267,6 +326,7 @@ jobs:
             exit 1
           fi
       - name: cargo test
+        if: ${{ steps.scope.outputs.run == 'true' }}
         env:
           TEST: ${{ matrix.test }}
           DOC: ${{ matrix.doc }}
@@ -278,6 +338,7 @@ jobs:
             cargo test --doc $DOC
           fi
       - name: the web's generated types and constants are what the Rust exports (V20)
+        if: ${{ steps.scope.outputs.run == 'true' }}
         run: |
           changed=$(git status --porcelain -- apps/web/src/wire)
           if [ -n "$changed" ]; then
@@ -292,7 +353,7 @@ jobs:
       # Skipped until the module exists, as on main before v0.4.0, whose crates/luau has no `ts`
       # feature.
       - name: the card scripts' typed module is what the Rust generates (#442 L10)
-        if: ${{ matrix.luau && hashFiles('crates/cards/luau/jackioh.luau') != '' }}
+        if: ${{ steps.scope.outputs.run == 'true' && matrix.luau && hashFiles('crates/cards/luau/jackioh.luau') != '' }}
         run: |
           cargo test -p jackioh-luau --features ts --test export_api
           changed=$(git status --porcelain -- crates/cards/luau)
@@ -620,6 +681,7 @@ jobs:
       - name: every piece passed
         env:
           FULL: ${{ needs.changes.outputs.full }}
+          CLIPPY: ${{ needs.changes.outputs.clippy }}
           LINT: ${{ needs.rust-lint.result }}
           TEST: ${{ needs.rust-test.result }}
           BUILD: ${{ needs.rust-build.result }}
@@ -629,12 +691,17 @@ jobs:
           TRAINING: ${{ needs.training-gate.result }}
           AI_BRANCH: ${{ github.event_name == 'pull_request' && startsWith(github.head_ref, 'ai/') }}
         run: |
-          echo "full=$FULL lint=$LINT test=$TEST build=$BUILD checks=$CHECKS classify=$CLASSIFY training-gate=$TRAINING (ai/* branch: $AI_BRANCH)"
+          echo "full=$FULL clippy=$CLIPPY lint=$LINT test=$TEST build=$BUILD checks=$CHECKS classify=$CLASSIFY training-gate=$TRAINING (ai/* branch: $AI_BRANCH)"
           if [ "$FULL" = false ]; then
             echo "only files no job reads changed (scripts/ci-scope.sh)"
             exit 0
           fi
-          test "$LINT" = success
+          # Each rust-test group skips its own steps on its own line, so the matrix is green either way.
+          if [ "$CLIPPY" = false ]; then
+            echo "no Rust or Luau source, manifest or lint setting changed: fmt and clippy skipped (scripts/ci-scope.sh)"
+          else
+            test "$LINT" = success
+          fi
           test "$TEST" = success
           test "$BUILD" = success
           test "$CHECKS" = success
@@ -656,7 +723,7 @@ jobs:
   wasm:
     name: web (wasm module)
     needs: changes
-    if: ${{ needs.changes.outputs.full == 'true' }}
+    if: ${{ needs.changes.outputs.full == 'true' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.e2e == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -681,7 +748,7 @@ jobs:
   wasm-luau:
     name: web (wasm luau module)
     needs: changes
-    if: ${{ needs.changes.outputs.full == 'true' }}
+    if: ${{ needs.changes.outputs.full == 'true' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.e2e == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -711,7 +778,7 @@ jobs:
   web-build:
     name: web (client build)
     needs: [changes, wasm, wasm-luau]
-    if: ${{ needs.changes.outputs.full == 'true' }}
+    if: ${{ needs.changes.outputs.full == 'true' && (needs.changes.outputs.web == 'true' || needs.changes.outputs.e2e == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -745,7 +812,7 @@ jobs:
   web-check:
     name: web (typecheck, eslint)
     needs: [changes, web-build]
-    if: ${{ needs.changes.outputs.full == 'true' }}
+    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.web == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -769,11 +836,15 @@ jobs:
 
   # In thirds, by file. The audio and fx layers and the asset tests (the recorded voice and music,
   # the card art convention) run in super.yml instead: cosmetic, large, and broken on Linux by every
-  # new card until its assets are rendered (docs/v0.3.0/research/D-ci-spec.md §2.4).
+  # new card until its assets are rendered (docs/v0.3.0/research/D-ci-spec.md §2.4). So does
+  # promote-production.test.ts, a minute and a half of git clones testing a script that seldom
+  # changes: the first third runs it on its own, only when scripts/ci-scope.sh's `web_promote` says
+  # what it runs or reads changed. The tests that sweep many games (the tutorial lessons' other
+  # deals and random players) play their first game here and the rest daily (src/test/daily.ts).
   web-unit:
     name: web (unit ${{ matrix.shard }}/${{ strategy.job-total }})
     needs: [changes, web-build]
-    if: ${{ needs.changes.outputs.full == 'true' }}
+    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.web == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -795,6 +866,10 @@ jobs:
         run: >-
           pnpm exec vitest run --project web --shard=${{ matrix.shard }}/${{ strategy.job-total }}
           --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'
+          --exclude '**/src/net/promote-production.test.ts'
+      - name: promote-production.test.ts, since what it tests changed
+        if: ${{ !cancelled() && matrix.shard == 1 && needs.changes.outputs.web_promote != 'false' }}
+        run: pnpm exec vitest run --project web src/net/promote-production.test.ts
 
   web:
     name: web
@@ -806,20 +881,31 @@ jobs:
       - name: every piece passed
         env:
           FULL: ${{ needs.changes.outputs.full }}
+          WEB: ${{ needs.changes.outputs.web }}
+          E2E: ${{ needs.changes.outputs.e2e }}
           WASM: ${{ needs.wasm.result }}
           WASM_LUAU: ${{ needs.wasm-luau.result }}
           BUILD: ${{ needs.web-build.result }}
           CHECK: ${{ needs.web-check.result }}
           UNIT: ${{ needs.web-unit.result }}
         run: |
-          echo "full=$FULL wasm=$WASM wasm-luau=$WASM_LUAU build=$BUILD check=$CHECK unit=$UNIT"
+          echo "full=$FULL web=$WEB e2e=$E2E wasm=$WASM wasm-luau=$WASM_LUAU build=$BUILD check=$CHECK unit=$UNIT"
           if [ "$FULL" = false ]; then
             echo "only files no job reads changed (scripts/ci-scope.sh)"
+            exit 0
+          fi
+          # The modules and the client serve the web's checks and e2e smoke both.
+          if [ "$WEB" = false ] && [ "$E2E" = false ]; then
+            echo "nothing the web's or e2e's jobs read changed (scripts/ci-scope.sh)"
             exit 0
           fi
           test "$WASM" = success
           test "$WASM_LUAU" = success
           test "$BUILD" = success
+          if [ "$WEB" = false ]; then
+            echo "nothing the web's typecheck, lint or unit tests read changed (scripts/ci-scope.sh)"
+            exit 0
+          fi
           test "$CHECK" = success
           test "$UNIT" = success
 
@@ -828,8 +914,9 @@ jobs:
   # ------------------------------------------------------------------------------------------------
 
   # CI for the night bot itself (bot/): its suite on the lowest and newest Python it supports, the
-  # CLI's start under both bots' configs, and actionlint over the bot's workflows, this one and the
-  # pull request title check, which runs the bot's title rule (`triage.pull_title_ok`). One job, so
+  # CLI's start under both bots' configs, and actionlint over every workflow (the bot's, this one,
+  # the pull request title check, which runs the bot's title rule `triage.pull_title_ok`, the daily
+  # super run and the deploys). One job, so
   # its name is the required check's. It runs when the `changes` job says `bot`, and also whenever
   # that job did not succeed, so an empty output never skips the check into a pass.
   bot-selftest:
@@ -866,15 +953,12 @@ jobs:
           python3.13 -m harness window
           HARNESS_HOME=.squishy python3.13 -m harness window
 
+      # Every workflow, the daily super run and the deploys among them: this job runs whenever
+      # anything under .github/ changes, so no workflow lands unlinted.
       - name: actionlint
         run: |
-          docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.7 -color \
-            .github/workflows/bot-night.yml .github/workflows/bot-commands.yml \
-            .github/workflows/ci.yml .github/workflows/triage.yml \
-            .github/workflows/bot-status.yml .github/workflows/squishy-run.yml \
-            .github/workflows/squishy-commands.yml .github/workflows/pr-title.yml \
-            .github/workflows/hygiene.yml .github/workflows/hygiene-delete.yml \
-            .github/workflows/bot-cache.yml
+          # shellcheck disable=SC2046 # one argument per workflow on purpose.
+          docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.7 -color $(ls .github/workflows/*.yml)
 
   # ------------------------------------------------------------------------------------------------
   # e2e smoke
@@ -886,7 +970,7 @@ jobs:
   e2e-smoke-shard:
     name: e2e ${{ inputs.e2e == 'all' && 'all' || 'smoke' }} (${{ matrix.shard }}/${{ strategy.job-total }})
     needs: [changes, web-build, rust-build]
-    if: ${{ needs.changes.outputs.full == 'true' }}
+    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.e2e == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: ${{ inputs.e2e == 'all' && 20 || 10 }}
     strategy:
@@ -948,13 +1032,18 @@ jobs:
       - name: every shard passed
         env:
           FULL: ${{ needs.changes.outputs.full }}
+          E2E: ${{ needs.changes.outputs.e2e }}
           SHARDS: ${{ needs.e2e-smoke-shard.result }}
           COMPONENT: ${{ needs.e2e-component.result }}
           ALL: ${{ inputs.e2e == 'all' }}
         run: |
-          echo "full=$FULL shards=$SHARDS component=$COMPONENT (every spec: $ALL)"
+          echo "full=$FULL e2e=$E2E shards=$SHARDS component=$COMPONENT (every spec: $ALL)"
           if [ "$FULL" = false ]; then
             echo "only files no job reads changed (scripts/ci-scope.sh)"
+            exit 0
+          fi
+          if [ "$E2E" = false ]; then
+            echo "nothing the client, the server, the jackioh binary or a spec reads changed (scripts/ci-scope.sh); super.yml runs every spec daily"
             exit 0
           fi
           test "$SHARDS" = success
@@ -990,20 +1079,39 @@ jobs:
       matrix:
         include:
           - suite: sql invariants
+            scope: sql
             script: crates/server/tests/sql/run.sh
             rust: false
           - suite: store contract
+            scope: store
             script: crates/server/tests/db/run.sh
             rust: true
     steps:
-      - uses: actions/checkout@v4
+      # Each suite on its own line (`db_sql`, `db_store`), as rust-test's groups are; anything but an
+      # exact `false` runs it.
+      - id: scope
+        name: whether anything this suite tests changed (scripts/ci-scope.sh)
+        env:
+          LINE: db_${{ matrix.scope }}
+          VALUE: ${{ needs.changes.outputs[format('db_{0}', matrix.scope)] }}
+        run: |
+          if [ "$VALUE" = false ]; then
+            echo "$LINE=false: nothing this suite tests changed, so it is skipped; super.yml runs it daily"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: ${{ steps.scope.outputs.run == 'true' }}
+        uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-        if: ${{ matrix.rust }}
+        if: ${{ steps.scope.outputs.run == 'true' && matrix.rust }}
         with:
           node: "false"
       - name: pre-pull postgres
+        if: ${{ steps.scope.outputs.run == 'true' }}
         run: docker pull postgres:16
       - name: ${{ matrix.suite }}
+        if: ${{ steps.scope.outputs.run == 'true' }}
         env:
           SCRIPT: ${{ matrix.script }}
         run: sh "$SCRIPT"
@@ -1025,7 +1133,7 @@ jobs:
   db-deploy-deps:
     name: db (deploy image deps)
     needs: changes
-    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.db == 'true' }}
+    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.db_deploy == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -1043,7 +1151,7 @@ jobs:
   db-deploy:
     name: db (deploy rehearsal)
     needs: [changes, db-deploy-deps]
-    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.db == 'true' }}
+    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.db_deploy == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -1069,15 +1177,21 @@ jobs:
         env:
           FULL: ${{ needs.changes.outputs.full }}
           DB: ${{ needs.changes.outputs.db }}
+          DB_DEPLOY: ${{ needs.changes.outputs.db_deploy }}
           SUITES: ${{ needs.db-suite.result }}
           DEPS: ${{ needs.db-deploy-deps.result }}
           DEPLOY: ${{ needs.db-deploy.result }}
         run: |
-          echo "full=$FULL db=$DB suites=$SUITES deploy-deps=$DEPS deploy=$DEPLOY"
+          echo "full=$FULL db=$DB db_deploy=$DB_DEPLOY suites=$SUITES deploy-deps=$DEPS deploy=$DEPLOY"
           if [ "$FULL" = false ] || [ "$DB" = false ]; then
             echo "nothing the db suites test changed (scripts/ci-scope.sh); super.yml runs them daily"
             exit 0
           fi
+          # db-suite's entries skip their own steps on db_sql and db_store, so it is green either way.
           test "$SUITES" = success
+          if [ "$DB_DEPLOY" = false ]; then
+            echo "nothing the deploy rehearsal tests changed (scripts/ci-scope.sh); super.yml runs it daily"
+            exit 0
+          fi
           test "$DEPS" = success
           test "$DEPLOY" = success
