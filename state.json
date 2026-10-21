@@ -9035,6 +9035,13 @@
     "1492": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T05:08:18Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "Rule 3 fails: the new Log test is named after R831003, a ruling spec/INDEX.md lists; everything else is a small apps/web-only change"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
