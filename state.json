@@ -9771,7 +9771,9 @@
           "gpt"
         ],
         "builder": "gpt",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [
           {
             "family": "gpt",
@@ -9781,6 +9783,7 @@
         ],
         "sha": "ee4af7085be4260b5d0dfc785d2e96b05096da02",
         "tiers": {
+          "claude": "strong",
           "gpt": "medium"
         }
       }
