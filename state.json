@@ -9754,9 +9754,11 @@
       "asks": [],
       "audit_tier": "strong",
       "cleared": {
-        "at": "2026-10-21T09:22:18Z",
+        "at": "2026-10-21T09:52:24Z",
         "by": "`claude` (strong)",
-        "sha": "e059a8228e01ba62ff72e046af826be2f14ca887"
+        "carried_from": "e059a8228e01ba62ff72e046af826be2f14ca887",
+        "resolved_by": "`claude` (strong)",
+        "sha": "8d05a82715bba8b0c829aee87bc86b4612e3513a"
       },
       "cross_rounds": 1,
       "died": 0,
