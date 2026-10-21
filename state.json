@@ -10003,6 +10003,8 @@
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-10-21T11:11:55Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "39590198226",
       "self_check_findings": [],
       "started_at": "2026-10-21T11:12:58Z",
