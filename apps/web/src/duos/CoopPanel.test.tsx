@@ -314,6 +314,33 @@ describe("B60 creating a room", () => {
   );
 });
 
+describe("B60 the deck choice", () => {
+  it("B60 decks that cannot be read are named under the picker, and a random deck is still offered", async () => {
+    serve({ created: false, guestJoined: false }, (call) =>
+      call.method === "GET" && call.path === "/api/decks" ? refusal(500, "internal", "The decks are out of reach.") : undefined,
+    );
+    await renderPanel();
+    expect(await screen.findByRole("alert", undefined, SLOW)).toHaveTextContent(
+      "Your decks could not be loaded: The decks are out of reach.",
+    );
+    const picker = screen.getByTestId<HTMLSelectElement>("coop-deck");
+    expect([...picker.options].map((option) => option.textContent)).toEqual(["Random deck"]);
+  });
+
+  it("B60 saved decks are offered after a random deck, with no alert", async () => {
+    serve({ created: false, guestJoined: false });
+    await renderPanel();
+    await waitFor(
+      () => {
+        const picker = screen.getByTestId<HTMLSelectElement>("coop-deck");
+        expect([...picker.options].map((option) => option.textContent)).toEqual(["Random deck", "Aggro"]);
+      },
+      SLOW,
+    );
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
 describe("B60 inviting a friend", () => {
   function inviteControl(): HTMLElement {
     const invites = screen.queryAllByRole("button", { name: /invite/i });

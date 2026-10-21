@@ -1,5 +1,8 @@
 # v0.3.0: the Rust rewrite, the Rust-native AI, the training lanes and the CI trim
 
+This folder names a codebase project, not a catalog version: codebase projects take no version
+number since #1360, and the folder keeps its name because code comments cite it.
+
 The plan for [#306](https://github.com/Jlore-Studios/JackiOh/issues/306), which merges #80 (the
 server, engine and AI rewrite) and #133 (spec adherence by structure, not prose), and adds the
 AI training lanes (the successor of #55, following #70 and #65) and a shorter CI. It is written so

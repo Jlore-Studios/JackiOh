@@ -1,0 +1,79 @@
+[
+  {
+    "version": "v0.4.0",
+    "commit": "0c72b84d3f2b107f4577af8905e68e6eb2bf09fc",
+    "pr": 1460,
+    "title": "the handicapped fuzz wave plays through the gate's loop, so it weighs growth and its failures name their decks",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "2f4c3f5c521f285fd8040622dcd71dcbe79a8ed5",
+    "pr": 1458,
+    "title": "bring the built economy in line with the owner's numbers and the cosmetic rarity scale",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "9950036ce54c5d8935e34f87e4069eebeee46c9d",
+    "pr": 1461,
+    "title": "the card flavor field",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "9cae82d8ed4fbe545dd111ceff26471a22e6cec0",
+    "pr": 1464,
+    "title": "the racing-writer results test stages its race with the fake store's seam, not a 50 ms sleep",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "395780b216d56d3f085279e57f5030e14d18d5ac",
+    "pr": 1459,
+    "title": "a game's payout takes the account's economy lock",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "68f7a82304b130bdac290d5347540fcde2916745",
+    "pr": 1465,
+    "title": "Discover's three options are one named constant, and the library and graveyard Discovers share one offer",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "031510771e49c66077c64d0f50c5b213932a9d11",
+    "pr": 1463,
+    "title": "the card tests use the crate's shared test helpers instead of their own copies",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "0fc9433d73890a148ef3281d9b90672f4f28495f",
+    "pr": 1466,
+    "title": "a failed \"Show older games\" keeps the replays already listed, and the co-op deck choice says when the decks failed to load",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "d29dd44d3ed20f7364c6ae66998eb3727b9c8b84",
+    "pr": 1462,
+    "title": "the card statistics stop showing \"Failed to load\" over figures that loaded",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "bb2a76fc5eaae5c49fa3f1dea198d7aff77bfe53",
+    "pr": 1469,
+    "title": "the payout race tests cross one level step under the owner's XP numbers",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "9f4d09510af56ae72fd2317cb01316d1528d2f57",
+    "pr": 1454,
+    "title": "patch numbers follow the cards: one classifier sorts every change, and the history is retconned to it",
+    "kind": "ai"
+  }
+]

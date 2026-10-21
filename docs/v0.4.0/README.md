@@ -1,5 +1,8 @@
 # v0.4.0: the card scripts in Luau
 
+This folder names a codebase project, not a catalog version: codebase projects take no version
+number since #1360, and the folder keeps its name because code comments cite it.
+
 The record of [#442](https://github.com/Jlore-Studios/JackiOh/issues/442): every card script that is
 a list of engine verbs moved from Rust to Luau, run by an embedded VM (`mlua`, `crates/luau`) on the
 server, in the tools and in the browser. It says what was built, what each part decided that the

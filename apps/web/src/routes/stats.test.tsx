@@ -287,6 +287,50 @@ function at(path: string): void {
   window.history.replaceState(null, "", path);
 }
 
+type HeldRequest = {
+  url: URL;
+  signal: AbortSignal | undefined;
+  answer: (body: unknown, status?: number) => void;
+};
+
+/**
+ * Stubs `fetch`: a request selected by `holds` waits until the test answers it and, as `fetch` does, rejects
+ * the moment its signal aborts; any other is answered at once with the provisional card statistics.
+ */
+function holdFetch(holds: (url: URL) => boolean): HeldRequest[] {
+  const held: HeldRequest[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input), window.location.origin);
+      if (!holds(url)) {
+        return Promise.resolve(new Response(JSON.stringify(MOCK_CARD_STATS_PROVISIONAL), { status: 200 }));
+      }
+      return new Promise<Response>((resolve, reject) => {
+        const signal = init?.signal ?? undefined;
+        signal?.addEventListener(
+          "abort",
+          () => reject(new DOMException("The operation was aborted.", "AbortError")),
+          { once: true },
+        );
+        held.push({
+          url,
+          signal,
+          answer: (body, status = 200) => resolve(new Response(JSON.stringify(body), { status })),
+        });
+      });
+    }),
+  );
+  return held;
+}
+
+function requested(pathname: string): URL[] {
+  return vi
+    .mocked(fetch)
+    .mock.calls.map(([input]) => new URL(String(input), window.location.origin))
+    .filter((url) => url.pathname === pathname);
+}
+
 beforeEach(() => {
   window.localStorage.clear();
   resetPlayerStats();
@@ -1026,5 +1070,117 @@ describe("R377 public statistics match type", () => {
     await waitFor(() => expect(screen.getAllByText("not enough games").length).toBeGreaterThan(0));
     expect(screen.queryByText("60%")).not.toBeInTheDocument();
     expect(screen.queryByText("50%")).not.toBeInTheDocument();
+  });
+});
+
+describe("card statistics requests", () => {
+  it("a filter changed while the table loads ends on the newer figures, never on the cancelled request's failure", async () => {
+    const held = holdFetch((url) => url.pathname === "/api/stats/cards");
+    render(<StatsRoute />);
+
+    await waitFor(() => expect(held).toHaveLength(1), SLOW);
+    fireEvent.change(screen.getByTestId(statsTestid.modeSelect), { target: { value: "bo1" } });
+    await waitFor(() => expect(held).toHaveLength(2), SLOW);
+    expect(held[0]!.signal?.aborted).toBe(true);
+    expect(held[1]!.url.searchParams.get("mode")).toBe("bo1");
+
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(screen.getByText("Loading card statistics…")).toBeInTheDocument();
+    expect(screen.queryByText("Failed to load card statistics.")).not.toBeInTheDocument();
+
+    await act(async () => {
+      held[1]!.answer(MOCK_KEYWORD_CARDS);
+    });
+    expect(await screen.findByText("Midrange Menace", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByText("Failed to load card statistics.")).not.toBeInTheDocument();
+  });
+
+  it("the table's Retry asks again, and a filter changed while the retry loads cancels it", async () => {
+    const held = holdFetch((url) => url.pathname === "/api/stats/cards");
+    render(<StatsRoute />);
+
+    await waitFor(() => expect(held).toHaveLength(1), SLOW);
+    await act(async () => {
+      held[0]!.answer({}, 500);
+    });
+    expect(await screen.findByText("Failed to load card statistics.", undefined, SLOW)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(held).toHaveLength(2), SLOW);
+    fireEvent.change(screen.getByTestId(statsTestid.modeSelect), { target: { value: "bo1" } });
+    await waitFor(() => expect(held).toHaveLength(3), SLOW);
+    expect(held[1]!.signal?.aborted).toBe(true);
+
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    await act(async () => {
+      held[2]!.answer(MOCK_KEYWORD_CARDS);
+    });
+    expect(await screen.findByText("Midrange Menace", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByText("Failed to load card statistics.")).not.toBeInTheDocument();
+  });
+
+  it("a card's details opened while another's load end on that card's, never Details unavailable", async () => {
+    const held = holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
+    render(<StatsRoute />);
+
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    fireEvent.click(screen.getByText("Spark Pup"));
+    await waitFor(() => expect(held).toHaveLength(1), SLOW);
+    fireEvent.click(screen.getByText("Aqua Warden"));
+    await waitFor(() => expect(held).toHaveLength(2), SLOW);
+    expect(held[1]!.url.pathname).toBe("/api/stats/cards/core-003");
+    expect(held[0]!.signal?.aborted).toBe(true);
+
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    const modal = screen.getByTestId(statsTestid.drillDownModal);
+    expect(within(modal).getByText("Loading drill-down data…")).toBeInTheDocument();
+    expect(within(modal).queryByText("Details unavailable.")).not.toBeInTheDocument();
+
+    await act(async () => {
+      held[1]!.answer({
+        ...MOCK_DRILL_DOWN,
+        card: { id: "core-003", name: "Aqua Warden", cost: 2, rarity: "Common" },
+        byTurn: [{ turn: 7, games: 12, winRate: 0.5 }],
+      });
+    });
+    expect(await within(modal).findByText("Turn 7:", undefined, SLOW)).toBeInTheDocument();
+    expect(within(modal).queryByText("Details unavailable.")).not.toBeInTheDocument();
+  });
+
+  it("a card's details that fail to load offer Retry, which asks again", async () => {
+    let asked = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        if (url.pathname === "/api/stats/cards/core-001") {
+          asked += 1;
+          const body = asked === 1 ? {} : MOCK_DRILL_DOWN;
+          return Promise.resolve(new Response(JSON.stringify(body), { status: asked === 1 ? 500 : 200 }));
+        }
+        return Promise.resolve(new Response(JSON.stringify(MOCK_CARD_STATS_PROVISIONAL), { status: 200 }));
+      }),
+    );
+    render(<StatsRoute />);
+
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    fireEvent.click(screen.getByText("Spark Pup"));
+    const modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    expect(await within(modal).findByText("Details unavailable.", undefined, SLOW)).toBeInTheDocument();
+
+    fireEvent.click(within(modal).getByText("Retry"));
+    expect(await within(modal).findByText("Win rate by patch", undefined, SLOW)).toBeInTheDocument();
+    expect(asked).toBe(2);
+  });
+
+  it("View previous patch asks the server once", async () => {
+    render(<StatsRoute />);
+
+    fireEvent.click(await screen.findByTestId(statsTestid.fallbackToggle, undefined, SLOW));
+    await waitFor(
+      () => expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.1.0"),
+      SLOW,
+    );
+    expect(requested("/api/stats/cards").filter((url) => url.searchParams.get("patch") === "0.1.0")).toHaveLength(1);
   });
 });

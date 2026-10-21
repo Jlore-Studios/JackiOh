@@ -242,7 +242,7 @@ pub(crate) fn fold_game(
     build_catalog: &str,
     policy: bool,
 ) -> Result<Vec<PositionRow>, Dropped> {
-    let shipped = catalog_for(&game.catalog, build_catalog).map_err(|_| Dropped::EarlierPatch)?;
+    let shipped = catalog_for(game.catalog_now(), build_catalog).map_err(|_| Dropped::EarlierPatch)?;
     if game.result.is_none() {
         return Err(Dropped::NoResult);
     }
@@ -414,6 +414,8 @@ mod tests {
             turns: record.turns,
             catalog: jackioh_cards::catalog_version().to_string(),
             commit: "test".to_string(),
+            versions: Some(jackioh_engine::config::VERSIONS_SCHEME),
+            ai_generation: None,
         };
         (game, live)
     }

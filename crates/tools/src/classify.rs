@@ -43,20 +43,14 @@ use crate::luau::{parent_check, temp_traces};
 use crate::patches::patches_io::{Catalog, ChangeKind, diff_catalogs};
 use crate::patches::{git, repo_root};
 
-/// R1365000: the card families that must play differently for a patch; fewer is a micro.
-pub(crate) const PATCH_MIN_CARDS: usize = 10;
+/// R1365000: the card families that must play differently for a patch; fewer is a micro. The
+/// engine's, since a card's stats window reads it too (R1367000).
+pub(crate) use jackioh_engine::config::PATCH_MIN_CARDS;
 
-/// R1365000: the catalog fields a player reads and no game does. Every other field plays. A
-/// `flavor` (R1437000) never reaches this list, since `changed_fields` leaves it out.
-const WORDING_FIELDS: &[&str] = &[
-    "name",
-    "base.text",
-    "radiant.text",
-    "refs",
-    "printedRarity",
-    "index",
-    "flavor",
-];
+/// R1365000: the catalog fields a player reads and no game does. Every other field plays. The cards
+/// crate's, since a card's stats window reads it too (R1367000). A `flavor` (R1437000) never
+/// reaches this list, since `changed_fields` leaves it out.
+pub(crate) use jackioh_cards::WORDING_FIELDS;
 
 /// The AI crate's own tooling, which plays no decision (gates, the sweep, development runs).
 const AI_TOOLING: &[&str] = &["gate.rs", "sweep.rs", "dev_run.rs", "baselines.rs"];
@@ -88,10 +82,44 @@ pub struct Args {
     /// Print the classification as one JSON object.
     #[arg(long)]
     json: bool,
+    /// Hold the head's pending fragments to what the change does (R1370000): fail when a card plays
+    /// differently and no fragment claims it, or a fragment claims a play or a rule the base build
+    /// does not show. Needs `--parent-bin` whenever stage 1 leaves something unchecked.
+    #[arg(long)]
+    claims: bool,
+}
+
+/// `--json --claims`: the classification, the labels CI puts on the pull request, and what the
+/// fragments' claims get wrong.
+#[derive(Serialize)]
+struct Report<'a> {
+    #[serde(flatten)]
+    classification: &'a Classification,
+    labels: Vec<String>,
+    problems: Vec<String>,
+}
+
+/// R1370000: the labels a pull request carries for its kind and its tier (`kind:cards`,
+/// `tier:micro`), as `bot/harness/config.py`'s `LABELS` lists them.
+pub(crate) fn labels(classification: &Classification) -> Vec<String> {
+    let mut labels = vec![format!("kind:{}", kind_name(classification.kind))];
+    if let Some(tier) = classification.tier {
+        labels.push(format!("tier:{}", format!("{tier:?}").to_lowercase()));
+    }
+    labels
+}
+
+fn kind_name(kind: Kind) -> &'static str {
+    match kind {
+        Kind::Internal => "internal",
+        Kind::App => "app",
+        Kind::Ai => "ai",
+        Kind::Cards => "cards",
+    }
 }
 
 /// What a change reaches, lowest first, so the highest of several is their `max`.
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum Kind {
     Internal,
@@ -742,11 +770,11 @@ fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
 // ---------------------------------------------------------------------------------------------
 
 /// `rev:path`'s text, or `None` where the commit has no such file.
-fn show(root: &Path, rev: &str, path: &str) -> Option<String> {
+pub(crate) fn show(root: &Path, rev: &str, path: &str) -> Option<String> {
     git(root, &["cat-file", "-p", &format!("{rev}:{path}")], &[]).ok()
 }
 
-fn side_at(root: &Path, rev: &str) -> Result<Side> {
+pub(crate) fn side_at(root: &Path, rev: &str) -> Result<Side> {
     let catalog = show(root, rev, CATALOG_PATH).with_context(|| format!("{rev} has no {CATALOG_PATH}"))?;
     let sets = show(root, rev, SETS_PATH).with_context(|| format!("{rev} has no {SETS_PATH}"))?;
     Ok(Side {
@@ -791,10 +819,44 @@ pub fn run(args: Args) -> Result<()> {
         None => None,
     };
     let classification = classify(&diff, checked.as_ref());
+    let problems = if args.claims {
+        if checked.is_none() && !classification.unchecked.is_empty() {
+            bail!(
+                "--claims needs --parent-bin: stage 1 left {} unchecked",
+                classification.unchecked.join(", ")
+            );
+        }
+        crate::claims::problems(
+            &classification,
+            &crate::claims::fragments_at(&root, &head)?,
+            &crate::claims::fragments_at(&root, &base)?,
+        )
+    } else {
+        Vec::new()
+    };
     if args.json {
-        println!("{}", serde_json::to_string(&classification)?);
-        return Ok(());
+        let report = Report {
+            classification: &classification,
+            labels: labels(&classification),
+            problems: problems.clone(),
+        };
+        println!("{}", serde_json::to_string(&report)?);
+    } else {
+        print_classification(&classification);
+        for problem in &problems {
+            println!("classify: {problem}");
+        }
     }
+    if !problems.is_empty() {
+        bail!(
+            "the pending fragments' claims do not match the change ({} problem(s))",
+            problems.len()
+        );
+    }
+    Ok(())
+}
+
+fn print_classification(classification: &Classification) {
     let tier = classification
         .tier
         .map_or(String::new(), |tier| format!(", {tier:?}").to_lowercase());
@@ -812,7 +874,6 @@ pub fn run(args: Args) -> Result<()> {
     if classification.rule {
         println!("  a divergence no card explains: a rule every game meets");
     }
-    Ok(())
 }
 
 #[cfg(test)]

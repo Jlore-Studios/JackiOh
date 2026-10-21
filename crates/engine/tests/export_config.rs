@@ -29,7 +29,7 @@ use jackioh_engine::config::{
     DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP, LIBRARY_CAP,
     MAX_COPIES, MAX_MANA, RANDOM_ATTACK_TARGET, REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS,
     SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX, TRIBAL_TAGS,
-    TURN_CAP_PLAYER_TURNS,
+    TURN_CAP_PLAYER_TURNS, VERSIONS_SCHEME,
 };
 use serde::Serialize;
 
@@ -140,6 +140,7 @@ fn engine_config_ts() -> String {
         constant("RANDOM_ATTACK_TARGET", None, RANDOM_ATTACK_TARGET),
         constant("REPLAY_CHECKPOINT_EVERY", None, &REPLAY_CHECKPOINT_EVERY),
         constant("REPLAY_PAGE_STEPS", None, &REPLAY_PAGE_STEPS),
+        constant("VERSIONS_SCHEME", None, &VERSIONS_SCHEME),
         // R923002: the practice sandbox panel's bounds.
         constant("SANDBOX_ARMOR_MAX", None, &SANDBOX_ARMOR_MAX),
         constant("SANDBOX_DRAW_MAX", None, &SANDBOX_DRAW_MAX),
@@ -168,8 +169,8 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    // Forty-eight constants, each on its own line, the way the client and the diff check read them.
-    assert_eq!(text.matches("\nexport const ").count(), 48, "{text}");
+    // Forty-nine constants, each on its own line, the way the client and the diff check read them.
+    assert_eq!(text.matches("\nexport const ").count(), 49, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 

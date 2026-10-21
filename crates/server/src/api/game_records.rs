@@ -18,7 +18,7 @@
 //! R1044000: the store folds each record it writes into the totals every card figure is read from,
 //! in the same transaction. `fold_pending` folds the records written before the totals existed.
 
-use jackioh_engine::{FoldArgs, GameMode, GameRecord, GameSource, PerPlayer, Pilot};
+use jackioh_engine::{FoldArgs, GameMode, GameRecord, GameSource, PerPlayer, Pilot, RecordBuild};
 use serde_json::{Map, Value, json};
 
 use crate::actor::engine;
@@ -181,6 +181,12 @@ async fn record_live_game_inner(app: &App, match_id: &str) -> Result<Option<Game
         source: GameSource::Live,
         mode: game_mode_of(mode),
         patch: row.catalog_version.clone(),
+        // R1367000: the deploy's commit, and its AI generation when a ladder bot played a seat.
+        build: RecordBuild::of(
+            app.env.deployed_commit.as_deref(),
+            jackioh_ai::ai_generation(),
+            &pilots,
+        ),
         pilots,
         game,
     };

@@ -20,7 +20,7 @@ const OPTS: GifPlanOptions = {
   width: 800,
   height: 450,
   fps: REPLAY_GIF_FPS,
-  catalogVersion: "v0.3.6",
+  catalogVersion: "v0.3.0b",
   portraits: { p1: "vanilla", p2: "gary" },
 };
 
@@ -122,13 +122,13 @@ describe("R513000 what a shared GIF holds", () => {
   });
 
   it("R513000 no frame plan holds an account name", () => {
-    const allowed = /^(You|Opponent|JackiOh|v\d+\.\d+\.\d+|Turn \d+|Hand \d+|Mana \d+\/\d+|\d+|Draw|You win|You lose)$/u;
+    const allowed = /^(You|Opponent|JackiOh|v\d+\.\d+\.\d+[a-z]?|Turn \d+|Hand \d+|Mana \d+\/\d+|\d+|Draw|You win|You lose)$/u;
     const plan = planFrames(clip, OPTS);
     const texts = plan.frames.flatMap((frame) => frame.items.flatMap((item) => (item.kind === "text" ? [item.text] : [])));
     expect(texts.length).toBeGreaterThan(0);
     for (const text of texts) expect(text).toMatch(allowed);
     expect(texts).toContain(GIF_MARK);
-    expect(texts).toContain("v0.3.6");
+    expect(texts).toContain("v0.3.0b");
     expect(texts).toContain("You");
     expect(texts).toContain("Opponent");
 
