@@ -1345,24 +1345,32 @@ name = "jackioh-wasm"
 version = "0.5.0"
 dependencies = [
  "console_error_panic_hook",
+ "jackioh-cards",
+ "jackioh-engine",
+ "jackioh-wasm-core",
+ "js-sys",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "jackioh-wasm-core"
+version = "0.5.0"
+dependencies = [
  "jackioh-ai",
  "jackioh-cards",
  "jackioh-engine",
- "js-sys",
  "serde",
  "serde_json",
- "wasm-bindgen",
 ]
 
 [[package]]
 name = "jackioh-wasm-luau"
 version = "0.5.0"
 dependencies = [
- "jackioh-ai",
  "jackioh-cards",
  "jackioh-engine",
  "jackioh-luau",
- "serde",
+ "jackioh-wasm-core",
  "serde_json",
 ]
 
