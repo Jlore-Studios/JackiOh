@@ -635,18 +635,18 @@ describe("the R81 kinds render the same picker when the engine does open them as
     expect(screen.getByTestId("craft-points")).toHaveTextContent("0/12 pts");
   });
 
-  it("R1182000 a potion craft prompt opens the editor in the potion frame", () => {
+  it("R1182000 R1563008 a potion craft prompt opens the editor in the potion frame", () => {
     const onAction = vi.fn();
     const potion: CraftRecipe = {
       cost: 1,
-      type: "Unit",
+      type: "Spell",
       adjective: "Pure",
       noun: "Closure",
-      attack: 2,
-      health: 2,
+      attack: 0,
+      health: 1,
       keywords: [],
       echo: 0,
-      hats: [{ hat: "activate", effects: [{ verb: "damageEnemyHero", n: 4 }] }],
+      hats: [{ hat: "whenCast", effects: [{ verb: "damageEnemyHero", n: 4 }] }],
       frame: "potion",
     };
     const view = viewWith({
@@ -659,7 +659,7 @@ describe("the R81 kinds render the same picker when the engine does open them as
     render(<Prompt view={view} onAction={onAction} />);
 
     expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-craft-mode", "potion");
-    expect(screen.getByTestId("craft-points")).toHaveTextContent("7/7 pts");
+    expect(screen.getByTestId("craft-points")).toHaveTextContent("4/4 pts");
     fireEvent.click(screen.getByTestId("prompt-submit"));
     expect(onAction).toHaveBeenCalledWith({
       type: "answer",

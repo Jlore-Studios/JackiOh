@@ -1,5 +1,5 @@
 //! `shuffleInto` at the bottom of the library (ME-DECK-BOTTOM): a fresh card put last with no
-//! rng draw, refused by a full library (R80). Meditative #49 YileGPT Tamed (R80, R310) is its user.
+//! rng draw, refused by a full library (R80). Meditative #49 YileGPT (R80, R310) is its user.
 
 use jackioh_engine::config::LIBRARY_CAP;
 use jackioh_engine::effects::shuffle_into;

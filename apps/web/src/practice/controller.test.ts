@@ -694,3 +694,58 @@ describe("R508 the controller carries the human's last practice board", () => {
     }
   });
 });
+
+// R1563006: KY's Competition's question sequence clock, which the practice host keeps itself.
+
+describe("R1563006 the practice host's question sequence clock", () => {
+  const ANSWERS = [
+    { key: "mode:A", label: "10" },
+    { key: "mode:B", label: "11" },
+    { key: "mode:C", label: "12" },
+    { key: "mode:D", label: "13" },
+    { key: "none", label: "Stop" },
+  ];
+
+  function question(choiceId: string, streak: number): PracticeSnapshot {
+    return snap(
+      { turn: 3, active: "p1", phase: "main", pending: pendingFor("answer", ANSWERS, { choiceId, streak }) },
+      false,
+    );
+  }
+
+  it("R1563006 a sequence open for 60 s from its first question is answered Stop for the human, whatever was answered since", async () => {
+    const fake = fakeHost();
+    const controller = controllerFor(fake);
+    await startWith(fake, controller, question("q1", 0));
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    // A right answer asks the next question: the same window goes on.
+    controller.act({ type: "answer", choiceId: "q1", selection: [{ pick: "mode", option: "A" }] });
+    await flush();
+    fake.respond({ type: "snapshot", snapshot: question("q2", 1) });
+    await flush();
+    const before = fake.requests.length;
+
+    await vi.advanceTimersByTimeAsync(30_000 - 1);
+    expect(fake.requests.length).toBe(before);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fake.requests.at(-1)?.body).toEqual({
+      type: "act",
+      action: { type: "answer", choiceId: "q2", selection: [{ pick: "none" }] },
+    });
+  });
+
+  it("R1563006 a sequence that ended sends nothing, and a new one starts a fresh window", async () => {
+    const fake = fakeHost();
+    const controller = controllerFor(fake);
+    await startWith(fake, controller, question("q1", 0));
+    controller.act({ type: "answer", choiceId: "q1", selection: [{ pick: "none" }] });
+    await flush();
+    fake.respond({ type: "snapshot", snapshot: humanTurn(3) });
+    await flush();
+    const before = fake.requests.length;
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(fake.requests.length).toBe(before);
+    controller.dispose();
+  });
+});

@@ -99,7 +99,7 @@ crates/
   engine/      reduce, state, events, rng, combat, triggers, zones, view_for; wire/ (action, event and
                catalog types); validator.rs (deck, trio and queue rules D1–D5, T1–T3, L1–L6, shared by
                client and server)
-  cards/       catalog.json (396 cards + 84 tokens across Core, Classic, Classic+, Meditative, Meditative+),
+  cards/       catalog.json (396 cards + 86 tokens across Core, Classic, Classic+, Meditative, Meditative+),
                patches/ (one snapshot per card patch), src/scripts/core/, classic/, classic_plus/, meditative/,
                meditative_plus/: one file per card, its tests inside it
   ai/          the practice opponent

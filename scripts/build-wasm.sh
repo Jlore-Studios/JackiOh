@@ -314,7 +314,7 @@ export interface JackiohWasmLuauModule {
   _build_ai_deck(options: number): number;
   _choose_action(state: number, seat: number, rngSeed: number, rngCursor: number): number;
   _constants(): number;
-  _craft_preview(recipe: number, cost: number): number;
+  _craft_preview(recipe: number, cost: number, prompt: number): number;
   _engine_tables(): number;
   _validator(call: number, input: number): number;
   _check_custom_card(card: number): number;

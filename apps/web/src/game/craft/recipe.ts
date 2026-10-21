@@ -6,6 +6,7 @@ import type {
   CraftHatKind,
   CraftKeyword,
   CraftMode,
+  CraftOffer,
   CraftRecipe,
   CraftVerb,
   Keyword,
@@ -16,13 +17,15 @@ import {
   CRAFT_KEYWORD_PRICES,
   CRAFT_MAX_N,
   CRAFT_NOUNS,
+  CRAFT_RETIRED_VERBS,
   CRAFT_VERB_PRICES,
 } from "../../wire/engineConfig.ts";
 
 /** ME-CRAFT (Meditative #17, R880–R883): the block editor's pure recipe helpers. Every helper
  * returns a new recipe and leaves its argument alone, so the editor's state stays immutable.
  * Meditative+ (#1182) adds the potion frame (R1182000, R1182001) and the empty canvas
- * (R1182002). */
+ * (R1182002); #1563 the prompt's offer (R1563007), the Spell potion (R1563008) and the retired
+ * verbs (R1563009). */
 
 /** What the palette calls each effect verb, in the block table's words. */
 export const VERB_LABELS: Record<CraftVerb, string> = {
@@ -65,8 +68,8 @@ export const HAT_LABELS: Record<CraftHatKind, string> = {
   activate: "Activate: Tribute this",
 };
 
-/** R1182000: a Potion's one hat, pinned to the canvas: the frame takes no other. */
-export const POTION_HAT: CraftHatKind = "activate";
+/** R1182000, R1563008: a Potion's one hat, pinned to the canvas: the frame takes no other. */
+export const POTION_HAT: CraftHatKind = "whenCast";
 
 /** The frame a craft prompt's mode fixes: a Potion or a HUGE Potion, none for Meditative #17's
  * crafter or Scratch Pad's canvas (R1182000, R1182002). */
@@ -75,8 +78,8 @@ export function frameOf(mode: CraftMode | undefined): CraftFrame | undefined {
 }
 
 /** An empty canvas at the prompt's cost: a 0/1 Unit with nothing on it (Scratch Pad's start,
- * R1182002), or, in a frame, a 0/1 Potion whose Activate holds nothing yet (R1182000). The engine
- * refuses what is still missing; the editor only starts from it. */
+ * R1182002), or, in a frame, a Potion, a Spell whose When cast holds nothing yet (R1182000,
+ * R1563008). The engine refuses what is still missing; the editor only starts from it. */
 export function blankRecipe(cost: number, frame?: CraftFrame): CraftRecipe {
   const blank: CraftRecipe = {
     cost,
@@ -89,7 +92,31 @@ export function blankRecipe(cost: number, frame?: CraftFrame): CraftRecipe {
     echo: 0,
     hats: [],
   };
-  return frame === undefined ? blank : { ...blank, hats: [{ hat: POTION_HAT, effects: [] }], frame };
+  return frame === undefined
+    ? blank
+    : { ...blank, type: "Spell", hats: [{ hat: POTION_HAT, effects: [] }], frame };
+}
+
+/** R1563007: the keywords the prompt offers, in the table's order; with no offer (Scratch Pad's
+ * prompt) every one. */
+export function offeredKeywords(offer: CraftOffer | undefined): Keyword["kind"][] {
+  return CRAFT_KEYWORD_PRICES.map((row) => row.kind).filter((kind) => offer?.keywords.includes(kind) ?? true);
+}
+
+/** R1563007: the hats the prompt offers, in the table's order; with no offer every hat a type takes
+ * (the potion frame's own is pinned, not offered). */
+export function offeredHats(offer: CraftOffer | undefined): CraftHatKind[] {
+  return CRAFT_HAT_PRICES.filter((row) => row.types.length > 0)
+    .map((row) => row.hat)
+    .filter((hat) => offer?.hats.includes(hat) ?? true);
+}
+
+/** R1563007, R1563009: the effect verbs the prompt offers, in the table's order; with no offer every
+ * verb but a retired one. */
+export function offeredVerbs(offer: CraftOffer | undefined): CraftVerb[] {
+  return CRAFT_VERB_PRICES.map((row) => row.verb).filter((verb) =>
+    offer === undefined ? !CRAFT_RETIRED_VERBS.includes(verb) : offer.verbs.includes(verb),
+  );
 }
 
 /** Whether a card type may take a hat: its `CRAFT_HAT_PRICES` row lists the type (R883). */

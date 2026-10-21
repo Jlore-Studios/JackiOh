@@ -1,4 +1,4 @@
-//! Pick N different entries of a list (Meditative #49.1 YileGPT Unleashed, MD-C23).
+//! Pick N different entries of a list (Meditative #49.1 YileGPT Prime, MD-C23).
 //!
 //! Call to Chaos's Radiant draw (R423) made into a verb: N different entries of a list (R60),
 //! drawn from the match rng as the effect resolves, resolved in the list's order and named to both

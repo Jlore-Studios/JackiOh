@@ -294,10 +294,11 @@ pub fn learned_parity(fixture_json: &str) -> Result<String, JsError> {
 
 /// ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost —
 /// a `CraftPreview` — so the block editor shows what the reducer will say and the client decides
-/// nothing (CLAUDE.md rule 7).
+/// nothing (CLAUDE.md rule 7). `prompt_json` is the open prompt's `{ craftMode, craftOffer }`
+/// (R1563007).
 #[wasm_bindgen]
-pub fn craft_preview(recipe_json: &str, cost: f64) -> Result<String, JsError> {
-    js(wasm_core::craft_preview(recipe_json, cost))
+pub fn craft_preview(recipe_json: &str, cost: f64, prompt_json: &str) -> Result<String, JsError> {
+    js(wasm_core::craft_preview(recipe_json, cost, prompt_json))
 }
 
 /// `{ chaosEffects: [{label}], chaosPlusEffects: [{label}], chaosMedEffects: [{label}], heroPowerNames,

@@ -1,27 +1,91 @@
 /* ME-CRAFT (Meditative #17, R880): the block editor's own styles, next to prompt.css. The editor
-   is a dialog, not a page: three columns (palette, canvas, preview) on a panel, one docked sheet
-   on a phone. */
+   is a dialog, not a page: a header (title, meters), a body and a footer whose Craft button stays in
+   reach. On a panel the body is three columns (the card, the canvas, the palette); on a phone it is
+   one docked sheet whose body scrolls between the header and the footer (#1563). */
 
-.craft-editor {
-  max-width: 880px;
+/* A small picker is click-through to the board (prompt.css); the editor is a whole dialog, so all of
+   it takes the pointer: its selects, its code and its hats as well as its buttons. */
+.prompt.craft-editor {
+  pointer-events: auto;
+  width: min(1080px, 100%);
+  max-width: none;
+  max-height: min(92vh, 860px);
+  overflow: hidden;
+  padding: 0;
+  gap: 0;
 }
 
+.craft-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 16px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--line-bright);
+}
+
+.craft-head .prompt-title {
+  max-width: none;
+}
+
+.craft-meters {
+  display: flex;
+  gap: 14px;
+  margin: 0;
+  max-width: none;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+
+/* A meter over its budget reads as a warning, which is the engine's own numbers, not a rule. */
+.craft-meters [data-over="true"] {
+  color: #fca5a5;
+  font-weight: 650;
+}
+
+/* The body has the dialog's height left over, so its rows take their content's full height and it
+   scrolls; an `auto` row would be squeezed to its minimum, and the canvas run over the palette. */
 .craft-columns {
   display: grid;
-  grid-template-columns: 1fr 1fr 220px;
-  gap: 12px;
+  grid-template-columns: minmax(180px, 220px) minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-auto-rows: max-content;
+  gap: 16px;
   align-items: start;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 14px;
+}
+
+.craft-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 14px max(10px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line-bright);
+}
+
+.craft-foot .prompt-submit {
+  min-width: 160px;
+}
+
+.craft-foot .prompt-submit[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .craft-palette {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .craft-palette section h3 {
-  margin: 0 0 4px;
-  font-size: 13px;
+  margin: 0 0 6px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
 }
 
 .craft-row {
@@ -32,24 +96,35 @@
 }
 
 .craft-block {
-  border: 1px solid currentcolor;
-  border-radius: 6px;
-  background: none;
+  border: 1px solid var(--line-bright);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 4%);
   color: inherit;
   font: inherit;
+  font-size: 13px;
   padding: 6px 10px;
-  min-height: 32px;
+  min-height: 34px;
   cursor: pointer;
   text-align: left;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .craft-block:hover {
+    border-color: var(--selected);
+  }
+}
+
 .craft-block[aria-pressed="true"] {
-  outline: 2px solid currentcolor;
-  outline-offset: 1px;
+  border-color: var(--selected);
+  box-shadow: inset 0 0 0 1px var(--selected);
+}
+
+.craft-block[aria-disabled="true"] {
+  opacity: 0.55;
 }
 
 .craft-block:focus-visible {
-  outline: 2px solid currentcolor;
+  outline: 2px solid var(--selected);
   outline-offset: 2px;
 }
 
@@ -68,8 +143,8 @@
 }
 
 .craft-stepper button {
-  min-width: 28px;
-  min-height: 28px;
+  min-width: 30px;
+  min-height: 30px;
   font: inherit;
 }
 
@@ -77,12 +152,23 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-height: 120px;
+  min-height: 140px;
+  padding: 10px;
+  border: 1px dashed var(--line-bright);
+  border-radius: 10px;
+}
+
+.craft-empty {
+  margin: auto;
+  color: var(--text-dim);
+  font-size: 13px;
+  text-align: center;
 }
 
 .craft-hat {
-  border: 1px solid currentcolor;
-  border-radius: 6px;
+  border: 1px solid var(--line-bright);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 3%);
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -90,8 +176,7 @@
 }
 
 .craft-hat[aria-pressed="true"] {
-  outline: 2px solid currentcolor;
-  outline-offset: 1px;
+  border-color: var(--selected);
 }
 
 .craft-hat > header {
@@ -101,8 +186,8 @@
 }
 
 .craft-hat > header button {
-  min-width: 28px;
-  min-height: 28px;
+  min-width: 30px;
+  min-height: 30px;
 }
 
 .craft-placed {
@@ -114,6 +199,10 @@
   touch-action: none;
 }
 
+.craft-placed > span:first-child {
+  flex: 1 1 auto;
+}
+
 .craft-placed:active {
   cursor: grabbing;
 }
@@ -122,34 +211,30 @@
   min-height: 10px;
 }
 
+/* The card side stays in view while the canvas and the palette scroll past it. */
 .craft-side {
+  position: sticky;
+  top: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 /* The card being crafted: a block box for the face (cards.css sizes it off its width), which opens
-   the card's preview and long-press sheet (#552). The picker's chrome is click-through (prompt.css),
-   so the face takes pointer events back, or neither the hover nor the long-press reaches it (#617). */
+   the card's preview and long-press sheet (#552). */
 .craft-face {
   display: block;
-}
-
-.prompt .craft-face {
-  pointer-events: auto;
-}
-
-.craft-meters {
-  display: flex;
-  gap: 12px;
-  margin: 0;
-  font-variant-numeric: tabular-nums;
 }
 
 .craft-reasons {
   margin: 0;
   padding-left: 18px;
-  min-height: 1em;
+  font-size: 12px;
+  color: #fca5a5;
+}
+
+.craft-reasons:empty {
+  display: none;
 }
 
 .craft-suggestions {
@@ -161,6 +246,58 @@
 .craft-suggestions button {
   min-height: 32px;
   font: inherit;
+  font-size: 12px;
+}
+
+/* R1563010: Scratch Pad's code, a text editor across the canvas and palette columns. */
+.craft-code {
+  grid-column: 2 / 4;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.craft-code-text {
+  width: 100%;
+  min-height: 280px;
+  resize: vertical;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--line-bright);
+  border-radius: 10px;
+  background: #0d1017;
+  color: #e5e7eb;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  tab-size: 2;
+  white-space: pre;
+}
+
+.craft-code-text[aria-invalid="true"] {
+  border-color: #f87171;
+}
+
+.craft-code-error {
+  margin: 0;
+  min-height: 1.3em;
+  max-width: none;
+  color: #fca5a5;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.craft-code-names {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.craft-code-names .craft-block {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  min-height: 30px;
+  padding: 4px 8px;
 }
 
 .craft-ghost {
@@ -181,18 +318,74 @@
   }
 }
 
-/* Phones: the palette docks as a bottom sheet with 44px targets, the same query as prompt.css. */
-@media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
-  .craft-editor[data-layout="sheet"] .craft-columns {
-    grid-template-columns: 1fr;
-    max-height: 80vh;
-    overflow-y: auto;
+/* A narrow panel (a tablet held upright): the card above, the canvas and palette side by side. */
+@media (max-width: 900px) {
+  .craft-editor[data-layout="panel"] .craft-columns {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 
-  .craft-editor[data-layout="sheet"] .craft-palette {
-    position: sticky;
-    bottom: 0;
-    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  .craft-editor[data-layout="panel"] .craft-side {
+    position: static;
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .craft-editor[data-layout="panel"] .craft-side .craft-face {
+    width: 150px;
+  }
+
+  .craft-editor[data-layout="panel"] .craft-code {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Phones: one column between a fixed header and footer, the card first (small, beside its
+   reasons), then the canvas, then the palette; 44px targets, the same query as prompt.css. */
+@media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
+  .prompt.craft-editor[data-layout="sheet"] {
+    max-height: 92vh;
+    padding: 0;
+  }
+
+  .craft-editor[data-layout="sheet"] .craft-head {
+    padding: 10px 12px 8px;
+  }
+
+  .craft-editor[data-layout="sheet"] .craft-columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 10px 12px;
+  }
+
+  .craft-editor[data-layout="sheet"] .craft-side {
+    position: static;
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 8px 12px;
+    align-items: start;
+  }
+
+  .craft-editor[data-layout="sheet"] .craft-side .craft-face {
+    grid-row: span 2;
+  }
+
+  .craft-editor[data-layout="sheet"] .craft-code {
+    grid-column: auto;
+  }
+
+  .craft-editor[data-layout="sheet"] .craft-code-text {
+    min-height: 220px;
+    font-size: 16px; /* iOS zooms into a field under 16px */
+  }
+
+  .craft-editor[data-layout="sheet"] .craft-foot {
+    padding: 8px 12px max(8px, env(safe-area-inset-bottom));
+  }
+
+  .craft-editor[data-layout="sheet"] .craft-foot .prompt-submit {
+    flex: 1 1 auto;
   }
 
   .craft-editor[data-layout="sheet"] .craft-block,
@@ -203,6 +396,7 @@
   }
 
   .craft-editor[data-layout="sheet"] .craft-stepper button,
+  .craft-editor[data-layout="sheet"] .craft-placed > button,
   .craft-editor[data-layout="sheet"] .craft-hat > header button {
     min-width: 44px;
     min-height: 44px;
