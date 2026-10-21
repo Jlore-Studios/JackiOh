@@ -302,6 +302,41 @@ mod r451_the_last_face_up_card_each_player_played_ai_autocomplete {
         );
     }
 
+    /// "R1121000 an Echo of an AI Spell leaves the last face-up play where it was"
+    #[test]
+    fn r1121000_an_echo_of_an_ai_spell_leaves_the_last_face_up_play_where_it_was() {
+        let mut state = game("r1121000-echo-ai");
+        state = play(&state, PlayerId::P1, &PA.crier.id, false);
+        assert_eq!(
+            query::last_face_up_played(&state, PlayerId::P1),
+            face_up(&PA.crier.id, CardType::Unit)
+        );
+        state = play(&state, PlayerId::P1, &PA.ai_card.id, false);
+        assert_eq!(
+            query::last_face_up_played(&state, PlayerId::P1),
+            face_up(&PA.crier.id, CardType::Unit)
+        );
+        assert_eq!(
+            query::last_spell_played(&state),
+            Some(PlayRecord {
+                def_id: PA.ai_card.id.clone(),
+                radiant: false,
+            })
+        );
+        state = play(&state, PlayerId::P1, &PA.echo_copy.id, false);
+        assert_eq!(
+            query::last_face_up_played(&state, PlayerId::P1),
+            face_up(&PA.crier.id, CardType::Unit)
+        );
+        assert_eq!(
+            query::last_spell_played(&state),
+            Some(PlayRecord {
+                def_id: PA.ai_card.id.clone(),
+                radiant: false,
+            })
+        );
+    }
+
     /// "R451 every record is plain data: it survives a JSON round trip and hashes the same"
     #[test]
     fn r451_every_record_is_plain_data_it_survives_a_json_round_trip_and_hashes_the_same() {

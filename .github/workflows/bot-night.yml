@@ -20,11 +20,13 @@
 # With `controller` on (.harness/config.json, #1455), bot-status's loop plans the work and starts
 # each run with its plan made (bot/harness/controller.py): `plan_ref` names the plan, which the loop
 # wrote to the state branch, and `runs_on`, `cli`, `secret` and `shared` are its runner, CLI,
-# secret name and shared flag. Such a run skips gate and plan, so it waits in GitHub's queue once,
-# for its model job, not three times; work's first step holds those inputs to the plan and to
-# providers.json before any step is handed a secret, and deliver reads the plan from the state
-# branch, where the model job cannot write. A run started any other way (the schedule, a command,
-# a person) gates and plans itself, and its gate defers to the loop while the loop is going.
+# secret name and shared flag. Such a run skips gate, plan and deliver, so it waits in GitHub's
+# queue once, for its model job, not four times; work's first step holds those inputs to the plan
+# and to providers.json before any step is handed a secret. The loop delivers the run itself once
+# it ends (#1537, `controller.deliver`): it reads the plan from the state branch, where the model
+# job cannot write, and the `work` upload through the Actions API. A run started any other way
+# (the schedule, a command, a person) gates, plans and delivers itself, and its gate defers to the
+# loop while the loop is going.
 name: bot-night
 # A run started with its plan names it, and where its model job runs: the loop finds its run by
 # this title, and Squishy counts a run on GitHub's runners against the slots the bots share.
@@ -479,10 +481,11 @@ jobs:
           retention-days: 14
           overwrite: true
 
+  # Not for a run the status loop started (`plan_ref`): the loop delivers that itself (#1537).
   deliver:
     name: deliver
     needs: [plan, work]
-    if: ${{ always() && (inputs.plan_ref || contains(fromJSON('["plan", "build", "revise", "review", "suggest"]'), needs.plan.outputs.action)) }}
+    if: ${{ always() && !inputs.plan_ref && contains(fromJSON('["plan", "build", "revise", "review", "suggest"]'), needs.plan.outputs.action) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -503,21 +506,10 @@ jobs:
           python-version: "3.13"
 
       - name: Fetch the plan
-        if: ${{ !inputs.plan_ref }}
         uses: actions/download-artifact@v4
         with:
           name: plan
           path: ${{ runner.temp }}/plan
-
-      # The status loop's plan (#1455), from the state branch, where the model job cannot write: in
-      # such a run its action, item and subscription are the plan file's, as there is no plan job.
-      - name: The loop's plan
-        if: ${{ inputs.plan_ref }}
-        working-directory: bot
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          PLAN_REF: ${{ inputs.plan_ref }}
-        run: python3 -m harness plan-fetch --ref "$PLAN_REF" --out "$RUNNER_TEMP/plan/plan.json"
 
       - name: Fetch the model job's output
         continue-on-error: true
