@@ -452,7 +452,11 @@ pub extern "C" fn constants() -> *mut c_char {
 /// nothing (CLAUDE.md rule 7). `prompt_json` is the open prompt's `{ craftMode, craftOffer }`
 /// (R1563007).
 #[unsafe(no_mangle)]
-pub extern "C" fn craft_preview(recipe_json: *const c_char, cost: f64, prompt_json: *const c_char) -> *mut c_char {
+pub extern "C" fn craft_preview(
+    recipe_json: *const c_char,
+    cost: f64,
+    prompt_json: *const c_char,
+) -> *mut c_char {
     boundary(|| {
         let recipe = arg("craftPreview: the recipe", recipe_json)?;
         let prompt = arg("craftPreview: the prompt", prompt_json)?;

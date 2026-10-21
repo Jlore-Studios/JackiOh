@@ -105,7 +105,11 @@ fn engine_config_ts() -> String {
         constant("CRAFT_MAX_N", None, &CRAFT_MAX_N),
         constant("CRAFT_NOUNS", Some("readonly string[]"), CRAFT_NOUNS),
         // R1563009: the verbs no craft prompt offers, which Scratch Pad's palette leaves out.
-        constant("CRAFT_RETIRED_VERBS", Some("readonly CraftVerb[]"), CRAFT_RETIRED_VERBS),
+        constant(
+            "CRAFT_RETIRED_VERBS",
+            Some("readonly CraftVerb[]"),
+            CRAFT_RETIRED_VERBS,
+        ),
         constant(
             "CRAFT_VERB_PRICES",
             Some("readonly CraftVerbPrice[]"),

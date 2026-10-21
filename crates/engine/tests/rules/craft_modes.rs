@@ -116,7 +116,8 @@ fn cast_potion(state: &GameState, targets: Value) -> GameState {
 }
 
 #[test]
-fn r1182000_r1563007_r1563008_a_potion_crafter_opens_a_potion_prompt_at_cost_1_whose_presets_are_spells_of_its_offer() {
+fn r1182000_r1563007_r1563008_a_potion_crafter_opens_a_potion_prompt_at_cost_1_whose_presets_are_spells_of_its_offer()
+ {
     for n in 0..20 {
         let state = crafting(&format!("potion-open-{n}"), "pm-potion-crafter", false);
         let pending = open_as(&state, PromptKind::Craft, P1);
@@ -154,7 +155,10 @@ fn r1182000_r1563007_r1563008_a_potion_crafter_opens_a_potion_prompt_at_cost_1_w
             other => panic!("p1's own prompt, not {other:?}"),
         }
         let theirs = serde_json::to_string(&view_for(&state, P2)).expect("the view serializes");
-        assert!(!theirs.contains("craftMode") && !theirs.contains("craftOffer"), "{theirs}");
+        assert!(
+            !theirs.contains("craftMode") && !theirs.contains("craftOffer"),
+            "{theirs}"
+        );
     }
 }
 
@@ -275,9 +279,14 @@ fn r1563007_a_block_the_offer_lacks_is_refused() {
     let state = crafting("potion-offer", "pm-potion-crafter", false);
     let offer = must(open_as(&state, PromptKind::Craft, P1).craft_offer, "its offer");
     let missing = must(
-        [CraftVerb::DamageEnemyHero, CraftVerb::Draw, CraftVerb::GainMana, CraftVerb::DamageRandomEnemy]
-            .into_iter()
-            .find(|verb| !offer.verbs.contains(verb)),
+        [
+            CraftVerb::DamageEnemyHero,
+            CraftVerb::Draw,
+            CraftVerb::GainMana,
+            CraftVerb::DamageRandomEnemy,
+        ]
+        .into_iter()
+        .find(|verb| !offer.verbs.contains(verb)),
         "a verb outside three",
     );
     let recipe = potion("potion", 1, json!([{ "verb": missing, "n": 1 }]));
@@ -293,7 +302,9 @@ fn r1563007_a_block_the_offer_lacks_is_refused() {
 
 /// Whether a verb takes a number, read off the price table.
 fn verb_takes_n(verb: CraftVerb) -> bool {
-    CRAFT_VERB_PRICES.iter().any(|row| row.verb == verb && row.takes_n)
+    CRAFT_VERB_PRICES
+        .iter()
+        .any(|row| row.verb == verb && row.takes_n)
 }
 
 #[test]
@@ -403,7 +414,10 @@ fn r1182000_r1563007_every_potion_preset_is_a_different_offered_verb_valid_withi
                     validate_recipe(recipe, cost)
                 );
                 assert!(offer.verbs.contains(&recipe.hats[0].effects[0].verb));
-                assert!(recipe_points(recipe) <= points_budget(Some(frame), cost), "{recipe:?}");
+                assert!(
+                    recipe_points(recipe) <= points_budget(Some(frame), cost),
+                    "{recipe:?}"
+                );
             }
         }
     }
@@ -572,7 +586,11 @@ fn r1563008_r1563009_a_potion_crafted_before_1563_still_compiles_as_it_did() {
     let def = compile_crafted_def(&old);
     assert_eq!(def.type_, CardType::Unit);
     assert_eq!(def.tags, vec![Tag::Potion]);
-    assert!(def.base.text.starts_with("Activate: Tribute this."), "{}", def.base.text);
+    assert!(
+        def.base.text.starts_with("Activate: Tribute this."),
+        "{}",
+        def.base.text
+    );
     let scripts = compile_crafted_scripts(&old);
     assert_eq!(scripts.base.activations.len(), 1);
     assert!(scripts.base.cry.is_none());

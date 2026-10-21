@@ -565,7 +565,8 @@ pub fn choose_craft(args: ChooseCraftArgs) -> Effect {
             None => args.cost.clamp(0, crate::config::CRAFT_MAX_COST),
         };
         let offer = crate::subsystems::craft::roll_offer(&mut *ctx.sink.rng, args.mode, cost);
-        let recipes = crate::subsystems::craft::presets_for(&mut *ctx.sink.rng, args.mode, cost, offer.as_ref());
+        let recipes =
+            crate::subsystems::craft::presets_for(&mut *ctx.sink.rng, args.mode, cost, offer.as_ref());
         let radiant = args.radiant == Some(true);
         let options: Vec<PromptOption> = recipes
             .into_iter()

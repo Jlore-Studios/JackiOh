@@ -4,7 +4,8 @@
 
 use jackioh_engine::effects::degrade;
 use jackioh_engine::subsystems::craft::{
-    compile_crafted_def, craft_id, craft_presets, craft_preview, recipe_loc, recipe_points, validate_recipe, whole_palette,
+    compile_crafted_def, craft_id, craft_presets, craft_preview, recipe_loc, recipe_points, validate_recipe,
+    whole_palette,
 };
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};

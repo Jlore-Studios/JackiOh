@@ -53,8 +53,9 @@ use crate::state::find_instance;
 use crate::subsystems::fuse::fused_digest;
 use crate::wire::{
     CardCost, CardDef, CardFace, CardType, CraftEffect, CraftFrame, CraftHat, CraftHatKind, CraftKeyword,
-    CraftKeywordPrice, CraftMode, CraftOffer, CraftPreview, CraftRecipe, CraftVerb, CraftVerbPrice, GameEvent,
-    GameEventType, Keyword, KeywordKind, Param, ParamBetter, Rarity, SetName, Tag, TargetDecl, opponent_of,
+    CraftKeywordPrice, CraftMode, CraftOffer, CraftPreview, CraftRecipe, CraftVerb, CraftVerbPrice,
+    GameEvent, GameEventType, Keyword, KeywordKind, Param, ParamBetter, Rarity, SetName, Tag, TargetDecl,
+    opponent_of,
 };
 use crate::zones::active_units_of;
 
@@ -326,7 +327,10 @@ pub fn validate_recipe(recipe: &CraftRecipe, cost: i32) -> Result<(), Vec<String
         for effect in &hat.effects {
             let row = verb_price(effect.verb);
             if CRAFT_RETIRED_VERBS.contains(&effect.verb) {
-                reasons.push(format!("{} is no craft block since #1563", verb_name(effect.verb)));
+                reasons.push(format!(
+                    "{} is no craft block since #1563",
+                    verb_name(effect.verb)
+                ));
             }
             if row.takes_n {
                 if effect.n.is_none_or(|n| !(1..=CRAFT_MAX_N).contains(&n)) {
@@ -1114,7 +1118,9 @@ fn preset_unit(rng: &mut Rng, cost: i32, budget: i32, offer: &CraftOffer) -> Cra
         .filter(|kind| offer.keywords.contains(kind))
         .collect();
     let keyword = if budget >= CRAFT_PRESET_KEYWORD_MIN_POINTS {
-        rng.pick(&offered).copied().map(|kind| CraftKeyword { kind, n: None })
+        rng.pick(&offered)
+            .copied()
+            .map(|kind| CraftKeyword { kind, n: None })
     } else {
         None
     };
@@ -1146,7 +1152,11 @@ fn preset_effect(
     budget: i32,
     offer: &CraftOffer,
 ) -> Option<CraftRecipe> {
-    let offered_hats: Vec<CraftHatKind> = hats.iter().copied().filter(|hat| offer.hats.contains(hat)).collect();
+    let offered_hats: Vec<CraftHatKind> = hats
+        .iter()
+        .copied()
+        .filter(|hat| offer.hats.contains(hat))
+        .collect();
     let hat = rng.pick(&offered_hats).copied()?;
     let verbs: Vec<CraftVerb> = offer
         .verbs
@@ -1187,12 +1197,23 @@ pub fn craft_presets(rng: &mut Rng, cost: i32, offer: &CraftOffer) -> Vec<CraftR
     let cost = cost.clamp(0, CRAFT_MAX_COST);
     let budget = craft_points_budget(cost);
     let mut out = vec![preset_unit(rng, cost, budget, offer)];
-    out.extend(preset_effect(rng, cost, CardType::Spell, &[CraftHatKind::WhenCast], budget, offer));
+    out.extend(preset_effect(
+        rng,
+        cost,
+        CardType::Spell,
+        &[CraftHatKind::WhenCast],
+        budget,
+        offer,
+    ));
     out.extend(preset_effect(
         rng,
         cost,
         CardType::FieldSpell,
-        &[CraftHatKind::StartOfTurn, CraftHatKind::EndOfTurn, CraftHatKind::Cry],
+        &[
+            CraftHatKind::StartOfTurn,
+            CraftHatKind::EndOfTurn,
+            CraftHatKind::Cry,
+        ],
         budget,
         offer,
     ));
@@ -1294,7 +1315,11 @@ pub fn roll_offer(rng: &mut Rng, mode: Option<CraftMode>, cost: i32) -> Option<C
     };
     // A verb fits when it fits alone under a hat of multiplier 1 that may aim (When cast); granting a
     // keyword when the cheapest keyword does.
-    let cheapest_keyword = CRAFT_KEYWORD_PRICES.iter().map(|row| row.points + row.per_n).min().unwrap_or(1);
+    let cheapest_keyword = CRAFT_KEYWORD_PRICES
+        .iter()
+        .map(|row| row.points + row.per_n)
+        .min()
+        .unwrap_or(1);
     let verbs: Vec<CraftVerb> = CRAFT_VERB_PRICES
         .iter()
         .map(|row| row.verb)
