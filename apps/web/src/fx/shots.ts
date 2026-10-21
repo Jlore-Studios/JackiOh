@@ -5,8 +5,8 @@
  * an instant line and a `swipe` is a claw-slash crescent. Each shot ends exactly when its flight is
  * up, bursting its preset where it lands, so nothing outlives its entry (R200).
  *
- * Glow comes from layered strokes and circles under `lighter` blending, never from `shadowBlur` or
- * text, and every random choice comes from the injected `FxRng`.
+ * Glow comes from layered strokes and circles under `lighter` blending, with no canvas blur or text,
+ * and every random choice comes from the injected `FxRng`.
  */
 import type { ParticleSystem, EmitOptions } from "./particles.ts";
 import type { FxRng } from "./rng.ts";
