@@ -75,5 +75,192 @@
     "pr": 1454,
     "title": "patch numbers follow the cards: one classifier sorts every change, and the history is retconned to it",
     "kind": "ai"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "88719aa4c26414e610393ef5f760c4d193e8d525",
+    "pr": 1470,
+    "title": "flavors for Core",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "e17c74581a6d8e0f82b80443a839c7e4dfd19129",
+    "pr": 1473,
+    "title": "patches log: fbee9ba..9f4d095",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "3421fbf6a3bfc49946823d73602d3d95dc159254",
+    "pr": 1471,
+    "title": "the old title prefixes stop passing, now that the title retcon has run (#1372)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "4e3643427ec0e69c8a994a4354d873df38042145",
+    "pr": 1476,
+    "title": "flavors for Classic and Meditative+",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "2ebf0141ad8817dc8cddaf4cd1eab3cf00b604b0",
+    "pr": 1467,
+    "title": "the AI's gates fail on a panic its search swallowed, since the browser's AI cannot swallow one",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "1d7db50b076bb30d6c73c7bf2e1a904a3628d647",
+    "pr": 1480,
+    "title": "the learn lane records the practice-claim game again, and two practice tests hold for any AI",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "c949f1469b70140c7061325ec7e51195a6e708bc",
+    "pr": 1482,
+    "title": "flavors for Classic+",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "bcbaca551367214e5664c152b38a62971a4ab6a7",
+    "pr": 1477,
+    "title": "AI gen 13 (learn): the learned evaluation, retrained on 99138 games",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "0fca65cb24b8a0417d1e6e1441fdc96f414744c0",
+    "pr": 1479,
+    "title": "squishy: build pass 1 for #1475",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "4aab6aa1ef816644977e77bd0e15c43d5e69cffb",
+    "pr": 1478,
+    "title": "squishy: build pass 1 for #1474",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "e971e847c13930aba578777f02c72dd65d596606",
+    "pr": 1494,
+    "title": "flavors for Meditative, and every entry carries one",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "82750263a59d380d6cc6613c9709153e5164f8b8",
+    "pr": 1496,
+    "title": "a failed read on the decks page or the account's shop panels can be tried again, and clears once a read works",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "60a20b491b7249fb0ddb8b0afdd0ee7672ff4c35",
+    "pr": 1507,
+    "title": "Traps should have a pop up like randomly cast spells",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "787c21edf51c615dac95f69726f4a166305c1083",
+    "pr": 1508,
+    "title": "the card creator asks before leaving a card with unsaved changes",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "af51d178940101773bc0f1c26c5a6abf3ee491f4",
+    "pr": 1509,
+    "title": "the game log names KY's Papaya's curve as an equation",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "6bfeece1bdac911457e968566cdc814aaa979198",
+    "pr": 1511,
+    "title": "the server tests share one store-helper module instead of dozens of copies of the same helpers",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "424abbc48b37471cb3f3f2a2dba351fff57b0e2c",
+    "pr": 1515,
+    "title": "the training arena and the promotion gate fail on a search panic or fallback, as the quality gates do",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "6569e4556ce25745b71b0e9a89cadcc3cdefaa75",
+    "pr": 1512,
+    "title": "the Jlore games pay stops at a daily cap, and an account holds only a few open practice seeds",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "6e7bbb143868e6d6229b49dc041b747df0b6cfff",
+    "pr": 1513,
+    "title": "each flavor's look, and a Ranged attacker fires its flavor's projectile",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "1a50b57490ed4b2d5e1989436117c18ffd63f6f6",
+    "pr": 1520,
+    "title": "a card's non-combat damage fires its flavor's projectile",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "7d8a0306320018a3323213dc87fc2180dfa25c46",
+    "pr": 1521,
+    "title": "flavored casts and melee impacts, and flavor effects go live",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "180fba8d6bd24ba4b699b2692ff296b384859156",
+    "title": "Merge pull request #1495 from Jlore-Studios/bot/issue-1310",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "8a366430a930933dbc22b04efb4a4dcfb04ad509",
+    "title": "Merge pull request #1517 from Jlore-Studios/bot/issue-1490",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "79ede7757eb2b708530d5ba6840bf9015e9942a5",
+    "pr": 1525,
+    "title": "catalog.json's loc is checked against the script's code block",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "766f1974adbdb742b9ad84b346bbe9c008021522",
+    "pr": 1526,
+    "title": "a Trap's reveal takes its flavor",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "4e04e7314163a48e3035f6637dac24a1ad887740",
+    "pr": 1527,
+    "title": "the card drill-down dialog reads to assistive tech, closes on Escape and gives focus back",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "61d47d0e6660d863f2b8744d1daeec4c35993de1",
+    "pr": 1528,
+    "title": "the co-op replay player's arrow keys work like the 1v1 one's",
+    "kind": "app"
   }
 ]
