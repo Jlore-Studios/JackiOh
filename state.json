@@ -10586,6 +10586,13 @@
     "1571": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T19:39:29Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "it touches crates/engine/src, which can mean hard, but it is presentation only (no state, event, replay or AI change) and copies R979000; it adds a ruling and spans engine, web and spec, so it is above easy"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
