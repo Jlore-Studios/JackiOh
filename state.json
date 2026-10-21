@@ -10553,6 +10553,13 @@
     "1569": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T20:00:45Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "fails line 8 at the margin: focus behaviour across four components and their callers, with choices (where focus lands, when not to restore) the plan settles but a weak builder could still get wrong"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
