@@ -12,31 +12,23 @@ use std::sync::Arc;
 
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{API_REQUESTS_PER_MINUTE, USERNAME_CHANGE_COOLDOWN_MS, USERNAME_MAX_LENGTH};
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::Db;
 use jackioh_server::username::{UsernameRefusal, normalize_username};
 use serde_json::{Value, json};
 
 use crate::support::deps::{add_user, call, test_app};
+use crate::support::store::fake_lock;
 
 const PREVIEW: &str = "/api/username/preview";
 const SAVE: &str = "/api/username";
 const SKIP: &str = "/api/username/skip";
 const ME: &str = "/api/auth/me";
 
-async fn fake(app: &App) -> tokio::sync::MutexGuard<'_, FakeData> {
-    match &app.db {
-        Db::Fake(data) => data.lock().await,
-        Db::Pg(_) => panic!("the API tests run on the fake store"),
-    }
-}
-
 /// A fresh account of `status`, with the default username a new account gets and the prompt not
 /// yet answered (R1434); answers its bearer token.
 async fn account(app: &App, id: &str, status: &str) -> String {
     let user_id = format!("user-{id}");
     let token = add_user(app, &user_id, &format!("{id}@example.test"), true);
-    fake(app)
+    fake_lock(app)
         .await
         .seed_profile(json!({ "id": id, "userId": user_id, "status": status }));
     token
@@ -561,7 +553,7 @@ mod the_routes_r1435 {
         let app = test_app().await;
         let user_id = "user-holder";
         let token = add_user(&app, user_id, "holder@example.test", true);
-        fake(&app).await.seed_profile(json!({
+        fake_lock(&app).await.seed_profile(json!({
             "id": "holder",
             "userId": user_id,
             "status": "active",

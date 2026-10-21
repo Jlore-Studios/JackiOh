@@ -1,0 +1,19 @@
+{
+  "title": "The Maestro's Activate button shows the price and exile count it will use",
+  "sources": "#1486",
+  "notes": "The Maestro (Meditative #69): its Activate's label is now the template \"Spend ({price}) Plague Counters: exile {exiles} from each enemy zone\" the client fills from the card's current numbers, where it baked in the printed 4 and 1 (2 on its Radiant face). The words only: the price and the exile count the ability uses are unchanged. Only the view's label differs, which the classifier's forced games read as a different play.",
+  "player": {
+    "title": "The Maestro's button shows its real numbers",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [
+      "The Maestro's Activate button shows the Plague Counter price and exile count it will use, as other cards change them. The ability itself is unchanged."
+    ],
+    "fixes": []
+  },
+  "cards": [],
+  "plays": [
+    "meditative-069"
+  ]
+}

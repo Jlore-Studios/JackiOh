@@ -10,10 +10,9 @@
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
 
-use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
-use tokio::sync::{MutexGuard, mpsc};
+use tokio::sync::mpsc;
 
 use indexmap::IndexMap;
 
@@ -23,10 +22,10 @@ use jackioh_server::actor::ws_server::{Socket, SocketFrame};
 use jackioh_server::api::game_records::record_live_game;
 use jackioh_server::api::results::record_result;
 use jackioh_server::app::App;
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, MatchSeat, StartMatchInput, StoreError};
+use jackioh_server::db::store::{MatchSeat, StartMatchInput, StoreError};
 
 use crate::support::deps::{TestAppOptions, test_app, test_app_with};
+use crate::support::store::{fake_lock, q, to_json};
 
 const MATCH_ID: &str = "match-records";
 const P1: &str = "profile-1";
@@ -41,26 +40,6 @@ fn from<T: DeserializeOwned>(value: Value) -> T {
     match serde_json::from_value(value.clone()) {
         Ok(parsed) => parsed,
         Err(error) => panic!("{error}: {value}"),
-    }
-}
-
-fn to_json<T: Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
-macro_rules! q {
-    ($app:expr, $method:ident($($arg:expr),* $(,)?)) => {{
-        let mut tx = $app.db.begin(None).await.expect("begin");
-        let out = tx.$method($($arg),*).await.expect(stringify!($method));
-        tx.commit().await.expect("commit");
-        out
-    }};
-}
-
-async fn fake(app: &App) -> MutexGuard<'_, FakeData> {
-    match &app.db {
-        Db::Fake(data) => data.lock().await,
-        Db::Pg(_) => panic!("the server's unit tests run on the fake store"),
     }
 }
 
@@ -242,7 +221,7 @@ async fn live_match_on(mode: Option<&str>, catalog_version: Option<&str>) -> Har
 /// The match `live_match_on` starts, on `app`.
 async fn live_match_in(app: Arc<App>, mode: Option<&str>, catalog_version: Option<&str>) -> Harness {
     {
-        let mut data = fake(&app).await;
+        let mut data = fake_lock(&app).await;
         data.seed_profile(json!({ "id": P1, "inMatchId": MATCH_ID }));
         data.seed_profile(json!({ "id": P2, "inMatchId": MATCH_ID }));
     }
@@ -322,7 +301,7 @@ async fn results_for(app: &App, match_id: &str) -> usize {
 }
 
 async fn game_records(app: &App) -> Value {
-    to_json(&fake(app).await.tables.game_records)
+    to_json(&fake_lock(app).await.tables.game_records)
 }
 
 // live game records (§9.11)
@@ -411,7 +390,7 @@ mod live_game_records {
     async fn r376_never_costs_a_result_a_failed_record_is_logged_and_the_result_stands() {
         let (logs, _guard) = log_lines();
         let mut h = live_match(Some("bo1")).await;
-        fake(&h.app).await.on_call = Some(Arc::new(|method: &str| {
+        fake_lock(&h.app).await.on_call = Some(Arc::new(|method: &str| {
             if method == "gameRecords.insert" {
                 return Err(StoreError::Other("the records table is gone".to_string()));
             }
@@ -445,7 +424,7 @@ mod live_game_records {
         let mut h = live_match(Some("bo1")).await;
         play_to_concession(&mut h).await;
         {
-            let mut data = fake(&h.app).await;
+            let mut data = fake_lock(&h.app).await;
             data.tables.game_records.clear();
             // The last action, the one that ended the game, goes missing from the log.
             data.tables.match_actions.pop();

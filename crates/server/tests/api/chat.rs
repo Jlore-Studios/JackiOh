@@ -9,17 +9,16 @@
 //! `app.rs` spawns (`api::retention::run_purge`), run here for one pass.
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use serde_json::{Value, json};
 
 use jackioh_server::api::retention::run_purge;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{CHAT_MAX_CHARS, CHAT_MESSAGES_PER_MINUTE, CHAT_PAGE, CHAT_RETENTION_DAYS};
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{ChatMessageRow, Db, StoreError};
+use jackioh_server::db::store::{ChatMessageRow, StoreError};
 
 use crate::support::deps::{add_user, call, empty_test_app};
+use crate::support::store::{advance, fake, uuid};
 
 /// Unit conversions, not configuration.
 const MINUTE_MS: u64 = 60_000;
@@ -36,13 +35,6 @@ const SETTLE_YIELDS: usize = 256;
 // Plumbing (private copies: each test file of this binary keeps its own)
 // ---------------------------------------------------------------------------------------------
 
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        _ => panic!("the test app runs on the fake store"),
-    }
-}
-
 fn count<T>(value: T) -> usize
 where
     usize: TryFrom<T>,
@@ -51,18 +43,10 @@ where
     usize::try_from(value).expect("a count fits a usize")
 }
 
-async fn advance(ms: u64) {
-    tokio::time::advance(Duration::from_millis(ms)).await;
-}
-
 async fn settle() {
     for _ in 0..SETTLE_YIELDS {
         tokio::task::yield_now().await;
     }
-}
-
-fn uuid(n: u32) -> String {
-    format!("00000000-0000-4000-8000-{n:012}")
 }
 
 /// A query value, percent-encoded.

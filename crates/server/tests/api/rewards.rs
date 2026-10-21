@@ -27,7 +27,7 @@ use jackioh_server::config::{
     SET_TRACK_UNLOCK_LEVEL, XP_GAME_CAP,
 };
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, MatchActionRow, MatchRow, MatchSeat, ResultRow, StoreError};
+use jackioh_server::db::store::{MatchActionRow, MatchRow, MatchSeat, ResultRow, StoreError};
 use jackioh_server::economy::math::total_xp_for_level;
 use jackioh_server::economy::rewards::{GameMode, track_level};
 use jackioh_server::economy::store::{
@@ -37,6 +37,7 @@ use jackioh_server::economy::track_rewards::reward_for_level;
 
 use crate::support::deps::{add_user, call, test_app as built_app};
 use crate::support::engine::{fake_deck, install_test_cards};
+use crate::support::store::{fake_ref, store};
 
 const MINUTE: i64 = 60 * 1000;
 /// A minute past the ceiling (R79, R389), whatever it is.
@@ -62,45 +63,25 @@ async fn test_app() -> Arc<App> {
     app
 }
 
-/// Every store call in this file: one transaction, committed when the call answers.
-macro_rules! store {
-    ($app:expr, |$t:ident| $call:expr) => {{
-        let mut $t = $app.db.begin(None).await.expect("a store transaction begins");
-        let out = $call
-            .await
-            .expect(concat!("the store answers ", stringify!($call)));
-        $t.commit().await.expect("the store transaction commits");
-        out
-    }};
-}
-
 /// The JSON a row or any port value serialises to.
 fn j<T: Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("the value serialises")
 }
 
-/// The fake store behind `test_app()`.
-fn fake(app: &App) -> &Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => data,
-        _ => panic!("support::deps::test_app() runs on the fake store"),
-    }
-}
-
 /// `test_app()` holds the E2E fixtures (R144), so they go first and every row a test reads is
 /// one it wrote.
 async fn fresh_store(app: &App) {
-    fake(app).lock().await.reset();
+    fake_ref(app).lock().await.reset();
 }
 
 /// A profile written without the API (status `active` unless set).
 async fn seed_profile(app: &App, input: Value) {
-    let _ = fake(app).lock().await.seed_profile(input);
+    let _ = fake_ref(app).lock().await.seed_profile(input);
 }
 
 /// One read of the fake's raw tables, as JSON.
 async fn table(app: &App, read: impl Fn(&FakeData) -> Value) -> Value {
-    let data = fake(app).lock().await;
+    let data = fake_ref(app).lock().await;
     read(&data)
 }
 
@@ -1041,7 +1022,7 @@ mod joint_commit {
         install_test_cards();
         let app = scenario().await;
         append_log_to(&app, MATCH_ID, &actions_of("p1", 10)).await;
-        fake(&app).lock().await.on_call = Some(Arc::new(|method: &str| {
+        fake_ref(&app).lock().await.on_call = Some(Arc::new(|method: &str| {
             if method == "economy.wallets.grant" {
                 Err(StoreError::Other("injected fault".to_string()))
             } else {
