@@ -1163,6 +1163,12 @@ const E2E_FIXTURE_ACCOUNTS: &[(&str, &str, &str, &str)] = &[
         "e2e-pending-password",
         "e2e-token-pending",
     ),
+    (
+        "e2e-econ",
+        "e2e-econ@jackioh.test",
+        "e2e-econ-password",
+        "e2e-token-econ",
+    ),
 ];
 
 /// The plain error a fixture sign-in fails with; `api::auth::call_provider` turns it into the one
@@ -1201,9 +1207,9 @@ struct E2eState {
 /// it (`add_user`).
 ///
 /// §9.4 makes a verified email a precondition of redemption, and spec 10 asserts
-/// `emailVerified === true` on the *pending* account before it redeems. So all three fixtures are
-/// verified; what distinguishes `e2e-pending` is its `profiles.status`. `app_metadata` stays empty:
-/// nothing here is an authorization claim.
+/// `emailVerified === true` on the *pending* account before it redeems. So every fixture is
+/// verified; what distinguishes `e2e-pending` and `e2e-econ` is their `profiles.status`.
+/// `app_metadata` stays empty: nothing here is an authorization claim.
 #[derive(Debug)]
 pub struct E2eAuth {
     state: Mutex<E2eState>,
@@ -1216,7 +1222,7 @@ impl Default for E2eAuth {
 }
 
 impl E2eAuth {
-    /// The three fixture accounts.
+    /// The fixture accounts.
     pub fn new() -> E2eAuth {
         let auth = E2eAuth {
             state: Mutex::new(E2eState {

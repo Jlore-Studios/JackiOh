@@ -41,7 +41,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
 | Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings) and `live_match_of` (§13) |
 | Economy | `economy/store.rs`, `math.rs`, `rewards.rs`, `roll.rs`, `packs.rs`, `cosmetic_packs.rs`, `practice.rs`, `quests.rs`, `quests.json` | migration 0045's tables (§14.11): `Tx`'s `economy_*` methods, each grant writing its holding and its ledger row together and refusing what the schema's checks refuse before either store, `economy_lock_account`, an opening's lock on its account (R1301003), and 0047's practice seeds; the pure math, the level curve and the pity roll (R1298000); the reward hook a finished game pays through (§14.8), holding the Jlore an account's games pay to `JLORE_GAMES_DAILY_CAP` over the UTC day under the account's lock (R1483000); the pure pack roll, its slots' rarities, the card draw and the dupe chain (R1301000–R1301002); buying and opening a pack, each in one transaction, the opening's catalog version, cosmetics, seed and result logged in its rows' `ref` (R1301003); opening a cosmetic pack, its slots rolled by cosmetic rarity from a seed and logged the same way, and the Chase Shard bar it fills and what the bar buys (R1306000–R1306003); a practice claim's check, its log folded from the seed's setup and every AI move re-run (§14.8, R1303000–R1303003); and the daily quests (§14.9): their pool and its check (every payout from `QUEST_JLORE_MIN` to `QUEST_JLORE_MAX`, a harder entry paying more), their rhythm and top-up, the store's read locking the account's schedule so two top-ups at once bring a quest once (R1304000), what a finished game moves through the reward hook and the payout of one that completes (R1304001) |
-| Dev tools | `api/dev.rs` | a dev account's own grants and clears (§14.10, R1300000): XP, Jlore, the fill and the clears, each one transaction of ledger rows marked `dev`; 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list |
+| Dev tools | `api/dev.rs` | a dev account's own grants and clears (§14.10, R1300000): XP, Jlore, the fill, the clears and a token bar filled so it pays (R1310003), each one transaction of ledger rows marked `dev`; 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list (and, under `E2E=1`, to any but the `e2e-econ` fixture, R1310004) |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
 There are no traits: `Db`, `Tx` and `Auth` are enums with one variant per implementation (`Pg` and
@@ -76,7 +76,7 @@ and export it: the binary reads the process environment and nothing else.
 ```
 set -a; . crates/server/.env; set +a
 target/release/jackioh-server migrate           # 1. the schema: every migrations/*.sql in order, ledger in app.migrations
-target/release/jackioh-server seed-catalog      # 2. public.cards at the compiled-in catalog version, and public.cosmetics (again after every patch)
+target/release/jackioh-server seed-catalog      # 2. public.cards at the compiled-in catalog version, public.cosmetics and the starter cards (again after every patch)
 target/release/jackioh-server mint-code         # 3. an invite code (--max-uses=N, --expires-in-days=N)
 target/release/jackioh-server seed-accounts     #    or active test accounts that skip the gate; refused under NODE_ENV=production
 target/release/jackioh-server                   # 4. serve (the default subcommand)
@@ -144,7 +144,7 @@ placeholders (`app::load_server_env`).
 | `LADDER_BOTS` | no | `on` seats a ladder bot against a ranked ticket of any mode left alone past its fallback time (a Conquest ticket's in a series, R641000), and keeps the bot pool (R1453, R1454, R1452); off unless `on` (unset or `off`), and any other value refuses the boot. The bots decide in this process, so turning it on wants a host with room for the AI's search, such as a paid Render instance |
 | `CREATE_ISSUES_TOKEN` | no | a token that may open issues in `GITHUB_ISSUES_REPO`, with which the server files a match its own log does not reproduce ([below](#a-match-its-log-does-not-reproduce)); unset, such a match is only logged. Secret |
 | `GITHUB_ISSUES_REPO` | no | the `owner/name` those issues go to; default `Jlore-Studios/JackiOh` (`BUG_REPORT_REPO_DEFAULT`) |
-| `DEV_PROFILE_IDS` | no | the dev accounts (§14.10, R1300000): comma-separated profile ids, each the account secret ID `/account` shows; unset, none. A malformed id refuses the boot, naming it. `seed-catalog` reads it too, so a new catalog's grant passes over them (R1300001). The boot logs how many, never which |
+| `DEV_PROFILE_IDS` | no | the dev accounts (§14.10, R1300000): comma-separated profile ids, each the account secret ID `/account` shows; unset, none. A malformed id refuses the boot, naming it. Only the boot reads it: no catalog stamp grants anyone (R1310001), so `seed-catalog` does not. The boot logs how many, never which |
 
 `mint-code`, `moderate` and `seed-accounts` read the same environment (`seed-accounts` also
 `SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import`, `stats-fold`,
@@ -162,7 +162,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | Method | Path | Auth | What |
 | --- | --- | --- | --- |
 | `POST` | `/api/auth/signin` | none | E2E mode only: a fixture account's session |
-| `POST` | `/api/e2e/reseed` | none | E2E mode only, elsewhere a path nobody serves (404): R144's reseed on demand, which spec 10 calls first; answers `{ profiles, grantedCards, codes }` |
+| `POST` | `/api/e2e/reseed` | none | E2E mode only, elsewhere a path nobody serves (404): R144's reseed on demand, which spec 10 calls first; answers `{ profiles, grantedCards, codes }`. The fixtures: `e2e-p1` and `e2e-p2`, active and granted every card past their starter cards; `e2e-pending`, pending, for spec 10; and `e2e-econ`, pending and a dev account in E2E mode alone, for spec 45, the one that walks the economy (R1310004) |
 | `POST` | `/api/auth/username-signin` | none | a username and password: the session, never the address; limited per address and per username (R1443) |
 | `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series, the caller's `username: { name, nextChangeAt, promptOwed }` (R1435), `ageCheckOwed` and `termsOwed` (R757000, R757001), `queued` (R897000), and `isDev`, whether `DEV_PROFILE_IDS` lists the caller (R1300000) |
 | `GET` | `/api/profile` | active | the account screen: who the caller is and their record |
@@ -172,7 +172,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `DELETE` | `/api/account` | user | delete the caller's account and every row only it owns; 409 in a live match, series or co-op match |
 | `POST` | `/api/account/consent` | user | `{ termsVersion, birthYear?, birthMonth? }`: the age screen's answer (an account under `MIN_ACCOUNT_AGE_YEARS` is deleted, 403 `under_age`) and agreement to `TERMS_VERSION` (409 `update_required` for any other); stores only that the age check passed, never the birth date (R757000, R757001) |
 | `GET` | `/api/catalog` | none | `{ version, defs }`, the bytes the client ships (R163); `x-deployed-commit` |
-| `POST` | `/api/codes/redeem` | user | §9.4's six-step redemption; first 403 `consent_owed` for an account owing the age check or the terms, costing no attempt (R757000, R757001) |
+| `POST` | `/api/codes/redeem` | user | §9.4's six-step redemption; first 403 `consent_owed` for an account owing the age check or the terms, costing no attempt (R757000, R757001). The activation grants the starter cards (R111) and pays the newest set's track its first level (R1310000) |
 | `GET` | `/api/codes/status` | user | whether redemption is paused, and the caller's attempts left (R192) |
 | `GET` | `/api/collection` | active | the cards owned (a card cleared to 0 is not sent); there is no write route but the dev tools' |
 | `GET`, `POST` | `/api/packs`, `/api/packs/buy`, `/api/packs/open` | active | the caller's pity counters, the odds and the unopened packs held; buy `{ pack }` (a shipped set's name or `global`) for `PACK_PRICE_JLORE`, 409 when the wallet cannot cover it; open one, 409 when none of that kind is held: its slots, the pity counters after it and the packs left (R1301000–R1301003) |
@@ -191,6 +191,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `POST` | `/api/practice/claims` | active | `{ seed, result, log }`: a finished practice game, folded and its AI moves re-run (R1303002), at most `PRACTICE_VERIFY_CONCURRENCY` at once, the rest waiting; 200 `{ paid: true, jlore, xp, jloreCapped }` (`jlore` what was paid, short of the game's rate when `jloreCapped` says the day's cap held some back, R1483000), or `{ paid: false, reason }` for every refusal; the seed is burned first, so it pays once (R1303001) |
 | `GET` | `/api/cosmetics` | active | the cosmetics the caller owns, `{ cards: [{ cardId, cosmeticId }], account }`, never another's; the starter cosmetics have no row (R1313000) |
 | `POST` | `/api/dev/xp`, `/api/dev/jlore`, `/api/dev/fill`, `/api/dev/clear/:part` | active | a dev account's own tools (§14.10, R1300000): `{ setId, xp }` to a shipped set's track, its level stopping at `SET_TRACK_LEVELS`; `{ jlore }`; every collectable card and every cosmetic but the defaults; a clear of `cards`, `cosmetics`, `jlore`, `counters`, `tracks` or `everything`; every row reason `dev`, marked `dev`. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list |
+| `POST` | `/api/dev/bar/:bar` | active | a dev tool: fills the caller's `card` or `cosmetic` token bar so it pays at once, a card token or the cosmetic token cycle's next step (R1305000, R1305001), every row reason `dev`, marked `dev`; 404 `no such bar` for any other `:bar`. 403 `forbidden` to any account that is not a dev account (R1310003) |
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641) and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000) |
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
@@ -690,7 +691,7 @@ decks and when it retired; RLS on with no policy and no client grant), and swaps
 foreign key to `auth.users` for triggers: inserting a person's profile still needs its auth user
 and deleting an auth user still deletes its profile, but a bot's profile needs none; and it limits
 the launch collection's backfill (`app.grant_launch_collection_all`, which every catalog stamp
-runs) to people, since a bot owns no collection. A bot's rating
+ran until migration 0050 dropped it) to people, since a bot owns no collection. A bot's rating
 is a `bot_ratings` row (0022, R610), and its rank a `season_ranks` row its ranked games move as a
 person's move theirs, read against people's ratings alone (R640000). Nothing a client reads carries
 a profile's `kind`, a seat's pilot or a bot's nonces: `GET /api/leaderboard` and
@@ -744,10 +745,10 @@ a `dev` mark (§14.10), which `collection_grants` gains too, false for every exi
 
 Migration 0046 adds the dev accounts' two rules (§14.10). `collection_grants` takes the reason `dev`,
 a dev tool's own, written only marked `dev` (`collection_grants_dev_check`, R1300000). And
-`app.grant_launch_collection_all`, which a catalog stamp runs (R481), passes over the profiles the
-transaction's `jackioh.dev_profile_ids` setting names, which `seed-catalog` sets from
-`DEV_PROFILE_IDS` before its stamp, so a dev account's clear stays cleared (R1300001); a stamp
-without the setting grants every person's active account as before.
+`app.grant_launch_collection_all`, which a catalog stamp ran (R481), passed over the profiles the
+transaction's `jackioh.dev_profile_ids` setting named, which `seed-catalog` set from
+`DEV_PROFILE_IDS` before its stamp, so a dev account's clear stayed cleared (R1300001), until
+migration 0050 dropped the grant.
 
 Migration 0047 adds `practice_seeds` (#1303): one row per seed `POST /api/practice/seeds` issued an
 account, with the game's setup (the AI tier, the human's seat, the deck, the last board it brought
@@ -766,6 +767,20 @@ played the game with, when the AI played a seat, its AI generation (`game_record
 live writer (`api/game_records.rs`) files the deployed commit (`RENDER_GIT_COMMIT`) and, for a ladder
 bot's game, `crates/ai/generation.json`'s generation; with no deployed commit it files none. A record
 written before it has no build and reads as before.
+
+Migration 0050 is going live (§14.12). It adds `app.settings.starter_cards`, which `seed-catalog`
+writes from `config::STARTER_CARDS` before its stamp, and the activation grant
+(`app.grant_launch_collection`, R111) grants one copy of each non-token card of the current version
+that it names, and nothing else (R1310000); the in-memory store reads `STARTER_CARDS` itself
+(`db/fake.rs`). It drops the catalog stamp's grant, the trigger, `app.on_catalog_version_stamped`
+and `app.grant_launch_collection_all`, so a stamp grants nobody and `seed-catalog` reads no
+`DEV_PROFILE_IDS` (R1310001). Every economy ledger takes the reason `launch` (`JloreReason::Launch`,
+`EconomyReason::Launch`, which no server path writes). And, once per database
+(`app.settings.economy_launched`), every account keeps every card while its wallet, inventory,
+counters, set tracks, held quests and owned full arts are zeroed by offsetting `launch` rows (ref
+`launch:0050`), each written before its holding's row is deleted, and its quest schedule is
+deleted, so its quest clock starts again (R1310002). The starter cosmetics have no row and are
+untouched. On a new project the reset zeroes nothing.
 
 ## Tests
 

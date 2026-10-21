@@ -1,7 +1,8 @@
 // The Dev tools panel (SPEC §14.10, R1300000): a dev account moves its own economy by hand, so each
 // part of the economy can be tried on staging and production. The quest tools (§14.9, #1304) give a
 // quest at once and complete one picked from the held quests, which `GET /api/quests` lists again
-// whenever a request ends.
+// whenever a request ends. The bar tools (§14.5, R1310003) fill the card or the cosmetic token bar,
+// so it pays its token at once: a card token, or the cosmetic token cycle's next step.
 //
 // THE SERVER DECIDES (CLAUDE.md rule 7). `/account` mounts this only when `/api/auth/me` says
 // `isDev`, and that is all the client decides: every button sends its request as typed (an amount
@@ -16,10 +17,12 @@ import {
   devClear,
   devCompleteQuest,
   devFill,
+  devFillBar,
   devGiveJlore,
   devGiveQuest,
   devGiveXp,
   getQuests,
+  type DevBar,
   type DevClearPart,
   type QuestView,
 } from "../net/api.ts";
@@ -32,6 +35,8 @@ export const devToolsTestid = {
   jlore: "dev-tools-jlore",
   giveJlore: "dev-tools-give-jlore",
   fill: "dev-tools-fill",
+  fillCardBar: "dev-tools-fill-card-bar",
+  fillCosmeticBar: "dev-tools-fill-cosmetic-bar",
   giveQuest: "dev-tools-give-quest",
   quest: "dev-tools-quest",
   completeQuest: "dev-tools-complete-quest",
@@ -56,6 +61,19 @@ function clearLabel(part: DevClearPart): string {
       return t("Clear track progress");
     case "everything":
       return t("Clear everything");
+  }
+}
+
+/** R1310003: the token bars, each filled by its own button, in the order §14.5 lists them. */
+const DEV_BARS: readonly DevBar[] = ["card", "cosmetic"];
+
+/** R1310003: a bar's button: its testid and its words. */
+function barButton(bar: DevBar): { testid: string; label: string } {
+  switch (bar) {
+    case "card":
+      return { testid: devToolsTestid.fillCardBar, label: t("Fill the card token bar") };
+    case "cosmetic":
+      return { testid: devToolsTestid.fillCosmeticBar, label: t("Fill the cosmetic token bar") };
   }
 }
 
@@ -183,6 +201,25 @@ export default function DevTools({ token }: { token: string }): ReactElement {
         >
           {t("Fill collection")}
         </button>
+      </div>
+
+      <div className="account-actions">
+        {DEV_BARS.map((bar) => {
+          const { testid, label } = barButton(bar);
+          return (
+            <button
+              key={bar}
+              type="button"
+              data-testid={testid}
+              disabled={working}
+              onClick={() => {
+                run(() => devFillBar(token, bar));
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       <div className="account-actions">

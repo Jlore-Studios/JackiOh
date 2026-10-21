@@ -47,7 +47,7 @@ use jackioh_engine::wire::{
 use jackioh_engine::{Action, GameRecord, LastBoardEntry, PlayerId};
 use jackioh_server::api::series_rules::forfeit_series;
 use jackioh_server::config::PersonaName;
-use jackioh_server::config::USERNAME_CHANGE_COOLDOWN_MS;
+use jackioh_server::config::{STARTER_CARDS, USERNAME_CHANGE_COOLDOWN_MS};
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
     BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, CustomCardWrite, Db,
@@ -199,6 +199,16 @@ enum Ends {
 }
 
 impl StoreHarness {
+    /// R1310000: the fixture catalog's starter cards, what R111's launch grant gives: its playable
+    /// ids that `STARTER_CARDS` names.
+    pub fn starter_ids(&self) -> Vec<String> {
+        self.playable_ids
+            .iter()
+            .filter(|id| STARTER_CARDS.contains(&id.as_str()))
+            .cloned()
+            .collect()
+    }
+
     // -----------------------------------------------------------------------
     // In-memory
     // -----------------------------------------------------------------------
@@ -254,6 +264,7 @@ impl StoreHarness {
             .expect("truncate every table");
         seed_cards(&admin).await;
         seed_cosmetics(&admin).await;
+        seed_starter_cards(&admin).await;
         let pool = PgPoolOptions::new()
             .connect(&url)
             .await
@@ -535,6 +546,19 @@ pub async fn seed_cosmetics(admin: &PgPool) {
     .execute(admin)
     .await
     .expect("seed the fixture cosmetics");
+}
+
+/// R1310000: the starter cards the activation grant reads, as `seed-catalog` writes them, which the
+/// harness does not run.
+pub async fn seed_starter_cards(admin: &PgPool) {
+    sqlx::query(
+        "insert into app.settings (key, value) values ('starter_cards', $1::jsonb)
+         on conflict (key) do update set value = excluded.value",
+    )
+    .bind(serde_json::to_string(STARTER_CARDS).expect("the starter cards serialise"))
+    .execute(admin)
+    .await
+    .expect("seed the starter cards");
 }
 
 /// `Date.now()`.
@@ -880,9 +904,10 @@ mod profiles {
     }
 
     /// R111, and the reason `e2e-store.ts` carries a trigger at all: "Becoming `active` grants one
-    /// copy of every non-token card, written by a trigger on the `pending → active` transition and
-    /// idempotent, so a repeated redemption cannot double a collection."
-    async fn r111_grants_one_copy_of_every_non_token_card_on_pending_active_idempotently(
+    /// copy of [each starter card, R1310000], written by a trigger on the `pending → active`
+    /// transition and idempotent, so a repeated redemption cannot double a collection." Both stores
+    /// grant the same cards: the fixture catalog's that `STARTER_CARDS` names.
+    async fn r111_r1310000_grants_one_copy_of_each_starter_card_on_pending_active_idempotently(
         harness: &StoreHarness,
     ) {
         let profile = pending_profile(harness, None).await;
@@ -891,7 +916,11 @@ mod profiles {
         q!(harness, t => t.profiles_set_status(&profile.id, status("active")));
         let granted = q!(harness, t => t.collection_get(&profile.id));
         let card_ids: Vec<String> = granted.iter().map(|entry| entry.card_id.clone()).collect();
-        assert_eq!(sorted(&card_ids), sorted(&harness.playable_ids));
+        assert_eq!(sorted(&card_ids), sorted(&harness.starter_ids()));
+        assert!(
+            card_ids.len() < harness.playable_ids.len(),
+            "a card that is not a starter is not granted"
+        );
         assert!(granted.iter().all(|entry| entry.quantity == 1));
         for token_id in &harness.token_ids {
             assert!(!granted.iter().any(|entry| entry.card_id == *token_id));
@@ -908,7 +937,7 @@ mod profiles {
         moves_the_rating_and_the_in_match_pointer,
         r890000_seat_claim_is_compare_and_set,
         r603_round_trips_the_whole_glicko_triple,
-        r111_grants_one_copy_of_every_non_token_card_on_pending_active_idempotently,
+        r111_r1310000_grants_one_copy_of_each_starter_card_on_pending_active_idempotently,
     );
 }
 
@@ -1513,10 +1542,11 @@ mod redeem {
         assert_eq!(status_of(harness, &profile.id).await, "active");
         assert_eq!(uses_of(harness, &code.code_hash).await, 1);
         assert_eq!(attempts(harness, &profile.id).await, 1);
-        // R111's launch grant rides the pending → active transition, wherever it is made.
+        // R111's launch grant rides the pending → active transition, wherever it is made: the
+        // starter cards (R1310000).
         assert_eq!(
             q!(harness, t => t.collection_get(&profile.id)).len(),
-            harness.playable_ids.len()
+            harness.starter_ids().len()
         );
     }
 

@@ -360,6 +360,28 @@ What is left is the dashboards' half (#256): set the Supabase Site URL to `https
   account", then "Show account secret ID". Save, and the service redeploys; the listed accounts then
   see the Dev tools panel on `/account`. A malformed id refuses the boot, and the deploy's log names
   it. Locally, the same line in `crates/server/.env`.
+- **Going live (SPEC §14.12, issue #1310):** the merge that turns `ECONOMY_LIVE` on is a release of
+  its own, done once. Render's `release` applies migration `0050_going_live.sql`, and then
+  `seed-catalog` writes `app.settings.starter_cards` from `STARTER_CARDS`, before the new instance
+  listens. 0050 resets the economy once per database: every account keeps its cards, and its Jlore,
+  packs, tokens, counters, tracks, quests and full arts go to zero with `launch` rows (R1310002).
+  Nothing but a backup brings those back, so take one first if the project keeps them.
+  `ECONOMY_LIVE` is compiled into both halves (the server's `config.rs`, the client's
+  `serverConfig.ts`), and production's client trails the server by up to a day (section 2), so
+  promote them together: once Render serves the commit (`x-deployed-commit` on `GET /api/catalog`)
+  and its CI on main is green, comment `/fast-forward` on the countdown issue. Until the client
+  catches up, players see no packs on `/account`, a practice game pays nothing and every full art
+  prints for everyone, while the server already pays ladder games. Then, in Studio's SQL editor:
+  - A fresh account that redeems a code owns 39 cards and holds 100 Jlore, its newest track's
+    level-1 reward (`reward_for_level(1)` in `crates/server/src/economy/track_rewards.rs`):
+    `select count(*) from public.collection where profile_id = '<id>';` → 39, and
+    `select jlore from public.wallets where profile_id = '<id>';` → 100.
+  - `select value from app.settings where key = 'economy_launched';` holds the time the reset ran,
+    and an account from before it still owns its cards and has no wallet row.
+  - An account that redeemed in the seconds between the migration and the seed, while the
+    previous instance still served, owns no cards. This lists any:
+    `select p.id from public.profiles p where p.status = 'active' and p.kind = 'human' and not exists (select 1 from public.collection c where c.profile_id = p.id);`,
+    and `select app.grant_launch_collection('<id>');` grants each its starter cards.
 - **Scheduled runs stop, or never start:** GitHub disables scheduled workflows in a repository with
   no activity for 60 days, and may start a schedule late or not at all. Re-enable it in the Actions
   tab. Nothing depends on it: every green push to `main`, a comment on the countdown issue and a

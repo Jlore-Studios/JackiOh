@@ -166,35 +166,45 @@ end $$;
 rollback;
 
 \echo '### R1454: a bot owns no collection, whatever grants the launch collection ###'
+-- Since going live the activation grant is the only one (R1310000), and a bot's profile is made
+-- active, never activated; a new catalog version grants nobody (R1310001).
 begin;
 do $$
 declare
-  p1      constant uuid := '11111111-1111-1111-1111-111111111111';
   bot     constant uuid := 'b1446000-0000-4000-8000-000000000001';
+  person  constant uuid := 'b1446000-0000-4000-8000-000000000002';
   v_cards bigint;
   n       bigint;
 begin
-  -- Vacuity guard: the launch backfill has cards to grant, and grants them to a person.
+  -- Vacuity guard: the launch collection has cards to grant, and an activation grants them to a
+  -- person.
   select count(*) into v_cards from public.cards
-   where token = false and catalog_version = app.catalog_version();
+   where token = false and catalog_version = app.catalog_version()
+     and app.setting('starter_cards') ? id;
   if v_cards = 0 then
-    raise exception 'FAIL (R1454): the current catalog holds no non-Token card; the backfill below would grant nothing to anyone';
+    raise exception 'FAIL (R1454): the current catalog holds no starter card; the grants below would give nothing to anyone';
   end if;
 
   insert into public.profiles (id, kind, status) values (bot, 'bot', 'active');
-  perform app.grant_launch_collection_all();
-  select count(*) into n from public.collection where profile_id = p1 and quantity >= 1;
+  insert into auth.users (id, email, email_confirmed_at) values (person, 'r1454-person@example.test', now());
+  update public.profiles set status = 'active', activated_at = now() where id = person;
+
+  -- A stamp, the grant that once reached every active profile (R481, 0016), now grants nobody.
+  update public.cards set catalog_version = 'r1454-v2' where catalog_version = app.catalog_version();
+  update app.settings set value = to_jsonb('r1454-v2'::text) where key = 'catalog_version';
+
+  select count(*) into n from public.collection where profile_id = person and quantity = 1;
   if n <> v_cards then
-    raise exception 'FAIL (R1454): profile 1 owns % of the % cards after the backfill; it must still grant people', n, v_cards;
+    raise exception 'FAIL (R1454): the person owns % of the % starter cards after activation and a stamp', n, v_cards;
   end if;
   select count(*) into n from public.collection where profile_id = bot;
   if n <> 0 then
-    raise exception 'FAIL (R1454): the backfill (0016 runs it on every catalog stamp) granted the bot % cards', n;
+    raise exception 'FAIL (R1454): the bot owns % cards', n;
   end if;
   select count(*) into n from public.collection_grants where profile_id = bot;
   if n <> 0 then
     raise exception 'FAIL (R1454): the bot has % collection_grants rows', n;
   end if;
-  raise notice 'OK (R1454): the launch backfill grants people and passes over the bot';
+  raise notice 'OK (R1454): an activation grants the person its starter cards, and neither it nor a stamp grants the bot';
 end $$;
 rollback;

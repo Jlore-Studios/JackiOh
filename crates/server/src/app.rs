@@ -81,8 +81,8 @@ pub struct App {
     /// A match its own log does not reproduce, logged and filed for the night bot
     /// (`bug_reports.rs`): GitHub with `CREATE_ISSUES_TOKEN`, a record in a test's app.
     pub bug_reports: crate::bug_reports::BugReports,
-    /// §14.12: whether the economy pays out, `config::ECONOMY_LIVE` at boot. A field so a test can
-    /// turn it on; nothing else sets it.
+    /// §14.12: whether the economy pays out, `config::ECONOMY_LIVE` at boot, on since the economy
+    /// went live (R1310000). A field so a test can turn it off; nothing else sets it.
     pub economy_live: bool,
     /// §14.8, #1303: the permits of the practice claims being verified at once,
     /// `PRACTICE_VERIFY_CONCURRENCY` of them (`api::practice`). One per app, for the limiter's reason.
@@ -644,6 +644,13 @@ pub static ROUTES: &[Route] = &[
         "/api/dev/clear/:part",
         AuthLevel::Active,
         h!(api::dev::clear),
+    ),
+    // R1310003: a token bar filled so it pays at once.
+    (
+        "POST",
+        "/api/dev/bar/:bar",
+        AuthLevel::Active,
+        h!(api::dev::fill_bar),
     ),
     // ---- Social: watching and shared replays (#939, #940) ----
     // social/shares.rs (B52). Ahead of `GET /api/replays/:matchId`, which would read `shared` as a

@@ -1,6 +1,8 @@
 // BUILD M8: §9.4 and §9.8 require identical bad-code responses; R107 hides branch timing.
 // The §9.4 attempt budget permits one screen failure, three HTTP failures, then redemption; M6-T1 tests timing tightly.
-// R111's activation grant enables an L1–L6 legal trio (R250, R252, R253); test order leaves the fixture active.
+// R111's activation grant is the starter cards since the economy went live (R1310000, §14.12): enough
+// for a deck Best of 1 accepts (L2, L3, L5, L6; R250, R253), not for a trio's 60 distinct cards (L4).
+// Test order leaves the fixture active.
 
 import {
   CODE_ALPHABET,
@@ -10,8 +12,8 @@ import {
   INVITE_CODE_SEPARATOR,
   REDEMPTION_IDENTICAL_ERROR,
   REDEMPTION_RESPONSE_FLOOR_MS,
+  STARTER_CARDS,
 } from "../../../apps/web/src/wire/serverConfig.ts";
-import { CARD_NAMES, cardId } from "../../support/cards.ts";
 import {
   E2E_RESEED_PATH,
   accounts,
@@ -37,7 +39,8 @@ const SESSION_STORAGE_KEY = "jackioh.e2e.session";
 /** Not R107's floor: bounds localhost transport spread; M6-T1 owns the tight timing assertion. */
 const TRANSPORT_JITTER_MS = 100;
 
-const CORE_CARD_COUNT = Object.keys(CARD_NAMES).length;
+/** The deck the activated account saves and queues: starter cards alone (R1310000). */
+const STARTER_DECK_FIXTURE = "10-invite-gate-a";
 
 function api(path: string): string {
   return `${server.http()}${path}`;
@@ -296,7 +299,7 @@ describe("10 invite gate — a pending account", () => {
     });
   });
 
-  it("R111 — a good code activates, grants one copy of every non-token card, and is idempotent", () => {
+  it("R111 — a good code activates, grants one copy of each starter card, and is idempotent", () => {
     let granted = "";
 
     redeem(inviteCodes.good()).should((response) => {
@@ -314,16 +317,13 @@ describe("10 invite gate — a pending account", () => {
       expect(response.body.needsInviteCode).to.eq(false);
     });
 
-    // Read R111's grant from the §9.1 ledger across SPEC §8, §8.6, and §8.7.
-    let expected = new Set<string>();
+    // Read R111's grant from the §9.1 ledger: since the economy went live it is `STARTER_CARDS`
+    // (R1310000), every one a non-token card of the catalog the server serves.
     cy.request<CatalogBody>({ method: "GET", url: api("/api/catalog") }).then((response) => {
-      expected = new Set(
-        Object.entries(response.body.defs)
-          .filter(([, def]) => !def.token)
-          .map(([id]) => id),
-      );
-      for (let index = 1; index <= CORE_CARD_COUNT; index += 1) {
-        expect(expected.has(cardId(index)), `the catalog holds SPEC §8's ${cardId(index)}`).to.eq(true);
+      for (const id of STARTER_CARDS) {
+        const def = response.body.defs[id];
+        expect(def, `the catalog holds the starter card ${id}`).to.not.eq(undefined);
+        expect(def?.token === true, `the starter card ${id} is not a token`).to.eq(false);
       }
     });
     cy.request<CollectionBody>({
@@ -333,15 +333,11 @@ describe("10 invite gate — a pending account", () => {
     }).should((response) => {
       expect(response.status, "the gate is open now").to.eq(200);
       const entries = response.body.entries;
-      const owned = new Set(entries.map((entry) => entry.cardId));
 
       expect(
-        owned.size,
-        `R111 grants the catalog's ${String(expected.size)} non-token cards and no token`,
-      ).to.eq(expected.size);
-      for (const id of expected) {
-        expect(owned.has(id), `R111 granted ${id}`).to.eq(true);
-      }
+        entries.map((entry) => entry.cardId).sort(),
+        `R111, R1310000: the grant is the ${String(STARTER_CARDS.length)} starter cards and nothing else`,
+      ).to.deep.eq([...STARTER_CARDS].sort());
       for (const entry of entries) {
         expect(
           entry.quantity,
@@ -373,19 +369,28 @@ describe("10 invite gate — a pending account", () => {
       });
     });
 
-    cy.installLoadout(accounts.pending(), "10-invite-gate-a").then((installed) => {
-      cy.request<{ status: string; mode: string }>({
-        method: "POST",
-        url: api("/api/queue"),
-        headers: bearer(pendingToken()),
-        body: { mode: "bo3", trioId: installed.trioId },
-      }).should((response) => {
-        expect(response.status, "R253: the granted cards make a trio Best of 3 accepts").to.eq(200);
-        expect(response.body.mode).to.eq("bo3");
-      });
-      cy.request({ method: "DELETE", url: api("/api/queue"), headers: bearer(pendingToken()) })
-        .its("status")
-        .should("eq", 200);
+    // R253: the granted cards make a deck Best of 1 accepts, L5 (owned) included. The fixture is
+    // starter cards alone, which is checked here so a list that moves fails with its own words.
+    cy.fixture(`decks/${STARTER_DECK_FIXTURE}.json`).then((raw: { cards: string[] }) => {
+      for (const id of raw.cards) {
+        expect(STARTER_CARDS, `decks/${STARTER_DECK_FIXTURE}.json holds starter cards only`).to.include(id);
+      }
+      cy.clearDecks(accounts.pending())
+        .then((catalogVersion) => cy.saveDeck(accounts.pending(), { name: "Deck 1", cards: raw.cards, catalogVersion }))
+        .then((deckId) => {
+          cy.request<{ status: string; mode: string }>({
+            method: "POST",
+            url: api("/api/queue"),
+            headers: bearer(pendingToken()),
+            body: { mode: "bo1", deckId },
+          }).should((response) => {
+            expect(response.status, "R253, R1310000: the starter cards make a deck Best of 1 accepts").to.eq(200);
+            expect(response.body.mode).to.eq("bo1");
+          });
+          cy.request({ method: "DELETE", url: api("/api/queue"), headers: bearer(pendingToken()) })
+            .its("status")
+            .should("eq", 200);
+        });
     });
 
     visitAs(pendingToken(), routes.deckbuilder());

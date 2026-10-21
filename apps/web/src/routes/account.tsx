@@ -34,8 +34,8 @@
 //
 // CARD PACKS (#1308, SPEC §14.3, §14.4): an active account gets "Card packs" behind a toggle too: the
 // odds and pity counters the server states, the packs held, and the scene that opens one
-// (`packs/PackOpening.tsx`). The economy is not live (`ECONOMY_LIVE`, §14.12), so until it is only a
-// dev account is offered it (`packsShown`). The same toggle mounts what the economy pays for
+// (`packs/PackOpening.tsx`), now that the economy is live (`ECONOMY_LIVE`, §14.12, R1310000); with the
+// switch off only a dev account is offered it (`packsShown`). The same toggle mounts what the economy pays for
 // them (#1309, `shop/`): the Jlore shop, the token picker and the cosmetic packs with the Chase
 // Shard bar. Each panel holds its own reads, so when one changes the account the others read it
 // again (`readAgain`): a pack bought in the shop can be opened at once, and an opening's bars,
@@ -576,10 +576,10 @@ function AccountDevTools({
 }
 
 /**
- * Whether the account is offered card packs: an active account once the economy is live
- * (`ECONOMY_LIVE`, §14.12), and before then a dev account alone (the server's word, `me.isDev`), so
- * the opening can be tried on staging and production before players see it. The routes check the
- * account again.
+ * Whether the account is offered card packs: an active account while the economy is live
+ * (`ECONOMY_LIVE`, §14.12, R1310000), and with the switch off a dev account alone (the server's word,
+ * `me.isDev`), as it was before going live, so the opening could be tried on staging and production
+ * before players saw it. The routes check the account again.
  */
 export function packsShown(me: MeResponse | undefined, live: boolean = ECONOMY_LIVE): boolean {
   return me?.profile.status === "active" && (live || me.isDev === true);

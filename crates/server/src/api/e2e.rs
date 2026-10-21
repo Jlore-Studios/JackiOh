@@ -7,6 +7,10 @@
 //! server with fixture accounts)." `e2e/README.md`'s assumption A6 spells out which accounts:
 //! "fixture accounts `e2e-p1`, `e2e-p2` (active, own every card) and `e2e-pending` (pending,
 //! verified email); seeded invite codes — one good, one missing, one expired, one exhausted."
+//! R1310004 adds `e2e-econ` (pending, verified, and a dev account in end-to-end mode alone,
+//! [`is_e2e_dev`]) for the one spec that walks the economy (spec 45), and keeps every card on the
+//! active fixtures now that the economy is live: a redemption grants the starter cards alone
+//! (R1310000), so each active fixture is granted the rest of the catalog after its activation.
 //!
 //! SPEC §11 R144: "In end-to-end mode the server reseeds its fixture accounts and invite codes at
 //! boot, and again on `POST /api/e2e/reseed`, which spec 10 calls before its first test, so a spec
@@ -35,6 +39,7 @@ use indexmap::IndexMap;
 use serde::Serialize;
 use serde_json::json;
 
+use crate::api::collection::grant_entire_catalog;
 use crate::api::crypto::{hashes_for_pepper, is_well_formed_code, normalize_code, system_ids};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, log_info, now_ms, ok_of};
 use crate::app::App;
@@ -66,12 +71,16 @@ pub struct E2EAccount {
     /// R1435: the fixed username the reseed gives the account, bare, with the prompt after
     /// activation already answered, so no end-to-end spec meets the prompt.
     pub username: &'static str,
+    /// R1310004: whether the server counts the account as a dev account (§14.10) in end-to-end
+    /// mode, as `DEV_PROFILE_IDS` would list it: a fixture's profile id is drawn afresh at every
+    /// reseed, so no list could name it.
+    pub dev: bool,
 }
 
 /// §9.4 makes a verified email a precondition of redemption ("reject unless the account is pending
 /// with a verified email"), and spec 10 asserts `emailVerified === true` on the *pending* account
-/// before it redeems. So all three fixtures are verified; what distinguishes `e2e-pending` is its
-/// `profiles.status`, which is the only thing §9.4's gate reads.
+/// before it redeems. So every fixture is verified; what distinguishes `e2e-pending` and `e2e-econ`
+/// is their `profiles.status`, which is the only thing §9.4's gate reads.
 pub const E2E_ACCOUNTS: &[E2EAccount] = &[
     E2EAccount {
         user_id: "e2e-p1",
@@ -80,6 +89,7 @@ pub const E2E_ACCOUNTS: &[E2EAccount] = &[
         token: "e2e-token-p1",
         status: E2EAccountStatus::Active,
         username: "e2e_p1",
+        dev: false,
     },
     E2EAccount {
         user_id: "e2e-p2",
@@ -88,6 +98,7 @@ pub const E2E_ACCOUNTS: &[E2EAccount] = &[
         token: "e2e-token-p2",
         status: E2EAccountStatus::Active,
         username: "e2e_p2",
+        dev: false,
     },
     E2EAccount {
         user_id: "e2e-pending",
@@ -96,8 +107,28 @@ pub const E2E_ACCOUNTS: &[E2EAccount] = &[
         token: "e2e-token-pending",
         status: E2EAccountStatus::Pending,
         username: "e2e_pending",
+        dev: false,
+    },
+    // R1310004: the economy loop's (spec 45), which redeems the good code for the starter cards
+    // (R1310000) and moves its own bars with the dev tools (R1310003).
+    E2EAccount {
+        user_id: "e2e-econ",
+        email: "e2e-econ@jackioh.test",
+        password: "e2e-econ-password",
+        token: "e2e-token-econ",
+        status: E2EAccountStatus::Pending,
+        username: "e2e_econ",
+        dev: true,
     },
 ];
+
+/// R1310004: whether `user_id` is a fixture account the end-to-end server counts as a dev account.
+/// `api::dev::is_dev` asks only when `env.e2e` is set, which `env.rs` refuses in production.
+pub fn is_e2e_dev(user_id: &str) -> bool {
+    E2E_ACCOUNTS
+        .iter()
+        .any(|account| account.dev && account.user_id == user_id)
+}
 
 // ---------------------------------------------------------------------------
 // Fixture invite codes (`e2e/support/config.ts`, `inviteCodes`)
@@ -183,7 +214,8 @@ const FIXTURE_CODE_MAX_USES: i64 = 1;
 pub struct E2ESeedSummary {
     /// userId -> the profile id the reseed created, for the boot log.
     pub profiles: IndexMap<String, String>,
-    /// How many cards R111's launch grant handed each active fixture.
+    /// How many cards each active fixture was granted: R111's starter cards (R1310000) and then the
+    /// rest of the catalog (R1310004), every card.
     pub granted_cards: usize,
     /// The kinds actually written to `invite_codes`; `missing` is never among them.
     pub codes: Vec<E2EInviteCodeKind>,
@@ -217,8 +249,9 @@ pub async fn seed_e2e_fixtures(app: &App) -> Result<E2ESeedSummary, ApiError> {
 /// repeatable.
 ///
 /// The accounts are created `pending` and then flipped with `profiles_set_status`, which is where
-/// the in-memory store carries R111's `pending → active` trigger — so "own every card" is produced
-/// by the same grant a redemption produces, not by a seeding shortcut that could disagree with it.
+/// the in-memory store carries R111's `pending → active` trigger, so an active fixture holds the
+/// same starter grant a redemption produces (R1310000); R1310004 then grants it the rest of the
+/// catalog, as a dev account's fill would, so every spec but the economy's plays any card.
 pub async fn seed_e2e_fixtures_with(app: &App, options: E2ESeedOptions) -> Result<E2ESeedSummary, ApiError> {
     let accounts = options.accounts;
     let codes = options.codes;
@@ -258,6 +291,8 @@ pub async fn seed_e2e_fixtures_with(app: &App, options: E2ESeedOptions) -> Resul
         // R1435: a fixed name and the prompt answered, as `seed-accounts` names its accounts.
         store.lock().await.name_fixture(&profile.id, account.username);
         if account.status == E2EAccountStatus::Active {
+            // R1310004: every card, past the starter cards the activation granted.
+            grant_entire_catalog(app, &profile.id, None).await?;
             granted_cards = store.lock().await.grants_for(&profile.id).len();
         }
         profiles.insert(account.user_id.to_string(), profile.id.clone());

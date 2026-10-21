@@ -10,6 +10,8 @@
 //! store is touched; `Tx::redeem` may also answer `CircuitOpen`, the same 503); R145's distinct
 //! refusals (the store answers `NotPending` for "no such profile", "banned" and "already active";
 //! they are decided here from the router's profile). Every constant comes from `crate::config`.
+//! R1310000: a redemption that makes the account active also pays its tracks' first rewards
+//! (`economy::rewards::pay_starting_rewards`) in its transaction, while the economy is live.
 
 use std::sync::{Arc, Mutex};
 
@@ -27,6 +29,7 @@ use crate::config::{
     REDEMPTION_RESPONSE_FLOOR_MS,
 };
 use crate::db::store::{Db, InviteCode, Profile, ProfileStatus, RedeemInviteCodeInput, RedeemResult};
+use crate::economy::rewards::pay_starting_rewards;
 
 // Wording and defaults SPEC does not pin down
 
@@ -291,6 +294,11 @@ pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutc
             ip_hash: input.ip_hash.to_string(),
         })
         .await?;
+    // R1310000: the account now active, its tracks' first rewards, in the same transaction, while
+    // the economy is live (§14.12). The starter cards are the activation's own grant (R111).
+    if matches!(result, RedeemResult::Ok) && app.economy_live {
+        pay_starting_rewards(&mut tx, &profile.id, now).await?;
+    }
     tx.commit().await?;
     let failed = !matches!(result, RedeemResult::Ok);
 

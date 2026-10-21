@@ -601,8 +601,9 @@ describe("deleting the account", () => {
   });
 });
 
-// #1308: the card packs behind a toggle of their own. The economy is not live (§14.12), so only a dev
-// account is offered them until it is, and the panel mounts, and asks the server, only once opened.
+// #1308: the card packs behind a toggle of their own. The economy is live (§14.12, R1310000), so every
+// active account is offered them (with the switch off, a dev account alone), and the panel mounts, and
+// asks the server, only once opened.
 describe("#1308 the card packs on the account page", () => {
   function me(over: { isDev?: boolean; status?: MeResponse["profile"]["status"] } = {}): MeResponse {
     return {
@@ -616,7 +617,7 @@ describe("#1308 the card packs on the account page", () => {
     };
   }
 
-  it("offers Card packs to a dev account and opens the panel on the server's numbers", async () => {
+  it("R1310000 offers Card packs to an active account, a dev account or not, and opens the panel on the server's numbers", async () => {
     // The panel is a lazy chunk: warm it so the toggle-to-panel wait measures the mount, not the transform.
     await import("../packs/PackOpening.tsx");
     vi.mocked(getProfile).mockResolvedValue(profileBody());
@@ -640,9 +641,10 @@ describe("#1308 the card packs on the account page", () => {
     expect(getPacks).toHaveBeenCalledWith(TOKEN);
     unmount();
 
+    // With the economy live, an account the server does not list as dev is offered them too.
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     render(<AccountRoute token={TOKEN} me={me({ isDev: false })} />);
-    expect(screen.queryByTestId(accountTestid.packsToggle)).toBeNull();
+    expect(screen.getByTestId(accountTestid.packsToggle)).toHaveAttribute("aria-expanded", "false");
   });
 
   it("#1309 opening the toggle mounts the shop, the token picker and the cosmetic packs", async () => {
@@ -712,7 +714,8 @@ describe("#1308 the card packs on the account page", () => {
     expect(screen.getByTestId(shopTestid.wallet)).toHaveTextContent("0 Jlore");
   });
 
-  it("packsShown: an active account once the economy is live, before it a dev account alone", () => {
+  it("packsShown: an active account while the economy is live, with the switch off a dev account alone", () => {
+    expect(packsShown(me())).toBe(true);
     expect(packsShown(me(), true)).toBe(true);
     expect(packsShown(me(), false)).toBe(false);
     expect(packsShown(me({ isDev: true }), false)).toBe(true);

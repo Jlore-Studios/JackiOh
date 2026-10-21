@@ -18,7 +18,7 @@ import { HOVER_DELAY_MS } from "../cards/inspect/constants.ts";
 import { FX_LETHAL_LEAD_MAX_MS, FX_RESULT_MS } from "../fx/constants.ts";
 import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 
-import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
+import { DECK_NAME_MAX_LENGTH, ECONOMY_LIVE, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import type { DecksResponse, TutorialAccountProgress } from "../net/api.ts";
 import type { PracticeClaimAnswer, PracticeEarningApi, PracticeSeedIssued } from "../net/practice.ts";
 import type { Account } from "../net/gate.ts";
@@ -350,6 +350,11 @@ function routeHost(options: HostOptions = {}): RouteHost {
 
 // Rendering.
 
+/**
+ * The route on `host`. R1310000: with the economy live the route's own earning calls would ask the
+ * server for a seed, so a test earns nothing unless it passes `practiceEarning` (`undefined` for the
+ * route's own default).
+ */
 function renderRoute(
   host: RouteHost,
   props: Partial<PracticeRouteProps> = {},
@@ -360,6 +365,7 @@ function renderRoute(
       pacing={PRACTICE_PACING_FAST}
       account={ANONYMOUS}
       loadDecks={vi.fn(() => Promise.reject(new Error("an anonymous page has no saved decks")))}
+      practiceEarning={null}
       {...props}
     />,
   );
@@ -2089,15 +2095,51 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     expect(unasked.claim).not.toHaveBeenCalled();
   });
 
-  it("R1303000 with the economy off (the build's default) an active account's game asks the server nothing", async () => {
+  it("R1310000 with the economy live an active account's game asks for a seed", async () => {
+    expect(ECONOMY_LIVE).toBe(true);
+    // The server's side of the route's own calls (`PRACTICE_EARNING_API`): a seed issued, the claim paid.
+    const reply = (status: number, body: unknown): Response =>
+      ({ ok: status >= 200 && status < 300, status, text: () => Promise.resolve(JSON.stringify(body)) }) as unknown as Response;
+    const server = vi.fn((url: string, _init?: RequestInit): Promise<Response> => {
+      const path = new URL(url, "http://localhost").pathname;
+      if (path === "/api/practice/seeds") return Promise.resolve(reply(201, ISSUED));
+      if (path === "/api/practice/claims") return Promise.resolve(reply(200, { paid: true, jlore: 5, xp: 7 }));
+      return Promise.reject(new Error("practice needs no other server call"));
+    });
+    vi.stubGlobal("fetch", server);
+    /** The `n`th request to `path`, its method, bearer and parsed body. */
+    const sent = (path: string, n: number) => {
+      const [, init] = server.mock.calls.filter(([url]) => new URL(url, "http://localhost").pathname === path)[n] ?? [];
+      return {
+        method: init?.method,
+        authorization: (init?.headers as Record<string, string> | undefined)?.authorization,
+        body: typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined,
+      };
+    };
+
     const host = routeHost();
-    renderRoute(host, { account: signedIn("active"), loadDecks: vi.fn(() => Promise.resolve(decksResponse(null))) });
+    // No `practiceEarning`: the route's own default, which is the server's while the economy is live.
+    renderRoute(host, { account: signedIn("active"), loadDecks: vi.fn(() => Promise.resolve(decksResponse(null))), practiceEarning: undefined });
     await startFromSetup();
-    expect(host.starts()[0]?.earning).toBeUndefined();
+    expect(sent("/api/practice/seeds", 0)).toEqual({
+      method: "POST",
+      authorization: "Bearer tok-1",
+      body: { difficulty: "easy", humanSeat: host.starts()[0]?.humanSeat, deck: { kind: "random", lean: null }, catalog: CATALOG_VERSION },
+    });
+    expect(host.starts()).toHaveLength(1);
+    expect(host.starts()[0]).toMatchObject({ seed: "server-seed-1", earning: true, lastBoard: ISSUED.lastBoard });
+
     concedeOnBoard();
     await screen.findByTestId(T.result);
-    expect(screen.queryByTestId(practiceTestid.resultEarning)).toBeNull();
-    expect(practiceFetches()).toEqual([]);
+    await waitFor(() => {
+      expect(screen.getByTestId(practiceTestid.resultEarning)).toHaveAttribute("data-earning", "paid");
+    });
+    expect(sent("/api/practice/claims", 0)).toEqual({
+      method: "POST",
+      authorization: "Bearer tok-1",
+      body: { seed: "server-seed-1", result: "loss", log: [] },
+    });
+    expect(screen.getByTestId(practiceTestid.resultEarning)).toHaveTextContent("+5 Jlore, +7 XP");
   });
 });
 
