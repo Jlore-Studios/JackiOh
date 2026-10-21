@@ -8607,15 +8607,18 @@
       "feedback_since": "2026-10-20T20:07:56Z",
       "issue": 1429,
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-20T22:59:11Z",
+      "round_tier": "strong",
       "run_id": "39511979284",
       "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-20T23:03:15Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "claude"
