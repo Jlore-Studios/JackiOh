@@ -10306,7 +10306,9 @@
     },
     "1557": {
       "action": "revise",
-      "asks": [],
+      "asks": [
+        "c:6324553642"
+      ],
       "ci_reruns": {
         "cd696b1bfd896bb54f58f9d541483142417f33f6": 1
       },
@@ -10329,11 +10331,12 @@
       "pending_request": false,
       "provider": "claude-4",
       "question": "",
-      "queued_at": "2026-10-21T19:22:10Z",
+      "queued_at": "2026-10-21T19:25:34Z",
+      "requested_by": "jgoetzmann",
       "round_tier": "strong",
       "run_id": "39652019888",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "request",
       "started_at": "2026-10-21T18:23:16Z",
       "stop_requested": false,
       "taken_asks": [],
