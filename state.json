@@ -12707,10 +12707,14 @@
     "what": "build #1568 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-21T19:47:42Z",
-    "notes": [],
+    "at": "2026-10-21T19:49:21Z",
+    "notes": [
+      "started build #1568 on muse (run 39665090265)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-10-21T22:10:00Z; `claude-7` 5-hour usage is 52%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-10-21T20:00:00Z; it can start a build or a plan again in 9m; `claude-1` 5-hour usage is 48%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-10-21T22:30:00Z; it can start a build or a plan again in 2h 39m; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 61%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-10-26T09:00:00Z; it can start a build or a plan again in 109h 09m; `muse` is busy; `agy` 7-day usage is 100%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-23T22:00:08Z; it can start a build or a plan again in 50h 09m; `gpt` it refused a call; its limit resets at 2026-10-27T18:45:27Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-24T05:00:00Z; it can start a build or a plan again in 57h 09m; `devin` is idle, but nothing queued is for it"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
+  "loop_tick": "2026-10-21T19:49:21Z",
   "machine_disk": {
     "issue": null,
     "reading": {
