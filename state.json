@@ -10307,6 +10307,9 @@
     "1557": {
       "action": "revise",
       "asks": [],
+      "ci_reruns": {
+        "cd696b1bfd896bb54f58f9d541483142417f33f6": 1
+      },
       "cleared": {
         "at": "2026-10-21T19:04:52Z",
         "by": "`claude` (strong)",
