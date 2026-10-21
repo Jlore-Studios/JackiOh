@@ -112,12 +112,12 @@ mod tests {
             let mut s = scenario(json!({
                 "seed": "core-008-radiant-flip",
                 // Radiant #29 GIGA Glowy Jelly Bean: "every card in your hand and every permanent you
-                // control becomes Radiant" (§8.2 row 29); cost 6, so the mana is seeded above the
+                // control becomes Radiant" (§8.2 row 29); cost 7, so the mana is seeded above the
                 // refresh (§2.3).
                 "p1": {
                     "hand": [{ "def": GIGA, "radiant": true }, FILLER],
                     "field": [{ "def": "core-008", "damage": 3 }],
-                    "mana": 6,
+                    "mana": 7,
                     "library": [FILLER]
                 },
                 "p2": { "hand": [FILLER], "field": [MENACE], "library": [FILLER] }

@@ -191,7 +191,7 @@ describe("B15: every catalog face fits its name and rules text at 270 px and 170
     // Balance patch 1 (issue #88) rewords C+ #40 Appropriations and C+ #42 KY's Test onto short
     // faces, so they leave the allowance; nothing else crosses the tier either way. The catalog holds
     // the Meditative set, and its wordiest faces cross it too: #8 Reach the Summit's Ascent ladder,
-    // #22 Mind Games and its #22.1 Fortify Mind, #49.1 YileGPT Unleashed and #95 Call to Chaos
+    // #22 Mind Games and its #22.1 Fortify Mind, #49.1 YileGPT Prime and #95 Call to Chaos
     // (meditative-faces.cy.tsx measures the set's faces at the inspect sizes); #65 Keymaster Keenus's
     // and #45 Knowledge Breaker's Radiant faces left it with their patch v0.3.7 text, and C+ #62 KY's
     // Papaya joined it with v0.3.10's Discover text (#967) and left it with #1017's cut. Each face

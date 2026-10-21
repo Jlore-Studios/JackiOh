@@ -2,8 +2,9 @@
 //! `@jackioh/engine/config` (docs/v0.3.0/SURFACE.md §5.1): the values and two types that a file under
 //! `apps/web/src` imports from it today (SURFACE's twelve, plus `LIBRARY_CAP`, which a web test
 //! imports, R768's two replay constants, R1382's `TRIBAL_TAGS`, the custom cards' and the practice
-//! sandbox's limits, R915001 and R923002, and Duos co-op's six, #936 S1), generated from
-//! `crates/engine/src/config.rs` so the client never restates a rules number (CLAUDE.md rule 9).
+//! sandbox's limits, R915001 and R923002, Duos co-op's six, #936 S1, and R1563006's sequence clock),
+//! generated from `crates/engine/src/config.rs` so the client never restates a rules number (CLAUDE.md
+//! rule 9).
 //!
 //! `cargo test -p jackioh-engine --test export_config` writes it; the file is committed, and CI runs
 //! this test and fails on a diff, as it does for the ts-rs types under `wire/generated/` (V20).
@@ -21,15 +22,15 @@
 
 use jackioh_engine::config::{
     AI_DIFFICULTY, AI_TUTORIAL, COIN_DEF_ID, CRAFT_ADJECTIVES, CRAFT_HAT_PRICES, CRAFT_KEYWORD_PRICES,
-    CRAFT_MAX_EFFECTS, CRAFT_MAX_N, CRAFT_NOUNS, CRAFT_VERB_PRICES, CUSTOM_ATTACK_MAX,
+    CRAFT_MAX_EFFECTS, CRAFT_MAX_N, CRAFT_NOUNS, CRAFT_RETIRED_VERBS, CRAFT_VERB_PRICES, CUSTOM_ATTACK_MAX,
     CUSTOM_BUILDER_MAX_BYTES, CUSTOM_COST_MAX, CUSTOM_HEALTH_MAX, CUSTOM_ID_PREFIX, CUSTOM_KEYWORDS,
     CUSTOM_KEYWORDS_MAX, CUSTOM_NAME_MAX_LENGTH, CUSTOM_PARAM_KEY_MAX_LENGTH, CUSTOM_PARAM_MAX,
     CUSTOM_PARAMS_MAX, CUSTOM_RADIANT_STAT_MAX, CUSTOM_SOURCE_MAX_BYTES, CUSTOM_TEXT_MAX_LENGTH, DECK_SIZE,
     DIFFICULTIES, DRAWS_PER_TURN, DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, DUOS_PASS_CAP, DUOS_PASS_COST,
-    DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP, LIBRARY_CAP,
-    MAX_COPIES, MAX_MANA, RANDOM_ATTACK_TARGET, REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS,
-    SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX, TRIBAL_TAGS,
-    TURN_CAP_PLAYER_TURNS, VERSIONS_SCHEME,
+    DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP,
+    KY_COMPETITION_SECONDS, LIBRARY_CAP, MAX_COPIES, MAX_MANA, RANDOM_ATTACK_TARGET, REPLAY_CHECKPOINT_EVERY,
+    REPLAY_PAGE_STEPS, SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX,
+    TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS, VERSIONS_SCHEME,
 };
 use serde::Serialize;
 
@@ -48,6 +49,7 @@ import type { Difficulty } from \"./generated/Difficulty.ts\";
 import type { Handicap } from \"./generated/Handicap.ts\";
 import type { CraftHatPrice } from \"./generated/CraftHatPrice.ts\";
 import type { CraftKeywordPrice } from \"./generated/CraftKeywordPrice.ts\";
+import type { CraftVerb } from \"./generated/CraftVerb.ts\";
 import type { CraftVerbPrice } from \"./generated/CraftVerbPrice.ts\";
 import type { DuosTeamRules } from \"./generated/DuosTeamRules.ts\";
 import type { KeywordKind } from \"./generated/KeywordKind.ts\";
@@ -102,6 +104,12 @@ fn engine_config_ts() -> String {
         constant("CRAFT_MAX_EFFECTS", None, &CRAFT_MAX_EFFECTS),
         constant("CRAFT_MAX_N", None, &CRAFT_MAX_N),
         constant("CRAFT_NOUNS", Some("readonly string[]"), CRAFT_NOUNS),
+        // R1563009: the verbs no craft prompt offers, which Scratch Pad's palette leaves out.
+        constant(
+            "CRAFT_RETIRED_VERBS",
+            Some("readonly CraftVerb[]"),
+            CRAFT_RETIRED_VERBS,
+        ),
         constant(
             "CRAFT_VERB_PRICES",
             Some("readonly CraftVerbPrice[]"),
@@ -134,6 +142,7 @@ fn engine_config_ts() -> String {
         constant("GLITCH_DEF_ID", None, GLITCH_DEF_ID),
         constant("HERO_HEALTH", None, &HERO_HEALTH),
         constant("HUMAN_HANDICAP", Some("Handicap"), &HUMAN_HANDICAP),
+        constant("KY_COMPETITION_SECONDS", None, &KY_COMPETITION_SECONDS),
         constant("LIBRARY_CAP", None, &LIBRARY_CAP),
         constant("MAX_COPIES", None, &MAX_COPIES),
         constant("MAX_MANA", None, &MAX_MANA),
@@ -169,8 +178,8 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    // Forty-nine constants, each on its own line, the way the client and the diff check read them.
-    assert_eq!(text.matches("\nexport const ").count(), 49, "{text}");
+    // Fifty-one constants, each on its own line, the way the client and the diff check read them.
+    assert_eq!(text.matches("\nexport const ").count(), 51, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 

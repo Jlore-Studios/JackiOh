@@ -1,4 +1,4 @@
-//! Meditative #20 Aestheticize the Game (SPEC §8.8 row 20). (1) Spell, Quickdraw, Wincon, Mythic.
+//! Meditative #20 Aestheticize the Game (SPEC §8.8 row 20). (0) Spell, Quickdraw, Wincon, Mythic.
 //!   Base:    "Choose one. You also win while it's true: your hero has {health}+ Health; your graveyard
 //!             has {graveyard}+ cards; or your Units total {board}+ Attack and {board}+ Health."
 //!   Radiant: the same with 90s, then: "Draw {draw}."

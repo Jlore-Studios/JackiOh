@@ -16,7 +16,9 @@ import { beginGame, catalogVersion, createGame, reduce } from "../wasm/index.ts"
 // Re-pinned for v0.3.15 (Meditative+ ships, #1187): the shipped pools grew by Meditative+, so
 // "replay-player-5" now ends with the opponent's hand empty, in under three pages; "replay-player-6"
 // ends with both hands holding cards and spans a third page.
-const SEED = "replay-player-6";
+// Re-pinned for #1563: Last Hurrah and Aestheticize the Game cost (0), so `cheap20` changed again and
+// "replay-player-6" now ends with the opponent's hand empty; "replay-player-10" holds cards in both.
+const SEED = "replay-player-10";
 /** Two pages' worth of actions and a few over, then a concede: the game ends, in a few turns. */
 const GAME_ACTIONS = 2 * REPLAY_PAGE_STEPS + 8;
 /** The turns the folded game must span for turn moves to have somewhere to go. */

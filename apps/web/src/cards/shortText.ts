@@ -7,14 +7,15 @@
 // but for these. Each card's text is a list no box holds, or a face still a line over after the cut:
 // - `n` (a number): its first n lines, which its text puts first, "…" in place of the last full
 //   stop: #98 Heroic Power's thirteen powers, Meditative #8 Reach the Summit's eleven levels,
-//   Combo-Index's grades, Mind Games' and Fortify Mind's three choices, and YileGPT Unleashed's list
+//   Combo-Index's grades, Mind Games' and Fortify Mind's three choices, and YileGPT Prime's list
 //   of Cries; and a few faces that fit, whose last line is a reminder or the designer's flavour
 //   that the click-in carries (Tesla, Jade Beauty, Jlockeed's Evil Blueprints);
 // - "colon": up to its first colon, "…" in its place: the three Call to Chaos editions, whose list
 //   must stay whole in the catalog (each roll's label is a clause of it, R436);
 // - "clamp": its whole text, cut by the rules box at its last line with "…": seven faces still about
 //   a line over after the cut (Yile's Virus and Knowledge Breaker, and the Radiant faces of KY's Gift,
-//   Feng Shui and Windfast), which a 200 px tile prints whole.
+//   Feng Shui and Windfast), which a 200 px tile prints whole, and three #1563 left a line over
+//   (Devil's Pact, with its keywords, and the Radiant faces of Bob's Plan and KY's Competition).
 // Only a face that prints its catalog text takes a short form: in play a #98 Heroic Power prints its
 // rolled power and a Call to Chaos "???" (inPlay.ts) instead.
 //
@@ -44,6 +45,7 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "core-095": { base: "colon", radiant: "colon" },
   "core-098": { base: 2, radiant: 2 },
   "classic-005": { base: 2, radiant: 2 },
+  "classic-023": { base: "clamp" },
   "classicplus-042-1": { radiant: "clamp" },
   "classicplus-073": { base: "colon", radiant: "colon" },
   "meditative-008": { base: 2, radiant: 2 },
@@ -57,7 +59,9 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "meditative-091": { radiant: "clamp" },
   "meditative-095": { base: "colon", radiant: "colon" },
   "meditative-097": { base: 1, radiant: 1 },
+  "meditativeplus-001": { radiant: "clamp" },
   "meditativeplus-004": { base: "clamp", radiant: "clamp" },
+  "meditativeplus-020": { radiant: "clamp" },
   "meditativeplus-024": { base: "clamp", radiant: "clamp" },
 };
 

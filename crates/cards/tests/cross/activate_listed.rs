@@ -511,7 +511,7 @@ mod c_n23_devils_pact {
         let mut s = pact(false);
         activate_listed(&mut s, DEVILS_PACT, any);
         play_vanilla_as_a_book(&mut s);
-        s.expect_health(P2, 26);
+        s.expect_health(P2, 25); // 4, raised by its Spell Damage +1 (R1563002).
     }
 
     #[test]
@@ -519,7 +519,7 @@ mod c_n23_devils_pact {
         let mut s = pact(true);
         activate_listed(&mut s, DEVILS_PACT, any);
         play_vanilla_as_a_book(&mut s);
-        s.expect_health(P2, 22);
+        s.expect_health(P2, 20); // 8, raised by its Spell Damage +2 (R1563002).
     }
 }
 

@@ -2678,9 +2678,9 @@ mod tests {
             // The refusal leaves the state alone: the card is still in hand and the mana unspent.
             poor.expect_in_zone("core-025", "hand").expect_mana("p1", 3);
 
-            // "Uncastable at 4 mana" (M4-T4): a 6-cost card with MAX_MANA available.
+            // "Uncastable at 4 mana" (M4-T4): a 7-cost card with MAX_MANA available.
             let mut giga = scenario(json!({ "p1": { "hand": ["core-029"], "field": [anchor()] } }));
-            giga.expect_refused_with(|s| s.play("core-029", json!({})), "costs 6, more than your mana");
+            giga.expect_refused_with(|s| s.play("core-029", json!({})), "costs 7, more than your mana");
 
             let mut full = scenario(json!({
                 "p1": { "hand": ["core-025"], "field": ["core-056", "core-056", "core-056", "core-056", "core-056"] },

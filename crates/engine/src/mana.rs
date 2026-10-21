@@ -286,35 +286,47 @@ pub fn garden_premium(state: &GameState) -> Option<i32> {
     least
 }
 
-/// R1181002: whether a Garden reaches a play of this card now — an embiggen card played face-up from
-/// a hand, or from a graveyard (R454), while a Garden acts. A cast (R545) and a card set face-down
-/// (R783005) are not reached.
+/// R1181002: whether a Garden reaches a play of this embiggen card now, which plays its Embiggened
+/// version at its normal price — an embiggen card played face-up from a hand, or from a graveyard
+/// (R454), while a Garden acts. A cast (R545) and a card set face-down (R783005) are not reached.
 pub fn garden_reaches(state: &GameState, card: &CardInstance) -> bool {
-    garden_premium_for(state, card).is_some()
+    crate::play_choices::has_embiggen_price(state, card) && garden_premium_for(state, card).is_some()
 }
 
-/// R1181002: the premium a Garden asks of a play of this card now, where one reaches it.
+/// R1181002, R1563004: the premium a Garden asks of a play of this card now — any card played face-up
+/// from a hand, or from a graveyard (R454), while a Garden acts.
 fn garden_premium_for(state: &GameState, card: &CardInstance) -> Option<i32> {
-    if card.set_as.is_some()
-        || !matches!(card.zone, Zone::Hand { .. } | Zone::Graveyard { .. })
-        || !crate::play_choices::has_embiggen_price(state, card)
-    {
+    if card.set_as.is_some() || !matches!(card.zone, Zone::Hand { .. } | Zone::Graveyard { .. }) {
         return None;
     }
     garden_premium(state)
 }
 
-/// R1181002: the price a Garden sets on the dearer play of an embiggen card that is not Radiant — its
-/// normal price plus the premium, in place of its printed Embiggened price — or `None` where no Garden
-/// reaches it, or for any other play.
+/// R1563004: whether a Garden offers this card of one price its Radiant price — a card that is not
+/// Radiant, has no embiggen price and no X (R65: an X card costs exactly X), played as a Garden reaches
+/// a play. Its dearer choice is the play's `embiggen: true`, stamped on the card as `embiggened` until
+/// §10.5 step 3 (`play_steps::garden_step`).
+pub fn garden_offers_radiant(state: &GameState, card: &CardInstance) -> bool {
+    !card.radiant
+        && !crate::play_choices::has_embiggen_price(state, card)
+        && !is_x_cost(state, card)
+        && garden_premium_for(state, card).is_some()
+}
+
+/// R1181002, R1563004: the price a Garden sets on the dearer play of a card that is not Radiant — its
+/// normal price plus the premium, in place of an embiggen card's printed Embiggened price — or `None`
+/// where no Garden reaches it, or for any other play.
 pub fn garden_dearer_price(state: &GameState, card: &CardInstance) -> Option<i32> {
     if card.embiggened != Some(true) || card.radiant {
         return None;
     }
-    let CardCost::Embiggen { base, .. } = def_of(Some(state), &card.def_id).cost else {
-        return None;
-    };
-    Some(base + garden_premium_for(state, card)?)
+    match def_of(Some(state), &card.def_id).cost {
+        CardCost::Embiggen { base, .. } => Some(base + garden_premium_for(state, card)?),
+        _ if garden_offers_radiant(state, card) => {
+            Some(printed_cost(state, card) + garden_premium_for(state, card)?)
+        }
+        _ => None,
+    }
 }
 
 /// R65, R1181003: the override a price starts from — for the Embiggened version, its own price

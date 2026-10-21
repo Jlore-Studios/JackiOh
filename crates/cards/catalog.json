@@ -635,11 +635,11 @@
     "loc": 46,
     "base": {
       "keywords": [],
-      "text": "Reveals when any player ends a turn with unspent mana: Summon an X/X Bread Token for you. X = that player's unspent mana."
+      "text": "Reveals when any player Floats: Summon an X/X Bread Token for you. X = the Float."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when any player ends a turn with unspent mana: Summon an X/X Bread Token for you. X = {multiplier} × that player's unspent mana."
+      "text": "Reveals when any player Floats: Summon an X/X Bread Token for you. X = {multiplier} × the Float."
     }
   },
   "core-019": {
@@ -989,15 +989,15 @@
     "rarity": "Rare",
     "flavor": "Holy",
     "token": false,
-    "cost": 6,
+    "cost": 7,
     "loc": 20,
     "base": {
       "keywords": [],
-      "text": "Make every card in your hand Radiant."
+      "text": "Make every card in your hand Radiant.\nFloat reduces cost."
     },
     "radiant": {
       "keywords": [],
-      "text": "Make every card in your hand and every permanent you control Radiant."
+      "text": "Make every card in your hand and every permanent you control Radiant.\nFloat reduces cost."
     }
   },
   "core-030": {
@@ -4757,12 +4757,28 @@
     ],
     "loc": 30,
     "base": {
-      "keywords": [],
-      "text": "Cry: Discard {discards|random card|random cards}.\nActivate: This turn, each card you play is replaced by a Book of Flame."
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Spell Damage",
+          "n": 1
+        }
+      ],
+      "text": "Indestructible, Spell Damage +1\nCry: Discard {discards|random card|random cards}.\nActivate: This turn, each card you play is replaced by a Book of Flame."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Cry: Discard {discards|random card|random cards}.\nActivate: This turn, each card you play is replaced by a Radiant Book of Flame."
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Spell Damage",
+          "n": 2
+        }
+      ],
+      "text": "Indestructible, Spell Damage +2\nCry: Discard {discards|random card|random cards}.\nActivate: This turn, each card you play is replaced by a Radiant Book of Flame."
     }
   },
   "classic-024": {
@@ -5218,7 +5234,7 @@
     "rarity": "Epic",
     "flavor": "Nerd",
     "token": false,
-    "cost": 1,
+    "cost": 0,
     "loc": 11,
     "base": {
       "keywords": [],
@@ -8919,7 +8935,7 @@
     "rarity": "Legendary",
     "flavor": "Physical",
     "token": false,
-    "cost": 4,
+    "cost": 3,
     "loc": 15,
     "base": {
       "keywords": [],
@@ -10558,8 +10574,8 @@
     "params": [
       {
         "key": "times",
-        "base": 5,
-        "radiant": 10,
+        "base": 4,
+        "radiant": 8,
         "better": "up",
         "step": 1,
         "min": 1
@@ -11918,14 +11934,28 @@
     "flavor": "Holy",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "loss",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 39,
     "base": {
       "keywords": [],
-      "text": "Lose all mana next turn. Make a card in your hand Radiant."
+      "text": "Lose ({loss}) mana next turn. Make a card in your hand Radiant."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Echo 1\nLose all mana next turn. Make a card in your hand Radiant."
+      "keywords": [
+        {
+          "kind": "Cleave"
+        }
+      ],
+      "text": "Cleave\nLose ({loss}) mana next turn. Make a card in your hand Radiant."
     }
   },
   "meditative-019": {
@@ -11946,9 +11976,17 @@
     ],
     "params": [
       {
-        "key": "turns",
+        "key": "loss",
         "base": 2,
         "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "lossAfter",
+        "base": 3,
+        "radiant": 3,
         "better": "down",
         "step": 1,
         "min": 1
@@ -11957,11 +11995,11 @@
     "loc": 20,
     "base": {
       "keywords": [],
-      "text": "Lose all mana for your next {turns|turn|turns}. Add a Temporal Rift to your hand."
+      "text": "Lose ({loss}) mana next turn, then ({lossAfter}) mana the turn after. Add a Temporal Rift to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Lose all mana for your next {turns|turn|turns}. Add a Radiant Temporal Rift to your hand."
+      "text": "Lose ({loss}) mana next turn, then ({lossAfter}) mana the turn after. Add a Radiant Temporal Rift to your hand."
     }
   },
   "meditative-019-1": {
@@ -12033,7 +12071,7 @@
     "rarity": "Mythic",
     "flavor": "Physical",
     "token": false,
-    "cost": 1,
+    "cost": 0,
     "params": [
       {
         "key": "health",
@@ -13458,7 +13496,7 @@
   "meditative-049": {
     "id": "meditative-049",
     "index": "49",
-    "name": "YileGPT Tamed",
+    "name": "YileGPT",
     "set": "Meditative",
     "type": "Unit",
     "tags": [
@@ -13472,26 +13510,27 @@
     "cost": 2,
     "refs": [
       "meditative-049-1",
-      "meditative-049-2"
+      "meditative-049-2",
+      "meditative-049"
     ],
     "loc": 40,
     "base": {
       "attack": 2,
       "health": 6,
       "keywords": [],
-      "text": "Cry: Summon a Yile's Virus for your opponent across from this.\nDeath: Put a YileGPT Unleashed on the bottom of your deck."
+      "text": "Cry: Summon a Yile's Virus for your opponent across from this.\nDeath: Shuffle a YileGPT Prime into your deck."
     },
     "radiant": {
       "attack": 4,
       "health": 12,
       "keywords": [],
-      "text": "Cry: Summon a Radiant Yile's Virus for your opponent across from this.\nDeath: Put a Radiant YileGPT Unleashed on the bottom of your deck."
+      "text": "Cry: Summon a Radiant Yile's Virus for your opponent across from this.\nDeath: Shuffle a Radiant YileGPT Prime into your deck."
     }
   },
   "meditative-049-1": {
     "id": "meditative-049-1",
     "index": "49.1",
-    "name": "YileGPT Unleashed",
+    "name": "YileGPT Prime",
     "set": "Meditative",
     "type": "Unit",
     "tags": [
@@ -13583,7 +13622,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Can't attack\nStart of turn: Make a random permanent of yours Radiant.\nWhenever your turn ends with unspent mana, this costs that much less.\nCry: Do {picks} of these at random: summon {datacenters|Claude's Datacenter|Claude's Datacenters}; add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand, which cost ({setCost}); summon an AI Girlfriend; fill your opponent's board with Yile's Viruses; Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
+      "text": "Can't attack\nStart of turn: Make a random permanent of yours Radiant.\nFloat reduces cost.\nCry: Do {picks} of these at random: summon {datacenters|Claude's Datacenter|Claude's Datacenters}; add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand, which cost ({setCost}); summon an AI Girlfriend; fill your opponent's board with Yile's Viruses; Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
     },
     "radiant": {
       "attack": 16,
@@ -13597,7 +13636,7 @@
           "n": 5
         }
       ],
-      "text": "Can't attack, Armor 5\nStart of turn: Make {radiants|random permanent|random permanents} of yours Radiant.\nWhenever your turn ends with unspent mana, this costs that much less.\nCry: Summon {datacenters|Claude's Datacenter|Claude's Datacenters}. Add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand; they cost ({setCost}). Summon an AI Girlfriend. Summon {viruses|Radiant Yile's Virus|Radiant Yile's Viruses} for your opponent. Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
+      "text": "Can't attack, Armor 5\nStart of turn: Make {radiants|random permanent|random permanents} of yours Radiant.\nFloat reduces cost.\nCry: Summon {datacenters|Claude's Datacenter|Claude's Datacenters}. Add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand; they cost ({setCost}). Summon an AI Girlfriend. Summon {viruses|Radiant Yile's Virus|Radiant Yile's Viruses} for your opponent. Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
     }
   },
   "meditative-049-2": {
@@ -15642,7 +15681,7 @@
     "rarity": "Rare",
     "flavor": "Nerd",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "refs": [
       "meditative-096-1"
     ],
@@ -15688,7 +15727,7 @@
     "printedRarity": "Rare",
     "flavor": "Nerd",
     "token": true,
-    "cost": 2,
+    "cost": 1,
     "params": [
       {
         "key": "discount",
@@ -16359,16 +16398,18 @@
       "meditativeplus-001-1",
       "meditative-008",
       "meditativeplus-001-2",
-      "meditative-020"
+      "meditative-020",
+      "meditativeplus-001-3",
+      "meditativeplus-001-4"
     ],
     "loc": 38,
     "base": {
       "keywords": [],
-      "text": "Add a random Wincon card to your hand, and its plan: a Base Camp for Reach the Summit, a Spa Day for Aestheticize the Game."
+      "text": "Add a random Wincon card to your hand, and its plan: a Base Camp for Reach the Summit; for Aestheticize the Game, Discover a Spa Day, a Garage Sale or a Leg Day."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add a random Radiant Wincon card to your hand, and its Radiant plan: a Radiant Base Camp for Reach the Summit, a Radiant Spa Day for Aestheticize the Game."
+      "text": "Add a random Radiant Wincon card to your hand, and its Radiant plan: a Radiant Base Camp for Reach the Summit; for Aestheticize the Game, Discover a Radiant Spa Day, Garage Sale or Leg Day."
     }
   },
   "meditativeplus-001-1": {
@@ -16460,6 +16501,78 @@
     "radiant": {
       "keywords": [],
       "text": "Heal your hero {heal}. Shuffle {bombs|Radiant Love Bomb|Radiant Love Bombs} into your deck."
+    }
+  },
+  "meditativeplus-001-3": {
+    "id": "meditativeplus-001-3",
+    "index": "1.3",
+    "name": "Garage Sale",
+    "set": "Meditative+",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Token"
+    ],
+    "rarity": "Token",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 1,
+    "refs": [
+      "core-t-coin"
+    ],
+    "params": [
+      {
+        "key": "rounds",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 23,
+    "base": {
+      "keywords": [],
+      "text": "Fill your hand with Coins, then discard your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Do this {rounds|time|times}: fill your hand with Coins, then discard your hand."
+    }
+  },
+  "meditativeplus-001-4": {
+    "id": "meditativeplus-001-4",
+    "index": "1.4",
+    "name": "Leg Day",
+    "set": "Meditative+",
+    "type": "Spell",
+    "tags": [
+      "AI",
+      "Token"
+    ],
+    "rarity": "Token",
+    "flavor": "Physical",
+    "token": true,
+    "cost": 2,
+    "params": [
+      {
+        "key": "buff",
+        "base": 5,
+        "radiant": 10,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 12,
+    "base": {
+      "keywords": [],
+      "text": "Give your Units +{buff}/+{buff}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give your Units +{buff}/+{buff}."
     }
   },
   "meditativeplus-002": {
@@ -17185,11 +17298,11 @@
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Answer three-digit sums one after another until you stop or miss one. Then summon a Lil' Kenny with X/X, X your correct answers."
+      "text": "Answer three-digit sums one after another until you stop, miss one or 60 seconds pass. Then summon a Lil' Kenny with X/X, X your correct answers."
     },
     "radiant": {
       "keywords": [],
-      "text": "Answer one- and two-digit sums one after another until you stop or miss one. Then summon a Radiant Lil' Kenny with 2X/2X, X your correct answers."
+      "text": "Answer one- and two-digit sums one after another until you stop, miss one or 60 seconds pass. Then summon a Radiant Lil' Kenny with 2X/2X, X your correct answers."
     }
   },
   "meditativeplus-020-1": {
@@ -17291,11 +17404,11 @@
     "loc": 27,
     "base": {
       "keywords": [],
-      "text": "Aura: Embiggen cards play their Embiggened version at their normal price. For ({premium}) more, a card that isn't Radiant is also played Radiant."
+      "text": "Aura: Embiggen cards play their Embiggened version at their normal price. Any card that isn't Radiant may be played Radiant for ({premium}) more."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Embiggen cards play their Embiggened version at their normal price. For ({premium}) more, a card that isn't Radiant is also played Radiant."
+      "text": "Aura: Embiggen cards play their Embiggened version at their normal price. Any card that isn't Radiant may be played Radiant for ({premium}) more."
     }
   },
   "meditativeplus-023": {

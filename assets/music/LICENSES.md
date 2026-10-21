@@ -131,8 +131,8 @@ attribution is required when they play in the game.
 | `intro-meditative-045` | `apps/web/public/audio/music/intro-meditative-045.m4a` | Intro of Meditative #45 Knowledge Breaker (Legendary): dulcimer, strings, double bass, E dorian, 3/4 at 145 | 4.7 s |
 | `intro-meditative-045-1` | `apps/web/public/audio/music/intro-meditative-045-1.m4a` | Intro of Meditative #45.1 Knowledge Breaker Prime (token printed Legendary): dulcimer, strings, double bass, C dorian, 3/4 at 118 | 5.6 s |
 | `intro-meditative-047` | `apps/web/public/audio/music/intro-meditative-047.m4a` | Intro of Meditative #47 饕餮 (Legendary): tuba, trombone, contrabass, C phrygian, 4/4 at 100 | 5.8 s |
-| `intro-meditative-049` | `apps/web/public/audio/music/intro-meditative-049.m4a` | Intro of Meditative #49 YileGPT Tamed (Mythic): square lead, polysynth, synth bass, E dorian, 4/4 at 120 | 5.0 s |
-| `intro-meditative-049-1` | `apps/web/public/audio/music/intro-meditative-049-1.m4a` | Intro of Meditative #49.1 YileGPT Unleashed (token printed Mythic): saw lead, polysynth, synth bass, E minor, 4/4 at 140 | 4.4 s |
+| `intro-meditative-049` | `apps/web/public/audio/music/intro-meditative-049.m4a` | Intro of Meditative #49 YileGPT (Mythic): square lead, polysynth, synth bass, E dorian, 4/4 at 120 | 5.0 s |
+| `intro-meditative-049-1` | `apps/web/public/audio/music/intro-meditative-049-1.m4a` | Intro of Meditative #49.1 YileGPT Prime (token printed Mythic): saw lead, polysynth, synth bass, E minor, 4/4 at 140 | 4.4 s |
 | `intro-meditative-049-2` | `apps/web/public/audio/music/intro-meditative-049-2.m4a` | Intro of Meditative #49.2 Yile's Virus (token printed Mythic): square lead, polysynth, synth bass, F phrygian, 4/4 at 132 | 4.6 s |
 | `intro-meditative-049-3` | `apps/web/public/audio/music/intro-meditative-049-3.m4a` | Intro of Meditative #49.3 AI Girlfriend (token printed Mythic): electric piano, vibraphone, fingered bass, C major, 4/4 at 100 | 5.8 s |
 | `intro-meditative-051` | `apps/web/public/audio/music/intro-meditative-051.m4a` | Intro of Meditative #51 Devin Bot (Legendary): square lead, polysynth, synth bass, F dorian, 4/4 at 132 | 4.6 s |
