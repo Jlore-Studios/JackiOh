@@ -9402,22 +9402,23 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "crates/server/tests/actor/glitch.rs",
+            "crates/server/README.md",
             "crates/server/tests/api/practice.rs",
-            "crates/server/tests/api/queue.rs"
+            "crates/server/tests/export_config.rs",
+            "spec/14-economy.md"
           ],
-          "from": "10f9dbb6e0908d71666a7bea6240353c01ccc55f",
-          "main": "54163dcabd1e718bca8d3b661584cadfd10d8371"
+          "from": "46b8045bc79d7c24988043c38950fdb95718ffa8",
+          "main": "6569e4556ce25745b71b0e9a89cadcc3cdefaa75"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39564687202",
+            "run": "39576456047",
             "tier": "strong"
           }
         ],
-        "sha": "46b8045bc79d7c24988043c38950fdb95718ffa8",
+        "sha": "1105fb4a0de475497b122f0d84abb36a67a54885",
         "tiers": {
           "claude": "strong"
         }
