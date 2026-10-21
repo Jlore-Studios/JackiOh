@@ -1,8 +1,8 @@
 //! R1453 (SPEC §9.5): the empty-queue fallback. With `LADDER_BOTS=on`, a ranked ticket that has
 //! waited past its own fallback time (15–40 s, from its id) with no person to pair with is paired with
 //! a ladder bot: free, on its schedule, the closest in rating, and not one the player faced in their
-//! last games. A player rated above every bot never gets one, and a person inside the window always
-//! pairs first.
+//! last games. A player rated above every bot never gets one but a grinder (R1555000), and a person
+//! inside the window always pairs first.
 //!
 //! R641000 (SPEC §9.5): a Conquest ticket's bot holds a trio, and the two play a ranked series. The
 //! bot is held by the series between games, so nothing else seats it until the series ends; it makes
@@ -22,6 +22,12 @@
 //! does, and offers or meets a rematch as its plan says, a rematch that claims it as the fallback
 //! does and that it then plays.
 //!
+//! R1555000: while the top bots grind, a player rated above every bot may meet a grinder within
+//! `MAX_FAIR_GAP` and no other bot; a grinder is on its widened hours; it steps up a strength every
+//! `BOT_GRIND_STEP_GAMES` rated wins; and a sweep that finds nobody queued kicks off one ranked
+//! Best-of-1 match between a grinder and the closest bot, which the two play out alone, rated as any
+//! bot's game is, with no rematch between them.
+//!
 //! Everything runs through `try_pair` on tokio's paused clock, on the fake store, the real catalog and
 //! the real registry (a started match is a real game). Bots are written through the store, as the pool
 //! writes them (`bots_create`, `bots_set_decks`).
@@ -35,19 +41,24 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
 use jackioh_engine::{PlayerId, pick_portrait_from_seed};
-use jackioh_server::api::queue::try_pair;
+use jackioh_server::api::queue::{kick_off_bot_match, try_pair};
+use jackioh_server::api::ranked::rate_ranked_game;
 use jackioh_server::api::rematch::STAKE_NORMAL;
 use jackioh_server::api::series::sweep_series;
 use jackioh_server::app::{App, load_server_env, now_ms};
+use jackioh_server::bots::calibrate::reference_observations;
 use jackioh_server::bots::fallback::{fallback_due, fallback_seconds, fallback_seconds_keyed, hour_of};
 use jackioh_server::bots::pick::{pick_due_at, pick_slot};
 use jackioh_server::bots::signals::{RematchPlan, rematch_plan};
 use jackioh_server::config::{
-    BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_RECENT_OPPONENTS, BOT_REMATCH_DELAY_MAX_MS,
-    BOT_REMATCH_FIT, BOT_REMATCH_LINGER_MAX_MS, BOT_SEED_RATINGS, JLORIOUS_SIZE, MAX_FAIR_GAP,
-    QUEUE_TICKET_STALE_MS, RANK_PLACEMENT_GAMES, RATING_WINDOW_FULL_AFTER_SECONDS,
+    BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_GRIND_STEP_GAMES, BOT_RECENT_OPPONENTS,
+    BOT_REMATCH_DELAY_MAX_MS, BOT_REMATCH_FIT, BOT_REMATCH_LINGER_MAX_MS, BOT_SEED_RATINGS, BOT_STRENGTHS,
+    BOT_VS_BOT_MIN_GAP_SECONDS, JLORIOUS_SIZE, MAX_FAIR_GAP, QUEUE_TICKET_STALE_MS, RANK_PLACEMENT_GAMES,
+    RATING_WINDOW_FULL_AFTER_SECONDS,
 };
-use jackioh_server::db::store::{BotDeck, FrozenTrio, NewBot, SeriesStatus, StoreError, Ticket};
+use jackioh_server::db::store::{
+    BotDeck, BotRow, FrozenTrio, NewBot, QueueMode, RatedGameRow, SeriesStatus, StoreError, Ticket,
+};
 use jackioh_server::env::SERVER_ONLY_ENV_VARS;
 use jackioh_server::ranked::ladder::{GrapeTier, fresh_rank, tier_bottom};
 use jackioh_server::ranked::season::season_id_of;
@@ -1457,4 +1468,525 @@ async fn r639000_a_bot_that_means_to_answer_stays_until_its_answer_lands() {
     pass(early / 2).await;
     let made = rematch_status(&app, &finished, &token).await;
     assert!(made["matchId"].is_string(), "{made}");
+}
+
+// R1555000 — the top bots' grind
+
+/// A bot in the pool that grinds, as a refresh sets one; answers its profile id.
+async fn grinder(app: &App, rating: f64) -> String {
+    let id = new_bot(app, BotSpec::rated(rating)).await;
+    q!(app, bots_set_grinding(&id, true));
+    id
+}
+
+/// The bot's row as the pool lists it.
+async fn bot_row(app: &App, id: &str) -> BotRow {
+    q!(app, bots_list())
+        .into_iter()
+        .find(|bot| bot.profile_id == id)
+        .expect("the bot")
+}
+
+/// Ends the match: `seat` concedes it at once, as `concede_bot_match` has a person do.
+async fn end_bot_match(app: &Arc<App>, match_id: &str, seat: PlayerId) {
+    let actor = app
+        .matches
+        .actor_for(app, match_id)
+        .await
+        .expect("the match's actor");
+    let reply = actor
+        .submit(seat, "concede-1".to_string(), from(json!({ "type": "concede" })))
+        .await;
+    assert_eq!(
+        serde_json::to_value(&reply).expect("a reply")["type"],
+        "ack",
+        "the concession was refused"
+    );
+    for _ in 0..10 {
+        actor.idle().await;
+        tokio::task::yield_now().await;
+    }
+}
+
+/// The match's row in the fake's table.
+async fn match_row(app: &App, match_id: &str) -> jackioh_server::db::store::MatchRow {
+    fake_lock(app)
+        .await
+        .tables
+        .matches
+        .iter()
+        .find(|row| row.id == match_id)
+        .cloned()
+        .expect("the match's row")
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1555000_above_every_bot_the_closest_free_grinder_in_the_gap_pairs() {
+    let app = app_with_bots(true).await;
+    let (person, _) = new_person(&app, 1500.0).await;
+    let not_grinding = new_bot(&app, BotSpec::rated(1200.0)).await;
+    let busy = grinder(&app, 1190.0).await;
+    q!(app, profiles_set_in_match(&busy, Some("another-match")));
+    let at_the_gap = grinder(&app, 1500.0 - MAX_FAIR_GAP as f64).await;
+    let past_the_gap = grinder(&app, 1500.0 - MAX_FAIR_GAP as f64 - 1.0).await;
+    ticket(&app, &person, 1500.0, 10 * past_any_fallback(), "bo1").await;
+
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
+    assert_eq!(
+        seated(&app, &[&not_grinding, &busy, &at_the_gap, &past_the_gap]).await,
+        vec![at_the_gap.clone()]
+    );
+    assert_eq!(matches(&app).await, vec![(person, at_the_gap)]);
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1555000_above_every_bot_no_grinder_in_reach_seats_no_bot() {
+    let app = app_with_bots(true).await;
+    let (person, _) = new_person(&app, 1500.0).await;
+    new_bot(&app, BotSpec::rated(1450.0)).await;
+    grinder(&app, 1500.0 - MAX_FAIR_GAP as f64 - 1.0).await;
+    ticket(&app, &person, 1500.0, 10 * past_any_fallback(), "bo1").await;
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
+    assert!(matches(&app).await.is_empty());
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1555000_under_some_bot_the_closest_bot_pairs_as_before() {
+    // A grinder is a bot like any other to a player some bot is rated above: the closest is seated.
+    let app = app_with_bots(true).await;
+    let (person, _) = new_person(&app, 1000.0).await;
+    let far_grinder = grinder(&app, 1300.0).await;
+    let closest = new_bot(&app, BotSpec::rated(1050.0)).await;
+    ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
+    assert_eq!(seated(&app, &[&far_grinder, &closest]).await, vec![closest]);
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1555000_a_grinder_is_seated_in_its_widened_hours() {
+    // Both are on for 8 hours from 10 hours ago: the closer one's own schedule has ended, but the
+    // grinder's widened one has not.
+    let app = app_with_bots(true).await;
+    let (person, _) = new_person(&app, 1000.0).await;
+    let schedule = Some(((hour_of(now_ms()) - 10).rem_euclid(24), 8));
+    let off = new_bot(
+        &app,
+        BotSpec {
+            rating: 1000.0,
+            schedule,
+            decks: true,
+        },
+    )
+    .await;
+    let widened = new_bot(
+        &app,
+        BotSpec {
+            rating: 1100.0,
+            schedule,
+            decks: true,
+        },
+    )
+    .await;
+    q!(app, bots_set_grinding(&widened, true));
+    ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
+    assert_eq!(seated(&app, &[&off, &widened]).await, vec![widened]);
+}
+
+/// R611: rates one ranked game between `person` (side 0) and `bot` (side 1), won by `winner`.
+async fn rate_against_bot(
+    app: &App,
+    id: &str,
+    person: &str,
+    bot: &str,
+    winner: Option<usize>,
+) -> RatedGameRow {
+    let mut tx = app.db.begin(None).await.expect("begin");
+    let rated = rate_ranked_game(
+        &mut tx,
+        app,
+        &from(json!({
+            "id": id,
+            "kind": "match",
+            "catalogVersion": app.catalog.version,
+            "sides": [{ "kind": "player", "profileId": person }, { "kind": "bot", "botId": bot }],
+            "winnerSide": winner,
+            "reason": "concede",
+            "at": now_ms(),
+        })),
+    )
+    .await
+    .expect("rates");
+    tx.commit().await.expect("commit");
+    rated
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1555000_a_grinder_steps_up_every_step_games_wins_and_never_past_the_strongest() {
+    const { assert!(BOT_GRIND_STEP_GAMES >= 2) };
+    let app = app_with_bots(true).await;
+    let (person, _) = new_person(&app, 1000.0).await;
+    let bot = grinder(&app, 1000.0).await;
+    let start = bot_row(&app, &bot).await.strength;
+    let strongest = BOT_STRENGTHS.len() - 1;
+    assert!(start < strongest, "PREMISE: room to step up");
+    let mut games = 0;
+    let mut rate = async |winner: Option<usize>| {
+        games += 1;
+        let rated = rate_against_bot(&app, &next_id("grind-game"), &person, &bot, winner).await;
+        let row = bot_row(&app, &bot).await;
+        // R610: its rating is the game's update and nothing else, step or no step.
+        assert_eq!(row.rating, rated.sides.1.after.rating, "game {games}");
+        row
+    };
+
+    for _ in 1..BOT_GRIND_STEP_GAMES {
+        rate(Some(1)).await;
+    }
+    let short = rate(None).await;
+    assert_eq!(
+        (short.strength, short.grind_wins),
+        (start, BOT_GRIND_STEP_GAMES - 1),
+        "a draw counts nothing"
+    );
+    let short = rate(Some(0)).await;
+    assert_eq!(
+        (short.strength, short.grind_wins),
+        (start, BOT_GRIND_STEP_GAMES - 1),
+        "a loss counts nothing"
+    );
+    let stepped = rate(Some(1)).await;
+    assert_eq!((stepped.strength, stepped.grind_wins), (start + 1, 0));
+
+    // Step after step up to the strongest, and no further.
+    for _ in 0..(strongest - start) {
+        for _ in 0..BOT_GRIND_STEP_GAMES {
+            rate(Some(1)).await;
+        }
+    }
+    let top = bot_row(&app, &bot).await;
+    assert_eq!((top.strength, top.grind_wins), (strongest, 0));
+
+    // A bot that is not grinding never steps, however much it wins.
+    let idle = new_bot(&app, BotSpec::rated(1000.0)).await;
+    for _ in 0..BOT_GRIND_STEP_GAMES {
+        rate_against_bot(&app, &next_id("idle-game"), &person, &idle, Some(1)).await;
+    }
+    let idle = bot_row(&app, &idle).await;
+    assert_eq!((idle.strength, idle.grind_wins), (start, 0));
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1555000_an_empty_queue_starts_one_bot_match_for_the_lowest_grinder() {
+    let app = app_with_bots(true).await;
+    let low = grinder(&app, 1200.0).await;
+    let high = grinder(&app, 1260.0).await;
+    let closest = new_bot(&app, BotSpec::rated(1180.0)).await;
+
+    let started = kick_off_bot_match(&app, now_ms())
+        .await
+        .expect("a kickoff")
+        .expect("a match between two bots");
+    let row = match_row(&app, &started).await;
+    assert_eq!(row.players, (low.clone(), closest.clone()), "the grinder is p1");
+    assert_eq!(row.ranked, Some(true));
+    assert_eq!(row.mode, Some(QueueMode::Bo1));
+    assert_eq!(row.decks, (deck(1), deck(1)), "each plays its own deck");
+    for id in [&low, &closest] {
+        assert_eq!(
+            bot_row(&app, id).await.in_match_id.as_deref(),
+            Some(started.as_str())
+        );
+    }
+    assert_eq!(bot_row(&app, &high).await.in_match_id, None);
+
+    // One is live: no second.
+    assert_eq!(kick_off_bot_match(&app, now_ms()).await.expect("a kickoff"), None);
+    assert_eq!(fake_lock(&app).await.tables.matches.len(), 1);
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1555000_a_bot_match_whose_start_fails_lets_both_bots_go() {
+    let app = app_with_bots(true).await;
+    let one = grinder(&app, 1200.0).await;
+    let other = new_bot(&app, BotSpec::rated(1190.0)).await;
+    // The claim put both bots in the match; writing the match itself then fails.
+    fake_lock(&app).await.on_call = Some(Arc::new(|method: &str| {
+        if method == "matches.create" {
+            return Err(StoreError::Other(format!("{method} refused by the test")));
+        }
+        Ok(())
+    }));
+    assert!(kick_off_bot_match(&app, now_ms()).await.is_err());
+    fake_lock(&app).await.on_call = None;
+    for id in [&one, &other] {
+        assert_eq!(bot_row(&app, id).await.in_match_id, None, "{id} is free again");
+    }
+    assert!(matches(&app).await.is_empty(), "no match started");
+    // And the next sweep's kickoff starts one.
+    assert!(
+        kick_off_bot_match(&app, now_ms())
+            .await
+            .expect("a kickoff")
+            .is_some()
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1555000_no_bot_match_with_a_ticket_queued_or_grinding_off() {
+    let app = app_with_bots(true).await;
+    let one = new_bot(&app, BotSpec::rated(1200.0)).await;
+    new_bot(&app, BotSpec::rated(1190.0)).await;
+    assert_eq!(
+        kick_off_bot_match(&app, now_ms()).await.expect("a kickoff"),
+        None,
+        "no bot grinds"
+    );
+
+    q!(app, bots_set_grinding(&one, true));
+    let (person, _) = new_person(&app, 1000.0).await;
+    let waiting = ticket(&app, &person, 1000.0, 0, "bo1").await;
+    assert_eq!(
+        kick_off_bot_match(&app, now_ms()).await.expect("a kickoff"),
+        None,
+        "someone is queued"
+    );
+    assert!(matches(&app).await.is_empty());
+
+    q!(app, tickets_cancel(&waiting.id, now_ms()));
+    assert!(
+        kick_off_bot_match(&app, now_ms())
+            .await
+            .expect("a kickoff")
+            .is_some()
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1555000_a_bot_match_plays_with_no_person_and_rates_both_bots() {
+    let app = app_with_bots(true).await;
+    let season = season_id_of(jackioh_cards::catalog_version());
+    let winner = grinder(&app, 1200.0).await;
+    let loser = new_bot(&app, BotSpec::rated(1190.0)).await;
+    // A placed person watching from the ladder, first in Jlorious (and its peak noted so): no game
+    // between two bots moves their row.
+    let (bystander, _) = new_person(&app, 1100.0).await;
+    let mut placed = fresh_rank(&season, &bystander, 0);
+    placed.games = RANK_PLACEMENT_GAMES;
+    placed.ladder = Some(tier_bottom(GrapeTier::Mythic as i32));
+    placed.floor = GrapeTier::Mythic as i32;
+    placed.peak_jlorious = Some(1);
+    q!(app, ranked_put_rank(&placed));
+    let bystander_before = q!(app, ranked_ranks_of(&bystander));
+    let before = |id: &str| {
+        let app = Arc::clone(&app);
+        let id = id.to_string();
+        async move { q!(app, ranked_bot(&id)).expect("an R610 row") }
+    };
+    let (winner_before, loser_before) = (before(&winner).await, before(&loser).await);
+
+    let started = kick_off_bot_match(&app, now_ms())
+        .await
+        .expect("a kickoff")
+        .expect("a match between two bots");
+    let actor = app.matches.actor_for(&app, &started).await.expect("its actor");
+    // Both seats are played: each bot's mulligan lands as a bot's server action, nobody attached.
+    let mut mulliganed = [false, false];
+    for _ in 0..200 {
+        actor.idle().await;
+        let log = q!(app, matches_actions(&started));
+        for (index, seat) in [PlayerId::P1, PlayerId::P2].into_iter().enumerate() {
+            mulliganed[index] |= log.iter().any(|row| {
+                row.action.player_id == seat
+                    && row.action.nonce.starts_with("srv-bot-")
+                    && serde_json::to_value(&row.action).is_ok_and(|action| action["type"] == "mulligan")
+            });
+        }
+        if mulliganed == [true, true] {
+            break;
+        }
+        pass(250).await;
+    }
+    assert_eq!(mulliganed, [true, true], "a bot never moved");
+    end_bot_match(&app, &started, PlayerId::P2).await;
+
+    // R610: rated for both, zero-sum.
+    let (winner_after, loser_after) = (before(&winner).await, before(&loser).await);
+    assert!(winner_after.glicko.rating > winner_before.glicko.rating);
+    assert!(loser_after.glicko.rating < loser_before.glicko.rating);
+    assert_eq!(winner_after.games, winner_before.games + 1);
+    assert_eq!(loser_after.games, loser_before.games + 1);
+    // R611: both sides recorded as the AI, with their bot ids.
+    let rated = q!(app, ranked_game(&started)).expect("the rated game");
+    let sides = serde_json::to_value(&rated.sides).expect("the sides");
+    assert_eq!(sides[0]["pilot"], "ai", "{sides}");
+    assert_eq!(sides[1]["pilot"], "ai", "{sides}");
+    assert_eq!(
+        (rated.sides.0.bot_id.as_deref(), rated.sides.1.bot_id.as_deref()),
+        (Some(winner.as_str()), Some(loser.as_str()))
+    );
+    assert_eq!(rated.winner_side, Some(0));
+    // R640000: each bot's season row moved.
+    for id in [&winner, &loser] {
+        assert_eq!(
+            q!(app, ranked_rank(&season, id)).expect("a season row").games,
+            1,
+            "{id}"
+        );
+    }
+    // The grinder's win counts toward its next strength; both bots are free again.
+    assert_eq!(bot_row(&app, &winner).await.grind_wins, 1);
+    for id in [&winner, &loser] {
+        assert_eq!(bot_row(&app, id).await.in_match_id, None, "{id}");
+    }
+
+    // No person played it: no weekly active person, no person's row, no calibration observation.
+    assert_eq!(q!(app, results_count_active_humans(0)), 0);
+    assert_eq!(q!(app, ranked_ranks_of(&bystander)), bystander_before);
+    let games = q!(app, ranked_bot_games_since(0));
+    assert_eq!(games.len(), 1);
+    let bots = q!(app, bots_list());
+    for strength in 0..BOT_STRENGTHS.len() {
+        assert!(
+            reference_observations(&games, &bots, strength).is_empty(),
+            "strength {strength}"
+        );
+    }
+    // Jlorious is people's alone: the bystander, still first.
+    let (_, token) = new_person(&app, 1000.0).await;
+    let (status, _, listed) = call(&app, "GET", "/api/leaderboard", Some(&token), Value::Null).await;
+    assert_eq!(status, 200, "{listed}");
+    let jlorious: Vec<Value> = listed["jlorious"]
+        .as_array()
+        .expect("a list")
+        .iter()
+        .map(|place| place["profileId"].clone())
+        .collect();
+    assert_eq!(jlorious, vec![json!(bystander)], "{listed}");
+
+    // And it was offered no rematch: still the one match.
+    pass(BOT_REMATCH_LINGER_MAX_MS + BOT_REMATCH_DELAY_MAX_MS).await;
+    assert_eq!(fake_lock(&app).await.tables.matches.len(), 1);
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1555000_a_bot_match_waits_out_the_gap_and_the_grinder_s_recent_opponents() {
+    let app = app_with_bots(true).await;
+    let climbing = grinder(&app, 1200.0).await;
+    let near = new_bot(&app, BotSpec::rated(1190.0)).await;
+    let far = new_bot(&app, BotSpec::rated(1000.0)).await;
+    let first = kick_off_bot_match(&app, now_ms())
+        .await
+        .expect("a kickoff")
+        .expect("a match between two bots");
+    assert_eq!(
+        match_row(&app, &first).await.players,
+        (climbing.clone(), near.clone())
+    );
+    end_bot_match(&app, &first, PlayerId::P2).await;
+    let ended = q!(app, ranked_game(&first)).expect("the rated game").ended_at;
+
+    let gap = BOT_VS_BOT_MIN_GAP_SECONDS * MS_PER_SECOND;
+    assert_eq!(kick_off_bot_match(&app, now_ms()).await.expect("a kickoff"), None);
+    assert_eq!(
+        kick_off_bot_match(&app, ended + gap - 1)
+            .await
+            .expect("a kickoff"),
+        None
+    );
+    let second = kick_off_bot_match(&app, ended + gap)
+        .await
+        .expect("a kickoff")
+        .expect("a second match");
+    // The bot it just played is among its recent opponents: the next closest plays it.
+    assert_eq!(match_row(&app, &second).await.players, (climbing, far));
+}
+
+/// R639000, R1555000: a seed on which both seats' bots plan to offer a rematch and to accept one.
+fn seed_both_rematch() -> String {
+    (0..10_000)
+        .map(|k| format!("seed-rematch-both-{k}"))
+        .find(|seed| {
+            [PlayerId::P1, PlayerId::P2].into_iter().all(|home| {
+                let plan = rematch_plan(seed, home, &BOT_REMATCH_FIT);
+                plan.offers && plan.accepts
+            })
+        })
+        .expect("a seed whose bots both plan so")
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1555000_two_bots_offer_each_other_no_rematch() {
+    let app = app_with_bots(true).await;
+    let one = grinder(&app, 1200.0).await;
+    let other = new_bot(&app, BotSpec::rated(1190.0)).await;
+    let match_id = next_id("match");
+    app.matches
+        .start(
+            &app,
+            from(json!({
+                "matchId": match_id,
+                "seed": seed_both_rematch(),
+                "catalogVersion": app.catalog.version,
+                "ranked": true,
+                "seats": [
+                    { "profileId": one, "player": "p1", "deck": deck(1) },
+                    { "profileId": other, "player": "p2", "deck": deck(1) },
+                ],
+                "mode": "bo1",
+            })),
+        )
+        .await
+        .expect("the registry starts the match");
+    end_bot_match(&app, &match_id, PlayerId::P1).await;
+
+    pass(BOT_REMATCH_LINGER_MAX_MS + BOT_REMATCH_DELAY_MAX_MS).await;
+    assert_eq!(
+        fake_lock(&app).await.tables.matches.len(),
+        1,
+        "no rematch was made"
+    );
+    let signals = serde_json::to_value(&fake_lock(&app).await.tables.match_signals).expect("the signals");
+    assert!(
+        signals
+            .as_array()
+            .is_none_or(|rows| rows.iter().all(|row| row["rematchOffered"] != json!(true))),
+        "{signals}"
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1555000_a_person_queued_during_a_bot_match_meets_a_bot_outside_it() {
+    let app = app_with_bots(true).await;
+    let playing = grinder(&app, 1200.0).await;
+    let opponent = new_bot(&app, BotSpec::rated(1190.0)).await;
+    let outside = new_bot(&app, BotSpec::rated(1000.0)).await;
+    kick_off_bot_match(&app, now_ms())
+        .await
+        .expect("a kickoff")
+        .expect("a match between two bots");
+
+    // The match plays on once someone queues; they meet the bot it does not hold.
+    let (person, _) = new_person(&app, 1195.0).await;
+    ticket(&app, &person, 1195.0, past_any_fallback(), "bo1").await;
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
+    assert_eq!(matches(&app).await, vec![(playing, opponent), (person, outside)]);
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1555000_a_bot_match_cut_off_by_a_restart_is_resumed() {
+    // No socket comes back to a match between two bots, so the sweep folds it back itself.
+    let app = app_with_bots(true).await;
+    grinder(&app, 1200.0).await;
+    new_bot(&app, BotSpec::rated(1190.0)).await;
+    let started = kick_off_bot_match(&app, now_ms())
+        .await
+        .expect("a kickoff")
+        .expect("a match between two bots");
+    app.matches.stop(&started).await;
+    assert!(!app.matches.has(&started), "PREMISE: the actor is gone");
+
+    assert_eq!(kick_off_bot_match(&app, now_ms()).await.expect("a kickoff"), None);
+    assert!(app.matches.has(&started), "the match was folded back");
+    assert_eq!(fake_lock(&app).await.tables.matches.len(), 1);
 }

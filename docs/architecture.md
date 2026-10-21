@@ -133,7 +133,7 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 | `action_timings` | **none** | no policy | none — the play telemetry, written by the match actor with the result (R1442) |
 | `emote_events` | **none** | no policy | none (R1442) |
 | `match_signals` | **none** | no policy | none (R1442) |
-| `bots` | **none** | no policy | none — the ladder bots' strength, speed, persona, schedule, decks and trio; a readable row would tell a bot's seat from a person's (R1454, R1452, R641000) |
+| `bots` | **none** | no policy | none — the ladder bots' strength, speed, persona, schedule, decks, trio and grind; a readable row would tell a bot's seat from a person's (R1454, R1452, R641000) |
 | `friend_requests` | rows you sent or received | `auth.uid() in (from_profile, to_profile)` | none — the server answers a request to a blocked pair as it answers an unknown name (SPEC §9.4) |
 | `friendships` | rows you are in | `auth.uid() in (a, b)` | none |
 | `blocks` | rows you made | `blocker = auth.uid()` | none — the blocked player never reads that they are blocked |
@@ -709,7 +709,7 @@ step that is not yet implemented says which BUILD task delivers it.
    `0042_match_checkpoints.sql` → `0043_meditative_plus_set.sql` → `0044_deck_cosmetics.sql` →
    `0045_economy.sql` → `0046_dev_accounts.sql` → `0047_practice_seeds.sql` →
    `0048_game_record_builds.sql` → `0049_version_retcon.sql` → `0050_going_live.sql` →
-   `0051_duos_seats_set_null.sql` → `0052_bot_rating_generation.sql` — and records them in
+   `0051_duos_seats_set_null.sql` → `0052_bot_rating_generation.sql` → `0053_bot_grind.sql` — and records them in
    `app.migrations`. Expected result: 63 tables in `public`, all with RLS enabled, plus the private
    `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
@@ -799,7 +799,7 @@ step that is not yet implemented says which BUILD task delivers it.
    on a finished co-op match empties while the match, its result and its log stay for the teammate,
    and a delete that would empty a seat of a live one raises. 0052 gives each `bot_ratings` row the
    AI generation it was last rated on (R1560000), which the server alone writes; no step of the
-   bring-up fills it.
+   bring-up fills it. 0053 adds `bots.grinding` and `bots.grind_wins` (R1555000).
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL
