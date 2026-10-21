@@ -279,7 +279,7 @@ routes (net/navigate.ts paths, and both vercel.json route tables):
                          name#tag; per friend Challenge (online and idle), Watch (when `watchable`),
                          Chat (always), Remove and Block; "Shared with me"; the co-op panel
   /watch/:matchId        together/WatchRoute.tsx: a friend's seat over /ws/watch, Game on a view with no
-                         legal action, SPECTATE_DELAY_MS behind
+                         legal action, SPECTATE_DELAY_MS behind; Reconnect now once its own reopens run out
   /duos/:matchId         duos/DuosRoute.tsx: the networked co-op board over /ws/duos
   /dev/duos              duos/DevDuosRoute.tsx: a four-seat hotseat Duos game over the WASM Duos
                          bindings, with a seat switcher (development only, as /dev/hotseat)
