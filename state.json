@@ -9162,6 +9162,13 @@
     "1490": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T06:44:45Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "rule line 1 fails: 19 files (18 web test files plus eslint.config.js, a lint config under line 6), so it is medium, not easy; no engine, AI or cross-crate work, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
