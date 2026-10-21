@@ -3,12 +3,14 @@
 # only (never on a pull request or a schedule). `gh workflow run selfplay.yml -f games=100000 -f
 # seed=<base>` (training/README.md, Where the exports come from).
 #
-#   plan      splits the games into `shards` ranges of game numbers (`--from`, `--games`)
+#   plan      splits the games into `shards` ranges of game numbers (`--from`, `--games`), and the
+#             ranges into rounds: one on GitHub's runners, five on the local runner
 #   build     one release `jackioh`, as super.yml's `rust-build` builds it, passed on as an artifact
-#   shard     one job per range on `runner`: `jackioh selfplay --from <k> --games <n> --seed <base>`,
-#             its log file uploaded as `selfplay-<base>-<k>` (kept `retention` days, 90 at most)
-#   count     every shard's logs through `jackioh positions` for its counts only (games, positions,
-#             games dropped for not replaying), written to the run's summary
+#   round1-5  selfplay-shards.yml, a round each, one after another: one job per range on `runner`,
+#             `jackioh selfplay --from <k> --games <n> --seed <base>`, its log file uploaded as
+#             `selfplay-<base>-<k>` (kept `retention` days, 90 at most)
+#   count     the logs of every shard that finished through `jackioh positions` for its counts only
+#             (games, positions, games dropped for not replaying), written to the run's summary
 #
 # A game is a function of its seed (R1006001), so an export is repeatable from its base: the same
 # dispatch plays the same games on any runner, and its shards' files together are the games one
@@ -16,9 +18,10 @@
 # by `selfplay` itself (R1006002). On GitHub's runners each shard keeps well under the 6-hour job
 # limit (about 1,500 games an hour on four vCPUs). On the local runner (`jackioh-selfplay-local`,
 # bot/machine/README.md, The local runner) every job runs there, the plan, the build and the count
-# too, and its shards run one after another (`max-parallel` 1: one is queued at a time, since a job no
-# runner takes in 24 hours fails), each for as long as it needs (about 2,500 games an hour on six
-# CPUs). The export is slow on purpose, and ci-duration.yml does not watch it.
+# too, and its shards run one after another, each for as long as it needs (about 2,500 games an hour
+# on six CPUs), in five rounds, so that no shard waits for the runner longer than its round takes
+# (GitHub fails a job no self-hosted runner takes in 24 hours; selfplay-shards.yml). The export is
+# slow on purpose, and ci-duration.yml does not watch it.
 #
 # The learn lane (learn.yml, #1012) calls it as a reusable workflow (`workflow_call`, the same inputs,
 # `count` off: its retrain folds the positions itself) on the local runner, and its artifacts are that
@@ -88,7 +91,11 @@ jobs:
     runs-on: ${{ inputs.runner }}
     timeout-minutes: 5
     outputs:
-      shards: ${{ steps.split.outputs.shards }}
+      round1: ${{ steps.split.outputs.round1 }}
+      round2: ${{ steps.split.outputs.round2 }}
+      round3: ${{ steps.split.outputs.round3 }}
+      round4: ${{ steps.split.outputs.round4 }}
+      round5: ${{ steps.split.outputs.round5 }}
     steps:
       - id: split
         env:
@@ -96,6 +103,7 @@ jobs:
           SHARDS: ${{ inputs.shards }}
           RETENTION: ${{ inputs.retention }}
           SEED: ${{ inputs.seed }}
+          RUNNER_LABEL: ${{ inputs.runner }}
         run: |
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import json, os, re, sys
@@ -112,7 +120,15 @@ jobs:
               n = base + (1 if k < extra else 0)
               ranges.append({"from": start, "games": n})
               start += n
-          print("shards=" + json.dumps(ranges))
+          # In order, into one round on GitHub's runners and five (or one a shard, when fewer) on the
+          # local runner; a round with no shards is skipped.
+          rounds = 1 if os.environ["RUNNER_LABEL"] == "ubuntu-latest" else min(5, shards)
+          size, more = divmod(shards, rounds)
+          at = 0
+          for r in range(5):
+              n = size + (1 if r < more else 0) if r < rounds else 0
+              print(f"round{r + 1}=" + json.dumps(ranges[at:at + n]))
+              at += n
           PY
 
   build:
@@ -137,59 +153,68 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
-  shard:
-    name: shard from ${{ matrix.range.from }}
+  # The shards, in rounds (selfplay-shards.yml): one round on GitHub's runners, up to five on the
+  # local runner, each started once the round before it has ended, whether or not every shard of it
+  # finished (a shard that did not costs the export its games, not the rest of the export).
+  round1:
+    name: round 1
     needs: [plan, build]
-    runs-on: ${{ inputs.runner }}
-    # GitHub's runners stop a job at 6 hours; the local runner's shards may take longer.
-    timeout-minutes: ${{ inputs.runner == 'ubuntu-latest' && 350 || 4320 }}
-    strategy:
-      fail-fast: false
-      # GitHub's free plan runs 20 hosted jobs at once for the whole organization: an export takes
-      # at most 12 of them, so CI and the bots' pull requests keep 8 while it plays. The local runner
-      # takes one job at a time, so its shards are queued one at a time: queued together, the last
-      # would wait past the 24 hours GitHub lets a job wait for a self-hosted runner.
-      max-parallel: ${{ inputs.runner == 'ubuntu-latest' && 12 || 1 }}
-      matrix:
-        range: ${{ fromJSON(needs.plan.outputs.shards) }}
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: selfplay-jackioh
-          path: ${{ runner.temp }}
-      - name: unpack it
-        run: tar -xzf "$RUNNER_TEMP/jackioh.tgz" -C "$RUNNER_TEMP"
-      - name: play
-        env:
-          SEED: ${{ inputs.seed }}
-          FROM: ${{ matrix.range.from }}
-          GAMES: ${{ matrix.range.games }}
-        run: |
-          echo "cores: $(nproc)"
-          mkdir -p "$RUNNER_TEMP/logs"
-          start=$(date +%s)
-          "$RUNNER_TEMP/target/release/jackioh" selfplay --from "$FROM" --games "$GAMES" --seed "$SEED" \
-            --out "$RUNNER_TEMP/logs" | tee "$RUNNER_TEMP/logs/summary.json"
-          echo "seconds: $(( $(date +%s) - start ))" | tee -a "$RUNNER_TEMP/logs/timing.txt"
-          # The CPUs the shard may use: its container's quota when it has one (the local runner's
-          # --cpus; nproc there counts every processor WSL has), else every processor nproc sees.
-          cores=$(nproc)
-          if read -r quota period 2>/dev/null < /sys/fs/cgroup/cpu.max && [ "$quota" != max ]; then
-            cores=$(( (quota + period - 1) / period ))
-          fi
-          echo "cores: $cores" >> "$RUNNER_TEMP/logs/timing.txt"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: selfplay-${{ inputs.seed }}-${{ matrix.range.from }}
-          path: ${{ runner.temp }}/logs
-          if-no-files-found: error
-          retention-days: ${{ fromJSON(inputs.retention) }}
+    uses: ./.github/workflows/selfplay-shards.yml
+    with:
+      ranges: ${{ needs.plan.outputs.round1 }}
+      seed: ${{ inputs.seed }}
+      runner: ${{ inputs.runner }}
+      retention: ${{ inputs.retention }}
+
+  round2:
+    name: round 2
+    needs: [plan, build, round1]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.plan.outputs.round2 != '[]' }}
+    uses: ./.github/workflows/selfplay-shards.yml
+    with:
+      ranges: ${{ needs.plan.outputs.round2 }}
+      seed: ${{ inputs.seed }}
+      runner: ${{ inputs.runner }}
+      retention: ${{ inputs.retention }}
+
+  round3:
+    name: round 3
+    needs: [plan, build, round2]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.plan.outputs.round3 != '[]' }}
+    uses: ./.github/workflows/selfplay-shards.yml
+    with:
+      ranges: ${{ needs.plan.outputs.round3 }}
+      seed: ${{ inputs.seed }}
+      runner: ${{ inputs.runner }}
+      retention: ${{ inputs.retention }}
+
+  round4:
+    name: round 4
+    needs: [plan, build, round3]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.plan.outputs.round4 != '[]' }}
+    uses: ./.github/workflows/selfplay-shards.yml
+    with:
+      ranges: ${{ needs.plan.outputs.round4 }}
+      seed: ${{ inputs.seed }}
+      runner: ${{ inputs.runner }}
+      retention: ${{ inputs.retention }}
+
+  round5:
+    name: round 5
+    needs: [plan, build, round4]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.plan.outputs.round5 != '[]' }}
+    uses: ./.github/workflows/selfplay-shards.yml
+    with:
+      ranges: ${{ needs.plan.outputs.round5 }}
+      seed: ${{ inputs.seed }}
+      runner: ${{ inputs.runner }}
+      retention: ${{ inputs.retention }}
 
   count:
     name: count the export
-    needs: shard
-    # A caller may leave the counts to its own positions pass.
-    if: ${{ inputs.count }}
+    needs: [round1, round2, round3, round4, round5]
+    # A caller may leave the counts to its own positions pass. It counts the shards that finished.
+    if: ${{ !cancelled() && inputs.count && needs.round1.result != 'skipped' }}
     runs-on: ${{ inputs.runner }}
     timeout-minutes: ${{ inputs.runner == 'ubuntu-latest' && 120 || 720 }}
     steps:
@@ -221,6 +246,8 @@ jobs:
               text = dict(line.split(": ") for line in open(path).read().split("\n") if ": " in line)
               shards.append((int(text["seconds"]), int(text["cores"])))
           slowest = max((s for s, _ in shards), default=0)
+          # GitHub's runners play the shards side by side; the local runner, one after another.
+          elapsed = slowest if runner == "ubuntu-latest" else sum(s for s, _ in shards)
           cpu_seconds = sum(s * c for s, c in shards)
           games = counts["games"]
           print(f"## Self-play export `{seed}` on `{runner}`\n")
@@ -229,8 +256,8 @@ jobs:
               print(f"| {key} | {counts[key]:,} |")
           print(f"| shards | {len(shards)} |")
           print(f"| slowest shard | {slowest / 3600:.2f} h |")
-          if slowest:
-              print(f"| games an hour (all shards) | {games / slowest * 3600:,.0f} |")
+          if elapsed:
+              print(f"| games an hour (all shards) | {games / elapsed * 3600:,.0f} |")
           if cpu_seconds and games:
               print(f"| vCPU-seconds a game | {cpu_seconds / games:.2f} |")
           print(f"| logs | {size / 1e6:,.1f} MB, {size / max(games, 1):,.0f} bytes a game |")

@@ -26,7 +26,9 @@ week's run may take several days; the next one waits for it (one run at a time).
    (`LEARN_PR_STALE_HOURS`), it closes, saying why, and goes on.
 2. **Exports** `games` games (100,000 by default) through `selfplay.yml` on a fresh base,
    `learned-<catalog>-<date>-<run>`, never a gate's deals or the dev set's (R1006002), in `shards` jobs
-   (20 by default, about two hours each) queued one at a time.
+   (20 by default, about two hours each) played one after another, in five rounds: a round starts
+   once the one before it has ended, so no shard waits for the runner longer than its round takes
+   (about 8 hours of an idle PC), well under the 24 hours GitHub lets a job wait.
 3. **Retrains** with `training/ml/retrain.sh` on `main`, over the shards that finished (a shard the PC
    lost costs the export its games, not the run; with none finished the run stops): the positions
    (R1006003, R1006004), folded by the export's own build while its features are `main`'s (`--positions-bin`), so a rules change merged

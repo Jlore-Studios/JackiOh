@@ -8,8 +8,8 @@
 #             green or running; one with a failed check, or open LEARN_PR_STALE_HOURS, is closed and the
 #             run goes on, so a stuck promotion never holds the lane
 #   export    selfplay.yml, called: `games` games in `shards` jobs, one after another on the local
-#             runner; none with `export_run`, which retrains on an earlier run's export (its artifacts
-#             are kept 30 days)
+#             runner, in five rounds; none with `export_run`, which retrains on an earlier run's
+#             export (its artifacts are kept 30 days)
 #   retrain   on main: training/ml/retrain.sh over the shards that finished (a shard the PC lost costs
 #             the export its games, not the run), its positions folded by the export's own
 #             build while its features are main's, the fit, the weights, the switch on, and an 800-game
