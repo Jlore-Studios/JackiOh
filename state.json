@@ -9803,7 +9803,10 @@
       "feedback_since": "2026-10-21T13:28:16Z",
       "issue": 1339,
       "kind": "revise",
+      "queued_at": "2026-10-21T14:29:34Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
