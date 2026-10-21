@@ -267,7 +267,7 @@ class HonestReportTests(unittest.TestCase):
         """#187: the title check holds a pull request's title to docs/issues-and-patches.md, so a
         builder's plain sentence gives way to its issue's conventional title, and a builder's
         conventional title (its version numbered, say) stands."""
-        issue = "Patch v0.3.X: the rules, version two"
+        issue = "Patch: the rules, version two"
         for text, want in ((DONE, issue),
                            (DONE.replace("Make the rules v2", "Patch v0.3.2: the rules, version two"),
                             "Patch v0.3.2: the rules, version two")):

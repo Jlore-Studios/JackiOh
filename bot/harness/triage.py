@@ -51,20 +51,11 @@ PREFIX_TYPES: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 #: A part of a change split over several issues: `(part n of m)`.
 _PART_OF = r"(?: \(part \d+ of \d+\))?"
-#: A title that already follows the convention (#1360): `Patch: <what it does>`, a shipped card
-#: change's `Patch vX.Y.Z[letter]: …`, which `patches-ship.yml` gives it, and a part's `(part n of
-#: m)` after either. The older prefixes (`Patch v0.3.X`, `Patch v0.3.Y`, `vX.Y.0`, `Night bot`, `CI`
-#: and `Architecture`) pass until the title retcon (#1372) has retitled every thread.
-CONVENTION = re.compile(
-    rf"^(?:Patch(?: v\d+\.\d+\.\d+[a-z]?)?{_PART_OF}"
-    rf"|Patch v\d+\.\d+\.(?:X|Y)[a-z]?{_PART_OF}"
-    rf"|v\d+\.\d+\.0{_PART_OF}"
-    r"|Night bot|CI|Architecture): \S")
-#: The old prefixes `CONVENTION` passes until the title retcon (#1372): what a title opens with
-#: before its "what it does", or None for a title already in the new form.
-OLD_PREFIX = re.compile(
-    r"^(?:Patch v\d+\.\d+\.(?:X|Y)[a-z]?|v\d+\.\d+\.0|Night bot|CI|Architecture)"
-    r"(?P<part> \(part \d+ of \d+\))?: ")
+#: A title that follows the convention (#1360): `Patch: <what it does>`, a shipped card change's
+#: `Patch vX.Y.Z[letter]: …`, which `patches-ship.yml` gives it, and a part's `(part n of m)` after
+#: either. The older prefixes (`Patch v0.3.X`, `Patch v0.3.Y`, `vX.Y.0`, `Night bot`, `CI` and
+#: `Architecture`) stopped passing once the title retcon (#1372) had retitled every thread.
+CONVENTION = re.compile(rf"^Patch(?: v\d+\.\d+\.\d+[a-z]?)?{_PART_OF}: \S")
 #: The titles tools give the pull requests they open, which the title check passes as they are
 #: (`pull_title_ok`): `patches ship: v0.3.1` (patches-ship.yml; several versions joined by ", "),
 #: `patches log: abc1234..def5678` (promote-production.yml's technical log, #1370),

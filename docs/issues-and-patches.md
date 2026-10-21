@@ -105,9 +105,8 @@ data never takes a version and keeps its `Patch:` title. Its kind (Cards, AI, Ap
 classifier's label on its pull request, never its title's.
 
 A pull request takes the same titles ([Pull requests](#pull-requests)). The older prefixes
-(`Patch v0.3.X: …`, `Patch v0.3.Y: …`, `vX.Y.0: …`, `Night bot: …`, `CI: …`, `Architecture: …`) still
-pass the title check until the title retcon (#1372) has retitled every thread; open new threads with
-`Patch: `. `ci-duration.yml` finds its open issue by its exact title, so leave that title alone, and
+(`Patch v0.3.X: …`, `Patch v0.3.Y: …`, `vX.Y.0: …`, `Night bot: …`, `CI: …`, `Architecture: …`) no
+longer pass the title check: the title retcon (#1372) retitled every thread to `Patch: `. `ci-duration.yml` finds its open issue by its exact title, so leave that title alone, and
 leave the `production merge` threads' titles to their workflow. Night bot suggestions
 (`bot:suggestion`) are asked for conventional titles; retitle one that arrives without.
 
