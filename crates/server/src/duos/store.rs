@@ -213,8 +213,9 @@ impl Tx<'_> {
     }
 
     /// B33's atomic single-claim: sets the guest, the guest's choice and the match id only while the
-    /// room is unjoined and unexpired at `at`. The claimed room, or `None` when it was not (a second
-    /// joiner, a race, an expiry).
+    /// room is unjoined and unexpired at `at`, and neither its host nor `guest` blocks the other
+    /// (§13.9). The claimed room, or `None` when it was not (a second joiner, a race, an expiry, a
+    /// block).
     pub async fn duos_rooms_claim(
         &mut self,
         code: &str,
@@ -442,7 +443,8 @@ mod pg {
         row.as_ref().map(room_of).transpose()
     }
 
-    /// B33's single-claim as one statement: the loser of a race updates no row.
+    /// B33's single-claim as one statement: the loser of a race updates no row, and so does a joiner
+    /// blocked either way (§13.9).
     pub async fn rooms_claim(
         t: &mut PgTx<'_>,
         code: &str,
@@ -458,6 +460,10 @@ mod pg {
               where code = $1::text
                 and guest is null
                 and host <> $2::uuid
+                and not exists (
+                      select 1 from public.blocks b
+                       where (b.blocker = duos_rooms.host and b.blocked = $2::uuid)
+                          or (b.blocker = $2::uuid and b.blocked = duos_rooms.host))
                 and expires_at > to_timestamp($5::double precision / 1000.0)
           returning ",
             room_columns!()
@@ -741,9 +747,19 @@ mod fake {
         match_id: &str,
         at: i64,
     ) -> Result<Option<DuosRoom>, StoreError> {
-        let tables = call(f, "duos.rooms.claim")?;
-        let Some(room) = tables.rooms.iter_mut().find(|room| {
-            room.code == code && room.guest.is_none() && room.host != guest && room.expires_at > at
+        call(f, "duos.rooms.claim")?;
+        let tables = f.tables();
+        // §13.9: the block Postgres's claim refuses, either way.
+        let blocks = &tables.social.blocks;
+        let Some(room) = tables.duos.rooms.iter_mut().find(|room| {
+            room.code == code
+                && room.guest.is_none()
+                && room.host != guest
+                && room.expires_at > at
+                && !blocks.iter().any(|block| {
+                    (block.blocker == room.host && block.blocked == guest)
+                        || (block.blocker == guest && block.blocked == room.host)
+                })
         }) else {
             return Ok(None);
         };

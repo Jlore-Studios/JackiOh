@@ -8213,8 +8213,37 @@ mod duos {
         );
     }
 
+    /// §13.9: a code is no key past a block. A block either way present at the claim makes it
+    /// write nothing; once it is lifted, the same claim goes through.
+    async fn s6_a_block_either_way_defeats_the_claim(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let now = harness.now();
+        let made = room("DUOSWX", &host.id, now, now + 600_000);
+        assert!(q!(harness, t => t.duos_rooms_create(&made)));
+        let choice = DuosChoice::Random { lean: None };
+        for (blocker, blocked) in [(&host.id, &guest.id), (&guest.id, &host.id)] {
+            q!(harness, t => t.blocks_add(blocker, blocked, now));
+            assert!(q!(harness, t => t.duos_rooms_claim("DUOSWX", &guest.id, &choice, &id(), now)).is_none());
+            assert_eq!(
+                q!(harness, t => t.duos_rooms_get("DUOSWX")),
+                Some(made.clone()),
+                "a blocked claim writes nothing"
+            );
+            assert!(q!(harness, t => t.blocks_remove(blocker, blocked)));
+        }
+        let match_id = id();
+        let claimed = must(
+            q!(harness, t => t.duos_rooms_claim("DUOSWX", &guest.id, &choice, &match_id, now)),
+            "the claim once unblocked",
+        );
+        assert_eq!(claimed.guest.as_deref(), Some(guest.id.as_str()));
+        assert_eq!(claimed.match_id.as_deref(), Some(match_id.as_str()));
+    }
+
     both_stores!(
         s6_rooms_are_claimed_once_and_reaped,
+        s6_a_block_either_way_defeats_the_claim,
         r1047002_open_co_op_rooms_are_counted_by_host,
         s6_matches_finish_once_and_the_log_is_append_only,
         s6_a_deleted_profile_takes_its_rooms_and_matches,

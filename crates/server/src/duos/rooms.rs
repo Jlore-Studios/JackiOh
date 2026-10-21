@@ -18,12 +18,13 @@
 //! results row is written; the result lives on the match's own row (B40).
 //!
 //! A code is no key past a block (§9.4, §13.9): to an account the host has blocked, or that has
-//! blocked the host, the room answers as an unknown code does, to read and to join. Once joined, a
-//! room answers its host and its guest alone; anyone else reads it as unknown (a join still says it
-//! is full, S6). A host's frozen deck is checked against the catalog it was frozen under: a join
-//! under another catalog is `409 update_required`, as a 1v1 room's (§9.4: a stale catalog is
-//! refused at every door into a match), and the match is pinned to the catalog it is dealt from
-//! (R767000, `DuosMatchOptions::catalog_version`).
+//! blocked the host, the room answers as an unknown code does, to read and to join. The join's claim
+//! checks the block again, so one made while a join is under way stops it too. Once joined, a room
+//! answers its host and its guest alone; anyone else reads it as unknown (a join still says it is
+//! full, S6). A host's frozen deck is checked against the catalog it was frozen under: a join under
+//! another catalog is `409 update_required`, as a 1v1 room's (§9.4: a stale catalog is refused at
+//! every door into a match), and the match is pinned to the catalog it is dealt from (R767000,
+//! `DuosMatchOptions::catalog_version`).
 //!
 //! S6's two join refusals keep the error body every route answers with, the code being S6's:
 //! `409 { "error": { "code": "full" | "own_room", "message" } }`.
@@ -356,7 +357,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     .map_err(ApiError::internal)?;
 
     // B33's single claim and the match row, in one transaction: the loser of a race writes nothing.
-    let claimed = one_tx!(app.db, |t| {
+    let (claimed, blocked) = one_tx!(app.db, |t| {
         let claimed = t
             .duos_rooms_claim(&room.code, &profile.id, &guest_choice, &match_id, now)
             .await?;
@@ -370,8 +371,14 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
                 }
             }
         }
-        claimed
+        // §13.9: a block made since `room_of` read the room defeats the claim; told apart from a lost
+        // race here, so it is answered as the block before the read is.
+        let blocked = claimed.is_none() && t.blocks_between(&room.host, &profile.id).await?;
+        (claimed, blocked)
     })?;
+    if blocked {
+        return Err(not_open());
+    }
     if claimed.is_none() {
         return Ok(refusal(409, "full", "someone already joined that room"));
     }
