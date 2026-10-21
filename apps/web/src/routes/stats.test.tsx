@@ -1,5 +1,9 @@
 // Tests for the public statistics page (SPEC §9.11, R654).
 
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SHIPPED_SETS } from "@jackioh/shared";
@@ -16,6 +20,7 @@ import StatsRoute from "./stats.tsx";
 const { documentTitleFor } = await import("../main.tsx");
 
 const SLOW = { timeout: 10_000 } as const;
+const HERE = dirname(fileURLToPath(import.meta.url));
 
 const MOCK_CARD_STATS_PROVISIONAL = {
   patch: "0.2.0",
@@ -1193,5 +1198,17 @@ describe("card statistics requests", () => {
       SLOW,
     );
     expect(requested("/api/stats/cards").filter((url) => url.searchParams.get("patch") === "0.1.0")).toHaveLength(1);
+  });
+});
+
+describe("the drill-down's card preview", () => {
+  // jsdom lays nothing out, so the stylesheet is read: the face is `height: 100%` (cards.css), and a
+  // preview stretched to the details column beside it drew the card tall and thin.
+  it("keeps the face at 5:7 however long the details column runs", () => {
+    const css = readFileSync(resolve(HERE, "stats.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const body = /\.stats-drilldown-body\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(body).toMatch(/align-items:\s*flex-start/);
+    const preview = /\.stats-drilldown-card-preview\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(preview).toMatch(/aspect-ratio:\s*5\s*\/\s*7/);
   });
 });
