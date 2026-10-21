@@ -34,6 +34,7 @@ import { brandCues } from "./brand.ts";
 import { castOnDrawCues, planCardFx } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
 import { flavorEntranceCues } from "./entrances.ts";
+import { flavorExitCues } from "./exits.ts";
 import { attackerOf, flavorLookOf, flavorSourceOf } from "./flavorSource.ts";
 import { flavorLook } from "./flavors.ts";
 import { lookOf, TONE_LOOKS, ZONE_DEFAULT, ZONE_LOOKS, type ZoneLook } from "./looks.ts";
@@ -623,10 +624,22 @@ const death: Recipe = (event, p) => {
     ];
   }
   if (!isCard(p.tgt)) return [burst(i, "smoke", at, "point", 0, "pileSmoke")];
+  // #1446: a card the view showed face-up leaves in its flavor's exit, over today's death; a
+  // face-down one (the viewer's own unrevealed Trap) keeps today's alone (CLAUDE.md rule 7).
+  const exit = flavorExitCues({
+    defId: event.defId,
+    instanceId: event.instanceId,
+    view: p.view,
+    D: p.D,
+    tgt: p.tgt,
+    intensity: i,
+    pile: animTestid.graveyard(sideOf(p.view, event.owner)),
+  });
   return [
     crack(p.D, at, 0),
     burst(i, "ember", at, "area", frac(FX_DEATH_EMBER_AT, p.D), "deathEmber"),
     burst(i, "smoke", at, "area", frac(FX_DEATH_SMOKE_AT, p.D), "deathSmoke"),
+    ...exit,
   ];
 };
 
