@@ -10572,6 +10572,13 @@
     "1570": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T19:45:41Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "Rule line 2 (one place) fails: keeping e2e/support/testids.ts a mirror of watchTestid puts one line outside apps/web; the rest is a small web-only change"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
