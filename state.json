@@ -9480,11 +9480,13 @@
         "by": "`claude` (strong)",
         "sha": "c31fbd5d2553361f89f6c704216af28aeb21eedd"
       },
+      "closed_at": "2026-10-21T13:41:08Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-21T12:39:45Z",
       "issue": 1504,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
