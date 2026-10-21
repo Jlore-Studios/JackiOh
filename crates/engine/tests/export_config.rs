@@ -22,7 +22,7 @@
 
 use jackioh_engine::config::{
     AI_DIFFICULTY, AI_TUTORIAL, COIN_DEF_ID, CRAFT_ADJECTIVES, CRAFT_HAT_PRICES, CRAFT_KEYWORD_PRICES,
-    CRAFT_MAX_EFFECTS, CRAFT_MAX_N, CRAFT_NOUNS, CRAFT_VERB_PRICES, CUSTOM_ATTACK_MAX,
+    CRAFT_MAX_EFFECTS, CRAFT_MAX_N, CRAFT_NOUNS, CRAFT_RETIRED_VERBS, CRAFT_VERB_PRICES, CUSTOM_ATTACK_MAX,
     CUSTOM_BUILDER_MAX_BYTES, CUSTOM_COST_MAX, CUSTOM_HEALTH_MAX, CUSTOM_ID_PREFIX, CUSTOM_KEYWORDS,
     CUSTOM_KEYWORDS_MAX, CUSTOM_NAME_MAX_LENGTH, CUSTOM_PARAM_KEY_MAX_LENGTH, CUSTOM_PARAM_MAX,
     CUSTOM_PARAMS_MAX, CUSTOM_RADIANT_STAT_MAX, CUSTOM_SOURCE_MAX_BYTES, CUSTOM_TEXT_MAX_LENGTH, DECK_SIZE,
@@ -49,6 +49,7 @@ import type { Difficulty } from \"./generated/Difficulty.ts\";
 import type { Handicap } from \"./generated/Handicap.ts\";
 import type { CraftHatPrice } from \"./generated/CraftHatPrice.ts\";
 import type { CraftKeywordPrice } from \"./generated/CraftKeywordPrice.ts\";
+import type { CraftVerb } from \"./generated/CraftVerb.ts\";
 import type { CraftVerbPrice } from \"./generated/CraftVerbPrice.ts\";
 import type { DuosTeamRules } from \"./generated/DuosTeamRules.ts\";
 import type { KeywordKind } from \"./generated/KeywordKind.ts\";
@@ -103,6 +104,8 @@ fn engine_config_ts() -> String {
         constant("CRAFT_MAX_EFFECTS", None, &CRAFT_MAX_EFFECTS),
         constant("CRAFT_MAX_N", None, &CRAFT_MAX_N),
         constant("CRAFT_NOUNS", Some("readonly string[]"), CRAFT_NOUNS),
+        // R1563009: the verbs no craft prompt offers, which Scratch Pad's palette leaves out.
+        constant("CRAFT_RETIRED_VERBS", Some("readonly CraftVerb[]"), CRAFT_RETIRED_VERBS),
         constant(
             "CRAFT_VERB_PRICES",
             Some("readonly CraftVerbPrice[]"),
@@ -171,8 +174,8 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    // Forty-nine constants, each on its own line, the way the client and the diff check read them.
-    assert_eq!(text.matches("\nexport const ").count(), 49, "{text}");
+    // Fifty-one constants, each on its own line, the way the client and the diff check read them.
+    assert_eq!(text.matches("\nexport const ").count(), 51, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 

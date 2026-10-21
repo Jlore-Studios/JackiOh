@@ -396,6 +396,7 @@ pub fn open_prompt(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<Pe
         max,
         budget: args.budget.map(|budget| budget.max(0)),
         craft_mode: None,
+        craft_offer: None,
         streak: None,
         resume,
     };
@@ -537,11 +538,13 @@ pub fn why_answer_refused(pending: &PendingChoice, answer: &AnswerInput) -> Resu
         let Some(Selection::Craft { recipe }) = picks.first() else {
             return Err(EngineError::new("that prompt takes a crafted recipe"));
         };
-        // R1182000, R1182002: and in the frame the prompt's mode names, if any.
+        // R1182000, R1182002: and in the frame the prompt's mode names, if any; R1563007: of the blocks
+        // its offer holds, if it has one.
         return match crate::subsystems::craft::validate_answer(
             recipe,
             pending.budget.unwrap_or(-1),
             pending.craft_mode,
+            pending.craft_offer.as_ref(),
         ) {
             Ok(()) => Ok(()),
             Err(reasons) => Err(EngineError::new(format!(
@@ -1423,6 +1426,7 @@ fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs, luck: i32)
         max,
         budget: None,
         craft_mode: None,
+        craft_offer: None,
         streak: None,
         resume: args.resume.clone(),
     };

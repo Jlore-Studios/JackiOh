@@ -555,14 +555,17 @@ pub struct ChooseCraftArgs {
 ///
 /// `mode` (Meditative+, #1182): a potion mode fixes the cost and the frame and rolls Potions as its
 /// presets (R1182000, R1182001); `scratch` rolls Meditative #17's (R1182002). The open prompt carries
-/// the mode (`PendingChoice.craft_mode`), which the answer check and the client read.
+/// the mode (`PendingChoice.craft_mode`), which the answer check and the client read. R1563007: every
+/// prompt but Scratch Pad's first draws its offer, the only blocks its presets and its answer use
+/// (`PendingChoice.craft_offer`).
 pub fn choose_craft(args: ChooseCraftArgs) -> Effect {
     Effect::new("chooseCraft", move |ctx| {
         let cost = match args.mode.and_then(crate::wire::CraftMode::frame) {
             Some(frame) => crate::subsystems::craft::frame_cost(frame),
             None => args.cost.clamp(0, crate::config::CRAFT_MAX_COST),
         };
-        let recipes = crate::subsystems::craft::presets_for(&mut *ctx.sink.rng, args.mode, cost);
+        let offer = crate::subsystems::craft::roll_offer(&mut *ctx.sink.rng, args.mode, cost);
+        let recipes = crate::subsystems::craft::presets_for(&mut *ctx.sink.rng, args.mode, cost, offer.as_ref());
         let radiant = args.radiant == Some(true);
         let options: Vec<PromptOption> = recipes
             .into_iter()
@@ -592,6 +595,7 @@ pub fn choose_craft(args: ChooseCraftArgs) -> Effect {
             && let Some(pending) = ctx.sink.state.pending.as_mut()
         {
             pending.craft_mode = args.mode;
+            pending.craft_offer = offer;
         }
     })
 }

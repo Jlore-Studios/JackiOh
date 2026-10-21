@@ -1149,6 +1149,15 @@ pub const CRAFT_LOC_BUDGET: i32 = 24;
 pub const CRAFT_LOC_SKELETON: i32 = 3;
 /// The most effect blocks one recipe may hold.
 pub const CRAFT_MAX_EFFECTS: usize = 8;
+/// R1563007: a `craft` prompt's offer (Meditative #17, Meditative+ #16 and #16.1; not Scratch Pad's):
+/// this many keywords, hats and effect verbs, drawn from the match rng among those its frame may take,
+/// and the only blocks its answer may use.
+pub const CRAFT_OFFER_KEYWORDS: usize = 4;
+pub const CRAFT_OFFER_HATS: usize = 2;
+pub const CRAFT_OFFER_VERBS: usize = 3;
+/// R1563009: the verbs no recipe may use any more — "give your hero Armor" since #1563. Each keeps its
+/// price row, so a recipe an older game crafted still prices and compiles.
+pub const CRAFT_RETIRED_VERBS: &[CraftVerb] = &[CraftVerb::GainArmor];
 /// R881: the points a Unit preset must hold before it spends a 2-point keyword, so at least as many
 /// are left for its stats.
 pub const CRAFT_PRESET_KEYWORD_MIN_POINTS: i32 = 4;
@@ -1545,9 +1554,9 @@ pub const CRAFT_HAT_PRICES: &[CraftHatPrice] = &[
         multiplier: 1,
         types: &[CardType::Trap],
     },
-    // R1182000: a Potion's one hat, "Activate: Tribute this.", an `ActivationDecl` with its Tribute
-    // cost (as many lines as a reveal hat's trigger). No type takes it in Meditative #17's free
-    // crafter: only the potion frame does, and the potion frame takes nothing else.
+    // R1182000: a Potion's one hat until #1563, "Activate: Tribute this.", an `ActivationDecl` with
+    // its Tribute cost (as many lines as a reveal hat's trigger). No type takes it: a Potion is a
+    // Spell cast When cast since #1563 (R1563008), and the row stays so an old recipe still prices.
     CraftHatPrice {
         hat: CraftHatKind::Activate,
         lines: 4,
@@ -1556,9 +1565,12 @@ pub const CRAFT_HAT_PRICES: &[CraftHatPrice] = &[
     },
 ];
 
-/// R1182000: a Potion's fixed cost (Meditative+ #16 Jazakus: "It costs (1)."). Its points are the
-/// crafter's budget at that cost, `craft_points_budget(CRAFT_POTION_COST)`.
+/// R1182000: a Potion's fixed cost (Meditative+ #16 Jazakus: "It costs (1).").
 pub const CRAFT_POTION_COST: i32 = 1;
+/// R1563008: a Potion's points. A Potion is a Spell with no stats since #1563, so it has fewer than
+/// the crafter's budget at its cost (`craft_points_budget(CRAFT_POTION_COST)`, 7), which a Unit
+/// Potion spent mostly on stats.
+pub const CRAFT_POTION_POINTS: i32 = 4;
 /// R1182001: a HUGE Potion's fixed cost (Meditative+ #16.1 Jazakus Prime: "It costs (3).").
 pub const CRAFT_HUGE_POTION_COST: i32 = 3;
 /// R1182001: a HUGE Potion has this many times a Potion's points ("about 5 times better than the

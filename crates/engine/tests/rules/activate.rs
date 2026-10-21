@@ -562,6 +562,7 @@ mod r384_b3_2_rule_2_who_and_when {
             max: 1,
             budget: None,
             craft_mode: None,
+            craft_offer: None,
             streak: None,
             resume: Resume {
                 def_id: String::new(),

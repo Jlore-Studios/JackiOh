@@ -471,7 +471,7 @@ mod the_mulligan_at_its_bounds_b20 {
     fn b20_the_shaped_keep_holds_the_one_best_proven_four_drop_and_returns_the_rest() {
         register_cards();
         let proven = "core-054"; // 4-cost, shaped weight far above DEAL_MULLIGAN_KEEP
-        let unproven = "classicplus-035"; // 4-cost, shaped weight below it
+        let unproven = "core-034"; // 4-cost, shaped weight below it
         assert_eq!(query_cost(def_of(None, proven)), AI_MULLIGAN.keep_max_cost + 1);
         assert_eq!(query_cost(def_of(None, unproven)), AI_MULLIGAN.keep_max_cost + 1);
         let state = mulligan_with("decide-mulligan-shaped", &[unproven, proven, unproven]);

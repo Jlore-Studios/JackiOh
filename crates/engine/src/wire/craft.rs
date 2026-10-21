@@ -18,8 +18,9 @@ use crate::wire::string_union;
 string_union! {
     /// One hat a recipe may put an effect under: the hook the block becomes. A Unit takes `cry`,
     /// `death`, `startOfTurn` and `endOfTurn`; a Field Spell takes `cry`, `startOfTurn` and
-    /// `endOfTurn`; a Spell takes `whenCast`; a Trap takes exactly one reveal hat (R883). A Potion
-    /// takes `activate` and nothing else, and no other recipe takes it (R1182000).
+    /// `endOfTurn`; a Spell takes `whenCast`; a Trap takes exactly one reveal hat (R883). A Potion is
+    /// a Spell and takes `whenCast` alone (R1563008). `activate` was a Potion's one hat until #1563
+    /// and no recipe takes it now; it stays so an old recipe still reads.
     pub enum CraftHatKind {
         Cry = "cry",
         Death = "death",
@@ -34,10 +35,11 @@ string_union! {
 }
 
 string_union! {
-    /// R1182000, R1182001: the fixed frame a recipe is crafted in — a Potion (Meditative+ #16
-    /// Jazakus, cost (1)) or a HUGE Potion (Meditative+ #16.1 Jazakus Prime, cost (3), five times a
-    /// Potion's points): a Unit tagged Potion whose one hook is "Activate: Tribute this." with the
-    /// effects the player builds. A recipe of Meditative #17's crafter carries none.
+    /// R1182000, R1182001, R1563008: the fixed frame a recipe is crafted in — a Potion (Meditative+
+    /// #16 Jazakus, cost (1)) or a HUGE Potion (Meditative+ #16.1 Jazakus Prime, cost (3), five times
+    /// a Potion's points): a Spell tagged Potion, with no stats, whose one hat is When cast with the
+    /// effects the player builds (a Unit with "Activate: Tribute this." until #1563). A recipe of
+    /// Meditative #17's crafter carries none.
     pub enum CraftFrame {
         Potion = "potion",
         HugePotion = "hugePotion",
@@ -186,6 +188,24 @@ impl CraftRecipe {
             Some(CraftFrame::HugePotion) => format!("HUGE {} {} Potion", self.adjective, self.noun),
         }
     }
+}
+
+/// R1563007: the blocks a `craft` prompt offers, Kazakus style — `CRAFT_OFFER_KEYWORDS` keywords,
+/// `CRAFT_OFFER_HATS` hats and `CRAFT_OFFER_VERBS` effect verbs, drawn from the match rng as the
+/// prompt opens (the keywords from the whole table, the hats and verbs among those its frame may
+/// take) — and the only blocks its answer may use. Scratch Pad's prompt carries none: it codes from
+/// the whole palette (R1182002).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct CraftOffer {
+    pub keywords: Vec<KeywordKind>,
+    pub hats: Vec<CraftHatKind>,
+    pub verbs: Vec<CraftVerb>,
 }
 
 /// One row of the verb price table: the price is `points + per_n × N`, halved (rounded up) when

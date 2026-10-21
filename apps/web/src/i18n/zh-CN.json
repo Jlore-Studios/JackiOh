@@ -562,6 +562,8 @@
   "Hats": "触发块",
   "Effects": "效果",
   "Your card": "你的卡牌",
+  "Your card's code": "你的卡牌代码",
+  "Add a hat, then snap effects under it": "先加一顶帽子，再把效果拼到它下面",
   "{hat} hat": "{hat}触发块",
   "Remove {hat} hat": "移除{hat}触发块",
   "{effect} under {hat}": "{hat}下的{effect}",

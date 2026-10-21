@@ -4,7 +4,7 @@
 
 use jackioh_engine::effects::degrade;
 use jackioh_engine::subsystems::craft::{
-    compile_crafted_def, craft_id, craft_presets, craft_preview, recipe_loc, recipe_points, validate_recipe,
+    compile_crafted_def, craft_id, craft_presets, craft_preview, recipe_loc, recipe_points, validate_recipe, whole_palette,
 };
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -53,6 +53,11 @@ fn crafting(seed: &str, cost_pick: &str) -> GameState {
     cast_now(&mut state, "pm-crafter", P1, false);
     let answered = answer_keys(&mut state, &[cost_pick]);
     assert_eq!(answered.error, None, "the cost answer");
+    // These tests hold R880–R883's rules, which R1563007's offer only narrows: widen it to every block
+    // (craft_modes.rs proves the offer itself).
+    if let Some(pending) = state.pending.as_mut() {
+        pending.craft_offer = Some(whole_palette());
+    }
     state
 }
 
@@ -96,7 +101,7 @@ fn option_types(state: &GameState) -> Vec<String> {
 }
 
 #[test]
-fn r880_the_crafter_asks_a_cost_0_to_4_then_a_craft_prompt_at_that_cost() {
+fn r880_r1563007_the_crafter_asks_a_cost_0_to_4_then_a_craft_prompt_at_that_cost() {
     let mut state = board("craft-cost");
     register_craft_fixtures();
     cast_now(&mut state, "pm-crafter", P1, false);
@@ -108,7 +113,15 @@ fn r880_the_crafter_asks_a_cost_0_to_4_then_a_craft_prompt_at_that_cost() {
     assert_eq!(answered.error, None);
     let pending = open_as(&state, PromptKind::Craft, P1);
     assert_eq!(pending.budget, Some(3));
-    assert_eq!(option_types(&state), vec!["Unit", "Spell", "Field Spell", "Trap"]);
+    // R1563007: the Unit always, then each type whose hat and verb the offer holds, in this order.
+    let order = ["Unit", "Spell", "Field Spell", "Trap"];
+    let types = option_types(&state);
+    assert_eq!(types[0], "Unit");
+    let places: Vec<usize> = types
+        .iter()
+        .map(|type_| must(order.iter().position(|o| o == type_), "a preset type"))
+        .collect();
+    assert!(places.windows(2).all(|pair| pair[0] < pair[1]), "{types:?}");
 }
 
 #[test]
@@ -134,11 +147,11 @@ fn r880_an_invalid_recipe_is_refused_and_the_prompt_stays_open() {
         "cost": 4, "type": "Spell", "adjective": "Pure", "noun": "Closure",
         "attack": 0, "health": 1, "keywords": [], "echo": 0,
         "hats": [{ "hat": "whenCast", "effects": [
-            { "verb": "gainArmor", "n": 1 }, { "verb": "gainArmor", "n": 1 },
-            { "verb": "gainArmor", "n": 1 }, { "verb": "gainArmor", "n": 1 },
-            { "verb": "gainArmor", "n": 1 }, { "verb": "gainArmor", "n": 1 },
-            { "verb": "gainArmor", "n": 1 }, { "verb": "gainArmor", "n": 1 },
-            { "verb": "gainArmor", "n": 1 },
+            { "verb": "healYourHero", "n": 1 }, { "verb": "healYourHero", "n": 1 },
+            { "verb": "healYourHero", "n": 1 }, { "verb": "healYourHero", "n": 1 },
+            { "verb": "healYourHero", "n": 1 }, { "verb": "healYourHero", "n": 1 },
+            { "verb": "healYourHero", "n": 1 }, { "verb": "healYourHero", "n": 1 },
+            { "verb": "healYourHero", "n": 1 },
         ] }],
     });
     let wrong_for_type = json!({
@@ -229,7 +242,7 @@ fn r881_every_preset_is_valid_at_every_cost() {
     for cost in 0..=4 {
         for seed in 0..50 {
             let mut rng = Rng::new(&format!("craft-preset-{cost}-{seed}"), 0);
-            let presets = craft_presets(&mut rng, cost);
+            let presets = craft_presets(&mut rng, cost, &whole_palette());
             assert_eq!(
                 presets.iter().map(|recipe| recipe.type_).collect::<Vec<_>>(),
                 vec![
@@ -347,14 +360,13 @@ fn r882_a_crafted_card_survives_a_json_round_trip_and_replays_exactly() {
         json!({ "type": "answer", "playerId": "p1", "choiceId": cost_id, "selection": [{ "pick": "mode", "option": "1" }] }),
         Some(&mut log),
     );
-    // A 3/4 Unit with a Cry dealing 3: 3+4-1+3 = 9 points, over 7 — so a 2/3 dealing 2:
-    // 2+3-1+2 = 6, within 7.
-    let recipe = json!({
-        "cost": 1, "type": "Unit", "adjective": "Pure", "noun": "Closure",
-        "attack": 2, "health": 3, "keywords": [], "echo": 0,
-        "hats": [{ "hat": "cry", "effects": [{ "verb": "damageEnemyHero", "n": 2 }] }],
-    });
-    let craft_id = must(state.pending.clone(), "the craft prompt").id.clone();
+    // The Unit preset, whatever the seed's offer (R1563007): a recipe the editor could send.
+    let pending = must(state.pending.clone(), "the craft prompt");
+    let recipe = match &pending.options[0].selection {
+        Selection::Craft { recipe } => serde_json::to_value(recipe).expect("a recipe serializes"),
+        other => panic!("a preset is a recipe, not {other:?}"),
+    };
+    let craft_id = pending.id.clone();
     state = act(
         &state,
         json!({ "type": "answer", "playerId": "p1", "choiceId": craft_id, "selection": [{ "pick": "craft", "recipe": recipe }] }),
@@ -533,8 +545,8 @@ fn r883_each_hat_compiles_to_its_hook_and_a_reveal_hat_fires_on_its_event() {
         "hats": [
             { "hat": "cry", "effects": [{ "verb": "damageEnemyHero", "n": 1 }] },
             { "hat": "death", "effects": [{ "verb": "damageEnemyHero", "n": 1 }] },
-            { "hat": "startOfTurn", "effects": [{ "verb": "gainArmor", "n": 1 }] },
-            { "hat": "endOfTurn", "effects": [{ "verb": "gainArmor", "n": 1 }] },
+            { "hat": "startOfTurn", "effects": [{ "verb": "healYourHero", "n": 1 }] },
+            { "hat": "endOfTurn", "effects": [{ "verb": "healYourHero", "n": 1 }] },
         ],
     }));
     let scripts = compile_crafted_scripts(&recipe);
