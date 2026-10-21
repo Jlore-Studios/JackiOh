@@ -129,6 +129,10 @@ export const FX_ZONE_TAIL_MS = 400;
 export const FX_CAST_SCALE_STEP = 0.06;
 export const FX_CAST_SCALE_MAX = 1.6;
 export const FX_CAST_TRAUMA = 0.12;
+// #1442; off until #1444; the shot leaves at jk-lunge's 24% keyframe and lands at the entry's end
+export const FX_FLAVOR_LIVE: boolean = false;
+export const FX_SHOT_LAUNCH_AT = 0.24;
+export const FX_SHOT_SHAKE_TRAUMA = 0.3;
 export const FX_SPEED_MIN = 0.25;              // R435: the slider runs from a quarter speed…
 export const FX_SPEED_MAX = 3;                 // …to three times the table's speed
 export const FX_SPEED_DEFAULT = 1;
