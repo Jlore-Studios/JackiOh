@@ -133,6 +133,8 @@ export const FX_CAST_TRAUMA = 0.12;
 export const FX_FLAVOR_LIVE: boolean = false;
 export const FX_SHOT_LAUNCH_AT = 0.24;
 export const FX_SHOT_SHAKE_TRAUMA = 0.3;
+// #1443: the per-entry cap on non-combat damage shots (one volley starts together).
+export const FX_FLAVOR_VOLLEY_MAX = 4;
 export const FX_SPEED_MIN = 0.25;              // R435: the slider runs from a quarter speed…
 export const FX_SPEED_MAX = 3;                 // …to three times the table's speed
 export const FX_SPEED_DEFAULT = 1;

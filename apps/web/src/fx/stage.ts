@@ -18,7 +18,7 @@ import {
   FX_SLAM_AT,
 } from "./constants.ts";
 import { flavorLook, type FlavorLook } from "./flavors.ts";
-import type { FxAnchor, FxCue, FxPlanEnv } from "./types.ts";
+import type { FxAnchor, FxCue, FxPlanEnv, FxShotCue } from "./types.ts";
 
 /** The contact spark's base count and power (rule 9). */
 const STAGE_TUNING = {
@@ -59,6 +59,22 @@ function rangedLook(attackerId: string, view: PlayerView): FlavorLook | null {
 }
 
 /**
+ * #1443: one flavor shot from `from` to `to`, leaving at jk-lunge's 24% keyframe and landing as
+ * the entry ends (R200). `shotCues` builds its still lunge around this; a non-combat damage's
+ * volley (cues.ts) fires it on its own.
+ */
+export function shotCue(
+  look: FlavorLook,
+  from: FxAnchor,
+  to: FxAnchor,
+  delayMs: number,
+  flightMs: number,
+  density: number,
+): FxShotCue {
+  return { kind: "shot", shot: look.projectile, colors: look.colors, preset: look.particle, from, to, delayMs, flightMs, density };
+}
+
+/**
  * #1442: a Ranged attacker stays in place (a still lunge) and its flavor's shot leaves at jk-lunge's
  * 24% keyframe and lands as the entry ends (R200); a boulder shakes the board as it lands.
  */
@@ -66,17 +82,7 @@ function shotCues(look: FlavorLook, attacker: string, target: string, c: Ctx): F
   const launch = frac(FX_SHOT_LAUNCH_AT, c.D);
   const cues: FxCue[] = [
     { kind: "lunge", attacker, target, delayMs: 0, durationMs: c.D, still: true },
-    {
-      kind: "shot",
-      shot: look.projectile,
-      colors: look.colors,
-      preset: look.particle,
-      from: tid(attacker),
-      to: tid(target),
-      delayMs: launch,
-      flightMs: c.D - launch,
-      density: c.env.intensity,
-    },
+    shotCue(look, tid(attacker), tid(target), launch, c.D - launch, c.env.intensity),
   ];
   if (look.projectile.motion === "arc" && look.projectile.shake === true) {
     const trauma = Math.min(1, FX_SHOT_SHAKE_TRAUMA * c.env.intensity);

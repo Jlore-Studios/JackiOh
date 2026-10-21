@@ -3,6 +3,7 @@
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
+import { flavorSourceOf } from "../fx/flavorSource.ts";
 import { sideOf, type Side } from "./contract";
 
 /** R97's sentinel (engine `viewFor.ts` `HIDDEN_ID`). */
@@ -300,4 +301,27 @@ export function sweepAt(
     if (!every) return null;
   }
   return { sweep: { tone, sides: touched, sourceId: source ?? null }, length };
+}
+
+/**
+ * #1443: one volley of non-combat damage from one source, planned as one entry so its shots start
+ * together. A hit only when `events[at]` is `damage` with `combat: false` and a non-null,
+ * non-sentinel `sourceId`, the run of consecutive same-`sourceId`, non-combat `damage` events has
+ * length 2 or more, and the view shows the source face-up (`flavorSourceOf` non-null:
+ * hidden/unknown/hero-power sources keep today's entries).
+ */
+export function volleyAt(events: readonly GameEvent[], at: number, view: PlayerView): { length: number } | null {
+  const first = events[at];
+  if (first === undefined || first.type !== "damage" || first.combat) return null;
+  const source = first.sourceId;
+  if (source === null || source === HIDDEN) return null;
+  let length = 0;
+  for (let i = at; i < events.length; i += 1) {
+    const event = events[i];
+    if (event === undefined || event.type !== "damage" || event.combat || event.sourceId !== source) break;
+    length += 1;
+  }
+  if (length < 2) return null;
+  if (flavorSourceOf(source, view) === null) return null;
+  return { length };
 }

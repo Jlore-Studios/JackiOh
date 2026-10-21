@@ -33,8 +33,11 @@ import { armorTookHalf, damageFeel, damageTier, UNIT_SLAM } from "../game/damage
 import { brandCues } from "./brand.ts";
 import { castOnDrawCues, planCardFx } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
+import { flavorSourceOf } from "./flavorSource.ts";
+import { flavorLook } from "./flavors.ts";
 import { lookOf, TONE_LOOKS, ZONE_DEFAULT, ZONE_LOOKS, type ZoneLook } from "./looks.ts";
 import { shieldCues } from "./shield.ts";
+import { shotCue } from "./stage.ts";
 import {
   FX_ARROWS_TAIL_MS,
   FX_BANNER_TAIL_MS,
@@ -49,6 +52,8 @@ import {
   FX_DEATH_SMOKE_AT,
   FX_FATIGUE_FLIGHT_FRACTION,
   FX_FATIGUE_STREAK_AT,
+  FX_FLAVOR_LIVE,
+  FX_FLAVOR_VOLLEY_MAX,
   FX_FLICKER_RETURN_AT,
   FX_FOG_HIT_FROM,
   FX_FOG_HIT_TO,
@@ -72,6 +77,7 @@ import {
   FX_REWIND_TRAUMA,
   FX_RING_MS,
   FX_SHAKE_MAX_PX,
+  FX_SHOT_LAUNCH_AT,
   FX_SLAM_AT,
   FX_SLAM_MAX_TRAUMA,
   FX_SLAM_STATS_MIN,
@@ -486,12 +492,43 @@ const summon: Recipe = (event, p) => {
   return cues;
 };
 
-const impact: Recipe = (event, p) => {
-  if (event.type !== "damage") return [];
+type DamageEvent = Extract<GameEvent, { type: "damage" }>;
+
+/**
+ * #1443: every impact at `hit`: the spark, the splat, the poison, the family's accent, the dust,
+ * the shockwave, the shield and the shake. `flavorParticle` is the flavor's own accent, used when
+ * a flavor shot flew instead of today's projectile; otherwise the accent is looked up as before.
+ */
+function impactTail(event: DamageEvent, p: Plan, hit: number, flavorParticle?: FxPreset): FxCue[] {
   const i = p.env.intensity;
   const feel = damageFeel(event.amount);
   const tier = damageTier(event.amount);
   const particleIntensity = i * feel.particleScale;
+  const at = anchor(p.tgt);
+  const poisonous = sourceIsPoisonous(event.sourceId, p.view);
+  const cues: FxCue[] = [];
+  cues.push(burst(particleIntensity, "spark", at, "point", hit, tier === "big" || tier === "giga" ? "impactHeavy" : "impactSpark"));
+  if (event.amount > 0) cues.push(splat(p.D, "damage", event.amount, at, hit));
+  if (poisonous) cues.push(burst(particleIntensity, "poison", at, "area", hit, "impactPoison"));
+  // Issue #124: a spell's or a card's hit lands in its family's look as well.
+  if (!event.combat) {
+    const accent = flavorParticle ?? lookOf(sourceFacts(event.sourceId, p.view, p.env))?.preset;
+    if (accent !== undefined) cues.push(burst(particleIntensity, accent, at, "area", hit, "impactAccent"));
+  }
+  if (tier === "moderate" || tier === "big" || tier === "giga") {
+    cues.push(burst(particleIntensity, "dust", anchor(p.tgt, FOOT), "area", hit, "impactDust"));
+  }
+  if (tier === "giga") cues.push(ring(p.D, "dust", viewportCenter(), hit));
+  // R1363: the Armor took half or more of the hit, and a small shield glances up as it lands.
+  if (armorTookHalf(event.absorbed, event.amount)) cues.push(...shieldCues("small", at, p.D, hit, i));
+  // B35: the board shakes here, by the tier's shakePx (#57's DAMAGE_FEEL); a Normal hit stays still.
+  pushShake(cues, i, traumaForShakePx(feel.shakePx), hit);
+  return cues;
+}
+
+/** Today's impact: the remembered projectile when one flies, then every impact at its landing. */
+function impactCues(event: DamageEvent, p: Plan): FxCue[] {
+  const i = p.env.intensity;
   const at = anchor(p.tgt);
   const poisonous = sourceIsPoisonous(event.sourceId, p.view);
   const cues: FxCue[] = [];
@@ -506,23 +543,28 @@ const impact: Recipe = (event, p) => {
       hit = flight;
     }
   }
-  cues.push(burst(particleIntensity, "spark", at, "point", hit, tier === "big" || tier === "giga" ? "impactHeavy" : "impactSpark"));
-  if (event.amount > 0) cues.push(splat(p.D, "damage", event.amount, at, hit));
-  if (poisonous) cues.push(burst(particleIntensity, "poison", at, "area", hit, "impactPoison"));
-  // Issue #124: a spell's or a card's hit lands in its family's look as well.
-  if (!event.combat) {
-    const look = lookOf(sourceFacts(event.sourceId, p.view, p.env));
-    if (look !== undefined) cues.push(burst(particleIntensity, look.preset, at, "area", hit, "impactAccent"));
+  return [...cues, ...impactTail(event, p, hit)];
+}
+
+const impact: Recipe = (event, p) => {
+  if (event.type !== "damage") return [];
+  if (!FX_FLAVOR_LIVE || event.combat || event.sourceId === null) return impactCues(event, p);
+  const src = flavorSourceOf(event.sourceId, p.view);
+  if (src === null || (src.anchor.kind === "testid" && src.anchor.testid === p.tgt)) return impactCues(event, p);
+  // #1443: the source card's flavor flies at the target and every impact waits for the landing.
+  // Chaos picks one look per source, so a volley of one Chaos card is uniform.
+  const look = flavorLook(src.flavor, event.sourceId);
+  let index = 0;
+  for (const other of p.entry.events) {
+    if (other === event) break;
+    if (other.type === "damage" && !other.combat && other.sourceId === event.sourceId) index += 1;
   }
-  if (tier === "moderate" || tier === "big" || tier === "giga") {
-    cues.push(burst(particleIntensity, "dust", anchor(p.tgt, FOOT), "area", hit, "impactDust"));
+  const cues: FxCue[] = [];
+  if (index < FX_FLAVOR_VOLLEY_MAX) {
+    const launch = frac(FX_SHOT_LAUNCH_AT, p.D);
+    cues.push(shotCue(look, src.anchor, anchor(p.tgt), launch, p.D - launch, p.env.intensity));
   }
-  if (tier === "giga") cues.push(ring(p.D, "dust", viewportCenter(), hit));
-  // R1363: the Armor took half or more of the hit, and a small shield glances up as it lands.
-  if (armorTookHalf(event.absorbed, event.amount)) cues.push(...shieldCues("small", at, p.D, hit, i));
-  // B35: the board shakes here, by the tier's shakePx (#57's DAMAGE_FEEL); a Normal hit stays still.
-  pushShake(cues, i, traumaForShakePx(feel.shakePx), hit);
-  return cues;
+  return [...cues, ...impactTail(event, p, p.D, look.particle)];
 };
 
 /** R1363: the Armor took the whole hit (`damageAbsorbed`), and a full shield blooms over the target. */
@@ -1110,6 +1152,10 @@ function sweepCues(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxC
   const D = entry.durationMs;
   const i = env.intensity;
   const look = lookOf(sourceFacts(sweep.sourceId, view, env)) ?? TONE_LOOKS[sweep.tone];
+  // #1443: one volley of the source's flavor, each shot landing on its target's fog hit.
+  const flavorFrom = FX_FLAVOR_LIVE && sweep.sourceId !== null ? flavorSourceOf(sweep.sourceId, view) : null;
+  const flavorShot = flavorFrom !== null && sweep.sourceId !== null ? flavorLook(flavorFrom.flavor, sweep.sourceId) : null;
+  let shots = 0;
   const cues: FxCue[] = [];
   const fraction = new Map<string, number>();
   for (const side of sweep.sides) {
@@ -1144,6 +1190,13 @@ function sweepCues(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv): FxC
       // R1363: the fog reaches a unit whose Armor takes its hit whole, and the shield blooms there.
       cues.push(...shieldCues("full", at, D, hit, i));
     } else {
+      if (event.type === "damage" && flavorFrom !== null && flavorShot !== null && shots < FX_FLAVOR_VOLLEY_MAX) {
+        const from = flavorFrom.anchor;
+        if (!(from.kind === "testid" && at.kind === "testid" && from.testid === at.testid)) {
+          cues.push(shotCue(flavorShot, from, at, 0, hit, i));
+          shots += 1;
+        }
+      }
       cues.push(burst(i, look.preset, at, "area", hit, "fogHit"));
       if (event.amount > 0) cues.push(splat(D, event.type === "damage" ? "damage" : "heal", event.amount, at, hit));
       if (event.type === "damage" && armorTookHalf(event.absorbed, event.amount)) cues.push(...shieldCues("small", at, D, hit, i));
