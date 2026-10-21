@@ -9213,6 +9213,8 @@
       "run_id": "39557387611",
       "started_at": "2026-10-21T06:45:59Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
