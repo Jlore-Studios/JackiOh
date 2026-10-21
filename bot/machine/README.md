@@ -194,20 +194,23 @@ Running the lanes:
 
 ## The local runner
 
-A person's own machine adds its cores to GitHub's free runners for the learned evaluation's
-self-play exports (#1008, `docs/learned-eval.md` D1; `.github/workflows/selfplay.yml`,
-`training/README.md`, Where the exports come from), without touching the training box, which the
-lanes keep. It can also take some of the night box's own jobs while the box is busy or off.
+A person's own machine runs the learn lane, every job of it (`.github/workflows/learn.yml`,
+`training/learn.md`: the self-play export, the retrain, the screen and the gate, and the lane's
+plan and watch), and any self-play export dispatched to it (#1008, `docs/learned-eval.md` D1;
+`.github/workflows/selfplay.yml`, `training/README.md`, Where the exports come from), without
+touching the training box, which the lanes keep. It can also take some of the night box's own jobs
+while the box is busy or off.
 
 | | |
 |---|---|
 | Machine | the owner's laptop (jgoetzmann): Windows 11, Intel i7-11800H (8 cores, 16 threads), 32 GB, Docker Desktop on WSL2 (which `%USERPROFILE%\.wslconfig` caps at 8 GB and 8 processors for every container). The owner looks after it |
-| Label | `jackioh-selfplay-local`, and no other: only `selfplay.yml` names it (its `runner` input). Registered to this repository alone |
+| Label | `jackioh-selfplay-local`, and no other: `learn.yml` names it for every job, and `selfplay.yml` when its `runner` input does. Registered to this repository alone |
 | How it runs | `bot/machine/local/supervisor.ps1`, started at logon by a scheduled task (`install-task.ps1`). Each runner is one ephemeral container of the image `local/Dockerfile` builds (`jackioh-pc-runner`): it registers with a single-use JIT config, takes one job and is gone. A `docker` or `gh` call that gives no answer in two minutes (`docker info`, 30 seconds) is killed and counts as failed, so a Docker engine that stops answering reads as Docker not running, not as a supervisor stuck in one call |
 | When | only while the PC is otherwise idle: CPU under 50% and memory under 24 GB in every sample of the last minute, leaving out the runners' own use and that of the `yieldingContainers` (a long-running container of the owner's that a gate of its own holds to the same rule and throttles while a runner works, so the two never read each other as the person's load) (`config.json`). It keeps one runner Idle for the label while it is calm; when the PC gets busy the idle runner is unregistered at once, and a runner in a job is throttled to half a CPU until it is calm again, so no export loses a shard |
 | Limits | one job at a time, 6 CPUs and 6 GB a container, swap off; never a GPU (no `--gpus`, `NVIDIA_VISIBLE_DEVICES=void`); a non-root user with `no-new-privileges`, no host folder and no Docker socket |
-| Tools | Rust 1.97.0 (`rust-toolchain.toml`), a C++ compiler (`mlua` builds Luau from source), `git` and `jq`, Node 24, Python 3.12, and the night box's CLIs |
-| Disk | a container's work directory goes with it, so `target/` never grows between exports; a shard runs the release `jackioh` the workflow builds on GitHub's runners, so it builds nothing. The image is about 6 GB |
+| Tools | Rust 1.97.0 (`rust-toolchain.toml`), a C++ compiler (`mlua` builds Luau from source), `git`, `jq` and `gh`, Node 24, Python 3.12, and the night box's CLIs. A job installs the rest itself (the learn lane's retrain: uv, which fetches Python 3.13 and torch for the fit) |
+| Disk | a container's work directory goes with it, so `target/` never grows between exports; a shard runs the release `jackioh` the export's build job built, so it builds nothing. The learn lane's retrain is the biggest job: about 10 GB while it runs (the export's logs, its positions, two or three builds, the web's install). The image is about 6 GB |
+| Memory | the learn lane's fit peaks at about 3.4 GB on a 100,000-game export (measured 2026-10-21), under the container's 6 GB |
 
 Any workflow could ask for the label, so it is safe only while **"Require approval for all external
 contributors"** stays on (Settings → Actions → General), as the night box's runners are (Why each
@@ -233,6 +236,17 @@ cd D:\somewhere\jackioh-pc-runner
 `gh` must be signed in as a repository admin: the supervisor asks GitHub for each runner's JIT
 config. The runner shows Idle under Settings → Actions → Runners as `pc-selfplay-<time>` within a
 minute of a calm PC. The log is `logs\supervisor.log` beside the scripts.
+
+**After a change here**, on the PC: build the image again (the `docker build` above) when the
+Dockerfile changed, since a runner started after that uses the new one, and when `config.json` or
+`supervisor.ps1` changed, copy them over the installed ones (keep any setting of your own, such as
+`yieldingContainers`) and restart the task (`Stop-ScheduledTask` then `Start-ScheduledTask -TaskName
+'JackiOh PC runner'`), since the supervisor reads its config once, as it starts. Neither stops a job
+that is running: its container keeps going, and the new supervisor finds it.
+
+**The learn lane runs only here**, so the PC is its only runner: it should not sleep while it is
+plugged in (Settings → System → Power), since a shard in the middle of its work is lost when it does,
+and while it is off or busy for a day the lane's jobs fail (`training/learn.md`, Running unattended).
 
 **Stopping and removing it:**
 

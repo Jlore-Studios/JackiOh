@@ -7,10 +7,11 @@
 #             set's, R1006002). A lane pull request still open is left to merge while its checks are
 #             green or running; one with a failed check, or open LEARN_PR_STALE_HOURS, is closed and the
 #             run goes on, so a stuck promotion never holds the lane
-#   export    selfplay.yml, called: `games` games in `shards` jobs on `runner` (GitHub's, or the
-#             local runner, jackioh-selfplay-local); none with `export_run`, which retrains on an
-#             earlier run's export (its artifacts are kept 30 days)
-#   retrain   on main: training/ml/retrain.sh over the export (positions, folded by the export's own
+#   export    selfplay.yml, called: `games` games in `shards` jobs, one after another on the local
+#             runner; none with `export_run`, which retrains on an earlier run's export (its artifacts
+#             are kept 30 days)
+#   retrain   on main: training/ml/retrain.sh over the shards that finished (a shard the PC lost costs
+#             the export its games, not the run), its positions folded by the export's own
 #             build while its features are main's, the fit, the weights, the switch on, and an 800-game
 #             paired screen against main's AI on improve-dev, decided in advance). Only a screen with
 #             edgeLow above zero goes on, to training/ml/learn-promote.sh: the network onto main as it
@@ -25,6 +26,13 @@
 #   watch     when CI finishes red on the lane's pull request: its failed jobs run once more (a flaky
 #             test); red again, the pull request is closed with the failed jobs named, and a run on the
 #             same export starts (at most LEARN_CHAIN_MAX in a row), on main as it is by then.
+#
+# Every job runs on the owner's PC, the local runner (`jackioh-selfplay-local`, bot/machine/README.md,
+# The local runner), and none on GitHub's runners. It takes one job at a time, and only while the PC is
+# otherwise idle, so a run's 100,000 games take about 40 hours of an idle PC (about 2,500 games an hour
+# on its six CPUs) and a week's run may take several days. A job no runner takes in 24 hours (the PC
+# off, asleep or busy all day) GitHub fails; the lane goes on with what finished, and the next week's
+# run comes anyway (training/learn.md, Running unattended).
 #
 # Pushing ai/learn and opening its pull request take LEARN_LANE_TOKEN, a fine-grained token that can
 # write contents and pull requests on this repository alone (a pull request opened with the run's
@@ -43,16 +51,9 @@ on:
         required: true
         default: "100000"
       shards:
-        description: "Export jobs"
+        description: "Export jobs (on the local runner, one after another)"
         required: true
         default: "20"
-      runner:
-        description: "Where the export runs"
-        type: choice
-        options:
-          - ubuntu-latest
-          - jackioh-selfplay-local
-        default: ubuntu-latest
       screen:
         description: "Paired screen games against main (decided before it is played)"
         required: true
@@ -91,7 +92,7 @@ jobs:
   plan:
     name: plan
     if: ${{ github.event_name != 'workflow_run' }}
-    runs-on: ubuntu-latest
+    runs-on: jackioh-selfplay-local
     timeout-minutes: 10
     permissions:
       contents: read
@@ -154,17 +155,20 @@ jobs:
       games: ${{ inputs.games || '100000' }}
       seed: ${{ needs.plan.outputs.seed }}
       shards: ${{ inputs.shards || '20' }}
-      runner: ${{ inputs.runner || 'ubuntu-latest' }}
+      runner: jackioh-selfplay-local
       retention: "30"
       count: false
 
   retrain:
     name: retrain, screen, gate
     needs: [plan, export]
-    # After the export, or with none when the run reuses an earlier one's (export_run).
-    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && (needs.export.result == 'success' || needs.export.result == 'skipped') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 350
+    # After the export, whether or not every shard finished (the shards step below), or with none
+    # when the run reuses an earlier one's (export_run).
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' }}
+    runs-on: jackioh-selfplay-local
+    # The PC's runner throttles a job to half a CPU while the PC is busy, so the job may take far
+    # longer than its two hours on an idle PC.
+    timeout-minutes: 2880
     permissions:
       contents: read
       actions: write
@@ -177,12 +181,14 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node: "false"
-      # training/ml pins Python 3.13 (its pyproject.toml), and uv as super.yml's notebooks job does.
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      # uv, pinned as super.yml's notebooks job pins it, in a venv of the runner's own Python (3.12),
+      # which also reads retrain.sh's JSON. training/ml pins Python 3.13 (its pyproject.toml), and
+      # uv fetches that Python itself for `uv run`.
       - name: uv, pinned
-        run: python3 -m pip install uv==0.13.0
+        run: |
+          python3 -m venv "$RUNNER_TEMP/uv"
+          "$RUNNER_TEMP/uv/bin/pip" install --quiet uv==0.13.0
+          echo "$RUNNER_TEMP/uv/bin" >> "$GITHUB_PATH"
       - uses: actions/download-artifact@v4
         with:
           pattern: selfplay-${{ needs.plan.outputs.seed }}-*
@@ -199,6 +205,25 @@ jobs:
           path: ${{ runner.temp }}/exporter
           run-id: ${{ inputs.export_run || github.run_id }}
           github-token: ${{ github.token }}
+      # A shard the PC lost (it slept, or no runner took the shard in 24 hours) costs the export its
+      # games, not the run: the retrain goes on with the shards that finished, as long as one did.
+      - name: the export's shards
+        env:
+          SHARDS: ${{ inputs.shards || '20' }}
+          EXPORT: ${{ needs.export.result }}
+        run: |
+          set -euo pipefail
+          finished=$(find "$RUNNER_TEMP/export" -name 'selfplay-*.jsonl' 2> /dev/null | wc -l)
+          if [ "$finished" = 0 ]; then
+            echo "::error::no shard of the export finished: the PC's runner took none in 24 hours, or each one failed"
+            exit 1
+          fi
+          if [ "$EXPORT" = success ] || [ "$EXPORT" = skipped ]; then
+            echo "the export: $finished shards" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::$finished of $SHARDS shards finished: the retrain goes on with their games"
+            echo "the export: $finished of $SHARDS shards finished; the rest failed, or no runner took them in 24 hours" >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: retrain and screen (training/ml/retrain.sh)
         id: retrain
         env:
@@ -332,7 +357,7 @@ jobs:
   watch:
     name: watch the lane's pull request
     if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion != 'success' && github.event.workflow_run.conclusion != 'skipped' }}
-    runs-on: ubuntu-latest
+    runs-on: jackioh-selfplay-local
     timeout-minutes: 10
     permissions:
       contents: read

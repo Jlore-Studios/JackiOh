@@ -656,8 +656,9 @@ def _took(ctx: Context, run: dict[str, Any], created: datetime) -> str:
 # ------------------------------------------------------------------ the learn lane
 
 #: The learn lane (#466; training/learn.md, .github/workflows/learn.yml): the learned evaluation,
-#: retrained and promoted on GitHub's runners with no model in the loop and no harness either, so
-#: its facts come from GitHub alone: the generation on main, the lane's pull request and its runs.
+#: retrained and promoted on the owner's PC (the local runner, bot/machine/README.md) with no model
+#: in the loop and no harness either, so its facts come from GitHub alone: the generation on main,
+#: the lane's pull request and its runs.
 LEARN_WORKFLOW = "learn.yml"
 LEARN_BRANCH = "ai/learn"
 #: learn.yml's schedule, "23 6 * * 1": Mondays (weekday 0) at 06:23 UTC.
@@ -675,22 +676,39 @@ def next_learn_run(now: datetime) -> datetime:
     return at if at > now else at + timedelta(days=7)
 
 
+#: A job that ended this way with no runner was never taken: the PC was off, asleep or busy for the
+#: 24 hours GitHub lets a job wait for a self-hosted runner.
+LEARN_NO_RUNNER = "⏸️ the PC's runner took none of it in 24 hours"
+
+
 def learn_outcome(run: dict[str, Any], jobs: list[dict[str, Any]]) -> str:
     """How a learn.yml run ended, from its jobs' and steps' conclusions (learn.yml's names)."""
     if run.get("status") != "completed":
         return "🔄 running"
     def named(items: list[dict[str, Any]], prefix: str) -> dict[str, Any] | None:
         return next((i for i in items if str(i.get("name") or "").startswith(prefix)), None)
-    export = named(jobs, "export")
-    if export is not None and export.get("conclusion") == "failure":
-        return "❌ the export failed"
-    retrain = named(jobs, "retrain")
+    def untaken(job: dict[str, Any] | None) -> bool:
+        return (job is not None and not job.get("runner_name")
+                and job.get("conclusion") in ("failure", "cancelled"))
+    retrain, plan = named(jobs, "retrain"), named(jobs, "plan")
+    lost = [j for j in jobs if str(j.get("name") or "").startswith("export")
+            and j.get("conclusion") not in ("success", "skipped")]
+    export_failed = LEARN_NO_RUNNER if all(untaken(j) for j in lost) else "❌ the export failed"
+    if untaken(plan) or untaken(retrain):
+        return LEARN_NO_RUNNER
     if retrain is None or retrain.get("conclusion") == "skipped":
-        plan = named(jobs, "plan")
         if plan is not None and plan.get("conclusion") == "failure":
             return "❌ the plan failed"
+        if lost:  # a run from before the retrain went on with the shards that finished
+            return export_failed
+        if run.get("conclusion") == "cancelled":
+            return "⏹️ cancelled"
         return "⏭️ waited on its open pull request"
     steps = retrain.get("steps") or []
+    # The retrain goes on with the shards that finished; it stops here only when none did.
+    shards = named(steps, "the export's shards")
+    if shards is not None and shards.get("conclusion") == "failure":
+        return export_failed if lost else "❌ the export failed"
     fit, gate = named(steps, "retrain and screen"), named(steps, "the gate")
     deliver, moving = named(steps, "deliver"), named(steps, "main kept moving")
     if fit is not None and fit.get("conclusion") == "failure":
@@ -713,7 +731,8 @@ def learn_lane(ctx: Context) -> list[str]:
     and its last runs with how each ended. Each part says so when GitHub cannot be read."""
     lines = ["## 🧠 The learn lane", "",
              "<sub>`learn.yml` retrains the learned evaluation on fresh self-play every week on "
-             "GitHub's runners and promotes it through the gate, with no model in the loop. It closes "
+             "the owner's PC (the local runner, only while the PC is idle: a run takes about 40 "
+             "hours of it) and promotes it through the gate, with no model in the loop. It closes "
              "a stuck promotion, and gates again when main moves (training/learn.md, Running "
              "unattended).</sub>", ""]
     try:

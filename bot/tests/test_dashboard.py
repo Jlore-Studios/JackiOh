@@ -110,7 +110,9 @@ class LearnLaneTests(unittest.TestCase):
         self.assertEqual(outcome([{"name": "plan", "conclusion": "success"},
                                   {"name": "retrain, screen, gate", "conclusion": "skipped"}]),
                          "⏭️ waited on its open pull request")
-        self.assertEqual(outcome([{"name": "export / shard from 1", "conclusion": "failure"}]),
+        # Before the retrain went on with the shards that finished, a failed shard stopped the run.
+        self.assertEqual(outcome([{"name": "export / shard from 1", "conclusion": "failure",
+                                   "runner_name": "pc-selfplay-1021011405"}]),
                          "❌ the export failed")
         self.assertEqual(outcome(self.retrain(fit="success", gate="skipped")), "screened out")
         self.assertEqual(outcome(self.retrain(fit="success", gate="success", deliver="skipped",
@@ -126,6 +128,33 @@ class LearnLaneTests(unittest.TestCase):
         old = self.retrain(fit="success")
         old[2]["steps"].append({"name": "the gate, once (promote --lane learn)", "conclusion": "skipped"})
         self.assertEqual(outcome(old), "screened out")
+
+    def test_a_run_the_pcs_runner_never_took_or_took_in_part(self):
+        """Every job runs on the owner's PC, and GitHub fails a job no runner takes in 24 hours: a
+        job that ended with no runner is the PC off, asleep or busy, not the lane broken."""
+        outcome = lambda jobs, conclusion="failure": dashboard.learn_outcome(
+            {"status": "completed", "conclusion": conclusion}, jobs)
+        never = lambda name: {"name": name, "conclusion": "cancelled", "runner_name": None}
+        took = lambda name, conclusion="success": {"name": name, "conclusion": conclusion,
+                                                   "runner_name": "pc-selfplay-1021011405"}
+        self.assertEqual(outcome([never("plan"), {"name": "retrain, screen, gate",
+                                                  "conclusion": "skipped"}]),
+                         dashboard.LEARN_NO_RUNNER)
+        # The retrain goes on with the shards that finished; with none, the shards step stops it.
+        none_finished = [took("plan"), took("export / plan the shards"),
+                         never("export / shard from 1"), never("export / shard from 5001"),
+                         {**took("retrain, screen, gate", "failure"), "steps": [
+                             {"name": "the export's shards", "conclusion": "failure"}]}]
+        self.assertEqual(outcome(none_finished), dashboard.LEARN_NO_RUNNER)
+        none_finished[2] = took("export / shard from 1", "failure")
+        self.assertEqual(outcome(none_finished), "❌ the export failed")
+        # Some shards lost, the rest retrained on: the run reads as the retrain ended.
+        some = self.retrain(fit="success", gate="skipped")
+        some[1:1] = [never("export / shard from 5001"), took("export / shard from 1")]
+        self.assertEqual(outcome(some, "cancelled"), "screened out")
+        self.assertEqual(outcome([took("plan"), {"name": "retrain, screen, gate",
+                                                 "conclusion": "skipped"}], "cancelled"),
+                         "⏹️ cancelled")
 
     def test_the_next_run_is_the_next_monday_at_0623_utc(self):
         wednesday = NIGHT  # 2026-09-30 03:00 UTC

@@ -2,7 +2,7 @@
   "repo": "Jlore-Studios/JackiOh",
   "image": "jackioh-pc-runner:latest",
   "serve": [
-    { "label": "jackioh-selfplay-local", "workflows": ["selfplay.yml"], "standby": true },
+    { "label": "jackioh-selfplay-local", "workflows": ["learn.yml", "selfplay.yml"], "standby": true },
     { "label": "night-vm-devin", "workflows": ["bot-night.yml", "triage.yml"], "home": "jackioh-pc-home-devin" },
     { "label": "night-vm-muse", "workflows": ["bot-night.yml", "triage.yml"], "home": "jackioh-pc-home-muse" },
     { "label": "night-vm-gpt", "workflows": ["bot-night.yml", "triage.yml"], "home": "jackioh-pc-home-gpt", "seccompUnconfined": true },

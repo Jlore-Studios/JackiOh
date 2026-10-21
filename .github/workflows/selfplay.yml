@@ -14,12 +14,15 @@
 # dispatch plays the same games on any runner, and its shards' files together are the games one
 # machine would have played. A base naming a training gate's hold-out deals or the dev set is refused
 # by `selfplay` itself (R1006002). On GitHub's runners each shard keeps well under the 6-hour job
-# limit (about 1,500 games an hour on four vCPUs); the local runner (`jackioh-selfplay-local`,
-# bot/machine/README.md, The local runner) runs its shards one after another for as long as it
-# needs. The export is slow on purpose, and ci-duration.yml does not watch it.
+# limit (about 1,500 games an hour on four vCPUs). On the local runner (`jackioh-selfplay-local`,
+# bot/machine/README.md, The local runner) every job runs there, the plan, the build and the count
+# too, and its shards run one after another (`max-parallel` 1: one is queued at a time, since a job no
+# runner takes in 24 hours fails), each for as long as it needs (about 2,500 games an hour on six
+# CPUs). The export is slow on purpose, and ci-duration.yml does not watch it.
 #
 # The learn lane (learn.yml, #1012) calls it as a reusable workflow (`workflow_call`, the same inputs,
-# `count` off: its retrain folds the positions itself), and its artifacts are that run's.
+# `count` off: its retrain folds the positions itself) on the local runner, and its artifacts are that
+# run's.
 name: selfplay
 
 on:
@@ -82,7 +85,7 @@ permissions:
 jobs:
   plan:
     name: plan the shards
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     timeout-minutes: 5
     outputs:
       shards: ${{ steps.split.outputs.shards }}
@@ -114,8 +117,9 @@ jobs:
 
   build:
     name: release build
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: ${{ inputs.runner }}
+    # The local runner builds with no cache of its own, and at half a CPU while the PC is busy.
+    timeout-minutes: ${{ inputs.runner == 'ubuntu-latest' && 30 || 720 }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -142,8 +146,10 @@ jobs:
     strategy:
       fail-fast: false
       # GitHub's free plan runs 20 hosted jobs at once for the whole organization: an export takes
-      # at most 12 of them, so CI and the bots' pull requests keep 8 while it plays.
-      max-parallel: 12
+      # at most 12 of them, so CI and the bots' pull requests keep 8 while it plays. The local runner
+      # takes one job at a time, so its shards are queued one at a time: queued together, the last
+      # would wait past the 24 hours GitHub lets a job wait for a self-hosted runner.
+      max-parallel: ${{ inputs.runner == 'ubuntu-latest' && 12 || 1 }}
       matrix:
         range: ${{ fromJSON(needs.plan.outputs.shards) }}
     steps:
@@ -184,8 +190,8 @@ jobs:
     needs: shard
     # A caller may leave the counts to its own positions pass.
     if: ${{ inputs.count }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: ${{ inputs.runner == 'ubuntu-latest' && 120 || 720 }}
     steps:
       - uses: actions/download-artifact@v4
         with:

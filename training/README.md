@@ -373,8 +373,10 @@ R1006003). An export is dispatched, never played on the training box, whose two 
 runner=jackioh-selfplay-local]` plays it in shards on GitHub's runners (free for this public
 repository, about 1,500 games an hour each, at most 12 at once so that CI keeps 8 of the
 organization's 20 hosted jobs: 100,000 games in 20 shards take two rounds, about seven hours) or on
-the local runner (`bot/machine/README.md`, The local
-runner), and keeps each shard's log file as an artifact for up to 90 days. Its last job runs
+the local runner (`bot/machine/README.md`, The local runner: one shard at a time, about 2,500 games
+an hour, so about 40 hours of an idle PC), and keeps each shard's log file as an artifact for up to
+90 days. The learn lane's own exports play on the local runner alone, as every job of the lane does
+([`learn.md`](learn.md), How it runs). Its last job runs
 `positions` over the whole export and writes the counts (games, positions, games that no longer
 replay) and the games an hour to the run's summary. The same base and game numbers always play the
 same games, so an export can be played again on any runner, and a base never names a gate's

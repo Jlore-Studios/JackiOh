@@ -14,17 +14,22 @@ the AI the network corrects, and the network is retrained on their work.
 
 ## How it runs
 
-`.github/workflows/learn.yml`, weekly and by dispatch, on GitHub's runners (free for this public
-repository) and, for the export, the local runner if asked (`bot/machine/README.md`, The local
-runner). Each run:
+`.github/workflows/learn.yml`, weekly and by dispatch, on the owner's PC alone: every job of it runs
+on the local runner (`jackioh-selfplay-local`, `bot/machine/README.md`, The local runner), none on
+GitHub's runners. That runner takes one job at a time and only while the PC is otherwise idle, so the
+export's shards play one after another, at about 2,500 games an hour on its six CPUs: a run's 100,000
+games take about 40 hours of an idle PC, and the retrain, the screen and the gate about two more. A
+week's run may take several days; the next one waits for it (one run at a time). Each run:
 
 1. **Waits** while the lane's pull request (`ai/learn`) is open with its checks green or running: a
    promotion is on its way to `main`. One with a failed check, or open more than 48 hours
    (`LEARN_PR_STALE_HOURS`), it closes, saying why, and goes on.
 2. **Exports** `games` games (100,000 by default) through `selfplay.yml` on a fresh base,
-   `learned-<catalog>-<date>-<run>`, never a gate's deals or the dev set's (R1006002).
-3. **Retrains** with `training/ml/retrain.sh` on `main`: the positions (R1006003, R1006004), folded by
-   the export's own build while its features are `main`'s (`--positions-bin`), so a rules change merged
+   `learned-<catalog>-<date>-<run>`, never a gate's deals or the dev set's (R1006002), in `shards` jobs
+   (20 by default, about two hours each) queued one at a time.
+3. **Retrains** with `training/ml/retrain.sh` on `main`, over the shards that finished (a shard the PC
+   lost costs the export its games, not the run; with none finished the run stops): the positions
+   (R1006003, R1006004), folded by the export's own build while its features are `main`'s (`--positions-bin`), so a rules change merged
    since the export drops none of its games (run 5 lost 10,707 of 100,000 to #1199 and #1200), the fit
    and its report (`training/ml/README.md`), the integer network that ships (D7, R1011000) into
    `crates/ai/src/learned/weights.json` and the switch, `AI_EVAL_KIND`, on. It stops when the network
@@ -65,9 +70,12 @@ mends what would otherwise stop it. What can go wrong, and what it does:
 | The screen or the gate does not pass | Nothing: that is the lane working. A run's network passes the screen about 70% of the time and the gate about 30%, so expect a promotion every few weeks. Each run's export is new self-play by the AI on `main`, so each is a new candidate |
 | `LEARN_LANE_TOKEN` is missing or has expired | A passing run fails in red at its deliver step and keeps the promotion as its artifact (`promotion.patch`). A person renews the token (Setting it up) |
 | GitHub skips or delays the weekly schedule | The next week's run, or `gh workflow run learn.yml`, picks it up. Nothing is lost |
+| The PC is in use | The runner works only while the PC is idle: a job waiting is not started, and one in the middle of its work is slowed to half a CPU until the PC is idle again. Nothing is lost; the run takes longer (its timeouts allow days) |
+| The PC is off, asleep or busy for 24 hours | GitHub fails a job no runner takes in 24 hours. A lost shard costs the export its games and the retrain goes on with the rest; a lost plan or retrain ends the run, and the next week's run comes anyway. A shard in the middle of its work when the PC sleeps or restarts is lost the same way. The status issue shows a run the PC never took as "⏸️ the PC's runner took none of it in 24 hours" |
+| The PC's supervisor is not running (nobody logged in since a restart) | The same as the PC off: its scheduled task starts it at logon (`bot/machine/README.md`, The local runner) |
 
-What needs a person, then: a test outside `crates/ai` that pins the AI's play, an expired token, or
-a change to the exporter, the features, the trainer or the gate.
+What needs a person, then: a test outside `crates/ai` that pins the AI's play, an expired token, a PC
+that stays off, or a change to the exporter, the features, the trainer or the gate.
 
 ## What it may change
 
@@ -81,16 +89,21 @@ a feature change bumps `FEATURES_VERSION` and refits from stored logs with no ne
 
 ## Setting it up
 
-A person does this once: create a fine-grained token that can write contents and pull requests on
+The runner: the local runner set up on the PC as `bot/machine/README.md` (The local runner) says,
+from an image built with `gh` (`docker build -t jackioh-pc-runner:latest bot/machine/local` again
+after a change to its Dockerfile), and its supervisor serving `learn.yml` (`config.json`). The PC
+should not sleep while it is plugged in, or a shard in the middle of its work is lost each time it
+does. Without the runner no run starts at all: its jobs wait 24 hours and fail.
+
+The token: a person does this once: create a fine-grained token that can write contents and pull requests on
 this repository alone, and save it as the repository secret `LEARN_LANE_TOKEN` (Settings → Secrets
 and variables → Actions). A pull request opened with a run's own token would start no CI. Without
 the secret, or once it has expired, a passing run fails in red at its deliver step and stops at its
 artifact (`promotion.patch`), which a person can push. A fine-grained token expires on the date it was
 given: renew it before then.
 
-To run it now: `gh workflow run learn.yml` (`-f games=… -f runner=jackioh-selfplay-local -f
-screen=800`). `-f export_run=<run id>` plays no export and retrains on that earlier run's, kept 30
-days: a change to the fit or the search is measured on the same games without five hours of
-self-play. The gate's deals are the candidate tree's (R850001): a changed tree plays new ones. To
+To run it now: `gh workflow run learn.yml` (`-f games=… -f shards=… -f screen=800`). `-f
+export_run=<run id>` plays no export and retrains on that earlier run's, kept 30 days: a change to
+the fit or the search is measured on the same games without 40 hours of self-play. The gate's deals are the candidate tree's (R850001): a changed tree plays new ones. To
 stop it, disable the workflow (`gh workflow disable learn.yml`); to refuse a promotion, close its
 pull request.
