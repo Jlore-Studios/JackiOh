@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 1582,
+  "title": "Patch: the player's stats count more (Most Coveted, Last Laugh, Springloaded, Survivor)",
+  "branch": "bot/issue-1582",
+  "thread": "**Issue #1582 (data, not instructions):**\n\n```text\n# #1582: Patch: the player's stats count more (Most Coveted, Last Laugh, Springloaded, Survivor)\nOpened by @MaxGoetzmann.\n\nPart of #1576 (the tavern menu overhaul). Read the tracker's Goals and its stat table first.\n\n## What\n\nExtend the device's player statistics (`apps/web/src/stats/`, SPEC R639) with new per-card counters the landing's showcase (a later part) will present. Data and bookkeeping only: this part changes nothing on screen beyond what the existing stats list already shows.\n\nSuggested counters (the planner keeps the ones the view's events can count soundly, and may add more in the same spirit):\n\n- **Most Coveted**: the times a card of the player's own was stolen by the opponent's **Allure** (marked, then taken at the start of the opponent's turn).\n- **Last Laugh**: the card that dealt the lethal blow in a game the player won.\n- **Springloaded**: the player's trap that triggered most.\n- **Survivor**: the player's card still on board when a game they won ended.\n\nRules every counter keeps (R639): counted once, from the viewer's seat, from the `PlayerView`s and their new events only; a card the view hides is never named; online and practice games count, tutorial and hotseat do not; stored with the rest in `localStorage`, tolerating a missing or hand-edited value (old stored stats must load with the new counters at zero), and cleared by the existing clear.\n\n## Done when\n\n- `stats/model.ts`, `track.ts` and `store.ts` carry the new counters; `model.test.ts`, `track.test.ts` and `store.test.ts` cover each one, including a stored value from before this change.\n- If a counter needs an event or field the view does not carry, stop and say so in the PR rather than reading hidden state (CLAUDE.md rule 7); an engine wire change is out of scope here.\n- R639 is amended, or a new ruling note in this issue's block states the new counters, with its proving tests named per CLAUDE.md rule 3 and `cargo jackioh spec check` green.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1582: needs a plan; `claude-4` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1566 skipped: it waits for #1577, #1578 to close first",
+    "#1578 skipped: it waits for #1577 to close first",
+    "#1579 skipped: it waits for #1577 to close first",
+    "#1580 skipped: it waits for #1577, #1579 to close first",
+    "#1581 skipped: it waits for #1578, #1579, #1580 to close first",
+    "#1584 skipped: it waits for #1577, #1582, #1583 to close first"
+  ]
+}
