@@ -482,13 +482,13 @@ jobs:
           PARENT: ${{ steps.stage1.outputs.parent }}
         run: |
           set -uo pipefail
-          parent=()
+          parent_bin=()
           if [ "$PARENT" = true ]; then
             mkdir -p "$RUNNER_TEMP/base-jackioh"
             tar -xzf "$RUNNER_TEMP/rust-base.tgz" -C "$RUNNER_TEMP/base-jackioh"
-            parent=(--parent-bin "$RUNNER_TEMP/base-jackioh/jackioh")
+            parent_bin=(--parent-bin "$RUNNER_TEMP/base-jackioh/jackioh")
           fi
-          target/release/jackioh classify --base "$BASE" "${parent[@]}" --claims --json > "$RUNNER_TEMP/classify.json"
+          target/release/jackioh classify --base "$BASE" "${parent_bin[@]}" --claims --json > "$RUNNER_TEMP/classify.json"
           status=$?
           cat "$RUNNER_TEMP/classify.json"
           echo "labels=$(jq -c '.labels // []' "$RUNNER_TEMP/classify.json" 2>/dev/null || echo '[]')" >> "$GITHUB_OUTPUT"
