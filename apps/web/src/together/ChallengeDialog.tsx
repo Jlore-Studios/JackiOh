@@ -6,8 +6,12 @@
 //
 // CLAUDE.md rule 7: the picks are the lobby's (`routes/play.tsx`), with no verdict of their own here;
 // whether a deck may be played is the server's, at the room.
+//
+// A modal like the client's others (`game/ConfirmConcede.tsx`, #1569): the focus moves to the checked
+// mode when it opens, Tab and Shift+Tab stay inside, Escape closes it wherever the focus is, and the
+// caller gives the focus back to the Challenge button that opened it (`TogetherRoute.tsx`).
 
-import { useEffect, useId, useState, type FormEvent, type ReactElement } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactElement } from "react";
 
 import { DECK_SIZE } from "@jackioh/engine/config";
 
@@ -23,6 +27,16 @@ import { challengeModeTestid, togetherTestid } from "./testids.ts";
 import { CHALLENGE_MODES, MODE_WORDS, Named } from "./words.tsx";
 
 type Saved = { decks: readonly SavedDeck[]; trios: readonly SavedTrio[] };
+
+/** What Tab may land on in the dialog. */
+const TAB_STOPS = "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled])";
+
+/** The dialog's tab stops in order; the mode group is one stop, its checked radio, as the browser's own Tab takes it. */
+function tabStops(dialog: HTMLElement): HTMLElement[] {
+  return [...dialog.querySelectorAll<HTMLElement>(TAB_STOPS)].filter(
+    (element) => !(element instanceof HTMLInputElement && element.type === "radio" && !element.checked),
+  );
+}
 
 /** The first complete deck, else the first; as the lobby picks one with nothing remembered. */
 function firstDeck(decks: readonly SavedDeck[]): SavedDeck | null {
@@ -65,6 +79,42 @@ export function ChallengeDialog({
   const [trioId, setTrioId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dialog = useRef<HTMLFormElement>(null);
+
+  // Keyboard and screen-reader users start inside the dialog, on the mode it opens with.
+  useEffect(() => {
+    const form = dialog.current;
+    if (form !== null) tabStops(form)[0]?.focus({ preventScroll: true });
+  }, []);
+
+  // Both keys are read at the window, in the capture phase, so they hold wherever the focus is (a
+  // click on the dialog's text or the dimmed page takes it off the controls): Escape closes, and Tab
+  // and Shift+Tab step through the dialog's stops, wrapping, never onto the page behind the scrim.
+  useEffect(() => {
+    function onKey(event: globalThis.KeyboardEvent): void {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const form = dialog.current;
+      if (form === null) return;
+      const order = tabStops(form);
+      if (order.length === 0) return;
+      const focused = document.activeElement;
+      const at = focused instanceof HTMLElement ? order.indexOf(focused) : -1;
+      const next = event.shiftKey ? (at <= 0 ? order.length - 1 : at - 1) : at === order.length - 1 ? 0 : at + 1;
+      event.preventDefault();
+      event.stopPropagation();
+      order[next]?.focus();
+    }
+    window.addEventListener("keydown", onKey, true);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+    };
+  }, [onClose]);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,18 +165,13 @@ export function ChallengeDialog({
       }}
     >
       <form
+        ref={dialog}
         className="lobby-card together-dialog"
         data-testid={togetherTestid.challengeForm}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         onSubmit={send}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            event.stopPropagation();
-            onClose();
-          }
-        }}
       >
         <h2 className="play-panel__heading" id={titleId}>
           <Named text={t("Challenge {name}")} name={friend.username} />

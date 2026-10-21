@@ -822,6 +822,7 @@ export const WATCH_WAITING = "watch-waiting";
 export const WATCH_REFUSED = "watch-refused";
 export const WATCH_STATUS = "watch-status";
 export const WATCH_BACK = "watch-back";
+export const WATCH_RECONNECT = "watch-reconnect";
 
 export const SHARE_FRIEND_OPEN = "share-friend-open";
 /** One per friend: `data-profile-id`, `data-shared`. */
