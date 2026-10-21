@@ -19411,13 +19411,13 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-21T19:10:00Z",
-          "utilization": 0.47
+          "resets_at": "2026-10-22T00:10:00Z",
+          "utilization": 0.0
         },
-        "observed_at": "2026-10-21T17:02:35Z",
+        "observed_at": "2026-10-21T19:14:31Z",
         "seven_day": {
           "resets_at": "2026-10-26T09:00:00Z",
-          "utilization": 0.58
+          "utilization": 0.61
         },
         "status": "allowed_warning"
       }
