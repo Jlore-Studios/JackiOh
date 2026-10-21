@@ -194,9 +194,14 @@ describe("R962000 a sandbox game spawns the custom cards it carries", () => {
     expect(after.view.events.some((event) => event.type === "scriptFailed")).toBe(false);
 
     // Either seat: one spawned into the AI's hand is a card it holds, which it may read (R915007).
+    // With the human's hero at 3, its damage, the card is the AI's win, so any evaluation plays it: a
+    // free 3 to the face alone is a choice one AI makes and the next may not (AI gen 13 held it).
     const ai = opponentOf(HUMAN);
     const given = snapshotOf(await send({ type: "act", action: { type: "sandbox", op: { kind: "spawn", player: ai, defId: BURNER.id, to: { zone: "hand" } } } }));
     expect(given.error).toBeNull();
+    const lethal = snapshotOf(await send({ type: "act", action: { type: "sandbox", op: { kind: "setHero", player: HUMAN, health: 3 } } }));
+    expect(lethal.error).toBeNull();
+    expect(lethal.view.you.hero.health).toBe(3);
     let turn = snapshotOf(await send({ type: "act", action: { type: "endTurn" } }));
     const events = [...turn.view.events];
     for (let step = 0; step < 40 && turn.aiToAct; step += 1) {

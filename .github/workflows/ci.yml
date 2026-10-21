@@ -502,7 +502,9 @@ jobs:
           echo "labelled #$NUMBER: $wanted"
 
   # README §8: a pull request from a training lane's branch (ai/improve, ai/unban) may change only
-  # crates/ai/** and training/history/**, must be exactly one generation on from main, and must pass
+  # crates/ai/** and training/history/**, and the practice game the AI's own moves are recorded in
+  # (crates/server/tests/fixtures/practice-claim.json, R1303002: every AI change plays it differently),
+  # must be exactly one generation on from main, and must pass
   # its lane's promotion gate again here, against main's AI with the same seeds. A lane's own claim is
   # never trusted. Any other pull request skips this job and the `rust` summary accepts the skip, so
   # it needs no required-check name of its own. It plays 200 games, so it may take longer than the
@@ -534,9 +536,10 @@ jobs:
             *) echo "::error::$HEAD_REF is not a training lane's branch (ai/improve, ai/unban or ai/learn)"; exit 1 ;;
           esac
           # --no-renames, so a file moved into crates/ai/ still shows where it came from.
-          outside=$(git diff --no-renames --name-only "$BASE...HEAD" | grep -Ev '^(crates/ai/|training/history/)' || true)
+          outside=$(git diff --no-renames --name-only "$BASE...HEAD" \
+            | grep -Ev '^(crates/ai/|training/history/|crates/server/tests/fixtures/practice-claim\.json$)' || true)
           if [ -n "$outside" ]; then
-            echo "::error::a training lane may change only crates/ai/** and training/history/** (docs/v0.3.0/README.md §8). This branch also changes:"
+            echo "::error::a training lane may change only crates/ai/**, training/history/** and the practice-claim fixture (docs/v0.3.0/README.md §8). This branch also changes:"
             echo "$outside"
             exit 1
           fi
