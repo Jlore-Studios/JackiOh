@@ -110,6 +110,8 @@ export const accountTestid = {
   winRate: "account-win-rate",
   signOut: "account-sign-out",
   error: "account-error",
+  /** #1568: a failed read offers Try again beside the alert. */
+  retry: "account-retry",
   loading: "account-loading",
   redeem: "account-redeem",
   deleteStart: "account-delete",
@@ -254,6 +256,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [rank, setRank] = useState<OwnRankResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [manageOpen, setManageOpen] = useState(false);
   const [devOpen, setDevOpen] = useState(false);
   const [packsOpen, setPacksOpen] = useState(false);
@@ -279,7 +282,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
       cancelled = true;
     };
     // The name too: a rename read back by the gate shows on the rank line at once (R1436).
-  }, [token, pending, username?.name]);
+  }, [token, pending, username?.name, attempt]);
 
   const played = profile === null ? 0 : profile.record.wins + profile.record.losses + profile.record.draws;
 
@@ -294,9 +297,24 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
         <h2>{t("Your account")}</h2>
 
         {error !== null ? (
-          <p className="notice" data-testid={accountTestid.error} role="alert">
-            {t(error)}
-          </p>
+          <>
+            <p className="notice" data-testid={accountTestid.error} role="alert">
+              {t(error)}
+            </p>
+            <div className="row">
+              <button
+                type="button"
+                className="button-primary"
+                data-testid={accountTestid.retry}
+                onClick={() => {
+                  setError(null);
+                  setAttempt((before) => before + 1);
+                }}
+              >
+                {t("Try again")}
+              </button>
+            </div>
+          </>
         ) : null}
 
         {pending && me !== undefined ? (

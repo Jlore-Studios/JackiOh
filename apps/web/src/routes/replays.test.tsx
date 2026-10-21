@@ -592,3 +592,50 @@ describe("R1141000 Open replay JSON", () => {
     vi.restoreAllMocks();
   });
 });
+
+describe("#1568 Try again on /replays", () => {
+  it("#1568 a device list that could not be read offers Try again, which asks a new worker and lists the games", async () => {
+    const saves = await storeWithGame();
+    let made = 0;
+    const broken: PracticeHost = {
+      request: () => Promise.reject(new Error("the practice worker failed")),
+      dispose: () => undefined,
+    };
+    render(
+      <ReplaysRoute
+        hostFactory={() => {
+          made += 1;
+          return made === 1 ? broken : hostOn(saves);
+        }}
+      />,
+    );
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("the practice worker failed");
+    expect(screen.getByTestId(replaysTestid.practiceRetry)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId(replaysTestid.practiceRetry));
+    expect(await screen.findByTestId(replaysTestid.practice(1))).toBeInTheDocument();
+    expect(made).toBe(2);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByTestId(replaysTestid.practiceRetry)).toBeNull();
+  });
+
+  it("#1568 an online list that could not be read offers Try again, which reads it again and lists the games", async () => {
+    signIn();
+    vi.mocked(getReplays)
+      .mockRejectedValueOnce(new ApiUnreachableError(new TypeError("Failed to fetch")))
+      .mockResolvedValueOnce({ replays: [listing()], nextOffset: null });
+    renderRoute(memorySaveStore());
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(API_UNREACHABLE_MESSAGE);
+    expect(screen.getByTestId(replaysTestid.onlineRetry)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId(replaysTestid.onlineRetry));
+    expect(await screen.findByTestId(replaysTestid.online("m-1"))).toBeInTheDocument();
+    expect(getReplays).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByTestId(replaysTestid.onlineRetry)).toBeNull();
+  });
+});

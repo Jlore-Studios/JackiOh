@@ -584,6 +584,24 @@ describe("the lobby's modes", () => {
     // The tiles still say it.
     expect(tileOf("bo1")).toHaveTextContent("Usually under 30 s");
   });
+
+  it("#1568 decks that could not be loaded offer Try again, which reads them again and makes the queue live", async () => {
+    vi.mocked(getDecks).mockRejectedValueOnce(new Error("decks unavailable"));
+    render(<PlayRoute token={TOKEN} />);
+
+    expect(await screen.findByText("Your decks could not be loaded: decks unavailable")).toBeInTheDocument();
+    expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
+    expect(screen.getByTestId(playTestid.decksRetry)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId(playTestid.decksRetry));
+    expect(screen.getByText("Loading your decks…")).toBeInTheDocument();
+    expect(screen.queryByTestId(playTestid.decksRetry)).toBeNull();
+
+    await screen.findByTestId(playTestid.deckSelect);
+    expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(getDecks).toHaveBeenCalledTimes(2);
+  });
 });
 
 // ---------------------------------------------------------------------------------------------
