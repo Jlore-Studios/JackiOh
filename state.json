@@ -8837,6 +8837,8 @@
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-10-21T04:11:55Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "39542666322",
       "self_check_findings": [],
       "started_at": "2026-10-21T04:12:26Z",
