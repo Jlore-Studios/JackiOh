@@ -231,7 +231,8 @@ mod delete_api_account {
     }
 
     /// Duos co-op (#946): a live co-op match is refused as a live 1v1 is, so the teammate's match
-    /// is never cascaded away (migration 0039); once it has ended, the account may go.
+    /// is never taken from under them (R1497000); once it has ended, the account may go and the
+    /// teammate keeps the match with the deleted seat empty.
     #[tokio::test]
     async fn refuses_a_player_in_a_live_co_op_match_with_409_and_deletes_nothing() {
         let setup = setup().await;
@@ -272,6 +273,15 @@ mod delete_api_account {
         tx.commit().await.expect("a commit");
         assert_eq!(remove(app, Some(&setup.token)).await.0, 204);
         assert!(!profile_exists(app, PROFILE).await);
+
+        let mut tx = app.db.begin(None).await.expect("a transaction");
+        let kept = tx
+            .duos_matches_get("duos-live")
+            .await
+            .expect("a read")
+            .expect("the teammate's match stays");
+        tx.commit().await.expect("a commit");
+        assert_eq!((kept.a1.as_str(), kept.a2.as_str()), ("", OTHER));
     }
 
     #[tokio::test]

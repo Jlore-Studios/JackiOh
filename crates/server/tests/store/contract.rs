@@ -8135,9 +8135,12 @@ mod duos {
         assert!(q!(harness, t => t.duos_matches_live()).is_empty());
     }
 
-    /// 0039's cascade (0012's rule): a deleted account takes its rooms and its co-op matches with
-    /// their logs, and nothing of its teammate.
-    async fn s6_a_deleted_profile_takes_its_rooms_and_matches(harness: &StoreHarness) {
+    /// 0039's cascade takes a deleted account's rooms; 0051 empties its seat on a finished co-op
+    /// match, which keeps its result and its log for the teammate, and both stores read the emptied
+    /// seat back as the empty id, as a 1v1 seat reads (R1497000).
+    async fn r1497000_a_deleted_profile_takes_its_rooms_and_empties_its_seat_on_a_finished_match(
+        harness: &StoreHarness,
+    ) {
         let a1 = active_profile(harness, None).await;
         let a2 = active_profile(harness, None).await;
         let now = harness.now();
@@ -8146,13 +8149,59 @@ mod duos {
         let row = duos_match(&a1.id, &a2.id, now);
         q!(harness, t => t.duos_matches_create(&row));
         q!(harness, t => t.duos_actions_append(&logged(&row.id, 1, "n-1", now)));
+        let result = json!({ "outcome": "win", "winner": "a", "reason": "poolEmptied" });
+        assert!(q!(harness, t => t.duos_matches_finish(&row.id, &result, now + 1_000)));
 
         assert!(q!(harness, t => t.profiles_remove(&a2.id)));
         assert!(q!(harness, t => t.duos_rooms_get("DUOSGH")).is_none());
         assert!(q!(harness, t => t.duos_rooms_get("DUOSJK")).is_some());
-        assert!(q!(harness, t => t.duos_matches_get(&row.id)).is_none());
-        assert!(q!(harness, t => t.duos_actions(&row.id)).is_empty());
+        let kept = must(
+            q!(harness, t => t.duos_matches_get(&row.id)),
+            "the finished match stays",
+        );
+        assert_eq!((kept.a1.as_str(), kept.a2.as_str()), (a1.id.as_str(), ""));
+        assert_eq!((kept.ended_at, kept.result), (Some(now + 1_000), Some(result)));
+        assert_eq!(q!(harness, t => t.duos_actions(&row.id)).len(), 1);
         assert!(q!(harness, t => t.profiles_get_by_id(&a1.id)).is_some());
+
+        assert!(q!(harness, t => t.profiles_remove(&a1.id)));
+        let emptied = must(
+            q!(harness, t => t.duos_matches_get(&row.id)),
+            "the match outlives both people",
+        );
+        assert_eq!((emptied.a1.as_str(), emptied.a2.as_str()), ("", ""));
+    }
+
+    /// 0051's check, and the fake's refusal of it: a profile seated in a live co-op match is not
+    /// deleted, from either seat, and the match and its log are left as they were; once the match
+    /// has ended the same delete goes through (R1497000).
+    async fn r1497000_a_profile_seated_in_a_live_co_op_match_is_not_deleted(harness: &StoreHarness) {
+        let a1 = active_profile(harness, None).await;
+        let a2 = active_profile(harness, None).await;
+        let now = harness.now();
+        let row = duos_match(&a1.id, &a2.id, now);
+        q!(harness, t => t.duos_matches_create(&row));
+        q!(harness, t => t.duos_actions_append(&logged(&row.id, 1, "n-1", now)));
+
+        for seated in [&a1, &a2] {
+            assert!(
+                call!(harness, t => t.profiles_remove(&seated.id)).is_err(),
+                "a seat of a live co-op match"
+            );
+            assert!(q!(harness, t => t.profiles_get_by_id(&seated.id)).is_some());
+        }
+        assert_eq!(q!(harness, t => t.duos_matches_get(&row.id)), Some(row.clone()));
+        assert_eq!(q!(harness, t => t.duos_actions(&row.id)).len(), 1);
+        assert_eq!(
+            q!(harness, t => t.duos_matches_live_for(&a2.id)),
+            Some(row.id.clone())
+        );
+
+        let result = json!({ "outcome": "draw", "winner": null, "reason": "turnCap" });
+        assert!(q!(harness, t => t.duos_matches_finish(&row.id, &result, now + 1_000)));
+        assert!(q!(harness, t => t.profiles_remove(&a2.id)));
+        let ended = must(q!(harness, t => t.duos_matches_get(&row.id)), "the match");
+        assert_eq!((ended.a1.as_str(), ended.a2.as_str()), (a1.id.as_str(), ""));
     }
 
     /// §13.9, the retention purge: a co-op match's log goes once the match ended before the cutoff,
@@ -8266,7 +8315,8 @@ mod duos {
         s6_a_block_either_way_defeats_the_claim,
         r1047002_open_co_op_rooms_are_counted_by_host,
         s6_matches_finish_once_and_the_log_is_append_only,
-        s6_a_deleted_profile_takes_its_rooms_and_matches,
+        r1497000_a_deleted_profile_takes_its_rooms_and_empties_its_seat_on_a_finished_match,
+        r1497000_a_profile_seated_in_a_live_co_op_match_is_not_deleted,
         s6_the_purge_takes_the_logs_of_matches_that_ended_before_the_cutoff,
     );
 }
