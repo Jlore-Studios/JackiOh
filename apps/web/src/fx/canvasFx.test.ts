@@ -291,6 +291,48 @@ describe("B41 flashes", () => {
     }
   });
 
+  it("#1447 a burst palette colors the existing flash", () => {
+    const stopsOf = (colors?: readonly string[]): string[] => {
+      const { fx } = setup();
+      const spec = PARTICLE_PRESETS.spark.flash;
+      const ms = spec?.ms ?? 0;
+      fx.flash("spark", { x: 445, y: 263 }, BOX, 24, colors);
+      // The bloom lives as long as its preset says, whatever its colours.
+      stepFor(fx, ms - 10);
+      expect(fx.alive()).toBe(1);
+      const stops: string[] = [];
+      const gradient = { addColorStop: (_offset: number, color: string) => void stops.push(color) };
+      const state: Record<string | symbol, unknown> = { globalAlpha: 1, globalCompositeOperation: "source-over" };
+      const ctx = new Proxy(state, {
+        get: (target, prop) =>
+          prop in target ? target[prop] : typeof prop === "symbol" ? undefined : () => (prop === "createRadialGradient" ? gradient : undefined),
+        set: (target, prop, value) => ((target[prop] = value), true),
+      }) as unknown as CanvasRenderingContext2D;
+      fx.draw(ctx);
+      stepFor(fx, 11);
+      expect(fx.alive()).toBe(0);
+      return stops;
+    };
+
+    // Hot first: the first colour is the core, the last the glow (the halo), the middle one is not used.
+    const tinted = stopsOf(["#102030", "#778899", "#ff00aa"]);
+    expect(tinted[0]).toBe("rgba(16, 32, 48, 1)");
+    expect(tinted.some((c) => c.startsWith("rgba(16, 32, 48"))).toBe(true);
+    expect(tinted.some((c) => c.startsWith("rgba(255, 0, 170"))).toBe(true);
+    expect(tinted.some((c) => c.startsWith("rgba(119, 136, 153"))).toBe(false);
+
+    // One colour is both the core and the glow.
+    const single = stopsOf(["#112233"]);
+    expect(single.every((c) => c.startsWith("rgba(17, 34, 51"))).toBe(true);
+
+    // The preset's own bloom (spark's core #ffffff, glow #ffa347), with no colours or none in the list.
+    expect(PARTICLE_PRESETS.spark.flash).toMatchObject({ core: "#ffffff", color: "#ffa347" });
+    for (const plain of [stopsOf(), stopsOf([])]) {
+      expect(plain[0]).toBe("rgba(255, 255, 255, 1)");
+      expect(plain.some((c) => c.startsWith("rgba(255, 163, 71"))).toBe(true);
+    }
+  });
+
   it("B41 a bigger burst blooms wider, within the clamp", () => {
     const radius = (count: number): number => {
       const { fx } = setup();

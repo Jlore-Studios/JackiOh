@@ -94,9 +94,16 @@ function fakeVisibility() {
   };
 }
 
-/** Records canvas calls without assuming implementation details. */
-function recordingContext(canvas: HTMLCanvasElement): { ctx: CanvasRenderingContext2D; calls: string[] } {
+/** Records canvas calls without assuming implementation details; `fills` and `stops` keep the colours painted (#1447). */
+function recordingContext(canvas: HTMLCanvasElement): {
+  ctx: CanvasRenderingContext2D;
+  calls: string[];
+  fills: unknown[];
+  stops: string[];
+} {
   const calls: string[] = [];
+  const fills: unknown[] = [];
+  const stops: string[] = [];
   const state: Record<string, unknown> = {
     canvas,
     globalAlpha: 1,
@@ -118,7 +125,7 @@ function recordingContext(canvas: HTMLCanvasElement): { ctx: CanvasRenderingCont
     shadowOffsetY: 0,
     imageSmoothingEnabled: true,
   };
-  const gradient = { addColorStop: (): void => undefined };
+  const gradient = { addColorStop: (_offset: number, color: string): void => void stops.push(color) };
   const ctx = new Proxy(state, {
     get(target, key) {
       if (typeof key !== "string") return undefined;
@@ -141,16 +148,17 @@ function recordingContext(canvas: HTMLCanvasElement): { ctx: CanvasRenderingCont
       if (typeof key === "string") {
         target[key] = value;
         calls.push(`set ${key}`);
+        if (key === "fillStyle") fills.push(value);
       }
       return true;
     },
   });
-  return { ctx: ctx as unknown as CanvasRenderingContext2D, calls };
+  return { ctx: ctx as unknown as CanvasRenderingContext2D, calls, fills, stops };
 }
 
 function stubSurface(width = 1280, height = 720) {
   const canvas = document.createElement("canvas");
-  const { ctx, calls } = recordingContext(canvas);
+  const { ctx, calls, fills, stops } = recordingContext(canvas);
   let clears = 0;
   const surface: FxSurface = {
     canvas,
@@ -164,7 +172,7 @@ function stubSurface(width = 1280, height = 720) {
     },
     dispose: () => undefined,
   };
-  return { surface, calls, clears: (): number => clears };
+  return { surface, calls, fills, stops, clears: (): number => clears };
 }
 
 type SinkEntry = { kind: "apply"; offset: FxShakeOffset } | { kind: "clear" };
@@ -827,6 +835,48 @@ describe("B41 — bursts of a flash preset bloom at their origin", () => {
     expect(h.director.particles()).toBe(24);
     h.pumpTo(T0 + flashMs);
     expect(h.director.active()).toBe(0);
+  });
+
+  it("#1447 the director forwards a burst palette to its particles and bloom", () => {
+    const palette = ["#102030", "#778899", "#ff00aa"];
+    const spec = PARTICLE_PRESETS.spark;
+    const flashMs = spec.flash?.ms ?? 0;
+    const play = (colors?: readonly string[]) => {
+      const h = harness();
+      h.director.play([
+        { kind: "burst", preset: "spark", at: at("card-a"), delayMs: 0, count: 24, spread: "point", power: 1, ...(colors === undefined ? {} : { colors }) },
+      ]);
+      h.frame(T0);
+      h.frame(T0 + STEP);
+      const emitted = h.director.particles();
+      h.pumpTo(T0 + flashMs - STEP);
+      const bloomRunning = h.director.active();
+      h.pumpTo(T0 + flashMs);
+      const bloomGone = h.director.active();
+      return { h, emitted, bloomRunning, bloomGone };
+    };
+
+    const plain = play();
+    const tinted = play(palette);
+
+    // The particles are drawn (jsdom gives them no sprites, so as arcs) only in the palette's colours,
+    // and the bloom's gradient takes its first colour as the core and its last as the glow.
+    const particleFills = tinted.h.surface.fills.filter((fill): fill is string => typeof fill === "string");
+    expect(particleFills.length).toBeGreaterThan(0);
+    for (const fill of particleFills) expect(palette).toContain(fill);
+    expect(tinted.h.surface.stops.some((c) => c.startsWith("rgba(16, 32, 48"))).toBe(true);
+    expect(tinted.h.surface.stops.some((c) => c.startsWith("rgba(255, 0, 170"))).toBe(true);
+    expect(tinted.h.surface.stops.some((c) => c.startsWith("rgba(255, 163, 71"))).toBe(false);
+
+    // The preset's own cue is untouched, and the palette changes neither how many nor how long.
+    for (const fill of plain.h.surface.fills.filter((f): f is string => typeof f === "string")) expect(spec.colors).toContain(fill);
+    expect(plain.h.surface.stops.some((c) => c.startsWith("rgba(255, 163, 71"))).toBe(true);
+    expect(tinted.emitted).toBe(24);
+    expect(tinted.emitted).toBe(plain.emitted);
+    expect(tinted.bloomRunning).toBe(plain.bloomRunning);
+    expect(tinted.bloomGone).toBe(plain.bloomGone);
+    expect(tinted.bloomRunning).toBe(1);
+    expect(tinted.bloomGone).toBe(0);
   });
 
   it("B41 a burst of a preset without a flash starts no bloom", () => {
