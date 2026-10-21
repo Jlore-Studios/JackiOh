@@ -8617,6 +8617,9 @@
       "started_at": "2026-10-21T06:33:51Z",
       "stop_requested": false
     },
+    "1505": {
+      "suggestion": true
+    },
     "1506": {
       "asks": [
         "c:6315865754"
