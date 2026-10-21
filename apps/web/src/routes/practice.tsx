@@ -1037,7 +1037,11 @@ function PracticeScreen({
       .then((claim) => api.claim(token, claim))
       .then(
         (answer) => {
-          settleTo(answer.paid ? { kind: "paid", jlore: answer.jlore, xp: answer.xp } : { kind: "refused", reason: answer.reason });
+          settleTo(
+            answer.paid
+              ? { kind: "paid", jlore: answer.jlore, xp: answer.xp, jloreCapped: answer.jloreCapped }
+              : { kind: "refused", reason: answer.reason },
+          );
         },
         () => {
           settleTo({ kind: "unreachable" });

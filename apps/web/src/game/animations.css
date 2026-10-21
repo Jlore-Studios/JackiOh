@@ -1572,6 +1572,17 @@
   margin-top: 12px;
 }
 
+/* A line of news under the ways on (the daily Jlore cap, R1483000): a row of its own, after "View
+   the board", and no button, so the first-way-on rule below passes it by. */
+.result-overlay__note {
+  order: 1;
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--text-dim, #9aa1b8);
+  font-size: 0.9em;
+  text-align: center;
+}
+
 /* A way on can be a block of them rather than one button: the match's rematch offers
    (routes/Rematch.tsx, laid into this row by reveal.css). Its buttons are the panel's buttons. */
 .result-overlay__actions > button,

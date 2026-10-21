@@ -39,7 +39,7 @@ export function seedRequestOf(config: PracticeStartConfig): PracticeSeedRequest 
 /** What the result dialog says about a game on a server seed: checking, paid, refused (and why), or no answer. */
 export type PracticeEarning =
   | { kind: "pending" }
-  | { kind: "paid"; jlore: number; xp: number }
+  | { kind: "paid"; jlore: number; xp: number; jloreCapped: boolean }
   | { kind: "refused"; reason: string }
   | { kind: "unreachable" };
 
@@ -76,8 +76,11 @@ export function earningText(earning: PracticeEarning): string {
   switch (earning.kind) {
     case "pending":
       return t("Checking this game on the server…");
-    case "paid":
-      return t("+{jlore} Jlore, +{xp} XP", { jlore: earning.jlore, xp: earning.xp });
+    case "paid": {
+      const paid = t("+{jlore} Jlore, +{xp} XP", { jlore: earning.jlore, xp: earning.xp });
+      // R1483000: what was paid stays in the line; the cap's holdback follows it.
+      return earning.jloreCapped ? `${paid} · ${t("Daily Jlore reached")}` : paid;
+    }
     case "refused":
       return t("This game earned nothing ({reason}).", { reason: refusalText(earning.reason) });
     case "unreachable":
