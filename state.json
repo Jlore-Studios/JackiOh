@@ -10819,7 +10819,9 @@
     },
     "1575": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6323786237"
+      ],
       "died": 1,
       "difficulty_by": {
         "at": "2026-10-21T23:07:11Z",
@@ -10857,9 +10859,7 @@
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [
-        "c:6323786237"
-      ]
+      "taken_asks": []
     },
     "1577": {
       "action": "build",
