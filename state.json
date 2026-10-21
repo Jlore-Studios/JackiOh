@@ -8860,6 +8860,13 @@
     "1503": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T13:24:32Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "one file in one crate and no engine work, but about 550 changed lines (the easy rule allows 400) and the board-manufacturing design had to be settled"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
