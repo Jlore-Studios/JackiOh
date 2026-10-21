@@ -6,7 +6,8 @@ import type { KeywordKind } from "./KeywordKind";
 /**
  * R1563007: the blocks a `craft` prompt offers, Kazakus style — `CRAFT_OFFER_KEYWORDS` keywords,
  * `CRAFT_OFFER_HATS` hats and `CRAFT_OFFER_VERBS` effect verbs, drawn from the match rng as the
- * prompt opens, among those its frame may take — and the only blocks its answer may use. Scratch
- * Pad's prompt carries none: it codes from the whole palette (R1182002).
+ * prompt opens (the keywords from the whole table, the hats and verbs among those its frame may
+ * take) — and the only blocks its answer may use. Scratch Pad's prompt carries none: it codes from
+ * the whole palette (R1182002).
  */
 export type CraftOffer = { keywords: Array<KeywordKind>, hats: Array<CraftHatKind>, verbs: Array<CraftVerb>, };
