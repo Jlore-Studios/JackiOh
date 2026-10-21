@@ -66,8 +66,7 @@ const TOO_MUCH_MESSAGE: &str = "That is more than this account can hold.";
 /// R1300000: whether `DEV_PROFILE_IDS` lists `profile`; R1310004: or, in end-to-end mode alone, it
 /// is a fixture account marked dev.
 pub fn is_dev(app: &App, profile: &Profile) -> bool {
-    app.env.dev_profile_ids.iter().any(|id| *id == profile.id)
-        || (app.env.e2e && is_e2e_dev(&profile.user_id))
+    app.env.dev_profile_ids.contains(&profile.id) || (app.env.e2e && is_e2e_dev(&profile.user_id))
 }
 
 /// The caller, when it is a dev account; 403 `forbidden` otherwise. Every handler here asks first,

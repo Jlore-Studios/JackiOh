@@ -952,7 +952,7 @@ mod no_payout {
     #[tokio::test]
     async fn r1310000_the_build_turns_the_economy_on() {
         // §14.12: the switch is on in the build, and the app every route reads takes it at boot.
-        assert!(jackioh_server::config::ECONOMY_LIVE);
+        const { assert!(jackioh_server::config::ECONOMY_LIVE) };
         assert!(built_app().await.economy_live);
     }
 

@@ -315,8 +315,8 @@ async fn world(options: WorldOptions) -> World {
     }
 }
 
-/// One client frame, and the actor's queue drained behind it until its reply is in, for up to
-/// `REPLY_WITHIN`.
+/// One client frame, and the actor's queue drained behind it until its reply (the `ack` or `error`
+/// carrying `nonce`) is in, for up to `REPLY_WITHIN`.
 async fn frame(w: &World, socket: &FakeSocket, nonce: &str, body: Value) -> Option<Value> {
     let actor = w
         .app
@@ -333,7 +333,7 @@ async fn frame(w: &World, socket: &FakeSocket, nonce: &str, body: Value) -> Opti
         actor.idle().await;
         let mut replies = socket.of_type("ack");
         replies.extend(socket.of_type("error"));
-        if let Some(reply) = replies.pop() {
+        if let Some(reply) = replies.into_iter().find(|reply| reply["nonce"] == nonce) {
             return Some(reply);
         }
         if Instant::now() >= deadline {
