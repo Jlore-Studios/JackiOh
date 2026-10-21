@@ -344,8 +344,9 @@ three sets minus its own AI's shadow-ban list, and promotes on:
 | improve | ≥ 90 of 100 | ≥ 85 of 100 | — |
 | unban | ≥ 90 of 100 | ≥ 75 of 100 | strictly fewer than the parent's |
 
-**CI re-verifies.** A pull request from an `ai/*` branch may change only `crates/ai/**` and
-`training/history/**`, and its `generation.json` must be `main`'s plus one; the `training-gate` job
+**CI re-verifies.** A pull request from an `ai/*` branch may change only `crates/ai/**`,
+`training/history/**` and the practice game the AI's moves are recorded in,
+`crates/server/tests/fixtures/practice-claim.json` (R1303002), and its `generation.json` must be `main`'s plus one; the `training-gate` job
 builds `main`'s binary and the branch's and re-runs `promote --lane <lane>` with the same seeds. A
 lane's own claim is never trusted. Branch protection's "require branches to be up to date" makes a
 lane whose parent moved re-run.

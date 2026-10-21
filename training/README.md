@@ -173,8 +173,15 @@ the latest pass, and its comments say what happened:
 
 ## What a lane may change
 
-Only `crates/ai/**` and `training/history/**`. A pull request from an `ai/*` branch that touches
-anything else is refused by CI, and so is one whose `crates/ai/generation.json` is not `main`'s
+Only `crates/ai/**` and `training/history/**`, and one file outside them:
+`crates/server/tests/fixtures/practice-claim.json`, a practice game whose AI moves the server's test
+re-runs move for move (R1303002). Every AI change plays it differently, so a promotion records it
+again once its gate passes (`JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run
+src/practice/claim.test.ts`, after `sh scripts/build-wasm.sh`) and commits it with `generation.json`.
+The learn lane's workflow does it itself; the improve and unban lanes' loop does not yet, so their
+promotion fails CI's `rust` and `web` on it until someone records it on the branch. A pull request
+from an `ai/*` branch that touches anything else is refused by CI, and so is one whose
+`crates/ai/generation.json` is not `main`'s
 plus one (part 30's `training-gate` job). That job builds `main`'s `jackioh` and the branch's, and
 runs `promote --lane <lane> --verify` again on the same seeds: a lane's own claim is never trusted.
 Branch protection's "require branches to be up to date" holds a promotion whose `main` moved on
