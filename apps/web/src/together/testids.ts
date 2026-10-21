@@ -93,6 +93,8 @@ export const watchTestid = {
   refused: "watch-refused",
   status: "watch-status",
   back: "watch-back",
+  /** #1570: "Reconnect now", once the screen's own reopens have run out on a game still running. */
+  reconnect: "watch-reconnect",
 } as const;
 
 export const shareTestid = {
