@@ -9054,6 +9054,13 @@
     "1493": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T05:08:07Z",
+        "difficulty": "medium",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "The code change is local to the web app and unit-testable, but the request is visual polish, which the rating rule always makes medium."
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "gpt",
