@@ -9272,9 +9272,12 @@
         "sha": "38dabb5743e03e67f437ca1b7a512a1702027c5f"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-21T04:43:11Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1441,
       "kind": "review",
       "pending_request": false,
