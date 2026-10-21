@@ -63,11 +63,11 @@ jobs:
           LIMIT: ${{ inputs.limit }}
         run: |
           set -euo pipefail
-          write=()
+          write_flag=()
           if [ "$WRITE" = true ]; then
-            write=(--write)
+            write_flag=(--write)
           fi
-          python3 -m harness.titles retcon "${write[@]}" --numbers "$NUMBERS" --limit "${LIMIT:-0}" --csv "$RUNNER_TEMP/title-retcon.csv"
+          python3 -m harness.titles retcon "${write_flag[@]}" --numbers "$NUMBERS" --limit "${LIMIT:-0}" --csv "$RUNNER_TEMP/title-retcon.csv"
           echo "----- title-retcon.csv -----"
           cat "$RUNNER_TEMP/title-retcon.csv"
       - uses: actions/upload-artifact@v4

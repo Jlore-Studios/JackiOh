@@ -3,7 +3,7 @@
 //! of either team may be refused, no AI action may come off a fallback path (#1385) and no AI seat's
 //! search may catch a panic (#1429); a failure names each such game's seed, which
 //! `duos_gate_game(n, "gate")` replays. It plays whole Duos
-//! games, so it runs in `ai_slow_b.rs` rather than the `ai` binary.
+//! games, so it runs in `ai_slow.rs` rather than the `ai` binary, and daily (`#[ignore]`).
 
 use jackioh_ai::{
     AI_GATE_BUDGET, DUOS_GATE_GAMES_SMOKE, DUOS_GATE_WIN_FLOOR, DuosGateGame, SearchBudget, duos_gate_game,
@@ -13,6 +13,7 @@ use jackioh_ai::{
 use super::support::register_cards;
 
 #[test]
+#[ignore = "daily: twenty whole Duos games; duos.rs's tests hold the AI's Duos seats per pull request"]
 fn b32_the_easy_ai_team_beats_a_random_policy_team_in_at_least_the_floor_of_the_smoke_games() {
     register_cards();
     let played: Vec<DuosGateGame> = (1..=DUOS_GATE_GAMES_SMOKE)

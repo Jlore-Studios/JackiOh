@@ -7,6 +7,10 @@
 // in support/axe-exceptions.ts, and on a listed one that no longer fires. One more test plays a card
 // by keyboard alone, since drag to play has no keyboard path and click-click is the one that must.
 //
+// #1561 added the routes that came after #757 (`/creator`, `/replays`, `/together`, `/collection`)
+// and runs every route again at BUILD M5-T1's phone size, 390x844, whose labels end in " (phone)" so
+// an exception in axe-exceptions.ts holds at one width only.
+//
 // Daily only: the super run plays every spec file, while a pull request's `e2e smoke` plays only
 // SMOKE in scripts/shard-specs.mjs, which does not hold 38. Networked: the signed-in routes need
 // `E2E=1 cargo run --release -p jackioh-server`. Every wait is a retried DOM assertion.
@@ -20,11 +24,17 @@ import { allCardIds } from "../../support/cards.ts";
 import { accounts, constants, routes, seedFor, timeouts } from "../../support/config.ts";
 import {
   BOARD,
+  CARD_POOL,
+  COLLECTION_SCREEN,
+  CREATOR_SCREEN,
   GAME,
   PLAY_QUEUE,
   PRACTICE_HUD,
+  REPLAYS_ROOT,
+  TOGETHER_ROOT,
   WORKSHOP,
   cardId,
+  deckRowId,
   handCardId,
   promptOf,
   ts,
@@ -36,6 +46,15 @@ import type { ActionBody, Lane } from "../../support/types.ts";
 const BOOT_TIMEOUT = 60_000;
 
 const SEED = seedFor("38-accessibility");
+
+/**
+ * BUILD M5-T1's two sizes: the Cypress config's 1280x720, whose labels are the routes as #757 named
+ * them, and the phone's 390x844, whose labels say so.
+ */
+const VIEWPORTS = [
+  { label: "desktop", width: 1280, height: 720, suffix: "" },
+  { label: "phone", width: 390, height: 844, suffix: " (phone)" },
+] as const;
 
 /** The screens whose testids live in their route's component file, which this project does not type-check. */
 const SCREEN = {
@@ -90,122 +109,156 @@ function checkSignedIn(route: string, account: ReturnType<typeof accounts.p1>, p
 }
 
 describe("38 — axe finds no serious or critical violation on any route (issue #757)", () => {
-  describe("public pages", () => {
-    it("/", () => {
-      cy.visit("/");
-      cy.get(ts(landingTestid.root), { timeout: timeouts.view }).should("be.visible");
-      // The fan's cards are dealt in (R704): checked once every one is drawn, so the check sees them.
-      cy.get(`${ts(landingTestid.fan)} .landing-fan-card--face`, { timeout: timeouts.view }).should(($cards) => {
-        expect($cards.length, "the fan holds its cards").to.be.greaterThan(0);
-        for (const card of $cards.toArray()) expect(getComputedStyle(card).opacity, "a dealt card").to.eq("1");
+  for (const viewport of VIEWPORTS) {
+    /** The label `route` has in axe-exceptions.ts at this width. */
+    const at = (route: string): string => route + viewport.suffix;
+
+    describe(`${viewport.label}, ${String(viewport.width)}x${String(viewport.height)}`, () => {
+      beforeEach(() => {
+        cy.viewport(viewport.width, viewport.height);
       });
-      expectNoBlockingViolations("/");
-    });
 
-    it("/login, signing in", () => {
-      checkPublic("/login", routes.login(), loginTestid.form);
-    });
+      describe("public pages", () => {
+        it("/", () => {
+          cy.visit("/");
+          cy.get(ts(landingTestid.root), { timeout: timeouts.view }).should("be.visible");
+          // The fan's cards are dealt in (R704): checked once every one is drawn, so the check sees them.
+          cy.get(`${ts(landingTestid.fan)} .landing-fan-card--face`, { timeout: timeouts.view }).should(($cards) => {
+            expect($cards.length, "the fan holds its cards").to.be.greaterThan(0);
+            for (const card of $cards.toArray()) expect(getComputedStyle(card).opacity, "a dealt card").to.eq("1");
+          });
+          expectNoBlockingViolations(at("/"));
+        });
 
-    it("/login, creating an account (the age screen and the terms box)", () => {
-      cy.visit(routes.login());
-      cy.get(ts(loginTestid.mode), { timeout: timeouts.view }).click();
-      cy.get(ts(loginTestid.form)).should("have.attr", "data-mode", "signUp");
-      cy.get(ts(consentTestid.birthYear)).should("be.visible");
-      expectNoBlockingViolations("/login sign-up");
-    });
+        it("/login, signing in", () => {
+          checkPublic(at("/login"), routes.login(), loginTestid.form);
+        });
 
-    it("/reset-password", () => {
-      checkPublic("/reset-password", "/reset-password", resetTestid.screen);
-    });
+        it("/login, creating an account (the age screen and the terms box)", () => {
+          cy.visit(routes.login());
+          cy.get(ts(loginTestid.mode), { timeout: timeouts.view }).click();
+          cy.get(ts(loginTestid.form)).should("have.attr", "data-mode", "signUp");
+          cy.get(ts(consentTestid.birthYear)).should("be.visible");
+          expectNoBlockingViolations(at("/login sign-up"));
+        });
 
-    it("/almanac", () => {
-      checkPublic("/almanac", "/almanac", SCREEN.almanac);
-    });
+        it("/reset-password", () => {
+          checkPublic(at("/reset-password"), "/reset-password", resetTestid.screen);
+        });
 
-    it("/patch-notes", () => {
-      checkPublic("/patch-notes", "/patch-notes", patchTestid.screen);
-    });
+        it("/almanac", () => {
+          checkPublic(at("/almanac"), "/almanac", SCREEN.almanac);
+        });
 
-    it("/stats", () => {
-      checkPublic("/stats", "/stats", statsTestid.screen);
-    });
+        it("/patch-notes", () => {
+          checkPublic(at("/patch-notes"), "/patch-notes", patchTestid.screen);
+        });
 
-    it("/privacy", () => {
-      checkPublic("/privacy", "/privacy", SCREEN.privacy);
-    });
+        it("/stats", () => {
+          checkPublic(at("/stats"), "/stats", statsTestid.screen);
+        });
 
-    it("/terms", () => {
-      checkPublic("/terms", "/terms", SCREEN.terms);
-    });
+        it("/privacy", () => {
+          checkPublic(at("/privacy"), "/privacy", SCREEN.privacy);
+        });
 
-    it("/accessibility", () => {
-      checkPublic("/accessibility", "/accessibility", SCREEN.accessibility);
-    });
+        it("/terms", () => {
+          checkPublic(at("/terms"), "/terms", SCREEN.terms);
+        });
 
-    it("/copyright", () => {
-      checkPublic("/copyright", "/copyright", SCREEN.copyright);
-    });
-  });
+        it("/accessibility", () => {
+          checkPublic(at("/accessibility"), "/accessibility", SCREEN.accessibility);
+        });
 
-  describe("practice and hotseat, no account", () => {
-    it("/practice setup", () => {
-      checkPublic("/practice", "/practice", practiceTestid.setup);
-    });
+        it("/copyright", () => {
+          checkPublic(at("/copyright"), "/copyright", SCREEN.copyright);
+        });
+      });
 
-    it("/practice board", () => {
-      cy.visit(practiceUrl(SEED));
-      cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("be.visible");
-      cy.get(ts(BOARD), { timeout: BOOT_TIMEOUT }).should("be.visible");
-      // The opening mulligan (R265), whose card options are a prompt's.
-      cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");
-      cy.settled();
-      expectNoBlockingViolations("/practice board");
-    });
+      describe("practice and hotseat, no account", () => {
+        it("/practice setup", () => {
+          checkPublic(at("/practice"), "/practice", practiceTestid.setup);
+        });
 
-    it("hotseat board", () => {
-      cy.seedGame({ seed: SEED, a: "01-aggro-a", b: "01-aggro-b" });
-      cy.get(ts(GAME), { timeout: timeouts.view }).should("be.visible");
-      cy.settled();
-      expectNoBlockingViolations("hotseat board");
-    });
-  });
+        it("/practice board", () => {
+          cy.visit(practiceUrl(SEED));
+          cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("be.visible");
+          cy.get(ts(BOARD), { timeout: BOOT_TIMEOUT }).should("be.visible");
+          // The opening mulligan (R265), whose card options are a prompt's.
+          cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");
+          cy.settled();
+          expectNoBlockingViolations(at("/practice board"));
+        });
 
-  describe("signed in", () => {
-    beforeEach(() => {
-      cy.freeAccount(accounts.p1());
-    });
+        it("hotseat board", () => {
+          cy.seedGame({ seed: SEED, a: "01-aggro-a", b: "01-aggro-b" });
+          cy.get(ts(GAME), { timeout: timeouts.view }).should("be.visible");
+          cy.settled();
+          expectNoBlockingViolations(at("hotseat board"));
+        });
+      });
 
-    it("/play", () => {
-      checkSignedIn("/play", accounts.p1(), routes.play(), PLAY_QUEUE);
-    });
+      describe("signed in", () => {
+        beforeEach(() => {
+          cy.freeAccount(accounts.p1());
+        });
 
-    it("/decks", () => {
-      // One full deck, whatever specs ran before this one saved: the list's rows and the open deck's
-      // card strips are what this page checks, and the exception for the strips must fire.
-      cy.clearDecks(accounts.p1());
-      cy.saveDeck(accounts.p1(), { name: "Axe", cards: allCardIds().slice(0, constants.DECK_SIZE) });
-      checkSignedIn("/decks", accounts.p1(), routes.deckbuilder(), WORKSHOP);
-    });
+        it("/play", () => {
+          checkSignedIn(at("/play"), accounts.p1(), routes.play(), PLAY_QUEUE);
+        });
 
-    it("/account", () => {
-      checkSignedIn("/account", accounts.p1(), "/account", SCREEN.account);
-    });
+        it("/decks", () => {
+          // One full deck, whatever specs ran before this one saved: the list's rows and the open deck's
+          // card strips are what this page checks, and the exception for the strips must fire.
+          cy.clearDecks(accounts.p1());
+          cy.saveDeck(accounts.p1(), { name: "Axe", cards: allCardIds().slice(0, constants.DECK_SIZE) }).then((deckId) => {
+            cy.visitAs(accounts.p1(), routes.deckbuilder());
+            cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("be.visible");
+            // A phone shows the list alone until a deck is opened (a desktop opens it already), so
+            // its row is pressed, and the pool is checked at both widths.
+            cy.get(ts(deckRowId(deckId))).click();
+            cy.get(ts(CARD_POOL), { timeout: timeouts.view }).should("be.visible");
+            expectNoBlockingViolations(at("/decks"));
+          });
+        });
 
-    it("/leaderboard", () => {
-      checkSignedIn("/leaderboard", accounts.p1(), "/leaderboard", SCREEN.leaderboard);
-    });
+        it("/account", () => {
+          checkSignedIn(at("/account"), accounts.p1(), "/account", SCREEN.account);
+        });
 
-    it("/invite, the code screen", () => {
-      asPending();
-      checkSignedIn("/invite", accounts.p1(), routes.invite(), inviteTestid.input);
-    });
+        it("/leaderboard", () => {
+          checkSignedIn(at("/leaderboard"), accounts.p1(), "/leaderboard", SCREEN.leaderboard);
+        });
 
-    it("/invite, the consent screen (R757000, R757001)", () => {
-      asPending({ ageCheckOwed: true, termsOwed: true });
-      checkSignedIn("/invite consent", accounts.p1(), routes.invite(), consentTestid.prompt);
-      cy.get(ts(consentTestid.birthMonth)).should("be.visible");
+        it("/creator", () => {
+          checkSignedIn(at("/creator"), accounts.p1(), routes.creator(), CREATOR_SCREEN);
+        });
+
+        it("/replays", () => {
+          checkSignedIn(at("/replays"), accounts.p1(), routes.replays(), REPLAYS_ROOT);
+        });
+
+        it("/together", () => {
+          checkSignedIn(at("/together"), accounts.p1(), "/together", TOGETHER_ROOT);
+        });
+
+        it("/collection", () => {
+          checkSignedIn(at("/collection"), accounts.p1(), routes.collection(), COLLECTION_SCREEN);
+        });
+
+        it("/invite, the code screen", () => {
+          asPending();
+          checkSignedIn(at("/invite"), accounts.p1(), routes.invite(), inviteTestid.input);
+        });
+
+        it("/invite, the consent screen (R757000, R757001)", () => {
+          asPending({ ageCheckOwed: true, termsOwed: true });
+          checkSignedIn(at("/invite consent"), accounts.p1(), routes.invite(), consentTestid.prompt);
+          cy.get(ts(consentTestid.birthMonth)).should("be.visible");
+        });
+      });
     });
-  });
+  }
 
   describe("keyboard alone", () => {
     it("Enter on a legal hand card and then on a legal zone plays the card there", () => {

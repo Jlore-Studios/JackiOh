@@ -7,8 +7,8 @@
 //! The soft reset pulls every rated player's hidden rating `SEASON_RESET_STRENGTH` of the way toward
 //! the mean of those players' ratings and widens each deviation by `SEASON_RESET_DEVIATION_BOOST` in
 //! quadrature, capped at a new player's deviation; volatility is kept. The season's ladder starts
-//! empty, so everyone is a Raisin again. Bots are not reset: their ratings measure a fixed program,
-//! not a player coming back from a break (R610).
+//! empty, so everyone is a Raisin again. Bots are not reset: their ratings measure a program, not a
+//! player coming back from a break (R610); a new AI widens a bot's deviation instead (R1560000).
 //!
 //! Pure: `src/api/ranked.rs` reads the players, calls `soft_reset`, and writes the result and the
 //! season row in one transaction; `src/cli/season_start.rs` runs the same path against a database

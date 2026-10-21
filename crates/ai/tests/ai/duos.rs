@@ -1,7 +1,7 @@
 //! Duos co-op's AI seats (#936, B26–B31): `duos_decide` answers a seat's mulligan and prompts with
 //! the 1v1 `decide`, plays its own turn with it, makes the passes `duos_passes` names before it ends
 //! that turn, owes nothing off its turn, and reads only its own team's knowledge. B32's gate plays
-//! whole games, so it runs in `ai_slow_b.rs` (`duos_gate.rs`).
+//! whole games, so it runs in `ai_slow.rs` (`duos_gate.rs`).
 //!
 //! States come from the testkit's `duos_scenario` (round 1 open, A1 and A2 to act) or from
 //! `duos_create` + `duos_begin` (the four mulligans open). Where a test needs exact costs it then sets
