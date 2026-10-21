@@ -1373,6 +1373,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "daily: eight full-skill games; r747000_a_mid_skill_game_reproduces_and_replays holds an arena game's replay per pull request"]
     fn two_self_agents_over_four_games_are_deterministic() {
         jackioh_cards::register_all();
         let a = self_entrant();

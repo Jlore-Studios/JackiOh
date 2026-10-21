@@ -31,7 +31,7 @@ use crate::db::store::{
     BotRating, Pilot, Profile, ProfileKind, RatedGameKind, RatedGameRow, RatedReason, RatedSide, Season,
     SeasonStanding, StoreError, Tx,
 };
-use crate::ranked::glicko2::{Glicko, START_GLICKO, rate_game};
+use crate::ranked::glicko2::{Glicko, START_GLICKO, rate_game, widen_for_promotions};
 use crate::ranked::ladder::{
     self, ApplyRankedGameInput, GRAPE_TIERS, GrapeTier, PeakBadge, RankTier, SeasonRank, Standing,
     VisibleRank, VisibleRankWire, apply_ranked_game, fresh_rank, jlorious_order, peak_badge, percentile_of,
@@ -274,6 +274,22 @@ struct Before {
     games: i64,
 }
 
+/// R1560000: the AI generation this build plays its ladder bots on (`crates/ai/generation.json`).
+fn ai_generation() -> Option<i64> {
+    jackioh_ai::ai_generation().map(i64::from)
+}
+
+/// R1560000: the AI promotions a bot's row has not been rated under: the generations since the one it
+/// names, or one for a row that names none (not rated since R1560000). None when the build names no
+/// generation.
+fn promotions_since(rated_on: Option<i64>) -> i64 {
+    match (ai_generation(), rated_on) {
+        (None, _) => 0,
+        (Some(_), None) => 1,
+        (Some(now), Some(then)) => now - then,
+    }
+}
+
 async fn before_of(
     t: &mut Tx<'_>,
     profiles: &[Profile],
@@ -284,8 +300,9 @@ async fn before_of(
         RankedSideInput::Bot { bot_id } => {
             let bot = t.ranked_bot(bot_id).await?;
             Ok(match bot {
+                // R1560000: a bot last rated on an older AI is rated from a widened deviation.
                 Some(bot) => Before {
-                    glicko: bot.glicko,
+                    glicko: widen_for_promotions(&bot.glicko, promotions_since(bot.ai_generation)),
                     games: bot.games,
                 },
                 None => Before {
@@ -586,6 +603,7 @@ pub async fn commit_ranked_game(t: &mut Tx<'_>, plan: &RankedPlan, at: i64) -> R
                     glicko: write.glicko,
                     games: write.games as _,
                     updated_at: at,
+                    ai_generation: ai_generation(),
                 })
                 .await?
             }

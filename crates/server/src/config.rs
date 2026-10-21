@@ -1197,6 +1197,11 @@ pub const BOT_CALIBRATION_MAX_ACTIONS: usize = 3000;
 /// "Activate N" with each use, so the AI went on using it. Of 100 games sampled, the longest turn took
 /// 20 actions.
 pub const BOT_CALIBRATION_MAX_TURN_ACTIONS: usize = 30;
+/// R1560000: the deviation each AI promotion adds to a ladder bot's rating before its next rated game,
+/// combined in quadrature as R609's `SEASON_RESET_DEVIATION_BOOST` is: `min(√(RD² + n × this²),
+/// RATING_DEVIATION_START)` for n promotions since it was last rated. About one promotion's measured
+/// gain over its parent (generations 10 to 13 gained 35 to 241 Elo), and the season reset's own.
+pub const BOT_PROMOTION_DEVIATION_BOOST: f64 = 150.0;
 
 /// R747000: the Elo the arena's reference, this build's AI at full skill, is held at in
 /// `SKILL_ELO_TABLE`: the 1200 the strongest bot has been seeded at since R1454, not a new player's

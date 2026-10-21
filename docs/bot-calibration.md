@@ -110,7 +110,10 @@ every promotion on a number a lane cannot change.
 
 The seeds are for new bots. A bot already in the pool keeps the rating it has earned, so a
 re-calibration changes the ratings of the bots made after it, and the ceiling only as bots are replaced
-and the live ratings follow the AI.
+and the live ratings follow the AI. They follow it without waiting for a calibration: a bot's first
+rated game on a new AI generation widens its deviation, by `BOT_PROMOTION_DEVIATION_BOOST` per
+promotion and capped at a new player's (R1560000), so its next games against people move its rating
+to the new AI's strength.
 
 ## How calibration differs from live play
 

@@ -1358,6 +1358,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "daily: a gate matchup's smoke games; `gate --full` plays it at full size daily, and b28_b31 keeps a smoke matchup per pull request"]
     fn b29_b31_the_easy_ai_wins_against_the_greedy_baseline_and_every_game_is_clean() {
         smoke_fixture("ai-vs-greedy");
     }
@@ -1376,6 +1377,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "daily: a gate matchup's smoke games; `gate --full` plays it at full size daily, and b28_b31 keeps a smoke matchup per pull request"]
     fn b30_b31_the_hard_ai_wins_against_itself_on_easy_and_every_game_is_clean() {
         smoke_fixture("hard-vs-easy");
     }
