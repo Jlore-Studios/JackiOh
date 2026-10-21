@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import type { Friend, FriendRequest, PlayerRef, SharedReplay } from "../net/social.ts";
 import { must, refusal, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { FRIENDS_POLL_MS } from "./config.ts";
 import { TogetherRoute } from "./TogetherRoute.tsx";
 
 const { App, resetUsernamePromptForTests } = await import("../main.tsx");
@@ -154,6 +155,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   window.localStorage.clear();
@@ -179,6 +181,14 @@ async function renderPage(state: World = world(), special?: (call: Call) => Repl
 
 function rows(): HTMLElement[] {
   return screen.queryAllByTestId(TESTID.friendRow);
+}
+
+/** Advance fake time by `ms`, then let the stubbed round trips and React's updates settle. */
+async function settle(ms = 0): Promise<void> {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(ms);
+    for (let tick = 0; tick < 50; tick += 1) await Promise.resolve();
+  });
 }
 
 function rowOf(friend: PlayerRef): HTMLElement {
@@ -246,7 +256,7 @@ async function expectLeadsTo(control: HTMLElement, path: string): Promise<void> 
 async function clickConfirmed(control: HTMLElement, done: () => boolean): Promise<void> {
   fireEvent.click(control);
   await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
   if (done()) return;
   const dialog = screen.queryByRole("alertdialog") ?? screen.queryByRole("dialog");
@@ -336,6 +346,7 @@ describe("B55 the friends list", () => {
   });
 
   it("B55 a friends list the server refuses to read draws no friend row and no request control", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     signedIn();
     const server = serve(world(), (call) =>
       call.method === "GET" && call.path === "/api/friends" ? refusal(500, "internal", "Something went wrong.") : undefined,
@@ -344,9 +355,8 @@ describe("B55 the friends list", () => {
     await waitFor(() => {
       expect(server.to("GET", "/api/friends").length).toBeGreaterThan(0);
     }, SLOW);
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    });
+    await settle(FRIENDS_POLL_MS + 1);
+    expect(server.to("GET", "/api/friends")).toHaveLength(2);
     expect(rows()).toHaveLength(0);
     expect(screen.queryAllByTestId(TESTID.requestAccept)).toHaveLength(0);
     expect(screen.queryAllByTestId(TESTID.challenge)).toHaveLength(0);
@@ -556,14 +566,14 @@ describe("B56 each friend row's controls", () => {
   });
 
   it("B56 a friend in a match (busy) or offline sends no challenge from its row", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     const server = await renderPage();
     for (const friend of [BOB, CY, DEE]) {
       const control = within(rowOf(friend)).queryByTestId(TESTID.challenge);
       if (control !== null) fireEvent.click(control);
     }
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    });
+    await settle(FRIENDS_POLL_MS + 1);
+    expect(server.to("GET", "/api/friends")).toHaveLength(2);
     expect(server.to("POST", "/api/challenges")).toHaveLength(0);
   });
 });
@@ -604,13 +614,13 @@ describe("B59 Shared with me", () => {
   });
 
   it("B59 with nothing shared, no shared replay is listed and none is asked for", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     const server = await renderPage(world({ ...ONLY_CY, shared: [] }));
     await waitFor(() => {
       expect(server.to("GET", "/api/replays/shared").length).toBeGreaterThan(0);
     }, SLOW);
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    });
+    await settle(FRIENDS_POLL_MS + 1);
+    expect(server.to("GET", "/api/friends")).toHaveLength(2);
     expect(screen.queryAllByText(wholeText("Ann#2"))).toHaveLength(0);
     expect(server.calls.some((call) => call.path.startsWith("/api/replays/m-"))).toBe(false);
   });

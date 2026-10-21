@@ -368,6 +368,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   document.head.querySelector('link[rel="canonical"]')?.remove();
 });
@@ -551,13 +552,23 @@ describe("R654 public statistics route", () => {
         .filter((url) => url.pathname === "/api/stats/players" && url.searchParams.has("search"))
         .map((url) => url.searchParams.get("search"));
     const box = screen.getByPlaceholderText("Search player by username…");
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     for (const text of ["a", "al", "ali", "alic", "alice"]) {
       fireEvent.change(box, { target: { value: text } });
     }
     expect(searched()).toEqual([]);
 
-    await waitFor(() => expect(searched()).toEqual(["alice"]));
-    await act(() => new Promise((resolve) => setTimeout(resolve, PLAYER_SEARCH_DEBOUNCE_MS)));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(PLAYER_SEARCH_DEBOUNCE_MS - 1);
+    });
+    expect(searched()).toEqual([]);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(searched()).toEqual(["alice"]);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(PLAYER_SEARCH_DEBOUNCE_MS + 1);
+    });
     expect(searched()).toEqual(["alice"]);
   });
 

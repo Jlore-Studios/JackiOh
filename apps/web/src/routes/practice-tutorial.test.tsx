@@ -5,7 +5,7 @@
 // the e2e pacing — plus the lesson's coach script, so these tests use a small fake script rather
 // than the real lessons', and the fake host decides the game's outcome.
 
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
@@ -312,17 +312,19 @@ describe("a lesson plays under the tutorial HUD with the coach", () => {
   });
 
   it("a holdAi step holds the AI until Got it", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const host = await startLesson(1, { aiToAct: true });
     await settle();
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      await vi.advanceTimersByTimeAsync(PRACTICE_PACING_FAST.firstActionMs + 1);
     });
     expect(host.requests.some((body) => body.type === "aiStep")).toBe(false);
 
     fireEvent.click(screen.getByTestId(tutorialTestid.coachAck));
-    await waitFor(() => {
-      expect(host.requests.some((body) => body.type === "aiStep")).toBe(true);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(PRACTICE_PACING_FAST.firstActionMs + 1);
     });
+    expect(host.requests.some((body) => body.type === "aiStep")).toBe(true);
   });
 
   it("Exit tutorial asks first mid-lesson; Keep playing stays, Leave goes back to the lesson path", async () => {

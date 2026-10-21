@@ -1,6 +1,6 @@
 // `/decks`: §9.4's gate, its reads, and R256 writes.
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DECK_AUTOSAVE_DEBOUNCE_MS } from "@jackioh/server-config";
@@ -83,6 +83,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.clearAllMocks();
 });
 
@@ -250,6 +251,7 @@ describe("when another account signs in under an open workshop", () => {
   const OTHER_PROFILE = "profile-p2";
 
   it("R256 never sends one profile's unsaved work with the next profile's token, and keeps it on this device", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldAdvanceTime: true });
     vi.mocked(getMe).mockImplementation(async (token) => ({
       ...meBody("active", false),
       profile: { id: token === OTHER_TOKEN ? OTHER_PROFILE : PROFILE, status: "active" },
@@ -276,7 +278,9 @@ describe("when another account signs in under an open workshop", () => {
       },
       { timeout: SWITCH_WAIT_MS },
     );
-    await new Promise((resolve) => setTimeout(resolve, DECK_AUTOSAVE_DEBOUNCE_MS * 2));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DECK_AUTOSAVE_DEBOUNCE_MS + 1);
+    });
 
     const sentAsOther = vi.mocked(putDeck).mock.calls.filter(([token]) => token === OTHER_TOKEN);
     expect(sentAsOther, "the first profile's new deck must not be created in the second's account").toEqual([]);

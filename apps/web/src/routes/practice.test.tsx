@@ -426,6 +426,7 @@ afterEach(() => {
   document.body.removeAttribute("data-showcase");
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  vi.useRealTimers();
   delete window.__jackiohPractice;
   try {
     window.localStorage.clear();
@@ -1046,25 +1047,28 @@ describe("B33 starting renders the game under the practice HUD", () => {
   });
 
   it("R923000 the panel's hold keeps the AI's next step back until it is let go", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const host = routeHost({ aiToAct: true });
     const gap = 200;
     renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
     await settle();
     fireEvent.click(screen.getByTestId(practiceTestid.sandbox));
     fireEvent.click(screen.getByTestId(T.start));
-    await screen.findByTestId(T.hud);
+    await settle();
+    expect(screen.getByTestId(T.hud)).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId(practiceTestid.sandboxHold));
     expect(screen.getByTestId(practiceTestid.sandboxHold)).toBeChecked();
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, gap * 3));
+      await vi.advanceTimersByTimeAsync(gap + 1);
     });
     expect(host.requests.filter((body) => body.type === "aiStep"), "no step while the AI is held").toEqual([]);
 
     fireEvent.click(screen.getByTestId(practiceTestid.sandboxHold));
-    await waitFor(() => {
-      expect(host.requests).toContainEqual({ type: "aiStep" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(gap + 1);
     });
+    expect(host.requests).toContainEqual({ type: "aiStep" });
   });
 
   it("B33 a saved deck chosen in setup travels as that deck's cards", async () => {
@@ -1259,12 +1263,14 @@ describe("B33 starting renders the game under the practice HUD", () => {
   });
 
   it("the AI's next step waits while anything on the board carries data-animating", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     visit("?seed=gate1&difficulty=easy&deck=random&seat=p1");
     const host = routeHost({ aiToAct: true });
     // Let the mark arrive before a step that would otherwise be sent.
     const gap = 400;
     renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
-    await screen.findByTestId(T.hud);
+    await settle();
+    expect(screen.getByTestId(T.hud)).toBeInTheDocument();
 
     // Runner in-flight marker (game/animations.ts).
     const board = screen.getByTestId("game");
@@ -1272,37 +1278,41 @@ describe("B33 starting renders the game under the practice HUD", () => {
     busy.setAttribute("data-animating", "summoned");
     board.appendChild(busy);
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, gap * 2));
+      await vi.advanceTimersByTimeAsync(gap + 1);
     });
     expect(host.requests.filter((body) => body.type === "aiStep"), "no step while the board animates").toEqual([]);
 
     busy.remove();
-    await waitFor(() => {
-      expect(host.requests).toContainEqual({ type: "aiStep" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(gap + 1);
     });
+    expect(host.requests).toContainEqual({ type: "aiStep" });
   });
 
   it("the AI's next step waits while the page marks a voice line with data-speaking", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     visit("?seed=voice1&difficulty=easy&deck=random&seat=p1");
     const host = routeHost({ aiToAct: true });
     const gap = 40;
     // Mark before rendering so the first gap waits.
     document.body.setAttribute("data-speaking", "core-011-play");
     renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
-    await screen.findByTestId(T.hud);
+    await settle();
+    expect(screen.getByTestId(T.hud)).toBeInTheDocument();
 
     // Any element marks an active voice line.
     try {
       await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, gap * 5));
+        await vi.advanceTimersByTimeAsync(gap + 1);
       });
       expect(host.requests.filter((body) => body.type === "aiStep"), "no step while a line plays").toEqual([]);
     } finally {
       document.body.removeAttribute("data-speaking");
     }
-    await waitFor(() => {
-      expect(host.requests).toContainEqual({ type: "aiStep" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(gap + 1);
     });
+    expect(host.requests).toContainEqual({ type: "aiStep" });
   });
 
   it("a voice mark nobody clears holds the AI for PRACTICE_VOICE_HOLD_MAX_MS and no longer", async () => {
@@ -1333,25 +1343,28 @@ describe("B33 starting renders the game under the practice HUD", () => {
   });
 
   it("the AI's next step waits while its last card is held up (data-showcase), and goes once it is down", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     visit("?seed=show1&difficulty=easy&deck=random&seat=p1");
     const host = routeHost({ aiToAct: true });
     const gap = 40;
     // CardShowcase marks a held AI card.
     document.body.setAttribute("data-showcase", "played");
     renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
-    await screen.findByTestId(T.hud);
+    await settle();
+    expect(screen.getByTestId(T.hud)).toBeInTheDocument();
 
     try {
       await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, gap * 5));
+        await vi.advanceTimersByTimeAsync(gap + 1);
       });
       expect(host.requests.filter((body) => body.type === "aiStep"), "no step while the card is held up").toEqual([]);
     } finally {
       document.body.removeAttribute("data-showcase");
     }
-    await waitFor(() => {
-      expect(host.requests).toContainEqual({ type: "aiStep" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(gap + 1);
     });
+    expect(host.requests).toContainEqual({ type: "aiStep" });
   });
 
   it("a showcase mark nobody clears holds the AI for PRACTICE_SHOWCASE_HOLD_MAX_MS and no longer", async () => {
@@ -2372,6 +2385,7 @@ describe("practice plays on the full board, with sound and settings", () => {
   }
 
   it("a line the audio engine is speaking marks the board data-speaking and holds the AI's next step", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const voice = speakingEngine();
     setAudioEngineForTests(voice.engine);
     visit("?seed=voice3&difficulty=easy&deck=random&seat=p1");
@@ -2379,11 +2393,12 @@ describe("practice plays on the full board, with sound and settings", () => {
     const gap = 40;
     voice.say(true);
     renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
-    await screen.findByTestId(T.hud);
+    await settle();
+    expect(screen.getByTestId(T.hud)).toBeInTheDocument();
     expect(screen.getByTestId("game")).toHaveAttribute("data-speaking", "true");
 
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, gap * 5));
+      await vi.advanceTimersByTimeAsync(gap + 1);
     });
     expect(host.requests.filter((body) => body.type === "aiStep"), "no step while the card talks").toEqual([]);
 
@@ -2391,9 +2406,10 @@ describe("practice plays on the full board, with sound and settings", () => {
       voice.say(false);
     });
     expect(screen.getByTestId("game")).not.toHaveAttribute("data-speaking");
-    await waitFor(() => {
-      expect(host.requests).toContainEqual({ type: "aiStep" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(gap + 1);
     });
+    expect(host.requests).toContainEqual({ type: "aiStep" });
   });
 
   it("?pace=fast (e2e) does not wait for voice lines", async () => {
