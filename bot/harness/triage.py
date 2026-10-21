@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping
 
 from harness import config as config_mod
+from harness import titles
 from harness.errors import GitHubError
 from harness.trust import TRUSTED_ASSOCIATIONS, Trust
 
@@ -123,12 +124,15 @@ def pull_title_ok(title: str) -> bool:
 
 def pull_title(chosen: str, issue: str) -> str:
     """The title of the pull request a bot opens for an issue: its builder's when that passes the
-    title check, else the issue's when that does, else the builder's as it is, which the check
-    then flags for a person to retitle."""
+    title check, else the issue's when that does, else the builder's (or the issue's) as
+    `Patch: <what it does>`, an old prefix dropped (`titles.new_title`). A workflow's alert keeps
+    its `CI: …` title so the workflow finds it again (`titles.LEFT_ALONE`); its fix lands as
+    `Patch: …`."""
     for title in (chosen, issue):
         if title.strip() and pull_title_ok(title):
             return " ".join(title.split())
-    return chosen.strip() or issue.strip()
+    text = chosen.strip() or issue.strip()
+    return titles.new_title(text) if text else ""
 
 
 def type_label(title: str) -> str:

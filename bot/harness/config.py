@@ -627,9 +627,10 @@ def companion_env(other: identity_mod.Other, env: Mapping[str, str] | None = Non
 
 
 def github_env() -> dict[str, str]:
-    """The Actions facts a command reads: event name and path, output and summary files, and the
+    """The Actions facts a command reads: event name and path, output and summary files, the
     runner, CLI, secret name and shared flag a night run's model job was given (`PLAN_*`, which
-    `plan-fetch --check` holds to its plan, #1455)."""
+    `plan-fetch --check` holds to its plan, #1455), and the runner's scratch directory, where the
+    status loop delivers a run (`RUNNER_TEMP`, #1537)."""
     keys = ("GITHUB_EVENT_NAME", "GITHUB_EVENT_PATH", "GITHUB_OUTPUT", "GITHUB_STEP_SUMMARY",
-            "PLAN_RUNS_ON", "PLAN_CLI", "PLAN_SECRET", "PLAN_SHARED")
+            "PLAN_RUNS_ON", "PLAN_CLI", "PLAN_SECRET", "PLAN_SHARED", "RUNNER_TEMP")
     return {k: os.environ.get(k, "") for k in keys}

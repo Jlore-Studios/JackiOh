@@ -129,11 +129,11 @@ class NightWorkflowTests(unittest.TestCase):
         self.assertFalse(other.group(1).startswith("Build, check and review"))
         self.assertEqual(work.count("python3 -m harness work --plan"), 2)
 
-    def test_a_run_the_loop_started_skips_gate_and_plan_and_checks_before_any_secret(self):
+    def test_a_run_the_loop_started_skips_gate_plan_and_deliver_and_checks_before_any_secret(self):
         """#1455: bot-status's loop plans, and starts a run with `plan_ref`. The run skips its gate
         (and so its plan job), names the plan and its runner in its title, and its model job holds
         the dispatch's runner, CLI, secret name and shared flag to the plan and providers.json
-        before any step is handed a secret; deliver reads the plan from the state branch."""
+        before any step is handed a secret. #1537: it skips deliver too, which the loop does."""
         self.assertIn("run-name: ${{ inputs.plan_ref && format('bot-night {0} on {1}', "
                       "inputs.plan_ref, inputs.runs_on) || 'bot-night' }}", self.text)
         self.assertIn("if: ${{ !inputs.plan_ref }}", job(self.text, "gate"))
@@ -150,9 +150,10 @@ class NightWorkflowTests(unittest.TestCase):
         self.assertIn('python3 -m harness plan-fetch --ref "$PLAN_REF" --out '
                       '"$RUNNER_TEMP/plan/plan.json" --check', work)
         deliver = job(self.text, "deliver")
-        self.assertIn('python3 -m harness plan-fetch --ref "$PLAN_REF" --out '
-                      '"$RUNNER_TEMP/plan/plan.json"\n', deliver)
-        self.assertEqual(deliver.count("if: ${{ !inputs.plan_ref }}"), 1)  # the plan artifact
+        self.assertIn("if: ${{ always() && !inputs.plan_ref && contains(", deliver)
+        # Only the plan job's artifact is left for it to read.
+        self.assertNotIn("plan-fetch", deliver)
+        self.assertIn("name: plan\n", deliver)
 
     def test_plans_run_one_at_a_time_and_runs_in_parallel(self):
         self.assertNotRegex(self.text, r"^concurrency:", "a workflow-wide group would serialize runs")

@@ -18,8 +18,11 @@
 # starts each bot-night run with its plan made (`--controller`, bot/harness/controller.py), so a run
 # waits in GitHub's queue once, for its model job, not for a gate and a plan job first; while this
 # loop goes, nothing else plans (bot-night's gate defers to it, and the planning lock holds the
-# rest). That needs this job's write grants: the plans go on the state branch, and the runs start
-# from its token.
+# rest). The loop also delivers those runs once they end (#1537): bot-night gives them no deliver
+# job, so each tick, before it plans, the sweep downloads a finished run's `work` upload, clones the
+# default branch into RUNNER_TEMP and delivers it as deliver did (`controller.deliver`). That needs
+# this job's write grants: the plans go on the state branch, the runs start from its token, and a
+# delivery pushes the branch and opens or updates the pull request with the bot's.
 # Each tick also runs Squishy (#60) in a process of its own (`--companions`): its sweep, with
 # Squishy's token, and its section of the status issue, which sits apart from the night bot's.
 # It holds no model secret and runs no model. Cancelling a run by hand stops the loop until the
@@ -49,10 +52,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 345
     permissions:
-      contents: write        # the state file on bot-state keeps the issue's number
+      contents: write        # the state file on bot-state keeps the issue's number; a delivery's push
       issues: write          # the status issue, and the queue it reads and the sweep labels
       pull-requests: write   # the sweep answers and labels pull requests
-      actions: write         # whether runs are alive; start a night run and the next loop
+      actions: write         # whether runs are alive; start a night run and the next loop; a run's upload
     steps:
       - name: Checkout the default branch
         uses: actions/checkout@v4
