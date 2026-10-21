@@ -9085,7 +9085,7 @@
         "tier": "strong",
         "why": "engine rules in crates/engine/src (a dozen lasting-text readers and a Script field on a shared surface) plus two rulings, a golden bless and a classify fix; the rule's hard line for engine rules holds outright"
       },
-      "failures": 2,
+      "failures": 0,
       "forced": false,
       "handoff": {
         "at": "2026-10-21T07:47:53Z",
@@ -9098,15 +9098,18 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-21T07:48:58Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
+      "pr": 1518,
       "provider": "claude-3",
+      "question": "",
       "queued_at": "2026-10-21T05:04:25Z",
       "requested_by": "MaxGoetzmann",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "39564792376",
       "started_at": "2026-10-21T07:51:24Z",
       "stop_requested": false,
@@ -9119,7 +9122,7 @@
       "taken_asks": [
         "c:6308490068"
       ],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "1489": {
       "action": "build",
