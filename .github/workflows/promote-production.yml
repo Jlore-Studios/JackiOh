@@ -1,5 +1,6 @@
-# Merges main into production (Cloudflare) through a pull request, once a day, with a countdown
-# issue anyone can hold or delay. docs/deploy-cloudflare.md is the plan; scripts/promote-production.sh
+# Merges main into production (Cloudflare) through a pull request, once a day, with one countdown
+# issue anyone can hold or delay, which also holds or hurries Vercel's builds of main (staging) and
+# lists what is queued for each. docs/deploy-cloudflare.md is the plan; scripts/promote-production.sh
 # is the logic (read its header first) and apps/web/src/net/promote-production.test.ts holds it.
 #
 # The Worker serves what the `production` branch holds, and nothing else. This workflow is the only
@@ -7,15 +8,20 @@
 # run passed. It never force-pushes: a `production` that carries anything main does not fails the
 # run, loudly, for a human to look at.
 #
-# The open issue labelled `production merge` says "Merging to production in N hours". The check
-# merges when the issue's time has passed and nobody has put it on hold. GitHub has not started this
+# The open issue labelled `production merge` says "Merging to production in N hours" and stays open
+# for good: a merge is a comment on it. The check merges when the issue's time has passed and nobody
+# has put it on hold. `/hold vercel`, `/delay vercel 3h`, `/resume vercel` and `/fast-forward vercel`
+# do the same for Vercel, through two tags scripts/vercel-ignore.sh reads at every Vercel build and,
+# for a build now, Vercel's deploy hook (the VERCEL_DEPLOY_HOOK_URL secret). The issue's body shows
+# the queue: every pull request on main not yet live on both, with its CI, read from the runs and from
+# the deployments Vercel's GitHub app reports (hence `deployments: read`). GitHub has not started this
 # repository's scheduled runs at all (CLAUDE.md, the night bot), so the check never rests on the
 # cron: every green CI run on main runs it too, and main moves many times a day.
 #
 # Four ways in:
 #   schedule           every hour, at minute 7 (the top of the hour is where GitHub's queue is longest),
 #                      if GitHub starts it: read the new comments, merge if due and not on hold, then
-#                      close the issue with the pull request and open the next.
+#                      say so on the issue and count down to the next. It also ends a Vercel delay.
 #   issue_comment      a /hold, /resume, /delay or /fast-forward on the countdown issue, from someone GitHub calls an
 #                      owner, member or collaborator: the same check, so the answer is quick and a
 #                      /resume on an overdue merge goes out at once.
@@ -25,9 +31,10 @@
 #                      on every push, and the bundle compiles the catalog version in
 #                      (crates/cards), so a catalog bump left a day behind would refuse every deck
 #                      save and queue in production (SPEC §9.4, R105).
-#   workflow_dispatch  by hand (Actions -> promote production -> Run workflow): the newest green
-#                      commit, or the `sha` given, which must also be green and on main. A hold does
-#                      not stop it.
+#   workflow_dispatch  by hand (Actions -> promote production -> Run workflow): for `target`
+#                      production, the newest green commit, or the `sha` given, which must also be
+#                      green and on main; for vercel, a build of main's newest commit on Vercel now;
+#                      both, both. A hold does not stop it.
 #
 # The promote branch, its pull request and the merge go out with the bot's token (BOT_GITHUB_TOKEN),
 # because GitHub refuses the Actions token any update to production that carries a change to
@@ -63,6 +70,12 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
+      target:
+        description: "What to bring up to date: production (Cloudflare), vercel (staging) or both"
+        type: choice
+        options: [production, vercel, both]
+        required: false
+        default: production
       sha:
         description: "Commit of main to promote (default: the newest one whose CI passed)"
         required: false
@@ -81,6 +94,7 @@ env:
 permissions:
   contents: write
   actions: read
+  deployments: read
   issues: write
   pull-requests: write
 
@@ -128,6 +142,8 @@ jobs:
           EVENT: ${{ github.event_name }}
           RUN_SHA: ${{ github.event.workflow_run.head_sha }}
           INPUT_SHA: ${{ inputs.sha }}
+          INPUT_TARGET: ${{ inputs.target }}
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
         run: bash scripts/promote-production.sh
 
   # What went live, onto the technical log (R1369000). Production's tip is the promotion's merge
