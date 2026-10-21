@@ -7,6 +7,7 @@
 //! - `aim`: the aim arrow it shows before a targeted play or attack (R738, R639000).
 //! - `calibrate`: the strengths' seed ratings, measured (R748000).
 //! - `fallback`: which waiting ticket pairs with a bot, and with which (R1453).
+//! - `names`: its username, drawn as people pick theirs (R1454).
 //! - `pick`: the deck it picks before each game of a Conquest series, and when (R641000).
 //! - `pool`: how many bots there are, who they are and what they play (R1454, R641000).
 //!
@@ -16,6 +17,7 @@
 pub mod aim;
 pub mod calibrate;
 pub mod fallback;
+pub mod names;
 pub mod persona;
 pub mod pick;
 pub mod pool;

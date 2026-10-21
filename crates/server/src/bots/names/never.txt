@@ -1,0 +1,97 @@
+# R1454: the ladder bots' own exclusion list, on top of the shared filter (R1433).
+# An entry matches anywhere in the folded name; a `=word` entry only as a whole token
+# (digits read back both ways, a token without a letter never matched), both folded as
+# R1433 folds. Han entries always match as substrings. A drawn name that matches is drawn
+# again, up to `BOT_NAME_DRAW_ATTEMPTS` times.
+# Hate and extremist references and codes.
+1488
+88
+siegheil
+groyper
+kkk
+wpww
+rahowa
+alqaeda
+taliban
+hezbollah
+swastika
+whitepower
+reich
+=hh
+=heil
+=isis
+=hamas
+=ss
+# Slurs and their soundalikes.
+nigg
+niga
+nigr
+negro
+negrata
+kike
+gook
+chink
+fag
+maricon
+marica
+sudaca
+mayate
+支那
+鬼子
+黑鬼
+棒子
+阿三
+尼哥
+白皮猪
+基佬
+=jap
+=chon
+=puto
+=puta
+=joto
+# Explicit sexual terms.
+hentai
+ecchi
+oppai
+ahegao
+loli
+shota
+pedo
+milf
+nsfw
+onlyfans
+horny
+blowjob
+orgasm
+verga
+rape
+傻逼
+鸡巴
+操你
+草泥马
+=sex
+=anal
+# Names that read aloud as a blocked word.
+hughjass
+mikehunt
+mikeoxlong
+# Self-harm.
+killyourself
+suicide
+selfharm
+=kys
+=kms
+# Real tragedies and their victims.
+holocaust
+auschwitz
+columbine
+sandyhook
+uvalde
+twintowers
+911
+六四
+8964
+# Posing as a person.
+thereal
+official
+=real
