@@ -31,9 +31,10 @@ use jackioh_server::actor::rooms::{e2e_room_seed_count, script_room_codes};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{MAX_SAVED_DECKS, MAX_SAVED_TRIOS, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
-use jackioh_server::db::store::{ChallengeRow, CollectionEntry, Db};
+use jackioh_server::db::store::{ChallengeRow, CollectionEntry};
 
 use crate::support::deps::{TestAppOptions, add_user, call, record_logs, test_app, test_app_with};
+use crate::support::store::{fake, store, to_json, uuid};
 
 const HOST: &str = "host";
 const GUEST: &str = "guest";
@@ -45,32 +46,8 @@ const AT: i64 = 1_700_000_000_000;
 /// test's seed is never another's count.
 static ROOMS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
-macro_rules! store {
-    ($app:expr, $t:ident => $call:expr) => {{
-        let mut $t = $app
-            .db
-            .begin(None)
-            .await
-            .expect("the fake store opens a transaction");
-        let out = $call;
-        $t.commit().await.expect("the fake store commits");
-        out
-    }};
-}
-
 fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-fn to_json<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("a serialisable value")
-}
-
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        _ => panic!("the test app runs on the fake store"),
-    }
 }
 
 async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
@@ -97,11 +74,6 @@ async fn in_match_of(app: &Arc<App>, profile: &str) -> Value {
     let row = store!(app, t => t.profiles_get_by_id(profile).await.expect("profiles.getById"))
         .expect("the profile");
     to_json(&row)["inMatchId"].clone()
-}
-
-/// A client-minted id (R256).
-fn uuid(n: u32) -> String {
-    format!("00000000-0000-4000-8000-{n:012}")
 }
 
 /// Every playable catalog id, in `catalog.json` order.

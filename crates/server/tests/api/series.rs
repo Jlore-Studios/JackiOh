@@ -27,7 +27,6 @@
 
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::{Arc, Mutex as StdMutex, OnceLock};
-use std::time::Duration;
 
 use jackioh_engine::config::DECK_SIZE;
 use jackioh_engine::{GameOverReason, Tag, Winner};
@@ -41,12 +40,13 @@ use jackioh_server::config::{
     SERIES_SWEEP_INTERVAL_SECONDS,
 };
 use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
-use jackioh_server::db::store::{Db, MatchSeat, StoreError};
+use jackioh_server::db::store::{MatchSeat, StoreError};
 use jackioh_server::ranked::glicko2::{Glicko, rate_game};
 use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::support::deps::{call, test_app};
+use crate::support::store::{advance, fake_ref, store};
 
 const ALICE: &str = "profile-alice";
 const BOB: &str = "profile-bob";
@@ -65,18 +65,6 @@ const STRANGER_ACCOUNT: (&str, &str) = ("e2e-pending", "e2e-token-pending");
 // ---------------------------------------------------------------------------
 // The harness's small reads (private copies, CLAUDE.md's fullsend rule 5)
 // ---------------------------------------------------------------------------
-
-/// Every store call in this file: one transaction, committed when the call answers.
-macro_rules! store {
-    ($app:expr, |$t:ident| $call:expr) => {{
-        let mut $t = $app.db.begin(None).await.expect("a store transaction begins");
-        let out = $call
-            .await
-            .expect(concat!("the store answers ", stringify!($call)));
-        $t.commit().await.expect("the store transaction commits");
-        out
-    }};
-}
 
 /// The JSON a row, a view or any port value serialises to (TS's object).
 fn j<T: Serialize>(value: &T) -> Value {
@@ -110,17 +98,9 @@ fn map(array: &Value, f: impl Fn(&Value) -> Value) -> Value {
     )
 }
 
-/// The fake store behind `test_app()`.
-fn fake(app: &App) -> &Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => data,
-        _ => panic!("support::deps::test_app() runs on the fake store"),
-    }
-}
-
 /// One read of the fake's raw tables (TS's `store.tables`), as JSON.
 async fn table(app: &App, read: impl Fn(&FakeData) -> Value) -> Value {
-    let data = fake(app).lock().await;
+    let data = fake_ref(app).lock().await;
     read(&data)
 }
 
@@ -285,7 +265,7 @@ async fn active_profile(
     rating: f64,
 ) -> &'static str {
     let (user_id, token) = account;
-    let _ = fake(app).lock().await.seed_profile(json!({
+    let _ = fake_ref(app).lock().await.seed_profile(json!({
         "id": id,
         "userId": user_id,
         "email": format!("{id}@example.test"),
@@ -299,14 +279,14 @@ async fn harness(ratings: (f64, f64)) -> Harness {
     let (logs, logging) = Logs::capture();
     let app = test_app().await;
     // `test_app()` holds the E2E fixtures (R144); the series' players replace them.
-    fake(&app).lock().await.reset();
+    fake_ref(&app).lock().await.reset();
     // `matches.discardOpen` is a no-op in memory (there are no `open` rows), so record what it is asked.
     let discarded = Arc::new(StdMutex::new(0));
     let fault: Arc<StdMutex<Option<Fault>>> = Arc::new(StdMutex::new(None));
     {
         let discarded = discarded.clone();
         let fault = fault.clone();
-        fake(&app).lock().await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
+        fake_ref(&app).lock().await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
             if method == "matches.discardOpen" {
                 *discarded.lock().expect("the discard count") += 1;
             }
@@ -500,11 +480,6 @@ async fn flush() {
     for _ in 0..20 {
         tokio::task::yield_now().await;
     }
-}
-
-/// TS's `h.deps.timers.advance(ms)`: tokio's paused clock, which the server's clock follows.
-async fn advance(ms: i64) {
-    tokio::time::advance(Duration::from_millis(u64::try_from(ms).unwrap_or(0))).await;
 }
 
 /// Advances the manual clock one sweep interval at a time, letting each sweep finish.
@@ -1229,18 +1204,19 @@ mod r890000_a_seat_taken_mid_start {
     async fn r890000_seat_taken_voids_the_game_and_reports_not_started() {
         let h = harness_at_1000().await;
         // A queue match seats alice between the game's start and its flags.
-        fake(&h.app).lock().await.before_call = Some(Arc::new(|method: &str, tables: &mut FakeTables| {
-            if method == "profiles.setInMatch"
-                && let Some(row) = tables.profiles.iter_mut().find(|row| row.id == ALICE)
-                && row.in_match_id.is_none()
-            {
-                row.in_match_id = Some("r89-elsewhere".to_string());
-            }
-            CallOutcome::Proceed
-        }));
+        fake_ref(&h.app).lock().await.before_call =
+            Some(Arc::new(|method: &str, tables: &mut FakeTables| {
+                if method == "profiles.setInMatch"
+                    && let Some(row) = tables.profiles.iter_mut().find(|row| row.id == ALICE)
+                    && row.in_match_id.is_none()
+                {
+                    row.in_match_id = Some("r89-elsewhere".to_string());
+                }
+                CallOutcome::Proceed
+            }));
 
         pick_both(&h, [0, 0]).await;
-        fake(&h.app).lock().await.before_call = None;
+        fake_ref(&h.app).lock().await.before_call = None;
 
         // A game that never started: no match row, the series still names it, alice keeps the
         // game she found and bob was never seated.

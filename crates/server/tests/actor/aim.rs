@@ -8,7 +8,6 @@
 //! Surface contract: docs/v0.3.0/SURFACE.md §5.1, §8, §11.2.
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use jackioh_engine::{Aim, PlayerId, PlayerView};
 use jackioh_server::actor::match_actor::{MatchActor, aim_is_public};
@@ -22,6 +21,7 @@ use serde_json::{Value, json};
 use crate::support::deps::{TEST_CATALOG_VERSION, test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
+use crate::support::store::sleep_settled;
 
 const MATCH_ID: &str = "match-aim";
 
@@ -43,12 +43,6 @@ async fn settle() {
     for _ in 0..SETTLE_YIELDS {
         tokio::task::yield_now().await;
     }
-}
-
-/// Sleeps on the paused clock, so every timer due by then fires in deadline order, then settles.
-async fn advance(ms: i64) {
-    tokio::time::sleep(Duration::from_millis(u64::try_from(ms.max(0)).unwrap_or(0))).await;
-    settle().await;
 }
 
 /// One client's end of a fake socket (`support::socket`), read as the JSON frames the server sent.
@@ -201,7 +195,7 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
         assert_eq!(h.p1.of_type("view"), Vec::<Value>::new());
         assert_eq!(h.p2.of_type("view"), Vec::<Value>::new());
 
-        advance(aim_interval()).await;
+        sleep_settled(aim_interval()).await;
         h.p1.receive_json(json!({ "type": "aim", "aim": null }));
         h.idle().await;
         assert_eq!(
@@ -273,13 +267,13 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
         h.idle().await;
         assert_eq!(relayed_aims(&h.p2), vec![at_hero()]);
 
-        advance(aim_interval() - 1).await;
+        sleep_settled(aim_interval() - 1).await;
         assert_eq!(relays(&h.p2).len(), 1);
-        advance(1).await;
+        sleep_settled(1).await;
         assert_eq!(relayed_aims(&h.p2), vec![at_hero(), third.clone()]);
 
         // A repeat of what the opponent was last told is not sent again.
-        advance(aim_interval()).await;
+        sleep_settled(aim_interval()).await;
         h.p1.receive_json(json!({ "type": "aim", "aim": third }));
         h.idle().await;
         assert_eq!(relays(&h.p2).len(), 2);
@@ -310,20 +304,20 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
         let from_hand = |player: &str, index: i64| json!({ "source": { "at": "hand", "player": player, "index": index }, "target": { "at": "hero", "player": "p2" } });
         h.p1.receive_json(json!({ "type": "aim", "aim": from_hand("p1", count) }));
         h.idle().await;
-        advance(aim_interval()).await;
+        sleep_settled(aim_interval()).await;
         h.p1.receive_json(json!({ "type": "aim", "aim": from_hand("p2", 0) }));
         h.idle().await;
         // Silently: no relay, no error.
         assert_eq!(relays(&h.p2), Vec::<Value>::new());
         assert_eq!(errors(&h.p1), Vec::<Value>::new());
 
-        advance(aim_interval()).await;
+        sleep_settled(aim_interval()).await;
         h.p1.receive_json(json!({ "type": "aim", "aim": from_hand("p1", count - 1) }));
         h.idle().await;
         assert_eq!(relayed_aims(&h.p2), vec![from_hand("p1", count - 1)]);
 
         // An aim dropped while an arrow is up clears that arrow instead of leaving it standing.
-        advance(aim_interval()).await;
+        sleep_settled(aim_interval()).await;
         h.p1.receive_json(json!({ "type": "aim", "aim": from_hand("p1", count) }));
         h.idle().await;
         assert_eq!(relayed_aims(&h.p2), vec![from_hand("p1", count - 1), Value::Null]);
