@@ -8879,6 +8879,13 @@
     "1504": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T13:24:23Z",
+        "difficulty": "medium",
+        "provider": "claude-2",
+        "tier": "strong",
+        "why": "Rule line 8 fails: the plan replaces the issue's design (a code_blocks.rs test plus fixing the cards that fail it) because the spec freezes loc, and a person may weigh the frozen scope or Mind Games' loc 0"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
