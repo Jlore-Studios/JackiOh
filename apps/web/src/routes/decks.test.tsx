@@ -15,7 +15,7 @@ import {
 import { mirrorKey } from "../game/deckbuilder/sync.ts";
 import { DECKBUILDER_RETRY, poolCardId } from "../game/deckbuilder/testids.ts";
 import { decksResponse, savedDeck, savedTrio } from "../game/deckbuilder/testkit.ts";
-import { ApiRequestError, getCollection, getDecks, getMe, putDeck } from "../net/api.ts";
+import { ApiRequestError, getCollection, getDecks, getMe, putDeck, type DecksResponse } from "../net/api.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import DecksRoute from "./decks.tsx";
 import { navTestid } from "./nav.tsx";
@@ -211,6 +211,34 @@ describe("what the screen opens with", () => {
       expect(screen.getByTestId("workshop")).toBeInTheDocument();
     });
     expect(getDecks).toHaveBeenCalledTimes(2);
+  });
+
+  it("#1524 the loading screens offer Back and no settings gear, so a dialog opened there cannot close when the decks arrive", async () => {
+    let land: (body: DecksResponse) => void = () => undefined;
+    vi.mocked(getDecks).mockReturnValue(
+      new Promise<DecksResponse>((resolve) => {
+        land = resolve;
+      }),
+    );
+    render(<DecksRoute />);
+    expect(screen.getByTestId("deckbuilder-loading")).toBeInTheDocument();
+    expect(screen.queryByTestId("settings-open-nav"), "while the account is read").toBeNull();
+
+    await waitFor(() => {
+      expect(getDecks).toHaveBeenCalledWith(TOKEN);
+    });
+    expect(screen.getByTestId("deckbuilder-loading")).toBeInTheDocument();
+    expect(screen.getByTestId(navTestid.back)).toBeInTheDocument();
+    expect(screen.queryByTestId("settings-open-nav"), "while the decks are read").toBeNull();
+
+    await act(async () => {
+      land(decksResponse([], [], catalog.version));
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("workshop")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("settings-open-nav"), "the workshop's own gear").toBeInTheDocument();
   });
 });
 

@@ -13,7 +13,7 @@ import json
 import sys
 
 LIVE_OLD_GAMES = 16
-OLD_PATCH = "v0.3.0"
+OLD_PATCH = "v0.2.5e"
 NEW_PATCH = "v0.2.5f"
 
 
