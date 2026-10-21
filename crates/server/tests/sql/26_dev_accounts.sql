@@ -23,7 +23,10 @@ begin
 end $$;
 rollback;
 
-\echo '=== R1300001: a new catalog version grants everyone but the dev accounts it is handed ==='
+\echo '=== R1300001: since going live (R1310001) a new catalog version grants nobody, dev account or not ==='
+-- R1300001's pass-over is moot since 0048 dropped the stamp's grant: no account is granted a new
+-- version's cards, so what a dev account cleared (R1300000) stays cleared whether or not the stamp
+-- is handed the dev accounts. The activation grant (R111) treats a dev account like anyone.
 begin;
 do $$
 declare
@@ -31,6 +34,7 @@ declare
   dev_id  constant uuid := 'd0000000-0000-4000-8000-000000001300';
   player  constant uuid := 'd0000000-0000-4000-8000-000000001301';
   bot     constant uuid := 'd0000000-0000-4000-8000-000000001302';
+  before_grants bigint;
   n       int;
 begin
   -- A dev account and a player, both active under the old version, and a ladder bot (R1454).
@@ -39,13 +43,18 @@ begin
   insert into auth.users (id, email, email_confirmed_at) values (player, 'player@example.test', now());
   update public.profiles set status = 'active', activated_at = now() where id = player;
   insert into public.profiles (id, kind, status) values (bot, 'bot', 'active');
-  -- Vacuity guard: R111's activation granted the dev account like anyone (0046 leaves it as it was).
+  -- Vacuity guard: R111's activation granted the dev account its starter cards like anyone.
   if not exists (select 1 from public.collection_grants where profile_id = dev_id and reason = 'launch') then
-    raise exception 'FAIL (R1300001): activation granted the dev account nothing, so a pass-over proves nothing';
+    raise exception 'FAIL (R1300001): activation granted the dev account nothing, unlike anyone else';
   end if;
+  select count(*) into before_grants from public.collection_grants;
 
-  -- db:seed-catalog's order: the dev accounts for this transaction, every row of the new version,
-  -- then the stamp.
+  -- The new card is a starter card, so a grant on the stamp would have had it to give.
+  update app.settings set value = app.setting('starter_cards') || '["classic-001"]'::jsonb
+   where key = 'starter_cards';
+
+  -- db:seed-catalog's order as it was: the dev accounts for this transaction, every row of the new
+  -- version, then the stamp.
   perform set_config('jackioh.dev_profile_ids', dev_id::text, true);
   update public.cards set catalog_version = 'r1300001-v2' where catalog_version = app.catalog_version();
   insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost, catalog_version)
@@ -53,34 +62,24 @@ begin
           'r1300001-v2');
   update app.settings set value = to_jsonb('r1300001-v2'::text) where key = 'catalog_version';
 
-  select count(*) into n from public.collection_grants
-   where profile_id = player and card_id = 'classic-001' and reason = 'launch' and ref = 'launch:r1300001-v2';
-  if n <> 1 then
-    raise exception 'FAIL (R1300001): the player holds % launch grant(s) of the new card, expected 1', n;
-  end if;
-  select count(*) into n from public.collection_grants
-   where profile_id = p1 and card_id = 'classic-001' and reason = 'launch' and ref = 'launch:r1300001-v2';
-  if n <> 1 then
-    raise exception 'FAIL (R1300001): profile 1 holds % launch grant(s) of the new card, expected 1', n;
-  end if;
-  select count(*) into n from public.collection_grants where profile_id = dev_id and card_id = 'classic-001';
-  if n <> 0 then
-    raise exception 'FAIL (R1300001): the dev account was granted the new card % time(s)', n;
-  end if;
-  if exists (select 1 from public.collection_grants where profile_id = bot) then
-    raise exception 'FAIL (R1454): the stamp granted the ladder bot cards';
-  end if;
-
-  -- A stamp handed no dev accounts grants everyone, the dev account included.
+  -- And a stamp handed no dev accounts.
   perform set_config('jackioh.dev_profile_ids', '', true);
   update public.cards set catalog_version = 'r1300001-v3' where catalog_version = 'r1300001-v2';
   update app.settings set value = to_jsonb('r1300001-v3'::text) where key = 'catalog_version';
+
   select count(*) into n from public.collection_grants
-   where profile_id = dev_id and card_id = 'classic-001' and reason = 'launch' and ref = 'launch:r1300001-v3';
-  if n <> 1 then
-    raise exception 'FAIL (R1300001): a stamp handed no dev accounts granted the dev account the new card % time(s), expected 1', n;
+   where card_id = 'classic-001' and profile_id in (player, p1, dev_id, bot);
+  if n <> 0 then
+    raise exception 'FAIL (R1300001): the stamps granted the new card % time(s) to the player, profile 1 or the dev account', n;
   end if;
-  raise notice 'OK (R1300001): the stamp passed over the dev account it was handed and granted everyone else; a stamp handed none grants it too';
+  select count(*) into n from public.collection_grants;
+  if n <> before_grants then
+    raise exception 'FAIL (R1310001): % collection grants after the stamps, expected the % before them', n, before_grants;
+  end if;
+  if exists (select 1 from public.collection_grants where profile_id = bot) then
+    raise exception 'FAIL (R1454): the ladder bot holds collection grants';
+  end if;
+  raise notice 'OK (R1300001): no stamp granted anyone the new card, the dev account included, whether it was handed the dev accounts or not';
 end $$;
 rollback;
 

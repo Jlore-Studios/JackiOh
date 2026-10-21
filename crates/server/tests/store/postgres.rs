@@ -15,6 +15,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::Poll;
 
+use jackioh_server::config::STARTER_CARDS;
 use jackioh_server::db::store::{Db, MatchActionRow};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -45,6 +46,14 @@ const DECK_SIZE: usize = 20;
 
 fn playable_ids() -> Vec<String> {
     (1..=PLAYABLE_COUNT).map(|i| format!("core-{i:03}")).collect()
+}
+
+/// R1310000: how many of the fixture cards are starter cards, what R111's launch grant gives.
+fn starter_count() -> usize {
+    playable_ids()
+        .iter()
+        .filter(|id| STARTER_CARDS.contains(&id.as_str()))
+        .count()
 }
 
 /// §9.4 L3: "no Token-tagged cards" — here so the R111 launch grant can be seen skipping them.
@@ -196,6 +205,7 @@ async fn setup() -> Option<Ctx> {
     let admin = PgPool::connect(&url).await.expect("the admin connection");
     sqlx::raw_sql(TRUNCATE).execute(&admin).await.expect("truncate");
     seed_cards(&admin).await;
+    crate::store::contract::seed_starter_cards(&admin).await;
     sqlx::raw_sql(PROBE_SETUP)
         .execute(&admin)
         .await
@@ -464,7 +474,8 @@ mod triggers_the_application_never_sees {
 
         let owned =
             once!(ctx.db, Some(user_id.as_str()), |tx| tx.collection_get(&user_id)).expect("collection.get");
-        assert_eq!(owned.len(), PLAYABLE_COUNT);
+        // R1310000: the starter cards among the fixture's.
+        assert_eq!(owned.len(), starter_count());
 
         let rows = sqlx::query(
             "select count(*)::text as n, min(reason) as reason
@@ -478,7 +489,7 @@ mod triggers_the_application_never_sees {
         let reason: String = rows[0].try_get("reason").expect("reason");
         let n: String = rows[0].try_get("n").expect("n");
         assert_eq!(reason, "launch");
-        assert_eq!(n.parse::<usize>().expect("a count"), PLAYABLE_COUNT);
+        assert_eq!(n.parse::<usize>().expect("a count"), starter_count());
         ctx.finish().await;
     }
 }
@@ -523,10 +534,11 @@ mod app_redeem_invite_code {
             code_by_hash(&ctx.db, &hash_of(&code)).await["uses"].as_i64(),
             Some(1)
         );
-        // §9.4 step 4, and R111's trigger on the way past: both ledgers were written too.
+        // §9.4 step 4, and R111's trigger on the way past: both ledgers were written too, the
+        // starter cards (R1310000).
         let owned =
             once!(ctx.db, Some(user_id.as_str()), |tx| tx.collection_get(&user_id)).expect("collection.get");
-        assert_eq!(owned.len(), PLAYABLE_COUNT);
+        assert_eq!(owned.len(), starter_count());
         ctx.finish().await;
     }
 

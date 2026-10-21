@@ -32,7 +32,8 @@ use crate::db::store::{StoreError, StoreResult, Tx};
 // ---------------------------------------------------------------------------
 
 /// Why a Jlore row was written (§14.11; `jlore_grants.reason`): a game's, a quest's or a track
-/// level's pay (§14.7–§14.9), a pack bought (§14.3), or a dev account's own grant or clear (§14.10).
+/// level's pay (§14.7–§14.9), a pack bought (§14.3), a dev account's own grant or clear (§14.10),
+/// or the launch's reset (§14.12).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum JloreReason {
@@ -41,11 +42,14 @@ pub enum JloreReason {
     Track,
     PackPurchase,
     Dev,
+    /// Migration 0048's reset of every existing account's economy (R1310002); no server path
+    /// writes it.
+    Launch,
 }
 
 /// Why a row of every other economy ledger was written (§14.11): the Jlore reasons, and a pack
-/// opened (§14.3), a token bar paying (§14.5), a token redeemed (§14.5) and the Chase Shard bar
-/// buying (§14.6).
+/// opened (§14.3), a token bar paying (§14.5), a token redeemed (§14.5), the Chase Shard bar
+/// buying (§14.6) and the launch's reset (§14.12).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum EconomyReason {
@@ -58,6 +62,9 @@ pub enum EconomyReason {
     TokenRedeem,
     ChaseShard,
     Dev,
+    /// Migration 0048's reset of every existing account's economy (R1310002); no server path
+    /// writes it.
+    Launch,
 }
 
 /// What an inventory row counts (§14.3, §14.5, §14.6). A set's card pack is keyed by its set, the

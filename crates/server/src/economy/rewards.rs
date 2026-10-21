@@ -24,8 +24,14 @@
 //!   `SET_TRACK_LEVELS`, and XP past it lands but reaches no level ([`track_level`], [[R1302005]]).
 //!   [`pay_xp`] is that payout, and a completed quest's XP goes through it too.
 //!
+//! - A new account starts with its tracks' first rewards (§14.12, [[R1310000]]):
+//!   [`pay_starting_rewards`] pays the newest set's track its first level when the account's
+//!   redemption makes it active, the only track active from the start; an older set's pays its
+//!   first level when it unlocks, as above.
+//!
 //! Nothing here checks `ECONOMY_LIVE` (§14.12): a caller pays only while it is on, so a build
-//! behind the switch changes nothing a player owns. `api::results` is that caller on the ladder.
+//! behind the switch changes nothing a player owns. `api::results` is that caller on the ladder,
+//! and `api::codes`'s redemption for the starting rewards.
 //!
 //! Every number is read through its [`crate::config`] constant (CLAUDE.md rule 9).
 
@@ -182,6 +188,49 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
     )
     .await?;
     move_quests(tx, summary).await
+}
+
+/// What the starting rewards' rows name as their `reference` ([`pay_starting_rewards`]).
+pub const STARTING_REWARDS_REFERENCE: &str = "signup";
+
+/// A new account's tracks' first rewards (§14.12, [[R1310000]]), in the caller's transaction: the
+/// newest set's track, active from the start, is marked paid through its first level
+/// (`SET_TRACK_FIRST_LEVEL`) and that level's [`reward_for_level`] is paid, as a payout reaching
+/// it would. A track already paid through its first level writes nothing, so it pays once.
+pub async fn pay_starting_rewards(tx: &mut Tx<'_>, profile_id: &str, at: i64) -> StoreResult<()> {
+    // [[R1301003]]: the account's economy lock, as every payout takes.
+    tx.economy_lock_account(profile_id).await?;
+    let newest = newest_shipped_set();
+    let claimed = tx
+        .economy_tracks_get(profile_id)
+        .await?
+        .into_iter()
+        .find(|track| track.set_id == newest.as_str())
+        .map_or(0, |track| track.rewards_claimed);
+    if claimed >= SET_TRACK_FIRST_LEVEL {
+        return Ok(());
+    }
+    tx.economy_tracks_grant(&TrackGrant {
+        profile_id: profile_id.to_string(),
+        set_id: newest.as_str().to_string(),
+        xp: 0,
+        levels: 0,
+        rewards: SET_TRACK_FIRST_LEVEL - claimed,
+        reason: EconomyReason::Track,
+        reference: Some(STARTING_REWARDS_REFERENCE.to_string()),
+        dev: false,
+        at,
+    })
+    .await?;
+    let payout = XpPayout {
+        profile_id,
+        xp: 0,
+        reason: EconomyReason::Track,
+        reference: STARTING_REWARDS_REFERENCE,
+        dev: false,
+        at,
+    };
+    pay_level_rewards(tx, &payout, &newest, claimed, SET_TRACK_FIRST_LEVEL).await
 }
 
 /// Pays `payout.xp` XP onto every active set track in the caller's transaction, each newly reached

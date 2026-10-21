@@ -42,9 +42,10 @@
 //!    grow-only merge and one game record per id (R250, R252, R263, R320, R376).
 //!
 //! R111 IS A DATABASE TRIGGER, so it is implemented here rather than in a handler. SPEC §11 R111:
-//! "Becoming `active` grants one copy of every non-token card, written by a trigger on the
-//! `pending → active` transition and idempotent, so a repeated redemption cannot double a
-//! collection." Nothing in application code grants it — `codes.rs` only calls
+//! becoming `active` grants one copy of each starter card (R1310000, `config::STARTER_CARDS`, which
+//! Postgres reads from `app.settings.starter_cards` as `seed-catalog` writes it), "written by a
+//! trigger on the `pending → active` transition and idempotent, so a repeated redemption cannot
+//! double a collection." Nothing in application code grants it — `codes.rs` only calls
 //! `profiles_set_status(profile_id, Active)` — so `profiles_set_status` carries the trigger,
 //! writing both tables exactly as `grant_cards` in `collection.rs` does and reading the same
 //! `LAUNCH_COPIES` and `LAUNCH_GRANT_REASON` so the two can never drift.
@@ -101,8 +102,8 @@ use crate::api::collection::{LAUNCH_COPIES, LAUNCH_GRANT_REASON};
 use crate::config::PersonaName;
 use crate::config::{
     CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_IP_PER_HOUR, CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
-    MIN_ACCOUNT_AGE_YEARS, RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START, TERMS_VERSION,
-    USERNAME_DEFAULT_BASE,
+    MIN_ACCOUNT_AGE_YEARS, RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START, STARTER_CARDS,
+    TERMS_VERSION, USERNAME_DEFAULT_BASE,
 };
 use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult, CollectionEntry,
@@ -819,8 +820,9 @@ fn collection_row<'t>(
         .find(|row| row.profile_id == profile_id && row.card_id == card_id)
 }
 
-/// One copy of every non-token, unbanned card, idempotent. Written as a delta against what the
-/// profile already owns — exactly what `grant_cards` does — so a second `pending → active`
+/// One copy of each non-token, unbanned starter card (R1310000, `STARTER_CARDS`), idempotent.
+/// Written as a delta against what the profile already owns — exactly what `grant_cards` does — so a
+/// second `pending → active`
 /// transition computes zero for everything and writes no row at all: `collection_grants.delta`
 /// carries `check (delta <> 0)` in migration `0002_collection.sql`, and an empty audit row would
 /// be a lie in the ledger. A store built without a catalog (the unit tests') grants nothing.
@@ -834,7 +836,10 @@ fn apply_launch_grant(f: &mut FakeTx<'_>, profile_id: &str) {
     let mut grants: Vec<CollectionGrant> = Vec::new();
 
     for card_id in &catalog.card_ids {
-        if (catalog.is_token)(card_id) || (catalog.is_banned)(card_id) {
+        if (catalog.is_token)(card_id)
+            || (catalog.is_banned)(card_id)
+            || !STARTER_CARDS.contains(&card_id.as_str())
+        {
             continue;
         }
         let owned = collection_row(tables, profile_id, card_id)
