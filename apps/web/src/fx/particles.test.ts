@@ -349,6 +349,60 @@ describe("S5 drawing live particles", () => {
     }
   });
 
+  it("#1447 an emit palette recolors a preset without changing its particle shape", () => {
+    const palette = ["#123456", "#abcdef", "#fedcba"];
+    const plain = createParticleSystem({ capacity: 50, rng: createRng(7), sprites: spriteCache(() => null) });
+    const tinted = createParticleSystem({ capacity: 50, rng: createRng(7), sprites: spriteCache(() => null) });
+    plain.emit("spark", 100, 100, opts(12, "ring"));
+    tinted.emit("spark", 100, 100, { ...opts(12, "ring"), colors: palette });
+    plain.step(16);
+    tinted.step(16);
+    // The same seed draws the same motion, size and life: only the colours differ.
+    expect(tinted.inspect()).toEqual(plain.inspect());
+
+    const plainDraw = recordingContext();
+    const tintedDraw = recordingContext();
+    plain.draw(plainDraw.ctx, 1);
+    tinted.draw(tintedDraw.ctx, 1);
+
+    const fillsOf = (calls: readonly DrawCall[]) => calls.filter((c) => c.name === "fill").map((c) => c.fillStyle);
+    expect(fillsOf(tintedDraw.calls)).toHaveLength(12);
+    for (const fill of fillsOf(tintedDraw.calls)) expect(palette).toContain(fill);
+    for (const fill of fillsOf(plainDraw.calls)) expect(PARTICLE_PRESETS.spark.colors).toContain(fill);
+
+    const get = vi.fn<SpriteCache["get"]>(() => null);
+    const sprited = createParticleSystem({ capacity: 50, rng: createRng(7), sprites: spriteCache(get) });
+    sprited.emit("spark", 100, 100, { ...opts(12, "ring"), colors: palette });
+    sprited.emit("spark", 100, 100, opts(4));
+    sprited.draw(recordingContext().ctx, 2);
+    const [named, preset] = [get.mock.calls.filter((c) => c[3] !== undefined), get.mock.calls.filter((c) => c[3] === undefined)];
+    expect(named.length).toBeGreaterThan(0);
+    for (const [name, colorIndex, dpr, colors] of named) {
+      expect(name).toBe("spark");
+      expect(colorIndex).toBeLessThan(palette.length);
+      expect(dpr).toBe(2);
+      expect(colors).toBe(palette);
+    }
+    expect(preset.length).toBeGreaterThan(0);
+  });
+
+  it("#1447 an empty emit palette keeps the preset's own, and a reused slot forgets the palette it had", () => {
+    const empty = createParticleSystem({ capacity: 10, rng: createRng(2), sprites: spriteCache(() => null) });
+    empty.emit("fire", 50, 50, { ...opts(5), colors: [] });
+    const first = recordingContext();
+    empty.draw(first.ctx, 1);
+    for (const fill of first.calls.filter((c) => c.name === "fill")) expect(PARTICLE_PRESETS.fire.colors).toContain(fill.fillStyle);
+
+    const ps = createParticleSystem({ capacity: 6, rng: createRng(4), sprites: spriteCache(() => null) });
+    ps.emit("fire", 50, 50, { ...opts(6), colors: ["#010203"] });
+    ps.emit("fire", 50, 50, opts(6));
+    const { ctx, calls } = recordingContext();
+    ps.draw(ctx, 1);
+    const fills = calls.filter((c) => c.name === "fill");
+    expect(fills).toHaveLength(6);
+    for (const fill of fills) expect(PARTICLE_PRESETS.fire.colors).toContain(fill.fillStyle);
+  });
+
   it("S5 a pool with nothing alive draws nothing", () => {
     const ps = createParticleSystem({ capacity: 10, rng: createRng(1), sprites: spriteCache(() => null) });
     const { ctx, calls } = recordingContext();
