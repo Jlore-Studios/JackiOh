@@ -325,8 +325,9 @@ sample of All Random. The base build needs the flag, so the first such compariso
   `Promote main to production: N commit(s) up to abc1234` (`scripts/promote-production.sh`), a
   training lane's `AI gen N (improve): …`, `AI gen N (unban): …` or `AI gen N (learn): …`, and GitHub's `Revert "…"` of
   a title that passes. The bots title theirs from the builder's answer when it follows the
-  convention, else from the issue (`triage.pull_title`), and merge by squash, so their branch
-  commits' subjects (`bot: build pass 1 for #85`) never become one on `main`.
+  convention, else from the issue, else as `Patch: <what it does>` with the old prefix dropped,
+  as the fix of a workflow's `CI: …` alert is (`triage.pull_title`), and merge by squash, so
+  their branch commits' subjects (`bot: build pass 1 for #85`) never become one on `main`.
 - **Body.** The template asks for `Closes #n` (a part says `Closes #<part>` and
   `Part of #<tracker>`), what changed, the tests run, the risks, the rulings added or changed and
   what the fragment claims (no version: it is named when it ships), and the gates (CLAUDE.md,
