@@ -1,5 +1,9 @@
 // Tests for the public statistics page (SPEC §9.11, R654).
 
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SHIPPED_SETS } from "@jackioh/shared";
@@ -16,6 +20,7 @@ import StatsRoute from "./stats.tsx";
 const { documentTitleFor } = await import("../main.tsx");
 
 const SLOW = { timeout: 10_000 } as const;
+const HERE = dirname(fileURLToPath(import.meta.url));
 
 const MOCK_CARD_STATS_PROVISIONAL = {
   patch: "0.2.0",
@@ -329,6 +334,11 @@ function requested(pathname: string): URL[] {
     .mocked(fetch)
     .mock.calls.map(([input]) => new URL(String(input), window.location.origin))
     .filter((url) => url.pathname === pathname);
+}
+
+/** A key pressed wherever the focus is: the drill-down reads Escape and Tab at the window (ConfirmConcede.test.tsx). */
+function press(key: string, options: { shiftKey?: boolean } = {}): void {
+  fireEvent.keyDown(document.activeElement ?? document.body, { key, ...options });
 }
 
 beforeEach(() => {
@@ -1193,5 +1203,107 @@ describe("card statistics requests", () => {
       SLOW,
     );
     expect(requested("/api/stats/cards").filter((url) => url.searchParams.get("patch") === "0.1.0")).toHaveLength(1);
+  });
+});
+
+describe("the card drill-down dialog", () => {
+  it("is a modal dialog assistive tech can find, named by its title", async () => {
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    fireEvent.click(screen.getByText("Spark Pup"));
+
+    const dialog = await screen.findByRole("dialog", undefined, SLOW);
+    expect(dialog).toBe(screen.getByTestId(statsTestid.drillDownModal));
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog).toHaveAccessibleName();
+    expect(dialog.closest('[aria-hidden="true"]')).toBeNull();
+  });
+
+  it("takes the focus to Close when it opens, and Escape closes it and gives the focus back to the grid card that opened it", async () => {
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    await user.click(screen.getByTestId(statsTestid.viewGrid));
+    const card = within(screen.getByTestId(statsTestid.cardsGrid)).getByRole("button", { name: "Spark Pup" });
+
+    // A click that leaves the focus where it was, as a click on a button does in Safari.
+    fireEvent.click(card);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByTestId(statsTestid.drillDownClose)).toHaveFocus();
+
+    press("Escape");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(card).toHaveFocus();
+  });
+
+  it("closes on a click on the scrim, never on one inside it, and on Close, each time giving the focus back to the table row", async () => {
+    const { container } = render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const row = screen.getByText("Spark Pup").closest("tr");
+    if (row === null) throw new Error("no row");
+
+    fireEvent.keyDown(row, { key: "Enter" });
+    fireEvent.click(screen.getByRole("dialog"));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    const scrim = container.querySelector(".stats-modal-scrim");
+    if (scrim === null) throw new Error("no scrim");
+    fireEvent.click(scrim);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(row).toHaveFocus();
+
+    fireEvent.click(row);
+    expect(screen.getByTestId(statsTestid.drillDownClose)).toHaveFocus();
+    fireEvent.click(screen.getByTestId(statsTestid.drillDownClose));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(row).toHaveFocus();
+  });
+
+  it("keeps Tab and Shift+Tab between Close and Retry, and brings them back inside from the page behind", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        if (url.pathname === "/api/stats/cards/core-001") {
+          return Promise.resolve(new Response("{}", { status: 500 }));
+        }
+        return Promise.resolve(new Response(JSON.stringify(MOCK_CARD_STATS_PROVISIONAL), { status: 200 }));
+      }),
+    );
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    fireEvent.click(screen.getByText("Spark Pup"));
+    const dialog = screen.getByRole("dialog");
+    const retry = await within(dialog).findByRole("button", { name: "Retry" }, SLOW);
+    const close = screen.getByTestId(statsTestid.drillDownClose);
+    expect(close).toHaveFocus();
+
+    press("Tab");
+    expect(retry).toHaveFocus();
+    press("Tab");
+    expect(close).toHaveFocus();
+    press("Tab", { shiftKey: true });
+    expect(retry).toHaveFocus();
+    press("Tab", { shiftKey: true });
+    expect(close).toHaveFocus();
+
+    const behind = screen.getByTestId(statsTestid.searchInput);
+    behind.focus();
+    press("Tab");
+    expect(close).toHaveFocus();
+    behind.focus();
+    press("Tab", { shiftKey: true });
+    expect(retry).toHaveFocus();
+  });
+});
+
+describe("the drill-down's card preview", () => {
+  // jsdom lays nothing out, so the stylesheet is read: the face is `height: 100%` (cards.css), and a
+  // preview stretched to the details column beside it drew the card tall and thin.
+  it("keeps the face at 5:7 however long the details column runs", () => {
+    const css = readFileSync(resolve(HERE, "stats.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const body = /\.stats-drilldown-body\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(body).toMatch(/align-items:\s*flex-start/);
+    const preview = /\.stats-drilldown-card-preview\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(preview).toMatch(/aspect-ratio:\s*5\s*\/\s*7/);
   });
 });

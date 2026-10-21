@@ -21,8 +21,12 @@ export type CanvasFx = {
   crack(box: FxBox, durationMs: number): void;
   /** An expanding elliptical shock wave about the box (RING.scaleFrom to RING.scaleTo), fading over durationMs. */
   ring(preset: FxPreset, box: FxBox, durationMs: number): void;
-  /** The preset's bloom at `at`, sized against `box` and the burst's `count`; a preset without a flash paints nothing. */
-  flash(preset: FxPreset, at: FxVec, box: FxBox, count: number): void;
+  /**
+   * The preset's bloom at `at`, sized against `box` and the burst's `count`; a preset without a flash paints
+   * nothing. `colors` (#1447, a burst's palette, hot first) gives it the first colour as its core and the last as its
+   * glow; the preset still sets its size and length.
+   */
+  flash(preset: FxPreset, at: FxVec, box: FxBox, count: number, colors?: readonly string[]): void;
   /** `dtMs` (clamped frame time) paces the trail; `ageMs` (real time, default `dtMs`) ages shapes, so a stalled frame never stretches one past its end (R200). */
   step(dtMs: number, ageMs?: number): void;
   draw(ctx: CanvasRenderingContext2D): void;
@@ -466,7 +470,7 @@ export function createCanvasFx(options: { particles: ParticleSystem; rng: FxRng 
       });
     },
 
-    flash(preset, at, box, count) {
+    flash(preset, at, box, count, colors) {
       const spec = PARTICLE_PRESETS[preset].flash;
       if (spec === undefined) return;
       const side = Math.min(box.width, box.height);
@@ -475,7 +479,9 @@ export function createCanvasFx(options: { particles: ParticleSystem; rng: FxRng 
         FLASH.minRadiusPx,
         FLASH.maxRadiusPx,
       );
-      flashes.push({ core: spec.core, color: spec.color, x: at.x, y: at.y, radius, durationMs: spec.ms, elapsed: 0 });
+      const core = colors?.[0] ?? spec.core;
+      const color = colors?.[colors.length - 1] ?? spec.color;
+      flashes.push({ core, color, x: at.x, y: at.y, radius, durationMs: spec.ms, elapsed: 0 });
     },
 
     step(dtMs, ageMs = dtMs) {

@@ -41,7 +41,11 @@ export type FxRayTone = "legendary" | "mythic" | "radiant" | "holy" | "victory";
 export type FxBannerTone = "you" | "opponent" | "muted";
 export type FxOutcome = "victory" | "defeat" | "draw";
 
-/** `scale` multiplies every particle's size, as `power` does its speed. Absent: 1. */
+/**
+ * `scale` multiplies every particle's size, as `power` does its speed. Absent: 1. `colors` (#1447) is a palette
+ * that replaces the preset's own, hot first: the particles' shape and physics still come from `preset`. Absent:
+ * the preset's colours.
+ */
 export type FxBurstCue = {
   kind: "burst";
   preset: FxPreset;
@@ -51,6 +55,7 @@ export type FxBurstCue = {
   spread: FxSpread;
   power: number;
   scale?: number;
+  colors?: readonly string[];
 };
 /** `density` is the intensity scale: it multiplies the trail and the arrival burst, as `count` does a burst's. */
 export type FxProjectileCue = { kind: "projectile"; preset: FxPreset; from: FxAnchor; to: FxAnchor; delayMs: number; flightMs: number; density: number };
