@@ -196,6 +196,9 @@ pub struct BotTableRow {
     pub trio: Option<FrozenTrio>,
     pub trio_catalog_version: Option<String>,
     pub retired_at: Option<i64>,
+    /// R1555000: whether it grinds now and its grinding wins since the last step (migration 0053).
+    pub grinding: bool,
+    pub grind_wins: i32,
 }
 
 /// R1450: a match id a queue pairing reserved (`tickets_claim_pair`) and when it was claimed; in
@@ -3601,6 +3604,8 @@ pub fn bots_list(f: &mut FakeTx<'_>) -> Result<Vec<BotRow>, StoreError> {
                 retired_at: bot.retired_at,
                 rating,
                 in_match_id: profile.in_match_id.clone(),
+                grinding: bot.grinding,
+                grind_wins: bot.grind_wins,
             })
         })
         .collect();
@@ -3654,6 +3659,8 @@ pub fn bots_create(f: &mut FakeTx<'_>, bot: &NewBot) -> Result<(), StoreError> {
         trio: None,
         trio_catalog_version: None,
         retired_at: None,
+        grinding: false,
+        grind_wins: 0,
     });
     let rating = BotRating {
         bot_id: bot.profile_id.clone(),
@@ -3815,6 +3822,68 @@ pub fn bots_claim_for_rematch(
     }
     if let Some(bot) = profile_of(tables, bot_id) {
         bot.in_match_id = Some(match_id.to_string());
+    }
+    tables.reserved.push(ReservedMatch {
+        match_id: match_id.to_string(),
+        claimed_at: at,
+    });
+    Ok(true)
+}
+
+/// R1555000: the flag, and the grind's count of wins back to 0; an unknown bot errs, as Postgres's
+/// row count does.
+pub fn bots_set_grinding(f: &mut FakeTx<'_>, profile_id: &str, grinding: bool) -> Result<(), StoreError> {
+    call(f, "bots.setGrinding")?;
+    let row = bot_row_of(f.tables(), profile_id)?;
+    row.grinding = grinding;
+    row.grind_wins = 0;
+    Ok(())
+}
+
+/// R1555000: as Postgres's statement: a grinding bot counts the win, and at `step_games` steps up
+/// one strength (to `strongest` at most) with its count back to 0; anything else changes nothing.
+pub fn bots_note_grind_win(
+    f: &mut FakeTx<'_>,
+    bot_id: &str,
+    step_games: i32,
+    strongest: usize,
+) -> Result<(), StoreError> {
+    call(f, "bots.noteGrindWin")?;
+    let Some(row) = f
+        .tables()
+        .ladder_bots
+        .iter_mut()
+        .find(|row| row.profile_id == bot_id && row.grinding)
+    else {
+        return Ok(());
+    };
+    if row.grind_wins + 1 >= step_games {
+        row.strength = (row.strength + 1).min(strongest);
+        row.grind_wins = 0;
+    } else {
+        row.grind_wins += 1;
+    }
+    Ok(())
+}
+
+/// R1555000: single-shot, as `bots_claim_for_rematch` for two bots: two different bots, both free,
+/// or nothing changes. As there, the fake writes no skeleton, so both point at the reserved id.
+pub fn bots_claim_pair(
+    f: &mut FakeTx<'_>,
+    players: &(String, String),
+    match_id: &str,
+    _catalog_version: &str,
+    at: i64,
+) -> Result<bool, StoreError> {
+    call(f, "bots.claimPair")?;
+    let tables = f.tables();
+    if players.0 == players.1 || !bot_is_free(tables, &players.0) || !bot_is_free(tables, &players.1) {
+        return Ok(false);
+    }
+    for bot_id in [&players.0, &players.1] {
+        if let Some(bot) = profile_of(tables, bot_id) {
+            bot.in_match_id = Some(match_id.to_string());
+        }
     }
     tables.reserved.push(ReservedMatch {
         match_id: match_id.to_string(),
