@@ -9463,9 +9463,12 @@
         "sha": "fa77419739867a4ac30ba39f16d2395fa5f198d0"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-21T05:10:07Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1493,
       "kind": "review",
       "pending_request": false,
