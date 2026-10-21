@@ -10258,6 +10258,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-21T17:50:02Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -10266,10 +10267,12 @@
       "provider": "claude-1",
       "queued_at": "2026-10-21T17:12:45Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "",
       "run_id": "39647401303",
       "started_at": "2026-10-21T17:53:01Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "1556": {
       "action": "build",
