@@ -9763,20 +9763,20 @@
       "verdict_rounds": 2,
       "votes": {
         "approvals": [
-          "claude"
+          "gpt"
         ],
-        "builder": "claude",
+        "builder": "gpt",
         "rejections": [],
         "reviews": [
           {
-            "family": "claude",
-            "run": "39556525402",
-            "tier": "strong"
+            "family": "gpt",
+            "run": "39562917229",
+            "tier": "medium"
           }
         ],
-        "sha": "bf666a9070212f469fc4fc351851c0af7f6368a2",
+        "sha": "ee4af7085be4260b5d0dfc785d2e96b05096da02",
         "tiers": {
-          "claude": "strong"
+          "gpt": "medium"
         }
       }
     },
