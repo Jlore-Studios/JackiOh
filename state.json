@@ -8872,6 +8872,9 @@
         }
       }
     },
+    "1486": {
+      "suggestion": true
+    },
     "1492": {
       "action": "plan",
       "asks": [],
