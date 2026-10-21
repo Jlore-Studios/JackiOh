@@ -90,8 +90,13 @@ struct Inner {
     /// Counts every change to a profile's seat, so `settle` can leave alone what moved after the
     /// record it compares was read.
     clock: u64,
-    /// The profile -> the `clock` of its last change.
+    /// The profile -> the `clock` of its last change. A stamp is kept while a read in flight
+    /// marked before it, so that read's `settle` still leaves that profile alone.
     changed: IndexMap<String, u64>,
+    /// The `clock` each read of the record in flight marked (`Seats::mark`), one entry per read:
+    /// reconciles overlap (the reaper's tick and the matchmaker's stale-start release), and one
+    /// settling must not drop the stamps an older one still needs.
+    reading: Vec<u64>,
     /// The last lease's id.
     leases: u64,
 }
@@ -238,17 +243,32 @@ impl Seats {
         self.epoch.store(epoch, Ordering::SeqCst);
     }
 
-    /// The ledger's clock now: `settle` leaves alone every profile changed after it.
-    pub fn mark(&self) -> u64 {
-        self.lock().clock
+    /// Opens a read of the record at the ledger's clock now, before the read starts: its
+    /// `Reading::settle` leaves alone every profile changed after it.
+    pub fn mark(&self) -> Reading<'_> {
+        let mut inner = self.lock();
+        let since = inner.clock;
+        inner.reading.push(since);
+        Reading { seats: self, since }
     }
 
-    /// The record's seats in place of every committed one; a pending seat stays as it is.
+    /// The record's seats in place of every committed one; a pending seat stays as it is. Every
+    /// profile it moves counts as changed, so a reconcile whose read began before it leaves them be.
     pub fn fill(&self, record: IndexMap<String, Seat>) {
         let mut inner = self.lock();
+        let dropped: Vec<String> = inner
+            .held
+            .iter()
+            .filter(|(_, held)| held.lease.is_none())
+            .map(|(profile, _)| profile.clone())
+            .collect();
         inner.held.retain(|_, held| held.lease.is_some());
+        for profile in &dropped {
+            inner.touch(profile);
+        }
         for (profile, seat) in record {
             if !inner.held.contains_key(&profile) {
+                inner.touch(&profile);
                 inner.held.insert(profile, Held { seat, lease: None });
             }
         }
@@ -257,7 +277,7 @@ impl Seats {
     /// Moves every committed seat that differs from the record to the record's and answers each
     /// move. A profile whose seat is pending, or changed after `since` (so after the record was
     /// read), is left alone.
-    pub fn settle(&self, record: &IndexMap<String, Seat>, since: u64) -> Vec<Drift> {
+    fn settle(&self, record: &IndexMap<String, Seat>, since: u64) -> Vec<Drift> {
         let mut inner = self.lock();
         let mut profiles: Vec<String> = inner
             .held
@@ -301,8 +321,34 @@ impl Seats {
                 record: recorded,
             });
         }
-        inner.changed.retain(|_, at| *at > since);
         drifts
+    }
+}
+
+/// One read of the record in flight, from `Seats::mark` (R1523000). Settled or dropped, it closes,
+/// and the stamps no read still open needs are let go.
+#[must_use = "a reading settles the record it marked"]
+pub struct Reading<'a> {
+    seats: &'a Seats,
+    since: u64,
+}
+
+impl Reading<'_> {
+    /// The record read after the mark, against the ledger (`Seats::settle`).
+    pub fn settle(self, record: &IndexMap<String, Seat>) -> Vec<Drift> {
+        self.seats.settle(record, self.since)
+    }
+}
+
+impl Drop for Reading<'_> {
+    fn drop(&mut self) {
+        let mut inner = self.seats.lock();
+        if let Some(at) = inner.reading.iter().position(|since| *since == self.since) {
+            inner.reading.swap_remove(at);
+        }
+        // A read opened later marks at the clock now or after, so it needs no stamp up to here.
+        let oldest = inner.reading.iter().copied().min().unwrap_or(inner.clock);
+        inner.changed.retain(|_, at| *at > oldest);
     }
 }
 
@@ -457,7 +503,7 @@ pub async fn hydrate(app: &App) -> Result<(), StoreError> {
 /// release is freed and a seat the record holds that the ledger lacks is adopted, each logged as
 /// `seats.drift`; what changed while the record was being read waits for the next tick.
 pub async fn reconcile(app: &App) {
-    let since = app.seats.mark();
+    let reading = app.seats.mark();
     let record = match read_record(app).await {
         Ok(record) => record,
         Err(error) => {
@@ -465,7 +511,7 @@ pub async fn reconcile(app: &App) {
             return;
         }
     };
-    for drift in app.seats.settle(&record, since) {
+    for drift in reading.settle(&record) {
         tracing::warn!(
             event = "seats.drift",
             source = "reconcile",
@@ -698,7 +744,7 @@ mod tests {
         held(&seats, &["ended"], game("m1"));
         held(&seats, &["moved"], game("m2"));
         let pending = seats.reserve(&["pending"], game("m3")).expect("free");
-        let since = seats.mark();
+        let reading = seats.mark();
         // After the mark, as a door's commit or an ending lands while the record is read.
         seats.end_game("moved", "m2");
 
@@ -708,7 +754,7 @@ mod tests {
         ]
         .into_iter()
         .collect();
-        let drifts = seats.settle(&record, since);
+        let drifts = reading.settle(&record);
         assert_eq!(
             drifts,
             vec![
@@ -739,14 +785,57 @@ mod tests {
         pending.commit();
 
         // The next tick, on a record read after everything above.
-        let since = seats.mark();
+        let reading = seats.mark();
         let record: IndexMap<String, Seat> = [
             ("adopted".to_string(), Seat::Duos("d1".to_string())),
             ("pending".to_string(), game("m3")),
         ]
         .into_iter()
         .collect();
-        assert_eq!(seats.settle(&record, since), Vec::new());
+        assert_eq!(reading.settle(&record), Vec::new());
+    }
+
+    #[test]
+    fn r1523000_an_overlapping_reconcile_keeps_what_moved_after_the_older_read() {
+        let seats = Seats::default();
+        // The reaper's tick marks and starts reading: the person holds nothing yet.
+        let older = seats.mark();
+        // A door seats the person meanwhile.
+        held(&seats, &["person"], Seat::Duos("d1".to_string()));
+        // The matchmaker's release reconciles too, reads the record with the seat and settles first.
+        let newer = seats.mark();
+        let seated: IndexMap<String, Seat> = [("person".to_string(), Seat::Duos("d1".to_string()))]
+            .into_iter()
+            .collect();
+        assert_eq!(newer.settle(&seated), Vec::new());
+
+        // The older read, from before the door, settles last and must not free the live seat.
+        assert_eq!(older.settle(&IndexMap::new()), Vec::new());
+        assert_eq!(seats.of("person"), Some(Seat::Duos("d1".to_string())));
+
+        // With no read open, the stamps go, and a fresh read settles the record again.
+        assert!(seats.lock().changed.is_empty());
+        let fresh = seats.mark();
+        assert_eq!(
+            fresh.settle(&IndexMap::new()),
+            vec![Drift {
+                profile: "person".to_string(),
+                ledger: Some(Seat::Duos("d1".to_string())),
+                record: None,
+            }]
+        );
+    }
+
+    #[test]
+    fn r1523000_a_reconcile_open_across_a_fill_leaves_what_the_fill_wrote() {
+        let seats = Seats::default();
+        held(&seats, &["gone"], game("m1"));
+        let older = seats.mark();
+        seats.fill([("filled".to_string(), game("m2"))].into_iter().collect());
+        let stale: IndexMap<String, Seat> = [("gone".to_string(), game("m1"))].into_iter().collect();
+        assert_eq!(older.settle(&stale), Vec::new());
+        assert_eq!(seats.of("gone"), None);
+        assert_eq!(seats.of("filled"), Some(game("m2")));
     }
 
     #[test]
