@@ -56,24 +56,32 @@ export default function Shop({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [reading, setReading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+    setReading(true);
     Promise.all([getPacks(token), getWallet(token)]).then(
       ([packs, balance]) => {
         if (!cancelled) {
           setInfo(packs);
           setWallet(balance);
+          setLoadError(null);
+          setReading(false);
         }
       },
       (cause: unknown) => {
-        if (!cancelled) setLoadError(wordsOf(cause));
+        if (!cancelled) {
+          setLoadError(wordsOf(cause));
+          setReading(false);
+        }
       },
     );
     return () => {
       cancelled = true;
     };
-  }, [token, revision]);
+  }, [token, revision, attempt]);
 
   const buy = (pack: string): void => {
     if (busy !== null) return;
@@ -97,9 +105,23 @@ export default function Shop({
     <div className="form-card shop-panel" data-testid={shopTestid.panel}>
       <h3 className="shop-heading">{t("Jlore shop")}</h3>
       {loadError === null ? null : (
-        <p className="notice" role="alert" data-testid={shopTestid.loadError}>
-          {loadError}
-        </p>
+        <>
+          <p className="notice" role="alert" data-testid={shopTestid.loadError}>
+            {loadError}
+          </p>
+          <div className="account-actions">
+            <button
+              type="button"
+              data-testid={shopTestid.retry}
+              disabled={reading}
+              onClick={() => {
+                setAttempt((before) => before + 1);
+              }}
+            >
+              {t("Try again")}
+            </button>
+          </div>
+        </>
       )}
       {info === null || wallet === null ? (
         loadError === null ? (

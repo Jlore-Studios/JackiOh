@@ -11224,6 +11224,7 @@
     "type": "Field Spell",
     "tags": [],
     "rarity": "Common",
+    "flavor": "Nerd",
     "token": false,
     "cost": 2,
     "params": [
@@ -11263,6 +11264,7 @@
     "type": "Unit",
     "tags": [],
     "rarity": "Common",
+    "flavor": "Brute",
     "token": false,
     "cost": 2,
     "params": [
@@ -11314,6 +11316,7 @@
     "type": "Unit",
     "tags": [],
     "rarity": "Rare",
+    "flavor": "Tech",
     "token": false,
     "cost": 3,
     "params": [
@@ -11358,6 +11361,7 @@
       "Fruit"
     ],
     "rarity": "Epic",
+    "flavor": "Snack",
     "token": false,
     "cost": 2,
     "params": [
@@ -11389,6 +11393,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Rare",
+    "flavor": "Fire",
     "token": false,
     "cost": 1,
     "params": [
@@ -11438,6 +11443,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Epic",
+    "flavor": "Hustle",
     "token": false,
     "cost": 0,
     "params": [
@@ -11469,6 +11475,7 @@
     "type": "Field Spell",
     "tags": [],
     "rarity": "Legendary",
+    "flavor": "Nerd",
     "token": false,
     "cost": 4,
     "params": [
@@ -11526,6 +11533,7 @@
       "Wincon"
     ],
     "rarity": "Mythic",
+    "flavor": "Nature",
     "token": false,
     "cost": 0,
     "params": [
@@ -11596,6 +11604,7 @@
     "type": "Field Spell",
     "tags": [],
     "rarity": "Epic",
+    "flavor": "Nerd",
     "token": false,
     "cost": 2,
     "params": [
@@ -11626,6 +11635,7 @@
     "type": "Field Spell",
     "tags": [],
     "rarity": "Epic",
+    "flavor": "Nerd",
     "token": false,
     "cost": 2,
     "params": [
@@ -11656,6 +11666,7 @@
     "type": "Field Spell",
     "tags": [],
     "rarity": "Legendary",
+    "flavor": "Nerd",
     "token": false,
     "cost": 4,
     "params": [
@@ -11688,6 +11699,7 @@
       "Human"
     ],
     "rarity": "Epic",
+    "flavor": "Dark",
     "token": false,
     "cost": 2,
     "params": [
@@ -11723,6 +11735,7 @@
     "type": "Unit",
     "tags": [],
     "rarity": "Epic",
+    "flavor": "Nature",
     "token": false,
     "cost": 2,
     "params": [
@@ -11775,6 +11788,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Epic",
+    "flavor": "Nerd",
     "token": false,
     "cost": 2,
     "params": [
@@ -11808,6 +11822,7 @@
       "Human"
     ],
     "rarity": "Common",
+    "flavor": "Toxic",
     "token": false,
     "cost": 2,
     "params": [
@@ -11842,6 +11857,7 @@
     "type": "Unit",
     "tags": [],
     "rarity": "Rare",
+    "flavor": "Chaos",
     "token": false,
     "cost": 2,
     "params": [
@@ -11876,6 +11892,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Mythic",
+    "flavor": "Nerd",
     "token": false,
     "cost": 0,
     "loc": 41,
@@ -11898,6 +11915,7 @@
       "Quickdraw"
     ],
     "rarity": "Epic",
+    "flavor": "Holy",
     "token": false,
     "cost": 1,
     "loc": 39,
@@ -11920,6 +11938,7 @@
       "Quickdraw"
     ],
     "rarity": "Epic",
+    "flavor": "Nerd",
     "token": false,
     "cost": 1,
     "refs": [
@@ -11956,6 +11975,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Epic",
+    "flavor": "Dark",
     "token": true,
     "cost": 0,
     "refs": [
@@ -12011,6 +12031,7 @@
       "Wincon"
     ],
     "rarity": "Mythic",
+    "flavor": "Physical",
     "token": false,
     "cost": 1,
     "params": [
@@ -12066,6 +12087,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Rare",
+    "flavor": "Tech",
     "token": false,
     "cost": {
       "base": 0,
@@ -12112,6 +12134,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Epic",
+    "flavor": "Chaos",
     "token": false,
     "cost": 2,
     "refs": [
@@ -12189,6 +12212,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Epic",
+    "flavor": "Chaos",
     "token": true,
     "cost": 0,
     "refs": [
@@ -12264,6 +12288,7 @@
       "Human"
     ],
     "rarity": "Common",
+    "flavor": "Physical",
     "token": false,
     "cost": 1,
     "refs": [
@@ -12291,6 +12316,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Common",
+    "flavor": "Beast",
     "token": false,
     "cost": 3,
     "refs": [
@@ -12316,6 +12342,7 @@
       "Felinor"
     ],
     "rarity": "Rare",
+    "flavor": "Beast",
     "token": false,
     "cost": 1,
     "loc": 26,
@@ -12351,6 +12378,7 @@
     "type": "Field Spell",
     "tags": [],
     "rarity": "Legendary",
+    "flavor": "Hustle",
     "token": false,
     "cost": 4,
     "refs": [
@@ -12376,6 +12404,7 @@
       "Human"
     ],
     "rarity": "Common",
+    "flavor": "Clout",
     "token": false,
     "cost": 2,
     "refs": [
@@ -12413,6 +12442,7 @@
     "type": "Unit",
     "tags": [],
     "rarity": "Common",
+    "flavor": "Dark",
     "token": false,
     "cost": 2,
     "refs": [
@@ -12453,6 +12483,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Common",
+    "flavor": "Fire",
     "token": true,
     "cost": 2,
     "params": [
@@ -12489,6 +12520,7 @@
       "Plague"
     ],
     "rarity": "Rare",
+    "flavor": "Toxic",
     "token": false,
     "cost": 3,
     "refs": [
@@ -12532,6 +12564,7 @@
       "Felinor"
     ],
     "rarity": "Epic",
+    "flavor": "Beast",
     "token": false,
     "cost": 1,
     "refs": [
@@ -12562,6 +12595,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Epic",
+    "flavor": "Holy",
     "token": true,
     "cost": 1,
     "params": [
@@ -12594,6 +12628,7 @@
       "Human"
     ],
     "rarity": "Rare",
+    "flavor": "Physical",
     "token": false,
     "cost": 3,
     "loc": 62,
@@ -12628,6 +12663,7 @@
       "CN"
     ],
     "rarity": "Epic",
+    "flavor": "Spirit",
     "token": false,
     "cost": 3,
     "params": [
@@ -12660,6 +12696,7 @@
       "CN"
     ],
     "rarity": "Rare",
+    "flavor": "Nerd",
     "token": false,
     "cost": 1,
     "params": [
@@ -12701,6 +12738,7 @@
       "KY"
     ],
     "rarity": "Rare",
+    "flavor": "Nerd",
     "token": false,
     "cost": 4,
     "params": [
@@ -12733,6 +12771,7 @@
       "CN"
     ],
     "rarity": "Common",
+    "flavor": "Holy",
     "token": false,
     "cost": 1,
     "params": [
@@ -12773,6 +12812,7 @@
       "CN"
     ],
     "rarity": "Common",
+    "flavor": "Snack",
     "token": false,
     "cost": 1,
     "params": [
@@ -12810,6 +12850,7 @@
       "CN"
     ],
     "rarity": "Epic",
+    "flavor": "Snack",
     "token": false,
     "cost": 1,
     "loc": 23,
@@ -12833,6 +12874,7 @@
       "KY"
     ],
     "rarity": "Rare",
+    "flavor": "Tech",
     "token": false,
     "cost": 3,
     "loc": 18,
@@ -12855,6 +12897,7 @@
       "CN"
     ],
     "rarity": "Rare",
+    "flavor": "Hustle",
     "token": false,
     "cost": 2,
     "refs": [
@@ -12886,6 +12929,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Rare",
+    "flavor": "Hustle",
     "token": true,
     "cost": 0,
     "refs": [
@@ -12930,6 +12974,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Rare",
+    "flavor": "Hustle",
     "token": true,
     "cost": 0,
     "params": [
@@ -12972,6 +13017,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Common",
+    "flavor": "Fire",
     "token": true,
     "cost": 0,
     "params": [
@@ -13006,6 +13052,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Mythic",
+    "flavor": "Hustle",
     "token": true,
     "cost": 0,
     "params": [
@@ -13040,6 +13087,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Mythic",
+    "flavor": "Physical",
     "token": true,
     "cost": 10,
     "refs": [
@@ -13086,6 +13134,7 @@
       "CN"
     ],
     "rarity": "Legendary",
+    "flavor": "Nature",
     "token": false,
     "cost": 2,
     "params": [
@@ -13118,6 +13167,7 @@
       "CN"
     ],
     "rarity": "Rare",
+    "flavor": "Hustle",
     "token": false,
     "cost": 2,
     "refs": [
@@ -13147,6 +13197,7 @@
       "CN"
     ],
     "rarity": "Legendary",
+    "flavor": "Hustle",
     "token": false,
     "cost": 1,
     "params": [
@@ -13179,6 +13230,7 @@
       "CN"
     ],
     "rarity": "Rare",
+    "flavor": "Hustle",
     "token": false,
     "cost": "X",
     "refs": [
@@ -13204,6 +13256,7 @@
       "CN"
     ],
     "rarity": "Rare",
+    "flavor": "Hustle",
     "token": false,
     "cost": 3,
     "refs": [
@@ -13231,6 +13284,7 @@
       "Catalyst"
     ],
     "rarity": "Legendary",
+    "flavor": "Nerd",
     "token": false,
     "cost": 1,
     "refs": [
@@ -13280,6 +13334,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Legendary",
+    "flavor": "Nerd",
     "token": true,
     "cost": 4,
     "params": [
@@ -13326,6 +13381,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Epic",
+    "flavor": "Nerd",
     "token": false,
     "cost": {
       "base": 2,
@@ -13361,6 +13417,7 @@
       "CN"
     ],
     "rarity": "Legendary",
+    "flavor": "Beast",
     "token": false,
     "cost": 4,
     "loc": 29,
@@ -13385,6 +13442,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Epic",
+    "flavor": "Holy",
     "token": false,
     "cost": 2,
     "loc": 18,
@@ -13409,6 +13467,7 @@
       "Catalyst"
     ],
     "rarity": "Mythic",
+    "flavor": "Tech",
     "token": false,
     "cost": 2,
     "refs": [
@@ -13443,6 +13502,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Mythic",
+    "flavor": "Tech",
     "token": true,
     "cost": 10,
     "refs": [
@@ -13552,6 +13612,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Mythic",
+    "flavor": "Toxic",
     "token": true,
     "cost": 2,
     "refs": [
@@ -13609,6 +13670,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Mythic",
+    "flavor": "Tech",
     "token": true,
     "cost": 4,
     "params": [
@@ -13660,6 +13722,7 @@
       "CN"
     ],
     "rarity": "Rare",
+    "flavor": "Tech",
     "token": false,
     "cost": 0,
     "loc": 18,
@@ -13680,6 +13743,7 @@
     "type": "Unit",
     "tags": [],
     "rarity": "Legendary",
+    "flavor": "Tech",
     "token": false,
     "cost": 2,
     "loc": 40,
@@ -13704,6 +13768,7 @@
     "type": "Field Spell",
     "tags": [],
     "rarity": "Rare",
+    "flavor": "Hustle",
     "token": false,
     "cost": 1,
     "params": [
@@ -13734,6 +13799,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Common",
+    "flavor": "Clout",
     "token": false,
     "cost": 1,
     "loc": 83,
@@ -13754,6 +13820,7 @@
     "type": "Field Spell",
     "tags": [],
     "rarity": "Common",
+    "flavor": "Tech",
     "token": false,
     "cost": 1,
     "refs": [
@@ -13780,6 +13847,7 @@
       "Fruit"
     ],
     "rarity": "Rare",
+    "flavor": "Snack",
     "token": false,
     "cost": 2,
     "params": [
@@ -13810,6 +13878,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Common",
+    "flavor": "Physical",
     "token": false,
     "cost": 3,
     "refs": [
@@ -13833,6 +13902,7 @@
     "type": "Unit",
     "tags": ["Human"],
     "rarity": "Common",
+    "flavor": "Clout",
     "token": false,
     "cost": 1,
     "loc": 60,
@@ -13859,6 +13929,7 @@
       "Human"
     ],
     "rarity": "Common",
+    "flavor": "Nerd",
     "token": false,
     "cost": 2,
     "params": [
@@ -13901,6 +13972,7 @@
       "Human"
     ],
     "rarity": "Rare",
+    "flavor": "Nerd",
     "token": false,
     "cost": 4,
     "loc": 42,
@@ -13931,6 +14003,7 @@
     "type": "Field Spell",
     "tags": [],
     "rarity": "Epic",
+    "flavor": "Chaos",
     "token": false,
     "cost": 3,
     "params": [
@@ -13971,6 +14044,7 @@
       "Human"
     ],
     "rarity": "Common",
+    "flavor": "Chaos",
     "token": false,
     "cost": 3,
     "params": [
@@ -14005,6 +14079,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Rare",
+    "flavor": "Nerd",
     "token": false,
     "cost": 0,
     "params": [
@@ -14035,6 +14110,7 @@
     "type": "Field Spell",
     "tags": [],
     "rarity": "Legendary",
+    "flavor": "Dark",
     "token": false,
     "cost": 3,
     "params": [
@@ -14065,6 +14141,7 @@
     "type": "Trap",
     "tags": [],
     "rarity": "Common",
+    "flavor": "Dark",
     "token": false,
     "cost": 1,
     "loc": 60,
@@ -14085,6 +14162,7 @@
     "type": "Unit",
     "tags": [],
     "rarity": "Legendary",
+    "flavor": "Physical",
     "token": false,
     "cost": 4,
     "params": [
@@ -14127,6 +14205,7 @@
     "type": "Field Spell",
     "tags": [],
     "rarity": "Common",
+    "flavor": "Physical",
     "token": false,
     "cost": 2,
     "loc": 6,
@@ -14170,6 +14249,7 @@
       "Felinor"
     ],
     "rarity": "Epic",
+    "flavor": "Beast",
     "token": false,
     "cost": 1,
     "refs": [
@@ -14217,6 +14297,7 @@
       "Felinor"
     ],
     "rarity": "Rare",
+    "flavor": "Beast",
     "token": false,
     "cost": 1,
     "loc": 28,
@@ -14255,6 +14336,7 @@
       "Plague"
     ],
     "rarity": "Rare",
+    "flavor": "Toxic",
     "token": false,
     "cost": 4,
     "params": [
@@ -14297,6 +14379,7 @@
     "type": "Unit",
     "tags": [],
     "rarity": "Common",
+    "flavor": "Dark",
     "token": false,
     "cost": 1,
     "refs": [
@@ -14327,6 +14410,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Common",
+    "flavor": "Toxic",
     "token": true,
     "cost": 1,
     "loc": 6,
@@ -14362,6 +14446,7 @@
     "type": "Field Spell",
     "tags": [],
     "rarity": "Mythic",
+    "flavor": "Hustle",
     "token": false,
     "cost": 3,
     "refs": [
@@ -14389,6 +14474,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Mythic",
+    "flavor": "Physical",
     "token": true,
     "cost": 2,
     "loc": 30,
@@ -14436,6 +14522,7 @@
     "type": "Unit",
     "tags": [],
     "rarity": "Common",
+    "flavor": "Dark",
     "token": false,
     "cost": 1,
     "loc": 40,
@@ -14466,6 +14553,7 @@
       "Human"
     ],
     "rarity": "Common",
+    "flavor": "Physical",
     "token": false,
     "cost": 2,
     "params": [
@@ -14500,6 +14588,7 @@
     "type": "Unit",
     "tags": [],
     "rarity": "Epic",
+    "flavor": "Brute",
     "token": false,
     "cost": 8,
     "params": [
@@ -14543,6 +14632,7 @@
     "type": "Field Spell",
     "tags": [],
     "rarity": "Legendary",
+    "flavor": "Nature",
     "token": false,
     "cost": 4,
     "loc": 40,
@@ -14563,6 +14653,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Common",
+    "flavor": "Dark",
     "token": false,
     "cost": 1,
     "params": [
@@ -14594,6 +14685,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Common",
+    "flavor": "Hustle",
     "token": false,
     "cost": 3,
     "loc": 23,
@@ -14616,6 +14708,7 @@
       "CN"
     ],
     "rarity": "Epic",
+    "flavor": "Dark",
     "token": false,
     "cost": 4,
     "params": [
@@ -14649,6 +14742,7 @@
       "KY"
     ],
     "rarity": "Legendary",
+    "flavor": "Holy",
     "token": false,
     "cost": 3,
     "params": [
@@ -14694,6 +14788,7 @@
       "Quickdraw"
     ],
     "rarity": "Legendary",
+    "flavor": "Nerd",
     "token": false,
     "cost": 2,
     "params": [
@@ -14741,6 +14836,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Rare",
+    "flavor": "Nerd",
     "token": false,
     "cost": {
       "base": 0,
@@ -14784,6 +14880,7 @@
     "type": "Unit",
     "tags": ["Human"],
     "rarity": "Common",
+    "flavor": "Physical",
     "token": false,
     "cost": 1,
     "params": [
@@ -14819,6 +14916,7 @@
     "type": "Unit",
     "tags": ["Human"],
     "rarity": "Rare",
+    "flavor": "Physical",
     "token": false,
     "cost": 2,
     "params": [
@@ -14854,6 +14952,7 @@
     "type": "Unit",
     "tags": [],
     "rarity": "Common",
+    "flavor": "Chaos",
     "token": false,
     "cost": 1,
     "loc": 25,
@@ -14878,6 +14977,7 @@
     "type": "Unit",
     "tags": ["Human"],
     "rarity": "Rare",
+    "flavor": "Physical",
     "token": false,
     "cost": 2,
     "refs": [
@@ -14916,6 +15016,7 @@
     "type": "Unit",
     "tags": [],
     "rarity": "Legendary",
+    "flavor": "Physical",
     "token": false,
     "cost": 2,
     "loc": 12,
@@ -14951,6 +15052,7 @@
       "Jlockeed"
     ],
     "rarity": "Legendary",
+    "flavor": "Spirit",
     "token": false,
     "cost": 1,
     "params": [
@@ -14985,6 +15087,7 @@
     "type": "Unit",
     "tags": [],
     "rarity": "Epic",
+    "flavor": "Beast",
     "token": false,
     "cost": 4,
     "params": [
@@ -15027,6 +15130,7 @@
     "type": "Field Spell",
     "tags": [],
     "rarity": "Rare",
+    "flavor": "Hustle",
     "token": false,
     "cost": 4,
     "params": [
@@ -15065,6 +15169,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Common",
+    "flavor": "Nerd",
     "token": false,
     "cost": 1,
     "params": [
@@ -15097,6 +15202,7 @@
       "Catalyst"
     ],
     "rarity": "Epic",
+    "flavor": "Nature",
     "token": false,
     "cost": 1,
     "refs": [
@@ -15142,6 +15248,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Epic",
+    "flavor": "Nature",
     "token": true,
     "cost": 3,
     "params": [
@@ -15193,6 +15300,7 @@
     "type": "Unit",
     "tags": [],
     "rarity": "Rare",
+    "flavor": "Brute",
     "token": false,
     "cost": 3,
     "loc": 20,
@@ -15229,6 +15337,7 @@
       "Felinor"
     ],
     "rarity": "Common",
+    "flavor": "Beast",
     "token": false,
     "cost": 1,
     "refs": [
@@ -15268,6 +15377,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Common",
+    "flavor": "Beast",
     "token": true,
     "cost": 1,
     "refs": [
@@ -15308,6 +15418,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Common",
+    "flavor": "Beast",
     "token": true,
     "cost": 1,
     "refs": [
@@ -15347,6 +15458,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Common",
+    "flavor": "Beast",
     "token": true,
     "cost": 1,
     "loc": 12,
@@ -15380,6 +15492,7 @@
       "Felinor"
     ],
     "rarity": "Rare",
+    "flavor": "Beast",
     "token": false,
     "cost": 4,
     "refs": [
@@ -15427,6 +15540,7 @@
       "Call to Chaos"
     ],
     "rarity": "Legendary",
+    "flavor": "Chaos",
     "token": false,
     "cost": 4,
     "refs": [
@@ -15459,6 +15573,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Legendary",
+    "flavor": "Brute",
     "token": true,
     "cost": 4,
     "refs": [
@@ -15525,6 +15640,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Rare",
+    "flavor": "Nerd",
     "token": false,
     "cost": 2,
     "refs": [
@@ -15570,6 +15686,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Rare",
+    "flavor": "Nerd",
     "token": true,
     "cost": 2,
     "params": [
@@ -15603,6 +15720,7 @@
       "Jlockeed"
     ],
     "rarity": "Mythic",
+    "flavor": "Tech",
     "token": false,
     "cost": 0,
     "refs": [
@@ -15637,6 +15755,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Common",
+    "flavor": "Nature",
     "token": true,
     "cost": 0,
     "params": [
@@ -15683,6 +15802,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Common",
+    "flavor": "Holy",
     "token": true,
     "cost": 1,
     "params": [
@@ -15733,6 +15853,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Rare",
+    "flavor": "Nerd",
     "token": true,
     "cost": 2,
     "params": [
@@ -15778,6 +15899,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Rare",
+    "flavor": "Holy",
     "token": true,
     "cost": 3,
     "params": [
@@ -15826,6 +15948,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Epic",
+    "flavor": "Brute",
     "token": true,
     "cost": 2,
     "params": [
@@ -15885,6 +16008,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Epic",
+    "flavor": "Nerd",
     "token": true,
     "cost": 4,
     "params": [
@@ -15931,6 +16055,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Epic",
+    "flavor": "Brute",
     "token": true,
     "cost": 2,
     "loc": 25,
@@ -15976,6 +16101,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Legendary",
+    "flavor": "Dark",
     "token": true,
     "cost": 4,
     "params": [
@@ -16020,6 +16146,7 @@
     ],
     "rarity": "Token",
     "printedRarity": "Mythic",
+    "flavor": "Tech",
     "token": true,
     "cost": 4,
     "loc": 47,
@@ -16058,6 +16185,7 @@
     "type": "Spell",
     "tags": [],
     "rarity": "Rare",
+    "flavor": "Dark",
     "token": false,
     "cost": 1,
     "refs": [
@@ -16080,6 +16208,7 @@
     "set": "Meditative",
     "type": "Field Spell",
     "rarity": "Epic",
+    "flavor": "Nerd",
     "token": false,
     "cost": 2,
     "params": [
@@ -16120,6 +16249,7 @@
     "type": "Unit",
     "tags": [],
     "rarity": "Common",
+    "flavor": "Physical",
     "token": false,
     "cost": 2,
     "loc": 6,
@@ -16147,6 +16277,7 @@
       "Human"
     ],
     "rarity": "Common",
+    "flavor": "Hustle",
     "token": false,
     "cost": 1,
     "params": [
@@ -16184,6 +16315,7 @@
       "Felinor"
     ],
     "rarity": "Common",
+    "flavor": "Beast",
     "token": false,
     "cost": 1,
     "loc": 38,
