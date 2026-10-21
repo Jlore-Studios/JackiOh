@@ -8783,6 +8783,13 @@
     "1500": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T13:36:11Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 9 (stands alone): with no GitHub access I cannot confirm no open PR touches the same files, and doubt on any line rates medium at least"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
