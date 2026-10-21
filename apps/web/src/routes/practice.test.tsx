@@ -1915,7 +1915,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
       issued += 1;
       return answers.seed?.() ?? Promise.resolve({ ...ISSUED, seed: `server-seed-${String(issued)}` });
     });
-    const claim = vi.fn<PracticeEarningApi["claim"]>(() => answers.claim?.() ?? Promise.resolve({ paid: true, jlore: 5, xp: 7 }));
+    const claim = vi.fn<PracticeEarningApi["claim"]>(() => answers.claim?.() ?? Promise.resolve({ paid: true, jlore: 5, xp: 7, jloreCapped: false }));
     return { api: { requestSeed, claim }, requestSeed, claim };
   }
 
@@ -1968,6 +1968,20 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     expect(earning.claim).toHaveBeenCalledWith("tok-1", { seed: "server-seed-1", result: "loss", log: [] });
     expect(screen.getByTestId(practiceTestid.resultEarning)).toHaveTextContent("+5 Jlore, +7 XP");
     expect(practiceFetches(), "every call went through the injected API").toEqual([]);
+  });
+
+  it("R1483000 shows a capped claim in the practice result", async () => {
+    const host = routeHost();
+    const earning = fakeEarning({ claim: () => Promise.resolve({ paid: true, jlore: 0, xp: 7, jloreCapped: true }) });
+    renderEarning(host, earning);
+    await startFromSetup();
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    const line = await screen.findByTestId(practiceTestid.resultEarning);
+    await waitFor(() => {
+      expect(line).toHaveAttribute("data-earning", "paid");
+    });
+    expect(line).toHaveTextContent("+0 Jlore, +7 XP · Daily Jlore reached");
   });
 
   it("R1303001 a game on a server seed picked up after a reload is still claimed at its end, on its own seed", async () => {

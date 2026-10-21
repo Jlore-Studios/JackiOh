@@ -25,10 +25,12 @@ Every value here is a constant named in backticks, never a number (CLAUDE.md rul
 | `SET_TRACK_UNLOCK_LEVEL` | The newest track's level that unlocks the older ones | [[§14.7]] |
 | `JLORE_LADDER_WIN`, `JLORE_LADDER_LOSS` | The Jlore a ladder game pays | [[§14.8]] |
 | `JLORE_PRACTICE_WIN`, `JLORE_PRACTICE_LOSS` | The Jlore a practice game pays | [[§14.8]] |
+| `JLORE_GAMES_DAILY_CAP` | The most Jlore an account's games pay it in a UTC day | [[§14.8]] |
 | `XP_PER_ACTION`, `XP_WIN_BONUS`, `XP_GAME_CAP` | A game's XP: per action, for a win, and its most | [[§14.8]] |
 | `XP_PRACTICE_SCALE` | A practice game's share of the XP the same game earns on the ladder | [[§14.8]] |
 | `XP_LADDER_TARGET_MEAN` | The XP a ladder game averages | [[§14.8]] |
 | `PRACTICE_SEED_TTL_SECONDS` | How long a practice seed waits to be claimed | [[§14.8]] |
+| `PRACTICE_SEEDS_OPEN_MAX` | How many unclaimed practice seeds an account holds at once | [[§14.8]] |
 | `PRACTICE_VERIFY_CONCURRENCY` | How many practice claims the server checks at once | [[§14.8]] |
 | `QUEST_INTERVAL_HOURS`, `QUEST_MAX_HELD` | How often a quest arrives, and how many are held | [[§14.9]] |
 | `QUEST_JLORE_MIN`, `QUEST_JLORE_MAX`, `QUEST_XP_PER_JLORE` | A quest's Jlore, and its XP per Jlore | [[§14.9]] |
@@ -94,14 +96,14 @@ Each level pays rewards, cards, Jlore and card packs, from a reward table per se
 
 ### 14.8 Earning
 
-Games earn Jlore and XP for the people who play them, never for a ladder bot. A ladder game, a ranked match ([[§9.12]]) that is not a game of a Conquest series, pays its winner `JLORE_LADDER_WIN` and its loser `JLORE_LADDER_LOSS`. A practice game ([[§9.9]]) pays `JLORE_PRACTICE_WIN` for a win and `JLORE_PRACTICE_LOSS` for a loss. Whether a game of a ranked Conquest series, an unranked game or a co-op game ([[§13]]) earns, the sub-issues that build earning rule.
+Games earn Jlore and XP for the people who play them, never for a ladder bot. A ladder game, a ranked match ([[§9.12]]) that is not a game of a Conquest series, pays its winner `JLORE_LADDER_WIN` and its loser `JLORE_LADDER_LOSS`. A practice game ([[§9.9]]) pays `JLORE_PRACTICE_WIN` for a win and `JLORE_PRACTICE_LOSS` for a loss. The Jlore an account's games pay it, ladder and practice together, stops once the UTC day's `game` Jlore reaches `JLORE_GAMES_DAILY_CAP`, as Hearthstone's games pay gold up to a daily limit: the game that crosses the cap is paid the part that fits, the ones after it no Jlore and no ledger row, and the next UTC day pays again. A capped game still pays its XP and moves quests, and the Jlore a quest or a track level pays neither counts toward the cap nor stops at it; a game's answer says when the cap held its Jlore back ([[R1483000]]). Whether a game of a ranked Conquest series, an unranked game or a co-op game ([[§13]]) earns, the sub-issues that build earning rule.
 
 XP stands in for time played: `XP_PER_ACTION` for each action the player took, a move of the game and never a row the server writes itself ([[R1302004]]), and `XP_WIN_BONUS` more for a win, the game's total never above `XP_GAME_CAP`, so a loop of empty actions cannot farm it. A practice game earns the XP the same game would earn on the ladder, times `XP_PRACTICE_SCALE`, rounded down ([[R1302007]]). The amounts are tuned so a ladder game averages `XP_LADDER_TARGET_MEAN` over [[R1333001]]'s measured games, and a practice game `XP_PRACTICE_SCALE` of it. What a draw, a concede or a game the reaper ends pays, [[R1302000]], [[R1302001]] and [[R1302002]] rule.
 
 Every payout goes through one reward hook on the server, which takes a finished game's summary (the account, the mode, the result and the actions taken), pays it, and moves the account's quests ([[§14.9]]).
 
 - **On the ladder** the server ran the match, so it counts the actions from its own log and pays in the transaction that records the result; the client reports nothing.
-- **In practice** the game runs in the browser ([[§9.9]]), so the server takes nothing on the client's word. It issues the game's seed and remembers it with the account, the AI's difficulty and the deck. At the end the client sends the action log; the server folds it ([[§9.3]]) to the claimed result and checks that every move of the AI's seat is the one the AI makes from that seed and difficulty. Only a game that passes pays; a seed pays once and expires unclaimed after `PRACTICE_SEED_TTL_SECONDS`. Only an active account's free game on a server seed pays, never a tutorial lesson ([[§9.10]]), a sandbox game ([[§9.9]]) or a game with custom cards ([[§12]]) ([[R1303000]]); a claim burns its seed, and a game resumed after a reload claims on its own ([[R1303001]]); the AI's moves are re-run at the full budget with no clock ([[R1303002]]); and a paying game brings the last board the server kept, not the device's ([[R1303003]]). The server checks at most `PRACTICE_VERIFY_CONCURRENCY` claims at once, and a claim past that waits its turn, never dropped.
+- **In practice** the game runs in the browser ([[§9.9]]), so the server takes nothing on the client's word. It issues the game's seed and remembers it with the account, the AI's difficulty and the deck. At the end the client sends the action log; the server folds it ([[§9.3]]) to the claimed result and checks that every move of the AI's seat is the one the AI makes from that seed and difficulty. Only a game that passes pays; a seed pays once and expires unclaimed after `PRACTICE_SEED_TTL_SECONDS`. Only an active account's free game on a server seed pays, never a tutorial lesson ([[§9.10]]), a sandbox game ([[§9.9]]) or a game with custom cards ([[§12]]) ([[R1303000]]); a claim burns its seed, and a game resumed after a reload claims on its own ([[R1303001]]); the AI's moves are re-run at the full budget with no clock ([[R1303002]]); and a paying game brings the last board the server kept, not the device's ([[R1303003]]). The server checks at most `PRACTICE_VERIFY_CONCURRENCY` claims at once, and a claim past that waits its turn, never dropped. An account holds at most `PRACTICE_SEEDS_OPEN_MAX` unclaimed, unexpired seeds, a request for another is refused and issues nothing, so one account cannot stockpile seeds to claim in a burst ([[R1483000]]).
 
 ### 14.9 Daily quests
 
@@ -124,6 +126,8 @@ Every dev grant and clear is written as ledger rows marked `dev` ([[R1300000]]),
 ### 14.11 The ledger
 
 The ledger today is `collection` plus the append-only `collection_grants` (`crates/server/migrations/0002_collection.sql`): every change writes both in one transaction, and no client path writes either ([[§9.4]]). Every holding of the economy follows that pattern, a current-state table beside an append-only one, readable by its own account alone. Every grant of anything (cards, Jlore, packs, tokens, cosmetics, XP) is one append-only row, written server-side in the transaction that changes the state; so is every spend, such as a pack bought or a token redeemed. A row is never edited, and is deleted only with its account ("Delete my account", [[§9.4]]): a mistaken grant is corrected by an offsetting row.
+
+A game's Jlore row has the reason `game`, and an account's `game` rows over a UTC day are what `JLORE_GAMES_DAILY_CAP` counts, read in the transaction that writes the next one, under the account's economy lock ([[R1301003]], [[R1483000]]); no row is written for a game the cap leaves nothing for.
 
 Every row says why. The collection's reasons are `pack`, `craft`, `reward`, `refund`, `admin`, `launch` and `dev`, a dev tool's own ([[R1300000]]); every economy ledger takes `launch` too, for the reset of going live ([[R1310002]]); a new kind of grant gets its reason from the sub-issue that adds it. A row a dev tool wrote is marked `dev` ([[§14.10]]).
 

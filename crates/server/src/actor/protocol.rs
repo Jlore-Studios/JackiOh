@@ -176,9 +176,16 @@ pub enum ServerMessage {
     /// targets the same `PlayerView` already shows. The actor passes the viewer as the player
     /// (`push_view`), so a socket never sees the other seat's array — which would leak the
     /// opponent's hand by naming every `play` in it (§9.1's "Hidden: ... opponent hand").
+    ///
+    /// `jlore_capped` is the receiving account's own: true once the match has ended and the daily
+    /// cap (`JLORE_GAMES_DAILY_CAP`) held back some or all of that account's Jlore for it
+    /// (R1483000). It is the account's economy, so a seat never gets the other seat's, and a
+    /// watcher's frame never says it; false is left off the frame.
     View {
         view: Box<PlayerView>,
         legal: Vec<ActionBody>,
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        jlore_capped: bool,
     },
     /// §9.3: the nonce that was accepted and the append-only log seq it was written at.
     Ack { nonce: String, seq: i64 },
@@ -228,10 +235,12 @@ pub enum ServerMessage {
 // ---------------------------------------------------------------------------
 
 /// `legal` must be `legal_actions(state, view.viewer)`; the actor is the only caller (`push_view`).
-pub fn view_message(view: PlayerView, legal: &[ActionBody]) -> ServerMessage {
+/// `jlore_capped` is the viewer's own account's flag, false for a watcher (R1483000).
+pub fn view_message(view: PlayerView, legal: &[ActionBody], jlore_capped: bool) -> ServerMessage {
     ServerMessage::View {
         view: Box::new(view),
         legal: legal.to_vec(),
+        jlore_capped,
     }
 }
 
