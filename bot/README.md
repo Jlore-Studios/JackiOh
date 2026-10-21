@@ -244,7 +244,7 @@ Every way of asking either gets an answer at once, or is found again later:
     `approve` or `reject` vote on a suggestion, which the event job also wakes for at once (#929);
   - an assignment nothing queued;
   - a review asking for changes on a bot pull request, newer than anything the bot acted on;
-  - a failed, cancelled or broken CI or `bot selftest` run on a bot pull request's head;
+  - a failed, cancelled or broken CI run (`bot selftest` among its jobs) on a bot pull request's head;
   - a label the bot uses (`config.LABELS`) that the repository does not have. It checks each
     time that list changes, so a new label exists within ten minutes of its merge, without
     `harness setup` (the method labels shipped in #328 without existing); and one it retired
@@ -521,12 +521,16 @@ prints each one and whether it could start now, and `/harness status` does the s
   a run reads its usage again, nothing refreshes the reading first. Muse's is 2026-10-11, when it
   moved to the $50 plan (its last reading, from the $15 plan, said 100% of the week).
 
-At the top level, `max_parallel` is how many run at once on GitHub's runners (11, the Claude
-accounts' lanes added up, so it holds none of them back), `machine_parallel` how many run at once
-on the bot's machine (6; its two vCPUs run each job's checks; GitHub's runners have four each),
-each apart from the other, so Claude runs never wait for the night box's slots nor its runs for
-GitHub's lanes; `plan_lanes` is how many planning runs may go on top of those (the planning
-lane, below; 6), `priority` the usage order within a tier (below), `balance` the load balancer
+At the top level, `max_parallel` is how many run at once on GitHub's runners, planning runs
+included (8: the organization runs 20 hosted jobs at once, so CI keeps 12; #1455). It is one pool
+the two bots share, first come first served: Squishy's `providers.json` names the same 8, and each
+bot counts the other's live runs against it (`plan.others_on_github`, by the workflow its identity
+names), so a free slot goes to whichever bot asks first. `machine_parallel` how
+many run at once on the bot's machine (6; its two vCPUs run each job's checks; GitHub's runners have
+four each), each apart from the other, so Claude runs never wait for the night box's slots nor its
+runs for GitHub's lanes; `plan_lanes` is how many planning runs may go at once beside the
+subscriptions' own lanes (the planning lane, below; 6), each still on a runner of its own: a machine
+slot, or one of `max_parallel`; `priority` the usage order within a tier (below), `balance` the load balancer
 that comes before it (below; on), and `tiers` each tier's models, which the router tries
 weakest-first inside the subscription. A subscription's own `lanes`
 (default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill its box alone, Muse's is 2, and claude-3's is 2. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
@@ -622,9 +626,9 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   from. A queued item without one carries `bot:needs-plan`: one with no plan, and one whose plan
   came from a model under its plan floor (a medium model's plan of a hard item). A
   planner on the **planning lane** plans those first, so a subscription never plans and builds
-  the same item: `plan_lanes` runs on top of
-  `max_parallel`, which take no build lane, so a subscription plans while it builds, up to as
-  many items at once as its `lanes`. The planning lane takes the easy items first (Devin waits on those),
+  the same item: `plan_lanes` runs, which take none of a subscription's own lanes, so it plans
+  while it builds, up to as many items at once as its `lanes`. Each still holds a runner: a slot
+  on the machine, or one of `max_parallel`'s lanes on GitHub's runners (#1455). The planning lane takes the easy items first (Devin waits on those),
   then fullsend parts (Muse builds those, [Fullsend](#fullsend)), then the rest in the usual
   order, ahead of every build. Each
   subscription offers its strongest free seat; the strong ones go first, within a tier the one
@@ -932,6 +936,28 @@ account.
 
 ## One night, step by step
 
+**Who plans (#1455).** With `"controller": true` in `.harness/config.json`, the status loop
+(`bot-status.yml`, `harness dashboard --controller`) is the planner while it goes. Each tick its
+sweep asks the gate's question (`plan.peek`), and when there is work it plans as the plan job
+below does, under a planning lock in the state file that the plan job also takes. For each run it
+claims the item with `pending:<ref>` for the run id, writes the plan to the state branch
+(`plans/<ref>.json`), starts `bot-night` with `plan_ref` and the plan's runner, CLI, secret name and
+shared flag, and puts the new run's id on the claim once GitHub lists the run under its title
+(`bot-night <ref> on <runner>`). It plans again until nothing more can start. Such a run skips the
+gate and the plan job, so it waits in GitHub's queue once, for its model job. The model job's
+first step (`harness plan-fetch --check`) holds the runner, CLI, secret name and shared flag it
+was given to the plan and to `providers.json`, and stops the job before any step is handed a
+secret when one does not match. Deliver reads the plan from the state branch. On 2026-10-20 a
+night run's gate, plan and deliver each waited 6 to 25 minutes for a runner, for jobs that ran
+under a minute.
+
+While the loop goes (its run is in progress and its sweep ticked in the last 15 minutes), nothing
+else starts a plain run: another sweep leaves the work to it, a delivery does not chain the next
+run, and a run started by the schedule stops at its gate. A run a person starts for an item, a
+mode or by force still gates and plans itself, under the lock. When the loop is gone, everything
+works as below, so the schedule (rule 13) and the commands keep the bot going. The plans are
+pruned after a week ([`harness/controller.py`](harness/controller.py)).
+
 1. **plan** (seconds, no model; one at a time across all runs). It runs only after the gate says
    go. It stops at once if `.harness/HALT` is on `main` or someone said `/harness halt`. It
    requeues anything a dead run left `bot:working` and queues a revision for any bot pull request
@@ -1220,8 +1246,10 @@ python3 -m unittest discover -s tests -t .   # the suite (about ten seconds)
 python3 -m harness --help                     # every command
 ```
 
-`bot selftest` in CI runs the suite on Python 3.12 and 3.13 and runs actionlint over the bot's
-workflows. The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `build`, `fix`, `revise`,
+`bot selftest`, a job of `ci.yml`, runs the suite on Python 3.12 and 3.13 and runs actionlint over the
+bot's workflows and `ci.yml`. It runs when a pull request touches what the suite reads (the bot, its
+switches, `.github/`, `.claude/`, the scripts, the training lanes' prompts and loop, the issue and patch
+conventions, the toolchain), on every push to `main`, and whenever the job that decides fails (#1455). The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `build`, `fix`, `revise`,
 `review` and `suggest` (the self check runs `review` with a header saying it is a self check),
 Squishy's `oneshot` and `split` (which both bots' fullsend splits with too), and `reconcile`, the
 first prompt of a fullsend reconcile. The bots cannot edit anything in `bot/`, `.harness/`, `.squishy/` or
@@ -1250,7 +1278,8 @@ started as Squishy (`tests/squishy_cases.py`, from `tests/test_squishy.py`).
 | `declined.py` | the suggestions that came to nothing, which no survey offers again (#797) |
 | `memory.py` | the machine's memory as its jobs read it, kept for the status issue's line on it (#312) |
 | `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |
-| `dashboard.py` | the pinned status issue (#148): opened and pinned once, rewritten every five minutes by `bot-status.yml` (`harness dashboard --sweep --stats --companions --every 300 --for 19800`, which sweeps first each time), with the statistics counted every 30 minutes and kept between |
+| `controller.py` | the status loop as the planner (#1455): it plans, writes each plan to the state branch and starts each night run with its plan; `plan-fetch` reads and checks such a plan in the run |
+| `dashboard.py` | the pinned status issue (#148): opened and pinned once, rewritten every five minutes by `bot-status.yml` (`harness dashboard --sweep --stats --companions --controller --every 300 --for 19800`, which sweeps first each time), with the statistics counted every 30 minutes and kept between |
 | `waiting.py` | what the status issue says each queued item waits for (the tier its difficulty needs, and which subscription frees up first) and what each subscription can do now, from the planner's own rules (`plan.pairs`) on the lanes held now |
 | `stats.py` | the status issue's statistics: the last 6 hours, day, week and all time, from the bot's comments, pull requests and state file, counted every 30 minutes and kept in the issue between counts |
 | `state.py`, `status.py`, `clock.py` | the state file on `bot-state`, the status report, time and windows |

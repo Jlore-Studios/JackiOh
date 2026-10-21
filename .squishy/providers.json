@@ -1,5 +1,5 @@
 {
-  "max_parallel": 2,
+  "max_parallel": 8,
   "machine_parallel": 0,
   "plan_lanes": 0,
   "start_headroom": {

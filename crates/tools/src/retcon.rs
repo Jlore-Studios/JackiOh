@@ -1429,8 +1429,12 @@ mod tests {
             assert!(!shipped.contains(&old), "{old} names no new version");
             let now = jackioh_cards::versions::current_version_name(old);
             assert!(shipped.contains(&now), "{old} is {now} now");
+            assert_ne!(jackioh_cards::catalog_version(), old, "a bundle at {old} misses");
         }
-        assert_eq!(jackioh_cards::catalog_version(), "v0.4.0d");
+        assert_eq!(
+            jackioh_cards::versions::current_version_name("v0.3.17b"),
+            "v0.4.0d"
+        );
     }
 
     #[test]
@@ -1450,7 +1454,13 @@ mod tests {
         );
         let news: Vec<&str> = patches.iter().map(|patch| patch.version.as_str()).collect();
         let mapped: Vec<&str> = aliases.aliases.values().map(String::as_str).collect();
-        assert_eq!(news, mapped, "patches.json holds the map's new names in order");
+        // Promotions only append (R646): the map's new names open the list, and any version past
+        // them shipped after the retcon.
+        assert_eq!(
+            news.get(..mapped.len()),
+            Some(&mapped[..]),
+            "patches.json opens with the map's new names in order"
+        );
     }
 
     #[test]

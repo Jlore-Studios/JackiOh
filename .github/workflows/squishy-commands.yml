@@ -26,7 +26,7 @@ on:
   pull_request_review:
     types: [submitted]
   workflow_run:
-    workflows: [CI, bot selftest]
+    workflows: [CI]
     types: [completed]
 
 permissions: {}

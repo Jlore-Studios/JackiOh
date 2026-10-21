@@ -204,6 +204,24 @@ describe("R630 the almanac's browse pane", () => {
     expect(screen.getByTestId(INSPECT_DETAIL)).toHaveAttribute("data-card", unit.id);
   });
 
+  it("opens the detail a ?card= link names, a token's too, and the URL follows the detail opened and closed", () => {
+    at(paths.almanacCard("core-t-rush"));
+    render(<AlmanacRoute />);
+    expect(screen.getByTestId(INSPECT_DETAIL)).toHaveAttribute("data-card", "core-t-rush");
+    fireEvent.click(within(screen.getByTestId(INSPECT_DETAIL)).getByTestId(INSPECT_CLOSE));
+    expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
+    expect(`${window.location.pathname}${window.location.search}`).toBe(paths.almanac);
+
+    fireEvent.click(screen.getByTestId(poolCardId("core-001")));
+    expect(`${window.location.pathname}${window.location.search}`).toBe(paths.almanacCard("core-001"));
+    cleanup();
+
+    // A link naming no card opens nothing.
+    at(paths.almanacCard("no-such-card"));
+    render(<AlmanacRoute />);
+    expect(screen.queryByTestId(INSPECT_DETAIL)).toBeNull();
+  });
+
   it("R660 a card's detail shows its flavour line from the sidecar, a token's too", () => {
     render(<AlmanacRoute />);
     for (const id of ["core-001", "core-t-sheep"]) {

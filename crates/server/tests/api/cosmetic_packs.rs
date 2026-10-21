@@ -16,7 +16,7 @@ use jackioh_server::api::collection::{GrantInput, grant_cards, owned_map};
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
-    CARD_TOKEN_BAR_POINTS_PER_DUPLICATE, CHASE_SHARD_PACKS, COSMETIC_PACK_SLOTS,
+    CARD_TOKEN_BAR_POINTS_PER_DUPLICATE, CHASE_SHARD_PACKS, COSMETIC_PACK_FLOOR_RARITY, COSMETIC_PACK_SLOTS,
     COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE,
 };
 use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, shipped};
@@ -29,6 +29,7 @@ use jackioh_server::economy::roll::{PackKind, pack_pool};
 use jackioh_server::economy::store::{
     CosmeticGrant, Counter, CounterGrant, EconomyLedger, EconomyReason, InventoryGrant, InventoryItem,
 };
+use jackioh_server::economy::tiers::cosmetic_odds;
 
 use crate::support::deps::{add_user, call, empty_test_app};
 use crate::support::store::fake;
@@ -808,11 +809,16 @@ async fn r1306002_a_full_bar_holds_when_no_legendary_or_mythic_cosmetic_exists()
 #[tokio::test]
 async fn r1306002_get_reads_the_shard_bar_and_unopened_packs() {
     let (app, token) = setup().await;
+    // One roll's odds on the cosmetic table, a slot's and the floored slot's (R1339000).
+    let odds = json!({
+        "slot": cosmetic_odds(None),
+        "flooredSlot": cosmetic_odds(Some(COSMETIC_PACK_FLOOR_RARITY)),
+    });
     let (status, _, body) = call(&app, "GET", "/api/cosmetic-packs", Some(&token), Value::Null).await;
     assert_eq!(status, 200, "{body}");
     assert_eq!(
         body,
-        json!({ "shardBar": { "points": 0, "size": CHASE_SHARD_PACKS }, "unopened": 0 })
+        json!({ "shardBar": { "points": 0, "size": CHASE_SHARD_PACKS }, "unopened": 0, "odds": odds })
     );
 
     set_counter(&app, Counter::ChaseShardBar, 4).await;
@@ -821,7 +827,7 @@ async fn r1306002_get_reads_the_shard_bar_and_unopened_packs() {
     assert_eq!(status, 200, "{body}");
     assert_eq!(
         body,
-        json!({ "shardBar": { "points": 4, "size": CHASE_SHARD_PACKS }, "unopened": 3 })
+        json!({ "shardBar": { "points": 4, "size": CHASE_SHARD_PACKS }, "unopened": 3, "odds": odds })
     );
 
     // An opening moves both.
@@ -838,7 +844,7 @@ async fn r1306002_get_reads_the_shard_bar_and_unopened_packs() {
     assert_eq!(status, 200, "{body}");
     assert_eq!(
         body,
-        json!({ "shardBar": { "points": 5, "size": CHASE_SHARD_PACKS }, "unopened": 2 })
+        json!({ "shardBar": { "points": 5, "size": CHASE_SHARD_PACKS }, "unopened": 2, "odds": odds })
     );
 }
 

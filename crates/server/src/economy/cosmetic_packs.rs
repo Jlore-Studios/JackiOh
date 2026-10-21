@@ -2,11 +2,12 @@
 //! cosmetic token cycle's last step pays, the bar each opening fills and the chase it buys.
 //!
 //! - [`roll_cosmetic_pack`]: the pure roll, from the shipped sets' pool, the account's
-//!   [`CosmeticHoldings`] and a seed to what each slot grants (R1306000, R1306001). The first
-//!   slot rolls its rarity at `COSMETIC_PACK_GUARANTEED_RATES`, the rest at `COSMETIC_PACK_RATES`,
-//!   on the cosmetics' own scale and with no pity; a slot grants one unowned cosmetic, for a card
-//!   or the account, leaning toward the cards the account owns, and its card when the account
-//!   lacks it, or falls to the nearest rarity with something unowned, or pays bar points.
+//!   [`CosmeticHoldings`] and a seed to what each slot grants (R1306000, R1306001). Each slot's
+//!   rarity is a tiered roll on `COSMETIC_TIER_WEIGHTS`, the floored slot's at
+//!   `COSMETIC_PACK_FLOOR_RARITY` (R1339000), on the cosmetics' own scale and with no pity; a slot
+//!   grants one unowned cosmetic, for a card or the account, leaning toward the cards the account
+//!   owns, and its card when the account lacks it, or falls to the nearest rarity with something
+//!   unowned, or pays bar points.
 //! - [`open_cosmetic_pack`]: under the account's lock, one unopened cosmetic pack spent, its
 //!   slots rolled from a fresh seed and every grant written, its cards, cosmetics, the Chase
 //!   Shard bar's one and both token bars' points for the spent slots (R1306002), with the
@@ -15,8 +16,8 @@
 //!   and the dropped `Tx` rolls it all back.
 //! - [`buy_chase`]: a full Chase Shard bar buys one Legendary or Mythic cosmetic the account
 //!   chooses and empties (R1306002).
-//! - The routes, all `AuthLevel::Active`: `GET /api/cosmetic-packs` (the bar and the packs held),
-//!   `POST /api/cosmetic-packs/open` and `POST /api/cosmetic-packs/chase`
+//! - The routes, all `AuthLevel::Active`: `GET /api/cosmetic-packs` (the bar, the packs held and
+//!   the slots' odds), `POST /api/cosmetic-packs/open` and `POST /api/cosmetic-packs/chase`
 //!   (`{ cosmeticId, cardId? }`).
 //!
 //! An opening and a purchase run under the account's lock (R1301003), so neither rolls on, nor
@@ -35,8 +36,8 @@ use crate::api::crypto::SystemIds;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, ok_of, optional_str, str};
 use crate::app::App;
 use crate::config::{
-    CHASE_SHARD_PACKS, COSMETIC_PACK_CARD_WEIGHTS, COSMETIC_PACK_GUARANTEED_RATES, COSMETIC_PACK_RATES,
-    COSMETIC_PACK_SLOTS, CosmeticPackRates,
+    CHASE_SHARD_PACKS, COSMETIC_PACK_CARD_WEIGHTS, COSMETIC_PACK_FLOOR_RARITY, COSMETIC_PACK_SLOTS,
+    PACK_FLOORED_SLOT,
 };
 use crate::cosmetics::{Cosmetic, CosmeticRarity, cosmetic_pack_cosmetics};
 use crate::economy::packs::{bar_before, delta_of, grant_counter, grant_unlocked, settle_bars};
@@ -44,6 +45,7 @@ use crate::economy::roll::{PackKind, PoolCard, pack_pool};
 use crate::economy::store::{
     CosmeticGrant, Counter, EconomyReason, InventoryGrant, InventoryItem, OwnedCosmetics,
 };
+use crate::economy::tiers::{TierOdds, cosmetic_odds, cosmetic_tier};
 use crate::economy::tokens::{BarState, choice_of, conflict, held};
 
 // A cosmetic pack holds a slot, and a full Chase Shard bar holds a pack.
@@ -159,47 +161,23 @@ pub struct OpenedCosmeticPack {
     pub unopened: i64,
 }
 
-/// What `GET /api/cosmetic-packs` reads back (R1306002): the Chase Shard bar and the cosmetic
-/// packs unopened.
+/// A cosmetic pack's odds as `GET /api/cosmetic-packs` shows them (R1339000): one roll of a slot
+/// and of the floored slot on `COSMETIC_TIER_WEIGHTS`, the fallback included.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CosmeticPackOdds {
+    pub slot: TierOdds,
+    pub floored_slot: TierOdds,
+}
+
+/// What `GET /api/cosmetic-packs` reads back (R1306002, R1339000): the Chase Shard bar, the
+/// cosmetic packs unopened and the slots' odds.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CosmeticPacks {
     pub shard_bar: BarState,
     pub unopened: i64,
-}
-
-/// `rates` by cosmetic rarity, commonest first.
-pub fn shares(rates: CosmeticPackRates) -> [(CosmeticRarity, f64); 5] {
-    [
-        (CosmeticRarity::Common, rates.common),
-        (CosmeticRarity::Rare, rates.rare),
-        (CosmeticRarity::Epic, rates.epic),
-        (CosmeticRarity::Legendary, rates.legendary),
-        (CosmeticRarity::Mythic, rates.mythic),
-    ]
-}
-
-/// The cosmetic rarity a slot's draw lands on at `rates` (R1306000): the first whose running sum
-/// of [`shares`] passes the draw, and Mythic past the last edge. Its own scale, with no pity.
-pub fn cosmetic_slot_rarity(rates: CosmeticPackRates, draw: f64) -> CosmeticRarity {
-    let mut edge = 0.0;
-    for (rarity, rate) in shares(rates) {
-        edge += rate;
-        if draw < edge {
-            return rarity;
-        }
-    }
-    CosmeticRarity::Mythic
-}
-
-/// The lowest rarity a slot at `rates` can roll: the commonest with a share. A slot stays at or
-/// above it while anything there is unowned (R1306001), so the first slot, with no Common or Rare
-/// share, stays Epic or better.
-fn floor_of(rates: CosmeticPackRates) -> CosmeticRarity {
-    shares(rates)
-        .into_iter()
-        .find(|(_, rate)| *rate > 0.0)
-        .map_or(CosmeticRarity::Mythic, |(rarity, _)| rarity)
+    pub odds: CosmeticPackOdds,
 }
 
 /// The pool cards a per-card cosmetic is not owned on: all of them, or a full art's own card
@@ -299,12 +277,13 @@ pub fn slot_grant(
     CosmeticSlotGrant::Bars
 }
 
-/// The whole opening (R1306003), pure from the pool, the account's holdings before it, the
-/// cosmetics registry and the opening's seed. Slot by slot, its draws in this order and no other:
-/// the slot's rarity, then its cosmetic's pick and, for a per-card one, its card's, each only
-/// when there is something to pick. The first slot rolls at `COSMETIC_PACK_GUARANTEED_RATES`, the
-/// rest at `COSMETIC_PACK_RATES`. Ownership moves slot by slot, so a cosmetic or a card granted
-/// earlier in the pack is owned later in it (R1306000).
+/// The whole opening (R1306003, R1339002), pure from the pool, the account's holdings before it,
+/// the cosmetics registry and the opening's seed. Slot by slot, its draws in this order and no
+/// other: the slot's tier, then its cosmetic's pick and, for a per-card one, its card's, each only
+/// when there is something to pick. Each slot's tier is a tiered roll on `COSMETIC_TIER_WEIGHTS`,
+/// the one at `PACK_FLOORED_SLOT` floored at `COSMETIC_PACK_FLOOR_RARITY`, and falls no lower than
+/// that floor while anything there or above is open (R1339000, R1306001). Ownership moves slot by
+/// slot, so a cosmetic or a card granted earlier in the pack is owned later in it (R1306000).
 pub fn roll_cosmetic_pack(
     pool: &[PoolCard],
     holdings: &CosmeticHoldings,
@@ -316,13 +295,16 @@ pub fn roll_cosmetic_pack(
     let mut holdings = holdings.clone();
     let mut slots = Vec::with_capacity(COSMETIC_PACK_SLOTS);
     for at in 0..COSMETIC_PACK_SLOTS {
-        let rates = if at == 0 {
-            COSMETIC_PACK_GUARANTEED_RATES
-        } else {
-            COSMETIC_PACK_RATES
-        };
-        let rarity = cosmetic_slot_rarity(rates, rng.next());
-        let grant = slot_grant(rarity, floor_of(rates), pool, &droppable, &holdings, &mut rng);
+        let floor = (at == PACK_FLOORED_SLOT).then_some(COSMETIC_PACK_FLOOR_RARITY);
+        let rarity = cosmetic_tier(floor, &mut rng);
+        let grant = slot_grant(
+            rarity,
+            floor.unwrap_or(CosmeticRarity::Common),
+            pool,
+            &droppable,
+            &holdings,
+            &mut rng,
+        );
         if let CosmeticSlotGrant::Cosmetic {
             cosmetic_id,
             card_id,
@@ -561,7 +543,7 @@ pub async fn buy_chase(
 }
 
 /// Reads [`CosmeticPacks`] for `get_cosmetic_packs`: the bar from the counters, the packs from the
-/// inventory. Read-only, like the collection.
+/// inventory and the odds from `COSMETIC_TIER_WEIGHTS`. Read-only, like the collection.
 async fn read_cosmetic_packs(app: &App, profile_id: &str) -> Result<CosmeticPacks, ApiError> {
     let mut tx = app.db.begin(Some(profile_id)).await?;
     let counters = tx.economy_counters_get(profile_id).await?;
@@ -573,6 +555,10 @@ async fn read_cosmetic_packs(app: &App, profile_id: &str) -> Result<CosmeticPack
             size: CHASE_SHARD_PACKS,
         },
         unopened: held(&inventory, InventoryItem::CosmeticPack, ""),
+        odds: CosmeticPackOdds {
+            slot: cosmetic_odds(None),
+            floored_slot: cosmetic_odds(Some(COSMETIC_PACK_FLOOR_RARITY)),
+        },
     })
 }
 
@@ -607,13 +593,13 @@ pub async fn post_chase(app: &Arc<App>, req: Req) -> ApiResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::PACK_RATE_TOLERANCE;
     use crate::cosmetics::CosmeticKind;
     use crate::cosmetics::CosmeticRarity::{Common, Epic, Legendary, Mythic, Rare};
     use crate::economy::store::CardCosmetic;
+    use crate::economy::tiers::RATE_TOLERANCE;
     use jackioh_engine::wire::PrintedRarity;
 
-    /// Draws enough for a rate to settle inside `PACK_RATE_TOLERANCE`.
+    /// Draws enough for a rate to settle inside `RATE_TOLERANCE`.
     const DRAWS: usize = 20_000;
 
     fn card(id: &str, rarity: PrintedRarity) -> PoolCard {
@@ -705,50 +691,85 @@ mod tests {
         }
     }
 
-    #[test]
-    fn r1306000_the_first_slot_is_epic_or_better_and_the_odds_sum_to_one() {
-        for rates in [COSMETIC_PACK_RATES, COSMETIC_PACK_GUARANTEED_RATES] {
-            let total: f64 = shares(rates).iter().map(|(_, rate)| rate).sum();
-            assert!((total - 1.0).abs() < 1e-9, "the shares sum to {total}");
-            let mut floor = 0.0;
-            for (rarity, rate) in shares(rates) {
-                let edge = floor + rate;
-                if rate > 0.0 {
-                    assert_eq!(cosmetic_slot_rarity(rates, floor), rarity, "at {floor}");
-                    assert_eq!(
-                        cosmetic_slot_rarity(rates, (floor + edge) / 2.0),
-                        rarity,
-                        "inside {rarity:?}"
-                    );
-                }
-                floor = edge;
-            }
-            assert_eq!(cosmetic_slot_rarity(rates, 1.0 - f64::EPSILON), Mythic);
-        }
-        assert_eq!(floor_of(COSMETIC_PACK_RATES), Common);
-        assert_eq!(floor_of(COSMETIC_PACK_GUARANTEED_RATES), Epic);
-
-        let mut rng = Rng::new("r1306000", 0);
-        let mut commons = 0;
-        let mut epics = 0;
-        for _ in 0..DRAWS {
-            assert!(cosmetic_slot_rarity(COSMETIC_PACK_GUARANTEED_RATES, rng.next()) >= Epic);
-            match cosmetic_slot_rarity(COSMETIC_PACK_RATES, rng.next()) {
-                Common => commons += 1,
-                Epic => epics += 1,
-                _ => {}
-            }
-        }
-        // The other slots roll every rarity, at their shares.
-        for (count, expected) in [
-            (commons, COSMETIC_PACK_RATES.common),
-            (epics, COSMETIC_PACK_RATES.epic),
-        ] {
-            let share = f64::from(count) / DRAWS as f64;
+    /// Each share of `counts` out of `draws` lands within `RATE_TOLERANCE` of `odds`, commonest
+    /// first.
+    fn assert_lands_on(counts: [usize; 5], draws: usize, odds: TierOdds, what: &str) {
+        let chances = [odds.common, odds.rare, odds.epic, odds.legendary, odds.mythic];
+        for (tier, (count, chance)) in counts.into_iter().zip(chances).enumerate() {
+            let share = count as f64 / draws as f64;
             assert!(
-                (share - expected).abs() <= PACK_RATE_TOLERANCE,
-                "share {share} outside tolerance of {expected}"
+                (share - chance).abs() <= RATE_TOLERANCE,
+                "{what}: tier {tier}'s share {share} outside tolerance of {chance}"
             );
+        }
+    }
+
+    #[test]
+    fn r1339000_r1306000_every_slot_rolls_the_cosmetic_table_the_first_floored_at_epic() {
+        // Nothing to drop: every slot is spent at the tier it rolled, on its tier's draw alone.
+        let pool = pool_of(10);
+        let openings = DRAWS / COSMETIC_PACK_SLOTS;
+        let mut floored = [0_usize; 5];
+        let mut others = [0_usize; 5];
+        for seed in 0..openings {
+            let opening = roll_cosmetic_pack(
+                &pool,
+                &CosmeticHoldings::default(),
+                &[],
+                &format!("r1339000-{seed}"),
+            );
+            assert_eq!(opening.slots.len(), COSMETIC_PACK_SLOTS);
+            assert_eq!(opening.draws as usize, COSMETIC_PACK_SLOTS);
+            for (at, slot) in opening.slots.iter().enumerate() {
+                assert_eq!(slot.grant, CosmeticSlotGrant::Bars);
+                let tier = usize::from(slot.rarity.tier());
+                if at == PACK_FLOORED_SLOT {
+                    assert!(slot.rarity >= COSMETIC_PACK_FLOOR_RARITY, "{slot:?}");
+                    floored[tier] += 1;
+                } else {
+                    others[tier] += 1;
+                }
+            }
+        }
+        assert_lands_on(
+            floored,
+            openings,
+            cosmetic_odds(Some(COSMETIC_PACK_FLOOR_RARITY)),
+            "the floored slot",
+        );
+        assert_lands_on(
+            others,
+            openings * (COSMETIC_PACK_SLOTS - 1),
+            cosmetic_odds(None),
+            "the other slots",
+        );
+    }
+
+    #[test]
+    fn r1339002_a_cosmetic_pack_draws_one_tier_per_slot_first() {
+        let pool = pool_of(40);
+        let mut registry = four_foils();
+        registry.push(table("table-drop", CosmeticRarity::Rare));
+        for seed in 0..50 {
+            let seed = format!("r1339002-{seed}");
+            let opening = roll_cosmetic_pack(&pool, &CosmeticHoldings::default(), &registry, &seed);
+            // Each slot's tier is the draw at the cursor its slot starts on, and its grant takes one
+            // draw for the cosmetic and one more for a per-card cosmetic's card.
+            let mut cursor = 0;
+            for (at, slot) in opening.slots.iter().enumerate() {
+                let floor = (at == PACK_FLOORED_SLOT).then_some(COSMETIC_PACK_FLOOR_RARITY);
+                assert_eq!(
+                    slot.rarity,
+                    cosmetic_tier(floor, &mut Rng::new(&seed, cursor)),
+                    "{seed}, slot {at}"
+                );
+                cursor += match &slot.grant {
+                    CosmeticSlotGrant::Bars => 1,
+                    CosmeticSlotGrant::Cosmetic { card_id: None, .. } => 2,
+                    CosmeticSlotGrant::Cosmetic { card_id: Some(_), .. } => 3,
+                };
+            }
+            assert_eq!(opening.draws, cursor, "{seed}");
         }
     }
 
@@ -765,13 +786,14 @@ mod tests {
                 &format!("r1306000-{seed}"),
             );
             assert_eq!(opening.slots.len(), COSMETIC_PACK_SLOTS);
-            assert!(opening.slots[0].rarity >= Epic, "{:?}", opening.slots[0]);
+            let floored = &opening.slots[PACK_FLOORED_SLOT];
+            assert!(floored.rarity >= COSMETIC_PACK_FLOOR_RARITY, "{floored:?}");
             for (at, slot) in opening.slots.iter().enumerate() {
                 let CosmeticSlotGrant::Cosmetic { cosmetic_rarity, .. } = &slot.grant else {
                     panic!("an open registry spends no slot: {slot:?}");
                 };
-                if at == 0 {
-                    assert!(*cosmetic_rarity >= Epic, "{slot:?}");
+                if at == PACK_FLOORED_SLOT {
+                    assert!(*cosmetic_rarity >= COSMETIC_PACK_FLOOR_RARITY, "{slot:?}");
                 }
                 if *cosmetic_rarity == Common {
                     common += 1;
@@ -904,7 +926,7 @@ mod tests {
         let expected = COSMETIC_PACK_CARD_WEIGHTS.owned
             / (COSMETIC_PACK_CARD_WEIGHTS.owned + COSMETIC_PACK_CARD_WEIGHTS.unowned);
         assert!(
-            (share - expected).abs() <= PACK_RATE_TOLERANCE,
+            (share - expected).abs() <= RATE_TOLERANCE,
             "owned share {share} outside tolerance of {expected}"
         );
         assert_eq!(rng.cursor() as usize, DRAWS);
@@ -974,7 +996,7 @@ mod tests {
             CosmeticSlotGrant::Cosmetic { cosmetic_rarity, .. } => Some(cosmetic_rarity),
             CosmeticSlotGrant::Bars => None,
         };
-        let floor = floor_of(COSMETIC_PACK_GUARANTEED_RATES);
+        let floor = COSMETIC_PACK_FLOOR_RARITY;
         // An Epic roll with no Epic open takes the Legendary before it drops to the Rare ...
         assert_eq!(
             tier_of(slot_grant(
@@ -1061,24 +1083,6 @@ mod tests {
         assert_ne!(roll_cosmetic_pack(&pool, &holdings, &moved, &log.seed), opening);
         let replayed = roll_cosmetic_pack(&pool, &holdings, &log.cosmetics, &log.seed);
         assert_eq!(replayed, opening);
-    }
-
-    #[test]
-    fn cosmetic_slot_rarities_land_on_their_odds() {
-        let mut rng = Rng::new("r1306000-odds", 0);
-        for rates in [COSMETIC_PACK_RATES, COSMETIC_PACK_GUARANTEED_RATES] {
-            let mut counts = [0_usize; 5];
-            for _ in 0..DRAWS {
-                counts[usize::from(cosmetic_slot_rarity(rates, rng.next()).tier())] += 1;
-            }
-            for ((rarity, rate), count) in shares(rates).into_iter().zip(counts) {
-                let share = count as f64 / DRAWS as f64;
-                assert!(
-                    (share - rate).abs() <= PACK_RATE_TOLERANCE,
-                    "{rarity} share {share} outside tolerance of {rate} ({rates:?})"
-                );
-            }
-        }
     }
 
     #[test]

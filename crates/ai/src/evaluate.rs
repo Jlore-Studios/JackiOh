@@ -10,8 +10,10 @@
 //! an own Temporary hand card at a discount (R637). #1143 prices an own hand Unit by the face it will
 //! enter with (its Radiant face, buffs and tuning) over its printed base face. #1224 prices what a
 //! side's coming refreshes will or will not give: the refreshes it still has to lose (R844) and its
-//! next-turn rider (§2.3). It reads only what the seat may know or what a determinization sampled, and
-//! nothing here reads a handicap or a difficulty (R180).
+//! next-turn rider (§2.3). #1506 weighs the cards dormant under a side's Stack piles (§3.2, R13):
+//! the seat's own unit piles card by card, every other pile by its count (R447). It reads only what
+//! the seat may know or what a determinization sampled, and nothing here reads a handicap or a
+//! difficulty (R180).
 //!
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
 //! are passed explicitly.
@@ -297,21 +299,44 @@ fn marked_enemy_worth(state: &GameState, player: PlayerId, w: &EvalWeights) -> f
     worth
 }
 
+/// §3.2, R13: what the cards dormant under `player`'s Stack piles are worth, each resuming when the
+/// cards above it leave. The seat reads its own unit piles card by card, each at `dormant_share` of
+/// its `unit_worth` (no call at a zero share); every other dormant card counts `dormant_card`
+/// whatever it is: the enemy's unit piles, and every backrow pile, whose cards both seats see only
+/// as a count (R447; `redact` makes a face-down one a placeholder, R185).
+fn dormant_worth(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights) -> f64 {
+    let side = &state.players[player];
+    let beneath = side.units.iter().flatten().flat_map(|pile| pile.iter().skip(1));
+    let buried = side.backrow_piles.iter().flatten().map(Vec::len).sum::<usize>();
+    let units = if player != seat {
+        beneath.count() as f64 * w.dormant_card
+    } else if w.dormant_share != 0.0 {
+        beneath
+            .map(|card| w.dormant_share * unit_worth(state, card, w))
+            .sum::<f64>()
+    } else {
+        0.0
+    };
+    units + buried as f64 * w.dormant_card
+}
+
 /// A hero's side of the ledger: its concave life (`effective_life`, R964000) and its armor.
 fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
     hero_value(effective_life(state, player), starting_life(state, player), w)
         + w.hero_armor * f64::from(hero_armor_of(state, player))
 }
 
-/// Everything on one side but the hero: the board, what it has banked (a debt, Jade steps, extra
-/// turns, the enemy units it has marked), what its coming refreshes will or will not give, the backrow,
-/// the hand and the library.
+/// Everything on one side but the hero: the board and the cards dormant under its piles, what it has
+/// banked (a debt, Jade steps, extra turns, the enemy units it has marked), what its coming refreshes
+/// will or will not give, the backrow, the hand and the library.
 fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights) -> f64 {
     let side = &state.players[player];
     let mut value = 0.0;
     for unit in active_units_of(state, player) {
         value += unit_worth(state, unit, w);
     }
+    // §3.2, R13: the cards dormant under its Stack piles, each resuming when the cards above it leave.
+    value += dormant_worth(state, player, seat, w);
 
     // R1224: a debt is coming turns' mana spent early, so it counts against the side that owes it.
     value -= w.owed_mana * f64::from(owed_mana_of(state, player));
