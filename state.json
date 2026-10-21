@@ -10803,10 +10803,8 @@
       "taken_asks": []
     },
     "1575": {
-      "action": "plan",
-      "asks": [
-        "c:6323786237"
-      ],
+      "action": "build",
+      "asks": [],
       "died": 1,
       "difficulty_by": {
         "at": "2026-10-21T23:07:11Z",
@@ -10833,18 +10831,20 @@
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_by_id": "claude-1",
       "planned_tier": "strong",
-      "provider": "claude-1",
+      "provider": "claude-3",
       "queued_at": "2026-10-21T20:42:26Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "39688083227",
-      "started_at": "2026-10-21T22:39:36Z",
+      "run_id": "pending:9076f85a-1792624756",
+      "started_at": "2026-10-21T23:19:30Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6323786237"
+      ]
     },
     "1577": {
       "action": "build",
@@ -13106,9 +13106,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-21T23:08:51Z",
+    "at": "2026-10-21T23:19:30Z",
     "url": "",
-    "what": "build #1583 on claude-1"
+    "what": "build #1575 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-21T23:06:43Z",
