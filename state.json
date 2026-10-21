@@ -8809,6 +8809,13 @@
     "1501": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T13:36:14Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "every easy line nearly holds (2 files in apps/web, ~150 lines, unit-tested), but line 9 cannot be checked without GitHub (open PRs on stats.tsx) and focus/keyboard timing under jsdom is borderline, so medium per the doubt rule"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
