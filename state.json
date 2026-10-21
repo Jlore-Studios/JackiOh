@@ -10884,11 +10884,13 @@
         "by": "`claude` (strong)",
         "sha": "1dfe6fae88ea83b45df4263cbda0fd228683aa1f"
       },
+      "closed_at": "2026-10-21T20:16:25Z",
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-21T17:57:59Z",
       "issue": 1555,
       "kind": "revise",
+      "merged": true,
       "queued_at": "2026-10-21T19:32:00Z",
       "self_check_findings": [],
       "source": "conflict",
