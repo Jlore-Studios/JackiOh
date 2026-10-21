@@ -10708,6 +10708,13 @@
     "1572": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T22:28:29Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule 1 fails: one crate (crates/tools) but about 600 lines over 3 files, past the 400-line limit, and the rates are a tuning decision; no engine, AI, card or spec work, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
