@@ -39,3 +39,14 @@
     min-height: 44px;
   }
 }
+
+/* R1571000: why a card the viewer's graveyard lists cannot be played now, where "Play" would be. */
+.inspect-list-play-reason {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  color: var(--text-dim, #9aa1b8);
+  font-size: 0.85em;
+  text-align: center;
+}

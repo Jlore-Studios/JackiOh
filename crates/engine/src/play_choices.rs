@@ -2091,6 +2091,31 @@ pub fn offered_play_costs(state: &GameState, player: PlayerId, card: &CardInstan
 /// `validate_play` reads them, since a banned card is refused at every price it could be played at;
 /// then §10.5 step 1's own order, the zone, the Tribute and what the card declares.
 pub fn why_hand_card_unplayable(state: &GameState, player: PlayerId, card: &CardInstance) -> Option<String> {
+    // R1223: borrowed mana pays; R1180004: a Spell its player's health price reaches is refused by no mana.
+    let mana = crate::credit::spendable_mana(state, player);
+    let health = crate::mana::health_priced(state, card);
+    why_unplayable(
+        state,
+        player,
+        card,
+        |cost| health || cost <= mana,
+        |cost| {
+            crate::credit::why_unaffordable(state, card, cost)
+                .err()
+                .map(|error| error.message)
+        },
+    )
+}
+
+/// R979000, R1571000: `why_hand_card_unplayable`'s order for any play source: `payable` says whether
+/// a payment meets a price, as the source's listing asks it; `refuse_price` refuses a price none meets.
+fn why_unplayable(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    payable: impl Fn(i32) -> bool,
+    refuse_price: impl Fn(i32) -> Option<String>,
+) -> Option<String> {
     // (a) Ban: every X and embiggen combination `play_prices` enumerates, stamped as it stamps
     // them, and every one forbidden (R455) — the listing left none out for this reason.
     let x_values: Vec<Option<i32>> = if chooses_x(state, card) {
@@ -2131,7 +2156,7 @@ pub fn why_hand_card_unplayable(state: &GameState, player: PlayerId, card: &Card
         return ban_message;
     }
     // (b) Price: `play_prices` left nothing unbanned. An X card with no legal X names its smallest
-    // refusal (R348); otherwise the cheapest unbanned price the purse cannot meet (R1223).
+    // refusal (R348); otherwise, when no price can be paid, the cheapest price's refusal (`refuse_price`).
     let prices = play_prices(state, player, card);
     if prices.is_empty() {
         if chooses_x(state, card) && legal_x_values(state, player, card).is_empty() {
@@ -2141,15 +2166,14 @@ pub fn why_hand_card_unplayable(state: &GameState, player: PlayerId, card: &Card
         }
         return None;
     }
-    let cheapest = prices.iter().min_by_key(|price| price.cost)?;
-    // R1180004: a Spell its player's health price reaches is refused by no mana.
-    if !crate::mana::health_priced(state, card)
-        && cheapest.cost > crate::credit::spendable_mana(state, player)
-    {
-        return crate::credit::why_unaffordable(state, card, cheapest.cost)
-            .err()
-            .map(|error| error.message);
-    }
+    let Some(cheapest) = prices
+        .iter()
+        .filter(|price| payable(price.cost))
+        .min_by_key(|price| price.cost)
+    else {
+        let cheapest = prices.iter().min_by_key(|price| price.cost)?;
+        return refuse_price(cheapest.cost);
+    };
     let tribute_sets = legal_tribute_sets(state, player, card);
     // (c) Zone: no set the Tribute could pay leaves a zone — neither an open one, nor one the set
     // itself empties (R391), nor a host an Equip play would fuse into (R1086, read off this price's
@@ -2217,6 +2241,26 @@ pub fn why_hand_card_unplayable(state: &GameState, player: PlayerId, card: &Card
             .map(|error| error.message);
     }
     None
+}
+
+/// R1571000, §10.8: R979000's order and words for a card in the player's own graveyard that a
+/// permission admits. The price step is asked as `graveyard_play_actions_for` asks it. It returns
+/// `None` for a card no permission admits, since there is no play to explain.
+pub fn why_graveyard_card_unplayable(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+) -> Option<String> {
+    if !crate::graveyard_play::playable_from_graveyard(state, card) || card.zone.player() != player {
+        return None;
+    }
+    why_unplayable(
+        state,
+        player,
+        card,
+        |cost| !crate::graveyard_play::graveyard_payments_for(state, player, card, cost).is_empty(),
+        |cost| crate::graveyard_play::why_graveyard_price_unpaid(state, player, card, cost),
+    )
 }
 
 /// R1200 (ME-RANDOMTARGETS): the face §10.5 step 1 reads a play's choices against — the one

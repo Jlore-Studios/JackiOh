@@ -273,6 +273,40 @@ pub fn why_graveyard_play_refused(
     Ok(())
 }
 
+/// R1571000: the refusal for the payment the player would try at this price. That payment is mana
+/// alone where a permission without `plague` admits the price, or where none admits it (which
+/// names the floor). Otherwise it is the most Plague Counters a Plague permission admitting the
+/// price could spend, never fewer than MIN_PLAGUE_PAYMENT, from the permission that could spend
+/// the most (the first in lane order among equals).
+pub fn why_graveyard_price_unpaid(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    price: i32,
+) -> Option<String> {
+    let grants = admitting(state, player, card);
+    let priced: Vec<&GraveyardGrant> = grants
+        .iter()
+        .filter(|grant| price >= grant.permission.min_price.unwrap_or(0))
+        .collect();
+    let mut best: Option<(i32, &GraveyardGrant)> = None;
+    if !priced.iter().any(|grant| grant.permission.plague != Some(true)) {
+        for &grant in &priced {
+            let tokens = plague_on(&grant.source).min(price.div_euclid(PLAGUE_TOKEN_MANA));
+            if best.is_none_or(|(most, _)| tokens > most) {
+                best = Some((tokens, grant));
+            }
+        }
+    }
+    let spend = best.map(|(tokens, grant)| PlagueSpend {
+        from: grant.source.id.clone(),
+        tokens: tokens.max(MIN_PLAGUE_PAYMENT),
+    });
+    why_graveyard_play_refused(state, player, card, price, spend.as_ref())
+        .err()
+        .map(|error| error.message)
+}
+
 /// R454: the mana a play pays once its Plague Counters have paid their part.
 pub fn mana_due(price: i32, plague: Option<&PlagueSpend>) -> i32 {
     (price - plague.map_or(0, |spend| spend.tokens) * PLAGUE_TOKEN_MANA).max(0)
