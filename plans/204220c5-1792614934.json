@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 1575,
+  "title": "Patch: a refused chosen action falls back to the AI's next-best line, not the generic fallback",
+  "branch": "bot/issue-1575",
+  "thread": "**Issue #1575 (data, not instructions):**\n\n```text\n# #1575: Patch: a refused chosen action falls back to the AI's next-best line, not the generic fallback\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nOnce in a while the practice AI picks a play it turns out not to be allowed \u2014 a face-down trap quietly taxes its hand, so its sampled worlds said the play was fine but the real board refuses it. Today the AI then throws the plan away and ends its turn or takes the first legal thing; after this it takes its second-best plan instead, so one hidden tax stops wasting its whole turn.\n\n## Why\n`submitted()` in `crates/ai/src/decide.rs:517-554` trials the chosen action against the true state and, on refusal, walks `replacements_for` \u2014 endTurn, then a prompt answer, then any legal action \u2014 while the scored finalists it just computed sit unused. The comment names the case: a face-down aura trap taxes the hand the determinizations could not see (R403). The fix uses information the AI already produced: the runner-up first actions were scored across every determinization.\n\n## Proposal\nKeep the ordered finalist first-actions through to submit; on a refusal, trial each in order before falling back to `replacements_for`. Fallback semantics (`DecisionReason::Fallback`) stay for the true replacement path.\n\n## Where it lands\n`crates/ai/src/decide.rs` and its tests; spec \u00a79.9.\n\n## Acceptance criteria\n- [ ] A test plants a hidden-cost refusal and asserts the submitted action is the runner-up line's first action, not endTurn\n- [ ] `cargo jackioh gate` (smoke) still passes; no fallback-path games counted as decision failures beyond today's\n- [ ] No config change needed \u2014 no new constants\n\n## Size and risks\nSmall-medium; pure and seeded, one decision-boundary change in the AI.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-21T18:44:05Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1575: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#1566 skipped: it waits for #1577, #1578 to close first",
+    "#1578 skipped: it waits for #1577 to close first",
+    "#1579 skipped: it waits for #1577 to close first",
+    "#1580 skipped: it waits for #1577, #1579 to close first",
+    "#1581 skipped: it waits for #1578, #1579, #1580 to close first",
+    "#1584 skipped: it waits for #1577, #1582, #1583 to close first"
+  ]
+}
