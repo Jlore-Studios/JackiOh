@@ -35,6 +35,14 @@ def secrets(*names: str) -> dict:
 
 
 class ParseTests(unittest.TestCase):
+    def test_the_bots_hold_at_most_eight_of_githubs_runners(self):
+        """#1455: the organization runs 20 hosted jobs at once, and CI takes the rest. The night
+        bot's `max_parallel` and Squishy's together cap every model job the bots run there,
+        planning runs included (`plan.Lanes.free`)."""
+        night = json.loads((ROOT / ".harness" / "providers.json").read_text(encoding="utf-8"))
+        squishy = json.loads((ROOT / ".squishy" / "providers.json").read_text(encoding="utf-8"))
+        self.assertLessEqual(night["max_parallel"] + squishy["max_parallel"], 8)
+
     def test_the_committed_file(self):
         pool = providers.load(ROOT)
         # The usage order: claude-3 (no caps), claude-7 and claude-1 first, then claude-4,
@@ -44,7 +52,7 @@ class ParseTests(unittest.TestCase):
         self.assertEqual(pool.priority, ("claude-3", "claude-7", "claude-1", "claude-4",
                                          "claude-6", "claude-5", "muse", "agy", "gpt",
                                          "claude-2", "devin"))
-        self.assertEqual((pool.max_parallel, pool.machine_parallel), (11, 6))
+        self.assertEqual((pool.max_parallel, pool.machine_parallel), (6, 6))
         self.assertTrue(pool.balance)  # the load balancer (`plan.balance`)
         self.assertEqual({p.cli for p in pool.ordered()}, set(providers.CLIS))
         self.assertEqual(len([p for p in pool.ordered() if p.cli == "claude"]), 7)
@@ -589,6 +597,10 @@ class MatchingTests(unittest.TestCase):
         gh.add_issue(3, labels=(LABEL_BUILD,))
         gh.add_issue(4, labels=(LABEL_BUILD, "difficulty:hard"))
         ctx = ctx_for(gh, at=DAY, committed_hours=True)
+        # Room for all eight Claude lanes: the order they fill in is this test's, the cap on
+        # GitHub's runners (`max_parallel`, #1455) its own.
+        ctx = make_ctx(gh, at=DAY, cfg=dataclasses.replace(
+            ctx.cfg, pool=dataclasses.replace(ctx.cfg.pool, max_parallel=20)))
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["number"], planned["provider"], planned["action"]),
                          (4, "claude-3", "build"))

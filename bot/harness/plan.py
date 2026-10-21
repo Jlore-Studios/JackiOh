@@ -138,10 +138,12 @@ def stops(ctx: Context, state: dict[str, Any], force: bool) -> str | None:
 class Lanes:
     """The runs that hold work now: item number (0 for a suggestion survey) -> provider id.
     `planning` are the items whose run is a planning run: those hold the planning lane
-    (`Pool.plan_lanes`), not a build lane, nor a lane of their provider's. GitHub's runners and
-    the bot's machine have lanes of their own, so neither waits on the other: `limit` is
-    GitHub's (`Pool.max_parallel`), `machine_limit` the machine's (`Pool.machine_parallel`), and
-    `machine` names the subscriptions that run on the machine."""
+    (`Pool.plan_lanes`), not a lane of their provider's. GitHub's runners and the bot's machine
+    have lanes of their own, so neither waits on the other: `limit` is GitHub's
+    (`Pool.max_parallel`), `machine_limit` the machine's (`Pool.machine_parallel`), and `machine`
+    names the subscriptions that run on the machine. Every run holds a runner where it runs, a
+    planning run too, so `limit` bounds the hosted runners the bot's model jobs take (#1455) and
+    `machine_limit` the machine's slots."""
 
     limit: int
     held: dict[int, str] = field(default_factory=dict)
@@ -179,10 +181,11 @@ class Lanes:
 
     @property
     def free(self) -> int:
-        """Build lanes free on GitHub's runners."""
-        return max(0, self.limit - sum(1 for number, provider_id in self.held.items()
-                                       if number not in self.planning
-                                       and provider_id not in self.machine))
+        """Lanes free on GitHub's runners. A planning run there takes one too (#1455): the
+        organization runs 20 hosted jobs at once, CI among them, so `max_parallel` caps every
+        model job the bot runs on them, not only its builds."""
+        return max(0, self.limit - sum(1 for provider_id in self.held.values()
+                                       if provider_id not in self.machine))
 
     @property
     def machine_free(self) -> int:
@@ -436,8 +439,10 @@ def lane_planners(ctx: Context, state: dict[str, Any], lanes: Lanes, *, forced: 
                   quiet_ok: str) -> list[Seat]:
     """The planning lane's planners: the strongest seat of each subscription that may plan now
     (at least medium), the strong ones first, and within a tier the one holding the fewest plans
-    first, then the usage order. A planning run there takes no build lane, so a subscription plans
-    while it builds, as many items at once as it has lanes: planning comes first, so the strong
+    first, then the usage order. A planning run takes none of its subscription's lanes, so a
+    subscription plans while it builds, as many items at once as it has lanes, but it takes a
+    runner: a slot on the machine (`machine_full`), or one of GitHub's lanes (`Lanes.free`,
+    #1455). Planning comes first, so the strong
     models write the plans the medium ones build from before they build themselves. One the quiet
     check guards, or one with caps, plans only when it holds nothing else. Which item a planner
     may take is the item's plan floor (`queue.plan_floor`): a medium one plans only easy or
@@ -458,6 +463,8 @@ def lane_planners(ctx: Context, state: dict[str, Any], lanes: Lanes, *, forced: 
             continue  # one run at a time on a guarded or capped subscription (`Lanes.full`)
         if machine_full(cfg.pool, provider, lanes):
             continue
+        if not cfg.pool.on_machine(provider.id) and lanes.free <= 0:
+            continue  # GitHub's lanes are full, and a planning run there takes one (#1455)
         if (provider.quiet_check and cfg.quiet.enabled and not forced
                 and quiet_ok not in (ANY_QUIET, provider.id)):
             continue

@@ -521,12 +521,14 @@ prints each one and whether it could start now, and `/harness status` does the s
   a run reads its usage again, nothing refreshes the reading first. Muse's is 2026-10-11, when it
   moved to the $50 plan (its last reading, from the $15 plan, said 100% of the week).
 
-At the top level, `max_parallel` is how many run at once on GitHub's runners (11, the Claude
-accounts' lanes added up, so it holds none of them back), `machine_parallel` how many run at once
-on the bot's machine (6; its two vCPUs run each job's checks; GitHub's runners have four each),
-each apart from the other, so Claude runs never wait for the night box's slots nor its runs for
-GitHub's lanes; `plan_lanes` is how many planning runs may go on top of those (the planning
-lane, below; 6), `priority` the usage order within a tier (below), `balance` the load balancer
+At the top level, `max_parallel` is how many run at once on GitHub's runners, planning runs
+included (6, under the Claude accounts' eight lanes: the organization runs 20 hosted jobs at once,
+and with Squishy's 2 the bots hold at most 8 of them, so CI keeps 12; #1455), `machine_parallel` how
+many run at once on the bot's machine (6; its two vCPUs run each job's checks; GitHub's runners have
+four each), each apart from the other, so Claude runs never wait for the night box's slots nor its
+runs for GitHub's lanes; `plan_lanes` is how many planning runs may go at once beside the
+subscriptions' own lanes (the planning lane, below; 6), each still on a runner of its own: a machine
+slot, or one of `max_parallel`; `priority` the usage order within a tier (below), `balance` the load balancer
 that comes before it (below; on), and `tiers` each tier's models, which the router tries
 weakest-first inside the subscription. A subscription's own `lanes`
 (default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill its box alone, Muse's is 2, and claude-3's is 2. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
@@ -622,9 +624,9 @@ starts nothing the caps would not: it only orders the subscriptions that may sta
   from. A queued item without one carries `bot:needs-plan`: one with no plan, and one whose plan
   came from a model under its plan floor (a medium model's plan of a hard item). A
   planner on the **planning lane** plans those first, so a subscription never plans and builds
-  the same item: `plan_lanes` runs on top of
-  `max_parallel`, which take no build lane, so a subscription plans while it builds, up to as
-  many items at once as its `lanes`. The planning lane takes the easy items first (Devin waits on those),
+  the same item: `plan_lanes` runs, which take none of a subscription's own lanes, so it plans
+  while it builds, up to as many items at once as its `lanes`. Each still holds a runner: a slot
+  on the machine, or one of `max_parallel`'s lanes on GitHub's runners (#1455). The planning lane takes the easy items first (Devin waits on those),
   then fullsend parts (Muse builds those, [Fullsend](#fullsend)), then the rest in the usual
   order, ahead of every build. Each
   subscription offers its strongest free seat; the strong ones go first, within a tier the one

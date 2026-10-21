@@ -268,7 +268,9 @@ def tier_at_least(tier: str, floor: str) -> bool:
 
 @dataclass(frozen=True)
 class Pool:
-    #: How many runs may go at once on GitHub's runners (the Claude accounts').
+    #: How many runs may go at once on GitHub's runners (the Claude accounts'), planning runs
+    #: included (#1455): the organization runs 20 hosted jobs at once, so this is the share the
+    #: bot's model jobs may hold while CI keeps the rest.
     max_parallel: int
     priority: tuple[str, ...]
     providers: Mapping[str, Provider]
@@ -276,8 +278,9 @@ class Pool:
     #: `max_parallel`, so neither waits on the other: its two vCPUs run every machine job's
     #: checks, while each of GitHub's runners has its own four.
     machine_parallel: int = 0
-    #: How many planning runs may go at once on top of `max_parallel` (the planning lane): a
-    #: strong model plans the Needs plan stage there while the build lanes are full.
+    #: How many planning runs may go at once (the planning lane), on top of each subscription's
+    #: own `lanes`: a strong model plans the Needs plan stage there while its builds go on. Each
+    #: still takes a runner, a machine slot or one of `max_parallel` (#1455).
     plan_lanes: int = 0
     #: Each tier's models, in the order the router tries them.
     tiers: Mapping[str, tuple[TierEntry, ...]] = field(default_factory=dict)
