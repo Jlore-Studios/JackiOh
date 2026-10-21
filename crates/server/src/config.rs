@@ -20,8 +20,10 @@
 //! collection are `usize`; game and ladder quantities are `i32`; ratings and Glicko numbers are
 //! `f64`.
 
-use jackioh_engine::wire::{CodeFormat, EmoteId};
+use jackioh_engine::wire::{CodeFormat, EmoteId, PrintedRarity};
 use serde::{Deserialize, Serialize};
+
+use crate::cosmetics::CosmeticRarity;
 
 // ---------------------------------------------------------------------------------------------
 // R79 — match lifecycle defaults (SPEC §9.5, BUILD §2). Exact names per BUILD §2's last
@@ -2011,19 +2013,30 @@ pub const PING_SHOW_MS: i64 = 2_500;
 // pity counters, bars, tracks and quests from these, so every one is exported to
 // `apps/web/src/wire/serverConfig.ts` by `tests/export_config.rs` (CLAUDE.md rules 7, 9).
 // The table in SPEC §14 lists every constant; the values are #1333's table, the owner's numbers
-// brought in at the end of #1294, and where it leaves a value to be derived the note below says
-// how. `PACK_BASE_RATES` is tuned by the seeded simulation in `economy/math.rs`, which also derives
-// both bars' points-per-duplicate from their target packs.
+// brought in at the end of #1294, and #1339's drop tables, and where they leave a value to be
+// derived the note below says how. No drop rate is tuned: every drop is a tiered roll on one of the
+// weight tables below (R1339000), and the seeded simulation in `economy/math.rs` only reports what
+// pity adds on top (R1339001) and derives both bars' points-per-duplicate from their target packs.
 // ---------------------------------------------------------------------------------------------
 
-/// The shape of `PACK_BASE_RATES` and `PACK_TARGET_RATES` (cf. `AiEmoteConfig`): the chance a
-/// card pack holds an Epic, a Legendary or a Mythic. Per pack, not per slot (SPEC §14.4).
-#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
+/// The shape of `CARD_TIER_WEIGHTS` and `COSMETIC_TIER_WEIGHTS` (SPEC §14.3, R1339000): the integer
+/// weight out of `TIER_WEIGHT_TOTAL` of each tier above the lowest, so a tier's chance in one roll
+/// is its weight over the total. The lowest tier, Common, is the fallback: it takes whatever weight
+/// is left, computed and never stored, so raising one tier takes from it alone.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct PackRarityRates {
-    pub epic: f64,
-    pub legendary: f64,
-    pub mythic: f64,
+pub struct TierWeights {
+    pub rare: u32,
+    pub epic: u32,
+    pub legendary: u32,
+    pub mythic: u32,
+}
+
+impl TierWeights {
+    /// The set tiers' weights summed: what the fallback's weight is `TIER_WEIGHT_TOTAL` less.
+    pub const fn set_total(&self) -> u32 {
+        self.rare + self.epic + self.legendary + self.mythic
+    }
 }
 
 /// The shape of `PACK_UNOWNED_WEIGHTS` and `COSMETIC_PACK_CARD_WEIGHTS`: how a draw weighs the
@@ -2048,19 +2061,6 @@ pub enum CosmeticTokenStep {
     CosmeticPack,
 }
 
-/// The shape of `COSMETIC_PACK_RATES` and `COSMETIC_PACK_GUARANTEED_RATES`: the chance one
-/// cosmetic pack slot rolls each rarity on the cosmetics' own scale (SPEC §14.6); the five shares
-/// sum to 1.
-#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct CosmeticPackRates {
-    pub common: f64,
-    pub rare: f64,
-    pub epic: f64,
-    pub legendary: f64,
-    pub mythic: f64,
-}
-
 /// SPEC §14.3: the Jlore a card pack costs (#1333's table: 100), five ladder wins.
 pub const PACK_PRICE_JLORE: i32 = 100;
 /// SPEC §14.3: the slots of a card pack (#1333's table: 5), the Rare-or-better slot one of them.
@@ -2072,30 +2072,43 @@ pub const PACK_UNOWNED_WEIGHTS: PackUnownedWeights = PackUnownedWeights {
     owned: 1.0,
     unowned: 4.0,
 };
-/// SPEC §14.4: the chance a card pack holds each rarity before pity. Retuned by the seeded
-/// simulation in `economy/math.rs` for pity 10/20/30 (#1333's table): a base `p` with threshold
-/// `T` holds its rarity in `p / (1 - (1 - p)^T)` of packs, so 29.0%, 8.2% and 3.0% land on
-/// 30.0%, 10.0% and 5.0%.
-pub const PACK_BASE_RATES: PackRarityRates = PackRarityRates {
-    epic: 0.290,
-    legendary: 0.082,
-    mythic: 0.030,
+/// SPEC §14.3, R1339000: the fixed total every tier weight table is out of, so a tier's chance in
+/// one roll is its weight over this, and one roll is one integer draw below it.
+pub const TIER_WEIGHT_TOTAL: u32 = 1000;
+/// SPEC §14.3, R1339000: a card pack slot's card rarity (#1339's table): Rare 300, Epic 70,
+/// Legendary 20 and Mythic 10, so the fallback, Common, is 600. Per pack before pity, five slots
+/// hold an Epic in 1 − (1 − 70/1000)^5 = 30.4% of packs, a Legendary in 9.6% and a Mythic in 4.9%.
+pub const CARD_TIER_WEIGHTS: TierWeights = TierWeights {
+    rare: 300,
+    epic: 70,
+    legendary: 20,
+    mythic: 10,
 };
-/// SPEC §14.4: the chance a card pack holds an Epic, a Legendary or a Mythic once pity is
-/// counted in (#1333's table: 30%, 10%, 5%).
-pub const PACK_TARGET_RATES: PackRarityRates = PackRarityRates {
-    epic: 0.30,
-    legendary: 0.10,
-    mythic: 0.05,
+/// SPEC §14.3, §14.6, R1339000: the cosmetic rarity of a duplicate's cosmetic and of a cosmetic
+/// pack slot (#1339's table): Rare 250, Epic 150, Legendary 45 and Mythic 5, so the fallback,
+/// Common, is 550.
+pub const COSMETIC_TIER_WEIGHTS: TierWeights = TierWeights {
+    rare: 250,
+    epic: 150,
+    legendary: 45,
+    mythic: 5,
 };
-/// SPEC §14.4: how far the seeded simulation's rates may land from `PACK_TARGET_RATES`, in
-/// fraction points. #1294's table gives no value; two points hold the tuned bases honestly
-/// without fitting the seed's noise.
-pub const PACK_RATE_TOLERANCE: f64 = 0.02;
+// SPEC §14.3, R1339000: set weights past the total leave the fallback nothing to take.
+const _: () = assert!(CARD_TIER_WEIGHTS.set_total() <= TIER_WEIGHT_TOTAL);
+const _: () = assert!(COSMETIC_TIER_WEIGHTS.set_total() <= TIER_WEIGHT_TOTAL);
+/// SPEC §14.3, R1339000: the card pack slot and the cosmetic pack slot floored at a tier, the
+/// first. #1339 says one slot; the first is this issue's pick.
+pub const PACK_FLOORED_SLOT: usize = 0;
+/// SPEC §14.3, R1339000: the floor of a card pack's floored slot: it rolls `CARD_TIER_WEIGHTS`, and
+/// a Common becomes Rare (Rare 900, Epic 70, Legendary 20, Mythic 10).
+pub const PACK_FLOOR_RARITY: PrintedRarity = PrintedRarity::Rare;
+/// SPEC §14.6, R1339000: the floor of a cosmetic pack's floored slot: it rolls
+/// `COSMETIC_TIER_WEIGHTS`, and a Common or a Rare becomes Epic (Epic 950, Legendary 45, Mythic 5).
+pub const COSMETIC_PACK_FLOOR_RARITY: CosmeticRarity = CosmeticRarity::Epic;
 /// SPEC §14.4: the longest an account waits for an Epic: of any 10 card packs in a row, at
-/// least one holds an Epic (#1333's table: 10/20/30, and pity never exceeds 30 packs). With
-/// `PACK_BASE_RATES` they land the effective rates on `PACK_TARGET_RATES` (see the simulation in
-/// `economy/math.rs`).
+/// least one holds an Epic (#1333's table: 10/20/30, and pity never exceeds 30 packs). Pity sits
+/// on top of `CARD_TIER_WEIGHTS` and tunes nothing: it only forces a tier on the pack a counter
+/// would reach its threshold in (R1339001).
 pub const PITY_EPIC_PACKS: usize = 10;
 /// SPEC §14.4: the longest an account waits for a Legendary: of any 20 card packs in a row, at
 /// least one holds one.
@@ -2129,26 +2142,9 @@ pub const COSMETIC_TOKEN_CYCLE: [CosmeticTokenStep; 6] = [
     CosmeticTokenStep::Rare,
     CosmeticTokenStep::CosmeticPack,
 ];
-/// SPEC §14.6: a cosmetic pack's slots (#1333's table: 5).
+/// SPEC §14.6: a cosmetic pack's slots (#1333's table: 5), each rolling `COSMETIC_TIER_WEIGHTS`,
+/// the floored one at `COSMETIC_PACK_FLOOR_RARITY` (R1339000).
 pub const COSMETIC_PACK_SLOTS: usize = 5;
-/// SPEC §14.6: a cosmetic pack slot's odds, the same as a duplicate's cosmetic
-/// (`COSMETIC_DUPLICATE_RATES`, #1333's table), R1306000.
-pub const COSMETIC_PACK_RATES: CosmeticPackRates = CosmeticPackRates {
-    common: 0.55,
-    rare: 0.25,
-    epic: 0.15,
-    legendary: 0.045,
-    mythic: 0.005,
-};
-/// SPEC §14.6: the first slot's odds, so every cosmetic pack holds an Epic or better (#1333's
-/// table).
-pub const COSMETIC_PACK_GUARANTEED_RATES: CosmeticPackRates = CosmeticPackRates {
-    common: 0.0,
-    rare: 0.0,
-    epic: 0.75,
-    legendary: 0.225,
-    mythic: 0.025,
-};
 /// #1306 gives no value; four to one, `PACK_UNOWNED_WEIGHTS` turned around, toward the cards the
 /// account owns.
 pub const COSMETIC_PACK_CARD_WEIGHTS: PackUnownedWeights = PackUnownedWeights {
@@ -2264,34 +2260,9 @@ pub const STARTER_CARDS: &[&str] = &[
 ];
 
 // ---- The pack roll (SPEC §14.3, #1301) ----
-// PUBLIC, like the collection economy's above: the pack screen shows these odds, so each is
-// exported to `apps/web/src/wire/serverConfig.ts` by `tests/export_config.rs`.
+// PUBLIC, like the collection economy's above, so it is exported to
+// `apps/web/src/wire/serverConfig.ts` by `tests/export_config.rs`.
 
-/// The shape of `COSMETIC_DUPLICATE_RATES`: the chance a duplicate's cosmetic rolls each
-/// rarity. The five shares sum to 1.
-#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct CosmeticDuplicateRates {
-    pub common: f64,
-    pub rare: f64,
-    pub epic: f64,
-    pub legendary: f64,
-    pub mythic: f64,
-}
-
-/// SPEC §14.3: the odds of the cosmetic rarity a duplicate rolls (#1333's table, R1301002). Its
-/// own scale, never tied to the card's rarity (R1333000).
-pub const COSMETIC_DUPLICATE_RATES: CosmeticDuplicateRates = CosmeticDuplicateRates {
-    common: 0.55,
-    rare: 0.25,
-    epic: 0.15,
-    legendary: 0.045,
-    mythic: 0.005,
-};
-/// R1301000: the chance a slot that holds none of the pack's Epic, Legendary or Mythic rolls Rare
-/// rather than Common. #1294's table gives no value; 0.25, about the share of Rares among
-/// Hearthstone's non-guaranteed slots.
-pub const PACK_FILLER_RARE_RATE: f64 = 0.25;
 /// SPEC §14.3: the name a request gives the global card pack; a set's pack goes by its set's name.
 pub const GLOBAL_PACK_NAME: &str = "global";
 

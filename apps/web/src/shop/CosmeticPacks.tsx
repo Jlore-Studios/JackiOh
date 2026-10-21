@@ -1,8 +1,8 @@
-// The cosmetic packs (#1309, SPEC §14.6): the unopened packs, a simple reveal of an opening's
-// slots, and the Chase Shard bar with its Legendary-or-Mythic choice when full.
+// The cosmetic packs (#1309, SPEC §14.6): the unopened packs and their odds, a simple reveal of an
+// opening's slots, and the Chase Shard bar with its Legendary-or-Mythic choice when full.
 //
-// THE SERVER DECIDES (CLAUDE.md rule 7). The packs held, every slot and the shard bar come
-// from the answers; the reveal only reads them out, slot by slot in order. A refused open or
+// THE SERVER DECIDES (CLAUDE.md rule 7). The packs held, the odds (R1339000), every slot and the
+// shard bar come from the answers; the reveal only reads them out, slot by slot in order. A refused open or
 // chase shows the server's words verbatim with nothing changed on screen.
 
 import { useEffect, useState, type ReactElement } from "react";
@@ -10,6 +10,7 @@ import { useEffect, useState, type ReactElement } from "react";
 import { CATALOG } from "@jackioh/cards";
 
 import { t } from "../i18n/i18n.ts";
+import { tierPercents } from "../packs/packs.ts";
 import {
   buyChase,
   getCollection,
@@ -170,6 +171,18 @@ export default function CosmeticPacks({
         <>
           <p className="cosmetic-packs-held" data-testid={shopTestid.unopened}>
             {t("{pack}: {count} unopened", { pack: t("Cosmetic pack"), count: info.unopened })}
+          </p>
+          <p data-testid={shopTestid.odds}>
+            {t(
+              "Each slot: Common {common}, Rare {rare}, Epic {epic}, Legendary {legendary}, Mythic {mythic}.",
+              tierPercents(info.odds.slot),
+            )}
+          </p>
+          <p data-testid={shopTestid.flooredOdds}>
+            {t(
+              "Guaranteed slot: Common {common}, Rare {rare}, Epic {epic}, Legendary {legendary}, Mythic {mythic}.",
+              tierPercents(info.odds.flooredSlot),
+            )}
           </p>
           {info.unopened > 0 ? (
             <div className="account-actions">
