@@ -58,6 +58,7 @@ export const packTestid = {
   panel: "packs-panel",
   loading: "packs-loading",
   loadError: "packs-load-error",
+  retry: "packs-retry",
   odds: "packs-odds",
   oddsRow: (key: string) => `packs-odds-${key}`,
   pity: (key: string) => `packs-pity-${key}`,

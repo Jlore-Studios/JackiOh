@@ -236,4 +236,38 @@ describe("#1309 the token picker", () => {
     expect(server.to("GET", "/api/collection")).toHaveLength(2);
     expect(server.to("GET", "/api/cosmetics")).toHaveLength(2);
   });
+
+  it("#1485 a failed read that works on the page's next revision shows the shop and drops the alert", async () => {
+    const answers: { bars?: Reply } = { bars: refusal(503, "unavailable", "the token bars are not reachable") };
+    tokenServer(answers);
+    const { rerender } = render(<TokenPicker token={TOKEN} />);
+    expect(await screen.findByTestId(T.tokenLoadError)).toHaveTextContent("the token bars are not reachable");
+
+    answers.bars = { status: 200, body: tokenBars() };
+    rerender(<TokenPicker token={TOKEN} revision={1} />);
+
+    expect(await screen.findByTestId(T.cardBar)).toHaveTextContent("149 / 150");
+    expect(screen.queryByTestId(T.tokenLoadError)).toBeNull();
+    expect(screen.queryByTestId(T.tokenRetry)).toBeNull();
+  });
+
+  it("#1485 Try again reads once more, cannot be pressed twice while the read is out, and drops the alert once it works", async () => {
+    const answers: { bars?: Reply } = { bars: refusal(503, "unavailable", "the token bars are not reachable") };
+    const server = tokenServer(answers);
+    render(<TokenPicker token={TOKEN} />);
+    await waitFor(() => {
+      expect(screen.getByTestId(T.tokenRetry)).toBeEnabled();
+    });
+    expect(server.to("GET", "/api/tokens")).toHaveLength(1);
+
+    answers.bars = { status: 200, body: tokenBars() };
+    fireEvent.click(screen.getByTestId(T.tokenRetry));
+    // The read is out: the button waits for it, and a second press sends nothing.
+    expect(screen.getByTestId(T.tokenRetry)).toBeDisabled();
+    fireEvent.click(screen.getByTestId(T.tokenRetry));
+
+    expect(await screen.findByTestId(T.cardBar)).toHaveTextContent("149 / 150");
+    expect(screen.queryByTestId(T.tokenLoadError)).toBeNull();
+    expect(server.to("GET", "/api/tokens")).toHaveLength(2);
+  });
 });

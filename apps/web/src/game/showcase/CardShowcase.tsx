@@ -1,7 +1,9 @@
 // A visual-only, redacted-event display (CLAUDE.md rule 7; R97, R202, R227), held long enough to read (R201).
 // R502: casts on draw (Hinder #21, Blood Ridden #27) appear on both seats, gated to the runner without pacing it.
 // A card another card casts (C+ #47 Jogg's Box) replaces the current display on its runner entry; per-viewer
-// `runs.ts` tracking identifies those casts. R436 announces Call to Chaos and shows it still when effects do not draw.
+// `runs.ts` tracking identifies those casts. Issue #1493: a revealed trap reuses that generated-cast close-up
+// on both seats, gated to its `trapFired` runner entry. R436 announces Call to Chaos and shows it still when
+// effects do not draw.
 // Per-viewer windows let a hotseat player catch up; the portal is click-through and holds practice's AI via `data-showcase`.
 // Reduced motion preserves the information without animation.
 
@@ -38,6 +40,7 @@ import {
   SHOWCASE_FADE_MS,
   SHOWCASE_GATE_MAX_MS,
   SHOWCASE_QUEUE_MAX,
+  TRAP_REVEAL_TEXT,
   showcaseCastHoldMs,
   showcaseHoldMs,
   showcaseMulticastHoldMs,
@@ -61,11 +64,12 @@ type ChaosShowing = { names: string[]; seq: number; holdMs: number; still: boole
 function kindOf(play: ShowcasePlay): ShowcaseKind {
   if (play.castOnDraw === true) return "cast";
   if (play.castBy !== undefined) return "multicast";
+  if (play.trapReveal !== undefined) return "trap";
   if (play.defId !== null) return "played";
   return play.set ? "set" : "hidden";
 }
 
-const CAPTION: Readonly<Record<Exclude<ShowcaseKind, "cast" | "multicast">, string>> = {
+const CAPTION: Readonly<Record<Exclude<ShowcaseKind, "cast" | "multicast" | "trap">, string>> = {
   played: "Opponent played",
   set: "Opponent set a card",
   hidden: "Opponent played a card",
@@ -82,7 +86,8 @@ function multicastCaption(byName: string | undefined): string {
 
 function captionOf(play: ShowcasePlay, kind: ShowcaseKind, viewer: PlayerId, byName: string | undefined): string {
   if (kind === "cast") return castCaption(play, viewer);
-  return kind === "multicast" ? multicastCaption(byName) : t(CAPTION[kind]);
+  if (kind === "multicast") return multicastCaption(byName);
+  return kind === "trap" ? t(TRAP_REVEAL_TEXT.caption) : t(CAPTION[kind]);
 }
 
 /**
@@ -99,8 +104,29 @@ function multicastSaid(byName: string | undefined, name: string | undefined, ord
     : t(`{by} ${said} {name} ({ordinal})`, { by: byName, name, ordinal });
 }
 
+/**
+ * A trap reveal's sentence: whose trap fired, the card when the view names it, and which of the
+ * batch's reveals it is. Each is one sentence for the dictionary, worded from the constants the
+ * tests read (issue #1493).
+ */
+function trapSaid(play: ShowcasePlay, viewer: PlayerId, name: string | undefined): string {
+  const whose = play.player === viewer ? t("your") : t("the opponent's");
+  const total = play.trapReveal?.total ?? 1;
+  const ordinal = String(play.trapReveal?.ordinal ?? 1);
+  if (play.defId === null) {
+    return total > 1 ? t(TRAP_REVEAL_TEXT.hiddenNumbered, { whose, ordinal }) : t(TRAP_REVEAL_TEXT.hidden, { whose });
+  }
+  if (name === undefined) {
+    return total > 1 ? t(TRAP_REVEAL_TEXT.unnamedNumbered, { whose, ordinal }) : t(TRAP_REVEAL_TEXT.unnamed, { whose });
+  }
+  return total > 1
+    ? t(TRAP_REVEAL_TEXT.namedNumbered, { whose, card: name, ordinal })
+    : t(TRAP_REVEAL_TEXT.named, { whose, card: name });
+}
+
 function saidOf(play: ShowcasePlay, kind: ShowcaseKind, viewer: PlayerId, name: string | undefined, byName: string | undefined): string {
   if (kind === "multicast") return multicastSaid(byName, name, String(play.castBy?.ordinal ?? 1));
+  if (kind === "trap") return trapSaid(play, viewer, name);
   if (kind === "cast") {
     const drew = castCaption(play, viewer);
     const said = CAST_ON_DRAW_TEXT.said;
@@ -125,7 +151,8 @@ type Gated = { event: GameEvent; release: (reached: boolean) => void };
 
 function holdFor(play: ShowcasePlay, speed: number): number {
   if (play.castOnDraw === true) return showcaseCastHoldMs(speed);
-  return play.castBy !== undefined ? showcaseMulticastHoldMs(speed) : showcaseHoldMs(speed);
+  if (play.castBy !== undefined || play.trapReveal !== undefined) return showcaseMulticastHoldMs(speed);
+  return showcaseHoldMs(speed);
 }
 
 function sameEvent(a: GameEvent, b: GameEvent): boolean {
@@ -289,7 +316,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
     const now: ShowcasePlay[] = [];
     for (const item of showcasePlays(fresh, view, tracker)) {
       if (queue !== undefined && item.play.castOnDraw === true) gate(item.event, () => hold([item.play]));
-      else if (queue !== undefined && item.play.castBy !== undefined) {
+      else if (queue !== undefined && (item.play.castBy !== undefined || item.play.trapReveal !== undefined)) {
         const play = item.play;
         gate(item.event, (reached) => (reached ? replace(play) : hold([play])));
       } else now.push(item.play);
@@ -357,6 +384,8 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
         });
   const kind = play === null ? null : kindOf(play);
   const castBy = play?.castBy;
+  // A lone trap gets no badge; a trap never gets the cast-on-draw ribbon.
+  const badge = castBy !== undefined ? castBy.ordinal : play?.trapReveal !== undefined && play.trapReveal.total > 1 ? play.trapReveal.ordinal : undefined;
   const castDefId = castBy?.defId ?? null;
   const byInfo = castDefId === null ? undefined : lookup?.(castDefId, false);
   const byEnglish = castDefId === null ? undefined : (byInfo?.name ?? view.defs?.[castDefId]?.name);
@@ -404,7 +433,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
                 <span ref={cardRef} className="showcase-card" data-testid={showcaseTestid.face}>
                   <CardFace face={face} layout="full" />
                   {kind === "cast" ? <CastRibbon /> : null}
-                  {castBy !== undefined ? <CastOrdinal ordinal={castBy.ordinal} /> : null}
+                  {badge === undefined ? null : <ShowcaseOrdinal ordinal={badge} />}
                 </span>
               ) : (
                 <span ref={cardRef} className="showcase-card showcase-card--back" data-testid={showcaseTestid.back}>
@@ -421,7 +450,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
                     </span>
                   )}
                   {kind === "cast" ? <CastRibbon /> : null}
-                  {castBy !== undefined ? <CastOrdinal ordinal={castBy.ordinal} /> : null}
+                  {badge === undefined ? null : <ShowcaseOrdinal ordinal={badge} />}
                 </span>
               )}
             </div>,
@@ -432,7 +461,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
   );
 }
 
-function CastOrdinal({ ordinal }: { ordinal: number }): ReactElement {
+function ShowcaseOrdinal({ ordinal }: { ordinal: number }): ReactElement {
   return (
     <span className="showcase-ordinal" data-testid={showcaseTestid.ordinal} data-ordinal={ordinal}>
       {`${MULTICAST_TEXT.ordinal}${String(ordinal)}`}
