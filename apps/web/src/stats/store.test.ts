@@ -4,7 +4,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PLAYER_STATS_KEY, PLAYER_STATS_VERSION } from "./config.ts";
-import { EMPTY_LOG, EMPTY_STATS, logSeen, logWith } from "./model.ts";
+import { EMPTY_LOG, EMPTY_STATS, NO_COUNTS, logSeen, logWith } from "./model.ts";
 import {
   dropPlayerStatsCache,
   parsePlayerStats,
@@ -37,7 +37,7 @@ describe("R639 the stored statistics", () => {
     expect(readPlayerStats()).toBe(stats);
     const stored = JSON.parse(window.localStorage.getItem(PLAYER_STATS_KEY) ?? "null") as Record<string, unknown>;
     expect(stored).toMatchObject({ v: PLAYER_STATS_VERSION, games: 1, wins: 1, losses: 0, draws: 0 });
-    expect(stored.cards).toEqual({ "core-001": { seen: 1, played: 1, playedAgainst: 0, destroyed: 0, defeated: 0 } });
+    expect(stored.cards).toEqual({ "core-001": { seen: 1, played: 1, playedAgainst: 0, destroyed: 0, defeated: 0, allured: 0, lethal: 0, sprung: 0, survived: 0 } });
   });
 
   it("R639 a game is added to the totals as stored, so two tabs finishing a game each add theirs", () => {
@@ -102,7 +102,67 @@ describe("R639 a tolerant reader", () => {
       },
     });
     expect(parsed).toMatchObject({ games: 0, wins: 0, losses: 0, draws: 2 });
-    expect(parsed.cards).toEqual({ "core-001": { seen: 2, played: 0, playedAgainst: 0, destroyed: 0, defeated: 4 } });
+    expect(parsed.cards).toEqual({ "core-001": { seen: 2, played: 0, playedAgainst: 0, destroyed: 0, defeated: 4, allured: 0, lethal: 0, sprung: 0, survived: 0 } });
+  });
+
+  it("R1582000 statistics stored before the new counters load with them at 0, and a game adds to them", () => {
+    window.localStorage.setItem(
+      PLAYER_STATS_KEY,
+      JSON.stringify({
+        v: PLAYER_STATS_VERSION,
+        games: 3,
+        wins: 2,
+        losses: 1,
+        draws: 0,
+        cards: { "core-001": { seen: 3, played: 4, playedAgainst: 0, destroyed: 1, defeated: 2 } },
+      }),
+    );
+    expect(readPlayerStats().cards["core-001"]).toEqual({
+      seen: 3,
+      played: 4,
+      playedAgainst: 0,
+      destroyed: 1,
+      defeated: 2,
+      allured: 0,
+      lethal: 0,
+      sprung: 0,
+      survived: 0,
+    });
+    let log = logWith(EMPTY_LOG, "survived", "core-001");
+    log = logWith(log, "sprung", "core-020");
+    expect(recordGame(log, "win")).toMatchObject({ games: 4, wins: 3 });
+    const kept = readPlayerStats().cards["core-001"];
+    expect(kept).toEqual({ ...NO_COUNTS, seen: 3, played: 4, destroyed: 1, defeated: 2, survived: 1 });
+    const stored = JSON.parse(window.localStorage.getItem(PLAYER_STATS_KEY) ?? "null") as {
+      cards: Record<string, unknown>;
+    };
+    expect(stored.cards["core-020"]).toEqual({ ...NO_COUNTS, sprung: 1 });
+  });
+
+  it("R1582000 a hand-edited new counter that is not a whole positive number reads as 0, and a card with only a new counter is kept", () => {
+    const parsed = parsePlayerStats({
+      v: PLAYER_STATS_VERSION,
+      games: 1,
+      wins: 1,
+      losses: 0,
+      draws: 0,
+      cards: {
+        "core-001": { allured: "2", lethal: -1, sprung: 1.5, survived: 3 },
+        "core-002": { sprung: 2 },
+        "core-003": { allured: 0, lethal: null },
+      },
+    });
+    expect(parsed.cards).toEqual({
+      "core-001": { ...NO_COUNTS, survived: 3 },
+      "core-002": { ...NO_COUNTS, sprung: 2 },
+    });
+  });
+
+  it("R1582000 the clear empties the new counters", () => {
+    recordGame(logWith(EMPTY_LOG, "allured", "core-050"), "loss");
+    expect(resetPlayerStats()).toBe(EMPTY_STATS);
+    expect(readPlayerStats()).toBe(EMPTY_STATS);
+    expect(parsePlayerStats(window.localStorage.getItem(PLAYER_STATS_KEY))).toEqual(EMPTY_STATS);
   });
 
   it("R639 storage that throws leaves the in-memory totals in force", () => {

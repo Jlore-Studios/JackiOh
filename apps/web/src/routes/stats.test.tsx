@@ -663,6 +663,10 @@ describe("R654 public statistics route", () => {
         playedAgainst: {},
         destroyed: {},
         defeated: {},
+        allured: {},
+        lethal: {},
+        sprung: {},
+        survived: {},
       },
       "win",
     );
