@@ -12641,8 +12641,19 @@
     "what": "build #1441 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-21T04:40:46Z",
-    "notes": [],
+    "at": "2026-10-21T04:47:14Z",
+    "notes": [
+      "#1492: typed it Task",
+      "#1491: typed it Task",
+      "#1490: typed it Task",
+      "#1489: typed it Bug",
+      "#1488: typed it Task",
+      "#1487: typed it Task",
+      "#1486: typed it Task",
+      "#1485: typed it Bug",
+      "#1484: typed it Task",
+      "#1483: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
