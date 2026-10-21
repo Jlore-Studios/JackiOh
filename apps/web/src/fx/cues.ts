@@ -33,7 +33,7 @@ import { armorTookHalf, damageFeel, damageTier, UNIT_SLAM } from "../game/damage
 import { brandCues } from "./brand.ts";
 import { castOnDrawCues, planCardFx } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
-import { flavorSourceOf } from "./flavorSource.ts";
+import { attackerOf, flavorLookOf, flavorSourceOf } from "./flavorSource.ts";
 import { flavorLook } from "./flavors.ts";
 import { lookOf, TONE_LOOKS, ZONE_DEFAULT, ZONE_LOOKS, type ZoneLook } from "./looks.ts";
 import { shieldCues } from "./shield.ts";
@@ -405,10 +405,13 @@ const cast: Recipe = (event, p) => {
   // Issue #124: a card the viewer reads flares in its family's look as well.
   const look = lookOf(factsOf(event.defId, p.env));
   const accent = look === undefined ? [] : [burst(p.env.intensity, look.preset, at, "ring", 0, "castAccent")];
+  // #1444: a readable face-up play bursts in its flavor particle; a face-down or hidden one bursts arcane.
+  const flavor = FX_FLAVOR_LIVE && event.formerId === undefined ? flavorLookOf(event.defId, event.instanceId, p.view) : null;
+  const base = flavor?.particle ?? "arcane";
   if (isCard(p.tgt) || isHandCard(p.tgt)) {
-    return [burst(p.env.intensity, "arcane", at, "area", 0, "cast"), ring(p.D, "arcane", at, 0), ...accent];
+    return [burst(p.env.intensity, base, at, "area", 0, "cast"), ring(p.D, "arcane", at, 0), ...accent];
   }
-  return [burst(p.env.intensity, "arcane", at, "point", 0, "castOpponent"), ...accent];
+  return [burst(p.env.intensity, base, at, "point", 0, "castOpponent"), ...accent];
 };
 
 /**
@@ -829,7 +832,15 @@ const lunge: Recipe = (event, p) => {
   // B5 E9: the redirected hit, attack or pick kicks up dust at its new target.
   if (event.type === "redirected") return redirectedCues(event, p);
   if (event.type !== "attackDeclared") return [];
-  return [burst(p.env.intensity, "dust", anchor(p.tgt, FOOT), "point", 0, "lungeDust")];
+  // #1444: a non-Ranged attacker's contact burst is its flavor particles; Ranged keeps dust.
+  let preset: FxPreset = "dust";
+  if (FX_FLAVOR_LIVE) {
+    const attacker = attackerOf(event.attackerId, p.view);
+    if (attacker !== null && !attacker.ranged) {
+      preset = flavorLookOf(attacker.defId, event.attackerId, p.view)?.particle ?? "dust";
+    }
+  }
+  return [burst(p.env.intensity, preset, anchor(p.tgt, FOOT), "point", 0, "lungeDust")];
 };
 
 const fizzle: Recipe = (event, p) => {

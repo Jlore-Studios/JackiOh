@@ -1,20 +1,13 @@
-// #1443: a card's non-combat damage fires its flavor's projectile at the target, behind
-// `FX_FLAVOR_LIVE` (off until part 8, so this file turns it on; the off side is the existing
-// `src/fx/*.test.ts` and `src/game/animations*.test.ts` suites, unchanged). Every plan here is
-// `planEntries` then `planFx`, against a view's public facts alone (CLAUDE.md rule 7, R202).
+// #1443: a card's non-combat damage fires its flavor's projectile at the target, with
+// `FX_FLAVOR_LIVE` on since #1444. Every plan here is `planEntries` then `planFx`, against a
+// view's public facts alone (CLAUDE.md rule 7, R202).
 
 import type { GameEvent, PlayerView } from "@jackioh/shared";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("../fx/constants.ts", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../fx/constants.ts")>()),
-  FX_FLAVOR_LIVE: true,
-}));
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { card, fullBoardView, withEvents } from "../test/fixtures.ts";
 import { FLAVOR_LOOKS, chaosFlavor } from "../fx/flavors.ts";
 import {
-  FX_FLAVOR_LIVE,
   FX_FLAVOR_VOLLEY_MAX,
   FX_FOG_HIT_FROM,
   FX_FOG_HIT_TO,
@@ -86,9 +79,8 @@ function shakesOf(cues: readonly FxCue[]): FxCue[] {
   return cues.filter((cue) => cue.kind === "shake");
 }
 
-describe("#1443 the flag is on for this file", () => {
+describe("#1443 the volley cap", () => {
   it("#1443 the volley cap is four", () => {
-    expect(FX_FLAVOR_LIVE).toBe(true);
     expect(FX_FLAVOR_VOLLEY_MAX).toBe(4);
   });
 });
@@ -316,5 +308,33 @@ describe("#1443 heals, loss, set health and absorbed damage fire nothing", () =>
     for (const cues of byEntry) {
       expect(shotsOf(cues)).toHaveLength(0);
     }
+  });
+});
+
+describe("#1444 a Spell's play into damage plays live", () => {
+  it("#1444 the fire cast bursts and the Fire shot flies", () => {
+    const view = resolvingView("classic-036", "spell-1");
+    const target = enemyUnit(view, 0);
+    const events: GameEvent[] = [
+      { type: "cardPlayed", player: "p1", instanceId: "spell-1", defId: "classic-036", costPaid: 2 },
+      dmg("spell-1", target, 4, false),
+    ];
+    const { entries, byEntry } = planned(events, view);
+    expect(entries).toHaveLength(2);
+    const playedCues = must(byEntry[0], "the play's cues");
+    expect(playedCues.find((cue) => cue.kind === "burst" && cue.preset === "fire")).toMatchObject({ delayMs: 0 });
+    const damageCues = must(byEntry[1], "the damage's cues");
+    const fire = FLAVOR_LOOKS.Fire;
+    const D = must(entries[1], "the damage entry").durationMs;
+    const launch = Math.round(FX_SHOT_LAUNCH_AT * D);
+    expect(shotsOf(damageCues)).toHaveLength(1);
+    expect(shotsOf(damageCues)[0]).toMatchObject({
+      kind: "shot",
+      shot: fire.projectile,
+      colors: fire.colors,
+      preset: fire.particle,
+      delayMs: launch,
+      flightMs: D - launch,
+    });
   });
 });

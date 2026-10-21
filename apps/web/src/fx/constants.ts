@@ -129,8 +129,8 @@ export const FX_ZONE_TAIL_MS = 400;
 export const FX_CAST_SCALE_STEP = 0.06;
 export const FX_CAST_SCALE_MAX = 1.6;
 export const FX_CAST_TRAUMA = 0.12;
-// #1442; off until #1444; the shot leaves at jk-lunge's 24% keyframe and lands at the entry's end
-export const FX_FLAVOR_LIVE: boolean = false;
+// #1442; on since #1444; the shot leaves at jk-lunge's 24% keyframe and lands at the entry's end
+export const FX_FLAVOR_LIVE: boolean = true;
 export const FX_SHOT_LAUNCH_AT = 0.24;
 export const FX_SHOT_SHAKE_TRAUMA = 0.3;
 // #1443: the per-entry cap on non-combat damage shots (one volley starts together).
