@@ -5478,6 +5478,33 @@ mod ranked {
         assert!(q!(harness, t => t.ranked_bot("ai-hard")).is_none());
     }
 
+    async fn r1560000_keeps_the_ai_generation_a_bot_was_last_rated_on(harness: &StoreHarness) {
+        let now = harness.now();
+        // A row written without one (before migration 0052) reads back without one.
+        let older: BotRating = from(json!({
+            "botId": "ai-gen",
+            "glicko": { "rating": 1200.0, "deviation": 60.0, "volatility": 0.06 },
+            "games": 40,
+            "updatedAt": now,
+        }));
+        q!(harness, t => t.ranked_put_bot(&older));
+        assert_eq!(
+            must(q!(harness, t => t.ranked_bot("ai-gen")), "the row").ai_generation,
+            None
+        );
+        // A rated game stamps it, and the upsert replaces it.
+        let mut stamped = j(&older);
+        stamped["aiGeneration"] = json!(13);
+        let stamped: BotRating = from(stamped);
+        q!(harness, t => t.ranked_put_bot(&stamped));
+        assert_eq!(q!(harness, t => t.ranked_bot("ai-gen")), Some(stamped.clone()));
+        let mut newer = j(&stamped);
+        newer["aiGeneration"] = json!(14);
+        let newer: BotRating = from(newer);
+        q!(harness, t => t.ranked_put_bot(&newer));
+        assert_eq!(q!(harness, t => t.ranked_bot("ai-gen")), Some(newer));
+    }
+
     async fn r611_records_a_rated_game_once_and_answers_it_back_whole(harness: &StoreHarness) {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
@@ -5654,6 +5681,7 @@ mod ranked {
         r607_lists_a_profile_s_badges_oldest_season_first,
         r608_keeps_the_best_jlorious_position_the_season_has_held,
         r610_keeps_each_bot_s_own_rating_upserted,
+        r1560000_keeps_the_ai_generation_a_bot_was_last_rated_on,
         r611_records_a_rated_game_once_and_answers_it_back_whole,
         r611_records_a_bot_side_with_no_profile_and_no_rank,
         r748000_lists_rated_games_with_a_bot_side_since,
@@ -7078,7 +7106,120 @@ mod bots {
         assert!(q!(harness, t => t.tickets_claim_for_bot(&best_of_one.id, &bot.profile_id, &id(), now)));
     }
 
+    /// R1555000: a grind counts a grinding bot's rated wins and steps its strength up at the count,
+    /// to the strongest at most, its count back to 0 at each step, start and stop; its rating is
+    /// untouched. A bot not grinding, or an id that is no bot, counts nothing.
+    async fn r1555000_a_grind_counts_its_wins_and_steps_the_strength(harness: &StoreHarness) {
+        let now = harness.now();
+        let bot = new_bot(3, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        let row = |bots: Vec<BotRow>| {
+            let bot = must(bots.into_iter().next(), "the bot");
+            (bot.grinding, bot.grind_wins, bot.strength)
+        };
+        assert_eq!(row(q!(harness, t => t.bots_list())), (false, 0, 3));
+        q!(harness, t => t.bots_note_grind_win(&bot.profile_id, 2, 4));
+        assert_eq!(
+            row(q!(harness, t => t.bots_list())),
+            (false, 0, 3),
+            "not grinding"
+        );
+
+        q!(harness, t => t.bots_set_grinding(&bot.profile_id, true));
+        q!(harness, t => t.bots_note_grind_win(&bot.profile_id, 2, 4));
+        assert_eq!(row(q!(harness, t => t.bots_list())), (true, 1, 3));
+        q!(harness, t => t.bots_note_grind_win(&bot.profile_id, 2, 4));
+        assert_eq!(row(q!(harness, t => t.bots_list())), (true, 0, 4), "a step");
+        q!(harness, t => t.bots_note_grind_win(&bot.profile_id, 2, 4));
+        q!(harness, t => t.bots_note_grind_win(&bot.profile_id, 2, 4));
+        assert_eq!(
+            row(q!(harness, t => t.bots_list())),
+            (true, 0, 4),
+            "never past the strongest"
+        );
+        let rating = must(q!(harness, t => t.ranked_bot(&bot.profile_id)), "its R610 row");
+        assert_eq!(rating.glicko.rating, 1000.0, "a step moves no rating");
+
+        q!(harness, t => t.bots_note_grind_win(&bot.profile_id, 2, 4));
+        q!(harness, t => t.bots_set_grinding(&bot.profile_id, false));
+        assert_eq!(
+            row(q!(harness, t => t.bots_list())),
+            (false, 0, 4),
+            "the step is kept"
+        );
+
+        assert!(call!(harness, t => t.bots_set_grinding(&id(), true)).is_err());
+        assert!(call!(harness, t => t.bots_note_grind_win("a-bare-rating", 2, 4)).is_ok());
+    }
+
+    /// R1555000: a match between two bots claims both in one statement: two different free bots,
+    /// once, completed by the match's start and let go, both, when the start never comes.
+    async fn r1555000_a_pair_claim_takes_two_free_bots_once(harness: &StoreHarness) {
+        const MINUTE: i64 = 60_000;
+        let now = harness.now();
+        let version = harness.catalog_version.clone();
+        let made: [NewBot; 6] = std::array::from_fn(|_| new_bot(2, now - DAY, 1000.0));
+        for bot in &made {
+            q!(harness, t => t.bots_create(bot));
+        }
+        let [a, b, c, d, retired, in_series] = made.map(|bot| bot.profile_id);
+        q!(harness, t => t.bots_set_retired(&retired, Some(now)));
+        let person = active_profile(harness, None).await;
+        let series = super::series::series_row(harness, &person.id, &in_series, json!({}));
+        q!(harness, t => t.series_create(&series));
+        let in_match = |bots: &[BotRow], id: &str| {
+            bots.iter()
+                .find(|row| row.profile_id == id)
+                .and_then(|row| row.in_match_id.clone())
+        };
+
+        let match_id = id();
+        let pair = (a.clone(), b.clone());
+        assert!(q!(harness, t => t.bots_claim_pair(&pair, &match_id, &version, now)));
+        let bots = q!(harness, t => t.bots_list());
+        assert_eq!(in_match(&bots, &a), Some(match_id.clone()));
+        assert_eq!(in_match(&bots, &b), Some(match_id.clone()));
+        // Busy now: neither is claimed again, with the other or with a free one.
+        assert!(!q!(harness, t => t.bots_claim_pair(&pair, &id(), &version, now)));
+        assert!(!q!(harness, t => t.bots_claim_pair(&(c.clone(), a.clone()), &id(), &version, now)));
+
+        // Never a retired bot, a person, a bot in a series not over or one bot twice; and a refused
+        // claim leaves the free bot free.
+        for refused in [
+            (c.clone(), retired.clone()),
+            (person.id.clone(), c.clone()),
+            (in_series.clone(), c.clone()),
+            (c.clone(), c.clone()),
+        ] {
+            assert!(
+                !q!(harness, t => t.bots_claim_pair(&refused, &id(), &version, now)),
+                "{refused:?}"
+            );
+        }
+        assert_eq!(in_match(&q!(harness, t => t.bots_list()), &c), None);
+
+        // The start completes the claim's match.
+        q!(harness, t => t.matches_create(&match_row(&match_id, &a, &b, harness, now)));
+        let started = must(q!(harness, t => t.matches_get(&match_id)), "the match");
+        assert_eq!(started.players, pair);
+        assert!(q!(harness, t => t.bots_release_stale_starts(now + MINUTE)).is_empty());
+
+        // A claim whose start never came lets both bots go.
+        assert!(
+            q!(harness, t => t.bots_claim_pair(&(c.clone(), d.clone()), &id(), &version, now - 2 * MINUTE))
+        );
+        let mut released = q!(harness, t => t.bots_release_stale_starts(now - MINUTE));
+        released.sort();
+        let mut both = vec![c.clone(), d.clone()];
+        both.sort();
+        assert_eq!(released, both);
+        let bots = q!(harness, t => t.bots_list());
+        assert_eq!((in_match(&bots, &c), in_match(&bots, &d)), (None, None));
+    }
+
     both_stores!(
+        r1555000_a_grind_counts_its_wins_and_steps_the_strength,
+        r1555000_a_pair_claim_takes_two_free_bots_once,
         r1454_bots_create_and_list,
         r1454_retire_and_decks,
         r1453_claim_for_bot_is_single_shot,
@@ -9060,7 +9201,7 @@ mod economy {
     );
 }
 
-/// R1523000: the seat ledger's epoch (migration 0052's `app.seat_epoch`). A claim fences on the epoch
+/// R1523000: the seat ledger's epoch (migration 0054's `app.seat_epoch`). A claim fences on the epoch
 /// its server booted on; once a newer server's bump has moved it on, the claim's transaction writes
 /// nothing.
 mod r1523000_seat_epoch {

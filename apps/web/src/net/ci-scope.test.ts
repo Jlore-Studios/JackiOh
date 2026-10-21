@@ -30,18 +30,15 @@ const NAMES = [
   "clippy",
   "rust_engine_rules",
   "rust_engine",
-  "rust_cards_lib_core",
-  "rust_cards_lib_classic",
-  "rust_cards_lib_classic_plus",
-  "rust_cards_lib_meditative",
+  "rust_cards_lib",
   "rust_cards",
   "rust_server",
   "rust_ai",
-  "rust_ai_slow_a",
-  "rust_ai_slow_b",
+  "rust_ai_slow",
   "rust_luau",
   "rust_tools_wasm",
   "web",
+  "web_promote",
   "e2e",
 ] as const;
 type Name = (typeof NAMES)[number];
@@ -51,15 +48,11 @@ type Answer = Record<Name, boolean>;
 const RUST = [
   "rust_engine_rules",
   "rust_engine",
-  "rust_cards_lib_core",
-  "rust_cards_lib_classic",
-  "rust_cards_lib_classic_plus",
-  "rust_cards_lib_meditative",
+  "rust_cards_lib",
   "rust_cards",
   "rust_server",
   "rust_ai",
-  "rust_ai_slow_a",
-  "rust_ai_slow_b",
+  "rust_ai_slow",
   "rust_luau",
   "rust_tools_wasm",
 ] as const satisfies readonly Name[];
@@ -324,10 +317,10 @@ describe("scripts/ci-scope.sh", () => {
       ".github/actions/setup/action.yml",
       "scripts/ci-scope.sh",
     ]) {
-      expect(onFor(file), file).toEqual(["full", "clippy", ...RUST, "web", "e2e"]);
+      expect(onFor(file), file).toEqual(["full", "clippy", ...RUST, "web", "web_promote", "e2e"]);
     }
     // The lockfile also picks the store's sqlx, so it runs two of the db suites besides.
-    expect(onFor("Cargo.lock")).toEqual(["full", "db", "db_store", "db_deploy", "clippy", ...RUST, "web", "e2e"]);
+    expect(onFor("Cargo.lock")).toEqual(["full", "db", "db_store", "db_deploy", "clippy", ...RUST, "web", "web_promote", "e2e"]);
   });
 
   // [db_sql, db_store, db_deploy], one path for each pattern the script's db block names.
@@ -374,6 +367,10 @@ describe("scripts/ci-scope.sh", () => {
         "crates/engine/clippy.toml",
         "rustfmt.toml",
         ".cargo/config.toml",
+        // The same job runs luau-analyze over the card scripts' typed module (#442 L10).
+        "crates/cards/luau/jackioh.luau",
+        "crates/luau/src/kit/kit.luau",
+        "crates/cards/src/scripts/.luaurc",
       ],
       off: ["apps/web/src/main.tsx", "crates/cards/catalog.json", "crates/server/migrations/0034_new.sql", "docs/architecture.md"],
     },
@@ -469,12 +466,53 @@ describe("scripts/ci-scope.sh", () => {
     });
   }
 
+  // promote-production.test.ts, which `web (unit 1/3)` runs on its own line: an `on` path alone turns
+  // it on (and `web` with it, so the job that runs it runs); an `off` path alone leaves it off, beside
+  // an engine source too, and beside an `on` path turns it on.
+  const PROMOTE = {
+    on: [
+      "scripts/promote-production.sh",
+      "scripts/vercel-ignore.sh",
+      "apps/web/src/net/promote-production.test.ts",
+      ".github/workflows/promote-production.yml",
+      "package.json",
+      "apps/web/package.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      ".nvmrc",
+      "vitest.config.ts",
+      "apps/web/vitest.config.ts",
+      "apps/web/src/test/setup.ts",
+    ],
+    off: [
+      "apps/web/src/main.tsx",
+      "apps/web/src/net/vercel-ignore.test.ts",
+      "crates/engine/src/reduce.rs",
+      "crates/server/src/main.rs",
+      "scripts/build-wasm.sh",
+      "scripts/vercel-install.sh",
+      "e2e/support/commands.ts",
+      "docs/architecture.md",
+    ],
+  };
+  it("runs promote-production.test.ts only when what it runs, reads or runs on changed", () => {
+    for (const file of PROMOTE.on) {
+      const { web, web_promote } = answerFor(file);
+      expect({ web, web_promote }, file).toEqual({ web: true, web_promote: true });
+    }
+    for (const file of PROMOTE.off) {
+      expect(answerFor(file).web_promote, file).toBe(false);
+      expect(answerFor(ENGINE, file).web_promote, `engine + ${file}`).toBe(false);
+      expect(answerFor("scripts/promote-production.sh", file).web_promote, `script + ${file}`).toBe(true);
+    }
+  });
+
   // The Rust test groups each path runs, one path for each pattern of the script's crate map.
   const GROUPS: [string, (typeof RUST)[number][]][] = [
     ["crates/server/.env.example", ["rust_server", "rust_tools_wasm"]],
     ["crates/engine/src/reduce.rs", [...RUST]],
     ["crates/cards/catalog.json", [...RUST]],
-    ["crates/ai/src/decide.rs", ["rust_server", "rust_ai", "rust_ai_slow_a", "rust_ai_slow_b", "rust_tools_wasm"]],
+    ["crates/ai/src/decide.rs", ["rust_server", "rust_ai", "rust_ai_slow", "rust_tools_wasm"]],
     ["crates/server/src/api/queue.rs", ["rust_server"]],
     ["crates/tools/src/fuzz.rs", ["rust_tools_wasm"]],
     ["crates/wasm/src/lib.rs", ["rust_tools_wasm"]],
@@ -490,9 +528,11 @@ describe("scripts/ci-scope.sh", () => {
     ["apps/server/src/x.ts", ["rust_tools_wasm"]],
     ["ladder/x.ts", ["rust_tools_wasm"]],
     ["training/history/sweep-2026-10-12.md", ["rust_tools_wasm"]],
+    // crates/wasm/tests/export_parity.rs holds the Luau module's factory types the script writes.
+    ["scripts/build-wasm.sh", ["rust_tools_wasm"]],
     // A crate's manifest also runs the group whose acceptance test holds the map to `cargo metadata`.
     ["crates/server/Cargo.toml", ["rust_server", "rust_tools_wasm"]],
-    ["crates/ai/Cargo.toml", ["rust_server", "rust_ai", "rust_ai_slow_a", "rust_ai_slow_b", "rust_tools_wasm"]],
+    ["crates/ai/Cargo.toml", ["rust_server", "rust_ai", "rust_ai_slow", "rust_tools_wasm"]],
   ];
   it("runs each Rust test group for the crates it builds on and the files its tests read", () => {
     const groups = (...files: string[]): Name[] => onFor(...files).filter((name) => (RUST as readonly Name[]).includes(name));
@@ -520,6 +560,8 @@ describe("scripts/ci-scope.sh", () => {
     expect(tools({ "crates/server/src/x.rs": "let s = std::fs::read_to_string(path);\n" })).toBe(true);
     expect(tools({ "crates/server/src/x.rs": 'const X: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/x.json");\n' })).toBe(true);
     expect(tools({ "apps/web/src/x.test.ts": 'const t = readFileSync(join(ROOT, "x.json"), "utf8");\n' })).toBe(true);
+    // acceptance.rs holds every ignore to the daily form (super.yml's daily tests).
+    expect(tools({ "crates/server/src/x.rs": '#[test]\n#[ignore = "daily: a sweep"]\nfn x() {}\n' })).toBe(true);
     expect(tools({ "apps/web/src/x.test.ts": "export const x = 1;\n" })).toBe(false);
     expect(tools({ "crates/server/src/x.rs": "pub const X: u32 = 1;\n" })).toBe(false);
     expect(tools({ "docs/x.json": "readFileSync(\n" })).toBe(false);

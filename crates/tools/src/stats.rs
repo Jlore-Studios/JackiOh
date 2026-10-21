@@ -1989,6 +1989,7 @@ mod tests {
     /// Like `selfplay`'s R1006001 test: the same games on one thread and on four give byte-identical
     /// record lines, plain and forced, and the card figures over them are unchanged.
     #[test]
+    #[ignore = "daily: the same games on one thread and four; selfplay's r1006001 holds the thread-count rule per pull request"]
     fn stats_chunks_match_a_serial_run_on_one_or_four_threads_plain_and_forced() {
         jackioh_cards::register_all();
         let one = rayon::ThreadPoolBuilder::new().num_threads(1).build().unwrap();

@@ -243,7 +243,8 @@ impl Registry {
             catalog_version: input.catalog_version.clone(),
             ranked: Some(input.ranked),
             // R672: only a rematch states its mode and stakes — which no ticket, room or series made —
-            // so only it lands on the row; every other start derives the mode as before.
+            // so only it lands on the row (and, R1555000, the mode of a match between two bots, which
+            // nothing made either); every other start derives the mode as before.
             mode: input.mode,
             stake: input.stake,
             status: MatchStatus::Live,

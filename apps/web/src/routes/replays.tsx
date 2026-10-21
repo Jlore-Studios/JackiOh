@@ -58,6 +58,10 @@ export const replaysTestid = {
   root: "replays",
   practice: (game: number): string => `replays-practice-${String(game)}`,
   online: (matchId: string): string => `replays-online-${matchId}`,
+  /** #1568: a failed device list offers Try again beside the alert. */
+  practiceRetry: "replays-retry-practice",
+  /** #1568: a failed online list offers Try again beside the alert. */
+  onlineRetry: "replays-retry-online",
   noPractice: "replays-no-practice",
   noOnline: "replays-no-online",
   signIn: "replays-sign-in",
@@ -221,6 +225,8 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
   const token = account.kind === "ready" && !consentOwed ? account.token : null;
   const [practice, setPractice] = useState<Listed<PracticeReplayListing>>({ kind: "loading" });
   const [online, setOnline] = useState<Listed<OnlineReplayListing>>({ kind: "loading" });
+  const [practiceRound, setPracticeRound] = useState(0);
+  const [onlineRound, setOnlineRound] = useState(0);
   const [lookup, setLookup] = useState<CardLookup | null>(null);
   const [open, setOpen] = useState<Open | null>(null);
   /** The worker that kept the practice games: one for this mount, which a practice source asks pages of. */
@@ -245,7 +251,7 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
       host.current = null;
       made.dispose();
     };
-  }, [hostFactory]);
+  }, [hostFactory, practiceRound]);
 
   useEffect(() => {
     if (token === null) return;
@@ -261,7 +267,7 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, onlineRound]);
 
   const loadMore = (): void => {
     if (token === null || online.kind !== "ready" || online.next === null || online.loadingMore) return;
@@ -327,7 +333,23 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
       <section className="replays__section" aria-labelledby="replays-practice-heading">
         <h2 id="replays-practice-heading">{t("Practice games on this device")}</h2>
         {practice.kind === "loading" ? <p role="status">{t("Reading the games kept on this device…")}</p> : null}
-        {practice.kind === "failed" ? <p role="alert">{t(practice.message)}</p> : null}
+        {practice.kind === "failed" ? (
+          <>
+            <p role="alert">{t(practice.message)}</p>
+            <p>
+              <button
+                type="button"
+                data-testid={replaysTestid.practiceRetry}
+                onClick={() => {
+                  setPractice({ kind: "loading" });
+                  setPracticeRound((before) => before + 1);
+                }}
+              >
+                {t("Try again")}
+              </button>
+            </p>
+          </>
+        ) : null}
         {practice.kind === "ready" && practice.rows.length === 0 ? (
           <p data-testid={replaysTestid.noPractice}>{t("Finish a practice game and it is kept here.")}</p>
         ) : null}
@@ -388,7 +410,23 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
           </p>
         )}
         {token !== null && online.kind === "loading" ? <p role="status">{t("Reading your online games…")}</p> : null}
-        {token !== null && online.kind === "failed" ? <p role="alert">{t(online.message)}</p> : null}
+        {token !== null && online.kind === "failed" ? (
+          <>
+            <p role="alert">{t(online.message)}</p>
+            <p>
+              <button
+                type="button"
+                data-testid={replaysTestid.onlineRetry}
+                onClick={() => {
+                  setOnline({ kind: "loading" });
+                  setOnlineRound((before) => before + 1);
+                }}
+              >
+                {t("Try again")}
+              </button>
+            </p>
+          </>
+        ) : null}
         {token !== null && online.kind === "ready" && online.rows.length === 0 ? (
           <p data-testid={replaysTestid.noOnline}>{t("No online game of yours is kept. A game is kept for a while after it ends.")}</p>
         ) : null}

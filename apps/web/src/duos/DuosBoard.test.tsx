@@ -185,7 +185,7 @@ type Board = {
 function renderBoard(over: Partial<DuosBoardProps> = {}, chrome: DuosChrome | null = null): Board {
   const onAction = vi.fn<(body: DuosActionBody) => void>();
   const onPing = vi.fn<(ping: PingKind, target: PingTarget) => void>();
-  const base: DuosBoardProps = { view: duosView(), legal: [], onAction, pings: [], onPing, error: null };
+  const base: DuosBoardProps = { view: duosView(), legal: [], onAction, pings: [], onPing, error: null, jloreCapped: false };
   const tree = (props: DuosBoardProps) => (
     <CatalogContext.Provider value={LOOKUP}>
       <DuosChromeContext.Provider value={chrome}>
@@ -692,6 +692,25 @@ describe("#965 the replay door and the board's replay mode", () => {
     flipPortal();
     expect(screen.getByTestId(testid.handCard("t1"))).toBeInTheDocument();
     expect(screen.queryByTestId(testid.handCard("h1"))).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R1483000: the result panel names the daily cap for a capped seat
+// ---------------------------------------------------------------------------------------------
+
+describe("R1483000 the result panel names the daily cap only for a capped seat", () => {
+  const OVER: DuosView = { ...duosView(), result: CONCEDED };
+
+  it("R1483000 the result panel names the daily cap only for a capped seat", () => {
+    renderBoard({ view: OVER, jloreCapped: true });
+    expect(screen.getByTestId("duos-result")).toBeInTheDocument();
+    expect(screen.getByTestId("duos-result-jlore")).toHaveTextContent("Daily Jlore reached");
+    cleanup();
+
+    renderBoard({ view: OVER, jloreCapped: false });
+    expect(screen.getByTestId("duos-result")).toBeInTheDocument();
+    expect(screen.queryByTestId("duos-result-jlore")).toBeNull();
   });
 });
 

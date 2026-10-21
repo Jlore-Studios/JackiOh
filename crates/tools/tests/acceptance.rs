@@ -18,6 +18,13 @@
 //!    crate built on it (dev-dependencies included) and no other, and a crate or a path dependency
 //!    the script's map lacks fails here; and a file a crate includes from outside its own directory
 //!    runs a group that tests that crate.
+//!
+//! And one for the daily run:
+//!
+//!  - Daily: every `#[ignore]` under `crates/` reads `#[ignore = "daily: <why>"]`. super.yml's
+//!    `daily tests` job runs each one (`cargo test -- --ignored`), and the reason names what holds
+//!    the same rule per pull request, so an ignore moves a test to the daily run and never switches
+//!    one off.
 
 use std::fs;
 use std::path::{Component, Path, PathBuf};
@@ -228,15 +235,11 @@ fn v28_no_typescript_is_left_where_the_rust_replaced_it() {
 const RUST_GROUPS: &[(&str, &[&str])] = &[
     ("rust_engine_rules", &["jackioh-engine"]),
     ("rust_engine", &["jackioh-engine"]),
-    ("rust_cards_lib_core", &["jackioh-cards"]),
-    ("rust_cards_lib_classic", &["jackioh-cards"]),
-    ("rust_cards_lib_classic_plus", &["jackioh-cards"]),
-    ("rust_cards_lib_meditative", &["jackioh-cards"]),
+    ("rust_cards_lib", &["jackioh-cards"]),
     ("rust_cards", &["jackioh-cards"]),
     ("rust_server", &["jackioh-server"]),
     ("rust_ai", &["jackioh-ai"]),
-    ("rust_ai_slow_a", &["jackioh-ai"]),
-    ("rust_ai_slow_b", &["jackioh-ai"]),
+    ("rust_ai_slow", &["jackioh-ai"]),
     ("rust_luau", &["jackioh-luau"]),
     ("rust_tools_wasm", &[]),
 ];
@@ -647,4 +650,43 @@ fn ci_scope_include_scan_finds_each_literal_path() {
             (4, "/../../e2e/y.ts".to_string(), true),
         ]
     );
+}
+
+/// The 1-based lines of `text` that ignore a test without saying it runs daily.
+fn ignored_without_a_daily_reason(text: &str) -> Vec<usize> {
+    text.lines()
+        .enumerate()
+        .filter(|(_, line)| {
+            let line = line.trim_start();
+            line.starts_with("#[ignore") && !line.starts_with("#[ignore = \"daily: ")
+        })
+        .map(|(index, _)| index + 1)
+        .collect()
+}
+
+#[test]
+fn daily_every_ignored_test_says_it_runs_daily() {
+    let root = repo();
+    let mut files = Vec::new();
+    rust_sources(&root.join("crates"), &mut files);
+    let mut bare = Vec::new();
+    for file in files {
+        let text = fs::read_to_string(&file).unwrap_or_default();
+        for line in ignored_without_a_daily_reason(&text) {
+            bare.push(format!(
+                "{}:{line}",
+                file.strip_prefix(&root).unwrap_or(&file).display()
+            ));
+        }
+    }
+    assert!(
+        bare.is_empty(),
+        "a test ignored without `#[ignore = \"daily: <why>\"]`, which super.yml's daily tests run and whose reason names what holds the rule per pull request: {bare:?}"
+    );
+}
+
+#[test]
+fn daily_the_scan_finds_each_bare_ignore() {
+    let text = "#[test]\n#[ignore]\nfn a() {}\n    #[ignore = \"slow\"]\nfn b() {}\n#[ignore = \"daily: a sweep\"]\nfn c() {}\n";
+    assert_eq!(ignored_without_a_daily_reason(text), [2, 4]);
 }

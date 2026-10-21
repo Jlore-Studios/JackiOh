@@ -1257,8 +1257,8 @@ python3 -m unittest discover -s tests -t .   # the suite (about ten seconds)
 python3 -m harness --help                     # every command
 ```
 
-`bot selftest`, a job of `ci.yml`, runs the suite on Python 3.12 and 3.13 and runs actionlint over the
-bot's workflows and `ci.yml`. It runs when a pull request touches what the suite reads (the bot, its
+`bot selftest`, a job of `ci.yml`, runs the suite on Python 3.12 and 3.13 and runs actionlint over
+every workflow. It runs when a pull request touches what the suite reads (the bot, its
 switches, `.github/`, `.claude/`, the scripts, the training lanes' prompts and loop, the issue and patch
 conventions, the toolchain), on every push to `main`, and whenever the job that decides fails (#1455). The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `build`, `fix`, `revise`,
 `review` and `suggest` (the self check runs `review` with a header saying it is a self check),

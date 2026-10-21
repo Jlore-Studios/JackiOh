@@ -28,7 +28,7 @@ from harness.config import LABEL_BUILD
 from tests.fakes import OPERATOR, FakeGitHub
 from tests.support import make_config, make_ctx
 from tests.test_dashboard import offline
-from tests.test_workflows import job, read, selftest
+from tests.test_workflows import job, linted, read, selftest
 
 BOT_DIR = Path(__file__).resolve().parents[1]
 SQUISHY = {"login": "squishy-squooby", "id": 334289562}
@@ -382,7 +382,7 @@ class SquishyWorkflowTests(unittest.TestCase):
         text = selftest()
         self.assertIn("HARNESS_HOME=.squishy python3.13 -m harness window", text)
         for name in ("squishy-run.yml", "squishy-commands.yml"):
-            self.assertIn(f".github/workflows/{name}", text)
+            self.assertTrue(linted(name), name)
 
     def test_fullsend_is_in_the_repository(self):
         skill = config.REPO_ROOT / ".claude" / "skills" / "fullsend"

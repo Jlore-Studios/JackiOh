@@ -1,6 +1,6 @@
--- The seat ledger's epoch (migration 0052, SPEC §9.5; R1523000; issue #1523).
+-- The seat ledger's epoch (migration 0054, SPEC §9.5; R1523000; issue #1523).
 -- Runs after 29_going_live.sql. No check here needs a row 01-29 wrote: each reads app.seat_epoch,
--- which only 0052 writes.
+-- which only 0054 writes.
 \set ON_ERROR_STOP on
 
 -- Same rules as 01-29: every check raises on failure (`raise exception 'FAIL (…): …'`), each check
