@@ -279,7 +279,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   // #1563 (R1563000): "Floats", "the Float" and "Float reduces cost" all bold as this term.
   Float: trigger(
     "Float",
-    'Unspent mana at the end of your turn. "Float reduces cost": whenever you Float, this costs that much less',
+    'The mana a player leaves unspent when their turn ends. "Float reduces cost": whenever you Float, this costs that much less',
     { aliases: ["Floats"] },
   ),
   // Patch v0.2.0 (B3.2, R384): "Activate", "Activate 2", "Activate ♾️" are this one term.
