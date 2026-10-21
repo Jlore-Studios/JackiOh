@@ -224,7 +224,10 @@ games against the parent (`TRAINING_IMPROVE.games`, 400; `TRAINING_UNBAN.games`,
 about half the time and one at 58% nine times in ten (R850000). It was 65 of 100 until issue #850.
 
 It plays no games against random (R732001), and a promotion records `"vsRandom": null`. A draw is not
-a win, and neither is a game that ended without a result. Exit 0 on a pass, 1 on a failed gate. The
+a win, and neither is a game that ended without a result. Every game must also be clean on either
+seat: no refused action, throw, fallback or panic caught in an AI's search, and a log that folds back
+to its hash (R1489000). The parent's counts come from its verbose answers; each other game is a
+failure naming its seed and the candidate's seat. Exit 0 on a pass, 1 on a failed gate. The
 report (Markdown) goes to stdout; a paired gate's report and latest pass add the paired edge, the
 candidate's wins less the parent's over each deal's two games, in points of the games, with its 95%
 interval.
@@ -378,7 +381,8 @@ runner), and keeps each shard's log file as an artifact for up to 90 days. Its l
 `positions` over the whole export and writes the counts (games, positions, games that no longer
 replay) and the games an hour to the run's summary. The same base and game numbers always play the
 same games, so an export can be played again on any runner, and a base never names a gate's
-hold-out deals or the dev set (R1006002). `gh run download <run> --pattern 'selfplay-<base>-*'`
+hold-out deals or the dev set (R1006002). A faulted game carries `faults`, which `positions` leaves
+out, counted `unclean` (R1489000). `gh run download <run> --pattern 'selfplay-<base>-*'`
 fetches it. The fit that learns from it is [`training/ml/`](ml/README.md).
 
 ## The ladder bots after a promotion

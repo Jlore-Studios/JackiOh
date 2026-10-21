@@ -2,8 +2,8 @@
 //! #1006; `docs/learned-eval.md` D3, D4). Each game of a `selfplay` file is folded from its seed under
 //! the catalog it was played on (`replay::catalog_for`, R767000) and its final hash checked: a game
 //! whose log no longer reaches its hash (an engine change since) is dropped and counted, never
-//! guessed at, and so is one played on a catalog this build does not carry, or one without a result
-//! (R1006003).
+//! guessed at, and so is one played on a catalog this build does not carry, one without a result
+//! (R1006003), or one its self-play run marked with faults (R1489000).
 //!
 //! At each position it writes one JSON line (`PositionRow`): the game's seed, the seat, the turn, the
 //! step, `FEATURES_VERSION`, the seat's features (`features_of`, which reads only `redact`, R185), the
@@ -117,6 +117,9 @@ pub(crate) enum Dropped {
     NoResult,
     NotReplayed,
     EarlierPatch,
+    /// R1489000: a seat had an action refused, fell back or caught a panic in its search
+    /// (`SelfplayGame::faults`).
+    Unclean,
 }
 
 /// A run's counts, printed at the end.
@@ -128,6 +131,7 @@ pub(crate) struct Counts {
     pub no_result: usize,
     pub not_replayed: usize,
     pub earlier_patch: usize,
+    pub unclean: usize,
     pub unreadable: usize,
     pub positions: usize,
 }
@@ -143,6 +147,7 @@ impl Counts {
             Err(Dropped::NoResult) => self.no_result += 1,
             Err(Dropped::NotReplayed) => self.not_replayed += 1,
             Err(Dropped::EarlierPatch) => self.earlier_patch += 1,
+            Err(Dropped::Unclean) => self.unclean += 1,
         }
     }
 }
@@ -245,6 +250,9 @@ pub(crate) fn fold_game(
     let shipped = catalog_for(game.catalog_now(), build_catalog).map_err(|_| Dropped::EarlierPatch)?;
     if game.result.is_none() {
         return Err(Dropped::NoResult);
+    }
+    if !game.faults.is_empty() {
+        return Err(Dropped::Unclean);
     }
     let folded = catch_unwind(AssertUnwindSafe(|| {
         with_shipped(shipped, || {
@@ -416,6 +424,7 @@ mod tests {
             commit: "test".to_string(),
             versions: Some(jackioh_engine::config::VERSIONS_SCHEME),
             ai_generation: None,
+            faults: Vec::new(),
         };
         (game, live)
     }
