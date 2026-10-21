@@ -884,7 +884,7 @@ async fn r1483000_a_claim_that_crosses_the_cap_pays_the_remainder() {
 #[tokio::test]
 async fn r1483000_the_open_seed_limit_refuses_without_insert_and_claim_or_expiry_frees_a_place() {
     let (app, token) = authed().await;
-    let held = |app: Arc<App>| async move { fake(&app).lock().await.tables.economy.practice_seeds.len() };
+    let held = |app: Arc<App>| async move { fake_ref(&app).lock().await.tables.economy.practice_seeds.len() };
     let mut seeds = Vec::new();
     for _ in 0..PRACTICE_SEEDS_OPEN_MAX {
         seeds.push(issue(&app, &token).await.0);
@@ -910,7 +910,7 @@ async fn r1483000_the_open_seed_limit_refuses_without_insert_and_claim_or_expiry
 
     // A seed past its lifetime no longer counts, and the request prunes it.
     {
-        let mut data = fake(&app).lock().await;
+        let mut data = fake_ref(&app).lock().await;
         let lapsed = data
             .tables
             .economy
@@ -931,7 +931,7 @@ async fn r1483000_the_open_seed_limit_refuses_without_insert_and_claim_or_expiry
 #[tokio::test]
 async fn r1483000_another_accounts_open_seeds_do_not_count() {
     let (app, token) = authed().await;
-    let _ = fake(&app)
+    let _ = fake_ref(&app)
         .lock()
         .await
         .seed_profile(json!({ "id": "profile-b", "userId": "user-b", "status": "active" }));
@@ -965,7 +965,7 @@ async fn r1483000_concurrent_seed_requests_never_exceed_the_open_limit() {
     assert_eq!(count(201), PRACTICE_SEEDS_OPEN_MAX as usize, "{statuses:?}");
     assert_eq!(count(409), PRACTICE_SEEDS_OPEN_MAX as usize, "{statuses:?}");
     assert_eq!(
-        fake(&app).lock().await.tables.economy.practice_seeds.len(),
+        fake_ref(&app).lock().await.tables.economy.practice_seeds.len(),
         PRACTICE_SEEDS_OPEN_MAX as usize
     );
 }
