@@ -23,7 +23,8 @@ use jackioh_server::api::ranked::{
 use jackioh_server::api::results::record_result;
 use jackioh_server::app::App;
 use jackioh_server::config::{
-    JLORIOUS_SIZE, RANK_PLACEMENT_GAMES, RATING_DEVIATION_START, SEASON_RESET_STRENGTH,
+    BOT_PROMOTION_DEVIATION_BOOST, JLORIOUS_SIZE, RANK_PLACEMENT_GAMES, RATING_DEVIATION_START,
+    SEASON_RESET_STRENGTH,
 };
 use jackioh_server::db::store::{BotRating, MatchRow, SeriesRow};
 use jackioh_server::ranked::glicko2::START_GLICKO;
@@ -1058,5 +1059,106 @@ mod r604_a_ranked_series_through_the_results_writer {
                 assert!(ended["ratingAfter"].is_null());
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// R1560000: a bot's rating re-settles after an AI promotion
+// ---------------------------------------------------------------------------
+
+mod r1560000_a_bot_after_an_ai_promotion {
+    use super::*;
+
+    /// The AI generation the test build plays its bots on.
+    fn generation() -> i64 {
+        i64::from(jackioh_ai::ai_generation().expect("crates/ai/generation.json names one"))
+    }
+
+    /// `ai-hard`, settled at 1200 with `deviation` after 40 games, last rated on `ai_generation`
+    /// (`None`: a row from before R1560000).
+    async fn put_bot(app: &App, deviation: f64, ai_generation: Option<i64>) {
+        let mut row = json!({
+            "botId": "ai-hard",
+            "glicko": { "rating": 1200.0, "deviation": deviation, "volatility": 0.06 },
+            "games": 40,
+            "updatedAt": 0,
+        });
+        if let Some(generation) = ai_generation {
+            row["aiGeneration"] = json!(generation);
+        }
+        let row: BotRating = from(row);
+        q!(app, ranked_put_bot(&row));
+    }
+
+    /// The bot's side of a rated game `id` that player A wins, as the record holds it.
+    async fn bot_side(app: &App, id: &str, at: i64) -> Value {
+        rate(app, game(id, [player(A), bot("ai-hard")], Some(0), at)).await["sides"][1].clone()
+    }
+
+    fn widened(deviation: f64, promotions: f64) -> f64 {
+        (deviation * deviation + promotions * BOT_PROMOTION_DEVIATION_BOOST * BOT_PROMOTION_DEVIATION_BOOST)
+            .sqrt()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1560000_a_bot_last_rated_on_an_older_ai_is_rated_from_a_widened_deviation_and_stamped() {
+        let app = test_app().await;
+        seed_profile(&app, json!({ "id": A })).await;
+        put_bot(&app, 60.0, Some(generation() - 2)).await;
+        let side = bot_side(&app, "g-1", 1).await;
+        // Two promotions: the deviation widened twice in quadrature, the rating and volatility kept.
+        assert_matches(
+            &side["before"],
+            &json!({ "rating": 1200.0, "volatility": 0.06 }),
+            "before",
+        );
+        assert_close(
+            side["before"]["deviation"].as_f64().expect("a deviation"),
+            widened(60.0, 2.0),
+        );
+        let row = q!(app, ranked_bot("ai-hard")).expect("the bot's row");
+        assert_eq!(row.ai_generation, Some(generation()));
+        assert_eq!(row.games, 41);
+        assert_eq!(json_of(&row.glicko), side["after"]);
+        // Stamped, it widens once: the next game is rated from exactly where this one left it.
+        let next = bot_side(&app, "g-2", 2).await;
+        assert_eq!(next["before"], side["after"]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1560000_a_row_naming_no_generation_counts_as_one_promotion_behind() {
+        let app = test_app().await;
+        seed_profile(&app, json!({ "id": A })).await;
+        put_bot(&app, 60.0, None).await;
+        let side = bot_side(&app, "g-1", 1).await;
+        assert_close(
+            side["before"]["deviation"].as_f64().expect("a deviation"),
+            widened(60.0, 1.0),
+        );
+        assert_eq!(
+            q!(app, ranked_bot("ai-hard"))
+                .expect("the bot's row")
+                .ai_generation,
+            Some(generation())
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1560000_a_bot_rated_on_this_ai_is_not_widened_and_a_widened_one_stops_at_a_new_player_s() {
+        let app = test_app().await;
+        seed_profile(&app, json!({ "id": A })).await;
+        put_bot(&app, 60.0, Some(generation())).await;
+        assert_eq!(
+            bot_side(&app, "g-1", 1).await["before"]["deviation"].as_f64(),
+            Some(60.0)
+        );
+
+        let app = test_app().await;
+        seed_profile(&app, json!({ "id": A })).await;
+        put_bot(&app, 300.0, Some(generation() - 2)).await;
+        assert_eq!(
+            bot_side(&app, "g-1", 1).await["before"]["deviation"].as_f64(),
+            Some(RATING_DEVIATION_START)
+        );
     }
 }

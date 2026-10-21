@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { QUEST_MAX_HELD } from "@jackioh/server-config";
@@ -125,6 +125,42 @@ describe("QuestsPanel", () => {
 
     expect(await screen.findByTestId(questsTestid.error)).toHaveTextContent("the server refused");
     expect(screen.getByTestId(questsTestid.panel)).toHaveTextContent("Quests");
+  });
+
+  it("#1568 says it is loading while the quests are on their way, which is not having none", async () => {
+    let land: (body: QuestsResponse) => void = () => undefined;
+    vi.mocked(getQuests).mockReturnValue(
+      new Promise<QuestsResponse>((resolve) => {
+        land = resolve;
+      }),
+    );
+    render(<QuestsPanel token={TOKEN} />);
+
+    expect(screen.getByTestId(questsTestid.loading)).toHaveTextContent("Loading your quests…");
+    expect(screen.queryByTestId(questsTestid.panel)).toBeNull();
+
+    await act(async () => {
+      land(book({ quests: [], nextDueAt: null }));
+      await Promise.resolve();
+    });
+    expect(screen.queryByTestId(questsTestid.loading)).toBeNull();
+    expect(screen.queryByTestId(questsTestid.panel)).toBeNull();
+  });
+
+  it("#1568 a failed read offers Try again, which reads the quests again", async () => {
+    vi.mocked(getQuests).mockRejectedValueOnce(new Error("the server refused")).mockResolvedValueOnce(book());
+    render(<QuestsPanel token={TOKEN} />);
+
+    expect(await screen.findByTestId(questsTestid.error)).toHaveTextContent("the server refused");
+    expect(screen.getByTestId(questsTestid.retry)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId(questsTestid.retry));
+    expect(screen.getByTestId(questsTestid.loading)).toBeInTheDocument();
+    expect(screen.queryByTestId(questsTestid.retry)).toBeNull();
+
+    expect(await screen.findByTestId(questsTestid.panel)).toHaveTextContent("Win 3 games");
+    expect(getQuests).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });
 

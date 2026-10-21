@@ -27,6 +27,14 @@ def selftest() -> str:
     return job(read("ci.yml"), "bot-selftest")
 
 
+ACTIONLINT_EVERY_WORKFLOW = "rhysd/actionlint:1.7.7 -color $(ls .github/workflows/*.yml)"
+
+
+def linted(name: str) -> bool:
+    """Whether bot selftest's actionlint reads the workflow `name`: it reads every one there is."""
+    return ACTIONLINT_EVERY_WORKFLOW in selftest() and (WORKFLOWS / name).is_file()
+
+
 class NightWorkflowTests(unittest.TestCase):
     text = read("bot-night.yml")
 
@@ -300,7 +308,7 @@ class BuildCacheWorkflowTests(unittest.TestCase):
         self.assertIn("run: sh scripts/build-wasm.sh\n", self.cache)
 
     def test_actionlint_reads_it(self):
-        self.assertIn(".github/workflows/bot-cache.yml", selftest())
+        self.assertTrue(linted("bot-cache.yml"))
 
 
 class CommandsWorkflowTests(unittest.TestCase):
@@ -429,7 +437,7 @@ class TriageWorkflowTests(unittest.TestCase):
                          {"contents": "read", "issues": "write", "pull-requests": "write"})
         self.assertIn('python3 -m harness triage --payload "$GITHUB_EVENT_PATH"', triage_job)
         self.assertIn("timeout-minutes:", triage_job)
-        self.assertIn(".github/workflows/triage.yml", selftest())
+        self.assertTrue(linted("triage.yml"))
 
     def test_only_human_of_the_labels_starts_it(self):
         self.assertIn("if: github.event_name != 'issues' || github.event.action == 'opened' || "

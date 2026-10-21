@@ -36,12 +36,15 @@ use crate::actor::contracts::one_tx;
 use crate::actor::protocol::SERVER_NONCE_PREFIX;
 use crate::app::{App, now_ms};
 use crate::config::{
-    DUOS_ROOM_TTL_MS, MATCH_ACTION_RETENTION_DAYS, MATCH_CEILING_MS, MATCH_REAPER_INTERVAL_SECONDS,
+    DUOS_ROOM_TTL_MS, JLORE_GAMES_DAILY_CAP, MATCH_ACTION_RETENTION_DAYS, MATCH_CEILING_MS,
+    MATCH_REAPER_INTERVAL_SECONDS,
 };
 use crate::db::store::{StoreError, StoreResult, Tx};
 use crate::duos::store::{DuosActionRow, DuosMatch, action_of};
 use crate::economy::quests::GameTally;
-use crate::economy::rewards::{GameMode, GameSummary, is_player_action, pay_game_rewards};
+use crate::economy::rewards::{
+    GameMode, GameSummary, game_jlore, is_player_action, pay_game_rewards, utc_day_bounds,
+};
 
 pub use registry::{DuosRegistry, registry};
 
@@ -103,6 +106,45 @@ pub async fn finish_match(
         pay_coop(t, row, result, at).await?;
     }
     Ok(true)
+}
+
+/// R1483000: whether the daily Jlore cap held back each person's pay for the finished co-op
+/// match `match_id`, by `HUMAN_SEATS`. Read off the ledger after the write, so a fresh result, a
+/// repeat of it and an actor rebuilt on the finished match all answer alike: a seat's pay was held
+/// back when its `game` row for the match is below `GameMode::Coop`'s rate for its result and its
+/// UTC day has reached `JLORE_GAMES_DAILY_CAP`. A voided game pays nothing (`finish_match` skips
+/// it). A bot's side is never paid (`pay_coop` pays people only), so there is no bot row to skip.
+pub async fn duos_game_jlore_caps(app: &App, match_id: &str) -> StoreResult<[bool; 2]> {
+    let none = [false, false];
+    if !app.economy_live {
+        return Ok(none);
+    }
+    let mut tx = app.db.begin(None).await?;
+    let row = tx.duos_matches_get(match_id).await?;
+    let Some(row) = row else {
+        return Ok(none);
+    };
+    let (Some(ended_at), Some(stored)) = (row.ended_at, row.result.clone()) else {
+        return Ok(none);
+    };
+    let Ok(result) = serde_json::from_value::<DuosResult>(stored) else {
+        return Ok(none);
+    };
+    if result.reason == DUOS_REASON_VOIDED {
+        return Ok(none);
+    }
+    let won = result.winner.map(|team| team == Team::A);
+    let (from, until) = utc_day_bounds(ended_at);
+    let mut capped = [false, false];
+    for (held_back, profile_id) in capped.iter_mut().zip([&row.a1, &row.a2]) {
+        let totals = tx
+            .economy_game_jlore_totals(profile_id, from, until, match_id)
+            .await?;
+        *held_back = totals.reference < i64::from(game_jlore(GameMode::Coop, won))
+            && totals.day >= JLORE_GAMES_DAILY_CAP;
+    }
+    tx.commit().await?;
+    Ok(capped)
 }
 
 /// [[R1502000]]: each person paid for their own seat at `GameMode::Coop`'s rates, a win when the

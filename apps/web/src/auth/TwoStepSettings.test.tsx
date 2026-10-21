@@ -162,4 +162,24 @@ describe("R665 turning two-step sign-in on and off", () => {
     expect(screen.queryByTestId(twoStepTestid.start)).toBeNull();
     expect(screen.queryByTestId(twoStepTestid.remove)).toBeNull();
   });
+
+  it("#1568 factors that could not be read offer Try again, which reads them again", async () => {
+    let reads = 0;
+    serve({
+      "GET /auth/v1/user": () => {
+        reads += 1;
+        return reads === 1 ? { status: 500, body: {} } : factors([]);
+      },
+    });
+    render(<TwoStepSettings token={TOKEN} />);
+
+    expect((await screen.findByTestId(twoStepTestid.state)).getAttribute("data-state")).toBe("unknown");
+    expect(screen.getByTestId(twoStepTestid.retry)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId(twoStepTestid.retry));
+    await waitFor(() => {
+      expect(screen.getByTestId(twoStepTestid.state)).toHaveAttribute("data-state", "off");
+    });
+    expect(reads).toBe(2);
+  });
 });

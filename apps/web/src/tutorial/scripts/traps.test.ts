@@ -7,6 +7,7 @@ import { opponentOf, type PlayerId } from "@jackioh/shared";
 
 import { LESSON_GAME_MS, LESSON_GAME_TIMEOUT_MS, RANDOM_GAME_MS, playLesson, type LessonRun } from "../harness.ts";
 import { lessonById } from "../lessons.ts";
+import { sweep } from "../../test/daily.ts";
 import { script } from "./traps.ts";
 import { gameTurnOf, gotItRuns, stepsOf, type Step } from "./testkit.ts";
 
@@ -179,7 +180,7 @@ describe("R293 lesson traps", () => {
   it(
     "R293 traps: a sensible beginner who ignores the coach wins on other seeds of the same decks too",
     () => {
-      for (let n = 1; n <= ALT_SEEDS; n += 1) {
+      for (let n = 1; n <= sweep(ALT_SEEDS); n += 1) {
         const seed = `${lesson.seed}:alt:${String(n)}`;
         const run = playLesson(LESSON, { policy: "autopilot", seed });
         expect(run.winner, `seed ${seed}`).toBe(human);
@@ -192,7 +193,7 @@ describe("R293 lesson traps", () => {
   it(
     "R293 traps: a player who ignores the coach never stalls or breaks it",
     () => {
-      for (let n = 1; n <= RANDOM_RUNS; n += 1) {
+      for (let n = 1; n <= sweep(RANDOM_RUNS); n += 1) {
         const run = playLesson(LESSON, { policy: "random", policySeed: `${LESSON}:random:${String(n)}` });
         expect(run.view.result, `policy seed ${String(n)} reaches a result`).not.toBeNull();
         expect(run.coach.finished, `policy seed ${String(n)}: the coach is finished`).toBe(true);

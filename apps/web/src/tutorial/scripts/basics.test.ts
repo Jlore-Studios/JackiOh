@@ -13,6 +13,7 @@ import { opponentOf, type GameEvent, type PlayerId } from "@jackioh/shared";
 
 import { LESSON_GAME_TIMEOUT_MS, RANDOM_GAME_MS, playLesson, type LessonRun } from "../harness.ts";
 import { lessonById } from "../lessons.ts";
+import { sweep } from "../../test/daily.ts";
 import { script } from "./basics.ts";
 import { gameTurnOf, gotItRuns, stepsOf, type Step } from "./testkit.ts";
 
@@ -208,7 +209,7 @@ describe("R293 lesson basics", () => {
   it(
     "R293 basics: a player who ignores the coach never stalls or breaks it",
     () => {
-      for (let n = 1; n <= RANDOM_RUNS; n += 1) {
+      for (let n = 1; n <= sweep(RANDOM_RUNS); n += 1) {
         const run = playLesson(LESSON, { policy: "random", policySeed: `${LESSON}:random:${String(n)}` });
         expect(run.view.result, `policy seed ${String(n)} reaches a result`).not.toBeNull();
         expect(run.coach.finished, `policy seed ${String(n)}: the coach is finished`).toBe(true);
