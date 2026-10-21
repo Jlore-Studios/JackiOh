@@ -9146,7 +9146,9 @@
     },
     "1490": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6308454116"
+      ],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -9169,9 +9171,7 @@
       "started_at": "2026-10-21T06:04:09Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6308454116"
-      ]
+      "taken_asks": []
     },
     "1491": {
       "action": "plan",
