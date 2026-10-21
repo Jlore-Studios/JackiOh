@@ -10842,8 +10842,16 @@
     "what": "review #1521 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-21T12:17:00Z",
-    "notes": [],
+    "at": "2026-10-21T12:29:31Z",
+    "notes": [
+      "#1339 needs a plan",
+      "#1445 needs a plan",
+      "#1447 needs a plan",
+      "#1497 needs a plan",
+      "#1505 needs a plan",
+      "#1506 needs a plan",
+      "started a night run, as a lane was free: #1339 (hard) is queued to build, for `claude-3`: plan on `claude-3` (claude, `opus`, strong)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
