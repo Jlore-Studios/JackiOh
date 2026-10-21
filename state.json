@@ -10286,17 +10286,23 @@
         "tier": "medium",
         "why": "Easy-rule line 7 is the one I was least sure of: the stub-docker harness can only unit-test the new validation branches, while the boot/image sequencing itself is proven by CI's own rehearsal jobs rather than a committed unit test, so the core behavior is not unit-checked and easy fails."
       },
+      "failures": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-21T18:25:00Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_tier": "medium",
+      "pr": 1565,
       "provider": "muse",
+      "question": "",
+      "round_tier": "medium",
       "run_id": "39644394527",
       "started_at": "2026-10-21T17:31:26Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 1
     },
     "1557": {
       "action": "revise",
