@@ -5,48 +5,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:6200530612": {
-      "at": "2026-10-15T19:28:55Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6200542325": {
-      "at": "2026-10-15T19:29:32Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6200556824": {
-      "at": "2026-10-15T19:30:23Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6200568612": {
-      "at": "2026-10-15T19:30:58Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6204053824": {
-      "at": "2026-10-15T23:00:54Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6204066705": {
-      "at": "2026-10-15T23:01:49Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6204080177": {
-      "at": "2026-10-15T23:02:53Z",
-      "lines": [
-        "Approve"
-      ]
-    },
     "c:6206150877": {
       "at": "2026-10-16T01:46:21Z",
       "lines": [
@@ -717,6 +675,12 @@
       "at": "2026-10-20T17:27:11Z",
       "lines": [
         "Approve"
+      ]
+    },
+    "c:6304683107": {
+      "at": "2026-10-21T00:11:35Z",
+      "lines": [
+        "/harness halt the title retcon (#1372) is retitling every issue and pull request; I'll start you again once it's done."
       ]
     }
   },
