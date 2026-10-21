@@ -4,7 +4,10 @@
 //! `App::economy_live` is on, which it is since the going-live sub-issue (#1310, R1310000). The dev
 //! tools (`api/dev.rs`, §14.10) write a dev account's own, live or not.
 //!
-//! - `math`: the pure math, the set-track level curve (§14.7) and the pity roll (§14.4) (#1298).
+//! - `math`: the pure math, the set-track level curve (§14.7) and pity, forced on top of a card
+//!   pack's rolled slots (§14.4) (#1298, #1339).
+//! - `tiers`: the tiered roll every drop goes through, one weight table per roll, its lowest tier
+//!   the fallback and a floor a fallback too (§14.3, §14.6, #1339).
 //! - `quests`: the daily quests, their pool kept as data, their rhythm, progress and payout (§14.9,
 //!   #1304).
 //! - `store`: migration 0045's tables, each holding beside its append-only ledger (§14.11), and
@@ -28,5 +31,6 @@ pub mod quests;
 pub mod rewards;
 pub mod roll;
 pub mod store;
+pub mod tiers;
 pub mod tokens;
 pub mod track_rewards;

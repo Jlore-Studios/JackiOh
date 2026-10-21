@@ -22,7 +22,9 @@
 //! file only decides which side won: §2.5's draws are a draw (0.5 each), and a concede and a
 //! disconnect are a loss like any other.
 //!
-//! A room challenge is unranked (R604): its row records both ratings unchanged.
+//! A room challenge is unranked (R604): its row records both ratings unchanged. It still pays its
+//! people at the unranked rates, as each game of a Conquest series pays at the Conquest rates
+//! (R1502000).
 //!
 //! A game of a Conquest series is written the same way with one difference and one addition
 //! (R262, R263): its row leaves both ratings unchanged, because a series moves the rating once, when it
@@ -86,6 +88,17 @@ fn series_status_name(status: SeriesStatus) -> &'static str {
 fn winner_side_of(outcome: &TerminalOutcome, seats: &(MatchSeat, MatchSeat)) -> Option<usize> {
     let winner = outcome.winner.player()?;
     Some(if winner == seats.0.player { 0 } else { 1 })
+}
+
+/// §14.8, [[R1502000]]: the rates a finished 1v1 match pays at: a game of a Conquest series,
+/// ranked or not, as a Conquest game; a ranked match outside one as a ladder game; any other
+/// (a room challenge and its rematches, R604) as an unranked game.
+fn game_mode_of(in_series: bool, ranked: bool) -> GameMode {
+    match (in_series, ranked) {
+        (true, _) => GameMode::Conquest,
+        (false, true) => GameMode::Ladder,
+        (false, false) => GameMode::Unranked,
+    }
 }
 
 /// R112: a reaper-resolved ceiling draw "records `turns = 0` and leaves both ratings unchanged,
@@ -306,18 +319,23 @@ async fn write_once(
     };
     tx.results_insert(&row).await.map_err(insert_error)?;
 
-    // §14.8: a finished ladder game — a ranked match that is not a game of a Conquest series —
-    // pays Jlore and XP through the one reward hook, in this same transaction, so a payout
-    // failure rolls the row back with it. Deliberately gated on `ranked_match` rather than
-    // `rating_policy`: a reaper ceiling draw is unrated yet still pays ([[R1302002]]). Nothing is
-    // paid for series games, room challenges, voided matches (that path never reaches here), or
-    // bot sides ([[R1454]]). The server ran the match, so it counts each seat's actions from its
-    // own log, the moves that seat took and not the server's own rows ([[R1302004]]); the client
-    // reports nothing. Nothing is paid while `ECONOMY_LIVE` is off (§14.12, [[R1302006]]): the
-    // economy is built behind it, and a ledger row is never deleted. The same hook moves each
-    // seat's quests (§14.9, [[R1304001]]) by what the game did: its plays and fired Traps, read off
-    // the log by the engine's fold (`quests_game`), and its attacks, counted from the log.
-    if app.economy_live && series.is_none() && ranked_match {
+    // §14.8: every finished match pays Jlore and XP through the one reward hook at its mode's rates
+    // ([[R1502000]]: `game_mode_of`), in this same transaction, so a payout failure rolls the row
+    // back with it. A game of a Conquest series pays as its own result, though the series moves the
+    // rating only once (R262). Deliberately not gated on `rating_policy`: a reaper ceiling draw is
+    // unrated yet still pays ([[R1302002]]). A missing match row, a voided match (that path never
+    // reaches here) and a bot's side ([[R1454]]) pay nothing. The server ran the match, so it
+    // counts each seat's actions from its own log, the moves that seat took and not the server's
+    // own rows ([[R1302004]]); the client reports nothing. Nothing is paid while `ECONOMY_LIVE` is
+    // off (§14.12, [[R1302006]]): the economy is built behind it, and a ledger row is never
+    // deleted. The same hook moves each seat's quests (§14.9, [[R1304001]]) by what the game did:
+    // its plays and fired Traps, read off the log by the engine's fold (`quests_game`), and its
+    // attacks, counted from the log.
+    if app.economy_live
+        && let Some(mode) = match_row
+            .as_ref()
+            .map(|row| game_mode_of(series.is_some(), row.ranked == Some(true)))
+    {
         // [[R1301003]]: both seats' economy locks, in profile-id order, so two payouts of one
         // account run one after the other and two ladder results sharing a player never wait on
         // each other in opposite orders. Taking one account's lock twice is safe: the advisory
@@ -350,7 +368,7 @@ async fn write_once(
             pay_game_rewards(
                 tx,
                 &GameSummary {
-                    mode: GameMode::Ladder,
+                    mode,
                     profile_id: seat.profile_id.clone(),
                     player: seat.player,
                     won: winner_side.map(|side| side == index),
@@ -510,13 +528,12 @@ pub async fn record_ceiling_draw(app: &Arc<App>, input: RecordResultInput) -> Re
     Ok(written.row)
 }
 
-/// R1483000: whether the daily Jlore cap held back each account's pay for the finished ladder match
+/// R1483000: whether the daily Jlore cap held back each account's pay for the finished match
 /// `match_id`, keyed by the seat each account began in (`MatchRow.players`). Read off the ledger
 /// after the write, so a fresh result, a repeat of it and an actor rebuilt on the finished match
-/// all answer alike: an account's pay was held back when its `game` row for the match is below the
-/// ladder's rate for its result and its UTC day has reached `JLORE_GAMES_DAILY_CAP`. A game the
-/// reward hook did not pay (a series game, an unranked match, a bot's side) or any game while the
-/// economy is off holds nothing back.
+/// all answer alike: an account's pay was held back when its `game` row for the match is below its
+/// mode's rate for its result and its UTC day has reached `JLORE_GAMES_DAILY_CAP`. A game the
+/// reward hook did not pay (a bot's side) or any game while the economy is off holds nothing back.
 pub async fn game_jlore_caps(app: &App, match_id: &str) -> Result<PerPlayer<bool>, ApiError> {
     let none = PerPlayer::new(false, false);
     if !app.economy_live {
@@ -525,13 +542,13 @@ pub async fn game_jlore_caps(app: &App, match_id: &str) -> Result<PerPlayer<bool
     let mut tx = app.db.begin(None).await.map_err(failure)?;
     let result = tx.results_get_by_match(match_id).await.map_err(failure)?;
     let match_row = tx.matches_get(match_id).await.map_err(failure)?;
-    let series = tx.series_by_match(match_id).await.map_err(failure)?;
-    let (Some(result), Some(match_row), None) = (result, match_row, series) else {
+    // The write recorded the game in its series, so the series is found by the games it holds, not
+    // by the game in play (`series_by_match`), which has moved on.
+    let series = tx.series_with_game(match_id).await.map_err(failure)?;
+    let (Some(result), Some(match_row)) = (result, match_row) else {
         return Ok(none);
     };
-    if match_row.ranked != Some(true) {
-        return Ok(none);
-    }
+    let mode = game_mode_of(series.is_some(), match_row.ranked == Some(true));
     let (first, second) = match_row.players;
     let profiles = tx
         .profiles_get_many(&[first.clone(), second.clone()])
@@ -554,8 +571,8 @@ pub async fn game_jlore_caps(app: &App, match_id: &str) -> Result<PerPlayer<bool
             .economy_game_jlore_totals(profile_id, from, until, match_id)
             .await
             .map_err(failure)?;
-        *held_back = totals.reference < i64::from(game_jlore(GameMode::Ladder, won))
-            && totals.day >= JLORE_GAMES_DAILY_CAP;
+        *held_back =
+            totals.reference < i64::from(game_jlore(mode, won)) && totals.day >= JLORE_GAMES_DAILY_CAP;
     }
     tx.commit().await.map_err(failure)?;
     Ok(PerPlayer::new(capped[0], capped[1]))

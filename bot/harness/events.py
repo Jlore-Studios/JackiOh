@@ -37,8 +37,9 @@ CI_FAILED = ("failure", "timed_out", "cancelled", "startup_failure")
 
 
 def ci_workflows(ctx: Context) -> tuple[str, ...]:
-    """The workflows whose checks a bot pull request must pass: CI and the bot's own selftest."""
-    return (ctx.cfg.ci_workflow, "bot selftest")
+    """The workflows whose checks a bot pull request must pass: CI, whose jobs include the bot's own
+    selftest (it had a workflow of its own, `bot selftest`, until #1455)."""
+    return (ctx.cfg.ci_workflow,)
 
 
 #: Events handled even when the bot sent them: CI runs its own pushes started, and pull requests

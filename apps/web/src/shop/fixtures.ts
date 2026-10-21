@@ -30,14 +30,22 @@ export function tokenBars(): TokenBarsResponse {
   };
 }
 
+/** A cosmetic pack's odds, a slot's and the guaranteed slot's, none of them the shipped tables'. */
+function cosmeticPackOdds(): CosmeticPacksResponse["odds"] {
+  return {
+    slot: { common: 0.5, rare: 0.3, epic: 0.15, legendary: 0.04, mythic: 0.01 },
+    flooredSlot: { common: 0, rare: 0, epic: 0.9, legendary: 0.08, mythic: 0.02 },
+  };
+}
+
 /** `GET /api/cosmetic-packs` with the shard bar one pack short of full and two packs unopened. */
 export function cosmeticPacksInfo(): CosmeticPacksResponse {
-  return { shardBar: { points: 19, size: 20 }, unopened: 2 };
+  return { shardBar: { points: 19, size: 20 }, unopened: 2, odds: cosmeticPackOdds() };
 }
 
 /** `GET /api/cosmetic-packs` with a full shard bar and one pack unopened. */
 export function cosmeticPacksFull(): CosmeticPacksResponse {
-  return { shardBar: { points: 20, size: 20 }, unopened: 1 };
+  return { shardBar: { points: 20, size: 20 }, unopened: 1, odds: cosmeticPackOdds() };
 }
 
 /**

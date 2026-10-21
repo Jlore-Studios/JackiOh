@@ -12,7 +12,8 @@
 //!
 //! The upgrade is `actor::ws_server::handle_duos` and the routes are `app::ROUTES`' co-op block.
 //! Nothing here touches a 1v1 match: a co-op match sets no profile's in-match flag, writes no
-//! results row and moves no rating (S6: co-op games are unranked).
+//! results row and moves no rating (S6: co-op games are unranked). Its result pays both people
+//! through the reward hook (`finish_match`, [[R1502000]]).
 
 pub mod actor;
 pub mod engine;
@@ -26,15 +27,21 @@ pub mod ws;
 use std::sync::Arc;
 use std::time::Duration;
 
-use jackioh_engine::wire::{DUOS_REASON_CEILING, DuosOutcome, DuosResult};
+use jackioh_engine::wire::{
+    DUOS_REASON_CEILING, DUOS_REASON_VOIDED, DuosActionBody, DuosOutcome, DuosResult, DuosSeat, Team,
+};
+use jackioh_engine::{ActionBody, PlayerId};
 
 use crate::actor::contracts::one_tx;
+use crate::actor::protocol::SERVER_NONCE_PREFIX;
 use crate::app::{App, now_ms};
 use crate::config::{
     DUOS_ROOM_TTL_MS, MATCH_ACTION_RETENTION_DAYS, MATCH_CEILING_MS, MATCH_REAPER_INTERVAL_SECONDS,
 };
-use crate::db::store::StoreError;
-use crate::duos::store::DuosMatch;
+use crate::db::store::{StoreError, StoreResult, Tx};
+use crate::duos::store::{DuosActionRow, DuosMatch, action_of};
+use crate::economy::quests::GameTally;
+use crate::economy::rewards::{GameMode, GameSummary, is_player_action, pay_game_rewards};
 
 pub use registry::{DuosRegistry, registry};
 
@@ -77,23 +84,99 @@ pub fn ceiling_draw() -> DuosResult {
     }
 }
 
+/// B40, §14.8, [[R1502000]]: writes `result` and `ended_at` once (`duos_matches_finish`); the write
+/// that lands pays both people in the same transaction while `ECONOMY_LIVE` is on ([[R1302006]]), so
+/// a payout failure rolls the result back. A game a void ended pays nothing, as a voided 1v1 match
+/// does not ([[R679]]). False, paying nothing, when the match already had its result.
+pub async fn finish_match(
+    t: &mut Tx<'_>,
+    app: &App,
+    row: &DuosMatch,
+    result: &DuosResult,
+    at: i64,
+) -> StoreResult<bool> {
+    let json = serde_json::to_value(result)?;
+    if !t.duos_matches_finish(&row.id, &json, at).await? {
+        return Ok(false);
+    }
+    if app.economy_live && result.reason != DUOS_REASON_VOIDED {
+        pay_coop(t, row, result, at).await?;
+    }
+    Ok(true)
+}
+
+/// [[R1502000]]: each person paid for their own seat at `GameMode::Coop`'s rates, a win when the
+/// humans' team won. A co-op log is not folded into what a seat played, so its quests count the
+/// result and the seat's attacks alone.
+async fn pay_coop(t: &mut Tx<'_>, row: &DuosMatch, result: &DuosResult, at: i64) -> StoreResult<()> {
+    // [[R1301003]]: both economy locks in profile-id order, as a 1v1 result takes its two.
+    let mut ordered = [row.a1.clone(), row.a2.clone()];
+    ordered.sort();
+    for profile_id in &ordered {
+        t.economy_lock_account(profile_id).await?;
+    }
+    let log = t.duos_actions(&row.id).await?;
+    let won = result.winner.map(|team| team == Team::A);
+    for (seat, profile_id) in [(DuosSeat::A1, &row.a1), (DuosSeat::A2, &row.a2)] {
+        let (actions, attacks) = seat_moves(&log, seat);
+        pay_game_rewards(
+            t,
+            &GameSummary {
+                mode: GameMode::Coop,
+                profile_id: profile_id.clone(),
+                // §13.1: each person is Player 1 of their own duel.
+                player: PlayerId::P1,
+                won,
+                actions,
+                match_id: row.id.clone(),
+                at,
+                bot: false,
+                tally: GameTally {
+                    attacks,
+                    ..GameTally::default()
+                },
+            },
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+/// [[R1502000]], [[R1302004]]: the moves `seat`'s person sent in `log`, and its attacks. A row under
+/// the server's nonce (R270: the AI's moves for the seat, the ceiling) is no one's; a duel action
+/// counts as `is_player_action` says, a pass and the team's concede count. A row that does not read
+/// as an action counts as none, so an unreadable log never stops a result.
+fn seat_moves(log: &[DuosActionRow], seat: DuosSeat) -> (i64, i64) {
+    let (mut moves, mut attacks) = (0, 0);
+    for action in log.iter().filter_map(|row| action_of(&row.action).ok()) {
+        if action.seat != seat || action.nonce.starts_with(SERVER_NONCE_PREFIX) {
+            continue;
+        }
+        match &action.body {
+            DuosActionBody::Duel { body } => {
+                if is_player_action(body) {
+                    moves += 1;
+                }
+                if matches!(body, ActionBody::Attack { .. }) {
+                    attacks += 1;
+                }
+            }
+            DuosActionBody::Pass { .. } | DuosActionBody::Concede => moves += 1,
+        }
+    }
+    (moves, attacks)
+}
+
 /// R1047001: a live match no actor can be folded back for, once it is past its ceiling (R1047000), ends
 /// as the ceiling's draw with the result the actor would have written, which frees both people as the
 /// 1v1 reaper frees a stuck match's (§9.5). `duos_matches_finish` writes once and the first writer
 /// stands, so an actor racing this sweep to the same result leaves one. Before the ceiling nothing
 /// is written and the next sweep folds the match back again.
 async fn end_abandoned(app: &Arc<App>, match_id: &str, now: i64) {
-    let result = match serde_json::to_value(ceiling_draw()) {
-        Ok(result) => result,
-        Err(error) => {
-            tracing::error!(event = "duos.result.unencodable", matchId = %match_id, message = %error);
-            return;
-        }
-    };
     let ended = one_tx!(app.db, |t| {
         match t.duos_matches_get(match_id).await? {
             Some(row) if row.ended_at.is_none() && now >= ceiling_at(&row) => {
-                if t.duos_matches_finish(match_id, &result, now).await? {
+                if finish_match(&mut t, app, &row, &ceiling_draw(), now).await? {
                     Some((row.a1, row.a2))
                 } else {
                     None

@@ -8,7 +8,7 @@
 // spread, delay, duration, tone, amount, text) is S7's and is compared exactly. Within one recipe the
 // cues are compared as a set: S7 lists what is planned, not in which order.
 
-import type { GameEvent, PlayerView } from "@jackioh/shared";
+import type { Flavor, GameEvent, PlayerView } from "@jackioh/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { ANIMATIONS, MIN_ENTRY_MS, planEntries, type AnimationEntry } from "../game/animations.ts";
@@ -122,8 +122,8 @@ function round6(value: number): number {
   return Math.round(value * 1e6) / 1e6;
 }
 
-function burst(preset: string, at: FxAnchor, spread: string, delayMs: number): Loose {
-  return { kind: "burst", preset, at, spread, delayMs };
+function burst(preset: string, at: FxAnchor, spread: string, delayMs: number, colors?: readonly string[]): Loose {
+  return { kind: "burst", preset, at, spread, delayMs, ...(colors === undefined ? {} : { colors }) };
 }
 function ring(preset: string, at: FxAnchor, delayMs: number, D: number): Loose {
   return { kind: "ring", preset, at, delayMs, durationMs: Math.min(FX_RING_MS, D - delayMs + T) };
@@ -875,6 +875,8 @@ describe("B14 summon", () => {
     expectCues(plan([summon("p2", "n2", "core-002", "units", 2)], 250, { env: envOf({ card: catalog(FACTS) }) }), [
       ring("dust", tid(zone), slam, 250),
       burst("dust", tid(zone, FOOT), "ring", slam),
+      // #1445: core-002 is Physical, so its entrance is a spark burst at the zone's foot.
+      burst("spark", tid(zone, FOOT), "point", slam),
     ]);
   });
 });
@@ -887,7 +889,12 @@ describe("B15 cast", () => {
       const cues = plan([played("p1", HAND), summon("p1", HAND, "core-002", "units", 3)], D, {
         env: envOf({ card: catalog(FACTS) }),
       });
-      expectCues(cues, [ring("dust", tid(zone), slam, D), burst("dust", tid(zone, FOOT), "ring", slam)]);
+      expectCues(cues, [
+        ring("dust", tid(zone), slam, D),
+        burst("dust", tid(zone, FOOT), "ring", slam),
+        // #1445: core-002 is Physical, so its entrance is a spark burst at the zone's foot.
+        burst("spark", tid(zone, FOOT), "point", slam),
+      ]);
     }
   });
 
@@ -1198,14 +1205,60 @@ describe("B16 the recipe table, row by row", () => {
     });
   });
 
-  it("B16 trapFired: an arcane ring, an arcane ring burst and a punch shake at 0.2 D, on the card the viewer reads", () => {
+  it("B16 trapFired: an arcane ring, a ring burst in the card's flavor and a punch shake at 0.2 D, on the card the viewer reads", () => {
     forDs("trapFired", (D) => {
       const b = r(FX_TRAP_BURST_AT * D);
+      const holy = FLAVOR_LOOKS.Holy;
       expectCues(plan([{ type: "trapFired", instanceId: MY_TRAP, defId: "core-084", controller: "p1", row: "backrow", lane: 5 }], D), [
         ring("arcane", cardT(MY_TRAP), 0, D),
-        burst("arcane", cardT(MY_TRAP), "ring", b),
+        burst(holy.particle, cardT(MY_TRAP), "ring", b, holy.colors),
         shake(0.4, b),
       ]);
+    });
+  });
+
+  it("#1447 a readable trap reveal uses every flavor look's colors and particle", () => {
+    const rows: Array<[string, Flavor]> = [
+      ["core-001", "Physical"],
+      ["core-019", "Brute"],
+      ["core-007", "Beast"],
+      ["core-035", "Fire"],
+      ["core-021", "Dark"],
+      ["core-026", "Holy"],
+      ["core-010", "Nerd"],
+      ["core-013", "Tech"],
+      ["core-017", "Nature"],
+      ["core-022", "Toxic"],
+      ["core-018", "Snack"],
+      ["core-004", "Hustle"],
+      ["core-050", "Clout"],
+      ["core-037", "Spirit"],
+      ["core-023", "Chaos"],
+    ];
+    expect(new Set(rows.map(([, flavor]) => flavor)), "one row per flavor").toEqual(new Set(Object.keys(FLAVOR_LOOKS)));
+    forDs("trapFired", (D) => {
+      const b = r(FX_TRAP_BURST_AT * D);
+      for (const [defId, flavor] of rows) {
+        const look = FLAVOR_LOOKS[flavor === "Chaos" ? chaosFlavor(MY_TRAP) : flavor];
+        const fired: GameEvent = { type: "trapFired", instanceId: MY_TRAP, defId, controller: "p1", row: "backrow", lane: 5 };
+        expectCues(plan([fired], D), [
+          ring("arcane", cardT(MY_TRAP), 0, D),
+          burst(look.particle, cardT(MY_TRAP), "ring", b, look.colors),
+          shake(0.4, b),
+        ]);
+      }
+    });
+  });
+
+  it("#1447 a trap absent from PlayerView keeps today's reveal cue", () => {
+    forDs("trapFired", (D) => {
+      const b = r(FX_TRAP_BURST_AT * D);
+      const zone = zoneT("opponent", "backrow", 4);
+      // The event names a card the catalog knows, but the view shows no such instance (an opponent's face-down trap).
+      const fired: GameEvent = { type: "trapFired", instanceId: "face-down-1", defId: "core-021", controller: "p2", row: "backrow", lane: 4 };
+      const cues = plan([fired], D);
+      expectCues(cues, [ring("arcane", zone, 0, D), burst("arcane", zone, "ring", b), shake(0.4, b)]);
+      for (const cue of cues) expect("colors" in cue).toBe(false);
     });
   });
 
@@ -1593,6 +1646,11 @@ describe("B20 turn banners", () => {
  * B21: R202, the redacted stream only
  * ------------------------------------------------------------------------------------------- */
 
+/** Fields a cue may leave out: a burst's `scale` and, from #1447, its `colors`. */
+const CUE_OPTIONAL_KEYS: Partial<Record<FxCue["kind"], readonly string[]>> = {
+  burst: ["scale", "colors"],
+};
+
 const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   burst: ["kind", "preset", "at", "delayMs", "count", "spread", "power"],
   projectile: ["kind", "preset", "from", "to", "delayMs", "flightMs", "density"],
@@ -1646,7 +1704,10 @@ function checkAnchor(anchor: unknown, where: string): void {
 function checkCue(cue: FxCue, where: string): void {
   const allowed = CUE_KEYS[cue.kind];
   expect(allowed, `${where}: unknown cue kind`).toBeDefined();
-  expect(definedKeys(cue), where).toEqual([...allowed].sort());
+  const optional = CUE_OPTIONAL_KEYS[cue.kind] ?? [];
+  const keys = definedKeys(cue);
+  for (const key of allowed) expect(keys, `${where}: missing ${key}`).toContain(key);
+  for (const key of keys) expect([...allowed, ...optional], `${where}: undeclared ${key}`).toContain(key);
   for (const field of ["at", "from", "to"] as const) {
     if (field in cue) checkAnchor((cue as Record<string, unknown>)[field], `${where}.${field}`);
   }

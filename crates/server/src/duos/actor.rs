@@ -56,7 +56,9 @@ use tokio::sync::{mpsc, oneshot};
 
 use jackioh_ai::{AI_BUDGET, AiOptions, duos_decide};
 use jackioh_engine::duos::DuosState;
-use jackioh_engine::wire::{ActionBody, DUOS_SEATS, DuosAction, DuosActionBody, DuosSeat, DuosView};
+use jackioh_engine::wire::{
+    ActionBody, DUOS_SEATS, DuosAction, DuosActionBody, DuosResult, DuosSeat, DuosView,
+};
 use jackioh_engine::{Rng, mulligan_owed};
 
 use crate::actor::clock::{Timer, after};
@@ -81,7 +83,7 @@ use crate::duos::protocol::{
 };
 use crate::duos::registry::registry;
 use crate::duos::store::{DuosActionRow, DuosMatch, action_json, seat_of_logged};
-use crate::duos::{ceiling_at, ceiling_draw};
+use crate::duos::{ceiling_at, ceiling_draw, finish_match};
 use crate::seats::Seat;
 
 /// The people's seats: the room's host and guest (S6). Their sockets, graces and AI takeovers are
@@ -1252,13 +1254,7 @@ impl DuosActor {
     /// writes any ending. The actor lets go as the sweep's `end_abandoned` does for a match it cannot
     /// fold back; the clocks `halt` clears, and the AI's retries find the match finished or stopped.
     async fn end_as_ceiling_draw(&self) {
-        let result = match serde_json::to_value(ceiling_draw()) {
-            Ok(result) => result,
-            Err(error) => {
-                tracing::error!(event = "duos.result.unencodable", matchId = %self.match_id_str(), message = %error);
-                return;
-            }
-        };
+        let result = ceiling_draw();
         let at = now_ms();
         {
             let mut core = self.lock();
@@ -1302,15 +1298,8 @@ impl DuosActor {
             if core.finished {
                 return;
             }
-            let Some(result) = core.state.result.as_ref() else {
+            let Some(result) = core.state.result.clone() else {
                 return;
-            };
-            let result = match serde_json::to_value(result) {
-                Ok(result) => result,
-                Err(error) => {
-                    tracing::error!(event = "duos.result.unencodable", matchId = %self.match_id_str(), message = %error);
-                    return;
-                }
             };
             let at = now_ms();
             core.finished = true;
@@ -1333,17 +1322,23 @@ impl DuosActor {
         for person in [&row.a1, &row.a2] {
             self.shared.app.seats.release(person, &seat);
         }
-        tracing::info!(event = "duos.over", matchId = %self.match_id_str(), result = %result);
+        tracing::info!(event = "duos.over", matchId = %self.match_id_str(), outcome = %result.outcome, reason = %result.reason);
     }
 
     /// `MATCH_RECORD_RESULT_ATTEMPTS` tries, the waits doubling from `MATCH_RECORD_RESULT_BACKOFF_MS`.
-    /// A write that finds the result already there has landed too.
-    async fn record_result(&self, result: &Value, at: i64) -> bool {
+    /// A write that finds the result already there has landed too. The write that lands pays both
+    /// people (`finish_match`, [[R1502000]]).
+    async fn record_result(&self, result: &DuosResult, at: i64) -> bool {
         let mut wait_ms = MATCH_RECORD_RESULT_BACKOFF_MS;
         for attempt in 1..=MATCH_RECORD_RESULT_ATTEMPTS {
-            let written = one_tx!(self.shared.app.db, |t| t
-                .duos_matches_finish(&self.shared.row.id, result, at)
-                .await?);
+            let written = one_tx!(self.shared.app.db, |t| finish_match(
+                &mut t,
+                &self.shared.app,
+                &self.shared.row,
+                result,
+                at
+            )
+            .await?);
             match written {
                 Ok(_) => return true,
                 Err(error) => {

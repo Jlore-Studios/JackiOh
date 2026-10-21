@@ -23,6 +23,8 @@ have used:
 - last, a night run that should be going and is not: GitHub drops scheduled runs, sometimes a
   whole night of `bot-night`'s hourly ones, so when the gate's own question (`plan.peek`) finds
   work for a free lane and no `bot-night` run is on its way to take it, the sweep starts one.
+  With `controller` on (#1455) the status loop's sweep plans the work and starts each run with
+  its plan (`controller.start`), and any other sweep leaves the work to the loop while it goes.
 
 It looks back to the later of `LOOKBACK` and the first sweep ever (so the first one replays
 nothing), leaves anything younger than `SETTLE` to a handler that may still be running, and
@@ -38,7 +40,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Any, Callable
 
-from harness import commands, events, stepup, triage
+from harness import commands, controller, events, stepup, triage
 from harness import plan as plan_mod
 from harness.clock import iso, parse_iso
 from harness.config import (LABELS, LABEL_BLOCKED, LABEL_PLANNED, RETIRED_LABELS, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN,
@@ -79,8 +81,12 @@ def sweep(ctx: Context) -> list[str]:
         except Exception as exc:  # noqa: BLE001 - one part failing never stops the rest
             notes.append(f"{part.__name__.strip('_')}: could not finish ({type(exc).__name__}: "
                          f"{str(exc)[:200]})")
-    ctx.store.update(lambda s: s.update(last_sweep={"at": iso(now), "since": iso(first),
-                                                    "notes": notes[-20:]}), "sweep")
+    def record(state: dict[str, Any]) -> None:
+        state["last_sweep"] = {"at": iso(now), "since": iso(first), "notes": notes[-20:]}
+        if ctx.cfg.controller_loop:
+            state["loop_tick"] = iso(now)  # the status loop's heartbeat (`plan.loop_alive`)
+
+    ctx.store.update(record, "sweep")
     return notes
 
 
@@ -409,6 +415,13 @@ def _night_run(ctx: Context, since: datetime) -> list[str]:
     plan_mod.note_idle(ctx, look.idle)
     if not look.work:
         return []
+    if ctx.cfg.controller:
+        # The status loop plans and starts the runs itself (`controller.py`, #1455); any other
+        # sweep leaves the work to it while it is going.
+        if ctx.cfg.controller_loop:
+            return controller.start(ctx)
+        if plan_mod.loop_alive(ctx):
+            return []
     live = [r for r in ctx.gh.list_runs(NIGHT_WORKFLOW, limit=20) if r.get("status") in LIVE_RUN]
     # A run waiting for the shared subscription to be quiet may wait two hours; it is not on
     # its way to the other subscriptions' work, which `peek` then offers instead.

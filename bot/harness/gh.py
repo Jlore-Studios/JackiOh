@@ -477,6 +477,24 @@ class GitHub:
             payload["sha"] = sha
         self.request("PUT", f"{self._r}/contents/{urllib.parse.quote(path)}", payload)
 
+    def list_dir(self, path: str, ref: str) -> list[tuple[str, str]]:
+        """`(name, blob sha)` of each file in a directory on `ref`; empty when there is none."""
+        quoted = urllib.parse.quote(path)
+        try:
+            data = self.request("GET", f"{self._r}/contents/{quoted}?ref={urllib.parse.quote(ref)}")
+        except GitHubError as exc:
+            if exc.status == 404:
+                return []
+            raise
+        if not isinstance(data, list):
+            return []
+        return [(str(entry.get("name")), str(entry.get("sha"))) for entry in data
+                if isinstance(entry, dict) and entry.get("type") == "file"]
+
+    def delete_file(self, path: str, *, branch: str, sha: str, message: str) -> None:
+        self.request("DELETE", f"{self._r}/contents/{urllib.parse.quote(path)}",
+                     {"message": message, "sha": sha, "branch": branch})
+
     def branch_sha(self, branch: str) -> str | None:
         try:
             data = self.request("GET", f"{self._r}/git/ref/heads/{urllib.parse.quote(branch)}")

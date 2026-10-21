@@ -427,6 +427,10 @@ class ReviewRunTests(unittest.TestCase):
     def test_strong_first_in_the_usage_order(self):
         gh = FakeGitHub()
         ctx = ctx_for(gh)
+        # Room past the cap on GitHub's runners (`max_parallel`, #1455): the usage order is this
+        # test's, the cap its own.
+        ctx = make_ctx(gh, at=NIGHT, cfg=dataclasses.replace(
+            ctx.cfg, pool=dataclasses.replace(ctx.cfg.pool, max_parallel=20)))
         self.pull(gh, ctx)
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], seats(planned)["review"]),

@@ -24,4 +24,8 @@ export const statsTestid = {
   playersNext: "stats-players-next",
   drillDownModal: "stats-drill-down-modal",
   drillDownClose: "stats-drill-down-close",
+  drillDownRadiantToggle: "stats-drill-down-radiant-toggle",
+  drillDownRadiantFace: "stats-drill-down-radiant-face",
+  drillDownAlmanac: "stats-drill-down-almanac",
+  drillDownTokens: "stats-drill-down-tokens",
 } as const;
