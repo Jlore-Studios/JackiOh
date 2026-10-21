@@ -9762,33 +9762,26 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-21T07:37:59Z",
+      "feedback_since": "2026-10-21T08:31:03Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1442,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "rangedLook only looks in each side's `units` row, so a Ranged Unit standing in a backrow zone (a Flying Unit, R1081000) attacks with a plain melee lunge instead of firing its flavor's projectile, even though the view shows it with Ranged.",
-          "evidence": "rangedLook loops over `side.units` only. `locateInstance` (game/animations.ts:108-118), which `targetFor` uses for attackDeclared, also finds face-up backrow slots, so the attacker resolves and the guard passes, but rangedLook returns null and the plain lunge plays. The engine lets backrow Units attack (crates/engine/src/turn.rs:286 'the Units standing in its backrow zones, which attack and switch as any unit does'; statuses.rs:73). The view carries their keywords in `PublicBackrowView.unit` (wire/generated/PublicBackrowView.ts:64-69). Flying plus Ranged is reachable: Ranged is in the random combat keyword pool (spec/06-keywords.md:61), and the custom-card kit offers both (spec/12-custom-cards.md:19). The issue says the projectile plays 'when that view shows the attacker with Ranged'. Fix: also check `slot.unit` of `side.backrow` slots where `faceDown === false`, and add a test with a Ranged unit standing in the backrow.",
-          "severity": "blocking",
-          "where": "apps/web/src/fx/stage.ts:49"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-6",
       "question": "",
       "queued_at": "2026-10-21T08:27:05Z",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "medium",
+      "round_tier": "strong",
       "run_id": "39569449449",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-21T08:31:03Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "gpt"
