@@ -8678,6 +8678,8 @@
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-10-21T00:04:58Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "39519121499",
       "self_check_findings": [],
       "started_at": "2026-10-21T00:06:36Z",
