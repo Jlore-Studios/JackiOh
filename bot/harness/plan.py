@@ -48,6 +48,7 @@ an unforced run uses it only after the gate saw it quiet (`quiet_ok`).
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from itertools import islice
@@ -114,7 +115,7 @@ def pending_run(ctx: Context, run_id: str) -> str:
         return "unknown"
     for run in runs:
         if str(run.get("display_title") or "").startswith(f"bot-night {ref} "):
-            return "alive" if run.get("status") in LIVE else "dead"
+            return "alive" if run.get("status") in LIVE or awaiting_delivery(ctx, run) else "dead"
     try:
         made = datetime.fromtimestamp(int(ref.rsplit("-", 1)[-1]), tz=timezone.utc)
     except (ValueError, OverflowError, OSError):
@@ -130,9 +131,44 @@ def run_status(ctx: Context, run_id: Any) -> str:
     if str(run_id).startswith(PENDING):
         return pending_run(ctx, str(run_id))
     try:
-        return "alive" if ctx.gh.get_run(run_id).get("status") in LIVE else "dead"
+        run = ctx.gh.get_run(run_id)
+        return "alive" if run.get("status") in LIVE or awaiting_delivery(ctx, run) else "dead"
     except GitHubError as exc:
         return "dead" if exc.status == 404 else "unknown"
+
+
+#: A night run the status loop started (`controller.py`): bot-night.yml's `run-name` names its plan.
+LOOP_TITLE = re.compile(r"^bot-night ([0-9a-f]{8}-[0-9]{9,11}) on ")
+#: How long after a run the loop started has ended the loop may still deliver it (#1537). Such a
+#: run has no `deliver` job of its own, so until then it counts as alive: its lane stays held and
+#: housekeeping leaves its item alone. After it, or once the loop has given up on it, the item is
+#: housekeeping's, as a dead run's is.
+DELIVER_WITHIN = timedelta(minutes=30)
+#: The deliveries the loop tries for one run, a tick apart, before it gives up on it.
+DELIVER_TRIES = 3
+#: The state file's record of the loop's deliveries, by run id (`controller.deliver`).
+DELIVERIES = "loop_deliveries"
+
+
+def loop_ref(run: Mapping[str, Any]) -> str:
+    """The plan reference of a night run the status loop started, or "" for any other run."""
+    found = LOOP_TITLE.match(str(run.get("display_title") or ""))
+    return found.group(1) if found else ""
+
+
+def awaiting_delivery(ctx: Context, run: Mapping[str, Any]) -> bool:
+    """Whether `run`, a night run that has ended, waits for the status loop to deliver it: the
+    loop started it, it ended less than `DELIVER_WITHIN` ago, and the loop has neither delivered
+    it nor given up on it (`DELIVERIES`)."""
+    if run.get("status") in LIVE or not loop_ref(run):
+        return False
+    ended = parse_iso(run.get("updated_at"))
+    if ended is None or ctx.now() - ended >= DELIVER_WITHIN:
+        return False
+    record = (ctx.store.load().get(DELIVERIES) or {}).get(str(run.get("id")))
+    if not isinstance(record, dict):
+        return True
+    return not (record.get("done") or int(record.get("tries") or 0) >= DELIVER_TRIES)
 
 
 def run_alive(ctx: Context, run_id: Any) -> bool:
