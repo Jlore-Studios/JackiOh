@@ -9839,21 +9839,20 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
+            "apps/web/src/wire/serverConfig.ts"
           ],
-          "from": "bde7cc530ee43c655f7fa00b3bbd1a0b317d063d",
-          "main": "e1589b1d1aa69a086ffe90911a4303b0a122ab55"
+          "from": "4fa2de65d1c9d065994f071d27867f54b9725387",
+          "main": "022839a1b23dd99d4c9b3894ddae84bc54f4e355"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39621731585",
+            "run": "39630897195",
             "tier": "strong"
           }
         ],
-        "sha": "4fa2de65d1c9d065994f071d27867f54b9725387",
+        "sha": "87f0c2e95257c714914bfb4cac1877d7f4da0092",
         "tiers": {
           "claude": "strong"
         }
