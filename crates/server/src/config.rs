@@ -1243,6 +1243,24 @@ pub const BOT_POOL_PER_WEEKLY_ACTIVE: f64 = 0.25;
 pub const BOT_POOL_ACTIVE_WINDOW_DAYS: i64 = 7;
 /// R1454: how often the server sizes the pool again (and once as it boots).
 pub const BOT_POOL_REFRESH_INTERVAL_SECONDS: i64 = 3600;
+/// R1555000: the place among the season's placed people (highest rating first) whose rating starts
+/// the top bots' grind, so one person far ahead does not.
+pub const BOT_GRIND_REFERENCE_RANK: usize = 3;
+/// R1555000: the grind starts at a refresh when that person is more than this above every active bot.
+pub const BOT_GRIND_GAP: f64 = 200.0;
+/// R1555000: and stops only once a bot is within `BOT_GRIND_GAP` less this of them, so it does not
+/// flap.
+pub const BOT_GRIND_HYSTERESIS: f64 = 100.0;
+/// R1555000: how many of the highest-rated active bots grind.
+pub const BOT_GRINDERS: usize = 3;
+/// R1555000: the hours a day a grinder is on, in place of its own schedule's when that is fewer.
+pub const BOT_GRIND_ACTIVE_HOURS: i32 = 20;
+/// R1555000: the rated wins a grinder needs while grinding to step up one strength.
+pub const BOT_GRIND_STEP_GAMES: i32 = 10;
+/// R1555000: the most matches between two bots that are live at once.
+pub const BOT_VS_BOT_MAX_LIVE: usize = 1;
+/// R1555000: the least time between a match between two bots ending and the next one's kickoff.
+pub const BOT_VS_BOT_MIN_GAP_SECONDS: i64 = 300;
 /// R1453, R641000: the shortest a ticket of any mode waits before it may pair with a bot.
 pub const BOT_FALLBACK_MIN_SECONDS: i64 = 15;
 /// R1453: the longest; each ticket's wait is drawn from its id and the server's key between the

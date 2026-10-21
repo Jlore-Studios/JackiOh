@@ -27,6 +27,7 @@ use jackioh_engine::PerPlayer;
 use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, log_alert, log_info, now_ms, ok_of};
 use crate::app::App;
+use crate::config::{BOT_GRIND_STEP_GAMES, BOT_STRENGTHS};
 use crate::db::store::{
     BotRating, Pilot, Profile, ProfileKind, RatedGameKind, RatedGameRow, RatedReason, RatedSide, Season,
     SeasonStanding, StoreError, Tx,
@@ -575,7 +576,7 @@ pub async fn commit_ranked_game(t: &mut Tx<'_>, plan: &RankedPlan, at: i64) -> R
     let Some(writes) = &plan.writes else {
         return Ok(());
     };
-    for write in &writes.glickos {
+    for (index, write) in writes.glickos.iter().enumerate() {
         match &write.side {
             RankedSideInput::Player { profile_id } => {
                 t.profiles_set_glicko(profile_id, &write.glicko).await?
@@ -587,7 +588,17 @@ pub async fn commit_ranked_game(t: &mut Tx<'_>, plan: &RankedPlan, at: i64) -> R
                     games: write.games as _,
                     updated_at: at,
                 })
-                .await?
+                .await?;
+                // R1555000: a grinder's rated win counts toward its next strength; its rating is
+                // the update above alone (R610).
+                if plan.row.winner_side == Some(index) {
+                    t.bots_note_grind_win(
+                        bot_id,
+                        BOT_GRIND_STEP_GAMES,
+                        BOT_STRENGTHS.len().saturating_sub(1),
+                    )
+                    .await?;
+                }
             }
         }
     }
