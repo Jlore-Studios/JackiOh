@@ -5699,7 +5699,7 @@
         "reason": "halted by /harness halt",
         "trail": ""
       },
-      "interruptions": 0,
+      "interruptions": 1,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
