@@ -350,7 +350,7 @@ pub(crate) fn read_diff(before: &Side, after: &Side, files: &[FileChange]) -> Di
 }
 
 /// A card script's `pub const ID`.
-fn script_id(source: &str) -> Option<String> {
+pub(crate) fn script_id(source: &str) -> Option<String> {
     let after = source.split("pub const ID: &str = \"").nth(1)?;
     after.split('"').next().map(str::to_string)
 }
