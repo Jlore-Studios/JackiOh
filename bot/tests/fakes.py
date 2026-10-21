@@ -386,7 +386,8 @@ class FakeGitHub:
         return dict(self.runs[str(run_id)])
 
     def list_runs(self, workflow: str, *, status: str = "", limit: int = 30) -> list[dict]:
-        return list(self.runs.values())[:limit]
+        # A run that names its workflow is listed only for it; one that does not, for any.
+        return [r for r in self.runs.values() if r.get("workflow", workflow) == workflow][:limit]
 
     def rerun_failed_jobs(self, run_id: Any) -> None:
         self.reruns.append(run_id)

@@ -82,6 +82,105 @@ class TrainingBoxTests(unittest.TestCase):
             self.assertEqual(self.boxes(gh), "")
 
 
+class LearnLaneTests(unittest.TestCase):
+    """The learn lane's section (#466): read from GitHub alone, since no harness runs the lane."""
+
+    def run_with(self, gh: FakeGitHub, run_id: int, *, number: int, event: str = "schedule",
+                 status: str = "completed", jobs: list[dict] | None = None) -> None:
+        gh.runs[str(run_id)] = {"id": run_id, "workflow": dashboard.LEARN_WORKFLOW, "event": event,
+                                "status": status, "conclusion": "success", "run_number": number,
+                                "created_at": iso(NIGHT - timedelta(days=1)),
+                                "html_url": f"https://github.com/x/y/actions/runs/{run_id}"}
+        gh.jobs[str(run_id)] = jobs or []
+
+    @staticmethod
+    def retrain(**steps: str) -> list[dict]:
+        names = {"fit": "retrain and screen (training/ml/retrain.sh)",
+                 "gate": "the gate on main as it is now (training/ml/learn-promote.sh)",
+                 "deliver": "deliver (push ai/learn, open its pull request, auto-merge)",
+                 "moving": "main kept moving, so another run on this export"}
+        return [{"name": "plan", "conclusion": "success"},
+                {"name": "export / plan the shards", "conclusion": "success"},
+                {"name": "retrain, screen, gate", "conclusion": "success",
+                 "steps": [{"name": names[key], "conclusion": value} for key, value in steps.items()]}]
+
+    def test_each_way_a_run_ends(self):
+        outcome = lambda jobs, status="completed": dashboard.learn_outcome({"status": status}, jobs)
+        self.assertEqual(outcome([], status="in_progress"), "🔄 running")
+        self.assertEqual(outcome([{"name": "plan", "conclusion": "success"},
+                                  {"name": "retrain, screen, gate", "conclusion": "skipped"}]),
+                         "⏭️ waited on its open pull request")
+        self.assertEqual(outcome([{"name": "export / shard from 1", "conclusion": "failure"}]),
+                         "❌ the export failed")
+        self.assertEqual(outcome(self.retrain(fit="success", gate="skipped")), "screened out")
+        self.assertEqual(outcome(self.retrain(fit="success", gate="success", deliver="skipped",
+                                              moving="skipped")), "gated out")
+        self.assertEqual(outcome(self.retrain(fit="success", gate="success", deliver="success")),
+                         "🎉 promoted")
+        self.assertIn("LEARN_LANE_TOKEN", outcome(self.retrain(fit="success", gate="success",
+                                                               deliver="failure")))
+        self.assertEqual(outcome(self.retrain(fit="success", gate="success", deliver="skipped",
+                                              moving="success")),
+                         "🔁 main kept moving: another run on the export")
+        # A run from before the lane gated on the newest main ("the gate, once") reads the same.
+        old = self.retrain(fit="success")
+        old[2]["steps"].append({"name": "the gate, once (promote --lane learn)", "conclusion": "skipped"})
+        self.assertEqual(outcome(old), "screened out")
+
+    def test_the_next_run_is_the_next_monday_at_0623_utc(self):
+        wednesday = NIGHT  # 2026-09-30 03:00 UTC
+        self.assertEqual(dashboard.next_learn_run(wednesday).isoformat(), "2026-10-05T06:23:00+00:00")
+        monday_after = NIGHT.replace(day=28, hour=7)
+        self.assertEqual(dashboard.next_learn_run(monday_after).isoformat(), "2026-10-05T06:23:00+00:00")
+        monday_before = NIGHT.replace(day=28, hour=5)
+        self.assertEqual(dashboard.next_learn_run(monday_before).isoformat(), "2026-09-28T06:23:00+00:00")
+
+    def test_the_section_says_what_is_on_main_its_pull_request_and_its_runs(self):
+        gh = FakeGitHub()
+        gh.files[("main", "crates/ai/generation.json")] = (json.dumps(
+            {"generation": 13, "lane": "learn", "date": "2026-09-29", "vsParent": "220/400"}), "sha1")
+        pull = gh.add_pull(1477, "ai/learn", "AI gen 14 (learn): the learned evaluation")
+        pull.update(created_at=iso(NIGHT - timedelta(hours=2)), html_url="https://github.com/x/y/pull/1477")
+        self.run_with(gh, 31, number=20, jobs=self.retrain(fit="success", gate="success",
+                                                           deliver="success"))
+        self.run_with(gh, 32, number=21, event="workflow_run")
+        self.run_with(gh, 33, number=22, status="in_progress")
+        body = "\n".join(dashboard.learn_lane(make_ctx(gh, at=NIGHT, cfg=make_config())))
+        self.assertIn("## 🧠 The learn lane", body)
+        self.assertIn("- **The AI on main:** gen 13 (learn), promoted 2026-09-29, 220/400 against its "
+                      "parent.", body)
+        self.assertIn("▶️ [#1477](https://github.com/x/y/pull/1477) open since", body)
+        self.assertIn("CI decides, and auto-merge lands it.", body)
+        self.assertIn("- **Next scheduled run:** Mon Oct 05 01:23 (Central).", body)
+        self.assertIn("| 🎉 promoted | [20](https://github.com/x/y/actions/runs/31) |", body)
+        self.assertIn("| 🔄 running | [22]", body)
+        # A watch run (CI on the lane's pull request) is not one of the lane's runs.
+        self.assertNotIn("[21]", body)
+
+    def test_a_promotion_open_too_long_is_one_the_next_run_closes(self):
+        gh = FakeGitHub()
+        pull = gh.add_pull(1477, "ai/learn", "AI gen 14 (learn): the learned evaluation")
+        pull.update(created_at=iso(NIGHT - dashboard.LEARN_PR_STALE - timedelta(hours=1)))
+        body = "\n".join(dashboard.learn_lane(make_ctx(gh, at=NIGHT, cfg=make_config())))
+        self.assertIn("⛔ [#1477]", body)
+        self.assertIn("the next run closes it.", body)
+        self.assertIn("- **The AI on main:** no generation.json.", body)
+        self.assertIn("No runs yet.", body)
+
+    def test_unreadable_github_still_draws_the_section(self):
+        gh = FakeGitHub()
+        with mock.patch.object(gh, "list_pulls", side_effect=GitHubError("down", 502)), \
+                mock.patch.object(gh, "list_runs", side_effect=GitHubError("down", 502)):
+            body = "\n".join(dashboard.learn_lane(make_ctx(gh, at=NIGHT, cfg=make_config())))
+        self.assertIn("- **Its pull request:** could not be read.", body)
+        self.assertIn("Its runs could not be read.", body)
+
+    def test_the_issue_carries_it_after_the_night_bots_runs(self):
+        ctx = make_ctx(FakeGitHub(), at=NIGHT, cfg=make_config())
+        body = dashboard.render(ctx)
+        self.assertLess(body.index("## 🏃 Last night-bot runs"), body.index("## 🧠 The learn lane"))
+
+
 class DashboardTests(unittest.TestCase):
     def setUp(self):
         self.gh = FakeGitHub()
