@@ -9388,20 +9388,22 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "CLAUDE.md"
+            "crates/server/tests/actor/glitch.rs",
+            "crates/server/tests/api/practice.rs",
+            "crates/server/tests/api/queue.rs"
           ],
-          "from": "486e06037e2265bc8792786cf89b67a6d65d4db2",
-          "main": "e971e847c13930aba578777f02c72dd65d596606"
+          "from": "10f9dbb6e0908d71666a7bea6240353c01ccc55f",
+          "main": "54163dcabd1e718bca8d3b661584cadfd10d8371"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39556196771",
+            "run": "39564687202",
             "tier": "strong"
           }
         ],
-        "sha": "10f9dbb6e0908d71666a7bea6240353c01ccc55f",
+        "sha": "46b8045bc79d7c24988043c38950fdb95718ffa8",
         "tiers": {
           "claude": "strong"
         }
