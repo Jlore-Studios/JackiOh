@@ -80,7 +80,7 @@ fn in_too_deep_quests() -> QuestBook {
             ),
             quest(
                 "4",
-                "End a turn with 3 or more unspent mana",
+                "Float 3 or more mana",
                 QuestGoal::UnspentManaAtTurnEnd { mana: QUEST_FLOAT },
                 &["F", "G"],
             ),
@@ -100,7 +100,7 @@ fn in_too_deep_quests() -> QuestBook {
             ),
             quest(
                 "7",
-                "End a turn with 5 or more unspent mana",
+                "Float 5 or more mana",
                 QuestGoal::UnspentManaAtTurnEnd {
                     mana: QUEST_BIG_FLOAT,
                 },

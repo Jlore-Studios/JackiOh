@@ -591,6 +591,9 @@ pub const KY_TEST_EASY_MISSES: &[i32] = &[1, -1, 2, -2, 10, -10];
 /// R1184000: the most right answers one sequence counts; the question that brings the streak to it
 /// is its last, and the Kenny is summoned at once.
 pub const KY_COMPETITION_MAX: i32 = 30;
+/// R1563006: the seconds a sequence has from its first question, in every hosted game (the server's
+/// match, the practice host); then its host answers Stop for its player (R1184001's answer).
+pub const KY_COMPETITION_SECONDS: i32 = 60;
 /// R1184000: a question's two operands on the base face: three-digit numbers.
 pub const KY_COMPETITION_OPERANDS: IntRange = IntRange { min: 100, max: 999 };
 /// R1184000: a question's two operands on the Radiant face: one- and two-digit numbers.

@@ -1,7 +1,7 @@
-//! Meditative+ #22 Mountaintop Garden (SPEC §8.9 row 22, BUILD M11 row M+ 22, R1181002, R1178001):
-//! (3) Field Spell, Epic.
-//!   Base:    "Aura: Embiggen cards play their Embiggened version at their normal price. For
-//!            ({premium}) more, a card that isn't Radiant is also played Radiant." (2)
+//! Meditative+ #22 Mountaintop Garden (SPEC §8.9 row 22, BUILD M11 row M+ 22, R1181002, R1178001,
+//! R1563004): (3) Field Spell, Epic.
+//!   Base:    "Aura: Embiggen cards play their Embiggened version at their normal price. Any card that
+//!            isn't Radiant may be played Radiant for ({premium}) more." (2)
 //!   Radiant: the same. (1)
 //!
 //! Mountaintop's aura (R1181002): the engine's `embiggenGarden` static flag. While the Garden acts on
@@ -10,8 +10,12 @@
 //! §10.5 step 3), and its dearer choice costs the normal price plus the premium and plays it Radiant
 //! and Embiggened; a Radiant card has its normal price only. Cost modifiers apply to both prices (R65),
 //! two Gardens apply the least premium, and a cast (R545) or a card set face-down is not a play it
-//! reaches. The premium is the declared `premium`, read through `params::declared_or` as each price
-//! is read, so a Nerf or a Buff moves it (R386). Tunes: premium 2 ↓ (Radiant 1).
+//! reaches. R1563004 (#1563): the dearer price reaches every card that is not Radiant, not only an
+//! embiggen card — a card of one price (no X, R65) is offered its price plus the premium beside its
+//! own, the play's `embiggen: true`, and that play is made Radiant (the engine's
+//! `garden_offers_radiant`); until then a card of one price had no dearer price under a Garden. The
+//! premium is the declared `premium`, read through `params::declared_or` as each price is read, so a
+//! Nerf or a Buff moves it (R386). Tunes: premium 2 ↓ (Radiant 1).
 
 use jackioh_engine::prelude::*;
 
@@ -179,6 +183,60 @@ mod tests {
         }
 
         #[test]
+        fn r1563004_any_card_that_isnt_radiant_may_be_played_radiant_for_2_more() {
+            let mut s = game(
+                "m+022-any",
+                json!({ "hand": [FILLER, MAGIC_JAMMED], "backrow": [garden_at(1, false)] }),
+                json!({}),
+            );
+            let vanilla = in_hand(&s, FILLER);
+            assert_eq!(offered(&s, &vanilla), vec![Some(false), Some(true)]);
+            s.play(vanilla.as_str(), json!({ "zone": 2, "embiggen": true }));
+            assert_eq!(paid(&s), 3, "its (1) and the premium (2)");
+            let played = s.card(vanilla.as_str()).clone();
+            assert!(played.radiant, "played Radiant");
+            assert_eq!(played.embiggened, None, "a card of one price has no Embiggened version");
+            s.expect_stats(&played, json!({ "attack": 12, "maxHealth": 12 }));
+        }
+
+        #[test]
+        fn r1563004_at_its_own_price_a_card_of_one_price_plays_as_it_is() {
+            let mut s = game(
+                "m+022-any-normal",
+                json!({ "hand": [FILLER, MAGIC_JAMMED], "backrow": [garden_at(1, false)] }),
+                json!({}),
+            );
+            let vanilla = in_hand(&s, FILLER);
+            s.play(vanilla.as_str(), json!({ "zone": 2 }));
+            assert_eq!(paid(&s), 1);
+            assert!(!s.card(vanilla.as_str()).radiant);
+            assert_eq!(s.card(vanilla.as_str()).embiggened, None);
+        }
+
+        #[test]
+        fn r1563004_a_radiant_card_of_one_price_has_no_dearer_price() {
+            let mut s = game(
+                "m+022-any-radiant",
+                json!({
+                    "hand": [{ "def": FILLER, "radiant": true }, MAGIC_JAMMED],
+                    "backrow": [garden_at(1, false)],
+                }),
+                json!({}),
+            );
+            let vanilla = in_hand(&s, FILLER);
+            assert_eq!(offered(&s, &vanilla), vec![None]);
+            s.expect_refused(|s| s.play(vanilla.as_str(), json!({ "zone": 2, "embiggen": true })));
+        }
+
+        #[test]
+        fn r1563004_with_no_garden_a_card_of_one_price_has_one_price() {
+            let mut s = game("m+022-none", json!({ "hand": [FILLER, MAGIC_JAMMED] }), json!({}));
+            let vanilla = in_hand(&s, FILLER);
+            assert_eq!(offered(&s, &vanilla), vec![None]);
+            assert_eq!(jackioh_engine::play_choices::embiggen_play_cost(s.state(), s.card(vanilla.as_str())), None);
+        }
+
+        #[test]
         fn r1181002_the_opponents_garden_reaches_your_cards_too() {
             let mut s = game(
                 "m+022-theirs",
@@ -271,6 +329,19 @@ mod tests {
             assert_eq!(paid(&s), 3);
             assert!(s.card(long.as_str()).radiant);
             assert_eq!(hero_armor_of(s.state(), P1), 8);
+        }
+
+        #[test]
+        fn r1563004_a_card_of_one_price_is_played_radiant_for_1_more() {
+            let mut s = game(
+                "m+022-radiant-any",
+                json!({ "hand": [FILLER, MAGIC_JAMMED], "backrow": [garden_at(1, true)] }),
+                json!({}),
+            );
+            let vanilla = in_hand(&s, FILLER);
+            s.play(vanilla.as_str(), json!({ "zone": 2, "embiggen": true }));
+            assert_eq!(paid(&s), 2);
+            assert!(s.card(vanilla.as_str()).radiant);
         }
     }
 }

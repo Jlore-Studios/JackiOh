@@ -808,7 +808,7 @@ step that is not yet implemented says which BUILD task delivers it.
      policy, so there is no path (§9.4).
 6. **Seed the catalog.** `target/release/jackioh-server seed-catalog`. It writes the catalog compiled
    into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 480
-   (396 cards + 84 tokens over Core, Classic, Classic+, Meditative and Meditative+: patch v0.2.0, Glitch,
+   (396 cards + 86 tokens over Core, Classic, Classic+, Meditative and Meditative+: patch v0.2.0, Glitch,
    issue #170, the Meditative set, issue #553, and the Meditative+ set, issue #1187) and
    `select app.catalog_version();` → your `CATALOG_VERSION`, the latest card patch's version (R388).
    In the same transaction it writes the cosmetics registry compiled in, `crates/server/cosmetics.json`

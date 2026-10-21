@@ -1,7 +1,13 @@
 //! C #23 Devil's Pact (SPEC §8.6 row 23). Field Spell, cost 2, Rare.
-//!   Base:    "Cry: Discard {discards|random card|random cards}.
+//!   Base:    "Indestructible, Spell Damage +1
+//!             Cry: Discard {discards|random card|random cards}.
 //!             Activate: This turn, each card you play is replaced by a Book of Flame."
-//!   Radiant: the same with a Radiant Book of Flame. Discards: 666 base (the whole hand, the joke), 6 Radiant.
+//!   Radiant: Spell Damage +2, and a Radiant Book of Flame. Discards: 666 base (the whole hand, the
+//!            joke), 6 Radiant.
+//!
+//! Indestructible and Spell Damage are catalog keywords (#1563): Indestructible keeps it on the field
+//! through a destroy, as it keeps any Field Spell (§6.1), and its Spell Damage is its controller's,
+//! summed with their Units' (R1563002), so each Book of Flame it makes is raised too.
 //!
 //! The Cry discards {discards} random cards (R682); a hand holding that many or fewer all goes, a
 //! discard all the same, so C #64 sees each card. Activate (R384), once per turn, installs a this-turn
@@ -205,7 +211,7 @@ mod tests {
 
                 s.expect_in_zone(&vanilla, "gone");
                 assert!(s.unit(P1, 2).is_none());
-                s.expect_health(P2, 26);
+                s.expect_health(P2, 25);
                 s.expect_events(json!(["activated", "transformed", "cardAnnounced", "cardPlayed", "damage"]));
             }
 
@@ -224,7 +230,7 @@ mod tests {
                 assert!(result.error.is_none());
                 assert!(result.state.pending.is_none());
                 assert!(result.state.work.is_empty());
-                assert_eq!(hero_of(&result.state, P2).health, 26);
+                assert_eq!(hero_of(&result.state, P2).health, 25);
             }
 
             #[test]
@@ -243,7 +249,7 @@ mod tests {
                     other => panic!("no cardPlayed: {other:?}"),
                 }
                 s.expect_mana(P1, 1);
-                s.expect_health(P2, 26);
+                s.expect_health(P2, 25);
             }
 
             #[test]
@@ -282,7 +288,7 @@ mod tests {
                 s.play(BEAR, json!({ "zone": 3 })).answer(at_p2());
 
                 assert!(s.backrow(P1, 3).is_none());
-                s.expect_health(P2, 26);
+                s.expect_health(P2, 25);
             }
 
             #[test]
@@ -307,7 +313,7 @@ mod tests {
                 s.answer(at_p2());
 
                 s.expect_in_zone(&hinder, "gone");
-                s.expect_health(P2, 26);
+                s.expect_health(P2, 25);
                 assert_eq!(s.state().players[P2].mana.next_turn_mod, 0);
             }
 
@@ -343,7 +349,7 @@ mod tests {
                         .chain(answered.events.iter())
                         .any(|event| event.event_type() == GameEventType::Summoned)
                 );
-                assert_eq!(hero_of(&answered.state, P2).health, 26);
+                assert_eq!(hero_of(&answered.state, P2).health, 25);
                 match answered.events.iter().find(|event| event.event_type() == GameEventType::CardPlayed) {
                     Some(GameEvent::CardPlayed { def_id, cost_paid, .. }) => {
                         assert_eq!(def_id, BOOK);
@@ -393,7 +399,7 @@ mod tests {
                 let answered = reduce(&played.state, &answer_at_p2(&played.state, "pacts-graveyard-answer"));
 
                 assert!(answered.error.is_none());
-                assert_eq!(hero_of(&answered.state, P2).health, 22);
+                assert_eq!(hero_of(&answered.state, P2).health, 19);
                 // The Book came from no graveyard: its play does not say it did.
                 match answered.events.iter().find(|event| event.event_type() == GameEventType::CardPlayed) {
                     Some(GameEvent::CardPlayed { from, .. }) => assert!(from.is_none()),
@@ -463,6 +469,42 @@ mod tests {
             }
         }
 
+        mod keywords {
+            use super::*;
+
+            const LUNAR: &str = "core-035"; // (1) Spell: 3 damage to a target.
+            const NETHER: &str = "core-088"; // (4) Spell: destroy every permanent.
+
+            #[test]
+            fn r1563002_its_spell_damage_raises_your_spells_1_base_2_radiant() {
+                for (radiant_face, health) in [(false, 26), (true, 25)] {
+                    crate::register_all();
+                    let mut s = on_field(json!({ "hand": [LUNAR, FILLER], "mana": 4 }), radiant_face, json!({}));
+                    s.play(LUNAR, json!({ "targets": at_p2() }));
+                    s.expect_health(P2, health);
+                }
+            }
+
+            #[test]
+            fn r1563002_the_opponents_spells_are_not_raised() {
+                crate::register_all();
+                let mut s = on_field(json!({}), true, json!({ "hand": [LUNAR, FILLER], "mana": 4 }));
+                s.end_turn();
+                s.play(LUNAR, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
+                s.expect_health(P1, 27);
+            }
+
+            #[test]
+            fn r1563002_indestructible_it_survives_a_destroy_every_permanent() {
+                crate::register_all();
+                let mut s = on_field(json!({ "hand": [NETHER, FILLER], "field": [VANILLA], "mana": 4 }), false, json!({}));
+                let pact = s.card(PACT).id.clone();
+                s.play(NETHER, json!({}));
+                s.expect_in_zone(&pact, "field");
+                assert!(s.unit(P1, 1).is_none());
+            }
+        }
+
         mod radiant {
             use super::*;
 
@@ -513,14 +555,14 @@ mod tests {
             }
 
             #[test]
-            fn each_replacement_is_a_radiant_book_of_flame_8_damage() {
+            fn r1563002_each_replacement_is_a_radiant_book_of_flame_8_damage_and_spell_damage_2_makes_10() {
                 crate::register_all();
                 let mut s = on_field(json!({}), true, json!({}));
 
                 s.activate(PACT, json!({}));
                 s.play(VANILLA, json!({ "zone": 2 })).answer(at_p2());
 
-                s.expect_health(P2, 22);
+                s.expect_health(P2, 20);
                 match s.events().iter().find(|event| event.event_type() == GameEventType::CardPlayed) {
                     Some(GameEvent::CardPlayed { def_id, .. }) => assert_eq!(def_id, BOOK),
                     other => panic!("no cardPlayed: {other:?}"),

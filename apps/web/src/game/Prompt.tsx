@@ -57,6 +57,7 @@
 
 import {
   Fragment,
+  useContext,
   useEffect,
   useId,
   useRef,
@@ -103,8 +104,16 @@ import { CardBack, CardFace, faceModel, useInspectTrigger, type FaceModel } from
 import { chineseName, drawnInChinese } from "../cards/chinese.ts";
 import { setMarkOf } from "../cards/setMark.ts";
 import { isZhCn, t, useLocale } from "../i18n/i18n.ts";
-import { MatchCardsProvider, useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
+import {
+  CatalogContext,
+  MatchCardsProvider,
+  useCardInfo,
+  useCopiedDef,
+  useFieldPower,
+  type CardLookup,
+} from "./catalog.ts";
 import { CraftEditor } from "./craft/CraftEditor.tsx";
+import { useSequenceSecondsLeft } from "./sequenceClock.ts";
 import MarketPrompt from "./MarketPrompt.tsx";
 import { liveFace } from "./faces.ts";
 import { DISCOVER_OPTION_LIMIT, X_CARD_LIMIT, sideOf, testid } from "./contract.ts";
@@ -230,6 +239,8 @@ type Picker = {
   boardKeys?: ReadonlyMap<string, string>;
   /** R1184000: a sequence question's right answers so far, as the view carries them. */
   streak?: number;
+  /** R1563006: the sequence question's choice id, which its countdown keys on. */
+  sequenceChoice?: string;
   /** No "Choose N: M chosen" line under the title: the mulligan outside a lesson. */
   uncounted?: boolean;
 };
@@ -430,7 +441,10 @@ function pickerForPending(
       action: answerAction(pending, items.map((item) => item.key).filter((key) => keys.includes(key)), view, legal),
     }),
   };
-  if (pending.kind === "answer" && pending.streak !== undefined) picker.streak = pending.streak;
+  if (pending.kind === "answer" && pending.streak !== undefined) {
+    picker.streak = pending.streak;
+    picker.sequenceChoice = pending.choiceId;
+  }
   if (pending.kind === "pick" && pending.budget !== undefined) {
     picker.budget = { limit: pending.budget, costs: new Map(pending.options.map((option) => [option.key, option.cost ?? 0])) };
   }
@@ -494,7 +508,7 @@ function playedFace(played: CardRef): Pick<PickerItem, "defId" | "radiant" | "co
   return { defId: played.defId, radiant: played.radiant, cost: played.cost, card: played.card };
 }
 
-function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerView): Picker {
+function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerView, lookup: CardLookup | null): Picker {
   const play = (patch: Partial<PlayBuild>): Submitted => {
     const result = pickInPlay(interaction, patch);
     return result.action === undefined
@@ -539,19 +553,25 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
     case "embiggen": {
       // #492: the two prices are two cards, front and centre: the card being played at the price it
       // shows in hand, and the same card at its Embiggened cost, each named for the version it plays
-      // (R1175000: an embiggen card's normal version and its Embiggened version).
+      // (R1175000: an embiggen card's normal version and its Embiggened version). R1563004: a card of
+      // one price has a dearer price only under Mountaintop Garden, which plays it Radiant, so its two
+      // cards are the card as it is and the card Radiant.
       const played = playedRef(interaction, view);
+      const printed = played === null ? undefined : lookup?.(played.defId, false)?.def?.cost;
+      const radiantOnly = typeof printed === "number" || printed === "X";
       return {
         ...common,
         chrome: "embiggen",
         cards: true,
         ...(played === null ? {} : { sourceDefId: played.defId }),
-        title: t("Play the normal or the Embiggened version?"),
+        title: radiantOnly ? t("Play it as it is, or Radiant?") : t("Play the normal or the Embiggened version?"),
         items: need.values.map((value) => {
-          const label = value ? t("Embiggened") : t("Normal");
+          const label = value ? (radiantOnly ? t("Radiant") : t("Embiggened")) : t("Normal");
           const item: PickerItem = { key: String(value), label };
           const price: EmbiggenPrice = value ? "embiggen" : "normal";
-          return played === null ? item : { ...item, ...playedFace(played), caption: label, price };
+          if (played === null) return item;
+          const face = playedFace(played);
+          return { ...item, ...face, ...(radiantOnly && value ? { radiant: true } : {}), caption: label, price };
         }),
         submit: (keys) => (keys[0] === undefined ? {} : play({ embiggen: keys[0] === "true" })),
       };
@@ -718,6 +738,18 @@ function pricedFace(face: FaceModel, price: EmbiggenPrice, card: CardView | unde
 /** What an embiggen option pays, in R432's words: "Pay (4)", or "Pay the Embiggened cost" when nothing vouches for it (R1175000). */
 function priceLine(face: FaceModel): string {
   return face.cost.text === UNKNOWN_PRICE ? t("Pay the Embiggened cost") : t("Pay ({cost})", { cost: face.cost.text });
+}
+
+/** R1563006: the seconds a question sequence has left, ticking; at 0 its host answers Stop. */
+function SequenceCountdown(props: { choiceId: string; streak: number }) {
+  useLocale();
+  const left = useSequenceSecondsLeft(props.choiceId, props.streak);
+  if (left === null) return null;
+  return (
+    <p className="prompt-sequence-clock" data-testid="prompt-sequence-clock" data-seconds={left} aria-live="off">
+      {t("Time left: {seconds} s", { seconds: left })}
+    </p>
+  );
 }
 
 /** R1301: the view flagged the option's card Chinese, by the option or by the card it lists. */
@@ -1262,6 +1294,9 @@ function PromptModal(props: {
               {t("Right answers in a row: {count}", { count: picker.streak })}
             </p>
           )}
+          {picker.streak === undefined || picker.sequenceChoice === undefined ? null : (
+            <SequenceCountdown choiceId={picker.sequenceChoice} streak={picker.streak} />
+          )}
           <div className="prompt-answers" role="group" aria-label={t("Answers")} onKeyDown={arrowFocus(ANSWER_COLUMNS)}>
             {answers.map((item, at) => {
               const letter = ANSWER_LETTERS[at] ?? String(at + 1);
@@ -1528,6 +1563,7 @@ function needKey(need: PlayNeed): string {
 
 export default function Prompt(props: PromptProps) {
   useLocale();
+  const lookup = useContext(CatalogContext);
   const interaction = props.interaction ?? IDLE;
   const boardTestids = [...highlightFor(props.view, props.legal ?? [], interaction).legal].sort();
   const pending = props.view.pending;
@@ -1597,7 +1633,7 @@ export default function Prompt(props: PromptProps) {
       <PromptModal
         key={needKey(need)}
         source="play"
-        picker={pickerForNeed(need, interaction, props.view)}
+        picker={pickerForNeed(need, interaction, props.view, lookup)}
         boardTestids={boardTestids}
         onAction={props.onAction}
         {...(props.onInteraction === undefined ? {} : { onInteraction: props.onInteraction })}

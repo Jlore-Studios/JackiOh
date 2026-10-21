@@ -7,7 +7,7 @@
 // but for these. Each card's text is a list no box holds, or a face still a line over after the cut:
 // - `n` (a number): its first n lines, which its text puts first, "…" in place of the last full
 //   stop: #98 Heroic Power's thirteen powers, Meditative #8 Reach the Summit's eleven levels,
-//   Combo-Index's grades, Mind Games' and Fortify Mind's three choices, and YileGPT Unleashed's list
+//   Combo-Index's grades, Mind Games' and Fortify Mind's three choices, and YileGPT Prime's list
 //   of Cries; and a few faces that fit, whose last line is a reminder or the designer's flavour
 //   that the click-in carries (Tesla, Jade Beauty, Jlockeed's Evil Blueprints);
 // - "colon": up to its first colon, "…" in its place: the three Call to Chaos editions, whose list

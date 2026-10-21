@@ -151,6 +151,7 @@ const TRIGGERS: readonly TriggerTermId[] = [
   "Echo",
   "Cast on draw",
   "Quickdraw",
+  "Float",
   "Activate",
 ];
 
@@ -415,6 +416,14 @@ describe("B10: tokenizeRules and termsIn", () => {
         offset += token.text.length;
       }
     }
+  });
+
+  it("R1563000 Float bolds as one term: Floats, the Float and Float reduces cost", () => {
+    expect(termsIn("Reveals when any player Floats: Summon an X/X Bread Token for you. X = the Float.")).toEqual([
+      "Float",
+      "Float",
+    ]);
+    expect(termsIn("Make every card in your hand Radiant.\nFloat reduces cost.")).toEqual(["Radiant", "Float"]);
   });
 
   it("B10 real card texts: Cry, Death, Combo, Cast on draw, Radiant and keywords are marked", () => {

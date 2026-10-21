@@ -176,6 +176,31 @@ pub fn stop_answer(state: &GameState) -> Option<ActionBody> {
         })
 }
 
+/// R1563006: a question of a sequence open in a state (Meditative+ #20 KY's Competition), as a host's
+/// sequence clock reads it: who answers it, the right answers so far, and the prompt's id. All public:
+/// the opponent's view shows that a prompt is open, and the streak rides the prompt (R1184000).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SequenceQuestion {
+    pub player: PlayerId,
+    pub streak: i32,
+    pub prompt_id: String,
+}
+
+/// R1563006: the question of a sequence open in `state`, or `None` with none open. A sequence's first
+/// question has a streak of 0, so a host starts its clock there and stops it when none is open.
+pub fn sequence_question_of(state: &GameState) -> Option<SequenceQuestion> {
+    let pending = state.pending.as_ref()?;
+    if pending.kind != PromptKind::Answer {
+        return None;
+    }
+    Some(SequenceQuestion {
+        player: pending.player_id,
+        streak: pending.streak?,
+        prompt_id: pending.id.clone(),
+    })
+}
+
 /// A card's data with the two one-prompt control keys taken out (`PROMPT_OWNER_KEY`, `ANSWER_KEY`).
 pub fn without_prompt_keys(data: &IndexMap<String, Value>) -> IndexMap<String, Value> {
     let mut rest = data.clone();

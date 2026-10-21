@@ -19,6 +19,10 @@
 // goes out on its own gap, and the human's Ready goes out whenever it is pressed — before the AI's
 // step, queued behind it, or after it — and neither answer changes the other (R266).
 //
+// One clock acts for the human, the host's own (R1563006): a question sequence (Meditative+ #20 KY's
+// Competition) has `KY_COMPETITION_SECONDS` from its first question, and when they run out with a
+// question still open the controller sends its Stop, as the server's match clock does online.
+//
 // The gap starts when the board has caught up. The board holds each new view back while its
 // events animate (BUILD M5-T4), so a timer alone runs the AI ahead of what the player can see:
 // measured with animations on, the AI finished its whole first turn while the board was still
@@ -50,6 +54,7 @@ import type {
   PracticeStartConfig,
 } from "./protocol.ts";
 import type { ReplaySource } from "../replay/source.ts";
+import { SEQUENCE_WINDOW_MS, sequenceQuestionOf, stopAnswerOf } from "../game/sequenceClock.ts";
 import { practiceReplaySource } from "../replay/sources.ts";
 
 type PracticePhase = "idle" | "starting" | "playing" | "over" | "failed";
@@ -152,6 +157,11 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
   let lastStepTurn: number | null = null;
   /** What the page is still showing (the board animating, a voice line): no AI step until it is done. */
   const holds = new Set<string>();
+  /**
+   * R1563006: the human's question sequence clock — the first question it started on and its timer.
+   * The practice host is this client, so it answers Stop itself when the window runs out.
+   */
+  let sequence: { first: string; handle: unknown } | null = null;
 
   function set(patch: Partial<PracticeControllerState>): void {
     if (disposed) return;
@@ -207,7 +217,43 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
   // snapshots and the pacing loop
   // -------------------------------------------------------------------------------------------
 
+  function clearSequence(): void {
+    if (sequence === null) return;
+    timers.clearTimeout(sequence.handle);
+    sequence = null;
+  }
+
+  /**
+   * R1563006: a sequence's first question (streak 0, a choice this clock has not started on) starts a
+   * window of `KY_COMPETITION_SECONDS`; a later question keeps it; none open clears it. When it runs
+   * out with a question still open, its Stop goes out as the human's answer, as the server answers it
+   * online.
+   */
+  function syncSequence(view: PlayerView): void {
+    const question = view.result === null ? sequenceQuestionOf(view) : null;
+    if (question === null) {
+      clearSequence();
+      return;
+    }
+    if (sequence !== null && !(question.streak === 0 && question.choiceId !== sequence.first)) return;
+    clearSequence();
+    const gen = generation;
+    sequence = {
+      first: question.choiceId,
+      handle: timers.setTimeout(() => {
+        sequence = null;
+        if (disposed || gen !== generation) return;
+        const latest = state.snapshot;
+        const stop = latest === null ? null : stopAnswerOf(latest.view);
+        if (stop === null) return;
+        clearTimer();
+        send({ type: "act", action: stop }, (response) => onSnapshotResponse(gen, response));
+      }, SEQUENCE_WINDOW_MS),
+    };
+  }
+
   function applySnapshot(snapshot: PracticeSnapshot, extra: Partial<PracticeControllerState> = {}): void {
+    syncSequence(snapshot.view);
     if (snapshot.view.result !== null) {
       // R668: a finished game is not resumed.
       clearPracticeResume();
@@ -392,6 +438,7 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
     dispose(): void {
       if (disposed) return;
       clearTimer();
+      clearSequence();
       disposed = true;
       const dropped = jobs.splice(0);
       for (const job of dropped) job.done({ id: -1, type: "failed", message: CLOSED_MESSAGE });

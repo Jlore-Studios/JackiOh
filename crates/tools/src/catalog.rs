@@ -192,15 +192,15 @@ fn sets() -> Vec<SetExpectation> {
             ],
         },
         // R1420, R1178000: the Meditative+ set (issue #1173, docs/meditative-plus-set.md MP2): 26 cards
-        // and the 4 tokens they define (#1.1 Base Camp and #1.2 Spa Day, the AI generated helpers of
-        // #1 Bob's Plan; #16.1 Jazakus Prime; #20.1 Lil' Kenny), the rarities the designer printed and
-        // #26 Scratch Pad's Mythic. It does not ship yet, so its entries are checked for their shape
+        // and the 6 tokens they define (#1.1 Base Camp, #1.2 Spa Day, and since #1563 #1.3 Garage Sale
+        // and #1.4 Leg Day, the AI generated helpers of #1 Bob's Plan; #16.1 Jazakus Prime; #20.1 Lil'
+        // Kenny), the rarities the designer printed and #26 Scratch Pad's Mythic. It does not ship yet, so its entries are checked for their shape
         // alone until the patch that lists it in SHIPPED_SETS (#1187).
         SetExpectation {
             set: "Meditative+",
             segment: "meditativeplus",
             cards: 26,
-            card_defined_tokens: texts(&["1.1", "1.2", "16.1", "20.1"]),
+            card_defined_tokens: texts(&["1.1", "1.2", "1.3", "1.4", "16.1", "20.1"]),
             shared_tokens: Vec::new(),
             rarities: &[
                 ("Common", 5),
@@ -225,7 +225,7 @@ fn expected_indices(set: &SetExpectation) -> Vec<String> {
 /// Classic+ Jlockeed cards'). TS's `Record<Tag, number>`: the `match` is exhaustive over the union.
 /// Each count is Core's, Classic's and Classic+'s, plus the Meditative set's
 /// (docs/meditative-set.md M2's census of its 132 entries) and the Meditative+ set's
-/// (docs/meditative-plus-set.md MP2's census of its 30), each of which counts once it ships (R1420).
+/// (docs/meditative-plus-set.md MP2's census of its 30, 32 since #1563), each of which counts once it ships (R1420).
 fn expected_tag_count(tag: Tag) -> usize {
     match tag {
         // Meditative+ #7 Life Mage, #8 Arch Mage, #10 Medina Grifter, #16 Jazakus and #16.1 Jazakus Prime.
@@ -248,8 +248,9 @@ fn expected_tag_count(tag: Tag) -> usize {
         // Meditative+ #15 Book of Potions.
         Tag::Book => 14 + meditative_plus(1),
         Tag::Pancake => 10,
-        // Meditative+ #1.1 Base Camp and #1.2 Spa Day, #1 Bob's Plan's AI generated helpers.
-        Tag::Ai => 10 + meditative_plus(2),
+        // Meditative+ #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale and #1.4 Leg Day, #1 Bob's Plan's
+        // AI generated helpers.
+        Tag::Ai => 10 + meditative_plus(4),
         Tag::Plague => 17 + meditative(2),
         // Meditative #45, #49 (patch v0.3.10, #831) and #91; their Primes #45.1, #49.1 and #91.1.
         // Meditative+ #16 Jazakus and its #16.1 Jazakus Prime.
@@ -261,7 +262,7 @@ fn expected_tag_count(tag: Tag) -> usize {
         Tag::Wincon => meditative(2),
         // Meditative+ #11, #12 and #13, the Living Potions, the tag's only catalog cards (R1178000).
         Tag::Potion => meditative_plus(3),
-        Tag::Token => 50 + meditative(30) + meditative_plus(4),
+        Tag::Token => 50 + meditative(30) + meditative_plus(6),
     }
 }
 
@@ -1949,13 +1950,13 @@ mod tests {
         assert_eq!(report.failures, Vec::<String>::new());
         // B2.1's 268 cards and 50 tokens, and from the patch that ships it (R1420) the Meditative
         // set's 102 and 30: 370 cards and 80 tokens; from its release (#1187) the Meditative+ set's
-        // 26 and 4 (R1178000).
+        // 26 and 4 (R1178000), 6 since #1563's #1.3 and #1.4.
         assert_eq!(
             (report.entries, report.non_token_count, report.token_count),
             (
-                318 + meditative(132) + meditative_plus(30),
+                318 + meditative(132) + meditative_plus(32),
                 268 + meditative(102) + meditative_plus(26),
-                50 + meditative(30) + meditative_plus(4)
+                50 + meditative(30) + meditative_plus(6)
             )
         );
     }
@@ -1984,7 +1985,7 @@ mod tests {
 
     #[test]
     fn r1178000_holds_the_meditative_plus_set_to_every_count_since_it_shipped() {
-        // Since its release (#1187) its 30 entries count toward the totals, and none is held apart.
+        // Since its release (#1187) its entries (30, 32 since #1563) count toward the totals, and none is held apart.
         let shipped = check_catalog(&shipped_catalog());
         assert_eq!(shipped.failures, Vec::<String>::new());
         assert_eq!(shipped.unshipped_count, 0);
@@ -2020,19 +2021,19 @@ mod tests {
             ["catalog: expected 3 entries tagged \"Potion\", found 2"]
         );
 
-        // An index the brief does not list (#27, a third helper #1.3), or an id that does not follow
+        // An index the brief does not list (#27, a fifth helper #1.5), or an id that does not follow
         // its index, still fails.
         let mut wrong = shipped_catalog();
         for (index, id) in [
             ("27", "meditativeplus-027"),
-            ("1.3", "meditativeplus-001-3"),
+            ("1.5", "meditativeplus-001-5"),
             ("3", "meditativeplus-x"),
         ] {
             wrong.insert(id.to_string(), fixture_entry("Meditative+", index, id));
         }
         let failures = check_catalog(&wrong).failures.join("\n");
         assert!(failures.contains("unexpected index \"27\""), "{failures}");
-        assert!(failures.contains("unexpected index \"1.3\""), "{failures}");
+        assert!(failures.contains("unexpected index \"1.5\""), "{failures}");
         assert!(
             failures.contains("implies id \"meditativeplus-003\""),
             "{failures}"
