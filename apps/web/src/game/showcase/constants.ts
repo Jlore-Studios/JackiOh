@@ -54,6 +54,17 @@ export const MULTICAST_TEXT = {
   said: "cast",
 } as const;
 
+/** Issue #1493: the words a revealed trap is held up with. `{whose}` is the reader's seat. */
+export const TRAP_REVEAL_TEXT = {
+  caption: "Trap revealed",
+  hidden: "{whose} face-down trap fired",
+  hiddenNumbered: "{whose} face-down trap fired ({ordinal})",
+  unnamed: "{whose} trap fired",
+  unnamedNumbered: "{whose} trap fired ({ordinal})",
+  named: "{whose} trap {card} fired",
+  namedNumbered: "{whose} trap {card} fired ({ordinal})",
+} as const;
+
 /** R436: the words the static reveal and the live region say a roll with. */
 export const CHAOS_TEXT = { title: "Call to Chaos", said: "Call to Chaos rolled" } as const;
 
@@ -78,4 +89,4 @@ export const showcaseTestid = {
 } as const;
 
 /** `data-showcase` holds the practice AI; casts apply to either seat (R502). */
-export type ShowcaseKind = "played" | "set" | "hidden" | "cast" | "multicast";
+export type ShowcaseKind = "played" | "set" | "hidden" | "cast" | "multicast" | "trap";
