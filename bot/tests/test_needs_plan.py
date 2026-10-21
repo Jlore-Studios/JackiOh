@@ -201,11 +201,29 @@ class PlanningLaneTests(unittest.TestCase):
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["number"]), ("plan", 4))
 
-    def test_a_planning_run_starts_with_every_build_lane_taken(self):
+    def test_a_planning_run_takes_a_runner_where_it_runs(self):
+        """A planning run takes none of its subscription's lanes, but it holds a runner: a slot on
+        the machine, or one of GitHub's lanes (#1455), so `max_parallel` caps every model job on
+        GitHub's runners."""
         gh = FakeGitHub()
         ctx = lane_ctx(gh, max_parallel=2)
-        # GitHub's two lanes and the machine's two slots, each held apart from the other.
+        # GitHub's two lanes and the machine's two slots, each held apart from the other: no
+        # runner is free for a plan either.
         busy(gh, ctx, ("agy", 53), ("muse", 54), ("claude-4", 55), ("claude-5", 56))
+        queue(gh, ctx, 3, planned=False)
+        self.assertEqual(plan_mod.make(ctx)["action"], "none")
+        # A slot free on the machine: a planner there plans, though GitHub's lanes are full.
+        gh = FakeGitHub()
+        ctx = lane_ctx(gh, max_parallel=2)
+        busy(gh, ctx, ("agy", 53), ("claude-4", 55), ("claude-5", 56))
+        queue(gh, ctx, 3, planned=False)
+        planned = plan_mod.make(ctx)
+        self.assertEqual(planned["action"], "plan")
+        self.assertTrue(ctx.cfg.pool.on_machine(planned["provider"]), planned["provider"])
+        # A lane free on GitHub's runners: the strong planner there goes first.
+        gh = FakeGitHub()
+        ctx = lane_ctx(gh, max_parallel=2)
+        busy(gh, ctx, ("agy", 53), ("muse", 54), ("claude-4", 55))
         queue(gh, ctx, 3, planned=False)
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["provider"]), ("plan", "claude-3"))

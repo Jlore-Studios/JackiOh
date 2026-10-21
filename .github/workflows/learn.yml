@@ -4,9 +4,10 @@
 #
 #   plan      skips the run while the lane's pull request is open, and names the export's seed base
 #             (`learned-<catalog>-<date>-<run>`, never a gate's or the dev set's, R1006002)
-#   export    selfplay.yml, called: `games` games in `shards` jobs on `runner` (GitHub's, or the
-#             local runner, jackioh-selfplay-local); none with `export_run`, which retrains on an
-#             earlier run's export (its artifacts are kept 30 days)
+#   export    selfplay.yml, called: `games` games in `shards` jobs on `runner` (the local runner,
+#             jackioh-selfplay-local, by default and on the schedule, or GitHub's when asked: #1455);
+#             none with `export_run`, which retrains on an earlier run's export (its artifacts are
+#             kept 30 days)
 #   retrain   on main: training/ml/retrain.sh over the export (positions, folded by the export's own
 #             build while its features are main's, the fit, the weights, the
 #             switch on, and an 800-game paired screen against main's AI on improve-dev, decided in
@@ -41,9 +42,9 @@ on:
         description: "Where the export runs"
         type: choice
         options:
-          - ubuntu-latest
           - jackioh-selfplay-local
-        default: ubuntu-latest
+          - ubuntu-latest
+        default: jackioh-selfplay-local
       screen:
         description: "Paired screen games against main (decided before it is played)"
         required: true
@@ -115,7 +116,7 @@ jobs:
       games: ${{ inputs.games || '100000' }}
       seed: ${{ needs.plan.outputs.seed }}
       shards: ${{ inputs.shards || '20' }}
-      runner: ${{ inputs.runner || 'ubuntu-latest' }}
+      runner: ${{ inputs.runner || 'jackioh-selfplay-local' }}
       retention: "30"
       count: false
 

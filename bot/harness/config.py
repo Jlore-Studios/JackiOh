@@ -56,6 +56,9 @@ STATE_FILE = "state.json"
 #: branch with no `vercel.json` of its own deploys on every write (docs/architecture.md, §4.2).
 NO_DEPLOY = {"vercel.json": '{ "git": { "deploymentEnabled": false } }\n'}
 NIGHT_WORKFLOW = IDENTITY.workflow
+#: The status loop's workflow (`bot-status.yml`): with `controller` on, the loop it runs is the one
+#: place that plans and starts the night runs (#1455).
+STATUS_WORKFLOW = "bot-status.yml"
 
 #: The environment key a run's model job receives its provider's secret in (`providers.py`).
 PROVIDER_SECRET_KEY = "HARNESS_PROVIDER_SECRET"
@@ -345,6 +348,11 @@ class Config:
     max_self_check_rounds: int = 3
     #: What `difficulty:easy` allows (`harness/easy.py`).
     easy: EasyRule = field(default_factory=EasyRule)
+    #: The status loop plans and starts the runs (`controller.py`, #1455): bot-night's gate and
+    #: plan jobs run only while no loop is going. The config's `controller`.
+    controller: bool = False
+    #: This process is that loop (`dashboard --controller`), the one place that plans then.
+    controller_loop: bool = False
     # From the environment.
     bot_token: str = field(default="", repr=False)
     actions_token: str = field(default="", repr=False)
@@ -378,7 +386,8 @@ class Config:
 
     @property
     def run_url(self) -> str:
-        if not self.run_id:
+        # A claim the status loop made before its run was listed has no page yet (#1455).
+        if not self.run_id or self.run_id.startswith("pending:"):
             return ""
         return f"{self.server_url}/{self.repo}/actions/runs/{self.run_id}"
 
@@ -413,7 +422,7 @@ _REQUIRED = (
 _ROLES = ("plan", "build", "fix", "revise", "review", "suggest")
 #: Keys `.harness/config.json` may leave out, with their defaults. `identity` is read once, when
 #: the process starts (`identity.py`); `parse` only checks it.
-_OPTIONAL = {"max_self_check_rounds": 3, "easy": {}, "identity": None}
+_OPTIONAL = {"max_self_check_rounds": 3, "easy": {}, "identity": None, "controller": False}
 
 
 def _easy(raw: Any) -> EasyRule:
@@ -560,6 +569,7 @@ def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str],
         pool=pool if pool is not None else providers_mod.load(root),
         max_self_check_rounds=self_checks,
         easy=_easy(raw.get("easy", _OPTIONAL["easy"])),
+        controller=bool(raw.get("controller", _OPTIONAL["controller"])),
         bot_token=env.get("BOT_GITHUB_TOKEN", ""),
         actions_token=env.get("GITHUB_TOKEN", "") or env.get("GH_TOKEN", ""),
         backend=backend,
@@ -617,6 +627,9 @@ def companion_env(other: identity_mod.Other, env: Mapping[str, str] | None = Non
 
 
 def github_env() -> dict[str, str]:
-    """The Actions facts a command reads: event name and path, output and summary files."""
-    keys = ("GITHUB_EVENT_NAME", "GITHUB_EVENT_PATH", "GITHUB_OUTPUT", "GITHUB_STEP_SUMMARY")
+    """The Actions facts a command reads: event name and path, output and summary files, and the
+    runner, CLI, secret name and shared flag a night run's model job was given (`PLAN_*`, which
+    `plan-fetch --check` holds to its plan, #1455)."""
+    keys = ("GITHUB_EVENT_NAME", "GITHUB_EVENT_PATH", "GITHUB_OUTPUT", "GITHUB_STEP_SUMMARY",
+            "PLAN_RUNS_ON", "PLAN_CLI", "PLAN_SECRET", "PLAN_SHARED")
     return {k: os.environ.get(k, "") for k in keys}

@@ -6,10 +6,11 @@ import dataclasses
 import json
 import unittest
 from datetime import datetime, timedelta, timezone
+from unittest import mock
 
-from harness import clock, plan as plan_mod, providers
+from harness import clock, identity, plan as plan_mod, providers
 from harness.config import LABEL_BUILD, LABEL_CROSS, LABEL_PR, LABEL_WORKING
-from harness.errors import ConfigError
+from harness.errors import ConfigError, GitHubError
 from harness.providers import Secrets
 from harness.state import item as state_item
 
@@ -35,6 +36,19 @@ def secrets(*names: str) -> dict:
 
 
 class ParseTests(unittest.TestCase):
+    def test_the_bots_share_eight_of_githubs_runners(self):
+        """#1455: the organization runs 20 hosted jobs at once, and CI takes the rest. The bots
+        share one pool of 8, first come first served: each bot's `max_parallel` is the whole
+        pool, and each counts the other's runs against it (`plan.others_on_github`), planning
+        runs included (`plan.Lanes.free`)."""
+        night = json.loads((ROOT / ".harness" / "providers.json").read_text(encoding="utf-8"))
+        squishy = json.loads((ROOT / ".squishy" / "providers.json").read_text(encoding="utf-8"))
+        self.assertEqual(night["max_parallel"], squishy["max_parallel"])
+        self.assertLessEqual(night["max_parallel"], 8)
+        for home, workflow in ((".harness", "squishy-run.yml"), (".squishy", "bot-night.yml")):
+            raw = json.loads((ROOT / home / "config.json").read_text(encoding="utf-8"))
+            self.assertEqual([o.get("workflow") for o in raw["identity"]["others"]], [workflow])
+
     def test_the_committed_file(self):
         pool = providers.load(ROOT)
         # The usage order: claude-3 (no caps), claude-7 and claude-1 first, then claude-4,
@@ -44,7 +58,7 @@ class ParseTests(unittest.TestCase):
         self.assertEqual(pool.priority, ("claude-3", "claude-7", "claude-1", "claude-4",
                                          "claude-6", "claude-5", "muse", "agy", "gpt",
                                          "claude-2", "devin"))
-        self.assertEqual((pool.max_parallel, pool.machine_parallel), (11, 6))
+        self.assertEqual((pool.max_parallel, pool.machine_parallel), (8, 6))
         self.assertTrue(pool.balance)  # the load balancer (`plan.balance`)
         self.assertEqual({p.cli for p in pool.ordered()}, set(providers.CLIS))
         self.assertEqual(len([p for p in pool.ordered() if p.cli == "claude"]), 7)
@@ -589,6 +603,10 @@ class MatchingTests(unittest.TestCase):
         gh.add_issue(3, labels=(LABEL_BUILD,))
         gh.add_issue(4, labels=(LABEL_BUILD, "difficulty:hard"))
         ctx = ctx_for(gh, at=DAY, committed_hours=True)
+        # Room for all eight Claude lanes: the order they fill in is this test's, the cap on
+        # GitHub's runners (`max_parallel`, #1455) its own.
+        ctx = make_ctx(gh, at=DAY, cfg=dataclasses.replace(
+            ctx.cfg, pool=dataclasses.replace(ctx.cfg.pool, max_parallel=20)))
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["number"], planned["provider"], planned["action"]),
                          (4, "claude-3", "build"))
@@ -947,6 +965,51 @@ class WhenTests(unittest.TestCase):
         self.assertIn("when `claude-1` opens (21:00–07:00", text)
         text = providers.when_free(providers.load(ROOT), {}, DAY, "America/Chicago", only_claude)
         self.assertIn("`muse`, `agy`, `gpt`, `devin` can take it now", text)
+
+
+class SharedPoolTests(unittest.TestCase):
+    """#1455: the bots share one pool of GitHub's runners, first come first served. Each counts
+    the other's live runs against its `max_parallel` (`plan.others_on_github`)."""
+
+    def test_squishys_live_runs_hold_slots_the_night_bot_waits_for(self):
+        gh = FakeGitHub()
+        ctx = ctx_for(gh, at=NIGHT)
+        squishy = ".github/workflows/squishy-run.yml"
+        gh.runs["900"] = {"status": "in_progress", "path": squishy}
+        gh.runs["901"] = {"status": "queued", "path": squishy}
+        gh.runs["902"] = {"status": "completed", "path": squishy}
+        gh.runs["903"] = {"status": "in_progress", "path": ".github/workflows/ci.yml"}
+        lanes = plan_mod.read_lanes(ctx, ctx.store.load())
+        self.assertEqual(lanes.shared, 2)
+        self.assertEqual(lanes.free, ctx.cfg.pool.max_parallel - 2)
+        # Every slot Squishy's: a Claude account waits, a machine subscription does not.
+        for n in range(904, 904 + ctx.cfg.pool.max_parallel):
+            gh.runs[str(n)] = {"status": "in_progress", "path": squishy}
+        gh.add_issue(3, labels=(LABEL_BUILD, "difficulty:hard"))
+        self.assertEqual(plan_mod.make(ctx)["action"], "none")
+
+    def test_the_night_bots_runs_on_the_machine_hold_none(self):
+        night = ".github/workflows/bot-night.yml"
+        gh = FakeGitHub()
+        ctx = ctx_for(gh, at=NIGHT)
+        gh.runs["910"] = {"status": "in_progress", "path": night,
+                          "display_title": "bot-night 5-1 on night-vm-muse"}
+        gh.runs["911"] = {"status": "in_progress", "path": night,
+                          "display_title": "bot-night 6-2 on ubuntu-latest"}
+        gh.runs["912"] = {"status": "queued", "path": night, "display_title": "bot-night"}
+        other = identity.Other("the night bot", "jgoetzmann-bot", "bot:", workflow="bot-night.yml")
+        with mock.patch.object(plan_mod, "OTHERS", (other,)):
+            self.assertEqual(plan_mod.others_on_github(ctx), 2)
+
+    def test_an_unreadable_list_counts_none(self):
+        gh = FakeGitHub()
+        ctx = ctx_for(gh, at=NIGHT)
+
+        def refuse(*args, **kwargs):
+            raise GitHubError("down", 502)
+
+        gh.list_runs = refuse
+        self.assertEqual(plan_mod.others_on_github(ctx), 0)
 
 
 if __name__ == "__main__":

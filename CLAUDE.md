@@ -149,15 +149,16 @@ has the rest, the server's fixture reseed among it.
 
 ### CI
 
-Branch protection on `main` requires five checks: `rust`, `web`, `e2e smoke` and `db` (`ci.yml`) and
-`bot selftest` (`bot-selftest.yml`). On a pull request `rust` includes `rust (classify)`, which labels it with
+Branch protection on `main` requires five checks, all jobs of `ci.yml`: `rust`, `web`, `e2e smoke`, `db` and
+`bot selftest`. On a pull request `rust` includes `rust (classify)`, which labels it with
 its kind and tier and fails when the pending fragments do not match the cards that play differently
 (R1370000): run `cargo jackioh classify --base origin/main --claims` before pushing. `rust` also fails when
 `apps/web/src/wire/` or `crates/cards/luau/jackioh.luau` differs from what the Rust generates, and runs
 `luau-analyze --mode=strict` over the Luau there (#442 L10). A pull request that changes only paths on
 `scripts/ci-scope.sh`'s skip list (the bots, the agent instruction files, the issue forms, …) skips every job
 but `bot selftest`; adding a path to that list takes proof that nothing in `crates/`, `apps/`, `e2e/` or
-`spec/` reads it. Everything slow or statistical (fuzz at 10,000 seeds, `gate --full`, `golden check`,
+`spec/` reads it. `bot selftest` itself runs only when a pull request touches what the bot's tests read
+(`ci.yml`'s `changes` job, `bot`; #1455). Everything slow or statistical (fuzz at 10,000 seeds, `gate --full`, `golden check`,
 coverage against `.github/coverage-floor.txt`, every e2e spec, the db suites, the notebooks' tests) runs daily
 in `super.yml`. Each workflow's header says what it does, `ci.yml`'s the five-minute budget of every job.
 
