@@ -8660,15 +8660,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/tools/README.md"
+          ],
+          "from": "b3720b51653e42fff88d10a6bb231af71ff5dcc6",
+          "main": "3421fbf6a3bfc49946823d73602d3d95dc159254"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39486513102",
+            "run": "39527776010",
             "tier": "strong"
           }
         ],
-        "sha": "b3720b51653e42fff88d10a6bb231af71ff5dcc6",
+        "sha": "233aa99b1dae747c843aea1060375802cc1fbb9c",
         "tiers": {
           "claude": "strong"
         }
