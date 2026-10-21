@@ -14,9 +14,9 @@
 //! `db/pg.rs`'s KNOWN DIVERGENCES block and the assertion here is written to the weaker of the two
 //! (deck order, action timestamps) rather than deleted.
 //!
-//!   cargo test -p jackioh-server --test server store::contract   -> `<case>::memory::*` always;
-//!                                                                    `<case>::postgres::*` skip
-//!   test:db (crates/server/tests/db/run.sh, DATABASE_URL set)     -> `<case>::postgres::*` run too
+//!   cargo test -p jackioh-server --test server_store store::contract   -> `<case>::memory::*` always;
+//!                                                                      `<case>::postgres::*` skip
+//!   test:db (crates/server/tests/db/run.sh, DATABASE_URL set)          -> `<case>::postgres::*` run too
 //!
 //! How the TS reads in Rust:
 //!
