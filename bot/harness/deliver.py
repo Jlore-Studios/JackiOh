@@ -2142,6 +2142,9 @@ class Deliverer:
         """Start the next run at once when a lane is free and a subscription can take more."""
         if not self.chain:
             return
+        if plan_mod.loop_alive(self.ctx):
+            self.log.append("the status loop starts the next run (#1455)")
+            return
         look = plan_mod.peek(self.ctx)
         if look.work:
             self.ctx.dispatch()

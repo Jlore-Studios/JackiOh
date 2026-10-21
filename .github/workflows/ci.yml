@@ -2,8 +2,8 @@
 # request, each job under five minutes; everything slow or statistical runs once a day in super.yml.
 #
 # Branch protection and the bots' `required_checks` (.harness/config.json, .squishy/config.json)
-# wait on five names: `rust`, `web`, `e2e smoke` and `db` here, and `bot selftest` (bot-selftest.yml).
-# Each of the four is a summary job that needs its pieces and fails unless every piece passed. A
+# wait on five names, all here: `rust`, `web`, `e2e smoke`, `db` and `bot selftest`.
+# Each of the first four is a summary job that needs its pieces and fails unless every piece passed. A
 # summary job runs `if: !cancelled()`, never on plain `needs`: a required check SKIPPED because a
 # piece failed would count as passing. The pieces run side by side and each aims to finish under
 # five minutes (ci-duration.yml opens an issue past seven, #73); a piece that grows is split further
@@ -23,6 +23,10 @@
 #              the release jackioh-server, in two shards that each boot their own server.
 #   db         sql, the store contract and the Render deploy rehearsal against a real Postgres, only
 #              when the pull request touches what they test (scripts/ci-scope.sh's `db`); a skip passes.
+#   bot selftest  the night bot's own suite (bot/) on Python 3.12 and 3.13, its CLI's start under both
+#              bots' configs, and actionlint over the bot's workflows and this one, only when the pull
+#              request touches what those read (the `changes` job's `bot`); a skip passes. It had a
+#              workflow of its own, bot-selftest.yml, that ran on every pull request (#1455).
 #
 # The release build, the WASM modules and the built client travel between jobs as artifacts
 # (`rust-release`, `web-wasm` and `web-wasm-luau`, `web-build`), so each is compiled once per run,
@@ -35,11 +39,12 @@
 #
 # A pull request that changes only files no job here reads (`scripts/ci-scope.sh` lists them: the
 # night bot's code and switches, the workflows that run the bot, the agent instruction files, the
-# training lanes' prompts) skips every job below except `bot selftest`, which has its own workflow and
-# always runs. The `changes` job decides; each job below it runs `if: needs.changes.outputs.full ==
-# 'true'`, so a skip is a job-level skip, which counts as passing for a required check (a
-# workflow-level `paths:` filter would leave the check pending forever), and the summary jobs accept
-# "skipped" only on `full == 'false'`. A push to main, a dispatch, and any doubt run everything.
+# training lanes' prompts) skips every job below except `bot selftest`, which the `changes` job
+# scopes on its own (`bot`). The `changes` job decides; each job below it runs `if:
+# needs.changes.outputs.full == 'true'`, so a skip is a job-level skip, which counts as passing for a
+# required check (a workflow-level `paths:` filter would leave the check pending forever), and the
+# summary jobs accept "skipped" only on `full == 'false'`. A push to main, a dispatch, and any doubt
+# run everything.
 #
 # `workflow_dispatch` lets a person run all of it on any branch (`gh workflow run ci.yml --ref
 # staging`); the v0.3.0 rewrite's first full run is its cutover pull request (part 38). Its `e2e`
@@ -86,6 +91,14 @@ jobs:
   # skip list, and `db` is `true` only when the db job's own paths changed. A failed `changes` job
   # leaves both empty and skips every job below it, which fails each summary job (it accepts a skip
   # only on `full == 'false'`, or for db on `db == 'false'`).
+  #
+  # `bot` is `false` only for a pull request that changes none of the paths bot selftest's tests and
+  # lints read. Those are the bot's code and switches, all of .github/ and .claude/ (the tests read
+  # both directories whole: the workflows, the issue forms, the skills), the scripts
+  # (test_repo_meta.py reads scripts/*.sh), the training lanes' prompts and loop,
+  # docs/issues-and-patches.md, and the toolchain and .cargo/ (the night bot's checks pin both). It
+  # is set here, not in ci-scope.sh, because a bot-only diff is exactly the one ci-scope.sh answers
+  # `full=false` for, and because .github/ is a path the bots may not change. Any doubt says `true`.
   changes:
     name: what the change touches
     runs-on: ubuntu-latest
@@ -93,6 +106,7 @@ jobs:
     outputs:
       full: ${{ steps.scope.outputs.full }}
       db: ${{ steps.scope.outputs.db }}
+      bot: ${{ steps.scope.outputs.bot }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -105,8 +119,21 @@ jobs:
         run: |
           if [ "$EVENT" = pull_request ]; then
             sh scripts/ci-scope.sh "$BASE" "$HEAD" | tee -a "$GITHUB_OUTPUT"
+            # No name may expand as a glob in the loop below.
+            set -f
+            files=$(git diff --no-renames --name-only "$BASE...$HEAD") || files=
+            bot=false
+            if [ -z "$files" ]; then bot=true; fi
+            for file in $files; do
+              case "$file" in
+                bot/* | .harness/* | .squishy/* | .github/* | .claude/* | scripts/*.sh) bot=true ;;
+                training/loop.sh | training/*.md | docs/issues-and-patches.md) bot=true ;;
+                rust-toolchain.toml | .cargo/*) bot=true ;;
+              esac
+            done
+            echo "bot=$bot" | tee -a "$GITHUB_OUTPUT"
           else
-            printf 'full=true\ndb=true\n' | tee -a "$GITHUB_OUTPUT"
+            printf 'full=true\ndb=true\nbot=true\n' | tee -a "$GITHUB_OUTPUT"
           fi
 
   # ------------------------------------------------------------------------------------------------
@@ -455,13 +482,13 @@ jobs:
           PARENT: ${{ steps.stage1.outputs.parent }}
         run: |
           set -uo pipefail
-          parent=()
+          parent_bin=()
           if [ "$PARENT" = true ]; then
             mkdir -p "$RUNNER_TEMP/base-jackioh"
             tar -xzf "$RUNNER_TEMP/rust-base.tgz" -C "$RUNNER_TEMP/base-jackioh"
-            parent=(--parent-bin "$RUNNER_TEMP/base-jackioh/jackioh")
+            parent_bin=(--parent-bin "$RUNNER_TEMP/base-jackioh/jackioh")
           fi
-          target/release/jackioh classify --base "$BASE" "${parent[@]}" --claims --json > "$RUNNER_TEMP/classify.json"
+          target/release/jackioh classify --base "$BASE" "${parent_bin[@]}" --claims --json > "$RUNNER_TEMP/classify.json"
           status=$?
           cat "$RUNNER_TEMP/classify.json"
           echo "labels=$(jq -c '.labels // []' "$RUNNER_TEMP/classify.json" 2>/dev/null || echo '[]')" >> "$GITHUB_OUTPUT"
@@ -795,6 +822,59 @@ jobs:
           test "$BUILD" = success
           test "$CHECK" = success
           test "$UNIT" = success
+
+  # ------------------------------------------------------------------------------------------------
+  # bot selftest
+  # ------------------------------------------------------------------------------------------------
+
+  # CI for the night bot itself (bot/): its suite on the lowest and newest Python it supports, the
+  # CLI's start under both bots' configs, and actionlint over the bot's workflows, this one and the
+  # pull request title check, which runs the bot's title rule (`triage.pull_title_ok`). One job, so
+  # its name is the required check's. It runs when the `changes` job says `bot`, and also whenever
+  # that job did not succeed, so an empty output never skips the check into a pass.
+  bot-selftest:
+    name: bot selftest
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.bot != 'false') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: |
+            3.12
+            3.13
+
+      - name: Tests on Python 3.12
+        working-directory: bot
+        run: python3.12 -m unittest discover -s tests -t . -v
+
+      - name: Tests on Python 3.13
+        working-directory: bot
+        run: python3.13 -m unittest discover -s tests -t .
+
+      - name: The CLI starts and the config loads
+        working-directory: bot
+        run: |
+          python3.13 -m harness --help > /dev/null
+          python3.13 -m harness window
+          HARNESS_HOME=.squishy python3.13 -m harness window
+
+      - name: actionlint
+        run: |
+          docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.7 -color \
+            .github/workflows/bot-night.yml .github/workflows/bot-commands.yml \
+            .github/workflows/ci.yml .github/workflows/triage.yml \
+            .github/workflows/bot-status.yml .github/workflows/squishy-run.yml \
+            .github/workflows/squishy-commands.yml .github/workflows/pr-title.yml \
+            .github/workflows/hygiene.yml .github/workflows/hygiene-delete.yml \
+            .github/workflows/bot-cache.yml
 
   # ------------------------------------------------------------------------------------------------
   # e2e smoke
