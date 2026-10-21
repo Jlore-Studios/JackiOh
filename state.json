@@ -8742,9 +8742,12 @@
         "sha": "edc2ef1d629957627bc6593a257229d5c4e168d1"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-21T01:39:48Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1439,
       "kind": "review",
       "pending_request": false,
