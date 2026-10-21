@@ -511,4 +511,34 @@ describe("leaving, paging and failing", () => {
     expect(shownStep()).toBe(16);
     expect(source.calls).toEqual([0, 16, 32]);
   });
+
+  it("#1568 a page that could not be had offers Try again, which asks for it again and goes on", async () => {
+    const healthy = fakeReplaySource(steps);
+    let down = false;
+    const flaky: FakeReplaySource = {
+      total: healthy.total,
+      calls: healthy.calls,
+      page: (from, count) =>
+        down ? Promise.reject(new ReplayFailure("error", "Couldn’t reach JackiOh.")) : healthy.page(from, count),
+    };
+    await open(flaky);
+    down = true;
+    await press(replayTestid.end);
+
+    expect(screen.getByTestId(replayTestid.failure)).toHaveTextContent("Couldn’t reach JackiOh.");
+    expect(screen.getByTestId(replayTestid.retry)).toBeInTheDocument();
+
+    down = false;
+    await press(replayTestid.retry);
+    expect(screen.queryByTestId(replayTestid.failure)).toBeNull();
+    expect(screen.queryByTestId(replayTestid.retry)).toBeNull();
+    expect(shownStep()).toBe(LAST);
+  });
+
+  it("#1568 an expired replay offers no Try again", async () => {
+    await open(fakeReplaySource(steps, { failFrom: 0, failure: new ReplayFailure("expired") }));
+
+    expect(screen.getByTestId(replayTestid.failure)).toHaveTextContent("This replay has expired.");
+    expect(screen.queryByTestId(replayTestid.retry)).toBeNull();
+  });
 });

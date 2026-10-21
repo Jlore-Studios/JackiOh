@@ -1,7 +1,11 @@
-// crates/server/tests/deploy/rehearse.sh's REHEARSAL_STAGE (REHEARSAL_DEPS_ONLY=1 is its `deps`), which
-// CI runs as jobs of their own before the deploy rehearsal: each builds one stage of the Dockerfile
-// (`deps`, then `crates`) into the layer cache and starts nothing. A stand-in `docker` on PATH records
-// each call, so no Docker is needed.
+// crates/server/tests/deploy/rehearse.sh's split modes (#1556), which CI runs as jobs of their own:
+// REHEARSAL_STAGE builds one Dockerfile stage (`deps`, then `crates`) into the layer cache and starts
+// nothing (REHEARSAL_DEPS_ONLY=1 is `deps`); REHEARSAL_STAGE=image builds the whole image and saves it
+// with REHEARSAL_SAVE_IMAGE; REHEARSAL_LOAD_IMAGE with REHEARSAL_BOOT runs one boot shard on it.
+// A stand-in `docker` on PATH records each call, so no Docker is needed. Only the validation and the
+// build/save paths are tested here: past the build the script needs real `psql`/Postgres (the
+// readiness loop would burn 60 s in vitest), so the full boot sequencing is proven by CI's own
+// rehearsal jobs and the daily full run instead.
 
 import { spawnSync } from "node:child_process";
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -90,11 +94,54 @@ describe("crates/server/tests/deploy/rehearse.sh", () => {
     expect(stdout).toContain("the crates stage is built and cached");
   });
 
-  it("refuses a REHEARSAL_STAGE that is neither deps nor crates, before any docker call", () => {
+  it("refuses a REHEARSAL_STAGE that is neither deps, crates nor image, before any docker call", () => {
     const { status, stderr, calls } = rehearse({ REHEARSAL_STAGE: "build" });
     expect(status).not.toBe(0);
-    expect(stderr).toContain("REHEARSAL_STAGE is deps or crates, not build");
+    expect(stderr).toContain("REHEARSAL_STAGE is deps, crates or image, not build");
     expect(calls).toEqual([]);
+  });
+
+  it("refuses a REHEARSAL_BOOT outside all, migrate or stale, before any docker call", () => {
+    const { status, stderr, calls } = rehearse({ REHEARSAL_BOOT: "everything" });
+    expect(status).not.toBe(0);
+    expect(stderr).toContain("REHEARSAL_BOOT is all, migrate or stale, not everything");
+    expect(calls).toEqual([]);
+  });
+
+  it("refuses a stage with a boot, and a save with a load, before any docker call", () => {
+    const staged = rehearse({ REHEARSAL_STAGE: "image", REHEARSAL_BOOT: "migrate" });
+    expect(staged.status).not.toBe(0);
+    expect(staged.stderr).toContain("REHEARSAL_STAGE");
+    expect(staged.stderr).toContain("REHEARSAL_BOOT");
+    expect(staged.calls).toEqual([]);
+    const saved = rehearse({
+      REHEARSAL_SAVE_IMAGE: "/tmp/deploy-image.tgz",
+      REHEARSAL_LOAD_IMAGE: "/tmp/deploy-image.tgz",
+    });
+    expect(saved.status).not.toBe(0);
+    expect(saved.stderr).toContain("REHEARSAL_SAVE_IMAGE");
+    expect(saved.stderr).toContain("REHEARSAL_LOAD_IMAGE");
+    expect(saved.calls).toEqual([]);
+  });
+
+  it("builds the whole image and saves it for REHEARSAL_STAGE=image, starting no container", () => {
+    const save = join(mkdtempSync(join(bin, "save-")), "deploy-image.tgz");
+    const { status, stdout, calls } = rehearse({
+      REHEARSAL_STAGE: "image",
+      REHEARSAL_CACHE_FROM: "type=gha,scope=t",
+      REHEARSAL_CACHE_TO: "type=gha,mode=max,scope=t",
+      REHEARSAL_SAVE_IMAGE: save,
+    });
+    const [build] = builds(calls);
+    expect(status).toBe(0);
+    expect(builds(calls)).toHaveLength(1);
+    expect(build).toMatch(/^buildx build -t jackioh-server:rehearsal /);
+    expect(build).toContain("--cache-from type=gha,scope=t");
+    expect(build).toContain("--cache-to type=gha,mode=max,scope=t");
+    expect(build).toContain("--load");
+    expect(calls.filter((call) => call.startsWith("save "))).toHaveLength(1);
+    expect(calls.filter((call) => call.startsWith("run "))).toEqual([]);
+    expect(stdout).toContain("image stage is built");
   });
 
   it("keeps the cook in a deps stage, the workspace's crates in a crates stage on it, and the binary on that", () => {
