@@ -49,7 +49,7 @@ an unforced run uses it only after the gate saw it quiet (`quiet_ok`).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from itertools import islice
 from typing import Any, Iterator, Mapping
 
@@ -60,7 +60,7 @@ from harness.clock import iso, parse_iso
 from harness.config import (DIFFICULTIES, HALT_PATH, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
                             LABEL_NEEDS_PLAN, LABEL_PLANNED, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
                             LABEL_SUGGESTION, LABEL_WORKING, MIN_TIER, NIGHT_WORKFLOW, OTHERS,
-                            PART_FLOOR, SLASH, STATE_BRANCH)
+                            PART_FLOOR, SLASH, STATE_BRANCH, STATUS_WORKFLOW)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.prompts import data
@@ -96,11 +96,39 @@ def nothing(reason: str) -> dict[str, Any]:
     return {"action": "none", "reason": reason}
 
 
+#: The run id a claim carries while the run the status loop started for it is not yet found
+#: (`controller.py`): `pending:<item>-<unix seconds>`, which names the run's title.
+PENDING = "pending:"
+#: How long a pending claim's run may take to show up in the run list before it counts as dead.
+PENDING_GRACE = timedelta(minutes=15)
+
+
+def pending_run(ctx: Context, run_id: str) -> str:
+    """The status of the run a pending claim names: the bot-night run whose title carries its
+    reference (bot-night.yml's `run-name`). Until that run shows up it is alive for
+    `PENDING_GRACE` after the claim (the reference holds the claim's time), and dead after."""
+    ref = run_id[len(PENDING):]
+    try:
+        runs = ctx.gh.list_runs(NIGHT_WORKFLOW, limit=50)
+    except GitHubError:
+        return "unknown"
+    for run in runs:
+        if str(run.get("display_title") or "").startswith(f"bot-night {ref} "):
+            return "alive" if run.get("status") in LIVE else "dead"
+    try:
+        made = datetime.fromtimestamp(int(ref.rsplit("-", 1)[-1]), tz=timezone.utc)
+    except (ValueError, OverflowError, OSError):
+        return "dead"
+    return "alive" if ctx.now() - made < PENDING_GRACE else "dead"
+
+
 def run_status(ctx: Context, run_id: Any) -> str:
     """`alive`, `dead`, or `unknown` when GitHub could not say. Runs now overlap, so a run that
     cannot be read is treated as alive: its lane stays held and its item is not requeued."""
     if not run_id:
         return "dead"
+    if str(run_id).startswith(PENDING):
+        return pending_run(ctx, str(run_id))
     try:
         return "alive" if ctx.gh.get_run(run_id).get("status") in LIVE else "dead"
     except GitHubError as exc:
@@ -110,6 +138,64 @@ def run_status(ctx: Context, run_id: Any) -> str:
 def run_alive(ctx: Context, run_id: Any) -> bool:
     """True unless the run is known to have ended."""
     return run_status(ctx, run_id) != "dead"
+
+
+#: How long since the status loop's last tick (`loop_tick`) it still counts as going: two ticks
+#: missed, so a loop that hangs while its run still shows as in progress stops nothing for long.
+LOOP_STALE = timedelta(minutes=15)
+
+
+def loop_alive(ctx: Context) -> bool:
+    """With `controller` on (#1455), whether the status loop is going, the one place that plans and
+    starts night runs while it is: then bot-night's own gate defers to it and nothing else starts a
+    run. It is going when its run is in progress and its sweep ticked within `LOOP_STALE`. A run
+    list or a state file GitHub cannot read says no, so the night runs fall back to planning
+    themselves."""
+    if not ctx.cfg.controller:
+        return False
+    try:
+        runs = ctx.gh.list_runs(STATUS_WORKFLOW, status="in_progress", limit=5)
+        if not any(run.get("status") == "in_progress"
+                   and str(run.get("path") or "").endswith(f"/{STATUS_WORKFLOW}") for run in runs):
+            return False
+        tick = parse_iso(ctx.store.load().get("loop_tick"))
+    except GitHubError:
+        return False
+    return tick is not None and ctx.now() - tick < LOOP_STALE
+
+
+#: How long a planner may hold the planning lock (`planning_lock`) before another may take it:
+#: a plan takes under a minute, so a lock this old was left by a planner that died.
+LOCK_TTL = timedelta(minutes=3)
+
+
+def take_planning_lock(ctx: Context, owner: str) -> bool:
+    """Take the planning lock on the state file, or say False when another planner holds it. The
+    plan job's concurrency group serializes the night runs' plans; the status loop plans too
+    (#1455), so both take this lock, which the state file's compare-and-set makes one holder's."""
+    now = ctx.now()
+    got: list[bool] = []
+
+    def change(state: dict[str, Any]) -> None:
+        held = state.get("planning") if isinstance(state.get("planning"), dict) else {}
+        since = parse_iso(held.get("at")) if held.get("at") else None
+        if held.get("owner") not in (None, owner) and since and now - since < LOCK_TTL:
+            got[:] = [False]
+            return
+        got[:] = [True]
+        state["planning"] = {"owner": owner, "at": iso(now)}
+
+    ctx.store.update(change, "planning lock")
+    return bool(got and got[0])
+
+
+def drop_planning_lock(ctx: Context, owner: str) -> None:
+    def change(state: dict[str, Any]) -> None:
+        held = state.get("planning") if isinstance(state.get("planning"), dict) else {}
+        if held.get("owner") == owner:
+            state["planning"] = None
+
+    ctx.store.update(change, "planning lock released")
 
 
 def vault_path(provider_id: str) -> str:
@@ -933,6 +1019,8 @@ def fill_lanes(ctx: Context, lanes: Lanes, taken: Candidate, assignment: Assignm
                planned: dict[str, Any]) -> None:
     """Start one more run when, with this item claimed, a lane (or the planning lane) and more
     work are still free. That run does the same, so the lanes fill one run at a time."""
+    if ctx.cfg.controller_loop:
+        return  # the status loop plans again at once, in the same tick (`controller.start`)
     after = lanes.with_run(taken.number, assignment.provider.id, assignment.action)
     if not after.any_room:
         return

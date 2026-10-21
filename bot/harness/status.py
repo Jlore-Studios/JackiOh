@@ -179,7 +179,7 @@ def running_lines(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> 
         if since is not None:
             elapsed = human_delta(ctx.now() - since)
             detail.append("just started" if elapsed == "now" else f"for {elapsed}")
-        if record.get("run_id"):
+        if record.get("run_id") and not str(record["run_id"]).startswith("pending:"):
             detail.append(f"[run]({cfg.server_url}/{cfg.repo}/actions/runs/{record['run_id']})")
         lines.append(f"  - {name}: {what}" + (f", {', '.join(detail)}" if detail else "") + ".")
     return lines

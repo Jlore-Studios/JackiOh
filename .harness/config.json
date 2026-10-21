@@ -24,6 +24,7 @@
   "min_minutes_for_a_call": 25,
   "max_review_cycles": { "hard": 10, "medium": 3, "easy": 3 },
   "max_self_check_rounds": 3,
+  "controller": true,
   "easy": {
     "max_files": 10,
     "max_lines": 400,

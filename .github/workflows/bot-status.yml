@@ -14,6 +14,12 @@
 # which GitHub fires as late), so when the bot's chain of runs breaks, the next night run starts
 # within five minutes, not hours. Each tick also settles the issue about the bot machine's disk
 # (bot/harness/disk.py): open while the disk is filling up, closed once it is not.
+# With the config's `controller` on (#1455), each tick's sweep also plans the night bot's work and
+# starts each bot-night run with its plan made (`--controller`, bot/harness/controller.py), so a run
+# waits in GitHub's queue once, for its model job, not for a gate and a plan job first; while this
+# loop goes, nothing else plans (bot-night's gate defers to it, and the planning lock holds the
+# rest). That needs this job's write grants: the plans go on the state branch, and the runs start
+# from its token.
 # Each tick also runs Squishy (#60) in a process of its own (`--companions`): its sweep, with
 # Squishy's token, and its section of the status issue, which sits apart from the night bot's.
 # It holds no model secret and runs no model. Cancelling a run by hand stops the loop until the
@@ -79,7 +85,7 @@ jobs:
             ${{ secrets.MUSE_AUTH != '' && 'MUSE_AUTH' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
         run: |
-          python -m harness dashboard --sweep --stats --companions \
+          python -m harness dashboard --sweep --stats --companions --controller \
             --every "${EVERY_SECONDS}" --for "${LOOP_SECONDS}"
 
       # Not after a cancellation, so a person can stop the loop.
