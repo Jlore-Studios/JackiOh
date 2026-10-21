@@ -1,6 +1,6 @@
 // `/decks`: §9.4's gate, its reads, and R256 writes.
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DECK_AUTOSAVE_DEBOUNCE_MS } from "@jackioh/server-config";
@@ -13,11 +13,12 @@ import {
   legalDecks,
 } from "../game/deckbuilder/fixtures.ts";
 import { mirrorKey } from "../game/deckbuilder/sync.ts";
-import { poolCardId } from "../game/deckbuilder/testids.ts";
+import { DECKBUILDER_RETRY, poolCardId } from "../game/deckbuilder/testids.ts";
 import { decksResponse, savedDeck, savedTrio } from "../game/deckbuilder/testkit.ts";
 import { ApiRequestError, getCollection, getDecks, getMe, putDeck } from "../net/api.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import DecksRoute from "./decks.tsx";
+import { navTestid } from "./nav.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -82,6 +83,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.clearAllMocks();
 });
 
@@ -138,6 +140,15 @@ describe("the gate (§9.4)", () => {
       expect(screen.getByTestId("deckbuilder-error")).toHaveTextContent("the server could not be reached");
     });
   });
+
+  it("#1485 offers Back when /api/auth/me cannot be read", async () => {
+    vi.mocked(getMe).mockRejectedValue(new Error("the server could not be reached"));
+    render(<DecksRoute />);
+    await waitFor(() => {
+      expect(screen.getByTestId("deckbuilder-error")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId(navTestid.back)).toBeInTheDocument();
+  });
 });
 
 // Reads
@@ -182,6 +193,25 @@ describe("what the screen opens with", () => {
       expect(screen.getByTestId("deckbuilder-error")).toHaveTextContent("decks unavailable");
     });
   });
+
+  it("#1485 a failed decks read offers Back and Try again, and Try again opens the workshop once the read works", async () => {
+    vi.mocked(getDecks).mockRejectedValueOnce(new Error("decks unavailable"));
+    render(<DecksRoute />);
+    await waitFor(() => {
+      expect(screen.getByTestId("deckbuilder-error")).toHaveTextContent("decks unavailable");
+    });
+    expect(screen.getByTestId(navTestid.back)).toBeInTheDocument();
+    expect(screen.getByTestId(DECKBUILDER_RETRY)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId(DECKBUILDER_RETRY));
+    expect(screen.getByTestId("deckbuilder-loading")).toBeInTheDocument();
+    expect(screen.queryByTestId(DECKBUILDER_RETRY)).toBeNull();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("workshop")).toBeInTheDocument();
+    });
+    expect(getDecks).toHaveBeenCalledTimes(2);
+  });
 });
 
 // Writes (R256)
@@ -221,6 +251,7 @@ describe("when another account signs in under an open workshop", () => {
   const OTHER_PROFILE = "profile-p2";
 
   it("R256 never sends one profile's unsaved work with the next profile's token, and keeps it on this device", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldAdvanceTime: true });
     vi.mocked(getMe).mockImplementation(async (token) => ({
       ...meBody("active", false),
       profile: { id: token === OTHER_TOKEN ? OTHER_PROFILE : PROFILE, status: "active" },
@@ -247,7 +278,9 @@ describe("when another account signs in under an open workshop", () => {
       },
       { timeout: SWITCH_WAIT_MS },
     );
-    await new Promise((resolve) => setTimeout(resolve, DECK_AUTOSAVE_DEBOUNCE_MS * 2));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DECK_AUTOSAVE_DEBOUNCE_MS + 1);
+    });
 
     const sentAsOther = vi.mocked(putDeck).mock.calls.filter(([token]) => token === OTHER_TOKEN);
     expect(sentAsOther, "the first profile's new deck must not be created in the second's account").toEqual([]);

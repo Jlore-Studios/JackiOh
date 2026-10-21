@@ -1,7 +1,8 @@
 //! The dev tools (SPEC §14.10, R1300000): a dev account, one whose profile id `DEV_PROFILE_IDS`
-//! lists (`env.rs`), moves its own economy by hand, so each part of §14 can be tried on staging and
-//! production. Every route acts on the caller's own account, named by the token, and none takes a
-//! profile id.
+//! lists (`env.rs`), or in end-to-end mode a fixture account marked dev (R1310004,
+//! `api::e2e::is_e2e_dev`), moves its own economy by hand, so each part of §14 can be tried on
+//! staging and production. Every route acts on the caller's own account, named by the token, and
+//! none takes a profile id.
 //!
 //! The server decides (CLAUDE.md rule 7): `GET /api/auth/me` says whether the caller is a dev
 //! account (`isDev`), and every route here checks the list itself and answers anyone else 403
@@ -23,6 +24,9 @@
 //! - `POST /api/dev/clear/:part`: `cards`, `cosmetics`, `jlore`, `counters` (the bars and pity
 //!   counters), `tracks`, or `everything`, all five in one transaction. Packs, tokens and quests are
 //!   no part of any.
+//! - `POST /api/dev/bar/:bar` (R1310003): the `card` or the `cosmetic` token bar filled to its size,
+//!   so it pays at once what a pack's duplicates filling it would (§14.5): a card token, or the
+//!   cosmetic token cycle's next step, the cycle's place moving on.
 //!
 //! The quest tools (`POST /api/dev/quests`, `POST /api/dev/quests/:questId/complete`, §14.9) are
 //! `api/quests.rs`'s, behind this same [`dev_caller`].
@@ -35,15 +39,19 @@ use jackioh_engine::config::MAX_COPIES;
 use jackioh_engine::{SetName, set_ships};
 
 use crate::api::collection::{caller_profile, owned_in};
+use crate::api::e2e::is_e2e_dev;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json, str};
 use crate::app::{App, now_ms};
-use crate::config::{SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
+use crate::config::{CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
 use crate::cosmetics::CosmeticKind;
 use crate::db::store::{CollectionEntry, CollectionGrant, Profile, Tx};
 use crate::economy::math::level_for_xp;
+use crate::economy::packs::{bar_before, cycle_step};
 use crate::economy::store::{
-    CosmeticGrant, CounterGrant, EconomyReason, JloreGrant, JloreReason, SetTrack, TrackGrant,
+    CosmeticGrant, Counter, CounterGrant, EconomyReason, InventoryGrant, InventoryItem, JloreGrant,
+    JloreReason, SetTrack, TrackGrant,
 };
+use crate::economy::tokens::settle_bar;
 
 /// R1300000: `collection_grants.reason` for a dev account's own card grant or clear (migration
 /// 0046), which its `collection_grants_dev_check` writes only with the `dev` mark.
@@ -55,16 +63,17 @@ const DEV_ONLY_MESSAGE: &str = "Only a dev account may use the dev tools.";
 /// A grant the store answers `None` to: a sum past what a holding's column holds.
 const TOO_MUCH_MESSAGE: &str = "That is more than this account can hold.";
 
-/// R1300000: whether `DEV_PROFILE_IDS` lists `profile_id`.
-pub fn is_dev(app: &App, profile_id: &str) -> bool {
-    app.env.dev_profile_ids.iter().any(|id| id == profile_id)
+/// R1300000: whether `DEV_PROFILE_IDS` lists `profile`; R1310004: or, in end-to-end mode alone, it
+/// is a fixture account marked dev.
+pub fn is_dev(app: &App, profile: &Profile) -> bool {
+    app.env.dev_profile_ids.contains(&profile.id) || (app.env.e2e && is_e2e_dev(&profile.user_id))
 }
 
 /// The caller, when it is a dev account; 403 `forbidden` otherwise. Every handler here asks first,
 /// and so do `api/quests.rs`'s quest tools.
 pub(crate) fn dev_caller(app: &App, req: &Req) -> Result<Profile, ApiError> {
     let profile = caller_profile(req)?;
-    if !is_dev(app, &profile.id) {
+    if !is_dev(app, &profile) {
         return Err(ApiError::new(ApiErrorCode::Forbidden, DEV_ONLY_MESSAGE));
     }
     Ok(profile)
@@ -282,6 +291,110 @@ pub async fn clear(app: &Arc<App>, req: Req) -> ApiResult {
     tx.commit().await?;
     log_dev(&profile, part, written);
     Ok(json(200, json!({ "written": written })))
+}
+
+/// The token bar a fill's `:bar` names (§14.5), with its size, or `None` for no bar.
+fn bar_of(bar: &str) -> Option<(Counter, i64)> {
+    match bar {
+        "card" => Some((Counter::CardTokenBar, CARD_TOKEN_BAR_SIZE)),
+        "cosmetic" => Some((Counter::CosmeticTokenBar, COSMETIC_TOKEN_BAR_SIZE)),
+        _ => None,
+    }
+}
+
+/// `POST /api/dev/bar/:bar` (R1310003): 200 `{ written }`, the ledger rows the fill wrote; 404 for a
+/// `:bar` that names no bar. Under the account's lock (R1301003) the bar gains what it lacks of its
+/// size and pays as a pack's duplicates filling it would (`economy::packs::settle_bars`): the bar's
+/// points to what it keeps, then a card token, or the cosmetic token cycle's next step and the
+/// cycle's place moved on. Every row is reason `dev`, marked `dev`.
+pub async fn fill_bar(app: &Arc<App>, req: Req) -> ApiResult {
+    let profile = dev_caller(app, &req)?;
+    let bar = req.params.get("bar").map(String::as_str).unwrap_or("");
+    let Some((counter, size)) = bar_of(bar) else {
+        return Err(ApiError::new(ApiErrorCode::NotFound, "no such bar"));
+    };
+    let at = now_ms();
+    let mut tx = app.db.begin(Some(&profile.id)).await?;
+    tx.economy_lock_account(&profile.id).await?;
+    let counters = tx.economy_counters_get(&profile.id).await?;
+    let held = bar_before(&counters, counter);
+    let (pays, remainder) = settle_bar(held, size - held % size, size);
+    let mut written = 0;
+    if remainder != held {
+        grant_dev_counter(&mut tx, &profile.id, counter, remainder - held, at).await?;
+        written += 1;
+    }
+    if counter == Counter::CardTokenBar {
+        grant_dev_item(
+            &mut tx,
+            &profile.id,
+            InventoryItem::CardToken,
+            String::new(),
+            pays,
+            at,
+        )
+        .await?;
+        written += 1;
+    } else {
+        let cycle = bar_before(&counters, Counter::CosmeticTokenCycle);
+        for paid in 0..pays {
+            let (item, key) = cycle_step(cycle + paid);
+            grant_dev_item(&mut tx, &profile.id, item, key, 1, at).await?;
+            written += 1;
+        }
+        grant_dev_counter(&mut tx, &profile.id, Counter::CosmeticTokenCycle, pays, at).await?;
+        written += 1;
+    }
+    tx.commit().await?;
+    log_dev(&profile, bar, written);
+    Ok(json(200, json!({ "written": written })))
+}
+
+/// A dev tool's `economy_counter_grants` row: `delta` to the account-wide `counter`.
+async fn grant_dev_counter(
+    tx: &mut Tx<'_>,
+    profile_id: &str,
+    counter: Counter,
+    delta: i64,
+    at: i64,
+) -> Result<(), ApiError> {
+    tx.economy_counters_grant(&CounterGrant {
+        profile_id: profile_id.to_string(),
+        counter,
+        pack: String::new(),
+        delta,
+        reason: EconomyReason::Dev,
+        reference: None,
+        dev: true,
+        at,
+    })
+    .await?
+    .ok_or_else(|| bad_request(TOO_MUCH_MESSAGE))?;
+    Ok(())
+}
+
+/// A dev tool's `inventory_grants` row: `delta` of `item` under `key`.
+async fn grant_dev_item(
+    tx: &mut Tx<'_>,
+    profile_id: &str,
+    item: InventoryItem,
+    key: String,
+    delta: i64,
+    at: i64,
+) -> Result<(), ApiError> {
+    tx.economy_inventory_grant(&InventoryGrant {
+        profile_id: profile_id.to_string(),
+        item,
+        key,
+        delta,
+        reason: EconomyReason::Dev,
+        reference: None,
+        dev: true,
+        at,
+    })
+    .await?
+    .ok_or_else(|| bad_request(TOO_MUCH_MESSAGE))?;
+    Ok(())
 }
 
 /// Every card owned to 0, each by its offsetting row.

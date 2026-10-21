@@ -44,11 +44,15 @@ class PullTitleTests(unittest.TestCase):
         "Patch (part 2 of 8): fragments without a version",
         "Patch: patch numbers (part 2 of 8): fragments without a version",
         'Revert "Patch: Activate abilities work again"',
-        # The older prefixes, until the title retcon (#1372).
-        "Patch v0.3.X: Activate abilities work again",
-        "Patch v0.3.Y: fix the UI of the rematch button",
         "Patch v0.3.1: card text pass",
         "Patch v0.2.7b: one more fix",
+        'Revert "Patch v0.4.0c: one more fix"',
+        'Revert "patches ship: v0.3.1"',
+    )
+    BAD = (
+        # The older prefixes, retired by the title retcon (#1372).
+        "Patch v0.3.X: Activate abilities work again",
+        "Patch v0.3.Y: fix the UI of the rematch button",
         "Patch v0.3.X (part 2 of 3): the lobby",
         "v0.3.0: the Rust rewrite",
         "v0.4.0 (part 1 of 5): the engine",
@@ -56,9 +60,6 @@ class PullTitleTests(unittest.TestCase):
         "CI: daily super run failed",
         "Architecture: issue and PR templates, labels as code and repository meta",
         'Revert "Patch v0.3.X: Activate abilities work again"',
-        'Revert "patches ship: v0.3.1"',
-    )
-    BAD = (
         "Share a room as an invite link that opens the join form filled in (R767)",  # #490
         "Practice: a worker whose script never loaded says to reload",  # #471
         "v0.3.0 part 40: the sweep of record",  # #472
@@ -107,10 +108,10 @@ class PullTitleTests(unittest.TestCase):
             self.assertIn(f'git commit -m "AI gen <N> ({lane}): <what changed>"', text)
 
     def test_a_bot_takes_its_builders_title_when_it_passes_else_its_issues(self):
-        self.assertEqual(triage.pull_title("Patch v0.3.2: the rules, v2", "Patch v0.3.X: the rules"),
+        self.assertEqual(triage.pull_title("Patch v0.3.2: the rules, v2", "Patch: the rules"),
                          "Patch v0.3.2: the rules, v2")
-        self.assertEqual(triage.pull_title("Make the rules v2", "Patch v0.3.X: the rules"),
-                         "Patch v0.3.X: the rules")
+        self.assertEqual(triage.pull_title("Make the rules v2", "Patch: the rules"),
+                         "Patch: the rules")
         self.assertEqual(triage.pull_title("Make the rules v2", "the rules"), "Make the rules v2")
         self.assertEqual(triage.pull_title("", "the rules"), "the rules")
         self.assertEqual(triage.pull_title("", ""), "")

@@ -154,6 +154,11 @@ changes the weights in `src/config.rs`, never the floors, the seed counts or the
 gates see only a broken AI; whether a change made it stronger is the training lanes' question
 (`training/README.md`, `cargo jackioh promote`).
 
+Every gate game is clean (B31): nothing refused or thrown, no fallback, a result, a log that folds to
+its hash, and no panic caught in an AI's search (`SearchStats.sim_panics`, summed in `MatchRecord`,
+#1429). In the browser such a panic is a WebAssembly trap that loses the whole decision. A failure
+names the seed, the seat and the first message (`Decision::first_sim_panic`, native only).
+
 A seat the AI plays has a skill (R747000): `SeatController::Ai { budget, skill }`, the chance in
 `[0, 1]` that each decision follows the AI, the rest being a random legal action (`random_action`,
 §10.7's policy). `None` is `AI_SKILL_MAX`: full skill, which takes no draw, so a seat without one
@@ -273,9 +278,9 @@ and any human seat the server hands it after a disconnect (§13.8).
 
 ```rust
 pub fn duos_decide(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosActionBody>;
-pub fn duos_decision(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosDecision>;   // { body, fallback }
+pub fn duos_decision(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosDecision>;   // { body, fallback, sim_panics, first_sim_panic }
 pub fn duos_passes(state: &DuosState, seat: DuosSeat) -> Vec<String>;
-pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins, draws, rejected, fallbacks }
+pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins, draws, rejected, fallbacks, sim_panics }
 ```
 
 - `duos_decide` is `decide` on the seat's own duel: its mulligan and its prompts as a 1v1 seat answers
@@ -284,7 +289,8 @@ pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins
   nothing. The same state and options give the same action.
 - `duos_decision` is `duos_decide` with where its action came from: `fallback` is true when the
   wrapper's own fallback picked it (`decide` answered nothing the seat may send) or `decide` itself
-  fell back (`DecisionReason::Fallback`).
+  fell back (`DecisionReason::Fallback`); `sim_panics` and `first_sim_panic` are the panics `decide`'s
+  search caught and the first one's message (#1429).
 - `duos_passes` names the hand cards to pass now, best first: a card the seat cannot play this turn
   and its teammate can (a round seat that has not ended, can afford it and has a zone for it), when
   the seat can pay the pass; with `pass_cost` 0 also a card the teammate can afford next turn and the
@@ -304,8 +310,8 @@ pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins
   never concedes (R188), so it neither offers nor confirms a team's concede.
 - `duos_gate` plays the Easy AI team against a team on §10.7's random policy; it passes at
   `DUOS_GATE_WIN_FLOOR` (0.8) of `DUOS_GATE_GAMES_SMOKE` (20) games with no action of either team
-  refused and no AI action off a fallback path (`cargo jackioh gate --duos`); `duos_gate_game_at`
-  plays a game at another budget.
+  refused, no AI action off a fallback path and no panic an AI seat's search caught
+  (`cargo jackioh gate --duos`); `duos_gate_game_at` plays a game at another budget.
 
 ## Commands
 

@@ -12,7 +12,8 @@
 //! slower than a minute, is named on stderr. A turn that takes more than `SELFPLAY_TURN_ACTIONS`
 //! actions (an endless combo) ends its game without a result (R1006005), and so does a decision
 //! whose search runs a board to one of the engine's settle caps, at the cap's first panic (§10.3,
-//! R1006007).
+//! R1006007). A game in which a seat had an action refused, fell back or caught a panic in its search
+//! is marked with `faults`, which `positions` leaves out (R1489000).
 //!
 //! A base that names a training gate's hold-out deals (`promote::is_gate_seed_base`, R850001) or
 //! the improve lane's dev set (`improve-dev`, the screens' deals) is refused, so no screen ever plays
@@ -72,6 +73,10 @@ pub struct SelfplayGame {
     /// version retcon has none, and its catalog is read through `patches/aliases.json`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub versions: Option<u32>,
+    /// R1489000: the game's faults (`ArenaOutcome::faults`), which `positions` leaves it out for;
+    /// absent from a clean game and from one written before it.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub faults: Vec<String>,
 }
 
 impl SelfplayGame {
@@ -128,6 +133,7 @@ fn setups(base: &str, from: i32, games: i32) -> Vec<ArenaGame> {
                 paired: false,
                 turn_actions: Some(SELFPLAY_TURN_ACTIONS),
                 stop_unsettled: true,
+                self_budget: AI_GATE_BUDGET,
             }
         })
         .collect()
@@ -163,6 +169,7 @@ pub(crate) fn build_commit() -> Option<String> {
 }
 
 fn game_of(outcome: ArenaOutcome, catalog: &str, commit: &str) -> SelfplayGame {
+    let faults = outcome.faults();
     SelfplayGame {
         seed: outcome.game.seed,
         decks: outcome.game.decks,
@@ -174,6 +181,7 @@ fn game_of(outcome: ArenaOutcome, catalog: &str, commit: &str) -> SelfplayGame {
         commit: commit.to_string(),
         versions: Some(jackioh_engine::config::VERSIONS_SCHEME),
         ai_generation: ai_generation(),
+        faults,
     }
 }
 
@@ -265,7 +273,8 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     let file = std::fs::File::create(&path)
         .with_context(|| format!("selfplay: cannot create {}", path.display()))?;
     let mut writer = BufWriter::new(file);
-    let (mut played, mut finished, mut turns, mut catalog) = (0usize, 0usize, 0i64, None::<String>);
+    let (mut played, mut finished, mut faulted, mut turns, mut catalog) =
+        (0usize, 0usize, 0usize, 0i64, None::<String>);
     play_chunks(&args.seed, args.from, args.games, &commit(), |chunk| {
         for game in chunk {
             serde_json::to_writer(&mut writer, game)?;
@@ -275,6 +284,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
             )?;
             played += 1;
             finished += usize::from(game.result.is_some());
+            faulted += usize::from(!game.faults.is_empty());
             turns += i64::from(game.turns);
             catalog.get_or_insert_with(|| game.catalog.clone());
         }
@@ -288,6 +298,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
             "out": path.display().to_string(),
             "games": played,
             "finished": finished,
+            "faulted": faulted,
             "turns": turns,
             "catalog": catalog,
         })
@@ -408,5 +419,35 @@ mod tests {
         let b = four.install(|| play("selfplay-test", 1, 3, "test").unwrap());
         assert_eq!(a.len(), 3);
         assert_eq!(text(a), text(b));
+    }
+
+    #[test]
+    fn r1489000_a_game_with_a_fallback_is_marked_and_positions_leaves_it_out() {
+        jackioh_cards::register_all();
+        let mut game = setups("selfplay-starved", 1, 1).remove(0);
+        game.self_budget = jackioh_ai::SearchBudget {
+            nodes: 0,
+            lethal_nodes: 0,
+            ..AI_GATE_BUDGET
+        };
+        let outcome = play_game(&game).unwrap();
+        assert!(outcome.result.is_some(), "the starved game still finishes");
+        let build = jackioh_cards::catalog_version();
+        let line = game_of(outcome, build, "test");
+        assert!(
+            line.faults.iter().any(|fault| fault.ends_with(" fallbacks")),
+            "{:?}",
+            line.faults
+        );
+        assert_eq!(
+            crate::positions::fold_game(&line, crate::positions::Every::Turn, build, false),
+            Err(crate::positions::Dropped::Unclean)
+        );
+        let mut clean = line.clone();
+        clean.faults.clear();
+        assert!(crate::positions::fold_game(&clean, crate::positions::Every::Turn, build, false).is_ok());
+        let text = serde_json::to_string(&clean).unwrap();
+        assert!(!text.contains("\"faults\""), "{text}");
+        assert_eq!(serde_json::from_str::<SelfplayGame>(&text).unwrap(), clean);
     }
 }

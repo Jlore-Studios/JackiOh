@@ -190,7 +190,8 @@ fn is_dormant(state: &GameState, instance: &CardInstance) -> bool {
     unit_top(state, player, lane).map(|top| top.id.as_str()) != Some(instance.id.as_str())
 }
 
-/// Every permanent whose aura is in play, in lane order per side (§10.4 layer 5).
+/// Every permanent whose aura is in play, in lane order per side (§10.4 layer 5): a face-down card's
+/// sleeps (R1487000).
 pub(crate) fn aura_sources(state: &GameState) -> Vec<&CardInstance> {
     // Every unit read walks this list, so it is built with plain loops (#188), straight off the rows
     // as `zones::active_units_of` reads them: each unit zone's top card in lane order, then the Units
@@ -209,7 +210,10 @@ pub(crate) fn aura_sources(state: &GameState) -> Vec<&CardInstance> {
                 .ok()
                 .and_then(|at| side.backrow.get(at))
                 .and_then(|card| card.as_ref());
-            if let Some(card) = card {
+            // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+            if let Some(card) = card
+                && !crate::preview::lasting_text_dormant(state, card)
+            {
                 sources.push(card);
             }
         }

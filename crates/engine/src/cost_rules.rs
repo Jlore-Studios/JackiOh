@@ -99,7 +99,8 @@ fn whose_reaches(whose: CostAuraWhose, source: PlayerId, player: PlayerId) -> bo
 
 /// Every card acting on the field, both sides, in R68's walk (the active side first, units by lane,
 /// then the backrow by lane): the tops of the unit piles and the backrow cards. A card dormant under a
-/// Stack pile is not on the field for effects (§3.2, R13), so its aura is off, as §10.4 layer 5 reads.
+/// Stack pile is not on the field for effects (§3.2, R13), so its aura is off, as §10.4 layer 5 reads,
+/// and so is a face-down card's (R1487000).
 fn acting_permanents(state: &GameState) -> Vec<&CardInstance> {
     let order: [PlayerId; 2] = if state.active == PlayerId::P1 {
         PLAYER_IDS
@@ -110,7 +111,10 @@ fn acting_permanents(state: &GameState) -> Vec<&CardInstance> {
     for player in order {
         for row in [Row::Units, Row::Backrow] {
             for slot in crate::zones::slots_of(player, row) {
-                if let Some(card) = crate::zones::card_at(state, slot) {
+                // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+                if let Some(card) = crate::zones::card_at(state, slot)
+                    && !crate::preview::lasting_text_dormant(state, card)
+                {
                     out.push(card);
                 }
             }

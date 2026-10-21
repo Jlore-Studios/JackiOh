@@ -12,7 +12,8 @@
 #             switch on, and an 800-game paired screen against main's AI on improve-dev, decided in
 #             advance). Only a screen with edgeLow above zero goes on: the weights and the switch are
 #             committed on ai/learn, `promote --lane learn` plays the lane's 400 hold-out games once
-#             (R1012000, R850001), and a pass is pushed as `AI gen <N> (learn): …` with auto-merge on.
+#             (R1012000, R850001), and a pass, with the practice-claim fixture recorded again by the
+#             new AI (R1303002), is pushed as `AI gen <N> (learn): …` with auto-merge on.
 #             CI's training gate plays the gate again (`promote --verify`) before it merges, as for
 #             every lane. Each stage's report is kept as the run's `learn-<run>` artifact and in its
 #             summary, whether or not it passed.
@@ -220,6 +221,24 @@ jobs:
             echo "generation=$generation"
             echo "games=$games"
           } >> "$GITHUB_OUTPUT"
+      # The practice game the AI's own moves are recorded in (R1303002), which the server's test
+      # re-runs move for move: every AI change plays it differently, so the promoted AI records it
+      # again into the promotion commit, the one file outside crates/ai/** and training/history/**
+      # CI's training gate lets a lane change. Node for it alone, after a pass.
+      - uses: ./.github/actions/setup
+        if: ${{ steps.gate.outputs.passed == 'true' }}
+        with:
+          rust: "false"
+      - name: the practice-claim fixture, recorded again by the promoted AI
+        if: ${{ steps.gate.outputs.passed == 'true' }}
+        run: |
+          set -euo pipefail
+          JACKIOH_WASM_LUAU=0 sh scripts/build-wasm.sh
+          JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run src/practice/claim.test.ts
+          pnpm --dir apps/web exec vitest run src/practice/claim.test.ts
+          git add crates/server/tests/fixtures/practice-claim.json
+          git commit -q --amend --no-edit
+          git format-patch -2 --stdout > "$RUNNER_TEMP/learn/promotion.patch"
       - name: deliver (push ai/learn, open its pull request, auto-merge)
         if: ${{ steps.gate.outputs.passed == 'true' }}
         env:

@@ -179,6 +179,42 @@ describe("R502 a cast on draw is held up on both seats", () => {
   });
 });
 
+describe("issue #1493 trap reveals are held up", () => {
+  const fired = (controller: "p1" | "p2", instanceId: string, defId: string): GameEvent => ({
+    type: "trapFired",
+    instanceId,
+    defId,
+    controller,
+    row: "backrow",
+    lane: 2,
+  });
+
+  it("issue #1493 holds up every trap reveal in event order", () => {
+    const first = fired("p2", "b1", "core-041");
+    const second = fired("p1", "b2", "core-084");
+    const events = [played("p2", "c7", "core-032"), first, second];
+    const items = showcasePlays(events, withEvents(view, events));
+    // The reveal and the play keep their stream order, and each reveal names its batch place.
+    expect(items.map((item) => item.event)).toEqual(events);
+    expect(items.map((item) => item.play)).toEqual([
+      { player: "p2", defId: "core-032", instanceId: "c7", costPaid: 1, radiant: false, set: false },
+      { player: "p2", defId: "core-041", instanceId: "b1", radiant: false, set: false, trapReveal: { ordinal: 1, total: 2 } },
+      { player: "p1", defId: "core-084", instanceId: "b2", radiant: false, set: false, trapReveal: { ordinal: 2, total: 2 } },
+    ]);
+  });
+
+  it("issue #1493 preserves R154 and R763 redaction in a trap reveal popup", () => {
+    const hidden: GameEvent = { type: "trapFired", instanceId: "hidden", defId: "hidden", controller: "p2", row: "backrow", lane: 2 };
+    const items = showcasePlays([hidden], withEvents(view, [hidden]));
+    // The controller's seat is public, but the trap itself names nothing: no definition, no instance.
+    expect(items.map((item) => item.play)).toEqual([
+      { player: "p2", defId: null, radiant: false, set: false, trapReveal: { ordinal: 1, total: 1 } },
+    ]);
+    expect(items[0]?.play.instanceId).toBeUndefined();
+    expect(JSON.stringify(items)).not.toMatch(/core-\d+/);
+  });
+});
+
 describe("R436 the rolls a Call to Chaos names", () => {
   it("R436 finds each roll among the fresh events, with its event, and skips an empty one", () => {
     const roll: GameEvent = { type: "chaosRolled", player: "p2", instanceId: "c95", defId: "core-095", effects: ["Heal your hero 30", "Summon 3 random (3) Cost Units"] };

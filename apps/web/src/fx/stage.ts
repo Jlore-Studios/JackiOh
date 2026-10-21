@@ -2,18 +2,23 @@
 // R200: never pace or reschedule entries; FxLayer ends holds and conceals with the view or FX_HOLD_MAX_MS.
 // R202: stand-ins show only viewer-visible cards, otherwise a card-shaped light. Pure, like `cues.ts`.
 
-import type { GameEvent, PlayerView } from "@jackioh/shared";
+import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
 
+import { flavorOfId } from "../cards/flavor.ts";
 import { animTestid, locateInstance, targetFor, type AnimationEntry } from "../game/animations.ts";
 import { sideOf, testid } from "../game/contract.ts";
 import {
   FX_CONCEAL_AT,
+  FX_FLAVOR_LIVE,
   FX_HOLD_MAX_MS,
   FX_LUNGE_CONTACT_AT,
   FX_MIND_CONTROL_FLIGHT_FRACTION,
+  FX_SHOT_LAUNCH_AT,
+  FX_SHOT_SHAKE_TRAUMA,
   FX_SLAM_AT,
 } from "./constants.ts";
-import type { FxAnchor, FxCue, FxPlanEnv } from "./types.ts";
+import { flavorLook, type FlavorLook } from "./flavors.ts";
+import type { FxAnchor, FxCue, FxPlanEnv, FxShotCue } from "./types.ts";
 
 /** The contact spark's base count and power (rule 9). */
 const STAGE_TUNING = {
@@ -35,6 +40,56 @@ function attackTarget(targetId: string, view: PlayerView): string | null {
 }
 
 type Ctx = { entry: AnimationEntry; view: PlayerView; env: FxPlanEnv; D: number };
+
+/**
+ * #1442: the look of the shot `attackerId` fires, when `view` shows it with Ranged, else `null`. The
+ * view decides whether it is Ranged, a forced attack as much as a chosen one, and only its public
+ * `defId` and `keywords` are read (R202; CLAUDE.md rule 7). R1081000: a Unit standing in a backrow
+ * zone attacks as any Unit does, and the view carries it as its face-up slot's `unit`.
+ */
+function rangedLook(attackerId: string, view: PlayerView): FlavorLook | null {
+  for (const side of [view.you, view.opponent]) {
+    const standing = side.backrow.map((slot) => (slot !== null && slot.faceDown === false ? slot.unit : undefined));
+    for (const unit of [...side.units, ...standing]) {
+      if (unit === null || unit === undefined || unit.instanceId !== attackerId) continue;
+      return hasKeyword(unit.keywords, "Ranged") ? flavorLook(flavorOfId(unit.defId, view.defs), unit.instanceId) : null;
+    }
+  }
+  return null;
+}
+
+/**
+ * #1443: one flavor shot from `from` to `to`, leaving at jk-lunge's 24% keyframe and landing as
+ * the entry ends (R200). `shotCues` builds its still lunge around this; a non-combat damage's
+ * volley (cues.ts) fires it on its own.
+ */
+export function shotCue(
+  look: FlavorLook,
+  from: FxAnchor,
+  to: FxAnchor,
+  delayMs: number,
+  flightMs: number,
+  density: number,
+): FxShotCue {
+  return { kind: "shot", shot: look.projectile, colors: look.colors, preset: look.particle, from, to, delayMs, flightMs, density };
+}
+
+/**
+ * #1442: a Ranged attacker stays in place (a still lunge) and its flavor's shot leaves at jk-lunge's
+ * 24% keyframe and lands as the entry ends (R200); a boulder shakes the board as it lands.
+ */
+function shotCues(look: FlavorLook, attacker: string, target: string, c: Ctx): FxCue[] {
+  const launch = frac(FX_SHOT_LAUNCH_AT, c.D);
+  const cues: FxCue[] = [
+    { kind: "lunge", attacker, target, delayMs: 0, durationMs: c.D, still: true },
+    shotCue(look, tid(attacker), tid(target), launch, c.D - launch, c.env.intensity),
+  ];
+  if (look.projectile.motion === "arc" && look.projectile.shake === true) {
+    const trauma = Math.min(1, FX_SHOT_SHAKE_TRAUMA * c.env.intensity);
+    if (trauma > 0) cues.push({ kind: "shake", trauma, delayMs: c.D });
+  }
+  return cues;
+}
 
 function stageOf(event: GameEvent, c: Ctx): FxCue[] {
   const { entry, view, D } = c;
@@ -107,6 +162,8 @@ function stageOf(event: GameEvent, c: Ctx): FxCue[] {
       const attacker = targetFor(event, view);
       const target = attackTarget(event.targetId, view);
       if (attacker === null || target === null || attacker === target) return [];
+      const look = FX_FLAVOR_LIVE ? rangedLook(event.attackerId, view) : null;
+      if (look !== null) return shotCues(look, attacker, target, c);
       const tuning = STAGE_TUNING.contactSpark;
       return [
         { kind: "lunge", attacker, target, delayMs: 0, durationMs: D },

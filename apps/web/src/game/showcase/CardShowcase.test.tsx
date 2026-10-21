@@ -10,16 +10,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetFxSettingsForTests, setFxSettings } from "../../fx/settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../../settings/store.ts";
-import { baseView, withEvents } from "../../test/fixtures.ts";
+import { baseView, unit, withEvents } from "../../test/fixtures.ts";
 import { CatalogContext, lookupFromDefs } from "../catalog.ts";
 import Game from "../Game.tsx";
 import CardShowcase from "./CardShowcase.tsx";
-import { SHOWCASE_HOLD_MS, showcaseHoldMs, showcaseTestid as T } from "./constants.ts";
+import {
+  SHOWCASE_HOLD_MS,
+  SHOWCASE_MULTICAST_HOLD_MS,
+  TRAP_REVEAL_TEXT,
+  showcaseHoldMs,
+  showcaseTestid as T,
+} from "./constants.ts";
 
 const lookup = lookupFromDefs(CATALOG);
 const PANTHER = "core-032";
 const PANTHER_NAME = CATALOG[PANTHER]?.name ?? "";
 const SHEEPISH = "core-041";
+const SHEEPISH_NAME = CATALOG[SHEEPISH]?.name ?? "";
+const TESLA = "classic-005";
+const TESLA_NAME = CATALOG[TESLA]?.name ?? "";
 
 const TURN: GameEvent = { type: "turnStarted", player: "p2", turn: 4 };
 
@@ -182,6 +191,54 @@ describe("the opponent's play is held up", () => {
     mountThen([played("p2", "c7", PANTHER)]);
     expect(screen.getByTestId(T.root)).toHaveAttribute("data-motion", "reduce");
     advance(SHOWCASE_HOLD_MS);
+    expect(screen.queryByTestId(T.root)).toBeNull();
+  });
+});
+
+describe("issue #1493 trap reveals are held up", () => {
+  const fired = (controller: "p1" | "p2", instanceId: string, defId: string): GameEvent => ({
+    type: "trapFired",
+    instanceId,
+    defId,
+    controller,
+    row: "backrow",
+    lane: 2,
+  });
+
+  it("issue #1493 shows a Trap and an Animated Field Trap as numbered reveal close-ups", () => {
+    const sheepish = fired("p2", "b1", SHEEPISH);
+    const tesla = fired("p2", "t5", TESLA);
+    // Tesla stands animated in its unit zone: the close-up draws the card as the view lists it now.
+    const teslaUnit = unit("p2", { instanceId: "t5", defId: TESLA, keywords: [{ kind: "Animated" }] });
+    const base = baseView({ opponent: { ...baseView().opponent, units: [teslaUnit, null, null, null, null] } });
+    const { rerender } = render(withCatalog(<CardShowcase view={withEvents(base, [TURN])} />));
+    rerender(withCatalog(<CardShowcase view={withEvents(base, [TURN, sheepish, tesla])} />));
+    const showcase = screen.getByTestId(T.root);
+    expect(showcase).toHaveAttribute("data-showcase", "trap");
+    expect(showcase).toHaveAttribute("data-showcase-def", SHEEPISH);
+    expect(screen.getByTestId(T.face)).toHaveTextContent(SHEEPISH_NAME);
+    expect(screen.getByTestId(T.caption)).toHaveTextContent(TRAP_REVEAL_TEXT.caption);
+    expect(screen.getByTestId(T.live)).toHaveTextContent(`the opponent's trap ${SHEEPISH_NAME} fired (1)`);
+    expect(screen.getByTestId(T.ordinal)).toHaveTextContent("#1");
+    advance(SHOWCASE_MULTICAST_HOLD_MS);
+    expect(screen.getByTestId(T.root)).toHaveAttribute("data-showcase-def", TESLA);
+    expect(screen.getByTestId(T.face)).toHaveTextContent(TESLA_NAME);
+    expect(screen.getByTestId(T.ordinal)).toHaveTextContent("#2");
+  });
+
+  it("issue #1493 gives the other seat the same reveal popup without leaking the trap", () => {
+    mountThen([fired("p2", "hidden", "hidden")]);
+    const showcase = screen.getByTestId(T.root);
+    expect(showcase).toHaveAttribute("data-showcase", "trap");
+    expect(showcase).not.toHaveAttribute("data-showcase-def");
+    expect(screen.getByTestId(T.back)).toBeInTheDocument();
+    expect(screen.queryByTestId(T.face)).toBeNull();
+    expect(screen.queryByTestId(T.ordinal), "a lone reveal gets no badge").toBeNull();
+    expect(screen.getByTestId(T.caption)).toHaveTextContent(TRAP_REVEAL_TEXT.caption);
+    expect(screen.getByTestId(T.live)).toHaveTextContent("the opponent's face-down trap fired");
+    expect(document.body.innerHTML).not.toMatch(/core-\d+/);
+    expect(document.body.textContent).not.toContain(SHEEPISH_NAME);
+    advance(SHOWCASE_MULTICAST_HOLD_MS);
     expect(screen.queryByTestId(T.root)).toBeNull();
   });
 });

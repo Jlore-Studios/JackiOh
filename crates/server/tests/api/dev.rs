@@ -15,17 +15,18 @@ use serde_json::{Value, json};
 use jackioh_engine::config::MAX_COPIES;
 use jackioh_engine::set_ships;
 use jackioh_server::app::{self, App, now_ms};
-use jackioh_server::config::{SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
+use jackioh_server::config::{CARD_TOKEN_BAR_SIZE, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
 use jackioh_server::cosmetics::{CosmeticKind, shipped};
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{CollectionEntry, CollectionGrant, Db};
+use jackioh_server::db::store::{CollectionEntry, CollectionGrant};
 use jackioh_server::economy::math::total_xp_for_level;
 use jackioh_server::economy::store::{
-    Counter, CounterEntry, CounterGrant, EconomyLedger, EconomyReason, JloreReason, OwnedCosmetics, SetTrack,
+    Counter, CounterEntry, CounterGrant, EconomyLedger, EconomyReason, InventoryItem, JloreReason,
+    OwnedCosmetics, SetTrack,
 };
 use jackioh_server::env::{SERVER_ONLY_ENV_VARS, load_env, parse_dev_profile_ids};
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app_with};
+use crate::support::store::fake;
 
 /// The dev account `DEV_PROFILE_IDS` lists.
 const DEV: &str = "d0000000-0000-4000-8000-000000001300";
@@ -57,13 +58,6 @@ fn env_with(extra: &[(&str, &str)]) -> IndexMap<String, String> {
     .chain(extra.iter().copied())
     .map(|(name, value)| (name.to_string(), value.to_string()))
     .collect()
-}
-
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        _ => panic!("the test app runs on the fake store"),
-    }
 }
 
 /// The app with `DEV` listed (in upper case, which the list reads as the same id) and both accounts
@@ -316,7 +310,7 @@ async fn r1300000_a_non_dev_gets_403_on_every_dev_route_and_nothing_is_written()
         .iter()
         .filter(|(_, path, _, _)| path.starts_with("/api/dev/"))
         .map(|(method, path, _, _)| {
-            let path = path.replace(":part", "everything");
+            let path = path.replace(":part", "everything").replace(":bar", "card");
             (*method, path.replace(":questId", "win-1"))
         })
         .collect();
@@ -329,6 +323,7 @@ async fn r1300000_a_non_dev_gets_403_on_every_dev_route_and_nothing_is_written()
             ("POST", "/api/dev/jlore".to_string()),
             ("POST", "/api/dev/fill".to_string()),
             ("POST", "/api/dev/clear/everything".to_string()),
+            ("POST", "/api/dev/bar/card".to_string()),
         ]
     );
     for (method, path) in &routes {
@@ -704,4 +699,91 @@ async fn r1300000_clearing_everything_empties_all_five_and_a_bogus_part_is_no_cl
             rewards_claimed: 0,
         }]
     );
+}
+
+// ---------------------------------------------------------------------------------------------
+// A bar filled (R1310003)
+// ---------------------------------------------------------------------------------------------
+
+/// How many of `item` under `key` `profile_id` holds.
+async fn held(app: &App, profile_id: &str, item: InventoryItem, key: &str) -> i64 {
+    let mut tx = app.db.begin(Some(profile_id)).await.expect("begin");
+    let inventory = tx.economy_inventory_get(profile_id).await.expect("the inventory");
+    tx.commit().await.expect("commit");
+    inventory
+        .iter()
+        .filter(|entry| entry.item == item && entry.key == key)
+        .map(|entry| entry.count)
+        .sum()
+}
+
+/// `counter`'s account-wide value for `profile_id`; a counter never written is 0.
+async fn counter_of(app: &App, profile_id: &str, counter: Counter) -> i64 {
+    let mut tx = app.db.begin(Some(profile_id)).await.expect("begin");
+    let counters = tx.economy_counters_get(profile_id).await.expect("the counters");
+    tx.commit().await.expect("commit");
+    counters
+        .iter()
+        .find(|entry| entry.counter == counter && entry.pack.is_empty())
+        .map_or(0, |entry| entry.value)
+}
+
+#[tokio::test]
+async fn r1310003_filling_a_bar_pays_its_token_marked_dev() {
+    let (app, dev, _other) = dev_app().await;
+
+    // The card bar, part way to its size as a pack's duplicates leave it: the fill tops it up, it
+    // pays one card token and keeps nothing.
+    let mut tx = app.db.begin(Some(DEV)).await.expect("begin");
+    tx.economy_counters_grant(&CounterGrant {
+        profile_id: DEV.to_string(),
+        counter: Counter::CardTokenBar,
+        pack: String::new(),
+        delta: CARD_TOKEN_BAR_SIZE / 2,
+        reason: EconomyReason::PackOpen,
+        reference: None,
+        dev: false,
+        at: now_ms(),
+    })
+    .await
+    .expect("the counter")
+    .expect("a count");
+    tx.commit().await.expect("commit");
+    let before = ledger(&app, DEV).await;
+    let answer = ok(&app, "/api/dev/bar/card", &dev, json!({})).await;
+    assert_eq!(answer, json!({ "written": 2 }));
+    assert_eq!(held(&app, DEV, InventoryItem::CardToken, "").await, 1);
+    assert_eq!(counter_of(&app, DEV, Counter::CardTokenBar).await, 0);
+    let marks = new_marks(&before, &ledger(&app, DEV).await);
+    assert_eq!(marks, vec![("inventory", true, true), ("counters", true, true)]);
+
+    // An empty bar fills whole and pays again; its points need no row.
+    ok(&app, "/api/dev/bar/card", &dev, json!({})).await;
+    assert_eq!(held(&app, DEV, InventoryItem::CardToken, "").await, 2);
+
+    // The cosmetic bar pays the cycle's steps in order (§14.5): a Rare token, then an Epic one,
+    // the cycle's place moving on with each.
+    let before = ledger(&app, DEV).await;
+    ok(&app, "/api/dev/bar/cosmetic", &dev, json!({})).await;
+    assert_eq!(held(&app, DEV, InventoryItem::CosmeticToken, "Rare").await, 1);
+    assert_eq!(held(&app, DEV, InventoryItem::CosmeticToken, "Epic").await, 0);
+    assert_eq!(counter_of(&app, DEV, Counter::CosmeticTokenCycle).await, 1);
+    ok(&app, "/api/dev/bar/cosmetic", &dev, json!({})).await;
+    assert_eq!(held(&app, DEV, InventoryItem::CosmeticToken, "Rare").await, 1);
+    assert_eq!(held(&app, DEV, InventoryItem::CosmeticToken, "Epic").await, 1);
+    assert_eq!(counter_of(&app, DEV, Counter::CosmeticTokenCycle).await, 2);
+    assert_eq!(counter_of(&app, DEV, Counter::CosmeticTokenBar).await, 0);
+    let marks = new_marks(&before, &ledger(&app, DEV).await);
+    assert_eq!(marks.len(), 4, "{marks:?}");
+    assert!(
+        marks.iter().all(|(_, dev_reason, dev)| *dev_reason && *dev),
+        "{marks:?}"
+    );
+
+    // A `:bar` that names no bar is no fill, and writes nothing.
+    let before = ledger(&app, DEV).await;
+    let (status, answer) = api(&app, "POST", "/api/dev/bar/bogus", &dev, json!({})).await;
+    assert_eq!(status, 404, "{answer}");
+    assert_eq!(answer["error"]["code"], json!("not_found"));
+    assert_eq!(ledger(&app, DEV).await, before);
 }

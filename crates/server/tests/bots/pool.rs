@@ -40,19 +40,10 @@ use jackioh_server::db::store::{BotDeck, BotRow, FrozenTrio, Ticket};
 use jackioh_server::username::normalize_username;
 
 use crate::support::deps::empty_test_app;
+use crate::support::store::q;
 
 /// Unit conversion, not configuration: a day in milliseconds.
 const DAY: i64 = 86_400_000;
-
-/// One store call in its own transaction.
-macro_rules! q {
-    ($app:expr, $method:ident($($arg:expr),* $(,)?)) => {{
-        let mut tx = $app.db.begin(None).await.expect("begin");
-        let out = tx.$method($($arg),*).await.expect(stringify!($method));
-        tx.commit().await.expect("commit");
-        out
-    }};
-}
 
 fn bot(id: &str, created_at: i64, retired_at: Option<i64>) -> BotRow {
     BotRow {

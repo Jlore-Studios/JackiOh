@@ -14,6 +14,7 @@
 
 use std::any::Any;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 
@@ -26,11 +27,12 @@ use jackioh_server::api::series::start_series;
 use jackioh_server::app::App;
 use jackioh_server::config::{GLITCH_BOARDS_SAMPLED, MATCH_VOIDED_CLOSE_CODE};
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, ProfileKind, QueueMode};
+use jackioh_server::db::store::{ProfileKind, QueueMode};
 
 use crate::support::deps::{add_user, call, empty_test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
+use crate::support::store::{fake, store, to_json};
 
 const MATCH_ID: &str = "match-glitch";
 const P1: &str = "profile-1";
@@ -42,34 +44,16 @@ const SEED_SEARCH: usize = 5_000;
 /// When the boards below were stored; nothing reads it back.
 const BOARD_AT: i64 = 1_700_000_000_000;
 
-/// One store call in its own transaction.
-macro_rules! store {
-    ($app:expr, $t:ident => $call:expr) => {{
-        let mut $t = $app
-            .db
-            .begin(None)
-            .await
-            .expect("the fake store opens a transaction");
-        let out = $call;
-        $t.commit().await.expect("the fake store commits");
-        out
-    }};
-}
+/// How long `frame` waits for an action's reply. A game's last action is answered only once its
+/// result is written, the ladder payout's fold of the log off the runtime included
+/// (`api/results.rs`, §14.12), so its reply can land after the queue first drains. Every other
+/// reply is found at the first look.
+const REPLY_WITHIN: Duration = Duration::from_secs(1);
+/// How long `frame` sleeps between two looks for the reply.
+const REPLY_STEP: Duration = Duration::from_millis(10);
 
 fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-fn to_json<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("a serialisable value")
-}
-
-/// The fake store behind the test app (SURFACE §11.2's `Db::Fake`).
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        _ => panic!("the test app runs on the fake store"),
-    }
 }
 
 /// One table of the fake store: rows as JSON.
@@ -306,7 +290,8 @@ async fn world(options: WorldOptions) -> World {
     }
 }
 
-/// One client frame, and the actor's queue drained behind it.
+/// One client frame, and the actor's queue drained behind it until its reply (the `ack` or `error`
+/// carrying `nonce`) is in, for up to `REPLY_WITHIN`.
 async fn frame(w: &World, socket: &FakeSocket, nonce: &str, body: Value) -> Option<Value> {
     let actor = w
         .app
@@ -318,10 +303,19 @@ async fn frame(w: &World, socket: &FakeSocket, nonce: &str, body: Value) -> Opti
     let mut action = body;
     action["nonce"] = json!(nonce);
     socket.receive_json(json!({ "type": "action", "action": action }));
-    actor.idle().await;
-    let mut replies = socket.of_type("ack");
-    replies.extend(socket.of_type("error"));
-    replies.pop()
+    let deadline = Instant::now() + REPLY_WITHIN;
+    loop {
+        actor.idle().await;
+        let mut replies = socket.of_type("ack");
+        replies.extend(socket.of_type("error"));
+        if let Some(reply) = replies.into_iter().find(|reply| reply["nonce"] == nonce) {
+            return Some(reply);
+        }
+        if Instant::now() >= deadline {
+            return None;
+        }
+        tokio::time::sleep(REPLY_STEP).await;
+    }
 }
 
 fn last_view(socket: &FakeSocket) -> Value {

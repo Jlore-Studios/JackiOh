@@ -29,10 +29,9 @@ use jackioh_server::api::http::{account_key, address_key, create_rate_limiter};
 use jackioh_server::app::{self, App};
 use jackioh_server::auth::{Auth, SupabaseAuth, SupabaseAuthInput};
 use jackioh_server::config::API_REQUESTS_PER_MINUTE;
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::Db;
 
 use crate::support::deps::{add_user, test_app};
+use crate::support::store::fake_lock;
 
 /// R109's allowance, as the server itself carries it.
 const LIMIT: usize = API_REQUESTS_PER_MINUTE;
@@ -86,14 +85,6 @@ async fn send(app: &Arc<App>, method: &str, path: &str, token: Option<&str>, ip:
         status,
         headers,
         text: String::from_utf8_lossy(&bytes).into_owned(),
-    }
-}
-
-/// The fake store behind the test app.
-async fn fake(app: &App) -> tokio::sync::MutexGuard<'_, FakeData> {
-    match &app.db {
-        Db::Fake(data) => data.lock().await,
-        Db::Pg(_) => panic!("the API tests run on the fake store"),
     }
 }
 
@@ -165,7 +156,7 @@ impl tracing::field::Visit for Fields {
 async fn sign_in(app: &App, id: &str) -> String {
     let user_id = format!("user-{id}");
     let token = add_user(app, &user_id, &format!("{id}@example.test"), true);
-    fake(app)
+    fake_lock(app)
         .await
         .seed_profile(json!({ "id": id, "userId": user_id, "status": "active" }));
     token
@@ -255,7 +246,7 @@ mod the_per_account_api_rate_limit_r109 {
         let app = test_app().await;
         let user_id = "user-pending";
         let token = add_user(&app, user_id, "pending@example.test", true);
-        fake(&app)
+        fake_lock(&app)
             .await
             .seed_profile(json!({ "id": "pending", "userId": user_id, "status": "pending" }));
 

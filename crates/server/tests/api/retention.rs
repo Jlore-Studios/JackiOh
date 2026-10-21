@@ -17,10 +17,10 @@ use jackioh_server::config::{
     CODE_ATTEMPT_RETENTION_DAYS, GAME_RECORD_RAW_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS,
     PLAY_TELEMETRY_RETENTION_DAYS,
 };
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{CodeAttempt, Db, MatchActionRow, MatchRow, MatchSignalRow};
+use jackioh_server::db::store::{CodeAttempt, MatchActionRow, MatchRow, MatchSignalRow};
 
 use crate::support::deps::test_app;
+use crate::support::store::fake_lock;
 
 const DAY_MS: i64 = 86_400_000;
 
@@ -33,14 +33,6 @@ fn from<T: DeserializeOwned>(value: Value) -> T {
 
 fn json_of<T: Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("serialises")
-}
-
-/// The fake store's tables behind the test app.
-async fn fake(app: &App) -> tokio::sync::MutexGuard<'_, FakeData> {
-    match &app.db {
-        Db::Fake(data) => data.lock().await,
-        Db::Pg(_) => panic!("the API tests run on the fake store"),
-    }
 }
 
 fn finished_match(id: &str, finished_at: Option<i64>) -> MatchRow {
@@ -127,7 +119,7 @@ mod the_retention_purge {
         log_attempt(&app, "at-cutoff", code_attempts_before).await;
         log_attempt(&app, "past-cutoff", code_attempts_before - 1).await;
         {
-            let mut data = fake(&app).await;
+            let mut data = fake_lock(&app).await;
             data.tables
                 .matches
                 .push(finished_match("m-at-cutoff", Some(match_actions_ended_before)));
@@ -163,7 +155,7 @@ mod the_retention_purge {
                     .expect("gameRecords.insert")
             );
             t.commit().await.expect("commit");
-            fake(&app).await.tables.game_record_ledger[id].recorded_at = recorded_at;
+            fake_lock(&app).await.tables.game_record_ledger[id].recorded_at = recorded_at;
         }
 
         let purged = purge_expired(&app).await.expect("purgeExpired");
@@ -171,7 +163,7 @@ mod the_retention_purge {
             json_of(&purged),
             json!({ "codeAttempts": 1, "matchActions": 1, "playTelemetry": 1, "gameRecords": 1 })
         );
-        let data = fake(&app).await;
+        let data = fake_lock(&app).await;
         let attempts: Vec<String> = data
             .tables
             .attempts
@@ -215,7 +207,7 @@ mod the_retention_purge {
             log_attempt(&app, ip_hash, at(days)).await;
         }
         {
-            let mut data = fake(&app).await;
+            let mut data = fake_lock(&app).await;
             data.tables
                 .matches
                 .push(finished_match("m-old", Some(at(match_days + 1))));
@@ -233,7 +225,7 @@ mod the_retention_purge {
             json_of(&purged),
             json!({ "codeAttempts": 1, "matchActions": 1, "playTelemetry": 0, "gameRecords": 0 })
         );
-        let data = fake(&app).await;
+        let data = fake_lock(&app).await;
         let attempts: Vec<String> = data
             .tables
             .attempts

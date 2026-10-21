@@ -1,7 +1,8 @@
 //! B32 (#936): the Duos gate at smoke size. The Easy AI team (both seats on `duos_decide`) against a
 //! random-policy team has to win at least DUOS_GATE_WIN_FLOOR of DUOS_GATE_GAMES_SMOKE games. No action
-//! of either team may be refused and no AI action may come off a fallback path (#1385); a failure
-//! names each refused game's seed, which `duos_gate_game(n, "gate")` replays. It plays whole Duos
+//! of either team may be refused, no AI action may come off a fallback path (#1385) and no AI seat's
+//! search may catch a panic (#1429); a failure names each such game's seed, which
+//! `duos_gate_game(n, "gate")` replays. It plays whole Duos
 //! games, so it runs in `ai_slow_b.rs` rather than the `ai` binary.
 
 use jackioh_ai::{
@@ -49,6 +50,17 @@ fn b32_the_easy_ai_team_beats_a_random_policy_team_in_at_least_the_floor_of_the_
         .map(|game| format!("{} ({} fallbacks)", game.seed, game.fallbacks))
         .collect();
     assert_eq!(report.fallbacks, 0, "fell back: {}", fell_back.join(", "));
+    let panicked: Vec<String> = played
+        .iter()
+        .filter(|game| game.sim_panics > 0)
+        .map(|game| {
+            format!(
+                "{} ({} search panics, the first {:?})",
+                game.seed, game.sim_panics, game.first_sim_panic
+            )
+        })
+        .collect();
+    assert_eq!(report.sim_panics, 0, "panicked: {}", panicked.join(", "));
     assert!(report.passes());
 }
 
@@ -65,6 +77,8 @@ fn every_game_won() -> Vec<DuosGateGame> {
             rejected: 0,
             ai_rejected: 0,
             fallbacks: 0,
+            sim_panics: 0,
+            first_sim_panic: None,
         })
         .collect()
 }
@@ -98,6 +112,23 @@ fn b32_a_fallback_action_fails_the_duos_gate_report_even_with_every_game_won() {
     assert_eq!(report.wins, DUOS_GATE_GAMES_SMOKE);
     assert_eq!(report.rejected, 0);
     assert_eq!(report.fallbacks, 3);
+    assert!(!report.passes());
+}
+
+#[test]
+fn b32_a_search_panic_fails_the_duos_gate_report_even_with_every_game_won() {
+    let clean = every_game_won();
+    assert_eq!(duos_gate_report(&clean).sim_panics, 0);
+    assert!(duos_gate_report(&clean).passes());
+
+    let mut panicked = clean.clone();
+    panicked[0].sim_panics = 1;
+    panicked[1].sim_panics = 2;
+    let report = duos_gate_report(&panicked);
+    assert_eq!(report.wins, DUOS_GATE_GAMES_SMOKE);
+    assert_eq!(report.rejected, 0);
+    assert_eq!(report.fallbacks, 0);
+    assert_eq!(report.sim_panics, 3);
     assert!(!report.passes());
 }
 

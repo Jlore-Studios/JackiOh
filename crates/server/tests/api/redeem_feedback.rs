@@ -14,7 +14,6 @@
 //! Surface contract: docs/v0.3.0/SURFACE.md §11.2.
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use axum::body::Body;
 use axum::http::{HeaderMap, Request};
@@ -33,10 +32,10 @@ use jackioh_server::config::{
     CODE_ATTEMPTS_PER_PROFILE_PER_HOUR, REDEMPTION_CIRCUIT_FAILURE_THRESHOLD,
     REDEMPTION_CIRCUIT_WINDOW_SECONDS, REDEMPTION_IDENTICAL_ERROR,
 };
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{CodeAttempt, Db};
+use jackioh_server::db::store::CodeAttempt;
 
 use crate::support::deps::{add_user, test_app};
+use crate::support::store::{advance, fake_lock};
 
 // Fixtures
 
@@ -160,14 +159,6 @@ async fn read_response(response: axum::response::Response) -> Reply {
     }
 }
 
-/// The fake store behind the test app.
-async fn fake(app: &App) -> tokio::sync::MutexGuard<'_, FakeData> {
-    match &app.db {
-        Db::Fake(data) => data.lock().await,
-        Db::Pg(_) => panic!("the API tests run on the fake store"),
-    }
-}
-
 /// §9.4's address hash as the server takes it, peppered as `index.ts` peppers it
 /// (`${CODE_PEPPER}:ip`): HMAC-SHA256 of the trimmed, lower-cased address, in hex.
 struct Hashes {
@@ -221,7 +212,7 @@ struct Caller {
 async fn seed_caller(app: &App, id: &str) -> Caller {
     let user_id = format!("user-{id}");
     let token = add_user(app, &user_id, &format!("{id}@example.test"), true);
-    fake(app)
+    fake_lock(app)
         .await
         .seed_profile(json!({ "id": id, "userId": user_id, "status": "pending" }));
     Caller {
@@ -265,7 +256,7 @@ async fn log_attempts(app: &App, count: i64, profile_id: Option<&str>, ip_hash: 
 }
 
 async fn attempts_logged(app: &App) -> usize {
-    fake(app).await.tables.attempts.len()
+    fake_lock(app).await.tables.attempts.len()
 }
 
 // B7: tries left
@@ -564,7 +555,7 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
         let (_, exhausted) = mint(&app, Some(1), None).await;
         let (revoked_id, revoked) = mint(&app, None, None).await;
         {
-            let mut data = fake(&app).await;
+            let mut data = fake_lock(&app).await;
             let row = data
                 .tables
                 .codes
@@ -630,7 +621,7 @@ mod r192_b8_refusals_at_9_4_steps_2_and_3 {
     {
         let app = code_app().await;
         // The operator paused redemption in the database (app.settings.redemption_enabled = false).
-        fake(&app).await.redemption.enabled = Arc::new(|| false);
+        fake_lock(&app).await.redemption.enabled = Arc::new(|| false);
         let caller = seed_caller(&app, "paused").await;
         let (_, minted) = mint(&app, None, None).await;
 
@@ -756,7 +747,7 @@ mod r192_b9_the_api_limiter_s_429_r109 {
     async fn sign_in(app: &App, id: &str) -> String {
         let user_id = format!("user-{id}");
         let token = add_user(app, &user_id, &format!("{id}@example.test"), true);
-        fake(app)
+        fake_lock(app)
             .await
             .seed_profile(json!({ "id": id, "userId": user_id, "status": "active" }));
         token
@@ -766,10 +757,6 @@ mod r192_b9_the_api_limiter_s_429_r109 {
         reply.json()["error"]["details"]["retryAfterMs"]
             .as_i64()
             .expect("the 429 carries details.retryAfterMs")
-    }
-
-    async fn advance(ms: i64) {
-        tokio::time::advance(Duration::from_millis(u64::try_from(ms).expect("a wait ahead"))).await;
     }
 
     #[tokio::test(start_paused = true)]
@@ -871,7 +858,7 @@ mod b13_a_request_body_larger_than_api_max_body_bytes {
         assert_eq!(body["error"]["message"], json!(TOO_LARGE_MESSAGE));
         // Not an attempt: the handler never saw a code.
         assert_eq!(attempts_logged(&app).await, 0);
-        let data = fake(&app).await;
+        let data = fake_lock(&app).await;
         let row = data
             .tables
             .profiles

@@ -65,9 +65,13 @@ pub fn carries_plague(state: &GameState, card: &CardInstance) -> bool {
 }
 
 /// R471: what one placement onto this card is multiplied by — its text's `plague_multiplier` (Classic
-/// #27), read on the face it wears; a card with no such text, or a Vanilla one (§6.3), multiplies by
-/// 1. Never below 1, since a multiplier shrinks nothing.
+/// #27), read on the face it wears; a card with no such text, a Vanilla one (§6.3) or a face-down one,
+/// whose text sleeps (R1487000), multiplies by 1. Never below 1, since a multiplier shrinks nothing.
 pub fn plague_multiplier_of(state: &GameState, card: &CardInstance) -> i32 {
+    // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+    if crate::preview::lasting_text_dormant(state, card) {
+        return PLAGUE_MULTIPLIER_NONE;
+    }
     let script = script_of(state, card);
     let Some(hook) = script.plague_multiplier.as_ref() else {
         return PLAGUE_MULTIPLIER_NONE;

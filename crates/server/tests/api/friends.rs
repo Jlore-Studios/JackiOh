@@ -8,17 +8,16 @@
 //! (`support::engine`), and a Duos match through S6's room routes.
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use serde_json::{Value, json};
 
 use jackioh_server::app::App;
 use jackioh_server::config::{FRIEND_REQUESTS_PER_HOUR, MAX_FRIENDS, PRESENCE_TTL_MS, TERMS_VERSION};
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, StartMatchInput};
+use jackioh_server::db::store::StartMatchInput;
 
 use crate::support::deps::{TEST_CATALOG_VERSION, add_user, call, empty_test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
+use crate::support::store::{advance, fake, uuid};
 
 /// Unit conversions, not configuration.
 const MINUTE_MS: u64 = 60_000;
@@ -30,13 +29,6 @@ const ACCEPTS_PER_MINUTE: usize = 100;
 // ---------------------------------------------------------------------------------------------
 // Plumbing (private copies: each test file of this binary keeps its own)
 // ---------------------------------------------------------------------------------------------
-
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        _ => panic!("the test app runs on the fake store"),
-    }
-}
 
 /// A config count as a `usize`, whichever integer type `config.rs` gives it.
 fn count<T>(value: T) -> usize
@@ -54,15 +46,6 @@ where
     <u64 as TryFrom<T>>::Error: std::fmt::Debug,
 {
     u64::try_from(value).expect("a duration fits a u64")
-}
-
-async fn advance(ms: u64) {
-    tokio::time::advance(Duration::from_millis(ms)).await;
-}
-
-/// A uuid-shaped id, so a route that parses its path as a uuid takes it.
-fn uuid(n: u32) -> String {
-    format!("00000000-0000-4000-8000-{n:012}")
 }
 
 /// One signed-in account: its profile id, its username as shown (`name#tag`) and its token.

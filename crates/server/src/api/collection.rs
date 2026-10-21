@@ -22,9 +22,10 @@ use crate::api::http::{ApiError, ApiResult, Req, bad_request, json};
 use crate::app::App;
 use crate::db::store::{CollectionEntry, CollectionGrant, Profile, StoreError, Tx};
 
-/// SPEC §11 R111 fixes this: the launch grant is "one copy of every non-token card" (L3 caps a
-/// deck at `MAX_COPIES` and L4 forbids a card id in two decks; R141 leans on it: "L5 is never a
-/// sole failure"). Migration `0002_collection.sql` stores the same value as
+/// SPEC §11 R111 fixes this: the launch grant is one copy of each card it grants, the starter cards
+/// since the economy went live (R1310000; L3 caps a deck at `MAX_COPIES` and L4 forbids a card id
+/// in two decks; R141 leans on it for an account that owns every card: "L5 is never a sole
+/// failure"). Migration `0002_collection.sql` stores the same value as
 /// `app.settings('launch_quantity')`.
 ///
 /// Public because R111's grant is a database trigger in production ("written by a trigger on the
@@ -123,7 +124,9 @@ pub async fn grant_cards(app: &App, input: GrantInput) -> Result<(), ApiError> {
 }
 
 /// BUILD M6-T2: "launch mode grants every card to every active profile." One copy of every
-/// playable id in the catalog; tokens are skipped (§9.4 L3) and so are banned ids (L6).
+/// playable id in the catalog; tokens are skipped (§9.4 L3) and so are banned ids (L6). Since the
+/// economy went live (R1310000) no person's account is granted it; the end-to-end server's active
+/// fixtures are (R1310004), and the tests'.
 ///
 /// Idempotent by topping up to `LAUNCH_COPIES`: a second call computes a zero delta for everything
 /// owned and touches neither table. `reason` is `LAUNCH_GRANT_REASON` unless the caller names

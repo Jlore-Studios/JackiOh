@@ -39,7 +39,7 @@
 //!  - `deps.store.tables.*` are the fake store's rows, read through the store's own methods.
 //!  - `deps.log.entries` is a `tracing` layer of this file's (`log_capture`): the server logs through
 //!    `tracing` with TS's event names (SURFACE §11.3).
-//!  - `deps.timers` is tokio's paused clock (`start_paused = true`); `advance` sleeps on it.
+//!  - `deps.timers` is tokio's paused clock (`start_paused = true`); `sleep_settled` sleeps on it.
 //!  - The `ws` adapter's block runs a real listener and a minimal WebSocket client of this file's,
 //!    since `socketFromWs` and `createMatchSocketHandler` are `actor::ws_server::handle`'s inside now.
 
@@ -70,6 +70,7 @@ use self::log_capture::Recorder;
 use crate::support::deps::{TEST_CATALOG_VERSION, empty_test_app, test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
+use crate::support::store::sleep_settled;
 
 /// R603: the move one ranked game makes between two players new to rating.
 fn rating_move(rating_a: f64, rating_b: f64, score_a: f64) -> (f64, f64) {
@@ -148,13 +149,6 @@ async fn settle() {
     for _ in 0..SETTLE_YIELDS {
         tokio::task::yield_now().await;
     }
-}
-
-/// TS `deps.timers.advance(ms)`: sleeps on the paused clock, so every timer due by then fires in
-/// deadline order, then lets what it woke run.
-async fn advance(ms: i64) {
-    tokio::time::sleep(Duration::from_millis(u64::try_from(ms.max(0)).unwrap_or(0))).await;
-    settle().await;
 }
 
 /// TS `toMatchObject`: every key `expected` names is in `actual` and matches, recursively; arrays
@@ -543,6 +537,9 @@ struct Options {
     ratings: [f64; 2],
     /// R1351000: (blocker, blocked) profile pairs standing before the match starts.
     blocks: Vec<(&'static str, &'static str)>,
+    /// R1483000: the economy on (§14.12), which the build leaves off, so an ending pays and the
+    /// daily cap can hold its Jlore back.
+    economy_live: bool,
 }
 
 impl Default for Options {
@@ -557,6 +554,7 @@ impl Default for Options {
             walk: Walk::ToTurnOne,
             ratings: [1000.0, 1000.0],
             blocks: Vec::new(),
+            economy_live: false,
         }
     }
 }
@@ -689,7 +687,12 @@ async fn harness(options: Options) -> Harness {
             ((p1.clone(), p2.clone()), SEED.to_string())
         }
     };
-    let app = empty_test_app().await;
+    let mut app = empty_test_app().await;
+    if options.economy_live {
+        Arc::get_mut(&mut app)
+            .expect("the test app has no second handle yet")
+            .economy_live = true;
+    }
     let [first, second] = options.ratings;
     seed_profile(
         &app,
@@ -1306,7 +1309,7 @@ mod m6_t4_the_match_actor {
         );
 
         // A second later the budget is back.
-        advance(SECOND).await;
+        sleep_settled(SECOND).await;
         send(&h, &h.p1, "after-window", filler()).await;
         assert_eq!(
             acks(&h.p1).last().map(|ack| ack["nonce"].clone()),
@@ -1446,7 +1449,7 @@ mod m6_t4_the_match_actor {
 
         // A turn expiry ends the active player's turn. (TS fired its stub clock's `expire`; the real
         // clock fires when the deadline passes.)
-        advance(turn_ms()).await;
+        sleep_settled(turn_ms()).await;
         h.idle().await;
         assert_match(
             &h.last_row().await["action"],
@@ -1463,7 +1466,7 @@ mod m6_t4_the_match_actor {
         )
         .await;
         assert_eq!(h.actor.snapshot().pending_for, Some(P1));
-        advance(prompt_ms()).await;
+        sleep_settled(prompt_ms()).await;
         h.idle().await;
         assert_match(
             &h.last_row().await["action"],
@@ -1478,7 +1481,7 @@ mod m6_t4_the_match_actor {
         // turn clock, resumed with the time it had banked (R79), outlasts the grace.
         h.p1.drop_transport();
         h.idle().await;
-        advance(grace_ms()).await;
+        sleep_settled(grace_ms()).await;
         h.idle().await;
         // R146: p2 is the active player by now, and the loss is still p1's — the result is stamped
         // with the seat it belongs to, never with whoever happened to be active.
@@ -1555,7 +1558,7 @@ mod m6_t4_the_match_actor {
         actor.idle().await;
         let active = actor.snapshot().active;
 
-        advance(SECOND).await;
+        sleep_settled(SECOND).await;
         actor.idle().await;
 
         // R146: the ceiling belongs to neither player, so it is stamped with the active seat as a
@@ -2111,7 +2114,7 @@ mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
         send(&h, &h.p2, "p2-vanilla", listed_on(&h.p2, "play", &theirs)).await;
         send(&h, &h.p2, "p2-end", json!({ "type": "endTurn" })).await;
         // R137: p1's window holds MATCH_ACTIONS_PER_SECOND actions a second; turn 2 sends four more.
-        advance(SECOND).await;
+        sleep_settled(SECOND).await;
 
         // p1's turn 2: the two 4/4s trade, so p1's lies in its graveyard; the Plantation (2) takes the
         // turn's mana, its Cry places 2 Plague Counters on it, and its Activate arms one play from the
@@ -2263,7 +2266,7 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
             sent_at.push(now());
             h.idle().await;
             // A whole window between sends, so the eight are admitted on their own merits.
-            advance(EMOTE_WINDOW_MS).await;
+            sleep_settled(EMOTE_WINDOW_MS).await;
         }
 
         let expected: Vec<Value> = held
@@ -2357,7 +2360,7 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
         // The gate's own `retry_after_ms` is the wait — derived from the shared constant, not restated.
         let gate = emote_gate(&[now()], now());
         assert!(!gate.ok);
-        advance(if gate.ok {
+        sleep_settled(if gate.ok {
             0
         } else {
             gate.retry_after_ms.unwrap_or(0)
@@ -2384,7 +2387,7 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
             sent_at.push(now());
             h.idle().await;
             assert_eq!(relays(&h.p2).len(), n + 1);
-            advance(EMOTE_COOLDOWN_MS + 1).await;
+            sleep_settled(EMOTE_COOLDOWN_MS + 1).await;
         }
         // PREMISE: all five really did land inside one window, so the next send has nowhere to go.
         assert!(now() - sent_at.first().copied().unwrap_or(0) < EMOTE_WINDOW_MS);
@@ -2401,7 +2404,7 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
         // one relays again.
         let gate = emote_gate(&sent_at, now());
         assert!(!gate.ok);
-        advance(if gate.ok {
+        sleep_settled(if gate.ok {
             0
         } else {
             gate.retry_after_ms.unwrap_or(0)
@@ -2818,14 +2821,14 @@ mod r1351000_a_block_mutes_emotes_between_the_seats {
 
         // A block between two other accounts touches no match here.
         assert_eq!(h.app.matches.mute_emotes_between("profile-1", "profile-3"), 0);
-        advance(EMOTE_COOLDOWN_MS + 1).await;
+        sleep_settled(EMOTE_COOLDOWN_MS + 1).await;
         h.p1.receive_json(json!({ "type": "emote", "emote": second }));
         h.idle().await;
         assert_eq!(relays(&h.p2).len(), 2);
 
         // The block between this match's two accounts mutes it, whichever of them made it.
         assert_eq!(h.app.matches.mute_emotes_between("profile-2", "profile-1"), 1);
-        advance(EMOTE_WINDOW_MS).await;
+        sleep_settled(EMOTE_WINDOW_MS).await;
         h.p1.receive_json(json!({ "type": "emote", "emote": third }));
         h.p2.receive_json(json!({ "type": "emote", "emote": reply }));
         h.idle().await;
@@ -3564,7 +3567,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         );
 
         // p1 answers 10 s in. Both seats are still on the same deadline, the one that answered included.
-        advance(10 * SECOND).await;
+        sleep_settled(10 * SECOND).await;
         send(
             &h,
             &h.p1,
@@ -3597,10 +3600,10 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
             .collect();
 
         // Nothing happens a millisecond early; at the deadline p2, the one seat still owing, times out.
-        advance(mulligan_ms() - 10 * SECOND - 1).await;
+        sleep_settled(mulligan_ms() - 10 * SECOND - 1).await;
         h.idle().await;
         assert_eq!(h.rows().await.len(), 1);
-        advance(1).await;
+        sleep_settled(1).await;
         h.idle().await;
 
         let log = h.rows().await;
@@ -3656,7 +3659,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         )
         .await;
         assert_eq!(h.actor.snapshot().mulligan_owed, vec![P2]);
-        advance(mulligan_ms()).await;
+        sleep_settled(mulligan_ms()).await;
         h.idle().await;
         assert_match(
             &h.last_row().await["action"],
@@ -3672,7 +3675,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         let h = mulligan_match().await;
         let hands = (ids(&h.p1), ids(&h.p2));
 
-        advance(mulligan_ms()).await;
+        sleep_settled(mulligan_ms()).await;
         h.idle().await;
 
         let log = h.rows().await;
@@ -3715,7 +3718,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         assert_eq!(last_view(&h.p1)["clockMs"].as_i64(), Some(mulligan_ms()));
         assert_eq!(last_view(&h.p2)["clockMs"].as_i64(), Some(mulligan_ms()));
 
-        advance(mulligan_ms()).await;
+        sleep_settled(mulligan_ms()).await;
         h.idle().await;
 
         assert_eq!(
@@ -3734,7 +3737,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         assert!(last_view(&h.p2)["clockMs"].is_null());
 
         // And it is an ordinary turn clock: it runs out in `turnClockSeconds` and ends p1's turn.
-        advance(turn_ms()).await;
+        sleep_settled(turn_ms()).await;
         h.idle().await;
         assert_match(
             &h.last_row().await["action"],
@@ -3760,7 +3763,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
 
         send(&h, &h.p2, "p2-first", json!({ "type": "mulligan", "keep": [] })).await;
         assert_eq!(h.actor.snapshot().mulligan_owed, vec![P1]);
-        advance(mulligan_ms()).await;
+        sleep_settled(mulligan_ms()).await;
         h.idle().await;
         assert_eq!(
             rows_by_type_and_seat(&h.rows().await),
@@ -3771,7 +3774,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
 
         // No second alarm, once both are in: the window's clock fires once (R268) and nothing more is
         // written. (TS fired a late alarm by hand here; with the real clock nothing can.)
-        advance(mulligan_ms()).await;
+        sleep_settled(mulligan_ms()).await;
         h.idle().await;
         assert_eq!(h.rows().await.len(), 2);
         assert_eq!(errors(&h.p1), Vec::<Value>::new());
@@ -3851,7 +3854,7 @@ mod the_concurrent_mulligan_through_the_actor_r265_r266_r268 {
         // No clock is left to fire into a finished match: a whole ceiling's worth of time writes nothing
         // (TS counted the manual timers' queue empty; tokio keeps no such count).
         let rows = h.rows().await.len();
-        advance(ceiling_ms()).await;
+        sleep_settled(ceiling_ms()).await;
         h.idle().await;
         assert_eq!(h.rows().await.len(), rows);
     }
@@ -4739,6 +4742,109 @@ mod r1086_equip_over_the_socket {
             written.get("magnetic").is_none(),
             "written under the new name only: {written}"
         );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// R1483000 — a ladder result says whether the day's Jlore cap held an account's pay back
+// ---------------------------------------------------------------------------
+
+mod the_result_says_what_the_daily_cap_held_back {
+    use super::*;
+    use jackioh_server::config::JLORE_GAMES_DAILY_CAP;
+    use jackioh_server::economy::store::{JloreGrant, JloreReason};
+
+    /// The `jloreCapped` of each `view` frame a client was sent, in order (`None`: no such key).
+    fn flags(socket: &Client) -> Vec<Option<bool>> {
+        socket
+            .of_type("view")
+            .iter()
+            .map(|frame| {
+                frame
+                    .get("jloreCapped")
+                    .map(|flag| flag.as_bool().expect("a boolean"))
+            })
+            .collect()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1483000_a_ladder_result_sends_the_cap_only_to_the_capped_account_and_again_on_reconnect() {
+        let h = harness(Options {
+            economy_live: true,
+            ..Options::default()
+        })
+        .await;
+        // Today's games have already paid profile-1 the cap; profile-2 has played none.
+        let earlier = JloreGrant {
+            profile_id: "profile-1".to_string(),
+            delta: JLORE_GAMES_DAILY_CAP,
+            reason: JloreReason::Game,
+            reference: Some("earlier-game".to_string()),
+            dev: false,
+            at: now(),
+        };
+        {
+            let mut tx = h.app.db.begin(None).await.expect("a store transaction");
+            tx.economy_jlore_grant(&earlier)
+                .await
+                .expect("the earlier game's Jlore");
+            tx.commit().await.expect("commit");
+        }
+        assert_eq!(flags(&h.p1), vec![None], "no frame says it before the game ends");
+
+        send(&h, &h.p1, "resign", json!({ "type": "concede" })).await;
+        assert_eq!(
+            last_view(&h.p1)["result"],
+            json!({ "winner": "p2", "reason": "concede" })
+        );
+
+        // The seat held back is told, in a view of the finished game; the other is told nothing.
+        assert_eq!(flags(&h.p1).last(), Some(&Some(true)));
+        assert!(flags(&h.p2).iter().all(Option::is_none), "{:?}", flags(&h.p2));
+        assert_eq!(
+            last_view(&h.p1)["result"],
+            json!({ "winner": "p2", "reason": "concede" })
+        );
+        assert!(
+            flags(&h.p1)[..flags(&h.p1).len() - 1].iter().all(Option::is_none),
+            "the views before the result carry nothing: {:?}",
+            flags(&h.p1)
+        );
+
+        // A reconnect gets it again in its full view, the opponent's still nothing.
+        let (again1, again2) = (Client::new(), Client::new());
+        h.actor.attach(P1, again1.socket());
+        h.actor.attach(P2, again2.socket());
+        h.idle().await;
+        assert_eq!(flags(&again1), vec![Some(true)]);
+        assert_eq!(flags(&again2), vec![None]);
+
+        // So does one on an actor rebuilt from the store once the rematch window has passed.
+        let window_end =
+            h.actor.finished_at().expect("the concede finished the match") + REMATCH_OFFER_TTL_MS;
+        for client in [&h.p1, &h.p2, &again1, &again2] {
+            client.drop_transport();
+        }
+        settle().await;
+        let app = h.app.clone();
+        drop(h);
+        settle().await;
+        assert_eq!(
+            app.matches.reap_finished(window_end + 1).await,
+            vec![MATCH_ID.to_string()]
+        );
+        let rebuilt = app
+            .matches
+            .actor_for(&app, MATCH_ID)
+            .await
+            .expect("the rebuilt actor");
+        let (back1, back2) = (Client::new(), Client::new());
+        rebuilt.attach(P1, back1.socket());
+        rebuilt.attach(P2, back2.socket());
+        rebuilt.idle().await;
+        settle().await;
+        assert_eq!(flags(&back1), vec![Some(true)]);
+        assert_eq!(flags(&back2), vec![None]);
     }
 }
 

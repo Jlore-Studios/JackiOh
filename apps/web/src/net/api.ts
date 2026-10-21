@@ -379,6 +379,14 @@ export function devClear(token: string, part: DevClearPart): Promise<{ written: 
   return apiRequest<{ written: number }>(`/api/dev/clear/${part}`, { method: "POST", token, body: {} });
 }
 
+/** R1310003: which token bar `POST /api/dev/bar/:bar` fills (SPEC §14.5). */
+export type DevBar = "card" | "cosmetic";
+
+/** R1310003: `POST /api/dev/bar/:bar`: fills that token bar so it pays its token at once, answering the ledger rows written. */
+export function devFillBar(token: string, bar: DevBar): Promise<{ written: number }> {
+  return apiRequest<{ written: number }>(`/api/dev/bar/${bar}`, { method: "POST", token, body: {} });
+}
+
 /** `POST /api/dev/quests`: a quest at once (§14.9), answering it; 409 while the most are held. */
 export function devGiveQuest(token: string): Promise<{ quest: QuestView }> {
   return apiRequest<{ quest: QuestView }>("/api/dev/quests", { method: "POST", token, body: {} });

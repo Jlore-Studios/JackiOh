@@ -1,4 +1,4 @@
-# `e2e/` — the forty-four specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38`, the replays' `39`, the custom cards' `40`, Duos co-op's `41`, Play together's `42`, the preview rings' `43` and watching a friend's `44`, plus twenty-one component specs
+# `e2e/` — the forty-five specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38`, the replays' `39`, the custom cards' `40`, Duos co-op's `41`, Play together's `42`, the preview rings' `43`, watching a friend's `44` and the economy loop's `45`, plus twenty-one component specs
 
 Cypress runs against `apps/web` in `E2E=1` mode: the `/dev/hotseat` route for the local specs and
 a test server with fixture accounts for the networked ones, the Rust `jackioh-server` started with
@@ -35,7 +35,7 @@ pnpm check:fixtures                       # every deck fixture obeys L2/L3/L6 be
 # 1. the client, in E2E mode
 E2E=1 pnpm --dir apps/web dev                  # must serve http://localhost:5173
 
-# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 40, 41, 42, 44
+# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 40, 41, 42, 44, 45
 E2E=1 cargo run --release -p jackioh-server    # http://localhost:8787 and ws://…/ws/match (WS_PATH)
 
 # 3. the suite
@@ -142,7 +142,7 @@ place to change.
 
 | # | Assumption | Where | Ask |
 | --- | --- | --- | --- |
-| A6 | Routes and fixtures for the non-hotseat specs: `/login`, `/invite`, `/decks`, `/play`, `/match/<id>`; `http://localhost:8787` + `ws://localhost:8787/ws/match` (the path is `WS_PATH`, not an assumption); fixture accounts `e2e-p1`, `e2e-p2` (active, own every card) and `e2e-pending` (pending, verified email); seeded invite codes — one good, one missing, one expired, one exhausted. | `support/config.ts` | `apps/web`, `crates/server` |
+| A6 | Routes and fixtures for the non-hotseat specs: `/login`, `/invite`, `/decks`, `/play`, `/match/<id>`; `http://localhost:8787` + `ws://localhost:8787/ws/match` (the path is `WS_PATH`, not an assumption); fixture accounts `e2e-p1`, `e2e-p2` (active, own every card), `e2e-pending` (pending, verified email) and `e2e-econ` (pending, verified email, and a dev account under `E2E=1` alone: spec 45 redeems it into a new account's starter cards, R1310000, R1310004); seeded invite codes — one good, one missing, one expired, one exhausted. | `support/config.ts` | `apps/web`, `crates/server` |
 | A8 | The WS protocol `cy.task("wsPlayer")` speaks: `-> hello {token?,matchId?,roomCode?}`, `-> action {action:{…,nonce}}`; `<- view {view}`, `<- ack {nonce,seq}`, `<- error {code,message,nonce?}`, `<- prompt {forYou,…}`, `<- clock {now,clocks}`. Read off `crates/server/src/actor/protocol.rs`, which fixes every shape, so this is documentation now rather than an assumption. Joining a room is **not** on the socket: `POST /api/rooms/:code/join` is, and the `joinRoom` frame exists only to answer a client that tries with `error {code:"unsupported"}`. | `support/tasks/wsPlayer.ts` | — |
 
 ## What `support/` owns, so a spec does not

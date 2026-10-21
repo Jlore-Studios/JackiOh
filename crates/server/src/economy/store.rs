@@ -32,7 +32,8 @@ use crate::db::store::{StoreError, StoreResult, Tx};
 // ---------------------------------------------------------------------------
 
 /// Why a Jlore row was written (§14.11; `jlore_grants.reason`): a game's, a quest's or a track
-/// level's pay (§14.7–§14.9), a pack bought (§14.3), or a dev account's own grant or clear (§14.10).
+/// level's pay (§14.7–§14.9), a pack bought (§14.3), a dev account's own grant or clear (§14.10),
+/// or the launch's reset (§14.12).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum JloreReason {
@@ -41,11 +42,14 @@ pub enum JloreReason {
     Track,
     PackPurchase,
     Dev,
+    /// Migration 0050's reset of every existing account's economy (R1310002); no server path
+    /// writes it.
+    Launch,
 }
 
 /// Why a row of every other economy ledger was written (§14.11): the Jlore reasons, and a pack
-/// opened (§14.3), a token bar paying (§14.5), a token redeemed (§14.5) and the Chase Shard bar
-/// buying (§14.6).
+/// opened (§14.3), a token bar paying (§14.5), a token redeemed (§14.5), the Chase Shard bar
+/// buying (§14.6) and the launch's reset (§14.12).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum EconomyReason {
@@ -58,6 +62,9 @@ pub enum EconomyReason {
     TokenRedeem,
     ChaseShard,
     Dev,
+    /// Migration 0050's reset of every existing account's economy (R1310002); no server path
+    /// writes it.
+    Launch,
 }
 
 /// What an inventory row counts (§14.3, §14.5, §14.6). A set's card pack is keyed by its set, the
@@ -243,6 +250,14 @@ pub struct JloreGrant {
     pub reference: Option<String>,
     pub dev: bool,
     pub at: i64,
+}
+
+/// What a profile's `game` Jlore rows over one stretch of time add up to (R1483000), for the
+/// daily cap: the whole stretch, and the share of it that one reference (a match) wrote.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct GameJloreTotals {
+    pub day: i64,
+    pub reference: i64,
 }
 
 /// One row of `public.inventory_grants`: `delta` of an item under its key.
@@ -499,6 +514,19 @@ impl Tx<'_> {
         economy_dispatch!(self, jlore_grant(grant))
     }
 
+    /// R1483000: the Jlore the profile's `game` rows add up to with `at` in `[from, until)`
+    /// (milliseconds), and the share of it written under `reference`. Read under the account's
+    /// economy lock, so the sum is the one a payout adds to.
+    pub async fn economy_game_jlore_totals(
+        &mut self,
+        profile_id: &str,
+        from: i64,
+        until: i64,
+        reference: &str,
+    ) -> StoreResult<GameJloreTotals> {
+        economy_dispatch!(self, game_jlore_totals(profile_id, from, until, reference))
+    }
+
     /// §14.3, §14.5, §14.6: the account's packs and tokens, by item and key.
     pub async fn economy_inventory_get(&mut self, profile_id: &str) -> StoreResult<Vec<InventoryEntry>> {
         economy_dispatch!(self, inventory_get(profile_id))
@@ -604,6 +632,16 @@ impl Tx<'_> {
         economy_dispatch!(self, practice_seed_claim(profile_id, seed, at))
     }
 
+    /// R1483000: how many of the profile's seeds are unclaimed and issued at or after
+    /// `issued_since`, the ones `economy_practice_seeds_prune` keeps.
+    pub async fn economy_practice_seeds_open(
+        &mut self,
+        profile_id: &str,
+        issued_since: i64,
+    ) -> StoreResult<i64> {
+        economy_dispatch!(self, practice_seeds_open(profile_id, issued_since))
+    }
+
     /// R1303001: deletes the profile's seeds issued before `issued_before`, claimed or not.
     pub async fn economy_practice_seeds_prune(
         &mut self,
@@ -657,9 +695,9 @@ mod pg {
     use time::OffsetDateTime;
 
     use super::{
-        CardCosmetic, CosmeticGrant, CounterEntry, CounterGrant, EconomyLedger, HeldQuest, InventoryEntry,
-        InventoryGrant, JloreGrant, OwnedCosmetics, PracticeSeed, QuestBook, QuestChange, QuestGrant,
-        SetTrack, TrackGrant, count_after, from_literal, literal, track_after,
+        CardCosmetic, CosmeticGrant, CounterEntry, CounterGrant, EconomyLedger, GameJloreTotals, HeldQuest,
+        InventoryEntry, InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics, PracticeSeed, QuestBook,
+        QuestChange, QuestGrant, SetTrack, TrackGrant, count_after, from_literal, literal, track_after,
     };
     use crate::config::SET_TRACK_FIRST_LEVEL;
     use crate::db::pg::PgTx;
@@ -745,6 +783,33 @@ mod pg {
         .execute(&mut **t)
         .await?;
         Ok(Some(jlore))
+    }
+
+    /// One aggregate over the profile's rows (`jlore_grants_profile_idx` leads it).
+    pub async fn game_jlore_totals(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        from: i64,
+        until: i64,
+        reference: &str,
+    ) -> Result<GameJloreTotals, StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        let (day, reference): (i64, i64) = sqlx::query_as(
+            "select coalesce(sum(delta), 0)::bigint,
+                    coalesce(sum(delta) filter (where ref = $5::text), 0)::bigint
+               from public.jlore_grants
+              where profile_id = $1::uuid and reason = $2::text
+                and at >= to_timestamp($3::double precision / 1000.0)
+                and at < to_timestamp($4::double precision / 1000.0)",
+        )
+        .bind(profile_id)
+        .bind(literal(&JloreReason::Game)?)
+        .bind(from)
+        .bind(until)
+        .bind(reference)
+        .fetch_one(&mut **t)
+        .await?;
+        Ok(GameJloreTotals { day, reference })
     }
 
     pub async fn inventory_get(
@@ -1399,6 +1464,24 @@ mod pg {
         Ok(done.rows_affected() == 1)
     }
 
+    pub async fn practice_seeds_open(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        issued_since: i64,
+    ) -> Result<i64, StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        let open: i64 = sqlx::query_scalar(
+            "select count(*) from public.practice_seeds
+              where profile_id = $1::uuid and claimed_at is null
+                and issued_at >= to_timestamp($2::double precision / 1000.0)",
+        )
+        .bind(profile_id)
+        .bind(issued_since)
+        .fetch_one(&mut **t)
+        .await?;
+        Ok(open)
+    }
+
     pub async fn practice_seeds_prune(
         t: &mut PgTx<'_>,
         profile_id: &str,
@@ -1423,9 +1506,10 @@ mod pg {
 
 mod fake {
     use super::{
-        CardCosmetic, CosmeticGrant, CounterEntry, CounterGrant, EconomyLedger, EconomyTables, HeldQuest,
-        InventoryEntry, InventoryGrant, JloreGrant, OwnedCosmetics, PracticeSeed, QuestBook, QuestChange,
-        QuestGrant, SetTrack, TrackGrant, count_after, literal, track_after,
+        CardCosmetic, CosmeticGrant, CounterEntry, CounterGrant, EconomyLedger, EconomyTables,
+        GameJloreTotals, HeldQuest, InventoryEntry, InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics,
+        PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack, TrackGrant, count_after, literal,
+        track_after,
     };
     use crate::db::fake::FakeTx;
     use crate::db::store::StoreError;
@@ -1473,6 +1557,28 @@ mod fake {
         }
         tables.jlore_grants.push(grant.clone());
         Ok(Some(jlore))
+    }
+
+    pub fn game_jlore_totals(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        from: i64,
+        until: i64,
+        reference: &str,
+    ) -> Result<GameJloreTotals, StoreError> {
+        let tables = call(f, "economy.wallets.gameTotals")?;
+        let mut totals = GameJloreTotals::default();
+        for grant in tables.jlore_grants.iter().filter(|grant| {
+            grant.profile_id == profile_id
+                && grant.reason == JloreReason::Game
+                && (from..until).contains(&grant.at)
+        }) {
+            totals.day += grant.delta;
+            if grant.reference.as_deref() == Some(reference) {
+                totals.reference += grant.delta;
+            }
+        }
+        Ok(totals)
     }
 
     pub fn inventory_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<InventoryEntry>, StoreError> {
@@ -1792,6 +1898,22 @@ mod fake {
             }
             None => Ok(false),
         }
+    }
+
+    pub fn practice_seeds_open(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        issued_since: i64,
+    ) -> Result<i64, StoreError> {
+        let tables = call(f, "economy.practiceSeeds.open")?;
+        let open = tables
+            .practice_seeds
+            .iter()
+            .filter(|held| {
+                held.profile_id == profile_id && held.claimed_at.is_none() && held.issued_at >= issued_since
+            })
+            .count();
+        Ok(i64::try_from(open).unwrap_or(i64::MAX))
     }
 
     pub fn practice_seeds_prune(

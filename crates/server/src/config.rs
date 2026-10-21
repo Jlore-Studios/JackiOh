@@ -2177,6 +2177,11 @@ pub const JLORE_LADDER_LOSS: i32 = 10;
 pub const JLORE_PRACTICE_WIN: i32 = 10;
 /// SPEC §14.8: the Jlore a practice game pays for a loss (#1333's table: 5).
 pub const JLORE_PRACTICE_LOSS: i32 = 5;
+/// SPEC §14.8, R1483000: the most Jlore an account's games pay it in one UTC day, ladder and
+/// practice together, as Hearthstone caps the gold its games pay (quest and track Jlore are not
+/// counted and not stopped). The owner's number (#1483): well above a real day's play, far below
+/// what a loop of conceded practice games would earn.
+pub const JLORE_GAMES_DAILY_CAP: i64 = 2000;
 /// SPEC §14.8: the XP of a game per action the player took, a proxy for time played. #1333's
 /// table leaves it to measured action counts: over R1333001's games 20, 600 and 2,000 average
 /// 999.75 XP a ladder game, `XP_LADDER_TARGET_MEAN`'s 1,000.
@@ -2195,6 +2200,10 @@ pub const XP_LADDER_TARGET_MEAN: i32 = 1000;
 /// SPEC §14.8: how long a practice seed waits to be claimed, in seconds. #1294's table gives no
 /// value; an hour outlasts any game without holding seeds.
 pub const PRACTICE_SEED_TTL_SECONDS: i64 = 3600;
+/// SPEC §14.8, R1483000: how many unclaimed, unexpired practice seeds an account holds at once; a
+/// request past it is refused and issues nothing. Bounds one account's place in the claim queue
+/// (`PRACTICE_VERIFY_CONCURRENCY`). The approved proposal's number (#1483).
+pub const PRACTICE_SEEDS_OPEN_MAX: i64 = 3;
 /// SPEC §14.8, #1303: how many practice claims the server verifies at once, each a fold of the
 /// game's log and a re-run of every AI move off the runtime (`economy::practice`). A claim past it
 /// waits for a verification to finish, and none is dropped. #1294's table gives no value; two keep
@@ -2218,10 +2227,22 @@ pub const QUEST_XP_PER_JLORE: i32 = 50;
 
 /// §14.7: the level a set track starts at, with no XP (migration 0045's `set_tracks.level` default).
 pub const SET_TRACK_FIRST_LEVEL: i64 = 1;
-/// §14.12: the server's switch for the economy, off until the going-live sub-issue (#1310) turns it
-/// on; until then no finished game pays (R1302006) and the client prints every full art as before
-/// (R1313000). Exported to `serverConfig.ts`.
-pub const ECONOMY_LIVE: bool = false;
+/// §14.12: the server's switch for the economy, on since the going-live sub-issue (#1310,
+/// R1310000): finished games pay (R1302006), quests arrive (R1304002) and the client prints a full
+/// art only on its owner's own copies (R1313000). Exported to `serverConfig.ts`.
+pub const ECONOMY_LIVE: bool = true;
+/// §14.12, R1310000: the starter cards, what a new account owns on becoming active (R111): the
+/// cards of the three practice presets (`apps/web/src/practice/decks.ts`), so a new account can
+/// queue any of them. `seed-catalog` writes them to `app.settings.starter_cards`, which migration
+/// 0050's launch grant reads, and the in-memory store reads them here. Exported to
+/// `serverConfig.ts`.
+pub const STARTER_CARDS: &[&str] = &[
+    "core-001", "core-004", "core-005", "core-008", "core-009", "core-011", "core-012", "core-013",
+    "core-014", "core-015", "core-016", "core-019", "core-020", "core-025", "core-030", "core-032",
+    "core-035", "core-036", "core-037", "core-041", "core-044", "core-045", "core-049", "core-053",
+    "core-054", "core-056", "core-058", "core-061", "core-063", "core-066", "core-067", "core-068",
+    "core-069", "core-070", "core-073", "core-074", "core-077", "core-081", "core-088",
+];
 
 // ---- The pack roll (SPEC §14.3, #1301) ----
 // PUBLIC, like the collection economy's above: the pack screen shows these odds, so each is

@@ -186,8 +186,9 @@ folds under, never `crate::card_def`, the build's: then a patch to those words k
 
 `loc` is frozen data since v0.3.0: nothing recomputes it, and a refactor of an existing script leaves it as it is. A new card's comes
 from `cargo jackioh catalog loc crates/cards/src/scripts/<set>/<file>.rs` (its non-blank, non-comment, non-`use` lines above
-`#[cfg(test)]`), written into its entry by hand. In a patch split over several PRs, only the part that changes card data adds the
-fragment ([issues-and-patches.md](issues-and-patches.md)).
+`#[cfg(test)]`), written into its entry by hand; `cargo test -p jackioh-tools` fails on an entry without `loc`, and on a `loc` the
+newest shipped snapshot lacks or holds otherwise that is not this count. In a patch split over several PRs, only the part that
+changes card data adds the fragment ([issues-and-patches.md](issues-and-patches.md)).
 
 ## 4. Gates, and what a new card breaks that is not your card's fault
 

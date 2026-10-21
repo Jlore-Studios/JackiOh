@@ -28,11 +28,12 @@ use jackioh_server::db::store::StartMatchInput;
 
 use super::duos::{
     Account, PROMPTLY, Served, WsClient, account, api, assert_refused_for_its_sign_in, ms,
-    offers_without_a_credential, serve, settle, uuid,
+    offers_without_a_credential, serve, settle,
 };
 use crate::support::deps::{TEST_CATALOG_VERSION, empty_test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
+use crate::support::store::uuid;
 
 /// S7's watch socket.
 const WATCH_PATH: &str = "/ws/watch";

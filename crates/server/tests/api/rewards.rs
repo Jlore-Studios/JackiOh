@@ -8,6 +8,10 @@
 //! room games, voided matches and bot sides pay nothing. Every level position is read through the
 //! constants and the level curve, so the tests hold whatever values #1333 sets.
 //!
+//! The day's cap on what games pay (`JLORE_GAMES_DAILY_CAP`, R1483000) clamps the game that crosses
+//! it, pays the ones after it no Jlore with no row, leaves XP and the track's own Jlore alone, and
+//! starts again with the next UTC day.
+//!
 //! The engine is driven for real where the outcome matters (a win, a mutual-lethal draw, a
 //! concede); the action log the hook counts is appended as rows, which need no engine legality.
 
@@ -20,23 +24,25 @@ use serde_json::{Value, json};
 
 use jackioh_server::actor::clock::initial_clocks;
 use jackioh_server::actor::contracts::{RecordResultInput, TerminalOutcome};
-use jackioh_server::api::results::{ceiling_draw_input, record_ceiling_draw, record_result};
+use jackioh_server::api::results::{ceiling_draw_input, game_jlore_caps, record_ceiling_draw, record_result};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
-    JLORE_LADDER_LOSS, JLORE_LADDER_WIN, MATCH_CEILING_MINUTES, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS,
-    SET_TRACK_UNLOCK_LEVEL, XP_GAME_CAP,
+    JLORE_GAMES_DAILY_CAP, JLORE_LADDER_LOSS, JLORE_LADDER_WIN, MATCH_CEILING_MINUTES, SET_TRACK_FIRST_LEVEL,
+    SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL, XP_GAME_CAP,
 };
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, MatchActionRow, MatchRow, MatchSeat, ResultRow, StoreError};
+use jackioh_server::db::store::{MatchActionRow, MatchRow, MatchSeat, ResultRow, StoreError};
 use jackioh_server::economy::math::total_xp_for_level;
 use jackioh_server::economy::rewards::{GameMode, track_level};
 use jackioh_server::economy::store::{
-    EconomyLedger, EconomyReason, InventoryEntry, InventoryItem, JloreReason, SetTrack, TrackGrant,
+    EconomyLedger, EconomyReason, InventoryEntry, InventoryItem, JloreGrant, JloreReason, SetTrack,
+    TrackGrant,
 };
 use jackioh_server::economy::track_rewards::reward_for_level;
 
 use crate::support::deps::{add_user, call, test_app as built_app};
 use crate::support::engine::{fake_deck, install_test_cards};
+use crate::support::store::{fake_ref, store};
 
 const MINUTE: i64 = 60 * 1000;
 /// A minute past the ceiling (R79, R389), whatever it is.
@@ -52,26 +58,19 @@ fn game_xp(actions: i64, won: bool) -> i64 {
     jackioh_server::economy::rewards::game_xp(GameMode::Ladder, actions, won)
 }
 
-/// The test app with the economy on (§14.12): `ECONOMY_LIVE` is off in the build, so every test
-/// of a payout turns it on for its own app.
+/// The test app with the economy on (§14.12), as `ECONOMY_LIVE` builds it since the economy went
+/// live (R1310000); set here, so a payout test holds whatever the build's switch says.
 async fn test_app() -> Arc<App> {
+    economy_app(true).await
+}
+
+/// The test app with the economy switched to `live`.
+async fn economy_app(live: bool) -> Arc<App> {
     let mut app = built_app().await;
     Arc::get_mut(&mut app)
         .expect("the test app has no second handle yet")
-        .economy_live = true;
+        .economy_live = live;
     app
-}
-
-/// Every store call in this file: one transaction, committed when the call answers.
-macro_rules! store {
-    ($app:expr, |$t:ident| $call:expr) => {{
-        let mut $t = $app.db.begin(None).await.expect("a store transaction begins");
-        let out = $call
-            .await
-            .expect(concat!("the store answers ", stringify!($call)));
-        $t.commit().await.expect("the store transaction commits");
-        out
-    }};
 }
 
 /// The JSON a row or any port value serialises to.
@@ -79,28 +78,20 @@ fn j<T: Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("the value serialises")
 }
 
-/// The fake store behind `test_app()`.
-fn fake(app: &App) -> &Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => data,
-        _ => panic!("support::deps::test_app() runs on the fake store"),
-    }
-}
-
 /// `test_app()` holds the E2E fixtures (R144), so they go first and every row a test reads is
 /// one it wrote.
 async fn fresh_store(app: &App) {
-    fake(app).lock().await.reset();
+    fake_ref(app).lock().await.reset();
 }
 
 /// A profile written without the API (status `active` unless set).
 async fn seed_profile(app: &App, input: Value) {
-    let _ = fake(app).lock().await.seed_profile(input);
+    let _ = fake_ref(app).lock().await.seed_profile(input);
 }
 
 /// One read of the fake's raw tables, as JSON.
 async fn table(app: &App, read: impl Fn(&FakeData) -> Value) -> Value {
-    let data = fake(app).lock().await;
+    let data = fake_ref(app).lock().await;
     read(&data)
 }
 
@@ -160,6 +151,11 @@ async fn scenario() -> Arc<App> {
 
 /// Records `outcome` for `match_id` with the scenario's seats.
 async fn record_on(app: &Arc<App>, match_id: &str, outcome: TerminalOutcome) -> ResultRow {
+    record_on_at(app, match_id, outcome, now_ms()).await
+}
+
+/// `record_on`, the game ending at `at`.
+async fn record_on_at(app: &Arc<App>, match_id: &str, outcome: TerminalOutcome, at: i64) -> ResultRow {
     record_result(
         app,
         RecordResultInput {
@@ -167,7 +163,7 @@ async fn record_on(app: &Arc<App>, match_id: &str, outcome: TerminalOutcome) -> 
             seats: seats(),
             outcome,
             turns: 3,
-            at: now_ms(),
+            at,
             last_boards: None,
             final_hash: None,
         },
@@ -945,11 +941,17 @@ mod no_payout {
     }
 
     #[tokio::test]
+    async fn r1310000_the_build_turns_the_economy_on() {
+        // §14.12: the switch is on in the build, and the app every route reads takes it at boot.
+        const { assert!(jackioh_server::config::ECONOMY_LIVE) };
+        assert!(built_app().await.economy_live);
+    }
+
+    #[tokio::test]
     async fn r1302006_nothing_is_paid_while_the_economy_is_off() {
         install_test_cards();
-        // The build's own app: `ECONOMY_LIVE` is off (§14.12), as in production until launch.
-        let app = built_app().await;
-        assert!(!app.economy_live);
+        // The economy switched off (§14.12), as production ran until launch (R1310000).
+        let app = economy_app(false).await;
         fresh_store(&app).await;
         seed_profile(&app, json!({ "id": A, "rating": 1000.0, "inMatchId": MATCH_ID })).await;
         seed_profile(&app, json!({ "id": B, "rating": 1000.0, "inMatchId": MATCH_ID })).await;
@@ -1041,7 +1043,7 @@ mod joint_commit {
         install_test_cards();
         let app = scenario().await;
         append_log_to(&app, MATCH_ID, &actions_of("p1", 10)).await;
-        fake(&app).lock().await.on_call = Some(Arc::new(|method: &str| {
+        fake_ref(&app).lock().await.on_call = Some(Arc::new(|method: &str| {
             if method == "economy.wallets.grant" {
                 Err(StoreError::Other("injected fault".to_string()))
             } else {
@@ -1253,6 +1255,181 @@ mod quests {
         assert_eq!(
             moved.last().map(|row| (row.change, row.reference.as_deref())),
             Some((QuestChange::Progressed, Some(MATCH_ID)))
+        );
+    }
+}
+
+// R1483000: the day's Jlore cap, over the UTC day a game ended in.
+
+mod daily_cap {
+    use super::*;
+
+    const HOUR: i64 = 60 * MINUTE;
+    const DAY: i64 = 24 * HOUR;
+    /// A UTC day's first millisecond, well clear of the clock, so no test straddles its midnight.
+    const DAY_ZERO: i64 = 20_000 * DAY;
+
+    /// A `game` Jlore row an earlier game wrote for `profile` at `at`, as the cap counts it.
+    async fn earlier_game_jlore(app: &App, profile: &str, delta: i64, at: i64) {
+        let grant = JloreGrant {
+            profile_id: profile.to_string(),
+            delta,
+            reason: JloreReason::Game,
+            reference: Some("earlier-game".to_string()),
+            dev: false,
+            at,
+        };
+        store!(app, |t| t.economy_jlore_grant(&grant));
+    }
+
+    /// A's seat's one counted action, conceded: A (p1) loses and B wins, ending at `at`; the match is
+    /// made unless the scenario holds it.
+    async fn a_concedes(app: &Arc<App>, match_id: &str, at: i64) {
+        if store!(app, |t| t.matches_get(match_id)).is_none() {
+            create_match(app, match_id, true, false).await;
+        }
+        append_log_to(app, match_id, &actions_of("p1", 1)).await;
+        let outcome = play(&[json!({ "type": "concede", "playerId": "p1" })]);
+        record_on_at(app, match_id, outcome, at).await;
+    }
+
+    /// The `game` Jlore rows of `profile`, apart from the earlier one, as (delta, match).
+    async fn paid_by_games(app: &App, profile: &str) -> Vec<(i64, Option<String>)> {
+        ledger_of(app, profile)
+            .await
+            .jlore
+            .into_iter()
+            .filter(|grant| {
+                grant.reason == JloreReason::Game && grant.reference.as_deref() != Some("earlier-game")
+            })
+            .map(|grant| (grant.delta, grant.reference))
+            .collect()
+    }
+
+    async fn caps(app: &Arc<App>, match_id: &str) -> (bool, bool) {
+        let caps = game_jlore_caps(app, match_id).await.expect("the caps are read");
+        (caps.p1, caps.p2)
+    }
+
+    #[tokio::test]
+    async fn r1483000_ladder_jlore_clamps_then_stops_while_xp_pays_and_resets_next_utc_day() {
+        install_test_cards();
+        let app = scenario().await;
+        let (loss, win) = (i64::from(JLORE_LADDER_LOSS), i64::from(JLORE_LADDER_WIN));
+        let left = loss - 3;
+        earlier_game_jlore(&app, A, JLORE_GAMES_DAILY_CAP - left, DAY_ZERO + HOUR).await;
+        let one_game = game_xp(1, false);
+
+        // The game that crosses the cap pays exactly what is left of it, and says it was held back;
+        // the winner, far from its own cap, is paid in full.
+        a_concedes(&app, MATCH_ID, DAY_ZERO + 2 * HOUR).await;
+        assert_eq!(
+            paid_by_games(&app, A).await,
+            vec![(left, Some(MATCH_ID.to_string()))]
+        );
+        assert_eq!(
+            paid_by_games(&app, B).await,
+            vec![(win, Some(MATCH_ID.to_string()))]
+        );
+        assert_eq!(caps(&app, MATCH_ID).await, (true, false));
+
+        // A repeat of the result changes nothing and answers the same.
+        let before = j(&ledger_of(&app, A).await);
+        let outcome = play(&[json!({ "type": "concede", "playerId": "p1" })]);
+        record_on_at(&app, MATCH_ID, outcome, DAY_ZERO + 5 * HOUR).await;
+        assert_eq!(j(&ledger_of(&app, A).await), before);
+        assert_eq!(caps(&app, MATCH_ID).await, (true, false));
+
+        // The next game of the day pays A no Jlore and writes no row, and still pays its XP.
+        a_concedes(&app, MATCH_2, DAY_ZERO + 3 * HOUR).await;
+        assert_eq!(
+            paid_by_games(&app, A).await,
+            vec![(left, Some(MATCH_ID.to_string()))]
+        );
+        assert_eq!(caps(&app, MATCH_2).await, (true, false));
+        let track = track_of(&tracks_of(&app, A).await, newest()).expect("A's newest track");
+        assert_eq!(track.xp, 2 * one_game, "both capped games paid their XP");
+        assert_eq!(paid_by_games(&app, B).await.len(), 2, "B is paid for both");
+
+        // The next UTC day pays again, in full.
+        a_concedes(&app, MATCH_3, DAY_ZERO + DAY + HOUR).await;
+        assert_eq!(
+            paid_by_games(&app, A).await,
+            vec![
+                (left, Some(MATCH_ID.to_string())),
+                (loss, Some(MATCH_3.to_string()))
+            ]
+        );
+        assert_eq!(caps(&app, MATCH_3).await, (false, false));
+    }
+
+    #[tokio::test]
+    async fn r1483000_the_day_ends_at_midnight_utc() {
+        install_test_cards();
+        let app = scenario().await;
+        earlier_game_jlore(&app, A, JLORE_GAMES_DAILY_CAP, DAY_ZERO).await;
+        // The last millisecond of that day is capped; the first of the next is not.
+        a_concedes(&app, MATCH_ID, DAY_ZERO + DAY - 1).await;
+        assert_eq!(paid_by_games(&app, A).await, vec![]);
+        a_concedes(&app, MATCH_2, DAY_ZERO + DAY).await;
+        assert_eq!(
+            paid_by_games(&app, A).await,
+            vec![(i64::from(JLORE_LADDER_LOSS), Some(MATCH_2.to_string()))]
+        );
+    }
+
+    #[tokio::test]
+    async fn r1483000_an_unpaid_game_is_not_called_capped() {
+        install_test_cards();
+        // A room's game pays nothing, whatever the day's total.
+        let app = scenario_with(MATCH_ID, false, false).await;
+        earlier_game_jlore(&app, A, JLORE_GAMES_DAILY_CAP, DAY_ZERO).await;
+        append_log_to(&app, MATCH_ID, &actions_of("p1", 1)).await;
+        let outcome = play(&[json!({ "type": "concede", "playerId": "p1" })]);
+        record_on_at(&app, MATCH_ID, outcome, DAY_ZERO + HOUR).await;
+        assert_eq!(caps(&app, MATCH_ID).await, (false, false));
+        // Nor is a match with no result yet.
+        create_match(&app, MATCH_2, true, false).await;
+        assert_eq!(caps(&app, MATCH_2).await, (false, false));
+    }
+
+    #[tokio::test]
+    async fn r1483000_track_jlore_pays_past_the_game_cap() {
+        install_test_cards();
+        let app = scenario().await;
+        earlier_game_jlore(&app, A, JLORE_GAMES_DAILY_CAP, DAY_ZERO + HOUR).await;
+        // A's newest track sits one small loss below a level that pays Jlore, short of the unlock
+        // level so no older track pays too.
+        let one_game = game_xp(1, false);
+        let next = (SET_TRACK_FIRST_LEVEL + 1..i64::from(SET_TRACK_UNLOCK_LEVEL))
+            .find(|level| reward_for_level(*level).jlore > 0)
+            .expect("a level under the unlock level pays Jlore");
+        let level = next - 1;
+        let start = total_xp_for_level(u32::try_from(next).expect("a level")) - one_game;
+        assert_eq!(track_level(start), level, "the start stands on the level below");
+        grant_track(&app, A, newest(), start, level, level).await;
+
+        a_concedes(&app, MATCH_ID, DAY_ZERO + 2 * HOUR).await;
+        assert_eq!(
+            paid_by_games(&app, A).await,
+            vec![],
+            "the cap held the game's Jlore"
+        );
+        let track_jlore: i64 = ledger_of(&app, A)
+            .await
+            .jlore
+            .iter()
+            .filter(|grant| grant.reason == JloreReason::Track)
+            .map(|grant| grant.delta)
+            .sum();
+        assert_eq!(
+            track_jlore,
+            reward_for_level(next).jlore,
+            "the track's Jlore is paid past it"
+        );
+        assert_eq!(
+            jlore_of(&app, A).await,
+            JLORE_GAMES_DAILY_CAP + reward_for_level(next).jlore
         );
     }
 }

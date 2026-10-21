@@ -41,7 +41,7 @@ export function capacityFor(viewportWidth: number): number {
 }
 
 export type FxDirectorOptions = {
-  surface: FxSurface | null; // null: canvas cues (burst, projectile, crack, ring) are dropped
+  surface: FxSurface | null; // null: canvas cues (burst, projectile, shot, crack, ring) are dropped
   domRoot: HTMLElement; // DOM cues mount here via mountDomEffect (S10)
   now: () => number;
   frames: FxFrameSource;
@@ -138,7 +138,9 @@ function boxOfElement(element: Element): FxBox | null {
 }
 
 function isCanvasCue(cue: FxCue): boolean {
-  return cue.kind === "burst" || cue.kind === "projectile" || cue.kind === "crack" || cue.kind === "ring";
+  return (
+    cue.kind === "burst" || cue.kind === "projectile" || cue.kind === "shot" || cue.kind === "crack" || cue.kind === "ring"
+  );
 }
 
 function atOf(anchor: FxAnchor): FxPoint | undefined {
@@ -328,6 +330,22 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         const attacker = element(cue.attacker);
         const target = element(cue.target);
         if (attacker === null || target === null) return;
+        const aim = (x: string, y: string): void => {
+          attacker.style.setProperty("--fx-lunge-x", x);
+          attacker.style.setProperty("--fx-lunge-y", y);
+          staged.push({
+            undo: () => {
+              attacker.style.removeProperty("--fx-lunge-x");
+              attacker.style.removeProperty("--fx-lunge-y");
+            },
+            expiresAt,
+          });
+        };
+        // #1442: a Ranged attacker rears and flashes where it stands, its shot doing the travelling.
+        if (cue.still === true) {
+          aim("0px", "0px");
+          return;
+        }
         const a = boxOfElement(attacker);
         const b = boxOfElement(target);
         if (a === null || b === null) return;
@@ -340,15 +358,7 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         const uy = Math.abs(dy) / distance;
         const extents = (ux * (a.width + b.width) + uy * (a.height + b.height)) / 2;
         const reach = Math.min(FX_LUNGE_MAX_PX, Math.max(FX_LUNGE_MIN_PX, distance - extents * FX_LUNGE_STANDOFF));
-        attacker.style.setProperty("--fx-lunge-x", `${((dx / distance) * reach).toFixed(1)}px`);
-        attacker.style.setProperty("--fx-lunge-y", `${((dy / distance) * reach).toFixed(1)}px`);
-        staged.push({
-          undo: () => {
-            attacker.style.removeProperty("--fx-lunge-x");
-            attacker.style.removeProperty("--fx-lunge-y");
-          },
-          expiresAt,
-        });
+        aim(`${((dx / distance) * reach).toFixed(1)}px`, `${((dy / distance) * reach).toFixed(1)}px`);
         return;
       }
     }
@@ -387,8 +397,9 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
           box,
           power: cue.power,
           ...(cue.scale === undefined ? {} : { scale: cue.scale }),
+          ...(cue.colors === undefined ? {} : { colors: cue.colors }),
         });
-        canvasFx.flash(cue.preset, origin, box, cue.count);
+        canvasFx.flash(cue.preset, origin, box, cue.count, cue.colors);
         return;
       }
       case "projectile": {
@@ -397,6 +408,22 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
         const to = measure(cue.to);
         if (to === null) return;
         canvasFx.projectile(cue.preset, pointIn(from, atOf(cue.from)), pointIn(to, atOf(cue.to)), cue.flightMs, cue.density);
+        return;
+      }
+      case "shot": {
+        const from = measure(cue.from);
+        if (from === null) return;
+        const to = measure(cue.to);
+        if (to === null) return;
+        canvasFx.shot(
+          cue.shot,
+          cue.colors,
+          cue.preset,
+          pointIn(from, atOf(cue.from)),
+          pointIn(to, atOf(cue.to)),
+          cue.flightMs,
+          cue.density,
+        );
         return;
       }
       case "crack": {

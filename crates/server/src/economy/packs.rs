@@ -199,6 +199,23 @@ pub(crate) fn bar_before(counters: &[CounterEntry], counter: Counter) -> i64 {
         .map_or(0, |entry| entry.value)
 }
 
+/// What the cosmetic token cycle pays at `position`, its steps paid so far (§14.5): a Rare or an
+/// Epic cosmetic token, or a cosmetic pack. A pack opening's bar and a dev account's fill
+/// (`api::dev::fill_bar`, R1310003) both pay through it.
+pub(crate) fn cycle_step(position: i64) -> (InventoryItem, String) {
+    match COSMETIC_TOKEN_CYCLE[(position % COSMETIC_TOKEN_CYCLE.len() as i64) as usize] {
+        CosmeticTokenStep::Rare => (
+            InventoryItem::CosmeticToken,
+            CosmeticRarity::Rare.as_str().to_string(),
+        ),
+        CosmeticTokenStep::Epic => (
+            InventoryItem::CosmeticToken,
+            CosmeticRarity::Epic.as_str().to_string(),
+        ),
+        CosmeticTokenStep::CosmeticPack => (InventoryItem::CosmeticPack, String::new()),
+    }
+}
+
 /// Writes the cards an opening unlocked, `unlocked` copies per card over the copies `owned` before
 /// it: the collection's absolute quantities, then its ledger's deltas (reason [`PACK_GRANT_REASON`]),
 /// as `api::collection::grant_cards` writes them. Nothing unlocked writes nothing. A card pack's
@@ -317,19 +334,7 @@ pub(crate) async fn settle_bars(
         )
         .await?;
         for paid in 0..cosmetic_pays {
-            let step =
-                COSMETIC_TOKEN_CYCLE[((cycle_before + paid) % COSMETIC_TOKEN_CYCLE.len() as i64) as usize];
-            let (item, key) = match step {
-                CosmeticTokenStep::Rare => (
-                    InventoryItem::CosmeticToken,
-                    CosmeticRarity::Rare.as_str().to_string(),
-                ),
-                CosmeticTokenStep::Epic => (
-                    InventoryItem::CosmeticToken,
-                    CosmeticRarity::Epic.as_str().to_string(),
-                ),
-                CosmeticTokenStep::CosmeticPack => (InventoryItem::CosmeticPack, String::new()),
-            };
+            let (item, key) = cycle_step(cycle_before + paid);
             tx.economy_inventory_grant(&InventoryGrant {
                 profile_id: profile_id.to_string(),
                 item,

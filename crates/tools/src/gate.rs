@@ -14,7 +14,9 @@
 //! count: a draw at the turn cap is reported (`turnCapDraws`) and counts for nothing. Without `--full`
 //! it plays AI_GATE.smokeSeeds per matchup; `--full` (or `JACKIOH_AI_GATE=full`) plays
 //! AI_GATE.fullSeeds[matchup]. A failure names the seeds not won. Every game must be clean (B31):
-//! nothing rejected, thrown or fallen back, a real result, a log that folds to the live hash.
+//! nothing rejected, thrown or fallen back, a real result, a log that folds to the live hash, and no
+//! panic caught in an AI's search (`MatchRecord.sim_panics`, #1429), which the summary counts and a
+//! failure names by seed, seat and first message: in the browser that panic is a trap.
 //! The perf gate (B42) then checks that a decision at the browser's budget stays under
 //! AI_GATE.maxDecisionMs, and one on each pinned position under AI_GATE.pinnedDecisionMs
 //! (`perf_gate`, #1240).
@@ -791,8 +793,13 @@ fn check_report(run: &GateReport, played: &[i32]) -> Result<()> {
     Ok(())
 }
 
-/// B31: every game is clean: nothing rejected or thrown, no fallback, a result, and a replay that
-/// matches.
+/// #1429: the panics the AI's searches caught over a run's games.
+fn search_panics(run: &GateReport) -> usize {
+    run.games.iter().map(|game| game.record.sim_panics).sum()
+}
+
+/// B31: every game is clean: nothing rejected or thrown, no fallback, no panic caught in an AI's
+/// search (#1429), a result, and a replay that matches.
 fn check_clean(run: &GateReport) -> Result<()> {
     for game in &run.games {
         let label = format!("{} ({})", game.seed, game.subject_seat);
@@ -801,6 +808,13 @@ fn check_clean(run: &GateReport) -> Result<()> {
         })?;
         expect_that(game.record.thrown.is_empty(), || {
             format!("{label}: thrown {:?}", game.record.thrown)
+        })?;
+        expect_that(game.record.sim_panics == 0, || {
+            let first = game.record.first_sim_panic.as_ref().map_or_else(
+                || "no message kept".to_string(),
+                |first| format!("the first in {}'s search: {}", first.seat, first.message),
+            );
+            format!("{label}: {} search panics, {first}", game.record.sim_panics)
         })?;
         expect_eq(game.record.fallbacks as i64, 0, &format!("{label}: fallbacks"))?;
         expect_that(game.record.result.is_some(), || format!("{label}: no result"))?;
@@ -867,9 +881,11 @@ fn gate_matchup(matchup: Matchup, full: bool, shard: Option<GateShard>, out: &Pa
     if let Some(shard) = shard {
         match write_shard(&run, games, shard, &played, out) {
             Ok(path) => println!(
-                "[gate {name}{shard_label}] {} wins and {} turn-cap draws, written to {} ({seconds:.1}s)",
+                "[gate {name}{shard_label}] {} wins, {} turn-cap draws and {} search panics, written to {} \
+                 ({seconds:.1}s)",
                 run.wins,
                 run.turn_cap_draws,
+                search_panics(&run),
                 path.display()
             ),
             Err(error) => problems.push(format!("{name}: {error:#}")),
@@ -878,8 +894,11 @@ fn gate_matchup(matchup: Matchup, full: bool, shard: Option<GateShard>, out: &Pa
     }
     // Written to stdout, so a green gate still shows how it passed.
     println!(
-        "[gate {name}] {} wins and {} turn-cap draws of {games}; {needed} wins needed ({seconds:.1}s)",
-        run.wins, run.turn_cap_draws
+        "[gate {name}] {} wins and {} turn-cap draws of {games}; {needed} wins needed; {} search panics \
+         ({seconds:.1}s)",
+        run.wins,
+        run.turn_cap_draws,
+        search_panics(&run)
     );
     if run.wins < needed {
         problems.push(format!(
@@ -1265,6 +1284,7 @@ mod tests {
     //! pool (issue #1113); ai-vs-random keeps the live table.
 
     use super::*;
+    use jackioh_ai::{MatchRecord, SimPanic};
 
     /// The games each matchup's smoke test plays.
     const SMOKE_GAMES: i32 = 4;
@@ -1358,6 +1378,61 @@ mod tests {
     #[test]
     fn b30_b31_the_hard_ai_wins_against_itself_on_easy_and_every_game_is_clean() {
         smoke_fixture("hard-vs-easy");
+    }
+
+    #[test]
+    fn b31_a_search_panic_fails_the_gate_and_names_its_seed_seat_and_first_message() {
+        let seed = gate_seed(Matchup::HardVsEasy, 2);
+        let game = GateGame {
+            seed: seed.clone(),
+            subject_seat: PlayerId::P2,
+            record: MatchRecord {
+                result: Some(jackioh_engine::GameResult {
+                    winner: Winner::P2,
+                    reason: GameOverReason::HeroDeath,
+                }),
+                log: Vec::new(),
+                hash: "h".into(),
+                turns: 9,
+                rejected: Vec::new(),
+                thrown: Vec::new(),
+                fallbacks: 0,
+                decisions: 1,
+                nodes: 1,
+                sim_panics: 0,
+                first_sim_panic: None,
+                played: PerPlayer {
+                    p1: Vec::new(),
+                    p2: Vec::new(),
+                },
+            },
+            won: true,
+            replay_hash: "h".into(),
+            replay_errors: 0,
+        };
+        let mut run = GateReport {
+            matchup: Matchup::HardVsEasy,
+            games: vec![game],
+            wins: 1,
+            turn_cap_draws: 0,
+            rate: 1.0,
+        };
+        assert_eq!(search_panics(&run), 0);
+        check_clean(&run).unwrap();
+
+        run.games[0].record.sim_panics = 2;
+        run.games[0].record.first_sim_panic = Some(SimPanic {
+            seat: PlayerId::P1,
+            message: "a guessed world broke".into(),
+        });
+        assert_eq!(search_panics(&run), 2);
+        let error = check_clean(&run).unwrap_err().to_string();
+        assert!(
+            error.contains(&format!(
+                "{seed} (p2): 2 search panics, the first in p1's search: a guessed world broke"
+            )),
+            "{error}"
+        );
     }
 
     /// The clock is judged only in an optimised build: an unoptimised test binary slows the search and

@@ -234,7 +234,7 @@ pub fn run(args: &Args) -> Result<()> {
 mod tests {
     use super::*;
     use crate::arena::{self, AgentSpec, ArenaGame};
-    use jackioh_ai::AI_SKILL_MAX;
+    use jackioh_ai::{AI_GATE_BUDGET, AI_SKILL_MAX};
     use jackioh_engine::PerPlayer;
     use serde_json::json;
 
@@ -271,6 +271,7 @@ mod tests {
             paired,
             turn_actions: None,
             stop_unsettled: false,
+            self_budget: AI_GATE_BUDGET,
         }
     }
 

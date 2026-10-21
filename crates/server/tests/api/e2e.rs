@@ -27,22 +27,28 @@ use sha2::Sha256;
 use tower::ServiceExt;
 
 use jackioh_engine::config::DECK_SIZE;
+use jackioh_engine::newest_shipped_set;
 use jackioh_server::api::collection::{LAUNCH_COPIES, LAUNCH_GRANT_REASON};
 use jackioh_server::api::cors::is_origin_allowed;
 use jackioh_server::api::crypto::normalize_code;
+use jackioh_server::api::dev::is_dev;
 use jackioh_server::api::e2e::{
     E2E_ACCOUNTS, E2E_INVITE_CODES, E2E_RESEED_PATH, E2EAccount, E2EInviteCodes, E2ESeedOptions,
     seed_e2e_fixtures, seed_e2e_fixtures_with,
 };
 use jackioh_server::api::queue::e2e_seed_count;
 use jackioh_server::app::{self, App, now_ms};
-use jackioh_server::config::{MAX_SAVED_DECKS, REDEMPTION_IDENTICAL_ERROR};
+use jackioh_server::config::{
+    MAX_SAVED_DECKS, REDEMPTION_IDENTICAL_ERROR, SET_TRACK_FIRST_LEVEL, STARTER_CARDS,
+};
 use jackioh_server::db::fake::{E2eStoreOptions, FakeCatalog, create_e2e_store};
 use jackioh_server::db::store::{
     CollectionEntry, Db, InviteCode, MatchActionRow, ProfileCreateInput, Room, SavedDeck, Ticket, Tx,
 };
+use jackioh_server::economy::track_rewards::reward_for_level;
 
 use crate::support::deps::{call, test_app};
+use crate::support::store::{store, try_store, uuid};
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -62,6 +68,30 @@ fn grant_catalog() -> FakeCatalog {
         is_token: Arc::new(|card_id: &str| card_id == TOKEN),
         is_banned: Arc::new(|card_id: &str| card_id == BANNED),
     }
+}
+
+/// R1310000: the starter cards among `grant_catalog()`'s, all that its activation grant hands a new
+/// account: some of the playable cards and not all of them.
+fn starters() -> Vec<&'static str> {
+    let starters: Vec<&str> = PLAYABLE
+        .into_iter()
+        .filter(|id| STARTER_CARDS.contains(id))
+        .collect();
+    assert!(
+        !starters.is_empty() && starters.len() < PLAYABLE.len(),
+        "{starters:?}"
+    );
+    starters
+}
+
+/// R1310004: how many cards an active fixture owns after a reseed, every non-token, unbanned card of
+/// the app's catalog (`grant_entire_catalog`), the real one, which the harness keeps.
+fn every_card(app: &App) -> usize {
+    app.catalog
+        .card_ids
+        .iter()
+        .filter(|id| !app.catalog.is_token(id) && !app.catalog.is_banned(id))
+        .count()
 }
 
 /// End-to-end mode's store over `grant_catalog()`, on the server's clock.
@@ -137,28 +167,6 @@ fn hashes(app: &App) -> Hashes {
     Hashes {
         pepper: app.env.code_pepper.clone(),
     }
-}
-
-/// One store call in a transaction of its own (TS called the store's methods bare).
-macro_rules! store {
-    ($db:expr, $method:ident($($arg:expr),* $(,)?)) => {{
-        let mut t = $db.begin(None).await.expect("begin");
-        let out = t.$method($($arg),*).await.unwrap_or_else(|error| panic!("{}: {error:?}", stringify!($method)));
-        t.commit().await.expect("commit");
-        out
-    }};
-}
-
-/// The same call, answering its `Result` instead of insisting on `Ok`.
-macro_rules! try_store {
-    ($db:expr, $method:ident($($arg:expr),* $(,)?)) => {{
-        let mut t = $db.begin(None).await.expect("begin");
-        let out = t.$method($($arg),*).await;
-        if out.is_ok() {
-            t.commit().await.expect("commit");
-        }
-        out
-    }};
 }
 
 fn account(user_id: &str) -> &'static E2EAccount {
@@ -444,7 +452,7 @@ mod r111_the_launch_grant_on_pending_active {
     use super::*;
 
     #[tokio::test(start_paused = true)]
-    async fn grants_one_copy_of_every_non_token_unbanned_card_and_writes_both_tables() {
+    async fn r1310000_grants_one_copy_of_each_starter_card_and_writes_both_tables() {
         let db = e2e_store();
         let id = id_of(&create_profile(&db, "u1").await);
 
@@ -458,14 +466,15 @@ mod r111_the_launch_grant_on_pending_active {
             .map(|entry| entry["cardId"].as_str().expect("an id"))
             .collect();
         ids.sort();
-        assert_eq!(ids, PLAYABLE.to_vec());
+        // R1310000: the starter cards and nothing else, never the Token or the banned card.
+        assert_eq!(ids, starters());
         for entry in entries {
             assert_eq!(entry["quantity"], json!(LAUNCH_COPIES));
         }
 
         // §9.4: "Every collection change writes `collection` and `collection_grants`."
         let grants = grants_for(&db, &id).await;
-        assert_eq!(grants.len(), PLAYABLE.len());
+        assert_eq!(grants.len(), starters().len());
         for grant in &grants {
             assert_eq!(grant["delta"], json!(LAUNCH_COPIES));
             assert_eq!(grant["reason"], json!(LAUNCH_GRANT_REASON));
@@ -513,7 +522,7 @@ mod r144_the_reseed_at_boot {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn seeds_the_three_fixture_accounts_two_of_them_active_and_owning_every_card() {
+    async fn seeds_the_fixture_accounts_two_of_them_active_and_owning_every_card() {
         let app = harness().await;
         seed_e2e_fixtures(&app).await.expect("the reseed");
 
@@ -522,9 +531,10 @@ mod r144_the_reseed_at_boot {
             assert!(!profile.is_null(), "{} has a profile", fixture.user_id);
             assert_eq!(profile["status"], json_of(&fixture.status));
             let owned = collection_of(&app.db, profile["id"].as_str().unwrap_or("")).await;
-            // A6: `e2e-p1` and `e2e-p2` "own every card"; `e2e-pending` owns nothing until it redeems.
+            // A6: `e2e-p1` and `e2e-p2` "own every card" (R1310004); `e2e-pending` and `e2e-econ` own
+            // nothing until they redeem.
             let expected = if profile["status"] == json!("active") {
-                PLAYABLE.len()
+                every_card(&app)
             } else {
                 0
             };
@@ -595,7 +605,7 @@ mod r144_the_reseed_at_boot {
         // R144: "the server reseeds ... at boot". Two boots.
         seed_e2e_fixtures(&app).await.expect("the first reseed");
         let first = seed_e2e_fixtures(&app).await.expect("the second reseed");
-        assert_eq!(first.granted_cards as usize, PLAYABLE.len());
+        assert_eq!(first.granted_cards as usize, every_card(&app));
 
         let pending_profile = json_of(&store!(app.db, profiles_get_by_user_id(&pending().user_id)));
         assert_eq!(
@@ -631,12 +641,18 @@ mod r144_the_reseed_at_boot {
         assert_eq!(status, 409);
         assert_ne!(body["error"]["message"], json!(REDEMPTION_IDENTICAL_ERROR));
 
-        // ...and the freshly activated account owns exactly one copy of everything, once.
+        // ...and the freshly activated account owns exactly one copy of each starter card, once
+        // (R1310000).
         let (status, _headers, owned) =
             call(&app, "GET", "/api/collection", Some(pending().token), Value::Null).await;
         assert_eq!(status, 200);
         let entries = owned["entries"].as_array().expect("entries");
-        assert_eq!(entries.len(), PLAYABLE.len());
+        let mut ids: Vec<&str> = entries
+            .iter()
+            .map(|entry| entry["cardId"].as_str().expect("an id"))
+            .collect();
+        ids.sort();
+        assert_eq!(ids, starters());
         for entry in entries {
             assert_eq!(entry["quantity"], json!(LAUNCH_COPIES));
         }
@@ -797,6 +813,96 @@ mod the_fixture_auth_provider {
 }
 
 // ---------------------------------------------------------------------------
+// R1310000, R1310004: going live, for the end-to-end server
+// ---------------------------------------------------------------------------
+
+mod r1310000_going_live {
+    use super::*;
+
+    fn econ() -> &'static E2EAccount {
+        account("e2e-econ")
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1310000_a_redemption_grants_the_starter_cards_and_pays_the_newest_track_s_first_level() {
+        let app = harness().await;
+        assert!(app.economy_live, "the economy is live (§14.12)");
+        seed_e2e_fixtures(&app).await.expect("the reseed");
+        let id = id_of(&json_of(&store!(
+            app.db,
+            profiles_get_by_user_id(pending().user_id)
+        )));
+        assert_eq!(store!(app.db, economy_jlore_get(&id)), 0);
+
+        let (status, body) = redeem(&app, E2E_INVITE_CODES.good).await;
+        assert_eq!(status, 200, "{body}");
+        let mut owned: Vec<String> = store!(app.db, collection_get(&id))
+            .into_iter()
+            .map(|entry| entry.card_id)
+            .collect();
+        owned.sort();
+        assert_eq!(owned, starters());
+        // The newest set's track, the one active from the start, is paid through its first level.
+        assert_eq!(
+            store!(app.db, economy_jlore_get(&id)),
+            reward_for_level(SET_TRACK_FIRST_LEVEL).jlore
+        );
+        let tracks = store!(app.db, economy_tracks_get(&id));
+        let newest = tracks
+            .iter()
+            .find(|track| track.set_id == newest_shipped_set().as_str())
+            .expect("the newest set's track");
+        assert_eq!(
+            (newest.xp, newest.level, newest.rewards_claimed),
+            (0, SET_TRACK_FIRST_LEVEL, SET_TRACK_FIRST_LEVEL)
+        );
+        assert_eq!(tracks.len(), 1, "no older track is unlocked: {tracks:?}");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1310004_the_active_fixtures_own_every_card_and_e2e_econ_alone_is_dev() {
+        let app = harness().await;
+        seed_e2e_fixtures(&app).await.expect("the reseed");
+        for fixture in E2E_ACCOUNTS {
+            let profile = store!(app.db, profiles_get_by_user_id(fixture.user_id))
+                .unwrap_or_else(|| panic!("{} has a profile", fixture.user_id));
+            let owned = store!(app.db, collection_get(&profile.id)).len();
+            let active = fixture.user_id == "e2e-p1" || fixture.user_id == "e2e-p2";
+            assert_eq!(
+                owned,
+                if active { every_card(&app) } else { 0 },
+                "{}",
+                fixture.user_id
+            );
+            // Dev in end-to-end mode only, and only the economy loop's account.
+            assert_eq!(
+                is_dev(&app, &profile),
+                fixture.user_id == econ().user_id,
+                "{}",
+                fixture.user_id
+            );
+            let (status, _headers, me) =
+                call(&app, "GET", "/api/auth/me", Some(fixture.token), Value::Null).await;
+            assert_eq!(status, 200, "{me}");
+            assert_eq!(
+                me["isDev"],
+                json!(fixture.user_id == econ().user_id),
+                "{}",
+                fixture.user_id
+            );
+        }
+        assert_eq!(econ().status, jackioh_server::api::e2e::E2EAccountStatus::Pending);
+
+        // Outside end-to-end mode the mark counts for nothing: only `DEV_PROFILE_IDS` lists a dev.
+        let profile = store!(app.db, profiles_get_by_user_id(econ().user_id)).expect("e2e-econ's profile");
+        let mut app =
+            Arc::try_unwrap(app).unwrap_or_else(|_| panic!("the harness hands back its only reference"));
+        app.env.e2e = false;
+        assert!(!is_dev(&app, &profile));
+    }
+}
+
+// ---------------------------------------------------------------------------
 // R144, on demand (POST /api/e2e/reseed)
 // ---------------------------------------------------------------------------
 
@@ -847,20 +953,17 @@ mod r144_the_reseed_on_demand {
         let (status, _headers, body) = call(&app, "POST", E2E_RESEED_PATH, None, Value::Null).await;
         assert_eq!(status, 200);
         assert_eq!(body["codes"], json!(["good", "expired", "exhausted"]));
-        assert_eq!(body["grantedCards"], json!(PLAYABLE.len()));
+        assert_eq!(body["grantedCards"], json!(every_card(&app)));
         let reseeded: Vec<&str> = body["profiles"]
             .as_object()
             .expect("the profiles")
             .keys()
             .map(String::as_str)
             .collect();
-        assert_eq!(
-            reseeded,
-            E2E_ACCOUNTS
-                .iter()
-                .map(|fixture| fixture.user_id)
-                .collect::<Vec<_>>()
-        );
+        // The body's keys come sorted; the fixtures in any order.
+        let mut fixtures: Vec<&str> = E2E_ACCOUNTS.iter().map(|fixture| fixture.user_id).collect();
+        fixtures.sort_unstable();
+        assert_eq!(reseeded, fixtures);
 
         assert_eq!(good_code_uses(&app).await, json!(0));
         assert_eq!(pending_status(&app).await, json!("pending"));
@@ -904,11 +1007,6 @@ mod r144_the_reseed_on_demand {
 
 mod r143_the_optional_seed {
     use super::*;
-
-    /// A client-minted deck id (R256).
-    fn uuid(n: usize) -> String {
-        format!("00000000-0000-4000-8000-{n:012}")
-    }
 
     /// A legal Best-of-1 deck of the real catalog (the queue judges L2–L6 with the shared
     /// validator, SURFACE §11.3): `DECK_SIZE` distinct cards that are not Tokens.

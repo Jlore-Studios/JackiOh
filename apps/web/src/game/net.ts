@@ -291,7 +291,11 @@ function parseClocks(value: unknown): MatchClocks | null {
 
 /** Every server frame this client understands, after parsing. */
 export type ServerFrame =
-  | { type: "view"; view: PlayerView; legal: readonly ActionBody[] | null }
+  /**
+   * R1483000: `jloreCapped` is true once the match is over and the daily Jlore cap held back some or
+   * all of this account's Jlore for it; the server leaves it off a frame that has nothing to say.
+   */
+  | { type: "view"; view: PlayerView; legal: readonly ActionBody[] | null; jloreCapped: boolean }
   | { type: "ack"; nonce: string; seq: number }
   | { type: "error"; code: string; message: string; nonce?: string }
   | { type: "prompt"; prompt: PromptFrame }
@@ -321,11 +325,14 @@ export function parseServerFrame(text: string): ServerFrame | null {
     case "view": {
       // §10.8: the server shapes PlayerView; the client only checks its presence.
       if (!isRecord(parsed.view)) return null;
+      // R1483000: absent is false; a value that is not a boolean is no frame this client knows.
+      if (parsed.jloreCapped !== undefined && typeof parsed.jloreCapped !== "boolean") return null;
       return {
         type: "view",
         view: parsed.view as unknown as PlayerView,
         // `legal` riding alongside the view, which is what the actor sends (see the header).
         legal: parsed.legal === undefined ? null : parseLegal(parsed.legal),
+        jloreCapped: parsed.jloreCapped === true,
       };
     }
     case "ack": {
@@ -431,6 +438,11 @@ export type MatchSnapshot = {
   /** Empty until a server sends one; never computed here (CLAUDE.md rule 7, BUILD M5-T2). */
   legal: readonly ActionBody[];
   legalSource: LegalSource;
+  /**
+   * R1483000: whether the last view said the daily Jlore cap held back this account's Jlore for the
+   * finished match, as the server read it off its ledger; the page never works it out.
+   */
+  jloreCapped: boolean;
   /** The last `error` frame's message, relayed verbatim (§9.3), or null. */
   error: string | null;
   /** The last `error` frame's code, for a caller that wants to branch without parsing prose. */
@@ -499,6 +511,7 @@ const INITIAL: MatchSnapshot = {
   view: null,
   legal: EMPTY_LEGAL,
   legalSource: "none",
+  jloreCapped: false,
   error: null,
   errorCode: null,
   clock: null,
@@ -596,6 +609,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
         awaitingFirstView = false;
         patch({
           view: frame.view,
+          jloreCapped: frame.jloreCapped,
           // A view without `legal` does not blank an earlier legal-action array.
           ...(frame.legal === null ? {} : { legal: frame.legal, legalSource: "view" as const }),
           ...(fresh ? { error: null, errorCode: null } : {}),

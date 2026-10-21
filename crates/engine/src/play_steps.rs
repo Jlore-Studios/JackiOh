@@ -1974,7 +1974,8 @@ fn still_resolving(state: &GameState, run: &PlayRun) -> Option<CardInstance> {
 /// The played card is never one of them: a permanent does not answer its own arrival (R119), and a
 /// Quickstriker being played is on the field by step 5. Nor is one that arrived on the field during
 /// the play (`arrived_during`): a copy a tributed Cube's Death summoned at step 2, one #95's first
-/// resolution summoned, met again by the Echo repeat of that same play (R119).
+/// resolution summoned, met again by the Echo repeat of that same play (R119). Nor is a face-down card,
+/// whose text sleeps (R1487000).
 fn quickstriker_grants(state: &GameState, run: &PlayRun, played: &CardInstance) -> Vec<i32> {
     let arrived: IndexSet<String> = arrived_during(state, run).into_iter().collect();
     let mut multiples: Vec<i32> = Vec::new();
@@ -1983,7 +1984,11 @@ fn quickstriker_grants(state: &GameState, run: &PlayRun, played: &CardInstance) 
             let Some(held) = card_at(state, slot) else {
                 continue;
             };
-            if held.id == played.id || arrived.contains(&held.id) {
+            // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+            if held.id == played.id
+                || arrived.contains(&held.id)
+                || crate::preview::lasting_text_dormant(state, held)
+            {
                 continue;
             }
             let grants = match crate::scripts::flags_of(state, held).quickstriker {

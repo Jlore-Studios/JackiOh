@@ -6,7 +6,8 @@
 //! claimed before, a lapsed seed and a pruned one pay nothing and say why (R1303000–R1303003, whose
 //! proving tests live here). A claim past `PRACTICE_VERIFY_CONCURRENCY` waits and still pays, and
 //! so does one whose caller stops waiting. A paid game moves the account's quests by what it did,
-//! as a ladder game does (R1304001).
+//! as a ladder game does (R1304001). The day's Jlore cap holds a game's Jlore back and says so,
+//! and an account holds only `PRACTICE_SEEDS_OPEN_MAX` open seeds (R1483000).
 //!
 //! The games are played for real, on the shipped catalog (no `install_test_cards`), through
 //! `economy::practice`'s own `opening` and `ai_action`, so each AI move in a log is the one the
@@ -23,19 +24,21 @@ use jackioh_engine::{Action, ActionBody, Difficulty, GameState, LastBoardEntry, 
 use jackioh_server::actor::engine::{self, Pinned};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
-    JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, PRACTICE_SEED_TTL_SECONDS, PRACTICE_VERIFY_CONCURRENCY,
+    JLORE_GAMES_DAILY_CAP, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, PRACTICE_SEED_TTL_SECONDS,
+    PRACTICE_SEEDS_OPEN_MAX, PRACTICE_VERIFY_CONCURRENCY, STARTER_CARDS,
 };
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, LastBoardKind};
+use jackioh_server::db::fake::{E2eStoreOptions, FakeCatalog, create_e2e_store};
+use jackioh_server::db::store::{LastBoardKind, ProfileStatus};
 use jackioh_server::economy::practice::{self, ClaimedResult};
 use jackioh_server::economy::quests::{QuestDef, QuestGoal, pool, quest_interval_ms};
 use jackioh_server::economy::rewards::{GameMode, game_xp, is_player_action};
 use jackioh_server::economy::store::{
-    EconomyLedger, EconomyReason, JloreReason, PracticeDeck, PracticeSeed, PracticeSetup, QuestChange,
-    QuestGrant,
+    EconomyLedger, EconomyReason, JloreGrant, JloreReason, PracticeDeck, PracticeSeed, PracticeSetup,
+    QuestChange, QuestGrant,
 };
 
 use crate::support::deps::{add_user, call, test_app as built_app};
+use crate::support::store::{fake_ref, store};
 
 const A: &str = "profile-a";
 const USER_A: &str = "user-a";
@@ -46,38 +49,25 @@ const WIN_SEEDS: usize = 32;
 /// A seed's lifetime in milliseconds, through its constant.
 const TTL_MS: i64 = PRACTICE_SEED_TTL_SECONDS * 1000;
 
-/// The test app with the economy on (§14.12, R1302006): `ECONOMY_LIVE` is off in the build.
+/// The test app with the economy on (§14.12, R1302006), as `ECONOMY_LIVE` builds it since the
+/// economy went live (R1310000); set here, so a payout test holds whatever the build's switch says.
 async fn test_app() -> Arc<App> {
+    economy_app(true).await
+}
+
+/// The test app with the economy switched to `live`.
+async fn economy_app(live: bool) -> Arc<App> {
     let mut app = built_app().await;
     Arc::get_mut(&mut app)
         .expect("the test app has no second handle yet")
-        .economy_live = true;
+        .economy_live = live;
     app
-}
-
-/// Every store call in this file: one transaction, committed when the call answers.
-macro_rules! store {
-    ($app:expr, |$t:ident| $call:expr) => {{
-        let mut $t = $app.db.begin(None).await.expect("a store transaction begins");
-        let out = $call
-            .await
-            .expect(concat!("the store answers ", stringify!($call)));
-        $t.commit().await.expect("the store transaction commits");
-        out
-    }};
-}
-
-fn fake(app: &App) -> &Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => data,
-        _ => panic!("support::deps::test_app() runs on the fake store"),
-    }
 }
 
 /// An app with A as a signed-in active account and nothing else in its store, and A's token.
 async fn authed_with(app: Arc<App>) -> (Arc<App>, String) {
-    fake(&app).lock().await.reset();
-    let _ = fake(&app)
+    fake_ref(&app).lock().await.reset();
+    let _ = fake_ref(&app)
         .lock()
         .await
         .seed_profile(json!({ "id": A, "userId": USER_A, "status": "active" }));
@@ -108,9 +98,9 @@ fn setup(difficulty: Difficulty, last_board: Vec<LastBoardEntry>) -> PracticeSet
     }
 }
 
-/// `POST /api/practice/seeds` for an Easy random-deck game, the human second: the seed and the
-/// whole answer.
-async fn issue(app: &Arc<App>, token: &str) -> (String, Value) {
+/// `POST /api/practice/seeds` for an Easy random-deck game, the human second: the status and the
+/// answer, whatever they are.
+async fn request_seed(app: &Arc<App>, token: &str) -> (u16, Value) {
     let (status, _, body) = call(
         app,
         "POST",
@@ -122,6 +112,12 @@ async fn issue(app: &Arc<App>, token: &str) -> (String, Value) {
         }),
     )
     .await;
+    (status, body)
+}
+
+/// A seed issued: its name and the whole answer.
+async fn issue(app: &Arc<App>, token: &str) -> (String, Value) {
+    let (status, body) = request_seed(app, token).await;
     assert_eq!(status, 201, "{body}");
     let seed = body["seed"].as_str().expect("a seed").to_string();
     (seed, body)
@@ -304,7 +300,7 @@ async fn an_honest_loss_pays_practice_rates() {
     let xp = game_xp(GameMode::Practice, human_actions(&log), false);
     assert_eq!(
         claim(&app, &token, &seed, "loss", &log).await,
-        json!({ "paid": true, "jlore": JLORE_PRACTICE_LOSS, "xp": xp })
+        json!({ "paid": true, "jlore": JLORE_PRACTICE_LOSS, "xp": xp, "jloreCapped": false })
     );
     assert_paid(&app, &seed, JLORE_PRACTICE_LOSS, xp).await;
 }
@@ -317,7 +313,7 @@ async fn an_honest_win_pays_practice_rates() {
     let xp = game_xp(GameMode::Practice, human_actions(log), true);
     assert_eq!(
         claim(&app, &token, seed, "win", log).await,
-        json!({ "paid": true, "jlore": JLORE_PRACTICE_WIN, "xp": xp })
+        json!({ "paid": true, "jlore": JLORE_PRACTICE_WIN, "xp": xp, "jloreCapped": false })
     );
     assert_paid(&app, seed, JLORE_PRACTICE_WIN, xp).await;
 }
@@ -345,7 +341,80 @@ async fn a_game_on_a_list_of_cards_pays_too() {
     let xp = game_xp(GameMode::Practice, human_actions(&log), false);
     assert_eq!(
         claim(&app, &token, &seed, "loss", &log).await,
-        json!({ "paid": true, "jlore": JLORE_PRACTICE_LOSS, "xp": xp })
+        json!({ "paid": true, "jlore": JLORE_PRACTICE_LOSS, "xp": xp, "jloreCapped": false })
+    );
+}
+
+/// The test app over a store that carries R111's activation grant over the real catalog, as the
+/// end-to-end server builds its store (`app::build`).
+async fn granting_app() -> Arc<App> {
+    let app = Arc::try_unwrap(test_app().await)
+        .unwrap_or_else(|_| panic!("test_app() hands back its only reference"));
+    let (tokens, bans) = (app.catalog.clone(), app.catalog.clone());
+    let db = create_e2e_store(E2eStoreOptions {
+        catalog: FakeCatalog {
+            card_ids: app.catalog.card_ids.clone(),
+            is_token: Arc::new(move |card_id: &str| tokens.is_token(card_id)),
+            is_banned: Arc::new(move |card_id: &str| bans.is_banned(card_id)),
+        },
+        now: Arc::new(now_ms),
+        redemption: None,
+    });
+    Arc::new(App { db, ..app })
+}
+
+#[tokio::test]
+async fn r1310004_practice_takes_cards_the_account_does_not_own() {
+    let (app, token) = authed_with(granting_app().await).await;
+    // A becomes active again as a new account does, owning the starter cards alone (R1310000).
+    store!(app, |t| t.profiles_set_status(A, ProfileStatus::Pending));
+    store!(app, |t| t.profiles_set_status(A, ProfileStatus::Active));
+    let owned: Vec<String> = store!(app, |t| t.collection_get(A))
+        .into_iter()
+        .filter(|entry| entry.quantity > 0)
+        .map(|entry| entry.card_id)
+        .collect();
+    assert!(!owned.is_empty() && owned.iter().all(|id| STARTER_CARDS.contains(&id.as_str())));
+    // A deck of collectable cards A does not own, none of them a starter: practice reads no
+    // collection (§14.12), so the seed is issued and the game pays.
+    let size = usize::try_from(jackioh_engine::config::DECK_SIZE).expect("a deck size");
+    let cards: Vec<String> = app
+        .catalog
+        .card_ids
+        .iter()
+        .filter(|id| {
+            !app.catalog.is_token(id)
+                && !app.catalog.is_banned(id)
+                && app
+                    .catalog
+                    .defs
+                    .get(*id)
+                    .is_some_and(|def| jackioh_engine::set_ships(def.set))
+                && !owned.contains(id)
+        })
+        .take(size)
+        .cloned()
+        .collect();
+    assert_eq!(cards.len(), size);
+    let (status, _, body) = call(
+        &app,
+        "POST",
+        "/api/practice/seeds",
+        Some(&token),
+        json!({
+            "difficulty": "easy", "humanSeat": "p1", "deck": { "kind": "cards", "cards": cards },
+            "catalog": catalog_version(),
+        }),
+    )
+    .await;
+    assert_eq!(status, 201, "{body}");
+    let seed = body["seed"].as_str().expect("a seed").to_string();
+    let setup = kept_setup(&app, &seed).await;
+    let (log, _, _) = play(&seed, &setup, Human::Concede);
+    let xp = game_xp(GameMode::Practice, human_actions(&log), false);
+    assert_eq!(
+        claim(&app, &token, &seed, "loss", &log).await,
+        json!({ "paid": true, "jlore": JLORE_PRACTICE_LOSS, "xp": xp, "jloreCapped": false })
     );
 }
 
@@ -598,7 +667,7 @@ async fn r1303001_an_abandoned_seed_is_pruned_by_the_next_issue() {
 async fn r1303001_another_accounts_seed_is_unknown() {
     let (app, token) = authed().await;
     let setup = setup(Difficulty::Easy, Vec::new());
-    let _ = fake(&app)
+    let _ = fake_ref(&app)
         .lock()
         .await
         .seed_profile(json!({ "id": "profile-b", "userId": "user-b", "status": "active" }));
@@ -671,8 +740,8 @@ async fn r1303003_a_refused_claim_leaves_no_board() {
 
 #[tokio::test]
 async fn nothing_is_issued_or_paid_while_the_economy_is_off() {
-    let (app, token) = authed_with(built_app().await).await;
-    assert!(!app.economy_live, "the build's ECONOMY_LIVE is off");
+    // The economy switched off (§14.12), as production ran until launch (R1310000).
+    let (app, token) = authed_with(economy_app(false).await).await;
     let (status, _, _) = call(
         &app,
         "POST",
@@ -710,7 +779,15 @@ async fn a_seed_for_a_catalog_the_server_cannot_fold_is_refused() {
     )
     .await;
     assert_eq!(status, 409);
-    assert!(fake(&app).lock().await.tables.economy.practice_seeds.is_empty());
+    assert!(
+        fake_ref(&app)
+            .lock()
+            .await
+            .tables
+            .economy
+            .practice_seeds
+            .is_empty()
+    );
 }
 
 #[tokio::test]
@@ -806,6 +883,173 @@ async fn a_claim_whose_caller_stops_waiting_still_pays() {
     assert_paid(&app, &seed, JLORE_PRACTICE_LOSS, xp).await;
 }
 
+// ---------------------------------------------------------------------------
+// The day's Jlore cap and the open seeds (R1483000).
+// ---------------------------------------------------------------------------
+
+/// A `game` Jlore row of `delta` that an earlier game wrote today, as the cap counts it.
+async fn earlier_game_jlore(app: &Arc<App>, delta: i64) -> JloreGrant {
+    let grant = JloreGrant {
+        profile_id: A.to_string(),
+        delta,
+        reason: JloreReason::Game,
+        reference: Some("earlier-game".to_string()),
+        dev: false,
+        at: now_ms(),
+    };
+    store!(app, |t| t.economy_jlore_grant(&grant));
+    grant
+}
+
+/// A's `game` Jlore rows.
+async fn game_rows(app: &Arc<App>) -> Vec<JloreGrant> {
+    ledger(app)
+        .await
+        .jlore
+        .into_iter()
+        .filter(|grant| grant.reason == JloreReason::Game)
+        .collect()
+}
+
+#[tokio::test]
+async fn r1483000_a_capped_claim_pays_xp_reports_zero_jlore_and_writes_no_game_row() {
+    let (app, token) = authed().await;
+    let earlier = earlier_game_jlore(&app, JLORE_GAMES_DAILY_CAP).await;
+    let (seed, _) = issue(&app, &token).await;
+    let (log, _, _) = play(&seed, &kept_setup(&app, &seed).await, Human::Concede);
+    let xp = game_xp(GameMode::Practice, human_actions(&log), false);
+    assert!(xp > 0, "a conceded game still moved");
+    assert_eq!(
+        claim(&app, &token, &seed, "loss", &log).await,
+        json!({ "paid": true, "jlore": 0, "xp": xp, "jloreCapped": true })
+    );
+    assert_eq!(
+        game_rows(&app).await,
+        vec![earlier],
+        "the capped game wrote no Jlore row"
+    );
+    let reference = Some(format!("practice:{seed}"));
+    let tracks = ledger(&app).await.tracks;
+    assert!(!tracks.is_empty(), "the game's XP lands on a track");
+    for track in &tracks {
+        assert_eq!((track.xp, &track.reference), (xp, &reference));
+    }
+}
+
+#[tokio::test]
+async fn r1483000_a_claim_that_crosses_the_cap_pays_the_remainder() {
+    let (app, token) = authed().await;
+    let left = i64::from(JLORE_PRACTICE_LOSS) - 2;
+    earlier_game_jlore(&app, JLORE_GAMES_DAILY_CAP - left).await;
+    let (seed, _) = issue(&app, &token).await;
+    let (log, _, _) = play(&seed, &kept_setup(&app, &seed).await, Human::Concede);
+    let xp = game_xp(GameMode::Practice, human_actions(&log), false);
+    assert_eq!(
+        claim(&app, &token, &seed, "loss", &log).await,
+        json!({ "paid": true, "jlore": left, "xp": xp, "jloreCapped": true })
+    );
+    let paid: Vec<(i64, Option<String>)> = game_rows(&app)
+        .await
+        .into_iter()
+        .skip(1)
+        .map(|grant| (grant.delta, grant.reference))
+        .collect();
+    assert_eq!(paid, vec![(left, Some(format!("practice:{seed}")))]);
+    assert_eq!(
+        game_rows(&app).await.iter().map(|grant| grant.delta).sum::<i64>(),
+        JLORE_GAMES_DAILY_CAP
+    );
+}
+
+#[tokio::test]
+async fn r1483000_the_open_seed_limit_refuses_without_insert_and_claim_or_expiry_frees_a_place() {
+    let (app, token) = authed().await;
+    let held = |app: Arc<App>| async move { fake_ref(&app).lock().await.tables.economy.practice_seeds.len() };
+    let mut seeds = Vec::new();
+    for _ in 0..PRACTICE_SEEDS_OPEN_MAX {
+        seeds.push(issue(&app, &token).await.0);
+    }
+    let (status, body) = request_seed(&app, &token).await;
+    assert_eq!(status, 409, "{body}");
+    assert_eq!(
+        held(app.clone()).await,
+        PRACTICE_SEEDS_OPEN_MAX as usize,
+        "nothing was issued"
+    );
+
+    // A claim, paid or refused, burns its seed and frees its place.
+    let setup = kept_setup(&app, &seeds[0]).await;
+    let (log, _, _) = play(&seeds[0], &setup, Human::Concede);
+    assert_eq!(
+        claim(&app, &token, &seeds[0], "loss", &log).await["paid"],
+        json!(true)
+    );
+    let (after_claim, _) = issue(&app, &token).await;
+    let (status, _) = request_seed(&app, &token).await;
+    assert_eq!(status, 409, "the claimed seed's place is taken again");
+
+    // A seed past its lifetime no longer counts, and the request prunes it.
+    {
+        let mut data = fake_ref(&app).lock().await;
+        let lapsed = data
+            .tables
+            .economy
+            .practice_seeds
+            .iter_mut()
+            .find(|held| held.seed == seeds[1])
+            .expect("the seed is held");
+        lapsed.issued_at = now_ms() - TTL_MS - 1;
+    }
+    let (after_expiry, _) = issue(&app, &token).await;
+    assert!(store!(app, |t| t.economy_practice_seed_get(A, &seeds[1])).is_none());
+    assert!(store!(app, |t| t.economy_practice_seed_get(A, &after_claim)).is_some());
+    assert!(store!(app, |t| t.economy_practice_seed_get(A, &after_expiry)).is_some());
+    let (status, _) = request_seed(&app, &token).await;
+    assert_eq!(status, 409);
+}
+
+#[tokio::test]
+async fn r1483000_another_accounts_open_seeds_do_not_count() {
+    let (app, token) = authed().await;
+    let _ = fake_ref(&app)
+        .lock()
+        .await
+        .seed_profile(json!({ "id": "profile-b", "userId": "user-b", "status": "active" }));
+    for n in 0..PRACTICE_SEEDS_OPEN_MAX {
+        store!(app, |t| t.economy_practice_seed_insert(&PracticeSeed {
+            seed: format!("practice-theirs-{n}"),
+            profile_id: "profile-b".to_string(),
+            setup: setup(Difficulty::Easy, Vec::new()),
+            issued_at: now_ms(),
+            claimed_at: None,
+        }));
+    }
+    let (status, body) = request_seed(&app, &token).await;
+    assert_eq!(status, 201, "{body}");
+}
+
+#[tokio::test]
+async fn r1483000_concurrent_seed_requests_never_exceed_the_open_limit() {
+    let (app, token) = authed().await;
+    let requests: Vec<_> = (0..PRACTICE_SEEDS_OPEN_MAX * 2)
+        .map(|_| {
+            let (app, token) = (app.clone(), token.clone());
+            tokio::spawn(async move { request_seed(&app, &token).await.0 })
+        })
+        .collect();
+    let mut statuses = Vec::new();
+    for request in requests {
+        statuses.push(request.await.expect("the request answers"));
+    }
+    let count = |wanted: u16| statuses.iter().filter(|status| **status == wanted).count();
+    assert_eq!(count(201), PRACTICE_SEEDS_OPEN_MAX as usize, "{statuses:?}");
+    assert_eq!(count(409), PRACTICE_SEEDS_OPEN_MAX as usize, "{statuses:?}");
+    assert_eq!(
+        fake_ref(&app).lock().await.tables.economy.practice_seeds.len(),
+        PRACTICE_SEEDS_OPEN_MAX as usize
+    );
+}
+
 /// The browser's worker's game (`apps/web/src/practice/claim.test.ts` records it).
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -858,7 +1102,7 @@ async fn r1303002_the_ai_rerun_matches_the_game_the_worker_played() {
             &fixture.log
         )
         .await,
-        json!({ "paid": true, "jlore": jlore, "xp": xp }),
+        json!({ "paid": true, "jlore": jlore, "xp": xp, "jloreCapped": false }),
         "{rerecord}"
     );
     assert_paid(&app, &fixture.seed, jlore, xp).await;

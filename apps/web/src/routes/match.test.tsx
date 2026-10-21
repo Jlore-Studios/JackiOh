@@ -674,6 +674,39 @@ describe("the match screen's ranks (R604, R612)", () => {
   });
 });
 
+describe("the daily Jlore cap on a finished ladder match (R1483000)", () => {
+  const finished = baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "hero-death" } });
+
+  /** One view frame, as the actor sends it after the result has landed. */
+  function push(view: ReturnType<typeof baseView>, extra: Record<string, unknown> = {}): void {
+    act(() => {
+      live().onmessage?.({ data: JSON.stringify({ type: "view", view, ...extra }) });
+    });
+  }
+
+  it("R1483000 shows Daily Jlore reached only on a capped finished match", async () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    // The flag on a game still being played says nothing: the line is the finished game's.
+    push(baseView({ viewer: "p1", active: "p1" }), { jloreCapped: true });
+    expect(screen.queryByTestId("result-daily-jlore")).toBeNull();
+
+    // The finished game, the server saying the cap held this account's Jlore back.
+    push(finished, { jloreCapped: true });
+    expect(await screen.findByTestId("result-daily-jlore")).toHaveTextContent("Daily Jlore reached");
+    cleanup();
+
+    // The same game with nothing held back, or a view that says nothing about it, shows none.
+    for (const extra of [{ jloreCapped: false }, {}]) {
+      render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+      attach({ view: finished, ...extra });
+      expect(await screen.findByTestId("result-back")).toBeInTheDocument();
+      expect(screen.queryByTestId("result-daily-jlore")).toBeNull();
+      cleanup();
+    }
+  });
+});
+
 describe("the death screen's rematch offers (R672)", () => {
   /** A finished game of a series in this status, shaped like the R259 block's answer. */
   function seriesIn(status: string): Record<string, unknown> {

@@ -25,13 +25,13 @@ use jackioh_server::app::App;
 use jackioh_server::config::{
     JLORIOUS_SIZE, RANK_PLACEMENT_GAMES, RATING_DEVIATION_START, SEASON_RESET_STRENGTH,
 };
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{BotRating, Db, MatchRow, SeriesRow};
+use jackioh_server::db::store::{BotRating, MatchRow, SeriesRow};
 use jackioh_server::ranked::glicko2::START_GLICKO;
 use jackioh_server::ranked::ladder::{SeasonRank, fresh_rank, tier_bottom};
 use jackioh_server::ranked::season::season_id_of;
 
 use crate::support::deps::{add_user, call, test_app};
+use crate::support::store::{fake_lock, q};
 
 const A: &str = "profile-a";
 const B: &str = "profile-b";
@@ -90,24 +90,6 @@ fn assert_close(actual: f64, expected: f64) {
     );
 }
 
-/// The fake store behind the test app (TS `deps.store`).
-async fn fake(app: &App) -> tokio::sync::MutexGuard<'_, FakeData> {
-    match &app.db {
-        Db::Fake(data) => data.lock().await,
-        Db::Pg(_) => panic!("the API tests run on the fake store"),
-    }
-}
-
-/// One store call in a transaction of its own (TS called the store's methods bare).
-macro_rules! store {
-    ($app:expr, $method:ident($($arg:expr),* $(,)?)) => {{
-        let mut t = $app.db.begin(None).await.expect("begin");
-        let out = t.$method($($arg),*).await.unwrap_or_else(|error| panic!("{}: {error:?}", stringify!($method)));
-        t.commit().await.expect("commit");
-        out
-    }};
-}
-
 /// The patch the test app runs as, and so its season (R609).
 fn patch() -> String {
     jackioh_cards::catalog_version().to_string()
@@ -134,11 +116,11 @@ fn next_minor(patch: &str) -> String {
 
 /// TS `deps.store.seedProfile(...)`.
 async fn seed_profile(app: &App, row: Value) {
-    fake(app).await.seed_profile(row);
+    fake_lock(app).await.seed_profile(row);
 }
 
 async fn profile(app: &App, id: &str) -> Value {
-    json_of(&store!(app, profiles_get_by_id(id)))
+    json_of(&q!(app, profiles_get_by_id(id)))
 }
 
 fn rating_of(profile: &Value) -> f64 {
@@ -187,11 +169,11 @@ async fn board(app: &App, viewer_id: &str) -> Value {
 
 async fn put_rank(app: &App, rank: Value) {
     let rank: SeasonRank = from(rank);
-    store!(app, ranked_put_rank(&rank));
+    q!(app, ranked_put_rank(&rank));
 }
 
 async fn ladder_of(app: &App, profile_id: &str) -> i64 {
-    let rank = json_of(&store!(app, ranked_rank(&season(), profile_id)));
+    let rank = json_of(&q!(app, ranked_rank(&season(), profile_id)));
     rank["ladder"].as_i64().unwrap_or(-1)
 }
 
@@ -265,7 +247,7 @@ mod r609_seasons_on_the_server {
             &json!({ "opened": false, "reset": null }),
             "again",
         );
-        assert_eq!(fake(&app).await.tables.seasons.len(), 1);
+        assert_eq!(fake_lock(&app).await.tables.seasons.len(), 1);
         assert_eq!(rating_of(&profile(&app, A).await), 1300.0);
     }
 
@@ -282,7 +264,7 @@ mod r609_seasons_on_the_server {
         rate(&app, game("bot-game", [player(A), bot("ai-hard")], Some(1), 1)).await;
         let a = profile(&app, A).await;
         let b = profile(&app, B).await;
-        let bot_before = json_of(&store!(app, ranked_bot("ai-hard")));
+        let bot_before = json_of(&q!(app, ranked_bot("ai-hard")));
         assert!(
             !a.is_null() && !b.is_null() && !bot_before.is_null(),
             "premise: all three were rated"
@@ -324,13 +306,13 @@ mod r609_seasons_on_the_server {
             &json!({ "rating": 1000, "ratingDeviation": RATING_DEVIATION_START }),
             "never-played",
         );
-        assert_eq!(json_of(&store!(app, ranked_bot("ai-hard"))), bot_before);
+        assert_eq!(json_of(&q!(app, ranked_bot("ai-hard"))), bot_before);
         // Everyone starts the new season back in placements; the old season's rows are kept. TS read
         // this through `ownRank({ ...deps, patchVersion: "v0.2.0" }, A)`; the Rust test app runs as
         // one patch, so the same fact is read off the store: no row in the new season, which
         // `own_rank` answers as a Raisin with no placements played (R605).
-        assert!(json_of(&store!(app, ranked_rank(&season_id_of(&next_patch), A))).is_null());
-        let seasons: Vec<Value> = json_of(&store!(app, ranked_ranks_of(A)))
+        assert!(json_of(&q!(app, ranked_rank(&season_id_of(&next_patch), A))).is_null());
+        let seasons: Vec<Value> = json_of(&q!(app, ranked_ranks_of(A)))
             .as_array()
             .expect("a list")
             .iter()
@@ -346,7 +328,7 @@ mod r609_seasons_on_the_server {
         seed_profile(&app, json!({ "id": B })).await;
         let row = rate(&app, game("m-1", [player(A), player(B)], None, 1)).await;
         assert_eq!(row["seasonId"], json!(season()));
-        let ids: Vec<String> = fake(&app)
+        let ids: Vec<String> = fake_lock(&app)
             .await
             .tables
             .seasons
@@ -413,7 +395,7 @@ mod r605_placements_through_rated_games {
             first
         );
         assert_eq!(profile(&app, A).await, before);
-        assert_eq!(fake(&app).await.tables.rated_games.len(), 1);
+        assert_eq!(fake_lock(&app).await.tables.rated_games.len(), 1);
     }
 }
 
@@ -442,7 +424,7 @@ mod r610_bots {
             }),
             "sides[1]",
         );
-        let easy = json_of(&store!(app, ranked_bot("ai-easy")));
+        let easy = json_of(&q!(app, ranked_bot("ai-easy")));
         assert_eq!(easy["games"], json!(1));
         assert!(easy["glicko"]["rating"].as_f64().expect("a rating") < START_GLICKO.rating);
         assert_eq!(easy["glicko"], first["sides"][1]["after"]);
@@ -450,9 +432,9 @@ mod r610_bots {
         // The bot's next game starts from the rating its last one left it.
         let second = rate(&app, game("b-2", [bot("ai-easy"), player(A)], Some(0), 1)).await;
         assert_eq!(second["sides"][0]["before"], first["sides"][1]["after"]);
-        assert_eq!(json_of(&store!(app, ranked_bot("ai-easy")))["games"], json!(2));
+        assert_eq!(json_of(&q!(app, ranked_bot("ai-easy")))["games"], json!(2));
 
-        let ranked: Vec<String> = fake(&app)
+        let ranked: Vec<String> = fake_lock(&app)
             .await
             .tables
             .season_ranks
@@ -476,7 +458,7 @@ mod r610_bots {
             "games": 50,
             "updatedAt": 0,
         }));
-        store!(app, ranked_put_bot(&hard));
+        q!(app, ranked_put_bot(&hard));
         for n in 1..=(RANK_PLACEMENT_GAMES as i64) {
             rate(
                 &app,
@@ -524,7 +506,7 @@ mod r608_jlorious_through_the_server {
             ]
         );
         let peak = |rank: Value| rank["peakJlorious"].clone();
-        assert_eq!(peak(json_of(&store!(app, ranked_rank(&season(), A)))), json!(2));
+        assert_eq!(peak(json_of(&q!(app, ranked_rank(&season(), A)))), json!(2));
         assert_eq!(
             own(&app, A).await["rank"],
             json!({ "tier": "jlorious", "position": 2 })
@@ -534,10 +516,7 @@ mod r608_jlorious_through_the_server {
             json!([{ "seasonId": season(), "tier": "jlorious", "position": 2 }])
         );
         // m-low fell to #3 and keeps the #2 it never held: no peak is invented for it.
-        assert_eq!(
-            peak(json_of(&store!(app, ranked_rank(&season(), "m-low")))),
-            json!(3)
-        );
+        assert_eq!(peak(json_of(&q!(app, ranked_rank(&season(), "m-low")))), json!(3));
         // Golden is rated highest of all and is not Jlorious: Jlorious is drawn from Mythic Grape.
         let golden: Vec<Value> = listed["tiers"]
             .as_array()
@@ -576,7 +555,7 @@ mod r640000_bots_on_the_ladder {
             "games": 50,
             "updatedAt": 0,
         }));
-        store!(app, ranked_put_bot(&own));
+        q!(app, ranked_put_bot(&own));
     }
 
     /// `seed_placed` for a ladder bot.
@@ -612,7 +591,7 @@ mod r640000_bots_on_the_ladder {
             )
             .await;
         }
-        let row = json_of(&store!(app, ranked_rank(&season(), "bot-1")));
+        let row = json_of(&q!(app, ranked_rank(&season(), "bot-1")));
         assert_matches(
             &row,
             &json!({ "games": RANK_PLACEMENT_GAMES, "wins": RANK_PLACEMENT_GAMES, "losses": 0 }),
@@ -694,7 +673,7 @@ mod r640000_bots_on_the_ladder {
             "sides[0]",
         );
         assert_eq!(
-            json_of(&store!(app, ranked_rank(&season(), "bot-mythic")))["peakJlorious"],
+            json_of(&q!(app, ranked_rank(&season(), "bot-mythic")))["peakJlorious"],
             Value::Null
         );
     }
@@ -746,7 +725,7 @@ mod r640000_bots_on_the_ladder {
 
         let mut row = live_match("match-1", "s", true);
         row.players.1 = String::from("bot-1");
-        store!(app, matches_create(&row));
+        q!(app, matches_create(&row));
         let (status, _headers, ranks) = call(
             &app,
             "GET",
@@ -923,7 +902,7 @@ mod r612_what_the_client_reads {
             stranger,
         } = routed().await;
         let row = live_match("match-1", "s", true);
-        store!(app, matches_create(&row));
+        q!(app, matches_create(&row));
         let mine = get(&app, "/api/matches/match-1/ranks", &token_a).await;
         assert_eq!(mine.status, 200);
         assert_eq!(
@@ -964,7 +943,7 @@ mod r612_what_the_client_reads {
             }),
         );
         put_rank(&app, placed).await;
-        let row_before = json_of(&store!(app, ranked_rank(&season(), A)));
+        let row_before = json_of(&q!(app, ranked_rank(&season(), A)));
         let names = |body: &Value| -> Vec<Value> {
             body["tiers"]
                 .as_array()
@@ -993,7 +972,7 @@ mod r612_what_the_client_reads {
             get(&app, "/api/ranked", &token_a).await.body["username"],
             json!("Alicia")
         );
-        assert_eq!(json_of(&store!(app, ranked_rank(&season(), A))), row_before);
+        assert_eq!(json_of(&q!(app, ranked_rank(&season(), A))), row_before);
     }
 }
 
@@ -1041,9 +1020,9 @@ mod r604_a_ranked_series_through_the_results_writer {
                 "endedAt": null,
                 "version": 1,
             }));
-            store!(app, series_create(&series));
+            q!(app, series_create(&series));
             let game_1 = live_match("game-1", "s:3", ranked);
-            store!(app, matches_create(&game_1));
+            q!(app, matches_create(&game_1));
             let input: RecordResultInput = from(json!({
                 "matchId": "game-1",
                 "seats": [
@@ -1056,10 +1035,10 @@ mod r604_a_ranked_series_through_the_results_writer {
             }));
             record_result(&app, input).await.expect("recordResult");
 
-            let ended = json_of(&store!(app, series_get("series-1")));
+            let ended = json_of(&q!(app, series_get("series-1")));
             assert_eq!(ended["status"], json!("over"), "ranked: {ranked}");
             let rating = profile(&app, A).await["rating"].as_f64().unwrap_or(0.0);
-            let rated: Vec<Value> = fake(&app)
+            let rated: Vec<Value> = fake_lock(&app)
                 .await
                 .tables
                 .rated_games

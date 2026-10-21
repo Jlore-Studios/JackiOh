@@ -64,7 +64,7 @@ describe("R1303000 which practice games ask for a server seed", () => {
 describe("what the result dialog says of a claim", () => {
   it("earningText words each answer", () => {
     expect(earningText({ kind: "pending" })).toBe("Checking this game on the server…");
-    expect(earningText({ kind: "paid", jlore: 10, xp: 42 })).toBe("+10 Jlore, +42 XP");
+    expect(earningText({ kind: "paid", jlore: 10, xp: 42, jloreCapped: false })).toBe("+10 Jlore, +42 XP");
     expect(earningText({ kind: "refused", reason: "ai_mismatch" })).toBe(
       "This game earned nothing (the AI chose another move on the server).",
     );
@@ -72,6 +72,17 @@ describe("what the result dialog says of a claim", () => {
       "This game earned nothing (a_reason_from_a_newer_server).",
     );
     expect(earningText({ kind: "unreachable" })).toBe("The server could not check this game.");
+  });
+
+  it("R1483000 reports the daily cap without hiding the actual payout", () => {
+    // The server's `jlore` is already what the cap left: a game that crossed it, and one after it.
+    expect(earningText({ kind: "paid", jlore: 3, xp: 42, jloreCapped: true })).toBe(
+      "+3 Jlore, +42 XP · Daily Jlore reached",
+    );
+    expect(earningText({ kind: "paid", jlore: 0, xp: 42, jloreCapped: true })).toBe(
+      "+0 Jlore, +42 XP · Daily Jlore reached",
+    );
+    expect(earningText({ kind: "paid", jlore: 5, xp: 42, jloreCapped: false })).not.toContain("Daily Jlore reached");
   });
 
   it("every refusal the server names (`economy::practice::ClaimRefusal`) is worded", () => {

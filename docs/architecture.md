@@ -165,7 +165,8 @@ its email and see the code screen, and nothing else: no collection, loadout, que
 Two layers, both required:
 
 - **Database.** `app.profile_is_active()` guards the write functions; a `pending` profile simply has no
-  `collection` rows yet, because the launch grant fires on the `pending → active` transition.
+  `collection` rows yet, because the launch grant (the starter cards, R1310000) fires on the
+  `pending → active` transition.
 - **API.** Every route but `/api/codes/redeem` and `/api/me` asserts `status = 'active'` and returns
   403 otherwise (BUILD M6-T1 acceptance).
 
@@ -558,7 +559,7 @@ whole of what it can reach. Legacy `anon` JWT keys still work and are compatibil
 | `TRUSTED_PROXY_HOPS` | no (`0`) | R190: how many `X-Forwarded-For` entries, counted from the right, this deployment's own proxies write. The per-IP limits (§9.4 step 3, R157) key on that entry and ignore everything the caller wrote to its left; `CF-Connecting-IP` and `X-Real-IP` are never read. `0` to `5`; `0` (the default) ignores the header and keys on the socket's peer address, which is right with no proxy in front | `render.yaml` starts it at `1`, which can only over-group; set it to the count your own request shows in the `api.forwarded_for` log (§10, step 8); leave unset for a local server |
 | `RENDER_GIT_COMMIT` | no | the git commit this deploy was built from; Render sets it on every deploy and it is unset anywhere else. `GET /api/catalog` reports it in the `x-deployed-commit` response header (the body is untouched, R163), and `deploy-watch.yml` compares it with each push to `main`, so a Render that stopped receiving pushes is seen even when the catalog version did not change. Only a hex SHA is kept | set by Render; leave unset for a local server |
 | `LADDER_BOTS` | no (`off`) | R1453, R1454, R1452, R641000: `on` seats a ladder bot, which this process plays itself, against a ranked ticket of any mode that waited past its fallback time with no person inside its window (a Conquest ticket's in a series), and sizes the bot pool at boot and hourly. Off unless `on`: unset or `off` seats no bot and keeps no pool, and any other value refuses the boot | the operator; turning it on wants a host with room for the AI's search beside the matches, such as a paid Render instance rather than the free tier |
-| `DEV_PROFILE_IDS` | no (none) | SPEC §14.10, R1300000: the dev accounts, comma-separated profile ids; `/api/auth/me` says `isDev` to a listed account, which may use the `/api/dev/*` tools on its own economy, and a new catalog version's grant passes over it (R1300001, `seed-catalog` reads it too). A malformed id refuses the boot, naming it; the boot logs only how many are listed | the operator: each developer's account secret ID, from `/account` → "Manage sign-in & account" → "Show account secret ID"; leave unset for a local server without dev tools |
+| `DEV_PROFILE_IDS` | no (none) | SPEC §14.10, R1300000: the dev accounts, comma-separated profile ids; `/api/auth/me` says `isDev` to a listed account, which may use the `/api/dev/*` tools on its own economy (under `E2E=1` the `e2e-econ` fixture is one too, R1310004). Only the server's boot reads it: since no catalog stamp grants anyone (R1310001), `seed-catalog` does not. A malformed id refuses the boot, naming it; the boot logs only how many are listed | the operator: each developer's account secret ID, from `/account` → "Manage sign-in & account" → "Show account secret ID"; leave unset for a local server without dev tools |
 
 `crates/server/src/env.rs` loads these from the process environment (the binary reads no `.env`
 file), reports **every** missing or malformed variable in one error naming where to get each, and
@@ -706,7 +707,9 @@ step that is not yet implemented says which BUILD task delivers it.
    `0035_replay_final_hash.sql` → `0036_lean_set.sql` → `0037_custom_cards.sql` → `0038_social.sql` →
    `0039_duos.sql` → `0040_moderation_switch_grant.sql` → `0041_card_totals.sql` →
    `0042_match_checkpoints.sql` → `0043_meditative_plus_set.sql` → `0044_deck_cosmetics.sql` →
-   `0045_economy.sql` → `0046_dev_accounts.sql` → `0047_practice_seeds.sql` — and records them in
+   `0045_economy.sql` → `0046_dev_accounts.sql` → `0047_practice_seeds.sql` →
+   `0048_game_record_builds.sql` → `0049_version_retcon.sql` → `0050_going_live.sql` — and records
+   them in
    `app.migrations`. Expected result: 63 tables in `public`, all with RLS enabled, plus the private
    `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
@@ -715,8 +718,9 @@ step that is not yet implemented says which BUILD task delivers it.
    `app.merge_tutorial_progress` (R320); it needs nothing else from the bring-up. 0014 adds
    the server-only `game_records` (R376); `stats-cards` reads it and
    `stats-import` loads an AI development run into it (R377, R378). Patch v0.2.0 adds three: 0015
-   widens the `cards` tag check with Book, Pancake and AI (B2.4); 0016 grants every active account
-   the cards a new catalog version adds when `seed-catalog` stamps it (R481); and 0017 adds the
+   widens the `cards` tag check with Book, Pancake and AI (B2.4); 0016 granted every active account
+   the cards a new catalog version adds when `seed-catalog` stamps it (R481), until 0050 dropped
+   it; and 0017 adds the
    server-only `last_boards` and each match's starting boards for C+ #29 Portal to the Past (R417,
    R565). 0018 adds `player_settings` and its one write path, `app.merge_player_settings` (R633,
    R634), which keeps a player's game settings on the account; like 0011 it needs nothing else from
@@ -752,7 +756,7 @@ step that is not yet implemented says which BUILD task delivers it.
    on and no policy or grant; and the profile's foreign key to `auth.users` swapped for triggers, so
    inserting a person's profile still needs its auth user and deleting an auth user still deletes
    its profile, while a bot's profile needs none. It also limits the launch collection's backfill,
-   which every catalog stamp runs (0016), to people's profiles, since a bot owns no collection
+   which every catalog stamp ran (0016) until 0050, to people's profiles, since a bot owns no collection
    (R1454). It creates no bot: the server sizes the pool only while `LADDER_BOTS` is `on` (§8.2).
    0033 adds `bots.trio` and `bots.trio_catalog_version`, the Conquest trio the pool deals each bot
    and the catalog it was dealt for (R641000); the table stays server-only and no row is backfilled.
@@ -780,9 +784,17 @@ step that is not yet implemented says which BUILD task delivers it.
    adds the economy's fifteen tables (SPEC §14.11): each holding (Jlore, packs and tokens, pity and
    the bars, set tracks, quests, owned cosmetics) beside its append-only ledger, which its own
    account reads and no client role writes, and `cosmetics`, which step 6 fills; `collection_grants`
-   gains its `dev` mark (§14.10). Nothing reads or writes them yet. 0047 adds the server-only
+   gains its `dev` mark (§14.10). 0047 adds the server-only
    `practice_seeds` (SPEC §14.8, #1303): the seeds a practice game's claim is checked and paid on,
    each once; a seed goes with an account that is deleted, and needs nothing else from the bring-up.
+   0050 is going live (SPEC §14.12, R1310000–R1310002): `app.settings.starter_cards`, empty until
+   step 6 writes it; the activation grant now grants one copy of each non-token card of the current
+   version that list names (R111); the catalog stamp's grant (0016, 0032, 0046) is dropped, so a
+   stamp grants nobody (R1310001); every economy ledger takes the reason `launch`; and, once per
+   database (`app.settings.economy_launched`), every account keeps its cards while its Jlore, packs,
+   tokens, counters, tracks, held quests and full arts are zeroed by offsetting `launch` rows
+   (ref `launch:0050`) and its quest schedule is cleared (R1310002). On a new project it zeroes
+   nothing.
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL
@@ -797,7 +809,9 @@ step that is not yet implemented says which BUILD task delivers it.
    issue #170, the Meditative set, issue #553, and the Meditative+ set, issue #1187) and
    `select app.catalog_version();` → your `CATALOG_VERSION`, the latest card patch's version (R388).
    In the same transaction it writes the cosmetics registry compiled in, `crates/server/cosmetics.json`
-   (R1295000), into `public.cosmetics`: `select count(*) from public.cosmetics;` → 12.
+   (R1295000), into `public.cosmetics`: `select count(*) from public.cosmetics;` → 12. Before its
+   stamp it writes the starter cards (`STARTER_CARDS`, R1310000) into `app.settings`:
+   `select jsonb_array_length(value) from app.settings where key = 'starter_cards';` → 39.
 7. **Mint an invite code.** `target/release/jackioh-server mint-code`. It generates 16 characters
    from `CODE_ALPHABET`, formats them `XXXX-XXXX-XXXX-XXXX`, HMACs with `CODE_PEPPER` and inserts
    only the hash (§9.4). The plaintext goes to stdout **once** — the database cannot give it back —
@@ -828,13 +842,16 @@ step that is not yet implemented says which BUILD task delivers it.
    `auth.users` trigger. Verify both emails. Confirm a pending account gets 403 from
    `/api/collection`, `/api/decks` and `/api/queue`.
 10. **Redeem a code on each** (BUILD M6-T1). `status` flips to `active`, the activation trigger fires
-    the launch grant, and `select count(*) from public.collection;` shows every non-token card for
-    both profiles (R111; §9.1: every person's active account owns every card until the economy goes
-    live, §14.12). Confirm the three failure kinds — missing, expired, exhausted — return the
+    the launch grant, and `select profile_id, count(*) from public.collection group by 1;` shows
+    the 39 starter cards for each profile (R111, R1310000), and `select profile_id, jlore from
+    public.wallets;` 100 Jlore each, the newest set's track's first level, which the redemption pays
+    (§14.7). Confirm the three failure kinds — missing, expired, exhausted — return the
     identical message.
 11. **Build a deck on each** in `/decks` (R250). It saves as you go, whether or not it is finished;
     `/play` shows whether it can be queued and, if not, the validator's reason, naming the deck and
-    the card. `jackioh-server seed-accounts` gives its accounts three starter decks and a trio instead.
+    the card: a deck of cards outside the starter cards saves, and its queue is refused under L5.
+    `jackioh-server seed-accounts` gives its accounts every card, three starter decks and a trio
+    instead.
 12. **Create a room** (BUILD M6-T4). `POST /api/rooms { mode: "bo1", deckId }` → a 6-character code
     from `CODE_ALPHABET` (R79). A `matches` row appears at `status = 'open'` with p1's frozen deck.
 13. **Join it from the second browser.** `POST /api/rooms/:code/join { mode: "bo1", deckId }` claims

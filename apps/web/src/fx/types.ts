@@ -41,7 +41,11 @@ export type FxRayTone = "legendary" | "mythic" | "radiant" | "holy" | "victory";
 export type FxBannerTone = "you" | "opponent" | "muted";
 export type FxOutcome = "victory" | "defeat" | "draw";
 
-/** `scale` multiplies every particle's size, as `power` does its speed. Absent: 1. */
+/**
+ * `scale` multiplies every particle's size, as `power` does its speed. Absent: 1. `colors` (#1447) is a palette
+ * that replaces the preset's own, hot first: the particles' shape and physics still come from `preset`. Absent:
+ * the preset's colours.
+ */
 export type FxBurstCue = {
   kind: "burst";
   preset: FxPreset;
@@ -51,9 +55,44 @@ export type FxBurstCue = {
   spread: FxSpread;
   power: number;
   scale?: number;
+  colors?: readonly string[];
 };
 /** `density` is the intensity scale: it multiplies the trail and the arrival burst, as `count` does a burst's. */
 export type FxProjectileCue = { kind: "projectile"; preset: FxPreset; from: FxAnchor; to: FxAnchor; delayMs: number; flightMs: number; density: number };
+/** #1442: what a flavor's shot throws; `shots.ts` draws each with paths, never an image (B27). */
+export type FxShotSprite = "arrow" | "boulder" | "book" | "seed" | "goo" | "snack" | "coin" | "bill" | "heart" | "emoji";
+/**
+ * #1442: a flavor's projectile, one of four motions. An `arc` throws `count` sprites on a lob, each
+ * pointing along its path, spinning or floating (`turn`), `scatter`ed about the target or not, with a
+ * `trail` of particles and a `shake` on impact when set. A `bolt` is a glowing shot in a straight line
+ * with a particle trail, a `wave` when it weaves. A `beam` is an instant line; a `swipe` a claw-slash crescent.
+ */
+export type FxShot =
+  | {
+      motion: "arc";
+      sprites: readonly FxShotSprite[];
+      turn: "point" | "spin" | "float";
+      count: number;
+      trail?: FxPreset;
+      scatter?: true;
+      shake?: true;
+    }
+  | { motion: "bolt"; trail: FxPreset; wave?: true }
+  | { motion: "beam" }
+  | { motion: "swipe" };
+export type FxShotMotion = FxShot["motion"];
+/** #1442: a flavor's shot from one anchor to another over `flightMs`, in `colors` (hot first), bursting `preset` where it lands; `density` is the intensity scale, as the projectile's. */
+export type FxShotCue = {
+  kind: "shot";
+  shot: FxShot;
+  colors: readonly string[];
+  preset: FxPreset;
+  from: FxAnchor;
+  to: FxAnchor;
+  delayMs: number;
+  flightMs: number;
+  density: number;
+};
 export type FxCrackCue = { kind: "crack"; at: FxAnchor; delayMs: number; durationMs: number };
 export type FxRingCue = { kind: "ring"; preset: FxPreset; at: FxAnchor; delayMs: number; durationMs: number };
 export type FxShakeCue = { kind: "shake"; trauma: number; delayMs: number };
@@ -103,9 +142,17 @@ export type FxZoneCue = {
 /** B46–B48 stage cues come from `stage.ts`, not the S7 recipe table. `hold` waits for board catch-up (BUILD M5-T4); `durationMs` is a safety cap (R200). */
 export type FxHoldCue = { kind: "hold"; from: FxAnchor | null; to: FxAnchor; delayMs: number; landMs: number; durationMs: number };
 export type FxConcealCue = { kind: "conceal"; testid: string; mode: "now" | "after"; delayMs: number; durationMs: number };
-export type FxLungeCue = { kind: "lunge"; attacker: string; target: string; delayMs: number; durationMs: number };
+export type FxLungeCue = {
+  kind: "lunge";
+  attacker: string;
+  target: string;
+  delayMs: number;
+  durationMs: number;
+  /** #1442: a Ranged attacker fires from where it stands. */
+  still?: true;
+};
 
-export type FxCanvasCue = FxBurstCue | FxProjectileCue | FxCrackCue | FxRingCue;
+export type FxCanvasCue = FxBurstCue | FxProjectileCue | FxShotCue | FxCrackCue | FxRingCue;
 export type FxDomCue =
   | FxSplatCue
   | FxRaysCue

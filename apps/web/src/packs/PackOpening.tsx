@@ -335,23 +335,33 @@ export default function PackOpening({
   const [opened, setOpened] = useState<OpenedPackResponse | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [reading, setReading] = useState(true);
   // A swipe's pointerup is followed by a click, and both ask to open: the ref answers the second at once.
   const inFlight = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
+    setReading(true);
     getPacks(token).then(
       (response) => {
-        if (!cancelled) setInfo(response);
+        if (!cancelled) {
+          setInfo(response);
+          setLoadError(null);
+          setReading(false);
+        }
       },
       (cause: unknown) => {
-        if (!cancelled) setLoadError(wordsOf(cause));
+        if (!cancelled) {
+          setLoadError(wordsOf(cause));
+          setReading(false);
+        }
       },
     );
     return () => {
       cancelled = true;
     };
-  }, [token, revision]);
+  }, [token, revision, attempt]);
 
   const begin = (next: SceneState | null): void => {
     setScene(next);
@@ -401,9 +411,23 @@ export default function PackOpening({
   return (
     <div className="form-card packs-panel" data-testid={packTestid.panel}>
       {loadError === null ? null : (
-        <p className="notice" role="alert" data-testid={packTestid.loadError}>
-          {loadError}
-        </p>
+        <>
+          <p className="notice" role="alert" data-testid={packTestid.loadError}>
+            {loadError}
+          </p>
+          <div className="account-actions">
+            <button
+              type="button"
+              data-testid={packTestid.retry}
+              disabled={reading}
+              onClick={() => {
+                setAttempt((before) => before + 1);
+              }}
+            >
+              {t("Try again")}
+            </button>
+          </div>
+        </>
       )}
       {info === null && loadError === null ? (
         <p className="notice" role="status" data-testid={packTestid.loading}>

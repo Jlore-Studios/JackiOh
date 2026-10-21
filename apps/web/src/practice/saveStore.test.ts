@@ -75,8 +75,9 @@ function fakeIndexedDb(options: { failOpen?: boolean } = {}): { factory: IDBFact
   return { factory: factory as unknown as IDBFactory, rows, opened };
 }
 
+/** After every request already made has answered: the fake's 0 ms timers run in the order they were set. */
 function macrotasks(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 5));
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 describe("R668 the practice worker's save store", () => {

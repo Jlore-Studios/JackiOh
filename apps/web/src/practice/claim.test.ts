@@ -8,6 +8,8 @@
 // `r1303002_the_ai_rerun_matches_the_game_the_worker_played` folds and pays; after an AI, card or
 // engine change that plays it differently, record it again with
 // `JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run src/practice/claim.test.ts`.
+// A training lane's promotion records it with its gate (learn.yml; training/README.md, What a lane
+// may change): it is the one file outside crates/ai/** and training/history/** a lane may change.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

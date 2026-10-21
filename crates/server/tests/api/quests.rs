@@ -22,15 +22,18 @@ use jackioh_engine::{
 use serde_json::{Value, json};
 
 use jackioh_server::app::{App, now_ms};
-use jackioh_server::config::{QUEST_MAX_HELD, QUEST_XP_PER_JLORE};
+use jackioh_server::config::{JLORE_GAMES_DAILY_CAP, QUEST_MAX_HELD, QUEST_XP_PER_JLORE};
 use jackioh_server::economy::quests::{
     GameTally, PlayedCard, QuestDef, QuestGoal, pool, progress_of, quest_def, quest_interval_ms, quest_xp,
     tally_seat, top_up_quests,
 };
 use jackioh_server::economy::rewards::{GameMode, GameSummary, pay_game_rewards};
-use jackioh_server::economy::store::{EconomyLedger, EconomyReason, JloreReason, QuestChange, QuestGrant};
+use jackioh_server::economy::store::{
+    EconomyLedger, EconomyReason, JloreGrant, JloreReason, QuestChange, QuestGrant,
+};
 
 use crate::support::deps::{call, test_app as built_app};
+use crate::support::store::store;
 
 /// The caller's bearer token and managed-auth user id (`e2e/support/config.ts`'s `e2e-p1`).
 const TOKEN: &str = "e2e-token-p1";
@@ -47,23 +50,16 @@ fn interval() -> i64 {
 
 /// The test app with the economy on (§14.12), as `rewards.rs`'s.
 async fn test_app() -> Arc<App> {
+    economy_app(true).await
+}
+
+/// The test app with the economy switched to `live`, as `rewards.rs`'s.
+async fn economy_app(live: bool) -> Arc<App> {
     let mut app = built_app().await;
     Arc::get_mut(&mut app)
         .expect("the test app has no second handle yet")
-        .economy_live = true;
+        .economy_live = live;
     app
-}
-
-/// Every store call in this file: one transaction, committed when the call answers.
-macro_rules! store {
-    ($app:expr, |$t:ident| $call:expr) => {{
-        let mut $t = $app.db.begin(None).await.expect("a store transaction begins");
-        let out = $call
-            .await
-            .expect(concat!("the store answers ", stringify!($call)));
-        $t.commit().await.expect("the store transaction commits");
-        out
-    }};
 }
 
 async fn profile_id_of(app: &App, user_id: &str) -> String {
@@ -226,9 +222,8 @@ async fn r1304000_a_long_absence_returns_exactly_the_cap() {
 
 #[tokio::test]
 async fn r1304002_no_quest_arrives_while_the_economy_is_off() {
-    // The build's own app: `ECONOMY_LIVE` is off (§14.12).
-    let app = built_app().await;
-    assert!(!app.economy_live);
+    // The economy switched off (§14.12), as production ran until launch (R1310000).
+    let app = economy_app(false).await;
     let p1 = profile_id_of(&app, USER).await;
     set_due(&app, &p1, now_ms() - 10 * interval()).await;
     let (status, body) = get_quests(&app, TOKEN).await;
@@ -239,7 +234,9 @@ async fn r1304002_no_quest_arrives_while_the_economy_is_off() {
 
 #[tokio::test]
 async fn get_api_quests_answers_only_the_callers_own() {
-    let app = built_app().await;
+    // The economy off, so no visit schedules or delivers a quest (R1304000) and each answer is
+    // exactly what the store holds for its caller.
+    let app = economy_app(false).await;
     let p1 = profile_id_of(&app, USER).await;
     let win_3 = quest_def("win-3").expect("the pool has win-3");
     hold(&app, &p1, win_3, 1, T0).await;
@@ -350,6 +347,51 @@ async fn r1304001_a_completed_quest_pays_its_jlore_and_xp_exactly_once() {
         &won_game(&p1, "match-2", GameTally::default(), now + 1)
     ));
     assert_eq!(paid(&ledger_of(&app, &p1).await).len(), 1);
+}
+
+#[tokio::test]
+async fn r1483000_quest_jlore_pays_past_the_game_cap() {
+    let app = test_app().await;
+    let p1 = profile_id_of(&app, USER).await;
+    let now = now_ms();
+    set_due(&app, &p1, now + 10 * interval()).await;
+    let win = easiest(&QuestGoal::WinGames);
+    hold(&app, &p1, win, win.target - 1, now).await;
+    // Today's games have already paid the cap.
+    let earlier = JloreGrant {
+        profile_id: p1.clone(),
+        delta: JLORE_GAMES_DAILY_CAP,
+        reason: JloreReason::Game,
+        reference: Some("earlier-game".to_string()),
+        dev: false,
+        at: now,
+    };
+    store!(app, |t| t.economy_jlore_grant(&earlier));
+
+    store!(app, |t| pay_game_rewards(
+        &mut t,
+        &won_game(&p1, "match-1", GameTally::default(), now)
+    ));
+    let jlore = ledger_of(&app, &p1).await.jlore;
+    let by = |reason: JloreReason| -> Vec<JloreGrant> {
+        jlore
+            .iter()
+            .filter(|grant| grant.reason == reason)
+            .cloned()
+            .collect()
+    };
+    assert_eq!(
+        by(JloreReason::Game),
+        vec![earlier],
+        "the win's own Jlore was held back"
+    );
+    let quest = by(JloreReason::Quest);
+    assert_eq!(quest.len(), 1, "{quest:?}");
+    assert_eq!(
+        quest[0].delta,
+        i64::from(win.jlore),
+        "the quest's Jlore is paid past the cap"
+    );
 }
 
 #[tokio::test]

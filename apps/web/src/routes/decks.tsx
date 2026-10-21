@@ -1,6 +1,6 @@
 // `/decks`: §9.4 workshop gate and I/O (R250–R256, R341).
 // Redirecting pending accounts is UX; active-only endpoints enforce the gate.
-// Reads run once per profile; writes use the current token only while it remains that profile (R194, R256).
+// Reads run once per profile, and again on Try again; writes use the current token only while it remains that profile (R194, R256).
 // The collection is optional: without L5 quantities, ownership is unknown.
 // R915005: the account's custom cards join the catalog the workshop reads (set `Custom`, drawn from
 // their frames by `customDef`) and are owned once each; the validator's L7 marks a deck naming one.
@@ -19,7 +19,7 @@ import { currentCatalog } from "../game/currentCatalog.ts";
 import DeckWorkshop from "../game/deckbuilder/DeckWorkshop.tsx";
 import { collectionFrom } from "../game/deckbuilder/loadout.ts";
 import type { DeckSyncApi } from "../game/deckbuilder/sync.ts";
-import { DECKBUILDER_ERROR, DECKBUILDER_LOADING } from "../game/deckbuilder/testids.ts";
+import { DECKBUILDER_ERROR, DECKBUILDER_LOADING, DECKBUILDER_RETRY } from "../game/deckbuilder/testids.ts";
 import {
   ApiUnreachableError,
   deleteDeck,
@@ -33,6 +33,7 @@ import {
 } from "../net/api.ts";
 import { useAccount } from "../net/gate.ts";
 import { navigate, paths } from "../net/navigate.ts";
+import { BackLink } from "./nav.tsx";
 
 type Loaded = {
   catalog: CatalogSnapshot;
@@ -60,6 +61,7 @@ type Screen =
 function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="app-shell">
+      <BackLink />
       <h1>{t("JackiOh — decks")}</h1>
       {children}
     </div>
@@ -69,6 +71,7 @@ function Shell({ children }: { children: ReactNode }) {
 export default function DecksRoute() {
   const account = useAccount();
   const [screen, setScreen] = useState<Screen>({ kind: "loading" });
+  const [attempt, setAttempt] = useState(0);
 
   // §9.4 redirect visible to Cypress specs 09 and 10.
   useEffect(() => {
@@ -149,7 +152,7 @@ export default function DecksRoute() {
     return () => {
       cancelled = true;
     };
-  }, [hasToken, profileId, blocked]);
+  }, [hasToken, profileId, blocked, attempt]);
 
   if (account.kind === "error") {
     return (
@@ -186,6 +189,18 @@ export default function DecksRoute() {
         <p className="notice" data-testid={DECKBUILDER_ERROR}>
           {t(screen.message)}
         </p>
+        <div className="row">
+          <button
+            type="button"
+            className="button-primary"
+            data-testid={DECKBUILDER_RETRY}
+            onClick={() => {
+              setAttempt((before) => before + 1);
+            }}
+          >
+            {t("Try again")}
+          </button>
+        </div>
       </Shell>
     );
   }
