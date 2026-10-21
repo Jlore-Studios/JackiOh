@@ -115,7 +115,7 @@ use crate::db::store::{
     PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
     PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow,
     RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio, Season,
-    SeasonStanding, SeriesRow, SeriesStatus, SignalOutcomeRow, StatsTotalsQuery, StoreError,
+    SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow, StatsTotalsQuery, StoreError,
     TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialMergeInput,
     TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
@@ -280,6 +280,8 @@ pub struct FakeTables {
     /// `crate::economy::store`'s.
     pub economy: crate::economy::store::EconomyTables,
     // ---- end Economy ----
+    /// R1523000: migration 0051's `app.seat_epoch`, its one row's epoch (0 in an empty store).
+    pub seat_epoch: i64,
 }
 
 /// TS `emptyTables()` (with `emptyDeckTables`, `emptyTutorialTables`, `emptyPlayerSettingsTables`,
@@ -402,8 +404,12 @@ impl FakeData {
 
     /// R144: "the server reseeds its fixture accounts and invite codes at boot". The reseed is a
     /// wipe and rewrite rather than a merge, so a second run starts from the same rows as the first.
+    /// The seat epoch stays, as `app.seat_epoch` stays through the Postgres harness's truncate: a
+    /// server's ledger fences on it from boot on (R1523000).
     pub fn reset(&mut self) {
+        let seat_epoch = self.tables.seat_epoch;
         self.tables = empty_tables();
+        self.tables.seat_epoch = seat_epoch;
         self.next_profile = 1;
     }
 
@@ -1088,6 +1094,44 @@ pub fn profiles_clear_in_match(
         row.in_match_id = None;
     }
     Ok(())
+}
+
+/// R1523000: every profile whose in-match flag is set, with its match, by profile id.
+pub fn profiles_seated(f: &mut FakeTx<'_>) -> Result<Vec<SeatedProfile>, StoreError> {
+    call(f, "profiles.seated")?;
+    let mut rows: Vec<SeatedProfile> = f
+        .tables()
+        .profiles
+        .iter()
+        .filter_map(|profile| {
+            profile.in_match_id.as_ref().map(|match_id| SeatedProfile {
+                profile_id: profile.id.clone(),
+                match_id: match_id.clone(),
+            })
+        })
+        .collect();
+    rows.sort_by(|a, b| by_profile_id(&a.profile_id, &b.profile_id));
+    Ok(rows)
+}
+
+/// R1523000: the claim's fence, `Fenced` unless the epoch is still `epoch`. The transaction holds the
+/// tables' one lock, so nothing can bump the epoch while it runs; a claim begun after a bump finds
+/// the new epoch, as Postgres's does.
+pub fn seats_fence(f: &mut FakeTx<'_>, epoch: i64) -> Result<(), StoreError> {
+    call(f, "seats.fence")?;
+    if f.tables().seat_epoch == epoch {
+        Ok(())
+    } else {
+        Err(StoreError::Fenced)
+    }
+}
+
+/// R1523000: a booting process's bump.
+pub fn seats_bump_epoch(f: &mut FakeTx<'_>) -> Result<i64, StoreError> {
+    call(f, "seats.bumpEpoch")?;
+    let tables = f.tables();
+    tables.seat_epoch += 1;
+    Ok(tables.seat_epoch)
 }
 
 /// Migration 0012's account deletion, [`remove_profile_rows`].

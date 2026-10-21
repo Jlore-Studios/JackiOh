@@ -903,6 +903,10 @@ mod r264_rooms_carry_a_mode {
             "version": 1,
         }));
         store!(h.app, t => t.series_create(&series).await.expect("series.create"));
+        // R1523000: the seat written straight into the store, read as a restart would read it.
+        jackioh_server::seats::hydrate(&h.app)
+            .await
+            .expect("the ledger reads the store");
 
         let (status, body) = h.join(&code, json!({})).await;
         assert_eq!(status, 409);
@@ -975,6 +979,10 @@ mod r264_rooms_carry_a_mode {
         let h = harness(false).await;
         let code = create_in(&h, json!({ "mode": "bo1", "deckId": uuid(1) })).await;
         store!(h.app, t => t.profiles_set_in_match(HOST, Some("elsewhere")).await.expect("profiles.setInMatch"));
+        // R1523000: the seat written straight into the store, read as a restart would read it.
+        jackioh_server::seats::hydrate(&h.app)
+            .await
+            .expect("the ledger reads the store");
 
         let (status, refused) = h.join(&code, json!({})).await;
         assert_eq!(status, 409);
@@ -984,6 +992,9 @@ mod r264_rooms_carry_a_mode {
 
         // The control: once the host is free the same join goes through.
         store!(h.app, t => t.profiles_set_in_match(HOST, None).await.expect("profiles.setInMatch"));
+        jackioh_server::seats::hydrate(&h.app)
+            .await
+            .expect("the ledger reads the store");
         assert_eq!(h.join(&code, json!({})).await.0, 200);
     }
 }

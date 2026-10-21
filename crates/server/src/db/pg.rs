@@ -81,10 +81,10 @@ use crate::db::store::{
     PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
     ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput,
     RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard,
-    SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StatsTotalsQuery,
-    StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome,
-    TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
-    UsernameClaim, UsernameClaimOutcome,
+    SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesSide, SignalOutcomeRow,
+    StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
+    TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
+    UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -2201,6 +2201,56 @@ pub async fn profiles_clear_in_match(
     .await
     .map_err(db_error)?;
     Ok(())
+}
+
+/// R1523000: every profile whose in-match flag is set, with its match, by profile id.
+pub async fn profiles_seated(t: &mut PgTx<'_>) -> Result<Vec<SeatedProfile>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select id, current_match_id from public.profiles
+          where current_match_id is not null order by id",
+    )
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter()
+        .map(|row| {
+            Ok(SeatedProfile {
+                profile_id: uuid_text(row, "id")?,
+                match_id: uuid_text(row, "current_match_id")?,
+            })
+        })
+        .collect()
+}
+
+// ---------------------------------------------------------------------------
+// The seat ledger's epoch (R1523000, migration 0051)
+// ---------------------------------------------------------------------------
+
+/// The claim's fence: the one row `for share` while it still holds `epoch`, `Fenced` when it does
+/// not. Shared locks never wait on each other, so claims run side by side; a newer process's bump
+/// waits for every claim that took one, and a claim that reads after the bump finds no row.
+pub async fn seats_fence(t: &mut PgTx<'_>, epoch: i64) -> Result<(), StoreError> {
+    run_as(t, None).await?;
+    let row = sqlx::query("select 1 from app.seat_epoch where epoch = $1 for share")
+        .bind(epoch)
+        .fetch_optional(&mut **t)
+        .await
+        .map_err(db_error)?;
+    match row {
+        Some(_) => Ok(()),
+        None => Err(StoreError::Fenced),
+    }
+}
+
+/// A booting process's bump: one more than the epoch every older process fences on.
+pub async fn seats_bump_epoch(t: &mut PgTx<'_>) -> Result<i64, StoreError> {
+    run_as(t, None).await?;
+    let row = sqlx::query("update app.seat_epoch set epoch = epoch + 1 returning epoch")
+        .fetch_one(&mut **t)
+        .await
+        .map_err(db_error)?;
+    get::<i64>(&row, "epoch")
 }
 
 /// `DELETE /api/account`'s store half: one delete, and migration 0012's foreign keys do the

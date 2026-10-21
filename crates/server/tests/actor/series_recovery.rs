@@ -211,11 +211,16 @@ async fn boot(from: Option<&Process>) -> Process {
             for match_id in previous.app.matches.live() {
                 previous.app.matches.stop(&match_id).await;
             }
-            test_app_with(TestAppOptions {
+            let app = test_app_with(TestAppOptions {
                 db: Some(previous.app.db.clone()),
                 ..TestAppOptions::default()
             })
-            .await
+            .await;
+            // R1523000: the restart's seat ledger boots on the store it found, as `serve`'s does.
+            jackioh_server::seats::boot(&app)
+                .await
+                .expect("the seat ledger boots");
+            app
         }
     };
     let alice = add_user(&app, &format!("user-{ALICE}"), "alice@example.test", true);

@@ -2135,6 +2135,10 @@ mod r264_a_series_that_is_not_over_holds_its_players_out_of_the_queue {
             app,
             series_create(&from(series_with(&app, "mid-series", "opponent", "picking")))
         );
+        // R1523000: the seat written straight into the store, read as a restart would read it.
+        jackioh_server::seats::hydrate(&app)
+            .await
+            .expect("the ledger reads the store");
 
         let (status, body) = enqueue(&app, &token, &deck_id).await;
 
@@ -2151,6 +2155,9 @@ mod r264_a_series_that_is_not_over_holds_its_players_out_of_the_queue {
         let mut over = series_with(&app, "mid-series", "opponent", "over");
         over["version"] = json!(2);
         assert!(q!(app, series_update(&from(over))));
+        jackioh_server::seats::hydrate(&app)
+            .await
+            .expect("the ledger reads the store");
         assert_eq!(enqueue(&app, &token, &deck_id).await.0, 200);
     }
 

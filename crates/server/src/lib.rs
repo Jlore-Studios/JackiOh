@@ -12,6 +12,8 @@
 //! - `bots`: the ladder bots: their personas, seat, fallback and pool (SPEC §9.12, R1453, R1454,
 //!   R1451, R1452; #638).
 //! - `ranked`: the ladder's pure rules (part 18). `db`: the store and migrations (part 20).
+//! - `seats`: the seat ledger, the one game each profile holds, which every door into a game
+//!   reserves through (R1523000; #1523).
 //! - `cli`: the command-line tools `main.rs` dispatches to (part 20).
 //! - `loops`: the background loops' supervisor, which logs a loop that panics (#842) or returns
 //!   (#1093) and starts it again.
@@ -42,6 +44,7 @@ pub mod duos;
 pub mod env;
 pub mod loops;
 pub mod ranked;
+pub mod seats;
 // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- SPEC S7 (#936).
 pub mod social;
 pub mod username;

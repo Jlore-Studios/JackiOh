@@ -60,6 +60,7 @@ use crate::db::store::{
     BotRow, FrozenTrio, MatchSeat, PerMode, Profile, QueueMode, SeriesRow, StartMatchInput, Ticket,
     TicketStatus,
 };
+use crate::seats::{Lease, Seat};
 
 /// Unit conversion, not configuration: `rating_window` speaks seconds, tickets are stamped in ms.
 const MS_PER_SECOND: f64 = 1000.0;
@@ -409,7 +410,9 @@ fn seat_taken() -> ApiError {
 /// R890000: undoes a pair's start — or a seat the compare-and-set refused — by letting go only of
 /// the seats that point at this match, then forgetting the `open` skeleton. The clears are
 /// conditional, so a rival match that seated a player meanwhile keeps its flag; the tickets stay
-/// claimed, as a failed start leaves them today.
+/// claimed, as a failed start leaves them today. R1523000: once the clears have landed the ledger
+/// lets go of the same seats (a seat still pending is its lease's to give back); clears that fail
+/// leave both held in the ledger as in the record, until the reaper frees them (R1450).
 async fn cleanup_pair_start(app: &App, a_profile_id: &str, b_profile_id: &str, match_id: &str) {
     let cleanup = async {
         let mut tx = app
@@ -426,6 +429,10 @@ async fn cleanup_pair_start(app: &App, a_profile_id: &str, b_profile_id: &str, m
         tx.commit()
             .await
             .map_err(|error| ApiError::internal(error.to_string()))?;
+        let seat = Seat::Match(match_id.to_string());
+        for profile_id in [a_profile_id, b_profile_id] {
+            app.seats.release(profile_id, &seat);
+        }
         discard_open(app, match_id).await
     }
     .await;
@@ -455,12 +462,31 @@ pub(crate) async fn discard_open(app: &App, match_id: &str) -> Result<(), ApiErr
 /// is the older ticket, who goes first in odd games.
 async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) -> Result<(), ApiError> {
     let (older, younger) = older_first(a, b);
+    // R1523000: both sides' seats in the series, or neither, before anything is written: a side
+    // that took another game since the sweep's read fails the start as a lost seat does.
+    let series_id = new_uuid();
+    let lease = match app.seats.reserve(
+        &[&older.profile_id, &younger.profile_id],
+        Seat::Series {
+            id: series_id.clone(),
+            game: None,
+        },
+    ) {
+        Ok(lease) => lease,
+        Err(taken) => {
+            tracing::info!(event = "queue.seat_taken", matchId = %match_id, profileId = %taken.profile);
+            if let Err(cleanup) = discard_open(app, match_id).await {
+                tracing::error!(event = "queue.pair_cleanup_failed", matchId = %match_id, message = %cleanup.message);
+            }
+            return Err(seat_taken());
+        }
+    };
     // R143 and R259: the server mints the series seed (each game's is `{seed_base}:{n}`), unless an
     // end-to-end enqueue supplied one.
     let seed_base = take_seed_for_pair(a, b).unwrap_or_else(new_seed);
     let made = async {
         let input = NewSeriesInput {
-            series_id: new_uuid(),
+            series_id: series_id.clone(),
             first_match_id: match_id.to_string(),
             sides: (
                 NewSeriesSide {
@@ -485,6 +511,8 @@ async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) 
             .begin(None)
             .await
             .map_err(|error| ApiError::internal(error.to_string()))?;
+        // R1523000: a newer server holds the seats once the epoch has moved on; nothing is written.
+        tx.seats_fence(app.seats.epoch()).await.map_err(ApiError::from)?;
         let series = start_series(app, input, &mut tx)
             .await
             .map_err(|error| ApiError::internal(error.to_string()))?;
@@ -495,7 +523,10 @@ async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) 
     }
     .await;
     let series = match made {
-        Ok(series) => series,
+        Ok(series) => {
+            lease.commit();
+            series
+        }
         Err(error) => {
             // `start_paired_match`'s cleanup for a pair that becomes a series: the `open` skeleton `tickets_claim_pair` wrote points at nothing, so delete it now rather than leave it to the reaper's open-row sweep (R1450).
             if let Err(cleanup) = discard_open(app, match_id).await {
@@ -541,6 +572,20 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
     if a.mode == QueueMode::Bo3 {
         return start_paired_series(app, a, b, match_id).await;
     }
+    // R1523000: both seats, or neither, before anything is written. A player who took another game
+    // since the sweep's read (a room, a series, a co-op match) fails the start here, through the
+    // failed-start cleanup a lost seat takes; the lease gives the other seat back as it drops.
+    let lease = match app
+        .seats
+        .reserve(&[&a.profile_id, &b.profile_id], Seat::Match(match_id.to_string()))
+    {
+        Ok(lease) => lease,
+        Err(taken) => {
+            tracing::info!(event = "queue.seat_taken", matchId = %match_id, profileId = %taken.profile);
+            cleanup_pair_start(app, &a.profile_id, &b.profile_id, match_id).await;
+            return Err(seat_taken());
+        }
+    };
     // R143: the server mints the seed, unless an end-to-end enqueue supplied one.
     let seed = take_seed_for_pair(a, b).unwrap_or_else(new_seed);
     let random = a.mode == QueueMode::Random;
@@ -589,10 +634,16 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
             .begin(None)
             .await
             .map_err(|error| ApiError::internal(error.to_string()))?;
+        // R1523000: fenced first, so a claim a newer server's epoch has overtaken writes nothing.
+        if let Err(error) = tx.seats_fence(app.seats.epoch()).await {
+            drop(tx);
+            cleanup_pair_start(app, &a.profile_id, &b.profile_id, match_id).await;
+            return Err(ApiError::from(error));
+        }
         // §9.5: in-match state is set here and cleared by `results.rs` at every ending. Both
-        // seats are claimed compare-and-set (R890000): a room join that seated a player between
-        // the sweep's read and the claim loses one seat here instead of seating them twice, and
-        // dropping `tx` rolls both stores back, so the rival flag is never touched.
+        // seats are claimed compare-and-set (R890000), the record and a second guard behind the
+        // ledger's: a seat it refuses after the ledger granted it is drift, and dropping `tx`
+        // rolls both stores back, so the rival flag is never touched.
         let a_seated = tx
             .profiles_set_in_match(&a.profile_id, Some(match_id))
             .await
@@ -602,6 +653,7 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
             .await
             .map_err(|error| ApiError::internal(error.to_string()))?;
         if !a_seated || !b_seated {
+            tracing::error!(event = "seats.drift", source = "compare-and-set", matchId = %match_id);
             // Before the commit, so nothing was written: undo the claim's skeleton and let
             // `try_pair` record the failed start (the tickets stay claimed). Dropped first: the
             // fake store's lock is held by this transaction, and the cleanup begins its own.
@@ -613,6 +665,9 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
             .await
             .map_err(|error| ApiError::internal(error.to_string()))?;
     }
+    // R1523000: the record holds both seats now, so the ledger does: a start that fails from here
+    // lets go of them through its cleanup, as it clears the flags.
+    lease.commit();
 
     // R604: a match the queue pairs is ranked.
     let started = app
@@ -978,12 +1033,21 @@ async fn pair_with_bots(
             made += 1;
             continue;
         }
+        // R1523000: the person's seat and the bot's, or neither, before the claim; one taken since
+        // the sweep's read leaves the ticket for the next sweep, as a lost claim does.
+        let Ok(lease) = app.seats.reserve(
+            &[&ticket.profile_id, &bot.profile_id],
+            Seat::Match(match_id.clone()),
+        ) else {
+            continue;
+        };
         let claimed: Result<bool, ApiError> = async {
             let mut tx = app
                 .db
                 .begin(None)
                 .await
                 .map_err(|error| ApiError::internal(error.to_string()))?;
+            tx.seats_fence(app.seats.epoch()).await.map_err(ApiError::from)?;
             let won = tx
                 .tickets_claim_for_bot(&ticket.id, &bot.profile_id, &match_id, now)
                 .await
@@ -1017,7 +1081,7 @@ async fn pair_with_bots(
         app.queue_presence.forget(&ticket.profile_id);
         // One bot pairing's failed start ends that pairing, not the fallback: `start_bot_match`
         // already freed both sides, and the ticket and bot are marked taken above.
-        if let Err(error) = start_bot_match(app, ticket, bot, &match_id).await {
+        if let Err(error) = start_bot_match(app, ticket, bot, &match_id, lease).await {
             tracing::warn!(event = "queue.start_failed", matchId = %match_id, tickets = %json_list(std::slice::from_ref(&ticket.id)), message = %error.message);
             failed.push(FailedStart {
                 match_id,
@@ -1049,11 +1113,23 @@ async fn start_bot_series(
     let Some(bot_trio) = bot.trio.clone() else {
         return Ok(false);
     };
+    // R1523000: both sides' seats in the series, or neither, before the claim.
+    let series_id = new_uuid();
+    let Ok(lease) = app.seats.reserve(
+        &[&ticket.profile_id, &bot.profile_id],
+        Seat::Series {
+            id: series_id.clone(),
+            game: None,
+        },
+    ) else {
+        return Ok(false);
+    };
     let mut tx = app
         .db
         .begin(None)
         .await
         .map_err(|error| ApiError::internal(error.to_string()))?;
+    tx.seats_fence(app.seats.epoch()).await.map_err(ApiError::from)?;
     let won = tx
         .tickets_claim_for_bot_series(&ticket.id, &bot.profile_id, match_id, now)
         .await
@@ -1065,7 +1141,7 @@ async fn start_bot_series(
     // R143 and R259: the server mints the series seed, unless an end-to-end enqueue supplied one.
     let seed_base = seeds().shift_remove(&ticket.id).unwrap_or_else(new_seed);
     let input = NewSeriesInput {
-        series_id: new_uuid(),
+        series_id,
         first_match_id: match_id.to_string(),
         sides: (
             NewSeriesSide {
@@ -1088,6 +1164,7 @@ async fn start_bot_series(
     tx.commit()
         .await
         .map_err(|error| ApiError::internal(error.to_string()))?;
+    lease.commit();
     tracing::info!(
         event = "queue.paired_bot",
         mode = "bo3",
@@ -1107,12 +1184,14 @@ async fn start_bot_series(
 /// the ticket's frozen deck against one of the bot's decks picked from the seed (`{seed}:bot-deck`),
 /// with its portrait; All Random deals both seats as for two people (R258, R642), the bot's with no
 /// lean.
-/// The match is ranked (R604): a ticket the queue paired, whoever it was paired with.
+/// The match is ranked (R604): a ticket the queue paired, whoever it was paired with. `lease` holds
+/// both seats in the ledger (R1523000), committed once the record holds them too.
 async fn start_bot_match(
     app: &Arc<App>,
     ticket: &Ticket,
     bot: &BotRow,
     match_id: &str,
+    lease: Lease<'_>,
 ) -> Result<(), ApiError> {
     let seed = seeds().shift_remove(&ticket.id).unwrap_or_else(new_seed);
     let (human_player, bot_player) = (jackioh_engine::PlayerId::P1, jackioh_engine::PlayerId::P2);
@@ -1146,6 +1225,8 @@ async fn start_bot_match(
             .begin(None)
             .await
             .map_err(|error| ApiError::internal(error.to_string()))?;
+        // R1523000: a newer server holds the seats once the epoch has moved on.
+        tx.seats_fence(app.seats.epoch()).await.map_err(ApiError::from)?;
         let won = tx
             .profiles_set_in_match(&ticket.profile_id, Some(match_id))
             .await
@@ -1159,8 +1240,10 @@ async fn start_bot_match(
     }
     .await;
     match seated {
-        Ok(true) => {}
+        // R1523000: the record holds both seats now (the claim seated the bot), so the ledger does.
+        Ok(true) => lease.commit(),
         Ok(false) => {
+            tracing::error!(event = "seats.drift", source = "compare-and-set", matchId = %match_id);
             // Before any commit, so nothing was written: undo the claim and let the fallback
             // record the failed start (the ticket stays claimed).
             cleanup_pair_start(app, &ticket.profile_id, &bot.profile_id, match_id).await;

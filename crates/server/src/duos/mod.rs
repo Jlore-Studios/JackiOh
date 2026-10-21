@@ -93,14 +93,25 @@ async fn end_abandoned(app: &Arc<App>, match_id: &str, now: i64) {
     let ended = one_tx!(app.db, |t| {
         match t.duos_matches_get(match_id).await? {
             Some(row) if row.ended_at.is_none() && now >= ceiling_at(&row) => {
-                t.duos_matches_finish(match_id, &result, now).await?
+                if t.duos_matches_finish(match_id, &result, now).await? {
+                    Some((row.a1, row.a2))
+                } else {
+                    None
+                }
             }
-            _ => false,
+            _ => None,
         }
     });
     match ended {
-        Ok(true) => tracing::warn!(event = "duos.abandoned.ended", matchId = %match_id),
-        Ok(false) => {}
+        Ok(Some(people)) => {
+            // R1523000: both people leave the match's seats, as the actor's ending lets them go.
+            let seat = crate::seats::Seat::Duos(match_id.to_string());
+            for person in [&people.0, &people.1] {
+                app.seats.release(person, &seat);
+            }
+            tracing::warn!(event = "duos.abandoned.ended", matchId = %match_id);
+        }
+        Ok(None) => {}
         Err(error) => {
             tracing::error!(event = "duos.abandoned.failed", matchId = %match_id, message = %error);
         }

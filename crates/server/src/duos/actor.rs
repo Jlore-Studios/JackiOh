@@ -82,6 +82,7 @@ use crate::duos::protocol::{
 use crate::duos::registry::registry;
 use crate::duos::store::{DuosActionRow, DuosMatch, action_json, seat_of_logged};
 use crate::duos::{ceiling_at, ceiling_draw};
+use crate::seats::Seat;
 
 /// The people's seats: the room's host and guest (S6). Their sockets, graces and AI takeovers are
 /// indexed in this order.
@@ -1325,6 +1326,12 @@ impl DuosActor {
         if !self.record_result(&result, at).await {
             self.let_go("duos.result.unrecorded");
             return;
+        }
+        // R1523000: once the result has landed, both people leave the match's seats.
+        let row = &self.shared.row;
+        let seat = Seat::Duos(row.id.clone());
+        for person in [&row.a1, &row.a2] {
+            self.shared.app.seats.release(person, &seat);
         }
         tracing::info!(event = "duos.over", matchId = %self.match_id_str(), result = %result);
     }
