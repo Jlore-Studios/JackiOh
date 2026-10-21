@@ -10290,7 +10290,10 @@
       "feedback_since": "2026-10-21T16:02:10Z",
       "issue": 1523,
       "kind": "revise",
+      "queued_at": "2026-10-21T17:34:31Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
