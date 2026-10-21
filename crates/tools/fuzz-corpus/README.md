@@ -44,3 +44,5 @@ hash. The tools' `cargo test` runs the same, so the `rust` check does.
 ## Scope
 
 The gate's 1v1 deal only. The handicapped wave and Duos deal other decks (`handicap_decks_for_seed`, `duos_fuzz.rs`) and have no corpus.
+
+A record replays from the plain start (two built decks, no boards), whatever start its seed draws in the wave (#1503).
