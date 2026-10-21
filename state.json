@@ -8611,6 +8611,9 @@
       "started_at": "2026-10-21T06:33:51Z",
       "stop_requested": false
     },
+    "1506": {
+      "suggestion": true
+    },
     "1507": {
       "action": "review",
       "cleared": {
