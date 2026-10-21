@@ -47,7 +47,7 @@
       "radiantUpgradesMean": null
     },
     {
-      "patch": "v0.3.0",
+      "patch": "v0.2.5e",
       "mode": "bo1",
       "source": "live",
       "games": 8,
@@ -86,7 +86,7 @@
       "radiantUpgradesMean": null
     },
     {
-      "patch": "v0.3.0",
+      "patch": "v0.2.5e",
       "mode": "bo3",
       "source": "live",
       "games": 8,
