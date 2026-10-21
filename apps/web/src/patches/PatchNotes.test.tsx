@@ -231,7 +231,13 @@ describe("R388 the Patch notes page over the real history", () => {
     // (R743's names for issues #113, #181 and #218): whichever of the three is the newest opens with
     // every card it changed.
     const newest = shipped.at(-1)?.version ?? "";
-    await within(patchEntry(newest)).findByTestId(patchTestid.cards, undefined, SLOW);
+    // A newest patch that changed no card has no cards to open: its entry says so instead.
+    if ((shipped.at(-1)?.changes ?? []).length === 0) {
+      expect(patchEntry(newest)).toHaveTextContent("No card changed.");
+      expect(within(patchEntry(newest)).queryByTestId(patchTestid.toggle)).toBeNull();
+    } else {
+      await within(patchEntry(newest)).findByTestId(patchTestid.cards, undefined, SLOW);
+    }
     if (newest === "v0.2.2" || newest === "v0.2.2b" || newest === "v0.2.3") {
       const record = shipped.find((patch) => patch.version === newest);
       const changedIds = (record?.changes ?? []).filter((change) => change.kind === "changed").map((change) => change.id);

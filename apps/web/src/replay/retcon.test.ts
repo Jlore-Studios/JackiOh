@@ -5,7 +5,7 @@
 // (`crates/tools/src/retcon.rs`, `SKIP_FILES`).
 
 import { CATALOG_VERSION, currentVersionName } from "@jackioh/cards";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { DUOS_REPLAY_JSON_UNMARKED_VERSION, duosReplayJson, parseDuosReplayJson } from "../duos/download.ts";
 import { catalogOf } from "../practice/core.ts";
@@ -13,6 +13,14 @@ import { duosView } from "../test/fixtures.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
 import { REPLAY_JSON_FORMAT, REPLAY_JSON_UNMARKED_VERSION, REPLAY_JSON_VERSION, replayStepsOf } from "./download.ts";
 import { ReplayFailure } from "./source.ts";
+
+// The build as the retcon left it, its catalog the old v0.3.17b's under its new name. A file of an old
+// name opens only while the version it maps to is live, and every ship moves the live one on (R646),
+// so the files below are read under that build, whatever has shipped since.
+vi.mock("@jackioh/cards", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@jackioh/cards")>()),
+  CATALOG_VERSION: "v0.4.0d",
+}));
 
 const steps = foldedReplaySteps();
 const OTHER_PATCH = "This replay file is from another patch and cannot be opened here.";
@@ -32,9 +40,8 @@ function refused(read: () => unknown): string {
 }
 
 describe("R1371000 a file without the versions marker names its catalog the old way", () => {
-  it("R1371000 the build is the old v0.3.17b's catalog under its new name, v0.4.0d", () => {
-    expect(CATALOG_VERSION).toBe("v0.4.0d");
-    expect(currentVersionName("v0.3.17b")).toBe(CATALOG_VERSION);
+  it("R1371000 the old v0.3.17b's catalog goes by its new name, v0.4.0d", () => {
+    expect(currentVersionName("v0.3.17b")).toBe("v0.4.0d");
     expect(currentVersionName("v0.3.17")).toBe("v0.4.0c");
     expect(currentVersionName("v0.3.4")).toBe("v0.2.7b");
     expect(currentVersionName("v0.1.0")).toBe("v0.1.0");
@@ -54,7 +61,7 @@ describe("R1371000 a file without the versions marker names its catalog the old 
   });
 
   it("R1371000 a practice save or kept game without the marker is read through the map", () => {
-    expect(catalogOf({ catalog: "v0.3.17b" })).toBe(CATALOG_VERSION);
+    expect(catalogOf({ catalog: "v0.3.17b" })).toBe("v0.4.0d");
     expect(catalogOf({ catalog: "v0.3.4" })).toBe("v0.2.7b");
     expect(catalogOf({ catalog: "v0.3.4", versions: 2 })).toBe("v0.3.4");
   });
