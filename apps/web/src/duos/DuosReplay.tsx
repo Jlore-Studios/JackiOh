@@ -15,7 +15,7 @@
 // the seat's views as one file, made in the page. A replay that is loading, refused or expired
 // offers none.
 
-import { useCallback, useEffect, useState, type ReactElement, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
 
 import { useFxSettings } from "../fx/settings.ts";
 import { scaleForSpeed } from "../game/animations.ts";
@@ -88,12 +88,30 @@ export function previousRound(steps: DuosReplaySteps, at: number): number {
   return first;
 }
 
+// As the replay player's (replay/ReplayPlayer.tsx); kept local so that file stays the reference.
+/** A key the arrow keys must leave to its own control: a text field, a select, the scrubber. */
+function isTyping(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    (target.isContentEditable || target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT")
+  );
+}
+
+/** The control inside the co-op player that has focus, by test id: a fresh board takes its element away. */
+function focusedDuosControl(): string | null {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLElement) || active.closest(`[data-testid="${duosTestid.replay}"]`) === null) return null;
+  return active.dataset.testid ?? null;
+}
+
 export function DuosReplayPlayer({ steps, back, actions }: { steps: DuosReplaySteps; back: ReactNode; actions?: ReactNode }): ReactElement {
   useLocale();
   const last = steps.length - 1;
   const [shown, setShown] = useState<Shown>({ at: 0, board: 0 });
   const [playing, setPlaying] = useState(false);
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
+  /** The control that had focus when the board was mounted afresh, to give it back to the new one. */
+  const refocus = useRef<string | null>(null);
   const [fx] = useFxSettings();
   const busy = useBoardBusy(root);
   const view = steps[shown.at] ?? steps[0];
@@ -113,7 +131,9 @@ export function DuosReplayPlayer({ steps, back, actions }: { steps: DuosReplaySt
   /** A move the viewer made: Play stops. */
   function goTo(index: number): void {
     setPlaying(false);
-    show(index);
+    const target = Math.min(Math.max(index, 0), last);
+    if (target !== shown.at + 1) refocus.current = focusedDuosControl();
+    show(target);
   }
 
   // Play: the next step comes a gap after the board has settled, the gap shortened by the table's
@@ -128,6 +148,33 @@ export function DuosReplayPlayer({ steps, back, actions }: { steps: DuosReplaySt
       window.clearTimeout(timer);
     };
   }, [playing, busy, shown.at, last, fx.speed, show]);
+
+  const keys = useRef<(event: KeyboardEvent) => void>(ignore);
+  keys.current = (event) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    if (event.altKey || event.ctrlKey || event.metaKey || event.defaultPrevented || isTyping(event.target)) return;
+    event.preventDefault();
+    const direction = event.key === "ArrowRight" ? 1 : -1;
+    if (event.shiftKey) goTo(direction === 1 ? nextRound(steps, shown.at) : previousRound(steps, shown.at));
+    else goTo(shown.at + direction);
+  };
+  useEffect(() => {
+    const listener = (event: KeyboardEvent): void => {
+      keys.current(event);
+    };
+    window.addEventListener("keydown", listener);
+    return () => {
+      window.removeEventListener("keydown", listener);
+    };
+  }, []);
+
+  // A fresh board is new elements, so the control that was pressed has gone: focus its successor.
+  const board = shown.board;
+  useLayoutEffect(() => {
+    const id = refocus.current;
+    refocus.current = null;
+    if (id !== null) root?.querySelector<HTMLElement>(`[data-testid="${id}"]`)?.focus({ preventScroll: true });
+  }, [board, root]);
 
   const atStart = shown.at <= 0;
   const atEnd = shown.at >= last;

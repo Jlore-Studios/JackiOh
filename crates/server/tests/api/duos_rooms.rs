@@ -22,12 +22,13 @@ use jackioh_server::api::queue::try_pair;
 use jackioh_server::api::rematch::STAKE_NORMAL;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
-    BOT_FALLBACK_MAX_SECONDS, CODE_ALPHABET, DUOS_ROOM_TTL_MS, MATCH_ACTION_RETENTION_DAYS, MATCH_CEILING_MS,
-    MAX_OPEN_ROOMS_PER_HOST, MAX_SAVED_DECKS, REPLAY_REQUESTS_PER_MINUTE, ROOM_CODE_LENGTH,
+    BOT_FALLBACK_MAX_SECONDS, CODE_ALPHABET, DUOS_ROOM_TTL_MS, JLORE_COOP_LOSS, MATCH_ACTION_RETENTION_DAYS,
+    MATCH_CEILING_MS, MAX_OPEN_ROOMS_PER_HOST, MAX_SAVED_DECKS, REPLAY_REQUESTS_PER_MINUTE, ROOM_CODE_LENGTH,
 };
 use jackioh_server::db::store::{BotDeck, CollectionEntry, NewBot};
 use jackioh_server::duos::registry;
 use jackioh_server::duos::store::{DuosActionRow, DuosMatch, DuosRoom};
+use jackioh_server::economy::store::JloreReason;
 
 use crate::support::deps::{TestAppOptions, add_user, call, empty_test_app, test_app_with};
 use crate::support::store::{advance, fake, store, uuid};
@@ -1221,6 +1222,18 @@ mod r1047000_r1047001_the_sweep {
         for who in [&t.host, &t.guest] {
             let (status, body) = create(&t.app, who, json!({ "difficulty": "easy", "random": true })).await;
             assert_eq!(status, 201, "{body}");
+        }
+        // R1502000: the ceiling's draw pays each person as a draw, though its log holds a row no fold reads.
+        for who in [&t.host, &t.guest] {
+            let ledger =
+                store!(&t.app, tx => tx.economy_ledger_get(&who.id).await.expect("economy.ledger.get"));
+            let paid: Vec<i64> = ledger
+                .jlore
+                .iter()
+                .filter(|grant| grant.reason == JloreReason::Game)
+                .map(|grant| grant.delta)
+                .collect();
+            assert_eq!(paid, vec![i64::from(JLORE_COOP_LOSS)]);
         }
     }
 }
