@@ -167,7 +167,7 @@ jobs:
     if: ${{ !cancelled() && needs.plan.outputs.run == 'true' }}
     runs-on: jackioh-selfplay-local
     # The PC's runner throttles a job to half a CPU while the PC is busy, so the job may take far
-    # longer than its two hours on an idle PC.
+    # longer than the hour or two it takes on an idle PC (run 21: 59 minutes without a gate).
     timeout-minutes: 2880
     permissions:
       contents: read

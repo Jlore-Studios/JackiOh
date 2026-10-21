@@ -18,7 +18,8 @@ the AI the network corrects, and the network is retrained on their work.
 on the local runner (`jackioh-selfplay-local`, `bot/machine/README.md`, The local runner), none on
 GitHub's runners. That runner takes one job at a time and only while the PC is otherwise idle, so the
 export's shards play one after another, at about 2,500 games an hour on its six CPUs: a run's 100,000
-games take about 40 hours of an idle PC, and the retrain, the screen and the gate about two more. A
+games take about 40 hours of an idle PC, and the retrain and the screen about one more (run 21's
+took 59 minutes there), the gate another. A
 week's run may take several days; the next one waits for it (one run at a time). Each run:
 
 1. **Waits** while the lane's pull request (`ai/learn`) is open with its checks green or running: a

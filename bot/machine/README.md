@@ -210,7 +210,7 @@ while the box is busy or off.
 | Limits | one job at a time, 6 CPUs and 6 GB a container, swap off; never a GPU (no `--gpus`, `NVIDIA_VISIBLE_DEVICES=void`); a non-root user with `no-new-privileges`, no host folder and no Docker socket |
 | Tools | Rust 1.97.0 (`rust-toolchain.toml`), a C++ compiler (`mlua` builds Luau from source), `git`, `jq` and `gh`, Node 24, Python 3.12, and the night box's CLIs. A job installs the rest itself (the learn lane's retrain: uv, which fetches Python 3.13 and torch for the fit) |
 | Disk | a container's work directory goes with it, so `target/` never grows between exports; a shard runs the release `jackioh` the export's build job built, so it builds nothing. The learn lane's retrain is the biggest job: about 10 GB while it runs (the export's logs, its positions, two or three builds, the web's install). The image is about 6 GB |
-| Memory | the learn lane's fit peaks at about 3.4 GB on a 100,000-game export (measured 2026-10-21), under the container's 6 GB |
+| Memory | the learn lane's retrain peaks at about 4.1 GB of the container's 6 GB on a 100,000-game export (the positions, the six seeds' fit, the AI's tests and the 800-game screen took 59 minutes here: learn run 21, 2026-10-21) |
 
 Any workflow could ask for the label, so it is safe only while **"Require approval for all external
 contributors"** stays on (Settings → Actions → General), as the night box's runners are (Why each
