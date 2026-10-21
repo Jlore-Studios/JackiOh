@@ -10781,6 +10781,13 @@
     "1574": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T23:00:38Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "the planner gave no rating line"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
