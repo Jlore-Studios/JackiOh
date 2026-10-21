@@ -72,7 +72,7 @@ pub struct DuosRoom {
 /// unknown-code answer is decided by the same store statement that observed the block.
 #[derive(Clone, Debug, PartialEq)]
 pub enum DuosRoomClaimOutcome {
-    Claimed(DuosRoom),
+    Claimed(Box<DuosRoom>),
     Blocked,
     Unavailable,
 }
@@ -508,7 +508,7 @@ mod pg {
         };
         let outcome: String = row.try_get("claim_outcome")?;
         match outcome.as_str() {
-            "claimed" => Ok(DuosRoomClaimOutcome::Claimed(room_of(&row)?)),
+            "claimed" => Ok(DuosRoomClaimOutcome::Claimed(Box::new(room_of(&row)?))),
             "blocked" => Ok(DuosRoomClaimOutcome::Blocked),
             outcome => Err(StoreError::from(format!(
                 "unknown duos room claim outcome {outcome}"
@@ -803,7 +803,7 @@ mod fake {
         room.guest = Some(guest.to_string());
         room.guest_choice = Some(guest_choice.clone());
         room.match_id = Some(match_id.to_string());
-        Ok(DuosRoomClaimOutcome::Claimed(room.clone()))
+        Ok(DuosRoomClaimOutcome::Claimed(Box::new(room.clone())))
     }
 
     pub fn rooms_delete(f: &mut FakeTx<'_>, code: &str, host: &str) -> Result<bool, StoreError> {

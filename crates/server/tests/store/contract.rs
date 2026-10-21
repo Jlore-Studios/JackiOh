@@ -7967,7 +7967,7 @@ mod duos {
 
     fn claimed(outcome: DuosRoomClaimOutcome) -> DuosRoom {
         match outcome {
-            DuosRoomClaimOutcome::Claimed(room) => room,
+            DuosRoomClaimOutcome::Claimed(room) => *room,
             outcome => panic!("the room was not claimed: {outcome:?}"),
         }
     }
