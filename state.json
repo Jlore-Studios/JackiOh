@@ -23630,6 +23630,12 @@
         "number": 1396,
         "title": "Patch v0.3.Y: the AI's hidden cards keep only where they sit, so a raised Ascent level no longer gives away a hidden Reach the Summit",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-21T05:03:23Z",
+        "number": 1488,
+        "title": "Patch: the fuzz gate checks that a seat's view stays the same when only what that seat cannot see changes",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
