@@ -10334,6 +10334,8 @@
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-10-21T17:50:27Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "39647359157",
       "self_check_findings": [],
       "started_at": "2026-10-21T17:51:22Z",
