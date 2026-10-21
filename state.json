@@ -9098,6 +9098,13 @@
     "1489": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T05:35:19Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "fails easy on rule 3 (a new ruling R1489000 and edits to spec/09, spec/11 and spec/INDEX.md) and on rule 1 (about 12 files); not hard because nothing in crates/engine/src or crates/ai/src changes"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
