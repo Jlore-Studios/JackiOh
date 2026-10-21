@@ -128,7 +128,7 @@ fn sent(state: &mut GameState, events: Vec<GameEvent>, viewer: PlayerId) -> Valu
 
 fn table(cards: Vec<(&str, i32, i32)>) -> WinRateTable {
     WinRateTable {
-        patch: "v0.3.3".to_string(),
+        patch: "v0.2.7".to_string(),
         source: WinRateSource::Provisional,
         cards: cards
             .into_iter()

@@ -51,6 +51,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const QUICKSTRIKER: &str = "core-038";
@@ -108,10 +109,7 @@ mod tests {
                 scripts.base.preview.as_ref().expect("the base face has a preview"),
                 scripts.radiant.preview.as_ref().expect("the radiant face has a preview"),
             ));
-            assert_eq!(
-                serde_json::to_value(&scripts.base.static_flags).expect("flags are JSON"),
-                json!({ "quickstriker": true })
-            );
+            assert_eq!(js(&scripts.base.static_flags), json!({ "quickstriker": true }));
         }
 
         #[test]

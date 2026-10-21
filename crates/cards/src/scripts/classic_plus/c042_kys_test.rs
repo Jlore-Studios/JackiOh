@@ -30,6 +30,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use std::collections::BTreeSet;
 
+    use crate::events_json;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     use crate::ky_test_bank::KY_TEST_BANK;
@@ -128,11 +130,7 @@ mod tests {
     }
 
     fn view(s: &Scenario, seat: PlayerId) -> Value {
-        serde_json::to_value(s.view(seat)).expect("a view is JSON")
-    }
-
-    fn events_json(s: &Scenario) -> Vec<Value> {
-        s.events().iter().map(|event| serde_json::to_value(event).expect("an event is JSON")).collect()
+        js(&s.view(seat))
     }
 
     fn answers_offered(s: &Scenario, seat: PlayerId) -> usize {

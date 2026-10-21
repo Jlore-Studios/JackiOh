@@ -9,7 +9,8 @@
 //
 // Cosmetic rarity is its own scale (Common to Mythic), so a token buys at its tier or below on
 // the COSMETIC's rarity, not the card's: a Rare token reaches Common and Rare, an Epic token adds
-// Epic, and Legendary and Mythic are unreachable, since no token exceeds Epic (R1305003).
+// Epic, and Legendary and Mythic are unreachable, since no token exceeds Epic (R1305003). It is
+// its own type, `CosmeticRarity`, never a card's `PrintedRarity`, so the two cannot mix (R1333000).
 
 import { CATALOG } from "@jackioh/cards";
 import { MAX_COPIES } from "@jackioh/engine/config";
@@ -18,9 +19,9 @@ import {
   COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE,
   GLOBAL_PACK_NAME,
 } from "@jackioh/server-config";
-import { SHIPPED_SETS, setShips, type CardDef, type PrintedRarity } from "@jackioh/shared";
+import { SHIPPED_SETS, setShips, type CardDef } from "@jackioh/shared";
 
-import { COSMETICS } from "../wire/generated/cosmetics.ts";
+import { COSMETICS, type CosmeticRarity } from "../wire/generated/cosmetics.ts";
 import { t } from "../i18n/i18n.ts";
 import type { CollectionResponse, CosmeticSlot, CosmeticTokenTier, OwnedCosmeticsResponse } from "../net/api.ts";
 
@@ -29,7 +30,7 @@ export type RegistryCosmetic = {
   readonly id: string;
   readonly kind: string;
   readonly name: string;
-  readonly rarity: PrintedRarity;
+  readonly rarity: CosmeticRarity;
   readonly default: boolean;
   readonly starter: boolean;
   readonly chase: boolean;
@@ -40,10 +41,10 @@ export type RegistryCosmetic = {
 export const REGISTRY: readonly RegistryCosmetic[] = COSMETICS as unknown as readonly RegistryCosmetic[];
 
 /** Cosmetic rarities lowest first, mirroring `CosmeticRarity::tier`. */
-export const COSMETIC_TIER_ORDER: readonly PrintedRarity[] = ["Common", "Rare", "Epic", "Legendary", "Mythic"];
+export const COSMETIC_TIER_ORDER: readonly CosmeticRarity[] = ["Common", "Rare", "Epic", "Legendary", "Mythic"];
 
 /** A cosmetic rarity's place on its own scale, commonest first. */
-export function cosmeticTier(rarity: PrintedRarity): number {
+export function cosmeticTier(rarity: CosmeticRarity): number {
   return COSMETIC_TIER_ORDER.indexOf(rarity);
 }
 
@@ -174,7 +175,7 @@ export function redeemableCosmetics(
 }
 
 /**
- * The cosmetics a full Chase Shard bar buys: Legendary or Mythic, a chase included, the account
+ * The cosmetics a full Chase Shard bar buys: a chase, Legendary or Mythic (R1333000), the account
  * does not own, a per-card one for a card it owns (the server's `buy_chase`). `registry`
  * defaults to the shipped one; a test passes its own.
  */

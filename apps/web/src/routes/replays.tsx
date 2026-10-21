@@ -62,6 +62,8 @@ export const replaysTestid = {
   noOnline: "replays-no-online",
   signIn: "replays-sign-in",
   more: "replays-more",
+  /** Why the last page of older games could not be had, beside the button that tries again. */
+  moreFailed: "replays-more-failed",
   /** #936 B59: Play together's list of the replays friends shared. */
   sharedWithMe: "replays-shared-with-me",
   /** R970000: the account owes the consent screen before its online games. */
@@ -74,10 +76,11 @@ export const replaysTestid = {
   openFailed: "replays-open-failed",
 } as const;
 
+/** `moreFailed`: why the last page of older games failed, shown by the button that retries it. */
 type Listed<Row> =
   | { kind: "loading" }
   | { kind: "failed"; message: string }
-  | { kind: "ready"; rows: Row[]; next: number | null; loadingMore: boolean };
+  | { kind: "ready"; rows: Row[]; next: number | null; loadingMore: boolean; moreFailed: string | null };
 
 /**
  * The replay on screen; `matchId` for an online match's, which can be shared with a friend (#936 B59),
@@ -231,7 +234,7 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
       (read) => {
         if (cancelled) return;
         setLookup(() => read.lookup);
-        setPractice({ kind: "ready", rows: read.replays, next: null, loadingMore: false });
+        setPractice({ kind: "ready", rows: read.replays, next: null, loadingMore: false, moreFailed: null });
       },
       (cause: unknown) => {
         if (!cancelled) setPractice({ kind: "failed", message: messageOf(cause) });
@@ -249,7 +252,7 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
     let cancelled = false;
     getReplays(token).then(
       (list) => {
-        if (!cancelled) setOnline({ kind: "ready", rows: list.replays, next: list.nextOffset, loadingMore: false });
+        if (!cancelled) setOnline({ kind: "ready", rows: list.replays, next: list.nextOffset, loadingMore: false, moreFailed: null });
       },
       (cause: unknown) => {
         if (!cancelled) setOnline({ kind: "failed", message: messageOf(cause) });
@@ -263,13 +266,13 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
   const loadMore = (): void => {
     if (token === null || online.kind !== "ready" || online.next === null || online.loadingMore) return;
     const shown = online;
-    setOnline({ ...shown, loadingMore: true });
+    setOnline({ ...shown, loadingMore: true, moreFailed: null });
     getReplays(token, shown.next ?? 0).then(
       (list) => {
-        setOnline({ kind: "ready", rows: [...shown.rows, ...list.replays], next: list.nextOffset, loadingMore: false });
+        setOnline({ kind: "ready", rows: [...shown.rows, ...list.replays], next: list.nextOffset, loadingMore: false, moreFailed: null });
       },
       (cause: unknown) => {
-        setOnline({ kind: "failed", message: messageOf(cause) });
+        setOnline({ ...shown, loadingMore: false, moreFailed: messageOf(cause) });
       },
     );
   };
@@ -324,7 +327,7 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
       <section className="replays__section" aria-labelledby="replays-practice-heading">
         <h2 id="replays-practice-heading">{t("Practice games on this device")}</h2>
         {practice.kind === "loading" ? <p role="status">{t("Reading the games kept on this device…")}</p> : null}
-        {practice.kind === "failed" ? <p role="alert">{practice.message}</p> : null}
+        {practice.kind === "failed" ? <p role="alert">{t(practice.message)}</p> : null}
         {practice.kind === "ready" && practice.rows.length === 0 ? (
           <p data-testid={replaysTestid.noPractice}>{t("Finish a practice game and it is kept here.")}</p>
         ) : null}
@@ -385,7 +388,7 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
           </p>
         )}
         {token !== null && online.kind === "loading" ? <p role="status">{t("Reading your online games…")}</p> : null}
-        {token !== null && online.kind === "failed" ? <p role="alert">{online.message}</p> : null}
+        {token !== null && online.kind === "failed" ? <p role="alert">{t(online.message)}</p> : null}
         {token !== null && online.kind === "ready" && online.rows.length === 0 ? (
           <p data-testid={replaysTestid.noOnline}>{t("No online game of yours is kept. A game is kept for a while after it ends.")}</p>
         ) : null}
@@ -420,9 +423,17 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
               })}
             </ul>
             {online.next === null ? null : (
-              <button type="button" data-testid={replaysTestid.more} onClick={loadMore} disabled={online.loadingMore}>
-                {online.loadingMore ? t("Loading…") : t("Show older games")}
-              </button>
+              <>
+                <button type="button" data-testid={replaysTestid.more} onClick={loadMore} disabled={online.loadingMore}>
+                  {online.loadingMore ? t("Loading…") : t("Show older games")}
+                </button>
+                {online.moreFailed === null ? null : (
+                  <span role="alert" className="replays__why" data-testid={replaysTestid.moreFailed}>
+                    {" "}
+                    {t(online.moreFailed)}
+                  </span>
+                )}
+              </>
             )}
           </>
         ) : null}

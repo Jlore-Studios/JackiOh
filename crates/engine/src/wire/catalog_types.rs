@@ -227,6 +227,28 @@ string_union! {
 }
 
 string_union! {
+    /// R1437000: what kind of thing a card is, which picks its animations and nothing else
+    /// (`docs/polish/8-flavor.md`). No rule, pool or AI reads it.
+    pub enum Flavor {
+        Physical = "Physical",
+        Brute = "Brute",
+        Beast = "Beast",
+        Fire = "Fire",
+        Dark = "Dark",
+        Holy = "Holy",
+        Nerd = "Nerd",
+        Tech = "Tech",
+        Nature = "Nature",
+        Toxic = "Toxic",
+        Snack = "Snack",
+        Hustle = "Hustle",
+        Clout = "Clout",
+        Spirit = "Spirit",
+        Chaos = "Chaos",
+    }
+}
+
+string_union! {
     /// §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15,
     /// issue #1173, R1178000) ship; Boss and Boss-X are reserved. Custom is a custom card's (§12.1, R915000): never in the catalog and never
     /// shipped, so no pool or random deck finds one.
@@ -972,6 +994,12 @@ pub struct CardDef {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub printed_rarity: Option<PrintedRarity>,
+    /// R1437000: what kind of thing the card is, for its animations only: no rule, pool, query,
+    /// validator or AI reads it. A transient or custom definition carries none, so a state that
+    /// holds one serialises as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub flavor: Option<Flavor>,
     pub token: bool,
     pub cost: CardCost,
     /// R279: the cards and tokens this card's text names, by id — a name in its base or Radiant text,
@@ -1494,6 +1522,7 @@ mod tests {
             tags: vec![],
             rarity: Rarity::Common,
             printed_rarity: None,
+            flavor: None,
             token: false,
             cost: CardCost::Fixed(1),
             refs: None,
@@ -1596,6 +1625,32 @@ mod tests {
         assert_eq!(
             serde_json::to_string(&zone).unwrap(),
             "{\"z\":\"field\",\"player\":\"p1\",\"row\":\"units\",\"lane\":3}"
+        );
+    }
+
+    // R1437000: a def with no flavor (every transient and custom one) reads and writes as before.
+    #[test]
+    fn r1437000_a_def_with_no_flavor_reads_and_writes_without_the_key() {
+        let def = def_with("Draw a card.", vec![]);
+        let json = serde_json::to_string(&def).unwrap();
+        assert!(!json.contains("\"flavor\""), "{json}");
+        let read: CardDef = serde_json::from_str(&json).unwrap();
+        assert_eq!(read.flavor, None);
+        assert_eq!(read, def);
+        let fire = CardDef {
+            flavor: Some(Flavor::Fire),
+            ..def
+        };
+        let json = serde_json::to_string(&fire).unwrap();
+        assert!(json.contains("\"flavor\":\"Fire\""), "{json}");
+        assert_eq!(serde_json::from_str::<CardDef>(&json).unwrap(), fire);
+        let names: Vec<&str> = Flavor::ALL.iter().map(|flavor| flavor.as_str()).collect();
+        assert_eq!(
+            names,
+            [
+                "Physical", "Brute", "Beast", "Fire", "Dark", "Holy", "Nerd", "Tech", "Nature", "Toxic",
+                "Snack", "Hustle", "Clout", "Spirit", "Chaos",
+            ]
         );
     }
 }

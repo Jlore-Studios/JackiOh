@@ -73,6 +73,7 @@ pub fn script() -> CardScripts {
 // `param()`; radiant the summoned Units are made Radiant".
 #[cfg(test)]
 mod tests {
+    use crate::def_ids;
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -105,10 +106,6 @@ mod tests {
 
     fn units_of(s: &Scenario) -> Vec<String> {
         (1..=5).filter_map(|lane| s.unit(P1, lane).map(|unit| unit.def_id)).collect()
-    }
-
-    fn def_ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
     mod base {

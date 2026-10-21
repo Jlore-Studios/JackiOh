@@ -204,7 +204,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672) |
 | `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder; every player shown with their `profileId` and `username` (R608, R612, R1436) |
 | `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; the settings carry `allowSpectators`, whether friends may watch (§9.5) |
-| `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436) |
+| `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436); each card over its own window, through the engine's `windowed_card_stats` (R1367000) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654) |
 | `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5) |
 | `GET` | `/api/friends` | active | the caller's friends with their status (`offline`, `online`, `inMatch`) and whether they may be watched, the requests in and out, and the players the caller blocks (§9.4), read in one transaction by a fixed number of set-based queries whatever the number of friends |
@@ -377,6 +377,8 @@ target/release/jackioh-server stats-cards --source=dev --patch=v0.2.5       # re
 target/release/jackioh-server stats-export --out=live.jsonl                 # the records still held in full, a line each, in id order
 cargo jackioh stats report live.jsonl --json                                # the same figures with no database
 target/release/jackioh-server stats-fold                                    # fold the records written before migration 0041; the retention loop does it too
+target/release/jackioh-server stats-cards --window > window.json            # every card over its own window, off the totals (R1367000)
+cargo jackioh winrates --refresh window.json                                # CN Tech's and NA Tech's table, once per patch (R1368000)
 ```
 
 Every figure, `stats-cards`, `balance-watch`, the public routes and the ladder bots' decks, reads the
@@ -758,6 +760,12 @@ transaction pays and keeps the board. Measured in release (`cargo test --release
 --test server r1303002_the_ai_rerun -- --nocapture`, 2026-10-20, the night bot's 4-core runner):
 the recorded game, 46 actions of which 29 the AI's, verifies in 680–700 ms; twelve AI-against-AI
 games, four per tier, in 392–1,980 ms (32–76 actions, 18–46 AI moves), about 20–45 ms per AI move.
+
+Migration 0048 holds the shape of a game record's `build` (R1367000): absent, or the commit that
+played the game with, when the AI played a seat, its AI generation (`game_records_build_check`). The
+live writer (`api/game_records.rs`) files the deployed commit (`RENDER_GIT_COMMIT`) and, for a ladder
+bot's game, `crates/ai/generation.json`'s generation; with no deployed commit it files none. A record
+written before it has no build and reads as before.
 
 ## Tests
 

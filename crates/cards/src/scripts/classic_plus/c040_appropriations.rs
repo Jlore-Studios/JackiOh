@@ -106,6 +106,8 @@ pub fn script_v0_3_7b() -> CardScripts {
 // (a Book it made is cast as it is drawn, R58), the grants and buffs in the engine's E38 tests.
 #[cfg(test)]
 mod tests {
+    use crate::events_json;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -146,7 +148,7 @@ mod tests {
     }
 
     fn kind_of(keyword: &Keyword) -> String {
-        serde_json::to_value(keyword).expect("a keyword is JSON")["kind"].as_str().unwrap_or_default().to_string()
+        js(keyword)["kind"].as_str().unwrap_or_default().to_string()
     }
 
     fn keywords_of(s: &Scenario, card: &CardInstance) -> Vec<String> {
@@ -158,15 +160,11 @@ mod tests {
     }
 
     fn view(s: &Scenario, seat: PlayerId) -> Value {
-        serde_json::to_value(s.view(seat)).expect("a view is JSON")
+        js(&s.view(seat))
     }
 
     fn view_events(s: &Scenario, seat: PlayerId) -> Vec<Value> {
         view(s, seat)["events"].as_array().cloned().unwrap_or_default()
-    }
-
-    fn events_json(s: &Scenario) -> Vec<Value> {
-        s.events().iter().map(|event| serde_json::to_value(event).expect("an event is JSON")).collect()
     }
 
     fn listed(s: &Scenario) -> Vec<Value> {
@@ -181,11 +179,11 @@ mod tests {
     fn r81_declares_its_four_modes_with_the_play_on_both_faces() {
         let def = crate::card_def(APPROPRIATIONS);
         assert_eq!(def.id, APPROPRIATIONS);
-        assert_eq!(serde_json::to_value(def.cost).expect("a cost is JSON"), json!("X"));
+        assert_eq!(js(&def.cost), json!("X"));
         let scripts = super::script();
         for face in [&scripts.base, &scripts.radiant] {
             assert_eq!(
-                serde_json::to_value(&face.modes).expect("modes are JSON"),
+                js(&face.modes),
                 json!([{ "kind": "mode", "options": ["Military", "Education", "Culture", "Healthcare"] }])
             );
         }
@@ -202,7 +200,7 @@ mod tests {
     #[test]
     fn r767000_a_game_on_v0_3_7_folds_under_the_kept_script_radiant_5x_attack_and_7x_health() {
         crate::register_all();
-        let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+        let shipped = crate::shipped_catalog("v0.3.0c").expect("v0.3.0c is carried");
         jackioh_engine::with_shipped(Some(shipped), || {
             let mut s = appropriations(true, json!({}), json!({}));
             s.play(APPROPRIATIONS, json!({ "x": 2, "modes": ["Military"] }));

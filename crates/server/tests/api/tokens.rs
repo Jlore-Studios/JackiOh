@@ -237,7 +237,7 @@ fn foil(id: &str, rarity: CosmeticRarity) -> Cosmetic {
         rarity,
         default: false,
         starter: false,
-        chase: false,
+        chase: rarity.is_chase(),
         card: None,
     }
 }
@@ -249,9 +249,10 @@ fn registry(owned: &[String]) -> Vec<Cosmetic> {
         foil("foil-fixture-epic", CosmeticRarity::Epic),
         foil("foil-fixture-legendary", CosmeticRarity::Legendary),
         foil("foil-fixture-mythic", CosmeticRarity::Mythic),
+        // A chase is Legendary or Mythic (R1333000).
         Cosmetic {
             chase: true,
-            ..foil("foil-fixture-chase", CosmeticRarity::Rare)
+            ..foil("foil-fixture-chase", CosmeticRarity::Legendary)
         },
         Cosmetic {
             default: true,
@@ -495,7 +496,6 @@ async fn r1305002_a_card_token_unlocks_a_chosen_card_once() {
 
 #[tokio::test]
 async fn r1305003_a_rare_token_buys_common_and_rare_but_refuses_epic() {
-    use jackioh_engine::wire::PrintedRarity;
     let (app, _) = setup().await;
     let cards = three_cards(&app);
     own(&app, &cards[..2]).await;
@@ -506,7 +506,7 @@ async fn r1305003_a_rare_token_buys_common_and_rare_but_refuses_epic() {
         &app,
         PROFILE,
         &registry,
-        PrintedRarity::Rare,
+        CosmeticRarity::Rare,
         "foil-fixture-common",
         Some(&cards[0]),
     )
@@ -519,32 +519,39 @@ async fn r1305003_a_rare_token_buys_common_and_rare_but_refuses_epic() {
         &app,
         PROFILE,
         &registry,
-        PrintedRarity::Rare,
+        CosmeticRarity::Rare,
         "foil-fixture-rare",
         Some(&cards[0]),
     )
     .await
     .expect("a Rare token buys a Rare cosmetic");
 
-    // An Epic cosmetic is above a Rare token's tier: refused, and the token kept.
+    // An Epic cosmetic, a full art (Epic whatever its card's rarity, R1313000) among them, and a
+    // Legendary or Mythic one are above a Rare token's tier: refused, and the token kept.
     grant_item(&app, InventoryItem::CosmeticToken, "Rare", 1).await;
     let before = everything(&app).await;
-    let refused = redeem_cosmetic_token(
-        &app,
-        PROFILE,
-        &registry,
-        PrintedRarity::Rare,
+    for cosmetic_id in [
         "foil-fixture-epic",
-        Some(&cards[0]),
-    )
-    .await;
-    assert_eq!(refused.unwrap_err().status(), 409);
+        "full-art-fixture",
+        "foil-fixture-legendary",
+        "foil-fixture-mythic",
+    ] {
+        let refused = redeem_cosmetic_token(
+            &app,
+            PROFILE,
+            &registry,
+            CosmeticRarity::Rare,
+            cosmetic_id,
+            Some(&cards[0]),
+        )
+        .await;
+        assert_eq!(refused.unwrap_err().status(), 409, "{cosmetic_id}");
+    }
     assert_eq!(everything(&app).await, before);
 }
 
 #[tokio::test]
 async fn r1305003_an_epic_token_buys_common_rare_and_epic_but_not_legendary() {
-    use jackioh_engine::wire::PrintedRarity;
     let (app, _) = setup().await;
     let cards = three_cards(&app);
     own(&app, &cards[..2]).await;
@@ -564,7 +571,7 @@ async fn r1305003_an_epic_token_buys_common_rare_and_epic_but_not_legendary() {
             &app,
             PROFILE,
             &registry,
-            PrintedRarity::Epic,
+            CosmeticRarity::Epic,
             cosmetic_id,
             card_id,
         )
@@ -581,7 +588,7 @@ async fn r1305003_an_epic_token_buys_common_rare_and_epic_but_not_legendary() {
             &app,
             PROFILE,
             &registry,
-            PrintedRarity::Epic,
+            CosmeticRarity::Epic,
             cosmetic_id,
             Some(&cards[0]),
         )
@@ -597,7 +604,7 @@ async fn r1305003_an_epic_token_buys_common_rare_and_epic_but_not_legendary() {
             &app,
             PROFILE,
             &registry,
-            PrintedRarity::Epic,
+            CosmeticRarity::Epic,
             cosmetic_id,
             card_id,
         )
@@ -609,7 +616,6 @@ async fn r1305003_an_epic_token_buys_common_rare_and_epic_but_not_legendary() {
 
 #[tokio::test]
 async fn r1305003_an_owned_card_and_an_owned_cosmetic_are_refused_without_spend() {
-    use jackioh_engine::wire::PrintedRarity;
     let (app, token) = setup().await;
     let cards = three_cards(&app);
     own(&app, &cards[..2]).await;
@@ -640,7 +646,7 @@ async fn r1305003_an_owned_card_and_an_owned_cosmetic_are_refused_without_spend(
         &app,
         PROFILE,
         &registry,
-        PrintedRarity::Rare,
+        CosmeticRarity::Rare,
         "foil-fixture-common",
         Some(&cards[0]),
     )
@@ -650,22 +656,26 @@ async fn r1305003_an_owned_card_and_an_owned_cosmetic_are_refused_without_spend(
     let refusals = [
         // Already owned on that card.
         (
-            PrintedRarity::Rare,
+            CosmeticRarity::Rare,
             "foil-fixture-common",
             Some(cards[0].as_str()),
         ),
         // A per-card cosmetic for a card not owned, and with no card at all.
-        (PrintedRarity::Epic, "foil-fixture-epic", Some(cards[2].as_str())),
-        (PrintedRarity::Epic, "foil-fixture-epic", None),
+        (CosmeticRarity::Epic, "foil-fixture-epic", Some(cards[2].as_str())),
+        (CosmeticRarity::Epic, "foil-fixture-epic", None),
         // A chase, a default and a starter are owned or unbuyable by every account.
-        (PrintedRarity::Rare, "foil-fixture-chase", Some(cards[0].as_str())),
         (
-            PrintedRarity::Rare,
+            CosmeticRarity::Rare,
+            "foil-fixture-chase",
+            Some(cards[0].as_str()),
+        ),
+        (
+            CosmeticRarity::Rare,
             "foil-fixture-default",
             Some(cards[0].as_str()),
         ),
         (
-            PrintedRarity::Rare,
+            CosmeticRarity::Rare,
             "foil-fixture-starter",
             Some(cards[0].as_str()),
         ),
@@ -676,9 +686,9 @@ async fn r1305003_an_owned_card_and_an_owned_cosmetic_are_refused_without_spend(
     }
     // A token outside Rare and Epic, and an unknown cosmetic, are bad requests.
     for (token, cosmetic_id) in [
-        (PrintedRarity::Common, "foil-fixture-common"),
-        (PrintedRarity::Legendary, "foil-fixture-legendary"),
-        (PrintedRarity::Mythic, "foil-fixture-mythic"),
+        (CosmeticRarity::Common, "foil-fixture-common"),
+        (CosmeticRarity::Legendary, "foil-fixture-legendary"),
+        (CosmeticRarity::Mythic, "foil-fixture-mythic"),
     ] {
         let refused =
             redeem_cosmetic_token(&app, PROFILE, &registry, token, cosmetic_id, Some(&cards[0])).await;
@@ -688,7 +698,7 @@ async fn r1305003_an_owned_card_and_an_owned_cosmetic_are_refused_without_spend(
         &app,
         PROFILE,
         &registry,
-        PrintedRarity::Rare,
+        CosmeticRarity::Rare,
         "no-such-cosmetic",
         Some(&cards[0]),
     )

@@ -66,6 +66,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use std::sync::Arc;
 
+    use crate::events_json;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -114,7 +116,7 @@ mod tests {
     }
 
     fn view(s: &Scenario, seat: PlayerId) -> Value {
-        serde_json::to_value(s.view(seat)).expect("a view is JSON")
+        js(&s.view(seat))
     }
 
     fn view_events(s: &Scenario, seat: PlayerId) -> Vec<Value> {
@@ -130,10 +132,6 @@ mod tests {
         s.state().players.p1.mana.current
     }
 
-    fn events_json(s: &Scenario) -> Vec<Value> {
-        s.events().iter().map(|event| serde_json::to_value(event).expect("an event is JSON")).collect()
-    }
-
     #[test]
     fn r384_is_one_activate_once_a_turn_on_both_faces_its_numbers_the_declared_mana_discards_and_heal() {
         let def = crate::card_def(GIFT);
@@ -142,7 +140,7 @@ mod tests {
         assert_eq!(def.printed_rarity, Some(PrintedRarity::Legendary));
         let scripts = super::script();
         for face in [&scripts.base, &scripts.radiant] {
-            assert!(face.start_of_turn.is_none(), "no start-of-turn script since patch v0.3.10");
+            assert!(face.start_of_turn.is_none(), "no start-of-turn script since patch v0.3.3");
             assert_eq!(face.activations.len(), 1);
             assert_eq!(face.activations[0].id, "gift");
             assert_eq!(face.activations[0].uses, ActivationUses::Count(1));

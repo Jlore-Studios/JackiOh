@@ -182,6 +182,11 @@ every Radiant face meets R275's standard (`tests/cross/radiant_standard.rs` agai
   `cargo jackioh catalog loc <script path>`.
 - A face's own `type` (C+ #22 Blood Moon's Radiant face is a Field Trap) and `xStats` (C+ #69).
 
+`flavor` (R1437000) is what kind of thing the card is, one of the engine's fifteen `Flavor` names,
+chosen by `docs/polish/8-flavor.md`. It picks the card's animations and nothing else: no rule, pool or
+AI reads it, `catalog check` holds it to the fifteen, and a patch reads the catalog without it, so a
+flavor-only change needs no fragment.
+
 Tags are the designer's as written (`Jlockeed` is a pool as well as a filter, R278). No two cards
 share a name (R381). Texts follow the house style (R432, R373): "Nerf" and "Buff", never "Degrade" or
 "Upgrade" (R1320).
@@ -268,28 +273,42 @@ cargo clippy -p jackioh-cards --all-targets -- -D warnings
 Every change to card data is a patch, and every patch is kept.
 
 - `patches/patches.json` lists every shipped patch in ship order (`{ version, date, title, source,
-  notes, player }`, `player` the note players read on the Patch notes page, R724001);
+  notes, player, tier, plays }`, `player` the note players read on the Patch notes page, R724001;
+  `tier` and `plays`, the families that play differently, recorded from R1366000 on);
   `patches/<version>.json` is the whole catalog as that patch left it; `patches/win_rates/<version>.json`
   the win-rate table it shipped with (R1329000; none for a patch before v0.3.15, which shipped with
   the empty one); `shipped.json` records each patch's commit, snapshot blob and
   table blob (`winRatesBlob`); `index.json` maps each card to the versions it changed in. Shipped
-  snapshots and tables are never amended.
-- A branch that changes card data claims it with a pending fragment:
-  `cargo jackioh patches <version> <date> "<title>" --source "<issue or PR>" --notes "<what changed>"`
-  writes `patches/pending/<version>.json` (`--cards` names the ids; otherwise they are diffed from
-  the newest shipped snapshot). Its `player` note is written into the fragment by hand, since no flag
+  snapshots and tables are never amended. `aliases.json` is the version retcon's map (#1371,
+  R1371000), each old name to its new one: only a reader of a file without the `versions` marker
+  consults it (`src/versions.rs`, `current_version_name`), and the history's names are the new
+  ones. Older docs name versions the old way (`docs/issues-and-patches.md`, Version retcon).
+- `patches/technical.json` is the technical log (R1369000): the changes that shipped no card data, a
+  list in logged order of `{ version, commit, pr?, title, kind, player? }`, `version` the newest
+  shipped X when it was logged, `commit` its key, `kind` `app`, `ai` or `internal`, and `player` the
+  line the Patch notes page shows under that X (App and AI only). `cargo jackioh patches log
+  <base>..<head> [--bodies <path>]` appends to it (`crates/tools/src/technical.rs`'s header has the
+  rest); nothing else writes it.
+- A branch that changes a card claims it with a pending fragment:
+  `cargo jackioh patches "<title>" --source "<issue or PR>" --notes "<what changed>"` writes
+  `patches/pending/<slug>.json`, named after the title, with no version (R1366000; `--cards` names
+  the ids, otherwise they are diffed from the newest shipped snapshot; `--plays <ids>` claims cards
+  whose script or engine rule changed how they play with no catalog change, `--rule` a rule every
+  game meets, both as `cargo jackioh classify` finds them, which CI's `rust (classify)` holds them to,
+  R1370000). Its `player` note is written into the fragment by hand, since no flag
   sets it, and kept when the command runs again (`docs/issues-and-patches.md`, Patch notes players
   read). A patch that refreshes `data/win_rates.json` claims it too: the command writes
   `"winRates": true` when the table's rows differ from the newest shipped version's and no other
   fragment claims them, and a fragment may claim the table and no card (R1329000).
   `cargo jackioh patches check` (CI's `rust (checks, fuzz 200)` job) fails naming
-  the card when a change is unclaimed or claimed twice, a claimed card did not change, a version is
-  neither a bare patch number nor a micro `vA.B.Y` (R650), or a fragment's title, sources or notes is
-  empty, when a fragment's or a shipped patch's player note is missing, empty or names a ruling,
+  the card when a change is unclaimed or claimed twice, a claimed card did not change, a `plays` id
+  is no shipped card, a fragment claims nothing, or a fragment's title, sources or notes is empty, when a fragment's or a shipped patch's player note is missing, empty or names a ruling,
   an issue or a § (R724001), and when the win-rate table's rows changed unclaimed, are claimed twice,
   or are claimed unchanged (R1329000).
 - After the merge, `.github/workflows/patches-ship.yml` runs `cargo jackioh patches ship`: it
-  appends each fragment in first-parent order with its player note, snapshots the patch before it
+  appends each fragment in first-parent order with its player note, named from its tier (a major
+  `v0.(Z+1).0`, a patch `v0.Z.(X+1)`, a micro the next letter, R1366000) with the tier and `plays`
+  recorded, snapshots the patch before it
   with the cards the fragment claims as the catalog holds them (R1280000), writes its win-rate table
   (`data/win_rates.json` from the fragment that claims it on, the patch before it's until then,
   R1329000), records `shipped.json`, deletes
@@ -298,6 +317,10 @@ Every change to card data is a patch, and every patch is kept.
   the version from `patches.json` at compile time; `cargo jackioh catalog-version` prints it.
 - A version is opaque (R105): nothing parses or orders one, and the order of patches is
   `patches.json`'s. A snapshot keeps a card's data, not its script.
+- `patch_history()` (`src/patch_history.rs`, R1367000) reads `patches.json` as a card's statistics
+  window does: each version's tier and the families that play in it, as recorded, or, for a version
+  shipped before tiers were recorded, from its `changes` (`WORDING_FIELDS`, `PATCH_MIN_CARDS`,
+  `PRE_TIER_MAJORS`). The server and the tools hand it to the engine's `windowed_card_stats`.
 - Every shipped version but the newest is carried for replays (R767000): its definitions rebuilt
   from its snapshot, its scripts the build's own, and the win-rate table it shipped with (R1266000:
   its `win_rates/<version>.json`, or the empty table with no file, R1329000). A patch

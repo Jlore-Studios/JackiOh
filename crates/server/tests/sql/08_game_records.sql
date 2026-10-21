@@ -10,7 +10,7 @@ begin;
 do $$
 declare
   rec jsonb := jsonb_build_object(
-    'id', 'dev:check:1', 'source', 'dev', 'mode', 'random', 'patch', 'v0.2.5',
+    'id', 'dev:check:1', 'source', 'dev', 'mode', 'random', 'patch', 'v0.2.3',
     'pilots', jsonb_build_object('p1', 'ai', 'p2', 'ai'),
     'game', jsonb_build_object('first', 'p1', 'winner', 'p2', 'reason', 'hero-death', 'turns', 9,
       'seats', jsonb_build_object(
@@ -19,11 +19,11 @@ declare
   n int;
 begin
   insert into public.game_records (id, source, mode, patch, record)
-  values ('dev:check:1', 'dev', 'random', 'v0.2.5', rec);
+  values ('dev:check:1', 'dev', 'random', 'v0.2.3', rec);
 
   -- The store's `on conflict (id) do nothing`: a second write of the same game writes nothing.
   insert into public.game_records (id, source, mode, patch, record)
-  values ('dev:check:1', 'dev', 'random', 'v0.2.5', rec)
+  values ('dev:check:1', 'dev', 'random', 'v0.2.3', rec)
   on conflict (id) do nothing;
   select count(*) into n from public.game_records where id = 'dev:check:1';
   if n <> 1 then
@@ -34,21 +34,21 @@ begin
   -- refused, so a filter on the columns can never read a record as something it is not.
   begin
     insert into public.game_records (id, source, mode, patch, record)
-    values ('dev:check:2', 'practice', 'random', 'v0.2.5', rec || '{"id":"dev:check:2","source":"practice"}');
+    values ('dev:check:2', 'practice', 'random', 'v0.2.3', rec || '{"id":"dev:check:2","source":"practice"}');
     raise exception 'FAIL (0014): a record with the source practice was written';
   exception
     when check_violation then null;
   end;
   begin
     insert into public.game_records (id, source, mode, patch, record)
-    values ('dev:check:3', 'live', 'random', 'v0.2.5', rec || '{"id":"dev:check:3"}');
+    values ('dev:check:3', 'live', 'random', 'v0.2.3', rec || '{"id":"dev:check:3"}');
     raise exception 'FAIL (0014): a dev record was filed under the source live';
   exception
     when check_violation then null;
   end;
   begin
     insert into public.game_records (id, source, mode, patch, record)
-    values ('dev:check:4', 'dev', 'bo1', 'v0.2.5', rec || '{"id":"dev:check:4"}');
+    values ('dev:check:4', 'dev', 'bo1', 'v0.2.3', rec || '{"id":"dev:check:4"}');
     raise exception 'FAIL (0014): a random record was filed under the mode bo1';
   exception
     when check_violation then null;
@@ -56,7 +56,7 @@ begin
   begin
     insert into public.game_records (id, source, mode, patch, record)
     values ('dev:check:5', 'dev', 'random', 'v0.1.1', rec || '{"id":"dev:check:5"}');
-    raise exception 'FAIL (0014): a v0.2.5 record was filed under the patch v0.1.1';
+    raise exception 'FAIL (0014): a v0.2.3 record was filed under the patch v0.1.1';
   exception
     when check_violation then null;
   end;
@@ -64,7 +64,7 @@ begin
   -- R378: a development record keeps to its own ids, and a live one stays out of them.
   begin
     insert into public.game_records (id, source, mode, patch, record)
-    values ('00000000-0000-0000-0000-000000000014', 'dev', 'random', 'v0.2.5',
+    values ('00000000-0000-0000-0000-000000000014', 'dev', 'random', 'v0.2.3',
             rec || '{"id":"00000000-0000-0000-0000-000000000014"}');
     raise exception 'FAIL (0014): a dev record took a match id';
   exception
@@ -72,7 +72,7 @@ begin
   end;
   begin
     insert into public.game_records (id, source, mode, patch, record)
-    values ('dev:check:6', 'live', 'random', 'v0.2.5', rec || '{"id":"dev:check:6","source":"live"}');
+    values ('dev:check:6', 'live', 'random', 'v0.2.3', rec || '{"id":"dev:check:6","source":"live"}');
     raise exception 'FAIL (0014): a live record took a dev id';
   exception
     when check_violation then null;

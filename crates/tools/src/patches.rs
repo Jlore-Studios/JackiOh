@@ -8,6 +8,7 @@
 //!   [--source "<issue, PR, commits>"] [--notes "<what changed>"] [--cards <id,...>] [--plays <id,...>] [--rule]
 //! cargo jackioh patches check
 //! cargo jackioh patches ship
+//! cargo jackioh patches retcon [--dry-run] [--records <dir>...]   # the version retcon: retcon.rs (R1371000)
 //! ```
 //!
 //! - A branch changes `catalog.json` (or a card's play some other way) and adds one fragment,
@@ -1017,14 +1018,21 @@ pub mod patches_io {
         out
     }
 
+    /// R1437000: the catalog field a patch leaves out: a card's flavor, display only, so a change to
+    /// it alone claims no card, is in no snapshot and ships no version.
+    pub const FLAVOR_FIELD: &str = "flavor";
+
     /// The fields of one entry that differ, one level into its faces ("base.text", "cost"). A face's
     /// text is compared as it prints, its `{key}` numbers filled in (`fillParams`, as the
     /// patch-notes diff does): a patch that moves only a param's value still rewords the faces that
-    /// print it, so the face counts as changed.
+    /// print it, so the face counts as changed. A `flavor` is left out (R1437000).
     pub fn changed_fields(before: &Object, after: &Object) -> Vec<String> {
         let mut fields = Vec::new();
         let keys: IndexSet<&String> = before.keys().chain(after.keys()).collect();
         for key in keys {
+            if key.as_str() == FLAVOR_FIELD {
+                continue;
+            }
             let face = matches!(key.as_str(), "base" | "radiant");
             let face_a = before.get(key).and_then(Json::as_object);
             let face_b = after.get(key).and_then(Json::as_object);
@@ -1608,7 +1616,7 @@ fn win_rates_changed(paths: &PatchPaths, newest: &str) -> anyhow::Result<bool> {
     Ok(!same_win_rates(&shipped, &working))
 }
 
-/// `catalog.json` as a patch sees it: its shipped view (R1420).
+/// `catalog.json` as a patch sees it: its shipped view (R1420), without its flavors (R1437000).
 fn read_catalog(path: &Path) -> anyhow::Result<Catalog> {
     let text = fs::read_to_string(path).with_context(|| format!("{} cannot be read", path.display()))?;
     let catalog: Catalog =
@@ -1630,20 +1638,29 @@ fn entry_ships(entry: &js::Object) -> bool {
 
 /// R1420: the catalog a patch ships, every entry of a set that ships, in the file's order. A set the
 /// catalog holds before it ships is in no snapshot and no fragment claims its cards; the patch that
-/// adds it to `SHIPPED_SETS` claims every one of them at once.
+/// adds it to `SHIPPED_SETS` claims every one of them at once. Every entry is read without its
+/// `flavor` (R1437000).
 pub fn shipped_view(catalog: Catalog) -> Catalog {
     catalog
         .into_iter()
         .filter(|(_, entry)| entry_ships(entry))
+        .map(|(id, mut entry)| {
+            entry.shift_remove(patches_io::FLAVOR_FIELD);
+            (id, entry)
+        })
         .collect()
 }
 
-/// R1420: `catalog.json`'s text as a snapshot holds it. The text itself when every entry ships, so a
-/// history of shipped sets alone is the file byte for byte; otherwise the shipped view written as
-/// the catalog is (two-space JSON and the file's closing newline).
+/// R1420: `catalog.json`'s text as a snapshot holds it. The text itself when every entry ships and
+/// none carries a `flavor` (R1437000), so a history of shipped sets alone is the file byte for byte;
+/// otherwise the shipped view written as the catalog is (two-space JSON and the file's closing
+/// newline).
 pub fn shipped_text(raw: &str) -> anyhow::Result<String> {
     let catalog: Catalog = serde_json::from_str(raw).context("the catalog is not a catalog")?;
-    if catalog.values().all(entry_ships) {
+    if catalog
+        .values()
+        .all(|entry| entry_ships(entry) && !entry.contains_key(patches_io::FLAVOR_FIELD))
+    {
         return Ok(raw.to_string());
     }
     let mut text = js::stringify_pretty(&shipped_view(catalog));
@@ -1960,7 +1977,7 @@ struct Proved {
 }
 
 /// R1366000: the sets a snapshot's cards belong to, the sets that ship as of it.
-fn sets_of(catalog: &Catalog) -> Vec<SetName> {
+pub(crate) fn sets_of(catalog: &Catalog) -> Vec<SetName> {
     let mut sets = Vec::new();
     for entry in catalog.values() {
         let named = entry.get("set").and_then(js::Json::as_str);
@@ -2365,6 +2382,12 @@ fn main(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
             "patches check: every catalog change is claimed by exactly one pending fragment, and every older shipped version is carried for replays (R767000)"
         );
         return Ok(());
+    }
+    if command == Some("retcon") {
+        return crate::retcon::run(repo_root, &argv[1..]);
+    }
+    if command == Some("log") {
+        return crate::technical::main(repo_root, &argv[1..]);
     }
     if command == Some("ship") {
         let result = ship_patches(repo_root)?;
@@ -3149,6 +3172,51 @@ mod tests {
                     catalog.contains_key("boss"),
                     "catalog.json keeps the card being built"
                 );
+            }
+
+            // R1437000: a patch reads the catalog without its flavors, as without a held set's cards
+            // (R1420).
+            #[test]
+            fn r1437000_a_patch_reads_the_catalog_without_its_flavors() {
+                let base = cards(2);
+                let temp = shipped_repo("jackioh-ship-flavor-", &base);
+                let root = temp.path();
+                let dir = root.join("crates/cards/patches");
+                // Every card takes a flavor: nothing to claim, and the check passes.
+                let mut flavored = base.clone();
+                for entry in flavored.values_mut() {
+                    entry.insert("flavor".to_string(), Json::from("Fire"));
+                }
+                write_files(root, &[("crates/cards/catalog.json", json(&flavored))]);
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+                commit_at(root, "flavors", "2026-10-01T12:00:00+00:00");
+                // A cost changes beside them: the fragment claims that card alone.
+                let mut changed = flavored.clone();
+                changed
+                    .get_mut("c00")
+                    .expect("c00")
+                    .insert("cost".to_string(), Json::from(2));
+                write_files(root, &[("crates/cards/catalog.json", json(&changed))]);
+                let written = write_fragment(root, &fragment_args("t", "s", "n", None)).unwrap();
+                assert_eq!(written.fragment.cards, ids(0, 1));
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+                commit_at(root, "fragment", "2026-10-02T12:00:00+00:00");
+                // It ships as a micro recording that card alone, its snapshot without flavors.
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1b"]));
+                let changes: Vec<String> = shipped_patch(&dir, "v0.1.1b")
+                    .changes
+                    .into_iter()
+                    .map(|change| change.id)
+                    .collect();
+                assert_eq!(changes, ids(0, 1));
+                assert_eq!(
+                    read_snapshot("v0.1.1b", &dir).unwrap(),
+                    costing(&base, &ids(0, 1), 2)
+                );
+                assert!(!read(&dir.join("v0.1.1b.json")).contains("flavor"));
+                let catalog: Catalog =
+                    serde_json::from_str(&read(&root.join("crates/cards/catalog.json"))).unwrap();
+                assert_eq!(catalog["c01"].get("flavor"), Some(&Json::from("Fire")));
             }
 
             #[test]
@@ -4418,10 +4486,10 @@ mod tests {
                 assert_eq!(
                     versions[..8],
                     strings(&[
-                        "v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.1", "v0.2.2"
+                        "v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.0b", "v0.2.1"
                     ])
                 );
-                assert!(versions.iter().any(|version| version == "v0.2.3"));
+                assert!(versions.iter().any(|version| version == "v0.2.2"));
                 assert_eq!(versions.iter().collect::<IndexSet<_>>().len(), versions.len());
                 for patch in &patches {
                     let path = snapshot_path(&patch.version, &patches_dir()).unwrap();
@@ -4639,11 +4707,11 @@ mod tests {
             fn r388_records_patch_v0_2_3_eighteen_field_spells_animated_and_ivory_towers_text_issue_113() {
                 let patches = patches();
                 assert_eq!(
-                    ids_of(&patches, "v0.2.3", ChangeKind::Added),
+                    ids_of(&patches, "v0.2.2", ChangeKind::Added),
                     Vec::<String>::new()
                 );
                 assert_eq!(
-                    ids_of(&patches, "v0.2.3", ChangeKind::Changed),
+                    ids_of(&patches, "v0.2.2", ChangeKind::Changed),
                     strings(&[
                         "core-014",
                         "core-033",
@@ -4667,7 +4735,7 @@ mod tests {
                         "classicplus-078",
                     ])
                 );
-                let after = snapshot("v0.2.3");
+                let after = snapshot("v0.2.2");
                 let base_of = |id: &str| {
                     after
                         .get(id)
@@ -4690,7 +4758,7 @@ mod tests {
                 );
                 // Final Gambit's follow-up gained its R216 guard: the script's lines move, nothing
                 // printed does.
-                let changes = changes_of(&patches, "v0.2.3");
+                let changes = changes_of(&patches, "v0.2.2");
                 let gambit = changes
                     .iter()
                     .find(|change| change.id == "classic-052")
@@ -4714,12 +4782,12 @@ mod tests {
                     "classicplus-040",
                 ]);
                 let patches = patches();
-                let shipped = versions(&patches).iter().any(|version| version == "v0.2.4");
+                let shipped = versions(&patches).iter().any(|version| version == "v0.2.2b");
                 let pending = fragments()
                     .into_iter()
-                    .find(|named| named.fragment.version.as_deref() == Some("v0.2.4"))
+                    .find(|named| named.fragment.version.as_deref() == Some("v0.2.2b"))
                     .map(|named| named.fragment);
-                assert!(shipped || pending.is_some(), "v0.2.4 is pending or shipped");
+                assert!(shipped || pending.is_some(), "v0.2.2b is pending or shipped");
                 if !shipped {
                     assert_eq!(
                         pending.as_ref().map(|fragment| fragment.cards.clone()),
@@ -4727,9 +4795,9 @@ mod tests {
                     );
                 }
                 let changes: Vec<PatchChange> = if shipped {
-                    changes_of(&patches, "v0.2.4")
+                    changes_of(&patches, "v0.2.2b")
                 } else {
-                    diff_catalogs(Some(&snapshot("v0.2.3")), &catalog())
+                    diff_catalogs(Some(&snapshot("v0.2.2")), &catalog())
                         .into_iter()
                         .filter(|change| five.contains(&change.id))
                         .collect()
@@ -4766,19 +4834,19 @@ mod tests {
                 // Shipped by `patches ship` (R646): Classic #55 changed against v0.2.5's snapshot.
                 let patches = patches();
                 assert_eq!(
-                    ids_of(&patches, "v0.2.6", ChangeKind::Added),
+                    ids_of(&patches, "v0.2.3b", ChangeKind::Added),
                     Vec::<String>::new()
                 );
                 assert_eq!(
-                    ids_of(&patches, "v0.2.6", ChangeKind::Removed),
+                    ids_of(&patches, "v0.2.3b", ChangeKind::Removed),
                     Vec::<String>::new()
                 );
                 assert_eq!(
-                    ids_of(&patches, "v0.2.6", ChangeKind::Changed),
+                    ids_of(&patches, "v0.2.3b", ChangeKind::Changed),
                     strings(&["classic-055"])
                 );
                 assert_eq!(
-                    fields_of(&changes_of(&patches, "v0.2.6"), "classic-055"),
+                    fields_of(&changes_of(&patches, "v0.2.3b"), "classic-055"),
                     strings(&["base.text", "loc", "radiant.text"])
                 );
             }
@@ -4794,11 +4862,10 @@ mod tests {
                 let fragment = fragments()
                     .into_iter()
                     .find(|named| {
-                        named.fragment.version.as_deref() == Some("v0.2.10")
-                            && named.fragment.sources == "#88"
+                        named.fragment.version.as_deref() == Some("v0.2.5") && named.fragment.sources == "#88"
                     })
                     .map(|named| named.fragment);
-                let at = versions.iter().position(|version| version == "v0.2.10");
+                let at = versions.iter().position(|version| version == "v0.2.5");
                 let before = snapshot(match at {
                     None => versions.last().expect("a newest patch"),
                     Some(at) => &versions[at - 1],
@@ -4806,19 +4873,19 @@ mod tests {
                 let after = if fragment.is_some() {
                     catalog()
                 } else {
-                    snapshot("v0.2.10")
+                    snapshot("v0.2.5")
                 };
                 let claimed = match &fragment {
                     Some(fragment) => fragment.cards.clone(),
-                    None => ids_of(&patches, "v0.2.10", ChangeKind::Changed),
+                    None => ids_of(&patches, "v0.2.5", ChangeKind::Changed),
                 };
                 if fragment.is_none() {
                     assert_eq!(
-                        ids_of(&patches, "v0.2.10", ChangeKind::Added),
+                        ids_of(&patches, "v0.2.5", ChangeKind::Added),
                         Vec::<String>::new()
                     );
                     assert_eq!(
-                        ids_of(&patches, "v0.2.10", ChangeKind::Removed),
+                        ids_of(&patches, "v0.2.5", ChangeKind::Removed),
                         Vec::<String>::new()
                     );
                 }
@@ -4872,19 +4939,19 @@ mod tests {
                 let patches = patches();
                 match fragments()
                     .into_iter()
-                    .find(|named| named.fragment.version.as_deref() == Some("v0.2.5"))
+                    .find(|named| named.fragment.version.as_deref() == Some("v0.2.3"))
                 {
                     Some(named) => assert_eq!(named.fragment.cards, unanimated),
                     None => {
                         assert_eq!(
-                            ids_of(&patches, "v0.2.5", ChangeKind::Added),
+                            ids_of(&patches, "v0.2.3", ChangeKind::Added),
                             Vec::<String>::new()
                         );
                         assert_eq!(
-                            ids_of(&patches, "v0.2.5", ChangeKind::Removed),
+                            ids_of(&patches, "v0.2.3", ChangeKind::Removed),
                             Vec::<String>::new()
                         );
-                        assert_eq!(ids_of(&patches, "v0.2.5", ChangeKind::Changed), unanimated);
+                        assert_eq!(ids_of(&patches, "v0.2.3", ChangeKind::Changed), unanimated);
                     }
                 }
             }
@@ -4892,10 +4959,10 @@ mod tests {
             #[test]
             fn r388_records_patch_v0_2_1_card_text_pass_issue_45() {
                 let patches = patches();
-                assert_eq!(ids_of(&patches, "v0.2.1", ChangeKind::Added).len(), 0);
-                assert_eq!(ids_of(&patches, "v0.2.1", ChangeKind::Removed).len(), 0);
-                assert_eq!(ids_of(&patches, "v0.2.1", ChangeKind::Changed).len(), 22);
-                assert!(changes_of(&patches, "v0.2.1").iter().all(|change| {
+                assert_eq!(ids_of(&patches, "v0.2.0b", ChangeKind::Added).len(), 0);
+                assert_eq!(ids_of(&patches, "v0.2.0b", ChangeKind::Removed).len(), 0);
+                assert_eq!(ids_of(&patches, "v0.2.0b", ChangeKind::Changed).len(), 22);
+                assert!(changes_of(&patches, "v0.2.0b").iter().all(|change| {
                     change.kind == ChangeKind::Changed
                         && change
                             .fields()
@@ -4907,11 +4974,11 @@ mod tests {
             #[test]
             fn r388_records_patch_v0_2_2_small_set_of_mechanics_changes_issue_149() {
                 let patches = patches();
-                assert_eq!(ids_of(&patches, "v0.2.2", ChangeKind::Added).len(), 0);
-                assert_eq!(ids_of(&patches, "v0.2.2", ChangeKind::Removed).len(), 0);
-                assert_eq!(ids_of(&patches, "v0.2.2", ChangeKind::Changed).len(), 22);
-                let changes = changes_of(&patches, "v0.2.2");
-                let plague: Vec<String> = ids_of(&patches, "v0.2.2", ChangeKind::Changed)
+                assert_eq!(ids_of(&patches, "v0.2.1", ChangeKind::Added).len(), 0);
+                assert_eq!(ids_of(&patches, "v0.2.1", ChangeKind::Removed).len(), 0);
+                assert_eq!(ids_of(&patches, "v0.2.1", ChangeKind::Changed).len(), 22);
+                let changes = changes_of(&patches, "v0.2.1");
+                let plague: Vec<String> = ids_of(&patches, "v0.2.1", ChangeKind::Changed)
                     .into_iter()
                     .filter(|id| fields_of(&changes, id).iter().any(|field| field == "tags"))
                     .collect();
@@ -4945,8 +5012,8 @@ mod tests {
                     fields_of(&changes, "classicplus-070"),
                     strings(&["base.text", "loc", "radiant.text"])
                 );
-                let before = snapshot("v0.2.1");
-                let after = snapshot("v0.2.2");
+                let before = snapshot("v0.2.0b");
+                let after = snapshot("v0.2.1");
                 let param = |snapshot: &Catalog, id: &str, key: &str| -> Option<(Option<f64>, Option<f64>)> {
                     snapshot
                         .get(id)
@@ -5024,6 +5091,30 @@ mod tests {
                 assert_eq!(changed_fields(&face(1, ""), &face(1, "")), Vec::<String>::new());
             }
 
+            // R1437000: a flavor is display only, so a change to it alone changes no field.
+            #[test]
+            fn r1437000_changed_fields_leaves_out_a_flavor() {
+                let card = |flavor: Option<&str>, cost: i32| -> Object {
+                    let mut pairs = vec![("id", Json::from("c")), ("cost", Json::from(cost))];
+                    if let Some(flavor) = flavor {
+                        pairs.push(("flavor", Json::from(flavor)));
+                    }
+                    object(pairs)
+                };
+                assert_eq!(
+                    changed_fields(&card(None, 1), &card(Some("Fire"), 1)),
+                    Vec::<String>::new()
+                );
+                assert_eq!(
+                    changed_fields(&card(Some("Fire"), 1), &card(Some("Dark"), 1)),
+                    Vec::<String>::new()
+                );
+                assert_eq!(
+                    changed_fields(&card(Some("Fire"), 1), &card(None, 2)),
+                    strings(&["cost"])
+                );
+            }
+
             #[test]
             fn r388_indexes_each_card_by_the_versions_that_added_or_changed_it() {
                 let index = build_index(&patches());
@@ -5065,67 +5156,67 @@ mod tests {
             /// Each renamed patch: its former name, its shipping commit and its source.
             const RENAMED: &[(&str, &str, &str, &str)] = &[
                 (
-                    "v0.2.1",
+                    "v0.2.0b",
                     "v0.2.4",
                     "9dcb65e481717a49bfc750b58ea67a11a1852f39",
                     "#45",
                 ),
                 (
-                    "v0.2.2",
+                    "v0.2.1",
                     "v0.2.5",
                     "9e030abd6e3f846fde1f3e5003518d76ad512043",
                     "#149",
                 ),
                 (
-                    "v0.2.3",
+                    "v0.2.2",
                     "v0.2.10",
                     "d26ab17eb8515eb35b9c3ca214c3343cb4fb1a8d",
                     "Issue #113",
                 ),
                 (
-                    "v0.2.4",
+                    "v0.2.2b",
                     "v0.2.11",
                     "7f3458e41b6c54bf5d35e52f45c4b5c124c3844d",
                     "#181, #206",
                 ),
                 (
-                    "v0.2.5",
+                    "v0.2.3",
                     "v0.2.12",
                     "1be5a28e08c3b6ef94b95b3845c908adaa86d14e",
                     "Issue #218",
                 ),
                 (
-                    "v0.2.6",
+                    "v0.2.3b",
                     "v0.2.13",
                     "b26b1b9dde3f723528e60739caf5aee359a16c20",
                     "#271",
                 ),
                 (
-                    "v0.2.7",
+                    "v0.2.3c",
                     "v0.2.14",
                     "533b4e2db58eaae47b0edd0eee6da6d7e12439f3",
                     "#126",
                 ),
                 (
-                    "v0.2.7b",
+                    "v0.2.3d",
                     "v0.2.14b",
                     "80e7960ccaef1a8c0bb5c463eadacd8fd402d858",
                     "#260",
                 ),
                 (
-                    "v0.2.8",
+                    "v0.2.3e",
                     "v0.2.16",
                     "509e9a302ab71542a4e141fe7231c9743722bdba",
                     "#170",
                 ),
                 (
-                    "v0.2.8b",
+                    "v0.2.3f",
                     "v0.2.16b",
                     "16724d26939a1a03779523f11461b41c57871ccb",
                     "#323",
                 ),
                 (
-                    "v0.2.9",
+                    "v0.2.4",
                     "v0.2.17",
                     "97a00bd613bd3adfaafdc4d1580f5d895d2b5e22",
                     "#44",
@@ -5159,9 +5250,9 @@ mod tests {
                 assert_eq!(
                     versions[..17],
                     strings(&[
-                        "v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.1", "v0.2.2",
-                        "v0.2.3", "v0.2.4", "v0.2.5", "v0.2.6", "v0.2.7", "v0.2.7b", "v0.2.8", "v0.2.8b",
-                        "v0.2.9",
+                        "v0.1.0", "v0.1.0b", "v0.1.0c", "v0.1.0d", "v0.1.1", "v0.2.0", "v0.2.0b", "v0.2.1",
+                        "v0.2.2", "v0.2.2b", "v0.2.3", "v0.2.3b", "v0.2.3c", "v0.2.3d", "v0.2.3e", "v0.2.3f",
+                        "v0.2.4",
                     ])
                 );
                 let renamed: Vec<String> = RENAMED
@@ -5220,41 +5311,41 @@ mod tests {
                 let patches = patches();
                 let title_of = |version: &str| patch(&patches, version).map(|patch| patch.title.clone());
                 let title = |text: &str| Some(text.to_string());
-                assert_eq!(title_of("v0.2.1"), title("Patch v0.2.1: card text pass"));
+                assert_eq!(title_of("v0.2.0b"), title("Patch v0.2.1: card text pass"));
                 assert_eq!(
-                    title_of("v0.2.3"),
+                    title_of("v0.2.2"),
                     title("Patch v0.2.3: Animated pass on Field Spells, Ivory Tower fuses")
                 );
                 assert_eq!(
-                    title_of("v0.2.4"),
+                    title_of("v0.2.2b"),
                     title("Patch v0.2.4: aimed random casts and the Deft keyword")
                 );
                 assert_eq!(
-                    title_of("v0.2.5"),
+                    title_of("v0.2.3"),
                     title("Patch v0.2.5: undo the v0.2.3 animated additions")
                 );
-                assert_eq!(title_of("v0.2.7"), title("Patch v0.2.7: More card patches"));
-                assert_eq!(title_of("v0.2.8"), title("Patch v0.2.8: Easter egg, Glitch"));
-                assert_eq!(title_of("v0.2.9"), title("Patch v0.2.9: rarity pass"));
+                assert_eq!(title_of("v0.2.3c"), title("Patch v0.2.7: More card patches"));
+                assert_eq!(title_of("v0.2.3e"), title("Patch v0.2.8: Easter egg, Glitch"));
+                assert_eq!(title_of("v0.2.4"), title("Patch v0.2.9: rarity pass"));
                 // The two whose titles named no number keep them, and the micro patches keep their Y
                 // (R650).
-                assert_eq!(title_of("v0.2.2"), title("Small set of mechanics changes"));
+                assert_eq!(title_of("v0.2.1"), title("Small set of mechanics changes"));
                 assert_eq!(
-                    title_of("v0.2.6"),
+                    title_of("v0.2.3b"),
                     title("Book of Wildfire becomes a different Book at the end of your turn")
                 );
                 assert_eq!(
-                    title_of("v0.2.7b"),
+                    title_of("v0.2.3d"),
                     title("Patch v0.2.Y: the yellow condition glow for ten Core cards")
                 );
-                assert_eq!(title_of("v0.2.8b"), title("Patch v0.2.Y: Buff Gary the Gambler"));
+                assert_eq!(title_of("v0.2.3f"), title("Patch v0.2.Y: Buff Gary the Gambler"));
             }
 
             #[test]
             fn r743_has_issue_170s_glitch_shipped_as_v0_2_16_as_v0_2_8_the_patch_that_added_the_token() {
                 let patches = patches();
                 assert_eq!(
-                    ids_of(&patches, "v0.2.8", ChangeKind::Added),
+                    ids_of(&patches, "v0.2.3e", ChangeKind::Added),
                     strings(&["classic-t-glitch"])
                 );
                 assert_eq!(
@@ -5262,7 +5353,7 @@ mod tests {
                         .get("classic-t-glitch")
                         .and_then(|versions| versions.first())
                         .map(String::as_str),
-                    Some("v0.2.8")
+                    Some("v0.2.3e")
                 );
             }
         }

@@ -43,6 +43,8 @@ pub fn script() -> CardScripts {
 // `param()`; radiant Echo: it resolves a second time".
 #[cfg(test)]
 mod tests {
+    use crate::def_ids;
+    use crate::events_json;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -71,16 +73,8 @@ mod tests {
         s
     }
 
-    fn events_json(s: &Scenario) -> Vec<Value> {
-        s.events().iter().map(|event| serde_json::to_value(event).expect("an event is JSON")).collect()
-    }
-
     fn damage_events(s: &Scenario) -> Vec<Value> {
         events_json(s).into_iter().filter(|event| event["type"] == "damage").collect()
-    }
-
-    fn def_ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
     mod base {

@@ -104,7 +104,7 @@ mod tests {
 
     /// Breaker in p1's hand; CN/KY cards spread over both fields, hands and decks; a vanilla
     /// control on each side.
-    fn spread(seed: &str, radiant_face: bool) -> Scenario {
+    fn spread_board(seed: &str, radiant_face: bool) -> Scenario {
         scenario(json!({
             "seed": seed,
             "p1": {
@@ -195,7 +195,7 @@ mod tests {
 
         #[test]
         fn r1042_cry_nerfs_every_other_cn_or_ky_card_on_fields_hands_decks() {
-            let mut s = spread("breaker-cry", false);
+            let mut s = spread_board("breaker-cry", false);
             let breaker = s
                 .hand(P1)
                 .iter()
@@ -525,7 +525,7 @@ mod tests {
             // The Radiant face carries Divine Shield.
             let def = crate::card_def(BREAKER);
             assert!(def.radiant.keywords.contains(&Keyword::DivineShield));
-            let mut s = spread("breaker-cry-radiant", true);
+            let mut s = spread_board("breaker-cry-radiant", true);
             let breaker = s
                 .hand(P1)
                 .iter()

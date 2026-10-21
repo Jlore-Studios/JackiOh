@@ -58,6 +58,7 @@ pub fn script() -> CardScripts {
 // (1/14, makes every enemy Unit attack it at its controller's start of turn).
 #[cfg(test)]
 mod tests {
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     /// The harness's import-time `registerAll()`: the engine's testkit cannot name the cards crate.
@@ -73,7 +74,7 @@ mod tests {
     fn destroyed_event(s: &Scenario, instance_id: &str) -> Value {
         s.events()
             .iter()
-            .map(|event| serde_json::to_value(event).expect("an event is JSON"))
+            .map(js)
             .find(|event| event["type"] == "destroyed" && event["instanceId"] == instance_id)
             .unwrap_or_else(|| panic!("no destroyed event for {instance_id}"))
     }

@@ -48,6 +48,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::ID;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -83,10 +84,6 @@ mod tests {
         s.events()
             .iter()
             .any(|event| matches!(event, GameEvent::AutopilotEngaged { player: who, .. } if *who == player))
-    }
-
-    fn def_ids(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
     mod mp18_cognitive_offloading {

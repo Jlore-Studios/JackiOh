@@ -41,6 +41,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -51,10 +52,6 @@ mod tests {
     /// (1) Spell, deals 3 to a target.
     const ECLIPSE: &str = "core-035";
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     fn library_def_ids(s: &Scenario, player: PlayerId) -> Vec<String> {
         s.state().players[player].library.iter().map(|card| card.def_id.clone()).collect()

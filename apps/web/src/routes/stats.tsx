@@ -191,6 +191,8 @@ export default function StatsRoute(): ReactElement {
   const [cardStatsLoading, setCardStatsLoading] = useState(true);
   const [cardStatsError, setCardStatsError] = useState(false);
   const [cardStatsData, setCardStatsData] = useState<PublicStatsCardsResponse | null>(null);
+  // Bumped by Retry: the effect asks again, so its cleanup cancels a retry like any other request.
+  const [cardStatsAttempt, setCardStatsAttempt] = useState(0);
 
   // Players response
   const [playersLoading, setPlayersLoading] = useState(false);
@@ -205,6 +207,9 @@ export default function StatsRoute(): ReactElement {
   // Drill-down data
   const [drillDownLoading, setDrillDownLoading] = useState(false);
   const [drillDownData, setDrillDownData] = useState<CardDrillDownResponse | null>(null);
+  const [drillDownError, setDrillDownError] = useState(false);
+  // Bumped by the details' Retry, as `cardStatsAttempt` is by the table's.
+  const [drillDownAttempt, setDrillDownAttempt] = useState(0);
 
   const playerStats = usePlayerStats();
   const signedIn = readSession() !== null;
@@ -236,13 +241,13 @@ export default function StatsRoute(): ReactElement {
 
   // Fetch card stats
   const fetchCardStats = useCallback(
-    (targetPatch?: string) => {
+    () => {
       setCardStatsLoading(true);
       setCardStatsError(false);
       const controller = new AbortController();
 
       getCardStats({
-        patch: targetPatch || (patch ? patch : undefined),
+        patch: patch ? patch : undefined,
         set: setFilter ? setFilter : undefined,
         rarity: rarityFilter ? rarityFilter : undefined,
         cost: costFilter ? Number(costFilter) : undefined,
@@ -250,10 +255,12 @@ export default function StatsRoute(): ReactElement {
         signal: controller.signal,
       })
         .then((res) => {
+          if (controller.signal.aborted) return;
           setCardStatsData(res);
           setCardStatsLoading(false);
         })
         .catch(() => {
+          if (controller.signal.aborted) return;
           setCardStatsError(true);
           setCardStatsLoading(false);
         });
@@ -265,7 +272,7 @@ export default function StatsRoute(): ReactElement {
 
   useEffect(() => {
     return fetchCardStats();
-  }, [fetchCardStats]);
+  }, [fetchCardStats, cardStatsAttempt]);
 
   // Fetch players: one page of the server's `limit` rows. The response carries no total, so a full page may have another after it.
   const fetchPlayers = useCallback((query: string, page: number) => {
@@ -313,18 +320,22 @@ export default function StatsRoute(): ReactElement {
       return;
     }
     setDrillDownLoading(true);
+    setDrillDownError(false);
     const controller = new AbortController();
     getCardDrillDown(cardDrillDownId, mode ? mode : undefined, controller.signal)
       .then((data) => {
+        if (controller.signal.aborted) return;
         setDrillDownData(data);
         setDrillDownLoading(false);
       })
       .catch(() => {
+        if (controller.signal.aborted) return;
+        setDrillDownError(true);
         setDrillDownLoading(false);
       });
 
     return () => controller.abort();
-  }, [cardDrillDownId, mode]);
+  }, [cardDrillDownId, mode, drillDownAttempt]);
 
   const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
 
@@ -489,11 +500,7 @@ export default function StatsRoute(): ReactElement {
                 type="button"
                 className="stats-fallback-btn link-button"
                 data-testid={statsTestid.fallbackToggle}
-                onClick={() => {
-                  const target = cardStatsData.previousPatch!;
-                  setPatch(target);
-                  fetchCardStats(target);
-                }}
+                onClick={() => setPatch(cardStatsData.previousPatch!)}
               >
                 {t("View previous patch ({patch}) →", { patch: cardStatsData.previousPatch })}
               </button>
@@ -812,7 +819,7 @@ export default function StatsRoute(): ReactElement {
             ) : cardStatsError ? (
               <div className="stats-error">
                 <p>{t("Failed to load card statistics.")}</p>
-                <button type="button" className="stats-retry-btn" onClick={() => fetchCardStats()}>
+                <button type="button" className="stats-retry-btn" onClick={() => setCardStatsAttempt((n) => n + 1)}>
                   {t("Retry")}
                 </button>
               </div>
@@ -1297,6 +1304,13 @@ export default function StatsRoute(): ReactElement {
                 <div className="stats-drilldown-details">
                   {drillDownLoading ? (
                     <p className="stats-loading">{t("Loading drill-down data…")}</p>
+                  ) : drillDownError ? (
+                    <div className="stats-error">
+                      <p>{t("Details unavailable.")}</p>
+                      <button type="button" className="stats-retry-btn" onClick={() => setDrillDownAttempt((n) => n + 1)}>
+                        {t("Retry")}
+                      </button>
+                    </div>
                   ) : drillDownData ? (
                     <>
                       {/* Patches historical win rate */}

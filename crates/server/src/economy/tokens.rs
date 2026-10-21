@@ -22,14 +22,13 @@ use std::sync::Arc;
 use indexmap::IndexMap;
 use jackioh_engine::config::MAX_COPIES;
 use jackioh_engine::set_ships;
-use jackioh_engine::wire::PrintedRarity;
 use serde::{Deserialize, Serialize};
 
 use crate::api::collection::{caller_profile, owned_in};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, ok_of, optional_str, str};
 use crate::app::App;
 use crate::config::{CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE, COSMETIC_TOKEN_CYCLE, CosmeticTokenStep};
-use crate::cosmetics::Cosmetic;
+use crate::cosmetics::{Cosmetic, CosmeticRarity};
 use crate::db::store::{CollectionEntry, CollectionGrant};
 use crate::economy::store::{
     CosmeticGrant, Counter, CounterEntry, EconomyReason, InventoryEntry, InventoryGrant, InventoryItem,
@@ -56,21 +55,9 @@ pub fn settle_bar(start: i64, gained: i64, size: i64) -> (i64, i64) {
     (total / size, total % size)
 }
 
-/// A cosmetic token's place on §5's scale, as [`CosmeticRarity::tier`] reads a cosmetic's: a Rare
-/// token is tier 1, an Epic token tier 2 (R1305003).
-fn token_tier(token: PrintedRarity) -> u8 {
-    match token {
-        PrintedRarity::Common => 0,
-        PrintedRarity::Rare => 1,
-        PrintedRarity::Epic => 2,
-        PrintedRarity::Legendary => 3,
-        PrintedRarity::Mythic => 4,
-    }
-}
-
 /// The inventory key a cosmetic token of `token` is counted under: its rarity's name
 /// (`InventoryItem::CosmeticToken` takes a rarity key).
-fn token_key(token: PrintedRarity) -> String {
+fn token_key(token: CosmeticRarity) -> String {
     token.as_str().to_string()
 }
 
@@ -198,7 +185,7 @@ pub(crate) fn choice_of(
 }
 
 /// §14.5: a cosmetic token buys any cosmetic at its tier or below (§14.2's scale, Common to
-/// Mythic, read by [`CosmeticRarity::tier`]): a per-card cosmetic for a card the account owns, or
+/// Mythic; a token is a [`CosmeticRarity`] too, so the two compare on that scale alone): a per-card cosmetic for a card the account owns, or
 /// an account cosmetic, never a chase, in one transaction: the cosmetics grant, then one
 /// `CosmeticToken` of `token`'s rarity spent (reason `token_redeem`), all with the same `at`; one
 /// commit. A token outside Rare and Epic is 400, as is an unknown cosmetic id. Refuses with 409,
@@ -211,11 +198,11 @@ pub async fn redeem_cosmetic_token(
     app: &App,
     profile_id: &str,
     registry: &[Cosmetic],
-    token: PrintedRarity,
+    token: CosmeticRarity,
     cosmetic_id: &str,
     card_id: Option<&str>,
 ) -> Result<(), ApiError> {
-    if !matches!(token, PrintedRarity::Rare | PrintedRarity::Epic) {
+    if !matches!(token, CosmeticRarity::Rare | CosmeticRarity::Epic) {
         return Err(bad_request(format!("no cosmetic token is {token}")));
     }
     let cosmetic = registry
@@ -238,7 +225,7 @@ pub async fn redeem_cosmetic_token(
     if cosmetic.chase {
         return Err(conflict("no token pays for a chase cosmetic"));
     }
-    if cosmetic.rarity.tier() > token_tier(token) {
+    if cosmetic.rarity > token {
         return Err(conflict("that cosmetic sits above the token's tier"));
     }
     if !choice.fits {
@@ -334,12 +321,12 @@ async fn read_tokens(app: &App, profile_id: &str) -> Result<TokenBars, ApiError>
             cosmetic_rare: held(
                 &inventory,
                 InventoryItem::CosmeticToken,
-                &token_key(PrintedRarity::Rare),
+                &token_key(CosmeticRarity::Rare),
             ),
             cosmetic_epic: held(
                 &inventory,
                 InventoryItem::CosmeticToken,
-                &token_key(PrintedRarity::Epic),
+                &token_key(CosmeticRarity::Epic),
             ),
             cosmetic_pack: held(&inventory, InventoryItem::CosmeticPack, ""),
         },
@@ -366,9 +353,8 @@ pub async fn post_redeem_card(app: &Arc<App>, req: Req) -> ApiResult {
 pub async fn post_redeem_cosmetic(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let token = str(&req.body, "token")?;
-    let token = token
-        .parse::<PrintedRarity>()
-        .map_err(|_| bad_request(format!("no cosmetic token is named \"{token}\"")))?;
+    let token = CosmeticRarity::named(&token)
+        .ok_or_else(|| bad_request(format!("no cosmetic token is named \"{token}\"")))?;
     let cosmetic_id = str(&req.body, "cosmeticId")?;
     let card_id = optional_str(&req.body, "cardId")?;
     let registry = crate::cosmetics::shipped()
@@ -389,7 +375,6 @@ pub async fn post_redeem_cosmetic(app: &Arc<App>, req: Req) -> ApiResult {
 mod tests {
     use super::*;
     use crate::config::{CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE};
-    use crate::cosmetics::CosmeticRarity;
 
     #[test]
     fn r1305000_settle_bar_pays_once_and_keeps_the_overflow() {
@@ -420,13 +405,19 @@ mod tests {
 
     #[test]
     fn r1305003_a_rare_token_buys_at_its_tier_or_below() {
-        assert!(CosmeticRarity::Common.tier() < token_tier(PrintedRarity::Rare));
-        assert_eq!(CosmeticRarity::Rare.tier(), token_tier(PrintedRarity::Rare));
-        assert!(CosmeticRarity::Epic.tier() > token_tier(PrintedRarity::Rare));
-        assert!(CosmeticRarity::Legendary.tier() > token_tier(PrintedRarity::Rare));
-        assert!(CosmeticRarity::Mythic.tier() > token_tier(PrintedRarity::Rare));
-        assert_eq!(CosmeticRarity::Epic.tier(), token_tier(PrintedRarity::Epic));
-        assert!(CosmeticRarity::Legendary.tier() > token_tier(PrintedRarity::Epic));
-        assert!(CosmeticRarity::Mythic.tier() > token_tier(PrintedRarity::Epic));
+        // Common, Rare, Epic, Legendary, Mythic: what each token reaches.
+        for (token, buys) in [
+            (CosmeticRarity::Rare, [true, true, false, false, false]),
+            (CosmeticRarity::Epic, [true, true, true, false, false]),
+        ] {
+            for (rarity, buys) in CosmeticRarity::ALL.into_iter().zip(buys) {
+                assert_eq!(rarity <= token, buys, "a {token} token and a {rarity} cosmetic");
+                assert_eq!(
+                    rarity.tier() <= token.tier(),
+                    buys,
+                    "{token} and {rarity} by tier"
+                );
+            }
+        }
     }
 }

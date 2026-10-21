@@ -16,6 +16,8 @@ import type { GameOverReason, LeanPick, PlayerId, PortraitId, PrintedRarity, Set
 
 import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
+import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
+
 const DEFAULT_HTTP_URL = "http://localhost:8787";
 
 /**
@@ -502,11 +504,14 @@ export type PacksResponse = {
   unopened: { pack: string; count: number }[];
 };
 
-/** What a slot became (R1301002): a new card, a cosmetic for an owned card, or bar points. */
+/**
+ * What a slot became (R1301002): a new card, a cosmetic for an owned card, or bar points. A
+ * cosmetic's rarity is its own scale, never the slot's card's (R1333000).
+ */
 export type PackSlotGrant =
   | { kind: "card" }
-  | { kind: "cosmetic"; cosmeticId: string; cosmeticRarity: PrintedRarity }
-  | { kind: "bars"; cosmeticRarity: PrintedRarity };
+  | { kind: "cosmetic"; cosmeticId: string; cosmeticRarity: CosmeticRarity }
+  | { kind: "bars"; cosmeticRarity: CosmeticRarity };
 
 export type PackSlot = { rarity: PrintedRarity; cardId: string; grant: PackSlotGrant };
 
@@ -623,7 +628,7 @@ export type CosmeticSlotGrant =
   | {
       kind: "cosmetic";
       cosmeticId: string;
-      cosmeticRarity: PrintedRarity;
+      cosmeticRarity: CosmeticRarity;
       /** The card a per-card cosmetic goes on, null for an account cosmetic. */
       cardId: string | null;
       /** Whether the account lacked that card, so the slot grants it too. */
@@ -632,7 +637,7 @@ export type CosmeticSlotGrant =
   | { kind: "bars" };
 
 /** One slot of an opened cosmetic pack: the rarity it rolled and what that granted. */
-export type CosmeticSlot = { rarity: PrintedRarity; grant: CosmeticSlotGrant };
+export type CosmeticSlot = { rarity: CosmeticRarity; grant: CosmeticSlotGrant };
 
 /** `POST /api/cosmetic-packs/open`: its slots in order, the shard bar after it and the packs left. */
 export type OpenedCosmeticPackResponse = { slots: CosmeticSlot[]; shardBar: TokenBarState; unopened: number };
@@ -1218,7 +1223,17 @@ export type PublicCardStat = {
   playedDelta: number | null;
   playRate: number;
   hasEnoughGames: boolean;
+  /** R1367000: the card's window, and the versions its figures count. */
+  window?: {
+    from: string;
+    liveGames: number;
+    source: PublicStatsSource;
+    counted: string[];
+  };
 };
+
+/** R654, R1367000: which records a window's figures count. */
+export type PublicStatsSource = "provisional" | "live" | "previous" | "dev";
 
 export type PublicStatsCardsResponse = {
   patch: string;
@@ -1228,7 +1243,7 @@ export type PublicStatsCardsResponse = {
     liveGames: number;
     minLiveGames: number;
   };
-  source: "provisional" | "live" | "dev";
+  source: PublicStatsSource;
   sourceLabel: string;
   pilot: "merged" | "human" | "ai";
   pilotLabel: string;
@@ -1241,7 +1256,7 @@ export type PublicStatsCardsResponse = {
     totalGames: number;
     liveGames: number;
     activePatch: string;
-    source: "provisional" | "live" | "dev";
+    source: PublicStatsSource;
     pilot: "merged" | "human" | "ai";
     mode: "all" | "bo1" | "bo3" | "random";
     bestCard: { id: string; name: string; winRate: number; games: number } | null;

@@ -56,6 +56,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -250,7 +251,7 @@ mod tests {
             register_win_rates(the_table());
             let mut s = casting("na-tech-hidden", false, 1);
             let card = fused(&mut s);
-            let view = serde_json::to_value(view_for(s.state(), P2)).expect("the view serialises");
+            let view = js(&view_for(s.state(), P2));
             assert_eq!(view["opponent"]["hand"], json!({ "count": 2 }));
             assert!(!view.to_string().contains(&card.id), "the opponent never sees its id");
         }

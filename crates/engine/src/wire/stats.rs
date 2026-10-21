@@ -22,6 +22,9 @@ use crate::wire::catalog_types::{PLAYER_IDS, PerPlayer, PlayerId};
 use crate::wire::events::{GameOverReason, Winner};
 use crate::wire::string_union;
 
+pub mod window;
+pub use window::*;
+
 // ---------------------------------------------------------------------------
 // The record (R376)
 // ---------------------------------------------------------------------------
@@ -183,6 +186,45 @@ pub struct GameRecord {
     pub patch: String,
     pub pilots: PerPlayer<Pilot>,
     pub game: GameSummary,
+    /// R1367000: the build that played the game. Absent from a record written before it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub build: Option<RecordBuild>,
+}
+
+/// R1367000: the build a game was played on, so an AI change can be split out of a patch's figures
+/// without splitting the patch.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordBuild {
+    /// The git commit the server or tool that played the game was built from.
+    pub commit: String,
+    /// The AI generation (`crates/ai/generation.json`) that build holds, when the AI played a seat.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub ai_generation: Option<i32>,
+}
+
+impl RecordBuild {
+    /// R1367000: the build of a game played by a build of `commit` holding AI generation
+    /// `generation`, which it names only when the AI played one of `pilots`. `None` without a commit.
+    pub fn of(
+        commit: Option<&str>,
+        generation: Option<i32>,
+        pilots: &PerPlayer<Pilot>,
+    ) -> Option<RecordBuild> {
+        let commit = commit.filter(|commit| !commit.is_empty())?;
+        let ai_played = PLAYER_IDS.into_iter().any(|seat| pilots[seat] == Pilot::Ai);
+        Some(RecordBuild {
+            commit: commit.to_string(),
+            ai_generation: generation.filter(|_| ai_played),
+        })
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1424,7 +1466,22 @@ pub fn parse_game_record(value: &Value) -> Result<GameRecord, EngineError> {
                 p2: seat_summary(seats.get("p2"), "game.seats.p2")?,
             },
         },
+        build: record_build(record.get("build"))?,
     })
+}
+
+/// R1367000: a record's build, absent (or null) on a record written before builds were recorded.
+fn record_build(value: Option<&Value>) -> Result<Option<RecordBuild>, EngineError> {
+    let Some(value) = value.filter(|value| !value.is_null()) else {
+        return Ok(None);
+    };
+    let Some(build) = value.as_object() else {
+        return Err(EngineError::new("build is not an object"));
+    };
+    Ok(Some(RecordBuild {
+        commit: text(build.get("commit"), "build.commit")?,
+        ai_generation: seat_count(build.get("aiGeneration"), "build.aiGeneration")?,
+    }))
 }
 
 /// Records written one JSON object per line, as a development run writes them. Blank lines are skipped.
@@ -1501,6 +1558,7 @@ mod tests {
                 turns: 12,
                 seats: PerPlayer::new(seat_default(), seat_default()),
             },
+            build: None,
         }
     }
 
@@ -1757,14 +1815,14 @@ mod tests {
                 GameRecord {
                     id: "3".to_string(),
                     mode: GameMode::Bo3,
-                    patch: "v0.2.5".to_string(),
+                    patch: "v0.2.3".to_string(),
                     ..record()
                 },
                 // A practice-shaped record: one human seat, one AI seat. The AI's deck holds only z.
                 GameRecord {
                     id: "4".to_string(),
                     mode: GameMode::Random,
-                    patch: "v0.2.5".to_string(),
+                    patch: "v0.2.3".to_string(),
                     pilots: PerPlayer::new(Pilot::Human, Pilot::Ai),
                     game: game(
                         Winner::P2,
@@ -1787,9 +1845,9 @@ mod tests {
 
             assert_eq!(games(None, None), 4);
             assert_eq!(games(Some(GameMode::Random), None), 2);
-            assert_eq!(games(None, Some("v0.2.5")), 2);
-            assert_eq!(games(Some(GameMode::Random), Some("v0.2.5")), 1);
-            assert_eq!(games(Some(GameMode::Bo1), Some("v0.2.5")), 0);
+            assert_eq!(games(None, Some("v0.2.3")), 2);
+            assert_eq!(games(Some(GameMode::Random), Some("v0.2.3")), 1);
+            assert_eq!(games(Some(GameMode::Bo1), Some("v0.2.3")), 0);
 
             // Pilots count seats: record 4's human seat holds a, its AI seat z.
             let by_pilot = |pilot: PilotFilter| card_stats(&records, &CardStatsFilter { pilot, ..live() });
@@ -1884,10 +1942,10 @@ mod tests {
                 describe_filter(&CardStatsFilter {
                     source: SourceFilter::Dev,
                     mode: Some(GameMode::Random),
-                    patch: Some("v0.2.5".to_string()),
+                    patch: Some("v0.2.3".to_string()),
                     pilot: PilotFilter::Ai
                 }),
-                "AI development runs, All Random, patch v0.2.5, AI pilots"
+                "AI development runs, All Random, patch v0.2.3, AI pilots"
             );
         }
 
@@ -2235,6 +2293,7 @@ mod tests {
                     turns: 10,
                     seats: PerPlayer::new(random_seat(draws), random_seat(draws)),
                 },
+                build: None,
             }
         }
 
@@ -2411,6 +2470,47 @@ mod tests {
 
         fn refusal(value: &Value) -> String {
             parse_game_record(value).unwrap_err().message
+        }
+
+        #[test]
+        fn r1367000_a_record_without_build_still_loads_and_one_with_it_reads_back() {
+            let old = record();
+            assert_eq!(old.build, None);
+            let json = serde_json::to_value(&old).unwrap();
+            assert!(json.get("build").is_none(), "an absent build is not written");
+            assert_eq!(parse_game_record(&json).unwrap(), old);
+            assert_eq!(serde_json::from_value::<GameRecord>(json.clone()).unwrap(), old);
+            assert_eq!(
+                parse_game_record(&with(&json, "build", Value::Null)).unwrap(),
+                old
+            );
+
+            let built = GameRecord {
+                build: Some(RecordBuild {
+                    commit: "0123abc".to_string(),
+                    ai_generation: Some(12),
+                }),
+                ..record()
+            };
+            let json = serde_json::to_value(&built).unwrap();
+            assert_eq!(json["build"], json!({ "commit": "0123abc", "aiGeneration": 12 }));
+            assert_eq!(parse_game_record(&json).unwrap(), built);
+            let human = with(&json, "build", json!({ "commit": "0123abc" }));
+            assert_eq!(
+                parse_game_record(&human).unwrap().build.unwrap().ai_generation,
+                None
+            );
+
+            assert!(refusal(&with(&json, "build", json!("0123abc"))).contains("build is not an object"));
+            assert!(refusal(&with(&json, "build", json!({ "commit": "" }))).contains("build.commit"));
+            assert!(
+                refusal(&with(
+                    &json,
+                    "build",
+                    json!({ "commit": "a", "aiGeneration": -1 })
+                ))
+                .contains("build.aiGeneration")
+            );
         }
 
         #[test]
@@ -2595,27 +2695,27 @@ mod tests {
     #[test]
     fn r1284000_forced_series_is_some_only_for_a_record_filed_under_a_forced_series() {
         let forced = GameRecord {
-            id: "dev:v0.2.5:dev-force-core-090:1".to_string(),
-            patch: "v0.2.5".to_string(),
+            id: "dev:v0.2.3:dev-force-core-090:1".to_string(),
+            patch: "v0.2.3".to_string(),
             ..record()
         };
         assert_eq!(forced_series(&forced), Some("dev-force-core-090"));
         let plain = GameRecord {
-            id: "dev:v0.2.5:dev:1".to_string(),
-            patch: "v0.2.5".to_string(),
+            id: "dev:v0.2.3:dev:1".to_string(),
+            patch: "v0.2.3".to_string(),
             ..record()
         };
         assert_eq!(forced_series(&plain), None);
         assert_eq!(forced_series(&record()), None);
         let mismatched = GameRecord {
             id: "dev:run:1".to_string(),
-            patch: "v0.2.5".to_string(),
+            patch: "v0.2.3".to_string(),
             ..record()
         };
         assert_eq!(forced_series(&mismatched), None);
         // A mistyped patch cannot hide a forced series: the id alone decides.
         let spoofed = GameRecord {
-            id: "dev:v0.2.5:dev-force-core-090:1".to_string(),
+            id: "dev:v0.2.3:dev-force-core-090:1".to_string(),
             patch: "v9.9.9".to_string(),
             ..record()
         };

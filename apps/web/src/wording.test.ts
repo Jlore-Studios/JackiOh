@@ -135,7 +135,7 @@ const RETIRED_VOCABULARY: readonly { name: string; pattern: RegExp }[] = [
   { name: "Cannot be in Defense Position", pattern: /\bCannot be in Defense Position\b/i },
 ];
 
-describe("patch v0.2.1 vocabulary table (SPEC §11 R366)", () => {
+describe("patch v0.2.0b vocabulary table (SPEC §11 R366)", () => {
   it("no tutorial script line uses a word the vocabulary table retired", () => {
     const tutorialFiles = sources(join(SRC, "tutorial/scripts"));
     expect(tutorialFiles.length).toBeGreaterThan(0);
@@ -242,21 +242,30 @@ describe("R1320 players read Nerf and Buff", () => {
   });
 });
 
-/** R724001: the player notes `patches.json` carries, every title and line of each. */
+/** R724001: the player notes `patches.json` carries, every title and line of each, and the technical log's lines (R1369000). */
 function playerNoteTexts(): { at: string; text: string }[] {
   const patches = JSON.parse(readFileSync(join(SRC, "../../../crates/cards/patches/patches.json"), "utf8")) as {
     version: string;
     player?: Record<string, string | string[]>;
   }[];
-  return patches.flatMap(({ version, player }) =>
-    Object.entries(player ?? {}).flatMap(([key, value]) =>
-      (typeof value === "string" ? [value] : value).map((text) => ({ at: `${version} ${key}`, text })),
+  // R1369000: the technical log's player lines are a note's lines too.
+  const technical = JSON.parse(readFileSync(join(SRC, "../../../crates/cards/patches/technical.json"), "utf8")) as {
+    version: string;
+    commit: string;
+    player?: string;
+  }[];
+  return [
+    ...patches.flatMap(({ version, player }) =>
+      Object.entries(player ?? {}).flatMap(([key, value]) =>
+        (typeof value === "string" ? [value] : value).map((text) => ({ at: `${version} ${key}`, text })),
+      ),
     ),
-  );
+    ...technical.flatMap(({ version, commit, player }) => (player === undefined ? [] : [{ at: `${version} technical ${commit}`, text: player }])),
+  ];
 }
 
 describe("R724001 players read a patch's note in today's words", () => {
-  it("R724001 no player note in patches.json says library, sacrifice, an old cost form, Degrade or Upgrade", () => {
+  it("R724001 R1369000 no player note in patches.json or line of technical.json says library, sacrifice, an old cost form, Degrade or Upgrade", () => {
     const texts = playerNoteTexts();
     expect(texts.length).toBeGreaterThan(100);
     // Every word of a note is a player's, so the guards apply in any form, capitals or not.

@@ -91,6 +91,22 @@ class QueueTests(unittest.TestCase):
         self.assertIn("| #2 | Patch v0.9.X (part 2 of 2): the rest | — | — | ⏸️ held back: waits "
                       "for #1 to close | — |", dashboard.render(self.ctx))
 
+    def test_parts_wait_for_their_own_parents_earlier_parts_never_another_patchs(self):
+        """#1370: titles no longer name the patch (`Patch (part 2 of 2): …`), so a part waits for
+        the earlier sub-issues of its own parent."""
+        self.gh.add_issue(10, "Patch: the first change")
+        self.gh.add_issue(20, "Patch: the second change")
+        self.gh.add_issue(11, "Patch (part 1 of 2): the base")
+        self.gh.add_issue(12, "Patch (part 2 of 2): the rest", labels=(LABEL_BUILD,))
+        self.gh.add_issue(21, "Patch (part 1 of 2): another base")
+        self.gh.add_issue(22, "Patch (part 2 of 2): another rest", labels=(LABEL_BUILD,))
+        for parent, children in ((10, (11, 12)), (20, (21, 22))):
+            for child in children:
+                self.gh.add_sub_issue(parent, self.gh.get_issue(child)["id"])
+        explained = self.explain()
+        self.assertEqual(self.row(explained, 12).waiting, "waits for #11 to close")
+        self.assertEqual(self.row(explained, 22).waiting, "waits for #21 to close")
+
     def test_an_unrated_build_needs_a_medium_planner_first(self):
         self.gh.add_issue(5, "New thing", labels=(LABEL_BUILD,))
         self.ctx.store.update(lambda s: claude_refused(s, self.ctx.cfg.pool), "seed")

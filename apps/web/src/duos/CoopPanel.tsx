@@ -27,6 +27,7 @@ import { withSession } from "../net/gate.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { sendChat, type Friend } from "../net/social.ts";
 import { followInApp } from "../routes/nav.tsx";
+import { messageOf } from "../together/session.ts";
 import { COOP_ROOM_KEY, COOP_ROOM_POLL_MS } from "./config.ts";
 import { duosTestid } from "./testids.ts";
 import "./duos.css";
@@ -62,29 +63,32 @@ function refusalWords(cause: unknown): string {
   return cause instanceof Error ? t(cause.message) : String(cause);
 }
 
-/** The account's saved decks by name, for the deck choice; none when they cannot be read. */
-function useSavedDecks(): readonly SavedDeck[] {
+/** The account's saved decks by name, for the deck choice, and why they could not be read (none then). */
+function useSavedDecks(): { decks: readonly SavedDeck[]; loadError: string | null } {
   const [decks, setDecks] = useState<readonly SavedDeck[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
     withSession(getDecks).then(
       (answer) => {
         if (!cancelled) setDecks(answer.decks);
       },
-      () => undefined,
+      (cause: unknown) => {
+        if (!cancelled) setLoadError(messageOf(cause));
+      },
     );
     return () => {
       cancelled = true;
     };
   }, []);
-  return decks;
+  return { decks, loadError };
 }
 
 export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactElement {
   useLocale();
   const headingId = useId();
   const joinId = useId();
-  const decks = useSavedDecks();
+  const { decks, loadError } = useSavedDecks();
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
   const [deck, setDeck] = useState<string>(RANDOM);
   const [leanNewest, setLeanNewest] = useState(false);
@@ -275,6 +279,11 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
           </label>
         ) : null}
       </div>
+      {loadError === null ? null : (
+        <p className="coop-panel__error" role="alert">
+          {t("Your decks could not be loaded: {message}", { message: t(loadError) })}
+        </p>
+      )}
 
       {room === null ? (
         <div className="coop-panel__row">

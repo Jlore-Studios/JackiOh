@@ -200,7 +200,7 @@ function world(): World {
   git(w.work, "remote", "add", "origin", w.origin);
   const empty: Gh = { next: 1, nextComment: 1000, issues: [], prs: [], reactions: [], labels: [], green: [], newestGreen: "", failMerges: 0, fail: [], log: [], tokens: [] };
   writeFileSync(stateFile(w), JSON.stringify(empty));
-  commit(w, "c1", { "render.yaml": renderYaml("v0.2.1"), "app.txt": "one\n" });
+  commit(w, "c1", { "render.yaml": renderYaml("v0.2.0b"), "app.txt": "one\n" });
   git(w.work, "push", "-q", "origin", `${w.sha.c1}:refs/heads/production`);
   commit(w, "c2", { "app.txt": "two\n" });
   commit(w, "c3", { "app.txt": "three\n" });
@@ -303,7 +303,7 @@ describe("the countdown issue", () => {
     expect(pr).toMatchObject({ number: 2, base: "production", state: "closed", merged: true, labels: [LABEL, "human"], assignees: PEOPLE });
     expect(pr.title).toBe(`Promote main to production: 2 commit(s) up to ${w.sha.c3?.slice(0, 7)}`);
     expect(pr.body).toContain("Countdown issue: #1");
-    expect(pr.body).toContain("Catalog: v0.2.1");
+    expect(pr.body).toContain("Catalog: v0.2.0b");
     expect(pr.body).toMatch(/~~~\n[0-9a-f]{7} change c3\n[0-9a-f]{7} change c2\n~~~/u);
 
     // Production holds main's files, through a merge commit, and the promote branch is gone.
@@ -609,15 +609,15 @@ describe("the catalog fast path", () => {
     const w = counting();
     comment(w, 1, "/hold", "2026-10-05T10:00:00Z");
     ok(run(w, "issue_comment", "2026-10-05T10:01:00Z"));
-    const bump = commit(w, "c4", { "render.yaml": renderYaml("v0.2.2"), "app.txt": "four\n" });
+    const bump = commit(w, "c4", { "render.yaml": renderYaml("v0.2.1"), "app.txt": "four\n" });
     ok(run(w, "workflow_run", "2026-10-05T11:00:00Z", { RUN_SHA: bump }));
     expect(gh(w).prs).toHaveLength(1);
     expect(gh(w).prs[0]?.title).toContain("3 commit(s)");
     expect(tree(w, "production")).toBe(tree(w, bump));
     expect(issue(w, 1).state).toBe("open");
     expect(marker(issue(w, 1))).toContain("held=1");
-    expect(issue(w, 1).comments.at(-1)?.body).toContain("Catalog v0.2.2 could not wait");
-    expect(gh(w).prs[0]?.body).toContain("a catalog bump to v0.2.2, which is never held");
+    expect(issue(w, 1).comments.at(-1)?.body).toContain("Catalog v0.2.1 could not wait");
+    expect(gh(w).prs[0]?.body).toContain("a catalog bump to v0.2.1, which is never held");
   });
 
   it("leaves a commit that does not change the catalog for the scheduled merge", () => {
@@ -631,7 +631,7 @@ describe("the catalog fast path", () => {
 
   it("is also caught by the hourly check, should the event have been lost", () => {
     const w = counting();
-    commit(w, "c4", { "render.yaml": renderYaml("v0.2.2") });
+    commit(w, "c4", { "render.yaml": renderYaml("v0.2.1") });
     ok(run(w, "schedule", "2026-10-04T17:07:00Z"));
     expect(gh(w).prs).toHaveLength(1);
     expect(issue(w, 1).state).toBe("open");
@@ -735,7 +735,7 @@ describe("the deploy job", () => {
     const w = counting();
     comment(w, 1, "/hold", "2026-10-05T10:00:00Z");
     expect(ok(run(w, "issue_comment", "2026-10-05T10:01:00Z")).output).not.toContain("promoted=true");
-    const bump = commit(w, "c4", { "render.yaml": renderYaml("v0.2.2") });
+    const bump = commit(w, "c4", { "render.yaml": renderYaml("v0.2.1") });
     expect(ok(run(w, "workflow_run", "2026-10-05T11:00:00Z", { RUN_SHA: bump })).output).toContain("promoted=true");
 
     const fresh = world();

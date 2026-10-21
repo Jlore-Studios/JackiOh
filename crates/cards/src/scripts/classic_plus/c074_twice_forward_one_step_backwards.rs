@@ -59,6 +59,7 @@ pub fn script() -> CardScripts {
 // p1 sets the trap on its own turn (turn 9), then p2's turn begins and p2 plays.
 #[cfg(test)]
 mod tests {
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const FORWARD: &str = "classicplus-074";
@@ -86,22 +87,12 @@ mod tests {
         (0..n).map(|_| json!(card)).collect()
     }
 
-    fn spread(base: Value, extra: &Value) -> Value {
-        let mut out = base;
-        if let (Some(into), Some(from)) = (out.as_object_mut(), extra.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        out
-    }
-
     /// p1 sets the trap (lane 2) on turn 9 and ends its turn; p2's turn 10 begins, p2 with mana to spare.
     fn set_then_their_turn(radiant_face: bool, p1: Value, p2: Value, tune: impl FnOnce(&mut Scenario)) -> Scenario {
         crate::register_all();
         let mut s = scenario(json!({
-            "p1": spread(json!({ "hand": [{ "def": FORWARD, "radiant": radiant_face }, VANILLA], "library": deck(10, TIMMY) }), &p1),
-            "p2": spread(json!({ "hand": [STOCKPILE, RAPID, VANILLA, VANILLA], "library": deck(10, TIMMY) }), &p2),
+            "p1": merged(json!({ "hand": [{ "def": FORWARD, "radiant": radiant_face }, VANILLA], "library": deck(10, TIMMY) }), p1),
+            "p2": merged(json!({ "hand": [STOCKPILE, RAPID, VANILLA, VANILLA], "library": deck(10, TIMMY) }), p2),
         }));
         tune(&mut s);
         s.play(FORWARD, json!({ "zone": 2 })).end_turn();

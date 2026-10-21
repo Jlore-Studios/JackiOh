@@ -28,7 +28,6 @@ use std::sync::Arc;
 use indexmap::IndexMap;
 use jackioh_engine::config::MAX_COPIES;
 use jackioh_engine::rng::Rng;
-use jackioh_engine::wire::PrintedRarity;
 use serde::{Deserialize, Serialize};
 
 use crate::api::collection::{caller_profile, owned_in};
@@ -41,7 +40,7 @@ use crate::config::{
 };
 use crate::cosmetics::{Cosmetic, CosmeticRarity, cosmetic_pack_cosmetics};
 use crate::economy::packs::{bar_before, delta_of, grant_counter, grant_unlocked, settle_bars};
-use crate::economy::roll::{PackKind, PoolCard, fallback_order, pack_pool};
+use crate::economy::roll::{PackKind, PoolCard, pack_pool};
 use crate::economy::store::{
     CosmeticGrant, Counter, EconomyReason, InventoryGrant, InventoryItem, OwnedCosmetics,
 };
@@ -94,7 +93,7 @@ pub enum CosmeticSlotGrant {
     /// grants it too.
     Cosmetic {
         cosmetic_id: String,
-        cosmetic_rarity: PrintedRarity,
+        cosmetic_rarity: CosmeticRarity,
         card_id: Option<String>,
         card_granted: bool,
     },
@@ -107,7 +106,7 @@ pub enum CosmeticSlotGrant {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CosmeticSlot {
-    pub rarity: PrintedRarity,
+    pub rarity: CosmeticRarity,
     pub grant: CosmeticSlotGrant,
 }
 
@@ -169,20 +168,20 @@ pub struct CosmeticPacks {
     pub unopened: i64,
 }
 
-/// `rates` by rarity, commonest first.
-pub fn shares(rates: CosmeticPackRates) -> [(PrintedRarity, f64); 5] {
+/// `rates` by cosmetic rarity, commonest first.
+pub fn shares(rates: CosmeticPackRates) -> [(CosmeticRarity, f64); 5] {
     [
-        (PrintedRarity::Common, rates.common),
-        (PrintedRarity::Rare, rates.rare),
-        (PrintedRarity::Epic, rates.epic),
-        (PrintedRarity::Legendary, rates.legendary),
-        (PrintedRarity::Mythic, rates.mythic),
+        (CosmeticRarity::Common, rates.common),
+        (CosmeticRarity::Rare, rates.rare),
+        (CosmeticRarity::Epic, rates.epic),
+        (CosmeticRarity::Legendary, rates.legendary),
+        (CosmeticRarity::Mythic, rates.mythic),
     ]
 }
 
 /// The cosmetic rarity a slot's draw lands on at `rates` (R1306000): the first whose running sum
 /// of [`shares`] passes the draw, and Mythic past the last edge. Its own scale, with no pity.
-pub fn cosmetic_slot_rarity(rates: CosmeticPackRates, draw: f64) -> PrintedRarity {
+pub fn cosmetic_slot_rarity(rates: CosmeticPackRates, draw: f64) -> CosmeticRarity {
     let mut edge = 0.0;
     for (rarity, rate) in shares(rates) {
         edge += rate;
@@ -190,17 +189,17 @@ pub fn cosmetic_slot_rarity(rates: CosmeticPackRates, draw: f64) -> PrintedRarit
             return rarity;
         }
     }
-    PrintedRarity::Mythic
+    CosmeticRarity::Mythic
 }
 
 /// The lowest rarity a slot at `rates` can roll: the commonest with a share. A slot stays at or
 /// above it while anything there is unowned (R1306001), so the first slot, with no Common or Rare
 /// share, stays Epic or better.
-fn floor_of(rates: CosmeticPackRates) -> PrintedRarity {
+fn floor_of(rates: CosmeticPackRates) -> CosmeticRarity {
     shares(rates)
         .into_iter()
         .find(|(_, rate)| *rate > 0.0)
-        .map_or(PrintedRarity::Mythic, |(rarity, _)| rarity)
+        .map_or(CosmeticRarity::Mythic, |(rarity, _)| rarity)
 }
 
 /// The pool cards a per-card cosmetic is not owned on: all of them, or a full art's own card
@@ -261,25 +260,26 @@ pub fn pick_card<'c>(
 }
 
 /// What a slot grants once its rarity `rolled` (R1306000, R1306001): the first rarity in
-/// `roll::fallback_order(rolled)` with a cosmetic of `droppable` still open, with every rarity at
-/// or above `floor` ahead of those below it, supplies one, picked uniformly (one draw); a per-card
-/// one then takes its card by [`pick_card`] (one draw), and an account one has none. With nothing
-/// open in any rarity the slot is spent: `Bars`, with no draw.
+/// `rolled.fallback_order()` with a cosmetic of `droppable` still open, with every rarity at or
+/// above `floor` ahead of those below it, supplies one, picked uniformly (one draw); a per-card
+/// one then takes its card by [`pick_card`] (one draw), and an account one has none. A Legendary
+/// or Mythic one is a chase, and drops like any other (R1333000). With nothing open in any rarity
+/// the slot is spent: `Bars`, with no draw.
 pub fn slot_grant(
-    rolled: PrintedRarity,
-    floor: PrintedRarity,
+    rolled: CosmeticRarity,
+    floor: CosmeticRarity,
     pool: &[PoolCard],
     droppable: &[Cosmetic],
     holdings: &CosmeticHoldings,
     rng: &mut Rng,
 ) -> CosmeticSlotGrant {
-    let mut order = fallback_order(rolled);
+    let mut order = rolled.fallback_order();
     // Stable, so each side keeps `fallback_order`'s order.
     order.sort_by_key(|rarity| *rarity < floor);
     for tier in order {
         let open: Vec<&Cosmetic> = droppable
             .iter()
-            .filter(|cosmetic| cosmetic.rarity.printed() == tier)
+            .filter(|cosmetic| cosmetic.rarity == tier)
             .filter(|cosmetic| is_open(cosmetic, pool, holdings))
             .collect();
         let Some(cosmetic) = rng.pick(&open) else {
@@ -487,8 +487,8 @@ pub async fn open_cosmetic_pack(
     })
 }
 
-/// §14.6: a full Chase Shard bar buys any Legendary or Mythic cosmetic, a chase included, the
-/// account does not own: a per-card one for a card the account owns (a full art names its own
+/// §14.6: a full Chase Shard bar buys any chase cosmetic, a Legendary or Mythic one (R1333000),
+/// the account does not own: a per-card one for a card the account owns (a full art names its own
 /// card alone, R1313000) or an account one, in one transaction: the cosmetic's grant, then the
 /// bar emptied (reason `chase_shard`), with the same `at`; one commit (R1306002). An unknown
 /// cosmetic id is 400. Refuses with 409, writing nothing, when the bar is not full, the cosmetic
@@ -518,7 +518,7 @@ pub async fn buy_chase(
     if bar < CHASE_SHARD_PACKS {
         return Err(conflict("the Chase Shard bar is not full"));
     }
-    if cosmetic.rarity.tier() < CosmeticRarity::Legendary.tier() {
+    if !cosmetic.rarity.is_chase() {
         return Err(conflict(
             "the Chase Shard bar buys only a Legendary or Mythic cosmetic",
         ));
@@ -609,8 +609,9 @@ mod tests {
     use super::*;
     use crate::config::PACK_RATE_TOLERANCE;
     use crate::cosmetics::CosmeticKind;
+    use crate::cosmetics::CosmeticRarity::{Common, Epic, Legendary, Mythic, Rare};
     use crate::economy::store::CardCosmetic;
-    use jackioh_engine::wire::PrintedRarity::{Common, Epic, Legendary, Mythic, Rare};
+    use jackioh_engine::wire::PrintedRarity;
 
     /// Draws enough for a rate to settle inside `PACK_RATE_TOLERANCE`.
     const DRAWS: usize = 20_000;
@@ -631,7 +632,7 @@ mod tests {
             rarity,
             default: false,
             starter: false,
-            chase: false,
+            chase: rarity.is_chase(),
             card: None,
         }
     }
@@ -667,7 +668,7 @@ mod tests {
             .map(|at| {
                 card(
                     &format!("card-{at}"),
-                    *PrintedRarity::ALL.get(at % 5).unwrap_or(&Common),
+                    *PrintedRarity::ALL.get(at % 5).unwrap_or(&PrintedRarity::Common),
                 )
             })
             .collect()
@@ -781,7 +782,7 @@ mod tests {
     }
 
     #[test]
-    fn r1306000_a_pack_drops_account_cosmetics_but_no_default_starter_or_chase() {
+    fn r1306000_a_pack_drops_account_cosmetics_but_no_default_or_starter() {
         let default = Cosmetic {
             default: true,
             ..table("table-default", CosmeticRarity::Common)
@@ -790,14 +791,9 @@ mod tests {
             starter: true,
             ..foil("foil-starter", CosmeticRarity::Rare)
         };
-        let chase = Cosmetic {
-            chase: true,
-            ..foil("foil-chase", CosmeticRarity::Legendary)
-        };
         let registry = [
             default,
             starter,
-            chase,
             table("table-drop", CosmeticRarity::Common),
             foil("foil-drop", CosmeticRarity::Common),
             full_art("full-art-drop", CosmeticRarity::Epic, "card-1"),
@@ -877,7 +873,7 @@ mod tests {
     fn r1306000_ownership_moves_slot_by_slot() {
         // One card and two foils: the first slot grants the card with the first foil, the second
         // finds the card owned.
-        let pool = [card("c", Epic)];
+        let pool = [card("c", PrintedRarity::Epic)];
         let registry = [
             foil("foil-a", CosmeticRarity::Epic),
             foil("foil-b", CosmeticRarity::Epic),
@@ -919,7 +915,7 @@ mod tests {
 
     #[test]
     fn r1306001_a_tier_with_nothing_unowned_falls_below_then_above() {
-        let pool = [card("c", Common)];
+        let pool = [card("c", PrintedRarity::Common)];
         let foils = four_foils();
         let none = CosmeticHoldings::default();
         let grant = |rolled, droppable: &[Cosmetic], holdings: &CosmeticHoldings| {
@@ -952,7 +948,7 @@ mod tests {
         // Nothing unowned at all spends the slot, and draws nothing.
         let mut rng = Rng::new("r1306001", 0);
         let everything = wearing("c", &["foil-common", "foil-rare", "foil-epic", "foil-legendary"]);
-        for rolled in PrintedRarity::ALL.iter().copied() {
+        for rolled in CosmeticRarity::ALL {
             assert_eq!(
                 slot_grant(rolled, Common, &pool, &foils, &everything, &mut rng),
                 CosmeticSlotGrant::Bars
@@ -967,7 +963,7 @@ mod tests {
 
     #[test]
     fn r1306001_the_guaranteed_slot_stays_epic_or_better_while_one_is_open() {
-        let pool = [card("c", Common)];
+        let pool = [card("c", PrintedRarity::Common)];
         let rare_and_legendary = [
             foil("foil-rare", CosmeticRarity::Rare),
             foil("foil-legendary", CosmeticRarity::Legendary),
@@ -1065,5 +1061,59 @@ mod tests {
         assert_ne!(roll_cosmetic_pack(&pool, &holdings, &moved, &log.seed), opening);
         let replayed = roll_cosmetic_pack(&pool, &holdings, &log.cosmetics, &log.seed);
         assert_eq!(replayed, opening);
+    }
+
+    #[test]
+    fn cosmetic_slot_rarities_land_on_their_odds() {
+        let mut rng = Rng::new("r1306000-odds", 0);
+        for rates in [COSMETIC_PACK_RATES, COSMETIC_PACK_GUARANTEED_RATES] {
+            let mut counts = [0_usize; 5];
+            for _ in 0..DRAWS {
+                counts[usize::from(cosmetic_slot_rarity(rates, rng.next()).tier())] += 1;
+            }
+            for ((rarity, rate), count) in shares(rates).into_iter().zip(counts) {
+                let share = count as f64 / DRAWS as f64;
+                assert!(
+                    (share - rate).abs() <= PACK_RATE_TOLERANCE,
+                    "{rarity} share {share} outside tolerance of {rate} ({rates:?})"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn r1333000_a_chase_drops_from_a_cosmetic_pack_slot_that_lands_on_its_tier() {
+        let registry = [
+            foil("foil-epic", CosmeticRarity::Epic),
+            foil("foil-legendary", CosmeticRarity::Legendary),
+        ];
+        assert!(registry[1].chase);
+        assert_eq!(cosmetic_pack_cosmetics(&registry), registry);
+
+        let pool = pool_of(10);
+        let none = CosmeticHoldings::default();
+        let mut rng = Rng::new("r1333000", 0);
+        for (rolled, dropped) in [
+            (Legendary, "foil-legendary"),
+            (Mythic, "foil-legendary"),
+            (Epic, "foil-epic"),
+        ] {
+            let grant = slot_grant(rolled, Common, &pool, &registry, &none, &mut rng);
+            assert_eq!(named(&grant), Some(dropped), "{rolled}");
+        }
+
+        // Opened whole, the chase drops, and only from a slot that rolled Legendary or Mythic.
+        let pool = pool_of(40);
+        let mut chases = 0;
+        for seed in 0..200 {
+            let opening = roll_cosmetic_pack(&pool, &none, &registry, &format!("r1333000-{seed}"));
+            for slot in &opening.slots {
+                if named(&slot.grant) == Some("foil-legendary") {
+                    assert!(slot.rarity.is_chase(), "{slot:?}");
+                    chases += 1;
+                }
+            }
+        }
+        assert!(chases > 0, "no chase in 200 openings");
     }
 }

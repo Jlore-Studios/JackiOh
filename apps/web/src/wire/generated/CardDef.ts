@@ -3,6 +3,7 @@ import type { CardCost } from "./CardCost";
 import type { CardFace } from "./CardFace";
 import type { CardType } from "./CardType";
 import type { CraftRecipe } from "./CraftRecipe";
+import type { Flavor } from "./Flavor";
 import type { FusedIngredient } from "./FusedIngredient";
 import type { Param } from "./Param";
 import type { PrintedRarity } from "./PrintedRarity";
@@ -23,7 +24,13 @@ index: string, name: string, set: SetName, type: CardType, tags: Array<Tag>, rar
  * B2.5: the rarity a token prints (the Classic+ tokens the designer rated), for the card frame and
  * the summon sting only. A token's `rarity` stays "Token", so no pool ever finds one by rarity.
  */
-printedRarity?: PrintedRarity, token: boolean, cost: CardCost, 
+printedRarity?: PrintedRarity, 
+/**
+ * R1437000: what kind of thing the card is, for its animations only: no rule, pool, query,
+ * validator or AI reads it. A transient or custom definition carries none, so a state that
+ * holds one serialises as before.
+ */
+flavor?: Flavor, token: boolean, cost: CardCost, 
 /**
  * R279: the cards and tokens this card's text names, by id — a name in its base or Radiant text,
  * alone or plural, or a name before its parenthesis (#95's "Call to Chaos"). A client links each

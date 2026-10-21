@@ -893,8 +893,8 @@ pub const VIEW_EVENT_LIMIT: usize = 32;
 pub const RADIANT_SHEEP_TRIBUTE_VALUE: i32 = 3;
 pub const SHEEP_TRIBUTE_VALUE: i32 = 2;
 
-/// §6.3 Discover: "choose 1 of 3" (`effects::last_board`).
-pub const LAST_BOARD_DISCOVER_OPTIONS: i32 = 3;
+/// §6.3 Discover: "choose 1 of 3" (`effects::choose`, `effects::last_board`, `subsystems::scorer`).
+pub const DISCOVER_OPTIONS: i32 = 3;
 /// C+ #29: "It costs (0)", "Each costs (0)" — a `costOverride` (R65) (`effects::last_board`).
 pub const LAST_BOARD_CARD_COST: i32 = 0;
 
@@ -1111,6 +1111,11 @@ pub const TRAINING_UNBAN: TrainingGate = TrainingGate {
 pub const REPLAY_CHECKPOINT_EVERY: usize = 16;
 /// R768: the most steps one page of a replay gives.
 pub const REPLAY_PAGE_STEPS: usize = 16;
+
+/// R1371000: the scheme a file's catalog versions are named by, its `versions` marker. A replay,
+/// game-record or self-play file that carries no marker names them as they were before the version
+/// retcon (#1371), and its reader maps each through `patches/aliases.json`.
+pub const VERSIONS_SCHEME: u32 = 2;
 
 // ---------------------------------------------------------------------------------------------
 // The testkit's seed search (issue #848).
@@ -1635,6 +1640,8 @@ pub const CUSTOM_ATTACK_MAX: i32 = 12;
 pub const CUSTOM_HEALTH_MAX: i32 = 12;
 /// R915001: the highest attack or health a custom Unit's Radiant face prints, twice the base caps.
 pub const CUSTOM_RADIANT_STAT_MAX: i32 = 24;
+/// R915001: a custom Unit's Radiant stat the frame leaves unprinted is twice the base one (`custom::radiant_stat`).
+pub const CUSTOM_RADIANT_STAT_FACTOR: i32 = 2;
 /// R915001: the most keywords a custom Unit prints.
 pub const CUSTOM_KEYWORDS_MAX: usize = 4;
 /// R915001: the keywords a custom Unit may print, and the card kit may give: the game's own simple
@@ -1711,6 +1718,20 @@ pub fn duos_ai_team(difficulty: Difficulty) -> DuosTeamRules {
 /// seat's turn, and a round takes each duel at least one player-turn on, so the duels' own turn cap
 /// (R2) ends the game well inside it. A backstop, as `end_due_turns`' guard is.
 pub const DUOS_SETTLE_CAP: usize = 4 * TURN_CAP_PLAYER_TURNS as usize;
+
+// ---------------------------------------------------------------------------------------------
+// Patch numbers and card statistics by window (#1360, R1365000, R1367000; SPEC §9.11, R654)
+// ---------------------------------------------------------------------------------------------
+
+/// R1365000: the card families that must play differently for a change to be a patch; fewer is a
+/// micro. `cargo jackioh classify` reads it, and so does a card's stats window (R1367000) for a
+/// shipped version that recorded no tier.
+pub const PATCH_MIN_CARDS: usize = 10;
+
+/// SPEC §11 R654, amended by R1367000: the live games (ranked and unranked, tutorial excluded) a
+/// card's stats window must log before its figures are live-only. Fewer, and the card shows its
+/// previous window; the previous window short too, and AI development games pad the current one.
+pub const PUBLIC_STATS_MIN_LIVE_GAMES: i64 = 1000;
 
 #[cfg(test)]
 mod tests {

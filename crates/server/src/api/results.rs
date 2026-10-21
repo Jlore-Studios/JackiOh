@@ -303,6 +303,15 @@ async fn write_once(
     // seat's quests (§14.9, [[R1304001]]) by what the game did: its plays and fired Traps, read off
     // the log by the engine's fold (`quests_game`), and its attacks, counted from the log.
     if app.economy_live && series.is_none() && ranked_match {
+        // [[R1301003]]: both seats' economy locks, in profile-id order, so two payouts of one
+        // account run one after the other and two ladder results sharing a player never wait on
+        // each other in opposite orders. Taking one account's lock twice is safe: the advisory
+        // lock is re-entrant, as is each seat's payout below retaking its own.
+        let mut ordered = [seat_a.profile_id.clone(), seat_b.profile_id.clone()];
+        ordered.sort();
+        for profile_id in &ordered {
+            tx.economy_lock_account(profile_id).await.map_err(failed)?;
+        }
         let log = tx.matches_actions(&input.match_id).await.map_err(failed)?;
         let winner_side = winner_side_of(&input.outcome, &input.seats);
         let game = match &match_row {

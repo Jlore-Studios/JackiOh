@@ -678,22 +678,22 @@ const SNAPSHOTS: &[(&str, &str)] = &[
     ("v0.1.0d", include_str!("../../patches/v0.1.0d.json")),
     ("v0.1.1", include_str!("../../patches/v0.1.1.json")),
     ("v0.2.0", include_str!("../../patches/v0.2.0.json")),
+    ("v0.2.0b", include_str!("../../patches/v0.2.0b.json")),
     ("v0.2.1", include_str!("../../patches/v0.2.1.json")),
     ("v0.2.2", include_str!("../../patches/v0.2.2.json")),
+    ("v0.2.2b", include_str!("../../patches/v0.2.2b.json")),
     ("v0.2.3", include_str!("../../patches/v0.2.3.json")),
+    ("v0.2.3b", include_str!("../../patches/v0.2.3b.json")),
+    ("v0.2.3c", include_str!("../../patches/v0.2.3c.json")),
+    ("v0.2.3d", include_str!("../../patches/v0.2.3d.json")),
+    ("v0.2.3e", include_str!("../../patches/v0.2.3e.json")),
+    ("v0.2.3f", include_str!("../../patches/v0.2.3f.json")),
     ("v0.2.4", include_str!("../../patches/v0.2.4.json")),
     ("v0.2.5", include_str!("../../patches/v0.2.5.json")),
-    ("v0.2.6", include_str!("../../patches/v0.2.6.json")),
-    ("v0.2.7", include_str!("../../patches/v0.2.7.json")),
-    ("v0.2.7b", include_str!("../../patches/v0.2.7b.json")),
-    ("v0.2.8", include_str!("../../patches/v0.2.8.json")),
-    ("v0.2.8b", include_str!("../../patches/v0.2.8b.json")),
-    ("v0.2.9", include_str!("../../patches/v0.2.9.json")),
-    ("v0.2.10", include_str!("../../patches/v0.2.10.json")),
-    ("v0.2.10b", include_str!("../../patches/v0.2.10b.json")),
-    ("v0.2.10c", include_str!("../../patches/v0.2.10c.json")),
-    ("v0.2.10d", include_str!("../../patches/v0.2.10d.json")),
-    ("v0.2.11", include_str!("../../patches/v0.2.11.json")),
+    ("v0.2.5b", include_str!("../../patches/v0.2.5b.json")),
+    ("v0.2.5c", include_str!("../../patches/v0.2.5c.json")),
+    ("v0.2.5d", include_str!("../../patches/v0.2.5d.json")),
+    ("v0.2.5e", include_str!("../../patches/v0.2.5e.json")),
 ];
 
 /// `patches/patches.json`: every shipped patch in ship order.
@@ -981,7 +981,7 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
     #[test]
     fn r366_patch_v0_2_1_only_changes_base_text_and_radiant_text_between_v0_2_0_and_v0_2_1() {
         let before = read_snapshot("v0.2.0");
-        let after = read_snapshot("v0.2.1");
+        let after = read_snapshot("v0.2.0b");
         let mut differing_cards: Vec<String> = Vec::new();
         for (id, current_card) in &after {
             let prior_card = before.get(id);
@@ -1027,13 +1027,13 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
 
     #[test]
     fn r366_patch_v0_2_2_changes_only_its_mechanics_cards_between_v0_2_1_and_v0_2_2() {
-        let before = read_snapshot("v0.2.1");
-        let after = read_snapshot("v0.2.2");
+        let before = read_snapshot("v0.2.0b");
+        let after = read_snapshot("v0.2.1");
         let mut non_text_changed: IndexMap<String, Vec<String>> = IndexMap::new();
         let mut differing_cards: Vec<String> = Vec::new();
         for (id, current_card) in &after {
             let prior_card = before.get(id);
-            assert!(prior_card.is_some(), "card {id} existed in v0.2.1");
+            assert!(prior_card.is_some(), "card {id} existed in v0.2.0b");
             let Some(prior_card) = prior_card else { continue };
 
             let prior_non_text = without_text(prior_card);
@@ -1140,13 +1140,13 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
     #[test]
     fn r366_patch_v0_2_3_only_animates_eighteen_field_spells_rewords_ivory_tower_and_moves_final_gambit_s_loc_between_v0_2_2_and_v0_2_3()
      {
-        let before = read_snapshot("v0.2.2");
-        let after = read_snapshot("v0.2.3");
+        let before = read_snapshot("v0.2.1");
+        let after = read_snapshot("v0.2.2");
         let animated: IndexSet<&str> = ANIMATED_IN_V0_2_3.iter().copied().collect();
         let mut changed: Vec<String> = Vec::new();
         for (id, current_card) in &after {
             let prior_card = before.get(id);
-            assert!(prior_card.is_some(), "card {id} existed in v0.2.2");
+            assert!(prior_card.is_some(), "card {id} existed in v0.2.1");
             let Some(prior_card) = prior_card else { continue };
             if stringify(prior_card) != stringify(current_card) {
                 changed.push(id.clone());
@@ -1156,16 +1156,16 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
                 for face in ["base", "radiant"] {
                     assert!(
                         face_field(prior_card, face, "attack").is_none(),
-                        "{id} {face} had no stats before v0.2.3"
+                        "{id} {face} had no stats before v0.2.2"
                     );
                     assert!(
                         face_field(prior_card, face, "health").is_none(),
-                        "{id} {face} had no stats before v0.2.3"
+                        "{id} {face} had no stats before v0.2.2"
                     );
                     assert_eq!(
                         face_field(prior_card, face, "keywords"),
                         Some(&json!([])),
-                        "{id} {face} had no keywords before v0.2.3"
+                        "{id} {face} had no keywords before v0.2.2"
                     );
                     assert_eq!(
                         face_field(current_card, face, "keywords"),
@@ -1234,7 +1234,7 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
                 set_or_remove(&mut restored, "loc", prior_card.get("loc"));
                 assert_eq!(restored, *prior_card, "only loc differs on {id}");
             } else {
-                assert_eq!(current_card, prior_card, "card {id} unchanged by v0.2.3");
+                assert_eq!(current_card, prior_card, "card {id} unchanged by v0.2.2");
             }
         }
         let mut expected = strings(ANIMATED_IN_V0_2_3);
@@ -1245,9 +1245,9 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
     #[test]
     fn r366_patch_v0_2_4_aims_solarius_prime_and_appropriations_keywords_deft_duelist_and_moves_two_locs_between_v0_2_3_and_v0_2_4()
      {
-        let before = read_snapshot("v0.2.3");
+        let before = read_snapshot("v0.2.2");
         // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
-        let (_, after) = after_patch("v0.2.4");
+        let (_, after) = after_patch("v0.2.2b");
         let five: IndexSet<&str> = [
             "classic-003",
             "classicplus-010",
@@ -1260,7 +1260,7 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
         let mut changed: Vec<String> = Vec::new();
         for (id, current_card) in &after {
             let prior_card = before.get(id);
-            assert!(prior_card.is_some(), "card {id} existed in v0.2.3");
+            assert!(prior_card.is_some(), "card {id} existed in v0.2.2");
             let Some(prior_card) = prior_card else { continue };
             if stringify(prior_card) != stringify(current_card) {
                 changed.push(id.clone());
@@ -1305,7 +1305,7 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
         // shipped snapshot while it is pending and the patch before it once `patches ship` has
         // promoted it, and the patch is the current catalog until then, its snapshot after.
         let versions = shipped_versions();
-        let at = versions.iter().position(|version| version == "v0.2.10");
+        let at = versions.iter().position(|version| version == "v0.2.5");
         let baseline = match at {
             None => versions.last().cloned().expect("a shipped patch"),
             Some(at) => versions[at - 1].clone(),
@@ -1314,7 +1314,7 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
         let after = if at.is_none() {
             current_catalog()
         } else {
-            read_snapshot("v0.2.10")
+            read_snapshot("v0.2.5")
         };
         // The top-level fields each balance card may move (balance patch 1, issue #88); every other
         // field restores the baseline card, so no card smuggles an unlisted change.
@@ -1386,13 +1386,13 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
         let mut changed: Vec<String> = Vec::new();
         for (id, current_card) in &after {
             let prior_card = before.get(id);
-            assert!(prior_card.is_some(), "card {id} is not new in v0.2.10");
+            assert!(prior_card.is_some(), "card {id} is not new in v0.2.5");
             let Some(prior_card) = prior_card else { continue };
             if stringify(prior_card) != stringify(current_card) {
                 changed.push(id.clone());
             }
             let Some(fields) = allowed.get(id.as_str()) else {
-                assert_eq!(current_card, prior_card, "card {id} unchanged by v0.2.10");
+                assert_eq!(current_card, prior_card, "card {id} unchanged by v0.2.5");
                 continue;
             };
             let mut restored = current_card.clone();
@@ -1409,14 +1409,14 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
 
     #[test]
     fn r366_patch_v0_2_5_removes_animated_from_the_eighteen_v0_2_3_field_spells_between_v0_2_3_and_v0_2_5() {
-        let before = read_snapshot("v0.2.3");
+        let before = read_snapshot("v0.2.2");
         // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
-        let (_, after) = after_patch("v0.2.5");
+        let (_, after) = after_patch("v0.2.3");
         let unanimated: IndexSet<&str> = ANIMATED_IN_V0_2_3.iter().copied().collect();
         let mut changed: Vec<String> = Vec::new();
         for (id, current_card) in &after {
             let prior_card = before.get(id);
-            assert!(prior_card.is_some(), "card {id} existed in v0.2.3");
+            assert!(prior_card.is_some(), "card {id} existed in v0.2.2");
             let Some(prior_card) = prior_card else { continue };
             if stringify(prior_card) != stringify(current_card) {
                 changed.push(id.clone());
@@ -1484,16 +1484,16 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
     #[test]
     fn r366_patch_v0_2_7_takes_craft_a_card_s_radiant_draw_off_and_moves_plague_chalice_s_loc_between_v0_2_6_and_v0_2_7()
      {
-        let before = read_snapshot("v0.2.6");
+        let before = read_snapshot("v0.2.3b");
         // Pending until `patches ship` promotes it (R646): the current catalog until then, its snapshot after.
-        let (shipped, after) = after_patch("v0.2.7");
+        let (shipped, after) = after_patch("v0.2.3c");
         // The current catalog also carries every other pending patch's claims (R646), which are theirs
         // to prove. Those claims live in `patches/pending/`, a directory this test cannot list (a pure
         // crate's tests read no files, SURFACE §3); `cargo jackioh patches check` proves them. v0.2.7
         // has shipped, so its snapshot is read and no other claim is in it.
         assert!(
             shipped,
-            "v0.2.7 is pending: its baseline needs the other pending fragments' claims, which `cargo jackioh patches check` reads"
+            "v0.2.3c is pending: its baseline needs the other pending fragments' claims, which `cargo jackioh patches check` reads"
         );
         let others: IndexSet<String> = IndexSet::new();
         let changed: Vec<String> = after

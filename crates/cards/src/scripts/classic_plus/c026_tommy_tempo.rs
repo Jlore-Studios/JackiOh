@@ -69,6 +69,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::js;
+    use crate::merged;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -86,16 +88,6 @@ mod tests {
                                         // your hand", which asks for the card (a prompt)
     const DECK: [&str; 6] = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
 
-    fn spread(defaults: Value, overrides: &Value) -> Value {
-        let mut out = defaults;
-        if let (Some(into), Some(from)) = (out.as_object_mut(), overrides.as_object()) {
-            for (key, value) in from {
-                into.insert(key.clone(), value.clone());
-            }
-        }
-        out
-    }
-
     /// p2 is active; p1's library has Tommy on top, so p2 ending the turn makes p1 draw it at its start.
     fn drawn_at_start(radiant_face: bool, p1: Value) -> Scenario {
         crate::register_all();
@@ -103,7 +95,7 @@ mod tests {
         library.extend(DECK.iter().map(|card| json!(card)));
         scenario(json!({
             "active": "p2",
-            "p1": spread(json!({ "hand": [FILLER], "library": library }), &p1),
+            "p1": merged(json!({ "hand": [FILLER], "library": library }), p1),
             "p2": { "hand": [FILLER], "library": DECK },
         }))
     }
@@ -145,7 +137,7 @@ mod tests {
     use crate::matches_object;
 
     fn round_trip(state: &GameState) -> GameState {
-        serde_json::from_value(serde_json::to_value(state).expect("JSON")).expect("a state")
+        serde_json::from_value(js(state)).expect("a state")
     }
 
     mod c_n26_tommy_tempo {
@@ -181,7 +173,7 @@ mod tests {
                 assert!(matches!(played, Some(GameEvent::CardPlayed { cost_paid: 0, .. })));
                 let cut = s.events().iter().find(|event| event.event_type() == GameEventType::TurnCutShort);
                 assert!(matches_object(
-                    &serde_json::to_value(cut).expect("JSON"),
+                    &js(&cut),
                     &json!({ "player": "p1", "byInstanceId": tommy_id }),
                 ));
                 // p1 never reached a main phase: the turn ended and p2's began.

@@ -144,6 +144,8 @@ pub fn script() -> CardScripts {
 mod tests {
     use std::collections::BTreeSet;
 
+    use crate::events_json;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -197,15 +199,11 @@ mod tests {
     }
 
     fn view(s: &Scenario, seat: PlayerId) -> Value {
-        serde_json::to_value(s.view(seat)).expect("a view is JSON")
+        js(&s.view(seat))
     }
 
     fn view_text(s: &Scenario, seat: PlayerId) -> String {
         serde_json::to_string(&s.view(seat)).expect("a view is JSON")
-    }
-
-    fn events_json(s: &Scenario) -> Vec<Value> {
-        s.events().iter().map(|event| serde_json::to_value(event).expect("an event is JSON")).collect()
     }
 
     fn glows(s: &Scenario) -> bool {

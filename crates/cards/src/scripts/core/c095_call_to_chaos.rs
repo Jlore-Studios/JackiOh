@@ -73,6 +73,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::events_json;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -295,10 +296,6 @@ mod tests {
     /// `chaos` with the base roll "recast" pinned to a cast of #95 itself.
     fn recast_of_core(opts: ChaosOpts) -> Scenario {
         chaos(None, ChaosOpts { cursor: Some(recast_of_core_cursor()), ..opts })
-    }
-
-    fn events_json(s: &Scenario) -> Vec<Value> {
-        s.events().iter().map(js).collect()
     }
 
     fn events_of(s: &Scenario, kind: &str) -> Vec<Value> {

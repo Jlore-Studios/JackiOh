@@ -38,6 +38,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
+    use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -45,10 +47,6 @@ mod tests {
 
     const PRINTER: &str = "meditative-038";
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// p1's Printer stands in the backrow (base unless `radiant_face`); both sides hold and draw
     /// fillers, so turns pass normally.
@@ -127,7 +125,7 @@ mod tests {
                 assert_eq!(printed.chinese, None);
                 assert_eq!(printed.cost_override, None);
                 // Hidden from the opponent: a count, never the card.
-                let view: Value = serde_json::to_value(view_for(s.state(), P2)).expect("the view serialises");
+                let view: Value = js(&view_for(s.state(), P2));
                 assert_eq!(view["opponent"]["hand"], json!({ "count": hand.len() }));
             }
 

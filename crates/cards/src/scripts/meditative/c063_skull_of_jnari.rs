@@ -43,6 +43,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::filler;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -52,10 +53,6 @@ mod tests {
     const VANILLA: &str = "core-008";
     /// (1) Spell.
     const FILLER: &str = "core-005";
-
-    fn filler(count: usize) -> Value {
-        json!(vec!["core-005"; count])
-    }
 
     /// p1 holds the Skull (`radiant_face`) on the backrow with `hand` cards in hand. One `start_turn`
     /// runs p1's start of turn (the Skull fires), with its opening draw.
