@@ -9466,6 +9466,13 @@
     "1524": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T14:07:59Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule line 2 fails: the fix spans analysis/ (fixtures) and apps/web (decks route), and its proof is an e2e spec"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-3",
