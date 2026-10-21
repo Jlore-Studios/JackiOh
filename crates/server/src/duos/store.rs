@@ -68,6 +68,15 @@ pub struct DuosRoom {
     pub expires_at: i64,
 }
 
+/// What B33's atomic room claim came to. `Blocked` is distinct from `Unavailable` so §13.9's
+/// unknown-code answer is decided by the same store statement that observed the block.
+#[derive(Clone, Debug, PartialEq)]
+pub enum DuosRoomClaimOutcome {
+    Claimed(DuosRoom),
+    Blocked,
+    Unavailable,
+}
+
 /// Every seat's deck, in library order as the engine is handed it (`DuosDecks`'s fields).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -214,8 +223,8 @@ impl Tx<'_> {
 
     /// B33's atomic single-claim: sets the guest, the guest's choice and the match id only while the
     /// room is unjoined and unexpired at `at`, and neither its host nor `guest` blocks the other
-    /// (§13.9). The claimed room, or `None` when it was not (a second joiner, a race, an expiry, a
-    /// block).
+    /// (§13.9). Its outcome distinguishes a block observed by the claim from every other refusal,
+    /// without a second read whose snapshot could differ.
     pub async fn duos_rooms_claim(
         &mut self,
         code: &str,
@@ -223,7 +232,7 @@ impl Tx<'_> {
         guest_choice: &DuosChoice,
         match_id: &str,
         at: i64,
-    ) -> StoreResult<Option<DuosRoom>> {
+    ) -> StoreResult<DuosRoomClaimOutcome> {
         duos_dispatch!(self, rooms_claim(code, guest, guest_choice, match_id, at))
     }
 
@@ -322,7 +331,7 @@ mod pg {
 
     use jackioh_engine::config::Difficulty;
 
-    use super::{DuosActionRow, DuosChoice, DuosMatch, DuosRoom};
+    use super::{DuosActionRow, DuosChoice, DuosMatch, DuosRoom, DuosRoomClaimOutcome};
     use crate::auth::is_uuid;
     use crate::db::pg::PgTx;
     use crate::db::store::StoreError;
@@ -443,8 +452,8 @@ mod pg {
         row.as_ref().map(room_of).transpose()
     }
 
-    /// B33's single-claim as one statement: the loser of a race updates no row, and so does a joiner
-    /// blocked either way (§13.9).
+    /// B33's single-claim as one statement: the loser of a race updates no row, while a block either
+    /// way is reported from the statement's own snapshot (§13.9).
     pub async fn rooms_claim(
         t: &mut PgTx<'_>,
         code: &str,
@@ -452,21 +461,40 @@ mod pg {
         guest_choice: &DuosChoice,
         match_id: &str,
         at: i64,
-    ) -> Result<Option<DuosRoom>, StoreError> {
+    ) -> Result<DuosRoomClaimOutcome, StoreError> {
         run_as(t, Some(guest)).await?;
         let row = sqlx::query(concat!(
-            "update public.duos_rooms
-                set guest = $2::uuid, guest_choice = $3::jsonb, match_id = $4::uuid
-              where code = $1::text
-                and guest is null
-                and host <> $2::uuid
-                and not exists (
-                      select 1 from public.blocks b
-                       where (b.blocker = duos_rooms.host and b.blocked = $2::uuid)
-                          or (b.blocker = $2::uuid and b.blocked = duos_rooms.host))
-                and expires_at > to_timestamp($5::double precision / 1000.0)
-          returning ",
-            room_columns!()
+            "with blocked as materialized (
+                 select ",
+            room_columns!(),
+            " from public.duos_rooms
+                   where code = $1::text
+                     and guest is null
+                     and host <> $2::uuid
+                     and expires_at > to_timestamp($5::double precision / 1000.0)
+                     and exists (
+                           select 1 from public.blocks b
+                            where (b.blocker = duos_rooms.host and b.blocked = $2::uuid)
+                               or (b.blocker = $2::uuid and b.blocked = duos_rooms.host))
+             ), claimed as (
+                 update public.duos_rooms
+                    set guest = $2::uuid, guest_choice = $3::jsonb, match_id = $4::uuid
+                  where code = $1::text
+                    and guest is null
+                    and host <> $2::uuid
+                    and expires_at > to_timestamp($5::double precision / 1000.0)
+                    and not exists (select 1 from blocked)
+              returning ",
+            room_columns!(),
+            ")
+             select 'claimed'::text as claim_outcome, ",
+            room_columns!(),
+            " from claimed
+             union all
+             select 'blocked'::text as claim_outcome, ",
+            room_columns!(),
+            " from blocked
+             limit 1"
         ))
         .bind(code)
         .bind(guest)
@@ -475,7 +503,17 @@ mod pg {
         .bind(at)
         .fetch_optional(&mut **t)
         .await?;
-        row.as_ref().map(room_of).transpose()
+        let Some(row) = row else {
+            return Ok(DuosRoomClaimOutcome::Unavailable);
+        };
+        let outcome: String = row.try_get("claim_outcome")?;
+        match outcome.as_str() {
+            "claimed" => Ok(DuosRoomClaimOutcome::Claimed(room_of(&row)?)),
+            "blocked" => Ok(DuosRoomClaimOutcome::Blocked),
+            outcome => Err(StoreError::from(format!(
+                "unknown duos room claim outcome {outcome}"
+            ))),
+        }
     }
 
     pub async fn rooms_delete(t: &mut PgTx<'_>, code: &str, host: &str) -> Result<bool, StoreError> {
@@ -703,7 +741,7 @@ mod pg {
 mod fake {
     use serde_json::Value;
 
-    use super::{DuosActionRow, DuosChoice, DuosMatch, DuosRoom, DuosTables};
+    use super::{DuosActionRow, DuosChoice, DuosMatch, DuosRoom, DuosRoomClaimOutcome, DuosTables};
     use crate::db::fake::FakeTx;
     use crate::db::store::StoreError;
 
@@ -746,27 +784,26 @@ mod fake {
         guest_choice: &DuosChoice,
         match_id: &str,
         at: i64,
-    ) -> Result<Option<DuosRoom>, StoreError> {
+    ) -> Result<DuosRoomClaimOutcome, StoreError> {
         call(f, "duos.rooms.claim")?;
         let tables = f.tables();
-        // §13.9: the block Postgres's claim refuses, either way.
         let blocks = &tables.social.blocks;
         let Some(room) = tables.duos.rooms.iter_mut().find(|room| {
-            room.code == code
-                && room.guest.is_none()
-                && room.host != guest
-                && room.expires_at > at
-                && !blocks.iter().any(|block| {
-                    (block.blocker == room.host && block.blocked == guest)
-                        || (block.blocker == guest && block.blocked == room.host)
-                })
+            room.code == code && room.guest.is_none() && room.host != guest && room.expires_at > at
         }) else {
-            return Ok(None);
+            return Ok(DuosRoomClaimOutcome::Unavailable);
         };
+        // §13.9: report the block from the claim's own read, as Postgres's one statement does.
+        if blocks.iter().any(|block| {
+            (block.blocker == room.host && block.blocked == guest)
+                || (block.blocker == guest && block.blocked == room.host)
+        }) {
+            return Ok(DuosRoomClaimOutcome::Blocked);
+        }
         room.guest = Some(guest.to_string());
         room.guest_choice = Some(guest_choice.clone());
         room.match_id = Some(match_id.to_string());
-        Ok(Some(room.clone()))
+        Ok(DuosRoomClaimOutcome::Claimed(room.clone()))
     }
 
     pub fn rooms_delete(f: &mut FakeTx<'_>, code: &str, host: &str) -> Result<bool, StoreError> {
@@ -1008,17 +1045,20 @@ mod tests {
             .duos_rooms_claim("ABCDEF", "host", &choice, "m1", 10)
             .await
             .expect("a claim");
-        assert!(by_host.is_none());
+        assert_eq!(by_host, DuosRoomClaimOutcome::Unavailable);
         let by_guest = t
             .duos_rooms_claim("ABCDEF", "guest", &choice, "m1", 10)
             .await
             .expect("a claim");
-        assert_eq!(by_guest.and_then(|room| room.match_id), Some("m1".to_string()));
+        let DuosRoomClaimOutcome::Claimed(by_guest) = by_guest else {
+            panic!("the guest did not claim the room")
+        };
+        assert_eq!(by_guest.match_id, Some("m1".to_string()));
         let by_third = t
             .duos_rooms_claim("ABCDEF", "third", &choice, "m2", 10)
             .await
             .expect("a claim");
-        assert!(by_third.is_none());
+        assert_eq!(by_third, DuosRoomClaimOutcome::Unavailable);
         // B34: a joined room is not the host's to free.
         assert_eq!(t.duos_rooms_delete("ABCDEF", "host").await.ok(), Some(false));
     }
@@ -1038,7 +1078,7 @@ mod tests {
             .duos_rooms_claim("ABCDEF", "guest", &choice, "m1", 100)
             .await
             .expect("a claim");
-        assert!(late.is_none());
+        assert_eq!(late, DuosRoomClaimOutcome::Unavailable);
         assert_eq!(t.duos_rooms_reap(200, 200).await.ok(), Some(1));
         assert!(t.duos_rooms_get("ABCDEF").await.expect("a read").is_none());
         assert!(t.duos_rooms_get("GHJKLM").await.expect("a read").is_some());

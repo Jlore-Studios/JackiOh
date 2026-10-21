@@ -57,7 +57,7 @@ use crate::config::{DUOS_ROOM_TTL_MS, MAX_OPEN_ROOMS_PER_HOST, ROOM_CODE_LENGTH}
 use crate::duos::engine::{self, Pinned};
 use crate::duos::live_match_of;
 use crate::duos::registry::registry;
-use crate::duos::store::{DuosChoice, DuosMatch, DuosRoom};
+use crate::duos::store::{DuosChoice, DuosMatch, DuosRoom, DuosRoomClaimOutcome};
 
 /// R149's bound, as the 1v1 room's: a fresh code is tried this many times against the codes still
 /// held before the create reports that none is free.
@@ -357,11 +357,11 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     .map_err(ApiError::internal)?;
 
     // B33's single claim and the match row, in one transaction: the loser of a race writes nothing.
-    let (claimed, blocked) = one_tx!(app.db, |t| {
-        let claimed = t
+    let claim = one_tx!(app.db, |t| {
+        let claim = t
             .duos_rooms_claim(&room.code, &profile.id, &guest_choice, &match_id, now)
             .await?;
-        if claimed.is_some() {
+        if matches!(&claim, DuosRoomClaimOutcome::Claimed(_)) {
             t.duos_matches_create(&row).await?;
             // R1065000: a player in a co-op match is in no queue, as one in a series is: a ticket
             // left open would let the sweep pair them while the match lasts.
@@ -371,16 +371,14 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
                 }
             }
         }
-        // §13.9: a block made since `room_of` read the room defeats the claim; told apart from a lost
-        // race here, so it is answered as the block before the read is.
-        let blocked = claimed.is_none() && t.blocks_between(&room.host, &profile.id).await?;
-        (claimed, blocked)
+        claim
     })?;
-    if blocked {
-        return Err(not_open());
-    }
-    if claimed.is_none() {
-        return Ok(refusal(409, "full", "someone already joined that room"));
+    match claim {
+        DuosRoomClaimOutcome::Claimed(_) => {}
+        DuosRoomClaimOutcome::Blocked => return Err(not_open()),
+        DuosRoomClaimOutcome::Unavailable => {
+            return Ok(refusal(409, "full", "someone already joined that room"));
+        }
     }
     registry(app).start(app, row, state, pinned);
     tracing::info!(

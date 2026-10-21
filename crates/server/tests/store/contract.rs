@@ -7963,7 +7963,14 @@ mod social {
 mod duos {
     use super::*;
     use jackioh_engine::config::DUOS_HUMAN_TEAM;
-    use jackioh_server::duos::store::{DuosActionRow, DuosChoice, DuosMatch, DuosRoom};
+    use jackioh_server::duos::store::{DuosActionRow, DuosChoice, DuosMatch, DuosRoom, DuosRoomClaimOutcome};
+
+    fn claimed(outcome: DuosRoomClaimOutcome) -> DuosRoom {
+        match outcome {
+            DuosRoomClaimOutcome::Claimed(room) => room,
+            outcome => panic!("the room was not claimed: {outcome:?}"),
+        }
+    }
 
     fn room(code: &str, host: &str, at: i64, expires_at: i64) -> DuosRoom {
         from(json!({
@@ -8023,11 +8030,13 @@ mod duos {
 
         let choice = DuosChoice::Random { lean: None };
         let match_id = id();
-        assert!(q!(harness, t => t.duos_rooms_claim("DUOSAB", &host.id, &choice, &id(), now)).is_none());
-        let claimed = must(
-            q!(harness, t => t.duos_rooms_claim("DUOSAB", &guest.id, &choice, &match_id, now)),
-            "the claim",
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_claim("DUOSAB", &host.id, &choice, &id(), now)),
+            DuosRoomClaimOutcome::Unavailable
         );
+        let claimed = claimed(q!(harness, t => t.duos_rooms_claim(
+            "DUOSAB", &guest.id, &choice, &match_id, now
+        )));
         assert_eq!(claimed.guest.as_deref(), Some(guest.id.as_str()));
         assert_eq!(claimed.guest_choice, Some(choice.clone()));
         assert_eq!(claimed.match_id.as_deref(), Some(match_id.as_str()));
@@ -8035,7 +8044,10 @@ mod duos {
             q!(harness, t => t.duos_rooms_get("DUOSAB")),
             Some(claimed.clone())
         );
-        assert!(q!(harness, t => t.duos_rooms_claim("DUOSAB", &third.id, &choice, &id(), now)).is_none());
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_claim("DUOSAB", &third.id, &choice, &id(), now)),
+            DuosRoomClaimOutcome::Unavailable
+        );
         assert!(
             !q!(harness, t => t.duos_rooms_delete("DUOSAB", &host.id)),
             "a joined room stays"
@@ -8043,7 +8055,10 @@ mod duos {
 
         let lapsed = room("DUOSCD", &host.id, now - 700_000, now - 100_000);
         assert!(q!(harness, t => t.duos_rooms_create(&lapsed)));
-        assert!(q!(harness, t => t.duos_rooms_claim("DUOSCD", &guest.id, &choice, &id(), now)).is_none());
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_claim("DUOSCD", &guest.id, &choice, &id(), now)),
+            DuosRoomClaimOutcome::Unavailable
+        );
         let open = room("DUOSEF", &host.id, now, now + 600_000);
         assert!(q!(harness, t => t.duos_rooms_create(&open)));
         assert!(
@@ -8195,10 +8210,13 @@ mod duos {
         );
 
         let choice = DuosChoice::Random { lean: None };
-        must(
-            q!(harness, t => t.duos_rooms_claim("DUOSNP", &guest.id, &choice, &id(), now)),
-            "the claim",
-        );
+        claimed(q!(harness, t => t.duos_rooms_claim(
+            "DUOSNP",
+            &guest.id,
+            &choice,
+            &id(),
+            now
+        )));
         assert_eq!(
             q!(harness, t => t.duos_rooms_count_open_by_host(&host.id, now)),
             1
@@ -8224,7 +8242,10 @@ mod duos {
         let choice = DuosChoice::Random { lean: None };
         for (blocker, blocked) in [(&host.id, &guest.id), (&guest.id, &host.id)] {
             q!(harness, t => t.blocks_add(blocker, blocked, now));
-            assert!(q!(harness, t => t.duos_rooms_claim("DUOSWX", &guest.id, &choice, &id(), now)).is_none());
+            assert_eq!(
+                q!(harness, t => t.duos_rooms_claim("DUOSWX", &guest.id, &choice, &id(), now)),
+                DuosRoomClaimOutcome::Blocked
+            );
             assert_eq!(
                 q!(harness, t => t.duos_rooms_get("DUOSWX")),
                 Some(made.clone()),
@@ -8233,10 +8254,9 @@ mod duos {
             assert!(q!(harness, t => t.blocks_remove(blocker, blocked)));
         }
         let match_id = id();
-        let claimed = must(
-            q!(harness, t => t.duos_rooms_claim("DUOSWX", &guest.id, &choice, &match_id, now)),
-            "the claim once unblocked",
-        );
+        let claimed = claimed(q!(harness, t => t.duos_rooms_claim(
+            "DUOSWX", &guest.id, &choice, &match_id, now
+        )));
         assert_eq!(claimed.guest.as_deref(), Some(guest.id.as_str()));
         assert_eq!(claimed.match_id.as_deref(), Some(match_id.as_str()));
     }
