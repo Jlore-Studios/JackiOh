@@ -9,7 +9,7 @@
 // span, `playEmote` for the sound, `EmoteShow` for what draws — so a preview can't drift from a
 // match: same text, same file, same 2s sticker.
 
-import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactElement } from "react";
 
 import type { EmoteId, PortraitId } from "@jackioh/shared";
 import { EMOJI_EMOTE_IDS, PORTRAIT_IDS, PORTRAITS, VOICE_EMOTE_IDS } from "@jackioh/shared";
@@ -29,12 +29,15 @@ function PortraitTile({
   portrait,
   selected,
   previewing,
+  panelId,
   onPick,
   onPreview,
 }: {
   portrait: PortraitId;
   selected: boolean;
   previewing: boolean;
+  /** The id of the picker's one preview panel, which this tile's Preview shows while `previewing`. */
+  panelId: string;
   onPick: () => void;
   onPreview: () => void;
 }): ReactElement {
@@ -58,6 +61,7 @@ function PortraitTile({
         className="portrait-preview-toggle"
         data-testid={`portrait-preview-${portrait}`}
         aria-expanded={previewing}
+        aria-controls={previewing ? panelId : undefined}
         onClick={onPreview}
       >
         {t("Preview")}
@@ -82,16 +86,26 @@ export function PortraitPicker({
   const [show, setShow] = useState<EmoteShowState | null>(null);
   const seq = useRef(0);
   const root = useRef<HTMLDivElement>(null);
+  const toggle = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+  const panelId = useId();
 
   // Outside press and Escape close the picker, like the match's emote menu does (issue §2's
-  // lifetime carried over — the picker's a menu of the same kind).
+  // lifetime carried over — the picker's a menu of the same kind). Escape gives the focus back to the
+  // portrait button unless the player has put it elsewhere on the page (#1569); an outside press leaves
+  // it where the press put it.
   useEffect(() => {
     if (!open) return undefined;
     const onPointerDown = (event: PointerEvent): void => {
       if (root.current !== null && !root.current.contains(event.target as Node)) setOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      const focused = document.activeElement;
+      if (focused === null || focused === document.body || root.current?.contains(focused) === true) {
+        toggle.current?.focus({ preventScroll: true });
+      }
     };
     window.addEventListener("pointerdown", onPointerDown, true);
     window.addEventListener("keydown", onKeyDown, true);
@@ -124,10 +138,12 @@ export function PortraitPicker({
   return (
     <div className="portrait-picker" ref={root} data-testid="portrait-picker">
       <button
+        ref={toggle}
         type="button"
         className="portrait-current"
         data-testid="portrait-current"
         aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
         aria-haspopup="dialog"
         title={t("Hero portrait: {name}", { name: readerName(def) })}
         onClick={() => {
@@ -139,7 +155,7 @@ export function PortraitPicker({
       </button>
 
       {open ? (
-        <div className="portrait-menu" role="dialog" aria-label={t("Choose a hero portrait")}>
+        <div className="portrait-menu" id={menuId} role="dialog" aria-label={t("Choose a hero portrait")}>
           <div className="portrait-grid" role="listbox" aria-label={t("Portraits")}>
             {PORTRAIT_IDS.map((id) => (
               <PortraitTile
@@ -147,9 +163,12 @@ export function PortraitPicker({
                 portrait={id}
                 selected={id === portrait}
                 previewing={previewing === id}
+                panelId={panelId}
                 onPick={() => {
                   onPick(id);
                   setOpen(false);
+                  // The tile goes with the menu, so the focus goes back to the portrait button (#1569).
+                  toggle.current?.focus({ preventScroll: true });
                 }}
                 onPreview={() => {
                   setPreviewing((was) => (was === id ? null : id));
@@ -159,7 +178,7 @@ export function PortraitPicker({
           </div>
 
           {previewing === null ? null : (
-            <div className="portrait-preview" data-testid="portrait-preview-panel">
+            <div className="portrait-preview" id={panelId} data-testid="portrait-preview-panel">
               <span className="portrait-preview-show">
                 {show === null ? null : <EmoteShow key={show.key} show={show} />}
               </span>
