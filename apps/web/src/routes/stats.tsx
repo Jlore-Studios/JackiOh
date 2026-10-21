@@ -381,7 +381,7 @@ export default function StatsRoute(): ReactElement {
     };
   }, [drillDownOpen]);
 
-  const minSample =cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
+  const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
 
   const keywordOptions = useMemo(() => {
     const present = new Set<KeywordKind>();
