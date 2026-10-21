@@ -397,8 +397,9 @@ export function createFxDirector(options: FxDirectorOptions): FxDirector {
           box,
           power: cue.power,
           ...(cue.scale === undefined ? {} : { scale: cue.scale }),
+          ...(cue.colors === undefined ? {} : { colors: cue.colors }),
         });
-        canvasFx.flash(cue.preset, origin, box, cue.count);
+        canvasFx.flash(cue.preset, origin, box, cue.count, cue.colors);
         return;
       }
       case "projectile": {
