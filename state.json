@@ -8924,6 +8924,13 @@
     "1506": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T12:54:04Z",
+        "difficulty": "hard",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "only 3 files, but all in crates/ai/src, the AI's search and eval, which the rule rates hard, and it must pass a 400-game measured screen before it is kept"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
