@@ -8729,6 +8729,13 @@
     "1497": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T14:21:05Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "A database migration (crates/server/migrations/0051) makes it hard by the rule's own line. It also changes server, web, spec and docs files (~25) and moves the privacy policy's version."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
