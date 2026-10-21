@@ -32,13 +32,29 @@
 #      would be, must still serve render.yaml's version, warn naming the stale value, and leave the
 #      database stamped with render.yaml's version, never the stale one.
 #
+# CI splits the rehearsal so every job finishes under its five-minute budget (#1556): one job
+# per Dockerfile stage, then the image, then one boot shard per database shape.
 # REHEARSAL_STAGE=deps stops after building the Dockerfile's `deps` stage (the image's
 # dependencies, `cargo chef cook`), and REHEARSAL_STAGE=crates after its `crates` stage (the
 # workspace's crates and the server's library, compiled on them), with the cache flags below: no
 # database, no image, no boot. REHEARSAL_DEPS_ONLY=1 is REHEARSAL_STAGE=deps. CI builds each stage in
-# a job of its own before the rehearsal (#653, #1223), so a change to a manifest or Cargo.lock, which
-# recompiles every dependency, is paid in the first, the workspace's crates in the second, and the
-# rehearsal's own build compiles only the server's binary and its thin-LTO link.
+# a job of its own before the rehearsal (#653, #1223: db-deploy-deps, then db-deploy-crates), so a
+# change to a manifest or Cargo.lock, which recompiles every dependency, is paid in the first, the
+# workspace's crates in the second, and the rehearsal's own build compiles only the server's binary
+# and its thin-LTO link.
+# REHEARSAL_STAGE=image builds the whole image exactly as the rehearsal below does (`-t` the image,
+# the same cache flags, `--load` under buildx) and, when REHEARSAL_SAVE_IMAGE is set, saves it with
+# `docker save` to that path, then stops: no database, no container, no boot (CI's db-deploy-image,
+# which uploads the tarball as an artifact). REHEARSAL_LOAD_IMAGE loads such a tarball with
+# `docker load` instead of building, then runs the boots below unchanged; REHEARSAL_BOOT selects
+# which: `migrate` runs the first two boots on one database (the reseed, then the nothing-to-migrate
+# check, which only holds on the migrated database), `stale` runs only the stale-CATALOG_VERSION boot
+# on a fresh database, and an empty REHEARSAL_BOOT (or `all`) runs all three in order on one database,
+# which is what the daily full rehearsal and local runs keep doing (CI's db-deploy-boot matrix runs
+# one REHEARSAL_BOOT value per job on the downloaded tarball).
+# REHEARSAL_STAGE cannot be combined with REHEARSAL_BOOT, REHEARSAL_SAVE_IMAGE cannot be combined
+# with REHEARSAL_LOAD_IMAGE, and neither image flag applies to the deps or crates stages (those
+# builds tag no image).
 #
 # Needs Docker, or an existing superuser connection via REHEARSAL_PGHOST / REHEARSAL_PGPORT
 # (a socket directory or a host) and REHEARSAL_PGPASSWORD; it creates and drops its own database.
@@ -66,12 +82,44 @@ PGPORT_=${REHEARSAL_PGPORT:-5432}
 PGPASSWORD_=${REHEARSAL_PGPASSWORD:-postgres}
 SERVER_UP=""
 # The one Dockerfile stage to build alone (REHEARSAL_STAGE, or `deps` for REHEARSAL_DEPS_ONLY), or
-# empty for the whole rehearsal.
+# empty for the whole rehearsal. REHEARSAL_STAGE=image builds the whole image and, with
+# REHEARSAL_SAVE_IMAGE, saves it, instead of booting it. REHEARSAL_BOOT runs a subset of the boots
+# below on a loaded (REHEARSAL_LOAD_IMAGE) or freshly built image: `migrate` the first two,
+# `stale` only the stale-CATALOG_VERSION boot, `all` (or empty) all three in order.
 STAGE=${REHEARSAL_STAGE:-}
 if [ -z "$STAGE" ] && [ -n "${REHEARSAL_DEPS_ONLY:-}" ]; then STAGE=deps; fi
+BOOT=${REHEARSAL_BOOT:-}
+SAVE_IMAGE=${REHEARSAL_SAVE_IMAGE:-}
+LOAD_IMAGE=${REHEARSAL_LOAD_IMAGE:-}
 case "$STAGE" in
-  "" | deps | crates) ;;
-  *) echo "FAIL: REHEARSAL_STAGE is deps or crates, not $STAGE" >&2; exit 1 ;;
+  "" | deps | crates | image) ;;
+  *) echo "FAIL: REHEARSAL_STAGE is deps, crates or image, not $STAGE" >&2; exit 1 ;;
+esac
+case "$BOOT" in
+  "" | all | migrate | stale) ;;
+  *) echo "FAIL: REHEARSAL_BOOT is all, migrate or stale, not $BOOT" >&2; exit 1 ;;
+esac
+if [ -n "$STAGE" ] && [ -n "$BOOT" ]; then
+  echo "FAIL: REHEARSAL_STAGE=$STAGE and REHEARSAL_BOOT=$BOOT cannot be combined: a boot shard loads the image instead of building a stage" >&2
+  exit 1
+fi
+if [ -n "$SAVE_IMAGE" ] && [ -n "$LOAD_IMAGE" ]; then
+  echo "FAIL: REHEARSAL_SAVE_IMAGE and REHEARSAL_LOAD_IMAGE cannot both be set" >&2
+  exit 1
+fi
+case "$STAGE" in
+  deps | crates)
+    if [ -n "$SAVE_IMAGE" ] || [ -n "$LOAD_IMAGE" ]; then
+      echo "FAIL: REHEARSAL_SAVE_IMAGE and REHEARSAL_LOAD_IMAGE need the built image, not the $STAGE stage" >&2
+      exit 1
+    fi
+    ;;
+  image)
+    if [ -n "$LOAD_IMAGE" ]; then
+      echo "FAIL: REHEARSAL_LOAD_IMAGE skips the image build, so REHEARSAL_STAGE=image cannot be set with it" >&2
+      exit 1
+    fi
+    ;;
 esac
 
 cleanup() {
@@ -108,32 +156,46 @@ echo "image: $DOCKERFILE (context $CONTEXT)"
 echo "catalog version: $CATALOG_VERSION"
 echo "health check: $HEALTH_CHECK_PATH"
 
-# STAGE (above) builds that one stage alone, left in the build cache and written to
-# REHEARSAL_CACHE_TO, with no image to tag or load.
-if [ -n "$STAGE" ]; then
-  echo "--- the Dockerfile's $STAGE stage alone, built as Render builds it ---"
-  set -- --target "$STAGE"
+# REHEARSAL_LOAD_IMAGE (above) skips the build: the tarball a STAGE=image job saved already
+# carries the image's tag, so the boots below need no change.
+if [ -n "$LOAD_IMAGE" ]; then
+  echo "--- the image, loaded from a STAGE=image job's tarball ---"
+  docker load -i "$LOAD_IMAGE"
 else
-  echo "--- the image, built as Render builds it ---"
-  set -- -t "$IMAGE"
-fi
-# REHEARSAL_CACHE_FROM (and REHEARSAL_CACHE_TO) give buildx a layer cache to read (and write), in its
-# `--cache-from`/`--cache-to` syntax: CI's GitHub Actions cache, so an unchanged image is not compiled
-# again on every run. Same Dockerfile, same context, same image either way. Only a cache written
-# with `mode=max` keeps the build stages' layers, the Dockerfile's dependency layer (`cargo chef
-# cook`) among them, which a change to the sources alone reuses; `mode=min` keeps only the image's
-# own layers, so any change under crates/ compiles every dependency again.
-if [ -n "${REHEARSAL_CACHE_FROM:-}" ]; then
-  set -- "$@" --cache-from "$REHEARSAL_CACHE_FROM"
-  if [ -n "${REHEARSAL_CACHE_TO:-}" ]; then set -- "$@" --cache-to "$REHEARSAL_CACHE_TO"; fi
-  if [ -z "$STAGE" ]; then set -- "$@" --load; fi
-  docker buildx build "$@" -f "$REPO/$DOCKERFILE" "$REPO/$CONTEXT"
-else
-  docker build "$@" -f "$REPO/$DOCKERFILE" "$REPO/$CONTEXT"
-fi
-if [ -n "$STAGE" ]; then
-  echo "--- the $STAGE stage is built and cached: the rehearsal proper builds the image on it ---"
-  exit 0
+  # STAGE (above) builds that one stage alone, left in the build cache and written to
+  # REHEARSAL_CACHE_TO, with no image to tag or load; STAGE=image builds the whole image exactly
+  # as the rehearsal below does.
+  if [ -n "$STAGE" ] && [ "$STAGE" != "image" ]; then
+    echo "--- the Dockerfile's $STAGE stage alone, built as Render builds it ---"
+    set -- --target "$STAGE"
+  else
+    echo "--- the image, built as Render builds it ---"
+    set -- -t "$IMAGE"
+  fi
+  # REHEARSAL_CACHE_FROM (and REHEARSAL_CACHE_TO) give buildx a layer cache to read (and write), in its
+  # `--cache-from`/`--cache-to` syntax: CI's GitHub Actions cache, so an unchanged image is not compiled
+  # again on every run. Same Dockerfile, same context, same image either way. Only a cache written
+  # with `mode=max` keeps the build stages' layers, the Dockerfile's dependency layer (`cargo chef
+  # cook`) among them, which a change to the sources alone reuses; `mode=min` keeps only the image's
+  # own layers, so any change under crates/ compiles every dependency again.
+  if [ -n "${REHEARSAL_CACHE_FROM:-}" ]; then
+    set -- "$@" --cache-from "$REHEARSAL_CACHE_FROM"
+    if [ -n "${REHEARSAL_CACHE_TO:-}" ]; then set -- "$@" --cache-to "$REHEARSAL_CACHE_TO"; fi
+    if [ -z "$STAGE" ] || [ "$STAGE" = "image" ]; then set -- "$@" --load; fi
+    docker buildx build "$@" -f "$REPO/$DOCKERFILE" "$REPO/$CONTEXT"
+  else
+    docker build "$@" -f "$REPO/$DOCKERFILE" "$REPO/$CONTEXT"
+  fi
+  if [ "$STAGE" = "image" ]; then
+    if [ -n "$SAVE_IMAGE" ]; then docker save "$IMAGE" -o "$SAVE_IMAGE"; fi
+    echo "--- the image stage is built: the boot jobs load it and run one BOOT each ---"
+    exit 0
+  fi
+  if [ -n "$STAGE" ]; then
+    echo "--- the $STAGE stage is built and cached: the rehearsal proper builds the image on it ---"
+    exit 0
+  fi
+  if [ -n "$SAVE_IMAGE" ]; then docker save "$IMAGE" -o "$SAVE_IMAGE"; fi
 fi
 
 docker network rm "$NETWORK" >/dev/null 2>&1 || true
@@ -285,6 +347,11 @@ stamped_version() {
 }
 
 LOG_DIR=${RUNNER_TEMP:-/tmp}
+# REHEARSAL_BOOT (above) runs a subset: `migrate` the first two boots on one database (the
+# nothing-to-migrate check only holds on the migrated database), `stale` only the stale boot on a
+# fresh database, `all` (or empty) all three in order on one database.
+case "$BOOT" in
+  "" | all | migrate)
 echo "--- first boot: every migration, the reseed, then the server ---"
 start_server "$LOG_DIR/deploy-boot-1.log" "$CATALOG_VERSION"
 check_boot "$LOG_DIR/deploy-boot-1.log"
@@ -307,7 +374,10 @@ if ! grep -q "migrate: nothing to do" "$LOG_DIR/deploy-boot-2.log"; then
   exit 1
 fi
 stop_server
-
+    ;;
+esac
+case "$BOOT" in
+  "" | all | stale)
 echo "--- a stale CATALOG_VERSION: the boot serves the compiled-in catalog and says so ---"
 start_server "$LOG_DIR/deploy-boot-stale.log" "$STALE_CATALOG_VERSION"
 check_boot "$LOG_DIR/deploy-boot-stale.log"
@@ -324,5 +394,7 @@ if [ "$stamped" != "$CATALOG_VERSION" ]; then
   exit 1
 fi
 stop_server
+    ;;
+esac
 
 echo "--- the deploy rehearsal passed ---"
