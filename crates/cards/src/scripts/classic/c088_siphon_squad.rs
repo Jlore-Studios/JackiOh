@@ -78,6 +78,8 @@ fn siphon(
             }
             preview(read)
         })),
+        // R1487000: the engine puts every face-down card's aura to sleep; v0.3.7b's stays awake.
+        live_face_down,
         ..Script::default()
     }
 }

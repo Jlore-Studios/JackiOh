@@ -153,7 +153,12 @@ pub fn reveal_echo_bonus(state: &GameState, player: PlayerId) -> i32 {
             let Some(source) = crate::zones::card_at(state, slot) else {
                 continue;
             };
-            if source.controller != player || source.vanilla || is_dormant(source) {
+            // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+            if source.controller != player
+                || source.vanilla
+                || is_dormant(source)
+                || crate::preview::lasting_text_dormant(state, source)
+            {
                 continue;
             }
             let script = crate::scripts::script_of(state, source);

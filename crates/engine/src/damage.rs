@@ -34,9 +34,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::{ANTI_ONESHOT_CAP, DAMAGE_REDIRECT_CAP, HERO_ARMOR};
 use crate::script::{EngineSink, HeroGuard, HookArgs};
 use crate::state::{CardInstance, GameState, ModifierKind, find_instance, find_instance_mut};
-use crate::wire::{
-    CardType, GameEvent, Keyword, KeywordKind, PlayerId, Row, ZoneName, armor_of, has_keyword,
-};
+use crate::wire::{GameEvent, Keyword, KeywordKind, PlayerId, Row, ZoneName, armor_of, has_keyword};
 
 /// TS `{ kind: "unit"; instance } | { kind: "hero"; player }`. The unit is carried by value, as TS's
 /// object was: a target is built once per hit and matched at every card and test that aims one, and a
@@ -120,6 +118,10 @@ pub fn hero_armor_of(state: &GameState, player: PlayerId) -> i32 {
         let Some(card) = crate::zones::card_at(state, slot) else {
             continue;
         };
+        // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+        if crate::preview::lasting_text_dormant(state, card) {
+            continue;
+        }
         let side = HERO_ARMOR.on(card.radiant);
         // R124, R102: every Going Long text a card carries grants its own Armor, at the price that
         // text's card was played for — a Going Long fused onto a Going Long is Armor 4 as two apart are.
@@ -148,8 +150,8 @@ fn modifier_armor_of(state: &GameState, player: PlayerId) -> i32 {
 }
 
 /// The cards acting on a player's side of the field (§3.2): the top of each unit pile and each backrow
-/// card, a face-down Trap left out — its text is in nobody's use until it fires (R33). What E6's hero
-/// guards read.
+/// card, a face-down Trap left out — its text is in nobody's use until it fires (R33) or is revealed
+/// (R1487000). What E6's hero guards read.
 pub(crate) fn acting_texts_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let mut out: Vec<CardInstance> = crate::zones::active_units_of(state, player)
         .into_iter()
@@ -159,9 +161,8 @@ pub(crate) fn acting_texts_of(state: &GameState, player: PlayerId) -> Vec<CardIn
         let Some(card) = crate::zones::card_at(state, slot) else {
             continue;
         };
-        let card_type = crate::faces::card_type_of(state, card);
-        let face_down =
-            (card_type == CardType::Trap || card_type == CardType::FieldTrap) && card.face_up != Some(true);
+        // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+        let face_down = crate::preview::lasting_text_dormant(state, card);
         // R1081000: a Unit standing in the backrow is already above, among the active units — its
         // text must not answer twice.
         if !face_down && !out.iter().any(|held| held.id == card.id) {

@@ -567,9 +567,19 @@ fn families_named(strings: &BTreeSet<String>, head: &Side, state: &GameState) ->
                 find_instance(state, text).map(|card| card.def_id.clone())
             }
         })
+        .flat_map(|id| fused_parts(state, &id))
         .filter(|id| head.ships(id))
         .map(|id| family(&id))
         .collect()
+}
+
+/// R1487001: the cards a definition stands for: itself, or for a fusion every card it was fused from,
+/// a fusion among them read the same way (R77, R468). A fused definition is no catalog card.
+fn fused_parts(state: &GameState, def_id: &str) -> Vec<String> {
+    match jackioh_engine::subsystems::fuse::fused_ingredients(state, def_id) {
+        Some(parts) => parts.iter().flat_map(|part| fused_parts(state, part)).collect(),
+        None => vec![def_id.to_string()],
+    }
 }
 
 /// The instances an action or a legal action acts with: the card played, activated or switched,
@@ -1162,6 +1172,31 @@ mod tests {
         let mut strings = BTreeSet::new();
         differing_strings(&ours, &theirs, &mut strings);
         assert_eq!(strings, BTreeSet::from(["core-001".to_string()]));
+    }
+
+    #[test]
+    fn r1487001_a_fused_card_touches_the_cards_it_was_fused_from() {
+        register_all();
+        let mut game = jackioh_engine::testkit::scenario(json!({
+            "seed": "classify-fused",
+            "p1": { "backrow": [{ "def": "core-079" }] },
+        }));
+        let id = game
+            .backrow(jackioh_engine::PlayerId::P1, 1)
+            .expect("the card is set")
+            .id;
+        jackioh_engine::find_instance_mut(game.state_mut(), &id)
+            .expect("the card is set")
+            .def_id = "t-2:core-067+(t-1:core-079+classicplus-074)".to_string();
+        let head = side(vec![], &[SetName::Core, SetName::ClassicPlus]);
+        assert_eq!(
+            families_named(&BTreeSet::from([id]), &head, game.state()),
+            BTreeSet::from([
+                "classicplus-074".to_string(),
+                "core-067".to_string(),
+                "core-079".to_string(),
+            ])
+        );
     }
 
     #[test]

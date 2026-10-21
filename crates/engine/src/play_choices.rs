@@ -229,12 +229,16 @@ pub fn targets_follow_modes(decls: &[TargetDecl]) -> bool {
 // The face a play resolves with (§10.5 step 3, R213, R214)
 // ---------------------------------------------------------------------------
 
-/// Every permanent that acts for this player: the tops of their unit piles and their backrow (§3.2).
+/// Every permanent that acts for this player: the tops of their unit piles and their backrow (§3.2),
+/// a face-down card left out, whose text sleeps (R1487000).
 fn permanents_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     let mut out: Vec<&CardInstance> = Vec::new();
     for row in ROWS {
         for slot in crate::zones::slots_of(player, row) {
-            if let Some(held) = crate::zones::card_at(state, slot) {
+            // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+            if let Some(held) = crate::zones::card_at(state, slot)
+                && !crate::preview::lasting_text_dormant(state, held)
+            {
                 out.push(held);
             }
         }
@@ -789,9 +793,15 @@ pub fn may_tribute_enemy_units(state: &GameState, card: &CardInstance) -> bool {
 /// Vanilla Sheep — radiant #61's copy of one — is worth 1 like any other unit (R115: `flags_of` reads
 /// nothing off a Vanilla instance). And a fused card's text is both texts joined, with nothing about
 /// an ingredient dropped (R102), so a Sheep #85 fused a unit onto is still worth 2 — the fused flags
-/// take the larger worth, as they take the larger Tribute.
+/// take the larger worth, as they take the larger Tribute. A face-down backrow card taken by a wide
+/// Tribute is worth 1, its text asleep (R1487000).
 pub fn tribute_value_of(state: &GameState, unit: &CardInstance) -> i32 {
-    let flag = crate::scripts::script_of(state, unit).flags().tribute_worth;
+    // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+    let flag = if crate::preview::lasting_text_dormant(state, unit) {
+        None
+    } else {
+        crate::scripts::script_of(state, unit).flags().tribute_worth
+    };
     // B3.4 rule 5, R386: a card that declares its worth as a number (C #82 Sheeople's `worth`) is worth
     // what Degrade, Upgrade and KY's Constant have left it, read off the instance like any declared number.
     let worth = if flag.is_some() && crate::params::param_decl_of(state, &unit.def_id, "worth").is_some() {
