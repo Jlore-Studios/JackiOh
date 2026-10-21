@@ -9124,11 +9124,8 @@
       "run_id": "39564792376",
       "started_at": "2026-10-21T07:51:24Z",
       "stop_requested": false,
-      "strike_log": [
-        "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1",
-        "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
-      ],
-      "strikes": 2,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
