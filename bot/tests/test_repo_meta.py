@@ -29,6 +29,7 @@ class PullTitleTests(unittest.TestCase):
     AUTOMATED = (
         "patches ship: v0.3.1",  # patches-ship.yml
         "patches ship: v0.2.16b, v0.2.17",
+        "patches log: 6d44be2..c9ca419",  # promote-production.yml's technical log
         "Promote main to production: 28 commit(s) up to 6d44be2",  # scripts/promote-production.sh
         "Promote main to production: 1 commit(s) up to c9ca419",
         "AI gen 8 (improve): the opening plays its two-drops first",  # training/improve.md
@@ -36,10 +37,22 @@ class PullTitleTests(unittest.TestCase):
         "AI gen 14 (learn): the learned evaluation, retrained on 100,000 games",  # learn.yml
     )
     CONVENTIONAL = (
-        "Patch v0.3.X: Activate abilities work again",
-        "Patch v0.3.Y: fix the UI of the rematch button",
+        # #1360: every thread's form, a shipped card change's, and a part's.
+        "Patch: Activate abilities work again",
+        "Patch v0.3.18: Activate abilities work again",
+        "Patch v0.4.0c: one more fix",
+        "Patch (part 2 of 8): fragments without a version",
+        "Patch: patch numbers (part 2 of 8): fragments without a version",
+        'Revert "Patch: Activate abilities work again"',
         "Patch v0.3.1: card text pass",
         "Patch v0.2.7b: one more fix",
+        'Revert "Patch v0.4.0c: one more fix"',
+        'Revert "patches ship: v0.3.1"',
+    )
+    BAD = (
+        # The older prefixes, retired by the title retcon (#1372).
+        "Patch v0.3.X: Activate abilities work again",
+        "Patch v0.3.Y: fix the UI of the rematch button",
         "Patch v0.3.X (part 2 of 3): the lobby",
         "v0.3.0: the Rust rewrite",
         "v0.4.0 (part 1 of 5): the engine",
@@ -47,18 +60,20 @@ class PullTitleTests(unittest.TestCase):
         "CI: daily super run failed",
         "Architecture: issue and PR templates, labels as code and repository meta",
         'Revert "Patch v0.3.X: Activate abilities work again"',
-        'Revert "patches ship: v0.3.1"',
-    )
-    BAD = (
         "Share a room as an invite link that opens the join form filled in (R767)",  # #490
         "Practice: a worker whose script never loaded says to reload",  # #471
         "v0.3.0 part 40: the sweep of record",  # #472
         "bot: build pass 1 for #85",  # a bot commit's subject, #169
         "Patch v0.2.X Classic & Classic+ balance",
         "patch v0.3.X: lower case",
+        "Patch:",
+        "Patch : a space",
+        "Patch v0.3.Z: no such guess",
+        "Patch (part two of 8): words",
         "Architecture:",
         "patches ship: ",
         "patches ship: v0.3.Y",  # ship names a micro patch's version
+        "patches log: soon",
         "Promote main to production: soon",
         "AI gen 3 (sideways): a lane that does not exist",
         'Revert "Share a room"',
@@ -77,6 +92,8 @@ class PullTitleTests(unittest.TestCase):
         """Each tool's title, as its source writes it, so a change to one fails here first."""
         self.assertIn('--title "patches ship: $versions"', read("patches-ship.yml"))
         self.assertIn('versions=$(sed -n \'s/^patches ship: shipped //p\'', read("patches-ship.yml"))
+        self.assertIn('--title "patches log: $range"', read("promote-production.yml"))
+        self.assertIn('range="${OLD:0:7}..${NEW:0:7}"', read("promote-production.yml"))
         promote = (ROOT / "scripts" / "promote-production.sh").read_text(encoding="utf-8")
         self.assertIn('--title "Promote main to production: $COUNT commit(s) up to ${cand:0:7}"',
                       promote)
@@ -91,10 +108,10 @@ class PullTitleTests(unittest.TestCase):
             self.assertIn(f'git commit -m "AI gen <N> ({lane}): <what changed>"', text)
 
     def test_a_bot_takes_its_builders_title_when_it_passes_else_its_issues(self):
-        self.assertEqual(triage.pull_title("Patch v0.3.2: the rules, v2", "Patch v0.3.X: the rules"),
+        self.assertEqual(triage.pull_title("Patch v0.3.2: the rules, v2", "Patch: the rules"),
                          "Patch v0.3.2: the rules, v2")
-        self.assertEqual(triage.pull_title("Make the rules v2", "Patch v0.3.X: the rules"),
-                         "Patch v0.3.X: the rules")
+        self.assertEqual(triage.pull_title("Make the rules v2", "Patch: the rules"),
+                         "Patch: the rules")
         self.assertEqual(triage.pull_title("Make the rules v2", "the rules"), "Make the rules v2")
         self.assertEqual(triage.pull_title("", "the rules"), "the rules")
         self.assertEqual(triage.pull_title("", ""), "")
@@ -130,8 +147,14 @@ class IssueFormTests(unittest.TestCase):
              if path.name != "config.yml"}
 
     def test_one_form_per_kind(self):
-        self.assertEqual(sorted(self.forms), ["architecture.yml", "bug.yml", "micro-patch.yml",
-                                              "night-bot.yml", "patch.yml"])
+        # #1370: the Patch and Micro patch forms are one, since no form guesses a version.
+        self.assertEqual(sorted(self.forms), ["architecture.yml", "bug.yml", "night-bot.yml",
+                                              "patch.yml"])
+
+    def test_every_form_titles_its_issue_patch_with_no_version(self):
+        for name, text in self.forms.items():
+            self.assertEqual(re.search(r'^title: "(.*)"$', text, re.M).group(1), "Patch: ", name)
+            self.assertNotRegex(text, r"v0\.\d+\.[XY]\b", name)
 
     def test_each_form_titles_and_labels_its_issue_and_leaves_its_type_to_triage(self):
         for name, text in self.forms.items():
@@ -240,6 +263,16 @@ class LabelListTests(unittest.TestCase):
         self.assertIn(': "${RELEASE_LABEL:=production merge}"', script)
         self.assertIn(f'gh label create "$RELEASE_LABEL" --color {color} --force', script)
         self.assertIn(f'--description "{description}"', script)
+
+    def test_the_kind_and_tier_labels_are_as_ci_writes_them(self):
+        """ci.yml's `rust (classify)` creates its labels with `--force`, which would undo any other
+        colour or description (#1370)."""
+        text = read("ci.yml")
+        block = job(text, "rust-classify")
+        for name in (*config.KIND_LABELS, *config.TIER_LABELS):
+            color, description = config.LABELS[name]
+            self.assertIn(f"[{name}]={color}", block, name)
+            self.assertIn(f'[{name}]="{description}"', block, name)
 
     def test_setup_creates_the_missing_and_brings_back_the_hand_changed(self):
         gh = FakeGitHub()

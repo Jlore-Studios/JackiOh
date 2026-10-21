@@ -52,13 +52,18 @@ fn game_xp(actions: i64, won: bool) -> i64 {
     jackioh_server::economy::rewards::game_xp(GameMode::Ladder, actions, won)
 }
 
-/// The test app with the economy on (§14.12): `ECONOMY_LIVE` is off in the build, so every test
-/// of a payout turns it on for its own app.
+/// The test app with the economy on (§14.12), as `ECONOMY_LIVE` builds it since the economy went
+/// live (R1310000); set here, so a payout test holds whatever the build's switch says.
 async fn test_app() -> Arc<App> {
+    economy_app(true).await
+}
+
+/// The test app with the economy switched to `live`.
+async fn economy_app(live: bool) -> Arc<App> {
     let mut app = built_app().await;
     Arc::get_mut(&mut app)
         .expect("the test app has no second handle yet")
-        .economy_live = true;
+        .economy_live = live;
     app
 }
 
@@ -945,11 +950,17 @@ mod no_payout {
     }
 
     #[tokio::test]
+    async fn r1310000_the_build_turns_the_economy_on() {
+        // §14.12: the switch is on in the build, and the app every route reads takes it at boot.
+        assert!(jackioh_server::config::ECONOMY_LIVE);
+        assert!(built_app().await.economy_live);
+    }
+
+    #[tokio::test]
     async fn r1302006_nothing_is_paid_while_the_economy_is_off() {
         install_test_cards();
-        // The build's own app: `ECONOMY_LIVE` is off (§14.12), as in production until launch.
-        let app = built_app().await;
-        assert!(!app.economy_live);
+        // The economy switched off (§14.12), as production ran until launch (R1310000).
+        let app = economy_app(false).await;
         fresh_store(&app).await;
         seed_profile(&app, json!({ "id": A, "rating": 1000.0, "inMatchId": MATCH_ID })).await;
         seed_profile(&app, json!({ "id": B, "rating": 1000.0, "inMatchId": MATCH_ID })).await;

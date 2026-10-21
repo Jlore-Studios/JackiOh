@@ -112,7 +112,8 @@ cargo jackioh gate                 # the AI's quality gates at smoke size; --ful
 cargo jackioh sweep                # the shadow-ban sweep (R186); --write rewrites crates/ai/src/shadow_ban.rs's tables from the reports of record, --check holds them
 cargo jackioh stats                # an AI development run for the card statistics (R378); --out writes it
 cargo jackioh catalog-version      # the catalog version this checkout compiles in
-cargo jackioh patches <version> <date> "<title>"   # a branch's catalog change as a pending fragment (R388, R646); `patches ship` promotes it after merge
+cargo jackioh patches "<title>" [--plays <ids>] [--rule]   # a branch's card change as a pending fragment, no version (R388, R646, R1366000); `patches ship` names the version by tier after merge
+cargo jackioh classify --base origin/main [--parent-bin <path>] [--claims]   # what the change does: its kind, tier and the cards that play differently (R1365000); --claims holds the fragments to it, as CI's `rust (classify)` does (R1370000)
 cargo test -p jackioh-luau --features ts --test export_api   # regenerates crates/cards/luau/jackioh.luau, the host's typed `J` (commit any diff)
 luau-analyze --mode=strict crates/cards/luau/jackioh.luau  # Luau 0.740's strict checker over the typed module, where it is installed
 cargo jackioh luau surface         # the engine API each card script calls (hooks, verbs, readers, pools); --json, --card <id>
@@ -153,7 +154,7 @@ pnpm --dir apps/web exec vitest run src/game/animations.test.ts     # one web te
 ```
 # Cypress; the root `pnpm install` covers e2e/
 E2E=1 pnpm --dir apps/web dev                  # http://localhost:5173, serves /dev/hotseat
-E2E=1 cargo run --release -p jackioh-server    # :8787 + /ws/match, /ws/duos, /ws/watch; needed for networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 40, 41, 42, 44
+E2E=1 cargo run --release -p jackioh-server    # :8787 + /ws/match, /ws/duos, /ws/watch; needed for networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 40, 41, 42, 44, 45
 cargo build --release -p jackioh-tools         # target/release/jackioh, whose `replay` specs 01, 13 and 40 fold the browser's log with
 cd e2e && pnpm exec cypress run --spec cypress/e2e/01-hotseat-full-game.cy.ts
 pnpm --dir e2e test:component                  # component/pixel specs, no server needed
@@ -168,7 +169,11 @@ changes, restarting a hotseat game at turn 0, so serve a built client while you 
 ### CI
 
 Branch protection on `main` requires five checks: `rust`, `web`, `e2e smoke` and `db` (`ci.yml`, each a
-summary over jobs of under five minutes) and `bot selftest` (`bot-selftest.yml`). `rust` also fails when
+summary over jobs of under five minutes) and `bot selftest` (`bot-selftest.yml`). On a pull request `rust`
+includes `rust (classify)`: it labels the pull request with its kind and tier (`kind:*`, `tier:*`) and fails
+when a card plays differently and no pending fragment claims it, or a fragment claims a play the base build
+does not show (R1370000); run `cargo jackioh classify --base origin/main --claims` before pushing, with
+`--parent-bin` set to a build of `origin/main` when it asks. `rust` also fails when
 `apps/web/src/wire/` or `crates/cards/luau/jackioh.luau` differs from what the Rust generates, and runs
 `luau-analyze --mode=strict` over the Luau there (#442 L10). A pull request that changes only paths on
 `scripts/ci-scope.sh`'s skip list (the bots, the agent instruction files, the issue forms, …) skips every job

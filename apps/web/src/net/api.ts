@@ -1231,7 +1231,17 @@ export type PublicCardStat = {
   playedDelta: number | null;
   playRate: number;
   hasEnoughGames: boolean;
+  /** R1367000: the card's window, and the versions its figures count. */
+  window?: {
+    from: string;
+    liveGames: number;
+    source: PublicStatsSource;
+    counted: string[];
+  };
 };
+
+/** R654, R1367000: which records a window's figures count. */
+export type PublicStatsSource = "provisional" | "live" | "previous" | "dev";
 
 export type PublicStatsCardsResponse = {
   patch: string;
@@ -1241,7 +1251,7 @@ export type PublicStatsCardsResponse = {
     liveGames: number;
     minLiveGames: number;
   };
-  source: "provisional" | "live" | "dev";
+  source: PublicStatsSource;
   sourceLabel: string;
   pilot: "merged" | "human" | "ai";
   pilotLabel: string;
@@ -1254,7 +1264,7 @@ export type PublicStatsCardsResponse = {
     totalGames: number;
     liveGames: number;
     activePatch: string;
-    source: "provisional" | "live" | "dev";
+    source: PublicStatsSource;
     pilot: "merged" | "human" | "ai";
     mode: "all" | "bo1" | "bo3" | "random";
     bestCard: { id: string; name: string; winRate: number; games: number } | null;

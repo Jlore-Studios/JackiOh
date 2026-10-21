@@ -30,187 +30,187 @@
     "blob": "1901fa023b1c4bec3cba95f552635f3d1f7bbf04"
   },
   {
-    "version": "v0.2.1",
+    "version": "v0.2.0b",
     "commit": "9dcb65e481717a49bfc750b58ea67a11a1852f39",
     "blob": "09981874ad3c44007d9deb31dc22634cdd5cb795"
   },
   {
-    "version": "v0.2.2",
+    "version": "v0.2.1",
     "commit": "9e030abd6e3f846fde1f3e5003518d76ad512043",
     "blob": "e0067f7b94b18415e65a3c13a6d27c0f56c9cca7"
   },
   {
-    "version": "v0.2.3",
+    "version": "v0.2.2",
     "commit": "d26ab17eb8515eb35b9c3ca214c3343cb4fb1a8d",
     "blob": "41fc80fc0a96fc3e2515ffc0315de0ebc9196924"
   },
   {
-    "version": "v0.2.4",
+    "version": "v0.2.2b",
     "commit": "7f3458e41b6c54bf5d35e52f45c4b5c124c3844d",
     "blob": "d88a02a739152264d8586ed36c004088bc611bff"
   },
   {
-    "version": "v0.2.5",
+    "version": "v0.2.3",
     "commit": "1be5a28e08c3b6ef94b95b3845c908adaa86d14e",
     "blob": "13c1ef7f14d6ec6026d96fcd362e2703147164ee"
   },
   {
-    "version": "v0.2.6",
+    "version": "v0.2.3b",
     "commit": "b26b1b9dde3f723528e60739caf5aee359a16c20",
     "blob": "2835b1852a5e98df585e2cbb2a99db541dcc9294"
   },
   {
-    "version": "v0.2.7",
+    "version": "v0.2.3c",
     "commit": "533b4e2db58eaae47b0edd0eee6da6d7e12439f3",
     "blob": "677aa3cd5cc0d8b38c8a34d232d161ac6d7eeb5e"
   },
   {
-    "version": "v0.2.7b",
+    "version": "v0.2.3d",
     "commit": "80e7960ccaef1a8c0bb5c463eadacd8fd402d858",
     "blob": "5f39769f74c0956708eb7d28d457e63bca616267"
   },
   {
-    "version": "v0.2.8",
+    "version": "v0.2.3e",
     "commit": "509e9a302ab71542a4e141fe7231c9743722bdba",
     "blob": "2744936c1447a032911fbf6a8cc9e327a97f7503"
   },
   {
-    "version": "v0.2.8b",
+    "version": "v0.2.3f",
     "commit": "16724d26939a1a03779523f11461b41c57871ccb",
     "blob": "bad0d6f931ef9524a21f6ede29872396e7922467"
   },
   {
-    "version": "v0.2.9",
+    "version": "v0.2.4",
     "commit": "97a00bd613bd3adfaafdc4d1580f5d895d2b5e22",
     "blob": "0ed895027c145f1f0815ef07cf9998f9712d1fb5"
   },
   {
-    "version": "v0.2.10",
+    "version": "v0.2.5",
     "commit": "a065f26ebfebf33dbf25801d4e06e6e334a80d96",
     "blob": "507b7c107993d44cc1bdac24b05751f5655e4e90"
   },
   {
-    "version": "v0.2.10b",
+    "version": "v0.2.5b",
     "commit": "ce4a741b706ac75a7104c73736cb568ddc40f33f",
     "blob": "d0eef635e05b38737c73e0b42837b1b3b401df0e"
   },
   {
-    "version": "v0.2.10c",
+    "version": "v0.2.5c",
     "commit": "5234550417f490e87b65cbd9a7ae078ce707979c",
     "blob": "4b4dbb669569a960d704442b5e68424c0c153a1d"
   },
   {
-    "version": "v0.2.10d",
+    "version": "v0.2.5d",
     "commit": "ada067c48f78173e6b472fc9860b960b1ff30f15",
     "blob": "200dbf372552bfe0db8f0311366e5f328fd6a33b"
   },
   {
-    "version": "v0.2.11",
+    "version": "v0.2.5e",
     "commit": "d79927e13dfbeef7267501c7330ec6376c9f7b5c",
     "blob": "d74a733519b2e233a1a4b37a1143f637acfb678c"
   },
   {
-    "version": "v0.3.1",
+    "version": "v0.2.5f",
     "commit": "70b6e415a2877480e62864e24801ed3694a8c173",
     "blob": "c1fcf9d167c4f4f813504185fc3479c2629bc430"
   },
   {
-    "version": "v0.3.2",
+    "version": "v0.2.6",
     "commit": "d04709a05db17222b01f8c8ca41ba034861019c7",
     "blob": "d8797790613c4e26daa365cf99ea744027b11e03"
   },
   {
-    "version": "v0.3.3",
+    "version": "v0.2.7",
     "commit": "764bd0ad79ce2eff8768e7e1bc53d72169f2399f",
     "blob": "e9e04a2be49352b085ae78e353681c4b545e021b"
   },
   {
-    "version": "v0.3.4",
+    "version": "v0.2.7b",
     "commit": "858fcc5a33a33b9155f47031d05d620538c67858",
     "blob": "6d949c305beffc85f0ef86181a0177f3e8403763"
   },
   {
-    "version": "v0.3.5",
+    "version": "v0.3.0",
     "commit": "35eee095ae69d549bb10dd2e67e5ca1e3a9b7943",
     "blob": "074c8f6a991e51255342159341d86bf87011ae4f"
   },
   {
-    "version": "v0.3.6",
+    "version": "v0.3.0b",
     "commit": "10d856865bc8b319c8145dac17d6e143d32e4560",
     "blob": "15dfc1292278e67339c62692550295e45b1b7a00"
   },
   {
-    "version": "v0.3.7",
+    "version": "v0.3.0c",
     "commit": "189bb91c1f4559fee7266c91fe9846d1bb7b66dd",
     "blob": "c8dca945a09244bd050a66b0938522ce88964a16"
   },
   {
-    "version": "v0.3.7b",
+    "version": "v0.3.1",
     "commit": "799b3aeede37ce6d37380852164a52192d7e2379",
     "blob": "535d7f6a6ae5b9f06c595255496065705070e6ae"
   },
   {
-    "version": "v0.3.8",
+    "version": "v0.3.2",
     "commit": "d787d2a8fb00749737be6fddde97855e77b4b6ef",
     "blob": "471404577d4e211502594d0482820f2b57250756"
   },
   {
-    "version": "v0.3.9",
+    "version": "v0.3.2b",
     "commit": "bc67b77df9ef570c7db41b4b51b96792feb25c2a",
     "blob": "a820094110797f43b12dce5bd045a3638205d8ac"
   },
   {
-    "version": "v0.3.10",
+    "version": "v0.3.3",
     "commit": "f28f4fe8cc187a70cb06e7a3541607e88730ba58",
     "blob": "890f4a966c88800629357c9cb084ab00c7c0d02b"
   },
   {
-    "version": "v0.3.10b",
+    "version": "v0.3.3b",
     "commit": "84c1fb5323d15a27f3b69094d9d34c8f61a665f7",
     "blob": "793f9e8f2051522d592e19613cf01f9ee9d27881"
   },
   {
-    "version": "v0.3.11",
+    "version": "v0.3.3c",
     "commit": "b1580f7a771337e4656f5adca8cecec8183f6198",
     "blob": "8bc24b3c4164e3380793b60ef43c7c03dc28d691"
   },
   {
-    "version": "v0.3.12",
+    "version": "v0.3.4",
     "commit": "92cb1b493ccec61a099266d741d723c0fc1ae56f",
     "blob": "4cd2ef9b8b449bd0173c68e61ada9292469e6728"
   },
   {
-    "version": "v0.3.13",
+    "version": "v0.3.4b",
     "commit": "8714cced6f1a847c3f4b5b8ed24b403a4d1ad40e",
     "blob": "16c53ebc65574e6c89205a42de81bee7e9c75903"
   },
   {
-    "version": "v0.3.14",
+    "version": "v0.3.5",
     "commit": "2bc35ff6fcfdf46d7f6299be864127b94bd52ffa",
     "blob": "d1cc321483c822eb73f6df285e746576fd7270ea"
   },
   {
-    "version": "v0.3.15",
+    "version": "v0.4.0",
     "commit": "6c9bcfee3d649d2c6b9b90a83d0042dde3f3b9c5",
     "blob": "fe8ab96361f5e167c564502dc3b004b9b3d06911",
-    "winRatesBlob": "79a6d3bc8a9ff9b93b5acf7921d4fb0c6f8925a3"
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
   },
   {
-    "version": "v0.3.16",
+    "version": "v0.4.0b",
     "commit": "1fe9a19b9398c062eba7b2e4afd5f7101feaf6fd",
     "blob": "6a9fd0a7a2f0c4093abfd514fb34b868757d9dfb",
-    "winRatesBlob": "79a6d3bc8a9ff9b93b5acf7921d4fb0c6f8925a3"
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
   },
   {
-    "version": "v0.3.17",
+    "version": "v0.4.0c",
     "commit": "402651365937a39f14d215df30ef85409b24db0a",
     "blob": "45f0a992aa02229bbd1ca2bff01b089c38b4b872",
-    "winRatesBlob": "79a6d3bc8a9ff9b93b5acf7921d4fb0c6f8925a3"
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
   },
   {
-    "version": "v0.3.17b",
+    "version": "v0.4.0d",
     "commit": "6107dda0fbb6e8793e7aa078ffddf5574b9581b0",
     "blob": "8806eaf2012241094e1489d21330894e77d59948",
-    "winRatesBlob": "79a6d3bc8a9ff9b93b5acf7921d4fb0c6f8925a3"
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
   }
 ]

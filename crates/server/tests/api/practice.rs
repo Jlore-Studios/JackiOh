@@ -24,9 +24,10 @@ use jackioh_server::actor::engine::{self, Pinned};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
     JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, PRACTICE_SEED_TTL_SECONDS, PRACTICE_VERIFY_CONCURRENCY,
+    STARTER_CARDS,
 };
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, LastBoardKind};
+use jackioh_server::db::fake::{E2eStoreOptions, FakeCatalog, FakeData, create_e2e_store};
+use jackioh_server::db::store::{Db, LastBoardKind, ProfileStatus};
 use jackioh_server::economy::practice::{self, ClaimedResult};
 use jackioh_server::economy::quests::{QuestDef, QuestGoal, pool, quest_interval_ms};
 use jackioh_server::economy::rewards::{GameMode, game_xp, is_player_action};
@@ -46,12 +47,18 @@ const WIN_SEEDS: usize = 32;
 /// A seed's lifetime in milliseconds, through its constant.
 const TTL_MS: i64 = PRACTICE_SEED_TTL_SECONDS * 1000;
 
-/// The test app with the economy on (§14.12, R1302006): `ECONOMY_LIVE` is off in the build.
+/// The test app with the economy on (§14.12, R1302006), as `ECONOMY_LIVE` builds it since the
+/// economy went live (R1310000); set here, so a payout test holds whatever the build's switch says.
 async fn test_app() -> Arc<App> {
+    economy_app(true).await
+}
+
+/// The test app with the economy switched to `live`.
+async fn economy_app(live: bool) -> Arc<App> {
     let mut app = built_app().await;
     Arc::get_mut(&mut app)
         .expect("the test app has no second handle yet")
-        .economy_live = true;
+        .economy_live = live;
     app
 }
 
@@ -341,6 +348,79 @@ async fn a_game_on_a_list_of_cards_pays_too() {
     let seed = body["seed"].as_str().expect("a seed").to_string();
     let setup = kept_setup(&app, &seed).await;
     assert_eq!(setup.deck, PracticeDeck::Cards { cards });
+    let (log, _, _) = play(&seed, &setup, Human::Concede);
+    let xp = game_xp(GameMode::Practice, human_actions(&log), false);
+    assert_eq!(
+        claim(&app, &token, &seed, "loss", &log).await,
+        json!({ "paid": true, "jlore": JLORE_PRACTICE_LOSS, "xp": xp })
+    );
+}
+
+/// The test app over a store that carries R111's activation grant over the real catalog, as the
+/// end-to-end server builds its store (`app::build`).
+async fn granting_app() -> Arc<App> {
+    let app = Arc::try_unwrap(test_app().await)
+        .unwrap_or_else(|_| panic!("test_app() hands back its only reference"));
+    let (tokens, bans) = (app.catalog.clone(), app.catalog.clone());
+    let db = create_e2e_store(E2eStoreOptions {
+        catalog: FakeCatalog {
+            card_ids: app.catalog.card_ids.clone(),
+            is_token: Arc::new(move |card_id: &str| tokens.is_token(card_id)),
+            is_banned: Arc::new(move |card_id: &str| bans.is_banned(card_id)),
+        },
+        now: Arc::new(now_ms),
+        redemption: None,
+    });
+    Arc::new(App { db, ..app })
+}
+
+#[tokio::test]
+async fn r1310004_practice_takes_cards_the_account_does_not_own() {
+    let (app, token) = authed_with(granting_app().await).await;
+    // A becomes active again as a new account does, owning the starter cards alone (R1310000).
+    store!(app, |t| t.profiles_set_status(A, ProfileStatus::Pending));
+    store!(app, |t| t.profiles_set_status(A, ProfileStatus::Active));
+    let owned: Vec<String> = store!(app, |t| t.collection_get(A))
+        .into_iter()
+        .filter(|entry| entry.quantity > 0)
+        .map(|entry| entry.card_id)
+        .collect();
+    assert!(!owned.is_empty() && owned.iter().all(|id| STARTER_CARDS.contains(&id.as_str())));
+    // A deck of collectable cards A does not own, none of them a starter: practice reads no
+    // collection (§14.12), so the seed is issued and the game pays.
+    let size = usize::try_from(jackioh_engine::config::DECK_SIZE).expect("a deck size");
+    let cards: Vec<String> = app
+        .catalog
+        .card_ids
+        .iter()
+        .filter(|id| {
+            !app.catalog.is_token(id)
+                && !app.catalog.is_banned(id)
+                && app
+                    .catalog
+                    .defs
+                    .get(*id)
+                    .is_some_and(|def| jackioh_engine::set_ships(def.set))
+                && !owned.contains(id)
+        })
+        .take(size)
+        .cloned()
+        .collect();
+    assert_eq!(cards.len(), size);
+    let (status, _, body) = call(
+        &app,
+        "POST",
+        "/api/practice/seeds",
+        Some(&token),
+        json!({
+            "difficulty": "easy", "humanSeat": "p1", "deck": { "kind": "cards", "cards": cards },
+            "catalog": catalog_version(),
+        }),
+    )
+    .await;
+    assert_eq!(status, 201, "{body}");
+    let seed = body["seed"].as_str().expect("a seed").to_string();
+    let setup = kept_setup(&app, &seed).await;
     let (log, _, _) = play(&seed, &setup, Human::Concede);
     let xp = game_xp(GameMode::Practice, human_actions(&log), false);
     assert_eq!(
@@ -671,8 +751,8 @@ async fn r1303003_a_refused_claim_leaves_no_board() {
 
 #[tokio::test]
 async fn nothing_is_issued_or_paid_while_the_economy_is_off() {
-    let (app, token) = authed_with(built_app().await).await;
-    assert!(!app.economy_live, "the build's ECONOMY_LIVE is off");
+    // The economy switched off (§14.12), as production ran until launch (R1310000).
+    let (app, token) = authed_with(economy_app(false).await).await;
     let (status, _, _) = call(
         &app,
         "POST",

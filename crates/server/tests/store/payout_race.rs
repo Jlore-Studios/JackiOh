@@ -24,7 +24,9 @@
 
 use jackioh_engine::PlayerId;
 use jackioh_engine::wire::{SHIPPED_SETS, newest_shipped_set};
-use jackioh_server::config::{SET_TRACK_FIRST_LEVEL, SET_TRACK_UNLOCK_LEVEL};
+use jackioh_server::config::{
+    SET_TRACK_FIRST_LEVEL, SET_TRACK_UNLOCK_LEVEL, SET_TRACK_XP_PER_LEVEL, XP_PER_ACTION,
+};
 use jackioh_server::db::store::{Db, Profile, ProfileCreateInput};
 use jackioh_server::economy::math::total_xp_for_level;
 use jackioh_server::economy::quests::GameTally;
@@ -108,15 +110,19 @@ async fn suppress_quests(harness: &StoreHarness, profile: &Profile, at: i64) {
         .unwrap_or_else(|error| panic!("{}: commit: {error}", harness.name));
 }
 
-/// One finished ladder game for the account: a 40-action win, so [`game_xp`] is exactly the XP of
-/// one level step.
+/// The actions of one finished ladder loss whose [`game_xp`] is exactly the XP of one level step. A
+/// win cannot be: its bonus alone (`XP_WIN_BONUS`) passes a step.
+const STEP_ACTIONS: i64 = (SET_TRACK_XP_PER_LEVEL / XP_PER_ACTION) as i64;
+
+/// One finished ladder game for the account: a loss of [`STEP_ACTIONS`] actions, so [`game_xp`] is
+/// exactly the XP of one level step.
 fn summary(profile_id: &str, match_id: &str, at: i64) -> GameSummary {
     GameSummary {
         mode: GameMode::Ladder,
         profile_id: profile_id.to_string(),
         player: PlayerId::P1,
-        won: Some(true),
-        actions: 40,
+        won: Some(false),
+        actions: STEP_ACTIONS,
         match_id: match_id.to_string(),
         at,
         bot: false,
@@ -146,7 +152,7 @@ fn is_race(reference: &Option<String>) -> bool {
 /// Two overlapping payouts that each cross the same level pay it once: the track ends at its XP's
 /// level, and the level's reward is in the ledger exactly once.
 async fn overlapping_payouts_pay_each_level_once(harness: &StoreHarness) {
-    let step = game_xp(GameMode::Ladder, 40, true);
+    let step = game_xp(GameMode::Ladder, STEP_ACTIONS, false);
     assert_eq!(
         step,
         total_xp_for_level(2) - total_xp_for_level(1),
@@ -267,7 +273,7 @@ async fn overlapping_payouts_pay_each_level_once(harness: &StoreHarness) {
 /// unlocks the next one. Every reached level pays once, and every track's level is its XP's.
 /// Without the lock both payouts read the same stale tracks and both unlock and pay the same set.
 async fn overlapping_payouts_unlock_one_set_once(harness: &StoreHarness) {
-    let step = game_xp(GameMode::Ladder, 40, true);
+    let step = game_xp(GameMode::Ladder, STEP_ACTIONS, false);
     let seed_xp = total_xp_for_level(SET_TRACK_UNLOCK_LEVEL) - step;
     let seed_level = track_level(seed_xp);
     assert_eq!(

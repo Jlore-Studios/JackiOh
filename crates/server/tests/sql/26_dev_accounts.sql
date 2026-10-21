@@ -24,7 +24,7 @@ end $$;
 rollback;
 
 \echo '=== R1300001: since going live (R1310001) a new catalog version grants nobody, dev account or not ==='
--- R1300001's pass-over is moot since 0048 dropped the stamp's grant: no account is granted a new
+-- R1300001's pass-over is moot since 0050 dropped the stamp's grant: no account is granted a new
 -- version's cards, so what a dev account cleared (R1300000) stays cleared whether or not the stamp
 -- is handed the dev accounts. The activation grant (R111) treats a dev account like anyone.
 begin;

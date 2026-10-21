@@ -6,7 +6,7 @@
 // against that same shape, nothing sent and nothing stored. A co-op replay's file is another
 // shape, `duos/download.ts`'s (R1242000).
 
-import { CATALOG_VERSION } from "@jackioh/cards";
+import { CATALOG_VERSION, currentVersionName } from "@jackioh/cards";
 import type { ReplayStep } from "@jackioh/engine";
 
 import type { OnlineReplayListing } from "../net/api.ts";
@@ -18,7 +18,9 @@ import { createStepCache, loadClip } from "./steps.ts";
 
 /** What a reader of the file checks first: what it is, and which shape of it. */
 export const REPLAY_JSON_FORMAT = "jackioh-replay";
-export const REPLAY_JSON_VERSION = 1;
+export const REPLAY_JSON_VERSION = 2;
+/** R1371000: the version a file written before the version retcon carries; its catalog is an old name. */
+export const REPLAY_JSON_UNMARKED_VERSION = 1;
 
 /** The game a file is of: a practice game by its number on the device, an online match by its id. */
 export type ReplayJsonGame = Pick<PracticeReplaySummary, "endedAt" | "result" | "turns" | "steps" | "portraits"> &
@@ -111,8 +113,10 @@ export async function readReplayJsonFile(file: File): Promise<Record<string, unk
  * catalog gate is what makes that enough, and the page never enforces rules on a view (rule 7).
  */
 export function replayStepsOf(json: Record<string, unknown>): ReplayStep[] {
-  if (json.format !== REPLAY_JSON_FORMAT || json.version !== REPLAY_JSON_VERSION) throw new ReplayFailure("error", UNSUPPORTED);
-  if (json.catalogVersion !== CATALOG_VERSION) throw new ReplayFailure("error", OTHER_PATCH);
+  const unmarked = json.version === REPLAY_JSON_UNMARKED_VERSION;
+  if (json.format !== REPLAY_JSON_FORMAT || (json.version !== REPLAY_JSON_VERSION && !unmarked)) throw new ReplayFailure("error", UNSUPPORTED);
+  const played = unmarked && typeof json.catalogVersion === "string" ? currentVersionName(json.catalogVersion) : json.catalogVersion;
+  if (played !== CATALOG_VERSION) throw new ReplayFailure("error", OTHER_PATCH);
   const { steps } = json;
   if (!Array.isArray(steps) || steps.length === 0) throw new ReplayFailure("error", NOT_A_REPLAY);
   if (steps.length > REPLAY_JSON_MAX_STEPS) throw new ReplayFailure("error", TOO_BIG);

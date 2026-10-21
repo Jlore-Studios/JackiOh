@@ -1,0 +1,9 @@
+{
+  "seed": 9388,
+  "catalogVersion": "v0.3.1",
+  "decks": [
+    ["meditative-092", "meditative-060", "classicplus-061", "meditative-059", "meditative-079", "classic-058", "classic-049", "classicplus-053", "core-042", "classic-081", "meditative-017", "classicplus-037", "classic-014", "classic-054", "classic-045", "classic-071", "classic-065", "meditative-032", "classic-003", "meditative-094"],
+    ["classicplus-017", "classic-083", "meditative-064", "classic-088", "meditative-091", "meditative-023", "core-010", "meditativeplus-017", "classicplus-005", "classicplus-011", "meditative-001", "classic-050", "core-015", "core-044", "classic-001", "classic-089", "meditative-065", "meditativeplus-018", "core-070", "core-016"]
+  ],
+  "found": "The plain fuzz wave's fourth quarter (seeds 7501-10000, the daily run's fuzz 4/4) at d81d56fc2 (#1216): I2 fired 74 actions in: c51 (meditative-091-1, p1's) declared attack number 2 on turn 19. The autopilot (R1183002) played Windfurious Prime, which prints Windfury, and attacked with it twice inside the one action, where no state between actions held it on the field (R636). Fixed by #1316, proven by invariants.rs's r636_r1183002_a_windfury_card_from_the_hand_that_enters_and_declares_twice_in_one_action_is_one_legal_windfury_turn. The decks are decks_for_seed(9388) over the 396-card pool of catalog.json at d81d56fc2 (v0.3.1)."
+}

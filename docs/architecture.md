@@ -708,7 +708,8 @@ step that is not yet implemented says which BUILD task delivers it.
    `0039_duos.sql` → `0040_moderation_switch_grant.sql` → `0041_card_totals.sql` →
    `0042_match_checkpoints.sql` → `0043_meditative_plus_set.sql` → `0044_deck_cosmetics.sql` →
    `0045_economy.sql` → `0046_dev_accounts.sql` → `0047_practice_seeds.sql` →
-   `0048_going_live.sql` — and records them in
+   `0048_game_record_builds.sql` → `0049_version_retcon.sql` → `0050_going_live.sql` — and records
+   them in
    `app.migrations`. Expected result: 63 tables in `public`, all with RLS enabled, plus the private
    `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
@@ -718,7 +719,7 @@ step that is not yet implemented says which BUILD task delivers it.
    the server-only `game_records` (R376); `stats-cards` reads it and
    `stats-import` loads an AI development run into it (R377, R378). Patch v0.2.0 adds three: 0015
    widens the `cards` tag check with Book, Pancake and AI (B2.4); 0016 granted every active account
-   the cards a new catalog version adds when `seed-catalog` stamps it (R481), until 0048 dropped
+   the cards a new catalog version adds when `seed-catalog` stamps it (R481), until 0050 dropped
    it; and 0017 adds the
    server-only `last_boards` and each match's starting boards for C+ #29 Portal to the Past (R417,
    R565). 0018 adds `player_settings` and its one write path, `app.merge_player_settings` (R633,
@@ -755,7 +756,7 @@ step that is not yet implemented says which BUILD task delivers it.
    on and no policy or grant; and the profile's foreign key to `auth.users` swapped for triggers, so
    inserting a person's profile still needs its auth user and deleting an auth user still deletes
    its profile, while a bot's profile needs none. It also limits the launch collection's backfill,
-   which every catalog stamp ran (0016) until 0048, to people's profiles, since a bot owns no collection
+   which every catalog stamp ran (0016) until 0050, to people's profiles, since a bot owns no collection
    (R1454). It creates no bot: the server sizes the pool only while `LADDER_BOTS` is `on` (§8.2).
    0033 adds `bots.trio` and `bots.trio_catalog_version`, the Conquest trio the pool deals each bot
    and the catalog it was dealt for (R641000); the table stays server-only and no row is backfilled.
@@ -786,13 +787,13 @@ step that is not yet implemented says which BUILD task delivers it.
    gains its `dev` mark (§14.10). 0047 adds the server-only
    `practice_seeds` (SPEC §14.8, #1303): the seeds a practice game's claim is checked and paid on,
    each once; a seed goes with an account that is deleted, and needs nothing else from the bring-up.
-   0048 is going live (SPEC §14.12, R1310000–R1310002): `app.settings.starter_cards`, empty until
+   0050 is going live (SPEC §14.12, R1310000–R1310002): `app.settings.starter_cards`, empty until
    step 6 writes it; the activation grant now grants one copy of each non-token card of the current
    version that list names (R111); the catalog stamp's grant (0016, 0032, 0046) is dropped, so a
    stamp grants nobody (R1310001); every economy ledger takes the reason `launch`; and, once per
    database (`app.settings.economy_launched`), every account keeps its cards while its Jlore, packs,
    tokens, counters, tracks, held quests and full arts are zeroed by offsetting `launch` rows
-   (ref `launch:0048`) and its quest schedule is cleared (R1310002). On a new project it zeroes
+   (ref `launch:0050`) and its quest schedule is cleared (R1310002). On a new project it zeroes
    nothing.
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations

@@ -197,11 +197,13 @@ function bearer(account: E2EAccount): Record<string, string> {
 }
 
 /** `GET path` as `account`, which must answer 200; yields the body. */
-function read<T>(account: E2EAccount, path: string): Cypress.Chainable<T> {
-  return cy.request<T>({ method: "GET", url: api(path), headers: bearer(account) }).then((response) => {
-    expect(response.status, `GET ${path}`).to.eq(200);
-    return response.body;
-  });
+function read<T extends object>(account: E2EAccount, path: string): Cypress.Chainable<T> {
+  return cy
+    .request<T>({ method: "GET", url: api(path), headers: bearer(account) })
+    .then((response) => {
+      expect(response.status, `GET ${path}`).to.eq(200);
+    })
+    .its("body");
 }
 
 function ownedIds(collection: CollectionBody): Set<string> {
@@ -262,7 +264,8 @@ function pressDevTool(testid: string, alias: string): Cypress.Chainable<unknown>
   return cy.wait(`@${alias}`).then((interception) => {
     expect(interception.response?.statusCode, `${testid}: the server's answer`).to.eq(200);
     cy.get(ts(DEV_TOOLS_STATUS), { timeout: timeouts.view }).should("have.text", DEV_TOOL_DONE);
-    return interception.response?.body as unknown;
+    // A callback that ran a command yields through a chain, never a bare value (Cypress refuses the mix).
+    return cy.wrap(interception.response?.body as unknown, { log: false });
   });
 }
 

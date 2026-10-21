@@ -207,8 +207,16 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0047_practice_seeds.sql"),
     ),
     (
-        "0048_going_live.sql",
-        include_str!("../../migrations/0048_going_live.sql"),
+        "0048_game_record_builds.sql",
+        include_str!("../../migrations/0048_game_record_builds.sql"),
+    ),
+    (
+        "0049_version_retcon.sql",
+        include_str!("../../migrations/0049_version_retcon.sql"),
+    ),
+    (
+        "0050_going_live.sql",
+        include_str!("../../migrations/0050_going_live.sql"),
     ),
 ];
 

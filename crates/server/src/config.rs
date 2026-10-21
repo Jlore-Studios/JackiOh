@@ -843,9 +843,10 @@ pub const PLAYER_SETTINGS_BYTES_MAX: usize = 4096;
 // Public card and player statistics (SPEC §9.11, R654).
 // ---------------------------------------------------------------------------------------------
 
-/// SPEC §11 R654: live ranked and unranked games (tutorial excluded) logged per patch before public
-/// stats flip from provisional (padded with AI development runs) to live-only figures.
-pub const PUBLIC_STATS_MIN_LIVE_GAMES: i64 = 1000;
+/// SPEC §11 R654, amended by R1367000: the live games a card's stats window logs before its public
+/// figures are live-only. The engine holds it, since the window function that applies it is the
+/// engine's (`jackioh_engine::wire::stats::window`), shared with `cargo jackioh stats` and `winrates`.
+pub use jackioh_engine::config::PUBLIC_STATS_MIN_LIVE_GAMES;
 
 /// SPEC §11 R654: minimum sample of games for a card row to display a win-rate percentage. Below it,
 /// the row displays "not enough games". Its played delta needs this many on each side, played and
@@ -2224,7 +2225,7 @@ pub const ECONOMY_LIVE: bool = true;
 /// §14.12, R1310000: the starter cards, what a new account owns on becoming active (R111): the
 /// cards of the three practice presets (`apps/web/src/practice/decks.ts`), so a new account can
 /// queue any of them. `seed-catalog` writes them to `app.settings.starter_cards`, which migration
-/// 0048's launch grant reads, and the in-memory store reads them here. Exported to
+/// 0050's launch grant reads, and the in-memory store reads them here. Exported to
 /// `serverConfig.ts`.
 pub const STARTER_CARDS: &[&str] = &[
     "core-001", "core-004", "core-005", "core-008", "core-009", "core-011", "core-012", "core-013",

@@ -1,11 +1,11 @@
--- A catalog that grows (migration 0016, R481; ended by 0048, R1310001). Runs after
+-- A catalog that grows (migration 0016, R481; ended by 0050, R1310001). Runs after
 -- 08_game_records.sql; profiles 1 and 2 are active by then and own CHECK 10's cards under 'core-1'.
 \set ON_ERROR_STOP on
 
 -- Same rules as 01-08: every check raises on failure and runs inside a rolled-back transaction.
 --
 -- Until going live, R481's trigger on the catalog stamp granted every active person each new
--- non-token card. 0048 dropped it (R1310001): a new set's cards come from its track and its packs.
+-- non-token card. 0050 dropped it (R1310001): a new set's cards come from its track and its packs.
 -- So the stamp below must grant nothing, though the new card is on the starter list, which the
 -- activation grant reads (R1310000): a grant that rode the stamp would have had a card to give.
 

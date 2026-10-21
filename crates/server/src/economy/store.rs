@@ -42,7 +42,7 @@ pub enum JloreReason {
     Track,
     PackPurchase,
     Dev,
-    /// Migration 0048's reset of every existing account's economy (R1310002); no server path
+    /// Migration 0050's reset of every existing account's economy (R1310002); no server path
     /// writes it.
     Launch,
 }
@@ -62,7 +62,7 @@ pub enum EconomyReason {
     TokenRedeem,
     ChaseShard,
     Dev,
-    /// Migration 0048's reset of every existing account's economy (R1310002); no server path
+    /// Migration 0050's reset of every existing account's economy (R1310002); no server path
     /// writes it.
     Launch,
 }

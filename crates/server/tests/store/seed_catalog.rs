@@ -814,7 +814,10 @@ mod r1310001_r1300001_db_a_new_version_grants_nobody {
             .expect("the tables are emptied");
         active_person(&admin, DEV).await;
         active_person(&admin, PLAYER).await;
-        assert!(STARTER_CARDS.contains(&NEW_CARD), "the new card is a starter card");
+        assert!(
+            STARTER_CARDS.contains(&NEW_CARD),
+            "the new card is a starter card"
+        );
 
         let mut entry = card(NEW_CARD);
         entry["tags"] = json!([]);
@@ -854,8 +857,14 @@ mod r1310001_r1300001_db_a_new_version_grants_nobody {
             (0, 0),
             "(the player's, the dev account's) grants of the new card"
         );
-        assert_eq!(starters, json!(STARTER_CARDS), "seed-catalog writes the starter cards");
-        assert_eq!(later, 1, "an account activated after the stamp is granted the starter card");
+        assert_eq!(
+            starters,
+            json!(STARTER_CARDS),
+            "seed-catalog writes the starter cards"
+        );
+        assert_eq!(
+            later, 1,
+            "an account activated after the stamp is granted the starter card"
+        );
     }
 }
-

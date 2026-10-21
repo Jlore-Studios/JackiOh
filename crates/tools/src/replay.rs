@@ -7,8 +7,9 @@
 //! dealt seats, R417 last boards, R678 Glitch boards); any other key (a browser's `state`, say) is
 //! ignored. A `catalogVersion` folds the game under that shipped catalog (R767000, `catalog_for` inside
 //! `with_shipped`, as `replay_open` does); one this build neither is nor carries exits 1 naming
-//! `earlier_patch` and prints no hash, and without it the game folds under this build's catalog. A
-//! co-op game, `{options, log}` (`DuosReplayInput`, pinned by `options.catalogVersion`), is folded by
+//! `earlier_patch` and prints no hash, and without it the game folds under this build's catalog. An
+//! input without the `versions` marker names its catalog as it was before the version retcon, and it
+//! is read through `patches/aliases.json` (R1371000). A co-op game, `{options, log}` (`DuosReplayInput`, pinned by `options.catalogVersion`), is folded by
 //! `duos_fold` and answers `{"hash": duos_hash, "refusedAt": index or null}`; its fold stops at the
 //! first refused action.
 //! The card scripts are registered first: folding without them would diverge from the browser
@@ -38,11 +39,14 @@ pub struct Args {}
 
 /// R767000: the shipped catalog `game` folds under, read off its `catalogVersion`: `None` (this
 /// build's) when it names none or this build's own version, the carried one when this build carries
-/// it, and an `earlier_patch` error, before anything is folded, for any other version.
-pub(crate) fn pinned_catalog(game: &Value) -> Result<Option<&'static ShippedCatalog>> {
+/// it, and an `earlier_patch` error, before anything is folded, for any other version. An input
+/// without the `versions` marker (`marked` false) names it as it was before the version retcon, and
+/// it is read through `patches/aliases.json` (R1371000).
+pub(crate) fn pinned_catalog(game: &Value, marked: bool) -> Result<Option<&'static ShippedCatalog>> {
     let version = match game.get("catalogVersion") {
         None | Some(Value::Null) => return Ok(None),
-        Some(Value::String(version)) => version,
+        Some(Value::String(version)) if marked => version.as_str(),
+        Some(Value::String(version)) => jackioh_cards::versions::current_version_name(version),
         Some(other) => bail!("catalogVersion {other} is not a string"),
     };
     let build = jackioh_cards::catalog_version();
@@ -58,7 +62,7 @@ pub(crate) fn pinned_catalog(game: &Value) -> Result<Option<&'static ShippedCata
 /// game is by `catalogVersion`, folded by `duos_fold`: `{"hash": duos_hash, "refusedAt": the index in
 /// `log` of the action the fold refused and stopped at, or null}`.
 fn duos_json(input: Value) -> Result<Value> {
-    let shipped = pinned_catalog(&input["options"])?;
+    let shipped = pinned_catalog(&input["options"], jackioh_cards::versions::is_marked(&input))?;
     let game: DuosReplayInput =
         serde_json::from_value(input).context("the input is not a co-op game {options, log}")?;
     let folded = with_shipped(shipped, || duos_fold(&game));
@@ -71,7 +75,7 @@ fn replay_json(input: Value) -> Result<Value> {
     if input.get("options").is_some() {
         return duos_json(input);
     }
-    let shipped = pinned_catalog(&input)?;
+    let shipped = pinned_catalog(&input, jackioh_cards::versions::is_marked(&input))?;
     let args: FoldArgs = serde_json::from_value(input).context("the input is not {seed, decks, log, …}")?;
     let folded = with_shipped(shipped, || with_custom_scripts(Rc::new(KitHost), || fold(&args)));
     Ok(json!({

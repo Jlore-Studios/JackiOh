@@ -18,7 +18,7 @@ import { useLoaded, usePatchSource, type Loaded } from "./context.tsx";
 import { faceShown, type CardDelta } from "./diff.ts";
 import { currentDef, nameMatches, newestFirst, patchCards, versionBefore, type PatchCards } from "./history.ts";
 import { PatchFace } from "./PatchFace.tsx";
-import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups, type Release } from "./releases.ts";
+import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups, technicalLines, type Release } from "./releases.ts";
 import type { Patch, PlayerNote } from "./source.ts";
 import { patchTestid } from "./testids.ts";
 
@@ -252,14 +252,35 @@ function PlayerNoteView({ note }: { note: PlayerNote | undefined }): ReactElemen
   );
 }
 
+/** R1369000: the lines players read of the technical log of a patch, the X they were logged on. */
+function TechnicalLog({ lines }: { lines: readonly string[] }): ReactElement | null {
+  if (lines.length === 0) return null;
+  return (
+    <div className="patch-note">
+      <section className="patch-note__section" data-testid={patchTestid.technicalLog}>
+        <h4 className="patch-note__heading">{t("Technical changes")}</h4>
+        <ul className="patch-note__lines">
+          {lines.map((line, at) => (
+            <li key={at}>{line}</li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+const NO_LINES: readonly string[] = [];
+
 function PatchEntry({
   patch,
   patches,
+  technical,
   initiallyOpen,
   onOpen,
 }: {
   patch: Patch;
   patches: readonly Patch[];
+  technical: readonly string[];
   initiallyOpen: boolean;
   onOpen: OpenCard;
 }): ReactElement {
@@ -280,6 +301,7 @@ function PatchEntry({
         </p>
       </header>
       <PlayerNoteView note={patch.player} />
+      <TechnicalLog lines={technical} />
       {patch.changes.length === 0 ? (
         <p className="patch__counts">{t("No card changed.")}</p>
       ) : (
@@ -318,6 +340,7 @@ function ReleaseBubble({
   release,
   group,
   patches,
+  technical,
   opened,
   initiallyOpen,
   onOpen,
@@ -325,6 +348,7 @@ function ReleaseBubble({
   release: Release;
   group: readonly Patch[];
   patches: readonly Patch[];
+  technical: ReadonlyMap<string, readonly string[]>;
   opened: ReadonlySet<string>;
   initiallyOpen: boolean;
   onOpen: OpenCard;
@@ -369,7 +393,13 @@ function ReleaseBubble({
             <ol className="patch-list">
               {group.map((patch) => (
                 <li key={patch.version}>
-                  <PatchEntry patch={patch} patches={patches} initiallyOpen={opened.has(patch.version)} onOpen={onOpen} />
+                  <PatchEntry
+                    patch={patch}
+                    patches={patches}
+                    technical={technical.get(patch.version) ?? NO_LINES}
+                    initiallyOpen={opened.has(patch.version)}
+                    onOpen={onOpen}
+                  />
                 </li>
               ))}
             </ol>
@@ -387,6 +417,9 @@ function PatchList({ patches, releases }: { patches: readonly Patch[]; releases:
   const defs: Loaded<CardDefs | null> = useLoaded(`defs:${newest?.version ?? ""}`, () =>
     newest === undefined ? Promise.resolve(null) : source.snapshot(newest.version),
   );
+  // The technical log is a patch's extra lines: until it loads, or if it fails, the page reads without them.
+  const log = useLoaded("technical", () => source.technical());
+  const technical = technicalLines(log.status === "ready" ? log.value : []);
   const opened = new Set(newestFirst(patches).slice(0, PATCHES_OPEN_ON_LOAD).map((patch) => patch.version));
   return (
     <CardDefsProvider defs={defs.status === "ready" ? (defs.value ?? NO_DEFS) : NO_DEFS}>
@@ -397,6 +430,7 @@ function PatchList({ patches, releases }: { patches: readonly Patch[]; releases:
               release={release}
               group={group}
               patches={patches}
+              technical={technical}
               opened={opened}
               initiallyOpen={at < RELEASES_OPEN_ON_LOAD}
               onOpen={setOpenId}

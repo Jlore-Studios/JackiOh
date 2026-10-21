@@ -19,8 +19,8 @@
 //!
 //! R1310000: before the stamp it writes the starter cards (`config::STARTER_CARDS`) to
 //! `app.settings.starter_cards`, which a new account's activation grant reads (R111, migration
-//! 0048), so the list has one source. The stamp grants no account anything (R1310001): migration
-//! 0048 dropped R481's grant, and with it the dev accounts R1300001 had the seed hand it.
+//! 0050), so the list has one source. The stamp grants no account anything (R1310001): migration
+//! 0050 dropped R481's grant, and with it the dev accounts R1300001 had the seed hand it.
 //! Surface contract: docs/v0.3.0/SURFACE.md §11.3.
 
 use anyhow::{Result, anyhow};
@@ -252,7 +252,7 @@ async fn write_catalog(
     .bind(serde_json::to_string(&cosmetics)?)
     .execute(&mut *tx)
     .await?;
-    // R1310000: the starter cards a new account's activation grant reads (migration 0048).
+    // R1310000: the starter cards a new account's activation grant reads (migration 0050).
     sqlx::query(
         "insert into app.settings (key, value) values ('starter_cards', $1::jsonb)
        on conflict (key) do update set value = excluded.value, updated_at = now()",

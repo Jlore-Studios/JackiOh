@@ -490,7 +490,7 @@ describe("R1141000 Open replay JSON", () => {
     const refused: [File, string][] = [
       [new File(["{ not json"], "replay.json"), "This file is not a JackiOh replay file."],
       [file({ format: "jackioh-deck" }), "This replay file uses an unsupported format."],
-      [file({ version: 2 }), "This replay file uses an unsupported format."],
+      [file({ version: 999 }), "This replay file uses an unsupported format."],
       [file({ catalogVersion: "v0.0.0" }), "This replay file is from another patch and cannot be opened here."],
       [file({ steps: gap }), "This file is not a JackiOh replay file."],
       [file({ steps: Array.from({ length: REPLAY_JSON_MAX_STEPS + 1 }, (_, step) => ({ step, turn: 0, view: {} })) }), "This replay file is too big to open."],
@@ -545,7 +545,7 @@ describe("R1141000 Open replay JSON", () => {
       new File([JSON.stringify({ ...base, ...over })], "jackioh-duos-replay.json");
     const refused: [File, string][] = [
       [new File(["{ not json"], "jackioh-duos-replay.json"), "This file is not a JackiOh replay file."],
-      [file({ version: 2 }), "This replay file uses an unsupported format."],
+      [file({ version: 999 }), "This replay file uses an unsupported format."],
       [file({ catalogVersion: "v0.0.0" }), "This replay file is from another patch and cannot be opened here."],
       [file({ seat: "p1" }), "This file is not a JackiOh replay file."],
       [file({ steps: base.steps.filter((_, index) => index !== 1) }), "This file is not a JackiOh replay file."],

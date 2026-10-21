@@ -361,9 +361,9 @@ What is left is the dashboards' half (#256): set the Supabase Site URL to `https
   see the Dev tools panel on `/account`. A malformed id refuses the boot, and the deploy's log names
   it. Locally, the same line in `crates/server/.env`.
 - **Going live (SPEC §14.12, issue #1310):** the merge that turns `ECONOMY_LIVE` on is a release of
-  its own, done once. Render's `release` applies migration `0048_going_live.sql`, and then
+  its own, done once. Render's `release` applies migration `0050_going_live.sql`, and then
   `seed-catalog` writes `app.settings.starter_cards` from `STARTER_CARDS`, before the new instance
-  listens. 0048 resets the economy once per database: every account keeps its cards, and its Jlore,
+  listens. 0050 resets the economy once per database: every account keeps its cards, and its Jlore,
   packs, tokens, counters, tracks, quests and full arts go to zero with `launch` rows (R1310002).
   Nothing but a backup brings those back, so take one first if the project keeps them.
   `ECONOMY_LIVE` is compiled into both halves (the server's `config.rs`, the client's

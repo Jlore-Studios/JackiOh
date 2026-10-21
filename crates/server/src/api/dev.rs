@@ -326,7 +326,15 @@ pub async fn fill_bar(app: &Arc<App>, req: Req) -> ApiResult {
         written += 1;
     }
     if counter == Counter::CardTokenBar {
-        grant_dev_item(&mut tx, &profile.id, InventoryItem::CardToken, String::new(), pays, at).await?;
+        grant_dev_item(
+            &mut tx,
+            &profile.id,
+            InventoryItem::CardToken,
+            String::new(),
+            pays,
+            at,
+        )
+        .await?;
         written += 1;
     } else {
         let cycle = bar_before(&counters, Counter::CosmeticTokenCycle);

@@ -41,25 +41,30 @@ HUMAN_LABELS = frozenset({config_mod.LABEL_HUMAN, config_mod.LABEL_HUMAN_REQUIRE
 #: The bot's queue labels `human` takes off: people do the issue now. A run that holds it
 #: (`bot:working`) or a pull request it opened keep theirs.
 QUEUED = frozenset({config_mod.LABEL_BUILD, config_mod.LABEL_NEEDS_PLAN})
-#: The type label each title prefix names (`docs/issues-and-patches.md`, Titles).
+#: The type label each title prefix names (`docs/issues-and-patches.md`, Titles). A `Patch: `
+#: title names none: what a change is, the classifier says on its pull request (`kind:*`, #1370).
 PREFIX_TYPES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"^Patch v\d", re.I), "patch"),
     (re.compile(r"^v\d+\.\d+\.0\b"), "major version"),
     (re.compile(r"^Night bot:", re.I), "night bot"),
     (re.compile(r"^(?:Architecture|CI):", re.I), "architecture"),
 )
-#: A title that already follows the convention.
-CONVENTION = re.compile(
-    r"^(?:Patch v\d+\.\d+\.(?:\d+|X|Y)[a-z]?(?: \(part \d+ of \d+\))?"
-    r"|v\d+\.\d+\.0(?: \(part \d+ of \d+\))?"
-    r"|Night bot|CI|Architecture): \S")
+#: A part of a change split over several issues: `(part n of m)`.
+_PART_OF = r"(?: \(part \d+ of \d+\))?"
+#: A title that follows the convention (#1360): `Patch: <what it does>`, a shipped card change's
+#: `Patch vX.Y.Z[letter]: …`, which `patches-ship.yml` gives it, and a part's `(part n of m)` after
+#: either. The older prefixes (`Patch v0.3.X`, `Patch v0.3.Y`, `vX.Y.0`, `Night bot`, `CI` and
+#: `Architecture`) stopped passing once the title retcon (#1372) had retitled every thread.
+CONVENTION = re.compile(rf"^Patch(?: v\d+\.\d+\.\d+[a-z]?)?{_PART_OF}: \S")
 #: The titles tools give the pull requests they open, which the title check passes as they are
 #: (`pull_title_ok`): `patches ship: v0.3.1` (patches-ship.yml; several versions joined by ", "),
+#: `patches log: abc1234..def5678` (promote-production.yml's technical log, #1370),
 #: `Promote main to production: 28 commit(s) up to 6d44be2` (scripts/promote-production.sh, into
 #: `production`) and a training lane's promotion, `AI gen 8 (improve): …` (training/improve.md, learn.yml and
 #: unban.md). The bots' own pull requests take a title that follows the convention (`pull_title`).
 AUTOMATED_PULL = re.compile(
     r"^(?:patches ship: v\d+\.\d+\.\d+[a-z]?(?:, v\d+\.\d+\.\d+[a-z]?)*$"
+    r"|patches log: [0-9a-f]{7,40}\.\.[0-9a-f]{7,40}$"
     r"|Promote main to production: \d+ commit\(s\) up to [0-9a-f]{7,40}$"
     r"|AI gen \d+ \((?:improve|unban|learn)\): \S)")
 #: GitHub's Revert button titles its pull request `Revert "<the reverted pull request's title>"`.
