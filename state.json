@@ -21431,7 +21431,7 @@
       ]
     },
     "gpt": {
-      "refused_until": "2026-10-16T23:52:51Z",
+      "refused_until": "2026-10-27T18:45:27Z",
       "spent": [
         {
           "at": "2026-10-02T21:05:44Z",
@@ -21552,6 +21552,10 @@
         {
           "at": "2026-10-21T12:52:11Z",
           "minutes": 8.6
+        },
+        {
+          "at": "2026-10-21T13:33:53Z",
+          "minutes": 38.2
         }
       ],
       "tokens_spent": [
@@ -21666,13 +21670,20 @@
           "cost": 0.0,
           "input": 4534231,
           "output": 24696
+        },
+        {
+          "at": "2026-10-21T13:33:53Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 11921254,
+          "output": 31461
         }
       ],
       "usage": {
-        "observed_at": "2026-10-21T12:52:11Z",
+        "observed_at": "2026-10-21T13:33:53Z",
         "seven_day": {
           "resets_at": "2026-10-27T18:45:27Z",
-          "utilization": 0.85
+          "utilization": 0.96
         },
         "status": "allowed"
       }
