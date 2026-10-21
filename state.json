@@ -9992,9 +9992,12 @@
         "sha": "b9d95e7d2f545d5193880012bbdc72d6061a7ca2"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-21T13:56:35Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1505,
       "kind": "review",
       "pending_request": false,
