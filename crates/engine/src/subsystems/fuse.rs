@@ -1252,6 +1252,8 @@ fn combine_objects(records: &[Script]) -> Script {
         start_of_opponent_turn: hooks(|s| s.start_of_opponent_turn.clone(), "startOfOpponentTurn"),
         turn_hook_extra: None,
         cry_death_extra: None,
+        // R1487000, R767000: a fusion's text works face-down when any ingredient's did.
+        live_face_down: records.iter().any(|s| s.live_face_down),
     }
 }
 

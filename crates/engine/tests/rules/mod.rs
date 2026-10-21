@@ -116,6 +116,7 @@ pub mod enters_hand;
 pub mod equip;
 pub mod exile_on_damage;
 pub mod extra_turns;
+pub mod face_down_text;
 pub mod faces;
 pub mod feng_shui;
 pub mod fixtures;

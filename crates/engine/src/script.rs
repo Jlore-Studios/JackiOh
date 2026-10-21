@@ -1075,6 +1075,11 @@ pub struct Script {
     /// additional times" — N now, asked as a permanent's Cry runs for its controller and as the cards a
     /// state check collects have left the field. A PURE READ; the highest holds.
     pub cry_death_extra: Option<TriggerExtraHook>,
+    // ---- R1487000 ----
+    /// R1487000, R767000: the card's lasting text works while it is set face-down, as R403's first
+    /// reading had it. Only a kept script sets it (C #88 Siphon Squad's v0.3.7b), so its replays fold
+    /// as they played; every other card's sleeps there (`preview::lasting_text_dormant`).
+    pub live_face_down: bool,
 }
 
 impl Script {

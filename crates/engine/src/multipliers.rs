@@ -35,8 +35,8 @@ impl Multiplied {
 }
 
 /// R820: the extra runs `player`'s hooks of `kind` get now — the highest any card acting on their side
-/// of the field gives (the top of each unit pile, then each backrow card that is not face-down), or
-/// `TRIGGER_EXTRA_NONE` when none does.
+/// of the field gives (the top of each unit pile, then each backrow card that is not face-down,
+/// R1487000), or `TRIGGER_EXTRA_NONE` when none does.
 pub fn extra_runs(state: &GameState, player: PlayerId, kind: Multiplied) -> i32 {
     let mut cards = crate::zones::active_units_of(state, player);
     for slot in crate::zones::slots_of(player, Row::Backrow) {
@@ -46,7 +46,8 @@ pub fn extra_runs(state: &GameState, player: PlayerId, kind: Multiplied) -> i32 
     }
     let mut highest = TRIGGER_EXTRA_NONE;
     for card in cards {
-        if crate::preview::is_face_down(state, card) {
+        // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+        if crate::preview::lasting_text_dormant(state, card) {
             continue;
         }
         let script = crate::scripts::script_of(state, card);

@@ -425,6 +425,10 @@ pub fn granted_combo_live(state: &GameState, player: PlayerId) -> bool {
         return false;
     }
     let granted = permanents_held_by(state, player).iter().any(|held| {
+        // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+        if crate::preview::lasting_text_dormant(state, held) {
+            return false;
+        }
         match crate::scripts::flags_of(state, held).quickstriker {
             Some(FlagOrCount::Flag(flag)) => flag,
             Some(FlagOrCount::Count(count)) => count > 0,
@@ -520,8 +524,8 @@ pub fn fusable_permanents_of(state: &GameState, player: PlayerId, except: Option
 
 /// Whether any card acting for this player carries the picked static flag — the active units and
 /// the face-up backrow tops, `damage.rs`'s `acting_texts_of` (a face-down Trap's text is in nobody's
-/// use until it fires, R33). What the Pareto judge and the emote gate ask (MD-D28, MD-D29, R1125,
-/// R1127).
+/// use until it fires, R33, or is revealed, R1487000). What the Pareto judge and the emote gate ask
+/// (MD-D28, MD-D29, R1125, R1127).
 pub fn acting_with_flag(state: &GameState, player: PlayerId, pick: fn(&StaticFlags) -> Option<bool>) -> bool {
     crate::damage::acting_texts_of(state, player)
         .iter()

@@ -63,7 +63,9 @@ pub(crate) fn run_arrival_hooks(sink: &mut EngineSink, instance: &CardInstance) 
 /// #75: a backrow card that turns an empty-library draw into a Rush Token card.
 fn infinite_reserves_source(sink: &EngineSink, player: PlayerId) -> Option<CardInstance> {
     for slot in crate::zones::slots_of(player, Row::Backrow) {
+        // R1487000: a face-down card's text sleeps until it is revealed or face-up.
         if let Some(card) = crate::zones::card_at(sink.state, slot)
+            && !crate::preview::lasting_text_dormant(sink.state, card)
             && crate::scripts::script_of(sink.state, card)
                 .flags()
                 .infinite_reserves
@@ -303,14 +305,18 @@ fn count_draw(state: &mut GameState, player: PlayerId) -> Option<i32> {
 }
 
 /// The cards whose static text is in force: the top of each unit pile and each backrow card, both
-/// sides — the cards an aura is read from (§10.4 layer 5). A Vanilla card carries no text (§6.3).
+/// sides — the cards an aura is read from (§10.4 layer 5). A Vanilla card carries no text (§6.3), and
+/// a face-down card's sleeps (R1487000).
 fn text_on_field(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     let mut out: Vec<&CardInstance> = Vec::new();
     for unit in crate::zones::active_units_of(state, player) {
         out.push(unit);
     }
     for slot in crate::zones::slots_of(player, Row::Backrow) {
-        if let Some(card) = crate::zones::card_at(state, slot) {
+        // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+        if let Some(card) = crate::zones::card_at(state, slot)
+            && !crate::preview::lasting_text_dormant(state, card)
+        {
             out.push(card);
         }
     }

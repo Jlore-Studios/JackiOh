@@ -52,7 +52,7 @@ pub struct PlayPayment {
 /// E11: every permission the player has now — from each card acting on their side of the field (the
 /// top of a pile, a backrow card) whose running face grants one, in lane order, units first. A Vanilla
 /// card grants nothing (`script_of`, R115); a card dormant under a Stack pile is not on the field for
-/// effects (§3.2, R13).
+/// effects (§3.2, R13), and a face-down card's text sleeps (R1487000).
 pub fn graveyard_grants_of(state: &GameState, player: PlayerId) -> Vec<GraveyardGrant> {
     let mut out: Vec<GraveyardGrant> = Vec::new();
     for row in [Row::Units, Row::Backrow] {
@@ -60,7 +60,8 @@ pub fn graveyard_grants_of(state: &GameState, player: PlayerId) -> Vec<Graveyard
             let Some(source) = crate::zones::card_at(state, slot) else {
                 continue;
             };
-            if source.controller != player {
+            // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+            if source.controller != player || crate::preview::lasting_text_dormant(state, source) {
                 continue;
             }
             let script = crate::scripts::script_of(state, source);
