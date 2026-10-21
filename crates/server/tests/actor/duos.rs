@@ -31,13 +31,13 @@ use tokio::time::Instant;
 use jackioh_engine::config::{
     DECK_SIZE, DUOS_OWN_HEALTH, DUOS_PASS_COST, DUOS_POOL_HEALTH, Difficulty, UNIT_ZONES, duos_ai_team,
 };
-use jackioh_engine::wire::DuosSeat;
+use jackioh_engine::wire::{DuosSeat, newest_shipped_set};
 use jackioh_server::actor::guard::FLOOD_WINDOW_MS;
 use jackioh_server::actor::protocol::SERVER_NONCE_PREFIX;
 use jackioh_server::actor::ws_server::{Socket, SocketFrame, WS_CLOSE, WS_SUBPROTOCOL, bearer_protocol};
 use jackioh_server::app::{App, now_ms, router};
 use jackioh_server::config::{
-    DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_ROUND_CLOCK_MS,
+    DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_ROUND_CLOCK_MS, JLORE_COOP_LOSS,
     MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MS, MATCH_SERVER_ACTION_RETRY_MS,
     MAX_SAVED_DECKS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS, REJECTION_ALERT_THRESHOLD,
     REJECTION_ALERT_WINDOW_MS, REMATCH_OFFER_TTL_MS,
@@ -45,6 +45,8 @@ use jackioh_server::config::{
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::duos::registry;
 use jackioh_server::duos::store::DuosActionRow;
+use jackioh_server::economy::rewards::{GameMode, game_xp};
+use jackioh_server::economy::store::JloreReason;
 
 use super::ws_server::encode_query;
 use crate::support::deps::{add_user, call, empty_test_app, record_logs};
@@ -1658,6 +1660,34 @@ mod b40_b42_the_log_the_replay_and_the_end {
         let last = steps.last().expect("the replay holds the end");
         assert_eq!(last["result"]["reason"], "concede", "{last}");
         assert_eq!(last["seat"], "a1");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1502000_a_finished_coop_game_pays_both_people() {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        h.concede_both(&a1, &a2).await;
+
+        for who in [&h.host, &h.guest] {
+            let mut t = h.app.db.begin(None).await.expect("a transaction");
+            let ledger = t.economy_ledger_get(&who.id).await.expect("the ledger");
+            let tracks = t.economy_tracks_get(&who.id).await.expect("the tracks");
+            t.commit().await.expect("the commit");
+            let paid: Vec<i64> = ledger
+                .jlore
+                .iter()
+                .filter(|grant| grant.reason == JloreReason::Game)
+                .map(|grant| grant.delta)
+                .collect();
+            assert_eq!(paid, vec![i64::from(JLORE_COOP_LOSS)], "{}", who.name);
+            // The concede is each person's one move.
+            let newest = tracks
+                .iter()
+                .find(|track| track.set_id == newest_shipped_set().as_str())
+                .unwrap_or_else(|| panic!("{} has no newest track: {tracks:?}", who.name));
+            assert_eq!(newest.xp, game_xp(GameMode::Coop, 1, false), "{}", who.name);
+        }
     }
 
     #[tokio::test(start_paused = true)]

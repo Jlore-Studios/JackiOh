@@ -113,6 +113,11 @@ async function press(id: string): Promise<void> {
   await flush();
 }
 
+async function key(init: KeyboardEventInit): Promise<void> {
+  fireEvent.keyDown(window, init);
+  await flush();
+}
+
 async function jump(index: number): Promise<void> {
   fireEvent.change(screen.getByTestId(replayTestid.scrubber), { target: { value: String(index) } });
   await flush();
@@ -218,6 +223,64 @@ describe("the co-op replay screen", () => {
     expect(screen.getByTestId(replayTestid.scrubber)).toHaveValue("5");
     await jump(0);
     expect(shownStep()).toBe(0);
+  });
+
+  it("B41 the arrow keys move a step and shift+arrow a round", async () => {
+    serve();
+    await open();
+    await key({ key: "ArrowRight" });
+    expect(shownStep()).toBe(1);
+    await key({ key: "ArrowRight" });
+    expect(shownStep()).toBe(2);
+    await key({ key: "ArrowLeft" });
+    expect(shownStep()).toBe(1);
+    await key({ key: "ArrowRight", shiftKey: true });
+    expect(shownStep(), "the first step of the next round").toBe(4);
+    await key({ key: "ArrowRight", shiftKey: true });
+    expect(shownStep()).toBe(6);
+    await key({ key: "ArrowLeft", shiftKey: true });
+    expect(shownStep()).toBe(4);
+    await key({ key: "ArrowLeft", shiftKey: true });
+    expect(shownStep()).toBe(1);
+    await key({ key: "ArrowLeft", shiftKey: true });
+    expect(shownStep()).toBe(0);
+    await key({ key: "ArrowLeft" });
+    expect(shownStep(), "at the start a key goes nowhere").toBe(0);
+    await jump(LAST);
+    await key({ key: "ArrowRight" });
+    await key({ key: "ArrowRight", shiftKey: true });
+    expect(shownStep(), "at the end a key goes nowhere").toBe(LAST);
+  });
+
+  it("B41 the player leaves a key to the control that has it, and to the browser's own shortcuts", async () => {
+    serve();
+    await open();
+    // The scrubber moves itself with the arrows; the player does not move it twice.
+    fireEvent.keyDown(screen.getByTestId(replayTestid.scrubber), { key: "ArrowRight" });
+    await flush();
+    expect(shownStep()).toBe(0);
+    for (const modifier of [{ altKey: true }, { ctrlKey: true }, { metaKey: true }]) {
+      await key({ key: "ArrowRight", ...modifier });
+      expect(shownStep(), JSON.stringify(modifier)).toBe(0);
+    }
+    await key({ key: "ArrowUp" });
+    expect(shownStep()).toBe(0);
+  });
+
+  it("B41 a move that remounts the board gives the pressed control the focus again", async () => {
+    serve();
+    await open();
+    await press(replayTestid.forwardStep);
+    expect(shownStep()).toBe(1);
+    const forward = screen.getByTestId(replayTestid.backStep);
+    forward.focus();
+    expect(document.activeElement).toBe(forward);
+    await press(replayTestid.backStep);
+    expect(shownStep()).toBe(0);
+    // The toolbar sits outside the remounted board, so the button is the same element: the point
+    // is only that focus is on the pressed control after the move.
+    expect(forward).toBe(screen.getByTestId(replayTestid.backStep));
+    expect(document.activeElement).toBe(screen.getByTestId(replayTestid.backStep));
   });
 
   it("B41 play advances one step per gap and stops at the last step", async () => {

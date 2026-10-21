@@ -12,6 +12,7 @@
 //! refusal's code is read wherever the body carries it (`code_is`).
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde_json::{Value, json};
 
@@ -21,12 +22,13 @@ use jackioh_server::api::queue::try_pair;
 use jackioh_server::api::rematch::STAKE_NORMAL;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
-    BOT_FALLBACK_MAX_SECONDS, CODE_ALPHABET, DUOS_ROOM_TTL_MS, MATCH_ACTION_RETENTION_DAYS, MATCH_CEILING_MS,
-    MAX_OPEN_ROOMS_PER_HOST, MAX_SAVED_DECKS, REPLAY_REQUESTS_PER_MINUTE, ROOM_CODE_LENGTH,
+    BOT_FALLBACK_MAX_SECONDS, CODE_ALPHABET, DUOS_ROOM_TTL_MS, JLORE_COOP_LOSS, MATCH_ACTION_RETENTION_DAYS,
+    MATCH_CEILING_MS, MAX_OPEN_ROOMS_PER_HOST, MAX_SAVED_DECKS, REPLAY_REQUESTS_PER_MINUTE, ROOM_CODE_LENGTH,
 };
 use jackioh_server::db::store::{BotDeck, CollectionEntry, NewBot};
 use jackioh_server::duos::registry;
 use jackioh_server::duos::store::{DuosActionRow, DuosMatch, DuosRoom};
+use jackioh_server::economy::store::JloreReason;
 
 use crate::support::deps::{TestAppOptions, add_user, call, empty_test_app, test_app_with};
 use crate::support::store::{advance, fake, store, uuid};
@@ -911,6 +913,8 @@ mod retention {
 
 mod room_privacy {
     use super::*;
+    use jackioh_server::db::fake::{CallOutcome, FakeTables};
+    use jackioh_server::db::store::BlockRow;
 
     async fn block(app: &Arc<App>, blocker: &Account, blocked: &Account) {
         store!(app, t => t.blocks_add(&blocker.id, &blocked.id, now_ms()).await.expect("blocks.add"));
@@ -941,6 +945,71 @@ mod room_privacy {
 
         // Anyone else, and the pair once unblocked, still may.
         assert_eq!(get_room(&t.app, &t.third, &code).await.0, 200);
+        let (status, body) = join(&t.app, &t.guest, &code).await;
+        assert_eq!(status, 200, "{body}");
+    }
+
+    /// §13.9: a block made after the join read the room, as its claim runs, either way, refuses
+    /// the join as an unknown code is refused; no match starts and the room stays open.
+    #[tokio::test]
+    async fn a_block_made_inside_the_join_window_refuses_the_join_as_an_unknown_code() {
+        let t = three().await;
+        let code = room(&t.app, &t.host).await;
+        let (_, unknown_join) = join(&t.app, &t.guest, "ZZZZZZ").await;
+
+        for (blocker, blocked) in [(&t.host, &t.guest), (&t.guest, &t.host)] {
+            let (blocker_id, blocked_id) = (blocker.id.clone(), blocked.id.clone());
+            let second_read = Arc::new(AtomicBool::new(false));
+            let saw_second_read = second_read.clone();
+            fake(&t.app).lock().await.before_call =
+                Some(Arc::new(move |method: &str, tables: &mut FakeTables| {
+                    if method == "duos.rooms.claim"
+                        && !tables
+                            .social
+                            .blocks
+                            .iter()
+                            .any(|row| row.blocker == blocker_id && row.blocked == blocked_id)
+                    {
+                        tables.social.blocks.push(BlockRow {
+                            blocker: blocker_id.clone(),
+                            blocked: blocked_id.clone(),
+                            created_at: now_ms(),
+                        });
+                    }
+                    // A second statement can see an unblock committed after the claim. The fixed
+                    // path carries the claim statement's outcome instead of making this read.
+                    if method == "blocks.between"
+                        && tables
+                            .social
+                            .blocks
+                            .iter()
+                            .any(|row| row.blocker == blocker_id && row.blocked == blocked_id)
+                    {
+                        tables
+                            .social
+                            .blocks
+                            .retain(|row| row.blocker != blocker_id || row.blocked != blocked_id);
+                        saw_second_read.store(true, Ordering::SeqCst);
+                    }
+                    CallOutcome::Proceed
+                }));
+            let (status, body) = join(&t.app, &t.guest, &code).await;
+            fake(&t.app).lock().await.before_call = None;
+            assert_eq!(status, 404, "{body}");
+            assert_eq!(body, unknown_join);
+            assert!(
+                !second_read.load(Ordering::SeqCst),
+                "the claim-time refusal must not be inferred from a second snapshot"
+            );
+            assert!(live(&t.app, &t.guest).await.is_null());
+            assert!(live(&t.app, &t.host).await.is_null());
+            unblock(&t.app, blocker, blocked).await;
+            let (status, shown) = get_room(&t.app, &t.third, &code).await;
+            assert_eq!(status, 200, "{shown}");
+            assert!(shown["guest"].is_null(), "{shown}");
+        }
+
+        // With no block, the same join starts the match.
         let (status, body) = join(&t.app, &t.guest, &code).await;
         assert_eq!(status, 200, "{body}");
     }
@@ -1173,6 +1242,18 @@ mod r1047000_r1047001_the_sweep {
         for who in [&t.host, &t.guest] {
             let (status, body) = create(&t.app, who, json!({ "difficulty": "easy", "random": true })).await;
             assert_eq!(status, 201, "{body}");
+        }
+        // R1502000: the ceiling's draw pays each person as a draw, though its log holds a row no fold reads.
+        for who in [&t.host, &t.guest] {
+            let ledger =
+                store!(&t.app, tx => tx.economy_ledger_get(&who.id).await.expect("economy.ledger.get"));
+            let paid: Vec<i64> = ledger
+                .jlore
+                .iter()
+                .filter(|grant| grant.reason == JloreReason::Game)
+                .map(|grant| grant.delta)
+                .collect();
+            assert_eq!(paid, vec![i64::from(JLORE_COOP_LOSS)]);
         }
     }
 }

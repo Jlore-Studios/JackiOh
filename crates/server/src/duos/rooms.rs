@@ -18,12 +18,13 @@
 //! results row is written; the result lives on the match's own row (B40).
 //!
 //! A code is no key past a block (§9.4, §13.9): to an account the host has blocked, or that has
-//! blocked the host, the room answers as an unknown code does, to read and to join. Once joined, a
-//! room answers its host and its guest alone; anyone else reads it as unknown (a join still says it
-//! is full, S6). A host's frozen deck is checked against the catalog it was frozen under: a join
-//! under another catalog is `409 update_required`, as a 1v1 room's (§9.4: a stale catalog is
-//! refused at every door into a match), and the match is pinned to the catalog it is dealt from
-//! (R767000, `DuosMatchOptions::catalog_version`).
+//! blocked the host, the room answers as an unknown code does, to read and to join. The join's claim
+//! checks the block again, so one made while a join is under way stops it too. Once joined, a room
+//! answers its host and its guest alone; anyone else reads it as unknown (a join still says it is
+//! full, S6). A host's frozen deck is checked against the catalog it was frozen under: a join under
+//! another catalog is `409 update_required`, as a 1v1 room's (§9.4: a stale catalog is refused at
+//! every door into a match), and the match is pinned to the catalog it is dealt from (R767000,
+//! `DuosMatchOptions::catalog_version`).
 //!
 //! S6's two join refusals keep the error body every route answers with, the code being S6's:
 //! `409 { "error": { "code": "full" | "own_room", "message" } }`.
@@ -56,7 +57,7 @@ use crate::config::{DUOS_ROOM_TTL_MS, MAX_OPEN_ROOMS_PER_HOST, ROOM_CODE_LENGTH}
 use crate::duos::engine::{self, Pinned};
 use crate::duos::live_match_of;
 use crate::duos::registry::registry;
-use crate::duos::store::{DuosChoice, DuosMatch, DuosRoom};
+use crate::duos::store::{DuosChoice, DuosMatch, DuosRoom, DuosRoomClaimOutcome};
 
 /// R149's bound, as the 1v1 room's: a fresh code is tried this many times against the codes still
 /// held before the create reports that none is free.
@@ -356,11 +357,11 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     .map_err(ApiError::internal)?;
 
     // B33's single claim and the match row, in one transaction: the loser of a race writes nothing.
-    let claimed = one_tx!(app.db, |t| {
-        let claimed = t
+    let claim = one_tx!(app.db, |t| {
+        let claim = t
             .duos_rooms_claim(&room.code, &profile.id, &guest_choice, &match_id, now)
             .await?;
-        if claimed.is_some() {
+        if matches!(&claim, DuosRoomClaimOutcome::Claimed(_)) {
             t.duos_matches_create(&row).await?;
             // R1065000: a player in a co-op match is in no queue, as one in a series is: a ticket
             // left open would let the sweep pair them while the match lasts.
@@ -370,10 +371,14 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
                 }
             }
         }
-        claimed
+        claim
     })?;
-    if claimed.is_none() {
-        return Ok(refusal(409, "full", "someone already joined that room"));
+    match claim {
+        DuosRoomClaimOutcome::Claimed(_) => {}
+        DuosRoomClaimOutcome::Blocked => return Err(not_open()),
+        DuosRoomClaimOutcome::Unavailable => {
+            return Ok(refusal(409, "full", "someone already joined that room"));
+        }
     }
     registry(app).start(app, row, state, pinned);
     tracing::info!(
