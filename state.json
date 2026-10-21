@@ -7944,7 +7944,7 @@
       "stop_requested": false
     },
     "1447": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -7964,11 +7964,11 @@
       "planned_by": "`gpt` (codex, `gpt-5.6-sol`, medium)",
       "planned_by_id": "gpt",
       "planned_tier": "medium",
-      "provider": "gpt",
+      "provider": "claude-4",
       "queued_at": "2026-10-20T17:05:15Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "39600345085",
-      "started_at": "2026-10-21T12:32:41Z",
+      "run_id": "39603331793",
+      "started_at": "2026-10-21T12:54:51Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -11179,9 +11179,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-21T12:53:49Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39603174412",
-    "what": "build #1499 on gpt"
+    "at": "2026-10-21T12:54:51Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39603331793",
+    "what": "build #1447 on claude-4"
   },
   "last_sweep": {
     "at": "2026-10-21T12:51:30Z",
