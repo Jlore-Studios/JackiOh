@@ -1452,6 +1452,7 @@ struct BotRatingDbRow {
     volatility: f64,
     games: i32,
     updated_at: OffsetDateTime,
+    ai_generation: Option<i32>,
 }
 
 impl BotRatingDbRow {
@@ -1463,6 +1464,7 @@ impl BotRatingDbRow {
             volatility: get(row, "volatility")?,
             games: get(row, "games")?,
             updated_at: get(row, "updated_at")?,
+            ai_generation: get(row, "ai_generation")?,
         })
     }
 }
@@ -1477,6 +1479,7 @@ fn to_bot_rating(row: BotRatingDbRow) -> BotRating {
         },
         games: i64::from(row.games),
         updated_at: ms_of(row.updated_at),
+        ai_generation: row.ai_generation.map(i64::from),
     }
 }
 
@@ -5642,7 +5645,7 @@ pub async fn ranked_note_peak_jlorious(
 pub async fn ranked_bot(t: &mut PgTx<'_>, bot_id: &str) -> Result<Option<BotRating>, StoreError> {
     run_as(t, None).await?;
     let row = sqlx::query(
-        "select bot_id, rating, deviation, volatility, games, updated_at
+        "select bot_id, rating, deviation, volatility, games, updated_at, ai_generation
            from public.bot_ratings where bot_id = $1::text",
     )
     .bind(bot_id)
@@ -5656,13 +5659,14 @@ pub async fn ranked_bot(t: &mut PgTx<'_>, bot_id: &str) -> Result<Option<BotRati
 pub async fn ranked_put_bot(t: &mut PgTx<'_>, bot: &BotRating) -> Result<(), StoreError> {
     run_as(t, None).await?;
     sqlx::query(concat!(
-        "insert into public.bot_ratings (bot_id, rating, deviation, volatility, games, updated_at)
+        "insert into public.bot_ratings (bot_id, rating, deviation, volatility, games, updated_at, ai_generation)
          values ($1::text, $2::float8, $3::float8, $4::float8, $5::int, ",
         ts!("$6"),
-        ")
+        ", $7::int)
          on conflict (bot_id) do update set
            rating = excluded.rating, deviation = excluded.deviation,
-           volatility = excluded.volatility, games = excluded.games, updated_at = excluded.updated_at"
+           volatility = excluded.volatility, games = excluded.games, updated_at = excluded.updated_at,
+           ai_generation = excluded.ai_generation"
     ))
     .bind(bot.bot_id.as_str())
     .bind(bot.glicko.rating)
@@ -5670,6 +5674,7 @@ pub async fn ranked_put_bot(t: &mut PgTx<'_>, bot: &BotRating) -> Result<(), Sto
     .bind(bot.glicko.volatility)
     .bind(bot.games)
     .bind(bot.updated_at)
+    .bind(bot.ai_generation)
     .execute(&mut **t)
     .await
     .map_err(db_error)?;

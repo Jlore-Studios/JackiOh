@@ -976,6 +976,10 @@ pub struct BotRating {
     pub glicko: Glicko,
     pub games: i64,
     pub updated_at: i64,
+    /// R1560000: the AI generation (`crates/ai/generation.json`) the bot was last rated on; `None`
+    /// for a row not rated since R1560000 (migration 0051).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ai_generation: Option<i64>,
 }
 
 /// R1454: one Best-of-1 deck a ladder bot carries, and the portrait it plays it under (R642).

@@ -782,6 +782,13 @@ counters, set tracks, held quests and owned full arts are zeroed by offsetting `
 deleted, so its quest clock starts again (R1310002). The starter cosmetics have no row and are
 untouched. On a new project the reset zeroes nothing.
 
+Migration 0051 gives each `bot_ratings` row `ai_generation`, the AI generation
+(`crates/ai/generation.json`) the bot was last rated on (R1560000). A rated game against a bot whose
+row names an older generation, or none, widens its deviation by `BOT_PROMOTION_DEVIATION_BOOST` in
+quadrature per promotion (one for none), capped at a new player's, before rating it
+(`api/ranked.rs`, `ranked::glicko2::widen_for_promotions`), and stamps the row with the server's
+generation, so a bot's rating re-settles on each new AI from its games against people.
+
 ## Tests
 
 ```

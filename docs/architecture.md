@@ -708,8 +708,8 @@ step that is not yet implemented says which BUILD task delivers it.
    `0039_duos.sql` → `0040_moderation_switch_grant.sql` → `0041_card_totals.sql` →
    `0042_match_checkpoints.sql` → `0043_meditative_plus_set.sql` → `0044_deck_cosmetics.sql` →
    `0045_economy.sql` → `0046_dev_accounts.sql` → `0047_practice_seeds.sql` →
-   `0048_game_record_builds.sql` → `0049_version_retcon.sql` → `0050_going_live.sql` — and records
-   them in
+   `0048_game_record_builds.sql` → `0049_version_retcon.sql` → `0050_going_live.sql` →
+   `0051_bot_rating_generation.sql` — and records them in
    `app.migrations`. Expected result: 63 tables in `public`, all with RLS enabled, plus the private
    `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
@@ -794,7 +794,8 @@ step that is not yet implemented says which BUILD task delivers it.
    database (`app.settings.economy_launched`), every account keeps its cards while its Jlore, packs,
    tokens, counters, tracks, held quests and full arts are zeroed by offsetting `launch` rows
    (ref `launch:0050`) and its quest schedule is cleared (R1310002). On a new project it zeroes
-   nothing.
+   nothing. 0051 gives each `bot_ratings` row the AI generation it was last rated on (R1560000),
+   which the server alone writes; no step of the bring-up fills it.
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL

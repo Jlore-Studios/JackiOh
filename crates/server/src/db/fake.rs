@@ -3658,6 +3658,7 @@ pub fn bots_create(f: &mut FakeTx<'_>, bot: &NewBot) -> Result<(), StoreError> {
         },
         games: 0,
         updated_at: now,
+        ai_generation: None,
     };
     match tables.bots.iter().position(|row| row.bot_id == rating.bot_id) {
         None => tables.bots.push(rating),
