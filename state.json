@@ -9848,15 +9848,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/server/README.md"
+          ],
+          "from": "8b0b3e9df7080afc43e68f7d47c086740864715e",
+          "main": "e8850360781d32b9a8af8bb154aceacf32e214df"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39607783418",
+            "run": "39616760547",
             "tier": "strong"
           }
         ],
-        "sha": "8b0b3e9df7080afc43e68f7d47c086740864715e",
+        "sha": "8faaa9b45a35bf2b7ff6ec9f560d99c111a809df",
         "tiers": {
           "claude": "strong"
         }
