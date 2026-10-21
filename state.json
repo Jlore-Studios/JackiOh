@@ -9116,6 +9116,13 @@
     "1491": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T05:25:04Z",
+        "difficulty": "hard",
+        "provider": "claude-5",
+        "tier": "strong",
+        "why": "45 files (store.rs, mod.rs, README and 42 test files), past the rule's 'about 40 files or more'; no engine, AI, spec or card work"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
