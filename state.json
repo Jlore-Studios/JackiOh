@@ -10784,7 +10784,9 @@
     },
     "1575": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6323786237"
+      ],
       "died": 1,
       "failures": 0,
       "forced": false,
@@ -10812,9 +10814,7 @@
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [
-        "c:6323786237"
-      ]
+      "taken_asks": []
     },
     "1577": {
       "action": "build",
