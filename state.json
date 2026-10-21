@@ -9787,15 +9787,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "spec/INDEX.md"
+          ],
+          "from": "e059a8228e01ba62ff72e046af826be2f14ca887",
+          "main": "6569e4556ce25745b71b0e9a89cadcc3cdefaa75"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39569449449",
+            "run": "39576592131",
             "tier": "strong"
           }
         ],
-        "sha": "e059a8228e01ba62ff72e046af826be2f14ca887",
+        "sha": "8d05a82715bba8b0c829aee87bc86b4612e3513a",
         "tiers": {
           "claude": "strong"
         }
