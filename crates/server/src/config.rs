@@ -2177,8 +2177,24 @@ pub const JLORE_LADDER_LOSS: i32 = 10;
 pub const JLORE_PRACTICE_WIN: i32 = 10;
 /// SPEC §14.8: the Jlore a practice game pays for a loss (#1333's table: 5).
 pub const JLORE_PRACTICE_LOSS: i32 = 5;
-/// SPEC §14.8, R1483000: the most Jlore an account's games pay it in one UTC day, ladder and
-/// practice together, as Hearthstone caps the gold its games pay (quest and track Jlore are not
+/// SPEC §14.8, R1502000: the Jlore an unranked game pays its winner, at the ladder's rate.
+pub const JLORE_UNRANKED_WIN: i32 = 20;
+/// SPEC §14.8, R1502000: the Jlore an unranked game pays its loser, at the ladder's rate.
+pub const JLORE_UNRANKED_LOSS: i32 = 10;
+/// SPEC §14.8, R1502000: the Jlore a game of a Conquest series pays its winner, as its own
+/// result, at the ladder's rate.
+pub const JLORE_CONQUEST_WIN: i32 = 20;
+/// SPEC §14.8, R1502000: the Jlore a game of a Conquest series pays its loser, as its own result,
+/// at the ladder's rate.
+pub const JLORE_CONQUEST_LOSS: i32 = 10;
+/// SPEC §14.8, R1502000: the Jlore a co-op game pays each person of a winning team, at practice's
+/// rate, since the team plays the AI.
+pub const JLORE_COOP_WIN: i32 = 10;
+/// SPEC §14.8, R1502000: the Jlore a co-op game pays each person of a team that did not win, at
+/// practice's rate.
+pub const JLORE_COOP_LOSS: i32 = 5;
+/// SPEC §14.8, R1483000, R1502000: the most Jlore an account's games pay it in one UTC day, every
+/// mode's games together, as Hearthstone caps the gold its games pay (quest and track Jlore are not
 /// counted and not stopped). The owner's number (#1483): well above a real day's play, far below
 /// what a loop of conceded practice games would earn.
 pub const JLORE_GAMES_DAILY_CAP: i64 = 2000;
@@ -2194,6 +2210,9 @@ pub const XP_GAME_CAP: i32 = 2000;
 /// SPEC §14.8: a practice game's share of the XP the same game earns on the ladder (#1333's
 /// table: 0.5).
 pub const XP_PRACTICE_SCALE: f64 = 0.5;
+/// SPEC §14.8, R1502000: a co-op game's share of the XP the same moves earn on the ladder, as
+/// practice's (the team plays the AI).
+pub const XP_COOP_SCALE: f64 = 0.5;
 /// SPEC §14.8: the XP a ladder game averages (#1333's table: 1,000), over R1333001's measured
 /// games.
 pub const XP_LADDER_TARGET_MEAN: i32 = 1000;
