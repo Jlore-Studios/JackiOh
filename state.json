@@ -8940,6 +8940,8 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-21T12:11:53Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "39597711000",
       "self_check_findings": [],
       "started_at": "2026-10-21T12:12:46Z",
