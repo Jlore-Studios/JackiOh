@@ -452,7 +452,7 @@ pub enum EvalKind {
 
 /// The switch: one line turns the learned evaluation on or off. A promotion that ships a network sets
 /// it with the weights in one change (#1012).
-pub const AI_EVAL_KIND: EvalKind = EvalKind::Hand;
+pub const AI_EVAL_KIND: EvalKind = EvalKind::Learned;
 
 /// R1012001: the share of the network's correction a finalist's score takes, `hand + share·(points
 /// − hand)` (`learned::finalist_score_with`). The network is fitted to the games' outcomes, so its
