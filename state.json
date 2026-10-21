@@ -11017,6 +11017,14 @@
         }
       }
     },
+    "1592": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-21T19:50:12Z",
+      "issue": 1568,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "430": {
       "failures": 0,
       "forced": false,
