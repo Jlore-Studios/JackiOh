@@ -8860,6 +8860,13 @@
     "1505": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T12:50:37Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule 1 fails outright (11 files with Cargo.toml and Cargo.lock, ~800 lines moved) and rule 6 (manifests); not hard, since nothing in crates/engine or crates/ai changes"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
