@@ -33,7 +33,6 @@ use std::time::Duration;
 use indexmap::IndexMap;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
-use tokio::sync::MutexGuard;
 
 use jackioh_engine::{PlayerId, pick_portrait_from_seed};
 use jackioh_server::api::queue::try_pair;
@@ -48,13 +47,13 @@ use jackioh_server::config::{
     BOT_REMATCH_FIT, BOT_REMATCH_LINGER_MAX_MS, BOT_SEED_RATINGS, JLORIOUS_SIZE, MAX_FAIR_GAP,
     QUEUE_TICKET_STALE_MS, RANK_PLACEMENT_GAMES, RATING_WINDOW_FULL_AFTER_SECONDS,
 };
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{BotDeck, Db, FrozenTrio, NewBot, SeriesStatus, StoreError, Ticket};
+use jackioh_server::db::store::{BotDeck, FrozenTrio, NewBot, SeriesStatus, StoreError, Ticket};
 use jackioh_server::env::SERVER_ONLY_ENV_VARS;
 use jackioh_server::ranked::ladder::{GrapeTier, fresh_rank, tier_bottom};
 use jackioh_server::ranked::season::season_id_of;
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app_with};
+use crate::support::store::{fake_lock, q};
 
 // Plumbing (private copies: each test file of this binary keeps its own)
 
@@ -62,23 +61,6 @@ fn from<T: DeserializeOwned>(value: Value) -> T {
     match serde_json::from_value(value.clone()) {
         Ok(parsed) => parsed,
         Err(error) => panic!("{error}: {value}"),
-    }
-}
-
-/// One store call in its own transaction.
-macro_rules! q {
-    ($app:expr, $method:ident($($arg:expr),* $(,)?)) => {{
-        let mut tx = $app.db.begin(None).await.expect("begin");
-        let out = tx.$method($($arg),*).await.expect(stringify!($method));
-        tx.commit().await.expect("commit");
-        out
-    }};
-}
-
-async fn fake(app: &App) -> MutexGuard<'_, FakeData> {
-    match &app.db {
-        Db::Fake(data) => data.lock().await,
-        Db::Pg(_) => panic!("the server's unit tests run on the fake store"),
     }
 }
 
@@ -125,7 +107,7 @@ fn deck(slot: usize) -> Vec<String> {
 async fn new_person(app: &App, rating: f64) -> (String, String) {
     let id = next_id("person");
     let user_id = format!("user-{id}");
-    fake(app)
+    fake_lock(app)
         .await
         .seed_profile(json!({ "id": id, "userId": user_id, "status": "active", "rating": rating }));
     let token = add_user(app, &user_id, &format!("{id}@example.test"), true);
@@ -259,7 +241,7 @@ async fn series_in_game_1(app: &Arc<App>) -> (String, String, String, String) {
     give_trio(app, &bot).await;
     conquest_ticket(app, &person, 1000.0, past_any_fallback()).await;
     assert_eq!(try_pair(app).await.expect("a sweep").made, 1);
-    let opened = fake(app).await.tables.series[0].clone();
+    let opened = fake_lock(app).await.tables.series[0].clone();
     series_post(app, &opened.id, "pick", &token, json!({ "slot": 0, "gameNo": 1 })).await;
     let due = pick_due_at(&opened, PlayerId::P2).expect("a pick phase");
     tokio::time::advance(Duration::from_millis(
@@ -278,7 +260,7 @@ fn past_any_fallback() -> i64 {
 
 /// Each match row's players, in table order.
 async fn matches(app: &App) -> Vec<(String, String)> {
-    fake(app)
+    fake_lock(app)
         .await
         .tables
         .matches
@@ -299,7 +281,7 @@ async fn seated(app: &App, bots: &[&str]) -> Vec<String> {
 
 /// A finished bot match: the person concedes it at once. Answers `(match id, the person's seat)`.
 async fn concede_bot_match(app: &Arc<App>, person_id: &str) -> (String, PlayerId) {
-    let row = fake(app)
+    let row = fake_lock(app)
         .await
         .tables
         .matches
@@ -532,7 +514,7 @@ async fn r1453_the_closest_free_scheduled_bot_pairs() {
     );
 
     // The ticket is matched, both seats are in the match, and it is ranked (R604) and Best of 1.
-    let row = fake(&app).await.tables.matches[0].clone();
+    let row = fake_lock(&app).await.tables.matches[0].clone();
     let held = q!(app, tickets_get(&waiting.id)).expect("the ticket");
     assert_eq!(
         serde_json::to_value(&held).expect("a ticket")["status"],
@@ -566,7 +548,13 @@ async fn r1453_the_player_is_player_1_as_the_older_ticket_is() {
         let mode = if round % 2 == 0 { "bo1" } else { "random" };
         ticket(&app, &person, 1000.0, past_any_fallback(), mode).await;
         assert_eq!(try_pair(&app).await.expect("a sweep").made, 1, "round {round}");
-        let row = fake(&app).await.tables.matches.last().cloned().expect("a match");
+        let row = fake_lock(&app)
+            .await
+            .tables
+            .matches
+            .last()
+            .cloned()
+            .expect("a match");
         assert_eq!(row.players, (person, bot), "round {round} ({mode})");
     }
 }
@@ -604,11 +592,11 @@ async fn r641000_a_conquest_ticket_pairs_with_a_bot_holding_a_trio() {
     );
     // A bot with no trio dealt for this catalog plays no Conquest.
     assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
-    assert!(fake(&app).await.tables.series.is_empty());
+    assert!(fake_lock(&app).await.tables.series.is_empty());
 
     let trio = give_trio(&app, &bot).await;
     assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
-    let made = fake(&app).await.tables.series.clone();
+    let made = fake_lock(&app).await.tables.series.clone();
     assert_eq!(made.len(), 1);
     let series = &made[0];
     // The person is series p1, as the older ticket of a pair is (R335), with the trio they queued;
@@ -652,7 +640,7 @@ async fn r641000_a_bot_in_a_series_is_seated_nowhere_else_until_it_ends() {
     give_trio(&app, &bot).await;
     conquest_ticket(&app, &person, 1000.0, past_any_fallback()).await;
     assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
-    let series_id = fake(&app).await.tables.series[0].id.clone();
+    let series_id = fake_lock(&app).await.tables.series[0].id.clone();
 
     // Between games the bot is in no match, but the series holds it: a Best-of-1 ticket past its
     // fallback time, with that bot the only one, waits on.
@@ -675,7 +663,7 @@ async fn r641000_the_sweeper_makes_the_bot_s_pick_after_its_delay() {
     let trio = give_trio(&app, &bot).await;
     conquest_ticket(&app, &person, 1000.0, past_any_fallback()).await;
     assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
-    let opened = fake(&app).await.tables.series[0].clone();
+    let opened = fake_lock(&app).await.tables.series[0].clone();
 
     // The person picks through the route; the bot's pick is not in yet.
     let view = series_post(
@@ -709,7 +697,7 @@ async fn r641000_the_sweeper_makes_the_bot_s_pick_after_its_delay() {
     assert_eq!(begun.status, SeriesStatus::Playing);
     assert_eq!(begun.games[0].slots, (0, i64::try_from(wanted).expect("a slot")));
     // Game 1 is started: the person, series p1, goes first (R335); the bot plays its picked deck.
-    let row = fake(&app)
+    let row = fake_lock(&app)
         .await
         .tables
         .matches
@@ -733,7 +721,7 @@ async fn r641000_a_ranked_series_against_a_bot_is_rated_once_when_it_ends() {
     // The person concedes game 1: it is recorded and rates nothing (R262).
     let (game_1, _) = concede_bot_match(&app, &person).await;
     assert!(
-        fake(&app).await.tables.rated_games.is_empty(),
+        fake_lock(&app).await.tables.rated_games.is_empty(),
         "a series game is not rated"
     );
     let result = q!(app, results_get_by_match(&game_1)).expect("game 1's result");
@@ -750,7 +738,7 @@ async fn r641000_a_ranked_series_against_a_bot_is_rated_once_when_it_ends() {
     // The person forfeits between games: the series is rated once, as one game (R262, R604), the
     // bot's side as the bot it is (R610, R611).
     series_post(&app, &series_id, "forfeit", &token, json!({})).await;
-    let rated = fake(&app).await.tables.rated_games.clone();
+    let rated = fake_lock(&app).await.tables.rated_games.clone();
     assert_eq!(rated.len(), 1, "one rated game for the series");
     let game = serde_json::to_value(&rated[0]).expect("a rated game");
     assert_eq!(game["kind"], "series", "{game}");
@@ -781,7 +769,7 @@ async fn r641000_a_ranked_series_against_a_bot_is_rated_once_when_it_ends() {
 async fn r641000_a_series_game_s_bot_draws_no_rematch_plan() {
     let app = app_with_bots(true).await;
     let (person, _, _, _) = series_in_game_1(&app).await;
-    let game_1 = fake(&app)
+    let game_1 = fake_lock(&app)
         .await
         .tables
         .matches
@@ -845,7 +833,7 @@ async fn r1453_recent_retired_off_schedule_and_busy_bots_are_skipped() {
     // The person played `recent` last; it is among their last BOT_RECENT_OPPONENTS games.
     let played = next_id("played");
     {
-        let mut data = fake(&app).await;
+        let mut data = fake_lock(&app).await;
         data.tables.results.push(from(json!({
             "matchId": played,
             "players": [person, recent],
@@ -890,7 +878,7 @@ async fn r1453_a_start_that_fails_lets_the_bot_go() {
     // The claim put the bot in the match; the next write, the player's in-match state, fails.
     let refused = Arc::new(AtomicBool::new(false));
     let once = Arc::clone(&refused);
-    fake(&app).await.on_call = Some(Arc::new(move |method: &str| {
+    fake_lock(&app).await.on_call = Some(Arc::new(move |method: &str| {
         if method == "profiles.setInMatch" && !once.swap(true, Ordering::SeqCst) {
             return Err(StoreError::Other(format!("{method} refused by the test")));
         }
@@ -903,7 +891,7 @@ async fn r1453_a_start_that_fails_lets_the_bot_go() {
         refused.load(Ordering::SeqCst),
         "the write after the claim was refused"
     );
-    fake(&app).await.on_call = None;
+    fake_lock(&app).await.on_call = None;
 
     let bots = q!(app, bots_list());
     assert_eq!(bots.len(), 1);
@@ -1011,7 +999,7 @@ async fn r1451_the_bot_side_is_ai_and_the_human_side_counts() {
     assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     let (match_id, seat) = concede_bot_match(&app, &person).await;
 
-    let record = fake(&app)
+    let record = fake_lock(&app)
         .await
         .tables
         .game_records
@@ -1025,7 +1013,7 @@ async fn r1451_the_bot_side_is_ai_and_the_human_side_counts() {
     assert_eq!(record["pilots"][seat.opponent().as_str()], "ai");
 
     // R611: the rated game names the person's side and the bot's.
-    let rated = fake(&app).await.tables.rated_games.clone();
+    let rated = fake_lock(&app).await.tables.rated_games.clone();
     let rated = serde_json::to_value(&rated).expect("rated games");
     let text = rated.to_string();
     assert!(text.contains(&person) && text.contains(&bot), "{text}");
@@ -1108,7 +1096,7 @@ async fn r1452_no_read_tells_a_bot_seat() {
     let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
     ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
     assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
-    let row = fake(&app).await.tables.matches[0].clone();
+    let row = fake_lock(&app).await.tables.matches[0].clone();
 
     let (status, _, ranks) = call(
         &app,
@@ -1200,7 +1188,7 @@ async fn r640000_a_bot_in_mythic_shows_mythic_grape_while_jlorious_has_room() {
     let mut people = Vec::new();
     for _ in 0..PEOPLE_IN_MYTHIC {
         let id = next_id("mythic");
-        fake(&app)
+        fake_lock(&app)
             .await
             .seed_profile(json!({ "id": id, "status": "active", "rating": 1000 }));
         q!(app, ranked_put_rank(&mythic_row(&id)));
@@ -1214,7 +1202,7 @@ async fn r640000_a_bot_in_mythic_shows_mythic_grape_while_jlorious_has_room() {
     q!(app, ranked_put_rank(&mythic_row(&bot)));
     ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
     assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
-    let row = fake(&app).await.tables.matches[0].clone();
+    let row = fake_lock(&app).await.tables.matches[0].clone();
     let (status, _, ranks) = call(
         &app,
         "GET",
@@ -1294,7 +1282,7 @@ async fn r639000_a_bot_accepts_a_rematch_when_its_plan_says_and_plays_it() {
 
     // The rematch seats the same two in the same seats, ranked as the fallback's match was, and the
     // bot is claimed for it.
-    let row = fake(&app)
+    let row = fake_lock(&app)
         .await
         .tables
         .matches
@@ -1349,7 +1337,11 @@ async fn r639000_a_bot_that_declines_lets_the_offer_lapse() {
     let status = rematch_status(&app, &finished, &token).await;
     assert_eq!(status["opponentHere"], json!(false), "{status}");
     assert!(status["matchId"].is_null(), "{status}");
-    assert_eq!(fake(&app).await.tables.matches.len(), 1, "no rematch was made");
+    assert_eq!(
+        fake_lock(&app).await.tables.matches.len(),
+        1,
+        "no rematch was made"
+    );
 
     // A bot whose plan accepts meets no offer that comes once it has left.
     let (late, late_token) = new_person(&app, 1000.0).await;
@@ -1362,7 +1354,11 @@ async fn r639000_a_bot_that_declines_lets_the_offer_lapse() {
     let status = rematch_status(&app, &finished, &late_token).await;
     assert!(status["opponentOffer"].is_null(), "{status}");
     assert!(status["matchId"].is_null(), "{status}");
-    assert_eq!(fake(&app).await.tables.matches.len(), 2, "no rematch was made");
+    assert_eq!(
+        fake_lock(&app).await.tables.matches.len(),
+        2,
+        "no rematch was made"
+    );
 }
 
 #[tokio::test(start_paused = true)]
@@ -1384,7 +1380,7 @@ async fn r639000_a_bot_offers_a_rematch_when_its_plan_says() {
     assert_eq!(offered["opponentOffer"], json!(STAKE_NORMAL), "{offered}");
     assert_eq!(offered["opponentHere"], json!(true), "{offered}");
     // R1442: recorded among the match's signals, as a person's offer is.
-    let signals = serde_json::to_value(&fake(&app).await.tables.match_signals).expect("the signals");
+    let signals = serde_json::to_value(&fake_lock(&app).await.tables.match_signals).expect("the signals");
     let bot_row = signals
         .as_array()
         .and_then(|rows| {
@@ -1416,7 +1412,7 @@ async fn r639000_a_bot_stays_on_the_match_while_its_result_is_written() {
     let seen = Arc::new(std::sync::Mutex::new(Vec::new()));
     {
         let (actor, seen) = (actor.clone(), Arc::clone(&seen));
-        fake(&app).await.on_call = Some(Arc::new(move |method: &str| {
+        fake_lock(&app).await.on_call = Some(Arc::new(move |method: &str| {
             if method == "results.insert" {
                 seen.lock()
                     .expect("the presence seen")
@@ -1426,7 +1422,7 @@ async fn r639000_a_bot_stays_on_the_match_while_its_result_is_written() {
         }));
     }
     concede_bot_match(&app, &person).await;
-    fake(&app).await.on_call = None;
+    fake_lock(&app).await.on_call = None;
 
     assert_eq!(
         *seen.lock().expect("the presence seen"),

@@ -27,10 +27,9 @@ use jackioh_server::actor::protocol::MAX_FRAME_BYTES;
 use jackioh_server::actor::ws_server::{WS_PATH, WS_SUBPROTOCOL, bearer_protocol};
 use jackioh_server::app::{App, router};
 use jackioh_server::config::WS_MAX_CONNECTIONS_PER_ADDRESS;
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::Db;
 
 use crate::support::deps::{add_user, test_app};
+use crate::support::store::fake;
 
 /// How long a read waits before the test calls the socket silent. Real time: the listener does
 /// real I/O, so tokio's clock is not paused in this file.
@@ -42,13 +41,6 @@ static SERIAL: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        _ => panic!("the test app runs on the fake store"),
-    }
 }
 
 /// Every playable catalog id, in `catalog.json` order: real decks, so the real registry can start

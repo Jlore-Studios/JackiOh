@@ -17,8 +17,7 @@ use jackioh_engine::set_ships;
 use jackioh_server::app::{self, App, now_ms};
 use jackioh_server::config::{SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS};
 use jackioh_server::cosmetics::{CosmeticKind, shipped};
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{CollectionEntry, CollectionGrant, Db};
+use jackioh_server::db::store::{CollectionEntry, CollectionGrant};
 use jackioh_server::economy::math::total_xp_for_level;
 use jackioh_server::economy::store::{
     Counter, CounterEntry, CounterGrant, EconomyLedger, EconomyReason, JloreReason, OwnedCosmetics, SetTrack,
@@ -26,6 +25,7 @@ use jackioh_server::economy::store::{
 use jackioh_server::env::{SERVER_ONLY_ENV_VARS, load_env, parse_dev_profile_ids};
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app_with};
+use crate::support::store::fake;
 
 /// The dev account `DEV_PROFILE_IDS` lists.
 const DEV: &str = "d0000000-0000-4000-8000-000000001300";
@@ -57,13 +57,6 @@ fn env_with(extra: &[(&str, &str)]) -> IndexMap<String, String> {
     .chain(extra.iter().copied())
     .map(|(name, value)| (name.to_string(), value.to_string()))
     .collect()
-}
-
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        _ => panic!("the test app runs on the fake store"),
-    }
 }
 
 /// The app with `DEV` listed (in upper case, which the list reads as the same id) and both accounts

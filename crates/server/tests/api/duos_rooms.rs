@@ -12,7 +12,6 @@
 //! refusal's code is read wherever the body carries it (`code_is`).
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use serde_json::{Value, json};
 
@@ -25,12 +24,12 @@ use jackioh_server::config::{
     BOT_FALLBACK_MAX_SECONDS, CODE_ALPHABET, DUOS_ROOM_TTL_MS, MATCH_ACTION_RETENTION_DAYS, MATCH_CEILING_MS,
     MAX_OPEN_ROOMS_PER_HOST, MAX_SAVED_DECKS, REPLAY_REQUESTS_PER_MINUTE, ROOM_CODE_LENGTH,
 };
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{BotDeck, CollectionEntry, Db, NewBot};
+use jackioh_server::db::store::{BotDeck, CollectionEntry, NewBot};
 use jackioh_server::duos::registry;
 use jackioh_server::duos::store::{DuosActionRow, DuosMatch, DuosRoom};
 
 use crate::support::deps::{TestAppOptions, add_user, call, empty_test_app, test_app_with};
+use crate::support::store::{advance, fake, store, uuid};
 
 /// The epoch-ms stamp a saved deck carries; nothing reads it back.
 const AT: i64 = 1_700_000_000_000;
@@ -49,28 +48,8 @@ const BOT: &str = "bot-ladder";
 // Plumbing (private copies: each test file of this binary keeps its own)
 // ---------------------------------------------------------------------------------------------
 
-macro_rules! store {
-    ($app:expr, $t:ident => $call:expr) => {{
-        let mut $t = $app
-            .db
-            .begin(None)
-            .await
-            .expect("the fake store opens a transaction");
-        let out = $call;
-        $t.commit().await.expect("the fake store commits");
-        out
-    }};
-}
-
 fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        _ => panic!("the test app runs on the fake store"),
-    }
 }
 
 fn millis<T>(value: T) -> u64
@@ -79,14 +58,6 @@ where
     <u64 as TryFrom<T>>::Error: std::fmt::Debug,
 {
     u64::try_from(value).expect("a duration fits a u64")
-}
-
-async fn advance(ms: u64) {
-    tokio::time::advance(Duration::from_millis(ms)).await;
-}
-
-fn uuid(n: u32) -> String {
-    format!("00000000-0000-4000-8000-{n:012}")
 }
 
 struct Account {

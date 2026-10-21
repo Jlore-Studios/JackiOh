@@ -21,8 +21,7 @@ use jackioh_server::config::{
     COSMETIC_TOKEN_BAR_SIZE, PACK_PRICE_JLORE, PACK_SLOTS,
 };
 use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity};
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{CollectionEntry, Db};
+use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::packs::open_pack;
 use jackioh_server::economy::roll::PackKind;
 use jackioh_server::economy::store::{
@@ -31,6 +30,7 @@ use jackioh_server::economy::store::{
 use jackioh_server::economy::tokens::redeem_cosmetic_token;
 
 use crate::support::deps::{add_user, call, empty_test_app};
+use crate::support::store::fake;
 
 const PROFILE: &str = "p1";
 const USER: &str = "u1";
@@ -45,13 +45,6 @@ const ROUTES: [(&str, &str); 3] = [
 // ---------------------------------------------------------------------------------------------
 // Plumbing (private copies: each test file of this binary keeps its own)
 // ---------------------------------------------------------------------------------------------
-
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        Db::Pg(_) => panic!("the test app runs on the fake store"),
-    }
-}
 
 /// An empty app with the active `p1` and its Bearer [REDACTED]
 async fn setup() -> (Arc<App>, String) {

@@ -14,7 +14,6 @@
 use std::any::Any;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::Duration;
 
 use serde_json::{Value, json};
 
@@ -29,7 +28,7 @@ use jackioh_server::config::{
     MATCH_SERVER_ACTION_RETRY_MS, PROMPT_CLOCK_SECONDS, TURN_CLOCK_SECONDS,
 };
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, MatchActionRow, StoreError};
+use jackioh_server::db::store::{MatchActionRow, StoreError};
 
 use crate::support::deps::empty_test_app;
 use crate::support::engine::{
@@ -37,40 +36,15 @@ use crate::support::engine::{
     install_test_cards,
 };
 use crate::support::socket::{FakeSocket, create_fake_socket};
+use crate::support::store::{advance_and_yield, fake, store, to_json};
 
 const MATCH_ID: &str = "match-recovery";
 
 /// How many seeds `seed_dealing` tries before it gives up.
 const SEED_SEARCH: usize = 5_000;
 
-/// One store call in its own transaction.
-macro_rules! store {
-    ($app:expr, $t:ident => $call:expr) => {{
-        let mut $t = $app
-            .db
-            .begin(None)
-            .await
-            .expect("the fake store opens a transaction");
-        let out = $call;
-        $t.commit().await.expect("the fake store commits");
-        out
-    }};
-}
-
 fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-fn to_json<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("a serialisable value")
-}
-
-/// The fake store behind the test app.
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        _ => panic!("the test app runs on the fake store"),
-    }
 }
 
 /// One table of the fake store: rows as JSON.
@@ -86,7 +60,7 @@ async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
 // Time and logs
 
 /// The server's clock: the epoch-ms stamp written on the match row at the start plus the tokio time
-/// (paused, moved only by `advance`) since.
+/// (paused, moved only by `advance_and_yield`) since.
 #[derive(Clone, Copy)]
 struct Clock {
     base_ms: i64,
@@ -97,15 +71,6 @@ impl Clock {
     fn now(&self) -> i64 {
         self.base_ms + i64::try_from(self.at.elapsed().as_millis()).expect("milliseconds fit")
     }
-}
-
-/// Every timer due fires, and the woken actor gets to run.
-async fn advance(ms: i64) {
-    tokio::time::advance(Duration::from_millis(
-        u64::try_from(ms).expect("time moves forward"),
-    ))
-    .await;
-    tokio::task::yield_now().await;
 }
 
 /// Every `tracing` line the server writes on this thread while the guard lives, as JSON. On the
@@ -995,12 +960,12 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         );
         assert_eq!(grace_deadline(&h).await["p1"], json!(h.clock.now() + grace_ms));
 
-        advance(grace_ms - 1).await;
+        advance_and_yield(grace_ms - 1).await;
         revived.idle().await;
         assert_eq!(results(&h).await, Vec::<Value>::new());
         assert_eq!(expired(&h).await, Vec::<Value>::new());
 
-        advance(1).await;
+        advance_and_yield(1).await;
         revived.idle().await;
         let actions = table(&h.app, |data| json!(data.tables.match_actions)).await;
         let last = &actions.last().expect("a logged action")["action"];
@@ -1030,7 +995,7 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         assert_eq!(stored, json!(dropped_at + grace_ms));
 
         // Half the window passes, then the server restarts and p2 is the first back.
-        advance(grace_ms / 2).await;
+        advance_and_yield(grace_ms / 2).await;
         h.app.matches.stop(MATCH_ID).await;
         let revived = actor_of(&h).await;
         revived.idle().await;
@@ -1046,10 +1011,10 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         revived.idle().await;
         assert_eq!(to_json(&revived.clocks())["graceDeadline"]["p1"], stored);
 
-        advance(grace_ms / 2 - 1).await;
+        advance_and_yield(grace_ms / 2 - 1).await;
         revived.idle().await;
         assert_eq!(expired(&h).await, Vec::<Value>::new());
-        advance(1).await;
+        advance_and_yield(1).await;
         revived.idle().await;
         assert_eq!(expired(&h).await.len(), 1);
         assert_eq!(json!(h.clock.now()), stored);
@@ -1070,7 +1035,7 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         revived.idle().await;
         assert!(!to_json(&revived.clocks())["graceDeadline"]["p1"].is_null());
 
-        advance(grace_ms - 1).await;
+        advance_and_yield(grace_ms - 1).await;
         revived.idle().await;
         let back_p1 = create_fake_socket();
         h.app
@@ -1085,7 +1050,7 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         );
         assert_eq!(grace_deadline(&h).await, json!({ "p1": null, "p2": null }));
 
-        advance(1).await;
+        advance_and_yield(1).await;
         revived.idle().await;
         assert_eq!(expired(&h).await, Vec::<Value>::new());
         assert_eq!(results(&h).await, Vec::<Value>::new());
@@ -1110,7 +1075,7 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
             json!({ "p1": null, "p2": h.clock.now() + grace_ms })
         );
 
-        advance(grace_ms).await;
+        advance_and_yield(grace_ms).await;
         actor.idle().await;
         let actions = table(&h.app, |data| json!(data.tables.match_actions)).await;
         let last = &actions.last().expect("a logged action")["action"];
@@ -1136,7 +1101,7 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         // The second client is still loading, and its seat is already counted away.
         assert!(!to_json(&actor.clocks())["graceDeadline"]["p2"].is_null());
 
-        advance(grace_ms / 10).await;
+        advance_and_yield(grace_ms / 10).await;
         let second = create_fake_socket();
         h.app
             .matches
@@ -1149,7 +1114,7 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
             json!({ "p1": null, "p2": null })
         );
 
-        advance(grace_ms).await;
+        advance_and_yield(grace_ms).await;
         actor.idle().await;
         assert_eq!(expired(&h).await, Vec::<Value>::new());
         assert_eq!(results(&h).await, Vec::<Value>::new());
@@ -1172,7 +1137,7 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         h.app.matches.stop(MATCH_ID).await;
 
         // Nobody comes back: no actor is rebuilt, so no grace runs and nobody loses by it.
-        advance(MATCH_CEILING_MINUTES * 60_000).await;
+        advance_and_yield(MATCH_CEILING_MINUTES * 60_000).await;
         assert_eq!(
             reap_stuck_matches(&h.app).await.expect("the reaper runs"),
             vec![MATCH_ID.to_string()]
@@ -1380,18 +1345,18 @@ mod r776000_a_server_action_the_store_fails_to_take {
         let (h, actor, _p1, _p2) = attached().await;
         let appends = fail_first_append(&h).await;
 
-        advance(TURN_CLOCK_SECONDS * 1000).await;
+        advance_and_yield(TURN_CLOCK_SECONDS * 1000).await;
         actor.idle().await;
         assert_eq!(appends.load(Ordering::SeqCst), 1);
         assert_eq!(logs.count("match.append.failed"), 1);
         assert_eq!(rows_after_opening(&h).await, Vec::<Value>::new());
         assert_eq!(actor.snapshot().active, PlayerId::P1);
 
-        advance(MATCH_SERVER_ACTION_RETRY_MS - 1).await;
+        advance_and_yield(MATCH_SERVER_ACTION_RETRY_MS - 1).await;
         actor.idle().await;
         assert_eq!(rows_after_opening(&h).await, Vec::<Value>::new());
 
-        advance(1).await;
+        advance_and_yield(1).await;
         actor.idle().await;
         let rows = rows_after_opening(&h).await;
         assert_eq!(rows.len(), 1, "{rows:?}");
@@ -1406,7 +1371,7 @@ mod r776000_a_server_action_the_store_fails_to_take {
         assert_eq!(actor.snapshot().active, PlayerId::P2);
 
         // The turn passed to p2, whose clock is a whole turn long: the retry is spent.
-        advance(MATCH_SERVER_ACTION_RETRY_MS).await;
+        advance_and_yield(MATCH_SERVER_ACTION_RETRY_MS).await;
         actor.idle().await;
         assert_eq!(rows_after_opening(&h).await.len(), 1);
     }
@@ -1419,12 +1384,12 @@ mod r776000_a_server_action_the_store_fails_to_take {
         actor.idle().await;
         fail_first_append(&h).await;
 
-        advance(DISCONNECT_GRACE_SECONDS * 1000).await;
+        advance_and_yield(DISCONNECT_GRACE_SECONDS * 1000).await;
         actor.idle().await;
         assert_eq!(results(&h).await, Vec::<Value>::new());
         assert!(actor.snapshot().result.is_none());
 
-        advance(MATCH_SERVER_ACTION_RETRY_MS).await;
+        advance_and_yield(MATCH_SERVER_ACTION_RETRY_MS).await;
         actor.idle().await;
         let forfeits: Vec<Value> = rows_after_opening(&h)
             .await
@@ -1613,7 +1578,7 @@ mod r1253000_a_live_action_the_engine_panics_on {
         );
         assert_eq!(runs.load(Ordering::SeqCst), 0);
 
-        advance(TURN_CLOCK_SECONDS * 1000).await;
+        advance_and_yield(TURN_CLOCK_SECONDS * 1000).await;
         actor.idle().await;
         assert_eq!(runs.load(Ordering::SeqCst), 1);
         let rows = results(&h).await;
@@ -1646,7 +1611,7 @@ mod r1253000_a_live_action_the_engine_panics_on {
         assert_eq!(p2.close_code(), Some(1001));
 
         // Not retried: the same action on the same state would panic again.
-        advance(MATCH_SERVER_ACTION_RETRY_MS * 3).await;
+        advance_and_yield(MATCH_SERVER_ACTION_RETRY_MS * 3).await;
         assert_eq!(runs.load(Ordering::SeqCst), 1);
         assert!(!logs.has("match.clock.retrying"));
         assert_eq!(results(&h).await.len(), 1);
@@ -1688,7 +1653,7 @@ mod r1285000_a_finished_match_whose_log_was_purged {
         drop(actor);
         h.app.matches.stop(MATCH_ID).await;
 
-        advance(MATCH_ACTION_RETENTION_DAYS * MS_PER_DAY + 1).await;
+        advance_and_yield(MATCH_ACTION_RETENTION_DAYS * MS_PER_DAY + 1).await;
         let purged = purge_expired(&h.app).await.expect("the purge runs");
         assert!(purged.match_actions > 0, "{purged:?}");
         assert_eq!(
