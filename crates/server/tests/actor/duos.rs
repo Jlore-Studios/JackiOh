@@ -42,14 +42,14 @@ use jackioh_server::config::{
     MAX_SAVED_DECKS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS, REJECTION_ALERT_THRESHOLD,
     REJECTION_ALERT_WINDOW_MS, REMATCH_OFFER_TTL_MS,
 };
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{CollectionEntry, Db};
+use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::duos::registry;
 use jackioh_server::duos::store::DuosActionRow;
 
 use super::ws_server::encode_query;
 use crate::support::deps::{add_user, call, empty_test_app, record_logs};
 use crate::support::engine::{PANIC_TEXT, install_panicking_plays};
+use crate::support::store::{fake, uuid};
 
 /// S6's socket.
 const DUOS_PATH: &str = "/ws/duos";
@@ -442,17 +442,6 @@ impl WsClient {
 // ---------------------------------------------------------------------------------------------
 // Accounts and requests
 // ---------------------------------------------------------------------------------------------
-
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        _ => panic!("the test app runs on the fake store"),
-    }
-}
-
-pub(super) fn uuid(n: u32) -> String {
-    format!("00000000-0000-4000-8000-{n:012}")
-}
 
 /// One signed-in account: its profile id, its username as shown (`name#tag`) and its token.
 pub(super) struct Account {

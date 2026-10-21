@@ -15,7 +15,6 @@
 
 use std::sync::Arc;
 
-use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
@@ -33,14 +32,14 @@ use jackioh_server::config::{
     MATCH_ACTION_RETENTION_DAYS, REPLAY_CACHE_MATCHES, REPLAY_CACHE_TTL_SECONDS, REPLAY_LIST_PAGE,
     REPLAY_REQUESTS_PER_MINUTE,
 };
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, MatchActionRow, MatchRow, ResultRow, Room};
+use jackioh_server::db::store::{MatchActionRow, MatchRow, ResultRow, Room};
 
 use crate::support::deps::{add_user, call, empty_test_app};
 use crate::support::engine::{
     TEST_GLITCH_SWAP, begun_game, decks_that_open_on_the_mulligans, fake_deck, hand_card, install_test_cards,
     past_the_mulligans, real_pool,
 };
+use crate::support::store::{fake_lock, q, to_json};
 
 const A: &str = "profile-a";
 const B: &str = "profile-b";
@@ -61,27 +60,6 @@ fn from<T: DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
 }
 
-fn to_json<T: Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
-/// One store call in its own transaction.
-macro_rules! q {
-    ($app:expr, $method:ident($($arg:expr),* $(,)?)) => {{
-        let mut tx = $app.db.begin(None).await.expect("begin");
-        let out = tx.$method($($arg),*).await.expect(stringify!($method));
-        tx.commit().await.expect("commit");
-        out
-    }};
-}
-
-async fn fake(app: &App) -> tokio::sync::MutexGuard<'_, FakeData> {
-    match &app.db {
-        Db::Fake(data) => data.lock().await,
-        Db::Pg(_) => panic!("the API tests run on the fake store"),
-    }
-}
-
 /// The three accounts' tokens: A and B play, C never holds a seat.
 struct Tokens {
     a: String,
@@ -94,7 +72,7 @@ async fn app_with_players() -> (Arc<App>, Tokens) {
     let app = empty_test_app().await;
     let mut tokens = Vec::new();
     for (id, user, username) in [(A, "user-a", "Ada"), (B, "user-b", B_NAME), (C, "user-c", "Cy")] {
-        fake(&app)
+        fake_lock(&app)
             .await
             .seed_profile(json!({ "id": id, "userId": user, "status": "active", "username": username }));
         tokens.push(add_user(&app, user, &format!("{user}@example.test"), true));
@@ -732,7 +710,7 @@ mod r768_the_list {
 
         // R1436: the username is read as the list is, so a rename shows on past games too.
         {
-            let mut data = fake(&app).await;
+            let mut data = fake_lock(&app).await;
             let profile = data.tables.profiles.iter_mut().find(|found| found.id == B);
             profile.expect("B's profile").username_base = "Beatrix".to_string();
         }

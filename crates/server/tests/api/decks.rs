@@ -39,18 +39,13 @@ use jackioh_server::app::{self, App, now_ms};
 use jackioh_server::config::{
     DECK_NAME_MAX_LENGTH, DRAFT_ISSUES_REPORTED_MAX, MAX_SAVED_DECKS, MAX_SAVED_TRIOS,
 };
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{CollectionEntry, Db, SavedDeck, SavedTrio, SeriesRow, StoreError};
+use jackioh_server::db::store::{CollectionEntry, SavedDeck, SavedTrio, SeriesRow, StoreError};
 
 use crate::support::deps::{add_user, call, test_app};
+use crate::support::store::{fake_lock, q, uuid};
 
 const PROFILE: &str = "p1";
 const OTHER: &str = "p2";
-
-/// A client-minted id (R256): a UUID, made readable by its last digits.
-fn uuid(n: usize) -> String {
-    format!("00000000-0000-4000-8000-{n:012}")
-}
 
 // Harness (a private copy per file, SURFACE rule 5)
 
@@ -83,24 +78,6 @@ fn assert_matches(actual: &Value, expected: &Value, at: &str) {
         }
         _ => assert_eq!(actual, expected, "{at}"),
     }
-}
-
-/// The fake store behind the test app.
-async fn fake(app: &App) -> tokio::sync::MutexGuard<'_, FakeData> {
-    match &app.db {
-        Db::Fake(data) => data.lock().await,
-        Db::Pg(_) => panic!("the API tests run on the fake store"),
-    }
-}
-
-/// One store call in a transaction of its own.
-macro_rules! store {
-    ($app:expr, $method:ident($($arg:expr),* $(,)?)) => {{
-        let mut t = $app.db.begin(None).await.expect("begin");
-        let out = t.$method($($arg),*).await.unwrap_or_else(|error| panic!("{}: {error:?}", stringify!($method)));
-        t.commit().await.expect("commit");
-        out
-    }};
 }
 
 /// The version the server's catalog is at.
@@ -175,7 +152,7 @@ struct Ctx {
 
 async fn active_profile(app: &App, id: &str) -> String {
     let user_id = format!("user-{id}");
-    fake(app)
+    fake_lock(app)
         .await
         .seed_profile(json!({ "id": id, "userId": user_id, "status": "active" }));
     add_user(app, &user_id, &format!("{id}@example.test"), true)
@@ -246,11 +223,23 @@ impl Ctx {
     }
 
     async fn decks_table(&self) -> Vec<Value> {
-        fake(&self.app).await.tables.decks.iter().map(json_of).collect()
+        fake_lock(&self.app)
+            .await
+            .tables
+            .decks
+            .iter()
+            .map(json_of)
+            .collect()
     }
 
     async fn trios_table(&self) -> Vec<Value> {
-        fake(&self.app).await.tables.trios.iter().map(json_of).collect()
+        fake_lock(&self.app)
+            .await
+            .tables
+            .trios
+            .iter()
+            .map(json_of)
+            .collect()
     }
 }
 
@@ -330,7 +319,7 @@ mod saved_decks_9_4_r250_r256 {
             .put_deck(deck_body(json!({ "cards": cards(1, 0) })), &uuid(1), &ctx.token)
             .await;
         assert_eq!(status, 200);
-        assert_eq!(json_of(&store!(ctx.app, collection_get(PROFILE))), json!([]));
+        assert_eq!(json_of(&q!(ctx.app, collection_get(PROFILE))), json!([]));
         assert_eq!(ctx.decks_table().await.len(), 1);
     }
 
@@ -471,10 +460,7 @@ mod saved_decks_9_4_r250_r256 {
             .await;
         assert_eq!(status, 404);
         assert_eq!(*error_code(&body), json!("not_found"));
-        assert_eq!(
-            json_of(&store!(ctx.app, decks_get(&uuid(1))))["name"],
-            json!("Mine")
-        );
+        assert_eq!(json_of(&q!(ctx.app, decks_get(&uuid(1))))["name"], json!("Mine"));
 
         // DELETE of it is "nothing to delete", exactly as for an id nobody has.
         let (_, removed) = ctx.delete(&format!("/api/decks/{}", uuid(1)), &ctx.token).await;
@@ -502,7 +488,7 @@ mod saved_decks_9_4_r250_r256 {
         let ctx = setup().await;
         let touched = Arc::new(AtomicUsize::new(0));
         let seen = touched.clone();
-        fake(&ctx.app).await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
+        fake_lock(&ctx.app).await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
             if method.starts_with("decks.") || method.starts_with("trios.") {
                 seen.fetch_add(1, Ordering::SeqCst);
             }
@@ -1038,7 +1024,7 @@ mod saved_trios_9_4_r252 {
             .await;
         assert_eq!(status, 404);
         assert_eq!(
-            json_of(&store!(ctx.app, trios_get(&uuid(101))))["name"],
+            json_of(&q!(ctx.app, trios_get(&uuid(101))))["name"],
             json!("Theirs")
         );
         let (_, removed) = ctx.delete(&format!("/api/trios/{}", uuid(101)), &ctx.token).await;
@@ -1292,7 +1278,7 @@ mod a_trio_import_9_4_r340_r341 {
         let ctx = setup().await;
         let upserts = Arc::new(AtomicUsize::new(0));
         let counted = upserts.clone();
-        fake(&ctx.app).await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
+        fake_lock(&ctx.app).await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
             if method == "trios.upsert" {
                 return Err(StoreError::Other("the database went away".to_string()));
             }
@@ -1304,7 +1290,7 @@ mod a_trio_import_9_4_r340_r341 {
         let (status, _) = ctx.post_import(import_body(500, json!({})), &ctx.token).await;
         assert_eq!(status, 500);
         assert_eq!(upserts.load(Ordering::SeqCst), 3);
-        fake(&ctx.app).await.on_call = None;
+        fake_lock(&ctx.app).await.on_call = None;
         assert!(ctx.decks_table().await.is_empty());
         assert!(ctx.trios_table().await.is_empty());
     }
@@ -1451,7 +1437,7 @@ mod the_routes_9_4_a_pending_account_sees_no_decks {
     #[tokio::test(start_paused = true)]
     async fn a_pending_account_gets_403_from_each_and_nothing_is_written() {
         let ctx = setup().await;
-        fake(&ctx.app)
+        fake_lock(&ctx.app)
             .await
             .seed_profile(json!({ "id": "pending", "userId": "user-pending", "status": "pending" }));
         let pending = add_user(&ctx.app, "user-pending", "pending@example.test", true);
@@ -1618,11 +1604,11 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
                 .map(|card| json!({ "cardId": card, "quantity": 1 }))
                 .collect::<Vec<_>>()
         ));
-        store!(app, collection_upsert_quantities(profile_id, &entries));
+        q!(app, collection_upsert_quantities(profile_id, &entries));
     }
 
     async fn save(app: &App, deck: SavedDeck) {
-        store!(app, decks_upsert(&deck, MAX_SAVED_DECKS as i64));
+        q!(app, decks_upsert(&deck, MAX_SAVED_DECKS as i64));
     }
 
     async fn freeze(app: &App, profile_id: &str, choice: Value) -> Result<Value, ApiError> {
@@ -1728,7 +1714,7 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
         assert!(!matches!(error.code, ApiErrorCode::NotFound));
         assert!(error.message.to_lowercase().contains("deck"), "{}", error.message);
         // The premise: this profile really has saved nothing.
-        assert_eq!(json_of(&store!(ctx.app, decks_list(PROFILE))), json!([]));
+        assert_eq!(json_of(&q!(ctx.app, decks_list(PROFILE))), json!([]));
     }
 
     #[tokio::test(start_paused = true)]
@@ -1794,7 +1780,7 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
             "createdAt": 0,
             "updatedAt": 0,
         }));
-        store!(ctx.app, trios_upsert(&trio, MAX_SAVED_TRIOS as i64));
+        q!(ctx.app, trios_upsert(&trio, MAX_SAVED_TRIOS as i64));
 
         let frozen = freeze(&ctx.app, PROFILE, json!({ "mode": "bo3", "trioId": uuid(9) }))
             .await
@@ -1839,7 +1825,7 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
             "createdAt": 0,
             "updatedAt": 0,
         }));
-        store!(ctx.app, trios_upsert(&trio, MAX_SAVED_TRIOS as i64));
+        q!(ctx.app, trios_upsert(&trio, MAX_SAVED_TRIOS as i64));
         // A frozen trio with a hole in it is never the answer: the one filled deck goes to the
         // validator alone, and L1 refuses a trio of one.
         let refused = freeze(&ctx.app, PROFILE, json!({ "mode": "bo3", "trioId": uuid(9) }))
@@ -1915,7 +1901,7 @@ mod assert_not_in_series_r264 {
     #[tokio::test(start_paused = true)]
     async fn r264_refuses_a_profile_in_a_series_that_is_not_over_naming_the_series() {
         let ctx = setup().await;
-        store!(ctx.app, series_create(&series("picking")));
+        q!(ctx.app, series_create(&series("picking")));
         let error = assert_free_to_play(&ctx.app, PROFILE)
             .await
             .expect_err("in a series");
@@ -1927,7 +1913,7 @@ mod assert_not_in_series_r264 {
     #[tokio::test(start_paused = true)]
     async fn r264_s_control_a_series_that_is_over_holds_nobody() {
         let ctx = setup().await;
-        store!(ctx.app, series_create(&series("over")));
+        q!(ctx.app, series_create(&series("over")));
         assert!(assert_free_to_play(&ctx.app, PROFILE).await.is_ok());
     }
 }

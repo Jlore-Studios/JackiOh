@@ -1,12 +1,11 @@
 //! BUILD M7-T1's fake-timer tests for the match clock (SPEC §9.5, R79).
 //!
-//! One test per clock path, on tokio's paused clock (`start_paused = true`): `advance(ms)` fires the
+//! One test per clock path, on tokio's paused clock (`start_paused = true`): `sleep_settled(ms)` fires the
 //! due timers in deadline order, so the assertions are on the millisecond rather than a tolerance.
 //! Every duration is derived from the server's config (`crate::config`), so these tests state R79's
 //! numbers nowhere.
 
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use jackioh_engine::PlayerId::{self, P1, P2};
 use jackioh_server::actor::clock::{create_match_clock, initial_clocks, match_ceiling_at};
@@ -18,12 +17,11 @@ use jackioh_server::config::{
 };
 use serde_json::{Value, json};
 
+use crate::support::store::sleep_settled;
+
 /// Unit conversion only: R79's durations come from the config below.
 const SECOND: i64 = 1000;
 const MINUTE: i64 = 60 * SECOND;
-
-/// How many times `settle` yields: enough for every task woken at this instant to run.
-const SETTLE_YIELDS: usize = 8;
 
 /// A config number as milliseconds' arithmetic wants it, whatever integer type `config.rs` gives it.
 fn int(value: impl Into<i64>) -> i64 {
@@ -33,19 +31,6 @@ fn int(value: impl Into<i64>) -> i64 {
 /// The server's own epoch-millisecond clock, the one the match clock reads.
 fn now() -> i64 {
     now_ms()
-}
-
-/// Lets every task woken at this instant run: the clock's timers report from their own tasks.
-async fn settle() {
-    for _ in 0..SETTLE_YIELDS {
-        tokio::task::yield_now().await;
-    }
-}
-
-/// Runs every callback due within `ms`, in deadline order, advancing `now` as it goes.
-async fn advance(ms: i64) {
-    tokio::time::sleep(Duration::from_millis(u64::try_from(ms.max(0)).unwrap_or(0))).await;
-    settle().await;
 }
 
 struct Harness {
@@ -132,10 +117,10 @@ mod match_clock {
         let h = harness(0);
         h.clock.sync(&view());
 
-        advance(h.turn_ms - 1).await;
+        sleep_settled(h.turn_ms - 1).await;
         assert_eq!(h.expiries(), vec![]);
 
-        advance(1).await;
+        sleep_settled(1).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Turn { player: P1 }]);
     }
 
@@ -143,7 +128,7 @@ mod match_clock {
     async fn resets_the_turn_clock_when_the_turn_changes() {
         let h = harness(0);
         h.clock.sync(&view());
-        advance(h.turn_ms - SECOND).await;
+        sleep_settled(h.turn_ms - SECOND).await;
         assert_eq!(h.expiries(), vec![]);
 
         // R79: "The turn clock belongs to the active player" — the new turn starts from full.
@@ -155,9 +140,9 @@ mod match_clock {
         assert_eq!(h.clock.remaining_for(P2), Some(h.turn_ms));
         assert_eq!(h.clock.remaining_for(P1), None);
 
-        advance(h.turn_ms - 1).await;
+        sleep_settled(h.turn_ms - 1).await;
         assert_eq!(h.expiries(), vec![]);
-        advance(1).await;
+        sleep_settled(1).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Turn { player: P2 }]);
     }
 
@@ -169,7 +154,7 @@ mod match_clock {
 
         // Spend most of p1's turn, then a trap fires and asks p2 a question.
         let spent = h.turn_ms - 15 * SECOND;
-        advance(spent).await;
+        sleep_settled(spent).await;
         assert_eq!(h.clock.remaining_for(P1), Some(h.turn_ms - spent));
 
         h.clock.sync(&ClockView {
@@ -181,16 +166,16 @@ mod match_clock {
 
         // The prompt outlives what was left of p1's turn: 60 s spent + a 30 s prompt is past the 75 s
         // turn clock, so an unpaused turn clock would have fired in here.
-        advance(h.prompt_ms).await;
+        sleep_settled(h.prompt_ms).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Prompt { player: P2 }]);
         assert_eq!(h.clock.remaining_for(P1), Some(h.turn_ms - spent));
 
         // R79: when the pause ends the turn clock resumes with the time it had left, not from full.
         h.clock.sync(&view());
         assert_eq!(h.deadline("turnDeadline"), Some(now() + (h.turn_ms - spent)));
-        advance(h.turn_ms - spent - 1).await;
+        sleep_settled(h.turn_ms - spent - 1).await;
         assert_eq!(h.expiries().len(), 1);
-        advance(1).await;
+        sleep_settled(1).await;
         assert_eq!(
             h.expiries(),
             vec![
@@ -212,10 +197,10 @@ mod match_clock {
         assert_eq!(h.deadline("turnDeadline"), Some(now() + h.turn_ms));
         assert_eq!(h.deadline("promptDeadline"), None);
 
-        advance(h.prompt_ms).await;
+        sleep_settled(h.prompt_ms).await;
         assert_eq!(h.expiries(), vec![]);
 
-        advance(h.turn_ms - h.prompt_ms).await;
+        sleep_settled(h.turn_ms - h.prompt_ms).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Turn { player: P1 }]);
     }
 
@@ -228,9 +213,9 @@ mod match_clock {
             json!({ "p1": null, "p2": now() + h.grace_ms })
         );
 
-        advance(h.grace_ms - 1).await;
+        sleep_settled(h.grace_ms - 1).await;
         assert_eq!(h.expiries(), vec![]);
-        advance(1).await;
+        sleep_settled(1).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Grace { player: P2 }]);
         assert_eq!(h.grace(P2), None);
     }
@@ -246,13 +231,13 @@ mod match_clock {
         // The socket flaps: another drop arrives while the first countdown is still running. Re-arming
         // here would hand the player a fresh window every time they bounced, and the match would stall
         // for as long as they kept it up.
-        advance(h.grace_ms - SECOND).await;
+        sleep_settled(h.grace_ms - SECOND).await;
         h.clock.start_grace(P1, None);
         assert_eq!(h.grace(P1), deadline);
         assert_eq!(h.expiries(), vec![]);
 
         // It expires at the deadline the *first* drop set, not a second later.
-        advance(SECOND).await;
+        sleep_settled(SECOND).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Grace { player: P1 }]);
 
         // And a grace that has run out can be started again: the guard is about extending a live
@@ -270,9 +255,9 @@ mod match_clock {
         let stored = now() + h.grace_ms / 2;
         h.clock.start_grace(P1, Some(stored));
         assert_eq!(h.grace(P1), Some(stored));
-        advance(h.grace_ms / 2 - 1).await;
+        sleep_settled(h.grace_ms / 2 - 1).await;
         assert_eq!(h.expiries(), vec![]);
-        advance(1).await;
+        sleep_settled(1).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Grace { player: P1 }]);
 
         // A stored deadline later than a fresh window would end is held to it (R147): a rebuild can
@@ -282,7 +267,7 @@ mod match_clock {
 
         // One that already ran out while the server was down fires at once.
         h.clock.start_grace(P1, Some(now() - 1));
-        advance(0).await;
+        sleep_settled(0).await;
         assert_eq!(h.expiries().last(), Some(&ClockExpiry::Grace { player: P1 }));
         assert_eq!(
             h.expiries()
@@ -297,11 +282,11 @@ mod match_clock {
     async fn cancels_grace_when_the_player_returns_inside_the_window() {
         let h = harness(0);
         h.clock.start_grace(P1, None);
-        advance(h.grace_ms - SECOND).await;
+        sleep_settled(h.grace_ms - SECOND).await;
         h.clock.clear_grace(P1);
         assert_eq!(h.grace(P1), None);
 
-        advance(h.grace_ms * 2).await;
+        sleep_settled(h.grace_ms * 2).await;
         assert_eq!(
             h.expiries()
                 .iter()
@@ -321,7 +306,7 @@ mod match_clock {
         // §9.5: "The clock keeps running while a player is disconnected."
         assert_eq!(h.deadline("turnDeadline"), deadline);
 
-        advance(h.turn_ms).await;
+        sleep_settled(h.turn_ms).await;
         assert_eq!(
             h.expiries(),
             vec![
@@ -345,13 +330,13 @@ mod match_clock {
             Some(h.started_at + h.ceiling_ms)
         );
 
-        advance(h.ceiling_ms - elapsed - 1).await;
+        sleep_settled(h.ceiling_ms - elapsed - 1).await;
         assert_eq!(h.expiries(), vec![]);
-        advance(1).await;
+        sleep_settled(1).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Ceiling]);
 
         // Once: a second ceiling's worth fires nothing.
-        advance(h.ceiling_ms).await;
+        sleep_settled(h.ceiling_ms).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Ceiling]);
     }
 
@@ -371,7 +356,7 @@ mod match_clock {
         h.clock.sync(&view());
         assert_eq!(h.deadline("turnDeadline"), Some(now() + h.turn_ms));
 
-        advance(10 * SECOND).await;
+        sleep_settled(10 * SECOND).await;
         assert_eq!(h.clock.remaining_for(P1), Some(h.turn_ms - 10 * SECOND));
         assert_eq!(h.clock.remaining_for(P2), None);
 
@@ -393,7 +378,7 @@ mod match_clock {
         assert_eq!(h.clock.remaining_for(P1), Some(h.turn_ms - 10 * SECOND));
         assert_eq!(h.clock.remaining_for(P2), Some(h.prompt_ms));
 
-        advance(SECOND).await;
+        sleep_settled(SECOND).await;
         assert_eq!(h.clock.remaining_for(P2), Some(h.prompt_ms - SECOND));
         assert_eq!(h.clock.remaining_for(P1), Some(h.turn_ms - 10 * SECOND));
     }
@@ -420,7 +405,7 @@ mod match_clock {
             ..view()
         });
         assert_eq!(h.deadline("turnDeadline"), None);
-        advance(60 * MINUTE).await;
+        sleep_settled(60 * MINUTE).await;
         assert_eq!(h.expiries(), vec![]);
     }
 
@@ -440,7 +425,7 @@ mod match_clock {
         assert_eq!(h.deadline("turnDeadline"), None);
         assert_eq!(h.deadline("promptDeadline"), None);
         assert_eq!(h.grace(P1), None);
-        advance(60 * MINUTE).await;
+        sleep_settled(60 * MINUTE).await;
         assert_eq!(h.expiries(), vec![]);
     }
 
@@ -458,18 +443,18 @@ mod match_clock {
         assert_eq!(h.clock.remaining_for(P2), Some(h.mulligan_ms));
 
         // A turn clock's worth of waiting is not what ends it: only the mulligan deadline is armed.
-        advance(h.mulligan_ms - 1).await;
+        sleep_settled(h.mulligan_ms - 1).await;
         assert_eq!(h.expiries(), vec![]);
         assert_eq!(h.clock.remaining_for(P1), Some(1));
         assert_eq!(h.clock.remaining_for(P2), Some(1));
-        advance(1).await;
+        sleep_settled(1).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Mulligan]);
         assert!(h.mulligan_ms < h.turn_ms);
 
         // It fires once: the window is still open until the actor's timeouts land, and a `sync` that
         // still reports it arms nothing new.
         h.clock.sync(&mulligan_window(&[P2]));
-        advance(h.mulligan_ms * 2).await;
+        sleep_settled(h.mulligan_ms * 2).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Mulligan]);
     }
 
@@ -481,13 +466,13 @@ mod match_clock {
 
         // p2 answers first, well into the window. The seat still owing gets what was left, not a fresh
         // window, and the seat that answered still reads the same countdown: it is waiting on it.
-        advance(20 * SECOND).await;
+        sleep_settled(20 * SECOND).await;
         h.clock.sync(&mulligan_window(&[P1]));
         assert_eq!(h.deadline("promptDeadline"), deadline);
         assert_eq!(h.clock.remaining_for(P1), Some(h.mulligan_ms - 20 * SECOND));
         assert_eq!(h.clock.remaining_for(P2), Some(h.mulligan_ms - 20 * SECOND));
 
-        advance(h.mulligan_ms - 20 * SECOND).await;
+        sleep_settled(h.mulligan_ms - 20 * SECOND).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Mulligan]);
     }
 
@@ -495,11 +480,11 @@ mod match_clock {
     async fn r268_the_window_closing_cancels_the_mulligan_clock_and_turn_1_starts_p1s_turn_clock_from_full() {
         let h = harness(0);
         h.clock.sync(&mulligan_window(&[P1, P2]));
-        advance(10 * SECOND).await;
+        sleep_settled(10 * SECOND).await;
         h.clock.sync(&mulligan_window(&[P2]));
 
         // The second answer resolves both and starts turn 1 (R265, §2.1).
-        advance(5 * SECOND).await;
+        sleep_settled(5 * SECOND).await;
         h.clock.sync(&ClockView {
             turn: 1,
             active: P1,
@@ -511,9 +496,9 @@ mod match_clock {
         assert_eq!(h.clock.remaining_for(P2), None);
 
         // The mulligan deadline passes with nothing to report, and the turn clock is p1's.
-        advance(h.mulligan_ms).await;
+        sleep_settled(h.mulligan_ms).await;
         assert_eq!(h.expiries(), vec![]);
-        advance(h.turn_ms - h.mulligan_ms).await;
+        sleep_settled(h.turn_ms - h.mulligan_ms).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Turn { player: P1 }]);
     }
 
@@ -532,10 +517,10 @@ mod match_clock {
         assert_eq!(h.deadline("promptDeadline"), Some(now() + h.prompt_ms));
 
         // Answered, and the window opens: the prompt clock goes and the one mulligan deadline takes over.
-        advance(5 * SECOND).await;
+        sleep_settled(5 * SECOND).await;
         h.clock.sync(&mulligan_window(&[P1, P2]));
         assert_eq!(h.deadline("promptDeadline"), Some(now() + h.mulligan_ms));
-        advance(h.prompt_ms).await;
+        sleep_settled(h.prompt_ms).await;
         assert_eq!(h.expiries(), vec![]);
 
         // Both answered, and a replacement draw's cast asks p2 during the resolution (phase still
@@ -547,7 +532,7 @@ mod match_clock {
             ..view()
         });
         assert_eq!(h.deadline("promptDeadline"), Some(now() + h.prompt_ms));
-        advance(h.prompt_ms).await;
+        sleep_settled(h.prompt_ms).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Prompt { player: P2 }]);
     }
 
@@ -561,7 +546,7 @@ mod match_clock {
         });
         assert_eq!(h.deadline("promptDeadline"), None);
         assert_eq!(h.clock.remaining_for(P1), None);
-        advance(h.mulligan_ms).await;
+        sleep_settled(h.mulligan_ms).await;
         assert_eq!(h.expiries(), vec![]);
     }
 
@@ -584,18 +569,18 @@ mod match_clock {
         let retry_ms = int(MATCH_SERVER_ACTION_RETRY_MS);
         let h = harness(0);
         h.clock.sync(&view());
-        advance(h.turn_ms).await;
+        sleep_settled(h.turn_ms).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Turn { player: P1 }]);
 
         // One countdown, one timer: a second retry while the first runs changes nothing.
         h.clock.retry(ClockExpiry::Turn { player: P1 }, retry_ms);
         h.clock.retry(ClockExpiry::Turn { player: P1 }, retry_ms);
         assert_eq!(h.deadline("turnDeadline"), Some(now() + retry_ms));
-        advance(retry_ms).await;
+        sleep_settled(retry_ms).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Turn { player: P1 }; 2]);
 
         // Nothing re-arms a clock that ran out and was not retried.
-        advance(h.turn_ms).await;
+        sleep_settled(h.turn_ms).await;
         assert_eq!(h.expiries().len(), 2);
 
         // The turn passing to p2 cancels a retry that was waiting.
@@ -605,7 +590,7 @@ mod match_clock {
             active: P2,
             ..view()
         });
-        advance(retry_ms).await;
+        sleep_settled(retry_ms).await;
         assert_eq!(h.expiries().len(), 2);
         assert_eq!(h.deadline("turnDeadline"), Some(now() + h.turn_ms - retry_ms));
     }
@@ -615,7 +600,7 @@ mod match_clock {
         let retry_ms = int(MATCH_SERVER_ACTION_RETRY_MS);
         let h = harness(0);
         h.clock.start_grace(P1, None);
-        advance(h.grace_ms).await;
+        sleep_settled(h.grace_ms).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Grace { player: P1 }]);
 
         h.clock.retry(ClockExpiry::Grace { player: P1 }, retry_ms);
@@ -623,13 +608,13 @@ mod match_clock {
         // R147: a countdown already running is kept, not moved.
         h.clock.retry(ClockExpiry::Grace { player: P1 }, retry_ms * 2);
         assert_eq!(h.grace(P1), Some(now() + retry_ms));
-        advance(retry_ms).await;
+        sleep_settled(retry_ms).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Grace { player: P1 }; 2]);
 
         h.clock.retry(ClockExpiry::Grace { player: P1 }, retry_ms);
         h.clock.clear_grace(P1);
         assert_eq!(h.grace(P1), None);
-        advance(retry_ms).await;
+        sleep_settled(retry_ms).await;
         assert_eq!(h.expiries().len(), 2);
     }
 
@@ -642,32 +627,32 @@ mod match_clock {
             pending_for: Some(P2),
             ..view()
         });
-        advance(prompt.prompt_ms).await;
+        sleep_settled(prompt.prompt_ms).await;
         assert_eq!(prompt.expiries(), vec![ClockExpiry::Prompt { player: P2 }]);
         prompt.clock.retry(ClockExpiry::Prompt { player: P2 }, retry_ms);
-        advance(retry_ms).await;
+        sleep_settled(retry_ms).await;
         assert_eq!(prompt.expiries(), vec![ClockExpiry::Prompt { player: P2 }; 2]);
         prompt.clock.stop();
 
         let mulligan = harness(0);
         mulligan.clock.sync(&mulligan_window(&[P1, P2]));
-        advance(mulligan.mulligan_ms).await;
+        sleep_settled(mulligan.mulligan_ms).await;
         assert_eq!(mulligan.expiries(), vec![ClockExpiry::Mulligan]);
         mulligan.clock.retry(ClockExpiry::Mulligan, retry_ms);
-        advance(retry_ms).await;
+        sleep_settled(retry_ms).await;
         assert_eq!(mulligan.expiries(), vec![ClockExpiry::Mulligan; 2]);
         // The window closing cancels a retry that was waiting.
         mulligan.clock.retry(ClockExpiry::Mulligan, retry_ms);
         mulligan.clock.sync(&view());
-        advance(retry_ms).await;
+        sleep_settled(retry_ms).await;
         assert_eq!(mulligan.expiries().len(), 2);
         mulligan.clock.stop();
 
         let ceiling = harness(int(MATCH_CEILING_MINUTES) * MINUTE - SECOND);
-        advance(SECOND).await;
+        sleep_settled(SECOND).await;
         assert_eq!(ceiling.expiries(), vec![ClockExpiry::Ceiling]);
         ceiling.clock.retry(ClockExpiry::Ceiling, retry_ms);
-        advance(retry_ms).await;
+        sleep_settled(retry_ms).await;
         assert_eq!(ceiling.expiries(), vec![ClockExpiry::Ceiling; 2]);
         ceiling.clock.stop();
     }
