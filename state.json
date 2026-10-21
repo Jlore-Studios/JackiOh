@@ -9772,7 +9772,10 @@
       "feedback_since": "2026-10-21T12:39:10Z",
       "issue": 1497,
       "kind": "revise",
+      "queued_at": "2026-10-21T14:23:09Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
