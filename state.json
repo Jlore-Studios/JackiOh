@@ -9552,7 +9552,25 @@
       "feedback_since": "2026-10-21T06:08:13Z",
       "issue": 1492,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "gpt"
+        ],
+        "builder": "gpt",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "gpt",
+            "run": "39553290005",
+            "tier": "medium"
+          }
+        ],
+        "sha": "80560f6bae122457c99ded0ed1052d47f848463f",
+        "tiers": {
+          "gpt": "medium"
+        }
+      }
     },
     "430": {
       "failures": 0,
