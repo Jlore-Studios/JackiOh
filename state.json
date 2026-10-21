@@ -10981,7 +10981,7 @@
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-10-21T20:18:10Z",
-      "run_id": "pending:ef32529f-1792622409",
+      "run_id": "39688180095",
       "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-21T22:40:23Z",
