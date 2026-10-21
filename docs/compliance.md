@@ -39,8 +39,8 @@ line only after that review.
 ### A user found to be under the minimum
 
 1. Find the account in the Supabase dashboard (Authentication → Users) by its address.
-2. If the player is in a live match or an unfinished Conquest series, wait for it to end: the
-   deletion is refused until then (migration 0012).
+2. If the player is in a live match, a live co-op game or an unfinished Conquest series, wait for
+   it to end: the deletion is refused until then (migrations 0012 and 0051).
 3. Delete the user in the dashboard. That deletes from `auth.users`, which fires
    `on_auth_user_deleted` and removes the profile and every row that is only theirs, as "Delete my
    account" does (migration 0012). There is no parental-consent route.

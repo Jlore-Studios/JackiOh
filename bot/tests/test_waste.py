@@ -261,7 +261,8 @@ class HonestReportTests(unittest.TestCase):
         h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
                             "review": reviewer(APPROVE)}))
         pr = int(h.gh.list_pulls(head="bot/issue-12")[0]["number"])
-        self.assertEqual(h.gh.merge_titles[f"PR_{pr}"], f"Make the rules v2 (#{pr})")
+        # Neither the builder's title nor the fake issue's passes the title check, so it is written.
+        self.assertEqual(h.gh.merge_titles[f"PR_{pr}"], f"Patch: Make the rules v2 (#{pr})")
 
     def test_a_title_that_breaks_the_convention_gives_way_to_the_issues(self):
         """#187: the title check holds a pull request's title to docs/issues-and-patches.md, so a

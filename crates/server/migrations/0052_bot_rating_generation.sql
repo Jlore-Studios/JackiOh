@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0051: a bot's rating names the AI it was earned on (R1560000; issue #1560)
+-- Migration 0052: a bot's rating names the AI it was earned on (R1560000; issue #1560)
 -- ============================================================================
 -- Serves R1560000 (amends R610): a ladder bot's rating row remembers the AI
 -- generation (`crates/ai/generation.json`) it was last rated on. A rated game
@@ -12,8 +12,8 @@
 -- promotion behind. Nothing is backfilled: the server alone writes the column
 -- (public.bot_ratings is server-only, 0022).
 --
--- Apply order: 0001 -> ... -> 0022 (`public.bot_ratings`) -> ... -> 0050 ->
--- 0051 (this file).
+-- Apply order: 0001 -> ... -> 0022 (`public.bot_ratings`) -> ... -> 0051 ->
+-- 0052 (this file).
 -- Safe to re-apply: add-column-if-not-exists and comment-on.
 -- ============================================================================
 

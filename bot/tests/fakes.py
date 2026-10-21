@@ -36,6 +36,9 @@ class FakeGitHub:
         self.pinned: list[str] = []
         self.runs: dict[str, dict[str, Any]] = {}
         self.jobs: dict[str, list[dict[str, Any]]] = {}
+        #: A run's uploads, by run id, and each upload's zip, by its id.
+        self.artifacts: dict[str, list[dict[str, Any]]] = {}
+        self.artifact_zips: dict[int, bytes] = {}
         self.reruns: list[Any] = []
         self.reacted: list[tuple[int, str]] = []
         self.auto_merge: dict[str, str] = {}
@@ -409,6 +412,14 @@ class FakeGitHub:
 
     def job_log(self, job_id: Any, tail_chars: int = 6000) -> str:
         return f"log of job {job_id}: AssertionError: expected 3 to be 4"
+
+    def list_artifacts(self, run_id: Any) -> list[dict]:
+        return copy.deepcopy(self.artifacts.get(str(run_id), []))
+
+    def download_artifact(self, artifact_id: Any) -> bytes:
+        if int(artifact_id) not in self.artifact_zips:
+            raise GitHubError("no artifact", 404)
+        return self.artifact_zips[int(artifact_id)]
 
     def check_runs(self, sha: str) -> list[dict]:
         return []

@@ -13,6 +13,14 @@
 #      integration tests (a crate's tests/), web test files (*.test.ts, *.test.tsx, apps/web/src/test/),
 #      tooling and READMEs are never imported, so a commit that touches only those leaves the site
 #      byte for byte what it was and does not deploy.
+#   2a. The countdown issue's Vercel commands (scripts/promote-production.sh, docs/deploy-cloudflare.md
+#      2.3) are two tags this reads from the repository on GitHub with `git ls-remote`. While
+#      `vercel-hold` exists (`/hold vercel`, `/delay vercel`), main builds nothing. While
+#      `vercel-fast-forward` names a commit this one has and the last build lacks
+#      (`/fast-forward vercel`, the end of a hold), it builds, past rule 4's wait. Reading them is
+#      best effort: no network, no repository to read (VERCEL_GIT_REPO_OWNER and _SLUG, else the
+#      clone's origin; the tests' VERCEL_STAGING_REMOTE) or no answer in STAGING_TIMEOUT_SECONDS
+#      leaves rules 3 and 4 as they were. The repository is public, so no token is needed.
 #   4. main also waits MIN_GAP_SECONDS after the last commit Vercel built: a commit committed less
 #      than that after it is skipped, whatever it changed, and the first push after the wait builds
 #      it with everything skipped before it. Each build stores a whole copy of the site (about 76 MB
@@ -46,6 +54,30 @@ if [ "$VERCEL_ENV" != production ] && [ "$VERCEL_GIT_COMMIT_REF" != main ]; then
 fi
 
 prev=$VERCEL_GIT_PREVIOUS_SHA
+
+# Rule 2a: the countdown issue's hold and fast-forward.
+remote=${VERCEL_STAGING_REMOTE:-}
+if [ -z "$remote" ] && [ -n "$VERCEL_GIT_REPO_OWNER" ] && [ -n "$VERCEL_GIT_REPO_SLUG" ]; then
+  remote="https://github.com/$VERCEL_GIT_REPO_OWNER/$VERCEL_GIT_REPO_SLUG.git"
+fi
+[ -n "$remote" ] || remote=$(git config --get remote.origin.url 2>/dev/null) || remote=
+if [ -n "$remote" ]; then
+  STAGING_TIMEOUT_SECONDS=20
+  tags=$(GIT_TERMINAL_PROMPT=0 timeout "$STAGING_TIMEOUT_SECONDS" git ls-remote "$remote" \
+    refs/tags/vercel-hold refs/tags/vercel-fast-forward 2>/dev/null) || tags=
+  case "$tags" in
+    *refs/tags/vercel-hold*) exit 0 ;;
+  esac
+  ff=$(printf '%s\n' "$tags" | awk '$2 == "refs/tags/vercel-fast-forward" { print $1 }')
+  if [ -n "$ff" ]; then
+    [ "$ff" != "$(git rev-parse HEAD 2>/dev/null)" ] || exit 1
+    if git merge-base --is-ancestor "$ff" HEAD 2>/dev/null \
+      && ! { [ -n "$prev" ] && git merge-base --is-ancestor "$ff" "$prev" 2>/dev/null; }; then
+      exit 1
+    fi
+  fi
+fi
+
 [ -n "$prev" ] || exit 1
 git merge-base --is-ancestor "$prev" HEAD 2>/dev/null || exit 1
 # --no-renames: a move lists both paths, so a file moved onto the skip list still counts where it was.
