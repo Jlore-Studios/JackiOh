@@ -9,7 +9,6 @@
 
 use std::sync::Arc;
 
-use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
@@ -17,11 +16,11 @@ use jackioh_engine::{Action, ActionBody, GameState, PlayerId, Winner, legal_acti
 use jackioh_server::actor::clock::initial_clocks;
 use jackioh_server::actor::engine::{hash_state, seat_played_by};
 use jackioh_server::app::{App, now_ms};
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, MatchActionRow, MatchRow, ResultRow};
+use jackioh_server::db::store::{MatchActionRow, MatchRow, ResultRow};
 
 use crate::support::deps::{add_user, call, empty_test_app};
 use crate::support::engine::{begun_game, decks_that_open_on_the_mulligans, install_test_cards, real_pool};
+use crate::support::store::{fake, q, to_json, uuid};
 
 /// How many log actions a game runs before its seat to act concedes: one page of steps.
 const PLAYED_ACTIONS: usize = 8;
@@ -34,30 +33,6 @@ const HOUR_MS: i64 = 3_600_000;
 
 fn from<T: DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-fn to_json<T: Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
-macro_rules! q {
-    ($app:expr, $method:ident($($arg:expr),* $(,)?)) => {{
-        let mut tx = $app.db.begin(None).await.expect("begin");
-        let out = tx.$method($($arg),*).await.expect(stringify!($method));
-        tx.commit().await.expect("commit");
-        out
-    }};
-}
-
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        _ => panic!("the test app runs on the fake store"),
-    }
-}
-
-fn uuid(n: u32) -> String {
-    format!("00000000-0000-4000-8000-{n:012}")
 }
 
 struct Account {

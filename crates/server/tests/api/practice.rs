@@ -25,8 +25,7 @@ use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
     JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, PRACTICE_SEED_TTL_SECONDS, PRACTICE_VERIFY_CONCURRENCY,
 };
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, LastBoardKind};
+use jackioh_server::db::store::LastBoardKind;
 use jackioh_server::economy::practice::{self, ClaimedResult};
 use jackioh_server::economy::quests::{QuestDef, QuestGoal, pool, quest_interval_ms};
 use jackioh_server::economy::rewards::{GameMode, game_xp, is_player_action};
@@ -36,6 +35,7 @@ use jackioh_server::economy::store::{
 };
 
 use crate::support::deps::{add_user, call, test_app as built_app};
+use crate::support::store::{fake_ref, store};
 
 const A: &str = "profile-a";
 const USER_A: &str = "user-a";
@@ -55,29 +55,10 @@ async fn test_app() -> Arc<App> {
     app
 }
 
-/// Every store call in this file: one transaction, committed when the call answers.
-macro_rules! store {
-    ($app:expr, |$t:ident| $call:expr) => {{
-        let mut $t = $app.db.begin(None).await.expect("a store transaction begins");
-        let out = $call
-            .await
-            .expect(concat!("the store answers ", stringify!($call)));
-        $t.commit().await.expect("the store transaction commits");
-        out
-    }};
-}
-
-fn fake(app: &App) -> &Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => data,
-        _ => panic!("support::deps::test_app() runs on the fake store"),
-    }
-}
-
 /// An app with A as a signed-in active account and nothing else in its store, and A's token.
 async fn authed_with(app: Arc<App>) -> (Arc<App>, String) {
-    fake(&app).lock().await.reset();
-    let _ = fake(&app)
+    fake_ref(&app).lock().await.reset();
+    let _ = fake_ref(&app)
         .lock()
         .await
         .seed_profile(json!({ "id": A, "userId": USER_A, "status": "active" }));
@@ -598,7 +579,7 @@ async fn r1303001_an_abandoned_seed_is_pruned_by_the_next_issue() {
 async fn r1303001_another_accounts_seed_is_unknown() {
     let (app, token) = authed().await;
     let setup = setup(Difficulty::Easy, Vec::new());
-    let _ = fake(&app)
+    let _ = fake_ref(&app)
         .lock()
         .await
         .seed_profile(json!({ "id": "profile-b", "userId": "user-b", "status": "active" }));
@@ -710,7 +691,15 @@ async fn a_seed_for_a_catalog_the_server_cannot_fold_is_refused() {
     )
     .await;
     assert_eq!(status, 409);
-    assert!(fake(&app).lock().await.tables.economy.practice_seeds.is_empty());
+    assert!(
+        fake_ref(&app)
+            .lock()
+            .await
+            .tables
+            .economy
+            .practice_seeds
+            .is_empty()
+    );
 }
 
 #[tokio::test]

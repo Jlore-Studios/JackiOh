@@ -21,10 +21,11 @@ use jackioh_server::actor::protocol::SERVER_NONCE_PREFIX;
 use jackioh_server::actor::telemetry::{LIVE_PILOTS, Recorder, replay, replay_from};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{MATCH_CHECKPOINT_MIN_ACTIONS, MATCH_CHECKPOINT_VERSION};
-use jackioh_server::db::store::{Db, MatchActionRow, MatchCheckpointRow, MatchRow};
+use jackioh_server::db::store::{MatchActionRow, MatchCheckpointRow, MatchRow};
 
 use crate::support::deps::{RecordingLogger, add_user, call, empty_test_app, record_logs};
 use crate::support::engine::{begun_game, decks_the_engine_accepts, install_test_cards, real_pool};
+use crate::support::store::{fake_ref, to_json};
 
 const MATCH_ID: &str = "match-checkpoints";
 /// The rows logged before the drain.
@@ -41,10 +42,6 @@ type Decks = (Vec<String>, Vec<String>);
 
 fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-fn to_json<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 /// A live match row, as the registry writes one.
@@ -109,17 +106,10 @@ fn rows_of(row: &MatchRow, first: usize, actions: &[Action]) -> Vec<MatchActionR
         .collect()
 }
 
-fn fake(app: &App) -> &std::sync::Arc<tokio::sync::Mutex<jackioh_server::db::fake::FakeData>> {
-    let Db::Fake(data) = &app.db else {
-        panic!("the test app runs on the fake store")
-    };
-    data
-}
-
 /// The row written straight into the fake store with both profiles; its log is `append`'s.
 async fn write_match(app: &App, row: &MatchRow) {
     for n in [1, 2] {
-        fake(app).lock().await.seed_profile(json!({
+        fake_ref(app).lock().await.seed_profile(json!({
             "id": format!("profile-{n}"),
             "userId": format!("user-{n}"),
             "status": "active",
@@ -141,11 +131,11 @@ async fn append(app: &App, rows: &[MatchActionRow]) {
 }
 
 async fn checkpoints(app: &App) -> Vec<MatchCheckpointRow> {
-    fake(app).lock().await.tables.match_checkpoints.clone()
+    fake_ref(app).lock().await.tables.match_checkpoints.clone()
 }
 
 async fn set_checkpoint(app: &App, checkpoint: Option<MatchCheckpointRow>) {
-    fake(app).lock().await.tables.match_checkpoints = checkpoint.into_iter().collect();
+    fake_ref(app).lock().await.tables.match_checkpoints = checkpoint.into_iter().collect();
 }
 
 async fn logged(app: &App) -> Vec<MatchActionRow> {

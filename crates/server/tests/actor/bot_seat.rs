@@ -31,12 +31,12 @@ use jackioh_server::config::{
     AI_PERSONAS, BOT_DRAW_ANSWER_FIT, BOT_STRENGTHS, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_TIMEOUT_FIT,
     EmoteTrigger, MULLIGAN_CLOCK_MS, PersonaName, TURN_CLOCK_MS,
 };
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, NewBot, StoreError};
+use jackioh_server::db::store::{NewBot, StoreError};
 
 use crate::support::deps::{TestAppOptions, test_app_with};
 use crate::support::engine::{TEST_HEARS_EMOTES, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
+use crate::support::store::{fake, q, to_json};
 
 const MATCH_ID: &str = "match-bot-seat";
 const PERSON: &str = "profile-person";
@@ -48,27 +48,6 @@ const WAIT_STEP_MS: u64 = 250;
 
 fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-fn to_json<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("a serialisable value")
-}
-
-/// One store call in its own transaction.
-macro_rules! q {
-    ($app:expr, $method:ident($($arg:expr),* $(,)?)) => {{
-        let mut tx = $app.db.begin(None).await.expect("begin");
-        let out = tx.$method($($arg),*).await.expect(stringify!($method));
-        tx.commit().await.expect("commit");
-        out
-    }};
-}
-
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        Db::Pg(_) => panic!("the test app runs on the fake store"),
-    }
 }
 
 /// The catalog's playable ids (no tokens), sliced into two disjoint decks.

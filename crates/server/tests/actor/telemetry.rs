@@ -17,44 +17,18 @@ use jackioh_server::actor::match_actor::MatchActor;
 use jackioh_server::app::App;
 use jackioh_server::cli::timing_backfill::{BackfillOutcome, backfill};
 use jackioh_server::config::{MULLIGAN_CLOCK_MS, REMATCH_OFFER_TTL_MS, TURN_CLOCK_MS};
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, MatchStatus, PlayTelemetry, StoreError};
+use jackioh_server::db::store::{MatchStatus, PlayTelemetry, StoreError};
 
 use crate::support::deps::test_app;
 use crate::support::socket::{FakeSocket, create_fake_socket, settle};
+use crate::support::store::{fake, store, to_json};
 
 const P1: &str = "profile-1";
 const P2: &str = "profile-2";
 const SEED: &str = "telemetry-real";
 
-/// One store call in its own transaction.
-macro_rules! store {
-    ($app:expr, $t:ident => $call:expr) => {{
-        let mut $t = $app
-            .db
-            .begin(None)
-            .await
-            .expect("the fake store opens a transaction");
-        let out = $call;
-        $t.commit().await.expect("the fake store commits");
-        out
-    }};
-}
-
 fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-fn to_json<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("a serialisable value")
-}
-
-/// The fake store behind the test app.
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        _ => panic!("the test app runs on the fake store"),
-    }
 }
 
 /// Every store method named `method` fails until the test ends.
