@@ -9688,9 +9688,12 @@
         "sha": "b442c5484cd083cf354e1fdcd5bda3caac944dd8"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-21T12:38:34Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1445,
       "kind": "review",
       "pending_request": false,
