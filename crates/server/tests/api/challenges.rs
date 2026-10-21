@@ -8,30 +8,22 @@
 //! wherever the body carries it (`code_is`): S7's `{code}` or the repo's `{error: {code, …}}`.
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use serde_json::{Value, json};
 
 use jackioh_server::app::App;
 use jackioh_server::config::{CHALLENGE_TTL_MS, CHALLENGES_PER_HOUR, ROOM_CODE_LENGTH};
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, StartMatchInput};
+use jackioh_server::db::store::StartMatchInput;
 
 use jackioh_server::social::challenges::sweep;
 
 use crate::support::deps::{TEST_CATALOG_VERSION, add_user, call, empty_test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
+use crate::support::store::{advance, fake, uuid};
 
 // ---------------------------------------------------------------------------------------------
 // Plumbing (private copies: each test file of this binary keeps its own)
 // ---------------------------------------------------------------------------------------------
-
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        _ => panic!("the test app runs on the fake store"),
-    }
-}
 
 /// A config duration as milliseconds, whichever integer type `config.rs` gives it.
 fn millis<T>(value: T) -> u64
@@ -44,14 +36,6 @@ where
 
 /// An hour, in milliseconds: the challenge allowance's window.
 const HOUR_MS: u64 = 3_600_000;
-
-async fn advance(ms: u64) {
-    tokio::time::advance(Duration::from_millis(ms)).await;
-}
-
-fn uuid(n: u32) -> String {
-    format!("00000000-0000-4000-8000-{n:012}")
-}
 
 struct Account {
     id: String,
