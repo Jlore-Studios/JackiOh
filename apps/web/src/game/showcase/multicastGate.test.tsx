@@ -113,6 +113,26 @@ describe("issue #124 the gate outlasts a burst the runner is still working throu
   });
 });
 
+describe("issue #1493 trap reveals wait for their runner entry", () => {
+  it("issue #1493 replaces the close-up as each trapFired entry starts", () => {
+    const { queue, tick } = manual();
+    const first: GameEvent = { type: "trapFired", instanceId: "b1", defId: "core-041", controller: "p2", row: "backrow", lane: 2 };
+    const second: GameEvent = { type: "trapFired", instanceId: "b2", defId: "classic-005", controller: "p1", row: "backrow", lane: 3 };
+    const { next } = mountThen([first, second], { queue });
+    // Both reveals are gated to their `trapFired` entry: nothing is up before the runner reaches them.
+    expect(screen.queryByTestId(T.root)).toBeNull();
+    // Game feeds the runner the same objects the view holds.
+    act(() => queue.enqueue(next.events.slice(1), next));
+    // The first entry starts as it is enqueued: the first trap replaces in at once.
+    expect(screen.getByTestId(T.root)).toHaveAttribute("data-showcase", "trap");
+    expect(screen.getByTestId(T.root)).toHaveAttribute("data-showcase-def", "core-041");
+    expect(ordinalNow()).toBe("1");
+    tick(); // The first entry ends and the second starts: the second trap replaces it.
+    expect(screen.getByTestId(T.root)).toHaveAttribute("data-showcase-def", "classic-005");
+    expect(ordinalNow()).toBe("2");
+  });
+});
+
 describe("issue #1146 a burst that ends the game", () => {
   it("still holds each cast up as its entry starts, and goes once the runner has played the game over", () => {
     const { queue, tick } = manual();

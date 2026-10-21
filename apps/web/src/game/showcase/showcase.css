@@ -224,18 +224,22 @@
 }
 
 /* Issue #124: a card another card cast (C+ #47 Jogg's Box's ten) whirls in out of the arcane, a
-   violet halo breathes behind it, and a badge says which of the caster's casts it is. Only the
-   compositor's properties move: `translate`, `scale`, `rotate` and `opacity`. */
-.showcase[data-showcase="multicast"] .showcase-caption {
+   violet halo breathes behind it, and a badge says which of the caster's casts it is. Issue #1493
+   reuses the same close-up for a revealed trap. Only the compositor's properties move: `translate`,
+   `scale`, `rotate` and `opacity`. */
+.showcase[data-showcase="multicast"] .showcase-caption,
+.showcase[data-showcase="trap"] .showcase-caption {
   border-color: #b98cff;
   color: #e4d4ff;
 }
 
-.showcase[data-showcase="multicast"] .showcase-card {
+.showcase[data-showcase="multicast"] .showcase-card,
+.showcase[data-showcase="trap"] .showcase-card {
   animation: showcase-whirl var(--showcase-burst-ms, 420ms) cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
 }
 
-.showcase[data-showcase="multicast"] .showcase-card::before {
+.showcase[data-showcase="multicast"] .showcase-card::before,
+.showcase[data-showcase="trap"] .showcase-card::before {
   content: "";
   position: absolute;
   inset: -12%;
