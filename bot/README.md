@@ -421,6 +421,13 @@ triage.yml -f number=<n>` (or **Run workflow** on the triage workflow's Actions 
   alerts, the status issue), which never reaches triage, and any triage missed.
 - **When it can't:** a failure skips quietly. It leaves no comment.
 
+**Locked conversations.** `lock-conversations.yml` locks every issue and pull request as it opens,
+and an hourly sweep locks the rest, so only collaborators can comment: the people, the night bot
+and Squishy, whose tokens have write access. The threads `github-actions[bot]` opened (the CI
+alerts, the production countdown, the hygiene issues) stay unlocked, since the workflow's own
+token cannot comment on a locked thread; `patches ship`'s "Shipped as" comment unlocks a locked
+thread, comments and locks it again (`titles.retitle_shipped`).
+
 ## Subscriptions
 
 The bot spends whichever of your subscriptions is free. They are listed in
