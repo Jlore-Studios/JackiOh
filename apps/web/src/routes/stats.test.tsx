@@ -1258,7 +1258,7 @@ describe("the card drill-down dialog", () => {
     expect(row).toHaveFocus();
   });
 
-  it("keeps Tab and Shift+Tab between Close and Retry, and brings them back inside from the page behind", async () => {
+  it("keeps Tab and Shift+Tab between Close, the face's controls and Retry, and brings them back inside from the page behind", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo | URL) => {
@@ -1275,16 +1275,18 @@ describe("the card drill-down dialog", () => {
     const dialog = screen.getByRole("dialog");
     const retry = await within(dialog).findByRole("button", { name: "Retry" }, SLOW);
     const close = screen.getByTestId(statsTestid.drillDownClose);
+    const radiant = screen.getByTestId(statsTestid.drillDownRadiantToggle);
+    const almanac = screen.getByTestId(statsTestid.drillDownAlmanac);
     expect(close).toHaveFocus();
 
-    press("Tab");
-    expect(retry).toHaveFocus();
-    press("Tab");
-    expect(close).toHaveFocus();
-    press("Tab", { shiftKey: true });
-    expect(retry).toHaveFocus();
-    press("Tab", { shiftKey: true });
-    expect(close).toHaveFocus();
+    for (const next of [radiant, almanac, retry, close]) {
+      press("Tab");
+      expect(next).toHaveFocus();
+    }
+    for (const previous of [retry, almanac, radiant, close]) {
+      press("Tab", { shiftKey: true });
+      expect(previous).toHaveFocus();
+    }
 
     const behind = screen.getByTestId(statsTestid.searchInput);
     behind.focus();
@@ -1305,5 +1307,66 @@ describe("the drill-down's card preview", () => {
     expect(body).toMatch(/align-items:\s*flex-start/);
     const preview = /\.stats-drilldown-card-preview\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
     expect(preview).toMatch(/aspect-ratio:\s*5\s*\/\s*7/);
+  });
+
+  it("shows the Radiant face beside the normal one on Show Radiant, and only the normal one again on a second press", async () => {
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    fireEvent.click(screen.getByText("Spark Pup"));
+    const dialog = screen.getByRole("dialog");
+    const toggle = screen.getByTestId(statsTestid.drillDownRadiantToggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(dialog.querySelectorAll(".cf")).toHaveLength(1);
+    expect(dialog.querySelector('[data-radiant-face="true"]')).toBeNull();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(dialog.querySelectorAll(".cf")).toHaveLength(2);
+    const radiant = screen.getByTestId(statsTestid.drillDownRadiantFace);
+    expect(radiant.querySelector('.cf[data-radiant-face="true"]')).not.toBeNull();
+    expect(within(radiant).getByText("Radiant")).toBeInTheDocument();
+    expect(within(dialog).getByText("Normal")).toBeInTheDocument();
+    expect(dialog).toHaveAttribute("data-radiant", "true");
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByTestId(statsTestid.drillDownRadiantFace)).toBeNull();
+    expect(dialog.querySelectorAll(".cf")).toHaveLength(1);
+  });
+
+  it("links the card to its detail in the Almanac, and follows the link in place", async () => {
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    fireEvent.click(screen.getByText("Spark Pup"));
+    const link = screen.getByTestId(statsTestid.drillDownAlmanac);
+    expect(link).toHaveAttribute("href", "/almanac?card=core-001");
+    expect(link).toHaveAttribute("href", paths.almanacCard("core-001"));
+
+    fireEvent.click(link);
+    expect(`${window.location.pathname}${window.location.search}`).toBe("/almanac?card=core-001");
+  });
+
+  it("shows the tokens a card's text names, each a link to its detail in the Almanac, and no Tokens section for a card that names none", async () => {
+    holdFetch((url) => url.pathname.startsWith("/api/stats/cards/"));
+    at("/stats?card=core-015");
+    render(<StatsRoute />);
+    const tokens = await screen.findByTestId(statsTestid.drillDownTokens, undefined, SLOW);
+    const rush = within(tokens).getByRole("link", { name: "View Rush Token in the Almanac" });
+    expect(rush).toHaveAttribute("href", paths.almanacCard("core-t-rush"));
+    expect(within(tokens).getAllByRole("link")).toHaveLength(1);
+    expect(rush.querySelector(".cf")).not.toBeNull();
+
+    // Two tokens named, and a card that names only itself shows none.
+    cleanup();
+    at("/stats?card=core-098");
+    render(<StatsRoute />);
+    const two = await screen.findByTestId(statsTestid.drillDownTokens, undefined, SLOW);
+    expect(within(two).getAllByRole("link").length).toBeGreaterThanOrEqual(2);
+
+    cleanup();
+    at("/stats?card=core-003");
+    render(<StatsRoute />);
+    await screen.findByRole("dialog", undefined, SLOW);
+    expect(screen.queryByTestId(statsTestid.drillDownTokens)).toBeNull();
   });
 });

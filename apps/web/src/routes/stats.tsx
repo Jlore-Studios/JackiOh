@@ -11,12 +11,13 @@
 //  - Per-row sample floor (20 games): displays "not enough games" below threshold, and "not enough data"
 //    for a Played Δ the server withholds until both its sides reach the floor (R654).
 //  - URL search params for shareable views.
-//  - Card drill-down modal showing CardFace, patch history, turn curve, and co-played synergy.
+//  - Card drill-down modal showing CardFace (the Radiant face beside it on request, a link to the card in
+//    the Almanac and the tokens its text names), patch history, turn curve, and co-played synergy.
 //  - Players tab: the search asks the server a pause after the typing, one page of the server's limit at a time.
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
-import { KEYWORD_KINDS, SHIPPED_SETS, type CardDefs, type KeywordKind } from "@jackioh/shared";
+import { KEYWORD_KINDS, SHIPPED_SETS, type CardDef, type CardDefs, type KeywordKind } from "@jackioh/shared";
 import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
 import { chineseName, drawnInChinese, readerName, readerTerms } from "../cards/chinese.ts";
@@ -37,7 +38,7 @@ import { CARD_STATS_MIN_SAMPLE, PLAYER_SEARCH_DEBOUNCE_MS } from "../stats/confi
 import { formatPlayedDelta, winPercent } from "../stats/model.ts";
 import { usePlayerStats } from "../stats/store.ts";
 import { statsTestid } from "../stats/testids.ts";
-import { BackLink } from "./nav.tsx";
+import { BackLink, followInApp } from "./nav.tsx";
 
 import "../auth/tavern.css";
 import "./stats.css";
@@ -72,6 +73,14 @@ function keywordLabel(id: string, language?: string): string {
   const names = kinds.map(keywordName);
   names.sort((a, b) => a.localeCompare(b, language));
   return names.join(", ");
+}
+
+/** The tokens a card's text names (`CardDef.refs`, R279), the card itself left out: what the drill-down shows it makes. */
+function tokensOf(def: CardDef): CardDef[] {
+  return (def.refs ?? []).flatMap((id) => {
+    const named = CATALOG[id];
+    return named !== undefined && named.token && id !== def.id ? [named] : [];
+  });
 }
 
 function faceRate(
@@ -210,6 +219,8 @@ export default function StatsRoute(): ReactElement {
   const [drillDownError, setDrillDownError] = useState(false);
   // Bumped by the details' Retry, as `cardStatsAttempt` is by the table's.
   const [drillDownAttempt, setDrillDownAttempt] = useState(0);
+  // The drill-down's "Show Radiant": the Radiant face beside the normal one, kept from card to card.
+  const [drillDownRadiant, setDrillDownRadiant] = useState(false);
 
   const playerStats = usePlayerStats();
   const signedIn = readSession() !== null;
@@ -365,7 +376,7 @@ export default function StatsRoute(): ReactElement {
       if (event.key !== "Tab") return;
       const dialog = drillDownDialog.current;
       if (dialog === null) return;
-      const order = [...dialog.querySelectorAll<HTMLElement>("button:not([disabled])")];
+      const order = [...dialog.querySelectorAll<HTMLElement>("button:not([disabled]), a[href]")];
       if (order.length === 0) return;
       const at = order.indexOf(document.activeElement as HTMLElement);
       const next = event.shiftKey ? (at <= 0 ? order.length - 1 : at - 1) : at === order.length - 1 ? 0 : at + 1;
@@ -498,6 +509,9 @@ export default function StatsRoute(): ReactElement {
 
   const drillDownDef = cardDrillDownId ? CATALOG[cardDrillDownId] : undefined;
   const drillDownFace = drillDownDef ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: false }) : null;
+  const drillDownRadiantFace =
+    drillDownDef && drillDownRadiant ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: true }) : null;
+  const drillDownTokens = drillDownDef ? tokensOf(drillDownDef) : [];
 
   return (
     <CardDefsProvider defs={CATALOG}>
@@ -1319,6 +1333,7 @@ export default function StatsRoute(): ReactElement {
               ref={drillDownDialog}
               className="stats-drilldown-modal"
               data-testid={statsTestid.drillDownModal}
+              data-radiant={drillDownRadiantFace ? "true" : undefined}
               role="dialog"
               aria-modal="true"
               aria-labelledby="drilldown-title"
@@ -1341,9 +1356,65 @@ export default function StatsRoute(): ReactElement {
               </header>
 
               <div className="stats-drilldown-body">
-                {drillDownFace && (
-                  <div className="stats-drilldown-card-preview">
-                    <CardFace face={drillDownFace} layout="full" />
+                {drillDownDef && drillDownFace && (
+                  <div className="stats-drilldown-cards">
+                    <div className="stats-drilldown-faces">
+                      <figure className="stats-drilldown-face">
+                        <div className="stats-drilldown-card-preview">
+                          <CardFace face={drillDownFace} layout="full" />
+                        </div>
+                        {drillDownRadiantFace && <figcaption className="stats-drilldown-caption">{t("Normal")}</figcaption>}
+                      </figure>
+                      {drillDownRadiantFace && (
+                        <figure className="stats-drilldown-face" data-testid={statsTestid.drillDownRadiantFace}>
+                          <div className="stats-drilldown-card-preview">
+                            <CardFace face={drillDownRadiantFace} layout="full" />
+                          </div>
+                          <figcaption className="stats-drilldown-caption">{t("Radiant")}</figcaption>
+                        </figure>
+                      )}
+                    </div>
+                    <div className="stats-drilldown-actions">
+                      <button
+                        type="button"
+                        className="stats-drilldown-action"
+                        data-testid={statsTestid.drillDownRadiantToggle}
+                        aria-pressed={drillDownRadiant}
+                        onClick={() => setDrillDownRadiant((shown) => !shown)}
+                      >
+                        {t("Show Radiant")}
+                      </button>
+                      <a
+                        className="stats-drilldown-action button-secondary"
+                        data-testid={statsTestid.drillDownAlmanac}
+                        href={paths.almanacCard(drillDownDef.id)}
+                        onClick={followInApp(paths.almanacCard(drillDownDef.id))}
+                      >
+                        {t("View in Almanac")}
+                      </a>
+                    </div>
+                    {drillDownTokens.length > 0 && (
+                      <section className="stats-drilldown-section stats-drilldown-tokens" data-testid={statsTestid.drillDownTokens}>
+                        <h3>{t("Tokens")}</h3>
+                        <ul className="stats-drilldown-token-list">
+                          {drillDownTokens.map((token) => (
+                            <li key={token.id} className="stats-drilldown-token">
+                              <a
+                                className="stats-drilldown-token-link"
+                                href={paths.almanacCard(token.id)}
+                                onClick={followInApp(paths.almanacCard(token.id))}
+                                aria-label={t("View {name} in the Almanac", { name: readerName(token) })}
+                              >
+                                <span className="stats-drilldown-token-face">
+                                  <CardFace face={faceModel({ defId: token.id, def: token, radiant: false })} layout="full" lazyArt />
+                                </span>
+                                <span className="stats-drilldown-token-name">{readerName(token)}</span>
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    )}
                   </div>
                 )}
 

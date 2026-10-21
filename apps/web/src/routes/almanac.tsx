@@ -3,7 +3,8 @@
 // that edits a deck, no collection and no ownership. Public like the Patch notes page: the catalog
 // is public (§5.1) and ships in the bundle, so the page reads `@jackioh/cards/catalog.json`, as the
 // landing's fan does, and asks no server and no account anything for the catalog. The card detail's
-// statistics block (R654) reads the public card aggregates, like the deck builder's.
+// statistics block (R654) reads the public card aggregates, like the deck builder's. `?card=<id>`
+// opens one card's detail, and the URL names the detail that is open.
 //
 // The page decides nothing (CLAUDE.md rule 7): what the filter and the sort keep is filters.ts's,
 // the faces and the detail view are the cards module's. It wears the deck builder's look
@@ -28,6 +29,7 @@ import {
 } from "../game/deckbuilder/filters.ts";
 import { useCardWinRates } from "../game/deckbuilder/useCardWinRates.ts";
 import { useLocale, t } from "../i18n/i18n.ts";
+import { navigate, paths } from "../net/navigate.ts";
 import { BackLink } from "./nav.tsx";
 
 import "../auth/tavern.css";
@@ -64,7 +66,12 @@ export default function AlmanacRoute(): ReactElement {
   useLocale();
   const [filter, setFilter] = useState<PoolFilter>(DEFAULT_FILTER);
   const [sort, setSort] = useState<PoolSort>(DEFAULT_SORT);
-  const [detailCardId, setDetailCardId] = useState<string | null>(null);
+  // `?card=<id>` opens that card's detail (`paths.almanacCard`, the statistics drill-down's link),
+  // and the URL follows the detail a player opens and closes, so a card's page can be shared.
+  const [detailCardId, setDetailCardId] = useState<string | null>(() => {
+    const linked = new URLSearchParams(window.location.search).get("card");
+    return linked !== null && Object.hasOwn(ALMANAC_CATALOG.cards, linked) ? linked : null;
+  });
   const winRates = useCardWinRates(sort.key);
 
   const pool = useMemo(
@@ -77,6 +84,7 @@ export default function AlmanacRoute(): ReactElement {
     // At most one inspect overlay at a time, as in the deck editor.
     closeInspect();
     setDetailCardId(cardId);
+    navigate(paths.almanacCard(cardId), { replace: true });
   }, []);
 
   // R279: a reference in a card's text shows the card the catalog names.
@@ -111,6 +119,7 @@ export default function AlmanacRoute(): ReactElement {
             showStats
             onCloseDetail={() => {
               setDetailCardId(null);
+              navigate(paths.almanac, { replace: true });
             }}
           />
         </main>
