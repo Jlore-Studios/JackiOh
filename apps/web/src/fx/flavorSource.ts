@@ -3,11 +3,12 @@
 // bundled catalog or the match's own definitions know; a hidden card, an unknown id, a hero power
 // or no source fires nothing, and the damage animates as it does today.
 
-import type { Flavor, PlayerId, PlayerView } from "@jackioh/shared";
+import { hasKeyword, type Flavor, type PlayerId, type PlayerView } from "@jackioh/shared";
 
 import { flavorOfId } from "../cards/flavor.ts";
 import { sideOf, testid, type Side } from "../game/contract.ts";
 import { CATALOG } from "../wire/cards.ts";
+import { flavorLook, type FlavorLook } from "./flavors.ts";
 import type { FxAnchor } from "./types.ts";
 
 const HIDDEN_ID = "hidden";
@@ -34,6 +35,35 @@ function readable(defId: string, view: PlayerView): boolean {
 function sourceOf(defId: string, controller: PlayerId, view: PlayerView, anchor: FxAnchor): FlavorSource | null {
   if (!readable(defId, view)) return null;
   return { anchor, flavor: flavorOfId(defId, view.defs), controller };
+}
+
+/**
+ * #1444: the look `defId` draws for the card `instanceId`, or `null` when the view hides it.
+ * A hidden id or one neither the bundled catalog nor the match's own definitions know is never
+ * looked up (CLAUDE.md rule 7); Chaos picks per instance id.
+ */
+export function flavorLookOf(defId: string, instanceId: string, view: PlayerView): FlavorLook | null {
+  if (!readable(defId, view)) return null;
+  return flavorLook(flavorOfId(defId, view.defs), instanceId);
+}
+
+/** #1444: where the attacker `instanceId` stands and as what, or `null` when the view hides it. */
+export function attackerOf(instanceId: string, view: PlayerView): { defId: string; ranged: boolean } | null {
+  if (instanceId === HIDDEN_ID) return null;
+  for (const side of [view.you, view.opponent]) {
+    for (const unit of side.units) {
+      if (unit !== null && unit.instanceId === instanceId) {
+        return { defId: unit.defId, ranged: hasKeyword(unit.keywords, "Ranged") };
+      }
+    }
+    for (const slot of side.backrow) {
+      if (slot === null || slot.faceDown !== false || slot.unit === undefined) continue;
+      if (slot.unit.instanceId === instanceId) {
+        return { defId: slot.unit.defId, ranged: hasKeyword(slot.unit.keywords, "Ranged") };
+      }
+    }
+  }
+  return null;
 }
 
 /**

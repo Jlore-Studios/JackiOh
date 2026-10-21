@@ -43,10 +43,12 @@ import {
   FX_RESULT_MS,
   FX_RING_MS,
   FX_SHAKE_MAX_PX,
+  FX_SHOT_LAUNCH_AT,
   FX_SLAM_AT,
   FX_SPLAT_HOLD_MS,
   FX_TRAP_BURST_AT,
 } from "./constants.ts";
+import { FLAVOR_LOOKS, chaosFlavor, type FlavorLook } from "./flavors.ts";
 import { delayCues, planFx, planHandover, planLethal, planResult, sourceAnchor, traumaForShakePx } from "./cues.ts";
 import { createFxMemory } from "./memory.ts";
 import type { FxAnchor, FxCardFacts, FxCue, FxPlanEnv, FxPoint } from "./types.ts";
@@ -146,6 +148,19 @@ function arrows(direction: "up" | "down", at: FxAnchor, D: number): Loose {
 }
 function projectile(preset: string, from: FxAnchor, to: FxAnchor, flightMs: number): Loose {
   return { kind: "projectile", preset, from, to, delayMs: 0, flightMs, density: 1 };
+}
+function shot(look: FlavorLook, from: FxAnchor, to: FxAnchor, delayMs: number, flightMs: number): Loose {
+  return {
+    kind: "shot",
+    shot: look.projectile,
+    colors: look.colors,
+    preset: look.particle,
+    from,
+    to,
+    delayMs,
+    flightMs,
+    density: 1,
+  };
 }
 function shake(trauma: number, delayMs: number): Loose {
   return { kind: "shake", trauma: round6(trauma), delayMs };
@@ -474,13 +489,15 @@ describe("B9 intensity", () => {
  * ------------------------------------------------------------------------------------------- */
 
 describe("B10 spell projectiles", () => {
-  it("B10 a non-combat damage from a rendered unit flies an arcane projectile and lands every impact at the flight time", () => {
+  it("B10 a non-combat damage from a rendered unit fires its flavor's shot and lands every impact at the landing", () => {
     forDs("damage", (D) => {
-      const flight = r(FX_PROJECTILE_FLIGHT_FRACTION * D);
+      const launch = r(FX_SHOT_LAUNCH_AT * D);
+      const hustle = FLAVOR_LOOKS.Hustle;
       expectCues(plan([dmg(MINE, ENEMY, 4, false)], D), [
-        projectile("arcane", cardT(MINE), cardT(ENEMY), flight),
-        burst("spark", cardT(ENEMY), "point", flight),
-        splat("damage", 4, cardT(ENEMY), flight, D),
+        shot(hustle, cardT(MINE), cardT(ENEMY), launch, D - launch),
+        burst("spark", cardT(ENEMY), "point", D),
+        splat("damage", 4, cardT(ENEMY), D, D),
+        burst(hustle.particle, cardT(ENEMY), "area", D),
       ]);
     });
   });
@@ -514,17 +531,20 @@ describe("B10 spell projectiles", () => {
     expect(plan([dmg(MINE, "nowhere", 6, true)], 300)).toEqual([]);
   });
 
-  it("B10 the projectile preset follows its source: fire from a hand card, arcane from a backrow card", () => {
-    const flight = r(FX_PROJECTILE_FLIGHT_FRACTION * 300);
+  it("B10 a hand card fires from its hero and a backrow card from its zone, in their flavors", () => {
+    const launch = r(FX_SHOT_LAUNCH_AT * 300);
+    const physical = FLAVOR_LOOKS.Physical;
     expectCues(plan([dmg(HAND, "hero-p2", 2, false)], 300), [
-      projectile("fire", handCardT(HAND), heroT("opponent"), flight),
-      burst("spark", heroT("opponent"), "point", flight),
-      splat("damage", 2, heroT("opponent"), flight, 300),
+      shot(physical, heroT("you"), heroT("opponent"), launch, 300 - launch),
+      burst("spark", heroT("opponent"), "point", 300),
+      splat("damage", 2, heroT("opponent"), 300, 300),
+      burst(physical.particle, heroT("opponent"), "area", 300),
     ]);
     expectCues(plan([dmg(FIELD_SPELL, ENEMY_2, 2, false)], 300), [
-      projectile("arcane", cardT(FIELD_SPELL), cardT(ENEMY_2), flight),
-      burst("spark", cardT(ENEMY_2), "point", flight),
-      splat("damage", 2, cardT(ENEMY_2), flight, 300),
+      shot(physical, cardT(FIELD_SPELL), cardT(ENEMY_2), launch, 300 - launch),
+      burst("spark", cardT(ENEMY_2), "point", 300),
+      splat("damage", 2, cardT(ENEMY_2), 300, 300),
+      burst(physical.particle, cardT(ENEMY_2), "area", 300),
     ]);
   });
 });
@@ -585,14 +605,16 @@ describe("B12 poison", () => {
     expect(first?.keywords.some((k) => k.kind === "Poisonous")).toBe(false);
   });
 
-  it("B12 a Poisonous source flies a poison projectile and adds a poison burst at the target", () => {
+  it("B12 a Poisonous source fires its flavor's shot and adds a poison burst at the landing", () => {
     forDs("damage", (D) => {
-      const flight = r(FX_PROJECTILE_FLIGHT_FRACTION * D);
+      const launch = r(FX_SHOT_LAUNCH_AT * D);
+      const physical = FLAVOR_LOOKS.Physical;
       expectCues(plan([dmg(POISONER, ENEMY, 3, false)], D), [
-        projectile("poison", cardT(POISONER), cardT(ENEMY), flight),
-        burst("spark", cardT(ENEMY), "point", flight),
-        splat("damage", 3, cardT(ENEMY), flight, D),
-        burst("poison", cardT(ENEMY), "area", flight),
+        shot(physical, cardT(POISONER), cardT(ENEMY), launch, D - launch),
+        burst("spark", cardT(ENEMY), "point", D),
+        splat("damage", 3, cardT(ENEMY), D, D),
+        burst("poison", cardT(ENEMY), "area", D),
+        burst(physical.particle, cardT(ENEMY), "area", D),
       ]);
     });
   });
@@ -607,10 +629,10 @@ describe("B12 poison", () => {
     ]);
   });
 
-  it("B12 a source without Poisonous adds no poison burst and flies arcane", () => {
+  it("B12 a source without Poisonous adds no poison burst and fires its flavor", () => {
     const cues = plan([dmg(MINE, ENEMY, 3, false)], 300);
     expect(cues.some((c) => "preset" in c && c.preset === "poison")).toBe(false);
-    expect(cues.find((c) => c.kind === "projectile")).toMatchObject({ preset: "arcane" });
+    expect(cues.find((c) => c.kind === "shot")).toMatchObject({ preset: FLAVOR_LOOKS.Hustle.particle });
   });
 
   it("B12 Poisonous is read from the planning view: the same unit without it plans no poison", () => {
@@ -869,25 +891,90 @@ describe("B15 cast", () => {
     }
   });
 
-  it("B15 the viewer's unpaired cardPlayed plans an arcane area burst and an arcane ring at the played card", () => {
+  it("B15 the viewer's unpaired cardPlayed plans a flavor area burst and an arcane ring at the played card", () => {
     forDs("cardPlayed", (D) => {
-      expectCues(plan([played("p1", HAND)], D), [burst("arcane", handCardT(HAND), "area", 0), ring("arcane", handCardT(HAND), 0, D)]);
+      expectCues(plan([played("p1", HAND)], D), [burst("spark", handCardT(HAND), "area", 0), ring("arcane", handCardT(HAND), 0, D)]);
     });
   });
 
   it("B15 the viewer's cardPlayed of a card the view no longer holds still marks its hand-card testid", () => {
     const ghostCard = "c999";
     expectCues(plan([played("p1", ghostCard)], 400), [
-      burst("arcane", handCardT(ghostCard), "area", 0),
+      burst("spark", handCardT(ghostCard), "area", 0),
       ring("arcane", handCardT(ghostCard), 0, 400),
     ]);
   });
 
-  it("B15 the opponent's cardPlayed plans one arcane point burst at hand-opponent and no ring", () => {
+  it("B15 the opponent's cardPlayed plans one flavor point burst at hand-opponent and no ring", () => {
     forDs("cardPlayed", (D) => {
       expectCues(plan([played("p2", "hidden", "hidden")], D), [burst("arcane", tid("hand-opponent"), "point", 0)]);
-      expectCues(plan([played("p2", "sp9", "core-070")], D), [burst("arcane", tid("hand-opponent"), "point", 0)]);
+      expectCues(plan([played("p2", "sp9", "core-070")], D), [burst("spark", tid("hand-opponent"), "point", 0)]);
     });
+  });
+
+  it("B15 #1444 a face-up play casts in its card type's flavor particle", () => {
+    expectCues(plan([played("p1", HAND, "core-002")], 400), [
+      burst("spark", handCardT(HAND), "area", 0),
+      ring("arcane", handCardT(HAND), 0, 400),
+    ]);
+    expectCues(plan([played("p1", HAND, "classic-036")], 400), [
+      burst("fire", handCardT(HAND), "area", 0),
+      ring("arcane", handCardT(HAND), 0, 400),
+    ]);
+    expectCues(plan([played("p1", HAND, "core-084")], 400), [
+      burst("holy", handCardT(HAND), "area", 0),
+      ring("arcane", handCardT(HAND), 0, 400),
+    ]);
+    expectCues(plan([played("p1", HAND, "core-041")], 400), [
+      burst("shard", handCardT(HAND), "area", 0),
+      ring("arcane", handCardT(HAND), 0, 400),
+    ]);
+    expectCues(plan([played("p1", HAND, "core-018")], 400), [
+      burst("ember", handCardT(HAND), "area", 0),
+      ring("arcane", handCardT(HAND), 0, 400),
+    ]);
+  });
+
+  it("B15 #1444 a face-up play casts in its flavor's particle, one per look", () => {
+    const rows: Array<[string, string]> = [
+      ["core-001", "spark"],
+      ["core-019", "dust"],
+      ["core-007", "shard"],
+      ["core-035", "fire"],
+      ["core-021", "void"],
+      ["core-026", "holy"],
+      ["core-010", "arcane"],
+      ["core-013", "frost"],
+      ["core-017", "poison"],
+      ["core-022", "poison"],
+      ["core-018", "ember"],
+      ["core-004", "gold"],
+      ["core-050", "confetti"],
+      ["core-037", "sparkle"],
+    ];
+    for (const [defId, particle] of rows) {
+      expectCues(plan([played("p1", HAND, defId)], 400), [
+        burst(particle, handCardT(HAND), "area", 0),
+        ring("arcane", handCardT(HAND), 0, 400),
+      ]);
+    }
+    const chaosParticle = FLAVOR_LOOKS[chaosFlavor(HAND)].particle;
+    expectCues(plan([played("p1", HAND, "core-023")], 400), [
+      burst(chaosParticle, handCardT(HAND), "area", 0),
+      ring("arcane", handCardT(HAND), 0, 400),
+    ]);
+  });
+
+  it("B15 #1444 a face-down or hidden play keeps today's arcane cast", () => {
+    const setDown: GameEvent = { type: "cardPlayed", player: "p1", instanceId: "set-1", defId: "core-002", costPaid: 1, formerId: HAND };
+    expectCues(plan([setDown], 400), [
+      burst("arcane", handCardT(HAND), "area", 0),
+      ring("arcane", handCardT(HAND), 0, 400),
+    ]);
+    expectCues(plan([played("p1", "hidden", "hidden")], 400), [
+      burst("arcane", handCardT("hidden"), "area", 0),
+      ring("arcane", handCardT("hidden"), 0, 400),
+    ]);
   });
 });
 
@@ -1143,16 +1230,40 @@ describe("B16 the recipe table, row by row", () => {
     });
   });
 
-  it("B16 attackDeclared: a dust kick at the attacker's foot", () => {
+  it("B16 attackDeclared: a flavor kick at the attacker's foot", () => {
     forDs("attackDeclared", (D) => {
       expectCues(plan([{ type: "attackDeclared", attackerId: MINE, targetId: ENEMY, forced: false }], D), [
-        burst("dust", tid(testid.card(MINE), FOOT), "point", 0),
+        burst("gold", tid(testid.card(MINE), FOOT), "point", 0),
       ]);
     });
   });
 
   it("B16 attackDeclared by an attacker the view does not render plans nothing", () => {
     expect(plan([{ type: "attackDeclared", attackerId: "nowhere", targetId: ENEMY, forced: true }], 350)).toEqual([]);
+  });
+
+  it("B16 #1444 a melee attacker kicks up its flavor particles at its foot", () => {
+    const beastView = fullBoardView();
+    const first = must(beastView.you.units[0], "your first unit");
+    beastView.you.units[0] = { ...first, defId: "core-007" };
+    expectCues(plan([{ type: "attackDeclared", attackerId: MINE, targetId: ENEMY, forced: false }], 350, { view: beastView }), [
+      burst("shard", tid(testid.card(MINE), FOOT), "point", 0),
+    ]);
+  });
+
+  it("B16 #1444 a Ranged attacker keeps today's dust, and a hidden one kicks dust", () => {
+    const rangedView = fullBoardView();
+    const first = must(rangedView.you.units[0], "your first unit");
+    rangedView.you.units[0] = { ...first, keywords: [...first.keywords, { kind: "Ranged" }] };
+    expectCues(plan([{ type: "attackDeclared", attackerId: MINE, targetId: ENEMY, forced: false }], 350, { view: rangedView }), [
+      burst("dust", tid(testid.card(MINE), FOOT), "point", 0),
+    ]);
+    const hiddenView = fullBoardView();
+    const hiddenFirst = must(hiddenView.you.units[0], "your first unit");
+    hiddenView.you.units[0] = { ...hiddenFirst, defId: "hidden" };
+    expectCues(plan([{ type: "attackDeclared", attackerId: MINE, targetId: ENEMY, forced: false }], 350, { view: hiddenView }), [
+      burst("dust", tid(testid.card(MINE), FOOT), "point", 0),
+    ]);
   });
 
   it("B16 attackCancelled: a smoke puff at the attacker", () => {
@@ -1874,9 +1985,9 @@ describe("R200 planLethal: the killing blow a drained game over never drew", () 
 });
 
 describe("B9 projectiles carry the intensity as their density", () => {
-  it("B9 a bolt's density is the intensity, so a low setting thins its trail as it thins a burst", () => {
+  it("B9 a shot's density is the intensity, so a low setting thins its trail as it thins a burst", () => {
     const at = (intensity: number) =>
-      plan([dmg(MINE, ENEMY, 4, false)], 300, { env: envOf({ intensity }) }).find((cue) => cue.kind === "projectile");
+      plan([dmg(MINE, ENEMY, 4, false)], 300, { env: envOf({ intensity }) }).find((cue) => cue.kind === "shot");
     expect(at(FX_INTENSITY_SCALE.low)).toMatchObject({ density: FX_INTENSITY_SCALE.low });
     expect(at(FX_INTENSITY_SCALE.normal)).toMatchObject({ density: 1 });
     expect(at(FX_INTENSITY_SCALE.high)).toMatchObject({ density: FX_INTENSITY_SCALE.high });

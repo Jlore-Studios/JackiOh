@@ -1,10 +1,15 @@
-// #1442: `FX_FLAVOR_LIVE` ships off until #1444, and while it is off every cue is exactly today's:
-// a Ranged attacker lunges as any other does. `animations.flavor.test.ts` turns the flag on.
+// #1444: with `FX_FLAVOR_LIVE` off (mocked off here; it ships on) every cue is exactly today's:
+// a Ranged attacker lunges as any other does.
 
 import type { GameEvent, PlayerView, UnitView } from "@jackioh/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { FX_FLAVOR_LIVE, FX_INTENSITY_SCALE } from "../fx/constants.ts";
+vi.mock("../fx/constants.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../fx/constants.ts")>()),
+  FX_FLAVOR_LIVE: false,
+}));
+
+import { FX_INTENSITY_SCALE } from "../fx/constants.ts";
 import { createFxMemory } from "../fx/memory.ts";
 import { planStage } from "../fx/stage.ts";
 import type { FxCue } from "../fx/types.ts";
@@ -28,12 +33,8 @@ function attack(view: PlayerView, attackerId: string, targetId: string): FxCue[]
   return planStage({ ...entries[0]!, durationMs: 350 }, shown, env);
 }
 
-describe("#1442 the flavor effects are off", () => {
-  it("#1442 FX_FLAVOR_LIVE ships off", () => {
-    expect(FX_FLAVOR_LIVE).toBe(false);
-  });
-
-  it("#1442 with it off a Ranged attacker lunges exactly as today", () => {
+describe("#1444 the flavor effects stay off when the flag is off", () => {
+  it("#1444 with it off a Ranged attacker lunges exactly as today", () => {
     const ranged = attack(rangedBoard("u1"), "u1", "u6");
     expect(ranged).toEqual(attack(fullBoardView(), "u1", "u6"));
     expect(ranged.map((cue) => cue.kind)).toEqual(["lunge", "burst"]);
