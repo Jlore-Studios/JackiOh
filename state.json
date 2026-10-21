@@ -10487,6 +10487,13 @@
     "1568": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T19:21:06Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "rule 1 fails: about 26 files across apps/web; all client-only with no engine, AI or migration work, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
