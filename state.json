@@ -9762,7 +9762,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-21T08:31:03Z",
+      "feedback_since": "2026-10-21T09:24:13Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1442,
@@ -9777,11 +9777,11 @@
       "round_tier": "strong",
       "run_id": "39576592131",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-21T09:24:13Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "claude"
