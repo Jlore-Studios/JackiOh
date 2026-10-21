@@ -8923,6 +8923,13 @@
     "1483": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T05:26:47Z",
+        "difficulty": "medium",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "It adds R1483000 and crosses the server store/API/WebSocket plus the web UI, so it fails the one-place and no-spec easy rules without requiring an engine change or database migration."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
