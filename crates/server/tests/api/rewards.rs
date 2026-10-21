@@ -4,39 +4,49 @@
 //! Won and lost games pay exactly `JLORE_LADDER_WIN`/`JLORE_LADDER_LOSS`; XP counts the log's
 //! actions plus the win bonus up to `XP_GAME_CAP`; the second track unlocks at
 //! `SET_TRACK_UNLOCK_LEVEL`; and draws, concedes, reaper-resolved games, the moves that count and
-//! a track's last level pay per R1302000–R1302005, whose proving tests live here. Series games,
-//! room games, voided matches and bot sides pay nothing. Every level position is read through the
+//! a track's last level pay per R1302000–R1302005, whose proving tests live here. Room games and
+//! the games of a Conquest series pay their own rates and a co-op game pays each of its people
+//! (R1502000); voided matches and bot sides pay nothing. Every level position is read through the
 //! constants and the level curve, so the tests hold whatever values #1333 sets.
 //!
 //! The day's cap on what games pay (`JLORE_GAMES_DAILY_CAP`, R1483000) clamps the game that crosses
 //! it, pays the ones after it no Jlore with no row, leaves XP and the track's own Jlore alone, and
-//! starts again with the next UTC day.
+//! starts again with the next UTC day; a room game and a co-op game fall under it as a ladder game
+//! does (R1502000).
 //!
 //! The engine is driven for real where the outcome matters (a win, a mutual-lethal draw, a
 //! concede); the action log the hook counts is appended as rows, which need no engine legality.
 
 use std::sync::Arc;
 
-use jackioh_engine::wire::{SHIPPED_SETS, SetName, newest_shipped_set};
+use jackioh_engine::wire::{
+    DUOS_REASON_POOL_EMPTIED, DUOS_REASON_VOIDED, DuosOutcome, DuosResult, SHIPPED_SETS, SetName, Team,
+    newest_shipped_set,
+};
 use jackioh_engine::{Action, GameOverReason, PlayerId, Winner};
 use serde::Serialize;
 use serde_json::{Value, json};
 
 use jackioh_server::actor::clock::initial_clocks;
 use jackioh_server::actor::contracts::{RecordResultInput, TerminalOutcome};
+use jackioh_server::actor::protocol::SERVER_NONCE_PREFIX;
 use jackioh_server::api::results::{ceiling_draw_input, game_jlore_caps, record_ceiling_draw, record_result};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
-    JLORE_GAMES_DAILY_CAP, JLORE_LADDER_LOSS, JLORE_LADDER_WIN, MATCH_CEILING_MINUTES, SET_TRACK_FIRST_LEVEL,
-    SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL, XP_GAME_CAP,
+    JLORE_CONQUEST_LOSS, JLORE_CONQUEST_WIN, JLORE_COOP_LOSS, JLORE_COOP_WIN, JLORE_GAMES_DAILY_CAP,
+    JLORE_LADDER_LOSS, JLORE_LADDER_WIN, JLORE_UNRANKED_LOSS, JLORE_UNRANKED_WIN, MATCH_CEILING_MINUTES,
+    SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL, XP_GAME_CAP,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{MatchActionRow, MatchRow, MatchSeat, ResultRow, StoreError};
+use jackioh_server::duos::store::{DuosActionRow, DuosMatch};
+use jackioh_server::duos::{ceiling_draw, finish_match};
 use jackioh_server::economy::math::total_xp_for_level;
-use jackioh_server::economy::rewards::{GameMode, track_level};
+use jackioh_server::economy::quests::{QuestGoal, pool, quest_interval_ms};
+use jackioh_server::economy::rewards::{self, GameMode, track_level};
 use jackioh_server::economy::store::{
-    EconomyLedger, EconomyReason, InventoryEntry, InventoryItem, JloreGrant, JloreReason, SetTrack,
-    TrackGrant,
+    EconomyLedger, EconomyReason, InventoryEntry, InventoryItem, JloreGrant, JloreReason, QuestChange,
+    QuestGrant, SetTrack, TrackGrant,
 };
 use jackioh_server::economy::track_rewards::reward_for_level;
 
@@ -299,6 +309,46 @@ async fn grant_track(app: &App, profile: &str, set: SetName, xp: i64, level: i64
         at: now_ms(),
     };
     store!(app, |t| t.economy_tracks_grant(&grant));
+}
+
+/// Gives `profile` the pool's easiest quest of `goal`, as a quest that arrived, and keeps the next
+/// one from falling due during the game. Answers the quest's id.
+async fn hold_quest(app: &App, profile: &str, goal: QuestGoal) -> String {
+    store!(app, |t| t.economy_quests_set_next_due(
+        profile,
+        Some(now_ms() + 10 * quest_interval_ms())
+    ));
+    let quest = pool()
+        .iter()
+        .filter(|quest| quest.goal == goal)
+        .min_by_key(|quest| quest.target)
+        .expect("the pool has a quest of the goal");
+    let arrived = QuestGrant {
+        profile_id: profile.to_owned(),
+        quest_id: quest.id.clone(),
+        change: QuestChange::Arrived,
+        progress: 0,
+        reason: EconomyReason::Dev,
+        reference: None,
+        dev: true,
+        at: now_ms(),
+    };
+    assert!(store!(app, |t| t.economy_quests_change(&arrived)));
+    quest.id.clone()
+}
+
+/// How far `profile`'s held quest `quest_id` has come.
+async fn quest_progress(app: &App, profile: &str, quest_id: &str) -> i64 {
+    store!(app, |t| t.economy_quests_get(profile))
+        .held
+        .iter()
+        .find(|held| held.quest_id == quest_id)
+        .map_or(0, |held| held.progress)
+}
+
+/// The XP the newest track of `profile` holds, which is what its games paid.
+async fn newest_xp(app: &App, profile: &str) -> i64 {
+    track_of(&tracks_of(app, profile).await, newest()).map_or(0, |track| track.xp)
 }
 
 // A won and a lost ladder game pay exactly the configured Jlore; XP counts the log's actions
@@ -788,7 +838,8 @@ mod level_rewards_once {
     }
 }
 
-// Nothing is paid for series games, room challenges, voided matches or bot sides.
+// A game of a Conquest series and a room game pay their own rates (R1502000); nothing is paid for
+// voided matches, bot sides or while the economy is off.
 
 mod no_payout {
     use super::*;
@@ -816,7 +867,7 @@ mod no_payout {
     }
 
     /// The seats of a match as its row records them: index 0 is p1.
-    async fn started_seats(app: &App, match_id: &str) -> (MatchSeat, MatchSeat) {
+    pub(super) async fn started_seats(app: &App, match_id: &str) -> (MatchSeat, MatchSeat) {
         let row = match_row_of(app, match_id).await;
         (
             seat_of(row["players"][0].clone(), "p1", row["decks"][0].clone()),
@@ -825,7 +876,7 @@ mod no_payout {
     }
 
     /// A ranked Conquest series whose first game (`MATCH_ID`) is being played.
-    async fn series_game() -> Arc<App> {
+    pub(super) async fn series_game() -> Arc<App> {
         let app = test_app().await;
         fresh_store(&app).await;
         seed_profile(&app, json!({ "id": A, "rating": 1200.0 })).await;
@@ -857,7 +908,28 @@ mod no_payout {
         app
     }
 
-    async fn assert_paid_nothing(app: &App) {
+    /// P1 of the series' first game wins by hero death at `at`.
+    pub(super) async fn p1_wins_the_series_game(app: &Arc<App>, seats: (MatchSeat, MatchSeat), at: i64) {
+        record_result(
+            app,
+            RecordResultInput {
+                match_id: MATCH_ID.to_owned(),
+                seats,
+                outcome: TerminalOutcome {
+                    winner: Winner::P1,
+                    reason: GameOverReason::HeroDeath,
+                },
+                turns: 3,
+                at,
+                last_boards: None,
+                final_hash: None,
+            },
+        )
+        .await
+        .expect("the result is written");
+    }
+
+    pub(super) async fn assert_paid_nothing(app: &App) {
         for profile in [A, B] {
             assert_eq!(jlore_of(app, profile).await, 0, "{profile} earns no Jlore");
             assert!(tracks_of(app, profile).await.is_empty(), "{profile} earns no XP");
@@ -873,28 +945,31 @@ mod no_payout {
     }
 
     #[tokio::test]
-    async fn series_game_pays_nothing() {
+    async fn r1502000_a_conquest_series_game_pays_its_result_and_moves_its_quests() {
         install_test_cards();
         let app = series_game().await;
         let seats = started_seats(&app, MATCH_ID).await;
-        record_result(
-            &app,
-            RecordResultInput {
-                match_id: MATCH_ID.to_owned(),
-                seats,
-                outcome: TerminalOutcome {
-                    winner: Winner::P1,
-                    reason: GameOverReason::HeroDeath,
-                },
-                turns: 3,
-                at: now_ms(),
-                last_boards: None,
-                final_hash: None,
-            },
-        )
-        .await
-        .expect("the result is written");
-        assert_paid_nothing(&app).await;
+        let (winner, loser) = (seats.0.profile_id.clone(), seats.1.profile_id.clone());
+        let quest = hold_quest(&app, &winner, QuestGoal::PlayGames).await;
+        append_log_to(&app, MATCH_ID, &actions_of("p2", 4)).await;
+        p1_wins_the_series_game(&app, seats, now_ms()).await;
+        assert_eq!(
+            game_jlore_paid(&app, &winner).await,
+            i64::from(JLORE_CONQUEST_WIN)
+        );
+        assert_eq!(
+            game_jlore_paid(&app, &loser).await,
+            i64::from(JLORE_CONQUEST_LOSS)
+        );
+        assert_eq!(
+            newest_xp(&app, &winner).await,
+            rewards::game_xp(GameMode::Conquest, 0, true)
+        );
+        assert_eq!(
+            newest_xp(&app, &loser).await,
+            rewards::game_xp(GameMode::Conquest, 4, false)
+        );
+        assert_eq!(quest_progress(&app, &winner, &quest).await, 1);
         assert_eq!(
             table(&app, |data| j(&data.tables.results))
                 .await
@@ -905,20 +980,26 @@ mod no_payout {
     }
 
     #[tokio::test]
-    async fn room_game_pays_nothing() {
+    async fn r1502000_a_room_game_pays_unranked_rates_and_moves_its_quests() {
         install_test_cards();
         let app = scenario_with(MATCH_ID, false, false).await;
-        append_log_to(&app, MATCH_ID, &actions_of("p1", 30)).await;
+        let quest = hold_quest(&app, B, QuestGoal::PlayGames).await;
+        let mut log = actions_of("p1", 30);
+        log.extend(actions_of("p2", 5));
+        append_log_to(&app, MATCH_ID, &log).await;
         let outcome = play(&[json!({ "type": "play", "card": "test-lethal", "playerId": "p1" })]);
         record_on(&app, MATCH_ID, outcome).await;
-        assert_paid_nothing(&app).await;
+        assert_eq!(game_jlore_paid(&app, A).await, i64::from(JLORE_UNRANKED_WIN));
+        assert_eq!(game_jlore_paid(&app, B).await, i64::from(JLORE_UNRANKED_LOSS));
         assert_eq!(
-            table(&app, |data| j(&data.tables.results))
-                .await
-                .as_array()
-                .map(Vec::len),
-            Some(1)
+            newest_xp(&app, A).await,
+            rewards::game_xp(GameMode::Unranked, 30, true)
         );
+        assert_eq!(
+            newest_xp(&app, B).await,
+            rewards::game_xp(GameMode::Unranked, 5, false)
+        );
+        assert_eq!(quest_progress(&app, B, &quest).await, 1);
     }
 
     #[tokio::test]
@@ -1208,8 +1289,6 @@ mod reads {
 
 mod quests {
     use super::*;
-    use jackioh_server::economy::quests::{QuestGoal, pool, quest_interval_ms};
-    use jackioh_server::economy::store::{QuestChange, QuestGrant};
 
     #[tokio::test]
     async fn r1304001_a_ladder_game_moves_its_players_quests() {
@@ -1264,13 +1343,13 @@ mod quests {
 mod daily_cap {
     use super::*;
 
-    const HOUR: i64 = 60 * MINUTE;
+    pub(super) const HOUR: i64 = 60 * MINUTE;
     const DAY: i64 = 24 * HOUR;
     /// A UTC day's first millisecond, well clear of the clock, so no test straddles its midnight.
-    const DAY_ZERO: i64 = 20_000 * DAY;
+    pub(super) const DAY_ZERO: i64 = 20_000 * DAY;
 
     /// A `game` Jlore row an earlier game wrote for `profile` at `at`, as the cap counts it.
-    async fn earlier_game_jlore(app: &App, profile: &str, delta: i64, at: i64) {
+    pub(super) async fn earlier_game_jlore(app: &App, profile: &str, delta: i64, at: i64) {
         let grant = JloreGrant {
             profile_id: profile.to_string(),
             delta,
@@ -1381,16 +1460,57 @@ mod daily_cap {
     #[tokio::test]
     async fn r1483000_an_unpaid_game_is_not_called_capped() {
         install_test_cards();
-        // A room's game pays nothing, whatever the day's total.
-        let app = scenario_with(MATCH_ID, false, false).await;
+        // A bot's side is paid nothing, whatever the day's total (R1454), so it is not held back.
+        let app = test_app().await;
+        fresh_store(&app).await;
+        seed_profile(
+            &app,
+            json!({ "id": A, "kind": "bot", "rating": 1000.0, "inMatchId": MATCH_ID }),
+        )
+        .await;
+        seed_profile(&app, json!({ "id": B, "rating": 1000.0, "inMatchId": MATCH_ID })).await;
+        create_match(&app, MATCH_ID, true, false).await;
         earlier_game_jlore(&app, A, JLORE_GAMES_DAILY_CAP, DAY_ZERO).await;
-        append_log_to(&app, MATCH_ID, &actions_of("p1", 1)).await;
-        let outcome = play(&[json!({ "type": "concede", "playerId": "p1" })]);
-        record_on_at(&app, MATCH_ID, outcome, DAY_ZERO + HOUR).await;
+        a_concedes(&app, MATCH_ID, DAY_ZERO + HOUR).await;
         assert_eq!(caps(&app, MATCH_ID).await, (false, false));
         // Nor is a match with no result yet.
         create_match(&app, MATCH_2, true, false).await;
         assert_eq!(caps(&app, MATCH_2).await, (false, false));
+    }
+
+    #[tokio::test]
+    async fn r1502000_a_room_game_falls_under_the_daily_cap() {
+        install_test_cards();
+        let app = scenario_with(MATCH_ID, false, false).await;
+        let left = i64::from(JLORE_UNRANKED_LOSS) - 3;
+        earlier_game_jlore(&app, A, JLORE_GAMES_DAILY_CAP - left, DAY_ZERO + HOUR).await;
+        a_concedes(&app, MATCH_ID, DAY_ZERO + 2 * HOUR).await;
+        assert_eq!(
+            paid_by_games(&app, A).await,
+            vec![(left, Some(MATCH_ID.to_string()))]
+        );
+        assert_eq!(
+            paid_by_games(&app, B).await,
+            vec![(i64::from(JLORE_UNRANKED_WIN), Some(MATCH_ID.to_string()))]
+        );
+        assert_eq!(caps(&app, MATCH_ID).await, (true, false));
+    }
+
+    #[tokio::test]
+    async fn r1502000_a_conquest_series_game_falls_under_the_daily_cap() {
+        install_test_cards();
+        let app = no_payout::series_game().await;
+        let seats = no_payout::started_seats(&app, MATCH_ID).await;
+        let winner = seats.0.profile_id.clone();
+        earlier_game_jlore(&app, &winner, JLORE_GAMES_DAILY_CAP, DAY_ZERO).await;
+        no_payout::p1_wins_the_series_game(&app, seats, DAY_ZERO + HOUR).await;
+        assert_eq!(
+            paid_by_games(&app, &winner).await,
+            vec![],
+            "the cap held the game's Jlore"
+        );
+        // The series has moved on from the game, which is found by the games it holds.
+        assert_eq!(caps(&app, MATCH_ID).await, (true, false));
     }
 
     #[tokio::test]
@@ -1430,6 +1550,193 @@ mod daily_cap {
         assert_eq!(
             jlore_of(&app, A).await,
             JLORE_GAMES_DAILY_CAP + reward_for_level(next).jlore
+        );
+    }
+}
+
+// R1502000: a co-op game pays each of its two people, in the transaction that writes its result.
+
+mod coop {
+    use super::daily_cap::{DAY_ZERO, HOUR, earlier_game_jlore};
+    use super::no_payout::assert_paid_nothing;
+    use super::*;
+
+    const COOP_ID: &str = "coop-1";
+
+    /// The co-op match row: A hosts, B joined.
+    fn coop_match() -> DuosMatch {
+        let rules = j(&jackioh_engine::config::DUOS_HUMAN_TEAM);
+        serde_json::from_value(json!({
+            "id": COOP_ID,
+            "seed": "seed-coop",
+            "a1": A,
+            "a2": B,
+            "difficulty": "easy",
+            "options": {
+                "decks": { "a1": [], "a2": [], "b1": [], "b2": [] },
+                "dealt": [],
+                "teams": { "a": rules, "b": rules },
+                "handicaps": { "a1": null, "a2": null, "b1": null, "b2": null },
+            },
+            "createdAt": 0,
+            "endedAt": null,
+            "result": null,
+        }))
+        .expect("a co-op match row")
+    }
+
+    /// A live co-op match on `app` whose log holds: A1's two attacks and a pass, the AI's move for
+    /// A1's seat (the server's, so no one's), A2's one move and the AI team's own.
+    async fn coop_game_on(app: Arc<App>) -> Arc<App> {
+        fresh_store(&app).await;
+        seed_profile(&app, json!({ "id": A, "rating": 1000.0 })).await;
+        seed_profile(&app, json!({ "id": B, "rating": 1000.0 })).await;
+        let row = coop_match();
+        store!(app, |t| t.duos_matches_create(&row));
+        let attack =
+            json!({ "kind": "duel", "body": { "type": "attack", "attackerId": "c1", "targetId": "c2" } });
+        let end_turn = json!({ "kind": "duel", "body": { "type": "endTurn" } });
+        let ai = |tail: &str| format!("{SERVER_NONCE_PREFIX}{tail}");
+        let log = [
+            ("a1", "a1-1".to_owned(), attack.clone()),
+            ("a1", "a1-2".to_owned(), attack),
+            (
+                "a1",
+                "a1-3".to_owned(),
+                json!({ "kind": "pass", "instanceId": "c3" }),
+            ),
+            ("a1", ai("ai-4"), end_turn.clone()),
+            ("a2", "a2-5".to_owned(), end_turn.clone()),
+            ("b1", ai("ai-6"), end_turn),
+        ];
+        for (seq, (seat, nonce, body)) in (1..).zip(log) {
+            let row = DuosActionRow {
+                match_id: COOP_ID.to_owned(),
+                seq,
+                nonce: nonce.clone(),
+                action: json!({ "seat": seat, "nonce": nonce, "body": body }),
+                at: seq,
+            };
+            store!(app, |t| t.duos_actions_append(&row));
+        }
+        app
+    }
+
+    async fn coop_game() -> Arc<App> {
+        coop_game_on(test_app().await).await
+    }
+
+    /// Ends the match with `result` at `at` in a transaction of its own, as the actor does;
+    /// whether this write was the one that landed it.
+    async fn finish(app: &App, result: &DuosResult, at: i64) -> bool {
+        let mut t = app.db.begin(None).await.expect("a store transaction begins");
+        let landed = finish_match(&mut t, app, &coop_match(), result, at)
+            .await
+            .expect("the match finishes");
+        t.commit().await.expect("the store transaction commits");
+        landed
+    }
+
+    fn won_by(team: Team) -> DuosResult {
+        DuosResult {
+            outcome: DuosOutcome::Win,
+            winner: Some(team),
+            reason: DUOS_REASON_POOL_EMPTIED.to_owned(),
+        }
+    }
+
+    #[tokio::test]
+    async fn r1502000_a_won_coop_game_pays_each_person_their_own_moves() {
+        let app = coop_game().await;
+        let quest = hold_quest(&app, A, QuestGoal::AttackWithUnits).await;
+        assert!(finish(&app, &won_by(Team::A), now_ms()).await);
+        for profile in [A, B] {
+            assert_eq!(
+                game_jlore_paid(&app, profile).await,
+                i64::from(JLORE_COOP_WIN),
+                "{profile}"
+            );
+        }
+        // A1 sent two attacks and a pass; the AI's move for its seat is no one's. A2 sent one.
+        assert_eq!(
+            newest_xp(&app, A).await,
+            rewards::game_xp(GameMode::Coop, 3, true)
+        );
+        assert_eq!(
+            newest_xp(&app, B).await,
+            rewards::game_xp(GameMode::Coop, 1, true)
+        );
+        assert_eq!(quest_progress(&app, A, &quest).await, 2);
+    }
+
+    #[tokio::test]
+    async fn r1502000_a_lost_or_drawn_coop_game_pays_the_loss_rate() {
+        for result in [won_by(Team::B), ceiling_draw()] {
+            let app = coop_game().await;
+            assert!(finish(&app, &result, now_ms()).await);
+            for profile in [A, B] {
+                assert_eq!(
+                    game_jlore_paid(&app, profile).await,
+                    i64::from(JLORE_COOP_LOSS),
+                    "{profile} after {result:?}"
+                );
+            }
+            assert_eq!(
+                newest_xp(&app, A).await,
+                rewards::game_xp(GameMode::Coop, 3, false)
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn r1502000_a_coop_result_pays_once() {
+        let app = coop_game().await;
+        assert!(finish(&app, &won_by(Team::A), now_ms()).await);
+        let before = (j(&ledger_of(&app, A).await), j(&ledger_of(&app, B).await));
+        assert!(
+            !finish(&app, &won_by(Team::B), now_ms()).await,
+            "the first write stands"
+        );
+        assert_eq!(
+            before,
+            (j(&ledger_of(&app, A).await), j(&ledger_of(&app, B).await))
+        );
+    }
+
+    #[tokio::test]
+    async fn r1502000_a_voided_coop_game_or_the_economy_off_pays_nothing() {
+        let voided = DuosResult {
+            outcome: DuosOutcome::Draw,
+            winner: None,
+            reason: DUOS_REASON_VOIDED.to_owned(),
+        };
+        let app = coop_game().await;
+        assert!(finish(&app, &voided, now_ms()).await);
+        assert_paid_nothing(&app).await;
+
+        let app = coop_game_on(economy_app(false).await).await;
+        assert!(finish(&app, &won_by(Team::A), now_ms()).await);
+        assert_paid_nothing(&app).await;
+    }
+
+    #[tokio::test]
+    async fn r1502000_a_coop_game_falls_under_the_daily_cap() {
+        let app = coop_game().await;
+        earlier_game_jlore(&app, A, JLORE_GAMES_DAILY_CAP, DAY_ZERO).await;
+        assert!(finish(&app, &won_by(Team::A), DAY_ZERO + HOUR).await);
+        assert_eq!(
+            game_jlore_paid(&app, A).await,
+            JLORE_GAMES_DAILY_CAP,
+            "the cap held the game's Jlore back"
+        );
+        assert_eq!(
+            game_jlore_paid(&app, B).await,
+            i64::from(JLORE_COOP_WIN),
+            "B's own day is open"
+        );
+        assert_eq!(
+            newest_xp(&app, A).await,
+            rewards::game_xp(GameMode::Coop, 3, true)
         );
     }
 }

@@ -930,7 +930,7 @@ describe("S9 — the default catalog and the surface seam", () => {
     expect(fx.shakes).not.toContain("apply");
   });
 
-  it("S9 with no catalog at all, a summon plans only the dust burst at the zone's foot (and its stand-in, B46)", () => {
+  it("S9 with no catalog at all, a Brute summon plans the dust burst plus its heavy landing (and its stand-in, B46)", () => {
     const sched = fakeSchedule();
     const queue = queueWith(sched);
     const fx = fakeSeams();
@@ -941,11 +941,16 @@ describe("S9 — the default catalog and the surface seam", () => {
     fx.pump(400);
 
     expect(m.rays("legendary")).toBe(0);
-    expect(fx.shakes).not.toContain("apply");
-    // Every measure is the landing zone: once at its foot for the dust, and bare for the stand-in
-    // that lands there and follows it frame by frame.
+    // core-019 is really Brute, and the flavor resolves off the bundled catalog: its entrance
+    // shakes the board (#1445).
+    expect(fx.shakes).toContain("apply");
+    // Every measure is the landing zone: three times at its foot for the dust (the base burst
+    // plus the Brute's two), and bare for the stand-in that lands there and follows it frame by
+    // frame.
     const zone = { kind: "testid", testid: "zone-you-units-3" };
     expect(fx.measured.filter((anchor) => anchor.kind === "testid" && anchor.at !== undefined)).toEqual([
+      { ...zone, at: { x: 0.5, y: 1 } },
+      { ...zone, at: { x: 0.5, y: 1 } },
       { ...zone, at: { x: 0.5, y: 1 } },
     ]);
     expect(fx.measured.filter((anchor) => !(anchor.kind === "testid" && anchor.at !== undefined)).length).toBeGreaterThan(0);
