@@ -9000,6 +9000,7 @@
     "1485": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-21T05:12:47Z",
         "difficulty": "medium",
