@@ -33,8 +33,8 @@ Issues and pull requests share them (`docs/issues-and-patches.md`, Titles):
 
 No title names a version before it ships: `patches ship` names a card change's version from what it
 does to the cards (the classifier, R1365000) and retitles its issue and pull request. The `pr title`
-check fails a pull request whose title breaks these; the older prefixes (`Patch v0.3.X`, `Patch
-v0.3.Y`, `vX.Y.0`, `Night bot`, `CI`, `Architecture`) pass until the title retcon (#1372). Tools' own
+check fails a pull request whose title breaks these, the older prefixes (`Patch v0.3.X`, `Patch
+v0.3.Y`, `vX.Y.0`, `Night bot`, `CI`, `Architecture`) included since the title retcon (#1372). Tools' own
 pull requests (`patches ship: …`, `Promote main to production: …`, a training lane's `AI gen N
 (lane): …`) pass as they are.
 

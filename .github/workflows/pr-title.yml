@@ -1,8 +1,8 @@
 # The pull request title check (#187): a pull request's title becomes its squash commit's subject,
 # so it must follow docs/issues-and-patches.md (Titles): `Patch: <what it does>`, a shipped card
-# change's `Patch vX.Y.Z: …` and a part's `Patch (part n of m): …` (#1360); the older `Patch
-# v0.3.X: …`, `Patch v0.3.Y: …`, `vX.Y.0: …`, `Night bot: …`, `CI: …` and `Architecture: …` pass
-# until the title retcon (#1372) has run. The pattern is triage's
+# change's `Patch vX.Y.Z: …` and a part's `Patch (part n of m): …` (#1360); the older prefixes
+# (`Patch v0.3.X`, `vX.Y.0`, `Night bot`, `CI`, `Architecture`, …) stopped passing with the title
+# retcon (#1372). The pattern is triage's
 # (`bot/harness/triage.py`'s `CONVENTION`), with the titles tools give their own pull requests
 # (`AUTOMATED_PULL`: `patches ship: v0.3.1`, `Promote main to production: N commit(s) up to abc1234`,
 # a training lane's `AI gen N (lane): …`) and GitHub's `Revert "…"` of a title that passes. The
