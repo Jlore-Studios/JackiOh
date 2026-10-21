@@ -4,8 +4,6 @@
 
 export const togetherTestid = {
   root: "together",
-  /** The landing page's Play together call to action (B54). */
-  landingCta: "landing-play-together",
   addInput: "together-add-input",
   addSubmit: "together-add-submit",
   /** The server's refusal of an add (B55), in its own words. */

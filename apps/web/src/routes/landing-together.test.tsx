@@ -98,6 +98,16 @@ describe("B54 the landing offers no Play together call to action", () => {
     }, SLOW);
     expect(screen.queryByTestId(loginTestid.form)).toBeNull();
   });
+
+  // #1577: no door leads to /together anymore, so the signed-out bounce is visited directly:
+  // Play together keeps the gate Play online asks for.
+  it("B54 /together while signed out ends at sign-in, as Play together always did", async () => {
+    at(paths.together);
+    render(<App />);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(paths.login);
+    }, SLOW);
+  });
 });
 
 describe("B54 B56 B60 B65 the route table", () => {

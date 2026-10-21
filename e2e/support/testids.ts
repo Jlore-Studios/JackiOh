@@ -749,7 +749,6 @@ export function replaysOnlineId(matchId: string): string {
 // #936 (SPEC S8): Play together's selectors mirror `apps/web/src/together/testids.ts`: the friends page,
 // the chat panel and the board rail's chat, the challenge toast, the watch screen and the replay share.
 
-export const LANDING_PLAY_TOGETHER = "landing-play-together";
 export const TOGETHER_ROOT = "together";
 export const TOGETHER_ADD_INPUT = "together-add-input";
 export const TOGETHER_ADD_SUBMIT = "together-add-submit";
