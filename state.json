@@ -9288,6 +9288,13 @@
     "1522": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T12:52:20Z",
+        "difficulty": "medium",
+        "provider": "gpt",
+        "tier": "medium",
+        "why": "The split is bounded, but it changes a Cargo manifest and test runner and spans the server, CI scoping script, and web scoping test, so the one-place and forbidden-config easy criteria fail."
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "gpt",
