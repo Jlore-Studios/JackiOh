@@ -239,6 +239,27 @@ describe("server frames", () => {
     expect(h.client.snapshot().legal).toEqual([{ type: "endTurn" }]);
   });
 
+  it("R1483000 keeps the account's cap flag from view frames", () => {
+    const h = connected();
+    expect(h.client.snapshot().jloreCapped).toBe(false);
+    h.socket().deliver({ type: "view", view: baseView(), jloreCapped: true });
+    expect(h.client.snapshot().jloreCapped).toBe(true);
+    h.socket().deliver({ type: "view", view: baseView({ turn: 2 }), jloreCapped: true });
+    expect(h.client.snapshot().jloreCapped).toBe(true);
+    // The server leaves a false flag off the frame, so a view without it reads false.
+    h.socket().deliver({ type: "view", view: baseView({ turn: 3 }) });
+    expect(h.client.snapshot().jloreCapped).toBe(false);
+    // A flag that is no boolean makes the frame one this client does not know, and it changes nothing.
+    h.socket().deliver({ type: "view", view: baseView({ turn: 3 }), jloreCapped: true });
+    h.socket().deliver({ type: "view", view: baseView({ turn: 4 }), jloreCapped: "yes" });
+    expect(h.client.snapshot().jloreCapped).toBe(true);
+    expect(h.client.snapshot().view?.turn).toBe(3);
+    expect(parseServerFrame(JSON.stringify({ type: "view", view: baseView() }))).toMatchObject({
+      type: "view",
+      jloreCapped: false,
+    });
+  });
+
   it("relays an `error` verbatim (§9.3: the reducer's reason, never reworded)", () => {
     const h = connected();
     h.socket().deliver({

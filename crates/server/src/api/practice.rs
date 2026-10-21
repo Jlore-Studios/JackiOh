@@ -5,14 +5,18 @@
 //!   game's setup: the AI tier, the human's seat, the deck and the catalog version, which the page
 //!   sends, and the human's last board, which the server keeps ([[R1303003]]) and answers with the
 //!   seed for the game to begin with. The same transaction prunes the profile's seeds issued more
-//!   than `PRACTICE_SEED_TTL_SECONDS` ago, so an abandoned game's seed goes ([[R1303001]]).
+//!   than `PRACTICE_SEED_TTL_SECONDS` ago, so an abandoned game's seed goes ([[R1303001]]), and
+//!   refuses the request, issuing nothing, while the account already holds
+//!   `PRACTICE_SEEDS_OPEN_MAX` unclaimed seeds ([[R1483000]]), counted under the account's economy
+//!   lock so requests made at once cannot pass it together.
 //! - **A claim** (`POST /api/practice/claims`) sends the seed, the result and the game's log once
 //!   it is over. Its seed is burned first, in a transaction of its own, so it pays once whatever
 //!   the check answers ([[R1303001]]); then `economy::practice::verify` folds the log and re-runs
 //!   the AI off the runtime, at most `PRACTICE_VERIFY_CONCURRENCY` claims at once (the rest wait
 //!   for a permit, and none is dropped); then a claim that passed pays through the reward hook at
-//!   practice rates, moving the account's quests as a ladder game does ([[R1304001]]), and keeps
-//!   the board it ended on, in a task of its own that finishes even when the caller stops waiting.
+//!   practice rates (held to the day's Jlore cap, [[R1483000]]), moving the account's quests as a
+//!   ladder game does ([[R1304001]]), and keeps the board it ended on, in a task of its own that
+//!   finishes even when the caller stops waiting.
 //!   No transaction stays open across a check.
 //!   Every refusal answers 200 with `paid: false` and why, so the result screen can say it.
 //!
@@ -33,11 +37,11 @@ use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, Req, bad_request, json as json_response, log_info, log_warn,
 };
 use crate::app::{App, now_ms};
-use crate::config::PRACTICE_SEED_TTL_SECONDS;
+use crate::config::{PRACTICE_SEED_TTL_SECONDS, PRACTICE_SEEDS_OPEN_MAX};
 use crate::db::store::LastBoardKind;
 use crate::economy::practice::{ClaimRefusal, ClaimedResult, Verified, verify};
 use crate::economy::quests::tally_seat;
-use crate::economy::rewards::{GameMode, GameSummary, game_jlore, game_xp, pay_game_rewards};
+use crate::economy::rewards::{GameMode, GameSummary, pay_game_rewards};
 use crate::economy::store::{PracticeDeck, PracticeSeed, PracticeSetup};
 
 /// An issue's status: the seed is a new resource.
@@ -77,8 +81,9 @@ fn refused(reason: ClaimRefusal) -> ApiResult {
 }
 
 /// `POST /api/practice/seeds` with `{ difficulty, humanSeat, deck, catalog }` (`AuthLevel::Active`).
-/// 201 `{ seed, lastBoard, expiresAt }`; a 409 while the economy is off, or for a catalog version
-/// this build cannot fold (R767000).
+/// 201 `{ seed, lastBoard, expiresAt }`; a 409 while the economy is off, for a catalog version
+/// this build cannot fold (R767000), or while the account holds `PRACTICE_SEEDS_OPEN_MAX` unclaimed
+/// seeds (R1483000).
 pub async fn post_seed(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let request: SeedRequest = body_of(&req.body, "a practice game's setup")?;
@@ -97,8 +102,20 @@ pub async fn post_seed(app: &Arc<App>, req: Req) -> ApiResult {
     let now = now_ms();
     let seed = crate::api::queue::new_seed();
     let mut tx = app.db.begin(Some(&profile.id)).await?;
+    // R1483000: the account's lock before the count, so two requests at once see each other's seed.
+    tx.economy_lock_account(&profile.id).await?;
     tx.economy_practice_seeds_prune(&profile.id, now - SEED_TTL_MS)
         .await?;
+    if tx
+        .economy_practice_seeds_open(&profile.id, now - SEED_TTL_MS)
+        .await?
+        >= PRACTICE_SEEDS_OPEN_MAX
+    {
+        return Err(ApiError::new(
+            ApiErrorCode::Conflict,
+            "Claim one of your open practice games before starting another.",
+        ));
+    }
     let last_board = tx
         .last_boards_get(&profile.id, LastBoardKind::Practice)
         .await?
@@ -125,7 +142,8 @@ pub async fn post_seed(app: &Arc<App>, req: Req) -> ApiResult {
 }
 
 /// `POST /api/practice/claims` with `{ seed, result, log }` (`AuthLevel::Active`). 200
-/// `{ paid: true, jlore, xp }` for a game that passed, the game's own pay; 200
+/// `{ paid: true, jlore, xp, jloreCapped }` for a game that passed, the game's own pay, its Jlore
+/// short of the game's rate when the day's cap held some back (R1483000); 200
 /// `{ paid: false, reason }` for every refusal.
 pub async fn post_claim(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
@@ -187,7 +205,7 @@ async fn settle(
 
     let won = verified.won;
     let mut tx = app.db.begin(Some(&profile_id)).await?;
-    pay_game_rewards(
+    let paid = pay_game_rewards(
         &mut tx,
         &GameSummary {
             mode: GameMode::Practice,
@@ -209,8 +227,9 @@ async fn settle(
         200,
         json!({
             "paid": true,
-            "jlore": game_jlore(GameMode::Practice, won),
-            "xp": game_xp(GameMode::Practice, verified.actions, won == Some(true)),
+            "jlore": paid.jlore,
+            "xp": paid.xp,
+            "jloreCapped": paid.jlore_capped,
         }),
     ))
 }

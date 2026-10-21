@@ -35,7 +35,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use indexmap::IndexMap;
-use jackioh_engine::{ActionBody, GameOverReason, PlayerId, Winner};
+use jackioh_engine::{ActionBody, GameOverReason, PerPlayer, PlayerId, Winner};
 
 use crate::actor::contracts::{RecordResultInput, TerminalOutcome, VoidMatchInput};
 use crate::actor::{engine, match_actor, registry};
@@ -48,14 +48,17 @@ use crate::api::series::{SeriesGameResult, advance_series_in_tx, resume_series};
 use crate::app::{App, now_ms};
 use crate::bug_reports::{Finding, FoundIn, refused_rows};
 use crate::config::{
-    MATCH_REAPER_INTERVAL_SECONDS, OPEN_MATCH_REAP_GRACE_MS, RATING_START, RESULT_WRITE_ATTEMPTS,
+    JLORE_GAMES_DAILY_CAP, MATCH_REAPER_INTERVAL_SECONDS, OPEN_MATCH_REAP_GRACE_MS, RATING_START,
+    RESULT_WRITE_ATTEMPTS,
 };
 use crate::db::store::{
     LastBoardKind, MatchActionRow, MatchRow, MatchSeat, Profile, ProfileKind, RatedGameKind, RatedReason,
     ResultRow, SeriesRow, SeriesStatus, StoreError, Tx,
 };
 use crate::economy::quests::tally_seat;
-use crate::economy::rewards::{GameMode, GameSummary, is_player_action, pay_game_rewards};
+use crate::economy::rewards::{
+    GameMode, GameSummary, game_jlore, is_player_action, pay_game_rewards, utc_day_bounds,
+};
 
 /// A failure this file reports to its caller (the actor, the reaper): TS rethrew the error itself,
 /// so the sentence is the error's own.
@@ -493,6 +496,57 @@ pub async fn record_ceiling_draw(app: &Arc<App>, input: RecordResultInput) -> Re
     let written = write_result(app, &input, RatingPolicy::Unchanged).await?;
     resume_series(app, written.series.as_ref()).await;
     Ok(written.row)
+}
+
+/// R1483000: whether the daily Jlore cap held back each account's pay for the finished ladder match
+/// `match_id`, keyed by the seat each account began in (`MatchRow.players`). Read off the ledger
+/// after the write, so a fresh result, a repeat of it and an actor rebuilt on the finished match
+/// all answer alike: an account's pay was held back when its `game` row for the match is below the
+/// ladder's rate for its result and its UTC day has reached `JLORE_GAMES_DAILY_CAP`. A game the
+/// reward hook did not pay (a series game, an unranked match, a bot's side) or any game while the
+/// economy is off holds nothing back.
+pub async fn game_jlore_caps(app: &App, match_id: &str) -> Result<PerPlayer<bool>, ApiError> {
+    let none = PerPlayer::new(false, false);
+    if !app.economy_live {
+        return Ok(none);
+    }
+    let mut tx = app.db.begin(None).await.map_err(failure)?;
+    let result = tx.results_get_by_match(match_id).await.map_err(failure)?;
+    let match_row = tx.matches_get(match_id).await.map_err(failure)?;
+    let series = tx.series_by_match(match_id).await.map_err(failure)?;
+    let (Some(result), Some(match_row), None) = (result, match_row, series) else {
+        return Ok(none);
+    };
+    if match_row.ranked != Some(true) {
+        return Ok(none);
+    }
+    let (first, second) = match_row.players;
+    let profiles = tx
+        .profiles_get_many(&[first.clone(), second.clone()])
+        .await
+        .map_err(failure)?;
+    let (from, until) = utc_day_bounds(result.ended_at);
+    let mut capped = [false, false];
+    for (held_back, profile_id) in capped.iter_mut().zip([&first, &second]) {
+        if profiles
+            .iter()
+            .any(|profile| profile.id == *profile_id && profile.kind == ProfileKind::Bot)
+        {
+            continue;
+        }
+        let won = result
+            .winner_profile_id
+            .as_ref()
+            .map(|winner| winner == profile_id);
+        let totals = tx
+            .economy_game_jlore_totals(profile_id, from, until, match_id)
+            .await
+            .map_err(failure)?;
+        *held_back = totals.reference < i64::from(game_jlore(GameMode::Ladder, won))
+            && totals.day >= JLORE_GAMES_DAILY_CAP;
+    }
+    tx.commit().await.map_err(failure)?;
+    Ok(PerPlayer::new(capped[0], capped[1]))
 }
 
 /// R679: the `VoidMatch` port the actor holds (TS `ActorDeps.voidMatch`, made by

@@ -14,6 +14,11 @@
 //! - The summary names its [`GameMode`]. Jlore is [`game_jlore`]: on the ladder `JLORE_LADDER_WIN`
 //!   for a win and `JLORE_LADDER_LOSS` otherwise, in practice `JLORE_PRACTICE_WIN` and
 //!   `JLORE_PRACTICE_LOSS`.
+//! - A day's games pay an account at most `JLORE_GAMES_DAILY_CAP` Jlore, ladder and practice
+//!   together, counted over the UTC day the game ended in ([[R1483000]]). The game that crosses
+//!   the cap is paid the part that fits and the ones after it no Jlore, with no Jlore row; XP and
+//!   quests are paid in full. Quest and track Jlore neither count nor stop. [`GameRewards`] says
+//!   what was paid and whether the cap held some back.
 //! - XP is [`game_xp`]: `XP_PER_ACTION` for each counted action, `XP_WIN_BONUS` more for a win,
 //!   never above `XP_GAME_CAP`, so a loop of empty actions cannot farm it; a practice game earns
 //!   that times `XP_PRACTICE_SCALE`, rounded down. It goes to every
@@ -37,10 +42,14 @@ use super::quests::{GameTally, move_quests};
 use super::store::{EconomyReason, InventoryGrant, InventoryItem, JloreGrant, JloreReason, TrackGrant};
 use super::track_rewards::reward_for_level;
 use crate::config::{
-    JLORE_LADDER_LOSS, JLORE_LADDER_WIN, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, SET_TRACK_FIRST_LEVEL,
-    SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL, XP_GAME_CAP, XP_PER_ACTION, XP_PRACTICE_SCALE, XP_WIN_BONUS,
+    JLORE_GAMES_DAILY_CAP, JLORE_LADDER_LOSS, JLORE_LADDER_WIN, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN,
+    SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL, XP_GAME_CAP, XP_PER_ACTION,
+    XP_PRACTICE_SCALE, XP_WIN_BONUS,
 };
 use crate::db::store::{StoreResult, Tx};
+
+/// Milliseconds in a UTC day, the span `JLORE_GAMES_DAILY_CAP` counts over ([[R1483000]]).
+const MS_PER_UTC_DAY: i64 = 86_400_000;
 
 /// Which kind of game finished, so the hook pays its rates (SPEC §14.8).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -72,6 +81,16 @@ pub struct GameSummary {
     pub bot: bool,
     /// What the seat did, as the quests count it (§14.9).
     pub tally: GameTally,
+}
+
+/// What [`pay_game_rewards`] paid one game ([[R1483000]]): all zero for a bot's side.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct GameRewards {
+    /// The Jlore written: the game's rate, or what was left under the daily cap.
+    pub jlore: i64,
+    pub xp: i64,
+    /// Whether the daily cap held part or all of the game's Jlore back.
+    pub jlore_capped: bool,
 }
 
 /// One XP payout onto every active set track (§14.7): a game's or a completed quest's.
@@ -146,18 +165,30 @@ pub fn game_jlore(mode: GameMode, won: Option<bool>) -> i32 {
     }
 }
 
-/// Pays one finished game's rewards in the caller's transaction: its Jlore, its XP on every
-/// active set track ([`pay_xp`]), and then moves its quests, which may pay too ([[R1304001]]). A
-/// bot's side writes nothing.
-pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreResult<()> {
+/// The UTC day `at` (milliseconds) falls in, as `[start, end)` ([[R1483000]]).
+pub fn utc_day_bounds(at: i64) -> (i64, i64) {
+    let start = at.div_euclid(MS_PER_UTC_DAY) * MS_PER_UTC_DAY;
+    (start, start.saturating_add(MS_PER_UTC_DAY))
+}
+
+/// Pays one finished game's rewards in the caller's transaction: its Jlore, held to the account's
+/// daily cap ([[R1483000]]), its XP on every active set track ([`pay_xp`]), and then moves its
+/// quests, which may pay too ([[R1304001]]). A bot's side writes nothing.
+pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreResult<GameRewards> {
     if summary.bot {
-        return Ok(());
+        return Ok(GameRewards::default());
     }
     // [[R1301003]]: one account's payouts run one after the other, as its openings do: the
     // account's economy lock, taken before any track or quest is read. A completed quest paying
     // through `pay_xp` in this same transaction is unaffected: the advisory lock is re-entrant.
     tx.economy_lock_account(&summary.profile_id).await?;
-    let jlore = i64::from(game_jlore(summary.mode, summary.won));
+    let rate = i64::from(game_jlore(summary.mode, summary.won));
+    let (from, until) = utc_day_bounds(summary.at);
+    let paid_today = tx
+        .economy_game_jlore_totals(&summary.profile_id, from, until, &summary.match_id)
+        .await?
+        .day;
+    let jlore = rate.min((JLORE_GAMES_DAILY_CAP - paid_today).max(0));
     if jlore != 0 {
         tx.economy_jlore_grant(&JloreGrant {
             profile_id: summary.profile_id.clone(),
@@ -169,11 +200,12 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
         })
         .await?;
     }
+    let xp = game_xp(summary.mode, summary.actions, summary.won == Some(true));
     pay_xp(
         tx,
         &XpPayout {
             profile_id: &summary.profile_id,
-            xp: game_xp(summary.mode, summary.actions, summary.won == Some(true)),
+            xp,
             reason: EconomyReason::Track,
             reference: &summary.match_id,
             dev: false,
@@ -181,7 +213,12 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
         },
     )
     .await?;
-    move_quests(tx, summary).await
+    move_quests(tx, summary).await?;
+    Ok(GameRewards {
+        jlore,
+        xp,
+        jlore_capped: jlore < rate,
+    })
 }
 
 /// Pays `payout.xp` XP onto every active set track in the caller's transaction, each newly reached
