@@ -31,6 +31,8 @@ const TESTID = {
   chatOpen: "together-chat-open",
   chatInput: "chat-input",
   coopCreate: "coop-create",
+  sharedRetry: "together-shared-retry",
+  sharedRow: "together-shared-row",
 } as const;
 
 // ---------------------------------------------------------------------------------------------
@@ -623,6 +625,26 @@ describe("B59 Shared with me", () => {
     expect(server.to("GET", "/api/friends")).toHaveLength(2);
     expect(screen.queryAllByText(wholeText("Ann#2"))).toHaveLength(0);
     expect(server.calls.some((call) => call.path.startsWith("/api/replays/m-"))).toBe(false);
+  });
+
+  it("#1568 a Shared with me list that could not be read offers Try again, which reads it again and lists it", async () => {
+    let reads = 0;
+    const server = await renderPage(world(ONLY_CY), (call) => {
+      if (call.method === "GET" && call.path === "/api/replays/shared") {
+        reads += 1;
+        if (reads === 1) return refusal(500, "internal", "The shared replays are out of reach.");
+      }
+      return undefined;
+    });
+
+    expect(await screen.findByText(/the shared replays are out of reach/i, undefined, SLOW)).toBeInTheDocument();
+    fireEvent.click(await screen.findByTestId(TESTID.sharedRetry, undefined, SLOW));
+
+    const row = await screen.findByTestId(TESTID.sharedRow, undefined, SLOW);
+    expect(row).toHaveAttribute("data-match-id", SHARED.matchId);
+    await waitFor(() => {
+      expect(server.to("GET", "/api/replays/shared")).toHaveLength(2);
+    }, SLOW);
   });
 });
 

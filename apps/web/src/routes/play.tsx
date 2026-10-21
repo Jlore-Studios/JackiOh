@@ -93,6 +93,8 @@ export const playTestid = {
   leanNewest: "play-lean-newest",
   /** R915005: under a picker that offers a deck or trio naming a custom card: why it is off. */
   practiceOnly: "play-practice-only",
+  /** #1568: a failed decks read offers Try again beside the alert. */
+  decksRetry: "play-decks-retry",
 } as const;
 
 export const QUEUE_MODES: readonly QueueMode[] = ["bo1", "bo3", "random"];
@@ -194,8 +196,9 @@ function attempt<T>(call: () => Promise<T>): Promise<T> {
 }
 
 /** A collection failure skips only the client verdict; the catalog is the one the client ships (game/currentCatalog.ts). */
-function useLobbyData(token: string): LobbyLoad {
+function useLobbyData(token: string): [LobbyLoad, () => void] {
   const [load, setLoad] = useState<LobbyLoad>({ kind: "loading" });
+  const [round, setRound] = useState(0);
   useEffect(() => {
     let cancelled = false;
     Promise.all([
@@ -215,8 +218,12 @@ function useLobbyData(token: string): LobbyLoad {
     return () => {
       cancelled = true;
     };
-  }, [token]);
-  return load;
+  }, [token, round]);
+  const retry = useCallback((): void => {
+    setLoad({ kind: "loading" });
+    setRound((before) => before + 1);
+  }, []);
+  return [load, retry];
 }
 
 /** R915005: a deck that names a custom card plays only in practice, never online. */
@@ -736,7 +743,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
   const [trioId, setTrioId] = useState<string | null>(stored.trioId ?? null);
   const [lean, setLean] = useState(readPlayLean);
 
-  const lobby = useLobbyData(token);
+  const [lobby, retryLobby] = useLobbyData(token);
   const data = lobby.kind === "ready" ? lobby.data : null;
   const deck = data === null ? null : defaultDeck(data.decks, deckId);
   const trio = data === null ? null : defaultTrio(data.trios, trioId, data.decks);
@@ -1057,9 +1064,16 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
             </p>
           ) : null}
           {lobby.kind === "failed" && mode !== "random" ? (
-            <p className="notice" role="alert">
-              {t("Your decks could not be loaded: {message}", { message: t(lobby.message) })}
-            </p>
+            <>
+              <p className="notice" role="alert">
+                {t("Your decks could not be loaded: {message}", { message: t(lobby.message) })}
+              </p>
+              <div className="row">
+                <button type="button" data-testid={playTestid.decksRetry} onClick={retryLobby}>
+                  {t("Try again")}
+                </button>
+              </div>
+            </>
           ) : null}
 
           {data !== null && mode === "bo1" ? (

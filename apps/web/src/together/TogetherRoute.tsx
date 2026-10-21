@@ -300,7 +300,7 @@ export function TogetherRoute(): ReactElement {
   const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS);
   const [challenges, reloadChallenges] = usePolled(getChallenges, SOCIAL_POLL_MS);
   const [unread, reloadUnread] = usePolled(getUnread, SOCIAL_POLL_MS);
-  const [shared] = usePolled(getSharedReplays, null);
+  const [shared, reloadShared] = usePolled(getSharedReplays, null);
   const lookup = useCatalogLookup();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -515,9 +515,22 @@ export function TogetherRoute(): ReactElement {
               </p>
             ) : null}
             {shared.kind === "failed" ? (
-              <p className="notice" role="alert">
-                {t(shared.message)}
-              </p>
+              <>
+                <p className="notice" role="alert">
+                  {t(shared.message)}
+                </p>
+                <div className="row">
+                  <button
+                    type="button"
+                    data-testid={togetherTestid.sharedRetry}
+                    onClick={() => {
+                      reloadShared();
+                    }}
+                  >
+                    {t("Try again")}
+                  </button>
+                </div>
+              </>
             ) : null}
             {shared.kind === "ready" && shared.value.shared.length === 0 ? (
               <p className="lobby-note" data-testid={togetherTestid.noShared}>

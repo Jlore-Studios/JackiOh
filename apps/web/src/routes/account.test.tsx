@@ -210,6 +210,22 @@ describe("the account screen", () => {
     expect(await screen.findByTestId("account-error")).toHaveTextContent("the server refused");
   });
 
+  it("#1568 a failed read offers Try again, which reads the account again and shows it", async () => {
+    vi.mocked(getProfile).mockRejectedValueOnce(new Error("the server refused")).mockResolvedValueOnce(profileBody());
+    render(<AccountRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId(accountTestid.error)).toHaveTextContent("the server refused");
+    expect(screen.getByTestId(accountTestid.retry)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId(accountTestid.retry));
+    expect(screen.getByTestId(accountTestid.loading)).toBeInTheDocument();
+    expect(screen.queryByTestId(accountTestid.retry)).toBeNull();
+
+    expect(await screen.findByTestId(accountTestid.email)).toHaveTextContent("player1@example.com");
+    expect(getProfile).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("shows the summary without opening management", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     render(<AccountRoute token={TOKEN} />);

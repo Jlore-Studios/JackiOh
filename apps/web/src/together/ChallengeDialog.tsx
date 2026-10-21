@@ -60,6 +60,7 @@ export function ChallengeDialog({
   const [mode, setMode] = useState<QueueMode>("bo1");
   const [saved, setSaved] = useState<Saved | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [deckReads, setDeckReads] = useState(0);
   const [deckId, setDeckId] = useState<string | null>(null);
   const [trioId, setTrioId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -81,7 +82,7 @@ export function ChallengeDialog({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [deckReads]);
 
   const choice = choiceOf(mode, deckId, trioId);
 
@@ -161,9 +162,23 @@ export function ChallengeDialog({
           </p>
         ) : null}
         {mode !== "random" && loadError !== null ? (
-          <p className="notice" role="alert">
-            {t("Your decks could not be loaded: {message}", { message: t(loadError) })}
-          </p>
+          <>
+            <p className="notice" role="alert">
+              {t("Your decks could not be loaded: {message}", { message: t(loadError) })}
+            </p>
+            <div className="row">
+              <button
+                type="button"
+                data-testid={togetherTestid.challengeDecksRetry}
+                onClick={() => {
+                  setLoadError(null);
+                  setDeckReads((before) => before + 1);
+                }}
+              >
+                {t("Try again")}
+              </button>
+            </div>
+          </>
         ) : null}
         {mode === "bo1" && saved !== null ? (
           saved.decks.length === 0 ? (
