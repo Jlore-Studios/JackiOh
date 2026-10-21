@@ -42,6 +42,7 @@ export const duosTestid = {
   resultBack: "duos-result-back",
   resultBoard: "duos-result-board",
   resultReplay: "duos-result-replay",
+  resultJlore: "duos-result-jlore",
   // The route's own: before the first view, its clock, and its connection line and Reconnect now.
   connecting: "duos-connecting",
   refused: "duos-refused",

@@ -14,7 +14,7 @@ import {
   type Timers,
 } from "../game/net.ts";
 import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
-import { createDuosClient, type DuosClient } from "./socket.ts";
+import { createDuosClient, parseDuosFrame, type DuosClient } from "./socket.ts";
 
 // Fakes
 
@@ -497,5 +497,31 @@ describe("a co-op socket refused for its sign-in", () => {
       expect(afterRetry.sockets).toHaveLength(2);
       expect(afterRetry.client.snapshot().connection).toBe("refused");
     }
+  });
+});
+
+// R1483000: the daily cap's flag on view frames
+
+describe("R1483000 a finished view carries jloreCapped, absent while false", () => {
+  it("R1483000 a finished view carries jloreCapped, absent while false", () => {
+    const h = connected();
+    expect(h.client.snapshot().jloreCapped).toBe(false);
+    h.socket().deliver({ type: "view", view: { round: 1 }, legal: [] });
+    expect(h.client.snapshot().jloreCapped).toBe(false);
+    expect(roundOf(h)).toBe(1);
+    h.socket().deliver({ type: "view", view: { round: 2 }, legal: [], jloreCapped: true });
+    expect(h.client.snapshot().jloreCapped).toBe(true);
+    // The server leaves a false flag off the frame, so a view without it reads false.
+    h.socket().deliver({ type: "view", view: { round: 3 }, legal: [] });
+    expect(h.client.snapshot().jloreCapped).toBe(false);
+    // A flag that is no boolean makes the frame one this client does not know, and it changes nothing.
+    h.socket().deliver({ type: "view", view: { round: 3 }, legal: [], jloreCapped: true });
+    h.socket().deliver({ type: "view", view: { round: 4 }, legal: [], jloreCapped: "yes" });
+    expect(h.client.snapshot().jloreCapped).toBe(true);
+    expect(roundOf(h)).toBe(3);
+    expect(parseDuosFrame(JSON.stringify({ type: "view", view: { round: 0 }, legal: [] }))).toMatchObject({
+      type: "view",
+      jloreCapped: false,
+    });
   });
 });
