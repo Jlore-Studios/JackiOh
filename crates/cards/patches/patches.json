@@ -12866,5 +12866,225 @@
       "core-079"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.4.1",
+    "date": "2026-10-21",
+    "title": "Meditative+ balance changes and the Float keyword",
+    "source": "#1563",
+    "notes": "R1563000: Float, a turn's unspent mana, and Float reduces cost; R1563001: Expedition12's Radiant Cleave on its hand pick; R1563002: Spell Damage on a face-up Field Spell counts; R1563003: Bob's Plan Discovers Aestheticize the Game's plans; R1563004: Mountaintop Garden's Radiant price reaches every card that isn't Radiant; R1563005, R1563006: KY's Competition's AI accuracy and 60-second sequence; R1563007 to R1563009: the craft offer, Spell potions and no Gain Armor block; R1563010: Scratch Pad's code.",
+    "player": {
+      "title": "Meditative+ balance changes and Float",
+      "new": [
+        "Float: the mana a player leaves unspent at the end of their turn. A card with \"Float reduces cost\" costs that much less.",
+        "Garage Sale, a (1) Spell AI generated card: fill your hand with Coins, then discard your hand.",
+        "Leg Day, a (2) Spell AI generated card: give your Units +5/+5."
+      ],
+      "balance": [
+        "Book of Buff buffs 4 times, down from 5, and 8 times on its Radiant face, down from 10.",
+        "Rollback costs (3), down from (4).",
+        "Last Hurrah costs (0), down from (1).",
+        "Aestheticize the Game costs (0), down from (1).",
+        "Meditative Journey and Journey Complete cost (1), down from (2).",
+        "GIGA Glowy Jelly Bean costs (7), up from (6), and gains \"Float reduces cost\".",
+        "Expedition12 loses (2) mana next turn instead of all of it, and its Radiant face has Cleave instead of Echo 1.",
+        "Expedition123 loses (2) mana next turn, then (3) the turn after, instead of all of it for two turns.",
+        "Devil's Pact is Indestructible with Spell Damage +1, +2 on its Radiant face.",
+        "A crafted Potion is a Spell with no stats and 4 points to spend, down from 7; a HUGE Potion has 20, down from 35."
+      ],
+      "changes": [
+        "YileGPT Tamed is now YileGPT, and its Death shuffles a YileGPT Prime into your deck.",
+        "YileGPT Unleashed is now YileGPT Prime, and Float reduces its cost.",
+        "Bread and Butter reveals when any player Floats and summons a Bread Token the size of the Float.",
+        "Bob's Plan lets you Discover the plan for Aestheticize the Game: a Spa Day, a Garage Sale or a Leg Day.",
+        "KY's Competition ends after 60 seconds, against the AI as in a match; the AI answers right 85% of the time, 93% Radiant.",
+        "Crafting offers 4 keywords, 2 hats and 3 effects to build from, as Kazakus does, and giving your hero Armor is no longer an effect.",
+        "Scratch Pad is coded in a text editor: type the card's code, and Craft makes it.",
+        "Spell Damage on a face-up Field Spell now adds to your Spells."
+      ],
+      "text": [],
+      "fixes": [
+        "Mountaintop Garden lets you play any card that isn't Radiant as Radiant for its extra price, not only Embiggen cards."
+      ]
+    },
+    "commits": [
+      "6b5848da0300f618b7b839db7aa84fef703a2203"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-023",
+      "classic-037",
+      "classicplus-035",
+      "classicplus-071",
+      "core-029",
+      "meditative-018",
+      "meditative-019",
+      "meditative-020",
+      "meditative-096",
+      "meditativeplus-001"
+    ],
+    "changes": [
+      {
+        "id": "core-018",
+        "name": "Bread and Butter",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-029",
+        "name": "GIGA Glowy Jelly Bean",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-023",
+        "name": "Devil's Pact",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-037",
+        "name": "Last Hurrah",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-035",
+        "name": "Rollback",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-071",
+        "name": "Book of Buff",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-018",
+        "name": "Expedition12",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.keywords",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-019",
+        "name": "Expedition123",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-020",
+        "name": "Aestheticize the Game",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "meditative-049",
+        "name": "YileGPT",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "refs",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-049-1",
+        "name": "YileGPT Prime",
+        "kind": "changed",
+        "fields": [
+          "name",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-096",
+        "name": "Meditative Journey",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "meditative-096-1",
+        "name": "Journey Complete",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "meditativeplus-001",
+        "name": "Bob's Plan",
+        "kind": "changed",
+        "fields": [
+          "refs",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-001-3",
+        "name": "Garage Sale",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-001-4",
+        "name": "Leg Day",
+        "kind": "added"
+      },
+      {
+        "id": "meditativeplus-020",
+        "name": "KY's Competition",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-022",
+        "name": "Mountaintop Garden",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]
