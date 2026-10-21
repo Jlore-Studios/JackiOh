@@ -9843,6 +9843,8 @@
       "pending_request": false,
       "provider": "claude-1",
       "queued_at": "2026-10-21T08:27:36Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "39569384310",
       "self_check_findings": [],
       "started_at": "2026-10-21T08:28:06Z",
