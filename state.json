@@ -10630,6 +10630,7 @@
     "1570": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-21T19:45:41Z",
         "difficulty": "medium",
