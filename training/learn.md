@@ -15,8 +15,8 @@ the AI the network corrects, and the network is retrained on their work.
 ## How it runs
 
 `.github/workflows/learn.yml`, weekly and by dispatch, on GitHub's runners (free for this public
-repository) and, for the export, the local runner if asked (`bot/machine/README.md`, The local
-runner). Each run:
+repository), except the export, which plays on the local runner unless a dispatch asks for GitHub's
+(`runner`; `bot/machine/README.md`, The local runner; #1455). Each run:
 
 1. **Waits** while the lane's pull request (`ai/learn`) is open: a promotion is on its way to `main`.
 2. **Exports** `games` games (100,000 by default) through `selfplay.yml` on a fresh base,

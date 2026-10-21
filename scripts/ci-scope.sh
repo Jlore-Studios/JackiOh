@@ -2,7 +2,8 @@
 # `sh scripts/ci-scope.sh <base> <head>`: prints one `<name>=true|false` line per job it scopes,
 # which ci.yml's `changes` job appends to $GITHUB_OUTPUT. In order:
 #
-#   full               every job but `bot selftest`; false only for a diff of skip-list files
+#   full               every job but `bot selftest` (ci.yml's `changes` job scopes it, `bot`); false
+#                      only for a diff of skip-list files
 #   db                 true when any of the three below is (the `db` job, as one line)
 #   db_sql             the sql invariants (crates/server/tests/sql/run.sh)
 #   db_store           the store contract against Postgres (crates/server/tests/db/run.sh)
@@ -28,8 +29,8 @@
 # so that wiring needs no change here.
 #
 # `full=false` means every file the pull request changes sits on the SKIP list below, which holds
-# only paths that no CI job other than `bot selftest` ever reads (that check has its own workflow and
-# always runs): the night bot's code and its switches, the workflows that run the bot or watch the
+# only paths that no CI job other than `bot selftest` ever reads (ci.yml's `changes` job scopes that
+# check on its own, #1455): the night bot's code and its switches, the workflows that run the bot or watch the
 # repo (the pull request title check among them), the agent instruction files (CLAUDE.md, AGENTS.md,
 # GEMINI.md, CONTRIBUTING.md: code cites them in comments and nothing opens them), the repository's
 # meta that only GitHub reads (the issue forms, the pull request template, CODEOWNERS), and the
@@ -144,7 +145,7 @@ skipped() {
     training/history/*) return 1 ;;
     training/*.md | training/loop.sh) ;;
     analysis/*) ;;
-    .github/workflows/bot-commands.yml | .github/workflows/bot-night.yml | .github/workflows/bot-selftest.yml) ;;
+    .github/workflows/bot-commands.yml | .github/workflows/bot-night.yml) ;;
     .github/workflows/squishy-run.yml | .github/workflows/squishy-commands.yml) ;;
     .github/workflows/triage.yml | .github/workflows/deploy-watch.yml | .github/workflows/ci-duration.yml) ;;
     .github/workflows/pr-title.yml) ;;

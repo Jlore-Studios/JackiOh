@@ -33,6 +33,7 @@ import { armorTookHalf, damageFeel, damageTier, UNIT_SLAM } from "../game/damage
 import { brandCues } from "./brand.ts";
 import { castOnDrawCues, planCardFx } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
+import { flavorEntranceCues } from "./entrances.ts";
 import { attackerOf, flavorLookOf, flavorSourceOf } from "./flavorSource.ts";
 import { flavorLook } from "./flavors.ts";
 import { lookOf, TONE_LOOKS, ZONE_DEFAULT, ZONE_LOOKS, type ZoneLook } from "./looks.ts";
@@ -457,24 +458,30 @@ const summon: Recipe = (event, p) => {
   // #185: the entry's slam, when it is this event's Unit landing (`slamEntries`).
   const slam = "instanceId" in event && p.entry.slam?.instanceId === event.instanceId ? p.entry.slam : undefined;
   const landAt = slamLandMs(p.entry, p.D);
-  // B3.1: a backrow card stepping into its unit zone lands like a summon, with no entrance of its own.
+  // B3.1: a backrow card stepping into its unit zone lands like a summon, with its flavor's
+  // entrance on top (#1445).
   if (event.type === "animated") {
     // B3.1: the card lifts off its backrow zone and lands in its unit zone, where it slams down.
     const home = anchor(testid.zone(sideOf(p.view, event.player), "backrow", event.backrowLane));
     const lift = [ghost(p.D, home, anchor(p.tgt)), burst(p.env.intensity, "arcane", home, "point", 0, "animateArcane")];
-    if (slam !== undefined) return [...lift, ...slamCues(slam, p.env.intensity, p.D, p.tgt, landAt)];
-    return [...lift, ring(p.D, "dust", anchor(p.tgt), landAt), burst(p.env.intensity, "dust", anchor(p.tgt, FOOT), "ring", landAt, "summonDust")];
+    // #1445: an Animated card takes its flavor's entrance too; a hidden one keeps the lift alone.
+    const flavor = flavorEntranceCues({ defId: event.defId, instanceId: event.instanceId, view: p.view, D: p.D, tgt: p.tgt, intensity: p.env.intensity, landAt });
+    if (slam !== undefined) return [...lift, ...slamCues(slam, p.env.intensity, p.D, p.tgt, landAt), ...flavor];
+    return [...lift, ring(p.D, "dust", anchor(p.tgt), landAt), burst(p.env.intensity, "dust", anchor(p.tgt, FOOT), "ring", landAt, "summonDust"), ...flavor];
   }
   if (event.type !== "summoned") return [];
   const i = p.env.intensity;
   const facts = event.row === "units" && event.defId !== HIDDEN_ID ? p.env.card(event.defId) : undefined;
-  if (facts === undefined) return [burst(i, "dust", anchor(p.tgt, FOOT), "ring", landAt, "summonDust")];
+  // #1445: a face-up summon takes its flavor's entrance; a backrow set keeps today's dust burst.
+  const flavor = event.row === "units" ? flavorEntranceCues({ defId: event.defId, instanceId: event.instanceId, view: p.view, D: p.D, tgt: p.tgt, intensity: i, landAt }) : [];
+  if (facts === undefined) return [burst(i, "dust", anchor(p.tgt, FOOT), "ring", landAt, "summonDust"), ...flavor];
 
   const at = anchor(p.tgt);
   const cues: FxCue[] =
     slam === undefined
       ? [ring(p.D, "dust", at, landAt), burst(i, "dust", anchor(p.tgt, FOOT), "ring", landAt, "summonDust")]
       : slamCues(slam, i, p.D, p.tgt, landAt);
+  cues.push(...flavor);
   let entrance = 0;
   if (facts.rarity === "Legendary") {
     cues.push(rays(p.D, "legendary", at, 0), burst(i, "gold", at, "area", landAt, "summonGold"));

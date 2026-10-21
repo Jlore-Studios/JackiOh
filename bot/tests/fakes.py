@@ -356,6 +356,19 @@ class FakeGitHub:
             raise GitHubError("sha mismatch", 409)
         self.files[(branch, path)] = (text, f"sha{next(self._shas)}")
 
+    def list_dir(self, path: str, ref: str) -> list[tuple[str, str]]:
+        prefix = path.rstrip("/") + "/"
+        return sorted((name[len(prefix):], found[1]) for (branch, name), found in self.files.items()
+                      if branch == ref and name.startswith(prefix) and "/" not in name[len(prefix):])
+
+    def delete_file(self, path: str, *, branch: str, sha: str, message: str) -> None:
+        current = self.files.get((branch, path))
+        if current is None:
+            raise GitHubError("no file", 404)
+        if current[1] != sha:
+            raise GitHubError("sha mismatch", 409)
+        del self.files[(branch, path)]
+
     def branch_sha(self, branch: str) -> str | None:
         return f"head-of-{branch}" if branch in self.branches else None
 

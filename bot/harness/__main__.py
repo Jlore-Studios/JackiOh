@@ -19,6 +19,7 @@ from typing import Any
 
 from harness import config as config_mod
 from harness import context as context_mod
+from harness import controller as controller_mod
 from harness import dashboard as dashboard_mod
 from harness import disk as disk_mod
 from harness import stats as stats_mod
@@ -85,11 +86,25 @@ def _dump(obj: Any) -> None:
 # ---------------------------------------------------------------------- workflow commands
 
 
+#: How many times, and how far apart in seconds, a plan job asks for the planning lock the status
+#: loop may hold (#1455): about five minutes, long enough for a loop starting every lane at once,
+#: and well inside the plan job's 15-minute timeout.
+LOCK_TRIES = 30
+LOCK_WAIT = 10.0
+
+
 def cmd_plan(cfg: Config, args: argparse.Namespace) -> int:
     ctx = _ctx(cfg)
     item = int(args.item) if str(args.item or "").strip().lstrip("#").isdigit() else None
-    planned = plan_mod.make(ctx, force=args.force, item=item, mode=args.mode,
-                            quiet_ok=args.quiet_ok)
+    owner = f"run {cfg.run_id or 'by hand'}"
+    locked = not cfg.controller or _planning_lock(ctx, owner)
+    try:
+        planned = (plan_mod.make(ctx, force=args.force, item=item, mode=args.mode,
+                                 quiet_ok=args.quiet_ok) if locked else
+                   plan_mod.nothing("the status loop is planning; it starts the runs (#1455)"))
+    finally:
+        if locked and cfg.controller:
+            plan_mod.drop_planning_lock(ctx, owner)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(planned, indent=2) + "\n", encoding="utf-8")
@@ -118,9 +133,29 @@ def cmd_plan(cfg: Config, args: argparse.Namespace) -> int:
     return 0
 
 
+def _planning_lock(ctx: context_mod.Context, owner: str) -> bool:
+    for attempt in range(LOCK_TRIES):
+        if plan_mod.take_planning_lock(ctx, owner):
+            return True
+        if attempt < LOCK_TRIES - 1:
+            time.sleep(LOCK_WAIT)
+    return False
+
+
 def cmd_peek(cfg: Config, args: argparse.Namespace) -> int:
     ctx = _ctx(cfg, write=False)
     item = int(args.item) if str(args.item or "").strip().lstrip("#").isdigit() else None
+    if (cfg.controller and item is None and not args.force and args.mode == "auto"
+            and plan_mod.loop_alive(ctx)):
+        # The status loop plans and starts the runs while it goes (#1455): a run started by the
+        # schedule, or by a chain from before the loop, stops here. One a person started for an
+        # item, a mode or by force plans itself, under the planning lock.
+        _output({"work": "false", "quiet_check": "false", "quiet_provider": "", "quiet_secret": "",
+                 "fallback": "false"})
+        _summary("### Peek: the status loop plans\n\nbot-status's loop is going, and it plans the "
+                 "work and starts the runs itself (#1455).")
+        print("peek: nothing: the status loop plans and starts the runs")
+        return 0
     look = plan_mod.peek(ctx, force=args.force, item=item, mode=args.mode)
     check = bool(look.work and look.quiet_provider)
     _output({"work": str(look.work).lower(), "quiet_check": str(check).lower(),
@@ -243,6 +278,34 @@ def cmd_work(cfg: Config, args: argparse.Namespace) -> int:
     keep_login()
     _summary(f"### Work: {result.get('status')}\n\n{result.get('reason', '')}\n")
     print(f"work: {result.get('status')}: {result.get('reason', '')}")
+    return 0
+
+
+def cmd_plan_fetch(cfg: Config, args: argparse.Namespace) -> int:
+    """A night run the status loop started with its plan (#1455): read the plan from the state
+    branch into `--out`. With `--check` (the model job), the runner, CLI, secret name and shared
+    flag the job was given (`PLAN_RUNS_ON`, `PLAN_CLI`, `PLAN_SECRET`, `PLAN_SHARED`) must be the
+    plan's and its subscription's in providers.json, or the job stops before any step has a
+    secret."""
+    ctx = _ctx(cfg, write=False)
+    try:
+        planned = controller_mod.fetch(ctx, args.ref)
+    except (ValueError, GitHubError) as exc:
+        print(redact(f"::error::plan-fetch: {exc}"), file=sys.stderr)
+        return 2
+    if args.check:
+        env = config_mod.github_env()
+        given = {"runs_on": env.get("PLAN_RUNS_ON", ""), "cli": env.get("PLAN_CLI", ""),
+                 "secret": env.get("PLAN_SECRET", ""), "shared": env.get("PLAN_SHARED", "")}
+        problems = controller_mod.check(ctx, planned, given)
+        if problems:
+            for problem in problems:
+                print(redact(f"::error::plan-fetch: {problem}"), file=sys.stderr)
+            return 2
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(planned, indent=2) + "\n", encoding="utf-8")
+    print(f"plan-fetch: {controller_mod._what(planned)}, plan {args.ref}")
     return 0
 
 
@@ -400,6 +463,8 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
     every = max(0, int(getattr(args, "every", 0) or 0))
     deadline = time.monotonic() + max(0, int(getattr(args, "for_seconds", 0) or 0))
     since = _run_created(cfg)
+    if getattr(args, "controller", False) and cfg.controller:
+        cfg = dataclasses.replace(cfg, controller_loop=True)  # this loop plans (#1455)
     while True:
         fresh = _current(cfg, since)
         if fresh is None:
@@ -676,6 +741,11 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--plan", required=True)
     p.add_argument("--out", required=True)
     p.add_argument("--work-dir", required=True)
+    p = sub.add_parser("plan-fetch", help="read the plan the status loop made for this run (#1455)")
+    p.add_argument("--ref", required=True, help="the run's `plan_ref` input")
+    p.add_argument("--out", required=True)
+    p.add_argument("--check", action="store_true",
+                   help="hold the job's runner, CLI, secret and shared flag to the plan's")
     p = sub.add_parser("deliver", help="check the model job's output and publish it")
     p.add_argument("--plan", required=True)
     p.add_argument("--out", required=True)
@@ -700,6 +770,9 @@ def parser() -> argparse.ArgumentParser:
     dashboard.add_argument("--companions", action="store_true",
                            help="also sweep and draw each other bot (Squishy) in a process of "
                            "its own, and put its section in the issue")
+    dashboard.add_argument("--controller", action="store_true",
+                           help="with the config's `controller` on, plan the work and start each "
+                           "night run with its plan in the sweep (#1455)")
     dashboard.add_argument("--section-only", action="store_true",
                            help="print this bot's section of the status issue and write nothing "
                            "(the night bot's loop runs this as Squishy)")
@@ -740,6 +813,7 @@ COMMANDS = {
     "quiet": cmd_quiet,
     "plan": cmd_plan,
     "work": cmd_work,
+    "plan-fetch": cmd_plan_fetch,
     "deliver": cmd_deliver,
     "event": cmd_event,
     "sweep": cmd_sweep,
