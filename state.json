@@ -9814,6 +9814,8 @@
       "provider": "claude-3",
       "question": "",
       "queued_at": "2026-10-21T08:49:10Z",
+      "review_floor": "",
+      "review_notes": "",
       "round_tier": "medium",
       "run_id": "39572181126",
       "self_check_findings": [],
