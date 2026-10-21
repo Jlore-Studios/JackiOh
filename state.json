@@ -9462,6 +9462,7 @@
         "by": "`muse` (medium), `claude` (strong)",
         "sha": "fa77419739867a4ac30ba39f16d2395fa5f198d0"
       },
+      "closed_at": "2026-10-21T07:13:55Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
@@ -9471,6 +9472,7 @@
       "interruptions": 0,
       "issue": 1493,
       "kind": "review",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-2",
       "queued_at": "2026-10-21T06:47:36Z",
