@@ -251,6 +251,7 @@ function burst(
   delayMs: number,
   key: TuningKey,
   scale?: number,
+  colors?: readonly string[],
 ): FxBurstCue {
   const tuning = TUNING[key];
   return {
@@ -262,6 +263,7 @@ function burst(
     spread,
     power: tuning.power,
     ...(scale === undefined || scale === 1 ? {} : { scale }),
+    ...(colors === undefined ? {} : { colors }),
   };
 }
 
@@ -822,8 +824,14 @@ const trap: Recipe = (event, p) => {
   if (event.type !== "trapFired") return [];
   const at = anchor(p.tgt);
   const delay = frac(FX_TRAP_BURST_AT, p.D);
-  // A tight arcane ring on the trap's own zone, not motes over the whole area (integration QA).
-  const cues: FxCue[] = [ring(p.D, "arcane", at, 0), burst(p.env.intensity, "arcane", at, "ring", delay, "trapArcane")];
+  // #1447: the reveal names the card only when the view shows this very instance (§10.8, R33); its burst then takes the
+  // card's flavor colours and particle. An opponent's face-down trap is not in the view, so its burst stays arcane.
+  const look = FX_FLAVOR_LIVE && locateInstance(p.view, event.instanceId) !== null ? flavorLookOf(event.defId, event.instanceId, p.view) : null;
+  // A tight ring on the trap's own zone, not motes over the whole area (integration QA).
+  const cues: FxCue[] = [
+    ring(p.D, "arcane", at, 0),
+    burst(p.env.intensity, look?.particle ?? "arcane", at, "ring", delay, "trapArcane", undefined, look?.colors),
+  ];
   pushShake(cues, p.env.intensity, FX_TRAP_TRAUMA, delay);
   return cues;
 };

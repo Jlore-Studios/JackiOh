@@ -10,8 +10,11 @@ import type { FxRng } from "./rng.ts";
 import { createSpriteCache, domSpriteCanvas, type SpriteCache } from "./sprites.ts";
 import type { FxBox, FxPreset, FxSpread } from "./types.ts";
 
-/** `scale` multiplies each particle's size; absent, 1. */
-export type EmitOptions = { count: number; spread: FxSpread; box: FxBox; power: number; scale?: number };
+/**
+ * `scale` multiplies each particle's size; absent, 1. `colors` (#1447) replaces the preset's palette for this
+ * emit, hot first: the preset still gives the particles their shape and physics. Absent or empty: the preset's.
+ */
+export type EmitOptions = { count: number; spread: FxSpread; box: FxBox; power: number; scale?: number; colors?: readonly string[] };
 
 export type ParticleSystem = {
   /** Emits at (x, y), or across `box` for "area" and around its ellipse for "ring". Returns how many. */
@@ -79,6 +82,8 @@ type Pool = {
   preset: Uint8Array;
   color: Uint8Array;
   live: Uint8Array;
+  /** The palette an emit named for each slot, or undefined for the preset's own; every emit overwrites it. */
+  palette: Array<readonly string[] | undefined>;
 };
 
 function allocatePool(n: number): Pool {
@@ -95,6 +100,7 @@ function allocatePool(n: number): Pool {
     preset: new Uint8Array(n),
     color: new Uint8Array(n),
     live: new Uint8Array(n),
+    palette: new Array<readonly string[] | undefined>(n).fill(undefined),
   };
 }
 
@@ -111,6 +117,7 @@ function copyPool(from: Pool, to: Pool, n: number): void {
   to.preset.set(from.preset.subarray(0, n));
   to.color.set(from.color.subarray(0, n));
   to.live.set(from.live.subarray(0, n));
+  for (let i = 0; i < n; i++) to.palette[i] = from.palette[i];
 }
 
 function between(range: readonly [number, number], u: number): number {
@@ -130,6 +137,8 @@ export function createParticleSystem(options: { capacity: number; rng: FxRng; sp
   const dragFactor = new Float64Array(SPECS.length);
   /** Sprites resolved for the current dpr, indexed preset × colour, so drawing builds no cache keys. */
   const spriteTable: Array<CanvasImageSource | null | undefined> = new Array(SPECS.length * MAX_COLORS);
+  /** The same for an emit's own palette, by the palette array itself, indexed preset × palette length + colour. */
+  let paletteTables = new WeakMap<readonly string[], Array<CanvasImageSource | null | undefined>>();
   let spriteDpr = Number.NaN;
 
   const nextSlot = (s: number) => (s + 1 >= cap ? 0 : s + 1);
@@ -155,20 +164,36 @@ export function createParticleSystem(options: { capacity: number; rng: FxRng; sp
   const kill = (i: number) => {
     if (pool.live[i]) {
       pool.live[i] = 0;
+      pool.palette[i] = undefined;
       aliveCount--;
     }
   };
 
-  const spriteFor = (p: number, c: number, dpr: number): CanvasImageSource | null => {
+  const spriteFor = (p: number, c: number, dpr: number, palette: readonly string[] | undefined): CanvasImageSource | null => {
     if (dpr !== spriteDpr) {
       spriteTable.fill(undefined);
+      paletteTables = new WeakMap();
       spriteDpr = dpr;
     }
-    const k = p * MAX_COLORS + c;
-    let sprite = spriteTable[k];
+    if (palette === undefined) {
+      const k = p * MAX_COLORS + c;
+      let sprite = spriteTable[k];
+      if (sprite === undefined) {
+        sprite = sprites.get(PRESET_ORDER[p]!, c, dpr);
+        spriteTable[k] = sprite;
+      }
+      return sprite;
+    }
+    let table = paletteTables.get(palette);
+    if (table === undefined) {
+      table = new Array<CanvasImageSource | null | undefined>(SPECS.length * palette.length).fill(undefined);
+      paletteTables.set(palette, table);
+    }
+    const k = p * palette.length + c;
+    let sprite = table[k];
     if (sprite === undefined) {
-      sprite = sprites.get(PRESET_ORDER[p]!, c, dpr);
-      spriteTable[k] = sprite;
+      sprite = sprites.get(PRESET_ORDER[p]!, c, dpr, palette);
+      table[k] = sprite;
     }
     return sprite;
   };
@@ -176,7 +201,7 @@ export function createParticleSystem(options: { capacity: number; rng: FxRng; sp
   const drawPass = (ctx: CanvasRenderingContext2D, dpr: number, lighter: boolean) => {
     let blendSet = false;
     let rotated = false;
-    const { x, y, vx, vy, size, rot, spin, age, life, preset, color, live } = pool;
+    const { x, y, vx, vy, size, rot, spin, age, life, preset, color, live, palette } = pool;
     for (let i = 0; i < cap; i++) {
       if (!live[i]) continue;
       const p = preset[i]!;
@@ -197,7 +222,8 @@ export function createParticleSystem(options: { capacity: number; rng: FxRng; sp
       const px = x[i]!;
       const py = y[i]!;
       ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
-      const sprite = spriteFor(p, color[i]!, dpr);
+      const colors = palette[i];
+      const sprite = spriteFor(p, color[i]!, dpr, colors);
       const stretch = STRETCH[p]!;
       const speed = stretch > 0 ? Math.hypot(vx[i]!, vy[i]!) : 0;
       if (sprite && speed > STREAK.minSpeed) {
@@ -225,7 +251,8 @@ export function createParticleSystem(options: { capacity: number; rng: FxRng; sp
         const h = s * tumble;
         ctx.drawImage(sprite, px - s / 2, py - h / 2, s, h);
       } else {
-        ctx.fillStyle = spec.colors[color[i]!] ?? spec.colors[0] ?? "#ffffff";
+        const fill = colors ?? spec.colors;
+        ctx.fillStyle = fill[color[i]!] ?? fill[0] ?? "#ffffff";
         ctx.beginPath();
         ctx.arc(px, py, Math.max(0, s / 2), 0, TAU);
         ctx.fill();
@@ -241,7 +268,8 @@ export function createParticleSystem(options: { capacity: number; rng: FxRng; sp
       const spec = SPECS[p]!;
       const { power, spread, box } = emitOptions;
       const sizeScale = emitOptions.scale ?? 1;
-      const colorCount = spec.colors.length;
+      const palette = emitOptions.colors !== undefined && emitOptions.colors.length > 0 ? emitOptions.colors : undefined;
+      const colorCount = (palette ?? spec.colors).length;
 
       for (let k = 0; k < n; k++) {
         const slot = claimSlot();
@@ -269,6 +297,7 @@ export function createParticleSystem(options: { capacity: number; rng: FxRng; sp
         pool.spin[slot] = (rng() * 2 - 1) * spec.spin;
         pool.color[slot] = Math.floor(rng() * colorCount);
         pool.preset[slot] = p;
+        pool.palette[slot] = palette;
       }
       return n;
     },
@@ -349,6 +378,7 @@ export function createParticleSystem(options: { capacity: number; rng: FxRng; sp
 
     clear() {
       pool.live.fill(0);
+      pool.palette.fill(undefined);
       aliveCount = 0;
       cursor = 0;
     },
