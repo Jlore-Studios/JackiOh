@@ -91,6 +91,11 @@ export type SearchStats = {
   lines: number;
   /** Simulated reduce calls that threw or were refused; never escape `decide`. */
   simErrors: number;
+  /**
+   * Of `simErrors`, those that panicked (#1429): always 0 here, since in WebAssembly a panic is a trap
+   * and no decision comes back. The native gates fail on any.
+   */
+  simPanics: number;
   stoppedBy: "exhausted" | "budget" | "clock";
   /** Mean score of the chosen line across determinizations (0 for forced/mulligan/draw-offer). */
   score: number;

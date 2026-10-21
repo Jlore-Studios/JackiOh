@@ -8,9 +8,11 @@
 //! (a sub-counter holds its parent while the parent is spent elsewhere too), so the counters keep
 //! their tallies in `Cell`s and are passed as `&dyn NodeCounter` (`types.rs`). TS's `try`/`catch`
 //! around the reducer is `catch_unwind`: an engine invariant that panics where TS threw is a failed
-//! simulation, never a crash of the decision.
+//! simulation, never a crash of the decision. A panic is also counted apart, its first message kept
+//! (`SearchStats.simPanics`, #1429): in WebAssembly it is a trap no `catch_unwind` sees, so the
+//! browser's AI loses the whole decision to it, and the gates fail on any.
 
-use std::cell::Cell;
+use std::cell::{Cell, OnceCell};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
@@ -55,6 +57,8 @@ enum CounterKind<'a> {
         should_stop: Option<&'a dyn Fn() -> bool>,
         stopped_by: Cell<StoppedBy>,
         sim_errors: Cell<usize>,
+        sim_panics: Cell<usize>,
+        first_sim_panic: OnceCell<String>,
     },
     Sub {
         parent: &'a dyn NodeCounter,
@@ -87,6 +91,15 @@ impl CountingNodeCounter<'_> {
                     parent.set_sim_error_tally(value);
                 }
             }
+        }
+    }
+
+    /// #1429: the panics of `sim_errors`; a sub-counter reads its parent's tally (0 when the parent
+    /// keeps none).
+    pub fn sim_panics(&self) -> usize {
+        match &self.kind {
+            CounterKind::Root { sim_panics, .. } => sim_panics.get(),
+            CounterKind::Sub { parent, .. } => parent.sim_panic_tally().unwrap_or(0),
         }
     }
 }
@@ -171,6 +184,33 @@ impl NodeCounter for CountingNodeCounter<'_> {
     fn set_sim_error_tally(&self, value: usize) {
         self.set_sim_errors(value);
     }
+
+    fn sim_panic_tally(&self) -> Option<usize> {
+        Some(self.sim_panics())
+    }
+
+    fn first_sim_panic(&self) -> Option<String> {
+        match &self.kind {
+            CounterKind::Root { first_sim_panic, .. } => first_sim_panic.get().cloned(),
+            CounterKind::Sub { parent, .. } => parent.first_sim_panic(),
+        }
+    }
+
+    fn record_sim_panic(&self, message: &str) {
+        match &self.kind {
+            CounterKind::Root {
+                sim_panics,
+                first_sim_panic,
+                ..
+            } => {
+                sim_panics.set(sim_panics.get() + 1);
+                if first_sim_panic.get().is_none() {
+                    let _ = first_sim_panic.set(message.to_string());
+                }
+            }
+            CounterKind::Sub { parent, .. } => parent.record_sim_panic(message),
+        }
+    }
 }
 
 pub fn create_node_counter<'a>(
@@ -184,6 +224,8 @@ pub fn create_node_counter<'a>(
             should_stop,
             stopped_by: Cell::new(StoppedBy::Exhausted),
             sim_errors: Cell::new(0),
+            sim_panics: Cell::new(0),
+            first_sim_panic: OnceCell::new(),
         },
     }
 }
@@ -205,6 +247,15 @@ fn note_sim_error(counter: &dyn NodeCounter) {
     if let Some(errors) = counter.sim_error_tally() {
         counter.set_sim_error_tally(errors + 1);
     }
+}
+
+/// #1429: a caught panic is a failed simulation, counted apart too, its message kept when first;
+/// returns the message.
+pub(crate) fn note_sim_panic(counter: &dyn NodeCounter, payload: &(dyn std::any::Any + Send)) -> String {
+    note_sim_error(counter);
+    let message = panic_message(payload);
+    counter.record_sim_panic(&message);
+    message
 }
 
 /// TS `error instanceof Error ? error.message : String(error)`, for a panic's payload. The one reader
@@ -400,8 +451,7 @@ pub(crate) fn best_auto_answer(
         let next = match catch_unwind(AssertUnwindSafe(|| reduce_unpiloted(state, &action))) {
             Ok(next) => next,
             Err(payload) => {
-                note_sim_error(counter);
-                failure = panic_message(payload.as_ref());
+                failure = note_sim_panic(counter, payload.as_ref());
                 continue;
             }
         };
@@ -457,8 +507,8 @@ pub fn own_prompt_score(state: &GameState, seat: PlayerId, counter: &dyn NodeCou
         }
         Some(open_score(&current, seat, NextSwing::Enemy))
     }));
-    run.unwrap_or_else(|_| {
-        note_sim_error(counter);
+    run.unwrap_or_else(|payload| {
+        note_sim_panic(counter, payload.as_ref());
         None
     })
 }
@@ -547,10 +597,7 @@ fn simulate_answering(
     }));
     match run {
         Ok(step) => step,
-        Err(payload) => {
-            note_sim_error(counter);
-            Some(Err(panic_message(payload.as_ref())))
-        }
+        Err(payload) => Some(Err(note_sim_panic(counter, payload.as_ref()))),
     }
 }
 

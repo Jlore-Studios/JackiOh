@@ -18,7 +18,8 @@
 //! on §10.7's random policy over `duos_legal_actions` (`duos_random_action`), the AI on team A in odd
 //! games and on team B in even ones, every seat dealt by `build_ai_deck` on its Easy handicap. An action
 //! `duos_reduce` refuses, on either team, fails the gate (`DuosGateReport::passes`). So does any AI
-//! action that came off a fallback path (`duos_decision`, #1385). Pure and seeded like the rest of the
+//! action that came off a fallback path (`duos_decision`, #1385), and any panic an AI seat's 1v1
+//! search caught (`DuosDecision::sim_panics`, #1429). Pure and seeded like the rest of the
 //! crate (CLAUDE.md rule 4): a budget counts `reduce` calls, every stream is seeded from the game's
 //! seed and its seat, and nothing reads a clock.
 
@@ -84,6 +85,11 @@ pub struct DuosDecision {
     /// (`decide` answered nothing the wrapper offers), or `decide` itself fell back
     /// (`DecisionReason::Fallback`, which fails the 1v1 gates, B31). The gate fails on any (§13.7).
     pub fallback: bool,
+    /// The panics the 1v1 decision's search caught (`SearchStats::sim_panics`, #1429), 0 when the
+    /// wrapper decided alone; the gate fails on any (§13.7).
+    pub sim_panics: usize,
+    /// The first one's message (`Decision::first_sim_panic`).
+    pub first_sim_panic: Option<String>,
 }
 
 /// `duos_decide`, with whether its action came off a fallback path (#1385): the same stream, the same
@@ -101,17 +107,28 @@ pub fn duos_decision(state: &DuosState, seat: DuosSeat, options: &mut AiOptions)
     // wrapper's own refusals are by kind (a seat that has ended, a draw offer), so an action of a
     // kind the wrapper offers is sent as decided. A mulligan's keep or an answer's selection may list
     // its ids in another order than `duos_legal_actions` does, and means the same.
-    match decide(duel, seat.player(), options).map(|decision| (decision.action, decision.reason)) {
-        Some((ActionBody::EndTurn, reason)) if offers(&legal, ActionType::EndTurn) => Some(DuosDecision {
-            body: pass_or_end(state, seat, &legal),
-            fallback: reason == DecisionReason::Fallback,
-        }),
-        Some((action, reason)) if offers(&legal, action.action_type()) => Some(DuosDecision {
-            body: DuosActionBody::Duel { body: action },
-            fallback: reason == DecisionReason::Fallback,
-        }),
-        _ => fallback(state, seat, &legal).map(|body| DuosDecision { body, fallback: true }),
-    }
+    let decided = decide(duel, seat.player(), options);
+    let sim_panics = decided.as_ref().map_or(0, |decision| decision.stats.sim_panics);
+    let first_sim_panic = decided
+        .as_ref()
+        .and_then(|decision| decision.first_sim_panic.clone());
+    let chosen = match decided.map(|decision| (decision.action, decision.reason)) {
+        Some((ActionBody::EndTurn, reason)) if offers(&legal, ActionType::EndTurn) => Some((
+            pass_or_end(state, seat, &legal),
+            reason == DecisionReason::Fallback,
+        )),
+        Some((action, reason)) if offers(&legal, action.action_type()) => Some((
+            DuosActionBody::Duel { body: action },
+            reason == DecisionReason::Fallback,
+        )),
+        _ => fallback(state, seat, &legal).map(|body| (body, true)),
+    };
+    chosen.map(|(body, fell_back)| DuosDecision {
+        body,
+        fallback: fell_back,
+        sim_panics,
+        first_sim_panic,
+    })
 }
 
 /// Whether the wrapper offers a duel action of this kind.
@@ -499,8 +516,8 @@ fn policy_kind(body: &DuosActionBody) -> PolicyKind {
 }
 
 /// Gate: the Easy AI team against a random-policy team (B32). `wins` counts the games the AI team won;
-/// `draws` is reported beside them and counts for nothing; any `rejected` action or any `fallbacks`
-/// fails the gate.
+/// `draws` is reported beside them and counts for nothing; any `rejected` action, any `fallbacks` or
+/// any `sim_panics` fails the gate.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct DuosGateReport {
@@ -511,6 +528,8 @@ pub struct DuosGateReport {
     pub rejected: usize,
     /// AI actions that came off a fallback path, summed over the games (`DuosGateGame::fallbacks`).
     pub fallbacks: usize,
+    /// Panics the AI seats' searches caught, summed over the games (`DuosGateGame::sim_panics`).
+    pub sim_panics: usize,
 }
 
 impl DuosGateReport {
@@ -527,13 +546,24 @@ impl DuosGateReport {
     /// an action refused. A refusal is an AI bug or a gap between `duos_legal_actions` and
     /// `duos_reduce`, on either team, and fails the gate as a rejected action fails the 1v1 gates (B31);
     /// and no AI action came off a fallback path (`DuosDecision::fallback`), which fails the gate as a
-    /// fallback fails the 1v1 gates' clean run (B31, #1385).
+    /// fallback fails the 1v1 gates' clean run (B31, #1385); nor did any AI seat's search catch a
+    /// panic (`DuosDecision::sim_panics`), which fails it as it fails the 1v1 gates (B31, #1429).
     pub fn passes(&self) -> bool {
         self.games > 0
             && self.rejected == 0
             && self.fallbacks == 0
+            && self.sim_panics == 0
             && self.wins as f64 >= DUOS_GATE_WIN_FLOOR * self.games as f64
     }
+}
+
+/// The first panic an AI seat's search caught in a Duos gate game (`DuosGateGame::first_sim_panic`,
+/// #1429): the seat and its message.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DuosSimPanic {
+    pub seat: DuosSeat,
+    pub message: String,
 }
 
 /// One gate game, as `duos_gate_game` played it.
@@ -557,6 +587,11 @@ pub struct DuosGateGame {
     /// The AI team's actions that came off a fallback path (`DuosDecision::fallback`), each sent as
     /// chosen; any fails the gate (#1385).
     pub fallbacks: usize,
+    /// Panics the AI team's searches caught (`DuosDecision::sim_panics`), summed; any fails the gate
+    /// (#1429).
+    pub sim_panics: usize,
+    /// The first of them, by the seat that caught it; None when there is none.
+    pub first_sim_panic: Option<DuosSimPanic>,
 }
 
 /// Game n (1-based): the AI is team A when n is odd and team B when n is even, so a run measures it
@@ -579,6 +614,7 @@ pub fn duos_gate_report(played: &[DuosGateGame]) -> DuosGateReport {
         draws: played.iter().filter(|game| game.drawn).count(),
         rejected: played.iter().map(|game| game.rejected).sum(),
         fallbacks: played.iter().map(|game| game.fallbacks).sum(),
+        sim_panics: played.iter().map(|game| game.sim_panics).sum(),
     }
 }
 
@@ -591,10 +627,11 @@ pub fn duos_gate_game(n: usize, series: &str) -> DuosGateGame {
 /// `build_ai_deck` deals for it, the AI team on `duos_ai_team(Easy)` and the other on
 /// DUOS_HUMAN_TEAM. While a game is live, the first seat of `duos_seats_to_act` that sends something
 /// acts: an AI seat through `duos_decision` at `budget`, each action it marks `fallback` counted in
-/// `fallbacks`, a random-policy seat through `duos_random_action`, each on its own stream. An action
-/// `duos_reduce` refuses is replaced by the random policy's for that seat and counted in `rejected` (in
-/// `ai_rejected` too when the AI team sent it). A game in which no listed seat sends anything stops
-/// there, unfinished. A pure function of `n`, `series` and `budget`.
+/// `fallbacks` and the panics its search caught in `sim_panics`, a random-policy seat through
+/// `duos_random_action`, each on its own stream. An action `duos_reduce` refuses is replaced by the
+/// random policy's for that seat and counted in `rejected` (in `ai_rejected` too when the AI team sent
+/// it). A game in which no listed seat sends anything stops there, unfinished. A pure function of `n`,
+/// `series` and `budget`.
 pub fn duos_gate_game_at(n: usize, series: &str, budget: SearchBudget) -> DuosGateGame {
     let seed = format!("{series}:{n}");
     let subject = duos_gate_subject(n);
@@ -605,6 +642,8 @@ pub fn duos_gate_game_at(n: usize, series: &str, budget: SearchBudget) -> DuosGa
     let mut rejected = 0usize;
     let mut ai_rejected = 0usize;
     let mut fallbacks = 0usize;
+    let mut sim_panics = 0usize;
+    let mut first_sim_panic: Option<DuosSimPanic> = None;
     while state.result.is_none() && actions < DUOS_GATE_MAX_ACTIONS {
         // The first listed seat that sends something acts; an AI seat that owes nothing (it waits on
         // another seat's prompt in its duel) lets the next one go.
@@ -615,8 +654,19 @@ pub fn duos_gate_game_at(n: usize, series: &str, budget: SearchBudget) -> DuosGa
                 let mut options = AiOptions::with_budget(rngs[slot].clone(), budget);
                 let decided = duos_decision(&state, seat, &mut options);
                 rngs[slot] = options.rng;
-                if decided.as_ref().is_some_and(|decision| decision.fallback) {
-                    fallbacks += 1;
+                if let Some(decision) = &decided {
+                    if decision.fallback {
+                        fallbacks += 1;
+                    }
+                    sim_panics += decision.sim_panics;
+                    if first_sim_panic.is_none()
+                        && let Some(message) = &decision.first_sim_panic
+                    {
+                        first_sim_panic = Some(DuosSimPanic {
+                            seat,
+                            message: message.clone(),
+                        });
+                    }
                 }
                 decided.map(|decision| decision.body)
             } else {
@@ -679,6 +729,8 @@ pub fn duos_gate_game_at(n: usize, series: &str, budget: SearchBudget) -> DuosGa
         rejected,
         ai_rejected,
         fallbacks,
+        sim_panics,
+        first_sim_panic,
     }
 }
 
