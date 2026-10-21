@@ -10363,9 +10363,7 @@
       "source": "",
       "started_at": "2026-10-21T22:21:22Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6324553642"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 3,
       "votes": {
         "approvals": [
