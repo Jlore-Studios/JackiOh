@@ -26,7 +26,7 @@ Every issue carries at least one type label:
 | `major version` | A `vX.Y.0` release that changes the game or the codebase broadly enough to bump the minor or major version (v0.2.0, v0.3.0, v1.0.0), and each of its parts |
 | `architecture` | The repository, tooling, CI, deploys and agent setup |
 | `night bot` | The night bot and Squishy themselves: `bot/`, `.harness/`, `.squishy/` and their workflows |
-| `production merge` | The countdown issue `promote-production.yml` keeps open (`Merging to production in N hours`) and the pull requests that merge main into production. The workflow opens, retitles and closes them and finds the open one by this label, so leave it on, and leave its titles to the workflow. It also labels them `human` and assigns both people. Comments `/hold`, `/resume`, `/delay 3h` and `/fast-forward` steer it (`docs/deploy-cloudflare.md`, section 2.3) |
+| `production merge` | The countdown issue `promote-production.yml` keeps open for good (`Merging to production in N hours`, with the queue of what is not live yet) and the pull requests that merge main into production. The workflow retitles the issue and comments on it, opens and merges the pull requests, and finds the open issue by this label, so leave it on, and leave its titles to the workflow. It also labels them `human` and assigns both people. Comments `/hold`, `/resume`, `/delay 3h` and `/fast-forward` steer it, each for production, `vercel` or `both` (`/hold vercel`; `docs/deploy-cloudflare.md`, section 2.3) |
 
 A pull request also gets its **kind** and, for a card change, its **tier** from the classifier
 (`cargo jackioh classify`, R1365000), which CI's `rust (classify)` puts on and keeps up to date with

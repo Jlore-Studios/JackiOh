@@ -63,10 +63,11 @@ function commits(...pushes: string[][]): void {
   }
 }
 
-type Env = { ref?: string; message?: string; env?: string; previous?: string | null };
+/** `remote` stands in for the repository on GitHub, where rule 2a reads the countdown issue's tags. */
+type Env = { ref?: string; message?: string; env?: string; previous?: string | null; remote?: string };
 
 /** Whether Vercel would build, running ignoreCommand in `cwd` with the variables Vercel sets. */
-function builds({ ref = "main", message = "A change", env = "preview", previous = base }: Env = {}, cwd = repo): boolean {
+function builds({ ref = "main", message = "A change", env = "preview", previous = base, remote }: Env = {}, cwd = repo): boolean {
   const vars: Record<string, string> = {
     PATH: process.env.PATH ?? "",
     VERCEL_GIT_COMMIT_REF: ref,
@@ -74,6 +75,7 @@ function builds({ ref = "main", message = "A change", env = "preview", previous 
     VERCEL_ENV: env,
   };
   if (previous !== null) vars.VERCEL_GIT_PREVIOUS_SHA = previous;
+  if (remote !== undefined) vars.VERCEL_STAGING_REMOTE = remote;
   const run = spawnSync("sh", ["-c", ignoreCommand], { cwd, env: vars, encoding: "utf8" });
   expect(run.error, "sh ran").toBeUndefined();
   expect([0, 1], `exit status ${String(run.status)}: ${run.stderr}`).toContain(run.status);
@@ -298,6 +300,66 @@ describe("scripts/vercel-ignore.sh", () => {
     expect(builds({ ref: "release", env: "production" })).toBe(true);
     commits(["docs/architecture.md"]);
     expect(builds({ ref: "release", env: "production" })).toBe(false);
+  });
+
+  describe("rule 2a, the countdown issue's Vercel commands, as tags on GitHub", () => {
+    /** A bare repository standing in for GitHub, with the tags it is given pointing at commits of `repo`. */
+    function github(tags: Record<string, string>): string {
+      const remote = mkdtempSync(join(SCRATCH, "vercel-remote-"));
+      execFileSync("git", ["init", "-q", "--bare", remote]);
+      for (const [tag, sha] of Object.entries(tags)) git("push", "-q", remote, `${sha}:refs/tags/${tag}`);
+      return remote;
+    }
+    const remotes: string[] = [];
+    afterAll(() => {
+      for (const remote of remotes) rmSync(remote, { recursive: true, force: true });
+    });
+    const remote = (tags: Record<string, string>): string => {
+      const made = github(tags);
+      remotes.push(made);
+      return made;
+    };
+
+    it("builds nothing on main while vercel-hold is there, the [vercel] flag aside, and as before once it is gone", () => {
+      commits(["crates/engine/src/reduce.rs"]);
+      const head = git("rev-parse", "HEAD");
+      const held = remote({ "vercel-hold": head });
+      expect(builds({ remote: held })).toBe(false);
+      expect(builds({ remote: held, env: "production" })).toBe(false);
+      expect(builds({ remote: held, previous: null })).toBe(false);
+      expect(builds({ remote: held, message: "Hotfix [vercel]" })).toBe(true);
+      // Another branch is skipped by rule 2 first, held or not.
+      expect(builds({ remote: held, ref: "feat/x" })).toBe(false);
+      expect(builds({ remote: remote({}) })).toBe(true);
+    });
+
+    it("builds past rule 4's wait while vercel-fast-forward names a commit this one has and the last build lacks", () => {
+      commits(["crates/engine/src/a.rs"]);
+      const built = git("rev-parse", "HEAD");
+      writeFileSync(join(repo, "crates/engine/src/a.rs"), "changed\n");
+      git("add", "-A");
+      const asked = commit("soon after", MIN_GAP_SECONDS - 60);
+      // Without the tag, the wait skips it.
+      expect(builds({ previous: built })).toBe(false);
+      expect(builds({ previous: built, remote: remote({}) })).toBe(false);
+      // The tag on it, or on a commit before a newer one, builds it now.
+      expect(builds({ previous: built, remote: remote({ "vercel-fast-forward": asked }) })).toBe(true);
+      writeFileSync(join(repo, "crates/engine/src/a.rs"), "changed again\n");
+      git("add", "-A");
+      commit("a minute later", 60);
+      expect(builds({ previous: built, remote: remote({ "vercel-fast-forward": asked }) })).toBe(true);
+      // Once a build has the commit, the tag is spent: the next push waits again.
+      expect(builds({ previous: asked, remote: remote({ "vercel-fast-forward": asked }) })).toBe(false);
+      // A hold wins over a fast-forward (which lifts the hold, removing its tag, when it is asked for).
+      expect(builds({ previous: built, remote: remote({ "vercel-fast-forward": asked, "vercel-hold": asked }) })).toBe(false);
+    });
+
+    it("leaves the rules as they were when it cannot read the tags", () => {
+      commits(["crates/engine/src/reduce.rs"]);
+      expect(builds({ remote: join(SCRATCH, "no-such-remote") })).toBe(true);
+      commits(["docs/architecture.md"]);
+      expect(builds({ remote: join(SCRATCH, "no-such-remote") })).toBe(false);
+    });
   });
 
   it("finds the script from a subdirectory, and builds when it cannot find it", () => {
