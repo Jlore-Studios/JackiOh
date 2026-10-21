@@ -526,10 +526,11 @@ pub fn record_sweep_play(stats: &mut SweepStats, before: &GameState, after: &Gam
 
 /// One sweep game, counted for each `tracked` card the AI's deck holds (games 1): drawn (drawnGames
 /// 1), the turns it sat in hand affordable (effectiveCost <= mana at the AI's turn start), and its
-/// plays (`record_sweep_play`). The game's errors (throws, rejected or "fallback" AI actions; a game
-/// that cannot even be dealt is one) and timeouts (a decision whose `now()` duration > decisionMs, or
-/// maxActions hit) come back beside them. A decision the clock found slow counts in `timeouts` only
-/// when the re-timer, if there is one, finds it slow again (R977000); `raw_timeouts` counts them all.
+/// plays (`record_sweep_play`). The game's errors (throws, rejected or "fallback" AI actions, panics
+/// the AI's search caught (#1429); a game that cannot even be dealt is one) and timeouts (a decision
+/// whose `now()` duration > decisionMs, or maxActions hit) come back beside them. A decision the clock
+/// found slow counts in `timeouts` only when the re-timer, if there is one, finds it slow again
+/// (R977000); `raw_timeouts` counts them all.
 fn play_sweep_game(
     seed: &str,
     def_id: &str,
@@ -658,7 +659,10 @@ fn play_sweep_game(
 
     match played {
         Ok(record) => {
-            errors += record.thrown.len() as i32 + record.rejected.len() as i32 + record.fallbacks;
+            errors += record.thrown.len() as i32
+                + record.rejected.len() as i32
+                + record.fallbacks
+                + record.sim_panics as i32;
             // A game still running at maxActions is a timeout; one a throw ended is already an error.
             if record.result.is_none() && record.thrown.is_empty() {
                 timeouts += 1;

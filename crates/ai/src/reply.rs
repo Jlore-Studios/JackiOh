@@ -43,8 +43,8 @@ use crate::evaluate::{NextSwing, coming_mana, evaluate, unit_worth};
 use crate::learned::finalist_score;
 use crate::lethal::deft_ready_switch;
 use crate::simulate::{
-    AnswersTried, LineStatus, best_auto_answer, charge_announced, line_status, simulate, static_score,
-    surcharge_nodes,
+    AnswersTried, LineStatus, best_auto_answer, charge_announced, line_status, note_sim_panic, simulate,
+    static_score, surcharge_nodes,
 };
 use crate::types::NodeCounter;
 
@@ -146,9 +146,9 @@ fn ranked_attacks(state: &GameState, seat: PlayerId, legal: &[ActionBody]) -> Ve
     ranked.into_iter().map(|(action, _)| action).collect()
 }
 
-/// One opponent action through the reducer; `None` when it panics or is refused. A step whose
-/// reduce runs the expensive work `surcharge_nodes` knows (a whole AI turn inside a trap's answer)
-/// pays its nodes the same way `simulate` does.
+/// One opponent action through the reducer; `None` when it panics or is refused, a panic counted as
+/// `simulate` counts one (#1429). A step whose reduce runs the expensive work `surcharge_nodes` knows
+/// (a whole AI turn inside a trap's answer) pays its nodes the same way `simulate` does.
 fn reduce_for(
     state: &GameState,
     actor: PlayerId,
@@ -172,7 +172,11 @@ fn reduce_for(
             charge_announced(counter, state, &action.body, &next);
             Some(next.state)
         }
-        _ => None,
+        Ok(_) => None,
+        Err(payload) => {
+            note_sim_panic(counter, payload.as_ref());
+            None
+        }
     }
 }
 

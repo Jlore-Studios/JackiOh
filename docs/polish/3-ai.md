@@ -261,6 +261,8 @@ export type SearchStats = {
   lines: number;
   /** Simulated reduce calls that threw or were refused; never escape `decide`. */
   simErrors: number;
+  /** Of `simErrors`, those that panicked (#1429): a trap in WebAssembly, so the gates fail on any. */
+  simPanics: number;
   stoppedBy: "exhausted" | "budget" | "clock";
   /** Mean score of the chosen line across determinizations (0 for forced/mulligan/draw-offer). */
   score: number;
@@ -660,7 +662,7 @@ export function decide(state: GameState, seat: PlayerId, options: AiOptions): De
    they would without the reply. Reason `"prompt"` if `pub.pending` was the seat's, else `"search"`.
 7. If no line was ever scored (all simulations failed or the budget was 0): `endTurn` if it is a
    candidate, else `cands[0]`, with reason `"fallback"`. Every internal throw is caught and counted
-   in `stats.simErrors`. `decide` itself never throws.
+   in `stats.simErrors`, a panic in `stats.simPanics` too (#1429). `decide` itself never throws.
 
 #### `src/reply.ts` (strength pass): the opponent's reply
 
@@ -1217,7 +1219,7 @@ AI decks, harness and gates (slice B2):
 - **B28**: gate. The AI on Easy at `AI_GATE_BUDGET` wins at least `gateNeeded("ai-vs-random", n)` of n games against the random policy (full run 100 seeds, smoke run `AI_GATE.smokeSeeds`; seats alternate). The build asked for 95% wins; the count a run of this size needs is proposed in SPEC §9.9, pending the user's acceptance ("Fix pass 2"). Only wins count; turn-cap draws are reported beside them. Observed by `runGate("ai-vs-random")`.
 - **B29**: gate. The AI wins at least `gateNeeded("ai-vs-greedy", n)` of n games against the greedy baseline at equal (Easy) resources (full run 50 seeds). The build asked for 70%; the count is proposed as for B28. Observed by `runGate("ai-vs-greedy")`.
 - **B30**: gate. The same AI with Hard's handicap beats itself on Easy in at least `gateNeeded("hard-vs-easy", n)` of n games, which is the brief's 80% at both sizes (full run 50 seeds). Observed by `runGate("hard-vs-easy")`.
-- **B31**: every gate game has zero `rejected`, zero `thrown`, zero `fallbacks`, a non-null `result`, and `replayHash === record.hash` with `replayErrors === 0`. Observed in each gate file.
+- **B31**: every gate game has zero `rejected`, zero `thrown`, zero `fallbacks`, zero `simPanics` (#1429), a non-null `result`, and `replayHash === record.hash` with `replayErrors === 0`. Observed in each gate file.
 
 Web and e2e (slice C):
 
@@ -1476,8 +1478,10 @@ slice may add to a file no slice owns.
   kept: they reveal deck-list position, which the AI cannot map to identity. B9 and B11 are the proof.
 - **Determinized states the engine never produces.** A sampled card can sit somewhere its real
   history makes impossible, so `reduce` may throw inside a simulation. Every simulation is caught and
-  counted (`simErrors`), and `decide` never throws. B31 insists that the real game never sees a
-  rejected AI action.
+  counted (`simErrors`), and `decide` never throws. That holds natively only: in the browser's
+  WebAssembly a panic is a trap the worker cannot catch, and `fallbackActions` replaces the
+  decision. So the search counts caught panics apart (`simPanics`, #1429), and B31 fails a game
+  with any. B31 insists that the real game never sees a rejected AI action.
 - **Strategy fusion and det-0 bias.** The beam runs on determinization 0 alone. Finalists are
   re-scored on the others, only the first action is played, and the AI re-plans after every action.
   A line whose later steps depend on a det-specific Discover is truncated on the other
