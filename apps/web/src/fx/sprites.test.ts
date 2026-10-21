@@ -101,6 +101,53 @@ describe("B27 the sprite cache", () => {
     expect(cache.size()).toBe(keys.length);
   });
 
+  it("#1447 a supplied palette is painted and keyed separately", () => {
+    // A factory whose canvases record the gradient stops each sprite was painted with.
+    const painted: Array<{ canvas: CanvasImageSource; stops: string[] }> = [];
+    const factory: SpriteCanvasFactory = (sizePx) => {
+      const stops: string[] = [];
+      const gradient = { addColorStop: (_offset: number, color: string) => void stops.push(color) };
+      const ctx = {
+        clearRect: () => undefined,
+        createRadialGradient: () => gradient,
+        beginPath: () => undefined,
+        arc: () => undefined,
+        fill: () => undefined,
+        fillStyle: "",
+      } as unknown as CanvasRenderingContext2D;
+      const canvas = { width: sizePx, height: sizePx, id: painted.length } as unknown as CanvasImageSource;
+      painted.push({ canvas, stops });
+      return { canvas, ctx };
+    };
+    const cache = createSpriteCache(factory);
+    const blue = ["#102030", "#112233"];
+    const pink = ["#ff00aa", "#aa00ff"];
+    const stopsOf = (sprite: CanvasImageSource | null) => painted.find((p) => p.canvas === sprite)?.stops ?? [];
+
+    const own = cache.get("spark", 0, 1);
+    const inBlue = cache.get("spark", 0, 1, blue);
+    const inPink = cache.get("spark", 0, 1, pink);
+    const secondBlue = cache.get("spark", 1, 1, blue);
+    expect(painted).toHaveLength(4);
+    expect(new Set([own, inBlue, inPink, secondBlue]).size).toBe(4);
+    expect(cache.size()).toBe(4);
+
+    // The glow disc's plain-colour stop (offset 0.45, no whitening) is the palette's colour, half transparent.
+    expect(stopsOf(inBlue)).toContain("rgba(16, 32, 48, 0.5)");
+    expect(stopsOf(secondBlue)).toContain("rgba(17, 34, 51, 0.5)");
+    expect(stopsOf(inPink)).toContain("rgba(255, 0, 170, 0.5)");
+    expect(PARTICLE_PRESETS.spark.colors[0]).toBe("#ffffff");
+    expect(stopsOf(own)).toContain("rgba(255, 255, 255, 0.5)");
+    expect(stopsOf(own)).not.toContain("rgba(16, 32, 48, 0.5)");
+
+    // A repeat of each request reuses its own sprite, and the default palette is the one it always was.
+    expect(cache.get("spark", 0, 1, blue)).toBe(inBlue);
+    expect(cache.get("spark", 0, 1, [...pink])).toBe(inPink);
+    expect(cache.get("spark", 0, 1)).toBe(own);
+    expect(cache.get("spark", 0, 1, [])).toBe(own);
+    expect(painted).toHaveLength(4);
+  });
+
   it("B27 the factory is asked for a positive, finite size", () => {
     const { factory, made } = countingFactory();
     const cache = createSpriteCache(factory);

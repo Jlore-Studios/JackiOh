@@ -46,6 +46,9 @@ class Other:
     #: The environment variable that holds its GitHub token, for a process started as it
     #: (`__main__._companion`).
     token_env: str = ""
+    #: Its workflow (`squishy-run.yml`, `bot-night.yml`): its live runs there hold slots of the
+    #: GitHub runners the bots share, first come first served (`plan.others_on_github`, #1455).
+    workflow: str = ""
 
 
 @dataclass(frozen=True)
@@ -91,7 +94,8 @@ def _other(raw: Any, where: str) -> Other:
         raise ValueError(f"{where}: expected an object")
     try:
         return Other(str(raw["name"]), str(raw["login"]), str(raw["label_prefix"]),
-                     home=str(raw.get("home") or ""), token_env=str(raw.get("token_env") or ""))
+                     home=str(raw.get("home") or ""), token_env=str(raw.get("token_env") or ""),
+                     workflow=str(raw.get("workflow") or ""))
     except KeyError as exc:
         raise ValueError(f"{where}: needs name, login and label_prefix ({exc})") from exc
 

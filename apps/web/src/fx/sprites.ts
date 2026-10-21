@@ -12,8 +12,12 @@ export type SpriteSurface = { canvas: CanvasImageSource; ctx: CanvasRenderingCon
 export type SpriteCanvasFactory = (sizePx: number) => SpriteSurface | null;
 
 export type SpriteCache = {
-  /** A radial-gradient disc for (preset, colour index, dpr), drawn once and cached; null without a 2D context. */
-  get(preset: FxPreset, colorIndex: number, dpr: number): CanvasImageSource | null;
+  /**
+   * A radial-gradient disc for (preset, colour index, dpr), drawn once and cached; null without a 2D context.
+   * `colors` (#1447) is a palette that stands in for the preset's own: the index picks from it, and the colour it
+   * picks is part of the cache key, so two palettes never share a sprite.
+   */
+  get(preset: FxPreset, colorIndex: number, dpr: number, colors?: readonly string[]): CanvasImageSource | null;
   size(): number;
   clear(): void;
 };
@@ -132,11 +136,11 @@ export function createSpriteCache(factory: SpriteCanvasFactory): SpriteCache {
   const sprites = new Map<string, CanvasImageSource>();
 
   return {
-    get(preset, colorIndex, dpr) {
-      const colors = PARTICLE_PRESETS[preset].colors;
+    get(preset, colorIndex, dpr, palette) {
+      const colors = palette !== undefined && palette.length > 0 ? palette : PARTICLE_PRESETS[preset].colors;
       const count = colors.length;
       const index = ((Math.floor(colorIndex) % count) + count) % count;
-      const key = `${preset}|${index}|${dpr}`;
+      const key = `${preset}|${index}|${dpr}|${colors[index]}`;
       const hit = sprites.get(key);
       if (hit) return hit;
 

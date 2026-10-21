@@ -191,9 +191,10 @@ fn is_trap_card(state: &GameState, card: &CardInstance) -> bool {
     card_type == CardType::Trap || card_type == CardType::FieldTrap
 }
 
-/// A backrow Trap whose identity nobody but its controller reads yet (R33).
+/// A backrow Trap whose identity nobody but its controller reads yet (R33), its text asleep (R1487000).
 fn face_down_trap(state: &GameState, cand: &Candidate) -> bool {
-    cand.zone == CandidateZone::Backrow && is_trap_card(state, &cand.card) && cand.card.face_up != Some(true)
+    // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+    cand.zone == CandidateZone::Backrow && crate::preview::lasting_text_dormant(state, &cand.card)
 }
 
 /// Whether the event is about this card, for a "self" replacement.
@@ -463,7 +464,8 @@ fn healed_ref_of(target: &DamageTarget) -> HealedRef {
     }
 }
 
-/// E8: whether the card converts heals by its text, as it stands now (face-up, when a Trap).
+/// E8: whether the card converts heals by its text, as it stands now (revealed or face-up, when a Trap:
+/// R1487000).
 fn converts_by_text(state: &GameState, cand: &Candidate) -> bool {
     if crate::scripts::flags_of(state, &cand.card).heal_to_damage != Some(true) {
         return false;

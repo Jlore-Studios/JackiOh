@@ -314,6 +314,12 @@ pub struct EvalWeights {
     pub marked_share: f64,
     /// R846: per extra turn owed.
     pub extra_turn: f64,
+    /// §3.2, R13: the share of its `unit_worth` a card dormant under one of the seat's own unit piles
+    /// counts. It resumes when the cards above it leave.
+    pub dormant_share: f64,
+    /// §3.2, R447: per card dormant under a pile the seat counts but does not read card by card: the
+    /// enemy's unit piles, and every backrow pile, its own and the enemy's.
+    pub dormant_card: f64,
     /// An unseen hand card is valued as if it cost this.
     pub opponent_hand_cost: f64,
     /// A readable backrow card: backrowBase + backrowPerCost × queryCost(def).
@@ -415,6 +421,11 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     jade_step: 1.5,
     marked_share: 0.5,
     extra_turn: 5.0,
+    // #1506: off. At 0.5 and 1.0 its screen, 400 games of improve-dev against the parent (8a366430a),
+    // read 200-200, edge 0.0 (-0.024 to 0.024), which keeps nothing (training/improve.md, A screen);
+    // the training lanes may move them.
+    dormant_share: 0.0,
+    dormant_card: 0.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
@@ -571,6 +582,9 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     jade_step: 0.0,
     marked_share: 0.0,
     extra_turn: 0.0,
+    // #1506's dormant cards came after the gates were fixed too: nothing, as it gave them.
+    dormant_share: 0.0,
+    dormant_card: 0.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
     backrow_per_cost: 0.8,

@@ -880,3 +880,80 @@ export const DUOS_LIFE_STRIP = "duos-life-strip";
 export function duosDevSeatId(seat: "a1" | "a2" | "b1" | "b2"): string {
   return `duos-dev-seat-${seat}`;
 }
+
+// #1310 (SPEC §14): the economy's selectors, for spec 45. They mirror `accountTestid` in
+// apps/web/src/routes/account.tsx, `devToolsTestid` in routes/DevTools.tsx, `shopTestid` in
+// shop/shop.ts, `packTestid` in packs/packs.ts, `questsTestid` in routes/QuestsPanel.tsx and
+// `collectionTestid` in collection/collection.ts, none of which this project can import (each
+// reaches `@jackioh/*`, which only the client's own build resolves).
+
+/** `/account`: the Card packs toggle (shop, opening, token picker) and the Dev tools toggle (R1300000). */
+export const ACCOUNT_SCREEN = "account-screen";
+export const ACCOUNT_PACKS_TOGGLE = "account-packs-toggle";
+export const ACCOUNT_DEV_TOGGLE = "account-dev-toggle";
+
+/** §14.10: the Dev tools panel; its status line says "Done." or the server's refusal word for word. */
+export const DEV_TOOLS = "dev-tools";
+export const DEV_TOOLS_FILL_CARD_BAR = "dev-tools-fill-card-bar";
+export const DEV_TOOLS_FILL_COSMETIC_BAR = "dev-tools-fill-cosmetic-bar";
+export const DEV_TOOLS_GIVE_QUEST = "dev-tools-give-quest";
+export const DEV_TOOLS_STATUS = "dev-tools-status";
+
+/** §14.1, §14.3: the Jlore shop. `pack` is a shipped set's name, or `global`. */
+export const SHOP_PANEL = "shop-panel";
+export const SHOP_WALLET = "shop-wallet";
+
+export function shopBuyId(pack: string): string {
+  return `shop-buy-${pack}`;
+}
+
+/** §14.5: the token picker: the card tokens held, and one Pick per card a card token unlocks. */
+export const TOKEN_PANEL = "token-panel";
+export const TOKEN_HELD_CARD = "token-held-card";
+
+export function tokenCardPickId(cardId: string): string {
+  return `token-card-pick-${cardId}`;
+}
+
+/** Every card token Pick, whatever its card; the card is the testid's suffix. */
+export const TOKEN_CARD_PICKS = '[data-testid^="token-card-pick-"]';
+
+/** §14.3: the packs held, and the scene that opens one (`data-grant` on a slot is `card`, `cosmetic` or `bars`). */
+export function packsOpenId(pack: string): string {
+  return `packs-open-${pack}`;
+}
+
+export const PACK_SCENE = "pack-scene";
+export const PACK_SLOTS = "pack-slots";
+export const PACK_SKIP_ALL = "pack-skip-all";
+export const PACK_CLOSE = "pack-close";
+
+export function packSlotId(index: number): string {
+  return `pack-slot-${String(index)}`;
+}
+
+export function packSlotOutcomeId(index: number): string {
+  return `pack-slot-${String(index)}-outcome`;
+}
+
+/** §14.9: one held quest (`data-quest-id`), on `/collection`. */
+export const QUESTS_QUEST = "quests-quest";
+
+/** #1307: `/collection`'s wallet, and each shipped set's track (its level, and the XP bar's `<progress>`). */
+export const COLLECTION_SCREEN = "collection-screen";
+export const COLLECTION_JLORE = "collection-jlore";
+
+export function collectionTrackId(set: string): string {
+  return `collection-track-${set}`;
+}
+
+export function collectionTrackLevelId(set: string): string {
+  return `collection-track-level-${set}`;
+}
+
+export function collectionTrackXpId(set: string): string {
+  return `collection-track-xp-${set}`;
+}
+
+/** A card face's root (apps/web/src/cards/CardFace.tsx), which carries `data-full-art="true"` when it prints full art (R1017001, R1313000). */
+export const CARD_FACE = ".cf";

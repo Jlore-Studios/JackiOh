@@ -1,14 +1,16 @@
-//! The card pack roll (SPEC §14.3, §14.4; #1301): pure, from a pack's pool, the account's
+//! The card pack roll (SPEC §14.3, §14.4; #1301, #1339): pure, from a pack's pool, the account's
 //! holdings and a seed to what each slot grants and the next pity counters. No store, no clock,
 //! no I/O: `economy::packs` reads the holdings, draws the seed and writes the grants, and a
-//! replay is [`roll_opening`] over the same holdings and seed (R1301003).
+//! replay is [`roll_opening`] over the same holdings and seed (R1301003, R1339002).
 //!
-//! - [`slot_rarities`]: the slots' rarities from the pity math's pack (R1301000).
+//! - [`slot_tiers`]: each slot's card rarity, a tiered roll on `CARD_TIER_WEIGHTS`, the floored
+//!   slot's at `PACK_FLOOR_RARITY` (R1339000); pity forces on top of them (`math::apply_pity`,
+//!   R1339001).
 //! - [`draw_card`]: a slot's card from the pool, leaning toward the cards the account does not
 //!   own, from the nearest rarity the pool holds when it lacks the slot's (R1301001).
-//! - [`duplicate_grant`]: the dupe chain past an unlock, a duplicate's cosmetic or the bars
-//!   (R1301002).
-//! - [`roll_opening`]: the whole opening, in R1301003's draw order. Every list it walks is a
+//! - [`duplicate_grant`]: the dupe chain past an unlock, a duplicate's cosmetic, its rarity its
+//!   own tiered roll on `COSMETIC_TIER_WEIGHTS`, or the bars (R1301002).
+//! - [`roll_opening`]: the whole opening, in R1339002's draw order. Every list it walks is a
 //!   `Vec` or an `IndexMap` in catalog or registry order, so the same inputs draw the same.
 
 use indexmap::IndexMap;
@@ -19,17 +21,12 @@ use jackioh_engine::{CardDefs, SetName, set_ships};
 use serde::{Deserialize, Serialize};
 
 use crate::config::{
-    COSMETIC_DUPLICATE_RATES, GLOBAL_PACK_NAME, PACK_FILLER_RARE_RATE, PACK_SLOTS, PACK_UNOWNED_WEIGHTS,
+    GLOBAL_PACK_NAME, PACK_FLOOR_RARITY, PACK_FLOORED_SLOT, PACK_SLOTS, PACK_UNOWNED_WEIGHTS,
 };
 use crate::cosmetics::{Cosmetic, CosmeticRarity, pack_cosmetics};
-use crate::economy::math::{PackDraws, PackOutcome, PityCounters, roll_pack};
+use crate::economy::math::{PityCounters, apply_pity};
 use crate::economy::store::CardCosmetic;
-
-/// The slots a pack's tracked rarities take (R1301000): one each for Epic, Legendary and Mythic.
-const TRACKED_RARITIES: usize = 3;
-
-// A pack holding all three tracked rarities has a slot for each.
-const _: () = assert!(PACK_SLOTS >= TRACKED_RARITIES);
+use crate::economy::tiers::{card_tier, cosmetic_tier};
 
 /// Which card pack (§14.3): a set's, whose pool is that set, or the global one, whose pool is
 /// every set that ships.
@@ -110,8 +107,8 @@ pub enum SlotGrant {
     Bars { cosmetic_rarity: CosmeticRarity },
 }
 
-/// One slot of an opened pack: the rarity it rolled, which the pity counters read (§14.4), the
-/// card it drew and what that granted.
+/// One slot of an opened pack: the rarity it rolled, pity's force included, which the pity
+/// counters read (§14.4), the card it drew and what that granted.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Slot {
@@ -171,40 +168,21 @@ impl OpeningLog {
     }
 }
 
-/// A slot that holds none of the pack's tracked rarities (R1301000): Rare at
-/// `PACK_FILLER_RARE_RATE`, else Common. One draw.
-pub fn filler_rarity(rng: &mut Rng) -> PrintedRarity {
-    if rng.next() < PACK_FILLER_RARE_RATE {
-        PrintedRarity::Rare
-    } else {
-        PrintedRarity::Common
-    }
-}
-
-/// The slots' rarities (R1301000): the first is the pack's best, its Rare-or-better slot (§14.3),
-/// each other tracked rarity the pack holds takes the next, highest first, and the rest are
-/// fillers, one draw each. So a pack holds a tracked rarity exactly when the pity math says it
-/// does (§14.4).
-pub fn slot_rarities(outcome: PackOutcome, rng: &mut Rng) -> Vec<PrintedRarity> {
-    let best = outcome.best();
-    let mut rarities = vec![best];
-    for (held, rarity) in [
-        (outcome.has_legendary, PrintedRarity::Legendary),
-        (outcome.has_epic, PrintedRarity::Epic),
-    ] {
-        if held && rarity < best {
-            rarities.push(rarity);
-        }
-    }
-    while rarities.len() < PACK_SLOTS {
-        rarities.push(filler_rarity(rng));
-    }
-    rarities
+/// Each slot's card rarity (R1339000): a tiered roll on `CARD_TIER_WEIGHTS`, one draw each in slot
+/// order, the slot at `PACK_FLOORED_SLOT` floored at `PACK_FLOOR_RARITY`, so it never rolls Common
+/// and every pack holds a Rare or better. These are the opening's first draws (R1339002); pity
+/// forces on top of them (`math::apply_pity`, R1339001).
+pub fn slot_tiers(rng: &mut Rng) -> Vec<PrintedRarity> {
+    (0..PACK_SLOTS)
+        .map(|at| card_tier((at == PACK_FLOORED_SLOT).then_some(PACK_FLOOR_RARITY), rng))
+        .collect()
 }
 
 /// The rarities a slot of `rolled` takes its card from, in order (R1301001): its own, then each
-/// lower one from the nearest down, then each higher one from the nearest up.
-pub fn fallback_order(rolled: PrintedRarity) -> Vec<PrintedRarity> {
+/// lower one from the nearest down, then each higher one from the nearest up, with every rarity at
+/// or above `floor` ahead of those below it: a floored slot falls to its floor, then up, and below
+/// it only when nothing above is held. A slot with no floor passes `Common`.
+pub fn fallback_order(rolled: PrintedRarity, floor: PrintedRarity) -> Vec<PrintedRarity> {
     let mut order = vec![rolled];
     order.extend(
         PrintedRarity::ALL
@@ -219,6 +197,8 @@ pub fn fallback_order(rolled: PrintedRarity) -> Vec<PrintedRarity> {
             .copied()
             .filter(|rarity| *rarity > rolled),
     );
+    // Stable, so each side keeps its order.
+    order.sort_by_key(|step| *step < floor);
     order
 }
 
@@ -233,15 +213,16 @@ fn weight(owned: &IndexMap<String, i64>, card_id: &str) -> f64 {
 }
 
 /// A slot's card (§14.3, R1301001): one of the pool's cards of the first rarity in
-/// `fallback_order(rarity)` the pool holds, each by its weight. One draw; an empty pool is `None`
-/// and draws nothing.
+/// `fallback_order(rarity, floor)` the pool holds, each by its weight. One draw; an empty pool is
+/// `None` and draws nothing.
 pub fn draw_card<'p>(
     pool: &'p [PoolCard],
     rarity: PrintedRarity,
+    floor: PrintedRarity,
     owned: &IndexMap<String, i64>,
     rng: &mut Rng,
 ) -> Option<&'p PoolCard> {
-    let candidates: Vec<&PoolCard> = fallback_order(rarity)
+    let candidates: Vec<&PoolCard> = fallback_order(rarity, floor)
         .into_iter()
         .map(|step| pool.iter().filter(|card| card.rarity == step).collect::<Vec<_>>())
         .find(|cards| !cards.is_empty())?;
@@ -257,37 +238,13 @@ pub fn draw_card<'p>(
     candidates.last().copied()
 }
 
-/// `COSMETIC_DUPLICATE_RATES` by cosmetic rarity, commonest first.
-pub fn duplicate_rates() -> [(CosmeticRarity, f64); 5] {
-    let rates = COSMETIC_DUPLICATE_RATES;
-    [
-        (CosmeticRarity::Common, rates.common),
-        (CosmeticRarity::Rare, rates.rare),
-        (CosmeticRarity::Epic, rates.epic),
-        (CosmeticRarity::Legendary, rates.legendary),
-        (CosmeticRarity::Mythic, rates.mythic),
-    ]
-}
-
-/// The cosmetic rarity a duplicate's draw lands on (R1301002): the first whose running sum of
-/// [`duplicate_rates`] passes the draw, and Mythic past the last edge. Its own scale: the card's
-/// rarity plays no part, and its type cannot (R1333000).
-pub fn cosmetic_rarity_at(draw: f64) -> CosmeticRarity {
-    let mut edge = 0.0;
-    for (rarity, rate) in duplicate_rates() {
-        edge += rate;
-        if draw < edge {
-            return rarity;
-        }
-    }
-    CosmeticRarity::Mythic
-}
-
-/// What a duplicate of `card_id` grants once its cosmetic rarity is rolled (R1301002): one of
-/// `droppable` of that rarity the account does not own on that card, picked uniformly (one draw),
-/// or, with none, points to the bars (no draw). `droppable` is `cosmetics::pack_cosmetics`'s; one
-/// that names a card, a full art, is of that card alone (R1313000), and a Legendary or Mythic one
-/// is a chase that drops like any other (R1333000).
+/// What a duplicate of `card_id` grants once its cosmetic rarity is rolled (R1301002), a tiered
+/// roll on `COSMETIC_TIER_WEIGHTS` on its own scale, whatever the card's rarity (R1339000,
+/// R1333000): one of `droppable` of that rarity the account does not own on that card, picked
+/// uniformly (one draw), or, with none, points to the bars (no draw); a duplicate does not fall to
+/// another tier. `droppable` is `cosmetics::pack_cosmetics`'s; one that names a card, a full art,
+/// is of that card alone (R1313000), and a Legendary or Mythic one is a chase that drops like any
+/// other (R1333000).
 pub fn duplicate_grant(
     card_id: &str,
     cosmetic_rarity: CosmeticRarity,
@@ -314,12 +271,13 @@ pub fn duplicate_grant(
     }
 }
 
-/// The whole opening (R1301003), pure from the pack's pool, the account's holdings before it, the
-/// cosmetics registry and the opening's seed. Its draws, in this order and no other: the pity
-/// math's three (Epic, Legendary, Mythic), one per filler slot, then slot by slot the card's one
-/// and, for a duplicate, its cosmetic rarity's one and the pick's one when there is something to
-/// pick. Ownership is read slot by slot, so a card unlocked earlier in the pack is a duplicate
-/// later in it (R1301002). `None` for an empty pool.
+/// The whole opening (R1301003, R1339002), pure from the pack's pool, the account's holdings
+/// before it, the cosmetics registry and the opening's seed. Its draws, in this order and no other:
+/// [`slot_tiers`]' one per slot, which pity forces on top of with no draw of its own, then slot by
+/// slot the card's one and, for a duplicate, its cosmetic tier's one and the pick's one when there
+/// is something to pick. A slot keeps its rarity after pity when its card comes from another
+/// (R1301001). Ownership is read slot by slot, so a card unlocked earlier in the pack is a
+/// duplicate later in it (R1301002). `None` for an empty pool.
 pub fn roll_opening(
     pool: &[PoolCard],
     holdings: &Holdings,
@@ -328,24 +286,23 @@ pub fn roll_opening(
 ) -> Option<Opening> {
     let droppable = pack_cosmetics(registry);
     let mut rng = Rng::new(seed, 0);
-    let draws = PackDraws {
-        epic: rng.next(),
-        legendary: rng.next(),
-        mythic: rng.next(),
-    };
-    let (outcome, pity) = roll_pack(holdings.pity, draws);
-    let rarities = slot_rarities(outcome, &mut rng);
+    let (rarities, pity) = apply_pity(holdings.pity, slot_tiers(&mut rng));
     let mut owned = holdings.owned.clone();
     let mut cosmetics = holdings.cosmetics.clone();
     let mut slots = Vec::with_capacity(rarities.len());
-    for rarity in rarities {
-        let card = draw_card(pool, rarity, &owned, &mut rng)?;
+    for (at, rarity) in rarities.into_iter().enumerate() {
+        let floor = if at == PACK_FLOORED_SLOT {
+            PACK_FLOOR_RARITY
+        } else {
+            PrintedRarity::Common
+        };
+        let card = draw_card(pool, rarity, floor, &owned, &mut rng)?;
         let copies = owned.entry(card.id.clone()).or_insert(0);
         let grant = if *copies < i64::from(MAX_COPIES) {
             *copies += 1;
             SlotGrant::Card
         } else {
-            let cosmetic_rarity = cosmetic_rarity_at(rng.next());
+            let cosmetic_rarity = cosmetic_tier(None, &mut rng);
             let grant = duplicate_grant(&card.id, cosmetic_rarity, &droppable, &cosmetics, &mut rng);
             if let SlotGrant::Cosmetic { cosmetic_id, .. } = &grant {
                 cosmetics.push(CardCosmetic {
@@ -371,11 +328,12 @@ pub fn roll_opening(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{PACK_RATE_TOLERANCE, PITY_MYTHIC_PACKS};
+    use crate::config::PITY_MYTHIC_PACKS;
     use crate::cosmetics::CosmeticKind;
+    use crate::economy::tiers::{RATE_TOLERANCE, TierOdds, card_odds, cosmetic_odds};
     use jackioh_engine::wire::PrintedRarity::{Common, Epic, Legendary, Mythic, Rare};
 
-    /// Draws enough for a rate to settle inside `PACK_RATE_TOLERANCE`.
+    /// Draws enough for a rate to settle inside `RATE_TOLERANCE`.
     const DRAWS: usize = 20_000;
 
     fn card(id: &str, rarity: PrintedRarity) -> PoolCard {
@@ -422,75 +380,230 @@ mod tests {
         }
     }
 
-    #[test]
-    fn r1301000_slot_one_holds_the_best_then_the_other_held_rarities() {
-        let mut rng = Rng::new("r1301000", 0);
-        let all = PackOutcome {
-            has_epic: true,
-            has_legendary: true,
-            has_mythic: true,
-        };
-        let slots = slot_rarities(all, &mut rng);
-        assert_eq!(slots.len(), PACK_SLOTS);
-        assert_eq!(slots[..TRACKED_RARITIES], [Mythic, Legendary, Epic]);
-        assert!(slots[TRACKED_RARITIES..].iter().all(|rarity| *rarity <= Rare));
+    /// A pool of `count` cards, the five rarities in turn.
+    fn pool_of(count: usize) -> Vec<PoolCard> {
+        (0..count)
+            .map(|at| {
+                card(
+                    &format!("card-{at}"),
+                    *PrintedRarity::ALL.get(at % 5).unwrap_or(&Common),
+                )
+            })
+            .collect()
+    }
 
-        let two = PackOutcome {
-            has_epic: true,
-            has_legendary: false,
-            has_mythic: true,
-        };
-        let slots = slot_rarities(two, &mut rng);
-        assert_eq!(slots.len(), PACK_SLOTS);
-        assert_eq!(slots[..2], [Mythic, Epic]);
-        assert!(slots[2..].iter().all(|rarity| *rarity <= Rare));
+    /// `odds` commonest first.
+    fn chances(odds: TierOdds) -> [f64; 5] {
+        [odds.common, odds.rare, odds.epic, odds.legendary, odds.mythic]
+    }
+
+    /// Each share of `counts` out of `draws` lands within `RATE_TOLERANCE` of `odds`.
+    fn assert_lands_on(counts: [usize; 5], draws: usize, odds: TierOdds, what: &str) {
+        for (tier, (count, chance)) in counts.into_iter().zip(chances(odds)).enumerate() {
+            let share = count as f64 / draws as f64;
+            assert!(
+                (share - chance).abs() <= RATE_TOLERANCE,
+                "{what}: tier {tier}'s share {share} outside tolerance of {chance}"
+            );
+        }
+    }
+
+    fn card_place(rarity: PrintedRarity) -> usize {
+        PrintedRarity::ALL
+            .iter()
+            .position(|each| *each == rarity)
+            .expect("a printed rarity")
     }
 
     #[test]
-    fn r1301000_a_pack_holding_none_has_a_rare_slot() {
-        let mut rng = Rng::new("r1301000", 0);
-        for _ in 0..100 {
-            let slots = slot_rarities(PackOutcome::default(), &mut rng);
+    fn r1339000_r1301000_every_slot_rolls_the_card_table_the_first_floored_at_rare() {
+        let mut rng = Rng::new("r1339000", 0);
+        let mut floored = [0_usize; 5];
+        let mut others = [0_usize; 5];
+        for _ in 0..DRAWS {
+            let slots = slot_tiers(&mut rng);
             assert_eq!(slots.len(), PACK_SLOTS);
-            assert_eq!(slots[0], Rare);
-            assert!(slots.iter().all(|rarity| *rarity <= Rare), "{slots:?}");
+            for (at, rarity) in slots.into_iter().enumerate() {
+                if at == PACK_FLOORED_SLOT {
+                    assert!(rarity >= PACK_FLOOR_RARITY, "{rarity}");
+                    floored[card_place(rarity)] += 1;
+                } else {
+                    others[card_place(rarity)] += 1;
+                }
+            }
+        }
+        assert_eq!(floored[card_place(Common)], 0);
+        assert_lands_on(
+            floored,
+            DRAWS,
+            card_odds(Some(PACK_FLOOR_RARITY)),
+            "the floored slot",
+        );
+        assert_lands_on(
+            others,
+            DRAWS * (PACK_SLOTS - 1),
+            card_odds(None),
+            "the other slots",
+        );
+        // One draw per slot.
+        assert_eq!(rng.cursor() as usize, DRAWS * PACK_SLOTS);
+    }
+
+    #[test]
+    fn r1339000_the_floored_slot_is_never_common() {
+        let pool = pool_of(40);
+        let mut holdings = Holdings::default();
+        for seed in 0..500 {
+            let opening = roll_opening(&pool, &holdings, &[], &format!("r1339000-{seed}"))
+                .unwrap_or_else(|| panic!("the pool holds cards"));
+            let slot = &opening.slots[PACK_FLOORED_SLOT];
+            assert!(slot.rarity >= PACK_FLOOR_RARITY, "{seed}: {slot:?}");
+            let drawn = pool
+                .iter()
+                .find(|card| card.id == slot.card_id)
+                .unwrap_or_else(|| panic!("{} is in the pool", slot.card_id));
+            assert_eq!(drawn.rarity, slot.rarity, "{seed}: the pool holds every rarity");
+            // The counters run on from pack to pack, so pity forces some of them.
+            holdings.pity = opening.pity;
         }
     }
 
     #[test]
-    fn r1301000_fillers_roll_rare_at_the_filler_rate() {
-        let mut rng = Rng::new("r1301000", 0);
-        let rares = (0..DRAWS).filter(|_| filler_rarity(&mut rng) == Rare).count();
-        let share = rares as f64 / DRAWS as f64;
-        assert!(
-            (share - PACK_FILLER_RARE_RATE).abs() <= PACK_RATE_TOLERANCE,
-            "Rare share {share} outside tolerance of {PACK_FILLER_RARE_RATE}"
+    fn r1339000_r1301001_the_floored_slot_falls_no_lower_than_rare_while_it_can() {
+        assert_eq!(
+            fallback_order(Epic, PACK_FLOOR_RARITY),
+            [Epic, Rare, Legendary, Mythic, Common]
         );
-        assert_eq!(rng.cursor() as usize, DRAWS);
+        assert_eq!(
+            fallback_order(Rare, PACK_FLOOR_RARITY),
+            [Rare, Epic, Legendary, Mythic, Common]
+        );
+        assert_eq!(
+            fallback_order(Mythic, PACK_FLOOR_RARITY),
+            [Mythic, Legendary, Epic, Rare, Common]
+        );
+        // A pool with no Rare or Epic: the floored slot's Epic takes the Legendary, an unfloored
+        // slot's the Common.
+        let pool = [card("c", Common), card("l", Legendary)];
+        let owned = IndexMap::new();
+        let mut rng = Rng::new("r1339000", 0);
+        let id =
+            |floor, rng: &mut Rng| draw_card(&pool, Epic, floor, &owned, rng).map(|card| card.id.clone());
+        assert_eq!(id(PACK_FLOOR_RARITY, &mut rng).as_deref(), Some("l"));
+        assert_eq!(id(Common, &mut rng).as_deref(), Some("c"));
+        // With nothing at or above the floor, it takes what is below.
+        let commons = [card("c", Common)];
+        assert_eq!(
+            draw_card(&commons, Rare, PACK_FLOOR_RARITY, &owned, &mut rng),
+            Some(&commons[0])
+        );
+    }
+
+    #[test]
+    fn r1339000_r1301002_a_duplicate_rolls_the_cosmetic_table() {
+        // One card, owned: every slot is a duplicate, and with nothing to drop each is spent at
+        // the cosmetic rarity it rolled.
+        let pool = [card("m", Mythic)];
+        let holdings = Holdings {
+            owned: owning(&["m"]),
+            ..Holdings::default()
+        };
+        let mut counts = [0_usize; 5];
+        let openings = DRAWS / PACK_SLOTS;
+        for seed in 0..openings {
+            let opening = roll_opening(&pool, &holdings, &[], &format!("r1339000-dupe-{seed}"))
+                .unwrap_or_else(|| panic!("the pool holds a card"));
+            for slot in opening.slots {
+                let SlotGrant::Bars { cosmetic_rarity } = slot.grant else {
+                    panic!("nothing drops: {slot:?}");
+                };
+                counts[usize::from(cosmetic_rarity.tier())] += 1;
+            }
+        }
+        assert_lands_on(
+            counts,
+            openings * PACK_SLOTS,
+            cosmetic_odds(None),
+            "a duplicate's cosmetic",
+        );
+    }
+
+    #[test]
+    fn r1339002_the_slot_tiers_are_the_opening_s_first_draws() {
+        let pool = pool_of(40);
+        let ids: Vec<&str> = pool.iter().map(|card| card.id.as_str()).collect();
+        let pity = PityCounters {
+            epic: 3,
+            legendary: 7,
+            mythic: PITY_MYTHIC_PACKS - 1,
+        };
+        for (holdings, seed) in [
+            (
+                Holdings {
+                    pity,
+                    ..Holdings::default()
+                },
+                "r1339002",
+            ),
+            (
+                Holdings {
+                    owned: owning(&ids),
+                    pity,
+                    ..Holdings::default()
+                },
+                "r1339002-owned",
+            ),
+        ] {
+            let opening = roll_opening(&pool, &holdings, &[], seed).expect("the pool holds cards");
+            let (rarities, after) = apply_pity(pity, slot_tiers(&mut Rng::new(seed, 0)));
+            assert_eq!(
+                opening.slots.iter().map(|slot| slot.rarity).collect::<Vec<_>>(),
+                rarities,
+                "{seed}"
+            );
+            assert_eq!(opening.pity, after, "{seed}");
+        }
+        // Every card owned and nothing to drop: each slot's tier, its card and its duplicate's
+        // cosmetic tier, three draws a slot and no pick.
+        let owned = Holdings {
+            owned: owning(&ids),
+            ..Holdings::default()
+        };
+        let opening = roll_opening(&pool, &owned, &[], "r1339002").expect("the pool holds cards");
+        assert_eq!(opening.draws as usize, 3 * PACK_SLOTS);
     }
 
     #[test]
     fn r1301001_a_rarity_the_pool_lacks_steps_down_then_up() {
-        assert_eq!(fallback_order(Mythic), [Mythic, Legendary, Epic, Rare, Common]);
-        assert_eq!(fallback_order(Epic), [Epic, Rare, Common, Legendary, Mythic]);
-        assert_eq!(fallback_order(Common), [Common, Rare, Epic, Legendary, Mythic]);
+        assert_eq!(
+            fallback_order(Mythic, Common),
+            [Mythic, Legendary, Epic, Rare, Common]
+        );
+        assert_eq!(
+            fallback_order(Epic, Common),
+            [Epic, Rare, Common, Legendary, Mythic]
+        );
+        assert_eq!(
+            fallback_order(Common, Common),
+            [Common, Rare, Epic, Legendary, Mythic]
+        );
 
         let mut rng = Rng::new("r1301001", 0);
         let owned = IndexMap::new();
         let mythic_only = [card("m", Mythic)];
         assert_eq!(
-            draw_card(&mythic_only, Common, &owned, &mut rng),
+            draw_card(&mythic_only, Common, Common, &owned, &mut rng),
             Some(&mythic_only[0])
         );
         // The nearest lower rarity before any higher one.
         let rare_and_legendary = [card("l", Legendary), card("r", Rare)];
         assert_eq!(
-            draw_card(&rare_and_legendary, Epic, &owned, &mut rng).map(|card| card.id.as_str()),
+            draw_card(&rare_and_legendary, Epic, Common, &owned, &mut rng).map(|card| card.id.as_str()),
             Some("r")
         );
         assert_eq!(rng.cursor(), 2);
         // An empty pool has no card and takes no draw.
-        assert_eq!(draw_card(&[], Rare, &owned, &mut rng), None);
+        assert_eq!(draw_card(&[], Rare, Common, &owned, &mut rng), None);
         assert_eq!(rng.cursor(), 2);
     }
 
@@ -506,8 +619,14 @@ mod tests {
         };
         let opening =
             roll_opening(&pool, &holdings, &[], "r1301001").unwrap_or_else(|| panic!("the pool holds cards"));
-        assert_eq!(opening.slots[0].rarity, Mythic);
-        assert_eq!(opening.slots[0].card_id, "l");
+        // Pity forces the Mythic, or the slots rolled one: the pool has none, so its slot draws the
+        // Legendary and stays Mythic for the counter.
+        let mythic = opening
+            .slots
+            .iter()
+            .find(|slot| slot.rarity == Mythic)
+            .unwrap_or_else(|| panic!("pity holds a Mythic: {:?}", opening.slots));
+        assert_eq!(mythic.card_id, "l");
         assert_eq!(opening.pity.mythic, 0);
     }
 
@@ -662,42 +781,6 @@ mod tests {
     }
 
     #[test]
-    fn r1301002_cosmetic_rarity_follows_the_duplicate_rates() {
-        let rates = duplicate_rates();
-        let total: f64 = rates.iter().map(|(_, rate)| rate).sum();
-        assert!((total - 1.0).abs() < 1e-9, "the duplicate rates sum to {total}");
-        assert_eq!(rates.map(|(rarity, _)| rarity), CosmeticRarity::ALL);
-        let mut floor = 0.0;
-        for (rarity, rate) in rates {
-            let edge = floor + rate;
-            assert_eq!(cosmetic_rarity_at(floor), rarity, "at {floor}");
-            assert_eq!(
-                cosmetic_rarity_at((floor + edge) / 2.0),
-                rarity,
-                "inside {rarity:?}"
-            );
-            floor = edge;
-        }
-        assert_eq!(cosmetic_rarity_at(1.0 - f64::EPSILON), CosmeticRarity::Mythic);
-    }
-
-    #[test]
-    fn duplicate_cosmetic_rarities_land_on_their_odds() {
-        let mut rng = Rng::new("r1301002-odds", 0);
-        let mut counts = [0_usize; 5];
-        for _ in 0..DRAWS {
-            counts[usize::from(cosmetic_rarity_at(rng.next()).tier())] += 1;
-        }
-        for ((rarity, rate), count) in duplicate_rates().into_iter().zip(counts) {
-            let share = count as f64 / DRAWS as f64;
-            assert!(
-                (share - rate).abs() <= PACK_RATE_TOLERANCE,
-                "{rarity} share {share} outside tolerance of {rate}"
-            );
-        }
-    }
-
-    #[test]
     fn r1333000_a_duplicate_s_cosmetic_roll_leaves_the_pity_counters_alone() {
         let pool: Vec<PoolCard> = (0..40)
             .map(|at| {
@@ -738,14 +821,12 @@ mod tests {
                 assert_eq!(other.pity, dropping.pity, "{seed}");
                 assert_eq!(rarities(&other), rarities(&dropping), "{seed}");
             }
-            // The pity math's own three draws, the opening's first, set the counters alone.
-            let mut rng = Rng::new(&seed, 0);
-            let draws = PackDraws {
-                epic: rng.next(),
-                legendary: rng.next(),
-                mythic: rng.next(),
-            };
-            assert_eq!(dropping.pity, roll_pack(pity, draws).1, "{seed}");
+            // The slots' tiers, the opening's first draws, set the counters alone.
+            assert_eq!(
+                dropping.pity,
+                apply_pity(pity, slot_tiers(&mut Rng::new(&seed, 0))).1,
+                "{seed}"
+            );
             cosmetics += dropping
                 .slots
                 .iter()
@@ -762,14 +843,14 @@ mod tests {
         let mut rng = Rng::new("r1301002-lean", 0);
         let new = (0..DRAWS)
             .filter(|_| {
-                draw_card(&pool, Common, &owned, &mut rng).map(|card| card.id.as_str()) == Some("new")
+                draw_card(&pool, Common, Common, &owned, &mut rng).map(|card| card.id.as_str()) == Some("new")
             })
             .count();
         let share = new as f64 / DRAWS as f64;
         let expected =
             PACK_UNOWNED_WEIGHTS.unowned / (PACK_UNOWNED_WEIGHTS.owned + PACK_UNOWNED_WEIGHTS.unowned);
         assert!(
-            (share - expected).abs() <= PACK_RATE_TOLERANCE,
+            (share - expected).abs() <= RATE_TOLERANCE,
             "unowned share {share} outside tolerance of {expected}"
         );
     }

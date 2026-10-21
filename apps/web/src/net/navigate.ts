@@ -91,6 +91,8 @@ export const paths = {
   patchNotes: "/patch-notes",
   /** R630: browsable cards, including tokens. */
   almanac: "/almanac",
+  /** The Almanac with one card's detail open, as the statistics drill-down links it. */
+  almanacCard: (cardId: string): string => `/almanac?card=${encodeURIComponent(cardId)}`,
   /** R608, R612: the account-gated ranked ladder. */
   leaderboard: "/leaderboard",
   /** R654: public card and player statistics. */

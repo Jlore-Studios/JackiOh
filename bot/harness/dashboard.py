@@ -93,7 +93,9 @@ def _running_for(ctx: Context, since: datetime) -> str:
 
 
 def _run_url(ctx: Context, run_id: Any) -> str:
-    return f"{ctx.cfg.server_url}/{ctx.cfg.repo}/actions/runs/{run_id}" if run_id else ""
+    if not run_id or str(run_id).startswith("pending:"):
+        return ""  # the status loop started it and has not found its run yet (#1455)
+    return f"{ctx.cfg.server_url}/{ctx.cfg.repo}/actions/runs/{run_id}"
 
 
 def _cell(text: Any, limit: int = 70) -> str:

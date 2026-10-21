@@ -269,6 +269,17 @@ describe("#1309 the cosmetic packs", () => {
     expect(screen.getByTestId(T.shardEmpty)).toHaveTextContent("Nothing to buy yet");
   });
 
+  it("R1339000 the cosmetic packs panel shows the server's odds for each slot and the guaranteed one", async () => {
+    cosmeticServer();
+    render(<CosmeticPacks token={TOKEN} />);
+    expect(await screen.findByTestId(T.odds)).toHaveTextContent(
+      "Each slot: Common 50%, Rare 30%, Epic 15%, Legendary 4%, Mythic 1%.",
+    );
+    expect(screen.getByTestId(T.flooredOdds)).toHaveTextContent(
+      "Guaranteed slot: Common 0%, Rare 0%, Epic 90%, Legendary 8%, Mythic 2%.",
+    );
+  });
+
   it("an opened cosmetic pack reveals each slot, and tells the page", async () => {
     cosmeticServer();
     const onChanged = vi.fn<() => void>();

@@ -65,6 +65,26 @@ sh scripts/build-wasm.sh
 cargo build -p jackioh-wasm --release --target wasm32-unknown-unknown
 ```
 
+## The shared bodies (`core/`, #1505)
+
+Both browser modules wrap one set of bodies: `crates/wasm/core` (`jackioh-wasm-core`) holds the
+JSON helpers, the state cache and every binding's work as `Result<String, String>` (or
+`Result<bool | (), String>`) functions. `src/lib.rs` keeps only the wasm-bindgen wrappers, the
+panic hook, the clock and the custom-card refusal (R915009); `luau/src/main.rs` keeps only the C
+wrappers, the panic hook, the clock, the custom-card setup check (R915005, R915006) and
+`check_custom_card`. The exports stay identical, and behaviour does not change.
+
+A binding cannot be added to one side and forgotten in the other: `tests/export_parity.rs`
+compares each module's export list to a declared allow-list (`SHARED`, the bindings both export;
+`NORMAL_ONLY`, `learned_parity` and the Duos bindings with the reason; `LUAU_ONLY`, the creator's
+check and the C boundary's strings) and fails when a binding is bound in only one module. It also
+holds `.cargo/config.toml`'s `EXPORTED_FUNCTIONS` and the factory types `scripts/build-wasm.sh`
+writes to every C binding.
+
+```
+cargo test -p jackioh-wasm --test export_parity
+```
+
 ## The Luau module (`luau/`, #919)
 
 `crates/wasm/luau` (`jackioh-wasm-luau`) is the same engine, cards, AI and validator with the card

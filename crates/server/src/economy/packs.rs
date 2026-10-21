@@ -26,10 +26,9 @@ use crate::api::crypto::SystemIds;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, ok, ok_of, str};
 use crate::app::App;
 use crate::config::{
-    CARD_TOKEN_BAR_POINTS_PER_DUPLICATE, CARD_TOKEN_BAR_SIZE, COSMETIC_DUPLICATE_RATES,
-    COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE, COSMETIC_TOKEN_BAR_SIZE, COSMETIC_TOKEN_CYCLE,
-    CosmeticTokenStep, PACK_BASE_RATES, PACK_FILLER_RARE_RATE, PACK_PRICE_JLORE, PACK_SLOTS,
-    PACK_TARGET_RATES, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS,
+    CARD_TOKEN_BAR_POINTS_PER_DUPLICATE, CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE,
+    COSMETIC_TOKEN_BAR_SIZE, COSMETIC_TOKEN_CYCLE, CosmeticTokenStep, PACK_FLOOR_RARITY, PACK_PRICE_JLORE,
+    PACK_SLOTS, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS,
 };
 use crate::cosmetics::{Cosmetic, CosmeticRarity};
 use crate::db::store::{CollectionEntry, CollectionGrant, Tx};
@@ -39,6 +38,7 @@ use crate::economy::store::{
     CosmeticGrant, Counter, CounterEntry, CounterGrant, EconomyReason, InventoryEntry, InventoryGrant,
     InventoryItem, JloreGrant, JloreReason,
 };
+use crate::economy::tiers::{card_odds, cosmetic_odds};
 use crate::economy::tokens::settle_bar;
 
 /// The collection ledger's reason for a card a pack unlocks: migration 0002's `pack`, one of its
@@ -199,6 +199,23 @@ pub(crate) fn bar_before(counters: &[CounterEntry], counter: Counter) -> i64 {
         .map_or(0, |entry| entry.value)
 }
 
+/// What the cosmetic token cycle pays at `position`, its steps paid so far (§14.5): a Rare or an
+/// Epic cosmetic token, or a cosmetic pack. A pack opening's bar and a dev account's fill
+/// (`api::dev::fill_bar`, R1310003) both pay through it.
+pub(crate) fn cycle_step(position: i64) -> (InventoryItem, String) {
+    match COSMETIC_TOKEN_CYCLE[(position % COSMETIC_TOKEN_CYCLE.len() as i64) as usize] {
+        CosmeticTokenStep::Rare => (
+            InventoryItem::CosmeticToken,
+            CosmeticRarity::Rare.as_str().to_string(),
+        ),
+        CosmeticTokenStep::Epic => (
+            InventoryItem::CosmeticToken,
+            CosmeticRarity::Epic.as_str().to_string(),
+        ),
+        CosmeticTokenStep::CosmeticPack => (InventoryItem::CosmeticPack, String::new()),
+    }
+}
+
 /// Writes the cards an opening unlocked, `unlocked` copies per card over the copies `owned` before
 /// it: the collection's absolute quantities, then its ledger's deltas (reason [`PACK_GRANT_REASON`]),
 /// as `api::collection::grant_cards` writes them. Nothing unlocked writes nothing. A card pack's
@@ -317,19 +334,7 @@ pub(crate) async fn settle_bars(
         )
         .await?;
         for paid in 0..cosmetic_pays {
-            let step =
-                COSMETIC_TOKEN_CYCLE[((cycle_before + paid) % COSMETIC_TOKEN_CYCLE.len() as i64) as usize];
-            let (item, key) = match step {
-                CosmeticTokenStep::Rare => (
-                    InventoryItem::CosmeticToken,
-                    CosmeticRarity::Rare.as_str().to_string(),
-                ),
-                CosmeticTokenStep::Epic => (
-                    InventoryItem::CosmeticToken,
-                    CosmeticRarity::Epic.as_str().to_string(),
-                ),
-                CosmeticTokenStep::CosmeticPack => (InventoryItem::CosmeticPack, String::new()),
-            };
+            let (item, key) = cycle_step(cycle_before + paid);
             tx.economy_inventory_grant(&InventoryGrant {
                 profile_id: profile_id.to_string(),
                 item,
@@ -508,9 +513,10 @@ pub async fn open_pack(
 }
 
 /// `GET /api/packs` (`AuthLevel::Active`): the caller's pity counters and the odds, for the pack
-/// screen to show (§14.4): the price and slots, each counter's threshold, the per-pack rates before
-/// and after pity, the filler slots' Rare rate (R1301000) and a duplicate's cosmetic odds
-/// (R1301002). It also lists the unopened packs the caller holds (`unopened`, [`unopened_from`]).
+/// screen to show (§14.4): the price and slots, each counter's threshold, and one roll's odds on
+/// the tier tables, the fallback included (R1339000): a slot's, the floored slot's and a
+/// duplicate's cosmetic. It also lists the unopened packs the caller holds (`unopened`,
+/// [`unopened_from`]).
 pub async fn get_packs(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
@@ -527,10 +533,9 @@ pub async fn get_packs(app: &Arc<App>, req: Req) -> ApiResult {
             "mythic": PITY_MYTHIC_PACKS,
         },
         "odds": {
-            "base": PACK_BASE_RATES,
-            "target": PACK_TARGET_RATES,
-            "fillerRare": PACK_FILLER_RARE_RATE,
-            "duplicateCosmetic": COSMETIC_DUPLICATE_RATES,
+            "slot": card_odds(None),
+            "flooredSlot": card_odds(Some(PACK_FLOOR_RARITY)),
+            "duplicateCosmetic": cosmetic_odds(None),
         },
         "unopened": unopened_from(&inventory),
     })))

@@ -379,6 +379,14 @@ export function devClear(token: string, part: DevClearPart): Promise<{ written: 
   return apiRequest<{ written: number }>(`/api/dev/clear/${part}`, { method: "POST", token, body: {} });
 }
 
+/** R1310003: which token bar `POST /api/dev/bar/:bar` fills (SPEC §14.5). */
+export type DevBar = "card" | "cosmetic";
+
+/** R1310003: `POST /api/dev/bar/:bar`: fills that token bar so it pays its token at once, answering the ledger rows written. */
+export function devFillBar(token: string, bar: DevBar): Promise<{ written: number }> {
+  return apiRequest<{ written: number }>(`/api/dev/bar/${bar}`, { method: "POST", token, body: {} });
+}
+
 /** `POST /api/dev/quests`: a quest at once (§14.9), answering it; 409 while the most are held. */
 export function devGiveQuest(token: string): Promise<{ quest: QuestView }> {
   return apiRequest<{ quest: QuestView }>("/api/dev/quests", { method: "POST", token, body: {} });
@@ -488,18 +496,20 @@ export function getQuests(token: string): Promise<QuestsResponse> {
 /** The three rarities a pity counter tracks. */
 export type PackCounters = { epic: number; legendary: number; mythic: number };
 
+/**
+ * One tiered roll's chance of each tier, the fallback included, as the server computes it from its
+ * weight table (`TierOdds`, `crates/server/src/economy/tiers.rs`, R1339000).
+ */
+export type TierOdds = Record<"common" | "rare" | "epic" | "legendary" | "mythic", number>;
+
 /** `GET /api/packs`: the pity counters, their thresholds, the odds and the unopened packs held. */
 export type PacksResponse = {
   price: number;
   slots: number;
   pity: PackCounters;
   thresholds: PackCounters;
-  odds: {
-    base: PackCounters;
-    target: PackCounters;
-    fillerRare: number;
-    duplicateCosmetic: Record<"common" | "rare" | "epic" | "legendary" | "mythic", number>;
-  };
+  /** A slot's card rarity, the floored slot's, and a duplicate's cosmetic rarity. */
+  odds: { slot: TierOdds; flooredSlot: TierOdds; duplicateCosmetic: TierOdds };
   /** One entry per kind of pack held (a shipped set's name, or `global`), the global pack first. */
   unopened: { pack: string; count: number }[];
 };
@@ -616,8 +626,15 @@ export function redeemCosmeticToken(
   });
 }
 
-/** `GET /api/cosmetic-packs`: the Chase Shard bar and the cosmetic packs unopened (R1306002). */
-export type CosmeticPacksResponse = { shardBar: TokenBarState; unopened: number };
+/**
+ * `GET /api/cosmetic-packs`: the Chase Shard bar, the cosmetic packs unopened (R1306002) and a
+ * slot's and the floored slot's odds (R1339000).
+ */
+export type CosmeticPacksResponse = {
+  shardBar: TokenBarState;
+  unopened: number;
+  odds: { slot: TierOdds; flooredSlot: TierOdds };
+};
 
 export function getCosmeticPacks(token: string): Promise<CosmeticPacksResponse> {
   return apiRequest<CosmeticPacksResponse>("/api/cosmetic-packs", { token });

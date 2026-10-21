@@ -14,9 +14,8 @@ export function packsInfo(): PacksResponse {
     pity: { epic: 7, legendary: 13, mythic: 21 },
     thresholds: { epic: 10, legendary: 20, mythic: 40 },
     odds: {
-      base: { epic: 0.123, legendary: 0.045, mythic: 0.006 },
-      target: { epic: 0.333, legendary: 0.111, mythic: 0.055 },
-      fillerRare: 0.2,
+      slot: { common: 0.5, rare: 0.32, epic: 0.123, legendary: 0.045, mythic: 0.012 },
+      flooredSlot: { common: 0, rare: 0.82, epic: 0.123, legendary: 0.045, mythic: 0.012 },
       duplicateCosmetic: { common: 0.5, rare: 0.3, epic: 0.15, legendary: 0.04, mythic: 0.01 },
     },
     unopened: [

@@ -1,7 +1,7 @@
 // Session renewal at the gate (docs/polish/5-sign-in.md, B32, B33, R194): a near-expiry or refused
 // token renews once; refusal ends the session, network failure keeps it, and fixtures never renew.
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AUTH_SESSION_REFRESH_MARGIN_SECONDS } from "@jackioh/server-config";
@@ -122,6 +122,13 @@ function at(path: string): void {
 }
 
 /** A gated screen that prints the token it was opened with. */
+/** Lets the round trips already answered, and the renders they cause, run (no timer stands behind them). */
+async function flush(): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
+
 function renderGated(): void {
   render(
     <Gated>
@@ -243,9 +250,7 @@ describe("R194 B32 renewal", () => {
     await waitFor(() => {
       expect(meCalls.some((call) => call.token === NEW)).toBe(true);
     }, SLOW);
-    await new Promise((resolve) => {
-      setTimeout(resolve, 100);
-    });
+    await flush();
     expect(refreshCalls).toHaveLength(1);
     expect(meCalls.filter((call) => call.token === NEW)).toHaveLength(1);
     expect(screen.queryByTestId("opened")).toBeNull();
@@ -285,9 +290,11 @@ describe("R194 B32 renewal", () => {
     await waitFor(() => {
       expect(refreshCalls.length).toBeGreaterThan(0);
     }, SLOW);
-    await new Promise((resolve) => {
-      setTimeout(resolve, 100);
-    });
+    // Both screens have asked `/api/auth/me` and heard 401 before the provider answers.
+    await waitFor(() => {
+      expect(vi.mocked(fetch).mock.calls.filter(([input]) => String(input).endsWith("/api/auth/me"))).toHaveLength(2);
+    }, SLOW);
+    await flush();
     for (const release of releases) release();
 
     expect((await screen.findByTestId("opened-a", undefined, SLOW)).textContent).toBe(NEW);

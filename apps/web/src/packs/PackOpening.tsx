@@ -39,7 +39,7 @@ import {
   PACK_HOLD_MS,
   PACK_SWIPE_PX,
   PACK_TEAR_MS,
-  TRACKED_RARITIES,
+  ODDS_RARITIES,
   bestRarity,
   holdsToFlip,
   packName,
@@ -48,6 +48,7 @@ import {
   playStinger,
   revealCues,
   slotOutcome,
+  tierPercents,
   withOpening,
 } from "./packs.ts";
 import "./packs.css";
@@ -457,7 +458,10 @@ export default function PackOpening({
   );
 }
 
-/** The odds per rarity, with and without pity, and the counters, all as `GET /api/packs` states them. */
+/**
+ * The odds per rarity of a slot and of the floored slot, the fallback included, the counters and
+ * pity's guarantee, all as `GET /api/packs` states them (R1339000).
+ */
 function PackOdds({ info }: { info: PacksResponse }): ReactElement {
   const { odds, pity, thresholds } = info;
   return (
@@ -466,39 +470,38 @@ function PackOdds({ info }: { info: PacksResponse }): ReactElement {
         <thead>
           <tr>
             <th scope="col">{t("Rarity")}</th>
-            <th scope="col">{t("Chance per pack")}</th>
-            <th scope="col">{t("With pity")}</th>
+            <th scope="col">{t("Each slot")}</th>
+            <th scope="col">{t("Guaranteed slot")}</th>
             <th scope="col">{t("Pity")}</th>
           </tr>
         </thead>
         <tbody>
-          {TRACKED_RARITIES.map(({ key, rarity }) => (
+          {ODDS_RARITIES.map(({ key, rarity }) => (
             <tr key={key} data-testid={packTestid.oddsRow(key)}>
               <th scope="row">{t(rarity)}</th>
-              <td>{percent(odds.base[key])}</td>
-              <td>{percent(odds.target[key])}</td>
-              <td data-testid={packTestid.pity(key)}>
-                {t("{count} / {threshold} packs", { count: pity[key], threshold: thresholds[key] })}
-              </td>
+              <td>{percent(odds.slot[key])}</td>
+              <td>{percent(odds.flooredSlot[key])}</td>
+              {key === "common" || key === "rare" ? (
+                <td />
+              ) : (
+                <td data-testid={packTestid.pity(key)}>
+                  {t("{count} / {threshold} packs", { count: pity[key], threshold: thresholds[key] })}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
       </table>
-      <p data-testid={packTestid.filler}>
-        {t("A slot that holds no Epic or better is Rare {rare} of the time, else Common.", {
-          rare: percent(odds.fillerRare),
-        })}
+      <p data-testid={packTestid.pityLine}>
+        {t(
+          "Pity guarantees an Epic within {epic} packs, a Legendary within {legendary} packs and a Mythic within {mythic} packs.",
+          thresholds,
+        )}
       </p>
       <p data-testid={packTestid.duplicate}>
         {t(
           "A duplicate becomes a cosmetic: Common {common}, Rare {rare}, Epic {epic}, Legendary {legendary}, Mythic {mythic}. With none of that rarity left to own, it fills both token bars.",
-          {
-            common: percent(odds.duplicateCosmetic.common),
-            rare: percent(odds.duplicateCosmetic.rare),
-            epic: percent(odds.duplicateCosmetic.epic),
-            legendary: percent(odds.duplicateCosmetic.legendary),
-            mythic: percent(odds.duplicateCosmetic.mythic),
-          },
+          tierPercents(odds.duplicateCosmetic),
         )}
       </p>
     </div>

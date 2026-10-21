@@ -587,9 +587,13 @@
   color: #fff;
 }
 
+/* The row keeps its items at their own height: stretched to the details column, the preview gave
+   the face's `height: 100%` (cards.css) that column's height at a fixed width, and the card drew
+   tall and thin. The preview holds 5:7 itself, as the grid's `.stats-grid-card` does. */
 .stats-drilldown-body {
   display: flex;
   flex-direction: row;
+  align-items: flex-start;
   gap: 20px;
   padding: 20px;
   overflow-y: auto;
@@ -598,6 +602,97 @@
 .stats-drilldown-card-preview {
   flex: none;
   width: 220px;
+  aspect-ratio: 5 / 7;
+}
+
+/* With the Radiant face beside the normal one, the dialog widens so the details keep their room. */
+.stats-drilldown-modal[data-radiant="true"] {
+  max-width: 1000px;
+}
+
+/* The faces, the face's actions and its tokens: one column, as wide as the faces (two faces and the
+   gap between them with the Radiant one shown), the tokens and actions wrapping inside it. */
+.stats-drilldown-cards {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 220px;
+  max-width: 100%;
+}
+
+.stats-drilldown-modal[data-radiant="true"] .stats-drilldown-cards {
+  width: 452px;
+}
+
+.stats-drilldown-faces {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.stats-drilldown-face {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.stats-drilldown-caption {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim, #9aa1b8);
+}
+
+/* Show Radiant is the tavern's wood button and View in Almanac its wood link (tavern.css,
+   `a.button-secondary`): one above the other under one face, side by side under two. */
+.stats-drilldown-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.stats-drilldown-action {
+  flex: 1 1 auto;
+}
+
+/* Pressed, it wears the Radiant gold. As long as the tavern's wood button rule, and later, so it wins. */
+.tavern.app-shell.stats-page .stats-drilldown-actions button.stats-drilldown-action[aria-pressed="true"] {
+  border-color: var(--radiant, #ffd24a);
+  color: var(--radiant, #ffd24a);
+}
+
+.stats-drilldown-token-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* A face and its name under it, the name in the tavern's gold link (tavern.css). */
+.stats-drilldown-token-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 104px;
+}
+
+.stats-drilldown-token-face {
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+}
+
+.stats-drilldown-token-name {
+  font-size: 12px;
+  text-align: center;
 }
 
 .stats-drilldown-details {

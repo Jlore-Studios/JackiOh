@@ -26,7 +26,8 @@ import { getFxSettings, normalizeSpeed, type FxSettings } from "../fx/settings.t
 import { readSettings as readPanelSettings } from "../settings/store.ts";
 import { type AnimatingMap, type Side, sideOf, testid } from "./contract";
 import { SLAM_BURST, UNIT_SLAM, type SlamTier } from "./damageFeel.ts";
-import { createPlayTracker, pileOf, pileRunAt, sweepAt, type Pile, type PlayTracker, type Sweep, type ZoneImpact } from "./runs.ts";
+import { createPlayTracker, pileOf, pileRunAt, sweepAt, volleyAt, type Pile, type PlayTracker, type Sweep, type ZoneImpact } from "./runs.ts";
+import { FX_FLAVOR_LIVE } from "../fx/constants.ts";
 import { isRecord } from "../wire/json.ts";
 
 /* ------------------------------------------------------------------------------------------- *
@@ -1113,6 +1114,24 @@ export function planEntries(
       });
       i += sweep.length;
       continue;
+    }
+
+    // #1443: one volley's same-source damage flies as one entry that starts together, behind
+    // FX_FLAVOR_LIVE (off until part 8). Sweeps still win (checked first).
+    if (FX_FLAVOR_LIVE) {
+      const volley = volleyAt(events, i, view);
+      if (volley !== null) {
+        const run = take(i, volley.length);
+        out.push({
+          events: run,
+          type: "damage",
+          durationMs: durationFor("damage", reducedMotion),
+          frames: frameMap(run.map((e) => [targetFor(e, view), e.type] as const)),
+          view,
+        });
+        i += volley.length;
+        continue;
+      }
     }
 
     // A run that reached every card of one pile: one "affecting this zone" entry on that pile.

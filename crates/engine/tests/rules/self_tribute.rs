@@ -3,6 +3,7 @@
 //     (`StatMod.setAttack`, the Radiant face's "Enemy Units have 0 Attack");
 //   - "When …, Tribute this", a condition every state check reads, the one right after the card arrives
 //     included (`Script.tributeWhen`, read in `stateCheck.ts`), which reaches a face-down card too.
+// The aura itself sleeps while the card is face-down and works once it is revealed (R1487000).
 //
 // Port of `packages/engine/test/self-tribute.test.ts`.
 
@@ -148,12 +149,13 @@ mod r403_section_10_4_an_aura_that_sets_attack_applies_after_every_other_layer_c
     #[test]
     fn r403_a_buff_and_a_3_aura_do_not_lift_it_the_unit_reads_0_raw_and_floored() {
         let mut state = game("set");
-        put(
+        let zeroing = put(
             &mut state,
             &zeroer().id,
             slot(PlayerId::P1, Row::Backrow, 1),
             Default::default(),
         );
+        live_mut(&mut state, &zeroing).revealed = Some(true);
         put(
             &mut state,
             &booster().id,
@@ -238,7 +240,7 @@ mod r77_r102_r403_a_fusion_keeps_both_additions_of_its_ingredients {
     use super::*;
 
     #[test]
-    fn r403_a_field_trap_fused_onto_the_zeroer_still_zeroes_enemy_attack_and_is_tributed_when_they_have_no_unit()
+    fn r403_r1487000_a_field_trap_fused_onto_the_zeroer_sleeps_face_down_zeroes_revealed_and_is_tributed_face_down()
      {
         let mut state = game("fused");
         let target = put(
@@ -270,7 +272,12 @@ mod r77_r102_r403_a_fusion_keeps_both_additions_of_its_ingredients {
         );
 
         assert_eq!(fused.map(|card| card.id), Some(target.id.clone()));
-        assert_eq!(unit_view(&b.state, live(&b.state, &enemy)).attack, 0);
+        // R1487000: face-down, the fused aura sleeps; revealed, it zeroes their Attack.
+        assert_eq!(unit_view(&b.state, live(&b.state, &enemy)).attack, 4);
+        let mut shown = b.state.clone();
+        live_mut(&mut shown, &target).revealed = Some(true);
+        assert_eq!(unit_view(&shown, live(&shown, &enemy)).attack, 0);
+        // R403's self-Tribute is read face-down.
         state_check(&mut b.sink());
         assert_eq!(zone_of(&b.state, &target), ZoneName::Field);
 

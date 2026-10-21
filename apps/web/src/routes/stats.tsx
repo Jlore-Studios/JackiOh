@@ -11,12 +11,13 @@
 //  - Per-row sample floor (20 games): displays "not enough games" below threshold, and "not enough data"
 //    for a Played Δ the server withholds until both its sides reach the floor (R654).
 //  - URL search params for shareable views.
-//  - Card drill-down modal showing CardFace, patch history, turn curve, and co-played synergy.
+//  - Card drill-down modal showing CardFace (the Radiant face beside it on request, a link to the card in
+//    the Almanac and the tokens its text names), patch history, turn curve, and co-played synergy.
 //  - Players tab: the search asks the server a pause after the typing, one page of the server's limit at a time.
 
-import { Fragment, useCallback, useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
-import { KEYWORD_KINDS, SHIPPED_SETS, type CardDefs, type KeywordKind } from "@jackioh/shared";
+import { KEYWORD_KINDS, SHIPPED_SETS, type CardDef, type CardDefs, type KeywordKind } from "@jackioh/shared";
 import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
 import { chineseName, drawnInChinese, readerName, readerTerms } from "../cards/chinese.ts";
@@ -37,7 +38,7 @@ import { CARD_STATS_MIN_SAMPLE, PLAYER_SEARCH_DEBOUNCE_MS } from "../stats/confi
 import { formatPlayedDelta, winPercent } from "../stats/model.ts";
 import { usePlayerStats } from "../stats/store.ts";
 import { statsTestid } from "../stats/testids.ts";
-import { BackLink } from "./nav.tsx";
+import { BackLink, followInApp } from "./nav.tsx";
 
 import "../auth/tavern.css";
 import "./stats.css";
@@ -72,6 +73,14 @@ function keywordLabel(id: string, language?: string): string {
   const names = kinds.map(keywordName);
   names.sort((a, b) => a.localeCompare(b, language));
   return names.join(", ");
+}
+
+/** The tokens a card's text names (`CardDef.refs`, R279), the card itself left out: what the drill-down shows it makes. */
+function tokensOf(def: CardDef): CardDef[] {
+  return (def.refs ?? []).flatMap((id) => {
+    const named = CATALOG[id];
+    return named !== undefined && named.token && id !== def.id ? [named] : [];
+  });
 }
 
 function faceRate(
@@ -210,6 +219,8 @@ export default function StatsRoute(): ReactElement {
   const [drillDownError, setDrillDownError] = useState(false);
   // Bumped by the details' Retry, as `cardStatsAttempt` is by the table's.
   const [drillDownAttempt, setDrillDownAttempt] = useState(0);
+  // The drill-down's "Show Radiant": the Radiant face beside the normal one, kept from card to card.
+  const [drillDownRadiant, setDrillDownRadiant] = useState(false);
 
   const playerStats = usePlayerStats();
   const signedIn = readSession() !== null;
@@ -337,6 +348,50 @@ export default function StatsRoute(): ReactElement {
     return () => controller.abort();
   }, [cardDrillDownId, mode, drillDownAttempt]);
 
+  // The drill-down is a modal like the client's others (ConfirmConcede.tsx; docs/polish/6-cards.md,
+  // B25): the focus moves to its Close when it opens, Tab and Shift+Tab stay inside, Escape closes
+  // it, and the control that opened it has the focus back once it closes. That control is kept when
+  // it is pressed, not read off the focus, which a click on a button does not move in every browser.
+  const drillDownOpener = useRef<HTMLElement | null>(null);
+  const drillDownDialog = useRef<HTMLDivElement>(null);
+  const drillDownCloseButton = useRef<HTMLButtonElement>(null);
+  const drillDownOpen = Boolean(cardDrillDownId);
+
+  const openDrillDown = (id: string, opener: HTMLElement): void => {
+    drillDownOpener.current = opener;
+    setCardDrillDownId(id);
+  };
+
+  useEffect(() => {
+    if (!drillDownOpen) return;
+    drillDownCloseButton.current?.focus({ preventScroll: true });
+    // Both keys are read at the window, in the capture phase, so they hold wherever the focus is.
+    function onKey(event: globalThis.KeyboardEvent): void {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        setCardDrillDownId(null);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const dialog = drillDownDialog.current;
+      if (dialog === null) return;
+      const order = [...dialog.querySelectorAll<HTMLElement>("button:not([disabled]), a[href]")];
+      if (order.length === 0) return;
+      const at = order.indexOf(document.activeElement as HTMLElement);
+      const next = event.shiftKey ? (at <= 0 ? order.length - 1 : at - 1) : at === order.length - 1 ? 0 : at + 1;
+      event.preventDefault();
+      event.stopPropagation();
+      order[next]?.focus();
+    }
+    window.addEventListener("keydown", onKey, true);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      const opener = drillDownOpener.current;
+      if (opener !== null && opener.isConnected) opener.focus({ preventScroll: true });
+    };
+  }, [drillDownOpen]);
+
   const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
 
   const keywordOptions = useMemo(() => {
@@ -454,6 +509,9 @@ export default function StatsRoute(): ReactElement {
 
   const drillDownDef = cardDrillDownId ? CATALOG[cardDrillDownId] : undefined;
   const drillDownFace = drillDownDef ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: false }) : null;
+  const drillDownRadiantFace =
+    drillDownDef && drillDownRadiant ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: true }) : null;
+  const drillDownTokens = drillDownDef ? tokensOf(drillDownDef) : [];
 
   return (
     <CardDefsProvider defs={CATALOG}>
@@ -838,7 +896,7 @@ export default function StatsRoute(): ReactElement {
                       <button
                         type="button"
                         className="stats-grid-card"
-                        onClick={() => setCardDrillDownId(card.id)}
+                        onClick={(e) => openDrillDown(card.id, e.currentTarget)}
                         aria-label={shownName(card.id, card.name)}
                       >
                         {face && (
@@ -1073,13 +1131,13 @@ export default function StatsRoute(): ReactElement {
                           key={card.id}
                           className="stats-tr"
                           data-card-id={card.id}
-                          onClick={() => setCardDrillDownId(card.id)}
+                          onClick={(e) => openDrillDown(card.id, e.currentTarget)}
                           role="button"
                           tabIndex={0}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
                               e.preventDefault();
-                              setCardDrillDownId(card.id);
+                              openDrillDown(card.id, e.currentTarget);
                             }
                           }}
                         >
@@ -1270,10 +1328,12 @@ export default function StatsRoute(): ReactElement {
 
         {/* Card Drill-Down Modal */}
         {cardDrillDownId && (
-          <div className="stats-modal-scrim" onClick={() => setCardDrillDownId(null)} aria-hidden="true">
+          <div className="stats-modal-scrim" onClick={() => setCardDrillDownId(null)}>
             <div
+              ref={drillDownDialog}
               className="stats-drilldown-modal"
               data-testid={statsTestid.drillDownModal}
+              data-radiant={drillDownRadiantFace ? "true" : undefined}
               role="dialog"
               aria-modal="true"
               aria-labelledby="drilldown-title"
@@ -1284,6 +1344,7 @@ export default function StatsRoute(): ReactElement {
                   {drillDownDef ? readerName(drillDownDef) : cardDrillDownId}
                 </h2>
                 <button
+                  ref={drillDownCloseButton}
                   type="button"
                   className="stats-drilldown-close"
                   data-testid={statsTestid.drillDownClose}
@@ -1295,9 +1356,65 @@ export default function StatsRoute(): ReactElement {
               </header>
 
               <div className="stats-drilldown-body">
-                {drillDownFace && (
-                  <div className="stats-drilldown-card-preview">
-                    <CardFace face={drillDownFace} layout="full" />
+                {drillDownDef && drillDownFace && (
+                  <div className="stats-drilldown-cards">
+                    <div className="stats-drilldown-faces">
+                      <figure className="stats-drilldown-face">
+                        <div className="stats-drilldown-card-preview">
+                          <CardFace face={drillDownFace} layout="full" />
+                        </div>
+                        {drillDownRadiantFace && <figcaption className="stats-drilldown-caption">{t("Normal")}</figcaption>}
+                      </figure>
+                      {drillDownRadiantFace && (
+                        <figure className="stats-drilldown-face" data-testid={statsTestid.drillDownRadiantFace}>
+                          <div className="stats-drilldown-card-preview">
+                            <CardFace face={drillDownRadiantFace} layout="full" />
+                          </div>
+                          <figcaption className="stats-drilldown-caption">{t("Radiant")}</figcaption>
+                        </figure>
+                      )}
+                    </div>
+                    <div className="stats-drilldown-actions">
+                      <button
+                        type="button"
+                        className="stats-drilldown-action"
+                        data-testid={statsTestid.drillDownRadiantToggle}
+                        aria-pressed={drillDownRadiant}
+                        onClick={() => setDrillDownRadiant((shown) => !shown)}
+                      >
+                        {t("Show Radiant")}
+                      </button>
+                      <a
+                        className="stats-drilldown-action button-secondary"
+                        data-testid={statsTestid.drillDownAlmanac}
+                        href={paths.almanacCard(drillDownDef.id)}
+                        onClick={followInApp(paths.almanacCard(drillDownDef.id))}
+                      >
+                        {t("View in Almanac")}
+                      </a>
+                    </div>
+                    {drillDownTokens.length > 0 && (
+                      <section className="stats-drilldown-section stats-drilldown-tokens" data-testid={statsTestid.drillDownTokens}>
+                        <h3>{t("Tokens")}</h3>
+                        <ul className="stats-drilldown-token-list">
+                          {drillDownTokens.map((token) => (
+                            <li key={token.id} className="stats-drilldown-token">
+                              <a
+                                className="stats-drilldown-token-link"
+                                href={paths.almanacCard(token.id)}
+                                onClick={followInApp(paths.almanacCard(token.id))}
+                                aria-label={t("View {name} in the Almanac", { name: readerName(token) })}
+                              >
+                                <span className="stats-drilldown-token-face">
+                                  <CardFace face={faceModel({ defId: token.id, def: token, radiant: false })} layout="full" lazyArt />
+                                </span>
+                                <span className="stats-drilldown-token-name">{readerName(token)}</span>
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    )}
                   </div>
                 )}
 

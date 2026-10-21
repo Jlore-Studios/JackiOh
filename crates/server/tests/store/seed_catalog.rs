@@ -454,8 +454,8 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
     }
 
     /// The suite's other files run against the harness's fixture catalog, and its launch grant gives
-    /// every non-token card in `public.cards`. So this puts the fixture rows back, whichever file
-    /// runs next.
+    /// the starter cards among `public.cards` (R1310000). So this puts the fixture rows back,
+    /// whichever file runs next.
     async fn restore_fixture_catalog(admin: &PgPool) {
         sqlx::query(TRUNCATE)
             .execute(admin)
@@ -475,7 +475,7 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         let entries = read_catalog(REAL_CATALOG)
             .await
             .expect("the real catalog is read");
-        let written = seed_catalog(url, CATALOG_VERSION, &entries, &[])
+        let written = seed_catalog(url, CATALOG_VERSION, &entries)
             .await
             .expect("the catalog is seeded");
         assert_eq!(written, entries.len());
@@ -564,7 +564,7 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         let entries = read_catalog(REAL_CATALOG)
             .await
             .expect("the real catalog is read");
-        let again = seed_catalog(url, CATALOG_VERSION, &entries, &[])
+        let again = seed_catalog(url, CATALOG_VERSION, &entries)
             .await
             .expect("a second seed succeeds");
         assert_eq!(again, entries.len());
@@ -572,7 +572,7 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         let first = entries.first().expect("the catalog is not empty").clone();
         let mut misspelt = first.clone();
         misspelt.tags = vec!["Jlocked".to_owned()];
-        let refused = seed_catalog(url, CATALOG_VERSION, &[misspelt], &[])
+        let refused = seed_catalog(url, CATALOG_VERSION, &[misspelt])
             .await
             .expect_err("the unknown tag is refused");
         assert!(format!("{refused:#}").contains("cards_tags_check"), "{refused:#}");
@@ -709,7 +709,7 @@ mod db_seed_catalog_writes_the_cosmetics_registry {
             })
             .collect();
 
-        seed_catalog(&url, CATALOG_VERSION, &[], &[])
+        seed_catalog(&url, CATALOG_VERSION, &[])
             .await
             .expect("the registry is seeded");
         assert_eq!(registry_rows(&admin, &ids).await, expected);
@@ -724,7 +724,7 @@ mod db_seed_catalog_writes_the_cosmetics_registry {
         let mut misspelt = card("core-001");
         misspelt["tags"] = json!(["Jlocked"]);
         let misspelt: CatalogEntry = serde_json::from_value(misspelt).expect("an entry");
-        let refused = seed_catalog(&url, CATALOG_VERSION, &[misspelt], &[])
+        let refused = seed_catalog(&url, CATALOG_VERSION, &[misspelt])
             .await
             .expect_err("the unknown tag is refused");
         assert!(format!("{refused:#}").contains("cards_tags_check"), "{refused:#}");
@@ -736,7 +736,7 @@ mod db_seed_catalog_writes_the_cosmetics_registry {
         assert_eq!(name, "Stale");
 
         // A reseed puts every row back as the registry has it.
-        seed_catalog(&url, CATALOG_VERSION, &[], &[])
+        seed_catalog(&url, CATALOG_VERSION, &[])
             .await
             .expect("the registry is reseeded");
         assert_eq!(registry_rows(&admin, &ids).await, expected);
@@ -744,22 +744,28 @@ mod db_seed_catalog_writes_the_cosmetics_registry {
     }
 }
 
-/// `test:db` only: R1300001 as `seed-catalog` hands it to the stamp. Two people's accounts are
-/// active when a new catalog version of one card is seeded with one of them listed as a dev account:
-/// the stamp's grant (R481, migration 0046) gives the other the card and passes over the listed one.
-/// The tables and the stamp are put back after, for the cases that run next.
-mod r1300001_db_seed_catalog_hands_its_stamp_the_dev_accounts {
+/// `test:db` only: R1310001, which ends R1300001's pass over a dev account by ending the grant it
+/// passed over. Two people's accounts are active, one of them a dev account, when a new catalog
+/// version of one starter card is seeded: the stamp grants neither of them the card, `seed-catalog`
+/// writes the starter cards (R1310000) beside it, and a person activated after the stamp is granted
+/// it, so the card was one a grant could give. The tables and the stamp are put back after, for the
+/// cases that run next.
+mod r1310001_r1300001_db_a_new_version_grants_nobody {
     use super::*;
     use jackioh_server::cli::seed_catalog::{CatalogEntry, seed_catalog};
+    use jackioh_server::config::STARTER_CARDS;
     use sqlx::PgPool;
 
     /// The store contract's fixture catalog version, which the stamp is put back to.
     const FIXTURE_VERSION: &str = "core-1";
     /// The version the case seeds, holding one card no fixture uses.
-    const NEW_VERSION: &str = "r1300001-v2";
-    const NEW_CARD: &str = "core-999";
+    const NEW_VERSION: &str = "r1310001-v2";
+    /// A starter card past the fixture catalog's `core-064`, so a grant of the new version's
+    /// cards would have had it to give.
+    const NEW_CARD: &str = "core-088";
     const DEV: &str = "d0000000-0000-4000-8000-000000001300";
     const PLAYER: &str = "d0000000-0000-4000-8000-000000001301";
+    const LATER: &str = "d0000000-0000-4000-8000-000000001302";
 
     /// An auth user and its profile (0001's trigger makes it pending), activated.
     async fn active_person(admin: &PgPool, id: &str) {
@@ -776,22 +782,20 @@ mod r1300001_db_seed_catalog_hands_its_stamp_the_dev_accounts {
             .expect("the profile is activated");
     }
 
-    /// The `launch` grants of the new card the stamp wrote for `id`.
-    async fn launch_grants(admin: &PgPool, id: &str) -> i64 {
+    /// The grants of the new card `id` holds, whatever their reason.
+    async fn grants(admin: &PgPool, id: &str) -> i64 {
         sqlx::query_scalar(
-            "select count(*) from public.collection_grants
-              where profile_id = $1::uuid and card_id = $2 and reason = 'launch' and ref = $3",
+            "select count(*) from public.collection_grants where profile_id = $1::uuid and card_id = $2",
         )
         .bind(id)
         .bind(NEW_CARD)
-        .bind(format!("launch:{NEW_VERSION}"))
         .fetch_one(admin)
         .await
         .expect("the grants read back")
     }
 
     #[tokio::test]
-    async fn r1300001_a_new_version_seeded_with_a_dev_account_listed_passes_over_it() {
+    async fn r1310001_r1300001_a_new_version_seeded_grants_no_account_its_cards() {
         let Ok(url) = std::env::var("DATABASE_URL") else {
             return;
         };
@@ -810,17 +814,25 @@ mod r1300001_db_seed_catalog_hands_its_stamp_the_dev_accounts {
             .expect("the tables are emptied");
         active_person(&admin, DEV).await;
         active_person(&admin, PLAYER).await;
+        assert!(
+            STARTER_CARDS.contains(&NEW_CARD),
+            "the new card is a starter card"
+        );
 
         let mut entry = card(NEW_CARD);
         entry["tags"] = json!([]);
         let entry: CatalogEntry = serde_json::from_value(entry).expect("an entry");
-        seed_catalog(&url, NEW_VERSION, &[entry], &[DEV.to_string()])
+        seed_catalog(&url, NEW_VERSION, &[entry])
             .await
             .expect("the new version is seeded");
-        let granted = (
-            launch_grants(&admin, PLAYER).await,
-            launch_grants(&admin, DEV).await,
-        );
+        let stamped = (grants(&admin, PLAYER).await, grants(&admin, DEV).await);
+        let starters: Value =
+            sqlx::query_scalar("select value from app.settings where key = 'starter_cards'")
+                .fetch_one(&admin)
+                .await
+                .expect("the starter cards read back");
+        active_person(&admin, LATER).await;
+        let later = grants(&admin, LATER).await;
 
         // Put back what the case changed before asserting, so a failure leaves the next case its
         // tables, its fixture catalog and its stamp.
@@ -841,9 +853,18 @@ mod r1300001_db_seed_catalog_hands_its_stamp_the_dev_accounts {
         admin.close().await;
 
         assert_eq!(
-            granted,
-            (1, 0),
-            "(the player's, the dev account's) launch grants of the new card"
+            stamped,
+            (0, 0),
+            "(the player's, the dev account's) grants of the new card"
+        );
+        assert_eq!(
+            starters,
+            json!(STARTER_CARDS),
+            "seed-catalog writes the starter cards"
+        );
+        assert_eq!(
+            later, 1,
+            "an account activated after the stamp is granted the starter card"
         );
     }
 }

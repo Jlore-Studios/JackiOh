@@ -47,6 +47,16 @@ function theSwitch(): HTMLInputElement {
   return screen.getByTestId(SWITCH) as HTMLInputElement;
 }
 
+/** Run every timer the switch set, whatever its delay, then let the stubbed round trips and React's updates settle. */
+async function settle(): Promise<void> {
+  await act(async () => {
+    for (let round = 0; round < 3; round += 1) {
+      await vi.runAllTimersAsync();
+      for (let tick = 0; tick < 50; tick += 1) await Promise.resolve();
+    }
+  });
+}
+
 beforeEach(() => {
   window.localStorage.clear();
   signedIn();
@@ -54,6 +64,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   window.localStorage.clear();
@@ -61,25 +72,21 @@ afterEach(() => {
 
 describe("B50 the spectator switch", () => {
   it("B50 draws nothing signed out, and reads nothing", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] });
     window.localStorage.clear();
     const server = serve(true);
     const { container } = render(<SpectatorSwitch />);
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    });
+    await settle();
     expect(container).toBeEmptyDOMElement();
     expect(server.calls).toHaveLength(0);
   });
 
   it("B50 draws nothing when the account's settings carry no allowSpectators", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] });
     const server = serve(undefined);
     const { container } = render(<SpectatorSwitch />);
-    await waitFor(() => {
-      expect(server.to("GET", "/api/settings").length).toBeGreaterThan(0);
-    }, SLOW);
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    });
+    await settle();
+    expect(server.to("GET", "/api/settings").length).toBeGreaterThan(0);
     expect(container).toBeEmptyDOMElement();
   });
 

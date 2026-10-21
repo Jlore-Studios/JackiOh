@@ -196,15 +196,16 @@ Running the lanes:
 
 A person's own machine runs the learn lane, every job of it (`.github/workflows/learn.yml`,
 `training/learn.md`: the self-play export, the retrain, the screen and the gate, and the lane's
-plan and watch), and any self-play export dispatched to it (#1008, `docs/learned-eval.md` D1;
-`.github/workflows/selfplay.yml`, `training/README.md`, Where the exports come from), without
-touching the training box, which the lanes keep. It can also take some of the night box's own jobs
-while the box is busy or off.
+plan and watch), and is the default runner of any other self-play export (#1008, `docs/learned-eval.md`
+D1; `.github/workflows/selfplay.yml`, `training/README.md`, Where the exports come from), so an export
+no longer holds 12 of GitHub's 20 hosted runners while CI waits (#1455); a dispatch of `selfplay.yml`
+can still ask for GitHub's. It never touches the training box, which the lanes keep, and it can also
+take some of the night box's own jobs while the box is busy or off.
 
 | | |
 |---|---|
 | Machine | the owner's laptop (jgoetzmann): Windows 11, Intel i7-11800H (8 cores, 16 threads), 32 GB, Docker Desktop on WSL2 (which `%USERPROFILE%\.wslconfig` caps at 8 GB and 8 processors for every container). The owner looks after it |
-| Label | `jackioh-selfplay-local`, and no other: `learn.yml` names it for every job, and `selfplay.yml` when its `runner` input does. Registered to this repository alone |
+| Label | `jackioh-selfplay-local`, and no other: `learn.yml` names it for every job, and `selfplay.yml` when its `runner` input does (its default since #1455). Registered to this repository alone |
 | How it runs | `bot/machine/local/supervisor.ps1`, started at logon by a scheduled task (`install-task.ps1`). Each runner is one ephemeral container of the image `local/Dockerfile` builds (`jackioh-pc-runner`): it registers with a single-use JIT config, takes one job and is gone. A `docker` or `gh` call that gives no answer in two minutes (`docker info`, 30 seconds) is killed and counts as failed, so a Docker engine that stops answering reads as Docker not running, not as a supervisor stuck in one call |
 | When | only while the PC is otherwise idle: CPU under 50% and memory under 24 GB in every sample of the last minute, leaving out the runners' own use and that of the `yieldingContainers` (a long-running container of the owner's that a gate of its own holds to the same rule and throttles while a runner works, so the two never read each other as the person's load) (`config.json`). It keeps one runner Idle for the label while it is calm; when the PC gets busy the idle runner is unregistered at once, and a runner in a job is throttled to half a CPU until it is calm again, so no export loses a shard |
 | Limits | one job at a time, 6 CPUs and 6 GB a container, swap off; never a GPU (no `--gpus`, `NVIDIA_VISIBLE_DEVICES=void`); a non-root user with `no-new-privileges`, no host folder and no Docker socket |

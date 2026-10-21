@@ -105,6 +105,7 @@ afterEach(() => {
 
 describe("B40 one gate per screen", () => {
   it("B40 a successful redemption on /invite says so, and its way on lands on /decks and stays there", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldAdvanceTime: true });
     window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok" }));
     let redeemed = false;
     stubFetch((url) => {
@@ -134,7 +135,9 @@ describe("B40 one gate per screen", () => {
       expect(window.location.pathname).toBe(paths.decks);
     }, SLOW);
     // The gate on /decks read the account afresh: active, so it does not bounce back.
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(GATE_SLOW_NOTICE_SECONDS * 1000 + 1);
+    });
     expect(window.location.pathname).toBe(paths.decks);
   });
 
@@ -179,6 +182,7 @@ describe("B40 one gate per screen", () => {
   });
 
   it("R632 a sign-out in another tab leaves this tab signed in, because its session is its own", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldAdvanceTime: true });
     window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok" }));
     stubFetch((url) => (url === `${API}/api/auth/me` ? json(200, me("active")) : "hang"));
     at(paths.decks);
@@ -190,10 +194,14 @@ describe("B40 one gate per screen", () => {
     // The other tab signs out: it clears the shared storage, and this tab hears the storage event.
     window.localStorage.clear();
     window.dispatchEvent(new StorageEvent("storage", { key: SESSION_STORAGE_KEY, newValue: null }));
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(GATE_SLOW_NOTICE_SECONDS * 1000 + 1);
+    });
     window.history.pushState(null, "", paths.account);
     window.dispatchEvent(new PopStateEvent("popstate"));
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(GATE_SLOW_NOTICE_SECONDS * 1000 + 1);
+    });
 
     expect(window.location.pathname).toBe(paths.account);
     expect(JSON.parse(window.sessionStorage.getItem(SESSION_STORAGE_KEY) ?? "null")).toEqual({

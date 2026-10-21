@@ -58,10 +58,11 @@ type Screen =
   | { kind: "error"; message: string }
   | { kind: "ready"; profileId: string; data: Loaded };
 
-function Shell({ children }: { children: ReactNode }) {
+/** `settings` is off on the Loading… screens: the workshop replaces them with its own gear, so a dialog opened from theirs would close when the decks arrive (#1524). */
+function Shell({ children, settings = true }: { children: ReactNode; settings?: boolean }) {
   return (
     <div className="app-shell">
-      <BackLink />
+      <BackLink showSettings={settings} />
       <h1>{t("JackiOh — decks")}</h1>
       {children}
     </div>
@@ -166,7 +167,7 @@ export default function DecksRoute() {
 
   if (account.kind === "loading" || account.kind === "anonymous" || blocked) {
     return (
-      <Shell>
+      <Shell settings={false}>
         <p data-testid={DECKBUILDER_LOADING}>{t("Loading…")}</p>
       </Shell>
     );
@@ -207,7 +208,7 @@ export default function DecksRoute() {
 
   if (screen.kind === "loading") {
     return (
-      <Shell>
+      <Shell settings={false}>
         <p data-testid={DECKBUILDER_LOADING}>{t("Loading…")}</p>
       </Shell>
     );

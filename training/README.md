@@ -224,7 +224,10 @@ games against the parent (`TRAINING_IMPROVE.games`, 400; `TRAINING_UNBAN.games`,
 about half the time and one at 58% nine times in ten (R850000). It was 65 of 100 until issue #850.
 
 It plays no games against random (R732001), and a promotion records `"vsRandom": null`. A draw is not
-a win, and neither is a game that ended without a result. Exit 0 on a pass, 1 on a failed gate. The
+a win, and neither is a game that ended without a result. Every game must also be clean on either
+seat: no refused action, throw, fallback or panic caught in an AI's search, and a log that folds back
+to its hash (R1489000). The parent's counts come from its verbose answers; each other game is a
+failure naming its seed and the candidate's seat. Exit 0 on a pass, 1 on a failed gate. The
 report (Markdown) goes to stdout; a paired gate's report and latest pass add the paired edge, the
 candidate's wins less the parent's over each deal's two games, in points of the games, with its 95%
 interval.
@@ -370,17 +373,20 @@ The learned evaluation (#466, `docs/learned-eval.md`) learns from self-play expo
 `cargo jackioh selfplay` plays, which `cargo jackioh positions` folds into training rows (R1006001,
 R1006003). An export is dispatched, never played on the training box, whose two vCPUs the lanes need:
 `gh workflow run selfplay.yml -f games=100000 -f seed=<base> [-f shards=20] [-f
-runner=jackioh-selfplay-local]` plays it in shards on GitHub's runners (free for this public
-repository, about 1,500 games an hour each, at most 12 at once so that CI keeps 8 of the
-organization's 20 hosted jobs: 100,000 games in 20 shards take two rounds, about seven hours) or on
-the local runner (`bot/machine/README.md`, The local runner: one shard at a time, about 2,500 games
-an hour, so about 40 hours of an idle PC), and keeps each shard's log file as an artifact for up to
-90 days. The learn lane's own exports play on the local runner alone, as every job of the lane does
-([`learn.md`](learn.md), How it runs). Its last job runs
+runner=ubuntu-latest]` plays it in shards on the local runner by default (`bot/machine/README.md`,
+The local runner), one shard after another while the PC is idle (about 2,500 games an hour, so about
+40 hours of an idle PC for 100,000, in five rounds), or on GitHub's runners when asked (free for this
+public repository, about 1,500 games an hour each, at most 12 at once: 100,000 games in 20 shards
+take two rounds, about seven hours), and keeps each shard's log file as an artifact for up to 90
+days. The local runner is the default because an export on GitHub's runners holds 12 of the
+organization's 20 hosted jobs for hours, and CI waits behind it: 70 to 110 minutes a run on
+2026-10-20, against 10 to 16 without one (#1455). The learn lane's own exports play on the local
+runner alone, as every job of the lane does ([`learn.md`](learn.md), How it runs). Its last job runs
 `positions` over the whole export and writes the counts (games, positions, games that no longer
 replay) and the games an hour to the run's summary. The same base and game numbers always play the
 same games, so an export can be played again on any runner, and a base never names a gate's
-hold-out deals or the dev set (R1006002). `gh run download <run> --pattern 'selfplay-<base>-*'`
+hold-out deals or the dev set (R1006002). A faulted game carries `faults`, which `positions` leaves
+out, counted `unclean` (R1489000). `gh run download <run> --pattern 'selfplay-<base>-*'`
 fetches it. The fit that learns from it is [`training/ml/`](ml/README.md).
 
 ## The ladder bots after a promotion

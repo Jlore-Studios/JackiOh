@@ -1138,3 +1138,139 @@ mod r844_coming_refreshes_1224 {
         }
     }
 }
+
+mod dormant_cards_1506 {
+    use super::*;
+    use jackioh_ai::{EvalWeights, redact};
+
+    /// The dormant terms on whatever AI_EVAL holds (#1506's screen decides those), so these tests
+    /// pin the term, not its tuning.
+    const DORMANT: EvalWeights = EvalWeights {
+        dormant_share: 0.5,
+        dormant_card: 1.0,
+        ..AI_EVAL
+    };
+
+    const ROCK: &str = "core-066"; // Unit 10/10 Indestructible
+    const VANILLA: &str = "core-008"; // (1) Unit 4/4, no keywords
+    const TIMMY: &str = "core-011"; // Unit 3/3 Rush, First Strike: every unit pile's top here
+    const SHEEPISH: &str = "core-041"; // Trap
+    const PAWN: &str = "core-096"; // Trap
+    const WELL: &str = "core-006"; // Field Spell: every backrow pile's top here
+
+    fn scored(state: &GameState, w: &EvalWeights) -> f64 {
+        evaluate(state, AI, NextSwing::Enemy, w)
+    }
+
+    /// `state` with `player`'s lane-1 unit pile cut to its top `keep` cards.
+    fn cut(state: &GameState, player: PlayerId, keep: usize) -> GameState {
+        let mut out = clone(state);
+        if let Some(pile) = out.players[player].units[0].as_mut() {
+            pile.truncate(keep);
+        }
+        out
+    }
+
+    /// `state` with nothing dormant: every unit pile cut to its top, no backrow pile.
+    fn bare(state: &GameState) -> GameState {
+        let mut out = clone(state);
+        for player in [AI, HUMAN] {
+            for pile in out.players[player].units.iter_mut().flatten() {
+                pile.truncate(1);
+            }
+            out.players[player].backrow_piles = None;
+        }
+        out
+    }
+
+    #[test]
+    fn each_card_dormant_under_an_own_unit_pile_adds_its_share_of_its_unit_worth() {
+        let three = board(json!({
+            "p1": { "field": [ROCK, { "def": VANILLA, "stack": true }, { "def": TIMMY, "stack": true }] },
+            "p2": { "field": [VANILLA] },
+        }));
+        let two = cut(&three, AI, 2);
+        let one = cut(&three, AI, 1);
+        let pile = three.players[AI].units[0].clone().unwrap_or_default();
+        assert_eq!(pile.len(), 3, "setup: a three-deep pile in lane 1");
+        // A second card dormant under the pile scores strictly differently, and a third again.
+        assert!(scored(&three, &DORMANT) > scored(&two, &DORMANT));
+        assert!(scored(&two, &DORMANT) > scored(&one, &DORMANT));
+        assert_close(
+            scored(&two, &DORMANT) - scored(&one, &DORMANT),
+            DORMANT.dormant_share * unit_worth(&two, &pile[1], &DORMANT),
+            9,
+        );
+        assert_close(
+            scored(&three, &DORMANT) - scored(&two, &DORMANT),
+            DORMANT.dormant_share * unit_worth(&three, &pile[2], &DORMANT),
+            9,
+        );
+    }
+
+    #[test]
+    fn the_enemys_dormant_units_count_dormant_card_each_whatever_they_are() {
+        let vanilla = board(json!({
+            "p1": { "field": [VANILLA] },
+            "p2": { "field": [VANILLA, { "def": TIMMY, "stack": true }] },
+        }));
+        let rock = board(json!({
+            "p1": { "field": [VANILLA] },
+            "p2": { "field": [ROCK, { "def": TIMMY, "stack": true }] },
+        }));
+        assert_close(
+            scored(&bare(&vanilla), &DORMANT) - scored(&vanilla, &DORMANT),
+            DORMANT.dormant_card,
+            9,
+        );
+        // Count only: a 10/10 beneath scores as a 4/4 does.
+        assert_eq!(scored(&rock, &DORMANT), scored(&vanilla, &DORMANT));
+    }
+
+    #[test]
+    fn a_card_dormant_under_a_backrow_pile_counts_dormant_card_on_either_side_whatever_it_is() {
+        let own = board(json!({
+            "p1": { "backrow": [SHEEPISH, { "def": WELL, "stack": true }] },
+            "p2": { "field": [VANILLA] },
+        }));
+        assert_close(
+            scored(&own, &DORMANT) - scored(&bare(&own), &DORMANT),
+            DORMANT.dormant_card,
+            9,
+        );
+        let sheepish = board(json!({
+            "p1": { "field": [VANILLA] },
+            "p2": { "backrow": [SHEEPISH, { "def": WELL, "stack": true }] },
+        }));
+        let pawn = board(json!({
+            "p1": { "field": [VANILLA] },
+            "p2": { "backrow": [PAWN, { "def": WELL, "stack": true }] },
+        }));
+        assert_close(
+            scored(&bare(&sheepish), &DORMANT) - scored(&sheepish, &DORMANT),
+            DORMANT.dormant_card,
+            9,
+        );
+        assert_eq!(scored(&pawn, &DORMANT), scored(&sheepish, &DORMANT));
+        // R447: the seat's view holds a placeholder beneath, and scores alike.
+        assert_eq!(
+            scored(&redact(&sheepish, AI), &DORMANT),
+            scored(&sheepish, &DORMANT)
+        );
+    }
+
+    #[test]
+    fn greedy_eval_counts_no_dormant_card() {
+        let piled = board(json!({
+            "p1": {
+                "field": [VANILLA, { "def": TIMMY, "stack": true }],
+                "backrow": [SHEEPISH, { "def": WELL, "stack": true }],
+            },
+            "p2": {
+                "field": [VANILLA, { "def": TIMMY, "stack": true }],
+                "backrow": [PAWN, { "def": WELL, "stack": true }],
+            },
+        }));
+        assert_eq!(scored(&piled, &GREEDY_EVAL), scored(&bare(&piled), &GREEDY_EVAL));
+    }
+}

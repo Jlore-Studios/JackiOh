@@ -230,23 +230,6 @@ fn constants() -> Vec<(&'static str, Value)> {
                 "unowned": c::PACK_UNOWNED_WEIGHTS.unowned,
             }),
         ),
-        (
-            "PACK_BASE_RATES",
-            json!({
-                "epic": c::PACK_BASE_RATES.epic,
-                "legendary": c::PACK_BASE_RATES.legendary,
-                "mythic": c::PACK_BASE_RATES.mythic,
-            }),
-        ),
-        (
-            "PACK_TARGET_RATES",
-            json!({
-                "epic": c::PACK_TARGET_RATES.epic,
-                "legendary": c::PACK_TARGET_RATES.legendary,
-                "mythic": c::PACK_TARGET_RATES.mythic,
-            }),
-        ),
-        ("PACK_RATE_TOLERANCE", json!(c::PACK_RATE_TOLERANCE)),
         ("PITY_EPIC_PACKS", json!(c::PITY_EPIC_PACKS)),
         ("PITY_LEGENDARY_PACKS", json!(c::PITY_LEGENDARY_PACKS)),
         ("PITY_MYTHIC_PACKS", json!(c::PITY_MYTHIC_PACKS)),
@@ -270,16 +253,6 @@ fn constants() -> Vec<(&'static str, Value)> {
         ),
         ("COSMETIC_TOKEN_CYCLE", json!(c::COSMETIC_TOKEN_CYCLE)),
         ("COSMETIC_PACK_SLOTS", json!(c::COSMETIC_PACK_SLOTS)),
-        (
-            "COSMETIC_PACK_RATES",
-            json!({
-                "common": c::COSMETIC_PACK_RATES.common,
-                "rare": c::COSMETIC_PACK_RATES.rare,
-                "epic": c::COSMETIC_PACK_RATES.epic,
-                "legendary": c::COSMETIC_PACK_RATES.legendary,
-                "mythic": c::COSMETIC_PACK_RATES.mythic,
-            }),
-        ),
         ("CHASE_SHARD_PACKS", json!(c::CHASE_SHARD_PACKS)),
         ("SET_TRACK_LEVELS", json!(c::SET_TRACK_LEVELS)),
         ("SET_TRACK_XP_PER_LEVEL", json!(c::SET_TRACK_XP_PER_LEVEL)),
@@ -288,43 +261,25 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("JLORE_LADDER_LOSS", json!(c::JLORE_LADDER_LOSS)),
         ("JLORE_PRACTICE_WIN", json!(c::JLORE_PRACTICE_WIN)),
         ("JLORE_PRACTICE_LOSS", json!(c::JLORE_PRACTICE_LOSS)),
+        ("JLORE_GAMES_DAILY_CAP", json!(c::JLORE_GAMES_DAILY_CAP)),
         ("XP_PER_ACTION", json!(c::XP_PER_ACTION)),
         ("XP_WIN_BONUS", json!(c::XP_WIN_BONUS)),
         ("XP_GAME_CAP", json!(c::XP_GAME_CAP)),
         ("XP_PRACTICE_SCALE", json!(c::XP_PRACTICE_SCALE)),
         ("XP_LADDER_TARGET_MEAN", json!(c::XP_LADDER_TARGET_MEAN)),
         ("PRACTICE_SEED_TTL_SECONDS", json!(c::PRACTICE_SEED_TTL_SECONDS)),
+        ("PRACTICE_SEEDS_OPEN_MAX", json!(c::PRACTICE_SEEDS_OPEN_MAX)),
         ("QUEST_INTERVAL_HOURS", json!(c::QUEST_INTERVAL_HOURS)),
         ("QUEST_MAX_HELD", json!(c::QUEST_MAX_HELD)),
         ("QUEST_JLORE_MIN", json!(c::QUEST_JLORE_MIN)),
         ("QUEST_JLORE_MAX", json!(c::QUEST_JLORE_MAX)),
         ("QUEST_XP_PER_JLORE", json!(c::QUEST_XP_PER_JLORE)),
         ("ECONOMY_LIVE", json!(c::ECONOMY_LIVE)),
-        // The pack roll's (#1301): the duplicate's cosmetic odds, the filler slots' Rare rate
-        // (R1301000, R1301002) and the global pack's name.
-        (
-            "COSMETIC_DUPLICATE_RATES",
-            json!({
-                "common": c::COSMETIC_DUPLICATE_RATES.common,
-                "rare": c::COSMETIC_DUPLICATE_RATES.rare,
-                "epic": c::COSMETIC_DUPLICATE_RATES.epic,
-                "legendary": c::COSMETIC_DUPLICATE_RATES.legendary,
-                "mythic": c::COSMETIC_DUPLICATE_RATES.mythic,
-            }),
-        ),
-        ("PACK_FILLER_RARE_RATE", json!(c::PACK_FILLER_RARE_RATE)),
+        // The going live's (#1310): the starter cards a new account owns (R1310000).
+        ("STARTER_CARDS", json!(c::STARTER_CARDS)),
+        // The pack roll's (#1301): the global pack's name.
         ("GLOBAL_PACK_NAME", json!(c::GLOBAL_PACK_NAME)),
-        // The cosmetic pack's (#1306): the first slot's odds and how its card leans.
-        (
-            "COSMETIC_PACK_GUARANTEED_RATES",
-            json!({
-                "common": c::COSMETIC_PACK_GUARANTEED_RATES.common,
-                "rare": c::COSMETIC_PACK_GUARANTEED_RATES.rare,
-                "epic": c::COSMETIC_PACK_GUARANTEED_RATES.epic,
-                "legendary": c::COSMETIC_PACK_GUARANTEED_RATES.legendary,
-                "mythic": c::COSMETIC_PACK_GUARANTEED_RATES.mythic,
-            }),
-        ),
+        // The cosmetic pack's (#1306): how its card leans.
         (
             "COSMETIC_PACK_CARD_WEIGHTS",
             json!({
@@ -332,6 +287,30 @@ fn constants() -> Vec<(&'static str, Value)> {
                 "unowned": c::COSMETIC_PACK_CARD_WEIGHTS.unowned,
             }),
         ),
+        // #1339's tiered roll (R1339000): the total, the two weight tables, the floored slot and
+        // both floors.
+        ("TIER_WEIGHT_TOTAL", json!(c::TIER_WEIGHT_TOTAL)),
+        (
+            "CARD_TIER_WEIGHTS",
+            json!({
+                "rare": c::CARD_TIER_WEIGHTS.rare,
+                "epic": c::CARD_TIER_WEIGHTS.epic,
+                "legendary": c::CARD_TIER_WEIGHTS.legendary,
+                "mythic": c::CARD_TIER_WEIGHTS.mythic,
+            }),
+        ),
+        (
+            "COSMETIC_TIER_WEIGHTS",
+            json!({
+                "rare": c::COSMETIC_TIER_WEIGHTS.rare,
+                "epic": c::COSMETIC_TIER_WEIGHTS.epic,
+                "legendary": c::COSMETIC_TIER_WEIGHTS.legendary,
+                "mythic": c::COSMETIC_TIER_WEIGHTS.mythic,
+            }),
+        ),
+        ("PACK_FLOORED_SLOT", json!(c::PACK_FLOORED_SLOT)),
+        ("PACK_FLOOR_RARITY", json!(c::PACK_FLOOR_RARITY)),
+        ("COSMETIC_PACK_FLOOR_RARITY", json!(c::COSMETIC_PACK_FLOOR_RARITY)),
         // ---- end the collection economy ----
     ]
 }
@@ -356,11 +335,14 @@ fn every_name_is_listed_once() {
     // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- 64 + S7's twelve.
     assert_eq!(
         // 64 before #936 and v0.5.0, main's two (CUSTOM_CARDS_PER_ACCOUNT, QUEUE_ENDED_AFTER_READS),
-        // SPEC S7's twelve, the social poll and Duos co-op's eight, SPEC §14's thirty-seven
-        // economy numbers (#1298's thirty-eight, less #1333's CHASE_DROP_RATE), its ECONOMY_LIVE
-        // switch (R1313000) and the pack roll's three (#1301) and the cosmetic pack's two (#1306).
+        // SPEC S7's twelve, the social poll and Duos co-op's eight, SPEC §14's thirty-five
+        // economy numbers (#1298's thirty-eight, less #1333's CHASE_DROP_RATE, plus #1483's two,
+        // less #1339's PACK_BASE_RATES, PACK_TARGET_RATES, PACK_RATE_TOLERANCE and
+        // COSMETIC_PACK_RATES), its ECONOMY_LIVE switch (R1313000), the pack roll's one (#1301, less
+        // #1339's two rates), the cosmetic pack's one (#1306, less #1339's guaranteed rates), the
+        // going live's starter cards (R1310000) and #1339's tiered roll's six (R1339000).
         listed,
-        88 + 37 + 1 + 3 + 2,
+        88 + 35 + 1 + 1 + 1 + 1 + 6,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -369,9 +351,13 @@ fn every_name_is_listed_once() {
          RATING_WINDOW_FULL_AFTER_SECONDS in place of the uncapped window's \
          RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001), QUEUE_ENDED_AFTER_READS (R897000), SPEC S7's \
          twelve (#936) with the social poll (SOCIAL_POLL_MS), Duos co-op's eight clocks and ping \
-         limits (#946), PLAYER_STATS_BYTES_MAX (R1142000), SPEC §14's thirty-seven economy \
-         numbers (#1298's, less #1333's CHASE_DROP_RATE), ECONOMY_LIVE (R1313000), and the pack roll's COSMETIC_DUPLICATE_RATES, \
-         PACK_FILLER_RARE_RATE and GLOBAL_PACK_NAME (#1301), and the cosmetic pack's two (#1306)"
+         limits (#946), PLAYER_STATS_BYTES_MAX (R1142000), SPEC §14's thirty-five economy \
+         numbers (#1298's, less #1333's CHASE_DROP_RATE, plus #1483's JLORE_GAMES_DAILY_CAP and \
+         PRACTICE_SEEDS_OPEN_MAX, less #1339's four rate constants), ECONOMY_LIVE (R1313000), the \
+         pack roll's GLOBAL_PACK_NAME (#1301), the cosmetic pack's COSMETIC_PACK_CARD_WEIGHTS \
+         (#1306), STARTER_CARDS (R1310000), and #1339's TIER_WEIGHT_TOTAL, CARD_TIER_WEIGHTS, \
+         COSMETIC_TIER_WEIGHTS, PACK_FLOORED_SLOT, PACK_FLOOR_RARITY and COSMETIC_PACK_FLOOR_RARITY \
+         (R1339000)"
     );
 }
 

@@ -16,11 +16,12 @@ the AI the network corrects, and the network is retrained on their work.
 
 `.github/workflows/learn.yml`, weekly and by dispatch, on the owner's PC alone: every job of it runs
 on the local runner (`jackioh-selfplay-local`, `bot/machine/README.md`, The local runner), none on
-GitHub's runners. That runner takes one job at a time and only while the PC is otherwise idle, so the
+GitHub's runners, whose hosted jobs CI needs (an export there held 12 of the organization's 20 for
+hours, #1455). That runner takes one job at a time and only while the PC is otherwise idle, so the
 export's shards play one after another, at about 2,500 games an hour on its six CPUs: a run's 100,000
 games take about 40 hours of an idle PC, and the retrain and the screen about one more (run 21's
-took 59 minutes there), the gate another. A
-week's run may take several days; the next one waits for it (one run at a time). Each run:
+took 59 minutes there), the gate another. A week's run may take several days; the next one waits for
+it (one run at a time). Each run:
 
 1. **Waits** while the lane's pull request (`ai/learn`) is open with its checks green or running: a
    promotion is on its way to `main`. One with a failed check, or open more than 48 hours

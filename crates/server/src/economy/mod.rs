@@ -1,11 +1,13 @@
 //! The economy (SPEC §14): Jlore, packs and tokens, pity and the bars, set tracks, daily quests and
-//! the cosmetics an account owns. Its parts are built behind `ECONOMY_LIVE` (§14.12): the ladder's
-//! payout (`rewards`) and practice's (`practice`) run only while `App::economy_live` is on, and it is
-//! off until the going-live sub-issue. The dev tools (`api/dev.rs`, §14.10) write a dev account's
-//! own, live or not. Until the switch is on, nothing else earns Jlore or grants a pack, so the pack
-//! routes, though served, change only what a dev account owns.
+//! the cosmetics an account owns. Its parts were built behind `ECONOMY_LIVE` (§14.12): the ladder's
+//! payout (`rewards`), practice's (`practice`) and a new account's starting rewards run only while
+//! `App::economy_live` is on, which it is since the going-live sub-issue (#1310, R1310000). The dev
+//! tools (`api/dev.rs`, §14.10) write a dev account's own, live or not.
 //!
-//! - `math`: the pure math, the set-track level curve (§14.7) and the pity roll (§14.4) (#1298).
+//! - `math`: the pure math, the set-track level curve (§14.7) and pity, forced on top of a card
+//!   pack's rolled slots (§14.4) (#1298, #1339).
+//! - `tiers`: the tiered roll every drop goes through, one weight table per roll, its lowest tier
+//!   the fallback and a floor a fallback too (§14.3, §14.6, #1339).
 //! - `quests`: the daily quests, their pool kept as data, their rhythm, progress and payout (§14.9,
 //!   #1304).
 //! - `store`: migration 0045's tables, each holding beside its append-only ledger (§14.11), and
@@ -29,5 +31,6 @@ pub mod quests;
 pub mod rewards;
 pub mod roll;
 pub mod store;
+pub mod tiers;
 pub mod tokens;
 pub mod track_rewards;

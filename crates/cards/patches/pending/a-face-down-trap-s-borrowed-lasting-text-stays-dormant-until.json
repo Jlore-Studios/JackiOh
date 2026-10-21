@@ -1,0 +1,21 @@
+{
+  "title": "A face-down Trap's borrowed lasting text stays dormant until it is revealed, as Siphon Squad's does",
+  "sources": "#1487",
+  "notes": "R1487000: a face-down Trap's lasting text sleeps until it is revealed or face-up; R1487001: classify names a fused card's ingredients.",
+  "player": {
+    "title": "Face-down Traps keep borrowed effects asleep",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "A lasting effect a Trap borrowed in a fusion waits while the Trap is face-down. Revealed or face-up it works, and the Trap still fires as a Trap."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "plays": [
+    "classicplus-074",
+    "core-067",
+    "core-079"
+  ]
+}

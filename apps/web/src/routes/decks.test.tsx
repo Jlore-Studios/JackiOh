@@ -1,6 +1,6 @@
 // `/decks`: §9.4's gate, its reads, and R256 writes.
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DECK_AUTOSAVE_DEBOUNCE_MS } from "@jackioh/server-config";
@@ -15,7 +15,7 @@ import {
 import { mirrorKey } from "../game/deckbuilder/sync.ts";
 import { DECKBUILDER_RETRY, poolCardId } from "../game/deckbuilder/testids.ts";
 import { decksResponse, savedDeck, savedTrio } from "../game/deckbuilder/testkit.ts";
-import { ApiRequestError, getCollection, getDecks, getMe, putDeck } from "../net/api.ts";
+import { ApiRequestError, getCollection, getDecks, getMe, putDeck, type DecksResponse } from "../net/api.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import DecksRoute from "./decks.tsx";
 import { navTestid } from "./nav.tsx";
@@ -83,6 +83,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.clearAllMocks();
 });
 
@@ -211,6 +212,34 @@ describe("what the screen opens with", () => {
     });
     expect(getDecks).toHaveBeenCalledTimes(2);
   });
+
+  it("#1524 the loading screens offer Back and no settings gear, so a dialog opened there cannot close when the decks arrive", async () => {
+    let land: (body: DecksResponse) => void = () => undefined;
+    vi.mocked(getDecks).mockReturnValue(
+      new Promise<DecksResponse>((resolve) => {
+        land = resolve;
+      }),
+    );
+    render(<DecksRoute />);
+    expect(screen.getByTestId("deckbuilder-loading")).toBeInTheDocument();
+    expect(screen.queryByTestId("settings-open-nav"), "while the account is read").toBeNull();
+
+    await waitFor(() => {
+      expect(getDecks).toHaveBeenCalledWith(TOKEN);
+    });
+    expect(screen.getByTestId("deckbuilder-loading")).toBeInTheDocument();
+    expect(screen.getByTestId(navTestid.back)).toBeInTheDocument();
+    expect(screen.queryByTestId("settings-open-nav"), "while the decks are read").toBeNull();
+
+    await act(async () => {
+      land(decksResponse([], [], catalog.version));
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("workshop")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("settings-open-nav"), "the workshop's own gear").toBeInTheDocument();
+  });
 });
 
 // Writes (R256)
@@ -250,6 +279,7 @@ describe("when another account signs in under an open workshop", () => {
   const OTHER_PROFILE = "profile-p2";
 
   it("R256 never sends one profile's unsaved work with the next profile's token, and keeps it on this device", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldAdvanceTime: true });
     vi.mocked(getMe).mockImplementation(async (token) => ({
       ...meBody("active", false),
       profile: { id: token === OTHER_TOKEN ? OTHER_PROFILE : PROFILE, status: "active" },
@@ -276,7 +306,9 @@ describe("when another account signs in under an open workshop", () => {
       },
       { timeout: SWITCH_WAIT_MS },
     );
-    await new Promise((resolve) => setTimeout(resolve, DECK_AUTOSAVE_DEBOUNCE_MS * 2));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DECK_AUTOSAVE_DEBOUNCE_MS + 1);
+    });
 
     const sentAsOther = vi.mocked(putDeck).mock.calls.filter(([token]) => token === OTHER_TOKEN);
     expect(sentAsOther, "the first profile's new deck must not be created in the second's account").toEqual([]);

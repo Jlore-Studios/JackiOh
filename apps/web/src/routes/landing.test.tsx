@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
 import { landingFanCardTestid, landingTestid } from "../auth/testids.ts";
 import { LONG_PRESS_MS } from "../cards/inspect/constants.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../cards/settings.ts";
@@ -156,6 +157,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   setReducedMotion(false);
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -245,17 +247,23 @@ describe("B37 the corner slot", () => {
   });
 
   it("B37 loading: the slot holds nothing while /api/auth/me is unanswered", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     signedIn();
     serve("hang");
     render(<LandingRoute />);
 
     expect(landing()).toHaveAttribute("data-account", "loading");
-    await new Promise((resolve) => {
-      setTimeout(resolve, 50);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(GATE_SLOW_NOTICE_SECONDS * 1000 - 1);
     });
     expect(screen.queryByTestId(landingTestid.signIn)).toBeNull();
     expect(screen.queryByTestId(landingTestid.account)).toBeNull();
     expect(landing()).toHaveAttribute("data-account", "loading");
+    // Until the slow notice: then the session this device holds is offered its link.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(screen.getByTestId(landingTestid.account)).toBeInTheDocument();
   });
 
   it("B37 a token the server refuses is anonymous: the slot offers landing-sign-in", async () => {

@@ -214,6 +214,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "0049_version_retcon.sql",
         include_str!("../../migrations/0049_version_retcon.sql"),
     ),
+    (
+        "0050_going_live.sql",
+        include_str!("../../migrations/0050_going_live.sql"),
+    ),
 ];
 
 /// One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is

@@ -47,7 +47,7 @@ use jackioh_engine::wire::{
 use jackioh_engine::{Action, GameRecord, LastBoardEntry, PlayerId};
 use jackioh_server::api::series_rules::forfeit_series;
 use jackioh_server::config::PersonaName;
-use jackioh_server::config::USERNAME_CHANGE_COOLDOWN_MS;
+use jackioh_server::config::{STARTER_CARDS, USERNAME_CHANGE_COOLDOWN_MS};
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
     BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, CustomCardWrite, Db,
@@ -199,6 +199,16 @@ enum Ends {
 }
 
 impl StoreHarness {
+    /// R1310000: the fixture catalog's starter cards, what R111's launch grant gives: its playable
+    /// ids that `STARTER_CARDS` names.
+    pub fn starter_ids(&self) -> Vec<String> {
+        self.playable_ids
+            .iter()
+            .filter(|id| STARTER_CARDS.contains(&id.as_str()))
+            .cloned()
+            .collect()
+    }
+
     // -----------------------------------------------------------------------
     // In-memory
     // -----------------------------------------------------------------------
@@ -254,6 +264,7 @@ impl StoreHarness {
             .expect("truncate every table");
         seed_cards(&admin).await;
         seed_cosmetics(&admin).await;
+        seed_starter_cards(&admin).await;
         let pool = PgPoolOptions::new()
             .connect(&url)
             .await
@@ -535,6 +546,19 @@ pub async fn seed_cosmetics(admin: &PgPool) {
     .execute(admin)
     .await
     .expect("seed the fixture cosmetics");
+}
+
+/// R1310000: the starter cards the activation grant reads, as `seed-catalog` writes them, which the
+/// harness does not run.
+pub async fn seed_starter_cards(admin: &PgPool) {
+    sqlx::query(
+        "insert into app.settings (key, value) values ('starter_cards', $1::jsonb)
+         on conflict (key) do update set value = excluded.value",
+    )
+    .bind(serde_json::to_string(STARTER_CARDS).expect("the starter cards serialise"))
+    .execute(admin)
+    .await
+    .expect("seed the starter cards");
 }
 
 /// `Date.now()`.
@@ -880,9 +904,10 @@ mod profiles {
     }
 
     /// R111, and the reason `e2e-store.ts` carries a trigger at all: "Becoming `active` grants one
-    /// copy of every non-token card, written by a trigger on the `pending → active` transition and
-    /// idempotent, so a repeated redemption cannot double a collection."
-    async fn r111_grants_one_copy_of_every_non_token_card_on_pending_active_idempotently(
+    /// copy of [each starter card, R1310000], written by a trigger on the `pending → active`
+    /// transition and idempotent, so a repeated redemption cannot double a collection." Both stores
+    /// grant the same cards: the fixture catalog's that `STARTER_CARDS` names.
+    async fn r111_r1310000_grants_one_copy_of_each_starter_card_on_pending_active_idempotently(
         harness: &StoreHarness,
     ) {
         let profile = pending_profile(harness, None).await;
@@ -891,7 +916,11 @@ mod profiles {
         q!(harness, t => t.profiles_set_status(&profile.id, status("active")));
         let granted = q!(harness, t => t.collection_get(&profile.id));
         let card_ids: Vec<String> = granted.iter().map(|entry| entry.card_id.clone()).collect();
-        assert_eq!(sorted(&card_ids), sorted(&harness.playable_ids));
+        assert_eq!(sorted(&card_ids), sorted(&harness.starter_ids()));
+        assert!(
+            card_ids.len() < harness.playable_ids.len(),
+            "a card that is not a starter is not granted"
+        );
         assert!(granted.iter().all(|entry| entry.quantity == 1));
         for token_id in &harness.token_ids {
             assert!(!granted.iter().any(|entry| entry.card_id == *token_id));
@@ -908,7 +937,7 @@ mod profiles {
         moves_the_rating_and_the_in_match_pointer,
         r890000_seat_claim_is_compare_and_set,
         r603_round_trips_the_whole_glicko_triple,
-        r111_grants_one_copy_of_every_non_token_card_on_pending_active_idempotently,
+        r111_r1310000_grants_one_copy_of_each_starter_card_on_pending_active_idempotently,
     );
 }
 
@@ -1513,10 +1542,11 @@ mod redeem {
         assert_eq!(status_of(harness, &profile.id).await, "active");
         assert_eq!(uses_of(harness, &code.code_hash).await, 1);
         assert_eq!(attempts(harness, &profile.id).await, 1);
-        // R111's launch grant rides the pending → active transition, wherever it is made.
+        // R111's launch grant rides the pending → active transition, wherever it is made: the
+        // starter cards (R1310000).
         assert_eq!(
             q!(harness, t => t.collection_get(&profile.id)).len(),
-            harness.playable_ids.len()
+            harness.starter_ids().len()
         );
     }
 
@@ -7933,7 +7963,14 @@ mod social {
 mod duos {
     use super::*;
     use jackioh_engine::config::DUOS_HUMAN_TEAM;
-    use jackioh_server::duos::store::{DuosActionRow, DuosChoice, DuosMatch, DuosRoom};
+    use jackioh_server::duos::store::{DuosActionRow, DuosChoice, DuosMatch, DuosRoom, DuosRoomClaimOutcome};
+
+    fn claimed(outcome: DuosRoomClaimOutcome) -> DuosRoom {
+        match outcome {
+            DuosRoomClaimOutcome::Claimed(room) => *room,
+            outcome => panic!("the room was not claimed: {outcome:?}"),
+        }
+    }
 
     fn room(code: &str, host: &str, at: i64, expires_at: i64) -> DuosRoom {
         from(json!({
@@ -7993,11 +8030,13 @@ mod duos {
 
         let choice = DuosChoice::Random { lean: None };
         let match_id = id();
-        assert!(q!(harness, t => t.duos_rooms_claim("DUOSAB", &host.id, &choice, &id(), now)).is_none());
-        let claimed = must(
-            q!(harness, t => t.duos_rooms_claim("DUOSAB", &guest.id, &choice, &match_id, now)),
-            "the claim",
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_claim("DUOSAB", &host.id, &choice, &id(), now)),
+            DuosRoomClaimOutcome::Unavailable
         );
+        let claimed = claimed(q!(harness, t => t.duos_rooms_claim(
+            "DUOSAB", &guest.id, &choice, &match_id, now
+        )));
         assert_eq!(claimed.guest.as_deref(), Some(guest.id.as_str()));
         assert_eq!(claimed.guest_choice, Some(choice.clone()));
         assert_eq!(claimed.match_id.as_deref(), Some(match_id.as_str()));
@@ -8005,7 +8044,10 @@ mod duos {
             q!(harness, t => t.duos_rooms_get("DUOSAB")),
             Some(claimed.clone())
         );
-        assert!(q!(harness, t => t.duos_rooms_claim("DUOSAB", &third.id, &choice, &id(), now)).is_none());
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_claim("DUOSAB", &third.id, &choice, &id(), now)),
+            DuosRoomClaimOutcome::Unavailable
+        );
         assert!(
             !q!(harness, t => t.duos_rooms_delete("DUOSAB", &host.id)),
             "a joined room stays"
@@ -8013,7 +8055,10 @@ mod duos {
 
         let lapsed = room("DUOSCD", &host.id, now - 700_000, now - 100_000);
         assert!(q!(harness, t => t.duos_rooms_create(&lapsed)));
-        assert!(q!(harness, t => t.duos_rooms_claim("DUOSCD", &guest.id, &choice, &id(), now)).is_none());
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_claim("DUOSCD", &guest.id, &choice, &id(), now)),
+            DuosRoomClaimOutcome::Unavailable
+        );
         let open = room("DUOSEF", &host.id, now, now + 600_000);
         assert!(q!(harness, t => t.duos_rooms_create(&open)));
         assert!(
@@ -8165,10 +8210,13 @@ mod duos {
         );
 
         let choice = DuosChoice::Random { lean: None };
-        must(
-            q!(harness, t => t.duos_rooms_claim("DUOSNP", &guest.id, &choice, &id(), now)),
-            "the claim",
-        );
+        claimed(q!(harness, t => t.duos_rooms_claim(
+            "DUOSNP",
+            &guest.id,
+            &choice,
+            &id(),
+            now
+        )));
         assert_eq!(
             q!(harness, t => t.duos_rooms_count_open_by_host(&host.id, now)),
             1
@@ -8183,8 +8231,39 @@ mod duos {
         );
     }
 
+    /// §13.9: a code is no key past a block. A block either way present at the claim makes it
+    /// write nothing; once it is lifted, the same claim goes through.
+    async fn s6_a_block_either_way_defeats_the_claim(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let now = harness.now();
+        let made = room("DUOSWX", &host.id, now, now + 600_000);
+        assert!(q!(harness, t => t.duos_rooms_create(&made)));
+        let choice = DuosChoice::Random { lean: None };
+        for (blocker, blocked) in [(&host.id, &guest.id), (&guest.id, &host.id)] {
+            q!(harness, t => t.blocks_add(blocker, blocked, now));
+            assert_eq!(
+                q!(harness, t => t.duos_rooms_claim("DUOSWX", &guest.id, &choice, &id(), now)),
+                DuosRoomClaimOutcome::Blocked
+            );
+            assert_eq!(
+                q!(harness, t => t.duos_rooms_get("DUOSWX")),
+                Some(made.clone()),
+                "a blocked claim writes nothing"
+            );
+            assert!(q!(harness, t => t.blocks_remove(blocker, blocked)));
+        }
+        let match_id = id();
+        let claimed = claimed(q!(harness, t => t.duos_rooms_claim(
+            "DUOSWX", &guest.id, &choice, &match_id, now
+        )));
+        assert_eq!(claimed.guest.as_deref(), Some(guest.id.as_str()));
+        assert_eq!(claimed.match_id.as_deref(), Some(match_id.as_str()));
+    }
+
     both_stores!(
         s6_rooms_are_claimed_once_and_reaped,
+        s6_a_block_either_way_defeats_the_claim,
         r1047002_open_co_op_rooms_are_counted_by_host,
         s6_matches_finish_once_and_the_log_is_append_only,
         s6_a_deleted_profile_takes_its_rooms_and_matches,
@@ -8200,8 +8279,8 @@ mod economy {
     use super::*;
     use jackioh_server::config::SET_TRACK_FIRST_LEVEL;
     use jackioh_server::economy::store::{
-        CosmeticGrant, CounterGrant, EconomyLedger, InventoryGrant, JloreGrant, PracticeSeed, QuestGrant,
-        TrackGrant,
+        CosmeticGrant, CounterGrant, EconomyLedger, GameJloreTotals, InventoryGrant, JloreGrant,
+        PracticeSeed, QuestGrant, TrackGrant,
     };
 
     fn jlore(profile_id: &str, delta: i64, reason: &str, dev: bool, at: i64) -> JloreGrant {
@@ -8763,6 +8842,118 @@ mod economy {
         );
     }
 
+    /// R1483000: the day's `game` Jlore sums the profile's own `game` rows with `at` in the half-open
+    /// window, a quest's, a track's and a pack's rows and another profile's apart, with the share
+    /// one reference wrote beside it.
+    async fn r1483000_game_jlore_totals_use_one_window_reason_and_reference(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let (day_start, day_end) = (10 * 86_400_000_i64, 11 * 86_400_000_i64);
+        let row = |profile_id: &str, delta: i64, reason: &str, reference: &str, at: i64| -> JloreGrant {
+            from(json!({
+                "profileId": profile_id, "delta": delta, "reason": reason, "reference": reference,
+                "dev": false, "at": at,
+            }))
+        };
+        for grant in [
+            row(&owner.id, 100, "game", "m1", day_start),
+            row(&owner.id, 20, "game", "m2", day_end - 1),
+            row(&owner.id, 7, "game", "m3", day_end),
+            row(&owner.id, 3, "game", "m0", day_start - 1),
+            row(&owner.id, 50, "quest", "m1", day_start + 1),
+            row(&owner.id, 40, "track", "m1", day_start + 2),
+            row(&owner.id, -30, "pack_purchase", "m1", day_start + 3),
+            row(&other.id, 500, "game", "m1", day_start + 4),
+        ] {
+            q!(harness, t => t.economy_jlore_grant(&grant));
+        }
+        let totals = |profile_id: &str, reference: &str, window: (i64, i64)| {
+            let (profile_id, reference) = (profile_id.to_string(), reference.to_string());
+            async move {
+                q!(harness, t => t.economy_game_jlore_totals(&profile_id, window.0, window.1, &reference))
+            }
+        };
+        let window = (day_start, day_end);
+        assert_eq!(
+            totals(&owner.id, "m1", window).await,
+            GameJloreTotals {
+                day: 120,
+                reference: 100
+            }
+        );
+        assert_eq!(
+            totals(&owner.id, "m2", window).await,
+            GameJloreTotals {
+                day: 120,
+                reference: 20
+            }
+        );
+        assert_eq!(
+            totals(&owner.id, "m3", window).await,
+            GameJloreTotals {
+                day: 120,
+                reference: 0
+            }
+        );
+        assert_eq!(
+            totals(&other.id, "m1", window).await,
+            GameJloreTotals {
+                day: 500,
+                reference: 500
+            }
+        );
+        assert_eq!(
+            totals(&owner.id, "m1", (day_end, day_end + 1)).await,
+            GameJloreTotals { day: 7, reference: 0 }
+        );
+        assert_eq!(
+            totals(&owner.id, "m1", (day_start + 5, day_end - 1)).await,
+            GameJloreTotals::default()
+        );
+    }
+
+    /// R1483000: a profile's open seeds are the ones unclaimed and issued at or after the time given,
+    /// its own alone: a claimed seed and a lapsed one do not count, nor another profile's.
+    async fn r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts(
+        harness: &StoreHarness,
+    ) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let now = harness.now();
+        let seed = |name: &str, profile_id: &str, issued_at: i64| -> PracticeSeed {
+            from(json!({
+                "seed": name, "profileId": profile_id, "issuedAt": issued_at, "claimedAt": null,
+                "setup": {
+                    "difficulty": "easy", "humanSeat": "p1", "deck": { "kind": "random", "lean": null },
+                    "lastBoard": [], "catalogVersion": "v-contract",
+                },
+            }))
+        };
+        for held in [
+            seed("seed-open-new", &owner.id, now),
+            seed("seed-open-old", &owner.id, now - 5),
+            seed("seed-claimed", &owner.id, now),
+            seed("seed-lapsed", &owner.id, now - 1000),
+            seed("seed-theirs", &other.id, now),
+        ] {
+            q!(harness, t => t.economy_practice_seed_insert(&held));
+        }
+        assert!(q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-claimed", now + 1)));
+        let open = |profile_id: &str, since: i64| {
+            let profile_id = profile_id.to_string();
+            async move { q!(harness, t => t.economy_practice_seeds_open(&profile_id, since)) }
+        };
+        assert_eq!(open(&owner.id, now - 100).await, 2);
+        assert_eq!(
+            open(&owner.id, now - 5).await,
+            2,
+            "a seed issued at the time counts"
+        );
+        assert_eq!(open(&owner.id, now).await, 1);
+        assert_eq!(open(&owner.id, now + 1).await, 0);
+        assert_eq!(open(&other.id, now - 100).await, 1);
+    }
+
     /// R1301003: a pack opening takes the account's economy lock for its transaction. Taken in
     /// turn, each transaction gets it, a rolled-back one lets it go, and the lock writes no row.
     async fn r1301003_the_economy_lock_is_taken_per_transaction(harness: &StoreHarness) {
@@ -8814,6 +9005,8 @@ mod economy {
         every_economy_write_rolls_back_with_its_transaction,
         a_deleted_account_takes_its_economy_with_it,
         practice_seeds_issue_claim_once_and_prune,
+        r1483000_game_jlore_totals_use_one_window_reason_and_reference,
+        r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts,
     );
 }
 

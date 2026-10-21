@@ -16,7 +16,8 @@
 //!
 //! `catalog loc <path>` prints a card script's lines of code (SURFACE §7.5): `loc` is frozen
 //! gameplay data in `catalog.json`, so nothing recomputes it; a card added after v0.3.0 takes its
-//! number from here.
+//! number from here. A test below holds every entry to carrying a `loc`, and each one written since
+//! the newest shipped snapshot (a new entry, or a `loc` other than the snapshot's) to this count.
 //!
 //! `catalog-version` is the port of `scripts/catalog-version.mjs`: it prints the catalog version
 //! this checkout ships, the newest entry of `crates/cards/patches/patches.json` (R388). The version
@@ -2342,5 +2343,114 @@ return { base = { cry = cry }, radiant = "base" }
     fn catalog_version_is_the_newest_patch() {
         let path = repo_root().join("crates/cards/patches/patches.json");
         assert_eq!(newest_version(&path).unwrap(), jackioh_cards::catalog_version());
+    }
+
+    /// One catalog entry's `loc` against SPEC §5 and SURFACE §7.5: every entry carries one, and one
+    /// written since the newest shipped snapshot (an entry the snapshot lacks, `shipped` `None`, or a
+    /// `loc` other than the snapshot's) is its script's lines of code as `catalog loc` prints them,
+    /// `counted`. A shipped `loc` is frozen: a refactor of its script leaves it as it is.
+    fn loc_failure(
+        id: &str,
+        loc: Option<i32>,
+        shipped: Option<Option<i32>>,
+        counted: Option<usize>,
+    ) -> Option<String> {
+        let Some(loc) = loc else {
+            return Some(format!("{id}: no `loc`"));
+        };
+        if shipped == Some(Some(loc)) {
+            return None;
+        }
+        match counted {
+            Some(counted) if usize::try_from(loc).ok() == Some(counted) => None,
+            Some(counted) => Some(format!(
+                "{id}: `loc` is {loc}, its script's lines of code {counted} (`cargo jackioh catalog loc`)"
+            )),
+            None => Some(format!(
+                "{id}: no script under crates/cards/src/scripts/ has this `ID`"
+            )),
+        }
+    }
+
+    /// Every card script's lines of code (`count_loc`) by its `pub const ID`, read off
+    /// `crates/cards/src/scripts/<set>/`.
+    fn script_locs() -> IndexMap<String, usize> {
+        let mut locs = IndexMap::new();
+        let scripts = repo_root().join("crates/cards/src/scripts");
+        for set in fs::read_dir(&scripts).expect("crates/cards/src/scripts reads") {
+            let set = set.expect("a set directory").path();
+            if !set.is_dir() {
+                continue;
+            }
+            for file in fs::read_dir(&set).expect("a set directory reads") {
+                let path = file.expect("a script").path();
+                if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+                    continue;
+                }
+                let source = fs::read_to_string(&path).expect("a script reads");
+                if let Some(id) = crate::classify::script_id(&source) {
+                    locs.insert(id, count_loc(&source));
+                }
+            }
+        }
+        locs
+    }
+
+    #[test]
+    fn a_loc_written_since_the_newest_snapshot_is_its_scripts_count_and_a_shipped_one_is_frozen() {
+        let wrong = |loc: i32, counted: usize| {
+            Some(format!(
+                "x-001: `loc` is {loc}, its script's lines of code {counted} (`cargo jackioh catalog loc`)"
+            ))
+        };
+        // A new entry, which the snapshot lacks, is its script's count.
+        assert_eq!(loc_failure("x-001", Some(7), None, Some(7)), None);
+        assert_eq!(loc_failure("x-001", Some(8), None, Some(7)), wrong(8, 7));
+        // A missing `loc` fails, new or shipped.
+        assert_eq!(
+            loc_failure("x-001", None, None, Some(7)),
+            Some("x-001: no `loc`".to_string())
+        );
+        assert_eq!(
+            loc_failure("x-001", None, Some(Some(7)), Some(7)),
+            Some("x-001: no `loc`".to_string())
+        );
+        // A shipped `loc` is frozen, whatever its script counts now.
+        assert_eq!(loc_failure("x-001", Some(10), Some(Some(10)), Some(23)), None);
+        // A hand-edited `loc` is written again: it must be the count.
+        assert_eq!(
+            loc_failure("x-001", Some(11), Some(Some(10)), Some(23)),
+            wrong(11, 23)
+        );
+        assert_eq!(loc_failure("x-001", Some(23), Some(Some(10)), Some(23)), None);
+        // A `loc` the shipped entry lacked is written too.
+        assert_eq!(loc_failure("x-001", Some(9), Some(None), Some(7)), wrong(9, 7));
+        // A written entry no script declares.
+        assert_eq!(
+            loc_failure("x-001", Some(7), None, None),
+            Some("x-001: no script under crates/cards/src/scripts/ has this `ID`".to_string())
+        );
+    }
+
+    #[test]
+    fn every_catalog_entry_carries_a_loc_and_each_written_one_is_its_scripts_count() {
+        let shipped = jackioh_cards::catalog_defs_at(jackioh_cards::CATALOG_VERSION)
+            .expect("the newest shipped catalog is carried");
+        let locs = script_locs();
+        for id in jackioh_cards::CATALOG.keys() {
+            assert!(locs.contains_key(id), "{id}: its script was not read");
+        }
+        let failures: Vec<String> = jackioh_cards::CATALOG
+            .iter()
+            .filter_map(|(id, def)| {
+                loc_failure(
+                    id,
+                    def.loc,
+                    shipped.get(id).map(|old| old.loc),
+                    locs.get(id).copied(),
+                )
+            })
+            .collect();
+        assert!(failures.is_empty(), "{}", failures.join("\n"));
     }
 }

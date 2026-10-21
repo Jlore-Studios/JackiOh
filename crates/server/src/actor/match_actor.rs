@@ -319,6 +319,10 @@ struct Core {
     /// nothing left to record. One that is still `live` crashed between the terminal action and the
     /// results write, so it heals itself on arming (§9.5: every ending records a result).
     finished: bool,
+    /// R1483000: whether the daily Jlore cap held back each account's pay for this match, keyed by
+    /// home like `sockets`. Read off the ledger (`results::game_jlore_caps`) once the result has
+    /// landed, or as an actor arms on a match already finished; each seat's views carry its own.
+    jlore_capped: PerPlayer<bool>,
     /// When this actor's rematch window opened (R672): the game's end, or, for an actor rebuilt on a
     /// match already `finished`, the rebuild. `None` while the game is on. `Registry::reap_finished`
     /// counts `REMATCH_OFFER_TTL_MS` from here.
@@ -561,6 +565,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         aims: PerPlayer::new(empty_aim_slot(), empty_aim_slot()),
         voided: false,
         finished: matches!(match_row.status, MatchStatus::Finished),
+        jlore_capped: PerPlayer::new(false, false),
         finished_at: matches!(match_row.status, MatchStatus::Finished).then(now_ms),
         stopped: false,
         persisted_clocks: match_row.clocks.clone(),
@@ -668,6 +673,11 @@ impl MatchActor {
                     self.lock().tiers = tiers;
                 }
                 if snapshot.result.is_some() {
+                    // R1483000: an actor rebuilt on a match whose result is already in learns what
+                    // the cap held back from the ledger; one that is about to write it does so below.
+                    if self.lock().finished {
+                        self.load_jlore_caps(false).await;
+                    }
                     self.on_terminal(&snapshot).await;
                 } else {
                     // R1452: a bot that owes the match a move, as it opens or after a restart, makes it.
@@ -836,6 +846,7 @@ impl MatchActor {
         let message = view_message(
             self.view_of(core, player),
             &engine::legal_actions(self.shared.pinned, &core.state, player),
+            core.jlore_capped[playing(core, player)],
         );
         self.send(core, player, &message);
     }
@@ -1192,6 +1203,7 @@ impl MatchActor {
             self.let_go_unrecorded();
             return;
         }
+        self.load_jlore_caps(true).await;
         // R1442: the play telemetry goes after the result, so its write can never cost it.
         // R1452: a bot home's rows are the AI's, so no human figure reads them unasked.
         let pilot = |home: PlayerId| {
@@ -1216,6 +1228,31 @@ impl MatchActor {
             reason = %result.reason,
             turns = snapshot.turn,
         );
+    }
+
+    /// R1483000: whether the daily Jlore cap held back either account's pay for this match, read
+    /// off the ledger now that the result is in it. Every view of a seat it held back carries it;
+    /// `announce` sends those seats a fresh one now, for a result just written (an actor arming on
+    /// a finished match sends its sockets theirs as each attaches). A read that fails costs the
+    /// line, never the result: it is logged, and the next rebuilt actor reads it again.
+    async fn load_jlore_caps(&self, announce: bool) {
+        let caps = match crate::api::results::game_jlore_caps(&self.shared.deps, self.match_id_str()).await {
+            Ok(caps) => caps,
+            Err(error) => {
+                tracing::warn!(event = "match.jloreCaps.failed", matchId = %self.match_id_str(), message = %error);
+                return;
+            }
+        };
+        if !caps.p1 && !caps.p2 {
+            return;
+        }
+        let mut core = self.lock();
+        core.jlore_capped = caps;
+        for home in PLAYERS {
+            if announce && core.jlore_capped[home] {
+                self.push_view(&core, playing(&core, home));
+            }
+        }
     }
 
     /// R639000, R672: each bot home of a ranked match draws its plan for the game's end as the game
@@ -2722,7 +2759,7 @@ impl MatchActor {
         }
         let now = now_ms();
         for home in PLAYERS {
-            let frame = encode(&view_message(self.view_of(core, playing(core, home)), &[]));
+            let frame = encode(&view_message(self.view_of(core, playing(core, home)), &[], false));
             let seq = core.spectate.next_seq;
             core.spectate.next_seq += 1;
             core.spectate.records[home].push_back(SpectateFrame {

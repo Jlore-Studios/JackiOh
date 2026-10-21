@@ -4,7 +4,8 @@
 // EVERY NUMBER SHOWN COMES FROM THE SERVER (CLAUDE.md rule 7). `GET /api/packs` says the odds, the
 // pity counters and their thresholds; `POST /api/packs/open` says every slot before anything
 // animates. Nothing here rolls, counts or decides: `withOpening` copies the server's counters into
-// the panel, and the constants below are timings and looks, never a rate.
+// the panel, `tierPercents` only formats the server's odds, and the constants below are timings and
+// looks, never a rate.
 //
 // `CardShowcase` and `FxLayer` read a game's `PlayerView`, and a pack has none, so the scene draws
 // `CardFace` itself and mounts the fx director itself (`PackOpening.tsx`), over the cues built here.
@@ -20,7 +21,7 @@ import { getAudioEngine } from "../audio/engine.ts";
 import { raysCue, tid, tunedBurst, type BurstTuning } from "../fx/build.ts";
 import type { FxCue } from "../fx/types.ts";
 import { t } from "../i18n/i18n.ts";
-import type { OpenedPackResponse, PackSlot, PacksResponse } from "../net/api.ts";
+import type { OpenedPackResponse, PackSlot, PacksResponse, TierOdds } from "../net/api.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 
 /** How long a torn pack takes to open before its cards show. */
@@ -39,8 +40,10 @@ export const PACK_ODDS_DECIMALS = 1;
 /** Rarities lowest first. */
 export const RARITY_ORDER: readonly PrintedRarity[] = ["Common", "Rare", "Epic", "Legendary", "Mythic"];
 
-/** The three rarities the server's pity counters track, in the order the panel lists them. */
-export const TRACKED_RARITIES = [
+/** The five tiers of the server's odds, commonest first, in the order the panel lists them. */
+export const ODDS_RARITIES = [
+  { key: "common", rarity: "Common" },
+  { key: "rare", rarity: "Rare" },
   { key: "epic", rarity: "Epic" },
   { key: "legendary", rarity: "Legendary" },
   { key: "mythic", rarity: "Mythic" },
@@ -62,7 +65,7 @@ export const packTestid = {
   odds: "packs-odds",
   oddsRow: (key: string) => `packs-odds-${key}`,
   pity: (key: string) => `packs-pity-${key}`,
-  filler: "packs-filler",
+  pityLine: "packs-pity-line",
   duplicate: "packs-duplicate",
   held: "packs-held",
   none: "packs-none",
@@ -85,6 +88,17 @@ export const packTestid = {
 /** A rate as a percentage to `PACK_ODDS_DECIMALS`, without trailing zeros: 0.29 is "29%", 0.082 "8.2%". */
 export function percent(rate: number): string {
   return `${String(Number((rate * 100).toFixed(PACK_ODDS_DECIMALS)))}%`;
+}
+
+/** The server's odds of each tier as percentages, by tier key, for a sentence to name. */
+export function tierPercents(odds: TierOdds): Record<keyof TierOdds, string> {
+  return {
+    common: percent(odds.common),
+    rare: percent(odds.rare),
+    epic: percent(odds.epic),
+    legendary: percent(odds.legendary),
+    mythic: percent(odds.mythic),
+  };
 }
 
 /** The highest rarity among a pack's slots; Common for none. */

@@ -253,7 +253,8 @@ shop/                   #1309: spending what the economy pays, on /account behin
                         unowned cards (`POST /api/tokens/redeem-card`) and a Rare/Epic token browsing unowned
                         cosmetics at its tier or below with a preview on the card (`POST
                         /api/tokens/redeem-cosmetic`); the cosmetic packs open through a simple reveal (`POST
-                        /api/cosmetic-packs/open`) with the Chase Shard bar (`GET /api/cosmetic-packs`) and its
+                        /api/cosmetic-packs/open`) with the Chase Shard bar and the odds of a slot and of the
+                        guaranteed one (`GET /api/cosmetic-packs`, R1339000) and the bar's
                         Legendary-or-Mythic choice only when full (`POST /api/cosmetic-packs/chase`); every
                         refusal shows the server's reason verbatim and changes nothing; a buy, an opening,
                         a redemption or a chase that lands makes the other panels, the opening's included,
@@ -309,7 +310,7 @@ duos/download.ts        a finished co-op replay's "Download JSON" (R1242000): th
 The landing page offers Play together beside Play online. The replays list and the replay player offer
 "Share with a friend". The match board's rail says how many friends are watching while any are
 (`match-watchers`, from the match socket's `watchers {count}` frame, which `game/net.ts` keeps as the
-snapshot's `watchers`). On the Duos board:
+snapshot's `watchers`). A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. On the Duos board:
 
 - the pass control on an inspected hand card, or a hand card dragged onto the portal, sends `Pass`
   only when `legal` holds it, with the pass cost and the passes left beside it (SPEC §13.5);
@@ -371,6 +372,7 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   library never cross the worker boundary. A finished free game's snapshot adds `lastBoard`, the
   engine's `lastBoardFor(state, human)`; the controller keeps it on the device and sends it with the
   next start, as the human's seat's last board (R508). The AI's seat and a lesson never have one.
+- A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
 - A free game in progress survives a reload (R668). After every answer the core writes its save
   to the worker's store, which never crosses to the page (the log names the AI's hidden cards); the
   controller remembers the setup when the game is dealt and forgets it when the game ends, and the

@@ -13,6 +13,7 @@ import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import type { Challenge, PlayerRef } from "../net/social.ts";
 import { must, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
+import { SOCIAL_POLL_MS } from "./config.ts";
 
 const { App, resetUsernamePromptForTests } = await import("../main.tsx");
 
@@ -86,6 +87,14 @@ function acceptButtons(): HTMLElement[] {
   return screen.queryAllByRole("button", { name: /^accept/i });
 }
 
+/** Advance fake time by `ms`, then let the stubbed round trips and React's updates settle. */
+async function settle(ms = 0): Promise<void> {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(ms);
+    for (let tick = 0; tick < 50; tick += 1) await Promise.resolve();
+  });
+}
+
 beforeEach(() => {
   window.localStorage.clear();
   forgetRoomLink();
@@ -95,6 +104,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   forgetRoomLink();
@@ -168,15 +178,15 @@ describe("B57 the challenge toast", () => {
   it(
     "B57 no incoming challenge, no toast: the player's own outgoing challenge raises none",
     async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
       signedIn();
       const server = serve({ incoming: [], outgoing: [OUTGOING] });
       render(<ChallengeToast />);
       await waitFor(() => {
         expect(server.to("GET", "/api/challenges").length).toBeGreaterThan(0);
       }, SOON);
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      });
+      await settle(SOCIAL_POLL_MS + 1);
+      expect(server.to("GET", "/api/challenges")).toHaveLength(2);
       expect(acceptButtons()).toHaveLength(0);
       expect(document.body).not.toHaveTextContent(BOB.username);
     },
@@ -186,11 +196,10 @@ describe("B57 the challenge toast", () => {
   it(
     "B57 signed out: the toast reads no challenges and shows nothing",
     async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
       const server = serve({ incoming: [INCOMING], outgoing: [] });
       render(<ChallengeToast />);
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      });
+      await settle(SOCIAL_POLL_MS + 1);
       expect(server.to("GET", "/api/challenges")).toHaveLength(0);
       expect(acceptButtons()).toHaveLength(0);
       expect(document.body).not.toHaveTextContent(ANN.username);
@@ -201,6 +210,7 @@ describe("B57 the challenge toast", () => {
   it(
     "B57 a refused read of the challenges shows no toast",
     async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
       signedIn();
       const server = serve({ incoming: [INCOMING], outgoing: [] }, (call) =>
         call.path === "/api/challenges" ? { status: 500, body: { error: { code: "internal", message: "boom" } } } : undefined,
@@ -209,9 +219,8 @@ describe("B57 the challenge toast", () => {
       await waitFor(() => {
         expect(server.to("GET", "/api/challenges").length).toBeGreaterThan(0);
       }, SOON);
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      });
+      await settle(SOCIAL_POLL_MS + 1);
+      expect(server.to("GET", "/api/challenges")).toHaveLength(2);
       expect(acceptButtons()).toHaveLength(0);
     },
     TEST_MS,

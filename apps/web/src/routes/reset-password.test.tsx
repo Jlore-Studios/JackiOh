@@ -87,6 +87,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   releaseRecoverySession();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
@@ -400,8 +401,11 @@ describe("R193 leaving the reset screen lets go of the recovery session", () => 
     });
 
     await act(async () => {
+      const popped = new Promise((resolve) => {
+        window.addEventListener("popstate", resolve, { once: true });
+      });
       window.history.back();
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await popped;
     });
     await waitFor(() => {
       expect(window.location.pathname).toBe(paths.resetPassword);
@@ -424,15 +428,18 @@ describe("R193 leaving the reset screen lets go of the recovery session", () => 
   });
 
   it("R193 React's StrictMode rehearsal (unmount, mount again) neither forgets nor revokes it", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const calls = recordProvider();
     render(
       <StrictMode>
         <ResetPasswordRoute />
       </StrictMode>,
     );
+    // Past the unmount's deferred abandon (`abandonRecoverySessionSoon`, 0 ms).
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      await vi.advanceTimersByTimeAsync(1);
     });
+    await flushMicrotasks();
     expect(screen.getByTestId(resetTestid.form)).toBeInTheDocument();
     expect(recoverySession()).toEqual({ session: RECOVERY, email: EMAIL });
     expect(revoked(calls, RECOVERY.accessToken)).toBe(false);
@@ -584,12 +591,11 @@ describe("R194 a recovery session that runs out while the form is open", () => {
   };
 
   it("R194 is renewed with its refresh token before the password is sent, and the renewal is saved", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
     holdRecoverySession({ accessToken: "recovery-access-1", refreshToken: "recovery-refresh-1", expiresAt: Date.now() + 30 }, EMAIL);
     const { bearers, refreshes } = renewingProvider("recovery-access-1", RENEWED);
     render(<ResetPasswordRoute />);
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 60)); // the access token has now expired
-    });
+    vi.setSystemTime(Date.now() + 31); // the access token has now expired
 
     setField(resetTestid.password, PASSWORD);
     setField(resetTestid.confirm, PASSWORD);
@@ -650,12 +656,11 @@ describe("R194 a recovery session that runs out while the form is open", () => {
   });
 
   it("R194 a renewal that cannot reach the provider keeps the session and says so", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
     holdRecoverySession({ accessToken: "recovery-access-1", refreshToken: "recovery-refresh-1", expiresAt: Date.now() + 30 }, EMAIL);
     vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))));
     render(<ResetPasswordRoute />);
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 60));
-    });
+    vi.setSystemTime(Date.now() + 31);
     setField(resetTestid.password, PASSWORD);
     setField(resetTestid.confirm, PASSWORD);
     submit();
