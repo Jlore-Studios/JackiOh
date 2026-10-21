@@ -2937,6 +2937,13 @@
     "1121": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T16:05:03Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Easy-rule line 3 fails: R451 plus R923 as written permit the bug, so the fix needs a new ruling note (R1121000), spec edits, and engine plus card changes."
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
