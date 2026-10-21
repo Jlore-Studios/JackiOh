@@ -2224,7 +2224,7 @@ pub async fn profiles_seated(t: &mut PgTx<'_>) -> Result<Vec<SeatedProfile>, Sto
 }
 
 // ---------------------------------------------------------------------------
-// The seat ledger's epoch (R1523000, migration 0051)
+// The seat ledger's epoch (R1523000, migration 0052)
 // ---------------------------------------------------------------------------
 
 /// The claim's fence: the one row `for share` while it still holds `epoch`, `Fenced` when it does
@@ -2257,9 +2257,10 @@ pub async fn seats_bump_epoch(t: &mut PgTx<'_>) -> Result<i64, StoreError> {
 /// rest. Rows only this profile owns cascade; its invite-code attempts, the codes it minted and
 /// the finished matches, results, series and logged actions it played in keep their rows with
 /// its seat set to null; `profiles_release_open_matches` removes a room it opened that nobody
-/// joined. A profile still seated in a live match or an unfinished series makes the delete
-/// raise, by constraint; `src/api/auth.rs` refuses that case first. No `app.*` function: the
-/// schema is the rule here, and the statement is the whole of it.
+/// joined. A profile still seated in a live match, an unfinished series or a live co-op match
+/// (migration 0051, R1497000) makes the delete raise, by constraint; `src/api/auth.rs` refuses
+/// that case first. No `app.*` function: the schema is the rule here, and the statement is the
+/// whole of it.
 pub async fn profiles_remove(t: &mut PgTx<'_>, profile_id: &str) -> Result<bool, StoreError> {
     if !is_uuid(profile_id) {
         return Ok(false);

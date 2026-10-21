@@ -17,7 +17,7 @@
 //! adopted, each logged as `seats.drift`.
 //!
 //! Two processes overlap while a deploy hands over, each with its own ledger, so every claim fences
-//! on `app.seat_epoch` (migration 0051) inside the transaction that writes its seats: boot bumps the
+//! on `app.seat_epoch` (migration 0052) inside the transaction that writes its seats: boot bumps the
 //! epoch before it fills the ledger, and a claim made on an older epoch writes nothing
 //! (`StoreError::Fenced`, answered 503). The fence's shared row lock makes the bump wait for the
 //! claims in flight, so the new ledger reads every seat the old process committed. No lock is held

@@ -5,7 +5,7 @@
 //!
 //! Run with `tests/db/run.sh`, which sets `DATABASE_URL`; without it every case returns at once, so
 //! `cargo test` stays hermetic. The cases share one database and truncate it, so `run.sh` runs them
-//! one at a time (`--test-threads=1`).
+//! one at a time per database (`--test-threads=1`, in each of its shard databases).
 //!
 //! A store call made outside `store.tx` is its own transaction: `once!` begins one (`Db::begin`),
 //! makes the call and commits. Rows go in and come out as JSON, so these cases read the wire shapes.

@@ -46,6 +46,7 @@ const SLOW = { timeout: 5_000 } as const;
 const AGREED_TEXT: Readonly<Record<string, string>> = {
   "2026-10-15b/2026-10-15b": "33b0dd18c38c52456ee05a0cfaa51d881cc168411edac71c1672a9254d997e13",
   "2026-10-15b/2026-10-17": "37fbbebe49f56312ba164323c624142fa3e88a5294677e1c654c6cfc86de2774",
+  "2026-10-15b/2026-10-21": "df87894475e985f8f9915b94e155f6245a841e53969765cd96dbd6d2f90f2be4",
 };
 
 /** Both pages' English text, the Terms then the Privacy Policy, as rendered. */
@@ -89,7 +90,7 @@ describe("the privacy policy", () => {
   it("shows the date it was last updated", () => {
     render(<PrivacyRoute />);
     expect(screen.getByTestId(privacyTestid.updated)).toHaveTextContent(`Last updated ${PRIVACY_LAST_UPDATED}`);
-    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-17");
+    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-21");
   });
 
   it("R757000 the policy names the minimum age and what is kept of the check, and holds no owner slot", () => {
@@ -204,9 +205,11 @@ describe("the privacy policy", () => {
     expect(kept).toMatch(/A block: until the player who made it lifts it/);
     expect(kept).not.toMatch(/until you or the other player removes them/);
 
-    // Deleting: a co-op game goes for both teammates, and a live one holds the deletion back.
+    // Deleting: a finished co-op game stays for the teammate (R1497000), and a live one holds the
+    // deletion back.
     const deleting = section(/deleting your account/i);
-    expect(deleting).toMatch(/deleting either teammate.s account deletes the whole co-op game, its moves and its result, for both of you/);
+    expect(deleting).toMatch(/and so does a finished co-op game in your teammate.s, its moves and its result included/);
+    expect(deleting).not.toMatch(/deletes the whole co-op game/);
     expect(deleting).toMatch(/during a match, a co-op game or a Conquest series that hasn.t finished/);
     expect(deleting).toMatch(/challenges, co-op rooms and replay shares/);
   });

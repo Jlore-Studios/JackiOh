@@ -1,8 +1,10 @@
 // scripts/promote-production.sh, the logic of .github/workflows/promote-production.yml: the merge of
-// main into production through a pull request, and the countdown issue that can be held or delayed.
-// Each case runs the real script in a fresh clone of a throwaway "origin", with a stand-in for `gh`
-// (below) that keeps issues, pull requests, comments and reactions in a JSON file and does the merge
-// for real with git, so what production ends up holding is what GitHub would leave it.
+// main into production through a pull request, Vercel's hold and fast-forward, and the one countdown
+// issue that can hold or delay either and shows the queue. Each case runs the real script in a fresh
+// clone of a throwaway "origin", with a stand-in for `gh` (below) that keeps issues, pull requests,
+// comments, reactions, CI runs and Vercel's deployments in a JSON file and does the merge for real
+// with git, so what production ends up holding is what GitHub would leave it, and one for `curl`
+// that records the deploy hook's calls.
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -69,7 +71,14 @@ if ((st.fail || []).some((prefix) => argv.join(" ").startsWith(prefix))) {
 const [a, b] = pos;
 // Which token each call went out with, and what it was: "pr merge", "issue close", "api DELETE".
 st.tokens.push(process.env.GH_TOKEN + " " + a + " " + (a === "api" ? (f("-X") || "GET") : b));
-if (a === "run" && b === "list") {
+if (a === "run" && b === "list" && f("--status") === undefined && f("--commit") === undefined) {
+  // Every push-to-main run, for the queue's CI column.
+  out([
+    ...st.green.map((headSha) => ({ headSha, status: "completed", conclusion: "success" })),
+    ...st.failed.map((headSha) => ({ headSha, status: "completed", conclusion: "failure" })),
+    ...st.running.map((headSha) => ({ headSha, status: "in_progress", conclusion: null })),
+  ]);
+} else if (a === "run" && b === "list") {
   const sha = f("--commit") !== undefined ? (st.green.includes(f("--commit")) ? f("--commit") : "") : st.newestGreen;
   out(sha ? [{ headSha: sha }] : []);
 } else if (a === "label") {
@@ -116,6 +125,11 @@ if (a === "run" && b === "list") {
     out(issue(m[1]).comments.map((c) => ({ id: c.id, user: { login: c.login, type: c.type }, author_association: c.assoc, created_at: c.at, body: c.body })));
   } else if ((m = /^repos\/[^/]+\/[^/]+\/issues\/comments\/(\d+)\/reactions$/.exec(b))) {
     st.reactions.push({ comment: Number(m[1]), content: f("-f").replace(/^content=/, "") });
+  } else if ((m = /^repos\/[^/]+\/[^/]+\/deployments\/(\d+)\/statuses/.exec(b))) {
+    const d = st.deployments.find((x) => x.id === Number(m[1]));
+    out(d ? [{ state: d.state }] : []);
+  } else if (/^repos\/[^/]+\/[^/]+\/deployments\?environment=Production&/.test(b)) {
+    out(st.deployments.map((d) => ({ id: d.id, sha: d.sha, environment: "Production", creator: { login: d.creator ?? "vercel[bot]" } })));
   } else if ((m = /^repos\/[^/]+\/[^/]+\/git\/refs\/heads\/(.+)$/.exec(b)) && f("-X") === "DELETE") {
     git(origin, "update-ref", "-d", "refs/heads/" + m[1]);
   } else { process.stderr.write("fake gh: unsupported api call " + argv.join(" ") + "\n"); process.exit(2); }
@@ -124,9 +138,17 @@ fs.writeFileSync(file, JSON.stringify(st));
 process.stdout.write(printed);
 `;
 
+/** The stand-in for `curl`, which the script calls only for Vercel's deploy hook: it writes down each call. */
+const FAKE_CURL = `#!/bin/sh
+echo "$*" >> "$FAKE_GH_DIR/curl.log"
+[ -z "$FAKE_CURL_FAIL" ] || exit 22
+`;
+
 interface Comment { id: number; login: string; type: string; assoc: string; at: string; body: string }
 interface Issue { number: number; title: string; body: string; labels: string[]; assignees?: string[]; state: "open" | "closed"; reason: string; comments: Comment[] }
 interface Pr { number: number; head: string; base: string; title: string; body: string; labels: string[]; assignees?: string[]; state: string; merged: boolean }
+/** What Vercel's GitHub app reported for a build of main: its commit and its latest status. */
+interface Deployment { id: number; sha: string; state: string; creator?: string }
 interface Gh {
   next: number;
   nextComment: number;
@@ -135,7 +157,10 @@ interface Gh {
   reactions: { comment: number; content: string }[];
   labels: string[];
   green: string[];
+  failed: string[];
+  running: string[];
   newestGreen: string;
+  deployments: Deployment[];
   failMerges: number;
   fail: string[];
   log: string[];
@@ -163,14 +188,14 @@ const edit = (w: World, change: (state: Gh) => void): void => {
 };
 
 /** A commit on main (pushed, and recorded green); `files` are written whole. */
-function commit(w: World, name: string, files: Record<string, string>, green = true): string {
+function commit(w: World, name: string, files: Record<string, string>, green = true, subject = `change ${name}`): string {
   if (Object.keys(w.sha).length > 0) git(w.work, "checkout", "-q", "main");
   for (const [file, text] of Object.entries(files)) {
     mkdirSync(dirname(join(w.work, file)), { recursive: true });
     writeFileSync(join(w.work, file), text);
   }
   git(w.work, "add", "-A");
-  git(w.work, "commit", "-q", "-m", `change ${name}`);
+  git(w.work, "commit", "-q", "-m", subject);
   git(w.work, "push", "-q", "origin", "main");
   const sha = git(w.work, "rev-parse", "HEAD");
   w.sha[name] = sha;
@@ -195,10 +220,12 @@ function world(): World {
   mkdirSync(join(root, "gh"));
   writeFileSync(join(w.bin, "gh"), FAKE_GH);
   chmodSync(join(w.bin, "gh"), 0o755);
+  writeFileSync(join(w.bin, "curl"), FAKE_CURL);
+  chmodSync(join(w.bin, "curl"), 0o755);
   git(root, "init", "-q", "--bare", "-b", "main", w.origin);
   git(root, "init", "-q", "-b", "main", w.work);
   git(w.work, "remote", "add", "origin", w.origin);
-  const empty: Gh = { next: 1, nextComment: 1000, issues: [], prs: [], reactions: [], labels: [], green: [], newestGreen: "", failMerges: 0, fail: [], log: [], tokens: [] };
+  const empty: Gh = { next: 1, nextComment: 1000, issues: [], prs: [], reactions: [], labels: [], green: [], failed: [], running: [], newestGreen: "", deployments: [], failMerges: 0, fail: [], log: [], tokens: [] };
   writeFileSync(stateFile(w), JSON.stringify(empty));
   commit(w, "c1", { "render.yaml": renderYaml("v0.2.0b"), "app.txt": "one\n" });
   git(w.work, "push", "-q", "origin", `${w.sha.c1}:refs/heads/production`);
@@ -232,6 +259,9 @@ function run(w: World, event: string, now: string, extra: Record<string, string>
       FAKE_GH_ORIGIN: w.origin,
       RUN_SHA: "",
       INPUT_SHA: "",
+      INPUT_TARGET: "",
+      VERCEL_DEPLOY_HOOK_URL: "",
+      FAKE_CURL_FAIL: "",
       ...extra,
     },
   });
@@ -260,6 +290,17 @@ const comment = (w: World, number: number, body: string, when: string, who: { lo
   return id;
 };
 const reactions = (w: World, id: number): string[] => gh(w).reactions.filter((r) => r.comment === id).map((r) => r.content);
+/** The commit a tag names on origin, or "" when there is no such tag. */
+const tagAt = (w: World, tag: string): string => git(w.origin, "for-each-ref", "--format=%(objectname)", `refs/tags/${tag}`);
+/** The deploy hook's calls, one line of curl's arguments each. */
+const hookCalls = (w: World): string[] => {
+  try {
+    return readFileSync(join(w.root, "gh", "curl.log"), "utf8").split("\n").filter((line) => line !== "");
+  } catch {
+    return [];
+  }
+};
+const HOOK = "https://api.vercel.com/v1/integrations/deploy/prj_x/hook";
 
 /** The first check, which opens issue #1 for Oct 5 15:00 UTC; the rest of the cases start from there. */
 function counting(): World {
@@ -294,7 +335,7 @@ describe("the countdown issue", () => {
     expect(gh(w).issues).toHaveLength(1);
   });
 
-  it("at the time merges through a pull request, closes the issue with it and opens the next", () => {
+  it("at the time merges through a pull request, says so on the issue, and counts the same issue down to the next", () => {
     const w = counting();
     ok(run(w, "schedule", "2026-10-05T15:07:00Z"));
     const { prs } = gh(w);
@@ -311,13 +352,13 @@ describe("the countdown issue", () => {
     expect(git(w.origin, "rev-list", "--parents", "-n1", "production").split(" ")).toHaveLength(3);
     expect(git(w.origin, "for-each-ref", "refs/heads/promote")).toBe("");
 
-    const old = issue(w, 1);
-    expect(old).toMatchObject({ state: "closed", reason: "completed" });
-    expect(old.comments.at(-1)?.body).toContain("Merged to production in #2 (the scheduled merge): 2 commits");
-    const [next, ...rest] = openIssues(w);
-    expect(rest).toEqual([]);
-    expect(next).toMatchObject({ number: 3, title: "Merging to production in 24 hours (2026-10-06 10:00 AM CT)", labels: [LABEL, "human"], assignees: PEOPLE });
-    expect(marker(next as Issue)).toBe(`due=${at("2026-10-06T15:00:00Z")} held=0 last=0`);
+    // One issue for good: never closed, never a second one.
+    const kept = issue(w, 1);
+    expect(kept).toMatchObject({ state: "open", title: "Merging to production in 24 hours (2026-10-06 10:00 AM CT)", labels: [LABEL, "human"], assignees: PEOPLE });
+    expect(kept.comments.at(-1)?.body).toContain("Merged to production in #2 (the scheduled merge): 2 commits");
+    expect(kept.comments.at(-1)?.body).toContain("The next merge is at 2026-10-06 10:00 AM CT.");
+    expect(marker(kept)).toBe(`due=${at("2026-10-06T15:00:00Z")} held=0 last=0`);
+    expect(gh(w).issues).toHaveLength(1);
   });
 
   it("keeps merging day after day, each a merge commit of production's own history", () => {
@@ -326,9 +367,10 @@ describe("the countdown issue", () => {
     commit(w, "c4", { "app.txt": "four\n" });
     commit(w, "c5", { "app.txt": "five\n" });
     ok(run(w, "schedule", "2026-10-06T15:07:00Z"));
-    expect(gh(w).prs.map((p) => [p.number, p.merged])).toEqual([[2, true], [4, true]]);
+    expect(gh(w).prs.map((p) => [p.number, p.merged])).toEqual([[2, true], [3, true]]);
     expect(tree(w, "production")).toBe(tree(w, w.sha.c5 as string));
-    expect(openIssues(w).map((i) => i.number)).toEqual([5]);
+    expect(openIssues(w).map((i) => i.number)).toEqual([1]);
+    expect(issue(w, 1).comments.filter((c) => c.body.startsWith("Merged to production"))).toHaveLength(2);
   });
 
   it("stays due, rather than close as nothing to merge, while main is ahead but not green yet", () => {
@@ -337,15 +379,14 @@ describe("the countdown issue", () => {
     const w = counting();
     ok(run(w, "schedule", "2026-10-05T15:07:00Z"));
     const ahead = commit(w, "c4", { "app.txt": "four\n" }, false);
-    const id = comment(w, 3, "/fast-forward", "2026-10-05T16:00:00Z");
+    const id = comment(w, 1, "/fast-forward", "2026-10-05T16:00:00Z");
     const r = ok(run(w, "issue_comment", "2026-10-05T16:00:30Z"));
     expect(reactions(w, id)).toEqual(["+1"]);
     expect(r.text).toContain("1 newer commit(s) whose CI has not passed yet");
-    expect(issue(w, 3).state).toBe("open");
-    expect(issue(w, 3).title).toBe("Merging to production at the next check (2026-10-05 11:00 AM CT)");
+    expect(issue(w, 1).title).toBe("Merging to production at the next check (2026-10-05 11:00 AM CT)");
     expect(gh(w).prs).toHaveLength(1);
 
-    // CI passes on main: its run merges what /fast-forward asked for, and the countdown rolls.
+    // CI passes on main: its run merges what /fast-forward asked for, and the countdown starts over.
     edit(w, (s) => {
       s.green.push(ahead);
       s.newestGreen = ahead;
@@ -353,17 +394,18 @@ describe("the countdown issue", () => {
     ok(run(w, "workflow_run", "2026-10-05T16:30:00Z", { RUN_SHA: ahead }));
     expect(gh(w).prs).toHaveLength(2);
     expect(tree(w, "production")).toBe(tree(w, ahead));
-    expect(issue(w, 3).state).toBe("closed");
+    expect(issue(w, 1).title).toBe("Merging to production in 23 hours (2026-10-06 10:00 AM CT)");
   });
 
-  it("closes it as nothing to merge when production already has everything", () => {
+  it("says there was nothing to merge, and counts down to the next day, when production already has everything", () => {
     const w = counting();
     git(w.work, "push", "-q", "origin", `${w.sha.c3}:refs/heads/production`);
     ok(run(w, "schedule", "2026-10-05T15:07:00Z"));
     expect(gh(w).prs).toEqual([]);
-    expect(issue(w, 1)).toMatchObject({ state: "closed", reason: "completed" });
+    expect(issue(w, 1).state).toBe("open");
     expect(issue(w, 1).comments.at(-1)?.body).toContain("Nothing to merge");
-    expect(openIssues(w).map((i) => i.number)).toEqual([2]);
+    expect(issue(w, 1).title).toBe("Merging to production in 24 hours (2026-10-06 10:00 AM CT)");
+    expect(openIssues(w).map((i) => i.number)).toEqual([1]);
   });
 
   it("starts the next one at the next release hour that is at least 12 hours away", () => {
@@ -409,13 +451,14 @@ describe("the countdown issue", () => {
     expect(gh(w).log.filter((l) => l.startsWith("issue edit"))).toHaveLength(edits);
   });
 
-  it("closes any older duplicate as not planned and keeps the newest", () => {
+  it("keeps the oldest, the one that stays open, and closes any newer duplicate as not planned", () => {
     const w = counting();
     ok(run(w, "schedule", "2026-10-04T16:30:00Z"));
     edit(w, (s) => s.issues.push({ ...(s.issues[0] as Issue), number: s.next++, comments: [] }));
     ok(run(w, "schedule", "2026-10-04T17:00:00Z"));
-    expect(issue(w, 1)).toMatchObject({ state: "closed", reason: "not planned" });
-    expect(openIssues(w).map((i) => i.number)).toEqual([2]);
+    expect(issue(w, 2)).toMatchObject({ state: "closed", reason: "not planned" });
+    expect(issue(w, 2).comments.at(-1)?.body).toContain("Superseded by #1");
+    expect(openIssues(w).map((i) => i.number)).toEqual([1]);
   });
 
   it("schedules a fresh time when someone deleted its state line", () => {
@@ -462,7 +505,7 @@ describe("/fast-forward", () => {
     expect(r.output).toContain("promoted=true");
     expect(gh(w).prs.map((p) => [p.number, p.merged])).toEqual([[2, true]]);
     expect(tree(w, "production")).toBe(tree(w, w.sha.c3 as string));
-    expect(issue(w, 1)).toMatchObject({ state: "closed", reason: "completed" });
+    expect(issue(w, 1).state).toBe("open");
     expect(issue(w, 1).comments.at(-1)?.body).toContain("Merged to production in #2");
     expect(openIssues(w).map((i) => i.title)).toEqual(["Merging to production in 21 hours (2026-10-05 10:00 AM CT)"]);
   });
@@ -474,7 +517,7 @@ describe("/fast-forward", () => {
     comment(w, 1, "/fast-forward", "2026-10-04T18:00:00Z");
     ok(run(w, "issue_comment", "2026-10-04T18:00:30Z"));
     expect(gh(w).prs).toHaveLength(1);
-    expect(issue(w, 1).state).toBe("closed");
+    expect(marker(issue(w, 1))).toContain("held=0");
   });
 
   it("is refused from anyone without write access", () => {
@@ -501,7 +544,7 @@ describe("holding and delaying from the comments", () => {
     expect(reactions(w, id)).toEqual(["+1"]);
     expect(issue(w, 1).title).toBe("Merging to production: on hold (was due 2026-10-05 10:00 AM CT)");
     expect(marker(issue(w, 1))).toBe(`due=${DUE} held=1 last=${id}`);
-    expect(issue(w, 1).body).toContain("**On hold.**");
+    expect(issue(w, 1).body).toContain("**Production: on hold.**");
     ok(run(w, "schedule", "2026-10-05T16:07:00Z"));
     ok(run(w, "schedule", "2026-10-06T16:07:00Z"));
     expect(gh(w).prs).toEqual([]);
@@ -516,7 +559,7 @@ describe("holding and delaying from the comments", () => {
     ok(run(w, "issue_comment", "2026-10-05T17:00:30Z"));
     expect(reactions(w, id)).toEqual(["+1"]);
     expect(gh(w).prs).toHaveLength(1);
-    expect(issue(w, 1)).toMatchObject({ state: "closed", reason: "completed" });
+    expect(issue(w, 1).comments.at(-1)?.body).toContain("Merged to production in #2");
     expect(openIssues(w)[0]?.title).toBe("Merging to production in 22 hours (2026-10-06 10:00 AM CT)");
   });
 
@@ -604,6 +647,198 @@ describe("holding and delaying from the comments", () => {
   });
 });
 
+describe("Vercel, from the same issue", () => {
+  it("/hold vercel puts the hold tag on main, says so, and leaves production's countdown alone", () => {
+    const w = counting();
+    const id = comment(w, 1, "/hold vercel the art is half in", "2026-10-05T10:00:00Z");
+    ok(run(w, "issue_comment", "2026-10-05T10:01:00Z"));
+    expect(reactions(w, id)).toEqual(["+1"]);
+    expect(tagAt(w, "vercel-hold")).toBe(w.sha.c3);
+    expect(issue(w, 1).body).toContain("vercel_held=1 vercel_until=0");
+    expect(issue(w, 1).body).toContain("**Vercel (staging): on hold.**");
+    expect(issue(w, 1).title).toBe("Merging to production in 5 hours (2026-10-05 10:00 AM CT) · Vercel on hold");
+    expect(marker(issue(w, 1))).toContain("held=0");
+    // Production still merges at its time.
+    ok(run(w, "schedule", "2026-10-05T15:07:00Z"));
+    expect(gh(w).prs).toHaveLength(1);
+    expect(tagAt(w, "vercel-hold")).toBe(w.sha.c3);
+    expect(hookCalls(w)).toEqual([]);
+  });
+
+  it("/resume vercel takes the tag away and has Vercel build what the hold kept back, through the deploy hook", () => {
+    const w = counting();
+    comment(w, 1, "/hold staging", "2026-10-05T10:00:00Z");
+    ok(run(w, "issue_comment", "2026-10-05T10:01:00Z"));
+    const later = commit(w, "c4", { "app.txt": "four\n" });
+    comment(w, 1, "/resume vercel", "2026-10-05T11:00:00Z");
+    ok(run(w, "issue_comment", "2026-10-05T11:01:00Z", { VERCEL_DEPLOY_HOOK_URL: HOOK }));
+    expect(tagAt(w, "vercel-hold")).toBe("");
+    expect(tagAt(w, "vercel-fast-forward")).toBe(later);
+    expect(hookCalls(w)).toEqual([`-fsS -X POST -o /dev/null ${HOOK}`]);
+    expect(issue(w, 1).comments.at(-1)?.body).toContain(`Vercel is building \`${later.slice(0, 7)}\`, main's newest commit, past the hour between its builds (its hold is over).`);
+    expect(issue(w, 1).title).toBe("Merging to production in 4 hours (2026-10-05 10:00 AM CT)");
+  });
+
+  it("/delay vercel 3h holds Vercel for three hours, and the first check after them builds", () => {
+    const w = counting();
+    comment(w, 1, "/delay vercel 3h", "2026-10-05T10:00:00Z");
+    ok(run(w, "issue_comment", "2026-10-05T10:01:00Z", { VERCEL_DEPLOY_HOOK_URL: HOOK }));
+    expect(issue(w, 1).body).toContain(`vercel_held=0 vercel_until=${at("2026-10-05T13:00:00Z")}`);
+    expect(issue(w, 1).title).toBe("Merging to production in 5 hours (2026-10-05 10:00 AM CT) · Vercel held until 2026-10-05 8:00 AM CT");
+    expect(tagAt(w, "vercel-hold")).toBe(w.sha.c3);
+    ok(run(w, "schedule", "2026-10-05T12:07:00Z", { VERCEL_DEPLOY_HOOK_URL: HOOK }));
+    expect(hookCalls(w)).toEqual([]);
+    ok(run(w, "schedule", "2026-10-05T13:07:00Z", { VERCEL_DEPLOY_HOOK_URL: HOOK }));
+    expect(tagAt(w, "vercel-hold")).toBe("");
+    expect(tagAt(w, "vercel-fast-forward")).toBe(w.sha.c3);
+    expect(hookCalls(w)).toHaveLength(1);
+    expect(issue(w, 1).body).toContain("vercel_held=0 vercel_until=0");
+  });
+
+  it("/fast-forward vercel builds main's newest commit now, past a hold, and leaves production alone", () => {
+    const w = counting();
+    comment(w, 1, "/hold vercel", "2026-10-04T17:00:00Z");
+    ok(run(w, "issue_comment", "2026-10-04T17:01:00Z"));
+    const before = production(w);
+    const id = comment(w, 1, "/fast-forward vercel", "2026-10-04T18:00:00Z");
+    ok(run(w, "issue_comment", "2026-10-04T18:00:30Z", { VERCEL_DEPLOY_HOOK_URL: HOOK }));
+    expect(reactions(w, id)).toEqual(["+1"]);
+    expect(tagAt(w, "vercel-hold")).toBe("");
+    expect(tagAt(w, "vercel-fast-forward")).toBe(w.sha.c3);
+    expect(hookCalls(w)).toHaveLength(1);
+    expect(issue(w, 1).comments.at(-1)?.body).toContain("(/fast-forward)");
+    expect(production(w)).toBe(before);
+    expect(gh(w).prs).toEqual([]);
+    expect(issue(w, 1).title).toBe("Merging to production in 21 hours (2026-10-05 10:00 AM CT)");
+  });
+
+  it("/fast-forward both merges production and builds Vercel", () => {
+    const w = counting();
+    comment(w, 1, "/fast-forward both", "2026-10-04T18:00:00Z");
+    ok(run(w, "issue_comment", "2026-10-04T18:00:30Z", { VERCEL_DEPLOY_HOOK_URL: HOOK }));
+    expect(gh(w).prs.map((p) => p.merged)).toEqual([true]);
+    expect(hookCalls(w)).toHaveLength(1);
+  });
+
+  it("says the next push builds it when the deploy hook is not set, or refused, and skips one Vercel already serves", () => {
+    const w = counting();
+    comment(w, 1, "/fast-forward vercel", "2026-10-04T18:00:00Z");
+    ok(run(w, "issue_comment", "2026-10-04T18:00:30Z"));
+    expect(tagAt(w, "vercel-fast-forward")).toBe(w.sha.c3);
+    expect(hookCalls(w)).toEqual([]);
+    expect(issue(w, 1).comments.at(-1)?.body).toContain("at the next push to `main`");
+    expect(issue(w, 1).comments.at(-1)?.body).toContain("`VERCEL_DEPLOY_HOOK_URL` secret is not set");
+
+    comment(w, 1, "/fast-forward vercel", "2026-10-04T18:10:00Z");
+    ok(run(w, "issue_comment", "2026-10-04T18:10:30Z", { VERCEL_DEPLOY_HOOK_URL: HOOK, FAKE_CURL_FAIL: "1" }));
+    expect(issue(w, 1).comments.at(-1)?.body).toContain("Vercel's deploy hook refused the request");
+
+    edit(w, (s) => s.deployments.push({ id: 7, sha: w.sha.c3 as string, state: "success" }));
+    comment(w, 1, "/fast-forward vercel", "2026-10-04T18:20:00Z");
+    ok(run(w, "issue_comment", "2026-10-04T18:20:30Z", { VERCEL_DEPLOY_HOOK_URL: HOOK }));
+    expect(issue(w, 1).comments.at(-1)?.body).toContain(`Vercel already serves \`${(w.sha.c3 as string).slice(0, 7)}\``);
+    expect(hookCalls(w)).toHaveLength(1);
+  });
+
+  it("reads a hold's reason as production's when it names no target", () => {
+    const w = counting();
+    comment(w, 1, "/hold the vercel build is slow", "2026-10-05T10:00:00Z");
+    comment(w, 1, "/delay production 2h", "2026-10-05T10:01:00Z");
+    ok(run(w, "issue_comment", "2026-10-05T10:02:00Z"));
+    expect(marker(issue(w, 1))).toContain(`due=${DUE + 2 * 3600} held=1`);
+    expect(issue(w, 1).body).toContain("vercel_held=0 vercel_until=0");
+    expect(tagAt(w, "vercel-hold")).toBe("");
+  });
+
+  it("is in the issue's instructions", () => {
+    const w = counting();
+    expect(issue(w, 1).body).toContain("| `/fast-forward vercel` |");
+    expect(issue(w, 1).body).toContain("| `/hold vercel`, `/delay vercel 3h`, `/resume vercel` |");
+  });
+
+  it("runs by hand for Vercel alone, or both, and refuses a target it does not know", () => {
+    const w = counting();
+    ok(run(w, "workflow_dispatch", "2026-10-04T18:00:00Z", { INPUT_TARGET: "vercel", VERCEL_DEPLOY_HOOK_URL: HOOK }));
+    expect(hookCalls(w)).toHaveLength(1);
+    expect(gh(w).prs).toEqual([]);
+    expect(issue(w, 1).comments.at(-1)?.body).toContain("(a manual run)");
+    ok(run(w, "workflow_dispatch", "2026-10-04T18:10:00Z", { INPUT_TARGET: "both", VERCEL_DEPLOY_HOOK_URL: HOOK }));
+    expect(gh(w).prs).toHaveLength(1);
+    const refused = run(w, "workflow_dispatch", "2026-10-04T18:20:00Z", { INPUT_TARGET: "everything" });
+    expect(refused.status).not.toBe(0);
+    expect(refused.text).toContain("The target must be production, vercel or both");
+  });
+
+  it("names the two tags scripts/vercel-ignore.sh reads", () => {
+    const script = readFileSync(SCRIPT, "utf8");
+    const ignore = readFileSync(join(ROOT, "scripts/vercel-ignore.sh"), "utf8");
+    for (const [name, tag] of [["STAGING_HOLD_TAG", "vercel-hold"], ["STAGING_FAST_FORWARD_TAG", "vercel-fast-forward"]]) {
+      expect(new RegExp(`: "\\$\\{${name}:=([^}]+)\\}"`, "u").exec(script)?.[1]).toBe(tag);
+      expect(ignore).toContain(`refs/tags/${tag}`);
+    }
+  });
+});
+
+describe("the queue in the issue", () => {
+  /** The body's queue table, a row a commit of main. */
+  const rows = (i: Issue): string[] => {
+    const start = i.body.indexOf("| Pull request |");
+    if (start === -1) return [];
+    const table = i.body.slice(start).split("\n\n")[0] ?? "";
+    return table.split("\n").slice(2);
+  };
+  const short = (sha: string | undefined): string => (sha ?? "").slice(0, 7);
+
+  it("lists what main has that is not live on both, by pull request, newest first, with its CI and where it stands", () => {
+    const w = world();
+    edit(w, (s) => s.deployments.push({ id: 9, sha: w.sha.c2 as string, state: "success" }, { id: 8, sha: w.sha.c1 as string, state: "success" }));
+    const four = commit(w, "c4", { "app.txt": "four\n" }, false, "Patch: four | more (#14)");
+    edit(w, (s) => s.failed.push(four));
+    // A pull request merged with a merge commit, its title on the body's first line.
+    git(w.work, "checkout", "-q", "-b", "side");
+    writeFileSync(join(w.work, "side.txt"), "x\n");
+    git(w.work, "add", "-A");
+    git(w.work, "commit", "-q", "-m", "side work");
+    git(w.work, "checkout", "-q", "main");
+    git(w.work, "merge", "-q", "--no-ff", "side", "-m", "Merge pull request #15 from acme/side", "-m", "Patch: the side quest");
+    git(w.work, "push", "-q", "origin", "main");
+    const merged = git(w.work, "rev-parse", "HEAD");
+    w.sha.c5 = merged;
+    edit(w, (s) => s.running.push(merged));
+    ok(run(w, "schedule", "2026-10-04T16:00:00Z"));
+    const body = issue(w, 1).body;
+    expect(body).toContain(`Cloudflare serves \`main\` as of \`${short(w.sha.c1)}\`; Vercel serves \`${short(w.sha.c2)}\`.`);
+    expect(body).toContain("Not live on both yet, newest first: 4.");
+    expect(rows(issue(w, 1))).toEqual([
+      "| #15 Patch: the side quest | ⏳ running | queued | waits for CI |",
+      "| #14 Patch: four \\| more | ❌ failed | queued | waits for CI |",
+      `| \`${short(w.sha.c3)}\` change c3 | ✅ passed | queued | next merge |`,
+      `| \`${short(w.sha.c2)}\` change c2 | ✅ passed | 🟢 live | next merge |`,
+    ]);
+  });
+
+  it("follows a merge and a hold, and says when everything is live", () => {
+    const w = counting();
+    edit(w, (s) => s.deployments.push({ id: 9, sha: w.sha.c3 as string, state: "success" }));
+    comment(w, 1, "/hold", "2026-10-04T17:00:00Z");
+    ok(run(w, "issue_comment", "2026-10-04T17:01:00Z"));
+    expect(rows(issue(w, 1)).map((row) => row.split(" | ").at(-1))).toEqual(["held |", "held |"]);
+    ok(run(w, "workflow_dispatch", "2026-10-04T18:00:00Z"));
+    expect(rows(issue(w, 1))).toEqual([]);
+    expect(issue(w, 1).body).toContain("Everything on `main` is live on both.");
+  });
+
+  it("says what Vercel serves is unknown, and lists against production alone, when no deployment can be read", () => {
+    const w = counting();
+    expect(issue(w, 1).body).toContain("what Vercel serves could not be read");
+    expect(rows(issue(w, 1)).map((row) => row.split(" | ")[2])).toEqual(["?", "?"]);
+    // A failed deployment is not what Vercel serves.
+    edit(w, (s) => s.deployments.push({ id: 9, sha: w.sha.c3 as string, state: "failure" }));
+    ok(run(w, "schedule", "2026-10-04T17:07:00Z"));
+    expect(issue(w, 1).body).toContain("what Vercel serves could not be read");
+  });
+});
+
 describe("the catalog fast path", () => {
   it("merges a catalog bump at once, past a hold, and leaves the countdown standing", () => {
     const w = counting();
@@ -656,8 +891,8 @@ describe("a green push to main, for a cron GitHub never starts", () => {
     ok(run(w, "workflow_run", "2026-10-05T15:40:00Z", { RUN_SHA: late }));
     expect(gh(w).prs.map((p) => [p.number, p.merged])).toEqual([[2, true]]);
     expect(tree(w, "production")).toBe(tree(w, late));
-    expect(issue(w, 1)).toMatchObject({ state: "closed", reason: "completed" });
-    expect(openIssues(w).map((i) => i.number)).toEqual([3]);
+    expect(issue(w, 1).comments.at(-1)?.body).toContain("Merged to production in #2");
+    expect(openIssues(w).map((i) => i.number)).toEqual([1]);
   });
 
   it("is held by a hold, like any other check", () => {
@@ -677,7 +912,8 @@ describe("running it by hand", () => {
     ok(run(w, "issue_comment", "2026-10-04T17:01:00Z"));
     ok(run(w, "workflow_dispatch", "2026-10-04T18:00:00Z"));
     expect(tree(w, "production")).toBe(tree(w, w.sha.c3 as string));
-    expect(issue(w, 1)).toMatchObject({ state: "closed", reason: "completed" });
+    expect(issue(w, 1).comments.at(-1)?.body).toContain("Merged to production in #2 (a manual run)");
+    expect(marker(issue(w, 1))).toContain("held=0");
     expect(openIssues(w)[0]?.title).toBe("Merging to production in 21 hours (2026-10-05 10:00 AM CT)");
   });
 
@@ -801,7 +1037,7 @@ describe("what stops it", () => {
     const calls = (token: string): string[] =>
       gh(w).tokens.filter((c) => c.startsWith(`${token} `)).map((c) => c.slice(token.length + 1));
     expect(calls("bot")).toEqual(["pr list", "pr create", "pr merge", "api DELETE"]);
-    expect(calls("actions")).toEqual(expect.arrayContaining(["run list", "label create", "issue close", "issue create"]));
+    expect(calls("actions")).toEqual(expect.arrayContaining(["run list", "label create", "issue comment", "issue edit"]));
     expect(calls("actions").filter((c) => c.startsWith("pr ") || c === "api DELETE")).toEqual([]);
 
     // Without one, everything goes out as GH_TOKEN.
@@ -822,7 +1058,7 @@ describe("what stops it", () => {
     expect(out.text).toContain("nothing to merge");
     expect(production(w)).toBe(before);
     expect(gh(w).prs).toHaveLength(1);
-    expect(openIssues(w).map((i) => i.number)).toEqual([3]);
+    expect(openIssues(w).map((i) => i.number)).toEqual([1]);
   });
 
   it("waits, without failing, while main's newest commit changes a workflow and has not passed CI", () => {
@@ -849,7 +1085,7 @@ describe("what stops it", () => {
     ok(run(w, "workflow_run", "2026-10-05T15:20:00Z", { RUN_SHA: red }));
     expect(gh(w).prs).toHaveLength(1);
     expect(tree(w, "production")).toBe(tree(w, red));
-    expect(issue(w, 1).state).toBe("closed");
+    expect(issue(w, 1).comments.at(-1)?.body).toContain("Merged to production in #2");
   });
 
   it("does not wait with the bot's token, which may push workflow files: it merges the newest green commit", () => {
@@ -923,6 +1159,6 @@ describe("the workflow", () => {
   });
 
   it("asks for the permissions the script uses, and no more", () => {
-    expect(WORKFLOW).toMatch(/^permissions:\n {2}contents: write\n {2}actions: read\n {2}issues: write\n {2}pull-requests: write\n/mu);
+    expect(WORKFLOW).toMatch(/^permissions:\n {2}contents: write\n {2}actions: read\n {2}deployments: read\n {2}issues: write\n {2}pull-requests: write\n/mu);
   });
 });

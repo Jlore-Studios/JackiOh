@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0051: the seat ledger's epoch (SPEC §9.5; R1523000; issue #1523)
+-- Migration 0052: the seat ledger's epoch (SPEC §9.5; R1523000; issue #1523)
 -- ============================================================================
 -- Serves R1523000: one seat ledger in the server holds every profile's game
 -- (crates/server/src/seats.rs), and the in-match flag is its record and a
@@ -21,7 +21,7 @@
 -- server's service_role selects it FOR SHARE (which takes UPDATE as well as
 -- SELECT) and bumps it.
 --
--- Apply order: ... -> 0050 -> 0051 (this file).
+-- Apply order: ... -> 0050 -> 0051 -> 0052 (this file).
 -- Safe to re-apply: create-if-not-exists, an insert that skips an existing
 -- row, and idempotent grants.
 -- ============================================================================

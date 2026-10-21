@@ -15,9 +15,10 @@
 // and replay shares (migration 0038, #936; chat purged after `CHAT_RETENTION_DAYS`, B53; a challenge
 // deleted once `CHALLENGE_TTL_MS` has passed, B49; the shares between two players deleted when either
 // unfriends or blocks the other, B46, B52), who may watch a game you play (B50: your friends, and your
-// opponent's) and Duos co-op (migration 0039, SPEC S6: the teammate's view, B23; its moves kept
-// `MATCH_ACTION_RETENTION_DAYS`; either account's deletion takes the whole co-op game, refused while
-// one is live), custom cards (migration 0037, R915008: private to their owner, gone with the account)
+// opponent's) and Duos co-op (migrations 0039 and 0051, SPEC S6: the teammate's view, B23; its moves
+// kept `MATCH_ACTION_RETENTION_DAYS`; a finished co-op game stays for the teammate when one account
+// is deleted, R1497000, and the deletion is refused while one is live), custom cards (migration 0037,
+// R915008: private to their owner, gone with the account)
 // and the presence heartbeat every signed-in session sends once its account owes no agreement
 // (R970002). The minimum age is `MIN_ACCOUNT_AGE_YEARS`, the owner's to
 // choose. Change the date on the page whenever the text changes: with the terms' date it makes up
@@ -59,7 +60,7 @@ export const privacyTestid = {
 } as const;
 
 /** The date the text below last changed, as the page shows it. */
-export const PRIVACY_LAST_UPDATED = "2026-10-17";
+export const PRIVACY_LAST_UPDATED = "2026-10-21";
 
 export default function PrivacyRoute(): ReactElement {
   const locale = useLocale();
@@ -299,9 +300,9 @@ export default function PrivacyRoute(): ReactElement {
             tutorial progress, the records of how you played, and the record of your age check and of the terms
             you agreed to.
             Finished matches and their results stay in the other player&rsquo;s history, with your account
-            removed from them. Co-op games are different: deleting either teammate&rsquo;s account deletes the
-            whole co-op game, its moves and its result, for both of you. You can&rsquo;t delete your account
-            during a match, a co-op game or a Conquest series that hasn&rsquo;t finished.
+            removed from them, and so does a finished co-op game in your teammate&rsquo;s, its moves and its
+            result included. You can&rsquo;t delete your account during a match, a co-op game or a Conquest
+            series that hasn&rsquo;t finished.
           </p>
           <p>
             Deleting your account also deletes everything of yours on Play together: your friends, friend

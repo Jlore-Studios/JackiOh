@@ -1,4 +1,4 @@
--- Duos co-op (migration 0039, fullsend SPEC S6, B33, B34, B40; issues #936, #946). Runs after
+-- Duos co-op (migrations 0039 and 0051, fullsend SPEC S6, B33, B34, B40; issues #936, #946). Runs after
 -- 22 (0038's checks); profiles 1 and 2 are active by then (03 activated them).
 \set ON_ERROR_STOP on
 
@@ -152,7 +152,7 @@ begin
 end $$;
 rollback;
 
-\echo '### 0012''s rule: a co-op room and a co-op match go with either of their people ###'
+\echo '### R1497000 (0051): a deleted account''s room goes, and its seat on a finished co-op match empties while the match and its log stay ###'
 begin;
 insert into auth.users (id, email, email_confirmed_at)
 values ('d0050000-0000-4000-8000-000000000004', 'duos-leaver@example.test', now());
@@ -167,21 +167,73 @@ values ('d0050000-0000-4000-8000-000000000005', 1, 'n-1', '{}');
 do $$
 begin
   if not exists (select 1 from public.profiles where id = 'd0050000-0000-4000-8000-000000000004') then
-    raise exception 'FAIL (0039): the leaver has no profile; the cascade below would prove nothing';
+    raise exception 'FAIL (R1497000): the leaver has no profile; the delete below would prove nothing';
   end if;
   delete from auth.users where id = 'd0050000-0000-4000-8000-000000000004';
   if exists (select 1 from public.duos_rooms where code = 'DUOSCD') then
-    raise exception 'FAIL (0039): the deleted account''s room outlived it';
+    raise exception 'FAIL (R1497000): the deleted account''s room outlived it';
   end if;
-  if exists (select 1 from public.duos_matches where id = 'd0050000-0000-4000-8000-000000000005') then
-    raise exception 'FAIL (0039): the deleted account''s co-op match outlived it';
+  if not exists (select 1 from public.duos_matches
+                  where id = 'd0050000-0000-4000-8000-000000000005'
+                    and a1 = '11111111-1111-1111-1111-111111111111' and a2 is null
+                    and result = '{"outcome":"win","winner":"a"}'::jsonb) then
+    raise exception 'FAIL (R1497000): the finished co-op match did not stay for the teammate with the deleted seat empty';
   end if;
-  if exists (select 1 from public.duos_match_actions where match_id = 'd0050000-0000-4000-8000-000000000005') then
-    raise exception 'FAIL (0039): the deleted account''s co-op log outlived it';
+  if (select count(*) from public.duos_match_actions
+       where match_id = 'd0050000-0000-4000-8000-000000000005') <> 1 then
+    raise exception 'FAIL (R1497000): the finished co-op match''s log did not stay with it';
   end if;
   if not exists (select 1 from public.profiles where id = '11111111-1111-1111-1111-111111111111') then
-    raise exception 'FAIL (0039): deleting one person took their teammate''s profile';
+    raise exception 'FAIL (R1497000): deleting one person took their teammate''s profile';
   end if;
-  raise notice 'OK (0039): deleting an account deletes its rooms and co-op matches with their logs, and nothing of its teammate';
+  raise notice 'OK (R1497000): deleting an account deletes its rooms and empties its seat on a finished co-op match, which keeps its result and its log, and takes nothing of its teammate';
+end $$;
+rollback;
+
+\echo '### R1497000 (0051): a live co-op match refuses the delete of either of its people ###'
+begin;
+insert into auth.users (id, email, email_confirmed_at)
+values ('d0050000-0000-4000-8000-000000000006', 'duos-mid-game@example.test', now());
+do $$
+declare
+  mate constant uuid := '11111111-1111-1111-1111-111111111111';
+  gone constant uuid := 'd0050000-0000-4000-8000-000000000006';
+  mid  constant uuid := 'd0050000-0000-4000-8000-000000000007';
+  seat text;
+  refused_by text;
+begin
+  if not exists (select 1 from public.profiles where id = gone) then
+    raise exception 'FAIL (R1497000): the player has no profile; the refusals below would prove nothing';
+  end if;
+  foreach seat in array array['a1', 'a2'] loop
+    delete from public.duos_matches where id = mid;
+    insert into public.duos_matches (id, seed, a1, a2, difficulty, options)
+    values (mid, 'seed-live', case when seat = 'a1' then gone else mate end,
+            case when seat = 'a1' then mate else gone end, 'easy', '{}');
+    insert into public.duos_match_actions (match_id, seq, nonce, action) values (mid, 1, 'n-1', '{}');
+    begin
+      delete from auth.users where id = gone;
+      raise exception 'FAIL (R1497000): a person in seat % of a live co-op match was deleted', seat;
+    exception
+      when check_violation then
+        get stacked diagnostics refused_by = constraint_name;
+        if refused_by is distinct from 'duos_matches_seats_filled_unless_over_check' then
+          raise exception 'FAIL (R1497000): the live co-op match (seat %) was refused by "%"', seat, refused_by;
+        end if;
+    end;
+    if not exists (select 1 from public.profiles where id = gone)
+       or not exists (select 1 from public.duos_matches
+                       where id = mid and ended_at is null and a1 is not null and a2 is not null)
+       or (select count(*) from public.duos_match_actions where match_id = mid) <> 1 then
+      raise exception 'FAIL (R1497000): the refused delete (seat %) changed the profile, the match or its log', seat;
+    end if;
+  end loop;
+  -- Once the match has ended, the same delete goes through and empties the seat.
+  update public.duos_matches set ended_at = now(), result = '{"outcome":"draw"}' where id = mid;
+  delete from auth.users where id = gone;
+  if not exists (select 1 from public.duos_matches where id = mid and a1 = mate and a2 is null) then
+    raise exception 'FAIL (R1497000): once the co-op match ended, the delete did not empty the seat';
+  end if;
+  raise notice 'OK (R1497000): a live co-op match refuses the delete of either seat''s person, and a match that has ended lets it go';
 end $$;
 rollback;

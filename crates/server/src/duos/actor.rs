@@ -1531,8 +1531,8 @@ impl DuosActor {
         match code {
             SocketErrorCode::MatchOver => {}
             SocketErrorCode::Internal => {
-                // A match whose row is gone (an account deleted with it) takes no more rows: the
-                // actor lets go rather than retry for ever.
+                // A match whose row is gone (deleted from the store under the actor) takes no more
+                // rows: the actor lets go rather than retry for ever.
                 let row = one_tx!(self.shared.app.db, |t| t
                     .duos_matches_get(&self.shared.row.id)
                     .await?);

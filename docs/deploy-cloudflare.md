@@ -11,7 +11,7 @@ database and auth (Supabase).
 | --- | --- | --- |
 | Purpose | See main as it is now; preview a branch on request | What players use |
 | Builds from | `main`, plus any branch whose commit message says `[vercel]` | `production` only |
-| How often | A push to main that changes the bundle, once an hour has passed since the last build (`scripts/vercel-ignore.sh`) | Once a day (an open issue counts down, and anyone can hold or delay it), plus catalog bumps as soon as CI passes |
+| How often | A push to main that changes the bundle, once an hour has passed since the last build (`scripts/vercel-ignore.sh`); the countdown issue can hold, delay or fast-forward it (section 2.3) | Once a day (an open issue counts down, and anyone can hold or delay it), plus catalog bumps as soon as CI passes |
 | Gate | Vercel's own build | `main`'s push-to-main CI run must have passed |
 | Routing and headers | `vercel.json` (source of truth) | `apps/web/public/_redirects`, `_headers`, `wrangler.jsonc` |
 | Domain | `jackioh.vercel.app` | jackioh.com |
@@ -30,9 +30,9 @@ merging a pull request whose head is a green commit of main, so its files always
    When its time comes, 10:00 AM Central each day unless someone held or delayed it,
    `promote-production.yml` looks up the newest commit of `main` whose push-to-main CI run succeeded,
    opens a pull request from `promote/<date>-<sha>` into `production` listing the commits, and
-   merges it with a merge commit. It then closes the issue as completed, with the pull request, and
-   opens the next one. If `production` already has that commit, no pull request is opened and
-   nothing deploys. GitHub did not start the first scheduled run (it starts this repository's
+   merges it with a merge commit. It then says so on the issue, with the pull request, and counts
+   the same issue down to the next day: the issue stays open for good. If `production` already has
+   that commit, no pull request is opened and nothing deploys. GitHub did not start the first scheduled run (it starts this repository's
    schedules late, if at all), so the same check also runs on every green CI run on `main`: the
    first one after the issue's time merges, and the cron is only a second chance.
 4. The same run's `deploy` job checks out `production`, installs the way CI does, builds
@@ -77,13 +77,13 @@ These are all tested against a simulated repo before this change shipped:
 - The pull request lists the catalog version and every commit that goes live, and the run summary
   repeats it.
 
-### 2.3 The countdown issue: hold and delay
+### 2.3 The countdown issue: hold, delay, fast-forward and the queue
 
-Exactly one issue labelled `production merge` is open at a time. Its title reads "Merging to
-production in 23 hours (2026-10-05 10:00 AM CT)", and every check (the hourly cron, every green CI run
-on `main`, every command) brings the hours up to date, so it counts down; a check in the same hour
-edits nothing. The first line of its body is a
-hidden state line (the time, whether it is held, the last comment read); leave it alone.
+One issue labelled `production merge` stays open for good. Its title reads "Merging to production
+in 23 hours (2026-10-05 10:00 AM CT)", and every check (the hourly cron, every green CI run on
+`main`, every command) brings the hours up to date, so it counts down; a check in the same hour
+edits nothing. The first line of its body is a hidden state line (the time, whether
+it is held, the last comment read, Vercel's hold and delay); leave it alone.
 
 Anyone with write access comments on the issue:
 
@@ -93,7 +93,14 @@ Anyone with write access comments on the issue:
 | `/resume` (or `/release`, `/unhold`) | Lifts the hold. If the time has passed, it merges at once. |
 | `/delay 3h`, `/delay 2d` | Moves the merge later by that long. At most 168 hours at a time; use `/hold` for longer. If the time has already passed, it counts from the comment. |
 | `/fast-forward` | Merges now, past a hold: the comment starts the check, which merges within a minute. |
+| `/hold vercel` | Vercel builds nothing from `main` until `/resume vercel`. The title says "Vercel on hold". |
+| `/delay vercel 3h` | Vercel builds nothing from `main` for that long (from the comment, or from the end of a delay already running), then builds `main` as it is. |
+| `/resume vercel` | Lifts Vercel's hold or delay, and Vercel builds `main` as it is now. |
+| `/fast-forward vercel` | Vercel builds `main`'s newest commit now, past its hold and the hour between its builds. |
 
+Every command takes a target as its first word: none, `production` (`prod`, `cloudflare`) for the
+merge, `vercel` (`staging`) for Vercel, `both` (`all`) for both, so `/fast-forward both` merges and
+builds. Anything else after the command is the reason (`/hold the art is half in` is production's).
 A command is a line that starts with the slash, in any case. Each is acknowledged with a 👍 (😕 when
 it was refused: the commenter has no write access, or it is not understood), and a comment wakes the
 workflow at once, so the answer takes a minute rather than an hour. Commands apply once, in the order
@@ -102,10 +109,30 @@ they were written; editing a comment later changes nothing.
 The check merges when the issue's time has passed and it is not held. It runs on every green CI run
 on `main`, on every command comment, on a manual run and, if GitHub starts it, from the hourly cron
 (minute 7). GitHub has not started this repository's scheduled runs, so in practice the first green
-push after the time is what merges: a merge comes a little after its time, never before. When it merges, the issue is closed as completed with a link to the pull
-request, and the next one is opened for the first 10:00 AM Central at least 12 hours away. Every
+push after the time is what merges: a merge comes a little after its time, never before. When it
+merges, the issue says so in a comment with a link to the pull request, and counts down to the
+first 10:00 AM Central at least 12 hours away; the issue is never closed and opened again. Every
 time the issue shows is Central (CT), and the hour stays 10:00 AM through daylight saving. A manual run
 (section 5) merges at once, hold or no hold, and starts the countdown over.
+
+**Vercel from the same issue.** Vercel builds `main` by itself (section 1), so the workflow cannot
+hold it back by not merging. Instead `scripts/vercel-ignore.sh`, which every Vercel build runs
+first, reads two tags from the repository on GitHub with `git ls-remote` (rule 2a; the repository is
+public, so it needs no token): while `vercel-hold` exists, `main` builds nothing; while
+`vercel-fast-forward` names a commit the build has and the last build lacks, it builds past the
+hour. The workflow moves the tags as the commands say, and on a fast-forward, a `/resume vercel` or
+the end of a delay asks Vercel to build at once through its deploy hook (step 7). Without the hook
+the next push to `main` builds instead, and the issue says so. Reading the tags is best effort: a
+build that cannot reach GitHub builds as it would have without them. A hold does not stop a commit
+whose message says `[vercel]`.
+
+**The queue.** Under the countdown the issue lists every pull request on `main` that is not live on
+both Vercel and Cloudflare yet, newest first: its push-to-main CI (passed, failed, running), Vercel
+(live, queued, held) and Cloudflare (live, the next merge, waits for CI, held). The next merge takes
+`main` up to its newest commit whose CI passed, so a red commit, and everything after it, waits for
+CI until a later commit passes. What Vercel serves is its newest successful deployment for `main`'s
+builds, as Vercel's GitHub app reports them (the workflow's `deployments: read`); when none can be
+read, the Vercel column says `?`. Every check brings it up to date.
 
 The label is the custom tag: the workflow finds the open issue by it, and it is on every promotion
 pull request too. Both also carry `human` and are assigned to jgoetzmann and MaxGoetzmann
@@ -277,13 +304,29 @@ production: `crates/server/tests/deploy/rehearse.sh` boots with
 
 What is left is the dashboards' half (#256): set the Supabase Site URL to `https://jackioh.com`.
 
+### Step 7: Let the countdown issue start Vercel's builds
+
+`/fast-forward vercel`, `/resume vercel` and the end of a `/delay vercel` ask Vercel to build at once
+through a deploy hook. Without one they still work, at the next push to `main`.
+
+1. Vercel -> the `jackioh` project -> Settings -> Git -> Deploy Hooks: name it `countdown issue`,
+   branch `main`, **Create Hook**, and copy the URL.
+2. GitHub -> Settings -> Secrets and variables -> Actions -> New repository secret:
+   `VERCEL_DEPLOY_HOOK_URL`, the URL. Anyone with the URL can start a build, so it is a secret.
+3. Check it: comment `/fast-forward vercel` on the countdown issue. The reply says "Vercel is
+   building ...", and Vercel's Deployments tab shows the build of `main`.
+
+A hook's build runs `scripts/vercel-ignore.sh` like any other, so the fast-forward tag is what lets it
+past the hour.
+
 ## 5. Day-to-day operation
 
 - **Normal day:** merge to main as usual. Staging updates within minutes; production catches up when
   the countdown issue's time comes (10:00 AM CT). To change the hour or the zone, edit
   `RELEASE_HOUR` or `RELEASE_TZ` in
   `scripts/promote-production.sh`; the hourly `cron` stays as it is.
-- **Now, please:** comment `/fast-forward` on the countdown issue.
+- **Now, please:** comment `/fast-forward` on the countdown issue (`/fast-forward vercel` for
+  staging, `/fast-forward both` for both). The issue's queue shows what each would take.
 - **Not yet, I'm mid-change:** comment `/hold` on the countdown issue, and `/resume` when the work is
   done; or `/delay 6h` for a known wait (section 2.3). Neither stops a catalog bump.
 - **Ship now (hotfix):** merge the fix, wait for its CI on main to pass, then Actions ->
@@ -297,6 +340,8 @@ What is left is the dashboards' half (#256): set the Supabase Site URL to `https
   workflow) until the fix has merged, then re-enable it.
 - **Pause production:** `/hold` on the countdown issue (a catalog bump still goes out), or disable the
   workflow to stop everything. Staging keeps updating.
+- **Pause staging:** `/hold vercel` (or `/delay vercel 6h`) on the countdown issue, and
+  `/resume vercel` when it may build again; it then builds `main` as it is.
 - **A promote run fails with "refusing to allow a GitHub App to create or update workflow" or "only
   a token with the workflow scope may move it":** the run had no `BOT_GITHUB_TOKEN`, or that token
   lost its `workflow` scope or expired, and main changed `.github/workflows` since production. Renew
@@ -323,8 +368,8 @@ What is left is the dashboards' half (#256): set the Supabase Site URL to `https
   and says why on its page (a setting, a conflict). Fix that and the next hourly check opens a new
   one; close the old one.
 - **The countdown issue is missing or doubled:** the hourly check opens one when none is open and
-  closes all but the newest as not planned, so closing it by hand only starts a fresh countdown for
-  the next 10:00 AM CT that is at least 12 hours away.
+  closes all but the oldest as not planned, so closing it by hand only starts a fresh countdown (in
+  a new issue) for the next 10:00 AM CT that is at least 12 hours away.
 - **deploy-watch opens "Render: the live server is not serving main's catalog":** it compares the
   version and the commit the live server reports (`x-deployed-commit`, from Render's
   `RENDER_GIT_COMMIT`) with the push, and its issue says which of three things it is. The server
@@ -392,7 +437,8 @@ What is left is the dashboards' half (#256): set the Supabase Site URL to `https
 - Cloudflare: none. The `VITE_` settings are all public and committed, and there is no Worker
   script.
 - GitHub: `CLOUDFLARE_API_TOKEN`, which the deploy job uses to upload the build. Moving `production`
-  uses the bot's existing `BOT_GITHUB_TOKEN` (step 1). CI runs on a promotion pull request like any
+  uses the bot's existing `BOT_GITHUB_TOKEN` (step 1). `VERCEL_DEPLOY_HOOK_URL` (step 7) is optional:
+  it lets the countdown issue start a Vercel build itself. CI runs on a promotion pull request like any
   other, but the merge does not wait for it: its head is a commit of `main` whose CI already passed.
 - Render and Supabase: unchanged, except for the `PUBLIC_ORIGINS` value and the Redirect URL above.
 

@@ -280,7 +280,7 @@ pub struct FakeTables {
     /// `crate::economy::store`'s.
     pub economy: crate::economy::store::EconomyTables,
     // ---- end Economy ----
-    /// R1523000: migration 0051's `app.seat_epoch`, its one row's epoch (0 in an empty store).
+    /// R1523000: migration 0052's `app.seat_epoch`, its one row's epoch (0 in an empty store).
     pub seat_epoch: i64,
 }
 
@@ -1134,10 +1134,15 @@ pub fn seats_bump_epoch(f: &mut FakeTx<'_>) -> Result<i64, StoreError> {
     Ok(tables.seat_epoch)
 }
 
-/// Migration 0012's account deletion, [`remove_profile_rows`].
+/// Migration 0012's account deletion, [`remove_profile_rows`]. A profile seated in a live co-op
+/// match is refused first, as migration 0051's check refuses it in Postgres (R1497000).
 pub fn profiles_remove(f: &mut FakeTx<'_>, profile_id: &str) -> Result<bool, StoreError> {
     call(f, "profiles.remove")?;
-    Ok(remove_profile_rows(f.tables(), profile_id))
+    let tables = f.tables();
+    if tables.profiles.iter().any(|row| row.id == profile_id) {
+        crate::duos::store::refuse_live_seat(&tables.duos, profile_id)?;
+    }
+    Ok(remove_profile_rows(tables, profile_id))
 }
 
 // ---------------------------------------------------------------------------
@@ -3313,7 +3318,8 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     }
     // Social (#939, #940): migration 0038's rows cascade with the profile.
     remove_watch_rows(tables, profile_id);
-    // Duos co-op (#946): 0039's rooms, matches and their logs cascade with either person.
+    // Duos co-op (#946, R1497000): 0039's rooms cascade with either person; 0051 empties the
+    // person's seat on each co-op match, which stays with its log.
     crate::duos::store::remove_duos_rows(&mut tables.duos, profile_id);
     // Economy (#1299): 0045's holdings and ledgers cascade with the profile.
     crate::economy::store::remove_economy_rows(&mut tables.economy, profile_id);
