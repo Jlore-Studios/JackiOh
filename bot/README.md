@@ -944,16 +944,26 @@ claims the item with `pending:<ref>` for the run id, writes the plan to the stat
 (`plans/<ref>.json`), starts `bot-night` with `plan_ref` and the plan's runner, CLI, secret name and
 shared flag, and puts the new run's id on the claim once GitHub lists the run under its title
 (`bot-night <ref> on <runner>`). It plans again until nothing more can start. Such a run skips the
-gate and the plan job, so it waits in GitHub's queue once, for its model job. The model job's
-first step (`harness plan-fetch --check`) holds the runner, CLI, secret name and shared flag it
-was given to the plan and to `providers.json`, and stops the job before any step is handed a
-secret when one does not match. Deliver reads the plan from the state branch. On 2026-10-20 a
-night run's gate, plan and deliver each waited 6 to 25 minutes for a runner, for jobs that ran
-under a minute.
+gate, the plan job and deliver, so it waits in GitHub's queue once, for its model job. The model
+job's first step (`harness plan-fetch --check`) holds the runner, CLI, secret name and shared flag
+it was given to the plan and to `providers.json`, and stops the job before any step is handed a
+secret when one does not match. On 2026-10-20 a night run's gate, plan and deliver each waited 6
+to 25 minutes for a runner, for jobs that ran under a minute.
+
+**Who delivers (#1537).** The loop delivers the runs it started. Each tick, before it plans, its
+sweep takes every such run that has ended: it reads the run's plan from the state branch (where
+the model job cannot write), downloads the model job's `work` upload through the Actions API,
+clones the default branch afresh into the runner's scratch directory, and delivers as the deliver
+job does, as the run (its links and records name the night run). Each try is recorded in the state
+file first (`loop_deliveries`), so one that fails is tried again on the next tick, three times at
+most; until then the run counts as going, so housekeeping leaves its item alone and its lane stays
+held. After the third try, or 30 minutes after the run ended (the loop was gone, say), the item is
+housekeeping's, as a dead run's is. A failure is a note in the sweep, never the end of the loop.
 
 While the loop goes (its run is in progress and its sweep ticked in the last 15 minutes), nothing
 else starts a plain run: another sweep leaves the work to it, a delivery does not chain the next
-run, and a run started by the schedule stops at its gate. A run a person starts for an item, a
+run, and a run started by the schedule stops at its gate. A run that gated and planned itself
+delivers itself, in its own deliver job. A run a person starts for an item, a
 mode or by force still gates and plans itself, under the lock. When the loop is gone, everything
 works as below, so the schedule (rule 13) and the commands keep the bot going. The plans are
 pruned after a week ([`harness/controller.py`](harness/controller.py)).
@@ -1278,7 +1288,7 @@ started as Squishy (`tests/squishy_cases.py`, from `tests/test_squishy.py`).
 | `declined.py` | the suggestions that came to nothing, which no survey offers again (#797) |
 | `memory.py` | the machine's memory as its jobs read it, kept for the status issue's line on it (#312) |
 | `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |
-| `controller.py` | the status loop as the planner (#1455): it plans, writes each plan to the state branch and starts each night run with its plan; `plan-fetch` reads and checks such a plan in the run |
+| `controller.py` | the status loop as the planner (#1455): it plans, writes each plan to the state branch and starts each night run with its plan; `plan-fetch` reads and checks such a plan in the run; and it delivers each such run once it ends (#1537), with the model job's upload and a fresh clone of the default branch |
 | `dashboard.py` | the pinned status issue (#148): opened and pinned once, rewritten every five minutes by `bot-status.yml` (`harness dashboard --sweep --stats --companions --controller --every 300 --for 19800`, which sweeps first each time), with the statistics counted every 30 minutes and kept between |
 | `waiting.py` | what the status issue says each queued item waits for (the tier its difficulty needs, and which subscription frees up first) and what each subscription can do now, from the planner's own rules (`plan.pairs`) on the lanes held now |
 | `stats.py` | the status issue's statistics: the last 6 hours, day, week and all time, from the bot's comments, pull requests and state file, counted every 30 minutes and kept in the issue between counts |
