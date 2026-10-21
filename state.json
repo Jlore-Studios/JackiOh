@@ -11207,7 +11207,25 @@
       "feedback_since": "2026-10-21T21:54:52Z",
       "issue": 1570,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "muse"
+        ],
+        "builder": "muse",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "39682549968",
+            "tier": "medium"
+          }
+        ],
+        "sha": "59a148e92d3ea4c9200b214bb7c9974499af626f",
+        "tiers": {
+          "muse": "medium"
+        }
+      }
     },
     "430": {
       "failures": 0,
