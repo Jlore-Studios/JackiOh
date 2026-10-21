@@ -12764,7 +12764,9 @@
   "loop_deliveries": {
     "39667071753": {
       "at": "2026-10-21T20:10:47Z",
+      "done": true,
       "ref": "1aa5e02e-1792613029",
+      "status": "interrupted",
       "tries": 1
     }
   },
