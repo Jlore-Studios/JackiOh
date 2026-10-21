@@ -408,7 +408,8 @@ triage.yml -f number=<n>` (or **Run workflow** on the triage workflow's Actions 
   title, which becomes the squash commit's subject: the `pr title` check (`pr-title.yml`, #187)
   holds it to `CONVENTION`, plus the titles tools give their own (`AUTOMATED_PULL`,
   `pull_title_ok`), and the bots' pull requests take their builder's title when it passes, else
-  their issue's (`pull_title`).
+  their issue's, else `Patch: <what it does>` with the old prefix dropped, as a workflow's
+  `CI: …` alert's fix takes (`pull_title`).
 - **It adds, and moves only what `human` moves.** A person's labels, assignees and type stay. It
   links nothing: the queue holds a build that waits for another issue by itself, from a "Blocked
   by #n" line, GitHub's own blocked-by links and the earlier parts of a patch, the sub-issues of
