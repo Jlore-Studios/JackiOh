@@ -1,10 +1,6 @@
 {
-  "halt": {
-    "at": "2026-10-21T00:11:33Z",
-    "by": "jgoetzmann",
-    "reason": "the title retcon (#1372) is retitling every issue and pull request; I'll start you again once it's done."
-  },
-  "halted": true,
+  "halt": {},
+  "halted": false,
   "handled": {
     "c:6304683581": {
       "at": "2026-10-21T00:11:31Z",
