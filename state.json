@@ -9841,9 +9841,12 @@
         "sha": "a4c6a9fe59ce6b8e2fc340f079788801dfd4a1d1"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-21T06:50:55Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1490,
       "kind": "review",
       "pending_request": false,
