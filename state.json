@@ -7940,6 +7940,8 @@
       "run_id": "39601078589",
       "started_at": "2026-10-21T12:38:34Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 1
     },
