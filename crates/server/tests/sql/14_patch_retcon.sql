@@ -22,7 +22,7 @@ begin
          ('r743-b', '743.2', 'Card under v0.2.11', 'Core', 'Unit', '{}', 'Common', false, '1'::jsonb, 'v0.2.11'),
          ('r743-c', '743.3', 'Card under v0.2.16', 'Core', 'Unit', '{}', 'Common', false, '1'::jsonb, 'v0.2.16'),
          ('r743-d', '743.4', 'Card under v0.2.17', 'Core', 'Unit', '{}', 'Common', false, '1'::jsonb, 'v0.2.17');
-  -- The stamp db:seed-catalog left: its launch grant (0016) gives r743-d to every active account now.
+  -- The stamp db:seed-catalog left. Since 0050 a stamp grants no account its cards (R1310001).
   update app.settings set value = '"v0.2.17"' where key = 'catalog_version';
 
   insert into public.decks (id, profile_id, name, cards, catalog_version)
@@ -85,7 +85,7 @@ declare
   v_row  record;
   v_rec  jsonb;
 begin
-  -- Cards and the stamp move together, so the launch grant the stamp fires found nothing to add.
+  -- Cards and the stamp move together, and the renamed stamp grants nothing (0016's grant ended in 0050).
   select array_agg(id || '=' || catalog_version order by id collate "C") into v_ids from public.cards where id like 'r743-%';
   if v_ids <> array['r743-a=v0.2.1', 'r743-b=v0.2.4', 'r743-c=v0.2.8', 'r743-d=v0.2.9'] then
     raise exception 'FAIL (R743): the cards read %, expected v0.2.4 -> v0.2.1, v0.2.11 -> v0.2.4, v0.2.16 -> v0.2.8 and v0.2.17 -> v0.2.9', v_ids;

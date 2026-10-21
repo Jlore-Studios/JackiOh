@@ -17,7 +17,7 @@ import type { OwnedCosmeticsResponse } from "../net/api.ts";
 import { baseView, card, emptySide, resetIds } from "../test/fixtures.ts";
 import { COSMETIC_KINDS, COSMETICS } from "../wire/generated/cosmetics.ts";
 import { CardFace } from "./CardFace.tsx";
-import { FULL_ART_GATED, FULL_ART_NAMES, FullArtOwned, NO_FULL_ART, OwnCopy, fullArtGated, ownsFullArt } from "./fullArt.ts";
+import { E2E_FULL_ART_GATED_KEY, FULL_ART_GATED, FULL_ART_NAMES, FullArtOwned, NO_FULL_ART, OwnCopy, fullArtGated, ownsFullArt } from "./fullArt.ts";
 import { HoverPreview } from "./inspect/HoverPreview.tsx";
 import { closeInspect } from "./inspect/store.ts";
 import { INSPECT_FACE, INSPECT_SHEET } from "./inspect/testids.ts";
@@ -86,6 +86,24 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
     expect(ownsFullArt(new Set([OWNED]), OWNED, true)).toBe(true);
     expect(ownsFullArt(new Set([OWNED]), OWNED, false)).toBe(false);
     expect(ownsFullArt(new Set([OWNED]), NOT_OWNED, true)).toBe(false);
+  });
+
+  it("R1310004 a development build gates full art only when the e2e key asks", () => {
+    expect(E2E_FULL_ART_GATED_KEY).toBe("jackioh.e2e.fullArtGated");
+    for (const e2eGated of [false, true]) {
+      // A production build is gated while the economy is live, whatever the key says.
+      expect(fullArtGated(true, "production", e2eGated)).toBe(true);
+      // A development build (dev and e2e) only when the e2e run asks.
+      expect(fullArtGated(true, "development", e2eGated)).toBe(e2eGated);
+      // The tests never are.
+      expect(fullArtGated(true, "test", e2eGated)).toBe(false);
+      // And no build is while the economy is off.
+      for (const mode of ["production", "development", "test"]) {
+        expect(fullArtGated(false, mode, e2eGated), mode).toBe(false);
+      }
+    }
+    // This test build reads no key at all.
+    expect(FULL_ART_GATED).toBe(false);
   });
 
   it("R1017001 R1313000 with the economy off every hero's copy prints full art, yours and the opponent's, and nothing is read", () => {

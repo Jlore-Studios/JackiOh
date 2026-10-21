@@ -101,14 +101,25 @@ select id, status, current_match_id is null as not_in_match from public.profiles
 -- SPEC §9.4 L2 is DECK_SIZE = 20 and L3 is MAX_COPIES = 1, so a legal loadout needs 60
 -- distinct non-Token cards. 01 seeded three cards (two of them non-Token) because its
 -- checks are about the schema; this fills the catalog out to 60 non-Token cards and
--- grants them through app.grant_launch_collection — the same path CHECK 20 (R111) then
--- re-runs to prove idempotent.
+-- grants profile 1 the 58 it lacks through app.grant_cards, as an operator's 'admin'
+-- grant. Since going live the activation grant gives only the starter cards (R1310000),
+-- which 01 set to its two, so it cannot fill a loadout; CHECK 20 (R111) re-runs it to
+-- prove it idempotent and that it granted the starters alone.
 insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost,
                           catalog_version)
 select format('bulk-%s', to_char(n, 'FM000')), n::text, format('Bulk %s', n), 'Core',
        'Unit', '{}'::text[], 'Common', false, to_jsonb(1), 'core-1'
   from generate_series(1, 58) as n;
-select app.grant_launch_collection('11111111-1111-1111-1111-111111111111');
+select app.grant_cards(
+  '11111111-1111-1111-1111-111111111111',
+  (select jsonb_agg(jsonb_build_object('card_id', c.id, 'delta', 1) order by c.id)
+     from public.cards c
+    where c.token = false and c.catalog_version = 'core-1'
+      and not exists (select 1 from public.collection o
+                       where o.profile_id = '11111111-1111-1111-1111-111111111111'
+                         and o.card_id = c.id)),
+  'admin',
+  'sql-suite: a legal loadout');
 select count(*) as non_token_catalog from public.cards
  where token = false and catalog_version = 'core-1';
 select count(*) as owned_cards, min(quantity) as min_quantity, max(quantity) as max_quantity
@@ -133,7 +144,7 @@ begin
   select count(*) into v_owned from public.collection where profile_id = p1 and quantity >= 1;
   if v_owned <> v_catalog then
     raise exception
-      'FAIL (CHECK 2): profile 1 owns % of the % non-Token cards — app.grant_launch_collection did not grant the new ones',
+      'FAIL (CHECK 2): profile 1 owns % of the % non-Token cards — app.grant_cards did not grant the ones it lacked',
       v_owned, v_catalog;
   end if;
 
@@ -1184,11 +1195,12 @@ declare
   now_collection bigint;
   now_quantity   bigint;
   now_grants     bigint;
-  catalog        bigint;
+  launched       text;
+  starters       text;
   n              bigint;
 begin
   -- CHECK 20. Vacuity guard: "nothing changed" is free if there was nothing there. The
-  -- first grant (CHECK 2, and 01 CHECK 10 before it) must already have landed.
+  -- first grant (01 CHECK 10's activation) and CHECK 2's admin grant must already have landed.
   if was_collection < 1 or was_grants < 1 then
     raise exception
       'FAIL (CHECK 20): profile 1 held % collection row(s) and % launch grant(s) before the repeat call — there was nothing for a second grant to duplicate',
@@ -1214,12 +1226,22 @@ begin
       now_quantity, now_collection;
   end if;
 
-  -- SPEC §9.1 "Everyone owns every card at launch", minus the Tokens of loadout rule L3.
-  select count(*) into catalog from public.cards
-   where token = false and catalog_version = 'core-1';
-  if now_collection <> catalog then
-    raise exception 'FAIL (CHECK 20): profile 1 owns % of the % non-Token cards in the catalog',
-      now_collection, catalog;
+  -- R1310000: the launch rows are the starter cards of the catalog, one each, and nothing
+  -- else, though profile 1 owns all 60 non-Token cards (CHECK 2's admin grant) and the
+  -- catalog holds 58 more cards the grant could have reached.
+  select string_agg(g.card_id || ' ' || g.delta, ', ' order by g.card_id) into launched
+    from public.collection_grants g where g.profile_id = p1 and g.reason = 'launch';
+  select string_agg(c.id || ' 1', ', ' order by c.id) into starters
+    from public.cards c
+   where c.token = false and c.catalog_version = 'core-1'
+     and app.setting('starter_cards') ? c.id;
+  if starters is distinct from 'core-001 1, core-002 1' then
+    raise exception 'FAIL (CHECK 20): the starter cards of the catalog are [%], expected 01''s core-001 and core-002',
+      coalesce(starters, '(none)');
+  end if;
+  if launched is distinct from starters then
+    raise exception 'FAIL (CHECK 20): profile 1''s launch grants are [%], expected the starter cards [%]',
+      coalesce(launched, '(none)'), starters;
   end if;
   select count(*) into n from public.collection c
     join public.cards k on k.id = c.card_id

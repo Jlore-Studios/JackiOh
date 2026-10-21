@@ -56,10 +56,12 @@ use jackioh_server::config::{
     BOT_FALLBACK_MAX_SECONDS, MAX_FAIR_GAP, MAX_SAVED_DECKS, MAX_SAVED_TRIOS, OPEN_MATCH_REAP_GRACE_SECONDS,
     QUEUE_READOUT_WINDOW_SECONDS, QUEUE_TICKET_STALE_MS, RATING_WINDOW_FULL_AFTER_SECONDS,
     RATING_WINDOW_START, RATING_WINDOW_WIDEN_BY, RATING_WINDOW_WIDEN_EVERY_SECONDS, SERIES_POLL_SECONDS,
-    rating_window,
+    STARTER_CARDS, rating_window,
 };
-use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
-use jackioh_server::db::store::{BotDeck, NewBot, StoreError};
+use jackioh_server::db::fake::{
+    CallOutcome, E2eStoreOptions, FakeCatalog, FakeData, FakeTables, create_e2e_store,
+};
+use jackioh_server::db::store::{BotDeck, NewBot, ProfileStatus, StoreError};
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app, test_app_with};
 use crate::support::store::{fake_lock, q, to_json, uuid};
@@ -2249,6 +2251,69 @@ mod r253_what_may_be_queued_through_the_real_validator {
         assert_eq!(
             tickets_table(&w.app).await.first().map(|row| row["deck"].clone()),
             Some(json!(deck))
+        );
+    }
+
+    /// The test app over a store that carries R111's activation grant over the real catalog, as the
+    /// end-to-end server builds its store (`app::build`).
+    async fn granting_app() -> Arc<App> {
+        let app = Arc::try_unwrap(test_app().await)
+            .unwrap_or_else(|_| panic!("test_app() hands back its only reference"));
+        let (tokens, bans) = (app.catalog.clone(), app.catalog.clone());
+        let db = create_e2e_store(E2eStoreOptions {
+            catalog: FakeCatalog {
+                card_ids: app.catalog.card_ids.clone(),
+                is_token: Arc::new(move |card_id: &str| tokens.is_token(card_id)),
+                is_banned: Arc::new(move |card_id: &str| bans.is_banned(card_id)),
+            },
+            now: Arc::new(now_ms),
+            redemption: None,
+        });
+        Arc::new(App { db, ..app })
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1310000_a_new_account_queues_its_starter_cards_and_is_refused_another() {
+        let app = granting_app().await;
+        // A new account: pending, then active through the store's R111 trigger, which grants the
+        // starter cards and nothing else.
+        fake_lock(&app)
+            .await
+            .seed_profile(json!({ "id": "starter", "userId": "user-starter", "status": "pending" }));
+        q!(app, profiles_set_status("starter", ProfileStatus::Active));
+        let token = add_user(&app, "user-starter", "starter@example.test", true);
+        let w = Real {
+            app,
+            token,
+            pool: pool(),
+            size: deck_size(),
+        };
+        let starters: Vec<String> = STARTER_CARDS[..w.size].iter().map(ToString::to_string).collect();
+        let unowned = w
+            .pool
+            .iter()
+            .find(|id| !STARTER_CARDS.contains(&id.as_str()))
+            .cloned()
+            .expect("a card past the starter cards");
+
+        // One card past the starter cards, which a save keeps as a draft (R250) and the queue refuses.
+        let mut over = starters[1..].to_vec();
+        over.push(unowned.clone());
+        let over_id = save_deck_for(&w.app, "starter", &over, "Reach").await;
+        let refused = expect_refused(&w, json!({ "mode": "bo1", "deckId": over_id }), "L5").await;
+        assert_eq!(
+            refused["error"]["details"][0]["cardId"],
+            json!(unowned),
+            "{refused}"
+        );
+
+        let deck_id = save_deck_for(&w.app, "starter", &starters, "Starter").await;
+        let (status, body) =
+            enqueue_with(&w.app, &w.token, json!({ "mode": "bo1", "deckId": deck_id })).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(
+            tickets_table(&w.app).await.first().map(|row| row["deck"].clone()),
+            Some(json!(starters))
         );
     }
 

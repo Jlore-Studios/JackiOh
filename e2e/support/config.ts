@@ -31,6 +31,10 @@ export const routes = {
   practice: () => env("practiceRoute", "/practice"),
   /** R768000: the recent games and their replays. */
   replays: () => env("replaysRoute", "/replays"),
+  /** §14: the account page, whose Card packs and Dev tools toggles spec 45 opens. */
+  account: () => env("accountRoute", "/account"),
+  /** #1307: the collection, wallet, set tracks and quests. */
+  collection: () => env("collectionRoute", "/collection"),
 };
 
 /** A6: `WS_PATH` is `/ws/match`; support type-checks without `apps/*`. */
@@ -66,11 +70,16 @@ export const TUTORIAL_HANDICAP = {
 
 export type E2EAccount = { email: string; password: string; token: string };
 
-/** A6: `pending` waits at the spec-10 invite gate; `p1`/`p2` own every card. */
-export const accounts: Record<"p1" | "p2" | "pending", () => E2EAccount> = {
+/**
+ * A6: `pending` waits at the spec-10 invite gate; `p1`/`p2` own every card. R1310004: `econ` waits
+ * at the gate too, for spec 45, which redeems it into a new account's starter cards (R1310000); the
+ * E2E server counts it, and it alone, as a dev account.
+ */
+export const accounts: Record<"p1" | "p2" | "pending" | "econ", () => E2EAccount> = {
   p1: () => ({ email: env("p1Email", "e2e-p1@jackioh.test"), password: env("p1Password", "e2e-p1-password"), token: env("p1Token", "e2e-token-p1") }),
   p2: () => ({ email: env("p2Email", "e2e-p2@jackioh.test"), password: env("p2Password", "e2e-p2-password"), token: env("p2Token", "e2e-token-p2") }),
   pending: () => ({ email: env("pendingEmail", "e2e-pending@jackioh.test"), password: env("pendingPassword", "e2e-pending-password"), token: env("pendingToken", "e2e-token-pending") }),
+  econ: () => ({ email: env("econEmail", "e2e-econ@jackioh.test"), password: env("econPassword", "e2e-econ-password"), token: env("econToken", "e2e-token-econ") }),
 };
 
 /** A6: seeded invite codes cover each §9.4 failure mode and success. */
@@ -112,3 +121,10 @@ export const constants = {
 
 /** R201: spec 25 seeds effects settings so its screenshot catches a notice. */
 export const FX_SETTINGS_KEY = "jackioh.fx.v1";
+
+/**
+ * R1310004: `E2E_FULL_ART_GATED_KEY` in apps/web/src/cards/fullArt.ts. A development build gates
+ * full art on ownership (R1313000) only when this key holds "1" as the page loads; spec 45 sets it
+ * before it visits, and every other spec sees every full art.
+ */
+export const FULL_ART_GATED_KEY = "jackioh.e2e.fullArtGated";

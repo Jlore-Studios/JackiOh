@@ -14,6 +14,7 @@
 
 use std::any::Any;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 
@@ -42,6 +43,14 @@ const SEED_SEARCH: usize = 5_000;
 
 /// When the boards below were stored; nothing reads it back.
 const BOARD_AT: i64 = 1_700_000_000_000;
+
+/// How long `frame` waits for an action's reply. A game's last action is answered only once its
+/// result is written, the ladder payout's fold of the log off the runtime included
+/// (`api/results.rs`, §14.12), so its reply can land after the queue first drains. Every other
+/// reply is found at the first look.
+const REPLY_WITHIN: Duration = Duration::from_secs(1);
+/// How long `frame` sleeps between two looks for the reply.
+const REPLY_STEP: Duration = Duration::from_millis(10);
 
 fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
@@ -281,7 +290,8 @@ async fn world(options: WorldOptions) -> World {
     }
 }
 
-/// One client frame, and the actor's queue drained behind it.
+/// One client frame, and the actor's queue drained behind it until its reply (the `ack` or `error`
+/// carrying `nonce`) is in, for up to `REPLY_WITHIN`.
 async fn frame(w: &World, socket: &FakeSocket, nonce: &str, body: Value) -> Option<Value> {
     let actor = w
         .app
@@ -293,10 +303,19 @@ async fn frame(w: &World, socket: &FakeSocket, nonce: &str, body: Value) -> Opti
     let mut action = body;
     action["nonce"] = json!(nonce);
     socket.receive_json(json!({ "type": "action", "action": action }));
-    actor.idle().await;
-    let mut replies = socket.of_type("ack");
-    replies.extend(socket.of_type("error"));
-    replies.pop()
+    let deadline = Instant::now() + REPLY_WITHIN;
+    loop {
+        actor.idle().await;
+        let mut replies = socket.of_type("ack");
+        replies.extend(socket.of_type("error"));
+        if let Some(reply) = replies.into_iter().find(|reply| reply["nonce"] == nonce) {
+            return Some(reply);
+        }
+        if Instant::now() >= deadline {
+            return None;
+        }
+        tokio::time::sleep(REPLY_STEP).await;
+    }
 }
 
 fn last_view(socket: &FakeSocket) -> Value {

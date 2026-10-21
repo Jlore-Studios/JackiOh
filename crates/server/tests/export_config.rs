@@ -302,6 +302,8 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("QUEST_JLORE_MAX", json!(c::QUEST_JLORE_MAX)),
         ("QUEST_XP_PER_JLORE", json!(c::QUEST_XP_PER_JLORE)),
         ("ECONOMY_LIVE", json!(c::ECONOMY_LIVE)),
+        // The going live's (#1310): the starter cards a new account owns (R1310000).
+        ("STARTER_CARDS", json!(c::STARTER_CARDS)),
         // The pack roll's (#1301): the duplicate's cosmetic odds, the filler slots' Rare rate
         // (R1301000, R1301002) and the global pack's name.
         (
@@ -361,9 +363,9 @@ fn every_name_is_listed_once() {
         // SPEC S7's twelve, the social poll and Duos co-op's eight, SPEC §14's thirty-nine
         // economy numbers (#1298's thirty-eight, less #1333's CHASE_DROP_RATE, plus #1483's two),
         // its ECONOMY_LIVE switch (R1313000) and the pack roll's three (#1301) and the cosmetic
-        // pack's two (#1306).
+        // pack's two (#1306), and the going live's starter cards (R1310000).
         listed,
-        88 + 39 + 1 + 3 + 2,
+        88 + 39 + 1 + 3 + 2 + 1,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -375,7 +377,8 @@ fn every_name_is_listed_once() {
          limits (#946), PLAYER_STATS_BYTES_MAX (R1142000), SPEC §14's thirty-nine economy \
          numbers (#1298's, less #1333's CHASE_DROP_RATE, plus #1483's JLORE_GAMES_DAILY_CAP and \
          PRACTICE_SEEDS_OPEN_MAX), ECONOMY_LIVE (R1313000), and the pack roll's COSMETIC_DUPLICATE_RATES, \
-         PACK_FILLER_RARE_RATE and GLOBAL_PACK_NAME (#1301), and the cosmetic pack's two (#1306)"
+         PACK_FILLER_RARE_RATE and GLOBAL_PACK_NAME (#1301), the cosmetic pack's two (#1306), \
+         and STARTER_CARDS (R1310000)"
     );
 }
 

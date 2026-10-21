@@ -1,25 +1,20 @@
 // #1442: each flavor's look, and a Ranged attacker firing its flavor's shot instead of lunging.
-// `FX_FLAVOR_LIVE` ships off (#1444 turns it on), so this file turns it on; `animations.flavor-off.test.ts`
-// holds the other side. Every plan here is `planStage`'s, against a view's public facts alone (R202).
+// `#1444` turned `FX_FLAVOR_LIVE` on, so every plan here runs with flavor live. Every plan here is
+// `planStage`'s, against a view's public facts alone (R202).
 
 import type { CardDef, Flavor, GameEvent, PlayerView, UnitView } from "@jackioh/shared";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("../fx/constants.ts", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../fx/constants.ts")>()),
-  FX_FLAVOR_LIVE: true,
-}));
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { faceUpBackrow, fullBoardView, unit, withEvents } from "../test/fixtures.ts";
 import { FLAVOR_LOOKS, chaosFlavor, flavorLook } from "../fx/flavors.ts";
 import {
-  FX_FLAVOR_LIVE,
   FX_INTENSITY_SCALE,
   FX_LUNGE_CONTACT_AT,
   FX_PARTICLE_CAP,
   FX_SHOT_LAUNCH_AT,
   FX_SHOT_SHAKE_TRAUMA,
 } from "../fx/constants.ts";
+import { planFx } from "../fx/cues.ts";
 import { createFxDirector } from "../fx/director.ts";
 import { createFxMemory } from "../fx/memory.ts";
 import { PARTICLE_PRESETS } from "../fx/presets.ts";
@@ -97,10 +92,6 @@ const FLAVORS = [
 const MOTIONS: readonly FxShotMotion[] = ["arc", "bolt", "beam", "swipe"];
 
 describe("#1442 the looks", () => {
-  it("#1442 the flag is on for this file", () => {
-    expect(FX_FLAVOR_LIVE).toBe(true);
-  });
-
   it("#1442 every Flavor has a look: two or three colours, a particle shape and a projectile", () => {
     expect([...FLAVORS].sort()).toEqual(Object.keys(FLAVOR_LOOKS).sort());
     for (const flavor of FLAVORS) {
@@ -314,6 +305,56 @@ describe("#1442 reduced motion and the effects layer's off switch", () => {
     for (const view of [rangedBoard(MINE), fullBoardView()]) {
       expect(attack(view, MINE, ENEMY, { intensity: FX_INTENSITY_SCALE.off })).toEqual([]);
     }
+  });
+});
+
+describe("#1444 a Ranged attack into combat damage plays live", () => {
+  it("#1444 the shot flies and the combat hit lands at once with today's lunge timing", () => {
+    const view = rangedBoard(MINE);
+    const events: GameEvent[] = [
+      attackEvent(MINE, ENEMY),
+      { type: "damage", sourceId: MINE, targetId: ENEMY, amount: 4, combat: true },
+    ];
+    const shown = withEvents(view, events);
+    const entries = planEntries(events, shown, false);
+    expect(entries).toHaveLength(2);
+    const attackEntry = entries[0]!;
+    const damageEntry = entries[1]!;
+    const attackD = attackEntry.durationMs;
+    const damageD = damageEntry.durationMs;
+
+    const attackEnv: FxPlanEnv = { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
+    attackEnv.memory.remember(attackEntry.events);
+    const stageCues = planStage({ ...attackEntry, durationMs: attackD }, shown, attackEnv);
+    const hustle = FLAVOR_LOOKS.Hustle;
+    const launch = Math.round(FX_SHOT_LAUNCH_AT * attackD);
+    expect(stageCues[0]).toEqual({
+      kind: "lunge",
+      attacker: `card-${MINE}`,
+      target: `card-${ENEMY}`,
+      delayMs: 0,
+      durationMs: attackD,
+      still: true,
+    });
+    expect(stageCues[1]).toMatchObject({
+      kind: "shot",
+      shot: hustle.projectile,
+      colors: hustle.colors,
+      preset: hustle.particle,
+      delayMs: launch,
+      flightMs: attackD - launch,
+    });
+
+    const fxCues = planFx({ ...attackEntry, durationMs: attackD }, shown, attackEnv);
+    expect(fxCues).toHaveLength(1);
+    expect(fxCues[0]).toMatchObject({ kind: "burst", preset: "dust", delayMs: 0 });
+
+    const damageEnv: FxPlanEnv = { intensity: FX_INTENSITY_SCALE.normal, card: () => undefined, memory: createFxMemory() };
+    damageEnv.memory.remember(damageEntry.events);
+    const damageCues = planFx({ ...damageEntry, durationMs: damageD }, shown, damageEnv);
+    expect(damageCues.some((cue) => cue.kind === "shot" || cue.kind === "projectile")).toBe(false);
+    expect(damageCues.find((cue) => cue.kind === "burst" && cue.preset === "spark")).toMatchObject({ delayMs: 0 });
+    expect(damageCues.find((cue) => cue.kind === "splat")).toMatchObject({ delayMs: 0 });
   });
 });
 

@@ -587,9 +587,13 @@
   color: #fff;
 }
 
+/* The row keeps its items at their own height: stretched to the details column, the preview gave
+   the face's `height: 100%` (cards.css) that column's height at a fixed width, and the card drew
+   tall and thin. The preview holds 5:7 itself, as the grid's `.stats-grid-card` does. */
 .stats-drilldown-body {
   display: flex;
   flex-direction: row;
+  align-items: flex-start;
   gap: 20px;
   padding: 20px;
   overflow-y: auto;
@@ -598,6 +602,7 @@
 .stats-drilldown-card-preview {
   flex: none;
   width: 220px;
+  aspect-ratio: 5 / 7;
 }
 
 .stats-drilldown-details {

@@ -658,3 +658,40 @@ mod the_routes_section_9_4_no_client_path_writes_the_collection {
         assert_eq!(response.status, 401);
     }
 }
+
+// ---------------------------------------------------------------------------
+// R1310000: the starter cards
+// ---------------------------------------------------------------------------
+
+mod r1310000_the_starter_cards {
+    use super::*;
+
+    use jackioh_engine::config::DECK_SIZE;
+    use jackioh_server::config::STARTER_CARDS;
+
+    #[tokio::test]
+    async fn r1310000_the_starter_cards_are_collectable_and_make_a_deck() {
+        let app = deps::test_app().await;
+        let mut listed: Vec<&str> = Vec::new();
+        for id in STARTER_CARDS {
+            let def = app
+                .catalog
+                .defs
+                .get(*id)
+                .unwrap_or_else(|| panic!("{id} is in the catalog"));
+            assert!(
+                !app.catalog.is_token(id),
+                "{id} is a Token, which no deck may hold (L3)"
+            );
+            assert!(!app.catalog.is_banned(id), "{id} is banned (L6)");
+            assert!(
+                jackioh_engine::set_ships(def.set),
+                "{id}'s set has not shipped (L3)"
+            );
+            assert!(!listed.contains(id), "{id} is listed twice");
+            listed.push(id);
+        }
+        // One copy each (R111) still fills a deck (L2).
+        assert!(STARTER_CARDS.len() >= usize::try_from(DECK_SIZE).expect("a deck size"));
+    }
+}

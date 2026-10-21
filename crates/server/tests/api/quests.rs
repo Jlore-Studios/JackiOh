@@ -50,10 +50,15 @@ fn interval() -> i64 {
 
 /// The test app with the economy on (§14.12), as `rewards.rs`'s.
 async fn test_app() -> Arc<App> {
+    economy_app(true).await
+}
+
+/// The test app with the economy switched to `live`, as `rewards.rs`'s.
+async fn economy_app(live: bool) -> Arc<App> {
     let mut app = built_app().await;
     Arc::get_mut(&mut app)
         .expect("the test app has no second handle yet")
-        .economy_live = true;
+        .economy_live = live;
     app
 }
 
@@ -217,9 +222,8 @@ async fn r1304000_a_long_absence_returns_exactly_the_cap() {
 
 #[tokio::test]
 async fn r1304002_no_quest_arrives_while_the_economy_is_off() {
-    // The build's own app: `ECONOMY_LIVE` is off (§14.12).
-    let app = built_app().await;
-    assert!(!app.economy_live);
+    // The economy switched off (§14.12), as production ran until launch (R1310000).
+    let app = economy_app(false).await;
     let p1 = profile_id_of(&app, USER).await;
     set_due(&app, &p1, now_ms() - 10 * interval()).await;
     let (status, body) = get_quests(&app, TOKEN).await;
@@ -230,7 +234,9 @@ async fn r1304002_no_quest_arrives_while_the_economy_is_off() {
 
 #[tokio::test]
 async fn get_api_quests_answers_only_the_callers_own() {
-    let app = built_app().await;
+    // The economy off, so no visit schedules or delivers a quest (R1304000) and each answer is
+    // exactly what the store holds for its caller.
+    let app = economy_app(false).await;
     let p1 = profile_id_of(&app, USER).await;
     let win_3 = quest_def("win-3").expect("the pool has win-3");
     hold(&app, &p1, win_3, 1, T0).await;

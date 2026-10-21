@@ -22,6 +22,11 @@ def job(text: str, name: str) -> str:
     return match.group(1)
 
 
+def selftest() -> str:
+    """The `bot selftest` job's block: a job of CI's since #1455, which had a workflow of its own."""
+    return job(read("ci.yml"), "bot-selftest")
+
+
 class NightWorkflowTests(unittest.TestCase):
     text = read("bot-night.yml")
 
@@ -38,9 +43,13 @@ class NightWorkflowTests(unittest.TestCase):
         block = re.search(r"permissions:\n((?:\s{6}.*\n)+)", work).group(1)
         grants = dict(re.findall(r"^\s+([\w-]+):\s*(\w+)", block, re.M))
         self.assertEqual(grants, {"contents": "read"})
-        # Exactly one model secret: the one plan named, picked by name.
+        # Exactly one model secret: the one plan named, picked by name. A run the status loop
+        # started names it in its inputs, which `plan-fetch --check` holds to the plan and to
+        # providers.json before any step reads it (#1455).
         self.assertEqual(set(re.findall(r"\$\{\{\s*(secrets[^}]*?)\s*\}\}", work)),
-                         {"secrets[needs.plan.outputs.secret]"})
+                         {"secrets[env.PLAN_SECRET]"})
+        self.assertIn("PLAN_SECRET: ${{ inputs.plan_ref && inputs.secret || "
+                      "needs.plan.outputs.secret }}", work)
 
     def test_model_secrets_reach_only_jobs_that_cannot_write(self):
         """A model secret's value goes only to the gate's quiet step and to the model job, which
@@ -78,14 +87,14 @@ class NightWorkflowTests(unittest.TestCase):
     def test_only_the_chosen_cli_is_installed_and_only_on_githubs_runners(self):
         work = job(self.text, "work")
         for cli in providers.SECRET_CLIS:
-            self.assertRegex(work, rf"if: needs\.plan\.outputs\.cli == '{cli}' && "
-                                   r"startsWith\(needs\.plan\.outputs\.runs_on, 'ubuntu-'\)")
+            self.assertRegex(work, rf"if: env\.PLAN_CLI == '{cli}' && "
+                                   r"startsWith\(env\.PLAN_RUNS_ON, 'ubuntu-'\)")
         self.assertNotIn("cli == 'agy'", work)  # agy lives on the machine only
         for action in ("pnpm/action-setup", "actions/setup-node", "dtolnay/rust-toolchain",
                        "actions/setup-python"):
             step = work[work.index(action):]
             self.assertTrue(step.split("\n", 2)[1].strip().startswith(
-                "if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')"), action)
+                "if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')"), action)
 
     def test_the_model_jobs_install_the_rust_ci_installs(self):
         """The harness's checks run cargo, so a model job on GitHub's runners sets up the
@@ -104,8 +113,8 @@ class NightWorkflowTests(unittest.TestCase):
 
     def test_the_model_job_runs_on_its_subscriptions_runner(self):
         self.assertIn("runs_on: ${{ steps.plan.outputs.runs_on }}", job(self.text, "plan"))
-        self.assertIn("runs-on: ${{ needs.plan.outputs.runs_on || 'ubuntu-latest' }}",
-                      job(self.text, "work"))
+        self.assertIn("runs-on: ${{ inputs.plan_ref && inputs.runs_on || needs.plan.outputs.runs_on "
+                      "|| 'ubuntu-latest' }}", job(self.text, "work"))
         for name in ("gate", "plan", "deliver"):  # the jobs that hold a GitHub write token
             self.assertIn("runs-on: ubuntu-latest", job(self.text, name), name)
 
@@ -115,10 +124,35 @@ class NightWorkflowTests(unittest.TestCase):
         work = job(self.text, "work")
         shared = re.search(r"- name: Build, check and review\n\s+if: (.*)\n", work)
         other = re.search(r"- name: (Work on another subscription.*)\n\s+if: (.*)\n", work)
-        self.assertEqual(shared.group(1), "needs.plan.outputs.shared == 'true'")
-        self.assertEqual(other.group(2), "needs.plan.outputs.shared != 'true'")
+        self.assertEqual(shared.group(1), "env.PLAN_SHARED == 'true'")
+        self.assertEqual(other.group(2), "env.PLAN_SHARED != 'true'")
         self.assertFalse(other.group(1).startswith("Build, check and review"))
         self.assertEqual(work.count("python3 -m harness work --plan"), 2)
+
+    def test_a_run_the_loop_started_skips_gate_and_plan_and_checks_before_any_secret(self):
+        """#1455: bot-status's loop plans, and starts a run with `plan_ref`. The run skips its gate
+        (and so its plan job), names the plan and its runner in its title, and its model job holds
+        the dispatch's runner, CLI, secret name and shared flag to the plan and providers.json
+        before any step is handed a secret; deliver reads the plan from the state branch."""
+        self.assertIn("run-name: ${{ inputs.plan_ref && format('bot-night {0} on {1}', "
+                      "inputs.plan_ref, inputs.runs_on) || 'bot-night' }}", self.text)
+        self.assertIn("if: ${{ !inputs.plan_ref }}", job(self.text, "gate"))
+        work = job(self.text, "work")
+        self.assertIn("if: ${{ !cancelled() && (inputs.plan_ref || ", work)
+        steps = re.split(r"(?m)^      - ", work.split("    steps:\n", 1)[1])[1:]
+        heads = [body.split("\n", 1)[0] for body in steps]
+        check = heads.index("name: The loop's plan, held to providers.json")
+        self.assertLess(check, heads.index("name: Doctor (stops here, before any model call, if "
+                                           "something is missing)"))
+        for index, body in enumerate(steps):
+            if "secrets[" in body:
+                self.assertGreater(index, check, heads[index])
+        self.assertIn('python3 -m harness plan-fetch --ref "$PLAN_REF" --out '
+                      '"$RUNNER_TEMP/plan/plan.json" --check', work)
+        deliver = job(self.text, "deliver")
+        self.assertIn('python3 -m harness plan-fetch --ref "$PLAN_REF" --out '
+                      '"$RUNNER_TEMP/plan/plan.json"\n', deliver)
+        self.assertEqual(deliver.count("if: ${{ !inputs.plan_ref }}"), 1)  # the plan artifact
 
     def test_plans_run_one_at_a_time_and_runs_in_parallel(self):
         self.assertNotRegex(self.text, r"^concurrency:", "a workflow-wide group would serialize runs")
@@ -145,8 +179,9 @@ class NightWorkflowTests(unittest.TestCase):
             self.assertTrue(steps[0].startswith("HALT check"), (name, steps))
 
     def test_no_checkout_keeps_credentials(self):
-        for name in ("bot-night.yml", "bot-commands.yml", "bot-selftest.yml"):
-            text = read(name)
+        for name, text in (("bot-night.yml", read("bot-night.yml")),
+                           ("bot-commands.yml", read("bot-commands.yml")),
+                           ("ci.yml's bot selftest", selftest())):
             checkouts = text.count("uses: actions/checkout@")
             self.assertEqual(text.count("persist-credentials: false"), checkouts, name)
 
@@ -230,7 +265,7 @@ class BuildCacheWorkflowTests(unittest.TestCase):
         self.assertNotRegex(self.work, r"uses: actions/cache(/save)?@")
         for head in (f"uses: {self.RUST_CACHE}", "uses: actions/cache/restore@v4",
                      "name: The night bot's build directories", "name: Only the pinned toolchain"):
-            self.assertIn("if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')",
+            self.assertIn("if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')",
                           step(self.work, head).split("\n", 1)[0], head)
 
     def test_both_key_the_entry_alike(self):
@@ -264,7 +299,7 @@ class BuildCacheWorkflowTests(unittest.TestCase):
         self.assertIn("run: sh scripts/build-wasm.sh\n", self.cache)
 
     def test_actionlint_reads_it(self):
-        self.assertIn(".github/workflows/bot-cache.yml", read("bot-selftest.yml"))
+        self.assertIn(".github/workflows/bot-cache.yml", selftest())
 
 
 class CommandsWorkflowTests(unittest.TestCase):
@@ -286,7 +321,7 @@ class CommandsWorkflowTests(unittest.TestCase):
         cfg = config.load(env={})
         self.assertIn(f"github.actor != '{cfg.bot_login}'", self.text)
         self.assertIn(f"'@{cfg.bot_login}'", self.text)
-        self.assertIn(f"workflows: [{cfg.ci_workflow}, bot selftest]", self.text)
+        self.assertIn(f"workflows: [{cfg.ci_workflow}]", self.text)
 
     def test_every_way_a_request_arrives_is_heard(self):
         for trigger in ("issue_comment:\n    types: [created, edited]",
@@ -338,7 +373,7 @@ class StatusLoopWorkflowTests(unittest.TestCase):
         self.assertIn("runs-on: ubuntu-latest", refresh)
         self.assertIn('EVERY_SECONDS: "300"', self.text)
         self.assertEqual(dashboard.EVERY_MINUTES * 60, 300)  # what the issue says it does
-        self.assertIn('python -m harness dashboard --sweep --stats --companions \\\n'
+        self.assertIn('python -m harness dashboard --sweep --stats --companions --controller \\\n'
                       '            --every "${EVERY_SECONDS}" --for "${LOOP_SECONDS}"', refresh)
         # The loop ends inside GitHub's six-hour cap, ahead of its own timeout.
         loop = int(re.search(r'LOOP_SECONDS: "(\d+)"', self.text).group(1))
@@ -393,7 +428,7 @@ class TriageWorkflowTests(unittest.TestCase):
                          {"contents": "read", "issues": "write", "pull-requests": "write"})
         self.assertIn('python3 -m harness triage --payload "$GITHUB_EVENT_PATH"', triage_job)
         self.assertIn("timeout-minutes:", triage_job)
-        self.assertIn(".github/workflows/triage.yml", read("bot-selftest.yml"))
+        self.assertIn(".github/workflows/triage.yml", selftest())
 
     def test_only_human_of_the_labels_starts_it(self):
         self.assertIn("if: github.event_name != 'issues' || github.event.action == 'opened' || "

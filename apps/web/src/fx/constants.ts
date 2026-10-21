@@ -129,10 +129,45 @@ export const FX_ZONE_TAIL_MS = 400;
 export const FX_CAST_SCALE_STEP = 0.06;
 export const FX_CAST_SCALE_MAX = 1.6;
 export const FX_CAST_TRAUMA = 0.12;
-// #1442; off until #1444; the shot leaves at jk-lunge's 24% keyframe and lands at the entry's end
-export const FX_FLAVOR_LIVE: boolean = false;
+// #1442; on since #1444; the shot leaves at jk-lunge's 24% keyframe and lands at the entry's end
+export const FX_FLAVOR_LIVE: boolean = true;
 export const FX_SHOT_LAUNCH_AT = 0.24;
 export const FX_SHOT_SHAKE_TRAUMA = 0.3;
+// #1443: the per-entry cap on non-combat damage shots (one volley starts together).
+export const FX_FLAVOR_VOLLEY_MAX = 4;
+// #1445: a Unit's summon entrance takes its flavor. A Brute lands heavy, with the weight of a
+// Legendary entrance; every other flavor throws its bursts with these counts and powers at
+// intensity "normal" (rule 9). Every count is at least 8, so low plans strictly fewer particles
+// than normal and high strictly more.
+export const FX_SUMMON_BRUTE_TRAUMA = 0.5;
+export const FX_SUMMON_FLAVOR_TUNING = {
+  physicalSpark: { count: 8, power: 1.2 },
+  bruteCloud: { count: 48, power: 1.3 },
+  bruteHeavy: { count: 64, power: 1.6 },
+  beastClaw: { count: 22, power: 1.2 },
+  beastScratch: { count: 14, power: 1 },
+  fireFlame: { count: 32, power: 1 },
+  fireEmber: { count: 18, power: 0.9 },
+  darkRise: { count: 16, power: 0.8 },
+  darkSmoke: { count: 12, power: 0.7 },
+  holyLight: { count: 26, power: 0.9 },
+  nerdPages: { count: 14, power: 0.9 },
+  nerdMotes: { count: 10, power: 0.7 },
+  techScan: { count: 12, power: 0.8 },
+  techBoot: { count: 10, power: 0.8 },
+  natureSprout: { count: 16, power: 1 },
+  natureBloom: { count: 12, power: 0.8 },
+  toxicBubbles: { count: 20, power: 0.8 },
+  toxicPop: { count: 12, power: 0.7 },
+  snackCrumbs: { count: 18, power: 0.9 },
+  snackFall: { count: 12, power: 0.8 },
+  hustleShower: { count: 40, power: 1.3 },
+  hustleCoins: { count: 16, power: 1 },
+  cloutConfetti: { count: 26, power: 1 },
+  cloutFlash: { count: 14, power: 1.2 },
+  spiritFade: { count: 12, power: 0.8 },
+  spiritWisps: { count: 10, power: 0.7 },
+} as const;
 export const FX_SPEED_MIN = 0.25;              // R435: the slider runs from a quarter speed…
 export const FX_SPEED_MAX = 3;                 // …to three times the table's speed
 export const FX_SPEED_DEFAULT = 1;

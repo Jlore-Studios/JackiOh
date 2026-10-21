@@ -23,7 +23,7 @@ on:
   pull_request_review:
     types: [submitted]
   workflow_run:
-    workflows: [CI, bot selftest]
+    workflows: [CI]
     types: [completed]
 
 # No concurrency group: a group keeps one pending run and cancels the rest, which would drop a

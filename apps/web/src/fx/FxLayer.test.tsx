@@ -8,9 +8,10 @@ import type { CardDef, CardDefs, GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ANIMATIONS, createAnimationQueue, type AnimationQueue } from "../game/animations.ts";
+import { ANIMATIONS, BURST_BUDGET_MS, createAnimationQueue, type AnimationQueue } from "../game/animations.ts";
 import { CatalogContext, lookupFromDefs, type CardLookup } from "../game/catalog.ts";
 import Game from "../game/Game.tsx";
+import { resultRevealMs } from "../game/Result.tsx";
 import { baseView, emptySide, fullBoardView, withEvents } from "../test/fixtures.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import { FX_TEXT } from "./constants.ts";
@@ -26,6 +27,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   setReducedMotion(false);
   resetFxSettingsForTests();
   localStorage.clear();
@@ -582,6 +584,7 @@ describe("B37 — when the layer draws, and what it never renders", () => {
 
   it("B37 Game mounts the layer as a direct child of .game and logs no console.error through a burst and a game over", async () => {
     const errors = vi.spyOn(console, "error");
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     try {
       const view = fullBoardView();
       const events: GameEvent[] = [
@@ -601,18 +604,16 @@ describe("B37 — when the layer draws, and what it never renders", () => {
 
       const busy = withEvents(view, events);
       rerender(<Game view={busy} legal={[]} onAction={onAction} />);
+      expect(container.querySelector("[data-animating]")).not.toBeNull();
       await act(async () => {
-        await new Promise<void>((resolve) => {
-          setTimeout(resolve, 1_300);
-        });
+        await vi.advanceTimersByTimeAsync(BURST_BUDGET_MS + 1);
       });
+      expect(container.querySelector("[data-animating]")).toBeNull();
       expect(container.querySelector('[data-testid="fx-layer"] [data-animating]')).toBeNull();
 
       rerender(<Game view={{ ...busy, result: { winner: "p1", reason: "hero-death" } }} legal={[]} onAction={onAction} />);
       await act(async () => {
-        await new Promise<void>((resolve) => {
-          setTimeout(resolve, 100);
-        });
+        await vi.advanceTimersByTimeAsync(resultRevealMs() + 1);
       });
       unmount();
 
@@ -929,7 +930,7 @@ describe("S9 — the default catalog and the surface seam", () => {
     expect(fx.shakes).not.toContain("apply");
   });
 
-  it("S9 with no catalog at all, a summon plans only the dust burst at the zone's foot (and its stand-in, B46)", () => {
+  it("S9 with no catalog at all, a Brute summon plans the dust burst plus its heavy landing (and its stand-in, B46)", () => {
     const sched = fakeSchedule();
     const queue = queueWith(sched);
     const fx = fakeSeams();
@@ -940,11 +941,16 @@ describe("S9 — the default catalog and the surface seam", () => {
     fx.pump(400);
 
     expect(m.rays("legendary")).toBe(0);
-    expect(fx.shakes).not.toContain("apply");
-    // Every measure is the landing zone: once at its foot for the dust, and bare for the stand-in
-    // that lands there and follows it frame by frame.
+    // core-019 is really Brute, and the flavor resolves off the bundled catalog: its entrance
+    // shakes the board (#1445).
+    expect(fx.shakes).toContain("apply");
+    // Every measure is the landing zone: three times at its foot for the dust (the base burst
+    // plus the Brute's two), and bare for the stand-in that lands there and follows it frame by
+    // frame.
     const zone = { kind: "testid", testid: "zone-you-units-3" };
     expect(fx.measured.filter((anchor) => anchor.kind === "testid" && anchor.at !== undefined)).toEqual([
+      { ...zone, at: { x: 0.5, y: 1 } },
+      { ...zone, at: { x: 0.5, y: 1 } },
       { ...zone, at: { x: 0.5, y: 1 } },
     ]);
     expect(fx.measured.filter((anchor) => !(anchor.kind === "testid" && anchor.at !== undefined)).length).toBeGreaterThan(0);

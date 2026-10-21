@@ -1655,10 +1655,13 @@ describe("R193 a link's session that is not kept is revoked at the provider", ()
     at(`/login${hash}`);
     const view = render(<LoginRoute />);
     await screen.findByTestId(loginTestid.recoveryClaim);
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     view.unmount();
+    // Past the unmount's deferred revocation (0 ms, so StrictMode's rehearsal keeps the link).
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await vi.advanceTimersByTimeAsync(1);
     });
+    await flushMicrotasks();
     expect(callsTo(calls, "/auth/v1/logout").map((call) => call.auth)).toEqual([`Bearer ${renewed}`]);
   });
 

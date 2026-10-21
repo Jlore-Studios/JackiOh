@@ -2177,8 +2177,24 @@ pub const JLORE_LADDER_LOSS: i32 = 10;
 pub const JLORE_PRACTICE_WIN: i32 = 10;
 /// SPEC §14.8: the Jlore a practice game pays for a loss (#1333's table: 5).
 pub const JLORE_PRACTICE_LOSS: i32 = 5;
-/// SPEC §14.8, R1483000: the most Jlore an account's games pay it in one UTC day, ladder and
-/// practice together, as Hearthstone caps the gold its games pay (quest and track Jlore are not
+/// SPEC §14.8, R1502000: the Jlore an unranked game pays its winner, at the ladder's rate.
+pub const JLORE_UNRANKED_WIN: i32 = 20;
+/// SPEC §14.8, R1502000: the Jlore an unranked game pays its loser, at the ladder's rate.
+pub const JLORE_UNRANKED_LOSS: i32 = 10;
+/// SPEC §14.8, R1502000: the Jlore a game of a Conquest series pays its winner, as its own
+/// result, at the ladder's rate.
+pub const JLORE_CONQUEST_WIN: i32 = 20;
+/// SPEC §14.8, R1502000: the Jlore a game of a Conquest series pays its loser, as its own result,
+/// at the ladder's rate.
+pub const JLORE_CONQUEST_LOSS: i32 = 10;
+/// SPEC §14.8, R1502000: the Jlore a co-op game pays each person of a winning team, at practice's
+/// rate, since the team plays the AI.
+pub const JLORE_COOP_WIN: i32 = 10;
+/// SPEC §14.8, R1502000: the Jlore a co-op game pays each person of a team that did not win, at
+/// practice's rate.
+pub const JLORE_COOP_LOSS: i32 = 5;
+/// SPEC §14.8, R1483000, R1502000: the most Jlore an account's games pay it in one UTC day, every
+/// mode's games together, as Hearthstone caps the gold its games pay (quest and track Jlore are not
 /// counted and not stopped). The owner's number (#1483): well above a real day's play, far below
 /// what a loop of conceded practice games would earn.
 pub const JLORE_GAMES_DAILY_CAP: i64 = 2000;
@@ -2194,6 +2210,9 @@ pub const XP_GAME_CAP: i32 = 2000;
 /// SPEC §14.8: a practice game's share of the XP the same game earns on the ladder (#1333's
 /// table: 0.5).
 pub const XP_PRACTICE_SCALE: f64 = 0.5;
+/// SPEC §14.8, R1502000: a co-op game's share of the XP the same moves earn on the ladder, as
+/// practice's (the team plays the AI).
+pub const XP_COOP_SCALE: f64 = 0.5;
 /// SPEC §14.8: the XP a ladder game averages (#1333's table: 1,000), over R1333001's measured
 /// games.
 pub const XP_LADDER_TARGET_MEAN: i32 = 1000;
@@ -2227,10 +2246,22 @@ pub const QUEST_XP_PER_JLORE: i32 = 50;
 
 /// §14.7: the level a set track starts at, with no XP (migration 0045's `set_tracks.level` default).
 pub const SET_TRACK_FIRST_LEVEL: i64 = 1;
-/// §14.12: the server's switch for the economy, off until the going-live sub-issue (#1310) turns it
-/// on; until then no finished game pays (R1302006) and the client prints every full art as before
-/// (R1313000). Exported to `serverConfig.ts`.
-pub const ECONOMY_LIVE: bool = false;
+/// §14.12: the server's switch for the economy, on since the going-live sub-issue (#1310,
+/// R1310000): finished games pay (R1302006), quests arrive (R1304002) and the client prints a full
+/// art only on its owner's own copies (R1313000). Exported to `serverConfig.ts`.
+pub const ECONOMY_LIVE: bool = true;
+/// §14.12, R1310000: the starter cards, what a new account owns on becoming active (R111): the
+/// cards of the three practice presets (`apps/web/src/practice/decks.ts`), so a new account can
+/// queue any of them. `seed-catalog` writes them to `app.settings.starter_cards`, which migration
+/// 0050's launch grant reads, and the in-memory store reads them here. Exported to
+/// `serverConfig.ts`.
+pub const STARTER_CARDS: &[&str] = &[
+    "core-001", "core-004", "core-005", "core-008", "core-009", "core-011", "core-012", "core-013",
+    "core-014", "core-015", "core-016", "core-019", "core-020", "core-025", "core-030", "core-032",
+    "core-035", "core-036", "core-037", "core-041", "core-044", "core-045", "core-049", "core-053",
+    "core-054", "core-056", "core-058", "core-061", "core-063", "core-066", "core-067", "core-068",
+    "core-069", "core-070", "core-073", "core-074", "core-077", "core-081", "core-088",
+];
 
 // ---- The pack roll (SPEC §14.3, #1301) ----
 // PUBLIC, like the collection economy's above: the pack screen shows these odds, so each is

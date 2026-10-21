@@ -14,8 +14,11 @@
 //! It then flips `profiles.status` to 'active'. That is a real activation, not a shortcut around
 //! one: migration 0002's `profiles_grant_launch_collection` trigger fires on exactly that
 //! transition and calls `app.grant_launch_collection`, so the account ends up with the same
-//! entitlement ledger a redeemed invite code would have produced. What it skips is the invite gate
-//! (§9.4's six-step redemption), which is the point -- that path has its own tests.
+//! entitlement ledger a redeemed invite code would have produced, the starter cards (R1310000).
+//! What it skips is the invite gate (§9.4's six-step redemption), which is the point -- that path
+//! has its own tests. Since a seeded account is for testing the game, not the economy, it is then
+//! granted every other card of the current version too (reason `admin`), so the decks saved for it
+//! below can be queued.
 //!
 //! These accounts skip the invite gate, so the script refuses to run unless you opt in for one
 //! named project, and the password comes from your environment, never from this file:
@@ -278,6 +281,26 @@ fn text_at(row: &PgRow, column: &str) -> Result<Option<String>> {
 ///
 /// Re-runnable: a profile that already holds a deck or a trio is left alone, so a second run neither
 /// piles up starters nor touches decks a tester has built since.
+/// Every non-token card of the current version the account does not own yet, the launch quantity
+/// each (reason `admin`): the activation granted the starter cards alone (R1310000), and a seeded
+/// account plays any card, as a person's did before the economy went live.
+async fn grant_every_card(client: &mut PgConnection, profile_id: &str) -> Result<()> {
+    sqlx::query(
+        "select app.grant_cards($1, coalesce((
+           select jsonb_agg(jsonb_build_object('card_id', c.id, 'delta', (app.setting('launch_quantity'))::text::int))
+             from public.cards c
+            where c.catalog_version = app.catalog_version()
+              and not c.token
+              and not exists (select 1 from public.collection o
+                               where o.profile_id = $1 and o.card_id = c.id and o.quantity > 0)
+         ), '[]'::jsonb), 'admin', 'seed-accounts')",
+    )
+    .bind(uuid_of(profile_id)?)
+    .execute(&mut *client)
+    .await?;
+    Ok(())
+}
+
 async fn save_starter_decks(
     client: &mut PgConnection,
     profile_id: &str,
@@ -447,6 +470,7 @@ async fn seed_with(
         .bind(uuid_of(&id)?)
         .execute(&mut *client)
         .await?;
+        grant_every_card(client, &id).await?;
 
         name_seeded_account(client, &id, i).await?;
         record_seeded_consent(client, &id).await?;

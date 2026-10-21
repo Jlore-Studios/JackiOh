@@ -351,6 +351,18 @@ function otherTabWrote(): void {
   window.dispatchEvent(new StorageEvent("storage", { key: SESSION_STORAGE_KEY }));
 }
 
+/** Lets the round trips already answered, and the renders they cause, run (no timer stands behind them). */
+async function flush(): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
+
+/** How often `/api/auth/me` was asked: one more once the gate's re-read is out. */
+function meReads(): number {
+  return vi.mocked(fetch).mock.calls.filter(([input]) => String(input) === `${API}/api/auth/me`).length;
+}
+
 /**
  * One socket opened, with the token its handshake offered (R1379000); `drop` ends it the way a
  * network blip does (not a close this side asked for).
@@ -413,10 +425,14 @@ describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, ()
 
     // The (still good) session was renewed and written.
     store(renewed, "rt-2", Date.now() + 3_600_000);
-    await act(async () => {
+    const reads = meReads();
+    act(() => {
       otherTabWrote();
-      await new Promise((resolve) => setTimeout(resolve, 100));
     });
+    await waitFor(() => {
+      expect(meReads()).toBe(reads + 1);
+    }, SLOW);
+    await flush();
 
     expect(sockets.map((socket) => ({ first: socket.token === first, closed: socket.closed }))).toEqual([
       { first: true, closed: false },
@@ -452,9 +468,10 @@ describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, ()
       expect(readSession()?.accessToken).toBe(renewed);
     }, SLOW);
     expect(refreshes).toHaveLength(1);
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    });
+    await waitFor(() => {
+      expect(meReads()).toBe(2);
+    }, SLOW);
+    await flush();
     // The socket that was up stays up: the opponent sees no disconnect.
     expect(sockets.map((socket) => ({ first: socket.token === first, closed: socket.closed }))).toEqual([
       { first: true, closed: false },
@@ -530,10 +547,13 @@ describe("R194 a re-read in the background keeps the open screen", SLOW_TEST, ()
     expect(screen.getByTestId(inviteTestid.input)).toHaveValue("ABCD-EFGH-JKMN");
 
     store(sessionToken("user-x", "session-1", "renewed"), "rt-2", Date.now() + 3_600_000);
-    await act(async () => {
+    act(() => {
       otherTabWrote();
-      await new Promise((resolve) => setTimeout(resolve, 100));
     });
+    await waitFor(() => {
+      expect(meCalls).toBe(2);
+    }, SLOW);
+    await flush();
 
     expect(meCalls).toBe(2);
     expect(screen.queryByTestId(shellTestid.error)).toBeNull();
