@@ -10821,6 +10821,13 @@
       "action": "plan",
       "asks": [],
       "died": 1,
+      "difficulty_by": {
+        "at": "2026-10-21T23:07:11Z",
+        "difficulty": "hard",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "the change is in crates/ai/src/decide.rs, in plan()'s step-6 finalists, and the rule lists the AI's search (crates/ai/src/) as hard; it is small and its code was checked in a scratch copy, so medium was the other choice, and the rule says to take the harder one when torn"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
