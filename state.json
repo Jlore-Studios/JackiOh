@@ -8808,6 +8808,13 @@
     "1502": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T12:53:26Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "fails easy rule 3 (a new ruling R1502000 and \u00a714.8 edits) and touches about 15 files across the server and the spec; no engine, AI or migration work, so it is not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
