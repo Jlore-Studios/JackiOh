@@ -69,6 +69,8 @@ export type DuosBoardProps = {
   pings: readonly ReceivedPing[];
   onPing: (ping: PingKind, target: PingTarget) => void;
   error?: string | null;
+  /** R1483000: the server's per-seat flag for whether the daily cap held this seat's pay back; dev and replay pass false. */
+  jloreCapped: boolean;
   /** #965: a finished game's step to look at (`DuosReplay.tsx`): nothing is offered, and nothing is sent. */
   replay?: boolean;
 };
@@ -193,11 +195,13 @@ function ConcedeControl({ view, live, onConcede }: { view: DuosView; live: boole
 
 function ResultPanel({
   view,
+  jloreCapped,
   onShowBoard,
   onWatchReplay,
   onLeave,
 }: {
   view: DuosView;
+  jloreCapped: boolean;
   onShowBoard: () => void;
   onWatchReplay: (() => void) | undefined;
   onLeave: (() => void) | undefined;
@@ -208,6 +212,11 @@ function ResultPanel({
     <div className="duos-result" data-testid={duosTestid.result} data-outcome={words.outcome} role="dialog" aria-label={words.heading}>
       <h2 className="duos-result__heading">{words.heading}</h2>
       {words.reason === "" ? null : <p className="duos-result__reason">{words.reason}</p>}
+      {jloreCapped ? (
+        <p className="duos-result__note" data-testid={duosTestid.resultJlore}>
+          {t("Daily Jlore reached")}
+        </p>
+      ) : null}
       <div className="row duos-result__actions">
         <button type="button" data-testid={duosTestid.resultBoard} onClick={onShowBoard}>
           {t("View the board")}
@@ -227,7 +236,7 @@ function ResultPanel({
   );
 }
 
-export function DuosBoard({ view, legal, onAction, pings, onPing, error, replay = false }: DuosBoardProps): ReactElement {
+export function DuosBoard({ view, legal, onAction, pings, onPing, error, jloreCapped, replay = false }: DuosBoardProps): ReactElement {
   useLocale();
   const chrome = useContext(DuosChromeContext);
   const container = useRef<HTMLDivElement>(null);
@@ -428,6 +437,7 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error, replay 
       {over && !boardAfterResult && !replay && !boardBusy ? (
         <ResultPanel
           view={view}
+          jloreCapped={jloreCapped}
           onShowBoard={() => {
             setBoardAfterResult(true);
           }}

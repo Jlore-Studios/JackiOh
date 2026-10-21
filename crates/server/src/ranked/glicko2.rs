@@ -15,8 +15,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::{
-    GLICKO_CONVERGENCE, GLICKO_MAX_ITERATIONS, GLICKO_SCALE, GLICKO_TAU, RATING_DEVIATION_START,
-    RATING_START, RATING_VOLATILITY_START,
+    BOT_PROMOTION_DEVIATION_BOOST, GLICKO_CONVERGENCE, GLICKO_MAX_ITERATIONS, GLICKO_SCALE, GLICKO_TAU,
+    RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START,
 };
 
 /// One side's hidden rating: Glicko-2's r, RD and σ, on the displayed scale.
@@ -45,6 +45,22 @@ pub const START_GLICKO: Glicko = Glicko {
     deviation: RATING_DEVIATION_START,
     volatility: RATING_VOLATILITY_START,
 };
+
+/// R1560000: a ladder bot's rating after `promotions` AI promotions it has not been rated under: the
+/// rating and volatility kept, the deviation widened by `BOT_PROMOTION_DEVIATION_BOOST` in quadrature
+/// for each, capped at a new player's. No promotions changes nothing.
+pub fn widen_for_promotions(glicko: &Glicko, promotions: i64) -> Glicko {
+    if promotions <= 0 {
+        return *glicko;
+    }
+    Glicko {
+        deviation: (glicko.deviation * glicko.deviation
+            + promotions as f64 * BOT_PROMOTION_DEVIATION_BOOST * BOT_PROMOTION_DEVIATION_BOOST)
+            .sqrt()
+            .min(RATING_DEVIATION_START),
+        ..*glicko
+    }
+}
 
 /// Step 3's g(φ): how much an opponent's own uncertainty discounts a game against them.
 fn g(phi: f64) -> f64 {

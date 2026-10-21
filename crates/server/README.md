@@ -536,9 +536,9 @@ series still makes its picks.
 - `bots::fallback` is pure but for that key: which waiting ticket may have a bot (`fallback_due`)
   and which bot it gets (`choose_bot`: in the pool, on its schedule, in no match and a side of no
   series that is not over, not one of the player's last `BOT_RECENT_OPPONENTS`, for Best of 1
-  holding decks and for Conquest a trio dealt for this catalog, the closest in rating; none for a
-  player rated above every bot). The queue's sweep (`api/queue.rs`, `try_pair`) pairs every two
-  people it can first, then claims a ticket and its bot in one statement (`tickets_claim_for_bot`,
+  holding decks and for Conquest a trio dealt for this catalog, the closest in rating; for a
+  player rated above every bot, only a grinder within `MAX_FAIR_GAP`, R1555000). The queue's sweep
+  (`api/queue.rs`, `try_pair`) pairs every two people it can first, then claims a ticket and its bot in one statement (`tickets_claim_for_bot`,
   single-shot like a pair's claim) and starts the match, ranked, the person p1 and first to act as
   the older ticket of a pair is (R1453); a start that fails lets both go. A Conquest ticket and its
   bot (R641000) are claimed and made a series in one transaction (`start_bot_series`:
@@ -546,7 +546,14 @@ series still makes its picks.
   games the series is what holds the bot, so every bot claim checks, after it locks the bot, that
   it is a side of no series that is not over (`lock_free_bot` in `db/pg.rs`, a statement of its own
   so it reads what an earlier claim committed). The person is series p1; the series is ranked and
-  rated once as it ends, the bot's side as the bot it is (`plan_series_rating`).
+  rated once as it ends, the bot's side as the bot it is (`plan_series_rating`). While the top bots
+  grind (R1555000), a sweep that finds no ticket open at all then kicks off a ranked Best-of-1 match
+  between two bots (`kick_off_bot_match`): the pair is `choose_bot_pair`'s (the lowest-rated ready
+  grinder and the ready bot closest to it, not one of its recent opponents), at most
+  `BOT_VS_BOT_MAX_LIVE` live (`bot_matches`) and `BOT_VS_BOT_MIN_GAP_SECONDS` after the last ended
+  (`bot_match_gap_passed`), both claimed in one statement (`bots_claim_pair`), the grinder p1, and
+  neither draws a rematch plan (`plan_bot_rematches`). A sweep also folds back a match two bots hold
+  whose actor is not in memory, which no socket would come back to rebuild after a restart.
 - `bots::pick` is a bot's Conquest pick (R641000), which the series sweeper makes (`sweep_series`,
   `bot_picked`) once `pick_due_at` has come: `BOT_PICK_DELAY_MIN_MS` to `BOT_PICK_DELAY_MAX_MS` after
   the pick phase opened, before the clock runs out. The pick (`pick_slot`) follows the rule
@@ -617,7 +624,12 @@ series still makes its picks.
   match was still unstarted `BOT_STALE_START_SECONDS` after the claim, with its player
   (`release_stale_starts`), which is what a restart mid-start leaves; it does so whatever
   `LADDER_BOTS` says, since a restart may have turned it off, and long before the reaper's
-  open-row sweep (R1450) would delete the skeleton.
+  open-row sweep (R1450) would delete the skeleton. Each refresh ends by setting grinding the bots
+  `plan_grind` names (R1555000): the top `BOT_GRINDERS` active bots while the season's
+  `BOT_GRIND_REFERENCE_RANK`-th placed person is more than `BOT_GRIND_GAP` above every one, until a
+  bot is within the gap less `BOT_GRIND_HYSTERESIS` (`bots_set_grinding`). A grinder is on
+  `BOT_GRIND_ACTIVE_HOURS` a day (`fallback::scheduled_hours`), and each of its rated wins counts
+  toward its next strength (`bots_note_grind_win`, from `api::ranked::commit_ranked_game`).
 - `bots::calibrate` measures the seed ratings `BOT_SEED_RATINGS` holds (R748000,
   `docs/bot-calibration.md`). `jackioh-server bot-calibrate` plays every pair of `BOT_STRENGTHS`
   `BOT_CALIBRATION_GAMES_PER_PAIR` games as the bot seat plays them (the skill's roll, then
@@ -790,6 +802,17 @@ have an empty seat, so a delete that would empty a seat of a live co-op match ra
 `DELETE /api/account`'s own 409. Both stores read an emptied seat back as `""` (`duos::store`), and
 the in-memory store refuses the live case too (`duos::store::refuse_live_seat`). A co-op room still
 goes with either of its people.
+
+Migration 0052 gives each `bot_ratings` row `ai_generation`, the AI generation
+(`crates/ai/generation.json`) the bot was last rated on (R1560000). A rated game against a bot whose
+row names an older generation, or none, widens its deviation by `BOT_PROMOTION_DEVIATION_BOOST` in
+quadrature per promotion (one for none), capped at a new player's, before rating it
+(`api/ranked.rs`, `ranked::glicko2::widen_for_promotions`), and stamps the row with the server's
+generation, so a bot's rating re-settles on each new AI from its rated games.
+
+Migration 0053 adds `bots.grinding` and `bots.grind_wins` (R1555000): whether a ladder bot grinds
+now, which the pool's refresh sets and clears, and its rated wins since it started grinding or last
+stepped up a strength.
 
 ## Tests
 

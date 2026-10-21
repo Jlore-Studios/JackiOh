@@ -21,6 +21,8 @@ export const leaderboardTestid = {
   screen: "leaderboard-screen",
   loading: "leaderboard-loading",
   error: "leaderboard-error",
+  /** #1568: a failed read offers Try again beside the alert. */
+  retry: "leaderboard-retry",
   season: "leaderboard-season",
   you: "leaderboard-you",
   jlorious: "leaderboard-jlorious",
@@ -35,6 +37,7 @@ export type LeaderboardRouteProps = {
 export default function LeaderboardRoute({ token }: LeaderboardRouteProps): ReactElement {
   const [board, setBoard] = useState<LeaderboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,7 +51,7 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, attempt]);
 
   return (
     <div className="app-shell tavern leaderboard-screen" data-testid={leaderboardTestid.screen}>
@@ -60,9 +63,24 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
         <h2>{t("Leaderboard")}</h2>
 
         {error !== null ? (
-          <p className="notice" data-testid={leaderboardTestid.error} role="alert">
-            {t(error)}
-          </p>
+          <>
+            <p className="notice" data-testid={leaderboardTestid.error} role="alert">
+              {t(error)}
+            </p>
+            <div className="row">
+              <button
+                type="button"
+                className="button-primary"
+                data-testid={leaderboardTestid.retry}
+                onClick={() => {
+                  setError(null);
+                  setAttempt((before) => before + 1);
+                }}
+              >
+                {t("Try again")}
+              </button>
+            </div>
+          </>
         ) : null}
 
         {board === null && error === null ? (

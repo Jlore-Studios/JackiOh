@@ -96,6 +96,7 @@ compiler (`mlua` builds Luau from source); Node ≥ 22.13 and pnpm 11 for `apps/
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings      # includes rule 4's purity lint
 cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts   # every crate's tests, the golden replay included; rewrites apps/web/src/wire/ (commit any diff)
+cargo test --workspace --tests --features jackioh-engine/testkit,jackioh-engine/ts -- --ignored   # the daily tests: the many-game sweeps marked #[ignore = "daily: …"]
 cargo jackioh catalog check        # catalog.json's shape and its census of cards and tokens by set
 cargo jackioh patches check        # every catalog change claimed by exactly one pending fragment
 cargo jackioh spec check           # rule 3: ruling notes vs proving tests vs R-ids cited in code
@@ -157,10 +158,17 @@ its kind and tier and fails when the pending fragments do not match the cards th
 `luau-analyze --mode=strict` over the Luau there (#442 L10). A pull request that changes only paths on
 `scripts/ci-scope.sh`'s skip list (the bots, the agent instruction files, the issue forms, …) skips every job
 but `bot selftest`; adding a path to that list takes proof that nothing in `crates/`, `apps/`, `e2e/` or
-`spec/` reads it. `bot selftest` itself runs only when a pull request touches what the bot's tests read
-(`ci.yml`'s `changes` job, `bot`; #1455). Everything slow or statistical (fuzz at 10,000 seeds, `gate --full`, `golden check`,
-coverage against `.github/coverage-floor.txt`, every e2e spec, the db suites, the notebooks' tests) runs daily
-in `super.yml`. Each workflow's header says what it does, `ci.yml`'s the five-minute budget of every job.
+`spec/` reads it. Past that, each job runs only when the pull request touches what it reads: `ci-scope.sh` prints
+a line per job (clippy, each `rust (test …)` group by the crate graph, web, e2e, each db suite; #751), its
+header says what turns each on, and `ci-scope.test.ts` and `crates/tools/tests/acceptance.rs` hold them, so
+a file a test newly reads from outside its crate goes in the script's map in the same pull request. A push to
+`main` runs everything. `bot selftest` itself runs only when a pull request touches what the bot's tests read
+(`ci.yml`'s `changes` job, `bot`; #1455). Everything slow or statistical (fuzz at 10,000 seeds and the Duos wave,
+`gate --full`, `golden check`, the Rust tests marked `#[ignore = "daily: <why>"]`, the web's sweeps behind
+`apps/web/src/test/daily.ts`, coverage against `.github/coverage-floor.txt`, every e2e spec, the db suites, the
+notebooks' tests) runs daily in `super.yml`. A test moves there only when a cheaper test keeps its rule per pull
+request, which its `daily:` reason names (`acceptance.rs` refuses an ignore without one). Each workflow's
+header says what it does, `ci.yml`'s the five-minute budget of every job.
 
 ## Architecture
 

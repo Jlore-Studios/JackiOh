@@ -34,9 +34,9 @@ use jackioh_engine::testkit::{
 };
 use jackioh_engine::{
     AI_END_TURN_PROBABILITY, AI_PLAYOUT_STEP_CAP, ActionBody, DECK_SIZE, DUOS_DUELS, DUOS_NONCE_PREFIX,
-    DUOS_REASON_DUEL_RESULT, DUOS_REASON_POOL_EMPTIED, DUOS_REASON_TURN_CAP, DUOS_SEATS, DuosAction,
-    DuosActionBody, DuosCreateOptions, DuosDecks, DuosReduceResult, DuosReplayInput, DuosSeat, DuosState,
-    Rng, TURN_CAP_PLAYER_TURNS, duos_begin, duos_create, duos_fold, duos_hash, duos_legal_actions,
+    DUOS_REASON_DUEL_RESULT, DUOS_REASON_POOL_EMPTIED, DUOS_REASON_TURN_CAP, DUOS_REASON_VOIDED, DUOS_SEATS,
+    DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks, DuosReduceResult, DuosReplayInput, DuosSeat,
+    DuosState, Rng, TURN_CAP_PLAYER_TURNS, duos_begin, duos_create, duos_fold, duos_hash, duos_legal_actions,
     duos_reduce, duos_seats_to_act,
 };
 use rayon::prelude::*;
@@ -55,11 +55,13 @@ pub const DUOS_WAVE_SEEDS: u32 = 200;
 /// The seeds the tools crate's own test plays: the same games, fewer of them.
 pub const DUOS_SWEEP_SEEDS: u32 = 3;
 
-/// The endings a random-policy Duos game can reach (the policy never concedes, R84).
+/// The endings a random-policy Duos game can reach (the policy never concedes, R84), a Glitch that
+/// voids the game (R679) among them, as the 1v1 wave's TERMINAL_REASONS has it.
 const DUOS_TERMINAL_REASONS: &[&str] = &[
     DUOS_REASON_POOL_EMPTIED,
     DUOS_REASON_DUEL_RESULT,
     DUOS_REASON_TURN_CAP,
+    DUOS_REASON_VOIDED,
 ];
 
 /// Plays the Duos wave from seed `from` and prints its numbers; fails (exit 1) when a seed failed.
@@ -704,6 +706,12 @@ mod tests {
     fn a_duos_smoke_wave_ends_every_game_and_folds_it_back() {
         let outcomes = play_duos_wave(1, duos_wave_size(None));
         assert_eq!(failure_lines(&outcomes), Vec::<String>::new());
+    }
+
+    #[test]
+    fn r679_duos_seed_1427_whose_glitch_voids_the_game_passes() {
+        // The seed of the 2,000-seed wave a Glitch voided, before `voided` was an ending here.
+        assert_eq!(failure_lines(&[fuzz_duos_seed(1427)]), Vec::<String>::new());
     }
 
     #[test]

@@ -34,6 +34,8 @@ export const twoStepTestid = {
   cancel: "account-two-step-cancel",
   remove: "account-two-step-remove",
   removeConfirm: "account-two-step-remove-confirm",
+  /** #1568: factors that could not be read offer Try again beside the notice. */
+  retry: "account-two-step-retry",
   notice: "account-two-step-notice",
   error: "account-two-step-error",
 } as const;
@@ -69,6 +71,7 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,7 +79,7 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
       .then((factors) => {
         if (cancelled) return;
         const verified = factors.find((factor) => factor.verified);
-        // Read once: a token handed down later (a renewal, this screen's own raise) is the same account.
+        // Read once per attempt: a token handed down later (a renewal, this screen's own raise) is the same account.
         setPhase((now) => (now.kind !== "loading" ? now : verified === undefined ? { kind: "off" } : { kind: "on", factorId: verified.id }));
       })
       .catch(() => {
@@ -85,7 +88,12 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, attempt]);
+
+  const retry = (): void => {
+    setPhase({ kind: "loading" });
+    setAttempt((before) => before + 1);
+  };
 
   const start = (): void => {
     setBusy(true);
@@ -161,9 +169,16 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
       <h3 className="account-heading">{t("Two-step sign-in")}</h3>
       {phase.kind === "loading" ? <p className="auth-hint">{t("Checking…")}</p> : null}
       {phase.kind === "unknown" ? (
-        <p className="auth-hint" data-testid={twoStepTestid.state} data-state="unknown">
-          {t("Two-step sign-in can’t be checked just now. Reload the page to try again.")}
-        </p>
+        <>
+          <p className="auth-hint" data-testid={twoStepTestid.state} data-state="unknown">
+            {t("Two-step sign-in can’t be checked just now.")}
+          </p>
+          <div className="account-actions">
+            <button type="button" data-testid={twoStepTestid.retry} onClick={retry}>
+              {t("Try again")}
+            </button>
+          </div>
+        </>
       ) : null}
       {phase.kind === "off" ? (
         <>

@@ -19,6 +19,14 @@
 //! transaction (`start_bot_series`), whose picks the bot makes through the series sweeper
 //! (`bots::pick`); a bot that is a side of a series not over is seated nowhere else.
 //!
+//! R1555000 adds the match between two bots: while the top bots grind (`bots::pool`), a sweep that
+//! finds the queue holding no ticket at all kicks off one ranked Best-of-1 match between the
+//! lowest-rated free grinder and the free bot closest in rating to it (`kick_off_bot_match`,
+//! `bots::fallback::choose_bot_pair`), at most `BOT_VS_BOT_MAX_LIVE` live and
+//! `BOT_VS_BOT_MIN_GAP_SECONDS` after the last ended. The queue is read at kickoff only: a match
+//! already started plays out whoever queues meanwhile, and they are paired as above, with a person
+//! or a bot not in it.
+//!
 //! Three pieces: the endpoints, one pairing sweep (`try_pair`) and the sweeper (`run_matchmaker`).
 //! Two invariants:
 //!
@@ -50,15 +58,18 @@ use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json
 use crate::api::series::start_series;
 use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
 use crate::app::{App, now_ms};
-use crate::bots::fallback::{choose_bot, fallback_due, hour_of};
+use crate::bots::fallback::{
+    bot_match_gap_passed, bot_match_gap_since, bot_matches, choose_bot, choose_bot_pair, fallback_due,
+    hour_of,
+};
 use crate::config::{
-    BOT_RECENT_OPPONENTS, MATCHMAKER_SWEEP_INTERVAL_SECONDS, QUEUE_READOUT_WINDOW_SECONDS,
-    QUEUE_TICKET_STALE_MS, QUEUE_WAIT_MIN_SAMPLES, QUEUE_WAIT_QUANTILE, QUEUE_WAIT_STEP_SECONDS,
-    rating_window,
+    BOT_RECENT_OPPONENTS, BOT_VS_BOT_MAX_LIVE, MATCHMAKER_SWEEP_INTERVAL_SECONDS,
+    QUEUE_READOUT_WINDOW_SECONDS, QUEUE_TICKET_STALE_MS, QUEUE_WAIT_MIN_SAMPLES, QUEUE_WAIT_QUANTILE,
+    QUEUE_WAIT_STEP_SECONDS, rating_window,
 };
 use crate::db::store::{
-    BotRow, FrozenTrio, MatchSeat, PerMode, Profile, QueueMode, SeriesRow, StartMatchInput, Ticket,
-    TicketStatus,
+    BotRow, FrozenTrio, MatchSeat, PerMode, Profile, QueueMode, SeriesRow, StartMatchInput, StoreError,
+    Ticket, TicketStatus,
 };
 
 /// Unit conversion, not configuration: `rating_window` speaks seconds, tickets are stamped in ms.
@@ -1229,6 +1240,141 @@ async fn start_bot_match(
     Ok(())
 }
 
+/// A store error as the internal error a route or the sweeper answers with.
+fn internal(error: StoreError) -> ApiError {
+    ApiError::internal(error.to_string())
+}
+
+/// R1555000: kicks off a match between two bots when the sweep at `now` finds none live (fewer than
+/// `BOT_VS_BOT_MAX_LIVE`), no ticket open in any mode, a bot grinding, none ended in the last
+/// `BOT_VS_BOT_MIN_GAP_SECONDS`, and a pair `choose_bot_pair` names: a grinder, and the ready bot
+/// closest in rating to it that is none of its last `BOT_RECENT_OPPONENTS` opponents. Each read
+/// waits for the checks before it to pass, so a sweep with nothing to kick off reads only the bots
+/// and the queue's count. Both are claimed in one statement (`bots_claim_pair`), and a claim that
+/// loses is no error. The grinder is p1 and goes first, each side plays one of its own Best-of-1
+/// decks picked from the seed (`{seed}:bot-deck:{seat}`) with its portrait, and the match is ranked
+/// (R604) and Best of 1, stated on the row since no ticket made it: the bot seat (`bots::seat`)
+/// plays both sides, and it is rated and recorded as any match with a bot side is (R610, R611,
+/// R640000). Before any of that, a match between two bots that a restart cut off, which no socket
+/// will come back to rebuild, is folded back so it plays on (§9.5). Answers the match it started,
+/// or none.
+pub async fn kick_off_bot_match(app: &Arc<App>, now: i64) -> Result<Option<String>, ApiError> {
+    let (bots, queued) = {
+        let mut tx = app.db.begin(None).await.map_err(internal)?;
+        let bots = tx.bots_list().await.map_err(internal)?;
+        let queued = tx.tickets_count_open().await.map_err(internal)?;
+        tx.commit().await.map_err(internal)?;
+        (bots, queued)
+    };
+    let live = bot_matches(&bots);
+    for match_id in live.iter().filter(|match_id| !app.matches.has(match_id)) {
+        if let Err(error) = app.matches.actor_for(app, match_id).await {
+            tracing::warn!(event = "bots.match.resume_failed", matchId = %match_id, message = %error);
+        }
+    }
+    if queued > 0
+        || live.len() >= BOT_VS_BOT_MAX_LIVE
+        || !bots.iter().any(|bot| bot.grinding && bot.retired_at.is_none())
+    {
+        return Ok(None);
+    }
+    let (busy, games) = {
+        let mut tx = app.db.begin(None).await.map_err(internal)?;
+        // R641000: the sides of every series not over, which no bot claim may seat.
+        let busy: IndexSet<String> = tx
+            .series_active()
+            .await
+            .map_err(internal)?
+            .into_iter()
+            .flat_map(|series| [series.sides.0.profile_id, series.sides.1.profile_id])
+            .collect();
+        let games = tx
+            .ranked_bot_games_since(bot_match_gap_since(now))
+            .await
+            .map_err(internal)?;
+        tx.commit().await.map_err(internal)?;
+        (busy, games)
+    };
+    if !bot_match_gap_passed(&games, now) {
+        return Ok(None);
+    }
+    let mut recent: IndexMap<String, Vec<String>> = IndexMap::new();
+    for grinder in bots.iter().filter(|bot| bot.grinding && bot.retired_at.is_none()) {
+        let mut tx = app.db.begin(None).await.map_err(internal)?;
+        let faced = tx
+            .results_recent_opponents(&grinder.profile_id, BOT_RECENT_OPPONENTS)
+            .await
+            .map_err(internal)?;
+        tx.commit().await.map_err(internal)?;
+        recent.insert(grinder.profile_id.clone(), faced);
+    }
+    let Some((grinder, opponent)) =
+        choose_bot_pair(&bots, &recent, &busy, hour_of(now), &app.catalog.version)
+    else {
+        return Ok(None);
+    };
+    let match_id = new_uuid();
+    let players = (grinder.profile_id.clone(), opponent.profile_id.clone());
+    let mut tx = app.db.begin(None).await.map_err(internal)?;
+    if !tx
+        .bots_claim_pair(&players, &match_id, &app.catalog.version, now)
+        .await
+        .map_err(internal)?
+    {
+        // Dropping `tx` rolls it back.
+        return Ok(None);
+    }
+    tx.commit().await.map_err(internal)?;
+
+    let seed = new_seed();
+    let seat = |bot: &BotRow, player: jackioh_engine::PlayerId| -> Result<MatchSeat, ApiError> {
+        let picked = jackioh_engine::Rng::new(&format!("{seed}:bot-deck:{}", player.as_str()), 0)
+            .pick(&bot.decks)
+            .cloned()
+            .ok_or_else(|| ApiError::internal(format!("bot {} holds no deck", bot.profile_id)))?;
+        Ok(MatchSeat {
+            profile_id: bot.profile_id.clone(),
+            player,
+            deck: picked.cards,
+            portrait: Some(picked.portrait),
+        })
+    };
+    let started = async {
+        let seats = (
+            seat(grinder, jackioh_engine::PlayerId::P1)?,
+            seat(opponent, jackioh_engine::PlayerId::P2)?,
+        );
+        app.matches
+            .start(
+                app,
+                StartMatchInput {
+                    match_id: match_id.clone(),
+                    seed: seed.clone(),
+                    catalog_version: app.catalog.version.clone(),
+                    ranked: true,
+                    seats,
+                    mode: Some(QueueMode::Bo1),
+                    stake: None,
+                },
+            )
+            .await
+    }
+    .await;
+    if let Err(error) = started {
+        // As `start_bot_match`'s: both bots are let go and the skeleton discarded before the error
+        // stands.
+        cleanup_pair_start(app, &players.0, &players.1, &match_id).await;
+        return Err(error);
+    }
+    tracing::info!(
+        event = "queue.paired_bots",
+        matchId = %match_id,
+        botIds = %json_list(&[players.0.clone(), players.1.clone()]),
+        ratings = %json_list(&[grinder.rating, opponent.rating]),
+    );
+    Ok(Some(match_id))
+}
+
 /// §9.5: "Pairing runs on enqueue plus a sweeper every few seconds" (R108: every 3 s,
 /// `MATCHMAKER_SWEEP_INTERVAL_SECONDS`). `app.rs` spawns this loop (SURFACE §11.2) and aborting the
 /// task stops it. Each sweep starts one interval after the last finished, on tokio's clock, so a test
@@ -1245,6 +1391,13 @@ pub async fn run_matchmaker(app: Arc<App>) {
         if let Err(error) = try_pair(&app).await {
             // A failed sweep must not kill the sweeper: the next one may well succeed.
             tracing::warn!(event = "matchmaker.sweep_failed", message = %error.message);
+        }
+        // R1555000: after the sweep, so a ticket it could pair is never left for a match between
+        // two bots, and only with the queue empty.
+        if app.env.ladder_bots
+            && let Err(error) = kick_off_bot_match(&app, now_ms()).await
+        {
+            tracing::warn!(event = "bots.match.failed", message = %error.message);
         }
     }
 }

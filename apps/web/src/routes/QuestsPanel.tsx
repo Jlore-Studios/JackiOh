@@ -26,6 +26,10 @@ export const questsTestid = {
   progress: "quests-progress",
   next: "quests-next",
   error: "quests-error",
+  /** #1568: the loading line shown while the quests are on their way. */
+  loading: "quests-loading",
+  /** #1568: a failed read offers Try again beside the alert. */
+  retry: "quests-retry",
 } as const;
 
 /** Whole seconds as a clock reads them, `H:MM:SS`, the hours running past a day: 3725 is "1:02:05". */
@@ -93,12 +97,14 @@ export function QuestsList({ quests }: { quests: QuestsResponse }): ReactElement
 }
 
 /**
- * The caller's quests, read once when it mounts; a failed read says why in the panel's place, so
- * the screen around it still shows.
+ * The caller's quests, read on mount and again on Try again; a failed read says why in the
+ * panel's place, so the screen around it still shows. The panel is loading until the quests
+ * arrive, so loading never looks like having no quests.
  */
 export default function QuestsPanel({ token }: { token: string }): ReactElement | null {
   const [quests, setQuests] = useState<QuestsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,7 +118,7 @@ export default function QuestsPanel({ token }: { token: string }): ReactElement 
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, attempt]);
 
   if (error !== null) {
     return (
@@ -121,8 +127,31 @@ export default function QuestsPanel({ token }: { token: string }): ReactElement 
         <p className="notice" role="alert" data-testid={questsTestid.error}>
           {t(error)}
         </p>
+        <div className="row">
+          <button
+            type="button"
+            data-testid={questsTestid.retry}
+            onClick={() => {
+              setError(null);
+              setAttempt((before) => before + 1);
+            }}
+          >
+            {t("Try again")}
+          </button>
+        </div>
       </div>
     );
   }
-  return quests === null ? null : <QuestsList quests={quests} />;
+  if (quests === null) {
+    // Not the panel's testid: that stands for quests read, or a read that failed.
+    return (
+      <div className="account-quests">
+        <h3 className="account-heading">{t("Quests")}</h3>
+        <p className="notice" role="status" data-testid={questsTestid.loading}>
+          {t("Loading your quests…")}
+        </p>
+      </div>
+    );
+  }
+  return <QuestsList quests={quests} />;
 }

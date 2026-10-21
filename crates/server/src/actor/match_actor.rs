@@ -1260,8 +1260,12 @@ impl MatchActor {
     /// socket does, and meets a person's offer as `on_rematch_offer` says. An end whose result never
     /// lands lets the actor go (`let_go_unrecorded`), and its plan with it.
     fn plan_bot_rematches(&self, core: &mut Core, at: i64) {
-        // R641000: a series game offers no rematch, so its bot stays for none.
-        if self.shared.match_row.ranked != Some(true) || self.shared.series_game {
+        // R641000: a series game offers no rematch, so its bot stays for none. R1555000: nor do two
+        // bots offer each other one.
+        if self.shared.match_row.ranked != Some(true)
+            || self.shared.series_game
+            || PLAYERS.iter().all(|home| self.shared.bots[*home].is_some())
+        {
             return;
         }
         for home in PLAYERS {

@@ -346,6 +346,29 @@ describe("B60 the deck choice", () => {
     );
     expect(screen.queryByRole("alert")).toBeNull();
   });
+
+  it("#1568 decks that could not be read offer Try again, which reads them again and offers them", async () => {
+    let reads = 0;
+    serve({ created: false, guestJoined: false }, (call) => {
+      if (call.method === "GET" && call.path === "/api/decks") {
+        reads += 1;
+        if (reads === 1) return refusal(500, "internal", "The decks are out of reach.");
+      }
+      return undefined;
+    });
+    await renderPanel();
+    expect(await screen.findByRole("alert", undefined, SLOW)).toHaveTextContent(
+      "Your decks could not be loaded: The decks are out of reach.",
+    );
+
+    fireEvent.click(screen.getByTestId("coop-decks-retry"));
+    await waitFor(() => {
+      const picker = screen.getByTestId<HTMLSelectElement>("coop-deck");
+      expect([...picker.options].map((option) => option.textContent)).toEqual(["Random deck", "Aggro"]);
+    }, SLOW);
+    expect(reads).toBe(2);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
 });
 
 describe("B60 inviting a friend", () => {

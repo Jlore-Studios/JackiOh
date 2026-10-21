@@ -46,7 +46,7 @@ async function readWallet(token: string): Promise<WalletRead> {
 
 type Read<T> = { kind: "loading" } | { kind: "ready"; value: T } | { kind: "error"; message: string };
 
-/** One panel's read, once when it mounts, like `QuestsPanel`'s. */
+/** One panel's read, once when it mounts. */
 function useRead<T>(token: string, load: (token: string) => Promise<T>): Read<T> {
   const [read, setRead] = useState<Read<T>>({ kind: "loading" });
 

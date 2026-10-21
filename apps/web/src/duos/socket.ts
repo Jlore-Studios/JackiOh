@@ -73,7 +73,11 @@ export type DuosClockFrame = {
 export type DuosClockReading = DuosClockFrame & { receivedAt: number };
 
 export type DuosServerFrame =
-  | { type: "view"; view: DuosView; legal: readonly DuosActionBody[] }
+  /**
+   * R1483000: `jloreCapped` is true once the match is over and the daily Jlore cap held back some or
+   * all of this seat's Jlore for it; the server leaves it off a frame that has nothing to say.
+   */
+  | { type: "view"; view: DuosView; legal: readonly DuosActionBody[]; jloreCapped: boolean }
   | { type: "ack"; nonce: string; seq: number }
   | { type: "error"; code: string; message: string; nonce?: string }
   | ({ type: "clock" } & DuosClockFrame)
@@ -102,7 +106,14 @@ export function parseDuosFrame(text: string): DuosServerFrame | null {
   switch (parsed.type) {
     case "view":
       if (!isRecord(parsed.view)) return null;
-      return { type: "view", view: parsed.view as unknown as DuosView, legal: parseLegal(parsed.legal) };
+      // R1483000: absent is false; a value that is not a boolean is no frame this client knows.
+      if (parsed.jloreCapped !== undefined && typeof parsed.jloreCapped !== "boolean") return null;
+      return {
+        type: "view",
+        view: parsed.view as unknown as DuosView,
+        legal: parseLegal(parsed.legal),
+        jloreCapped: parsed.jloreCapped === true,
+      };
     case "ack":
       if (typeof parsed.nonce !== "string" || typeof parsed.seq !== "number") return null;
       return { type: "ack", nonce: parsed.nonce, seq: parsed.seq };
@@ -148,6 +159,11 @@ export type DuosSnapshot = {
   view: DuosView | null;
   /** The seat's legal actions as the server last listed them; never computed here (rule 7). */
   legal: readonly DuosActionBody[];
+  /**
+   * R1483000: whether the last view said the daily Jlore cap held back this seat's Jlore for the
+   * finished match, as the server read it off its ledger; the page never works it out.
+   */
+  jloreCapped: boolean;
   /** The last `error` frame's message, relayed verbatim, or null. */
   error: string | null;
   errorCode: string | null;
@@ -200,6 +216,7 @@ const INITIAL: DuosSnapshot = {
   connection: "connecting",
   view: null,
   legal: [],
+  jloreCapped: false,
   error: null,
   errorCode: null,
   clock: null,
@@ -310,6 +327,7 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
         patch({
           view: frame.view,
           legal: frame.legal,
+          jloreCapped: frame.jloreCapped,
           ...(fresh ? { error: null, errorCode: null } : {}),
         });
         return;
