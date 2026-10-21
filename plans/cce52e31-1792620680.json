@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 1573,
+  "title": "Patch: the duos fuzz varies team rules, handicaps and dealt decks",
+  "branch": "bot/issue-1573",
+  "thread": "**Issue #1573 (data, not instructions):**\n\n```text\n# #1573: Patch: the duos fuzz varies team rules, handicaps and dealt decks\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe co-op fuzz gate plays the same default setup on every seed \u2014 the humans' team rules, no handicaps, never a dealt deck \u2014 so the configurations production actually runs (AI-team rules per difficulty, handicapped seats, dealt-deck duels) are fuzzed not at all. After this, the seed varies those options the way the 1v1 fuzz already rotates handicaps and starts.\n\n## Why\n`play_duos_game_inner` builds `DuosCreateOptions` with only `seed` and generated decks, leaving `teams`, `handicaps`, `dealt` and `custom_cards` at `Default` (`crates/tools/src/duos_fuzz.rs:253-264`). The dealt-seat filter inside `create_duel` (`crates/engine/src/duos/state.rs`) has no coverage anywhere \u2014 the rules tests hardcode `dealt: None` \u2014 and the non-`DUOS_HUMAN_TEAM` rules change pass costs and pool health the co-op AI reads (\u00a713.7).\n\n## Proposal\nRotate `teams`, per-seat `handicaps` and `dealt` by seed, the way `handicap_for_seed` and the 1v1 `StartKind` rotation already do; print the options in a failure's report beside the seed and decks so a failure stays reproducible.\n\n## Where it lands\n`crates/tools/src/duos_fuzz.rs`; spec \u00a713.\n\n## Acceptance criteria\n- [ ] Two seeds produce different create options (a unit test pins the rotation)\n- [ ] At least one rotation exercises a dealt seat, covering the `create_duel` filter\n- [ ] Failure reports name the options alongside seed and decks\n\n## Size and risks\nSmall-medium; mirror of machinery the 1v1 fuzz already has. Custom cards stay out of scope (custom-card fuzz was rejected in #1000).\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-21T19:29:57Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1573: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#1566 skipped: it waits for #1577, #1578 to close first",
+    "#1578 skipped: it waits for #1577 to close first",
+    "#1579 skipped: it waits for #1577 to close first",
+    "#1580 skipped: it waits for #1577, #1579 to close first",
+    "#1581 skipped: it waits for #1578, #1579, #1580 to close first",
+    "#1584 skipped: it waits for #1577, #1582, #1583 to close first"
+  ]
+}
