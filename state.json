@@ -18833,6 +18833,10 @@
         {
           "at": "2026-10-21T14:47:41Z",
           "minutes": 1.2
+        },
+        {
+          "at": "2026-10-21T17:02:35Z",
+          "minutes": 1.5
         }
       ],
       "tokens_spent": [
@@ -18938,12 +18942,12 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-21T19:10:00Z",
-          "utilization": 0.13
+          "utilization": 0.47
         },
-        "observed_at": "2026-10-21T14:47:41Z",
+        "observed_at": "2026-10-21T17:02:35Z",
         "seven_day": {
           "resets_at": "2026-10-26T09:00:00Z",
-          "utilization": 0.56
+          "utilization": 0.58
         },
         "status": "allowed_warning"
       }
