@@ -12,7 +12,7 @@
 //!    back.
 //!
 //! ONE suite, TWO stores, like `contract.rs`: every case runs against `Db::Fake` always, and against
-//! `Db::Pg` too when `DATABASE_URL` is set (`tests/db/run.sh`, one case at a time over one database).
+//! `Db::Pg` too when `DATABASE_URL` is set (`tests/db/run.sh`, one case at a time per database).
 //!
 //! Every call is started before any is awaited (`join_all`), so the stores see them overlap. The fake
 //! serialises them on its one lock; Postgres runs them on separate connections under
@@ -31,7 +31,7 @@ use serde_json::{Value, json};
 use sqlx::Row;
 use sqlx::postgres::PgPool;
 
-use crate::support::deps::test_app;
+use crate::support::test_app::test_app;
 
 /// One transaction around one store call made outside `store.tx`: begin, the call, commit. Answers
 /// the call's value, or the first error's text; an error drops the transaction, rolling it back.

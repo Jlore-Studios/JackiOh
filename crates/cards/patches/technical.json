@@ -262,5 +262,111 @@
     "pr": 1528,
     "title": "the co-op replay player's arrow keys work like the 1v1 one's",
     "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "c2edba70af1d72626a11dc4ebf1158b2bde7e45d",
+    "pr": 1530,
+    "title": "unranked, Conquest-series and co-op games earn",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "e8850360781d32b9a8af8bb154aceacf32e214df",
+    "pr": 1531,
+    "title": "a Unit's summon entrance takes its flavor",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "6fde4f25b651cb4ca26961c3a1c77f033496cd4d",
+    "pr": 1533,
+    "title": "the stats drill-down's card keeps its 5:7 shape",
+    "kind": "app",
+    "player": "The card in a card's statistics popup keeps its shape instead of stretching."
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "e1589b1d1aa69a086ffe90911a4303b0a122ab55",
+    "pr": 1539,
+    "title": "a block made between a co-op room's read and its claim stops the join",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "0c7bbe8f729924164a0ab612059296c42d22f2ea",
+    "pr": 1536,
+    "title": "exports run locally, the bots share 8 hosted runners, and the status loop plans the night runs",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "7afa0d2132f63e7fe30a11990ec5f44f4a7c1eb7",
+    "pr": 1540,
+    "title": "the fuzz wave plays dealt decks, last boards and Glitch boards",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "573322d3936e7e274f45b6dee605d08eaaa4e12e",
+    "pr": 1541,
+    "title": "tests stop pinning the newest patch, so patches ship can merge again",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "4a293aa94146b16db6fb9c3f96c29e15a5f5c6e1",
+    "pr": 1544,
+    "title": "patches log: 9f4d095..61d47d0",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "bd028d6a4cac93e96ce544197cfa59efbe7f9f3e",
+    "pr": 1535,
+    "title": "tiered drop rolls (one weight table per roll, pity on top)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "84e96941410afe9b45ee2a5ef415739cbb852a55",
+    "pr": 1546,
+    "title": "the stats drill-down shows the Radiant face, links the Almanac and shows the tokens",
+    "kind": "app",
+    "player": "A card's statistics popup can show its Radiant face beside the normal one, links to the card in the Almanac, and shows the tokens it makes."
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "ed7c3d4e84d68815b443468c32850299c4ad0ae3",
+    "title": "Merge pull request #1545 from Jlore-Studios/bot/issue-1505",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "022839a1b23dd99d4c9b3894ddae84bc54f4e355",
+    "pr": 1547,
+    "title": "the AI's evaluation gains a term for the cards dormant under Stack piles, off after its screen",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "acb2ebf50d6d9a08acd18cb9fd8d6e87d67d88e4",
+    "pr": 1548,
+    "title": "daily super run failed",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "f15086fc850eade0393d9eb361641afc22b23700",
+    "pr": 1550,
+    "title": "a Unit's death exit takes its flavor",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "1dfd921652b90b66aa17b8c8eab0b73819bd943b",
+    "pr": 1519,
+    "title": "patches ship: v0.4.0e, v0.4.0f",
+    "kind": "app"
   }
 ]

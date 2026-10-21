@@ -168,6 +168,40 @@ export const FX_SUMMON_FLAVOR_TUNING = {
   spiritFade: { count: 12, power: 0.8 },
   spiritWisps: { count: 10, power: 0.7 },
 } as const;
+// #1446: a face-up death's flavor exit, on the death's beats (FX_DEATH_EMBER_AT, FX_DEATH_SMOKE_AT).
+// A Beast's streak to its graveyard flies this fraction of the entry; Hustle's bills and Clout's
+// lights-out take these colours (hot first). Every count is at least 8, as the summon's (rule 9).
+export const FX_DEATH_BOLT_FLIGHT_FRACTION = 0.5;
+export const FX_DEATH_BILL_COLORS = ["#e9f7d9", "#3fae5a", "#1f6b35"] as const;
+export const FX_DEATH_LIGHTS_OUT_COLORS = ["#4a4a57", "#26262e", "#0b0b0f"] as const;
+export const FX_DEATH_FLAVOR_TUNING = {
+  physicalSlump: { count: 10, power: 0.6 },
+  physicalDust: { count: 18, power: 0.5 },
+  bruteRubble: { count: 30, power: 1.2 },
+  bruteDust: { count: 24, power: 0.8 },
+  beastKick: { count: 14, power: 1.3 },
+  fireFlame: { count: 28, power: 0.9 },
+  fireAsh: { count: 16, power: 0.5 },
+  darkSink: { count: 18, power: 0.7 },
+  darkSmoke: { count: 16, power: 0.6 },
+  holyLight: { count: 24, power: 0.9 },
+  nerdPages: { count: 14, power: 0.8 },
+  nerdSnap: { count: 10, power: 1 },
+  techSparks: { count: 20, power: 1.3 },
+  techFade: { count: 10, power: 0.5 },
+  natureWilt: { count: 16, power: 0.6 },
+  natureFall: { count: 10, power: 0.5 },
+  toxicDrip: { count: 12, power: 0.6 },
+  toxicPuddle: { count: 22, power: 0.7 },
+  snackBite: { count: 16, power: 1 },
+  snackCrumbs: { count: 18, power: 0.6 },
+  hustleBills: { count: 30, power: 1.2 },
+  hustleCoins: { count: 12, power: 0.9 },
+  cloutFlash: { count: 16, power: 1.4 },
+  cloutDark: { count: 20, power: 0.5 },
+  spiritRise: { count: 14, power: 0.6 },
+  spiritWisps: { count: 10, power: 0.5 },
+} as const;
 export const FX_SPEED_MIN = 0.25;              // R435: the slider runs from a quarter speed…
 export const FX_SPEED_MAX = 3;                 // …to three times the table's speed
 export const FX_SPEED_DEFAULT = 1;

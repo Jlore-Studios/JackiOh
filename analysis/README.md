@@ -132,9 +132,9 @@ exactly, means to three places).
 | `fixtures/dev-40.jsonl` | 40 AI development games (R378), as `cargo jackioh stats` writes them |
 | `fixtures/dev-40.report.json` | `stats report` over them, as JSON |
 | `fixtures/games.report.json` | `stats report --games --source=all` over both fixtures' games, as JSON: the figures notebook 02's first-seat and ending cells are held to |
-| `fixtures/counts.jsonl` | Five live v0.3.1 games, bo1 and bo3, three of whose records carry R1256000's counts and two written before them. **Made up** by hand: no run writes old and new records together |
+| `fixtures/counts.jsonl` | Five live v0.2.5f games, bo1 and bo3, three of whose records carry R1256000's counts and two written before them. **Made up** by hand: no run writes old and new records together |
 | `fixtures/counts.report.json` | `stats report --games --source=all` over it, as JSON: the figures notebook 02's switch and upgrade columns are held to |
-| `fixtures/live-40.jsonl` | 40 more AI games, filed as live ones: `make_live.py` gives them live ids, patches v0.3.0 (16) and v0.3.1 (24), the modes bo1 and bo3 and a human first seat. Not played by anyone: the notebooks' live and patch comparisons need records of that shape |
+| `fixtures/live-40.jsonl` | 40 more AI games, filed as live ones: `make_live.py` gives them live ids, patches v0.2.5e (16) and v0.2.5f (24), the modes bo1 and bo3 and a human first seat. Not played by anyone: the notebooks' live and patch comparisons need records of that shape |
 | `fixtures/sweep-small.jsonl` | `cargo jackioh sweep --json` over four cards (pass 1 at Easy and Hard), as it wrote it |
 | `fixtures/repo/` | The files `load_generations` reads under a repository root: `crates/ai/generation.json` and `training/history/*.jsonl`. **Made up**: three promotions on two lanes, so the charts have a line. The real histories are empty until the first promotion |
 
@@ -143,7 +143,7 @@ To remake them (after a change to the record's shape or to R377's arithmetic, ne
 ```
 cargo jackioh stats --games 40 --series analysis-fixture --out analysis/fixtures/dev-40.jsonl
 cargo jackioh stats report analysis/fixtures/dev-40.jsonl --source=all --json > analysis/fixtures/dev-40.report.json
-cargo jackioh stats --games 40 --patch v0.3.0 --series analysis-fixture-prev --out /tmp/prev-40.jsonl
+cargo jackioh stats --games 40 --patch v0.2.5e --series analysis-fixture-prev --out /tmp/prev-40.jsonl
 python3 analysis/fixtures/make_live.py /tmp/prev-40.jsonl > analysis/fixtures/live-40.jsonl
 cargo jackioh stats report --games --source=all --json analysis/fixtures/dev-40.jsonl analysis/fixtures/live-40.jsonl > analysis/fixtures/games.report.json
 cargo jackioh stats report --games --source=all --json analysis/fixtures/counts.jsonl > analysis/fixtures/counts.report.json   # counts.jsonl is hand-written; only its report is remade

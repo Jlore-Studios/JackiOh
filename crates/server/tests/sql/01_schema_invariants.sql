@@ -57,7 +57,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 63 tables of migrations 0001-0050 ==='
+\echo '=== CHECK 2: the 63 tables of migrations 0001-0051 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -83,8 +83,9 @@ declare
   -- quest_schedules, quest_grants, cosmetics, card_cosmetics, account_cosmetics and cosmetic_grants
   -- (0045, SPEC §14.11, #1299), and practice earning's practice_seeds (0047, #1303).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
-  -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049 and 0050 add no table. The
-  -- three loadout tables stay after 0007, unread and unwritten (R254), so they are still expected here.
+  -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050 and 0051 add no table.
+  -- The three loadout tables stay after 0007, unread and unwritten (R254), so they are still expected
+  -- here.
   expected constant text[] := array[
     'account_cosmetics', 'action_timings', 'age_checks', 'blocks', 'bot_ratings', 'bots', 'card_cosmetics',
     'card_totals', 'cards', 'challenges',

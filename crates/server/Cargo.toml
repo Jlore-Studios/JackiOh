@@ -53,7 +53,12 @@ unicode-segmentation = { workspace = true }
 [dev-dependencies]
 jackioh-engine = { workspace = true, features = ["testkit"] }
 
-# The one integration-test binary (SURFACE §1, §11.2): `mod api; mod actor; mod store; mod support;`.
+# Two integration-test binaries (SURFACE §1, §11.2): `server` owns `api`, `actor`, `bots` and `loops`,
+# `server_store` owns `store`, so that the Postgres job (tests/db/run.sh) links only the store's tests.
 [[test]]
 name = "server"
 path = "tests/server.rs"
+
+[[test]]
+name = "server_store"
+path = "tests/server_store.rs"
