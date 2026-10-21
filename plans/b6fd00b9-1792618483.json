@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 1572,
+  "title": "Patch: the fuzz wave plays the endings and server actions it never submits",
+  "branch": "bot/issue-1572",
+  "thread": "**Issue #1572 (data, not instructions):**\n\n```text\n# #1572: Patch: the fuzz wave plays the endings and server actions it never submits\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe randomized-game gate has never once conceded, offered or answered a draw, emoted, timed out a turn, expired a disconnect, or hit the ceiling inside a fuzzed game \u2014 those endings and cleanups are covered only by hand-written tests, never across thousands of random boards. After this, a fuzz wave takes them at a low seeded rate, so whole-game random coverage finally reaches the ways a real game can end.\n\n## Why\n`play_game` drives `subsystems::choose_action`, which samples `legal_actions` minus `AI_SKIPPED_ACTIONS` \u2014 Concede, OfferDraw, AnswerDraw and Emote are always filtered (`crates/engine/src/subsystems/ai_policy.rs:29-37`, `crates/tools/src/fuzz.rs:671-736`). That is correct for \u00a710.7's random policy, but it means the draw-offer state machine (offer once per turn, decline blocks re-offers, lapse at turn end, standing offer in views \u2014 `crates/engine/src/turn.rs`, `reduce.rs:870-901`), concede-during-prompt cleanup, and the emote record get zero whole-game randomized coverage. The server-only actions \u2014 `timeout` (which resolves open prompts by policy and keeps mulligans whole, R268/R1002/R1184001), `disconnectExpired`, `ceilingReached`, `setAutoEndTurn` (`reduce.rs:287-465`) \u2014 likewise never appear; `duos_fuzz.rs` filters Concede too. A drift in draw bookkeeping (stale `drawOffer`, double offers, offers surviving the turn boundary) or a timeout resolving a prompt wrongly would land silently.\n\n## Proposal\nAdd a seeded endings channel inside `play_game`: a small per-step probability of picking a listed concede/draw/emote action when offered, and a per-seed schedule that forges `timeout`/`setAutoEndTurn` (and near the cap, `ceilingReached`) through the existing probe seam, logged like any action so replays fold them. Keep the rate low enough that games still reach depth; mirror concede/timeout in `duos_fuzz`.\n\n## Where it lands\n`crates/tools/src/fuzz.rs`, `crates/tools/src/duos_fuzz.rs`; spec \u00a710.7, the draw rules in `crates/engine/src/turn.rs`, the server actions in `crates/engine/src/reduce.rs`.\n\n## Acceptance criteria\n- [ ] A fixed-seed fuzz test asserts its log contains concede/draw/emote/timeout actions, so the channel cannot silently regress\n- [ ] Replay-fold and state-hash checks still pass on games that end by concede or accepted draw\n- [ ] Failures keep naming their seed and decks\n\n## Size and risks\nMedium; the risk is tuning the rate so endings don't crowd out normal play \u2014 make it small and seeded, and it is one more wave beside the existing ones, not a change to the shipped \u00a710.7 policy.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-21T19:28:58Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1572: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#1566 skipped: it waits for #1577, #1578 to close first",
+    "#1578 skipped: it waits for #1577 to close first",
+    "#1579 skipped: it waits for #1577 to close first",
+    "#1580 skipped: it waits for #1577, #1579 to close first",
+    "#1581 skipped: it waits for #1578, #1579, #1580 to close first",
+    "#1584 skipped: it waits for #1577, #1582, #1583 to close first"
+  ]
+}
