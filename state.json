@@ -8633,6 +8633,12 @@
         "tiers": {
           "claude": "strong"
         }
+      },
+      "wip": {
+        "at": "2026-10-21T00:13:36Z",
+        "provider": "claude-3",
+        "sha": "8afc3345272a7ec0f69ab2584c5a0450488f16dc",
+        "start": "b3720b51653e42fff88d10a6bb231af71ff5dcc6"
       }
     },
     "1470": {
