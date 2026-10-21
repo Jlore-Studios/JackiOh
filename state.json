@@ -9111,9 +9111,7 @@
       ],
       "strikes": 2,
       "suggestion": true,
-      "taken_asks": [
-        "c:6308490068"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1489": {
