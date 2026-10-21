@@ -164,9 +164,10 @@ async function join(code: string): Promise<void> {
   fireEvent.click(screen.getByTestId("coop-join-submit"));
 }
 
-async function pause(ms: number): Promise<void> {
+/** Let the stubbed round trips and React's updates settle: a 0 ms timer runs after every promise already queued. */
+async function flush(): Promise<void> {
   await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, ms));
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
 }
 
@@ -177,6 +178,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   window.localStorage.clear();
@@ -269,10 +271,10 @@ describe("B60 creating a room", () => {
         await waitFor(() => {
           expect(server.to("GET", `/api/duos/rooms/${CODE}`)).toHaveLength(1);
         }, SLOW);
-        await pause(50);
+        await flush();
 
         show("hidden");
-        await pause(50);
+        await flush();
         expect(server.to("GET", `/api/duos/rooms/${CODE}`)).toHaveLength(1);
 
         // Wakes that land together are one read.
@@ -282,7 +284,7 @@ describe("B60 creating a room", () => {
         await waitFor(() => {
           expect(server.to("GET", `/api/duos/rooms/${CODE}`)).toHaveLength(2);
         }, SLOW);
-        await pause(50);
+        await flush();
         expect(server.to("GET", `/api/duos/rooms/${CODE}`)).toHaveLength(2);
         expect(window.location.pathname).toBe("/together");
 
@@ -303,10 +305,15 @@ describe("B60 creating a room", () => {
   it(
     "B60 the host stays put while nobody has joined",
     async () => {
+      vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
       const server = serve({ created: false, guestJoined: false });
       await renderPanel();
       await createRoom(server);
-      await pause(1_500);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(COOP_ROOM_POLL_MS + 1);
+      });
+      await flush();
+      expect(server.to("GET", `/api/duos/rooms/${CODE}`)).toHaveLength(2);
       expect(window.location.pathname).toBe("/together");
       expect(screen.getByTestId("coop-code")).toHaveTextContent(CODE);
     },
@@ -374,7 +381,7 @@ describe("B60 inviting a friend", () => {
     for (const button of screen.queryAllByRole("button", { name: /invite/i })) {
       if ((button as HTMLButtonElement).disabled !== true) fireEvent.click(button);
     }
-    await pause(100);
+    await flush();
     expect(server.calls.some((call) => call.method === "POST" && call.path.startsWith("/api/chat/"))).toBe(false);
   });
 

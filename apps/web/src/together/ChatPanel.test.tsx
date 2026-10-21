@@ -13,6 +13,7 @@ import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import type { ChatMessage, Friend, PlayerRef } from "../net/social.ts";
 import { must, refusal, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { ChatPanel } from "./ChatPanel.tsx";
+import { SOCIAL_POLL_MS } from "./config.ts";
 import { InMatchChat } from "./InMatchChat.tsx";
 
 const SLOW = { timeout: 5_000 } as const;
@@ -159,19 +160,20 @@ describe("B58 the conversation", () => {
   });
 
   it("B58 an empty conversation shows no message", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     const server = serve([]);
     render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
     await waitFor(() => {
       expect(server.to("GET", `/api/chat/${ANN.profileId}`).length).toBeGreaterThan(0);
     }, SLOW);
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    });
+    await settle(CHAT_POLL_MS + 1);
+    expect(server.to("GET", `/api/chat/${ANN.profileId}`)).toHaveLength(2);
     expect(shown()).toHaveLength(0);
     expect(screen.getByTestId("chat-input")).toBeInTheDocument();
   });
 
   it("B58 a conversation the server refuses to read (no longer friends) shows no message", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     const server = serve(conversation(), (call) =>
       call.method === "GET" && call.path === `/api/chat/${ANN.profileId}` ? refusal(404, "not_found", "You can only chat with friends.") : undefined,
     );
@@ -179,9 +181,8 @@ describe("B58 the conversation", () => {
     await waitFor(() => {
       expect(server.to("GET", `/api/chat/${ANN.profileId}`).length).toBeGreaterThan(0);
     }, SLOW);
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    });
+    await settle(CHAT_POLL_MS + 1);
+    expect(server.to("GET", `/api/chat/${ANN.profileId}`)).toHaveLength(2);
     expect(shown()).toHaveLength(0);
   });
 
@@ -205,6 +206,7 @@ describe("B58 the conversation", () => {
 
   it("B58 a too-long message adds no message; one the server refuses is refused in its words", async () => {
     const words = "That message is too long.";
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     const server = serve(conversation(), (call) => (call.method === "POST" ? refusal(422, "too_long", words) : undefined));
     render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
     await waitFor(() => {
@@ -212,9 +214,7 @@ describe("B58 the conversation", () => {
     }, SLOW);
     type("x".repeat(501));
     send();
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    });
+    await settle(CHAT_POLL_MS + 1);
     if (server.to("POST", `/api/chat/${ANN.profileId}`).length > 0) {
       await waitFor(() => {
         expect(document.body).toHaveTextContent(words);
@@ -225,16 +225,16 @@ describe("B58 the conversation", () => {
 
   it("B58 a blank message adds no message, whether the panel holds it back or the server refuses it", async () => {
     const words = "Type a message first.";
-    serve(conversation(), (call) => (call.method === "POST" ? refusal(422, "empty", words) : undefined));
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const server = serve(conversation(), (call) => (call.method === "POST" ? refusal(422, "empty", words) : undefined));
     render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
     await waitFor(() => {
       expect(shown()).toHaveLength(2);
     }, SLOW);
     type("    ");
     send();
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    });
+    await settle(CHAT_POLL_MS + 1);
+    expect(server.to("GET", `/api/chat/${ANN.profileId}`)).toHaveLength(2);
     expect(shown()).toHaveLength(2);
   });
 
@@ -368,11 +368,11 @@ describe("B58 the in-match chat toggle", () => {
   });
 
   it("B58 closed, the toggle shows no conversation and reads none", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     const server = serveFriends();
     render(<InMatchChat />);
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    });
+    await settle(SOCIAL_POLL_MS + 1);
+    expect(server.to("GET", "/api/chat/unread")).toHaveLength(2);
     expect(screen.queryByTestId("chat-input")).toBeNull();
     expect(server.calls.some((call) => call.method === "GET" && call.path === `/api/chat/${ANN.profileId}`)).toBe(false);
   });

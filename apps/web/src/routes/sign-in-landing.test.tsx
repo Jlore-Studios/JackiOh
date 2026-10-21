@@ -5,9 +5,10 @@
 // Asserted through the real `App` from `main.tsx` (loaded with `await import`, because main.tsx
 // mounts itself outside vitest), with the auth provider and the API answered by a stubbed `fetch`.
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
 import { landingTestid, loginTestid } from "../auth/testids.ts";
 import { SIGN_IN_FAILED_MESSAGE } from "../net/auth.ts";
 import { paths } from "../net/navigate.ts";
@@ -118,6 +119,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   window.localStorage.clear();
@@ -176,6 +178,7 @@ describe("issue #479 a successful sign-in lands on the main menu", () => {
 
 describe("issue #479 a failed sign-in stays on the sign-in screen", () => {
   it("shows its sentence above the form and keeps what was typed; the next try signs in", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldAdvanceTime: true });
     const stub = stubFetch();
     at(paths.landing);
     render(<App />);
@@ -184,7 +187,9 @@ describe("issue #479 a failed sign-in stays on the sign-in screen", () => {
     signIn(WRONG_PASSWORD);
     await expectStillSigningIn(WRONG_PASSWORD);
     // Still there once everything has settled: nothing moves the player on afterwards.
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(GATE_SLOW_NOTICE_SECONDS * 1000 + 1);
+    });
     expect(window.location.pathname).toBe(paths.login);
     expect(screen.getByTestId(loginTestid.form)).toBeInTheDocument();
 
@@ -201,6 +206,7 @@ describe("issue #479 a sign-in a protected screen sent the player to", () => {
   it.each([paths.decks, paths.play, paths.invite, paths.account, paths.leaderboard, paths.match("some-match")])(
     "from %s: a failure stays on the sign-in screen, and the sign-in lands on the main menu, not back there",
     async (protectedPath) => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldAdvanceTime: true });
       stubFetch();
       at(protectedPath);
       render(<App />);
@@ -216,7 +222,9 @@ describe("issue #479 a sign-in a protected screen sent the player to", () => {
       }, SLOW);
       expect(await screen.findByTestId(landingTestid.root, undefined, SLOW)).toBeInTheDocument();
       // And it stays there: nothing sends the player on to the screen that asked.
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(GATE_SLOW_NOTICE_SECONDS * 1000 + 1);
+      });
       expect(window.location.pathname).toBe(paths.landing);
     },
   );
