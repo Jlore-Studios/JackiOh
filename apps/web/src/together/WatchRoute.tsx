@@ -12,9 +12,11 @@
 // the way back. An unexpected close opens the socket again, `WATCH_RECONNECT_ATTEMPTS` times
 // `WATCH_RECONNECT_MS` apart; a finished game is not reopened. A tab that wakes probes a quiet socket
 // with the hello again, which the server answers with the view it last sent, and replaces one that
-// does not answer (R1441, R1103000), within the same attempts.
+// does not answer (R1441, R1103000), within the same attempts. Once they run out on a game still
+// running, "Reconnect now" (the match bar's, `routes/match.tsx`) opens it again and starts the attempts
+// over (#1570).
 
-import { useEffect, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
@@ -54,10 +56,12 @@ export function watchSocketUrl(matchId: string, friendId: string, base: string =
   return `${serverSocketUrl(WATCH_PATH, base).replace(/\?.*$/u, "")}?${query}`;
 }
 
-/** The newest delayed view of the friend's seat, and how the socket stands. */
-function useWatch(matchId: string, friendId: string): { view: PlayerView | null; connection: WatchConnection } {
+/** The newest delayed view of the friend's seat, how the socket stands, and the watcher's own retry. */
+function useWatch(matchId: string, friendId: string): { view: PlayerView | null; connection: WatchConnection; reconnect: () => void } {
   const [view, setView] = useState<PlayerView | null>(null);
   const [connection, setConnection] = useState<WatchConnection>("connecting");
+  /** The running effect's retry (#1570); a no-op until the effect sets it. */
+  const reconnectRef = useRef<() => void>(IGNORE);
 
   useEffect(() => {
     let stopped = false;
@@ -150,6 +154,16 @@ function useWatch(matchId: string, friendId: string): { view: PlayerView | null;
       });
     };
 
+    // #1570: once the reopens run out on a game still running, the watcher's own retry opens the
+    // socket again and starts the attempts over.
+    reconnectRef.current = () => {
+      if (stopped || refused || over || socket !== null) return;
+      window.clearTimeout(timer);
+      tries = 0;
+      setConnection("connecting");
+      open();
+    };
+
     wakeProbe.listen();
     open();
     return () => {
@@ -160,7 +174,11 @@ function useWatch(matchId: string, friendId: string): { view: PlayerView | null;
     };
   }, [matchId, friendId]);
 
-  return { view, connection };
+  const reconnect = useCallback((): void => {
+    reconnectRef.current();
+  }, []);
+
+  return { view, connection, reconnect };
 }
 
 /** The connection in a watcher's words. */
@@ -185,13 +203,24 @@ function BackToTogether(): ReactElement {
   );
 }
 
+/** #1570: the match bar's "Reconnect now", offered once the screen's own reopens have run out. */
+function ReconnectNow({ className, onReconnect }: { className: string; onReconnect: () => void }): ReactElement {
+  return (
+    <button type="button" className={className} data-testid={watchTestid.reconnect} onClick={onReconnect}>
+      {t("Reconnect now")}
+    </button>
+  );
+}
+
 export function WatchRoute({ matchId, friendId }: { matchId: string; friendId: string }): ReactElement {
   useLocale();
-  const { view, connection } = useWatch(matchId, friendId);
+  const { view, connection, reconnect } = useWatch(matchId, friendId);
   const lookup = useCatalogLookup();
   const [friends] = usePolled(getFriends, null);
   const name = friends.kind === "ready" ? friends.value.friends.find((friend) => friend.profileId === friendId)?.username : undefined;
   const seconds = String(Math.round(SPECTATE_DELAY_MS / MS_PER_SECOND));
+  // #1570: the reopens ran out on a game still running (a finished game's socket closes as "closed" too).
+  const exhausted = connection === "closed" && view?.result == null;
 
   let screen: ReactElement;
   if (connection === "refused") {
@@ -210,6 +239,7 @@ export function WatchRoute({ matchId, friendId }: { matchId: string; friendId: s
       <Loading what="Joining as a watcher…" slow testId={watchTestid.waiting}>
         <p className="auth-hint">{t("What you watch runs {seconds} seconds behind the game.", { seconds })}</p>
         <div className="row">
+          {exhausted ? <ReconnectNow className="button-primary" onReconnect={reconnect} /> : null}
           <BackToTogether />
         </div>
       </Loading>
@@ -225,10 +255,18 @@ export function WatchRoute({ matchId, friendId }: { matchId: string; friendId: s
             replay
             resultForm="chip"
             matchStatus={
-              <span data-testid={watchTestid.status} data-connection={connection}>
-                {name === undefined ? t("Watching your friend") : <Named text={t("Watching {name}")} name={name} />} ·{" "}
-                {t("{seconds} s behind", { seconds })} · {connectionWords(connection)}
-              </span>
+              <>
+                <span data-testid={watchTestid.status} data-connection={connection}>
+                  {name === undefined ? t("Watching your friend") : <Named text={t("Watching {name}")} name={name} />} ·{" "}
+                  {t("{seconds} s behind", { seconds })} · {connectionWords(connection)}
+                </span>
+                {exhausted ? (
+                  <>
+                    {" "}
+                    <ReconnectNow className="link-button" onReconnect={reconnect} />
+                  </>
+                ) : null}
+              </>
             }
             boardRail={<BackLink to={paths.together} label="← Play together" showSettings={false} />}
           />

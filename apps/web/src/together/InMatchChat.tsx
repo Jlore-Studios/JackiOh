@@ -4,7 +4,7 @@
 // `FRIENDS_POLL_MS`), never while the board is just played; the unread count every
 // `SOCIAL_POLL_MS`.
 
-import { useState, type ReactElement } from "react";
+import { useId, useRef, useState, type ReactElement } from "react";
 
 import Username from "../auth/Username.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
@@ -75,6 +75,8 @@ export function InMatchChat(): ReactElement {
   useLocale();
   const [open, setOpen] = useState(false);
   const [chatWith, setChatWith] = useState<PlayerRef | null>(null);
+  const toggle = useRef<HTMLButtonElement>(null);
+  const listId = useId();
   const [unread, reloadUnread] = usePolled(getUnread, SOCIAL_POLL_MS);
   const counts: Readonly<Record<string, number>> = unread.kind === "ready" ? unreadCountsOf(unread.value) : {};
   const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
@@ -82,10 +84,12 @@ export function InMatchChat(): ReactElement {
   return (
     <div className="in-match-chat">
       <button
+        ref={toggle}
         type="button"
         className="link-button in-match-chat__toggle"
         data-testid={chatTestid.inMatchToggle}
         aria-expanded={open}
+        aria-controls={open ? listId : undefined}
         onClick={() => {
           setOpen((shown) => !shown);
         }}
@@ -98,7 +102,7 @@ export function InMatchChat(): ReactElement {
         ) : null}
       </button>
       {open ? (
-        <div className="in-match-chat__list" data-testid={chatTestid.inMatchList}>
+        <div className="in-match-chat__list" id={listId} data-testid={chatTestid.inMatchList}>
           <OnlineFriends
             unread={counts}
             onPick={(friend) => {
@@ -115,6 +119,8 @@ export function InMatchChat(): ReactElement {
           onClose={() => {
             setChatWith(null);
             reloadUnread();
+            // The friend picked left with the list, so the focus goes back to the toggle that opened both.
+            toggle.current?.focus({ preventScroll: true });
           }}
         />
       )}
