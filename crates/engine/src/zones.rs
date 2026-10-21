@@ -274,8 +274,13 @@ pub fn carried_at(state: &GameState, slot: impl Into<ZoneSlot>) -> Option<&CardI
 
 /// B5 E21, R446: a backrow card whose text lets a Unit be played on top of it (`staticFlags.carrier`,
 /// or Classic+ #33 Ivory Tower's `fusesCarried`, R653). The flag is the card's text, so a Vanilla
-/// carrier carries nothing more (§6.3, R115: `flags_of` reads nothing off a Vanilla instance).
+/// carrier carries nothing more (§6.3, R115: `flags_of` reads nothing off a Vanilla instance), and a
+/// face-down one's sleeps (R1487000).
 pub fn is_carrier(state: &GameState, card: &CardInstance) -> bool {
+    // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+    if crate::preview::lasting_text_dormant(state, card) {
+        return false;
+    }
     let flags = flags_of(state, card);
     flags.carrier == Some(true) || flags.fuses_carried == Some(true)
 }

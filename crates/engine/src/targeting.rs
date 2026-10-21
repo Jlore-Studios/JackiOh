@@ -51,9 +51,14 @@ fn fused_cost(state: &GameState, self_: &CardInstance, def_id: &str) -> i32 {
 }
 
 /// B5 E5, Classic #89: how many cards a player must also discard to target this card now — its
-/// `targetingDiscards`, while it acts on the field. A Vanilla card has no text (§6.3, R115).
+/// `targetingDiscards`, while it acts on the field. A Vanilla card has no text (§6.3, R115), and a
+/// face-down one's sleeps (R1487000).
 pub fn targeting_discards_of(state: &GameState, card: &CardInstance) -> i32 {
-    if card.vanilla || !crate::zones::acts_on_field(state, card) {
+    // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+    if card.vanilla
+        || !crate::zones::acts_on_field(state, card)
+        || crate::preview::lasting_text_dormant(state, card)
+    {
         return 0;
     }
     if crate::catalog::fused_id_parts(Some(state), &card.def_id).is_some() {

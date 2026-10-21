@@ -41,6 +41,17 @@ pub fn is_face_down(state: &GameState, card: &CardInstance) -> bool {
     card.face_up != Some(true) && card.revealed != Some(true)
 }
 
+/// R1487000: whether a card's lasting text sleeps — its auras, static flags, hero Armor, draw limits,
+/// discard guards, every text a reader takes off the board — because it is face-down
+/// (`is_face_down`). It wakes once the card is revealed or face-up. Its triggers stay live, and so
+/// does a self-Tribute (R1149000). A kept script with `Script::live_face_down` (R767000) never sleeps.
+/// A card with no definition (the AI's redacted placeholder, R185) has no text to sleep.
+pub fn lasting_text_dormant(state: &GameState, card: &CardInstance) -> bool {
+    crate::catalog::find_def(Some(state), &card.def_id).is_some()
+        && is_face_down(state, card)
+        && !crate::scripts::script_of(state, card).live_face_down
+}
+
 /// R1447, §10.8: the ids among `ids` that `viewer` may read where the card lies (R466's readers): a
 /// face-down card only for its controller, a hand only for its holder, a library for nobody, and a
 /// card that has ceased to exist never.
