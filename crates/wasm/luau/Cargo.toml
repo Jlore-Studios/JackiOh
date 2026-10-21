@@ -18,12 +18,13 @@ path = "src/main.rs"
 default = []
 # R1420's preview, as `crates/wasm`'s `preview`: the development and test builds turn it on, the
 # production bundle off (`JACKIOH_WASM_PREVIEW=0`).
-preview = ["jackioh-engine/testkit"]
+preview = ["jackioh-wasm-core/preview"]
 
 [dependencies]
 jackioh-engine = { workspace = true }
 jackioh-cards = { workspace = true }
-jackioh-ai = { workspace = true }
 jackioh-luau = { workspace = true }
-serde = { workspace = true }
+# By path, not through the workspace: the crate sits inside `crates/wasm`, which
+# scripts/build-wasm.sh hashes whole (`MODULE_CRATES`).
+jackioh-wasm-core = { path = "../core" }
 serde_json = { workspace = true }

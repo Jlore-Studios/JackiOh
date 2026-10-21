@@ -1,0 +1,22 @@
+[package]
+name = "jackioh-wasm-core"
+description = "The bodies both browser modules bind (#1505): JSON strings in and out, the state cache and each binding's work, which `crates/wasm` wraps for wasm-bindgen and `crates/wasm/luau` for C."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+default = []
+# R1420's `preview_sets`: the engine's testkit. Each module's `preview` feature turns this on.
+preview = ["jackioh-engine/testkit"]
+# #936's Duos bodies. Only `crates/wasm`'s `duos` feature turns this on; without it each body
+# answers the reason.
+duos = []
+
+[dependencies]
+jackioh-engine = { workspace = true }
+jackioh-cards = { workspace = true }
+jackioh-ai = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
