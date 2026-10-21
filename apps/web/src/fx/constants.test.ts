@@ -141,6 +141,37 @@ const S2 = {
     spiritFade: { count: 12, power: 0.8 },
     spiritWisps: { count: 10, power: 0.7 },
   },
+  FX_DEATH_BOLT_FLIGHT_FRACTION: 0.5,
+  FX_DEATH_BILL_COLORS: ["#e9f7d9", "#3fae5a", "#1f6b35"],
+  FX_DEATH_LIGHTS_OUT_COLORS: ["#4a4a57", "#26262e", "#0b0b0f"],
+  FX_DEATH_FLAVOR_TUNING: {
+    physicalSlump: { count: 10, power: 0.6 },
+    physicalDust: { count: 18, power: 0.5 },
+    bruteRubble: { count: 30, power: 1.2 },
+    bruteDust: { count: 24, power: 0.8 },
+    beastKick: { count: 14, power: 1.3 },
+    fireFlame: { count: 28, power: 0.9 },
+    fireAsh: { count: 16, power: 0.5 },
+    darkSink: { count: 18, power: 0.7 },
+    darkSmoke: { count: 16, power: 0.6 },
+    holyLight: { count: 24, power: 0.9 },
+    nerdPages: { count: 14, power: 0.8 },
+    nerdSnap: { count: 10, power: 1 },
+    techSparks: { count: 20, power: 1.3 },
+    techFade: { count: 10, power: 0.5 },
+    natureWilt: { count: 16, power: 0.6 },
+    natureFall: { count: 10, power: 0.5 },
+    toxicDrip: { count: 12, power: 0.6 },
+    toxicPuddle: { count: 22, power: 0.7 },
+    snackBite: { count: 16, power: 1 },
+    snackCrumbs: { count: 18, power: 0.6 },
+    hustleBills: { count: 30, power: 1.2 },
+    hustleCoins: { count: 12, power: 0.9 },
+    cloutFlash: { count: 16, power: 1.4 },
+    cloutDark: { count: 20, power: 0.5 },
+    spiritRise: { count: 14, power: 0.6 },
+    spiritWisps: { count: 10, power: 0.5 },
+  },
   FX_SPEED_MIN: 0.25,
   FX_SPEED_MAX: 3,
   FX_SPEED_DEFAULT: 1,
@@ -197,6 +228,7 @@ describe("S2 the effects constants", () => {
       constants.FX_REDIRECT_FLIGHT_FRACTION,
       constants.FX_WALLS_HIT_AT,
       constants.FX_WALLS_REACH,
+      constants.FX_DEATH_BOLT_FLIGHT_FRACTION,
     ];
     for (const fraction of fractions) {
       expect(fraction).toBeGreaterThan(0);
@@ -204,6 +236,8 @@ describe("S2 the effects constants", () => {
     }
     // R318: the fatigue streak leaves the library and lands on the hero inside its entry.
     expect(constants.FX_FATIGUE_STREAK_AT + constants.FX_FATIGUE_FLIGHT_FRACTION).toBeLessThan(1);
+    // #1446: a Beast's streak leaves at the embers' beat and lands inside its entry.
+    expect(constants.FX_DEATH_EMBER_AT + constants.FX_DEATH_BOLT_FLIGHT_FRACTION).toBeLessThan(1);
   });
 
   it("R435 the slider runs from 0.25x to 3x in steps that land on both ends and on the default", () => {

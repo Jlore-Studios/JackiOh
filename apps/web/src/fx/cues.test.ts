@@ -1036,7 +1036,7 @@ describe("B16 the recipe table, row by row", () => {
     expect(plan([{ type: "divineShieldLost", instanceId: "nowhere" }], 250)).toEqual([]);
   });
 
-  it("B16 destroyed on the board: a crack at 0, embers at 0.3 D and smoke at 0.5 D", () => {
+  it("B16 destroyed on the board: a crack at 0, embers at 0.3 D and smoke at 0.5 D, plus its flavor's exit (#1446)", () => {
     forDs("destroyed", (D) => {
       expectCues(
         plan([{ type: "destroyed", instanceId: MINE_3, defId: "core-017", owner: "p1", controller: "p1", attack: 1, maxHealth: 6, killerId: ENEMY }], D),
@@ -1044,6 +1044,9 @@ describe("B16 the recipe table, row by row", () => {
           crack(cardT(MINE_3), 0, D),
           burst("ember", cardT(MINE_3), "area", r(FX_DEATH_EMBER_AT * D)),
           burst("smoke", cardT(MINE_3), "area", r(FX_DEATH_SMOKE_AT * D)),
+          // #1446: core-017 is Nature, so it wilts: leaves drop off the card and settle at its foot.
+          burst("poison", cardT(MINE_3), "area", r(FX_DEATH_EMBER_AT * D)),
+          burst("dust", cardT(MINE_3, FOOT), "point", r(FX_DEATH_SMOKE_AT * D)),
         ],
       );
     });
