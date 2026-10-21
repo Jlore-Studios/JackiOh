@@ -12,6 +12,7 @@
 //! refusal's code is read wherever the body carries it (`code_is`).
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde_json::{Value, json};
 
@@ -892,6 +893,8 @@ mod retention {
 
 mod room_privacy {
     use super::*;
+    use jackioh_server::db::fake::{CallOutcome, FakeTables};
+    use jackioh_server::db::store::BlockRow;
 
     async fn block(app: &Arc<App>, blocker: &Account, blocked: &Account) {
         store!(app, t => t.blocks_add(&blocker.id, &blocked.id, now_ms()).await.expect("blocks.add"));
@@ -922,6 +925,71 @@ mod room_privacy {
 
         // Anyone else, and the pair once unblocked, still may.
         assert_eq!(get_room(&t.app, &t.third, &code).await.0, 200);
+        let (status, body) = join(&t.app, &t.guest, &code).await;
+        assert_eq!(status, 200, "{body}");
+    }
+
+    /// §13.9: a block made after the join read the room, as its claim runs, either way, refuses
+    /// the join as an unknown code is refused; no match starts and the room stays open.
+    #[tokio::test]
+    async fn a_block_made_inside_the_join_window_refuses_the_join_as_an_unknown_code() {
+        let t = three().await;
+        let code = room(&t.app, &t.host).await;
+        let (_, unknown_join) = join(&t.app, &t.guest, "ZZZZZZ").await;
+
+        for (blocker, blocked) in [(&t.host, &t.guest), (&t.guest, &t.host)] {
+            let (blocker_id, blocked_id) = (blocker.id.clone(), blocked.id.clone());
+            let second_read = Arc::new(AtomicBool::new(false));
+            let saw_second_read = second_read.clone();
+            fake(&t.app).lock().await.before_call =
+                Some(Arc::new(move |method: &str, tables: &mut FakeTables| {
+                    if method == "duos.rooms.claim"
+                        && !tables
+                            .social
+                            .blocks
+                            .iter()
+                            .any(|row| row.blocker == blocker_id && row.blocked == blocked_id)
+                    {
+                        tables.social.blocks.push(BlockRow {
+                            blocker: blocker_id.clone(),
+                            blocked: blocked_id.clone(),
+                            created_at: now_ms(),
+                        });
+                    }
+                    // A second statement can see an unblock committed after the claim. The fixed
+                    // path carries the claim statement's outcome instead of making this read.
+                    if method == "blocks.between"
+                        && tables
+                            .social
+                            .blocks
+                            .iter()
+                            .any(|row| row.blocker == blocker_id && row.blocked == blocked_id)
+                    {
+                        tables
+                            .social
+                            .blocks
+                            .retain(|row| row.blocker != blocker_id || row.blocked != blocked_id);
+                        saw_second_read.store(true, Ordering::SeqCst);
+                    }
+                    CallOutcome::Proceed
+                }));
+            let (status, body) = join(&t.app, &t.guest, &code).await;
+            fake(&t.app).lock().await.before_call = None;
+            assert_eq!(status, 404, "{body}");
+            assert_eq!(body, unknown_join);
+            assert!(
+                !second_read.load(Ordering::SeqCst),
+                "the claim-time refusal must not be inferred from a second snapshot"
+            );
+            assert!(live(&t.app, &t.guest).await.is_null());
+            assert!(live(&t.app, &t.host).await.is_null());
+            unblock(&t.app, blocker, blocked).await;
+            let (status, shown) = get_room(&t.app, &t.third, &code).await;
+            assert_eq!(status, 200, "{shown}");
+            assert!(shown["guest"].is_null(), "{shown}");
+        }
+
+        // With no block, the same join starts the match.
         let (status, body) = join(&t.app, &t.guest, &code).await;
         assert_eq!(status, 200, "{body}");
     }
