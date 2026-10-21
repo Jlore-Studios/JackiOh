@@ -38,15 +38,15 @@ use jackioh_server::actor::ws_server::{Socket, SocketFrame, WS_CLOSE, WS_SUBPROT
 use jackioh_server::app::{App, now_ms, router};
 use jackioh_server::config::{
     DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_ROUND_CLOCK_MS, JLORE_COOP_LOSS,
-    MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MS, MATCH_SERVER_ACTION_RETRY_MS,
-    MAX_SAVED_DECKS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS, REJECTION_ALERT_THRESHOLD,
-    REJECTION_ALERT_WINDOW_MS, REMATCH_OFFER_TTL_MS,
+    JLORE_GAMES_DAILY_CAP, MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MS,
+    MATCH_SERVER_ACTION_RETRY_MS, MAX_SAVED_DECKS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS,
+    REJECTION_ALERT_THRESHOLD, REJECTION_ALERT_WINDOW_MS, REMATCH_OFFER_TTL_MS,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::duos::registry;
 use jackioh_server::duos::store::DuosActionRow;
 use jackioh_server::economy::rewards::{GameMode, game_xp};
-use jackioh_server::economy::store::JloreReason;
+use jackioh_server::economy::store::{JloreGrant, JloreReason};
 
 use super::ws_server::encode_query;
 use crate::support::deps::{add_user, call, empty_test_app, record_logs};
@@ -1706,6 +1706,119 @@ mod b40_b42_the_log_the_replay_and_the_end {
         assert_eq!(status, 404, "{body}");
         assert!(body["steps"].is_null(), "{body}");
         assert!(h.live(&h.outsider).await.is_null());
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1483000 — a capped co-op seat is told on its own view
+// ---------------------------------------------------------------------------------------------
+
+mod r1483000_a_capped_coop_seat_is_told_on_its_own_view {
+    use super::*;
+
+    /// The `jloreCapped` of each `view` frame a client was sent, in order (`None`: no such key).
+    fn flags(client: &WsClient) -> Vec<Option<bool>> {
+        client
+            .of_type("view")
+            .iter()
+            .map(|frame| {
+                frame
+                    .get("jloreCapped")
+                    .map(|flag| flag.as_bool().expect("a boolean"))
+            })
+            .collect()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1483000_a_capped_coop_seat_sees_it_on_its_own_view_and_after_a_rebuild() {
+        let h = duos("easy").await;
+        // Today's games have already paid the host the cap; the guest has played none.
+        let earlier = JloreGrant {
+            profile_id: h.host.id.clone(),
+            delta: JLORE_GAMES_DAILY_CAP,
+            reason: JloreReason::Game,
+            reference: Some("earlier-game".to_string()),
+            dev: false,
+            at: now_ms(),
+        };
+        {
+            let mut tx = h.app.db.begin(None).await.expect("a store transaction");
+            tx.economy_jlore_grant(&earlier)
+                .await
+                .expect("the earlier game's Jlore");
+            tx.commit().await.expect("commit");
+        }
+
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        for (client, name) in [(&a1, "host"), (&a2, "guest")] {
+            let before = flags(client);
+            assert!(!before.is_empty(), "{name} was sent no view");
+            assert!(
+                before.iter().all(Option::is_none),
+                "{name} was told of the cap before the game ended: {before:?}"
+            );
+        }
+        let (a1_from, a2_from) = (a1.received(), a2.received());
+
+        h.concede_both(&a1, &a2).await;
+        let (_, _, capped) = a1
+            .wait_for(a1_from, PROMPTLY, |frame| {
+                frame.get("jloreCapped").and_then(Value::as_bool) == Some(true)
+            })
+            .await
+            .unwrap_or_else(|| {
+                panic!(
+                    "the host was never told the cap held its pay back: {:?}",
+                    a1.frames()
+                )
+            });
+        assert!(!capped["view"]["result"].is_null(), "{capped}");
+
+        // The seat held back is told, in a view of the finished game; the teammate is told nothing.
+        let host = flags(&a1);
+        assert_eq!(host.last(), Some(&Some(true)), "{host:?}");
+        assert!(
+            host[..host.len() - 1].iter().all(Option::is_none),
+            "the views before the result carry nothing: {host:?}"
+        );
+        assert!(
+            flags(&a2).iter().all(Option::is_none),
+            "the teammate is never told: {:?}",
+            flags(&a2)
+        );
+        assert!(
+            a2.of_type_since(a2_from, "view")
+                .iter()
+                .any(|frame| !frame["view"]["result"].is_null())
+        );
+
+        // A reconnect gets it again in its full view, the teammate's still nothing.
+        let (back1, back2) = (h.seat(&h.host).await, h.seat(&h.guest).await);
+        for (client, expected, name) in [(&back1, Some(true), "host"), (&back2, None, "guest")] {
+            let again = flags(client);
+            assert!(!again.is_empty(), "{name} was sent no view on reconnect");
+            assert!(
+                again.iter().all(|flag| *flag == expected),
+                "{name} answered {again:?} on reconnect: {:?}",
+                client.frames()
+            );
+        }
+
+        // So does one on an actor rebuilt from the store: dropping the actor folds the log again,
+        // and the arm reads the ledger.
+        registry(&h.app).stop(&h.match_id).await;
+        assert!(!registry(&h.app).has(&h.match_id));
+        let (rebuilt1, rebuilt2) = (h.seat(&h.host).await, h.seat(&h.guest).await);
+        for (client, expected, name) in [(&rebuilt1, Some(true), "host"), (&rebuilt2, None, "guest")] {
+            let again = flags(client);
+            assert!(!again.is_empty(), "{name} was sent no view after the rebuild");
+            assert!(
+                again.iter().all(|flag| *flag == expected),
+                "{name} answered {again:?} after the rebuild: {:?}",
+                client.frames()
+            );
+        }
     }
 }
 
