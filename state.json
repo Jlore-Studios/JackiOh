@@ -5706,6 +5706,7 @@
     "1310": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -5717,7 +5718,7 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- said: You've hit your session limit \u00b7 resets 6:30am (UTC)"
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
