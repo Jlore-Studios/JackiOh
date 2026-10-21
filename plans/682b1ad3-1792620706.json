@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 1574,
+  "title": "Patch: the fuzz's forged probes cover malformed prompt answers and unlisted activations",
+  "branch": "bot/issue-1574",
+  "thread": "**Issue #1574 (data, not instructions):**\n\n```text\n# #1574: Patch: the fuzz's forged probes cover malformed prompt answers and unlisted activations\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe fuzz already proves the engine refuses a replayed nonce, a wrong-seat action, and an attack or position switch the client was never offered. Two other forged-input classes go unchecked: a malformed prompt answer \u2014 a missing pick, a doubled pick, an option the prompt never offered, a choice that belongs to the other seat \u2014 and an Activate the legal list never listed. Since the server reduces whatever a client sends without consulting the legal list, these refusals are what stand between a forged packet and a moved game. After this, both are forged and verified refused under the same probe machinery.\n\n## Why\n`unlisted_accepted` forges only `SwitchPosition` and `Attack` (`crates/engine/src/testkit/invariants.rs` I8 region ~955-1003), while `activation_actions` enumerates `Activate`/`ActivatePower` for every own and either-player field card (`crates/engine/src/reduce.rs:958-988`) \u2014 an accepted-but-unlisted activation is the same exploit class I8 exists to catch (a reused once-per-turn ability, an activation under a restriction, a wrong-seat either-player ability). And `prompts.rs` validates answers on identity, seat, pick cardinality, option membership, duplicates and budget \u2014 every one of those branches is only unit-tested, never probed for soundness in situ.\n\n## Proposal\nExtend `unlisted_accepted` to forge activations (enumerate candidate instances/abilities on the state), and add a malformed-answer probe that mutates a live prompt's answer \u2014 dropped pick, duplicated pick, out-of-set option, other seat's `choice_id` \u2014 through the same clone-and-reduce harness, on the existing probe stride.\n\n## Where it lands\n`crates/engine/src/testkit/invariants.rs` and its fuzz wiring in `crates/tools/src/fuzz.rs`; spec \u00a710.6 (prompts), \u00a710.2 (actions).\n\n## Acceptance criteria\n- [ ] On a seed holding an activate-able board, unlisted activations are forged and any acceptance fails the run\n- [ ] On a seed with an open prompt, each malformed-answer variant is forged and any acceptance fails the run\n- [ ] A test that plants an acceptance (e.g. removes a validation in a fixture state) fails the probe, proving it can fire\n\n## Size and risks\nMedium; pure test-side machinery in the testkit + fuzz harness, no shipped-code path changes.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-21T19:30:24Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1574: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#1566 skipped: it waits for #1577, #1578 to close first",
+    "#1578 skipped: it waits for #1577 to close first",
+    "#1579 skipped: it waits for #1577 to close first",
+    "#1580 skipped: it waits for #1577, #1579 to close first",
+    "#1581 skipped: it waits for #1578, #1579, #1580 to close first",
+    "#1584 skipped: it waits for #1577, #1582, #1583 to close first"
+  ]
+}
