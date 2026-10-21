@@ -1217,15 +1217,15 @@
 }
 
 /* On a phone the filter block keeps to three rows (search and Owned; sort, Filters and Clear; the
-   cost chips), so a first screen still reaches the pool: the Sort and Cost labels go (the select
-   and the crystals say what they are), the result count is kept for a screen reader only, and the
-   eight cost chips share one row. */
+   cost chips), so a first screen still reaches the pool: the Cost label goes (the crystals say what
+   they are), the Sort label and the result count are kept for a screen reader only (the label is
+   the select's name, #1561), and the eight cost chips share one row. */
 @media (max-width: 760px) {
-  .db-sort .db-group-label,
   .db-filter-row--cost .db-group-label {
     display: none;
   }
 
+  .db-sort .db-group-label,
   .db-result-count {
     position: absolute;
     width: 1px;

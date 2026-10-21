@@ -5478,6 +5478,33 @@ mod ranked {
         assert!(q!(harness, t => t.ranked_bot("ai-hard")).is_none());
     }
 
+    async fn r1560000_keeps_the_ai_generation_a_bot_was_last_rated_on(harness: &StoreHarness) {
+        let now = harness.now();
+        // A row written without one (before migration 0052) reads back without one.
+        let older: BotRating = from(json!({
+            "botId": "ai-gen",
+            "glicko": { "rating": 1200.0, "deviation": 60.0, "volatility": 0.06 },
+            "games": 40,
+            "updatedAt": now,
+        }));
+        q!(harness, t => t.ranked_put_bot(&older));
+        assert_eq!(
+            must(q!(harness, t => t.ranked_bot("ai-gen")), "the row").ai_generation,
+            None
+        );
+        // A rated game stamps it, and the upsert replaces it.
+        let mut stamped = j(&older);
+        stamped["aiGeneration"] = json!(13);
+        let stamped: BotRating = from(stamped);
+        q!(harness, t => t.ranked_put_bot(&stamped));
+        assert_eq!(q!(harness, t => t.ranked_bot("ai-gen")), Some(stamped.clone()));
+        let mut newer = j(&stamped);
+        newer["aiGeneration"] = json!(14);
+        let newer: BotRating = from(newer);
+        q!(harness, t => t.ranked_put_bot(&newer));
+        assert_eq!(q!(harness, t => t.ranked_bot("ai-gen")), Some(newer));
+    }
+
     async fn r611_records_a_rated_game_once_and_answers_it_back_whole(harness: &StoreHarness) {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
@@ -5654,6 +5681,7 @@ mod ranked {
         r607_lists_a_profile_s_badges_oldest_season_first,
         r608_keeps_the_best_jlorious_position_the_season_has_held,
         r610_keeps_each_bot_s_own_rating_upserted,
+        r1560000_keeps_the_ai_generation_a_bot_was_last_rated_on,
         r611_records_a_rated_game_once_and_answers_it_back_whole,
         r611_records_a_bot_side_with_no_profile_and_no_rank,
         r748000_lists_rated_games_with_a_bot_side_since,

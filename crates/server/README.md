@@ -803,7 +803,14 @@ have an empty seat, so a delete that would empty a seat of a live co-op match ra
 the in-memory store refuses the live case too (`duos::store::refuse_live_seat`). A co-op room still
 goes with either of its people.
 
-Migration 0052 adds `bots.grinding` and `bots.grind_wins` (R1555000): whether a ladder bot grinds
+Migration 0052 gives each `bot_ratings` row `ai_generation`, the AI generation
+(`crates/ai/generation.json`) the bot was last rated on (R1560000). A rated game against a bot whose
+row names an older generation, or none, widens its deviation by `BOT_PROMOTION_DEVIATION_BOOST` in
+quadrature per promotion (one for none), capped at a new player's, before rating it
+(`api/ranked.rs`, `ranked::glicko2::widen_for_promotions`), and stamps the row with the server's
+generation, so a bot's rating re-settles on each new AI from its rated games.
+
+Migration 0053 adds `bots.grinding` and `bots.grind_wins` (R1555000): whether a ladder bot grinds
 now, which the pool's refresh sets and clears, and its rated wins since it started grinding or last
 stepped up a strength.
 

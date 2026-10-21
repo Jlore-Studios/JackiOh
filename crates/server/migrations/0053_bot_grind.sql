@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0052: the top ladder bots' grind (SPEC §9.12, R1555000; issue #1555)
+-- Migration 0053: the top ladder bots' grind (SPEC §9.12, R1555000; issue #1555)
 -- ============================================================================
 -- When the season's people outrank every ladder bot by more than
 -- BOT_GRIND_GAP, the pool's refresh (R1454) sets the top BOT_GRINDERS active
@@ -20,7 +20,7 @@
 -- TRUST BOUNDARY: unchanged. public.bots stays server-only (0032): RLS on, no
 -- policy, no grant to anon or authenticated.
 --
--- Apply order: ... -> 0032 (`public.bots`) -> ... -> 0050 -> 0051 -> 0052
+-- Apply order: ... -> 0032 (`public.bots`) -> ... -> 0051 -> 0052 -> 0053
 -- (this file).
 -- Safe to re-apply: add-column-if-not-exists, create-index-if-not-exists.
 -- ============================================================================

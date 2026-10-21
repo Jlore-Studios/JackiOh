@@ -977,6 +977,10 @@ pub struct BotRating {
     pub glicko: Glicko,
     pub games: i64,
     pub updated_at: i64,
+    /// R1560000: the AI generation (`crates/ai/generation.json`) the bot was last rated on; `None`
+    /// for a row not rated since R1560000 (migration 0052).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ai_generation: Option<i64>,
 }
 
 /// R1454: one Best-of-1 deck a ladder bot carries, and the portrait it plays it under (R642).
@@ -1020,7 +1024,7 @@ pub struct BotRow {
     pub rating: f64,
     /// The match it is in, as for a profile (§9.5).
     pub in_match_id: Option<String>,
-    /// R1555000: whether it grinds now (migration 0052), set and cleared by the pool's refresh.
+    /// R1555000: whether it grinds now (migration 0053), set and cleared by the pool's refresh.
     #[serde(default)]
     pub grinding: bool,
     /// R1555000: the rated games it has won since it started grinding or last stepped up.

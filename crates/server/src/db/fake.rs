@@ -196,7 +196,7 @@ pub struct BotTableRow {
     pub trio: Option<FrozenTrio>,
     pub trio_catalog_version: Option<String>,
     pub retired_at: Option<i64>,
-    /// R1555000: whether it grinds now and its grinding wins since the last step (migration 0052).
+    /// R1555000: whether it grinds now and its grinding wins since the last step (migration 0053).
     pub grinding: bool,
     pub grind_wins: i32,
 }
@@ -3671,6 +3671,7 @@ pub fn bots_create(f: &mut FakeTx<'_>, bot: &NewBot) -> Result<(), StoreError> {
         },
         games: 0,
         updated_at: now,
+        ai_generation: None,
     };
     match tables.bots.iter().position(|row| row.bot_id == rating.bot_id) {
         None => tables.bots.push(rating),
