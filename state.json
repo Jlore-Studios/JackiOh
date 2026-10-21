@@ -9719,7 +9719,10 @@
       "feedback_since": "2026-10-21T06:38:09Z",
       "issue": 1442,
       "kind": "revise",
+      "queued_at": "2026-10-21T07:37:38Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
