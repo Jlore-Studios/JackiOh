@@ -10458,11 +10458,11 @@
       "issue": 1556,
       "kind": "review",
       "pending_request": false,
-      "provider": "claude-5",
+      "provider": "claude-3",
       "queued_at": "2026-10-21T18:25:29Z",
-      "run_id": "39659274975",
+      "run_id": "pending:9a8f7518-1792621238",
       "self_check_findings": [],
-      "started_at": "2026-10-21T19:12:46Z",
+      "started_at": "2026-10-21T22:20:53Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -12920,9 +12920,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-21T22:12:57Z",
+    "at": "2026-10-21T22:20:53Z",
     "url": "",
-    "what": "review #1591 on claude-3"
+    "what": "review #1565 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-21T22:10:47Z",
