@@ -22,7 +22,7 @@ use anyhow::{anyhow, bail};
 use indexmap::IndexMap;
 use serde::Serialize;
 
-use jackioh_engine::wire::{DEV_RECORD_ID_PREFIX, GameSource, forced_series, parse_game_record_lines};
+use jackioh_engine::wire::{DEV_RECORD_ID_PREFIX, GameSource, forced_series};
 
 use crate::cli::card_stats::literal;
 use crate::cli::{connect_one, database_url};
@@ -69,7 +69,9 @@ pub fn run_file_path(path: &str, env: &IndexMap<String, String>, cwd: &str) -> P
 
 /// R378: every record a development record, or nothing is written.
 pub async fn import_dev_records(db: &Db, contents: &str) -> anyhow::Result<ImportOutcome> {
-    let records = parse_game_record_lines(contents).map_err(|error| anyhow!("{error}"))?;
+    // R1371000: a file written before the version retcon names its versions the old way.
+    let records =
+        jackioh_cards::versions::read_game_record_lines(contents).map_err(|error| anyhow!("{error}"))?;
     if let Some(live) = records.iter().find(|record| record.source != GameSource::Dev) {
         bail!(
             "record {} is a {} record; only an AI development run's records (source \"dev\") can be imported (R378)",

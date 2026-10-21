@@ -2615,6 +2615,13 @@ pub fn game_records_insert_batch(
                 record.source, record.id
             )));
         }
+        // R1367000: `game_records_build_check` (0048). A build names a commit.
+        if record.build.as_ref().is_some_and(|build| build.commit.is_empty()) {
+            return Err(StoreError::from(format!(
+                "game_records_build_check: the record {} names a build with no commit",
+                record.id
+            )));
+        }
         if tables.game_record_ledger.contains_key(&record.id)
             || tables
                 .game_records

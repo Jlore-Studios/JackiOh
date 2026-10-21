@@ -140,7 +140,7 @@ mod tests {
         assert_eq!(def.printed_rarity, Some(PrintedRarity::Legendary));
         let scripts = super::script();
         for face in [&scripts.base, &scripts.radiant] {
-            assert!(face.start_of_turn.is_none(), "no start-of-turn script since patch v0.3.10");
+            assert!(face.start_of_turn.is_none(), "no start-of-turn script since patch v0.3.3");
             assert_eq!(face.activations.len(), 1);
             assert_eq!(face.activations[0].id, "gift");
             assert_eq!(face.activations[0].uses, ActivationUses::Count(1));

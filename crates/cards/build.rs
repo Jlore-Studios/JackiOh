@@ -73,7 +73,7 @@ struct CardFile {
 /// is carried as well so that the browser carries a version from its first build and its tests fold
 /// through one. Carrying every version would add about 30 KB to the gzipped module, against #442
 /// L12's cap (`apps/web/src/wasm/size.test.ts`).
-const BROWSER_CARRIED_FROM: &str = "v0.3.7";
+const BROWSER_CARRIED_FROM: &str = "v0.3.0c";
 
 fn main() {
     let manifest = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));
@@ -477,7 +477,14 @@ fn history_json(
         }
         carried.push(entry);
     }
-    serde_json::json!({ "order": versions, "patches": patches, "winRates": tables, "versions": carried })
+    // R1371000: the old names the version retcon renamed, which a reader of an unmarked file maps.
+    let aliases_path = patches_dir.join("aliases.json");
+    let aliases = if aliases_path.exists() {
+        read_json(&aliases_path)["aliases"].clone()
+    } else {
+        serde_json::json!({})
+    };
+    serde_json::json!({ "order": versions, "patches": patches, "winRates": tables, "versions": carried, "aliases": aliases })
         .to_string()
 }
 

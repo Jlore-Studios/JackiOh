@@ -4780,15 +4780,40 @@ mod game_records {
         );
     }
 
+    /// R1367000: a record keeps the build that played it, and one written without a build reads back
+    /// without one; a build that names no commit is refused (`game_records_build_check`, 0047).
+    async fn r1367000_keeps_a_records_build_and_reads_one_written_without_it(harness: &StoreHarness) {
+        let built = game_record(
+            &id(),
+            json!({ "build": { "commit": "0123abc", "aiGeneration": 12 } }),
+        );
+        let plain = game_record(&id(), json!({}));
+        assert_eq!(
+            built.build.as_ref().map(|build| build.ai_generation),
+            Some(Some(12))
+        );
+        assert_eq!(plain.build, None);
+        assert!(q!(harness, t => t.game_records_insert(&built)));
+        assert!(q!(harness, t => t.game_records_insert(&plain)));
+        let mut written = vec![built, plain];
+        written.sort_by(|a, b| a.id.cmp(&b.id));
+        assert_eq!(
+            q!(harness, t => t.game_records_list(&query(json!({ "source": "live", "mode": null, "patch": null })))),
+            written
+        );
+        let no_commit = game_record(&id(), json!({ "build": { "commit": "" } }));
+        assert!(call!(harness, t => t.game_records_insert(&no_commit)).is_err());
+    }
+
     async fn r378_reads_development_records_only_when_asked_and_filters_by_mode_and_patch(
         harness: &StoreHarness,
     ) {
         let records = [
             game_record("a-live", json!({ "mode": "bo1", "patch": "v0.1.1" })),
-            game_record("b-live", json!({ "mode": "random", "patch": "v0.2.5" })),
+            game_record("b-live", json!({ "mode": "random", "patch": "v0.2.3" })),
             game_record(
                 "dev:c",
-                json!({ "source": "dev", "mode": "random", "patch": "v0.2.5", "pilots": { "p1": "ai", "p2": "ai" } }),
+                json!({ "source": "dev", "mode": "random", "patch": "v0.2.3", "pilots": { "p1": "ai", "p2": "ai" } }),
             ),
             game_record(
                 "dev:d",
@@ -4827,7 +4852,7 @@ mod game_records {
         assert_eq!(
             ids(
                 harness,
-                json!({ "source": "all", "mode": null, "patch": "v0.2.5" })
+                json!({ "source": "all", "mode": null, "patch": "v0.2.3" })
             )
             .await,
             ["b-live", "dev:c"]
@@ -4846,7 +4871,7 @@ mod game_records {
                 .is_empty()
         );
         assert_eq!(
-            q!(harness, t => t.game_records_list(&query(json!({ "source": "dev", "mode": null, "patch": "v0.2.5" })))),
+            q!(harness, t => t.game_records_list(&query(json!({ "source": "dev", "mode": null, "patch": "v0.2.3" })))),
             vec![records[2].clone()]
         );
     }
@@ -5108,6 +5133,7 @@ mod game_records {
     both_stores!(
         r376_reads_a_match_s_mode_off_its_room_its_queue_tickets_or_its_series,
         r376_writes_one_record_per_game_and_refuses_a_second_with_the_same_id,
+        r1367000_keeps_a_records_build_and_reads_one_written_without_it,
         r378_reads_development_records_only_when_asked_and_filters_by_mode_and_patch,
         r378_refuses_a_development_record_under_a_match_id_and_a_live_one_under_a_development_id,
         r1044000_folds_each_record_written_once_and_reads_every_report_the_records_give,
@@ -5264,7 +5290,7 @@ mod ranked {
         assert!(q!(harness, t => t.ranked_create_season(&newer)));
         assert!(q!(harness, t => t.ranked_create_season(&older)));
         // A second opener of the same id writes nothing and answers false.
-        let reopened: Season = from(spread(j(&newer), json!({ "patchVersion": "v0.2.9" })));
+        let reopened: Season = from(spread(j(&newer), json!({ "patchVersion": "v0.2.4" })));
         assert!(!q!(harness, t => t.ranked_create_season(&reopened)));
         assert_eq!(q!(harness, t => t.ranked_seasons()), vec![older, newer]);
     }

@@ -1112,6 +1112,11 @@ pub const REPLAY_CHECKPOINT_EVERY: usize = 16;
 /// R768: the most steps one page of a replay gives.
 pub const REPLAY_PAGE_STEPS: usize = 16;
 
+/// R1371000: the scheme a file's catalog versions are named by, its `versions` marker. A replay,
+/// game-record or self-play file that carries no marker names them as they were before the version
+/// retcon (#1371), and its reader maps each through `patches/aliases.json`.
+pub const VERSIONS_SCHEME: u32 = 2;
+
 // ---------------------------------------------------------------------------------------------
 // The testkit's seed search (issue #848).
 // ---------------------------------------------------------------------------------------------
@@ -1713,6 +1718,20 @@ pub fn duos_ai_team(difficulty: Difficulty) -> DuosTeamRules {
 /// seat's turn, and a round takes each duel at least one player-turn on, so the duels' own turn cap
 /// (R2) ends the game well inside it. A backstop, as `end_due_turns`' guard is.
 pub const DUOS_SETTLE_CAP: usize = 4 * TURN_CAP_PLAYER_TURNS as usize;
+
+// ---------------------------------------------------------------------------------------------
+// Patch numbers and card statistics by window (#1360, R1365000, R1367000; SPEC §9.11, R654)
+// ---------------------------------------------------------------------------------------------
+
+/// R1365000: the card families that must play differently for a change to be a patch; fewer is a
+/// micro. `cargo jackioh classify` reads it, and so does a card's stats window (R1367000) for a
+/// shipped version that recorded no tier.
+pub const PATCH_MIN_CARDS: usize = 10;
+
+/// SPEC §11 R654, amended by R1367000: the live games (ranked and unranked, tutorial excluded) a
+/// card's stats window must log before its figures are live-only. Fewer, and the card shows its
+/// previous window; the previous window short too, and AI development games pad the current one.
+pub const PUBLIC_STATS_MIN_LIVE_GAMES: i64 = 1000;
 
 #[cfg(test)]
 mod tests {

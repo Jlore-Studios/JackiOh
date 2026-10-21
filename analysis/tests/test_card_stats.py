@@ -172,7 +172,7 @@ def test_filters_by_source_mode_patch_and_pilot_and_counts_only_games_with_a_sea
         [
             simple("1", mode="bo1", patch="v0.1.1"),
             simple("2", mode="random", patch="v0.1.1"),
-            simple("3", mode="bo3", patch="v0.2.5"),
+            simple("3", mode="bo3", patch="v0.2.3"),
             # One human seat, one AI seat; the AI's deck holds only z.
             record(
                 "4",
@@ -180,16 +180,16 @@ def test_filters_by_source_mode_patch_and_pilot_and_counts_only_games_with_a_sea
                 seat(["z"]),
                 winner="p2",
                 mode="random",
-                patch="v0.2.5",
+                patch="v0.2.3",
                 pilots=("human", "ai"),
             ),
             record(
-                "dev:v0.2.5:dev:1",
+                "dev:v0.2.3:dev:1",
                 seat(["a"]),
                 seat(["a"]),
                 source="dev",
                 mode="random",
-                patch="v0.2.5",
+                patch="v0.2.3",
                 pilots=("ai", "ai"),
             ),
         ],
@@ -201,12 +201,12 @@ def test_filters_by_source_mode_patch_and_pilot_and_counts_only_games_with_a_sea
 
     assert games() == 4
     assert games(mode="random") == 2
-    assert games(patch="v0.2.5") == 2
-    assert games(mode="random", patch="v0.2.5") == 1
-    assert games(mode="bo1", patch="v0.2.5") == 0
+    assert games(patch="v0.2.3") == 2
+    assert games(mode="random", patch="v0.2.3") == 1
+    assert games(mode="bo1", patch="v0.2.3") == 0
     assert games(source="dev") == 1
     assert games(source="all") == 5
-    assert games(source="all", mode="random", patch="v0.2.5") == 2
+    assert games(source="all", mode="random", patch="v0.2.3") == 2
 
     human = card_stats(records, pilot="human")
     assert human.attrs["decks"] == 7

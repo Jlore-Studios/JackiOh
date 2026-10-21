@@ -386,7 +386,7 @@ mod tests {
         #[test]
         fn r1149001_r767000_a_game_on_v0_3_7_folds_under_the_kept_script_a_draw_replaces_it_in_place() {
             crate::register_all();
-            let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+            let shipped = crate::shipped_catalog("v0.3.0c").expect("v0.3.0c is carried");
             jackioh_engine::with_shipped(Some(shipped), || {
                 let mut s = scenario(json!({
                     "seed": "bottle-v0-3-7",

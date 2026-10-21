@@ -20,10 +20,11 @@
 
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
+use std::sync::OnceLock;
 use std::time::Instant;
 
 use anyhow::{Context, bail};
-use jackioh_ai::{AI_GATE_BUDGET, dev_game_config};
+use jackioh_ai::{AI_GATE_BUDGET, ai_generation, dev_game_config};
 use jackioh_engine::{Action, GameResult, PerPlayer, PlayerId};
 use serde::{Deserialize, Serialize};
 
@@ -63,6 +64,24 @@ pub struct SelfplayGame {
     pub catalog: String,
     /// The commit the binary was built from, or `"unknown"`.
     pub commit: String,
+    /// R1367000: the AI generation (`crates/ai/generation.json`) the binary holds, which played both
+    /// seats. Absent from a game written before it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ai_generation: Option<i32>,
+    /// R1371000: the scheme `catalog` is named by (`VERSIONS_SCHEME`); a game written before the
+    /// version retcon has none, and its catalog is read through `patches/aliases.json`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub versions: Option<u32>,
+}
+
+impl SelfplayGame {
+    /// R1371000: the catalog the game was played on, as it is named now.
+    pub fn catalog_now(&self) -> &str {
+        match self.versions {
+            Some(_) => &self.catalog,
+            None => jackioh_cards::versions::current_version_name(&self.catalog),
+        }
+    }
 }
 
 /// R1006005: the most actions one turn of a self-play game may take. A whole game takes about 60
@@ -116,21 +135,31 @@ fn setups(base: &str, from: i32, games: i32) -> Vec<ArenaGame> {
 
 /// The commit this checkout is on, for the logs' provenance; `"unknown"` without git.
 fn commit() -> String {
-    if let Ok(sha) = std::env::var("GITHUB_SHA")
-        && !sha.is_empty()
-    {
-        return sha;
-    }
-    std::process::Command::new("git")
-        .args(["rev-parse", "HEAD"])
-        .current_dir(env!("CARGO_MANIFEST_DIR"))
-        .output()
-        .ok()
-        .filter(|out| out.status.success())
-        .and_then(|out| String::from_utf8(out.stdout).ok())
-        .map(|text| text.trim().to_string())
-        .filter(|text| !text.is_empty())
-        .unwrap_or_else(|| "unknown".to_string())
+    build_commit().unwrap_or_else(|| "unknown".to_string())
+}
+
+/// R1367000: the commit this tool was built from, which the games it plays file as their build:
+/// `$GITHUB_SHA` on CI, else this checkout's `HEAD`; `None` without git. Read once per run.
+pub(crate) fn build_commit() -> Option<String> {
+    static COMMIT: OnceLock<Option<String>> = OnceLock::new();
+    COMMIT
+        .get_or_init(|| {
+            if let Ok(sha) = std::env::var("GITHUB_SHA")
+                && !sha.is_empty()
+            {
+                return Some(sha);
+            }
+            std::process::Command::new("git")
+                .args(["rev-parse", "HEAD"])
+                .current_dir(env!("CARGO_MANIFEST_DIR"))
+                .output()
+                .ok()
+                .filter(|out| out.status.success())
+                .and_then(|out| String::from_utf8(out.stdout).ok())
+                .map(|text| text.trim().to_string())
+                .filter(|text| !text.is_empty())
+        })
+        .clone()
 }
 
 fn game_of(outcome: ArenaOutcome, catalog: &str, commit: &str) -> SelfplayGame {
@@ -143,6 +172,8 @@ fn game_of(outcome: ArenaOutcome, catalog: &str, commit: &str) -> SelfplayGame {
         turns: outcome.turns,
         catalog: catalog.to_string(),
         commit: commit.to_string(),
+        versions: Some(jackioh_engine::config::VERSIONS_SCHEME),
+        ai_generation: ai_generation(),
     }
 }
 

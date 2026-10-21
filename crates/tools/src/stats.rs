@@ -64,10 +64,11 @@ use serde_json::Value;
 
 use jackioh_ai::{AI_DEV_RUN, DevRunOptions, SHADOW_BAN, SHADOW_WATCH, dev_game_record};
 use jackioh_engine::{
-    CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, DEV_RECORD_ID_PREFIX, FORCED_SERIES_PREFIX,
-    GAME_MODES, GAME_OVER_REASONS, GameMode, GameOverReason, GameRecord, GameSource, GameSummary,
-    PILOT_FILTERS, PLAYER_IDS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, Winner, card_stats,
-    describe_filter, format_card_stats, parse_game_record_lines, record_matches, seats_counted, sources_of,
+    CardStatsFilter, CardStatsReport, CardWindow, DEFAULT_CARD_STATS_FILTER, DEV_RECORD_ID_PREFIX,
+    FORCED_SERIES_PREFIX, GAME_MODES, GAME_OVER_REASONS, GameMode, GameOverReason, GameRecord, GameSource,
+    GameSummary, PILOT_FILTERS, PLAYER_IDS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, StatsTotals,
+    WindowQuery, WindowRequest, WindowedReport, Winner, card_stats, describe_filter, format_card_stats,
+    record_matches, seats_counted, sources_of, windowed_card_stats,
 };
 
 use crate::arena::{self, paired_interval, wilson_interval};
@@ -203,6 +204,12 @@ pub struct ReportArgs {
     /// The game figures instead of the card win rates (per patch, mode and source). Not with --card.
     #[arg(long, conflicts_with = "card")]
     pub games: bool,
+    /// R1367000: each card over its own window at this version, as `/api/stats/cards` reads it
+    /// (`windowed_card_stats`): live games once the window, or else its previous one, has
+    /// `PUBLIC_STATS_MIN_LIVE_GAMES`, development games padding it otherwise. `--pilot` names a
+    /// live game's seats counted. Not with --source, --mode, --patch or --games.
+    #[arg(long, value_name = "VERSION", conflicts_with_all = ["source", "mode", "patch", "games"])]
+    pub window: Option<String>,
     /// The report as JSON, as `stats-cards --json` prints it.
     #[arg(long)]
     pub json: bool,
@@ -235,7 +242,8 @@ pub fn read_records(files: &[PathBuf]) -> Result<Vec<GameRecord>> {
     let mut records = Vec::new();
     for file in files {
         let text = std::fs::read_to_string(file).with_context(|| format!("reading {}", file.display()))?;
-        let read = parse_game_record_lines(&text)
+        // R1371000: a file written before the version retcon names its versions the old way.
+        let read = jackioh_cards::versions::read_game_record_lines(&text)
             .map_err(|error| anyhow!("{}: {}", file.display(), error.message))?;
         records.extend(read);
     }
@@ -552,8 +560,88 @@ pub fn render_games(report: &GameReport, json: bool) -> String {
     lines.join("\n")
 }
 
+/// R1367000: `stats report --window <version>`: every card over its own window at `at`, through the
+/// function `/api/stats/cards` calls, over the records of the files named.
+pub fn window_report(args: &ReportArgs, at: &str) -> Result<WindowedReport> {
+    let mut totals = StatsTotals::default();
+    for record in read_records(&args.files)? {
+        totals.fold(&record, false);
+    }
+    let history = jackioh_cards::patch_history();
+    let mut report = windowed_card_stats(
+        &totals,
+        &WindowQuery {
+            history: &history,
+            at,
+            live_pilot: args.pilot.unwrap_or_else(|| default_pilot(args.source)),
+            mode: None,
+            request: WindowRequest::Gated,
+        },
+    );
+    if let Some(only) = &args.card {
+        report.cards.retain(|card| &card.stats.card == only);
+    }
+    Ok(report)
+}
+
+/// The windowed report as JSON, or as the table `stats report` prints with each card's window beside it.
+pub fn render_window(
+    report: &WindowedReport,
+    args: &ReportArgs,
+    name_of: impl Fn(&str) -> Option<String>,
+) -> String {
+    if args.json {
+        return serde_json::to_string_pretty(report).unwrap_or_default();
+    }
+    let window = |window: &CardWindow| {
+        format!(
+            "from {} ({} live games), {} over {}",
+            window.versions.first().map(String::as_str).unwrap_or_default(),
+            window.live_games,
+            serde_json::to_value(window.source)
+                .ok()
+                .and_then(|source| source.as_str().map(str::to_string))
+                .unwrap_or_default(),
+            window.counted.join(", ")
+        )
+    };
+    let table = format_card_stats(
+        &CardStatsReport {
+            filter: CardStatsFilter {
+                source: SourceFilter::All,
+                mode: None,
+                patch: Some(report.at.clone()),
+                pilot: args.pilot.unwrap_or_else(|| default_pilot(args.source)),
+            },
+            games: i32::try_from(report.games).unwrap_or(i32::MAX),
+            decks: i32::try_from(report.decks).unwrap_or(i32::MAX),
+            cards: report.cards.iter().map(|card| card.stats.clone()).collect(),
+        },
+        name_of,
+    );
+    let mut lines = vec![
+        format!("Window at {}: {}", report.at, window(&report.patch)),
+        table,
+    ];
+    for card in report.cards.iter().filter(|card| card.window != report.patch) {
+        lines.push(format!("{}: {}", card.stats.card, window(&card.window)));
+    }
+    lines.join("\n")
+}
+
 /// `cargo jackioh stats report`.
 fn run_report(args: &ReportArgs) -> Result<()> {
+    if let Some(at) = &args.window {
+        jackioh_cards::register_all();
+        let report = window_report(args, at)?;
+        println!(
+            "{}",
+            render_window(&report, args, |card| jackioh_cards::CATALOG
+                .get(card)
+                .map(|def| def.name.clone()))
+        );
+        return Ok(());
+    }
     if args.games {
         let report = game_report(&read_records(&args.files)?, &filter_of(args));
         println!("{}", render_games(&report, args.json));
@@ -799,6 +887,7 @@ fn run_options(args: &Args, patch: String) -> Result<DevRunOptions> {
         patch,
         budget: None,
         force,
+        commit: None,
     })
 }
 
@@ -869,7 +958,11 @@ pub fn run(args: Args) -> Result<()> {
         }
     };
     // Before `--out` is created, so a refused id writes no file.
-    let options = run_options(&args, patch)?;
+    let options = DevRunOptions {
+        // R1367000: each record files the build that played it.
+        commit: crate::selfplay::build_commit(),
+        ..run_options(&args, patch)?
+    };
     let series = &options.series;
     if let Some(card) = &options.force {
         eprintln!("[ai:stats] {card} forced: p1's deck in odd games, p2's in even ({series})");
@@ -899,7 +992,7 @@ pub fn run(args: Args) -> Result<()> {
                 continue;
             };
             if let Some(file) = file.as_mut() {
-                writeln!(file, "{}", serde_json::to_string(&record)?)?;
+                writeln!(file, "{}", jackioh_cards::versions::game_record_line(&record))?;
             }
             let outcome = match record.game.winner {
                 Winner::Draw => "draw".to_string(),
@@ -948,6 +1041,7 @@ pub fn run(args: Args) -> Result<()> {
 mod tests {
     use super::*;
     use clap::Parser;
+    use jackioh_engine::wire::parse_game_record_lines;
     use serde_json::Value;
 
     /// `Args` under a parser of its own, as `main.rs` mounts it.
@@ -979,7 +1073,7 @@ mod tests {
             parse(&[
                 "--games=50",
                 "--from=51",
-                "--patch=v0.2.5",
+                "--patch=v0.2.3",
                 "--series=a",
                 "--force=core-090",
                 "--out=run.jsonl"
@@ -988,7 +1082,7 @@ mod tests {
             Args {
                 games: Some(50),
                 from: 51,
-                patch: Some("v0.2.5".to_string()),
+                patch: Some("v0.2.3".to_string()),
                 series: Some("a".to_string()),
                 force: Some("core-090".to_string()),
                 out: Some(PathBuf::from("run.jsonl")),
@@ -1033,6 +1127,7 @@ mod tests {
                 pilot: None,
                 card: None,
                 games: false,
+                window: None,
                 json: false,
             }
         );
@@ -1041,7 +1136,7 @@ mod tests {
             "b.jsonl",
             "--source=all",
             "--mode=random",
-            "--patch=v0.2.5",
+            "--patch=v0.2.3",
             "--pilot",
             "ai",
             "--card=core-001",
@@ -1055,7 +1150,7 @@ mod tests {
         );
         assert_eq!(
             (all.patch.as_deref(), all.card.as_deref(), all.json),
-            (Some("v0.2.5"), Some("core-001"), true)
+            (Some("v0.2.3"), Some("core-001"), true)
         );
 
         // --games asks for the game figures and does not go with one card's row.
@@ -1129,23 +1224,23 @@ mod tests {
     fn game_lines() -> Vec<String> {
         vec![
             game_line(
-                "dev:v0.2.5:dev:1",
-                "v0.2.5",
+                "dev:v0.2.3:dev:1",
+                "v0.2.3",
                 "p1",
                 "hero-death",
                 9,
                 Some([[0, 0, 2, 1, 3, 1], [2, 3, 1, 0, 1, 2]]),
             ),
             game_line(
-                "dev:v0.2.5:dev:2",
-                "v0.2.5",
+                "dev:v0.2.3:dev:2",
+                "v0.2.3",
                 "draw",
                 "turn-cap",
                 40,
                 Some([[0; 6]; 2]),
             ),
-            game_line("dev:v0.2.5:dev:3", "v0.2.5", "p2", "hero-death", 12, None),
-            game_line("dev:v0.2.4:dev:1", "v0.2.4", "p1", "alt-win", 15, None),
+            game_line("dev:v0.2.3:dev:3", "v0.2.3", "p2", "hero-death", 12, None),
+            game_line("dev:v0.2.2b:dev:1", "v0.2.2b", "p1", "alt-win", 15, None),
             record_line("m1", "live", "bo1", "p1", &["core-002"]),
         ]
     }
@@ -1184,7 +1279,7 @@ mod tests {
                 "otherSources": 1,
                 "groups": [
                     {
-                        "patch": "v0.2.5", "mode": "random", "source": "dev",
+                        "patch": "v0.2.3", "mode": "random", "source": "dev",
                         "games": 3, "draws": 1, "firstWins": 1,
                         "firstShare": 0.333, "firstLow": 0.061, "firstHigh": 0.792,
                         "reasons": reasons(&[("hero-death", 2), ("turn-cap", 1)]),
@@ -1194,7 +1289,7 @@ mod tests {
                         "positionSwitches": 4, "positionSwitchesMean": 2.0, "radiantUpgrades": 3, "radiantUpgradesMean": 1.5
                     },
                     {
-                        "patch": "v0.2.4", "mode": "random", "source": "dev",
+                        "patch": "v0.2.2b", "mode": "random", "source": "dev",
                         "games": 1, "draws": 0, "firstWins": 1,
                         "firstShare": 1.0, "firstLow": 0.207, "firstHigh": 1.0,
                         "reasons": reasons(&[("alt-win", 1)]),
@@ -1214,7 +1309,7 @@ mod tests {
         let expected = [
             "Games: AI development runs, every mode, every patch, human and AI pilots (unified).",
             "",
-            "v0.2.5 random dev: 3 games, 1 drawn",
+            "v0.2.3 random dev: 3 games, 1 drawn",
             "  first seat won 1 of 3: 33.3%, 95% interval 6.1% to 79.2%",
             "  endings: hero-death 2, turn-cap 1",
             "  turns, quartiles: 9, 12, 40",
@@ -1224,7 +1319,7 @@ mod tests {
             "  Radiant upgrades: 3, 1.50 a game",
             "  (fatigue, traps, switches and upgrades over the 2 of 3 games whose records carry R1256000's counts)",
             "",
-            "v0.2.4 random dev: 1 games, 0 drawn",
+            "v0.2.2b random dev: 1 games, 0 drawn",
             "  first seat won 1 of 1: 100.0%, 95% interval 20.7% to 100.0%",
             "  endings: alt-win 1",
             "  turns, quartiles: 15, 15, 15",
@@ -1238,7 +1333,7 @@ mod tests {
     #[test]
     fn games_report_adds_both_seats_switches_and_upgrades_whichever_seat_holds_them() {
         let totals = |counts: [[i32; 6]; 2]| {
-            let line = game_line("dev:v0.2.5:dev:1", "v0.2.5", "p1", "hero-death", 9, Some(counts));
+            let line = game_line("dev:v0.2.3:dev:1", "v0.2.3", "p1", "hero-death", 9, Some(counts));
             let report = game_report(
                 &parse_game_record_lines(&line).unwrap(),
                 &filter_of(&report_args(&["a.jsonl", "--games", "--source=dev"]).unwrap()),
@@ -1255,8 +1350,8 @@ mod tests {
     fn games_report_counts_a_game_only_when_both_seats_carry_all_six_counts() {
         // A seat that carries the fatigue and trap counts but not the switches: unknown, not zero.
         let mut partial: Value = serde_json::from_str(&game_line(
-            "dev:v0.2.5:dev:4",
-            "v0.2.5",
+            "dev:v0.2.3:dev:4",
+            "v0.2.3",
             "p1",
             "hero-death",
             10,
@@ -1295,20 +1390,23 @@ mod tests {
                 .map(|group| format!("{} {} {}", group.patch, group.mode, group.source))
                 .collect()
         };
-        let both_dev = ["v0.2.5 random dev", "v0.2.4 random dev"];
+        let both_dev = ["v0.2.3 random dev", "v0.2.2b random dev"];
 
         // R378: live games unless a development run is named.
-        assert_eq!(groups(&[]), ["v0.2.5 bo1 live"]);
+        assert_eq!(groups(&[]), ["v0.2.3 bo1 live"]);
         assert_eq!(games_of(&[]).other_sources, 4);
         assert_eq!(
             groups(&["--source=all"]),
-            ["v0.2.5 random dev", "v0.2.4 random dev", "v0.2.5 bo1 live"]
+            ["v0.2.3 random dev", "v0.2.2b random dev", "v0.2.3 bo1 live"]
         );
-        assert_eq!(groups(&["--source=all", "--patch=v0.2.4"]), ["v0.2.4 random dev"]);
-        assert_eq!(games_of(&["--source=all", "--patch=v0.2.4"]).other_sources, 0);
-        assert_eq!(groups(&["--source=all", "--mode=bo1"]), ["v0.2.5 bo1 live"]);
+        assert_eq!(
+            groups(&["--source=all", "--patch=v0.2.2b"]),
+            ["v0.2.2b random dev"]
+        );
+        assert_eq!(games_of(&["--source=all", "--patch=v0.2.2b"]).other_sources, 0);
+        assert_eq!(groups(&["--source=all", "--mode=bo1"]), ["v0.2.3 bo1 live"]);
         // A game counts when a seat its pilot reads is in it.
-        assert_eq!(groups(&["--source=all", "--pilot=human"]), ["v0.2.5 bo1 live"]);
+        assert_eq!(groups(&["--source=all", "--pilot=human"]), ["v0.2.3 bo1 live"]);
         assert_eq!(groups(&["--source=all", "--pilot=ai"]), both_dev);
 
         let none = games_of(&["--patch=v0.0.1"]);
@@ -1347,7 +1445,9 @@ mod tests {
             "id": id,
             "source": source,
             "mode": mode,
-            "patch": "v0.2.5",
+            "patch": "v0.2.3",
+            // R1371000: marked, as the build writes a record file.
+            "versions": 2,
             "pilots": { "p1": pilots[0], "p2": pilots[1] },
             "game": {
                 "first": "p1",
@@ -1391,8 +1491,8 @@ mod tests {
     #[test]
     fn report_over_files_is_card_stats_over_their_records_in_the_order_named() {
         let live = record_line("m1", "live", "bo1", "p1", &["core-002", "core-003"]);
-        let dev_a = record_line("dev:v0.2.5:dev:1", "dev", "random", "p2", &["core-002"]);
-        let dev_b = record_line("dev:v0.2.5:dev:2", "dev", "random", "p1", &["core-003"]);
+        let dev_a = record_line("dev:v0.2.3:dev:1", "dev", "random", "p2", &["core-002"]);
+        let dev_b = record_line("dev:v0.2.3:dev:2", "dev", "random", "p1", &["core-003"]);
         let (dir, paths) = scratch(&[
             ("live.jsonl", format!("{live}\n")),
             // A blank line is skipped, as `stats-import` skips it.
@@ -1422,12 +1522,12 @@ mod tests {
 
         let (_, narrowed) = report_of(
             &paths,
-            &["--source=dev", "--mode=random", "--patch=v0.2.5", "--pilot=ai"],
+            &["--source=dev", "--mode=random", "--patch=v0.2.3", "--pilot=ai"],
         );
         let filter = CardStatsFilter {
             source: SourceFilter::Dev,
             mode: Some(GameMode::Random),
-            patch: Some("v0.2.5".to_string()),
+            patch: Some("v0.2.3".to_string()),
             pilot: PilotFilter::Ai,
         };
         assert_eq!(narrowed, card_stats(&records, &filter));
@@ -1491,7 +1591,7 @@ mod tests {
         // p1 a person, p2 a ladder bot holding core-003; and a development game, both seats AIs.
         // p1's deck holds core-001 and core-002, and p2 (the winner) holds core-003.
         let bot_game = record_line_piloted("m1", "live", "bo1", "p2", &["core-003"], ["human", "ai"]);
-        let dev = record_line("dev:v0.2.5:dev:1", "dev", "random", "p1", &["core-003"]);
+        let dev = record_line("dev:v0.2.3:dev:1", "dev", "random", "p1", &["core-003"]);
         let (dir, paths) = scratch(&[("a.jsonl", format!("{bot_game}\n{dev}\n"))]);
         let held = |report: &CardStatsReport, card: &str| {
             report
@@ -1522,6 +1622,34 @@ mod tests {
             (dev_default.filter.pilot, dev_default.decks),
             (PilotFilter::Unified, 2)
         );
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn r1367000_report_window_reads_each_card_over_its_own_window() {
+        // v0.2.6, a micro after v0.2.5's patch, plays Classic #55 alone (patches.json's changes).
+        let on = |id: &str, patch: &str| {
+            record_line(id, "live", "bo1", "p1", &["classic-055"])
+                .replace("\"v0.2.3\"", &format!("\"{patch}\""))
+        };
+        let (dir, paths) = scratch(&[(
+            "a.jsonl",
+            format!("{}\n{}\n", on("m1", "v0.2.3"), on("m2", "v0.2.3b")),
+        )]);
+        let named: Vec<&str> = paths.iter().map(|path| path.to_str().unwrap()).collect();
+        let args = report_args(&[named, vec!["--window", "v0.2.3b"]].concat()).unwrap();
+        let report = window_report(&args, "v0.2.3b").unwrap();
+        assert_eq!(report.patch.versions, ["v0.2.3", "v0.2.3b"]);
+        let games = |card: &str| report.card(card).map(|card| card.stats.in_deck.games);
+        assert_eq!(games("core-001"), Some(2));
+        assert_eq!(games("classic-055"), Some(1));
+        let micro = report.card("classic-055").unwrap();
+        assert_eq!(micro.window.versions, ["v0.2.3b"]);
+        assert_eq!(micro.window.source, jackioh_engine::WindowSource::Provisional);
+        assert!(render_window(&report, &args, |_| None).contains("classic-055: from v0.2.3b"));
+        // --window takes the place of the filter flags.
+        assert!(report_args(&["a.jsonl", "--window=v0.2.3b", "--patch=v0.2.3"]).is_err());
+        assert!(report_args(&["a.jsonl", "--window=v0.2.3b", "--games"]).is_err());
         std::fs::remove_dir_all(dir).unwrap();
     }
 
@@ -1563,14 +1691,14 @@ mod tests {
     /// The options a run of `argv` plays, as `run` reads them under the patch "v0.2.5".
     fn options_of(argv: &[&str]) -> Result<DevRunOptions> {
         jackioh_cards::register_all();
-        run_options(&parse(argv).unwrap(), "v0.2.5".to_string())
+        run_options(&parse(argv).unwrap(), "v0.2.3".to_string())
     }
 
     #[test]
     fn r1284000_force_takes_a_tokens_card_and_refuses_an_unknown_id_or_an_unshipped_sets_card() {
         let plain = options_of(&[]).unwrap();
         assert_eq!((plain.series.as_str(), plain.force), ("dev", None));
-        assert_eq!(plain.patch, "v0.2.5");
+        assert_eq!(plain.patch, "v0.2.3");
 
         // A forced run files under a series of its own; an explicit series with --force is refused.
         let forced = options_of(&["--force=core-090"]).unwrap();
@@ -1685,12 +1813,12 @@ mod tests {
     /// (v0.2.6): it wins 1 to 7, loses 8 and 9 and draws 10; wins 12, which only this side played; and
     /// game 13 has two holders.
     fn forced_runs() -> (Vec<GameRecord>, Vec<GameRecord>) {
-        let mut before: Vec<String> = (1..=10).map(|n| forced_game("v0.2.5", n, n <= 5)).collect();
-        before.push(forced_line("v0.2.5", 11, "none", "p1"));
-        let mut after: Vec<String> = (1..=9).map(|n| forced_game("v0.2.6", n, n <= 7)).collect();
-        after.push(forced_line("v0.2.6", 10, "p2", "draw"));
-        after.push(forced_game("v0.2.6", 12, true));
-        after.push(forced_line("v0.2.6", 13, "both", "p1"));
+        let mut before: Vec<String> = (1..=10).map(|n| forced_game("v0.2.3", n, n <= 5)).collect();
+        before.push(forced_line("v0.2.3", 11, "none", "p1"));
+        let mut after: Vec<String> = (1..=9).map(|n| forced_game("v0.2.3b", n, n <= 7)).collect();
+        after.push(forced_line("v0.2.3b", 10, "p2", "draw"));
+        after.push(forced_game("v0.2.3b", 12, true));
+        after.push(forced_line("v0.2.3b", 13, "both", "p1"));
         let parse = |lines: Vec<String>| parse_game_record_lines(&lines.join("\n")).unwrap();
         (parse(before), parse(after))
     }
@@ -1732,19 +1860,19 @@ mod tests {
         // before, and game 3 none after.
         let before = parse_game_record_lines(
             &[
-                line("v0.2.5", 1, "p1", "p1"),
-                line("v0.2.5", 1, "p1", "p2"),
-                line("v0.2.5", 2, "none", "p1"),
-                line("v0.2.5", 3, "p1", "p1"),
+                line("v0.2.3", 1, "p1", "p1"),
+                line("v0.2.3", 1, "p1", "p2"),
+                line("v0.2.3", 2, "none", "p1"),
+                line("v0.2.3", 3, "p1", "p1"),
             ]
             .join("\n"),
         )
         .unwrap();
         let after = parse_game_record_lines(
             &[
-                line("v0.2.6", 1, "p1", "p2"),
-                line("v0.2.6", 2, "p2", "p2"),
-                line("v0.2.6", 3, "none", "p2"),
+                line("v0.2.3b", 1, "p1", "p2"),
+                line("v0.2.3b", 2, "p2", "p2"),
+                line("v0.2.3b", 3, "none", "p2"),
             ]
             .join("\n"),
         )
@@ -1784,8 +1912,8 @@ mod tests {
             lines.join("\n") + "\n"
         };
         let (dir, paths) = scratch(&[
-            ("before.jsonl", forced("v0.2.5", false)),
-            ("after.jsonl", forced("v0.2.6", true)),
+            ("before.jsonl", forced("v0.2.3", false)),
+            ("after.jsonl", forced("v0.2.3b", true)),
         ]);
         let args = compare_args(&[
             "--before",
@@ -1872,12 +2000,14 @@ mod tests {
                 patch: "v0.9.9-test".to_string(),
                 budget: Some(FEW),
                 force: None,
+                commit: None,
             },
             DevRunOptions {
                 series: "dev-force-core-090".to_string(),
                 patch: "v0.9.9-test".to_string(),
                 budget: Some(FEW),
                 force: Some("core-090".to_string()),
+                commit: None,
             },
         ] {
             let expected = serial_lines(1, 6, &options);
@@ -1914,6 +2044,7 @@ mod tests {
             patch: "v0.9.9-test".to_string(),
             budget: Some(FEW),
             force: None,
+            commit: None,
         };
         let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
         let mut kept = String::new();

@@ -53,8 +53,9 @@ The harness then hands the issue to the people: it takes the bot's labels off, a
 labels it `human required` and names them in a comment, and the bot no longer touches it.
 
 The title becomes the squash commit's subject, and a check holds it to the convention: usually
-the issue's own title (`Patch v0.3.X: …`, `CI: …`, `Architecture: …`), with its version number
-kept. A title that breaks the convention is replaced by the issue's.
+the issue's own title (`Patch: …`, or an older `Patch v0.3.X: …`, `CI: …` or `Architecture: …`
+it was opened with). Never put a version in it: `patches ship` names a card change's version when it
+ships and retitles the issue and the pull request. A title that breaks the convention is replaced by the issue's.
 
 After the first line, write the pull request description in Markdown: what changed and why, how you
 tested it (the commands you ran and what they printed), every decision you made that the issue did

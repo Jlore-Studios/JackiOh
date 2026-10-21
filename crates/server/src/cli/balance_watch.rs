@@ -29,7 +29,7 @@ use indexmap::IndexMap;
 
 use jackioh_engine::wire::{
     CardStats, CardStatsFilter, GameRecord, PilotFilter, SourceFilter, StatsTotals, add_stats, card_stats_of,
-    parse_game_record_lines, played_delta, record_matches,
+    played_delta, record_matches,
 };
 
 use super::card_stats::flag;
@@ -197,7 +197,8 @@ pub async fn balance_watch_report_from_files(
         let text = tokio::fs::read_to_string(path)
             .await
             .map_err(|error| anyhow!("{}: {error}", path.display()))?;
-        let read = parse_game_record_lines(&text)
+        // R1371000: a file written before the version retcon names its versions the old way.
+        let read = jackioh_cards::versions::read_game_record_lines(&text)
             .map_err(|error| anyhow!("{}: {}", path.display(), error.message))?;
         records.extend(read.into_iter().filter(|record| record_matches(record, &filter)));
     }

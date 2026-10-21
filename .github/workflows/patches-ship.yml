@@ -20,12 +20,18 @@
 # holds their fragments, so it ships all of them, and it closes the older pull requests. Merging
 # the promotion deletes the fragments, which touches pending/ and runs this again; with nothing
 # pending it opens nothing.
+#
+# Once a promotion has merged (the push that runs this changed patches.json), `retitle` names the
+# version on the threads it shipped (#1360, #1370): the pull request whose commit added each patch's
+# fragment and the issues that pull request closes become `Patch v<version>: <what it does>`, each
+# with a comment naming the version (`bot/harness/titles.py`). Versions are named by tier when they
+# ship (R1366000), so no title holds one before.
 name: patches ship
 
 on:
   push:
     branches: [main]
-    paths: ["crates/cards/patches/pending/**"]
+    paths: ["crates/cards/patches/pending/**", "crates/cards/patches/patches.json"]
   workflow_dispatch:
 
 concurrency:
@@ -121,3 +127,30 @@ jobs:
           else
             gh issue create --repo "$REPO" --title "$title" --body "$body" --label "bot:build" --label "difficulty:medium" --label "priority:high"
           fi
+
+  # The threads of the patches this push shipped, retitled with their versions. A push that shipped
+  # nothing (a fragment's own merge) changes nothing. The workflow's token: an edit made with it
+  # starts no workflow, and nothing fires on a title edit anyway.
+  retitle:
+    name: retitle what shipped
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: the shipped patches' issues and pull requests, titled with their versions
+        working-directory: bot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: python3 -m harness.titles shipped --before "$BEFORE" --after "$AFTER"

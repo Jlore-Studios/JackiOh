@@ -624,9 +624,12 @@ KIND_ORDER = {"review": 0, "revise": 1, "build": 2}
 _BLOCKED_BY = re.compile(
     r"(?i)\b(?:blocked by|depends on|do not start until|waits (?:on|for))[^\S\n]*:?[^\S\n]*"
     r"(#\d+(?:[^\S\n]*(?:,|\band\b|&)?[^\S\n]*#\d+)*)")
-#: A multi-part patch's part (docs/issues-and-patches.md): "Patch v0.2.X (part 2 of 4): …".
-#: n is the order the parts merge in, and every part of a patch carries the same m.
+#: A multi-part patch's part (docs/issues-and-patches.md): "Patch (part 2 of 4): …", or an older
+#: "Patch v0.2.X (part 2 of 4): …". n is the order the parts merge in, and every part of a patch
+#: carries the same m.
 _PART = re.compile(r"(?i)^(.*?)\s*\(part (\d+) of (\d+)\)")
+#: A sub-issue's link to its parent, as GitHub writes it on the issue: `…/issues/<n>`.
+_PARENT = re.compile(r"/issues/(\d+)$")
 
 
 def named_blockers(body: str | None) -> set[int]:
@@ -647,13 +650,32 @@ def part_of(title: str) -> tuple[tuple[str, int], int] | None:
     return (" ".join(match.group(1).lower().split()), int(match.group(3))), int(match.group(2))
 
 
+def parent_of(thread: dict[str, Any]) -> int:
+    """The issue a thread is a sub-issue of, from GitHub's own link, or 0."""
+    match = _PARENT.search(str(thread.get("parent_issue_url") or ""))
+    return int(match.group(1)) if match else 0
+
+
+def patch_of(thread: dict[str, Any]) -> tuple[tuple[Any, int], int] | None:
+    """`((the patch, m), n)` for a part, or None (#1370): the patch is the parent it is a sub-issue
+    of, which every part has, so two patches' parts never mix when their titles both open
+    `Patch (part 2 of 4)`. A part with no parent link falls back to its title's name."""
+    part = part_of(str(thread.get("title") or ""))
+    if part is None:
+        return None
+    (name, total), n = part
+    parent = parent_of(thread)
+    return ((("parent", parent) if parent else name), total), n
+
+
 def waits_for(ctx: Context, threads: list[dict[str, Any]]) -> dict[int, list[int]]:
     """The issues among `threads` that wait for another to close first, with what they wait for:
     the issues a "Blocked by #n" line names, GitHub's own blocked-by links, and the earlier parts
-    of the same patch (a part builds only once every part before it has closed). Only open ones
+    of the same patch, the sub-issues of the same parent (`patch_of`; a part builds only once
+    every part before it has closed). Only open ones
     count. GitHub is asked about open issues only when some thread names one or is a part."""
     named = {int(t["number"]): named_blockers(t.get("body")) for t in threads}
-    parts = {int(t["number"]): part_of(str(t.get("title") or "")) for t in threads}
+    parts = {int(t["number"]): patch_of(t) for t in threads}
     open_numbers: set[int] = set()
     earlier: dict[int, list[int]] = {}
     if any(named.values()) or any(parts.values()):
@@ -667,7 +689,7 @@ def waits_for(ctx: Context, threads: list[dict[str, Any]]) -> dict[int, list[int
                 continue
             earlier[number] = sorted(
                 int(t["number"]) for t in everything if "pull_request" not in t
-                and (other := part_of(str(t.get("title") or ""))) is not None
+                and (other := patch_of(t)) is not None
                 and other[0] == part[0] and other[1] < part[1])
     waiting: dict[int, list[int]] = {}
     for thread in threads:
