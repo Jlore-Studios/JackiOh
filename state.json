@@ -9054,7 +9054,9 @@
     },
     "1492": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6308409417"
+      ],
       "difficulty_by": {
         "at": "2026-10-21T05:08:18Z",
         "difficulty": "medium",
@@ -9087,9 +9089,7 @@
       "started_at": "2026-10-21T04:59:33Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6308409417"
-      ]
+      "taken_asks": []
     },
     "1493": {
       "action": "plan",
