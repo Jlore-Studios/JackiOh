@@ -10497,6 +10497,13 @@
     "1567": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T20:20:28Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Easy rule line 2 (One place) fails: the flag crosses crates/server, apps/web, e2e and spec notes, so it cannot be easy; with no engine, AI, migration or new ruling it is not hard."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
