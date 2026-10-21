@@ -1675,8 +1675,9 @@ impl Tx<'_> {
     /// trios, custom cards (R915008), tutorial progress, its age check and terms acceptances
     /// (R757000, R757001), queue
     /// tickets, rooms it opened that nobody joined, and its invite-code attempts' link to it. Finished matches, results and series stay for the other
-    /// player, with this profile's seat left empty (migration 0012). False when there was no such
-    /// profile. The caller refuses a profile in a live match or series first.
+    /// player, with this profile's seat left empty (migration 0012), and so do finished co-op matches
+    /// for the teammate (migration 0051, R1497000). False when there was no such profile. The caller
+    /// refuses a profile in a live match, series or co-op match first.
     pub async fn profiles_remove(&mut self, profile_id: &str) -> StoreResult<bool> {
         dispatch!(self, profiles_remove(profile_id))
     }

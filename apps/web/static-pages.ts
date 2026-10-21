@@ -151,10 +151,9 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
         "&ldquo;Delete my account&rdquo;. That deletes your sign-in, your decks, trios and cards, your " +
         "custom cards, your tutorial progress, the records of how you played, and the record of your age " +
         "check and of the terms you agreed to. Finished matches and their results stay in " +
-        "the other player&rsquo;s history, with your account removed from them. Co-op games are different: " +
-        "deleting either teammate&rsquo;s account deletes the whole co-op game, its moves and its result, for " +
-        "both of you. You can&rsquo;t delete your account during a match, a co-op game or a Conquest series " +
-        "that hasn&rsquo;t finished.</p>" +
+        "the other player&rsquo;s history, with your account removed from them, and so does a finished " +
+        "co-op game in your teammate&rsquo;s, its moves and its result included. You can&rsquo;t delete " +
+        "your account during a match, a co-op game or a Conquest series that hasn&rsquo;t finished.</p>" +
         "<p>Deleting your account also deletes everything of yours on Play together: your friends, friend " +
         "requests, blocks, challenges, co-op rooms and replay shares, and your chats, the messages your " +
         "friends sent you included.</p>" +

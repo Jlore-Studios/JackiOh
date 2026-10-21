@@ -757,6 +757,26 @@ mod b41_the_finished_replay {
         assert_eq!(held.replays.held(now_ms()), 1, "one fold serves both people");
     }
 
+    /// R1497000: the guest's `DELETE /api/account` empties their seat on the finished match and
+    /// leaves the match and its log, so the host still watches its replay from their own seat.
+    #[tokio::test]
+    async fn r1497000_the_teammate_still_opens_the_replay_once_the_other_account_is_gone() {
+        let t = three().await;
+        let match_id = t.finished().await;
+
+        let (status, body) = api(&t.app, "DELETE", "/api/account", &t.guest.token, Value::Null).await;
+        assert_eq!(status, 204, "{body}");
+
+        let (row, log) = stored(&t.app, &match_id).await;
+        assert_eq!((row.a1.as_str(), row.a2.as_str()), (t.host.id.as_str(), ""));
+        assert!(!log.is_empty(), "the log stays with the match");
+        let (status, body) = replay(&t.app, &t.host, &match_id).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(body["seat"], "a1", "{body}");
+        let steps = body["steps"].as_array().expect("steps");
+        assert_eq!(steps.len(), log.len() + 1, "as it began, then a step per action");
+    }
+
     #[tokio::test]
     async fn r767000_a_join_pins_the_match_to_the_catalog_it_is_dealt_from() {
         let t = three().await;

@@ -782,6 +782,15 @@ counters, set tracks, held quests and owned full arts are zeroed by offsetting `
 deleted, so its quest clock starts again (R1310002). The starter cosmetics have no row and are
 untouched. On a new project the reset zeroes nothing.
 
+Migration 0051 gives a co-op seat 0012's rule for a 1v1 seat (R1497000). `duos_matches.a1` and `a2`
+become nullable and `on delete set null`, replacing 0039's cascade, so a deleted account's seat on a
+finished co-op match empties while the match, its result and its log stay for the teammate, whose
+replay still opens. `duos_matches_seats_filled_unless_over_check` lets only a match that has ended
+have an empty seat, so a delete that would empty a seat of a live co-op match raises, behind
+`DELETE /api/account`'s own 409. Both stores read an emptied seat back as `""` (`duos::store`), and
+the in-memory store refuses the live case too (`duos::store::refuse_live_seat`). A co-op room still
+goes with either of its people.
+
 ## Tests
 
 ```
