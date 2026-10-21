@@ -10966,6 +10966,9 @@
       }
     },
     "1591": {
+      "ci_reruns": {
+        "5a120fa9ad061142f04d16f8216903eceb3e4e08": 1
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-21T19:14:00Z",
