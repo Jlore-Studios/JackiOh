@@ -8961,6 +8961,13 @@
     "1485": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T05:12:47Z",
+        "difficulty": "medium",
+        "provider": "claude-2",
+        "tier": "strong",
+        "why": "Rule line 1 fails: 12 files (5 components, 3 testid modules, 4 test files), over the 10-file limit. Otherwise it is apps/web only with no spec work"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
